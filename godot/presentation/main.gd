@@ -27,7 +27,13 @@ func _ready() -> void:
 		get_tree().quit(20)
 		return
 
-	_native = ScraperXSimulation.new()
+	_native = ClassDB.instantiate("ScraperXSimulation") as RefCounted
+	if _native == null:
+		_status.text = "NATIVE EXTENSION FAILED"
+		_status_dot.color = Color("ef5b5b")
+		push_error("SCRAPERX_EXTENSION_INSTANTIATION_FAILED")
+		get_tree().quit(20)
+		return
 	_step_value.text = "%.3f ms" % (_native.get_fixed_step_seconds() * 1000.0)
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim")
 	_render_snapshot()
@@ -79,4 +85,3 @@ func _capture_frame() -> void:
 	])
 	_capture_path = ""
 	get_tree().quit(0)
-
