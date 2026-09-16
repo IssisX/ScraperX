@@ -1,0 +1,154 @@
+name: WO-000 Delivery Spine
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wo000-delivery-spine-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7-stable
+  GODOT_BINARY_SHA256: 0b1a6c54c2c619c12e169fe9241edda4b81080b519451cec2984bf0d2c6cb73c
+  GODOT_TEMPLATES_SHA256: 9714459dc071907c0f3d5f17d608faf69e7cda21331fc5d39c4503ffa4e99eec
+  ANDROID_NDK_VERSION: 29.0.14206865
+
+jobs:
+  delivery-spine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Configure Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install build and render prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
+
+      - name: Install verified Godot 4.7 editor and Android template
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          curl --fail --location --retry 3 \
+            --output tools/godot/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          echo "${GODOT_BINARY_SHA256}  tools/godot/godot.zip" | sha256sum --check
+          unzip -q tools/godot/godot.zip -d tools/godot
+          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
+          chmod +x tools/godot/godot
+
+          curl --fail --location --retry 3 \
+            --output tools/godot/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA256}  tools/godot/templates.tpz" | sha256sum --check
+          unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
+            -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          tools/godot/godot --version
+
+      - name: Build native host graph and run fixed-step test
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cmake -S . -B build/host -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSCRAPERX_BUILD_BRIDGE=ON \
+            -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_TARGET=template_release
+          cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
+          ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
+
+      - name: Run Godot through native authority and capture one screenshot suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/screenshots
+          xvfb-run -a -s "-screen 0 1600x900x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo000-delivery-spine.png" \
+            2>&1 | tee artifacts/godot-runtime.log
+          test -s artifacts/screenshots/wo000-delivery-spine.png
+          grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_RUNTIME_PROOF" artifacts/godot-runtime.log
+
+      - name: Cross-compile native graph for Android arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build/android-arm64 -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-24 \
+            -DSCRAPERX_BUILD_BRIDGE=ON \
+            -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_TARGET=template_release
+          cmake --build build/android-arm64 --target scraperx_native --parallel 2
+          test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
+          file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
+
+      - name: Export current-source Android arm64 APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/apk artifacts/apk
+          tools/godot/godot --headless --path godot \
+            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/ScraperX-WO000-arm64.apk" \
+            2>&1 | tee artifacts/godot-android-export.log
+          test -s build/apk/ScraperX-WO000-arm64.apk
+          unzip -l build/apk/ScraperX-WO000-arm64.apk | tee artifacts/apk-contents.log
+          grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
+          cp build/apk/ScraperX-WO000-arm64.apk artifacts/apk/
+          sha256sum artifacts/apk/ScraperX-WO000-arm64.apk | tee artifacts/apk/SHA256SUMS.txt
+
+      - name: Record evidence boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > artifacts/WO-000-EVIDENCE.md <<EOF
+          # WO-000 Evidence
+
+          Source commit: \`${GITHUB_SHA}\`
+
+          Proven by this workflow:
+
+          - native host test passed for authoritative 90 Hz fixed-step state;
+          - Godot 4.7 loaded the current-source GDExtension;
+          - the Godot runtime observed native-owned tick/time advancing;
+          - one rendered diagnostic screenshot was captured from that runtime;
+          - the native graph cross-compiled for Android arm64-v8a;
+          - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
+          - the APK checksum was recorded.
+
+          Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, or gameplay.
+          EOF
+
+      - name: Publish WO-000 build and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScraperX-WO000-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
+

@@ -1,0 +1,269 @@
+# SCRAPERX — EXECUTION PROTOCOL v1.0
+
+**Status:** Engineering execution authority  
+**Product / repository:** `ScraperX`  
+**Depends on:** `00_GOVERNING_LAWS.md` and `01_SCRAPERX_GDD.md`  
+**Purpose:** Keep AI implementation work narrow, evidence-driven, and faithful to ScraperX without requiring the full design package to be treated as one giant work order.
+
+---
+
+## 1. AUTHORITY STACK
+
+For implementation work, resolve conflicts in this order:
+
+1. **Governing Laws** — non-negotiable project constraints.
+2. **Frozen GDD** — product truth: what ScraperX must be.
+3. **Technical Architecture / TDD** — implementation ownership and system boundaries, once created.
+4. **Current source, tests, build configuration, and runtime evidence** — implementation truth.
+5. **Current Work Order** — the exact bounded change being executed.
+
+Supporting decision/provenance documents are consulted only when a product decision needs tracing. They are not routine implementation context.
+
+No work order may silently override a higher authority. If it conflicts, stop that mechanism and surface the conflict.
+
+---
+
+## 2. CONTEXT LOADING RULE
+
+Do **not** dump the entire project package into every coding task.
+
+Every implementation task loads:
+
+- this Execution Protocol;
+- the current Work Order;
+- the relevant source/tests/config;
+- the specific Governing Law and GDD sections that constrain the task;
+- the relevant TDD sections once the TDD exists.
+
+Load additional GDD/support material only when the task crosses into it.
+
+The goal is **small active context under strong global authority**, not reduced authority.
+
+---
+
+## 3. WORK ORDER CONTRACT
+
+Every coding task must begin with a bounded Work Order containing:
+
+**Objective** — one concrete player-visible or system-visible capability.
+
+**Existing truth** — what source/runtime/tests already prove.
+
+**Authority** — exact Governing Law / GDD / TDD sections that constrain the change.
+
+**Owner** — the subsystem that owns the consequential state being changed.
+
+**Allowed seam** — the smallest existing interface/state/solver boundary through which the capability should be added.
+
+**Forbidden shortcuts** — plausible wrong implementations that would fake, duplicate, or bypass authority.
+
+**Proof path** — the actual build/runtime/device path that must demonstrate the result.
+
+**Completion** — observable conditions that end the task.
+
+If those fields cannot be stated clearly, the task is not ready to code.
+
+---
+
+## 4. VERTICAL-SLICE RULE
+
+Implement the **smallest complete causal slice**, not the smallest amount of code.
+
+A valid slice should normally connect:
+
+**player/input → authoritative state change → physical/system consequence → presentation/interaction result → verification**
+
+A slice may cross several files or subsystems if the causal path genuinely requires it.
+
+A slice must not opportunistically expand into unrelated systems because they are nearby.
+
+Prefer one reusable primitive that unlocks several later behaviors over several disconnected features.
+
+---
+
+## 5. ONE OWNER PER CONSEQUENCE
+
+Before writing code, identify who owns every consequential fact touched by the task.
+
+Examples include:
+
+- support/contact validity;
+- machine position and capability;
+- structural deformation/failure;
+- rigging state;
+- process/isolation state;
+- route validity;
+- mission predicates;
+- checkpoint/persistence state.
+
+Presentation may request and render. It may not independently decide an outcome owned elsewhere.
+
+If two systems currently resolve the same consequential fact, treat that as an architectural defect before adding more behavior.
+
+---
+
+## 6. NO PROXY COMPLETION
+
+The following do **not** prove a feature works:
+
+- UI controls existing;
+- animation playing;
+- a variable changing;
+- a unit test passing when the real runtime path differs;
+- a desktop build when Android behavior is claimed;
+- an APK being produced when execution is claimed;
+- logs saying an event occurred when the world did not exhibit the consequence;
+- a scripted effect standing in for authoritative mechanics.
+
+Evidence must fit the claim.
+
+Use:
+
+- source/config for implementation facts;
+- tests for invariant/contract facts;
+- build output for build facts;
+- runtime observation/logs for behavior;
+- actual Fold-class execution for Fold behavior.
+
+Never upgrade one evidence class into another.
+
+---
+
+## 7. SCRAPERX-SPECIFIC REJECTION TESTS
+
+Reject or redesign an implementation if it:
+
+- turns the tower into disconnected disposable spaces;
+- weakens fast, physical parkour into generic FPS locomotion;
+- cancels meaningful moving-support momentum;
+- prevents legitimate falls with invisible safety;
+- turns the parachute into magical recovery;
+- scripts a causal consequence that the authoritative world should produce;
+- makes mission/UI state override physical world truth;
+- introduces unlimited-force or teleporting machinery;
+- converts structural/process systems into cosmetic meters;
+- deletes strategically useful aftermath to hide cost;
+- converts the game toward conventional combat;
+- protects an intended route against a legitimate physical sequence break;
+- adds solver sophistication with no material player/system capability;
+- creates a second authority because integration was convenient;
+- cannot survive the real Android shipping path.
+
+An exciting feature does not receive an exemption.
+
+---
+
+## 8. CHANGE CLASSIFICATION
+
+Before execution, classify the task:
+
+### BUG / REGRESSION
+Reproduce → capture evidence → identify owner → test plausible causes → repair owner/seam → rerun the same failing path.
+
+Do not optimize or redesign before the mechanism is known.
+
+### FEATURE / CHANGE
+Preserve existing contracts unless the objective requires changing them → identify owner/seam → add the smallest reusable capability → prove the actual path.
+
+### ARCHITECTURE
+Architecture changes require demonstrated inability of the current boundary to support a required capability, correctness property, or shipping constraint.
+
+“Cleaner,” “more modern,” or “more sophisticated” alone is insufficient.
+
+---
+
+## 9. EXTERNAL TECHNOLOGY GATE
+
+Libraries, physics engines, extensions, middleware, and packages are candidates, not trophies.
+
+Adopt one only when it:
+
+1. solves a defined ScraperX requirement;
+2. has a bounded ownership role;
+3. does not create duplicate consequential authority;
+4. survives the actual Android build/runtime path;
+5. materially improves capability, correctness, robustness, performance, or production leverage;
+6. beats the simpler alternative with evidence.
+
+Do not select Jolt—or replace Jolt—by reputation alone.
+
+---
+
+## 10. PERFORMANCE RULE
+
+The current target is sustained **45 FPS on Galaxy Fold 6-class Android hardware** under representative play.
+
+When over budget, first reduce:
+
+- visual cost;
+- redundant detail;
+- inactive-region update frequency;
+- active extent;
+- nonconsequential simulation detail.
+
+Do not erase strategically meaningful world truth merely to hit the frame target.
+
+Optimization must preserve authoritative state and later reactivation.
+
+---
+
+## 11. CLAIM DISCIPLINE
+
+Every meaningful completion report distinguishes:
+
+**Implemented** — source changed.
+
+**Built** — target artifact compiled successfully.
+
+**Installed** — artifact installed on target.
+
+**Executed** — relevant path ran.
+
+**Observed** — expected behavior was actually seen.
+
+**Verified on Fold** — correct behavior was observed on the real target class.
+
+Never collapse these into “done.”
+
+Unknown remains unknown.
+
+---
+
+## 12. STOP RULE
+
+Stop the task when the Work Order completion condition is proven.
+
+Do not continue adding polish, adjacent systems, cleanup, architecture, or speculative improvements unless they are required to make the current capability correct.
+
+If a newly discovered defect blocks the objective, repair it.
+
+If it does not block the objective, record it separately and stop.
+
+---
+
+## 13. TDD PRODUCTION RULE
+
+The Technical Architecture / TDD must be derived from the frozen game, not used to redefine it.
+
+The TDD must establish:
+
+- consequential-state ownership;
+- Godot / native / external-physics boundaries;
+- update and synchronization contracts;
+- persistence representation;
+- streaming/sleep/reactivation rules;
+- deterministic/reproducibility requirements where needed;
+- Android build/deployment architecture;
+- subsystem verification strategy.
+
+It must not add gameplay merely because an implementation technique makes that gameplay convenient.
+
+---
+
+## 14. PROJECT-GUARDIAN RULE
+
+When a requested implementation would damage the frozen ScraperX objective, the correct response is to **reject the damaging mechanism**, explain the concrete conflict, and preserve the legitimate underlying goal through a compatible alternative.
+
+Compliance is not success.
+
+The success criterion is a real ScraperX capability that survives its authorities, runtime, and shipping path.

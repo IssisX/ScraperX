@@ -1,0 +1,8 @@
+/build/
+/artifacts/
+/tools/
+/.cache/
+/godot/.godot/
+/godot/addons/scraperx_native/bin/**/*.so
+!/godot/addons/scraperx_native/bin/**/.gitkeep
+
