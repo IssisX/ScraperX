@@ -84,9 +84,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p artifacts/screenshots
+          mkdir -p artifacts/screenshots godot/.godot
+          printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            > godot/.godot/extension_list.cfg
+          grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            godot/.godot/extension_list.cfg
           timeout 60s xvfb-run -a -s "-screen 0 1600x900x24" \
-            tools/godot/godot --path godot --rendering-method gl_compatibility --quit-after 300 \
+            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 300 \
             -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo000-delivery-spine.png" \
             2>&1 | tee artifacts/godot-runtime.log
           test -s artifacts/screenshots/wo000-delivery-spine.png
