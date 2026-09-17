@@ -44,6 +44,7 @@ double horizontal_dot(const scraperx::sim::Vector3 &a,
 int main() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
+    using scraperx::sim::TraversalMode;
 
     Simulation partitioned;
     for (std::uint32_t i = 0; i < Simulation::kTickRateHz; ++i) {
@@ -184,13 +185,19 @@ int main() {
     require(horizontal_magnitude(rotating_grounded.support_point_linear_velocity) > 0.5,
             "rotating support must produce non-zero support-point linear velocity away from its axis");
 
-    const double radius_x = rotating_grounded.support_contact_point.x - rotating_grounded.rotating_support_position.x;
-    const double radius_z = rotating_grounded.support_contact_point.z - rotating_grounded.rotating_support_position.z;
+    const double radius_x =
+        rotating_grounded.support_contact_point.x - rotating_grounded.rotating_support_position.x;
+    const double radius_z =
+        rotating_grounded.support_contact_point.z - rotating_grounded.rotating_support_position.z;
     const double omega_y = rotating_grounded.rotating_support_angular_velocity.y;
     const double expected_point_x = omega_y * radius_z;
     const double expected_point_z = -omega_y * radius_x;
-    require(nearly_equal(rotating_grounded.support_point_linear_velocity.x, expected_point_x, 0.12) &&
-                nearly_equal(rotating_grounded.support_point_linear_velocity.z, expected_point_z, 0.12),
+    require(nearly_equal(rotating_grounded.support_point_linear_velocity.x,
+                         expected_point_x,
+                         0.12) &&
+                nearly_equal(rotating_grounded.support_point_linear_velocity.z,
+                             expected_point_z,
+                             0.12),
             "rotating support point velocity must obey omega cross r at the actual contact point");
     require(horizontal_dot(rotating_grounded.player_linear_velocity,
                            rotating_grounded.support_point_linear_velocity) > 0.15,
@@ -208,6 +215,8 @@ int main() {
             "hopper release must reject remote interaction from the spawn point");
     require(!approach.request_hopper_release(),
             "remote player must not release the hopper through presentation-only authority");
+    require(!approach.can_traverse(),
+            "traversal assist must not advertise a route from empty approach grade");
 
     Simulation hopper(InitialSpawn::HopperControl);
     require(hopper.advance_frame(1.0).accepted,
@@ -221,15 +230,18 @@ int main() {
             "hopper release must begin closed");
     require(!hopper_closed.hopper_gate_open,
             "hopper gate must begin closed");
+    require(!hopper_closed.impact_rocker_struck,
+            "downstream rocker must begin mechanically undisturbed");
 
     const auto load_initial = hopper_closed.hopper_load_position;
     const auto gate_initial = hopper_closed.hopper_gate_position;
+    const double rocker_angle_initial = hopper_closed.impact_rocker_angle_radians;
     require(hopper.request_hopper_release(),
             "native control interaction must accept hopper release in range");
     require(!hopper.request_hopper_release(),
             "duplicate release request before the next tick must be rejected");
-    require(hopper.advance_frame(3.0).accepted,
-            "hopper causal interval must advance");
+    require(hopper.advance_frame(5.0).accepted,
+            "hopper-to-rocker causal interval must advance");
 
     const auto hopper_released = hopper.snapshot();
     require(hopper_released.hopper_release_started,
@@ -249,20 +261,127 @@ int main() {
             "one-shot release control must stop advertising an already-started action");
     require(!hopper.request_hopper_release(),
             "released hopper must reject repeated action commands");
+    require(hopper_released.impact_rocker_struck,
+            "released hopper matter must physically propagate into the downstream rocker");
+    require(std::abs(hopper_released.impact_rocker_angle_radians - rocker_angle_initial) > 0.03 ||
+                std::abs(hopper_released.impact_rocker_angular_velocity.x) > 0.10,
+            "second machine consequence must come from real rocker rotation/angular velocity");
 
-    std::cout << "PASS scraperx_sim exterior-machine checkpoint: "
+    Simulation traversal(InitialSpawn::TraversalCourse);
+    require(traversal.advance_frame(1.0).accepted,
+            "traversal-course settling interval must be accepted");
+    const auto vault_ready = traversal.snapshot();
+    require(vault_ready.player_grounded,
+            "vault course must begin from real grade support");
+    require(vault_ready.traversal_assist_available,
+            "low obstacle must expose a bounded native traversal candidate");
+    require(vault_ready.traversal_candidate_mode == TraversalMode::Vault,
+            "first course candidate must classify as vault from actual obstacle geometry");
+    require(traversal.request_traversal(),
+            "vault request must be accepted only in the valid candidate window");
+    require(!traversal.request_traversal(),
+            "duplicate traversal request before a tick must be rejected");
+    require(traversal.advance_frame(0.78).accepted,
+            "vault controller interval must advance through physical simulation");
+    const auto vaulted = traversal.snapshot();
+    require(vaulted.player_position.z < 35.25,
+            "vault must carry the physical player beyond the low blocker without teleporting");
+    require(vaulted.player_position.y > 0.80,
+            "vault must preserve a physically valid player height");
+
+    require(traversal.set_move_input(0.0, -1.0),
+            "course locomotion toward mantle must be accepted");
+    bool mantle_candidate_found = false;
+    for (int step = 0; step < 180; ++step) {
+        require(traversal.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "mantle approach fixed step must advance");
+        const auto candidate = traversal.snapshot();
+        if (candidate.traversal_candidate_mode == TraversalMode::Mantle) {
+            mantle_candidate_found = true;
+            break;
+        }
+    }
+    require(mantle_candidate_found,
+            "real high obstacle geometry must become a mantle candidate after approach");
+    require(traversal.set_move_input(0.0, 0.0),
+            "mantle test must be able to stop ordinary locomotion");
+    require(traversal.request_traversal(),
+            "mantle request must be accepted from the bounded candidate window");
+    require(traversal.advance_frame(1.10).accepted,
+            "mantle controller interval must advance through physical simulation");
+    require(traversal.advance_frame(0.45).accepted,
+            "mantle landing interval must allow gravity/contact to settle");
+    const auto mantled = traversal.snapshot();
+    require(mantled.player_position.y > 2.85,
+            "mantle must raise the actual player body onto the higher support");
+    require(mantled.player_position.z < 32.9,
+            "mantle must move the actual player body past the ledge face");
+    require(mantled.player_grounded,
+            "mantle must terminate on physically supported geometry rather than a scripted pose");
+    require(mantled.support_entity_id == Simulation::kMantleBlockEntityId,
+            "mantle landing support must be the actual native ledge body");
+
+    Simulation hang(InitialSpawn::HangCourse);
+    const auto hang_candidate = hang.snapshot();
+    require(hang_candidate.traversal_assist_available,
+            "airborne player within ledge reach must expose a native hang candidate");
+    require(hang_candidate.traversal_candidate_mode == TraversalMode::Hang,
+            "ledge candidate must classify as hang rather than a route flag");
+    require(hang.request_traversal(),
+            "ledge-grab request must be accepted inside the reach window");
+    require(hang.advance_frame(0.55).accepted,
+            "hang acquisition controller must advance through physical simulation");
+    const auto hanging = hang.snapshot();
+    require(hanging.traversal_mode == TraversalMode::Hang,
+            "hang controller must remain active after acquiring the physical ledge");
+    require(distance_3d(hanging.player_position, hanging.traversal_target_position) < 0.45,
+            "hang controller must converge toward the native ledge target without teleporting");
+    require(hanging.player_position.y > 2.75,
+            "hang controller must arrest the fall at the actual ledge");
+
+    require(hang.request_jump(),
+            "jump from a valid hang must request a climb transition");
+    require(hang.advance_frame(0.95).accepted,
+            "hang-to-mantle controller interval must advance");
+    require(hang.advance_frame(0.55).accepted,
+            "hang-to-mantle landing interval must settle on contact");
+    const auto climbed = hang.snapshot();
+    require(climbed.player_position.y > 4.80,
+            "hang-to-mantle must raise the physical player above the ledge top");
+    require(climbed.player_position.z < 27.0,
+            "hang-to-mantle must move the physical player behind the ledge face");
+    require(climbed.player_grounded,
+            "hang-to-mantle must finish on real support rather than a floating controller state");
+    require(climbed.support_entity_id == Simulation::kHangLedgeEntityId,
+            "climb completion must report the actual native hang ledge as support");
+
+    Simulation hang_drop(InitialSpawn::HangCourse);
+    require(hang_drop.request_traversal(),
+            "second hang fixture must accept a ledge grab");
+    require(hang_drop.advance_frame(0.40).accepted,
+            "second hang acquisition must advance");
+    const auto before_drop = hang_drop.snapshot();
+    require(before_drop.traversal_mode == TraversalMode::Hang,
+            "drop test must begin in hang mode");
+    require(hang_drop.request_drop_from_hang(),
+            "explicit drop must be accepted only from hang mode");
+    require(hang_drop.advance_frame(0.25).accepted,
+            "drop interval must advance under gravity");
+    const auto after_drop = hang_drop.snapshot();
+    require(after_drop.traversal_mode != TraversalMode::Hang,
+            "drop command must release the native hang controller");
+    require(after_drop.player_position.y < before_drop.player_position.y - 0.10,
+            "released hang must actually fall rather than switch animation state");
+
+    std::cout << "PASS scraperx_sim CP-004 traversal-impact checkpoint: "
               << "approach_z=" << approach_spawn.player_position.z
               << " translating_vx=" << translating_support_velocity.x
               << " jump_vx=" << translating_jump.player_linear_velocity.x
-              << " rotating_point_v=("
-              << rotating_grounded.support_point_linear_velocity.x << ','
-              << rotating_grounded.support_point_linear_velocity.z << ')'
-              << " gate_dx=" << hopper_released.hopper_gate_position.x - gate_initial.x
-              << " load_delta=" << distance_3d(hopper_released.hopper_load_position, load_initial)
-              << " load_pos=("
-              << hopper_released.hopper_load_position.x << ','
-              << hopper_released.hopper_load_position.y << ','
-              << hopper_released.hopper_load_position.z << ')'
+              << " rocker_angle=" << hopper_released.impact_rocker_angle_radians
+              << " rocker_omega_x=" << hopper_released.impact_rocker_angular_velocity.x
+              << " vault_z=" << vaulted.player_position.z
+              << " mantle_support=" << mantled.support_entity_id
+              << " hang_support=" << climbed.support_entity_id
               << " hz=" << Simulation::kTickRateHz << '\n';
     return EXIT_SUCCESS;
 }
