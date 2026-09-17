@@ -16,7 +16,7 @@ var _capture_path := ""
 var _capture_scheduled := false
 var _ci_mode := false
 var _yaw := 0.0
-var _pitch := -0.10
+var _pitch := 0.10
 var _move_touch_index := -1
 var _look_touch_index := -1
 var _move_touch_origin := Vector2.ZERO
@@ -60,7 +60,7 @@ func _ready() -> void:
 			_capture_path = argument.trim_prefix("--capture=")
 
 	if _ci_mode:
-		_pitch = -0.30
+		_pitch = 0.30
 
 	RenderingServer.set_default_clear_color(Color("202326"))
 	_build_exterior_world()
