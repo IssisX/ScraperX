@@ -21,6 +21,7 @@ public:
     [[nodiscard]] bool request_jump();
     [[nodiscard]] bool request_traversal();
     [[nodiscard]] bool request_release();
+    [[nodiscard]] bool request_parachute();
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
     [[nodiscard]] std::int64_t get_tick_index() const;
     [[nodiscard]] double get_simulation_time_seconds() const;
@@ -71,6 +72,15 @@ public:
     [[nodiscard]] double get_piston_force_n() const;
     [[nodiscard]] double get_vessel_available_energy_j() const;
     [[nodiscard]] double get_machine_cycle_phase_seconds() const;
+
+    // WO-008 fall / parachute / checkpoint.
+    [[nodiscard]] std::int64_t get_fall_state() const;
+    [[nodiscard]] double get_fall_peak_speed_mps() const;
+    [[nodiscard]] double get_last_impact_speed_mps() const;
+    [[nodiscard]] bool is_parachute_deployed() const;
+    [[nodiscard]] godot::Vector3 get_checkpoint_position() const;
+    [[nodiscard]] std::int64_t get_checkpoint_commit_count() const;
+    [[nodiscard]] std::int64_t get_death_count() const;
 
 protected:
     static void _bind_methods();

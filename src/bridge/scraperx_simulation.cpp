@@ -12,7 +12,7 @@ namespace {
             static_cast<godot::real_t>(value.z)};
 }
 
-constexpr std::int64_t kInitialSpawnCount = 11;
+constexpr std::int64_t kInitialSpawnCount = 13;
 
 } // namespace
 
@@ -32,6 +32,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::request_traversal);
     godot::ClassDB::bind_method(godot::D_METHOD("request_release"),
                                 &ScraperXSimulation::request_release);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_parachute"),
+                                &ScraperXSimulation::request_parachute);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"),
                                 &ScraperXSimulation::advance_frame);
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"),
@@ -132,6 +134,20 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_vessel_available_energy_j);
     godot::ClassDB::bind_method(godot::D_METHOD("get_machine_cycle_phase_seconds"),
                                 &ScraperXSimulation::get_machine_cycle_phase_seconds);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_fall_state"),
+                                &ScraperXSimulation::get_fall_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_fall_peak_speed_mps"),
+                                &ScraperXSimulation::get_fall_peak_speed_mps);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_last_impact_speed_mps"),
+                                &ScraperXSimulation::get_last_impact_speed_mps);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_parachute_deployed"),
+                                &ScraperXSimulation::is_parachute_deployed);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_checkpoint_position"),
+                                &ScraperXSimulation::get_checkpoint_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_checkpoint_commit_count"),
+                                &ScraperXSimulation::get_checkpoint_commit_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_death_count"),
+                                &ScraperXSimulation::get_death_count);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -174,6 +190,10 @@ bool ScraperXSimulation::request_traversal() {
 
 bool ScraperXSimulation::request_release() {
     return simulation_->request_release();
+}
+
+bool ScraperXSimulation::request_parachute() {
+    return simulation_->request_parachute();
 }
 
 std::int64_t ScraperXSimulation::advance_frame(const double frame_delta_seconds) {
@@ -377,6 +397,34 @@ double ScraperXSimulation::get_vessel_available_energy_j() const {
 
 double ScraperXSimulation::get_machine_cycle_phase_seconds() const {
     return simulation_->snapshot().machine_cycle_phase_seconds;
+}
+
+std::int64_t ScraperXSimulation::get_fall_state() const {
+    return static_cast<std::int64_t>(static_cast<std::uint8_t>(simulation_->snapshot().fall_state));
+}
+
+double ScraperXSimulation::get_fall_peak_speed_mps() const {
+    return simulation_->snapshot().fall_peak_speed_mps;
+}
+
+double ScraperXSimulation::get_last_impact_speed_mps() const {
+    return simulation_->snapshot().last_impact_speed_mps;
+}
+
+bool ScraperXSimulation::is_parachute_deployed() const {
+    return simulation_->snapshot().parachute_deployed;
+}
+
+godot::Vector3 ScraperXSimulation::get_checkpoint_position() const {
+    return to_godot(simulation_->snapshot().checkpoint_position);
+}
+
+std::int64_t ScraperXSimulation::get_checkpoint_commit_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().checkpoint_commit_count);
+}
+
+std::int64_t ScraperXSimulation::get_death_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().death_count);
 }
 
 double ScraperXSimulation::get_tower_height_meters() const {

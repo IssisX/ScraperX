@@ -19,6 +19,11 @@ const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
 
+# Mirrors scraperx::sim::FallState.
+const FALL_GROUNDED := 0
+const FALL_AIRBORNE := 1
+const FALL_PARACHUTING := 2
+
 const PHASE_APPROACH := 0
 const PHASE_OBSERVE := 1
 const PHASE_PROVEN := 2
@@ -100,6 +105,8 @@ var _ci_proof_printed := false
 @onready var _touch_knob: ColorRect = $HUD/TouchMove/Knob
 @onready var _action_button: Control = $HUD/TouchAction
 @onready var _release_button: Control = $HUD/TouchRelease
+@onready var _parachute_button: Control = $HUD/TouchParachute
+@onready var _fall_value: Label = $HUD/TopLeft/Fall
 @onready var _light_rig: Node3D = $LightRig
 
 
@@ -224,6 +231,9 @@ func _input(event: InputEvent) -> void:
 		elif touch.pressed and _touch_hits(_release_button, touch.position):
 			if _native != null:
 				_native.request_release()
+		elif touch.pressed and _touch_hits(_parachute_button, touch.position):
+			if _native != null:
+				_native.request_parachute()
 		elif touch.pressed and touch.position.x < get_viewport().get_visible_rect().size.x * 0.5:
 			if _move_touch_index == -1:
 				_move_touch_index = touch.index
@@ -262,6 +272,8 @@ func _input(event: InputEvent) -> void:
 			_native.request_traversal()
 		elif key.keycode == KEY_Q and _native != null:
 			_native.request_release()
+		elif key.keycode == KEY_F and _native != null:
+			_native.request_parachute()
 
 
 func _touch_hits(control: Control, at: Vector2) -> bool:
@@ -361,6 +373,16 @@ func _render_snapshot() -> void:
 	_tick_value.text = "90 HZ NATIVE  /  TICK %08d  /  TOWER %.0f m" % [
 		int(_native.get_tick_index()), float(_native.get_tower_height_meters())]
 
+	var fall_state := int(_native.get_fall_state())
+	_fall_value.text = "FALL      %s  PEAK %5.1f m/s  CHUTE %s  CHECKPOINT %6.2f %5.2f %6.2f  COMMITS %d  DEATHS %d" % [
+		_fall_state_name(fall_state),
+		float(_native.get_fall_peak_speed_mps()),
+		"DEPLOYED" if bool(_native.is_parachute_deployed()) else "stowed",
+		_native.get_checkpoint_position().x, _native.get_checkpoint_position().y,
+		_native.get_checkpoint_position().z,
+		int(_native.get_checkpoint_commit_count()), int(_native.get_death_count())]
+	_fall_value.modulate = Color("8fd9b8") if fall_state == FALL_PARACHUTING else Color("d8e0dc")
+
 	if traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
 	elif traversal == TRAVERSAL_MANTLING:
@@ -375,6 +397,8 @@ func _render_snapshot() -> void:
 		_status.text = "NATIVE MOVING SUPPORT ONLINE"
 	elif grounded:
 		_status.text = "AT GRADE"
+	elif fall_state == FALL_PARACHUTING:
+		_status.text = "PARACHUTE DEPLOYED"
 	else:
 		_status.text = "AIRBORNE / MOMENTUM PRESERVED"
 
@@ -449,6 +473,16 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 		_gear_pivot.rotation = Vector3(0.0, 0.0, gear_angle)
 	if _drum_pivot != null:
 		_drum_pivot.rotation = Vector3(gear_angle * 1.6, 0.0, 0.0)
+
+
+func _fall_state_name(fall_state: int) -> String:
+	match fall_state:
+		FALL_PARACHUTING:
+			return "PARACHUTING"
+		FALL_AIRBORNE:
+			return "AIRBORNE   "
+		_:
+			return "GROUNDED   "
 
 
 func _traversal_name(traversal: int) -> String:

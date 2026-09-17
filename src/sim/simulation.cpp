@@ -135,6 +135,16 @@ constexpr float kValveLeverMassKg = 90.0F;
 constexpr float kValveShutAngle = -0.05F;
 constexpr float kValveOpenAngle = 0.62F;
 
+// WO-008 fall / parachute / checkpoint. An 8.8 m unassisted lift-platform
+// fall (~13.1 m/s impact) must stay survivable per GDD 8.2; a genuine
+// tower-scale drop must not be. Terminal parachute speed (~9 m/s, derived
+// below) sits comfortably under this threshold with margin either side.
+constexpr float kLethalImpactSpeedMps = 20.0F;
+
+// Quadratic drag a = -k*v*|v|. Solved for a target terminal speed v_t at
+// k = g / v_t^2 (net vertical accel is zero at v_t: g - k*v_t^2 = 0).
+constexpr float kParachuteDragCoefficient = 0.1211F; // v_t ~= 9 m/s at g=9.81
+
 constexpr float kTraversalStallTolerance = 0.22F;
 constexpr std::uint32_t kTraversalStallAbortTicks = 12;
 
@@ -370,6 +380,14 @@ private:
         return {6.1, 4.2, 12.0};
     case scraperx::sim::InitialSpawn::BlockedLedgeApproach:
         return {-3.6, 1.2, -8.0};
+    case scraperx::sim::InitialSpawn::HighDrop:
+        // ~61 m above the static deck: unmitigated free fall reaches
+        // sqrt(2*g*61) ~= 34.6 m/s, well past kLethalImpactSpeedMps.
+        return {0.0, 62.0, -8.0};
+    case scraperx::sim::InitialSpawn::SurvivableDrop:
+        // ~12 m above the static deck: unmitigated free fall reaches
+        // sqrt(2*g*12) ~= 15.3 m/s, under kLethalImpactSpeedMps with margin.
+        return {0.0, 13.0, -8.0};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -419,6 +437,31 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
     }
     const float t = std::clamp((value - edge0) / (edge1 - edge0), 0.0F, 1.0F);
     return t * t * (3.0F - 2.0F * t);
+}
+
+// WO-008 checkpoint capture: full rigid-body state for one dynamic machine
+// member. Kinematic bodies (supports, hoist scoop) deliberately have no
+// equivalent -- they are pure functions of the authoritative tick counter
+// and are always correct without restoration.
+struct BodyCheckpoint final {
+    JPH::RVec3 position{JPH::RVec3::sZero()};
+    JPH::Quat rotation = JPH::Quat::sIdentity();
+    JPH::Vec3 linear_velocity{JPH::Vec3::sZero()};
+    JPH::Vec3 angular_velocity{JPH::Vec3::sZero()};
+};
+
+[[nodiscard]] BodyCheckpoint capture_body(const JPH::BodyInterface &bodies,
+                                          const JPH::BodyID id) noexcept {
+    return {bodies.GetPosition(id), bodies.GetRotation(id), bodies.GetLinearVelocity(id),
+            bodies.GetAngularVelocity(id)};
+}
+
+void restore_body(JPH::BodyInterface &bodies, const JPH::BodyID id,
+                  const BodyCheckpoint &checkpoint) noexcept {
+    bodies.SetPositionAndRotation(id, checkpoint.position, checkpoint.rotation,
+                                  JPH::EActivation::Activate);
+    bodies.SetLinearAndAngularVelocity(id, checkpoint.linear_velocity,
+                                       checkpoint.angular_velocity);
 }
 
 [[nodiscard]] scraperx::sim::Vector3 to_vector3(const JPH::RVec3 value) noexcept {
@@ -562,6 +605,10 @@ public:
         player_id_ = bodies.CreateAndAddBody(player_settings, JPH::EActivation::Activate);
 
         physics_system_.OptimizeBroadPhase();
+
+        checkpoint_position_ = JPH::RVec3(0.0, 0.9, 0.0);
+        commit_machine_checkpoint(bodies);
+
         read_state();
     }
 
@@ -601,15 +648,26 @@ public:
         bool jump_requested = false;
         bool traversal_requested = false;
         bool release_requested = false;
+        bool parachute_toggle_requested = false;
     };
 
     void step(const StepCommands &commands,
               const float delta_seconds,
               const double next_time_seconds) noexcept {
+        // WO-008: captured before anything this tick can change grounded_, so
+        // it means exactly "was the player standing on something one tick ago."
+        const bool was_grounded_before_tick = grounded_;
+
         auto &bodies = physics_system_.GetBodyInterface();
         update_support_motion(bodies, delta_seconds, next_time_seconds);
         update_scoop(bodies, delta_seconds, next_time_seconds);
         update_plant(bodies, delta_seconds);
+
+        // A toggle while airborne only: deploying/retracting on the ground is
+        // meaningless and would let a grounded button-mash pre-arm the canopy.
+        if (commands.parachute_toggle_requested && !was_grounded_before_tick) {
+            parachute_deployed_ = !parachute_deployed_;
+        }
 
         if (regrab_lockout_ticks_ > 0) {
             --regrab_lockout_ticks_;
@@ -623,6 +681,18 @@ public:
             jump_started = apply_locomotion(bodies, commands, delta_seconds);
             if (!jump_started) {
                 try_begin_hang(bodies, commands);
+            }
+            if (!was_grounded_before_tick) {
+                apply_parachute_drag(bodies, delta_seconds);
+                // Distinct from fall_peak_speed_mps_ (a running max, telemetry
+                // only): this is overwritten every tick, so it always holds
+                // exactly the velocity the body carries into this tick's
+                // contact resolution -- what "impact speed" has to mean for
+                // late deceleration (a well-timed parachute) to matter.
+                const float vertical_speed = bodies.GetLinearVelocity(player_id_).GetY();
+                pre_contact_fall_speed_mps_ = std::max(0.0F, -vertical_speed);
+                fall_peak_speed_mps_ =
+                    std::max(fall_peak_speed_mps_, pre_contact_fall_speed_mps_);
             }
         }
 
@@ -640,6 +710,28 @@ public:
         support_sample_ = support;
         grounded_ = support.grounded;
         support_entity_id_ = support.entity_id;
+
+        // WO-008: a genuine (non-traversal, non-jump) landing is the one
+        // moment fall consequence is resolved. Traversal-completion landings
+        // never reach here with a real fall velocity -- complete_traversal
+        // always sets a support-relative landing velocity first -- so no
+        // separate traversal exemption is needed.
+        bool died_this_tick = false;
+        if (grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None &&
+            !jump_started) {
+            last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
+            if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
+                restore_from_checkpoint(bodies);
+                died_this_tick = true;
+            }
+        }
+        if (!died_this_tick && grounded_ && traversal_state_ == TraversalState::None) {
+            commit_checkpoint(bodies);
+        }
+        if (grounded_) {
+            fall_peak_speed_mps_ = 0.0F;
+            parachute_deployed_ = false;
+        }
 
         if (traversal_state_ != TraversalState::None) {
             resolve_traversal_outcome(bodies);
@@ -1361,6 +1453,25 @@ private:
         return jump_started;
     }
 
+    // Real quadratic drag opposing the full velocity vector, not a clamp: it
+    // can only ever pull speed toward the terminal value, never accelerate
+    // the player upward past what deceleration implies (Governing Law 7 --
+    // no powered ascent). Applied on top of ordinary air control, so existing
+    // horizontal steering doubles as the "redirection" the same law permits.
+    void apply_parachute_drag(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
+        if (!parachute_deployed_) {
+            return;
+        }
+        JPH::Vec3 velocity = bodies.GetLinearVelocity(player_id_);
+        const float speed = velocity.Length();
+        if (speed > 1.0e-4F) {
+            const JPH::Vec3 drag_acceleration =
+                -(velocity / speed) * (kParachuteDragCoefficient * speed * speed);
+            velocity += drag_acceleration * delta_seconds;
+            bodies.SetLinearVelocity(player_id_, velocity);
+        }
+    }
+
     void try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
         if (grounded_ || regrab_lockout_ticks_ > 0) {
             return;
@@ -1664,6 +1775,56 @@ private:
                                   true);
     }
 
+    // Machine half of a checkpoint (TDD 14.1: "machine/control state").
+    // Kinematic bodies are deliberately excluded -- see BodyCheckpoint comment.
+    void commit_machine_checkpoint(const JPH::BodyInterface &bodies) noexcept {
+        checkpoint_.ballast = capture_body(bodies, ballast_id_);
+        checkpoint_.tipper = capture_body(bodies, tipper_id_);
+        checkpoint_.valve_lever = capture_body(bodies, valve_lever_id_);
+        checkpoint_.lift_platform = capture_body(bodies, lift_platform_id_);
+        checkpoint_.counterweight = capture_body(bodies, counterweight_id_);
+        checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
+        checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
+    }
+
+    // WO-008 automatic commit (GDD 9.1): every tick the player is grounded and
+    // not mid-traversal, so the checkpoint is always "wherever the player was
+    // last standing." No dwell timer, no player-facing save action.
+    void commit_checkpoint(const JPH::BodyInterface &bodies) noexcept {
+        checkpoint_position_ = bodies.GetPosition(player_id_);
+        commit_machine_checkpoint(bodies);
+        ++checkpoint_commit_count_;
+    }
+
+    // WO-008 death restore (Governing Laws 9, 21): the one sanctioned
+    // exception to "no hidden teleportation," explicitly named by Law 21
+    // itself. Restores player and every captured machine body, then clears
+    // this tick's now-stale contact/traversal-adjacent state so the next
+    // tick re-establishes ground truth from a fresh contact pass rather than
+    // publishing a snapshot that mixes a teleported position with a contact
+    // sample that referred to the pre-restore position.
+    void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+        bodies.SetPositionAndRotation(player_id_, checkpoint_position_, JPH::Quat::sIdentity(),
+                                      JPH::EActivation::Activate);
+        bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
+
+        restore_body(bodies, ballast_id_, checkpoint_.ballast);
+        restore_body(bodies, tipper_id_, checkpoint_.tipper);
+        restore_body(bodies, valve_lever_id_, checkpoint_.valve_lever);
+        restore_body(bodies, lift_platform_id_, checkpoint_.lift_platform);
+        restore_body(bodies, counterweight_id_, checkpoint_.counterweight);
+        steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
+
+        grounded_ = false;
+        support_entity_id_ = 0;
+        support_sample_ = {};
+        airborne_inherited_velocity_ = JPH::Vec3::sZero();
+        fall_peak_speed_mps_ = 0.0F;
+        pre_contact_fall_speed_mps_ = 0.0F;
+        parachute_deployed_ = false;
+        ++death_count_;
+    }
+
     void read_machine_state(const JPH::BodyInterface &bodies) noexcept {
         state_.hoist_scoop_position = {kScoopX, scoop_height_, kScoopZ};
         state_.hoist_scoop_tilt_radians = scoop_tilt_;
@@ -1761,6 +1922,16 @@ private:
         state_.accepted_traversal_count = accepted_traversal_count_;
         state_.rejected_traversal_count = rejected_traversal_count_;
         state_.aborted_traversal_count = aborted_traversal_count_;
+
+        state_.fall_state = !grounded_
+            ? (parachute_deployed_ ? FallState::Parachuting : FallState::Airborne)
+            : FallState::Grounded;
+        state_.fall_peak_speed_mps = fall_peak_speed_mps_;
+        state_.last_impact_speed_mps = last_impact_speed_mps_;
+        state_.parachute_deployed = parachute_deployed_;
+        state_.checkpoint_position = to_vector3(checkpoint_position_);
+        state_.checkpoint_commit_count = checkpoint_commit_count_;
+        state_.death_count = death_count_;
     }
 
     JoltRuntimeLease runtime_;
@@ -1828,6 +1999,24 @@ private:
     std::uint64_t aborted_traversal_count_ = 0;
     LedgeProbe affordance_{};
 
+    struct MachineCheckpoint final {
+        BodyCheckpoint ballast{};
+        BodyCheckpoint tipper{};
+        BodyCheckpoint valve_lever{};
+        BodyCheckpoint lift_platform{};
+        BodyCheckpoint counterweight{};
+        double vessel_mass_kg = 0.0;
+        double cylinder_mass_kg = 0.0;
+    };
+    JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
+    MachineCheckpoint checkpoint_{};
+    std::uint64_t checkpoint_commit_count_ = 0;
+    std::uint64_t death_count_ = 0;
+    bool parachute_deployed_ = false;
+    float fall_peak_speed_mps_ = 0.0F;
+    float pre_contact_fall_speed_mps_ = 0.0F;
+    float last_impact_speed_mps_ = 0.0F;
+
     Snapshot state_{};
 };
 
@@ -1893,6 +2082,11 @@ bool Simulation::request_release() noexcept {
     return true;
 }
 
+bool Simulation::request_parachute() noexcept {
+    parachute_toggle_requested_ = true;
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -1905,11 +2099,13 @@ void Simulation::step_fixed() noexcept {
     commands.jump_requested = jump_requested_;
     commands.traversal_requested = traversal_requested_;
     commands.release_requested = release_requested_;
+    commands.parachute_toggle_requested = parachute_toggle_requested_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     jump_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;
+    parachute_toggle_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();

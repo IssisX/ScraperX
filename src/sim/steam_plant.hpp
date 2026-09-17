@@ -70,6 +70,15 @@ public:
     void set_feed_enabled(bool enabled) noexcept;
     [[nodiscard]] bool feed_enabled() const noexcept { return feed_enabled_; }
 
+    // Checkpoint restore (WO-008 / TDD 14.1): forces the two integrated mass
+    // variables to committed values and immediately recomputes the pressures
+    // that derive from them, so the very next published snapshot is correct.
+    // Flow/force fields are zeroed rather than left stale -- they are only
+    // ever a function of the current tick's valve fraction and masses, so
+    // "unknown until next step" is the honest value, not whatever they
+    // happened to be at the moment of death.
+    void restore_state(double vessel_mass_kg, double cylinder_mass_kg) noexcept;
+
     // Advances one authoritative fixed step. Non-finite or non-positive steps are
     // ignored so a bad frame can never corrupt plant state.
     void step(double delta_seconds) noexcept;

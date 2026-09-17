@@ -613,6 +613,185 @@ int main() {
               << " release_vz=" << after_release.player_linear_velocity.z
               << " rejected=" << blocked_result.rejected_traversal_count
               << " accepted=" << moving.snapshot().accepted_traversal_count << '\n';
+    // ---- WO-008 fall / parachute / checkpoint ----------------------------
+
+    Simulation lethal(InitialSpawn::HighDrop);
+    const auto lethal_start = lethal.snapshot();
+    require(lethal_start.death_count == 0, "a fresh simulation must start with zero deaths");
+    require(!advance_until(lethal,
+                           [](const Snapshot &state) { return state.death_count >= 1; },
+                           0.01),
+            "death must not be instantaneous: the drop must actually take real time");
+    require(advance_until(lethal,
+                          [](const Snapshot &state) { return state.death_count >= 1; },
+                          6.0),
+            "an unmitigated ~61 m fall must be lethal");
+    const auto lethal_result = lethal.snapshot();
+    require(lethal_result.last_impact_speed_mps > 20.0,
+            "the recorded impact speed must actually exceed the lethal threshold");
+    require(nearly_equal(lethal_result.checkpoint_position.x, 0.0, 0.05) &&
+                nearly_equal(lethal_result.checkpoint_position.y, 0.9, 0.05) &&
+                nearly_equal(lethal_result.checkpoint_position.z, 0.0, 0.05),
+            "with no prior real commit, death must restore the seeded safe checkpoint");
+    require(std::abs(lethal_result.player_position.x - lethal_result.checkpoint_position.x) <
+                    0.05 &&
+                std::abs(lethal_result.player_position.y - lethal_result.checkpoint_position.y) <
+                    0.05 &&
+                std::abs(lethal_result.player_position.z - lethal_result.checkpoint_position.z) <
+                    0.05,
+            "death must actually move the player to the checkpoint, not leave them at the "
+            "fatal impact site");
+    require(std::abs(lethal_result.player_linear_velocity.y) < 0.05,
+            "a checkpoint restore must zero velocity, not merely reposition the body");
+
+    Simulation survivable(InitialSpawn::SurvivableDrop);
+    require(advance_until(survivable,
+                          [](const Snapshot &state) { return state.player_grounded; },
+                          4.0),
+            "the short drop must land");
+    require(survivable.snapshot().death_count == 0,
+            "an ordinary ~12 m platforming fall must never be lethal (GDD 8.2)");
+
+    Simulation chuted(InitialSpawn::HighDrop);
+    require(chuted.advance_frame(0.5).accepted, "early free-fall interval must be accepted");
+    require(chuted.snapshot().fall_state == scraperx::sim::FallState::Airborne,
+            "the player must be genuinely airborne before deploying");
+    require(chuted.request_parachute(), "an airborne parachute deploy request must be accepted");
+    require(chuted.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "the deploy tick must advance");
+    require(chuted.snapshot().parachute_deployed, "the parachute must show as deployed");
+    require(chuted.snapshot().fall_state == scraperx::sim::FallState::Parachuting,
+            "fall_state must report Parachuting once deployed");
+    require(advance_until(chuted,
+                          [](const Snapshot &state) { return state.player_grounded; },
+                          10.0),
+            "a parachuted fall must still land");
+    const auto chuted_result = chuted.snapshot();
+    require(chuted_result.death_count == 0,
+            "deploying early enough must make a lethal-height fall survivable");
+    require(chuted_result.last_impact_speed_mps < 12.0,
+            "the parachute must measurably reduce impact speed toward its terminal value");
+    require(chuted_result.last_impact_speed_mps > 5.0,
+            "drag must be a real decelerating force, not an instant velocity clamp to near-zero");
+
+    Simulation late_chute(InitialSpawn::HighDrop);
+    require(advance_until(late_chute,
+                          [](const Snapshot &state) {
+                              return state.player_position.y < 3.0;
+                          },
+                          6.0),
+            "the late-deploy test must reach low altitude while still airborne");
+    require(!late_chute.snapshot().player_grounded,
+            "the late-deploy test must still be airborne at low altitude");
+    require(late_chute.request_parachute(),
+            "a late airborne parachute deploy request must still be accepted");
+    require(advance_until(late_chute,
+                          [](const Snapshot &state) { return state.death_count >= 1; },
+                          2.0),
+            "deploying too late must not fabricate a save: the fall must still kill");
+
+    Simulation grounded_parachute(InitialSpawn::StaticDeck);
+    require(grounded_parachute.advance_frame(1.0).accepted,
+            "grounded settling interval must be accepted");
+    require(grounded_parachute.snapshot().player_grounded,
+            "the grounded-parachute test must start grounded");
+    require(grounded_parachute.request_parachute(),
+            "a parachute request while grounded must be queued, not rejected");
+    require(grounded_parachute.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "the grounded deploy-attempt tick must advance");
+    require(!grounded_parachute.snapshot().parachute_deployed,
+            "a deploy request while grounded must produce no state change (GDD 8.3)");
+
+    Simulation committed(InitialSpawn::MachineYard);
+    require(committed.set_facing(1.0, 0.0), "checkpoint test facing must be accepted");
+    require(committed.set_move_input(1.0, 0.0), "checkpoint test approach input must be accepted");
+    require(advance_until(committed,
+                          [](const Snapshot &state) {
+                              return state.player_grounded &&
+                                     state.support_entity_id == Simulation::kTipperEntityId;
+                          },
+                          6.0),
+            "the checkpoint test must reach the native tipper deck");
+    const auto pre_commit_checkpoints = committed.snapshot().checkpoint_commit_count;
+    require(committed.advance_frame(1.0).accepted,
+            "standing on the tipper must advance and keep auto-committing");
+    const auto disturbed_checkpoint = committed.snapshot();
+    require(disturbed_checkpoint.checkpoint_commit_count > pre_commit_checkpoints,
+            "standing grounded must keep advancing the automatic commit count");
+    require(std::abs(disturbed_checkpoint.tipper_angle_radians) > 0.02,
+            "the committed checkpoint must be taken while the tipper is genuinely disturbed");
+    require(std::abs(disturbed_checkpoint.checkpoint_position.x -
+                     disturbed_checkpoint.player_position.x) < 0.05 &&
+                std::abs(disturbed_checkpoint.checkpoint_position.z -
+                         disturbed_checkpoint.player_position.z) < 0.05,
+            "the committed checkpoint position must track the player's current grounded spot");
+
+    require(committed.set_facing(0.0, 1.0), "checkpoint jump-away facing must be accepted");
+    require(committed.set_move_input(0.0, 0.0), "checkpoint jump-away input must be accepted");
+    require(committed.request_jump(), "the checkpoint test jump must be accepted");
+    require(committed.advance_frame(0.15).accepted, "the jump-away tick must advance");
+    require(!committed.snapshot().player_grounded, "the checkpoint test must now be airborne");
+    const auto airborne_checkpoint = committed.snapshot();
+    require(nearly_equal(airborne_checkpoint.checkpoint_position.x,
+                         disturbed_checkpoint.checkpoint_position.x, 1.0e-6) &&
+                nearly_equal(airborne_checkpoint.checkpoint_position.y,
+                             disturbed_checkpoint.checkpoint_position.y, 1.0e-6) &&
+                nearly_equal(airborne_checkpoint.checkpoint_position.z,
+                             disturbed_checkpoint.checkpoint_position.z, 1.0e-6),
+            "leaving the ground must freeze the checkpoint at the last grounded position, not "
+            "track mid-air position");
+
+    // Death must restore real *machine* state, not just the player -- proof that
+    // this is a genuine TDD-14.1 state rollback and not a scripted respawn. The
+    // hoist/ballast cycle runs autonomously (WO-006), so it changes measurably
+    // within seconds with no player input at all. HighDrop's ~6 s fall to
+    // death never touches ground, so the only checkpoint in play is the one
+    // seeded at construction -- if restore is real, the ballast must return to
+    // its pristine seeded height, not the height the autonomous cycle had
+    // already carried it to by the moment of death.
+    Simulation machine_restore(InitialSpawn::HighDrop);
+    const double seeded_ballast_y = machine_restore.snapshot().ballast_position.y;
+    require(machine_restore.advance_frame(2.5).accepted,
+            "letting the machine run autonomously before death must be accepted");
+    const auto mid_fall = machine_restore.snapshot();
+    require(!mid_fall.player_grounded && mid_fall.death_count == 0,
+            "the restore-signal window must still be mid-fall, before any death or re-commit");
+    require(mid_fall.ballast_position.y > seeded_ballast_y + 2.0,
+            "the autonomous hoist must have measurably lifted the ballast with zero player input");
+    require(advance_until(machine_restore,
+                          [](const Snapshot &state) { return state.death_count >= 1; },
+                          2.0),
+            "the remainder of the unmitigated fall must be lethal");
+    const auto post_death = machine_restore.snapshot();
+    require(post_death.death_count == 1, "exactly one death must be recorded");
+    require(std::abs(post_death.ballast_position.y - seeded_ballast_y) < 0.1,
+            "death must restore the ballast to its seeded checkpoint height, not leave it "
+            "wherever the autonomous cycle had carried it -- proving machine state, not just "
+            "the player, is part of the checkpoint");
+
+    // Frame-partition invariance for the whole subsystem.
+    Simulation fall_partitioned(InitialSpawn::HighDrop);
+    for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz * 4; ++tick) {
+        require(fall_partitioned.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "fall-subsystem partition step must be accepted");
+    }
+    Simulation fall_batched(InitialSpawn::HighDrop);
+    require(fall_batched.advance_frame(4.0).accepted,
+            "fall-subsystem batched interval must be accepted");
+    const auto partitioned_fall = fall_partitioned.snapshot();
+    const auto batched_fall = fall_batched.snapshot();
+    require(partitioned_fall.tick_index == batched_fall.tick_index,
+            "fall-subsystem frame partitioning must not change tick count");
+    require(partitioned_fall.death_count == batched_fall.death_count,
+            "fall-subsystem frame partitioning must not change death count");
+    require(nearly_equal(partitioned_fall.player_position.x, batched_fall.player_position.x,
+                         1.0e-5) &&
+                nearly_equal(partitioned_fall.player_position.y, batched_fall.player_position.y,
+                             1.0e-5) &&
+                nearly_equal(partitioned_fall.player_position.z, batched_fall.player_position.z,
+                             1.0e-5),
+            "fall-subsystem frame partitioning must not change native player position");
+
     std::cout << "PASS scraperx_sim coupled machine: valve=" << first_cycle.peak_valve_fraction
               << " piston=" << first_cycle.peak_piston_force
               << "N lift=" << first_cycle.peak_lift_height
@@ -620,5 +799,15 @@ int main() {
               << "m starved_energy=" << starved_final.vessel_available_energy_j
               << "J player_valve=" << disturbed_result.valve_open_fraction
               << " tower_m=" << Simulation::kTowerHeightMeters << '\n';
+    std::cout << "PASS scraperx_sim fall/parachute/checkpoint: lethal_impact="
+              << lethal_result.last_impact_speed_mps
+              << " chuted_impact=" << chuted_result.last_impact_speed_mps
+              << " late_chute_deaths=" << late_chute.snapshot().death_count
+              << " grounded_deploy_blocked="
+              << int(!grounded_parachute.snapshot().parachute_deployed)
+              << " commits=" << airborne_checkpoint.checkpoint_commit_count
+              << " machine_restored="
+              << int(std::abs(post_death.ballast_position.y - seeded_ballast_y) < 0.1)
+              << " deaths=" << post_death.death_count << '\n';
     return EXIT_SUCCESS;
 }

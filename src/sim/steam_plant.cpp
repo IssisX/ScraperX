@@ -31,6 +31,18 @@ void SteamPlant::set_feed_enabled(const bool enabled) noexcept {
     feed_enabled_ = enabled;
 }
 
+void SteamPlant::restore_state(const double vessel_mass_kg, const double cylinder_mass_kg) noexcept {
+    state_.vessel_mass_kg = std::max(0.0, vessel_mass_kg);
+    state_.cylinder_mass_kg = std::max(0.0, cylinder_mass_kg);
+    const double rt = config_.gas_constant_j_per_kg_k * config_.temperature_k;
+    state_.vessel_pressure_pa = state_.vessel_mass_kg * rt / config_.vessel_volume_m3;
+    state_.cylinder_pressure_pa = state_.cylinder_mass_kg * rt / config_.cylinder_volume_m3;
+    state_.orifice_mass_flow_kg_per_s = 0.0;
+    state_.bleed_mass_flow_kg_per_s = 0.0;
+    state_.feed_mass_flow_kg_per_s = 0.0;
+    state_.piston_force_n = 0.0;
+}
+
 // Compressible flow through a thin orifice. Choked above the critical pressure
 // ratio, subcritical below it, and identically zero when the pressure difference
 // or the area vanishes. No backflow is modelled; a reversed pressure difference

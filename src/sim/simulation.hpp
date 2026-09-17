@@ -25,6 +25,14 @@ enum class InitialSpawn : std::uint8_t {
     ExteriorGrade = 8,
     MachineYard = 9,
     LiftPlatform = 10,
+    // WO-008 falsifier spawn: high above the static deck with no horizontal
+    // offset, so an unmitigated fall is unambiguously lethal and a
+    // sufficiently early parachute deploy is unambiguously survivable.
+    HighDrop = 11,
+    // WO-008 falsifier spawn: a short ~12 m drop, comfortably under
+    // kLethalImpactSpeedMps, proving ordinary platforming falls stay
+    // survivable (GDD 8.2) and are never mistaken for a lethal one.
+    SurvivableDrop = 12,
 };
 
 enum class TraversalState : std::uint8_t {
@@ -32,6 +40,14 @@ enum class TraversalState : std::uint8_t {
     Hanging = 1,
     Mantling = 2,
     Vaulting = 3,
+};
+
+// WO-008. Parachuting is a sub-state of Airborne, not a fourth motion primitive
+// -- the player is still under normal air control, with drag layered on top.
+enum class FallState : std::uint8_t {
+    Grounded = 0,
+    Airborne = 1,
+    Parachuting = 2,
 };
 
 struct Snapshot final {
@@ -64,6 +80,15 @@ struct Snapshot final {
     std::uint64_t accepted_traversal_count = 0;
     std::uint64_t rejected_traversal_count = 0;
     std::uint64_t aborted_traversal_count = 0;
+
+    // --- WO-008 fall / parachute / checkpoint -----------------------------
+    FallState fall_state = FallState::Grounded;
+    double fall_peak_speed_mps = 0.0;
+    double last_impact_speed_mps = 0.0;
+    bool parachute_deployed = false;
+    Vector3 checkpoint_position{};
+    std::uint64_t checkpoint_commit_count = 0;
+    std::uint64_t death_count = 0;
 
     // --- coupled machine: every field below is read back from the authoritative
     // Jolt bodies or from the reduced-order steam plant, never authored.
@@ -140,6 +165,12 @@ public:
     [[nodiscard]] bool request_traversal() noexcept;
     [[nodiscard]] bool request_release() noexcept;
 
+    // Toggles the always-carried parachute. Only takes effect while airborne
+    // (GDD 8.3); queued and resolved on the authoritative tick like every
+    // other command, so a press while grounded is accepted as a command but
+    // produces no state change.
+    [[nodiscard]] bool request_parachute() noexcept;
+
     // Disables the boiler feed so the plant becomes a strictly finite reservoir.
     // Used to prove the machine cannot manufacture work.
     void set_boiler_feed_enabled(bool enabled) noexcept;
@@ -161,6 +192,7 @@ private:
     bool jump_requested_ = false;
     bool traversal_requested_ = false;
     bool release_requested_ = false;
+    bool parachute_toggle_requested_ = false;
     Snapshot snapshot_{};
 };
 

@@ -102,6 +102,11 @@ theme_override_colors/font_color = Color(0.68, 0.64, 0.58, 1)
 theme_override_font_sizes/font_size = 16
 text = "VESSEL"
 
+[node name="Fall" type="Label" parent="HUD/TopLeft"]
+theme_override_colors/font_color = Color(0.62, 0.7, 0.66, 1)
+theme_override_font_sizes/font_size = 16
+text = "FALL"
+
 [node name="TopRight" type="VBoxContainer" parent="HUD"]
 anchors_preset = 1
 anchor_left = 1.0
@@ -238,6 +243,36 @@ theme_override_font_sizes/font_size = 17
 text = "RELEASE"
 mouse_filter = 2
 
+[node name="TouchParachute" type="Control" parent="HUD"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -228.0
+offset_top = -88.0
+offset_right = -44.0
+offset_bottom = -44.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Face" type="ColorRect" parent="HUD/TouchParachute"]
+offset_right = 184.0
+offset_bottom = 44.0
+color = Color(0.2, 0.42, 0.36, 0.28)
+mouse_filter = 2
+
+[node name="Caption" type="Label" parent="HUD/TouchParachute"]
+offset_left = 20.0
+offset_top = 9.0
+offset_right = 170.0
+offset_bottom = 34.0
+theme_override_colors/font_color = Color(0.68, 0.9, 0.82, 1)
+theme_override_font_sizes/font_size = 17
+text = "PARACHUTE"
+mouse_filter = 2
+
 [node name="TouchLook" type="Label" parent="HUD"]
 anchors_preset = 3
 anchor_left = 1.0
@@ -252,5 +287,5 @@ grow_horizontal = 0
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.58, 0.56, 0.53, 0.72)
 theme_override_font_sizes/font_size = 16
-text = "DRAG LOOK / LEFT PAD MOVE / E VAULT-MANTLE / Q RELEASE"
+text = "DRAG LOOK / LEFT PAD MOVE / E VAULT-MANTLE / Q RELEASE / F PARACHUTE"
 horizontal_alignment = 2
