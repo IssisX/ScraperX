@@ -261,6 +261,19 @@ int main() {
             "one-shot release control must stop advertising an already-started action");
     require(!hopper.request_hopper_release(),
             "released hopper must reject repeated action commands");
+    std::cerr << "DIAG hopper_load=(" << hopper_released.hopper_load_position.x << ','
+              << hopper_released.hopper_load_position.y << ','
+              << hopper_released.hopper_load_position.z << ") load_v=("
+              << hopper_released.hopper_load_linear_velocity.x << ','
+              << hopper_released.hopper_load_linear_velocity.y << ','
+              << hopper_released.hopper_load_linear_velocity.z << ") rocker=("
+              << hopper_released.impact_rocker_position.x << ','
+              << hopper_released.impact_rocker_position.y << ','
+              << hopper_released.impact_rocker_position.z << ") rocker_angle="
+              << hopper_released.impact_rocker_angle_radians << " rocker_w=("
+              << hopper_released.impact_rocker_angular_velocity.x << ','
+              << hopper_released.impact_rocker_angular_velocity.y << ','
+              << hopper_released.impact_rocker_angular_velocity.z << ")\n";
     require(hopper_released.impact_rocker_struck,
             "released hopper matter must physically propagate into the downstream rocker");
     require(std::abs(hopper_released.impact_rocker_angle_radians - rocker_angle_initial) > 0.03 ||
