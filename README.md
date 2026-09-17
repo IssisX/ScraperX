@@ -4,18 +4,24 @@ ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority pac
 
 ## Current work order
 
-**WO-001 — Embodied Authority**
+**WO-003 — Athletic Traversal**
 
 ```text
-touch / WASD desired movement
+touch / WASD movement, look facing, contextual action
   -> ScraperX GDExtension command seam
   -> native 90 Hz Jolt player body
-  -> static-world contact and support identity
-  -> immutable pose snapshot
+  -> native geometry probe against the real collision world
+  -> validated mantle / vault / ledge-hang in the support body's own frame
+  -> inherited support motion on completion
+  -> immutable snapshot
   -> Godot first-person tower-deck presentation
 ```
 
-This is the first embodied dependency for the full game: one persistent 1.6 km skyscraper climbed through athletic industrial traversal and large-scale Rube-Goldberg physics mechanisms. WO-001 deliberately stops before climbing, moving supports, freight, structural, and process systems.
+Completed before it: WO-000 delivery spine, WO-001 embodied authority, WO-002 moving-support truth.
+
+This is the third embodied slice of the full game: one persistent 1.6 km skyscraper climbed through athletic industrial traversal and large-scale Rube-Goldberg physics mechanisms. WO-003 deliberately stops before the fall/parachute/checkpoint loop, freight machinery, structural coupling, and process systems.
+
+Traversal assistance never fabricates geometry. Each mantle, vault, and ledge grab requires a real wall hit, a real top surface on the same body, a rise inside the reach band, a supported landing, and a capsule clearance query at the actual landing pose. A committed traversal is driven through Jolt every tick and is aborted — not forced through — when real geometry blocks it.
 
 ## Build
 
@@ -32,7 +38,7 @@ cmake --build build/host
 ctest --test-dir build/host --output-on-failure
 ```
 
-The GitHub Actions workflow performs the bounded WO-001 proof path, including native support/locomotion tests, Linux GDExtension loading, one rendered first-person tower-deck capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
+The GitHub Actions workflow performs the bounded WO-003 proof path, including the native traversal test suite, Linux GDExtension loading, a runtime that walks to a real ledge and mantles it, one rendered first-person capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
 
 ## Claim boundary
 

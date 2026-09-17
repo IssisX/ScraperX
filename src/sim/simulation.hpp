@@ -15,6 +15,18 @@ enum class InitialSpawn : std::uint8_t {
     StaticDeck = 0,
     TranslatingSupport = 1,
     RotatingSupport = 2,
+    VaultApproach = 3,
+    MantleApproach = 4,
+    HangApproach = 5,
+    MovingLedgeApproach = 6,
+    BlockedLedgeApproach = 7,
+};
+
+enum class TraversalState : std::uint8_t {
+    None = 0,
+    Hanging = 1,
+    Mantling = 2,
+    Vaulting = 3,
 };
 
 struct Snapshot final {
@@ -33,6 +45,20 @@ struct Snapshot final {
     Vector3 rotating_support_position{};
     double rotating_support_yaw_radians = 0.0;
     Vector3 rotating_support_angular_velocity{};
+    Vector3 moving_ledge_position{};
+    Vector3 moving_ledge_linear_velocity{};
+    TraversalState traversal_state = TraversalState::None;
+    std::uint64_t traversal_support_entity_id = 0;
+    Vector3 traversal_ledge_point{};
+    Vector3 traversal_target_point{};
+    double traversal_progress = 0.0;
+    bool ledge_available = false;
+    std::uint64_t ledge_entity_id = 0;
+    Vector3 ledge_point{};
+    double ledge_rise_meters = 0.0;
+    std::uint64_t accepted_traversal_count = 0;
+    std::uint64_t rejected_traversal_count = 0;
+    std::uint64_t aborted_traversal_count = 0;
 };
 
 struct AdvanceResult final {
@@ -49,6 +75,12 @@ public:
     static constexpr std::uint64_t kPlayerEntityId = 2;
     static constexpr std::uint64_t kTranslatingSupportEntityId = 3;
     static constexpr std::uint64_t kRotatingSupportEntityId = 4;
+    static constexpr std::uint64_t kVaultRailEntityId = 5;
+    static constexpr std::uint64_t kMantleLedgeEntityId = 6;
+    static constexpr std::uint64_t kHangLedgeEntityId = 7;
+    static constexpr std::uint64_t kMovingLedgeEntityId = 8;
+    static constexpr std::uint64_t kBlockedLedgeEntityId = 9;
+    static constexpr std::uint64_t kBlockedLedgeCanopyEntityId = 10;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::TranslatingSupport);
     ~Simulation();
@@ -59,7 +91,10 @@ public:
     Simulation &operator=(Simulation &&) = delete;
 
     [[nodiscard]] bool set_move_input(double world_x, double world_z) noexcept;
+    [[nodiscard]] bool set_facing(double world_x, double world_z) noexcept;
     [[nodiscard]] bool request_jump() noexcept;
+    [[nodiscard]] bool request_traversal() noexcept;
+    [[nodiscard]] bool request_release() noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -73,7 +108,11 @@ private:
     double remainder_seconds_ = 0.0;
     double move_input_x_ = 0.0;
     double move_input_z_ = 0.0;
+    double facing_x_ = 0.0;
+    double facing_z_ = 0.0;
     bool jump_requested_ = false;
+    bool traversal_requested_ = false;
+    bool release_requested_ = false;
     Snapshot snapshot_{};
 };
 

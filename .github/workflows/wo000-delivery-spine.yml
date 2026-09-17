@@ -1,8 +1,8 @@
-name: ScraperX-2 Checkpoint — WO-002 Moving Support Truth
+name: ScraperX-2 Checkpoint — WO-003 Athletic Traversal
 
 on:
   push:
-    branches: [ScraperX-2]
+    branches: [ScraperX-2, ScraperX-Claude]
   workflow_dispatch:
 
 permissions:
@@ -69,7 +69,7 @@ jobs:
             -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
           tools/godot/godot --version
 
-      - name: Build native host graph and run moving-support tests
+      - name: Build native host graph and run athletic-traversal tests
         shell: bash
         run: |
           set -euo pipefail
@@ -83,7 +83,7 @@ jobs:
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
 
-      - name: Run Godot through native moving-support authority and capture proof
+      - name: Run Godot through native traversal authority and capture proof
         shell: bash
         run: |
           set -euo pipefail
@@ -92,16 +92,21 @@ jobs:
             > godot/.godot/extension_list.cfg
           grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
             godot/.godot/extension_list.cfg
-          timeout 60s xvfb-run -a -s "-screen 0 1600x900x24" \
-            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 360 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo002-moving-support-truth.png" \
+          timeout 180s xvfb-run -a -s "-screen 0 1600x900x24" \
+            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 900 \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo003-athletic-traversal.png" \
             2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/wo002-moving-support-truth.png
+          test -s artifacts/screenshots/wo003-athletic-traversal.png
           grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "work_order=WO-002" artifacts/godot-runtime.log
+          grep -F "work_order=WO-003" artifacts/godot-runtime.log
           grep -F "SCRAPERX_WO002_RUNTIME_PROOF" artifacts/godot-runtime.log
           grep -F "support_before_jump=3" artifacts/godot-runtime.log
           grep -F "inherited=1" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_WO003_RUNTIME_PROOF" artifacts/godot-runtime.log
+          grep -F "mantle_support=6" artifacts/godot-runtime.log
+          grep -F "grounded=1" artifacts/godot-runtime.log
+          grep -F "accepted=1" artifacts/godot-runtime.log
+          grep -F "aborted=0" artifacts/godot-runtime.log
 
       - name: Cross-compile native graph for Android arm64
         shell: bash
@@ -142,24 +147,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/WO-002-EVIDENCE.md <<EOF
-          # WO-002 Evidence
+          cat > artifacts/WO-003-EVIDENCE.md <<EOF
+          # WO-003 Evidence
 
           Source commit: \`${GITHUB_SHA}\`
 
           Proven by this workflow:
 
           - WO-001 fixed-step, invalid-input, static-support, and static-locomotion regressions remained green;
-          - native host tests grounded the player on translating and rotating Jolt supports with stable entity IDs;
-          - translating support exposed real support-point velocity and jump detachment retained material inherited horizontal momentum;
-          - rotating support contact-point velocity matched the native \`v_linear + omega x r\` relationship within the work-order tolerance;
+          - WO-002 moving-support regressions remained green: translating and rotating Jolt supports with stable entity IDs, real support-point velocity, material inherited jump momentum, and contact-point velocity matching \`v_linear + omega x r\` within the work-order tolerance;
+          - native host tests proved the WO-003 traversal suite against real Jolt geometry: a vault that crosses a real rail onto a validated far landing while retaining approach momentum, a mantle that ends grounded on ledge entity 6, a ledge hang that holds against gravity on entity 7, a hang on the kinematic moving ledge (entity 8) carried at the support's own velocity and mantled onto that moving support, refusal of the obstructed landing behind entity 9/10 with no player rise, and traversal frame-partition invariance;
           - Godot 4.7 loaded the same current-source GDExtension, mirrored native support poses, jumped from support entity 3, and observed inherited momentum;
-          - one first-person moving-support screenshot was captured from that runtime;
+          - the same runtime then walked to a real native ledge using only the native geometry affordance and completed one native mantle onto ledge entity 6 with zero aborted traversals;
+          - one first-person traversal screenshot was captured from that runtime;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
           - the APK checksum and checkpoint identity were recorded.
 
-          Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, WO-003 mantle/vault/ledge/hang, freight, structural simulation, process simulation, or a complete game loop.
+          Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, WO-004 fall/parachute/checkpoint, freight, structural simulation, process simulation, or a complete game loop.
           EOF
 
       - name: Publish immutable checkpoint build and evidence
