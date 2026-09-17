@@ -63,6 +63,44 @@ constexpr double kHopperControlY = 0.0;
 constexpr double kHopperControlZ = 40.0;
 constexpr double kHopperInteractionRadiusMeters = 3.4;
 
+constexpr double kImpactRockerX = 7.0;
+constexpr double kImpactRockerY = 1.65;
+constexpr double kImpactRockerZ = 21.55;
+constexpr double kImpactRockerAngleThreshold = 0.035;
+constexpr double kImpactRockerAngularSpeedThreshold = 0.10;
+
+constexpr double kTraversalLaneX = 2.5;
+constexpr double kVaultCenterY = 0.45;
+constexpr double kVaultCenterZ = 35.5;
+constexpr double kVaultFrontZ = 35.85;
+constexpr double kVaultCandidateFarZ = 38.2;
+constexpr double kVaultLandingZ = 34.15;
+constexpr double kMantleCenterY = 1.15;
+constexpr double kMantleCenterZ = 31.5;
+constexpr double kMantleFrontZ = 32.9;
+constexpr double kMantleCandidateFarZ = 34.25;
+constexpr double kMantleTopPlayerY = 3.20;
+constexpr double kMantleLandingZ = 30.75;
+constexpr double kHangLedgeCenterY = 4.10;
+constexpr double kHangLedgeCenterZ = 25.4;
+constexpr double kHangLedgeFrontZ = 27.0;
+constexpr double kHangCandidateFarZ = 28.35;
+constexpr double kHangTargetY = 3.20;
+constexpr double kHangTargetZ = 27.48;
+constexpr double kHangMantlePlayerY = 5.25;
+constexpr double kHangMantleLandingZ = 26.0;
+constexpr double kTraversalLaneHalfWidth = 2.65;
+
+constexpr float kVaultDurationSeconds = 0.66F;
+constexpr float kVaultLiftSeconds = 0.22F;
+constexpr float kMantleDurationSeconds = 0.86F;
+constexpr float kMantleLiftSeconds = 0.46F;
+constexpr float kTraversalHorizontalSpeed = 5.0F;
+constexpr float kVaultLiftVelocity = 4.8F;
+constexpr float kMantleLiftVelocity = 5.5F;
+constexpr float kHangPositionGain = 6.0F;
+constexpr float kHangMaximumCorrectionSpeed = 3.0F;
+
 class BroadPhaseLayerInterface final : public JPH::BroadPhaseLayerInterface {
 public:
     BroadPhaseLayerInterface() {
@@ -207,7 +245,10 @@ private:
             entity_id == Simulation::kTowerLeftPierEntityId ||
             entity_id == Simulation::kTowerRightPierEntityId ||
             entity_id == Simulation::kHopperLeftWallEntityId ||
-            entity_id == Simulation::kHopperRightWallEntityId) {
+            entity_id == Simulation::kHopperRightWallEntityId ||
+            entity_id == Simulation::kVaultBlockEntityId ||
+            entity_id == Simulation::kMantleBlockEntityId ||
+            entity_id == Simulation::kHangLedgeEntityId) {
             return 1;
         }
         return 0;
@@ -287,6 +328,10 @@ private:
         return {-6.5, 3.0, 0.0};
     case scraperx::sim::InitialSpawn::HopperControl:
         return {kHopperControlX, 3.0, kHopperControlZ};
+    case scraperx::sim::InitialSpawn::TraversalCourse:
+        return {kTraversalLaneX, 3.0, 38.0};
+    case scraperx::sim::InitialSpawn::HangCourse:
+        return {kTraversalLaneX, kHangTargetY, 27.75};
     case scraperx::sim::InitialSpawn::ApproachGrade:
     default:
         return {0.0, 3.0, 60.0};
@@ -330,6 +375,10 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
     return std::sqrt(dx * dx + dy * dy + dz * dz);
 }
 
+[[nodiscard]] float clamp_float(const float value, const float low, const float high) noexcept {
+    return std::max(low, std::min(high, value));
+}
+
 } // namespace
 
 namespace scraperx::sim {
@@ -339,10 +388,10 @@ public:
     explicit PhysicsWorld(const InitialSpawn initial_spawn)
         : temp_allocator_(8U * 1024U * 1024U),
           job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1) {
-        physics_system_.Init(512,
+        physics_system_.Init(768,
                              0,
-                             1024,
-                             512,
+                             1536,
+                             768,
                              broadphase_layer_interface_,
                              object_vs_broadphase_filter_,
                              object_layer_pair_filter_);
@@ -404,6 +453,25 @@ public:
                               Simulation::kHopperRightWallEntityId,
                               0.55F);
 
+        vault_block_id_ =
+            create_static_box(JPH::Vec3(2.0F, 0.45F, 0.35F),
+                              JPH::RVec3(kTraversalLaneX, kVaultCenterY, kVaultCenterZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kVaultBlockEntityId,
+                              0.72F);
+        mantle_block_id_ =
+            create_static_box(JPH::Vec3(2.2F, 1.15F, 1.4F),
+                              JPH::RVec3(kTraversalLaneX, kMantleCenterY, kMantleCenterZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kMantleBlockEntityId,
+                              0.78F);
+        hang_ledge_id_ =
+            create_static_box(JPH::Vec3(2.8F, 0.25F, 1.6F),
+                              JPH::RVec3(kTraversalLaneX, kHangLedgeCenterY, kHangLedgeCenterZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kHangLedgeEntityId,
+                              0.76F);
+
         JPH::BodyCreationSettings translating_support_settings(
             new JPH::BoxShape(JPH::Vec3(2.75F, 0.25F, 2.75F)),
             JPH::RVec3(0.0, 0.25, 8.0),
@@ -455,6 +523,21 @@ public:
         hopper_load_id_ =
             bodies.CreateAndAddBody(hopper_load_settings, JPH::EActivation::Activate);
 
+        JPH::BodyCreationSettings impact_rocker_settings(
+            new JPH::BoxShape(JPH::Vec3(2.0F, 1.60F, 0.22F)),
+            JPH::RVec3(kImpactRockerX, kImpactRockerY, kImpactRockerZ),
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic,
+            object_layers::kMoving);
+        impact_rocker_settings.mAllowedDOFs = JPH::EAllowedDOFs::RotationX;
+        impact_rocker_settings.mAllowSleeping = false;
+        impact_rocker_settings.mFriction = 0.52F;
+        impact_rocker_settings.mRestitution = 0.03F;
+        impact_rocker_settings.mAngularDamping = 0.08F;
+        impact_rocker_settings.mUserData = Simulation::kImpactRockerEntityId;
+        impact_rocker_id_ =
+            bodies.CreateAndAddBody(impact_rocker_settings, JPH::EActivation::Activate);
+
         JPH::BodyCreationSettings player_settings(
             new JPH::CapsuleShape(0.55F, 0.35F),
             spawn_position(initial_spawn),
@@ -478,10 +561,14 @@ public:
         physics_system_.SetContactListener(nullptr);
         auto &bodies = physics_system_.GetBodyInterface();
         remove_and_destroy(bodies, player_id_);
+        remove_and_destroy(bodies, impact_rocker_id_);
         remove_and_destroy(bodies, hopper_load_id_);
         remove_and_destroy(bodies, hopper_gate_id_);
         remove_and_destroy(bodies, rotating_support_id_);
         remove_and_destroy(bodies, translating_support_id_);
+        remove_and_destroy(bodies, hang_ledge_id_);
+        remove_and_destroy(bodies, mantle_block_id_);
+        remove_and_destroy(bodies, vault_block_id_);
         remove_and_destroy(bodies, hopper_right_wall_id_);
         remove_and_destroy(bodies, hopper_left_wall_id_);
         remove_and_destroy(bodies, hopper_chute_id_);
@@ -493,6 +580,8 @@ public:
     void step(const double move_input_x,
               const double move_input_z,
               const bool jump_requested,
+              const bool traversal_requested,
+              const bool drop_from_hang_requested,
               const bool hopper_release_requested,
               const float delta_seconds,
               const double next_time_seconds) noexcept {
@@ -505,43 +594,67 @@ public:
         update_support_motion(bodies, delta_seconds, next_time_seconds);
         update_hopper_motion(bodies, delta_seconds);
 
+        if (drop_from_hang_requested && traversal_mode_ == TraversalMode::Hang) {
+            traversal_mode_ = TraversalMode::None;
+            traversal_elapsed_seconds_ = 0.0F;
+            JPH::Vec3 drop_velocity = bodies.GetLinearVelocity(player_id_);
+            drop_velocity.SetY(-1.5F);
+            bodies.SetLinearVelocity(player_id_, drop_velocity);
+        }
+
+        if (traversal_requested && traversal_mode_ == TraversalMode::None) {
+            begin_traversal(bodies);
+        }
+
+        bool jump_started = false;
+        if (traversal_mode_ == TraversalMode::Hang && jump_requested) {
+            begin_mantle_from_hang(bodies);
+        }
+
         JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
         JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
 
-        if (grounded_ && support_entity_id_ != 0) {
-            reference_velocity = current_support_point_velocity(bodies);
-            airborne_inherited_velocity_ = reference_velocity;
-            approach_relative_horizontal_velocity(player_velocity,
-                                                  reference_velocity,
-                                                  move_input_x,
-                                                  move_input_z,
-                                                  kGroundAcceleration,
-                                                  delta_seconds);
+        if (traversal_mode_ != TraversalMode::None) {
+            apply_traversal_controller(bodies, player_velocity, delta_seconds);
         } else {
-            approach_relative_horizontal_velocity(player_velocity,
-                                                  reference_velocity,
-                                                  move_input_x,
-                                                  move_input_z,
-                                                  kAirAcceleration,
-                                                  delta_seconds);
+            if (grounded_ && support_entity_id_ != 0) {
+                reference_velocity = current_support_point_velocity(bodies);
+                airborne_inherited_velocity_ = reference_velocity;
+                approach_relative_horizontal_velocity(player_velocity,
+                                                      reference_velocity,
+                                                      move_input_x,
+                                                      move_input_z,
+                                                      kGroundAcceleration,
+                                                      delta_seconds);
+            } else {
+                approach_relative_horizontal_velocity(player_velocity,
+                                                      reference_velocity,
+                                                      move_input_x,
+                                                      move_input_z,
+                                                      kAirAcceleration,
+                                                      delta_seconds);
+            }
+
+            jump_started = jump_requested && grounded_;
+            if (jump_started) {
+                player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
+            }
         }
 
-        const bool jump_started = jump_requested && grounded_;
-        if (jump_started) {
-            player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
-        }
         bodies.SetLinearVelocity(player_id_, player_velocity);
 
         contact_listener_.begin_tick();
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
 
         SupportSample support = contact_listener_.sample();
-        if (jump_started) {
+        if (jump_started || traversal_mode_ == TraversalMode::Hang) {
             support = {};
         }
         support_sample_ = support;
         grounded_ = support.grounded;
         support_entity_id_ = support.entity_id;
+
+        advance_traversal_after_physics(delta_seconds);
         read_state();
     }
 
@@ -582,6 +695,15 @@ private:
         }
         if (entity_id == Simulation::kHopperRightWallEntityId) {
             return hopper_right_wall_id_;
+        }
+        if (entity_id == Simulation::kVaultBlockEntityId) {
+            return vault_block_id_;
+        }
+        if (entity_id == Simulation::kMantleBlockEntityId) {
+            return mantle_block_id_;
+        }
+        if (entity_id == Simulation::kHangLedgeEntityId) {
+            return hang_ledge_id_;
         }
         return {};
     }
@@ -637,6 +759,135 @@ private:
             hopper_gate_x_ >= kHopperGateOpenX - kHopperGateOpenTolerance;
     }
 
+    [[nodiscard]] TraversalMode traversal_candidate(const JPH::RVec3 &player_position) const noexcept {
+        if (traversal_mode_ != TraversalMode::None) {
+            return TraversalMode::None;
+        }
+
+        const double x = player_position.GetX();
+        const double y = player_position.GetY();
+        const double z = player_position.GetZ();
+        const bool lane_clear = std::abs(x - kTraversalLaneX) <= kTraversalLaneHalfWidth;
+        if (!lane_clear) {
+            return TraversalMode::None;
+        }
+
+        if (grounded_ && y < 1.55 && z >= kVaultFrontZ && z <= kVaultCandidateFarZ) {
+            return TraversalMode::Vault;
+        }
+        if (grounded_ && y < 1.55 && z >= kMantleFrontZ && z <= kMantleCandidateFarZ) {
+            return TraversalMode::Mantle;
+        }
+        if (!grounded_ && y >= 2.55 && y <= 4.30 &&
+            z >= kHangLedgeFrontZ && z <= kHangCandidateFarZ) {
+            return TraversalMode::Hang;
+        }
+        return TraversalMode::None;
+    }
+
+    void begin_traversal(JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+        const TraversalMode candidate = traversal_candidate(player_position);
+        if (candidate == TraversalMode::None) {
+            return;
+        }
+
+        traversal_mode_ = candidate;
+        traversal_elapsed_seconds_ = 0.0F;
+        mantle_from_hang_ = false;
+        traversal_reference_velocity_ = grounded_ ? current_support_point_velocity(bodies)
+                                                 : airborne_inherited_velocity_;
+
+        const double target_x = std::max(
+            kTraversalLaneX - 1.65,
+            std::min(kTraversalLaneX + 1.65, player_position.GetX()));
+        if (candidate == TraversalMode::Vault) {
+            traversal_target_ = JPH::RVec3(target_x, 0.90, kVaultLandingZ);
+        } else if (candidate == TraversalMode::Mantle) {
+            traversal_target_ = JPH::RVec3(target_x, kMantleTopPlayerY, kMantleLandingZ);
+        } else {
+            traversal_target_ = JPH::RVec3(target_x, kHangTargetY, kHangTargetZ);
+        }
+    }
+
+    void begin_mantle_from_hang(JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+        const double target_x = std::max(
+            kTraversalLaneX - 1.75,
+            std::min(kTraversalLaneX + 1.75, player_position.GetX()));
+        traversal_mode_ = TraversalMode::Mantle;
+        traversal_elapsed_seconds_ = 0.0F;
+        mantle_from_hang_ = true;
+        traversal_reference_velocity_ = JPH::Vec3::sZero();
+        traversal_target_ = JPH::RVec3(target_x, kHangMantlePlayerY, kHangMantleLandingZ);
+    }
+
+    void apply_traversal_controller(const JPH::BodyInterface &bodies,
+                                    JPH::Vec3 &player_velocity,
+                                    const float delta_seconds) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+
+        if (traversal_mode_ == TraversalMode::Hang) {
+            const float error_x = static_cast<float>(traversal_target_.GetX() - player_position.GetX());
+            const float error_y = static_cast<float>(traversal_target_.GetY() - player_position.GetY());
+            const float error_z = static_cast<float>(traversal_target_.GetZ() - player_position.GetZ());
+            player_velocity.SetX(clamp_float(error_x * kHangPositionGain,
+                                             -kHangMaximumCorrectionSpeed,
+                                             kHangMaximumCorrectionSpeed));
+            player_velocity.SetY(clamp_float(error_y * kHangPositionGain + 9.81F * delta_seconds,
+                                             -kHangMaximumCorrectionSpeed,
+                                             kHangMaximumCorrectionSpeed));
+            player_velocity.SetZ(clamp_float(error_z * kHangPositionGain,
+                                             -kHangMaximumCorrectionSpeed,
+                                             kHangMaximumCorrectionSpeed));
+            return;
+        }
+
+        const float dx = static_cast<float>(traversal_target_.GetX() - player_position.GetX());
+        const float dz = static_cast<float>(traversal_target_.GetZ() - player_position.GetZ());
+        const float horizontal_length = std::sqrt(dx * dx + dz * dz);
+        float direction_x = 0.0F;
+        float direction_z = 0.0F;
+        if (horizontal_length > 1.0e-5F) {
+            direction_x = dx / horizontal_length;
+            direction_z = dz / horizontal_length;
+        }
+
+        const bool is_vault = traversal_mode_ == TraversalMode::Vault;
+        const float lift_seconds = is_vault ? kVaultLiftSeconds : kMantleLiftSeconds;
+        const float horizontal_scale = traversal_elapsed_seconds_ < lift_seconds && !is_vault
+                                           ? 0.12F
+                                           : 1.0F;
+
+        player_velocity.SetX(traversal_reference_velocity_.GetX() +
+                             direction_x * kTraversalHorizontalSpeed * horizontal_scale);
+        player_velocity.SetZ(traversal_reference_velocity_.GetZ() +
+                             direction_z * kTraversalHorizontalSpeed * horizontal_scale);
+        if (traversal_elapsed_seconds_ < lift_seconds) {
+            player_velocity.SetY(traversal_reference_velocity_.GetY() +
+                                 (is_vault ? kVaultLiftVelocity : kMantleLiftVelocity));
+        }
+    }
+
+    void advance_traversal_after_physics(const float delta_seconds) noexcept {
+        if (traversal_mode_ == TraversalMode::Vault) {
+            traversal_elapsed_seconds_ += delta_seconds;
+            if (traversal_elapsed_seconds_ >= kVaultDurationSeconds) {
+                traversal_mode_ = TraversalMode::None;
+                traversal_elapsed_seconds_ = 0.0F;
+            }
+            return;
+        }
+        if (traversal_mode_ == TraversalMode::Mantle) {
+            traversal_elapsed_seconds_ += delta_seconds;
+            if (traversal_elapsed_seconds_ >= kMantleDurationSeconds) {
+                traversal_mode_ = TraversalMode::None;
+                traversal_elapsed_seconds_ = 0.0F;
+                mantle_from_hang_ = false;
+            }
+        }
+    }
+
     void read_state() noexcept {
         const auto &bodies = physics_system_.GetBodyInterface();
 
@@ -650,6 +901,13 @@ private:
         state_.support_entity_id = support_entity_id_;
         state_.support_contact_point = support_sample_.contact_point;
         state_.support_point_linear_velocity = support_sample_.point_velocity;
+
+        state_.traversal_mode = traversal_mode_;
+        state_.traversal_candidate_mode = traversal_candidate(player_position);
+        state_.traversal_assist_available =
+            state_.traversal_candidate_mode != TraversalMode::None;
+        state_.traversal_target_position =
+            {traversal_target_.GetX(), traversal_target_.GetY(), traversal_target_.GetZ()};
 
         const JPH::RVec3 translating_position = bodies.GetPosition(translating_support_id_);
         const JPH::Vec3 translating_velocity = bodies.GetLinearVelocity(translating_support_id_);
@@ -694,6 +952,23 @@ private:
                         kHopperControlX,
                         0.9,
                         kHopperControlZ) <= kHopperInteractionRadiusMeters;
+
+        const JPH::RVec3 rocker_position = bodies.GetPosition(impact_rocker_id_);
+        const JPH::Vec3 rocker_angular_velocity = bodies.GetAngularVelocity(impact_rocker_id_);
+        const JPH::Quat rocker_rotation = bodies.GetRotation(impact_rocker_id_);
+        const double rocker_angle =
+            2.0 * std::atan2(static_cast<double>(rocker_rotation.GetX()),
+                             static_cast<double>(rocker_rotation.GetW()));
+        state_.impact_rocker_position =
+            {rocker_position.GetX(), rocker_position.GetY(), rocker_position.GetZ()};
+        state_.impact_rocker_angular_velocity =
+            {rocker_angular_velocity.GetX(),
+             rocker_angular_velocity.GetY(),
+             rocker_angular_velocity.GetZ()};
+        state_.impact_rocker_angle_radians = rocker_angle;
+        state_.impact_rocker_struck =
+            std::abs(rocker_angle) >= kImpactRockerAngleThreshold ||
+            std::abs(rocker_angular_velocity.GetX()) >= kImpactRockerAngularSpeedThreshold;
     }
 
     JoltRuntimeLease runtime_;
@@ -711,10 +986,14 @@ private:
     JPH::BodyID hopper_chute_id_;
     JPH::BodyID hopper_left_wall_id_;
     JPH::BodyID hopper_right_wall_id_;
+    JPH::BodyID vault_block_id_;
+    JPH::BodyID mantle_block_id_;
+    JPH::BodyID hang_ledge_id_;
     JPH::BodyID translating_support_id_;
     JPH::BodyID rotating_support_id_;
     JPH::BodyID hopper_gate_id_;
     JPH::BodyID hopper_load_id_;
+    JPH::BodyID impact_rocker_id_;
     JPH::BodyID player_id_;
 
     SupportSample support_sample_{};
@@ -726,6 +1005,12 @@ private:
     bool hopper_release_started_ = false;
     bool hopper_gate_open_ = false;
     double hopper_gate_x_ = kHopperGateClosedX;
+
+    TraversalMode traversal_mode_ = TraversalMode::None;
+    JPH::RVec3 traversal_target_{JPH::RVec3::sZero()};
+    JPH::Vec3 traversal_reference_velocity_{JPH::Vec3::sZero()};
+    float traversal_elapsed_seconds_ = 0.0F;
+    bool mantle_from_hang_ = false;
 
     Snapshot state_{};
 };
@@ -758,6 +1043,27 @@ bool Simulation::request_jump() noexcept {
     return true;
 }
 
+bool Simulation::can_traverse() const noexcept {
+    return physics_world_->state().traversal_assist_available;
+}
+
+bool Simulation::request_traversal() noexcept {
+    if (traversal_requested_ || !physics_world_->state().traversal_assist_available) {
+        return false;
+    }
+    traversal_requested_ = true;
+    return true;
+}
+
+bool Simulation::request_drop_from_hang() noexcept {
+    if (drop_from_hang_requested_ ||
+        physics_world_->state().traversal_mode != TraversalMode::Hang) {
+        return false;
+    }
+    drop_from_hang_requested_ = true;
+    return true;
+}
+
 bool Simulation::can_operate_hopper() const noexcept {
     return physics_world_->state().hopper_interaction_available;
 }
@@ -776,10 +1082,14 @@ void Simulation::step_fixed() noexcept {
     physics_world_->step(move_input_x_,
                          move_input_z_,
                          jump_requested_,
+                         traversal_requested_,
+                         drop_from_hang_requested_,
                          hopper_release_requested_,
                          static_cast<float>(kFixedStepSeconds),
                          next_time_seconds);
     jump_requested_ = false;
+    traversal_requested_ = false;
+    drop_from_hang_requested_ = false;
     hopper_release_requested_ = false;
     ++tick_index_;
 
