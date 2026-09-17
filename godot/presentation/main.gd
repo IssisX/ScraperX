@@ -34,6 +34,13 @@ const CI_HOLD_TICKS := 20
 # the ratio below is a real fraction of a real flow, not a tuned animation curve.
 const PLUME_REFERENCE_FLOW := 0.75
 
+# Mirrors scraperx::sim kMachineCyclePeriodSeconds. The tower-face gear motif is
+# decorative -- it owns no state and is never queried -- but its rotation is a
+# real function of the native machine_cycle_phase_seconds, not a free-running
+# clock, so it reads as the visible face of the actual plant. Governing Law 26:
+# it must never be mistaken for a second physics authority.
+const KELLERWORKS_CYCLE_PERIOD_SECONDS := 26.0
+
 var _native: Object
 var _capture_path := ""
 var _capture_scheduled := false
@@ -61,6 +68,16 @@ var _plume: CPUParticles3D
 var _plume_material: StandardMaterial3D
 var _fire_box: OmniLight3D
 var _vent_light: OmniLight3D
+
+# Decorative dressing (WO-007). None of these carry collision, own state, or
+# feed the CI proof; the gear pivot is the one exception that reads a real
+# native value (see KELLERWORKS_CYCLE_PERIOD_SECONDS above).
+var _gear_pivot: Node3D
+var _drum_pivot: Node3D
+var _crane_boom: Node3D
+var _crane_hook: Node3D
+var _crane_crate: MeshInstance3D
+var _ambient_clock := 0.0
 
 var _ci_phase := PHASE_APPROACH
 var _ci_facing := CI_APPROACH_FACING
@@ -145,6 +162,8 @@ func _process(delta: float) -> void:
 		return
 
 	_render_snapshot()
+	_ambient_clock += delta
+	_update_ambient_dressing()
 
 	if _ci_mode:
 		_ci_observe()
@@ -421,6 +440,16 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 		var charge := clampf(float(_native.get_vessel_pressure_pa()) / 4.6e5, 0.0, 1.0)
 		_fire_box.light_energy = 1.6 + 5.4 * (1.0 - charge)
 
+	# Decorative face gear/drum: driven one-way from the real cycle phase so it
+	# reads as the plant's visible mechanism. It owns no state and is never
+	# read back -- freezing machine_cycle_phase_seconds freezes it too.
+	var phase := float(_native.get_machine_cycle_phase_seconds())
+	var gear_angle := (phase / KELLERWORKS_CYCLE_PERIOD_SECONDS) * TAU
+	if _gear_pivot != null:
+		_gear_pivot.rotation = Vector3(0.0, 0.0, gear_angle)
+	if _drum_pivot != null:
+		_drum_pivot.rotation = Vector3(gear_angle * 1.6, 0.0, 0.0)
+
 
 func _traversal_name(traversal: int) -> String:
 	match traversal:
@@ -438,6 +467,19 @@ func _ledge_affordance_text() -> String:
 	if not bool(_native.is_ledge_available()):
 		return "  --"
 	return "E%04d +%4.2fm" % [int(_native.get_ledge_entity_id()), float(_native.get_ledge_rise_meters())]
+
+
+func _update_ambient_dressing() -> void:
+	# Clock-driven crane sway only. This is explicitly weather-class ambient
+	# motion (GDD term for non-authoritative background movement), never
+	# claimed as simulated rigging -- native-authoritative freight is a later
+	# work order (TDD section 9). Nothing here is queried by any other system.
+	if _crane_boom == null:
+		return
+	var sway := sin(_ambient_clock * 0.18) * 0.035
+	_crane_boom.rotation = Vector3(0.0, 0.0, sway)
+	if _crane_hook != null:
+		_crane_hook.position.y = -13.0 + sin(_ambient_clock * 0.5) * 0.25
 
 
 # --- world ------------------------------------------------------------------
@@ -462,15 +504,21 @@ func _build_world() -> void:
 	_add_box("Grade", Vector3(480.0, 1.0, 480.0), Vector3(0.0, -0.5, -60.0), asphalt)
 	_add_box("Tower", Vector3(120.0, 1600.0, 90.0), Vector3(0.0, 800.0, -190.0), concrete)
 
-	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow)
+	var timber := _material(Color("4a3524"), 0.02, 0.86)
+
+	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
 	_build_yard(concrete, mill_scale, faded_yellow, tar)
 	_build_legacy_fixtures(mill_scale, galvanised, hazard, faded_yellow)
 	_build_plant(mill_scale, oxidised, galvanised, hazard, faded_yellow)
+	_build_mountains_and_waterfall()
+	_build_kellerworks_signage(timber, faded_yellow)
+	_build_gear_motif(mill_scale, oxidised)
+	_build_crane(mill_scale, hazard)
 	_build_sky_shear()
 	_build_lighting()
 
 
-func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Material, faded: Material) -> void:
+func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Material, faded: Material, timber: Material) -> void:
 	# Structural relief on the approach face so the lower third reads as a wall of
 	# structure rather than a flat slab. Non-authoritative set dressing: it sits
 	# proud of the native collision box by design.
@@ -480,8 +528,8 @@ func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Mat
 		_add_box("FaceBand", Vector3(118.0, 1.4, 2.0), Vector3(0.0, float(level), -143.4), oxidised)
 	for x in [-40.0, -13.0, 13.0, 40.0]:
 		_add_box("FaceDuct", Vector3(3.2, 190.0, 3.2), Vector3(x, 96.0, -141.0), galvanised)
-	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("c07a24"), 0.85)
-	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("6e4a1c"), 0.7)
+	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("c07a24"), 0.4)
+	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("6e4a1c"), 0.3)
 	for level in range(22, 320, 12):
 		var band: Material = lit_band if (level / 12) % 3 != 0 else lit_band_dim
 		_add_box("FloorLight", Vector3(104.0, 1.0, 0.6), Vector3(0.0, float(level), -144.3), band)
@@ -490,6 +538,10 @@ func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Mat
 	_add_box("LoadingHeader", Vector3(46.0, 4.0, 3.0), Vector3(0.0, 13.0, -141.0), faded)
 	for x in [-18.0, -6.0, 6.0, 18.0]:
 		_add_box("BayDoor", Vector3(9.0, 11.0, 1.2), Vector3(x, 5.5, -141.2), mill_scale)
+	# Timber cladding accent (identity doc item 4): secondary material, not a
+	# replacement for the steel piers/bands above.
+	for x in [-39.0, -14.0, 14.0, 39.0]:
+		_add_box("TimberCladding", Vector3(9.0, 34.0, 1.2), Vector3(x, 30.0, -142.6), timber)
 
 
 func _build_yard(concrete: Material, mill_scale: Material,
@@ -662,19 +714,19 @@ func _build_lighting() -> void:
 		lamp.name = "SodiumFlood"
 		lamp.position = mast + Vector3(0.6, 10.6, 0.0)
 		lamp.light_color = Color(1.0, 0.585, 0.225)
-		lamp.light_energy = 14.0
-		lamp.omni_range = 46.0
-		lamp.omni_attenuation = 1.4
+		lamp.light_energy = 3.5
+		lamp.omni_range = 26.0
+		lamp.omni_attenuation = 1.6
 		_light_rig.add_child(lamp)
 
 	for base_x in [-46.0, -16.0, 16.0, 46.0]:
 		var base_flood := OmniLight3D.new()
 		base_flood.name = "TowerFootFlood"
 		base_flood.position = Vector3(base_x, 15.0, -132.0)
-		base_flood.light_color = Color(1.0, 0.61, 0.26)
-		base_flood.light_energy = 26.0
-		base_flood.omni_range = 78.0
-		base_flood.omni_attenuation = 1.2
+		base_flood.light_color = Color(1.0, 0.7, 0.42)
+		base_flood.light_energy = 4.0
+		base_flood.omni_range = 48.0
+		base_flood.omni_attenuation = 1.3
 		_light_rig.add_child(base_flood)
 
 	_fire_box = OmniLight3D.new()
@@ -692,6 +744,225 @@ func _build_lighting() -> void:
 	_vent_light.light_energy = 1.2
 	_vent_light.omni_range = 22.0
 	_light_rig.add_child(_vent_light)
+
+
+func _build_mountains_and_waterfall() -> void:
+	# Non-collidable alpine backdrop (identity doc item 2). Peaks are cheap
+	# cones -- a CylinderMesh with top_radius 0 -- with a lighter snow-cap cone
+	# nested at the tip. Distance fade comes from the environment's aerial
+	# perspective fog, not from manual colour tuning per peak.
+	var rock := _material(Color("3c434c"), 0.04, 0.9)
+	var rock_far := _material(Color("57616c"), 0.02, 0.94)
+	var snow := _material(Color("f4f7fa"), 0.0, 0.7)
+
+	var near_peaks := [
+		Vector3(-380.0, 0.0, -560.0), Vector3(-160.0, 0.0, -610.0),
+		Vector3(110.0, 0.0, -630.0), Vector3(180.0, 0.0, -540.0),
+		Vector3(380.0, 0.0, -580.0), Vector3(580.0, 0.0, -680.0),
+	]
+	var near_sizes := [520.0, 640.0, 700.0, 600.0, 560.0, 480.0]
+	for index in near_peaks.size():
+		var base: Vector3 = near_peaks[index]
+		var peak_height: float = near_sizes[index]
+		var radius := peak_height * 0.62
+		_add_cone("MountainPeak", radius, peak_height, base + Vector3(0.0, peak_height * 0.5, 0.0), rock)
+		_add_cone("MountainSnowCap", radius * 0.34, peak_height * 0.3,
+			base + Vector3(0.0, peak_height * 0.92, 0.0), snow)
+
+	var far_peaks := [
+		Vector3(-640.0, 0.0, -880.0), Vector3(-240.0, 0.0, -950.0),
+		Vector3(260.0, 0.0, -930.0), Vector3(680.0, 0.0, -900.0),
+	]
+	for base in far_peaks:
+		var peak_height := 900.0
+		var radius := peak_height * 0.7
+		_add_cone("MountainRidgeFar", radius, peak_height, base + Vector3(0.0, peak_height * 0.5, 0.0), rock_far)
+		_add_cone("MountainRidgeFarSnow", radius * 0.4, peak_height * 0.32,
+			base + Vector3(0.0, peak_height * 0.9, 0.0), snow)
+
+	_build_waterfall(Vector3(200.0, 0.0, -560.0))
+
+
+func _build_waterfall(at: Vector3) -> void:
+	var falls := StandardMaterial3D.new()
+	falls.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	falls.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	falls.albedo_color = Color(0.86, 0.9, 0.94, 0.55)
+	falls.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var quad := QuadMesh.new()
+	quad.size = Vector2(26.0, 420.0)
+	quad.material = falls
+	var instance := MeshInstance3D.new()
+	instance.name = "Waterfall"
+	instance.mesh = quad
+	instance.position = at + Vector3(0.0, 210.0, 0.0)
+	$TowerPresentation.add_child(instance)
+
+	var mist := CPUParticles3D.new()
+	mist.name = "WaterfallMist"
+	mist.position = at + Vector3(0.0, 8.0, 8.0)
+	mist.amount = 50
+	mist.lifetime = 6.0
+	mist.direction = Vector3(0.0, 1.0, 0.4)
+	mist.spread = 40.0
+	mist.gravity = Vector3(0.0, 1.4, 1.6)
+	mist.scale_amount_min = 8.0
+	mist.scale_amount_max = 20.0
+	mist.emitting = true
+	var mist_quad := QuadMesh.new()
+	mist_quad.size = Vector2(2.0, 2.0)
+	var mist_material := StandardMaterial3D.new()
+	mist_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mist_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mist_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mist_material.albedo_color = Color(0.88, 0.91, 0.94, 0.16)
+	mist_quad.material = mist_material
+	mist.mesh = mist_quad
+	$TowerPresentation.add_child(mist)
+
+
+func _build_kellerworks_signage(timber: Material, faded: Material) -> void:
+	# Painted banners (identity doc items 1 and 7): real Label3D copy over a
+	# backing plane, plus an original chevron-K mark. Non-collidable.
+	var backing := _material(Color("4a231c"), 0.05, 0.85)
+	var slogans := [
+		["MATERIALS MOVE", "CIVILIZATION RISES"],
+		["HIGHER  STRONGER", "FURTHER"],
+		["PEOPLE  POWER", "PROGRESS"],
+	]
+	var banner_spots := [Vector3(-9.4, 0.0, -22.0), Vector3(21.4, 0.0, -42.0), Vector3(26.5, 0.0, -90.5)]
+	for index in banner_spots.size():
+		_add_banner(banner_spots[index], slogans[index], backing)
+
+	# Tower-face wordmark: bigger backing, bigger text, high enough to be read
+	# from the approach.
+	_add_box("WordmarkBacking", Vector3(20.0, 5.0, 0.4), Vector3(0.0, 46.0, -142.3), backing)
+	var wordmark := Label3D.new()
+	wordmark.name = "KellerworksWordmark"
+	wordmark.text = "KELLERWORKS"
+	wordmark.font_size = 96
+	wordmark.pixel_size = 0.018
+	wordmark.modulate = Color(0.93, 0.89, 0.82)
+	wordmark.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	wordmark.position = Vector3(0.0, 46.0, -142.05)
+	$TowerPresentation.add_child(wordmark)
+	_add_chevron_mark(Vector3(0.0, 52.6, -142.1), 1.4, faded)
+
+	# Lift signage near the platform (identity doc item 7): a display
+	# designation distinct from the internal native entity ID (16).
+	_add_box("LiftSignBacking", Vector3(1.6, 1.0, 0.12), Vector3(13.0, 8.7, -99.1), backing)
+	var lift_sign := Label3D.new()
+	lift_sign.name = "LiftSign"
+	lift_sign.text = "LIFT A\nCAGE 3"
+	lift_sign.font_size = 44
+	lift_sign.pixel_size = 0.012
+	lift_sign.modulate = Color(0.95, 0.92, 0.86)
+	lift_sign.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	lift_sign.position = Vector3(13.0, 8.7, -99.02)
+	$TowerPresentation.add_child(lift_sign)
+
+
+func _add_banner(at: Vector3, lines: Array, backing: Material) -> void:
+	_add_box("BannerBacking", Vector3(3.2, 4.6, 0.12), at + Vector3(0.0, 4.6, 0.0), backing)
+	var label := Label3D.new()
+	label.name = "BannerCopy"
+	label.text = "\n".join(lines)
+	label.font_size = 40
+	label.pixel_size = 0.0095
+	label.modulate = Color(0.92, 0.88, 0.8)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.position = at + Vector3(0.0, 4.6, 0.07)
+	$TowerPresentation.add_child(label)
+	_add_chevron_mark(at + Vector3(0.0, 6.7, 0.07), 0.55, backing)
+
+
+func _add_chevron_mark(at: Vector3, scale: float, accent: Material) -> void:
+	# Original angular chevron-K mark, built from three thin boxes. Not a copy
+	# of any existing logotype.
+	var mark := Node3D.new()
+	mark.name = "ChevronMark"
+	mark.position = at
+	$TowerPresentation.add_child(mark)
+	_add_box_to("ChevronSpine", Vector3(0.14, 0.9, 0.05) * scale, Vector3(-0.32, 0.0, 0.0) * scale, accent, mark)
+	_add_box_to("ChevronUpper", Vector3(0.62, 0.14, 0.05) * scale, Vector3(0.05, 0.24, 0.0) * scale, accent, mark, -0.55)
+	_add_box_to("ChevronLower", Vector3(0.62, 0.14, 0.05) * scale, Vector3(0.05, -0.24, 0.0) * scale, accent, mark, 0.55)
+
+
+func _build_gear_motif(mill_scale: Material, oxidised: Material) -> void:
+	# Decorative exposed gear + wound drum on the tower face (identity doc item
+	# 5). Rotation is applied in _mirror_machine from the real machine phase.
+	_gear_pivot = Node3D.new()
+	_gear_pivot.name = "FaceGearPivot"
+	_gear_pivot.position = Vector3(-30.0, 58.0, -142.4)
+	$TowerPresentation.add_child(_gear_pivot)
+	var hub := CylinderMesh.new()
+	hub.top_radius = 3.6
+	hub.bottom_radius = 3.6
+	hub.height = 0.7
+	hub.radial_segments = 20
+	var hub_instance := MeshInstance3D.new()
+	hub_instance.mesh = hub
+	hub_instance.material_override = mill_scale
+	hub_instance.rotation = Vector3(deg_to_rad(90.0), 0.0, 0.0)
+	_gear_pivot.add_child(hub_instance)
+	for tooth_index in 12:
+		var angle := float(tooth_index) / 12.0 * TAU
+		var tooth := _add_box_to("GearTooth", Vector3(0.75, 0.75, 0.7), Vector3.ZERO, mill_scale, _gear_pivot)
+		tooth.position = Vector3(cos(angle), sin(angle), 0.0) * 3.9
+		tooth.rotation = Vector3(0.0, 0.0, angle)
+
+	_drum_pivot = Node3D.new()
+	_drum_pivot.name = "FaceDrumPivot"
+	_drum_pivot.position = Vector3(-19.0, 58.0, -142.4)
+	$TowerPresentation.add_child(_drum_pivot)
+	var drum := CylinderMesh.new()
+	drum.top_radius = 1.9
+	drum.bottom_radius = 1.9
+	drum.height = 3.2
+	drum.radial_segments = 14
+	var drum_instance := MeshInstance3D.new()
+	drum_instance.mesh = drum
+	drum_instance.material_override = oxidised
+	drum_instance.rotation = Vector3(0.0, 0.0, deg_to_rad(90.0))
+	_drum_pivot.add_child(drum_instance)
+
+
+func _build_crane(mill_scale: Material, hazard: Material) -> void:
+	# Scale-telegraphing crane (identity doc item 6). Sway is applied in
+	# _update_ambient_dressing from a wall-clock, never from native state --
+	# it is explicitly not simulated rigging.
+	var mast_base := Vector3(58.0, 0.0, -108.0)
+	_add_box("CraneMast", Vector3(1.1, 26.0, 1.1), mast_base + Vector3(0.0, 13.0, 0.0), hazard)
+
+	_crane_boom = Node3D.new()
+	_crane_boom.name = "CraneBoom"
+	_crane_boom.position = mast_base + Vector3(0.0, 25.0, 0.0)
+	$TowerPresentation.add_child(_crane_boom)
+	_add_box_to("CraneBoomArm", Vector3(24.0, 0.9, 0.9), Vector3(-11.0, 0.6, 0.0), mill_scale, _crane_boom)
+	_add_box_to("CraneCounterArm", Vector3(6.0, 0.9, 0.9), Vector3(4.0, 0.6, 0.0), mill_scale, _crane_boom)
+	_add_box_to("CraneCounterweight", Vector3(2.4, 2.0, 2.4), Vector3(7.4, -0.4, 0.0), mill_scale, _crane_boom)
+
+	_crane_hook = Node3D.new()
+	_crane_hook.name = "CraneHook"
+	_crane_hook.position = Vector3(-20.0, -13.0, 0.0)
+	_crane_boom.add_child(_crane_hook)
+	_add_box_to("CraneCable", Vector3(0.08, 12.0, 0.08), Vector3(0.0, 6.0, 0.0), hazard, _crane_hook)
+	_crane_crate = _add_box_to("CraneCrate", Vector3(2.6, 2.0, 2.6), Vector3.ZERO, mill_scale, _crane_hook)
+
+
+func _add_cone(node_name: String, radius: float, height: float, at: Vector3, material: Material) -> MeshInstance3D:
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.0
+	cone.bottom_radius = radius
+	cone.height = height
+	cone.radial_segments = 9
+	var instance := MeshInstance3D.new()
+	instance.name = node_name
+	instance.mesh = cone
+	instance.material_override = material
+	instance.position = at
+	$TowerPresentation.add_child(instance)
+	return instance
 
 
 func _material(color: Color, metallic: float, roughness: float,

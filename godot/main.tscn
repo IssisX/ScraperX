@@ -4,23 +4,23 @@
 
 [sub_resource type="Environment" id="Environment_yard"]
 background_mode = 1
-background_color = Color(0.148, 0.132, 0.116, 1)
+background_color = Color(0.62, 0.66, 0.7, 1)
 background_energy_multiplier = 1.0
 ambient_light_source = 3
-ambient_light_color = Color(0.29, 0.27, 0.26, 1)
-ambient_light_energy = 0.6
+ambient_light_color = Color(0.64, 0.67, 0.71, 1)
+ambient_light_energy = 0.75
 fog_enabled = true
 fog_mode = 0
-fog_light_color = Color(0.3, 0.268, 0.232, 1)
-fog_light_energy = 1.15
-fog_sun_scatter = 0.14
-fog_density = 0.0035
-fog_aerial_perspective = 0.85
-fog_height = 140.0
-fog_height_density = 0.008
+fog_light_color = Color(0.66, 0.69, 0.73, 1)
+fog_light_energy = 0.55
+fog_sun_scatter = 0.05
+fog_density = 0.0009
+fog_aerial_perspective = 0.35
+fog_height = 180.0
+fog_height_density = 0.003
 tonemap_mode = 3
-tonemap_exposure = 1.05
-tonemap_white = 5.0
+tonemap_exposure = 1.0
+tonemap_white = 3.5
 
 [node name="TowerApproach" type="Node3D"]
 script = ExtResource("1_main")
@@ -33,9 +33,9 @@ environment = SubResource("Environment_yard")
 [node name="LightRig" type="Node3D" parent="."]
 
 [node name="Overcast" type="DirectionalLight3D" parent="."]
-rotation_degrees = Vector3(-62, 38, 0)
-light_color = Color(0.53, 0.58, 0.66, 1)
-light_energy = 0.34
+rotation_degrees = Vector3(-58, 34, 0)
+light_color = Color(0.92, 0.94, 0.97, 1)
+light_energy = 1.15
 shadow_enabled = true
 
 [node name="Camera" type="Camera3D" parent="."]
@@ -65,7 +65,7 @@ mouse_filter = 2
 [node name="Eyebrow" type="Label" parent="HUD/TopLeft"]
 theme_override_colors/font_color = Color(0.76, 0.56, 0.3, 1)
 theme_override_font_sizes/font_size = 17
-text = "SCRAPERX  /  APPROACH YARD  /  PLANT 001"
+text = "SCRAPERX  /  KELLERWORKS TOWER  /  PLANT 001"
 
 [node name="Status" type="Label" parent="HUD/TopLeft"]
 theme_override_colors/font_color = Color(0.86, 0.85, 0.82, 1)
