@@ -240,7 +240,7 @@ int main() {
             "native control interaction must accept hopper release in range");
     require(!hopper.request_hopper_release(),
             "duplicate release request before the next tick must be rejected");
-    require(hopper.advance_frame(5.0).accepted,
+    require(hopper.advance_frame(5.5).accepted,
             "hopper-to-rocker causal interval must advance");
 
     const auto hopper_released = hopper.snapshot();
