@@ -1,17 +1,15 @@
-name: ScraperX-2 Checkpoint — Exterior Machine Threshold
+name: ScraperX-2 CP-004 — Traversal Impact Identity
 
 on:
   push:
-    branches: [ScraperX-2]
+    branches: [scraperx2-cp004-staging]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Every ScraperX-2 commit is an immutable checkpoint candidate. A newer push must
-# never cancel an older commit's build, otherwise that commit can lose its APK.
 concurrency:
-  group: scraperx-checkpoint-${{ github.workflow }}-${{ github.sha }}
+  group: scraperx-cp004-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 env:
@@ -23,9 +21,9 @@ env:
   ANDROID_NDK_VERSION: 29.0.14206865
 
 jobs:
-  exterior-machine-threshold:
+  traversal-impact-identity:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 70
 
     steps:
       - name: Checkout exact source
@@ -69,7 +67,7 @@ jobs:
             -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
           tools/godot/godot --version
 
-      - name: Build native host graph and run checkpoint regressions
+      - name: Build native host graph and run CP-004 regressions
         shell: bash
         run: |
           set -euo pipefail
@@ -82,9 +80,9 @@ jobs:
           cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
           ctest --test-dir build/host --verbose | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
-          grep -F "PASS scraperx_sim exterior-machine checkpoint" artifacts/native-tests.log
+          grep -F "PASS scraperx_sim CP-004 traversal-impact checkpoint" artifacts/native-tests.log
 
-      - name: Run Godot through exterior approach and native hopper interaction
+      - name: Run Fold-aspect exterior traversal and impact chain
         shell: bash
         run: |
           set -euo pipefail
@@ -93,19 +91,21 @@ jobs:
             > godot/.godot/extension_list.cfg
           grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
             godot/.godot/extension_list.cfg
-          timeout 60s xvfb-run -a -s "-screen 0 2160x1856x24" \
-            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 720 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/cp003-exterior-machine.png" \
+          timeout 70s xvfb-run -a -s "-screen 0 2160x1856x24" \
+            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 1600 \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/cp004-traversal-impact-identity.png" \
             2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/cp003-exterior-machine.png
+          test -s artifacts/screenshots/cp004-traversal-impact-identity.png
           grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "checkpoint=CP-003-EXTERIOR-MACHINE" artifacts/godot-runtime.log
-          grep -F "SCRAPERX_EXTERIOR_MACHINE_PROOF" artifacts/godot-runtime.log
+          grep -F "checkpoint=CP-004-TRAVERSAL-IMPACT" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_CP004_RUNTIME_PROOF" artifacts/godot-runtime.log
           grep -F "fold_layout=1" artifacts/godot-runtime.log
           grep -F "approach=1" artifacts/godot-runtime.log
           grep -F "interaction=1" artifacts/godot-runtime.log
-          grep -F "gate_open=1" artifacts/godot-runtime.log
           grep -F "load_moved=1" artifacts/godot-runtime.log
+          grep -F "rocker=1" artifacts/godot-runtime.log
+          grep -F "vault=1" artifacts/godot-runtime.log
+          grep -F "mantle=1" artifacts/godot-runtime.log
 
       - name: Cross-compile native graph for Android arm64
         shell: bash
@@ -123,12 +123,12 @@ jobs:
           test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
           file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
 
-      - name: Export checkpoint Android arm64 APK
+      - name: Export CP-004 Android arm64 APK
         shell: bash
         run: |
           set -euo pipefail
           CHECKPOINT_ID="${GITHUB_SHA::12}"
-          APK_NAME="ScraperX-2-${CHECKPOINT_ID}-arm64.apk"
+          APK_NAME="ScraperX-2-CP004-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
@@ -142,49 +142,48 @@ jobs:
             "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
             > artifacts/apk/CHECKPOINT.txt
 
-      - name: Record evidence boundaries
+      - name: Record CP-004 evidence boundaries
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/CP-003-EVIDENCE.md <<EOF
-          # CP-003 Exterior Machine Threshold Evidence
+          cat > artifacts/CP-004-EVIDENCE.md <<EOF
+          # CP-004 Traversal / Impact / Identity Evidence
 
           Source commit: \`${GITHUB_SHA}\`
 
           Proven by this workflow:
 
-          - WO-001 fixed-step, invalid-input, static-support, and locomotion regressions remained green;
-          - WO-002 translating/rotating support and inherited-momentum regressions remained green;
-          - default native spawn is exterior grade rather than a tower-interior deck;
-          - remote hopper operation is rejected by native authority;
-          - in-range hopper operation opens a native Jolt gate over finite travel;
-          - a dynamic native Jolt load leaves its initial support and moves through gravity/contact;
-          - Godot 4.7 uses a Fold6-aspect composition path, traverses the exterior approach, and observes the native machine predicates;
-          - the screenshot comes from that current-source runtime;
-          - Android arm64 native graph cross-compiles;
-          - the exported APK contains \`lib/arm64-v8a/libscraperx_native.so\`;
+          - WO-001 static-support/input/fixed-step regressions remain green;
+          - WO-002 translating/rotating support and inherited-momentum regressions remain green;
+          - CP-003 exterior spawn and native hopper matter-transfer regressions remain green;
+          - native traversal candidates are bounded to real authored Jolt geometry;
+          - vault crosses a low blocker through multi-tick body motion, not position teleport;
+          - mantle terminates on the actual higher native support;
+          - hang arrests a real airborne body, jump climbs onto the actual ledge, and drop returns to gravity;
+          - hopper matter physically propagates into a rotation-only dynamic Jolt rocker and produces real angular state;
+          - Godot mirrors current native rocker/traversal state while presenting the Fold-open machine-tower identity;
+          - current-source Fold-aspect runtime executes hopper → rocker → vault → mantle and captures a screenshot;
+          - Android arm64 native graph cross-compiles and the APK contains the current native library;
           - APK checksum and checkpoint identity are recorded.
 
           Presentation-only in this checkpoint:
 
-          - cloud, stack plume, fog, lighting, material appearance, and distant tower mass.
+          - atmospheric cloud/plume/fog;
+          - idle giant wheel/drum/crane/lift infrastructure that establishes visual identity but is not yet consequential machinery.
 
           Not proven here:
 
-          - actual Fold6 installation/execution or touch ergonomics;
-          - sustained frame rate or thermals;
-          - authoritative steam/fluid dynamics;
-          - WO-003 mantle/vault/ledge/hang completion;
-          - WO-004 fall/parachute/checkpoint completion;
-          - full WO-005 finite power/force/brake freight mechanism;
-          - structural or process coupling;
-          - persistent checkpoint/reload.
+          - generalized arbitrary-geometry traversal or moving-ledge hang/mantle;
+          - Fold6 installation, touch ergonomics, sustained 45 FPS, or thermals;
+          - WO-004 parachute/checkpoint persistence;
+          - complete WO-005 finite power/force/brake freight machinery;
+          - cables/rigging, structural coupling, process/steam/fluid authority, or persistence.
           EOF
 
-      - name: Publish immutable checkpoint build and evidence
+      - name: Publish CP-004 staging build and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ScraperX-2-checkpoint-${{ github.sha }}
+          name: ScraperX-2-CP004-${{ github.sha }}
           path: artifacts/
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
