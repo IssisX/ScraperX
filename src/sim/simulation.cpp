@@ -53,6 +53,18 @@ public:
         return mapping_[layer];
     }
 
+    [[nodiscard]] const char *GetBroadPhaseLayerName(
+        const JPH::BroadPhaseLayer layer) const override {
+        if (layer == broadphase_layers::kStatic) {
+            return "STATIC";
+        }
+        if (layer == broadphase_layers::kMoving) {
+            return "MOVING";
+        }
+        JPH_ASSERT(false);
+        return "INVALID";
+    }
+
 private:
     JPH::BroadPhaseLayer mapping_[object_layers::kCount];
 };
