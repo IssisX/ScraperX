@@ -21,11 +21,17 @@
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/PulleyConstraint.h>
+#include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
 
 #include <algorithm>
 #include <atomic>
+#include <vector>
 #include <cmath>
 #include <limits>
 #include <mutex>
@@ -97,6 +103,37 @@ constexpr double kHangIntentDotThreshold = 0.3;
 // After a deliberate release the controller stops offering an automatic re-grab
 // for a moment, so letting go is a real decision rather than an instant re-hang.
 constexpr std::uint32_t kReleaseRegrabLockoutTicks = 27;
+
+// --- coupled machine geometry, metres / seconds / kilograms ---------------
+// The plant sits in the approach yard between grade spawn and the tower, so the
+// player meets it on the way in rather than being born inside it.
+constexpr double kMachineCyclePeriodSeconds = 26.0;
+constexpr float kScoopX = 34.0F;
+constexpr float kScoopZ = -96.0F;
+constexpr float kScoopBottomY = 0.03F;
+constexpr float kScoopTopY = 12.0F;
+constexpr float kScoopDischargeTilt = 0.62F;
+constexpr float kTipperHingeX = 29.0F;
+constexpr float kTipperHingeY = 3.6F;
+constexpr float kTipperZ = -96.0F;
+constexpr float kValveHingeX = 29.6F;
+constexpr float kValveHingeY = 7.2F;
+constexpr float kRopeSlackMeters = 0.15F;
+constexpr float kLiftMastX = 13.0F;
+constexpr float kLiftZ = -100.0F;
+constexpr float kLiftPlatformX = 16.4F;
+constexpr float kLiftPlatformRestY = 1.2F;
+constexpr float kLiftTravelMeters = 7.6F;
+constexpr float kCounterweightX = 11.6F;
+constexpr float kSheaveY = 10.4F;
+constexpr float kBallastMassKg = 380.0F;
+constexpr float kLiftPlatformMassKg = 2100.0F;
+constexpr float kCounterweightMassKg = 1800.0F;
+constexpr float kTipperMassKg = 900.0F;
+constexpr float kValveLeverMassKg = 90.0F;
+// Valve lever angle band that maps to a fully shut / fully open orifice.
+constexpr float kValveShutAngle = -0.05F;
+constexpr float kValveOpenAngle = 0.62F;
 
 constexpr float kTraversalStallTolerance = 0.22F;
 constexpr std::uint32_t kTraversalStallAbortTicks = 12;
@@ -203,10 +240,17 @@ struct SupportSample final {
     float normal_y = 0.0F;
 };
 
-[[nodiscard]] bool entity_is_kinematic_support(const std::uint64_t entity_id) noexcept {
-    return entity_id == scraperx::sim::Simulation::kTranslatingSupportEntityId ||
-           entity_id == scraperx::sim::Simulation::kRotatingSupportEntityId ||
-           entity_id == scraperx::sim::Simulation::kMovingLedgeEntityId;
+// Supports that actually move. These outrank static ground when the player is
+// in contact with both, so support-relative locomotion picks the machine.
+[[nodiscard]] bool entity_is_moving_support(const std::uint64_t entity_id) noexcept {
+    using Sim = scraperx::sim::Simulation;
+    return entity_id == Sim::kTranslatingSupportEntityId ||
+           entity_id == Sim::kRotatingSupportEntityId ||
+           entity_id == Sim::kMovingLedgeEntityId ||
+           entity_id == Sim::kHoistScoopEntityId ||
+           entity_id == Sim::kTipperEntityId ||
+           entity_id == Sim::kLiftPlatformEntityId ||
+           entity_id == Sim::kCounterweightEntityId;
 }
 
 class PlayerContactListener final : public JPH::ContactListener {
@@ -243,7 +287,7 @@ private:
         if (entity_id == 0 || entity_id == scraperx::sim::Simulation::kPlayerEntityId) {
             return 0;
         }
-        return entity_is_kinematic_support(entity_id) ? 2 : 1;
+        return entity_is_moving_support(entity_id) ? 2 : 1;
     }
 
     void observe_support(const JPH::Body &first,
@@ -326,9 +370,19 @@ private:
         return {6.1, 4.2, 12.0};
     case scraperx::sim::InitialSpawn::BlockedLedgeApproach:
         return {-3.6, 1.2, -8.0};
+    case scraperx::sim::InitialSpawn::MachineYard:
+        return {31.2, 5.0, -96.0};
+    case scraperx::sim::InitialSpawn::LiftPlatform:
+        return {16.4, 2.0, -100.0};
+    case scraperx::sim::InitialSpawn::ExteriorGrade:
+        // At grade, outdoors, 120 m short of the tower face: far enough that the
+        // mass reads as something you approach, close enough that its lower
+        // third already fills the frame.
+        return {6.0, 1.2, -25.0};
     case scraperx::sim::InitialSpawn::TranslatingSupport:
-    default:
         return {0.0, 3.0, 8.0};
+    default:
+        return {6.0, 1.2, -25.0};
     }
 }
 
@@ -405,13 +459,26 @@ public:
 
         auto &bodies = physics_system_.GetBodyInterface();
 
+        // Grade: the yard the player is born on, outdoors, wide enough to walk
+        // the tower approach and to carry the whole plant.
         deck_id_ = add_box(bodies,
-                           JPH::Vec3(16.0F, 0.5F, 16.0F),
-                           JPH::RVec3(0.0, -0.5, 0.0),
+                           JPH::Vec3(240.0F, 0.5F, 240.0F),
+                           JPH::RVec3(0.0, -0.5, -60.0),
                            JPH::EMotionType::Static,
                            object_layers::kStatic,
                            0.6F,
                            Simulation::kStaticDeckEntityId);
+
+        // The tower itself: one mass, 1.6 km, 120 m across its approach face.
+        tower_id_ = add_box(bodies,
+                            JPH::Vec3(60.0F,
+                                      static_cast<float>(Simulation::kTowerHeightMeters * 0.5),
+                                      45.0F),
+                            JPH::RVec3(0.0, Simulation::kTowerHeightMeters * 0.5, -190.0),
+                            JPH::EMotionType::Static,
+                            object_layers::kStatic,
+                            0.8F,
+                            Simulation::kTowerEntityId);
 
         translating_support_id_ = add_box(bodies,
                                           JPH::Vec3(2.75F, 0.25F, 2.75F),
@@ -477,6 +544,8 @@ public:
                                            0.7F,
                                            Simulation::kBlockedLedgeCanopyEntityId);
 
+        build_machine(bodies);
+
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
         JPH::BodyCreationSettings player_settings(player_shape_,
                                                   spawn_position(initial_spawn),
@@ -498,7 +567,20 @@ public:
 
     ~PhysicsWorld() {
         physics_system_.SetContactListener(nullptr);
+        for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
+            if (constraint != nullptr) {
+                physics_system_.RemoveConstraint(constraint);
+            }
+        }
+        machine_constraints_.clear();
+        tipper_hinge_ = nullptr;
+        valve_hinge_ = nullptr;
         auto &bodies = physics_system_.GetBodyInterface();
+        for (auto it = machine_bodies_.rbegin(); it != machine_bodies_.rend(); ++it) {
+            remove_and_destroy(bodies, *it);
+        }
+        machine_bodies_.clear();
+        remove_and_destroy(bodies, tower_id_);
         remove_and_destroy(bodies, player_id_);
         remove_and_destroy(bodies, blocked_ledge_canopy_id_);
         remove_and_destroy(bodies, blocked_ledge_id_);
@@ -526,6 +608,8 @@ public:
               const double next_time_seconds) noexcept {
         auto &bodies = physics_system_.GetBodyInterface();
         update_support_motion(bodies, delta_seconds, next_time_seconds);
+        update_scoop(bodies, delta_seconds, next_time_seconds);
+        update_plant(bodies, delta_seconds);
 
         if (regrab_lockout_ticks_ > 0) {
             --regrab_lockout_ticks_;
@@ -573,10 +657,40 @@ public:
         return traversal_state_ != TraversalState::None;
     }
 
+    void set_feed_enabled(const bool enabled) noexcept {
+        steam_plant_.set_feed_enabled(enabled);
+    }
+
 private:
     static void remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {
         bodies.RemoveBody(body_id);
         bodies.DestroyBody(body_id);
+    }
+
+    static JPH::Body *add_shape_body(JPH::BodyInterface &bodies,
+                                     const JPH::Shape *shape,
+                                     const JPH::RVec3 position,
+                                     const JPH::Quat rotation,
+                                     const JPH::EMotionType motion_type,
+                                     const JPH::ObjectLayer layer,
+                                     const float friction,
+                                     const std::uint64_t entity_id,
+                                     const float mass_kg) {
+        JPH::BodyCreationSettings settings(shape, position, rotation, motion_type, layer);
+        settings.mFriction = friction;
+        settings.mUserData = entity_id;
+        settings.mAllowSleeping = false;
+        if (mass_kg > 0.0F) {
+            settings.mOverrideMassProperties =
+                JPH::EOverrideMassProperties::CalculateInertia;
+            settings.mMassPropertiesOverride.mMass = mass_kg;
+        }
+        JPH::Body *body = bodies.CreateBody(settings);
+        const JPH::EActivation activation = motion_type == JPH::EMotionType::Static
+                                                ? JPH::EActivation::DontActivate
+                                                : JPH::EActivation::Activate;
+        bodies.AddBody(body->GetID(), activation);
+        return body;
     }
 
     static JPH::BodyID add_box(JPH::BodyInterface &bodies,
@@ -585,19 +699,19 @@ private:
                                const JPH::EMotionType motion_type,
                                const JPH::ObjectLayer layer,
                                const float friction,
-                               const std::uint64_t entity_id) {
-        JPH::BodyCreationSettings settings(new JPH::BoxShape(half_extent),
-                                           position,
-                                           JPH::Quat::sIdentity(),
-                                           motion_type,
-                                           layer);
-        settings.mFriction = friction;
-        settings.mUserData = entity_id;
-        settings.mAllowSleeping = motion_type == JPH::EMotionType::Static;
-        const JPH::EActivation activation = motion_type == JPH::EMotionType::Static
-                                                ? JPH::EActivation::DontActivate
-                                                : JPH::EActivation::Activate;
-        return bodies.CreateAndAddBody(settings, activation);
+                               const std::uint64_t entity_id,
+                               const JPH::Quat rotation = JPH::Quat::sIdentity(),
+                               const float mass_kg = 0.0F) {
+        return add_shape_body(bodies,
+                              new JPH::BoxShape(half_extent),
+                              position,
+                              rotation,
+                              motion_type,
+                              layer,
+                              friction,
+                              entity_id,
+                              mass_kg)
+            ->GetID();
     }
 
     [[nodiscard]] static JPH::Vec3 normalized_horizontal(const double x, const double z) noexcept {
@@ -628,8 +742,331 @@ private:
             return blocked_ledge_id_;
         case Simulation::kBlockedLedgeCanopyEntityId:
             return blocked_ledge_canopy_id_;
+        case Simulation::kTowerEntityId:
+            return tower_id_;
+        case Simulation::kHoistScoopEntityId:
+            return scoop_ids_[0];
+        case Simulation::kBallastEntityId:
+            return ballast_id_;
+        case Simulation::kTipperEntityId:
+            return tipper_id_;
+        case Simulation::kValveLeverEntityId:
+            return valve_lever_id_;
+        case Simulation::kLiftPlatformEntityId:
+            return lift_platform_id_;
+        case Simulation::kCounterweightEntityId:
+            return counterweight_id_;
         default:
             return {};
+        }
+    }
+
+    // ---- coupled machine ------------------------------------------------
+    //
+    // One causal chain, all of it authoritative:
+    //   hoist scoop lifts ballast -> tips it onto a chute -> ballast falls onto a
+    //   hinged tipper -> tipper rotation drags a tension-only rope -> rope pulls a
+    //   counterweighted valve lever -> lever angle sets a real orifice area ->
+    //   orifice vents a finite pressure vessel into an actuator cylinder ->
+    //   cylinder pressure pushes a piston -> piston lifts a counterweighted
+    //   platform the player can stand on and ride.
+    //
+    // Nothing in the chain is scripted. Each link reads the previous link's
+    // actual body state, so the player can enter it mid-cycle, block it, ride it,
+    // or start it early by standing on the tipper.
+    void build_machine(JPH::BodyInterface &bodies) {
+        const auto track = [this](const JPH::BodyID id) {
+            machine_bodies_.push_back(id);
+            return id;
+        };
+
+        // Static plant structure.
+        const JPH::BodyID machine_pylon = track(add_box(
+            bodies, JPH::Vec3(0.55F, 1.45F, 1.4F), JPH::RVec3(kTipperHingeX, 1.45, kTipperZ),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+            Simulation::kMachinePylonEntityId));
+        const JPH::BodyID valve_pylon = track(add_box(
+            bodies, JPH::Vec3(0.3F, 3.6F, 0.3F), JPH::RVec3(kValveHingeX, 3.6, -92.25),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+            Simulation::kMachinePylonEntityId));
+        track(add_box(bodies, JPH::Vec3(0.4F, 6.2F, 0.4F), JPH::RVec3(35.9, 6.2, kScoopZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                      Simulation::kMachinePylonEntityId));
+        track(add_box(bodies, JPH::Vec3(1.7F, 2.3F, 1.7F), JPH::RVec3(30.5, 2.3, -101.5),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.75F,
+                      Simulation::kVesselShellEntityId));
+        track(add_box(bodies, JPH::Vec3(0.9F, 0.625F, 0.8F), JPH::RVec3(27.0, 0.625, -94.05),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                      Simulation::kMachinePylonEntityId));
+        track(add_box(bodies, JPH::Vec3(0.9F, 1.25F, 0.8F), JPH::RVec3(28.3, 1.25, -94.05),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                      Simulation::kMachinePylonEntityId));
+        track(add_box(bodies, JPH::Vec3(1.0F, 0.15F, 0.8F), JPH::RVec3(29.5, 3.65, -94.05),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                      Simulation::kMachinePylonEntityId));
+
+        const JPH::BodyID lift_mast = track(add_box(
+            bodies, JPH::Vec3(0.4F, 5.6F, 0.4F), JPH::RVec3(kLiftMastX, 5.6, kLiftZ),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+            Simulation::kLiftMastEntityId));
+        track(add_box(bodies, JPH::Vec3(2.6F, 0.14F, 9.0F), JPH::RVec3(kLiftPlatformX, 8.55, -112.0),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.7F,
+                      Simulation::kCatwalkEntityId));
+
+        // Return basin: a sloped real surface that walks the ballast back to the
+        // hoist mouth under gravity and friction alone, with lane guards so it
+        // cannot wander out of the machine.
+        track(add_box(bodies, JPH::Vec3(1.2F, 0.14F, 1.5F), JPH::RVec3(31.82, 1.84, kScoopZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.30F,
+                      Simulation::kCatchBasinEntityId,
+                      JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), -0.20F)));
+        for (const float guard_z : {kScoopZ - 1.55F, kScoopZ + 1.55F}) {
+            track(add_box(bodies, JPH::Vec3(1.4F, 0.45F, 0.12F),
+                          JPH::RVec3(31.82, 2.20, guard_z), JPH::EMotionType::Static,
+                          object_layers::kStatic, 0.4F, Simulation::kChuteEntityId));
+        }
+
+        // Hoist scoop: four kinematic panels driven by one rigid transform, open
+        // on its -x face so a forward tilt discharges the ballast.
+        scoop_local_[0] = JPH::Vec3(0.0F, -0.03F, 0.0F);
+        scoop_local_[1] = JPH::Vec3(1.42F, 0.70F, 0.0F);
+        scoop_local_[2] = JPH::Vec3(0.0F, 0.70F, -1.42F);
+        scoop_local_[3] = JPH::Vec3(0.0F, 0.70F, 1.42F);
+        const JPH::Vec3 scoop_half[4] = {
+            JPH::Vec3(1.30F, 0.03F, 1.30F),
+            JPH::Vec3(0.12F, 0.70F, 1.30F),
+            JPH::Vec3(1.30F, 0.70F, 0.12F),
+            JPH::Vec3(1.30F, 0.70F, 0.12F),
+        };
+        for (int i = 0; i < 4; ++i) {
+            scoop_ids_[i] = track(add_box(
+                bodies, scoop_half[i],
+                JPH::RVec3(kScoopX + scoop_local_[i].GetX(),
+                           kScoopBottomY + scoop_local_[i].GetY(),
+                           kScoopZ + scoop_local_[i].GetZ()),
+                JPH::EMotionType::Kinematic, object_layers::kMoving, 0.25F,
+                Simulation::kHoistScoopEntityId));
+        }
+
+        // Ballast: a real 380 kg mass. The player can push it, be struck by it, or
+        // stand where it lands.
+        ballast_id_ = track(add_box(bodies, JPH::Vec3(0.42F, 0.42F, 0.42F),
+                                    JPH::RVec3(34.6, 1.0, kScoopZ), JPH::EMotionType::Dynamic,
+                                    object_layers::kMoving, 0.45F, Simulation::kBallastEntityId,
+                                    JPH::Quat::sIdentity(), kBallastMassKg));
+
+        // Tipper: beam plus an inboard counterweight lump, so it rests with the
+        // catch end raised and resets itself once the ballast rolls off.
+        JPH::StaticCompoundShapeSettings tipper_settings;
+        tipper_settings.AddShape(JPH::Vec3::sZero(), JPH::Quat::sIdentity(),
+                                 new JPH::BoxShape(JPH::Vec3(3.6F, 0.20F, 1.1F)));
+        tipper_settings.AddShape(JPH::Vec3(-3.95F, -0.30F, 0.0F), JPH::Quat::sIdentity(),
+                                 new JPH::BoxShape(JPH::Vec3(0.44F, 0.44F, 0.44F)));
+        JPH::Body *tipper = add_shape_body(
+            bodies, tipper_settings.Create().Get(),
+            JPH::RVec3(kTipperHingeX, kTipperHingeY, kTipperZ), JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.30F,
+            Simulation::kTipperEntityId, kTipperMassKg);
+        tipper_id_ = track(tipper->GetID());
+
+        // Valve lever: arm plus an outboard counterweight, so gravity shuts the
+        // valve and only rope tension opens it.
+        JPH::StaticCompoundShapeSettings lever_settings;
+        lever_settings.AddShape(JPH::Vec3(-0.80F, 0.0F, 0.0F), JPH::Quat::sIdentity(),
+                                new JPH::BoxShape(JPH::Vec3(0.80F, 0.13F, 0.20F)));
+        lever_settings.AddShape(JPH::Vec3(0.62F, 0.0F, 0.0F), JPH::Quat::sIdentity(),
+                                new JPH::BoxShape(JPH::Vec3(0.34F, 0.34F, 0.34F)));
+        JPH::Body *lever = add_shape_body(
+            bodies, lever_settings.Create().Get(),
+            JPH::RVec3(kValveHingeX, kValveHingeY, -93.0), JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
+            Simulation::kValveLeverEntityId, kValveLeverMassKg);
+        valve_lever_id_ = track(lever->GetID());
+
+        // Lift platform and its counterweight, each on a real vertical slider and
+        // joined by a real pulley rope.
+        JPH::Body *platform = add_shape_body(
+            bodies, new JPH::BoxShape(JPH::Vec3(2.3F, 0.16F, 2.3F)),
+            JPH::RVec3(kLiftPlatformX, kLiftPlatformRestY, kLiftZ), JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.9F,
+            Simulation::kLiftPlatformEntityId, kLiftPlatformMassKg);
+        lift_platform_id_ = track(platform->GetID());
+
+        JPH::Body *counterweight = add_shape_body(
+            bodies, new JPH::BoxShape(JPH::Vec3(0.5F, 0.9F, 0.5F)),
+            JPH::RVec3(kCounterweightX, 7.4, kLiftZ), JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
+            Simulation::kCounterweightEntityId, kCounterweightMassKg);
+        counterweight_id_ = track(counterweight->GetID());
+
+        add_hinge(machine_pylon, tipper_id_, JPH::RVec3(kTipperHingeX, kTipperHingeY, kTipperZ),
+                  -0.42F, 0.06F, &tipper_hinge_, Simulation::kMachinePylonEntityId);
+        add_hinge(valve_pylon, valve_lever_id_, JPH::RVec3(kValveHingeX, kValveHingeY, -93.0),
+                  kValveShutAngle, 0.95F, &valve_hinge_, Simulation::kMachinePylonEntityId);
+
+        add_slider(lift_mast, lift_platform_id_, 0.0F, kLiftTravelMeters);
+        add_slider(lift_mast, counterweight_id_, -kLiftTravelMeters, 0.0F);
+        add_pulley();
+        settle_machine();
+        add_rope();
+    }
+
+    // Lets the linkage reach its own resting pose before the rope is measured, so
+    // slack is slack against the machine as it actually hangs.
+    void settle_machine() noexcept {
+        for (int step = 0; step < 90; ++step) {
+            physics_system_.Update(static_cast<float>(Simulation::kFixedStepSeconds), 1,
+                                   &temp_allocator_, &job_system_);
+        }
+    }
+
+    void add_hinge(const JPH::BodyID anchor_id,
+                   const JPH::BodyID moving_id,
+                   const JPH::RVec3 point,
+                   const float limit_min,
+                   const float limit_max,
+                   JPH::Ref<JPH::HingeConstraint> *out,
+                   const std::uint64_t) {
+        JPH::HingeConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mPoint1 = point;
+        settings.mPoint2 = point;
+        settings.mHingeAxis1 = JPH::Vec3::sAxisZ();
+        settings.mHingeAxis2 = JPH::Vec3::sAxisZ();
+        settings.mNormalAxis1 = JPH::Vec3::sAxisX();
+        settings.mNormalAxis2 = JPH::Vec3::sAxisX();
+        settings.mLimitsMin = limit_min;
+        settings.mLimitsMax = limit_max;
+        JPH::TwoBodyConstraint *constraint = create_constraint(settings, anchor_id, moving_id);
+        if (constraint != nullptr && out != nullptr) {
+            *out = static_cast<JPH::HingeConstraint *>(constraint);
+        }
+    }
+
+    void add_slider(const JPH::BodyID anchor_id,
+                    const JPH::BodyID moving_id,
+                    const float limit_min,
+                    const float limit_max) {
+        JPH::SliderConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mAutoDetectPoint = true;
+        settings.SetSliderAxis(JPH::Vec3::sAxisY());
+        settings.mLimitsMin = limit_min;
+        settings.mLimitsMax = limit_max;
+        (void)create_constraint(settings, anchor_id, moving_id);
+    }
+
+    // Tension-only rope: it can pull the valve lever but never push it, and it
+    // carries deliberate slack so the valve opens a beat after the strike.
+    void add_rope() {
+        const auto &bodies = physics_system_.GetBodyInterface();
+        const JPH::RVec3 tipper_point =
+            bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
+        const JPH::RVec3 lever_point =
+            bodies.GetCenterOfMassTransform(valve_lever_id_) * JPH::RVec3(-1.60, 0.0, 0.0);
+        rope_rest_length_ = JPH::Vec3(lever_point - tipper_point).Length();
+
+        JPH::DistanceConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mPoint1 = tipper_point;
+        settings.mPoint2 = lever_point;
+        settings.mMinDistance = 0.0F;
+        settings.mMaxDistance = rope_rest_length_ + kRopeSlackMeters;
+        (void)create_constraint(settings, tipper_id_, valve_lever_id_);
+    }
+
+    void add_pulley() {
+        JPH::PulleyConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mBodyPoint1 = JPH::RVec3(kLiftPlatformX, kLiftPlatformRestY + 0.16, kLiftZ);
+        settings.mFixedPoint1 = JPH::RVec3(kLiftPlatformX, kSheaveY, kLiftZ);
+        settings.mBodyPoint2 = JPH::RVec3(kCounterweightX, 8.3, kLiftZ);
+        settings.mFixedPoint2 = JPH::RVec3(kCounterweightX, kSheaveY, kLiftZ);
+        settings.mRatio = 1.0F;
+        settings.mMinLength = 0.0F;
+        settings.mMaxLength = -1.0F;
+        (void)create_constraint(settings, lift_platform_id_, counterweight_id_);
+    }
+
+    [[nodiscard]] JPH::TwoBodyConstraint *create_constraint(
+        const JPH::TwoBodyConstraintSettings &settings,
+        const JPH::BodyID first,
+        const JPH::BodyID second) {
+        JPH::BodyLockWrite lock_first(physics_system_.GetBodyLockInterface(), first);
+        JPH::BodyLockWrite lock_second(physics_system_.GetBodyLockInterface(), second);
+        if (!lock_first.Succeeded() || !lock_second.Succeeded()) {
+            return nullptr;
+        }
+        JPH::TwoBodyConstraint *constraint =
+            settings.Create(lock_first.GetBody(), lock_second.GetBody());
+        if (constraint == nullptr) {
+            return nullptr;
+        }
+        physics_system_.AddConstraint(constraint);
+        machine_constraints_.emplace_back(constraint);
+        return constraint;
+    }
+
+    // Kinematic skip-hoist cycle. Every phase is a function of authoritative
+    // simulation time, never wall clock, so the loop is deterministic and can be
+    // walked into at any point.
+    void update_scoop(JPH::BodyInterface &bodies,
+                      const float delta_seconds,
+                      const double next_time_seconds) noexcept {
+        const double phase = std::fmod(next_time_seconds, kMachineCyclePeriodSeconds);
+        machine_cycle_phase_seconds_ = phase;
+
+        float height = kScoopBottomY;
+        float tilt = 0.0F;
+        if (phase < 7.0) {
+            height = kScoopBottomY + (kScoopTopY - kScoopBottomY) *
+                                         smoothstep(0.0F, 1.0F, static_cast<float>(phase / 7.0));
+        } else if (phase < 9.0) {
+            height = kScoopTopY;
+        } else if (phase < 12.5) {
+            height = kScoopTopY;
+            tilt = kScoopDischargeTilt *
+                   smoothstep(0.0F, 1.0F, static_cast<float>((phase - 9.0) / 3.5));
+        } else if (phase < 14.0) {
+            height = kScoopTopY;
+            tilt = kScoopDischargeTilt;
+        } else if (phase < 16.0) {
+            height = kScoopTopY + (kScoopBottomY - kScoopTopY) *
+                                      smoothstep(0.0F, 1.0F, static_cast<float>((phase - 14.0) / 2.0));
+            tilt = kScoopDischargeTilt *
+                   (1.0F - smoothstep(0.0F, 1.0F, static_cast<float>((phase - 14.0) / 1.6)));
+        }
+
+        scoop_height_ = height;
+        scoop_tilt_ = tilt;
+        const JPH::Quat rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), tilt);
+        const JPH::RVec3 origin(kScoopX, height, kScoopZ);
+        for (int i = 0; i < 4; ++i) {
+            bodies.MoveKinematic(scoop_ids_[i], origin + rotation * scoop_local_[i], rotation,
+                                 delta_seconds);
+        }
+    }
+
+    // Reads the real valve lever angle, advances the plant on the same fixed
+    // step, and pushes the piston. Presentation never touches any of this.
+    void update_plant(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
+        float lever_angle = kValveShutAngle;
+        if (valve_hinge_ != nullptr) {
+            const float measured = valve_hinge_->GetCurrentAngle();
+            if (std::isfinite(measured)) {
+                lever_angle = measured;
+            }
+        }
+        valve_lever_angle_ = lever_angle;
+        const float span = kValveOpenAngle - kValveShutAngle;
+        const double fraction =
+            span > 1.0e-4F ? static_cast<double>((lever_angle - kValveShutAngle) / span) : 0.0;
+        steam_plant_.set_valve_open_fraction(fraction);
+        steam_plant_.step(static_cast<double>(delta_seconds));
+
+        const float piston_force = static_cast<float>(steam_plant_.state().piston_force_n);
+        if (piston_force > 0.0F) {
+            bodies.AddForce(lift_platform_id_, JPH::Vec3(0.0F, piston_force, 0.0F));
         }
     }
 
@@ -1227,6 +1664,46 @@ private:
                                   true);
     }
 
+    void read_machine_state(const JPH::BodyInterface &bodies) noexcept {
+        state_.hoist_scoop_position = {kScoopX, scoop_height_, kScoopZ};
+        state_.hoist_scoop_tilt_radians = scoop_tilt_;
+
+        const JPH::RVec3 ballast_position = bodies.GetPosition(ballast_id_);
+        const JPH::Vec3 ballast_velocity = bodies.GetLinearVelocity(ballast_id_);
+        state_.ballast_position = to_vector3(ballast_position);
+        state_.ballast_linear_velocity =
+            {ballast_velocity.GetX(), ballast_velocity.GetY(), ballast_velocity.GetZ()};
+
+        state_.tipper_position = to_vector3(bodies.GetPosition(tipper_id_));
+        state_.tipper_angle_radians =
+            tipper_hinge_ != nullptr ? tipper_hinge_->GetCurrentAngle() : 0.0;
+        state_.valve_lever_angle_radians = valve_lever_angle_;
+
+        const JPH::RVec3 platform_position = bodies.GetPosition(lift_platform_id_);
+        const JPH::Vec3 platform_velocity = bodies.GetLinearVelocity(lift_platform_id_);
+        state_.lift_platform_position = to_vector3(platform_position);
+        state_.lift_platform_linear_velocity =
+            {platform_velocity.GetX(), platform_velocity.GetY(), platform_velocity.GetZ()};
+        state_.counterweight_position = to_vector3(bodies.GetPosition(counterweight_id_));
+
+        const auto &plant = steam_plant_.state();
+        state_.valve_open_fraction = plant.valve_open_fraction;
+        state_.vessel_pressure_pa = plant.vessel_pressure_pa;
+        state_.cylinder_pressure_pa = plant.cylinder_pressure_pa;
+        state_.orifice_mass_flow_kg_per_s = plant.orifice_mass_flow_kg_per_s;
+        state_.vented_mass_kg = plant.vented_mass_kg;
+        state_.piston_force_n = plant.piston_force_n;
+        state_.vessel_available_energy_j = steam_plant_.vessel_available_energy_j();
+        state_.machine_cycle_phase_seconds = machine_cycle_phase_seconds_;
+
+        const JPH::RVec3 rope_tipper =
+            bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
+        const JPH::RVec3 rope_lever =
+            bodies.GetCenterOfMassTransform(valve_lever_id_) * JPH::RVec3(-1.60, 0.0, 0.0);
+        state_.rope_extension_meters =
+            JPH::Vec3(rope_lever - rope_tipper).Length() - rope_rest_length_;
+    }
+
     void read_state() noexcept {
         const auto &bodies = physics_system_.GetBodyInterface();
 
@@ -1279,6 +1756,8 @@ private:
         state_.ledge_point = affordance_.valid ? to_vector3(affordance_.ledge_point) : Vector3{};
         state_.ledge_rise_meters = affordance_.valid ? affordance_.rise : 0.0;
 
+        read_machine_state(bodies);
+
         state_.accepted_traversal_count = accepted_traversal_count_;
         state_.rejected_traversal_count = rejected_traversal_count_;
         state_.aborted_traversal_count = aborted_traversal_count_;
@@ -1302,7 +1781,26 @@ private:
     JPH::BodyID moving_ledge_id_;
     JPH::BodyID blocked_ledge_id_;
     JPH::BodyID blocked_ledge_canopy_id_;
+    JPH::BodyID tower_id_;
     JPH::BodyID player_id_;
+
+    SteamPlant steam_plant_{};
+    std::vector<JPH::BodyID> machine_bodies_;
+    std::vector<JPH::Ref<JPH::TwoBodyConstraint>> machine_constraints_;
+    JPH::Ref<JPH::HingeConstraint> tipper_hinge_;
+    JPH::Ref<JPH::HingeConstraint> valve_hinge_;
+    JPH::BodyID scoop_ids_[4];
+    JPH::Vec3 scoop_local_[4]{};
+    JPH::BodyID ballast_id_;
+    JPH::BodyID tipper_id_;
+    JPH::BodyID valve_lever_id_;
+    JPH::BodyID lift_platform_id_;
+    JPH::BodyID counterweight_id_;
+    float scoop_height_ = kScoopBottomY;
+    float scoop_tilt_ = 0.0F;
+    float valve_lever_angle_ = kValveShutAngle;
+    float rope_rest_length_ = 0.0F;
+    double machine_cycle_phase_seconds_ = 0.0;
     SupportSample support_sample_{};
     JPH::Vec3 airborne_inherited_velocity_{JPH::Vec3::sZero()};
     JPH::Vec3 facing_{JPH::Vec3::sZero()};
@@ -1381,6 +1879,10 @@ bool Simulation::request_traversal() noexcept {
     }
     traversal_requested_ = true;
     return true;
+}
+
+void Simulation::set_boiler_feed_enabled(const bool enabled) noexcept {
+    physics_world_->set_feed_enabled(enabled);
 }
 
 bool Simulation::request_release() noexcept {

@@ -1,59 +1,74 @@
 extends Node3D
 
 # Presentation and input only. Every consequential fact below is read from the
-# native ScraperX simulation; nothing here decides pose, support, or traversal.
+# native ScraperX simulation; nothing here decides pose, support, traversal, or
+# machine state. Where this file draws something that looks simulated -- the
+# steam plume above all -- it is driven by an authoritative native value, so
+# freezing that value freezes the effect.
 
-const EYE_OFFSET := Vector3(0.0, 0.55, 0.0)
-const TOUCH_RADIUS := 92.0
+const EYE_OFFSET := Vector3(0.0, 0.62, 0.0)
+const TOUCH_RADIUS := 100.0
 
 const TRANSLATING_SUPPORT_ENTITY_ID := 3
 const MANTLE_LEDGE_ENTITY_ID := 6
+const TIPPER_ENTITY_ID := 14
+const LIFT_PLATFORM_ENTITY_ID := 16
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
 
-const PHASE_SETTLE := 0
-const PHASE_JUMPED := 1
-const PHASE_APPROACH := 2
-const PHASE_CLOSE := 3
-const PHASE_MANTLE := 4
+const PHASE_APPROACH := 0
+const PHASE_OBSERVE := 1
+const PHASE_PROVEN := 2
 
-# Standoff point in front of the native mantle ledge, in the same metres the
-# native world uses, and the direction the player then faces to close on it.
-const CI_LEDGE_STANDOFF := Vector2(6.6, -6.0)
-const CI_LEDGE_STANDOFF_RADIUS := 0.6
-const CI_LEDGE_FACING := Vector2(1.0, 0.0)
-# After the mantle lands, look back across the deck so the captured frame shows
-# the climbed ledge, the moving supports and the tower slice together.
-const CI_PROOF_VIEW := Vector2(-0.836, 0.549)
-const CI_PROOF_PITCH := -0.16
-const CI_HOLD_TICKS := 24
+# The tower face sits at z = -145. Walking to z = -78 puts its lower third across
+# the whole frame while the plant is still in shot to the right.
+const CI_APPROACH_TARGET_Z := -66.0
+const CI_APPROACH_FACING := Vector2(-0.22, -0.975)
+const CI_OBSERVE_FACING := Vector2(0.36, -0.933)
+const CI_HOLD_TICKS := 20
+
+# Reference mass flow for the plume, kg/s. The native orifice peaks near this, so
+# the ratio below is a real fraction of a real flow, not a tuned animation curve.
+const PLUME_REFERENCE_FLOW := 0.75
 
 var _native: Object
 var _capture_path := ""
 var _capture_scheduled := false
 var _ci_mode := false
 var _yaw := 0.0
-var _pitch := -0.06
+var _pitch := -0.02
 var _move_touch_index := -1
 var _look_touch_index := -1
 var _move_touch_origin := Vector2.ZERO
 var _touch_move := Vector2.ZERO
+var _viewport_size := Vector2.ZERO
+
+var _scoop_meshes: Array[MeshInstance3D] = []
+var _scoop_locals: Array[Vector3] = []
+var _ballast_mesh: MeshInstance3D
+var _tipper_mesh: Node3D
+var _valve_mesh: Node3D
+var _lift_mesh: MeshInstance3D
+var _counterweight_mesh: MeshInstance3D
 var _translating_support_mesh: MeshInstance3D
 var _rotating_support_mesh: MeshInstance3D
 var _moving_ledge_mesh: MeshInstance3D
-var _ci_phase := PHASE_SETTLE
-var _ci_facing := Vector2(1.0, 0.0)
-var _ci_jump_tick := -1
-var _ci_mantle_tick := -1
-var _ci_support_entity_before_jump := 0
-var _ci_support_velocity_before_jump := Vector3.ZERO
-var _ci_jump_velocity_observed := Vector3.ZERO
-var _ci_inherited_motion_observed := false
-var _ci_mantle_support := 0
-var _ci_mantle_ledge_point := Vector3.ZERO
+var _rope_mesh: MeshInstance3D
+var _plume: CPUParticles3D
+var _plume_material: StandardMaterial3D
+var _fire_box: OmniLight3D
+var _vent_light: OmniLight3D
+
+var _ci_phase := PHASE_APPROACH
+var _ci_facing := CI_APPROACH_FACING
+var _ci_proof_tick := -1
+var _ci_peak_valve := 0.0
+var _ci_peak_lift := 0.0
+var _ci_peak_flow := 0.0
+var _ci_shut_flow := 0.0
 var _ci_proof_printed := false
 
 @onready var _camera: Camera3D = $Camera
@@ -62,10 +77,13 @@ var _ci_proof_printed := false
 @onready var _velocity_value: Label = $HUD/TopLeft/Velocity
 @onready var _support_value: Label = $HUD/TopLeft/Support
 @onready var _traversal_value: Label = $HUD/TopLeft/Traversal
+@onready var _machine_value: Label = $HUD/TopLeft/Machine
+@onready var _plant_value: Label = $HUD/TopLeft/Plant
 @onready var _tick_value: Label = $HUD/TopRight/Tick
 @onready var _touch_knob: ColorRect = $HUD/TouchMove/Knob
 @onready var _action_button: Control = $HUD/TouchAction
 @onready var _release_button: Control = $HUD/TouchRelease
+@onready var _light_rig: Node3D = $LightRig
 
 
 func _ready() -> void:
@@ -75,11 +93,10 @@ func _ready() -> void:
 		elif argument.begins_with("--capture="):
 			_capture_path = argument.trim_prefix("--capture=")
 
-	if _ci_mode:
-		_pitch = -0.18
-
-	RenderingServer.set_default_clear_color(Color("071017"))
-	_build_tower_slice()
+	RenderingServer.set_default_clear_color(Color("0e0d0c"))
+	_build_world()
+	_layout_hud()
+	get_viewport().size_changed.connect(_layout_hud)
 
 	if not ClassDB.class_exists("ScraperXSimulation"):
 		_fail_native("SCRAPERX_EXTENSION_LOAD_FAILED", 20)
@@ -90,7 +107,14 @@ func _ready() -> void:
 		_fail_native("SCRAPERX_EXTENSION_INSTANTIATION_FAILED", 20)
 		return
 
-	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-003")
+	if _ci_mode:
+		_yaw = atan2(-CI_APPROACH_FACING.x, -CI_APPROACH_FACING.y)
+		_pitch = 0.06
+
+	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006")
+	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
+		int(_viewport_size.x), int(_viewport_size.y),
+		_viewport_size.x / maxf(1.0, _viewport_size.y), _camera.fov, _camera.far])
 	_render_snapshot()
 
 
@@ -106,7 +130,6 @@ func _process(delta: float) -> void:
 		desired = _ci_movement_intent(position)
 		facing = _ci_facing
 		_yaw = atan2(-facing.x, -facing.y)
-		_pitch = CI_PROOF_PITCH if _ci_mantle_tick >= 0 else _pitch
 
 	var forward := Vector2(-sin(_yaw), -cos(_yaw))
 	var right := Vector2(cos(_yaw), -sin(_yaw))
@@ -124,12 +147,11 @@ func _process(delta: float) -> void:
 	_render_snapshot()
 
 	if _ci_mode:
-		_ci_observe(int(_native.get_tick_index()))
+		_ci_observe()
 
 	var proof_ready := (
-		_ci_inherited_motion_observed
-		and _ci_mantle_tick >= 0
-		and int(_native.get_tick_index()) >= _ci_mantle_tick + CI_HOLD_TICKS
+		_ci_proof_tick >= 0
+		and int(_native.get_tick_index()) >= _ci_proof_tick + CI_HOLD_TICKS
 	)
 
 	if proof_ready and not _capture_path.is_empty() and not _capture_scheduled:
@@ -140,79 +162,35 @@ func _process(delta: float) -> void:
 		get_tree().quit(0)
 
 
-# --- CI sequence: every transition is driven by native authoritative state ---
+# --- CI sequence: walk the approach, then watch the plant work ---------------
 
 
 func _ci_movement_intent(position: Vector3) -> Vector2:
 	if _ci_phase == PHASE_APPROACH:
-		var to_standoff := Vector2(
-			CI_LEDGE_STANDOFF.x - position.x, CI_LEDGE_STANDOFF.y - position.z
-		)
-		if to_standoff.length() <= CI_LEDGE_STANDOFF_RADIUS:
-			_ci_phase = PHASE_CLOSE
-			_ci_facing = CI_LEDGE_FACING
-			_print_ci_phase("CLOSE")
-			return Vector2(0.0, 1.0)
-		# Steer by looking where we walk: the world direction becomes facing and
-		# the movement command stays a plain "forward", exactly as a thumb on the
-		# left pad would produce.
-		_ci_facing = to_standoff.normalized()
-		return Vector2(0.0, 1.0)
-
-	if _ci_phase != PHASE_CLOSE:
-		return Vector2.ZERO
-
-	# Facing the real ledge and walking into it: the native probe decides whether
-	# a traversal exists, and it keeps deciding for as long as we stand here.
-	_ci_facing = CI_LEDGE_FACING
-	if bool(_native.is_ledge_available()) and int(_native.get_ledge_entity_id()) == MANTLE_LEDGE_ENTITY_ID:
-		if not _native.request_traversal():
-			_fail_native("SCRAPERX_TRAVERSAL_REQUEST_REJECTED", 24)
+		if position.z <= CI_APPROACH_TARGET_Z:
+			_ci_phase = PHASE_OBSERVE
+			_ci_facing = CI_OBSERVE_FACING
+			_pitch = 0.17
+			_print_ci_phase("OBSERVE")
 			return Vector2.ZERO
-		_ci_phase = PHASE_MANTLE
-		_print_ci_phase("MANTLE_REQUESTED")
-		return Vector2.ZERO
-	return Vector2(0.0, 1.0)
+		_ci_facing = CI_APPROACH_FACING
+		return Vector2(0.0, 1.0)
+	return Vector2.ZERO
 
 
-func _ci_observe(tick: int) -> void:
-	var grounded := bool(_native.is_player_grounded())
-	var support := int(_native.get_support_entity_id())
-	var support_velocity: Vector3 = _native.get_support_point_linear_velocity()
-	var player_velocity: Vector3 = _native.get_player_linear_velocity()
+func _ci_observe() -> void:
+	var valve := float(_native.get_valve_open_fraction())
+	var flow := float(_native.get_orifice_mass_flow_kg_per_s())
+	_ci_peak_valve = maxf(_ci_peak_valve, valve)
+	_ci_peak_lift = maxf(_ci_peak_lift, float(_native.get_lift_platform_position().y))
+	_ci_peak_flow = maxf(_ci_peak_flow, flow)
+	if valve <= 0.0:
+		_ci_shut_flow = maxf(_ci_shut_flow, flow)
 
-	match _ci_phase:
-		PHASE_SETTLE:
-			if tick >= 55 and grounded and support == TRANSLATING_SUPPORT_ENTITY_ID and absf(support_velocity.x) > 0.5:
-				_ci_support_entity_before_jump = support
-				_ci_support_velocity_before_jump = support_velocity
-				if not _native.request_jump():
-					_fail_native("SCRAPERX_JUMP_REQUEST_REJECTED", 23)
-					return
-				_ci_jump_tick = tick
-				_ci_phase = PHASE_JUMPED
-				_print_ci_phase("JUMPED")
-		PHASE_JUMPED:
-			if tick > _ci_jump_tick and not grounded and not _ci_inherited_motion_observed:
-				_ci_jump_velocity_observed = player_velocity
-				_ci_inherited_motion_observed = (
-					player_velocity.x * _ci_support_velocity_before_jump.x > 0.0
-					and absf(player_velocity.x) >= absf(_ci_support_velocity_before_jump.x) * 0.45
-				)
-			if _ci_inherited_motion_observed and grounded:
-				_ci_phase = PHASE_APPROACH
-				_print_ci_phase("APPROACH")
-		PHASE_MANTLE:
-			if int(_native.get_traversal_state()) == TRAVERSAL_MANTLING:
-				_ci_mantle_ledge_point = _native.get_traversal_ledge_point()
-			if _ci_mantle_tick < 0 and grounded and support == MANTLE_LEDGE_ENTITY_ID and int(_native.get_accepted_traversal_count()) >= 1:
-				_ci_mantle_tick = tick
-				_ci_mantle_support = support
-				_ci_facing = CI_PROOF_VIEW
-				_pitch = CI_PROOF_PITCH
-				_print_ci_phase("MANTLE_LANDED")
-		_:
-			pass
+	if _ci_phase == PHASE_OBSERVE and _ci_peak_valve > 0.5 and _ci_peak_lift > 6.0:
+		_ci_phase = PHASE_PROVEN
+		_ci_proof_tick = int(_native.get_tick_index())
+		_print_ci_phase("MACHINE_PROVEN")
 
 
 # --- input ------------------------------------------------------------------
@@ -236,7 +214,7 @@ func _input(event: InputEvent) -> void:
 		elif not touch.pressed and touch.index == _move_touch_index:
 			_move_touch_index = -1
 			_touch_move = Vector2.ZERO
-			_touch_knob.position = Vector2(50.0, 50.0)
+			_touch_knob.position = Vector2(56.0, 56.0)
 		elif not touch.pressed and touch.index == _look_touch_index:
 			_look_touch_index = -1
 	elif event is InputEventScreenDrag:
@@ -244,7 +222,7 @@ func _input(event: InputEvent) -> void:
 		if drag.index == _move_touch_index:
 			var offset := (drag.position - _move_touch_origin).limit_length(TOUCH_RADIUS)
 			_touch_move = Vector2(offset.x, -offset.y) / TOUCH_RADIUS
-			_touch_knob.position = Vector2(50.0, 50.0) + offset
+			_touch_knob.position = Vector2(56.0, 56.0) + offset
 		elif drag.index == _look_touch_index:
 			_apply_look_delta(drag.relative)
 	elif event is InputEventMouseButton:
@@ -281,7 +259,47 @@ func _read_desired_movement() -> Vector2:
 
 func _apply_look_delta(delta: Vector2) -> void:
 	_yaw -= delta.x * 0.003
-	_pitch = clampf(_pitch - delta.y * 0.003, -1.15, 1.15)
+	_pitch = clampf(_pitch - delta.y * 0.003, -1.25, 1.35)
+
+
+# --- HUD sized to the bounds the device actually gives us --------------------
+
+
+func _layout_hud() -> void:
+	_viewport_size = get_viewport().get_visible_rect().size
+	var short_edge := minf(_viewport_size.x, _viewport_size.y)
+	var scale := clampf(short_edge / 1100.0, 0.62, 1.7)
+	var gutter := roundf(30.0 * scale)
+
+	for label in [_status, _position_value, _velocity_value, _support_value,
+			_traversal_value, _machine_value, _plant_value, _tick_value]:
+		if label == null:
+			continue
+		var base := 28.0 if label == _status else 16.0
+		label.add_theme_font_size_override("font_size", int(roundf(base * scale)))
+
+	var top_left: Control = $HUD/TopLeft
+	top_left.offset_left = gutter
+	top_left.offset_top = gutter
+	top_left.offset_right = gutter + _viewport_size.x * 0.52
+
+	var top_right: Control = $HUD/TopRight
+	top_right.offset_left = -_viewport_size.x * 0.44
+	top_right.offset_top = gutter
+	top_right.offset_right = -gutter
+
+	var pad_size := roundf(206.0 * scale)
+	var pad: Control = $HUD/TouchMove
+	pad.offset_left = gutter + 12.0
+	pad.offset_right = pad.offset_left + pad_size
+	pad.offset_bottom = -(gutter + 12.0)
+	pad.offset_top = pad.offset_bottom - pad_size
+
+	for button in [_action_button, _release_button]:
+		if button == null:
+			continue
+		button.offset_right = -(gutter + 12.0)
+		button.offset_left = button.offset_right - roundf(184.0 * scale)
 
 
 # --- presentation mirror ----------------------------------------------------
@@ -297,28 +315,32 @@ func _render_snapshot() -> void:
 
 	_camera.position = position + EYE_OFFSET
 	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
-	_position_value.text = "POSITION  %7.2f  %6.2f  %7.2f m" % [position.x, position.y, position.z]
-	_velocity_value.text = "VELOCITY  %7.2f  %6.2f  %7.2f m/s" % [velocity.x, velocity.y, velocity.z]
+
+	_position_value.text = "POSITION  %8.2f %7.2f %8.2f m" % [position.x, position.y, position.z]
+	_velocity_value.text = "VELOCITY  %8.2f %7.2f %8.2f m/s" % [velocity.x, velocity.y, velocity.z]
 	_support_value.text = "SUPPORT   %s / E%04d / POINT V %5.2f %5.2f %5.2f" % [
-		"GROUNDED" if grounded else "AIRBORNE",
-		support,
-		support_velocity.x,
-		support_velocity.y,
-		support_velocity.z,
-	]
-	_support_value.modulate = Color("62f5a8") if grounded else Color("ffc857")
+		"GROUNDED" if grounded else "AIRBORNE", support,
+		support_velocity.x, support_velocity.y, support_velocity.z]
+	_support_value.modulate = Color("d9c08a") if grounded else Color("b4742c")
 	_traversal_value.text = "TRAVERSAL %s / E%04d / %3d%%   LEDGE %s" % [
 		_traversal_name(traversal),
 		int(_native.get_traversal_support_entity_id()),
 		int(round(float(_native.get_traversal_progress()) * 100.0)),
-		_ledge_affordance_text(),
-	]
-	_traversal_value.modulate = Color("62f5a8") if traversal != TRAVERSAL_NONE else Color("8fa3ad")
-	_tick_value.text = "90 HZ NATIVE  /  TICK %08d  /  TRAVERSALS %d ACCEPTED %d REFUSED" % [
-		int(_native.get_tick_index()),
-		int(_native.get_accepted_traversal_count()),
-		int(_native.get_rejected_traversal_count()),
-	]
+		_ledge_affordance_text()]
+
+	var valve := float(_native.get_valve_open_fraction())
+	var flow := float(_native.get_orifice_mass_flow_kg_per_s())
+	_machine_value.text = "PLANT     CYCLE %5.1fs  TIPPER %+6.3f rad  VALVE %3d%%  FLOW %5.3f kg/s" % [
+		float(_native.get_machine_cycle_phase_seconds()),
+		float(_native.get_tipper_angle_radians()), int(round(valve * 100.0)), flow]
+	_plant_value.text = "VESSEL    %5.2f bar  CYL %5.2f bar  PISTON %6.2f kN  STORE %5.2f MJ  LIFT %5.2f m" % [
+		float(_native.get_vessel_pressure_pa()) / 1.0e5,
+		float(_native.get_cylinder_pressure_pa()) / 1.0e5,
+		float(_native.get_piston_force_n()) / 1000.0,
+		float(_native.get_vessel_available_energy_j()) / 1.0e6,
+		float(_native.get_lift_platform_position().y)]
+	_tick_value.text = "90 HZ NATIVE  /  TICK %08d  /  TOWER %.0f m" % [
+		int(_native.get_tick_index()), float(_native.get_tower_height_meters())]
 
 	if traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
@@ -326,13 +348,21 @@ func _render_snapshot() -> void:
 		_status.text = "MANTLING REAL GEOMETRY"
 	elif traversal == TRAVERSAL_VAULTING:
 		_status.text = "VAULTING REAL GEOMETRY"
+	elif grounded and support == LIFT_PLATFORM_ENTITY_ID:
+		_status.text = "RIDING THE STEAM LIFT"
+	elif grounded and support == TIPPER_ENTITY_ID:
+		_status.text = "STANDING ON THE TIPPER"
 	elif grounded and support == TRANSLATING_SUPPORT_ENTITY_ID:
 		_status.text = "NATIVE MOVING SUPPORT ONLINE"
 	elif grounded:
-		_status.text = "NATIVE BODY ONLINE"
+		_status.text = "AT GRADE"
 	else:
 		_status.text = "AIRBORNE / MOMENTUM PRESERVED"
 
+	_mirror_machine(valve, flow)
+
+
+func _mirror_machine(_valve: float, flow: float) -> void:
 	if _translating_support_mesh != null:
 		_translating_support_mesh.position = _native.get_translating_support_position()
 	if _rotating_support_mesh != null:
@@ -340,6 +370,56 @@ func _render_snapshot() -> void:
 		_rotating_support_mesh.rotation = Vector3(0.0, float(_native.get_rotating_support_yaw_radians()), 0.0)
 	if _moving_ledge_mesh != null:
 		_moving_ledge_mesh.position = _native.get_moving_ledge_position()
+
+	var scoop_origin: Vector3 = _native.get_hoist_scoop_position()
+	var scoop_tilt := float(_native.get_hoist_scoop_tilt_radians())
+	var scoop_basis := Basis(Vector3(0.0, 0.0, 1.0), scoop_tilt)
+	for index in _scoop_meshes.size():
+		var mesh := _scoop_meshes[index]
+		mesh.position = scoop_origin + scoop_basis * _scoop_locals[index]
+		mesh.rotation = Vector3(0.0, 0.0, scoop_tilt)
+
+	if _ballast_mesh != null:
+		_ballast_mesh.position = _native.get_ballast_position()
+	if _tipper_mesh != null:
+		_tipper_mesh.position = _native.get_tipper_position()
+		_tipper_mesh.rotation = Vector3(0.0, 0.0, float(_native.get_tipper_angle_radians()))
+	if _valve_mesh != null:
+		_valve_mesh.rotation = Vector3(0.0, 0.0, float(_native.get_valve_lever_angle_radians()))
+	if _lift_mesh != null:
+		_lift_mesh.position = _native.get_lift_platform_position()
+	if _counterweight_mesh != null:
+		_counterweight_mesh.position = _native.get_counterweight_position()
+
+	if _rope_mesh != null:
+		var from: Vector3 = _native.get_tipper_position() + Vector3(3.0, -0.2, 0.0).rotated(
+			Vector3(0.0, 0.0, 1.0), float(_native.get_tipper_angle_radians()))
+		var to := Vector3(29.6, 7.2, -93.0) + Vector3(-1.6, 0.0, 0.0).rotated(
+			Vector3(0.0, 0.0, 1.0), float(_native.get_valve_lever_angle_radians()))
+		var span := to - from
+		var length := span.length()
+		if length > 0.05:
+			_rope_mesh.position = from + span * 0.5
+			_rope_mesh.look_at_from_position(from + span * 0.5, to, Vector3.UP, true)
+			_rope_mesh.scale = Vector3(1.0, 1.0, length)
+
+	# The plume is the only "simulated-looking" effect in this file, and it is a
+	# pure function of the native orifice mass flow. Shut the valve and it stops:
+	# it has no clock of its own.
+	if _plume != null:
+		var flow_ratio := clampf(flow / PLUME_REFERENCE_FLOW, 0.0, 1.0)
+		_plume.emitting = flow > 0.0005
+		_plume.initial_velocity_min = 1.5 + 6.0 * flow_ratio
+		_plume.initial_velocity_max = 3.0 + 15.0 * flow_ratio
+		_plume.scale_amount_min = 0.9 + 1.4 * flow_ratio
+		_plume.scale_amount_max = 1.8 + 3.6 * flow_ratio
+		if _plume_material != null:
+			_plume_material.albedo_color = Color(0.80, 0.78, 0.74, 0.05 + 0.30 * flow_ratio)
+	if _vent_light != null:
+		_vent_light.light_energy = 1.2 + 9.0 * clampf(flow / PLUME_REFERENCE_FLOW, 0.0, 1.0)
+	if _fire_box != null:
+		var charge := clampf(float(_native.get_vessel_pressure_pa()) / 4.6e5, 0.0, 1.0)
+		_fire_box.light_energy = 1.6 + 5.4 * (1.0 - charge)
 
 
 func _traversal_name(traversal: int) -> String:
@@ -360,55 +440,262 @@ func _ledge_affordance_text() -> String:
 	return "E%04d +%4.2fm" % [int(_native.get_ledge_entity_id()), float(_native.get_ledge_rise_meters())]
 
 
-# --- world -------------------------------------------------------------------
+# --- world ------------------------------------------------------------------
+#
+# Industrial palette: mill scale, oxidised steel, poured concrete, wet asphalt,
+# galvanised mesh, faded warning yellow, chipped hazard orange. Nothing here
+# emits light except a sodium fitting, a fire box, or a vent -- colour is a
+# consequence of material and weather, not a shader preset.
 
 
-func _build_tower_slice() -> void:
-	var steel := _material(Color("25343d"), 0.72, 0.28)
-	var dark_steel := _material(Color("101b22"), 0.8, 0.32)
-	var deck := _material(Color("34444d"), 0.65, 0.45)
-	var hazard := _material(Color("e9a62f"), 0.35, 0.5)
-	var signal_material := _material(Color("33d996"), 0.2, 0.34, Color("0b3d2d"))
-	var climbable := _material(Color("3c5764"), 0.55, 0.42, Color("102c26"))
-	# Set dressing is deliberately dimmer than native-authoritative surfaces:
-	# it carries no collision in scraperx_sim and is never traversable.
-	var backdrop := _material(Color("16222a"), 0.35, 0.68)
+func _build_world() -> void:
+	var asphalt := _material(Color("18191b"), 0.06, 0.34)
+	var concrete := _material(Color("6a635b"), 0.0, 0.93)
+	var mill_scale := _material(Color("33322f"), 0.82, 0.58)
+	var oxidised := _material(Color("6b3a22"), 0.22, 0.88)
+	var galvanised := _material(Color("8b8e91"), 0.72, 0.42)
+	var faded_yellow := _material(Color("8f7a2e"), 0.12, 0.76)
+	var hazard := _material(Color("8a4620"), 0.14, 0.8)
+	var tar := _material(Color("131417"), 0.05, 0.62)
 
-	# --- native-authoritative surfaces: sizes mirror the Jolt bodies exactly ---
-	_add_box("AuthorityDeck", Vector3(32.0, 1.0, 32.0), Vector3(0.0, -0.5, 0.0), deck)
+	# Grade and tower: sizes mirror the native Jolt bodies exactly.
+	_add_box("Grade", Vector3(480.0, 1.0, 480.0), Vector3(0.0, -0.5, -60.0), asphalt)
+	_add_box("Tower", Vector3(120.0, 1600.0, 90.0), Vector3(0.0, 800.0, -190.0), concrete)
+
+	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow)
+	_build_yard(concrete, mill_scale, faded_yellow, tar)
+	_build_legacy_fixtures(mill_scale, galvanised, hazard, faded_yellow)
+	_build_plant(mill_scale, oxidised, galvanised, hazard, faded_yellow)
+	_build_sky_shear()
+	_build_lighting()
+
+
+func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Material, faded: Material) -> void:
+	# Structural relief on the approach face so the lower third reads as a wall of
+	# structure rather than a flat slab. Non-authoritative set dressing: it sits
+	# proud of the native collision box by design.
+	for x in [-52.0, -26.0, 0.0, 26.0, 52.0]:
+		_add_box("FacePier", Vector3(7.0, 240.0, 3.0), Vector3(x, 120.0, -143.0), mill_scale)
+	for level in range(14, 240, 16):
+		_add_box("FaceBand", Vector3(118.0, 1.4, 2.0), Vector3(0.0, float(level), -143.4), oxidised)
+	for x in [-40.0, -13.0, 13.0, 40.0]:
+		_add_box("FaceDuct", Vector3(3.2, 190.0, 3.2), Vector3(x, 96.0, -141.0), galvanised)
+	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("c07a24"), 0.85)
+	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("6e4a1c"), 0.7)
+	for level in range(22, 320, 12):
+		var band: Material = lit_band if (level / 12) % 3 != 0 else lit_band_dim
+		_add_box("FloorLight", Vector3(104.0, 1.0, 0.6), Vector3(0.0, float(level), -144.3), band)
+	for level in range(340, 900, 34):
+		_add_box("FloorLightHigh", Vector3(96.0, 0.9, 0.6), Vector3(0.0, float(level), -144.3), lit_band_dim)
+	_add_box("LoadingHeader", Vector3(46.0, 4.0, 3.0), Vector3(0.0, 13.0, -141.0), faded)
+	for x in [-18.0, -6.0, 6.0, 18.0]:
+		_add_box("BayDoor", Vector3(9.0, 11.0, 1.2), Vector3(x, 5.5, -141.2), mill_scale)
+
+
+func _build_yard(concrete: Material, mill_scale: Material,
+		faded: Material, tar: Material) -> void:
+	for z in range(-130, 10, 14):
+		_add_box("LaneStripe", Vector3(0.22, 0.02, 7.0), Vector3(-2.0, 0.012, float(z)), faded)
+	for z in [-118.0, -60.0, -16.0]:
+		_add_box("KerbRun", Vector3(86.0, 0.28, 0.5), Vector3(-6.0, 0.14, z), concrete)
+	for x in [-44.0, -20.0]:
+		for z in [-124.0, -86.0, -40.0]:
+			_add_box("YardCrate", Vector3(4.4, 3.0, 4.4), Vector3(x, 1.5, z), mill_scale)
+	_add_box("StandingWater", Vector3(26.0, 0.02, 18.0), Vector3(-24.0, 0.021, -70.0), tar)
+	_add_box("StandingWaterTwo", Vector3(18.0, 0.02, 12.0), Vector3(14.0, 0.021, -36.0), tar)
+
+
+func _build_legacy_fixtures(mill_scale: Material, galvanised: Material,
+		hazard: Material, faded: Material) -> void:
+	# The WO-001..003 traversal fixtures, re-sited as the loading dock the player
+	# starts beside. Native sizes, unchanged.
 	_translating_support_mesh = _add_box("NativeTranslatingSupport", Vector3(5.5, 0.5, 5.5), Vector3(0.0, 0.25, 8.0), hazard)
-	_rotating_support_mesh = _add_box("NativeRotatingSupport", Vector3(6.0, 0.5, 6.0), Vector3(-8.0, 0.25, 0.0), signal_material)
-	_add_box("NativeVaultRail", Vector3(0.44, 0.95, 5.0), Vector3(5.0, 0.475, -6.0), hazard)
-	_add_box("NativeMantleLedge", Vector3(4.0, 1.55, 4.0), Vector3(11.0, 0.775, -6.0), climbable)
-	_add_box("NativeHangLedge", Vector3(5.0, 3.6, 5.0), Vector3(11.0, 1.8, 4.0), climbable)
-	_moving_ledge_mesh = _add_box("NativeMovingLedge", Vector3(4.0, 3.6, 4.0), Vector3(9.0, 1.8, 12.5), climbable)
-	_add_box("NativeBlockedLedge", Vector3(3.0, 1.55, 3.0), Vector3(-6.0, 0.775, -8.0), climbable)
-	_add_box("NativeBlockedCanopy", Vector3(4.4, 0.3, 4.4), Vector3(-6.0, 2.7, -8.0), hazard)
-
-	# --- non-authoritative set dressing ---------------------------------------
-	for lane_x in [-8.0, 0.0, 8.0]:
-		_add_box("DeckLane", Vector3(0.10, 0.025, 31.0), Vector3(lane_x, 0.015, 0.0), hazard)
-	for lane_z in [-8.0, 0.0, 8.0]:
-		_add_box("DeckCrossline", Vector3(31.0, 0.026, 0.10), Vector3(0.0, 0.016, lane_z), dark_steel)
-
-	for x in [-14.0, 14.0]:
-		for z in [-14.0, 14.0]:
-			_add_box("TowerColumn", Vector3(0.9, 64.0, 0.9), Vector3(x, 31.5, z), backdrop)
-
-	for level in range(4, 61, 6):
-		for z in [-14.0, 14.0]:
-			_add_box("CrossBeamX", Vector3(28.9, 0.55, 0.55), Vector3(0.0, float(level), z), backdrop)
-		for x in [-14.0, 14.0]:
-			_add_box("CrossBeamZ", Vector3(0.55, 0.55, 28.9), Vector3(x, float(level), 0.0), backdrop)
-
-	_add_box("LockedMechanismHeader", Vector3(18.0, 1.0, 1.0), Vector3(0.0, 8.0, -13.0), backdrop)
-	for marker_x in [-10.5, -3.5, 3.5, 10.5]:
-		_add_box("SignalMarker", Vector3(0.22, 0.22, 0.22), Vector3(marker_x, 1.25, -13.5), signal_material)
-	_add_box("SuspendedGuide", Vector3(0.45, 18.0, 0.45), Vector3(-7.5, 15.0, -11.5), backdrop)
-	_add_box("Counterweight", Vector3(2.4, 5.0, 2.4), Vector3(-7.5, 12.0, -11.5), backdrop)
+	_rotating_support_mesh = _add_box("NativeRotatingSupport", Vector3(6.0, 0.5, 6.0), Vector3(-8.0, 0.25, 0.0), galvanised)
+	_add_box("NativeVaultRail", Vector3(0.44, 0.95, 5.0), Vector3(5.0, 0.475, -6.0), faded)
+	_add_box("NativeMantleLedge", Vector3(4.0, 1.55, 4.0), Vector3(11.0, 0.775, -6.0), mill_scale)
+	_add_box("NativeHangLedge", Vector3(5.0, 3.6, 5.0), Vector3(11.0, 1.8, 4.0), mill_scale)
+	_moving_ledge_mesh = _add_box("NativeMovingLedge", Vector3(4.0, 3.6, 4.0), Vector3(9.0, 1.8, 12.5), galvanised)
+	_add_box("NativeBlockedLedge", Vector3(3.0, 1.55, 3.0), Vector3(-6.0, 0.775, -8.0), mill_scale)
+	_add_box("NativeBlockedCanopy", Vector3(4.4, 0.3, 4.4), Vector3(-6.0, 2.7, -8.0), faded)
 
 
-func _material(color: Color, metallic: float, roughness: float, emission: Color = Color.BLACK) -> StandardMaterial3D:
+func _build_plant(mill_scale: Material, oxidised: Material, galvanised: Material,
+		hazard: Material, faded: Material) -> void:
+	# Static plant structure, mirroring the native bodies.
+	_add_box("TipperPylon", Vector3(1.1, 2.9, 2.8), Vector3(29.0, 1.45, -96.0), mill_scale)
+	_add_box("ValvePylon", Vector3(0.6, 7.2, 0.6), Vector3(29.6, 3.6, -92.25), galvanised)
+	_add_box("HoistMast", Vector3(0.8, 12.4, 0.8), Vector3(35.9, 6.2, -96.0), mill_scale)
+	_add_box("Vessel", Vector3(3.4, 4.6, 3.4), Vector3(30.5, 2.3, -101.5), oxidised)
+	_add_box("LiftMast", Vector3(0.8, 11.2, 0.8), Vector3(13.0, 5.6, -100.0), mill_scale)
+	_add_box("Catwalk", Vector3(5.2, 0.28, 18.0), Vector3(16.4, 8.55, -112.0), galvanised)
+	_add_box("AccessStepOne", Vector3(1.8, 1.25, 1.6), Vector3(27.0, 0.625, -94.05), mill_scale)
+	_add_box("AccessStepTwo", Vector3(1.8, 2.5, 1.6), Vector3(28.3, 1.25, -94.05), mill_scale)
+	_add_box("AccessLanding", Vector3(2.0, 0.3, 1.6), Vector3(29.5, 3.65, -94.05), galvanised)
+	_add_box("ReturnBasin", Vector3(2.4, 0.28, 3.0), Vector3(31.82, 1.84, -96.0), oxidised, -0.20)
+	for guard_z in [-97.55, -94.45]:
+		_add_box("BasinGuard", Vector3(2.8, 0.9, 0.24), Vector3(31.82, 2.20, guard_z), faded)
+
+	# Catwalk handrail and sheave head: dressing, deliberately dimmer.
+	for rail_x in [13.9, 18.9]:
+		_add_box("CatwalkRail", Vector3(0.1, 1.1, 18.0), Vector3(rail_x, 9.2, -112.0), galvanised)
+	_add_box("SheaveHead", Vector3(6.4, 0.5, 1.2), Vector3(15.0, 10.4, -100.0), mill_scale)
+
+	# Moving machine parts, each mirroring one authoritative native body.
+	_scoop_locals = [
+		Vector3(0.0, -0.03, 0.0), Vector3(1.42, 0.70, 0.0),
+		Vector3(0.0, 0.70, -1.42), Vector3(0.0, 0.70, 1.42)]
+	var scoop_sizes := [
+		Vector3(2.6, 0.06, 2.6), Vector3(0.24, 1.4, 2.6),
+		Vector3(2.6, 1.4, 0.24), Vector3(2.6, 1.4, 0.24)]
+	for index in 4:
+		_scoop_meshes.append(_add_box("HoistScoop", scoop_sizes[index],
+			Vector3(34.0, 0.03, -96.0) + _scoop_locals[index], oxidised))
+
+	_ballast_mesh = _add_box("Ballast", Vector3(0.84, 0.84, 0.84), Vector3(34.6, 1.0, -96.0), mill_scale)
+
+	_tipper_mesh = Node3D.new()
+	_tipper_mesh.name = "Tipper"
+	$TowerPresentation.add_child(_tipper_mesh)
+	_add_box_to("TipperBeam", Vector3(7.2, 0.4, 2.2), Vector3.ZERO, hazard, _tipper_mesh)
+	_add_box_to("TipperBallast", Vector3(1.0, 1.0, 1.0), Vector3(-3.95, -0.30, 0.0), mill_scale, _tipper_mesh)
+
+	_valve_mesh = Node3D.new()
+	_valve_mesh.name = "ValveLever"
+	_valve_mesh.position = Vector3(29.6, 7.2, -93.0)
+	$TowerPresentation.add_child(_valve_mesh)
+	_add_box_to("ValveArm", Vector3(1.6, 0.26, 0.4), Vector3(-0.80, 0.0, 0.0), galvanised, _valve_mesh)
+	_add_box_to("ValveWeight", Vector3(0.68, 0.68, 0.68), Vector3(0.62, 0.0, 0.0), mill_scale, _valve_mesh)
+
+	_lift_mesh = _add_box("LiftPlatform", Vector3(4.6, 0.32, 4.6), Vector3(16.4, 1.2, -100.0), galvanised)
+	_counterweight_mesh = _add_box("Counterweight", Vector3(1.0, 1.8, 1.0), Vector3(11.6, 7.4, -100.0), mill_scale)
+
+	var rope_material := _material(Color("2b2621"), 0.5, 0.7)
+	_rope_mesh = _add_box("Rope", Vector3(0.09, 0.09, 1.0), Vector3(30.0, 5.0, -95.0), rope_material)
+
+	_build_plume()
+
+
+func _build_plume() -> void:
+	_plume = CPUParticles3D.new()
+	_plume.name = "VentPlume"
+	_plume.position = Vector3(30.5, 5.1, -101.5)
+	_plume.amount = 160
+	_plume.lifetime = 3.4
+	_plume.direction = Vector3(0.15, 1.0, 0.0)
+	_plume.spread = 16.0
+	_plume.gravity = Vector3(0.6, 1.1, 0.0)
+	_plume.damping_min = 0.5
+	_plume.damping_max = 1.4
+	_plume.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	_plume.emission_sphere_radius = 0.45
+	_plume.scale_amount_min = 0.9
+	_plume.scale_amount_max = 1.8
+	_plume.emitting = false
+
+	var quad := QuadMesh.new()
+	quad.size = Vector2(2.2, 2.2)
+	_plume_material = StandardMaterial3D.new()
+	_plume_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_plume_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	_plume_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	_plume_material.albedo_color = Color(0.80, 0.78, 0.74, 0.05)
+	_plume_material.roughness = 1.0
+	_plume_material.disable_receive_shadows = false
+	quad.material = _plume_material
+	_plume.mesh = quad
+	$TowerPresentation.add_child(_plume)
+
+	# Stack plumes on the tower itself, high enough to shear the mass before the
+	# crown. These are weather, not simulation, and are not claimed otherwise.
+	for stack in [Vector3(-34.0, 210.0, -150.0), Vector3(22.0, 268.0, -152.0)]:
+		var haze := CPUParticles3D.new()
+		haze.name = "StackPlume"
+		haze.position = stack
+		haze.amount = 40
+		haze.lifetime = 22.0
+		haze.direction = Vector3(0.8, 0.6, 0.0)
+		haze.spread = 24.0
+		haze.gravity = Vector3(3.2, 1.6, 0.0)
+		haze.scale_amount_min = 26.0
+		haze.scale_amount_max = 64.0
+		haze.emitting = true
+		var stack_quad := QuadMesh.new()
+		stack_quad.size = Vector2(2.0, 2.0)
+		var stack_material := StandardMaterial3D.new()
+		stack_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		stack_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		stack_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		stack_material.albedo_color = Color(0.30, 0.29, 0.28, 0.10)
+		stack_quad.material = stack_material
+		haze.mesh = stack_quad
+		$TowerPresentation.add_child(haze)
+
+
+func _build_sky_shear() -> void:
+	# Thin high cloud that cuts the tower before the eye can finish it.
+	var shear := StandardMaterial3D.new()
+	shear.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	shear.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	shear.albedo_color = Color(0.23, 0.225, 0.215, 0.36)
+	shear.cull_mode = BaseMaterial3D.CULL_DISABLED
+	for level in [236.0, 318.0, 402.0, 520.0]:
+		var plane := PlaneMesh.new()
+		plane.size = Vector2(1400.0, 900.0)
+		plane.material = shear
+		var instance := MeshInstance3D.new()
+		instance.name = "SkyShear"
+		instance.mesh = plane
+		instance.position = Vector3(0.0, level, -170.0)
+		$TowerPresentation.add_child(instance)
+
+
+func _build_lighting() -> void:
+	# Sodium vapour: warm, low, and sourced from actual fittings on masts.
+	for mast in [Vector3(-10.0, 0.0, -24.0), Vector3(-10.0, 0.0, -62.0),
+			Vector3(-10.0, 0.0, -100.0), Vector3(22.0, 0.0, -44.0),
+			Vector3(22.0, 0.0, -82.0), Vector3(40.0, 0.0, -104.0)]:
+		_add_box("LampMast", Vector3(0.38, 11.0, 0.38), mast + Vector3(0.0, 5.5, 0.0),
+			_material(Color("3a3835"), 0.7, 0.62))
+		_add_box("LampHead", Vector3(1.5, 0.4, 0.8), mast + Vector3(0.6, 10.9, 0.0),
+			_material(Color("5a4b2c"), 0.4, 0.7, Color("b06a1c"), 1.4))
+		var lamp := OmniLight3D.new()
+		lamp.name = "SodiumFlood"
+		lamp.position = mast + Vector3(0.6, 10.6, 0.0)
+		lamp.light_color = Color(1.0, 0.585, 0.225)
+		lamp.light_energy = 14.0
+		lamp.omni_range = 46.0
+		lamp.omni_attenuation = 1.4
+		_light_rig.add_child(lamp)
+
+	for base_x in [-46.0, -16.0, 16.0, 46.0]:
+		var base_flood := OmniLight3D.new()
+		base_flood.name = "TowerFootFlood"
+		base_flood.position = Vector3(base_x, 15.0, -132.0)
+		base_flood.light_color = Color(1.0, 0.61, 0.26)
+		base_flood.light_energy = 26.0
+		base_flood.omni_range = 78.0
+		base_flood.omni_attenuation = 1.2
+		_light_rig.add_child(base_flood)
+
+	_fire_box = OmniLight3D.new()
+	_fire_box.name = "FireBox"
+	_fire_box.position = Vector3(30.5, 1.2, -100.0)
+	_fire_box.light_color = Color(1.0, 0.42, 0.14)
+	_fire_box.light_energy = 2.4
+	_fire_box.omni_range = 16.0
+	_light_rig.add_child(_fire_box)
+
+	_vent_light = OmniLight3D.new()
+	_vent_light.name = "VentGlow"
+	_vent_light.position = Vector3(30.5, 5.3, -101.5)
+	_vent_light.light_color = Color(0.86, 0.82, 0.76)
+	_vent_light.light_energy = 1.2
+	_vent_light.omni_range = 22.0
+	_light_rig.add_child(_vent_light)
+
+
+func _material(color: Color, metallic: float, roughness: float,
+		emission: Color = Color.BLACK, emission_energy: float = 1.0) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.metallic = metallic
@@ -416,11 +703,17 @@ func _material(color: Color, metallic: float, roughness: float, emission: Color 
 	if emission != Color.BLACK:
 		material.emission_enabled = true
 		material.emission = emission
-		material.emission_energy_multiplier = 2.4
+		material.emission_energy_multiplier = emission_energy
 	return material
 
 
-func _add_box(node_name: String, size: Vector3, at: Vector3, material: Material) -> MeshInstance3D:
+func _add_box(node_name: String, size: Vector3, at: Vector3, material: Material,
+		roll: float = 0.0) -> MeshInstance3D:
+	return _add_box_to(node_name, size, at, material, $TowerPresentation, roll)
+
+
+func _add_box_to(node_name: String, size: Vector3, at: Vector3, material: Material,
+		parent: Node3D, roll: float = 0.0) -> MeshInstance3D:
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	mesh.material = material
@@ -428,68 +721,40 @@ func _add_box(node_name: String, size: Vector3, at: Vector3, material: Material)
 	instance.name = node_name
 	instance.mesh = mesh
 	instance.position = at
-	$TowerPresentation.add_child(instance)
+	if not is_zero_approx(roll):
+		instance.rotation = Vector3(0.0, 0.0, roll)
+	parent.add_child(instance)
 	return instance
 
 
 func _fail_native(reason: String, exit_code: int) -> void:
 	_status.text = "NATIVE AUTHORITY FAILURE"
-	_status.modulate = Color("ef5b5b")
+	_status.modulate = Color("c8503a")
 	push_error(reason)
 	get_tree().quit(exit_code)
 
 
 func _print_ci_phase(label: String) -> void:
 	var position: Vector3 = _native.get_player_position()
-	print("SCRAPERX_CI_PHASE %s tick=%d position=(%.2f,%.2f,%.2f) grounded=%d support=%d ledge=%d/%d" % [
-		label,
-		_native.get_tick_index(),
-		position.x,
-		position.y,
-		position.z,
-		int(_native.is_player_grounded()),
-		int(_native.get_support_entity_id()),
-		int(_native.is_ledge_available()),
-		int(_native.get_ledge_entity_id()),
-	])
+	print("SCRAPERX_CI_PHASE %s tick=%d position=(%.2f,%.2f,%.2f) valve=%.2f lift=%.2f" % [
+		label, _native.get_tick_index(), position.x, position.y, position.z,
+		float(_native.get_valve_open_fraction()),
+		float(_native.get_lift_platform_position().y)])
 
 
 func _print_runtime_proof() -> void:
 	_ci_proof_printed = true
 	var position: Vector3 = _native.get_player_position()
-	var translating_position: Vector3 = _native.get_translating_support_position()
-	print("SCRAPERX_WO002_RUNTIME_PROOF ticks=%d position=(%.3f,%.3f,%.3f) support_before_jump=%d support_v=(%.3f,%.3f,%.3f) jump_v=(%.3f,%.3f,%.3f) inherited=%d translating_support=(%.3f,%.3f,%.3f) rotating_yaw=%.3f" % [
-		_native.get_tick_index(),
-		position.x,
-		position.y,
-		position.z,
-		_ci_support_entity_before_jump,
-		_ci_support_velocity_before_jump.x,
-		_ci_support_velocity_before_jump.y,
-		_ci_support_velocity_before_jump.z,
-		_ci_jump_velocity_observed.x,
-		_ci_jump_velocity_observed.y,
-		_ci_jump_velocity_observed.z,
-		int(_ci_inherited_motion_observed),
-		translating_position.x,
-		translating_position.y,
-		translating_position.z,
-		_native.get_rotating_support_yaw_radians(),
-	])
-	print("SCRAPERX_WO003_RUNTIME_PROOF ticks=%d mantle_support=%d position=(%.3f,%.3f,%.3f) grounded=%d accepted=%d refused=%d aborted=%d ledge_point=(%.3f,%.3f,%.3f)" % [
-		_native.get_tick_index(),
-		_ci_mantle_support,
-		position.x,
-		position.y,
-		position.z,
-		int(_native.is_player_grounded()),
-		int(_native.get_accepted_traversal_count()),
-		int(_native.get_rejected_traversal_count()),
-		int(_native.get_aborted_traversal_count()),
-		_ci_mantle_ledge_point.x,
-		_ci_mantle_ledge_point.y,
-		_ci_mantle_ledge_point.z,
-	])
+	print("SCRAPERX_WO004_VIEWPORT_PROOF width=%d height=%d aspect=%.3f fov=%.1f far=%.0f stretch=expand" % [
+		int(_viewport_size.x), int(_viewport_size.y),
+		_viewport_size.x / maxf(1.0, _viewport_size.y), _camera.fov, _camera.far])
+	print("SCRAPERX_WO005_APPROACH_PROOF spawn_grade=1 position=(%.2f,%.2f,%.2f) tower_face_distance=%.1f tower_height=%.0f" % [
+		position.x, position.y, position.z, absf(-145.0 - position.z),
+		float(_native.get_tower_height_meters())])
+	print("SCRAPERX_WO006_MACHINE_PROOF ticks=%d peak_valve=%.2f peak_lift=%.2f peak_flow=%.3f shut_flow=%.5f vessel_bar=%.2f vented=%.2f" % [
+		_native.get_tick_index(), _ci_peak_valve, _ci_peak_lift, _ci_peak_flow,
+		_ci_shut_flow, float(_native.get_vessel_pressure_pa()) / 1.0e5,
+		float(_native.get_vented_mass_kg())])
 
 
 func _capture_frame() -> void:

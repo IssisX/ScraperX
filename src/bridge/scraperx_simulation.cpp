@@ -12,7 +12,7 @@ namespace {
             static_cast<godot::real_t>(value.z)};
 }
 
-constexpr std::int64_t kInitialSpawnCount = 8;
+constexpr std::int64_t kInitialSpawnCount = 11;
 
 } // namespace
 
@@ -92,6 +92,46 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_rejected_traversal_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_aborted_traversal_count"),
                                 &ScraperXSimulation::get_aborted_traversal_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_tower_height_meters"),
+                                &ScraperXSimulation::get_tower_height_meters);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_hoist_scoop_position"),
+                                &ScraperXSimulation::get_hoist_scoop_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_hoist_scoop_tilt_radians"),
+                                &ScraperXSimulation::get_hoist_scoop_tilt_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_ballast_position"),
+                                &ScraperXSimulation::get_ballast_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_ballast_linear_velocity"),
+                                &ScraperXSimulation::get_ballast_linear_velocity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_tipper_position"),
+                                &ScraperXSimulation::get_tipper_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_tipper_angle_radians"),
+                                &ScraperXSimulation::get_tipper_angle_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_valve_lever_angle_radians"),
+                                &ScraperXSimulation::get_valve_lever_angle_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_valve_open_fraction"),
+                                &ScraperXSimulation::get_valve_open_fraction);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_rope_extension_meters"),
+                                &ScraperXSimulation::get_rope_extension_meters);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_lift_platform_position"),
+                                &ScraperXSimulation::get_lift_platform_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_lift_platform_linear_velocity"),
+                                &ScraperXSimulation::get_lift_platform_linear_velocity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_counterweight_position"),
+                                &ScraperXSimulation::get_counterweight_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_vessel_pressure_pa"),
+                                &ScraperXSimulation::get_vessel_pressure_pa);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_cylinder_pressure_pa"),
+                                &ScraperXSimulation::get_cylinder_pressure_pa);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_orifice_mass_flow_kg_per_s"),
+                                &ScraperXSimulation::get_orifice_mass_flow_kg_per_s);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_vented_mass_kg"),
+                                &ScraperXSimulation::get_vented_mass_kg);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_piston_force_n"),
+                                &ScraperXSimulation::get_piston_force_n);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_vessel_available_energy_j"),
+                                &ScraperXSimulation::get_vessel_available_energy_j);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_machine_cycle_phase_seconds"),
+                                &ScraperXSimulation::get_machine_cycle_phase_seconds);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -261,6 +301,86 @@ std::int64_t ScraperXSimulation::get_rejected_traversal_count() const {
 
 std::int64_t ScraperXSimulation::get_aborted_traversal_count() const {
     return static_cast<std::int64_t>(simulation_->snapshot().aborted_traversal_count);
+}
+
+godot::Vector3 ScraperXSimulation::get_hoist_scoop_position() const {
+    return to_godot(simulation_->snapshot().hoist_scoop_position);
+}
+
+double ScraperXSimulation::get_hoist_scoop_tilt_radians() const {
+    return simulation_->snapshot().hoist_scoop_tilt_radians;
+}
+
+godot::Vector3 ScraperXSimulation::get_ballast_position() const {
+    return to_godot(simulation_->snapshot().ballast_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_ballast_linear_velocity() const {
+    return to_godot(simulation_->snapshot().ballast_linear_velocity);
+}
+
+godot::Vector3 ScraperXSimulation::get_tipper_position() const {
+    return to_godot(simulation_->snapshot().tipper_position);
+}
+
+double ScraperXSimulation::get_tipper_angle_radians() const {
+    return simulation_->snapshot().tipper_angle_radians;
+}
+
+double ScraperXSimulation::get_valve_lever_angle_radians() const {
+    return simulation_->snapshot().valve_lever_angle_radians;
+}
+
+double ScraperXSimulation::get_valve_open_fraction() const {
+    return simulation_->snapshot().valve_open_fraction;
+}
+
+double ScraperXSimulation::get_rope_extension_meters() const {
+    return simulation_->snapshot().rope_extension_meters;
+}
+
+godot::Vector3 ScraperXSimulation::get_lift_platform_position() const {
+    return to_godot(simulation_->snapshot().lift_platform_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_lift_platform_linear_velocity() const {
+    return to_godot(simulation_->snapshot().lift_platform_linear_velocity);
+}
+
+godot::Vector3 ScraperXSimulation::get_counterweight_position() const {
+    return to_godot(simulation_->snapshot().counterweight_position);
+}
+
+double ScraperXSimulation::get_vessel_pressure_pa() const {
+    return simulation_->snapshot().vessel_pressure_pa;
+}
+
+double ScraperXSimulation::get_cylinder_pressure_pa() const {
+    return simulation_->snapshot().cylinder_pressure_pa;
+}
+
+double ScraperXSimulation::get_orifice_mass_flow_kg_per_s() const {
+    return simulation_->snapshot().orifice_mass_flow_kg_per_s;
+}
+
+double ScraperXSimulation::get_vented_mass_kg() const {
+    return simulation_->snapshot().vented_mass_kg;
+}
+
+double ScraperXSimulation::get_piston_force_n() const {
+    return simulation_->snapshot().piston_force_n;
+}
+
+double ScraperXSimulation::get_vessel_available_energy_j() const {
+    return simulation_->snapshot().vessel_available_energy_j;
+}
+
+double ScraperXSimulation::get_machine_cycle_phase_seconds() const {
+    return simulation_->snapshot().machine_cycle_phase_seconds;
+}
+
+double ScraperXSimulation::get_tower_height_meters() const {
+    return sim::Simulation::kTowerHeightMeters;
 }
 
 } // namespace scraperx::bridge

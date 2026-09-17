@@ -1,5 +1,6 @@
 #include "sim/simulation.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -75,6 +76,40 @@ scraperx::sim::Snapshot run_mantle_command_stream(const bool single_fixed_steps)
     require(simulation.request_traversal(), "partition run traversal request must be accepted");
     run_one_second();
     return simulation.snapshot();
+}
+
+
+// Runs the machine for a whole number of cycles and reports what the chain did.
+struct MachineCycleReport final {
+    double peak_valve_fraction = 0.0;
+    double peak_lift_height = 0.0;
+    double peak_piston_force = 0.0;
+    double mass_flow_while_shut = 0.0;
+    double final_available_energy = 0.0;
+};
+
+MachineCycleReport run_machine_cycles(scraperx::sim::Simulation &simulation,
+                                      const double seconds) {
+    using scraperx::sim::Simulation;
+    MachineCycleReport report;
+    const auto ticks = static_cast<std::uint32_t>(
+        seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+        require(simulation.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "machine cycle step must be accepted");
+        const auto state = simulation.snapshot();
+        report.peak_valve_fraction =
+            std::max(report.peak_valve_fraction, state.valve_open_fraction);
+        report.peak_lift_height =
+            std::max(report.peak_lift_height, state.lift_platform_position.y);
+        report.peak_piston_force = std::max(report.peak_piston_force, state.piston_force_n);
+        if (state.valve_open_fraction <= 0.0) {
+            report.mass_flow_while_shut =
+                std::max(report.mass_flow_while_shut, state.orifice_mass_flow_kg_per_s);
+        }
+        report.final_available_energy = state.vessel_available_energy_j;
+    }
+    return report;
 }
 
 } // namespace
@@ -460,6 +495,103 @@ int main() {
                              1.0e-6),
             "traversal frame partitioning must not change native player position");
 
+
+    // ---- WO-006 coupled machine -----------------------------------------
+
+    Simulation machine(InitialSpawn::ExteriorGrade);
+    const auto machine_start = machine.snapshot();
+    require(machine_start.player_position.z < -20.0 && machine_start.player_position.y < 2.0,
+            "the default spawn must be outdoors at grade, short of the tower");
+    require(machine_start.vessel_pressure_pa > 4.0e5,
+            "the plant must start charged");
+    require(machine_start.valve_open_fraction == 0.0, "the valve must start shut");
+    require(machine_start.lift_platform_position.y < 1.5,
+            "the lift must start parked at the bottom of its travel");
+
+    const auto first_cycle = run_machine_cycles(machine, 26.0);
+    require(first_cycle.peak_valve_fraction > 0.5,
+            "the falling ballast must drive the rope and open the real valve past half");
+    require(first_cycle.peak_piston_force > 8000.0,
+            "the vented cylinder must push the piston with material force");
+    require(first_cycle.peak_lift_height > 6.0,
+            "the piston must lift the counterweighted platform several metres");
+    require(first_cycle.mass_flow_while_shut == 0.0,
+            "a shut valve must pass exactly zero mass: the plume has no source of its own");
+
+    const auto second_cycle = run_machine_cycles(machine, 26.0);
+    require(second_cycle.peak_lift_height > 6.0,
+            "the machine must complete its return loop and fire again unattended");
+    const auto machine_settled = machine.snapshot();
+    require(machine_settled.lift_platform_position.y < 2.0,
+            "the platform must sink again once the cylinder bleeds down");
+    require(machine_settled.counterweight_position.y > 6.5,
+            "the counterweight must return as the platform descends");
+
+    // Governing Law 24: the plant cannot manufacture work. With the boiler feed
+    // cut it is a strictly finite reservoir, and the lift must fade and stop.
+    Simulation starved(InitialSpawn::ExteriorGrade);
+    starved.set_boiler_feed_enabled(false);
+    const auto starved_first = run_machine_cycles(starved, 26.0);
+    require(starved_first.peak_lift_height > 5.0,
+            "the first stroke must still work on stored energy alone");
+    double previous_peak = starved_first.peak_lift_height;
+    double previous_energy = starved_first.final_available_energy;
+    for (int cycle = 0; cycle < 4; ++cycle) {
+        const auto next = run_machine_cycles(starved, 26.0);
+        require(next.final_available_energy < previous_energy + 1.0,
+                "a starved vessel's available energy must never increase");
+        previous_energy = next.final_available_energy;
+        previous_peak = std::min(previous_peak, next.peak_lift_height);
+    }
+    const auto starved_final = starved.snapshot();
+    require(starved_final.vessel_available_energy_j < starved_first.final_available_energy,
+            "repeated strokes must draw the finite reservoir down");
+    require(starved_final.lift_platform_position.y < 3.0,
+            "a drained plant must leave the lift low rather than holding it up for free");
+
+    // The player is a body in the plant, not an audience: standing on the tipper
+    // is enough to work the same linkage the ballast works.
+    Simulation disturbed(InitialSpawn::MachineYard);
+    require(disturbed.set_facing(1.0, 0.0), "yard facing must be accepted");
+    require(disturbed.set_move_input(1.0, 0.0), "yard approach input must be accepted");
+    require(advance_until(disturbed,
+                          [](const Snapshot &state) {
+                              return state.player_grounded &&
+                                     state.support_entity_id == Simulation::kTipperEntityId;
+                          },
+                          6.0),
+            "the player must be able to stand on the native tipper deck");
+    const auto standing = disturbed.snapshot();
+    require(disturbed.advance_frame(1.5).accepted, "player-driven linkage interval must advance");
+    const auto disturbed_result = disturbed.snapshot();
+    require(disturbed_result.tipper_angle_radians < standing.tipper_angle_radians - 0.05,
+            "the player's own weight must rotate the tipper off its rest stop");
+    require(disturbed_result.valve_open_fraction > 0.0,
+            "a player standing on the tipper must open the same real valve the ballast opens");
+    require(disturbed_result.cylinder_pressure_pa > machine_start.cylinder_pressure_pa,
+            "the player-opened valve must actually charge the actuator cylinder");
+
+    // The machine is fixed-step-owned like everything else.
+    Simulation machine_partitioned(InitialSpawn::ExteriorGrade);
+    for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz * 20; ++tick) {
+        require(machine_partitioned.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "machine partition step must be accepted");
+    }
+    Simulation machine_batched(InitialSpawn::ExteriorGrade);
+    require(machine_batched.advance_frame(20.0).accepted,
+            "machine batched interval must be accepted");
+    const auto partitioned_machine = machine_partitioned.snapshot();
+    const auto batched_machine = machine_batched.snapshot();
+    require(partitioned_machine.tick_index == batched_machine.tick_index,
+            "machine frame partitioning must not change tick count");
+    require(nearly_equal(partitioned_machine.lift_platform_position.y,
+                         batched_machine.lift_platform_position.y,
+                         1.0e-6) &&
+                nearly_equal(partitioned_machine.vessel_pressure_pa,
+                             batched_machine.vessel_pressure_pa,
+                             1.0e-6),
+            "machine frame partitioning must not change authoritative machine state");
+
     std::cout << "PASS scraperx_sim moving-support truth: translating_support="
               << translating_grounded.support_entity_id
               << " translating_vx=" << translating_support_velocity.x
@@ -481,5 +613,12 @@ int main() {
               << " release_vz=" << after_release.player_linear_velocity.z
               << " rejected=" << blocked_result.rejected_traversal_count
               << " accepted=" << moving.snapshot().accepted_traversal_count << '\n';
+    std::cout << "PASS scraperx_sim coupled machine: valve=" << first_cycle.peak_valve_fraction
+              << " piston=" << first_cycle.peak_piston_force
+              << "N lift=" << first_cycle.peak_lift_height
+              << "m second_lift=" << second_cycle.peak_lift_height
+              << "m starved_energy=" << starved_final.vessel_available_energy_j
+              << "J player_valve=" << disturbed_result.valve_open_fraction
+              << " tower_m=" << Simulation::kTowerHeightMeters << '\n';
     return EXIT_SUCCESS;
 }

@@ -51,6 +51,26 @@ public:
     [[nodiscard]] std::int64_t get_accepted_traversal_count() const;
     [[nodiscard]] std::int64_t get_rejected_traversal_count() const;
     [[nodiscard]] std::int64_t get_aborted_traversal_count() const;
+    [[nodiscard]] double get_tower_height_meters() const;
+    [[nodiscard]] godot::Vector3 get_hoist_scoop_position() const;
+    [[nodiscard]] double get_hoist_scoop_tilt_radians() const;
+    [[nodiscard]] godot::Vector3 get_ballast_position() const;
+    [[nodiscard]] godot::Vector3 get_ballast_linear_velocity() const;
+    [[nodiscard]] godot::Vector3 get_tipper_position() const;
+    [[nodiscard]] double get_tipper_angle_radians() const;
+    [[nodiscard]] double get_valve_lever_angle_radians() const;
+    [[nodiscard]] double get_valve_open_fraction() const;
+    [[nodiscard]] double get_rope_extension_meters() const;
+    [[nodiscard]] godot::Vector3 get_lift_platform_position() const;
+    [[nodiscard]] godot::Vector3 get_lift_platform_linear_velocity() const;
+    [[nodiscard]] godot::Vector3 get_counterweight_position() const;
+    [[nodiscard]] double get_vessel_pressure_pa() const;
+    [[nodiscard]] double get_cylinder_pressure_pa() const;
+    [[nodiscard]] double get_orifice_mass_flow_kg_per_s() const;
+    [[nodiscard]] double get_vented_mass_kg() const;
+    [[nodiscard]] double get_piston_force_n() const;
+    [[nodiscard]] double get_vessel_available_energy_j() const;
+    [[nodiscard]] double get_machine_cycle_phase_seconds() const;
 
 protected:
     static void _bind_methods();

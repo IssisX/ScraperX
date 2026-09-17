@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sim/steam_plant.hpp"
+
 #include <cstdint>
 #include <memory>
 
@@ -20,6 +22,9 @@ enum class InitialSpawn : std::uint8_t {
     HangApproach = 5,
     MovingLedgeApproach = 6,
     BlockedLedgeApproach = 7,
+    ExteriorGrade = 8,
+    MachineYard = 9,
+    LiftPlatform = 10,
 };
 
 enum class TraversalState : std::uint8_t {
@@ -59,6 +64,28 @@ struct Snapshot final {
     std::uint64_t accepted_traversal_count = 0;
     std::uint64_t rejected_traversal_count = 0;
     std::uint64_t aborted_traversal_count = 0;
+
+    // --- coupled machine: every field below is read back from the authoritative
+    // Jolt bodies or from the reduced-order steam plant, never authored.
+    Vector3 hoist_scoop_position{};
+    double hoist_scoop_tilt_radians = 0.0;
+    Vector3 ballast_position{};
+    Vector3 ballast_linear_velocity{};
+    Vector3 tipper_position{};
+    double tipper_angle_radians = 0.0;
+    double valve_lever_angle_radians = 0.0;
+    double valve_open_fraction = 0.0;
+    double rope_extension_meters = 0.0;
+    Vector3 lift_platform_position{};
+    Vector3 lift_platform_linear_velocity{};
+    Vector3 counterweight_position{};
+    double vessel_pressure_pa = 0.0;
+    double cylinder_pressure_pa = 0.0;
+    double orifice_mass_flow_kg_per_s = 0.0;
+    double vented_mass_kg = 0.0;
+    double piston_force_n = 0.0;
+    double vessel_available_energy_j = 0.0;
+    double machine_cycle_phase_seconds = 0.0;
 };
 
 struct AdvanceResult final {
@@ -81,8 +108,25 @@ public:
     static constexpr std::uint64_t kMovingLedgeEntityId = 8;
     static constexpr std::uint64_t kBlockedLedgeEntityId = 9;
     static constexpr std::uint64_t kBlockedLedgeCanopyEntityId = 10;
+    static constexpr std::uint64_t kTowerEntityId = 11;
+    static constexpr std::uint64_t kHoistScoopEntityId = 12;
+    static constexpr std::uint64_t kBallastEntityId = 13;
+    static constexpr std::uint64_t kTipperEntityId = 14;
+    static constexpr std::uint64_t kValveLeverEntityId = 15;
+    static constexpr std::uint64_t kLiftPlatformEntityId = 16;
+    static constexpr std::uint64_t kCounterweightEntityId = 17;
+    static constexpr std::uint64_t kVesselShellEntityId = 18;
+    static constexpr std::uint64_t kCatwalkEntityId = 19;
+    static constexpr std::uint64_t kMachinePylonEntityId = 20;
+    static constexpr std::uint64_t kCatchBasinEntityId = 21;
+    static constexpr std::uint64_t kChuteEntityId = 22;
+    static constexpr std::uint64_t kLiftMastEntityId = 23;
 
-    explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::TranslatingSupport);
+    // Height of the tower mass, metres. The crown is far past anything the
+    // player can resolve from grade; haze and stack plume shear it earlier.
+    static constexpr double kTowerHeightMeters = 1600.0;
+
+    explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ExteriorGrade);
     ~Simulation();
 
     Simulation(const Simulation &) = delete;
@@ -95,6 +139,10 @@ public:
     [[nodiscard]] bool request_jump() noexcept;
     [[nodiscard]] bool request_traversal() noexcept;
     [[nodiscard]] bool request_release() noexcept;
+
+    // Disables the boiler feed so the plant becomes a strictly finite reservoir.
+    // Used to prove the machine cannot manufacture work.
+    void set_boiler_feed_enabled(bool enabled) noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
