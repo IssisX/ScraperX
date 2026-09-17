@@ -1,16 +1,29 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource path="res://presentation/main.gd" type="Script" id="1_main"]
 
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_industrial"]
+sky_top_color = Color(0.20, 0.25, 0.29, 1)
+sky_horizon_color = Color(0.62, 0.64, 0.63, 1)
+ground_bottom_color = Color(0.09, 0.10, 0.10, 1)
+ground_horizon_color = Color(0.42, 0.43, 0.41, 1)
+sun_angle_max = 18.0
+sun_curve = 0.08
+
+[sub_resource type="Sky" id="Sky_industrial"]
+sky_material = SubResource("SkyMaterial_industrial")
+process_mode = 2
+radiance_size = 3
+
 [sub_resource type="Environment" id="Environment_exterior"]
-background_mode = 1
-background_color = Color(0.115, 0.125, 0.125, 1)
+background_mode = 2
+sky = SubResource("Sky_industrial")
 background_energy_multiplier = 0.72
 ambient_light_source = 3
 ambient_light_color = Color(0.38, 0.39, 0.38, 1)
 ambient_light_energy = 0.66
 fog_enabled = true
-fog_light_color = Color(0.34, 0.35, 0.34, 1)
+fog_light_color = Color(0.44, 0.46, 0.46, 1)
 fog_light_energy = 0.52
 fog_density = 0.0032
 fog_height = 405.0
@@ -26,16 +39,16 @@ environment = SubResource("Environment_exterior")
 
 [node name="OvercastKey" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-48, -26, 0)
-light_color = Color(0.72, 0.72, 0.68, 1)
-light_energy = 1.05
+light_color = Color(0.76, 0.78, 0.77, 1)
+light_energy = 1.12
 shadow_enabled = true
-directional_shadow_max_distance = 180.0
+directional_shadow_max_distance = 220.0
 
 [node name="Camera" type="Camera3D" parent="."]
 current = true
-fov = 94.0
+fov = 96.0
 near = 0.07
-far = 1500.0
+far = 1600.0
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
@@ -53,21 +66,21 @@ layout_mode = 3
 anchors_preset = 0
 offset_left = 26.0
 offset_top = 24.0
-offset_right = 610.0
-offset_bottom = 208.0
+offset_right = 650.0
+offset_bottom = 210.0
 theme_override_constants/separation = 3
 
 [node name="Eyebrow" type="Label" parent="HUD/TopLeft"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.67, 0.59, 0.39, 1)
 theme_override_font_sizes/font_size = 15
-text = "SCRAPERX  /  EXTERIOR GRADE  /  NATIVE WORLD"
+text = "SCRAPERX  /  EXTERIOR MACHINE  /  NATIVE WORLD"
 
 [node name="Status" type="Label" parent="HUD/TopLeft"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.87, 0.82, 1)
 theme_override_font_sizes/font_size = 25
-text = "EXTERIOR GRADE / TOWER AHEAD"
+text = "EXTERIOR GRADE / MACHINE-TOWER AHEAD"
 
 [node name="Position" type="Label" parent="HUD/TopLeft"]
 layout_mode = 2
@@ -85,13 +98,13 @@ text = "VEL"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.68, 0.64, 0.51, 1)
 theme_override_font_sizes/font_size = 14
-text = "SUPPORT"
+text = "SUPPORT / TRAVERSE"
 
 [node name="Machine" type="Label" parent="HUD/TopLeft"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.47, 0.28, 1)
 theme_override_font_sizes/font_size = 14
-text = "HOPPER"
+text = "CHAIN / ROCKER"
 
 [node name="TopRight" type="VBoxContainer" parent="HUD"]
 layout_mode = 3
@@ -116,7 +129,7 @@ horizontal_alignment = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.69, 0.53, 0.28, 1)
 theme_override_font_sizes/font_size = 13
-text = "EXTERIOR APPROACH"
+text = "EXTERIOR MACHINE / PHYSICAL TRAVERSAL"
 horizontal_alignment = 2
 
 [node name="CrosshairHorizontal" type="ColorRect" parent="HUD"]
@@ -185,32 +198,51 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -276.0
-offset_top = -232.0
+offset_left = -292.0
+offset_top = -254.0
 offset_right = -34.0
-offset_bottom = -132.0
+offset_bottom = -154.0
 grow_horizontal = 0
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.89, 0.83, 0.67, 1)
 theme_override_colors/font_hover_color = Color(0.96, 0.90, 0.73, 1)
 theme_override_colors/font_pressed_color = Color(0.78, 0.61, 0.29, 1)
 theme_override_font_sizes/font_size = 20
-text = "RELEASE HOPPER"
+text = "ACTION"
 
-[node name="TouchLook" type="Label" parent="HUD"]
+[node name="JumpButton" type="Button" parent="HUD"]
 layout_mode = 3
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -382.0
-offset_top = -96.0
-offset_right = -28.0
-offset_bottom = -38.0
+offset_left = -292.0
+offset_top = -140.0
+offset_right = -34.0
+offset_bottom = -40.0
 grow_horizontal = 0
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.62, 0.62, 0.57, 0.74)
-theme_override_font_sizes/font_size = 14
-text = "DRAG TO LOOK  /  LEFT PAD MOVE  /  E ACTION"
-horizontal_alignment = 2
+theme_override_colors/font_color = Color(0.86, 0.86, 0.81, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.93, 0.83, 1)
+theme_override_colors/font_pressed_color = Color(0.78, 0.61, 0.29, 1)
+theme_override_font_sizes/font_size = 20
+text = "JUMP"
+
+[node name="TouchLook" type="Label" parent="HUD"]
+layout_mode = 3
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -210.0
+offset_top = -64.0
+offset_right = 210.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.62, 0.62, 0.57, 0.66)
+theme_override_font_sizes/font_size = 13
+text = "DRAG LOOK  /  LEFT PAD MOVE  /  ACTION CONTEXT"
+horizontal_alignment = 1
