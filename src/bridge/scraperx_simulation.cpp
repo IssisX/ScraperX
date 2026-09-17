@@ -18,6 +18,9 @@ namespace scraperx::bridge {
 void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_move_input", "world_x", "world_z"), &ScraperXSimulation::set_move_input);
     godot::ClassDB::bind_method(godot::D_METHOD("request_jump"), &ScraperXSimulation::request_jump);
+    godot::ClassDB::bind_method(godot::D_METHOD("can_traverse"), &ScraperXSimulation::can_traverse);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_traversal"), &ScraperXSimulation::request_traversal);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_drop_from_hang"), &ScraperXSimulation::request_drop_from_hang);
     godot::ClassDB::bind_method(godot::D_METHOD("can_operate_hopper"), &ScraperXSimulation::can_operate_hopper);
     godot::ClassDB::bind_method(godot::D_METHOD("request_hopper_release"), &ScraperXSimulation::request_hopper_release);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"), &ScraperXSimulation::advance_frame);
@@ -34,6 +37,10 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_support_contact_point"), &ScraperXSimulation::get_support_contact_point);
     godot::ClassDB::bind_method(godot::D_METHOD("get_support_point_linear_velocity"), &ScraperXSimulation::get_support_point_linear_velocity);
 
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_mode"), &ScraperXSimulation::get_traversal_mode);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_candidate_mode"), &ScraperXSimulation::get_traversal_candidate_mode);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_target_position"), &ScraperXSimulation::get_traversal_target_position);
+
     godot::ClassDB::bind_method(godot::D_METHOD("get_translating_support_position"), &ScraperXSimulation::get_translating_support_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_translating_support_linear_velocity"), &ScraperXSimulation::get_translating_support_linear_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("get_rotating_support_position"), &ScraperXSimulation::get_rotating_support_position);
@@ -47,6 +54,11 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("has_hopper_release_started"), &ScraperXSimulation::has_hopper_release_started);
     godot::ClassDB::bind_method(godot::D_METHOD("is_hopper_gate_open"), &ScraperXSimulation::is_hopper_gate_open);
     godot::ClassDB::bind_method(godot::D_METHOD("has_hopper_load_moved"), &ScraperXSimulation::has_hopper_load_moved);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("get_impact_rocker_position"), &ScraperXSimulation::get_impact_rocker_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_impact_rocker_angular_velocity"), &ScraperXSimulation::get_impact_rocker_angular_velocity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_impact_rocker_angle_radians"), &ScraperXSimulation::get_impact_rocker_angle_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("has_impact_rocker_been_struck"), &ScraperXSimulation::has_impact_rocker_been_struck);
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {
@@ -59,6 +71,28 @@ bool ScraperXSimulation::set_move_input(const double world_x, const double world
 
 bool ScraperXSimulation::request_jump() {
     return simulation_.request_jump();
+}
+
+bool ScraperXSimulation::can_traverse() const {
+    return simulation_.can_traverse();
+}
+
+bool ScraperXSimulation::request_traversal() {
+    const bool accepted = simulation_.request_traversal();
+    if (!accepted) {
+        godot::UtilityFunctions::push_warning(
+            "ScraperX native authority rejected traversal: no physically valid candidate is in reach or a traversal request is already queued.");
+    }
+    return accepted;
+}
+
+bool ScraperXSimulation::request_drop_from_hang() {
+    const bool accepted = simulation_.request_drop_from_hang();
+    if (!accepted) {
+        godot::UtilityFunctions::push_warning(
+            "ScraperX native authority rejected hang drop: the player is not currently hanging or a drop is already queued.");
+    }
+    return accepted;
 }
 
 bool ScraperXSimulation::can_operate_hopper() const {
@@ -123,6 +157,18 @@ godot::Vector3 ScraperXSimulation::get_support_point_linear_velocity() const {
     return to_godot(simulation_.snapshot().support_point_linear_velocity);
 }
 
+std::int64_t ScraperXSimulation::get_traversal_mode() const {
+    return static_cast<std::int64_t>(simulation_.snapshot().traversal_mode);
+}
+
+std::int64_t ScraperXSimulation::get_traversal_candidate_mode() const {
+    return static_cast<std::int64_t>(simulation_.snapshot().traversal_candidate_mode);
+}
+
+godot::Vector3 ScraperXSimulation::get_traversal_target_position() const {
+    return to_godot(simulation_.snapshot().traversal_target_position);
+}
+
 godot::Vector3 ScraperXSimulation::get_translating_support_position() const {
     return to_godot(simulation_.snapshot().translating_support_position);
 }
@@ -169,6 +215,22 @@ bool ScraperXSimulation::is_hopper_gate_open() const {
 
 bool ScraperXSimulation::has_hopper_load_moved() const {
     return simulation_.snapshot().hopper_load_moved;
+}
+
+godot::Vector3 ScraperXSimulation::get_impact_rocker_position() const {
+    return to_godot(simulation_.snapshot().impact_rocker_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_impact_rocker_angular_velocity() const {
+    return to_godot(simulation_.snapshot().impact_rocker_angular_velocity);
+}
+
+double ScraperXSimulation::get_impact_rocker_angle_radians() const {
+    return simulation_.snapshot().impact_rocker_angle_radians;
+}
+
+bool ScraperXSimulation::has_impact_rocker_been_struck() const {
+    return simulation_.snapshot().impact_rocker_struck;
 }
 
 } // namespace scraperx::bridge
