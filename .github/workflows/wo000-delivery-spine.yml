@@ -1,16 +1,18 @@
-name: WO-002 Moving Support Truth
+name: ScraperX-2 Checkpoint — WO-002 Moving Support Truth
 
 on:
   push:
-    branches: [main, ScraperX-2]
+    branches: [ScraperX-2]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Every ScraperX-2 commit is an immutable checkpoint candidate. A newer push must
+# never cancel an older commit's build, otherwise that commit can lose its APK.
 concurrency:
-  group: wo002-moving-support-truth-${{ github.ref }}
-  cancel-in-progress: true
+  group: scraperx-checkpoint-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 env:
   GODOT_VERSION: 4.7-stable
@@ -117,19 +119,24 @@ jobs:
           test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
           file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
 
-      - name: Export current-source Android arm64 APK
+      - name: Export checkpoint Android arm64 APK
         shell: bash
         run: |
           set -euo pipefail
+          CHECKPOINT_ID="${GITHUB_SHA::12}"
+          APK_NAME="ScraperX-2-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
-            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/ScraperX-WO002-arm64.apk" \
+            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
             2>&1 | tee artifacts/godot-android-export.log
-          test -s build/apk/ScraperX-WO002-arm64.apk
-          unzip -l build/apk/ScraperX-WO002-arm64.apk | tee artifacts/apk-contents.log
+          test -s "build/apk/${APK_NAME}"
+          unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
-          cp build/apk/ScraperX-WO002-arm64.apk artifacts/apk/
-          sha256sum artifacts/apk/ScraperX-WO002-arm64.apk | tee artifacts/apk/SHA256SUMS.txt
+          cp "build/apk/${APK_NAME}" artifacts/apk/
+          sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
+          printf 'branch=%s\ncommit=%s\napk=%s\n' \
+            "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
+            > artifacts/apk/CHECKPOINT.txt
 
       - name: Record evidence boundaries
         shell: bash
@@ -150,15 +157,15 @@ jobs:
           - one first-person moving-support screenshot was captured from that runtime;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
-          - the APK checksum was recorded.
+          - the APK checksum and checkpoint identity were recorded.
 
           Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, WO-003 mantle/vault/ledge/hang, freight, structural simulation, process simulation, or a complete game loop.
           EOF
 
-      - name: Publish WO-002 build and evidence
+      - name: Publish immutable checkpoint build and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ScraperX-WO002-${{ github.sha }}
+          name: ScraperX-2-checkpoint-${{ github.sha }}
           path: artifacts/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
