@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(ScraperX VERSION 0.0.1 LANGUAGES CXX)
+project(ScraperX VERSION 0.1.0 LANGUAGES CXX)
 
 include(CTest)
 include(FetchContent)
@@ -63,7 +63,7 @@ if(BUILD_TESTING AND NOT ANDROID)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
-    add_test(NAME scraperx_sim.fixed_step COMMAND scraperx_sim_tests)
+    add_test(NAME scraperx_sim.embodied_authority COMMAND scraperx_sim_tests)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

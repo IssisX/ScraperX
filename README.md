@@ -4,17 +4,18 @@ ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority pac
 
 ## Current work order
 
-**WO-000 — Delivery Spine**
+**WO-001 — Embodied Authority**
 
 ```text
-Godot 4.7 app
-  -> ScraperX GDExtension
-  -> native 90 Hz fixed-step scraperx_sim
-  -> immutable diagnostic snapshot
-  -> Android arm64 APK
+touch / WASD desired movement
+  -> ScraperX GDExtension command seam
+  -> native 90 Hz Jolt player body
+  -> static-world contact and support identity
+  -> immutable pose snapshot
+  -> Godot first-person tower-deck presentation
 ```
 
-No gameplay systems belong in this work order.
+This is the first embodied dependency for the full game: one persistent 1.6 km skyscraper climbed through athletic industrial traversal and large-scale Rube-Goldberg physics mechanisms. WO-001 deliberately stops before climbing, moving supports, freight, structural, and process systems.
 
 ## Build
 
@@ -31,9 +32,8 @@ cmake --build build/host
 ctest --test-dir build/host --output-on-failure
 ```
 
-The GitHub Actions workflow performs the complete proof path, including Linux GDExtension loading, one rendered diagnostic capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
+The GitHub Actions workflow performs the bounded WO-001 proof path, including native support/locomotion tests, Linux GDExtension loading, one rendered first-person tower-deck capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
 
 ## Claim boundary
 
 An APK artifact proves production by the current source. It does not prove installation, execution on Android, or Fold 6 behavior. Those remain separate evidence states.
-

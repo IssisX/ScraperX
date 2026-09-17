@@ -18,6 +18,11 @@ bool nearly_equal(const double a, const double b, const double epsilon = 1.0e-12
     return std::abs(a - b) <= epsilon;
 }
 
+double horizontal_distance(const scraperx::sim::Vector3 &a,
+                           const scraperx::sim::Vector3 &b) {
+    return std::hypot(a.x - b.x, a.z - b.z);
+}
+
 } // namespace
 
 int main() {
@@ -45,6 +50,16 @@ int main() {
     require(nearly_equal(batched_snapshot.simulation_time_seconds,
                          partitioned_snapshot.simulation_time_seconds),
             "frame partitioning must not change simulation time");
+    require(nearly_equal(batched_snapshot.player_position.x,
+                         partitioned_snapshot.player_position.x,
+                         1.0e-6) &&
+                nearly_equal(batched_snapshot.player_position.y,
+                             partitioned_snapshot.player_position.y,
+                             1.0e-6) &&
+                nearly_equal(batched_snapshot.player_position.z,
+                             partitioned_snapshot.player_position.z,
+                             1.0e-6),
+            "frame partitioning must not change native player position");
 
     Simulation remainder;
     require(remainder.advance_frame(Simulation::kFixedStepSeconds * 0.5).steps_advanced == 0,
@@ -61,10 +76,46 @@ int main() {
     require(remainder.snapshot().tick_index == before_invalid.tick_index,
             "rejected input must not mutate authoritative state");
 
-    std::cout << "PASS scraperx_sim fixed-step authority: tick="
-              << batched_snapshot.tick_index
-              << " time=" << batched_snapshot.simulation_time_seconds
+    Simulation supported;
+    require(supported.advance_frame(2.0).accepted,
+            "settling interval must be accepted");
+    const auto supported_snapshot = supported.snapshot();
+    require(supported_snapshot.player_grounded,
+            "the native player capsule must be grounded after falling onto the deck");
+    require(supported_snapshot.support_entity_id == Simulation::kStaticDeckEntityId,
+            "grounded support must expose the stable deck entity ID");
+    require(nearly_equal(supported_snapshot.player_position.y, 0.9, 0.03),
+            "the supported capsule center must settle at the deck contact height");
+
+    require(supported.set_move_input(1.0, 0.0),
+            "finite desired movement input must be accepted");
+    require(supported.advance_frame(0.5).accepted,
+            "locomotion interval must be accepted");
+    const auto moved_snapshot = supported.snapshot();
+    require(moved_snapshot.player_position.x > supported_snapshot.player_position.x + 1.0,
+            "desired velocity input must move the native body across the deck");
+    require(moved_snapshot.player_grounded,
+            "horizontal locomotion must preserve static-deck support");
+    require(moved_snapshot.support_entity_id == Simulation::kStaticDeckEntityId,
+            "locomotion support identity must remain native and stable");
+
+    require(!supported.set_move_input(std::numeric_limits<double>::quiet_NaN(), 0.0),
+            "non-finite desired movement input must be rejected");
+    const auto before_rejected_command = supported.snapshot();
+    require(supported.advance_frame(0.25).accepted,
+            "simulation must remain usable after rejecting a command");
+    const auto after_rejected_command = supported.snapshot();
+    require(horizontal_distance(after_rejected_command.player_position,
+                                before_rejected_command.player_position) > 0.5,
+            "a rejected command must not replace the last accepted movement command");
+
+    std::cout << "PASS scraperx_sim embodied authority: tick="
+              << moved_snapshot.tick_index
+              << " position=(" << moved_snapshot.player_position.x << ','
+              << moved_snapshot.player_position.y << ','
+              << moved_snapshot.player_position.z << ')'
+              << " grounded=" << moved_snapshot.player_grounded
+              << " support=" << moved_snapshot.support_entity_id
               << " hz=" << Simulation::kTickRateHz << '\n';
     return EXIT_SUCCESS;
 }
-

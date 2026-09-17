@@ -1,4 +1,4 @@
-name: WO-000 Delivery Spine
+name: WO-001 Embodied Authority
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: wo000-delivery-spine-${{ github.ref }}
+  group: wo001-embodied-authority-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -21,7 +21,7 @@ env:
   ANDROID_NDK_VERSION: 29.0.14206865
 
 jobs:
-  delivery-spine:
+  embodied-authority:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
@@ -67,7 +67,7 @@ jobs:
             -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
           tools/godot/godot --version
 
-      - name: Build native host graph and run fixed-step test
+      - name: Build native host graph and run embodied-authority tests
         shell: bash
         run: |
           set -euo pipefail
@@ -80,7 +80,7 @@ jobs:
           cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
 
-      - name: Run Godot through native authority and capture one screenshot suite
+      - name: Run Godot through native player authority and capture one tower-deck frame
         shell: bash
         run: |
           set -euo pipefail
@@ -91,11 +91,12 @@ jobs:
             godot/.godot/extension_list.cfg
           timeout 60s xvfb-run -a -s "-screen 0 1600x900x24" \
             tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 300 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo000-delivery-spine.png" \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo001-embodied-authority.png" \
             2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/wo000-delivery-spine.png
+          test -s artifacts/screenshots/wo001-embodied-authority.png
           grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "SCRAPERX_RUNTIME_PROOF" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_WO001_RUNTIME_PROOF" artifacts/godot-runtime.log
+          grep -F "grounded=1 support=1" artifacts/godot-runtime.log
 
       - name: Cross-compile native graph for Android arm64
         shell: bash
@@ -119,40 +120,40 @@ jobs:
           set -euo pipefail
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
-            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/ScraperX-WO000-arm64.apk" \
+            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/ScraperX-WO001-arm64.apk" \
             2>&1 | tee artifacts/godot-android-export.log
-          test -s build/apk/ScraperX-WO000-arm64.apk
-          unzip -l build/apk/ScraperX-WO000-arm64.apk | tee artifacts/apk-contents.log
+          test -s build/apk/ScraperX-WO001-arm64.apk
+          unzip -l build/apk/ScraperX-WO001-arm64.apk | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
-          cp build/apk/ScraperX-WO000-arm64.apk artifacts/apk/
-          sha256sum artifacts/apk/ScraperX-WO000-arm64.apk | tee artifacts/apk/SHA256SUMS.txt
+          cp build/apk/ScraperX-WO001-arm64.apk artifacts/apk/
+          sha256sum artifacts/apk/ScraperX-WO001-arm64.apk | tee artifacts/apk/SHA256SUMS.txt
 
       - name: Record evidence boundaries
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/WO-000-EVIDENCE.md <<EOF
-          # WO-000 Evidence
+          cat > artifacts/WO-001-EVIDENCE.md <<EOF
+          # WO-001 Evidence
 
           Source commit: \`${GITHUB_SHA}\`
 
           Proven by this workflow:
 
-          - native host test passed for authoritative 90 Hz fixed-step state;
+          - native host tests passed for 90 Hz stepping, static-deck contact/support, desired-velocity locomotion, frame partitioning, and invalid-input rejection;
           - Godot 4.7 loaded the current-source GDExtension;
-          - the Godot runtime observed native-owned tick/time advancing;
-          - one rendered diagnostic screenshot was captured from that runtime;
+          - the Godot runtime observed the native-owned player grounded on stable support entity 1 after native locomotion;
+          - one first-person industrial tower-deck screenshot was captured from that runtime;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
           - the APK checksum was recorded.
 
-          Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, or gameplay.
+          Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, climbing, moving supports, freight, structural simulation, process simulation, or a complete game loop.
           EOF
 
-      - name: Publish WO-000 build and evidence
+      - name: Publish WO-001 build and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ScraperX-WO000-${{ github.sha }}
+          name: ScraperX-WO001-${{ github.sha }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 30
