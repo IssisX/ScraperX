@@ -1,4 +1,4 @@
-name: ScraperX-2 Checkpoint — WO-002 Moving Support Truth
+name: ScraperX-2 Checkpoint — Exterior Machine Threshold
 
 on:
   push:
@@ -23,7 +23,7 @@ env:
   ANDROID_NDK_VERSION: 29.0.14206865
 
 jobs:
-  moving-support-truth:
+  exterior-machine-threshold:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
@@ -69,7 +69,7 @@ jobs:
             -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
           tools/godot/godot --version
 
-      - name: Build native host graph and run moving-support tests
+      - name: Build native host graph and run checkpoint regressions
         shell: bash
         run: |
           set -euo pipefail
@@ -82,8 +82,9 @@ jobs:
           cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
+          grep -F "PASS scraperx_sim exterior-machine checkpoint" artifacts/native-tests.log
 
-      - name: Run Godot through native moving-support authority and capture proof
+      - name: Run Godot through exterior approach and native hopper interaction
         shell: bash
         run: |
           set -euo pipefail
@@ -92,16 +93,19 @@ jobs:
             > godot/.godot/extension_list.cfg
           grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
             godot/.godot/extension_list.cfg
-          timeout 60s xvfb-run -a -s "-screen 0 1600x900x24" \
-            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 360 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo002-moving-support-truth.png" \
+          timeout 60s xvfb-run -a -s "-screen 0 2160x1856x24" \
+            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 720 \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/cp003-exterior-machine.png" \
             2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/wo002-moving-support-truth.png
+          test -s artifacts/screenshots/cp003-exterior-machine.png
           grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "work_order=WO-002" artifacts/godot-runtime.log
-          grep -F "SCRAPERX_WO002_RUNTIME_PROOF" artifacts/godot-runtime.log
-          grep -F "support_before_jump=3" artifacts/godot-runtime.log
-          grep -F "inherited=1" artifacts/godot-runtime.log
+          grep -F "checkpoint=CP-003-EXTERIOR-MACHINE" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_EXTERIOR_MACHINE_PROOF" artifacts/godot-runtime.log
+          grep -F "fold_layout=1" artifacts/godot-runtime.log
+          grep -F "approach=1" artifacts/godot-runtime.log
+          grep -F "interaction=1" artifacts/godot-runtime.log
+          grep -F "gate_open=1" artifacts/godot-runtime.log
+          grep -F "load_moved=1" artifacts/godot-runtime.log
 
       - name: Cross-compile native graph for Android arm64
         shell: bash
@@ -142,24 +146,39 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/WO-002-EVIDENCE.md <<EOF
-          # WO-002 Evidence
+          cat > artifacts/CP-003-EVIDENCE.md <<EOF
+          # CP-003 Exterior Machine Threshold Evidence
 
           Source commit: \`${GITHUB_SHA}\`
 
           Proven by this workflow:
 
-          - WO-001 fixed-step, invalid-input, static-support, and static-locomotion regressions remained green;
-          - native host tests grounded the player on translating and rotating Jolt supports with stable entity IDs;
-          - translating support exposed real support-point velocity and jump detachment retained material inherited horizontal momentum;
-          - rotating support contact-point velocity matched the native \`v_linear + omega x r\` relationship within the work-order tolerance;
-          - Godot 4.7 loaded the same current-source GDExtension, mirrored native support poses, jumped from support entity 3, and observed inherited momentum;
-          - one first-person moving-support screenshot was captured from that runtime;
-          - the native graph cross-compiled for Android arm64-v8a;
-          - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
-          - the APK checksum and checkpoint identity were recorded.
+          - WO-001 fixed-step, invalid-input, static-support, and locomotion regressions remained green;
+          - WO-002 translating/rotating support and inherited-momentum regressions remained green;
+          - default native spawn is exterior grade rather than a tower-interior deck;
+          - remote hopper operation is rejected by native authority;
+          - in-range hopper operation opens a native Jolt gate over finite travel;
+          - a dynamic native Jolt load leaves its initial support and moves through gravity/contact;
+          - Godot 4.7 uses a Fold6-aspect composition path, traverses the exterior approach, and observes the native machine predicates;
+          - the screenshot comes from that current-source runtime;
+          - Android arm64 native graph cross-compiles;
+          - the exported APK contains \`lib/arm64-v8a/libscraperx_native.so\`;
+          - APK checksum and checkpoint identity are recorded.
 
-          Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, WO-003 mantle/vault/ledge/hang, freight, structural simulation, process simulation, or a complete game loop.
+          Presentation-only in this checkpoint:
+
+          - cloud, stack plume, fog, lighting, material appearance, and distant tower mass.
+
+          Not proven here:
+
+          - actual Fold6 installation/execution or touch ergonomics;
+          - sustained frame rate or thermals;
+          - authoritative steam/fluid dynamics;
+          - WO-003 mantle/vault/ledge/hang completion;
+          - WO-004 fall/parachute/checkpoint completion;
+          - full WO-005 finite power/force/brake freight mechanism;
+          - structural or process coupling;
+          - persistent checkpoint/reload.
           EOF
 
       - name: Publish immutable checkpoint build and evidence

@@ -15,6 +15,8 @@ enum class InitialSpawn : std::uint8_t {
     StaticDeck = 0,
     TranslatingSupport = 1,
     RotatingSupport = 2,
+    ApproachGrade = 3,
+    HopperControl = 4,
 };
 
 struct Snapshot final {
@@ -22,17 +24,28 @@ struct Snapshot final {
     double simulation_time_seconds = 0.0;
     double fixed_step_seconds = 0.0;
     double interpolation_alpha = 0.0;
+
     Vector3 player_position{};
     Vector3 player_linear_velocity{};
     bool player_grounded = false;
     std::uint64_t support_entity_id = 0;
     Vector3 support_contact_point{};
     Vector3 support_point_linear_velocity{};
+
     Vector3 translating_support_position{};
     Vector3 translating_support_linear_velocity{};
     Vector3 rotating_support_position{};
     double rotating_support_yaw_radians = 0.0;
     Vector3 rotating_support_angular_velocity{};
+
+    Vector3 hopper_control_position{};
+    Vector3 hopper_gate_position{};
+    Vector3 hopper_load_position{};
+    Vector3 hopper_load_linear_velocity{};
+    bool hopper_interaction_available = false;
+    bool hopper_release_started = false;
+    bool hopper_gate_open = false;
+    bool hopper_load_moved = false;
 };
 
 struct AdvanceResult final {
@@ -45,12 +58,20 @@ public:
     static constexpr std::uint32_t kTickRateHz = 90;
     static constexpr double kFixedStepSeconds = 1.0 / static_cast<double>(kTickRateHz);
     static constexpr double kMaximumAcceptedFrameDeltaSeconds = 3600.0;
+
     static constexpr std::uint64_t kStaticDeckEntityId = 1;
     static constexpr std::uint64_t kPlayerEntityId = 2;
     static constexpr std::uint64_t kTranslatingSupportEntityId = 3;
     static constexpr std::uint64_t kRotatingSupportEntityId = 4;
+    static constexpr std::uint64_t kHopperGateEntityId = 5;
+    static constexpr std::uint64_t kHopperLoadEntityId = 6;
+    static constexpr std::uint64_t kHopperChuteEntityId = 7;
+    static constexpr std::uint64_t kTowerLeftPierEntityId = 8;
+    static constexpr std::uint64_t kTowerRightPierEntityId = 9;
+    static constexpr std::uint64_t kHopperLeftWallEntityId = 10;
+    static constexpr std::uint64_t kHopperRightWallEntityId = 11;
 
-    explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::TranslatingSupport);
+    explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ApproachGrade);
     ~Simulation();
 
     Simulation(const Simulation &) = delete;
@@ -60,6 +81,8 @@ public:
 
     [[nodiscard]] bool set_move_input(double world_x, double world_z) noexcept;
     [[nodiscard]] bool request_jump() noexcept;
+    [[nodiscard]] bool can_operate_hopper() const noexcept;
+    [[nodiscard]] bool request_hopper_release() noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -74,6 +97,7 @@ private:
     double move_input_x_ = 0.0;
     double move_input_z_ = 0.0;
     bool jump_requested_ = false;
+    bool hopper_release_requested_ = false;
     Snapshot snapshot_{};
 };
 

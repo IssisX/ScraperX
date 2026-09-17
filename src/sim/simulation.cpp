@@ -1,7 +1,7 @@
 #include "sim/simulation.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
-#error "WO-002 requires the pinned Jolt physics substrate"
+#error "ScraperX checkpoint requires the pinned Jolt physics substrate"
 #endif
 
 #include <Jolt/Jolt.h>
@@ -14,9 +14,11 @@
 #include <Jolt/Physics/Collision/ContactListener.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <limits>
@@ -41,9 +43,25 @@ constexpr float kPlayerMaximumRelativeSpeed = 5.5F;
 constexpr float kGroundAcceleration = 22.0F;
 constexpr float kAirAcceleration = 8.0F;
 constexpr float kJumpSpeed = 5.5F;
+
 constexpr double kTranslatingSupportAmplitudeMeters = 2.0;
 constexpr double kTranslatingSupportAngularFrequency = 1.0;
 constexpr double kRotatingSupportAngularSpeed = 0.8;
+
+constexpr double kHopperGateClosedX = 7.0;
+constexpr double kHopperGateOpenX = 11.5;
+constexpr double kHopperGateY = 4.8;
+constexpr double kHopperGateZ = 33.0;
+constexpr double kHopperGateSpeedMetersPerSecond = 2.25;
+constexpr double kHopperGateOpenTolerance = 0.12;
+constexpr double kHopperLoadInitialX = 7.0;
+constexpr double kHopperLoadInitialY = 5.60;
+constexpr double kHopperLoadInitialZ = 33.0;
+constexpr double kHopperLoadMovedThresholdMeters = 1.0;
+constexpr double kHopperControlX = 2.5;
+constexpr double kHopperControlY = 0.0;
+constexpr double kHopperControlZ = 40.0;
+constexpr double kHopperInteractionRadiusMeters = 3.4;
 
 class BroadPhaseLayerInterface final : public JPH::BroadPhaseLayerInterface {
 public:
@@ -178,11 +196,18 @@ public:
 
 private:
     [[nodiscard]] static int support_rank(const std::uint64_t entity_id) noexcept {
-        if (entity_id == scraperx::sim::Simulation::kTranslatingSupportEntityId ||
-            entity_id == scraperx::sim::Simulation::kRotatingSupportEntityId) {
+        using scraperx::sim::Simulation;
+        if (entity_id == Simulation::kTranslatingSupportEntityId ||
+            entity_id == Simulation::kRotatingSupportEntityId ||
+            entity_id == Simulation::kHopperGateEntityId) {
             return 2;
         }
-        if (entity_id == scraperx::sim::Simulation::kStaticDeckEntityId) {
+        if (entity_id == Simulation::kStaticDeckEntityId ||
+            entity_id == Simulation::kHopperChuteEntityId ||
+            entity_id == Simulation::kTowerLeftPierEntityId ||
+            entity_id == Simulation::kTowerRightPierEntityId ||
+            entity_id == Simulation::kHopperLeftWallEntityId ||
+            entity_id == Simulation::kHopperRightWallEntityId) {
             return 1;
         }
         return 0;
@@ -256,11 +281,15 @@ private:
     switch (spawn) {
     case scraperx::sim::InitialSpawn::StaticDeck:
         return {0.0, 3.0, -8.0};
+    case scraperx::sim::InitialSpawn::TranslatingSupport:
+        return {0.0, 3.0, 8.0};
     case scraperx::sim::InitialSpawn::RotatingSupport:
         return {-6.5, 3.0, 0.0};
-    case scraperx::sim::InitialSpawn::TranslatingSupport:
+    case scraperx::sim::InitialSpawn::HopperControl:
+        return {kHopperControlX, 3.0, kHopperControlZ};
+    case scraperx::sim::InitialSpawn::ApproachGrade:
     default:
-        return {0.0, 3.0, 8.0};
+        return {0.0, 3.0, 60.0};
     }
 }
 
@@ -291,6 +320,16 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
     world_velocity.SetZ(reference_velocity.GetZ() + relative_z);
 }
 
+[[nodiscard]] double distance_3d(const JPH::RVec3 &position,
+                                 const double x,
+                                 const double y,
+                                 const double z) noexcept {
+    const double dx = position.GetX() - x;
+    const double dy = position.GetY() - y;
+    const double dz = position.GetZ() - z;
+    return std::sqrt(dx * dx + dy * dy + dz * dz);
+}
+
 } // namespace
 
 namespace scraperx::sim {
@@ -300,10 +339,10 @@ public:
     explicit PhysicsWorld(const InitialSpawn initial_spawn)
         : temp_allocator_(8U * 1024U * 1024U),
           job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1) {
-        physics_system_.Init(256,
+        physics_system_.Init(512,
                              0,
+                             1024,
                              512,
-                             256,
                              broadphase_layer_interface_,
                              object_vs_broadphase_filter_,
                              object_layer_pair_filter_);
@@ -311,15 +350,59 @@ public:
 
         auto &bodies = physics_system_.GetBodyInterface();
 
-        JPH::BodyCreationSettings deck_settings(
-            new JPH::BoxShape(JPH::Vec3(16.0F, 0.5F, 16.0F)),
-            JPH::RVec3(0.0, -0.5, 0.0),
-            JPH::Quat::sIdentity(),
-            JPH::EMotionType::Static,
-            object_layers::kStatic);
-        deck_settings.mFriction = 0.6F;
-        deck_settings.mUserData = Simulation::kStaticDeckEntityId;
-        deck_id_ = bodies.CreateAndAddBody(deck_settings, JPH::EActivation::DontActivate);
+        auto create_static_box =
+            [&bodies](const JPH::Vec3 half_extents,
+                      const JPH::RVec3 position,
+                      const JPH::Quat rotation,
+                      const std::uint64_t entity_id,
+                      const float friction) {
+                JPH::BodyCreationSettings settings(new JPH::BoxShape(half_extents),
+                                                   position,
+                                                   rotation,
+                                                   JPH::EMotionType::Static,
+                                                   object_layers::kStatic);
+                settings.mFriction = friction;
+                settings.mUserData = entity_id;
+                return bodies.CreateAndAddBody(settings, JPH::EActivation::DontActivate);
+            };
+
+        deck_id_ = create_static_box(JPH::Vec3(70.0F, 0.5F, 100.0F),
+                                     JPH::RVec3(0.0, -0.5, 10.0),
+                                     JPH::Quat::sIdentity(),
+                                     Simulation::kStaticDeckEntityId,
+                                     0.72F);
+
+        tower_left_pier_id_ =
+            create_static_box(JPH::Vec3(10.0F, 15.0F, 3.0F),
+                              JPH::RVec3(-17.0, 15.0, 10.0),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kTowerLeftPierEntityId,
+                              0.78F);
+        tower_right_pier_id_ =
+            create_static_box(JPH::Vec3(10.0F, 15.0F, 3.0F),
+                              JPH::RVec3(17.0, 15.0, 10.0),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kTowerRightPierEntityId,
+                              0.78F);
+
+        hopper_chute_id_ =
+            create_static_box(JPH::Vec3(2.0F, 0.16F, 6.0F),
+                              JPH::RVec3(7.0, 2.65, 28.8),
+                              JPH::Quat::sRotation(JPH::Vec3(1.0F, 0.0F, 0.0F), -0.20F),
+                              Simulation::kHopperChuteEntityId,
+                              0.24F);
+        hopper_left_wall_id_ =
+            create_static_box(JPH::Vec3(0.14F, 0.8F, 1.8F),
+                              JPH::RVec3(5.05, 5.85, 33.0),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kHopperLeftWallEntityId,
+                              0.55F);
+        hopper_right_wall_id_ =
+            create_static_box(JPH::Vec3(0.14F, 0.8F, 1.8F),
+                              JPH::RVec3(8.95, 5.85, 33.0),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kHopperRightWallEntityId,
+                              0.55F);
 
         JPH::BodyCreationSettings translating_support_settings(
             new JPH::BoxShape(JPH::Vec3(2.75F, 0.25F, 2.75F)),
@@ -345,6 +428,33 @@ public:
         rotating_support_id_ =
             bodies.CreateAndAddBody(rotating_support_settings, JPH::EActivation::Activate);
 
+        JPH::BodyCreationSettings hopper_gate_settings(
+            new JPH::BoxShape(JPH::Vec3(1.8F, 0.15F, 1.8F)),
+            JPH::RVec3(kHopperGateClosedX, kHopperGateY, kHopperGateZ),
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Kinematic,
+            object_layers::kMoving);
+        hopper_gate_settings.mAllowSleeping = false;
+        hopper_gate_settings.mFriction = 0.42F;
+        hopper_gate_settings.mUserData = Simulation::kHopperGateEntityId;
+        hopper_gate_id_ =
+            bodies.CreateAndAddBody(hopper_gate_settings, JPH::EActivation::Activate);
+
+        JPH::BodyCreationSettings hopper_load_settings(
+            new JPH::SphereShape(0.65F),
+            JPH::RVec3(kHopperLoadInitialX, kHopperLoadInitialY, kHopperLoadInitialZ),
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic,
+            object_layers::kMoving);
+        hopper_load_settings.mAllowSleeping = false;
+        hopper_load_settings.mFriction = 0.22F;
+        hopper_load_settings.mRestitution = 0.04F;
+        hopper_load_settings.mLinearDamping = 0.04F;
+        hopper_load_settings.mAngularDamping = 0.04F;
+        hopper_load_settings.mUserData = Simulation::kHopperLoadEntityId;
+        hopper_load_id_ =
+            bodies.CreateAndAddBody(hopper_load_settings, JPH::EActivation::Activate);
+
         JPH::BodyCreationSettings player_settings(
             new JPH::CapsuleShape(0.55F, 0.35F),
             spawn_position(initial_spawn),
@@ -368,18 +478,32 @@ public:
         physics_system_.SetContactListener(nullptr);
         auto &bodies = physics_system_.GetBodyInterface();
         remove_and_destroy(bodies, player_id_);
+        remove_and_destroy(bodies, hopper_load_id_);
+        remove_and_destroy(bodies, hopper_gate_id_);
         remove_and_destroy(bodies, rotating_support_id_);
         remove_and_destroy(bodies, translating_support_id_);
+        remove_and_destroy(bodies, hopper_right_wall_id_);
+        remove_and_destroy(bodies, hopper_left_wall_id_);
+        remove_and_destroy(bodies, hopper_chute_id_);
+        remove_and_destroy(bodies, tower_right_pier_id_);
+        remove_and_destroy(bodies, tower_left_pier_id_);
         remove_and_destroy(bodies, deck_id_);
     }
 
     void step(const double move_input_x,
               const double move_input_z,
               const bool jump_requested,
+              const bool hopper_release_requested,
               const float delta_seconds,
               const double next_time_seconds) noexcept {
         auto &bodies = physics_system_.GetBodyInterface();
+
+        if (hopper_release_requested && !hopper_release_started_) {
+            hopper_release_started_ = true;
+        }
+
         update_support_motion(bodies, delta_seconds, next_time_seconds);
+        update_hopper_motion(bodies, delta_seconds);
 
         JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
         JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
@@ -441,6 +565,24 @@ private:
         if (entity_id == Simulation::kRotatingSupportEntityId) {
             return rotating_support_id_;
         }
+        if (entity_id == Simulation::kHopperGateEntityId) {
+            return hopper_gate_id_;
+        }
+        if (entity_id == Simulation::kHopperChuteEntityId) {
+            return hopper_chute_id_;
+        }
+        if (entity_id == Simulation::kTowerLeftPierEntityId) {
+            return tower_left_pier_id_;
+        }
+        if (entity_id == Simulation::kTowerRightPierEntityId) {
+            return tower_right_pier_id_;
+        }
+        if (entity_id == Simulation::kHopperLeftWallEntityId) {
+            return hopper_left_wall_id_;
+        }
+        if (entity_id == Simulation::kHopperRightWallEntityId) {
+            return hopper_right_wall_id_;
+        }
         return {};
     }
 
@@ -479,6 +621,22 @@ private:
             delta_seconds);
     }
 
+    void update_hopper_motion(JPH::BodyInterface &bodies,
+                              const float delta_seconds) noexcept {
+        if (hopper_release_started_) {
+            hopper_gate_x_ = std::min(
+                kHopperGateOpenX,
+                hopper_gate_x_ + kHopperGateSpeedMetersPerSecond * delta_seconds);
+        }
+
+        bodies.MoveKinematic(hopper_gate_id_,
+                             JPH::RVec3(hopper_gate_x_, kHopperGateY, kHopperGateZ),
+                             JPH::Quat::sIdentity(),
+                             delta_seconds);
+        hopper_gate_open_ =
+            hopper_gate_x_ >= kHopperGateOpenX - kHopperGateOpenTolerance;
+    }
+
     void read_state() noexcept {
         const auto &bodies = physics_system_.GetBodyInterface();
 
@@ -509,6 +667,33 @@ private:
             {rotating_angular_velocity.GetX(),
              rotating_angular_velocity.GetY(),
              rotating_angular_velocity.GetZ()};
+
+        const JPH::RVec3 gate_position = bodies.GetPosition(hopper_gate_id_);
+        state_.hopper_gate_position =
+            {gate_position.GetX(), gate_position.GetY(), gate_position.GetZ()};
+
+        const JPH::RVec3 load_position = bodies.GetPosition(hopper_load_id_);
+        const JPH::Vec3 load_velocity = bodies.GetLinearVelocity(hopper_load_id_);
+        state_.hopper_load_position =
+            {load_position.GetX(), load_position.GetY(), load_position.GetZ()};
+        state_.hopper_load_linear_velocity =
+            {load_velocity.GetX(), load_velocity.GetY(), load_velocity.GetZ()};
+
+        state_.hopper_control_position =
+            {kHopperControlX, kHopperControlY, kHopperControlZ};
+        state_.hopper_release_started = hopper_release_started_;
+        state_.hopper_gate_open = hopper_gate_open_;
+        state_.hopper_load_moved =
+            distance_3d(load_position,
+                        kHopperLoadInitialX,
+                        kHopperLoadInitialY,
+                        kHopperLoadInitialZ) >= kHopperLoadMovedThresholdMeters;
+        state_.hopper_interaction_available =
+            !hopper_release_started_ &&
+            distance_3d(player_position,
+                        kHopperControlX,
+                        0.9,
+                        kHopperControlZ) <= kHopperInteractionRadiusMeters;
     }
 
     JoltRuntimeLease runtime_;
@@ -519,15 +704,29 @@ private:
     ObjectLayerPairFilter object_layer_pair_filter_;
     JPH::PhysicsSystem physics_system_;
     PlayerContactListener contact_listener_;
+
     JPH::BodyID deck_id_;
+    JPH::BodyID tower_left_pier_id_;
+    JPH::BodyID tower_right_pier_id_;
+    JPH::BodyID hopper_chute_id_;
+    JPH::BodyID hopper_left_wall_id_;
+    JPH::BodyID hopper_right_wall_id_;
     JPH::BodyID translating_support_id_;
     JPH::BodyID rotating_support_id_;
+    JPH::BodyID hopper_gate_id_;
+    JPH::BodyID hopper_load_id_;
     JPH::BodyID player_id_;
+
     SupportSample support_sample_{};
     JPH::Vec3 airborne_inherited_velocity_{JPH::Vec3::sZero()};
     bool grounded_ = false;
     std::uint64_t support_entity_id_ = 0;
     double rotating_support_yaw_radians_ = 0.0;
+
+    bool hopper_release_started_ = false;
+    bool hopper_gate_open_ = false;
+    double hopper_gate_x_ = kHopperGateClosedX;
+
     Snapshot state_{};
 };
 
@@ -559,15 +758,29 @@ bool Simulation::request_jump() noexcept {
     return true;
 }
 
+bool Simulation::can_operate_hopper() const noexcept {
+    return physics_world_->state().hopper_interaction_available;
+}
+
+bool Simulation::request_hopper_release() noexcept {
+    if (hopper_release_requested_ || !physics_world_->state().hopper_interaction_available) {
+        return false;
+    }
+    hopper_release_requested_ = true;
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
     physics_world_->step(move_input_x_,
                          move_input_z_,
                          jump_requested_,
+                         hopper_release_requested_,
                          static_cast<float>(kFixedStepSeconds),
                          next_time_seconds);
     jump_requested_ = false;
+    hopper_release_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();
