@@ -50,6 +50,7 @@ if(SCRAPERX_WITH_JOLT)
         SOURCE_SUBDIR Build
     )
     FetchContent_MakeAvailable(jolt)
+    set_target_properties(Jolt PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(scraperx_sim PUBLIC Jolt)
     target_compile_definitions(scraperx_sim PUBLIC SCRAPERX_HAS_JOLT=1)
 endif()
