@@ -1,15 +1,15 @@
-name: WO-001 Embodied Authority
+name: WO-002 Moving Support Truth
 
 on:
   push:
-    branches: [main]
+    branches: [main, ScraperX-2]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: wo001-embodied-authority-${{ github.ref }}
+  group: wo002-moving-support-truth-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -21,7 +21,7 @@ env:
   ANDROID_NDK_VERSION: 29.0.14206865
 
 jobs:
-  embodied-authority:
+  moving-support-truth:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
@@ -67,7 +67,7 @@ jobs:
             -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
           tools/godot/godot --version
 
-      - name: Build native host graph and run embodied-authority tests
+      - name: Build native host graph and run moving-support tests
         shell: bash
         run: |
           set -euo pipefail
@@ -79,8 +79,9 @@ jobs:
             -DGODOTCPP_TARGET=template_release
           cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
+          grep -F "100% tests passed" artifacts/native-tests.log
 
-      - name: Run Godot through native player authority and capture one tower-deck frame
+      - name: Run Godot through native moving-support authority and capture proof
         shell: bash
         run: |
           set -euo pipefail
@@ -90,13 +91,15 @@ jobs:
           grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
             godot/.godot/extension_list.cfg
           timeout 60s xvfb-run -a -s "-screen 0 1600x900x24" \
-            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 300 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo001-embodied-authority.png" \
+            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 360 \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo002-moving-support-truth.png" \
             2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/wo001-embodied-authority.png
+          test -s artifacts/screenshots/wo002-moving-support-truth.png
           grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "SCRAPERX_WO001_RUNTIME_PROOF" artifacts/godot-runtime.log
-          grep -F "grounded=1 support=1" artifacts/godot-runtime.log
+          grep -F "work_order=WO-002" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_WO002_RUNTIME_PROOF" artifacts/godot-runtime.log
+          grep -F "support_before_jump=3" artifacts/godot-runtime.log
+          grep -F "inherited=1" artifacts/godot-runtime.log
 
       - name: Cross-compile native graph for Android arm64
         shell: bash
@@ -120,40 +123,42 @@ jobs:
           set -euo pipefail
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
-            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/ScraperX-WO001-arm64.apk" \
+            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/ScraperX-WO002-arm64.apk" \
             2>&1 | tee artifacts/godot-android-export.log
-          test -s build/apk/ScraperX-WO001-arm64.apk
-          unzip -l build/apk/ScraperX-WO001-arm64.apk | tee artifacts/apk-contents.log
+          test -s build/apk/ScraperX-WO002-arm64.apk
+          unzip -l build/apk/ScraperX-WO002-arm64.apk | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
-          cp build/apk/ScraperX-WO001-arm64.apk artifacts/apk/
-          sha256sum artifacts/apk/ScraperX-WO001-arm64.apk | tee artifacts/apk/SHA256SUMS.txt
+          cp build/apk/ScraperX-WO002-arm64.apk artifacts/apk/
+          sha256sum artifacts/apk/ScraperX-WO002-arm64.apk | tee artifacts/apk/SHA256SUMS.txt
 
       - name: Record evidence boundaries
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/WO-001-EVIDENCE.md <<EOF
-          # WO-001 Evidence
+          cat > artifacts/WO-002-EVIDENCE.md <<EOF
+          # WO-002 Evidence
 
           Source commit: \`${GITHUB_SHA}\`
 
           Proven by this workflow:
 
-          - native host tests passed for 90 Hz stepping, static-deck contact/support, desired-velocity locomotion, frame partitioning, and invalid-input rejection;
-          - Godot 4.7 loaded the current-source GDExtension;
-          - the Godot runtime observed the native-owned player grounded on stable support entity 1 after native locomotion;
-          - one first-person industrial tower-deck screenshot was captured from that runtime;
+          - WO-001 fixed-step, invalid-input, static-support, and static-locomotion regressions remained green;
+          - native host tests grounded the player on translating and rotating Jolt supports with stable entity IDs;
+          - translating support exposed real support-point velocity and jump detachment retained material inherited horizontal momentum;
+          - rotating support contact-point velocity matched the native \`v_linear + omega x r\` relationship within the work-order tolerance;
+          - Godot 4.7 loaded the same current-source GDExtension, mirrored native support poses, jumped from support entity 3, and observed inherited momentum;
+          - one first-person moving-support screenshot was captured from that runtime;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
           - the APK checksum was recorded.
 
-          Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, climbing, moving supports, freight, structural simulation, process simulation, or a complete game loop.
+          Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, WO-003 mantle/vault/ledge/hang, freight, structural simulation, process simulation, or a complete game loop.
           EOF
 
-      - name: Publish WO-001 build and evidence
+      - name: Publish WO-002 build and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ScraperX-WO001-${{ github.sha }}
+          name: ScraperX-WO002-${{ github.sha }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 30

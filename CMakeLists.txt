@@ -64,7 +64,7 @@ if(BUILD_TESTING AND NOT ANDROID)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
-    add_test(NAME scraperx_sim.embodied_authority COMMAND scraperx_sim_tests)
+    add_test(NAME scraperx_sim.moving_support_truth COMMAND scraperx_sim_tests)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

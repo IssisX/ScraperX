@@ -11,6 +11,12 @@ struct Vector3 final {
     double z = 0.0;
 };
 
+enum class InitialSpawn : std::uint8_t {
+    StaticDeck = 0,
+    TranslatingSupport = 1,
+    RotatingSupport = 2,
+};
+
 struct Snapshot final {
     std::uint64_t tick_index = 0;
     double simulation_time_seconds = 0.0;
@@ -20,6 +26,13 @@ struct Snapshot final {
     Vector3 player_linear_velocity{};
     bool player_grounded = false;
     std::uint64_t support_entity_id = 0;
+    Vector3 support_contact_point{};
+    Vector3 support_point_linear_velocity{};
+    Vector3 translating_support_position{};
+    Vector3 translating_support_linear_velocity{};
+    Vector3 rotating_support_position{};
+    double rotating_support_yaw_radians = 0.0;
+    Vector3 rotating_support_angular_velocity{};
 };
 
 struct AdvanceResult final {
@@ -34,8 +47,10 @@ public:
     static constexpr double kMaximumAcceptedFrameDeltaSeconds = 3600.0;
     static constexpr std::uint64_t kStaticDeckEntityId = 1;
     static constexpr std::uint64_t kPlayerEntityId = 2;
+    static constexpr std::uint64_t kTranslatingSupportEntityId = 3;
+    static constexpr std::uint64_t kRotatingSupportEntityId = 4;
 
-    Simulation();
+    explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::TranslatingSupport);
     ~Simulation();
 
     Simulation(const Simulation &) = delete;
@@ -44,6 +59,7 @@ public:
     Simulation &operator=(Simulation &&) = delete;
 
     [[nodiscard]] bool set_move_input(double world_x, double world_z) noexcept;
+    [[nodiscard]] bool request_jump() noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -57,10 +73,8 @@ private:
     double remainder_seconds_ = 0.0;
     double move_input_x_ = 0.0;
     double move_input_z_ = 0.0;
-    Vector3 player_position_{};
-    Vector3 player_linear_velocity_{};
-    bool player_grounded_ = false;
-    std::uint64_t support_entity_id_ = 0;
+    bool jump_requested_ = false;
+    Snapshot snapshot_{};
 };
 
 } // namespace scraperx::sim
