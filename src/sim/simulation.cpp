@@ -97,7 +97,8 @@ constexpr float kMantleDurationSeconds = 0.86F;
 constexpr float kMantleLiftSeconds = 0.46F;
 constexpr float kTraversalHorizontalSpeed = 5.0F;
 constexpr float kVaultLiftVelocity = 4.8F;
-constexpr float kMantleLiftVelocity = 5.5F;
+constexpr float kMantleVerticalPositionGain = 6.0F;
+constexpr float kMantleMaximumVerticalSpeed = 4.5F;
 constexpr float kHangPositionGain = 6.0F;
 constexpr float kHangMaximumCorrectionSpeed = 3.0F;
 
@@ -865,9 +866,19 @@ private:
                              direction_x * kTraversalHorizontalSpeed * horizontal_scale);
         player_velocity.SetZ(traversal_reference_velocity_.GetZ() +
                              direction_z * kTraversalHorizontalSpeed * horizontal_scale);
-        if (traversal_elapsed_seconds_ < lift_seconds) {
-            player_velocity.SetY(traversal_reference_velocity_.GetY() +
-                                 (is_vault ? kVaultLiftVelocity : kMantleLiftVelocity));
+        if (is_vault) {
+            if (traversal_elapsed_seconds_ < lift_seconds) {
+                player_velocity.SetY(traversal_reference_velocity_.GetY() +
+                                     kVaultLiftVelocity);
+            }
+        } else {
+            const float error_y =
+                static_cast<float>(traversal_target_.GetY() - player_position.GetY());
+            const float vertical_correction =
+                clamp_float(error_y * kMantleVerticalPositionGain + 9.81F * delta_seconds,
+                            -kMantleMaximumVerticalSpeed,
+                            kMantleMaximumVerticalSpeed);
+            player_velocity.SetY(traversal_reference_velocity_.GetY() + vertical_correction);
         }
     }
 
