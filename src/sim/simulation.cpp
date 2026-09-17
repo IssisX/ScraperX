@@ -800,7 +800,8 @@ private:
 
         const double target_x = std::max(
             kTraversalLaneX - 1.65,
-            std::min(kTraversalLaneX + 1.65, player_position.GetX()));
+            std::min(kTraversalLaneX + 1.65,
+                     static_cast<double>(player_position.GetX())));
         if (candidate == TraversalMode::Vault) {
             traversal_target_ = JPH::RVec3(target_x, 0.90, kVaultLandingZ);
         } else if (candidate == TraversalMode::Mantle) {
@@ -814,7 +815,8 @@ private:
         const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
         const double target_x = std::max(
             kTraversalLaneX - 1.75,
-            std::min(kTraversalLaneX + 1.75, player_position.GetX()));
+            std::min(kTraversalLaneX + 1.75,
+                     static_cast<double>(player_position.GetX())));
         traversal_mode_ = TraversalMode::Mantle;
         traversal_elapsed_seconds_ = 0.0F;
         mantle_from_hang_ = true;
