@@ -147,7 +147,7 @@ func _build_tower_slice() -> void:
 	var dark_steel := _material(Color("101b22"), 0.8, 0.32)
 	var deck := _material(Color("34444d"), 0.65, 0.45)
 	var hazard := _material(Color("e9a62f"), 0.35, 0.5)
-	var signal := _material(Color("33d996"), 0.2, 0.34, Color("0b3d2d"))
+	var signal_material := _material(Color("33d996"), 0.2, 0.34, Color("0b3d2d"))
 
 	_add_box("AuthorityDeck", Vector3(32.0, 1.0, 32.0), Vector3(0.0, -0.5, 0.0), deck)
 	for lane_x in [-8.0, 0.0, 8.0]:
@@ -172,7 +172,7 @@ func _build_tower_slice() -> void:
 
 	_add_box("LockedMechanismHeader", Vector3(18.0, 1.0, 1.0), Vector3(0.0, 8.0, -13.0), hazard)
 	for marker_x in [-10.5, -3.5, 3.5, 10.5]:
-		_add_box("SignalMarker", Vector3(0.22, 0.22, 0.22), Vector3(marker_x, 1.25, -13.5), signal)
+		_add_box("SignalMarker", Vector3(0.22, 0.22, 0.22), Vector3(marker_x, 1.25, -13.5), signal_material)
 
 
 func _material(color: Color, metallic: float, roughness: float, emission: Color = Color.BLACK) -> StandardMaterial3D:
