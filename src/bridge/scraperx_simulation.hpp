@@ -13,6 +13,9 @@ class ScraperXSimulation final : public godot::RefCounted {
 public:
     [[nodiscard]] bool set_move_input(double world_x, double world_z);
     [[nodiscard]] bool request_jump();
+    [[nodiscard]] bool can_traverse() const;
+    [[nodiscard]] bool request_traversal();
+    [[nodiscard]] bool request_drop_from_hang();
     [[nodiscard]] bool can_operate_hopper() const;
     [[nodiscard]] bool request_hopper_release();
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
@@ -29,6 +32,10 @@ public:
     [[nodiscard]] godot::Vector3 get_support_contact_point() const;
     [[nodiscard]] godot::Vector3 get_support_point_linear_velocity() const;
 
+    [[nodiscard]] std::int64_t get_traversal_mode() const;
+    [[nodiscard]] std::int64_t get_traversal_candidate_mode() const;
+    [[nodiscard]] godot::Vector3 get_traversal_target_position() const;
+
     [[nodiscard]] godot::Vector3 get_translating_support_position() const;
     [[nodiscard]] godot::Vector3 get_translating_support_linear_velocity() const;
     [[nodiscard]] godot::Vector3 get_rotating_support_position() const;
@@ -42,6 +49,11 @@ public:
     [[nodiscard]] bool has_hopper_release_started() const;
     [[nodiscard]] bool is_hopper_gate_open() const;
     [[nodiscard]] bool has_hopper_load_moved() const;
+
+    [[nodiscard]] godot::Vector3 get_impact_rocker_position() const;
+    [[nodiscard]] godot::Vector3 get_impact_rocker_angular_velocity() const;
+    [[nodiscard]] double get_impact_rocker_angle_radians() const;
+    [[nodiscard]] bool has_impact_rocker_been_struck() const;
 
 protected:
     static void _bind_methods();
