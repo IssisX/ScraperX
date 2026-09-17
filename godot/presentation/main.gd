@@ -175,7 +175,7 @@ func _build_tower_slice() -> void:
 		_add_box("SignalMarker", Vector3(0.22, 0.22, 0.22), Vector3(marker_x, 1.25, -13.5), signal)
 
 
-func _material(color: Color, metallic: float, roughness: float, emission := Color.BLACK) -> StandardMaterial3D:
+func _material(color: Color, metallic: float, roughness: float, emission: Color = Color.BLACK) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.metallic = metallic
