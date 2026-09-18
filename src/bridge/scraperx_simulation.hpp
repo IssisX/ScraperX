@@ -18,6 +18,8 @@ public:
     [[nodiscard]] bool request_drop_from_hang();
     [[nodiscard]] bool can_operate_hopper() const;
     [[nodiscard]] bool request_hopper_release();
+    [[nodiscard]] bool request_parachute();
+    [[nodiscard]] bool commit_checkpoint();
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
 
     [[nodiscard]] std::int64_t get_tick_index() const;
@@ -54,6 +56,11 @@ public:
     [[nodiscard]] godot::Vector3 get_impact_rocker_angular_velocity() const;
     [[nodiscard]] double get_impact_rocker_angle_radians() const;
     [[nodiscard]] bool has_impact_rocker_been_struck() const;
+    [[nodiscard]] bool is_parachute_deployed() const;
+    [[nodiscard]] bool is_parachute_allowed() const;
+    [[nodiscard]] std::int64_t get_fall_severity() const;
+    [[nodiscard]] std::int64_t get_fear_event_id() const;
+    [[nodiscard]] bool is_checkpoint_committed() const;
 
 protected:
     static void _bind_methods();

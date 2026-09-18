@@ -386,6 +386,43 @@ int main() {
     require(after_drop.player_position.y < before_drop.player_position.y - 0.10,
             "released hang must actually fall rather than switch animation state");
 
+    Simulation grounded_block(InitialSpawn::StaticDeck);
+    require(grounded_block.advance_frame(0.5).accepted, "static deck settle must advance");
+    require(!grounded_block.request_parachute(),
+            "parachute must refuse deployment while supported");
+    require(grounded_block.commit_checkpoint(),
+            "grounded player must be able to commit a checkpoint");
+    require(grounded_block.snapshot().checkpoint_committed,
+            "committed checkpoint flag must be visible on the snapshot");
+
+    Simulation high(InitialSpawn::HighDeck);
+    require(high.advance_frame(0.50).accepted, "high platform settle must advance");
+    require(high.snapshot().player_grounded, "high-deck spawn must stand on the high platform");
+    require(high.commit_checkpoint(), "high platform must accept a checkpoint");
+    require(high.set_move_input(0.0, 1.0), "walk-off input must be accepted");
+    require(high.advance_frame(1.10).accepted, "walk-off from the high platform must advance");
+    require(!high.snapshot().player_grounded, "walking off the high platform must create a real fall");
+    require(high.request_parachute(), "open fall with clearance must accept a chute");
+    require(high.advance_frame(0.80).accepted, "chute descent interval must advance");
+    const auto chuted = high.snapshot();
+    require(chuted.parachute_deployed, "accepted chute request must mark deployed state");
+    require(chuted.player_linear_velocity.y > -10.0,
+            "chute must cap sink rate rather than grant a powered climb or a free fall");
+    require(chuted.player_position.y > 0.5, "chute must not teleport to the refuge");
+    require(chuted.fear_event_id >= 1, "a material fall must emit a fear event");
+
+    Simulation lethal(InitialSpawn::HighDeck);
+    require(lethal.advance_frame(0.50).accepted, "lethal fixture settle must advance");
+    const auto committed_pose = lethal.snapshot().player_position;
+    require(lethal.commit_checkpoint(), "lethal fixture must commit before the fall");
+    require(lethal.set_move_input(0.0, 1.0), "lethal walk-off input must be accepted");
+    require(lethal.advance_frame(4.0).accepted, "un-chuted high fall must be allowed to finish");
+    const auto after_lethal = lethal.snapshot();
+    require(after_lethal.checkpoint_committed, "death must keep the committed timeline");
+    require(std::abs(after_lethal.player_position.x - committed_pose.x) < 2.5 &&
+                std::abs(after_lethal.player_position.z - committed_pose.z) < 2.5,
+            "restored pose must return near the committed platform, not a mid-air teleport");
+
     std::cout << "PASS scraperx_sim CP-004 traversal-impact checkpoint: "
               << "approach_z=" << approach_spawn.player_position.z
               << " translating_vx=" << translating_support_velocity.x

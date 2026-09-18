@@ -333,6 +333,8 @@ private:
         return {kTraversalLaneX, 3.0, 38.0};
     case scraperx::sim::InitialSpawn::HangCourse:
         return {kTraversalLaneX, kHangTargetY, 27.75};
+    case scraperx::sim::InitialSpawn::HighDeck:
+        return {0.0, 18.55, 0.0};
     case scraperx::sim::InitialSpawn::ApproachGrade:
     default:
         return {0.0, 3.0, 60.0};
@@ -421,6 +423,12 @@ public:
                                      JPH::Quat::sIdentity(),
                                      Simulation::kStaticDeckEntityId,
                                      0.72F);
+
+        high_platform_id_ = create_static_box(JPH::Vec3(1.6F, 0.25F, 1.6F),
+                                              JPH::RVec3(0.0, 17.25, 0.0),
+                                              JPH::Quat::sIdentity(),
+                                              Simulation::kHighPlatformEntityId,
+                                              0.72F);
 
         tower_left_pier_id_ =
             create_static_box(JPH::Vec3(10.0F, 15.0F, 3.0F),
@@ -575,6 +583,7 @@ public:
         remove_and_destroy(bodies, hopper_chute_id_);
         remove_and_destroy(bodies, tower_right_pier_id_);
         remove_and_destroy(bodies, tower_left_pier_id_);
+        remove_and_destroy(bodies, high_platform_id_);
         remove_and_destroy(bodies, deck_id_);
     }
 
@@ -584,6 +593,7 @@ public:
               const bool traversal_requested,
               const bool drop_from_hang_requested,
               const bool hopper_release_requested,
+              const bool parachute_requested,
               const float delta_seconds,
               const double next_time_seconds) noexcept {
         auto &bodies = physics_system_.GetBodyInterface();
@@ -644,6 +654,10 @@ public:
 
         bodies.SetLinearVelocity(player_id_, player_velocity);
 
+        if (parachute_requested) {
+            try_deploy_parachute(bodies);
+        }
+
         contact_listener_.begin_tick();
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
 
@@ -655,12 +669,24 @@ public:
         grounded_ = support.grounded;
         support_entity_id_ = support.entity_id;
 
+        apply_parachute_and_fall(bodies, delta_seconds);
+        maybe_autocommit();
+        maybe_restore_from_death(bodies);
+
         advance_traversal_after_physics(delta_seconds);
         read_state();
     }
 
     [[nodiscard]] const Snapshot &state() const noexcept {
         return state_;
+    }
+
+    bool commit_checkpoint_public() noexcept {
+        if (!grounded_) {
+            return false;
+        }
+        store_checkpoint();
+        return true;
     }
 
 private:
@@ -705,6 +731,9 @@ private:
         }
         if (entity_id == Simulation::kHangLedgeEntityId) {
             return hang_ledge_id_;
+        }
+        if (entity_id == Simulation::kHighPlatformEntityId) {
+            return high_platform_id_;
         }
         return {};
     }
@@ -882,6 +911,130 @@ private:
         }
     }
 
+    void try_deploy_parachute(JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 position = bodies.GetPosition(player_id_);
+        const bool enough_clearance = position.GetY() > 3.5F &&
+                                      traversal_mode_ == TraversalMode::None &&
+                                      !grounded_;
+        if (!enough_clearance) {
+            return;
+        }
+        parachute_deployed_ = true;
+    }
+
+    void apply_parachute_and_fall(JPH::BodyInterface &bodies,
+                                  const float delta_seconds) noexcept {
+        const JPH::RVec3 position = bodies.GetPosition(player_id_);
+        JPH::Vec3 velocity = bodies.GetLinearVelocity(player_id_);
+
+        const bool airborne = !grounded_ && traversal_mode_ != TraversalMode::Hang;
+        if (airborne) {
+            airborne_seconds_ += static_cast<double>(delta_seconds);
+            const double drop = fall_start_y_ - static_cast<double>(position.GetY());
+            std::uint8_t severity = 0;
+            if (drop > 3.0 || airborne_seconds_ > 0.45) {
+                severity = 1;
+            }
+            if (drop > 8.0 || airborne_seconds_ > 1.1) {
+                severity = 2;
+            }
+            if (drop > 14.0 || airborne_seconds_ > 1.8) {
+                severity = 3;
+            }
+            if (severity > fall_severity_) {
+                fall_severity_ = severity;
+                ++fear_event_id_;
+            }
+        } else if (grounded_) {
+            parachute_deployed_ = false;
+            airborne_seconds_ = 0.0;
+            fall_severity_ = 0;
+            fall_start_y_ = static_cast<double>(position.GetY());
+        }
+
+        if (airborne && airborne_seconds_ <= static_cast<double>(delta_seconds) + 1.0e-9) {
+            fall_start_y_ = static_cast<double>(position.GetY()) +
+                            std::max(0.0F, velocity.GetY()) * 0.05;
+        }
+
+        if (parachute_deployed_ && airborne) {
+            if (velocity.GetY() > 0.0F) {
+                velocity.SetY(velocity.GetY() * 0.82F);
+            }
+            const float sink = -6.5F;
+            if (velocity.GetY() < sink) {
+                velocity.SetY(velocity.GetY() + 28.0F * delta_seconds);
+                if (velocity.GetY() > sink) {
+                    velocity.SetY(sink);
+                }
+            }
+            velocity.SetX(velocity.GetX() * 0.985F);
+            velocity.SetZ(velocity.GetZ() * 0.985F);
+            bodies.SetLinearVelocity(player_id_, velocity);
+        }
+
+        const bool fell_off_world = position.GetY() < -6.0F;
+        const bool fatal_impact = grounded_ && !parachute_deployed_ &&
+                                  last_airborne_speed_y_ < -16.0F;
+        if (fell_off_world || fatal_impact) {
+            pending_death_ = true;
+        }
+        if (airborne) {
+            last_airborne_speed_y_ = velocity.GetY();
+        } else {
+            last_airborne_speed_y_ = 0.0F;
+        }
+    }
+
+    void maybe_autocommit() noexcept {
+        if (grounded_ && !pending_death_) {
+            grounded_dwell_seconds_ += Simulation::kFixedStepSeconds;
+            if (grounded_dwell_seconds_ >= 0.35 && !checkpoint_committed_) {
+                store_checkpoint();
+            }
+        } else if (!grounded_) {
+            grounded_dwell_seconds_ = 0.0;
+        }
+    }
+
+    void store_checkpoint() noexcept {
+        checkpoint_has_pose_ = true;
+        checkpoint_committed_ = true;
+        checkpoint_player_position_ = state_.player_position;
+        checkpoint_player_velocity_ = state_.player_linear_velocity;
+        checkpoint_hopper_release_ = hopper_release_started_;
+        checkpoint_hopper_gate_x_ = hopper_gate_x_;
+        checkpoint_tick_ = state_.tick_index;
+    }
+
+    void maybe_restore_from_death(JPH::BodyInterface &bodies) noexcept {
+        if (!pending_death_) {
+            return;
+        }
+        pending_death_ = false;
+        if (!checkpoint_has_pose_) {
+            store_checkpoint();
+        }
+        bodies.SetPosition(
+            player_id_,
+            JPH::RVec3(checkpoint_player_position_.x,
+                       checkpoint_player_position_.y,
+                       checkpoint_player_position_.z),
+            JPH::EActivation::Activate);
+        bodies.SetLinearVelocity(
+            player_id_,
+            JPH::Vec3(static_cast<float>(checkpoint_player_velocity_.x),
+                      static_cast<float>(checkpoint_player_velocity_.y),
+                      static_cast<float>(checkpoint_player_velocity_.z)));
+        hopper_release_started_ = checkpoint_hopper_release_;
+        hopper_gate_x_ = checkpoint_hopper_gate_x_;
+        parachute_deployed_ = false;
+        airborne_seconds_ = 0.0;
+        fall_severity_ = 0;
+        traversal_mode_ = TraversalMode::None;
+        grounded_ = true;
+    }
+
     void advance_traversal_after_physics(const float delta_seconds) noexcept {
         if (traversal_mode_ == TraversalMode::Vault) {
             traversal_elapsed_seconds_ += delta_seconds;
@@ -966,6 +1119,17 @@ private:
                         0.9,
                         kHopperControlZ) <= kHopperInteractionRadiusMeters;
 
+        state_.player_alive = !pending_death_;
+        state_.parachute_deployed = parachute_deployed_;
+        state_.parachute_allowed = !grounded_ &&
+                                   traversal_mode_ == TraversalMode::None &&
+                                   player_position.GetY() > 3.5F;
+        state_.fall_severity = fall_severity_;
+        state_.airborne_seconds = airborne_seconds_;
+        state_.fear_event_id = fear_event_id_;
+        state_.checkpoint_tick = checkpoint_tick_;
+        state_.checkpoint_committed = checkpoint_committed_;
+
         const JPH::RVec3 rocker_position = bodies.GetPosition(impact_rocker_id_);
         const JPH::Vec3 rocker_angular_velocity = bodies.GetAngularVelocity(impact_rocker_id_);
         const JPH::Quat rocker_rotation = bodies.GetRotation(impact_rocker_id_);
@@ -994,6 +1158,7 @@ private:
     PlayerContactListener contact_listener_;
 
     JPH::BodyID deck_id_;
+    JPH::BodyID high_platform_id_;
     JPH::BodyID tower_left_pier_id_;
     JPH::BodyID tower_right_pier_id_;
     JPH::BodyID hopper_chute_id_;
@@ -1018,6 +1183,22 @@ private:
     bool hopper_release_started_ = false;
     bool hopper_gate_open_ = false;
     double hopper_gate_x_ = kHopperGateClosedX;
+
+    bool parachute_deployed_ = false;
+    double airborne_seconds_ = 0.0;
+    double fall_start_y_ = 3.0;
+    double grounded_dwell_seconds_ = 0.0;
+    float last_airborne_speed_y_ = 0.0F;
+    std::uint8_t fall_severity_ = 0;
+    std::uint32_t fear_event_id_ = 0;
+    bool pending_death_ = false;
+    bool checkpoint_committed_ = false;
+    bool checkpoint_has_pose_ = false;
+    std::uint64_t checkpoint_tick_ = 0;
+    Vector3 checkpoint_player_position_{};
+    Vector3 checkpoint_player_velocity_{};
+    bool checkpoint_hopper_release_ = false;
+    double checkpoint_hopper_gate_x_ = kHopperGateClosedX;
 
     TraversalMode traversal_mode_ = TraversalMode::None;
     JPH::RVec3 traversal_target_{JPH::RVec3::sZero()};
@@ -1089,6 +1270,21 @@ bool Simulation::request_hopper_release() noexcept {
     return true;
 }
 
+bool Simulation::request_parachute() noexcept {
+    const auto &state = physics_world_->state();
+    if (parachute_requested_ || state.player_grounded ||
+        state.traversal_mode != TraversalMode::None ||
+        state.player_position.y <= 3.5) {
+        return false;
+    }
+    parachute_requested_ = true;
+    return true;
+}
+
+bool Simulation::commit_checkpoint() noexcept {
+    return physics_world_->commit_checkpoint_public();
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -1098,12 +1294,14 @@ void Simulation::step_fixed() noexcept {
                          traversal_requested_,
                          drop_from_hang_requested_,
                          hopper_release_requested_,
+                         parachute_requested_,
                          static_cast<float>(kFixedStepSeconds),
                          next_time_seconds);
     jump_requested_ = false;
     traversal_requested_ = false;
     drop_from_hang_requested_ = false;
     hopper_release_requested_ = false;
+    parachute_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();

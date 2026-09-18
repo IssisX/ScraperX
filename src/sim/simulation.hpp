@@ -19,6 +19,7 @@ enum class InitialSpawn : std::uint8_t {
     HopperControl = 4,
     TraversalCourse = 5,
     HangCourse = 6,
+    HighDeck = 7,
 };
 
 enum class TraversalMode : std::uint8_t {
@@ -61,6 +62,15 @@ struct Snapshot final {
     bool hopper_gate_open = false;
     bool hopper_load_moved = false;
 
+    bool player_alive = true;
+    bool parachute_deployed = false;
+    bool parachute_allowed = false;
+    std::uint8_t fall_severity = 0;
+    double airborne_seconds = 0.0;
+    std::uint32_t fear_event_id = 0;
+    std::uint64_t checkpoint_tick = 0;
+    bool checkpoint_committed = false;
+
     Vector3 impact_rocker_position{};
     Vector3 impact_rocker_angular_velocity{};
     double impact_rocker_angle_radians = 0.0;
@@ -93,6 +103,7 @@ public:
     static constexpr std::uint64_t kVaultBlockEntityId = 13;
     static constexpr std::uint64_t kMantleBlockEntityId = 14;
     static constexpr std::uint64_t kHangLedgeEntityId = 15;
+    static constexpr std::uint64_t kHighPlatformEntityId = 16;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ApproachGrade);
     ~Simulation();
@@ -109,6 +120,8 @@ public:
     [[nodiscard]] bool request_drop_from_hang() noexcept;
     [[nodiscard]] bool can_operate_hopper() const noexcept;
     [[nodiscard]] bool request_hopper_release() noexcept;
+    [[nodiscard]] bool request_parachute() noexcept;
+    [[nodiscard]] bool commit_checkpoint() noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -126,6 +139,7 @@ private:
     bool traversal_requested_ = false;
     bool drop_from_hang_requested_ = false;
     bool hopper_release_requested_ = false;
+    bool parachute_requested_ = false;
     Snapshot snapshot_{};
 };
 

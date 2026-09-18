@@ -286,6 +286,9 @@ func _request_context_action() -> void:
 		return
 	if bool(_native.can_operate_hopper()):
 		_native.request_hopper_release()
+		return
+	if not bool(_native.is_player_grounded()) and _native.has_method("request_parachute"):
+		_native.request_parachute()
 
 func _traversal_name(mode: int) -> String:
 	match mode:
@@ -342,6 +345,9 @@ func _render_snapshot() -> void:
 	elif hopper_available and not hopper_started:
 		_action_button.text = "RELEASE HOPPER"
 		context_visible = true
+	elif not grounded and _native.has_method("is_parachute_allowed") and bool(_native.is_parachute_allowed()):
+		_action_button.text = "CHUTE"
+		context_visible = true
 	_action_button.visible = context_visible
 	_action_button.disabled = not context_visible
 	_jump_button.text = "CLIMB" if traversal_mode == TRAVERSAL_HANG else "JUMP"
@@ -358,8 +364,13 @@ func _render_snapshot() -> void:
 		_status.text = "HOPPER DISCHARGED / FOLLOW THE MASS"
 	elif grounded:
 		_status.text = "EXTERIOR GRADE / MACHINE-TOWER AHEAD"
-	else:
-		_status.text = "AIRBORNE / MOMENTUM PRESERVED"
+	elif not grounded:
+		if _native.has_method("is_parachute_deployed") and bool(_native.is_parachute_deployed()):
+			_status.text = "CHUTE OPEN / SINKING / STEER WITH MOVE"
+		elif _native.has_method("get_fall_severity") and int(_native.get_fall_severity()) >= 2:
+			_status.text = "LONG FALL / CHUTE IF YOU HAVE CLEARANCE"
+		else:
+			_status.text = "AIRBORNE / MOMENTUM PRESERVED"
 
 	if _translating_support_mesh != null:
 		_translating_support_mesh.position = _native.get_translating_support_position()

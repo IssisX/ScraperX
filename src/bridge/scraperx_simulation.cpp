@@ -23,6 +23,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_drop_from_hang"), &ScraperXSimulation::request_drop_from_hang);
     godot::ClassDB::bind_method(godot::D_METHOD("can_operate_hopper"), &ScraperXSimulation::can_operate_hopper);
     godot::ClassDB::bind_method(godot::D_METHOD("request_hopper_release"), &ScraperXSimulation::request_hopper_release);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_parachute"), &ScraperXSimulation::request_parachute);
+    godot::ClassDB::bind_method(godot::D_METHOD("commit_checkpoint"), &ScraperXSimulation::commit_checkpoint);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"), &ScraperXSimulation::advance_frame);
 
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"), &ScraperXSimulation::get_tick_index);
@@ -59,6 +61,11 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_impact_rocker_angular_velocity"), &ScraperXSimulation::get_impact_rocker_angular_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("get_impact_rocker_angle_radians"), &ScraperXSimulation::get_impact_rocker_angle_radians);
     godot::ClassDB::bind_method(godot::D_METHOD("has_impact_rocker_been_struck"), &ScraperXSimulation::has_impact_rocker_been_struck);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_parachute_deployed"), &ScraperXSimulation::is_parachute_deployed);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_parachute_allowed"), &ScraperXSimulation::is_parachute_allowed);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_fall_severity"), &ScraperXSimulation::get_fall_severity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_fear_event_id"), &ScraperXSimulation::get_fear_event_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_checkpoint_committed"), &ScraperXSimulation::is_checkpoint_committed);
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {
@@ -106,6 +113,14 @@ bool ScraperXSimulation::request_hopper_release() {
             "ScraperX native authority rejected hopper release: player is out of range or the release has already started.");
     }
     return accepted;
+}
+
+bool ScraperXSimulation::request_parachute() {
+    return simulation_.request_parachute();
+}
+
+bool ScraperXSimulation::commit_checkpoint() {
+    return simulation_.commit_checkpoint();
 }
 
 std::int64_t ScraperXSimulation::advance_frame(const double frame_delta_seconds) {
@@ -231,6 +246,26 @@ double ScraperXSimulation::get_impact_rocker_angle_radians() const {
 
 bool ScraperXSimulation::has_impact_rocker_been_struck() const {
     return simulation_.snapshot().impact_rocker_struck;
+}
+
+bool ScraperXSimulation::is_parachute_deployed() const {
+    return simulation_.snapshot().parachute_deployed;
+}
+
+bool ScraperXSimulation::is_parachute_allowed() const {
+    return simulation_.snapshot().parachute_allowed;
+}
+
+std::int64_t ScraperXSimulation::get_fall_severity() const {
+    return static_cast<std::int64_t>(simulation_.snapshot().fall_severity);
+}
+
+std::int64_t ScraperXSimulation::get_fear_event_id() const {
+    return static_cast<std::int64_t>(simulation_.snapshot().fear_event_id);
+}
+
+bool ScraperXSimulation::is_checkpoint_committed() const {
+    return simulation_.snapshot().checkpoint_committed;
 }
 
 } // namespace scraperx::bridge
