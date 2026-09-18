@@ -89,8 +89,6 @@ constexpr double kJibGravity = 9.81;
 constexpr float kJibCrateHalfExtent = 0.50F;
 
 constexpr double kImpactRockerX = 7.0;
-
-constexpr double kImpactRockerX = 7.0;
 constexpr double kImpactRockerY = 1.65;
 constexpr double kImpactRockerZ = 21.55;
 constexpr double kImpactRockerAngleThreshold = 0.035;
@@ -417,33 +415,41 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
     return std::max(low, std::min(high, value));
 }
 
+[[nodiscard]] JPH::RVec3 jib_rvec(const double x, const double y, const double z) noexcept {
+    return JPH::RVec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
+}
+
 [[nodiscard]] JPH::RVec3 jib_boom_direction(const double slew_radians) noexcept {
-    return {std::cos(slew_radians), 0.0, std::sin(slew_radians)};
+    return jib_rvec(std::cos(slew_radians), 0.0, std::sin(slew_radians));
 }
 
 [[nodiscard]] JPH::RVec3 jib_boom_tip(const double slew_radians) noexcept {
     const JPH::RVec3 direction = jib_boom_direction(slew_radians);
-    return {kJibMastX + kJibBoomLengthMeters * direction.GetX(),
-            kJibBoomHeightMeters,
-            kJibMastZ + kJibBoomLengthMeters * direction.GetZ()};
+    return jib_rvec(kJibMastX + kJibBoomLengthMeters * static_cast<double>(direction.GetX()),
+                    kJibBoomHeightMeters,
+                    kJibMastZ + kJibBoomLengthMeters * static_cast<double>(direction.GetZ()));
 }
 
 [[nodiscard]] JPH::RVec3 jib_boom_center(const double slew_radians) noexcept {
     const JPH::RVec3 direction = jib_boom_direction(slew_radians);
-    return {kJibMastX + 0.5 * kJibBoomLengthMeters * direction.GetX(),
-            kJibBoomHeightMeters,
-            kJibMastZ + 0.5 * kJibBoomLengthMeters * direction.GetZ()};
+    return jib_rvec(kJibMastX + 0.5 * kJibBoomLengthMeters * static_cast<double>(direction.GetX()),
+                    kJibBoomHeightMeters,
+                    kJibMastZ + 0.5 * kJibBoomLengthMeters * static_cast<double>(direction.GetZ()));
 }
 
 [[nodiscard]] JPH::RVec3 jib_hook_position(const double slew_radians,
                                            const double winch_length_meters) noexcept {
     const JPH::RVec3 tip = jib_boom_tip(slew_radians);
-    return {tip.GetX(), kJibBoomHeightMeters - winch_length_meters, tip.GetZ()};
+    return jib_rvec(static_cast<double>(tip.GetX()),
+                    kJibBoomHeightMeters - winch_length_meters,
+                    static_cast<double>(tip.GetZ()));
 }
 
 [[nodiscard]] JPH::RVec3 jib_crate_rest_position(const double slew_radians) noexcept {
     const JPH::RVec3 tip = jib_boom_tip(slew_radians);
-    return {tip.GetX(), static_cast<double>(kJibCrateHalfExtent), tip.GetZ()};
+    return jib_rvec(static_cast<double>(tip.GetX()),
+                    static_cast<double>(kJibCrateHalfExtent),
+                    static_cast<double>(tip.GetZ()));
 }
 
 } // namespace
