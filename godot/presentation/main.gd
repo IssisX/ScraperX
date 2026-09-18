@@ -15,6 +15,8 @@ const TIPPER_ENTITY_ID := 14
 const LIFT_PLATFORM_ENTITY_ID := 16
 const CATWALK_ENTITY_ID := 19
 const TREADLE_ENTITY_ID := 24
+const JIB_HOOK_ENTITY_ID := 27
+const CRATE_ENTITY_ID := 28
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -68,6 +70,11 @@ var _valve_mesh: Node3D
 var _treadle_mesh: Node3D
 var _treadle_cable_a: Node3D
 var _treadle_cable_b: Node3D
+var _jib_boom_mesh: Node3D
+var _jib_hook_mesh: MeshInstance3D
+var _jib_crate_mesh: MeshInstance3D
+var _jib_capacity_load_mesh: MeshInstance3D
+var _jib_hoist_cable: Node3D
 var _lift_mesh: MeshInstance3D
 var _counterweight_mesh: MeshInstance3D
 var _translating_support_mesh: MeshInstance3D
@@ -112,6 +119,7 @@ var _ci_proof_printed := false
 @onready var _release_button: Control = $HUD/TouchRelease
 @onready var _parachute_button: Control = $HUD/TouchParachute
 @onready var _fall_value: Label = $HUD/TopLeft/Fall
+@onready var _jib_value: Label = $HUD/TopLeft/Jib
 @onready var _light_rig: Node3D = $LightRig
 
 
@@ -167,6 +175,10 @@ func _process(delta: float) -> void:
 		_fail_native("SCRAPERX_MOVE_INPUT_REJECTED", 21)
 		return
 	_native.set_facing(facing.x, facing.y)
+
+	var jib_input := _read_jib_input()
+	_native.set_jib_slew_input(jib_input.x)
+	_native.set_jib_hoist_input(jib_input.y)
 
 	var steps_advanced := int(_native.advance_frame(delta))
 	if steps_advanced < 0:
@@ -293,6 +305,16 @@ func _read_desired_movement() -> Vector2:
 	return (keyboard + _touch_move).limit_length(1.0)
 
 
+# WO-011 KX-JIB pendant: x is Drive (slew), y is Raise(+)/Lower(-). Arrow keys
+# so they never collide with WASD movement; effect is native-gated to the
+# station radius regardless of what this reads.
+func _read_jib_input() -> Vector2:
+	return Vector2(
+		float(int(Input.is_key_pressed(KEY_RIGHT)) - int(Input.is_key_pressed(KEY_LEFT))),
+		float(int(Input.is_key_pressed(KEY_UP)) - int(Input.is_key_pressed(KEY_DOWN)))
+	)
+
+
 func _apply_look_delta(delta: Vector2) -> void:
 	_yaw -= delta.x * 0.003
 	_pitch = clampf(_pitch - delta.y * 0.003, -1.25, 1.35)
@@ -388,12 +410,26 @@ func _render_snapshot() -> void:
 		int(_native.get_checkpoint_commit_count()), int(_native.get_death_count())]
 	_fall_value.modulate = Color("8fd9b8") if fall_state == FALL_PARACHUTING else Color("d8e0dc")
 
+	var jib_at_station := bool(_native.is_jib_station_active())
+	var jib_hook: Vector3 = _native.get_jib_hook_position()
+	_jib_value.text = "JIB       %s  BOOM %+6.3f rad  HOOK %6.2f %5.2f %6.2f  CRATE %6.2f %5.2f %6.2f" % [
+		"AT PENDANT" if jib_at_station else "away",
+		float(_native.get_jib_boom_angle_radians()),
+		jib_hook.x, jib_hook.y, jib_hook.z,
+		_native.get_jib_crate_position().x, _native.get_jib_crate_position().y,
+		_native.get_jib_crate_position().z]
+	_jib_value.modulate = Color("e8d9a8") if jib_at_station else Color("8a8378")
+
 	if traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
 	elif traversal == TRAVERSAL_MANTLING:
 		_status.text = "MANTLING REAL GEOMETRY"
 	elif traversal == TRAVERSAL_VAULTING:
 		_status.text = "VAULTING REAL GEOMETRY"
+	elif jib_at_station:
+		_status.text = "AT THE JIB PENDANT / ARROWS DRIVE-HOIST"
+	elif grounded and support == CRATE_ENTITY_ID:
+		_status.text = "RIDING THE CRATE"
 	elif grounded and support == LIFT_PLATFORM_ENTITY_ID:
 		_status.text = "RIDING THE STEAM LIFT"
 	elif grounded and support == CATWALK_ENTITY_ID:
@@ -450,6 +486,19 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 		_lift_mesh.position = _native.get_lift_platform_position()
 	if _counterweight_mesh != null:
 		_counterweight_mesh.position = _native.get_counterweight_position()
+
+	if _jib_boom_mesh != null:
+		_jib_boom_mesh.rotation = Vector3(0.0, float(_native.get_jib_boom_angle_radians()), 0.0)
+	if _jib_hook_mesh != null:
+		_jib_hook_mesh.position = _native.get_jib_hook_position()
+	if _jib_crate_mesh != null:
+		_jib_crate_mesh.position = _native.get_jib_crate_position()
+	if _jib_capacity_load_mesh != null:
+		_jib_capacity_load_mesh.position = _native.get_jib_capacity_stand_load_position()
+	if _jib_hoist_cable != null:
+		_span_cable(_jib_hoist_cable, _native.get_jib_hook_position() + Vector3(0.0, 0.15, 0.0),
+			Vector3(200.0, 5.0, 0.0) + Vector3(6.0, 0.0, 0.0).rotated(
+				Vector3.UP, float(_native.get_jib_boom_angle_radians())))
 
 	if _rope_mesh != null:
 		var from: Vector3 = _native.get_tipper_position() + Vector3(3.0, -0.2, 0.0).rotated(
@@ -676,6 +725,7 @@ func _build_plant(mill_scale: Material, oxidised: Material, galvanised: Material
 	_rope_mesh = _add_box("Rope", Vector3(0.09, 0.09, 1.0), Vector3(30.0, 5.0, -95.0), rope_material)
 
 	_build_treadle(galvanised, mill_scale, hazard, rope_material)
+	_build_kernel_jib(galvanised, mill_scale, hazard)
 	_build_plume()
 
 
@@ -718,6 +768,36 @@ func _span_cable(node: Node3D, from: Vector3, to: Vector3) -> void:
 	node.position = from + delta * 0.5
 	node.scale = Vector3(1.0, 1.0, length)
 	node.look_at(to, Vector3.UP if absf(delta.normalized().y) < 0.99 else Vector3.RIGHT)
+
+
+# WO-011. Ascent Atlas v1.0 kernel: KX-JIB + KX-CRATE. Sited well clear of the
+# Kellerworks yard -- the atlas kernel is its own bounded proof volume (atlas
+# section 9), not band content, so it is not staged inside the tower approach.
+func _build_kernel_jib(galvanised: StandardMaterial3D, mill_scale: StandardMaterial3D,
+		hazard: StandardMaterial3D) -> void:
+	var kernel_deck := _material(Color("55524a"), 0.05, 0.9)
+	_add_box("KernelDeck", Vector3(20.0, 0.6, 20.0), Vector3(200.0, -0.3, 0.0), kernel_deck)
+	_add_box("JibMast", Vector3(0.7, 5.0, 0.7), Vector3(200.0, 2.5, 0.0), mill_scale)
+
+	_jib_boom_mesh = Node3D.new()
+	_jib_boom_mesh.name = "JibBoom"
+	_jib_boom_mesh.position = Vector3(200.0, 5.0, 0.0)
+	$TowerPresentation.add_child(_jib_boom_mesh)
+	_add_box_to("JibBoomBeam", Vector3(6.0, 0.3, 0.3), Vector3(3.0, 0.0, 0.0), galvanised,
+		_jib_boom_mesh)
+
+	_jib_hook_mesh = _add_box("JibHook", Vector3(0.3, 0.3, 0.3), Vector3(206.0, 1.65, 0.0), hazard)
+	_jib_crate_mesh = _add_box("KernelCrate", Vector3(1.5, 1.5, 1.5), Vector3(206.0, 0.75, 0.0),
+		mill_scale)
+	_jib_hoist_cable = _add_box("JibHoistCable", Vector3(0.05, 0.05, 1.0), Vector3.ZERO,
+		_material(Color("2b2621"), 0.5, 0.7))
+
+	# Capacity-proving stand: fixed, no slew, permanently overweight. A real,
+	# visible part of the yard, not a hidden test fixture -- it proves the
+	# rated winch force is real whether or not anyone is watching.
+	_add_box("CapacityStandMast", Vector3(0.6, 4.0, 0.6), Vector3(208.0, 2.0, 6.0), mill_scale)
+	_jib_capacity_load_mesh = _add_box("CapacityStandLoad", Vector3(1.2, 1.2, 1.2),
+		Vector3(208.0, 0.6, 6.0), hazard)
 
 
 func _build_plume() -> void:

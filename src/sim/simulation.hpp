@@ -37,6 +37,14 @@ enum class InitialSpawn : std::uint8_t {
     // human-scale control. Isolates "a body on this pedal works the valve" from
     // the separately-proven question of how the player reaches the catwalk.
     CatwalkTreadle = 13,
+    // WO-011 falsifier spawn: at the KX-JIB pendant station, per Ascent Atlas
+    // v1.0 kernel (section 9). The atlas kernel is a bounded, separate proof
+    // volume -- not the Kellerworks yard -- so this spawns well clear of it.
+    KernelJibStation = 14,
+    // WO-011 falsifier spawn: directly on the crate's top surface, isolating
+    // "the crate is a real moving support" (WO-005 proof path item 3, WO-002
+    // law) from the separately-proven pendant/motor mechanics above.
+    KernelCrateTop = 15,
 };
 
 enum class TraversalState : std::uint8_t {
@@ -116,6 +124,22 @@ struct Snapshot final {
     double piston_force_n = 0.0;
     double vessel_available_energy_j = 0.0;
     double machine_cycle_phase_seconds = 0.0;
+
+    // --- WO-011 KX-JIB / KX-CRATE (Ascent Atlas v1.0 kernel, atlas-authority
+    // §9). A pendant-controlled crane, not an autonomous cycle: the boom slews
+    // and the hook raises/lowers only while the player is at the station and
+    // only as fast as a finite, real Jolt constraint motor allows.
+    bool jib_station_active = false;
+    double jib_boom_angle_radians = 0.0;
+    Vector3 jib_hook_position{};
+    Vector3 jib_hook_linear_velocity{};
+    Vector3 jib_crate_position{};
+    Vector3 jib_crate_linear_velocity{};
+    // A separate, fixed capacity-proving stand: the same rated winch force as
+    // the jib's hoist, permanently loaded past that rating, so "the winch
+    // force is finite" is falsifiable without staging an unsafe lift on the
+    // real jib.
+    Vector3 jib_capacity_stand_load_position{};
 };
 
 struct AdvanceResult final {
@@ -155,6 +179,14 @@ public:
     // cabled across the yard to the valve gear. The player cannot move machine-
     // scale mass with their body, so this is how a body enters the machine.
     static constexpr std::uint64_t kTreadleEntityId = 24;
+    // WO-011 Ascent Atlas kernel entities (§9): KX-JIB is the mast+boom+hook,
+    // KX-CRATE is the load, plus a fixed, always-overweight capacity-proving
+    // stand that shares the jib's rated winch force.
+    static constexpr std::uint64_t kJibMastEntityId = 25;
+    static constexpr std::uint64_t kJibBoomEntityId = 26;
+    static constexpr std::uint64_t kJibHookEntityId = 27;
+    static constexpr std::uint64_t kCrateEntityId = 28;
+    static constexpr std::uint64_t kCapacityStandEntityId = 29;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -180,6 +212,18 @@ public:
     // produces no state change.
     [[nodiscard]] bool request_parachute() noexcept;
 
+    // WO-011 KX-JIB pendant commands. Continuous, persistent axes -- like
+    // set_move_input, not a one-shot event -- matching Drive (slew) and
+    // Raise/Lower (hoist); zero on either axis is the brake, not "let go":
+    // the winch motor holds against gravity up to its rated force, it does
+    // not free-fall the instant input stops. Both axes are clamped to
+    // [-1, 1] and take effect only while the player is at the station
+    // (jib_station_active); away from the station they are accepted as
+    // commands but produce no motion, exactly like a parachute request while
+    // grounded.
+    [[nodiscard]] bool set_jib_slew_input(double value) noexcept;
+    [[nodiscard]] bool set_jib_hoist_input(double value) noexcept;
+
     // Disables the boiler feed so the plant becomes a strictly finite reservoir.
     // Used to prove the machine cannot manufacture work.
     void set_boiler_feed_enabled(bool enabled) noexcept;
@@ -202,6 +246,8 @@ private:
     bool traversal_requested_ = false;
     bool release_requested_ = false;
     bool parachute_toggle_requested_ = false;
+    double jib_slew_input_ = 0.0;
+    double jib_hoist_input_ = 0.0;
     Snapshot snapshot_{};
 };
 

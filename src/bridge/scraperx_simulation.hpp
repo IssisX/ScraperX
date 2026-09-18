@@ -83,6 +83,17 @@ public:
     [[nodiscard]] std::int64_t get_checkpoint_commit_count() const;
     [[nodiscard]] std::int64_t get_death_count() const;
 
+    // WO-011 KX-JIB / KX-CRATE (Ascent Atlas v1.0 kernel).
+    [[nodiscard]] bool set_jib_slew_input(double value);
+    [[nodiscard]] bool set_jib_hoist_input(double value);
+    [[nodiscard]] bool is_jib_station_active() const;
+    [[nodiscard]] double get_jib_boom_angle_radians() const;
+    [[nodiscard]] godot::Vector3 get_jib_hook_position() const;
+    [[nodiscard]] godot::Vector3 get_jib_hook_linear_velocity() const;
+    [[nodiscard]] godot::Vector3 get_jib_crate_position() const;
+    [[nodiscard]] godot::Vector3 get_jib_crate_linear_velocity() const;
+    [[nodiscard]] godot::Vector3 get_jib_capacity_stand_load_position() const;
+
 protected:
     static void _bind_methods();
 

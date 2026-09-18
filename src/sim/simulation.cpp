@@ -25,6 +25,7 @@
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/Constraints/PulleyConstraint.h>
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
@@ -175,6 +176,59 @@ constexpr float kTreadleMastZ = -105.0F;
 constexpr float kValveMastZ = -92.0F;
 constexpr float kCatwalkDeckY = 8.69F;
 
+// --- WO-011 Ascent Atlas v1.0 kernel: KX-JIB / KX-CRATE --------------------
+// Ascent Atlas section 9 places the WO-005..008 kernel at "z=0-24 m, plan cut
+// 36 m x 36 m" as its own bounded proof volume, separate from band content --
+// it is explicitly not the Kellerworks yard above. Sited well clear of it.
+constexpr float kKernelBaseX = 200.0F;
+constexpr float kKernelBaseZ = 0.0F;
+constexpr float kKernelDeckHalfExtent = 10.0F; // 20 m square kernel apron.
+
+constexpr float kJibMastX = kKernelBaseX;
+constexpr float kJibMastZ = kKernelBaseZ;
+constexpr float kJibMastHeight = 5.0F;
+constexpr float kJibBoomLength = 6.0F;
+constexpr float kJibBoomMassKg = 400.0F;
+// Slew is bounded, not a full 360 -- a compact pendant swinging a load between
+// a pickup point and a drop point, matching WO-005's "a compact pendant is
+// enough" scope note. +/-2.0 rad (~115 deg) covers pickup-to-drop with margin.
+constexpr float kJibSlewLimitRadians = 2.0F;
+// The crate+hook at the boom tip (radius ~4.65 m) carries most of the slew
+// moment of inertia: I ~= (1200+40)*4.65^2 + boom's own (1/3)*400*6^2 ~=
+// 31,600 kg*m^2. 6000 N*m -- an earlier, unmeasured guess -- produced 0.006
+// rad/s after 6 s of full command, not the target 0.5 rad/s. Measured via a
+// probe and corrected; this value is a real, falsifiable design target now,
+// not a guess (Atlas section 0.3).
+constexpr float kJibSlewMaxTorqueNm = 45000.0F;
+constexpr float kJibSlewMaxRateRadPerSec = 0.5F;
+
+constexpr float kJibHookMassKg = 40.0F;
+constexpr float kJibHoistMaxRateMetersPerSec = 1.0F;
+// The rated winch force. A finite, enforced Jolt motor limit (Governing Law 26:
+// a real constraint capacity, not a number that only appears in an HUD label).
+// Atlas section 0.3: masses/loads below this line are design targets, not
+// proof requirements, until a benchmark scene exists -- this WO is that scene.
+constexpr float kJibMaxLiftForceN = 20000.0F;
+
+constexpr float kCrateMassKg = 1200.0F; // weight ~11.8 kN, well inside rating.
+constexpr float kCrateHalfExtent = 0.75F;
+
+// A fixed, permanently-overweight capacity-proving stand: same rated winch
+// force as the jib's hoist, a load past that rating, always commanded to
+// raise. Proves "unlimited winch force" is forbidden without staging an
+// unsafe lift on the real jib (WO-005 forbidden-shortcuts list).
+constexpr float kCapacityStandX = kKernelBaseX + 8.0F;
+constexpr float kCapacityStandZ = kKernelBaseZ + 6.0F;
+constexpr float kCapacityStandMastHeight = 4.0F;
+constexpr float kCapacityStandLoadMassKg = 2500.0F; // weight ~24.5 kN > rating.
+constexpr float kCapacityStandLoadHalfExtent = 0.6F;
+
+// Pendant station: a fixed point near the mast base. Commands only take
+// effect within this radius (WO-005: "Action to enter station").
+constexpr float kJibStationX = kJibMastX - 2.5F;
+constexpr float kJibStationZ = kJibMastZ - 2.0F;
+constexpr float kJibStationRadius = 2.5F;
+
 // WO-008 fall / parachute / checkpoint. An 8.8 m unassisted lift-platform
 // fall (~13.1 m/s impact) must stay survivable per GDD 8.2; a genuine
 // tower-scale drop must not be. Terminal parachute speed (~9 m/s, derived
@@ -301,7 +355,9 @@ struct SupportSample final {
            entity_id == Sim::kTipperEntityId ||
            entity_id == Sim::kLiftPlatformEntityId ||
            entity_id == Sim::kCounterweightEntityId ||
-           entity_id == Sim::kTreadleEntityId;
+           entity_id == Sim::kTreadleEntityId ||
+           entity_id == Sim::kJibHookEntityId ||
+           entity_id == Sim::kCrateEntityId;
 }
 
 class PlayerContactListener final : public JPH::ContactListener {
@@ -433,6 +489,13 @@ private:
         // Above the outboard half of the treadle plate, where a body has real
         // leverage on the hinge.
         return {15.3, 10.3, -106.0};
+    case scraperx::sim::InitialSpawn::KernelJibStation:
+        return {kJibStationX, 1.2, kJibStationZ};
+    case scraperx::sim::InitialSpawn::KernelCrateTop:
+        // Offset from the crate's centre so the player doesn't spawn inside
+        // the hook, which hangs directly above the centre via the pin link.
+        return {static_cast<double>(kJibMastX + kJibBoomLength) + 0.4, 2.4,
+                static_cast<double>(kJibMastZ)};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -633,6 +696,7 @@ public:
                                            Simulation::kBlockedLedgeCanopyEntityId);
 
         build_machine(bodies);
+        build_kernel_jib(bodies);
 
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
         JPH::BodyCreationSettings player_settings(player_shape_,
@@ -670,6 +734,8 @@ public:
         tipper_hinge_ = nullptr;
         valve_hinge_ = nullptr;
         treadle_hinge_ = nullptr;
+        jib_slew_hinge_ = nullptr;
+        jib_hoist_slider_ = nullptr;
         auto &bodies = physics_system_.GetBodyInterface();
         for (auto it = machine_bodies_.rbegin(); it != machine_bodies_.rend(); ++it) {
             remove_and_destroy(bodies, *it);
@@ -697,6 +763,8 @@ public:
         bool traversal_requested = false;
         bool release_requested = false;
         bool parachute_toggle_requested = false;
+        double jib_slew_input = 0.0;
+        double jib_hoist_input = 0.0;
     };
 
     void step(const StepCommands &commands,
@@ -710,6 +778,7 @@ public:
         update_support_motion(bodies, delta_seconds, next_time_seconds);
         update_scoop(bodies, delta_seconds, next_time_seconds);
         update_plant(bodies, delta_seconds);
+        update_jib(bodies, commands.jib_slew_input, commands.jib_hoist_input);
 
         // A toggle while airborne only: deploying/retracting on the ground is
         // meaningless and would let a grounded button-mash pre-arm the canopy.
@@ -1092,6 +1161,99 @@ private:
         add_treadle_cable();
     }
 
+    // WO-011. Ascent Atlas v1.0 kernel (section 9): KX-JIB + KX-CRATE. A
+    // pendant-controlled crane, not an autonomous cycle -- everything here
+    // moves only in response to a real command, through a real, finite-force
+    // Jolt constraint motor, never a scripted animation or a teleport.
+    void build_kernel_jib(JPH::BodyInterface &bodies) {
+        const auto track = [this](const JPH::BodyID id) {
+            machine_bodies_.push_back(id);
+            return id;
+        };
+
+        // KX-DECK kernel patch: its own bounded apron, not the Kellerworks
+        // yard -- Ascent Atlas section 9 places the kernel at a separate,
+        // compressed scale.
+        track(add_box(bodies, JPH::Vec3(kKernelDeckHalfExtent, 0.3F, kKernelDeckHalfExtent),
+                      JPH::RVec3(kKernelBaseX, -0.3, kKernelBaseZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
+                      Simulation::kStaticDeckEntityId));
+
+        const JPH::BodyID jib_mast = track(add_box(
+            bodies, JPH::Vec3(0.35F, kJibMastHeight * 0.5F, 0.35F),
+            JPH::RVec3(kJibMastX, kJibMastHeight * 0.5F, kJibMastZ),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+            Simulation::kJibMastEntityId));
+
+        JPH::Body *boom = add_shape_body(
+            bodies, new JPH::BoxShape(JPH::Vec3(kJibBoomLength * 0.5F, 0.15F, 0.15F)),
+            JPH::RVec3(kJibMastX + kJibBoomLength * 0.5F, kJibMastHeight, kJibMastZ),
+            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.5F,
+            Simulation::kJibBoomEntityId, kJibBoomMassKg);
+        jib_boom_id_ = track(boom->GetID());
+
+        add_vertical_hinge(jib_mast, jib_boom_id_,
+                           JPH::RVec3(kJibMastX, kJibMastHeight, kJibMastZ),
+                           -kJibSlewLimitRadians, kJibSlewLimitRadians, kJibSlewMaxTorqueNm,
+                           &jib_slew_hinge_);
+
+        // Hook and crate both start near the deck: the crate is where a real
+        // load actually sits, and the hook is pre-rigged to it (WO-005 allows
+        // this -- "CAP-HOOK5 may be pre-placed on the crate for this WO").
+        // Raising is what "picks it up"; nothing snaps into a solved pose.
+        const float crate_start_y = kCrateHalfExtent;
+        const float link_y = crate_start_y + kCrateHalfExtent;
+        const float hook_start_y = link_y + 0.15F;
+        JPH::Body *crate = add_shape_body(
+            bodies,
+            new JPH::BoxShape(JPH::Vec3(kCrateHalfExtent, kCrateHalfExtent, kCrateHalfExtent)),
+            JPH::RVec3(kJibMastX + kJibBoomLength, crate_start_y, kJibMastZ),
+            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
+            Simulation::kCrateEntityId, kCrateMassKg);
+        crate_id_ = track(crate->GetID());
+
+        JPH::Body *hook = add_shape_body(
+            bodies, new JPH::BoxShape(JPH::Vec3(0.15F, 0.15F, 0.15F)),
+            JPH::RVec3(kJibMastX + kJibBoomLength, hook_start_y, kJibMastZ), JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.4F,
+            Simulation::kJibHookEntityId, kJibHookMassKg);
+        jib_hook_id_ = track(hook->GetID());
+
+        add_point_link(jib_hook_id_, crate_id_,
+                      JPH::RVec3(kJibMastX + kJibBoomLength, link_y, kJibMastZ));
+
+        // Travel is signed from this starting (lowest) pose, matching every
+        // other slider in this file (lift platform, counterweight): 0 here,
+        // upward-only, so raising is unambiguously the positive direction.
+        const float hoist_travel = (kJibMastHeight - 0.35F) - hook_start_y;
+        add_motorized_slider(jib_boom_id_, jib_hook_id_, 0.0F, hoist_travel, kJibMaxLiftForceN,
+                             &jib_hoist_slider_);
+
+        // Capacity-proving stand: fixed, no slew, permanently overweight,
+        // always commanded to raise. Proves the rated force is real without
+        // staging that failure as an unsafe lift on the working jib (WO-005
+        // forbidden shortcuts: "unlimited winch force").
+        const JPH::BodyID stand_mast = track(add_box(
+            bodies, JPH::Vec3(0.3F, kCapacityStandMastHeight * 0.5F, 0.3F),
+            JPH::RVec3(kCapacityStandX, kCapacityStandMastHeight * 0.5F, kCapacityStandZ),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+            Simulation::kJibMastEntityId));
+        JPH::Body *stand_load = add_shape_body(
+            bodies,
+            new JPH::BoxShape(JPH::Vec3(kCapacityStandLoadHalfExtent, kCapacityStandLoadHalfExtent,
+                                        kCapacityStandLoadHalfExtent)),
+            JPH::RVec3(kCapacityStandX, kCapacityStandLoadHalfExtent, kCapacityStandZ),
+            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
+            Simulation::kCapacityStandEntityId, kCapacityStandLoadMassKg);
+        capacity_stand_load_id_ = track(stand_load->GetID());
+        JPH::Ref<JPH::SliderConstraint> stand_slider;
+        const float stand_travel = kCapacityStandMastHeight - kCapacityStandLoadHalfExtent -
+                                    kCapacityStandLoadHalfExtent;
+        add_motorized_slider(stand_mast, capacity_stand_load_id_, 0.0F, stand_travel,
+                             kJibMaxLiftForceN, &stand_slider);
+        stand_slider->SetTargetVelocity(kJibHoistMaxRateMetersPerSec);
+    }
+
     // Lets the linkage reach its own resting pose before the rope is measured, so
     // slack is slack against the machine as it actually hangs.
     void settle_machine() noexcept {
@@ -1135,6 +1297,86 @@ private:
         settings.mLimitsMin = limit_min;
         settings.mLimitsMax = limit_max;
         (void)create_constraint(settings, anchor_id, moving_id);
+    }
+
+    // WO-011. A vertical-axis hinge with a real, torque-limited Jolt motor --
+    // the jib's slew. EMotorState::Velocity drives toward a commanded angular
+    // velocity "limited only by max force/torque the motor can apply" (Jolt's
+    // own doc comment on EMotorState): exceeding that torque does not snap to
+    // the target, the body simply cannot reach it. That is the finite-actuator
+    // requirement (WO-005 forbidden shortcuts: "unlimited winch force"),
+    // enforced by the engine's own constraint solver, not by application code.
+    void add_vertical_hinge(const JPH::BodyID anchor_id,
+                            const JPH::BodyID moving_id,
+                            const JPH::RVec3 point,
+                            const float limit_min,
+                            const float limit_max,
+                            const float max_motor_torque_nm,
+                            JPH::Ref<JPH::HingeConstraint> *out) {
+        JPH::HingeConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mPoint1 = point;
+        settings.mPoint2 = point;
+        settings.mHingeAxis1 = JPH::Vec3::sAxisY();
+        settings.mHingeAxis2 = JPH::Vec3::sAxisY();
+        settings.mNormalAxis1 = JPH::Vec3::sAxisX();
+        settings.mNormalAxis2 = JPH::Vec3::sAxisX();
+        settings.mLimitsMin = limit_min;
+        settings.mLimitsMax = limit_max;
+        settings.mMotorSettings.SetTorqueLimit(max_motor_torque_nm);
+        JPH::TwoBodyConstraint *constraint = create_constraint(settings, anchor_id, moving_id);
+        if (constraint == nullptr || out == nullptr) {
+            return;
+        }
+        auto *hinge = static_cast<JPH::HingeConstraint *>(constraint);
+        hinge->SetMotorState(JPH::EMotorState::Velocity);
+        hinge->SetTargetAngularVelocity(0.0F);
+        *out = hinge;
+    }
+
+    // A vertical slider with a real, force-limited motor -- the jib's hoist
+    // winch, and the capacity-proving stand that shares its rating. Same
+    // honesty property as the slew motor: EMotorState::Velocity can only push
+    // as hard as mMaxForceLimit, so an overweight load is not held, it sags or
+    // falls at a rate the deficit between weight and rated force actually
+    // produces -- not scripted, read back from the solver.
+    void add_motorized_slider(const JPH::BodyID anchor_id,
+                              const JPH::BodyID moving_id,
+                              const float limit_min,
+                              const float limit_max,
+                              const float max_motor_force_n,
+                              JPH::Ref<JPH::SliderConstraint> *out) {
+        JPH::SliderConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mAutoDetectPoint = true;
+        settings.SetSliderAxis(JPH::Vec3::sAxisY());
+        settings.mLimitsMin = limit_min;
+        settings.mLimitsMax = limit_max;
+        settings.mMotorSettings.SetForceLimit(max_motor_force_n);
+        JPH::TwoBodyConstraint *constraint = create_constraint(settings, anchor_id, moving_id);
+        if (constraint == nullptr || out == nullptr) {
+            return;
+        }
+        auto *slider = static_cast<JPH::SliderConstraint *>(constraint);
+        slider->SetMotorState(JPH::EMotorState::Velocity);
+        slider->SetTargetVelocity(0.0F);
+        *out = slider;
+    }
+
+    // A real pin between two bodies at one shared world point -- the hook-to-
+    // crate rigging. WO-005 allows the attachment pre-placed for this WO
+    // ("CAP-HOOK5 may be pre-placed on the crate... but the hook must still be
+    // a real constraint"); a PointConstraint fixes the pin but leaves rotation
+    // free, so the crate genuinely swings under the hook rather than being
+    // welded to it.
+    void add_point_link(const JPH::BodyID first_id,
+                        const JPH::BodyID second_id,
+                        const JPH::RVec3 point) {
+        JPH::PointConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mPoint1 = point;
+        settings.mPoint2 = point;
+        (void)create_constraint(settings, first_id, second_id);
     }
 
     // Tension-only rope: it can pull the valve lever but never push it, and it
@@ -1282,6 +1524,39 @@ private:
         const float piston_force = static_cast<float>(steam_plant_.state().piston_force_n);
         if (piston_force > 0.0F) {
             bodies.AddForce(lift_platform_id_, JPH::Vec3(0.0F, piston_force, 0.0F));
+        }
+    }
+
+    // WO-011 KX-JIB. Commands take effect only within the pendant station
+    // radius (WO-005: "Action to enter station"); away from it, both motors
+    // are forced to hold at zero velocity regardless of queued input, so
+    // walking off the station always safely brakes the jib rather than
+    // leaving it drifting on a stale command.
+    void update_jib(const JPH::BodyInterface &bodies,
+                    const double slew_input,
+                    const double hoist_input) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+        const float station_dx = static_cast<float>(player_position.GetX()) - kJibStationX;
+        const float station_dz = static_cast<float>(player_position.GetZ()) - kJibStationZ;
+        const bool at_station =
+            (station_dx * station_dx + station_dz * station_dz) <=
+            (kJibStationRadius * kJibStationRadius);
+        jib_station_active_ = at_station;
+
+        const float slew =
+            at_station ? std::clamp(static_cast<float>(slew_input), -1.0F, 1.0F) : 0.0F;
+        const float hoist =
+            at_station ? std::clamp(static_cast<float>(hoist_input), -1.0F, 1.0F) : 0.0F;
+
+        if (jib_slew_hinge_ != nullptr) {
+            jib_slew_hinge_->SetTargetAngularVelocity(slew * kJibSlewMaxRateRadPerSec);
+            const float measured = jib_slew_hinge_->GetCurrentAngle();
+            if (std::isfinite(measured)) {
+                jib_boom_angle_ = measured;
+            }
+        }
+        if (jib_hoist_slider_ != nullptr) {
+            jib_hoist_slider_->SetTargetVelocity(hoist * kJibHoistMaxRateMetersPerSec);
         }
     }
 
@@ -1907,6 +2182,9 @@ private:
         checkpoint_.treadle = capture_body(bodies, treadle_id_);
         checkpoint_.lift_platform = capture_body(bodies, lift_platform_id_);
         checkpoint_.counterweight = capture_body(bodies, counterweight_id_);
+        checkpoint_.jib_boom = capture_body(bodies, jib_boom_id_);
+        checkpoint_.jib_hook = capture_body(bodies, jib_hook_id_);
+        checkpoint_.crate = capture_body(bodies, crate_id_);
         checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
         checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
     }
@@ -1938,6 +2216,9 @@ private:
         restore_body(bodies, treadle_id_, checkpoint_.treadle);
         restore_body(bodies, lift_platform_id_, checkpoint_.lift_platform);
         restore_body(bodies, counterweight_id_, checkpoint_.counterweight);
+        restore_body(bodies, jib_boom_id_, checkpoint_.jib_boom);
+        restore_body(bodies, jib_hook_id_, checkpoint_.jib_hook);
+        restore_body(bodies, crate_id_, checkpoint_.crate);
         steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
 
         grounded_ = false;
@@ -1982,6 +2263,19 @@ private:
         state_.piston_force_n = plant.piston_force_n;
         state_.vessel_available_energy_j = steam_plant_.vessel_available_energy_j();
         state_.machine_cycle_phase_seconds = machine_cycle_phase_seconds_;
+
+        state_.jib_station_active = jib_station_active_;
+        state_.jib_boom_angle_radians = jib_boom_angle_;
+        const JPH::Vec3 hook_velocity = bodies.GetLinearVelocity(jib_hook_id_);
+        state_.jib_hook_position = to_vector3(bodies.GetPosition(jib_hook_id_));
+        state_.jib_hook_linear_velocity =
+            {hook_velocity.GetX(), hook_velocity.GetY(), hook_velocity.GetZ()};
+        const JPH::Vec3 crate_velocity = bodies.GetLinearVelocity(crate_id_);
+        state_.jib_crate_position = to_vector3(bodies.GetPosition(crate_id_));
+        state_.jib_crate_linear_velocity =
+            {crate_velocity.GetX(), crate_velocity.GetY(), crate_velocity.GetZ()};
+        state_.jib_capacity_stand_load_position =
+            to_vector3(bodies.GetPosition(capacity_stand_load_id_));
 
         const JPH::RVec3 rope_tipper =
             bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
@@ -2087,6 +2381,8 @@ private:
     JPH::Ref<JPH::HingeConstraint> tipper_hinge_;
     JPH::Ref<JPH::HingeConstraint> valve_hinge_;
     JPH::Ref<JPH::HingeConstraint> treadle_hinge_;
+    JPH::Ref<JPH::HingeConstraint> jib_slew_hinge_;
+    JPH::Ref<JPH::SliderConstraint> jib_hoist_slider_;
     JPH::BodyID scoop_ids_[4];
     JPH::Vec3 scoop_local_[4]{};
     JPH::BodyID ballast_id_;
@@ -2095,10 +2391,16 @@ private:
     JPH::BodyID treadle_id_;
     JPH::BodyID lift_platform_id_;
     JPH::BodyID counterweight_id_;
+    JPH::BodyID jib_boom_id_;
+    JPH::BodyID jib_hook_id_;
+    JPH::BodyID crate_id_;
+    JPH::BodyID capacity_stand_load_id_;
     float scoop_height_ = kScoopBottomY;
     float scoop_tilt_ = 0.0F;
     float valve_lever_angle_ = kValveShutAngle;
     float treadle_angle_ = kTreadleRestAngle;
+    float jib_boom_angle_ = 0.0F;
+    bool jib_station_active_ = false;
     float rope_rest_length_ = 0.0F;
     double machine_cycle_phase_seconds_ = 0.0;
     SupportSample support_sample_{};
@@ -2135,6 +2437,9 @@ private:
         BodyCheckpoint treadle{};
         BodyCheckpoint lift_platform{};
         BodyCheckpoint counterweight{};
+        BodyCheckpoint jib_boom{};
+        BodyCheckpoint jib_hook{};
+        BodyCheckpoint crate{};
         double vessel_mass_kg = 0.0;
         double cylinder_mass_kg = 0.0;
     };
@@ -2217,6 +2522,22 @@ bool Simulation::request_parachute() noexcept {
     return true;
 }
 
+bool Simulation::set_jib_slew_input(const double value) noexcept {
+    if (!std::isfinite(value)) {
+        return false;
+    }
+    jib_slew_input_ = std::clamp(value, -1.0, 1.0);
+    return true;
+}
+
+bool Simulation::set_jib_hoist_input(const double value) noexcept {
+    if (!std::isfinite(value)) {
+        return false;
+    }
+    jib_hoist_input_ = std::clamp(value, -1.0, 1.0);
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -2230,6 +2551,8 @@ void Simulation::step_fixed() noexcept {
     commands.traversal_requested = traversal_requested_;
     commands.release_requested = release_requested_;
     commands.parachute_toggle_requested = parachute_toggle_requested_;
+    commands.jib_slew_input = jib_slew_input_;
+    commands.jib_hoist_input = jib_hoist_input_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     jump_requested_ = false;

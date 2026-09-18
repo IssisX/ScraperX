@@ -12,7 +12,7 @@ namespace {
             static_cast<godot::real_t>(value.z)};
 }
 
-constexpr std::int64_t kInitialSpawnCount = 14;
+constexpr std::int64_t kInitialSpawnCount = 16;
 
 } // namespace
 
@@ -150,6 +150,25 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_checkpoint_commit_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_death_count"),
                                 &ScraperXSimulation::get_death_count);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("set_jib_slew_input", "value"),
+                                &ScraperXSimulation::set_jib_slew_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_jib_hoist_input", "value"),
+                                &ScraperXSimulation::set_jib_hoist_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_jib_station_active"),
+                                &ScraperXSimulation::is_jib_station_active);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_boom_angle_radians"),
+                                &ScraperXSimulation::get_jib_boom_angle_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_hook_position"),
+                                &ScraperXSimulation::get_jib_hook_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_hook_linear_velocity"),
+                                &ScraperXSimulation::get_jib_hook_linear_velocity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_crate_position"),
+                                &ScraperXSimulation::get_jib_crate_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_crate_linear_velocity"),
+                                &ScraperXSimulation::get_jib_crate_linear_velocity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_capacity_stand_load_position"),
+                                &ScraperXSimulation::get_jib_capacity_stand_load_position);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -435,6 +454,42 @@ std::int64_t ScraperXSimulation::get_death_count() const {
 
 double ScraperXSimulation::get_tower_height_meters() const {
     return sim::Simulation::kTowerHeightMeters;
+}
+
+bool ScraperXSimulation::set_jib_slew_input(const double value) {
+    return simulation_->set_jib_slew_input(value);
+}
+
+bool ScraperXSimulation::set_jib_hoist_input(const double value) {
+    return simulation_->set_jib_hoist_input(value);
+}
+
+bool ScraperXSimulation::is_jib_station_active() const {
+    return simulation_->snapshot().jib_station_active;
+}
+
+double ScraperXSimulation::get_jib_boom_angle_radians() const {
+    return simulation_->snapshot().jib_boom_angle_radians;
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_hook_position() const {
+    return to_godot(simulation_->snapshot().jib_hook_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_hook_linear_velocity() const {
+    return to_godot(simulation_->snapshot().jib_hook_linear_velocity);
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_crate_position() const {
+    return to_godot(simulation_->snapshot().jib_crate_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_crate_linear_velocity() const {
+    return to_godot(simulation_->snapshot().jib_crate_linear_velocity);
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_capacity_stand_load_position() const {
+    return to_godot(simulation_->snapshot().jib_capacity_stand_load_position);
 }
 
 } // namespace scraperx::bridge
