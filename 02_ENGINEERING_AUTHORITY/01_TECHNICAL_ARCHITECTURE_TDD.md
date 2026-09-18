@@ -2,7 +2,7 @@
 
 **Status:** Technical baseline  
 **Product / repository:** `ScraperX`  
-**Product authority:** `ScraperX_GDD_Package_v1.0/00_GOVERNING_LAWS.md` + `01_SCRAPERX_GDD.md`  
+**Product authority:** `01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md` + `01_SCRAPERX_GDD.md` + `02_ASCENT_ATLAS.md`  
 **Engineering authority above this document:** `00_EXECUTION_PROTOCOL.md`  
 **Target:** Galaxy Fold 6-class Android, sustained 45 FPS under representative play  
 **Purpose:** Define ownership, runtime boundaries, data flow, persistence, build delivery, and verification strongly enough that bounded implementation work can begin without redefining the game.
@@ -835,7 +835,11 @@ A coding model may not pick one silently because it wants to proceed.
 
 Do not begin with a giant tower, structural solver, or content production.
 
+The playable geometry for WO-001–008 is the atlas **kernel slice** (`02_ASCENT_ATLAS.md` §9), not bands B01–B11.
+
 ### Work Order 000 — delivery spine
+File: `03_WORK_ORDERS/WO-000_DELIVERY_SPINE.md`
+
 Prove:
 
 `Godot 4.7 app → native GDExtension loads → authoritative fixed-step sim runs → Android arm64 APK produced`
@@ -843,16 +847,18 @@ Prove:
 No fake game systems.
 
 ### Work Order 001 — embodied authority
-Implement:
+File: `03_WORK_ORDERS/WO-001_EMBODIED_AUTHORITY.md`
 
 `touch/desktop test input → native player state → static-world collision/support → Godot render mirror`
 
-No climbing system yet.
+No climbing system yet. World: `KX-DECK`.
 
 ### Work Order 002 — moving-support truth
+File: `03_WORK_ORDERS/WO-002_MOVING_SUPPORT_TRUTH.md`
+
 Add:
 
-- translating support;
+- translating support (`KX-BELT`);
 - rotating support;
 - support-point velocity;
 - inherited momentum on detach/jump.
@@ -860,28 +866,40 @@ Add:
 This is a constitutional discriminator. Do not advance if it is fake or unstable.
 
 ### Work Order 003 — athletic traversal
+File: `03_WORK_ORDERS/WO-003_ATHLETIC_TRAVERSAL.md`
+
 Add bounded mantle/vault/ledge/hang primitives on real geometry, preserving moving-support behavior.
 
 ### Work Order 004 — fall / parachute / checkpoint
-Prove real fall, survivable parachute dynamics, checkpoint commit, death rollback, and surviving lower-level fall continuation.
+File: `03_WORK_ORDERS/WO-004_FALL_PARACHUTE_CHECKPOINT.md`
+
+Prove real fall, survivable parachute dynamics, checkpoint commit, death rollback, and surviving lower-level fall continuation. Refuge: `KX-REFUGE`.
 
 ### Work Order 005 — first freight mechanism
-One real machine with finite power/force/travel/brake behavior and a real movable load.
+File: `03_WORK_ORDERS/WO-005_FIRST_FREIGHT.md`
+
+One real machine with finite power/force/travel/brake behavior and a real movable load: `KX-JIB` + `KX-CRATE`.
 
 ### Work Order 006 — first structural coupling
-The machine/load changes an actual structural state that changes geometry/support/traversal.
+File: `03_WORK_ORDERS/WO-006_FIRST_STRUCTURAL_COUPLING.md`
+
+The machine/load changes an actual structural state that changes geometry/support/traversal: `KX-NEEDLE` in `KX-POCKETS`.
 
 ### Work Order 007 — first process coupling
-A process/isolation state changes the same physical situation or machine capability.
+File: `03_WORK_ORDERS/WO-007_FIRST_PROCESS_COUPLING.md`
+
+A process/isolation state changes the same physical situation or machine capability: `KX-SUMP` → `KX-GRATE`.
 
 ### Work Order 008 — first full causal chain
-Demonstrate one complete chain:
+File: `03_WORK_ORDERS/WO-008_FIRST_CAUSAL_CHAIN.md`
+
+Demonstrate one complete chain on the kernel:
 
 `player intervention → freight/load change → structural/process consequence → changed traversal/world capability → persistent checkpoint/reload`
 
 This is the first point at which ScraperX has proven its defining architecture.
 
-Do not scale content before this slice is real.
+Do not scale content before this slice is real. After it is real, assemble from atlas band B00 upward using the same primitives. Do not author a second tower.
 
 ---
 
@@ -901,7 +919,8 @@ Reject a technical proposal if it:
 - lowers simulation quality before identifying actual performance cost;
 - creates free-running asynchronous subsystem clocks;
 - uses presentation physics to affect critical world state;
-- makes save/load reconstruct a prettier but mechanically different world.
+- makes save/load reconstruct a prettier but mechanically different world;
+- authors a second tower, sidecar atlas, or parallel work-order pack instead of amending this tree.
 
 ---
 

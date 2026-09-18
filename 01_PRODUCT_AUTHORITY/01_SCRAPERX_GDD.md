@@ -1,15 +1,17 @@
 # SCRAPERX — GAME DESIGN DOCUMENT
 
-**Version:** 1.0 — Frozen Product Baseline  
+**Version:** 1.1 — Product baseline + atlas integration  
 **Product:** ScraperX  
 **Repository:** `ScraperX`  
-**Status:** Frozen product-design baseline derived from the governing laws, canonical requirements ledger, direct product decisions, and pre-GDD closure decisions.
+**Status:** Product-design baseline. v1.1 only binds spatial content to `02_ASCENT_ATLAS.md`; it does not change the governing game.
 
 ## 0. Authority and boundary
 
 This GDD defines **what ScraperX is as a game**. It is subordinate to `00_GOVERNING_LAWS.md`; if the two conflict, the governing laws win until the conflict is deliberately resolved.
 
-This document does **not** choose the engine, rigid-body backend, structural solver, rope solver, process solver, programming language boundaries, package stack, or other implementation architecture. Those decisions belong to a later technical architecture document and must satisfy this GDD rather than redefine it.
+The physical layout of that game — datum, bands, braids, named modules, capability objects, and the first kernel slice — is specified in `02_ASCENT_ATLAS.md`. The atlas is subordinate to this GDD. It may not redefine the genre, weaken parkour, script consequences the world does not own, or complete the campaign by anything other than physically reaching the summit.
+
+This document does **not** choose the engine, rigid-body backend, structural solver, rope solver, process solver, programming language boundaries, package stack, or other implementation architecture. Those decisions belong to the technical architecture document and must satisfy this GDD rather than redefine it.
 
 No historical implementation, prior project structure, inherited location, or compatibility assumption is part of ScraperX unless explicitly re-established in the current authority set.
 
@@ -128,7 +130,7 @@ The opening must communicate by play that:
 - the tower extends far beyond the immediate problem;
 - ascent is the durable direction.
 
-The exact opening location, machine, incident, characters, and scripted context are intentionally unspecified here because the current authority set does not establish them.
+The opening location and jammed-intake situation are specified in `02_ASCENT_ATLAS.md` band B00. Exact incident cast, dialogue, and scripted flavor beyond that physical problem remain unspecified.
 
 ---
 
@@ -582,23 +584,28 @@ A build that has attractive scenery, parkour animations, machinery models, or de
 
 # 30. Intentionally unspecified in this GDD
 
-The following are deliberately left open because the current authority set does not establish them and they are not required to define the product:
+The following remain open because they are not required to define the product, or they belong to the atlas / TDD rather than this document:
 
 - the exact narrative reason the summit matters;
 - the player's detailed biography;
-- the exact opening location and incident;
 - a complete mission catalog;
 - exact population counts per layer;
 - exact checkpoint spacing in meters/minutes;
 - exact manual lift/push mass thresholds;
-- the final machine roster;
-- the final portable-tool roster;
+- portable-tool roster beyond the atlas capability table;
 - exact structural/material numerical models;
-- exact engine, physics backend, solver stack, or package set;
-- exact implementation-language and module boundaries;
+- exact engine, physics backend, solver stack, or package set (TDD);
+- exact implementation-language and module boundaries (TDD);
 - final art-production pipeline and audio implementation stack.
 
-These are downstream design or technical decisions. They must be made when their requirements are known, not invented now to make the GDD look more complete.
+These are specified in `02_ASCENT_ATLAS.md` and must not be re-invented by a work order:
+
+- opening location and jammed-intake problem;
+- vertical datum, band cuts, braid identities, Transfer Plates;
+- named modules and kernel IDs used by WO-001–008;
+- physical summit predicate on the 1600 m deck.
+
+Downstream work must use those atlas facts rather than author a second tower.
 
 ---
 
