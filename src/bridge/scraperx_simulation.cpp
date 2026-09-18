@@ -12,7 +12,7 @@ namespace {
             static_cast<godot::real_t>(value.z)};
 }
 
-constexpr std::int64_t kInitialSpawnCount = 13;
+constexpr std::int64_t kInitialSpawnCount = 14;
 
 } // namespace
 
@@ -110,6 +110,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_tipper_angle_radians);
     godot::ClassDB::bind_method(godot::D_METHOD("get_valve_lever_angle_radians"),
                                 &ScraperXSimulation::get_valve_lever_angle_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_treadle_angle_radians"),
+                                &ScraperXSimulation::get_treadle_angle_radians);
     godot::ClassDB::bind_method(godot::D_METHOD("get_valve_open_fraction"),
                                 &ScraperXSimulation::get_valve_open_fraction);
     godot::ClassDB::bind_method(godot::D_METHOD("get_rope_extension_meters"),
@@ -349,6 +351,10 @@ double ScraperXSimulation::get_tipper_angle_radians() const {
 
 double ScraperXSimulation::get_valve_lever_angle_radians() const {
     return simulation_->snapshot().valve_lever_angle_radians;
+}
+
+double ScraperXSimulation::get_treadle_angle_radians() const {
+    return simulation_->snapshot().treadle_angle_radians;
 }
 
 double ScraperXSimulation::get_valve_open_fraction() const {

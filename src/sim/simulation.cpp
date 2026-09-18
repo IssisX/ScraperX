@@ -13,6 +13,7 @@
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Body/BodyLockMulti.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
@@ -67,6 +68,13 @@ constexpr double kMovingLedgeCenterZ = 12.5;
 // Player capsule: cylinder half-height 0.55 plus radius 0.35.
 constexpr float kPlayerRadius = 0.35F;
 constexpr float kPlayerHalfHeight = 0.9F;
+
+// An athletic climber with gear. Left to Jolt's default density this capsule
+// weighs 602.9 kg -- freight, not a person -- which silently made the player
+// the heaviest thing in any mechanism they stood on. GDD 17 puts the power in
+// the tower, not the body; a machine that needs a human's weight must be built
+// around a human's weight.
+constexpr float kPlayerMassKg = 85.0F;
 
 // Traversal reach / clearance rules. Every one of these is a bound on what the
 // native assist may attempt; none of them fabricates geometry.
@@ -134,6 +142,38 @@ constexpr float kValveLeverMassKg = 90.0F;
 // Valve lever angle band that maps to a fully shut / fully open orifice.
 constexpr float kValveShutAngle = -0.05F;
 constexpr float kValveOpenAngle = 0.62F;
+
+// --- WO-010 catwalk treadle ------------------------------------------------
+// The player masses 85 kg and cannot shift a 900 kg counterweighted tipper, so
+// body-in-the-machine has to happen through a control built for a body. The
+// treadle is a see-saw on the catwalk deck: standing on the outboard end lifts
+// the inboard end, which hauls a cable to the valve lever's counterweight and
+// opens the orifice. Arms are equal, so this is reach and placement rather than
+// force multiplication -- the valve gear only needs ~190 N.m, which is human
+// scale by design, and the treadle is only reachable by someone the lift has
+// already carried up (WO-009).
+constexpr float kTreadleX = 16.4F;
+constexpr float kTreadleZ = -106.0F;
+constexpr float kTreadleHingeY = 9.09F;      // 0.40 m above the catwalk deck: a step, not a mantle.
+constexpr float kTreadlePlateMeters = 1.5F;  // Plate runs from the hinge out to -x.
+constexpr float kTreadleCableArm = 0.70F;    // Cable hangs from here, under a sheave.
+constexpr float kTreadleMassKg = 130.0F;
+// Rest is level (held against the min stop by the inboard counterweight, valve
+// shut); depressed is the throw that hauls the valve gear fully open.
+constexpr float kTreadleRestAngle = 0.0F;
+constexpr float kTreadleDepressedAngle = 0.24F;
+// Sheave heights above each cable anchor. The run is a real two-sheave cable
+// span across the yard, which is also what makes the linkage legible from the
+// catwalk: you can see what the pedal is wired to.
+constexpr float kTreadleSheaveRise = 2.0F;
+constexpr float kValveCableArm = 0.25F;      // Short arm: 0.17 m of travel, ~750 N to move.
+constexpr float kValveSheaveY = 9.6F;
+// Sheave masts stand clear of everything that swings: the treadle mast is set
+// off the walkway in z so the plate and the player never foul it, and the valve
+// mast is set off in z so it misses the lever's counterweight.
+constexpr float kTreadleMastZ = -105.0F;
+constexpr float kValveMastZ = -92.0F;
+constexpr float kCatwalkDeckY = 8.69F;
 
 // WO-008 fall / parachute / checkpoint. An 8.8 m unassisted lift-platform
 // fall (~13.1 m/s impact) must stay survivable per GDD 8.2; a genuine
@@ -260,7 +300,8 @@ struct SupportSample final {
            entity_id == Sim::kHoistScoopEntityId ||
            entity_id == Sim::kTipperEntityId ||
            entity_id == Sim::kLiftPlatformEntityId ||
-           entity_id == Sim::kCounterweightEntityId;
+           entity_id == Sim::kCounterweightEntityId ||
+           entity_id == Sim::kTreadleEntityId;
 }
 
 class PlayerContactListener final : public JPH::ContactListener {
@@ -388,6 +429,10 @@ private:
         // ~12 m above the static deck: unmitigated free fall reaches
         // sqrt(2*g*12) ~= 15.3 m/s, under kLethalImpactSpeedMps with margin.
         return {0.0, 13.0, -8.0};
+    case scraperx::sim::InitialSpawn::CatwalkTreadle:
+        // Above the outboard half of the treadle plate, where a body has real
+        // leverage on the hinge.
+        return {15.3, 10.3, -106.0};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -602,6 +647,8 @@ public:
         player_settings.mFriction = 0.0F;
         player_settings.mLinearDamping = 0.0F;
         player_settings.mUserData = Simulation::kPlayerEntityId;
+        player_settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+        player_settings.mMassPropertiesOverride.mMass = kPlayerMassKg;
         player_id_ = bodies.CreateAndAddBody(player_settings, JPH::EActivation::Activate);
 
         physics_system_.OptimizeBroadPhase();
@@ -622,6 +669,7 @@ public:
         machine_constraints_.clear();
         tipper_hinge_ = nullptr;
         valve_hinge_ = nullptr;
+        treadle_hinge_ = nullptr;
         auto &bodies = physics_system_.GetBodyInterface();
         for (auto it = machine_bodies_.rbegin(); it != machine_bodies_.rend(); ++it) {
             remove_and_destroy(bodies, *it);
@@ -975,6 +1023,46 @@ private:
             Simulation::kValveLeverEntityId, kValveLeverMassKg);
         valve_lever_id_ = track(lever->GetID());
 
+        // WO-010 treadle: the plant's human-scale control, on the catwalk deck.
+        // A plate hinged at its inboard end with a counterweight just past the
+        // hinge, so it rests level against its stop with the valve shut, and an
+        // 85 kg body standing on it swings it down against that counterweight.
+        // Pylon top stops below the plate's underside so the hinge is free.
+        const JPH::BodyID treadle_pylon = track(add_box(
+            bodies, JPH::Vec3(0.24F, 0.155F, 0.34F),
+            JPH::RVec3(kTreadleX, kCatwalkDeckY + 0.155, kTreadleZ),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+            Simulation::kMachinePylonEntityId));
+        JPH::StaticCompoundShapeSettings treadle_settings;
+        treadle_settings.AddShape(
+            JPH::Vec3(-kTreadlePlateMeters * 0.5F, 0.0F, 0.0F), JPH::Quat::sIdentity(),
+            new JPH::BoxShape(JPH::Vec3(kTreadlePlateMeters * 0.5F, 0.04F, 0.55F)));
+        // Counterweight rides above the hinge line: only its x offset sets the
+        // restoring torque, so putting it high keeps it clear of the deck.
+        treadle_settings.AddShape(JPH::Vec3(0.55F, 0.42F, 0.0F), JPH::Quat::sIdentity(),
+                                  new JPH::BoxShape(JPH::Vec3(0.32F, 0.32F, 0.32F)));
+        JPH::Body *treadle = add_shape_body(
+            bodies, treadle_settings.Create().Get(),
+            JPH::RVec3(kTreadleX, kTreadleHingeY, kTreadleZ), JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.9F,
+            Simulation::kTreadleEntityId, kTreadleMassKg);
+        treadle_id_ = track(treadle->GetID());
+        add_hinge(treadle_pylon, treadle_id_, JPH::RVec3(kTreadleX, kTreadleHingeY, kTreadleZ),
+                  kTreadleRestAngle, kTreadleDepressedAngle, &treadle_hinge_,
+                  Simulation::kMachinePylonEntityId);
+
+        // Sheave masts carrying the control cable. Static, and load-bearing only
+        // as pulley anchor points.
+        track(add_box(bodies, JPH::Vec3(0.10F, 1.0F, 0.10F),
+                      JPH::RVec3(kTreadleX - kTreadleCableArm, kCatwalkDeckY + 1.61,
+                                 kTreadleMastZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                      Simulation::kMachinePylonEntityId));
+        track(add_box(bodies, JPH::Vec3(0.10F, 1.2F, 0.10F),
+                      JPH::RVec3(kValveHingeX + kValveCableArm, kValveSheaveY - 1.2, kValveMastZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                      Simulation::kMachinePylonEntityId));
+
         // Lift platform and its counterweight, each on a real vertical slider and
         // joined by a real pulley rope.
         JPH::Body *platform = add_shape_body(
@@ -1001,6 +1089,7 @@ private:
         add_pulley();
         settle_machine();
         add_rope();
+        add_treadle_cable();
     }
 
     // Lets the linkage reach its own resting pose before the rope is measured, so
@@ -1067,6 +1156,27 @@ private:
         (void)create_constraint(settings, tipper_id_, valve_lever_id_);
     }
 
+    // WO-010 control cable. A real two-sheave run: pressing the treadle pays out
+    // cable on the catwalk side, which must be taken up on the valve side, so the
+    // valve lever's counterweight end is hauled up and the orifice opens. Like
+    // every rope here it can only pull -- when the player steps off, the treadle
+    // is returned by its own counterweight and the valve by its own, not by the
+    // cable pushing anything.
+    void add_treadle_cable() {
+        JPH::PulleyConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mBodyPoint1 =
+            JPH::RVec3(kTreadleX - kTreadleCableArm, kTreadleHingeY, kTreadleZ);
+        settings.mFixedPoint1 = JPH::RVec3(kTreadleX - kTreadleCableArm,
+                                           kTreadleHingeY + kTreadleSheaveRise, kTreadleMastZ);
+        settings.mBodyPoint2 = JPH::RVec3(kValveHingeX + kValveCableArm, kValveHingeY + 0.2, -93.0);
+        settings.mFixedPoint2 = JPH::RVec3(kValveHingeX + kValveCableArm, kValveSheaveY, kValveMastZ);
+        settings.mRatio = 1.0F;
+        settings.mMinLength = 0.0F;
+        settings.mMaxLength = -1.0F;
+        (void)create_constraint(settings, treadle_id_, valve_lever_id_);
+    }
+
     void add_pulley() {
         JPH::PulleyConstraintSettings settings;
         settings.mSpace = JPH::EConstraintSpace::WorldSpace;
@@ -1084,13 +1194,20 @@ private:
         const JPH::TwoBodyConstraintSettings &settings,
         const JPH::BodyID first,
         const JPH::BodyID second) {
-        JPH::BodyLockWrite lock_first(physics_system_.GetBodyLockInterface(), first);
-        JPH::BodyLockWrite lock_second(physics_system_.GetBodyLockInterface(), second);
-        if (!lock_first.Succeeded() || !lock_second.Succeeded()) {
+        // Jolt stripes body mutexes across a fixed-size array, so two distinct
+        // bodies can share one. Taking two separate BodyLockWrite locks then
+        // deadlocks on a non-recursive mutex ("Resource deadlock avoided").
+        // BodyLockMultiWrite sorts and dedupes the mutexes, which is exactly
+        // what it exists for. Every constraint pair built before this simply
+        // happened not to collide.
+        const JPH::BodyID ids[2] = {first, second};
+        JPH::BodyLockMultiWrite lock(physics_system_.GetBodyLockInterface(), ids, 2);
+        JPH::Body *first_body = lock.GetBody(0);
+        JPH::Body *second_body = lock.GetBody(1);
+        if (first_body == nullptr || second_body == nullptr) {
             return nullptr;
         }
-        JPH::TwoBodyConstraint *constraint =
-            settings.Create(lock_first.GetBody(), lock_second.GetBody());
+        JPH::TwoBodyConstraint *constraint = settings.Create(*first_body, *second_body);
         if (constraint == nullptr) {
             return nullptr;
         }
@@ -1150,6 +1267,12 @@ private:
             }
         }
         valve_lever_angle_ = lever_angle;
+        if (treadle_hinge_ != nullptr) {
+            const float measured = treadle_hinge_->GetCurrentAngle();
+            if (std::isfinite(measured)) {
+                treadle_angle_ = measured;
+            }
+        }
         const float span = kValveOpenAngle - kValveShutAngle;
         const double fraction =
             span > 1.0e-4F ? static_cast<double>((lever_angle - kValveShutAngle) / span) : 0.0;
@@ -1781,6 +1904,7 @@ private:
         checkpoint_.ballast = capture_body(bodies, ballast_id_);
         checkpoint_.tipper = capture_body(bodies, tipper_id_);
         checkpoint_.valve_lever = capture_body(bodies, valve_lever_id_);
+        checkpoint_.treadle = capture_body(bodies, treadle_id_);
         checkpoint_.lift_platform = capture_body(bodies, lift_platform_id_);
         checkpoint_.counterweight = capture_body(bodies, counterweight_id_);
         checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
@@ -1811,6 +1935,7 @@ private:
         restore_body(bodies, ballast_id_, checkpoint_.ballast);
         restore_body(bodies, tipper_id_, checkpoint_.tipper);
         restore_body(bodies, valve_lever_id_, checkpoint_.valve_lever);
+        restore_body(bodies, treadle_id_, checkpoint_.treadle);
         restore_body(bodies, lift_platform_id_, checkpoint_.lift_platform);
         restore_body(bodies, counterweight_id_, checkpoint_.counterweight);
         steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
@@ -1839,6 +1964,7 @@ private:
         state_.tipper_angle_radians =
             tipper_hinge_ != nullptr ? tipper_hinge_->GetCurrentAngle() : 0.0;
         state_.valve_lever_angle_radians = valve_lever_angle_;
+        state_.treadle_angle_radians = treadle_angle_;
 
         const JPH::RVec3 platform_position = bodies.GetPosition(lift_platform_id_);
         const JPH::Vec3 platform_velocity = bodies.GetLinearVelocity(lift_platform_id_);
@@ -1960,16 +2086,19 @@ private:
     std::vector<JPH::Ref<JPH::TwoBodyConstraint>> machine_constraints_;
     JPH::Ref<JPH::HingeConstraint> tipper_hinge_;
     JPH::Ref<JPH::HingeConstraint> valve_hinge_;
+    JPH::Ref<JPH::HingeConstraint> treadle_hinge_;
     JPH::BodyID scoop_ids_[4];
     JPH::Vec3 scoop_local_[4]{};
     JPH::BodyID ballast_id_;
     JPH::BodyID tipper_id_;
     JPH::BodyID valve_lever_id_;
+    JPH::BodyID treadle_id_;
     JPH::BodyID lift_platform_id_;
     JPH::BodyID counterweight_id_;
     float scoop_height_ = kScoopBottomY;
     float scoop_tilt_ = 0.0F;
     float valve_lever_angle_ = kValveShutAngle;
+    float treadle_angle_ = kTreadleRestAngle;
     float rope_rest_length_ = 0.0F;
     double machine_cycle_phase_seconds_ = 0.0;
     SupportSample support_sample_{};
@@ -2003,6 +2132,7 @@ private:
         BodyCheckpoint ballast{};
         BodyCheckpoint tipper{};
         BodyCheckpoint valve_lever{};
+        BodyCheckpoint treadle{};
         BodyCheckpoint lift_platform{};
         BodyCheckpoint counterweight{};
         double vessel_mass_kg = 0.0;

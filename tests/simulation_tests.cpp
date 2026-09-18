@@ -549,8 +549,16 @@ int main() {
     require(starved_final.lift_platform_position.y < 3.0,
             "a drained plant must leave the lift low rather than holding it up for free");
 
-    // The player is a body in the plant, not an audience: standing on the tipper
-    // is enough to work the same linkage the ballast works.
+    // The player is a body in the plant, but an 85 kg body is not a machine.
+    // Standing on a 900 kg counterweighted tipper moves it by a fraction of a
+    // milliradian and opens the valve not at all. This is the GDD 17 guard --
+    // "the tower itself is a major source of power... rather than granting the
+    // player industrial-scale strength directly" -- and it is load-bearing: it
+    // fails the moment anyone hands the player freight-scale mass again, which
+    // is exactly how the original version of this falsifier passed (the player
+    // capsule took Jolt's default density, 602.9 kg, and simply outweighed the
+    // machine). Player authority over the plant must come from leverage and
+    // timing, which is what the catwalk treadle below provides.
     Simulation disturbed(InitialSpawn::MachineYard);
     require(disturbed.set_facing(1.0, 0.0), "yard facing must be accepted");
     require(disturbed.set_move_input(1.0, 0.0), "yard approach input must be accepted");
@@ -564,12 +572,11 @@ int main() {
     const auto standing = disturbed.snapshot();
     require(disturbed.advance_frame(1.5).accepted, "player-driven linkage interval must advance");
     const auto disturbed_result = disturbed.snapshot();
-    require(disturbed_result.tipper_angle_radians < standing.tipper_angle_radians - 0.05,
-            "the player's own weight must rotate the tipper off its rest stop");
-    require(disturbed_result.valve_open_fraction > 0.0,
-            "a player standing on the tipper must open the same real valve the ballast opens");
-    require(disturbed_result.cylinder_pressure_pa > machine_start.cylinder_pressure_pa,
-            "the player-opened valve must actually charge the actuator cylinder");
+    require(std::abs(disturbed_result.tipper_angle_radians - standing.tipper_angle_radians) < 0.01,
+            "an unaided 85 kg body must not swing a 900 kg counterweighted tipper -- the player "
+            "does not get industrial-scale strength for free (GDD 17)");
+    require(disturbed_result.valve_open_fraction == 0.0,
+            "standing on the tipper must not open the valve by body mass alone");
 
     // The machine is fixed-step-owned like everything else.
     Simulation machine_partitioned(InitialSpawn::ExteriorGrade);
@@ -712,14 +719,21 @@ int main() {
                           },
                           6.0),
             "the checkpoint test must reach the native tipper deck");
+    // Stop walking on arrival. Without this the player simply strides off the
+    // far side of the tipper and is mid-air when the jump below is requested --
+    // the original version only stayed put because a 602.9 kg player sank the
+    // beam and wedged there, which was never the behaviour being tested.
+    require(committed.set_move_input(0.0, 0.0), "checkpoint test halt input must be accepted");
     const auto pre_commit_checkpoints = committed.snapshot().checkpoint_commit_count;
     require(committed.advance_frame(1.0).accepted,
             "standing on the tipper must advance and keep auto-committing");
     const auto disturbed_checkpoint = committed.snapshot();
     require(disturbed_checkpoint.checkpoint_commit_count > pre_commit_checkpoints,
             "standing grounded must keep advancing the automatic commit count");
-    require(std::abs(disturbed_checkpoint.tipper_angle_radians) > 0.02,
-            "the committed checkpoint must be taken while the tipper is genuinely disturbed");
+    require(disturbed_checkpoint.support_entity_id == Simulation::kTipperEntityId,
+            "the committed checkpoint must be taken while the player stands on a real dynamic "
+            "machine body, so the commit covers machine state and not just static ground "
+            "(TDD 14.1)");
     require(std::abs(disturbed_checkpoint.checkpoint_position.x -
                      disturbed_checkpoint.player_position.x) < 0.05 &&
                 std::abs(disturbed_checkpoint.checkpoint_position.z -
@@ -874,6 +888,89 @@ int main() {
             "arbitrary-committed-position was already proven position- and entity-agnostic in "
             "WO-008 (capture_body/restore_body replay whatever was captured, with no per-location "
             "special case) and is not re-derived here");
+
+    // ---- WO-010 the player is the plant's missing component ----------------
+    // An 85 kg body cannot move machine-scale mass (proved above on the tipper),
+    // so player authority enters through a control built for a body: a treadle
+    // on the catwalk, cabled over two sheaves to the valve gear. It is reachable
+    // only by someone the lift has already carried up (WO-009), and what it buys
+    // is not strength but *duration* -- the autonomous cycle only crosses the
+    // catwalk mantle band for a fraction of a second every 26 s, whereas a body
+    // standing on the pedal parks the lift inside that band for as long as it
+    // stands there. GDD 16: change machinery -> change access -> change traversal.
+    Simulation idle_plant(InitialSpawn::MachineYard);
+    require(idle_plant.advance_frame(8.0).accepted, "control-plant interval must be accepted");
+    const auto idle_eight = idle_plant.snapshot();
+    require(idle_eight.valve_open_fraction == 0.0,
+            "with nobody on the treadle the valve must still be shut at this point in the cycle");
+    require(idle_eight.lift_platform_position.y < 2.0,
+            "with nobody on the treadle the lift must still be parked -- the machine does not "
+            "open this route on its own at this moment");
+
+    Simulation treadle(InitialSpawn::CatwalkTreadle);
+    const auto treadle_spawn = treadle.snapshot();
+    require(std::abs(treadle_spawn.treadle_angle_radians) < 0.01 &&
+                treadle_spawn.valve_open_fraction == 0.0,
+            "the treadle must rest against its stop with the valve shut -- a control that is not "
+            "being stood on grants nothing (Governing Law 24)");
+    require(treadle.advance_frame(8.0).accepted, "treadle-held interval must be accepted");
+    const auto treadle_held = treadle.snapshot();
+    require(treadle_held.player_grounded &&
+                treadle_held.support_entity_id == Simulation::kTreadleEntityId,
+            "the player must actually be standing on the treadle, not beside it");
+    require(treadle_held.treadle_angle_radians > 0.05,
+            "an 85 kg body must visibly swing the treadle against its counterweight -- this is "
+            "the control that is built to a human scale, unlike the 900 kg tipper");
+    require(treadle_held.valve_open_fraction > 0.5,
+            "standing on the treadle must haul the cable and open the real valve");
+    require(treadle_held.piston_force_n > 0.0,
+            "the player-opened valve must actually drive the real piston");
+    require(treadle_held.lift_platform_position.y > 6.7 &&
+                treadle_held.lift_platform_position.y < 8.3,
+            "holding the treadle must park the lift inside the catwalk mantle band, turning a "
+            "fractional-second window in the autonomous cycle into a standing route");
+    require(treadle_held.vessel_available_energy_j < idle_eight.vessel_available_energy_j,
+            "the held-open valve must be spending a real reservoir, not conjuring lift -- the "
+            "store must be measurably lower than the untouched plant's at the same tick "
+            "(Governing Law 24)");
+
+    // Stepping off spends the capability: the treadle returns under its own
+    // counterweight, the valve shuts, and the lift bleeds back down. The window
+    // this leaves is the ascent -- and it closes.
+    require(treadle.set_facing(0.0, 1.0), "treadle step-off facing must be accepted");
+    require(treadle.set_move_input(0.0, 1.0), "treadle step-off input must be accepted");
+    require(advance_until(treadle,
+                          [](const Snapshot &state) {
+                              return state.support_entity_id != Simulation::kTreadleEntityId;
+                          },
+                          3.0),
+            "the player must be able to step off the treadle along the catwalk");
+    require(advance_until(treadle,
+                          [](const Snapshot &state) { return state.valve_open_fraction == 0.0; },
+                          4.0),
+            "with nobody on it the treadle must return under its own counterweight and shut the "
+            "valve -- the player holds this open, nothing latches it");
+    const auto treadle_released = treadle.snapshot();
+    require(treadle_released.lift_platform_position.y > 6.7,
+            "the lift must still be up when the valve shuts, leaving a real window to cross");
+    require(advance_until(treadle,
+                          [](const Snapshot &state) {
+                              return state.lift_platform_position.y < 6.7;
+                          },
+                          8.0),
+            "and that window must close on its own -- a spent store must not hold the lift up "
+            "for free");
+
+    std::cout << "PASS scraperx_sim player is the plant's missing component: rest_valve="
+              << treadle_spawn.valve_open_fraction
+              << " held_treadle=" << treadle_held.treadle_angle_radians
+              << " held_valve=" << treadle_held.valve_open_fraction
+              << " held_lift=" << treadle_held.lift_platform_position.y
+              << "m idle_lift=" << idle_eight.lift_platform_position.y
+              << "m store_spent_MJ="
+              << (idle_eight.vessel_available_energy_j - treadle_held.vessel_available_energy_j) /
+                     1.0e6
+              << '\n';
 
     std::cout << "PASS scraperx_sim first full causal chain: gate_closed_at_rest="
               << int(!chain_rest.ledge_available) << " lift_at_gate=" << chain_gated.lift_platform_position.y

@@ -60,6 +60,7 @@ public:
     [[nodiscard]] godot::Vector3 get_tipper_position() const;
     [[nodiscard]] double get_tipper_angle_radians() const;
     [[nodiscard]] double get_valve_lever_angle_radians() const;
+    [[nodiscard]] double get_treadle_angle_radians() const;
     [[nodiscard]] double get_valve_open_fraction() const;
     [[nodiscard]] double get_rope_extension_meters() const;
     [[nodiscard]] godot::Vector3 get_lift_platform_position() const;

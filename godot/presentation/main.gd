@@ -14,6 +14,7 @@ const MANTLE_LEDGE_ENTITY_ID := 6
 const TIPPER_ENTITY_ID := 14
 const LIFT_PLATFORM_ENTITY_ID := 16
 const CATWALK_ENTITY_ID := 19
+const TREADLE_ENTITY_ID := 24
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -64,6 +65,9 @@ var _scoop_locals: Array[Vector3] = []
 var _ballast_mesh: MeshInstance3D
 var _tipper_mesh: Node3D
 var _valve_mesh: Node3D
+var _treadle_mesh: Node3D
+var _treadle_cable_a: Node3D
+var _treadle_cable_b: Node3D
 var _lift_mesh: MeshInstance3D
 var _counterweight_mesh: MeshInstance3D
 var _translating_support_mesh: MeshInstance3D
@@ -394,6 +398,8 @@ func _render_snapshot() -> void:
 		_status.text = "RIDING THE STEAM LIFT"
 	elif grounded and support == CATWALK_ENTITY_ID:
 		_status.text = "ON THE CATWALK"
+	elif grounded and support == TREADLE_ENTITY_ID:
+		_status.text = "ON THE TREADLE / VALVE HELD OPEN"
 	elif grounded and support == TIPPER_ENTITY_ID:
 		_status.text = "STANDING ON THE TIPPER"
 	elif grounded and support == TRANSLATING_SUPPORT_ENTITY_ID:
@@ -432,6 +438,14 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 		_tipper_mesh.rotation = Vector3(0.0, 0.0, float(_native.get_tipper_angle_radians()))
 	if _valve_mesh != null:
 		_valve_mesh.rotation = Vector3(0.0, 0.0, float(_native.get_valve_lever_angle_radians()))
+	if _treadle_mesh != null:
+		var treadle_angle := float(_native.get_treadle_angle_radians())
+		_treadle_mesh.rotation = Vector3(0.0, 0.0, treadle_angle)
+		# The catwalk-side cable pays out as the pedal swings, exactly as the
+		# native pulley sees it.
+		var cable_anchor := Vector3(15.7, 9.09, -106.0)
+		cable_anchor.y -= sin(treadle_angle) * 0.70
+		_span_cable(_treadle_cable_a, cable_anchor, Vector3(15.7, 11.09, -105.0))
 	if _lift_mesh != null:
 		_lift_mesh.position = _native.get_lift_platform_position()
 	if _counterweight_mesh != null:
@@ -661,7 +675,49 @@ func _build_plant(mill_scale: Material, oxidised: Material, galvanised: Material
 	var rope_material := _material(Color("2b2621"), 0.5, 0.7)
 	_rope_mesh = _add_box("Rope", Vector3(0.09, 0.09, 1.0), Vector3(30.0, 5.0, -95.0), rope_material)
 
+	_build_treadle(galvanised, mill_scale, hazard, rope_material)
 	_build_plume()
+
+
+# WO-010. The plant's human-scale control and the cable run that proves what it
+# is wired to. The cable is drawn between the same two sheave points the native
+# PulleyConstraint uses, so what the player sees spanning the yard is the actual
+# linkage, not a decorative wire.
+func _build_treadle(galvanised: StandardMaterial3D, mill_scale: StandardMaterial3D,
+		hazard: StandardMaterial3D, cable_material: StandardMaterial3D) -> void:
+	_add_box("TreadlePylon", Vector3(0.48, 0.31, 0.68), Vector3(16.4, 8.845, -106.0), mill_scale)
+
+	_treadle_mesh = Node3D.new()
+	_treadle_mesh.name = "Treadle"
+	_treadle_mesh.position = Vector3(16.4, 9.09, -106.0)
+	$TowerPresentation.add_child(_treadle_mesh)
+	_add_box_to("TreadlePlate", Vector3(1.5, 0.08, 1.1), Vector3(-0.75, 0.0, 0.0), hazard,
+		_treadle_mesh)
+	_add_box_to("TreadleWeight", Vector3(0.64, 0.64, 0.64), Vector3(0.55, 0.42, 0.0), mill_scale,
+		_treadle_mesh)
+
+	_add_box("TreadleSheaveMast", Vector3(0.2, 2.0, 0.2), Vector3(15.7, 10.3, -105.0), galvanised)
+	_add_box("ValveSheaveMast", Vector3(0.2, 2.4, 0.2), Vector3(29.85, 8.4, -92.0), galvanised)
+
+	# Two cable segments, matching the native pulley's two runs.
+	_treadle_cable_a = _add_box("TreadleCableA", Vector3(0.06, 0.06, 1.0), Vector3.ZERO,
+		cable_material)
+	_treadle_cable_b = _add_box("TreadleCableB", Vector3(0.06, 0.06, 1.0), Vector3.ZERO,
+		cable_material)
+	_span_cable(_treadle_cable_a, Vector3(15.7, 9.09, -106.0), Vector3(15.7, 11.09, -105.0))
+	_span_cable(_treadle_cable_b, Vector3(29.85, 7.4, -93.0), Vector3(29.85, 9.6, -92.0))
+
+
+func _span_cable(node: Node3D, from: Vector3, to: Vector3) -> void:
+	if node == null:
+		return
+	var delta := to - from
+	var length := delta.length()
+	if length < 0.001:
+		return
+	node.position = from + delta * 0.5
+	node.scale = Vector3(1.0, 1.0, length)
+	node.look_at(to, Vector3.UP if absf(delta.normalized().y) < 0.99 else Vector3.RIGHT)
 
 
 func _build_plume() -> void:

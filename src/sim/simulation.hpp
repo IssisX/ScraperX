@@ -33,6 +33,10 @@ enum class InitialSpawn : std::uint8_t {
     // kLethalImpactSpeedMps, proving ordinary platforming falls stay
     // survivable (GDD 8.2) and are never mistaken for a lethal one.
     SurvivableDrop = 12,
+    // WO-010 falsifier spawn: directly above the catwalk treadle, the plant's
+    // human-scale control. Isolates "a body on this pedal works the valve" from
+    // the separately-proven question of how the player reaches the catwalk.
+    CatwalkTreadle = 13,
 };
 
 enum class TraversalState : std::uint8_t {
@@ -99,6 +103,7 @@ struct Snapshot final {
     Vector3 tipper_position{};
     double tipper_angle_radians = 0.0;
     double valve_lever_angle_radians = 0.0;
+    double treadle_angle_radians = 0.0;
     double valve_open_fraction = 0.0;
     double rope_extension_meters = 0.0;
     Vector3 lift_platform_position{};
@@ -146,6 +151,10 @@ public:
     static constexpr std::uint64_t kCatchBasinEntityId = 21;
     static constexpr std::uint64_t kChuteEntityId = 22;
     static constexpr std::uint64_t kLiftMastEntityId = 23;
+    // WO-010. The plant's human-scale control: a foot treadle on the catwalk,
+    // cabled across the yard to the valve gear. The player cannot move machine-
+    // scale mass with their body, so this is how a body enters the machine.
+    static constexpr std::uint64_t kTreadleEntityId = 24;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
