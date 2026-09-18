@@ -20,6 +20,8 @@ No gameplay-system implementation belongs in this work order.
 - `02_ENGINEERING_AUTHORITY/00_EXECUTION_PROTOCOL.md`
 - TDD sections 1, 3, 4, 20, 21, and 24.
 
+The atlas is not required for this work order. Do not build kernel geometry here.
+
 ## Owner
 Native/Godot integration and build-delivery spine.
 
@@ -75,3 +77,4 @@ This work order is complete when:
 - all performed verification is recorded without upgrading unperformed checks into claims.
 
 Stop. Do not begin WO-001 inside this work order.
+The next file in this same folder is `WO-001_EMBODIED_AUTHORITY.md`. Its world is atlas kernel `KX-DECK`, not a new document.

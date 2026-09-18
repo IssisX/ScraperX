@@ -12,14 +12,17 @@
 For implementation work, resolve conflicts in this order:
 
 1. **Governing Laws** — non-negotiable project constraints.
-2. **Frozen GDD** — product truth: what ScraperX must be.
-3. **Technical Architecture / TDD** — implementation ownership and system boundaries, once created.
-4. **Current source, tests, build configuration, and runtime evidence** — implementation truth.
-5. **Current Work Order** — the exact bounded change being executed.
+2. **GDD** — product truth: what ScraperX must be.
+3. **Ascent Atlas** — spatial/content truth for the same game: datum, bands, braids, modules, kernel slice.
+4. **Technical Architecture / TDD** — implementation ownership and system boundaries.
+5. **Current source, tests, build configuration, and runtime evidence** — implementation truth.
+6. **Current Work Order** — the exact bounded change being executed.
 
 Supporting decision/provenance documents are consulted only when a product decision needs tracing. They are not routine implementation context.
 
 No work order may silently override a higher authority. If it conflicts, stop that mechanism and surface the conflict.
+
+Do not create a parallel content brief outside `01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`. If a band, module, or chain is missing, amend the atlas. Do not bolt on a second map.
 
 ---
 
@@ -32,12 +35,14 @@ Every implementation task loads:
 - this Execution Protocol;
 - the current Work Order;
 - the relevant source/tests/config;
-- the specific Governing Law and GDD sections that constrain the task;
-- the relevant TDD sections once the TDD exists.
+- the specific Governing Law, GDD, and atlas sections that constrain the task;
+- the relevant TDD sections.
 
-Load additional GDD/support material only when the task crosses into it.
+Load additional GDD/atlas/support material only when the task crosses into it.
 
-The goal is **small active context under strong global authority**, not reduced authority.
+WO-000 does not need the atlas. WO-001–004 need Atlas §§2 and 9. WO-005–008 need Atlas §§4, 7–9, 12.
+
+The goal is **small active context under one global authority tree**, not reduced authority and not a second package.
 
 ---
 
