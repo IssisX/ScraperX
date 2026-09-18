@@ -101,6 +101,13 @@ public:
     [[nodiscard]] godot::Vector3 get_needle_position() const;
     [[nodiscard]] godot::Vector3 get_needle_linear_velocity() const;
 
+    // WO-013 KX-SUMP / KX-GRATE (Ascent Atlas v1.0 kernel).
+    [[nodiscard]] bool request_valve_toggle();
+    [[nodiscard]] bool is_sump_station_active() const;
+    [[nodiscard]] bool is_sump_isolated() const;
+    [[nodiscard]] double get_sump_volume_kg() const;
+    [[nodiscard]] bool is_grate_safe() const;
+
 protected:
     static void _bind_methods();
 

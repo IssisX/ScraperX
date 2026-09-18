@@ -12,7 +12,7 @@ namespace {
             static_cast<godot::real_t>(value.z)};
 }
 
-constexpr std::int64_t kInitialSpawnCount = 17;
+constexpr std::int64_t kInitialSpawnCount = 18;
 
 } // namespace
 
@@ -180,6 +180,17 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_needle_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_needle_linear_velocity"),
                                 &ScraperXSimulation::get_needle_linear_velocity);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("request_valve_toggle"),
+                                &ScraperXSimulation::request_valve_toggle);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_sump_station_active"),
+                                &ScraperXSimulation::is_sump_station_active);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_sump_isolated"),
+                                &ScraperXSimulation::is_sump_isolated);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_sump_volume_kg"),
+                                &ScraperXSimulation::get_sump_volume_kg);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_grate_safe"),
+                                &ScraperXSimulation::is_grate_safe);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -521,6 +532,26 @@ godot::Vector3 ScraperXSimulation::get_needle_position() const {
 
 godot::Vector3 ScraperXSimulation::get_needle_linear_velocity() const {
     return to_godot(simulation_->snapshot().needle_linear_velocity);
+}
+
+bool ScraperXSimulation::request_valve_toggle() {
+    return simulation_->request_valve_toggle();
+}
+
+bool ScraperXSimulation::is_sump_station_active() const {
+    return simulation_->snapshot().sump_station_active;
+}
+
+bool ScraperXSimulation::is_sump_isolated() const {
+    return simulation_->snapshot().sump_isolated;
+}
+
+double ScraperXSimulation::get_sump_volume_kg() const {
+    return simulation_->snapshot().sump_volume_kg;
+}
+
+bool ScraperXSimulation::is_grate_safe() const {
+    return simulation_->snapshot().grate_safe;
 }
 
 } // namespace scraperx::bridge

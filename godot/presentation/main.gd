@@ -18,6 +18,7 @@ const TREADLE_ENTITY_ID := 24
 const JIB_HOOK_ENTITY_ID := 27
 const CRATE_ENTITY_ID := 28
 const NEEDLE_BEAM_ENTITY_ID := 33
+const SUMP_GRATE_ENTITY_ID := 34
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -78,6 +79,9 @@ var _jib_capacity_load_mesh: MeshInstance3D
 var _jib_hoist_cable: Node3D
 var _needle_beam_mesh: MeshInstance3D
 var _needle_hoist_cable: Node3D
+var _sump_grate_mesh: MeshInstance3D
+var _sump_grate_safe_material: Material
+var _sump_grate_hazard_material: Material
 var _lift_mesh: MeshInstance3D
 var _counterweight_mesh: MeshInstance3D
 var _translating_support_mesh: MeshInstance3D
@@ -124,6 +128,7 @@ var _ci_proof_printed := false
 @onready var _fall_value: Label = $HUD/TopLeft/Fall
 @onready var _jib_value: Label = $HUD/TopLeft/Jib
 @onready var _needle_value: Label = $HUD/TopLeft/Needle
+@onready var _sump_value: Label = $HUD/TopLeft/Sump
 @onready var _light_rig: Node3D = $LightRig
 
 
@@ -299,6 +304,8 @@ func _input(event: InputEvent) -> void:
 			_native.request_release()
 		elif key.keycode == KEY_F and _native != null:
 			_native.request_parachute()
+		elif key.keycode == KEY_V and _native != null:
+			_native.request_valve_toggle()
 
 
 func _touch_hits(control: Control, at: Vector2) -> bool:
@@ -437,6 +444,15 @@ func _render_snapshot() -> void:
 		needle_pos.x, needle_pos.y, needle_pos.z]
 	_needle_value.modulate = Color("9ad6c4") if needle_seated else Color("8a8378")
 
+	var sump_at_station := bool(_native.is_sump_station_active())
+	var grate_safe := bool(_native.is_grate_safe())
+	_sump_value.text = "SUMP      %s  VALVE %s  VOLUME %6.1f kg  GRATE %s" % [
+		"AT VALVE" if sump_at_station else "away",
+		"closed" if bool(_native.is_sump_isolated()) else "OPEN",
+		float(_native.get_sump_volume_kg()),
+		"safe" if grate_safe else "HAZARD"]
+	_sump_value.modulate = Color("9ad6c4") if grate_safe else Color("d99a4a")
+
 	if traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
 	elif traversal == TRAVERSAL_MANTLING:
@@ -447,10 +463,14 @@ func _render_snapshot() -> void:
 		_status.text = "AT THE JIB PENDANT / ARROWS DRIVE-HOIST"
 	elif needle_at_station:
 		_status.text = "AT THE NEEDLE PENDANT / ARROWS RAISE-LOWER"
+	elif sump_at_station:
+		_status.text = "AT THE SUMP VALVE / V TO ISOLATE"
 	elif grounded and support == CRATE_ENTITY_ID:
 		_status.text = "RIDING THE CRATE"
 	elif grounded and support == NEEDLE_BEAM_ENTITY_ID:
 		_status.text = "ON THE SEATED NEEDLE"
+	elif grounded and support == SUMP_GRATE_ENTITY_ID:
+		_status.text = "ON THE DRAINED GRATE"
 	elif grounded and support == LIFT_PLATFORM_ENTITY_ID:
 		_status.text = "RIDING THE STEAM LIFT"
 	elif grounded and support == CATWALK_ENTITY_ID:
@@ -526,6 +546,11 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 	if _needle_hoist_cable != null:
 		_span_cable(_needle_hoist_cable,
 			_native.get_needle_position() + Vector3(0.0, 0.18, 0.0), Vector3(200.0, 7.0, -16.0))
+
+	if _sump_grate_mesh != null:
+		var grate_safe := bool(_native.is_grate_safe())
+		_sump_grate_mesh.mesh.material = (
+			_sump_grate_safe_material if grate_safe else _sump_grate_hazard_material)
 
 	if _rope_mesh != null:
 		var from: Vector3 = _native.get_tipper_position() + Vector3(3.0, -0.2, 0.0).rotated(
@@ -754,6 +779,7 @@ func _build_plant(mill_scale: Material, oxidised: Material, galvanised: Material
 	_build_treadle(galvanised, mill_scale, hazard, rope_material)
 	_build_kernel_jib(galvanised, mill_scale, hazard)
 	_build_kernel_needle(galvanised, mill_scale)
+	_build_kernel_sump(mill_scale)
 	_build_plume()
 
 
@@ -848,6 +874,22 @@ func _build_kernel_needle(galvanised: StandardMaterial3D, mill_scale: StandardMa
 		galvanised)
 	_needle_hoist_cable = _add_box("NeedleHoistCable", Vector3(0.05, 0.05, 1.0), Vector3.ZERO,
 		_material(Color("2b2621"), 0.5, 0.7))
+
+
+# WO-013. Ascent Atlas v1.0 kernel: KX-SUMP + KX-GRATE. Fixed decking flanks
+# one grate panel; the panel's own tint amplifies the real derived predicate
+# (hazard amber wet, mill-scale grey safe) read back from native every frame
+# -- it never decides the predicate, only displays it.
+func _build_kernel_sump(mill_scale: StandardMaterial3D) -> void:
+	_add_box("SumpApproachDeck", Vector3(3.0, 0.3, 3.0), Vector3(197.0, 2.85, 16.0), mill_scale)
+	_add_box("SumpFarDeck", Vector3(3.0, 0.3, 3.0), Vector3(203.0, 2.85, 16.0), mill_scale)
+	_add_box("SumpApproachLeg", Vector3(0.5, 3.0, 0.5), Vector3(197.0, 1.5, 16.0), mill_scale)
+	_add_box("SumpFarLeg", Vector3(0.5, 3.0, 0.5), Vector3(203.0, 1.5, 16.0), mill_scale)
+
+	_sump_grate_safe_material = mill_scale
+	_sump_grate_hazard_material = _material(Color("6b4a1c"), 0.2, 0.75, Color("c98a2c"), 0.8)
+	_sump_grate_mesh = _add_box("SumpGrate", Vector3(3.0, 0.3, 3.0), Vector3(200.0, 2.85, 16.0),
+		_sump_grate_hazard_material)
 
 
 func _build_plume() -> void:

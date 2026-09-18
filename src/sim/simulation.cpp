@@ -320,6 +320,41 @@ constexpr float kNeedleStationX = kNeedlePierApproachX;
 constexpr float kNeedleStationZ = kNeedleGapCenterZ;
 constexpr float kNeedleStationRadius = 2.5F;
 
+// --- WO-013 Ascent Atlas v1.0 kernel: KX-SUMP / KX-GRATE -------------------
+// Atlas section 9: "wet sump makes KX-GRATE a hazard... isolated + drained
+// grate is ordinary walkable support." A lumped process graph (WO-007's own
+// "Allowed seam": one volume, one isolation edge, one drain sink, one derived
+// safe predicate) -- no particle fluid, no second process engine.
+//
+// The walkway is elevated, like the needle's piers, rather than a hole cut
+// into the existing world deck: that deck is one solid box spanning nearly
+// the whole map, so a below-grade pit would need the deck itself carved
+// open, which nothing in this codebase does. A raised grate with real open
+// air beneath it, landing back on that same deck, reuses proven geometry.
+constexpr float kSumpCenterX = kKernelBaseX;         // 200
+constexpr float kSumpCenterZ = kKernelBaseZ + 16.0F; // clear of the jib (Z~0) and the needle (Z~-16).
+constexpr float kSumpPlatformTopY = 3.0F; // a real, clearly-survivable fall through (~7.7 m/s impact).
+constexpr float kSumpDeckHalfThickness = 0.15F;
+constexpr float kSumpDeckHalfZ = 1.5F;
+constexpr float kSumpApproachDeckHalfX = 1.5F;
+constexpr float kSumpGrateHalfX = 1.5F;
+constexpr float kSumpFarDeckHalfX = 1.5F;
+
+constexpr float kSumpGrateX = kSumpCenterX;
+constexpr float kSumpApproachDeckX = kSumpGrateX - kSumpGrateHalfX - kSumpApproachDeckHalfX;
+constexpr float kSumpFarDeckX = kSumpGrateX + kSumpGrateHalfX + kSumpFarDeckHalfX;
+
+// Lumped process state. Starts full (wet, unsafe) -- WO-006's needle and
+// WO-005's jib both start in their "nothing done yet" pose; the sump matches
+// that convention with "nothing isolated yet, still wet."
+constexpr float kSumpCapacityKg = 1000.0F;
+constexpr float kSumpInflowKgPerSec = 150.0F; // while the valve is open, inflow keeps it topped up.
+constexpr float kSumpDrainKgPerSec = 100.0F;  // always draining; only wins once isolated.
+
+constexpr float kSumpStationX = kSumpApproachDeckX;
+constexpr float kSumpStationZ = kSumpCenterZ;
+constexpr float kSumpStationRadius = 2.5F;
+
 // WO-008 fall / parachute / checkpoint. An 8.8 m unassisted lift-platform
 // fall (~13.1 m/s impact) must stay survivable per GDD 8.2; a genuine
 // tower-scale drop must not be. Terminal parachute speed (~9 m/s, derived
@@ -516,8 +551,15 @@ private:
             support_body = &first;
         }
 
-        if (support_body == nullptr || support_normal_y < kSupportNormalThreshold ||
-            support_rank(support_entity) == 0) {
+        // WO-013: a sensor body (the wet grate) still produces a full contact
+        // manifold -- Jolt's own doc comment is explicit that sensors "will
+        // receive collision callbacks, but will not cause any collision
+        // responses" -- so without this check a wet grate would read as
+        // real support from geometry alone, even though no physical force
+        // is actually holding the player up (they are in freefall through
+        // it). A sensor is never a valid support.
+        if (support_body == nullptr || support_body->IsSensor() ||
+            support_normal_y < kSupportNormalThreshold || support_rank(support_entity) == 0) {
             return;
         }
 
@@ -593,6 +635,11 @@ private:
         // note by kNeedleStationX above.
         return {static_cast<double>(kNeedleStationX), static_cast<double>(kNeedlePierTopY) + 1.0,
                 static_cast<double>(kNeedleStationZ)};
+    case scraperx::sim::InitialSpawn::KernelSumpStation:
+        // On the fixed approach decking, not the grate -- see the station-
+        // siting note by kSumpStationX above.
+        return {static_cast<double>(kSumpStationX), static_cast<double>(kSumpPlatformTopY) + 1.0,
+                static_cast<double>(kSumpStationZ)};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -795,6 +842,7 @@ public:
         build_machine(bodies);
         build_kernel_jib(bodies);
         build_kernel_needle(bodies);
+        build_kernel_sump(bodies);
 
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
         JPH::BodyCreationSettings player_settings(player_shape_,
@@ -876,6 +924,7 @@ public:
         double jib_slew_input = 0.0;
         double jib_hoist_input = 0.0;
         double needle_hoist_input = 0.0;
+        bool valve_toggle_requested = false;
     };
 
     void step(const StepCommands &commands,
@@ -891,6 +940,7 @@ public:
         update_plant(bodies, delta_seconds);
         update_jib(bodies, commands.jib_slew_input, commands.jib_hoist_input);
         update_needle(bodies, commands.needle_hoist_input);
+        update_sump(bodies, delta_seconds, commands.valve_toggle_requested);
 
         // A toggle while airborne only: deploying/retracting on the ground is
         // meaningless and would let a grounded button-mash pre-arm the canopy.
@@ -1083,6 +1133,8 @@ private:
             return needle_pier_far_id_;
         case Simulation::kNeedleBeamEntityId:
             return needle_beam_id_;
+        case Simulation::kSumpGrateEntityId:
+            return sump_grate_id_;
         default:
             return {};
         }
@@ -1466,6 +1518,52 @@ private:
         const float travel_down = kNeedleStowedY - kNeedleSeatedY;
         add_motorized_slider(needle_head, needle_beam_id_, -travel_down, 0.0F, kNeedleMaxLiftForceN,
                              &needle_hoist_slider_);
+    }
+
+    // WO-013. Ascent Atlas v1.0 kernel (section 9): KX-SUMP + KX-GRATE. Fixed
+    // approach/far decking flank one grate panel; only the grate's own
+    // collidability changes, driven by update_sump every tick. Starts wet
+    // (grate is a sensor -- see create) since the sump starts full.
+    void build_kernel_sump(JPH::BodyInterface &bodies) {
+        const auto track = [this](const JPH::BodyID id) {
+            machine_bodies_.push_back(id);
+            return id;
+        };
+
+        const float deck_y = kSumpPlatformTopY - kSumpDeckHalfThickness;
+        track(add_box(bodies,
+                      JPH::Vec3(kSumpApproachDeckHalfX, kSumpDeckHalfThickness, kSumpDeckHalfZ),
+                      JPH::RVec3(kSumpApproachDeckX, deck_y, kSumpCenterZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
+                      Simulation::kStaticDeckEntityId));
+        track(add_box(bodies, JPH::Vec3(kSumpFarDeckHalfX, kSumpDeckHalfThickness, kSumpDeckHalfZ),
+                      JPH::RVec3(kSumpFarDeckX, deck_y, kSumpCenterZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
+                      Simulation::kStaticDeckEntityId));
+
+        // Support legs, purely structural -- under each fixed deck section,
+        // clear of the grate span so nothing but the grate itself is ever the
+        // question of whether this walkway holds.
+        track(add_box(bodies, JPH::Vec3(0.25F, kSumpPlatformTopY * 0.5F, 0.25F),
+                      JPH::RVec3(kSumpApproachDeckX, kSumpPlatformTopY * 0.5F, kSumpCenterZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                      Simulation::kStaticDeckEntityId));
+        track(add_box(bodies, JPH::Vec3(0.25F, kSumpPlatformTopY * 0.5F, 0.25F),
+                      JPH::RVec3(kSumpFarDeckX, kSumpPlatformTopY * 0.5F, kSumpCenterZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                      Simulation::kStaticDeckEntityId));
+
+        JPH::Body *grate = add_shape_body(
+            bodies, new JPH::BoxShape(JPH::Vec3(kSumpGrateHalfX, kSumpDeckHalfThickness, kSumpDeckHalfZ)),
+            JPH::RVec3(kSumpGrateX, deck_y, kSumpCenterZ), JPH::Quat::sIdentity(),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.9F, Simulation::kSumpGrateEntityId,
+            0.0F);
+        sump_grate_id_ = track(grate->GetID());
+        // The sump starts full (existing truth: wet is the default), so the
+        // grate starts as a sensor -- see update_sump for why a sensor alone
+        // is not the whole mechanism.
+        bodies.SetIsSensor(sump_grate_id_, true);
+        sump_volume_kg_ = kSumpCapacityKg;
     }
 
     // Lets the linkage reach its own resting pose before the rope is measured, so
@@ -1881,6 +1979,37 @@ private:
         } else if (!checkpoint_seated && needle_seated_) {
             unseat_needle();
         }
+    }
+
+    // WO-013 KX-SUMP. One lumped volume, one isolation edge, one drain sink,
+    // one derived predicate -- updated every authoritative tick, same as
+    // every other machine link in this file. The valve toggle is a one-shot
+    // Action (WO-006 text: "Player Action may... close a valve only at the
+    // real station"), gated by station radius exactly like the jib/needle
+    // pendants, but flips a binary state rather than driving a motor.
+    void update_sump(JPH::BodyInterface &bodies, const float delta_seconds,
+                     const bool valve_toggle_requested) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+        const float station_dx = static_cast<float>(player_position.GetX()) - kSumpStationX;
+        const float station_dz = static_cast<float>(player_position.GetZ()) - kSumpStationZ;
+        const bool at_station = (station_dx * station_dx + station_dz * station_dz) <=
+                                (kSumpStationRadius * kSumpStationRadius);
+        sump_station_active_ = at_station;
+
+        if (valve_toggle_requested && at_station) {
+            sump_isolated_ = !sump_isolated_;
+        }
+
+        const float inflow = sump_isolated_ ? 0.0F : kSumpInflowKgPerSec;
+        sump_volume_kg_ += (inflow - kSumpDrainKgPerSec) * delta_seconds;
+        sump_volume_kg_ = std::clamp(sump_volume_kg_, 0.0F, kSumpCapacityKg);
+
+        const bool grate_safe = sump_volume_kg_ <= 0.0F;
+        // Set every tick, not just on transition: a plain bool flag, cheap to
+        // reassert, and it removes any chance of a missed-edge desync between
+        // grate_safe_ and the body's actual sensor state.
+        bodies.SetIsSensor(sump_grate_id_, !grate_safe);
+        grate_safe_ = grate_safe;
     }
 
     [[nodiscard]] JPH::Vec3 current_support_point_velocity(
@@ -2510,6 +2639,8 @@ private:
         checkpoint_.crate = capture_body(bodies, crate_id_);
         checkpoint_.needle_beam = capture_body(bodies, needle_beam_id_);
         checkpoint_.needle_seated = needle_seated_;
+        checkpoint_.sump_volume_kg = sump_volume_kg_;
+        checkpoint_.sump_isolated = sump_isolated_;
         checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
         checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
     }
@@ -2546,6 +2677,12 @@ private:
         restore_body(bodies, crate_id_, checkpoint_.crate);
         restore_body(bodies, needle_beam_id_, checkpoint_.needle_beam);
         restore_needle_topology(checkpoint_.needle_seated);
+        // No topology reconciliation call needed here, unlike the needle:
+        // update_sump recomputes grate_safe_ and reasserts the grate's
+        // sensor flag from sump_volume_kg_ unconditionally every tick, so
+        // restoring the scalar is the whole restore.
+        sump_volume_kg_ = checkpoint_.sump_volume_kg;
+        sump_isolated_ = checkpoint_.sump_isolated;
         steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
 
         grounded_ = false;
@@ -2610,6 +2747,11 @@ private:
         state_.needle_position = to_vector3(bodies.GetPosition(needle_beam_id_));
         state_.needle_linear_velocity =
             {needle_velocity.GetX(), needle_velocity.GetY(), needle_velocity.GetZ()};
+
+        state_.sump_station_active = sump_station_active_;
+        state_.sump_isolated = sump_isolated_;
+        state_.sump_volume_kg = sump_volume_kg_;
+        state_.grate_safe = grate_safe_;
 
         const JPH::RVec3 rope_tipper =
             bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
@@ -2737,6 +2879,7 @@ private:
     JPH::BodyID needle_pier_approach_id_;
     JPH::BodyID needle_pier_far_id_;
     JPH::BodyID needle_beam_id_;
+    JPH::BodyID sump_grate_id_;
     float scoop_height_ = kScoopBottomY;
     float scoop_tilt_ = 0.0F;
     float valve_lever_angle_ = kValveShutAngle;
@@ -2745,6 +2888,10 @@ private:
     bool jib_station_active_ = false;
     bool needle_station_active_ = false;
     bool needle_seated_ = false;
+    bool sump_station_active_ = false;
+    bool sump_isolated_ = false;
+    float sump_volume_kg_ = 0.0F;
+    bool grate_safe_ = false;
     float rope_rest_length_ = 0.0F;
     double machine_cycle_phase_seconds_ = 0.0;
     SupportSample support_sample_{};
@@ -2786,6 +2933,8 @@ private:
         BodyCheckpoint crate{};
         BodyCheckpoint needle_beam{};
         bool needle_seated = false;
+        float sump_volume_kg = 0.0F;
+        bool sump_isolated = false;
         double vessel_mass_kg = 0.0;
         double cylinder_mass_kg = 0.0;
     };
@@ -2892,6 +3041,11 @@ bool Simulation::set_needle_hoist_input(const double value) noexcept {
     return true;
 }
 
+bool Simulation::request_valve_toggle() noexcept {
+    valve_toggle_requested_ = true;
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -2908,12 +3062,14 @@ void Simulation::step_fixed() noexcept {
     commands.jib_slew_input = jib_slew_input_;
     commands.jib_hoist_input = jib_hoist_input_;
     commands.needle_hoist_input = needle_hoist_input_;
+    commands.valve_toggle_requested = valve_toggle_requested_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     jump_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;
     parachute_toggle_requested_ = false;
+    valve_toggle_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();

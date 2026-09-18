@@ -52,6 +52,13 @@ enum class InitialSpawn : std::uint8_t {
     // on the pier specifically so both are reachable without a climb move
     // this kernel slice has no mechanism for.
     KernelNeedleStation = 16,
+    // WO-013 falsifier spawn: at the KX-SUMP valve station, on the fixed
+    // approach decking facing the grate (not on the grate itself, which
+    // starts wet and unsafe). One spawn serves both "wet grate cannot be
+    // crossed" (walk forward immediately) and "isolate and drain makes it
+    // ordinary support" (close the valve first, then walk) -- matching the
+    // pattern established for the needle station.
+    KernelSumpStation = 17,
 };
 
 enum class TraversalState : std::uint8_t {
@@ -156,6 +163,15 @@ struct Snapshot final {
     bool needle_seated = false;
     Vector3 needle_position{};
     Vector3 needle_linear_velocity{};
+
+    // --- WO-013 KX-SUMP / KX-GRATE (Ascent Atlas v1.0 kernel, §9). A lumped
+    // process volume: one isolation edge (the valve), one drain sink, one
+    // derived "grate safe" predicate. The grate's own collidability is what
+    // changes -- not a decal, not a flag the traversal system trusts blindly.
+    bool sump_station_active = false;
+    bool sump_isolated = false;
+    double sump_volume_kg = 0.0;
+    bool grate_safe = false;
 };
 
 struct AdvanceResult final {
@@ -211,6 +227,11 @@ public:
     static constexpr std::uint64_t kNeedlePierFarEntityId = 31;
     static constexpr std::uint64_t kNeedleHoistMastEntityId = 32;
     static constexpr std::uint64_t kNeedleBeamEntityId = 33;
+    // WO-013 Ascent Atlas kernel entity (§9): KX-GRATE is the walkway whose
+    // collidability the process network derives. Falling through it lands on
+    // the existing world deck below -- a real, measured drop, not a new floor
+    // body invented just to catch it.
+    static constexpr std::uint64_t kSumpGrateEntityId = 34;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -254,6 +275,13 @@ public:
     // while the player is at the needle station.
     [[nodiscard]] bool set_needle_hoist_input(double value) noexcept;
 
+    // WO-013 KX-SUMP valve command. A one-shot toggle, like request_parachute
+    // -- not a continuous axis, since isolation is a real binary state (open
+    // feeding the sump, or closed and letting the drain win) -- gated the
+    // same way: accepted as a command anywhere, but only takes effect while
+    // the player is at the sump station.
+    [[nodiscard]] bool request_valve_toggle() noexcept;
+
     // Disables the boiler feed so the plant becomes a strictly finite reservoir.
     // Used to prove the machine cannot manufacture work.
     void set_boiler_feed_enabled(bool enabled) noexcept;
@@ -279,6 +307,7 @@ private:
     double jib_slew_input_ = 0.0;
     double jib_hoist_input_ = 0.0;
     double needle_hoist_input_ = 0.0;
+    bool valve_toggle_requested_ = false;
     Snapshot snapshot_{};
 };
 
