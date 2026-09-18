@@ -418,12 +418,29 @@ int main() {
     const auto committed_pose = lethal.snapshot().player_position;
     require(lethal.commit_checkpoint(), "lethal fixture must commit before the fall");
     require(lethal.set_move_input(0.0, 1.0), "lethal walk-off input must be accepted");
-    require(lethal.advance_frame(4.0).accepted, "un-chuted high fall must be allowed to finish");
-    const auto after_lethal = lethal.snapshot();
-    require(after_lethal.checkpoint_committed, "death must keep the committed timeline");
-    require(std::abs(after_lethal.player_position.x - committed_pose.x) < 2.5 &&
-                std::abs(after_lethal.player_position.z - committed_pose.z) < 2.5,
+    bool left_committed_support = false;
+    bool restored_near_platform = false;
+    const int lethal_budget_steps =
+        static_cast<int>(4.0 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < lethal_budget_steps; ++step) {
+        require(lethal.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "un-chuted high fall must be allowed to finish");
+        const auto now = lethal.snapshot();
+        if (now.player_position.y < committed_pose.y - 3.0) {
+            left_committed_support = true;
+        }
+        if (left_committed_support && now.player_grounded &&
+            now.support_entity_id == Simulation::kHighPlatformEntityId &&
+            std::abs(now.player_position.x - committed_pose.x) < 2.5 &&
+            std::abs(now.player_position.z - committed_pose.z) < 2.5) {
+            restored_near_platform = true;
+            break;
+        }
+    }
+    require(left_committed_support, "lethal walk-off must produce a real fall");
+    require(restored_near_platform,
             "restored pose must return near the committed platform, not a mid-air teleport");
+    require(lethal.snapshot().checkpoint_committed, "death must keep the committed timeline");
 
     Simulation remote_jib;
     require(remote_jib.advance_frame(1.0).accepted, "approach settle for remote jib must advance");

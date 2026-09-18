@@ -81,12 +81,18 @@ constexpr double kJibWinchMinMeters = 2.40;
 constexpr double kJibWinchMaxMeters = 8.15;
 constexpr double kJibWinchInitialMeters = 8.15;
 constexpr double kJibHoistSpeedMetersPerSecond = 1.15;
-constexpr double kJibSlingMaxMeters = 0.45;
+constexpr double kJibSlingMaxMeters = 0.60;
 constexpr double kJibSwlKilograms = 5000.0;
 constexpr double kJibRatedCrateKilograms = 800.0;
 constexpr double kJibOverweightCrateKilograms = 8000.0;
 constexpr double kJibGravity = 9.81;
-constexpr float kJibCrateHalfExtent = 0.50F;
+constexpr float kJibCrateHalfWidth = 0.70F;
+constexpr float kJibCrateHalfHeight = 0.16F;
+constexpr float kPlayerCapsuleCylinderHalfHeight = 0.55F;
+constexpr float kPlayerCapsuleRadius = 0.35F;
+constexpr float kPlayerStandingHalfHeight =
+    kPlayerCapsuleCylinderHalfHeight + kPlayerCapsuleRadius;
+constexpr float kCrateStepHeight = 0.42F;
 
 constexpr double kImpactRockerX = 7.0;
 constexpr double kImpactRockerY = 1.65;
@@ -268,6 +274,7 @@ private:
             return 2;
         }
         if (entity_id == Simulation::kStaticDeckEntityId ||
+            entity_id == Simulation::kHighPlatformEntityId ||
             entity_id == Simulation::kHopperChuteEntityId ||
             entity_id == Simulation::kTowerLeftPierEntityId ||
             entity_id == Simulation::kTowerRightPierEntityId ||
@@ -448,7 +455,7 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
 [[nodiscard]] JPH::RVec3 jib_crate_rest_position(const double slew_radians) noexcept {
     const JPH::RVec3 tip = jib_boom_tip(slew_radians);
     return jib_rvec(static_cast<double>(tip.GetX()),
-                    static_cast<double>(kJibCrateHalfExtent),
+                    static_cast<double>(kJibCrateHalfHeight),
                     static_cast<double>(tip.GetZ()));
 }
 
@@ -618,7 +625,7 @@ public:
             bodies.CreateAndAddBody(impact_rocker_settings, JPH::EActivation::Activate);
 
         JPH::BodyCreationSettings player_settings(
-            new JPH::CapsuleShape(0.55F, 0.35F),
+            new JPH::CapsuleShape(kPlayerCapsuleCylinderHalfHeight, kPlayerCapsuleRadius),
             spawn_position(initial_spawn),
             JPH::Quat::sIdentity(),
             JPH::EMotionType::Dynamic,
@@ -670,7 +677,7 @@ public:
 
         const JPH::RVec3 crate_rest = jib_crate_rest_position(slew_radians_);
         JPH::BodyCreationSettings crate_settings(
-            new JPH::BoxShape(JPH::Vec3(kJibCrateHalfExtent, kJibCrateHalfExtent, kJibCrateHalfExtent)),
+            new JPH::BoxShape(JPH::Vec3(kJibCrateHalfWidth, kJibCrateHalfHeight, kJibCrateHalfWidth)),
             crate_rest,
             JPH::Quat::sIdentity(),
             JPH::EMotionType::Dynamic,
@@ -689,7 +696,7 @@ public:
         hook_constraint_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
         hook_constraint_settings.mPoint1 = jib_hook_position(slew_radians_, winch_length_);
         hook_constraint_settings.mPoint2 =
-            crate_rest + JPH::RVec3(0.0, static_cast<double>(kJibCrateHalfExtent), 0.0);
+            crate_rest + JPH::RVec3(0.0, static_cast<double>(kJibCrateHalfHeight), 0.0);
         hook_constraint_settings.mMinDistance = 0.0F;
         hook_constraint_settings.mMaxDistance = static_cast<float>(kJibSlingMaxMeters);
         JPH::Body *hook_body =
@@ -798,6 +805,7 @@ public:
                                                       move_input_z,
                                                       kGroundAcceleration,
                                                       delta_seconds);
+                player_velocity.SetY(reference_velocity.GetY());
             } else {
                 approach_relative_horizontal_velocity(player_velocity,
                                                       reference_velocity,
@@ -829,6 +837,7 @@ public:
         support_sample_ = support;
         grounded_ = support.grounded;
         support_entity_id_ = support.entity_id;
+        maybe_step_up_crate(bodies);
 
         apply_parachute_and_fall(bodies, delta_seconds);
         maybe_autocommit();
@@ -847,6 +856,7 @@ public:
             return false;
         }
         store_checkpoint();
+        read_state();
         return true;
     }
 
@@ -960,7 +970,6 @@ private:
         const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
         const bool in_range = distance_3d(player_position, kJibPendantX, 0.9, kJibPendantZ) <=
                               kJibStationRadiusMeters;
-        jib_station_available_ = in_range && !jib_station_occupied_;
 
         if (jib_enter_requested_ && in_range) {
             jib_station_occupied_ = true;
@@ -970,6 +979,7 @@ private:
             jib_hoist_input_ = 0.0;
             jib_slew_input_ = 0.0;
         }
+        jib_station_available_ = in_range && !jib_station_occupied_;
 
         jib_stalled_ = false;
         jib_at_hoist_limit_ = winch_length_ <= kJibWinchMinMeters + 1.0e-4 ||
@@ -1044,6 +1054,38 @@ private:
         }
 
         jib_load_newtons_ = load_newtons;
+    }
+
+    void maybe_step_up_crate(JPH::BodyInterface &bodies) noexcept {
+        if (traversal_mode_ != TraversalMode::None ||
+            support_entity_id_ == Simulation::kJibCrateEntityId) {
+            return;
+        }
+        const JPH::RVec3 player = bodies.GetPosition(player_id_);
+        const JPH::RVec3 crate = bodies.GetPosition(jib_crate_id_);
+        const double horiz = std::hypot(static_cast<double>(player.GetX()) - crate.GetX(),
+                                        static_cast<double>(player.GetZ()) - crate.GetZ());
+        if (horiz > static_cast<double>(kJibCrateHalfWidth + kPlayerCapsuleRadius + 0.08F)) {
+            return;
+        }
+        const double crate_top = crate.GetY() + static_cast<double>(kJibCrateHalfHeight);
+        const double feet = player.GetY() - static_cast<double>(kPlayerStandingHalfHeight);
+        const double rise = crate_top - feet;
+        if (rise <= 0.04 || rise > static_cast<double>(kCrateStepHeight)) {
+            return;
+        }
+        const JPH::Vec3 velocity = bodies.GetLinearVelocity(player_id_);
+        const double approach = static_cast<double>(velocity.GetX()) * (crate.GetX() - player.GetX()) +
+                                static_cast<double>(velocity.GetZ()) * (crate.GetZ() - player.GetZ());
+        if (approach < 0.20) {
+            return;
+        }
+        bodies.SetPosition(player_id_,
+                           jib_rvec(crate.GetX(),
+                                    crate_top + static_cast<double>(kPlayerStandingHalfHeight) + 0.02,
+                                    crate.GetZ()),
+                           JPH::EActivation::Activate);
+        bodies.SetLinearVelocity(player_id_, JPH::Vec3::sZero());
     }
 
     [[nodiscard]] TraversalMode traversal_candidate(const JPH::RVec3 &player_position) const noexcept {
@@ -1440,7 +1482,7 @@ private:
         const JPH::Vec3 crate_velocity = bodies.GetLinearVelocity(jib_crate_id_);
         const JPH::RVec3 boom_tip = jib_boom_tip(slew_radians_);
         const JPH::RVec3 crate_padeye =
-            crate_position + JPH::RVec3(0.0, static_cast<double>(kJibCrateHalfExtent), 0.0);
+            crate_position + JPH::RVec3(0.0, static_cast<double>(kJibCrateHalfHeight), 0.0);
         const double hook_crate_distance = distance_3d(
             hook_position, crate_padeye.GetX(), crate_padeye.GetY(), crate_padeye.GetZ());
 
@@ -1626,7 +1668,13 @@ bool Simulation::request_parachute() noexcept {
 }
 
 bool Simulation::commit_checkpoint() noexcept {
-    return physics_world_->commit_checkpoint_public();
+    if (!physics_world_->commit_checkpoint_public()) {
+        return false;
+    }
+    const Snapshot &world = physics_world_->state();
+    snapshot_.checkpoint_committed = world.checkpoint_committed;
+    snapshot_.checkpoint_tick = world.checkpoint_tick;
+    return true;
 }
 
 bool Simulation::can_enter_jib_station() const noexcept {
