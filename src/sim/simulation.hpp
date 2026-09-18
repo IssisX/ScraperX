@@ -45,6 +45,13 @@ enum class InitialSpawn : std::uint8_t {
     // "the crate is a real moving support" (WO-005 proof path item 3, WO-002
     // law) from the separately-proven pendant/motor mechanics above.
     KernelCrateTop = 15,
+    // WO-012 falsifier spawn: at the KX-NEEDLE pendant station, on the
+    // approach pier facing the gap. One spawn serves both "the unseated gap
+    // cannot be crossed" (walk forward immediately) and "seating it with the
+    // jib makes it walkable" (operate the hoist first) -- the station sits
+    // on the pier specifically so both are reachable without a climb move
+    // this kernel slice has no mechanism for.
+    KernelNeedleStation = 16,
 };
 
 enum class TraversalState : std::uint8_t {
@@ -140,6 +147,15 @@ struct Snapshot final {
     // force is finite" is falsifiable without staging an unsafe lift on the
     // real jib.
     Vector3 jib_capacity_stand_load_position{};
+
+    // --- WO-012 KX-NEEDLE / KX-POCKETS (Ascent Atlas v1.0 kernel, §9). A
+    // needle beam lowered by its own finite-force hoist; once its pose is
+    // within seat tolerance and settled, it is pinned into both pockets and
+    // becomes real, walkable structural support. Unseated, the gap has none.
+    bool needle_station_active = false;
+    bool needle_seated = false;
+    Vector3 needle_position{};
+    Vector3 needle_linear_velocity{};
 };
 
 struct AdvanceResult final {
@@ -187,6 +203,14 @@ public:
     static constexpr std::uint64_t kJibHookEntityId = 27;
     static constexpr std::uint64_t kCrateEntityId = 28;
     static constexpr std::uint64_t kCapacityStandEntityId = 29;
+    // WO-012 Ascent Atlas kernel entities (§9): KX-NEEDLE is the seatable
+    // beam; KX-POCKETS is represented by the two piers it seats into. The
+    // hoist mast is proof scaffolding (a second, minimal jib-pattern
+    // mechanism), like WO-011's capacity stand -- not an atlas-named module.
+    static constexpr std::uint64_t kNeedlePierApproachEntityId = 30;
+    static constexpr std::uint64_t kNeedlePierFarEntityId = 31;
+    static constexpr std::uint64_t kNeedleHoistMastEntityId = 32;
+    static constexpr std::uint64_t kNeedleBeamEntityId = 33;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -224,6 +248,12 @@ public:
     [[nodiscard]] bool set_jib_slew_input(double value) noexcept;
     [[nodiscard]] bool set_jib_hoist_input(double value) noexcept;
 
+    // WO-012 KX-NEEDLE pendant command. Same continuous, persistent, signed-
+    // axis contract as the jib's hoist: positive raises, negative lowers,
+    // zero brakes against gravity up to the rated force. Takes effect only
+    // while the player is at the needle station.
+    [[nodiscard]] bool set_needle_hoist_input(double value) noexcept;
+
     // Disables the boiler feed so the plant becomes a strictly finite reservoir.
     // Used to prove the machine cannot manufacture work.
     void set_boiler_feed_enabled(bool enabled) noexcept;
@@ -248,6 +278,7 @@ private:
     bool parachute_toggle_requested_ = false;
     double jib_slew_input_ = 0.0;
     double jib_hoist_input_ = 0.0;
+    double needle_hoist_input_ = 0.0;
     Snapshot snapshot_{};
 };
 

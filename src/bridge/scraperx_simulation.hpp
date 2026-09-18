@@ -94,6 +94,13 @@ public:
     [[nodiscard]] godot::Vector3 get_jib_crate_linear_velocity() const;
     [[nodiscard]] godot::Vector3 get_jib_capacity_stand_load_position() const;
 
+    // WO-012 KX-NEEDLE / KX-POCKETS (Ascent Atlas v1.0 kernel).
+    [[nodiscard]] bool set_needle_hoist_input(double value);
+    [[nodiscard]] bool is_needle_station_active() const;
+    [[nodiscard]] bool is_needle_seated() const;
+    [[nodiscard]] godot::Vector3 get_needle_position() const;
+    [[nodiscard]] godot::Vector3 get_needle_linear_velocity() const;
+
 protected:
     static void _bind_methods();
 

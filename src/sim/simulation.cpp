@@ -37,6 +37,7 @@
 #include <cmath>
 #include <limits>
 #include <mutex>
+#include <utility>
 
 namespace {
 
@@ -229,6 +230,96 @@ constexpr float kJibStationX = kJibMastX - 2.5F;
 constexpr float kJibStationZ = kJibMastZ - 2.0F;
 constexpr float kJibStationRadius = 2.5F;
 
+// --- WO-012 Ascent Atlas v1.0 kernel: KX-NEEDLE / KX-POCKETS ---------------
+// Atlas section 9 kernel chain: "player seats KX-NEEDLE with the jib." A
+// second, minimal jib-pattern mechanism -- mast + one finite-force vertical
+// motor, no slew -- carries the beam. WO-006's own text sanctions this
+// reduction ("reduced-order connection... exact beam formulation remains
+// TDD-gated... do not invent FEM to finish this WO"): siting the mast
+// directly above the pocket centreline removes any need for slew, since the
+// beam only ever travels straight down into the seat. Sited well clear of
+// both the WO-011 jib's ~6.15 m swept reach and the capacity stand, inside
+// the same 36x36 m kernel envelope (Atlas section 9).
+constexpr float kNeedleGapCenterX = kKernelBaseX;
+constexpr float kNeedleGapCenterZ = kKernelBaseZ - 16.0F;
+constexpr float kNeedleGapWidthMeters = 3.2F; // clear span the beam must bridge.
+constexpr float kNeedlePierHalfExtentX = 2.5F;
+constexpr float kNeedlePierHalfExtentZ = 1.6F;
+constexpr float kNeedlePierHeight = 4.0F; // "one bay of frame" (Atlas section 9).
+constexpr float kNeedlePierTopY = kNeedlePierHeight;
+
+constexpr float kNeedlePierApproachX =
+    kNeedleGapCenterX - (kNeedleGapWidthMeters * 0.5F + kNeedlePierHalfExtentX);
+constexpr float kNeedlePierFarX =
+    kNeedleGapCenterX + (kNeedleGapWidthMeters * 0.5F + kNeedlePierHalfExtentX);
+
+// How far each end must rest onto its pier once seated.
+constexpr float kNeedleSeatOverlapMeters = 0.9F;
+constexpr float kNeedleBeamHalfLength = kNeedleGapWidthMeters * 0.5F + kNeedleSeatOverlapMeters;
+constexpr float kNeedleBeamHalfWidth = 0.5F;
+constexpr float kNeedleBeamHalfHeight = 0.18F;
+constexpr float kNeedleBeamMassKg = 900.0F; // GDD 17: real machinery, not player strength.
+
+// Rest (seated) height of the beam's centreline -- also the hard bottom of
+// the hoist's travel, so "reaches the bottom" and "reaches the seat" are the
+// same event, not two independently-tuned numbers that could drift apart.
+// The beam's *top* is set flush with the pier tops (seated into a pocket,
+// not resting proud on top of one): this locomotion is a raw dynamic
+// capsule with no step-up assist at all (confirmed by direct observation --
+// a proud-mounted beam, top 0.36 m above the pier, flatly blocked forward
+// walking rather than being climbed), so any step here is a wall, and a real
+// seated span has to be a level continuation of the pier top, not a curb.
+constexpr float kNeedleSeatedY = kNeedlePierTopY - kNeedleBeamHalfHeight;
+// Top of the notch block cut into each pier's gap-facing edge (see
+// build_kernel_needle): low enough that the seated beam's underside clears
+// it and its own top still lands flush with the main pier top.
+constexpr float kNeedlePocketNotchTopY = kNeedlePierTopY - 2.0F * kNeedleBeamHalfHeight;
+// Clearance between the notch's boundary and the beam's own resting edge,
+// well past JPH::BoxShape's default convex radius plus Jolt's default
+// speculative contact distance, so the main block's rounded corner can never
+// intercept the descending beam (see build_kernel_needle).
+constexpr float kNeedlePocketMarginMeters = 0.2F;
+
+// Pocket world points: the beam's two end centrelines when correctly seated.
+// The beam has no horizontal or slew freedom at all (see above), so these
+// are the only points its ends can ever occupy -- alignment is guaranteed by
+// construction, not by a tolerance check.
+constexpr float kNeedlePocketApproachX = kNeedleGapCenterX - kNeedleBeamHalfLength;
+constexpr float kNeedlePocketFarX = kNeedleGapCenterX + kNeedleBeamHalfLength;
+
+constexpr float kNeedleHoistMastHeight = 7.0F; // clears the beam's stowed pose above the piers.
+// Stowed (top of travel): near the mast head, clear of the piers entirely.
+constexpr float kNeedleStowedY = kNeedleHoistMastHeight - 0.8F;
+constexpr float kNeedleHoistMaxRateMetersPerSec = 0.6F;
+constexpr float kNeedleMaxLiftForceN = 16000.0F; // weight ~8.8 kN, well inside rating.
+
+// A rest-pose seat predicate (WO-006: "a model that can say seated => support
+// predicate true... optional sag only if the chosen reduced model already
+// exists" -- this one has none). Speed, not position, is the operative test:
+// position is already guaranteed by construction, so all that remains is
+// "has it actually come to rest at the bottom," not "is it approximately
+// somewhere near it."
+constexpr float kNeedleSeatPositionToleranceMeters = 0.12F;
+constexpr float kNeedleSeatSpeedToleranceMetersPerSec = 0.35F;
+// A sustained raise command while seated is the legal unseat path: it pulls
+// the pockets pins first (the beam cannot otherwise move at all while
+// rigidly pinned), then the same motor that lowered it lifts it clear -- a
+// real mechanism reversal, not a teleport or a flag flip.
+constexpr float kNeedleUnseatCommandThreshold = 0.5F;
+
+// Sited on the approach pier itself, not at grade: the pier top is the only
+// place a player standing at grade cannot climb back up to unaided (no
+// stair/ramp exists in this kernel slice), so the pendant has to be where
+// the operator can actually reach it and then step onto the seated beam.
+// At the pier's own centre, clear of the beam's horizontal footprint (which
+// starts at kNeedlePocketApproachX = 197.5) by well over kPlayerRadius --
+// close enough to that edge and the descending beam clips the standing
+// player and wedges them against its face (found by direct observation:
+// an earlier siting 0.1 m from that edge froze forward movement dead).
+constexpr float kNeedleStationX = kNeedlePierApproachX;
+constexpr float kNeedleStationZ = kNeedleGapCenterZ;
+constexpr float kNeedleStationRadius = 2.5F;
+
 // WO-008 fall / parachute / checkpoint. An 8.8 m unassisted lift-platform
 // fall (~13.1 m/s impact) must stay survivable per GDD 8.2; a genuine
 // tower-scale drop must not be. Terminal parachute speed (~9 m/s, derived
@@ -357,7 +448,8 @@ struct SupportSample final {
            entity_id == Sim::kCounterweightEntityId ||
            entity_id == Sim::kTreadleEntityId ||
            entity_id == Sim::kJibHookEntityId ||
-           entity_id == Sim::kCrateEntityId;
+           entity_id == Sim::kCrateEntityId ||
+           entity_id == Sim::kNeedleBeamEntityId;
 }
 
 class PlayerContactListener final : public JPH::ContactListener {
@@ -496,6 +588,11 @@ private:
         // the hook, which hangs directly above the centre via the pin link.
         return {static_cast<double>(kJibMastX + kJibBoomLength) + 0.4, 2.4,
                 static_cast<double>(kJibMastZ)};
+    case scraperx::sim::InitialSpawn::KernelNeedleStation:
+        // On the approach pier top, not at grade: see the station-siting
+        // note by kNeedleStationX above.
+        return {static_cast<double>(kNeedleStationX), static_cast<double>(kNeedlePierTopY) + 1.0,
+                static_cast<double>(kNeedleStationZ)};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -697,6 +794,7 @@ public:
 
         build_machine(bodies);
         build_kernel_jib(bodies);
+        build_kernel_needle(bodies);
 
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
         JPH::BodyCreationSettings player_settings(player_shape_,
@@ -725,6 +823,17 @@ public:
 
     ~PhysicsWorld() {
         physics_system_.SetContactListener(nullptr);
+        // Dynamically-owned pins (track_for_teardown=false) are never in
+        // machine_constraints_, so the loop below cannot reach them -- remove
+        // whichever of them are currently seated before it runs.
+        if (needle_pin_approach_ != nullptr) {
+            physics_system_.RemoveConstraint(needle_pin_approach_);
+            needle_pin_approach_ = nullptr;
+        }
+        if (needle_pin_far_ != nullptr) {
+            physics_system_.RemoveConstraint(needle_pin_far_);
+            needle_pin_far_ = nullptr;
+        }
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
             if (constraint != nullptr) {
                 physics_system_.RemoveConstraint(constraint);
@@ -736,6 +845,7 @@ public:
         treadle_hinge_ = nullptr;
         jib_slew_hinge_ = nullptr;
         jib_hoist_slider_ = nullptr;
+        needle_hoist_slider_ = nullptr;
         auto &bodies = physics_system_.GetBodyInterface();
         for (auto it = machine_bodies_.rbegin(); it != machine_bodies_.rend(); ++it) {
             remove_and_destroy(bodies, *it);
@@ -765,6 +875,7 @@ public:
         bool parachute_toggle_requested = false;
         double jib_slew_input = 0.0;
         double jib_hoist_input = 0.0;
+        double needle_hoist_input = 0.0;
     };
 
     void step(const StepCommands &commands,
@@ -779,6 +890,7 @@ public:
         update_scoop(bodies, delta_seconds, next_time_seconds);
         update_plant(bodies, delta_seconds);
         update_jib(bodies, commands.jib_slew_input, commands.jib_hoist_input);
+        update_needle(bodies, commands.needle_hoist_input);
 
         // A toggle while airborne only: deploying/retracting on the ground is
         // meaningless and would let a grounded button-mash pre-arm the canopy.
@@ -965,6 +1077,12 @@ private:
             return lift_platform_id_;
         case Simulation::kCounterweightEntityId:
             return counterweight_id_;
+        case Simulation::kNeedlePierApproachEntityId:
+            return needle_pier_approach_id_;
+        case Simulation::kNeedlePierFarEntityId:
+            return needle_pier_far_id_;
+        case Simulation::kNeedleBeamEntityId:
+            return needle_beam_id_;
         default:
             return {};
         }
@@ -1254,6 +1372,102 @@ private:
         stand_slider->SetTargetVelocity(kJibHoistMaxRateMetersPerSec);
     }
 
+    // WO-012. Ascent Atlas v1.0 kernel (section 9): KX-NEEDLE + KX-POCKETS. A
+    // second, minimal jib-pattern hoist -- mast plus one finite-force
+    // vertical motor, no slew -- lowers the beam on a fixed vertical line
+    // directly above the gap. Two piers stand in for the atlas's KX-POCKETS;
+    // seating pins them to the beam at runtime (update_needle), never here.
+    void build_kernel_needle(JPH::BodyInterface &bodies) {
+        const auto track = [this](const JPH::BodyID id) {
+            machine_bodies_.push_back(id);
+            return id;
+        };
+
+        // Each pier is two boxes, not one: a full-height main block, and a
+        // shorter notch block under the overlap strip where the beam's end
+        // actually lands. Seating the beam flush with the pier top (see
+        // kNeedleSeatedY) means its underside has to have somewhere to go
+        // that isn't solid pier -- a real pocket is a recess, not a shelf.
+        //
+        // The notch's boundary against the main block is pulled back by
+        // kNeedlePocketMarginMeters, well clear of the beam's own edge --
+        // found necessary by direct observation: siting that boundary exactly
+        // at the beam's edge left the descending beam stopping ~4 cm short of
+        // its seat, against JPH::BoxShape's default rounded convex radius on
+        // the main block's corner, not the notch it was actually meant to
+        // land on.
+        const auto box_from_span = [](const float min_x, const float max_x) {
+            return std::pair<float, float>{(min_x + max_x) * 0.5F, (max_x - min_x) * 0.5F};
+        };
+        const float pier_top_y_half = kNeedlePierHeight * 0.5F;
+        const float notch_top_y_half = kNeedlePocketNotchTopY * 0.5F;
+
+        const float approach_outer_x = kNeedlePierApproachX + kNeedlePierHalfExtentX;
+        const float approach_inner_x = kNeedlePierApproachX - kNeedlePierHalfExtentX;
+        const float approach_notch_boundary_x = kNeedlePocketApproachX - kNeedlePocketMarginMeters;
+        const auto [approach_main_x, approach_main_half_x] =
+            box_from_span(approach_inner_x, approach_notch_boundary_x);
+        const auto [approach_notch_x, approach_notch_half_x] =
+            box_from_span(approach_notch_boundary_x, approach_outer_x);
+
+        track(add_box(bodies, JPH::Vec3(approach_main_half_x, pier_top_y_half, kNeedlePierHalfExtentZ),
+                      JPH::RVec3(approach_main_x, pier_top_y_half, kNeedleGapCenterZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
+                      Simulation::kNeedlePierApproachEntityId));
+        needle_pier_approach_id_ = track(add_box(
+            bodies, JPH::Vec3(approach_notch_half_x, notch_top_y_half, kNeedlePierHalfExtentZ),
+            JPH::RVec3(approach_notch_x, notch_top_y_half, kNeedleGapCenterZ),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
+            Simulation::kNeedlePierApproachEntityId));
+
+        const float far_outer_x = kNeedlePierFarX + kNeedlePierHalfExtentX;
+        const float far_inner_x = kNeedlePierFarX - kNeedlePierHalfExtentX;
+        const float far_notch_boundary_x = kNeedlePocketFarX + kNeedlePocketMarginMeters;
+        const auto [far_main_x, far_main_half_x] = box_from_span(far_notch_boundary_x, far_outer_x);
+        const auto [far_notch_x, far_notch_half_x] = box_from_span(far_inner_x, far_notch_boundary_x);
+
+        track(add_box(bodies, JPH::Vec3(far_main_half_x, pier_top_y_half, kNeedlePierHalfExtentZ),
+                      JPH::RVec3(far_main_x, pier_top_y_half, kNeedleGapCenterZ),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
+                      Simulation::kNeedlePierFarEntityId));
+        needle_pier_far_id_ = track(add_box(
+            bodies, JPH::Vec3(far_notch_half_x, notch_top_y_half, kNeedlePierHalfExtentZ),
+            JPH::RVec3(far_notch_x, notch_top_y_half, kNeedleGapCenterZ),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
+            Simulation::kNeedlePierFarEntityId));
+
+        // Mast (visual + mass) and a small fixed head at the top, directly
+        // above the gap centreline -- the head is the actual slider anchor,
+        // the mast beneath it is proof scaffolding like the capacity stand's,
+        // not a load-bearing member of the kernel chain.
+        track(add_box(bodies, JPH::Vec3(0.35F, kNeedleHoistMastHeight * 0.5F, 0.35F),
+                      JPH::RVec3(kNeedleGapCenterX, kNeedleHoistMastHeight * 0.5F,
+                                kNeedleGapCenterZ + kNeedlePierHalfExtentZ + 1.0F),
+                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                      Simulation::kNeedleHoistMastEntityId));
+        const JPH::BodyID needle_head = track(add_box(
+            bodies, JPH::Vec3(0.4F, 0.2F, 0.4F),
+            JPH::RVec3(kNeedleGapCenterX, kNeedleHoistMastHeight, kNeedleGapCenterZ),
+            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+            Simulation::kNeedleHoistMastEntityId));
+
+        JPH::Body *beam = add_shape_body(
+            bodies,
+            new JPH::BoxShape(
+                JPH::Vec3(kNeedleBeamHalfLength, kNeedleBeamHalfHeight, kNeedleBeamHalfWidth)),
+            JPH::RVec3(kNeedleGapCenterX, kNeedleStowedY, kNeedleGapCenterZ), JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.7F,
+            Simulation::kNeedleBeamEntityId, kNeedleBeamMassKg);
+        needle_beam_id_ = track(beam->GetID());
+
+        // Travel is signed from the spawn (stowed, top) pose: 0 here, and
+        // downward-only to the hard-limited seat height -- "reaches the
+        // bottom of travel" and "reaches the seat" are the same event.
+        const float travel_down = kNeedleStowedY - kNeedleSeatedY;
+        add_motorized_slider(needle_head, needle_beam_id_, -travel_down, 0.0F, kNeedleMaxLiftForceN,
+                             &needle_hoist_slider_);
+    }
+
     // Lets the linkage reach its own resting pose before the rope is measured, so
     // slack is slack against the machine as it actually hangs.
     void settle_machine() noexcept {
@@ -1432,10 +1646,18 @@ private:
         (void)create_constraint(settings, lift_platform_id_, counterweight_id_);
     }
 
+    // track_for_teardown=false hands ownership entirely to the caller (WO-012
+    // needle pins, created and removed at runtime as the seat predicate
+    // changes): Jolt's ConstraintManager::Remove asserts on an already-
+    // invalidated constraint index, so a constraint that might be removed
+    // before the destructor runs must never also sit in machine_constraints_,
+    // which is unconditionally removed there once. Exactly one owner removes
+    // it, on every path.
     [[nodiscard]] JPH::TwoBodyConstraint *create_constraint(
         const JPH::TwoBodyConstraintSettings &settings,
         const JPH::BodyID first,
-        const JPH::BodyID second) {
+        const JPH::BodyID second,
+        const bool track_for_teardown = true) {
         // Jolt stripes body mutexes across a fixed-size array, so two distinct
         // bodies can share one. Taking two separate BodyLockWrite locks then
         // deadlocks on a non-recursive mutex ("Resource deadlock avoided").
@@ -1454,7 +1676,9 @@ private:
             return nullptr;
         }
         physics_system_.AddConstraint(constraint);
-        machine_constraints_.emplace_back(constraint);
+        if (track_for_teardown) {
+            machine_constraints_.emplace_back(constraint);
+        }
         return constraint;
     }
 
@@ -1557,6 +1781,105 @@ private:
         }
         if (jib_hoist_slider_ != nullptr) {
             jib_hoist_slider_->SetTargetVelocity(hoist * kJibHoistMaxRateMetersPerSec);
+        }
+    }
+
+    // WO-012 KX-NEEDLE. Same station-gated, continuous-axis contract as
+    // update_jib. Seating and unseating are real topology changes -- two
+    // PointConstraint pockets added or removed at runtime -- driven entirely
+    // by this tick's measured position/speed or command, never a flag.
+    void update_needle(const JPH::BodyInterface &bodies, const double hoist_input) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+        const float station_dx = static_cast<float>(player_position.GetX()) - kNeedleStationX;
+        const float station_dz = static_cast<float>(player_position.GetZ()) - kNeedleStationZ;
+        const bool at_station =
+            (station_dx * station_dx + station_dz * station_dz) <=
+            (kNeedleStationRadius * kNeedleStationRadius);
+        needle_station_active_ = at_station;
+
+        const float hoist =
+            at_station ? std::clamp(static_cast<float>(hoist_input), -1.0F, 1.0F) : 0.0F;
+        if (needle_hoist_slider_ != nullptr) {
+            needle_hoist_slider_->SetTargetVelocity(hoist * kNeedleHoistMaxRateMetersPerSec);
+        }
+
+        // Gated on "not actively raising": right after unseat_needle() removes
+        // the pins, the beam is still sitting exactly at the seat pose with
+        // near-zero velocity for at least one tick, since the motor needs real
+        // time to accelerate it away. Checking the seat predicate unconditionally
+        // would re-seat it that same tick, before a held raise command ever got
+        // a chance to move it -- found by direct observation (the unseat proof
+        // path never actually left the seated state). A held raise is an
+        // unambiguous "not trying to seat" signal, so it suppresses the check
+        // entirely rather than racing it.
+        if (!needle_seated_ && hoist <= 0.0F) {
+            const JPH::RVec3 beam_position = bodies.GetPosition(needle_beam_id_);
+            const JPH::Vec3 beam_velocity = bodies.GetLinearVelocity(needle_beam_id_);
+            const JPH::Vec3 beam_angular_velocity = bodies.GetAngularVelocity(needle_beam_id_);
+            const float height_error =
+                std::fabs(static_cast<float>(beam_position.GetY()) - kNeedleSeatedY);
+            const bool close_enough = height_error <= kNeedleSeatPositionToleranceMeters;
+            const bool settled = beam_velocity.Length() <= kNeedleSeatSpeedToleranceMetersPerSec &&
+                                 beam_angular_velocity.Length() <= kNeedleSeatSpeedToleranceMetersPerSec;
+            if (close_enough && settled) {
+                seat_needle();
+            }
+        } else if (needle_seated_ && hoist > kNeedleUnseatCommandThreshold) {
+            unseat_needle();
+        }
+    }
+
+    // Pins the beam into both piers at the fixed pocket points. The hoist
+    // slider is left connected (Governing Law 26 sidestep: no attach/detach
+    // system to invent -- see WO-012's design notes), which over-constrains
+    // the beam slightly but consistently, since the slider's own rest point
+    // already coincides exactly with these pocket points.
+    void seat_needle() noexcept {
+        JPH::PointConstraintSettings approach_settings;
+        approach_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        approach_settings.mPoint1 =
+            JPH::RVec3(kNeedlePocketApproachX, kNeedleSeatedY, kNeedleGapCenterZ);
+        approach_settings.mPoint2 = approach_settings.mPoint1;
+        needle_pin_approach_ = static_cast<JPH::PointConstraint *>(create_constraint(
+            approach_settings, needle_pier_approach_id_, needle_beam_id_, false));
+
+        JPH::PointConstraintSettings far_settings;
+        far_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        far_settings.mPoint1 = JPH::RVec3(kNeedlePocketFarX, kNeedleSeatedY, kNeedleGapCenterZ);
+        far_settings.mPoint2 = far_settings.mPoint1;
+        needle_pin_far_ = static_cast<JPH::PointConstraint *>(
+            create_constraint(far_settings, needle_pier_far_id_, needle_beam_id_, false));
+
+        needle_seated_ = true;
+    }
+
+    // Removes both pocket pins. The beam is still hoist-connected, so it does
+    // not fall -- the same motor that lowered it now lifts it clear on the
+    // next sustained raise, exactly reversing how it was seated.
+    void unseat_needle() noexcept {
+        if (needle_pin_approach_ != nullptr) {
+            physics_system_.RemoveConstraint(needle_pin_approach_);
+            needle_pin_approach_ = nullptr;
+        }
+        if (needle_pin_far_ != nullptr) {
+            physics_system_.RemoveConstraint(needle_pin_far_);
+            needle_pin_far_ = nullptr;
+        }
+        needle_seated_ = false;
+    }
+
+    // WO-012 checkpoint topology reconciliation: restore_from_checkpoint
+    // already restores the beam's continuous transform via restore_body
+    // (called just before this); this reconciles the discrete seated/unseated
+    // state to match what was actually committed, rather than leaving
+    // whatever pins happened to exist at the moment of death. Forbidden-
+    // shortcuts list (WO-006): "resetting seat on play-mode restart without
+    // going through checkpoint rules" -- this is that checkpoint rule.
+    void restore_needle_topology(const bool checkpoint_seated) noexcept {
+        if (checkpoint_seated && !needle_seated_) {
+            seat_needle();
+        } else if (!checkpoint_seated && needle_seated_) {
+            unseat_needle();
         }
     }
 
@@ -2185,6 +2508,8 @@ private:
         checkpoint_.jib_boom = capture_body(bodies, jib_boom_id_);
         checkpoint_.jib_hook = capture_body(bodies, jib_hook_id_);
         checkpoint_.crate = capture_body(bodies, crate_id_);
+        checkpoint_.needle_beam = capture_body(bodies, needle_beam_id_);
+        checkpoint_.needle_seated = needle_seated_;
         checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
         checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
     }
@@ -2219,6 +2544,8 @@ private:
         restore_body(bodies, jib_boom_id_, checkpoint_.jib_boom);
         restore_body(bodies, jib_hook_id_, checkpoint_.jib_hook);
         restore_body(bodies, crate_id_, checkpoint_.crate);
+        restore_body(bodies, needle_beam_id_, checkpoint_.needle_beam);
+        restore_needle_topology(checkpoint_.needle_seated);
         steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
 
         grounded_ = false;
@@ -2276,6 +2603,13 @@ private:
             {crate_velocity.GetX(), crate_velocity.GetY(), crate_velocity.GetZ()};
         state_.jib_capacity_stand_load_position =
             to_vector3(bodies.GetPosition(capacity_stand_load_id_));
+
+        state_.needle_station_active = needle_station_active_;
+        state_.needle_seated = needle_seated_;
+        const JPH::Vec3 needle_velocity = bodies.GetLinearVelocity(needle_beam_id_);
+        state_.needle_position = to_vector3(bodies.GetPosition(needle_beam_id_));
+        state_.needle_linear_velocity =
+            {needle_velocity.GetX(), needle_velocity.GetY(), needle_velocity.GetZ()};
 
         const JPH::RVec3 rope_tipper =
             bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
@@ -2383,6 +2717,11 @@ private:
     JPH::Ref<JPH::HingeConstraint> treadle_hinge_;
     JPH::Ref<JPH::HingeConstraint> jib_slew_hinge_;
     JPH::Ref<JPH::SliderConstraint> jib_hoist_slider_;
+    JPH::Ref<JPH::SliderConstraint> needle_hoist_slider_;
+    // track_for_teardown=false: created/removed at runtime by seat_needle/
+    // unseat_needle, never through machine_constraints_. See create_constraint.
+    JPH::Ref<JPH::PointConstraint> needle_pin_approach_;
+    JPH::Ref<JPH::PointConstraint> needle_pin_far_;
     JPH::BodyID scoop_ids_[4];
     JPH::Vec3 scoop_local_[4]{};
     JPH::BodyID ballast_id_;
@@ -2395,12 +2734,17 @@ private:
     JPH::BodyID jib_hook_id_;
     JPH::BodyID crate_id_;
     JPH::BodyID capacity_stand_load_id_;
+    JPH::BodyID needle_pier_approach_id_;
+    JPH::BodyID needle_pier_far_id_;
+    JPH::BodyID needle_beam_id_;
     float scoop_height_ = kScoopBottomY;
     float scoop_tilt_ = 0.0F;
     float valve_lever_angle_ = kValveShutAngle;
     float treadle_angle_ = kTreadleRestAngle;
     float jib_boom_angle_ = 0.0F;
     bool jib_station_active_ = false;
+    bool needle_station_active_ = false;
+    bool needle_seated_ = false;
     float rope_rest_length_ = 0.0F;
     double machine_cycle_phase_seconds_ = 0.0;
     SupportSample support_sample_{};
@@ -2440,6 +2784,8 @@ private:
         BodyCheckpoint jib_boom{};
         BodyCheckpoint jib_hook{};
         BodyCheckpoint crate{};
+        BodyCheckpoint needle_beam{};
+        bool needle_seated = false;
         double vessel_mass_kg = 0.0;
         double cylinder_mass_kg = 0.0;
     };
@@ -2538,6 +2884,14 @@ bool Simulation::set_jib_hoist_input(const double value) noexcept {
     return true;
 }
 
+bool Simulation::set_needle_hoist_input(const double value) noexcept {
+    if (!std::isfinite(value)) {
+        return false;
+    }
+    needle_hoist_input_ = std::clamp(value, -1.0, 1.0);
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -2553,6 +2907,7 @@ void Simulation::step_fixed() noexcept {
     commands.parachute_toggle_requested = parachute_toggle_requested_;
     commands.jib_slew_input = jib_slew_input_;
     commands.jib_hoist_input = jib_hoist_input_;
+    commands.needle_hoist_input = needle_hoist_input_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     jump_requested_ = false;

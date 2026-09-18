@@ -112,6 +112,11 @@ theme_override_colors/font_color = Color(0.72, 0.66, 0.5, 1)
 theme_override_font_sizes/font_size = 16
 text = "JIB"
 
+[node name="Needle" type="Label" parent="HUD/TopLeft"]
+theme_override_colors/font_color = Color(0.6, 0.72, 0.66, 1)
+theme_override_font_sizes/font_size = 16
+text = "NEEDLE"
+
 [node name="TopRight" type="VBoxContainer" parent="HUD"]
 anchors_preset = 1
 anchor_left = 1.0

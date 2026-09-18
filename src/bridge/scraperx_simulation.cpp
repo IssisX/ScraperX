@@ -12,7 +12,7 @@ namespace {
             static_cast<godot::real_t>(value.z)};
 }
 
-constexpr std::int64_t kInitialSpawnCount = 16;
+constexpr std::int64_t kInitialSpawnCount = 17;
 
 } // namespace
 
@@ -169,6 +169,17 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_jib_crate_linear_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("get_jib_capacity_stand_load_position"),
                                 &ScraperXSimulation::get_jib_capacity_stand_load_position);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("set_needle_hoist_input", "value"),
+                                &ScraperXSimulation::set_needle_hoist_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_needle_station_active"),
+                                &ScraperXSimulation::is_needle_station_active);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_needle_seated"),
+                                &ScraperXSimulation::is_needle_seated);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_position"),
+                                &ScraperXSimulation::get_needle_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_linear_velocity"),
+                                &ScraperXSimulation::get_needle_linear_velocity);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -490,6 +501,26 @@ godot::Vector3 ScraperXSimulation::get_jib_crate_linear_velocity() const {
 
 godot::Vector3 ScraperXSimulation::get_jib_capacity_stand_load_position() const {
     return to_godot(simulation_->snapshot().jib_capacity_stand_load_position);
+}
+
+bool ScraperXSimulation::set_needle_hoist_input(const double value) {
+    return simulation_->set_needle_hoist_input(value);
+}
+
+bool ScraperXSimulation::is_needle_station_active() const {
+    return simulation_->snapshot().needle_station_active;
+}
+
+bool ScraperXSimulation::is_needle_seated() const {
+    return simulation_->snapshot().needle_seated;
+}
+
+godot::Vector3 ScraperXSimulation::get_needle_position() const {
+    return to_godot(simulation_->snapshot().needle_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_needle_linear_velocity() const {
+    return to_godot(simulation_->snapshot().needle_linear_velocity);
 }
 
 } // namespace scraperx::bridge

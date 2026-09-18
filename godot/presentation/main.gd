@@ -17,6 +17,7 @@ const CATWALK_ENTITY_ID := 19
 const TREADLE_ENTITY_ID := 24
 const JIB_HOOK_ENTITY_ID := 27
 const CRATE_ENTITY_ID := 28
+const NEEDLE_BEAM_ENTITY_ID := 33
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -75,6 +76,8 @@ var _jib_hook_mesh: MeshInstance3D
 var _jib_crate_mesh: MeshInstance3D
 var _jib_capacity_load_mesh: MeshInstance3D
 var _jib_hoist_cable: Node3D
+var _needle_beam_mesh: MeshInstance3D
+var _needle_hoist_cable: Node3D
 var _lift_mesh: MeshInstance3D
 var _counterweight_mesh: MeshInstance3D
 var _translating_support_mesh: MeshInstance3D
@@ -120,6 +123,7 @@ var _ci_proof_printed := false
 @onready var _parachute_button: Control = $HUD/TouchParachute
 @onready var _fall_value: Label = $HUD/TopLeft/Fall
 @onready var _jib_value: Label = $HUD/TopLeft/Jib
+@onready var _needle_value: Label = $HUD/TopLeft/Needle
 @onready var _light_rig: Node3D = $LightRig
 
 
@@ -179,6 +183,10 @@ func _process(delta: float) -> void:
 	var jib_input := _read_jib_input()
 	_native.set_jib_slew_input(jib_input.x)
 	_native.set_jib_hoist_input(jib_input.y)
+	# WO-012 KX-NEEDLE pendant: the same Raise/Lower axis as the jib's hoist --
+	# the two stations are never in range simultaneously, so reusing it needs
+	# no new key binding and keeps the same Raise(+)/Lower(-) verb.
+	_native.set_needle_hoist_input(jib_input.y)
 
 	var steps_advanced := int(_native.advance_frame(delta))
 	if steps_advanced < 0:
@@ -420,6 +428,15 @@ func _render_snapshot() -> void:
 		_native.get_jib_crate_position().z]
 	_jib_value.modulate = Color("e8d9a8") if jib_at_station else Color("8a8378")
 
+	var needle_at_station := bool(_native.is_needle_station_active())
+	var needle_seated := bool(_native.is_needle_seated())
+	var needle_pos: Vector3 = _native.get_needle_position()
+	_needle_value.text = "NEEDLE    %s  %s  POS %6.2f %5.2f %6.2f" % [
+		"AT PENDANT" if needle_at_station else "away",
+		"SEATED" if needle_seated else "unseated",
+		needle_pos.x, needle_pos.y, needle_pos.z]
+	_needle_value.modulate = Color("9ad6c4") if needle_seated else Color("8a8378")
+
 	if traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
 	elif traversal == TRAVERSAL_MANTLING:
@@ -428,8 +445,12 @@ func _render_snapshot() -> void:
 		_status.text = "VAULTING REAL GEOMETRY"
 	elif jib_at_station:
 		_status.text = "AT THE JIB PENDANT / ARROWS DRIVE-HOIST"
+	elif needle_at_station:
+		_status.text = "AT THE NEEDLE PENDANT / ARROWS RAISE-LOWER"
 	elif grounded and support == CRATE_ENTITY_ID:
 		_status.text = "RIDING THE CRATE"
+	elif grounded and support == NEEDLE_BEAM_ENTITY_ID:
+		_status.text = "ON THE SEATED NEEDLE"
 	elif grounded and support == LIFT_PLATFORM_ENTITY_ID:
 		_status.text = "RIDING THE STEAM LIFT"
 	elif grounded and support == CATWALK_ENTITY_ID:
@@ -499,6 +520,12 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 		_span_cable(_jib_hoist_cable, _native.get_jib_hook_position() + Vector3(0.0, 0.15, 0.0),
 			Vector3(200.0, 5.0, 0.0) + Vector3(6.0, 0.0, 0.0).rotated(
 				Vector3.UP, float(_native.get_jib_boom_angle_radians())))
+
+	if _needle_beam_mesh != null:
+		_needle_beam_mesh.position = _native.get_needle_position()
+	if _needle_hoist_cable != null:
+		_span_cable(_needle_hoist_cable,
+			_native.get_needle_position() + Vector3(0.0, 0.18, 0.0), Vector3(200.0, 7.0, -16.0))
 
 	if _rope_mesh != null:
 		var from: Vector3 = _native.get_tipper_position() + Vector3(3.0, -0.2, 0.0).rotated(
@@ -726,6 +753,7 @@ func _build_plant(mill_scale: Material, oxidised: Material, galvanised: Material
 
 	_build_treadle(galvanised, mill_scale, hazard, rope_material)
 	_build_kernel_jib(galvanised, mill_scale, hazard)
+	_build_kernel_needle(galvanised, mill_scale)
 	_build_plume()
 
 
@@ -798,6 +826,28 @@ func _build_kernel_jib(galvanised: StandardMaterial3D, mill_scale: StandardMater
 	_add_box("CapacityStandMast", Vector3(0.6, 4.0, 0.6), Vector3(208.0, 2.0, 6.0), mill_scale)
 	_jib_capacity_load_mesh = _add_box("CapacityStandLoad", Vector3(1.2, 1.2, 1.2),
 		Vector3(208.0, 0.6, 6.0), hazard)
+
+
+# WO-012. Ascent Atlas v1.0 kernel: KX-NEEDLE + KX-POCKETS. Each pier is a
+# main block plus a lower notch: the seated beam's top sits flush with the
+# pier top (a real recessed pocket, not a shelf the beam sits proud on --
+# this locomotion has no step-up assist, confirmed by direct observation),
+# so its underside needs somewhere to go that is not solid pier.
+func _build_kernel_needle(galvanised: StandardMaterial3D, mill_scale: StandardMaterial3D) -> void:
+	_add_box("NeedlePierApproachMain", Vector3(3.9, 4.0, 3.2), Vector3(195.35, 2.0, -16.0),
+		mill_scale)
+	_add_box("NeedlePierApproachNotch", Vector3(1.1, 3.64, 3.2), Vector3(197.85, 1.82, -16.0),
+		mill_scale)
+	_add_box("NeedlePierFarMain", Vector3(3.9, 4.0, 3.2), Vector3(204.65, 2.0, -16.0), mill_scale)
+	_add_box("NeedlePierFarNotch", Vector3(1.1, 3.64, 3.2), Vector3(202.15, 1.82, -16.0), mill_scale)
+
+	_add_box("NeedleHoistMast", Vector3(0.7, 7.0, 0.7), Vector3(200.0, 3.5, -13.4), mill_scale)
+	_add_box("NeedleHoistHead", Vector3(0.8, 0.4, 0.8), Vector3(200.0, 7.0, -16.0), mill_scale)
+
+	_needle_beam_mesh = _add_box("NeedleBeam", Vector3(5.0, 0.36, 1.0), Vector3(200.0, 6.2, -16.0),
+		galvanised)
+	_needle_hoist_cable = _add_box("NeedleHoistCable", Vector3(0.05, 0.05, 1.0), Vector3.ZERO,
+		_material(Color("2b2621"), 0.5, 0.7))
 
 
 func _build_plume() -> void:
