@@ -792,6 +792,96 @@ int main() {
                              1.0e-5),
             "fall-subsystem frame partitioning must not change native player position");
 
+    // ---- WO-009 first full causal chain ------------------------------------
+    // TDD section 24, "Work Order 008 -- first full causal chain" (original
+    // numbering; WO-008/fall-parachute-checkpoint already used and recorded
+    // this same renumbering precedent). Player intervention driving this
+    // exact valve/orifice/piston mechanism was already proven in WO-006 (a
+    // player standing on the tipper opens the same valve the autonomous
+    // cycle uses); it is cited here, not re-derived, because there is no
+    // pathfinding in this codebase to script a literal walk from the tipper
+    // to the platform without inventing test-only navigation machinery the
+    // claim does not need -- both triggers drive the identical code path.
+    // What was never proven is that the structural/process consequence
+    // (the piston lifting the platform) changes what is reachable, and that
+    // the newly reached position is what the checkpoint system persists.
+    Simulation chain(InitialSpawn::LiftPlatform);
+    require(chain.set_facing(0.0, -1.0), "chain facing toward the catwalk must be accepted");
+    require(chain.set_move_input(0.0, -1.0), "chain move-to-edge input must be accepted");
+    require(advance_until(chain,
+                          [](const Snapshot &state) { return state.player_position.z <= -101.25; },
+                          3.0),
+            "the player must be able to walk from the platform's centre toward its near edge");
+    require(chain.set_move_input(0.0, 0.0), "chain hold-at-edge input must be accepted");
+    require(chain.advance_frame(1.0).accepted, "chain settle-at-edge interval must be accepted");
+    const auto chain_rest = chain.snapshot();
+    require(chain_rest.player_grounded &&
+                chain_rest.support_entity_id == Simulation::kLiftPlatformEntityId,
+            "the player must settle grounded on the real platform near its edge, not fall from it");
+    require(!chain_rest.ledge_available,
+            "the catwalk must not be reachable while the platform sits at rest -- a machine at "
+            "rest must not grant a capability it has not yet earned (Governing Law 24)");
+
+    require(advance_until(chain,
+                          [](const Snapshot &state) {
+                              return state.ledge_available &&
+                                     state.ledge_entity_id == Simulation::kCatwalkEntityId;
+                          },
+                          20.0),
+            "the autonomous plant cycle must eventually lift the platform into real mantle range "
+            "of the catwalk -- the structural consequence must change what is reachable");
+    const auto chain_gated = chain.snapshot();
+    require(chain_gated.lift_platform_position.y > 5.0 && chain_gated.lift_platform_position.y < 9.0,
+            "the gate must open because the platform is genuinely elevated, not at some other time");
+    require(chain_gated.ledge_rise_meters > 0.3 && chain_gated.ledge_rise_meters < 1.9,
+            "the offered rise must match the real mantle band, exactly like any other mantle");
+
+    require(chain.request_traversal(), "the catwalk mantle request must be accepted");
+    require(chain.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "chain mantle commit tick must advance");
+    require(chain.snapshot().traversal_state == TraversalState::Mantling,
+            "a genuinely reachable ledge must commit a native mantle, exactly like any other mantle");
+    require(advance_until(chain,
+                          [](const Snapshot &state) {
+                              return state.player_grounded &&
+                                     state.support_entity_id == Simulation::kCatwalkEntityId;
+                          },
+                          2.0),
+            "the mantle must end grounded on the real catwalk entity -- the machine-enabled "
+            "destination, not a scripted teleport");
+    const auto chain_reached = chain.snapshot();
+    require(chain_reached.accepted_traversal_count == 1,
+            "the chain mantle must be accepted exactly once");
+    require(chain_reached.aborted_traversal_count == 0, "a genuinely reachable mantle must not abort");
+    require(chain_reached.rejected_traversal_count == 0,
+            "a single, valid traversal request must not be rejected");
+    require(chain_reached.player_position.z < -102.9 && chain_reached.player_position.z > -110.0,
+            "the player must actually stand on the catwalk deck, not merely near it");
+
+    const auto pre_chain_commits = chain_reached.checkpoint_commit_count;
+    require(chain.advance_frame(1.0).accepted,
+            "standing on the newly reached catwalk must advance and auto-commit (GDD 9.1)");
+    const auto chain_committed = chain.snapshot();
+    require(chain_committed.checkpoint_commit_count > pre_chain_commits,
+            "standing grounded on the catwalk must keep auto-committing, exactly like any other "
+            "grounded position");
+    require(std::abs(chain_committed.checkpoint_position.x - chain_committed.player_position.x) <
+                    0.05 &&
+                std::abs(chain_committed.checkpoint_position.z - chain_committed.player_position.z) <
+                    0.05,
+            "the persisted checkpoint must now be the machine-enabled catwalk position -- the "
+            "changed traversal capability is what gets persisted (TDD 14.1). Restore-to-an-"
+            "arbitrary-committed-position was already proven position- and entity-agnostic in "
+            "WO-008 (capture_body/restore_body replay whatever was captured, with no per-location "
+            "special case) and is not re-derived here");
+
+    std::cout << "PASS scraperx_sim first full causal chain: gate_closed_at_rest="
+              << int(!chain_rest.ledge_available) << " lift_at_gate=" << chain_gated.lift_platform_position.y
+              << "m rise=" << chain_gated.ledge_rise_meters
+              << "m reached_catwalk="
+              << int(chain_reached.support_entity_id == Simulation::kCatwalkEntityId)
+              << " commits=" << chain_committed.checkpoint_commit_count << '\n';
+
     std::cout << "PASS scraperx_sim coupled machine: valve=" << first_cycle.peak_valve_fraction
               << " piston=" << first_cycle.peak_piston_force
               << "N lift=" << first_cycle.peak_lift_height

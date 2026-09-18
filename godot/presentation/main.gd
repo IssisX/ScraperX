@@ -13,6 +13,7 @@ const TRANSLATING_SUPPORT_ENTITY_ID := 3
 const MANTLE_LEDGE_ENTITY_ID := 6
 const TIPPER_ENTITY_ID := 14
 const LIFT_PLATFORM_ENTITY_ID := 16
+const CATWALK_ENTITY_ID := 19
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -391,6 +392,8 @@ func _render_snapshot() -> void:
 		_status.text = "VAULTING REAL GEOMETRY"
 	elif grounded and support == LIFT_PLATFORM_ENTITY_ID:
 		_status.text = "RIDING THE STEAM LIFT"
+	elif grounded and support == CATWALK_ENTITY_ID:
+		_status.text = "ON THE CATWALK"
 	elif grounded and support == TIPPER_ENTITY_ID:
 		_status.text = "STANDING ON THE TIPPER"
 	elif grounded and support == TRANSLATING_SUPPORT_ENTITY_ID:
