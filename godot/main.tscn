@@ -74,7 +74,7 @@ theme_override_constants/separation = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.67, 0.59, 0.39, 1)
 theme_override_font_sizes/font_size = 15
-text = "SCRAPERX  /  EXTERIOR MACHINE  /  NATIVE WORLD"
+text = "SCRAPERX  /  KX-JIB FIRST FREIGHT  /  NATIVE WORLD"
 
 [node name="Status" type="Label" parent="HUD/TopLeft"]
 layout_mode = 2

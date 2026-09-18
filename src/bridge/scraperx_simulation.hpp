@@ -20,6 +20,12 @@ public:
     [[nodiscard]] bool request_hopper_release();
     [[nodiscard]] bool request_parachute();
     [[nodiscard]] bool commit_checkpoint();
+    [[nodiscard]] bool can_enter_jib_station() const;
+    [[nodiscard]] bool request_enter_jib_station();
+    [[nodiscard]] bool request_exit_jib_station();
+    [[nodiscard]] bool set_jib_hoist_input(double hoist);
+    [[nodiscard]] bool set_jib_slew_input(double slew);
+    [[nodiscard]] bool set_jib_brake(bool engaged);
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
 
     [[nodiscard]] std::int64_t get_tick_index() const;
@@ -61,6 +67,22 @@ public:
     [[nodiscard]] std::int64_t get_fall_severity() const;
     [[nodiscard]] std::int64_t get_fear_event_id() const;
     [[nodiscard]] bool is_checkpoint_committed() const;
+
+    [[nodiscard]] godot::Vector3 get_jib_pendant_position() const;
+    [[nodiscard]] godot::Vector3 get_jib_mast_position() const;
+    [[nodiscard]] godot::Vector3 get_jib_boom_tip_position() const;
+    [[nodiscard]] godot::Vector3 get_jib_hook_position() const;
+    [[nodiscard]] godot::Vector3 get_jib_crate_position() const;
+    [[nodiscard]] godot::Vector3 get_jib_crate_linear_velocity() const;
+    [[nodiscard]] double get_jib_slew_radians() const;
+    [[nodiscard]] double get_jib_winch_length_meters() const;
+    [[nodiscard]] double get_jib_crate_mass_kg() const;
+    [[nodiscard]] double get_jib_swl_kg() const;
+    [[nodiscard]] bool is_jib_station_occupied() const;
+    [[nodiscard]] bool is_jib_brake_engaged() const;
+    [[nodiscard]] bool is_jib_stalled() const;
+    [[nodiscard]] bool is_jib_at_hoist_limit() const;
+    [[nodiscard]] bool is_jib_hook_attached() const;
 
 protected:
     static void _bind_methods();

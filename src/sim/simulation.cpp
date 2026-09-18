@@ -15,8 +15,11 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
+#include <Jolt/Physics/Body/MassProperties.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
+
 
 #include <algorithm>
 #include <atomic>
@@ -62,6 +65,30 @@ constexpr double kHopperControlX = 2.5;
 constexpr double kHopperControlY = 0.0;
 constexpr double kHopperControlZ = 40.0;
 constexpr double kHopperInteractionRadiusMeters = 3.4;
+
+constexpr double kJibMastX = -12.0;
+constexpr double kJibMastZ = 48.0;
+constexpr double kJibBoomLengthMeters = 8.0;
+constexpr double kJibBoomHeightMeters = 9.0;
+constexpr double kJibPendantX = -7.0;
+constexpr double kJibPendantY = 0.0;
+constexpr double kJibPendantZ = 49.0;
+constexpr double kJibStationRadiusMeters = 3.6;
+constexpr double kJibSlewMinRadians = -1.05;
+constexpr double kJibSlewMaxRadians = 1.05;
+constexpr double kJibSlewSpeedRadiansPerSecond = 0.35;
+constexpr double kJibWinchMinMeters = 2.40;
+constexpr double kJibWinchMaxMeters = 8.15;
+constexpr double kJibWinchInitialMeters = 8.15;
+constexpr double kJibHoistSpeedMetersPerSecond = 1.15;
+constexpr double kJibSlingMaxMeters = 0.45;
+constexpr double kJibSwlKilograms = 5000.0;
+constexpr double kJibRatedCrateKilograms = 800.0;
+constexpr double kJibOverweightCrateKilograms = 8000.0;
+constexpr double kJibGravity = 9.81;
+constexpr float kJibCrateHalfExtent = 0.50F;
+
+constexpr double kImpactRockerX = 7.0;
 
 constexpr double kImpactRockerX = 7.0;
 constexpr double kImpactRockerY = 1.65;
@@ -238,7 +265,8 @@ private:
         using scraperx::sim::Simulation;
         if (entity_id == Simulation::kTranslatingSupportEntityId ||
             entity_id == Simulation::kRotatingSupportEntityId ||
-            entity_id == Simulation::kHopperGateEntityId) {
+            entity_id == Simulation::kHopperGateEntityId ||
+            entity_id == Simulation::kJibCrateEntityId) {
             return 2;
         }
         if (entity_id == Simulation::kStaticDeckEntityId ||
@@ -335,6 +363,9 @@ private:
         return {kTraversalLaneX, kHangTargetY, 27.75};
     case scraperx::sim::InitialSpawn::HighDeck:
         return {0.0, 18.55, 0.0};
+    case scraperx::sim::InitialSpawn::JibStation:
+    case scraperx::sim::InitialSpawn::JibOverweight:
+        return {kJibPendantX, 3.0, kJibPendantZ};
     case scraperx::sim::InitialSpawn::ApproachGrade:
     default:
         return {0.0, 3.0, 60.0};
@@ -380,6 +411,39 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
 
 [[nodiscard]] float clamp_float(const float value, const float low, const float high) noexcept {
     return std::max(low, std::min(high, value));
+}
+
+[[nodiscard]] double clamp_double(const double value, const double low, const double high) noexcept {
+    return std::max(low, std::min(high, value));
+}
+
+[[nodiscard]] JPH::RVec3 jib_boom_direction(const double slew_radians) noexcept {
+    return {std::cos(slew_radians), 0.0, std::sin(slew_radians)};
+}
+
+[[nodiscard]] JPH::RVec3 jib_boom_tip(const double slew_radians) noexcept {
+    const JPH::RVec3 direction = jib_boom_direction(slew_radians);
+    return {kJibMastX + kJibBoomLengthMeters * direction.GetX(),
+            kJibBoomHeightMeters,
+            kJibMastZ + kJibBoomLengthMeters * direction.GetZ()};
+}
+
+[[nodiscard]] JPH::RVec3 jib_boom_center(const double slew_radians) noexcept {
+    const JPH::RVec3 direction = jib_boom_direction(slew_radians);
+    return {kJibMastX + 0.5 * kJibBoomLengthMeters * direction.GetX(),
+            kJibBoomHeightMeters,
+            kJibMastZ + 0.5 * kJibBoomLengthMeters * direction.GetZ()};
+}
+
+[[nodiscard]] JPH::RVec3 jib_hook_position(const double slew_radians,
+                                           const double winch_length_meters) noexcept {
+    const JPH::RVec3 tip = jib_boom_tip(slew_radians);
+    return {tip.GetX(), kJibBoomHeightMeters - winch_length_meters, tip.GetZ()};
+}
+
+[[nodiscard]] JPH::RVec3 jib_crate_rest_position(const double slew_radians) noexcept {
+    const JPH::RVec3 tip = jib_boom_tip(slew_radians);
+    return {tip.GetX(), static_cast<double>(kJibCrateHalfExtent), tip.GetZ()};
 }
 
 } // namespace
@@ -562,6 +626,74 @@ public:
         player_settings.mUserData = Simulation::kPlayerEntityId;
         player_id_ = bodies.CreateAndAddBody(player_settings, JPH::EActivation::Activate);
 
+        crate_mass_kg_ = initial_spawn == InitialSpawn::JibOverweight
+                             ? kJibOverweightCrateKilograms
+                             : kJibRatedCrateKilograms;
+        slew_radians_ = 0.0;
+        winch_length_ = kJibWinchInitialMeters;
+        jib_brake_engaged_ = true;
+
+        jib_mast_id_ = create_static_box(JPH::Vec3(0.38F, 4.55F, 0.38F),
+                                         JPH::RVec3(kJibMastX, 4.55, kJibMastZ),
+                                         JPH::Quat::sIdentity(),
+                                         Simulation::kJibMastEntityId,
+                                         0.70F);
+
+        const JPH::RVec3 boom_center = jib_boom_center(slew_radians_);
+        JPH::BodyCreationSettings boom_settings(
+            new JPH::BoxShape(JPH::Vec3(static_cast<float>(kJibBoomLengthMeters * 0.5), 0.18F, 0.18F)),
+            boom_center,
+            JPH::Quat::sRotation(JPH::Vec3(0.0F, 1.0F, 0.0F), static_cast<float>(slew_radians_)),
+            JPH::EMotionType::Kinematic,
+            object_layers::kMoving);
+        boom_settings.mAllowSleeping = false;
+        boom_settings.mFriction = 0.55F;
+        boom_settings.mUserData = Simulation::kJibBoomEntityId;
+        jib_boom_id_ = bodies.CreateAndAddBody(boom_settings, JPH::EActivation::Activate);
+
+        JPH::BodyCreationSettings hook_settings(
+            new JPH::SphereShape(0.12F),
+            jib_hook_position(slew_radians_, winch_length_),
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Kinematic,
+            object_layers::kMoving);
+        hook_settings.mIsSensor = true;
+        hook_settings.mAllowSleeping = false;
+        hook_settings.mUserData = Simulation::kJibHookEntityId;
+        jib_hook_id_ = bodies.CreateAndAddBody(hook_settings, JPH::EActivation::Activate);
+
+        const JPH::RVec3 crate_rest = jib_crate_rest_position(slew_radians_);
+        JPH::BodyCreationSettings crate_settings(
+            new JPH::BoxShape(JPH::Vec3(kJibCrateHalfExtent, kJibCrateHalfExtent, kJibCrateHalfExtent)),
+            crate_rest,
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Dynamic,
+            object_layers::kMoving);
+        crate_settings.mAllowSleeping = false;
+        crate_settings.mFriction = 0.82F;
+        crate_settings.mRestitution = 0.0F;
+        crate_settings.mLinearDamping = 0.08F;
+        crate_settings.mAngularDamping = 0.12F;
+        crate_settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+        crate_settings.mMassPropertiesOverride.mMass = static_cast<float>(crate_mass_kg_);
+        crate_settings.mUserData = Simulation::kJibCrateEntityId;
+        jib_crate_id_ = bodies.CreateAndAddBody(crate_settings, JPH::EActivation::Activate);
+
+        JPH::DistanceConstraintSettings hook_constraint_settings;
+        hook_constraint_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        hook_constraint_settings.mPoint1 = jib_hook_position(slew_radians_, winch_length_);
+        hook_constraint_settings.mPoint2 =
+            crate_rest + JPH::RVec3(0.0, static_cast<double>(kJibCrateHalfExtent), 0.0);
+        hook_constraint_settings.mMinDistance = 0.0F;
+        hook_constraint_settings.mMaxDistance = static_cast<float>(kJibSlingMaxMeters);
+        JPH::Body *hook_body =
+            physics_system_.GetBodyLockInterfaceNoLock().TryGetBody(jib_hook_id_);
+        JPH::Body *crate_body =
+            physics_system_.GetBodyLockInterfaceNoLock().TryGetBody(jib_crate_id_);
+        hook_constraint_ = static_cast<JPH::DistanceConstraint *>(
+            hook_constraint_settings.Create(*hook_body, *crate_body));
+        physics_system_.AddConstraint(hook_constraint_.GetPtr());
+
         physics_system_.OptimizeBroadPhase();
         read_state();
     }
@@ -569,7 +701,15 @@ public:
     ~PhysicsWorld() {
         physics_system_.SetContactListener(nullptr);
         auto &bodies = physics_system_.GetBodyInterface();
+        if (hook_constraint_.GetPtr() != nullptr) {
+            physics_system_.RemoveConstraint(hook_constraint_.GetPtr());
+            hook_constraint_ = nullptr;
+        }
         remove_and_destroy(bodies, player_id_);
+        remove_and_destroy(bodies, jib_crate_id_);
+        remove_and_destroy(bodies, jib_hook_id_);
+        remove_and_destroy(bodies, jib_boom_id_);
+        remove_and_destroy(bodies, jib_mast_id_);
         remove_and_destroy(bodies, impact_rocker_id_);
         remove_and_destroy(bodies, hopper_load_id_);
         remove_and_destroy(bodies, hopper_gate_id_);
@@ -594,6 +734,12 @@ public:
               const bool drop_from_hang_requested,
               const bool hopper_release_requested,
               const bool parachute_requested,
+              const bool jib_enter_requested,
+              const bool jib_exit_requested,
+              const double jib_hoist_input,
+              const double jib_slew_input,
+              const bool jib_brake_engaged,
+              const bool jib_brake_command_valid,
               const float delta_seconds,
               const double next_time_seconds) noexcept {
         auto &bodies = physics_system_.GetBodyInterface();
@@ -602,8 +748,17 @@ public:
             hopper_release_started_ = true;
         }
 
+        if (jib_brake_command_valid) {
+            jib_brake_engaged_ = jib_brake_engaged;
+        }
+        jib_hoist_input_ = jib_hoist_input;
+        jib_slew_input_ = jib_slew_input;
+        jib_enter_requested_ = jib_enter_requested;
+        jib_exit_requested_ = jib_exit_requested;
+
         update_support_motion(bodies, delta_seconds, next_time_seconds);
         update_hopper_motion(bodies, delta_seconds);
+        update_jib_motion(bodies, delta_seconds);
 
         if (drop_from_hang_requested && traversal_mode_ == TraversalMode::Hang) {
             traversal_mode_ = TraversalMode::None;
@@ -735,6 +890,12 @@ private:
         if (entity_id == Simulation::kHighPlatformEntityId) {
             return high_platform_id_;
         }
+        if (entity_id == Simulation::kJibCrateEntityId) {
+            return jib_crate_id_;
+        }
+        if (entity_id == Simulation::kJibBoomEntityId) {
+            return jib_boom_id_;
+        }
         return {};
     }
 
@@ -787,6 +948,96 @@ private:
                              delta_seconds);
         hopper_gate_open_ =
             hopper_gate_x_ >= kHopperGateOpenX - kHopperGateOpenTolerance;
+    }
+
+    void update_jib_motion(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+        const bool in_range = distance_3d(player_position, kJibPendantX, 0.9, kJibPendantZ) <=
+                              kJibStationRadiusMeters;
+        jib_station_available_ = in_range && !jib_station_occupied_;
+
+        if (jib_enter_requested_ && in_range) {
+            jib_station_occupied_ = true;
+        }
+        if (jib_exit_requested_ || (jib_station_occupied_ && !in_range)) {
+            jib_station_occupied_ = false;
+            jib_hoist_input_ = 0.0;
+            jib_slew_input_ = 0.0;
+        }
+
+        jib_stalled_ = false;
+        jib_at_hoist_limit_ = winch_length_ <= kJibWinchMinMeters + 1.0e-4 ||
+                              winch_length_ >= kJibWinchMaxMeters - 1.0e-4;
+        jib_at_slew_limit_ = slew_radians_ <= kJibSlewMinRadians + 1.0e-4 ||
+                             slew_radians_ >= kJibSlewMaxRadians - 1.0e-4;
+
+        const bool commands_live = jib_station_occupied_;
+        const double hoist = commands_live ? jib_hoist_input_ : 0.0;
+        const double slew_command = commands_live ? jib_slew_input_ : 0.0;
+        const double load_newtons = crate_mass_kg_ * kJibGravity;
+        const bool within_swl = crate_mass_kg_ <= kJibSwlKilograms + 1.0e-6;
+        const bool raise_requested = hoist > 0.05;
+        const bool lower_requested = hoist < -0.05;
+        const bool slew_requested = std::abs(slew_command) > 0.05;
+
+        if (commands_live && jib_brake_engaged_ && (raise_requested || lower_requested || slew_requested)) {
+            jib_stalled_ = true;
+        } else if (commands_live && !jib_brake_engaged_) {
+            if (raise_requested) {
+                if (!within_swl) {
+                    jib_stalled_ = true;
+                } else if (winch_length_ <= kJibWinchMinMeters + 1.0e-4) {
+                    jib_at_hoist_limit_ = true;
+                } else {
+                    winch_length_ = std::max(
+                        kJibWinchMinMeters,
+                        winch_length_ - kJibHoistSpeedMetersPerSecond * hoist *
+                                            static_cast<double>(delta_seconds));
+                    jib_at_hoist_limit_ = winch_length_ <= kJibWinchMinMeters + 1.0e-4;
+                    bodies.ActivateBody(jib_crate_id_);
+                }
+            } else if (lower_requested) {
+                if (winch_length_ >= kJibWinchMaxMeters - 1.0e-4) {
+                    jib_at_hoist_limit_ = true;
+                } else {
+                    winch_length_ = std::min(
+                        kJibWinchMaxMeters,
+                        winch_length_ - kJibHoistSpeedMetersPerSecond * hoist *
+                                            static_cast<double>(delta_seconds));
+                    jib_at_hoist_limit_ = winch_length_ >= kJibWinchMaxMeters - 1.0e-4;
+                    bodies.ActivateBody(jib_crate_id_);
+                }
+            }
+
+            if (slew_requested) {
+                const double next_slew =
+                    slew_radians_ + kJibSlewSpeedRadiansPerSecond * slew_command *
+                                        static_cast<double>(delta_seconds);
+                if (next_slew <= kJibSlewMinRadians || next_slew >= kJibSlewMaxRadians) {
+                    jib_at_slew_limit_ = true;
+                    slew_radians_ = clamp_double(next_slew, kJibSlewMinRadians, kJibSlewMaxRadians);
+                } else {
+                    slew_radians_ = next_slew;
+                    jib_at_slew_limit_ = false;
+                }
+                bodies.ActivateBody(jib_crate_id_);
+            }
+        }
+
+        const JPH::RVec3 boom_center = jib_boom_center(slew_radians_);
+        const JPH::Quat boom_rotation =
+            JPH::Quat::sRotation(JPH::Vec3(0.0F, 1.0F, 0.0F), static_cast<float>(slew_radians_));
+        bodies.MoveKinematic(jib_boom_id_, boom_center, boom_rotation, delta_seconds);
+        bodies.MoveKinematic(jib_hook_id_,
+                             jib_hook_position(slew_radians_, winch_length_),
+                             JPH::Quat::sIdentity(),
+                             delta_seconds);
+
+        if (hook_constraint_.GetPtr() != nullptr) {
+            hook_constraint_->SetDistance(0.0F, static_cast<float>(kJibSlingMaxMeters));
+        }
+
+        jib_load_newtons_ = load_newtons;
     }
 
     [[nodiscard]] TraversalMode traversal_candidate(const JPH::RVec3 &player_position) const noexcept {
@@ -1005,6 +1256,12 @@ private:
         checkpoint_hopper_release_ = hopper_release_started_;
         checkpoint_hopper_gate_x_ = hopper_gate_x_;
         checkpoint_tick_ = state_.tick_index;
+        checkpoint_slew_radians_ = slew_radians_;
+        checkpoint_winch_length_ = winch_length_;
+        checkpoint_jib_brake_ = jib_brake_engaged_;
+        checkpoint_jib_occupied_ = jib_station_occupied_;
+        checkpoint_crate_position_ = state_.jib_crate_position;
+        checkpoint_crate_velocity_ = state_.jib_crate_linear_velocity;
     }
 
     void maybe_restore_from_death(JPH::BodyInterface &bodies) noexcept {
@@ -1028,6 +1285,31 @@ private:
                       static_cast<float>(checkpoint_player_velocity_.z)));
         hopper_release_started_ = checkpoint_hopper_release_;
         hopper_gate_x_ = checkpoint_hopper_gate_x_;
+        slew_radians_ = checkpoint_slew_radians_;
+        winch_length_ = checkpoint_winch_length_;
+        jib_brake_engaged_ = checkpoint_jib_brake_;
+        jib_station_occupied_ = checkpoint_jib_occupied_;
+        bodies.SetPosition(
+            jib_crate_id_,
+            JPH::RVec3(checkpoint_crate_position_.x,
+                       checkpoint_crate_position_.y,
+                       checkpoint_crate_position_.z),
+            JPH::EActivation::Activate);
+        bodies.SetLinearVelocity(
+            jib_crate_id_,
+            JPH::Vec3(static_cast<float>(checkpoint_crate_velocity_.x),
+                      static_cast<float>(checkpoint_crate_velocity_.y),
+                      static_cast<float>(checkpoint_crate_velocity_.z)));
+        bodies.SetAngularVelocity(jib_crate_id_, JPH::Vec3::sZero());
+        bodies.MoveKinematic(
+            jib_boom_id_,
+            jib_boom_center(slew_radians_),
+            JPH::Quat::sRotation(JPH::Vec3(0.0F, 1.0F, 0.0F), static_cast<float>(slew_radians_)),
+            static_cast<float>(Simulation::kFixedStepSeconds));
+        bodies.MoveKinematic(jib_hook_id_,
+                             jib_hook_position(slew_radians_, winch_length_),
+                             JPH::Quat::sIdentity(),
+                             static_cast<float>(Simulation::kFixedStepSeconds));
         parachute_deployed_ = false;
         airborne_seconds_ = 0.0;
         fall_severity_ = 0;
@@ -1146,6 +1428,36 @@ private:
         state_.impact_rocker_struck =
             std::abs(rocker_angle) >= kImpactRockerAngleThreshold ||
             std::abs(rocker_angular_velocity.GetX()) >= kImpactRockerAngularSpeedThreshold;
+
+        const JPH::RVec3 hook_position = bodies.GetPosition(jib_hook_id_);
+        const JPH::RVec3 crate_position = bodies.GetPosition(jib_crate_id_);
+        const JPH::Vec3 crate_velocity = bodies.GetLinearVelocity(jib_crate_id_);
+        const JPH::RVec3 boom_tip = jib_boom_tip(slew_radians_);
+        const JPH::RVec3 crate_padeye =
+            crate_position + JPH::RVec3(0.0, static_cast<double>(kJibCrateHalfExtent), 0.0);
+        const double hook_crate_distance = distance_3d(
+            hook_position, crate_padeye.GetX(), crate_padeye.GetY(), crate_padeye.GetZ());
+
+        state_.jib_pendant_position = {kJibPendantX, kJibPendantY, kJibPendantZ};
+        state_.jib_mast_position = {kJibMastX, 0.0, kJibMastZ};
+        state_.jib_boom_tip_position = {boom_tip.GetX(), boom_tip.GetY(), boom_tip.GetZ()};
+        state_.jib_hook_position = {hook_position.GetX(), hook_position.GetY(), hook_position.GetZ()};
+        state_.jib_crate_position =
+            {crate_position.GetX(), crate_position.GetY(), crate_position.GetZ()};
+        state_.jib_crate_linear_velocity =
+            {crate_velocity.GetX(), crate_velocity.GetY(), crate_velocity.GetZ()};
+        state_.jib_slew_radians = slew_radians_;
+        state_.jib_winch_length_meters = winch_length_;
+        state_.jib_crate_mass_kg = crate_mass_kg_;
+        state_.jib_swl_kg = kJibSwlKilograms;
+        state_.jib_load_newtons = jib_load_newtons_;
+        state_.jib_station_available = jib_station_available_;
+        state_.jib_station_occupied = jib_station_occupied_;
+        state_.jib_brake_engaged = jib_brake_engaged_;
+        state_.jib_stalled = jib_stalled_;
+        state_.jib_at_hoist_limit = jib_at_hoist_limit_;
+        state_.jib_at_slew_limit = jib_at_slew_limit_;
+        state_.jib_hook_attached = hook_crate_distance <= kJibSlingMaxMeters + 0.08;
     }
 
     JoltRuntimeLease runtime_;
@@ -1173,6 +1485,11 @@ private:
     JPH::BodyID hopper_load_id_;
     JPH::BodyID impact_rocker_id_;
     JPH::BodyID player_id_;
+    JPH::BodyID jib_mast_id_;
+    JPH::BodyID jib_boom_id_;
+    JPH::BodyID jib_hook_id_;
+    JPH::BodyID jib_crate_id_;
+    JPH::Ref<JPH::DistanceConstraint> hook_constraint_;
 
     SupportSample support_sample_{};
     JPH::Vec3 airborne_inherited_velocity_{JPH::Vec3::sZero()};
@@ -1199,6 +1516,27 @@ private:
     Vector3 checkpoint_player_velocity_{};
     bool checkpoint_hopper_release_ = false;
     double checkpoint_hopper_gate_x_ = kHopperGateClosedX;
+    double checkpoint_slew_radians_ = 0.0;
+    double checkpoint_winch_length_ = kJibWinchInitialMeters;
+    bool checkpoint_jib_brake_ = true;
+    bool checkpoint_jib_occupied_ = false;
+    Vector3 checkpoint_crate_position_{};
+    Vector3 checkpoint_crate_velocity_{};
+
+    double crate_mass_kg_ = kJibRatedCrateKilograms;
+    double slew_radians_ = 0.0;
+    double winch_length_ = kJibWinchInitialMeters;
+    double jib_hoist_input_ = 0.0;
+    double jib_slew_input_ = 0.0;
+    double jib_load_newtons_ = 0.0;
+    bool jib_brake_engaged_ = true;
+    bool jib_station_occupied_ = false;
+    bool jib_station_available_ = false;
+    bool jib_stalled_ = false;
+    bool jib_at_hoist_limit_ = false;
+    bool jib_at_slew_limit_ = false;
+    bool jib_enter_requested_ = false;
+    bool jib_exit_requested_ = false;
 
     TraversalMode traversal_mode_ = TraversalMode::None;
     JPH::RVec3 traversal_target_{JPH::RVec3::sZero()};
@@ -1285,6 +1623,53 @@ bool Simulation::commit_checkpoint() noexcept {
     return physics_world_->commit_checkpoint_public();
 }
 
+bool Simulation::can_enter_jib_station() const noexcept {
+    return physics_world_->state().jib_station_available;
+}
+
+bool Simulation::request_enter_jib_station() noexcept {
+    if (jib_enter_requested_ || !physics_world_->state().jib_station_available) {
+        return false;
+    }
+    jib_enter_requested_ = true;
+    return true;
+}
+
+bool Simulation::request_exit_jib_station() noexcept {
+    if (jib_exit_requested_ || !physics_world_->state().jib_station_occupied) {
+        return false;
+    }
+    jib_exit_requested_ = true;
+    jib_hoist_input_ = 0.0;
+    jib_slew_input_ = 0.0;
+    return true;
+}
+
+bool Simulation::set_jib_hoist_input(const double hoist) noexcept {
+    if (!std::isfinite(hoist) || !physics_world_->state().jib_station_occupied) {
+        return false;
+    }
+    jib_hoist_input_ = clamp_double(hoist, -1.0, 1.0);
+    return true;
+}
+
+bool Simulation::set_jib_slew_input(const double slew) noexcept {
+    if (!std::isfinite(slew) || !physics_world_->state().jib_station_occupied) {
+        return false;
+    }
+    jib_slew_input_ = clamp_double(slew, -1.0, 1.0);
+    return true;
+}
+
+bool Simulation::set_jib_brake(const bool engaged) noexcept {
+    if (!physics_world_->state().jib_station_occupied) {
+        return false;
+    }
+    jib_brake_engaged_ = engaged;
+    jib_brake_command_valid_ = true;
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -1295,6 +1680,12 @@ void Simulation::step_fixed() noexcept {
                          drop_from_hang_requested_,
                          hopper_release_requested_,
                          parachute_requested_,
+                         jib_enter_requested_,
+                         jib_exit_requested_,
+                         jib_hoist_input_,
+                         jib_slew_input_,
+                         jib_brake_engaged_,
+                         jib_brake_command_valid_,
                          static_cast<float>(kFixedStepSeconds),
                          next_time_seconds);
     jump_requested_ = false;
@@ -1302,6 +1693,9 @@ void Simulation::step_fixed() noexcept {
     drop_from_hang_requested_ = false;
     hopper_release_requested_ = false;
     parachute_requested_ = false;
+    jib_enter_requested_ = false;
+    jib_exit_requested_ = false;
+    jib_brake_command_valid_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();
@@ -1309,6 +1703,10 @@ void Simulation::step_fixed() noexcept {
     snapshot_.simulation_time_seconds =
         static_cast<double>(tick_index_) * kFixedStepSeconds;
     snapshot_.fixed_step_seconds = kFixedStepSeconds;
+    if (!snapshot_.jib_station_occupied) {
+        jib_hoist_input_ = 0.0;
+        jib_slew_input_ = 0.0;
+    }
 }
 
 AdvanceResult Simulation::advance_frame(const double frame_delta_seconds) noexcept {

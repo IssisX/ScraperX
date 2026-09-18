@@ -20,6 +20,8 @@ enum class InitialSpawn : std::uint8_t {
     TraversalCourse = 5,
     HangCourse = 6,
     HighDeck = 7,
+    JibStation = 8,
+    JibOverweight = 9,
 };
 
 enum class TraversalMode : std::uint8_t {
@@ -75,6 +77,25 @@ struct Snapshot final {
     Vector3 impact_rocker_angular_velocity{};
     double impact_rocker_angle_radians = 0.0;
     bool impact_rocker_struck = false;
+
+    Vector3 jib_pendant_position{};
+    Vector3 jib_mast_position{};
+    Vector3 jib_boom_tip_position{};
+    Vector3 jib_hook_position{};
+    Vector3 jib_crate_position{};
+    Vector3 jib_crate_linear_velocity{};
+    double jib_slew_radians = 0.0;
+    double jib_winch_length_meters = 0.0;
+    double jib_crate_mass_kg = 0.0;
+    double jib_swl_kg = 0.0;
+    double jib_load_newtons = 0.0;
+    bool jib_station_available = false;
+    bool jib_station_occupied = false;
+    bool jib_brake_engaged = false;
+    bool jib_stalled = false;
+    bool jib_at_hoist_limit = false;
+    bool jib_at_slew_limit = false;
+    bool jib_hook_attached = false;
 };
 
 struct AdvanceResult final {
@@ -104,6 +125,10 @@ public:
     static constexpr std::uint64_t kMantleBlockEntityId = 14;
     static constexpr std::uint64_t kHangLedgeEntityId = 15;
     static constexpr std::uint64_t kHighPlatformEntityId = 16;
+    static constexpr std::uint64_t kJibMastEntityId = 17;
+    static constexpr std::uint64_t kJibBoomEntityId = 18;
+    static constexpr std::uint64_t kJibHookEntityId = 19;
+    static constexpr std::uint64_t kJibCrateEntityId = 20;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ApproachGrade);
     ~Simulation();
@@ -122,6 +147,12 @@ public:
     [[nodiscard]] bool request_hopper_release() noexcept;
     [[nodiscard]] bool request_parachute() noexcept;
     [[nodiscard]] bool commit_checkpoint() noexcept;
+    [[nodiscard]] bool can_enter_jib_station() const noexcept;
+    [[nodiscard]] bool request_enter_jib_station() noexcept;
+    [[nodiscard]] bool request_exit_jib_station() noexcept;
+    [[nodiscard]] bool set_jib_hoist_input(double hoist) noexcept;
+    [[nodiscard]] bool set_jib_slew_input(double slew) noexcept;
+    [[nodiscard]] bool set_jib_brake(bool engaged) noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -140,6 +171,12 @@ private:
     bool drop_from_hang_requested_ = false;
     bool hopper_release_requested_ = false;
     bool parachute_requested_ = false;
+    bool jib_enter_requested_ = false;
+    bool jib_exit_requested_ = false;
+    double jib_hoist_input_ = 0.0;
+    double jib_slew_input_ = 0.0;
+    bool jib_brake_engaged_ = true;
+    bool jib_brake_command_valid_ = false;
     Snapshot snapshot_{};
 };
 

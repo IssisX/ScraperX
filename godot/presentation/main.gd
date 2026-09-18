@@ -27,7 +27,17 @@ var _rotating_support_mesh: MeshInstance3D
 var _hopper_gate_mesh: MeshInstance3D
 var _hopper_load_mesh: MeshInstance3D
 var _impact_rocker_mesh: MeshInstance3D
+var _jib_boom_mesh: MeshInstance3D
+var _jib_hook_mesh: MeshInstance3D
+var _jib_crate_mesh: MeshInstance3D
+var _jib_cable_mesh: MeshInstance3D
 var _cloud_wisps: Array[MeshInstance3D] = []
+
+var _pendant: Control
+var _raise_held := false
+var _lower_held := false
+var _slew_left_held := false
+var _slew_right_held := false
 
 var _fold_layout_observed := false
 var _ci_initial_player_position := Vector3.ZERO
@@ -64,6 +74,7 @@ func _ready() -> void:
 
 	RenderingServer.set_default_clear_color(Color("202326"))
 	_build_exterior_world()
+	_build_pendant_hud()
 	_action_button.pressed.connect(_request_context_action)
 	_jump_button.pressed.connect(_request_jump)
 	get_viewport().size_changed.connect(_apply_viewport_composition)
@@ -79,7 +90,7 @@ func _ready() -> void:
 		return
 
 	_ci_initial_player_position = _native.get_player_position()
-	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=CP-004-TRAVERSAL-IMPACT")
+	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=WO-005-FIRST-FREIGHT")
 	_render_snapshot()
 
 func _process(delta: float) -> void:
@@ -98,6 +109,8 @@ func _process(delta: float) -> void:
 	if not _native.set_move_input(world_move.x, world_move.y):
 		_fail_native("SCRAPERX_MOVE_INPUT_REJECTED", 21)
 		return
+
+	_apply_jib_pendant_commands()
 
 	var steps_advanced := int(_native.advance_frame(delta))
 	if steps_advanced < 0:
@@ -166,6 +179,17 @@ func _input(event: InputEvent) -> void:
 			_request_context_action()
 		elif key.keycode == KEY_Q and key.pressed and not key.echo and _native != null:
 			_native.request_drop_from_hang()
+		elif key.keycode == KEY_R:
+			_raise_held = key.pressed
+		elif key.keycode == KEY_F:
+			_lower_held = key.pressed
+		elif key.keycode == KEY_Z:
+			_slew_left_held = key.pressed
+		elif key.keycode == KEY_C:
+			_slew_right_held = key.pressed
+		elif key.keycode == KEY_B and key.pressed and not key.echo and _native != null:
+			if bool(_native.is_jib_station_occupied()):
+				_native.set_jib_brake(not bool(_native.is_jib_brake_engaged()))
 
 func _read_desired_movement() -> Vector2:
 	var keyboard := Vector2(
@@ -284,6 +308,16 @@ func _request_context_action() -> void:
 	if bool(_native.can_traverse()):
 		_native.request_traversal()
 		return
+	if bool(_native.is_jib_station_occupied()):
+		_native.request_exit_jib_station()
+		_raise_held = false
+		_lower_held = false
+		_slew_left_held = false
+		_slew_right_held = false
+		return
+	if bool(_native.can_enter_jib_station()):
+		_native.request_enter_jib_station()
+		return
 	if bool(_native.can_operate_hopper()):
 		_native.request_hopper_release()
 		return
@@ -317,6 +351,13 @@ func _render_snapshot() -> void:
 	var load_velocity: Vector3 = _native.get_hopper_load_linear_velocity()
 	var rocker_struck := bool(_native.has_impact_rocker_been_struck())
 	var rocker_omega: Vector3 = _native.get_impact_rocker_angular_velocity()
+	var jib_occupied := bool(_native.is_jib_station_occupied())
+	var jib_enter := bool(_native.can_enter_jib_station())
+	var jib_brake := bool(_native.is_jib_brake_engaged())
+	var jib_stall := bool(_native.is_jib_stalled())
+	var jib_limit := bool(_native.is_jib_at_hoist_limit())
+	var winch := float(_native.get_jib_winch_length_meters())
+	var crate_mass := float(_native.get_jib_crate_mass_kg())
 
 	_camera.position = position + EYE_OFFSET
 	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
@@ -327,13 +368,14 @@ func _render_snapshot() -> void:
 		support,
 		_traversal_name(traversal_mode),
 	]
-	_machine_value.text = "CHAIN  HOPPER %s  /  ROCKER %s  ωX %5.2f" % [
-		"MOVED" if hopper_moved else ("OPEN" if hopper_open else ("CYCLING" if hopper_started else "READY")),
-		"STRUCK" if rocker_struck else "IDLE",
-		rocker_omega.x,
+	_machine_value.text = "JIB  %s  WINCH %4.2f  CRATE %4.0fkg  %s" % [
+		"STALL" if jib_stall else ("LIMIT" if jib_limit else ("HOLD" if jib_brake else ("CAB" if jib_occupied else "COLD"))),
+		winch,
+		crate_mass,
+		"HOOK" if bool(_native.is_jib_hook_attached()) else "OPEN",
 	]
 	_tick_value.text = "90 HZ NATIVE  /  %08d" % int(_native.get_tick_index())
-	_boundary_value.text = "EXTERIOR MACHINE / PHYSICAL TRAVERSAL"
+	_boundary_value.text = "KX-JIB 5t SWL / LOCAL PENDANT"
 
 	var context_visible := false
 	if traversal_mode == TRAVERSAL_HANG:
@@ -341,6 +383,12 @@ func _render_snapshot() -> void:
 		context_visible = true
 	elif traversal_available:
 		_action_button.text = _traversal_name(traversal_candidate)
+		context_visible = true
+	elif jib_occupied:
+		_action_button.text = "EXIT JIB"
+		context_visible = true
+	elif jib_enter:
+		_action_button.text = "ENTER JIB"
 		context_visible = true
 	elif hopper_available and not hopper_started:
 		_action_button.text = "RELEASE HOPPER"
@@ -356,6 +404,15 @@ func _render_snapshot() -> void:
 		_status.text = "LEDGE HELD / JUMP TO CLIMB / ACTION TO DROP"
 	elif traversal_available:
 		_status.text = "%s AVAILABLE / REAL GEOMETRY IN REACH" % _traversal_name(traversal_candidate)
+	elif jib_occupied:
+		if jib_stall:
+			_status.text = "PENDANT LIVE / ACTUATOR STALLED / BRAKE OR SWL"
+		elif jib_brake:
+			_status.text = "PENDANT LIVE / BRAKE HOLDING / RELEASE TO WORK"
+		else:
+			_status.text = "PENDANT LIVE / RAISE LOWER SLEW / BOUNDED WORK"
+	elif jib_enter:
+		_status.text = "KX-JIB PENDANT IN RANGE / ACTION ENTERS STATION"
 	elif hopper_available:
 		_status.text = "LOADING BAY CONTROL IN RANGE"
 	elif rocker_struck:
@@ -384,6 +441,9 @@ func _render_snapshot() -> void:
 	if _impact_rocker_mesh != null:
 		_impact_rocker_mesh.position = _native.get_impact_rocker_position()
 		_impact_rocker_mesh.rotation = Vector3(float(_native.get_impact_rocker_angle_radians()), 0.0, 0.0)
+	_sync_jib_meshes()
+	if _pendant != null:
+		_pendant.visible = jib_occupied
 
 func _build_exterior_world() -> void:
 	var wet_asphalt := _material(Color("202223"), 0.02, 0.34)
@@ -454,6 +514,18 @@ func _build_exterior_world() -> void:
 	_translating_support_mesh = _add_box("NativeTransferDeck", Vector3(5.5, 0.5, 5.5), Vector3(0.0, 0.25, 8.0), faded_yellow)
 	_rotating_support_mesh = _add_box("NativeRotaryTable", Vector3(6.0, 0.5, 6.0), Vector3(-8.0, 0.25, 0.0), mill_scale)
 
+	var jib_mast := Vector3(-12.0, 0.0, 48.0)
+	_add_box("KxJibMast", Vector3(0.76, 9.1, 0.76), jib_mast + Vector3(0.0, 4.55, 0.0), oxidized_steel)
+	_add_box("KxJibBase", Vector3(2.2, 0.35, 2.2), jib_mast + Vector3(0.0, 0.18, 0.0), mill_scale)
+	_jib_boom_mesh = _add_box("KxJibBoom", Vector3(8.0, 0.36, 0.36), Vector3(-8.0, 9.0, 48.0), mill_scale)
+	_jib_hook_mesh = _add_sphere("KxJibHook", 0.16, Vector3(-4.0, 0.85, 48.0), faded_yellow)
+	_jib_crate_mesh = _add_box("KxCrate", Vector3(1.0, 1.0, 1.0), Vector3(-4.0, 0.5, 48.0), chipped_orange)
+	_add_box("KxCrateMark", Vector3(1.02, 0.08, 1.02), Vector3(-4.0, 0.96, 48.0), faded_yellow)
+	_jib_cable_mesh = _add_cylinder("KxJibCable", 0.035, 1.0, Vector3(-4.0, 5.0, 48.0), galvanized)
+	var pendant := Vector3(-7.0, 0.0, 49.0)
+	_add_box("KxPendantPedestal", Vector3(0.7, 1.35, 0.55), pendant + Vector3(0.0, 0.68, 0.0), mill_scale)
+	_add_box("KxPendantFace", Vector3(0.52, 0.38, 0.08), pendant + Vector3(0.0, 1.18, -0.30), chipped_orange)
+
 	# Machine-tower identity: large readable idle infrastructure, not fake animated authority.
 	_add_machine_wheel(Vector3(-17.0, 43.0, 14.0), 6.5, 1.4, mill_scale, oxidized_steel)
 	_add_machine_wheel(Vector3(-18.0, 22.0, 14.0), 4.8, 1.2, oxidized_steel, mill_scale)
@@ -491,6 +563,97 @@ func _build_exterior_world() -> void:
 	for index in range(11):
 		var plume_position := Vector3(23.0 + sin(float(index) * 0.72) * 3.0, 216.0 + float(index) * 18.0, 4.0 + cos(float(index) * 0.55) * 2.5)
 		_cloud_wisps.append(_add_cloud_wisp(plume_position, Vector3(5.0 + index * 0.7, 7.0, 5.0 + index * 0.5), plume))
+
+func _apply_jib_pendant_commands() -> void:
+	if _native == null or not bool(_native.is_jib_station_occupied()):
+		return
+	var hoist := 0.0
+	if _raise_held:
+		hoist += 1.0
+	if _lower_held:
+		hoist -= 1.0
+	var slew := 0.0
+	if _slew_left_held:
+		slew -= 1.0
+	if _slew_right_held:
+		slew += 1.0
+	_native.set_jib_hoist_input(hoist)
+	_native.set_jib_slew_input(slew)
+
+func _hold_button(name: String, label: String, on_down: Callable, on_up: Callable) -> Button:
+	var button := Button.new()
+	button.name = name
+	button.text = label
+	button.custom_minimum_size = Vector2(118, 56)
+	button.button_down.connect(on_down)
+	button.button_up.connect(on_up)
+	return button
+
+func _build_pendant_hud() -> void:
+	_pendant = Control.new()
+	_pendant.name = "JibPendant"
+	_pendant.visible = false
+	_pendant.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_pendant.offset_left = 250.0
+	_pendant.offset_right = -300.0
+	_pendant.offset_top = -228.0
+	_pendant.offset_bottom = -16.0
+	$HUD.add_child(_pendant)
+
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	_pendant.add_child(grid)
+
+	grid.add_child(_hold_button("Raise", "RAISE", func() -> void: _raise_held = true, func() -> void: _raise_held = false))
+	grid.add_child(_hold_button("Lower", "LOWER", func() -> void: _lower_held = true, func() -> void: _lower_held = false))
+	var brake := Button.new()
+	brake.text = "BRAKE"
+	brake.custom_minimum_size = Vector2(118, 56)
+	brake.pressed.connect(func() -> void:
+		if _native != null and bool(_native.is_jib_station_occupied()):
+			_native.set_jib_brake(not bool(_native.is_jib_brake_engaged()))
+	)
+	grid.add_child(brake)
+	grid.add_child(_hold_button("SlewL", "SLEW L", func() -> void: _slew_left_held = true, func() -> void: _slew_left_held = false))
+	grid.add_child(_hold_button("SlewR", "SLEW R", func() -> void: _slew_right_held = true, func() -> void: _slew_right_held = false))
+	var exit_btn := Button.new()
+	exit_btn.text = "EXIT"
+	exit_btn.custom_minimum_size = Vector2(118, 56)
+	exit_btn.pressed.connect(func() -> void:
+		if _native != null:
+			_native.request_exit_jib_station()
+			_raise_held = false
+			_lower_held = false
+			_slew_left_held = false
+			_slew_right_held = false
+	)
+	grid.add_child(exit_btn)
+
+func _sync_jib_meshes() -> void:
+	if _native == null:
+		return
+	var tip: Vector3 = _native.get_jib_boom_tip_position()
+	var hook: Vector3 = _native.get_jib_hook_position()
+	var crate: Vector3 = _native.get_jib_crate_position()
+	var mast := Vector3(-12.0, 9.0, 48.0)
+	var slew := float(_native.get_jib_slew_radians())
+	if _jib_boom_mesh != null:
+		_jib_boom_mesh.position = (mast + tip) * 0.5
+		_jib_boom_mesh.rotation = Vector3(0.0, slew, 0.0)
+	if _jib_hook_mesh != null:
+		_jib_hook_mesh.position = hook
+	if _jib_crate_mesh != null:
+		_jib_crate_mesh.position = crate
+	if _jib_cable_mesh != null:
+		var mid := (tip + hook) * 0.5
+		var length := tip.distance_to(hook)
+		_jib_cable_mesh.position = mid
+		_jib_cable_mesh.scale = Vector3(1.0, maxf(length, 0.05), 1.0)
+		if length > 0.001:
+			_jib_cable_mesh.look_at(tip, Vector3.RIGHT)
+			_jib_cable_mesh.rotate_object_local(Vector3.RIGHT, PI * 0.5)
 
 func _material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()

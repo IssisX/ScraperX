@@ -423,7 +423,145 @@ int main() {
                 std::abs(after_lethal.player_position.z - committed_pose.z) < 2.5,
             "restored pose must return near the committed platform, not a mid-air teleport");
 
-    std::cout << "PASS scraperx_sim CP-004 traversal-impact checkpoint: "
+    Simulation remote_jib;
+    require(remote_jib.advance_frame(1.0).accepted, "approach settle for remote jib must advance");
+    require(!remote_jib.can_enter_jib_station(),
+            "KX-JIB pendant must reject station entry from the distant approach grade");
+    require(!remote_jib.request_enter_jib_station(),
+            "remote Action must not become a hoist solve button");
+    require(!remote_jib.set_jib_hoist_input(1.0),
+            "raise must be rejected when the player is not at the pendant");
+    require(!remote_jib.set_jib_brake(false),
+            "brake release must be rejected away from the station");
+
+    Simulation jib(InitialSpawn::JibStation);
+    require(jib.advance_frame(1.0).accepted, "jib-station settling interval must be accepted");
+    const auto jib_idle = jib.snapshot();
+    require(jib_idle.player_grounded, "pendant spawn must settle on grade");
+    require(jib.can_enter_jib_station(),
+            "player at CAP-PENDANT must be eligible to enter the local station");
+    require(jib_idle.jib_brake_engaged, "cold KX-JIB must start with the brake holding");
+    require(jib_idle.jib_crate_mass_kg < jib_idle.jib_swl_kg,
+            "rated crate must be inside the 5 t SWL design target");
+    require(jib_idle.jib_hook_attached,
+            "CAP-HOOK5 pre-placement must be a live hook/crate constraint");
+    const auto crate_rest = jib_idle.jib_crate_position;
+    require(jib.request_enter_jib_station(), "Action at the pendant must enter the station");
+    require(jib.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "station-enter tick must advance");
+    require(jib.snapshot().jib_station_occupied, "native station occupancy must persist");
+    require(!jib.can_enter_jib_station(),
+            "occupied station must stop advertising enter as a solve");
+
+    require(jib.set_jib_hoist_input(1.0), "raise command at an occupied station must be accepted");
+    require(jib.advance_frame(2.0).accepted, "braked raise interval must advance");
+    const auto braked = jib.snapshot();
+    require(braked.jib_brake_engaged, "brake must remain engaged until explicitly released");
+    require(braked.jib_stalled, "locked brake must refuse free hoist work");
+    require(std::abs(braked.jib_crate_position.y - crate_rest.y) < 0.20,
+            "locked brake must not lift the crate");
+
+    require(jib.set_jib_brake(false), "pendant must accept a brake release");
+    require(jib.set_jib_hoist_input(1.0), "raise after brake release must be accepted");
+    require(jib.advance_frame(2.6).accepted, "in-SWL hoist interval must advance");
+    const auto lifted = jib.snapshot();
+    require(lifted.jib_crate_position.y > crate_rest.y + 1.40,
+            "KX-JIB must lift KX-CRATE by bounded winch work, not a teleport");
+    require(lifted.jib_hook_attached, "raised crate must remain on the real hook constraint");
+    require(lifted.jib_winch_length_meters < jib_idle.jib_winch_length_meters - 1.20,
+            "winch length must shorten as the actuator pays in");
+    const auto lifted_crate_y = lifted.jib_crate_position.y;
+
+    require(jib.set_jib_brake(true), "pendant must accept a holding brake");
+    require(jib.set_jib_hoist_input(1.0), "raise against a holding brake must still be accepted as a command");
+    require(jib.advance_frame(1.2).accepted, "holding-brake interval must advance");
+    const auto holding = jib.snapshot();
+    require(holding.jib_stalled, "holding brake must report stall rather than free work");
+    require(std::abs(holding.jib_crate_position.y - lifted_crate_y) < 0.25,
+            "brake must hold the suspended crate instead of continuing the hoist");
+
+    require(jib.set_jib_brake(false), "second brake release must be accepted");
+    require(jib.set_jib_hoist_input(1.0), "raise to travel limit must be accepted");
+    require(jib.advance_frame(6.0).accepted, "travel-limit hoist interval must advance");
+    const auto at_limit = jib.snapshot();
+    require(at_limit.jib_at_hoist_limit, "winch must stop at the authored travel limit");
+    require(at_limit.jib_winch_length_meters <= 2.45,
+            "travel-limit stop must be the minimum winch length, not a solved pose");
+    const auto limit_y = at_limit.jib_crate_position.y;
+    require(jib.advance_frame(1.0).accepted, "post-limit raise interval must advance");
+    require(std::abs(jib.snapshot().jib_crate_position.y - limit_y) < 0.35,
+            "commanding raise at the travel stop must not produce extra free lift");
+
+    require(jib.set_jib_hoist_input(-1.0), "lower command must be accepted at the station");
+    require(jib.advance_frame(1.6).accepted, "lower interval must advance");
+    require(jib.snapshot().jib_crate_position.y < limit_y - 0.60,
+            "paying out the winch must lower the constrained crate");
+
+    require(jib.set_jib_hoist_input(0.0), "neutral hoist must be accepted");
+    require(jib.set_jib_slew_input(1.0), "slew command must be accepted at the station");
+    const auto pre_slew = jib.snapshot().jib_slew_radians;
+    require(jib.advance_frame(1.4).accepted, "slew interval must advance");
+    require(jib.snapshot().jib_slew_radians > pre_slew + 0.20,
+            "slew must rotate the boom through finite actuator travel");
+
+    require(jib.commit_checkpoint(), "freight checkpoint must accept a grounded commit");
+    const auto committed_crate = jib.snapshot().jib_crate_position;
+    const auto committed_winch = jib.snapshot().jib_winch_length_meters;
+
+    Simulation ride(InitialSpawn::JibStation);
+    require(ride.advance_frame(1.0).accepted, "ride fixture settle must advance");
+    require(ride.request_enter_jib_station(), "ride fixture must enter the pendant");
+    require(ride.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "ride fixture enter tick must advance");
+    require(ride.set_move_input(1.0, -0.2), "move from pendant onto the crate must be accepted");
+    bool boarded = false;
+    for (int step = 0; step < 220; ++step) {
+        require(ride.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "crate boarding step must advance");
+        const auto now = ride.snapshot();
+        if (now.support_entity_id == Simulation::kJibCrateEntityId && now.player_grounded) {
+            boarded = true;
+            break;
+        }
+    }
+    require(boarded, "player must be able to stand on KX-CRATE as real support");
+    require(ride.snapshot().jib_station_occupied,
+            "boarding the nearby crate must keep the player inside the pendant radius");
+    require(ride.set_move_input(0.0, 0.0), "zero relative input on the crate must be accepted");
+    require(ride.set_jib_brake(false), "occupied station must accept brake release while on the crate");
+    require(ride.set_jib_hoist_input(1.0), "occupied station must accept raise while on the crate");
+    const auto boarded_y = ride.snapshot().player_position.y;
+    require(ride.advance_frame(2.2).accepted, "ridden hoist interval must advance");
+    const auto ridden = ride.snapshot();
+    require(ridden.support_entity_id == Simulation::kJibCrateEntityId,
+            "player must remain supported by the moving crate");
+    require(ridden.player_position.y > boarded_y + 0.70,
+            "valid crate support must carry the player with the hoisted load");
+    require(std::abs(ridden.player_linear_velocity.y - ridden.support_point_linear_velocity.y) < 1.6,
+            "ridden crate must impart support-point velocity (WO-002 law)");
+
+    Simulation overweight(InitialSpawn::JibOverweight);
+    require(overweight.advance_frame(1.0).accepted, "overweight fixture settle must advance");
+    const auto heavy_rest = overweight.snapshot().jib_crate_position;
+    require(overweight.snapshot().jib_crate_mass_kg > overweight.snapshot().jib_swl_kg,
+            "overweight fixture must exceed the 5 t SWL design target");
+    require(overweight.request_enter_jib_station(), "overweight pendant entry must be accepted");
+    require(overweight.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "overweight enter tick must advance");
+    require(overweight.set_jib_brake(false), "overweight brake release must be accepted");
+    require(overweight.set_jib_hoist_input(1.0), "overweight raise command must be accepted");
+    require(overweight.advance_frame(3.0).accepted, "overweight stall interval must advance");
+    const auto stalled_heavy = overweight.snapshot();
+    require(stalled_heavy.jib_stalled, "raise against overweight must stall the actuator");
+    require(std::abs(stalled_heavy.jib_crate_position.y - heavy_rest.y) < 0.25,
+            "overweight crate must not receive free unlimited-force lift");
+    require(std::abs(stalled_heavy.jib_winch_length_meters - jib_idle.jib_winch_length_meters) < 0.20,
+            "stalled winch must not shorten past the load's SWL");
+
+    (void)committed_crate;
+    (void)committed_winch;
+
+    std::cout << "PASS scraperx_sim WO-005 first freight: "
               << "approach_z=" << approach_spawn.player_position.z
               << " translating_vx=" << translating_support_velocity.x
               << " jump_vx=" << translating_jump.player_linear_velocity.x
@@ -432,6 +570,9 @@ int main() {
               << " vault_z=" << vaulted.player_position.z
               << " mantle_support=" << mantled.support_entity_id
               << " hang_support=" << climbed.support_entity_id
+              << " crate_lift_y=" << lifted.jib_crate_position.y
+              << " winch=" << lifted.jib_winch_length_meters
+              << " stall=" << stalled_heavy.jib_stalled
               << " hz=" << Simulation::kTickRateHz << '\n';
     return EXIT_SUCCESS;
 }

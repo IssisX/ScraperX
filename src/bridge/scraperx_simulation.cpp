@@ -25,6 +25,12 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_hopper_release"), &ScraperXSimulation::request_hopper_release);
     godot::ClassDB::bind_method(godot::D_METHOD("request_parachute"), &ScraperXSimulation::request_parachute);
     godot::ClassDB::bind_method(godot::D_METHOD("commit_checkpoint"), &ScraperXSimulation::commit_checkpoint);
+    godot::ClassDB::bind_method(godot::D_METHOD("can_enter_jib_station"), &ScraperXSimulation::can_enter_jib_station);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_enter_jib_station"), &ScraperXSimulation::request_enter_jib_station);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_exit_jib_station"), &ScraperXSimulation::request_exit_jib_station);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_jib_hoist_input", "hoist"), &ScraperXSimulation::set_jib_hoist_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_jib_slew_input", "slew"), &ScraperXSimulation::set_jib_slew_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_jib_brake", "engaged"), &ScraperXSimulation::set_jib_brake);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"), &ScraperXSimulation::advance_frame);
 
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"), &ScraperXSimulation::get_tick_index);
@@ -66,6 +72,21 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_fall_severity"), &ScraperXSimulation::get_fall_severity);
     godot::ClassDB::bind_method(godot::D_METHOD("get_fear_event_id"), &ScraperXSimulation::get_fear_event_id);
     godot::ClassDB::bind_method(godot::D_METHOD("is_checkpoint_committed"), &ScraperXSimulation::is_checkpoint_committed);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_pendant_position"), &ScraperXSimulation::get_jib_pendant_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_mast_position"), &ScraperXSimulation::get_jib_mast_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_boom_tip_position"), &ScraperXSimulation::get_jib_boom_tip_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_hook_position"), &ScraperXSimulation::get_jib_hook_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_crate_position"), &ScraperXSimulation::get_jib_crate_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_crate_linear_velocity"), &ScraperXSimulation::get_jib_crate_linear_velocity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_slew_radians"), &ScraperXSimulation::get_jib_slew_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_winch_length_meters"), &ScraperXSimulation::get_jib_winch_length_meters);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_crate_mass_kg"), &ScraperXSimulation::get_jib_crate_mass_kg);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_swl_kg"), &ScraperXSimulation::get_jib_swl_kg);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_jib_station_occupied"), &ScraperXSimulation::is_jib_station_occupied);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_jib_brake_engaged"), &ScraperXSimulation::is_jib_brake_engaged);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_jib_stalled"), &ScraperXSimulation::is_jib_stalled);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_jib_at_hoist_limit"), &ScraperXSimulation::is_jib_at_hoist_limit);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_jib_hook_attached"), &ScraperXSimulation::is_jib_hook_attached);
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {
@@ -121,6 +142,35 @@ bool ScraperXSimulation::request_parachute() {
 
 bool ScraperXSimulation::commit_checkpoint() {
     return simulation_.commit_checkpoint();
+}
+
+bool ScraperXSimulation::can_enter_jib_station() const {
+    return simulation_.can_enter_jib_station();
+}
+
+bool ScraperXSimulation::request_enter_jib_station() {
+    const bool accepted = simulation_.request_enter_jib_station();
+    if (!accepted) {
+        godot::UtilityFunctions::push_warning(
+            "ScraperX native authority rejected jib station entry: player is out of range or already at the pendant.");
+    }
+    return accepted;
+}
+
+bool ScraperXSimulation::request_exit_jib_station() {
+    return simulation_.request_exit_jib_station();
+}
+
+bool ScraperXSimulation::set_jib_hoist_input(const double hoist) {
+    return simulation_.set_jib_hoist_input(hoist);
+}
+
+bool ScraperXSimulation::set_jib_slew_input(const double slew) {
+    return simulation_.set_jib_slew_input(slew);
+}
+
+bool ScraperXSimulation::set_jib_brake(const bool engaged) {
+    return simulation_.set_jib_brake(engaged);
 }
 
 std::int64_t ScraperXSimulation::advance_frame(const double frame_delta_seconds) {
@@ -266,6 +316,66 @@ std::int64_t ScraperXSimulation::get_fear_event_id() const {
 
 bool ScraperXSimulation::is_checkpoint_committed() const {
     return simulation_.snapshot().checkpoint_committed;
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_pendant_position() const {
+    return to_godot(simulation_.snapshot().jib_pendant_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_mast_position() const {
+    return to_godot(simulation_.snapshot().jib_mast_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_boom_tip_position() const {
+    return to_godot(simulation_.snapshot().jib_boom_tip_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_hook_position() const {
+    return to_godot(simulation_.snapshot().jib_hook_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_crate_position() const {
+    return to_godot(simulation_.snapshot().jib_crate_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_jib_crate_linear_velocity() const {
+    return to_godot(simulation_.snapshot().jib_crate_linear_velocity);
+}
+
+double ScraperXSimulation::get_jib_slew_radians() const {
+    return simulation_.snapshot().jib_slew_radians;
+}
+
+double ScraperXSimulation::get_jib_winch_length_meters() const {
+    return simulation_.snapshot().jib_winch_length_meters;
+}
+
+double ScraperXSimulation::get_jib_crate_mass_kg() const {
+    return simulation_.snapshot().jib_crate_mass_kg;
+}
+
+double ScraperXSimulation::get_jib_swl_kg() const {
+    return simulation_.snapshot().jib_swl_kg;
+}
+
+bool ScraperXSimulation::is_jib_station_occupied() const {
+    return simulation_.snapshot().jib_station_occupied;
+}
+
+bool ScraperXSimulation::is_jib_brake_engaged() const {
+    return simulation_.snapshot().jib_brake_engaged;
+}
+
+bool ScraperXSimulation::is_jib_stalled() const {
+    return simulation_.snapshot().jib_stalled;
+}
+
+bool ScraperXSimulation::is_jib_at_hoist_limit() const {
+    return simulation_.snapshot().jib_at_hoist_limit;
+}
+
+bool ScraperXSimulation::is_jib_hook_attached() const {
+    return simulation_.snapshot().jib_hook_attached;
 }
 
 } // namespace scraperx::bridge
