@@ -320,6 +320,25 @@ constexpr float kNeedleStationX = kNeedlePierApproachX;
 constexpr float kNeedleStationZ = kNeedleGapCenterZ;
 constexpr float kNeedleStationRadius = 2.5F;
 
+// --- The stack: the tower's climbable lower section -------------------------
+// The machine IS the building. This is a real open steel frame the player
+// walks inside and outside of -- perimeter deck rings around a central shaft,
+// so you can always see up and down through the structure -- not the solid
+// slab that stood here before, which had no interior at all and could only
+// ever be looked at from the yard.
+constexpr float kStackCenterX = 0.0F;
+constexpr float kStackCenterZ = -150.0F;
+constexpr float kStackHalfExtent = 18.0F;      // 36 m square footprint.
+constexpr float kStackLevelHeight = 11.0F;     // generous industrial floor-to-floor.
+constexpr int kStackLevelCount = 14;           // decks at 11..154 m; level 0 is grade.
+constexpr float kStackDeckHalfThickness = 0.25F;
+constexpr float kStackDeckBandDepth = 7.0F;    // walkable perimeter band; leaves a 22 m shaft.
+constexpr float kStackColumnHalf = 0.8F;
+constexpr float kStackRampHalfWidth = 1.6F;
+// Where the tower's unclimbable mass resumes above the playable slice.
+constexpr float kTowerMassBaseY =
+    static_cast<float>(kStackLevelCount) * kStackLevelHeight + 5.0F;
+
 // --- WO-013 Ascent Atlas v1.0 kernel: KX-SUMP / KX-GRATE -------------------
 // Atlas section 9: "wet sump makes KX-GRATE a hazard... isolated + drained
 // grate is ordinary walkable support." A lumped process graph (WO-007's own
@@ -743,10 +762,11 @@ public:
     explicit PhysicsWorld(const InitialSpawn initial_spawn)
         : temp_allocator_(8U * 1024U * 1024U),
           job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1) {
-        physics_system_.Init(256,
+        // Raised from 256: the climbable stack adds ~90 static frame bodies.
+        physics_system_.Init(1024,
                              0,
-                             512,
-                             256,
+                             2048,
+                             1024,
                              broadphase_layer_interface_,
                              object_vs_broadphase_filter_,
                              object_layer_pair_filter_);
@@ -764,12 +784,14 @@ public:
                            0.6F,
                            Simulation::kStaticDeckEntityId);
 
-        // The tower itself: one mass, 1.6 km, 120 m across its approach face.
+        // The tower's upper mass: still 1.6 km of it, but it now begins above
+        // the playable slice instead of at grade. Everything below this line
+        // is the real, climbable frame built by build_stack().
+        const float mass_half_height =
+            static_cast<float>(Simulation::kTowerHeightMeters * 0.5) - kTowerMassBaseY * 0.5F;
         tower_id_ = add_box(bodies,
-                            JPH::Vec3(60.0F,
-                                      static_cast<float>(Simulation::kTowerHeightMeters * 0.5),
-                                      45.0F),
-                            JPH::RVec3(0.0, Simulation::kTowerHeightMeters * 0.5, -190.0),
+                            JPH::Vec3(60.0F, mass_half_height, 45.0F),
+                            JPH::RVec3(0.0, kTowerMassBaseY + mass_half_height, -190.0),
                             JPH::EMotionType::Static,
                             object_layers::kStatic,
                             0.8F,
@@ -839,6 +861,7 @@ public:
                                            0.7F,
                                            Simulation::kBlockedLedgeCanopyEntityId);
 
+        build_stack(bodies);
         build_machine(bodies);
         build_kernel_jib(bodies);
         build_kernel_needle(bodies);
@@ -1518,6 +1541,81 @@ private:
         const float travel_down = kNeedleStowedY - kNeedleSeatedY;
         add_motorized_slider(needle_head, needle_beam_id_, -travel_down, 0.0F, kNeedleMaxLiftForceN,
                              &needle_hoist_slider_);
+    }
+
+    // The stack: the tower's climbable lower section, as real static
+    // collision. A perimeter deck ring per level around an open central
+    // shaft, corner and mid-span columns carrying each deck, and a stair
+    // ramp per level alternating sides so the ascent spirals. The player is
+    // inside this, not looking at it.
+    void build_stack(JPH::BodyInterface &bodies) {
+        const auto track = [this](const JPH::BodyID id) {
+            machine_bodies_.push_back(id);
+            return id;
+        };
+        const auto frame = [&](const JPH::Vec3 half_extent, const JPH::RVec3 position,
+                               const JPH::Quat rotation = JPH::Quat::sIdentity()) {
+            track(add_box(bodies, half_extent, position, JPH::EMotionType::Static,
+                          object_layers::kStatic, 0.85F, Simulation::kTowerEntityId, rotation));
+        };
+
+        const float band_center = kStackHalfExtent - kStackDeckBandDepth * 0.5F;
+        const float inner_half = kStackHalfExtent - kStackDeckBandDepth;
+
+        for (int level = 1; level <= kStackLevelCount; ++level) {
+            const float deck_y = static_cast<float>(level) * kStackLevelHeight;
+            const float slab_y = deck_y - kStackDeckHalfThickness;
+
+            // Deck ring: two full-width bands and two inner bands, leaving a
+            // 22 m shaft open through every level.
+            for (const float sz : {1.0F, -1.0F}) {
+                frame(JPH::Vec3(kStackHalfExtent, kStackDeckHalfThickness,
+                                kStackDeckBandDepth * 0.5F),
+                      JPH::RVec3(kStackCenterX, slab_y, kStackCenterZ + sz * band_center));
+            }
+            for (const float sx : {1.0F, -1.0F}) {
+                frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
+                      JPH::RVec3(kStackCenterX + sx * band_center, slab_y, kStackCenterZ));
+            }
+        }
+
+        // Columns: corners and edge mid-spans, one run per storey.
+        for (int level = 0; level < kStackLevelCount; ++level) {
+            const float base_y = static_cast<float>(level) * kStackLevelHeight;
+            const float column_half = kStackLevelHeight * 0.5F;
+            for (const float sx : {1.0F, -1.0F}) {
+                for (const float sz : {1.0F, -1.0F}) {
+                    frame(JPH::Vec3(kStackColumnHalf, column_half, kStackColumnHalf),
+                          JPH::RVec3(kStackCenterX + sx * kStackHalfExtent, base_y + column_half,
+                                     kStackCenterZ + sz * kStackHalfExtent));
+                }
+                frame(JPH::Vec3(kStackColumnHalf, column_half, kStackColumnHalf),
+                      JPH::RVec3(kStackCenterX + sx * kStackHalfExtent, base_y + column_half,
+                                 kStackCenterZ));
+                frame(JPH::Vec3(kStackColumnHalf, column_half, kStackColumnHalf),
+                      JPH::RVec3(kStackCenterX, base_y + column_half,
+                                 kStackCenterZ + sx * kStackHalfExtent));
+            }
+        }
+
+        // Stair runs: one flight per storey, alternating sides so the climb
+        // spirals the perimeter rather than stacking in one corner. A single
+        // inclined slab per flight -- the visible steps are drawn on top of
+        // it, so what you see and what you stand on agree.
+        for (int level = 0; level < kStackLevelCount; ++level) {
+            const float base_y = static_cast<float>(level) * kStackLevelHeight;
+            const float run = kStackHalfExtent * 2.0F - kStackDeckBandDepth * 2.0F;
+            const float rise = kStackLevelHeight;
+            const float length = std::sqrt(run * run + rise * rise);
+            const float pitch = std::atan2(rise, run);
+            const float side = (level % 2 == 0) ? 1.0F : -1.0F;
+            // Runs along X on alternating Z bands, climbing in +X or -X.
+            const JPH::Quat rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), side * pitch);
+            frame(JPH::Vec3(length * 0.5F, 0.18F, kStackRampHalfWidth),
+                  JPH::RVec3(kStackCenterX, base_y + rise * 0.5F,
+                             kStackCenterZ + side * band_center),
+                  rotation);
+        }
     }
 
     // WO-013. Ascent Atlas v1.0 kernel (section 9): KX-SUMP + KX-GRATE. Fixed

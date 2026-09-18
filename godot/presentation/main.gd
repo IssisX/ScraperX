@@ -20,6 +20,18 @@ const CRATE_ENTITY_ID := 28
 const NEEDLE_BEAM_ENTITY_ID := 33
 const SUMP_GRATE_ENTITY_ID := 34
 
+# The stack. Mirrors the kStack* constants in simulation.cpp exactly -- these
+# are the native collision sizes, so what is drawn is what you stand on.
+const STACK_CENTER := Vector3(0.0, 0.0, -150.0)
+const STACK_HALF_EXTENT := 18.0
+const STACK_LEVEL_HEIGHT := 11.0
+const STACK_LEVEL_COUNT := 14
+const STACK_DECK_THICKNESS := 0.5
+const STACK_DECK_BAND_DEPTH := 7.0
+const STACK_COLUMN_SIZE := 1.6
+const STACK_RAMP_WIDTH := 3.2
+const STACK_MASS_BASE_Y := 159.0
+
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -82,6 +94,7 @@ var _needle_hoist_cable: Node3D
 var _sump_grate_mesh: MeshInstance3D
 var _sump_grate_safe_material: Material
 var _sump_grate_hazard_material: Material
+var _stack_gears: Array[Node3D] = []
 var _lift_mesh: MeshInstance3D
 var _counterweight_mesh: MeshInstance3D
 var _translating_support_mesh: MeshInstance3D
@@ -632,6 +645,13 @@ func _update_ambient_dressing() -> void:
 	_crane_boom.rotation = Vector3(0.0, 0.0, sway)
 	if _crane_hook != null:
 		_crane_hook.position.y = -13.0 + sin(_ambient_clock * 0.5) * 0.25
+	# Stack gearing turns on the real native machine phase, like the yard gear
+	# motif -- a visible face of an authoritative value, never its own clock.
+	var phase := float(_native.get_machine_cycle_phase_seconds()) if _native != null else 0.0
+	for index in _stack_gears.size():
+		var direction := 1.0 if index % 2 == 0 else -1.0
+		_stack_gears[index].rotation = Vector3(0.0, 0.0,
+			direction * phase * TAU / KELLERWORKS_CYCLE_PERIOD_SECONDS)
 
 
 # --- world ------------------------------------------------------------------
@@ -643,21 +663,31 @@ func _update_ambient_dressing() -> void:
 
 
 func _build_world() -> void:
-	var asphalt := _material(Color("18191b"), 0.06, 0.34)
-	var concrete := _material(Color("6a635b"), 0.0, 0.93)
-	var mill_scale := _material(Color("33322f"), 0.82, 0.58)
-	var oxidised := _material(Color("6b3a22"), 0.22, 0.88)
-	var galvanised := _material(Color("8b8e91"), 0.72, 0.42)
-	var faded_yellow := _material(Color("8f7a2e"), 0.12, 0.76)
-	var hazard := _material(Color("8a4620"), 0.14, 0.8)
-	var tar := _material(Color("131417"), 0.05, 0.62)
+	# Palette: oxidised iron and rust carry the structure, weathered timber
+	# softens it, mill scale is the dark shadow value, crane yellow and brass
+	# lamplight are the only warm accents. Grey is a shadow here, not a colour
+	# scheme.
+	var asphalt := _material(Color("17150f"), 0.06, 0.4)
+	var concrete := _material(Color("4e4841"), 0.0, 0.94)
+	# A real value ladder: near-black iron in shadow, mid rust for the frame,
+	# brighter oxide only where light catches an edge.
+	var mill_scale := _material(Color("1d1a17"), 0.72, 0.6)
+	var oxidised := _material(Color("6b3520"), 0.3, 0.92)
+	var rust_deep := _material(Color("3b1f13"), 0.28, 0.95)
+	var rust_bright := _material(Color("9a5326"), 0.34, 0.82)
+	var galvanised := _material(Color("5a5d5e"), 0.66, 0.5)
+	var faded_yellow := _material(Color("b08a22"), 0.16, 0.68)
+	var hazard := _material(Color("a04d16"), 0.18, 0.76)
+	var tar := _material(Color("0e0f11"), 0.05, 0.62)
+	var timber := _material(Color("4a3420"), 0.02, 0.9)
 
-	# Grade and tower: sizes mirror the native Jolt bodies exactly.
+	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
 	_add_box("Grade", Vector3(480.0, 1.0, 480.0), Vector3(0.0, -0.5, -60.0), asphalt)
-	_add_box("Tower", Vector3(120.0, 1600.0, 90.0), Vector3(0.0, 800.0, -190.0), concrete)
+	var mass_half := 800.0 - STACK_MASS_BASE_Y * 0.5
+	_add_box("TowerMass", Vector3(120.0, mass_half * 2.0, 90.0),
+		Vector3(0.0, STACK_MASS_BASE_Y + mass_half, -190.0), concrete)
 
-	var timber := _material(Color("4a3524"), 0.02, 0.86)
-
+	_build_stack(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
 	_build_yard(concrete, mill_scale, faded_yellow, tar)
 	_build_legacy_fixtures(mill_scale, galvanised, hazard, faded_yellow)
@@ -670,30 +700,222 @@ func _build_world() -> void:
 	_build_lighting()
 
 
+# The stack: the tower's climbable lower section. Deck rings, columns and
+# stair flights mirror real native collision one-for-one; bracing, rails,
+# steps, pipework and lamps are dressing hung on that frame. The player is
+# inside this structure, so it is built to be seen from within as well as
+# from the yard.
+func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
+		rust_bright: Material, galvanised: Material, faded: Material, timber: Material) -> void:
+	var band_center := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH * 0.5
+	var inner_half := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+
+	for level in range(1, STACK_LEVEL_COUNT + 1):
+		var deck_y := float(level) * STACK_LEVEL_HEIGHT
+		var slab_y := deck_y - STACK_DECK_THICKNESS * 0.5
+		var deck_material: Material = galvanised if level % 2 == 1 else mill_scale
+
+		for sz in [1.0, -1.0]:
+			_add_box("StackDeck", Vector3(STACK_HALF_EXTENT * 2.0, STACK_DECK_THICKNESS,
+				STACK_DECK_BAND_DEPTH), Vector3(cx, slab_y, cz + sz * band_center), deck_material)
+		for sx in [1.0, -1.0]:
+			_add_box("StackDeck", Vector3(STACK_DECK_BAND_DEPTH, STACK_DECK_THICKNESS,
+				inner_half * 2.0), Vector3(cx + sx * band_center, slab_y, cz), deck_material)
+
+		# Edge beams around the shaft and the outer face: the structure reads
+		# as fabricated plate girders, not floating slabs.
+		for sz in [1.0, -1.0]:
+			_add_box("ShaftEdgeBeam", Vector3(inner_half * 2.0, 0.9, 0.5),
+				Vector3(cx, deck_y - 0.55, cz + sz * inner_half), oxidised)
+			_add_box("OuterEdgeBeam", Vector3(STACK_HALF_EXTENT * 2.0, 1.1, 0.6),
+				Vector3(cx, deck_y - 0.7, cz + sz * STACK_HALF_EXTENT), rust_deep)
+		for sx in [1.0, -1.0]:
+			_add_box("ShaftEdgeBeam", Vector3(0.5, 0.9, inner_half * 2.0),
+				Vector3(cx + sx * inner_half, deck_y - 0.55, cz), oxidised)
+			_add_box("OuterEdgeBeam", Vector3(0.6, 1.1, STACK_HALF_EXTENT * 2.0),
+				Vector3(cx + sx * STACK_HALF_EXTENT, deck_y - 0.7, cz), rust_deep)
+
+		# Handrails around the open shaft -- the safety line you walk beside.
+		for sz in [1.0, -1.0]:
+			_add_box("ShaftRail", Vector3(inner_half * 2.0, 0.08, 0.08),
+				Vector3(cx, deck_y + 1.05, cz + sz * inner_half), galvanised)
+		for sx in [1.0, -1.0]:
+			_add_box("ShaftRail", Vector3(0.08, 0.08, inner_half * 2.0),
+				Vector3(cx + sx * inner_half, deck_y + 1.05, cz), galvanised)
+		for post_x in [-inner_half, -inner_half * 0.5, 0.0, inner_half * 0.5, inner_half]:
+			for sz in [1.0, -1.0]:
+				_add_box("ShaftPost", Vector3(0.09, 1.1, 0.09),
+					Vector3(cx + post_x, deck_y + 0.55, cz + sz * inner_half), galvanised)
+
+		# Timber decking planks laid over the walking band, warm against iron.
+		for plank in range(-2, 3):
+			for sz in [1.0, -1.0]:
+				_add_box("DeckPlank", Vector3(STACK_HALF_EXTENT * 2.0 - 2.0, 0.08, 1.1),
+					Vector3(cx, deck_y + 0.05, cz + sz * (band_center + float(plank) * 1.35)),
+					timber)
+
+	# Columns, and the diagonal bracing that makes a frame a frame.
+	for level in range(0, STACK_LEVEL_COUNT):
+		var base_y := float(level) * STACK_LEVEL_HEIGHT
+		var mid_y := base_y + STACK_LEVEL_HEIGHT * 0.5
+		var brace_length := sqrt(pow(STACK_LEVEL_HEIGHT, 2.0) + pow(STACK_HALF_EXTENT, 2.0))
+		var brace_pitch := atan2(STACK_LEVEL_HEIGHT, STACK_HALF_EXTENT)
+
+		for sx in [1.0, -1.0]:
+			for sz in [1.0, -1.0]:
+				_add_box("StackColumn", Vector3(STACK_COLUMN_SIZE, STACK_LEVEL_HEIGHT,
+					STACK_COLUMN_SIZE), Vector3(cx + sx * STACK_HALF_EXTENT, mid_y,
+					cz + sz * STACK_HALF_EXTENT), rust_deep)
+			_add_box("StackColumn", Vector3(STACK_COLUMN_SIZE, STACK_LEVEL_HEIGHT,
+				STACK_COLUMN_SIZE), Vector3(cx + sx * STACK_HALF_EXTENT, mid_y, cz), rust_deep)
+			_add_box("StackColumn", Vector3(STACK_COLUMN_SIZE, STACK_LEVEL_HEIGHT,
+				STACK_COLUMN_SIZE), Vector3(cx, mid_y, cz + sx * STACK_HALF_EXTENT), rust_deep)
+
+		# Cross bracing on all four outer faces.
+		for sz in [1.0, -1.0]:
+			for direction in [1.0, -1.0]:
+				var brace := _add_box("StackBrace", Vector3(brace_length, 0.45, 0.45),
+					Vector3(cx + direction * STACK_HALF_EXTENT * 0.5, mid_y,
+						cz + sz * STACK_HALF_EXTENT), oxidised)
+				brace.rotation = Vector3(0.0, 0.0, direction * brace_pitch)
+		for sx in [1.0, -1.0]:
+			for direction in [1.0, -1.0]:
+				var brace_z := _add_box("StackBrace", Vector3(0.45, 0.45, brace_length),
+					Vector3(cx + sx * STACK_HALF_EXTENT, mid_y,
+						cz + direction * STACK_HALF_EXTENT * 0.5), oxidised)
+				brace_z.rotation = Vector3(-direction * brace_pitch, 0.0, 0.0)
+
+	# Stair flights: the inclined slab is the native collision, the treads and
+	# stringers are drawn on top of it so the two agree.
+	for level in range(0, STACK_LEVEL_COUNT):
+		var base_y := float(level) * STACK_LEVEL_HEIGHT
+		var run := STACK_HALF_EXTENT * 2.0 - STACK_DECK_BAND_DEPTH * 2.0
+		var rise := STACK_LEVEL_HEIGHT
+		var length := sqrt(run * run + rise * rise)
+		var pitch := atan2(rise, run)
+		var side := 1.0 if level % 2 == 0 else -1.0
+		var flight_origin := Vector3(cx, base_y + rise * 0.5, cz + side * band_center)
+
+		var flight := _add_box("StairFlight", Vector3(length, 0.36, STACK_RAMP_WIDTH),
+			flight_origin, mill_scale)
+		flight.rotation = Vector3(0.0, 0.0, side * pitch)
+
+		var tread_count := 14
+		for step in range(tread_count):
+			var t := (float(step) + 0.5) / float(tread_count) - 0.5
+			var along := t * length
+			var step_position := flight_origin + Vector3(
+				along * cos(side * pitch), along * sin(side * pitch), 0.0)
+			_add_box("StairTread", Vector3(length / float(tread_count) * 0.86, 0.1,
+				STACK_RAMP_WIDTH * 0.94), step_position + Vector3(0.0, 0.26, 0.0), galvanised)
+		for rail_side in [1.0, -1.0]:
+			var stringer := _add_box("StairStringer", Vector3(length, 0.9, 0.12),
+				flight_origin + Vector3(0.0, 0.5, rail_side * STACK_RAMP_WIDTH * 0.5),
+				rust_bright)
+			stringer.rotation = Vector3(0.0, 0.0, side * pitch)
+
+	_build_stack_dressing(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded)
+
+
+# Pipework, gearing, vents and lamps hung on the frame. None of this is
+# collision or authority -- it is what makes the frame read as a working
+# plant rather than a jungle gym.
+func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: Material,
+		rust_bright: Material, galvanised: Material, faded: Material) -> void:
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var inner_half := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH
+
+	# Riser pipes running the full height in the corners of the shaft.
+	for sx in [1.0, -1.0]:
+		for sz in [1.0, -1.0]:
+			var pipe_material: Material = oxidised if sx * sz > 0.0 else rust_bright
+			_add_box("Riser", Vector3(0.7, STACK_LEVEL_HEIGHT * STACK_LEVEL_COUNT, 0.7),
+				Vector3(cx + sx * (inner_half - 1.2),
+					STACK_LEVEL_HEIGHT * STACK_LEVEL_COUNT * 0.5,
+					cz + sz * (inner_half - 1.2)), pipe_material)
+			for level in range(1, STACK_LEVEL_COUNT + 1):
+				_add_box("RiserFlange", Vector3(1.1, 0.35, 1.1),
+					Vector3(cx + sx * (inner_half - 1.2), float(level) * STACK_LEVEL_HEIGHT - 1.4,
+						cz + sz * (inner_half - 1.2)), mill_scale)
+
+	# Drive gearing on alternating levels, big enough to read from the yard.
+	for level in range(1, STACK_LEVEL_COUNT):
+		if level % 2 == 0:
+			continue
+		var gear_y := float(level) * STACK_LEVEL_HEIGHT + 3.4
+		var gear := Node3D.new()
+		gear.name = "StackGear"
+		gear.position = Vector3(cx - inner_half + 1.0, gear_y, cz - STACK_HALF_EXTENT + 1.2)
+		$TowerPresentation.add_child(gear)
+		_add_box_to("GearHub", Vector3(1.0, 1.0, 0.8), Vector3.ZERO, rust_deep, gear)
+		for tooth in range(12):
+			var angle := TAU * float(tooth) / 12.0
+			_add_box_to("GearTooth", Vector3(0.7, 0.7, 0.7),
+				Vector3(cos(angle) * 2.6, sin(angle) * 2.6, 0.0), oxidised, gear)
+		_stack_gears.append(gear)
+
+	# Vent stacks that the plume system can sit on later, plus lamp fittings
+	# throwing warm light into the frame.
+	var lamp_material := _material(Color("4a3a24"), 0.3, 0.7, Color("ffb04d"), 3.0)
+	for level in range(1, STACK_LEVEL_COUNT + 1):
+		var y := float(level) * STACK_LEVEL_HEIGHT
+		if level % 2 == 0:
+			continue
+		for sx in [1.0, -1.0]:
+			_add_box("VentStack", Vector3(0.8, 2.4, 0.8),
+				Vector3(cx + sx * (STACK_HALF_EXTENT - 2.2), y + 1.2,
+					cz - STACK_HALF_EXTENT + 2.2), mill_scale)
+			_add_box("LampFitting", Vector3(0.5, 0.3, 0.7),
+				Vector3(cx + sx * (inner_half - 0.6), y + 2.6, cz), lamp_material)
+			var lamp := OmniLight3D.new()
+			lamp.name = "StackLamp"
+			lamp.position = Vector3(cx + sx * (inner_half - 0.6), y + 2.4, cz)
+			lamp.light_color = Color(1.0, 0.72, 0.38)
+			lamp.light_energy = 3.2
+			lamp.omni_range = 16.0
+			lamp.omni_attenuation = 1.5
+			_light_rig.add_child(lamp)
+
+	# Hazard striping on the outer edge beams at the lower, most-seen levels.
+	for level in range(1, 4):
+		var y := float(level) * STACK_LEVEL_HEIGHT
+		for stripe in range(-7, 8):
+			_add_box("EdgeStripe", Vector3(1.1, 0.5, 0.12),
+				Vector3(cx + float(stripe) * 2.3, y - 0.7, cz + STACK_HALF_EXTENT + 0.32),
+				faded if stripe % 2 == 0 else mill_scale)
+
+
 func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Material, faded: Material, timber: Material) -> void:
-	# Structural relief on the approach face so the lower third reads as a wall of
-	# structure rather than a flat slab. Non-authoritative set dressing: it sits
-	# proud of the native collision box by design.
+	# Relief on the mass ABOVE the playable stack -- the rest of the skyscraper,
+	# continuing up out of reach. It starts where the climbable frame stops, so
+	# the two read as one structure: what you are standing in carries on up.
+	var base := STACK_MASS_BASE_Y
 	for x in [-52.0, -26.0, 0.0, 26.0, 52.0]:
-		_add_box("FacePier", Vector3(7.0, 240.0, 3.0), Vector3(x, 120.0, -143.0), mill_scale)
-	for level in range(14, 240, 16):
-		_add_box("FaceBand", Vector3(118.0, 1.4, 2.0), Vector3(0.0, float(level), -143.4), oxidised)
+		_add_box("FacePier", Vector3(7.0, 300.0, 3.0), Vector3(x, base + 150.0, -143.0), oxidised)
+	for level in range(int(base) + 10, 420, 16):
+		_add_box("FaceBand", Vector3(118.0, 1.4, 2.0), Vector3(0.0, float(level), -143.4), mill_scale)
 	for x in [-40.0, -13.0, 13.0, 40.0]:
-		_add_box("FaceDuct", Vector3(3.2, 190.0, 3.2), Vector3(x, 96.0, -141.0), galvanised)
-	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("c07a24"), 0.4)
-	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("6e4a1c"), 0.3)
-	for level in range(22, 320, 12):
+		_add_box("FaceDuct", Vector3(3.2, 240.0, 3.2), Vector3(x, base + 120.0, -141.0), galvanised)
+	# Continuing frame legs above the stack, aligned with its own columns, so
+	# the climbable structure visibly continues rather than being capped.
+	for sx in [1.0, -1.0]:
+		for sz in [1.0, -1.0]:
+			_add_box("StackLegAbove", Vector3(STACK_COLUMN_SIZE, 90.0, STACK_COLUMN_SIZE),
+				Vector3(sx * STACK_HALF_EXTENT, base + 45.0,
+					STACK_CENTER.z + sz * STACK_HALF_EXTENT), oxidised)
+	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("e0a040"), 0.9)
+	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("a86c22"), 0.5)
+	for level in range(int(base) + 6, 320, 12):
 		var band: Material = lit_band if (level / 12) % 3 != 0 else lit_band_dim
 		_add_box("FloorLight", Vector3(104.0, 1.0, 0.6), Vector3(0.0, float(level), -144.3), band)
 	for level in range(340, 900, 34):
 		_add_box("FloorLightHigh", Vector3(96.0, 0.9, 0.6), Vector3(0.0, float(level), -144.3), lit_band_dim)
-	_add_box("LoadingHeader", Vector3(46.0, 4.0, 3.0), Vector3(0.0, 13.0, -141.0), faded)
-	for x in [-18.0, -6.0, 6.0, 18.0]:
-		_add_box("BayDoor", Vector3(9.0, 11.0, 1.2), Vector3(x, 5.5, -141.2), mill_scale)
-	# Timber cladding accent (identity doc item 4): secondary material, not a
-	# replacement for the steel piers/bands above.
+	# Timber cladding accent: secondary material against the steel above.
 	for x in [-39.0, -14.0, 14.0, 39.0]:
-		_add_box("TimberCladding", Vector3(9.0, 34.0, 1.2), Vector3(x, 30.0, -142.6), timber)
+		_add_box("TimberCladding", Vector3(9.0, 44.0, 1.2), Vector3(x, base + 40.0, -142.6), timber)
 
 
 func _build_yard(concrete: Material, mill_scale: Material,
@@ -892,12 +1114,32 @@ func _build_kernel_sump(mill_scale: StandardMaterial3D) -> void:
 		_sump_grate_hazard_material)
 
 
+# A soft radial falloff for every billboard particle in the scene. Without
+# one, an untextured quad renders as a hard-edged square, and a plume reads as
+# a drift of grey boxes rather than steam.
+func _smoke_texture() -> GradientTexture2D:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
+	gradient.set_color(1, Color(1.0, 1.0, 1.0, 0.0))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.width = 64
+	texture.height = 64
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	return texture
+
+
 func _build_plume() -> void:
 	_plume = CPUParticles3D.new()
 	_plume.name = "VentPlume"
 	_plume.position = Vector3(30.5, 5.1, -101.5)
-	_plume.amount = 160
-	_plume.lifetime = 3.4
+	# Kept deliberately sparse and thin: at the old 160 x 2.2 m billboards this
+	# vent stacked into an opaque white wall whenever it sat between the eye
+	# and the tower, swallowing the whole frame behind it.
+	_plume.amount = 60
+	_plume.lifetime = 2.6
 	_plume.direction = Vector3(0.15, 1.0, 0.0)
 	_plume.spread = 16.0
 	_plume.gravity = Vector3(0.6, 1.1, 0.0)
@@ -915,7 +1157,8 @@ func _build_plume() -> void:
 	_plume_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_plume_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	_plume_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	_plume_material.albedo_color = Color(0.80, 0.78, 0.74, 0.05)
+	_plume_material.albedo_color = Color(0.82, 0.80, 0.76, 0.10)
+	_plume_material.albedo_texture = _smoke_texture()
 	_plume_material.roughness = 1.0
 	_plume_material.disable_receive_shadows = false
 	quad.material = _plume_material
@@ -924,17 +1167,19 @@ func _build_plume() -> void:
 
 	# Stack plumes on the tower itself, high enough to shear the mass before the
 	# crown. These are weather, not simulation, and are not claimed otherwise.
-	for stack in [Vector3(-34.0, 210.0, -150.0), Vector3(22.0, 268.0, -152.0)]:
+	# High stack plume, kept well above the climbable frame and much smaller
+	# than before: at the old scale these billboards swallowed the structure.
+	for stack in [Vector3(-34.0, 320.0, -168.0), Vector3(22.0, 392.0, -172.0)]:
 		var haze := CPUParticles3D.new()
 		haze.name = "StackPlume"
 		haze.position = stack
-		haze.amount = 40
-		haze.lifetime = 22.0
+		haze.amount = 26
+		haze.lifetime = 20.0
 		haze.direction = Vector3(0.8, 0.6, 0.0)
-		haze.spread = 24.0
+		haze.spread = 22.0
 		haze.gravity = Vector3(3.2, 1.6, 0.0)
-		haze.scale_amount_min = 26.0
-		haze.scale_amount_max = 64.0
+		haze.scale_amount_min = 8.0
+		haze.scale_amount_max = 20.0
 		haze.emitting = true
 		var stack_quad := QuadMesh.new()
 		stack_quad.size = Vector2(2.0, 2.0)
@@ -942,10 +1187,41 @@ func _build_plume() -> void:
 		stack_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		stack_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		stack_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-		stack_material.albedo_color = Color(0.30, 0.29, 0.28, 0.10)
+		stack_material.albedo_color = Color(0.66, 0.64, 0.62, 0.16)
+		stack_material.albedo_texture = _smoke_texture()
 		stack_quad.material = stack_material
 		haze.mesh = stack_quad
 		$TowerPresentation.add_child(haze)
+
+	# Working steam venting from the frame itself, at a human scale -- the
+	# references are full of small, sharp vents, not fog banks.
+	for level in range(2, STACK_LEVEL_COUNT, 3):
+		var vent_y := float(level) * STACK_LEVEL_HEIGHT + 1.6
+		var vent := CPUParticles3D.new()
+		vent.name = "FrameVent"
+		vent.position = Vector3(STACK_CENTER.x + (STACK_HALF_EXTENT - 2.2) * (1.0 if level % 2 == 0 else -1.0),
+			vent_y, STACK_CENTER.z - STACK_HALF_EXTENT + 2.2)
+		vent.amount = 10
+		vent.lifetime = 2.2
+		vent.direction = Vector3(0.3, 1.0, 0.0)
+		vent.spread = 14.0
+		vent.gravity = Vector3(0.4, 1.6, 0.0)
+		vent.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+		vent.emission_sphere_radius = 0.3
+		vent.scale_amount_min = 0.8
+		vent.scale_amount_max = 2.6
+		vent.emitting = true
+		var vent_quad := QuadMesh.new()
+		vent_quad.size = Vector2(1.6, 1.6)
+		var vent_material := StandardMaterial3D.new()
+		vent_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		vent_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		vent_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		vent_material.albedo_color = Color(0.90, 0.89, 0.86, 0.22)
+		vent_material.albedo_texture = _smoke_texture()
+		vent_quad.material = vent_material
+		vent.mesh = vent_quad
+		$TowerPresentation.add_child(vent)
 
 
 func _build_sky_shear() -> void:
@@ -953,7 +1229,7 @@ func _build_sky_shear() -> void:
 	var shear := StandardMaterial3D.new()
 	shear.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	shear.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	shear.albedo_color = Color(0.23, 0.225, 0.215, 0.36)
+	shear.albedo_color = Color(0.30, 0.31, 0.33, 0.16)
 	shear.cull_mode = BaseMaterial3D.CULL_DISABLED
 	for level in [236.0, 318.0, 402.0, 520.0]:
 		var plane := PlaneMesh.new()
@@ -1016,9 +1292,11 @@ func _build_mountains_and_waterfall() -> void:
 	# cones -- a CylinderMesh with top_radius 0 -- with a lighter snow-cap cone
 	# nested at the tip. Distance fade comes from the environment's aerial
 	# perspective fog, not from manual colour tuning per peak.
-	var rock := _material(Color("3c434c"), 0.04, 0.9)
-	var rock_far := _material(Color("57616c"), 0.02, 0.94)
-	var snow := _material(Color("f4f7fa"), 0.0, 0.7)
+	# Kept dark and desaturated: these are distant backdrop mass, and at the
+	# old values they read as bright white blobs competing with the tower.
+	var rock := _material(Color("2f353d"), 0.04, 0.92)
+	var rock_far := _material(Color("414a55"), 0.02, 0.95)
+	var snow := _material(Color("b9c2cc"), 0.0, 0.78)
 
 	var near_peaks := [
 		Vector3(-380.0, 0.0, -560.0), Vector3(-160.0, 0.0, -610.0),

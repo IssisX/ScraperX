@@ -4,23 +4,27 @@
 
 [sub_resource type="Environment" id="Environment_yard"]
 background_mode = 1
-background_color = Color(0.62, 0.66, 0.7, 1)
+background_color = Color(0.55, 0.6, 0.66, 1)
 background_energy_multiplier = 1.0
 ambient_light_source = 3
-ambient_light_color = Color(0.64, 0.67, 0.71, 1)
-ambient_light_energy = 0.75
+ambient_light_color = Color(0.42, 0.47, 0.56, 1)
+ambient_light_energy = 0.38
 fog_enabled = true
 fog_mode = 0
-fog_light_color = Color(0.66, 0.69, 0.73, 1)
-fog_light_energy = 0.55
-fog_sun_scatter = 0.05
-fog_density = 0.0009
-fog_aerial_perspective = 0.35
-fog_height = 180.0
-fog_height_density = 0.003
+fog_light_color = Color(0.6, 0.64, 0.7, 1)
+fog_light_energy = 0.4
+fog_sun_scatter = 0.08
+fog_density = 0.00022
+fog_aerial_perspective = 0.18
+fog_height = 90.0
+fog_height_density = 0.0004
 tonemap_mode = 3
-tonemap_exposure = 1.0
-tonemap_white = 3.5
+tonemap_exposure = 1.18
+tonemap_white = 4.0
+ssao_enabled = true
+ssao_radius = 3.0
+ssao_intensity = 2.6
+ssao_power = 2.0
 
 [node name="TowerApproach" type="Node3D"]
 script = ExtResource("1_main")
@@ -33,10 +37,12 @@ environment = SubResource("Environment_yard")
 [node name="LightRig" type="Node3D" parent="."]
 
 [node name="Overcast" type="DirectionalLight3D" parent="."]
-rotation_degrees = Vector3(-58, 34, 0)
-light_color = Color(0.92, 0.94, 0.97, 1)
-light_energy = 1.15
+rotation_degrees = Vector3(-42, 28, 0)
+light_color = Color(1, 0.93, 0.84, 1)
+light_energy = 2.4
 shadow_enabled = true
+shadow_bias = 0.04
+directional_shadow_max_distance = 320.0
 
 [node name="Camera" type="Camera3D" parent="."]
 current = true
