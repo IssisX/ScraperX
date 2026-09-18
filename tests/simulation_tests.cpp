@@ -387,7 +387,9 @@ int main() {
             "released hang must actually fall rather than switch animation state");
 
     Simulation grounded_block(InitialSpawn::StaticDeck);
-    require(grounded_block.advance_frame(0.5).accepted, "static deck settle must advance");
+    require(grounded_block.advance_frame(1.0).accepted, "static deck settle must advance");
+    require(grounded_block.snapshot().player_grounded,
+            "static-deck spawn must finish on the deck after a full fall from authored height");
     require(!grounded_block.request_parachute(),
             "parachute must refuse deployment while supported");
     require(grounded_block.commit_checkpoint(),
