@@ -22,6 +22,9 @@ enum class InitialSpawn : std::uint8_t {
     HighDeck = 7,
     JibStation = 8,
     JibOverweight = 9,
+    NeedleBay = 10,
+    NeedleNearLanding = 11,
+    NeedleSeated = 12,
 };
 
 enum class TraversalMode : std::uint8_t {
@@ -29,6 +32,12 @@ enum class TraversalMode : std::uint8_t {
     Vault = 1,
     Mantle = 2,
     Hang = 3,
+};
+
+enum class HookLoad : std::uint8_t {
+    None = 0,
+    Crate = 1,
+    Needle = 2,
 };
 
 struct Snapshot final {
@@ -96,6 +105,15 @@ struct Snapshot final {
     bool jib_at_hoist_limit = false;
     bool jib_at_slew_limit = false;
     bool jib_hook_attached = false;
+    HookLoad jib_hook_load = HookLoad::None;
+
+    Vector3 needle_position{};
+    Vector3 needle_linear_velocity{};
+    double needle_yaw_radians = 0.0;
+    bool needle_seated = false;
+    Vector3 needle_near_landing_position{};
+    Vector3 needle_far_landing_position{};
+    Vector3 needle_bay_floor_position{};
 };
 
 struct AdvanceResult final {
@@ -129,6 +147,15 @@ public:
     static constexpr std::uint64_t kJibBoomEntityId = 18;
     static constexpr std::uint64_t kJibHookEntityId = 19;
     static constexpr std::uint64_t kJibCrateEntityId = 20;
+    static constexpr std::uint64_t kNeedleEntityId = 21;
+    static constexpr std::uint64_t kNeedleWestPocketEntityId = 22;
+    static constexpr std::uint64_t kNeedleEastPocketEntityId = 23;
+    static constexpr std::uint64_t kNeedleNearLandingEntityId = 24;
+    static constexpr std::uint64_t kNeedleFarLandingEntityId = 25;
+    static constexpr std::uint64_t kNeedleBayFloorEntityId = 26;
+    static constexpr std::uint64_t kNeedleStairEntityIdBegin = 30;
+    static constexpr std::uint32_t kNeedleWestStairCount = 15;
+    static constexpr std::uint32_t kNeedleEastStairCount = 9;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ApproachGrade);
     ~Simulation();

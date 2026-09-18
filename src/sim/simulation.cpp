@@ -93,6 +93,43 @@ constexpr float kPlayerCapsuleRadius = 0.35F;
 constexpr float kPlayerStandingHalfHeight =
     kPlayerCapsuleCylinderHalfHeight + kPlayerCapsuleRadius;
 constexpr float kCrateStepHeight = 0.42F;
+constexpr float kStepUpHeight = 0.48F;
+
+constexpr double kNeedleSeatX = -5.15;
+constexpr double kNeedleSeatY = 5.22;
+constexpr double kNeedleSeatZ = 43.90;
+constexpr float kNeedleHalfLength = 3.60F;
+constexpr float kNeedleHalfHeight = 0.18F;
+constexpr float kNeedleHalfWidth = 0.28F;
+constexpr double kNeedleMassKilograms = 620.0;
+constexpr double kNeedleParkX = -18.0;
+constexpr double kNeedleParkZ = 40.0;
+constexpr double kNeedleNearLandingX = -10.60;
+constexpr double kNeedleNearLandingY = 5.20;
+constexpr double kNeedleNearLandingZ = 43.90;
+constexpr float kNeedleNearHalfX = 2.20F;
+constexpr float kNeedleNearHalfY = 0.20F;
+constexpr float kNeedleNearHalfZ = 1.50F;
+constexpr double kNeedleFarLandingX = 0.60;
+constexpr double kNeedleFarLandingY = 5.20;
+constexpr double kNeedleFarLandingZ = 43.90;
+constexpr float kNeedleFarHalfX = 2.50F;
+constexpr float kNeedleFarHalfY = 0.20F;
+constexpr float kNeedleFarHalfZ = 1.50F;
+constexpr double kNeedleBayFloorX = 9.50;
+constexpr double kNeedleBayFloorY = 8.50;
+constexpr double kNeedleBayFloorZ = 40.50;
+constexpr float kNeedleBayFloorHalfX = 6.00F;
+constexpr float kNeedleBayFloorHalfY = 0.20F;
+constexpr float kNeedleBayFloorHalfZ = 5.00F;
+constexpr double kNeedleWestPocketX = -8.75;
+constexpr double kNeedleEastPocketX = -1.55;
+constexpr double kNeedlePocketY = 4.86;
+constexpr float kNeedlePocketHalfX = 0.36F;
+constexpr float kNeedlePocketHalfY = 0.18F;
+constexpr float kNeedlePocketHalfZ = 0.36F;
+constexpr double kCrateParkX = -16.0;
+constexpr double kCrateParkZ = 53.0;
 
 constexpr double kImpactRockerX = 7.0;
 constexpr double kImpactRockerY = 1.65;
@@ -233,6 +270,7 @@ struct SupportSample final {
     scraperx::sim::Vector3 contact_point{};
     scraperx::sim::Vector3 point_velocity{};
     float normal_y = 0.0F;
+    int rank = 0;
 };
 
 class PlayerContactListener final : public JPH::ContactListener {
@@ -265,13 +303,17 @@ public:
     }
 
 private:
-    [[nodiscard]] static int support_rank(const std::uint64_t entity_id) noexcept {
+    [[nodiscard]] static int support_rank(const std::uint64_t entity_id,
+                                          const bool kinematic) noexcept {
         using scraperx::sim::Simulation;
         if (entity_id == Simulation::kTranslatingSupportEntityId ||
             entity_id == Simulation::kRotatingSupportEntityId ||
             entity_id == Simulation::kHopperGateEntityId ||
             entity_id == Simulation::kJibCrateEntityId) {
             return 2;
+        }
+        if (entity_id == Simulation::kNeedleEntityId) {
+            return kinematic ? 1 : 0;
         }
         if (entity_id == Simulation::kStaticDeckEntityId ||
             entity_id == Simulation::kHighPlatformEntityId ||
@@ -282,7 +324,18 @@ private:
             entity_id == Simulation::kHopperRightWallEntityId ||
             entity_id == Simulation::kVaultBlockEntityId ||
             entity_id == Simulation::kMantleBlockEntityId ||
-            entity_id == Simulation::kHangLedgeEntityId) {
+            entity_id == Simulation::kHangLedgeEntityId ||
+            entity_id == Simulation::kNeedleWestPocketEntityId ||
+            entity_id == Simulation::kNeedleEastPocketEntityId ||
+            entity_id == Simulation::kNeedleNearLandingEntityId ||
+            entity_id == Simulation::kNeedleFarLandingEntityId ||
+            entity_id == Simulation::kNeedleBayFloorEntityId) {
+            return 1;
+        }
+        if (entity_id >= Simulation::kNeedleStairEntityIdBegin &&
+            entity_id < Simulation::kNeedleStairEntityIdBegin +
+                            Simulation::kNeedleWestStairCount +
+                            Simulation::kNeedleEastStairCount) {
             return 1;
         }
         return 0;
@@ -315,8 +368,11 @@ private:
             support_body = &first;
         }
 
-        if (support_body == nullptr || support_normal_y < kSupportNormalThreshold ||
-            support_rank(support_entity) == 0) {
+        if (support_body == nullptr || support_normal_y < kSupportNormalThreshold) {
+            return;
+        }
+        const int candidate_rank = support_rank(support_entity, support_body->IsKinematic());
+        if (candidate_rank == 0) {
             return;
         }
 
@@ -327,13 +383,12 @@ private:
             {support_contact_point.GetX(), support_contact_point.GetY(), support_contact_point.GetZ()},
             {point_velocity.GetX(), point_velocity.GetY(), point_velocity.GetZ()},
             support_normal_y,
+            candidate_rank,
         };
 
         lock();
-        const int current_rank = support_rank(sample_.entity_id);
-        const int candidate_rank = support_rank(candidate.entity_id);
-        if (!sample_.grounded || candidate_rank > current_rank ||
-            (candidate_rank == current_rank && candidate.normal_y > sample_.normal_y)) {
+        if (!sample_.grounded || candidate.rank > sample_.rank ||
+            (candidate.rank == sample_.rank && candidate.normal_y > sample_.normal_y)) {
             sample_ = candidate;
         }
         unlock();
@@ -370,7 +425,14 @@ private:
         return {0.0, 18.55, 0.0};
     case scraperx::sim::InitialSpawn::JibStation:
     case scraperx::sim::InitialSpawn::JibOverweight:
+    case scraperx::sim::InitialSpawn::NeedleBay:
         return {kJibPendantX, 3.0, kJibPendantZ};
+    case scraperx::sim::InitialSpawn::NeedleNearLanding:
+    case scraperx::sim::InitialSpawn::NeedleSeated:
+        return {kNeedleNearLandingX,
+                kNeedleNearLandingY + static_cast<double>(kNeedleNearHalfY) +
+                    static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
+                kNeedleNearLandingZ};
     case scraperx::sim::InitialSpawn::ApproachGrade:
     default:
         return {0.0, 3.0, 60.0};
@@ -457,6 +519,23 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
     return jib_rvec(static_cast<double>(tip.GetX()),
                     static_cast<double>(kJibCrateHalfHeight),
                     static_cast<double>(tip.GetZ()));
+}
+
+[[nodiscard]] JPH::RVec3 needle_seat_position() noexcept {
+    return jib_rvec(kNeedleSeatX, kNeedleSeatY, kNeedleSeatZ);
+}
+
+[[nodiscard]] JPH::RVec3 needle_padeye(const JPH::RVec3 &center) noexcept {
+    return center + JPH::RVec3(0.0F, kNeedleHalfHeight, 0.0F);
+}
+
+[[nodiscard]] JPH::RVec3 crate_padeye(const JPH::RVec3 &center) noexcept {
+    return center + JPH::RVec3(0.0F, kJibCrateHalfHeight, 0.0F);
+}
+
+[[nodiscard]] double yaw_from_quat(const JPH::Quat &rotation) noexcept {
+    const JPH::Vec3 forward = rotation * JPH::Vec3(1.0F, 0.0F, 0.0F);
+    return std::atan2(static_cast<double>(forward.GetZ()), static_cast<double>(forward.GetX()));
 }
 
 } // namespace
@@ -675,10 +754,16 @@ public:
         hook_settings.mUserData = Simulation::kJibHookEntityId;
         jib_hook_id_ = bodies.CreateAndAddBody(hook_settings, JPH::EActivation::Activate);
 
-        const JPH::RVec3 crate_rest = jib_crate_rest_position(slew_radians_);
+        const bool needle_fixture =
+            initial_spawn == InitialSpawn::NeedleBay ||
+            initial_spawn == InitialSpawn::NeedleNearLanding ||
+            initial_spawn == InitialSpawn::NeedleSeated;
+        const JPH::RVec3 crate_spawn =
+            needle_fixture ? jib_rvec(kCrateParkX, static_cast<double>(kJibCrateHalfHeight), kCrateParkZ)
+                           : jib_crate_rest_position(slew_radians_);
         JPH::BodyCreationSettings crate_settings(
             new JPH::BoxShape(JPH::Vec3(kJibCrateHalfWidth, kJibCrateHalfHeight, kJibCrateHalfWidth)),
-            crate_rest,
+            crate_spawn,
             JPH::Quat::sIdentity(),
             JPH::EMotionType::Dynamic,
             object_layers::kMoving);
@@ -692,20 +777,91 @@ public:
         crate_settings.mUserData = Simulation::kJibCrateEntityId;
         jib_crate_id_ = bodies.CreateAndAddBody(crate_settings, JPH::EActivation::Activate);
 
-        JPH::DistanceConstraintSettings hook_constraint_settings;
-        hook_constraint_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        hook_constraint_settings.mPoint1 = jib_hook_position(slew_radians_, winch_length_);
-        hook_constraint_settings.mPoint2 =
-            crate_rest + JPH::RVec3(0.0, static_cast<double>(kJibCrateHalfHeight), 0.0);
-        hook_constraint_settings.mMinDistance = 0.0F;
-        hook_constraint_settings.mMaxDistance = static_cast<float>(kJibSlingMaxMeters);
-        JPH::Body *hook_body =
-            physics_system_.GetBodyLockInterfaceNoLock().TryGetBody(jib_hook_id_);
-        JPH::Body *crate_body =
-            physics_system_.GetBodyLockInterfaceNoLock().TryGetBody(jib_crate_id_);
-        hook_constraint_ = static_cast<JPH::DistanceConstraint *>(
-            hook_constraint_settings.Create(*hook_body, *crate_body));
-        physics_system_.AddConstraint(hook_constraint_.GetPtr());
+        needle_west_pocket_id_ =
+            create_static_box(JPH::Vec3(kNeedlePocketHalfX, kNeedlePocketHalfY, kNeedlePocketHalfZ),
+                              jib_rvec(kNeedleWestPocketX, kNeedlePocketY, kNeedleSeatZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kNeedleWestPocketEntityId,
+                              0.78F);
+        needle_east_pocket_id_ =
+            create_static_box(JPH::Vec3(kNeedlePocketHalfX, kNeedlePocketHalfY, kNeedlePocketHalfZ),
+                              jib_rvec(kNeedleEastPocketX, kNeedlePocketY, kNeedleSeatZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kNeedleEastPocketEntityId,
+                              0.78F);
+        needle_near_landing_id_ =
+            create_static_box(JPH::Vec3(kNeedleNearHalfX, kNeedleNearHalfY, kNeedleNearHalfZ),
+                              jib_rvec(kNeedleNearLandingX, kNeedleNearLandingY, kNeedleNearLandingZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kNeedleNearLandingEntityId,
+                              0.80F);
+        needle_far_landing_id_ =
+            create_static_box(JPH::Vec3(kNeedleFarHalfX, kNeedleFarHalfY, kNeedleFarHalfZ),
+                              jib_rvec(kNeedleFarLandingX, kNeedleFarLandingY, kNeedleFarLandingZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kNeedleFarLandingEntityId,
+                              0.80F);
+        needle_bay_floor_id_ =
+            create_static_box(JPH::Vec3(kNeedleBayFloorHalfX, kNeedleBayFloorHalfY, kNeedleBayFloorHalfZ),
+                              jib_rvec(kNeedleBayFloorX, kNeedleBayFloorY, kNeedleBayFloorZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kNeedleBayFloorEntityId,
+                              0.80F);
+
+        for (std::uint32_t i = 0; i < Simulation::kNeedleWestStairCount; ++i) {
+            const double y_top = 0.36 * static_cast<double>(i + 1);
+            const double z = 53.20 - 0.60 * static_cast<double>(i);
+            west_stair_ids_[i] = create_static_box(
+                JPH::Vec3(1.15F, 0.10F, 0.32F),
+                jib_rvec(kNeedleNearLandingX, y_top - 0.10, z),
+                JPH::Quat::sIdentity(),
+                Simulation::kNeedleStairEntityIdBegin + i,
+                0.80F);
+        }
+        for (std::uint32_t i = 0; i < Simulation::kNeedleEastStairCount; ++i) {
+            const double y_top = 5.40 + 0.367 * static_cast<double>(i + 1);
+            const double x = 2.40 + 0.68 * static_cast<double>(i);
+            east_stair_ids_[i] = create_static_box(
+                JPH::Vec3(0.42F, 0.10F, 1.20F),
+                jib_rvec(x, y_top - 0.10, kNeedleFarLandingZ),
+                JPH::Quat::sIdentity(),
+                Simulation::kNeedleStairEntityIdBegin + Simulation::kNeedleWestStairCount + i,
+                0.80F);
+        }
+
+        needle_seated_ = initial_spawn == InitialSpawn::NeedleSeated;
+        JPH::RVec3 needle_spawn = jib_rvec(kNeedleParkX, static_cast<double>(kNeedleHalfHeight), kNeedleParkZ);
+        if (initial_spawn == InitialSpawn::NeedleBay ||
+            initial_spawn == InitialSpawn::NeedleNearLanding) {
+            needle_spawn = jib_crate_rest_position(slew_radians_);
+            needle_spawn.SetY(kNeedleHalfHeight);
+        } else if (needle_seated_) {
+            needle_spawn = needle_seat_position();
+        }
+
+        JPH::BodyCreationSettings needle_settings(
+            new JPH::BoxShape(JPH::Vec3(kNeedleHalfLength, kNeedleHalfHeight, kNeedleHalfWidth)),
+            needle_spawn,
+            JPH::Quat::sIdentity(),
+            needle_seated_ ? JPH::EMotionType::Kinematic : JPH::EMotionType::Dynamic,
+            object_layers::kMoving);
+        needle_settings.mAllowSleeping = false;
+        needle_settings.mFriction = 0.84F;
+        needle_settings.mRestitution = 0.0F;
+        needle_settings.mLinearDamping = 0.18F;
+        needle_settings.mAngularDamping = 0.25F;
+        needle_settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+        needle_settings.mMassPropertiesOverride.mMass = static_cast<float>(kNeedleMassKilograms);
+        needle_settings.mUserData = Simulation::kNeedleEntityId;
+        needle_id_ = bodies.CreateAndAddBody(needle_settings, JPH::EActivation::Activate);
+
+        if (initial_spawn == InitialSpawn::NeedleBay) {
+            attach_hook(HookLoad::Needle);
+        } else if (!needle_fixture) {
+            attach_hook(HookLoad::Crate);
+        } else {
+            hook_attachment_ = HookLoad::None;
+        }
 
         physics_system_.OptimizeBroadPhase();
         read_state();
@@ -719,6 +875,7 @@ public:
             hook_constraint_ = nullptr;
         }
         remove_and_destroy(bodies, player_id_);
+        remove_and_destroy(bodies, needle_id_);
         remove_and_destroy(bodies, jib_crate_id_);
         remove_and_destroy(bodies, jib_hook_id_);
         remove_and_destroy(bodies, jib_boom_id_);
@@ -738,6 +895,17 @@ public:
         remove_and_destroy(bodies, tower_left_pier_id_);
         remove_and_destroy(bodies, high_platform_id_);
         remove_and_destroy(bodies, deck_id_);
+        remove_and_destroy(bodies, needle_west_pocket_id_);
+        remove_and_destroy(bodies, needle_east_pocket_id_);
+        remove_and_destroy(bodies, needle_near_landing_id_);
+        remove_and_destroy(bodies, needle_far_landing_id_);
+        remove_and_destroy(bodies, needle_bay_floor_id_);
+        for (std::uint32_t i = 0; i < Simulation::kNeedleWestStairCount; ++i) {
+            remove_and_destroy(bodies, west_stair_ids_[i]);
+        }
+        for (std::uint32_t i = 0; i < Simulation::kNeedleEastStairCount; ++i) {
+            remove_and_destroy(bodies, east_stair_ids_[i]);
+        }
     }
 
     void step(const double move_input_x,
@@ -837,7 +1005,7 @@ public:
         support_sample_ = support;
         grounded_ = support.grounded;
         support_entity_id_ = support.entity_id;
-        maybe_step_up_crate(bodies);
+        maybe_step_up(bodies);
 
         apply_parachute_and_fall(bodies, delta_seconds);
         maybe_autocommit();
@@ -908,6 +1076,18 @@ private:
         }
         if (entity_id == Simulation::kJibCrateEntityId) {
             return jib_crate_id_;
+        }
+        if (entity_id == Simulation::kNeedleEntityId) {
+            return needle_id_;
+        }
+        if (entity_id == Simulation::kNeedleNearLandingEntityId) {
+            return needle_near_landing_id_;
+        }
+        if (entity_id == Simulation::kNeedleFarLandingEntityId) {
+            return needle_far_landing_id_;
+        }
+        if (entity_id == Simulation::kNeedleBayFloorEntityId) {
+            return needle_bay_floor_id_;
         }
         if (entity_id == Simulation::kJibBoomEntityId) {
             return jib_boom_id_;
@@ -990,8 +1170,9 @@ private:
         const bool commands_live = jib_station_occupied_;
         const double hoist = commands_live ? jib_hoist_input_ : 0.0;
         const double slew_command = commands_live ? jib_slew_input_ : 0.0;
-        const double load_newtons = crate_mass_kg_ * kJibGravity;
-        const bool within_swl = crate_mass_kg_ <= kJibSwlKilograms + 1.0e-6;
+        const double attached_mass = attached_load_mass();
+        const double load_newtons = attached_mass * kJibGravity;
+        const bool within_swl = attached_mass <= kJibSwlKilograms + 1.0e-6;
         const bool raise_requested = hoist > 0.05;
         const bool lower_requested = hoist < -0.05;
         const bool slew_requested = std::abs(slew_command) > 0.05;
@@ -1011,6 +1192,7 @@ private:
                                             static_cast<double>(delta_seconds));
                     jib_at_hoist_limit_ = winch_length_ <= kJibWinchMinMeters + 1.0e-4;
                     bodies.ActivateBody(jib_crate_id_);
+                    bodies.ActivateBody(needle_id_);
                 }
             } else if (lower_requested) {
                 if (winch_length_ >= kJibWinchMaxMeters - 1.0e-4) {
@@ -1022,6 +1204,7 @@ private:
                                             static_cast<double>(delta_seconds));
                     jib_at_hoist_limit_ = winch_length_ >= kJibWinchMaxMeters - 1.0e-4;
                     bodies.ActivateBody(jib_crate_id_);
+                    bodies.ActivateBody(needle_id_);
                 }
             }
 
@@ -1037,6 +1220,7 @@ private:
                     jib_at_slew_limit_ = false;
                 }
                 bodies.ActivateBody(jib_crate_id_);
+                bodies.ActivateBody(needle_id_);
             }
         }
 
@@ -1049,6 +1233,15 @@ private:
                              JPH::Quat::sIdentity(),
                              delta_seconds);
 
+        maybe_attach_hook(bodies);
+        maybe_seat_or_unseat_needle(bodies, raise_requested && commands_live && !jib_brake_engaged_);
+        if (needle_seated_) {
+            bodies.MoveKinematic(needle_id_,
+                                 needle_seat_position(),
+                                 JPH::Quat::sIdentity(),
+                                 delta_seconds);
+        }
+
         if (hook_constraint_.GetPtr() != nullptr) {
             hook_constraint_->SetDistance(0.0F, static_cast<float>(kJibSlingMaxMeters));
         }
@@ -1056,36 +1249,244 @@ private:
         jib_load_newtons_ = load_newtons;
     }
 
-    void maybe_step_up_crate(JPH::BodyInterface &bodies) noexcept {
-        if (traversal_mode_ != TraversalMode::None ||
-            support_entity_id_ == Simulation::kJibCrateEntityId) {
+    [[nodiscard]] double attached_load_mass() const noexcept {
+        if (hook_attachment_ == HookLoad::Crate) {
+            return crate_mass_kg_;
+        }
+        if (hook_attachment_ == HookLoad::Needle) {
+            return kNeedleMassKilograms;
+        }
+        return 0.0;
+    }
+
+    void detach_hook() noexcept {
+        if (hook_constraint_.GetPtr() != nullptr) {
+            physics_system_.RemoveConstraint(hook_constraint_.GetPtr());
+            hook_constraint_ = nullptr;
+        }
+        hook_attachment_ = HookLoad::None;
+    }
+
+    void attach_hook(const HookLoad load) noexcept {
+        if (load == HookLoad::None) {
+            detach_hook();
+            return;
+        }
+        detach_hook();
+        const auto &bodies = physics_system_.GetBodyInterface();
+        const JPH::BodyID load_id = load == HookLoad::Crate ? jib_crate_id_ : needle_id_;
+        const JPH::RVec3 load_position = bodies.GetPosition(load_id);
+        const JPH::RVec3 padeye =
+            load == HookLoad::Crate ? crate_padeye(load_position) : needle_padeye(load_position);
+        JPH::DistanceConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mPoint1 = jib_hook_position(slew_radians_, winch_length_);
+        settings.mPoint2 = padeye;
+        settings.mMinDistance = 0.0F;
+        settings.mMaxDistance = static_cast<float>(kJibSlingMaxMeters);
+        JPH::Body *hook_body = physics_system_.GetBodyLockInterfaceNoLock().TryGetBody(jib_hook_id_);
+        JPH::Body *load_body = physics_system_.GetBodyLockInterfaceNoLock().TryGetBody(load_id);
+        if (hook_body == nullptr || load_body == nullptr) {
+            return;
+        }
+        hook_constraint_ =
+            static_cast<JPH::DistanceConstraint *>(settings.Create(*hook_body, *load_body));
+        physics_system_.AddConstraint(hook_constraint_.GetPtr());
+        hook_attachment_ = load;
+    }
+
+    void maybe_attach_hook(JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 hook = bodies.GetPosition(jib_hook_id_);
+        auto consider = [&](const HookLoad load, const JPH::BodyID load_id, const JPH::RVec3 &padeye) {
+            if (hook_attachment_ == load) {
+                return;
+            }
+            if (distance_3d(hook, padeye.GetX(), padeye.GetY(), padeye.GetZ()) <=
+                kJibSlingMaxMeters + 0.12) {
+                attach_hook(load);
+                bodies.ActivateBody(load_id);
+            }
+        };
+        if (hook_attachment_ == HookLoad::None) {
+            const JPH::RVec3 crate = bodies.GetPosition(jib_crate_id_);
+            const JPH::RVec3 needle = bodies.GetPosition(needle_id_);
+            const double crate_d =
+                distance_3d(hook, crate_padeye(crate).GetX(), crate_padeye(crate).GetY(),
+                            crate_padeye(crate).GetZ());
+            const double needle_d =
+                distance_3d(hook, needle_padeye(needle).GetX(), needle_padeye(needle).GetY(),
+                            needle_padeye(needle).GetZ());
+            if (crate_d <= needle_d) {
+                consider(HookLoad::Crate, jib_crate_id_, crate_padeye(crate));
+            }
+            if (hook_attachment_ == HookLoad::None) {
+                consider(HookLoad::Needle, needle_id_, needle_padeye(needle));
+            }
+            if (hook_attachment_ == HookLoad::None) {
+                consider(HookLoad::Crate, jib_crate_id_, crate_padeye(crate));
+            }
+        }
+    }
+
+    [[nodiscard]] bool needle_aligned_for_seat(const JPH::BodyInterface &bodies) const noexcept {
+        const JPH::RVec3 position = bodies.GetPosition(needle_id_);
+        const JPH::Vec3 velocity = bodies.GetLinearVelocity(needle_id_);
+        const JPH::Quat rotation = bodies.GetRotation(needle_id_);
+        const JPH::Vec3 up = rotation * JPH::Vec3(0.0F, 1.0F, 0.0F);
+        const JPH::Vec3 axis = rotation * JPH::Vec3(1.0F, 0.0F, 0.0F);
+        const double dx = static_cast<double>(position.GetX()) - kNeedleSeatX;
+        const double dy = static_cast<double>(position.GetY()) - kNeedleSeatY;
+        const double dz = static_cast<double>(position.GetZ()) - kNeedleSeatZ;
+        const double speed = std::sqrt(static_cast<double>(velocity.LengthSq()));
+        const bool upright = up.GetY() > 0.90F;
+        const bool along_x = std::abs(axis.GetX()) > 0.90F;
+        return std::hypot(dx, dz) <= 0.55 && dy >= -0.20 && dy <= 0.75 && speed <= 1.45 &&
+               upright && along_x;
+    }
+
+    void seat_needle(JPH::BodyInterface &bodies) noexcept {
+        if (hook_attachment_ == HookLoad::Needle) {
+            detach_hook();
+        }
+        bodies.SetMotionType(needle_id_, JPH::EMotionType::Kinematic, JPH::EActivation::Activate);
+        bodies.SetPositionAndRotation(needle_id_,
+                                      needle_seat_position(),
+                                      JPH::Quat::sIdentity(),
+                                      JPH::EActivation::Activate);
+        bodies.SetLinearVelocity(needle_id_, JPH::Vec3::sZero());
+        bodies.SetAngularVelocity(needle_id_, JPH::Vec3::sZero());
+        needle_seated_ = true;
+    }
+
+    void unseat_needle(JPH::BodyInterface &bodies) noexcept {
+        if (!needle_seated_) {
+            return;
+        }
+        bodies.SetMotionType(needle_id_, JPH::EMotionType::Dynamic, JPH::EActivation::Activate);
+        bodies.ActivateBody(needle_id_);
+        needle_seated_ = false;
+    }
+
+    void maybe_seat_or_unseat_needle(JPH::BodyInterface &bodies, const bool raise_live) noexcept {
+        if (needle_seated_) {
+            const JPH::RVec3 hook = bodies.GetPosition(jib_hook_id_);
+            const JPH::RVec3 padeye = needle_padeye(needle_seat_position());
+            const double horiz = std::hypot(static_cast<double>(hook.GetX() - padeye.GetX()),
+                                            static_cast<double>(hook.GetZ() - padeye.GetZ()));
+            const bool over_span = horiz <= 0.90 &&
+                                   static_cast<double>(hook.GetY()) >= padeye.GetY() - 0.25;
+            if (raise_live && over_span) {
+                unseat_needle(bodies);
+                attach_hook(HookLoad::Needle);
+            }
+            return;
+        }
+        if (raise_live && hook_attachment_ == HookLoad::Needle) {
+            return;
+        }
+        if (needle_aligned_for_seat(bodies)) {
+            seat_needle(bodies);
+        }
+    }
+
+    void maybe_step_up(JPH::BodyInterface &bodies) noexcept {
+        if (traversal_mode_ != TraversalMode::None) {
             return;
         }
         const JPH::RVec3 player = bodies.GetPosition(player_id_);
-        const JPH::RVec3 crate = bodies.GetPosition(jib_crate_id_);
-        const double horiz = std::hypot(static_cast<double>(player.GetX()) - crate.GetX(),
-                                        static_cast<double>(player.GetZ()) - crate.GetZ());
-        if (horiz > static_cast<double>(kJibCrateHalfWidth + kPlayerCapsuleRadius + 0.08F)) {
-            return;
-        }
-        const double crate_top = crate.GetY() + static_cast<double>(kJibCrateHalfHeight);
-        const double feet = player.GetY() - static_cast<double>(kPlayerStandingHalfHeight);
-        const double rise = crate_top - feet;
-        if (rise <= 0.04 || rise > static_cast<double>(kCrateStepHeight)) {
-            return;
-        }
         const JPH::Vec3 velocity = bodies.GetLinearVelocity(player_id_);
-        const double approach = static_cast<double>(velocity.GetX()) * (crate.GetX() - player.GetX()) +
-                                static_cast<double>(velocity.GetZ()) * (crate.GetZ() - player.GetZ());
-        if (approach < 0.20) {
-            return;
+        const double feet = player.GetY() - static_cast<double>(kPlayerStandingHalfHeight);
+
+        struct StepTarget {
+            JPH::BodyID id;
+            std::uint64_t entity;
+            float half_x;
+            float half_y;
+            float half_z;
+            bool snap_center;
+            float max_rise;
+        };
+        StepTarget targets[5] = {
+            {jib_crate_id_, Simulation::kJibCrateEntityId, kJibCrateHalfWidth, kJibCrateHalfHeight,
+             kJibCrateHalfWidth, true, kCrateStepHeight},
+            {needle_id_, Simulation::kNeedleEntityId, kNeedleHalfLength, kNeedleHalfHeight,
+             kNeedleHalfWidth, false, kStepUpHeight},
+            {needle_near_landing_id_, Simulation::kNeedleNearLandingEntityId, kNeedleNearHalfX,
+             kNeedleNearHalfY, kNeedleNearHalfZ, false, kStepUpHeight},
+            {needle_far_landing_id_, Simulation::kNeedleFarLandingEntityId, kNeedleFarHalfX,
+             kNeedleFarHalfY, kNeedleFarHalfZ, false, kStepUpHeight},
+            {needle_bay_floor_id_, Simulation::kNeedleBayFloorEntityId, kNeedleBayFloorHalfX,
+             kNeedleBayFloorHalfY, kNeedleBayFloorHalfZ, false, kStepUpHeight},
+        };
+        if (!needle_seated_) {
+            targets[1].id = JPH::BodyID();
         }
-        bodies.SetPosition(player_id_,
-                           jib_rvec(crate.GetX(),
-                                    crate_top + static_cast<double>(kPlayerStandingHalfHeight) + 0.02,
-                                    crate.GetZ()),
-                           JPH::EActivation::Activate);
-        bodies.SetLinearVelocity(player_id_, JPH::Vec3::sZero());
+
+        auto try_step = [&](const StepTarget &target) {
+            if (target.id.IsInvalid() || support_entity_id_ == target.entity) {
+                return false;
+            }
+            const JPH::RVec3 center = bodies.GetPosition(target.id);
+            const double dx = static_cast<double>(player.GetX()) - center.GetX();
+            const double dz = static_cast<double>(player.GetZ()) - center.GetZ();
+            const double horiz = std::hypot(dx, dz);
+            const double radius = static_cast<double>(
+                std::max(target.half_x, target.half_z) + kPlayerCapsuleRadius + 0.08F);
+            if (horiz > radius) {
+                return false;
+            }
+            const double top = center.GetY() + static_cast<double>(target.half_y);
+            const double rise = top - feet;
+            if (rise <= 0.04 || rise > static_cast<double>(target.max_rise)) {
+                return false;
+            }
+            const double approach = static_cast<double>(velocity.GetX()) * (center.GetX() - player.GetX()) +
+                                    static_cast<double>(velocity.GetZ()) * (center.GetZ() - player.GetZ());
+            if (approach < 0.12) {
+                return false;
+            }
+            const double x = target.snap_center ? static_cast<double>(center.GetX())
+                                                : static_cast<double>(player.GetX());
+            const double z = target.snap_center ? static_cast<double>(center.GetZ())
+                                                : static_cast<double>(player.GetZ());
+            bodies.SetPosition(player_id_,
+                               jib_rvec(x, top + static_cast<double>(kPlayerStandingHalfHeight) + 0.02, z),
+                               JPH::EActivation::Activate);
+            if (target.snap_center) {
+                bodies.SetLinearVelocity(player_id_, JPH::Vec3::sZero());
+            }
+            return true;
+        };
+
+        for (const StepTarget &target : targets) {
+            if (try_step(target)) {
+                return;
+            }
+        }
+        for (std::uint32_t i = 0; i < Simulation::kNeedleWestStairCount; ++i) {
+            StepTarget tread{west_stair_ids_[i],
+                             Simulation::kNeedleStairEntityIdBegin + i,
+                             1.15F,
+                             0.10F,
+                             0.32F,
+                             false,
+                             kStepUpHeight};
+            if (try_step(tread)) {
+                return;
+            }
+        }
+        for (std::uint32_t i = 0; i < Simulation::kNeedleEastStairCount; ++i) {
+            StepTarget tread{east_stair_ids_[i],
+                             Simulation::kNeedleStairEntityIdBegin + Simulation::kNeedleWestStairCount + i,
+                             0.42F,
+                             0.10F,
+                             1.20F,
+                             false,
+                             kStepUpHeight};
+            if (try_step(tread)) {
+                return;
+            }
+        }
     }
 
     [[nodiscard]] TraversalMode traversal_candidate(const JPH::RVec3 &player_position) const noexcept {
@@ -1310,6 +1711,10 @@ private:
         checkpoint_jib_occupied_ = jib_station_occupied_;
         checkpoint_crate_position_ = state_.jib_crate_position;
         checkpoint_crate_velocity_ = state_.jib_crate_linear_velocity;
+        checkpoint_needle_seated_ = needle_seated_;
+        checkpoint_needle_position_ = state_.needle_position;
+        checkpoint_needle_velocity_ = state_.needle_linear_velocity;
+        checkpoint_hook_attachment_ = hook_attachment_;
     }
 
     void maybe_restore_from_death(JPH::BodyInterface &bodies) noexcept {
@@ -1358,6 +1763,24 @@ private:
                              jib_hook_position(slew_radians_, winch_length_),
                              JPH::Quat::sIdentity(),
                              static_cast<float>(Simulation::kFixedStepSeconds));
+        needle_seated_ = checkpoint_needle_seated_;
+        bodies.SetMotionType(needle_id_,
+                             needle_seated_ ? JPH::EMotionType::Kinematic : JPH::EMotionType::Dynamic,
+                             JPH::EActivation::Activate);
+        bodies.SetPositionAndRotation(
+            needle_id_,
+            JPH::RVec3(checkpoint_needle_position_.x,
+                       checkpoint_needle_position_.y,
+                       checkpoint_needle_position_.z),
+            JPH::Quat::sIdentity(),
+            JPH::EActivation::Activate);
+        bodies.SetLinearVelocity(
+            needle_id_,
+            JPH::Vec3(static_cast<float>(checkpoint_needle_velocity_.x),
+                      static_cast<float>(checkpoint_needle_velocity_.y),
+                      static_cast<float>(checkpoint_needle_velocity_.z)));
+        bodies.SetAngularVelocity(needle_id_, JPH::Vec3::sZero());
+        attach_hook(checkpoint_hook_attachment_);
         parachute_deployed_ = false;
         airborne_seconds_ = 0.0;
         fall_severity_ = 0;
@@ -1481,10 +1904,22 @@ private:
         const JPH::RVec3 crate_position = bodies.GetPosition(jib_crate_id_);
         const JPH::Vec3 crate_velocity = bodies.GetLinearVelocity(jib_crate_id_);
         const JPH::RVec3 boom_tip = jib_boom_tip(slew_radians_);
-        const JPH::RVec3 crate_padeye =
-            crate_position + JPH::RVec3(0.0, static_cast<double>(kJibCrateHalfHeight), 0.0);
-        const double hook_crate_distance = distance_3d(
-            hook_position, crate_padeye.GetX(), crate_padeye.GetY(), crate_padeye.GetZ());
+        const JPH::RVec3 needle_position = bodies.GetPosition(needle_id_);
+        const JPH::Vec3 needle_velocity = bodies.GetLinearVelocity(needle_id_);
+        const JPH::Quat needle_rotation = bodies.GetRotation(needle_id_);
+        JPH::RVec3 attached_padeye = hook_position;
+        if (hook_attachment_ == HookLoad::Crate) {
+            attached_padeye = crate_padeye(crate_position);
+        } else if (hook_attachment_ == HookLoad::Needle) {
+            attached_padeye = needle_padeye(needle_position);
+        }
+        const double hook_load_distance =
+            hook_attachment_ == HookLoad::None
+                ? 1.0e9
+                : distance_3d(hook_position,
+                              attached_padeye.GetX(),
+                              attached_padeye.GetY(),
+                              attached_padeye.GetZ());
 
         state_.jib_pendant_position = {kJibPendantX, kJibPendantY, kJibPendantZ};
         state_.jib_mast_position = {kJibMastX, 0.0, kJibMastZ};
@@ -1505,7 +1940,19 @@ private:
         state_.jib_stalled = jib_stalled_;
         state_.jib_at_hoist_limit = jib_at_hoist_limit_;
         state_.jib_at_slew_limit = jib_at_slew_limit_;
-        state_.jib_hook_attached = hook_crate_distance <= kJibSlingMaxMeters + 0.08;
+        state_.jib_hook_attached =
+            hook_attachment_ != HookLoad::None && hook_load_distance <= kJibSlingMaxMeters + 0.08;
+        state_.jib_hook_load = hook_attachment_;
+        state_.needle_position = {needle_position.GetX(), needle_position.GetY(), needle_position.GetZ()};
+        state_.needle_linear_velocity =
+            {needle_velocity.GetX(), needle_velocity.GetY(), needle_velocity.GetZ()};
+        state_.needle_yaw_radians = yaw_from_quat(needle_rotation);
+        state_.needle_seated = needle_seated_;
+        state_.needle_near_landing_position = {kNeedleNearLandingX, kNeedleNearLandingY,
+                                               kNeedleNearLandingZ};
+        state_.needle_far_landing_position = {kNeedleFarLandingX, kNeedleFarLandingY,
+                                              kNeedleFarLandingZ};
+        state_.needle_bay_floor_position = {kNeedleBayFloorX, kNeedleBayFloorY, kNeedleBayFloorZ};
     }
 
     JoltRuntimeLease runtime_;
@@ -1537,6 +1984,14 @@ private:
     JPH::BodyID jib_boom_id_;
     JPH::BodyID jib_hook_id_;
     JPH::BodyID jib_crate_id_;
+    JPH::BodyID needle_id_;
+    JPH::BodyID needle_west_pocket_id_;
+    JPH::BodyID needle_east_pocket_id_;
+    JPH::BodyID needle_near_landing_id_;
+    JPH::BodyID needle_far_landing_id_;
+    JPH::BodyID needle_bay_floor_id_;
+    JPH::BodyID west_stair_ids_[Simulation::kNeedleWestStairCount]{};
+    JPH::BodyID east_stair_ids_[Simulation::kNeedleEastStairCount]{};
     JPH::Ref<JPH::DistanceConstraint> hook_constraint_;
 
     SupportSample support_sample_{};
@@ -1570,6 +2025,10 @@ private:
     bool checkpoint_jib_occupied_ = false;
     Vector3 checkpoint_crate_position_{};
     Vector3 checkpoint_crate_velocity_{};
+    bool checkpoint_needle_seated_ = false;
+    Vector3 checkpoint_needle_position_{};
+    Vector3 checkpoint_needle_velocity_{};
+    HookLoad checkpoint_hook_attachment_ = HookLoad::Crate;
 
     double crate_mass_kg_ = kJibRatedCrateKilograms;
     double slew_radians_ = 0.0;
@@ -1585,6 +2044,8 @@ private:
     bool jib_at_slew_limit_ = false;
     bool jib_enter_requested_ = false;
     bool jib_exit_requested_ = false;
+    HookLoad hook_attachment_ = HookLoad::None;
+    bool needle_seated_ = false;
 
     TraversalMode traversal_mode_ = TraversalMode::None;
     JPH::RVec3 traversal_target_{JPH::RVec3::sZero()};

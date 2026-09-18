@@ -65,6 +65,7 @@ if(BUILD_TESTING AND NOT ANDROID)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.wo005_first_freight COMMAND scraperx_sim_tests)
+    add_test(NAME scraperx_sim.wo006_first_structural_coupling COMMAND scraperx_sim_tests)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

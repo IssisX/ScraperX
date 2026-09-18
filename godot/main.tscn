@@ -25,9 +25,9 @@ ambient_light_energy = 0.66
 fog_enabled = true
 fog_light_color = Color(0.44, 0.46, 0.46, 1)
 fog_light_energy = 0.52
-fog_density = 0.0014
-fog_height = 180.0
-fog_height_density = -0.010
+fog_density = 0.0018
+fog_height = 140.0
+fog_height_density = -0.012
 
 [node name="ScraperXWorld" type="Node3D"]
 script = ExtResource("1_main")
@@ -74,7 +74,7 @@ theme_override_constants/separation = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.67, 0.59, 0.39, 1)
 theme_override_font_sizes/font_size = 15
-text = "SCRAPERX  /  KX-JIB FIRST FREIGHT  /  NATIVE WORLD"
+text = "SCRAPERX  /  KX-NEEDLE FIRST COUPLING  /  NATIVE WORLD"
 
 [node name="Status" type="Label" parent="HUD/TopLeft"]
 layout_mode = 2

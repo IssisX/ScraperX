@@ -580,6 +580,119 @@ int main() {
     (void)committed_crate;
     (void)committed_winch;
 
+    Simulation gap(InitialSpawn::NeedleNearLanding);
+    require(gap.advance_frame(1.0).accepted, "needle near-landing settle must advance");
+    const auto gap_idle = gap.snapshot();
+    require(gap_idle.player_grounded, "near-landing spawn must stand on the bay deck");
+    require(gap_idle.support_entity_id == Simulation::kNeedleNearLandingEntityId,
+            "unseated fixture must begin on the near landing, not an invisible walkbox");
+    require(!gap_idle.needle_seated, "KX-NEEDLE must begin unseated in the gap fixture");
+    require(gap.set_move_input(1.0, 0.0), "walk toward the far landing must be accepted");
+    bool fell_the_gap = false;
+    bool cheated_across = false;
+    const int gap_budget = static_cast<int>(3.6 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < gap_budget; ++step) {
+        require(gap.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "unseated gap crossing step must advance");
+        const auto now = gap.snapshot();
+        if (now.support_entity_id == Simulation::kNeedleFarLandingEntityId ||
+            now.support_entity_id == Simulation::kNeedleBayFloorEntityId) {
+            cheated_across = true;
+        }
+        if (now.player_position.y < 3.2) {
+            fell_the_gap = true;
+            break;
+        }
+    }
+    require(fell_the_gap, "unseated KX-NEEDLE must leave the bay as a real fall");
+    require(!cheated_across, "the far landing must not exist as support while the needle is unseated");
+
+    Simulation seated(InitialSpawn::NeedleSeated);
+    require(seated.advance_frame(1.0).accepted, "seated-needle settle must advance");
+    const auto seated_idle = seated.snapshot();
+    require(seated_idle.needle_seated, "NeedleSeated spawn must begin with a seated structural member");
+    require(seated_idle.player_grounded, "seated fixture must stand on the near landing");
+    require(seated.set_move_input(1.0, 0.0), "walk across the seated needle must be accepted");
+    bool walked_needle = false;
+    bool reached_far = false;
+    const int seat_budget = static_cast<int>(5.5 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < seat_budget; ++step) {
+        require(seated.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "seated crossing step must advance");
+        const auto now = seated.snapshot();
+        if (now.support_entity_id == Simulation::kNeedleEntityId && now.player_grounded) {
+            walked_needle = true;
+        }
+        if (now.player_grounded && now.player_position.y > 5.0 &&
+            (now.support_entity_id == Simulation::kNeedleFarLandingEntityId ||
+             now.support_entity_id == Simulation::kNeedleBayFloorEntityId ||
+             (now.support_entity_id == Simulation::kNeedleEntityId && now.player_position.x > -2.0))) {
+            if (now.player_position.x > -1.8) {
+                reached_far = true;
+            }
+        }
+        if (walked_needle && reached_far) {
+            break;
+        }
+    }
+    require(walked_needle, "player must walk the seated KX-NEEDLE as real support");
+    require(reached_far, "seated needle must change traversal so the far landing is reachable");
+    require(seated.snapshot().player_position.y > 4.8,
+            "the seated span must carry the player, not drop them to grade");
+    require(seated.commit_checkpoint(), "seated span must accept a grounded checkpoint");
+    require(seated.snapshot().checkpoint_committed && seated.snapshot().needle_seated,
+            "checkpoint must store seated structural state");
+
+    Simulation bay(InitialSpawn::NeedleBay);
+    require(bay.advance_frame(1.0).accepted, "needle-bay settle must advance");
+    const auto bay_idle = bay.snapshot();
+    require(!bay_idle.needle_seated, "jib fixture must begin with a free needle");
+    require(bay_idle.jib_hook_load == scraperx::sim::HookLoad::Needle,
+            "NeedleBay must pre-hook KX-NEEDLE rather than auto-snap it into the pockets");
+    require(bay.request_enter_jib_station(), "needle bay pendant entry must be accepted");
+    require(bay.advance_frame(Simulation::kFixedStepSeconds).accepted, "needle bay enter tick must advance");
+    require(bay.set_jib_brake(false), "needle bay brake release must be accepted");
+    const double target_slew = std::atan2(43.90 - 48.0, -5.15 - (-12.0));
+    bool jib_seated = false;
+    int lower_phase = 0;
+    const int jib_budget = static_cast<int>(16.0 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < jib_budget; ++step) {
+        const auto now = bay.snapshot();
+        if (now.needle_seated) {
+            jib_seated = true;
+            break;
+        }
+        const double slew_err = target_slew - now.jib_slew_radians;
+        double slew_cmd = slew_err / 0.12;
+        if (slew_cmd > 1.0) {
+            slew_cmd = 1.0;
+        }
+        if (slew_cmd < -1.0) {
+            slew_cmd = -1.0;
+        }
+        if (std::abs(slew_err) < 0.05 && now.jib_winch_length_meters < 2.80) {
+            lower_phase = 1;
+        }
+        const double winch_target = lower_phase == 0 ? 2.55 : 3.55;
+        double hoist_cmd = (now.jib_winch_length_meters - winch_target) / 0.35;
+        if (hoist_cmd > 1.0) {
+            hoist_cmd = 1.0;
+        }
+        if (hoist_cmd < -1.0) {
+            hoist_cmd = -1.0;
+        }
+        require(bay.set_jib_slew_input(slew_cmd), "needle placement slew must be accepted");
+        require(bay.set_jib_hoist_input(hoist_cmd), "needle placement hoist must be accepted");
+        require(bay.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "needle placement step must advance");
+    }
+    require(jib_seated, "KX-JIB must seat KX-NEEDLE in KX-POCKETS by bounded hoist/slew, not a flag");
+
+    require(bay.set_jib_hoist_input(1.0), "raise after seat must be accepted as the legal unseat path");
+    require(bay.advance_frame(2.2).accepted, "unseat hoist interval must advance");
+    require(!bay.snapshot().needle_seated,
+            "raising a hooked seated needle must unseat it and remove the span");
+
     std::cout << "PASS scraperx_sim WO-005 first freight: "
               << "approach_z=" << approach_spawn.player_position.z
               << " translating_vx=" << translating_support_velocity.x
@@ -592,6 +705,13 @@ int main() {
               << " crate_lift_y=" << lifted.jib_crate_position.y
               << " winch=" << lifted.jib_winch_length_meters
               << " stall=" << stalled_heavy.jib_stalled
+              << " hz=" << Simulation::kTickRateHz << '\n';
+    std::cout << "PASS scraperx_sim WO-006 first structural coupling: "
+              << "unseated_fall_y=" << gap.snapshot().player_position.y
+              << " seated_far_x=" << seated.snapshot().player_position.x
+              << " seated_support=" << seated.snapshot().support_entity_id
+              << " jib_seated=" << jib_seated
+              << " unseated_after_raise=" << !bay.snapshot().needle_seated
               << " hz=" << Simulation::kTickRateHz << '\n';
     return EXIT_SUCCESS;
 }

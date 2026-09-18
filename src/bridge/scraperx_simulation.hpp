@@ -83,6 +83,14 @@ public:
     [[nodiscard]] bool is_jib_stalled() const;
     [[nodiscard]] bool is_jib_at_hoist_limit() const;
     [[nodiscard]] bool is_jib_hook_attached() const;
+    [[nodiscard]] std::int64_t get_jib_hook_load() const;
+    [[nodiscard]] godot::Vector3 get_needle_position() const;
+    [[nodiscard]] godot::Vector3 get_needle_linear_velocity() const;
+    [[nodiscard]] double get_needle_yaw_radians() const;
+    [[nodiscard]] bool is_needle_seated() const;
+    [[nodiscard]] godot::Vector3 get_needle_near_landing_position() const;
+    [[nodiscard]] godot::Vector3 get_needle_far_landing_position() const;
+    [[nodiscard]] godot::Vector3 get_needle_bay_floor_position() const;
 
 protected:
     static void _bind_methods();

@@ -31,6 +31,7 @@ var _jib_boom_mesh: MeshInstance3D
 var _jib_hook_mesh: MeshInstance3D
 var _jib_crate_mesh: MeshInstance3D
 var _jib_cable_mesh: MeshInstance3D
+var _needle_mesh: MeshInstance3D
 var _cloud_wisps: Array[MeshInstance3D] = []
 
 var _pendant: Control
@@ -90,7 +91,7 @@ func _ready() -> void:
 		return
 
 	_ci_initial_player_position = _native.get_player_position()
-	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=WO-005-FIRST-FREIGHT")
+	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=WO-006-FIRST-STRUCTURAL-COUPLING")
 	_render_snapshot()
 
 func _process(delta: float) -> void:
@@ -358,6 +359,8 @@ func _render_snapshot() -> void:
 	var jib_limit := bool(_native.is_jib_at_hoist_limit())
 	var winch := float(_native.get_jib_winch_length_meters())
 	var crate_mass := float(_native.get_jib_crate_mass_kg())
+	var needle_seated := _native.has_method("is_needle_seated") and bool(_native.is_needle_seated())
+	var hook_load := int(_native.get_jib_hook_load()) if _native.has_method("get_jib_hook_load") else 1
 
 	_camera.position = position + EYE_OFFSET
 	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
@@ -368,14 +371,14 @@ func _render_snapshot() -> void:
 		support,
 		_traversal_name(traversal_mode),
 	]
-	_machine_value.text = "JIB  %s  WINCH %4.2f  CRATE %4.0fkg  %s" % [
+	_machine_value.text = "JIB  %s  WINCH %4.2f  %s  NEEDLE %s" % [
 		"STALL" if jib_stall else ("LIMIT" if jib_limit else ("HOLD" if jib_brake else ("CAB" if jib_occupied else "COLD"))),
 		winch,
-		crate_mass,
-		"HOOK" if bool(_native.is_jib_hook_attached()) else "OPEN",
+		"NEEDLE" if hook_load == 2 else ("CRATE %0.0fkg" % crate_mass),
+		"SEATED" if needle_seated else "FREE",
 	]
 	_tick_value.text = "90 HZ NATIVE  /  %08d" % int(_native.get_tick_index())
-	_boundary_value.text = "KX-JIB 5t SWL / LOCAL PENDANT"
+	_boundary_value.text = "KX-NEEDLE / POCKETS / LOCAL PENDANT"
 
 	var context_visible := false
 	if traversal_mode == TRAVERSAL_HANG:
@@ -413,6 +416,8 @@ func _render_snapshot() -> void:
 			_status.text = "PENDANT LIVE / RAISE LOWER SLEW / BOUNDED WORK"
 	elif jib_enter:
 		_status.text = "KX-JIB PENDANT IN RANGE / ACTION ENTERS STATION"
+	elif needle_seated:
+		_status.text = "KX-NEEDLE SEATED / SPAN IS SUPPORT / WALK THE BAY"
 	elif hopper_available:
 		_status.text = "LOADING BAY CONTROL IN RANGE"
 	elif rocker_struck:
@@ -442,6 +447,7 @@ func _render_snapshot() -> void:
 		_impact_rocker_mesh.position = _native.get_impact_rocker_position()
 		_impact_rocker_mesh.rotation = Vector3(float(_native.get_impact_rocker_angle_radians()), 0.0, 0.0)
 	_sync_jib_meshes()
+	_sync_needle_mesh()
 	if _pendant != null:
 		_pendant.visible = jib_occupied
 
@@ -465,28 +471,11 @@ func _build_exterior_world() -> void:
 	for x in [-18.0, -6.0, 6.0, 18.0]:
 		_add_box("DrainStripe", Vector3(0.14, 0.035, 58.0), Vector3(x, 0.05, 42.0), tar)
 
-	# Monumental lower mass: concrete piers plus steel machine bays, not a thin scaffold cage.
+	# Monumental lower mass: piers, then stacked machine bays that ARE the tower.
 	_add_box("TowerBasePierL", Vector3(20.0, 30.0, 6.0), Vector3(-17.0, 15.0, 10.0), dark_concrete)
 	_add_box("TowerBasePierR", Vector3(20.0, 30.0, 6.0), Vector3(17.0, 15.0, 10.0), dark_concrete)
 	_add_box("LoadingBayHeader", Vector3(14.0, 3.0, 6.0), Vector3(0.0, 27.5, 10.0), oxidized_steel)
-	_add_box("TowerCoreSpine", Vector3(24.0, 900.0, 30.0), Vector3(0.0, 470.0, -5.0), dark_concrete)
-	_add_box("MachineBayMassL", Vector3(13.0, 610.0, 24.0), Vector3(-19.0, 320.0, -1.0), mill_scale)
-	_add_box("MachineBayMassR", Vector3(13.0, 610.0, 24.0), Vector3(19.0, 320.0, -1.0), mill_scale)
-
-	for x in [-31.0, 31.0]:
-		for z in [-27.0, 25.0]:
-			_add_box("MegaColumn", Vector3(2.8, 650.0, 2.8), Vector3(x, 325.0, z), mill_scale)
-	for level in range(36, 325, 18):
-		var y := float(level)
-		for z in [-27.0, 25.0]:
-			_add_box("ExteriorBeamX", Vector3(64.0, 1.3, 1.3), Vector3(0.0, y, z), oxidized_steel)
-		for x in [-31.0, 31.0]:
-			_add_box("ExteriorBeamZ", Vector3(1.3, 1.3, 54.0), Vector3(x, y, -1.0), oxidized_steel)
-
-	# Timber infill breaks the concrete/steel mass with a construction language seen in the identity reference.
-	for y in [44.0, 68.0, 92.0, 116.0]:
-		_add_box("TimberInfillL", Vector3(8.0, 14.0, 0.55), Vector3(-18.5, y, 12.2), weathered_timber)
-		_add_box("TimberInfillR", Vector3(8.0, 14.0, 0.55), Vector3(18.5, y + 8.0, 12.2), weathered_timber)
+	_build_stacked_machine_tower(mill_scale, oxidized_steel, dark_concrete, weathered_timber, galvanized, faded_yellow)
 
 	# Native hopper and downstream impact rocker.
 	_add_box("HopperFrameL", Vector3(0.28, 1.6, 3.6), Vector3(5.05, 5.85, 33.0), mill_scale)
@@ -519,14 +508,16 @@ func _build_exterior_world() -> void:
 	_add_box("KxJibBase", Vector3(2.2, 0.35, 2.2), jib_mast + Vector3(0.0, 0.18, 0.0), mill_scale)
 	_jib_boom_mesh = _add_box("KxJibBoom", Vector3(8.0, 0.36, 0.36), Vector3(-8.0, 9.0, 48.0), mill_scale)
 	_jib_hook_mesh = _add_sphere("KxJibHook", 0.16, Vector3(-4.0, 0.85, 48.0), faded_yellow)
-	_jib_crate_mesh = _add_box("KxCrate", Vector3(1.0, 1.0, 1.0), Vector3(-4.0, 0.5, 48.0), chipped_orange)
-	_add_box("KxCrateMark", Vector3(1.02, 0.08, 1.02), Vector3(-4.0, 0.96, 48.0), faded_yellow)
+	_jib_crate_mesh = _add_box("KxCrate", Vector3(1.40, 0.32, 1.40), Vector3(-4.0, 0.16, 48.0), chipped_orange)
+	_add_box("KxCrateMark", Vector3(1.42, 0.04, 1.42), Vector3(-4.0, 0.30, 48.0), faded_yellow)
 	_jib_cable_mesh = _add_cylinder("KxJibCable", 0.035, 1.0, Vector3(-4.0, 5.0, 48.0), galvanized)
 	var pendant := Vector3(-7.0, 0.0, 49.0)
 	_add_box("KxPendantPedestal", Vector3(0.7, 1.35, 0.55), pendant + Vector3(0.0, 0.68, 0.0), mill_scale)
 	_add_box("KxPendantFace", Vector3(0.52, 0.38, 0.08), pendant + Vector3(0.0, 1.18, -0.30), chipped_orange)
 
-	# Machine-tower identity: large readable idle infrastructure, not fake animated authority.
+	_build_needle_bay(mill_scale, oxidized_steel, weathered_timber, galvanized, faded_yellow, chipped_orange)
+
+	# Machine-tower identity: large readable idle infrastructure integrated into the bays.
 	_add_machine_wheel(Vector3(-17.0, 43.0, 14.0), 6.5, 1.4, mill_scale, oxidized_steel)
 	_add_machine_wheel(Vector3(-18.0, 22.0, 14.0), 4.8, 1.2, oxidized_steel, mill_scale)
 	_add_hoist_drum(Vector3(12.0, 24.0, 14.0), 3.4, 7.5, mill_scale, galvanized)
@@ -654,6 +645,84 @@ func _sync_jib_meshes() -> void:
 		if length > 0.001:
 			_jib_cable_mesh.look_at(tip, Vector3.RIGHT)
 			_jib_cable_mesh.rotate_object_local(Vector3.RIGHT, PI * 0.5)
+
+func _sync_needle_mesh() -> void:
+	if _native == null or _needle_mesh == null or not _native.has_method("get_needle_position"):
+		return
+	_needle_mesh.position = _native.get_needle_position()
+	_needle_mesh.rotation = Vector3(0.0, float(_native.get_needle_yaw_radians()), 0.0)
+
+func _build_needle_bay(mill_scale: Material, oxidized_steel: Material, weathered_timber: Material, galvanized: Material, faded_yellow: Material, chipped_orange: Material) -> void:
+	_add_box("KxPocketWest", Vector3(0.72, 0.36, 0.72), Vector3(-8.75, 4.86, 43.90), mill_scale)
+	_add_box("KxPocketEast", Vector3(0.72, 0.36, 0.72), Vector3(-1.55, 4.86, 43.90), mill_scale)
+	_add_box("KxPocketCheekW", Vector3(0.18, 0.70, 0.80), Vector3(-8.75, 5.20, 43.40), oxidized_steel)
+	_add_box("KxPocketCheekE", Vector3(0.18, 0.70, 0.80), Vector3(-1.55, 5.20, 43.40), oxidized_steel)
+	_needle_mesh = _add_box("KxNeedle", Vector3(7.20, 0.36, 0.56), Vector3(-18.0, 0.18, 40.0), faded_yellow)
+	_add_box("KxNearLanding", Vector3(4.40, 0.40, 3.00), Vector3(-10.60, 5.20, 43.90), weathered_timber)
+	_add_box("KxFarLanding", Vector3(5.00, 0.40, 3.00), Vector3(0.60, 5.20, 43.90), weathered_timber)
+	_add_box("KxBayFloor", Vector3(12.00, 0.40, 10.00), Vector3(9.50, 8.50, 40.50), mill_scale)
+	_add_box("KxBayFloorEdge", Vector3(12.2, 0.08, 0.18), Vector3(9.50, 8.72, 45.40), faded_yellow)
+	for i in range(15):
+		var y_top := 0.36 * float(i + 1)
+		var z := 53.20 - 0.60 * float(i)
+		_add_box("KxWestTread", Vector3(2.30, 0.20, 0.64), Vector3(-10.60, y_top - 0.10, z), galvanized)
+	for i in range(9):
+		var y_top := 5.40 + 0.367 * float(i + 1)
+		var x := 2.40 + 0.68 * float(i)
+		_add_box("KxEastTread", Vector3(0.84, 0.20, 2.40), Vector3(x, y_top - 0.10, 43.90), galvanized)
+	_add_box("KxNeedleRailN", Vector3(4.8, 0.08, 0.08), Vector3(-5.15, 6.15, 42.55), faded_yellow)
+	_add_box("KxBayHeader", Vector3(8.0, 1.4, 1.6), Vector3(9.5, 14.2, 45.2), oxidized_steel)
+	_add_box("KxBayColumnL", Vector3(1.4, 16.0, 1.4), Vector3(4.2, 8.0, 45.4), mill_scale)
+	_add_box("KxBayColumnR", Vector3(1.4, 16.0, 1.4), Vector3(14.8, 8.0, 45.4), mill_scale)
+	_add_machine_wheel(Vector3(9.5, 12.4, 44.6), 2.6, 0.7, mill_scale, oxidized_steel)
+	_add_box("KxStagingRack", Vector3(7.6, 0.22, 0.7), Vector3(-18.0, 0.20, 40.0), mill_scale)
+	_add_box("KxApronBrace", Vector3(0.55, 5.4, 0.55), Vector3(-13.4, 2.7, 44.2), oxidized_steel)
+	_add_box("KxApronBrace2", Vector3(0.55, 5.4, 0.55), Vector3(-7.8, 2.7, 44.2), oxidized_steel)
+	_add_box("KxPocketPaint", Vector3(0.20, 0.12, 0.46), Vector3(-8.75, 5.28, 43.90), chipped_orange)
+
+func _build_stacked_machine_tower(mill_scale: Material, oxidized_steel: Material, dark_concrete: Material, weathered_timber: Material, galvanized: Material, faded_yellow: Material) -> void:
+	# Four mega columns carry stacked open bays. No solid 900 m core.
+	for x in [-22.0, 22.0]:
+		for z in [-18.0, 18.0]:
+			_add_box("MegaColumn", Vector3(3.2, 340.0, 3.2), Vector3(x, 170.0, z), mill_scale)
+	_add_box("CoreWellL", Vector3(4.0, 280.0, 8.0), Vector3(-8.0, 150.0, -4.0), dark_concrete)
+	_add_box("CoreWellR", Vector3(4.0, 280.0, 8.0), Vector3(8.0, 150.0, -4.0), dark_concrete)
+
+	var elevations := [8.0, 22.0, 36.0, 50.0, 66.0, 82.0, 100.0, 118.0, 138.0, 158.0, 180.0, 204.0, 230.0, 258.0, 288.0, 320.0]
+	for index in range(elevations.size()):
+		var y: float = elevations[index]
+		var variant := index % 4
+		_add_box("BayFloorRingN", Vector3(48.0, 1.1, 3.2), Vector3(0.0, y, 20.0), oxidized_steel)
+		_add_box("BayFloorRingS", Vector3(48.0, 1.1, 3.2), Vector3(0.0, y, -20.0), oxidized_steel)
+		_add_box("BayFloorRingE", Vector3(3.2, 1.1, 38.0), Vector3(22.0, y, 0.0), mill_scale)
+		_add_box("BayFloorRingW", Vector3(3.2, 1.1, 38.0), Vector3(-22.0, y, 0.0), mill_scale)
+		_add_box("BayHeaderN", Vector3(36.0, 2.2, 2.4), Vector3(0.0, y + 10.0, 19.5), mill_scale)
+		_add_box("ChevronL", Vector3(1.1, 12.0, 1.1), Vector3(-14.0, y + 6.0, 19.0), oxidized_steel).rotation.z = 0.55
+		_add_box("ChevronR", Vector3(1.1, 12.0, 1.1), Vector3(14.0, y + 6.0, 19.0), oxidized_steel).rotation.z = -0.55
+		_add_box("CatwalkN", Vector3(28.0, 0.22, 2.4), Vector3(0.0, y + 3.6, 22.6), galvanized)
+		_add_box("CatwalkRailN", Vector3(28.0, 0.08, 0.08), Vector3(0.0, y + 4.5, 23.7), faded_yellow)
+		if variant == 0:
+			if index < 5:
+				_add_machine_wheel(Vector3(-15.0, y + 7.5, 16.5), 4.4, 1.2, mill_scale, oxidized_steel)
+			else:
+				_add_cylinder("BayWheel", 4.4, 1.2, Vector3(-15.0, y + 7.5, 16.5), mill_scale).rotation.x = PI * 0.5
+			_add_hoist_drum(Vector3(12.0, y + 6.5, 16.0), 2.6, 6.4, mill_scale, galvanized)
+		elif variant == 1:
+			_add_hoist_drum(Vector3(-12.0, y + 7.0, 15.5), 3.0, 7.0, oxidized_steel, mill_scale)
+			if index < 5:
+				_add_machine_wheel(Vector3(14.5, y + 8.0, 16.0), 3.6, 1.0, oxidized_steel, mill_scale)
+			_add_box("TimberInfill", Vector3(7.5, 9.0, 0.5), Vector3(-18.5, y + 6.0, 21.4), weathered_timber)
+		elif variant == 2:
+			_add_box("IdleCraneMast", Vector3(2.6, 14.0, 2.6), Vector3(16.0, y + 8.0, 14.0), oxidized_steel)
+			_add_box("IdleCraneBoom", Vector3(1.6, 1.4, 22.0), Vector3(16.0, y + 14.5, 24.0), mill_scale).rotation.x = -0.22
+			if index < 6:
+				_add_machine_wheel(Vector3(-16.0, y + 6.8, 15.8), 3.2, 0.9, mill_scale, oxidized_steel)
+		else:
+			_add_box("PipeRack", Vector3(22.0, 0.7, 0.7), Vector3(0.0, y + 9.5, 17.5), galvanized)
+			_add_box("Counterweight", Vector3(4.4, 6.0, 3.2), Vector3(18.0, y + 4.2, 14.5), mill_scale)
+			_add_box("TimberInfill", Vector3(8.0, 10.0, 0.5), Vector3(18.5, y + 7.0, 21.4), weathered_timber)
+		if index % 3 == 0:
+			_add_floodlight(Vector3(-10.0, y + 11.0, 21.0), Vector3(0.15, -0.35, 1.0))
 
 func _material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()

@@ -1,4 +1,4 @@
-name: ScraperX WO-005 — First Freight
+name: ScraperX WO-006 — First Structural Coupling
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: scraperx-wo005-${{ github.ref }}-${{ github.sha }}
+  group: scraperx-wo006-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 env:
@@ -21,7 +21,7 @@ env:
   ANDROID_NDK_VERSION: 29.0.14206865
 
 jobs:
-  first-freight:
+  first-structural-coupling:
     runs-on: ubuntu-24.04
     timeout-minutes: 70
 
@@ -67,7 +67,7 @@ jobs:
             -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
           tools/godot/godot --version
 
-      - name: Build native host graph and run WO-005 regressions
+      - name: Build native host graph and run WO-005/WO-006 regressions
         shell: bash
         run: |
           set -euo pipefail
@@ -81,6 +81,7 @@ jobs:
           ctest --test-dir build/host --verbose | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
           grep -F "PASS scraperx_sim WO-005 first freight" artifacts/native-tests.log
+          grep -F "PASS scraperx_sim WO-006 first structural coupling" artifacts/native-tests.log
 
       - name: Run Fold-aspect Godot presentation with current native graph
         shell: bash
@@ -93,11 +94,11 @@ jobs:
             godot/.godot/extension_list.cfg
           timeout 70s xvfb-run -a -s "-screen 0 2160x1856x24" \
             tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 1600 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo005-first-freight.png" \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo006-first-structural-coupling.png" \
             2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/wo005-first-freight.png
+          test -s artifacts/screenshots/wo006-first-structural-coupling.png
           grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "checkpoint=WO-005-FIRST-FREIGHT" artifacts/godot-runtime.log
+          grep -F "checkpoint=WO-006-FIRST-STRUCTURAL-COUPLING" artifacts/godot-runtime.log
           grep -F "SCRAPERX_CP004_RUNTIME_PROOF" artifacts/godot-runtime.log
           grep -F "fold_layout=1" artifacts/godot-runtime.log
           grep -F "approach=1" artifacts/godot-runtime.log
@@ -118,12 +119,12 @@ jobs:
           test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
           file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
 
-      - name: Export WO-005 Android arm64 APK
+      - name: Export WO-006 Android arm64 APK
         shell: bash
         run: |
           set -euo pipefail
           CHECKPOINT_ID="${GITHUB_SHA::12}"
-          APK_NAME="ScraperX-WO005-${CHECKPOINT_ID}-arm64.apk"
+          APK_NAME="ScraperX-WO006-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
@@ -137,19 +138,21 @@ jobs:
             "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
             > artifacts/apk/CHECKPOINT.txt
 
-      - name: Record WO-005 evidence boundaries
+      - name: Record WO-006 evidence boundaries
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/WO-005-EVIDENCE.md <<EOF
-          # WO-005 First Freight Evidence
+          cat > artifacts/WO-006-EVIDENCE.md <<EOF
+          # WO-006 First Structural Coupling Evidence
 
           Source commit: \`${GITHUB_SHA}\`
 
           Proven by this workflow:
 
-          - native in-SWL lift, overweight stall, locked-brake hold, travel-limit stop, remote rejection, and crate ride remain green;
-          - Godot loads the current native graph and prints checkpoint \`WO-005-FIRST-FREIGHT\`;
+          - WO-005 first freight regressions remain green;
+          - unseated needle bay is a real fall; seated needle is walkable support;
+          - KX-JIB seats KX-NEEDLE in KX-POCKETS; hoist-out unseats;
+          - Godot loads the current native graph and prints checkpoint \`WO-006-FIRST-STRUCTURAL-COUPLING\`;
           - Android arm64 native graph cross-compiles;
           - the APK contains \`lib/arm64-v8a/libscraperx_native.so\`;
           - APK checksum and checkpoint identity are recorded.
@@ -157,14 +160,14 @@ jobs:
           Not proven here:
 
           - Fold installation, touch ergonomics, sustained 45 FPS, or thermals;
-          - WO-006 structural coupling, WO-007 process, WO-008 causal chain;
+          - WO-007 process, WO-008 causal chain;
           - B01–B11 assembly.
           EOF
 
-      - name: Publish WO-005 Android build and evidence
+      - name: Publish WO-006 Android build and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ScraperX-WO005-${{ github.sha }}
+          name: ScraperX-WO006-${{ github.sha }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 30

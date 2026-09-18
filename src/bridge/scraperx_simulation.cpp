@@ -87,6 +87,14 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("is_jib_stalled"), &ScraperXSimulation::is_jib_stalled);
     godot::ClassDB::bind_method(godot::D_METHOD("is_jib_at_hoist_limit"), &ScraperXSimulation::is_jib_at_hoist_limit);
     godot::ClassDB::bind_method(godot::D_METHOD("is_jib_hook_attached"), &ScraperXSimulation::is_jib_hook_attached);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_hook_load"), &ScraperXSimulation::get_jib_hook_load);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_position"), &ScraperXSimulation::get_needle_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_linear_velocity"), &ScraperXSimulation::get_needle_linear_velocity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_yaw_radians"), &ScraperXSimulation::get_needle_yaw_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_needle_seated"), &ScraperXSimulation::is_needle_seated);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_near_landing_position"), &ScraperXSimulation::get_needle_near_landing_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_far_landing_position"), &ScraperXSimulation::get_needle_far_landing_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_bay_floor_position"), &ScraperXSimulation::get_needle_bay_floor_position);
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {
@@ -376,6 +384,38 @@ bool ScraperXSimulation::is_jib_at_hoist_limit() const {
 
 bool ScraperXSimulation::is_jib_hook_attached() const {
     return simulation_.snapshot().jib_hook_attached;
+}
+
+std::int64_t ScraperXSimulation::get_jib_hook_load() const {
+    return static_cast<std::int64_t>(simulation_.snapshot().jib_hook_load);
+}
+
+godot::Vector3 ScraperXSimulation::get_needle_position() const {
+    return to_godot(simulation_.snapshot().needle_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_needle_linear_velocity() const {
+    return to_godot(simulation_.snapshot().needle_linear_velocity);
+}
+
+double ScraperXSimulation::get_needle_yaw_radians() const {
+    return simulation_.snapshot().needle_yaw_radians;
+}
+
+bool ScraperXSimulation::is_needle_seated() const {
+    return simulation_.snapshot().needle_seated;
+}
+
+godot::Vector3 ScraperXSimulation::get_needle_near_landing_position() const {
+    return to_godot(simulation_.snapshot().needle_near_landing_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_needle_far_landing_position() const {
+    return to_godot(simulation_.snapshot().needle_far_landing_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_needle_bay_floor_position() const {
+    return to_godot(simulation_.snapshot().needle_bay_floor_position);
 }
 
 } // namespace scraperx::bridge
