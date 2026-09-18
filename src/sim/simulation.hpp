@@ -25,6 +25,8 @@ enum class InitialSpawn : std::uint8_t {
     NeedleBay = 10,
     NeedleNearLanding = 11,
     NeedleSeated = 12,
+    CageDeck = 13,
+    CageSeated = 14,
 };
 
 enum class TraversalMode : std::uint8_t {
@@ -114,6 +116,16 @@ struct Snapshot final {
     Vector3 needle_near_landing_position{};
     Vector3 needle_far_landing_position{};
     Vector3 needle_bay_floor_position{};
+
+    Vector3 cage_position{};
+    Vector3 cage_linear_velocity{};
+    Vector3 cage_lever_position{};
+    Vector3 cage_upper_landing_position{};
+    bool cage_lever_available = false;
+    bool cage_brake_engaged = true;
+    bool cage_stalled = false;
+    bool cage_at_limit = false;
+    double cage_command = 0.0;
 };
 
 struct AdvanceResult final {
@@ -153,6 +165,8 @@ public:
     static constexpr std::uint64_t kNeedleNearLandingEntityId = 24;
     static constexpr std::uint64_t kNeedleFarLandingEntityId = 25;
     static constexpr std::uint64_t kNeedleBayFloorEntityId = 26;
+    static constexpr std::uint64_t kCageEntityId = 27;
+    static constexpr std::uint64_t kCageUpperLandingEntityId = 28;
     static constexpr std::uint64_t kNeedleStairEntityIdBegin = 30;
     static constexpr std::uint32_t kNeedleWestStairCount = 15;
     static constexpr std::uint32_t kNeedleEastStairCount = 9;
@@ -180,6 +194,8 @@ public:
     [[nodiscard]] bool set_jib_hoist_input(double hoist) noexcept;
     [[nodiscard]] bool set_jib_slew_input(double slew) noexcept;
     [[nodiscard]] bool set_jib_brake(bool engaged) noexcept;
+    [[nodiscard]] bool can_operate_cage() const noexcept;
+    [[nodiscard]] bool request_cage_lever() noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -204,6 +220,7 @@ private:
     double jib_slew_input_ = 0.0;
     bool jib_brake_engaged_ = true;
     bool jib_brake_command_valid_ = false;
+    bool cage_lever_requested_ = false;
     Snapshot snapshot_{};
 };
 

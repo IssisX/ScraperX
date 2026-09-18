@@ -693,6 +693,106 @@ int main() {
     require(!bay.snapshot().needle_seated,
             "raising a hooked seated needle must unseat it and remove the span");
 
+    Simulation locked(InitialSpawn::CageDeck);
+    require(locked.advance_frame(1.0).accepted, "unseated cage settle must advance");
+    const auto locked_idle = locked.snapshot();
+    require(locked_idle.player_grounded, "cage deck spawn must land on KX-CAGE");
+    require(locked_idle.support_entity_id == Simulation::kCageEntityId,
+            "unseated cage fixture must stand on the cage, not an invisible floor");
+    require(!locked_idle.needle_seated, "CageDeck must begin with the needle free");
+    require(locked_idle.cage_brake_engaged, "cage brake must default ON");
+    require(locked.can_operate_cage(), "player on the cage must reach the local lever");
+    const auto locked_y = locked_idle.cage_position.y;
+    require(locked.request_cage_lever(), "unseated lever pull must be accepted as a real request");
+    require(locked.advance_frame(2.0).accepted, "interlock stall interval must advance");
+    const auto locked_after = locked.snapshot();
+    require(locked_after.cage_stalled, "raise with KX-NEEDLE unseated must stall the cage interlock");
+    require(std::abs(locked_after.cage_position.y - locked_y) < 0.08,
+            "interlock stall must not give free shaft travel");
+    require(locked_after.support_entity_id == Simulation::kCageEntityId,
+            "stalled cage must remain the standing support");
+
+    Simulation ride_cage(InitialSpawn::CageSeated);
+    require(ride_cage.advance_frame(1.0).accepted, "seated cage settle must advance");
+    const auto ride_idle = ride_cage.snapshot();
+    require(ride_idle.needle_seated, "CageSeated spawn must begin with a seated needle");
+    require(ride_idle.support_entity_id == Simulation::kCageEntityId,
+            "seated cage fixture must stand on KX-CAGE");
+    require(ride_cage.can_operate_cage(), "seated cage lever must be in reach");
+    require(ride_cage.request_cage_lever(), "seated lever pull must be accepted");
+    require(ride_cage.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "cage lever tick must advance");
+    const auto boarded_cage_y = ride_cage.snapshot().player_position.y;
+    require(ride_cage.advance_frame(3.2).accepted, "cage raise interval must advance");
+    const auto raising = ride_cage.snapshot();
+    require(raising.support_entity_id == Simulation::kCageEntityId,
+            "player must remain supported by the moving cage");
+    require(raising.player_position.y > boarded_cage_y + 2.4,
+            "valid cage support must carry the player up the well");
+    require(raising.cage_position.y > locked_y + 2.4,
+            "seated interlock must allow finite drum travel");
+    require(std::abs(raising.player_linear_velocity.y - raising.support_point_linear_velocity.y) < 1.6,
+            "ridden cage must impart support-point velocity (WO-002 law)");
+    require(!raising.cage_brake_engaged, "live raise must hold the brake off");
+
+    bool reached_top = raising.cage_at_limit && raising.cage_position.y > 21.0;
+    if (!reached_top) {
+        const int travel_budget = static_cast<int>(12.0 / Simulation::kFixedStepSeconds + 0.5);
+        for (int step = 0; step < travel_budget; ++step) {
+            require(ride_cage.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                    "cage travel-limit step must advance");
+            const auto now = ride_cage.snapshot();
+            if (now.cage_at_limit && now.cage_position.y > 21.0) {
+                reached_top = true;
+                break;
+            }
+        }
+    }
+    require(reached_top, "cage drum must stop at the authored upper landing, not climb forever");
+    const auto at_top = ride_cage.snapshot();
+    require(at_top.cage_position.y <= 21.90,
+            "travel-limit stop must be the authored cage maximum");
+    const auto cage_limit_y = at_top.cage_position.y;
+    require(ride_cage.advance_frame(1.0).accepted, "post-limit idle interval must advance");
+    require(std::abs(ride_cage.snapshot().cage_position.y - cage_limit_y) < 0.08,
+            "commanding extra raise at the travel stop must not produce free lift");
+
+    require(ride_cage.set_move_input(0.0, 1.0), "walk off the raised cage must be accepted");
+    bool boarded_upper = false;
+    const int walk_budget = static_cast<int>(3.5 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < walk_budget; ++step) {
+        require(ride_cage.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "upper-landing boarding step must advance");
+        const auto now = ride_cage.snapshot();
+        if (now.player_grounded && now.player_position.y > 21.0 &&
+            (now.support_entity_id == Simulation::kCageUpperLandingEntityId ||
+             now.player_position.z > 36.4)) {
+            boarded_upper = true;
+            break;
+        }
+    }
+    require(boarded_upper, "raised cage must change traversal onto the upper landing");
+    const auto upper_support = ride_cage.snapshot().support_entity_id;
+    require(ride_cage.snapshot().player_position.y > 21.0,
+            "the upper landing must exist as support at the cage travel stop");
+
+    require(ride_cage.set_move_input(0.0, -1.0), "return onto the cage to lower must be accepted");
+    bool back_on_cage = false;
+    for (int step = 0; step < walk_budget; ++step) {
+        require(ride_cage.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "return-to-cage step must advance");
+        if (ride_cage.snapshot().support_entity_id == Simulation::kCageEntityId &&
+            ride_cage.snapshot().player_grounded) {
+            back_on_cage = true;
+            break;
+        }
+    }
+    require(back_on_cage, "player must be able to step back onto the cage at the upper stop");
+    require(ride_cage.request_cage_lever(), "lever pull at the top must start the down-drum");
+    require(ride_cage.advance_frame(3.0).accepted, "cage lower interval must advance");
+    require(ride_cage.snapshot().cage_position.y < cage_limit_y - 2.0,
+            "paying the drum out from the top must lower the cage");
+
     std::cout << "PASS scraperx_sim WO-005 first freight: "
               << "approach_z=" << approach_spawn.player_position.z
               << " translating_vx=" << translating_support_velocity.x
@@ -712,6 +812,12 @@ int main() {
               << " seated_support=" << seated.snapshot().support_entity_id
               << " jib_seated=" << jib_seated
               << " unseated_after_raise=" << !bay.snapshot().needle_seated
+              << " hz=" << Simulation::kTickRateHz << '\n';
+    std::cout << "PASS scraperx_sim KX-CAGE first shaft: "
+              << "interlock_stall=" << locked_after.cage_stalled
+              << " raise_y=" << raising.cage_position.y
+              << " top_y=" << at_top.cage_position.y
+              << " upper_support=" << upper_support
               << " hz=" << Simulation::kTickRateHz << '\n';
     return EXIT_SUCCESS;
 }

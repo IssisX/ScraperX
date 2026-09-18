@@ -82,6 +82,7 @@ jobs:
           grep -F "100% tests passed" artifacts/native-tests.log
           grep -F "PASS scraperx_sim WO-005 first freight" artifacts/native-tests.log
           grep -F "PASS scraperx_sim WO-006 first structural coupling" artifacts/native-tests.log
+          grep -F "PASS scraperx_sim KX-CAGE first shaft" artifacts/native-tests.log
 
       - name: Run Fold-aspect Godot presentation with current native graph
         shell: bash
@@ -98,7 +99,7 @@ jobs:
             2>&1 | tee artifacts/godot-runtime.log
           test -s artifacts/screenshots/wo006-first-structural-coupling.png
           grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "checkpoint=WO-006-FIRST-STRUCTURAL-COUPLING" artifacts/godot-runtime.log
+          grep -F "checkpoint=KX-CAGE-FIRST-SHAFT" artifacts/godot-runtime.log
           grep -F "SCRAPERX_CP004_RUNTIME_PROOF" artifacts/godot-runtime.log
           grep -F "fold_layout=1" artifacts/godot-runtime.log
           grep -F "approach=1" artifacts/godot-runtime.log
@@ -152,7 +153,9 @@ jobs:
           - WO-005 first freight regressions remain green;
           - unseated needle bay is a real fall; seated needle is walkable support;
           - KX-JIB seats KX-NEEDLE in KX-POCKETS; hoist-out unseats;
-          - Godot loads the current native graph and prints checkpoint \`WO-006-FIRST-STRUCTURAL-COUPLING\`;
+          - KX-CAGE raises only while the needle is seated; unseated lever stalls;
+          - ridden cage imparts support velocity (WO-002) and stops at the upper landing;
+          - Godot loads the current native graph and prints checkpoint \`KX-CAGE-FIRST-SHAFT\`;
           - Android arm64 native graph cross-compiles;
           - the APK contains \`lib/arm64-v8a/libscraperx_native.so\`;
           - APK checksum and checkpoint identity are recorded.

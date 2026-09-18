@@ -31,6 +31,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_jib_hoist_input", "hoist"), &ScraperXSimulation::set_jib_hoist_input);
     godot::ClassDB::bind_method(godot::D_METHOD("set_jib_slew_input", "slew"), &ScraperXSimulation::set_jib_slew_input);
     godot::ClassDB::bind_method(godot::D_METHOD("set_jib_brake", "engaged"), &ScraperXSimulation::set_jib_brake);
+    godot::ClassDB::bind_method(godot::D_METHOD("can_operate_cage"), &ScraperXSimulation::can_operate_cage);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_cage_lever"), &ScraperXSimulation::request_cage_lever);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"), &ScraperXSimulation::advance_frame);
 
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"), &ScraperXSimulation::get_tick_index);
@@ -95,6 +97,14 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_needle_near_landing_position"), &ScraperXSimulation::get_needle_near_landing_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_needle_far_landing_position"), &ScraperXSimulation::get_needle_far_landing_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_needle_bay_floor_position"), &ScraperXSimulation::get_needle_bay_floor_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_cage_position"), &ScraperXSimulation::get_cage_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_cage_linear_velocity"), &ScraperXSimulation::get_cage_linear_velocity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_cage_lever_position"), &ScraperXSimulation::get_cage_lever_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_cage_upper_landing_position"), &ScraperXSimulation::get_cage_upper_landing_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_cage_brake_engaged"), &ScraperXSimulation::is_cage_brake_engaged);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_cage_stalled"), &ScraperXSimulation::is_cage_stalled);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_cage_at_limit"), &ScraperXSimulation::is_cage_at_limit);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_cage_command"), &ScraperXSimulation::get_cage_command);
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {
@@ -179,6 +189,19 @@ bool ScraperXSimulation::set_jib_slew_input(const double slew) {
 
 bool ScraperXSimulation::set_jib_brake(const bool engaged) {
     return simulation_.set_jib_brake(engaged);
+}
+
+bool ScraperXSimulation::can_operate_cage() const {
+    return simulation_.can_operate_cage();
+}
+
+bool ScraperXSimulation::request_cage_lever() {
+    const bool accepted = simulation_.request_cage_lever();
+    if (!accepted) {
+        godot::UtilityFunctions::push_warning(
+            "ScraperX native authority rejected cage lever: player is out of range or a pull is already queued.");
+    }
+    return accepted;
 }
 
 std::int64_t ScraperXSimulation::advance_frame(const double frame_delta_seconds) {
@@ -416,6 +439,38 @@ godot::Vector3 ScraperXSimulation::get_needle_far_landing_position() const {
 
 godot::Vector3 ScraperXSimulation::get_needle_bay_floor_position() const {
     return to_godot(simulation_.snapshot().needle_bay_floor_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_cage_position() const {
+    return to_godot(simulation_.snapshot().cage_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_cage_linear_velocity() const {
+    return to_godot(simulation_.snapshot().cage_linear_velocity);
+}
+
+godot::Vector3 ScraperXSimulation::get_cage_lever_position() const {
+    return to_godot(simulation_.snapshot().cage_lever_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_cage_upper_landing_position() const {
+    return to_godot(simulation_.snapshot().cage_upper_landing_position);
+}
+
+bool ScraperXSimulation::is_cage_brake_engaged() const {
+    return simulation_.snapshot().cage_brake_engaged;
+}
+
+bool ScraperXSimulation::is_cage_stalled() const {
+    return simulation_.snapshot().cage_stalled;
+}
+
+bool ScraperXSimulation::is_cage_at_limit() const {
+    return simulation_.snapshot().cage_at_limit;
+}
+
+double ScraperXSimulation::get_cage_command() const {
+    return simulation_.snapshot().cage_command;
 }
 
 } // namespace scraperx::bridge

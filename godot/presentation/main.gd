@@ -32,6 +32,11 @@ var _jib_hook_mesh: MeshInstance3D
 var _jib_crate_mesh: MeshInstance3D
 var _jib_cable_mesh: MeshInstance3D
 var _needle_mesh: MeshInstance3D
+var _cage_mesh: MeshInstance3D
+var _cage_gate_mesh: MeshInstance3D
+var _cage_lever_mesh: MeshInstance3D
+var _cage_wheel_mesh: MeshInstance3D
+var _cage_wheel_angle := 0.0
 var _cloud_wisps: Array[MeshInstance3D] = []
 
 var _pendant: Control
@@ -91,7 +96,7 @@ func _ready() -> void:
 		return
 
 	_ci_initial_player_position = _native.get_player_position()
-	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=WO-006-FIRST-STRUCTURAL-COUPLING")
+	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=KX-CAGE-FIRST-SHAFT")
 	_render_snapshot()
 
 func _process(delta: float) -> void:
@@ -319,6 +324,9 @@ func _request_context_action() -> void:
 	if bool(_native.can_enter_jib_station()):
 		_native.request_enter_jib_station()
 		return
+	if _native.has_method("can_operate_cage") and bool(_native.can_operate_cage()):
+		_native.request_cage_lever()
+		return
 	if bool(_native.can_operate_hopper()):
 		_native.request_hopper_release()
 		return
@@ -361,6 +369,11 @@ func _render_snapshot() -> void:
 	var crate_mass := float(_native.get_jib_crate_mass_kg())
 	var needle_seated := _native.has_method("is_needle_seated") and bool(_native.is_needle_seated())
 	var hook_load := int(_native.get_jib_hook_load()) if _native.has_method("get_jib_hook_load") else 1
+	var cage_lever := _native.has_method("can_operate_cage") and bool(_native.can_operate_cage())
+	var cage_stall := _native.has_method("is_cage_stalled") and bool(_native.is_cage_stalled())
+	var cage_brake := _native.has_method("is_cage_brake_engaged") and bool(_native.is_cage_brake_engaged())
+	var cage_limit := _native.has_method("is_cage_at_limit") and bool(_native.is_cage_at_limit())
+	var cage_command := float(_native.get_cage_command()) if _native.has_method("get_cage_command") else 0.0
 
 	_camera.position = position + EYE_OFFSET
 	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
@@ -371,14 +384,13 @@ func _render_snapshot() -> void:
 		support,
 		_traversal_name(traversal_mode),
 	]
-	_machine_value.text = "JIB  %s  WINCH %4.2f  %s  NEEDLE %s" % [
-		"STALL" if jib_stall else ("LIMIT" if jib_limit else ("HOLD" if jib_brake else ("CAB" if jib_occupied else "COLD"))),
-		winch,
-		"NEEDLE" if hook_load == 2 else ("CRATE %0.0fkg" % crate_mass),
+	_machine_value.text = "CAGE  %s  NEEDLE %s  JIB %s" % [
+		"STALL" if cage_stall else ("LIMIT" if cage_limit else ("HOLD" if cage_brake else ("UP" if cage_command > 0.05 else ("DOWN" if cage_command < -0.05 else "LIVE")))),
 		"SEATED" if needle_seated else "FREE",
+		"STALL" if jib_stall else ("CAB" if jib_occupied else "COLD"),
 	]
 	_tick_value.text = "90 HZ NATIVE  /  %08d" % int(_native.get_tick_index())
-	_boundary_value.text = "KX-NEEDLE / POCKETS / LOCAL PENDANT"
+	_boundary_value.text = "KX-CAGE / NEEDLE INTERLOCK / LOCAL LEVER"
 
 	var context_visible := false
 	if traversal_mode == TRAVERSAL_HANG:
@@ -392,6 +404,9 @@ func _render_snapshot() -> void:
 		context_visible = true
 	elif jib_enter:
 		_action_button.text = "ENTER JIB"
+		context_visible = true
+	elif cage_lever:
+		_action_button.text = "PULL LEVER"
 		context_visible = true
 	elif hopper_available and not hopper_started:
 		_action_button.text = "RELEASE HOPPER"
@@ -416,6 +431,12 @@ func _render_snapshot() -> void:
 			_status.text = "PENDANT LIVE / RAISE LOWER SLEW / BOUNDED WORK"
 	elif jib_enter:
 		_status.text = "KX-JIB PENDANT IN RANGE / ACTION ENTERS STATION"
+	elif cage_stall:
+		_status.text = "CAGE INTERLOCK / NEEDLE MUST SEAT BEFORE RAISE"
+	elif cage_lever and absf(cage_command) > 0.05:
+		_status.text = "CAGE TRAVEL / PULL LEVER TO BRAKE"
+	elif cage_lever:
+		_status.text = "KX-CAGE LEVER IN REACH / PULL TO WORK THE DRUM"
 	elif needle_seated:
 		_status.text = "KX-NEEDLE SEATED / SPAN IS SUPPORT / WALK THE BAY"
 	elif hopper_available:
@@ -448,6 +469,7 @@ func _render_snapshot() -> void:
 		_impact_rocker_mesh.rotation = Vector3(float(_native.get_impact_rocker_angle_radians()), 0.0, 0.0)
 	_sync_jib_meshes()
 	_sync_needle_mesh()
+	_sync_cage_meshes()
 	if _pendant != null:
 		_pendant.visible = jib_occupied
 
@@ -516,14 +538,12 @@ func _build_exterior_world() -> void:
 	_add_box("KxPendantFace", Vector3(0.52, 0.38, 0.08), pendant + Vector3(0.0, 1.18, -0.30), chipped_orange)
 
 	_build_needle_bay(mill_scale, oxidized_steel, weathered_timber, galvanized, faded_yellow, chipped_orange)
+	_build_cage_house(mill_scale, oxidized_steel, galvanized, faded_yellow, chipped_orange, weathered_timber)
 
-	# Machine-tower identity: large readable idle infrastructure integrated into the bays.
+	# Readable idle machinery integrated into the lower bays — not a dead lift car in a blank shaft.
 	_add_machine_wheel(Vector3(-17.0, 43.0, 14.0), 6.5, 1.4, mill_scale, oxidized_steel)
 	_add_machine_wheel(Vector3(-18.0, 22.0, 14.0), 4.8, 1.2, oxidized_steel, mill_scale)
-	_add_hoist_drum(Vector3(12.0, 24.0, 14.0), 3.4, 7.5, mill_scale, galvanized)
-	_add_box("LiftRailL", Vector3(0.55, 120.0, 0.55), Vector3(-8.0, 60.0, 15.0), galvanized)
-	_add_box("LiftRailR", Vector3(0.55, 120.0, 0.55), Vector3(-4.8, 60.0, 15.0), galvanized)
-	_add_box("IdleLiftCar", Vector3(3.0, 5.0, 2.6), Vector3(-6.4, 14.0, 15.0), oxidized_steel)
+	_add_hoist_drum(Vector3(-14.0, 28.0, 12.0), 3.4, 7.5, mill_scale, galvanized)
 
 	var crane_mast := _add_box("CraneMast", Vector3(4.0, 24.0, 4.0), Vector3(18.0, 44.0, 13.0), oxidized_steel)
 	var crane_boom := _add_box("CraneBoom", Vector3(2.3, 2.0, 38.0), Vector3(18.0, 57.0, 29.0), mill_scale)
@@ -680,49 +700,114 @@ func _build_needle_bay(mill_scale: Material, oxidized_steel: Material, weathered
 	_add_box("KxApronBrace2", Vector3(0.55, 5.4, 0.55), Vector3(-7.8, 2.7, 44.2), oxidized_steel)
 	_add_box("KxPocketPaint", Vector3(0.20, 0.12, 0.46), Vector3(-8.75, 5.28, 43.90), chipped_orange)
 
-func _build_stacked_machine_tower(mill_scale: Material, oxidized_steel: Material, dark_concrete: Material, weathered_timber: Material, galvanized: Material, faded_yellow: Material) -> void:
-	# Four mega columns carry stacked open bays. No solid 900 m core.
-	for x in [-22.0, 22.0]:
-		for z in [-18.0, 18.0]:
-			_add_box("MegaColumn", Vector3(3.2, 340.0, 3.2), Vector3(x, 170.0, z), mill_scale)
-	_add_box("CoreWellL", Vector3(4.0, 280.0, 8.0), Vector3(-8.0, 150.0, -4.0), dark_concrete)
-	_add_box("CoreWellR", Vector3(4.0, 280.0, 8.0), Vector3(8.0, 150.0, -4.0), dark_concrete)
+func _build_cage_house(mill_scale: Material, oxidized_steel: Material, galvanized: Material, faded_yellow: Material, chipped_orange: Material, weathered_timber: Material) -> void:
+	# Open well: rails and guides, not a 280 m concrete plug.
+	_add_box("CageRailL", Vector3(0.22, 48.0, 0.22), Vector3(7.75, 24.0, 34.20), galvanized)
+	_add_box("CageRailR", Vector3(0.22, 48.0, 0.22), Vector3(11.25, 24.0, 34.20), galvanized)
+	_add_box("CageGuideN", Vector3(0.16, 48.0, 0.16), Vector3(9.50, 24.0, 35.85), mill_scale)
+	_add_box("CageGuideS", Vector3(0.16, 48.0, 0.16), Vector3(9.50, 24.0, 32.55), mill_scale)
+	_add_box("CageHeadgear", Vector3(8.4, 1.8, 6.2), Vector3(9.50, 24.8, 34.20), oxidized_steel)
+	_add_hoist_drum(Vector3(9.50, 26.4, 31.4), 1.6, 4.8, mill_scale, galvanized)
+	_add_machine_wheel(Vector3(14.6, 12.2, 34.0), 3.4, 0.9, mill_scale, oxidized_steel)
+	_add_machine_wheel(Vector3(4.4, 11.6, 33.4), 2.6, 0.7, oxidized_steel, mill_scale)
+	_add_box("CageHousePostL", Vector3(1.2, 16.0, 1.2), Vector3(5.6, 8.0, 32.2), mill_scale)
+	_add_box("CageHousePostR", Vector3(1.2, 16.0, 1.2), Vector3(13.4, 8.0, 32.2), mill_scale)
+	_add_box("CageHouseBeam", Vector3(9.2, 0.7, 1.1), Vector3(9.5, 16.2, 32.2), oxidized_steel)
+	_add_box("CageHouseTimber", Vector3(6.5, 8.0, 0.4), Vector3(9.5, 10.0, 31.4), weathered_timber)
+	_add_box("KxUpperLanding", Vector3(6.40, 0.36, 4.40), Vector3(9.50, 21.82, 37.80), mill_scale)
+	_add_box("KxUpperEdge", Vector3(6.5, 0.08, 0.14), Vector3(9.50, 22.02, 39.90), faded_yellow)
+	_add_box("KxUpperRailL", Vector3(0.10, 1.1, 4.2), Vector3(6.40, 22.55, 37.80), faded_yellow)
+	_add_box("KxUpperRailR", Vector3(0.10, 1.1, 4.2), Vector3(12.60, 22.55, 37.80), faded_yellow)
+	_add_wrapping_stairs(Vector3(15.6, 0.0, 34.2), 8.7, 1, galvanized, faded_yellow)
 
+	_cage_mesh = _add_box("KxCageDeck", Vector3(3.10, 0.36, 3.10), Vector3(9.50, 8.52, 34.20), faded_yellow)
+	_cage_gate_mesh = _add_box("KxCageGate", Vector3(2.6, 2.4, 0.12), Vector3(9.50, 9.85, 32.72), oxidized_steel)
+	_cage_lever_mesh = _add_box("KxCageLever", Vector3(0.12, 1.15, 0.12), Vector3(10.20, 9.47, 33.85), chipped_orange)
+	_cage_lever_mesh.rotation.z = 0.45
+	_add_box("KxCageLeverBase", Vector3(0.45, 0.22, 0.45), Vector3(10.20, 8.82, 33.85), mill_scale)
+	_cage_wheel_mesh = _add_cylinder("KxCageHandwheel", 0.85, 0.12, Vector3(8.35, 9.55, 33.40), oxidized_steel)
+	_cage_wheel_mesh.rotation.x = PI * 0.5
+	_add_floodlight(Vector3(9.5, 16.8, 32.0), Vector3(0.0, -0.45, 1.0))
+	_add_floodlight(Vector3(7.2, 10.4, 36.0), Vector3(0.2, -0.25, -0.4))
+
+func _add_wrapping_stairs(origin: Vector3, rise: float, flights: int, tread_material: Material, rail_material: Material) -> void:
+	for flight in range(flights):
+		var base_y := origin.y + rise * float(flight)
+		for i in range(12):
+			var t := float(i)
+			var y := base_y + 0.36 * (t + 1.0)
+			var z := origin.z - 0.42 * t
+			_add_box("WrapTread", Vector3(1.6, 0.14, 0.46), Vector3(origin.x, y - 0.07, z), tread_material)
+		_add_box("WrapRail", Vector3(0.08, rise * 0.9, 0.08), Vector3(origin.x + 0.85, base_y + rise * 0.5, origin.z - 2.4), rail_material)
+
+func _sync_cage_meshes() -> void:
+	if _native == null or _cage_mesh == null or not _native.has_method("get_cage_position"):
+		return
+	var cage: Vector3 = _native.get_cage_position()
+	var lever: Vector3 = _native.get_cage_lever_position()
+	var velocity: Vector3 = _native.get_cage_linear_velocity()
+	_cage_mesh.position = cage
+	if _cage_gate_mesh != null:
+		_cage_gate_mesh.position = cage + Vector3(0.0, 1.33, -1.48)
+	if _cage_lever_mesh != null:
+		_cage_lever_mesh.position = lever
+		var pulled := not bool(_native.is_cage_brake_engaged())
+		_cage_lever_mesh.rotation.z = 0.95 if pulled else 0.45
+	if _cage_wheel_mesh != null:
+		_cage_wheel_angle += velocity.y * 0.55
+		_cage_wheel_mesh.position = cage + Vector3(-1.15, 1.03, -0.80)
+		_cage_wheel_mesh.rotation = Vector3(PI * 0.5, 0.0, _cage_wheel_angle)
+
+func _build_stacked_machine_tower(mill_scale: Material, oxidized_steel: Material, dark_concrete: Material, weathered_timber: Material, galvanized: Material, faded_yellow: Material) -> void:
+	# Machine bays ARE the tower. Corner posts only span their bay. The well stays open.
 	var elevations := [8.0, 22.0, 36.0, 50.0, 66.0, 82.0, 100.0, 118.0, 138.0, 158.0, 180.0, 204.0, 230.0, 258.0, 288.0, 320.0]
 	for index in range(elevations.size()):
 		var y: float = elevations[index]
+		var next_y: float = elevations[index + 1] if index + 1 < elevations.size() else y + 28.0
+		var bay_h: float = next_y - y
 		var variant := index % 4
-		_add_box("BayFloorRingN", Vector3(48.0, 1.1, 3.2), Vector3(0.0, y, 20.0), oxidized_steel)
-		_add_box("BayFloorRingS", Vector3(48.0, 1.1, 3.2), Vector3(0.0, y, -20.0), oxidized_steel)
-		_add_box("BayFloorRingE", Vector3(3.2, 1.1, 38.0), Vector3(22.0, y, 0.0), mill_scale)
-		_add_box("BayFloorRingW", Vector3(3.2, 1.1, 38.0), Vector3(-22.0, y, 0.0), mill_scale)
-		_add_box("BayHeaderN", Vector3(36.0, 2.2, 2.4), Vector3(0.0, y + 10.0, 19.5), mill_scale)
-		_add_box("ChevronL", Vector3(1.1, 12.0, 1.1), Vector3(-14.0, y + 6.0, 19.0), oxidized_steel).rotation.z = 0.55
-		_add_box("ChevronR", Vector3(1.1, 12.0, 1.1), Vector3(14.0, y + 6.0, 19.0), oxidized_steel).rotation.z = -0.55
-		_add_box("CatwalkN", Vector3(28.0, 0.22, 2.4), Vector3(0.0, y + 3.6, 22.6), galvanized)
-		_add_box("CatwalkRailN", Vector3(28.0, 0.08, 0.08), Vector3(0.0, y + 4.5, 23.7), faded_yellow)
+		var dense := index < 5
+		var post_h: float = bay_h
+		var post_y: float = y + bay_h * 0.5
+		var post_size := Vector3(2.4 if dense else 1.8, post_h, 2.4 if dense else 1.8)
+		for corner in [Vector3(-20.0, post_y, 18.0), Vector3(20.0, post_y, 18.0), Vector3(-20.0, post_y, -16.0), Vector3(20.0, post_y, -16.0)]:
+			_add_box("BayPost", post_size, corner, mill_scale if dense else oxidized_steel)
+		_add_box("BayFloorRingN", Vector3(44.0 if dense else 36.0, 1.2 if dense else 0.8, 2.8), Vector3(0.0, y, 19.5), oxidized_steel)
+		_add_box("BayFloorRingS", Vector3(44.0 if dense else 36.0, 1.2 if dense else 0.8, 2.8), Vector3(0.0, y, -16.5), dark_concrete)
+		_add_box("BayFloorRingE", Vector3(2.8, 1.2 if dense else 0.8, 34.0), Vector3(20.0, y, 1.5), mill_scale)
+		_add_box("BayFloorRingW", Vector3(2.8, 1.2 if dense else 0.8, 34.0), Vector3(-20.0, y, 1.5), mill_scale)
+		_add_box("BayHeaderN", Vector3(32.0, 2.0 if dense else 1.3, 2.2), Vector3(0.0, y + bay_h * 0.72, 19.0), mill_scale)
+		_add_box("ChevronL", Vector3(1.2, bay_h * 0.85, 1.2), Vector3(-13.0, y + bay_h * 0.42, 18.4), oxidized_steel).rotation.z = 0.48
+		_add_box("ChevronR", Vector3(1.2, bay_h * 0.85, 1.2), Vector3(13.0, y + bay_h * 0.42, 18.4), oxidized_steel).rotation.z = -0.48
+		_add_box("CatwalkN", Vector3(24.0, 0.22, 2.2), Vector3(0.0, y + 3.4, 22.2), galvanized)
+		_add_box("CatwalkRailN", Vector3(24.0, 0.08, 0.08), Vector3(0.0, y + 4.3, 23.2), faded_yellow)
+		if dense:
+			_add_wrapping_stairs(Vector3(-16.5 + float(index % 2) * 33.0, y, 21.5), minf(bay_h - 1.0, 12.0), 1, galvanized, faded_yellow)
 		if variant == 0:
-			if index < 5:
-				_add_machine_wheel(Vector3(-15.0, y + 7.5, 16.5), 4.4, 1.2, mill_scale, oxidized_steel)
+			if dense:
+				_add_machine_wheel(Vector3(-14.0, y + 7.2, 16.2), 4.2, 1.15, mill_scale, oxidized_steel)
+				_add_hoist_drum(Vector3(13.0, y + 6.2, 16.0), 2.5, 6.0, mill_scale, galvanized)
 			else:
-				_add_cylinder("BayWheel", 4.4, 1.2, Vector3(-15.0, y + 7.5, 16.5), mill_scale).rotation.x = PI * 0.5
-			_add_hoist_drum(Vector3(12.0, y + 6.5, 16.0), 2.6, 6.4, mill_scale, galvanized)
+				_add_cylinder("BaySilhouetteWheel", 3.6, 0.9, Vector3(-14.0, y + 7.0, 16.0), mill_scale).rotation.x = PI * 0.5
 		elif variant == 1:
-			_add_hoist_drum(Vector3(-12.0, y + 7.0, 15.5), 3.0, 7.0, oxidized_steel, mill_scale)
-			if index < 5:
-				_add_machine_wheel(Vector3(14.5, y + 8.0, 16.0), 3.6, 1.0, oxidized_steel, mill_scale)
-			_add_box("TimberInfill", Vector3(7.5, 9.0, 0.5), Vector3(-18.5, y + 6.0, 21.4), weathered_timber)
+			_add_hoist_drum(Vector3(-12.0, y + 6.8, 15.2), 2.8 if dense else 2.0, 6.4, oxidized_steel, mill_scale)
+			if dense:
+				_add_machine_wheel(Vector3(14.0, y + 7.6, 15.8), 3.4, 0.95, oxidized_steel, mill_scale)
+			_add_box("TimberInfill", Vector3(7.2, 8.5 if dense else 5.5, 0.45), Vector3(-18.0, y + 5.5, 20.8), weathered_timber)
 		elif variant == 2:
-			_add_box("IdleCraneMast", Vector3(2.6, 14.0, 2.6), Vector3(16.0, y + 8.0, 14.0), oxidized_steel)
-			_add_box("IdleCraneBoom", Vector3(1.6, 1.4, 22.0), Vector3(16.0, y + 14.5, 24.0), mill_scale).rotation.x = -0.22
-			if index < 6:
-				_add_machine_wheel(Vector3(-16.0, y + 6.8, 15.8), 3.2, 0.9, mill_scale, oxidized_steel)
+			_add_box("IdleCraneMast", Vector3(2.4, 12.0 if dense else 8.0, 2.4), Vector3(16.0, y + (7.5 if dense else 5.0), 13.5), oxidized_steel)
+			_add_box("IdleCraneBoom", Vector3(1.5, 1.3, 18.0 if dense else 12.0), Vector3(16.0, y + (13.5 if dense else 9.0), 22.0), mill_scale).rotation.x = -0.22
+			if dense:
+				_add_machine_wheel(Vector3(-16.0, y + 6.6, 15.5), 3.1, 0.85, mill_scale, oxidized_steel)
 		else:
-			_add_box("PipeRack", Vector3(22.0, 0.7, 0.7), Vector3(0.0, y + 9.5, 17.5), galvanized)
-			_add_box("Counterweight", Vector3(4.4, 6.0, 3.2), Vector3(18.0, y + 4.2, 14.5), mill_scale)
-			_add_box("TimberInfill", Vector3(8.0, 10.0, 0.5), Vector3(18.5, y + 7.0, 21.4), weathered_timber)
+			_add_box("PipeRack", Vector3(20.0, 0.65, 0.65), Vector3(0.0, y + 8.8, 17.2), galvanized)
+			_add_box("Counterweight", Vector3(4.0, 5.4 if dense else 3.6, 2.8), Vector3(17.5, y + 3.8, 14.0), mill_scale)
+			_add_box("TimberInfill", Vector3(7.6, 9.0 if dense else 6.0, 0.45), Vector3(18.0, y + 6.4, 20.8), weathered_timber)
 		if index % 3 == 0:
-			_add_floodlight(Vector3(-10.0, y + 11.0, 21.0), Vector3(0.15, -0.35, 1.0))
+			_add_floodlight(Vector3(-10.0, y + 10.0, 20.6), Vector3(0.15, -0.35, 1.0))
+		if index >= 8:
+			# Upper tower continues as overlapping machine silhouette, crown hidden in weather.
+			_add_box("HighSilhouette", Vector3(28.0, 0.7, 1.6), Vector3(0.0, y + bay_h * 0.55, 17.5), mill_scale)
 
 func _material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()

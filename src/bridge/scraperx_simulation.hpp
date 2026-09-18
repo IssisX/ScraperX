@@ -26,6 +26,8 @@ public:
     [[nodiscard]] bool set_jib_hoist_input(double hoist);
     [[nodiscard]] bool set_jib_slew_input(double slew);
     [[nodiscard]] bool set_jib_brake(bool engaged);
+    [[nodiscard]] bool can_operate_cage() const;
+    [[nodiscard]] bool request_cage_lever();
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
 
     [[nodiscard]] std::int64_t get_tick_index() const;
@@ -91,6 +93,14 @@ public:
     [[nodiscard]] godot::Vector3 get_needle_near_landing_position() const;
     [[nodiscard]] godot::Vector3 get_needle_far_landing_position() const;
     [[nodiscard]] godot::Vector3 get_needle_bay_floor_position() const;
+    [[nodiscard]] godot::Vector3 get_cage_position() const;
+    [[nodiscard]] godot::Vector3 get_cage_linear_velocity() const;
+    [[nodiscard]] godot::Vector3 get_cage_lever_position() const;
+    [[nodiscard]] godot::Vector3 get_cage_upper_landing_position() const;
+    [[nodiscard]] bool is_cage_brake_engaged() const;
+    [[nodiscard]] bool is_cage_stalled() const;
+    [[nodiscard]] bool is_cage_at_limit() const;
+    [[nodiscard]] double get_cage_command() const;
 
 protected:
     static void _bind_methods();

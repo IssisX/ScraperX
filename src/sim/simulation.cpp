@@ -131,6 +131,25 @@ constexpr float kNeedlePocketHalfZ = 0.36F;
 constexpr double kCrateParkX = -16.0;
 constexpr double kCrateParkZ = 53.0;
 
+constexpr double kCageX = 9.50;
+constexpr double kCageZ = 34.20;
+constexpr float kCageHalfX = 1.55F;
+constexpr float kCageHalfY = 0.18F;
+constexpr float kCageHalfZ = 1.55F;
+constexpr double kCageMinY = 8.52;
+constexpr double kCageMaxY = 21.82;
+constexpr double kCageSpeedMetersPerSecond = 1.25;
+constexpr double kCageLeverRadiusMeters = 3.00;
+constexpr double kCageLeverLocalX = 0.70;
+constexpr double kCageLeverLocalY = 0.95;
+constexpr double kCageLeverLocalZ = -0.35;
+constexpr double kCageUpperX = 9.50;
+constexpr double kCageUpperY = 21.82;
+constexpr double kCageUpperZ = 37.80;
+constexpr float kCageUpperHalfX = 3.20F;
+constexpr float kCageUpperHalfY = 0.18F;
+constexpr float kCageUpperHalfZ = 2.20F;
+
 constexpr double kImpactRockerX = 7.0;
 constexpr double kImpactRockerY = 1.65;
 constexpr double kImpactRockerZ = 21.55;
@@ -309,7 +328,8 @@ private:
         if (entity_id == Simulation::kTranslatingSupportEntityId ||
             entity_id == Simulation::kRotatingSupportEntityId ||
             entity_id == Simulation::kHopperGateEntityId ||
-            entity_id == Simulation::kJibCrateEntityId) {
+            entity_id == Simulation::kJibCrateEntityId ||
+            entity_id == Simulation::kCageEntityId) {
             return 2;
         }
         if (entity_id == Simulation::kNeedleEntityId) {
@@ -329,7 +349,8 @@ private:
             entity_id == Simulation::kNeedleEastPocketEntityId ||
             entity_id == Simulation::kNeedleNearLandingEntityId ||
             entity_id == Simulation::kNeedleFarLandingEntityId ||
-            entity_id == Simulation::kNeedleBayFloorEntityId) {
+            entity_id == Simulation::kNeedleBayFloorEntityId ||
+            entity_id == Simulation::kCageUpperLandingEntityId) {
             return 1;
         }
         if (entity_id >= Simulation::kNeedleStairEntityIdBegin &&
@@ -433,6 +454,12 @@ private:
                 kNeedleNearLandingY + static_cast<double>(kNeedleNearHalfY) +
                     static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
                 kNeedleNearLandingZ};
+    case scraperx::sim::InitialSpawn::CageDeck:
+    case scraperx::sim::InitialSpawn::CageSeated:
+        return {kCageX,
+                kCageMinY + static_cast<double>(kCageHalfY) +
+                    static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
+                kCageZ};
     case scraperx::sim::InitialSpawn::ApproachGrade:
     default:
         return {0.0, 3.0, 60.0};
@@ -757,7 +784,9 @@ public:
         const bool needle_fixture =
             initial_spawn == InitialSpawn::NeedleBay ||
             initial_spawn == InitialSpawn::NeedleNearLanding ||
-            initial_spawn == InitialSpawn::NeedleSeated;
+            initial_spawn == InitialSpawn::NeedleSeated ||
+            initial_spawn == InitialSpawn::CageDeck ||
+            initial_spawn == InitialSpawn::CageSeated;
         const JPH::RVec3 crate_spawn =
             needle_fixture ? jib_rvec(kCrateParkX, static_cast<double>(kJibCrateHalfHeight), kCrateParkZ)
                            : jib_crate_rest_position(slew_radians_);
@@ -829,7 +858,8 @@ public:
                 0.80F);
         }
 
-        needle_seated_ = initial_spawn == InitialSpawn::NeedleSeated;
+        needle_seated_ = initial_spawn == InitialSpawn::NeedleSeated ||
+                         initial_spawn == InitialSpawn::CageSeated;
         JPH::RVec3 needle_spawn = jib_rvec(kNeedleParkX, static_cast<double>(kNeedleHalfHeight), kNeedleParkZ);
         if (initial_spawn == InitialSpawn::NeedleBay ||
             initial_spawn == InitialSpawn::NeedleNearLanding) {
@@ -855,6 +885,27 @@ public:
         needle_settings.mUserData = Simulation::kNeedleEntityId;
         needle_id_ = bodies.CreateAndAddBody(needle_settings, JPH::EActivation::Activate);
 
+        cage_y_ = kCageMinY;
+        cage_command_ = 0.0;
+        cage_brake_engaged_ = true;
+        JPH::BodyCreationSettings cage_settings(
+            new JPH::BoxShape(JPH::Vec3(kCageHalfX, kCageHalfY, kCageHalfZ)),
+            jib_rvec(kCageX, cage_y_, kCageZ),
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Kinematic,
+            object_layers::kMoving);
+        cage_settings.mAllowSleeping = false;
+        cage_settings.mFriction = 0.82F;
+        cage_settings.mUserData = Simulation::kCageEntityId;
+        cage_id_ = bodies.CreateAndAddBody(cage_settings, JPH::EActivation::Activate);
+
+        cage_upper_landing_id_ =
+            create_static_box(JPH::Vec3(kCageUpperHalfX, kCageUpperHalfY, kCageUpperHalfZ),
+                              jib_rvec(kCageUpperX, kCageUpperY, kCageUpperZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kCageUpperLandingEntityId,
+                              0.78F);
+
         if (initial_spawn == InitialSpawn::NeedleBay) {
             attach_hook(HookLoad::Needle);
         } else if (!needle_fixture) {
@@ -876,6 +927,8 @@ public:
         }
         remove_and_destroy(bodies, player_id_);
         remove_and_destroy(bodies, needle_id_);
+        remove_and_destroy(bodies, cage_id_);
+        remove_and_destroy(bodies, cage_upper_landing_id_);
         remove_and_destroy(bodies, jib_crate_id_);
         remove_and_destroy(bodies, jib_hook_id_);
         remove_and_destroy(bodies, jib_boom_id_);
@@ -921,6 +974,7 @@ public:
               const double jib_slew_input,
               const bool jib_brake_engaged,
               const bool jib_brake_command_valid,
+              const bool cage_lever_requested,
               const float delta_seconds,
               const double next_time_seconds) noexcept {
         auto &bodies = physics_system_.GetBodyInterface();
@@ -940,6 +994,7 @@ public:
         update_support_motion(bodies, delta_seconds, next_time_seconds);
         update_hopper_motion(bodies, delta_seconds);
         update_jib_motion(bodies, delta_seconds);
+        update_cage_motion(bodies, cage_lever_requested, delta_seconds);
 
         if (drop_from_hang_requested && traversal_mode_ == TraversalMode::Hang) {
             traversal_mode_ = TraversalMode::None;
@@ -1088,6 +1143,12 @@ private:
         }
         if (entity_id == Simulation::kNeedleBayFloorEntityId) {
             return needle_bay_floor_id_;
+        }
+        if (entity_id == Simulation::kCageEntityId) {
+            return cage_id_;
+        }
+        if (entity_id == Simulation::kCageUpperLandingEntityId) {
+            return cage_upper_landing_id_;
         }
         if (entity_id == Simulation::kJibBoomEntityId) {
             return jib_boom_id_;
@@ -1249,6 +1310,70 @@ private:
         jib_load_newtons_ = load_newtons;
     }
 
+    void update_cage_motion(JPH::BodyInterface &bodies,
+                            const bool cage_lever_requested,
+                            const float delta_seconds) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+        const double lever_x = kCageX + kCageLeverLocalX;
+        const double lever_y = cage_y_ + kCageLeverLocalY;
+        const double lever_z = kCageZ + kCageLeverLocalZ;
+        cage_lever_available_ =
+            distance_3d(player_position, lever_x, lever_y, lever_z) <= kCageLeverRadiusMeters;
+
+        const bool at_min = cage_y_ <= kCageMinY + 1.0e-4;
+        const bool at_max = cage_y_ >= kCageMaxY - 1.0e-4;
+        cage_at_limit_ = at_min || at_max;
+
+        if (cage_lever_requested && cage_lever_available_) {
+            const bool moving = std::abs(cage_command_) > 0.05 && !cage_brake_engaged_;
+            if (moving) {
+                cage_command_ = 0.0;
+                cage_brake_engaged_ = true;
+                cage_stalled_ = false;
+            } else if (!at_max) {
+                if (!needle_seated_) {
+                    cage_command_ = 0.0;
+                    cage_brake_engaged_ = true;
+                    cage_stalled_ = true;
+                } else {
+                    cage_command_ = 1.0;
+                    cage_brake_engaged_ = false;
+                    cage_stalled_ = false;
+                }
+            } else {
+                cage_command_ = -1.0;
+                cage_brake_engaged_ = false;
+                cage_stalled_ = false;
+            }
+        }
+
+        if (cage_command_ > 0.05 && !needle_seated_) {
+            cage_command_ = 0.0;
+            cage_brake_engaged_ = true;
+            cage_stalled_ = true;
+        }
+
+        double travel = 0.0;
+        if (!cage_brake_engaged_ && std::abs(cage_command_) > 0.05) {
+            travel = cage_command_ * kCageSpeedMetersPerSecond * static_cast<double>(delta_seconds);
+        }
+        const double previous_y = cage_y_;
+        cage_y_ = clamp_double(cage_y_ + travel, kCageMinY, kCageMaxY);
+        if ((travel > 0.0 && cage_y_ >= kCageMaxY - 1.0e-4) ||
+            (travel < 0.0 && cage_y_ <= kCageMinY + 1.0e-4)) {
+            cage_y_ = travel > 0.0 ? kCageMaxY : kCageMinY;
+            cage_command_ = 0.0;
+            cage_brake_engaged_ = true;
+            cage_at_limit_ = true;
+        }
+        cage_velocity_y_ = (cage_y_ - previous_y) / static_cast<double>(delta_seconds);
+
+        bodies.MoveKinematic(cage_id_,
+                             jib_rvec(kCageX, cage_y_, kCageZ),
+                             JPH::Quat::sIdentity(),
+                             delta_seconds);
+    }
+
     [[nodiscard]] double attached_load_mass() const noexcept {
         if (hook_attachment_ == HookLoad::Crate) {
             return crate_mass_kg_;
@@ -1406,7 +1531,7 @@ private:
             bool snap_center;
             float max_rise;
         };
-        StepTarget targets[5] = {
+        StepTarget targets[7] = {
             {jib_crate_id_, Simulation::kJibCrateEntityId, kJibCrateHalfWidth, kJibCrateHalfHeight,
              kJibCrateHalfWidth, true, kCrateStepHeight},
             {needle_id_, Simulation::kNeedleEntityId, kNeedleHalfLength, kNeedleHalfHeight,
@@ -1417,6 +1542,10 @@ private:
              kNeedleFarHalfY, kNeedleFarHalfZ, false, kStepUpHeight},
             {needle_bay_floor_id_, Simulation::kNeedleBayFloorEntityId, kNeedleBayFloorHalfX,
              kNeedleBayFloorHalfY, kNeedleBayFloorHalfZ, false, kStepUpHeight},
+            {cage_id_, Simulation::kCageEntityId, kCageHalfX, kCageHalfY, kCageHalfZ, false,
+             kStepUpHeight},
+            {cage_upper_landing_id_, Simulation::kCageUpperLandingEntityId, kCageUpperHalfX,
+             kCageUpperHalfY, kCageUpperHalfZ, false, kStepUpHeight},
         };
         if (!needle_seated_) {
             targets[1].id = JPH::BodyID();
@@ -1715,6 +1844,9 @@ private:
         checkpoint_needle_position_ = state_.needle_position;
         checkpoint_needle_velocity_ = state_.needle_linear_velocity;
         checkpoint_hook_attachment_ = hook_attachment_;
+        checkpoint_cage_y_ = cage_y_;
+        checkpoint_cage_command_ = cage_command_;
+        checkpoint_cage_brake_ = cage_brake_engaged_;
     }
 
     void maybe_restore_from_death(JPH::BodyInterface &bodies) noexcept {
@@ -1781,6 +1913,14 @@ private:
                       static_cast<float>(checkpoint_needle_velocity_.z)));
         bodies.SetAngularVelocity(needle_id_, JPH::Vec3::sZero());
         attach_hook(checkpoint_hook_attachment_);
+        cage_y_ = checkpoint_cage_y_;
+        cage_command_ = checkpoint_cage_command_;
+        cage_brake_engaged_ = checkpoint_cage_brake_;
+        cage_stalled_ = false;
+        bodies.SetPosition(cage_id_,
+                           jib_rvec(kCageX, cage_y_, kCageZ),
+                           JPH::EActivation::Activate);
+        bodies.SetLinearVelocity(cage_id_, JPH::Vec3::sZero());
         parachute_deployed_ = false;
         airborne_seconds_ = 0.0;
         fall_severity_ = 0;
@@ -1953,6 +2093,22 @@ private:
         state_.needle_far_landing_position = {kNeedleFarLandingX, kNeedleFarLandingY,
                                               kNeedleFarLandingZ};
         state_.needle_bay_floor_position = {kNeedleBayFloorX, kNeedleBayFloorY, kNeedleBayFloorZ};
+
+        const JPH::RVec3 cage_position = bodies.GetPosition(cage_id_);
+        const double lever_x = kCageX + kCageLeverLocalX;
+        const double lever_y = cage_y_ + kCageLeverLocalY;
+        const double lever_z = kCageZ + kCageLeverLocalZ;
+        cage_lever_available_ =
+            distance_3d(player_position, lever_x, lever_y, lever_z) <= kCageLeverRadiusMeters;
+        state_.cage_position = {cage_position.GetX(), cage_position.GetY(), cage_position.GetZ()};
+        state_.cage_linear_velocity = {0.0, cage_velocity_y_, 0.0};
+        state_.cage_lever_position = {lever_x, lever_y, lever_z};
+        state_.cage_upper_landing_position = {kCageUpperX, kCageUpperY, kCageUpperZ};
+        state_.cage_lever_available = cage_lever_available_;
+        state_.cage_brake_engaged = cage_brake_engaged_;
+        state_.cage_stalled = cage_stalled_;
+        state_.cage_at_limit = cage_at_limit_;
+        state_.cage_command = cage_command_;
     }
 
     JoltRuntimeLease runtime_;
@@ -1990,6 +2146,8 @@ private:
     JPH::BodyID needle_near_landing_id_;
     JPH::BodyID needle_far_landing_id_;
     JPH::BodyID needle_bay_floor_id_;
+    JPH::BodyID cage_id_;
+    JPH::BodyID cage_upper_landing_id_;
     JPH::BodyID west_stair_ids_[Simulation::kNeedleWestStairCount]{};
     JPH::BodyID east_stair_ids_[Simulation::kNeedleEastStairCount]{};
     JPH::Ref<JPH::DistanceConstraint> hook_constraint_;
@@ -2029,6 +2187,9 @@ private:
     Vector3 checkpoint_needle_position_{};
     Vector3 checkpoint_needle_velocity_{};
     HookLoad checkpoint_hook_attachment_ = HookLoad::Crate;
+    double checkpoint_cage_y_ = kCageMinY;
+    double checkpoint_cage_command_ = 0.0;
+    bool checkpoint_cage_brake_ = true;
 
     double crate_mass_kg_ = kJibRatedCrateKilograms;
     double slew_radians_ = 0.0;
@@ -2046,6 +2207,13 @@ private:
     bool jib_exit_requested_ = false;
     HookLoad hook_attachment_ = HookLoad::None;
     bool needle_seated_ = false;
+    double cage_y_ = kCageMinY;
+    double cage_command_ = 0.0;
+    double cage_velocity_y_ = 0.0;
+    bool cage_brake_engaged_ = true;
+    bool cage_stalled_ = false;
+    bool cage_at_limit_ = true;
+    bool cage_lever_available_ = false;
 
     TraversalMode traversal_mode_ = TraversalMode::None;
     JPH::RVec3 traversal_target_{JPH::RVec3::sZero()};
@@ -2185,6 +2353,18 @@ bool Simulation::set_jib_brake(const bool engaged) noexcept {
     return true;
 }
 
+bool Simulation::can_operate_cage() const noexcept {
+    return physics_world_->state().cage_lever_available;
+}
+
+bool Simulation::request_cage_lever() noexcept {
+    if (cage_lever_requested_ || !physics_world_->state().cage_lever_available) {
+        return false;
+    }
+    cage_lever_requested_ = true;
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -2201,6 +2381,7 @@ void Simulation::step_fixed() noexcept {
                          jib_slew_input_,
                          jib_brake_engaged_,
                          jib_brake_command_valid_,
+                         cage_lever_requested_,
                          static_cast<float>(kFixedStepSeconds),
                          next_time_seconds);
     jump_requested_ = false;
@@ -2211,6 +2392,7 @@ void Simulation::step_fixed() noexcept {
     jib_enter_requested_ = false;
     jib_exit_requested_ = false;
     jib_brake_command_valid_ = false;
+    cage_lever_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();
