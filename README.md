@@ -10,6 +10,8 @@ ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority pac
 
 Native tests cover in-SWL lift, overweight stall, locked-brake hold, travel-limit stop, remote-command rejection, and riding the crate as moving support. Machine pose is stored in the WO-004 commit blob.
 
+Android arm64 APKs are produced by `.github/workflows/wo005-first-freight.yml` on `ScraperX-Grok`. An APK artifact proves production by the current source. It does not prove installation, execution on Fold, or that the crate lifted on device.
+
 Do not start WO-006 in this change. Do not assemble B01–B11.
 
 ## Claim boundary

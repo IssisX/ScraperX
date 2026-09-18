@@ -1,0 +1,170 @@
+name: ScraperX WO-005 — First Freight
+
+on:
+  push:
+    branches: [ScraperX-Grok]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scraperx-wo005-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: 4.7-stable
+  GODOT_BINARY_SHA256: 0b1a6c54c2c619c12e169fe9241edda4b81080b519451cec2984bf0d2c6cb73c
+  GODOT_TEMPLATES_SHA256: 9714459dc071907c0f3d5f17d608faf69e7cda21331fc5d39c4503ffa4e99eec
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  ANDROID_NDK_VERSION: 29.0.14206865
+
+jobs:
+  first-freight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install build and render prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
+          SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          test -x "${SDKMANAGER_PATH}"
+          yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
+          "${SDKMANAGER_PATH}" "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
+
+      - name: Install verified Godot 4.7 editor and Android template
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          curl --fail --location --retry 3 \
+            --output tools/godot/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          echo "${GODOT_BINARY_SHA256}  tools/godot/godot.zip" | sha256sum --check
+          unzip -q tools/godot/godot.zip -d tools/godot
+          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
+          chmod +x tools/godot/godot
+
+          curl --fail --location --retry 3 \
+            --output tools/godot/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA256}  tools/godot/templates.tpz" | sha256sum --check
+          unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
+            -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          tools/godot/godot --version
+
+      - name: Build native host graph and run WO-005 regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cmake -S . -B build/host -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSCRAPERX_BUILD_BRIDGE=ON \
+            -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_TARGET=template_release
+          cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
+          ctest --test-dir build/host --verbose | tee artifacts/native-tests.log
+          grep -F "100% tests passed" artifacts/native-tests.log
+          grep -F "PASS scraperx_sim WO-005 first freight" artifacts/native-tests.log
+
+      - name: Run Fold-aspect Godot presentation with current native graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/screenshots godot/.godot
+          printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            > godot/.godot/extension_list.cfg
+          grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            godot/.godot/extension_list.cfg
+          timeout 70s xvfb-run -a -s "-screen 0 2160x1856x24" \
+            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 1600 \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo005-first-freight.png" \
+            2>&1 | tee artifacts/godot-runtime.log
+          test -s artifacts/screenshots/wo005-first-freight.png
+          grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
+          grep -F "checkpoint=WO-005-FIRST-FREIGHT" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_CP004_RUNTIME_PROOF" artifacts/godot-runtime.log
+          grep -F "fold_layout=1" artifacts/godot-runtime.log
+          grep -F "approach=1" artifacts/godot-runtime.log
+
+      - name: Cross-compile native graph for Android arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build/android-arm64 -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-24 \
+            -DSCRAPERX_BUILD_BRIDGE=ON \
+            -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_TARGET=template_release
+          cmake --build build/android-arm64 --target scraperx_native --parallel 2
+          test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
+          file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
+
+      - name: Export WO-005 Android arm64 APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHECKPOINT_ID="${GITHUB_SHA::12}"
+          APK_NAME="ScraperX-WO005-${CHECKPOINT_ID}-arm64.apk"
+          mkdir -p build/apk artifacts/apk
+          tools/godot/godot --headless --path godot \
+            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
+            2>&1 | tee artifacts/godot-android-export.log
+          test -s "build/apk/${APK_NAME}"
+          unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
+          grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
+          cp "build/apk/${APK_NAME}" artifacts/apk/
+          sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
+          printf 'branch=%s\ncommit=%s\napk=%s\n' \
+            "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
+            > artifacts/apk/CHECKPOINT.txt
+
+      - name: Record WO-005 evidence boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > artifacts/WO-005-EVIDENCE.md <<EOF
+          # WO-005 First Freight Evidence
+
+          Source commit: \`${GITHUB_SHA}\`
+
+          Proven by this workflow:
+
+          - native in-SWL lift, overweight stall, locked-brake hold, travel-limit stop, remote rejection, and crate ride remain green;
+          - Godot loads the current native graph and prints checkpoint \`WO-005-FIRST-FREIGHT\`;
+          - Android arm64 native graph cross-compiles;
+          - the APK contains \`lib/arm64-v8a/libscraperx_native.so\`;
+          - APK checksum and checkpoint identity are recorded.
+
+          Not proven here:
+
+          - Fold installation, touch ergonomics, sustained 45 FPS, or thermals;
+          - WO-006 structural coupling, WO-007 process, WO-008 causal chain;
+          - B01–B11 assembly.
+          EOF
+
+      - name: Publish WO-005 Android build and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScraperX-WO005-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
