@@ -27,6 +27,8 @@ enum class InitialSpawn : std::uint8_t {
     NeedleSeated = 12,
     CageDeck = 13,
     CageSeated = 14,
+    SumpLanding = 15,
+    SumpDrained = 16,
 };
 
 enum class TraversalMode : std::uint8_t {
@@ -126,6 +128,18 @@ struct Snapshot final {
     bool cage_stalled = false;
     bool cage_at_limit = false;
     double cage_command = 0.0;
+
+    Vector3 sump_grate_position{};
+    Vector3 sump_valve_position{};
+    Vector3 sump_drain_position{};
+    Vector3 sump_far_landing_position{};
+    Vector3 sump_floor_position{};
+    bool sump_valve_available = false;
+    bool sump_drain_available = false;
+    bool sump_isolated = false;
+    bool sump_drain_open = false;
+    bool sump_grate_safe = false;
+    double sump_inventory = 1.0;
 };
 
 struct AdvanceResult final {
@@ -167,9 +181,12 @@ public:
     static constexpr std::uint64_t kNeedleBayFloorEntityId = 26;
     static constexpr std::uint64_t kCageEntityId = 27;
     static constexpr std::uint64_t kCageUpperLandingEntityId = 28;
+    static constexpr std::uint64_t kSumpGrateEntityId = 29;
     static constexpr std::uint64_t kNeedleStairEntityIdBegin = 30;
     static constexpr std::uint32_t kNeedleWestStairCount = 15;
     static constexpr std::uint32_t kNeedleEastStairCount = 9;
+    static constexpr std::uint64_t kSumpFloorEntityId = 54;
+    static constexpr std::uint64_t kSumpFarLandingEntityId = 55;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ApproachGrade);
     ~Simulation();
@@ -196,6 +213,10 @@ public:
     [[nodiscard]] bool set_jib_brake(bool engaged) noexcept;
     [[nodiscard]] bool can_operate_cage() const noexcept;
     [[nodiscard]] bool request_cage_lever() noexcept;
+    [[nodiscard]] bool can_operate_sump_valve() const noexcept;
+    [[nodiscard]] bool request_sump_valve() noexcept;
+    [[nodiscard]] bool can_operate_sump_drain() const noexcept;
+    [[nodiscard]] bool request_sump_drain() noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -221,6 +242,8 @@ private:
     bool jib_brake_engaged_ = true;
     bool jib_brake_command_valid_ = false;
     bool cage_lever_requested_ = false;
+    bool sump_valve_requested_ = false;
+    bool sump_drain_requested_ = false;
     Snapshot snapshot_{};
 };
 

@@ -28,6 +28,10 @@ public:
     [[nodiscard]] bool set_jib_brake(bool engaged);
     [[nodiscard]] bool can_operate_cage() const;
     [[nodiscard]] bool request_cage_lever();
+    [[nodiscard]] bool can_operate_sump_valve() const;
+    [[nodiscard]] bool request_sump_valve();
+    [[nodiscard]] bool can_operate_sump_drain() const;
+    [[nodiscard]] bool request_sump_drain();
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
 
     [[nodiscard]] std::int64_t get_tick_index() const;
@@ -101,6 +105,14 @@ public:
     [[nodiscard]] bool is_cage_stalled() const;
     [[nodiscard]] bool is_cage_at_limit() const;
     [[nodiscard]] double get_cage_command() const;
+    [[nodiscard]] godot::Vector3 get_sump_grate_position() const;
+    [[nodiscard]] godot::Vector3 get_sump_valve_position() const;
+    [[nodiscard]] godot::Vector3 get_sump_drain_position() const;
+    [[nodiscard]] godot::Vector3 get_sump_far_landing_position() const;
+    [[nodiscard]] bool is_sump_isolated() const;
+    [[nodiscard]] bool is_sump_drain_open() const;
+    [[nodiscard]] bool is_sump_grate_safe() const;
+    [[nodiscard]] double get_sump_inventory() const;
 
 protected:
     static void _bind_methods();

@@ -37,6 +37,9 @@ var _cage_gate_mesh: MeshInstance3D
 var _cage_lever_mesh: MeshInstance3D
 var _cage_wheel_mesh: MeshInstance3D
 var _cage_wheel_angle := 0.0
+var _sump_water_mesh: MeshInstance3D
+var _sump_valve_mesh: MeshInstance3D
+var _sump_drain_mesh: MeshInstance3D
 var _cloud_wisps: Array[MeshInstance3D] = []
 
 var _pendant: Control
@@ -96,7 +99,7 @@ func _ready() -> void:
 		return
 
 	_ci_initial_player_position = _native.get_player_position()
-	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=KX-CAGE-FIRST-SHAFT")
+	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=WO-007-FIRST-PROCESS")
 	_render_snapshot()
 
 func _process(delta: float) -> void:
@@ -327,6 +330,22 @@ func _request_context_action() -> void:
 	if _native.has_method("can_operate_cage") and bool(_native.can_operate_cage()):
 		_native.request_cage_lever()
 		return
+	if _native.has_method("can_operate_sump_valve") and bool(_native.can_operate_sump_valve()) and (
+		not _native.has_method("is_sump_isolated") or not bool(_native.is_sump_isolated())
+	):
+		_native.request_sump_valve()
+		return
+	if _native.has_method("can_operate_sump_drain") and bool(_native.can_operate_sump_drain()) and (
+		not _native.has_method("is_sump_drain_open") or not bool(_native.is_sump_drain_open())
+	):
+		_native.request_sump_drain()
+		return
+	if _native.has_method("can_operate_sump_valve") and bool(_native.can_operate_sump_valve()):
+		_native.request_sump_valve()
+		return
+	if _native.has_method("can_operate_sump_drain") and bool(_native.can_operate_sump_drain()):
+		_native.request_sump_drain()
+		return
 	if bool(_native.can_operate_hopper()):
 		_native.request_hopper_release()
 		return
@@ -374,6 +393,12 @@ func _render_snapshot() -> void:
 	var cage_brake := _native.has_method("is_cage_brake_engaged") and bool(_native.is_cage_brake_engaged())
 	var cage_limit := _native.has_method("is_cage_at_limit") and bool(_native.is_cage_at_limit())
 	var cage_command := float(_native.get_cage_command()) if _native.has_method("get_cage_command") else 0.0
+	var sump_valve := _native.has_method("can_operate_sump_valve") and bool(_native.can_operate_sump_valve())
+	var sump_drain := _native.has_method("can_operate_sump_drain") and bool(_native.can_operate_sump_drain())
+	var sump_isolated := _native.has_method("is_sump_isolated") and bool(_native.is_sump_isolated())
+	var sump_drain_open := _native.has_method("is_sump_drain_open") and bool(_native.is_sump_drain_open())
+	var sump_safe := _native.has_method("is_sump_grate_safe") and bool(_native.is_sump_grate_safe())
+	var sump_inventory := float(_native.get_sump_inventory()) if _native.has_method("get_sump_inventory") else 1.0
 
 	_camera.position = position + EYE_OFFSET
 	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
@@ -384,13 +409,13 @@ func _render_snapshot() -> void:
 		support,
 		_traversal_name(traversal_mode),
 	]
-	_machine_value.text = "CAGE  %s  NEEDLE %s  JIB %s" % [
-		"STALL" if cage_stall else ("LIMIT" if cage_limit else ("HOLD" if cage_brake else ("UP" if cage_command > 0.05 else ("DOWN" if cage_command < -0.05 else "LIVE")))),
+	_machine_value.text = "SUMP  %s  CAGE %s  NEEDLE %s" % [
+		"SAFE" if sump_safe else ("ISO" if sump_isolated else ("DRAIN" if sump_drain_open else "WET")),
+		"STALL" if cage_stall else ("LIMIT" if cage_limit else ("HOLD" if cage_brake else "LIVE")),
 		"SEATED" if needle_seated else "FREE",
-		"STALL" if jib_stall else ("CAB" if jib_occupied else "COLD"),
 	]
 	_tick_value.text = "90 HZ NATIVE  /  %08d" % int(_native.get_tick_index())
-	_boundary_value.text = "KX-CAGE / NEEDLE INTERLOCK / LOCAL LEVER"
+	_boundary_value.text = "KX-SUMP / GRATE HAZARD / LOCAL VALVE"
 
 	var context_visible := false
 	if traversal_mode == TRAVERSAL_HANG:
@@ -407,6 +432,15 @@ func _render_snapshot() -> void:
 		context_visible = true
 	elif cage_lever:
 		_action_button.text = "PULL LEVER"
+		context_visible = true
+	elif sump_valve and not sump_isolated:
+		_action_button.text = "ISOLATE"
+		context_visible = true
+	elif sump_drain and not sump_drain_open:
+		_action_button.text = "OPEN DRAIN"
+		context_visible = true
+	elif sump_valve:
+		_action_button.text = "OPEN LINE"
 		context_visible = true
 	elif hopper_available and not hopper_started:
 		_action_button.text = "RELEASE HOPPER"
@@ -437,6 +471,14 @@ func _render_snapshot() -> void:
 		_status.text = "CAGE TRAVEL / PULL LEVER TO BRAKE"
 	elif cage_lever:
 		_status.text = "KX-CAGE LEVER IN REACH / PULL TO WORK THE DRUM"
+	elif sump_safe:
+		_status.text = "KX-GRATE DRY / ISOLATED VOLUME / WALK THE BARS"
+	elif sump_isolated and sump_drain_open:
+		_status.text = "SUMP DUMPING / INVENTORY FALLING / GRATE STILL A HOLE"
+	elif sump_valve and not sump_isolated:
+		_status.text = "ISOLATION WHEEL IN REACH / CLOSE THE FILL LINE"
+	elif sump_drain:
+		_status.text = "DRAIN COCK IN REACH / OPENS ONLY THE DUMP"
 	elif needle_seated:
 		_status.text = "KX-NEEDLE SEATED / SPAN IS SUPPORT / WALK THE BAY"
 	elif hopper_available:
@@ -470,6 +512,7 @@ func _render_snapshot() -> void:
 	_sync_jib_meshes()
 	_sync_needle_mesh()
 	_sync_cage_meshes()
+	_sync_sump_meshes(sump_isolated, sump_drain_open, sump_inventory)
 	if _pendant != null:
 		_pendant.visible = jib_occupied
 
@@ -539,6 +582,7 @@ func _build_exterior_world() -> void:
 
 	_build_needle_bay(mill_scale, oxidized_steel, weathered_timber, galvanized, faded_yellow, chipped_orange)
 	_build_cage_house(mill_scale, oxidized_steel, galvanized, faded_yellow, chipped_orange, weathered_timber)
+	_build_sump_bay(mill_scale, oxidized_steel, dark_concrete, weathered_timber, galvanized, faded_yellow, chipped_orange)
 
 	# Readable idle machinery integrated into the lower bays — not a dead lift car in a blank shaft.
 	_add_machine_wheel(Vector3(-17.0, 43.0, 14.0), 6.5, 1.4, mill_scale, oxidized_steel)
@@ -729,6 +773,66 @@ func _build_cage_house(mill_scale: Material, oxidized_steel: Material, galvanize
 	_cage_wheel_mesh.rotation.x = PI * 0.5
 	_add_floodlight(Vector3(9.5, 16.8, 32.0), Vector3(0.0, -0.45, 1.0))
 	_add_floodlight(Vector3(7.2, 10.4, 36.0), Vector3(0.2, -0.25, -0.4))
+
+func _build_sump_bay(mill_scale: Material, oxidized_steel: Material, dark_concrete: Material, weathered_timber: Material, galvanized: Material, faded_yellow: Material, chipped_orange: Material) -> void:
+	# Torn +22 m floor: the grate is a real hole while the sump is wet.
+	_add_box("SumpPitWest", Vector3(0.44, 4.40, 8.40), Vector3(5.95, 19.40, 42.80), oxidized_steel)
+	_add_box("SumpPitEast", Vector3(0.44, 4.40, 8.40), Vector3(13.05, 19.40, 42.80), oxidized_steel)
+	_add_box("SumpPitSouthLip", Vector3(6.8, 0.22, 0.55), Vector3(9.50, 21.62, 40.05), mill_scale)
+	_add_box("SumpPitNorthLip", Vector3(6.8, 0.22, 0.55), Vector3(9.50, 21.62, 45.10), mill_scale)
+	_add_box("SumpFloor", Vector3(6.80, 0.36, 8.40), Vector3(9.50, 17.20, 42.80), dark_concrete)
+	_add_box("SumpSludge", Vector3(6.2, 0.10, 7.6), Vector3(9.50, 17.42, 42.80), oxidized_steel)
+	_add_box("SumpFarLanding", Vector3(6.00, 0.36, 4.80), Vector3(9.50, 21.82, 47.50), mill_scale)
+	_add_box("SumpFarEdge", Vector3(6.1, 0.08, 0.14), Vector3(9.50, 22.02, 45.20), faded_yellow)
+	_add_box("SumpFarRailL", Vector3(0.10, 1.05, 4.4), Vector3(6.55, 22.52, 47.50), faded_yellow)
+	_add_box("SumpFarRailR", Vector3(0.10, 1.05, 4.4), Vector3(12.45, 22.52, 47.50), faded_yellow)
+	_add_box("BrokenSlabL", Vector3(1.8, 0.16, 1.1), Vector3(6.70, 21.70, 40.90), mill_scale).rotation.z = 0.18
+	_add_box("BrokenSlabR", Vector3(1.6, 0.14, 0.9), Vector3(12.20, 21.68, 40.70), oxidized_steel).rotation.z = -0.22
+	_add_box("HangingPlate", Vector3(2.4, 0.08, 1.6), Vector3(11.6, 20.4, 43.6), mill_scale).rotation = Vector3(0.35, 0.2, -0.4)
+	_add_box("TornRebar", Vector3(0.08, 1.8, 0.08), Vector3(7.1, 20.9, 40.4), galvanized).rotation.z = 0.55
+	_add_box("SumpDowncomer", Vector3(0.55, 8.5, 0.55), Vector3(12.15, 17.8, 40.6), galvanized)
+	_add_box("SumpFillRiser", Vector3(0.48, 9.2, 0.48), Vector3(6.85, 18.2, 40.2), oxidized_steel)
+	_add_box("SumpHeaderPipe", Vector3(6.6, 0.42, 0.42), Vector3(9.50, 23.55, 40.15), galvanized)
+
+	# Visual grate bars only — collision is native and wet means you fall through.
+	for i in range(9):
+		var z := 40.15 + 0.55 * float(i)
+		_add_box("KxGrateBar", Vector3(4.80, 0.07, 0.12), Vector3(9.50, 21.84, z), oxidized_steel)
+	for i in range(5):
+		var x := 7.30 + 1.10 * float(i)
+		_add_box("KxGrateTie", Vector3(0.10, 0.05, 5.10), Vector3(x, 21.80, 42.55), mill_scale)
+
+	var dirty_water := _transparent_material(Color(0.22, 0.28, 0.24, 0.55), 0.18)
+	_sump_water_mesh = _add_box("KxSumpWater", Vector3(6.4, 0.22, 8.0), Vector3(9.50, 21.20, 42.80), dirty_water)
+
+	_add_box("KxValvePedestal", Vector3(0.70, 1.10, 0.70), Vector3(6.85, 22.45, 38.20), mill_scale)
+	_add_box("KxValveStem", Vector3(0.12, 0.70, 0.12), Vector3(6.85, 23.10, 38.20), galvanized)
+	_sump_valve_mesh = _add_cylinder("KxValveWheel", 0.62, 0.10, Vector3(6.85, 22.70, 38.20), chipped_orange)
+	_sump_valve_mesh.rotation.x = PI * 0.5
+	_add_box("KxValveTag", Vector3(0.28, 0.08, 0.02), Vector3(6.85, 22.18, 37.82), faded_yellow)
+
+	_add_box("KxDrainPedestal", Vector3(0.55, 0.90, 0.55), Vector3(12.15, 22.35, 38.40), mill_scale)
+	_sump_drain_mesh = _add_box("KxDrainCock", Vector3(0.16, 0.55, 0.16), Vector3(12.15, 22.55, 38.40), faded_yellow)
+	_sump_drain_mesh.rotation.x = 0.20
+	_add_box("KxDrainPipe", Vector3(0.22, 0.22, 2.4), Vector3(12.15, 22.05, 39.50), galvanized)
+	_add_box("KxDrainTag", Vector3(0.28, 0.08, 0.02), Vector3(12.15, 22.05, 38.05), chipped_orange)
+
+	_add_box("SumpBayPostL", Vector3(1.1, 10.0, 1.1), Vector3(5.4, 19.0, 47.8), mill_scale)
+	_add_box("SumpBayPostR", Vector3(1.1, 10.0, 1.1), Vector3(13.6, 19.0, 47.8), mill_scale)
+	_add_box("SumpBayHeader", Vector3(9.4, 1.1, 1.4), Vector3(9.50, 24.4, 47.6), oxidized_steel)
+	_add_box("TimberInfillSump", Vector3(4.8, 6.4, 0.38), Vector3(15.6, 20.6, 46.8), weathered_timber)
+	_add_floodlight(Vector3(9.5, 24.6, 40.8), Vector3(0.0, -0.55, 0.35))
+	_add_floodlight(Vector3(6.2, 23.4, 38.0), Vector3(0.35, -0.4, 0.2))
+
+func _sync_sump_meshes(isolated: bool, drain_open: bool, inventory: float) -> void:
+	if _sump_water_mesh != null:
+		var water_y := 17.42 + clampf(inventory, 0.0, 1.0) * 4.20
+		_sump_water_mesh.position = Vector3(9.50, water_y, 42.80)
+		_sump_water_mesh.visible = inventory > 0.03
+	if _sump_valve_mesh != null:
+		_sump_valve_mesh.rotation = Vector3(PI * 0.5, 1.35 if isolated else 0.20, 0.0)
+	if _sump_drain_mesh != null:
+		_sump_drain_mesh.rotation.x = 1.15 if drain_open else 0.20
 
 func _add_wrapping_stairs(origin: Vector3, rise: float, flights: int, tread_material: Material, rail_material: Material) -> void:
 	for flight in range(flights):

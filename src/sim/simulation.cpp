@@ -150,6 +150,35 @@ constexpr float kCageUpperHalfX = 3.20F;
 constexpr float kCageUpperHalfY = 0.18F;
 constexpr float kCageUpperHalfZ = 2.20F;
 
+constexpr double kSumpGrateX = 9.50;
+constexpr double kSumpGrateY = 21.82;
+constexpr double kSumpGrateZ = 42.55;
+constexpr float kSumpGrateHalfX = 2.40F;
+constexpr float kSumpGrateHalfY = 0.10F;
+constexpr float kSumpGrateHalfZ = 2.55F;
+constexpr double kSumpFarX = 9.50;
+constexpr double kSumpFarY = 21.82;
+constexpr double kSumpFarZ = 47.50;
+constexpr float kSumpFarHalfX = 3.00F;
+constexpr float kSumpFarHalfY = 0.18F;
+constexpr float kSumpFarHalfZ = 2.40F;
+constexpr double kSumpFloorX = 9.50;
+constexpr double kSumpFloorY = 17.20;
+constexpr double kSumpFloorZ = 42.80;
+constexpr float kSumpFloorHalfX = 3.40F;
+constexpr float kSumpFloorHalfY = 0.18F;
+constexpr float kSumpFloorHalfZ = 4.20F;
+constexpr double kSumpValveX = 6.85;
+constexpr double kSumpValveY = 22.70;
+constexpr double kSumpValveZ = 38.20;
+constexpr double kSumpDrainX = 12.15;
+constexpr double kSumpDrainY = 22.55;
+constexpr double kSumpDrainZ = 38.40;
+constexpr double kSumpStationRadiusMeters = 2.80;
+constexpr double kSumpDryThreshold = 0.08;
+constexpr double kSumpDrainRate = 0.28;
+constexpr double kSumpFillRate = 0.45;
+
 constexpr double kImpactRockerX = 7.0;
 constexpr double kImpactRockerY = 1.65;
 constexpr double kImpactRockerZ = 21.55;
@@ -300,6 +329,10 @@ public:
         unlock();
     }
 
+    void set_grate_walkable(const bool walkable) noexcept {
+        grate_walkable_ = walkable;
+    }
+
     [[nodiscard]] SupportSample sample() const noexcept {
         lock();
         const SupportSample result = sample_;
@@ -322,8 +355,8 @@ public:
     }
 
 private:
-    [[nodiscard]] static int support_rank(const std::uint64_t entity_id,
-                                          const bool kinematic) noexcept {
+    [[nodiscard]] int support_rank(const std::uint64_t entity_id,
+                                          const bool kinematic) const noexcept {
         using scraperx::sim::Simulation;
         if (entity_id == Simulation::kTranslatingSupportEntityId ||
             entity_id == Simulation::kRotatingSupportEntityId ||
@@ -334,6 +367,9 @@ private:
         }
         if (entity_id == Simulation::kNeedleEntityId) {
             return kinematic ? 1 : 0;
+        }
+        if (entity_id == Simulation::kSumpGrateEntityId) {
+            return grate_walkable_ ? 1 : 0;
         }
         if (entity_id == Simulation::kStaticDeckEntityId ||
             entity_id == Simulation::kHighPlatformEntityId ||
@@ -350,7 +386,9 @@ private:
             entity_id == Simulation::kNeedleNearLandingEntityId ||
             entity_id == Simulation::kNeedleFarLandingEntityId ||
             entity_id == Simulation::kNeedleBayFloorEntityId ||
-            entity_id == Simulation::kCageUpperLandingEntityId) {
+            entity_id == Simulation::kCageUpperLandingEntityId ||
+            entity_id == Simulation::kSumpFloorEntityId ||
+            entity_id == Simulation::kSumpFarLandingEntityId) {
             return 1;
         }
         if (entity_id >= Simulation::kNeedleStairEntityIdBegin &&
@@ -426,6 +464,7 @@ private:
 
     mutable std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
     SupportSample sample_{};
+    bool grate_walkable_ = false;
 };
 
 [[nodiscard]] JPH::RVec3 spawn_position(const scraperx::sim::InitialSpawn spawn) noexcept {
@@ -460,6 +499,12 @@ private:
                 kCageMinY + static_cast<double>(kCageHalfY) +
                     static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
                 kCageZ};
+    case scraperx::sim::InitialSpawn::SumpLanding:
+    case scraperx::sim::InitialSpawn::SumpDrained:
+        return {kCageUpperX,
+                kCageUpperY + static_cast<double>(kCageUpperHalfY) +
+                    static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
+                kCageUpperZ};
     case scraperx::sim::InitialSpawn::ApproachGrade:
     default:
         return {0.0, 3.0, 60.0};
@@ -906,6 +951,48 @@ public:
                               Simulation::kCageUpperLandingEntityId,
                               0.78F);
 
+        sump_isolated_ = initial_spawn == InitialSpawn::SumpDrained;
+        sump_drain_open_ = initial_spawn == InitialSpawn::SumpDrained;
+        sump_inventory_ = sump_isolated_ ? 0.0 : 1.0;
+        grate_safe_ = sump_isolated_ && sump_inventory_ <= kSumpDryThreshold;
+
+        JPH::BodyCreationSettings grate_settings(
+            new JPH::BoxShape(JPH::Vec3(kSumpGrateHalfX, kSumpGrateHalfY, kSumpGrateHalfZ)),
+            jib_rvec(kSumpGrateX, kSumpGrateY, kSumpGrateZ),
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Static,
+            object_layers::kStatic);
+        grate_settings.mFriction = 0.70F;
+        grate_settings.mIsSensor = !grate_safe_;
+        grate_settings.mUserData = Simulation::kSumpGrateEntityId;
+        sump_grate_id_ = bodies.CreateAndAddBody(grate_settings, JPH::EActivation::DontActivate);
+        contact_listener_.set_grate_walkable(grate_safe_);
+
+        sump_floor_id_ =
+            create_static_box(JPH::Vec3(kSumpFloorHalfX, kSumpFloorHalfY, kSumpFloorHalfZ),
+                              jib_rvec(kSumpFloorX, kSumpFloorY, kSumpFloorZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kSumpFloorEntityId,
+                              0.55F);
+        sump_far_landing_id_ =
+            create_static_box(JPH::Vec3(kSumpFarHalfX, kSumpFarHalfY, kSumpFarHalfZ),
+                              jib_rvec(kSumpFarX, kSumpFarY, kSumpFarZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kSumpFarLandingEntityId,
+                              0.78F);
+        sump_pit_west_id_ =
+            create_static_box(JPH::Vec3(0.22F, 2.20F, 4.20F),
+                              jib_rvec(kSumpFloorX - 3.55, 19.40, kSumpFloorZ),
+                              JPH::Quat::sIdentity(),
+                              0,
+                              0.62F);
+        sump_pit_east_id_ =
+            create_static_box(JPH::Vec3(0.22F, 2.20F, 4.20F),
+                              jib_rvec(kSumpFloorX + 3.55, 19.40, kSumpFloorZ),
+                              JPH::Quat::sIdentity(),
+                              0,
+                              0.62F);
+
         if (initial_spawn == InitialSpawn::NeedleBay) {
             attach_hook(HookLoad::Needle);
         } else if (!needle_fixture) {
@@ -929,6 +1016,11 @@ public:
         remove_and_destroy(bodies, needle_id_);
         remove_and_destroy(bodies, cage_id_);
         remove_and_destroy(bodies, cage_upper_landing_id_);
+        remove_and_destroy(bodies, sump_grate_id_);
+        remove_and_destroy(bodies, sump_floor_id_);
+        remove_and_destroy(bodies, sump_far_landing_id_);
+        remove_and_destroy(bodies, sump_pit_west_id_);
+        remove_and_destroy(bodies, sump_pit_east_id_);
         remove_and_destroy(bodies, jib_crate_id_);
         remove_and_destroy(bodies, jib_hook_id_);
         remove_and_destroy(bodies, jib_boom_id_);
@@ -975,6 +1067,8 @@ public:
               const bool jib_brake_engaged,
               const bool jib_brake_command_valid,
               const bool cage_lever_requested,
+              const bool sump_valve_requested,
+              const bool sump_drain_requested,
               const float delta_seconds,
               const double next_time_seconds) noexcept {
         auto &bodies = physics_system_.GetBodyInterface();
@@ -995,6 +1089,7 @@ public:
         update_hopper_motion(bodies, delta_seconds);
         update_jib_motion(bodies, delta_seconds);
         update_cage_motion(bodies, cage_lever_requested, delta_seconds);
+        update_sump_process(bodies, sump_valve_requested, sump_drain_requested, delta_seconds);
 
         if (drop_from_hang_requested && traversal_mode_ == TraversalMode::Hang) {
             traversal_mode_ = TraversalMode::None;
@@ -1149,6 +1244,15 @@ private:
         }
         if (entity_id == Simulation::kCageUpperLandingEntityId) {
             return cage_upper_landing_id_;
+        }
+        if (entity_id == Simulation::kSumpGrateEntityId) {
+            return sump_grate_id_;
+        }
+        if (entity_id == Simulation::kSumpFloorEntityId) {
+            return sump_floor_id_;
+        }
+        if (entity_id == Simulation::kSumpFarLandingEntityId) {
+            return sump_far_landing_id_;
         }
         if (entity_id == Simulation::kJibBoomEntityId) {
             return jib_boom_id_;
@@ -1374,6 +1478,46 @@ private:
                              delta_seconds);
     }
 
+    void apply_grate_collision(JPH::BodyInterface &bodies) noexcept {
+        const bool safe = sump_isolated_ && sump_inventory_ <= kSumpDryThreshold;
+        grate_safe_ = safe;
+        contact_listener_.set_grate_walkable(safe);
+        bodies.SetIsSensor(sump_grate_id_, !safe);
+        if (safe) {
+            bodies.ActivateBody(player_id_);
+        }
+    }
+
+    void update_sump_process(JPH::BodyInterface &bodies,
+                             const bool sump_valve_requested,
+                             const bool sump_drain_requested,
+                             const float delta_seconds) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+        sump_valve_available_ =
+            distance_3d(player_position, kSumpValveX, kSumpValveY, kSumpValveZ) <=
+            kSumpStationRadiusMeters;
+        sump_drain_available_ =
+            distance_3d(player_position, kSumpDrainX, kSumpDrainY, kSumpDrainZ) <=
+            kSumpStationRadiusMeters;
+
+        if (sump_valve_requested && sump_valve_available_) {
+            sump_isolated_ = !sump_isolated_;
+        }
+        if (sump_drain_requested && sump_drain_available_) {
+            sump_drain_open_ = !sump_drain_open_;
+        }
+
+        if (sump_isolated_ && sump_drain_open_) {
+            sump_inventory_ = std::max(
+                0.0, sump_inventory_ - kSumpDrainRate * static_cast<double>(delta_seconds));
+        } else if (!sump_isolated_) {
+            sump_inventory_ = std::min(
+                1.0, sump_inventory_ + kSumpFillRate * static_cast<double>(delta_seconds));
+        }
+
+        apply_grate_collision(bodies);
+    }
+
     [[nodiscard]] double attached_load_mass() const noexcept {
         if (hook_attachment_ == HookLoad::Crate) {
             return crate_mass_kg_;
@@ -1531,7 +1675,7 @@ private:
             bool snap_center;
             float max_rise;
         };
-        StepTarget targets[7] = {
+        StepTarget targets[9] = {
             {jib_crate_id_, Simulation::kJibCrateEntityId, kJibCrateHalfWidth, kJibCrateHalfHeight,
              kJibCrateHalfWidth, true, kCrateStepHeight},
             {needle_id_, Simulation::kNeedleEntityId, kNeedleHalfLength, kNeedleHalfHeight,
@@ -1546,9 +1690,16 @@ private:
              kStepUpHeight},
             {cage_upper_landing_id_, Simulation::kCageUpperLandingEntityId, kCageUpperHalfX,
              kCageUpperHalfY, kCageUpperHalfZ, false, kStepUpHeight},
+            {sump_grate_id_, Simulation::kSumpGrateEntityId, kSumpGrateHalfX, kSumpGrateHalfY,
+             kSumpGrateHalfZ, false, kStepUpHeight},
+            {sump_far_landing_id_, Simulation::kSumpFarLandingEntityId, kSumpFarHalfX,
+             kSumpFarHalfY, kSumpFarHalfZ, false, kStepUpHeight},
         };
         if (!needle_seated_) {
             targets[1].id = JPH::BodyID();
+        }
+        if (!grate_safe_) {
+            targets[7].id = JPH::BodyID();
         }
 
         auto try_step = [&](const StepTarget &target) {
@@ -1847,6 +1998,9 @@ private:
         checkpoint_cage_y_ = cage_y_;
         checkpoint_cage_command_ = cage_command_;
         checkpoint_cage_brake_ = cage_brake_engaged_;
+        checkpoint_sump_isolated_ = sump_isolated_;
+        checkpoint_sump_drain_open_ = sump_drain_open_;
+        checkpoint_sump_inventory_ = sump_inventory_;
     }
 
     void maybe_restore_from_death(JPH::BodyInterface &bodies) noexcept {
@@ -1921,6 +2075,10 @@ private:
                            jib_rvec(kCageX, cage_y_, kCageZ),
                            JPH::EActivation::Activate);
         bodies.SetLinearVelocity(cage_id_, JPH::Vec3::sZero());
+        sump_isolated_ = checkpoint_sump_isolated_;
+        sump_drain_open_ = checkpoint_sump_drain_open_;
+        sump_inventory_ = checkpoint_sump_inventory_;
+        apply_grate_collision(bodies);
         parachute_deployed_ = false;
         airborne_seconds_ = 0.0;
         fall_severity_ = 0;
@@ -2109,6 +2267,18 @@ private:
         state_.cage_stalled = cage_stalled_;
         state_.cage_at_limit = cage_at_limit_;
         state_.cage_command = cage_command_;
+
+        state_.sump_grate_position = {kSumpGrateX, kSumpGrateY, kSumpGrateZ};
+        state_.sump_valve_position = {kSumpValveX, kSumpValveY, kSumpValveZ};
+        state_.sump_drain_position = {kSumpDrainX, kSumpDrainY, kSumpDrainZ};
+        state_.sump_far_landing_position = {kSumpFarX, kSumpFarY, kSumpFarZ};
+        state_.sump_floor_position = {kSumpFloorX, kSumpFloorY, kSumpFloorZ};
+        state_.sump_valve_available = sump_valve_available_;
+        state_.sump_drain_available = sump_drain_available_;
+        state_.sump_isolated = sump_isolated_;
+        state_.sump_drain_open = sump_drain_open_;
+        state_.sump_grate_safe = grate_safe_;
+        state_.sump_inventory = sump_inventory_;
     }
 
     JoltRuntimeLease runtime_;
@@ -2148,6 +2318,11 @@ private:
     JPH::BodyID needle_bay_floor_id_;
     JPH::BodyID cage_id_;
     JPH::BodyID cage_upper_landing_id_;
+    JPH::BodyID sump_grate_id_;
+    JPH::BodyID sump_floor_id_;
+    JPH::BodyID sump_far_landing_id_;
+    JPH::BodyID sump_pit_west_id_;
+    JPH::BodyID sump_pit_east_id_;
     JPH::BodyID west_stair_ids_[Simulation::kNeedleWestStairCount]{};
     JPH::BodyID east_stair_ids_[Simulation::kNeedleEastStairCount]{};
     JPH::Ref<JPH::DistanceConstraint> hook_constraint_;
@@ -2190,6 +2365,9 @@ private:
     double checkpoint_cage_y_ = kCageMinY;
     double checkpoint_cage_command_ = 0.0;
     bool checkpoint_cage_brake_ = true;
+    bool checkpoint_sump_isolated_ = false;
+    bool checkpoint_sump_drain_open_ = false;
+    double checkpoint_sump_inventory_ = 1.0;
 
     double crate_mass_kg_ = kJibRatedCrateKilograms;
     double slew_radians_ = 0.0;
@@ -2214,6 +2392,12 @@ private:
     bool cage_stalled_ = false;
     bool cage_at_limit_ = true;
     bool cage_lever_available_ = false;
+    bool sump_isolated_ = false;
+    bool sump_drain_open_ = false;
+    bool grate_safe_ = false;
+    bool sump_valve_available_ = false;
+    bool sump_drain_available_ = false;
+    double sump_inventory_ = 1.0;
 
     TraversalMode traversal_mode_ = TraversalMode::None;
     JPH::RVec3 traversal_target_{JPH::RVec3::sZero()};
@@ -2365,6 +2549,30 @@ bool Simulation::request_cage_lever() noexcept {
     return true;
 }
 
+bool Simulation::can_operate_sump_valve() const noexcept {
+    return physics_world_->state().sump_valve_available;
+}
+
+bool Simulation::request_sump_valve() noexcept {
+    if (sump_valve_requested_ || !physics_world_->state().sump_valve_available) {
+        return false;
+    }
+    sump_valve_requested_ = true;
+    return true;
+}
+
+bool Simulation::can_operate_sump_drain() const noexcept {
+    return physics_world_->state().sump_drain_available;
+}
+
+bool Simulation::request_sump_drain() noexcept {
+    if (sump_drain_requested_ || !physics_world_->state().sump_drain_available) {
+        return false;
+    }
+    sump_drain_requested_ = true;
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -2382,6 +2590,8 @@ void Simulation::step_fixed() noexcept {
                          jib_brake_engaged_,
                          jib_brake_command_valid_,
                          cage_lever_requested_,
+                         sump_valve_requested_,
+                         sump_drain_requested_,
                          static_cast<float>(kFixedStepSeconds),
                          next_time_seconds);
     jump_requested_ = false;
@@ -2393,6 +2603,8 @@ void Simulation::step_fixed() noexcept {
     jib_exit_requested_ = false;
     jib_brake_command_valid_ = false;
     cage_lever_requested_ = false;
+    sump_valve_requested_ = false;
+    sump_drain_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();

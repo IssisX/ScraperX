@@ -793,6 +793,121 @@ int main() {
     require(ride_cage.snapshot().cage_position.y < cage_limit_y - 2.0,
             "paying the drum out from the top must lower the cage");
 
+    Simulation remote_sump;
+    require(remote_sump.advance_frame(1.0).accepted, "approach settle for remote sump must advance");
+    require(!remote_sump.can_operate_sump_valve(),
+            "KX-SUMP valve must reject isolation from the distant approach grade");
+    require(!remote_sump.request_sump_valve(),
+            "remote Action must not become an isolate-solve button");
+    require(!remote_sump.can_operate_sump_drain(),
+            "KX-SUMP drain must reject operation away from the cock");
+    require(!remote_sump.request_sump_drain(),
+            "remote Action must not open the drain");
+
+    Simulation wet(InitialSpawn::SumpLanding);
+    require(wet.advance_frame(1.0).accepted, "sump-landing settle must advance");
+    const auto wet_idle = wet.snapshot();
+    require(wet_idle.player_grounded, "sump fixture must stand on the cage-house landing");
+    require(!wet_idle.sump_grate_safe, "cold KX-SUMP must start wet");
+    require(!wet_idle.sump_isolated, "live fill line must start open");
+    require(wet_idle.sump_inventory > 0.90, "undrained inventory must be a full lumped volume");
+    require(wet.can_operate_sump_valve(), "player on the landing must reach the isolation wheel");
+    require(wet.can_operate_sump_drain(), "player on the landing must reach the drain cock");
+
+    require(wet.set_move_input(0.0, 1.0), "walk onto the wet grate must be accepted");
+    bool fell_wet = false;
+    const int wet_walk_budget = static_cast<int>(1.6 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < wet_walk_budget; ++step) {
+        require(wet.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "wet-grate walk step must advance");
+        const auto now = wet.snapshot();
+        if (now.player_position.y < wet_idle.player_position.y - 1.20 &&
+            now.support_entity_id != Simulation::kSumpGrateEntityId) {
+            fell_wet = true;
+            break;
+        }
+    }
+    require(fell_wet, "wet KX-GRATE must be a hole, not a painted solid walkway");
+
+    Simulation live_drain(InitialSpawn::SumpLanding);
+    require(live_drain.advance_frame(1.0).accepted, "live-drain settle must advance");
+    require(live_drain.request_sump_drain(), "drain cock must accept an open while the line is live");
+    require(live_drain.advance_frame(5.0).accepted, "unisolated drain interval must advance");
+    const auto still_wet = live_drain.snapshot();
+    require(!still_wet.sump_isolated, "drain-without-isolate must leave the fill line live");
+    require(still_wet.sump_inventory > 0.80,
+            "live fill must overwhelm the drain so inventory does not magically empty");
+    require(!still_wet.sump_grate_safe, "a timer must not dry the grate without isolation");
+
+    Simulation isolate(InitialSpawn::SumpLanding);
+    require(isolate.advance_frame(1.0).accepted, "isolate fixture settle must advance");
+    require(isolate.request_sump_valve(), "isolation wheel must accept a local close");
+    require(isolate.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "isolate tick must advance");
+    require(isolate.snapshot().sump_isolated, "valve Action must isolate the lumped volume");
+    require(!isolate.snapshot().sump_grate_safe,
+            "isolation alone must not invent a dry grate without drain inventory");
+    require(isolate.request_sump_drain(), "isolated drain cock must accept an open");
+    require(isolate.advance_frame(5.0).accepted, "isolated drain interval must advance");
+    const auto dried = isolate.snapshot();
+    require(dried.sump_isolated, "isolation must hold while the volume dumps");
+    require(dried.sump_drain_open, "drain cock must remain open during the dump");
+    require(dried.sump_inventory <= 0.08, "isolated drain must empty the lumped inventory");
+    require(dried.sump_grate_safe, "grate-safe must be derived from isolated empty inventory");
+
+    require(isolate.set_move_input(0.0, 1.0), "walk the drained grate must be accepted");
+    bool crossed = false;
+    const int dry_walk_budget = static_cast<int>(2.8 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < dry_walk_budget; ++step) {
+        require(isolate.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "dry-grate walk step must advance");
+        const auto now = isolate.snapshot();
+        if (now.player_grounded && now.player_position.y > 21.0 &&
+            (now.support_entity_id == Simulation::kSumpGrateEntityId ||
+             now.support_entity_id == Simulation::kSumpFarLandingEntityId)) {
+            crossed = true;
+            if (now.support_entity_id == Simulation::kSumpFarLandingEntityId) {
+                break;
+            }
+        }
+        if (now.player_position.y < 19.5) {
+            break;
+        }
+    }
+    require(crossed, "dry KX-GRATE must be ordinary support to the far landing");
+    require(isolate.snapshot().player_position.y > 21.0,
+            "drained traversal must stay on the +22 m machine floor, not drop into the pit");
+
+    Simulation dump(InitialSpawn::SumpDrained);
+    require(dump.advance_frame(1.0).accepted, "drained fixture settle must advance");
+    const auto dump_idle = dump.snapshot();
+    require(dump_idle.sump_grate_safe, "SumpDrained spawn must begin with a walkable grate");
+    require(dump_idle.sump_isolated, "SumpDrained spawn must begin isolated");
+    require(dump.can_operate_sump_valve(), "dump fixture must reach the isolation wheel");
+    require(dump.request_sump_valve(), "opening the isolation wheel must be a real dump");
+    require(dump.advance_frame(3.0).accepted, "dump refill interval must advance");
+    const auto dumped = dump.snapshot();
+    require(!dumped.sump_isolated, "dump must put the fill line back on the volume");
+    require(dumped.sump_inventory > 0.50, "live line must restore inventory after a dump");
+    require(!dumped.sump_grate_safe, "dump/fail must make the grate unsafe again");
+    require(dump.set_move_input(0.0, 1.0), "walk the dumped grate must be accepted");
+    bool fell_dump = false;
+    for (int step = 0; step < wet_walk_budget; ++step) {
+        require(dump.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "dumped-grate walk step must advance");
+        const auto now = dump.snapshot();
+        if (now.player_position.y < dump_idle.player_position.y - 1.20 &&
+            now.support_entity_id != Simulation::kSumpGrateEntityId) {
+            fell_dump = true;
+            break;
+        }
+    }
+    require(fell_dump, "dump/fail must restore the fall, not keep a solved walkbox");
+
+    require(isolate.commit_checkpoint(), "process checkpoint must accept a grounded commit");
+    require(isolate.snapshot().checkpoint_committed,
+            "committed sump state must be visible on the snapshot");
+
     std::cout << "PASS scraperx_sim WO-005 first freight: "
               << "approach_z=" << approach_spawn.player_position.z
               << " translating_vx=" << translating_support_velocity.x
@@ -818,6 +933,13 @@ int main() {
               << " raise_y=" << raising.cage_position.y
               << " top_y=" << at_top.cage_position.y
               << " upper_support=" << upper_support
+              << " hz=" << Simulation::kTickRateHz << '\n';
+    std::cout << "PASS scraperx_sim WO-007 first process coupling: "
+              << "wet_fall=" << fell_wet
+              << " isolated=" << dried.sump_isolated
+              << " inventory=" << dried.sump_inventory
+              << " grate_safe=" << dried.sump_grate_safe
+              << " dump_unsafe=" << !dumped.sump_grate_safe
               << " hz=" << Simulation::kTickRateHz << '\n';
     return EXIT_SUCCESS;
 }

@@ -33,6 +33,10 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_jib_brake", "engaged"), &ScraperXSimulation::set_jib_brake);
     godot::ClassDB::bind_method(godot::D_METHOD("can_operate_cage"), &ScraperXSimulation::can_operate_cage);
     godot::ClassDB::bind_method(godot::D_METHOD("request_cage_lever"), &ScraperXSimulation::request_cage_lever);
+    godot::ClassDB::bind_method(godot::D_METHOD("can_operate_sump_valve"), &ScraperXSimulation::can_operate_sump_valve);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_sump_valve"), &ScraperXSimulation::request_sump_valve);
+    godot::ClassDB::bind_method(godot::D_METHOD("can_operate_sump_drain"), &ScraperXSimulation::can_operate_sump_drain);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_sump_drain"), &ScraperXSimulation::request_sump_drain);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"), &ScraperXSimulation::advance_frame);
 
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"), &ScraperXSimulation::get_tick_index);
@@ -105,6 +109,14 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("is_cage_stalled"), &ScraperXSimulation::is_cage_stalled);
     godot::ClassDB::bind_method(godot::D_METHOD("is_cage_at_limit"), &ScraperXSimulation::is_cage_at_limit);
     godot::ClassDB::bind_method(godot::D_METHOD("get_cage_command"), &ScraperXSimulation::get_cage_command);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_sump_grate_position"), &ScraperXSimulation::get_sump_grate_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_sump_valve_position"), &ScraperXSimulation::get_sump_valve_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_sump_drain_position"), &ScraperXSimulation::get_sump_drain_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_sump_far_landing_position"), &ScraperXSimulation::get_sump_far_landing_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_sump_isolated"), &ScraperXSimulation::is_sump_isolated);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_sump_drain_open"), &ScraperXSimulation::is_sump_drain_open);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_sump_grate_safe"), &ScraperXSimulation::is_sump_grate_safe);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_sump_inventory"), &ScraperXSimulation::get_sump_inventory);
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {
@@ -471,6 +483,64 @@ bool ScraperXSimulation::is_cage_at_limit() const {
 
 double ScraperXSimulation::get_cage_command() const {
     return simulation_.snapshot().cage_command;
+}
+
+bool ScraperXSimulation::can_operate_sump_valve() const {
+    return simulation_.can_operate_sump_valve();
+}
+
+bool ScraperXSimulation::request_sump_valve() {
+    const bool accepted = simulation_.request_sump_valve();
+    if (!accepted) {
+        godot::UtilityFunctions::push_warning(
+            "ScraperX native authority rejected sump valve: player is out of range or a valve request is already queued.");
+    }
+    return accepted;
+}
+
+bool ScraperXSimulation::can_operate_sump_drain() const {
+    return simulation_.can_operate_sump_drain();
+}
+
+bool ScraperXSimulation::request_sump_drain() {
+    const bool accepted = simulation_.request_sump_drain();
+    if (!accepted) {
+        godot::UtilityFunctions::push_warning(
+            "ScraperX native authority rejected sump drain: player is out of range or a drain request is already queued.");
+    }
+    return accepted;
+}
+
+godot::Vector3 ScraperXSimulation::get_sump_grate_position() const {
+    return to_godot(simulation_.snapshot().sump_grate_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_sump_valve_position() const {
+    return to_godot(simulation_.snapshot().sump_valve_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_sump_drain_position() const {
+    return to_godot(simulation_.snapshot().sump_drain_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_sump_far_landing_position() const {
+    return to_godot(simulation_.snapshot().sump_far_landing_position);
+}
+
+bool ScraperXSimulation::is_sump_isolated() const {
+    return simulation_.snapshot().sump_isolated;
+}
+
+bool ScraperXSimulation::is_sump_drain_open() const {
+    return simulation_.snapshot().sump_drain_open;
+}
+
+bool ScraperXSimulation::is_sump_grate_safe() const {
+    return simulation_.snapshot().sump_grate_safe;
+}
+
+double ScraperXSimulation::get_sump_inventory() const {
+    return simulation_.snapshot().sump_inventory;
 }
 
 } // namespace scraperx::bridge

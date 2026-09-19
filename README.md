@@ -4,23 +4,19 @@ ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority pac
 
 ## Current work order
 
-**WO-005 — First freight mechanism** is implemented in source on `ScraperX-Grok`.
+**WO-007 — First process coupling** is implemented in source on `ScraperX-Grok`.
 
-`KX-JIB` is a finite 5 t-class machine. `KX-CRATE` is a Jolt body on a real hook constraint. Local pendant verbs are Raise / Lower / Slew / Brake. Action enters or exits the station; it does not hoist.
+`KX-SUMP` is a lumped isolation volume with a local valve and a drain cock. `KX-GRATE` is a hole while the volume is wet and ordinary support only after isolate+drain empties inventory. Dumping the isolation line refills the volume and restores the fall. The grate sits on the +22 m cage-house landing, after `KX-NEEDLE` and `KX-CAGE`.
 
-Native tests cover in-SWL lift, overweight stall, locked-brake hold, travel-limit stop, remote-command rejection, and riding the crate as moving support. Machine pose is stored in the WO-004 commit blob.
-
-Android arm64 APKs are produced by `.github/workflows/wo005-first-freight.yml` on `ScraperX-Grok`. An APK artifact proves production by the current source. It does not prove installation, execution on Fold, or that the crate lifted on device.
-
-Do not start WO-006 in this change. Do not assemble B01–B11.
+Do not start WO-008 in this change. Do not assemble B01–B11.
 
 ## Claim boundary
 
 | Class | This change |
 |---|---|
-| Implemented | Yes — native freight + Godot pendant presentation |
-| Built | Host compile unverified in this environment |
-| APK produced | Not claimed |
+| Implemented | Yes — native sump/grate + Godot process station presentation |
+| Built | Host compile unverified in this environment until Actions |
+| APK produced | Not claimed until the Android Actions job publishes an artifact |
 | Installed | Not claimed |
 | Executed / observed | Not claimed |
 | Verified on Fold | Not claimed |
