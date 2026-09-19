@@ -663,23 +663,32 @@ func _update_ambient_dressing() -> void:
 
 
 func _build_world() -> void:
+	_build_bump_textures()
+
 	# Palette: oxidised iron and rust carry the structure, weathered timber
 	# softens it, mill scale is the dark shadow value, crane yellow and brass
-	# lamplight are the only warm accents. Grey is a shadow here, not a colour
-	# scheme.
+	# lamplight are the warm accents -- and now verdigris copper, painted
+	# machinery blue, and lichen staining break the rust/iron monochrome, the
+	# way a real decades-old industrial site actually weathers.
 	var asphalt := _material(Color("17150f"), 0.06, 0.4)
-	var concrete := _material(Color("4e4841"), 0.0, 0.94)
+	var concrete := _material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete)
 	# A real value ladder: near-black iron in shadow, mid rust for the frame,
-	# brighter oxide only where light catches an edge.
-	var mill_scale := _material(Color("1d1a17"), 0.72, 0.6)
-	var oxidised := _material(Color("6b3520"), 0.3, 0.92)
-	var rust_deep := _material(Color("3b1f13"), 0.28, 0.95)
-	var rust_bright := _material(Color("9a5326"), 0.34, 0.82)
-	var galvanised := _material(Color("5a5d5e"), 0.66, 0.5)
+	# brighter oxide only where light catches an edge. Bump-mapped: these
+	# cover most of the structure's surface area, so this is where per-pixel
+	# normal detail matters most.
+	var mill_scale := _material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, _bump_steel)
+	var oxidised := _material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_steel)
+	var rust_deep := _material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, _bump_steel)
+	var rust_bright := _material(Color("9a5326"), 0.34, 0.82, Color.BLACK, 1.0, _bump_steel)
+	var galvanised := _material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_steel)
 	var faded_yellow := _material(Color("b08a22"), 0.16, 0.68)
 	var hazard := _material(Color("a04d16"), 0.18, 0.76)
 	var tar := _material(Color("0e0f11"), 0.05, 0.62)
-	var timber := _material(Color("4a3420"), 0.02, 0.9)
+	var timber := _material(Color("4a3420"), 0.02, 0.9, Color.BLACK, 1.0, _bump_timber)
+	# New accents: living colour against the rust.
+	var verdigris := _material(Color("3f6b5c"), 0.42, 0.68, Color.BLACK, 1.0, _bump_steel)
+	var machine_blue := _material(Color("29455c"), 0.22, 0.6, Color.BLACK, 1.0, _bump_steel)
+	var lichen := _material(Color("57642e"), 0.0, 0.96)
 
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
 	_add_box("Grade", Vector3(480.0, 1.0, 480.0), Vector3(0.0, -0.5, -60.0), asphalt)
@@ -688,6 +697,7 @@ func _build_world() -> void:
 		Vector3(-30.0, STACK_MASS_BASE_Y + mass_half, -330.0), concrete)
 
 	_build_stack(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
+	_build_stack_accents(verdigris, machine_blue, lichen)
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
 	_build_yard(concrete, mill_scale, faded_yellow, tar)
 	_build_legacy_fixtures(mill_scale, galvanised, hazard, faded_yellow)
@@ -696,6 +706,7 @@ func _build_world() -> void:
 	_build_kellerworks_signage(timber, faded_yellow)
 	_build_gear_motif(mill_scale, oxidised)
 	_build_crane(mill_scale, hazard)
+	_build_foliage()
 	_build_sky_shear()
 	_build_lighting()
 
@@ -1126,6 +1137,49 @@ func _build_stack_bridges(galvanised: Material, faded: Material, rust_deep: Mate
 		# A pylon out at the far end, implying the span lands somewhere.
 		_add_box("BridgePylon", Vector3(3.0, y * 0.94, 3.0),
 			to + Vector3(sx * 2.0, -y * 0.5, 0.0), rust_deep)
+
+
+# Colour that isn't rust: verdigris copper pipe runs, blue-painted machinery
+# boxes (the ordinary paint colour for real industrial valve gear), and
+# lichen staining low on the columns where damp and shade let something
+# green actually take hold. A decades-old working plant is never one colour.
+func _build_stack_accents(verdigris: Material, machine_blue: Material,
+		lichen: Material) -> void:
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var front_z := cz + STACK_HALF_EXTENT
+
+	# A verdigris pipe run climbing the front face, distinct from the oxidised
+	# risers in the shaft -- copper service lines age to blue-green, not rust.
+	for sx in [1.0]:
+		_add_cylinder("VerdigrisPipe", 0.4, STACK_LEVEL_HEIGHT * float(STACK_LEVEL_COUNT),
+			Vector3(cx + sx * (STACK_HALF_EXTENT - 4.5),
+				STACK_LEVEL_HEIGHT * float(STACK_LEVEL_COUNT) * 0.5, front_z + 0.9), verdigris)
+		for level in range(1, STACK_LEVEL_COUNT + 1):
+			_add_box("VerdigrisFlange", Vector3(1.0, 0.3, 1.0),
+				Vector3(cx + sx * (STACK_HALF_EXTENT - 4.5), float(level) * STACK_LEVEL_HEIGHT - 1.2,
+					front_z + 0.9), verdigris)
+
+	# Painted machine-blue valve boxes and gauge housings at working levels.
+	for level in [2, 5, 8, 11]:
+		var y := float(level) * STACK_LEVEL_HEIGHT + 2.0
+		var box := _add_box("ValveHousing", Vector3(1.8, 1.4, 1.2),
+			Vector3(cx - STACK_HALF_EXTENT + 3.5, y, front_z - 2.0), machine_blue)
+		_add_cylinder("ValveWheel", 0.55, 0.22,
+			box.position + Vector3(0.0, 0.0, 0.75), machine_blue).rotation = Vector3(PI * 0.5, 0.0, 0.0)
+
+	# Lichen staining low on every column, on the shaded (south) face, and
+	# streaking down from every deck's drip line -- damp industrial concrete
+	# and iron are never actually clean at the base.
+	for sx in [1.0, -1.0]:
+		for sz in [1.0, -1.0]:
+			_add_box("ColumnLichen", Vector3(STACK_COLUMN_SIZE + 0.1, 3.5, STACK_COLUMN_SIZE + 0.1),
+				Vector3(cx + sx * STACK_HALF_EXTENT, 1.75, cz + sz * STACK_HALF_EXTENT), lichen)
+	for level in range(1, 5):
+		var y := float(level) * STACK_LEVEL_HEIGHT
+		for streak in range(-3, 4):
+			_add_box("DeckStreak", Vector3(0.35, 2.4, 0.1),
+				Vector3(cx + float(streak) * 4.0, y - 1.2, cz - STACK_HALF_EXTENT - 0.15), lichen)
 
 
 # Pipework, gearing, vents and lamps hung on the frame. None of this is
@@ -1687,6 +1741,119 @@ func _build_mountains_and_waterfall() -> void:
 			base + Vector3(0.0, peak_height * 0.9, 0.0), snow)
 
 	_build_waterfall(Vector3(200.0, 0.0, -560.0))
+	_build_foothill_forest()
+
+
+# A treeline at the base of the near peaks, mixed in with the rock cones
+# already there -- the mountains stop being bare geometry and start being a
+# real slope something grows on.
+func _build_foothill_forest() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4021
+	var bands := [
+		{"x": -380.0, "z": -520.0, "spread": 140.0},
+		{"x": -160.0, "z": -560.0, "spread": 150.0},
+		{"x": 140.0, "z": -570.0, "spread": 160.0},
+		{"x": 420.0, "z": -540.0, "spread": 130.0},
+	]
+	for band in bands:
+		var bx: float = band["x"]
+		var bz: float = band["z"]
+		var spread: float = band["spread"]
+		for _tree in range(14):
+			var tx := bx + rng.randf_range(-spread, spread)
+			var tz := bz + rng.randf_range(-spread * 0.5, spread * 0.5)
+			_add_tree(Vector3(tx, 0.0, tz), rng.randf_range(7.0, 13.0), rng)
+
+
+# One stylised conifer: a trunk and three descending, widening canopy tiers.
+# Cheap enough to scatter by the dozen, varied enough per-instance (scale,
+# yaw, a hue jitter across the greens) that a cluster doesn't read as one
+# mesh copy-pasted.
+func _add_tree(at: Vector3, height: float, rng: RandomNumberGenerator) -> void:
+	var hue_jitter := rng.randf_range(-0.03, 0.03)
+	var canopy := _material(Color(0.16 + hue_jitter, 0.28 + hue_jitter, 0.14, 1.0), 0.0, 0.92)
+	var trunk_material := _material(Color("362316"), 0.0, 0.9)
+
+	var tree := Node3D.new()
+	tree.name = "Conifer"
+	tree.position = at
+	tree.rotation.y = rng.randf_range(0.0, TAU)
+	tree.scale = Vector3.ONE * rng.randf_range(0.85, 1.25)
+	$TowerPresentation.add_child(tree)
+
+	var trunk_height := height * 0.32
+	_add_cylinder("TreeTrunk", height * 0.045, trunk_height,
+		Vector3(0.0, trunk_height * 0.5, 0.0), trunk_material, tree)
+	for tier in range(3):
+		var t := float(tier) / 2.0
+		var tier_radius := lerpf(height * 0.34, height * 0.11, t)
+		var tier_height := height * 0.4
+		var tier_y := trunk_height + t * height * 0.5
+		_add_cone("TreeCanopy", tier_radius, tier_height,
+			Vector3(0.0, tier_y + tier_height * 0.5, 0.0), canopy, tree)
+
+
+# Low scrub and ground bushes: irregular clusters of squashed spheres, no
+# trunk, filling the gap between bare grade and full trees.
+func _add_bush(at: Vector3, spread: float, rng: RandomNumberGenerator) -> void:
+	var hue_jitter := rng.randf_range(-0.04, 0.04)
+	var bush_material := _material(Color(0.2 + hue_jitter, 0.3 + hue_jitter, 0.15, 1.0), 0.0, 0.94)
+	var bush := Node3D.new()
+	bush.name = "Scrub"
+	bush.position = at
+	$TowerPresentation.add_child(bush)
+	for _lobe in range(rng.randi_range(3, 5)):
+		var lobe_at := Vector3(rng.randf_range(-spread, spread), rng.randf_range(0.1, spread * 0.5),
+			rng.randf_range(-spread, spread))
+		var lobe := _add_sphere("ScrubLobe", rng.randf_range(spread * 0.45, spread * 0.75),
+			lobe_at, bush_material, bush)
+		lobe.scale.y = 0.72
+
+
+func _add_sphere(node_name: String, radius: float, at: Vector3,
+		material: Material, parent: Node3D = null) -> MeshInstance3D:
+	var sphere := SphereMesh.new()
+	sphere.radius = radius
+	sphere.height = radius * 2.0
+	sphere.radial_segments = 10
+	sphere.rings = 6
+	var instance := MeshInstance3D.new()
+	instance.name = node_name
+	instance.mesh = sphere
+	instance.material_override = material
+	instance.position = at
+	var host: Node3D = parent if parent != null else $TowerPresentation
+	host.add_child(instance)
+	return instance
+
+
+# Foliage scattered through the yard itself: away from every kernel/stack/
+# plant footprint, so it reads as the site being slowly reclaimed rather than
+# clipping through a wall. Two open bands exist by construction -- west of
+# the tower and plant, and along the north/entrance edge -- and this stays
+# inside them.
+func _build_foliage() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7733
+
+	for _tree in range(22):
+		var tx := rng.randf_range(-225.0, -95.0)
+		var tz := rng.randf_range(-260.0, 30.0)
+		_add_tree(Vector3(tx, 0.0, tz), rng.randf_range(6.0, 11.0), rng)
+	for _tree in range(10):
+		var tx := rng.randf_range(-190.0, 190.0)
+		var tz := rng.randf_range(110.0, 165.0)
+		_add_tree(Vector3(tx, 0.0, tz), rng.randf_range(6.0, 10.0), rng)
+
+	for _bush in range(26):
+		var bx := rng.randf_range(-225.0, -90.0)
+		var bz := rng.randf_range(-260.0, 40.0)
+		_add_bush(Vector3(bx, 0.0, bz), rng.randf_range(1.1, 2.4), rng)
+	for _bush in range(14):
+		var bx := rng.randf_range(-190.0, 190.0)
+		var bz := rng.randf_range(100.0, 170.0)
+		_add_bush(Vector3(bx, 0.0, bz), rng.randf_range(1.0, 2.0), rng)
 
 
 func _build_waterfall(at: Vector3) -> void:
@@ -1856,7 +2023,8 @@ func _build_crane(mill_scale: Material, hazard: Material) -> void:
 	_crane_crate = _add_box_to("CraneCrate", Vector3(2.6, 2.0, 2.6), Vector3.ZERO, mill_scale, _crane_hook)
 
 
-func _add_cone(node_name: String, radius: float, height: float, at: Vector3, material: Material) -> MeshInstance3D:
+func _add_cone(node_name: String, radius: float, height: float, at: Vector3, material: Material,
+		parent: Node3D = null) -> MeshInstance3D:
 	var cone := CylinderMesh.new()
 	cone.top_radius = 0.0
 	cone.bottom_radius = radius
@@ -1867,7 +2035,8 @@ func _add_cone(node_name: String, radius: float, height: float, at: Vector3, mat
 	instance.mesh = cone
 	instance.material_override = material
 	instance.position = at
-	$TowerPresentation.add_child(instance)
+	var host: Node3D = parent if parent != null else $TowerPresentation
+	host.add_child(instance)
 	return instance
 
 
@@ -1959,8 +2128,50 @@ func _add_sign_text(text: String, at: Vector3, yaw: float, height_meters: float,
 	return label
 
 
+# Real bump mapping, not flat-shaded boxes. gl_compatibility (what CI renders
+# with) has no SSAO/SSIL/SDFGI -- those are Forward+-only -- so per-pixel
+# normal perturbation is the actual lever available here for surface detail,
+# and it is a basic, renderer-agnostic feature confirmed working by direct
+# probe (NoiseTexture2D.as_normal_map). Three shared textures (steel, timber,
+# concrete), not one per material instance, since the grain frequency is what
+# distinguishes them and dozens of unique noise textures would cost more than
+# they are worth.
+var _bump_steel: NoiseTexture2D
+var _bump_timber: NoiseTexture2D
+var _bump_concrete: NoiseTexture2D
+
+
+func _build_bump_textures() -> void:
+	_bump_steel = _make_bump_texture(1, 0.5, 1.8, false)
+	_bump_timber = _make_bump_texture(2, 0.7, 2.6, true)
+	_bump_concrete = _make_bump_texture(3, 0.7, 1.3, false)
+
+
+func _make_bump_texture(seed_value: int, frequency: float, strength: float,
+		directional: bool) -> NoiseTexture2D:
+	var noise := FastNoiseLite.new()
+	noise.seed = seed_value
+	noise.frequency = frequency
+	noise.fractal_octaves = 4
+	noise.fractal_lacunarity = 2.1
+	if directional:
+		# Wood grain: stretched noise reads as fibrous rather than pitted.
+		noise.frequency = frequency * 0.2
+		noise.fractal_type = FastNoiseLite.FRACTAL_RIDGED
+	var tex := NoiseTexture2D.new()
+	tex.width = 256
+	tex.height = 256
+	tex.seamless = true
+	tex.generate_mipmaps = true
+	tex.as_normal_map = true
+	tex.bump_strength = strength
+	tex.noise = noise
+	return tex
+
+
 func _material(color: Color, metallic: float, roughness: float,
-		emission: Color = Color.BLACK, emission_energy: float = 1.0) -> StandardMaterial3D:
+		emission: Color = Color.BLACK, emission_energy: float = 1.0,
+		bump: NoiseTexture2D = null) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.metallic = metallic
@@ -1969,6 +2180,12 @@ func _material(color: Color, metallic: float, roughness: float,
 		material.emission_enabled = true
 		material.emission = emission
 		material.emission_energy_multiplier = emission_energy
+	if bump != null:
+		material.normal_enabled = true
+		material.normal_texture = bump
+		material.uv1_triplanar = true
+		material.uv1_triplanar_sharpness = 1.0
+		material.uv1_scale = Vector3(0.22, 0.22, 0.22)
 	return material
 
 
