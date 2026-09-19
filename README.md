@@ -4,17 +4,17 @@ ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority pac
 
 ## Current work order
 
-**WO-007 — First process coupling** is implemented in source on `ScraperX-Grok`.
+**WO-008 — First causal chain** is implemented in source on `ScraperX-Grok`.
 
-`KX-SUMP` is a lumped isolation volume with a local valve and a drain cock. `KX-GRATE` is a hole while the volume is wet and ordinary support only after isolate+drain empties inventory. Dumping the isolation line refills the volume and restores the fall. The grate sits on the +22 m cage-house landing, after `KX-NEEDLE` and `KX-CAGE`.
+Freight, structure, and process already exist. This change adds `KX-SCREW`, a different raise: a jack through a torn floor, interlocked to a dry `KX-GRATE`. It lifts to `KX-REFUGE`. A SKIN lip around the wet grate is a legal sequence-break. The committed kernel serializes (`SXK1`) and reloads equivalent continuation.
 
-Do not start WO-008 in this change. Do not assemble B01–B11.
+Do not start B00–B11 in this change.
 
 ## Claim boundary
 
 | Class | This change |
 |---|---|
-| Implemented | Yes — native sump/grate + Godot process station presentation |
+| Implemented | Yes — native screw/refuge/persist + Godot torn-floor presentation |
 | Built | Host compile unverified in this environment until Actions |
 | APK produced | Not claimed until the Android Actions job publishes an artifact |
 | Installed | Not claimed |

@@ -68,6 +68,7 @@ if(BUILD_TESTING AND NOT ANDROID)
     add_test(NAME scraperx_sim.wo006_first_structural_coupling COMMAND scraperx_sim_tests)
     add_test(NAME scraperx_sim.kx_cage_first_shaft COMMAND scraperx_sim_tests)
     add_test(NAME scraperx_sim.wo007_first_process_coupling COMMAND scraperx_sim_tests)
+    add_test(NAME scraperx_sim.wo008_first_causal_chain COMMAND scraperx_sim_tests)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

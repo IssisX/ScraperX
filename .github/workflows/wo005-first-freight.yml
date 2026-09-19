@@ -1,4 +1,4 @@
-name: ScraperX WO-007 — First Process Coupling
+name: ScraperX WO-008 — First Causal Chain
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: scraperx-wo007-${{ github.ref }}-${{ github.sha }}
+  group: scraperx-wo008-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 env:
@@ -67,7 +67,7 @@ jobs:
             -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
           tools/godot/godot --version
 
-      - name: Build native host graph and run WO-005/WO-006/WO-007 regressions
+      - name: Build native host graph and run kernel regressions
         shell: bash
         run: |
           set -euo pipefail
@@ -84,6 +84,7 @@ jobs:
           grep -F "PASS scraperx_sim WO-006 first structural coupling" artifacts/native-tests.log
           grep -F "PASS scraperx_sim KX-CAGE first shaft" artifacts/native-tests.log
           grep -F "PASS scraperx_sim WO-007 first process coupling" artifacts/native-tests.log
+          grep -F "PASS scraperx_sim WO-008 first causal chain" artifacts/native-tests.log
 
       - name: Run Fold-aspect Godot presentation with current native graph
         shell: bash
@@ -96,11 +97,11 @@ jobs:
             godot/.godot/extension_list.cfg
           timeout 70s xvfb-run -a -s "-screen 0 2160x1856x24" \
             tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 1600 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo007-first-process-coupling.png" \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo008-first-causal-chain.png" \
             2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/wo007-first-process-coupling.png
+          test -s artifacts/screenshots/wo008-first-causal-chain.png
           grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "checkpoint=WO-007-FIRST-PROCESS" artifacts/godot-runtime.log
+          grep -F "checkpoint=WO-008-FIRST-CHAIN" artifacts/godot-runtime.log
           grep -F "SCRAPERX_CP004_RUNTIME_PROOF" artifacts/godot-runtime.log
           grep -F "fold_layout=1" artifacts/godot-runtime.log
           grep -F "approach=1" artifacts/godot-runtime.log
@@ -121,12 +122,12 @@ jobs:
           test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
           file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
 
-      - name: Export WO-007 Android arm64 APK
+      - name: Export WO-008 Android arm64 APK
         shell: bash
         run: |
           set -euo pipefail
           CHECKPOINT_ID="${GITHUB_SHA::12}"
-          APK_NAME="ScraperX-WO007-${CHECKPOINT_ID}-arm64.apk"
+          APK_NAME="ScraperX-WO008-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
@@ -140,39 +141,36 @@ jobs:
             "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
             > artifacts/apk/CHECKPOINT.txt
 
-      - name: Record WO-007 evidence boundaries
+      - name: Record WO-008 evidence boundaries
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/WO-007-EVIDENCE.md <<EOF
-          # WO-007 First Process Coupling Evidence
+          cat > artifacts/WO-008-EVIDENCE.md <<EOF
+          # WO-008 First Causal Chain Evidence
 
           Source commit: \`${GITHUB_SHA}\`
 
           Proven by this workflow:
 
-          - WO-005 first freight regressions remain green;
-          - WO-006 seated needle and KX-CAGE shaft ride remain green;
-          - wet KX-GRATE is a hole, not a painted solid;
-          - isolate+drain empties lumped inventory and the grate becomes support;
-          - drain without isolate does not dry the grate;
-          - dump/fail restores the fall;
-          - Godot loads the current native graph and prints checkpoint \`WO-007-FIRST-PROCESS\`;
+          - WO-005 through WO-007 regressions remain green;
+          - KX-SCREW is a different raise: a jack through a torn floor, interlocked to a dry grate;
+          - wet grate stalls the screw; drained grate lets it lift to KX-REFUGE;
+          - a SKIN lip around the wet grate is a legal sequence-break;
+          - committed kernel serializes (SXK1) and reloads equivalent continuation;
+          - Godot prints checkpoint \`WO-008-FIRST-CHAIN\`;
           - Android arm64 native graph cross-compiles;
-          - the APK contains \`lib/arm64-v8a/libscraperx_native.so\`;
-          - APK checksum and checkpoint identity are recorded.
+          - the APK contains \`lib/arm64-v8a/libscraperx_native.so\`.
 
           Not proven here:
 
           - Fold installation, touch ergonomics, sustained 45 FPS, or thermals;
-          - WO-008 full causal chain persist/reload;
-          - B01–B11 assembly.
+          - B00–B11 campaign assembly.
           EOF
 
-      - name: Publish WO-007 Android build and evidence
+      - name: Publish WO-008 Android build and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ScraperX-WO007-${{ github.sha }}
+          name: ScraperX-WO008-${{ github.sha }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 30

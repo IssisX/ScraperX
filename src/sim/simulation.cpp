@@ -159,7 +159,7 @@ constexpr float kSumpGrateHalfZ = 2.55F;
 constexpr double kSumpFarX = 9.50;
 constexpr double kSumpFarY = 21.82;
 constexpr double kSumpFarZ = 47.50;
-constexpr float kSumpFarHalfX = 3.00F;
+constexpr float kSumpFarHalfX = 3.40F;
 constexpr float kSumpFarHalfY = 0.18F;
 constexpr float kSumpFarHalfZ = 2.40F;
 constexpr double kSumpFloorX = 9.50;
@@ -178,6 +178,31 @@ constexpr double kSumpStationRadiusMeters = 2.80;
 constexpr double kSumpDryThreshold = 0.08;
 constexpr double kSumpDrainRate = 0.28;
 constexpr double kSumpFillRate = 0.45;
+
+constexpr double kScrewX = 9.50;
+constexpr double kScrewZ = 51.60;
+constexpr float kScrewHalfX = 1.70F;
+constexpr float kScrewHalfY = 0.18F;
+constexpr float kScrewHalfZ = 1.70F;
+constexpr double kScrewMinY = 21.82;
+constexpr double kScrewMaxY = 28.40;
+constexpr double kScrewSpeedMetersPerSecond = 0.85;
+constexpr double kScrewWheelRadiusMeters = 2.90;
+constexpr double kScrewWheelLocalX = -0.55;
+constexpr double kScrewWheelLocalY = 0.95;
+constexpr double kScrewWheelLocalZ = 0.40;
+constexpr double kRefugeX = 9.50;
+constexpr double kRefugeY = 28.40;
+constexpr double kRefugeZ = 55.50;
+constexpr float kRefugeHalfX = 3.20F;
+constexpr float kRefugeHalfY = 0.18F;
+constexpr float kRefugeHalfZ = 2.20F;
+constexpr double kSumpSkinX = 6.70;
+constexpr double kSumpSkinY = 21.82;
+constexpr double kSumpSkinZ = 42.55;
+constexpr float kSumpSkinHalfX = 0.45F;
+constexpr float kSumpSkinHalfY = 0.10F;
+constexpr float kSumpSkinHalfZ = 3.10F;
 
 constexpr double kImpactRockerX = 7.0;
 constexpr double kImpactRockerY = 1.65;
@@ -362,7 +387,8 @@ private:
             entity_id == Simulation::kRotatingSupportEntityId ||
             entity_id == Simulation::kHopperGateEntityId ||
             entity_id == Simulation::kJibCrateEntityId ||
-            entity_id == Simulation::kCageEntityId) {
+            entity_id == Simulation::kCageEntityId ||
+            entity_id == Simulation::kScrewEntityId) {
             return 2;
         }
         if (entity_id == Simulation::kNeedleEntityId) {
@@ -388,7 +414,9 @@ private:
             entity_id == Simulation::kNeedleBayFloorEntityId ||
             entity_id == Simulation::kCageUpperLandingEntityId ||
             entity_id == Simulation::kSumpFloorEntityId ||
-            entity_id == Simulation::kSumpFarLandingEntityId) {
+            entity_id == Simulation::kSumpFarLandingEntityId ||
+            entity_id == Simulation::kRefugeEntityId ||
+            entity_id == Simulation::kSumpSkinEntityId) {
             return 1;
         }
         if (entity_id >= Simulation::kNeedleStairEntityIdBegin &&
@@ -505,6 +533,21 @@ private:
                 kCageUpperY + static_cast<double>(kCageUpperHalfY) +
                     static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
                 kCageUpperZ};
+    case scraperx::sim::InitialSpawn::KernelChain:
+        return {kSumpFarX,
+                kSumpFarY + static_cast<double>(kSumpFarHalfY) +
+                    static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
+                kSumpFarZ};
+    case scraperx::sim::InitialSpawn::ScrewDeck:
+        return {kScrewX,
+                kScrewMinY + static_cast<double>(kScrewHalfY) +
+                    static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
+                kScrewZ};
+    case scraperx::sim::InitialSpawn::RefugeDeck:
+        return {kRefugeX,
+                kRefugeY + static_cast<double>(kRefugeHalfY) +
+                    static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
+                kRefugeZ};
     case scraperx::sim::InitialSpawn::ApproachGrade:
     default:
         return {0.0, 3.0, 60.0};
@@ -904,7 +947,9 @@ public:
         }
 
         needle_seated_ = initial_spawn == InitialSpawn::NeedleSeated ||
-                         initial_spawn == InitialSpawn::CageSeated;
+                         initial_spawn == InitialSpawn::CageSeated ||
+                         initial_spawn == InitialSpawn::KernelChain ||
+                         initial_spawn == InitialSpawn::RefugeDeck;
         JPH::RVec3 needle_spawn = jib_rvec(kNeedleParkX, static_cast<double>(kNeedleHalfHeight), kNeedleParkZ);
         if (initial_spawn == InitialSpawn::NeedleBay ||
             initial_spawn == InitialSpawn::NeedleNearLanding) {
@@ -951,8 +996,10 @@ public:
                               Simulation::kCageUpperLandingEntityId,
                               0.78F);
 
-        sump_isolated_ = initial_spawn == InitialSpawn::SumpDrained;
-        sump_drain_open_ = initial_spawn == InitialSpawn::SumpDrained;
+        sump_isolated_ = initial_spawn == InitialSpawn::SumpDrained ||
+                         initial_spawn == InitialSpawn::KernelChain ||
+                         initial_spawn == InitialSpawn::RefugeDeck;
+        sump_drain_open_ = sump_isolated_;
         sump_inventory_ = sump_isolated_ ? 0.0 : 1.0;
         grate_safe_ = sump_isolated_ && sump_inventory_ <= kSumpDryThreshold;
 
@@ -992,6 +1039,33 @@ public:
                               JPH::Quat::sIdentity(),
                               0,
                               0.62F);
+        sump_skin_id_ =
+            create_static_box(JPH::Vec3(kSumpSkinHalfX, kSumpSkinHalfY, kSumpSkinHalfZ),
+                              jib_rvec(kSumpSkinX, kSumpSkinY, kSumpSkinZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kSumpSkinEntityId,
+                              0.70F);
+
+        screw_y_ = initial_spawn == InitialSpawn::RefugeDeck ? kScrewMaxY : kScrewMinY;
+        screw_command_ = 0.0;
+        screw_brake_engaged_ = true;
+        JPH::BodyCreationSettings screw_settings(
+            new JPH::BoxShape(JPH::Vec3(kScrewHalfX, kScrewHalfY, kScrewHalfZ)),
+            jib_rvec(kScrewX, screw_y_, kScrewZ),
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Kinematic,
+            object_layers::kMoving);
+        screw_settings.mAllowSleeping = false;
+        screw_settings.mFriction = 0.82F;
+        screw_settings.mUserData = Simulation::kScrewEntityId;
+        screw_id_ = bodies.CreateAndAddBody(screw_settings, JPH::EActivation::Activate);
+
+        refuge_id_ =
+            create_static_box(JPH::Vec3(kRefugeHalfX, kRefugeHalfY, kRefugeHalfZ),
+                              jib_rvec(kRefugeX, kRefugeY, kRefugeZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kRefugeEntityId,
+                              0.78F);
 
         if (initial_spawn == InitialSpawn::NeedleBay) {
             attach_hook(HookLoad::Needle);
@@ -1021,6 +1095,9 @@ public:
         remove_and_destroy(bodies, sump_far_landing_id_);
         remove_and_destroy(bodies, sump_pit_west_id_);
         remove_and_destroy(bodies, sump_pit_east_id_);
+        remove_and_destroy(bodies, sump_skin_id_);
+        remove_and_destroy(bodies, screw_id_);
+        remove_and_destroy(bodies, refuge_id_);
         remove_and_destroy(bodies, jib_crate_id_);
         remove_and_destroy(bodies, jib_hook_id_);
         remove_and_destroy(bodies, jib_boom_id_);
@@ -1069,6 +1146,7 @@ public:
               const bool cage_lever_requested,
               const bool sump_valve_requested,
               const bool sump_drain_requested,
+              const bool screw_wheel_requested,
               const float delta_seconds,
               const double next_time_seconds) noexcept {
         auto &bodies = physics_system_.GetBodyInterface();
@@ -1090,6 +1168,7 @@ public:
         update_jib_motion(bodies, delta_seconds);
         update_cage_motion(bodies, cage_lever_requested, delta_seconds);
         update_sump_process(bodies, sump_valve_requested, sump_drain_requested, delta_seconds);
+        update_screw_motion(bodies, screw_wheel_requested, delta_seconds);
 
         if (drop_from_hang_requested && traversal_mode_ == TraversalMode::Hang) {
             traversal_mode_ = TraversalMode::None;
@@ -1178,6 +1257,74 @@ public:
         return true;
     }
 
+    bool export_checkpoint_public(CheckpointRecord &record) const noexcept {
+        if (!checkpoint_committed_) {
+            return false;
+        }
+        record = {};
+        record.magic[0] = 'S';
+        record.magic[1] = 'X';
+        record.magic[2] = 'K';
+        record.magic[3] = '1';
+        record.version = CheckpointRecord::kVersion;
+        record.player_x = checkpoint_player_position_.x;
+        record.player_y = checkpoint_player_position_.y;
+        record.player_z = checkpoint_player_position_.z;
+        record.player_vx = checkpoint_player_velocity_.x;
+        record.player_vy = checkpoint_player_velocity_.y;
+        record.player_vz = checkpoint_player_velocity_.z;
+        record.needle_seated = checkpoint_needle_seated_ ? 1 : 0;
+        record.needle_x = checkpoint_needle_position_.x;
+        record.needle_y = checkpoint_needle_position_.y;
+        record.needle_z = checkpoint_needle_position_.z;
+        record.sump_isolated = checkpoint_sump_isolated_ ? 1 : 0;
+        record.sump_drain_open = checkpoint_sump_drain_open_ ? 1 : 0;
+        record.sump_inventory = checkpoint_sump_inventory_;
+        record.screw_y = checkpoint_screw_y_;
+        record.screw_command = checkpoint_screw_command_;
+        record.screw_brake = checkpoint_screw_brake_ ? 1 : 0;
+        record.cage_y = checkpoint_cage_y_;
+        record.cage_command = checkpoint_cage_command_;
+        record.cage_brake = checkpoint_cage_brake_ ? 1 : 0;
+        record.crate_x = checkpoint_crate_position_.x;
+        record.crate_y = checkpoint_crate_position_.y;
+        record.crate_z = checkpoint_crate_position_.z;
+        record.checkpoint_tick = checkpoint_tick_;
+        record.grate_safe = (checkpoint_sump_isolated_ && checkpoint_sump_inventory_ <= kSumpDryThreshold) ? 1 : 0;
+        return true;
+    }
+
+    bool import_checkpoint_public(const CheckpointRecord &record) noexcept {
+        if (record.magic[0] != 'S' || record.magic[1] != 'X' || record.magic[2] != 'K' ||
+            record.magic[3] != '1' || record.version != CheckpointRecord::kVersion) {
+            return false;
+        }
+        checkpoint_has_pose_ = true;
+        checkpoint_committed_ = true;
+        checkpoint_player_position_ = {record.player_x, record.player_y, record.player_z};
+        checkpoint_player_velocity_ = {record.player_vx, record.player_vy, record.player_vz};
+        checkpoint_needle_seated_ = record.needle_seated != 0;
+        checkpoint_needle_position_ = {record.needle_x, record.needle_y, record.needle_z};
+        checkpoint_needle_velocity_ = {};
+        checkpoint_sump_isolated_ = record.sump_isolated != 0;
+        checkpoint_sump_drain_open_ = record.sump_drain_open != 0;
+        checkpoint_sump_inventory_ = record.sump_inventory;
+        checkpoint_screw_y_ = record.screw_y;
+        checkpoint_screw_command_ = record.screw_command;
+        checkpoint_screw_brake_ = record.screw_brake != 0;
+        checkpoint_cage_y_ = record.cage_y;
+        checkpoint_cage_command_ = record.cage_command;
+        checkpoint_cage_brake_ = record.cage_brake != 0;
+        checkpoint_crate_position_ = {record.crate_x, record.crate_y, record.crate_z};
+        checkpoint_crate_velocity_ = {};
+        checkpoint_tick_ = record.checkpoint_tick;
+        pending_death_ = true;
+        auto &bodies = physics_system_.GetBodyInterface();
+        maybe_restore_from_death(bodies);
+        read_state();
+        return true;
+    }
+
 private:
     static void remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {
         bodies.RemoveBody(body_id);
@@ -1253,6 +1400,15 @@ private:
         }
         if (entity_id == Simulation::kSumpFarLandingEntityId) {
             return sump_far_landing_id_;
+        }
+        if (entity_id == Simulation::kScrewEntityId) {
+            return screw_id_;
+        }
+        if (entity_id == Simulation::kRefugeEntityId) {
+            return refuge_id_;
+        }
+        if (entity_id == Simulation::kSumpSkinEntityId) {
+            return sump_skin_id_;
         }
         if (entity_id == Simulation::kJibBoomEntityId) {
             return jib_boom_id_;
@@ -1518,6 +1674,70 @@ private:
         apply_grate_collision(bodies);
     }
 
+    void update_screw_motion(JPH::BodyInterface &bodies,
+                             const bool screw_wheel_requested,
+                             const float delta_seconds) noexcept {
+        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
+        const double wheel_x = kScrewX + kScrewWheelLocalX;
+        const double wheel_y = screw_y_ + kScrewWheelLocalY;
+        const double wheel_z = kScrewZ + kScrewWheelLocalZ;
+        screw_wheel_available_ =
+            distance_3d(player_position, wheel_x, wheel_y, wheel_z) <= kScrewWheelRadiusMeters;
+
+        const bool at_min = screw_y_ <= kScrewMinY + 1.0e-4;
+        const bool at_max = screw_y_ >= kScrewMaxY - 1.0e-4;
+        screw_at_limit_ = at_min || at_max;
+
+        if (screw_wheel_requested && screw_wheel_available_) {
+            const bool moving = std::abs(screw_command_) > 0.05 && !screw_brake_engaged_;
+            if (moving) {
+                screw_command_ = 0.0;
+                screw_brake_engaged_ = true;
+                screw_stalled_ = false;
+            } else if (!at_max) {
+                if (!grate_safe_) {
+                    screw_command_ = 0.0;
+                    screw_brake_engaged_ = true;
+                    screw_stalled_ = true;
+                } else {
+                    screw_command_ = 1.0;
+                    screw_brake_engaged_ = false;
+                    screw_stalled_ = false;
+                }
+            } else {
+                screw_command_ = -1.0;
+                screw_brake_engaged_ = false;
+                screw_stalled_ = false;
+            }
+        }
+
+        if (screw_command_ > 0.05 && !grate_safe_) {
+            screw_command_ = 0.0;
+            screw_brake_engaged_ = true;
+            screw_stalled_ = true;
+        }
+
+        double travel = 0.0;
+        if (!screw_brake_engaged_ && std::abs(screw_command_) > 0.05) {
+            travel = screw_command_ * kScrewSpeedMetersPerSecond * static_cast<double>(delta_seconds);
+        }
+        const double previous_y = screw_y_;
+        screw_y_ = clamp_double(screw_y_ + travel, kScrewMinY, kScrewMaxY);
+        if ((travel > 0.0 && screw_y_ >= kScrewMaxY - 1.0e-4) ||
+            (travel < 0.0 && screw_y_ <= kScrewMinY + 1.0e-4)) {
+            screw_y_ = travel > 0.0 ? kScrewMaxY : kScrewMinY;
+            screw_command_ = 0.0;
+            screw_brake_engaged_ = true;
+            screw_at_limit_ = true;
+        }
+        screw_velocity_y_ = (screw_y_ - previous_y) / static_cast<double>(delta_seconds);
+
+        bodies.MoveKinematic(screw_id_,
+                             jib_rvec(kScrewX, screw_y_, kScrewZ),
+                             JPH::Quat::sIdentity(),
+                             delta_seconds);
+    }
+
     [[nodiscard]] double attached_load_mass() const noexcept {
         if (hook_attachment_ == HookLoad::Crate) {
             return crate_mass_kg_;
@@ -1675,7 +1895,7 @@ private:
             bool snap_center;
             float max_rise;
         };
-        StepTarget targets[9] = {
+        StepTarget targets[12] = {
             {jib_crate_id_, Simulation::kJibCrateEntityId, kJibCrateHalfWidth, kJibCrateHalfHeight,
              kJibCrateHalfWidth, true, kCrateStepHeight},
             {needle_id_, Simulation::kNeedleEntityId, kNeedleHalfLength, kNeedleHalfHeight,
@@ -1694,6 +1914,12 @@ private:
              kSumpGrateHalfZ, false, kStepUpHeight},
             {sump_far_landing_id_, Simulation::kSumpFarLandingEntityId, kSumpFarHalfX,
              kSumpFarHalfY, kSumpFarHalfZ, false, kStepUpHeight},
+            {screw_id_, Simulation::kScrewEntityId, kScrewHalfX, kScrewHalfY, kScrewHalfZ, false,
+             kStepUpHeight},
+            {refuge_id_, Simulation::kRefugeEntityId, kRefugeHalfX, kRefugeHalfY, kRefugeHalfZ,
+             false, kStepUpHeight},
+            {sump_skin_id_, Simulation::kSumpSkinEntityId, kSumpSkinHalfX, kSumpSkinHalfY,
+             kSumpSkinHalfZ, false, kStepUpHeight},
         };
         if (!needle_seated_) {
             targets[1].id = JPH::BodyID();
@@ -2001,6 +2227,9 @@ private:
         checkpoint_sump_isolated_ = sump_isolated_;
         checkpoint_sump_drain_open_ = sump_drain_open_;
         checkpoint_sump_inventory_ = sump_inventory_;
+        checkpoint_screw_y_ = screw_y_;
+        checkpoint_screw_command_ = screw_command_;
+        checkpoint_screw_brake_ = screw_brake_engaged_;
     }
 
     void maybe_restore_from_death(JPH::BodyInterface &bodies) noexcept {
@@ -2079,11 +2308,20 @@ private:
         sump_drain_open_ = checkpoint_sump_drain_open_;
         sump_inventory_ = checkpoint_sump_inventory_;
         apply_grate_collision(bodies);
+        screw_y_ = checkpoint_screw_y_;
+        screw_command_ = checkpoint_screw_command_;
+        screw_brake_engaged_ = checkpoint_screw_brake_;
+        screw_stalled_ = false;
+        bodies.SetPosition(screw_id_,
+                           jib_rvec(kScrewX, screw_y_, kScrewZ),
+                           JPH::EActivation::Activate);
+        bodies.SetLinearVelocity(screw_id_, JPH::Vec3::sZero());
         parachute_deployed_ = false;
         airborne_seconds_ = 0.0;
         fall_severity_ = 0;
         traversal_mode_ = TraversalMode::None;
         grounded_ = true;
+        support_entity_id_ = 0;
     }
 
     void advance_traversal_after_physics(const float delta_seconds) noexcept {
@@ -2279,6 +2517,23 @@ private:
         state_.sump_drain_open = sump_drain_open_;
         state_.sump_grate_safe = grate_safe_;
         state_.sump_inventory = sump_inventory_;
+
+        const JPH::RVec3 screw_position = bodies.GetPosition(screw_id_);
+        const double wheel_x = kScrewX + kScrewWheelLocalX;
+        const double wheel_y = screw_y_ + kScrewWheelLocalY;
+        const double wheel_z = kScrewZ + kScrewWheelLocalZ;
+        screw_wheel_available_ =
+            distance_3d(player_position, wheel_x, wheel_y, wheel_z) <= kScrewWheelRadiusMeters;
+        state_.screw_position = {screw_position.GetX(), screw_position.GetY(), screw_position.GetZ()};
+        state_.screw_linear_velocity = {0.0, screw_velocity_y_, 0.0};
+        state_.screw_wheel_position = {wheel_x, wheel_y, wheel_z};
+        state_.refuge_position = {kRefugeX, kRefugeY, kRefugeZ};
+        state_.screw_wheel_available = screw_wheel_available_;
+        state_.screw_brake_engaged = screw_brake_engaged_;
+        state_.screw_stalled = screw_stalled_;
+        state_.screw_at_limit = screw_at_limit_;
+        state_.screw_command = screw_command_;
+        state_.refuge_occupied = grounded_ && support_entity_id_ == Simulation::kRefugeEntityId;
     }
 
     JoltRuntimeLease runtime_;
@@ -2323,6 +2578,9 @@ private:
     JPH::BodyID sump_far_landing_id_;
     JPH::BodyID sump_pit_west_id_;
     JPH::BodyID sump_pit_east_id_;
+    JPH::BodyID sump_skin_id_;
+    JPH::BodyID screw_id_;
+    JPH::BodyID refuge_id_;
     JPH::BodyID west_stair_ids_[Simulation::kNeedleWestStairCount]{};
     JPH::BodyID east_stair_ids_[Simulation::kNeedleEastStairCount]{};
     JPH::Ref<JPH::DistanceConstraint> hook_constraint_;
@@ -2368,6 +2626,9 @@ private:
     bool checkpoint_sump_isolated_ = false;
     bool checkpoint_sump_drain_open_ = false;
     double checkpoint_sump_inventory_ = 1.0;
+    double checkpoint_screw_y_ = kScrewMinY;
+    double checkpoint_screw_command_ = 0.0;
+    bool checkpoint_screw_brake_ = true;
 
     double crate_mass_kg_ = kJibRatedCrateKilograms;
     double slew_radians_ = 0.0;
@@ -2398,6 +2659,13 @@ private:
     bool sump_valve_available_ = false;
     bool sump_drain_available_ = false;
     double sump_inventory_ = 1.0;
+    double screw_y_ = kScrewMinY;
+    double screw_command_ = 0.0;
+    double screw_velocity_y_ = 0.0;
+    bool screw_brake_engaged_ = true;
+    bool screw_stalled_ = false;
+    bool screw_at_limit_ = true;
+    bool screw_wheel_available_ = false;
 
     TraversalMode traversal_mode_ = TraversalMode::None;
     JPH::RVec3 traversal_target_{JPH::RVec3::sZero()};
@@ -2573,6 +2841,32 @@ bool Simulation::request_sump_drain() noexcept {
     return true;
 }
 
+bool Simulation::can_operate_screw() const noexcept {
+    return physics_world_->state().screw_wheel_available;
+}
+
+bool Simulation::request_screw_wheel() noexcept {
+    if (screw_wheel_requested_ || !physics_world_->state().screw_wheel_available) {
+        return false;
+    }
+    screw_wheel_requested_ = true;
+    return true;
+}
+
+bool Simulation::export_checkpoint(CheckpointRecord &record) const noexcept {
+    return physics_world_->export_checkpoint_public(record);
+}
+
+bool Simulation::import_checkpoint(const CheckpointRecord &record) noexcept {
+    if (!physics_world_->import_checkpoint_public(record)) {
+        return false;
+    }
+    snapshot_ = physics_world_->state();
+    snapshot_.tick_index = tick_index_;
+    snapshot_.fixed_step_seconds = kFixedStepSeconds;
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -2592,6 +2886,7 @@ void Simulation::step_fixed() noexcept {
                          cage_lever_requested_,
                          sump_valve_requested_,
                          sump_drain_requested_,
+                         screw_wheel_requested_,
                          static_cast<float>(kFixedStepSeconds),
                          next_time_seconds);
     jump_requested_ = false;
@@ -2605,6 +2900,7 @@ void Simulation::step_fixed() noexcept {
     cage_lever_requested_ = false;
     sump_valve_requested_ = false;
     sump_drain_requested_ = false;
+    screw_wheel_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();

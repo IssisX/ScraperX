@@ -1,7 +1,9 @@
 #include "sim/simulation.hpp"
 
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <limits>
 
@@ -45,6 +47,7 @@ int main() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
     using scraperx::sim::TraversalMode;
+    using scraperx::sim::CheckpointRecord;
 
     Simulation partitioned;
     for (std::uint32_t i = 0; i < Simulation::kTickRateHz; ++i) {
@@ -908,6 +911,151 @@ int main() {
     require(isolate.snapshot().checkpoint_committed,
             "committed sump state must be visible on the snapshot");
 
+    Simulation remote_screw;
+    require(remote_screw.advance_frame(1.0).accepted, "approach settle for remote screw must advance");
+    require(!remote_screw.can_operate_screw(),
+            "KX-SCREW wheel must reject work from the distant approach grade");
+    require(!remote_screw.request_screw_wheel(),
+            "remote Action must not become a screw-solve button");
+
+    Simulation wet_screw(InitialSpawn::ScrewDeck);
+    require(wet_screw.advance_frame(1.0).accepted, "wet screw settle must advance");
+    const auto wet_screw_idle = wet_screw.snapshot();
+    require(!wet_screw_idle.sump_grate_safe, "ScrewDeck must begin with a wet sump");
+    require(wet_screw_idle.support_entity_id == Simulation::kScrewEntityId,
+            "ScrewDeck must stand on KX-SCREW");
+    require(wet_screw.can_operate_screw(), "player on the screw must reach the local wheel");
+    const auto wet_screw_y = wet_screw_idle.screw_position.y;
+    require(wet_screw.request_screw_wheel(), "wet wheel pull must be a real request");
+    require(wet_screw.advance_frame(2.0).accepted, "wet-screw stall interval must advance");
+    const auto wet_screw_after = wet_screw.snapshot();
+    require(wet_screw_after.screw_stalled, "raise with KX-GRATE wet must stall the screw");
+    require(std::abs(wet_screw_after.screw_position.y - wet_screw_y) < 0.08,
+            "process interlock must not give free screw travel");
+
+    Simulation skin(InitialSpawn::SumpLanding);
+    require(skin.advance_frame(1.0).accepted, "skin-ledge settle must advance");
+    require(!skin.snapshot().sump_grate_safe, "skin alternate starts with a wet grate");
+    require(skin.set_move_input(-1.0, 0.0), "walk onto the torn west lip must be accepted");
+    require(skin.advance_frame(0.55).accepted, "lip approach interval must advance");
+    require(skin.set_move_input(0.20, 1.0), "walk the skin north must be accepted");
+    bool used_skin = false;
+    bool reached_far_by_skin = false;
+    const int skin_budget = static_cast<int>(4.0 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < skin_budget; ++step) {
+        require(skin.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "skin walk step must advance");
+        const auto now = skin.snapshot();
+        if (now.support_entity_id == Simulation::kSumpSkinEntityId) {
+            used_skin = true;
+        }
+        if (now.player_grounded && now.player_position.y > 21.0 &&
+            now.support_entity_id == Simulation::kSumpFarLandingEntityId) {
+            reached_far_by_skin = true;
+            break;
+        }
+    }
+    require(used_skin, "the torn west lip must be real support, not a painted ledge");
+    require(reached_far_by_skin,
+            "a SKIN route around the wet grate must still be a legal physical path");
+    require(!skin.snapshot().sump_grate_safe,
+            "the skin path must not magically drain the sump");
+
+    Simulation chain(InitialSpawn::KernelChain);
+    require(chain.advance_frame(1.0).accepted, "kernel chain settle must advance");
+    const auto chain_idle = chain.snapshot();
+    require(chain_idle.needle_seated, "kernel fixture must inherit the seated needle");
+    require(chain_idle.sump_grate_safe, "kernel fixture must inherit the drained sump");
+    require(chain_idle.player_grounded, "kernel fixture must stand on the far landing");
+    require(chain.set_move_input(0.0, 1.0), "walk from far landing onto the screw must be accepted");
+    bool boarded_screw = false;
+    const int board_budget = static_cast<int>(2.4 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < board_budget; ++step) {
+        require(chain.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "screw boarding step must advance");
+        if (chain.snapshot().support_entity_id == Simulation::kScrewEntityId &&
+            chain.snapshot().player_grounded) {
+            boarded_screw = true;
+            break;
+        }
+    }
+    require(boarded_screw, "dry grate must change traversal onto KX-SCREW");
+    require(chain.set_move_input(0.0, 0.0), "stop on the screw deck must be accepted");
+    require(chain.advance_frame(0.4).accepted, "screw deck settle must advance");
+    require(chain.can_operate_screw(), "kernel player on the screw must reach the wheel");
+    require(chain.request_screw_wheel(), "drained screw wheel must accept a raise");
+    require(chain.advance_frame(Simulation::kFixedStepSeconds).accepted, "screw raise tick must advance");
+    const auto boarded_screw_y = chain.snapshot().player_position.y;
+    require(chain.advance_frame(4.0).accepted, "screw raise interval must advance");
+    const auto screw_raising = chain.snapshot();
+    require(screw_raising.support_entity_id == Simulation::kScrewEntityId,
+            "player must remain supported by the moving screw");
+    require(screw_raising.player_position.y > boarded_screw_y + 2.0,
+            "valid screw support must carry the player up through the torn floor");
+    require(std::abs(screw_raising.player_linear_velocity.y -
+                     screw_raising.support_point_linear_velocity.y) < 1.6,
+            "ridden screw must impart support-point velocity (WO-002 law)");
+
+    bool screw_top = screw_raising.screw_at_limit && screw_raising.screw_position.y > 28.0;
+    if (!screw_top) {
+        const int screw_budget = static_cast<int>(8.0 / Simulation::kFixedStepSeconds + 0.5);
+        for (int step = 0; step < screw_budget; ++step) {
+            require(chain.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                    "screw travel-limit step must advance");
+            const auto now = chain.snapshot();
+            if (now.screw_at_limit && now.screw_position.y > 28.0) {
+                screw_top = true;
+                break;
+            }
+        }
+    }
+    require(screw_top, "screw jack must stop at the authored refuge elevation, not climb forever");
+    require(chain.set_move_input(0.0, 1.0), "walk off the raised screw onto refuge must be accepted");
+    bool boarded_refuge = false;
+    for (int step = 0; step < board_budget; ++step) {
+        require(chain.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "refuge boarding step must advance");
+        const auto now = chain.snapshot();
+        if (now.player_grounded && now.support_entity_id == Simulation::kRefugeEntityId) {
+            boarded_refuge = true;
+            break;
+        }
+    }
+    require(boarded_refuge, "raised screw must change traversal onto KX-REFUGE");
+    require(chain.snapshot().refuge_occupied, "refuge occupancy must be visible on the snapshot");
+    require(chain.snapshot().player_position.y > 27.5, "refuge must exist as support at the screw stop");
+    require(chain.commit_checkpoint(), "refuge commit must accept grounded kernel state");
+    CheckpointRecord blob{};
+    require(chain.export_checkpoint(blob), "committed kernel must serialize to a versioned blob");
+    require(blob.magic[0] == 'S' && blob.magic[1] == 'X' && blob.magic[2] == 'K' && blob.magic[3] == '1',
+            "checkpoint blob must carry the SXK1 magic");
+    require(blob.needle_seated != 0, "blob must keep the seated needle");
+    require(blob.sump_isolated != 0 && blob.grate_safe != 0, "blob must keep the drained sump");
+    require(blob.player_y > 27.5, "blob must keep the refuge pose");
+
+    {
+        const char *path = "/tmp/scraperx-wo008-checkpoint.bin";
+        std::ofstream out(path, std::ios::binary);
+        require(static_cast<bool>(out), "checkpoint file must open for write");
+        out.write(reinterpret_cast<const char *>(&blob), static_cast<std::streamsize>(sizeof(blob)));
+        out.close();
+        std::ifstream in(path, std::ios::binary);
+        CheckpointRecord disk{};
+        in.read(reinterpret_cast<char *>(&disk), static_cast<std::streamsize>(sizeof(disk)));
+        require(static_cast<bool>(in), "checkpoint file must open for read");
+        Simulation reloaded(InitialSpawn::ApproachGrade);
+        require(reloaded.advance_frame(0.5).accepted, "reload host must settle");
+        require(reloaded.import_checkpoint(disk), "disk blob must restore equivalent continuation");
+        require(reloaded.advance_frame(0.25).accepted, "restored pose must be allowed to re-contact");
+        const auto restored = reloaded.snapshot();
+        require(restored.refuge_occupied || restored.support_entity_id == Simulation::kRefugeEntityId,
+                "reload must put the player back on KX-REFUGE, not a prettier default");
+        require(restored.needle_seated, "reload must keep the seated needle");
+        require(restored.sump_grate_safe, "reload must keep the drained grate");
+        require(restored.player_position.y > 27.5, "reload must keep the raised pose");
+        std::remove(path);
+    }
+
     std::cout << "PASS scraperx_sim WO-005 first freight: "
               << "approach_z=" << approach_spawn.player_position.z
               << " translating_vx=" << translating_support_velocity.x
@@ -940,6 +1088,12 @@ int main() {
               << " inventory=" << dried.sump_inventory
               << " grate_safe=" << dried.sump_grate_safe
               << " dump_unsafe=" << !dumped.sump_grate_safe
+              << " hz=" << Simulation::kTickRateHz << '\n';
+    std::cout << "PASS scraperx_sim WO-008 first causal chain: "
+              << "skin=" << reached_far_by_skin
+              << " screw_top=" << chain.snapshot().screw_position.y
+              << " refuge=" << boarded_refuge
+              << " blob_y=" << blob.player_y
               << " hz=" << Simulation::kTickRateHz << '\n';
     return EXIT_SUCCESS;
 }

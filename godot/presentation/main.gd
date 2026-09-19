@@ -40,6 +40,10 @@ var _cage_wheel_angle := 0.0
 var _sump_water_mesh: MeshInstance3D
 var _sump_valve_mesh: MeshInstance3D
 var _sump_drain_mesh: MeshInstance3D
+var _screw_mesh: MeshInstance3D
+var _screw_wheel_mesh: MeshInstance3D
+var _screw_helix: Array[MeshInstance3D] = []
+var _screw_angle := 0.0
 var _cloud_wisps: Array[MeshInstance3D] = []
 
 var _pendant: Control
@@ -99,7 +103,7 @@ func _ready() -> void:
 		return
 
 	_ci_initial_player_position = _native.get_player_position()
-	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=WO-007-FIRST-PROCESS")
+	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=WO-008-FIRST-CHAIN")
 	_render_snapshot()
 
 func _process(delta: float) -> void:
@@ -346,6 +350,9 @@ func _request_context_action() -> void:
 	if _native.has_method("can_operate_sump_drain") and bool(_native.can_operate_sump_drain()):
 		_native.request_sump_drain()
 		return
+	if _native.has_method("can_operate_screw") and bool(_native.can_operate_screw()):
+		_native.request_screw_wheel()
+		return
 	if bool(_native.can_operate_hopper()):
 		_native.request_hopper_release()
 		return
@@ -399,6 +406,11 @@ func _render_snapshot() -> void:
 	var sump_drain_open := _native.has_method("is_sump_drain_open") and bool(_native.is_sump_drain_open())
 	var sump_safe := _native.has_method("is_sump_grate_safe") and bool(_native.is_sump_grate_safe())
 	var sump_inventory := float(_native.get_sump_inventory()) if _native.has_method("get_sump_inventory") else 1.0
+	var screw_wheel := _native.has_method("can_operate_screw") and bool(_native.can_operate_screw())
+	var screw_stall := _native.has_method("is_screw_stalled") and bool(_native.is_screw_stalled())
+	var screw_brake := _native.has_method("is_screw_brake_engaged") and bool(_native.is_screw_brake_engaged())
+	var screw_limit := _native.has_method("is_screw_at_limit") and bool(_native.is_screw_at_limit())
+	var refuge_here := _native.has_method("is_refuge_occupied") and bool(_native.is_refuge_occupied())
 
 	_camera.position = position + EYE_OFFSET
 	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
@@ -409,13 +421,13 @@ func _render_snapshot() -> void:
 		support,
 		_traversal_name(traversal_mode),
 	]
-	_machine_value.text = "SUMP  %s  CAGE %s  NEEDLE %s" % [
-		"SAFE" if sump_safe else ("ISO" if sump_isolated else ("DRAIN" if sump_drain_open else "WET")),
-		"STALL" if cage_stall else ("LIMIT" if cage_limit else ("HOLD" if cage_brake else "LIVE")),
+	_machine_value.text = "SCREW  %s  SUMP %s  NEEDLE %s" % [
+		"STALL" if screw_stall else ("REFUGE" if refuge_here else ("LIMIT" if screw_limit else ("HOLD" if screw_brake else "LIVE"))),
+		"SAFE" if sump_safe else ("ISO" if sump_isolated else "WET"),
 		"SEATED" if needle_seated else "FREE",
 	]
 	_tick_value.text = "90 HZ NATIVE  /  %08d" % int(_native.get_tick_index())
-	_boundary_value.text = "KX-SUMP / GRATE HAZARD / LOCAL VALVE"
+	_boundary_value.text = "KX-SCREW / TORN FLOOR / KX-REFUGE"
 
 	var context_visible := false
 	if traversal_mode == TRAVERSAL_HANG:
@@ -441,6 +453,9 @@ func _render_snapshot() -> void:
 		context_visible = true
 	elif sump_valve:
 		_action_button.text = "OPEN LINE"
+		context_visible = true
+	elif screw_wheel:
+		_action_button.text = "TURN SCREW"
 		context_visible = true
 	elif hopper_available and not hopper_started:
 		_action_button.text = "RELEASE HOPPER"
@@ -471,6 +486,14 @@ func _render_snapshot() -> void:
 		_status.text = "CAGE TRAVEL / PULL LEVER TO BRAKE"
 	elif cage_lever:
 		_status.text = "KX-CAGE LEVER IN REACH / PULL TO WORK THE DRUM"
+	elif screw_stall:
+		_status.text = "SCREW INTERLOCK / GRATE MUST DRY BEFORE THE JACK LIFTS"
+	elif screw_wheel and not screw_brake:
+		_status.text = "SCREW LIVE / TURN TO BRAKE / RIDING THE THREAD"
+	elif screw_wheel:
+		_status.text = "KX-SCREW WHEEL IN REACH / TURN TO CLIMB THE TORN FLOOR"
+	elif refuge_here:
+		_status.text = "KX-REFUGE / COMMITTED FLOOR / THE TOWER KEEPS GOING"
 	elif sump_safe:
 		_status.text = "KX-GRATE DRY / ISOLATED VOLUME / WALK THE BARS"
 	elif sump_isolated and sump_drain_open:
@@ -513,6 +536,7 @@ func _render_snapshot() -> void:
 	_sync_needle_mesh()
 	_sync_cage_meshes()
 	_sync_sump_meshes(sump_isolated, sump_drain_open, sump_inventory)
+	_sync_screw_meshes()
 	if _pendant != null:
 		_pendant.visible = jib_occupied
 
@@ -583,6 +607,7 @@ func _build_exterior_world() -> void:
 	_build_needle_bay(mill_scale, oxidized_steel, weathered_timber, galvanized, faded_yellow, chipped_orange)
 	_build_cage_house(mill_scale, oxidized_steel, galvanized, faded_yellow, chipped_orange, weathered_timber)
 	_build_sump_bay(mill_scale, oxidized_steel, dark_concrete, weathered_timber, galvanized, faded_yellow, chipped_orange)
+	_build_screw_refuge(mill_scale, oxidized_steel, dark_concrete, weathered_timber, galvanized, faded_yellow, chipped_orange)
 
 	# Readable idle machinery integrated into the lower bays — not a dead lift car in a blank shaft.
 	_add_machine_wheel(Vector3(-17.0, 43.0, 14.0), 6.5, 1.4, mill_scale, oxidized_steel)
@@ -782,10 +807,12 @@ func _build_sump_bay(mill_scale: Material, oxidized_steel: Material, dark_concre
 	_add_box("SumpPitNorthLip", Vector3(6.8, 0.22, 0.55), Vector3(9.50, 21.62, 45.10), mill_scale)
 	_add_box("SumpFloor", Vector3(6.80, 0.36, 8.40), Vector3(9.50, 17.20, 42.80), dark_concrete)
 	_add_box("SumpSludge", Vector3(6.2, 0.10, 7.6), Vector3(9.50, 17.42, 42.80), oxidized_steel)
-	_add_box("SumpFarLanding", Vector3(6.00, 0.36, 4.80), Vector3(9.50, 21.82, 47.50), mill_scale)
-	_add_box("SumpFarEdge", Vector3(6.1, 0.08, 0.14), Vector3(9.50, 22.02, 45.20), faded_yellow)
-	_add_box("SumpFarRailL", Vector3(0.10, 1.05, 4.4), Vector3(6.55, 22.52, 47.50), faded_yellow)
-	_add_box("SumpFarRailR", Vector3(0.10, 1.05, 4.4), Vector3(12.45, 22.52, 47.50), faded_yellow)
+	_add_box("SumpFarLanding", Vector3(6.80, 0.36, 4.80), Vector3(9.50, 21.82, 47.50), mill_scale)
+	_add_box("SumpFarEdge", Vector3(6.9, 0.08, 0.14), Vector3(9.50, 22.02, 45.20), faded_yellow)
+	_add_box("SumpFarRailL", Vector3(0.10, 1.05, 4.4), Vector3(6.20, 22.52, 47.50), faded_yellow)
+	_add_box("SumpFarRailR", Vector3(0.10, 1.05, 4.4), Vector3(12.80, 22.52, 47.50), faded_yellow)
+	_add_box("KxSumpSkin", Vector3(0.90, 0.14, 6.20), Vector3(6.70, 21.82, 42.55), oxidized_steel)
+	_add_box("KxSumpSkinRail", Vector3(0.08, 0.90, 6.00), Vector3(6.20, 22.35, 42.55), faded_yellow)
 	_add_box("BrokenSlabL", Vector3(1.8, 0.16, 1.1), Vector3(6.70, 21.70, 40.90), mill_scale).rotation.z = 0.18
 	_add_box("BrokenSlabR", Vector3(1.6, 0.14, 0.9), Vector3(12.20, 21.68, 40.70), oxidized_steel).rotation.z = -0.22
 	_add_box("HangingPlate", Vector3(2.4, 0.08, 1.6), Vector3(11.6, 20.4, 43.6), mill_scale).rotation = Vector3(0.35, 0.2, -0.4)
@@ -833,6 +860,61 @@ func _sync_sump_meshes(isolated: bool, drain_open: bool, inventory: float) -> vo
 		_sump_valve_mesh.rotation = Vector3(PI * 0.5, 1.35 if isolated else 0.20, 0.0)
 	if _sump_drain_mesh != null:
 		_sump_drain_mesh.rotation.x = 1.15 if drain_open else 0.20
+
+func _build_screw_refuge(mill_scale: Material, oxidized_steel: Material, dark_concrete: Material, weathered_timber: Material, galvanized: Material, faded_yellow: Material, chipped_orange: Material) -> void:
+	# Giant rusted screw through a missing floor — the raise is the structure.
+	_add_cylinder("KxScrewShaft", 0.55, 14.0, Vector3(9.50, 25.2, 51.60), oxidized_steel)
+	for i in range(18):
+		var t := float(i)
+		var ang := t * 0.70
+		var y := 21.4 + t * 0.42
+		var flight := _add_box("KxScrewFlight", Vector3(2.6, 0.10, 0.70), Vector3(9.50 + cos(ang) * 1.45, y, 51.60 + sin(ang) * 1.45), mill_scale)
+		flight.rotation.y = ang
+		_screw_helix.append(flight)
+	_screw_mesh = _add_box("KxScrewDeck", Vector3(3.40, 0.36, 3.40), Vector3(9.50, 21.82, 51.60), faded_yellow)
+	_add_box("KxScrewLip", Vector3(3.5, 0.08, 0.12), Vector3(9.50, 22.02, 53.25), chipped_orange)
+	_screw_wheel_mesh = _add_cylinder("KxScrewWheel", 1.05, 0.14, Vector3(8.95, 22.77, 52.00), chipped_orange)
+	_screw_wheel_mesh.rotation.x = PI * 0.5
+	_add_box("KxScrewWheelPost", Vector3(0.18, 1.05, 0.18), Vector3(8.95, 22.40, 52.00), mill_scale)
+
+	# Torn floor the screw punches through.
+	_add_box("TornRingN", Vector3(8.0, 0.28, 1.3), Vector3(9.50, 28.20, 53.8), mill_scale)
+	_add_box("TornRingS", Vector3(8.0, 0.28, 1.3), Vector3(9.50, 28.20, 49.4), oxidized_steel)
+	_add_box("TornRingW", Vector3(1.2, 0.22, 3.2), Vector3(5.7, 28.18, 51.6), mill_scale)
+	_add_box("MissingSlab", Vector3(2.4, 0.12, 1.8), Vector3(12.6, 27.6, 50.4), oxidized_steel).rotation = Vector3(0.42, -0.2, 0.15)
+	_add_box("HangingIBeam", Vector3(0.22, 3.4, 0.22), Vector3(13.2, 26.4, 53.2), mill_scale).rotation.z = 0.35
+	_add_box("RebarFan", Vector3(0.07, 2.2, 0.07), Vector3(6.2, 27.3, 50.2), galvanized).rotation.z = -0.55
+
+	# Refuge is a wrecked mezzanine, not a clean checkpoint pad.
+	_add_box("KxRefuge", Vector3(6.40, 0.36, 4.40), Vector3(9.50, 28.40, 55.50), mill_scale)
+	_add_box("RefugeBite", Vector3(1.6, 0.38, 1.4), Vector3(11.8, 28.42, 56.6), dark_concrete)
+	_add_box("RefugeTimber", Vector3(3.4, 0.18, 1.1), Vector3(7.4, 28.62, 56.4), weathered_timber)
+	_add_box("RefugeRailL", Vector3(0.10, 1.05, 4.0), Vector3(6.40, 29.10, 55.50), faded_yellow)
+	_add_box("RefugeRailBroken", Vector3(0.10, 0.55, 1.6), Vector3(12.55, 28.85, 54.70), faded_yellow).rotation.z = 0.8
+	_add_box("RefugePostL", Vector3(1.0, 8.5, 1.0), Vector3(5.6, 25.0, 57.4), mill_scale)
+	_add_box("RefugePostR", Vector3(1.0, 8.5, 1.0), Vector3(13.4, 25.0, 57.4), oxidized_steel)
+	_add_box("RefugeHeader", Vector3(9.2, 1.0, 1.3), Vector3(9.50, 29.6, 57.6), mill_scale)
+	_add_wrapping_stairs(Vector3(14.8, 21.8, 50.8), 6.4, 1, galvanized, faded_yellow)
+
+	# Identity: monumental rusted spiral occupying the void, not a sticker.
+	_add_machine_wheel(Vector3(17.5, 26.5, 52.0), 5.4, 1.35, mill_scale, oxidized_steel)
+	_add_machine_wheel(Vector3(1.8, 24.8, 49.6), 3.8, 1.05, oxidized_steel, mill_scale)
+	_add_hoist_drum(Vector3(16.2, 30.4, 56.8), 2.2, 5.5, mill_scale, galvanized)
+	_add_box("VoidPipe", Vector3(0.7, 0.7, 18.0), Vector3(15.8, 27.2, 48.0), galvanized).rotation.y = 0.4
+	_add_floodlight(Vector3(9.5, 31.2, 53.0), Vector3(0.0, -0.7, 0.2))
+	_add_floodlight(Vector3(6.4, 29.4, 55.8), Vector3(0.4, -0.35, -0.2))
+
+func _sync_screw_meshes() -> void:
+	if _native == null or _screw_mesh == null or not _native.has_method("get_screw_position"):
+		return
+	var screw: Vector3 = _native.get_screw_position()
+	var wheel: Vector3 = _native.get_screw_wheel_position()
+	var velocity: Vector3 = _native.get_screw_linear_velocity()
+	_screw_mesh.position = screw
+	if _screw_wheel_mesh != null:
+		_screw_angle += velocity.y * 1.15
+		_screw_wheel_mesh.position = wheel
+		_screw_wheel_mesh.rotation = Vector3(PI * 0.5, 0.0, _screw_angle)
 
 func _add_wrapping_stairs(origin: Vector3, rise: float, flights: int, tread_material: Material, rail_material: Material) -> void:
 	for flight in range(flights):

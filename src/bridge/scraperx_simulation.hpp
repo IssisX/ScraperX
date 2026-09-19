@@ -32,6 +32,8 @@ public:
     [[nodiscard]] bool request_sump_valve();
     [[nodiscard]] bool can_operate_sump_drain() const;
     [[nodiscard]] bool request_sump_drain();
+    [[nodiscard]] bool can_operate_screw() const;
+    [[nodiscard]] bool request_screw_wheel();
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
 
     [[nodiscard]] std::int64_t get_tick_index() const;
@@ -113,6 +115,15 @@ public:
     [[nodiscard]] bool is_sump_drain_open() const;
     [[nodiscard]] bool is_sump_grate_safe() const;
     [[nodiscard]] double get_sump_inventory() const;
+    [[nodiscard]] godot::Vector3 get_screw_position() const;
+    [[nodiscard]] godot::Vector3 get_screw_linear_velocity() const;
+    [[nodiscard]] godot::Vector3 get_screw_wheel_position() const;
+    [[nodiscard]] godot::Vector3 get_refuge_position() const;
+    [[nodiscard]] bool is_screw_brake_engaged() const;
+    [[nodiscard]] bool is_screw_stalled() const;
+    [[nodiscard]] bool is_screw_at_limit() const;
+    [[nodiscard]] double get_screw_command() const;
+    [[nodiscard]] bool is_refuge_occupied() const;
 
 protected:
     static void _bind_methods();

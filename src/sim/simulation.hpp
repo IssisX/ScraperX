@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 
@@ -29,6 +30,9 @@ enum class InitialSpawn : std::uint8_t {
     CageSeated = 14,
     SumpLanding = 15,
     SumpDrained = 16,
+    ScrewDeck = 17,
+    KernelChain = 18,
+    RefugeDeck = 19,
 };
 
 enum class TraversalMode : std::uint8_t {
@@ -140,6 +144,49 @@ struct Snapshot final {
     bool sump_drain_open = false;
     bool sump_grate_safe = false;
     double sump_inventory = 1.0;
+
+    Vector3 screw_position{};
+    Vector3 screw_linear_velocity{};
+    Vector3 screw_wheel_position{};
+    Vector3 refuge_position{};
+    bool screw_wheel_available = false;
+    bool screw_brake_engaged = true;
+    bool screw_stalled = false;
+    bool screw_at_limit = false;
+    double screw_command = 0.0;
+    bool refuge_occupied = false;
+};
+
+struct CheckpointRecord final {
+    static constexpr char kMagic[4] = {'S', 'X', 'K', '1'};
+    static constexpr std::uint32_t kVersion = 1;
+
+    char magic[4]{'S', 'X', 'K', '1'};
+    std::uint32_t version = kVersion;
+    double player_x = 0.0;
+    double player_y = 0.0;
+    double player_z = 0.0;
+    double player_vx = 0.0;
+    double player_vy = 0.0;
+    double player_vz = 0.0;
+    std::uint8_t needle_seated = 0;
+    double needle_x = 0.0;
+    double needle_y = 0.0;
+    double needle_z = 0.0;
+    std::uint8_t sump_isolated = 0;
+    std::uint8_t sump_drain_open = 0;
+    double sump_inventory = 1.0;
+    double screw_y = 0.0;
+    double screw_command = 0.0;
+    std::uint8_t screw_brake = 1;
+    double cage_y = 0.0;
+    double cage_command = 0.0;
+    std::uint8_t cage_brake = 1;
+    double crate_x = 0.0;
+    double crate_y = 0.0;
+    double crate_z = 0.0;
+    std::uint64_t checkpoint_tick = 0;
+    std::uint8_t grate_safe = 0;
 };
 
 struct AdvanceResult final {
@@ -187,6 +234,9 @@ public:
     static constexpr std::uint32_t kNeedleEastStairCount = 9;
     static constexpr std::uint64_t kSumpFloorEntityId = 54;
     static constexpr std::uint64_t kSumpFarLandingEntityId = 55;
+    static constexpr std::uint64_t kScrewEntityId = 56;
+    static constexpr std::uint64_t kRefugeEntityId = 57;
+    static constexpr std::uint64_t kSumpSkinEntityId = 58;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ApproachGrade);
     ~Simulation();
@@ -217,6 +267,10 @@ public:
     [[nodiscard]] bool request_sump_valve() noexcept;
     [[nodiscard]] bool can_operate_sump_drain() const noexcept;
     [[nodiscard]] bool request_sump_drain() noexcept;
+    [[nodiscard]] bool can_operate_screw() const noexcept;
+    [[nodiscard]] bool request_screw_wheel() noexcept;
+    [[nodiscard]] bool export_checkpoint(CheckpointRecord &record) const noexcept;
+    [[nodiscard]] bool import_checkpoint(const CheckpointRecord &record) noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -244,6 +298,7 @@ private:
     bool cage_lever_requested_ = false;
     bool sump_valve_requested_ = false;
     bool sump_drain_requested_ = false;
+    bool screw_wheel_requested_ = false;
     Snapshot snapshot_{};
 };
 

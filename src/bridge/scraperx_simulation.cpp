@@ -37,6 +37,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_sump_valve"), &ScraperXSimulation::request_sump_valve);
     godot::ClassDB::bind_method(godot::D_METHOD("can_operate_sump_drain"), &ScraperXSimulation::can_operate_sump_drain);
     godot::ClassDB::bind_method(godot::D_METHOD("request_sump_drain"), &ScraperXSimulation::request_sump_drain);
+    godot::ClassDB::bind_method(godot::D_METHOD("can_operate_screw"), &ScraperXSimulation::can_operate_screw);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_screw_wheel"), &ScraperXSimulation::request_screw_wheel);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"), &ScraperXSimulation::advance_frame);
 
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"), &ScraperXSimulation::get_tick_index);
@@ -117,6 +119,15 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("is_sump_drain_open"), &ScraperXSimulation::is_sump_drain_open);
     godot::ClassDB::bind_method(godot::D_METHOD("is_sump_grate_safe"), &ScraperXSimulation::is_sump_grate_safe);
     godot::ClassDB::bind_method(godot::D_METHOD("get_sump_inventory"), &ScraperXSimulation::get_sump_inventory);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_screw_position"), &ScraperXSimulation::get_screw_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_screw_linear_velocity"), &ScraperXSimulation::get_screw_linear_velocity);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_screw_wheel_position"), &ScraperXSimulation::get_screw_wheel_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_refuge_position"), &ScraperXSimulation::get_refuge_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_screw_brake_engaged"), &ScraperXSimulation::is_screw_brake_engaged);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_screw_stalled"), &ScraperXSimulation::is_screw_stalled);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_screw_at_limit"), &ScraperXSimulation::is_screw_at_limit);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_screw_command"), &ScraperXSimulation::get_screw_command);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_refuge_occupied"), &ScraperXSimulation::is_refuge_occupied);
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {
@@ -541,6 +552,55 @@ bool ScraperXSimulation::is_sump_grate_safe() const {
 
 double ScraperXSimulation::get_sump_inventory() const {
     return simulation_.snapshot().sump_inventory;
+}
+
+bool ScraperXSimulation::can_operate_screw() const {
+    return simulation_.can_operate_screw();
+}
+
+bool ScraperXSimulation::request_screw_wheel() {
+    const bool accepted = simulation_.request_screw_wheel();
+    if (!accepted) {
+        godot::UtilityFunctions::push_warning(
+            "ScraperX native authority rejected screw wheel: player is out of range or a request is already queued.");
+    }
+    return accepted;
+}
+
+godot::Vector3 ScraperXSimulation::get_screw_position() const {
+    return to_godot(simulation_.snapshot().screw_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_screw_linear_velocity() const {
+    return to_godot(simulation_.snapshot().screw_linear_velocity);
+}
+
+godot::Vector3 ScraperXSimulation::get_screw_wheel_position() const {
+    return to_godot(simulation_.snapshot().screw_wheel_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_refuge_position() const {
+    return to_godot(simulation_.snapshot().refuge_position);
+}
+
+bool ScraperXSimulation::is_screw_brake_engaged() const {
+    return simulation_.snapshot().screw_brake_engaged;
+}
+
+bool ScraperXSimulation::is_screw_stalled() const {
+    return simulation_.snapshot().screw_stalled;
+}
+
+bool ScraperXSimulation::is_screw_at_limit() const {
+    return simulation_.snapshot().screw_at_limit;
+}
+
+double ScraperXSimulation::get_screw_command() const {
+    return simulation_.snapshot().screw_command;
+}
+
+bool ScraperXSimulation::is_refuge_occupied() const {
+    return simulation_.snapshot().refuge_occupied;
 }
 
 } // namespace scraperx::bridge
