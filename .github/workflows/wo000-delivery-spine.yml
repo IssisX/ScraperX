@@ -1,16 +1,18 @@
-name: WO-001 Embodied Authority
+name: ScraperX-2 Checkpoint — WO-004..006 Fold Stage, Exterior Approach, Coupled Machine
 
 on:
   push:
-    branches: [main]
+    branches: [ScraperX-2, ScraperX-Claude]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Every ScraperX-2 commit is an immutable checkpoint candidate. A newer push must
+# never cancel an older commit's build, otherwise that commit can lose its APK.
 concurrency:
-  group: wo001-embodied-authority-${{ github.ref }}
-  cancel-in-progress: true
+  group: scraperx-checkpoint-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 env:
   GODOT_VERSION: 4.7-stable
@@ -21,7 +23,7 @@ env:
   ANDROID_NDK_VERSION: 29.0.14206865
 
 jobs:
-  embodied-authority:
+  moving-support-truth:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
@@ -67,7 +69,7 @@ jobs:
             -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
           tools/godot/godot --version
 
-      - name: Build native host graph and run embodied-authority tests
+      - name: Build native host graph and run the full native suite
         shell: bash
         run: |
           set -euo pipefail
@@ -79,8 +81,9 @@ jobs:
             -DGODOTCPP_TARGET=template_release
           cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
+          grep -F "100% tests passed" artifacts/native-tests.log
 
-      - name: Run Godot through native player authority and capture one tower-deck frame
+      - name: Run Godot at Fold aspect through native machine authority and capture proof
         shell: bash
         run: |
           set -euo pipefail
@@ -89,14 +92,28 @@ jobs:
             > godot/.godot/extension_list.cfg
           grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
             godot/.godot/extension_list.cfg
-          timeout 60s xvfb-run -a -s "-screen 0 1600x900x24" \
-            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 300 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo001-embodied-authority.png" \
+          timeout 300s xvfb-run -a -s "-screen 0 1728x1485x24" \
+            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 2400 \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo006-approach-and-machine.png" \
             2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/wo001-embodied-authority.png
+          test -s artifacts/screenshots/wo006-approach-and-machine.png
           grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "SCRAPERX_WO001_RUNTIME_PROOF" artifacts/godot-runtime.log
-          grep -F "grounded=1 support=1" artifacts/godot-runtime.log
+          grep -F "work_order=WO-006" artifacts/godot-runtime.log
+          # WO-004: the viewport is the Fold inner panel, not a phone strip.
+          grep -F "SCRAPERX_WO004_VIEWPORT_PROOF" artifacts/godot-runtime.log
+          grep -F "width=2160 height=1856" artifacts/godot-runtime.log
+          grep -F "aspect=1.164" artifacts/godot-runtime.log
+          grep -F "stretch=expand" artifacts/godot-runtime.log
+          # WO-005: spawn is outdoors at grade with the tower still ahead.
+          grep -F "SCRAPERX_WO005_APPROACH_PROOF" artifacts/godot-runtime.log
+          grep -F "tower_height=1600" artifacts/godot-runtime.log
+          # WO-006: the coupled chain ran, and a shut valve passed exactly zero mass.
+          grep -F "SCRAPERX_WO006_MACHINE_PROOF" artifacts/godot-runtime.log
+          grep -F "shut_flow=0.00000" artifacts/godot-runtime.log
+          awk -F'peak_valve=' '/SCRAPERX_WO006_MACHINE_PROOF/ {split($2,a," "); exit (a[1]+0 > 0.5) ? 0 : 1}' \
+            artifacts/godot-runtime.log
+          awk -F'peak_lift=' '/SCRAPERX_WO006_MACHINE_PROOF/ {split($2,a," "); exit (a[1]+0 > 6.0) ? 0 : 1}' \
+            artifacts/godot-runtime.log
 
       - name: Cross-compile native graph for Android arm64
         shell: bash
@@ -114,46 +131,55 @@ jobs:
           test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
           file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
 
-      - name: Export current-source Android arm64 APK
+      - name: Export checkpoint Android arm64 APK
         shell: bash
         run: |
           set -euo pipefail
+          CHECKPOINT_ID="${GITHUB_SHA::12}"
+          APK_NAME="ScraperX-2-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
-            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/ScraperX-WO001-arm64.apk" \
+            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
             2>&1 | tee artifacts/godot-android-export.log
-          test -s build/apk/ScraperX-WO001-arm64.apk
-          unzip -l build/apk/ScraperX-WO001-arm64.apk | tee artifacts/apk-contents.log
+          test -s "build/apk/${APK_NAME}"
+          unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
-          cp build/apk/ScraperX-WO001-arm64.apk artifacts/apk/
-          sha256sum artifacts/apk/ScraperX-WO001-arm64.apk | tee artifacts/apk/SHA256SUMS.txt
+          cp "build/apk/${APK_NAME}" artifacts/apk/
+          sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
+          printf 'branch=%s\ncommit=%s\napk=%s\n' \
+            "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
+            > artifacts/apk/CHECKPOINT.txt
 
       - name: Record evidence boundaries
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/WO-001-EVIDENCE.md <<EOF
-          # WO-001 Evidence
+          cat > artifacts/WO-006-EVIDENCE.md <<EOF
+          # WO-004..006 Evidence
 
           Source commit: \`${GITHUB_SHA}\`
 
           Proven by this workflow:
 
-          - native host tests passed for 90 Hz stepping, static-deck contact/support, desired-velocity locomotion, frame partitioning, and invalid-input rejection;
-          - Godot 4.7 loaded the current-source GDExtension;
-          - the Godot runtime observed the native-owned player grounded on stable support entity 1 after native locomotion;
-          - one first-person industrial tower-deck screenshot was captured from that runtime;
+          - WO-001 fixed-step, invalid-input, static-support, and static-locomotion regressions remained green;
+          - WO-002 moving-support regressions remained green: translating and rotating Jolt supports with stable entity IDs, real support-point velocity, material inherited jump momentum, and contact-point velocity matching \`v_linear + omega x r\` within the work-order tolerance;
+          - native host tests proved the WO-003 traversal suite against real Jolt geometry: a vault that crosses a real rail onto a validated far landing while retaining approach momentum, a mantle that ends grounded on ledge entity 6, a ledge hang that holds against gravity on entity 7, a hang on the kinematic moving ledge (entity 8) carried at the support's own velocity and mantled onto that moving support, refusal of the obstructed landing behind entity 9/10 with no player rise, and traversal frame-partition invariance;
+          - Godot 4.7 loaded the same current-source GDExtension, mirrored native support poses, jumped from support entity 3, and observed inherited momentum;
+          - WO-006 host tests proved the coupled machine: the falling ballast drives a hinged tipper, the tipper drags a tension-only rope, the rope opens a real valve, the valve vents a finite pressure vessel into an actuator cylinder, and the cylinder lifts a counterweighted platform past six metres; a shut valve passes exactly zero mass; with the boiler feed cut the vessel's available energy never increases and the lift fades; a player standing on the tipper opens the same valve; and the whole machine is frame-partition invariant;
+          - the Godot runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856, 1.164) with stretch=expand, an 82 degree vertical field of view and a 2600 m far plane;
+          - the same runtime spawned outdoors at grade, walked the tower approach, and observed the native machine open its valve past half and lift the platform past six metres;
+          - one first-person approach-and-machine screenshot was captured from that runtime;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
-          - the APK checksum was recorded.
+          - the APK checksum and checkpoint identity were recorded.
 
-          Not proven here: APK installation, Android execution, Fold 6 observation, sustained frame rate, thermals, touch ergonomics, climbing, moving supports, freight, structural simulation, process simulation, or a complete game loop.
+          Not proven here: APK installation, Android execution, Fold 6 observation on the real panel, sustained frame rate, thermals, touch ergonomics, the fall/parachute/checkpoint loop, load-bearing structural simulation, process/isolation networks, persistence, NPCs, missions, or a complete game loop.
           EOF
 
-      - name: Publish WO-001 build and evidence
+      - name: Publish immutable checkpoint build and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ScraperX-WO001-${{ github.sha }}
+          name: ScraperX-2-checkpoint-${{ github.sha }}
           path: artifacts/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90

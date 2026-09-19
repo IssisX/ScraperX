@@ -2,20 +2,24 @@
 
 ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority package at the repository root. Read [`00_START_HERE.md`](00_START_HERE.md) before changing implementation.
 
-## Current work order
+## Current work orders
 
-**WO-001 — Embodied Authority**
+**WO-004 Fold Stage · WO-005 Exterior Grade and Approach · WO-006 First Coupled Machine**
 
 ```text
-touch / WASD desired movement
-  -> ScraperX GDExtension command seam
-  -> native 90 Hz Jolt player body
-  -> static-world contact and support identity
-  -> immutable pose snapshot
-  -> Godot first-person tower-deck presentation
+device bounds -> Fold inner-panel viewport, frustum and HUD
+grade spawn   -> walk the approach -> tower's lower third fills the frame,
+                 crown sheared off by haze and stack plume
+hoist -> ballast -> hinged tipper -> tension-only rope -> valve lever
+      -> real orifice -> finite pressure vessel -> actuator cylinder
+      -> piston -> counterweighted platform the player rides
 ```
 
-This is the first embodied dependency for the full game: one persistent 1.6 km skyscraper climbed through athletic industrial traversal and large-scale Rube-Goldberg physics mechanisms. WO-001 deliberately stops before climbing, moving supports, freight, structural, and process systems.
+Completed before them: WO-000 delivery spine, WO-001 embodied authority, WO-002 moving-support truth, WO-003 athletic traversal.
+
+The machine is not scripted. Each link reads the previous link's actual body state, so it can be entered mid-cycle, walked around, looked up into, blocked, and started early by standing on the tipper. The plant is a reduced-order pressure vessel with finite stored energy: cut the boiler feed and the lift fades and stops. The steam plume is a one-way consumer of the native orifice mass flow — shut the valve and it dies.
+
+Still deliberately absent: the fall/parachute/checkpoint loop, load-bearing structural coupling, process/isolation networks, persistence, NPCs, missions, and interior routes into the tower.
 
 ## Build
 
@@ -32,7 +36,7 @@ cmake --build build/host
 ctest --test-dir build/host --output-on-failure
 ```
 
-The GitHub Actions workflow performs the bounded WO-001 proof path, including native support/locomotion tests, Linux GDExtension loading, one rendered first-person tower-deck capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
+The GitHub Actions workflow performs the bounded WO-004..006 proof path: the full native suite, Linux GDExtension loading, a runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856) that walks the tower approach and observes the coupled machine work, one rendered first-person capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
 
 ## Claim boundary
 

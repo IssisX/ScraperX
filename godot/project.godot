@@ -1,5 +1,5 @@
 ; Engine configuration file.
-; ScraperX WO-001: native embodied authority on static support.
+; ScraperX WO-004..WO-006: Fold-native stage, industrial identity, coupled machine.
 
 config_version=5
 
@@ -11,12 +11,17 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [display]
 
-window/size/viewport_width=1600
-window/size/viewport_height=900
-window/size/window_width_override=1600
-window/size/window_height_override=900
+; Galaxy Z Fold 6 inner display: 2160x1856, 20.9:18, a near-square canvas.
+; The unfolded panel is the intended stage; the cover screen is the fallback.
+window/size/viewport_width=2160
+window/size/viewport_height=1856
+window/size/window_width_override=1296
+window/size/window_height_override=1114
+; "expand" grows the viewport into whatever bounds the device actually gives us
+; instead of letterboxing the design resolution into a phone-safe rectangle.
 window/stretch/mode="canvas_items"
-window/handheld/orientation=1
+window/stretch/aspect="expand"
+window/handheld/orientation=4
 
 [input_devices]
 
@@ -28,3 +33,5 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/default_filters/use_nearest_mipmap_filter=false
 textures/vram_compression/import_etc2_astc=true
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=1
+environment/defaults/default_clear_color=Color(0.055, 0.055, 0.058, 1)

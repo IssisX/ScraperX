@@ -17,6 +17,7 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
+    src/sim/steam_plant.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -64,7 +65,7 @@ if(BUILD_TESTING AND NOT ANDROID)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
-    add_test(NAME scraperx_sim.embodied_authority COMMAND scraperx_sim_tests)
+    add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)
