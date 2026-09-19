@@ -4,6 +4,7 @@
 
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/variant/vector3.hpp>
+#include <godot_cpp/variant/string.hpp>
 
 namespace scraperx::bridge {
 
@@ -26,12 +27,18 @@ public:
     [[nodiscard]] bool set_jib_hoist_input(double hoist);
     [[nodiscard]] bool set_jib_slew_input(double slew);
     [[nodiscard]] bool set_jib_brake(bool engaged);
+    [[nodiscard]] bool can_release_jib_hook() const;
+    [[nodiscard]] bool request_jib_hook_release();
+    [[nodiscard]] bool can_operate_dog_manual_release() const;
+    [[nodiscard]] bool request_dog_manual_release();
     [[nodiscard]] bool can_operate_cage() const;
     [[nodiscard]] bool request_cage_lever();
     [[nodiscard]] bool can_operate_sump_valve() const;
     [[nodiscard]] bool request_sump_valve();
     [[nodiscard]] bool can_operate_sump_drain() const;
     [[nodiscard]] bool request_sump_drain();
+    [[nodiscard]] bool save_checkpoint_to_file(const godot::String &path) const;
+    [[nodiscard]] bool load_checkpoint_from_file(const godot::String &path);
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
 
     [[nodiscard]] std::int64_t get_tick_index() const;
@@ -113,6 +120,15 @@ public:
     [[nodiscard]] bool is_sump_drain_open() const;
     [[nodiscard]] bool is_sump_grate_safe() const;
     [[nodiscard]] double get_sump_inventory() const;
+    [[nodiscard]] godot::Vector3 get_dog_position() const;
+    [[nodiscard]] godot::Vector3 get_dog_release_pad_position() const;
+    [[nodiscard]] godot::Vector3 get_dog_manual_release_position() const;
+    [[nodiscard]] double get_dog_retraction_meters() const;
+    [[nodiscard]] bool is_dog_release_latched() const;
+    [[nodiscard]] bool is_dog_clear() const;
+    [[nodiscard]] bool is_jib_hook_release_available() const;
+    [[nodiscard]] godot::Vector3 get_refuge_position() const;
+    [[nodiscard]] bool is_refuge_reached() const;
 
 protected:
     static void _bind_methods();

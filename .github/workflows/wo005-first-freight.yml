@@ -1,15 +1,15 @@
-name: ScraperX WO-007 — First Process Coupling
+name: ScraperX WO-008 — Full Causal Chain
 
 on:
   push:
-    branches: [ScraperX-Grok]
+    branches: [ChatGPT]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: scraperx-wo007-${{ github.ref }}-${{ github.sha }}
+  group: scraperx-wo008-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 env:
@@ -21,7 +21,7 @@ env:
   ANDROID_NDK_VERSION: 29.0.14206865
 
 jobs:
-  first-structural-coupling:
+  full-causal-chain:
     runs-on: ubuntu-24.04
     timeout-minutes: 70
 
@@ -51,128 +51,135 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable"
-          curl --fail --location --retry 3 \
-            --output tools/godot/godot.zip \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          curl --fail --location --retry 3             --output tools/godot/godot.zip             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
           echo "${GODOT_BINARY_SHA256}  tools/godot/godot.zip" | sha256sum --check
           unzip -q tools/godot/godot.zip -d tools/godot
           mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
           chmod +x tools/godot/godot
 
-          curl --fail --location --retry 3 \
-            --output tools/godot/templates.tpz \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          curl --fail --location --retry 3             --output tools/godot/templates.tpz             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
           echo "${GODOT_TEMPLATES_SHA256}  tools/godot/templates.tpz" | sha256sum --check
-          unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
-            -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          unzip -q -j tools/godot/templates.tpz templates/android_debug.apk             -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
           tools/godot/godot --version
 
-      - name: Build native host graph and run WO-005/WO-006/WO-007 regressions
+      - name: Build host graph and run native WO-001 through WO-008 regressions
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          cmake -S . -B build/host -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DSCRAPERX_BUILD_BRIDGE=ON \
-            -DSCRAPERX_WITH_JOLT=ON \
-            -DGODOTCPP_TARGET=template_release
+          cmake -S . -B build/host -G Ninja             -DCMAKE_BUILD_TYPE=Release             -DSCRAPERX_BUILD_BRIDGE=ON             -DSCRAPERX_WITH_JOLT=ON             -DGODOTCPP_TARGET=template_release
           cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
+
+          export SCRAPERX_WO008_CHECKPOINT_OUT="${GITHUB_WORKSPACE}/artifacts/wo008-checkpoint.txt"
           ctest --test-dir build/host --verbose | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
           grep -F "PASS scraperx_sim WO-005 first freight" artifacts/native-tests.log
           grep -F "PASS scraperx_sim WO-006 first structural coupling" artifacts/native-tests.log
           grep -F "PASS scraperx_sim KX-CAGE first shaft" artifacts/native-tests.log
           grep -F "PASS scraperx_sim WO-007 first process coupling" artifacts/native-tests.log
+          grep -F "PASS scraperx_sim WO-008 causal kernel" artifacts/native-tests.log
+          test -s artifacts/wo008-checkpoint.txt
 
-      - name: Run Fold-aspect Godot presentation with current native graph
+          ./build/host/scraperx_sim_tests             --verify-checkpoint artifacts/wo008-checkpoint.txt             2>&1 | tee artifacts/process-restart.log
+          grep -F "PASS scraperx_sim WO-008 process restart" artifacts/process-restart.log
+
+      - name: Run one Fold-aspect WO-008 presentation proof
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts/screenshots godot/.godot
-          printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
-            > godot/.godot/extension_list.cfg
-          grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
-            godot/.godot/extension_list.cfg
-          timeout 70s xvfb-run -a -s "-screen 0 2160x1856x24" \
-            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 1600 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo007-first-process-coupling.png" \
-            2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/wo007-first-process-coupling.png
-          grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "checkpoint=WO-007-FIRST-PROCESS" artifacts/godot-runtime.log
-          grep -F "SCRAPERX_CP004_RUNTIME_PROOF" artifacts/godot-runtime.log
-          grep -F "fold_layout=1" artifacts/godot-runtime.log
-          grep -F "approach=1" artifacts/godot-runtime.log
+          printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension'             > godot/.godot/extension_list.cfg
+          grep -F 'res://addons/scraperx_native/scraperx_native.gdextension'             godot/.godot/extension_list.cfg
 
-      - name: Cross-compile native graph for Android arm64
+          timeout 220s xvfb-run -a -s "-screen 0 2160x1856x24"             tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 20000             -- --ci "--capture-dir=${GITHUB_WORKSPACE}/artifacts/screenshots"             2>&1 | tee artifacts/godot-runtime.log
+
+          for shot in before consequence after-access; do
+            test -s "artifacts/screenshots/wo008-${shot}.png"
+          done
+          test -s artifacts/screenshots/wo008-runtime-checkpoint.txt
+
+          python3 - <<'PY'
+          import pathlib, struct
+          for path in sorted(pathlib.Path("artifacts/screenshots").glob("wo008-*.png")):
+              if path.name == "wo008-runtime-checkpoint.txt":
+                  continue
+              data = path.read_bytes()
+              assert data[:8] == b"\x89PNG\r\n\x1a\n", path
+              width, height = struct.unpack(">II", data[16:24])
+              assert (width, height) == (2160, 1856), (path, width, height)
+              print(f"FOLD_SCREENSHOT {path.name} {width}x{height}")
+          PY
+
+          grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
+          grep -F "checkpoint=WO-008-FULL-CAUSAL-CHAIN" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_WO008_SCREENSHOT_BEFORE=" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_WO008_SCREENSHOT_CONSEQUENCE=" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_WO008_SCREENSHOT_AFTER-ACCESS=" artifacts/godot-runtime.log
+          grep -F "SCRAPERX_WO008_RUNTIME_PROOF" artifacts/godot-runtime.log
+          grep -F "fold_layout=1" artifacts/godot-runtime.log
+          grep -F "before=1 consequence=1 after=1" artifacts/godot-runtime.log
+          grep -F "dog_clear=1 needle=1 sump=1 refuge=1 checkpoint_saved=1" artifacts/godot-runtime.log
+
+      - name: Cross-compile current native graph for Android arm64
         shell: bash
         run: |
           set -euo pipefail
-          cmake -S . -B build/android-arm64 -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-24 \
-            -DSCRAPERX_BUILD_BRIDGE=ON \
-            -DSCRAPERX_WITH_JOLT=ON \
-            -DGODOTCPP_TARGET=template_release
+          cmake -S . -B build/android-arm64 -G Ninja             -DCMAKE_BUILD_TYPE=Release             -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake"             -DANDROID_ABI=arm64-v8a             -DANDROID_PLATFORM=android-24             -DSCRAPERX_BUILD_BRIDGE=ON             -DSCRAPERX_WITH_JOLT=ON             -DGODOTCPP_TARGET=template_release
           cmake --build build/android-arm64 --target scraperx_native --parallel 2
           test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
-          file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
+          file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so             | tee artifacts/android-native-library.log
 
-      - name: Export WO-007 Android arm64 APK
+      - name: Export immutable WO-008 Android arm64 APK
         shell: bash
         run: |
           set -euo pipefail
           CHECKPOINT_ID="${GITHUB_SHA::12}"
-          APK_NAME="ScraperX-WO007-${CHECKPOINT_ID}-arm64.apk"
+          APK_NAME="ScraperX-WO008-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
-          tools/godot/godot --headless --path godot \
-            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
-            2>&1 | tee artifacts/godot-android-export.log
+          tools/godot/godot --headless --path godot             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}"             2>&1 | tee artifacts/godot-android-export.log
           test -s "build/apk/${APK_NAME}"
           unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
           cp "build/apk/${APK_NAME}" artifacts/apk/
           sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
-          printf 'branch=%s\ncommit=%s\napk=%s\n' \
-            "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
-            > artifacts/apk/CHECKPOINT.txt
+          printf 'branch=%s\ncommit=%s\napk=%s\n'             "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}"             > artifacts/apk/CHECKPOINT.txt
 
-      - name: Record WO-007 evidence boundaries
+      - name: Record WO-008 evidence boundaries
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/WO-007-EVIDENCE.md <<EOF
-          # WO-007 First Process Coupling Evidence
+          cat > artifacts/WO-008-EVIDENCE.md <<EOF
+          # WO-008 Full Causal Chain Evidence
 
-          Source commit: \`${GITHUB_SHA}\`
+          Source commit: `${GITHUB_SHA}`
 
           Proven by this workflow:
 
-          - WO-005 first freight regressions remain green;
-          - WO-006 seated needle and KX-CAGE shaft ride remain green;
-          - wet KX-GRATE is a hole, not a painted solid;
-          - isolate+drain empties lumped inventory and the grate becomes support;
-          - drain without isolate does not dry the grate;
-          - dump/fail restores the fall;
-          - Godot loads the current native graph and prints checkpoint \`WO-007-FIRST-PROCESS\`;
+          - the complete native regression executable remains green, including WO-005 freight, WO-006 structure, KX-CAGE and WO-007 process coupling;
+          - KX-CRATE must settle on a real Jolt receiver before finite KX-DOG travel occurs;
+          - the actual KX-DOG body clearance gates KX-NEEDLE seating;
+          - pinned-dog, unseated-needle, wet-grate, remote-control and premature-refuge falsifiers remain negative;
+          - one uninterrupted cold-kernel command stream reaches KX-REFUGE through freight -> dog -> needle -> cage -> sump -> grate;
+          - the committed native checkpoint is serialized to disk;
+          - an independent executable process reloads that checkpoint and continues authoritative simulation;
+          - malformed and truncated checkpoint files are rejected without mutating authority;
+          - one Fold-aspect runtime captures BEFORE, CONSEQUENCE and AFTER-ACCESS from current native state;
           - Android arm64 native graph cross-compiles;
-          - the APK contains \`lib/arm64-v8a/libscraperx_native.so\`;
-          - APK checksum and checkpoint identity are recorded.
+          - the APK contains `lib/arm64-v8a/libscraperx_native.so`;
+          - APK checksum and immutable source identity are recorded.
 
           Not proven here:
 
-          - Fold installation, touch ergonomics, sustained 45 FPS, or thermals;
-          - WO-008 full causal chain persist/reload;
-          - B01–B11 assembly.
+          - physical installation on a Galaxy Fold 6;
+          - real touch ergonomics on device;
+          - sustained 45 FPS, thermal behavior or battery cost on device;
+          - B01 or any content above the kernel.
           EOF
 
-      - name: Publish WO-007 Android build and evidence
+      - name: Publish immutable WO-008 build and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ScraperX-WO007-${{ github.sha }}
+          name: ScraperX-WO008-${{ github.sha }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 30

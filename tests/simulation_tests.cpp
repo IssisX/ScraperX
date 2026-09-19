@@ -1,9 +1,13 @@
 #include "sim/simulation.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <limits>
+#include <string>
 
 namespace {
 
@@ -41,10 +45,43 @@ double horizontal_dot(const scraperx::sim::Vector3 &a,
 
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
     using scraperx::sim::TraversalMode;
+
+    if (argc == 3 && std::string(argv[1]) == "--verify-checkpoint") {
+        Simulation restarted_process(InitialSpawn::ApproachGrade);
+        require(restarted_process.load_checkpoint_from_file(argv[2]),
+                "fresh process must load persisted WO-008 checkpoint");
+        require(restarted_process.advance_frame(0.20).accepted,
+                "fresh process must settle restored Jolt contacts");
+        const auto restored = restarted_process.snapshot();
+        require(restored.refuge_reached &&
+                    restored.support_entity_id == Simulation::kRefugeEntityId,
+                "fresh process must reacquire real KX-REFUGE support");
+        require(restored.dog_clear && restored.needle_seated,
+                "fresh process must restore freight-to-structure consequence");
+        require(restored.sump_isolated && restored.sump_grate_safe &&
+                    restored.sump_inventory <= 0.08,
+                "fresh process must restore process-to-support consequence");
+        require(restored.player_position.y > 21.0,
+                "fresh process must restore player at the refuge aftermath");
+        require(restarted_process.set_move_input(0.20, -0.15),
+                "fresh-process continuation input must be accepted");
+        require(restarted_process.advance_frame(0.50).accepted,
+                "fresh-process continuation must advance");
+        require(restarted_process.snapshot().tick_index > restored.tick_index,
+                "fresh process must continue authoritative time after reload");
+        std::cout << "PASS scraperx_sim WO-008 process restart: tick="
+                  << restarted_process.snapshot().tick_index
+                  << " dog=" << restarted_process.snapshot().dog_retraction_meters
+                  << " sump=" << restarted_process.snapshot().sump_inventory
+                  << '\n';
+        return EXIT_SUCCESS;
+    }
+
+    require(argc == 1, "unknown scraperx_sim_tests command line");
 
     Simulation partitioned;
     for (std::uint32_t i = 0; i < Simulation::kTickRateHz; ++i) {
@@ -828,6 +865,8 @@ int main() {
         }
     }
     require(fell_wet, "wet KX-GRATE must be a hole, not a painted solid walkway");
+    require(!wet.snapshot().refuge_reached,
+            "wet process state must keep the KX-REFUGE route physically inaccessible");
 
     Simulation live_drain(InitialSpawn::SumpLanding);
     require(live_drain.advance_frame(1.0).accepted, "live-drain settle must advance");
@@ -907,6 +946,319 @@ int main() {
     require(isolate.commit_checkpoint(), "process checkpoint must accept a grounded commit");
     require(isolate.snapshot().checkpoint_committed,
             "committed sump state must be visible on the snapshot");
+
+    Simulation blocked_needle(InitialSpawn::NeedleBlocked);
+    require(blocked_needle.advance_frame(0.75).accepted,
+            "blocked-needle falsifier must advance");
+    const auto blocked_state = blocked_needle.snapshot();
+    require(!blocked_state.dog_clear && blocked_state.dog_retraction_meters < 0.10,
+            "cold KX-DOG body must remain physically in the pocket line");
+    require(!blocked_state.needle_seated,
+            "aligned KX-NEEDLE must not seat through the uncleared KX-DOG body");
+
+    Simulation remote_dog;
+    require(remote_dog.advance_frame(1.0).accepted,
+            "remote dog falsifier settle must advance");
+    require(!remote_dog.can_operate_dog_manual_release() &&
+                !remote_dog.request_dog_manual_release(),
+            "maintenance release must reject remote Action");
+
+    // WO-008: one uninterrupted native command stream crosses all three macro
+    // domains. No phase fixture is used for the main path.
+    Simulation kernel(InitialSpawn::ApproachGrade);
+    require(kernel.advance_frame(1.0).accepted, "WO-008 kernel settle must advance");
+    const auto kernel_cold = kernel.snapshot();
+    require(!kernel_cold.dog_release_latched && !kernel_cold.dog_clear,
+            "cold KX-DOG must physically pin the structural operation");
+    require(!kernel_cold.sump_grate_safe && !kernel_cold.refuge_reached,
+            "cold process state must leave KX-REFUGE inaccessible");
+
+    auto steer_to = [](Simulation &sim,
+                       const double target_x,
+                       const double target_z,
+                       const double seconds,
+                       const double tolerance) {
+        const int budget =
+            static_cast<int>(seconds / Simulation::kFixedStepSeconds + 0.5);
+        for (int step = 0; step < budget; ++step) {
+            const auto now = sim.snapshot();
+            const double dx = target_x - now.player_position.x;
+            const double dz = target_z - now.player_position.z;
+            const double distance = std::hypot(dx, dz);
+            if (distance <= tolerance) {
+                sim.set_move_input(0.0, 0.0);
+                return true;
+            }
+            require(sim.set_move_input(dx / distance, dz / distance),
+                    "WO-008 steering input must be accepted");
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                    "WO-008 steering tick must advance");
+        }
+        sim.set_move_input(0.0, 0.0);
+        return horizontal_distance(sim.snapshot().player_position,
+                                   {target_x, sim.snapshot().player_position.y, target_z}) <=
+               tolerance + 0.35;
+    };
+
+    require(steer_to(kernel, -7.0, 49.0, 5.0, 0.90),
+            "player must physically reach KX-JIB pendant from approach grade");
+    require(kernel.can_enter_jib_station() && kernel.request_enter_jib_station(),
+            "local pendant Action must enter KX-JIB station");
+    require(kernel.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "WO-008 jib-enter tick must advance");
+    require(kernel.set_jib_brake(false), "WO-008 must release the finite jib brake");
+
+    auto drive_winch = [](Simulation &sim, const double target, const double seconds) {
+        const int budget =
+            static_cast<int>(seconds / Simulation::kFixedStepSeconds + 0.5);
+        for (int i = 0; i < budget; ++i) {
+            const double current = sim.snapshot().jib_winch_length_meters;
+            const double error = current - target;
+            if (std::abs(error) <= 0.08) {
+                sim.set_jib_hoist_input(0.0);
+                return true;
+            }
+            require(sim.set_jib_hoist_input(error > 0.0 ? 1.0 : -1.0),
+                    "WO-008 winch command must be accepted");
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                    "WO-008 winch tick must advance");
+        }
+        sim.set_jib_hoist_input(0.0);
+        return std::abs(sim.snapshot().jib_winch_length_meters - target) <= 0.16;
+    };
+    auto drive_slew = [](Simulation &sim, const double target, const double seconds) {
+        const int budget =
+            static_cast<int>(seconds / Simulation::kFixedStepSeconds + 0.5);
+        for (int i = 0; i < budget; ++i) {
+            const double error = target - sim.snapshot().jib_slew_radians;
+            if (std::abs(error) <= 0.025) {
+                sim.set_jib_slew_input(0.0);
+                return true;
+            }
+            double command = error / 0.12;
+            command = std::max(-1.0, std::min(1.0, command));
+            require(sim.set_jib_slew_input(command),
+                    "WO-008 slew command must be accepted");
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                    "WO-008 slew tick must advance");
+        }
+        sim.set_jib_slew_input(0.0);
+        return std::abs(sim.snapshot().jib_slew_radians - target) <= 0.05;
+    };
+
+    require(drive_winch(kernel, 5.40, 4.0),
+            "KX-JIB must hoist KX-CRATE clear before slewing");
+    const auto dog_pad = kernel.snapshot().dog_release_pad_position;
+    const double dog_angle = std::atan2(dog_pad.z - 48.0, dog_pad.x - (-12.0));
+    require(drive_slew(kernel, dog_angle, 5.0),
+            "KX-JIB must slew the live crate over the KX-DOG release pad");
+    require(drive_winch(kernel, 8.05, 4.0),
+            "KX-JIB must lower the real crate onto the dog receiver");
+    require(kernel.set_jib_hoist_input(0.0), "crate placement must neutralize the winch");
+    require(kernel.advance_frame(2.2).accepted,
+            "crate must settle and drive finite KX-DOG travel");
+    const auto dog_released = kernel.snapshot();
+    require(dog_released.dog_release_latched && dog_released.dog_clear,
+            "KX-CRATE pose must latch and physically retract KX-DOG");
+    require(dog_released.dog_retraction_meters > 0.70,
+            "dog consequence must be finite mechanical travel, not a solved flag");
+    require(kernel.can_release_jib_hook() && kernel.request_jib_hook_release(),
+            "stable crate on the dog receiver must permit a real sling release");
+    require(kernel.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "hook-release tick must advance");
+    require(kernel.snapshot().jib_hook_load == scraperx::sim::HookLoad::None,
+            "released KX-CRATE must remain on the receiver instead of following the hook");
+
+    require(drive_winch(kernel, 5.25, 4.0), "empty hook must hoist clear of the receiver");
+    const double needle_park_angle = -0.80;
+    require(drive_slew(kernel, needle_park_angle, 6.0),
+            "empty hook must slew to the cold KX-NEEDLE rack");
+    require(drive_winch(kernel, 8.05, 4.0),
+            "hook must lower to the real needle padeye");
+    require(kernel.advance_frame(1.0).accepted, "needle-hook acquisition must settle");
+    require(kernel.snapshot().jib_hook_load == scraperx::sim::HookLoad::Needle,
+            "the same Jolt sling must physically acquire KX-NEEDLE");
+
+    const double seat_angle = std::atan2(43.90 - 48.0, -5.15 - (-12.0));
+    require(drive_winch(kernel, 2.55, 6.0), "needle must hoist clear before placement");
+    require(drive_slew(kernel, seat_angle, 6.0), "needle must slew over KX-POCKETS");
+    require(drive_winch(kernel, 3.55, 5.0), "needle must lower into KX-POCKETS");
+    require(kernel.advance_frame(2.0).accepted, "needle seating must settle under Jolt");
+    require(kernel.snapshot().needle_seated,
+            "dog-clear geometry plus needle pose must seat KX-NEEDLE");
+    require(kernel.set_jib_hoist_input(0.0) && kernel.set_jib_slew_input(0.0),
+            "seated structural state must neutralize jib commands");
+    require(kernel.set_jib_brake(true), "jib brake must re-engage after structural placement");
+    require(kernel.request_exit_jib_station(), "player must leave the pendant physically");
+    require(kernel.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "jib-exit tick must advance");
+
+    require(steer_to(kernel, -10.60, 53.10, 4.0, 0.75),
+            "player must walk to the west stair foot");
+    require(steer_to(kernel, -10.60, 44.25, 7.0, 0.80),
+            "real west treads must carry the player to the needle landing");
+    require(kernel.snapshot().player_position.y > 4.8,
+            "stair ascent must gain real elevation before KX-NEEDLE");
+    require(steer_to(kernel, 0.55, 43.90, 5.0, 0.80),
+            "seated KX-NEEDLE must be crossed as real support");
+    require(steer_to(kernel, 9.20, 43.90, 6.0, 0.90),
+            "east treads must carry the player onto the cage-machine bay");
+    require(kernel.snapshot().player_position.y > 8.0,
+            "kernel structural traversal must reach the cage deck elevation");
+    require(steer_to(kernel, 9.50, 34.20, 5.0, 0.80),
+            "player must physically board KX-CAGE");
+    require(kernel.snapshot().support_entity_id == Simulation::kCageEntityId ||
+                kernel.can_operate_cage(),
+            "KX-CAGE must be locally operable after structural traversal");
+    require(kernel.request_cage_lever(), "local cage lever must start the finite lift");
+    require(kernel.set_move_input(0.0, 0.0), "cage ride must use zero support-relative input");
+
+    bool kernel_cage_top = false;
+    for (int i = 0; i < static_cast<int>(13.0 / Simulation::kFixedStepSeconds); ++i) {
+        require(kernel.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "kernel cage-ride tick must advance");
+        if (kernel.snapshot().cage_position.y > 21.65 &&
+            kernel.snapshot().player_position.y > 21.0) {
+            kernel_cage_top = true;
+            break;
+        }
+    }
+    require(kernel_cage_top, "needle interlock must allow the player to ride KX-CAGE upward");
+
+    require(steer_to(kernel, 6.85, 38.20, 4.0, 0.75),
+            "player must step from cage onto the upper process landing");
+    require(kernel.can_operate_sump_valve() && kernel.request_sump_valve(),
+            "local KX-SUMP isolation wheel must close the live fill edge");
+    require(kernel.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "sump isolation tick must advance");
+    require(steer_to(kernel, 12.15, 38.40, 3.0, 0.75),
+            "player must physically cross the landing to the drain cock");
+    require(kernel.can_operate_sump_drain() && kernel.request_sump_drain(),
+            "local drain cock must open only from physical reach");
+    require(kernel.advance_frame(5.0).accepted, "isolated KX-SUMP must drain finite inventory");
+    require(kernel.snapshot().sump_isolated && kernel.snapshot().sump_grate_safe,
+            "isolate+drain must make KX-GRATE authoritative support");
+
+    require(steer_to(kernel, 9.50, 52.65, 7.0, 0.90),
+            "dry KX-GRATE and far landing must lead physically to KX-REFUGE");
+    const auto at_refuge = kernel.snapshot();
+    require(at_refuge.refuge_reached &&
+                at_refuge.support_entity_id == Simulation::kRefugeEntityId,
+            "KX-REFUGE must be a real reached support, not a mission flag");
+    require(kernel.commit_checkpoint(),
+            "grounded player at KX-REFUGE must commit the solved physical/process state");
+
+    const char *checkpoint_env = std::getenv("SCRAPERX_WO008_CHECKPOINT_OUT");
+    const char *checkpoint_path =
+        checkpoint_env != nullptr && checkpoint_env[0] != '\0'
+            ? checkpoint_env
+            : "/tmp/scraperx-wo008-checkpoint.txt";
+    require(kernel.save_checkpoint_to_file(checkpoint_path),
+            "native authority must serialize the committed refuge checkpoint to disk");
+    const auto committed_kernel = kernel.snapshot();
+
+    const char *bad_magic_path = "/tmp/scraperx-wo008-bad-magic.txt";
+    {
+        std::ofstream bad(bad_magic_path, std::ios::binary | std::ios::trunc);
+        bad << "NOT_SCRAPERX 1\n";
+    }
+    Simulation reject_bad_magic(InitialSpawn::ApproachGrade);
+    const auto reject_before = reject_bad_magic.snapshot();
+    require(!reject_bad_magic.load_checkpoint_from_file(bad_magic_path),
+            "wrong checkpoint magic must be rejected");
+    const auto reject_after = reject_bad_magic.snapshot();
+    require(distance_3d(reject_before.player_position, reject_after.player_position) < 1.0e-12 &&
+                reject_before.tick_index == reject_after.tick_index,
+            "rejected checkpoint must not mutate live authority");
+
+    const char *truncated_path = "/tmp/scraperx-wo008-truncated.txt";
+    {
+        std::ofstream bad(truncated_path, std::ios::binary | std::ios::trunc);
+        bad << "SCRAPERX_WO008_CHECKPOINT 1\n42\n0 0";
+    }
+    Simulation reject_truncated(InitialSpawn::ApproachGrade);
+    require(!reject_truncated.load_checkpoint_from_file(truncated_path),
+            "truncated checkpoint must be rejected before world mutation");
+    std::remove(bad_magic_path);
+    std::remove(truncated_path);
+
+    require(kernel.set_move_input(0.0, 1.0), "post-commit mutation input must be accepted");
+    require(kernel.advance_frame(2.0).accepted, "post-commit world mutation must advance");
+    require(horizontal_distance(kernel.snapshot().player_position,
+                                committed_kernel.player_position) > 0.50,
+            "live world must be able to diverge after commit");
+
+    Simulation restarted(InitialSpawn::ApproachGrade);
+    require(restarted.load_checkpoint_from_file(checkpoint_path),
+            "fresh process state must load the native checkpoint file");
+    require(restarted.advance_frame(0.20).accepted,
+            "reloaded Jolt world must settle from persisted state");
+    const auto reload = restarted.snapshot();
+    require(reload.dog_release_latched && reload.dog_clear,
+            "reload must restore KX-DOG mechanical latch/travel");
+    require(reload.needle_seated,
+            "reload must restore KX-NEEDLE structural consequence");
+    require(reload.sump_isolated && reload.sump_grate_safe && reload.sump_inventory <= 0.08,
+            "reload must restore KX-SUMP/KX-GRATE process consequence");
+    require(horizontal_distance(reload.jib_crate_position,
+                                committed_kernel.jib_crate_position) < 0.45,
+            "reload must restore consequential KX-CRATE pose");
+    require(horizontal_distance(reload.player_position,
+                                committed_kernel.player_position) < 0.80 &&
+                reload.player_position.y > 21.0,
+            "reload must restore the player at the refuge aftermath");
+    require(reload.refuge_reached &&
+                reload.support_entity_id == Simulation::kRefugeEntityId,
+            "reload must restore real refuge support after Jolt settles");
+
+    Simulation replay_a(InitialSpawn::ApproachGrade);
+    Simulation replay_b(InitialSpawn::ApproachGrade);
+    require(replay_a.load_checkpoint_from_file(checkpoint_path) &&
+                replay_b.load_checkpoint_from_file(checkpoint_path),
+            "two fresh processes must accept the same checkpoint bytes");
+    require(replay_a.set_move_input(0.25, -0.35) &&
+                replay_b.set_move_input(0.25, -0.35),
+            "deterministic continuation command must be accepted");
+    require(replay_a.advance_frame(0.75).accepted &&
+                replay_b.advance_frame(0.75).accepted,
+            "deterministic continuation interval must advance");
+    const auto continuation_a = replay_a.snapshot();
+    const auto continuation_b = replay_b.snapshot();
+    require(distance_3d(continuation_a.player_position, continuation_b.player_position) < 1.0e-5 &&
+                horizontal_distance(continuation_a.jib_crate_position,
+                                    continuation_b.jib_crate_position) < 1.0e-5 &&
+                std::abs(continuation_a.sump_inventory -
+                         continuation_b.sump_inventory) < 1.0e-9,
+            "same checkpoint plus same command stream must continue materially equivalently");
+    if (checkpoint_env == nullptr || checkpoint_env[0] == '\0') {
+        std::remove(checkpoint_path);
+    }
+
+    // Legal sequence break: a locally reached maintenance dog handle can
+    // retract the same physical pin without KX-CRATE. It does not bypass
+    // needle seating or the downstream process gate.
+    Simulation dog_maintenance(InitialSpawn::NeedleNearLanding);
+    require(dog_maintenance.advance_frame(1.0).accepted,
+            "maintenance-route fixture must settle on the real near landing");
+    require(!dog_maintenance.snapshot().dog_release_latched &&
+                dog_maintenance.can_operate_dog_manual_release(),
+            "manual dog release must exist only at the local maintenance position");
+    require(dog_maintenance.request_dog_manual_release(),
+            "maintenance Action must drive the same dog mechanism");
+    require(dog_maintenance.advance_frame(2.0).accepted,
+            "manual dog release must consume finite travel time");
+    require(dog_maintenance.snapshot().dog_clear &&
+                dog_maintenance.snapshot().dog_retraction_meters > 0.70,
+            "sequence break must retract the real dog body, not set progression state");
+
+    std::cout << "PASS scraperx_sim WO-008 causal kernel: "
+              << "dog=" << dog_released.dog_retraction_meters
+              << " needle=" << kernel.snapshot().needle_seated
+              << " sump=" << committed_kernel.sump_inventory
+              << " refuge=" << committed_kernel.refuge_reached
+              << " reload_y=" << reload.player_position.y
+              << " tick=" << reload.tick_index
+              << " hz=" << Simulation::kTickRateHz << '\n';
 
     std::cout << "PASS scraperx_sim WO-005 first freight: "
               << "approach_z=" << approach_spawn.player_position.z

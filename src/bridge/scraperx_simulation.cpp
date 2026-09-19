@@ -3,6 +3,8 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
+#include <string>
+
 namespace {
 
 [[nodiscard]] godot::Vector3 to_godot(const scraperx::sim::Vector3 &value) {
@@ -31,12 +33,18 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("set_jib_hoist_input", "hoist"), &ScraperXSimulation::set_jib_hoist_input);
     godot::ClassDB::bind_method(godot::D_METHOD("set_jib_slew_input", "slew"), &ScraperXSimulation::set_jib_slew_input);
     godot::ClassDB::bind_method(godot::D_METHOD("set_jib_brake", "engaged"), &ScraperXSimulation::set_jib_brake);
+    godot::ClassDB::bind_method(godot::D_METHOD("can_release_jib_hook"), &ScraperXSimulation::can_release_jib_hook);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_jib_hook_release"), &ScraperXSimulation::request_jib_hook_release);
+    godot::ClassDB::bind_method(godot::D_METHOD("can_operate_dog_manual_release"), &ScraperXSimulation::can_operate_dog_manual_release);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_dog_manual_release"), &ScraperXSimulation::request_dog_manual_release);
     godot::ClassDB::bind_method(godot::D_METHOD("can_operate_cage"), &ScraperXSimulation::can_operate_cage);
     godot::ClassDB::bind_method(godot::D_METHOD("request_cage_lever"), &ScraperXSimulation::request_cage_lever);
     godot::ClassDB::bind_method(godot::D_METHOD("can_operate_sump_valve"), &ScraperXSimulation::can_operate_sump_valve);
     godot::ClassDB::bind_method(godot::D_METHOD("request_sump_valve"), &ScraperXSimulation::request_sump_valve);
     godot::ClassDB::bind_method(godot::D_METHOD("can_operate_sump_drain"), &ScraperXSimulation::can_operate_sump_drain);
     godot::ClassDB::bind_method(godot::D_METHOD("request_sump_drain"), &ScraperXSimulation::request_sump_drain);
+    godot::ClassDB::bind_method(godot::D_METHOD("save_checkpoint_to_file", "path"), &ScraperXSimulation::save_checkpoint_to_file);
+    godot::ClassDB::bind_method(godot::D_METHOD("load_checkpoint_from_file", "path"), &ScraperXSimulation::load_checkpoint_from_file);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"), &ScraperXSimulation::advance_frame);
 
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"), &ScraperXSimulation::get_tick_index);
@@ -117,6 +125,15 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("is_sump_drain_open"), &ScraperXSimulation::is_sump_drain_open);
     godot::ClassDB::bind_method(godot::D_METHOD("is_sump_grate_safe"), &ScraperXSimulation::is_sump_grate_safe);
     godot::ClassDB::bind_method(godot::D_METHOD("get_sump_inventory"), &ScraperXSimulation::get_sump_inventory);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_dog_position"), &ScraperXSimulation::get_dog_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_dog_release_pad_position"), &ScraperXSimulation::get_dog_release_pad_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_dog_manual_release_position"), &ScraperXSimulation::get_dog_manual_release_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_dog_retraction_meters"), &ScraperXSimulation::get_dog_retraction_meters);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_dog_release_latched"), &ScraperXSimulation::is_dog_release_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_dog_clear"), &ScraperXSimulation::is_dog_clear);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_jib_hook_release_available"), &ScraperXSimulation::is_jib_hook_release_available);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_refuge_position"), &ScraperXSimulation::get_refuge_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_refuge_reached"), &ScraperXSimulation::is_refuge_reached);
 }
 
 bool ScraperXSimulation::set_move_input(const double world_x, const double world_z) {
@@ -201,6 +218,22 @@ bool ScraperXSimulation::set_jib_slew_input(const double slew) {
 
 bool ScraperXSimulation::set_jib_brake(const bool engaged) {
     return simulation_.set_jib_brake(engaged);
+}
+
+bool ScraperXSimulation::can_release_jib_hook() const {
+    return simulation_.can_release_jib_hook();
+}
+
+bool ScraperXSimulation::request_jib_hook_release() {
+    return simulation_.request_jib_hook_release();
+}
+
+bool ScraperXSimulation::can_operate_dog_manual_release() const {
+    return simulation_.can_operate_dog_manual_release();
+}
+
+bool ScraperXSimulation::request_dog_manual_release() {
+    return simulation_.request_dog_manual_release();
 }
 
 bool ScraperXSimulation::can_operate_cage() const {
@@ -511,6 +544,16 @@ bool ScraperXSimulation::request_sump_drain() {
     return accepted;
 }
 
+bool ScraperXSimulation::save_checkpoint_to_file(const godot::String &path) const {
+    const std::string native_path(path.utf8().get_data());
+    return simulation_.save_checkpoint_to_file(native_path);
+}
+
+bool ScraperXSimulation::load_checkpoint_from_file(const godot::String &path) {
+    const std::string native_path(path.utf8().get_data());
+    return simulation_.load_checkpoint_from_file(native_path);
+}
+
 godot::Vector3 ScraperXSimulation::get_sump_grate_position() const {
     return to_godot(simulation_.snapshot().sump_grate_position);
 }
@@ -541,6 +584,42 @@ bool ScraperXSimulation::is_sump_grate_safe() const {
 
 double ScraperXSimulation::get_sump_inventory() const {
     return simulation_.snapshot().sump_inventory;
+}
+
+godot::Vector3 ScraperXSimulation::get_dog_position() const {
+    return to_godot(simulation_.snapshot().dog_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_dog_release_pad_position() const {
+    return to_godot(simulation_.snapshot().dog_release_pad_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_dog_manual_release_position() const {
+    return to_godot(simulation_.snapshot().dog_manual_release_position);
+}
+
+double ScraperXSimulation::get_dog_retraction_meters() const {
+    return simulation_.snapshot().dog_retraction_meters;
+}
+
+bool ScraperXSimulation::is_dog_release_latched() const {
+    return simulation_.snapshot().dog_release_latched;
+}
+
+bool ScraperXSimulation::is_dog_clear() const {
+    return simulation_.snapshot().dog_clear;
+}
+
+bool ScraperXSimulation::is_jib_hook_release_available() const {
+    return simulation_.snapshot().jib_hook_release_available;
+}
+
+godot::Vector3 ScraperXSimulation::get_refuge_position() const {
+    return to_godot(simulation_.snapshot().refuge_position);
+}
+
+bool ScraperXSimulation::is_refuge_reached() const {
+    return simulation_.snapshot().refuge_reached;
 }
 
 } // namespace scraperx::bridge

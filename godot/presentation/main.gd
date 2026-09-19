@@ -13,6 +13,8 @@ const TRAVERSAL_HANG := 3
 
 var _native: Object
 var _capture_path := ""
+var _capture_dir := ""
+var _capture_label := ""
 var _capture_scheduled := false
 var _ci_mode := false
 var _yaw := 0.0
@@ -32,6 +34,7 @@ var _jib_hook_mesh: MeshInstance3D
 var _jib_crate_mesh: MeshInstance3D
 var _jib_cable_mesh: MeshInstance3D
 var _needle_mesh: MeshInstance3D
+var _dog_mesh: MeshInstance3D
 var _cage_mesh: MeshInstance3D
 var _cage_gate_mesh: MeshInstance3D
 var _cage_lever_mesh: MeshInstance3D
@@ -49,15 +52,12 @@ var _slew_left_held := false
 var _slew_right_held := false
 
 var _fold_layout_observed := false
-var _ci_initial_player_position := Vector3.ZERO
-var _ci_approach_observed := false
-var _ci_machine_requested := false
-var _ci_load_start := Vector3.ZERO
-var _ci_load_moved_observed := false
-var _ci_rocker_observed := false
-var _ci_vault_observed := false
-var _ci_mantle_observed := false
 var _ci_phase := 0
+var _ci_phase_ticks := 0
+var _ci_before_done := false
+var _ci_consequence_done := false
+var _ci_after_done := false
+var _ci_checkpoint_saved := false
 
 @onready var _camera: Camera3D = $Camera
 @onready var _status: Label = $HUD/TopLeft/Status
@@ -77,6 +77,8 @@ func _ready() -> void:
 			_ci_mode = true
 		elif argument.begins_with("--capture="):
 			_capture_path = argument.trim_prefix("--capture=")
+		elif argument.begins_with("--capture-dir="):
+			_capture_dir = argument.trim_prefix("--capture-dir=")
 
 	if _ci_mode:
 		_pitch = 0.30
@@ -98,8 +100,7 @@ func _ready() -> void:
 		_fail_native("SCRAPERX_EXTENSION_INSTANTIATION_FAILED", 20)
 		return
 
-	_ci_initial_player_position = _native.get_player_position()
-	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=WO-007-FIRST-PROCESS")
+	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim checkpoint=WO-008-FULL-CAUSAL-CHAIN")
 	_render_snapshot()
 
 func _process(delta: float) -> void:
@@ -119,7 +120,8 @@ func _process(delta: float) -> void:
 		_fail_native("SCRAPERX_MOVE_INPUT_REJECTED", 21)
 		return
 
-	_apply_jib_pendant_commands()
+	if not _ci_mode:
+		_apply_jib_pendant_commands()
 
 	var steps_advanced := int(_native.advance_frame(delta))
 	if steps_advanced < 0:
@@ -130,24 +132,11 @@ func _process(delta: float) -> void:
 	_animate_weather(float(_native.get_simulation_time_seconds()))
 
 	if _ci_mode:
+		_ci_phase_ticks += steps_advanced
 		_update_ci_proof()
-
-	var proof_ready := (
-		_fold_layout_observed
-		and _ci_approach_observed
-		and _ci_machine_requested
-		and _ci_load_moved_observed
-		and _ci_rocker_observed
-		and _ci_vault_observed
-		and _ci_mantle_observed
-	)
-
-	if proof_ready and not _capture_path.is_empty() and not _capture_scheduled:
+	elif not _capture_path.is_empty() and not _capture_scheduled:
 		_capture_scheduled = true
 		RenderingServer.frame_post_draw.connect(_capture_frame, CONNECT_ONE_SHOT)
-	elif proof_ready and _ci_mode and _capture_path.is_empty():
-		_print_runtime_proof()
-		get_tree().quit(0)
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
@@ -229,53 +218,224 @@ func _apply_viewport_composition() -> void:
 	_camera.near = 0.07
 	_camera.far = 1600.0
 
-func _ci_world_movement() -> Vector2:
-	if _ci_phase == 0:
-		if bool(_native.can_operate_hopper()):
-			_ci_load_start = _native.get_hopper_load_position()
-			if not bool(_native.request_hopper_release()):
-				_fail_native("SCRAPERX_HOPPER_RELEASE_REJECTED_IN_RANGE", 24)
-				return Vector2.ZERO
-			_ci_machine_requested = true
-			_ci_phase = 1
-			return Vector2.ZERO
-		return _movement_toward(_native.get_hopper_control_position())
+func _ci_set_phase(next_phase: int) -> void:
+	_ci_phase = next_phase
+	_ci_phase_ticks = 0
 
-	if _ci_phase == 1:
-		if bool(_native.has_impact_rocker_been_struck()):
-			_ci_rocker_observed = true
-			_ci_phase = 2
+func _ci_drive_winch(target: float) -> bool:
+	var current := float(_native.get_jib_winch_length_meters())
+	var error := current - target
+	if absf(error) <= 0.08:
+		if not bool(_native.set_jib_hoist_input(0.0)):
+			_fail_native("SCRAPERX_WO008_WINCH_NEUTRAL_REJECTED", 31)
+		return true
+	if not bool(_native.set_jib_hoist_input(1.0 if error > 0.0 else -1.0)):
+		_fail_native("SCRAPERX_WO008_WINCH_REJECTED", 31)
+	return false
+
+func _ci_drive_slew(target: float) -> bool:
+	var error := target - float(_native.get_jib_slew_radians())
+	if absf(error) <= 0.025:
+		if not bool(_native.set_jib_slew_input(0.0)):
+			_fail_native("SCRAPERX_WO008_SLEW_NEUTRAL_REJECTED", 32)
+		return true
+	var command := clampf(error / 0.12, -1.0, 1.0)
+	if not bool(_native.set_jib_slew_input(command)):
+		_fail_native("SCRAPERX_WO008_SLEW_REJECTED", 32)
+	return false
+
+func _queue_ci_capture(label: String) -> void:
+	if _capture_scheduled:
+		return
+	if _capture_dir.is_empty():
+		_fail_native("SCRAPERX_WO008_CAPTURE_DIR_MISSING", 33)
+		return
+	_capture_label = label
+	_capture_scheduled = true
+	RenderingServer.frame_post_draw.connect(_capture_ci_frame, CONNECT_ONE_SHOT)
+
+func _ci_world_movement() -> Vector2:
+	if _ci_phase_ticks > 3600:
+		_fail_native("SCRAPERX_WO008_PHASE_TIMEOUT_%d" % _ci_phase, 34)
 		return Vector2.ZERO
 
-	if _ci_phase == 2:
-		if bool(_native.can_traverse()) and int(_native.get_traversal_candidate_mode()) == TRAVERSAL_VAULT:
-			if not bool(_native.request_traversal()):
-				_fail_native("SCRAPERX_CI_VAULT_REJECTED", 25)
-				return Vector2.ZERO
-			_ci_phase = 3
+	if _ci_phase == 0:
+		if not _ci_before_done:
+			_queue_ci_capture("BEFORE")
 			return Vector2.ZERO
-		return Vector2(0.0, -1.0)
+		_ci_set_phase(1)
+
+	if _ci_phase == 1:
+		if bool(_native.can_enter_jib_station()):
+			if not bool(_native.request_enter_jib_station()):
+				_fail_native("SCRAPERX_WO008_JIB_ENTER_REJECTED", 35)
+				return Vector2.ZERO
+			_ci_set_phase(2)
+			return Vector2.ZERO
+		return _movement_toward(_native.get_jib_pendant_position())
+
+	if _ci_phase == 2:
+		if bool(_native.is_jib_station_occupied()):
+			if not bool(_native.set_jib_brake(false)):
+				_fail_native("SCRAPERX_WO008_BRAKE_RELEASE_REJECTED", 36)
+				return Vector2.ZERO
+			_ci_set_phase(3)
+		return Vector2.ZERO
 
 	if _ci_phase == 3:
-		if int(_native.get_traversal_mode()) == TRAVERSAL_VAULT:
-			_ci_vault_observed = true
-		if _ci_vault_observed and int(_native.get_traversal_mode()) == TRAVERSAL_NONE:
-			_ci_phase = 4
+		if _ci_drive_winch(5.40):
+			_ci_set_phase(4)
 		return Vector2.ZERO
 
 	if _ci_phase == 4:
-		if bool(_native.can_traverse()) and int(_native.get_traversal_candidate_mode()) == TRAVERSAL_MANTLE:
-			if not bool(_native.request_traversal()):
-				_fail_native("SCRAPERX_CI_MANTLE_REJECTED", 26)
-				return Vector2.ZERO
-			_ci_phase = 5
-			return Vector2.ZERO
-		return Vector2(0.0, -1.0)
+		var pad: Vector3 = _native.get_dog_release_pad_position()
+		var target := atan2(pad.z - 48.0, pad.x - (-12.0))
+		if _ci_drive_slew(target):
+			_ci_set_phase(5)
+		return Vector2.ZERO
 
 	if _ci_phase == 5:
-		if int(_native.get_traversal_mode()) == TRAVERSAL_MANTLE:
-			_ci_mantle_observed = true
+		if _ci_drive_winch(8.05):
+			_ci_set_phase(6)
 		return Vector2.ZERO
+
+	if _ci_phase == 6:
+		_native.set_jib_hoist_input(0.0)
+		if bool(_native.is_dog_clear()):
+			if not bool(_native.can_release_jib_hook()) or not bool(_native.request_jib_hook_release()):
+				_fail_native("SCRAPERX_WO008_HOOK_RELEASE_REJECTED", 37)
+				return Vector2.ZERO
+			_ci_set_phase(7)
+		return Vector2.ZERO
+
+	if _ci_phase == 7:
+		if _ci_drive_winch(5.25):
+			_ci_set_phase(8)
+		return Vector2.ZERO
+
+	if _ci_phase == 8:
+		if _ci_drive_slew(-0.80):
+			_ci_set_phase(9)
+		return Vector2.ZERO
+
+	if _ci_phase == 9:
+		if _ci_drive_winch(8.05):
+			if int(_native.get_jib_hook_load()) == 2:
+				_ci_set_phase(10)
+		return Vector2.ZERO
+
+	if _ci_phase == 10:
+		if _ci_drive_winch(2.55):
+			_ci_set_phase(11)
+		return Vector2.ZERO
+
+	if _ci_phase == 11:
+		var seat_target := atan2(43.90 - 48.0, -5.15 - (-12.0))
+		if _ci_drive_slew(seat_target):
+			_ci_set_phase(12)
+		return Vector2.ZERO
+
+	if _ci_phase == 12:
+		if _ci_drive_winch(3.55) and bool(_native.is_needle_seated()):
+			_native.set_jib_hoist_input(0.0)
+			_native.set_jib_slew_input(0.0)
+			_native.set_jib_brake(true)
+			if not bool(_native.request_exit_jib_station()):
+				_fail_native("SCRAPERX_WO008_JIB_EXIT_REJECTED", 38)
+				return Vector2.ZERO
+			_ci_set_phase(13)
+		return Vector2.ZERO
+
+	if _ci_phase == 13:
+		var target := Vector3(-10.60, 0.0, 53.10)
+		if _movement_toward(target).length() < 0.01:
+			_ci_set_phase(14)
+			return Vector2.ZERO
+		return _movement_toward(target)
+
+	if _ci_phase == 14:
+		var target := Vector3(-10.60, 0.0, 44.25)
+		if _native.get_player_position().y > 4.8 and Vector2(
+			target.x - _native.get_player_position().x,
+			target.z - _native.get_player_position().z
+		).length() < 0.85:
+			_ci_set_phase(15)
+			return Vector2.ZERO
+		return _movement_toward(target)
+
+	if _ci_phase == 15:
+		var target := Vector3(0.55, 0.0, 43.90)
+		if _native.get_player_position().x > 0.0:
+			_ci_set_phase(16)
+			return Vector2.ZERO
+		return _movement_toward(target)
+
+	if _ci_phase == 16:
+		var target := Vector3(9.20, 0.0, 43.90)
+		if _native.get_player_position().y > 8.0 and _native.get_player_position().x > 8.5:
+			_ci_set_phase(17)
+			return Vector2.ZERO
+		return _movement_toward(target)
+
+	if _ci_phase == 17:
+		if bool(_native.can_operate_cage()):
+			if not bool(_native.request_cage_lever()):
+				_fail_native("SCRAPERX_WO008_CAGE_LEVER_REJECTED", 39)
+				return Vector2.ZERO
+			_ci_set_phase(18)
+			return Vector2.ZERO
+		return _movement_toward(_native.get_cage_position())
+
+	if _ci_phase == 18:
+		if _native.get_cage_position().y > 21.65 and _native.get_player_position().y > 21.0:
+			_ci_set_phase(19)
+		return Vector2.ZERO
+
+	if _ci_phase == 19:
+		if bool(_native.can_operate_sump_valve()):
+			if not bool(_native.request_sump_valve()):
+				_fail_native("SCRAPERX_WO008_SUMP_ISOLATE_REJECTED", 40)
+				return Vector2.ZERO
+			_ci_set_phase(20)
+			return Vector2.ZERO
+		return _movement_toward(_native.get_sump_valve_position())
+
+	if _ci_phase == 20:
+		if bool(_native.can_operate_sump_drain()):
+			if not bool(_native.request_sump_drain()):
+				_fail_native("SCRAPERX_WO008_SUMP_DRAIN_REJECTED", 41)
+				return Vector2.ZERO
+			_ci_set_phase(21)
+			return Vector2.ZERO
+		return _movement_toward(_native.get_sump_drain_position())
+
+	if _ci_phase == 21:
+		if bool(_native.is_sump_grate_safe()):
+			if not _ci_consequence_done:
+				_yaw = PI
+				_pitch = 0.08
+				_queue_ci_capture("CONSEQUENCE")
+				return Vector2.ZERO
+			_ci_set_phase(22)
+		return Vector2.ZERO
+
+	if _ci_phase == 22:
+		var refuge: Vector3 = _native.get_refuge_position()
+		if bool(_native.is_refuge_reached()):
+			if not bool(_native.commit_checkpoint()):
+				_fail_native("SCRAPERX_WO008_REFUGE_COMMIT_REJECTED", 42)
+				return Vector2.ZERO
+			var checkpoint_path := _capture_dir.path_join("wo008-runtime-checkpoint.txt")
+			if not bool(_native.save_checkpoint_to_file(checkpoint_path)):
+				_fail_native("SCRAPERX_WO008_RUNTIME_SAVE_FAILED", 43)
+				return Vector2.ZERO
+			_ci_checkpoint_saved = true
+			_yaw = PI
+			_pitch = 0.10
+			_queue_ci_capture("AFTER-ACCESS")
+			_ci_set_phase(23)
+			return Vector2.ZERO
+		return _movement_toward(refuge)
 
 	return Vector2.ZERO
 
@@ -287,20 +447,9 @@ func _movement_toward(target: Vector3) -> Vector2:
 	return delta.normalized()
 
 func _update_ci_proof() -> void:
-	var player: Vector3 = _native.get_player_position()
-	var approach_distance := Vector2(
-		player.x - _ci_initial_player_position.x,
-		player.z - _ci_initial_player_position.z
-	).length()
-	if approach_distance >= APPROACH_PROOF_METERS:
-		_ci_approach_observed = true
-
-	if _ci_machine_requested:
-		var load_now: Vector3 = _native.get_hopper_load_position()
-		if load_now.distance_to(_ci_load_start) > 1.0 and bool(_native.has_hopper_load_moved()):
-			_ci_load_moved_observed = true
-		if bool(_native.has_impact_rocker_been_struck()):
-			_ci_rocker_observed = true
+	if _ci_phase == 23 and _ci_after_done:
+		_print_runtime_proof()
+		get_tree().quit(0)
 
 func _request_jump() -> void:
 	if _native == null:
@@ -317,6 +466,9 @@ func _request_context_action() -> void:
 	if bool(_native.can_traverse()):
 		_native.request_traversal()
 		return
+	if bool(_native.is_jib_station_occupied()) and _native.has_method("can_release_jib_hook") and bool(_native.can_release_jib_hook()):
+		_native.request_jib_hook_release()
+		return
 	if bool(_native.is_jib_station_occupied()):
 		_native.request_exit_jib_station()
 		_raise_held = false
@@ -326,6 +478,9 @@ func _request_context_action() -> void:
 		return
 	if bool(_native.can_enter_jib_station()):
 		_native.request_enter_jib_station()
+		return
+	if _native.has_method("can_operate_dog_manual_release") and bool(_native.can_operate_dog_manual_release()):
+		_native.request_dog_manual_release()
 		return
 	if _native.has_method("can_operate_cage") and bool(_native.can_operate_cage()):
 		_native.request_cage_lever()
@@ -399,6 +554,10 @@ func _render_snapshot() -> void:
 	var sump_drain_open := _native.has_method("is_sump_drain_open") and bool(_native.is_sump_drain_open())
 	var sump_safe := _native.has_method("is_sump_grate_safe") and bool(_native.is_sump_grate_safe())
 	var sump_inventory := float(_native.get_sump_inventory()) if _native.has_method("get_sump_inventory") else 1.0
+	var dog_clear := _native.has_method("is_dog_clear") and bool(_native.is_dog_clear())
+	var dog_manual := _native.has_method("can_operate_dog_manual_release") and bool(_native.can_operate_dog_manual_release())
+	var hook_release := _native.has_method("can_release_jib_hook") and bool(_native.can_release_jib_hook())
+	var refuge_reached := _native.has_method("is_refuge_reached") and bool(_native.is_refuge_reached())
 
 	_camera.position = position + EYE_OFFSET
 	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
@@ -409,13 +568,13 @@ func _render_snapshot() -> void:
 		support,
 		_traversal_name(traversal_mode),
 	]
-	_machine_value.text = "SUMP  %s  CAGE %s  NEEDLE %s" % [
-		"SAFE" if sump_safe else ("ISO" if sump_isolated else ("DRAIN" if sump_drain_open else "WET")),
-		"STALL" if cage_stall else ("LIMIT" if cage_limit else ("HOLD" if cage_brake else "LIVE")),
+	_machine_value.text = "DOG %s  NEEDLE %s  SUMP %s" % [
+		"CLEAR" if dog_clear else "PINNED",
 		"SEATED" if needle_seated else "FREE",
+		"SAFE" if sump_safe else ("ISO" if sump_isolated else ("DRAIN" if sump_drain_open else "WET")),
 	]
 	_tick_value.text = "90 HZ NATIVE  /  %08d" % int(_native.get_tick_index())
-	_boundary_value.text = "KX-SUMP / GRATE HAZARD / LOCAL VALVE"
+	_boundary_value.text = "WO-008 KERNEL / KX-REFUGE %s" % ("REACHED" if refuge_reached else "AHEAD")
 
 	var context_visible := false
 	if traversal_mode == TRAVERSAL_HANG:
@@ -424,11 +583,17 @@ func _render_snapshot() -> void:
 	elif traversal_available:
 		_action_button.text = _traversal_name(traversal_candidate)
 		context_visible = true
+	elif jib_occupied and hook_release:
+		_action_button.text = "RELEASE LOAD"
+		context_visible = true
 	elif jib_occupied:
 		_action_button.text = "EXIT JIB"
 		context_visible = true
 	elif jib_enter:
 		_action_button.text = "ENTER JIB"
+		context_visible = true
+	elif dog_manual:
+		_action_button.text = "RETRACT DOG"
 		context_visible = true
 	elif cage_lever:
 		_action_button.text = "PULL LEVER"
@@ -456,8 +621,14 @@ func _render_snapshot() -> void:
 		_status.text = "LEDGE HELD / JUMP TO CLIMB / ACTION TO DROP"
 	elif traversal_available:
 		_status.text = "%s AVAILABLE / REAL GEOMETRY IN REACH" % _traversal_name(traversal_candidate)
+	elif refuge_reached:
+		_status.text = "KX-REFUGE / AUTHORITATIVE ROUTE COMPLETE / CHECKPOINT READY"
+	elif dog_manual and not dog_clear:
+		_status.text = "KX-DOG MAINTENANCE HANDLE / SAME PHYSICAL PIN"
 	elif jib_occupied:
-		if jib_stall:
+		if hook_release:
+			_status.text = "KX-CRATE SETTLED ON DOG RECEIVER / RELEASE SLING"
+		elif jib_stall:
 			_status.text = "PENDANT LIVE / ACTUATOR STALLED / BRAKE OR SWL"
 		elif jib_brake:
 			_status.text = "PENDANT LIVE / BRAKE HOLDING / RELEASE TO WORK"
@@ -511,6 +682,7 @@ func _render_snapshot() -> void:
 		_impact_rocker_mesh.rotation = Vector3(float(_native.get_impact_rocker_angle_radians()), 0.0, 0.0)
 	_sync_jib_meshes()
 	_sync_needle_mesh()
+	_sync_dog_mesh()
 	_sync_cage_meshes()
 	_sync_sump_meshes(sump_isolated, sump_drain_open, sump_inventory)
 	if _pendant != null:
@@ -743,6 +915,16 @@ func _build_needle_bay(mill_scale: Material, oxidized_steel: Material, weathered
 	_add_box("KxApronBrace", Vector3(0.55, 5.4, 0.55), Vector3(-13.4, 2.7, 44.2), oxidized_steel)
 	_add_box("KxApronBrace2", Vector3(0.55, 5.4, 0.55), Vector3(-7.8, 2.7, 44.2), oxidized_steel)
 	_add_box("KxPocketPaint", Vector3(0.20, 0.12, 0.46), Vector3(-8.75, 5.28, 43.90), chipped_orange)
+	_add_box("KxDogReceiver", Vector3(1.80, 0.20, 1.80), Vector3(-6.426, 0.10, 53.739), mill_scale)
+	_add_box("KxDogReceiverWear", Vector3(1.45, 0.03, 1.45), Vector3(-6.426, 0.215, 53.739), chipped_orange)
+	_dog_mesh = _add_box("KxDogPin", Vector3(0.48, 0.48, 0.44), Vector3(-5.15, 5.22, 43.90), chipped_orange)
+	_add_box("KxDogGuide", Vector3(0.80, 0.78, 1.80), Vector3(-5.15, 5.22, 44.45), mill_scale)
+	_add_box("KxDogManualHandle", Vector3(0.12, 0.90, 0.12), Vector3(-10.60, 5.72, 42.75), faded_yellow).rotation.z = -0.55
+
+func _sync_dog_mesh() -> void:
+	if _native == null or _dog_mesh == null or not _native.has_method("get_dog_position"):
+		return
+	_dog_mesh.position = _native.get_dog_position()
 
 func _build_cage_house(mill_scale: Material, oxidized_steel: Material, galvanized: Material, faded_yellow: Material, chipped_orange: Material, weathered_timber: Material) -> void:
 	# Open well: rails and guides, not a 280 m concrete plug.
@@ -786,6 +968,9 @@ func _build_sump_bay(mill_scale: Material, oxidized_steel: Material, dark_concre
 	_add_box("SumpFarEdge", Vector3(6.1, 0.08, 0.14), Vector3(9.50, 22.02, 45.20), faded_yellow)
 	_add_box("SumpFarRailL", Vector3(0.10, 1.05, 4.4), Vector3(6.55, 22.52, 47.50), faded_yellow)
 	_add_box("SumpFarRailR", Vector3(0.10, 1.05, 4.4), Vector3(12.45, 22.52, 47.50), faded_yellow)
+	_add_box("KxRefugeDeck", Vector3(6.00, 0.36, 5.10), Vector3(9.50, 21.82, 52.65), weathered_timber)
+	_add_box("KxRefugeBackstop", Vector3(6.20, 2.40, 0.22), Vector3(9.50, 23.02, 55.15), oxidized_steel)
+	_add_box("KxRefugeMark", Vector3(2.00, 0.05, 1.00), Vector3(9.50, 22.03, 52.65), faded_yellow)
 	_add_box("BrokenSlabL", Vector3(1.8, 0.16, 1.1), Vector3(6.70, 21.70, 40.90), mill_scale).rotation.z = 0.18
 	_add_box("BrokenSlabR", Vector3(1.6, 0.14, 0.9), Vector3(12.20, 21.68, 40.70), oxidized_steel).rotation.z = -0.22
 	_add_box("HangingPlate", Vector3(2.4, 0.08, 1.6), Vector3(11.6, 20.4, 43.6), mill_scale).rotation = Vector3(0.35, 0.2, -0.4)
@@ -1031,13 +1216,34 @@ func _fail_native(reason: String, exit_code: int) -> void:
 
 func _print_runtime_proof() -> void:
 	var position: Vector3 = _native.get_player_position()
-	var load_position: Vector3 = _native.get_hopper_load_position()
-	var rocker_omega: Vector3 = _native.get_impact_rocker_angular_velocity()
 	var viewport := get_viewport().get_visible_rect().size
 	var aspect := viewport.x / viewport.y if viewport.y > 0.0 else 0.0
-	print("SCRAPERX_CP004_RUNTIME_PROOF ticks=%d viewport=(%.0f,%.0f) aspect=%.4f fold_layout=%d approach=%d interaction=%d load_moved=%d rocker=%d vault=%d mantle=%d player=(%.3f,%.3f,%.3f) load=(%.3f,%.3f,%.3f) rocker_omega_x=%.3f" % [
-		_native.get_tick_index(), viewport.x, viewport.y, aspect, int(_fold_layout_observed), int(_ci_approach_observed), int(_ci_machine_requested), int(_ci_load_moved_observed), int(_ci_rocker_observed), int(_ci_vault_observed), int(_ci_mantle_observed), position.x, position.y, position.z, load_position.x, load_position.y, load_position.z, rocker_omega.x,
+	print("SCRAPERX_WO008_RUNTIME_PROOF ticks=%d viewport=(%.0f,%.0f) aspect=%.4f fold_layout=%d before=%d consequence=%d after=%d dog_clear=%d needle=%d sump=%d refuge=%d checkpoint_saved=%d player=(%.3f,%.3f,%.3f)" % [
+		_native.get_tick_index(), viewport.x, viewport.y, aspect, int(_fold_layout_observed),
+		int(_ci_before_done), int(_ci_consequence_done), int(_ci_after_done),
+		int(bool(_native.is_dog_clear())), int(bool(_native.is_needle_seated())),
+		int(bool(_native.is_sump_grate_safe())), int(bool(_native.is_refuge_reached())),
+		int(_ci_checkpoint_saved), position.x, position.y, position.z,
 	])
+
+func _capture_ci_frame() -> void:
+	DirAccess.make_dir_recursive_absolute(_capture_dir)
+	var safe_label := _capture_label.to_lower().replace(" ", "-")
+	var path := _capture_dir.path_join("wo008-%s.png" % safe_label)
+	var image := get_viewport().get_texture().get_image()
+	var error := image.save_png(path)
+	if error != OK:
+		_fail_native("SCRAPERX_WO008_SCREENSHOT_FAILED_%s_%d" % [_capture_label, error], 44)
+		return
+	print("SCRAPERX_WO008_SCREENSHOT_%s=%s" % [_capture_label, path])
+	if _capture_label == "BEFORE":
+		_ci_before_done = true
+	elif _capture_label == "CONSEQUENCE":
+		_ci_consequence_done = true
+	elif _capture_label == "AFTER-ACCESS":
+		_ci_after_done = true
+	_capture_label = ""
+	_capture_scheduled = false
 
 func _capture_frame() -> void:
 	DirAccess.make_dir_recursive_absolute(_capture_path.get_base_dir())

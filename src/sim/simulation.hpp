@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 namespace scraperx::sim {
 
@@ -29,6 +30,7 @@ enum class InitialSpawn : std::uint8_t {
     CageSeated = 14,
     SumpLanding = 15,
     SumpDrained = 16,
+    NeedleBlocked = 17,
 };
 
 enum class TraversalMode : std::uint8_t {
@@ -140,6 +142,19 @@ struct Snapshot final {
     bool sump_drain_open = false;
     bool sump_grate_safe = false;
     double sump_inventory = 1.0;
+
+    // WO-008 kernel coupling. KX-DOG is a real finite-travel latch/pin and
+    // KX-REFUGE is real support beyond the process-gated grate.
+    Vector3 dog_position{};
+    Vector3 dog_release_pad_position{};
+    Vector3 dog_manual_release_position{};
+    double dog_retraction_meters = 0.0;
+    bool dog_release_latched = false;
+    bool dog_clear = false;
+    bool dog_manual_release_available = false;
+    bool jib_hook_release_available = false;
+    Vector3 refuge_position{};
+    bool refuge_reached = false;
 };
 
 struct AdvanceResult final {
@@ -187,6 +202,9 @@ public:
     static constexpr std::uint32_t kNeedleEastStairCount = 9;
     static constexpr std::uint64_t kSumpFloorEntityId = 54;
     static constexpr std::uint64_t kSumpFarLandingEntityId = 55;
+    static constexpr std::uint64_t kDogEntityId = 56;
+    static constexpr std::uint64_t kRefugeEntityId = 57;
+    static constexpr std::uint64_t kDogReceiverEntityId = 58;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ApproachGrade);
     ~Simulation();
@@ -211,12 +229,22 @@ public:
     [[nodiscard]] bool set_jib_hoist_input(double hoist) noexcept;
     [[nodiscard]] bool set_jib_slew_input(double slew) noexcept;
     [[nodiscard]] bool set_jib_brake(bool engaged) noexcept;
+    [[nodiscard]] bool can_release_jib_hook() const noexcept;
+    [[nodiscard]] bool request_jib_hook_release() noexcept;
+    [[nodiscard]] bool can_operate_dog_manual_release() const noexcept;
+    [[nodiscard]] bool request_dog_manual_release() noexcept;
     [[nodiscard]] bool can_operate_cage() const noexcept;
     [[nodiscard]] bool request_cage_lever() noexcept;
     [[nodiscard]] bool can_operate_sump_valve() const noexcept;
     [[nodiscard]] bool request_sump_valve() noexcept;
     [[nodiscard]] bool can_operate_sump_drain() const noexcept;
     [[nodiscard]] bool request_sump_drain() noexcept;
+
+    // Native persistence authority. These methods serialize/restore the
+    // committed checkpoint, not a Godot-owned approximation of live state.
+    [[nodiscard]] bool save_checkpoint_to_file(const std::string &path) const noexcept;
+    [[nodiscard]] bool load_checkpoint_from_file(const std::string &path) noexcept;
+
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -241,6 +269,8 @@ private:
     double jib_slew_input_ = 0.0;
     bool jib_brake_engaged_ = true;
     bool jib_brake_command_valid_ = false;
+    bool jib_hook_release_requested_ = false;
+    bool dog_manual_release_requested_ = false;
     bool cage_lever_requested_ = false;
     bool sump_valve_requested_ = false;
     bool sump_drain_requested_ = false;

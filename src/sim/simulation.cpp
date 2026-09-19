@@ -26,6 +26,9 @@
 #include <cmath>
 #include <limits>
 #include <mutex>
+#include <fstream>
+#include <iomanip>
+#include <string>
 
 namespace {
 
@@ -102,8 +105,35 @@ constexpr float kNeedleHalfLength = 3.60F;
 constexpr float kNeedleHalfHeight = 0.18F;
 constexpr float kNeedleHalfWidth = 0.28F;
 constexpr double kNeedleMassKilograms = 620.0;
-constexpr double kNeedleParkX = -18.0;
-constexpr double kNeedleParkZ = 40.0;
+// The cold KX-NEEDLE rack lies on the real eight-metre jib arc, so the
+// canonical kernel can be solved continuously without a fixture teleport.
+constexpr double kNeedleParkX = -6.426;
+constexpr double kNeedleParkZ = 42.261;
+
+constexpr double kDogReleasePadX = -6.426;
+constexpr double kDogReleasePadY = 0.36;
+constexpr double kDogReleasePadZ = 53.739;
+constexpr double kDogReleasePadRadiusMeters = 0.95;
+constexpr double kDogPinX = kNeedleSeatX;
+constexpr double kDogPinY = kNeedleSeatY;
+constexpr double kDogPinZ = kNeedleSeatZ;
+constexpr double kDogRetractDistanceMeters = 1.10;
+constexpr double kDogClearanceMeters = 0.72;
+constexpr double kDogRetractSpeedMetersPerSecond = 0.80;
+constexpr double kDogManualReleaseX = kNeedleNearLandingX;
+constexpr double kDogManualReleaseY = 5.72;
+constexpr double kDogManualReleaseZ = 42.75;
+constexpr double kDogManualReleaseRadiusMeters = 2.25;
+constexpr float kDogHalfX = 0.24F;
+constexpr float kDogHalfY = 0.24F;
+constexpr float kDogHalfZ = 0.22F;
+
+constexpr double kRefugeX = 9.50;
+constexpr double kRefugeY = 21.82;
+constexpr double kRefugeZ = 52.65;
+constexpr float kRefugeHalfX = 3.00F;
+constexpr float kRefugeHalfY = 0.18F;
+constexpr float kRefugeHalfZ = 2.55F;
 constexpr double kNeedleNearLandingX = -10.60;
 constexpr double kNeedleNearLandingY = 5.20;
 constexpr double kNeedleNearLandingZ = 43.90;
@@ -489,6 +519,7 @@ private:
         return {kJibPendantX, 3.0, kJibPendantZ};
     case scraperx::sim::InitialSpawn::NeedleNearLanding:
     case scraperx::sim::InitialSpawn::NeedleSeated:
+    case scraperx::sim::InitialSpawn::NeedleBlocked:
         return {kNeedleNearLandingX,
                 kNeedleNearLandingY + static_cast<double>(kNeedleNearHalfY) +
                     static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
@@ -830,6 +861,7 @@ public:
             initial_spawn == InitialSpawn::NeedleBay ||
             initial_spawn == InitialSpawn::NeedleNearLanding ||
             initial_spawn == InitialSpawn::NeedleSeated ||
+            initial_spawn == InitialSpawn::NeedleBlocked ||
             initial_spawn == InitialSpawn::CageDeck ||
             initial_spawn == InitialSpawn::CageSeated;
         const JPH::RVec3 crate_spawn =
@@ -905,11 +937,21 @@ public:
 
         needle_seated_ = initial_spawn == InitialSpawn::NeedleSeated ||
                          initial_spawn == InitialSpawn::CageSeated;
+        const bool dog_fixture_clear =
+            initial_spawn == InitialSpawn::NeedleBay ||
+            initial_spawn == InitialSpawn::NeedleSeated ||
+            initial_spawn == InitialSpawn::CageSeated ||
+            initial_spawn == InitialSpawn::SumpLanding ||
+            initial_spawn == InitialSpawn::SumpDrained;
+        dog_release_latched_ = dog_fixture_clear;
+        dog_retraction_meters_ = dog_fixture_clear ? kDogRetractDistanceMeters : 0.0;
         JPH::RVec3 needle_spawn = jib_rvec(kNeedleParkX, static_cast<double>(kNeedleHalfHeight), kNeedleParkZ);
         if (initial_spawn == InitialSpawn::NeedleBay ||
             initial_spawn == InitialSpawn::NeedleNearLanding) {
             needle_spawn = jib_crate_rest_position(slew_radians_);
             needle_spawn.SetY(kNeedleHalfHeight);
+        } else if (initial_spawn == InitialSpawn::NeedleBlocked) {
+            needle_spawn = needle_seat_position();
         } else if (needle_seated_) {
             needle_spawn = needle_seat_position();
         }
@@ -929,6 +971,24 @@ public:
         needle_settings.mMassPropertiesOverride.mMass = static_cast<float>(kNeedleMassKilograms);
         needle_settings.mUserData = Simulation::kNeedleEntityId;
         needle_id_ = bodies.CreateAndAddBody(needle_settings, JPH::EActivation::Activate);
+
+        JPH::BodyCreationSettings dog_settings(
+            new JPH::BoxShape(JPH::Vec3(kDogHalfX, kDogHalfY, kDogHalfZ)),
+            jib_rvec(kDogPinX, kDogPinY, kDogPinZ + dog_retraction_meters_),
+            JPH::Quat::sIdentity(),
+            JPH::EMotionType::Kinematic,
+            object_layers::kMoving);
+        dog_settings.mAllowSleeping = false;
+        dog_settings.mFriction = 0.80F;
+        dog_settings.mUserData = Simulation::kDogEntityId;
+        dog_id_ = bodies.CreateAndAddBody(dog_settings, JPH::EActivation::Activate);
+
+        dog_receiver_id_ =
+            create_static_box(JPH::Vec3(0.90F, 0.10F, 0.90F),
+                              jib_rvec(kDogReleasePadX, 0.10, kDogReleasePadZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kDogReceiverEntityId,
+                              0.86F);
 
         cage_y_ = kCageMinY;
         cage_command_ = 0.0;
@@ -980,6 +1040,12 @@ public:
                               JPH::Quat::sIdentity(),
                               Simulation::kSumpFarLandingEntityId,
                               0.78F);
+        refuge_id_ =
+            create_static_box(JPH::Vec3(kRefugeHalfX, kRefugeHalfY, kRefugeHalfZ),
+                              jib_rvec(kRefugeX, kRefugeY, kRefugeZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kRefugeEntityId,
+                              0.82F);
         sump_pit_west_id_ =
             create_static_box(JPH::Vec3(0.22F, 2.20F, 4.20F),
                               jib_rvec(kSumpFloorX - 3.55, 19.40, kSumpFloorZ),
@@ -1014,11 +1080,14 @@ public:
         }
         remove_and_destroy(bodies, player_id_);
         remove_and_destroy(bodies, needle_id_);
+        remove_and_destroy(bodies, dog_id_);
+        remove_and_destroy(bodies, dog_receiver_id_);
         remove_and_destroy(bodies, cage_id_);
         remove_and_destroy(bodies, cage_upper_landing_id_);
         remove_and_destroy(bodies, sump_grate_id_);
         remove_and_destroy(bodies, sump_floor_id_);
         remove_and_destroy(bodies, sump_far_landing_id_);
+        remove_and_destroy(bodies, refuge_id_);
         remove_and_destroy(bodies, sump_pit_west_id_);
         remove_and_destroy(bodies, sump_pit_east_id_);
         remove_and_destroy(bodies, jib_crate_id_);
@@ -1066,6 +1135,8 @@ public:
               const double jib_slew_input,
               const bool jib_brake_engaged,
               const bool jib_brake_command_valid,
+              const bool jib_hook_release_requested,
+              const bool dog_manual_release_requested,
               const bool cage_lever_requested,
               const bool sump_valve_requested,
               const bool sump_drain_requested,
@@ -1087,7 +1158,8 @@ public:
 
         update_support_motion(bodies, delta_seconds, next_time_seconds);
         update_hopper_motion(bodies, delta_seconds);
-        update_jib_motion(bodies, delta_seconds);
+        update_jib_motion(bodies, jib_hook_release_requested, delta_seconds);
+        update_dog_motion(bodies, dog_manual_release_requested, delta_seconds);
         update_cage_motion(bodies, cage_lever_requested, delta_seconds);
         update_sump_process(bodies, sump_valve_requested, sump_drain_requested, delta_seconds);
 
@@ -1158,6 +1230,9 @@ public:
         maybe_step_up(bodies);
 
         apply_parachute_and_fall(bodies, delta_seconds);
+        state_.tick_index = static_cast<std::uint64_t>(
+            std::llround(next_time_seconds / Simulation::kFixedStepSeconds));
+        state_.simulation_time_seconds = next_time_seconds;
         maybe_autocommit();
         maybe_restore_from_death(bodies);
 
@@ -1174,6 +1249,130 @@ public:
             return false;
         }
         store_checkpoint();
+        read_state();
+        return true;
+    }
+
+    bool save_checkpoint_file(const std::string &path) const noexcept {
+        if (!checkpoint_has_pose_ || path.empty()) {
+            return false;
+        }
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            return false;
+        }
+        out << "SCRAPERX_WO008_CHECKPOINT 1\n" << std::setprecision(17) << std::scientific;
+        auto vec = [&out](const Vector3 &v) {
+            out << v.x << ' ' << v.y << ' ' << v.z << '\n';
+        };
+        out << checkpoint_tick_ << '\n';
+        vec(checkpoint_player_position_);
+        vec(checkpoint_player_velocity_);
+        out << checkpoint_hopper_release_ << ' ' << checkpoint_hopper_gate_x_ << '\n';
+        out << checkpoint_slew_radians_ << ' ' << checkpoint_winch_length_ << ' '
+            << checkpoint_jib_brake_ << ' ' << checkpoint_jib_occupied_ << '\n';
+        vec(checkpoint_crate_position_);
+        vec(checkpoint_crate_velocity_);
+        vec(checkpoint_crate_angular_velocity_);
+        out << checkpoint_crate_rotation_x_ << ' ' << checkpoint_crate_rotation_y_ << ' '
+            << checkpoint_crate_rotation_z_ << ' ' << checkpoint_crate_rotation_w_ << '\n';
+        out << checkpoint_dog_release_latched_ << ' ' << checkpoint_dog_retraction_meters_ << '\n';
+        out << checkpoint_needle_seated_ << '\n';
+        vec(checkpoint_needle_position_);
+        vec(checkpoint_needle_velocity_);
+        out << static_cast<int>(checkpoint_hook_attachment_) << '\n';
+        out << checkpoint_cage_y_ << ' ' << checkpoint_cage_command_ << ' '
+            << checkpoint_cage_brake_ << '\n';
+        out << checkpoint_sump_isolated_ << ' ' << checkpoint_sump_drain_open_ << ' '
+            << checkpoint_sump_inventory_ << '\n';
+        return static_cast<bool>(out);
+    }
+
+    bool load_checkpoint_file(const std::string &path) noexcept {
+        if (path.empty()) {
+            return false;
+        }
+        std::ifstream in(path, std::ios::binary);
+        std::string magic;
+        int version = 0;
+        if (!(in >> magic >> version) || magic != "SCRAPERX_WO008_CHECKPOINT" || version != 1) {
+            return false;
+        }
+        auto read_vec = [&in](Vector3 &v) {
+            return static_cast<bool>(in >> v.x >> v.y >> v.z);
+        };
+
+        std::uint64_t tick = 0;
+        Vector3 player_pos{}, player_vel{}, crate_pos{}, crate_vel{}, crate_omega{};
+        Vector3 needle_pos{}, needle_vel{};
+        bool hopper_release = false, jib_brake = true, jib_occupied = false;
+        bool dog_latched = false, needle_seated = false, cage_brake = true;
+        bool sump_isolated = false, sump_drain_open = false;
+        double gate_x = kHopperGateClosedX, slew = 0.0, winch = kJibWinchInitialMeters;
+        double crate_qx = 0.0, crate_qy = 0.0, crate_qz = 0.0, crate_qw = 1.0;
+        double dog_retraction = 0.0, cage_y = kCageMinY, cage_command = 0.0, sump_inventory = 1.0;
+        int hook = 0;
+        if (!(in >> tick) || !read_vec(player_pos) || !read_vec(player_vel) ||
+            !(in >> hopper_release >> gate_x >> slew >> winch >> jib_brake >> jib_occupied) ||
+            !read_vec(crate_pos) || !read_vec(crate_vel) || !read_vec(crate_omega) ||
+            !(in >> crate_qx >> crate_qy >> crate_qz >> crate_qw) ||
+            !(in >> dog_latched >> dog_retraction >> needle_seated) ||
+            !read_vec(needle_pos) || !read_vec(needle_vel) || !(in >> hook) ||
+            !(in >> cage_y >> cage_command >> cage_brake >>
+              sump_isolated >> sump_drain_open >> sump_inventory)) {
+            return false;
+        }
+        auto finite_vec = [](const Vector3 &v) {
+            return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
+        };
+        if (!finite_vec(player_pos) || !finite_vec(player_vel) ||
+            !finite_vec(crate_pos) || !finite_vec(crate_vel) || !finite_vec(crate_omega) ||
+            !finite_vec(needle_pos) || !finite_vec(needle_vel) ||
+            !std::isfinite(gate_x) || !std::isfinite(slew) || !std::isfinite(winch) ||
+            !std::isfinite(crate_qx) || !std::isfinite(crate_qy) ||
+            !std::isfinite(crate_qz) || !std::isfinite(crate_qw) ||
+            (crate_qx * crate_qx + crate_qy * crate_qy + crate_qz * crate_qz +
+                 crate_qw * crate_qw) < 0.50 ||
+            !std::isfinite(dog_retraction) || !std::isfinite(cage_y) ||
+            !std::isfinite(cage_command) || !std::isfinite(sump_inventory) ||
+            hook < static_cast<int>(HookLoad::None) || hook > static_cast<int>(HookLoad::Needle) ||
+            dog_retraction < -1.0e-6 || dog_retraction > kDogRetractDistanceMeters + 1.0e-6 ||
+            sump_inventory < -1.0e-6 || sump_inventory > 1.0 + 1.0e-6) {
+            return false;
+        }
+
+        checkpoint_has_pose_ = true;
+        checkpoint_committed_ = true;
+        checkpoint_tick_ = tick;
+        checkpoint_player_position_ = player_pos;
+        checkpoint_player_velocity_ = player_vel;
+        checkpoint_hopper_release_ = hopper_release;
+        checkpoint_hopper_gate_x_ = gate_x;
+        checkpoint_slew_radians_ = slew;
+        checkpoint_winch_length_ = winch;
+        checkpoint_jib_brake_ = jib_brake;
+        checkpoint_jib_occupied_ = jib_occupied;
+        checkpoint_crate_position_ = crate_pos;
+        checkpoint_crate_velocity_ = crate_vel;
+        checkpoint_crate_angular_velocity_ = crate_omega;
+        checkpoint_crate_rotation_x_ = crate_qx;
+        checkpoint_crate_rotation_y_ = crate_qy;
+        checkpoint_crate_rotation_z_ = crate_qz;
+        checkpoint_crate_rotation_w_ = crate_qw;
+        checkpoint_dog_release_latched_ = dog_latched;
+        checkpoint_dog_retraction_meters_ = dog_retraction;
+        checkpoint_needle_seated_ = needle_seated;
+        checkpoint_needle_position_ = needle_pos;
+        checkpoint_needle_velocity_ = needle_vel;
+        checkpoint_hook_attachment_ = static_cast<HookLoad>(hook);
+        checkpoint_cage_y_ = cage_y;
+        checkpoint_cage_command_ = cage_command;
+        checkpoint_cage_brake_ = cage_brake;
+        checkpoint_sump_isolated_ = sump_isolated;
+        checkpoint_sump_drain_open_ = sump_drain_open;
+        checkpoint_sump_inventory_ = sump_inventory;
+
+        restore_checkpoint_state(physics_system_.GetBodyInterface());
         read_state();
         return true;
     }
@@ -1248,6 +1447,15 @@ private:
         if (entity_id == Simulation::kSumpGrateEntityId) {
             return sump_grate_id_;
         }
+        if (entity_id == Simulation::kDogEntityId) {
+            return dog_id_;
+        }
+        if (entity_id == Simulation::kDogReceiverEntityId) {
+            return dog_receiver_id_;
+        }
+        if (entity_id == Simulation::kRefugeEntityId) {
+            return refuge_id_;
+        }
         if (entity_id == Simulation::kSumpFloorEntityId) {
             return sump_floor_id_;
         }
@@ -1311,7 +1519,9 @@ private:
             hopper_gate_x_ >= kHopperGateOpenX - kHopperGateOpenTolerance;
     }
 
-    void update_jib_motion(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
+    void update_jib_motion(JPH::BodyInterface &bodies,
+                           const bool hook_release_requested,
+                           const float delta_seconds) noexcept {
         const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
         const bool in_range = distance_3d(player_position, kJibPendantX, 0.9, kJibPendantZ) <=
                               kJibStationRadiusMeters;
@@ -1341,6 +1551,21 @@ private:
         const bool raise_requested = hoist > 0.05;
         const bool lower_requested = hoist < -0.05;
         const bool slew_requested = std::abs(slew_command) > 0.05;
+
+        jib_hook_release_available_ = false;
+        if (commands_live && hook_attachment_ == HookLoad::Crate) {
+            const JPH::RVec3 crate = bodies.GetPosition(jib_crate_id_);
+            const JPH::Vec3 crate_v = bodies.GetLinearVelocity(jib_crate_id_);
+            const double pad_distance = distance_3d(
+                crate, kDogReleasePadX, kDogReleasePadY, kDogReleasePadZ);
+            jib_hook_release_available_ =
+                pad_distance <= kDogReleasePadRadiusMeters &&
+                crate_v.LengthSq() <= 0.64F;
+        }
+        if (hook_release_requested && jib_hook_release_available_) {
+            released_load_inhibit_ = hook_attachment_;
+            detach_hook();
+        }
 
         if (commands_live && jib_brake_engaged_ && (raise_requested || lower_requested || slew_requested)) {
             jib_stalled_ = true;
@@ -1412,6 +1637,44 @@ private:
         }
 
         jib_load_newtons_ = load_newtons;
+    }
+
+    void update_dog_motion(JPH::BodyInterface &bodies,
+                           const bool manual_release_requested,
+                           const float delta_seconds) noexcept {
+        const JPH::RVec3 player = bodies.GetPosition(player_id_);
+        dog_manual_release_available_ =
+            distance_3d(player, kDogManualReleaseX, kDogManualReleaseY, kDogManualReleaseZ) <=
+            kDogManualReleaseRadiusMeters;
+
+        const JPH::RVec3 crate = bodies.GetPosition(jib_crate_id_);
+        const JPH::Vec3 crate_v = bodies.GetLinearVelocity(jib_crate_id_);
+        const JPH::RVec3 receiver = bodies.GetPosition(dog_receiver_id_);
+        const double receiver_top =
+            receiver.GetY() + 0.10 + static_cast<double>(kJibCrateHalfHeight);
+        const bool crate_on_release_pad =
+            std::hypot(static_cast<double>(crate.GetX() - receiver.GetX()),
+                       static_cast<double>(crate.GetZ() - receiver.GetZ())) <=
+                kDogReleasePadRadiusMeters &&
+            std::abs(static_cast<double>(crate.GetY()) - receiver_top) <= 0.20 &&
+            crate_v.LengthSq() <= 0.64F;
+
+        if (crate_on_release_pad || (manual_release_requested && dog_manual_release_available_)) {
+            dog_release_latched_ = true;
+        }
+
+        if (dog_release_latched_) {
+            dog_retraction_meters_ =
+                std::min(kDogRetractDistanceMeters,
+                         dog_retraction_meters_ +
+                             kDogRetractSpeedMetersPerSecond * static_cast<double>(delta_seconds));
+        }
+        bodies.MoveKinematic(dog_id_,
+                             jib_rvec(kDogPinX,
+                                      kDogPinY,
+                                      kDogPinZ + dog_retraction_meters_),
+                             JPH::Quat::sIdentity(),
+                             delta_seconds);
     }
 
     void update_cage_motion(JPH::BodyInterface &bodies,
@@ -1566,8 +1829,24 @@ private:
 
     void maybe_attach_hook(JPH::BodyInterface &bodies) noexcept {
         const JPH::RVec3 hook = bodies.GetPosition(jib_hook_id_);
+        if (released_load_inhibit_ != HookLoad::None) {
+            const JPH::BodyID inhibited_id =
+                released_load_inhibit_ == HookLoad::Crate ? jib_crate_id_ : needle_id_;
+            const JPH::RVec3 inhibited_center = bodies.GetPosition(inhibited_id);
+            const JPH::RVec3 inhibited_padeye =
+                released_load_inhibit_ == HookLoad::Crate
+                    ? crate_padeye(inhibited_center)
+                    : needle_padeye(inhibited_center);
+            if (distance_3d(hook,
+                            inhibited_padeye.GetX(),
+                            inhibited_padeye.GetY(),
+                            inhibited_padeye.GetZ()) >
+                kJibSlingMaxMeters + 0.70) {
+                released_load_inhibit_ = HookLoad::None;
+            }
+        }
         auto consider = [&](const HookLoad load, const JPH::BodyID load_id, const JPH::RVec3 &padeye) {
-            if (hook_attachment_ == load) {
+            if (hook_attachment_ == load || released_load_inhibit_ == load) {
                 return;
             }
             if (distance_3d(hook, padeye.GetX(), padeye.GetY(), padeye.GetZ()) <=
@@ -1653,7 +1932,7 @@ private:
         if (raise_live && hook_attachment_ == HookLoad::Needle) {
             return;
         }
-        if (needle_aligned_for_seat(bodies)) {
+        if (dog_clear_ && needle_aligned_for_seat(bodies)) {
             seat_needle(bodies);
         }
     }
@@ -1675,7 +1954,7 @@ private:
             bool snap_center;
             float max_rise;
         };
-        StepTarget targets[9] = {
+        StepTarget targets[10] = {
             {jib_crate_id_, Simulation::kJibCrateEntityId, kJibCrateHalfWidth, kJibCrateHalfHeight,
              kJibCrateHalfWidth, true, kCrateStepHeight},
             {needle_id_, Simulation::kNeedleEntityId, kNeedleHalfLength, kNeedleHalfHeight,
@@ -1694,6 +1973,8 @@ private:
              kSumpGrateHalfZ, false, kStepUpHeight},
             {sump_far_landing_id_, Simulation::kSumpFarLandingEntityId, kSumpFarHalfX,
              kSumpFarHalfY, kSumpFarHalfZ, false, kStepUpHeight},
+            {refuge_id_, Simulation::kRefugeEntityId, kRefugeHalfX, kRefugeHalfY,
+             kRefugeHalfZ, false, kStepUpHeight},
         };
         if (!needle_seated_) {
             targets[1].id = JPH::BodyID();
@@ -1991,6 +2272,17 @@ private:
         checkpoint_jib_occupied_ = jib_station_occupied_;
         checkpoint_crate_position_ = state_.jib_crate_position;
         checkpoint_crate_velocity_ = state_.jib_crate_linear_velocity;
+        const auto &checkpoint_bodies = physics_system_.GetBodyInterface();
+        const JPH::Vec3 crate_omega = checkpoint_bodies.GetAngularVelocity(jib_crate_id_);
+        const JPH::Quat crate_rotation = checkpoint_bodies.GetRotation(jib_crate_id_);
+        checkpoint_crate_angular_velocity_ =
+            {crate_omega.GetX(), crate_omega.GetY(), crate_omega.GetZ()};
+        checkpoint_crate_rotation_x_ = crate_rotation.GetX();
+        checkpoint_crate_rotation_y_ = crate_rotation.GetY();
+        checkpoint_crate_rotation_z_ = crate_rotation.GetZ();
+        checkpoint_crate_rotation_w_ = crate_rotation.GetW();
+        checkpoint_dog_release_latched_ = dog_release_latched_;
+        checkpoint_dog_retraction_meters_ = state_.dog_retraction_meters;
         checkpoint_needle_seated_ = needle_seated_;
         checkpoint_needle_position_ = state_.needle_position;
         checkpoint_needle_velocity_ = state_.needle_linear_velocity;
@@ -2003,14 +2295,7 @@ private:
         checkpoint_sump_inventory_ = sump_inventory_;
     }
 
-    void maybe_restore_from_death(JPH::BodyInterface &bodies) noexcept {
-        if (!pending_death_) {
-            return;
-        }
-        pending_death_ = false;
-        if (!checkpoint_has_pose_) {
-            store_checkpoint();
-        }
+    void restore_checkpoint_state(JPH::BodyInterface &bodies) noexcept {
         bodies.SetPosition(
             player_id_,
             JPH::RVec3(checkpoint_player_position_.x,
@@ -2028,18 +2313,33 @@ private:
         winch_length_ = checkpoint_winch_length_;
         jib_brake_engaged_ = checkpoint_jib_brake_;
         jib_station_occupied_ = checkpoint_jib_occupied_;
-        bodies.SetPosition(
+        bodies.SetPositionAndRotation(
             jib_crate_id_,
             JPH::RVec3(checkpoint_crate_position_.x,
                        checkpoint_crate_position_.y,
                        checkpoint_crate_position_.z),
+            JPH::Quat(static_cast<float>(checkpoint_crate_rotation_x_),
+                      static_cast<float>(checkpoint_crate_rotation_y_),
+                      static_cast<float>(checkpoint_crate_rotation_z_),
+                      static_cast<float>(checkpoint_crate_rotation_w_)).Normalized(),
             JPH::EActivation::Activate);
         bodies.SetLinearVelocity(
             jib_crate_id_,
             JPH::Vec3(static_cast<float>(checkpoint_crate_velocity_.x),
                       static_cast<float>(checkpoint_crate_velocity_.y),
                       static_cast<float>(checkpoint_crate_velocity_.z)));
-        bodies.SetAngularVelocity(jib_crate_id_, JPH::Vec3::sZero());
+        bodies.SetAngularVelocity(
+            jib_crate_id_,
+            JPH::Vec3(static_cast<float>(checkpoint_crate_angular_velocity_.x),
+                      static_cast<float>(checkpoint_crate_angular_velocity_.y),
+                      static_cast<float>(checkpoint_crate_angular_velocity_.z)));
+        dog_release_latched_ = checkpoint_dog_release_latched_;
+        dog_retraction_meters_ = checkpoint_dog_retraction_meters_;
+        dog_clear_ = dog_retraction_meters_ >= kDogClearanceMeters;
+        bodies.SetPosition(dog_id_,
+                           jib_rvec(kDogPinX, kDogPinY, kDogPinZ + dog_retraction_meters_),
+                           JPH::EActivation::Activate);
+        bodies.SetLinearVelocity(dog_id_, JPH::Vec3::sZero());
         bodies.MoveKinematic(
             jib_boom_id_,
             jib_boom_center(slew_radians_),
@@ -2084,6 +2384,17 @@ private:
         fall_severity_ = 0;
         traversal_mode_ = TraversalMode::None;
         grounded_ = true;
+    }
+
+    void maybe_restore_from_death(JPH::BodyInterface &bodies) noexcept {
+        if (!pending_death_) {
+            return;
+        }
+        pending_death_ = false;
+        if (!checkpoint_has_pose_) {
+            store_checkpoint();
+        }
+        restore_checkpoint_state(bodies);
     }
 
     void advance_traversal_after_physics(const float delta_seconds) noexcept {
@@ -2279,6 +2590,24 @@ private:
         state_.sump_drain_open = sump_drain_open_;
         state_.sump_grate_safe = grate_safe_;
         state_.sump_inventory = sump_inventory_;
+
+        const JPH::RVec3 dog_position = bodies.GetPosition(dog_id_);
+        state_.dog_position = {dog_position.GetX(), dog_position.GetY(), dog_position.GetZ()};
+        state_.dog_release_pad_position =
+            {kDogReleasePadX, kDogReleasePadY, kDogReleasePadZ};
+        state_.dog_manual_release_position =
+            {kDogManualReleaseX, kDogManualReleaseY, kDogManualReleaseZ};
+        const double actual_dog_retraction =
+            std::max(0.0, static_cast<double>(dog_position.GetZ()) - kDogPinZ);
+        dog_clear_ = actual_dog_retraction >= kDogClearanceMeters;
+        state_.dog_retraction_meters = actual_dog_retraction;
+        state_.dog_release_latched = dog_release_latched_;
+        state_.dog_clear = dog_clear_;
+        state_.dog_manual_release_available = dog_manual_release_available_;
+        state_.jib_hook_release_available = jib_hook_release_available_;
+        state_.refuge_position = {kRefugeX, kRefugeY, kRefugeZ};
+        state_.refuge_reached =
+            grounded_ && support_entity_id_ == Simulation::kRefugeEntityId;
     }
 
     JoltRuntimeLease runtime_;
@@ -2311,6 +2640,8 @@ private:
     JPH::BodyID jib_hook_id_;
     JPH::BodyID jib_crate_id_;
     JPH::BodyID needle_id_;
+    JPH::BodyID dog_id_;
+    JPH::BodyID dog_receiver_id_;
     JPH::BodyID needle_west_pocket_id_;
     JPH::BodyID needle_east_pocket_id_;
     JPH::BodyID needle_near_landing_id_;
@@ -2321,6 +2652,7 @@ private:
     JPH::BodyID sump_grate_id_;
     JPH::BodyID sump_floor_id_;
     JPH::BodyID sump_far_landing_id_;
+    JPH::BodyID refuge_id_;
     JPH::BodyID sump_pit_west_id_;
     JPH::BodyID sump_pit_east_id_;
     JPH::BodyID west_stair_ids_[Simulation::kNeedleWestStairCount]{};
@@ -2358,6 +2690,13 @@ private:
     bool checkpoint_jib_occupied_ = false;
     Vector3 checkpoint_crate_position_{};
     Vector3 checkpoint_crate_velocity_{};
+    Vector3 checkpoint_crate_angular_velocity_{};
+    double checkpoint_crate_rotation_x_ = 0.0;
+    double checkpoint_crate_rotation_y_ = 0.0;
+    double checkpoint_crate_rotation_z_ = 0.0;
+    double checkpoint_crate_rotation_w_ = 1.0;
+    bool checkpoint_dog_release_latched_ = false;
+    double checkpoint_dog_retraction_meters_ = 0.0;
     bool checkpoint_needle_seated_ = false;
     Vector3 checkpoint_needle_position_{};
     Vector3 checkpoint_needle_velocity_{};
@@ -2384,6 +2723,12 @@ private:
     bool jib_enter_requested_ = false;
     bool jib_exit_requested_ = false;
     HookLoad hook_attachment_ = HookLoad::None;
+    HookLoad released_load_inhibit_ = HookLoad::None;
+    bool jib_hook_release_available_ = false;
+    bool dog_release_latched_ = false;
+    bool dog_clear_ = false;
+    bool dog_manual_release_available_ = false;
+    double dog_retraction_meters_ = 0.0;
     bool needle_seated_ = false;
     double cage_y_ = kCageMinY;
     double cage_command_ = 0.0;
@@ -2537,6 +2882,31 @@ bool Simulation::set_jib_brake(const bool engaged) noexcept {
     return true;
 }
 
+bool Simulation::can_release_jib_hook() const noexcept {
+    return physics_world_->state().jib_hook_release_available;
+}
+
+bool Simulation::request_jib_hook_release() noexcept {
+    if (jib_hook_release_requested_ || !physics_world_->state().jib_hook_release_available) {
+        return false;
+    }
+    jib_hook_release_requested_ = true;
+    return true;
+}
+
+bool Simulation::can_operate_dog_manual_release() const noexcept {
+    return physics_world_->state().dog_manual_release_available &&
+           !physics_world_->state().dog_release_latched;
+}
+
+bool Simulation::request_dog_manual_release() noexcept {
+    if (dog_manual_release_requested_ || !can_operate_dog_manual_release()) {
+        return false;
+    }
+    dog_manual_release_requested_ = true;
+    return true;
+}
+
 bool Simulation::can_operate_cage() const noexcept {
     return physics_world_->state().cage_lever_available;
 }
@@ -2573,6 +2943,25 @@ bool Simulation::request_sump_drain() noexcept {
     return true;
 }
 
+bool Simulation::save_checkpoint_to_file(const std::string &path) const noexcept {
+    return physics_world_->save_checkpoint_file(path);
+}
+
+bool Simulation::load_checkpoint_from_file(const std::string &path) noexcept {
+    if (!physics_world_->load_checkpoint_file(path)) {
+        return false;
+    }
+    const Snapshot &world = physics_world_->state();
+    tick_index_ = world.checkpoint_tick;
+    remainder_seconds_ = 0.0;
+    snapshot_ = world;
+    snapshot_.tick_index = tick_index_;
+    snapshot_.simulation_time_seconds =
+        static_cast<double>(tick_index_) * kFixedStepSeconds;
+    snapshot_.fixed_step_seconds = kFixedStepSeconds;
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -2589,6 +2978,8 @@ void Simulation::step_fixed() noexcept {
                          jib_slew_input_,
                          jib_brake_engaged_,
                          jib_brake_command_valid_,
+                         jib_hook_release_requested_,
+                         dog_manual_release_requested_,
                          cage_lever_requested_,
                          sump_valve_requested_,
                          sump_drain_requested_,
@@ -2602,6 +2993,8 @@ void Simulation::step_fixed() noexcept {
     jib_enter_requested_ = false;
     jib_exit_requested_ = false;
     jib_brake_command_valid_ = false;
+    jib_hook_release_requested_ = false;
+    dog_manual_release_requested_ = false;
     cage_lever_requested_ = false;
     sump_valve_requested_ = false;
     sump_drain_requested_ = false;
