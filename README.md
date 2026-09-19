@@ -4,9 +4,9 @@ ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority pac
 
 ## Current work order
 
-**WO-008 — First causal chain** is implemented in source on `ScraperX-Grok`.
+**WO-008 — First causal chain** is implemented in source on `ScraperX-Grok`, plus a walkable mill kernel.
 
-Freight, structure, and process already exist. This change adds `KX-SCREW`, a different raise: a jack through a torn floor, interlocked to a dry `KX-GRATE`. It lifts to `KX-REFUGE`. A SKIN lip around the wet grate is a legal sequence-break. The committed kernel serializes (`SXK1`) and reloads equivalent continuation.
+Painted wrapping stairs and skinny east treads are gone. Ground, well, and refuge flights are real Jolt support. Beams you can hang from and shimmy along sit beside the machines, not through them. Bay columns sit at the north posts so the east stairs fit. Gears and timber occupy volume next to the route, not in it. You can ride the stacked machines or climb the mill.
 
 Do not start B00–B11 in this change.
 
@@ -14,7 +14,7 @@ Do not start B00–B11 in this change.
 
 | Class | This change |
 |---|---|
-| Implemented | Yes — native screw/refuge/persist + Godot torn-floor presentation |
+| Implemented | Yes — native walkable mill + hang shimmy + Godot twins |
 | Built | Host compile unverified in this environment until Actions |
 | APK produced | Not claimed until the Android Actions job publishes an artifact |
 | Installed | Not claimed |

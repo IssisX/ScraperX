@@ -33,6 +33,7 @@ enum class InitialSpawn : std::uint8_t {
     ScrewDeck = 17,
     KernelChain = 18,
     RefugeDeck = 19,
+    GroundStair = 20,
 };
 
 enum class TraversalMode : std::uint8_t {
@@ -237,6 +238,18 @@ public:
     static constexpr std::uint64_t kScrewEntityId = 56;
     static constexpr std::uint64_t kRefugeEntityId = 57;
     static constexpr std::uint64_t kSumpSkinEntityId = 58;
+    static constexpr std::uint64_t kFillStairEntityIdBegin = 59;
+    static constexpr std::uint32_t kGroundStairCount = 20;
+    static constexpr std::uint32_t kWellStairCount = 32;
+    static constexpr std::uint32_t kRefugeStairCount = 16;
+    static constexpr std::uint32_t kFillStairCount =
+        kGroundStairCount + kWellStairCount + kRefugeStairCount;
+    static constexpr std::uint64_t kHangRailEntityIdBegin =
+        kFillStairEntityIdBegin + kFillStairCount;
+    static constexpr std::uint32_t kHangRailCount = 6;
+    static constexpr std::uint64_t kCatwalkEntityIdBegin =
+        kHangRailEntityIdBegin + kHangRailCount;
+    static constexpr std::uint32_t kCatwalkCount = 7;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ApproachGrade);
     ~Simulation();

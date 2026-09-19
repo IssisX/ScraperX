@@ -119,7 +119,7 @@ constexpr float kNeedleFarHalfZ = 1.50F;
 constexpr double kNeedleBayFloorX = 9.50;
 constexpr double kNeedleBayFloorY = 8.50;
 constexpr double kNeedleBayFloorZ = 40.50;
-constexpr float kNeedleBayFloorHalfX = 6.00F;
+constexpr float kNeedleBayFloorHalfX = 7.20F;
 constexpr float kNeedleBayFloorHalfY = 0.20F;
 constexpr float kNeedleBayFloorHalfZ = 5.00F;
 constexpr double kNeedleWestPocketX = -8.75;
@@ -419,6 +419,18 @@ private:
             entity_id == Simulation::kSumpSkinEntityId) {
             return 1;
         }
+        if (entity_id >= Simulation::kFillStairEntityIdBegin &&
+            entity_id < Simulation::kFillStairEntityIdBegin + Simulation::kFillStairCount) {
+            return 1;
+        }
+        if (entity_id >= Simulation::kHangRailEntityIdBegin &&
+            entity_id < Simulation::kHangRailEntityIdBegin + Simulation::kHangRailCount) {
+            return 1;
+        }
+        if (entity_id >= Simulation::kCatwalkEntityIdBegin &&
+            entity_id < Simulation::kCatwalkEntityIdBegin + Simulation::kCatwalkCount) {
+            return 1;
+        }
         if (entity_id >= Simulation::kNeedleStairEntityIdBegin &&
             entity_id < Simulation::kNeedleStairEntityIdBegin +
                             Simulation::kNeedleWestStairCount +
@@ -548,6 +560,8 @@ private:
                 kRefugeY + static_cast<double>(kRefugeHalfY) +
                     static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
                 kRefugeZ};
+    case scraperx::sim::InitialSpawn::GroundStair:
+        return {16.80, 1.35, 27.10};
     case scraperx::sim::InitialSpawn::ApproachGrade:
     default:
         return {0.0, 3.0, 60.0};
@@ -662,10 +676,10 @@ public:
     explicit PhysicsWorld(const InitialSpawn initial_spawn)
         : temp_allocator_(8U * 1024U * 1024U),
           job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1) {
-        physics_system_.Init(768,
+        physics_system_.Init(1024,
                              0,
-                             1536,
-                             768,
+                             2048,
+                             1024,
                              broadphase_layer_interface_,
                              object_vs_broadphase_filter_,
                              object_layer_pair_filter_);
@@ -939,7 +953,7 @@ public:
             const double y_top = 5.40 + 0.367 * static_cast<double>(i + 1);
             const double x = 2.40 + 0.68 * static_cast<double>(i);
             east_stair_ids_[i] = create_static_box(
-                JPH::Vec3(0.42F, 0.10F, 1.20F),
+                JPH::Vec3(1.15F, 0.10F, 1.20F),
                 jib_rvec(x, y_top - 0.10, kNeedleFarLandingZ),
                 JPH::Quat::sIdentity(),
                 Simulation::kNeedleStairEntityIdBegin + Simulation::kNeedleWestStairCount + i,
@@ -1067,6 +1081,104 @@ public:
                               Simulation::kRefugeEntityId,
                               0.78F);
 
+        for (std::uint32_t i = 0; i < Simulation::kGroundStairCount; ++i) {
+            const double t = static_cast<double>(i + 1);
+            const double y_top = 0.407 * t;
+            const double z = 26.40 + 0.500 * t;
+            ground_stair_ids_[i] = create_static_box(
+                JPH::Vec3(1.30F, 0.10F, 0.32F),
+                jib_rvec(16.80, y_top - 0.10, z),
+                JPH::Quat::sIdentity(),
+                Simulation::kFillStairEntityIdBegin + i,
+                0.82F);
+        }
+        for (std::uint32_t i = 0; i < Simulation::kWellStairCount; ++i) {
+            const double t = static_cast<double>(i + 1);
+            const double y_top = 8.52 + 0.416 * t;
+            const double z = 34.40 + 0.406 * t;
+            well_stair_ids_[i] = create_static_box(
+                JPH::Vec3(1.30F, 0.10F, 0.32F),
+                jib_rvec(16.80, y_top - 0.10, z),
+                JPH::Quat::sIdentity(),
+                Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount + i,
+                0.82F);
+        }
+        for (std::uint32_t i = 0; i < Simulation::kRefugeStairCount; ++i) {
+            const double t = static_cast<double>(i + 1);
+            const double y_top = 21.82 + 0.411 * t;
+            const double z = 49.10 + 0.500 * t;
+            refuge_stair_ids_[i] = create_static_box(
+                JPH::Vec3(1.20F, 0.10F, 0.30F),
+                jib_rvec(13.20, y_top - 0.10, z),
+                JPH::Quat::sIdentity(),
+                Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount +
+                    Simulation::kWellStairCount + i,
+                0.82F);
+        }
+
+        const float catwalk_hx[Simulation::kCatwalkCount] = {
+            1.50F, 1.50F, 3.40F, 4.60F, 1.20F, 2.40F, 4.00F};
+        const float catwalk_hy[Simulation::kCatwalkCount] = {
+            0.12F, 0.12F, 0.12F, 0.28F, 0.12F, 0.12F, 0.14F};
+        const float catwalk_hz[Simulation::kCatwalkCount] = {
+            1.60F, 0.80F, 1.20F, 0.55F, 2.20F, 1.00F, 0.65F};
+        const double catwalk_x[Simulation::kCatwalkCount] = {
+            16.80, 16.80, 13.40, 9.50, 13.20, 13.30, 9.50};
+        const double catwalk_y[Simulation::kCatwalkCount] = {
+            8.50, 21.82, 21.82, 16.20, 28.40, 8.52, 28.20};
+        const double catwalk_z[Simulation::kCatwalkCount] = {
+            36.40, 48.10, 48.10, 32.20, 55.50, 34.20, 53.80};
+        for (std::uint32_t i = 0; i < Simulation::kCatwalkCount; ++i) {
+            catwalk_ids_[i] = create_static_box(
+                JPH::Vec3(catwalk_hx[i], catwalk_hy[i], catwalk_hz[i]),
+                jib_rvec(catwalk_x[i], catwalk_y[i], catwalk_z[i]),
+                JPH::Quat::sIdentity(),
+                Simulation::kCatwalkEntityIdBegin + i,
+                i == 3 ? 0.78F : 0.80F);
+        }
+
+        const float rail_hx[Simulation::kHangRailCount] = {
+            4.60F, 0.12F, 0.12F, 0.12F, 0.12F, 4.00F};
+        const float rail_hy[Simulation::kHangRailCount] = {
+            0.10F, 0.10F, 0.10F, 0.10F, 0.10F, 0.10F};
+        const float rail_hz[Simulation::kHangRailCount] = {
+            0.12F, 3.10F, 3.20F, 2.40F, 2.80F, 0.12F};
+        const double rail_x[Simulation::kHangRailCount] = {
+            9.50, 6.70, 18.40, 15.00, 18.40, 9.50};
+        const double rail_y[Simulation::kHangRailCount] = {
+            16.55, 20.75, 15.20, 25.10, 8.90, 27.10};
+        const double rail_z[Simulation::kHangRailCount] = {
+            32.20, 42.55, 41.20, 53.20, 31.20, 53.80};
+        for (std::uint32_t i = 0; i < Simulation::kHangRailCount; ++i) {
+            hang_rail_ids_[i] = create_static_box(
+                JPH::Vec3(rail_hx[i], rail_hy[i], rail_hz[i]),
+                jib_rvec(rail_x[i], rail_y[i], rail_z[i]),
+                JPH::Quat::sIdentity(),
+                Simulation::kHangRailEntityIdBegin + i,
+                0.70F);
+        }
+
+        const double post_x[kMillObstacleCount] = {
+            5.6, 13.4, 4.2, 14.8, 9.50, 21.50, -1.50, 5.6, 13.4, 5.4, 13.6, 20.00};
+        const double post_y[kMillObstacleCount] = {
+            8.0, 8.0, 8.0, 8.0, 10.0, 12.2, 11.6, 25.0, 25.0, 19.0, 19.0, 20.6};
+        const double post_z[kMillObstacleCount] = {
+            32.2, 32.2, 47.8, 47.8, 31.00, 34.0, 33.4, 57.4, 57.4, 47.8, 47.8, 46.8};
+        const float post_hx[kMillObstacleCount] = {
+            0.70F, 0.70F, 0.70F, 0.70F, 2.00F, 1.80F, 1.40F, 0.50F, 0.50F, 0.55F, 0.55F, 0.22F};
+        const float post_hy[kMillObstacleCount] = {
+            8.00F, 8.00F, 8.00F, 8.00F, 4.00F, 3.00F, 2.40F, 4.25F, 4.25F, 5.00F, 5.00F, 3.20F};
+        const float post_hz[kMillObstacleCount] = {
+            0.70F, 0.70F, 0.70F, 0.70F, 0.18F, 0.50F, 0.40F, 0.50F, 0.50F, 0.55F, 0.55F, 1.80F};
+        for (std::uint32_t i = 0; i < kMillObstacleCount; ++i) {
+            mill_obstacle_ids_[i] = create_static_box(
+                JPH::Vec3(post_hx[i], post_hy[i], post_hz[i]),
+                jib_rvec(post_x[i], post_y[i], post_z[i]),
+                JPH::Quat::sIdentity(),
+                0,
+                0.62F);
+        }
+
         if (initial_spawn == InitialSpawn::NeedleBay) {
             attach_hook(HookLoad::Needle);
         } else if (!needle_fixture) {
@@ -1098,6 +1210,24 @@ public:
         remove_and_destroy(bodies, sump_skin_id_);
         remove_and_destroy(bodies, screw_id_);
         remove_and_destroy(bodies, refuge_id_);
+        for (std::uint32_t i = 0; i < Simulation::kGroundStairCount; ++i) {
+            remove_and_destroy(bodies, ground_stair_ids_[i]);
+        }
+        for (std::uint32_t i = 0; i < Simulation::kWellStairCount; ++i) {
+            remove_and_destroy(bodies, well_stair_ids_[i]);
+        }
+        for (std::uint32_t i = 0; i < Simulation::kRefugeStairCount; ++i) {
+            remove_and_destroy(bodies, refuge_stair_ids_[i]);
+        }
+        for (std::uint32_t i = 0; i < Simulation::kCatwalkCount; ++i) {
+            remove_and_destroy(bodies, catwalk_ids_[i]);
+        }
+        for (std::uint32_t i = 0; i < Simulation::kHangRailCount; ++i) {
+            remove_and_destroy(bodies, hang_rail_ids_[i]);
+        }
+        for (std::uint32_t i = 0; i < kMillObstacleCount; ++i) {
+            remove_and_destroy(bodies, mill_obstacle_ids_[i]);
+        }
         remove_and_destroy(bodies, jib_crate_id_);
         remove_and_destroy(bodies, jib_hook_id_);
         remove_and_destroy(bodies, jib_boom_id_);
@@ -1191,7 +1321,8 @@ public:
         JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
 
         if (traversal_mode_ != TraversalMode::None) {
-            apply_traversal_controller(bodies, player_velocity, delta_seconds);
+            apply_traversal_controller(bodies, player_velocity, move_input_x, move_input_z,
+                                       delta_seconds);
         } else {
             if (grounded_ && support_entity_id_ != 0) {
                 reference_velocity = current_support_point_velocity(bodies);
@@ -1234,7 +1365,7 @@ public:
         support_sample_ = support;
         grounded_ = support.grounded;
         support_entity_id_ = support.entity_id;
-        maybe_step_up(bodies);
+        maybe_step_up(bodies, move_input_x, move_input_z);
 
         apply_parachute_and_fall(bodies, delta_seconds);
         maybe_autocommit();
@@ -1409,6 +1540,30 @@ private:
         }
         if (entity_id == Simulation::kSumpSkinEntityId) {
             return sump_skin_id_;
+        }
+        if (entity_id >= Simulation::kFillStairEntityIdBegin &&
+            entity_id < Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount) {
+            return ground_stair_ids_[entity_id - Simulation::kFillStairEntityIdBegin];
+        }
+        if (entity_id >= Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount &&
+            entity_id < Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount +
+                            Simulation::kWellStairCount) {
+            return well_stair_ids_[entity_id - Simulation::kFillStairEntityIdBegin -
+                                   Simulation::kGroundStairCount];
+        }
+        if (entity_id >= Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount +
+                             Simulation::kWellStairCount &&
+            entity_id < Simulation::kFillStairEntityIdBegin + Simulation::kFillStairCount) {
+            return refuge_stair_ids_[entity_id - Simulation::kFillStairEntityIdBegin -
+                                     Simulation::kGroundStairCount - Simulation::kWellStairCount];
+        }
+        if (entity_id >= Simulation::kHangRailEntityIdBegin &&
+            entity_id < Simulation::kHangRailEntityIdBegin + Simulation::kHangRailCount) {
+            return hang_rail_ids_[entity_id - Simulation::kHangRailEntityIdBegin];
+        }
+        if (entity_id >= Simulation::kCatwalkEntityIdBegin &&
+            entity_id < Simulation::kCatwalkEntityIdBegin + Simulation::kCatwalkCount) {
+            return catwalk_ids_[entity_id - Simulation::kCatwalkEntityIdBegin];
         }
         if (entity_id == Simulation::kJibBoomEntityId) {
             return jib_boom_id_;
@@ -1878,7 +2033,9 @@ private:
         }
     }
 
-    void maybe_step_up(JPH::BodyInterface &bodies) noexcept {
+    void maybe_step_up(JPH::BodyInterface &bodies,
+                       const double move_input_x,
+                       const double move_input_z) noexcept {
         if (traversal_mode_ != TraversalMode::None) {
             return;
         }
@@ -1948,7 +2105,9 @@ private:
             }
             const double approach = static_cast<double>(velocity.GetX()) * (center.GetX() - player.GetX()) +
                                     static_cast<double>(velocity.GetZ()) * (center.GetZ() - player.GetZ());
-            if (approach < 0.12) {
+            const double desired = move_input_x * (center.GetX() - player.GetX()) +
+                                   move_input_z * (center.GetZ() - player.GetZ());
+            if (approach < 0.12 && desired < 0.08) {
                 return false;
             }
             const double x = target.snap_center ? static_cast<double>(center.GetX())
@@ -1984,7 +2143,7 @@ private:
         for (std::uint32_t i = 0; i < Simulation::kNeedleEastStairCount; ++i) {
             StepTarget tread{east_stair_ids_[i],
                              Simulation::kNeedleStairEntityIdBegin + Simulation::kNeedleWestStairCount + i,
-                             0.42F,
+                             1.15F,
                              0.10F,
                              1.20F,
                              false,
@@ -1993,6 +2152,134 @@ private:
                 return;
             }
         }
+        for (std::uint32_t i = 0; i < Simulation::kGroundStairCount; ++i) {
+            StepTarget tread{ground_stair_ids_[i],
+                             Simulation::kFillStairEntityIdBegin + i,
+                             1.30F,
+                             0.10F,
+                             0.32F,
+                             true,
+                             kStepUpHeight};
+            if (try_step(tread)) {
+                return;
+            }
+        }
+        for (std::uint32_t i = 0; i < Simulation::kWellStairCount; ++i) {
+            StepTarget tread{well_stair_ids_[i],
+                             Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount + i,
+                             1.30F,
+                             0.10F,
+                             0.32F,
+                             true,
+                             kStepUpHeight};
+            if (try_step(tread)) {
+                return;
+            }
+        }
+        for (std::uint32_t i = 0; i < Simulation::kRefugeStairCount; ++i) {
+            StepTarget tread{refuge_stair_ids_[i],
+                             Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount +
+                                 Simulation::kWellStairCount + i,
+                             1.20F,
+                             0.10F,
+                             0.30F,
+                             true,
+                             kStepUpHeight};
+            if (try_step(tread)) {
+                return;
+            }
+        }
+        const float catwalk_hx[Simulation::kCatwalkCount] = {
+            1.50F, 1.50F, 3.40F, 4.60F, 1.20F, 2.40F, 4.00F};
+        const float catwalk_hy[Simulation::kCatwalkCount] = {
+            0.12F, 0.12F, 0.12F, 0.28F, 0.12F, 0.12F, 0.14F};
+        const float catwalk_hz[Simulation::kCatwalkCount] = {
+            1.60F, 0.80F, 1.20F, 0.55F, 2.20F, 1.00F, 0.65F};
+        for (std::uint32_t i = 0; i < Simulation::kCatwalkCount; ++i) {
+            StepTarget walk{catwalk_ids_[i],
+                            Simulation::kCatwalkEntityIdBegin + i,
+                            catwalk_hx[i],
+                            catwalk_hy[i],
+                            catwalk_hz[i],
+                            false,
+                            kStepUpHeight};
+            if (try_step(walk)) {
+                return;
+            }
+        }
+    }
+
+    struct HangRailDef {
+        double cx;
+        double cy;
+        double cz;
+        double ax;
+        double az;
+        double half;
+        double hang_y;
+        double mantle_dx;
+        double mantle_dz;
+        double mantle_dy;
+    };
+
+    [[nodiscard]] static HangRailDef mill_hang_rail(const int mill_index) noexcept {
+        static const HangRailDef kRails[Simulation::kHangRailCount] = {
+            {9.50, 16.55, 32.20, 1.0, 0.0, 4.20, 15.45, 0.00, 0.70, 1.15},
+            {6.70, 20.75, 42.55, 0.0, 1.0, 2.90, 19.65, 0.15, 0.00, 2.20},
+            {18.40, 15.20, 41.20, 0.0, 1.0, 3.20, 14.10, -0.70, 0.00, 1.15},
+            {15.00, 25.10, 53.20, 0.0, 1.0, 2.20, 24.00, -0.70, 0.00, 1.15},
+            {18.40, 8.90, 31.20, 0.0, 1.0, 2.60, 7.80, -0.70, 0.00, 1.15},
+            {9.50, 27.10, 53.80, 1.0, 0.0, 3.60, 26.00, 0.00, 0.70, 1.15},
+        };
+        return kRails[mill_index];
+    }
+
+    [[nodiscard]] int nearest_hang_rail(const JPH::RVec3 &player_position) const noexcept {
+        const double x = player_position.GetX();
+        const double y = player_position.GetY();
+        const double z = player_position.GetZ();
+        const bool lane_clear = std::abs(x - kTraversalLaneX) <= kTraversalLaneHalfWidth;
+        if (lane_clear && !grounded_ && y >= 2.55 && y <= 4.30 &&
+            z >= kHangLedgeFrontZ && z <= kHangCandidateFarZ) {
+            return 0;
+        }
+
+        int best = -1;
+        double best_dist = 1.20;
+        for (int i = 0; i < static_cast<int>(Simulation::kHangRailCount); ++i) {
+            const HangRailDef rail = mill_hang_rail(i);
+            if (std::abs(y - rail.hang_y) > 0.85) {
+                continue;
+            }
+            const double dx = x - rail.cx;
+            const double dz = z - rail.cz;
+            const double s = std::max(-rail.half, std::min(rail.half, dx * rail.ax + dz * rail.az));
+            const double hx = rail.cx + rail.ax * s;
+            const double hz = rail.cz + rail.az * s;
+            const double dist = std::hypot(x - hx, z - hz);
+            if (dist < best_dist) {
+                best_dist = dist;
+                best = i + 1;
+            }
+        }
+        return best;
+    }
+
+    void hang_pose_for_rail(const int rail, const double s, JPH::RVec3 &pose, double &ax,
+                            double &az, double &half) const noexcept {
+        if (rail <= 0) {
+            ax = 1.0;
+            az = 0.0;
+            half = 1.65;
+            pose = JPH::RVec3(kTraversalLaneX + s, kHangTargetY, kHangTargetZ);
+            return;
+        }
+        const HangRailDef def = mill_hang_rail(rail - 1);
+        ax = def.ax;
+        az = def.az;
+        half = def.half;
+        const double clamped = std::max(-half, std::min(half, s));
+        pose = JPH::RVec3(def.cx + ax * clamped, def.hang_y, def.cz + az * clamped);
     }
 
     [[nodiscard]] TraversalMode traversal_candidate(const JPH::RVec3 &player_position) const noexcept {
@@ -2004,18 +2291,14 @@ private:
         const double y = player_position.GetY();
         const double z = player_position.GetZ();
         const bool lane_clear = std::abs(x - kTraversalLaneX) <= kTraversalLaneHalfWidth;
-        if (!lane_clear) {
-            return TraversalMode::None;
-        }
 
-        if (grounded_ && y < 1.55 && z >= kVaultFrontZ && z <= kVaultCandidateFarZ) {
+        if (lane_clear && grounded_ && y < 1.55 && z >= kVaultFrontZ && z <= kVaultCandidateFarZ) {
             return TraversalMode::Vault;
         }
-        if (grounded_ && y < 1.55 && z >= kMantleFrontZ && z <= kMantleCandidateFarZ) {
+        if (lane_clear && grounded_ && y < 1.55 && z >= kMantleFrontZ && z <= kMantleCandidateFarZ) {
             return TraversalMode::Mantle;
         }
-        if (!grounded_ && y >= 2.55 && y <= 4.30 &&
-            z >= kHangLedgeFrontZ && z <= kHangCandidateFarZ) {
+        if (!grounded_ && nearest_hang_rail(player_position) >= 0) {
             return TraversalMode::Hang;
         }
         return TraversalMode::None;
@@ -2043,29 +2326,62 @@ private:
         } else if (candidate == TraversalMode::Mantle) {
             traversal_target_ = JPH::RVec3(target_x, kMantleTopPlayerY, kMantleLandingZ);
         } else {
-            traversal_target_ = JPH::RVec3(target_x, kHangTargetY, kHangTargetZ);
+            hang_rail_index_ = nearest_hang_rail(player_position);
+            double ax = 1.0;
+            double az = 0.0;
+            double half = 1.65;
+            JPH::RVec3 pose{};
+            hang_pose_for_rail(hang_rail_index_, 0.0, pose, ax, az, half);
+            hang_axis_x_ = ax;
+            hang_axis_z_ = az;
+            hang_s_ = (player_position.GetX() - pose.GetX()) * ax +
+                      (player_position.GetZ() - pose.GetZ()) * az;
+            hang_s_ = std::max(-half, std::min(half, hang_s_));
+            hang_pose_for_rail(hang_rail_index_, hang_s_, traversal_target_, ax, az, half);
         }
     }
 
     void begin_mantle_from_hang(JPH::BodyInterface &bodies) noexcept {
         const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
-        const double target_x = std::max(
-            kTraversalLaneX - 1.75,
-            std::min(kTraversalLaneX + 1.75,
-                     static_cast<double>(player_position.GetX())));
         traversal_mode_ = TraversalMode::Mantle;
         traversal_elapsed_seconds_ = 0.0F;
         mantle_from_hang_ = true;
         traversal_reference_velocity_ = JPH::Vec3::sZero();
-        traversal_target_ = JPH::RVec3(target_x, kHangMantlePlayerY, kHangMantleLandingZ);
+        if (hang_rail_index_ <= 0) {
+            const double target_x = std::max(
+                kTraversalLaneX - 1.75,
+                std::min(kTraversalLaneX + 1.75,
+                         static_cast<double>(player_position.GetX())));
+            traversal_target_ = JPH::RVec3(target_x, kHangMantlePlayerY, kHangMantleLandingZ);
+            return;
+        }
+        double ax = 0.0;
+        double az = 0.0;
+        double half = 0.0;
+        JPH::RVec3 hang_pose{};
+        hang_pose_for_rail(hang_rail_index_, hang_s_, hang_pose, ax, az, half);
+        const HangRailDef rail = mill_hang_rail(hang_rail_index_ - 1);
+        traversal_target_ = JPH::RVec3(hang_pose.GetX() + rail.mantle_dx,
+                                       hang_pose.GetY() + rail.mantle_dy,
+                                       hang_pose.GetZ() + rail.mantle_dz);
     }
 
     void apply_traversal_controller(const JPH::BodyInterface &bodies,
                                     JPH::Vec3 &player_velocity,
+                                    const double move_input_x,
+                                    const double move_input_z,
                                     const float delta_seconds) noexcept {
         const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
 
         if (traversal_mode_ == TraversalMode::Hang) {
+            double ax = hang_axis_x_;
+            double az = hang_axis_z_;
+            double half = 1.65;
+            JPH::RVec3 pose{};
+            hang_pose_for_rail(hang_rail_index_, hang_s_, pose, ax, az, half);
+            const double along = move_input_x * ax + move_input_z * az;
+            hang_s_ = std::max(-half, std::min(half, hang_s_ + along * 2.35 * static_cast<double>(delta_seconds)));
+            hang_pose_for_rail(hang_rail_index_, hang_s_, traversal_target_, ax, az, half);
             const float error_x = static_cast<float>(traversal_target_.GetX() - player_position.GetX());
             const float error_y = static_cast<float>(traversal_target_.GetY() - player_position.GetY());
             const float error_z = static_cast<float>(traversal_target_.GetZ() - player_position.GetZ());
@@ -2581,6 +2897,13 @@ private:
     JPH::BodyID sump_skin_id_;
     JPH::BodyID screw_id_;
     JPH::BodyID refuge_id_;
+    static constexpr std::uint32_t kMillObstacleCount = 12;
+    JPH::BodyID well_stair_ids_[Simulation::kWellStairCount]{};
+    JPH::BodyID ground_stair_ids_[Simulation::kGroundStairCount]{};
+    JPH::BodyID refuge_stair_ids_[Simulation::kRefugeStairCount]{};
+    JPH::BodyID catwalk_ids_[Simulation::kCatwalkCount]{};
+    JPH::BodyID hang_rail_ids_[Simulation::kHangRailCount]{};
+    JPH::BodyID mill_obstacle_ids_[kMillObstacleCount]{};
     JPH::BodyID west_stair_ids_[Simulation::kNeedleWestStairCount]{};
     JPH::BodyID east_stair_ids_[Simulation::kNeedleEastStairCount]{};
     JPH::Ref<JPH::DistanceConstraint> hook_constraint_;
@@ -2672,6 +2995,10 @@ private:
     JPH::Vec3 traversal_reference_velocity_{JPH::Vec3::sZero()};
     float traversal_elapsed_seconds_ = 0.0F;
     bool mantle_from_hang_ = false;
+    int hang_rail_index_ = 0;
+    double hang_s_ = 0.0;
+    double hang_axis_x_ = 1.0;
+    double hang_axis_z_ = 0.0;
 
     Snapshot state_{};
 };

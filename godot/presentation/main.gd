@@ -749,8 +749,8 @@ func _build_needle_bay(mill_scale: Material, oxidized_steel: Material, weathered
 	_needle_mesh = _add_box("KxNeedle", Vector3(7.20, 0.36, 0.56), Vector3(-18.0, 0.18, 40.0), faded_yellow)
 	_add_box("KxNearLanding", Vector3(4.40, 0.40, 3.00), Vector3(-10.60, 5.20, 43.90), weathered_timber)
 	_add_box("KxFarLanding", Vector3(5.00, 0.40, 3.00), Vector3(0.60, 5.20, 43.90), weathered_timber)
-	_add_box("KxBayFloor", Vector3(12.00, 0.40, 10.00), Vector3(9.50, 8.50, 40.50), mill_scale)
-	_add_box("KxBayFloorEdge", Vector3(12.2, 0.08, 0.18), Vector3(9.50, 8.72, 45.40), faded_yellow)
+	_add_box("KxBayFloor", Vector3(14.40, 0.40, 10.00), Vector3(9.50, 8.50, 40.50), mill_scale)
+	_add_box("KxBayFloorEdge", Vector3(14.6, 0.08, 0.18), Vector3(9.50, 8.72, 45.40), faded_yellow)
 	for i in range(15):
 		var y_top := 0.36 * float(i + 1)
 		var z := 53.20 - 0.60 * float(i)
@@ -758,11 +758,11 @@ func _build_needle_bay(mill_scale: Material, oxidized_steel: Material, weathered
 	for i in range(9):
 		var y_top := 5.40 + 0.367 * float(i + 1)
 		var x := 2.40 + 0.68 * float(i)
-		_add_box("KxEastTread", Vector3(0.84, 0.20, 2.40), Vector3(x, y_top - 0.10, 43.90), galvanized)
+		_add_box("KxEastTread", Vector3(2.30, 0.20, 2.40), Vector3(x, y_top - 0.10, 43.90), galvanized)
 	_add_box("KxNeedleRailN", Vector3(4.8, 0.08, 0.08), Vector3(-5.15, 6.15, 42.55), faded_yellow)
 	_add_box("KxBayHeader", Vector3(8.0, 1.4, 1.6), Vector3(9.5, 14.2, 45.2), oxidized_steel)
-	_add_box("KxBayColumnL", Vector3(1.4, 16.0, 1.4), Vector3(4.2, 8.0, 45.4), mill_scale)
-	_add_box("KxBayColumnR", Vector3(1.4, 16.0, 1.4), Vector3(14.8, 8.0, 45.4), mill_scale)
+	_add_box("KxBayColumnL", Vector3(1.4, 16.0, 1.4), Vector3(4.2, 8.0, 47.8), mill_scale)
+	_add_box("KxBayColumnR", Vector3(1.4, 16.0, 1.4), Vector3(14.8, 8.0, 47.8), mill_scale)
 	_add_machine_wheel(Vector3(9.5, 12.4, 44.6), 2.6, 0.7, mill_scale, oxidized_steel)
 	_add_box("KxStagingRack", Vector3(7.6, 0.22, 0.7), Vector3(-18.0, 0.20, 40.0), mill_scale)
 	_add_box("KxApronBrace", Vector3(0.55, 5.4, 0.55), Vector3(-13.4, 2.7, 44.2), oxidized_steel)
@@ -777,17 +777,22 @@ func _build_cage_house(mill_scale: Material, oxidized_steel: Material, galvanize
 	_add_box("CageGuideS", Vector3(0.16, 48.0, 0.16), Vector3(9.50, 24.0, 32.55), mill_scale)
 	_add_box("CageHeadgear", Vector3(8.4, 1.8, 6.2), Vector3(9.50, 24.8, 34.20), oxidized_steel)
 	_add_hoist_drum(Vector3(9.50, 26.4, 31.4), 1.6, 4.8, mill_scale, galvanized)
-	_add_machine_wheel(Vector3(14.6, 12.2, 34.0), 3.4, 0.9, mill_scale, oxidized_steel)
-	_add_machine_wheel(Vector3(4.4, 11.6, 33.4), 2.6, 0.7, oxidized_steel, mill_scale)
-	_add_box("CageHousePostL", Vector3(1.2, 16.0, 1.2), Vector3(5.6, 8.0, 32.2), mill_scale)
-	_add_box("CageHousePostR", Vector3(1.2, 16.0, 1.2), Vector3(13.4, 8.0, 32.2), mill_scale)
-	_add_box("CageHouseBeam", Vector3(9.2, 0.7, 1.1), Vector3(9.5, 16.2, 32.2), oxidized_steel)
-	_add_box("CageHouseTimber", Vector3(6.5, 8.0, 0.4), Vector3(9.5, 10.0, 31.4), weathered_timber)
+	_add_machine_wheel(Vector3(21.5, 12.2, 34.0), 3.4, 0.9, mill_scale, oxidized_steel)
+	_add_machine_wheel(Vector3(-1.5, 11.6, 33.4), 2.6, 0.7, oxidized_steel, mill_scale)
+	_add_box("CageHousePostL", Vector3(1.4, 16.0, 1.4), Vector3(5.6, 8.0, 32.2), mill_scale)
+	_add_box("CageHousePostR", Vector3(1.4, 16.0, 1.4), Vector3(13.4, 8.0, 32.2), mill_scale)
+	_add_box("CageHouseBeam", Vector3(9.2, 0.56, 1.1), Vector3(9.5, 16.20, 32.2), oxidized_steel)
+	_add_box("CageHouseTimber", Vector3(4.0, 8.0, 0.36), Vector3(9.5, 10.0, 31.0), weathered_timber)
 	_add_box("KxUpperLanding", Vector3(6.40, 0.36, 4.40), Vector3(9.50, 21.82, 37.80), mill_scale)
 	_add_box("KxUpperEdge", Vector3(6.5, 0.08, 0.14), Vector3(9.50, 22.02, 39.90), faded_yellow)
 	_add_box("KxUpperRailL", Vector3(0.10, 1.1, 4.2), Vector3(6.40, 22.55, 37.80), faded_yellow)
 	_add_box("KxUpperRailR", Vector3(0.10, 1.1, 4.2), Vector3(12.60, 22.55, 37.80), faded_yellow)
-	_add_wrapping_stairs(Vector3(15.6, 0.0, 34.2), 8.7, 1, galvanized, faded_yellow)
+	_add_stair_flight("KxGroundTread", 20, 16.80, 0.0, 0.407, 26.40, 0.500, 2.60, 0.64, galvanized)
+	_add_stair_flight("KxWellTread", 32, 16.80, 8.52, 0.416, 34.40, 0.406, 2.60, 0.64, galvanized)
+	_add_box("KxEastPorch", Vector3(4.80, 0.24, 2.00), Vector3(13.30, 8.52, 34.20), mill_scale)
+	_add_box("KxWellPorch", Vector3(3.00, 0.24, 3.20), Vector3(16.80, 8.50, 36.40), mill_scale)
+	_add_box("KxHangRailEastLow", Vector3(0.24, 0.20, 5.60), Vector3(18.40, 8.90, 31.20), oxidized_steel)
+	_add_box("KxHangRailHouse", Vector3(9.20, 0.20, 0.24), Vector3(9.50, 16.55, 32.20), faded_yellow)
 
 	_cage_mesh = _add_box("KxCageDeck", Vector3(3.10, 0.36, 3.10), Vector3(9.50, 8.52, 34.20), faded_yellow)
 	_cage_gate_mesh = _add_box("KxCageGate", Vector3(2.6, 2.4, 0.12), Vector3(9.50, 9.85, 32.72), oxidized_steel)
@@ -847,7 +852,11 @@ func _build_sump_bay(mill_scale: Material, oxidized_steel: Material, dark_concre
 	_add_box("SumpBayPostL", Vector3(1.1, 10.0, 1.1), Vector3(5.4, 19.0, 47.8), mill_scale)
 	_add_box("SumpBayPostR", Vector3(1.1, 10.0, 1.1), Vector3(13.6, 19.0, 47.8), mill_scale)
 	_add_box("SumpBayHeader", Vector3(9.4, 1.1, 1.4), Vector3(9.50, 24.4, 47.6), oxidized_steel)
-	_add_box("TimberInfillSump", Vector3(4.8, 6.4, 0.38), Vector3(15.6, 20.6, 46.8), weathered_timber)
+	_add_box("TimberInfillSump", Vector3(0.44, 6.4, 3.6), Vector3(20.0, 20.6, 46.8), weathered_timber)
+	_add_box("KxWellTopPorch", Vector3(3.00, 0.24, 1.60), Vector3(16.80, 21.82, 48.10), mill_scale)
+	_add_box("KxSumpWellLink", Vector3(6.80, 0.24, 1.60), Vector3(13.40, 21.82, 48.10), mill_scale)
+	_add_box("KxHangRailSkin", Vector3(0.24, 0.20, 6.20), Vector3(6.70, 20.75, 42.55), oxidized_steel)
+	_add_box("KxHangRailWell", Vector3(0.24, 0.20, 6.40), Vector3(18.40, 15.20, 41.20), oxidized_steel)
 	_add_floodlight(Vector3(9.5, 24.6, 40.8), Vector3(0.0, -0.55, 0.35))
 	_add_floodlight(Vector3(6.2, 23.4, 38.0), Vector3(0.35, -0.4, 0.2))
 
@@ -894,7 +903,10 @@ func _build_screw_refuge(mill_scale: Material, oxidized_steel: Material, dark_co
 	_add_box("RefugePostL", Vector3(1.0, 8.5, 1.0), Vector3(5.6, 25.0, 57.4), mill_scale)
 	_add_box("RefugePostR", Vector3(1.0, 8.5, 1.0), Vector3(13.4, 25.0, 57.4), oxidized_steel)
 	_add_box("RefugeHeader", Vector3(9.2, 1.0, 1.3), Vector3(9.50, 29.6, 57.6), mill_scale)
-	_add_wrapping_stairs(Vector3(14.8, 21.8, 50.8), 6.4, 1, galvanized, faded_yellow)
+	_add_stair_flight("KxRefugeTread", 16, 13.20, 21.82, 0.411, 49.10, 0.500, 2.40, 0.60, galvanized)
+	_add_box("KxRefugePorch", Vector3(2.40, 0.24, 4.40), Vector3(13.20, 28.40, 55.50), mill_scale)
+	_add_box("KxHangRailRefuge", Vector3(0.24, 0.20, 4.80), Vector3(15.00, 25.10, 53.20), oxidized_steel)
+	_add_box("KxHangRailTorn", Vector3(8.00, 0.20, 0.24), Vector3(9.50, 27.10, 53.80), mill_scale)
 
 	# Identity: monumental rusted spiral occupying the void, not a sticker.
 	_add_machine_wheel(Vector3(17.5, 26.5, 52.0), 5.4, 1.35, mill_scale, oxidized_steel)
@@ -916,7 +928,16 @@ func _sync_screw_meshes() -> void:
 		_screw_wheel_mesh.position = wheel
 		_screw_wheel_mesh.rotation = Vector3(PI * 0.5, 0.0, _screw_angle)
 
+func _add_stair_flight(tread_name: String, count: int, origin_x: float, y0: float, dy: float, z0: float, dz: float, width: float, depth: float, tread_material: Material) -> void:
+	for i in range(count):
+		var t := float(i + 1)
+		var y_top := y0 + dy * t
+		var z := z0 + dz * t
+		_add_box(tread_name, Vector3(width, 0.20, depth), Vector3(origin_x, y_top - 0.10, z), tread_material)
+	_add_box(tread_name + "Rail", Vector3(0.08, dy * float(count) * 0.92, 0.08), Vector3(origin_x + width * 0.42, y0 + dy * float(count) * 0.5, z0 + dz * float(count) * 0.5), tread_material)
+
 func _add_wrapping_stairs(origin: Vector3, rise: float, flights: int, tread_material: Material, rail_material: Material) -> void:
+	# Silhouette only — high tower wrapping. Kernel flights are _add_stair_flight with Jolt twins.
 	for flight in range(flights):
 		var base_y := origin.y + rise * float(flight)
 		for i in range(12):

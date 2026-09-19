@@ -355,6 +355,19 @@ int main() {
     require(hanging.player_position.y > 2.75,
             "hang controller must arrest the fall at the actual ledge");
 
+    const double hang_x0 = hanging.player_position.x;
+    require(hang.set_move_input(1.0, 0.0),
+            "hang shimmy input must be accepted while hanging");
+    require(hang.advance_frame(0.70).accepted,
+            "hang shimmy interval must advance through physical simulation");
+    const auto shimmied = hang.snapshot();
+    require(shimmied.traversal_mode == TraversalMode::Hang,
+            "shimmy must stay in hang rather than drop the player");
+    require(shimmied.player_position.x > hang_x0 + 0.35,
+            "hang must translate along the rail instead of locking to a single lane pose");
+    require(hang.set_move_input(0.0, 0.0),
+            "hang shimmy must be able to stop along the rail");
+
     require(hang.request_jump(),
             "jump from a valid hang must request a climb transition");
     require(hang.advance_frame(0.95).accepted,
@@ -1055,6 +1068,82 @@ int main() {
         require(restored.player_position.y > 27.5, "reload must keep the raised pose");
         std::remove(path);
     }
+
+    Simulation well(InitialSpawn::CageSeated);
+    require(well.advance_frame(1.0).accepted, "well-stair fixture must settle");
+    require(well.set_move_input(1.0, 0.0), "walk off the cage toward the well stairs must be accepted");
+    bool on_well_stairs = false;
+    bool boarded_landing_by_stairs = false;
+    const int stair_budget = static_cast<int>(16.0 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < stair_budget; ++step) {
+        const auto steer = well.snapshot();
+        if (steer.player_position.x < 16.30) {
+            require(well.set_move_input(1.0, 0.0),
+                    "well-stair east heading must be accepted");
+        } else if (steer.player_position.x > 17.30) {
+            require(well.set_move_input(-0.40, 1.0),
+                    "well-stair recenter heading must be accepted");
+        } else {
+            require(well.set_move_input(0.0, 1.0),
+                    "well-stair north heading must be accepted");
+        }
+        require(well.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "well-stair climb step must advance");
+        const auto now = well.snapshot();
+        if (now.support_entity_id >= Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount &&
+            now.support_entity_id < Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount +
+                                        Simulation::kWellStairCount) {
+            on_well_stairs = true;
+        }
+        if (now.player_grounded && now.player_position.y > 21.0 &&
+            (now.support_entity_id == Simulation::kCageUpperLandingEntityId ||
+             now.support_entity_id == Simulation::kSumpFarLandingEntityId ||
+             now.support_entity_id >= Simulation::kCatwalkEntityIdBegin ||
+             (now.support_entity_id >= Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount &&
+              now.support_entity_id < Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount +
+                                          Simulation::kWellStairCount))) {
+            boarded_landing_by_stairs = true;
+            break;
+        }
+    }
+    require(on_well_stairs, "east well stairs must be real support, not a painted ramp");
+    require(boarded_landing_by_stairs,
+            "climbing the well stairs must reach the +22 m landing without riding the cage");
+
+    Simulation ground(InitialSpawn::GroundStair);
+    require(ground.advance_frame(0.6).accepted, "ground-stair fixture must settle");
+    require(ground.set_move_input(0.2, 1.0),
+            "walk north up the east mill stairs must be accepted");
+    bool on_ground_stairs = false;
+    bool boarded_bay_by_stairs = false;
+    const int ground_budget = static_cast<int>(10.0 / Simulation::kFixedStepSeconds + 0.5);
+    for (int step = 0; step < ground_budget; ++step) {
+        const auto now_pose = ground.snapshot();
+        if (now_pose.player_position.x < 16.2) {
+            require(ground.set_move_input(0.8, 0.6),
+                    "ground-stair east heading must be accepted");
+        } else {
+            require(ground.set_move_input(0.1, 1.0),
+                    "ground-stair north heading must be accepted");
+        }
+        require(ground.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "ground-stair climb step must advance");
+        const auto now = ground.snapshot();
+        if (now.support_entity_id >= Simulation::kFillStairEntityIdBegin &&
+            now.support_entity_id < Simulation::kFillStairEntityIdBegin + Simulation::kGroundStairCount) {
+            on_ground_stairs = true;
+        }
+        if (now.player_grounded && now.player_position.y > 8.15 &&
+            (now.support_entity_id == Simulation::kNeedleBayFloorEntityId ||
+             now.support_entity_id == Simulation::kCageEntityId ||
+             now.support_entity_id >= Simulation::kCatwalkEntityIdBegin)) {
+            boarded_bay_by_stairs = true;
+            break;
+        }
+    }
+    require(on_ground_stairs, "ground-to-bay stairs must be real support, not a painted wrap");
+    require(boarded_bay_by_stairs,
+            "climbing the ground stairs must reach the +8.5 m bay without a machine ride");
 
     std::cout << "PASS scraperx_sim WO-005 first freight: "
               << "approach_z=" << approach_spawn.player_position.z
