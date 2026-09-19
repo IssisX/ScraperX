@@ -1078,7 +1078,8 @@ int main(int argc, char **argv) {
             const double dz = target_z - now.player_position.z;
             const double distance = std::hypot(dx, dz);
             if (distance <= tolerance) {
-                sim.set_move_input(0.0, 0.0);
+                require(sim.set_move_input(0.0, 0.0),
+                        "WO-008 steering neutral input must be accepted");
                 return true;
             }
             require(sim.set_move_input(dx / distance, dz / distance),
@@ -1086,7 +1087,8 @@ int main(int argc, char **argv) {
             require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted,
                     "WO-008 steering tick must advance");
         }
-        sim.set_move_input(0.0, 0.0);
+        require(sim.set_move_input(0.0, 0.0),
+                "WO-008 steering final neutral input must be accepted");
         return horizontal_distance(sim.snapshot().player_position,
                                    {target_x, sim.snapshot().player_position.y, target_z}) <=
                tolerance + 0.35;
@@ -1107,7 +1109,8 @@ int main(int argc, char **argv) {
             const double current = sim.snapshot().jib_winch_length_meters;
             const double error = current - target;
             if (std::abs(error) <= 0.08) {
-                sim.set_jib_hoist_input(0.0);
+                require(sim.set_jib_hoist_input(0.0),
+                        "WO-008 winch neutral command must be accepted");
                 return true;
             }
             require(sim.set_jib_hoist_input(error > 0.0 ? 1.0 : -1.0),
@@ -1115,7 +1118,8 @@ int main(int argc, char **argv) {
             require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted,
                     "WO-008 winch tick must advance");
         }
-        sim.set_jib_hoist_input(0.0);
+        require(sim.set_jib_hoist_input(0.0),
+                "WO-008 winch final neutral command must be accepted");
         return std::abs(sim.snapshot().jib_winch_length_meters - target) <= 0.16;
     };
     auto drive_slew = [](Simulation &sim, const double target, const double seconds) {
@@ -1124,7 +1128,8 @@ int main(int argc, char **argv) {
         for (int i = 0; i < budget; ++i) {
             const double error = target - sim.snapshot().jib_slew_radians;
             if (std::abs(error) <= 0.025) {
-                sim.set_jib_slew_input(0.0);
+                require(sim.set_jib_slew_input(0.0),
+                        "WO-008 slew neutral command must be accepted");
                 return true;
             }
             double command = error / 0.12;
@@ -1134,7 +1139,8 @@ int main(int argc, char **argv) {
             require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted,
                     "WO-008 slew tick must advance");
         }
-        sim.set_jib_slew_input(0.0);
+        require(sim.set_jib_slew_input(0.0),
+                "WO-008 slew final neutral command must be accepted");
         return std::abs(sim.snapshot().jib_slew_radians - target) <= 0.05;
     };
 
