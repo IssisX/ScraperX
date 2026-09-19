@@ -444,7 +444,11 @@ private:
             entity_id == Simulation::kNeedleBayFloorEntityId ||
             entity_id == Simulation::kCageUpperLandingEntityId ||
             entity_id == Simulation::kSumpFloorEntityId ||
-            entity_id == Simulation::kSumpFarLandingEntityId) {
+            entity_id == Simulation::kSumpFarLandingEntityId ||
+            entity_id == Simulation::kRefugeEntityId ||
+            entity_id == Simulation::kDogReceiverEntityId ||
+            entity_id == Simulation::kMaintenanceRampEntityId ||
+            entity_id == Simulation::kMaintenanceBeamEntityId) {
             return 1;
         }
         if (entity_id >= Simulation::kNeedleStairEntityIdBegin &&
