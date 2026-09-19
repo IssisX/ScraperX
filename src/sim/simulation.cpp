@@ -328,11 +328,11 @@ constexpr float kNeedleStationRadius = 2.5F;
 // ever be looked at from the yard.
 constexpr float kStackCenterX = 0.0F;
 constexpr float kStackCenterZ = -150.0F;
-constexpr float kStackHalfExtent = 18.0F;      // 36 m square footprint.
+constexpr float kStackHalfExtent = 26.0F;      // 52 m square footprint: a building, not a mast.
 constexpr float kStackLevelHeight = 11.0F;     // generous industrial floor-to-floor.
 constexpr int kStackLevelCount = 14;           // decks at 11..154 m; level 0 is grade.
 constexpr float kStackDeckHalfThickness = 0.25F;
-constexpr float kStackDeckBandDepth = 7.0F;    // walkable perimeter band; leaves a 22 m shaft.
+constexpr float kStackDeckBandDepth = 9.0F;    // walkable perimeter band; leaves a 34 m shaft.
 constexpr float kStackColumnHalf = 0.8F;
 constexpr float kStackRampHalfWidth = 1.6F;
 // Where the tower's unclimbable mass resumes above the playable slice.
@@ -789,9 +789,12 @@ public:
         // is the real, climbable frame built by build_stack().
         const float mass_half_height =
             static_cast<float>(Simulation::kTowerHeightMeters * 0.5) - kTowerMassBaseY * 0.5F;
+        // Set well back from the climbable frame: overhead and close, it read
+        // as a black void hanging over the stack rather than as a neighbouring
+        // structure receding into the weather.
         tower_id_ = add_box(bodies,
-                            JPH::Vec3(60.0F, mass_half_height, 45.0F),
-                            JPH::RVec3(0.0, kTowerMassBaseY + mass_half_height, -190.0),
+                            JPH::Vec3(46.0F, mass_half_height, 40.0F),
+                            JPH::RVec3(-30.0, kTowerMassBaseY + mass_half_height, -330.0),
                             JPH::EMotionType::Static,
                             object_layers::kStatic,
                             0.8F,

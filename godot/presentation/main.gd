@@ -23,11 +23,11 @@ const SUMP_GRATE_ENTITY_ID := 34
 # The stack. Mirrors the kStack* constants in simulation.cpp exactly -- these
 # are the native collision sizes, so what is drawn is what you stand on.
 const STACK_CENTER := Vector3(0.0, 0.0, -150.0)
-const STACK_HALF_EXTENT := 18.0
+const STACK_HALF_EXTENT := 26.0
 const STACK_LEVEL_HEIGHT := 11.0
 const STACK_LEVEL_COUNT := 14
 const STACK_DECK_THICKNESS := 0.5
-const STACK_DECK_BAND_DEPTH := 7.0
+const STACK_DECK_BAND_DEPTH := 9.0
 const STACK_COLUMN_SIZE := 1.6
 const STACK_RAMP_WIDTH := 3.2
 const STACK_MASS_BASE_Y := 159.0
@@ -684,8 +684,8 @@ func _build_world() -> void:
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
 	_add_box("Grade", Vector3(480.0, 1.0, 480.0), Vector3(0.0, -0.5, -60.0), asphalt)
 	var mass_half := 800.0 - STACK_MASS_BASE_Y * 0.5
-	_add_box("TowerMass", Vector3(120.0, mass_half * 2.0, 90.0),
-		Vector3(0.0, STACK_MASS_BASE_Y + mass_half, -190.0), concrete)
+	_add_box("TowerMass", Vector3(92.0, mass_half * 2.0, 80.0),
+		Vector3(-30.0, STACK_MASS_BASE_Y + mass_half, -330.0), concrete)
 
 	_build_stack(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
@@ -817,6 +817,315 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 			stringer.rotation = Vector3(0.0, 0.0, side * pitch)
 
 	_build_stack_dressing(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded)
+	_build_stack_megastructure(mill_scale, oxidised, rust_deep, rust_bright, galvanised,
+		faded, timber)
+
+
+# Everything that makes the frame read as one vast working plant rather than
+# a repeated scaffold: splayed footings, clad machine halls with lit windows,
+# exposed gearing, lift cages on their guide rails, jib cranes with loads
+# hanging off them, company signage, and walkways striking out into the air.
+# None of it is collision or authority -- it is filler in the honest sense,
+# structure whose job is scale and density.
+func _build_stack_megastructure(mill_scale: Material, oxidised: Material, rust_deep: Material,
+		rust_bright: Material, galvanised: Material, faded: Material, timber: Material) -> void:
+	var banner_cloth := _material(Color("5e2220"), 0.0, 0.95)
+	var crane_yellow := _material(Color("b8862a"), 0.26, 0.58)
+	var sign_plate := _material(Color("46423b"), 0.2, 0.86)
+	var window_lit := _material(Color("2a2118"), 0.1, 0.7, Color("ffb45c"), 2.8)
+	var cage_yellow := _material(Color("94701f"), 0.3, 0.6)
+
+	_build_stack_footings(rust_deep, oxidised, mill_scale)
+	_build_stack_halls(timber, mill_scale, rust_deep, window_lit)
+	_build_stack_gearworks(rust_deep, oxidised, mill_scale)
+	_build_stack_lifts(cage_yellow, galvanised, mill_scale, window_lit)
+	_build_stack_jibs(crane_yellow, mill_scale, timber, galvanised)
+	_build_stack_signage(banner_cloth, sign_plate)
+	_build_stack_bridges(galvanised, faded, rust_deep, mill_scale)
+
+
+# Splayed footings. The references all plant their towers on legs that kick
+# out well past the shaft, which is what gives them their sense of weight.
+func _build_stack_footings(rust_deep: Material, oxidised: Material, mill_scale: Material) -> void:
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var reach := STACK_HALF_EXTENT + 13.0
+	var meet_y := STACK_LEVEL_HEIGHT * 3.0
+
+	for sx in [1.0, -1.0]:
+		for sz in [1.0, -1.0]:
+			var foot := Vector3(cx + sx * reach, 0.0, cz + sz * reach)
+			var head := Vector3(cx + sx * STACK_HALF_EXTENT, meet_y, cz + sz * STACK_HALF_EXTENT)
+			_add_strut("Buttress", foot, head, 2.4, rust_deep)
+			_add_box("ButtressFoot", Vector3(6.0, 2.6, 6.0),
+				foot + Vector3(0.0, 1.3, 0.0), mill_scale)
+			# Secondary tie back into the frame, one storey down.
+			var tie_foot := foot.lerp(head, 0.42)
+			var tie_head := Vector3(cx + sx * STACK_HALF_EXTENT, STACK_LEVEL_HEIGHT,
+				cz + sz * STACK_HALF_EXTENT)
+			_add_strut("ButtressTie", tie_foot, tie_head, 1.1, oxidised)
+
+
+# Clad machine halls bolted onto the frame: solid volumes with lit windows,
+# so the tower is not uniformly see-through and has interior worth reading.
+func _build_stack_halls(timber: Material, mill_scale: Material, rust_deep: Material,
+		window_lit: Material) -> void:
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var halls := [
+		{"level": 3, "sx": -1.0, "storeys": 2.0, "depth": 13.0},
+		{"level": 7, "sx": 1.0, "storeys": 3.0, "depth": 11.0},
+		{"level": 11, "sx": -1.0, "storeys": 2.0, "depth": 12.0},
+	]
+	for hall in halls:
+		var level: float = hall["level"]
+		var sx: float = hall["sx"]
+		var storeys: float = hall["storeys"]
+		var depth: float = hall["depth"]
+		var height := storeys * STACK_LEVEL_HEIGHT
+		var width := 9.0
+		var centre := Vector3(cx + sx * (STACK_HALF_EXTENT + width * 0.5 - 1.0),
+			level * STACK_LEVEL_HEIGHT + height * 0.5 - 1.0, cz)
+
+		_add_box("MachineHall", Vector3(width, height, depth), centre, timber)
+		_add_box("HallCapping", Vector3(width + 1.2, 0.9, depth + 1.2),
+			centre + Vector3(0.0, height * 0.5 + 0.3, 0.0), rust_deep)
+		_add_box("HallSill", Vector3(width + 1.0, 0.8, depth + 1.0),
+			centre - Vector3(0.0, height * 0.5 + 0.2, 0.0), mill_scale)
+		# Window grid on the outward face and the front face.
+		for row in range(int(storeys) * 2):
+			for column in range(3):
+				var wy := centre.y - height * 0.5 + 2.6 + float(row) * 4.4
+				var wz := cz - depth * 0.5 + 2.6 + float(column) * (depth - 5.2) * 0.5
+				_add_box("HallWindow", Vector3(0.4, 1.9, 1.5),
+					Vector3(centre.x + sx * (width * 0.5 + 0.1), wy, wz), window_lit)
+			_add_box("HallWindowFront", Vector3(2.2, 1.9, 0.4),
+				Vector3(centre.x, centre.y - height * 0.5 + 3.4 + float(row) * 4.4,
+					cz + depth * 0.5 + 0.1), window_lit)
+		# Ribs, so the cladding reads as boards on a frame.
+		for rib in range(5):
+			_add_box("HallRib", Vector3(0.5, height, 0.5),
+				Vector3(centre.x - width * 0.5 + 0.5 + float(rib) * (width - 1.0) * 0.25,
+					centre.y, cz + depth * 0.5 + 0.2), rust_deep)
+
+
+# Exposed gearing on the front face, big enough to read from the yard.
+func _build_stack_gearworks(rust_deep: Material, oxidised: Material, mill_scale: Material) -> void:
+	var cx := STACK_CENTER.x
+	var front_z := STACK_CENTER.z + STACK_HALF_EXTENT
+	var specs = [
+		{"at": Vector3(cx - 10.0, STACK_LEVEL_HEIGHT * 2.4, front_z + 1.4), "r": 7.4, "t": 22},
+		{"at": Vector3(cx + 2.0, STACK_LEVEL_HEIGHT * 3.6, front_z + 1.0), "r": 4.6, "t": 16},
+		{"at": Vector3(cx - 6.0, STACK_LEVEL_HEIGHT * 6.3, front_z + 1.4), "r": 6.2, "t": 20},
+		{"at": Vector3(cx + 8.0, STACK_LEVEL_HEIGHT * 9.4, front_z + 1.2), "r": 5.4, "t": 18},
+	]
+	for index in specs.size():
+		var spec = specs[index]
+		var gear_at: Vector3 = spec["at"]
+		var gear_radius: float = spec["r"]
+		var gear_teeth: int = spec["t"]
+		var gear := _add_gear("StackGearwheel", gear_at, gear_radius, gear_teeth,
+			rust_deep, oxidised)
+		_stack_gears.append(gear)
+		# The shaft it turns on, driven back into the frame.
+		var shaft := _add_cylinder("GearShaft", gear_radius * 0.16, 3.2,
+			gear_at - Vector3(0.0, 0.0, 1.6), mill_scale)
+		shaft.rotation = Vector3(PI * 0.5, 0.0, 0.0)
+
+	# Winch drums with cable wound on them, paired with the gearing.
+	for drum in [Vector3(cx + 9.0, STACK_LEVEL_HEIGHT * 4.5, front_z - 1.0),
+			Vector3(cx - 11.0, STACK_LEVEL_HEIGHT * 8.4, front_z - 1.0)]:
+		var barrel := _add_cylinder("WinchDrum", 1.9, 7.0, drum, mill_scale)
+		barrel.rotation = Vector3(0.0, 0.0, PI * 0.5)
+		for band in range(7):
+			var ring := _add_cylinder("DrumCable", 2.05, 0.5,
+				drum + Vector3(-2.6 + float(band) * 0.9, 0.0, 0.0), rust_deep)
+			ring.rotation = Vector3(0.0, 0.0, PI * 0.5)
+		_add_box("DrumHousing", Vector3(1.4, 3.4, 3.4), drum + Vector3(4.4, 0.0, 0.0), rust_deep)
+
+
+# Lift cages running in guide rails up the front of the shaft.
+func _build_stack_lifts(cage_yellow: Material, galvanised: Material, mill_scale: Material,
+		window_lit: Material) -> void:
+	var cz := STACK_CENTER.z
+	var front_z := cz + STACK_HALF_EXTENT
+	var top_y := STACK_LEVEL_HEIGHT * float(STACK_LEVEL_COUNT)
+
+	for shaft_index in range(2):
+		var lift_x := STACK_CENTER.x + (6.5 if shaft_index == 0 else -14.5)
+		# Paired guide rails, full height.
+		for rail in [-1.6, 1.6]:
+			_add_box("LiftGuide", Vector3(0.45, top_y, 0.45),
+				Vector3(lift_x + rail, top_y * 0.5, front_z + 1.1), galvanised)
+		_add_box("LiftHead", Vector3(5.4, 2.2, 3.2), Vector3(lift_x, top_y + 1.0, front_z + 1.1),
+			mill_scale)
+
+		var cage_y: float = STACK_LEVEL_HEIGHT * (4.5 if shaft_index == 0 else 8.5)
+		# Hoist rope from the head down to the cage.
+		_add_box("LiftRope", Vector3(0.12, top_y - cage_y, 0.12),
+			Vector3(lift_x, (top_y + cage_y) * 0.5, front_z + 1.1), mill_scale)
+
+		var cage := Node3D.new()
+		cage.name = "LiftCage"
+		cage.position = Vector3(lift_x, cage_y, front_z + 1.1)
+		$TowerPresentation.add_child(cage)
+		_add_box_to("CageFloor", Vector3(4.0, 0.3, 3.0), Vector3(0.0, -1.7, 0.0), mill_scale, cage)
+		_add_box_to("CageRoof", Vector3(4.0, 0.3, 3.0), Vector3(0.0, 1.7, 0.0), cage_yellow, cage)
+		for corner_x in [-1.85, 1.85]:
+			for corner_z in [-1.35, 1.35]:
+				_add_box_to("CagePost", Vector3(0.24, 3.4, 0.24),
+					Vector3(corner_x, 0.0, corner_z), cage_yellow, cage)
+		_add_box_to("CageBack", Vector3(4.0, 3.0, 0.16), Vector3(0.0, 0.0, -1.4),
+			galvanised, cage)
+		_add_box_to("CageLamp", Vector3(1.4, 0.3, 1.0), Vector3(0.0, 1.35, 0.0), window_lit, cage)
+		_add_sign_text(str(shaft_index + 3), Vector3(0.0, 0.4, 1.45), 0.0, 1.1,
+			Color("f2e6cf"), cage)
+
+		var cage_light := OmniLight3D.new()
+		cage_light.name = "CageLight"
+		cage_light.position = cage.position
+		cage_light.light_color = Color(1.0, 0.74, 0.42)
+		cage_light.light_energy = 3.0
+		cage_light.omni_range = 13.0
+		_light_rig.add_child(cage_light)
+
+
+# Jib cranes reaching off the tower with loads on the hook, at three heights.
+func _build_stack_jibs(crane_yellow: Material, mill_scale: Material, timber: Material,
+		galvanised: Material) -> void:
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var jibs = [
+		{"y": STACK_LEVEL_HEIGHT * 5.0, "sx": 1.0, "reach": 26.0, "drop": 13.0},
+		{"y": STACK_LEVEL_HEIGHT * 9.0, "sx": -1.0, "reach": 22.0, "drop": 17.0},
+		{"y": STACK_LEVEL_HEIGHT * 12.5, "sx": 1.0, "reach": 19.0, "drop": 11.0},
+	]
+	for jib in jibs:
+		var y: float = jib["y"]
+		var sx: float = jib["sx"]
+		var reach: float = jib["reach"]
+		var drop: float = jib["drop"]
+		var root := Vector3(cx + sx * (STACK_HALF_EXTENT - 1.0), y, cz + 4.0)
+		var tip := Vector3(cx + sx * (STACK_HALF_EXTENT + reach), y + reach * 0.42, cz + 9.0)
+		var mast_top := root + Vector3(0.0, 11.0, 0.0)
+
+		# Boom as a shallow lattice: two chords and the zigzag between them.
+		_add_strut("JibChord", root, tip, 1.05, crane_yellow)
+		var chord_offset := Vector3(0.0, 1.5, 0.0)
+		_add_strut("JibChord", root + chord_offset, tip + chord_offset, 0.8, crane_yellow)
+		for web in range(7):
+			var a := float(web) / 7.0
+			var b := (float(web) + 1.0) / 7.0
+			_add_strut("JibWeb", root.lerp(tip, a) + chord_offset, root.lerp(tip, b), 0.4,
+				crane_yellow)
+		# A-frame mast and the tie back to the boom tip.
+		_add_strut("JibMast", root, mast_top, 1.2, crane_yellow)
+		_add_strut("JibStay", mast_top, tip, 0.35, mill_scale)
+		_add_strut("JibBackStay", mast_top,
+			Vector3(cx - sx * (STACK_HALF_EXTENT - 2.0), y + 2.0, cz), 0.35, mill_scale)
+
+		# Hook rope and the crate hanging on it.
+		var hook := tip - Vector3(0.0, drop, 0.0)
+		_add_box("JibRope", Vector3(0.14, drop, 0.14), (tip + hook) * 0.5, mill_scale)
+		_add_box("JibBlock", Vector3(1.0, 0.9, 1.0), hook + Vector3(0.0, 0.5, 0.0), mill_scale)
+		var crate_size := 3.6
+		_add_box("JibLoad", Vector3(crate_size, crate_size, crate_size),
+			hook - Vector3(0.0, crate_size * 0.5, 0.0), timber)
+		for edge in [-1.0, 1.0]:
+			_add_box("JibLoadBand", Vector3(crate_size + 0.2, 0.34, 0.34),
+				hook + Vector3(0.0, -crate_size * 0.5, edge * crate_size * 0.5), galvanised)
+		# Slings from the block out to the crate corners.
+		for corner_x in [-1.0, 1.0]:
+			for corner_z in [-1.0, 1.0]:
+				_add_strut("JibSling", hook + Vector3(0.0, 0.5, 0.0),
+					hook + Vector3(corner_x * crate_size * 0.5, 0.0, corner_z * crate_size * 0.5),
+					0.1, mill_scale)
+
+
+# Company signage: hanging cloth banners and painted plate on the structure.
+func _build_stack_signage(banner_cloth: Material, sign_plate: Material) -> void:
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var front_z := cz + STACK_HALF_EXTENT
+	var emblem := _material(Color("ddd2c0"), 0.0, 0.8)
+
+	var banners = [
+		{"x": cx - 15.0, "level": 9.0, "lines": "KELLERWORKS", "sub": "MATERIALS\nMOVE\nCIVILIZATION\nRISES"},
+		{"x": cx + 14.0, "level": 5.0, "lines": "", "sub": "PEOPLE\nPOWER\nPROGRESS"},
+		{"x": cx - 4.0, "level": 12.0, "lines": "", "sub": "A HIGHER\nWORLD\nTOGETHER"},
+	]
+	for banner in banners:
+		var bx: float = banner["x"]
+		var top := float(banner["level"]) * STACK_LEVEL_HEIGHT - 0.8
+		var height := 13.0
+		var width := 5.0
+		var centre := Vector3(bx, top - height * 0.5, front_z + 0.5)
+		_add_box("Banner", Vector3(width, height, 0.12), centre, banner_cloth)
+		_add_box("BannerRod", Vector3(width + 0.8, 0.22, 0.22),
+			centre + Vector3(0.0, height * 0.5 + 0.2, 0.0), sign_plate)
+		# Emblem: a canted bar cluster standing in for the company mark.
+		for bar in range(2):
+			var mark := _add_box("BannerMark", Vector3(2.4, 0.5, 0.06),
+				centre + Vector3(0.0, height * 0.5 - 2.0, 0.09), emblem)
+			mark.rotation = Vector3(0.0, 0.0, (0.7 if bar == 0 else -0.7))
+		if String(banner["lines"]) != "":
+			_add_sign_text(String(banner["lines"]),
+				centre + Vector3(0.0, height * 0.5 - 4.1, 0.12), 0.0, 0.62, Color("efe5d4"))
+		_add_sign_text(String(banner["sub"]),
+			centre + Vector3(0.0, height * 0.5 - 7.4, 0.12), 0.0, 0.78, Color("e4d8c4"))
+
+	# Painted plate high on the shaft, the biggest piece of lettering here.
+	var plate_centre := Vector3(cx + 6.0, STACK_LEVEL_HEIGHT * 7.6, front_z + 0.45)
+	_add_box("SignPlate", Vector3(11.0, 11.0, 0.3), plate_centre, sign_plate)
+	for bar in range(2):
+		var plate_mark := _add_box("SignPlateMark", Vector3(4.6, 0.9, 0.08),
+			plate_centre + Vector3(0.0, 3.4, 0.2), emblem)
+		plate_mark.rotation = Vector3(0.0, 0.0, (0.7 if bar == 0 else -0.7))
+	_add_sign_text("HIGHER\nSTRONGER\nFURTHER", plate_centre + Vector3(0.0, -1.6, 0.25),
+		0.0, 1.5, Color("ded2bd"))
+
+	# Bay lettering down at the loading level, where the player starts.
+	var bay_centre := Vector3(cx - 12.0, 6.4, front_z + 0.45)
+	_add_box("BayPlate", Vector3(8.0, 9.0, 0.3), bay_centre, sign_plate)
+	_add_sign_text("LIFT A", bay_centre + Vector3(0.0, 2.2, 0.25), 0.0, 2.1, Color("e8dcc6"))
+	_add_sign_text("TO A HIGHER\nTOMORROW", bay_centre + Vector3(0.0, -1.8, 0.25), 0.0, 0.8,
+		Color("cbbfa8"))
+
+
+# Walkways striking out from the tower toward structures off in the weather.
+func _build_stack_bridges(galvanised: Material, faded: Material, rust_deep: Material,
+		mill_scale: Material) -> void:
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var spans = [
+		{"y": STACK_LEVEL_HEIGHT * 6.0, "sx": 1.0, "length": 54.0},
+		{"y": STACK_LEVEL_HEIGHT * 10.0, "sx": -1.0, "length": 46.0},
+	]
+	for span in spans:
+		var y: float = span["y"]
+		var sx: float = span["sx"]
+		var length: float = span["length"]
+		var from := Vector3(cx + sx * STACK_HALF_EXTENT, y, cz - 3.0)
+		var to := from + Vector3(sx * length, -3.0, 0.0)
+
+		_add_box("BridgeDeck", Vector3(length, 0.4, 4.4), (from + to) * 0.5, mill_scale)
+		for rail_z in [-2.1, 2.1]:
+			_add_box("BridgeRail", Vector3(length, 0.1, 0.1),
+				(from + to) * 0.5 + Vector3(0.0, 1.15, rail_z), faded)
+			for post in range(int(length / 4.0)):
+				_add_box("BridgePost", Vector3(0.12, 1.2, 0.12),
+					from + Vector3(sx * (2.0 + float(post) * 4.0), 0.6, rail_z), galvanised)
+		# Under-truss, so the span looks like it could carry itself.
+		for web in range(int(length / 6.0)):
+			var a := float(web) / (length / 6.0)
+			var b := (float(web) + 1.0) / (length / 6.0)
+			_add_strut("BridgeWeb", from.lerp(to, a) - Vector3(0.0, 0.2, 0.0),
+				from.lerp(to, b) - Vector3(0.0, 2.6, 0.0), 0.3, rust_deep)
+		_add_strut("BridgeChord", from - Vector3(0.0, 2.6, 0.0), to - Vector3(0.0, 2.6, 0.0),
+			0.42, rust_deep)
+		# A pylon out at the far end, implying the span lands somewhere.
+		_add_box("BridgePylon", Vector3(3.0, y * 0.94, 3.0),
+			to + Vector3(sx * 2.0, -y * 0.5, 0.0), rust_deep)
 
 
 # Pipework, gearing, vents and lamps hung on the frame. None of this is
@@ -889,33 +1198,87 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 
 
 func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Material, faded: Material, timber: Material) -> void:
-	# Relief on the mass ABOVE the playable stack -- the rest of the skyscraper,
-	# continuing up out of reach. It starts where the climbable frame stops, so
-	# the two read as one structure: what you are standing in carries on up.
-	var base := STACK_MASS_BASE_Y
-	for x in [-52.0, -26.0, 0.0, 26.0, 52.0]:
-		_add_box("FacePier", Vector3(7.0, 300.0, 3.0), Vector3(x, base + 150.0, -143.0), oxidised)
-	for level in range(int(base) + 10, 420, 16):
-		_add_box("FaceBand", Vector3(118.0, 1.4, 2.0), Vector3(0.0, float(level), -143.4), mill_scale)
-	for x in [-40.0, -13.0, 13.0, 40.0]:
-		_add_box("FaceDuct", Vector3(3.2, 240.0, 3.2), Vector3(x, base + 120.0, -141.0), galvanised)
-	# Continuing frame legs above the stack, aligned with its own columns, so
-	# the climbable structure visibly continues rather than being capped.
-	for sx in [1.0, -1.0]:
-		for sz in [1.0, -1.0]:
-			_add_box("StackLegAbove", Vector3(STACK_COLUMN_SIZE, 90.0, STACK_COLUMN_SIZE),
-				Vector3(sx * STACK_HALF_EXTENT, base + 45.0,
-					STACK_CENTER.z + sz * STACK_HALF_EXTENT), oxidised)
+	# Relief on the neighbouring mass, now set well back across the yard. It is
+	# a second Kellerworks shaft receding into the weather, not a lid over the
+	# frame the player climbs.
+	var mass_x := -30.0
+	var face_z := -290.0
 	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("e0a040"), 0.9)
 	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("a86c22"), 0.5)
-	for level in range(int(base) + 6, 320, 12):
+	for offset in [-38.0, -19.0, 0.0, 19.0, 38.0]:
+		_add_box("FacePier", Vector3(6.0, 460.0, 3.0),
+			Vector3(mass_x + offset, 230.0, face_z), oxidised)
+	for level in range(40, 520, 16):
+		_add_box("FaceBand", Vector3(90.0, 1.4, 2.0),
+			Vector3(mass_x, float(level), face_z - 0.4), mill_scale)
+	for offset in [-30.0, -10.0, 10.0, 30.0]:
+		_add_box("FaceDuct", Vector3(3.0, 380.0, 3.0),
+			Vector3(mass_x + offset, 200.0, face_z + 1.6), galvanised)
+	for level in range(30, 360, 12):
 		var band: Material = lit_band if (level / 12) % 3 != 0 else lit_band_dim
-		_add_box("FloorLight", Vector3(104.0, 1.0, 0.6), Vector3(0.0, float(level), -144.3), band)
-	for level in range(340, 900, 34):
-		_add_box("FloorLightHigh", Vector3(96.0, 0.9, 0.6), Vector3(0.0, float(level), -144.3), lit_band_dim)
-	# Timber cladding accent: secondary material against the steel above.
-	for x in [-39.0, -14.0, 14.0, 39.0]:
-		_add_box("TimberCladding", Vector3(9.0, 44.0, 1.2), Vector3(x, base + 40.0, -142.6), timber)
+		_add_box("FloorLight", Vector3(80.0, 1.0, 0.6),
+			Vector3(mass_x, float(level), face_z - 1.3), band)
+	for level in range(380, 900, 34):
+		_add_box("FloorLightHigh", Vector3(74.0, 0.9, 0.6),
+			Vector3(mass_x, float(level), face_z - 1.3), lit_band_dim)
+	for offset in [-28.0, -9.0, 9.0, 28.0]:
+		_add_box("TimberCladding", Vector3(8.0, 44.0, 1.2),
+			Vector3(mass_x + offset, 62.0, face_z + 0.8), timber)
+
+	_build_stack_continuation(oxidised, rust_deepen(oxidised), mill_scale, galvanised, faded)
+
+
+# The frame does not stop where the player's reach does. Above the climbable
+# stack the same columns, decks and bracing carry on for a few hundred metres,
+# thinning out as they go, and the environment fog takes them the rest of the
+# way. This is what makes the structure read as a skyscraper rather than a
+# gantry: there is always more of it above you.
+func _build_stack_continuation(oxidised: Material, rust_deep: Material, mill_scale: Material,
+		galvanised: Material, faded: Material) -> void:
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var base_level := STACK_LEVEL_COUNT
+	var top_level := STACK_LEVEL_COUNT + 24
+
+	for level in range(base_level, top_level):
+		var base_y := float(level) * STACK_LEVEL_HEIGHT
+		var mid_y := base_y + STACK_LEVEL_HEIGHT * 0.5
+		# The shaft steps in as it rises, so the silhouette tapers.
+		var shrink := 1.0 - float(level - base_level) / float(top_level - base_level) * 0.42
+		var half := STACK_HALF_EXTENT * shrink
+
+		for sx in [1.0, -1.0]:
+			for sz in [1.0, -1.0]:
+				_add_box("UpperColumn", Vector3(STACK_COLUMN_SIZE * shrink, STACK_LEVEL_HEIGHT,
+					STACK_COLUMN_SIZE * shrink),
+					Vector3(cx + sx * half, mid_y, cz + sz * half), oxidised)
+		# A deck band every other level, and bracing on the faces between.
+		if level % 2 == 0:
+			for sz in [1.0, -1.0]:
+				_add_box("UpperDeck", Vector3(half * 2.0, 0.5, 4.0),
+					Vector3(cx, base_y, cz + sz * (half - 2.0)), mill_scale)
+			for sx in [1.0, -1.0]:
+				_add_box("UpperDeck", Vector3(4.0, 0.5, half * 2.0 - 8.0),
+					Vector3(cx + sx * (half - 2.0), base_y, cz), mill_scale)
+		var brace_length := sqrt(pow(STACK_LEVEL_HEIGHT, 2.0) + pow(half, 2.0))
+		var brace_pitch := atan2(STACK_LEVEL_HEIGHT, half)
+		for sz in [1.0, -1.0]:
+			for direction in [1.0, -1.0]:
+				var brace := _add_box("UpperBrace", Vector3(brace_length, 0.4, 0.4),
+					Vector3(cx + direction * half * 0.5, mid_y, cz + sz * half), rust_deep)
+				brace.rotation = Vector3(0.0, 0.0, direction * brace_pitch)
+		if level % 3 == 0:
+			_add_box("UpperLightBand", Vector3(half * 2.0, 0.7, 0.4),
+				Vector3(cx, base_y + 1.2, cz + half + 0.3), faded)
+
+
+# Slightly darker variant of a base material, for members that should sit back
+# a value step without defining a whole new palette entry.
+func rust_deepen(source: Material) -> Material:
+	var base := source as StandardMaterial3D
+	if base == null:
+		return source
+	return _material(base.albedo_color.darkened(0.35), base.metallic, base.roughness)
 
 
 func _build_yard(concrete: Material, mill_scale: Material,
@@ -1147,12 +1510,12 @@ func _build_plume() -> void:
 	_plume.damping_max = 1.4
 	_plume.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	_plume.emission_sphere_radius = 0.45
-	_plume.scale_amount_min = 0.9
-	_plume.scale_amount_max = 1.8
+	_plume.scale_amount_min = 0.5
+	_plume.scale_amount_max = 1.1
 	_plume.emitting = false
 
 	var quad := QuadMesh.new()
-	quad.size = Vector2(2.2, 2.2)
+	quad.size = Vector2(1.2, 1.2)
 	_plume_material = StandardMaterial3D.new()
 	_plume_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_plume_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
@@ -1506,6 +1869,94 @@ func _add_cone(node_name: String, radius: float, height: float, at: Vector3, mat
 	instance.position = at
 	$TowerPresentation.add_child(instance)
 	return instance
+
+
+# A member spanning two points. Almost every diagonal in a steel frame is one
+# of these -- braces, buttress legs, jib booms, tie rods -- and computing the
+# pose from the endpoints is far less error-prone than hand-solving rotations.
+func _add_strut(node_name: String, from: Vector3, to: Vector3, thickness: float,
+		material: Material, parent: Node3D = null) -> MeshInstance3D:
+	var delta := to - from
+	var length := delta.length()
+	if length < 0.01:
+		return null
+	var host: Node3D = parent if parent != null else $TowerPresentation
+	var instance := _add_box_to(node_name, Vector3(thickness, thickness, length),
+		from + delta * 0.5, material, host)
+	var up := Vector3.UP if absf(delta.normalized().y) < 0.99 else Vector3.RIGHT
+	instance.look_at(to, up)
+	return instance
+
+
+func _add_cylinder(node_name: String, radius: float, height: float, at: Vector3,
+		material: Material, parent: Node3D = null) -> MeshInstance3D:
+	var cylinder := CylinderMesh.new()
+	cylinder.top_radius = radius
+	cylinder.bottom_radius = radius
+	cylinder.height = height
+	cylinder.radial_segments = 12
+	var instance := MeshInstance3D.new()
+	instance.name = node_name
+	instance.mesh = cylinder
+	instance.material_override = material
+	instance.position = at
+	var host: Node3D = parent if parent != null else $TowerPresentation
+	host.add_child(instance)
+	return instance
+
+
+# An exposed gearwheel: hub, spokes and a toothed rim, built in the local XY
+# plane so the returned node can be rotated to face any direction and spun on
+# its own Z axis. The references lean on these hard -- they are the single
+# clearest signal that the building is a machine.
+func _add_gear(node_name: String, at: Vector3, radius: float, teeth: int,
+		hub_material: Material, rim_material: Material) -> Node3D:
+	var gear := Node3D.new()
+	gear.name = node_name
+	gear.position = at
+	$TowerPresentation.add_child(gear)
+
+	var depth := maxf(0.5, radius * 0.16)
+	_add_box_to("GearHub", Vector3(radius * 0.38, radius * 0.38, depth * 1.5),
+		Vector3.ZERO, hub_material, gear)
+	for spoke in range(6):
+		var spoke_mesh := _add_box_to("GearSpoke",
+			Vector3(radius * 1.7, radius * 0.11, depth * 0.8), Vector3.ZERO, hub_material, gear)
+		spoke_mesh.rotation = Vector3(0.0, 0.0, PI * float(spoke) / 6.0)
+	# Rim built from short chords, with a tooth standing proud of each joint.
+	var rim_step := TAU / float(teeth)
+	for index in range(teeth):
+		var angle := rim_step * float(index)
+		var chord := 2.0 * radius * tan(rim_step * 0.5) * 1.06
+		var rim := _add_box_to("GearRim", Vector3(chord, radius * 0.13, depth),
+			Vector3(cos(angle) * radius, sin(angle) * radius, 0.0), rim_material, gear)
+		rim.rotation = Vector3(0.0, 0.0, angle + PI * 0.5)
+		var tooth_radius := radius * 1.075
+		var tooth := _add_box_to("GearTooth",
+			Vector3(chord * 0.5, radius * 0.11, depth * 0.92),
+			Vector3(cos(angle) * tooth_radius, sin(angle) * tooth_radius, 0.0), rim_material, gear)
+		tooth.rotation = Vector3(0.0, 0.0, angle + PI * 0.5)
+	return gear
+
+
+# Painted text on the structure. Label3D keeps this readable at distance
+# without needing an atlas, which is what sells the company's presence in the
+# references -- the building talks at you.
+func _add_sign_text(text: String, at: Vector3, yaw: float, height_meters: float,
+		color: Color, parent: Node3D = null) -> Label3D:
+	var label := Label3D.new()
+	label.text = text
+	label.font_size = 64
+	label.pixel_size = height_meters / 64.0
+	label.modulate = color
+	label.double_sided = true
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.position = at
+	label.rotation = Vector3(0.0, yaw, 0.0)
+	var host: Node3D = parent if parent != null else $TowerPresentation
+	host.add_child(label)
+	return label
 
 
 func _material(color: Color, metallic: float, roughness: float,
