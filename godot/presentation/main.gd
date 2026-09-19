@@ -912,8 +912,23 @@ func _build_needle_bay(mill_scale: Material, oxidized_steel: Material, weathered
 	_add_box("KxBayColumnR", Vector3(1.4, 16.0, 1.4), Vector3(14.8, 8.0, 45.4), mill_scale)
 	_add_machine_wheel(Vector3(9.5, 12.4, 44.6), 2.6, 0.7, mill_scale, oxidized_steel)
 	_add_box("KxStagingRack", Vector3(7.6, 0.22, 0.7), Vector3(-18.0, 0.20, 40.0), mill_scale)
-	_add_box("KxApronBrace", Vector3(0.55, 5.4, 0.55), Vector3(-13.4, 2.7, 44.2), oxidized_steel)
-	_add_box("KxApronBrace2", Vector3(0.55, 5.4, 0.55), Vector3(-7.8, 2.7, 44.2), oxidized_steel)
+
+	# Playable maintenance route mirrors native Jolt geometry exactly.
+	var maintenance_ramp := _add_box(
+		"KxMaintenanceRamp",
+		Vector3(2.40, 0.24, 7.20),
+		Vector3(-14.0, 1.55, 49.40),
+		galvanized
+	)
+	maintenance_ramp.rotation.x = 0.365
+	_add_box("KxMaintenanceRampEdgeL", Vector3(0.10, 0.16, 7.20), Vector3(-15.15, 1.62, 49.40), faded_yellow).rotation.x = 0.365
+	_add_box("KxMaintenanceRampEdgeR", Vector3(0.10, 0.16, 7.20), Vector3(-12.85, 1.62, 49.40), faded_yellow).rotation.x = 0.365
+	_add_box("KxMaintenanceHangBeam", Vector3(6.00, 0.40, 0.60), Vector3(-11.80, 4.55, 45.55), oxidized_steel)
+	_add_box("KxMaintenanceBeamStripe", Vector3(5.70, 0.05, 0.64), Vector3(-11.80, 4.78, 45.55), faded_yellow)
+
+	# Structural filler is kept outside the playable clearance corridor.
+	_add_box("KxApronOuterBraceL", Vector3(0.70, 5.4, 0.70), Vector3(-17.2, 2.7, 44.2), oxidized_steel)
+	_add_box("KxApronOuterBraceR", Vector3(0.70, 5.4, 0.70), Vector3(-5.2, 2.7, 44.2), oxidized_steel)
 	_add_box("KxPocketPaint", Vector3(0.20, 0.12, 0.46), Vector3(-8.75, 5.28, 43.90), chipped_orange)
 	_add_box("KxDogReceiver", Vector3(1.80, 0.20, 1.80), Vector3(-6.426, 0.10, 53.739), mill_scale)
 	_add_box("KxDogReceiverWear", Vector3(1.45, 0.03, 1.45), Vector3(-6.426, 0.215, 53.739), chipped_orange)
@@ -944,7 +959,8 @@ func _build_cage_house(mill_scale: Material, oxidized_steel: Material, galvanize
 	_add_box("KxUpperEdge", Vector3(6.5, 0.08, 0.14), Vector3(9.50, 22.02, 39.90), faded_yellow)
 	_add_box("KxUpperRailL", Vector3(0.10, 1.1, 4.2), Vector3(6.40, 22.55, 37.80), faded_yellow)
 	_add_box("KxUpperRailR", Vector3(0.10, 1.1, 4.2), Vector3(12.60, 22.55, 37.80), faded_yellow)
-	_add_wrapping_stairs(Vector3(15.6, 0.0, 34.2), 8.7, 1, galvanized, faded_yellow)
+	# No visual-only staircase here: KX-CAGE is the truthful machine route.
+	_add_box("CageOuterBrace", Vector3(0.72, 12.0, 0.72), Vector3(17.8, 7.0, 31.0), oxidized_steel).rotation.z = -0.34
 
 	_cage_mesh = _add_box("KxCageDeck", Vector3(3.10, 0.36, 3.10), Vector3(9.50, 8.52, 34.20), faded_yellow)
 	_cage_gate_mesh = _add_box("KxCageGate", Vector3(2.6, 2.4, 0.12), Vector3(9.50, 9.85, 32.72), oxidized_steel)
@@ -1071,7 +1087,9 @@ func _build_stacked_machine_tower(mill_scale: Material, oxidized_steel: Material
 		_add_box("CatwalkN", Vector3(24.0, 0.22, 2.2), Vector3(0.0, y + 3.4, 22.2), galvanized)
 		_add_box("CatwalkRailN", Vector3(24.0, 0.08, 0.08), Vector3(0.0, y + 4.3, 23.2), faded_yellow)
 		if dense:
-			_add_wrapping_stairs(Vector3(-16.5 + float(index % 2) * 33.0, y, 21.5), minf(bay_h - 1.0, 12.0), 1, galvanized, faded_yellow)
+			# Dense filler remains structural silhouette, not a fake staircase affordance.
+			var brace_x := -20.8 if index % 2 == 0 else 20.8
+			_add_box("BayOuterServiceBrace", Vector3(0.75, minf(bay_h - 1.0, 12.0), 0.75), Vector3(brace_x, y + minf(bay_h - 1.0, 12.0) * 0.5, 20.8), oxidized_steel).rotation.z = 0.34 if brace_x < 0.0 else -0.34
 		if variant == 0:
 			if dense:
 				_add_machine_wheel(Vector3(-14.0, y + 7.2, 16.2), 4.2, 1.15, mill_scale, oxidized_steel)

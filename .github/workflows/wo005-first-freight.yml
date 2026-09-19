@@ -78,6 +78,7 @@ jobs:
           grep -F "PASS scraperx_sim KX-CAGE first shaft" artifacts/native-tests.log
           grep -F "PASS scraperx_sim WO-007 first process coupling" artifacts/native-tests.log
           grep -F "PASS scraperx_sim WO-008 causal kernel" artifacts/native-tests.log
+          grep -F "PASS scraperx_sim maintenance parkour" artifacts/native-tests.log
           test -s artifacts/wo008-checkpoint.txt
 
           ./build/host/scraperx_sim_tests             --verify-checkpoint artifacts/wo008-checkpoint.txt             2>&1 | tee artifacts/process-restart.log
@@ -158,6 +159,8 @@ jobs:
           - the complete native regression executable remains green, including WO-005 freight, WO-006 structure, KX-CAGE and WO-007 process coupling;
           - KX-CRATE must settle on a real Jolt receiver before finite KX-DOG travel occurs;
           - the actual KX-DOG body clearance gates KX-NEEDLE seating;
+          - the maintenance sequence-break is native geometry: clear ramp -> beam grab -> lateral shimmy -> mantle -> local dog handle;
+          - presentation-only stair cues were removed from the lower kernel so visible route language no longer lies about collision;
           - pinned-dog, unseated-needle, wet-grate, remote-control and premature-refuge falsifiers remain negative;
           - one uninterrupted cold-kernel command stream reaches KX-REFUGE through freight -> dog -> needle -> cage -> sump -> grate;
           - the committed native checkpoint is serialized to disk;

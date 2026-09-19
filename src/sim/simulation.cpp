@@ -120,7 +120,7 @@ constexpr double kDogPinZ = kNeedleSeatZ;
 constexpr double kDogRetractDistanceMeters = 1.10;
 constexpr double kDogClearanceMeters = 0.72;
 constexpr double kDogRetractSpeedMetersPerSecond = 0.80;
-constexpr double kDogManualReleaseX = kNeedleNearLandingX;
+constexpr double kDogManualReleaseX = -10.60;
 constexpr double kDogManualReleaseY = 5.72;
 constexpr double kDogManualReleaseZ = 42.75;
 constexpr double kDogManualReleaseRadiusMeters = 2.25;
@@ -247,6 +247,32 @@ constexpr float kMantleVerticalPositionGain = 6.0F;
 constexpr float kMantleMaximumVerticalSpeed = 4.5F;
 constexpr float kHangPositionGain = 6.0F;
 constexpr float kHangMaximumCorrectionSpeed = 3.0F;
+constexpr float kHangShimmySpeed = 2.4F;
+
+// Native-owned maintenance parkour route. This is the documented legal
+// sequence-break path to the KX-DOG service handle.
+constexpr double kMaintenanceRampX = -14.0;
+constexpr double kMaintenanceRampY = 1.55;
+constexpr double kMaintenanceRampZ = 49.40;
+constexpr float kMaintenanceRampHalfX = 1.20F;
+constexpr float kMaintenanceRampHalfY = 0.12F;
+constexpr float kMaintenanceRampHalfZ = 3.60F;
+constexpr float kMaintenanceRampPitch = 0.365F;
+constexpr double kMaintenanceBeamX = -11.80;
+constexpr double kMaintenanceBeamY = 4.55;
+constexpr double kMaintenanceBeamZ = 45.55;
+constexpr float kMaintenanceBeamHalfX = 3.00F;
+constexpr float kMaintenanceBeamHalfY = 0.20F;
+constexpr float kMaintenanceBeamHalfZ = 0.30F;
+constexpr double kMaintenanceHangTargetY = 3.48;
+constexpr double kMaintenanceHangTargetZ = 45.88;
+constexpr double kMaintenanceHangCandidateMinY = 2.85;
+constexpr double kMaintenanceHangCandidateMaxY = 4.75;
+constexpr double kMaintenanceHangCandidateMinZ = 45.55;
+constexpr double kMaintenanceHangCandidateMaxZ = 46.85;
+constexpr double kMaintenanceHangLateralMargin = 0.38;
+constexpr double kMaintenanceMantlePlayerY = 6.46;
+constexpr double kMaintenanceMantleLandingZ = 44.25;
 
 class BroadPhaseLayerInterface final : public JPH::BroadPhaseLayerInterface {
 public:
@@ -530,6 +556,8 @@ private:
                 kCageMinY + static_cast<double>(kCageHalfY) +
                     static_cast<double>(kPlayerStandingHalfHeight) + 0.08,
                 kCageZ};
+    case scraperx::sim::InitialSpawn::MaintenanceRamp:
+        return {kMaintenanceRampX, 3.0, 52.15};
     case scraperx::sim::InitialSpawn::SumpLanding:
     case scraperx::sim::InitialSpawn::SumpDrained:
         return {kCageUpperX,
@@ -739,6 +767,28 @@ public:
                               JPH::Quat::sIdentity(),
                               Simulation::kHangLedgeEntityId,
                               0.76F);
+
+        maintenance_ramp_id_ =
+            create_static_box(JPH::Vec3(kMaintenanceRampHalfX,
+                                        kMaintenanceRampHalfY,
+                                        kMaintenanceRampHalfZ),
+                              JPH::RVec3(kMaintenanceRampX,
+                                         kMaintenanceRampY,
+                                         kMaintenanceRampZ),
+                              JPH::Quat::sRotation(JPH::Vec3(1.0F, 0.0F, 0.0F),
+                                                   kMaintenanceRampPitch),
+                              Simulation::kMaintenanceRampEntityId,
+                              0.92F);
+        maintenance_beam_id_ =
+            create_static_box(JPH::Vec3(kMaintenanceBeamHalfX,
+                                        kMaintenanceBeamHalfY,
+                                        kMaintenanceBeamHalfZ),
+                              JPH::RVec3(kMaintenanceBeamX,
+                                         kMaintenanceBeamY,
+                                         kMaintenanceBeamZ),
+                              JPH::Quat::sIdentity(),
+                              Simulation::kMaintenanceBeamEntityId,
+                              0.86F);
 
         JPH::BodyCreationSettings translating_support_settings(
             new JPH::BoxShape(JPH::Vec3(2.75F, 0.25F, 2.75F)),
@@ -1100,6 +1150,8 @@ public:
         remove_and_destroy(bodies, rotating_support_id_);
         remove_and_destroy(bodies, translating_support_id_);
         remove_and_destroy(bodies, hang_ledge_id_);
+        remove_and_destroy(bodies, maintenance_beam_id_);
+        remove_and_destroy(bodies, maintenance_ramp_id_);
         remove_and_destroy(bodies, mantle_block_id_);
         remove_and_destroy(bodies, vault_block_id_);
         remove_and_destroy(bodies, hopper_right_wall_id_);
@@ -1184,7 +1236,10 @@ public:
         JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
 
         if (traversal_mode_ != TraversalMode::None) {
-            apply_traversal_controller(bodies, player_velocity, delta_seconds);
+            apply_traversal_controller(bodies,
+                                       player_velocity,
+                                       move_input_x,
+                                       delta_seconds);
         } else {
             if (grounded_ && support_entity_id_ != 0) {
                 reference_velocity = current_support_point_velocity(bodies);
@@ -1455,6 +1510,12 @@ private:
         }
         if (entity_id == Simulation::kRefugeEntityId) {
             return refuge_id_;
+        }
+        if (entity_id == Simulation::kMaintenanceRampEntityId) {
+            return maintenance_ramp_id_;
+        }
+        if (entity_id == Simulation::kMaintenanceBeamEntityId) {
+            return maintenance_beam_id_;
         }
         if (entity_id == Simulation::kSumpFloorEntityId) {
             return sump_floor_id_;
@@ -2058,6 +2119,21 @@ private:
         const double x = player_position.GetX();
         const double y = player_position.GetY();
         const double z = player_position.GetZ();
+
+        const bool maintenance_beam_reach =
+            !grounded_ &&
+            y >= kMaintenanceHangCandidateMinY &&
+            y <= kMaintenanceHangCandidateMaxY &&
+            z >= kMaintenanceHangCandidateMinZ &&
+            z <= kMaintenanceHangCandidateMaxZ &&
+            x >= kMaintenanceBeamX - static_cast<double>(kMaintenanceBeamHalfX) -
+                     kMaintenanceHangLateralMargin &&
+            x <= kMaintenanceBeamX + static_cast<double>(kMaintenanceBeamHalfX) +
+                     kMaintenanceHangLateralMargin;
+        if (maintenance_beam_reach) {
+            return TraversalMode::Hang;
+        }
+
         const bool lane_clear = std::abs(x - kTraversalLaneX) <= kTraversalLaneHalfWidth;
         if (!lane_clear) {
             return TraversalMode::None;
@@ -2098,30 +2174,68 @@ private:
         } else if (candidate == TraversalMode::Mantle) {
             traversal_target_ = JPH::RVec3(target_x, kMantleTopPlayerY, kMantleLandingZ);
         } else {
-            traversal_target_ = JPH::RVec3(target_x, kHangTargetY, kHangTargetZ);
+            const bool maintenance_hang =
+                player_position.GetX() < -6.0 && player_position.GetZ() > 40.0;
+            if (maintenance_hang) {
+                hang_lateral_min_ =
+                    kMaintenanceBeamX - static_cast<double>(kMaintenanceBeamHalfX) + 0.42;
+                hang_lateral_max_ =
+                    kMaintenanceBeamX + static_cast<double>(kMaintenanceBeamHalfX) - 0.42;
+                hang_mantle_y_ = kMaintenanceMantlePlayerY;
+                hang_mantle_z_ = kMaintenanceMantleLandingZ;
+                traversal_target_ =
+                    JPH::RVec3(clamp_double(static_cast<double>(player_position.GetX()),
+                                            hang_lateral_min_,
+                                            hang_lateral_max_),
+                               kMaintenanceHangTargetY,
+                               kMaintenanceHangTargetZ);
+            } else {
+                hang_lateral_min_ = kTraversalLaneX - 2.30;
+                hang_lateral_max_ = kTraversalLaneX + 2.30;
+                hang_mantle_y_ = kHangMantlePlayerY;
+                hang_mantle_z_ = kHangMantleLandingZ;
+                traversal_target_ = JPH::RVec3(target_x, kHangTargetY, kHangTargetZ);
+            }
         }
     }
 
     void begin_mantle_from_hang(JPH::BodyInterface &bodies) noexcept {
         const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
-        const double target_x = std::max(
-            kTraversalLaneX - 1.75,
-            std::min(kTraversalLaneX + 1.75,
-                     static_cast<double>(player_position.GetX())));
+        const bool maintenance_hang = player_position.GetX() < -6.0;
+        const double target_x =
+            maintenance_hang
+                ? clamp_double(static_cast<double>(player_position.GetX()),
+                               kNeedleNearLandingX - static_cast<double>(kNeedleNearHalfX) + 0.40,
+                               kNeedleNearLandingX + static_cast<double>(kNeedleNearHalfX) - 0.40)
+                : clamp_double(static_cast<double>(player_position.GetX()),
+                               kTraversalLaneX - 1.75,
+                               kTraversalLaneX + 1.75);
         traversal_mode_ = TraversalMode::Mantle;
         traversal_elapsed_seconds_ = 0.0F;
         mantle_from_hang_ = true;
         traversal_reference_velocity_ = JPH::Vec3::sZero();
-        traversal_target_ = JPH::RVec3(target_x, kHangMantlePlayerY, kHangMantleLandingZ);
+        traversal_target_ = JPH::RVec3(target_x, hang_mantle_y_, hang_mantle_z_);
     }
 
     void apply_traversal_controller(const JPH::BodyInterface &bodies,
                                     JPH::Vec3 &player_velocity,
+                                    const double move_input_x,
                                     const float delta_seconds) noexcept {
         const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
 
         if (traversal_mode_ == TraversalMode::Hang) {
-            const float error_x = static_cast<float>(traversal_target_.GetX() - player_position.GetX());
+            const double shimmy_target =
+                clamp_double(static_cast<double>(traversal_target_.GetX()) +
+                                 move_input_x * static_cast<double>(kHangShimmySpeed) *
+                                     static_cast<double>(delta_seconds),
+                             hang_lateral_min_,
+                             hang_lateral_max_);
+            traversal_target_ =
+                JPH::RVec3(shimmy_target,
+                           traversal_target_.GetY(),
+                           traversal_target_.GetZ());
+            const float error_x =
+                static_cast<float>(traversal_target_.GetX() - player_position.GetX());
             const float error_y = static_cast<float>(traversal_target_.GetY() - player_position.GetY());
             const float error_z = static_cast<float>(traversal_target_.GetZ() - player_position.GetZ());
             player_velocity.SetX(clamp_float(error_x * kHangPositionGain,
@@ -2629,6 +2743,8 @@ private:
     JPH::BodyID vault_block_id_;
     JPH::BodyID mantle_block_id_;
     JPH::BodyID hang_ledge_id_;
+    JPH::BodyID maintenance_ramp_id_;
+    JPH::BodyID maintenance_beam_id_;
     JPH::BodyID translating_support_id_;
     JPH::BodyID rotating_support_id_;
     JPH::BodyID hopper_gate_id_;
@@ -2749,6 +2865,10 @@ private:
     JPH::Vec3 traversal_reference_velocity_{JPH::Vec3::sZero()};
     float traversal_elapsed_seconds_ = 0.0F;
     bool mantle_from_hang_ = false;
+    double hang_lateral_min_ = kTraversalLaneX - 2.30;
+    double hang_lateral_max_ = kTraversalLaneX + 2.30;
+    double hang_mantle_y_ = kHangMantlePlayerY;
+    double hang_mantle_z_ = kHangMantleLandingZ;
 
     Snapshot state_{};
 };

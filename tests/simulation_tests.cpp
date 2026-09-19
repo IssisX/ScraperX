@@ -389,6 +389,20 @@ int main(int argc, char **argv) {
     require(hanging.player_position.y > 2.75,
             "hang controller must arrest the fall at the actual ledge");
 
+    require(hang.set_move_input(1.0, 0.0),
+            "hang shimmy input must remain a normal movement command");
+    require(hang.advance_frame(0.60).accepted,
+            "hand-over-hand beam shimmy must advance through fixed-step simulation");
+    const auto shimmied = hang.snapshot();
+    require(shimmied.traversal_mode == TraversalMode::Hang,
+            "lateral movement must preserve the hang until climb/drop input");
+    require(shimmied.player_position.x > hanging.player_position.x + 0.55,
+            "hang movement must translate the physical player sideways along the ledge");
+    require(std::abs(shimmied.player_position.y - hanging.player_position.y) < 0.30,
+            "shimmy must not fake elevation while hanging");
+    require(hang.set_move_input(0.0, 0.0),
+            "hang shimmy must be stoppable before mantle");
+
     require(hang.request_jump(),
             "jump from a valid hang must request a climb transition");
     require(hang.advance_frame(0.95).accepted,
@@ -422,6 +436,84 @@ int main(int argc, char **argv) {
             "drop command must release the native hang controller");
     require(after_drop.player_position.y < before_drop.player_position.y - 0.10,
             "released hang must actually fall rather than switch animation state");
+
+    // Legal manual parkour route: real Jolt ramp -> jump/grab real beam ->
+    // hand-over-hand shimmy -> hang-to-mantle onto the KX-NEEDLE landing.
+    Simulation maintenance(InitialSpawn::MaintenanceRamp);
+    require(maintenance.advance_frame(0.80).accepted,
+            "maintenance ramp fixture must settle on native geometry");
+    require(maintenance.snapshot().player_grounded,
+            "maintenance route must begin on real support");
+    require(maintenance.set_move_input(0.0, -1.0),
+            "maintenance ramp approach input must be accepted");
+
+    bool climbed_ramp = false;
+    for (int step = 0; step < 260; ++step) {
+        require(maintenance.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "maintenance ramp fixed step must advance");
+        const auto state = maintenance.snapshot();
+        if (state.player_position.y > 3.45 && state.player_position.z < 47.1) {
+            climbed_ramp = true;
+            break;
+        }
+    }
+    require(climbed_ramp,
+            "clear native ramp must carry the physical player upward without an obstruction");
+    require(maintenance.set_move_input(0.0, 0.0),
+            "player must be able to stop at the ramp crest");
+    require(maintenance.request_jump(),
+            "manual route must require a real jump before the beam grab");
+
+    bool maintenance_hang = false;
+    for (int step = 0; step < 140; ++step) {
+        require(maintenance.set_move_input(0.0, -0.25),
+                "beam approach air-control input must be accepted");
+        require(maintenance.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "beam approach fixed step must advance");
+        if (maintenance.snapshot().traversal_candidate_mode == TraversalMode::Hang) {
+            require(maintenance.request_traversal(),
+                    "maintenance beam must accept a native ledge grab");
+            require(maintenance.advance_frame(0.45).accepted,
+                    "maintenance beam acquisition must advance");
+            maintenance_hang =
+                maintenance.snapshot().traversal_mode == TraversalMode::Hang;
+            break;
+        }
+    }
+    require(maintenance_hang,
+            "ramp must lead into reachable beam-hang geometry instead of a dead end");
+    const auto maintenance_hang_start = maintenance.snapshot();
+    require(maintenance.set_move_input(1.0, 0.0),
+            "maintenance beam must accept lateral hand-over-hand movement");
+    require(maintenance.advance_frame(0.70).accepted,
+            "maintenance beam shimmy interval must advance");
+    const auto maintenance_shimmy = maintenance.snapshot();
+    require(maintenance_shimmy.player_position.x >
+                maintenance_hang_start.player_position.x + 0.60,
+            "maintenance beam must provide real sideways hanging travel");
+
+    require(maintenance.set_move_input(0.0, 0.0),
+            "maintenance beam mantle must start from a stopped shimmy");
+    require(maintenance.request_jump(),
+            "jump while hanging must transition into manual mantle");
+    require(maintenance.advance_frame(1.05).accepted,
+            "maintenance hang-to-mantle controller must advance");
+    require(maintenance.advance_frame(0.55).accepted,
+            "maintenance landing must settle on native contact");
+    const auto maintenance_landed = maintenance.snapshot();
+    require(maintenance_landed.player_grounded &&
+                maintenance_landed.support_entity_id == Simulation::kNeedleNearLandingEntityId,
+            "maintenance route must end on the real KX-NEEDLE landing support");
+    require(maintenance.can_operate_dog_manual_release(),
+            "manual parkour route must physically lead to the local KX-DOG service handle");
+
+    std::cout << "PASS scraperx_sim maintenance parkour: "
+              << "ramp_y=" << maintenance_hang_start.player_position.y
+              << " shimmy_dx="
+              << maintenance_shimmy.player_position.x -
+                     maintenance_hang_start.player_position.x
+              << " landing=" << maintenance_landed.support_entity_id
+              << '\n';
 
     Simulation grounded_block(InitialSpawn::StaticDeck);
     require(grounded_block.advance_frame(1.0).accepted, "static deck settle must advance");

@@ -31,6 +31,7 @@ enum class InitialSpawn : std::uint8_t {
     SumpLanding = 15,
     SumpDrained = 16,
     NeedleBlocked = 17,
+    MaintenanceRamp = 18,
 };
 
 enum class TraversalMode : std::uint8_t {
@@ -205,6 +206,8 @@ public:
     static constexpr std::uint64_t kDogEntityId = 56;
     static constexpr std::uint64_t kRefugeEntityId = 57;
     static constexpr std::uint64_t kDogReceiverEntityId = 58;
+    static constexpr std::uint64_t kMaintenanceRampEntityId = 59;
+    static constexpr std::uint64_t kMaintenanceBeamEntityId = 60;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ApproachGrade);
     ~Simulation();
