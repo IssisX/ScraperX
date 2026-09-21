@@ -82,19 +82,36 @@ jobs:
           cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
+          # The falsifiers' own proof lines. ctest --output-on-failure prints a
+          # passing test's stdout nowhere, so native-tests.log carries only the
+          # aggregate verdict -- every PASS line the suite emits was invisible
+          # to this workflow until now. Run the binary directly for them.
+          # set -o pipefail means a non-zero exit still fails the step.
+          ./build/host/scraperx_sim_tests | tee artifacts/native-falsifiers.log
+          for proof in \
+            "PASS scraperx_sim moving-support truth" \
+            "PASS scraperx_sim athletic traversal" \
+            "PASS scraperx_sim first full causal chain" \
+            "PASS scraperx_sim coupled machine" \
+            "PASS scraperx_sim fall/parachute/checkpoint" \
+            "PASS scraperx_sim first freight" \
+            "PASS scraperx_sim first structural coupling" \
+            "PASS scraperx_sim first process coupling" \
+            "PASS scraperx_sim B00 intake rise"
+          do
+            grep -F "${proof}" artifacts/native-falsifiers.log
+          done
           # WO-014 B00: the intake rise closed, and it closed for physical
-          # reasons. A green suite that silently stopped running this slice
-          # would otherwise still pass the line above.
-          grep -F "PASS scraperx_sim B00 intake rise" artifacts/native-tests.log
-          grep -F "pinned_impassable=1" artifacts/native-tests.log
-          grep -F "forced_impassable=1" artifacts/native-tests.log
-          grep -F "skin_freight_untouched=1" artifacts/native-tests.log
+          # reasons. Each of these is a separate link in the causal path.
+          grep -F "pinned_impassable=1" artifacts/native-falsifiers.log
+          grep -F "forced_impassable=1" artifacts/native-falsifiers.log
+          grep -F "skin_freight_untouched=1" artifacts/native-falsifiers.log
           awk -F'skin_mantles=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 >= 15) ? 0 : 1}' \
-            artifacts/native-tests.log
+            artifacts/native-falsifiers.log
           awk -F'handoff_y=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 > 24.8) ? 0 : 1}' \
-            artifacts/native-tests.log
+            artifacts/native-falsifiers.log
           awk -F'overweight_y=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 < 1.2) ? 0 : 1}' \
-            artifacts/native-tests.log
+            artifacts/native-falsifiers.log
 
       - name: Run Godot at Fold aspect through native machine authority and capture proof
         shell: bash
