@@ -1,142 +1,195 @@
-# SCRAPERX — WO-015 LEGAL FORTY (~+24 m TO FIRST STAND AT +40 m)
+# SCRAPERX — WO-015 LEGAL FORTY (+24.19 m TO FIRST STAND AT +40.19 m)
 
-**Work Order:** `WO-015`  
-**Status:** READY after `WO-014_INTAKE_RISE` source on `ScraperX-Claude`  
-**Depends on:** `03_WORK_ORDERS/WO-014_INTAKE_RISE.md` implemented in source; the kernel falsifiers (WO-000–WO-003, WO-008–WO-009, WO-011–WO-013) remain green; protocol `03_WORK_ORDERS/SECTION_PRE_RESOLVE_PROTOCOL.md`
+**Work Order:** `WO-015`
+**Status:** READY. Plan authored against this branch's real `WO-014` exit state.
+**Depends on:** `WO-014_INTAKE_RISE.md` in source and green; kernel falsifiers
+(`WO-000`–`WO-003`, `WO-008`–`WO-009`, `WO-011`–`WO-013`) green; protocol
+`SECTION_PRE_RESOLVE_PROTOCOL.md` §8.
 
-> **Provenance.** Adopted from `ScraperX-Grok`, where this slice was authored as `WO-010_LEGAL_FORTY`.
-> Ticket numbers remapped per `SECTION_PRE_RESOLVE_PROTOCOL.md` §5.1. Geometry, ratings and
-> falsifiers carry over as **DESIGN TARGET**: they were never proven in source on that branch
-> (it has not compiled since 2026-09-20). Positions are re-sited against this branch's tower
-> at source `(0, —, -150)`.
+> **Authoring note.** This file replaces the plan adopted from `ScraperX-Grok`
+> (their `WO-010_LEGAL_FORTY`). That version was not portable: its entire
+> "Existing truth" section quotes geometry that does not exist here — a handoff
+> at source `(10.40, 24.00, 38.40)`, 68 discrete STAIR-A treads at `x = 10.40`,
+> SKIN at `x = -17.00`, `InitialSpawn::IntakeHandoff`. This branch's `WO-014`
+> built a switchback stair in a walled bay, a handoff deck at `x = -6`, and a
+> stepped SKIN line at `x = -6`. A job ticket whose inherited constants are all
+> false is not a job ticket. The one thing carried across unchanged is its
+> finding that the atlas's third B00 exit does not close — independently
+> re-derived in §8.4 below, with a stronger reason than reach.
 
 ## Objective
 
-Close atlas §7 **K0 PLAY**: the player first stands with stable support at atlas `z ≥ 40 m`.
+Close Atlas §7 **K0 PLAY**: the player first stands with stable support at
+`z ≥ 40 m` and the automatic checkpoint commits there.
 
-This is the leftover 24–40 m of atlas band `B00 - Apron and Intake`. It is not a new kernel fixture, not `MOD-HOOK5-RACK`, and not atlas band B01 needles (`WO-017_NEEDLE_SEAT.md`).
+This is the leftover 24–40 m of Atlas band `B00 — Apron and Intake`. It is not
+`MOD-HOOK5-RACK` (`WO-016`), and it is not band B01's needles (`WO-017`).
 
-Two atlas exits close under frozen B00 ratings:
-
-- `MOD-STAIR-A` continues from the +24 m handoff to `MOD-HALL-DECK` lower landing
-- `MOD-SKIN-LADDER-S` continues to the same landing
-
-The third atlas exit does **not** close. Report is in Mechanical close §8.4. Do not lengthen `MOD-YARD-JIB`.
+The slice owns **one mechanism**: `MOD-STAIR-A`'s lower upper-flight is a
+counterweighted bascule that hangs uselessly in the bay until the yard jib
+loads its counterweight. That is the first time in the campaign that the
+player's own climb is paid for by a mass balance rather than by a gate.
 
 ## Existing truth
 
-HEAD on `ScraperX-Claude` contains B00 0–24 m (`WO-014_INTAKE_RISE`). Native 90 Hz Jolt owns the dog, 12 m / 5 t jib, 18 m belt, 68 STAIR-A treads, 48 SKIN rungs plus hang/decks, and the +24 m handoff body.
+Observed on `ScraperX-Claude` at `af8beca`, CI run `35651140478` green:
 
-Frozen source consumed by this file:
+```
+PASS scraperx_sim B00 intake rise: pinned_impassable=1 pinned_deepest_z=-110.517
+  forced_impassable=1 overweight_y=0.899998 lifted_y=4.54117 dog_rad=1.20062
+  handoff_y=25.0872 skin_mantles=15 skin_freight_untouched=1
+```
 
-- handoff `kB00Handoff*` source `(10.40, 24.00, 38.40)` half `(4.80, 0.20, 3.40)`
-- STAIR-A 0–24: `kB00StairX = 10.40`, `kB00StairY0 = 0.00`, `kB00StairDY = 0.353`, `kB00StairZ0 = 14.20`, `kB00StairDZ = 0.320`, `kB00StairHalfX = 1.30`, `kB00StairHalfZ = 0.18`, count `kFillStairCount = 68`
-- last 0–24 tread t=68: source top `(10.40, 24.004, 35.96)`
-- SKIN: `kB00SkinX = -17.00`, `kB00SkinZ = 16.60`, rise 0.450 m for rungs 1–40 then 0.40 m jog, `kIntakeSkinCount = 48`
-- jib: boom 12.00 m, boom height 11.50 m, SWL 5000 kg, winch `[2.80, 10.20]` m, slew `[-0.90, 0.90]` rad
-- dog hinge source `(11.90, 1.45, 13.50)`, retract `+1.45` rad — **grade mechanism**, not a +24 gate
-- player capsule: radius 0.35 m, cylinder half-height 0.55 m, standing half-height 0.90 m
-- gravity 9.81 m/s², 90 Hz, autocommit dwell 0.35 s
-- spawn `InitialSpawn::IntakeHandoff` already exists at the +24 m deck
-- Godot `UnfinishedFortyA/B/C` at source z 41.90 / 42.28 / 42.66 are unfinished silhouette, not frozen STAIR-A
+Frozen source this file consumes (`src/sim/simulation.cpp`, verbatim):
 
-Fold-device execution is not proven. Kernel `KX-*` IDs remain regression substrate.
+| Constant | Value | Meaning |
+|---|---|---|
+| `kIntakeHandoffY` | `24.0` | handoff deck datum |
+| tread surface offset | `0.1872` | `kIntakeStairSlabHalfY / cos(pitch)`, pitch `15.95°` |
+| — handoff **walking surface** | **`24.1872`** | derived; the player's feet stand here |
+| `kIntakeHandoffCenterX` / `HalfX` | `-6.0` / `4.0` | deck spans `x ∈ [-10, -2]` |
+| `kIntakeHandoffSouthZ` / `NorthZ` | `-107.7` / `-117.5` | deck z span |
+| `kIntakeBayHalfX` | `10.0` | bay `x ∈ [-10, 10]`, inner faces `±9.7` |
+| `kIntakeBayFrontZ` / `BackZ` | `-110.5` / `-122.5` | front wall occupies `z ∈ [-110.8, -110.2]` |
+| `kIntakeStairZ` / `LaneOffset` | `-118.0` / `2.0` | 0–24 lanes at `z = -116` and `-120`, half-width `1.8` |
+| `kIntakeJibMastZ` | `-100.2` | `MOD-YARD-JIB` mast at `x = 0` |
+| `kIntakeBoomLength` / `BoomHeight` | `12.0` / `11.50` | **frozen**; do not lengthen |
+| `kIntakeJibSlewLimitRadians` | `0.90` | slew about the `-Z` bearing |
+| `kIntakeJibWinchForceN` | `49050` | `5000 × 9.81` |
+| `kIntakePackMassKg` | `4000` | weight `39240 N` |
+| hook travel | `y ∈ [2.0, 11.05]` | `hoist_travel = (11.50 - 0.45) - 2.0 = 9.05` |
+| `kIntakeSkinRungRise` | `1.6` | SKIN head rung tops at `24.0` |
+| `kIntakeStationRadius` | `3.40` | `CAP-PENDANT` at `(3.0, ~1.4, -100.0)` |
+| `kSupportNormalThreshold` | `0.55` | a surface is support up to `acos(0.55) = 56.63°` |
+| `kMantleMaximumRise` / `kMantleMinimumRise` | `1.85` / `0.35` | |
+| `kLedgeTopNormalThreshold` | `0.7` | a mantle landing must be `≤ 45.6°` |
+| `kPlayerMassKg` / radius / half-height | `85.0` / `0.35` / `0.90` | |
+| `kLethalImpactSpeedMps` | `20.0` | a 40 m fall arrives at `28.0 m/s` — lethal |
+
+**The pack is pre-slung and cannot currently be let go.** `build_intake_rise`
+rigs it to the hook with `add_point_link`, a `JPH::PointConstraint`, which is
+bidirectional — it carries compression as readily as tension. A pack lowered
+into a cradle with the winch slacked is still held by that constraint; its
+weight does **not** transfer. This slice must therefore author a real release,
+and that release is the hinge of its causal path.
+
+Entities `1`–`46` and spawns `0`–`20` are taken. Fold-device execution is not
+proven. Kernel `KX-*` IDs at `x ≈ 200` remain regression substrate and are not
+retitled here.
 
 ## Authority
 
-- Laws 2–7, 9–10, 12–18, 21–27, 29, 32
-- GDD §§3, 4, 6, 7.2–7.4, 9, 11, 16, 17, 23, 24, 28
-- Atlas §§2, 3, 5 (B00 0–40), 6 B00, 7 K0, 8.1, 8.3, 12, 13
-- TDD §§6, 8.2–8.4, 14.1
+- Governing Laws 2–7, 9–10, 12–18, 21–27, 29, 32
+- GDD §§3, 4, 6, 7.2–7.4, 9, 11, 16, 17, 23, 24
+- Atlas §§2, 3, 5, 6 (band B00 exit states), 7 (K0), 8.1, 8.3, 12, 13
+- TDD §§6, 8–11, 14
 - Execution Protocol §§3–7, 11–12
-- `WO-014_INTAKE_RISE.md` Completion / out-of-scope (+24–40 m)
-- `SECTION_PRE_RESOLVE_PROTOCOL.md` WO-015
+- `WO-014_INTAKE_RISE.md` Result record / Out of scope
+- `SECTION_PRE_RESOLVE_PROTOCOL.md` §§4, 6, 8, 9
 
 ## Owner
 
-Native 90 Hz C++/Jolt simulation. Godot presents authoritative state. Mission/UI may observe predicates only.
+Native 90 Hz C++/Jolt. Godot presents authoritative state. Mission/UI observe
+predicates only.
 
 ## Allowed seam
 
-Extend the existing B00 IntakeRise world with new static climbable members. Reuse kernel primitives: contact-ranked support, athletic traversal, checkpoint commit. Do not retitle `KX-*`. Do not add a second jib. Do not add a new actuator.
+New campaign bodies continuing `MOD-STAIR-A`, `MOD-SKIN-LADDER-S`, and the
+lower landing of `MOD-HALL-DECK` (Atlas band B01's floor, authored here only as
+the surface B00 exits onto). Reuse proven primitives: `add_hinge` (world-Z
+axis, limited — the exact shape of a bascule), `add_pulley`
+(`JPH::PulleyConstraint`, `mMinLength = 0`, a tension-only rope over two
+sheaves), `add_point_link`, `create_constraint(..., track_for_teardown = false)`
+for runtime topology, the station-gating pattern, and the existing automatic
+`commit_checkpoint`.
+
+Do not retitle `KX-*`. Do not author `MOD-NEEDLE-*`, `MOD-CAGE-1`,
+`MOD-GUIDE-RACK` or `MOD-EAST-OUTRIGGER` — those are `WO-017`/`WO-018`. Do not
+lengthen `MOD-YARD-JIB`. Do not add a second jib.
 
 ## Required causal path
 
-Primary (STAIR-A, dog already travelled in 0–24 **or** player already on the +24 deck):
+**Primary — SHAFT, via the bascule:**
 
-    ACT[walk opened MOD-STAIR-A from the +24 m handoff, then the 24–32 west flight, then the 32–40 south flight]
-      → STATE[support identity is STAIR-A treads, then landing 32, then treads, then MOD-HALL-DECK lower landing]
-      → WORLD[stable support at atlas z ≥ 40 m]
-      → PLAY[atlas band B01 is physically reachable; automatic commit on 0.35 s grounded dwell]
+```
+ACT  [at CAP-PENDANT: slew MOD-YARD-JIB to bearing 0.80 rad, lower the 4 t pack
+      into MOD-CW-CRADLE, hold Release]
+  → STATE[the hook-to-pack PointConstraint is removed; cradle gross mass goes
+          1800 kg -> 5800 kg; rope tension read back from the solver goes
+          17.66 kN -> 56.90 kN]
+  → WORLD[56.90 kN exceeds the 47.14 kN that the flight's own weight demands at
+          its stowed stop, so MOD-STAIR-A-SWING travels its full 0.9076 rad and
+          presses into the deployed stop; the cradle descends 1.620 m]
+  → PLAY [MOD-STAIR-A is continuous from the +24.1872 m handoff to the
+          +32.1872 m mid-landing and on to MOD-HALL-DECK at +40.1872 m; the
+          player climbs it and the automatic checkpoint commits above 40 m]
+```
 
-Alternate (SKIN, freight unsolved):
+**Alternate — SKIN, freight untouched (Atlas B00 coupling 3):**
 
-    ACT[climb MOD-SKIN-LADDER-S extension from the +24 m skin decks]
-      → STATE[support identity is SKIN rungs, then SKIN crown deck, then MOD-HALL-DECK lower landing]
-      → WORLD[stable support at atlas z ≥ 40 m; crate pose and dog angle unchanged]
-      → PLAY[same stand and commit; K0 freight may remain unsolved]
+```
+ACT  [from the +24.1872 m deck, climb MOD-SKIN-LADDER-S rungs 16-25]
+  → STATE[support identity = SKIN rungs]
+  → WORLD[the hall deck's south edge is reachable; cradle and flight poses
+          are unchanged]
+  → PLAY [same +40 m commit, with the pack still on the apron]
+```
 
-Illegal third atlas sentence (does not close — see §8.4):
+**Reconnect:** both braids arrive on `MOD-HALL-DECK`. `WO-016` and `WO-017`
+enter from the same deck whichever way the player got there.
 
-    ACT[ride MOD-YARD-JIB onto the +40 m timber soffit]
-      → cannot produce WORLD[support at atlas z ≥ 40 m] under frozen 12 m / 11.50 m jib
+**Illegal:**
 
-Hybrid (legal sequence break): SKIN to +24, then STAIR-A 24–40. The grade dog does not occupy the 24–40 throat.
+```
+MISSION_FLAG[forty_open] → WORLD[a walkable flight]
+ACT[Release with the pack nowhere near the cradle] → PLAY[the stair deploys]
+ACT[pendant command from the +24 m deck] → anything
+an invisible wall on SKIN because the pack is still on the apron
+```
 
 ## Forbidden shortcuts
 
-- duplicating `WO-014_INTAKE_RISE.md` or rebuilding 0–24 m
-- renaming `KX-*` as `MOD-HALL-DECK`
-- `gate_open` / `reached_forty` / mission flags as the 40 m predicate
-- invisible walls on mill_obstacle massing to “protect” the stair
-- lengthening `MOD-YARD-JIB` boom or winch to fake the third atlas exit
-- teleport from +24 to +40
-- chute as powered lift
-- loading atlas band B01 needles, `MOD-CAGE-1`, or `MOD-HOOK5-RACK`
-- treating Godot stacked-tower `BayFloorRing` at y=40 as native support
-- leaving `UnfinishedFortyA/B/C` as the only 24–40 treads
-- blocking SKIN until the dog travels
+- a `stair_deployed` / `pack_loaded` flag as WORLD without the bodies moving
+- lengthening the 12 m boom or the 11.50 m boom height to close §8.4's gap
+- a second jib, a winch at +24 m, or a powered lift the player rides
+- teleporting the pack into the cradle, or snapping the flight to its stop
+  without the solver driving it
+- walling off `MOD-SKIN-LADDER-S` to protect the bascule
+- a kill plane in the bay in place of the real 40 m fall
 - claiming Fold-device execution
 
 ## Implementation scope
 
-Native B00 world extension + falsifier tests; Godot presentation twins; CI Fold-aspect screenshot of the 24–40 rise and the +40 stand; Android arm64 APK still contains `libscraperx_native.so`.
-
-Climbable vs filler is in Mechanical close §8.3.
+Native bodies, constraints and falsifiers; Godot presentation twins; persist
+version bump for the sling topology; CI proof lines.
 
 ## Out of scope
 
-`WO-016_HOOK5_RACK.md` / `CAP-HOOK5` acquire (next file). Atlas band B01 `MOD-NEEDLE-POCKETS`, `MOD-NEEDLE-A/B`, `MOD-CAGE-1`, `MOD-GUIDE-RACK`, `MOD-EAST-OUTRIGGER`. Atlas bands B02–B11. Fold 45 FPS certification. Art/VO. Hard-fail missions (atlas §8.2: none). Reopening WO-009. Changing frozen 0–24 constants.
+`WO-016_HOOK5_RACK` (`CAP-HOOK5` acquire). Band B01 above the hall's lower
+landing. Fold 45 FPS certification. Art/VO. Reopening `WO-014`.
 
 ## Proof path
 
-This planning pass does not execute. The later coding pass must exercise:
-
-1. Native deterministic tests named in §8.11
-2. Source inspection: new members exist; 0–24 constants unchanged
-3. Godot runtime mirrors native support at Fold aspect 1080×928
-4. One screenshot: 24–40 mechanism readable as continuation of the same mill stair / skin, not a new toy level
-5. Second screenshot: player-equivalent camera at the +40 m soffit, unfinished atlas band B01 volume visible above
-6. Android arm64 APK contains `libscraperx_native.so`
-7. The kernel falsifiers (WO-000–WO-003, WO-008–WO-009, WO-011–WO-013) and the B00 0–24 tests remain green
-
-Claim classes stay distinct (Law 29).
+The ten named falsifiers in §8.11, each a sentence that can fail. Two Godot
+screenshots at Fold aspect: the bascule stowed and deployed from the same
+camera. Android arm64 APK carrying `libscraperx_native.so`. Kernel and
+`WO-014` regressions green.
 
 ## Completion
 
-- player can obtain stable grounded support at source `y ≥ 40.00` m (atlas `z ≥ 40.00` m) on `MOD-HALL-DECK` lower landing **or** the SKIN crown deck **or** any other collision-honest body at that elevation
-- STAIR-A 24–40 is real support after the +24 m handoff; it is not a painted stripe
-- SKIN 24–40 reaches the same elevation without mutating crate pose or dog angle
-- moving only a mission/presentation variable cannot create the +40 m support
-- `MOD-YARD-JIB` still cannot lift a body to y=40 (overload / travel / geometry all still bind)
-- 0–24 dog still pins the **grade** stair throat when the crate occupies the latch
-- automatic commit fires on first 0.35 s stable stand at y≥40; reload restores crate/dog/jib/belt/player
-- atlas band B01 volume is visible and unfinished; needles are not seated because they are not in this slice
+- with the pack on the apron, no route exists between `+24.1872 m` and
+  `+32.1872 m`, and the gap is `8.000 m` against a `1.85 m` mantle ceiling
+- loading the cradle makes the flight travel, measurably, under solver forces
+- the deployed flight is real support the player walks
+- the player stands on `MOD-HALL-DECK` at `≥ 40 m` and the checkpoint commits
+- unloading the cradle retracts the flight and closes the route again
+- SKIN reaches the same deck with the freight untouched
+- the jib gap in §8.4 is reported, not engineered around
 - Fold install / on-device play remain unverified
 
 ## Result record
 
-pending. This pass does not execute.
+pending.
 
 ---
 
@@ -146,311 +199,487 @@ pending. This pass does not execute.
 
 | Field | Value |
 |---|---|
-| Band | B00 Apron and Intake |
-| Slice authored | atlas `z = 24.00–40.00` m (source `y = 24.00–40.00`) |
-| Chain | K0 Intake, PLAY only. ACT/STATE/WORLD of the crate/dog are already 0–24 |
-| Live braids | SHAFT (stair), SKIN. FLOW is not live in B00 |
-| Transfer Plate | Apron slab (already present). +40 m soffit is a marked refuge, not a new TP |
-| Modules allowed | `MOD-STAIR-A` (extension), `MOD-SKIN-LADDER-S` (extension), `MOD-HALL-DECK` **lower landing only**, existing `MOD-APRON` / `MOD-YARD-JIB` / `MOD-DOG-A` / `MOD-INTAKE-BELT` as inherited state |
-| Modules forbidden | `MOD-HOOK5-RACK`, `MOD-NEEDLE-POCKETS`, `MOD-NEEDLE-A/B`, `MOD-CAGE-1`, `MOD-GUIDE-RACK`, `MOD-EAST-OUTRIGGER`, `MOD-CW-STACK`, any atlas band B02–B11 ID |
+| Atlas band | B00 — Apron and Intake, the 24–40 m leftover |
+| Slice | `+24.1872 m` → first stable stand at `+40.1872 m`, with commit |
+| Chain | K0 (Intake) PLAY |
+| Live braids | SHAFT (the bascule stair). SKIN (the facade line). FLOW not live |
+| Transfer Plate | none. B00's exit commit is a refuge ledger per Atlas §8.1 |
+| Modules allowed | `MOD-STAIR-A` (upper section), `MOD-SKIN-LADDER-S` (continuation), `MOD-HALL-DECK` (lower landing only), `MOD-YARD-JIB` (reused), the 4 t pack (reused) |
+| Modules forbidden | `MOD-HOOK5-RACK`, `MOD-NEEDLE-*`, `MOD-CAGE-1`, `MOD-GUIDE-RACK`, `MOD-EAST-OUTRIGGER` |
+| Capability consumed | none |
+| Capability authored | none. The release is the pre-placed sling being let go, not `CAP-HOOK5` |
 
 ### 8.2 Entry state
 
-Inherited from `WO-014_INTAKE_RISE` Completion and source:
+Player support at entry is **either**:
 
-- player has (or can have) stable support at the +24 m handoff, source `(10.40, 24.00, 38.40)` = atlas `(10.40, 38.40, 24.00)`
-- support identity at entry: `kIntakeHandoffEntityId` and/or catwalk IDs `kCatwalkEntityIdBegin+5/+6` and/or SKIN decks
-- `MOD-STAIR-A` 68 treads exist and end on the south edge of that landing
-- `MOD-SKIN-LADDER-S` 48 rungs + hang rails + three skin decks exist and can reach y>23.4 without freight
-- dog and crate are **either**: crate clear, dog travelled (**or**) crate on latch, dog blocking the **grade** throat. Both are legal entry. 24–40 must work in both
-- jib frozen as 12 m / 5 t / winch `[2.80, 10.20]`
-- belt may still run
-- persist blob already stores player, crate, jib, dog, needle/sump/cage kernel fields (kernel fields unused in IntakeRise)
+- `kIntakeHandoffEntityId` at walking surface `24.1872 m`, arrived by
+  `MOD-STAIR-A` after deploying `MOD-DOG-A`; **or**
+- the same deck, arrived by `MOD-SKIN-LADDER-S` with the pack still pinning
+  the dog.
 
-Godot `UnfinishedFortyA/B/C`, `BrokenRise`, `TornPlate40` are **not** entry support the next coder should extend. They are silhouette. This slice replaces A/B/C.
+Machine poses that may be true at entry, all legal:
+
+- pack on the apron at `(0, 0.90, -112.2)` pinning the dog, dog at `≤ 0.28 rad`
+- pack lifted anywhere on the hook up to `y = 10.10`, dog at its `1.45 rad` stop
+- pack set back down anywhere inside the jib's 12 m working circle
+
+`MOD-DOG-A`'s state is **irrelevant to this slice**. The bascule does not read
+it. A player who came up SKIN with the dog still pinned can still deploy the
+bascule, because doing so requires only the jib and the cradle.
+
+Persist: inherit `WO-014`'s blob. No fields consumed.
 
 ### 8.3 Geometry
 
-Frame mapping (every row): `source.x = atlas.x`, `source.y = atlas.z`, `source.z = atlas.y`.
+Atlas frame is z-up; this tree is y-up. Every row gives both.
+`source.x = atlas.x`, `source.y = atlas.z`, `source.z = atlas.y`.
 
-Player capsule (frozen): diameter 0.70 m, standing height 1.80 m.
+**Derived datums** (all from frozen constants, shown with their arithmetic):
 
-**Why a switchback (not more +Z run):**  
-If STAIR-A kept `dz = +0.320` for 16.00 m of rise from the landing north edge `source z = 41.80`, arrival would be `z = 56.52`, which is 11.52 m north of the 90 m primary frame face at `z = +45`. Atlas `MOD-HALL-DECK` lives in the frame. Do not invent extra tower. Switch west, then south, using the frozen rise/run.
+```
+handoff walking surface   24.1872 m     = 6 * 4.000 + 0.18 / cos(15.95°)
+flight rise (each)         8.000  m     chosen; two flights close 16.000 m
+flight pitch              30.0°         support_normal_y = 0.8660 vs 0.55 floor
+flight length L           16.000  m     = 8.000 / sin(30°)
+flight run                13.856  m     = 8.000 / tan(30°)
+mid-landing surface       32.1872 m
+hall deck surface         40.1872 m     = 24.1872 + 16.000
+SKIN rung 25 top          40.1872 m     = 24.1872 + 10 * 1.6   -- exactly flush
+```
 
-Replace Godot/native stub treads at `(10.40, 24.40, 41.90)`, `(10.40, 24.80, 42.28)`, `(10.40, 25.20, 42.66)`.
+The hall surface is `40.1872 m`, not a round `40.0`, precisely so the SKIN line
+lands on it without a step: ten more 1.6 m rungs off the 24.1872 m deck arrive
+at it to the millimetre. Atlas's `z ≥ 40 m` is satisfied with 0.19 m to spare.
 
-#### Climbable members this slice adds
-
-| ID | Role | Atlas (x, y, z) origin | Source (x, y, z) | Extents / rule | Rating |
+| ID / member | atlas (x, y, z) | source (x, y, z) | extents (half) | climbable | rating |
 |---|---|---|---|---|---|
-| `STAIR-A` flight 24–32 | mill stair, run west | starts `(5.42, 38.40, 24.00)` | starts `(5.42, 24.00, 38.40)` | 23 treads; see formula | player + 40 kg portable. DESIGN TARGET 5 kN service per tread |
-| `LANDING-32` | mill half-landing | `(-1.62, 38.40, 32.119)` | `(-1.62, 32.119, 38.40)` | half `(2.40, 0.20, 2.40)` | same |
-| `STAIR-A` flight 32–40 | mill stair, run south | starts `(-1.76, 35.82, 32.119)` | starts `(-1.76, 32.119, 35.82)` | 23 treads; see formula | same |
-| `MOD-HALL-DECK` lower landing | timber-on-steel soffit; B00 exit | `(-1.76, 28.78, 40.00)` | `(-1.76, 40.00, 28.78)` | half `(8.00, 0.20, 6.00)`; top source y = 40.20 | player + pack; DESIGN TARGET 15 kN/m² timber on joists (reduced-order: rigid static until atlas band B01 seats needles) |
-| `SKIN-S` rungs 24–40 | exposed climb | `(-17.00, 22.40, y)` | `(-17.00, y, 22.40)` | 40 rungs; see formula | player only; not a freight path |
-| `SKIN-S` crown deck | west-to-hall walkway at 40 m | `(-8.50, 25.50, 40.00)` | `(-8.50, 40.00, 25.50)` | half `(10.00, 0.12, 4.00)` | player + 40 kg |
+| `MOD-STAIR-A-SWING` hinge | `(7.856, -112.5, 32.1872)` | `(7.856, 32.1872, -112.5)` | — | — | Z-axis hinge |
+| `MOD-STAIR-A-SWING` slab | body-local | centre driven by hinge | `(8.00, 0.18, 0.90)` | **yes, deployed only** | player + 365 kg |
+| `MOD-STAIR-A` upper flight | `(2.422, -117.0, 36.1872)` | `(2.422, 36.1872, -117.0)` | `(8.00, 0.18, 0.90)` | yes | player + pack |
+| mid-landing | `(9.350, -114.80, 32.0072)` | `(9.350, 32.0072, -114.80)` | `(1.05, 0.18, 3.20)` | yes | spans both lanes |
+| `MOD-HALL-DECK` lower landing | `(0.0, -115.1, 39.9872)` | `(0.0, 39.9872, -115.1)` | `(10.00, 0.20, 7.40)` | yes | B01's floor |
+| — stair well in that deck | `(-4.51, -117.0, —)` | `(-4.51, —, -117.0)` | `(3.00, —, 2.20)` | opening | `6.0 × 4.4 m` |
+| `MOD-CW-CRADLE` car | `(8.608, -108.560, 4.000)` | `(8.608, 4.000, -108.560)` | `(1.50, 1.20, 1.20)` | no (filler) | 1800 kg tare |
+| `MOD-CW-CRADLE` guide mast | same xz | `y ∈ [0, 8.0]` | `(0.35, 4.00, 0.35)` | no | slider anchor |
+| sheave A (flight side) | `(7.856, -112.5, 36.1872)` | `(7.856, 36.1872, -112.5)` | fixed point | — | `h_s = 4.000 m` above hinge |
+| sheave B (cradle side) | `(8.608, -108.560, 36.1872)` | `(8.608, 36.1872, -108.560)` | fixed point | — | directly over the car |
+| `MOD-SKIN-LADDER-S` rungs 16–25 | `x = -6.0`, `z` stepping | see below | `(1.00, 0.50, 1.00)` | yes | player + 40 kg |
 
-`LANDING-32` source y is the box **center**. Top = 32.119 + 0.20 = 32.319 m.  
-`MOD-HALL-DECK` top = 40.00 + 0.20 = **40.20 m** ≥ 40.00.
+**Swing flight, both stops** (hinge at the slab's top-end centreline, local
+`(+8.00, 0, 0)`; `θ` measured from the downward vertical):
 
-#### STAIR-A flight 24–32 formula (DESIGN TARGET, inherits `kB00StairDY` / `kB00StairDZ`)
+```
+stowed   θ =  8°  foot ( 5.630, 16.343,  -112.5)  hanging in open bay air
+deployed θ = 60°  foot (-6.000, 24.1872, -112.5)  over the handoff deck
+hinge travel = 60° - 8° = 52° = 0.9076 rad
+```
 
-23 treads, i = 1…23:
+Built **at the stowed pose**, so the hinge's as-built angle is `0` and its
+limits are `[0.0, 0.9076]` — the same convention `MOD-DOG-A` already uses.
 
-    y_top = 24.00 + 0.353 * i
-    x     = 5.42 - 0.320 * (i - 1)
-    z     = 38.40
-    half  = (0.18, 0.10, 1.30)   # run is west, width is north-south
-    body center y = y_top - 0.10
+**Clearances, stated in metres, not as "enough room":**
 
-i=1: source `(5.42, 24.353, 38.40)` — overlaps the frozen handoff west face x=5.60 by 0.18 m. Gap = 0. No fall-through.  
-i=23: source `(-1.62, 32.119, 38.40)`.
+- swing flight lane `z ∈ [-113.4, -111.6]`; `WO-014`'s nearest stair lane face
+  is `-114.2` → **0.800 m**
+- stowed flight occupies `x ∈ [5.630, 7.856]`; the handoff deck ends at
+  `x = -2.0` → **7.630 m**, so the stowed flight is nowhere near the deck
+- **mid-landing to hinge:** landing west edge `8.300`, hinge `7.856` → a
+  `0.444 m` gap. It is bridged, not fallen through: the capsule is `0.70 m`
+  across. It also holds the `0.30 m` sweep setback below with `0.264 m` to spare
+- **haul rope vs the mid-landing:** the rope runs from the flight's bracket up
+  to sheave A and crosses the landing's plane at `x = 7.413` when stowed and
+  `x = 3.338` when deployed — west of the landing's `8.300` edge in both poses,
+  worst case **0.887 m**. The rope stays in the flight's own centre plane, so
+  the hinge carries no out-of-plane couple. Siting the foot at `x = -6.000`
+  rather than `-5.000` is what buys this; at `-5.000` the rope crossed the deck
+- cradle `z ∈ [-109.760, -107.360]`; bay front wall face `-110.200` → **0.440 m**
+- cradle `x ∈ [7.108, 10.108]`; bay east wall inner face `9.7` → the cradle sits
+  **outside** the bay, south of its front wall, which is where the jib can reach
+- **hinge sweep:** the slab's top-end corners lie `0.18 m` off the hinge axis and
+  sweep a `0.18 m` circle. The mid-landing must be set back **≥ 0.30 m** from the
+  hinge line. `WO-014` lost a day to exactly this: `MOD-DOG-A` bound at
+  `0.31 rad` on its own trailing corner because its hinge sat flush with the
+  jamb. Do not repeat it.
+- **deployed foot must not bear:** the stop is the hinge limit, not the deck.
+  Hold `≥ 0.06 m` between the flight's structural underside and the deck on
+  every path. The resulting step from deck to first tread is `0.06–0.25 m`,
+  under `kMantleMinimumRise = 0.35` and under the `0.35 m` capsule radius, so it
+  is walked, not mantled — the same reasoning that made `WO-014`'s `0.187 m`
+  landing lip safe.
+- throat width on the deployed flight: `1.80 m` clear vs `0.70 m` capsule
+- hall well `6.0 × 4.4 m` vs `0.70 m` capsule: a chute through it is
+  geometrically legal and must not be fake-denied
 
-Rise 8.119 m. Run 7.04 m. Angle `atan(0.353/0.320) = 47.8°` (same as 0–24).  
-Width 2.60 m. Capsule 0.70 m. Side clearance 1.90 m.
+**SKIN continuation rungs 16–25.** The 0–24 line steps north and its head rung
+is at `z = -106.7`; continuing north walks into the bay's front wall at
+`-110.5`. The line therefore turns and climbs the hall's south fascia, stepping
+in `+X`:
 
-#### STAIR-A flight 32–40 formula (DESIGN TARGET)
+```
+rung k (k = 16..25):  top_y = 24.1872 + 1.6 * (k - 15)
+                      x     = -6.0 + 2.0 * (k - 16)      -> -6.0 .. 12.0
+                      z     = -106.4                     (fascia, protruding south)
+                      half  = (1.00, 0.50, 1.00)
+```
 
-23 treads, i = 1…23:
+This reuses `WO-014`'s proven rung law verbatim, which is a **derived
+constraint, not a style choice**. With rise `R`, half-height `H`, half-depth `D`:
 
-    y_top = 32.119 + 0.353 * i
-    x     = -1.76
-    z     = 35.82 - 0.320 * (i - 1)
-    half  = (1.30, 0.10, 0.18)   # run is south, width is east-west
+```
+R - 2H <= 0.90                              chest-height wall ray strikes the next rung
+R <= kMantleMaximumRise = 1.85
+2D - kLandingInset > kTraversalReach + kPlayerRadius
+   -> 2.00 - 0.47 = 1.53 > 1.30             the stand is outside probe reach
+```
 
-i=1: source `(-1.76, 32.472, 35.82)` — overlaps `LANDING-32` south face z=36.00 by 0.18 m.  
-i=23: source `(-1.76, 40.238, 28.78)`.
+The third line is the one that makes a ladder climbable at all. `WO-014` proved
+by observation that violating it produces a mantle→hang→fall cycle that makes
+no height, because a mantle drops the player `kLandingInset` in from the rung's
+near edge and the next rung is then still inside `probe_ledge`'s reach. Rungs
+step in one direction for the same reason: staggered rungs put the next target
+exactly where the mantle lands you.
 
-`MOD-HALL-DECK` plan: x `[-9.76, 6.24]`, z `[22.78, 34.78]`. Last tread `(x=-1.76, z=28.78)` is on the landing center. Overlap vs capsule: landing half-z 6.00 m vs tread, no gap.
-
-Inside primary frame `±45` m in x and z.
-
-#### SKIN-S rungs 24–40 formula (DESIGN TARGET, inherits 0.40 m rise from existing i≥40 skin)
-
-40 rungs, i = 1…40:
-
-    y_top = 24.00 + 0.400 * i
-    x     = -17.00
-    z     = 22.40
-    half  = (0.90, 0.10, 0.28)   # kB00SkinHalf*
-
-i=1: source `(-17.00, 24.40, 22.40)` — meets SkinDeckA/B elevation band (SkinDeckA y=21.60, hang 21.40/22.80, SkinDeckB y=22.80). Implementer must keep a ≤0.45 m vertical step from the highest existing west skin deck onto rung 1 (existing skin already uses 0.40–0.45). If the highest west contact is SkinHangHigh top ≈ 22.90, add **two** connector rungs at y=23.30 and 23.70, same x/z, before i=1. Those two are climbable, same rating.
-
-i=40: source `(-17.00, 40.00, 22.40)`.
-
-SKIN crown: x `[-18.50, 1.50]`, z `[21.50, 29.50]`, top y=40.12. Overlaps rung 40 and hall west/south.
-
-Rung rise 0.40 m is a climb/hang pitch, not a walk pitch. Traversal uses WO-003 mantle/hang. Do not convert it to a walkable stair.
-
-#### Inherited members this slice does not rebuild
-
-| ID | Source | Climbable? |
-|---|---|---|
-| `MOD-STAIR-A` treads 1–68 | `kFillStairEntityIdBegin` | yes |
-| +24 handoff | `kIntakeHandoffEntityId` | yes |
-| catwalks 5–6 | `kCatwalkEntityIdBegin+5/+6` | yes |
-| SKIN rungs 1–48 + hang 0–5 | existing skin/hang IDs | yes |
-| `MOD-DOG-A` | `kIntakeDogEntityId` | kinematic gate at grade |
-| `MOD-YARD-JIB` | existing | finite machine, not a 40 m lift |
-| `MOD-INTAKE-BELT` | existing | moving support at y≈1.20 |
-| mill_obstacle[0] box | center `(-18, 22, 36)` half `(4, 22, 4)`, **top y=44** | collision-honest massing. If the player stands on it, that is a legal sequence break to y=44. Do **not** add invisible walls. Do **not** call it `MOD-HALL-DECK` |
-| mill_obstacle[1] | center `(18, 22, 36)` half `(4, 22, 4)`, top y=44 | same |
-| Godot `BrokenRise` / `TornPlate40` | presentation wreckage north of the old stubs | filler: keep only if collision matches a small tilted plate. Not the route. Not a teleport |
-| Godot stacked `BayFloorRing*` at y=40 | presentation silhouette | **not** native support until twinned to `MOD-HALL-DECK`. Coding pass must not let presentation be stood on without a native body |
-
-#### Entity IDs (DESIGN TARGET)
-
-Assign after `kIntakeHandoffEntityId`. Do not reuse 0 (current dummy on mill_obstacle 6/7/8). Suggested layout:
-
-- `kStairAWestEntityIdBegin` — 23
-- `kLanding32EntityId` — 1
-- `kStairASouthEntityIdBegin` — 23
-- `kHallSoffitEntityId` — 1
-- `kSkinFortyEntityIdBegin` — 40 (+2 connectors if needed)
-- `kSkinCrownEntityId` — 1
-
-Stable across save/load. Independent of Godot node IDs.
-
-#### Clearance summary (meters, not “enough”)
-
-| Location | Opening | Capsule | Residual |
-|---|---|---|---|
-| STAIR-A width (both new flights) | 2.60 | 0.70 | 1.90 |
-| Tread depth | 0.36 (2×0.18) | foot, not capsule diameter | already frozen 0–24 |
-| First west tread vs handoff | 0.18 overlap | 0.35 radius | overlap, no slot |
-| First south tread vs landing 32 | 0.18 overlap | 0.35 radius | overlap, no slot |
-| Last south tread vs hall | on-center | landing 12.00 m in z | no slot |
-| SKIN rung width | 1.80 (2×0.90) | 0.70 | 1.10 |
-| SKIN rise | 0.40 | hang/mantle, not walk | inherit 0–24 skin |
-| Headroom 24–40 | open sky until hall soffit | 1.80 standing | unlimited |
-| Hall soffit thickness | 0.40 | n/a | rigid static |
-| Dog vs 24–40 throat | dog at y≈1.45, flights at y≥24 | — | **no occupancy**. Grade dog cannot stall 24–40 |
+Rung 25 tops at `40.1872` and abuts the hall deck's south edge at `z = -107.7`,
+flush.
 
 ### 8.4 Mechanism
 
-No new actuator. STAIR-A, SKIN, landings, and hall soffit are **static** (or kinematic with ω=0). Support-point velocity is 0. Inherited momentum on jump is the player’s own velocity (Law 5 still applies; the support is not moving).
+#### 8.4.1 `MOD-STAIR-A-SWING` — a counterweighted bascule flight
 
-`MOD-YARD-JIB` is inherited, not re-specified. Frozen arithmetic that **closes the gap** on atlas exit 3:
+One rigid slab, hinged at its **top** end on a world-Z axis. Gravity pulls it
+toward the vertical; a rope pulls its foot out and up. It is a route only while
+the rope wins.
 
-    boom length            L = 12.00 m
-    boom height            H = 11.50 m          (kB00BoomHeightMeters)
-    winch                  w ∈ [2.80, 10.20] m
-    hook height (horizontal boom)  h_hook = H − w ∈ [1.30, 8.70] m
-    crate half-y           0.90 m
-    max crate-top-as-deck  ≈ 8.70 + 0.90 = 9.60 m
-    player standing on boom top ≈ 11.50 + 0.22 = 11.72 m
-    atlas target soffit    40.00 m
-    deficit                40.00 − 11.72 = 28.28 m
+Let `θ` be the angle from the downward vertical, `m_f` the flight mass, `L` its
+length, `r_a` the rope's lever arm from the hinge, `h_s` the sheave's height
+above the hinge, `T` the rope tension.
 
-Slew `±0.90 rad` changes plan position, not height. Rated moment `τ = 12 × 5000 × 9.81 = 588600 N·m` and winch force `49050 N` already stall 9 t and hold 4 t. None of that creates 28 m of extra hoist.
+Rope length from the attachment to sheave A, by the cosine rule:
 
-**Gap (atlas §6 B00 exit 3):** “yard jib used to place the player on the +40 m timber soffit” cannot be WORLD under frozen ratings. Do not lengthen the boom. Do not add a second jib. Do not write a fake “jib ride to 40” path. Keep the two routes that close.
+```
+ℓ(θ) = sqrt(r_a² + h_s² + 2·r_a·h_s·cos θ)
+```
 
-Commands this slice adds: none. Pendant still only Drive/Raise/Lower/Brake on the yard jib.
+The rope's moment about the hinge works out to `T · r_a · h_s · sin θ / ℓ(θ)`
+— the `sin θ` survives, and gravity's restoring moment is
+`m_f · g · (L/2) · sin θ`. Setting them equal, **`sin θ` cancels**:
 
-Energy: static members do no work. Player locomotion is the existing controller. Do not add a fatigue-calorie solver (GDD §7.5 is not frozen as a number).
+```
+T_crit(θ) = m_f · g · (L/2) · ℓ(θ) / (r_a · h_s)
+```
 
-Tread load: player weight DESIGN TARGET 80 kg × 9.81 = 785 N, << 5 kN tread rating. No stall. No structural solver in this slice (TDD §10.3 still open; hall is rigid static until atlas band B01 / `WO-017_NEEDLE_SEAT`).
+`ℓ` falls as `θ` rises, so `T_crit` falls as the flight swings out. A
+constant-tension counterweight therefore has **no stable intermediate
+equilibrium**: once it beats `T_crit` at the stowed stop it beats it everywhere
+after, and the flight runs hard to the deployed stop and presses into it. That
+is not a defect to damp out — it is what a counterweighted stair does, and it is
+why both stops are hinge limits rather than soft targets.
+
+**Design values:**
+
+```
+m_f = 1900 kg     16.000 × 1.80 m open grating flight = 66 kg/m²  DESIGN TARGET
+L   = 16.000 m    L/2 = 8.000 m
+r_a = 15.000 m    rope bracket 1.000 m inboard of the foot
+h_s =  4.000 m    sheave A above the hinge
+```
+
+**Worked balance** (`g = 9.81`):
+
+| | `ℓ(θ)` | `T_crit` | `m_c` needed |
+|---|---|---|---|
+| stowed, `θ = 8°` | `18.969 m` | `47 142 N` | `4 805.5 kg` |
+| deployed, `θ = 60°` | `17.349 m` | `43 117 N` | `4 395.2 kg` |
+
+```
+T_crit(8°) = 1900 × 9.81 × 8.000 × 18.969 / (15.000 × 4.000) = 47 142 N
+cradle stroke = ℓ(8°) − ℓ(60°) = 18.969 − 17.349 = 1.620 m
+```
+
+| cradle | gross | `T = m_c·g` | vs stowed | vs stop | result |
+|---|---|---|---|---|---|
+| empty | `1800 kg` | `17 658 N` | **`0.37×`** | `0.41×` | stays stowed |
+| + 4 t pack | `5800 kg` | `56 898 N` | **`1.21×`** | `1.32×` | deploys and holds |
+
+The empty cradle is **2.67× short** of the tension the stowed stop demands;
+the loaded cradle is **1.21× over** it. Nothing here sits on a knife-edge,
+and no intermediate cradle mass produces an ambiguous half-deployed stair.
+
+**Reserve at the deployed stop, and the flight's real SWL:**
+
+```
+τ_rope(60°) = 56 898 × 15.000 × 4.000 × sin60° / 17.349 = 170 410 N·m
+τ_grav(60°) = 1900 × 9.81 × 8.000 × sin60°             = 129 135 N·m
+net                                                     =  41 275 N·m
+
+player 85 kg at mid-span costs 85 × 9.81 × 8.000 × sin60° = 5 777 N·m
+  -> net 35 498 N·m, i.e. the player consumes 14 % of the reserve
+sag point at mid-span = 41 275 / (9.81 × 8.000 × sin60°) = 607.3 kg gross
+```
+
+Declare the flight's **SWL = 450 kg** (player plus 365 kg). Past `607 kg` at
+mid-span the rope loses and the flight sags off its stop — which is a correct,
+physical overload, not a failure mode to suppress. It is unreachable in this
+slice, since nothing the player can carry approaches it.
+
+#### 8.4.2 The rope — one `JPH::PulleyConstraint`
+
+`add_pulley` already builds exactly this for the Kellerworks lift. It must be
+generalised to take its four points, mass ratio and length rather than hardcoding
+them. Jolt's constraint is `|p₁ − f₁| + ratio·|p₂ − f₂| = length`, which is a
+real inextensible rope over two sheaves:
+
+```
+bodyPoint1  flight, local (+7.000, -0.18, 0)   -> r_a = 15.000 m from the hinge
+fixedPoint1 sheave A  (7.856, 36.1872, -112.5)
+bodyPoint2  cradle top (8.608,  5.200, -108.560)
+fixedPoint2 sheave B  (8.608, 36.1872, -108.560)
+ratio       1.0
+minLength   0.0        tension-only: the rope may go slack, never push
+maxLength   ℓ(8°) + (36.1872 − 5.200) = 18.969 + 30.987 = 49.956 m
+```
+
+At full deploy the cradle side becomes `49.956 − 17.349 = 32.607 m`, putting the
+cradle's top at `3.580 m` and its centre at `2.380 m` — the `1.620 m` stroke.
+The cradle rides a free vertical `SliderConstraint` (no motor) with limits
+`y_centre ∈ [1.80, 4.60]`, deliberately **wider** than the working stroke so the
+guide never becomes the stop. The hinge limits are the only stops.
+
+The rope is never slack in either rest state: stowed, the cradle's `17 658 N`
+still hangs on it, it simply loses to the flight's `47 142 N` demand.
+
+Rope rating: `56 898 N` working, declare `8 t MBL`. DESIGN TARGET.
+
+#### 8.4.3 The sling release — the actual hinge of the causal path
+
+`WO-014`'s `add_point_link` is bidirectional. The pack cannot be let go, so this
+slice authors a real release, mirroring `WO-012`'s seat/unseat exactly, including
+its race fix.
+
+```
+release_pack_to_cradle():
+    requires  |pack.xz − cradle_seat.xz| ≤ 0.55 m
+              |pack.y  − cradle_seat.y | ≤ 0.35 m
+              |v_pack| ≤ 0.15 m/s
+              pendant Release command held this tick
+    effect    remove the hook↔pack PointConstraint
+
+sling_pack():
+    requires  |hook − pack_padeye| ≤ 0.40 m
+              |v_hook| ≤ 0.20 m/s
+              pendant Attach command held this tick
+    effect    create the hook↔pack PointConstraint
+```
+
+Both use `create_constraint(..., track_for_teardown = false)`: Jolt's
+`ConstraintManager::Remove` asserts on an already-invalidated index, so a
+constraint that may be removed at runtime must never also sit in
+`machine_constraints_`, which the destructor removes unconditionally once.
+Exactly one owner releases, on every path.
+
+**Gate each predicate on its command, not on pose alone.** `WO-012` proved by
+observation that a pose-only predicate re-seats on the very tick after release,
+because the body is still at the seat pose with near-zero velocity — a real
+mechanism needs real time to move. Same defect class, same fix, stated in advance.
+
+Commands: `Release` and `Attach` are one-shot toggles on the existing pendant,
+station-gated identically to slew and hoist. Accepted anywhere, effective only
+within `kIntakeStationRadius = 3.40 m` of `(3.0, -100.0)`.
+
+#### 8.4.4 `MOD-YARD-JIB` reach — what the jib is asked to do here
+
+The hook hangs at the boom tip, so its working radius is **fixed at 12.000 m**;
+the boom slews and the winch raises, nothing luffs. The cradle must therefore
+sit on that circle:
+
+```
+bearing ψ = 0.80 rad of the 0.90 rad limit   (11 % margin)
+cradle    = (12·sin ψ, —, −100.2 − 12·cos ψ) = (8.608, —, −108.560)
+```
+
+The cradle is a three-sided frame — floor and two side rails at `x = ±1.50`,
+**open in ±Z** — not a closed hopper. A 2.4 m hopper cannot take a
+`2.2 × 2.3 m` pack, and widening the box to suit it puts the cradle inside the
+bay's front wall. An open cradle takes the pack with `0.40 m` of side clearance
+and keeps `0.440 m` between the frame and the wall.
+
+Loading it is inside everything already proven by `WO-014`: `4000 kg <
+5000 kg SWL`; `39 240 N < 49 050 N` winch; hook must reach `y = 4.800` to seat
+the pack, inside the `[2.0, 11.05]` travel. The 9 t proof load still stalls.
+
+#### 8.4.5 **GAP REPORT — Atlas band B00 exit state 3 does not close**
+
+Atlas §6 lists three B00 exits. The third is *"yard jib used to place the player
+on the +40 m timber soffit."* Protocol §7 requires this be derived from the
+frozen `12 m` boom and `11.50 m` boom height, and §9 requires the gap be
+reported rather than engineered around.
+
+**By reach:**
+
+```
+max hook y                        11.050 m   = (11.50 − 0.45) − 2.0 + 2.0
+a rider standing on a slung pack  ≈ 9.950 m  (pack top), head ≈ 11.750 m
+required                          40.1872 m
+deficit                           28.44 m
+boom height that would close it   ≈ 41.8 m   = 3.63 × the frozen 11.50 m
+```
+
+**By control topology — the stronger reason.** The pendant is station-gated to a
+`3.40 m` radius at `(3.0, -100.0)` at grade. A player riding the hook is not at
+the station, so the jib is inert. **No boom length closes this exit**, because
+the player cannot simultaneously ride the machine and command it. The reach
+deficit is a symptom; the gating is the cause.
+
+This is not a defect. It is the shape of the game: you cannot ride your own
+crane, so every rung of the ascent must be a configuration you set from the
+ground and then climb. §8.4.1 is the first mechanism built on that premise
+rather than around it.
+
+**Resolution:** close the slice on the other two Atlas exits — `MOD-STAIR-A`
+continued, and `MOD-SKIN-LADDER-S` continued. Do not lengthen the boom. Do not
+add a rideable hoist. If a later authority wants exit 3, it needs either a
+second operator or a latched pendant, and that is a GDD-level change, not a
+work-order one.
 
 ### 8.5 Occupancy and interlocks
 
-| Envelope | Body | Effect on this slice |
-|---|---|---|
-| Latch at source `(4.00, 1.70, 12.40)` half `(1.60, 0.12, 0.55)`, clear Y 3.08 | 4 t crate | stalls **grade** dog only. Does not stall 24–40 |
-| Dog at hinge `(11.90, 1.45, 13.50)` | dog box | blocks STAIR-A treads 1–N at grade when angle ≈ 0. Does not intersect flights 24–32 or 32–40 |
-| Jib SWL / travel | jib | cannot author +40 support |
-| Hall soffit | static | no interlock. Always standable once built |
-| SKIN crown | static | always standable. Must not set dog angle |
+| Envelope | Effect |
+|---|---|
+| pack centre inside the cradle seat tolerance, settled, Release held | sling removed; cradle gross `→ 5800 kg` |
+| cradle gross `≥ 4805.5 kg` | flight travels off the stowed stop |
+| cradle gross `< 4395.2 kg` while deployed | flight sags back toward stowed |
+| player anywhere in the flight's `52°` sweep | struck by a real body; no scripted exception |
+| player outside `3.40 m` of the pendant | every pendant axis reads zero |
+| hinge at either limit | hard stop; the solver holds it, no damping hack |
+| cradle at a guide limit | not reachable in the working stroke by design |
 
-No `reached_forty` flag. Tests may derive `player_grounded && player_position.y ≥ 40.00`. HUD may show that predicate. WORLD is the body under the feet.
+No `stair_deployed`, `pack_loaded`, or `forty_open` flag exists. `pack_in_cradle`
+and `flight_deployed` are **derived** from measured pose for the HUD and the
+falsifiers only, exactly as `WO-014`'s `intake_pack_pins_dog` is. No simulation
+branch may read either.
 
 ### 8.6 Required causal path
 
-Primary:
-
-    ACT[walk STAIR-A 24–32 west, LANDING-32, STAIR-A 32–40 south]
-      → STATE[support_entity_id is those tread/landing IDs in order]
-      → WORLD[player feet on MOD-HALL-DECK, source y ≥ 40.00]
-      → PLAY[atlas band B01 reachable; commit after 0.35 s dwell]
-
-SKIN:
-
-    ACT[climb SKIN-S rungs 24–40, walk crown]
-      → STATE[support_entity_id is skin-forty IDs then kSkinCrownEntityId]
-      → WORLD[same y ≥ 40.00; jib_crate_position and dog_angle_radians unchanged within 0.45 m / 0.15 rad]
-      → PLAY[same]
-
-Hybrid:
-
-    ACT[arrive +24 via SKIN with dog still pinned; walk handoff west onto flight 24–32]
-      → STATE[grade dog stays ~0; 24–40 treads are already static and present]
-      → WORLD[y ≥ 40 on hall]
-      → PLAY[K0 freight unsolved; K0 PLAY still true]
-
-Sequence break (not authored, must not be blocked):
-
-    ACT[mantle mill_obstacle[0] or [1] to its top]
-      → STATE[support is that massing]
-      → WORLD[y = 44]
-      → PLAY[atlas: physically valid unhighlighted route is accepted]
+See the Required causal path section above. The next file starts on
+`MOD-HALL-DECK`.
 
 ### 8.7 Support / traversal handoff
 
-Ordered authored primary:
-
-| Step | Member | Source Y (atlas Z) | Type | Inherit v? |
+| Step | Member | source y | type | inherits v? |
 |---|---|---|---|---|
-| 0 | +24 handoff `kIntakeHandoffEntityId` | 24.00 | static | no |
-| 1 | STAIR-A west treads i=1…23 | 24.35 → 32.12 | static | no |
-| 2 | `LANDING-32` | 32.12 | static | no |
-| 3 | STAIR-A south treads i=1…23 | 32.47 → 40.24 | static | no |
-| 4 | `MOD-HALL-DECK` lower landing | 40.00 (top 40.20) | static | no |
+| 0 | `kIntakeHandoffEntityId` | `24.1872` | static | no |
+| 1a | `MOD-STAIR-A-SWING` | `24.19 → 32.19` | **dynamic** | **yes** — it is a hinged body |
+| 1b | `MOD-SKIN-LADDER-S` rungs 16–25 | `25.79 → 40.19` | static | no |
+| 2 | mid-landing | `32.1872` | static | no |
+| 3 | `MOD-STAIR-A` upper flight | `32.19 → 40.19` | static | no |
+| 4 | `MOD-HALL-DECK` | `40.1872` | static | no |
 
-Ordered authored SKIN:
-
-| Step | Member | Source Y | Type | Inherit v? |
-|---|---|---|---|---|
-| 0 | existing SKIN / hang / SkinDeckC / +24 decks | ≤24 | static | no |
-| 1 | connector rungs if needed | 23.30–23.70 | static | no |
-| 2 | SKIN-S forty rungs i=1…40 | 24.40 → 40.00 | static | no |
-| 3 | SKIN crown | 40.00 | static | no |
-| 4 | optional step to hall soffit | 40.00 | static | no |
-
-Handoff is a change of `support_entity_id` by contact. No teleport. No Godot parenting.
+Row 1a is the interesting one: the deployed flight is a **dynamic body under
+load**, not static scenery, so it must be added to `entity_is_moving_support`.
+A player standing on it while it is still settling against its stop inherits its
+point velocity under the `WO-002` law. That is correct and must not be special-cased.
 
 ### 8.8 Failure states
 
-| Trigger | World | Player can | Must not |
+| Trigger | What the world does | What the player can still do | Must not happen |
 |---|---|---|---|
-| Walk grade STAIR-A while crate in latch | dog occupancy stalls dog at angle 0; throat blocked | SKIN; belt; apron | auto-open for “they’re doing 24–40” |
-| Walk 24–40 while crate in latch | 24–40 static treads exist | continue to 40 | freeze 24–40 because freight unsolved |
-| Fall from 24–40 | gravity, WO-008 chute if deployed | land apron / belt / jib boom if geometry allows (atlas §8.3) | chute powered return to 40 |
-| Miss SKIN rung | fall | chute / land / re-climb | invisible catch net |
-| Jib raise toward 40 | winch hits `w = 2.80`; hook Y ≈ 8.70 | operate within limits | free hoist to 40 |
-| 9 t on jib | stall, crate Y stays < 3.00 | SKIN / 24–40 if already at 24 | unpin dog |
-| Presentation `commit_checkpoint()` at 24 without new bodies | persist only | nothing new to stand on | 40 m support appearing |
-| Godot bay ring at y=40 with no native body | presentation only | cannot stand (if native has no collider) | presentation-owned stand |
+| never load the cradle | flight stays stowed at `8°`, `support_normal_y ≈ 0.14` | climb SKIN to the same deck | a flag opening the route |
+| Release commanded with the pack out of tolerance | rejected; sling holds | reposition and retry | pack teleporting to the seat |
+| Release commanded off-station | no effect at all | walk to the pendant | any remote actuation |
+| standing in the sweep when it deploys | struck and shoved by a real body | chute; the apron is the landing field | a scripted dodge or an ignore-collision |
+| unload while the player is on the flight | flight sags to stowed, player falls | chute from up to 40 m | a kill plane; the fall is real, `28.0 m/s` is lethal |
+| fall through the hall well | free fall into the bay | chute; `6.0 × 4.4 m` is legal clearance | fake-denying deployment |
+| overload past `607 kg` at mid-span | flight sags off its stop | step back | the stop holding an impossible load |
 
 ### 8.9 Recovery
 
-Soft-lock of the grade dog is already recovered by SKIN (0–24). This slice adds:
+Atlas §3 soft-lock rule. No state here can strand the player:
 
-- if STAIR-A 24–40 is missed or fallen from: SKIN-S 24–40 is live
-- if SKIN-S 24–40 is missed: STAIR-A 24–40 is live (from the +24 deck)
-- if both flights are left and the player is in air: chute to apron 180 m field; belt and jib boom are legal catch if present; then re-ascent by real routes
-- unrecoverable (tight well, no chute clearance): last commit. Do not auto-repair geometry
+- **never solve the bascule** → `MOD-SKIN-LADDER-S` reaches the same deck, and
+  it is never blocked
+- **deploy, climb, then want back down** → the flight is two-way; so is SKIN
+- **fall from any height in this slice** → chute to the apron (Atlas §8.3's
+  primary landing field), then re-climb `WO-014`'s stair or SKIN
+- **die** → restore to the last commit; if `≥ 40 m` was reached, that commit is
+  on the hall deck
+- **cradle left loaded with the player above** → harmless; the deployed state is
+  the useful one
 
-Do not strand on a 32 m landing with no down-climb. Both flights are two-way static stairs.
+Nothing auto-repairs. Nothing is deleted to make the next band load clean.
 
 ### 8.10 Persist
 
-Consumes WO-009 persist.
+**Persist version 2** (first bump on this branch). `WO-014` added no fields;
+this slice must, because the sling is runtime topology that outlives its bodies:
 
-New machine fields: **none**. New members are static authored geometry.
+```
+pack_slung          bool    is the hook↔pack PointConstraint present
+cradle_pack_seated  bool    derived at capture, re-derived on restore
+flight_hinge_angle  float   captured with the other machine bodies
+cradle_y            float
+```
 
-Commit rule for this slice (atlas B00 checkpoint intent + existing 0.35 s dwell):
+`restore_pack_topology()` mirrors `restore_needle_topology()`: after a restore,
+reconcile the sling constraint against `pack_slung` before the next tick reads
+contacts. Import of a v1 blob assumes `pack_slung = true`, cradle empty, flight
+stowed — `WO-014`'s exit state.
 
-- when `player_grounded` and `player_position.y ≥ 40.00` and dwell ≥ 0.35 s, store a commit even if a lower commit already exists
-- stored: player pose/velocity, crate pose/velocity, jib slew/winch/brake/occupied/hook, dog angle, belt phase, kernel needle/sump/cage/screw fields (unchanged)
-- reload must restore those and leave the new static 24–40 members in place (they are not reset because they are not aftermath; they are building)
-
-Do not reset crate/dog on “band load” because the player reached 40.
+Commit: the existing automatic `commit_checkpoint` already fires on every
+grounded, non-traversing tick, so standing on the hall deck commits with no new
+machinery. The falsifier asserts `checkpoint_position.y ≥ 40.0`, not that some
+new commit path ran.
 
 ### 8.11 Falsifiers (deterministic proof)
 
-Native tests the coding pass must add (names are suggested; sentences are the fail condition):
-
-1. `b00_forty_stair_from_handoff` — `InitialSpawn::IntakeHandoff`, walk west then south, must report `player_grounded && player_position.y ≥ 40.00` with `support_entity_id == kHallSoffitEntityId` (or crown). Fail if timeout without that support.
-2. `b00_forty_stair_is_real_support` — during that climb, at least one support ID in the new west/south stair ranges. Fail if y jumps 24→40 with no intermediate stair support (teleport).
-3. `b00_forty_skin_without_freight` — `InitialSpawn::IntakeSkin` (or handoff after a skin-only fixture), dog angle and crate xz captured at t=0; climb SKIN forty; y≥40; dog delta < 0.15 rad; crate xz delta < 0.45 m.
-4. `b00_forty_hybrid_dog_pinned` — crate still in latch, dog ≈ 0, spawn `IntakeHandoff`; 24–40 stair still reaches y≥40. Fail if 24–40 is blocked by the grade dog.
-5. `b00_forty_flag_is_not_a_floor` — `commit_checkpoint()` / HUD predicate without the new bodies must not place the player at y≥40 on hall support. Implementation: a world **without** the new EntityIds (or a test that only flips a bool) must fail to stand at 40.
-6. `b00_jib_cannot_reach_forty` — pendant raise to winch min; hook/crate/player y all < 12.00. Fail if any jib-driven body reaches y≥40.
-7. `b00_grade_dog_still_pins` — `IntakeStair` with crate in latch still cannot cross z>16.5 at y>3.2 (existing 0–24 falsifier stays green).
-8. `b00_forty_commit_reload` — stand at 40, dwell 0.35 s, export/import; crate/dog/jib match; player y≥40 on the soffit.
-9. `b00_unfinished_stubs_are_gone` — no standable unique route whose only treads are the three z=41.90/42.28/42.66 stubs.
-10. Kernel + B00 0–24 suite remains `PASS`.
-
-Optional observation, not a fail: standing on mill_obstacle[0] top y=44 is legal. Do not write a test that forbids it. Do not write a test that requires it.
+1. `wo015_unloaded_flight_is_not_a_route` — spawn on the `+24.1872 m` deck, pack
+   on the apron. Walk at the flight's deployed footprint for 14 s. The deepest
+   `y` reached stays below `25.2`, `support_entity_id` is never the swing flight,
+   and the hinge angle stays `≤ 0.20 rad`.
+2. `wo015_flag_is_not_a_stair` — from the same spawn, mash every command in the
+   game for 14 s while off-station. The hinge never travels, the sling never
+   releases, and no standable surface appears between `24.19` and `32.19`.
+3. `wo015_gap_exceeds_mantle` — assert the vertical gap from the deck to the
+   upper flight's foot is `8.000 m` against `kMantleMaximumRise = 1.85`, so the
+   route is closed by geometry and not by a tuned probe.
+4. `wo015_cradle_load_deploys` — from `IntakePendant`: slew to `0.80 rad`, lower,
+   hold Release. Assert the sling is gone, the cradle descends `≥ 1.40 m`, and
+   the hinge reaches `≥ 0.85 rad` — driven by the solver, within a 40 s budget.
+5. `wo015_deployed_flight_is_support` — walk the deployed flight. While over open
+   air, `support_entity_id` is the swing flight. Reach the mid-landing at
+   `y ≥ 32.19 + 0.70`.
+6. `wo015_reaches_forty_and_commits` — continue to the hall deck.
+   `support_entity_id == MOD-HALL-DECK`, player `y ≥ 40.1872 + 0.70`,
+   `checkpoint_commit_count` increased, and `checkpoint_position.y ≥ 40.0`.
+7. `wo015_unload_retracts` — re-attach the sling, lift the pack clear. The hinge
+   returns to `≤ 0.20 rad` and the route closes again. Reversible, not a
+   one-way flag.
+8. `wo015_skin_skips_the_freight` — from `IntakeSkinFoot`, climb to
+   `support_entity_id == MOD-HALL-DECK` with the pack never leaving the apron and
+   the hinge never leaving `≤ 0.20 rad`.
+9. `wo015_jib_cannot_reach_forty` — hold the hoist at its limit for 60 s. Every
+   jib-driven body stays below `y = 12.0`. This is §8.4.5's arithmetic made
+   executable, so the gap cannot be quietly closed later by a boom change.
+10. `wo015_prior_still_pass` — `WO-014` and all kernel falsifiers `PASS`
+    unchanged, the 9 t proof load still on the ground.
 
 ### 8.12 Exit state
 
-The next file may assume:
-
-- player **can** have stable support at source `(-1.76, 40.20, 28.78)` on `MOD-HALL-DECK` lower landing (atlas `(-1.76, 28.78, 40.20)`)
-- equivalently on SKIN crown top y=40.12
-- automatic commit at that stand exists
-- crate/dog/jib/belt are whatever the player left them (possibly still unsolved)
-- `MOD-HOOK5-RACK` is **not** opened, moved, or authored
-- atlas band B01 needles are visible at most as unfinished volume above 40 m; pockets at atlas z=96 m are not built
-- +48 m needle racks are not in this slice
-- frozen 0–24 numbers are unchanged
-- yard jib still cannot reach 40 m
-
-Next file inherits this stand as **entry**, not as a job to re-solve.
+- the player **can** stand on `MOD-HALL-DECK` at `40.1872 m`, arrived by either
+  braid, with a committed checkpoint there
+- the bascule is left wherever the player left it — deployed with the pack in
+  the cradle, or stowed with the pack on the apron; both are legal entry states
+  for `WO-016`
+- `MOD-HALL-DECK` exists only as B01's lower landing with its stair well. The
+  hall's east opening, `MOD-EAST-OUTRIGGER`, `MOD-NEEDLE-POCKETS`, the 48 m
+  racks and `MOD-CAGE-1` **do not exist yet**
+- `MOD-HOOK5-RACK` does not exist; `CAP-HOOK5` is not held
+- everything `WO-014` built still exists below
+- the `+120 m` continuation is visible and unfinished
+- persist is v2
+- Fold-device execution remains unverified
 
 ---
 
-**Stop. Do not begin the next file inside this one.**  
+**Stop. Do not begin the next file inside this one.**
 Next file: `03_WORK_ORDERS/WO-016_HOOK5_RACK.md`
