@@ -1,51 +1,76 @@
 # SCRAPERX — WO-016 HOOK5 RACK (CAP-HOOK5 ACQUIRE)
 
-**Work Order:** `WO-016`  
-**Status:** READY after `WO-015_LEGAL_FORTY` source on `ScraperX-Claude`  
-**Depends on:** `03_WORK_ORDERS/WO-014_INTAKE_RISE.md` and `03_WORK_ORDERS/WO-015_LEGAL_FORTY.md` in source; WO-011 crate sling remains kernel/campaign pre-placement; protocol `03_WORK_ORDERS/SECTION_PRE_RESOLVE_PROTOCOL.md` WO-016
+**Work Order:** `WO-016`
+**Status:** READY after `WO-015_LEGAL_FORTY` is in source.
+**Depends on:** `WO-014_INTAKE_RISE.md` in source and green; `WO-015_LEGAL_FORTY.md`
+in source; kernel falsifiers green; protocol `SECTION_PRE_RESOLVE_PROTOCOL.md` §8.
 
-> **Provenance.** Adopted from `ScraperX-Grok`, where this slice was authored as `WO-011_HOOK5_RACK`.
-> Ticket numbers remapped per `SECTION_PRE_RESOLVE_PROTOCOL.md` §5.1. Geometry, ratings and
-> falsifiers carry over as **DESIGN TARGET**: they were never proven in source on that branch
-> (it has not compiled since 2026-09-20). Positions are re-sited against this branch's tower
-> at source `(0, —, -150)`.
+> **Authoring note.** This file replaces the plan adopted from `ScraperX-Grok`
+> (their `WO-011_HOOK5_RACK`) for the same reason `WO-015` was replaced: its
+> inherited constants describe a world that does not exist here. Re-authored
+> against this branch's real `WO-014` source and `WO-015`'s planned exit.
 
 ## Objective
 
-Author `MOD-HOOK5-RACK` and close atlas §4 **`CAP-HOOK5` acquire**.
+Author `MOD-HOOK5-RACK` and the acquisition of `CAP-HOOK5`.
 
-The player gets a portable 5 t hook block + rated sling from a locked cage at grade. The cage opens because the 4 t crate stops occupying the door, **or** because the player circles `MOD-INTAKE-BELT` to the west hatch.
+Atlas §6 band B00 names it: *"Hook block + slings in a locked cage opened by
+moving the crate or circling the belt."* The capability it grants is consumed by
+`WO-017`, where nothing can be attached to a needle without it.
 
-This is not needle seating. This is not a second jib. This is not a retcon of the crate already being slung.
+The slice owns **one mechanism and one new player state**:
+
+1. The cage is locked by **height**, not by a flag — its only opening is 2.90 m
+   up against a 1.85 m mantle ceiling, and the only surface that gets you there
+   is `MOD-INTAKE-BELT`'s deck while it is alongside.
+2. `CAP-HOOK5` is a **carried body**, not an inventory bit. Carrying it occupies
+   both hands, which is the first time in the campaign that the two braids mean
+   different things: the stair takes cargo, the ladder does not.
 
 ## Existing truth
 
-HEAD `6a327ef` on `ScraperX-Claude` already has:
+From source at `af8beca`, `MOD-INTAKE-BELT` verbatim:
 
-- B00 0–24 m intake (`WO-014_INTAKE_RISE`)
-- B00 24–40 m stand (`WO-015_LEGAL_FORTY`): STAIR-A switchback, SKIN-S continuation, `MOD-HALL-DECK` lower landing, SKIN crown
-- yard jib frozen: boom 12.00 m, boom height 11.50 m, SWL 5000 kg, winch `[2.80, 10.20]` m, slew `[-0.90, 0.90]` rad
-- 4 t pack `kB00CrateKilograms = 4000`, source `(3.50, 2.28, 11.80)`, half `(1.10, 0.90, 1.15)`
-- latch source `(4.00, 1.70, 12.40)`, half `(1.60, 0.12, 0.55)`, clear Y `3.08`
-- belt source `(0.00, 1.20, 6.00)`, half `(2.00, 0.18, 6.00)`, stroke 18.00 m, `ω = 0.40` rad/s
-- WO-011 exception in source: `attach_hook(HookLoad::Crate)` at IntakeRise spawn. That sling is **pre-placed on the crate**. It is not `CAP-HOOK5`
-- kernel `kJibSlingMaxMeters = 0.60` stays the crate-hook distance limit
-- player capsule: radius 0.35 m, standing half-height 0.90 m
-- `kSkinCrownEntityId` is the last B00 24–40 entity. New IDs start after it
-- Fold-device execution is not proven
+| Constant | Value |
+|---|---|
+| `kIntakeBeltX` | `6.0` |
+| `kIntakeBeltHalfX` / `HalfZ` / `HalfY` | `2.0` / `6.0` / `0.18` |
+| `kIntakeBeltTopY` | `1.38` |
+| `kIntakeBeltCenterZ` | `-96.0` |
+| `kIntakeBeltStrokeMeters` | `18.0` |
+| `kIntakeBeltAngularFrequency` | `0.40` |
 
-Atlas does **not** freeze XYZ for `MOD-HOOK5-RACK`. Placement below is **DESIGN TARGET**, derived from the frozen crate/belt/latch AABBs so the two atlas open conditions are occupancy, not a flag.
+driven in `update_support_motion` as
+`belt_z = -96.0 + 9.0 · sin(0.40 · t)`, kinematic, and already in
+`entity_is_moving_support` — so riding it inherits its point velocity under the
+`WO-002` law. Deck spans `x ∈ [4.0, 8.0]`, top `1.38 m`, period `15.708 s`.
+
+Traversal constants this slice leans on:
+`kMantleMinimumRise 0.35`, `kMantleMaximumRise 1.85`, `kTraversalReach 0.95`,
+`kLandingInset 0.47`, `kPlayerRadius 0.35`, `kPlayerHalfHeight 0.90`,
+`kPlayerMassKg 85.0`, `kLethalImpactSpeedMps 20.0`.
+
+`probe_ledge` requires the wall ray and the top ray to strike the **same body**,
+and with `require_supported_landing` the landing probe must strike it too. Every
+mantle target below is therefore one box whose front face is the wall and whose
+top face is the landing — the law `WO-014` established for `MOD-SKIN-LADDER-S`.
+
+**Inherited from `WO-015` as DESIGN TARGET, not source:** the `+40.1872 m`
+`MOD-HALL-DECK`, the bascule and its cradle at `(8.608, —, -108.560)`, persist
+v2. If `WO-015` is re-sited before it lands, §8.3's clearances here must be
+re-derived against what actually shipped.
+
+Entity IDs and spawns are **assigned when this slice is coded**, after `WO-015`
+has taken its block. This file names bodies, not numbers.
 
 ## Authority
 
-- Laws 2–7, 11–18, 21–27, 29, 32
-- GDD §§7.2–7.4, 11, 15–17, 23–24
-- Atlas §§3, 4 (`CAP-HOOK5`), 6 B00 module `MOD-HOOK5-RACK`, 7 grammar, 8.1, 12, 13
-- TDD §§6, 8–9, 14, 19.1
-- Execution Protocol §§3–7, 11–12
-- `WO-015_LEGAL_FORTY.md` §8.12 exit
-- `SECTION_PRE_RESOLVE_PROTOCOL.md` WO-016
-- WO-011: crate may start pre-slung; hook must still be a real constraint
+- Governing Laws 2–7, 12–18, 21–27, 29, 32
+- GDD §§4, 6, 7.2–7.4, 11, 16, 17, 23, 24
+- Atlas §§3, 4 (`CAP-HOOK5`), 6 band B00, 7 K0, 8.3, 12, 13
+- TDD §§6, 8–11, 14
+- `WO-015_LEGAL_FORTY.md` §8.12
+- `SECTION_PRE_RESOLVE_PROTOCOL.md` §§4, 6, 8, 9
 
 ## Owner
 
@@ -53,95 +78,98 @@ Native 90 Hz C++/Jolt. Godot presents. Mission/UI observe predicates only.
 
 ## Allowed seam
 
-New campaign bodies in the existing IntakeRise world: cage, door, west hatch opening, hook-block body, carry/attach constraint.
+New campaign bodies for `MOD-HOOK5-RACK`. A carry constraint between the player
+body and a carryable, created and removed at runtime. Reuse: the moving-support
+law, `probe_ledge`/mantle, `add_vertical_hinge` with a permanent drive (the
+`MOD-DOG-A` pattern), `create_constraint(..., track_for_teardown = false)`, and
+the station-gating shape for the pick/drop commands.
 
-Reuse: kinematic occupancy (same class as `MOD-DOG-A`), finite distance-constraint hook (same class as WO-011), checkpoint blob (WO-009).
-
-Do not retitle `KX-*`. Do not lengthen `MOD-YARD-JIB`. Do not add `MOD-NEEDLE-A/B`.
+Do not retitle `KX-*`. Do not author `MOD-NEEDLE-*`, `MOD-CAGE-1` or
+`MOD-GUIDE-RACK` — `WO-017`. Do not lengthen `MOD-YARD-JIB`. Do not move
+`WO-015`'s cradle to make §8.4.4's coupling fit.
 
 ## Required causal path
 
-Primary (move the crate):
+**Primary — the belt gets you in:**
 
-    ACT[raise or slew the pre-slung 4 t pack with MOD-YARD-JIB until crate AABB clears the rack door AABB]
-      → STATE[door occupancy stall false; door angle can travel]
-      → WORLD[east door throat ≥ 0.90 m; cage floor reachable from the apron]
-      → PLAY[player can take the hook block]
+```
+ACT  [board MOD-INTAKE-BELT and ride it north]
+  → STATE[support = the belt; the deck carries the player into the window where
+          it lies alongside MOD-HOOK5-RACK, 8.97 s of every 15.708 s]
+  → WORLD[the cage's west buttress top at 2.90 m is 1.52 m above the deck, inside
+          the mantle band; from the apron it is 2.90 m and outside it]
+  → PLAY [the roof is standable; the hatch drops the player into the cage]
 
-Alternate (circle the belt; freight may stay unsolved):
+ACT  [lift MOD-HOOK5-BAR out of its keepers and set it down clear]
+  → STATE[the bar is a 38 kg body carried on a real constraint, then released]
+  → WORLD[nothing is left in the door's swing, so the door's permanent opening
+          torque travels it]
+  → PLAY [the cage is open at grade, from now on, for everyone]
 
-    ACT[walk west of MOD-INTAKE-BELT and/or ride the belt to the west hatch]
-      → STATE[support identity is apron west aisle or belt; contact with west hatch opening]
-      → WORLD[cage floor reachable without door travel]
-      → PLAY[same acquire; crate pose and dog angle unchanged]
+ACT  [lift the hook block off its rack]
+  → STATE[carry constraint created; hook_in_rack goes false]
+  → WORLD[CAP-HOOK5 is held: a 36 kg body attached to the player]
+  → PLAY [WO-017 can attach it. Both hands are now full, so no traversal move
+          begins until it is set down]
+```
 
-Acquire:
+**The braid consequence, which is the point of the slice:**
 
-    ACT[pick up the hook block from the cage floor]
-      → STATE[hook-block body leaves the rack; player hold or hip carry is real]
-      → WORLD[CAP-HOOK5 is a world fact: portable 5 t attach hardware is not in the cage]
-      → PLAY[legal attachment to declared padeyes ≤ 5 t; `WO-017_NEEDLE_SEAT` may consume this]
+```
+carrying  -> MOD-STAIR-A is walkable end to end; MOD-SKIN-LADDER-S is not,
+             because every rung is a mantle and both hands are on the block
+not carrying -> both braids as before, unchanged
+```
 
-Illegal:
+**Illegal:**
 
-    ACT[mission_flag cap_hook5 = true]
-    ACT[animation opens the cage]
-    ACT[take the crate's pre-placed sling and call it CAP-HOOK5]
+```
+MISSION_FLAG[has_hook5] → WORLD[a needle attaches]
+ACT[mantle the cage from the apron] → PLAY[inside]        -- 2.90 m vs 1.85 m
+an invisible wall on MOD-SKIN-LADDER-S while the block is held
+deleting the block on pickup and re-spawning it at the needle
+```
 
 ## Forbidden shortcuts
 
-- `rack_open` / `has_hook5` flags as WORLD
-- deleting the crate sling and pretending the rack was always the jib hook
-- invisible wall that blocks SKIN or the west aisle until freight is solved
-- lengthening the yard jib so the rack can live at +40 m
-- putting `MOD-HOOK5-RACK` on the hall soffit
-- teleporting the block into inventory with no body
-- mesh-swap of a locked cage into an open cage with no door travel / hatch
-- loading `MOD-NEEDLE-POCKETS` / `MOD-NEEDLE-A/B` / `MOD-CAGE-1`
+- `CAP-HOOK5` as a bool with no body behind it
+- a cage that opens on a timer, a proximity trigger, or a mission flag
+- teleporting the block to the player, or to the needle in `WO-017`
+- blocking `MOD-SKIN-LADDER-S` geometrically while the block is held — the
+  ladder must be untouched; only the player's own state changes
+- a second jib, or re-siting `WO-015`'s cradle, to make §8.4.4 close
 - claiming Fold-device execution
-- resetting crate/dog on acquire
 
 ## Implementation scope
 
-Native IntakeRise extension + falsifiers; Godot twins of cage/door/block; persist fields listed in §8.10; CI still runs B00 0–24 and 24–40 tests.
-
-Climbable vs filler is in §8.3.
+Native bodies, the carry constraint and its commands, falsifiers; Godot twins;
+persist v3 for the carry topology; CI proof lines.
 
 ## Out of scope
 
-`WO-017_NEEDLE_SEAT` (next file). Needle pockets at 96 m. Needle racks at 48 m. Using the yard jib as a 48 m hoist (frozen boom still cannot). `MOD-CAGE-1`. Fold 45 FPS. Art/VO. Hard-fail missions. Reopening WO-009. Changing frozen 0–24 or 24–40 constants.
+`WO-017_NEEDLE_SEAT`. Band B01 above `MOD-HALL-DECK`. Any second use of
+`CAP-HOOK5` inside this slice. Fold 45 FPS. Art/VO. Reopening `WO-014`/`WO-015`.
 
 ## Proof path
 
-This planning pass does not execute. Later coding must exercise:
-
-1. Native tests in §8.11
-2. Source inspection: crate sling still attaches at spawn; new rack IDs exist; 0–24 and 24–40 constants unchanged
-3. Godot mirrors door angle, block pose, hold state at Fold aspect 1080×928
-4. One screenshot: cage, crate, belt, and both openings readable at grade
-5. Second screenshot: player holding the block; cage empty; crate sling still on the pack if freight unsolved
-6. Android arm64 APK still contains `libscraperx_native.so`
-7. WO-011–008, B00 0–24, and B00 legal-forty tests stay green
-
-Claim classes stay distinct (Law 29).
+The nine falsifiers in §8.11. Two Godot screenshots at Fold aspect: the deck
+alongside the cage mid-window, and the player at grade holding the block with the
+door travelled. Android arm64 APK. Kernel, `WO-014` and `WO-015` green.
 
 ## Completion
 
-- `MOD-HOOK5-RACK` exists as collision-honest cage + door + west hatch
-- door cannot travel while crate AABB overlaps door AABB
-- door can travel after the crate is lifted or slewed off that overlap
-- west hatch is reachable by circling/riding the belt without moving the crate
-- hook block is a real body, DESIGN TARGET 36 kg, pickable from the cage floor
-- `CAP-HOOK5` is derived from block pose (not in rack), never from a mission bool
-- crate pre-sling still lifts the 4 t pack without `CAP-HOOK5`
-- without `CAP-HOOK5`, campaign code must not attach the jib to any padeye other than the pre-slung crate
-- acquire persists across commit/reload
-- SKIN / 24–40 routes still work if the player never takes the block
+- the cage cannot be entered from the apron, at any point, by any command
+- riding the belt puts the buttress inside the mantle band and the roof is reached
+- the bar is a body; moving it is what travels the door; a flag cannot
+- the block is a body; holding it is a real constraint
+- holding it, no traversal move begins; setting it down restores every move
+- `MOD-SKIN-LADDER-S` itself is bit-for-bit unchanged
+- the player can stand at `+40.1872 m` holding the block, having walked the stair
 - Fold install / on-device play remain unverified
 
 ## Result record
 
-pending. This pass does not execute.
+pending.
 
 ---
 
@@ -151,312 +179,368 @@ pending. This pass does not execute.
 
 | Field | Value |
 |---|---|
-| Band | B00 Apron and Intake |
-| Slice authored | grade rack / capability only. No new elevation. Atlas z ≈ 0–3 m at the intake |
-| Chain | K0 leftover capability. K0 PLAY (+40 m) is already closed. K1 is not this file |
-| Live braids | SHAFT (return by STAIR-A), SKIN (return by SKIN-S), belt (moving support). FLOW not live |
-| Transfer Plate | none new. Apron and +40 soffit already exist |
-| Modules allowed | `MOD-HOOK5-RACK`, inherited `MOD-YARD-JIB`, `MOD-INTAKE-BELT`, `MOD-DOG-A`, `MOD-APRON` |
-| Modules forbidden | `MOD-NEEDLE-POCKETS`, `MOD-NEEDLE-A/B`, `MOD-CAGE-1`, `MOD-GUIDE-RACK`, `MOD-EAST-OUTRIGGER`, any atlas band B02–B11 ID |
-| Capability authored | `CAP-HOOK5` |
+| Atlas band | B00 — Apron and Intake, grade level |
+| Slice | acquire `CAP-HOOK5` and carry it to `+40.1872 m` |
+| Chain | K0 (Intake), capability leg |
+| Live braids | SHAFT (the stair, as cargo route). SKIN (unchanged, free-hands only) |
+| Transfer Plate | none |
+| Modules allowed | `MOD-HOOK5-RACK`, `MOD-INTAKE-BELT` (reused, unmodified) |
+| Modules forbidden | `MOD-NEEDLE-*`, `MOD-CAGE-1`, `MOD-GUIDE-RACK`, `MOD-EAST-OUTRIGGER` |
+| Capability consumed | none |
+| Capability authored | **`CAP-HOOK5`**, as `!hook_in_rack`, derived from the block's measured pose |
 
 ### 8.2 Entry state
 
-Inherited from `WO-015_LEGAL_FORTY.md` §8.12 and source:
+Player support at entry may be anywhere `WO-015` leaves them: the apron, the
+`+24.1872 m` handoff, or `MOD-HALL-DECK` at `+40.1872 m`. The slice is entered
+by walking back down to grade, which is not a regression — it is the shape of a
+tower where the tools live at the bottom.
 
-- player **can** already stand at source `(-1.76, 40.20, 28.78)` on `MOD-HALL-DECK`, or on SKIN crown, or still be on the apron
-- 24–40 STAIR-A and SKIN-S are two-way static. Descent to grade is legal. Do not add a one-way drop
-- crate/dog/jib/belt are whatever the player left: crate on latch **or** crate clear, dog travelled
-- `attach_hook(HookLoad::Crate)` is already true at IntakeRise spawn. Leave it
-- `MOD-HOOK5-RACK` does not exist yet
-- persist blob already stores player, crate, jib, dog, belt phase
-- automatic commit at y ≥ 40 already exists
+Machine poses, all legal at entry:
 
-If the player is at +40 with freight unsolved, they go down SKIN or STAIR-A 24–40 (grade dog still only blocks treads 1–N). That is backtracking on real stairs, not a loading screen.
+- pack on the apron, in the cradle, or slung anywhere in the jib's 12 m circle
+- bascule stowed or deployed — irrelevant to this slice, which reads neither
+- `MOD-DOG-A` at either stop
+- belt running: it always runs, it has no control, and this slice adds none
+
+Persist: inherit v2. `hook_in_rack` is true, `carrying` is false.
 
 ### 8.3 Geometry
 
-Frame: `source.x = atlas.x`, `source.y = atlas.z`, `source.z = atlas.y`.
+`source.x = atlas.x`, `source.y = atlas.z`, `source.z = atlas.y`.
 
-Frozen crate AABB (do not change):
+| ID / member | atlas (x, y, z) | source (x, y, z) | extents (half) | climbable | rating |
+|---|---|---|---|---|---|
+| cage west buttress | `(8.700, -104.0, 1.450)` | `(8.700, 1.450, -104.0)` | `(0.70, 1.45, 2.00)` | **yes — the only way in** | player, free hands |
+| cage roof | `(10.700, -104.0, 2.750)` | `(10.700, 2.750, -104.0)` | `(1.30, 0.15, 2.00)` | yes | player + 40 kg |
+| cage north wall | `(10.700, -102.15, 1.450)` | `(10.700, 1.450, -102.15)` | `(1.30, 1.45, 0.15)` | no (filler) | — |
+| cage east wall | `(11.850, -104.0, 1.450)` | `(11.850, 1.450, -104.0)` | `(0.15, 1.45, 2.00)` | no (filler) | — |
+| cage south wall, west leaf | `(9.000, -105.85, 1.450)` | `(9.000, 1.450, -105.85)` | `(1.00, 1.45, 0.15)` | no (filler) | — |
+| cage south wall, header | `(10.800, -105.85, 2.550)` | `(10.800, 2.550, -105.85)` | `(0.80, 0.35, 0.15)` | no (filler) | over the doorway |
+| `MOD-HOOK5-DOOR` | hinge `(10.200, -105.85, —)` | hinge `(10.200, —, -105.85)` | `(0.72, 1.10, 0.12)` | no | Y-hinge, permanent drive, **swings inward** |
+| `MOD-HOOK5-BAR` keepers | `(10.800, -105.55, 1.300)` | `(10.800, 1.300, -105.55)` | `(0.12, 0.20, 0.12)` ×2 | no | — |
+| `MOD-HOOK5-BAR` | seated `(10.800, -105.55, 1.300)` | `(10.800, 1.300, -105.55)` | `(0.85, 0.09, 0.09)` | no | **38 kg carryable** |
+| hook block rack | `(11.400, -104.0, 0.900)` | `(11.400, 0.900, -104.0)` | `(0.45, 0.06, 0.45)` | no | — |
+| **hook block (`CAP-HOOK5`)** | seated `(11.400, -104.0, 1.260)` | `(11.400, 1.260, -104.0)` | `(0.30, 0.25, 0.30)` | no | **36 kg carryable** |
 
-    center source (3.50, 2.28, 11.80)
-    half (1.10, 0.90, 1.15)
-    x [2.40, 4.60], y [1.38, 3.18], z [10.65, 12.95]
+Cage outer footprint `x ∈ [8.00, 12.00]`, `z ∈ [-106.00, -102.00]`, walls to
+`y = 2.90`. Roof hatch is the gap the roof slab leaves: `x ∈ [9.40, 12.00]` is
+roofed, so the opening is `x ∈ [8.00, 9.40] minus the buttress` — restated
+plainly: the buttress occupies `x ∈ [8.00, 9.40]` and the roof `x ∈ [9.40,
+12.00]`, and the **hatch is cut in the roof** at `x ∈ [10.20, 11.40]`,
+`z ∈ [-104.80, -103.20]`, a `1.20 × 1.60 m` opening.
 
-Frozen belt AABB at rest, then translates in Z:
+**Clearances, in metres:**
 
-    rest center (0.00, 1.20, 6.00), half (2.00, 0.18, 6.00)
-    x [-2.00, 2.00]
-    z_center(t) = 6.00 + 9.00 * sin(0.40 * t) ∈ [-3.00, 15.00]
-    belt top y = 1.38
+- **the lock is the height.** Buttress top `2.90 m` above the apron.
+  `kMantleMaximumRise = 1.85`. Deficit `1.05 m`. No command closes it
+- **the key is the deck.** Belt top `1.38 m` → buttress top `2.90 m` =
+  **`1.52 m`**, inside `[0.35, 1.85]`
+- chest ray while on the deck sits at `1.38 + 0.90 = 2.28 m`; the buttress spans
+  `y ∈ [0, 2.90]`, so the wall ray strikes it and the top ray strikes the same
+  body — `probe_ledge`'s same-body rule is satisfied by construction
+- deck east edge `x = 8.00`; a player at the edge stands at `x = 7.65`; buttress
+  west face `x = 8.00` → **`0.35 m`**, far inside the `1.30 m` probe reach
+- landing inset puts the mantle exit at `x = 8.47`; the buttress runs to
+  `x = 9.40` → **`0.58 m`** clear of the far edge after the capsule radius
+- hatch `1.20 × 1.60 m` against a `0.70 m` capsule → **`0.50 m`** on the tight axis
+- drop through the hatch `2.90 m` → `7.54 m/s`, against `kLethalImpactSpeedMps
+  = 20.0`. An ordinary platforming fall, and deliberately one-way
+- doorway `x ∈ [10.00, 11.70]` = `1.70 m` wide × `2.20 m` tall against a
+  `0.70 × 1.80 m` capsule → **`1.00 m`** spare on the tight axis
+- door leaf shut spans `x ∈ [10.20, 11.64]`, leaving `0.20 m` at the hinge jamb
+  and `0.06 m` at the latch jamb. Both are far under `0.70 m`, so a shut door is
+  impassable, and neither boundary is coincident — the `BoxShape` convex-radius
+  jam `WO-012` and `WO-014` both hit is designed out rather than discovered
+- **door hinge sweep:** the leaf is `0.24 m` thick, so its trailing corner
+  sweeps a `0.12 m` circle about the hinge. The hinge is therefore set back to
+  `x = 10.200`, `0.20 m` clear of the jamb at `x = 10.000` — `0.08 m` more than
+  the corner needs. `WO-014`'s `MOD-DOG-A` bound at `0.31 rad` and never
+  travelled because its hinge sat flush with its jamb; that is pre-resolved here
+  and must not be rediscovered
+- cage `z ∈ [-106.0, -102.0]` vs `WO-015`'s cradle `z ∈ [-109.76, -107.36]` →
+  **`1.36 m`**
+- cage `x ∈ [8.0, 12.0]` vs the 9 t proof stand at `(7.0, —, -98.0)` → clear in
+  both axes
 
-#### Members this slice adds (all DESIGN TARGET)
+**The belt window** — the one number that makes this a timing problem rather
+than a walk:
 
-| ID | Role | Atlas (x, y, z) | Source (x, y, z) | Extents | Climbable? | Rating |
-|---|---|---|---|---|---|---|
-| `HOOK5-CAGE` | bar cage, floor + walls, east door, west hatch | `(2.00, 12.00, 1.50)` | `(2.00, 1.50, 12.00)` | half `(0.75, 1.20, 0.85)` | floor yes | player + 40 kg. DESIGN TARGET 5 kN cage floor |
-| `HOOK5-DOOR` | kinematic east door | closed `(3.65, 12.00, 1.50)` | closed `(3.65, 1.50, 12.00)` | half `(0.90, 1.10, 0.70)` | no (filler gate) | n/a — occupancy body |
-| `HOOK5-HATCH-W` | opening, not a body | west face of cage | plane x = 1.25, y [0.40, 2.30], z [11.55, 12.45] | 0.90 m wide × 1.90 m high | pass-through | n/a |
-| `CAP-HOOK5` block | portable snatch block + sling coil | seated `(2.00, 12.00, 0.62)` | seated `(2.00, 0.62, 12.00)` | half `(0.18, 0.22, 0.18)` | no (carryable) | see §8.4 |
-| cage floor (part of cage) | standable | same cage plan, top y = 0.40 | source y_top = 0.40 | half-y 0.10 if split | yes | player + block |
+```
+deck spans z ∈ [c - 6.00, c + 6.00],  c = -96.0 + 9.0·sin(0.40 t)
+the deck lies alongside the cage while c ∈ [-105.0, -98.0]
+  i.e. sin(0.40 t) ≤ -0.2222
+  = 57.1 % of the cycle = 8.97 s of every 15.708 s
+```
 
-Cage AABB:
-
-    x [1.25, 2.75], y [0.30, 2.70], z [11.15, 12.85]
-
-East door **closed** AABB:
-
-    x [2.75, 4.55], y [0.40, 2.60], z [11.30, 12.70]
-
-Crate ∩ door (crate on latch):
-
-    x [2.75, 4.55] ∩ [2.40, 4.60] = [2.75, 4.55]  → overlap Δx = 1.80 m
-    z [11.30, 12.70] ∩ [10.65, 12.95] = [11.30, 12.70] → overlap Δz = 1.40 m
-    y [0.40, 2.60] ∩ [1.38, 3.18] = [1.38, 2.60] → overlap Δy = 1.22 m
-
-Occupancy is real. Door cannot travel.
-
-West hatch (always an opening in the west wall; no door body):
-
-    x = 1.25 (cage west face)
-    y [0.40, 2.30]  height 1.90 m
-    z [11.55, 12.45]  width 0.90 m
-    capsule diameter 0.70 m → residual 0.20 m
-    standing height 1.80 m vs hatch 1.90 m → residual 0.10 m
-
-Cage sits on the east edge of the belt deck (belt east face x = 2.00; hatch at x = 1.25 is over the belt).
-
-West wall is omitted. North wall, south wall, and roof are filler. East wall is the kinematic door.
-
-#### Why this XY (not invented tower)
-
-Atlas: cage is opened by **moving the crate** or **circling the belt**. Both objects already exist at this plan. Putting the rack on the +40 soffit would require a new hoist the frozen 12 m jib cannot perform. Grade only.
-
-#### Inherited, not rebuilt
-
-| ID | Climbable? |
-|---|---|
-| crate (pre-slung) | yes if top is stood on (already true) |
-| latch / dog | kinematic grade gate |
-| belt | moving support, riding legal |
-| STAIR-A 0–40, SKIN-S, hall soffit | yes, unchanged |
-| mill piers | sequence-break massing, unchanged |
-
-#### Entity IDs (DESIGN TARGET)
-
-Assign after `kSkinCrownEntityId` (source: 284). Do not reuse 0.
-
-- `kHook5CageEntityId` — 1 (floor; climbable)
-- `kHook5DoorEntityId` — 1
-- `kHook5BlockEntityId` — 1
-
-Hatch is an opening, not an entity. North/south/roof filler may use entity 0.
-
-#### Clearance (meters)
-
-| Location | Opening | Capsule | Residual |
-|---|---|---|---|
-| east door throat after 1.20 rad swing | 1.80 m plan × sin(1.20) ≈ 1.68 m | 0.70 | 0.98 |
-| west hatch width | 0.90 | 0.70 | 0.20 |
-| west hatch height | 1.90 | 1.80 standing | 0.10 |
-| cage interior x | 1.50 | 0.70 | 0.80 |
-| cage interior z | 1.70 | 0.70 | 1.00 |
-| west aisle x < −2.20 | belt west face at −2.00, walk at x = −3.20 | 0.70 | apron is open |
-| headroom in cage | 2.40 interior | 1.80 | 0.60 |
-
-West-aisle circle path (DESIGN TARGET waypoints, source):
-
-    1. apron `(-3.20, 0.00, 2.00)`
-    2. north `(-3.20, 0.00, 12.00)`  — west of belt
-    3. onto belt or along belt north when aligned, then hatch at `(1.25, 0.40–2.30, 12.00)`
-
-Riding the belt is also legal: when `z_center ≥ 6` the belt top overlaps the hatch in z. Player on belt (moving support) steps east-north into the hatch. Inherited belt velocity applies (Law 5).
+The player does not have to jump at a moving target: they **board and ride**, and
+the deck carries them into the window. `8.97 s` is then ample for one mantle. The
+timing is real but not punishing, which is the correct dial for the first
+capability in the game.
 
 ### 8.4 Mechanism
 
-#### A. East door (new kinematic)
+#### 8.4.1 The lock is geometry
 
-Bodies: `HOOK5-DOOR` kinematic box. Hinge: vertical, source `(2.75, 1.50, 11.30)` (south-east cage corner). Travel: `θ ∈ [0.00, 1.20]` rad, sense +Y. Speed: `0.70` rad/s.
+There is no lock object. The cage is shut because its only opening is `2.90 m`
+up and the player's mantle ceiling is `1.85 m`. That gap is `1.05 m` and no
+input in the game narrows it. This is the cheapest possible honest lock and it
+cannot be opened by a flag, because there is no flag to set.
 
-Mass DESIGN TARGET 42 kg (unaided shove 200–400 kg; this is a door, not freight).
+#### 8.4.2 `MOD-HOOK5-BAR` — the door is opened by moving a body
 
-Commands: none on the pendant. Door travels when crate occupancy is clear (same class as `MOD-DOG-A` retract). Player walking into the free door may also drive `θ`. Do not add a new Drive channel on the jib.
+The door leaf hangs on a vertical hinge under a **permanent opening drive**,
+commanded once at build time and never touched again — the `MOD-DOG-A` contract
+exactly:
 
-Occupancy stall: if crate AABB overlaps the **closed** door AABB, `θ` is held.
+```
+add_vertical_hinge(south wall leaf, door, hinge point,
+                   0.0, 1.35 rad, torque limit 6 000 N·m)
+door_hinge->SetTargetAngularVelocity(+0.55 rad/s)   // at build, forever
+```
 
-Not allowed to write: `cap_hook5`, crate transform, dog angle.
+**The leaf swings inward**, into the cage. That is what puts
+`MOD-HOOK5-BAR` — a `38 kg` steel member seated across the *inside* of the door
+in two keepers at `z = -105.55`, `0.30 m` north of the door plane — squarely in
+its swing. The drive stalls against the bar. Lift the bar out and set it down
+anywhere clear, and the door travels on its own.
 
-Closed-door stall arithmetic:
+An inward leaf with the bar inside is also the whole soft-lock defence: whoever
+is in the cage can always move the bar and walk out, and no arrangement of
+bodies outside can shut them in.
 
-    door center (3.65, 1.50, 12.00) half (0.90, 1.10, 0.70)
-    crate start (3.50, 2.28, 11.80) half (1.10, 0.90, 1.15)
-    overlap at spawn: yes (Δx 0.15, Δy 0.78, Δz 0.20 vs sums 2.00 / 2.00 / 1.85)
-    free when crate center y ≥ 3.51 (bottom clears door top 2.60) or crate xz leaves the door AABB
+Rated so the bar holds and nothing else does:
 
-Latch clear Y 3.08 is **not** sufficient by itself (crate bottom at that pose is 2.18, door top 2.60).
+```
+bar seated, reaction arm from the hinge   r = 0.80 m
+torque the drive applies                  6 000 N·m
+force at the bar                          6 000 / 0.80 = 7 500 N
+bar shear capacity (DESIGN TARGET)        60 000 N   -> 8.0x, holds
+bar removed, remaining resistance         hinge friction only -> travels
+```
 
-#### B. Hook block (new body)
+The bar is **not** a lock that the player unlocks. It is a body in the way. No
+predicate reads "bar removed"; the door travels because nothing is touching it.
 
-Mass DESIGN TARGET **36 kg**. Weight `36 × 9.81 = 353 N`.
+#### 8.4.3 `CAP-HOOK5` — a carried body, and what carrying costs
 
-Sling: DESIGN TARGET WLL = 5000 kg, working tension `5000 × 9.81 = 49050 N` (matches jib SWL). Portable sling length DESIGN TARGET **1.20 m** when used on a new padeye. The crate's existing kernel sling stays **0.60 m**. Do not change `kJibSlingMaxMeters` for the crate hook.
+The hook block is a `36 kg` body, inside the Atlas's `25–40 kg` unaided range.
+It sits on a rack inside the cage. `CAP-HOOK5` is the derived predicate
+`!hook_in_rack`, computed from the block's measured pose exactly as
+`WO-020` specifies `CAP-BLIND`. It is never a stored bool.
 
-Padeyes this slice declares:
+```
+pick_up(body):
+    requires  no carry constraint currently exists
+              |player − body| ≤ 1.20 m
+              |v_body| ≤ 0.50 m/s
+              player grounded and not mid-traversal
+              Pick command this tick
+    effect    PointConstraint between the player body and the carryable,
+              world point = player position + facing·0.60 + (0, 0.30, 0)
+              created with track_for_teardown = false
 
-| Padeye | Owner | Compatible now? |
-|---|---|---|
-| crate top (existing) | 4 t pack | already slung by WO-011 pre-placement; `CAP-HOOK5` is **not** required |
-| hook-block self eye | portable block | carry only in this slice |
-| needle padeyes | atlas band B01 / `WO-017_NEEDLE_SEAT` | **forbidden this file**. Predicate for next file: attach only if `CAP-HOOK5` true |
+set_down():
+    requires  a carry constraint exists
+              Drop command this tick
+    effect    remove it. The body falls and rests. Nothing is destroyed,
+              nothing respawns, and it can be picked up again where it lies.
+```
 
-Carry: when player is in the cage (plan in cage AABB, y < 2.70) and context-acquires within 1.20 m of block center, block becomes a kinematic carry at source offset `(0.35, 0.20, 0.40)` from player (right hip). Drop: context again; block becomes dynamic.
+A `PointConstraint` fixes the shared point but leaves rotation free, so the
+block genuinely swings from the carry point as the player walks — the same
+property that makes `WO-014`'s pack swing under the hook rather than weld to it.
 
-`CAP-HOOK5` WORLD predicate (derived, not stored as the cause):
+**Both hands are on it.** While a carry constraint exists,
+`try_begin_ground_traversal` and the airborne hang grab both return false. Vault,
+mantle and hang are all pull-ups; none of them is available to someone holding a
+`36 kg` block in both arms.
 
-    cap_hook5 = (block is not in the seated rack pose)
-                AND (player holds it OR it is distance-constrained to a declared padeye)
+This is a **player state derived from real constraint topology**
+(`carrying = carry_constraint != nullptr`), not a mission bit, and it is the
+reason the distinction below matters:
 
-Seated rack pose: source `(2.00, 0.62, 12.00)` ± 0.15 m.
+> `MOD-SKIN-LADDER-S` is **not blocked**. Its bodies are bit-for-bit what
+> `WO-014` built; no collider changes, no envelope is added, no probe is
+> filtered. What changed is that the player's hands are full. Set the block
+> down and every rung is available again, immediately. The protocol forbids
+> walling SKIN off to protect a puzzle; this does not wall it off, and
+> falsifier 7 exists specifically to prove the geometry is untouched.
 
-#### C. Inherited jib (not re-specified)
+**Mass.** The `36 kg` loads the player body through the constraint, making the
+carried system `121 kg`. Whether that measurably changes walk response depends on
+whether the controller drives velocity or force — `kGroundAcceleration = 22.0`
+suggests an acceleration model, but the implementation must **measure** it and
+record what it found rather than assume. No claim about handling is made here.
 
-    τ = 12 × 5000 × 9.81 = 588600 N·m
-    winch force = 49050 N
-    4 t → F = 39240 N  (legal)
-    9 t must still stall
-    max hook y ≈ 8.70 m  (still cannot reach +40 or +48)
+#### 8.4.4 **GAP REPORT — the Atlas's crate coupling is not sitable**
 
-The jib may still lift the pre-slung crate without `CAP-HOOK5`. That is WO-011. This file must not break it.
+Atlas §6 offers two example couplings: *"opened by moving the crate **or**
+circling the belt."* §6 is explicit that these are *"legal intended uses, not
+exclusive scripts"*, so authoring one is not a violation. But the reason the
+other is absent should be on the record, because it is arithmetic and not taste.
 
-Energy this slice adds: door rotation is kinematic occupancy, not a motor. Block lift work = `353 N × Δh`. If Δh from floor 0.40 m to hip ~1.10 m, `W = 353 × 0.70 ≈ 247 J`. No fatigue solver.
+A crate-blocked cage door requires the cage to sit inside the jib's working
+reach. The hook hangs at the boom tip, so that reach is not a disc — it is the
+**circle of radius exactly `12.000 m`** about `(0, —, -100.2)`, swept through
+`±0.90 rad` of the `-Z` bearing:
+
+```
+slew -0.90 rad  ->  ( 9.400, —, -107.659)   east limit
+slew -0.80 rad  ->  ( 8.608, —, -108.560)   WO-015's counterweight cradle
+slew  0.00 rad  ->  (-0.000, —, -112.200)   the pack's rest pose
+slew +0.90 rad  ->  (-9.400, —, -107.659)   west limit
+```
+
+`WO-015` places the cradle at `(8.608, —, -108.560)`, `1.20 m` from the east
+limit. The entire east stretch of the reach circle is spoken for. The west
+stretch at `(-9.400, —, -107.659)` collides with `MOD-SKIN-LADDER-S`'s head rung
+at `x ∈ [-7.0, -5.0]`, `z ∈ [-107.7, -105.7]`, and siting a freight cage on the
+SKIN line is worse than not siting it at all.
+
+**Resolution:** close the slice on the belt coupling, which needs no jib reach at
+all. Do not move the cradle — it is load-bearing for `WO-015`'s bascule and
+re-siting it would invalidate a mechanism already specified down to its rope
+length. If a later slice wants the crate coupling, the cheapest path is a second
+door on the cage's north face reached from the belt's far stroke, not a
+relocation.
+
+The end state is the same either way: once the bar is moved the door is open
+permanently, so the cage is a one-time problem regardless of which coupling
+opened it.
 
 ### 8.5 Occupancy and interlocks
 
-| Envelope | Body | Effect |
-|---|---|---|
-| door closed AABB | 4 t crate | stalls door `θ` |
-| latch clear Y 3.08 | crate | existing dog stall; **not** sufficient alone to free the door |
-| west hatch | none | never stalled by crate. Crate min x = 2.40; hatch at x = 1.25 |
-| cage interior | door when `θ ≈ 0` | east entry blocked; west hatch still open |
-| jib SWL / travel | jib | unchanged |
-| dog at grade | dog | unchanged; does not occupy the rack |
+| Envelope | Effect |
+|---|---|
+| bar seated in its keepers | door drive stalls at `0 rad` |
+| bar anywhere else | door travels to its `1.35 rad` stop |
+| carry constraint exists | no traversal move begins; pick is refused |
+| player on the deck, deck alongside the cage | buttress inside the mantle band |
+| player on the apron | buttress `1.05 m` above the mantle band |
+| block off its rack by more than `0.35 m` | `CAP-HOOK5` reads held |
 
-No `rack_unlocked` flag. Tests may derive `door_overlap == false`. HUD may show “CAGE CLEAR” from that overlap. WORLD is AABBs / contacts.
+`hook_in_rack`, `carrying` and `door_open` are **derived** from pose and
+constraint topology for the HUD and the falsifiers. No simulation branch reads
+any of them, with the single declared exception of `carrying` gating traversal —
+which is itself read from `carry_constraint != nullptr`, a real object, not a bit.
 
 ### 8.6 Required causal path
 
-Primary:
-
-    ACT[pendant raise until crate AABB clears door AABB]
-      → STATE[door occupancy false; door travels to θ ≥ 1.00 rad]
-      → WORLD[east throat open; cage floor standable from apron]
-      → PLAY[block pickable]
-
-    ACT[pick up block]
-      → STATE[kHook5BlockEntityId carried; seated-pose false]
-      → WORLD[CAP-HOOK5 true]
-      → PLAY[legal attach to future padeyes ≤ 5 t]
-
-Belt alternate:
-
-    ACT[circle west of belt and/or ride belt into west hatch]
-      → STATE[support = belt or cage floor; door may stay at θ = 0]
-      → WORLD[block pickable; crate xz and dog angle unchanged within 0.45 m / 0.15 rad]
-      → PLAY[same CAP-HOOK5; K0 freight may remain unsolved]
-
-Illegal:
-
-    MISSION_FLAG → WORLD[cage open]
-    ACT[take crate sling] → PLAY[CAP-HOOK5]
-    ACT[stand at +40] → PLAY[CAP-HOOK5]
+See the Required causal path section above. The next file begins on
+`MOD-HALL-DECK` with `CAP-HOOK5` held or set down there.
 
 ### 8.7 Support / traversal handoff
 
-Primary (from +40 or apron):
-
-| Step | Member | Source Y | Type | Inherit v? |
+| Step | Member | source y | type | inherits v? |
 |---|---|---|---|---|
-| 0 | hall / SKIN / apron (entry) | 40 or ~0 | static | no |
-| 1 | STAIR-A or SKIN descent if needed | 40 → 0 | static | no |
-| 2 | apron / belt catwalk | ~0 | static | no |
-| 3 | pendant station (if using jib) | 1.58 | static | no |
-| 4 | cage floor | 0.40 | static | no |
-| 5 | carry block; walk out east door or west hatch | 0–2 | carry, not a floor | n/a |
+| 0 | apron / ground plane | `0.00` | static | no |
+| 1 | `MOD-INTAKE-BELT` deck | `1.38` | **kinematic** | **yes** — already in the moving-support set |
+| 2 | cage west buttress | `2.90` | static | no — the mantle exits a moving support onto a static one |
+| 3 | cage roof | `2.90` | static | no |
+| 4 | cage floor (via the hatch) | `0.00` | static | no |
+| 5 | apron, through the travelled door | `0.00` | static | no |
+| 6 | `MOD-STAIR-A` → `MOD-HALL-DECK` | `→ 40.1872` | static | no |
 
-Belt alternate inserts: belt top y=1.38, kinematic, inherit v = yes, then hatch, then cage floor.
-
-Handoff is contact. No teleport of player or block.
+Step 2 is the one with teeth: a mantle **off a moving support onto a static
+one**. `WO-003` proved the moving-ledge and moving-hang cases
+(`moving_hang_support`, `moving_ledge_vz`), so the machinery exists, but this
+exact direction — leaving a kinematic deck for a fixed ledge — is not separately
+falsified anywhere yet. Falsifier 2 covers it. Expect the exit velocity to carry
+the belt's `v` for one tick and land the player slightly along the buttress; the
+`0.58 m` of far-edge clearance in §8.3 exists for that.
 
 ### 8.8 Failure states
 
-| Trigger | World | Player can | Must not |
+| Trigger | What the world does | What the player can still do | Must not happen |
 |---|---|---|---|
-| shove door while crate overlaps | door `θ` held | circle belt; use jib | auto-open because “they need the hook” |
-| jib 9 t | stall, crate stays | belt circle | door frees |
-| jib winch at 2.80 m | hook y ≈ 8.70 | operate within limits | free the door by a flag |
-| miss west hatch from belt | fall to apron / ride continues | chute if high; here fall is short | catch net |
-| drop block on belt | block is dynamic on moving support | pick up again | delete block |
-| drop block down the well | gravity; may be lost | last commit if unrecoverable | auto-return to cage |
-| presentation `has_hook = true` | nothing | no attach | needle attach in `WO-017_NEEDLE_SEAT` |
-| take block, crate still slung | both facts true | lift crate **and** hold CAP-HOOK5 | stealing the crate sling |
-| stay at +40, never descend | rack stays locked/full | SKIN/STAIR still live | spawning the block at 40 m |
+| mantle attempted from the apron | probe returns invalid, nothing moves | board the belt | a "you need X" message standing in for geometry |
+| mantle attempted outside the window | no ledge in reach; the deck is elsewhere | ride one more cycle, `15.7 s` | the cage drifting to meet the player |
+| miss the mantle and fall off the deck | `1.38 m` fall to the apron | walk back and re-board | a rail that makes the belt safe |
+| drop into the cage before moving the bar | player is inside with the door shut | move the bar and walk out; the door opens from inside | a soft-lock — Atlas §3 |
+| pick attempted while already carrying | refused; nothing changes | set down first | two bodies on one carry point |
+| carrying, traversal attempted | refused; nothing changes | set the block down | the block clipping through a ledge |
+| block dropped from the roof | falls, rests on the apron, still pickable | pick it up at grade | the block despawning or resetting |
+| block dropped off `MOD-HALL-DECK` | falls 40 m, rests on the apron | walk down and fetch it | the block being consumed or duplicated |
+
+The cage is one-way inbound and free outbound **by construction**: the door's
+drive is permanent and the bar is inside. That is the whole soft-lock defence,
+and it is structural rather than a special case.
 
 ### 8.9 Recovery
 
-- east door stalled: west hatch / belt circle. Does not require freight
-- west hatch missed: east door after moving crate, or re-ride belt
-- block dropped on apron: pick up; it is 36 kg
-- block lost in an unrecoverable volume: last commit. Do not auto-repair
-- player at +40 without the block: descend real STAIR-A / SKIN. Do not strand
-- freight unsolved forever: CAP-HOOK5 still available via belt. SKIN braid stays legal
+Atlas §3. Nothing here can strand:
 
-Atlas §3: a Transfer Plate keeps one recovery that does not need the lost capability. Apron and +40 soffit stay standable if the player never takes the hook.
+- **cannot time the belt** → `CAP-HOOK5` is simply not held yet. Nothing else in
+  `WO-014`/`WO-015` needs it, and both braids to `+40 m` remain open
+- **inside the cage** → the bar is inside with you; the door opens outward from
+  within; and even leaving the bar seated, the hatch drop is the only cost
+- **block left somewhere awkward** → it is a body at rest and can always be
+  picked up again; it is never destroyed and never respawns
+- **carrying and want to climb SKIN** → set it down; every move returns
 
 ### 8.10 Persist
 
-Consumes WO-009 persist. Add to the blob (additive fields; export version 2; import accepts version 1 with hook5 defaults = in rack):
+**Persist version 3.** Carry state is runtime topology that outlives its bodies,
+so it must survive commit and restore the way `WO-012`'s needle pins do:
 
-- `hook5_x, hook5_y, hook5_z`
-- `hook5_held` (uint8)
-- `hook5_in_rack` (uint8)
-- `hook5_door_angle` (double)
+```
+carrying_entity     uint64   which body is on the carry point, 0 for none
+hook_block_x,y,z    float    wherever the block was left
+bar_x,y,z           float
+door_hinge_angle    float
+```
 
-Derived `cap_hook5` is **not** stored as the cause. Reload restores block pose/hold/door; predicate is recomputed.
-
-Crate/jib/dog/player/belt fields unchanged. Do not reset the rack on “band load.”
-
-Commit: no new elevation commit. Existing y≥40 commit and apron dwell still apply. If the player acquires the block, the next dwell commit must include the new fields.
+`restore_carry_topology()` mirrors `restore_needle_topology()`: after a restore,
+reconcile the carry constraint against `carrying_entity` **before** the next tick
+reads contacts, so the snapshot never mixes a restored pose with a stale
+constraint. Import of a v2 blob assumes nothing carried, block on its rack, bar
+seated, door shut.
 
 ### 8.11 Falsifiers (deterministic proof)
 
-1. `b00_hook5_door_stalled_by_crate` — IntakeRise spawn, crate on latch, wait 2 s; `θ` stays < 0.10 rad. Fail if door opens.
-2. `b00_hook5_door_frees_after_lift` — pendant raise until crate AABB clears door; door then reaches `θ ≥ 1.00` rad. Fail if door stays stalled after overlap is gone.
-3. `b00_hook5_crate_sling_still_works` — same lift uses existing crate constraint; `jib_hook_load == Crate`. Fail if lift requires `cap_hook5`.
-4. `b00_hook5_belt_circle_without_freight` — crate stays on latch, dog ≈ 0; player reaches cage floor via west hatch; crate xz delta < 0.45 m; dog delta < 0.15 rad.
-5. `b00_hook5_acquire_is_a_body` — pick up; `kHook5BlockEntityId` is not at seated pose; player hold true. Fail if only a bool flipped and the body stays in the cage.
-6. `b00_hook5_flag_is_not_world` — `commit_checkpoint()` without moving the block must leave seated pose and `cap_hook5` false.
-7. `b00_hook5_reload` — acquire, dwell commit, export/import; block still held or at dropped pose; door angle matches; crate/dog match.
-8. `b00_hook5_skips_needles` — after acquire, no campaign `MOD-NEEDLE-*` bodies exist in IntakeRise.
-9. `b00_forty_and_intake_still_pass` — existing B00 0–24 and 24–40 tests remain `PASS`.
-10. Kernel WO-011–008 remain `PASS` (kernel needle attach is **not** IntakeRise and must not be gated by campaign `CAP-HOOK5`).
+1. `wo016_apron_cannot_reach_the_cage` — spawn on the apron beside the cage.
+   Walk at every face for 20 s, requesting traversal every tick. `ledge_available`
+   is never true for a cage body, and the player never exceeds `y = 1.2`.
+2. `wo016_belt_ride_reaches_the_roof` — board the deck, ride, mantle when the
+   probe offers the buttress. `support_entity_id` becomes the buttress, then the
+   roof, within two belt cycles (`≤ 32 s`).
+3. `wo016_bar_is_not_a_flag` — with the bar seated, advance 30 s with every
+   command mashed. The door hinge stays `≤ 0.05 rad`. Then lift the bar, carry it
+   `2 m`, drop it: the hinge reaches `≥ 1.20 rad` **without any door command**,
+   because no door command exists.
+4. `wo016_block_is_a_body` — pick the block up. `hook_in_rack` false,
+   `CAP-HOOK5` true, and the block's position tracks the player within `1.0 m`
+   over 10 s of walking. Drop it: it falls, comes to rest, and is pickable again
+   at its new position.
+5. `wo016_carrying_blocks_traversal` — holding the block, stand at the proven
+   `MantleApproach` ledge and request traversal for 5 s. `accepted_traversal_count`
+   does not change. Set the block down, request once: it does.
+6. `wo016_hands_free_restores_everything` — the same instance, block down, runs
+   `WO-014`'s SKIN climb to `+24 m` unchanged, `15` mantles.
+7. `wo016_skin_geometry_is_untouched` — assert the SKIN rung bodies' positions
+   and extents are identical with the block held and with it stowed. The ladder
+   is not walled off; only the player's state differs.
+8. `wo016_hook_reaches_forty` — carrying the block, walk `MOD-STAIR-A` from the
+   apron to `MOD-HALL-DECK`. `support_entity_id == MOD-HALL-DECK`, player
+   `y ≥ 40.1872 + 0.70`, and `CAP-HOOK5` still held on arrival.
+9. `wo016_prior_still_pass` — `WO-014`, `WO-015` and all kernel falsifiers `PASS`
+   unchanged, the 9 t proof load still on the ground.
 
 ### 8.12 Exit state
 
-The next file may assume:
-
-- `MOD-HOOK5-RACK` exists at source `(2.00, 1.50, 12.00)`
-- player **can** possess `CAP-HOOK5` (block out of rack) by door-after-lift **or** belt hatch
-- player may also have skipped the rack; then `CAP-HOOK5` is false and `WO-017_NEEDLE_SEAT` must not attach needles to the jib
-- crate may still be pre-slung; that is not `CAP-HOOK5`
-- yard jib still cannot hoist to 48 m or 96 m
-- +40 m stand still exists
-- `MOD-NEEDLE-A/B` and pockets are **not** in this world yet
-- frozen 0–24 and 24–40 numbers are unchanged
-
-Next file inherits **whether** `CAP-HOOK5` is true as a world fact to consume, not as a job to re-author the rack.
+- `CAP-HOOK5` is held, or set down somewhere the player chose; either is legal
+- the cage door has travelled and stays travelled; the cage is open at grade
+- the bar lies wherever it was dropped
+- the player **can** stand on `MOD-HALL-DECK` at `40.1872 m` holding the block
+- `MOD-NEEDLE-A/B`, their `48 m` racks, `MOD-NEEDLE-POCKETS` at `96 m`,
+  `MOD-CAGE-1` and `MOD-GUIDE-RACK` **do not exist yet**
+- the hall's east opening and `MOD-EAST-OUTRIGGER` do not exist
+- everything `WO-014` and `WO-015` built still exists below
+- persist is v3
+- Fold-device execution remains unverified
 
 ---
 
-**Stop. Do not begin the next file inside this one.**  
+**Stop. Do not begin the next file inside this one.**
 Next file: `03_WORK_ORDERS/WO-017_NEEDLE_SEAT.md`
