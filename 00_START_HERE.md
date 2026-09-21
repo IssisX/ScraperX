@@ -76,7 +76,7 @@ Implement the smallest **complete causal slice**, not the smallest textual diff.
 
 Do not expand into adjacent features after the completion condition passes.
 
-Do not assemble bands B01–B11 before WO-008 is proven on the kernel slice.
+Do not assemble bands B01–B11 before the kernel slice is proven and `WO-014` is green.
 
 ## Claim discipline
 
@@ -90,23 +90,52 @@ Evidence must match the claim.
 
 ## Work-order spine
 
+Kernel: `WO-000`–`WO-013`. These prove the tool types on the `KX-*` substrate at source
+x ≈ 200. They stay as regression substrate and are not retitled into campaign modules.
+
 | WO | File | Slice |
 |---|---|---|
 | 000 | `03_WORK_ORDERS/WO-000_DELIVERY_SPINE.md` | Godot 4.7 → GDExtension → fixed-step native sim → arm64 APK |
 | 001 | `03_WORK_ORDERS/WO-001_EMBODIED_AUTHORITY.md` | native player on static `KX-DECK` |
 | 002 | `03_WORK_ORDERS/WO-002_MOVING_SUPPORT_TRUTH.md` | translating/rotating support-point velocity |
 | 003 | `03_WORK_ORDERS/WO-003_ATHLETIC_TRAVERSAL.md` | vault/mantle/ledge/hang on real geometry |
-| 004 | `03_WORK_ORDERS/WO-004_FALL_PARACHUTE_CHECKPOINT.md` | fall, chute, commit, survived lower landing |
-| 005 | `03_WORK_ORDERS/WO-005_FIRST_FREIGHT.md` | `KX-JIB` moves `KX-CRATE` |
-| 006 | `03_WORK_ORDERS/WO-006_FIRST_STRUCTURAL_COUPLING.md` | seated `KX-NEEDLE` changes traversal |
-| 007 | `03_WORK_ORDERS/WO-007_FIRST_PROCESS_COUPLING.md` | `KX-SUMP` changes `KX-GRATE` |
-| 008 | `03_WORK_ORDERS/WO-008_FIRST_CAUSAL_CHAIN.md` | kernel chain + persist/reload |
+| 004 | `03_WORK_ORDERS/WO-004_FOLD_STAGE_AND_INDUSTRIAL_IDENTITY.md` | Fold-aspect stage, industrial identity |
+| 005 | `03_WORK_ORDERS/WO-005_EXTERIOR_GRADE_AND_APPROACH.md` | exterior grade and approach |
+| 006 | `03_WORK_ORDERS/WO-006_FIRST_COUPLED_MACHINE.md` | vessel → orifice → cylinder → lift |
+| 007 | `03_WORK_ORDERS/WO-007_KELLERWORKS_IDENTITY_AND_ALPINE_BACKDROP.md` | Kellerworks identity, alpine backdrop |
+| 008 | `03_WORK_ORDERS/WO-008_FALL_PARACHUTE_CHECKPOINT.md` | fall, chute, commit, survived lower landing |
+| 009 | `03_WORK_ORDERS/WO-009_FIRST_FULL_CAUSAL_CHAIN.md` | kernel chain + persist/reload |
+| 010 | `03_WORK_ORDERS/WO-010_THE_PLAYERS_WEIGHT_IS_A_REAL_FORCE.md` | player mass drives the treadle |
+| 011 | `03_WORK_ORDERS/WO-011_FIRST_FREIGHT.md` | `KX-JIB` moves `KX-CRATE` |
+| 012 | `03_WORK_ORDERS/WO-012_FIRST_STRUCTURAL_COUPLING.md` | seated `KX-NEEDLE` changes traversal |
+| 013 | `03_WORK_ORDERS/WO-013_FIRST_PROCESS_COUPLING.md` | `KX-SUMP` changes `KX-GRATE` |
+
+## Campaign queue
+
+`WO-014`–`WO-028` build the actual 1.6 km ascent, one Atlas band at a time. The queue, the
+per-slice mechanical-close template, and the datum law live in
+`03_WORK_ORDERS/SECTION_PRE_RESOLVE_PROTOCOL.md`. `WO-014`–`WO-020` are authored plans adopted
+from `ScraperX-Grok`; the rest are unauthored.
+
+`B00`–`B11` are Atlas §6 band IDs — floors of the tower. They are never work-order filenames.
+
+| WO | File | Slice | Atlas band |
+|---|---|---|---|
+| 014 | `03_WORK_ORDERS/WO-014_INTAKE_RISE.md` | apron → +24 m | B00 |
+| 015 | `03_WORK_ORDERS/WO-015_LEGAL_FORTY.md` | first legal stand at +40 m | B00 |
+| 016 | `03_WORK_ORDERS/WO-016_HOOK5_RACK.md` | `CAP-HOOK5` acquire | B00 |
+| 017 | `03_WORK_ORDERS/WO-017_NEEDLE_SEAT.md` | seat needles at 96 m | B01 |
+| 018 | `03_WORK_ORDERS/WO-018_CAGE_OR_SKIN.md` | cage land at 120 m, or east climb | B01 exit |
+| 019 | `03_WORK_ORDERS/WO-019_CW_PIN.md` | counterweight ride / pin dump | B02 |
+| 020 | `03_WORK_ORDERS/WO-020_WET_ISOLATION.md` | blind + drain, or north climb to 340 m | B03 |
+| 021–028 | not authored | plate shop → summit | B04–B11 |
 
 ## Current starting point
 
-If the delivery spine is not proven, the current task is **WO-000**.
+The kernel is proven on `ScraperX-Claude`: `build/host/scraperx_sim_tests` exits 0 with 9 of 9
+`PASS` (observed 2026-09-21). The current task is **WO-014**.
 
-If it is proven, take the next incomplete work order in the table. Do not start from the 1.6 km crown.
+Take the next incomplete work order in the queue. Do not start from the 1.6 km crown.
 
 Kernel module IDs live in the atlas, §9. Campaign completion lives in the atlas, B11, and remains the GDD summit rule: physically stand on 1600 m.
 
