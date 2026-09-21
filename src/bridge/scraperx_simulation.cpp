@@ -12,7 +12,7 @@ namespace {
             static_cast<godot::real_t>(value.z)};
 }
 
-constexpr std::int64_t kInitialSpawnCount = 18;
+constexpr std::int64_t kInitialSpawnCount = 21;
 
 } // namespace
 
@@ -191,6 +191,27 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_sump_volume_kg);
     godot::ClassDB::bind_method(godot::D_METHOD("is_grate_safe"),
                                 &ScraperXSimulation::is_grate_safe);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("set_intake_slew_input", "value"),
+                                &ScraperXSimulation::set_intake_slew_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_intake_hoist_input", "value"),
+                                &ScraperXSimulation::set_intake_hoist_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_intake_station_active"),
+                                &ScraperXSimulation::is_intake_station_active);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_boom_angle_radians"),
+                                &ScraperXSimulation::get_intake_boom_angle_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_hook_position"),
+                                &ScraperXSimulation::get_intake_hook_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_pack_position"),
+                                &ScraperXSimulation::get_intake_pack_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_overweight_pack_position"),
+                                &ScraperXSimulation::get_intake_overweight_pack_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_dog_angle_radians"),
+                                &ScraperXSimulation::get_intake_dog_angle_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("does_intake_pack_pin_dog"),
+                                &ScraperXSimulation::does_intake_pack_pin_dog);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_intake_throat_clear"),
+                                &ScraperXSimulation::is_intake_throat_clear);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -552,6 +573,46 @@ double ScraperXSimulation::get_sump_volume_kg() const {
 
 bool ScraperXSimulation::is_grate_safe() const {
     return simulation_->snapshot().grate_safe;
+}
+
+bool ScraperXSimulation::set_intake_slew_input(const double value) {
+    return simulation_->set_intake_slew_input(value);
+}
+
+bool ScraperXSimulation::set_intake_hoist_input(const double value) {
+    return simulation_->set_intake_hoist_input(value);
+}
+
+bool ScraperXSimulation::is_intake_station_active() const {
+    return simulation_->snapshot().intake_station_active;
+}
+
+double ScraperXSimulation::get_intake_boom_angle_radians() const {
+    return simulation_->snapshot().intake_boom_angle_radians;
+}
+
+godot::Vector3 ScraperXSimulation::get_intake_hook_position() const {
+    return to_godot(simulation_->snapshot().intake_hook_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_intake_pack_position() const {
+    return to_godot(simulation_->snapshot().intake_pack_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_intake_overweight_pack_position() const {
+    return to_godot(simulation_->snapshot().intake_overweight_pack_position);
+}
+
+double ScraperXSimulation::get_intake_dog_angle_radians() const {
+    return simulation_->snapshot().intake_dog_angle_radians;
+}
+
+bool ScraperXSimulation::does_intake_pack_pin_dog() const {
+    return simulation_->snapshot().intake_pack_pins_dog;
+}
+
+bool ScraperXSimulation::is_intake_throat_clear() const {
+    return simulation_->snapshot().intake_throat_clear;
 }
 
 } // namespace scraperx::bridge

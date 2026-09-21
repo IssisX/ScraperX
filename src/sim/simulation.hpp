@@ -59,6 +59,20 @@ enum class InitialSpawn : std::uint8_t {
     // ordinary support" (close the valve first, then walk) -- matching the
     // pattern established for the needle station.
     KernelSumpStation = 17,
+    // WO-014 falsifier spawn: on the MOD-INTAKE-BELT catwalk at the
+    // MOD-YARD-JIB pendant, where CAP-PENDANT actually lives (Atlas B00). The
+    // whole freight sequence is driven from here without a climb.
+    IntakePendant = 18,
+    // WO-014 falsifier spawn: on the apron directly outside the MOD-DOG-A
+    // throat, facing the bay. One spawn serves both "MOD-STAIR-A is physically
+    // impassable while the pack pins the dog" (walk forward immediately) and
+    // "it is passable once the dog has travelled" -- matching the needle and
+    // sump station pattern.
+    IntakeThroat = 19,
+    // WO-014 falsifier spawn: at the foot of MOD-SKIN-LADDER-S. The SKIN braid
+    // is a legal bypass of the whole freight sequence (Atlas B00 coupling 3),
+    // so it is proven from its own spawn with the pack untouched.
+    IntakeSkinFoot = 20,
 };
 
 enum class TraversalState : std::uint8_t {
@@ -172,6 +186,21 @@ struct Snapshot final {
     bool sump_isolated = false;
     double sump_volume_kg = 0.0;
     bool grate_safe = false;
+
+    // --- WO-014 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
+    // MOD-YARD-JIB lifts the 4 t pack off MOD-DOG-A; the dog is a real hinged
+    // body under a permanent, finite opening torque, so it travels the instant
+    // the pack stops physically blocking its swing. Nothing here is a flag:
+    // intake_pack_pins_dog is derived from the pack's measured pose purely for
+    // the HUD and the falsifiers, and no simulation branch reads it.
+    bool intake_station_active = false;
+    double intake_boom_angle_radians = 0.0;
+    Vector3 intake_hook_position{};
+    Vector3 intake_pack_position{};
+    Vector3 intake_overweight_pack_position{};
+    double intake_dog_angle_radians = 0.0;
+    bool intake_pack_pins_dog = false;
+    bool intake_throat_clear = false;
 };
 
 struct AdvanceResult final {
@@ -233,6 +262,23 @@ public:
     // body invented just to catch it.
     static constexpr std::uint64_t kSumpGrateEntityId = 34;
 
+    // WO-014 campaign entities (Ascent Atlas §6, band B00 "Apron and Intake").
+    // These are MOD-* campaign modules in the real tower yard, not KX-*
+    // kernel fixtures: the kernel at x ~ 200 stays untouched regression
+    // substrate and is never retitled into campaign geometry.
+    static constexpr std::uint64_t kIntakeApronEntityId = 35;
+    static constexpr std::uint64_t kIntakeBeltEntityId = 36;
+    static constexpr std::uint64_t kIntakeJibMastEntityId = 37;
+    static constexpr std::uint64_t kIntakeJibBoomEntityId = 38;
+    static constexpr std::uint64_t kIntakeJibHookEntityId = 39;
+    static constexpr std::uint64_t kIntakePackEntityId = 40;
+    static constexpr std::uint64_t kIntakeOverweightPackEntityId = 41;
+    static constexpr std::uint64_t kIntakeDogEntityId = 42;
+    static constexpr std::uint64_t kIntakeBayEntityId = 43;
+    static constexpr std::uint64_t kIntakeStairEntityId = 44;
+    static constexpr std::uint64_t kIntakeHandoffEntityId = 45;
+    static constexpr std::uint64_t kIntakeSkinEntityId = 46;
+
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
     static constexpr double kTowerHeightMeters = 1600.0;
@@ -282,6 +328,13 @@ public:
     // the player is at the sump station.
     [[nodiscard]] bool request_valve_toggle() noexcept;
 
+    // WO-014 MOD-YARD-JIB pendant (CAP-PENDANT). Same continuous, persistent,
+    // signed-axis contract as the kernel jib, gated on the B00 pendant station
+    // rather than the kernel one. The dog has no command of its own: it is
+    // always under opening torque and is held only by the pack's mass.
+    [[nodiscard]] bool set_intake_slew_input(double value) noexcept;
+    [[nodiscard]] bool set_intake_hoist_input(double value) noexcept;
+
     // Disables the boiler feed so the plant becomes a strictly finite reservoir.
     // Used to prove the machine cannot manufacture work.
     void set_boiler_feed_enabled(bool enabled) noexcept;
@@ -307,6 +360,8 @@ private:
     double jib_slew_input_ = 0.0;
     double jib_hoist_input_ = 0.0;
     double needle_hoist_input_ = 0.0;
+    double intake_slew_input_ = 0.0;
+    double intake_hoist_input_ = 0.0;
     bool valve_toggle_requested_ = false;
     Snapshot snapshot_{};
 };

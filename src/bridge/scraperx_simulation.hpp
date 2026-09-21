@@ -108,6 +108,18 @@ public:
     [[nodiscard]] double get_sump_volume_kg() const;
     [[nodiscard]] bool is_grate_safe() const;
 
+    // WO-014 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
+    [[nodiscard]] bool set_intake_slew_input(double value);
+    [[nodiscard]] bool set_intake_hoist_input(double value);
+    [[nodiscard]] bool is_intake_station_active() const;
+    [[nodiscard]] double get_intake_boom_angle_radians() const;
+    [[nodiscard]] godot::Vector3 get_intake_hook_position() const;
+    [[nodiscard]] godot::Vector3 get_intake_pack_position() const;
+    [[nodiscard]] godot::Vector3 get_intake_overweight_pack_position() const;
+    [[nodiscard]] double get_intake_dog_angle_radians() const;
+    [[nodiscard]] bool does_intake_pack_pin_dog() const;
+    [[nodiscard]] bool is_intake_throat_clear() const;
+
 protected:
     static void _bind_methods();
 

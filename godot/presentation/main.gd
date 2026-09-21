@@ -32,6 +32,43 @@ const STACK_COLUMN_SIZE := 1.6
 const STACK_RAMP_WIDTH := 3.2
 const STACK_MASS_BASE_Y := 159.0
 
+# WO-014 B00 intake rise. Every figure here mirrors a kIntake* constant in
+# src/sim/simulation.cpp -- what is drawn and what is collided with are the
+# same geometry, so a player who can see a route can walk it.
+const INTAKE_BAY_FRONT_Z := -110.5
+const INTAKE_BAY_BACK_Z := -122.5
+const INTAKE_BAY_HALF_X := 10.0
+const INTAKE_BAY_WALL_HEIGHT := 5.0
+const INTAKE_BAY_WALL_THICKNESS := 0.6
+const INTAKE_THROAT_HALF_WIDTH := 1.3
+const INTAKE_THROAT_HEIGHT := 2.5
+const INTAKE_DOG_HALF_WIDTH := 1.04
+const INTAKE_DOG_HALF_HEIGHT := 1.19
+const INTAKE_DOG_CENTER_Y := 1.25
+const INTAKE_JIB_MAST_Z := -100.2
+const INTAKE_BOOM_LENGTH := 12.0
+const INTAKE_BOOM_HEIGHT := 11.5
+const INTAKE_PACK_SIZE := Vector3(2.2, 1.8, 2.3)
+const INTAKE_OVERWEIGHT_STAND := Vector3(7.0, 0.0, -98.0)
+const INTAKE_BELT_X := 6.0
+const INTAKE_BELT_TOP_Y := 1.38
+const INTAKE_PENDANT_X := 3.0
+const INTAKE_PENDANT_Z := -100.0
+const INTAKE_STAIR_Z := -118.0
+const INTAKE_STAIR_LANE_OFFSET := 2.0
+const INTAKE_STAIR_FLIGHT_COUNT := 6
+const INTAKE_STAIR_FLIGHT_RISE := 4.0
+const INTAKE_STAIR_HALF_RUN := 7.0
+const INTAKE_STAIR_WIDTH := 3.6
+const INTAKE_STAIR_LANDING_X := 8.0
+const INTAKE_HANDOFF_Y := 24.0
+const INTAKE_HANDOFF_CENTER_X := -6.0
+const INTAKE_HANDOFF_SOUTH_Z := -107.7
+const INTAKE_HANDOFF_NORTH_Z := -117.5
+const INTAKE_SKIN_RUNG_RISE := 1.6
+const INTAKE_SKIN_RUNG_COUNT := 15
+const INTAKE_SKIN_RUNG_HALF_Z := 1.0
+
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -92,6 +129,13 @@ var _jib_hoist_cable: Node3D
 var _needle_beam_mesh: MeshInstance3D
 var _needle_hoist_cable: Node3D
 var _sump_grate_mesh: MeshInstance3D
+var _intake_boom_pivot: Node3D
+var _intake_hook_mesh: MeshInstance3D
+var _intake_pack_mesh: MeshInstance3D
+var _intake_overweight_mesh: MeshInstance3D
+var _intake_dog_pivot: Node3D
+var _intake_hoist_cable: Node3D
+var _intake_belt_mesh: MeshInstance3D
 var _sump_grate_safe_material: Material
 var _sump_grate_hazard_material: Material
 var _stack_gears: Array[Node3D] = []
@@ -142,6 +186,7 @@ var _ci_proof_printed := false
 @onready var _jib_value: Label = $HUD/TopLeft/Jib
 @onready var _needle_value: Label = $HUD/TopLeft/Needle
 @onready var _sump_value: Label = $HUD/TopLeft/Sump
+@onready var _intake_value: Label = $HUD/TopLeft/Intake
 @onready var _light_rig: Node3D = $LightRig
 
 
@@ -201,6 +246,11 @@ func _process(delta: float) -> void:
 	var jib_input := _read_jib_input()
 	_native.set_jib_slew_input(jib_input.x)
 	_native.set_jib_hoist_input(jib_input.y)
+	# The B00 yard jib shares the same pendant axes. Both are station-gated
+	# natively, so whichever pendant the player is standing at is the one that
+	# responds; sending to both is not sending to both machines.
+	_native.set_intake_slew_input(jib_input.x)
+	_native.set_intake_hoist_input(jib_input.y)
 	# WO-012 KX-NEEDLE pendant: the same Raise/Lower axis as the jib's hoist --
 	# the two stations are never in range simultaneously, so reusing it needs
 	# no new key binding and keeps the same Raise(+)/Lower(-) verb.
@@ -357,8 +407,14 @@ func _layout_hud() -> void:
 	var scale := clampf(short_edge / 1100.0, 0.62, 1.7)
 	var gutter := roundf(30.0 * scale)
 
-	for label in [_status, _position_value, _velocity_value, _support_value,
-			_traversal_value, _machine_value, _plant_value, _tick_value]:
+	# Every readout, not just the first eight: the machine lines were left out
+	# of the scaling pass, so at Fold scale they kept their authored size while
+	# the VBox stayed at its authored height, and the box squeezed thirteen
+	# children into room for eight. They overlapped into an unreadable stack.
+	var readouts := [_status, _position_value, _velocity_value, _support_value,
+			_traversal_value, _machine_value, _plant_value, _tick_value,
+			_fall_value, _jib_value, _needle_value, _sump_value, _intake_value]
+	for label in readouts:
 		if label == null:
 			continue
 		var base := 28.0 if label == _status else 16.0
@@ -368,6 +424,11 @@ func _layout_hud() -> void:
 	top_left.offset_left = gutter
 	top_left.offset_top = gutter
 	top_left.offset_right = gutter + _viewport_size.x * 0.52
+	# Size the box to what it actually has to hold, so the container never
+	# compresses a line out of legibility.
+	var line_height := roundf(16.0 * scale) + 9.0
+	top_left.offset_bottom = top_left.offset_top + roundf(28.0 * scale) + 9.0 \
+		+ line_height * float(readouts.size())
 
 	var top_right: Control = $HUD/TopRight
 	top_right.offset_left = -_viewport_size.x * 0.44
@@ -466,12 +527,26 @@ func _render_snapshot() -> void:
 		"safe" if grate_safe else "HAZARD"]
 	_sump_value.modulate = Color("9ad6c4") if grate_safe else Color("d99a4a")
 
+	# WO-014 B00. pins/clear are predicates derived from real poses -- the HUD
+	# reports them, nothing in the world obeys them.
+	var intake_at_station := bool(_native.is_intake_station_active())
+	var throat_clear := bool(_native.is_intake_throat_clear())
+	var pack_pins := bool(_native.does_intake_pack_pin_dog())
+	_intake_value.text = "INTAKE    %s  PACK %5.1f m  DOG %5.2f rad  THROAT %s" % [
+		"AT PENDANT" if intake_at_station else "away",
+		float(_native.get_intake_pack_position().y),
+		float(_native.get_intake_dog_angle_radians()),
+		"OPEN" if throat_clear else ("pinned" if pack_pins else "shut")]
+	_intake_value.modulate = Color("9ad6c4") if throat_clear else Color("d99a4a")
+
 	if traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
 	elif traversal == TRAVERSAL_MANTLING:
 		_status.text = "MANTLING REAL GEOMETRY"
 	elif traversal == TRAVERSAL_VAULTING:
 		_status.text = "VAULTING REAL GEOMETRY"
+	elif intake_at_station:
+		_status.text = "AT THE YARD JIB PENDANT / ARROWS SLEW-HOIST"
 	elif jib_at_station:
 		_status.text = "AT THE JIB PENDANT / ARROWS DRIVE-HOIST"
 	elif needle_at_station:
@@ -564,6 +639,31 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 		var grate_safe := bool(_native.is_grate_safe())
 		_sump_grate_mesh.mesh.material = (
 			_sump_grate_safe_material if grate_safe else _sump_grate_hazard_material)
+
+	if _intake_boom_pivot != null:
+		_intake_boom_pivot.rotation = Vector3(
+			0.0, float(_native.get_intake_boom_angle_radians()), 0.0)
+	if _intake_hook_mesh != null:
+		_intake_hook_mesh.position = _native.get_intake_hook_position()
+	if _intake_pack_mesh != null:
+		_intake_pack_mesh.position = _native.get_intake_pack_position()
+	if _intake_overweight_mesh != null:
+		_intake_overweight_mesh.position = _native.get_intake_overweight_pack_position()
+	if _intake_dog_pivot != null:
+		_intake_dog_pivot.rotation = Vector3(
+			0.0, float(_native.get_intake_dog_angle_radians()), 0.0)
+	if _intake_hoist_cable != null:
+		var boom_yaw := float(_native.get_intake_boom_angle_radians())
+		var boom_tip := Vector3(0.0, INTAKE_BOOM_HEIGHT, INTAKE_JIB_MAST_Z) + Vector3(
+			0.0, 0.0, -INTAKE_BOOM_LENGTH).rotated(Vector3.UP, boom_yaw)
+		_span_cable(_intake_hoist_cable,
+			_native.get_intake_hook_position() + Vector3(0.0, 0.2, 0.0), boom_tip)
+	if _intake_belt_mesh != null:
+		# The belt is native-kinematic; its stroke is authoritative, so the
+		# mesh follows the body rather than running its own animation.
+		var belt_phase: float = sin(0.40 * float(_native.get_simulation_time_seconds()))
+		_intake_belt_mesh.position = Vector3(INTAKE_BELT_X, INTAKE_BELT_TOP_Y - 0.18,
+			-96.0 + 9.0 * belt_phase)
 
 	if _rope_mesh != null:
 		var from: Vector3 = _native.get_tipper_position() + Vector3(3.0, -0.2, 0.0).rotated(
@@ -699,6 +799,8 @@ func _build_world() -> void:
 	_build_stack(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
 	_build_stack_accents(verdigris, machine_blue, lichen)
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
+	_build_intake_rise(concrete, mill_scale, oxidised, rust_deep, rust_bright,
+		galvanised, faded_yellow, hazard, timber)
 	_build_yard(concrete, mill_scale, faded_yellow, tar)
 	_build_legacy_fixtures(mill_scale, galvanised, hazard, faded_yellow)
 	_build_plant(mill_scale, oxidised, galvanised, hazard, faded_yellow)
@@ -710,6 +812,185 @@ func _build_world() -> void:
 	_build_sky_shear()
 	_build_lighting()
 
+
+
+# WO-014: MOD-APRON, MOD-INTAKE-BELT, CAP-PENDANT, MOD-YARD-JIB, the 4 t pack,
+# MOD-DOG-A, MOD-STAIR-A, the +24 m handoff, and MOD-SKIN-LADDER-S. This is the
+# bottom of the real ascent: the player starts on the apron and the first 24 m
+# of the climb is won by moving freight, not by finding a ladder.
+#
+# Bodies that the native simulation owns get a mesh here and nothing else --
+# their transforms come from _render_snapshot(). Everything static mirrors the
+# native half-extents doubled.
+func _build_intake_rise(concrete: Material, mill_scale: Material, oxidised: Material,
+		rust_deep: Material, rust_bright: Material, galvanised: Material,
+		faded: Material, hazard: Material, timber: Material) -> void:
+	var bay := Node3D.new()
+	bay.name = "IntakeBay"
+	$TowerPresentation.add_child(bay)
+
+	var bay_depth := INTAKE_BAY_FRONT_Z - INTAKE_BAY_BACK_Z
+	var bay_center_z := (INTAKE_BAY_FRONT_Z + INTAKE_BAY_BACK_Z) * 0.5
+	var wall_mid_y := INTAKE_BAY_WALL_HEIGHT * 0.5
+
+	_add_box_to("BayBack", Vector3(INTAKE_BAY_HALF_X * 2.0, INTAKE_BAY_WALL_HEIGHT,
+		INTAKE_BAY_WALL_THICKNESS), Vector3(0.0, wall_mid_y, INTAKE_BAY_BACK_Z),
+		concrete, bay)
+	for sx in [1.0, -1.0]:
+		_add_box_to("BaySide%d" % int(sx), Vector3(INTAKE_BAY_WALL_THICKNESS,
+			INTAKE_BAY_WALL_HEIGHT, bay_depth),
+			Vector3(sx * INTAKE_BAY_HALF_X, wall_mid_y, bay_center_z), concrete, bay)
+
+	var jamb_width := INTAKE_BAY_HALF_X - INTAKE_THROAT_HALF_WIDTH
+	for sx in [1.0, -1.0]:
+		_add_box_to("BayJamb%d" % int(sx), Vector3(jamb_width, INTAKE_BAY_WALL_HEIGHT,
+			INTAKE_BAY_WALL_THICKNESS),
+			Vector3(sx * (INTAKE_THROAT_HALF_WIDTH + jamb_width * 0.5), wall_mid_y,
+				INTAKE_BAY_FRONT_Z), concrete, bay)
+	var lintel_height := INTAKE_BAY_WALL_HEIGHT - INTAKE_THROAT_HEIGHT
+	_add_box_to("BayLintel", Vector3(INTAKE_THROAT_HALF_WIDTH * 2.0, lintel_height,
+		INTAKE_BAY_WALL_THICKNESS),
+		Vector3(0.0, INTAKE_THROAT_HEIGHT + lintel_height * 0.5, INTAKE_BAY_FRONT_Z),
+		concrete, bay)
+	_add_sign_text("STAIR A", Vector3(0.0, 4.1, INTAKE_BAY_FRONT_Z + 0.4), 0.0, 0.5,
+		Color("d8b45a"), bay)
+
+	# MOD-DOG-A. The pivot sits on the hinge line so the plate swings exactly
+	# as the native hinge does; _render_snapshot drives its yaw.
+	_intake_dog_pivot = Node3D.new()
+	_intake_dog_pivot.name = "IntakeDog"
+	_intake_dog_pivot.position = Vector3(-INTAKE_DOG_HALF_WIDTH, INTAKE_DOG_CENTER_Y,
+		INTAKE_BAY_FRONT_Z)
+	bay.add_child(_intake_dog_pivot)
+	_add_box_to("DogPlate", Vector3(INTAKE_DOG_HALF_WIDTH * 2.0,
+		INTAKE_DOG_HALF_HEIGHT * 2.0, 0.4),
+		Vector3(INTAKE_DOG_HALF_WIDTH, 0.0, 0.0), hazard, _intake_dog_pivot)
+	for rib in range(3):
+		_add_box_to("DogRib%d" % rib, Vector3(0.14, INTAKE_DOG_HALF_HEIGHT * 2.0, 0.5),
+			Vector3(0.5 + float(rib) * 0.7, 0.0, 0.0), mill_scale, _intake_dog_pivot)
+
+	# MOD-INTAKE-BELT and the CAP-PENDANT catwalk.
+	_intake_belt_mesh = _add_box_to("IntakeBelt", Vector3(4.0, 0.36, 12.0),
+		Vector3(INTAKE_BELT_X, INTAKE_BELT_TOP_Y - 0.18, -96.0), galvanised, bay)
+	for slat in range(9):
+		_add_box_to("BeltSlat%d" % slat, Vector3(4.2, 0.1, 0.5),
+			Vector3(0.0, 0.22, -5.0 + float(slat) * 1.25), mill_scale, _intake_belt_mesh)
+	_add_box_to("PendantCatwalk", Vector3(3.2, 0.36, 6.0),
+		Vector3(INTAKE_PENDANT_X, INTAKE_BELT_TOP_Y - 0.18, INTAKE_PENDANT_Z),
+		galvanised, bay)
+	var ramp := _add_box_to("PendantRamp", Vector3(3.2, 0.3, 4.24),
+		Vector3(INTAKE_PENDANT_X, INTAKE_BELT_TOP_Y * 0.5, INTAKE_PENDANT_Z + 5.0),
+		galvanised, bay)
+	ramp.rotation = Vector3(atan2(INTAKE_BELT_TOP_Y, 4.0), 0.0, 0.0)
+	_add_box_to("PendantStand", Vector3(0.4, 1.1, 0.4),
+		Vector3(INTAKE_PENDANT_X - 1.0, INTAKE_BELT_TOP_Y + 0.55, INTAKE_PENDANT_Z),
+		mill_scale, bay)
+	_add_box_to("PendantBox", Vector3(0.5, 0.6, 0.3),
+		Vector3(INTAKE_PENDANT_X - 1.0, INTAKE_BELT_TOP_Y + 1.35, INTAKE_PENDANT_Z),
+		faded, bay)
+
+	# MOD-YARD-JIB: 12 m boom, 11.5 m under the boom, 5 t SWL.
+	_add_box_to("YardJibMast", Vector3(0.9, INTAKE_BOOM_HEIGHT, 0.9),
+		Vector3(0.0, INTAKE_BOOM_HEIGHT * 0.5, INTAKE_JIB_MAST_Z), oxidised, bay)
+	for brace in range(4):
+		var brace_y := 2.0 + float(brace) * 2.6
+		_add_strut("MastBrace%d" % brace,
+			Vector3(0.0, brace_y, INTAKE_JIB_MAST_Z),
+			Vector3(2.4, brace_y - 2.2, INTAKE_JIB_MAST_Z + 2.4), 0.16, rust_deep, bay)
+	_intake_boom_pivot = Node3D.new()
+	_intake_boom_pivot.name = "YardJibBoom"
+	_intake_boom_pivot.position = Vector3(0.0, INTAKE_BOOM_HEIGHT, INTAKE_JIB_MAST_Z)
+	bay.add_child(_intake_boom_pivot)
+	_add_box_to("BoomSpine", Vector3(0.44, 0.44, INTAKE_BOOM_LENGTH),
+		Vector3(0.0, 0.0, -INTAKE_BOOM_LENGTH * 0.5), oxidised, _intake_boom_pivot)
+	for lattice in range(7):
+		var lz := -1.0 - float(lattice) * 1.6
+		_add_strut("BoomLattice%d" % lattice, Vector3(0.0, 0.28, lz),
+			Vector3(0.0, -0.28, lz - 1.6), 0.09, mill_scale, _intake_boom_pivot)
+	_add_box_to("BoomTail", Vector3(0.5, 0.5, 3.0), Vector3(0.0, 0.0, 2.0),
+		rust_bright, _intake_boom_pivot)
+	_add_box_to("BoomBallast", Vector3(1.4, 1.0, 1.4), Vector3(0.0, -0.2, 3.4),
+		mill_scale, _intake_boom_pivot)
+
+	_intake_hoist_cable = Node3D.new()
+	_intake_hoist_cable.name = "IntakeHoistCable"
+	bay.add_child(_intake_hoist_cable)
+	var cable := BoxMesh.new()
+	cable.size = Vector3(0.07, 1.0, 0.07)
+	cable.material = mill_scale
+	var cable_mesh := MeshInstance3D.new()
+	cable_mesh.name = "Span"
+	cable_mesh.mesh = cable
+	_intake_hoist_cable.add_child(cable_mesh)
+
+	_intake_hook_mesh = _add_box_to("IntakeHook", Vector3(0.4, 0.4, 0.4),
+		Vector3(0.0, 2.0, -112.2), galvanised, bay)
+	_intake_pack_mesh = _add_box_to("IntakePack", INTAKE_PACK_SIZE,
+		Vector3(0.0, 0.9, -112.2), timber, bay)
+	_add_box_to("PackBand", Vector3(2.3, 0.14, 2.4), Vector3(0.0, 0.5, 0.0),
+		mill_scale, _intake_pack_mesh)
+	_add_box_to("PackBandUpper", Vector3(2.3, 0.14, 2.4), Vector3(0.0, -0.5, 0.0),
+		mill_scale, _intake_pack_mesh)
+
+	# The 9 t proof load on its own stand: rated force, permanently commanded
+	# up, permanently stalled.
+	_add_box_to("OverweightMast", Vector3(0.7, 9.0, 0.7),
+		INTAKE_OVERWEIGHT_STAND + Vector3(0.0, 4.5, 0.0), oxidised, bay)
+	_intake_overweight_mesh = _add_box_to("OverweightPack", INTAKE_PACK_SIZE,
+		INTAKE_OVERWEIGHT_STAND + Vector3(0.0, 0.9, 0.0), rust_deep, bay)
+
+	# MOD-STAIR-A: six flights in two lanes, landings at each turn.
+	var pitch := atan2(INTAKE_STAIR_FLIGHT_RISE, INTAKE_STAIR_HALF_RUN * 2.0)
+	var flight_length := sqrt(pow(INTAKE_STAIR_HALF_RUN * 2.0, 2.0)
+		+ pow(INTAKE_STAIR_FLIGHT_RISE, 2.0))
+	var tread_surface := 0.18 / cos(pitch)
+	for flight in range(INTAKE_STAIR_FLIGHT_COUNT):
+		var base_y := float(flight) * INTAKE_STAIR_FLIGHT_RISE
+		var side := 1.0 if flight % 2 == 0 else -1.0
+		var lane_z := INTAKE_STAIR_Z + side * INTAKE_STAIR_LANE_OFFSET
+		var slab := _add_box_to("StairFlight%d" % flight,
+			Vector3(flight_length, 0.36, INTAKE_STAIR_WIDTH),
+			Vector3(0.0, base_y + INTAKE_STAIR_FLIGHT_RISE * 0.5, lane_z),
+			mill_scale, bay, side * pitch)
+		# Treads drawn on the slab, so what you see and what you stand on agree.
+		for tread in range(11):
+			var along := -flight_length * 0.5 + 0.7 + float(tread) * 1.3
+			_add_box_to("Tread%d" % tread, Vector3(1.0, 0.1, INTAKE_STAIR_WIDTH - 0.2),
+				Vector3(along, 0.22, 0.0), galvanised, slab)
+		for rail in [1.0, -1.0]:
+			_add_box_to("StairRail%d" % int(rail), Vector3(flight_length, 0.08, 0.08),
+				Vector3(0.0, 1.05, rail * (INTAKE_STAIR_WIDTH * 0.5 - 0.1)), faded, slab)
+	for flight in range(INTAKE_STAIR_FLIGHT_COUNT + 1):
+		var base_y := float(flight) * INTAKE_STAIR_FLIGHT_RISE
+		var side := 1.0 if flight % 2 == 0 else -1.0
+		_add_box_to("StairLanding%d" % flight, Vector3(2.0, 0.36,
+			(INTAKE_STAIR_LANE_OFFSET + INTAKE_STAIR_WIDTH * 0.5) * 2.0),
+			Vector3(-side * INTAKE_STAIR_LANDING_X, base_y + tread_surface - 0.18,
+				INTAKE_STAIR_Z), galvanised, bay)
+
+	# The +24 m handoff. Both braids arrive here.
+	var handoff_depth := INTAKE_HANDOFF_SOUTH_Z - INTAKE_HANDOFF_NORTH_Z
+	_add_box_to("IntakeHandoff", Vector3(8.0, 0.4, handoff_depth),
+		Vector3(INTAKE_HANDOFF_CENTER_X, INTAKE_HANDOFF_Y + tread_surface - 0.2,
+			(INTAKE_HANDOFF_SOUTH_Z + INTAKE_HANDOFF_NORTH_Z) * 0.5), timber, bay)
+	_add_sign_text("+24", Vector3(INTAKE_HANDOFF_CENTER_X, INTAKE_HANDOFF_Y + 1.6,
+		INTAKE_HANDOFF_SOUTH_Z - 0.2), 0.0, 0.9, Color("c8a04a"), bay)
+
+	# MOD-SKIN-LADDER-S: the exposed bypass, stepping north up the apron.
+	var head_z := INTAKE_HANDOFF_SOUTH_Z + INTAKE_SKIN_RUNG_HALF_Z
+	for rung in range(1, INTAKE_SKIN_RUNG_COUNT + 1):
+		var top_y := float(rung) * INTAKE_SKIN_RUNG_RISE
+		var rung_z := head_z + 2.0 * INTAKE_SKIN_RUNG_HALF_Z * float(
+			INTAKE_SKIN_RUNG_COUNT - rung)
+		_add_box_to("SkinRung%d" % rung, Vector3(2.0, 1.0, INTAKE_SKIN_RUNG_HALF_Z * 2.0),
+			Vector3(INTAKE_HANDOFF_CENTER_X, top_y - 0.5, rung_z), rust_deep, bay)
+		_add_box_to("SkinRungPlate%d" % rung, Vector3(2.1, 0.08, 1.9),
+			Vector3(INTAKE_HANDOFF_CENTER_X, top_y + 0.02, rung_z), galvanised, bay)
+		if rung % 3 == 0:
+			_add_strut("SkinStay%d" % rung,
+				Vector3(INTAKE_HANDOFF_CENTER_X - 1.0, top_y, rung_z),
+				Vector3(INTAKE_HANDOFF_CENTER_X - 2.6, top_y - 3.0, rung_z + 1.2),
+				0.12, oxidised, bay)
 
 # The stack: the tower's climbable lower section. Deck rings, columns and
 # stair flights mirror real native collision one-for-one; bracing, rails,
