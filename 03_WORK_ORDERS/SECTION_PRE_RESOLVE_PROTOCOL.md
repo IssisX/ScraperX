@@ -118,9 +118,9 @@ Queue number **is** the WO number.
 | WO | File to author | Slice | Atlas band | Status on this branch |
 |---|---|---|---|---|
 | 014 | `WO-014_INTAKE_RISE.md` | 0–24 m | B00 | Plan adopted. **Code in progress.** |
-| 015 | `WO-015_LEGAL_FORTY.md` | first legal stand at atlas `z ≥ 40 m` | B00 leftover + K0 PLAY | Plan adopted. Not coded. |
-| 016 | `WO-016_HOOK5_RACK.md` | `MOD-HOOK5-RACK` / `CAP-HOOK5` acquire | B00 | Plan adopted. Not coded. |
-| 017 | `WO-017_NEEDLE_SEAT.md` | seat needles at `MOD-NEEDLE-POCKETS` | B01 + K1 | Plan adopted. Not coded. |
+| 015 | `WO-015_LEGAL_FORTY.md` | first legal stand at atlas `z ≥ 40 m` | B00 leftover + K0 PLAY | **Authored here.** Not coded. |
+| 016 | `WO-016_HOOK5_RACK.md` | `MOD-HOOK5-RACK` / `CAP-HOOK5` acquire | B00 | **Authored here.** Not coded. |
+| 017 | `WO-017_NEEDLE_SEAT.md` | seat needles at `MOD-NEEDLE-POCKETS` | B01 + K1 | **Authored here.** Not coded. |
 | 018 | `WO-018_CAGE_OR_SKIN.md` | cage landing at TP-120 vs `MOD-EAST-OUTRIGGER` | B01 exit | Plan adopted. Not coded. |
 | 019 | `WO-019_CW_PIN.md` | `MOD-CW-PIN` / stack as moving support | B02 + K2 | Plan adopted. Not coded. |
 | 020 | `WO-020_WET_ISOLATION.md` | blind + drain vs SKIN around wet core | B03 + K3 | Plan adopted. Not coded. |
@@ -430,8 +430,13 @@ If push credentials fail after approval, say so. Do not pretend it landed.
 
 Nothing in the `WO-014`–`WO-028` queue is in source on this branch yet.
 
-- Next **code** job: `WO-014_INTAKE_RISE` (B00, 0–24 m).
-- Next **plan** to author: `WO-021_SHOP_GIRDER.md`, after `WO-014` is green.
+- `WO-014` is in source and green (CI run `35651140478`).
+- Next **code** job: `WO-015_LEGAL_FORTY` (B00, 24–40 m).
+- `WO-015`, `WO-016` and `WO-017` are **authored against this branch**, replacing
+  the `ScraperX-Grok` ports whose inherited constants described a world that does
+  not exist here. `WO-018`–`WO-020` are still the unmodified ports and carry the
+  same defect; re-author each one before coding it.
+- Next **plan** to author: `WO-018_CAGE_OR_SKIN.md`.
 
 Do not implement `WO-015` until `WO-014` is in source with a passing falsifier. Do not treat a
 plan's numbers as proven because they are written down.
