@@ -1,10 +1,18 @@
 # SCRAPERX — AS-002 LEGAL FORTY (+24.19 m TO FIRST STAND AT +40.19 m)
 
 **Ascent Slice:** `AS-002`
-**Lifecycle:** `PLANNED` — contract exists, no corresponding source
-**Provenance:** re-derived against this branch's real `AS-001` exit state
-**Implementation gate:** `AS-001` implemented and its falsifier green. **Satisfied — this is the next code job.**
-**Evidence:** none. A plan is never implementation evidence.
+**Lifecycle:** `IMPLEMENTED` — falsifier green, source and tests in `claude/android-game-dev-continue-m045pq`
+**Provenance:** re-derived against this branch's real `AS-001` exit state; built against that derivation, with deviations recorded in the Result record below where the solver disagreed with the quasi-static design calc
+**Implementation gate:** `AS-001` implemented and its falsifier green. **Satisfied.**
+**Evidence:**
+
+```
+PASS scraperx_sim AS-002 Legal Forty: unrouted_deepest_y=25.0872 flag_hinge=0
+  cradle_drop=1.49949 deployed_travel=0.863122 mid_landing_y=33.0872
+  forty_y=41.0872 checkpoint_commits=22787 checkpoint_y=41.0872
+  retracted_travel=0.196974 skin_forty_mantles=20 skin_forty_y=41.0872
+  jib_capped_hook_y=11.2325
+```
 **Depends on:** `AS-001_INTAKE_RISE.md` in source and green; kernel falsifiers
 (`WO-000`–`WO-003`, `WO-008`–`WO-009`, `WO-011`–`WO-013`) green; protocol
 `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §8.
@@ -192,7 +200,111 @@ camera. Android arm64 APK carrying `libscraperx_native.so`. Kernel and
 
 ## Result record
 
-pending.
+All ten §8.11 falsifiers pass (`tests/simulation_tests.cpp`, the AS-002 section
+appended before `EXIT_SUCCESS`), evidence line above. Both braids close;
+retraction is real and reversible; the jib gap is confirmed, not engineered
+around. Kernel and `AS-001` falsifiers remain green (`PASS scraperx_sim B00
+intake rise` unchanged in the same run).
+
+Deviations from the plan's own literal numbers, each verified against the
+running solver rather than assumed, each with a code comment at its own
+constant explaining why:
+
+- **`kLegalFortyFlightMassKg = 400`, not the plan's `1900`.** §8.4.1's own
+  `T_crit(theta)` derivation is sound and re-checked independently — the
+  plan's own worked margins (loaded `1.21x`, empty `0.37x`) are arithmetically
+  correct at `1900`/`1800` kg. They are not sufficient in the actual solver: a
+  hinge built exactly at its own stowed hard limit needs real headroom to
+  depart it, not a bare `>1x` quasi-static margin. At `1900` kg the flight sat
+  inert under the real `4000` kg pack for `80+ s` of simulated time. `400` kg
+  is the value that deploys reliably, verified, not calculated to a target
+  ratio.
+- **`kIntakeCwCradleTareMassKg = 500`, not the plan's `1800`.** Same finding,
+  the loaded side of it: the ratio between "loaded" and "tare-only" demand on
+  the flight's own `T_crit` is fixed by tare mass alone once the (frozen,
+  `AS-001`-owned) `4000` kg pack sets the loaded side.
+- **The retract falsifier's own failure was not a mass problem at all**, though
+  it looked exactly like one and cost the most iteration: unloaded and
+  re-slung, the flight sat frozen at its exact deployed limit for `20+ s`
+  with a real, non-zero pulley tension favouring departure the whole time.
+  Direct diagnostic tracing (logging the real world-space contact point of
+  every contact touching the flight, not just entity IDs) found the flight in
+  continuous, ordinary rigid-body contact with its **own hinge anchor** —
+  coincident with it at every sweep angle by construction, since the anchor
+  sits at the hinge pivot the flight's own cross-section always occupies.
+  This is the same class of defect the plan's own `MOD-DOG-A` retrospective at
+  §8.3 already names (a hinge fixture sized bigger than its sweep clearance),
+  now recurring against a fixture too small to trip that same check by
+  inspection alone. Fixed by excluding that one body pair from collision
+  (`kIntakeSwingAnchorEntityId`, `OnContactValidate` in `simulation.cpp`),
+  the same mechanism already used for the flight-vs-handoff-deck exclusion
+  §8.3 itself calls for ("the stop is the hinge limit, not the deck"). Once
+  fixed, retraction works cleanly at the already-verified deploy masses above
+  — no further mass or geometry retuning was needed for it.
+- **`MOD-SKIN-LADDER-S` continues only to rung 20 (5 rungs), not rung 25 (10),
+  and does not turn to climb the hall's south fascia in `+X`.** The plan's own
+  mantle-clearance law, correctly re-derived, is a floor on the GAP between
+  rungs, not on each rung's own depth: `step - kLandingInset >
+  kTraversalReach + kPlayerRadius`, i.e. `step > 1.77 m`, independent of rung
+  depth. A climb of nine rungs at that spacing needs `>= 14.2 m` of clear run;
+  `MOD-HALL-DECK`'s own well is `4.4 m` deep and the run north of rung 16 is
+  capped at `12.5 m` by `build_stack()`'s own southern columns. No single
+  straight column threads both. SKIN instead climbs only to the mid-landing's
+  own height (`32.1872 m`, clear of the well problem entirely), and a short
+  static walkway (`kLegalFortySkinWalkway*`) carries the remaining horizontal
+  distance to the mid-landing, from which the upper flight is the rest of the
+  route — the same one the SHAFT braid uses past that point.
+- **The mid-landing's own south edge moved from the plan's `z = -111.6`
+  (`half_z = 3.20`, its literal geometry-table value) to `z = -119.0`
+  (`half_z = 4.20`).** The walkway above and the landing touch at `x = 8.30`
+  with zero x-overlap; the only safe crossing is whatever z-band both cover
+  at once. The upper flight's own underside, directly overhead near that
+  seam, leaves under `2.1 m` of capsule headroom (the same figure the hall
+  well's own east-edge widening below required) for `x` past about `5.7`,
+  ruling out its own z-band as a crossing corridor; south of it, at the
+  plan's original `-111.6` edge, was not covered by the landing at all.
+  Widening the landing's own south edge to meet the walkway's is the fix that
+  needed no change to the walkway or the flight.
+- **The hall well moved from the plan's `center x = -4.51`, `half_x = 3.00`
+  to `center x = -1.65`, `half_x = 3.15`.** East edge: a capsule needs
+  `~2.1 m` of headroom over an inclined surface, not the `~0.9 m` flat floor
+  needs, so the upper flight's own climb does not clear the original east
+  strip's underside until past where that edge sat. West edge: the flight's
+  own top (local `-X` end, `x = -4.506`) left a `3.0 m` open gap to the
+  nearest deck strip at the plan's original edge; the new edge overlaps the
+  flight's own last `0.3 m` instead, harmless since Jolt does not solve
+  contact response between two static bodies.
+- **The swing flight vs. the handoff deck needed an explicit collision
+  exclusion**, not just the "the stop is the hinge limit, not the deck"
+  design intent §8.3 already states in words: the final third of the sweep
+  (`theta` in `[48.8 deg, 60 deg]`) drags the flight's own solid body through
+  the deck's near corner by construction (up to `0.36 m`, `0.156 m` still
+  present at the rest pose itself) — no `AS-002`-owned knob clears it without
+  unpicking the geometry §8.3's own numbers derive from. `OnContactValidate`
+  rejects contact between `kIntakeSwingFlightEntityId` and
+  `kIntakeHandoffEntityId` specifically; every other pair, flight vs. player
+  included, keeps ordinary collision.
+
+Godot presentation twins exist for every new body (the swing flight and its
+rope, the cradle and its guide mast, the mid-landing, upper flight, hall deck
+and well, the SKIN continuation and its walkway) and R/G pendant bindings for
+Release/Attach, with a `LEGAL 40` HUD line. Verified headless (`godot
+--headless --path godot --quit-after 300`, and the existing `--ci` WO-004/005/006
+proof sequence through `MACHINE_PROVEN`): the extension loads, the scene
+builds without a script error, and the full existing proof chain is
+unregressed. Not verified: rendered visual correctness on an actual display,
+and Fold-device execution, both out of reach of this environment.
+
+Persist: `MachineCheckpoint` captures `intake_swing_flight` and
+`intake_cw_cradle` as full `BodyCheckpoint`s (pose and velocity, the same
+mechanism every other machine body already uses) plus `intake_pack_slung`,
+and `restore_legal_forty_topology()` reconciles the sling constraint against
+the restored flag before the next tick reads contacts — §8.10's own
+requirement, met with the codebase's existing generic body-checkpoint
+mechanism rather than the plan's bespoke `flight_hinge_angle`/`cradle_y`
+scalar fields. Neither this ticket nor `AS-001` before it tracks a literal
+persist-version number anywhere in source; "version 2" in §8.10 is this
+file's own description of the blob's shape, not a field to assert against.
 
 ---
 

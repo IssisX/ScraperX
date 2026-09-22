@@ -212,6 +212,19 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::does_intake_pack_pin_dog);
     godot::ClassDB::bind_method(godot::D_METHOD("is_intake_throat_clear"),
                                 &ScraperXSimulation::is_intake_throat_clear);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("request_intake_sling_release"),
+                                &ScraperXSimulation::request_intake_sling_release);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_intake_sling_attach"),
+                                &ScraperXSimulation::request_intake_sling_attach);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_legal_forty_pack_slung"),
+                                &ScraperXSimulation::is_legal_forty_pack_slung);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_legal_forty_swing_travel_radians"),
+                                &ScraperXSimulation::get_legal_forty_swing_travel_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_legal_forty_swing_flight_position"),
+                                &ScraperXSimulation::get_legal_forty_swing_flight_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_legal_forty_cradle_position"),
+                                &ScraperXSimulation::get_legal_forty_cradle_position);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -613,6 +626,30 @@ bool ScraperXSimulation::does_intake_pack_pin_dog() const {
 
 bool ScraperXSimulation::is_intake_throat_clear() const {
     return simulation_->snapshot().intake_throat_clear;
+}
+
+bool ScraperXSimulation::request_intake_sling_release() {
+    return simulation_->request_intake_sling_release();
+}
+
+bool ScraperXSimulation::request_intake_sling_attach() {
+    return simulation_->request_intake_sling_attach();
+}
+
+bool ScraperXSimulation::is_legal_forty_pack_slung() const {
+    return simulation_->snapshot().legal_forty_pack_slung;
+}
+
+double ScraperXSimulation::get_legal_forty_swing_travel_radians() const {
+    return simulation_->snapshot().legal_forty_swing_travel_radians;
+}
+
+godot::Vector3 ScraperXSimulation::get_legal_forty_swing_flight_position() const {
+    return to_godot(simulation_->snapshot().legal_forty_swing_flight_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_legal_forty_cradle_position() const {
+    return to_godot(simulation_->snapshot().legal_forty_cradle_position);
 }
 
 } // namespace scraperx::bridge

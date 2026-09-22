@@ -120,6 +120,14 @@ public:
     [[nodiscard]] bool does_intake_pack_pin_dog() const;
     [[nodiscard]] bool is_intake_throat_clear() const;
 
+    // AS-002 Legal Forty (Ascent Atlas §6, band B00's 24-40 m leftover).
+    [[nodiscard]] bool request_intake_sling_release();
+    [[nodiscard]] bool request_intake_sling_attach();
+    [[nodiscard]] bool is_legal_forty_pack_slung() const;
+    [[nodiscard]] double get_legal_forty_swing_travel_radians() const;
+    [[nodiscard]] godot::Vector3 get_legal_forty_swing_flight_position() const;
+    [[nodiscard]] godot::Vector3 get_legal_forty_cradle_position() const;
+
 protected:
     static void _bind_methods();
 

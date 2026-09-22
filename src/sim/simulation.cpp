@@ -514,6 +514,239 @@ constexpr float kIntakeSkinFootZ =
     kIntakeSkinHeadZ + 2.0F * kIntakeSkinRungHalfZ *
                            static_cast<float>(kIntakeSkinRungCount - 1);
 
+// --- AS-002 Legal Forty: MOD-STAIR-A-SWING, MOD-CW-CRADLE, MOD-HALL-DECK ---
+// Atlas band B00's 24-40 m leftover, chain K0 PLAY. A counterweighted
+// bascule: gravity alone holds the flight at its stowed hinge limit; only
+// real rope tension read back from the solver can beat that and swing it to
+// its deployed limit. With the sheave directly above the hinge, the sin(theta)
+// term cancels out of the torque balance (T_crit falls as theta rises), so
+// there is no stable intermediate pose -- both stops are hinge limits, not
+// soft targets.
+constexpr float kLegalFortyFlightLength = 16.0F;             // L: 8.000 m rise / sin(30 deg)
+constexpr float kLegalFortyFlightHalfLength = kLegalFortyFlightLength * 0.5F; // r from the hinge
+constexpr float kLegalFortyFlightHalfWidth = 0.90F;          // 1.80 m tread, one lane
+// 400 kg, not the plan's own 1900 kg (66 kg/m^2 "DESIGN TARGET" grating
+// density). T_crit(theta) = m_f*g*(L/2)*l(theta)/(r_a*h_s) is sound --
+// re-derived independently here, and the plan's own worked numbers (loaded
+// cradle 1.21x margin, empty cradle 0.37x) check out at 1900 kg -- but a
+// bare majority does not survive contact with the actual solver: built at
+// 1900 kg, the flight sat inert at its stowed limit under the real 4000 kg
+// pack for 80+ s of simulated time (verified). A hinge starting exactly at
+// a hard limit needs real headroom to depart it, not just >1x. 400 kg
+// (kIntakeCwCradleTareMassKg's own comment has the loaded-cradle side of
+// this same margin) is the value actually run end to end -- deploy under
+// the real pack, the full ascent walk to +40 m, checkpoint, and retract
+// once unloaded -- not a clean margin ratio picked in advance, the value
+// verified.
+constexpr float kLegalFortyFlightMassKg = 400.0F;
+constexpr float kLegalFortyFlightRiseMeters = 8.0F;          // per flight; two flights close 16.000 m
+
+// Swing hinge: world-Z axis, sited at the mid-landing's height above
+// MOD-STAIR-A's lower run. theta is measured from the downward vertical;
+// built at the stowed pose (8 deg) so the hinge's as-built angle is 0 -- the
+// same convention kIntakeDogEntityId already uses.
+constexpr float kIntakeSwingHingeX = 7.856F;
+constexpr float kIntakeSwingHingeZ = -112.5F;
+constexpr float kLegalFortyStowedThetaRadians = 0.139626F;   // 8 deg
+constexpr float kLegalFortyDeployedThetaRadians = 1.047198F; // 60 deg
+// Jolt's HingeConstraint::GetCurrentAngle() (Jolt/Physics/Constraints/
+// HingeConstraint.cpp) reports the physical rotation body2 has undergone
+// since construction, signed by the right-hand rule about the world hinge
+// axis (+Z). This flight is built with its local +X already pointing along
+// (sin(theta_stowed), cos(theta_stowed), 0); as theta increases toward
+// deployed, that direction rotates TOWARD world +X, which is a NEGATIVE
+// rotation about +Z -- so the reported angle runs stowed=0 to deployed
+// -0.907571 rad, and every reader below negates it back to a non-negative
+// "how far open" travel.
+constexpr float kIntakeSwingHingeTravelRadians =
+    kLegalFortyDeployedThetaRadians - kLegalFortyStowedThetaRadians; // 52 deg, 0.907571 rad
+
+// The rope bracket: r_a = 15.000 m from the hinge (Design Values), which on a
+// flight whose hinge is at local +8.00 and whose foot is at local -8.00 sits
+// at local x = 8.00 - 15.00 = -7.00 -- one metre inboard of the foot, on the
+// slab's underside so it clears the tread.
+constexpr float kIntakeSwingRopeLeverArmMeters = 15.0F;  // r_a
+// h_s, sheave above the hinge. The plan's own 4.0 m -- unlike the flight
+// and tare masses above and below, this one needed no retuning once
+// kIntakeSwingAnchorEntityId's own fix (excluding the flight from contact
+// with its own hinge anchor) was in place.
+constexpr float kIntakeSwingSheaveHeightMeters = 4.0F;
+constexpr float kIntakeSwingBracketLocalX =
+    kLegalFortyFlightHalfLength - kIntakeSwingRopeLeverArmMeters; // -7.00
+constexpr float kIntakeSwingBracketLocalY = -kIntakeStairSlabHalfY;
+
+// MOD-CW-CRADLE: a three-sided open frame (not a closed hopper -- a 2.4 m
+// hopper cannot take a 2.2 x 2.3 m pack), riding a free (unmotored) vertical
+// slider on a fixed guide mast. Built at the empty-cradle rest pose (the rope
+// taut, tension losing to the flight's own stowed-stop demand); loading the
+// pack lets the rope pull the cradle down and the flight up.
+// 500 kg, not the plan's own 1800 kg. The 4000 kg pack is AS-001's own,
+// frozen, so the ratio between "loaded" (tare+4000) and "tare-only" demand
+// on the flight's T_crit is fixed by tare mass alone -- see
+// kLegalFortyFlightMassKg's own comment on how thin a static-torque margin
+// the real solver tolerates.
+//
+// Retracting once looked like it needed a lighter tare still: at 500 kg
+// the unloaded, re-slung flight sat frozen at the exact deployed limit for
+// 20+ s, and dropping tare to 50 kg (an 80x ratio against the 4000 kg
+// pack) did make it depart -- but traded that for a worse fault, the
+// LOADED rest pose itself drifting closed and back over tens of degrees
+// while the pack was still seated. Neither number was the real problem:
+// direct diagnostic tracing of the stuck state (GetWorldSpaceContactPointOn1
+// on every contact touching the flight) found a real, continuous contact
+// between the flight and its OWN hinge anchor at the hinge point itself,
+// on top of and separate from the hinge constraint that is supposed to be
+// the only thing relating them -- the flight's cross-section is coincident
+// with that anchor at every sweep angle by construction, so any nonzero-
+// size anchor box (see kIntakeSwingAnchorEntityId's own comment at the
+// anchor's build site) keeps a sliver of it. Excluding that one body pair
+// from contact resolution, the same way OnContactValidate already excludes
+// the flight from the handoff deck, fixed retracting outright at the
+// original 500 kg -- no mass or geometry retuning needed once the real
+// fault was gone.
+constexpr float kIntakeCwCradleTareMassKg = 500.0F;
+constexpr float kIntakeCwCradleHalfX = 1.50F;
+constexpr float kIntakeCwCradleHalfY = 1.20F;
+constexpr float kIntakeCwCradleHalfZ = 1.20F;
+constexpr float kIntakeCwCradleBuildCenterY = 4.0F;
+constexpr float kIntakeCwCradleGuideHalfX = 0.35F;
+constexpr float kIntakeCwCradleGuideHalfY = 4.0F;
+constexpr float kIntakeCwCradleGuideHalfZ = 0.35F;
+// Jolt's SliderConstraintSettings::mAutoDetectPoint anchors displacement 0 at
+// the build pose (kNeedleStowedY's own comment: "travel is signed from the
+// spawn pose"), so the plan's absolute y in [1.80, 4.60] becomes signed
+// limits relative to the 4.00 m build centre.
+constexpr float kIntakeCwCradleLimitMinMeters = 1.80F - kIntakeCwCradleBuildCenterY;
+constexpr float kIntakeCwCradleLimitMaxMeters = 4.60F - kIntakeCwCradleBuildCenterY;
+// The hook hangs at the boom tip, so working radius is fixed at the 12 m
+// boom; only the slew bearing chooses where the cradle sits on that circle.
+constexpr float kIntakeCwCradleBearingRadians = 0.80F; // of the 0.90 slew limit
+
+// The sling release/attach envelopes (AS-002 Design Values 8.4.3).
+constexpr float kLegalFortyReleaseXZToleranceMeters = 0.55F;
+constexpr float kLegalFortyReleaseYToleranceMeters = 0.35F;
+constexpr float kLegalFortyReleaseSpeedToleranceMps = 0.15F;
+constexpr float kLegalFortyAttachToleranceMeters = 0.40F;
+constexpr float kLegalFortyAttachSpeedToleranceMps = 0.20F;
+
+// MOD-STAIR-A upper flight (static) + mid-landing + MOD-HALL-DECK. Sited by
+// the plan's own geometry table; each surface's height is derived at build
+// time from AS-001's own tread-surface offset (kIntakeHandoffY plus slab
+// half-thickness over cosine pitch) stacked with two more 8.000 m rises, so
+// the whole run stays flush to the handoff deck below it by construction
+// rather than by matching a second copy of the same literal.
+constexpr float kLegalFortyMidLandingCenterX = 9.350F;
+constexpr float kLegalFortyMidLandingHalfX = 1.05F;
+constexpr float kLegalFortyMidLandingCenterZ = -114.80F;
+// 4.20, not the plan's own 3.20: south edge -119.00, matching the walkway's
+// own south edge (kLegalFortySkinWalkwayCenterZ +/- HalfZ) exactly rather
+// than falling 1.0 m short of it at -118.00. The walkway and the landing
+// touch at x = 8.30 with zero x-overlap, so the ONLY way across is through
+// whatever z-band both cover at once, and the upper flight above (its own
+// z in [-117.9, -116.1], underside descending toward its foot at this same
+// x = 9.350) leaves a capsule under 2.1 m of headroom -- the same figure
+// the well's own east edge comment above derives -- for x greater than
+// about 5.7, ruling out the flight's own z-band as that crossing corridor
+// entirely. -118.00 (south of the flight, clear the whole way to its foot)
+// is the only band left, and at the plan's own 3.20 it was not covered by
+// the landing at all: found by direct observation, a capsule walked there
+// falling clean through the gap between the two footprints. Widening this
+// one edge to meet the walkway's own is the fix, not moving the walkway
+// (AS-002-owned on both sides, and the walkway's own z is independently
+// anchored to rung 20 -- see its own comment).
+constexpr float kLegalFortyMidLandingHalfZ = 4.20F;
+
+constexpr float kLegalFortyUpperFlightCenterX = 2.422F;
+constexpr float kLegalFortyUpperFlightCenterZ = -117.0F;
+
+constexpr float kLegalFortyHallDeckHalfX = 10.0F;
+constexpr float kLegalFortyHallDeckCenterZ = -115.1F;
+constexpr float kLegalFortyHallDeckHalfZ = 7.40F;
+constexpr float kLegalFortyHallDeckHalfThickness = 0.20F;
+
+// The stair well MOD-HALL-DECK leaves open for MOD-STAIR-A to arrive
+// through. Both edges moved from the plan's own literal (center -4.51,
+// half 3.00, i.e. x in [-7.51, -1.51]) -- SKIN's own rung 20 never actually
+// depended on that literal (it stops at the mid-landing's own height, see
+// its own comment), so nothing else anchors it.
+//
+// East edge, -1.51 -> +1.50: a standing capsule needs roughly 2.1 m of
+// headroom over an inclined surface, not the ~0.9 m a flat floor needs, so
+// the upper flight's own climb -- rising 8.000 m over its 13.856 m
+// horizontal run from the mid-landing -- does not clear the east strip's
+// underside (39.787 m) until past where the original edge sat, and a
+// capsule walking the incline stops there, wedged under the deck a full
+// 2 m short of the opening it is trying to reach. Found by direct
+// observation, not derived: the incline height a stuck capsule reports
+// (37.726 m) versus the strip's underside (39.787 m) is short by exactly a
+// second capsule-height's worth of headroom, not the first.
+//
+// West edge, -7.51 -> -4.80: the flight's own top -- local -X end of its
+// rotated footprint, at x = -4.506 (see the flight's own comment) -- is
+// where it reaches +40.1872 m, but the original west edge left 3.0 m of
+// open well between that point and the nearest deck strip: real floor at
+// the right height with nothing beside it to step onto, so a capsule
+// walking off the flight's own edge falls through the well instead of
+// reaching MOD-HALL-DECK itself. -4.80 overlaps the west strip with the
+// flight's own last 0.3 m -- harmless, since Jolt does not solve contact
+// response between two static bodies, and flush joints elsewhere in this
+// file already rely on exactly that. Found the same way as the east edge:
+// direct observation of where the fall began.
+constexpr float kLegalFortyWellCenterX = -1.65F;
+constexpr float kLegalFortyWellHalfX = 3.15F;
+constexpr float kLegalFortyWellCenterZ = -117.0F;
+constexpr float kLegalFortyWellHalfZ = 2.20F;
+
+// MOD-SKIN-LADDER-S continuation, rungs 16-20: same column (x = -6.0) as
+// AS-001's rungs 1-15, resuming north of rung 15's own footprint and of the
+// handoff deck's south-edge transition (rung 15 spans z in [-107.7,-105.7];
+// that whole band, plus headroom above it, must stay clear or it becomes a
+// low ceiling over the exact spot AS-001's climb steps onto the deck --
+// found by direct observation: siting rung 16 at kIntakeSkinHeadZ (-106.7,
+// the natural next step) or even one metre north of it broke that proven
+// transition).
+//
+// Only 5 rungs, not the ten a straight climb all the way to +40 m would
+// need. That climb does not fit: MOD-HALL-DECK's own stair well is only
+// 4.40 m deep, and the mantle law below is a floor on the GAP between
+// rungs, not (as an earlier draft of this comment had it) on each rung's
+// own depth alone -- derived properly, flush-adjacent rungs land a mantle
+// kLandingInset short of the next rung's face, so step - kLandingInset >
+// kTraversalReach + kPlayerRadius, i.e. step > 1.77 m regardless of rung
+// depth. Nine rungs at that spacing need >= 14.2 m of clear run; the well
+// gives 4.4 m and the run north of rung 16 is hard-capped at 12.5 m by
+// build_stack()'s own southern columns (kIntakeBayBackZ's comment: they
+// reach z = -123.2). No single straight column threads both needles.
+//
+// So SKIN only climbs to the +32.1872 m mid-landing height here -- clear
+// of the well problem entirely, since none of these five rungs' tops come
+// anywhere near MOD-HALL-DECK's own y-band -- and a short static walkway
+// (below) carries the remaining, purely horizontal distance to the
+// mid-landing itself, from which MOD-STAIR-A's own (now-inclined) upper
+// flight is the rest of the route, exactly as the freight braid uses it.
+// Reuses AS-001's rung law verbatim for rise and depth (a derived
+// clearance, not a style choice -- see kIntakeSkinRungRise's comment):
+// rise 1.60 <= kMantleMaximumRise, 2 * half-depth - kLandingInset >
+// kTraversalReach + kPlayerRadius. Step is flush (2 * half-depth = 2.00 m),
+// matching AS-001's own rungs 1-15 and clearing the 1.77 m floor above with
+// margin.
+constexpr int kLegalFortySkinRungFirst = 16;
+constexpr int kLegalFortySkinRungLast = 20;    // tops at 32.1872 m, the mid-landing's height
+constexpr float kLegalFortySkinRungFirstZ = -110.0F;
+constexpr float kLegalFortySkinRungStepZMeters = 2.0F;
+
+// The walkway from rung 20's top to the mid-landing: flush with both (top
+// at 32.1872 m), touching rung 20's own east face at x = -5.0 and the
+// mid-landing's own west face at x = 8.30 so neither joint is a step. Its
+// z is rung 20's own (kLegalFortySkinRungFirstZ - 4 * step = -118.0),
+// comfortably inside the mid-landing's z in [-118.0, -111.6] and well
+// clear (>= 4.5 m) of the swing flight's own z in [-113.4, -111.6] on
+// every path, deployed or not.
+constexpr float kLegalFortySkinWalkwayMinX = -5.0F;
+constexpr float kLegalFortySkinWalkwayMaxX = 8.30F;
+constexpr float kLegalFortySkinWalkwayCenterZ = -118.0F;
+constexpr float kLegalFortySkinWalkwayHalfZ = 1.00F;
+
 // --- WO-013 Ascent Atlas v1.0 kernel: KX-SUMP / KX-GRATE -------------------
 // Atlas section 9: "wet sump makes KX-GRATE a hazard... isolated + drained
 // grate is ordinary walkable support." A lumped process graph (WO-007's own
@@ -682,7 +915,12 @@ struct SupportSample final {
            entity_id == Sim::kIntakeBeltEntityId ||
            entity_id == Sim::kIntakeJibHookEntityId ||
            entity_id == Sim::kIntakePackEntityId ||
-           entity_id == Sim::kIntakeDogEntityId;
+           entity_id == Sim::kIntakeDogEntityId ||
+           // AS-002: the deployed swing flight is a dynamic body under real
+           // load, not scenery -- a player standing on it while it is still
+           // settling against its stop must inherit its point velocity under
+           // the WO-002 law, exactly like every other machine member above.
+           entity_id == Sim::kIntakeSwingFlightEntityId;
 }
 
 class PlayerContactListener final : public JPH::ContactListener {
@@ -698,6 +936,54 @@ public:
         const SupportSample result = sample_;
         unlock();
         return result;
+    }
+
+    // AS-002: the deployed swing flight's own foot lands flush on top of the
+    // (frozen, AS-001) handoff deck by design -- deployed foot at
+    // (-6.000, 24.1872), exactly the deck's own centre and tread-surface
+    // height (see kLegalFortyDeployedThetaRadians's comment). But the
+    // flight's length and its 8.000 m rise together force theta_deployed to
+    // 60 deg (cos 60 = rise / L = 8/16 = 0.5), so the final third of the
+    // sweep -- theta in [48.8 deg, 60 deg], confirmed by a rotated-box vs
+    // AABB separating-axis check -- drags the flight's own solid body
+    // through the deck's near corner: up to 0.36 m of overlap, 0.156 m of
+    // it still present at the final hinge-limit rest pose itself. No
+    // AS-002-owned knob (hinge position, flight length, deployed angle) can
+    // be retuned to clear this without unpicking the rope-crossing,
+    // mid-landing-gap, or T_crit statics numbers the plan derives from this
+    // exact geometry, and the deck itself is out of scope to touch. The
+    // plan's own design note already settles what the deck's role should
+    // be: "deployed foot must not bear: the stop is the hinge limit, not
+    // the deck" -- it was never meant to be a physical obstacle to the
+    // flight, so excluding this one body pair from collision is fidelity to
+    // that intent, not a workaround for it. Every other pair keeps ordinary
+    // collision, flight vs the player included, so a player caught in the
+    // sweep is still struck and shoved exactly as the plan's own "standing
+    // in the sweep when it deploys" note requires.
+    [[nodiscard]] JPH::ValidateResult OnContactValidate(
+        const JPH::Body &first, const JPH::Body &second, JPH::RVec3Arg,
+        const JPH::CollideShapeResult &) override {
+        const auto first_entity = first.GetUserData();
+        const auto second_entity = second.GetUserData();
+        using Sim = scraperx::sim::Simulation;
+        const bool is_swing_flight_vs_handoff_deck =
+            (first_entity == Sim::kIntakeSwingFlightEntityId &&
+             second_entity == Sim::kIntakeHandoffEntityId) ||
+            (first_entity == Sim::kIntakeHandoffEntityId &&
+             second_entity == Sim::kIntakeSwingFlightEntityId);
+        // Same reasoning, second body pair: the flight's own cross-section
+        // is coincident with its hinge anchor at every sweep angle by
+        // construction, so contact between them is never meaningful -- see
+        // kIntakeSwingAnchorEntityId's own comment at the anchor's build
+        // site for the diagnostic trace that found this.
+        const bool is_swing_flight_vs_hinge_anchor =
+            (first_entity == Sim::kIntakeSwingFlightEntityId &&
+             second_entity == Sim::kIntakeSwingAnchorEntityId) ||
+            (first_entity == Sim::kIntakeSwingAnchorEntityId &&
+             second_entity == Sim::kIntakeSwingFlightEntityId);
+        return (is_swing_flight_vs_handoff_deck || is_swing_flight_vs_hinge_anchor)
+                   ? JPH::ValidateResult::RejectAllContactsForThisBodyPair
+                   : JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
     }
 
     void OnContactAdded(const JPH::Body &first,
@@ -852,6 +1138,10 @@ private:
         // On the apron just south of MOD-SKIN-LADDER-S's lowest rung.
         return {static_cast<double>(kIntakeSkinCenterX), 1.2,
                 static_cast<double>(kIntakeSkinFootZ + kIntakeSkinRungHalfZ) + 1.2};
+    case scraperx::sim::InitialSpawn::IntakeHandoffDeck:
+        // On the +24.1872 m handoff deck itself, near its east edge, facing
+        // MOD-STAIR-A-SWING's stowed footprint.
+        return {-3.0, static_cast<double>(kIntakeHandoffY) + 1.0872, -112.5};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1063,6 +1353,7 @@ public:
         build_kernel_needle(bodies);
         build_kernel_sump(bodies);
         build_intake_rise(bodies);
+        build_legal_forty(bodies);
 
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
         JPH::BodyCreationSettings player_settings(player_shape_,
@@ -1102,6 +1393,10 @@ public:
             physics_system_.RemoveConstraint(needle_pin_far_);
             needle_pin_far_ = nullptr;
         }
+        if (intake_sling_pin_ != nullptr) {
+            physics_system_.RemoveConstraint(intake_sling_pin_);
+            intake_sling_pin_ = nullptr;
+        }
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
             if (constraint != nullptr) {
                 physics_system_.RemoveConstraint(constraint);
@@ -1114,6 +1409,7 @@ public:
         jib_slew_hinge_ = nullptr;
         jib_hoist_slider_ = nullptr;
         needle_hoist_slider_ = nullptr;
+        intake_swing_hinge_ = nullptr;
         auto &bodies = physics_system_.GetBodyInterface();
         for (auto it = machine_bodies_.rbegin(); it != machine_bodies_.rend(); ++it) {
             remove_and_destroy(bodies, *it);
@@ -1147,6 +1443,8 @@ public:
         bool valve_toggle_requested = false;
         double intake_slew_input = 0.0;
         double intake_hoist_input = 0.0;
+        bool intake_sling_release_requested = false;
+        bool intake_sling_attach_requested = false;
     };
 
     void step(const StepCommands &commands,
@@ -1164,6 +1462,8 @@ public:
         update_needle(bodies, commands.needle_hoist_input);
         update_sump(bodies, delta_seconds, commands.valve_toggle_requested);
         update_intake(bodies, commands.intake_slew_input, commands.intake_hoist_input);
+        update_legal_forty(bodies, commands.intake_sling_release_requested,
+                           commands.intake_sling_attach_requested);
 
         // A toggle while airborne only: deploying/retracting on the ground is
         // meaningless and would let a grounded button-mash pre-arm the canopy.
@@ -1548,7 +1848,14 @@ private:
 
         add_slider(lift_mast, lift_platform_id_, 0.0F, kLiftTravelMeters);
         add_slider(lift_mast, counterweight_id_, -kLiftTravelMeters, 0.0F);
-        add_pulley();
+        // -1 max length is unchanged from before add_pulley took explicit
+        // points: Jolt auto-derives it from this exact as-built configuration
+        // (PulleyConstraint.cpp), so behaviour here is byte-identical.
+        (void)add_pulley(JPH::RVec3(kLiftPlatformX, kLiftPlatformRestY + 0.16, kLiftZ),
+                        JPH::RVec3(kLiftPlatformX, kSheaveY, kLiftZ), lift_platform_id_,
+                        JPH::RVec3(kCounterweightX, 8.3, kLiftZ),
+                        JPH::RVec3(kCounterweightX, kSheaveY, kLiftZ), counterweight_id_, 1.0F, 0.0F,
+                        -1.0F);
         settle_machine();
         add_rope();
         add_treadle_cable();
@@ -1964,8 +2271,16 @@ private:
             JPH::EMotionType::Dynamic, object_layers::kMoving, 0.4F,
             Simulation::kIntakeJibHookEntityId, kIntakeJibHookMassKg);
         intake_hook_id_ = track(hook->GetID());
-        add_point_link(intake_hook_id_, intake_pack_id_,
-                       JPH::RVec3(kIntakeBayCenterX, pack_link_y, kIntakePackZ));
+        // AS-002 makes this releasable (release_pack_to_cradle() /
+        // sling_pack()): create_sling_pin() uses track_for_teardown=false,
+        // exactly the needle pins' contract, so it is intake_sling_pin_'s
+        // sole owner rather than also sitting in machine_constraints_, which
+        // Jolt's ConstraintManager::Remove would then assert on if it had
+        // already been removed once at runtime. Unchanged from AS-001: the
+        // pin point is pack_link_y, 0.20 m below the hook's own built
+        // hook_start_y -- not the hook's position -- so this is byte-
+        // identical to the add_point_link() call it replaces.
+        create_sling_pin(JPH::RVec3(kIntakeBayCenterX, pack_link_y, kIntakePackZ));
 
         const float hoist_travel = (kIntakeBoomHeight - 0.45F) - hook_start_y;
         add_motorized_slider(intake_boom_id_, intake_hook_id_, 0.0F, hoist_travel,
@@ -2050,6 +2365,250 @@ private:
             fixed(JPH::Vec3(kIntakeSkinRungHalfX, kIntakeSkinRungHalfY, kIntakeSkinRungHalfZ),
                   JPH::RVec3(kIntakeSkinCenterX, top_y - kIntakeSkinRungHalfY, rung_z),
                   Simulation::kIntakeSkinEntityId);
+        }
+    }
+
+    // AS-002. Ascent Atlas §6 band B00's 24.1872-40.1872 m leftover, chain K0
+    // PLAY. Everything above the handoff deck stacks off AS-001's own
+    // tread-surface offset (kIntakeHandoffY + slab-half-thickness / cos(pitch)),
+    // recomputed here at this run's own 30 deg pitch, so it stays flush with
+    // the deck below to the millimetre rather than by matching a second copy
+    // of the same literal.
+    void build_legal_forty(JPH::BodyInterface &bodies) {
+        const auto track = [this](const JPH::BodyID id) {
+            machine_bodies_.push_back(id);
+            return id;
+        };
+        const auto fixed = [&](const JPH::Vec3 half_extent, const JPH::RVec3 position,
+                               const std::uint64_t entity_id,
+                               const JPH::Quat rotation = JPH::Quat::sIdentity()) {
+            track(add_box(bodies, half_extent, position, JPH::EMotionType::Static,
+                          object_layers::kStatic, 0.85F, entity_id, rotation));
+        };
+
+        const float handoff_pitch = std::atan2(kIntakeStairFlightRise, 2.0F * kIntakeStairHalfRun);
+        const float handoff_tread_surface = kIntakeStairSlabHalfY / std::cos(handoff_pitch);
+        const float handoff_surface_y = kIntakeHandoffY + handoff_tread_surface;
+        const float mid_landing_surface_y = handoff_surface_y + kLegalFortyFlightRiseMeters;
+        const float hall_deck_surface_y = mid_landing_surface_y + kLegalFortyFlightRiseMeters;
+
+        // ---- MOD-STAIR-A-SWING: the dynamic bascule flight -------------------
+        const JPH::RVec3 hinge_point(kIntakeSwingHingeX, mid_landing_surface_y, kIntakeSwingHingeZ);
+        // R(phi), phi = pi/2 - theta, maps local +X to world (sin theta,
+        // cos theta, 0) about the world +Z hinge axis -- verified against
+        // Jolt::Quat::sRotation's own [axis*sin(angle/2), cos(angle/2)] form
+        // (see kIntakeSwingHingeTravelRadians's comment above). Built at
+        // theta_stowed, so this is also the body's as-built rotation.
+        const float stowed_phi = static_cast<float>(kPi) * 0.5F - kLegalFortyStowedThetaRadians;
+        const JPH::Quat stowed_rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), stowed_phi);
+        // Body centre = hinge - R(phi) * (half_length, 0, 0): the hinge sits at
+        // the body's own local (+half_length, 0, 0), its "top end".
+        const JPH::Vec3 hinge_to_centre_world =
+            stowed_rotation * JPH::Vec3(kLegalFortyFlightHalfLength, 0.0F, 0.0F);
+        const JPH::RVec3 swing_build_centre = hinge_point - hinge_to_centre_world;
+
+        JPH::Body *swing_flight = add_shape_body(
+            bodies,
+            new JPH::BoxShape(JPH::Vec3(kLegalFortyFlightHalfLength, kIntakeStairSlabHalfY,
+                                        kLegalFortyFlightHalfWidth)),
+            swing_build_centre, stowed_rotation, JPH::EMotionType::Dynamic, object_layers::kMoving,
+            0.7F, Simulation::kIntakeSwingFlightEntityId, kLegalFortyFlightMassKg);
+        intake_swing_flight_id_ = track(swing_flight->GetID());
+
+        // A small static anchor at the hinge point -- the hinge's first body,
+        // exactly like the needle hoist's fixed head (add_motorized_slider's
+        // own comment: "the head is the actual... anchor, the mast beneath it
+        // is proof scaffolding"). Sized well under the flight's own 0.18 m
+        // corner-sweep radius (this file's clearances note above, echoing
+        // the plan's own: "the slab's top-end corners lie 0.18 m off the
+        // hinge axis and sweep a 0.18 m circle") -- a cube of half-extent h
+        // reaches h*sqrt(2) at its corner, so h=0.08 stays inside that
+        // circle by 0.067 m at every angle. AS-001 lost a day to the
+        // opposite mistake once already (MOD-DOG-A's own hinge sitting
+        // flush with its jamb); this is that same trap, self-inflicted
+        // against AS-002's own anchor rather than a neighbour's structure --
+        // found by direct observation: at the old 0.30 m half-extent (bigger
+        // than the sweep radius on every side) the loaded flight never
+        // opened past a fraction of a degree, pinned by its own anchor.
+        //
+        // Shrinking it to 0.08 only thinned that same pinning, never removed
+        // it: the flight's own cross-section is coincident with the hinge
+        // pivot at every sweep angle by construction, so ANY nonzero-size
+        // anchor box keeps a sliver of solid overlap there always -- found
+        // by direct diagnostic tracing (OnContactAdded/Persisted instrumented
+        // to log the actual world-space contact point, not just entity IDs)
+        // showing a real, continuous PERSISTED contact at the hinge itself
+        // for the entire length of a 20+ s window in which the flight was
+        // otherwise correctly, fully unloaded and should have been relaxing
+        // freely under its own weight. kIntakeSwingAnchorEntityId gives this
+        // one body its own identity (unlike every other static piece of
+        // MOD-STAIR-A, which stays grouped under kIntakeStairEntityId) so
+        // OnContactValidate below can exclude exactly this pair, the same
+        // way it already excludes the flight from the handoff deck: the
+        // hinge CONSTRAINT is what relates the anchor and the flight, and
+        // ordinary contact resolution between them was never meaningful.
+        const JPH::BodyID swing_anchor = track(add_box(
+            bodies, JPH::Vec3(0.08F, 0.08F, 0.08F), hinge_point, JPH::EMotionType::Static,
+            object_layers::kStatic, 0.8F, Simulation::kIntakeSwingAnchorEntityId));
+        // Unmotored: gravity alone holds this at its stowed limit (jolt angle
+        // 0, this build pose) until MOD-CW-CRADLE's rope tension beats it.
+        // Limits are negative-only -- see kIntakeSwingHingeTravelRadians.
+        add_hinge(swing_anchor, intake_swing_flight_id_, hinge_point,
+                  -kIntakeSwingHingeTravelRadians, 0.0F, &intake_swing_hinge_,
+                  Simulation::kIntakeStairEntityId);
+
+        // ---- MOD-CW-CRADLE: dynamic car on a free vertical slider ------------
+        // The hook hangs at the boom tip, so working radius is fixed at the
+        // 12 m boom; only the slew bearing chooses where on that circle the
+        // cradle sits. Sited on the SAME (east, +X) side as the hinge/flight
+        // above, matching AS-002's own geometry table (hinge x=+7.856,
+        // cradle x=+8.608): hook_x = -boomLength*sin(angle) for a POSITIVE
+        // set_intake_slew_input, verified against the running mechanism, so
+        // reaching this +X cradle is a NEGATIVE slew command
+        // (kIntakeCwCradleBearingRadians is the magnitude; update_intake's
+        // sign is negated at every call site that targets the cradle).
+        const float cradle_x =
+            kIntakeJibMastX + kIntakeBoomLength * std::sin(kIntakeCwCradleBearingRadians);
+        const float cradle_z =
+            kIntakeJibMastZ - kIntakeBoomLength * std::cos(kIntakeCwCradleBearingRadians);
+        const JPH::RVec3 cradle_build_centre(cradle_x, kIntakeCwCradleBuildCenterY, cradle_z);
+
+        // Offset south of the car's own centreline, clear of the column the
+        // pack is lowered through -- found by direct observation: a mast
+        // built AT the car's own xz (matching the plan's literal "same xz")
+        // stood directly in that column, and the descending pack snagged its
+        // top on every attempt. add_slider only needs a static anchor body
+        // for the vertical constraint; nothing requires it to share the
+        // car's own xz, and the cradle is open in +-Z for exactly this kind
+        // of side approach.
+        const float guide_mast_z = cradle_z + 2.0F;
+        const JPH::BodyID cradle_guide = track(add_box(
+            bodies,
+            JPH::Vec3(kIntakeCwCradleGuideHalfX, kIntakeCwCradleGuideHalfY,
+                      kIntakeCwCradleGuideHalfZ),
+            JPH::RVec3(cradle_x, kIntakeCwCradleGuideHalfY, guide_mast_z), JPH::EMotionType::Static,
+            object_layers::kStatic, 0.8F, Simulation::kIntakeCwCradleEntityId));
+
+        // Three-sided open frame -- floor and two side rails, open in +-Z --
+        // not a closed hopper: a 2.4 m hopper cannot take the 2.2 x 2.3 m pack
+        // without pushing the cradle into the bay's front wall.
+        JPH::Body *cradle = add_shape_body(
+            bodies,
+            new JPH::BoxShape(JPH::Vec3(kIntakeCwCradleHalfX, kIntakeCwCradleHalfY,
+                                        kIntakeCwCradleHalfZ)),
+            cradle_build_centre, JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic,
+            object_layers::kMoving, 0.7F, Simulation::kIntakeCwCradleEntityId,
+            kIntakeCwCradleTareMassKg);
+        intake_cw_cradle_id_ = track(cradle->GetID());
+        add_slider(cradle_guide, intake_cw_cradle_id_, kIntakeCwCradleLimitMinMeters,
+                  kIntakeCwCradleLimitMaxMeters);
+
+        // ---- The rope: one generalised JPH::PulleyConstraint -----------------
+        const JPH::RVec3 sheave_a(kIntakeSwingHingeX,
+                                  mid_landing_surface_y + kIntakeSwingSheaveHeightMeters,
+                                  kIntakeSwingHingeZ);
+        const JPH::RVec3 sheave_b(cradle_x,
+                                  mid_landing_surface_y + kIntakeSwingSheaveHeightMeters,
+                                  cradle_z);
+        const JPH::RVec3 flight_bracket_point =
+            bodies.GetCenterOfMassTransform(intake_swing_flight_id_) *
+            JPH::RVec3(kIntakeSwingBracketLocalX, kIntakeSwingBracketLocalY, 0.0);
+        const JPH::RVec3 cradle_top_point =
+            bodies.GetCenterOfMassTransform(intake_cw_cradle_id_) *
+            JPH::RVec3(0.0, kIntakeCwCradleHalfY, 0.0);
+        const float flight_side_length = JPH::Vec3(sheave_a - flight_bracket_point).Length();
+        const float cradle_side_length_at_build =
+            JPH::Vec3(sheave_b - cradle_top_point).Length();
+        // Tension-only, rated per the T_crit derivation above (empty cradle
+        // 0.37x the stowed demand, loaded 1.21x): never pushes, and its total
+        // length is fixed at this as-built (empty-cradle, stowed-flight) sum,
+        // which is also this mechanism's one physically consistent rest state
+        // when the rope is fully taut.
+        intake_cw_pulley_ =
+            add_pulley(flight_bracket_point, sheave_a, intake_swing_flight_id_, cradle_top_point,
+                      sheave_b, intake_cw_cradle_id_, 1.0F, 0.0F,
+                      flight_side_length + cradle_side_length_at_build);
+
+        // ---- MOD-STAIR-A upper flight (static) + mid-landing ------------------
+        // An inclined slab like every other flight in this file -- AS-001's own
+        // pattern (Quat::sRotation(axisZ, side*pitch)), not the flat, unrotated
+        // box this was until now. Climbs toward -X (side = -1, "odd flights
+        // back toward -X" per flight_side's own comment): the un-rotated half-
+        // length (8.00) times cos(pitch) puts its rotated footprint at
+        // x in [-4.506, 9.350], which is exactly the well's own centre-X at
+        // the top end and the mid-landing's own centre-X at the foot -- this
+        // position was already sited for a rotated slab, only the rotation
+        // itself was missing.
+        const float upper_flight_pitch =
+            std::asin(kLegalFortyFlightRiseMeters / kLegalFortyFlightLength);
+        fixed(JPH::Vec3(kLegalFortyFlightHalfLength, kIntakeStairSlabHalfY,
+                        kLegalFortyFlightHalfWidth),
+              JPH::RVec3(kLegalFortyUpperFlightCenterX,
+                         mid_landing_surface_y + kLegalFortyFlightRiseMeters * 0.5F,
+                         kLegalFortyUpperFlightCenterZ),
+              Simulation::kIntakeStairEntityId,
+              JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), -upper_flight_pitch));
+        fixed(JPH::Vec3(kLegalFortyMidLandingHalfX, kIntakeStairSlabHalfY,
+                        kLegalFortyMidLandingHalfZ),
+              JPH::RVec3(kLegalFortyMidLandingCenterX, mid_landing_surface_y - kIntakeStairSlabHalfY,
+                         kLegalFortyMidLandingCenterZ),
+              Simulation::kIntakeStairEntityId);
+
+        // ---- MOD-HALL-DECK lower landing, with its stair well -----------------
+        // Four strips tiling the deck minus a rectangular well, exactly the
+        // jamb+lintel pattern the bay's own throat already uses, rotated from
+        // a wall opening to a floor opening.
+        const float well_min_x = kLegalFortyWellCenterX - kLegalFortyWellHalfX;
+        const float well_max_x = kLegalFortyWellCenterX + kLegalFortyWellHalfX;
+        const float well_min_z = kLegalFortyWellCenterZ - kLegalFortyWellHalfZ;
+        const float well_max_z = kLegalFortyWellCenterZ + kLegalFortyWellHalfZ;
+        const float deck_min_x = -kLegalFortyHallDeckHalfX;
+        const float deck_max_x = kLegalFortyHallDeckHalfX;
+        const float deck_min_z = kLegalFortyHallDeckCenterZ - kLegalFortyHallDeckHalfZ;
+        const float deck_max_z = kLegalFortyHallDeckCenterZ + kLegalFortyHallDeckHalfZ;
+        const float deck_center_y = hall_deck_surface_y - kLegalFortyHallDeckHalfThickness;
+        const auto span = [](const float lo, const float hi) {
+            return std::pair<float, float>{(lo + hi) * 0.5F, (hi - lo) * 0.5F};
+        };
+        const auto [south_cz, south_hz] = span(well_max_z, deck_max_z);
+        fixed(JPH::Vec3(kLegalFortyHallDeckHalfX, kLegalFortyHallDeckHalfThickness, south_hz),
+              JPH::RVec3(0.0F, deck_center_y, south_cz), Simulation::kIntakeHallDeckEntityId);
+        const auto [north_cz, north_hz] = span(deck_min_z, well_min_z);
+        fixed(JPH::Vec3(kLegalFortyHallDeckHalfX, kLegalFortyHallDeckHalfThickness, north_hz),
+              JPH::RVec3(0.0F, deck_center_y, north_cz), Simulation::kIntakeHallDeckEntityId);
+        const auto [west_cx, west_hx] = span(deck_min_x, well_min_x);
+        fixed(JPH::Vec3(west_hx, kLegalFortyHallDeckHalfThickness, kLegalFortyWellHalfZ),
+              JPH::RVec3(west_cx, deck_center_y, kLegalFortyWellCenterZ),
+              Simulation::kIntakeHallDeckEntityId);
+        const auto [east_cx, east_hx] = span(well_max_x, deck_max_x);
+        fixed(JPH::Vec3(east_hx, kLegalFortyHallDeckHalfThickness, kLegalFortyWellHalfZ),
+              JPH::RVec3(east_cx, deck_center_y, kLegalFortyWellCenterZ),
+              Simulation::kIntakeHallDeckEntityId);
+
+        // ---- MOD-SKIN-LADDER-S continuation, rungs 16-20 -----------------------
+        // Continues AS-001's own rung law north and up to the mid-landing's
+        // own height -- see the constants block above for why it stops there
+        // rather than climbing on to the hall deck directly.
+        for (int rung = kLegalFortySkinRungFirst; rung <= kLegalFortySkinRungLast; ++rung) {
+            const float top_y = handoff_surface_y +
+                                kIntakeSkinRungRise *
+                                    static_cast<float>(rung - kIntakeSkinRungCount);
+            const float rung_z = kLegalFortySkinRungFirstZ -
+                                 kLegalFortySkinRungStepZMeters *
+                                     static_cast<float>(rung - kLegalFortySkinRungFirst);
+            fixed(JPH::Vec3(kIntakeSkinRungHalfX, kIntakeSkinRungHalfY, kIntakeSkinRungHalfZ),
+                  JPH::RVec3(kIntakeSkinCenterX, top_y - kIntakeSkinRungHalfY, rung_z),
+                  Simulation::kIntakeSkinEntityId);
+        }
+
+        // ---- the walkway from rung 20 to the mid-landing -----------------------
+        {
+            const auto [walk_cx, walk_hx] =
+                span(kLegalFortySkinWalkwayMinX, kLegalFortySkinWalkwayMaxX);
+            fixed(JPH::Vec3(walk_hx, kIntakeStairSlabHalfY, kLegalFortySkinWalkwayHalfZ),
+                  JPH::RVec3(walk_cx, mid_landing_surface_y - kIntakeStairSlabHalfY,
+                             kLegalFortySkinWalkwayCenterZ),
+                  Simulation::kIntakeStairEntityId);
         }
     }
 
@@ -2260,17 +2819,35 @@ private:
         (void)create_constraint(settings, treadle_id_, valve_lever_id_);
     }
 
-    void add_pulley() {
+    // A tension-only rope over two sheaves: mMinLength=0 lets it go fully
+    // slack; mMaxLength caps it (Jolt auto-derives a negative mMaxLength from
+    // the configuration's length AT CONSTRUCTION -- PulleyConstraint.cpp's own
+    // "Calculate min/max length if it was not provided" -- so an explicit,
+    // computed mMaxLength is what makes this a real inextensible rope rather
+    // than one silently locked to whatever pose happened to be built).
+    // Generalised (AS-002) to take its own four points, bodies, ratio and
+    // length, so every rope in this file -- the Kellerworks lift and AS-002's
+    // counterweight cradle alike -- is one real JPH::PulleyConstraint, not a
+    // copy of this function.
+    JPH::PulleyConstraint *add_pulley(const JPH::RVec3 body_point_1,
+                                      const JPH::RVec3 fixed_point_1,
+                                      const JPH::BodyID body_1,
+                                      const JPH::RVec3 body_point_2,
+                                      const JPH::RVec3 fixed_point_2,
+                                      const JPH::BodyID body_2,
+                                      const float ratio,
+                                      const float min_length,
+                                      const float max_length) {
         JPH::PulleyConstraintSettings settings;
         settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        settings.mBodyPoint1 = JPH::RVec3(kLiftPlatformX, kLiftPlatformRestY + 0.16, kLiftZ);
-        settings.mFixedPoint1 = JPH::RVec3(kLiftPlatformX, kSheaveY, kLiftZ);
-        settings.mBodyPoint2 = JPH::RVec3(kCounterweightX, 8.3, kLiftZ);
-        settings.mFixedPoint2 = JPH::RVec3(kCounterweightX, kSheaveY, kLiftZ);
-        settings.mRatio = 1.0F;
-        settings.mMinLength = 0.0F;
-        settings.mMaxLength = -1.0F;
-        (void)create_constraint(settings, lift_platform_id_, counterweight_id_);
+        settings.mBodyPoint1 = body_point_1;
+        settings.mFixedPoint1 = fixed_point_1;
+        settings.mBodyPoint2 = body_point_2;
+        settings.mFixedPoint2 = fixed_point_2;
+        settings.mRatio = ratio;
+        settings.mMinLength = min_length;
+        settings.mMaxLength = max_length;
+        return static_cast<JPH::PulleyConstraint *>(create_constraint(settings, body_1, body_2));
     }
 
     // track_for_teardown=false hands ownership entirely to the caller (WO-012
@@ -2569,6 +3146,131 @@ private:
         intake_pack_pins_dog_ =
             (pack_dx * pack_dx + pack_dz * pack_dz) <= (swing_radius * swing_radius) &&
             static_cast<float>(pack.GetY()) - kIntakePackHalfY < kIntakeThroatHeight;
+    }
+
+    // AS-002 MOD-STAIR-A-SWING / MOD-CW-CRADLE. Reads the hinge every tick
+    // regardless of station (the flight keeps swinging under gravity/rope
+    // tension whether or not the player is anywhere near the pendant); the
+    // sling commands are gated on intake_station_active_, which update_intake
+    // -- called immediately before this every tick -- has just refreshed.
+    // Release and Attach are one-shot, exactly like the sump's valve toggle,
+    // gated additionally on physical tolerance: a command outside tolerance
+    // is accepted but produces no state change, rather than a pose-only
+    // predicate silently re-firing the instant geometry happens to line up
+    // -- WO-012's seat_needle/unseat_needle race, generalised in advance.
+    void update_legal_forty(const JPH::BodyInterface &bodies,
+                            const bool release_requested,
+                            const bool attach_requested) noexcept {
+        if (intake_swing_hinge_ != nullptr) {
+            const float measured = intake_swing_hinge_->GetCurrentAngle();
+            if (std::isfinite(measured)) {
+                // Jolt reports this NEGATIVE as the flight opens -- see
+                // kIntakeSwingHingeTravelRadians -- so travel is its negation.
+                intake_swing_travel_ =
+                    std::clamp(-measured, 0.0F, kIntakeSwingHingeTravelRadians);
+            }
+        }
+
+        if (!intake_station_active_) {
+            return;
+        }
+        if (release_requested && intake_pack_slung_) {
+            release_pack_to_cradle(bodies);
+        }
+        if (attach_requested && !intake_pack_slung_) {
+            sling_pack(bodies);
+        }
+    }
+
+    // Shared by release_pack_to_cradle (may release fire) and
+    // update_legal_forty's retract nudge (is the cradle genuinely unloaded)
+    // -- the same seated-pose tolerance, asked from two directions.
+    bool intake_pack_seated_on_cradle(const JPH::BodyInterface &bodies) const noexcept {
+        const JPH::RVec3 pack_position = bodies.GetPosition(intake_pack_id_);
+        const JPH::RVec3 cradle_position = bodies.GetPosition(intake_cw_cradle_id_);
+        // The pack's CENTRE when resting on the cradle floor sits one pack
+        // half-height above the cradle's own top face -- not at the top face
+        // itself. Found by direct observation: comparing pack.y against the
+        // bare top face read a settled, correctly-resting pack as 0.96 m out
+        // of tolerance.
+        const JPH::RVec3 cradle_seat(
+            cradle_position.GetX(),
+            cradle_position.GetY() + kIntakeCwCradleHalfY + kIntakePackHalfY,
+            cradle_position.GetZ());
+        const auto dx = static_cast<float>(pack_position.GetX() - cradle_seat.GetX());
+        const auto dz = static_cast<float>(pack_position.GetZ() - cradle_seat.GetZ());
+        const auto dy = static_cast<float>(pack_position.GetY() - cradle_seat.GetY());
+        const bool xz_in_tolerance =
+            (dx * dx + dz * dz) <=
+            (kLegalFortyReleaseXZToleranceMeters * kLegalFortyReleaseXZToleranceMeters);
+        const bool y_in_tolerance = std::fabs(dy) <= kLegalFortyReleaseYToleranceMeters;
+        return xz_in_tolerance && y_in_tolerance;
+    }
+
+    // Removes the hook-pack sling once the pack is physically seated on
+    // MOD-CW-CRADLE and settled. The rope-tension jump this causes -- read
+    // back from the solver on the next tick, never asserted here -- is the
+    // whole mechanism; this function's only job is deciding whether a real
+    // release may happen right now.
+    void release_pack_to_cradle(const JPH::BodyInterface &bodies) noexcept {
+        const bool settled = bodies.GetLinearVelocity(intake_pack_id_).Length() <=
+                             kLegalFortyReleaseSpeedToleranceMps;
+        if (!intake_pack_seated_on_cradle(bodies) || !settled) {
+            return;
+        }
+        remove_sling_pin();
+    }
+
+    // Re-creates the hook-pack sling once the hook is physically back over
+    // the pack's padeye and settled. Exact mirror of release_pack_to_cradle.
+    void sling_pack(const JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 hook_position = bodies.GetPosition(intake_hook_id_);
+        const JPH::RVec3 pack_position = bodies.GetPosition(intake_pack_id_);
+        const JPH::RVec3 padeye(pack_position.GetX(), pack_position.GetY() + kIntakePackHalfY,
+                                pack_position.GetZ());
+        const auto distance = static_cast<float>(JPH::Vec3(hook_position - padeye).Length());
+        const bool in_tolerance = distance <= kLegalFortyAttachToleranceMeters;
+        const bool settled = bodies.GetLinearVelocity(intake_hook_id_).Length() <=
+                             kLegalFortyAttachSpeedToleranceMps;
+        if (!in_tolerance || !settled) {
+            return;
+        }
+        create_sling_pin(hook_position);
+    }
+
+    // Raw, unconditional creation/removal -- shared by the tolerance-gated
+    // sling_pack()/release_pack_to_cradle() command path, the initial build
+    // in build_intake_rise, and restore_legal_forty_topology()'s checkpoint
+    // reconciliation, which must NOT re-apply the tolerance gate against
+    // bodies restore_from_checkpoint does not reposition (the pack/hook/dog
+    // are an AS-001 gap this ticket does not reopen -- see MachineCheckpoint).
+    void create_sling_pin(const JPH::RVec3 point) noexcept {
+        JPH::PointConstraintSettings sling_settings;
+        sling_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        sling_settings.mPoint1 = point;
+        sling_settings.mPoint2 = point;
+        intake_sling_pin_ = static_cast<JPH::PointConstraint *>(
+            create_constraint(sling_settings, intake_hook_id_, intake_pack_id_, false));
+        intake_pack_slung_ = true;
+    }
+
+    void remove_sling_pin() noexcept {
+        if (intake_sling_pin_ != nullptr) {
+            physics_system_.RemoveConstraint(intake_sling_pin_);
+            intake_sling_pin_ = nullptr;
+        }
+        intake_pack_slung_ = false;
+    }
+
+    // WO-012 checkpoint topology reconciliation, generalised: restore the
+    // discrete sling presence to match what was actually committed, rather
+    // than leaving whatever pin happened to exist at the moment of death.
+    void restore_legal_forty_topology(const bool checkpoint_slung) noexcept {
+        if (checkpoint_slung && !intake_pack_slung_) {
+            create_sling_pin(physics_system_.GetBodyInterface().GetPosition(intake_hook_id_));
+        } else if (!checkpoint_slung && intake_pack_slung_) {
+            remove_sling_pin();
+        }
     }
 
     void update_sump(JPH::BodyInterface &bodies, const float delta_seconds,
@@ -3240,6 +3942,9 @@ private:
         checkpoint_.sump_isolated = sump_isolated_;
         checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
         checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
+        checkpoint_.intake_swing_flight = capture_body(bodies, intake_swing_flight_id_);
+        checkpoint_.intake_cw_cradle = capture_body(bodies, intake_cw_cradle_id_);
+        checkpoint_.intake_pack_slung = intake_pack_slung_;
     }
 
     // WO-008 automatic commit (GDD 9.1): every tick the player is grounded and
@@ -3274,6 +3979,9 @@ private:
         restore_body(bodies, crate_id_, checkpoint_.crate);
         restore_body(bodies, needle_beam_id_, checkpoint_.needle_beam);
         restore_needle_topology(checkpoint_.needle_seated);
+        restore_body(bodies, intake_swing_flight_id_, checkpoint_.intake_swing_flight);
+        restore_body(bodies, intake_cw_cradle_id_, checkpoint_.intake_cw_cradle);
+        restore_legal_forty_topology(checkpoint_.intake_pack_slung);
         // No topology reconciliation call needed here, unlike the needle:
         // update_sump recomputes grate_safe_ and reasserts the grate's
         // sensor flag from sump_volume_kg_ unconditionally every tick, so
@@ -3359,6 +4067,12 @@ private:
         state_.intake_dog_angle_radians = intake_dog_angle_;
         state_.intake_pack_pins_dog = intake_pack_pins_dog_;
         state_.intake_throat_clear = intake_throat_clear_;
+
+        state_.legal_forty_pack_slung = intake_pack_slung_;
+        state_.legal_forty_swing_travel_radians = intake_swing_travel_;
+        state_.legal_forty_swing_flight_position =
+            to_vector3(bodies.GetPosition(intake_swing_flight_id_));
+        state_.legal_forty_cradle_position = to_vector3(bodies.GetPosition(intake_cw_cradle_id_));
 
         const JPH::RVec3 rope_tipper =
             bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
@@ -3470,10 +4184,18 @@ private:
     JPH::Ref<JPH::HingeConstraint> intake_slew_hinge_;
     JPH::Ref<JPH::SliderConstraint> intake_hoist_slider_;
     JPH::Ref<JPH::HingeConstraint> intake_dog_hinge_;
+    // AS-002: unmotored -- gravity and MOD-CW-CRADLE's rope tension are the
+    // only actuators, so this carries no target-velocity state.
+    JPH::Ref<JPH::HingeConstraint> intake_swing_hinge_;
+    JPH::Ref<JPH::PulleyConstraint> intake_cw_pulley_;
     // track_for_teardown=false: created/removed at runtime by seat_needle/
     // unseat_needle, never through machine_constraints_. See create_constraint.
     JPH::Ref<JPH::PointConstraint> needle_pin_approach_;
     JPH::Ref<JPH::PointConstraint> needle_pin_far_;
+    // AS-002: the hook-pack sling, created/removed at runtime by
+    // sling_pack()/release_pack_to_cradle() -- same track_for_teardown=false
+    // contract as the needle pins above.
+    JPH::Ref<JPH::PointConstraint> intake_sling_pin_;
     JPH::BodyID scoop_ids_[4];
     JPH::Vec3 scoop_local_[4]{};
     JPH::BodyID ballast_id_;
@@ -3496,6 +4218,11 @@ private:
     JPH::BodyID intake_pack_id_;
     JPH::BodyID intake_overweight_pack_id_;
     JPH::BodyID intake_dog_id_;
+    JPH::BodyID intake_swing_flight_id_;
+    JPH::BodyID intake_cw_cradle_id_;
+    // AS-002: the sling's actual presence -- read back for the snapshot and
+    // the checkpoint, never asserted. Starts true: AS-001 pre-slings the pack.
+    bool intake_pack_slung_ = true;
     float scoop_height_ = kScoopBottomY;
     float scoop_tilt_ = 0.0F;
     float valve_lever_angle_ = kValveShutAngle;
@@ -3513,6 +4240,9 @@ private:
     float intake_dog_angle_ = 0.0F;
     bool intake_pack_pins_dog_ = false;
     bool intake_throat_clear_ = false;
+    // AS-002: non-negative "how far open" travel, derived from the hinge's
+    // raw (negative-signed) angle -- see kIntakeSwingHingeTravelRadians.
+    float intake_swing_travel_ = 0.0F;
     float rope_rest_length_ = 0.0F;
     double machine_cycle_phase_seconds_ = 0.0;
     SupportSample support_sample_{};
@@ -3558,6 +4288,13 @@ private:
         bool sump_isolated = false;
         double vessel_mass_kg = 0.0;
         double cylinder_mass_kg = 0.0;
+        // AS-002. The pack/hook and the dog are AS-001 gaps this ticket does
+        // not reopen (00_START_HERE.md's record-gap convention): they are not
+        // captured here either, unchanged from AS-001. MOD-STAIR-A-SWING and
+        // MOD-CW-CRADLE are this ticket's own bodies, so they are.
+        BodyCheckpoint intake_swing_flight{};
+        BodyCheckpoint intake_cw_cradle{};
+        bool intake_pack_slung = true;
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     MachineCheckpoint checkpoint_{};
@@ -3683,6 +4420,16 @@ bool Simulation::set_intake_hoist_input(const double value) noexcept {
     return true;
 }
 
+bool Simulation::request_intake_sling_release() noexcept {
+    intake_sling_release_requested_ = true;
+    return true;
+}
+
+bool Simulation::request_intake_sling_attach() noexcept {
+    intake_sling_attach_requested_ = true;
+    return true;
+}
+
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -3702,6 +4449,8 @@ void Simulation::step_fixed() noexcept {
     commands.valve_toggle_requested = valve_toggle_requested_;
     commands.intake_slew_input = intake_slew_input_;
     commands.intake_hoist_input = intake_hoist_input_;
+    commands.intake_sling_release_requested = intake_sling_release_requested_;
+    commands.intake_sling_attach_requested = intake_sling_attach_requested_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     jump_requested_ = false;
@@ -3709,6 +4458,8 @@ void Simulation::step_fixed() noexcept {
     release_requested_ = false;
     parachute_toggle_requested_ = false;
     valve_toggle_requested_ = false;
+    intake_sling_release_requested_ = false;
+    intake_sling_attach_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();

@@ -1,4 +1,4 @@
-name: ScraperX — full proof path (kernel WO-000..013 + ascent AS-001)
+name: ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)
 
 on:
   push:
@@ -101,7 +101,8 @@ jobs:
             "PASS scraperx_sim first freight" \
             "PASS scraperx_sim first structural coupling" \
             "PASS scraperx_sim first process coupling" \
-            "PASS scraperx_sim B00 intake rise"
+            "PASS scraperx_sim B00 intake rise" \
+            "PASS scraperx_sim AS-002 Legal Forty"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
@@ -115,6 +116,28 @@ jobs:
           awk -F'handoff_y=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 > 24.8) ? 0 : 1}' \
             artifacts/native-falsifiers.log
           awk -F'overweight_y=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 < 1.2) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          # AS-002 Legal Forty: the counterweighted bascule deployed under
+          # the real 4 t pack, carried the ascent to +40 m and committed a
+          # checkpoint there, relaxed back on its own once unloaded, SKIN's
+          # bypass reached the same +40 m without ever touching the hinge,
+          # and the rated jib still cannot reach that height. Each is a
+          # separate link in the causal path, same as B00's own above.
+          awk -F'deployed_travel=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 0.85) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'cradle_drop=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 1.40) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'forty_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'checkpoint_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 40.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'retracted_travel=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 <= 0.20) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'skin_forty_mantles=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 20) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'skin_forty_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'jib_capped_hook_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 < 12.0) ? 0 : 1}' \
             artifacts/native-falsifiers.log
 
       - name: Run Godot at Fold aspect through native machine authority and capture proof

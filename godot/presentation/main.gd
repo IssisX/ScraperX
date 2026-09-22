@@ -69,6 +69,53 @@ const INTAKE_SKIN_RUNG_RISE := 1.6
 const INTAKE_SKIN_RUNG_COUNT := 15
 const INTAKE_SKIN_RUNG_HALF_Z := 1.0
 
+# AS-002 Legal Forty (Ascent Atlas §6, band B00's 24-40 m leftover). Surface
+# heights read off simulation.cpp's own build-time derivation (handoff
+# tread-surface offset stacked with two more 8.000 m rises); geometry
+# literals read off the kLegalForty*/kIntake* constants there directly.
+const LEGAL_FORTY_HANDOFF_SURFACE_Y := 24.1872
+const LEGAL_FORTY_MID_LANDING_SURFACE_Y := 32.1872
+const LEGAL_FORTY_HALL_DECK_SURFACE_Y := 40.1872
+const LEGAL_FORTY_FLIGHT_HALF_LENGTH := 8.0
+const LEGAL_FORTY_FLIGHT_HALF_WIDTH := 0.90
+const LEGAL_FORTY_FLIGHT_RISE := 8.0
+const LEGAL_FORTY_HINGE_X := 7.856
+const LEGAL_FORTY_HINGE_Z := -112.5
+const LEGAL_FORTY_STOWED_THETA := 0.139626 # 8 deg
+const LEGAL_FORTY_SWING_BRACKET_LOCAL_X := -7.0 # local, relative to the body centre
+const LEGAL_FORTY_SWING_BRACKET_LOCAL_Y := -0.18
+const LEGAL_FORTY_SWING_SHEAVE_HEIGHT := 4.0
+const LEGAL_FORTY_MID_LANDING_X := 9.350
+const LEGAL_FORTY_MID_LANDING_HALF_X := 1.05
+const LEGAL_FORTY_MID_LANDING_Z := -114.80
+const LEGAL_FORTY_MID_LANDING_HALF_Z := 4.20
+const LEGAL_FORTY_UPPER_FLIGHT_X := 2.422
+const LEGAL_FORTY_UPPER_FLIGHT_Z := -117.0
+const LEGAL_FORTY_HALL_DECK_HALF_X := 10.0
+const LEGAL_FORTY_HALL_DECK_Z := -115.1
+const LEGAL_FORTY_HALL_DECK_HALF_Z := 7.40
+const LEGAL_FORTY_HALL_DECK_HALF_THICKNESS := 0.20
+const LEGAL_FORTY_WELL_X := -1.65
+const LEGAL_FORTY_WELL_HALF_X := 3.15
+const LEGAL_FORTY_WELL_Z := -117.0
+const LEGAL_FORTY_WELL_HALF_Z := 2.20
+const LEGAL_FORTY_SKIN_RUNG_FIRST := 16
+const LEGAL_FORTY_SKIN_RUNG_LAST := 20
+const LEGAL_FORTY_SKIN_RUNG_FIRST_Z := -110.0
+const LEGAL_FORTY_SKIN_RUNG_STEP_Z := 2.0
+const LEGAL_FORTY_SKIN_WALKWAY_MIN_X := -5.0
+const LEGAL_FORTY_SKIN_WALKWAY_MAX_X := 8.30
+const LEGAL_FORTY_SKIN_WALKWAY_Z := -118.0
+const LEGAL_FORTY_SKIN_WALKWAY_HALF_Z := 1.00
+const LEGAL_FORTY_CW_CRADLE_HALF_X := 1.50
+const LEGAL_FORTY_CW_CRADLE_HALF_Y := 1.20
+const LEGAL_FORTY_CW_CRADLE_HALF_Z := 1.20
+const LEGAL_FORTY_CW_CRADLE_BUILD_Y := 4.0
+const LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_X := 0.35
+const LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Y := 4.0
+const LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Z := 0.35
+const LEGAL_FORTY_CW_CRADLE_BEARING := 0.80
+
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -136,6 +183,12 @@ var _intake_overweight_mesh: MeshInstance3D
 var _intake_dog_pivot: Node3D
 var _intake_hoist_cable: Node3D
 var _intake_belt_mesh: MeshInstance3D
+var _legal_forty_swing_flight_pivot: Node3D
+var _legal_forty_cradle_mesh: MeshInstance3D
+var _legal_forty_rope_flight: Node3D
+var _legal_forty_rope_cradle: Node3D
+var _legal_forty_sheave_a := Vector3.ZERO
+var _legal_forty_sheave_b := Vector3.ZERO
 var _sump_grate_safe_material: Material
 var _sump_grate_hazard_material: Material
 var _stack_gears: Array[Node3D] = []
@@ -187,6 +240,7 @@ var _ci_proof_printed := false
 @onready var _needle_value: Label = $HUD/TopLeft/Needle
 @onready var _sump_value: Label = $HUD/TopLeft/Sump
 @onready var _intake_value: Label = $HUD/TopLeft/Intake
+@onready var _legal_forty_value: Label = $HUD/TopLeft/LegalForty
 @onready var _light_rig: Node3D = $LightRig
 
 
@@ -369,6 +423,10 @@ func _input(event: InputEvent) -> void:
 			_native.request_parachute()
 		elif key.keycode == KEY_V and _native != null:
 			_native.request_valve_toggle()
+		elif key.keycode == KEY_R and _native != null:
+			_native.request_intake_sling_release()
+		elif key.keycode == KEY_G and _native != null:
+			_native.request_intake_sling_attach()
 
 
 func _touch_hits(control: Control, at: Vector2) -> bool:
@@ -413,7 +471,8 @@ func _layout_hud() -> void:
 	# children into room for eight. They overlapped into an unreadable stack.
 	var readouts := [_status, _position_value, _velocity_value, _support_value,
 			_traversal_value, _machine_value, _plant_value, _tick_value,
-			_fall_value, _jib_value, _needle_value, _sump_value, _intake_value]
+			_fall_value, _jib_value, _needle_value, _sump_value, _intake_value,
+			_legal_forty_value]
 	for label in readouts:
 		if label == null:
 			continue
@@ -538,6 +597,18 @@ func _render_snapshot() -> void:
 		float(_native.get_intake_dog_angle_radians()),
 		"OPEN" if throat_clear else ("pinned" if pack_pins else "shut")]
 	_intake_value.modulate = Color("9ad6c4") if throat_clear else Color("d99a4a")
+
+	# AS-002 Legal Forty. travel is the same raw 0 (stowed) .. ~0.9076
+	# (deployed) radians the native falsifier itself asserts against; R/G
+	# fire the same tolerance-gated commands the pendant test drives.
+	var legal_forty_slung := bool(_native.is_legal_forty_pack_slung())
+	var legal_forty_travel := float(_native.get_legal_forty_swing_travel_radians())
+	_legal_forty_value.text = "LEGAL 40  %s  FLIGHT %5.2f rad  SLUNG %s  CRADLE %5.2f m" % [
+		"AT PENDANT" if intake_at_station else "away",
+		legal_forty_travel,
+		"yes" if legal_forty_slung else "NO",
+		float(_native.get_legal_forty_cradle_position().y)]
+	_legal_forty_value.modulate = Color("9ad6c4") if legal_forty_travel >= 0.85 else Color("d99a4a")
 
 	if traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
@@ -664,6 +735,31 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 		var belt_phase: float = sin(0.40 * float(_native.get_simulation_time_seconds()))
 		_intake_belt_mesh.position = Vector3(INTAKE_BELT_X, INTAKE_BELT_TOP_Y - 0.18,
 			-96.0 + 9.0 * belt_phase)
+
+	# AS-002 Legal Forty. The pivot sits at the hinge itself (built once,
+	# above); only its own rotation is native-driven, exactly like the dog
+	# plate and the yard jib boom. travel runs 0 (stowed) .. ~0.9076
+	# (deployed); simulation.cpp's own build comment: the body is built at
+	# stowed_phi = pi/2 - theta_stowed, and departing the stowed limit is a
+	# NEGATIVE rotation about +Z, so the live angle is stowed_phi - travel.
+	if _legal_forty_swing_flight_pivot != null:
+		var legal_forty_travel := float(_native.get_legal_forty_swing_travel_radians())
+		var stowed_phi := PI * 0.5 - LEGAL_FORTY_STOWED_THETA
+		_legal_forty_swing_flight_pivot.rotation = Vector3(0.0, 0.0, stowed_phi - legal_forty_travel)
+	if _legal_forty_cradle_mesh != null:
+		_legal_forty_cradle_mesh.position = _native.get_legal_forty_cradle_position() + Vector3(
+			0.0, -LEGAL_FORTY_CW_CRADLE_HALF_Y, 0.0)
+	if _legal_forty_rope_flight != null and _legal_forty_swing_flight_pivot != null:
+		var bracket_local := Vector3(
+			LEGAL_FORTY_SWING_BRACKET_LOCAL_X - LEGAL_FORTY_FLIGHT_HALF_LENGTH,
+			LEGAL_FORTY_SWING_BRACKET_LOCAL_Y, 0.0)
+		var bracket_world: Vector3 = (
+			_legal_forty_swing_flight_pivot.global_transform * bracket_local)
+		_span_cable(_legal_forty_rope_flight, bracket_world, _legal_forty_sheave_a)
+	if _legal_forty_rope_cradle != null:
+		var cradle_top: Vector3 = _native.get_legal_forty_cradle_position() + Vector3(
+			0.0, LEGAL_FORTY_CW_CRADLE_HALF_Y, 0.0)
+		_span_cable(_legal_forty_rope_cradle, cradle_top, _legal_forty_sheave_b)
 
 	if _rope_mesh != null:
 		var from: Vector3 = _native.get_tipper_position() + Vector3(3.0, -0.2, 0.0).rotated(
@@ -800,6 +896,8 @@ func _build_world() -> void:
 	_build_stack_accents(verdigris, machine_blue, lichen)
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
 	_build_intake_rise(concrete, mill_scale, oxidised, rust_deep, rust_bright,
+		galvanised, faded_yellow, hazard, timber)
+	_build_legal_forty(concrete, mill_scale, oxidised, rust_deep, rust_bright,
 		galvanised, faded_yellow, hazard, timber)
 	_build_yard(concrete, mill_scale, faded_yellow, tar)
 	_build_legacy_fixtures(mill_scale, galvanised, hazard, faded_yellow)
@@ -991,6 +1089,155 @@ func _build_intake_rise(concrete: Material, mill_scale: Material, oxidised: Mate
 				Vector3(INTAKE_HANDOFF_CENTER_X - 1.0, top_y, rung_z),
 				Vector3(INTAKE_HANDOFF_CENTER_X - 2.6, top_y - 3.0, rung_z + 1.2),
 				0.12, oxidised, bay)
+
+
+# AS-002 Legal Forty: the counterweighted-bascule flight and cradle that
+# open band B00's own 24-40 m leftover, plus the static run above it --
+# mid-landing, upper flight, MOD-HALL-DECK and its well, and the SKIN
+# ladder's own continuation. Geometry mirrors simulation.cpp's own
+# build_legal_forty one-for-one; this function only draws it.
+func _build_legal_forty(concrete: Material, mill_scale: Material, oxidised: Material,
+		rust_deep: Material, rust_bright: Material, galvanised: Material,
+		faded: Material, hazard: Material, timber: Material) -> void:
+	var forty := Node3D.new()
+	forty.name = "LegalForty"
+	$TowerPresentation.add_child(forty)
+
+	# ---- MOD-STAIR-A-SWING: the dynamic bascule flight, its rotation driven
+	# by _mirror_machine every frame -- the pivot sits at the hinge itself,
+	# exactly like IntakeDog and YardJibBoom above, so only its own rotation
+	# needs updating; the slab (and everything hung on it) follows for free.
+	_legal_forty_swing_flight_pivot = Node3D.new()
+	_legal_forty_swing_flight_pivot.name = "SwingFlightPivot"
+	_legal_forty_swing_flight_pivot.position = Vector3(
+		LEGAL_FORTY_HINGE_X, LEGAL_FORTY_MID_LANDING_SURFACE_Y, LEGAL_FORTY_HINGE_Z)
+	forty.add_child(_legal_forty_swing_flight_pivot)
+	var flight_length := LEGAL_FORTY_FLIGHT_HALF_LENGTH * 2.0
+	var flight_slab := _add_box_to("SwingFlightSlab",
+		Vector3(flight_length, 0.36, LEGAL_FORTY_FLIGHT_HALF_WIDTH * 2.0),
+		Vector3(-LEGAL_FORTY_FLIGHT_HALF_LENGTH, 0.0, 0.0), mill_scale,
+		_legal_forty_swing_flight_pivot)
+	for tread in range(6):
+		var along := -flight_length + 1.4 + float(tread) * 2.4
+		_add_box_to("SwingTread%d" % tread,
+			Vector3(1.0, 0.1, LEGAL_FORTY_FLIGHT_HALF_WIDTH * 2.0 - 0.2),
+			Vector3(along, 0.22, 0.0), galvanised, flight_slab)
+	for rail in [1.0, -1.0]:
+		_add_box_to("SwingRail%d" % int(rail), Vector3(flight_length, 0.08, 0.08),
+			Vector3(0.0, 1.05, rail * (LEGAL_FORTY_FLIGHT_HALF_WIDTH - 0.1)), faded, flight_slab)
+
+	# ---- MOD-CW-CRADLE: dynamic car on a free vertical slider, plus its
+	# guide mast -- cradle_x/z read off the same yard-jib bearing formula
+	# simulation.cpp uses (same boom, same mast, MOD-YARD-JIB's own).
+	# kIntakeJibMastX is kIntakeBayCenterX (0.0) natively -- the yard jib's
+	# own mast sits on the bay's own centreline.
+	var cradle_x := 0.0 + INTAKE_BOOM_LENGTH * sin(LEGAL_FORTY_CW_CRADLE_BEARING)
+	var cradle_z := INTAKE_JIB_MAST_Z - INTAKE_BOOM_LENGTH * cos(LEGAL_FORTY_CW_CRADLE_BEARING)
+	var guide_mast_z := cradle_z + 2.0
+	_add_box_to("CradleGuideMast",
+		Vector3(LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_X * 2.0, LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Y * 2.0,
+			LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Z * 2.0),
+		Vector3(cradle_x, LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Y, guide_mast_z), oxidised, forty)
+
+	# Three-sided open frame -- floor and two side rails, open in +-Z --
+	# matching the native body's own design intent (its collision shape is a
+	# single solid box; this is the visual it stands in for). _mirror_machine
+	# drives the whole group's position from the live cradle body every
+	# frame, so the rails only need to be positioned once, as children.
+	_legal_forty_cradle_mesh = _add_box_to("CwCradleFloor",
+		Vector3(LEGAL_FORTY_CW_CRADLE_HALF_X * 2.0, 0.2, LEGAL_FORTY_CW_CRADLE_HALF_Z * 2.0),
+		Vector3(cradle_x, LEGAL_FORTY_CW_CRADLE_BUILD_Y - LEGAL_FORTY_CW_CRADLE_HALF_Y, cradle_z),
+		rust_deep, forty)
+	for rail_x in [LEGAL_FORTY_CW_CRADLE_HALF_X - 0.1, -(LEGAL_FORTY_CW_CRADLE_HALF_X - 0.1)]:
+		_add_box_to("CwCradleRail",
+			Vector3(0.2, LEGAL_FORTY_CW_CRADLE_HALF_Y * 2.0, LEGAL_FORTY_CW_CRADLE_HALF_Z * 2.0),
+			Vector3(rail_x, LEGAL_FORTY_CW_CRADLE_HALF_Y, 0.0), rust_deep, _legal_forty_cradle_mesh)
+
+	# ---- The rope: two segments over two fixed sheaves, matching the
+	# native pulley's own two runs (exactly like the treadle's own cable
+	# above) -- _mirror_machine spans both every frame from the live flight
+	# bracket and cradle top.
+	_legal_forty_sheave_a = Vector3(LEGAL_FORTY_HINGE_X,
+		LEGAL_FORTY_MID_LANDING_SURFACE_Y + LEGAL_FORTY_SWING_SHEAVE_HEIGHT, LEGAL_FORTY_HINGE_Z)
+	_legal_forty_sheave_b = Vector3(cradle_x,
+		LEGAL_FORTY_MID_LANDING_SURFACE_Y + LEGAL_FORTY_SWING_SHEAVE_HEIGHT, cradle_z)
+	_add_box_to("SheaveA", Vector3(0.3, 0.3, 0.3), _legal_forty_sheave_a, oxidised, forty)
+	_add_box_to("SheaveB", Vector3(0.3, 0.3, 0.3), _legal_forty_sheave_b, oxidised, forty)
+	_legal_forty_rope_flight = _add_box_to("RopeFlightSide", Vector3(0.05, 0.05, 1.0),
+		Vector3.ZERO, mill_scale, forty)
+	_legal_forty_rope_cradle = _add_box_to("RopeCradleSide", Vector3(0.05, 0.05, 1.0),
+		Vector3.ZERO, mill_scale, forty)
+
+	# ---- MOD-STAIR-A upper flight (static) + mid-landing --------------------
+	var upper_flight_pitch := asin(LEGAL_FORTY_FLIGHT_RISE / flight_length)
+	_add_box_to("UpperFlightSlab",
+		Vector3(flight_length, 0.36, LEGAL_FORTY_FLIGHT_HALF_WIDTH * 2.0),
+		Vector3(LEGAL_FORTY_UPPER_FLIGHT_X,
+			LEGAL_FORTY_MID_LANDING_SURFACE_Y + LEGAL_FORTY_FLIGHT_RISE * 0.5,
+			LEGAL_FORTY_UPPER_FLIGHT_Z),
+		mill_scale, forty, -upper_flight_pitch)
+	_add_box_to("MidLanding",
+		Vector3(LEGAL_FORTY_MID_LANDING_HALF_X * 2.0, 0.36, LEGAL_FORTY_MID_LANDING_HALF_Z * 2.0),
+		Vector3(LEGAL_FORTY_MID_LANDING_X, LEGAL_FORTY_MID_LANDING_SURFACE_Y - 0.18,
+			LEGAL_FORTY_MID_LANDING_Z),
+		galvanised, forty)
+	_add_sign_text("+32", Vector3(LEGAL_FORTY_MID_LANDING_X, LEGAL_FORTY_MID_LANDING_SURFACE_Y + 1.6,
+		LEGAL_FORTY_MID_LANDING_Z + LEGAL_FORTY_MID_LANDING_HALF_Z - 0.2),
+		0.0, 0.9, Color("c8a04a"), forty)
+
+	# ---- MOD-HALL-DECK, four strips tiling the deck minus its well ----------
+	var well_min_x := LEGAL_FORTY_WELL_X - LEGAL_FORTY_WELL_HALF_X
+	var well_max_x := LEGAL_FORTY_WELL_X + LEGAL_FORTY_WELL_HALF_X
+	var well_min_z := LEGAL_FORTY_WELL_Z - LEGAL_FORTY_WELL_HALF_Z
+	var well_max_z := LEGAL_FORTY_WELL_Z + LEGAL_FORTY_WELL_HALF_Z
+	var deck_min_x := -LEGAL_FORTY_HALL_DECK_HALF_X
+	var deck_max_x := LEGAL_FORTY_HALL_DECK_HALF_X
+	var deck_min_z := LEGAL_FORTY_HALL_DECK_Z - LEGAL_FORTY_HALL_DECK_HALF_Z
+	var deck_max_z := LEGAL_FORTY_HALL_DECK_Z + LEGAL_FORTY_HALL_DECK_HALF_Z
+	var deck_center_y := LEGAL_FORTY_HALL_DECK_SURFACE_Y - LEGAL_FORTY_HALL_DECK_HALF_THICKNESS
+	var south_cz := (well_max_z + deck_max_z) * 0.5
+	var south_hz := (deck_max_z - well_max_z) * 0.5
+	_add_box_to("HallDeckSouth", Vector3(LEGAL_FORTY_HALL_DECK_HALF_X * 2.0,
+		LEGAL_FORTY_HALL_DECK_HALF_THICKNESS * 2.0, south_hz * 2.0),
+		Vector3(0.0, deck_center_y, south_cz), timber, forty)
+	var north_cz := (deck_min_z + well_min_z) * 0.5
+	var north_hz := (well_min_z - deck_min_z) * 0.5
+	_add_box_to("HallDeckNorth", Vector3(LEGAL_FORTY_HALL_DECK_HALF_X * 2.0,
+		LEGAL_FORTY_HALL_DECK_HALF_THICKNESS * 2.0, north_hz * 2.0),
+		Vector3(0.0, deck_center_y, north_cz), timber, forty)
+	var west_cx := (deck_min_x + well_min_x) * 0.5
+	var west_hx := (well_min_x - deck_min_x) * 0.5
+	_add_box_to("HallDeckWest", Vector3(west_hx * 2.0, LEGAL_FORTY_HALL_DECK_HALF_THICKNESS * 2.0,
+		LEGAL_FORTY_WELL_HALF_Z * 2.0),
+		Vector3(west_cx, deck_center_y, LEGAL_FORTY_WELL_Z), timber, forty)
+	var east_cx := (well_max_x + deck_max_x) * 0.5
+	var east_hx := (deck_max_x - well_max_x) * 0.5
+	_add_box_to("HallDeckEast", Vector3(east_hx * 2.0, LEGAL_FORTY_HALL_DECK_HALF_THICKNESS * 2.0,
+		LEGAL_FORTY_WELL_HALF_Z * 2.0),
+		Vector3(east_cx, deck_center_y, LEGAL_FORTY_WELL_Z), timber, forty)
+	_add_sign_text("+40", Vector3(0.0, LEGAL_FORTY_HALL_DECK_SURFACE_Y + 1.6, deck_max_z - 0.2),
+		0.0, 0.9, Color("c8a04a"), forty)
+
+	# ---- MOD-SKIN-LADDER-S continuation, rungs 16-20, and its walkway -------
+	for rung in range(LEGAL_FORTY_SKIN_RUNG_FIRST, LEGAL_FORTY_SKIN_RUNG_LAST + 1):
+		var top_y := float(rung) * INTAKE_SKIN_RUNG_RISE
+		var rung_z := LEGAL_FORTY_SKIN_RUNG_FIRST_Z - LEGAL_FORTY_SKIN_RUNG_STEP_Z * float(
+			rung - LEGAL_FORTY_SKIN_RUNG_FIRST)
+		_add_box_to("SkinRung%d" % rung, Vector3(2.0, 1.0, INTAKE_SKIN_RUNG_HALF_Z * 2.0),
+			Vector3(INTAKE_HANDOFF_CENTER_X, top_y - 0.5, rung_z), rust_deep, forty)
+		_add_box_to("SkinRungPlate%d" % rung, Vector3(2.1, 0.08, 1.9),
+			Vector3(INTAKE_HANDOFF_CENTER_X, top_y + 0.02, rung_z), galvanised, forty)
+		if rung % 3 == 0:
+			_add_strut("SkinStay%d" % rung,
+				Vector3(INTAKE_HANDOFF_CENTER_X - 1.0, top_y, rung_z),
+				Vector3(INTAKE_HANDOFF_CENTER_X - 2.6, top_y - 3.0, rung_z + 1.2),
+				0.12, oxidised, forty)
+	var walk_cx := (LEGAL_FORTY_SKIN_WALKWAY_MIN_X + LEGAL_FORTY_SKIN_WALKWAY_MAX_X) * 0.5
+	var walk_hx := (LEGAL_FORTY_SKIN_WALKWAY_MAX_X - LEGAL_FORTY_SKIN_WALKWAY_MIN_X) * 0.5
+	_add_box_to("SkinWalkway", Vector3(walk_hx * 2.0, 0.36, LEGAL_FORTY_SKIN_WALKWAY_HALF_Z * 2.0),
+		Vector3(walk_cx, LEGAL_FORTY_MID_LANDING_SURFACE_Y - 0.18, LEGAL_FORTY_SKIN_WALKWAY_Z),
+		mill_scale, forty)
+
 
 # The stack: the tower's climbable lower section. Deck rings, columns and
 # stair flights mirror real native collision one-for-one; bracing, rails,

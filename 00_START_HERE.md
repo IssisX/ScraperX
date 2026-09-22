@@ -28,9 +28,9 @@ The one block to read before doing anything. Everything below is detail behind i
 |---|---|
 | **Write branch** | `ScraperX-Claude` — the only one |
 | **Kernel** | `WO-000`–`WO-013`, all fourteen in source. **Closed set** |
-| **Ascent frontier** | `AS-001` implemented; `AS-002`–`AS-004` planned; `AS-005`–`AS-007` imported, not re-derived; `AS-008`–`AS-015` unwritten |
-| **Integrated evidence** | **GREEN** at `bc1e084` — run [`35727055407`](https://github.com/IssisX/ScraperX/actions/runs/35727055407), all steps, 10/10 native falsifiers |
-| **Next code job** | **`AS-002`** — first legal stand at +40 m. Gate satisfied |
+| **Ascent frontier** | `AS-001`–`AS-002` implemented; `AS-003`–`AS-004` planned; `AS-005`–`AS-007` imported, not re-derived; `AS-008`–`AS-015` unwritten |
+| **Integrated evidence** | **GREEN** at `bc1e084` — run [`35727055407`](https://github.com/IssisX/ScraperX/actions/runs/35727055407), all steps, 10/10 native falsifiers. `AS-002`'s own 11th falsifier group is green locally (`03_EXECUTION/ASCENT/AS-002_LEGAL_FORTY.md` Result record) but **not yet CI-integrated** — no run has executed this branch's head |
+| **Next code job** | **`AS-003`** — `CAP-HOOK5` acquire. Gate satisfied (`AS-002` implemented, its exit revalidated in source) |
 | **Next authoring job** | re-author **`AS-005`** against this branch |
 | **Authoring contract** | `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` |
 | **Unproven** | Fold-device install, on-device execution, touch ergonomics, sustained frame rate. **No device access exists** |
@@ -158,8 +158,8 @@ records, deliberately not rewritten. Retconning a proof record is worse than an 
 | Ticket | Slice | Band | Lifecycle | Provenance | Evidence |
 |---|---|---|---|---|---|
 | `AS-001` | apron → +24 m, intake rise | B00 | **IMPLEMENTED** | re-derived here | falsifier, green in run `35727055407` |
-| `AS-002` | first legal stand at +40 m | B00 | PLANNED | re-derived here | none — **next code job** |
-| `AS-003` | `CAP-HOOK5` acquire | B00 | PLANNED | re-derived here | none |
+| `AS-002` | first legal stand at +40 m | B00 | **IMPLEMENTED** | re-derived here | falsifier, green locally — not yet CI-integrated |
+| `AS-003` | `CAP-HOOK5` acquire | B00 | PLANNED | re-derived here | none — **next code job** |
 | `AS-004` | seat needles at 96 m | B01 | PLANNED | re-derived here | none |
 | `AS-005` | cage land at 120 m, or east climb | B01 exit | PLANNED | ⚠ imported | none |
 | `AS-006` | counterweight ride / pin dump | B02 | PLANNED | ⚠ imported | none |
@@ -180,9 +180,9 @@ records, deliberately not rewritten. Retconning a proof record is worse than an 
 
 ## 8. What is next
 
-> **Next code job: `AS-002` — first legal stand at +40 m.**
-> `03_EXECUTION/ASCENT/AS-002_LEGAL_FORTY.md`. Lifecycle `PLANNED`, provenance re-derived here,
-> implementation gate satisfied.
+> **Next code job: `AS-003` — `CAP-HOOK5` acquire.**
+> `03_EXECUTION/ASCENT/AS-003_HOOK5_RACK.md`. Lifecycle `PLANNED`, provenance re-derived here,
+> implementation gate satisfied (`AS-002` implemented, its exit revalidated in source).
 >
 > **Next authoring job: re-author `AS-005`** against this branch, per §7.
 

@@ -73,6 +73,11 @@ enum class InitialSpawn : std::uint8_t {
     // is a legal bypass of the whole freight sequence (Atlas B00 coupling 3),
     // so it is proven from its own spawn with the pack untouched.
     IntakeSkinFoot = 20,
+    // AS-002 falsifier spawn: standing on the +24.1872 m handoff deck itself,
+    // facing MOD-STAIR-A-SWING's stowed footprint. Isolates "the unloaded
+    // flight is not a route" (walk at it immediately) from the separately
+    // proven jib/cradle mechanics, matching the throat/sump station pattern.
+    IntakeHandoffDeck = 21,
 };
 
 enum class TraversalState : std::uint8_t {
@@ -201,6 +206,16 @@ struct Snapshot final {
     double intake_dog_angle_radians = 0.0;
     bool intake_pack_pins_dog = false;
     bool intake_throat_clear = false;
+
+    // --- AS-002 Legal Forty (Ascent Atlas §6 band B00 leftover, §7 chain K0
+    // PLAY). MOD-STAIR-A-SWING is a passive, gravity-restored hinge; only
+    // MOD-CW-CRADLE's rope tension -- real solver tension, not a flag -- can
+    // swing it to its deployed stop. legal_forty_pack_slung is the hook-pack
+    // PointConstraint's actual presence, never a derived guess.
+    bool legal_forty_pack_slung = true;
+    double legal_forty_swing_travel_radians = 0.0;   // 0 stowed .. ~0.9076 deployed
+    Vector3 legal_forty_swing_flight_position{};
+    Vector3 legal_forty_cradle_position{};
 };
 
 struct AdvanceResult final {
@@ -279,6 +294,24 @@ public:
     static constexpr std::uint64_t kIntakeHandoffEntityId = 45;
     static constexpr std::uint64_t kIntakeSkinEntityId = 46;
 
+    // AS-002 campaign entities (Ascent Atlas §6, band B00's 24-40 m leftover).
+    // MOD-STAIR-A's static upper flight, mid-landing and the SKIN continuation
+    // reuse kIntakeStairEntityId / kIntakeSkinEntityId above -- same modules,
+    // continued -- since only the dynamic swing flight and the cradle need
+    // their own identity.
+    static constexpr std::uint64_t kIntakeSwingFlightEntityId = 47;
+    static constexpr std::uint64_t kIntakeCwCradleEntityId = 48;
+    static constexpr std::uint64_t kIntakeHallDeckEntityId = 49;
+    // The swing hinge's own static anchor body (add_hinge's first body) --
+    // NOT grouped under kIntakeStairEntityId like the rest of the static
+    // structure above, because it alone needs to be excluded from contact
+    // with kIntakeSwingFlightEntityId (simulation.cpp's OnContactValidate):
+    // the flight's own cross-section is coincident with this anchor at
+    // every sweep angle by construction (it sits AT the hinge pivot), so
+    // ordinary rigid-body contact between them is never meaningful -- the
+    // hinge constraint alone is what should relate their motion.
+    static constexpr std::uint64_t kIntakeSwingAnchorEntityId = 50;
+
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
     static constexpr double kTowerHeightMeters = 1600.0;
@@ -335,6 +368,15 @@ public:
     [[nodiscard]] bool set_intake_slew_input(double value) noexcept;
     [[nodiscard]] bool set_intake_hoist_input(double value) noexcept;
 
+    // AS-002 sling commands. One-shot, like request_valve_toggle -- not a
+    // held axis -- gated identically on the shared B00 pendant station, and
+    // further gated on the pack/hook actually being in physical tolerance
+    // (see update_legal_forty): a command outside tolerance is accepted but
+    // has no effect, exactly like every other pendant command away from its
+    // station.
+    [[nodiscard]] bool request_intake_sling_release() noexcept;
+    [[nodiscard]] bool request_intake_sling_attach() noexcept;
+
     // Disables the boiler feed so the plant becomes a strictly finite reservoir.
     // Used to prove the machine cannot manufacture work.
     void set_boiler_feed_enabled(bool enabled) noexcept;
@@ -363,6 +405,8 @@ private:
     double intake_slew_input_ = 0.0;
     double intake_hoist_input_ = 0.0;
     bool valve_toggle_requested_ = false;
+    bool intake_sling_release_requested_ = false;
+    bool intake_sling_attach_requested_ = false;
     Snapshot snapshot_{};
 };
 
