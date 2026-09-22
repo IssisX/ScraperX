@@ -59,17 +59,17 @@ enum class InitialSpawn : std::uint8_t {
     // ordinary support" (close the valve first, then walk) -- matching the
     // pattern established for the needle station.
     KernelSumpStation = 17,
-    // ASC-01 falsifier spawn: on the MOD-INTAKE-BELT catwalk at the
+    // AS-001 falsifier spawn: on the MOD-INTAKE-BELT catwalk at the
     // MOD-YARD-JIB pendant, where CAP-PENDANT actually lives (Atlas B00). The
     // whole freight sequence is driven from here without a climb.
     IntakePendant = 18,
-    // ASC-01 falsifier spawn: on the apron directly outside the MOD-DOG-A
+    // AS-001 falsifier spawn: on the apron directly outside the MOD-DOG-A
     // throat, facing the bay. One spawn serves both "MOD-STAIR-A is physically
     // impassable while the pack pins the dog" (walk forward immediately) and
     // "it is passable once the dog has travelled" -- matching the needle and
     // sump station pattern.
     IntakeThroat = 19,
-    // ASC-01 falsifier spawn: at the foot of MOD-SKIN-LADDER-S. The SKIN braid
+    // AS-001 falsifier spawn: at the foot of MOD-SKIN-LADDER-S. The SKIN braid
     // is a legal bypass of the whole freight sequence (Atlas B00 coupling 3),
     // so it is proven from its own spawn with the pack untouched.
     IntakeSkinFoot = 20,
@@ -187,7 +187,7 @@ struct Snapshot final {
     double sump_volume_kg = 0.0;
     bool grate_safe = false;
 
-    // --- ASC-01 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
+    // --- AS-001 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
     // MOD-YARD-JIB lifts the 4 t pack off MOD-DOG-A; the dog is a real hinged
     // body under a permanent, finite opening torque, so it travels the instant
     // the pack stops physically blocking its swing. Nothing here is a flag:
@@ -262,7 +262,7 @@ public:
     // body invented just to catch it.
     static constexpr std::uint64_t kSumpGrateEntityId = 34;
 
-    // ASC-01 campaign entities (Ascent Atlas §6, band B00 "Apron and Intake").
+    // AS-001 campaign entities (Ascent Atlas §6, band B00 "Apron and Intake").
     // These are MOD-* campaign modules in the real tower yard, not KX-*
     // kernel fixtures: the kernel at x ~ 200 stays untouched regression
     // substrate and is never retitled into campaign geometry.
@@ -328,7 +328,7 @@ public:
     // the player is at the sump station.
     [[nodiscard]] bool request_valve_toggle() noexcept;
 
-    // ASC-01 MOD-YARD-JIB pendant (CAP-PENDANT). Same continuous, persistent,
+    // AS-001 MOD-YARD-JIB pendant (CAP-PENDANT). Same continuous, persistent,
     // signed-axis contract as the kernel jib, gated on the B00 pendant station
     // rather than the kernel one. The dog has no command of its own: it is
     // always under opening torque and is held only by the pack's mass.

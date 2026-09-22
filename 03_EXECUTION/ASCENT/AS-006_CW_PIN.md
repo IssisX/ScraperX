@@ -1,11 +1,14 @@
-# SCRAPERX — ASC-06 CW PIN (K2)
+# SCRAPERX — AS-006 CW PIN (K2)
 
-**Work Order:** `ASC-06`  
-**Status:** `PORTED` — `ScraperX-Grok` text, not re-derived. **Re-author before coding**
-**Depends on:** ASC-01–ASC-05; protocol ASC-06
+**Ascent Slice:** `AS-006`
+**Lifecycle:** `PLANNED` — contract exists, no corresponding source
+**Provenance:** ⚠ **imported from `ScraperX-Grok`, NOT re-derived.** Reference provenance only
+**Implementation gate:** re-author against this branch first, then `AS-005` implemented
+**Evidence:** none. A plan is never implementation evidence.
+**Depends on:** `AS-001`–`AS-005`; `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5 row `AS-006`
 
 > **Provenance.** Adopted from `ScraperX-Grok`, where this slice was authored as `WO-014_CW_PIN`.
-> Ticket numbers remapped per `02_ASCENT_SLICE_PROTOCOL.md` §5.1. Geometry, ratings and
+> Ticket numbers remapped per `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5.1. Geometry, ratings and
 > falsifiers carry over as **DESIGN TARGET**: they were never proven in source on that branch
 > (it has not compiled since 2026-09-20). Positions are re-sited against this branch's tower
 > at source `(0, —, -150)`.
@@ -13,7 +16,7 @@
 > **`PORTED`, not authored.** Everything below still quotes `ScraperX-Grok` source
 > constants — geometry, entity ids and persist versions that do not exist on
 > `ScraperX-Claude`. Treat it as design intent, not as a job ticket. Re-derive it
-> against real exit state first, as `ASC-02`, `ASC-03` and `ASC-04` were.
+> against real exit state first, as `AS-002`, `AS-003` and `AS-004` were.
 
 ## Objective
 
@@ -25,7 +28,7 @@ This is not wet isolation. This is not `CAP-BLIND`. This is not TP-340.
 
 ## Existing truth
 
-After `ASC-05` is in source:
+After `AS-005` is in source:
 
 - TP-120 ring around well `(-1.76, 120.00, 25.30)`
 - 120 m SKIN ring with **west stub** `(-17.00, 120.00, 25.30)`
@@ -37,7 +40,7 @@ After `ASC-05` is in source:
 
 Atlas: band B02 has **no** Transfer Plate. 220 is a well-head landing inside `MOD-WELL-LEDGES`, not a new TP id.
 
-Until ASC-05 is coded, this file still inherits ASC-04 geometry plus the DESIGN TARGET exit of ASC-05. Do not implement this file before ASC-05 is in source.
+Until AS-005 is coded, this file still inherits AS-004 geometry plus the DESIGN TARGET exit of AS-005. Do not implement this file before AS-005 is in source.
 
 ## Authority
 
@@ -45,8 +48,8 @@ Until ASC-05 is coded, this file still inherits ASC-04 geometry plus the DESIGN 
 - GDD §§7.2–7.4, 11, 15–17, 23–24
 - Atlas §§3, 5 (band B02 has no TP), 6 band B02, 7 K2, 8.1, 8.3, 12, 13
 - TDD §§6, 8–11, 14
-- `ASC-05_CAGE_OR_SKIN.md` §8.12
-- protocol ASC-06
+- `AS-005_CAGE_OR_SKIN.md` §8.12
+- protocol AS-006
 
 ## Owner
 
@@ -81,7 +84,7 @@ SKIN skip:
     ACT[from 120 west stub, climb SKIN-W]
       → STATE[support = SKIN-W rungs]
       → WORLD[220 west head reachable; stack pose unchanged]
-      → PLAY[ASC-07 entry without K2]
+      → PLAY[AS-007 entry without K2]
 
 Stitch from previous:
 
@@ -91,7 +94,7 @@ Stitch from previous:
 
 Stitch to next:
 
-    220 well-head ledge and 220 SKIN-W head are ASC-07’s floor
+    220 well-head ledge and 220 SKIN-W head are AS-007’s floor
 
 ## Forbidden shortcuts
 
@@ -108,11 +111,11 @@ Native + falsifiers; Godot twins; persist v5.
 
 ## Out of scope
 
-`ASC-07_WET_ISOLATION`. `CAP-BLIND`. `CAP-DOGKEY` (no new SHAFT cage landing this band). Fold 45 FPS. Art/VO. Reopening TP-120.
+`AS-007_WET_ISOLATION`. `CAP-BLIND`. `CAP-DOGKEY` (no new SHAFT cage landing this band). Fold 45 FPS. Art/VO. Reopening TP-120.
 
 ## Proof path
 
-§8.11 tests; screenshot stack in the same well as the cage; kernel + ASC-01–013 tests green. Result pending.
+§8.11 tests; screenshot stack in the same well as the cage; kernel + AS-001–013 tests green. Result pending.
 
 ## Completion
 
@@ -148,7 +151,7 @@ pending.
 
 ### 8.2 Entry state
 
-- player **can** be on TP-120 or 120 west stub (or still in ASC-04/013)
+- player **can** be on TP-120 or 120 west stub (or still in AS-004/013)
 - well xz `(-1.76, 25.30)`
 - cage may sit parked north of the well after a land; treat as parked kinematic furniture
 - west stub standable
@@ -157,7 +160,7 @@ pending.
 
 Well frozen. Stack must fit: plan 3.10 × 3.10.
 
-**Authoritative occupancy:** stack xz = `(-1.76, 25.30)`. After a legal land, ASC-05 parks the cage north. If the player arrived by SKIN, the well is already empty at 120.
+**Authoritative occupancy:** stack xz = `(-1.76, 25.30)`. After a legal land, AS-005 parks the cage north. If the player arrived by SKIN, the well is already empty at 120.
 
 #### MOD-CW-STACK (DESIGN TARGET)
 
@@ -204,7 +207,7 @@ This is the CW drum. It is not the cage winch in the pit at y = 4.
     y = 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 220
     each: x = -4.90 (west lip), z = 25.30, half (0.80, 0.12, 1.20)
     climbable, player + 40 kg
-    220 ledge is the **well-head**: extend half x to 4.00 so it meets ASC-07’s north walk
+    220 ledge is the **well-head**: extend half x to 4.00 so it meets AS-007’s north walk
 
 #### SKIN-W 120–220
 
@@ -292,7 +295,7 @@ Commit: dwell on 220 well-head or SKIN-W y ≥ 220.00. Also inherit TP-120 commi
 5. `wo014_skin_w_skips_pin` — pin still in; player y ≥ 220 on SKIN-W; stack_top still 120.2 ± 0.5.
 6. `wo014_flag_is_not_a_block` — commit without pull; catch has no standable dumped mass.
 7. `wo014_jump_inherits` — jump from moving stack; player vx/vz matches stack before air.
-8. `wo014_prior_still_pass` — ASC-01–013 + kernel PASS.
+8. `wo014_prior_still_pass` — AS-001–013 + kernel PASS.
 
 ### 8.12 Exit state
 
@@ -306,4 +309,4 @@ Commit: dwell on 220 well-head or SKIN-W y ≥ 220.00. Also inherit TP-120 commi
 ---
 
 **Stop. Do not begin the next file inside this one.**  
-Next file: `04_ASCENT/ASC-07_WET_ISOLATION.md`
+Next file: `03_EXECUTION/ASCENT/AS-007_WET_ISOLATION.md`

@@ -1,4 +1,4 @@
-name: ScraperX — full proof path (kernel WO-000..013 + ascent ASC-01)
+name: ScraperX — full proof path (kernel WO-000..013 + ascent AS-001)
 
 on:
   push:
@@ -105,7 +105,7 @@ jobs:
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
-          # ASC-01 B00: the intake rise closed, and it closed for physical
+          # AS-001 B00: the intake rise closed, and it closed for physical
           # reasons. Each of these is a separate link in the causal path.
           grep -F "pinned_impassable=1" artifacts/native-falsifiers.log
           grep -F "forced_impassable=1" artifacts/native-falsifiers.log

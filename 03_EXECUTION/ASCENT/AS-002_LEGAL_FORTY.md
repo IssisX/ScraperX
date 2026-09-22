@@ -1,16 +1,19 @@
-# SCRAPERX — ASC-02 LEGAL FORTY (+24.19 m TO FIRST STAND AT +40.19 m)
+# SCRAPERX — AS-002 LEGAL FORTY (+24.19 m TO FIRST STAND AT +40.19 m)
 
-**Work Order:** `ASC-02`
-**Status:** `AUTHORED` — written against this branch's real `ASC-01` exit state. Not coded. **Next code job.**
-**Depends on:** `ASC-01_INTAKE_RISE.md` in source and green; kernel falsifiers
+**Ascent Slice:** `AS-002`
+**Lifecycle:** `PLANNED` — contract exists, no corresponding source
+**Provenance:** re-derived against this branch's real `AS-001` exit state
+**Implementation gate:** `AS-001` implemented and its falsifier green. **Satisfied — this is the next code job.**
+**Evidence:** none. A plan is never implementation evidence.
+**Depends on:** `AS-001_INTAKE_RISE.md` in source and green; kernel falsifiers
 (`WO-000`–`WO-003`, `WO-008`–`WO-009`, `WO-011`–`WO-013`) green; protocol
-`02_ASCENT_SLICE_PROTOCOL.md` §8.
+`03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §8.
 
 > **Authoring note.** This file replaces the plan adopted from `ScraperX-Grok`
 > (their `WO-010_LEGAL_FORTY`). That version was not portable: its entire
 > "Existing truth" section quotes geometry that does not exist here — a handoff
 > at source `(10.40, 24.00, 38.40)`, 68 discrete STAIR-A treads at `x = 10.40`,
-> SKIN at `x = -17.00`, `InitialSpawn::IntakeHandoff`. This branch's `ASC-01`
+> SKIN at `x = -17.00`, `InitialSpawn::IntakeHandoff`. This branch's `AS-001`
 > built a switchback stair in a walled bay, a handoff deck at `x = -6`, and a
 > stepped SKIN line at `x = -6`. A job ticket whose inherited constants are all
 > false is not a job ticket. The one thing carried across unchanged is its
@@ -23,7 +26,7 @@ Close Atlas §7 **K0 PLAY**: the player first stands with stable support at
 `z ≥ 40 m` and the automatic checkpoint commits there.
 
 This is the leftover 24–40 m of Atlas band `B00 — Apron and Intake`. It is not
-`MOD-HOOK5-RACK` (`ASC-03`), and it is not band B01's needles (`ASC-04`).
+`MOD-HOOK5-RACK` (`AS-003`), and it is not band B01's needles (`AS-004`).
 
 The slice owns **one mechanism**: `MOD-STAIR-A`'s lower upper-flight is a
 counterweighted bascule that hangs uselessly in the bay until the yard jib
@@ -84,8 +87,8 @@ retitled here.
 - Atlas §§2, 3, 5, 6 (band B00 exit states), 7 (K0), 8.1, 8.3, 12, 13
 - TDD §§6, 8–11, 14
 - Execution Protocol §§3–7, 11–12
-- `ASC-01_INTAKE_RISE.md` Result record / Out of scope
-- `02_ASCENT_SLICE_PROTOCOL.md` §§4, 6, 8, 9
+- `AS-001_INTAKE_RISE.md` Result record / Out of scope
+- `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §§4, 6, 8, 9
 
 ## Owner
 
@@ -104,7 +107,7 @@ for runtime topology, the station-gating pattern, and the existing automatic
 `commit_checkpoint`.
 
 Do not retitle `KX-*`. Do not author `MOD-NEEDLE-*`, `MOD-CAGE-1`,
-`MOD-GUIDE-RACK` or `MOD-EAST-OUTRIGGER` — those are `ASC-04`/`ASC-05`. Do not
+`MOD-GUIDE-RACK` or `MOD-EAST-OUTRIGGER` — those are `AS-004`/`AS-005`. Do not
 lengthen `MOD-YARD-JIB`. Do not add a second jib.
 
 ## Required causal path
@@ -135,7 +138,7 @@ ACT  [from the +24.1872 m deck, climb MOD-SKIN-LADDER-S rungs 16-25]
   → PLAY [same +40 m commit, with the pack still on the apron]
 ```
 
-**Reconnect:** both braids arrive on `MOD-HALL-DECK`. `ASC-03` and `ASC-04`
+**Reconnect:** both braids arrive on `MOD-HALL-DECK`. `AS-003` and `AS-004`
 enter from the same deck whichever way the player got there.
 
 **Illegal:**
@@ -165,15 +168,15 @@ version bump for the sling topology; CI proof lines.
 
 ## Out of scope
 
-`ASC-03_HOOK5_RACK` (`CAP-HOOK5` acquire). Band B01 above the hall's lower
-landing. Fold 45 FPS certification. Art/VO. Reopening `ASC-01`.
+`AS-003_HOOK5_RACK` (`CAP-HOOK5` acquire). Band B01 above the hall's lower
+landing. Fold 45 FPS certification. Art/VO. Reopening `AS-001`.
 
 ## Proof path
 
 The ten named falsifiers in §8.11, each a sentence that can fail. Two Godot
 screenshots at Fold aspect: the bascule stowed and deployed from the same
 camera. Android arm64 APK carrying `libscraperx_native.so`. Kernel and
-`ASC-01` regressions green.
+`AS-001` regressions green.
 
 ## Completion
 
@@ -228,7 +231,7 @@ Machine poses that may be true at entry, all legal:
 it. A player who came up SKIN with the dog still pinned can still deploy the
 bascule, because doing so requires only the jib and the cradle.
 
-Persist: inherit `ASC-01`'s blob. No fields consumed.
+Persist: inherit `AS-001`'s blob. No fields consumed.
 
 ### 8.3 Geometry
 
@@ -280,7 +283,7 @@ limits are `[0.0, 0.9076]` — the same convention `MOD-DOG-A` already uses.
 
 **Clearances, stated in metres, not as "enough room":**
 
-- swing flight lane `z ∈ [-113.4, -111.6]`; `ASC-01`'s nearest stair lane face
+- swing flight lane `z ∈ [-113.4, -111.6]`; `AS-001`'s nearest stair lane face
   is `-114.2` → **0.800 m**
 - stowed flight occupies `x ∈ [5.630, 7.856]`; the handoff deck ends at
   `x = -2.0` → **7.630 m**, so the stowed flight is nowhere near the deck
@@ -298,14 +301,14 @@ limits are `[0.0, 0.9076]` — the same convention `MOD-DOG-A` already uses.
   **outside** the bay, south of its front wall, which is where the jib can reach
 - **hinge sweep:** the slab's top-end corners lie `0.18 m` off the hinge axis and
   sweep a `0.18 m` circle. The mid-landing must be set back **≥ 0.30 m** from the
-  hinge line. `ASC-01` lost a day to exactly this: `MOD-DOG-A` bound at
+  hinge line. `AS-001` lost a day to exactly this: `MOD-DOG-A` bound at
   `0.31 rad` on its own trailing corner because its hinge sat flush with the
   jamb. Do not repeat it.
 - **deployed foot must not bear:** the stop is the hinge limit, not the deck.
   Hold `≥ 0.06 m` between the flight's structural underside and the deck on
   every path. The resulting step from deck to first tread is `0.06–0.25 m`,
   under `kMantleMinimumRise = 0.35` and under the `0.35 m` capsule radius, so it
-  is walked, not mantled — the same reasoning that made `ASC-01`'s `0.187 m`
+  is walked, not mantled — the same reasoning that made `AS-001`'s `0.187 m`
   landing lip safe.
 - throat width on the deployed flight: `1.80 m` clear vs `0.70 m` capsule
 - hall well `6.0 × 4.4 m` vs `0.70 m` capsule: a chute through it is
@@ -323,7 +326,7 @@ rung k (k = 16..25):  top_y = 24.1872 + 1.6 * (k - 15)
                       half  = (1.00, 0.50, 1.00)
 ```
 
-This reuses `ASC-01`'s proven rung law verbatim, which is a **derived
+This reuses `AS-001`'s proven rung law verbatim, which is a **derived
 constraint, not a style choice**. With rise `R`, half-height `H`, half-depth `D`:
 
 ```
@@ -333,7 +336,7 @@ R <= kMantleMaximumRise = 1.85
    -> 2.00 - 0.47 = 1.53 > 1.30             the stand is outside probe reach
 ```
 
-The third line is the one that makes a ladder climbable at all. `ASC-01` proved
+The third line is the one that makes a ladder climbable at all. `AS-001` proved
 by observation that violating it produces a mantle→hang→fall cycle that makes
 no height, because a mantle drops the player `kLandingInset` in from the rung's
 near edge and the next rung is then still inside `probe_ledge`'s reach. Rungs
@@ -453,7 +456,7 @@ Rope rating: `56 898 N` working, declare `8 t MBL`. DESIGN TARGET.
 
 #### 8.4.3 The sling release — the actual hinge of the causal path
 
-`ASC-01`'s `add_point_link` is bidirectional. The pack cannot be let go, so this
+`AS-001`'s `add_point_link` is bidirectional. The pack cannot be let go, so this
 slice authors a real release, mirroring `WO-012`'s seat/unseat exactly, including
 its race fix.
 
@@ -504,7 +507,7 @@ The cradle is a three-sided frame — floor and two side rails at `x = ±1.50`,
 bay's front wall. An open cradle takes the pack with `0.40 m` of side clearance
 and keeps `0.440 m` between the frame and the wall.
 
-Loading it is inside everything already proven by `ASC-01`: `4000 kg <
+Loading it is inside everything already proven by `AS-001`: `4000 kg <
 5000 kg SWL`; `39 240 N < 49 050 N` winch; hook must reach `y = 4.800` to seat
 the pack, inside the `[2.0, 11.05]` travel. The 9 t proof load still stalls.
 
@@ -556,7 +559,7 @@ work-order one.
 
 No `stair_deployed`, `pack_loaded`, or `forty_open` flag exists. `pack_in_cradle`
 and `flight_deployed` are **derived** from measured pose for the HUD and the
-falsifiers only, exactly as `ASC-01`'s `intake_pack_pins_dog` is. No simulation
+falsifiers only, exactly as `AS-001`'s `intake_pack_pins_dog` is. No simulation
 branch may read either.
 
 ### 8.6 Required causal path
@@ -600,7 +603,7 @@ Atlas §3 soft-lock rule. No state here can strand the player:
   it is never blocked
 - **deploy, climb, then want back down** → the flight is two-way; so is SKIN
 - **fall from any height in this slice** → chute to the apron (Atlas §8.3's
-  primary landing field), then re-climb `ASC-01`'s stair or SKIN
+  primary landing field), then re-climb `AS-001`'s stair or SKIN
 - **die** → restore to the last commit; if `≥ 40 m` was reached, that commit is
   on the hall deck
 - **cradle left loaded with the player above** → harmless; the deployed state is
@@ -610,7 +613,7 @@ Nothing auto-repairs. Nothing is deleted to make the next band load clean.
 
 ### 8.10 Persist
 
-**Persist version 2** (first bump on this branch). `ASC-01` added no fields;
+**Persist version 2** (first bump on this branch). `AS-001` added no fields;
 this slice must, because the sling is runtime topology that outlives its bodies:
 
 ```
@@ -623,7 +626,7 @@ cradle_y            float
 `restore_pack_topology()` mirrors `restore_needle_topology()`: after a restore,
 reconcile the sling constraint against `pack_slung` before the next tick reads
 contacts. Import of a v1 blob assumes `pack_slung = true`, cradle empty, flight
-stowed — `ASC-01`'s exit state.
+stowed — `AS-001`'s exit state.
 
 Commit: the existing automatic `commit_checkpoint` already fires on every
 grounded, non-traversing tick, so standing on the hall deck commits with no new
@@ -660,7 +663,7 @@ new commit path ran.
 9. `wo015_jib_cannot_reach_forty` — hold the hoist at its limit for 60 s. Every
    jib-driven body stays below `y = 12.0`. This is §8.4.5's arithmetic made
    executable, so the gap cannot be quietly closed later by a boom change.
-10. `wo015_prior_still_pass` — `ASC-01` and all kernel falsifiers `PASS`
+10. `wo015_prior_still_pass` — `AS-001` and all kernel falsifiers `PASS`
     unchanged, the 9 t proof load still on the ground.
 
 ### 8.12 Exit state
@@ -669,12 +672,12 @@ new commit path ran.
   braid, with a committed checkpoint there
 - the bascule is left wherever the player left it — deployed with the pack in
   the cradle, or stowed with the pack on the apron; both are legal entry states
-  for `ASC-03`
+  for `AS-003`
 - `MOD-HALL-DECK` exists only as B01's lower landing with its stair well. The
   hall's east opening, `MOD-EAST-OUTRIGGER`, `MOD-NEEDLE-POCKETS`, the 48 m
   racks and `MOD-CAGE-1` **do not exist yet**
 - `MOD-HOOK5-RACK` does not exist; `CAP-HOOK5` is not held
-- everything `ASC-01` built still exists below
+- everything `AS-001` built still exists below
 - the `+120 m` continuation is visible and unfinished
 - persist is v2
 - Fold-device execution remains unverified
@@ -682,4 +685,4 @@ new commit path ran.
 ---
 
 **Stop. Do not begin the next file inside this one.**
-Next file: `04_ASCENT/ASC-03_HOOK5_RACK.md`
+Next file: `03_EXECUTION/ASCENT/AS-003_HOOK5_RACK.md`

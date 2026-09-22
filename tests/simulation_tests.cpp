@@ -1341,7 +1341,7 @@ int main() {
               << " reached_far_deck=" << int(dry.snapshot().player_position.x > 201.5)
               << " dump_unsafe_again=" << int(!dumped.grate_safe) << '\n';
 
-    // ---- ASC-01: B00 intake rise, apron to +24 m -------------------------
+    // ---- AS-001: B00 intake rise, apron to +24 m -------------------------
     // The first campaign slice. Atlas band B00, chain K0. The claim under test
     // is the causal path itself: MOD-STAIR-A is shut because 4 t of freight is
     // physically standing in MOD-DOG-A's swing, and it opens because the jib

@@ -32,7 +32,7 @@ const STACK_COLUMN_SIZE := 1.6
 const STACK_RAMP_WIDTH := 3.2
 const STACK_MASS_BASE_Y := 159.0
 
-# ASC-01 B00 intake rise. Every figure here mirrors a kIntake* constant in
+# AS-001 B00 intake rise. Every figure here mirrors a kIntake* constant in
 # src/sim/simulation.cpp -- what is drawn and what is collided with are the
 # same geometry, so a player who can see a route can walk it.
 const INTAKE_BAY_FRONT_Z := -110.5
@@ -527,7 +527,7 @@ func _render_snapshot() -> void:
 		"safe" if grate_safe else "HAZARD"]
 	_sump_value.modulate = Color("9ad6c4") if grate_safe else Color("d99a4a")
 
-	# ASC-01 B00. pins/clear are predicates derived from real poses -- the HUD
+	# AS-001 B00. pins/clear are predicates derived from real poses -- the HUD
 	# reports them, nothing in the world obeys them.
 	var intake_at_station := bool(_native.is_intake_station_active())
 	var throat_clear := bool(_native.is_intake_throat_clear())
@@ -814,7 +814,7 @@ func _build_world() -> void:
 
 
 
-# ASC-01: MOD-APRON, MOD-INTAKE-BELT, CAP-PENDANT, MOD-YARD-JIB, the 4 t pack,
+# AS-001: MOD-APRON, MOD-INTAKE-BELT, CAP-PENDANT, MOD-YARD-JIB, the 4 t pack,
 # MOD-DOG-A, MOD-STAIR-A, the +24 m handoff, and MOD-SKIN-LADDER-S. This is the
 # bottom of the real ascent: the player starts on the apron and the first 24 m
 # of the climb is won by moving freight, not by finding a ladder.

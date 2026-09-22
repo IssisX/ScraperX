@@ -1,11 +1,15 @@
-# SCRAPERX — ASC-07 WET ISOLATION (K3)
+# SCRAPERX — AS-007 WET ISOLATION (K3)
 
-**Work Order:** `ASC-07`  
-**Status:** `PORTED` — `ScraperX-Grok` text, not re-derived. **Re-author before coding**
-**Depends on:** ASC-01–014; kernel WO-013 is regression substrate only; protocol ASC-07
+**Ascent Slice:** `AS-007`
+**Lifecycle:** `PLANNED` — contract exists, no corresponding source
+**Provenance:** ⚠ **imported from `ScraperX-Grok`, NOT re-derived.** Reference provenance only
+**Implementation gate:** re-author against this branch first, then `AS-006` implemented
+**Evidence:** none. A plan is never implementation evidence.
+**Depends on:** `AS-001`–`AS-006`; kernel `WO-013` is regression substrate only;
+`03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5 row `AS-007`
 
 > **Provenance.** Adopted from `ScraperX-Grok`, where this slice was authored as `WO-015_WET_ISOLATION`.
-> Ticket numbers remapped per `02_ASCENT_SLICE_PROTOCOL.md` §5.1. Geometry, ratings and
+> Ticket numbers remapped per `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5.1. Geometry, ratings and
 > falsifiers carry over as **DESIGN TARGET**: they were never proven in source on that branch
 > (it has not compiled since 2026-09-20). Positions are re-sited against this branch's tower
 > at source `(0, —, -150)`.
@@ -13,7 +17,7 @@
 > **`PORTED`, not authored.** Everything below still quotes `ScraperX-Grok` source
 > constants — geometry, entity ids and persist versions that do not exist on
 > `ScraperX-Claude`. Treat it as design intent, not as a job ticket. Re-derive it
-> against real exit state first, as `ASC-02`, `ASC-03` and `ASC-04` were.
+> against real exit state first, as `AS-002`, `AS-003` and `AS-004` were.
 
 ## Objective
 
@@ -25,7 +29,7 @@ This is not the plate shop. This is not `MOD-GIRDER-T`.
 
 ## Existing truth
 
-After `ASC-06` is in source:
+After `AS-006` is in source:
 
 - 220 well-head ledge at well xz, y = 220.20
 - SKIN-W head at `(-17.00, 220.20, 25.30)`
@@ -36,7 +40,7 @@ After `ASC-06` is in source:
 
 Atlas §14: band B03 fluid species may stay “wet and drainable.” DESIGN TARGET: water. Predicates do not depend on naming steam vs water.
 
-Until ASC-06 is coded, this file still inherits the DESIGN TARGET exit of ASC-06. Do not implement this file before ASC-06 is in source.
+Until AS-006 is coded, this file still inherits the DESIGN TARGET exit of AS-006. Do not implement this file before AS-006 is in source.
 
 ## Authority
 
@@ -45,8 +49,8 @@ Until ASC-06 is coded, this file still inherits the DESIGN TARGET exit of ASC-06
 - Atlas §§3, 4 (`CAP-BLIND`), 5 (TP-340), 6 band B03, 7 K3, 8.1, 8.3, 12, 13, 14
 - TDD §§6, 8–11, 14 (process)
 - WO-013: grate/sump class. Do not reopen. Do not gate kernel on `CAP-BLIND`
-- `ASC-06_CW_PIN.md` §8.12
-- protocol ASC-07
+- `AS-006_CW_PIN.md` §8.12
+- protocol AS-007
 
 ## Owner
 
@@ -89,7 +93,7 @@ Stitch from previous:
     220 SKIN-W head → walk 220 ring north → SKIN-N
     stack does not become the 220–340 elevator
 
-Stitch to next (`ASC-08_SHOP_GIRDER`, not in this pack):
+Stitch to next (`AS-008_SHOP_GIRDER`, not in this pack):
 
     TP-340 is the shop floor lip. Girder seating is the next ticket.
 
@@ -109,7 +113,7 @@ Native + falsifiers; Godot twins; persist v6.
 
 ## Out of scope
 
-`ASC-08_SHOP_GIRDER`. `CAP-TROLLEY`. Fold 45 FPS. Art/VO. Reopening K2.
+`AS-008_SHOP_GIRDER`. `CAP-TROLLEY`. Fold 45 FPS. Art/VO. Reopening K2.
 
 ## Proof path
 
@@ -242,7 +246,7 @@ When isolated and dry: all treads rank 1.
     center (0.00, 340.00, 25.30) extending north
     half (12.00, 0.20, 16.00)
     climbable
-    reconnect: stair top, SKIN-N top, and a lip back toward the well for later SHAFT (ASC-08 guides — not built here)
+    reconnect: stair top, SKIN-N top, and a lip back toward the well for later SHAFT (AS-008 guides — not built here)
 
 Commit: dwell, y ≥ 340.00, support is TP-340.
 
@@ -278,7 +282,7 @@ Unseat blind: player pickup from slot; header live again; lock closes; if drain 
 
 ### 8.6 Causal path
 
-See Objective. Next ticket (`ASC-08_SHOP_GIRDER`) inherits TP-340 as the shop floor.
+See Objective. Next ticket (`AS-008_SHOP_GIRDER`) inherits TP-340 as the shop floor.
 
 ### 8.7 Support handoff
 
@@ -331,7 +335,7 @@ Fields:
 7. `wo015_unseat_blind_relives` — after dry, remove blind; lock closes; flood treads rank 0 again.
 8. `wo015_flag_is_not_dry` — commit at 220 without insert; TP-340 does not appear under the player.
 9. `wo015_kernel_sump_ungated` — mill `SumpLanding` still isolates without `cap_blind`.
-10. Prior ASC-01–014 + kernel PASS.
+10. Prior AS-001–014 + kernel PASS.
 
 ### 8.12 Exit state
 
@@ -344,4 +348,4 @@ Fields:
 ---
 
 **Stop. Do not begin the next file inside this one.**  
-Next file: `04_ASCENT/ASC-08_SHOP_GIRDER.md`
+Next file: `03_EXECUTION/ASCENT/AS-008_SHOP_GIRDER.md` — `UNAUTHORED`, does not exist yet

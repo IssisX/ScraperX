@@ -108,7 +108,7 @@ public:
     [[nodiscard]] double get_sump_volume_kg() const;
     [[nodiscard]] bool is_grate_safe() const;
 
-    // ASC-01 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
+    // AS-001 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
     [[nodiscard]] bool set_intake_slew_input(double value);
     [[nodiscard]] bool set_intake_hoist_input(double value);
     [[nodiscard]] bool is_intake_station_active() const;

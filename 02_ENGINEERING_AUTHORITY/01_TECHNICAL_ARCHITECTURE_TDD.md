@@ -835,10 +835,17 @@ A coding model may not pick one silently because it wants to proceed.
 
 Do not begin with a giant tower, structural solver, or content production.
 
-The playable geometry for WO-001–008 is the atlas **kernel slice** (`02_ASCENT_ATLAS.md` §9), not bands B01–B11.
+The playable geometry for the kernel is the atlas **kernel slice** (`02_ASCENT_ATLAS.md` §9), not
+bands B01–B11.
+
+> **Numbering note.** The nine headings below are the *planned* sequence as this TDD first wrote
+> it. The repository's kernel grew to fourteen and renumbered five of them, because `WO-005`–`WO-010`
+> were already committed against other objectives before the atlas existed. The headings are left
+> as the historical plan; each `File:` line points at the document that actually carries that
+> content here. The full map is `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5.1.
 
 ### Work Order 000 — delivery spine
-File: `03_KERNEL/WO-000_DELIVERY_SPINE.md`
+File: `03_EXECUTION/KERNEL/WO-000_DELIVERY_SPINE.md`
 
 Prove:
 
@@ -847,14 +854,14 @@ Prove:
 No fake game systems.
 
 ### Work Order 001 — embodied authority
-File: `03_KERNEL/WO-001_EMBODIED_AUTHORITY.md`
+File: `03_EXECUTION/KERNEL/WO-001_EMBODIED_AUTHORITY.md`
 
 `touch/desktop test input → native player state → static-world collision/support → Godot render mirror`
 
 No climbing system yet. World: `KX-DECK`.
 
 ### Work Order 002 — moving-support truth
-File: `03_KERNEL/WO-002_MOVING_SUPPORT_TRUTH.md`
+File: `03_EXECUTION/KERNEL/WO-002_MOVING_SUPPORT_TRUTH.md`
 
 Add:
 
@@ -866,32 +873,32 @@ Add:
 This is a constitutional discriminator. Do not advance if it is fake or unstable.
 
 ### Work Order 003 — athletic traversal
-File: `03_KERNEL/WO-003_ATHLETIC_TRAVERSAL.md`
+File: `03_EXECUTION/KERNEL/WO-003_ATHLETIC_TRAVERSAL.md`
 
 Add bounded mantle/vault/ledge/hang primitives on real geometry, preserving moving-support behavior.
 
 ### Work Order 004 — fall / parachute / checkpoint
-File: `03_KERNEL/WO-004_FALL_PARACHUTE_CHECKPOINT.md`
+File: `03_EXECUTION/KERNEL/WO-008_FALL_PARACHUTE_CHECKPOINT.md` (renumbered `WO-008`)
 
 Prove real fall, survivable parachute dynamics, checkpoint commit, death rollback, and surviving lower-level fall continuation. Refuge: `KX-REFUGE`.
 
 ### Work Order 005 — first freight mechanism
-File: `03_KERNEL/WO-005_FIRST_FREIGHT.md`
+File: `03_EXECUTION/KERNEL/WO-011_FIRST_FREIGHT.md` (renumbered `WO-011`)
 
 One real machine with finite power/force/travel/brake behavior and a real movable load: `KX-JIB` + `KX-CRATE`.
 
 ### Work Order 006 — first structural coupling
-File: `03_KERNEL/WO-006_FIRST_STRUCTURAL_COUPLING.md`
+File: `03_EXECUTION/KERNEL/WO-012_FIRST_STRUCTURAL_COUPLING.md` (renumbered `WO-012`)
 
 The machine/load changes an actual structural state that changes geometry/support/traversal: `KX-NEEDLE` in `KX-POCKETS`.
 
 ### Work Order 007 — first process coupling
-File: `03_KERNEL/WO-007_FIRST_PROCESS_COUPLING.md`
+File: `03_EXECUTION/KERNEL/WO-013_FIRST_PROCESS_COUPLING.md` (renumbered `WO-013`)
 
 A process/isolation state changes the same physical situation or machine capability: `KX-SUMP` → `KX-GRATE`.
 
 ### Work Order 008 — first full causal chain
-File: `03_KERNEL/WO-008_FIRST_CAUSAL_CHAIN.md`
+File: `03_EXECUTION/KERNEL/WO-009_FIRST_FULL_CAUSAL_CHAIN.md` (renumbered `WO-009`)
 
 Demonstrate one complete chain on the kernel:
 
@@ -900,6 +907,9 @@ Demonstrate one complete chain on the kernel:
 This is the first point at which ScraperX has proven its defining architecture.
 
 Do not scale content before this slice is real. After it is real, assemble from atlas band B00 upward using the same primitives. Do not author a second tower.
+
+That point has been passed. Band assembly is the `AS-*` queue in `03_EXECUTION/ASCENT/`; the kernel
+is closed and is now regression substrate only.
 
 ---
 

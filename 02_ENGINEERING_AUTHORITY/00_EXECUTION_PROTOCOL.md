@@ -17,8 +17,8 @@ For implementation work, resolve conflicts in this order:
 4. **Technical Architecture / TDD** — implementation ownership and system boundaries.
 5. **Current source, tests, build configuration, and runtime evidence** — implementation truth.
 6. **The one open ticket** — the exact bounded change being executed. That is a
-   **Kernel Work Order** (`WO-000`–`WO-013`, `03_KERNEL/`, closed set) or an
-   **Ascent Slice** (`ASC-01`–`ASC-15`, `04_ASCENT/`). The two are different classes of
+   **Kernel Work Order** (`WO-000`–`WO-013`, `03_EXECUTION/KERNEL/`, closed set) or an
+   **Ascent Slice** (`AS-001`–`AS-015`, `03_EXECUTION/ASCENT/`). The two are different classes of
    work and never share an identifier. `00_START_HERE.md` §2 is the vocabulary.
 
 Writes land on **`ScraperX-Claude`**. Other branches are readable for provenance and are
@@ -47,7 +47,7 @@ Every implementation task loads:
 Load additional GDD/atlas/support material only when the task crosses into it.
 
 `WO-000` does not need the atlas. `WO-001`–`WO-004` need Atlas §§2 and 9. `WO-005`–`WO-013`
-need Atlas §§4, 7, 8, 9, 12. An `ASC-*` slice needs Atlas §6 for **its own band only**, plus
+need Atlas §§4, 7, 8, 9, 12. An `AS-*` slice needs Atlas §6 for **its own band only**, plus
 §§4, 5, 7, 12, 13 as that slice cites them — loading bands a slice does not own is how scope creeps.
 
 The goal is **small active context under one global authority tree**, not reduced authority and not a second package.
@@ -57,8 +57,8 @@ The goal is **small active context under one global authority tree**, not reduce
 ## 3. TICKET CONTRACT
 
 Every coding task begins with one bounded ticket. Kernel Work Orders use the fields below
-(`03_KERNEL/_KERNEL_WORK_ORDER_TEMPLATE.md`). Ascent Slices use these fields **plus** the
-mechanical close in `02_ASCENT_SLICE_PROTOCOL.md` §8, which is not optional for them.
+(`03_EXECUTION/TEMPLATES/KERNEL_WORK_ORDER_TEMPLATE.md`). Ascent Slices use these fields **plus** the
+mechanical close in `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §8, which is not optional for them.
 
 Every ticket must contain:
 
@@ -80,7 +80,40 @@ Every ticket must contain:
 
 If those fields cannot be stated clearly, the task is not ready to code.
 
-The kernel is a **closed set**. No new `WO-*` is ever created; new work is an `ASC-*` slice.
+The kernel is a **closed set**. No new `WO-*` is ever created; new work is an `AS-*` slice.
+
+### 3.1 Ticket header
+
+Every ticket opens with the same five lines, so that its state can be read without reading the
+ticket. Three of them are **separate fields and never collapse into one status word**:
+
+```
+**Kernel Work Order:** `WO-___`        (or **Ascent Slice:** `AS-___`)
+**Lifecycle:**          IMPLEMENTED | PLANNED | UNAUTHORED
+**Provenance:**         re-derived here | imported, NOT re-derived
+**Implementation gate:** what must be true before source work may start
+**Evidence:**           pointer to the ledger, never a copy of it
+```
+
+| Field | Answers | Changes when |
+|---|---|---|
+| `Lifecycle` | does source exist for this ticket? | someone writes code |
+| `Provenance` | were its numbers derived against *this* tree? | someone re-authors it |
+| `Evidence` | what has actually been observed? | **every CI run** |
+
+Because those three change at different rates, evidence is never written into a ticket. It lives
+once, in the `00_START_HERE.md` ledgers, and the ticket points at it. A ticket that quotes its own
+evidence goes stale silently, which is the failure mode this rule exists to prevent.
+
+`IMPLEMENTED` is a statement about source, never about proof. A green falsifier is the only thing
+that speaks for behaviour, and §11 governs what it is allowed to say.
+
+`Provenance: imported, NOT re-derived` is a **hard gate**: the ticket's constants describe another
+branch's world. It must be re-authored against this tree before any of it is coded.
+
+The fourteen kernel files predate this header and keep their original `**Status:**` line. They are
+historical execution records; rewriting them would retcon a proof record. New tickets use the
+header above.
 
 ---
 
@@ -297,8 +330,8 @@ The requester’s workstation may be the Fold. That is normal. It is the shippin
 
 ### Legal asks
 
-- `Execute ASC-NN. Stop at its completion condition.` — the normal ask
-- `Author ASC-NN.` — write the plan, no code
+- `Execute AS-NNN. Stop at its completion condition.` — the normal ask
+- `Author AS-NNN.` — write the plan, no code
 - `status`
 - `fix:` + the broken evidence
 - `amend:` + one atlas module / one TDD gate / one ticket field

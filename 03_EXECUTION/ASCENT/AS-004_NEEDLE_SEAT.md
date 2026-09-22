@@ -1,12 +1,15 @@
-# SCRAPERX — ASC-04 NEEDLE SEAT (SEAT MOD-NEEDLE-A/B AT +96 m)
+# SCRAPERX — AS-004 NEEDLE SEAT (SEAT MOD-NEEDLE-A/B AT +96 m)
 
-**Work Order:** `ASC-04`
-**Status:** `AUTHORED` — written against this branch. Not coded. Blocked on `ASC-03`
-**Depends on:** `ASC-01` and `ASC-02` in source and green; `ASC-03` in source
+**Ascent Slice:** `AS-004`
+**Lifecycle:** `PLANNED` — contract exists, no corresponding source
+**Provenance:** re-derived against this branch
+**Implementation gate:** `AS-003` implemented and its exit revalidated in source
+**Evidence:** none. A plan is never implementation evidence.
+**Depends on:** `AS-001` and `AS-002` in source and green; `AS-003` in source
 (`CAP-HOOK5` acquirable); kernel falsifiers green; protocol §8.
 
 > **Authoring note.** Replaces the `ScraperX-Grok` port (their `WO-012`) for the
-> reason `ASC-02` and `ASC-03` were replaced — inherited constants describing a
+> reason `AS-002` and `AS-003` were replaced — inherited constants describing a
 > world that does not exist here. Its falsifier *shape* is excellent and is kept;
 > its geometry is re-derived against this branch.
 
@@ -32,25 +35,25 @@ The slice owns **one machine and one capability consumption**:
 
 ## Existing truth
 
-Frozen from `ASC-01` source at `af8beca`; inherited from `ASC-02`/`ASC-03` as
+Frozen from `AS-001` source at `af8beca`; inherited from `AS-002`/`AS-003` as
 **DESIGN TARGET** until those land:
 
 | Datum | Value | Source |
 |---|---|---|
-| `MOD-HALL-DECK` walking surface | `40.1872 m`, `x ∈ [-10, 10]`, `z ∈ [-122.5, -107.7]` | `ASC-02` §8.3 |
-| `MOD-STAIR-A` well in that deck | `x ∈ [-7.51, -1.51]`, `z ∈ [-119.2, -114.8]` | `ASC-02` §8.3 |
-| bascule hinge | `(7.856, 32.1872, -112.5)`, swings `y ∈ [16, 32]` | `ASC-02` §8.3 |
-| `MOD-SKIN-LADDER-S` head | rung 25 top `40.1872 m`, fascia `z = -106.4` | `ASC-02` §8.3 |
-| `MOD-HOOK5` block | `36 kg`, half `(0.30, 0.25, 0.30)`, carried on a point constraint | `ASC-03` §8.4.3 |
-| carrying blocks traversal | vault, mantle and hang all refuse while held | `ASC-03` §8.4.3 |
-| max `MOD-YARD-JIB` hook | `11.05 m` | `ASC-01`, verified |
-| persist | v3 | `ASC-03` §8.10 |
+| `MOD-HALL-DECK` walking surface | `40.1872 m`, `x ∈ [-10, 10]`, `z ∈ [-122.5, -107.7]` | `AS-002` §8.3 |
+| `MOD-STAIR-A` well in that deck | `x ∈ [-7.51, -1.51]`, `z ∈ [-119.2, -114.8]` | `AS-002` §8.3 |
+| bascule hinge | `(7.856, 32.1872, -112.5)`, swings `y ∈ [16, 32]` | `AS-002` §8.3 |
+| `MOD-SKIN-LADDER-S` head | rung 25 top `40.1872 m`, fascia `z = -106.4` | `AS-002` §8.3 |
+| `MOD-HOOK5` block | `36 kg`, half `(0.30, 0.25, 0.30)`, carried on a point constraint | `AS-003` §8.4.3 |
+| carrying blocks traversal | vault, mantle and hang all refuse while held | `AS-003` §8.4.3 |
+| max `MOD-YARD-JIB` hook | `11.05 m` | `AS-001`, verified |
+| persist | v3 | `AS-003` §8.10 |
 
 Proven primitives this slice reuses rather than reinvents:
 
 - `add_motorized_slider` — `EMotorState::Velocity` with `SetForceLimit`, so an
   overloaded drum **is not held**; it sags at the rate the deficit actually
-  produces, read back from the solver. `WO-011` and `ASC-01` both proved this.
+  produces, read back from the solver. `WO-011` and `AS-001` both proved this.
 - the `WO-012` seat/unseat pattern: pins created and removed at runtime with
   `create_constraint(..., track_for_teardown = false)`, with the seat predicate
   **gated on the command** so it cannot re-seat the tick after release.
@@ -67,8 +70,8 @@ Entity IDs and spawns are assigned when this slice is coded.
 - GDD §§4, 6, 7.2–7.4, 11, 15–17, 23, 24
 - Atlas §§3, 4 (`CAP-HOOK5`), 5, 6 band B01, 7 K1, 8.1, 8.3, 12, 13
 - TDD §§6, 8–11, 14
-- `ASC-03_HOOK5_RACK.md` §8.12
-- `02_ASCENT_SLICE_PROTOCOL.md` §§4, 6, 8, 9
+- `AS-003_HOOK5_RACK.md` §8.12
+- `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §§4, 6, 8, 9
 
 ## Owner
 
@@ -83,7 +86,7 @@ the seat/unseat topology pattern, the carry constraint, moving-support identity.
 Do not retitle `KX-NEEDLE` — the kernel needle at `x ≈ 200` stays regression
 substrate and **must remain ungated by `CAP-HOOK5`** (falsifier 8). Do not
 author `TP-120`, the `120 m` landing, `MOD-EAST-OUTRIGGER` or `SKIN-E` — all
-`ASC-05`. Do not lengthen `MOD-YARD-JIB`.
+`AS-005`. Do not lengthen `MOD-YARD-JIB`.
 
 ## Required causal path
 
@@ -115,7 +118,7 @@ ACT  [raise the winch]
 ACT  [repeat for MOD-NEEDLE-B]
   → STATE[guide_offset for both lines within tolerance]
   → WORLD[MOD-CAGE-1's drum no longer stalls above 118 m]
-  → PLAY [the 120 m landing is reachable -- which ASC-05 authors]
+  → PLAY [the 120 m landing is reachable -- which AS-005 authors]
 ```
 
 **Atlas coupling 2 — one needle only:**
@@ -126,7 +129,7 @@ ACT[seat A, leave B on its rack]
   → PLAY[a parkour beam to the facade, and the cage still stalls at 118]
 ```
 
-**Atlas coupling 3 — neither needle:** `ASC-05` authors the SKIN route to 120 m.
+**Atlas coupling 3 — neither needle:** `AS-005` authors the SKIN route to 120 m.
 Nothing in this slice may block it.
 
 **Illegal:**
@@ -155,8 +158,8 @@ measurement, falsifiers; Godot twins; persist v4; CI proof lines.
 
 ## Out of scope
 
-`ASC-05_CAGE_OR_SKIN` — the `120 m` landing, `TP-120`, `MOD-EAST-OUTRIGGER`,
-`SKIN-E`. Fold 45 FPS. Art/VO. Reopening `ASC-01`–`ASC-03`.
+`AS-005_CAGE_OR_SKIN` — the `120 m` landing, `TP-120`, `MOD-EAST-OUTRIGGER`,
+`SKIN-E`. Fold 45 FPS. Art/VO. Reopening `AS-001`–`AS-003`.
 
 ## Completion
 
@@ -185,8 +188,8 @@ pending.
 | Atlas band | B01 — Transfer Hall, `40–120 m`, the seating problem only |
 | Slice | seat both needles at `+96 m`; clear the cage's `118 m` interlock |
 | Chain | K1 |
-| Live braids | SHAFT (`MOD-CAGE-1`). SKIN inherited from `ASC-02`, untouched |
-| Transfer Plate | none. `TP-120` is `ASC-05` |
+| Live braids | SHAFT (`MOD-CAGE-1`). SKIN inherited from `AS-002`, untouched |
+| Transfer Plate | none. `TP-120` is `AS-005` |
 | Modules allowed | `MOD-CAGE-1`, `MOD-NEEDLE-A/B`, `MOD-NEEDLE-POCKETS`, `MOD-GUIDE-RACK`, the `48 m` racks |
 | Modules forbidden | `MOD-EAST-OUTRIGGER`, `SKIN-E`, `TP-120`, `MOD-CW-STACK` |
 | Capability consumed | **`CAP-HOOK5`**, physically — the block is the load path |
@@ -227,7 +230,7 @@ Persist: inherit v3.
   their span
 - well opening `z ∈ [-112.0, -109.0]` vs cage `z ∈ [-111.7, -109.3]` → `0.30`
   running clearance. No boundary is coincident
-- cage well vs `ASC-02`'s stair well (`z` to `-114.8`) → **`2.80`**
+- cage well vs `AS-002`'s stair well (`z` to `-114.8`) → **`2.80`**
 - needle walking width `0.90 m` against a `0.70 m` capsule → **`0.20`** spare.
   This is deliberately tight: Atlas calls it *"a springy span"* and it should
   read as a beam you balance on, not a footbridge
@@ -235,13 +238,13 @@ Persist: inherit v3.
   end. Pockets are **tapered**, and the seated needle's underside sits `0.06 m`
   clear of the pocket floor before its pins take it, so no two box boundaries are
   ever coincident — the `JPH::BoxShape` convex-radius jam that stopped `WO-012`'s
-  beam `0.04 m` short of its seat, and bound `ASC-01`'s dog at `0.31 rad`, is
+  beam `0.04 m` short of its seat, and bound `AS-001`'s dog at `0.31 rad`, is
   designed out here rather than rediscovered a third time
 - seated needle top `96.25 m`; the cage passes at `y = 96` with its platform
   `0.125 m` thick, so nothing fouls
 - the `48 m` racks and the seated pockets share `x` and `z`, so a needle rises on
   a **pure vertical** line. Its rigging does not
-- drum head at `121.0 m`; this slice limits cage travel to `118.0 m`. `ASC-05`
+- drum head at `121.0 m`; this slice limits cage travel to `118.0 m`. `AS-005`
   takes it to `120`
 
 ### 8.4 Mechanism
@@ -249,11 +252,11 @@ Persist: inherit v3.
 #### 8.4.1 `MOD-CAGE-1` — a ridden machine, and why that is not a contradiction
 
 A motorized vertical slider between the drum head and the car, exactly the
-primitive `WO-011`'s hoist and `ASC-01`'s winch already use:
+primitive `WO-011`'s hoist and `AS-001`'s winch already use:
 
 ```
 add_motorized_slider(drum_head, cage, 0.0, 77.81, 32 000 N, &cage_drum)
-travel  y ∈ [40.19, 118.00]   (ASC-05 extends the top to 120.00)
+travel  y ∈ [40.19, 118.00]   (AS-005 extends the top to 120.00)
 speed   0.90 m/s
 ```
 
@@ -264,7 +267,7 @@ mid-travel, which is correct and is a stated hazard in §8.8.
 
 This is the first machine the player rides while driving, and the contrast is the
 point. `MOD-YARD-JIB`'s pendant is bolted to a catwalk at grade, so nothing can
-ride it — `ASC-02` §8.4.5 showed that is what actually closes the Atlas's third
+ride it — `AS-002` §8.4.5 showed that is what actually closes the Atlas's third
 B00 exit, not boom length. `MOD-CAGE-1` has a car station because a personnel
 cage has one. Same engine, same station-gating shape, opposite consequence.
 
@@ -280,7 +283,7 @@ cage 900 kg + player 85 kg                =  9 663 N   net +22 337 N, rises
 Two needles is not *refused*. The motor is `EMotorState::Velocity` with a force
 limit, so it applies its 32 kN, loses, and the whole assembly descends at the
 rate a 9 055 N deficit on 4 185 kg produces — `2.16 m/s²`. The player watches it
-go down. That is the same honesty `WO-011`'s capacity stand and `ASC-01`'s 9 t
+go down. That is the same honesty `WO-011`'s capacity stand and `AS-001`'s 9 t
 proof load already enforce, and it is why the falsifier asserts *sag*, not a
 rejected command.
 
@@ -396,7 +399,7 @@ deficit                        37.31 m
 Falsifier 1 holds the jib's hoist at its limit and asserts every jib-driven body
 stays below `y = 12`. This is not decoration: it is what makes `MOD-CAGE-1`
 necessary, and it keeps a later slice from quietly closing the gap with a boom
-change. `ASC-02` §8.4.5 and `ASC-03` §8.4.4 record the same jib limit reached
+change. `AS-002` §8.4.5 and `AS-003` §8.4.4 record the same jib limit reached
 from two other directions.
 
 ### 8.5 Occupancy and interlocks
@@ -457,14 +460,14 @@ Atlas §3. Nothing strands:
 - **needle left dangling on the hook** → lower it back onto its rack, or onto the
   hall deck, or drop it; it is a body and it comes to rest somewhere reachable
 - **one needle seated, stuck at 118** → the seated needle is itself a route to
-  the facade (Atlas coupling 2), and `ASC-05` authors SKIN to `120 m` for the
+  the facade (Atlas coupling 2), and `AS-005` authors SKIN to `120 m` for the
   case where neither is ever seated
 - **cage left at the top with the player at the bottom** → the car station is on
   the car, so the cage cannot be recalled. Both braids to `40 m` remain open and
-  `ASC-05`'s SKIN continues past it. **This is the one place where a later slice
-  must not regress**: if `ASC-05` makes the `120 m` landing the only way onward,
+  `AS-005`'s SKIN continues past it. **This is the one place where a later slice
+  must not regress**: if `AS-005` makes the `120 m` landing the only way onward,
   a cage parked at `118` with the player at `40` is a soft-lock. Flagged here so
-  `ASC-05` answers it rather than discovering it.
+  `AS-005` answers it rather than discovering it.
 
 ### 8.10 Persist
 
@@ -507,24 +510,24 @@ assumes both needles on their racks, nothing rigged, cage at `40.19`.
    `WO-012`'s proof line reproduces unchanged.
 9. `wo017_car_station_needs_the_car` — stand on the hall deck beside the well and
    command the drum for 10 s. The cage does not move. Step onto it: it does.
-10. `wo017_prior_still_pass` — `ASC-01`–`ASC-03` and all kernel falsifiers `PASS`
+10. `wo017_prior_still_pass` — `AS-001`–`AS-003` and all kernel falsifiers `PASS`
     unchanged, the 9 t proof load still on the ground.
 
 ### 8.12 Exit state
 
 - both needles **may** be seated at `96 m`, or one, or neither — all three are
-  legal entry states for `ASC-05`
+  legal entry states for `AS-005`
 - with both seated, `MOD-CAGE-1` reaches `118.0 m` and stops on travel
 - a seated needle is a walkable `18.40 m` span at `96.25 m`
 - `CAP-HOOK5` is wherever the player left it
 - `TP-120`, the `120 m` landing, `MOD-EAST-OUTRIGGER` and `SKIN-E` **do not
   exist**; the cage stops in bare shaft and the player steps into void
-- the `ASC-05` author must answer §8.9's parked-cage case
-- everything `ASC-01`–`ASC-03` built still exists below
+- the `AS-005` author must answer §8.9's parked-cage case
+- everything `AS-001`–`AS-003` built still exists below
 - persist is v4
 - Fold-device execution remains unverified
 
 ---
 
 **Stop. Do not begin the next file inside this one.**
-Next file: `04_ASCENT/ASC-05_CAGE_OR_SKIN.md`
+Next file: `03_EXECUTION/ASCENT/AS-005_CAGE_OR_SKIN.md`
