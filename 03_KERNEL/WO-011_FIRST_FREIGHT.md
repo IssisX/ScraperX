@@ -15,7 +15,7 @@ The Kellerworks machine (repo WO-006) proved an autonomous, non-interactive cycl
 ## Governing authority
 
 - Ascent Atlas v1.0 §§4, 9 (`KX-JIB`, `KX-CRATE`, `KX-BELT` may remain as support), §0.3 (masses/forces below this line are design targets, not proof requirements, until a benchmark scene falsifies them — this WO is that scene).
-- `03_WORK_ORDERS/WO-005_FIRST_FREIGHT.md` in the v1.1 build package (Laws 11, 12, 22, 24, 26, 27; GDD §§11, 15; TDD §§9, 19.1 item 2).
+- `03_KERNEL/WO-005_FIRST_FREIGHT.md` in the v1.1 build package (Laws 11, 12, 22, 24, 26, 27; GDD §§11, 15; TDD §§9, 19.1 item 2).
 - Governing Law 24 — machinery cannot create capability from nothing.
 - Governing Law 26 — no physics theater / no second authority.
 

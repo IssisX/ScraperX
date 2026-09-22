@@ -1,7 +1,12 @@
-# SCRAPERX — WORK ORDER TEMPLATE
+# SCRAPERX — KERNEL WORK ORDER TEMPLATE
 
-**Work Order:** `WO-___`  
-**Status:** READY / BLOCKED / COMPLETE
+> **The kernel is a closed set.** `WO-000`–`WO-013` are all in source and no new `WO-*` is ever
+> created. This template is kept as the historical form those fourteen documents take. New work
+> is an **Ascent Slice** — see `02_ENGINEERING_AUTHORITY/02_ASCENT_SLICE_PROTOCOL.md`, whose §10
+> template carries these fields **plus** the §8 mechanical close.
+
+**Kernel Work Order:** `WO-___`  
+**Status:** `COMPLETE` / `AUTHORED` / `PORTED` / `UNAUTHORED` — see `00_START_HERE.md` §2
 
 ## Objective
 One concrete player-visible or system-visible capability.

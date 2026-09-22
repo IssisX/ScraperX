@@ -1,155 +1,189 @@
-# SCRAPERX — AI BUILD PACKAGE v1.1
+# SCRAPERX — START HERE
 
-**Purpose:** Give an implementation AI one authority tree: laws, game, spatial content, engineering, and bounded work orders. Do not treat this package as a pile of parallel briefs.
+**Write branch: `ScraperX-Claude`.** All implementation and all document writes land there.
+Other branches may be read to recover provenance. None of them is a write target, and none of
+them is an authority. `ScraperX-Grok` in particular is a sibling experiment whose planning
+documents were adopted here; where this tree and that one disagree, **this tree wins**.
 
-## Read first
+---
 
-Use this authority order:
+## 1. What are the project authorities?
 
-1. `01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md`
-2. `01_PRODUCT_AUTHORITY/01_SCRAPERX_GDD.md`
-3. `01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`
-4. `02_ENGINEERING_AUTHORITY/00_EXECUTION_PROTOCOL.md`
-5. `02_ENGINEERING_AUTHORITY/01_TECHNICAL_ARCHITECTURE_TDD.md`
-6. Current repository source / tests / build / runtime evidence
-7. The current file under `03_WORK_ORDERS/`
+Read in this order. Higher wins on conflict.
 
-Higher authority wins when documents conflict.
+| # | Document | Owns |
+|---|---|---|
+| 1 | `01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md` | what the game may never do |
+| 2 | `01_PRODUCT_AUTHORITY/01_SCRAPERX_GDD.md` | what the game is |
+| 3 | `01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md` | the tower in metres, modules and braids |
+| 4 | `02_ENGINEERING_AUTHORITY/00_EXECUTION_PROTOCOL.md` | how work is executed and claimed |
+| 5 | `02_ENGINEERING_AUTHORITY/01_TECHNICAL_ARCHITECTURE_TDD.md` | how the engine is built |
+| 6 | repository source / tests / CI evidence | what is actually true |
+| 7 | the one open ticket | the current job |
 
-The atlas is the GDD written in meters, modules, and braids. It is not a sidecar spec. Support files under `01_PRODUCT_AUTHORITY/support/` remain provenance for how the GDD was closed. They are not a second product.
+The atlas is the GDD written in metres. It is not a sidecar spec.
+`01_PRODUCT_AUTHORITY/support/` is provenance for how the GDD was closed — never a second product.
 
-Requester rules live in Execution Protocol §15. Fold-only operation lives in §16. The human does not paste this package into the model. The model already has the tree. The legal human act is a short command.
+---
 
-## Fold-only operator
+## 2. Vocabulary — one concept, one name, one home
 
-Shipping target and current workstation are the same device: Galaxy Fold 6, no desktop.
+This is the part that used to be ambiguous. Kernel engineering and ascent construction are
+different classes of work and no longer share an identifier.
 
-Human types one line. Model loads the WO, the listed sections, and the source.
+| Class | ID form | Home | What it is |
+|---|---|---|---|
+| **Kernel Work Order** | `WO-000`–`WO-013` | `03_KERNEL/` | foundational engineering. Proves one *tool type* on the `KX-*` substrate at source x ≈ 200. **Closed set — no new `WO-*` is ever created.** |
+| **Ascent Slice** | `ASC-01`–`ASC-15` | `04_ASCENT/` | one causal slice of the 1.6 km climb. The live work. |
+| **Atlas band** | `B00`–`B11` | Atlas §6 | a floor range of the tower. **Never a filename, never a ticket.** |
+| **Atlas chain** | `K0`–`K8` | Atlas §7 | a causal chain spanning bands |
+| **Campaign module** | `MOD-*` | Atlas §6 | a world object in the real tower |
+| **Kernel substrate** | `KX-*` | Atlas §9 | a kernel fixture. Regression substrate; never retitled into a `MOD-*` |
+| **Capability** | `CAP-*` | Atlas §4 | something the player holds or has acquired |
+| **Commit** | — | `commit_checkpoint()` in source | the in-sim automatic checkpoint. A *gameplay* concept. There is no `CP-*` document class on this branch and none may be introduced |
+| **Process document** | named, never numbered | `02_ENGINEERING_AUTHORITY/` | the protocol and the templates |
 
-| Thumb | Meaning |
+Status words, used identically everywhere:
+
+| Word | Means |
 |---|---|
-| `000` | execute WO-000, then stop |
-| `001` … `008` | execute that WO, then stop |
-| `status` | current WO, what is proven, what is unverified |
-| `fix:` + what broke | repair inside the current WO only |
-| `amend:` + one fact | change one atlas/TDD/WO field, then stop |
+| `COMPLETE` | in source, and its falsifier is green in CI |
+| `AUTHORED` | plan written against **this branch's** real state. Not coded |
+| `PORTED` | plan inherited from `ScraperX-Grok` and **not** re-derived. Its inherited constants describe a world that does not exist here. Must be re-authored before it can be coded |
+| `UNAUTHORED` | nothing written yet |
 
-Do not ask the Fold user to open, copy, or re-upload authority files on each turn.
+Old names map to new ones in `02_ENGINEERING_AUTHORITY/02_ASCENT_SLICE_PROTOCOL.md` §5.1.
 
-If the current WO is unexecuted and the ask is not in that table, name the current WO and wait.
+---
 
-## Context-loading rule
+## 3. What has already been proven?
 
-Do **not** load every file into every coding task.
+Observed on `ScraperX-Claude`, CI run [`35651140478`](https://github.com/IssisX/ScraperX/actions/runs/35651140478), all 11 steps green:
 
-Always load:
+- **10 native falsifiers, exit 0** — `./build/host/scraperx_sim_tests`
+- **Godot 4.7 at Fold aspect** under `gl_compatibility`: `width=2160 height=1856 aspect=1.164`,
+  `tower_height=1600`, `shut_flow=0.00000`
+- **Android arm64 APK** exported, carrying `libscraperx_native.so`
+
+Unproven, and not to be claimed: Fold-device install, on-device execution, touch ergonomics,
+sustained frame rate. No device access exists.
+
+---
+
+## 4. Kernel — foundational engineering
+
+`03_KERNEL/`. All fourteen are in source. The kernel is **closed**: it exists to be regression
+substrate, not to grow.
+
+| Ticket | Slice | Status |
+|---|---|---|
+| `WO-000` | Godot 4.7 → GDExtension → fixed-step native sim → arm64 APK | COMPLETE — proven by the CI build/export steps |
+| `WO-001` | native player on static `KX-DECK` | COMPLETE in source — **record gap**, see below |
+| `WO-002` | translating / rotating support-point velocity | COMPLETE — falsifier |
+| `WO-003` | vault / mantle / ledge / hang on real geometry | COMPLETE — falsifier |
+| `WO-004` | Fold-aspect stage, industrial identity | COMPLETE — `SCRAPERX_WO004_VIEWPORT_PROOF` |
+| `WO-005` | exterior grade and approach | COMPLETE — `SCRAPERX_WO005_APPROACH_PROOF` |
+| `WO-006` | vessel → orifice → cylinder → lift | COMPLETE — falsifier + `SCRAPERX_WO006_MACHINE_PROOF` |
+| `WO-007` | Kellerworks identity, alpine backdrop | COMPLETE — screenshot evidence only |
+| `WO-008` | fall, chute, commit, survived lower landing | COMPLETE — falsifier |
+| `WO-009` | kernel chain + persist / reload | COMPLETE — falsifier |
+| `WO-010` | player mass drives the treadle | COMPLETE — falsifier |
+| `WO-011` | `KX-JIB` moves `KX-CRATE` | COMPLETE — falsifier |
+| `WO-012` | seated `KX-NEEDLE` changes traversal | COMPLETE — falsifier |
+| `WO-013` | `KX-SUMP` changes `KX-GRATE` | COMPLETE — falsifier |
+
+A completed work order's Existing-truth and Result-record sections quote the evidence and CI
+names **as they stood when it was executed** — including the retired "ScraperX-2 checkpoint CI".
+Those are historical records. They are deliberately not rewritten; retconning a proof record
+would be worse than an out-of-date name.
+
+> **Record gap, `WO-001`.** Its Result record reads `pending` on every line, yet the player body,
+> its capsule and its support identity are in source and are exercised by every falsifier that
+> follows. The code is real; the paperwork was never filled. Recorded here rather than silently
+> promoted to COMPLETE. Closing it is bookkeeping, not engineering.
+
+---
+
+## 5. Ascent — the actual climb
+
+`04_ASCENT/`. Fifteen slices, each bound to one Atlas band. This is where all new work happens.
+
+| Ticket | Slice | Band | Status |
+|---|---|---|---|
+| `ASC-01` | apron → +24 m, intake rise | B00 | **COMPLETE** — falsifier green |
+| `ASC-02` | first legal stand at +40 m | B00 | **AUTHORED** |
+| `ASC-03` | `CAP-HOOK5` acquire | B00 | **AUTHORED** |
+| `ASC-04` | seat needles at 96 m | B01 | **AUTHORED** |
+| `ASC-05` | cage land at 120 m, or east climb | B01 exit | **PORTED** |
+| `ASC-06` | counterweight ride / pin dump | B02 | **PORTED** |
+| `ASC-07` | blind + drain, or north climb to 340 m | B03 | **PORTED** |
+| `ASC-08` | seat `MOD-GIRDER-T` | B04 | UNAUTHORED |
+| `ASC-09` | hang rail / traveler stroke | B05 | UNAUTHORED |
+| `ASC-10` | service lift or SKIN | B06 | UNAUTHORED |
+| `ASC-11` | wind-frame structure / SKIN | B07 | UNAUTHORED |
+| `ASC-12` | isolate high riser / drum clutch | B08 | UNAUTHORED |
+| `ASC-13` | jack + seat crown beam | B09 | UNAUTHORED |
+| `ASC-14` | isolate + lock fans; bell as support | B10 | UNAUTHORED |
+| `ASC-15` | stand on 1600.00 m | B11 | UNAUTHORED |
+
+`ASC-05`–`ASC-07` are `PORTED`, not `AUTHORED`. They still quote `ScraperX-Grok` source constants
+— a handoff at `(10.40, 24.00, 38.40)`, 68 treads at `x = 10.40`, entity id `319`, a well at
+`(-1.76, —, 25.30)`. None of that exists here. Re-author each against real exit state before coding it.
+
+---
+
+## 6. What is next?
+
+> **Next code job: `ASC-02` — first legal stand at +40 m.**
+> Plan: `04_ASCENT/ASC-02_LEGAL_FORTY.md`, status AUTHORED, ready to implement.
+>
+> **Next planning job: re-author `ASC-05`** against this branch, per §5 above.
+
+Do not start from the 1.6 km crown. Do not open a second ticket while one is open.
+
+---
+
+## 7. Context-loading rule
+
+Do **not** load every file into every task. Load:
 
 - Governing Laws;
 - Execution Protocol;
-- current Work Order;
-- relevant source/tests/config;
-- only the GDD / atlas / TDD sections that constrain the current task.
+- the one open ticket;
+- the relevant source / tests / config;
+- only the GDD / atlas / TDD sections that ticket cites.
 
-Use `01_PRODUCT_AUTHORITY/support/` only to trace or resolve a product decision.
+Atlas loading by class:
 
-Atlas loading by work-order class:
+- `WO-000`: no atlas.
+- `WO-001`–`WO-004`: Atlas §§2, 9 (datum + kernel deck).
+- `WO-005`–`WO-013`: Atlas §§4, 7, 8, 9, 12.
+- `ASC-*`: Atlas §6 for **its own band only**, plus §§4, 5, 7, 12, 13 as the slice cites them.
+  Loading bands the slice does not own is how scope creeps.
 
-- WO-000: no atlas required.
-- WO-001–004: Atlas §§2 and 9 only (datum + kernel deck).
-- WO-005–008: Atlas §§4, 7, 8, 9, 12.
-- Later content work: the named band in Atlas §6.
+Use `01_PRODUCT_AUTHORITY/support/` only to trace a closed product decision.
 
-## Implementation method
+---
 
-Work through bounded Work Orders. Each Work Order must identify:
+## 8. Claim discipline
 
-- one concrete capability;
-- existing proven truth;
-- governing product/technical sections;
-- authoritative owner;
-- allowed implementation seam;
-- forbidden shortcuts;
-- actual proof path;
-- explicit completion condition.
-
-Implement the smallest **complete causal slice**, not the smallest textual diff.
-
-Do not expand into adjacent features after the completion condition passes.
-
-Do not assemble bands B01–B11 before the kernel slice is proven and `WO-014` is green.
-
-## Claim discipline
-
-Never collapse:
+Never collapse
 
 `implemented → built → APK produced → installed → executed → observed → verified on Fold`
 
-into one word such as “done.”
+into one word such as "done". Evidence must match the claim, and the claim must name its evidence.
 
-Evidence must match the claim.
+A plan is not an implementation. `AUTHORED` is not `COMPLETE`. A green aggregate is not a green
+falsifier — name the line.
 
-## Work-order spine
+---
 
-Kernel: `WO-000`–`WO-013`. These prove the tool types on the `KX-*` substrate at source
-x ≈ 200. They stay as regression substrate and are not retitled into campaign modules.
+## 9. Deliberately excluded
 
-| WO | File | Slice |
-|---|---|---|
-| 000 | `03_WORK_ORDERS/WO-000_DELIVERY_SPINE.md` | Godot 4.7 → GDExtension → fixed-step native sim → arm64 APK |
-| 001 | `03_WORK_ORDERS/WO-001_EMBODIED_AUTHORITY.md` | native player on static `KX-DECK` |
-| 002 | `03_WORK_ORDERS/WO-002_MOVING_SUPPORT_TRUTH.md` | translating/rotating support-point velocity |
-| 003 | `03_WORK_ORDERS/WO-003_ATHLETIC_TRAVERSAL.md` | vault/mantle/ledge/hang on real geometry |
-| 004 | `03_WORK_ORDERS/WO-004_FOLD_STAGE_AND_INDUSTRIAL_IDENTITY.md` | Fold-aspect stage, industrial identity |
-| 005 | `03_WORK_ORDERS/WO-005_EXTERIOR_GRADE_AND_APPROACH.md` | exterior grade and approach |
-| 006 | `03_WORK_ORDERS/WO-006_FIRST_COUPLED_MACHINE.md` | vessel → orifice → cylinder → lift |
-| 007 | `03_WORK_ORDERS/WO-007_KELLERWORKS_IDENTITY_AND_ALPINE_BACKDROP.md` | Kellerworks identity, alpine backdrop |
-| 008 | `03_WORK_ORDERS/WO-008_FALL_PARACHUTE_CHECKPOINT.md` | fall, chute, commit, survived lower landing |
-| 009 | `03_WORK_ORDERS/WO-009_FIRST_FULL_CAUSAL_CHAIN.md` | kernel chain + persist/reload |
-| 010 | `03_WORK_ORDERS/WO-010_THE_PLAYERS_WEIGHT_IS_A_REAL_FORCE.md` | player mass drives the treadle |
-| 011 | `03_WORK_ORDERS/WO-011_FIRST_FREIGHT.md` | `KX-JIB` moves `KX-CRATE` |
-| 012 | `03_WORK_ORDERS/WO-012_FIRST_STRUCTURAL_COUPLING.md` | seated `KX-NEEDLE` changes traversal |
-| 013 | `03_WORK_ORDERS/WO-013_FIRST_PROCESS_COUPLING.md` | `KX-SUMP` changes `KX-GRATE` |
+Not implementation authority, and not to be reintroduced: questionnaire executables or JSON
+state; rejected drafts; GraveSpire history; old branches and builds; discarded mathematics;
+any second "content package" outside this tree.
 
-## Campaign queue
-
-`WO-014`–`WO-028` build the actual 1.6 km ascent, one Atlas band at a time. The queue, the
-per-slice mechanical-close template, and the datum law live in
-`03_WORK_ORDERS/SECTION_PRE_RESOLVE_PROTOCOL.md`. `WO-014`–`WO-020` are authored plans adopted
-from `ScraperX-Grok`; the rest are unauthored.
-
-`B00`–`B11` are Atlas §6 band IDs — floors of the tower. They are never work-order filenames.
-
-| WO | File | Slice | Atlas band |
-|---|---|---|---|
-| 014 | `03_WORK_ORDERS/WO-014_INTAKE_RISE.md` | apron → +24 m | B00 |
-| 015 | `03_WORK_ORDERS/WO-015_LEGAL_FORTY.md` | first legal stand at +40 m | B00 |
-| 016 | `03_WORK_ORDERS/WO-016_HOOK5_RACK.md` | `CAP-HOOK5` acquire | B00 |
-| 017 | `03_WORK_ORDERS/WO-017_NEEDLE_SEAT.md` | seat needles at 96 m | B01 |
-| 018 | `03_WORK_ORDERS/WO-018_CAGE_OR_SKIN.md` | cage land at 120 m, or east climb | B01 exit |
-| 019 | `03_WORK_ORDERS/WO-019_CW_PIN.md` | counterweight ride / pin dump | B02 |
-| 020 | `03_WORK_ORDERS/WO-020_WET_ISOLATION.md` | blind + drain, or north climb to 340 m | B03 |
-| 021–028 | not authored | plate shop → summit | B04–B11 |
-
-## Current starting point
-
-The kernel is proven on `ScraperX-Claude`: `build/host/scraperx_sim_tests` exits 0 with 9 of 9
-`PASS` (observed 2026-09-21). The current task is **WO-014**.
-
-Take the next incomplete work order in the queue. Do not start from the 1.6 km crown.
-
-Kernel module IDs live in the atlas, §9. Campaign completion lives in the atlas, B11, and remains the GDD summit rule: physically stand on 1600 m.
-
-## Deliberately excluded
-
-This package does not contain:
-
-- questionnaire executables;
-- questionnaire JSON state;
-- rejected drafts;
-- screenshots;
-- GraveSpire history;
-- old branches/builds;
-- discarded mathematics material;
-- a second “content package” outside this tree.
-
-Those are not ScraperX implementation authority.
+`MANIFEST.txt` and `SHA256SUMS.txt` are a **frozen snapshot of the v1.1 delivery package**. Their
+paths predate this layout and are not maintained. They are kept as a delivery record, not as an
+index of the tree.

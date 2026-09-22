@@ -2,24 +2,34 @@
 
 ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority package at the repository root. Read [`00_START_HERE.md`](00_START_HERE.md) before changing implementation.
 
-## Current work orders
+## Where the project is
 
-**WO-004 Fold Stage · WO-005 Exterior Grade and Approach · WO-006 First Coupled Machine**
+Two classes of work, defined once in [`00_START_HERE.md`](00_START_HERE.md) §2 and never sharing
+an identifier:
 
-```text
-device bounds -> Fold inner-panel viewport, frustum and HUD
-grade spawn   -> walk the approach -> tower's lower third fills the frame,
-                 crown sheared off by haze and stack plume
-hoist -> ballast -> hinged tipper -> tension-only rope -> valve lever
-      -> real orifice -> finite pressure vessel -> actuator cylinder
-      -> piston -> counterweighted platform the player rides
-```
+- **Kernel Work Orders** `WO-000`–`WO-013` in `03_KERNEL/` — foundational engineering that proves
+  one tool type each on the `KX-*` substrate. A **closed set**. All fourteen are in source.
+- **Ascent Slices** `ASC-01`–`ASC-15` in `04_ASCENT/` — the actual 1.6 km climb, one Atlas band
+  at a time. This is where new work happens.
 
-Completed before them: WO-000 delivery spine, WO-001 embodied authority, WO-002 moving-support truth, WO-003 athletic traversal.
+`B00`–`B11` are Atlas band IDs — floors of the tower. They are never filenames and never tickets.
 
-The machine is not scripted. Each link reads the previous link's actual body state, so it can be entered mid-cycle, walked around, looked up into, blocked, and started early by standing on the tipper. The plant is a reduced-order pressure vessel with finite stored energy: cut the boiler feed and the lift fades and stops. The steam plume is a one-way consumer of the native orifice mass flow — shut the valve and it dies.
+**Proven** (CI run `35651140478`, all steps green): 10 native falsifiers at exit 0; Godot 4.7 at
+Fold inner-panel aspect `2160x1856`; Android arm64 APK carrying `libscraperx_native.so`.
 
-Still deliberately absent: the fall/parachute/checkpoint loop, load-bearing structural coupling, process/isolation networks, persistence, NPCs, missions, and interior routes into the tower.
+The kernel proves: a native 90 Hz Jolt player; moving-support point velocity; vault / mantle /
+ledge / hang; a coupled steam plant whose every link reads the previous link's real body state;
+fall, parachute and automatic commit; freight on a finite jib; a seated beam that changes
+traversal; a process volume that decides whether a grate is walkable.
+
+`ASC-01` builds the first real campaign ground: an apron, an 18 m intake belt, a 12 m / 5 t yard
+jib, a 4 t pack physically pinning a landing dog, a switchback stair and an exposed facade ladder
+to +24 m. The stair is shut because freight is standing in the dog's swing, and it opens because
+the jib moved that freight.
+
+**Next:** `ASC-02` — first legal stand at +40 m. Planned, not coded.
+
+Still absent: bands B01–B11 above the hall deck, NPCs, missions, and the summit.
 
 ## Build
 
@@ -36,7 +46,7 @@ cmake --build build/host
 ctest --test-dir build/host --output-on-failure
 ```
 
-The GitHub Actions workflow performs the bounded WO-004..006 proof path: the full native suite, Linux GDExtension loading, a runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856) that walks the tower approach and observes the coupled machine work, one rendered first-person capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
+The GitHub Actions workflow performs the full proof path: the full native suite, Linux GDExtension loading, a runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856) that walks the tower approach and observes the coupled machine work, one rendered first-person capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
 
 ## Claim boundary
 

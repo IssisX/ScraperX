@@ -1,11 +1,11 @@
-# SCRAPERX — WO-014 INTAKE RISE (~0 m TO +24 m)
+# SCRAPERX — ASC-01 INTAKE RISE (~0 m TO +24 m)
 
-**Work Order:** `WO-014`  
-**Status:** COMPLETE in native source. Presentation and CI proof lines reproduced.  
+**Work Order:** `ASC-01`  
+**Status:** `COMPLETE` — in source; falsifier green in CI run `35651140478`
 **Depends on:** the kernel slice (WO-000–WO-003, WO-008–WO-009, WO-011–WO-013) proven on `ScraperX-Claude`
 
 > **Provenance.** Adopted from `ScraperX-Grok`, where this slice was authored as `WO-009_INTAKE_RISE`.
-> Ticket numbers remapped per `SECTION_PRE_RESOLVE_PROTOCOL.md` §5.1. Geometry, ratings and
+> Ticket numbers remapped per `02_ASCENT_SLICE_PROTOCOL.md` §5.1. Geometry, ratings and
 > falsifiers carry over as **DESIGN TARGET**: they were never proven in source on that branch
 > (it has not compiled since 2026-09-20). Positions are re-sited against this branch's tower
 > at source `(0, —, -150)`.
@@ -53,7 +53,7 @@ yet. Fold-device execution is not proven. Android APK export is proven by CI on 
 
 The claim on `ScraperX-Grok` that this slice was already "DONE in source, proven by Actions run
 `35454049354`" does not hold: that run is the kernel causal-chain run at `b90c5911`, and it
-predates every campaign commit. See `SECTION_PRE_RESOLVE_PROTOCOL.md` §7.
+predates every campaign commit. See `02_ASCENT_SLICE_PROTOCOL.md` §7.
 
 ## Authority
 
@@ -135,7 +135,7 @@ Stop at the first stable ~+24 m handoff.
 
 ## Result record
 
-- **Changed:** `src/sim/simulation.{hpp,cpp}` (entity IDs 35–46 `kIntakeApronEntityId`..`kIntakeSkinEntityId`; `InitialSpawn::IntakePendant`/`IntakeThroat`/`IntakeSkinFoot` = 18–20; the `kIntake*` constant block; `build_intake_rise`; `update_intake`; MOD-INTAKE-BELT stroke in `update_support_motion`; belt/hook/pack/dog added to `entity_is_moving_support`; `StepCommands::intake_slew_input`/`intake_hoist_input`; `Simulation::set_intake_slew_input`/`set_intake_hoist_input`; eight new `Snapshot` fields); `src/bridge/scraperx_simulation.{hpp,cpp}` (ten accessors/setters, spawn count 18→21); `tests/simulation_tests.cpp` (the WO-014 falsifier and a `walk_toward` helper that returns the deepest z reached); `godot/presentation/main.gd` (`_build_intake_rise`, render mirror, pendant input, `INTAKE` HUD line, and a `_layout_hud` fix); `godot/main.tscn` (`Intake` HUD label); `.github/workflows/wo000-delivery-spine.yml` (six proof greps on the new line).
+- **Changed:** `src/sim/simulation.{hpp,cpp}` (entity IDs 35–46 `kIntakeApronEntityId`..`kIntakeSkinEntityId`; `InitialSpawn::IntakePendant`/`IntakeThroat`/`IntakeSkinFoot` = 18–20; the `kIntake*` constant block; `build_intake_rise`; `update_intake`; MOD-INTAKE-BELT stroke in `update_support_motion`; belt/hook/pack/dog added to `entity_is_moving_support`; `StepCommands::intake_slew_input`/`intake_hoist_input`; `Simulation::set_intake_slew_input`/`set_intake_hoist_input`; eight new `Snapshot` fields); `src/bridge/scraperx_simulation.{hpp,cpp}` (ten accessors/setters, spawn count 18→21); `tests/simulation_tests.cpp` (the ASC-01 falsifier and a `walk_toward` helper that returns the deepest z reached); `godot/presentation/main.gd` (`_build_intake_rise`, render mirror, pendant input, `INTAKE` HUD line, and a `_layout_hud` fix); `godot/main.tscn` (`Intake` HUD label); `.github/workflows/wo000-delivery-spine.yml` (six proof greps on the new line).
 - **Built:** host and bridge configurations, Release, GCC 13.3, `-Wall -Wextra -Wpedantic -Werror`, clean.
 - **Executed:** `./build/host/scraperx_sim_tests` (exit 0); `ctest --test-dir build/bridge` (1/1 passed); Godot 4.7.stable under Xvfb at Fold aspect with `--rendering-method gl_compatibility` and the workflow's own `--ci --capture=` sequence.
 - **Observed:**
@@ -159,6 +159,6 @@ Stop at the first stable ~+24 m handoff.
 
 - **Deviations from the adopted plan, stated rather than absorbed:** the plan's `WO-009` geometry table places B00 at a bare origin with its own numbers (`kB00StairDY = 0.353` treads, an 18 m belt along z, a mast at `(-6.50, —, 8.00)`). This branch already has a tower at source `(0, —, -150)`, so B00 is re-sited against that tower's south face and the positions are re-derived; ratings, strokes, masses and moments carry over unchanged (12 m boom, 11.50 m boom height, 5 t SWL, `τ = 588600 N·m`, `F = 49050 N`, 0.85 m/s hoist, 0.22 rad/s slew, ±0.90 rad, 18 m belt stroke, ω = 0.40, 1.45 rad dog retract at 0.62 rad/s). MOD-STAIR-A is built as six inclined switchback slabs rather than 68 discrete treads, matching `build_stack`'s existing house pattern. MOD-SKIN-LADDER-S is a stepped ledge line climbing north up the apron rather than a facade rung line, for the reason in defect 4.
 
-- **Unverified boundary:** interactive desktop/Fold operation of the yard-jib pendant (it shares the kernel jib's Raise/Lower/Slew axes, wired and exercised headlessly but not hand-tested in a live session). Android install/execution, Fold 6 panel observation, touch ergonomics and sustained frame rate remain unverified — no device access. **`CAP-PENDANT` is not gated in this slice:** the Atlas has the pendant cold until the belt catwalk is reachable, and this branch makes the catwalk reachable from grade by a ramp, so "reach the pendant" is not yet a puzzle. That is `WO-016`'s capability work, not this slice's. **Riding MOD-INTAKE-BELT is legal but not separately falsified here** — the belt is kinematic and in the moving-support set, so the WO-002 support-point law already covers it; a dedicated ride falsifier is left to the slice that makes riding it necessary. The apron is the ground plane rather than a distinct `MOD-APRON` slab, since the existing 480 m ground already reaches the tower base. No persist fields were added: nothing in this slice has state that outlives its bodies.
+- **Unverified boundary:** interactive desktop/Fold operation of the yard-jib pendant (it shares the kernel jib's Raise/Lower/Slew axes, wired and exercised headlessly but not hand-tested in a live session). Android install/execution, Fold 6 panel observation, touch ergonomics and sustained frame rate remain unverified — no device access. **`CAP-PENDANT` is not gated in this slice:** the Atlas has the pendant cold until the belt catwalk is reachable, and this branch makes the catwalk reachable from grade by a ramp, so "reach the pendant" is not yet a puzzle. That is `ASC-03`'s capability work, not this slice's. **Riding MOD-INTAKE-BELT is legal but not separately falsified here** — the belt is kinematic and in the moving-support set, so the WO-002 support-point law already covers it; a dedicated ride falsifier is left to the slice that makes riding it necessary. The apron is the ground plane rather than a distinct `MOD-APRON` slab, since the existing 480 m ground already reaches the tower base. No persist fields were added: nothing in this slice has state that outlives its bodies.
 
 - **Regressions:** none observed. All nine prior native falsifiers and every Godot runtime proof line passed unchanged after this work order's changes.

@@ -1,14 +1,14 @@
-# SCRAPERX — WO-016 HOOK5 RACK (CAP-HOOK5 ACQUIRE)
+# SCRAPERX — ASC-03 HOOK5 RACK (CAP-HOOK5 ACQUIRE)
 
-**Work Order:** `WO-016`
-**Status:** READY after `WO-015_LEGAL_FORTY` is in source.
-**Depends on:** `WO-014_INTAKE_RISE.md` in source and green; `WO-015_LEGAL_FORTY.md`
-in source; kernel falsifiers green; protocol `SECTION_PRE_RESOLVE_PROTOCOL.md` §8.
+**Work Order:** `ASC-03`
+**Status:** `AUTHORED` — written against this branch. Not coded. Blocked on `ASC-02`
+**Depends on:** `ASC-01_INTAKE_RISE.md` in source and green; `ASC-02_LEGAL_FORTY.md`
+in source; kernel falsifiers green; protocol `02_ASCENT_SLICE_PROTOCOL.md` §8.
 
 > **Authoring note.** This file replaces the plan adopted from `ScraperX-Grok`
-> (their `WO-011_HOOK5_RACK`) for the same reason `WO-015` was replaced: its
+> (their `WO-011_HOOK5_RACK`) for the same reason `ASC-02` was replaced: its
 > inherited constants describe a world that does not exist here. Re-authored
-> against this branch's real `WO-014` source and `WO-015`'s planned exit.
+> against this branch's real `ASC-01` source and `ASC-02`'s planned exit.
 
 ## Objective
 
@@ -16,7 +16,7 @@ Author `MOD-HOOK5-RACK` and the acquisition of `CAP-HOOK5`.
 
 Atlas §6 band B00 names it: *"Hook block + slings in a locked cage opened by
 moving the crate or circling the belt."* The capability it grants is consumed by
-`WO-017`, where nothing can be attached to a needle without it.
+`ASC-04`, where nothing can be attached to a needle without it.
 
 The slice owns **one mechanism and one new player state**:
 
@@ -53,14 +53,14 @@ Traversal constants this slice leans on:
 `probe_ledge` requires the wall ray and the top ray to strike the **same body**,
 and with `require_supported_landing` the landing probe must strike it too. Every
 mantle target below is therefore one box whose front face is the wall and whose
-top face is the landing — the law `WO-014` established for `MOD-SKIN-LADDER-S`.
+top face is the landing — the law `ASC-01` established for `MOD-SKIN-LADDER-S`.
 
-**Inherited from `WO-015` as DESIGN TARGET, not source:** the `+40.1872 m`
+**Inherited from `ASC-02` as DESIGN TARGET, not source:** the `+40.1872 m`
 `MOD-HALL-DECK`, the bascule and its cradle at `(8.608, —, -108.560)`, persist
-v2. If `WO-015` is re-sited before it lands, §8.3's clearances here must be
+v2. If `ASC-02` is re-sited before it lands, §8.3's clearances here must be
 re-derived against what actually shipped.
 
-Entity IDs and spawns are **assigned when this slice is coded**, after `WO-015`
+Entity IDs and spawns are **assigned when this slice is coded**, after `ASC-02`
 has taken its block. This file names bodies, not numbers.
 
 ## Authority
@@ -69,8 +69,8 @@ has taken its block. This file names bodies, not numbers.
 - GDD §§4, 6, 7.2–7.4, 11, 16, 17, 23, 24
 - Atlas §§3, 4 (`CAP-HOOK5`), 6 band B00, 7 K0, 8.3, 12, 13
 - TDD §§6, 8–11, 14
-- `WO-015_LEGAL_FORTY.md` §8.12
-- `SECTION_PRE_RESOLVE_PROTOCOL.md` §§4, 6, 8, 9
+- `ASC-02_LEGAL_FORTY.md` §8.12
+- `02_ASCENT_SLICE_PROTOCOL.md` §§4, 6, 8, 9
 
 ## Owner
 
@@ -85,8 +85,8 @@ law, `probe_ledge`/mantle, `add_vertical_hinge` with a permanent drive (the
 the station-gating shape for the pick/drop commands.
 
 Do not retitle `KX-*`. Do not author `MOD-NEEDLE-*`, `MOD-CAGE-1` or
-`MOD-GUIDE-RACK` — `WO-017`. Do not lengthen `MOD-YARD-JIB`. Do not move
-`WO-015`'s cradle to make §8.4.4's coupling fit.
+`MOD-GUIDE-RACK` — `ASC-04`. Do not lengthen `MOD-YARD-JIB`. Do not move
+`ASC-02`'s cradle to make §8.4.4's coupling fit.
 
 ## Required causal path
 
@@ -109,7 +109,7 @@ ACT  [lift MOD-HOOK5-BAR out of its keepers and set it down clear]
 ACT  [lift the hook block off its rack]
   → STATE[carry constraint created; hook_in_rack goes false]
   → WORLD[CAP-HOOK5 is held: a 36 kg body attached to the player]
-  → PLAY [WO-017 can attach it. Both hands are now full, so no traversal move
+  → PLAY [ASC-04 can attach it. Both hands are now full, so no traversal move
           begins until it is set down]
 ```
 
@@ -134,10 +134,10 @@ deleting the block on pickup and re-spawning it at the needle
 
 - `CAP-HOOK5` as a bool with no body behind it
 - a cage that opens on a timer, a proximity trigger, or a mission flag
-- teleporting the block to the player, or to the needle in `WO-017`
+- teleporting the block to the player, or to the needle in `ASC-04`
 - blocking `MOD-SKIN-LADDER-S` geometrically while the block is held — the
   ladder must be untouched; only the player's own state changes
-- a second jib, or re-siting `WO-015`'s cradle, to make §8.4.4 close
+- a second jib, or re-siting `ASC-02`'s cradle, to make §8.4.4 close
 - claiming Fold-device execution
 
 ## Implementation scope
@@ -147,14 +147,14 @@ persist v3 for the carry topology; CI proof lines.
 
 ## Out of scope
 
-`WO-017_NEEDLE_SEAT`. Band B01 above `MOD-HALL-DECK`. Any second use of
-`CAP-HOOK5` inside this slice. Fold 45 FPS. Art/VO. Reopening `WO-014`/`WO-015`.
+`ASC-04_NEEDLE_SEAT`. Band B01 above `MOD-HALL-DECK`. Any second use of
+`CAP-HOOK5` inside this slice. Fold 45 FPS. Art/VO. Reopening `ASC-01`/`ASC-02`.
 
 ## Proof path
 
 The nine falsifiers in §8.11. Two Godot screenshots at Fold aspect: the deck
 alongside the cage mid-window, and the player at grade holding the block with the
-door travelled. Android arm64 APK. Kernel, `WO-014` and `WO-015` green.
+door travelled. Android arm64 APK. Kernel, `ASC-01` and `ASC-02` green.
 
 ## Completion
 
@@ -191,7 +191,7 @@ pending.
 
 ### 8.2 Entry state
 
-Player support at entry may be anywhere `WO-015` leaves them: the apron, the
+Player support at entry may be anywhere `ASC-02` leaves them: the apron, the
 `+24.1872 m` handoff, or `MOD-HALL-DECK` at `+40.1872 m`. The slice is entered
 by walking back down to grade, which is not a regression — it is the shape of a
 tower where the tools live at the bottom.
@@ -251,14 +251,14 @@ plainly: the buttress occupies `x ∈ [8.00, 9.40]` and the roof `x ∈ [9.40,
 - door leaf shut spans `x ∈ [10.20, 11.64]`, leaving `0.20 m` at the hinge jamb
   and `0.06 m` at the latch jamb. Both are far under `0.70 m`, so a shut door is
   impassable, and neither boundary is coincident — the `BoxShape` convex-radius
-  jam `WO-012` and `WO-014` both hit is designed out rather than discovered
+  jam `WO-012` and `ASC-01` both hit is designed out rather than discovered
 - **door hinge sweep:** the leaf is `0.24 m` thick, so its trailing corner
   sweeps a `0.12 m` circle about the hinge. The hinge is therefore set back to
   `x = 10.200`, `0.20 m` clear of the jamb at `x = 10.000` — `0.08 m` more than
-  the corner needs. `WO-014`'s `MOD-DOG-A` bound at `0.31 rad` and never
+  the corner needs. `ASC-01`'s `MOD-DOG-A` bound at `0.31 rad` and never
   travelled because its hinge sat flush with its jamb; that is pre-resolved here
   and must not be rediscovered
-- cage `z ∈ [-106.0, -102.0]` vs `WO-015`'s cradle `z ∈ [-109.76, -107.36]` →
+- cage `z ∈ [-106.0, -102.0]` vs `ASC-02`'s cradle `z ∈ [-109.76, -107.36]` →
   **`1.36 m`**
 - cage `x ∈ [8.0, 12.0]` vs the 9 t proof stand at `(7.0, —, -98.0)` → clear in
   both axes
@@ -327,7 +327,7 @@ predicate reads "bar removed"; the door travels because nothing is touching it.
 The hook block is a `36 kg` body, inside the Atlas's `25–40 kg` unaided range.
 It sits on a rack inside the cage. `CAP-HOOK5` is the derived predicate
 `!hook_in_rack`, computed from the block's measured pose exactly as
-`WO-020` specifies `CAP-BLIND`. It is never a stored bool.
+`ASC-07` specifies `CAP-BLIND`. It is never a stored bool.
 
 ```
 pick_up(body):
@@ -349,7 +349,7 @@ set_down():
 
 A `PointConstraint` fixes the shared point but leaves rotation free, so the
 block genuinely swings from the carry point as the player walks — the same
-property that makes `WO-014`'s pack swing under the hook rather than weld to it.
+property that makes `ASC-01`'s pack swing under the hook rather than weld to it.
 
 **Both hands are on it.** While a carry constraint exists,
 `try_begin_ground_traversal` and the airborne hang grab both return false. Vault,
@@ -361,7 +361,7 @@ This is a **player state derived from real constraint topology**
 reason the distinction below matters:
 
 > `MOD-SKIN-LADDER-S` is **not blocked**. Its bodies are bit-for-bit what
-> `WO-014` built; no collider changes, no envelope is added, no probe is
+> `ASC-01` built; no collider changes, no envelope is added, no probe is
 > filtered. What changed is that the player's hands are full. Set the block
 > down and every rung is available again, immediately. The protocol forbids
 > walling SKIN off to protect a puzzle; this does not wall it off, and
@@ -387,19 +387,19 @@ reach. The hook hangs at the boom tip, so that reach is not a disc — it is the
 
 ```
 slew -0.90 rad  ->  ( 9.400, —, -107.659)   east limit
-slew -0.80 rad  ->  ( 8.608, —, -108.560)   WO-015's counterweight cradle
+slew -0.80 rad  ->  ( 8.608, —, -108.560)   ASC-02's counterweight cradle
 slew  0.00 rad  ->  (-0.000, —, -112.200)   the pack's rest pose
 slew +0.90 rad  ->  (-9.400, —, -107.659)   west limit
 ```
 
-`WO-015` places the cradle at `(8.608, —, -108.560)`, `1.20 m` from the east
+`ASC-02` places the cradle at `(8.608, —, -108.560)`, `1.20 m` from the east
 limit. The entire east stretch of the reach circle is spoken for. The west
 stretch at `(-9.400, —, -107.659)` collides with `MOD-SKIN-LADDER-S`'s head rung
 at `x ∈ [-7.0, -5.0]`, `z ∈ [-107.7, -105.7]`, and siting a freight cage on the
 SKIN line is worse than not siting it at all.
 
 **Resolution:** close the slice on the belt coupling, which needs no jib reach at
-all. Do not move the cradle — it is load-bearing for `WO-015`'s bascule and
+all. Do not move the cradle — it is load-bearing for `ASC-02`'s bascule and
 re-siting it would invalidate a mechanism already specified down to its rope
 length. If a later slice wants the crate coupling, the cheapest path is a second
 door on the cage's north face reached from the belt's far stroke, not a
@@ -472,7 +472,7 @@ and it is structural rather than a special case.
 Atlas §3. Nothing here can strand:
 
 - **cannot time the belt** → `CAP-HOOK5` is simply not held yet. Nothing else in
-  `WO-014`/`WO-015` needs it, and both braids to `+40 m` remain open
+  `ASC-01`/`ASC-02` needs it, and both braids to `+40 m` remain open
 - **inside the cage** → the bar is inside with you; the door opens outward from
   within; and even leaving the bar seated, the hatch drop is the only cost
 - **block left somewhere awkward** → it is a body at rest and can always be
@@ -517,14 +517,14 @@ seated, door shut.
    `MantleApproach` ledge and request traversal for 5 s. `accepted_traversal_count`
    does not change. Set the block down, request once: it does.
 6. `wo016_hands_free_restores_everything` — the same instance, block down, runs
-   `WO-014`'s SKIN climb to `+24 m` unchanged, `15` mantles.
+   `ASC-01`'s SKIN climb to `+24 m` unchanged, `15` mantles.
 7. `wo016_skin_geometry_is_untouched` — assert the SKIN rung bodies' positions
    and extents are identical with the block held and with it stowed. The ladder
    is not walled off; only the player's state differs.
 8. `wo016_hook_reaches_forty` — carrying the block, walk `MOD-STAIR-A` from the
    apron to `MOD-HALL-DECK`. `support_entity_id == MOD-HALL-DECK`, player
    `y ≥ 40.1872 + 0.70`, and `CAP-HOOK5` still held on arrival.
-9. `wo016_prior_still_pass` — `WO-014`, `WO-015` and all kernel falsifiers `PASS`
+9. `wo016_prior_still_pass` — `ASC-01`, `ASC-02` and all kernel falsifiers `PASS`
    unchanged, the 9 t proof load still on the ground.
 
 ### 8.12 Exit state
@@ -536,11 +536,11 @@ seated, door shut.
 - `MOD-NEEDLE-A/B`, their `48 m` racks, `MOD-NEEDLE-POCKETS` at `96 m`,
   `MOD-CAGE-1` and `MOD-GUIDE-RACK` **do not exist yet**
 - the hall's east opening and `MOD-EAST-OUTRIGGER` do not exist
-- everything `WO-014` and `WO-015` built still exists below
+- everything `ASC-01` and `ASC-02` built still exists below
 - persist is v3
 - Fold-device execution remains unverified
 
 ---
 
 **Stop. Do not begin the next file inside this one.**
-Next file: `03_WORK_ORDERS/WO-017_NEEDLE_SEAT.md`
+Next file: `04_ASCENT/ASC-04_NEEDLE_SEAT.md`

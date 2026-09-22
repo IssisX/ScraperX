@@ -73,6 +73,12 @@ This work order is complete when:
 Stop. Do not begin climbing or moving-support work inside WO-001.
 
 ## Result record
+
+> **Record gap, identified 2026-09-22.** Every line below reads `pending`, yet the player body,
+> its capsule, its allowed DOFs and its support identity are all in source and are exercised by
+> every falsifier that follows this work order. The code is real; the paperwork was never
+> filled. Recorded as a gap rather than back-filled from memory — closing it means quoting the
+> commit and the observed output, which is bookkeeping, not engineering.
 - Changed: pending.
 - Built: pending.
 - Executed: pending.

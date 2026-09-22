@@ -838,7 +838,7 @@ Do not begin with a giant tower, structural solver, or content production.
 The playable geometry for WO-001–008 is the atlas **kernel slice** (`02_ASCENT_ATLAS.md` §9), not bands B01–B11.
 
 ### Work Order 000 — delivery spine
-File: `03_WORK_ORDERS/WO-000_DELIVERY_SPINE.md`
+File: `03_KERNEL/WO-000_DELIVERY_SPINE.md`
 
 Prove:
 
@@ -847,14 +847,14 @@ Prove:
 No fake game systems.
 
 ### Work Order 001 — embodied authority
-File: `03_WORK_ORDERS/WO-001_EMBODIED_AUTHORITY.md`
+File: `03_KERNEL/WO-001_EMBODIED_AUTHORITY.md`
 
 `touch/desktop test input → native player state → static-world collision/support → Godot render mirror`
 
 No climbing system yet. World: `KX-DECK`.
 
 ### Work Order 002 — moving-support truth
-File: `03_WORK_ORDERS/WO-002_MOVING_SUPPORT_TRUTH.md`
+File: `03_KERNEL/WO-002_MOVING_SUPPORT_TRUTH.md`
 
 Add:
 
@@ -866,32 +866,32 @@ Add:
 This is a constitutional discriminator. Do not advance if it is fake or unstable.
 
 ### Work Order 003 — athletic traversal
-File: `03_WORK_ORDERS/WO-003_ATHLETIC_TRAVERSAL.md`
+File: `03_KERNEL/WO-003_ATHLETIC_TRAVERSAL.md`
 
 Add bounded mantle/vault/ledge/hang primitives on real geometry, preserving moving-support behavior.
 
 ### Work Order 004 — fall / parachute / checkpoint
-File: `03_WORK_ORDERS/WO-004_FALL_PARACHUTE_CHECKPOINT.md`
+File: `03_KERNEL/WO-004_FALL_PARACHUTE_CHECKPOINT.md`
 
 Prove real fall, survivable parachute dynamics, checkpoint commit, death rollback, and surviving lower-level fall continuation. Refuge: `KX-REFUGE`.
 
 ### Work Order 005 — first freight mechanism
-File: `03_WORK_ORDERS/WO-005_FIRST_FREIGHT.md`
+File: `03_KERNEL/WO-005_FIRST_FREIGHT.md`
 
 One real machine with finite power/force/travel/brake behavior and a real movable load: `KX-JIB` + `KX-CRATE`.
 
 ### Work Order 006 — first structural coupling
-File: `03_WORK_ORDERS/WO-006_FIRST_STRUCTURAL_COUPLING.md`
+File: `03_KERNEL/WO-006_FIRST_STRUCTURAL_COUPLING.md`
 
 The machine/load changes an actual structural state that changes geometry/support/traversal: `KX-NEEDLE` in `KX-POCKETS`.
 
 ### Work Order 007 — first process coupling
-File: `03_WORK_ORDERS/WO-007_FIRST_PROCESS_COUPLING.md`
+File: `03_KERNEL/WO-007_FIRST_PROCESS_COUPLING.md`
 
 A process/isolation state changes the same physical situation or machine capability: `KX-SUMP` → `KX-GRATE`.
 
 ### Work Order 008 — first full causal chain
-File: `03_WORK_ORDERS/WO-008_FIRST_CAUSAL_CHAIN.md`
+File: `03_KERNEL/WO-008_FIRST_CAUSAL_CHAIN.md`
 
 Demonstrate one complete chain on the kernel:
 

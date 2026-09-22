@@ -1,5 +1,13 @@
 ScraperX AI Build Package v1.1
 
+FROZEN DELIVERY RECORD -- NOT AN INDEX OF THE CURRENT TREE.
+This lists the v1.1 package as shipped. Paths below predate the 2026-09-22 taxonomy
+split: 03_WORK_ORDERS/ no longer exists and is now 03_KERNEL/ and 04_ASCENT/.
+The old-name -> new-name map is 02_ENGINEERING_AUTHORITY/02_ASCENT_SLICE_PROTOCOL.md
+section 5.1. SHA256SUMS.txt verifies this same v1.1 snapshot and is likewise frozen;
+it is deliberately left unedited so it remains a valid checksum file for what it
+covers. Neither file is maintained against the live tree.
+
 00_START_HERE.md
 01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md
 01_PRODUCT_AUTHORITY/01_SCRAPERX_GDD.md

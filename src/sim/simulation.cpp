@@ -339,7 +339,7 @@ constexpr float kStackRampHalfWidth = 1.6F;
 constexpr float kTowerMassBaseY =
     static_cast<float>(kStackLevelCount) * kStackLevelHeight + 5.0F;
 
-// --- WO-014: Ascent Atlas §6 band B00, "Apron and Intake" (0 -> 24 m) -------
+// --- ASC-01: Ascent Atlas §6 band B00, "Apron and Intake" (0 -> 24 m) -------
 // The first real campaign slice. Everything here is MOD-* content in the tower
 // yard, sited against the stack's south face (z = kStackCenterZ +
 // kStackHalfExtent = -124) rather than at a bare origin.
@@ -1822,7 +1822,7 @@ private:
     // approach/far decking flank one grate panel; only the grate's own
     // collidability changes, driven by update_sump every tick. Starts wet
     // (grate is a sensor -- see create) since the sump starts full.
-    // WO-014. Ascent Atlas §6 band B00: MOD-APRON, MOD-INTAKE-BELT,
+    // ASC-01. Ascent Atlas §6 band B00: MOD-APRON, MOD-INTAKE-BELT,
     // CAP-PENDANT, MOD-YARD-JIB, the 4 t pack, MOD-DOG-A, MOD-STAIR-A,
     // MOD-SKIN-LADDER-S. The ground plane already reaches here, so MOD-APRON
     // is the yard furniture standing on it rather than a second slab.
@@ -2516,7 +2516,7 @@ private:
     // Action (WO-006 text: "Player Action may... close a valve only at the
     // real station"), gated by station radius exactly like the jib/needle
     // pendants, but flips a binary state rather than driving a motor.
-    // WO-014 MOD-YARD-JIB / MOD-DOG-A. Same station-gated, continuous-axis
+    // ASC-01 MOD-YARD-JIB / MOD-DOG-A. Same station-gated, continuous-axis
     // contract as update_jib. The dog is deliberately absent from the command
     // path: its motor was commanded open at build time and is never touched
     // here, so the only thing that can change the throat is the pack moving.
@@ -2638,7 +2638,7 @@ private:
                              JPH::Quat::sIdentity(),
                              delta_seconds);
 
-        // WO-014 MOD-INTAKE-BELT: an 18 m translating slat deck. Kinematic and
+        // ASC-01 MOD-INTAKE-BELT: an 18 m translating slat deck. Kinematic and
         // in the moving-support set, so riding it inherits its velocity under
         // the WO-002 support-point law rather than being scenery you slide on.
         const double belt_z =

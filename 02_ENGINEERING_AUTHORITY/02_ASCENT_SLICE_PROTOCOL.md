@@ -1,16 +1,24 @@
-# SCRAPERX — MECHANICAL PRE-RESOLVE JOB CHAIN
+# SCRAPERX — ASCENT SLICE PROTOCOL
+
+**What this is:** the standing instruction for authoring an **Ascent Slice** (`ASC-01`–`ASC-15`,
+`04_ASCENT/`). It does not govern Kernel Work Orders (`WO-000`–`WO-013`, `03_KERNEL/`), which are
+a closed set and use `03_KERNEL/_KERNEL_WORK_ORDER_TEMPLATE.md`.
 
 **Origin:** authored on `ScraperX-Grok` as `SECTION_PRE_RESOLVE_PROTOCOL.md`; adopted here
-on 2026-09-21 with ticket numbers remapped to this branch's spine (see §5.1). The prose is
-theirs. The status claims are re-derived from evidence on this branch.
+2026-09-21 and re-homed into engineering authority 2026-09-22, because a process document is not
+a ticket and does not belong in a ticket folder. The prose is theirs. Every status claim is
+re-derived from evidence on this branch.
 
-**Use:** Paste this entire file as the standing instruction for every later section response.
 **Repo:** `IssisX/ScraperX`
-**Branch:** `ScraperX-Claude`
-**Mode:** planning documents only. No C++, Godot scenes, tests, CI, or APK in this pass.
-**Push rule:** review-then-push. Show the full file in chat. Wait. Write/commit/push that one file only after explicit approval of that file.
+**Write branch:** `ScraperX-Claude`. Other branches are readable for provenance and are never
+authorities or write targets.
+**Mode:** planning documents only. No C++, Godot scenes, tests, CI, or APK in an authoring pass.
 
-**Names.** One ticket list: `WO-000`–`WO-028` in `03_WORK_ORDERS/`. `B00`–`B11` exist only as atlas band IDs in `02_ASCENT_ATLAS.md` §6 (floors of the tower). Never name a work-order file `B##`. C++ tokens such as `kB00StairDY` are frozen source names; leave them.
+**Names.** Two ticket classes, one identifier each, defined once in `00_START_HERE.md` §2:
+`WO-000`–`WO-013` are Kernel Work Orders in `03_KERNEL/`; `ASC-01`–`ASC-15` are Ascent Slices in
+`04_ASCENT/`. They never share a namespace. `B00`–`B11` exist only as Atlas §6 band IDs — floors
+of the tower, never a filename and never a ticket. C++ tokens such as `kB00StairDY` are frozen
+source names; leave them.
 
 ---
 
@@ -20,7 +28,7 @@ Later coding must spend energy on implementation, not on inventing geometry, rat
 
 Each section file is the job ticket a coder can follow without inventing a module, a gate, a recovery path, or a climbable/filler distinction.
 
-The atlas is the map. The kernel work orders (`WO-000`–`WO-009`) proved the tool types. `WO-014_INTAKE_RISE.md` plus source proved the first 0–24 m campaign slice. This chain authors the remaining tickets, one causal slice at a time.
+The atlas is the map. The kernel work orders (`WO-000`–`WO-009`) proved the tool types. `ASC-01_INTAKE_RISE.md` plus source proved the first 0–24 m campaign slice. This chain authors the remaining tickets, one causal slice at a time.
 
 ---
 
@@ -60,12 +68,12 @@ A valid slice has all of:
 
 It is not:
 
-- a whole atlas band unless that band is already one chain (atlas band B00 0–24 was one chain; `WO-015_LEGAL_FORTY` is the leftover PLAY of K0, not all of atlas band B01)
+- a whole atlas band unless that band is already one chain (atlas band B00 0–24 was one chain; `ASC-02_LEGAL_FORTY` is the leftover PLAY of K0, not all of atlas band B01)
 - a visual pass
 - a kernel re-proof
 - three macros forced into one floor (atlas §12.8, GDD §10 region-dependent coupling)
 
-Gold standard for freeze quality: the “Pre-resolved mechanism” block in `03_WORK_ORDERS/WO-014_INTAKE_RISE.md`.
+Gold standard for freeze quality: the “Pre-resolved mechanism” block in `04_ASCENT/ASC-01_INTAKE_RISE.md`.
 
 ---
 
@@ -76,7 +84,7 @@ Always load:
 - `00_START_HERE.md` (spine + current job only)
 - `01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md` — only laws cited by the slice
 - `01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md` — §6 of the named band, §7 chain row, §12, §13; plus §4/§5/§8 if the slice uses a CAP, Transfer Plate, or commit
-- `03_WORK_ORDERS/WORK_ORDER_TEMPLATE.md`
+- `03_KERNEL/_KERNEL_WORK_ORDER_TEMPLATE.md`
 - the previous section file’s **Completion / exit state**
 - current source constants for any machine this slice reuses (`src/sim/simulation.cpp` `kB00*` and player capsule)
 
@@ -91,7 +99,7 @@ Conflict order: Laws > GDD > Atlas > Execution Protocol > TDD > current source >
 ## 4. Hard rules
 
 1. **No invention.** Module IDs, CAP IDs, band cuts, braid names, and example couplings come from the atlas. If the slice needs an ID not in the atlas, stop (see §9).
-2. **Do not retcon.** Do not rewrite WO-000–008, CP-003, CP-004, or `WO-014_INTAKE_RISE.md`. Do not treat CPs as TDD completion.
+2. **Do not retcon.** Do not rewrite WO-000–008, CP-003, CP-004, or `ASC-01_INTAKE_RISE.md`. Do not treat CPs as TDD completion.
 3. **Do not duplicate B00 0–24.** That slice is already specified and in source at HEAD. Inherit its numbers.
 4. **Kernel stays substrate.** Do not rename `KX-*` objects and call them campaign modules.
 5. **Native owns consequence.** Godot presents. Flags, animation, mission state, and mesh-swap-without-collision-change are not causality.
@@ -105,7 +113,7 @@ Conflict order: Laws > GDD > Atlas > Execution Protocol > TDD > current source >
 13. **One file per response.** Full body, template-complete, no “snip.”
 14. **Push only after explicit approval of that file.**
 
-Forbidden shortcuts (always in force): painted parkour stripe; mission flags as gates; invisible walls vs SKIN; chute teleport / powered lift; animation-owned machines; mesh-swap without collision change; reset-on-band-load; loading atlas bands B01–B11 inside the B00 intake slice; duplicating `WO-014_INTAKE_RISE`; claiming CP-003 hopper as WO-011; second atlas; stranding with no recovery path.
+Forbidden shortcuts (always in force): painted parkour stripe; mission flags as gates; invisible walls vs SKIN; chute teleport / powered lift; animation-owned machines; mesh-swap without collision change; reset-on-band-load; loading atlas bands B01–B11 inside the B00 intake slice; duplicating `ASC-01_INTAKE_RISE`; claiming CP-003 hopper as WO-011; second atlas; stranding with no recovery path.
 
 ---
 
@@ -117,41 +125,64 @@ Queue number **is** the WO number.
 
 | WO | File to author | Slice | Atlas band | Status on this branch |
 |---|---|---|---|---|
-| 014 | `WO-014_INTAKE_RISE.md` | 0–24 m | B00 | Plan adopted. **Code in progress.** |
-| 015 | `WO-015_LEGAL_FORTY.md` | first legal stand at atlas `z ≥ 40 m` | B00 leftover + K0 PLAY | **Authored here.** Not coded. |
-| 016 | `WO-016_HOOK5_RACK.md` | `MOD-HOOK5-RACK` / `CAP-HOOK5` acquire | B00 | **Authored here.** Not coded. |
-| 017 | `WO-017_NEEDLE_SEAT.md` | seat needles at `MOD-NEEDLE-POCKETS` | B01 + K1 | **Authored here.** Not coded. |
-| 018 | `WO-018_CAGE_OR_SKIN.md` | cage landing at TP-120 vs `MOD-EAST-OUTRIGGER` | B01 exit | Plan adopted. Not coded. |
-| 019 | `WO-019_CW_PIN.md` | `MOD-CW-PIN` / stack as moving support | B02 + K2 | Plan adopted. Not coded. |
-| 020 | `WO-020_WET_ISOLATION.md` | blind + drain vs SKIN around wet core | B03 + K3 | Plan adopted. Not coded. |
-| 021 | `WO-021_SHOP_GIRDER.md` | seat `MOD-GIRDER-T` | B04 + K4 | Not authored. |
-| 022 | `WO-022_FACADE_TRAVELER.md` | hang rail / traveler stroke | B05 + K5 | Not authored. |
-| 023 | `WO-023_MIDSTACK.md` | service lift or SKIN; do not force three macros | B06 | Not authored. |
-| 024 | `WO-024_WIND_FRAME.md` | wind-frame structure / SKIN | B07 | Not authored. |
-| 025 | `WO-025_HIGH_HEADER.md` | isolate high riser / drum clutch | B08 + K6 | Not authored. |
-| 026 | `WO-026_CROWN_BEAM.md` | jack + seat crown beam | B09 + K7 | Not authored. |
-| 027 | `WO-027_FANS.md` | isolate + lock fans; bell as support | B10 + K8 | Not authored. |
-| 028 | `WO-028_SUMMIT.md` | stand on `z = 1600.00 m`; no flag shortcut | B11 | Not authored. |
+| 014 | `ASC-01_INTAKE_RISE.md` | 0–24 m | B00 | Plan adopted. **Code in progress.** |
+| 015 | `ASC-02_LEGAL_FORTY.md` | first legal stand at atlas `z ≥ 40 m` | B00 leftover + K0 PLAY | **Authored here.** Not coded. |
+| 016 | `ASC-03_HOOK5_RACK.md` | `MOD-HOOK5-RACK` / `CAP-HOOK5` acquire | B00 | **Authored here.** Not coded. |
+| 017 | `ASC-04_NEEDLE_SEAT.md` | seat needles at `MOD-NEEDLE-POCKETS` | B01 + K1 | **Authored here.** Not coded. |
+| 018 | `ASC-05_CAGE_OR_SKIN.md` | cage landing at TP-120 vs `MOD-EAST-OUTRIGGER` | B01 exit | Plan adopted. Not coded. |
+| 019 | `ASC-06_CW_PIN.md` | `MOD-CW-PIN` / stack as moving support | B02 + K2 | Plan adopted. Not coded. |
+| 020 | `ASC-07_WET_ISOLATION.md` | blind + drain vs SKIN around wet core | B03 + K3 | Plan adopted. Not coded. |
+| 021 | `ASC-08_SHOP_GIRDER.md` | seat `MOD-GIRDER-T` | B04 + K4 | Not authored. |
+| 022 | `ASC-09_FACADE_TRAVELER.md` | hang rail / traveler stroke | B05 + K5 | Not authored. |
+| 023 | `ASC-10_MIDSTACK.md` | service lift or SKIN; do not force three macros | B06 | Not authored. |
+| 024 | `ASC-11_WIND_FRAME.md` | wind-frame structure / SKIN | B07 | Not authored. |
+| 025 | `ASC-12_HIGH_HEADER.md` | isolate high riser / drum clutch | B08 + K6 | Not authored. |
+| 026 | `ASC-13_CROWN_BEAM.md` | jack + seat crown beam | B09 + K7 | Not authored. |
+| 027 | `ASC-14_FANS.md` | isolate + lock fans; bell as support | B10 + K8 | Not authored. |
+| 028 | `ASC-15_SUMMIT.md` | stand on `z = 1600.00 m`; no flag shortcut | B11 | Not authored. |
 
-### 5.1 Ticket-number map
+### 5.1 Migration map — old name → current name
 
-`ScraperX-Grok` authored these plans against its own spine, which numbered the shared kernel
-work differently from this branch. The Atlas **band** is the stable key; the ticket number is
-bookkeeping. Mapping applied when the plans were ported:
+Two renames have happened. This table is the whole record; it is frozen and needs no upkeep.
 
-| Slice | Atlas band | `ScraperX-Grok` | Here |
+**1. Adoption from `ScraperX-Grok` (2026-09-21).** That branch numbered the shared kernel work
+differently, so the same slice carried different numbers on each side.
+
+| Slice | Class | `ScraperX-Grok` | here |
 |---|---|---|---|
-| First freight | kernel | WO-005 | WO-011 |
-| First structural coupling | kernel | WO-006 | WO-012 |
-| First process coupling | kernel | WO-007 | WO-013 |
-| First causal chain | kernel | WO-008 | WO-009 |
-| Fall / parachute / checkpoint | kernel | WO-004 | WO-008 |
-| Intake rise | B00 | WO-009 | WO-014 |
-| …campaign rows | B00–B11 | WO-0NN | WO-0(NN+5) |
+| Fall / parachute / checkpoint | kernel | `WO-004` | `WO-008` |
+| First freight | kernel | `WO-005` | `WO-011` |
+| First structural coupling | kernel | `WO-006` | `WO-012` |
+| First process coupling | kernel | `WO-007` | `WO-013` |
+| First causal chain | kernel | `WO-008` | `WO-009` |
 
-If a later coding pass splits a row, split only at a falsifiable handoff. Never author two rows in one response.
+**2. Taxonomy split (2026-09-22).** Kernel and campaign work had shared one ambiguous `WO-*`
+namespace. Campaign tickets became `ASC-*`; kernel tickets kept `WO-*` and the set was closed.
 
-Queue may grow **only** if atlas §6 names a module this chain skipped (the first likely extra is none; `MOD-HOOK5-RACK` is already `WO-016` because `WO-014` left it out of scope).
+| Slice | Atlas band | `ScraperX-Grok` | old here | **current** |
+|---|---|---|---|---|
+| Intake rise | B00 | `WO-009` | `WO-014` | **`ASC-01`** |
+| Legal forty | B00 | `WO-010` | `WO-015` | **`ASC-02`** |
+| Hook5 rack | B00 | `WO-011` | `WO-016` | **`ASC-03`** |
+| Needle seat | B01 | `WO-012` | `WO-017` | **`ASC-04`** |
+| Cage or skin | B01 exit | `WO-013` | `WO-018` | **`ASC-05`** |
+| CW pin | B02 | `WO-014` | `WO-019` | **`ASC-06`** |
+| Wet isolation | B03 | `WO-015` | `WO-020` | **`ASC-07`** |
+| Shop girder → Summit | B04–B11 | `WO-016`–`WO-023` | `WO-021`–`WO-028` | **`ASC-08`–`ASC-15`** |
+
+Documents moved in the same pass:
+
+| Old path | Current path |
+|---|---|
+| `03_WORK_ORDERS/WO-000..013_*.md` | `03_KERNEL/WO-000..013_*.md` |
+| `03_WORK_ORDERS/WO-014..020_*.md` | `04_ASCENT/ASC-01..07_*.md` |
+| `03_WORK_ORDERS/SECTION_PRE_RESOLVE_PROTOCOL.md` | `02_ENGINEERING_AUTHORITY/02_ASCENT_SLICE_PROTOCOL.md` |
+| `03_WORK_ORDERS/WORK_ORDER_TEMPLATE.md` | `03_KERNEL/_KERNEL_WORK_ORDER_TEMPLATE.md` |
+
+The Atlas **band** is the stable key across every rename. The ticket number is bookkeeping.
+
+If a later coding pass splits a row, split only at a falsifiable handoff. The queue may grow only
+if Atlas §6 names a module this chain skipped.
 
 ---
 
@@ -198,8 +229,8 @@ Gravity: `9.81 m/s²` (`kB00Gravity`).
 **Claim class on this branch: `DESIGN TARGET`.** On `ScraperX-Grok` these were written as frozen
 source constants. They are not frozen here: that branch's source has not compiled since
 2026-09-20, and at its last compiling commit every falsifier — kernel included — was red. So
-these numbers are inherited as a *specification* for `WO-014`, not as quoted source. Once
-`WO-014` lands in `src/sim/simulation.cpp` with a green falsifier, the constants that ship
+these numbers are inherited as a *specification* for `ASC-01`, not as quoted source. Once
+`ASC-01` lands in `src/sim/simulation.cpp` with a green falsifier, the constants that ship
 become frozen and later B00 files must consume those.
 
 Geometry is additionally re-sited here: this branch already has a tower at source
@@ -368,9 +399,10 @@ Examples that must stop the file:
 
 ## 10. File template
 
-Path: `03_WORK_ORDERS/<FILE_FROM_QUEUE>.md`
+Path: `04_ASCENT/<FILE_FROM_QUEUE>.md`
 
-Fill every `WORK_ORDER_TEMPLATE.md` field, then append `## Mechanical close` from §8.
+Fill every field in `03_KERNEL/_KERNEL_WORK_ORDER_TEMPLATE.md`, then append
+`## Mechanical close` from §8. The mechanical close is what makes it a slice.
 
 Skeleton:
 
@@ -412,31 +444,35 @@ Proof path separates claim classes (Law 29). This planning pass does not execute
 
 ---
 
-## 11. Review-then-push (mandatory)
+## 11. Writing a slice to the branch
 
-**Step A.** Show first: proposed path + complete markdown body. No summaries. No snip.
+> **Resolved contradiction (2026-09-22).** This section previously carried
+> `ScraperX-Grok`'s review-then-push gate: paste the full file in chat, wait for explicit
+> per-file approval, then push. That is a chat-workflow artifact of the branch it came from and
+> it does not describe how this branch operates — the operator directs work turn by turn and
+> commits land directly. Keeping a rule nobody follows makes the whole document advisory, so it
+> is replaced rather than quietly ignored.
 
-**Step B.** Stop. Approval is a clear go-ahead for **that file** (“approved”, “push it”, “it’s all good”). Silence, questions, and requested edits are not approval. If they request edits, paste the full revised file and wait again.
+One slice per commit. Write the file to `04_ASCENT/`, commit that file alone, push
+`IssisX/ScraperX` `ScraperX-Claude`.
 
-**Step C.** Only after approval: write that file to `03_WORK_ORDERS/` on `ScraperX-Claude`, commit **only that file**, push `IssisX/ScraperX` `ScraperX-Claude`. No C++, no atlas rewrites, no unrelated README churn in the same commit.
+An authoring commit contains **no** C++, no atlas rewrite, no unrelated churn. If it needs a
+source change to be correct, it is not an authoring pass — it is a coding pass, and it needs its
+own ticket.
 
-Until Step C is authorized: no GitHub writes.
-
-If push credentials fail after approval, say so. Do not pretend it landed.
+If the push fails, say so. Do not report a file as landed when it has not.
 
 ---
 
 ## 12. First action when this protocol is active
 
-Nothing in the `WO-014`–`WO-028` queue is in source on this branch yet.
+Read `00_START_HERE.md` §5 for live status, then:
 
-- `WO-014` is in source and green (CI run `35651140478`).
-- Next **code** job: `WO-015_LEGAL_FORTY` (B00, 24–40 m).
-- `WO-015`, `WO-016` and `WO-017` are **authored against this branch**, replacing
-  the `ScraperX-Grok` ports whose inherited constants described a world that does
-  not exist here. `WO-018`–`WO-020` are still the unmodified ports and carry the
-  same defect; re-author each one before coding it.
-- Next **plan** to author: `WO-018_CAGE_OR_SKIN.md`.
+- **Next code job:** `ASC-02_LEGAL_FORTY` (B00, 24–40 m). Status AUTHORED, ready to implement.
+- **Next authoring job:** re-author `ASC-05_CAGE_OR_SKIN` against this branch.
 
-Do not implement `WO-015` until `WO-014` is in source with a passing falsifier. Do not treat a
-plan's numbers as proven because they are written down.
+`ASC-01` is COMPLETE — in source, falsifier green in CI run `35651140478`.
+`ASC-02`–`ASC-04` are AUTHORED against this branch's real state.
+`ASC-05`–`ASC-07` are PORTED: still `ScraperX-Grok` text quoting constants that do not exist
+here. Re-author each before coding it. A plan's numbers are not proven because they are written
+down.

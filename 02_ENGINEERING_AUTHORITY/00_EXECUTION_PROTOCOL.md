@@ -16,7 +16,13 @@ For implementation work, resolve conflicts in this order:
 3. **Ascent Atlas** — spatial/content truth for the same game: datum, bands, braids, modules, kernel slice.
 4. **Technical Architecture / TDD** — implementation ownership and system boundaries.
 5. **Current source, tests, build configuration, and runtime evidence** — implementation truth.
-6. **Current Work Order** — the exact bounded change being executed.
+6. **The one open ticket** — the exact bounded change being executed. That is a
+   **Kernel Work Order** (`WO-000`–`WO-013`, `03_KERNEL/`, closed set) or an
+   **Ascent Slice** (`ASC-01`–`ASC-15`, `04_ASCENT/`). The two are different classes of
+   work and never share an identifier. `00_START_HERE.md` §2 is the vocabulary.
+
+Writes land on **`ScraperX-Claude`**. Other branches are readable for provenance and are
+never authorities.
 
 Supporting decision/provenance documents are consulted only when a product decision needs tracing. They are not routine implementation context.
 
@@ -33,22 +39,28 @@ Do **not** dump the entire project package into every coding task.
 Every implementation task loads:
 
 - this Execution Protocol;
-- the current Work Order;
+- the one open ticket;
 - the relevant source/tests/config;
 - the specific Governing Law, GDD, and atlas sections that constrain the task;
 - the relevant TDD sections.
 
 Load additional GDD/atlas/support material only when the task crosses into it.
 
-WO-000 does not need the atlas. WO-001–004 need Atlas §§2 and 9. WO-005–008 need Atlas §§4, 7–9, 12.
+`WO-000` does not need the atlas. `WO-001`–`WO-004` need Atlas §§2 and 9. `WO-005`–`WO-013`
+need Atlas §§4, 7, 8, 9, 12. An `ASC-*` slice needs Atlas §6 for **its own band only**, plus
+§§4, 5, 7, 12, 13 as that slice cites them — loading bands a slice does not own is how scope creeps.
 
 The goal is **small active context under one global authority tree**, not reduced authority and not a second package.
 
 ---
 
-## 3. WORK ORDER CONTRACT
+## 3. TICKET CONTRACT
 
-Every coding task must begin with a bounded Work Order containing:
+Every coding task begins with one bounded ticket. Kernel Work Orders use the fields below
+(`03_KERNEL/_KERNEL_WORK_ORDER_TEMPLATE.md`). Ascent Slices use these fields **plus** the
+mechanical close in `02_ASCENT_SLICE_PROTOCOL.md` §8, which is not optional for them.
+
+Every ticket must contain:
 
 **Objective** — one concrete player-visible or system-visible capability.
 
@@ -67,6 +79,8 @@ Every coding task must begin with a bounded Work Order containing:
 **Completion** — observable conditions that end the task.
 
 If those fields cannot be stated clearly, the task is not ready to code.
+
+The kernel is a **closed set**. No new `WO-*` is ever created; new work is an `ASC-*` slice.
 
 ---
 
@@ -283,10 +297,11 @@ The requester’s workstation may be the Fold. That is normal. It is the shippin
 
 ### Legal asks
 
-- `000` … `008` or `Execute WO-NNN. Stop at its completion condition.`
+- `Execute ASC-NN. Stop at its completion condition.` — the normal ask
+- `Author ASC-NN.` — write the plan, no code
 - `status`
 - `fix:` + the broken evidence
-- `amend:` + one atlas module / one TDD gate / one WO field
+- `amend:` + one atlas module / one TDD gate / one ticket field
 - `Record this claim at class implemented|built|installed|executed|observed|Fold.`
 
 One current work order. One change class. One proof path.
@@ -295,12 +310,12 @@ The requester does **not** paste Laws, GDD, atlas, TDD, or the WO file when the 
 
 ### Illegal asks
 
-Reject these and name the current WO instead:
+Reject these and name the one open ticket instead:
 
 - build the game / the tower / the 1.6 km climb / “make it causal”;
 - dump the whole package as one prompt and expect a world;
-- write another protocol, atlas, GDD, or work-order pack while the current WO is unexecuted;
-- start B01–B11 content before WO-008 is proven;
+- write another protocol, atlas, GDD, or ticket pack while the open ticket is unexecuted;
+- start a band the open slice does not own;
 - treat desktop, web, video, or a screenshot as Fold proof.
 
 Asking how to operate from the Fold is legal. Using process-chat to avoid `000` after that answer is not.
@@ -309,11 +324,11 @@ Asking how to operate from the Fold is legal. Using process-chat to avoid `000` 
 
 New prose is legal only when the current work order cannot name owner, seam, or proof without it.
 
-If the current WO can be executed, execute it. Do not derive process.
+If the open ticket can be executed, execute it. Do not derive process.
 
 ### Model rule
 
-If the requester issues an illegal ask, do not comply and do not soothe. Point at the current WO. If they insist on a whole-tower build, that is a Project-Guardian reject, not a bigger prompt.
+If the requester issues an illegal ask, do not comply and do not soothe. Point at the open ticket. If they insist on a whole-tower build, that is a Project-Guardian reject, not a bigger prompt.
 
 Load files yourself. Return one artifact or one status block. Do not assign copy-paste homework.
 
@@ -325,9 +340,9 @@ Galaxy Fold 6 is both the proof device and, until a desktop exists, the only con
 
 Therefore:
 
-- commands must be thumb-legal (see `00_START_HERE.md` Fold-only operator);
+- commands must be thumb-legal: one line naming one ticket;
 - deliverables are one downloadable artifact or a short status, not a reading list;
 - remote/CI build is the intended compile path (TDD §20.3);
 - “open these eight markdown files and paste them” is a protocol defect, not a user defect.
 
-Friction may be reduced. Scope may not. WO-000 is still the first code.
+Friction may be reduced. Scope may not. One open ticket at a time, always.

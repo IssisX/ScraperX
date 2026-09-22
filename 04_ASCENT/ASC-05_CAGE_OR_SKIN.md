@@ -1,14 +1,19 @@
-# SCRAPERX — WO-018 CAGE OR SKIN (K1 PLAY)
+# SCRAPERX — ASC-05 CAGE OR SKIN (K1 PLAY)
 
-**Work Order:** `WO-018`  
-**Status:** READY after `WO-017_NEEDLE_SEAT` source on `ScraperX-Claude`  
-**Depends on:** `WO-014_INTAKE_RISE.md`, `WO-015_LEGAL_FORTY.md`, `WO-016_HOOK5_RACK.md`, `WO-017_NEEDLE_SEAT.md` in source; protocol `03_WORK_ORDERS/SECTION_PRE_RESOLVE_PROTOCOL.md` WO-018
+**Work Order:** `ASC-05`  
+**Status:** `PORTED` — `ScraperX-Grok` text, not re-derived. **Re-author before coding.** Next authoring job
+**Depends on:** `ASC-01_INTAKE_RISE.md`, `ASC-02_LEGAL_FORTY.md`, `ASC-03_HOOK5_RACK.md`, `ASC-04_NEEDLE_SEAT.md` in source; protocol `02_ENGINEERING_AUTHORITY/02_ASCENT_SLICE_PROTOCOL.md` ASC-05
 
 > **Provenance.** Adopted from `ScraperX-Grok`, where this slice was authored as `WO-013_CAGE_OR_SKIN`.
-> Ticket numbers remapped per `SECTION_PRE_RESOLVE_PROTOCOL.md` §5.1. Geometry, ratings and
+> Ticket numbers remapped per `02_ASCENT_SLICE_PROTOCOL.md` §5.1. Geometry, ratings and
 > falsifiers carry over as **DESIGN TARGET**: they were never proven in source on that branch
 > (it has not compiled since 2026-09-20). Positions are re-sited against this branch's tower
 > at source `(0, —, -150)`.
+>
+> **`PORTED`, not authored.** Everything below still quotes `ScraperX-Grok` source
+> constants — geometry, entity ids and persist versions that do not exist on
+> `ScraperX-Claude`. Treat it as design intent, not as a job ticket. Re-derive it
+> against real exit state first, as `ASC-02`, `ASC-03` and `ASC-04` were.
 
 ## Objective
 
@@ -17,13 +22,13 @@ Close atlas §6 band B01 **exit** and K1 **PLAY**: stand on TP-120, **or** reach
 SHAFT: if both needles are seated, `MOD-CAGE-1` may pass 118 m and land.  
 SKIN: `MOD-EAST-OUTRIGGER` plus SKIN-E rungs. Needles may be 0, 1, or 2. Do not wall SKIN to protect the cage.
 
-This is not `MOD-CW-STACK`. This is not `CAP-DOGKEY`. This is not WO-019.
+This is not `MOD-CW-STACK`. This is not `CAP-DOGKEY`. This is not ASC-06.
 
 ## Existing truth
 
-HEAD `b71c949` on `ScraperX-Claude` (needle source `a859f6b`) already has:
+HEAD `b71c949` on `ScraperX-Grok` (needle source `a859f6b`) already has — **none of which is true on `ScraperX-Claude`**:
 
-- WO-014–012 in source: 0–40 m, `CAP-HOOK5`, campaign needles, `MOD-CAGE-1` stroke y ∈ [8.00, 120.00]
+- ASC-01–012 in source: 0–40 m, `CAP-HOOK5`, campaign needles, `MOD-CAGE-1` stroke y ∈ [8.00, 120.00]
 - well source `(-1.76, —, 25.30)`, opening 5.00 × 5.00 (south of hall center so STAIR-A still lands)
 - hall north remainder `kHallSoffitEntityId`, top y = 40.20
 - needles park y = 48.36, seat y = 96.18, A z = 24.70, B z = 25.90, x = -1.76, length 18.40 m
@@ -44,8 +49,8 @@ There is **no** TP-120 deck and **no** `MOD-EAST-OUTRIGGER` yet. Cage can travel
 - Atlas §§3, 4 (`CAP-NEEDLE`), 5 (TP-120), 6 band B01 exit, 7 K1 PLAY, 8.1, 8.3, 12, 13
 - TDD §§6, 8–11, 14
 - Execution Protocol §§3–7, 11–12
-- `WO-017_NEEDLE_SEAT.md` §8.12
-- `SECTION_PRE_RESOLVE_PROTOCOL.md` WO-018
+- `ASC-04_NEEDLE_SEAT.md` §8.12
+- `02_ASCENT_SLICE_PROTOCOL.md` ASC-05
 
 ## Owner
 
@@ -66,7 +71,7 @@ SHAFT (needs `CAP-NEEDLE`):
     ACT[ride MOD-CAGE-1 with both needles seated, command up through 118]
       → STATE[cage y → 120.00; landing dogs retract]
       → WORLD[TP-120 ring is standable; support identity is TP-120]
-      → PLAY[K1 PLAY closed; WO-019 may board the stack from this deck]
+      → PLAY[K1 PLAY closed; ASC-06 may board the stack from this deck]
 
 SKIN, zero needles:
 
@@ -87,7 +92,7 @@ Reconnect at 120:
     ACT[walk the 120 m SKIN ring east catwalk]
       → STATE[support = ring then TP-120]
       → WORLD[SHAFT and SKIN share TP-120]
-      → PLAY[WO-019 entry is the same deck whether you rode or climbed]
+      → PLAY[ASC-06 entry is the same deck whether you rode or climbed]
 
 Illegal:
 
@@ -108,15 +113,15 @@ Illegal:
 
 ## Implementation scope
 
-Native IntakeRise extension + falsifiers; Godot twins; persist v4; CI still runs WO-014–012 and kernel tests.
+Native IntakeRise extension + falsifiers; Godot twins; persist v4; CI still runs ASC-01–012 and kernel tests.
 
 ## Out of scope
 
-`WO-019_CW_PIN` (next file): stack, pin, drum, west SKIN 120–220. `CAP-DOGKEY`. `CAP-BLIND`. Fold 45 FPS. Art/VO. Reopening needle seating.
+`ASC-06_CW_PIN` (next file): stack, pin, drum, west SKIN 120–220. `CAP-DOGKEY`. `CAP-BLIND`. Fold 45 FPS. Art/VO. Reopening needle seating.
 
 ## Proof path
 
-This planning pass does not execute. Later coding must exercise §8.11, inspect frozen jib/well/needle numbers, screenshot TP-120 and the outrigger as one hall, keep kernel + WO-014–012 tests green.
+This planning pass does not execute. Later coding must exercise §8.11, inspect frozen jib/well/needle numbers, screenshot TP-120 and the outrigger as one hall, keep kernel + ASC-01–012 tests green.
 
 ## Completion
 
@@ -144,7 +149,7 @@ pending. This pass does not execute.
 |---|---|
 | Atlas band | B01 Transfer Hall |
 | Slice | band B01 exit: TP-120 **or** 120 m SKIN ring |
-| Chain | K1 PLAY only. ACT/STATE/WORLD already closed by `WO-017` |
+| Chain | K1 PLAY only. ACT/STATE/WORLD already closed by `ASC-04` |
 | Live braids | SHAFT (cage land). SKIN (outrigger + SKIN-E). FLOW not live |
 | Transfer Plate | **TP-120** authored here |
 | Modules allowed | `MOD-CAGE-1` (landing), `MOD-EAST-OUTRIGGER`, `MOD-HALL-DECK` (east opening already open), inherited needles/guides |
@@ -154,7 +159,7 @@ pending. This pass does not execute.
 
 ### 8.2 Entry state
 
-From `WO-017_NEEDLE_SEAT.md` §8.12 and source `a859f6b`:
+From `ASC-04_NEEDLE_SEAT.md` §8.12 and source `a859f6b`:
 
 - player can stand on hall y = 40.20
 - `seated_count` ∈ {0, 1, 2} as left
@@ -219,10 +224,10 @@ i=1 overlaps outrigger 40. i=200 is the 120 ring. 96 m stub meets i ≈ 140 (`40
 |---|---|---|---|---|
 | ring east | SKIN-E head | `(17.00, 120.00, 25.30)` | `(0.40, 0.12, 6.00)` | yes |
 | ring south | join SKIN-S lineage | `(0.00, 120.00, 22.40)` | `(17.40, 0.12, 0.40)` | yes |
-| ring west stub | WO-019 SKIN-W start | `(-17.00, 120.00, 25.30)` | `(0.40, 0.12, 6.00)` | yes |
+| ring west stub | ASC-06 SKIN-W start | `(-17.00, 120.00, 25.30)` | `(0.40, 0.12, 6.00)` | yes |
 | catwalk E | ring → TP-120 east | `(10.24, 120.00, 25.30)` | `(6.50, 0.12, 0.40)` | yes |
 
-West stub is standable now so WO-019 does not invent a 120 m floor. WO-019 authors the climb **up** from here. Do not author SKIN-W rungs above 120 in this file.
+West stub is standable now so ASC-06 does not invent a 120 m floor. ASC-06 authors the climb **up** from here. Do not author SKIN-W rungs above 120 in this file.
 
 #### Entity IDs (after 319)
 
@@ -243,7 +248,7 @@ Player walk-off is contact. No teleport.
 
 SKIN-E is always climbable from the 40 m outrigger.
 
-After a legal land, the cage parks north on TP-120 so the well is free for WO-019's stack:
+After a legal land, the cage parks north on TP-120 so the well is free for ASC-06's stack:
 
     landed cage park xz = (-1.76, 29.60)
     kinematic slide ≤ 4.3 m on the plate, speed 0.40 m/s, brake on when flush
@@ -267,7 +272,7 @@ If the player arrived by SKIN, cage is already elsewhere.
 See Objective. Stitch to **next** file:
 
     PLAY[stand on TP-120 or 120 ring]
-      → WO-019 entry: same well, stack top will sit at y = 120.20
+      → ASC-06 entry: same well, stack top will sit at y = 120.20
       → west ring stub is where SKIN-W 120–220 begins
 
 ### 8.7 Support / traversal handoff
@@ -321,7 +326,7 @@ Commit: dwell 0.35 s on TP-120 **or** 120 ring, player y ≥ 120.00. Do not requ
 6. `wo013_stub_absent_without_needle` — seated_count 0; stub is not standable.
 7. `wo013_ring_to_tp` — from 120 ring walk catwalk; support becomes TP-120 without a teleport (xz continuous).
 8. `wo013_flag_is_not_a_floor` — commit at 40 m does not create TP-120 under the player.
-9. `wo013_prior_still_pass` — WO-014–012 + kernel PASS.
+9. `wo013_prior_still_pass` — ASC-01–012 + kernel PASS.
 
 ### 8.12 Exit state
 
@@ -339,4 +344,4 @@ Next file boards a stack from TP-120, **or** climbs west SKIN from the 120 ring 
 ---
 
 **Stop. Do not begin the next file inside this one.**  
-Next file: `03_WORK_ORDERS/WO-019_CW_PIN.md`
+Next file: `04_ASCENT/ASC-06_CW_PIN.md`

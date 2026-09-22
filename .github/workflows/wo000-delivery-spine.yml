@@ -1,15 +1,19 @@
-name: ScraperX-2 Checkpoint — WO-004..006 Fold Stage, Exterior Approach, Coupled Machine
+name: ScraperX — full proof path (kernel WO-000..013 + ascent ASC-01)
 
 on:
   push:
-    branches: [ScraperX-2, ScraperX-Claude]
+    # ScraperX-Claude is the write/implementation branch. ScraperX-2 carries its
+    # own copy of this workflow, so listing it here was inert routing.
+    branches: [ScraperX-Claude]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Every ScraperX-2 commit is an immutable checkpoint candidate. A newer push must
-# never cancel an older commit's build, otherwise that commit can lose its APK.
+# Every commit is an immutable build candidate. A newer push must never cancel an
+# older commit's build, otherwise that commit can lose its APK. "Build candidate",
+# not "checkpoint": a checkpoint in ScraperX is the in-sim commit_checkpoint(), and
+# the word is not reused for CI artefacts.
 concurrency:
   group: scraperx-checkpoint-${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: false
@@ -101,7 +105,7 @@ jobs:
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
-          # WO-014 B00: the intake rise closed, and it closed for physical
+          # ASC-01 B00: the intake rise closed, and it closed for physical
           # reasons. Each of these is a separate link in the causal path.
           grep -F "pinned_impassable=1" artifacts/native-falsifiers.log
           grep -F "forced_impassable=1" artifacts/native-falsifiers.log
@@ -166,7 +170,7 @@ jobs:
         run: |
           set -euo pipefail
           CHECKPOINT_ID="${GITHUB_SHA::12}"
-          APK_NAME="ScraperX-2-${CHECKPOINT_ID}-arm64.apk"
+          APK_NAME="ScraperX-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
@@ -209,7 +213,7 @@ jobs:
       - name: Publish immutable checkpoint build and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: ScraperX-2-checkpoint-${{ github.sha }}
+          name: ScraperX-build-${{ github.sha }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 90
