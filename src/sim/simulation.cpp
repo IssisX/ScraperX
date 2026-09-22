@@ -58,7 +58,22 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr float kSupportNormalThreshold = 0.55F;
 constexpr float kPlayerMaximumRelativeSpeed = 5.5F;
 constexpr float kGroundAcceleration = 22.0F;
-constexpr float kAirAcceleration = 8.0F;
+// 14.0, not the original 8.0. Measured directly, by executing a jump and an
+// airborne redirect against the real solver, not calculated: a still-
+// airborne redirect from a dead stop to 90% of max relative speed
+// took 0.622 s at 8.0 -- more than half of an ordinary jump's own measured
+// 1.111 s total airtime -- against GDD 7's own "Player intent should feel
+// immediate and athletic... sluggishness is not used as a substitute for
+// physical credibility." At 14.0 (63.6% of ground control, so air steering
+// still reads as distinctly weaker than ground -- a jump stays a committed
+// arc, not free ground-speed control) the same redirect measures 0.356 s,
+// under a third of airtime, with real time left to act on it before
+// landing. kGroundAcceleration, kJumpSpeed and kPlayerMaximumRelativeSpeed
+// were measured against the same probe and left unchanged: ground accel
+// already reaches full speed in 0.25 s and jump apex/airtime (1.51 m,
+// 1.11 s) both read as athletic, not floaty -- the redirect lag was the one
+// number the numbers themselves flagged.
+constexpr float kAirAcceleration = 14.0F;
 constexpr float kJumpSpeed = 5.5F;
 constexpr double kTranslatingSupportAmplitudeMeters = 2.0;
 constexpr double kTranslatingSupportAngularFrequency = 1.0;

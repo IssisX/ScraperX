@@ -9,6 +9,29 @@ extends Node3D
 const EYE_OFFSET := Vector3(0.0, 0.62, 0.0)
 const TOUCH_RADIUS := 100.0
 
+# Locomotion-feel camera response. Pure presentation, driven every frame by
+# native player position/velocity/grounded state already read below -- never
+# the other way around, and never touching _native itself. Every term is a
+# function of CURRENT state (speed, ground contact, the last frame's own
+# vertical velocity), not an accumulating drift, so it always returns to
+# exactly baseline (no dip, no bob, FOV_BASE) the moment the player is
+# grounded and stationary -- the CI runtime proof's own OBSERVE hold, where
+# the player stands still, depends on that landing on the same fov=82.0 the
+# scene is built with.
+const FOV_BASE := 82.0
+const FOV_SPRINT_MAX_DEGREES := 4.0
+const FOV_FALL_MAX_DEGREES := 3.0
+const FOV_FALL_FULL_MPS := 14.0
+const LANDING_DIP_DURATION_SECONDS := 0.22
+const LANDING_DIP_MAX_METERS := 0.16
+const LANDING_DIP_MIN_IMPACT_MPS := 2.0
+const LANDING_DIP_FULL_IMPACT_MPS := 9.0
+const HEAD_BOB_CYCLES_PER_METER := 0.72
+const HEAD_BOB_VERTICAL_METERS := 0.028
+const HEAD_BOB_LATERAL_METERS := 0.016
+const HEAD_BOB_SPEED_FLOOR_MPS := 0.3
+const HEAD_BOB_SPEED_FULL_MPS := 3.0
+
 const TRANSLATING_SUPPORT_ENTITY_ID := 3
 const MANTLE_LEDGE_ENTITY_ID := 6
 const TIPPER_ENTITY_ID := 14
@@ -154,6 +177,11 @@ var _capture_scheduled := false
 var _ci_mode := false
 var _yaw := 0.0
 var _pitch := -0.02
+var _cam_was_grounded := true
+var _cam_last_velocity_y := 0.0
+var _cam_landing_timer := 0.0
+var _cam_landing_strength := 0.0
+var _cam_bob_phase := 0.0
 var _move_touch_index := -1
 var _look_touch_index := -1
 var _move_touch_origin := Vector2.ZERO
@@ -315,7 +343,7 @@ func _process(delta: float) -> void:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return
 
-	_render_snapshot()
+	_render_snapshot(delta)
 	_ambient_clock += delta
 	_update_ambient_dressing()
 
@@ -511,7 +539,51 @@ func _layout_hud() -> void:
 # --- presentation mirror ----------------------------------------------------
 
 
-func _render_snapshot() -> void:
+# Every term is a pure function of THIS frame's native state (or a bounded
+# transient timer that provably reaches exactly zero), so a stationary,
+# grounded player always reads back exactly EYE_OFFSET / FOV_BASE -- see this
+# file's own header comment on the constants block above for why that must
+# hold for the CI runtime proof.
+func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool,
+		delta: float) -> void:
+	if grounded and not _cam_was_grounded:
+		var impact := absf(_cam_last_velocity_y)
+		_cam_landing_timer = LANDING_DIP_DURATION_SECONDS
+		_cam_landing_strength = smoothstep(LANDING_DIP_MIN_IMPACT_MPS,
+			LANDING_DIP_FULL_IMPACT_MPS, impact)
+	_cam_was_grounded = grounded
+	_cam_last_velocity_y = velocity.y
+
+	var dip := 0.0
+	if _cam_landing_timer > 0.0:
+		_cam_landing_timer = maxf(0.0, _cam_landing_timer - delta)
+		var t := 1.0 - _cam_landing_timer / LANDING_DIP_DURATION_SECONDS
+		dip = -_cam_landing_strength * LANDING_DIP_MAX_METERS * sin(PI * t)
+
+	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
+	# 5.5 mirrors kPlayerMaximumRelativeSpeed (src/sim/simulation.cpp) -- a
+	# curve-shape input, not a gameplay bound, so the native constant is not
+	# exposed through the bridge just for this.
+	var bob_fade := 0.0
+	if grounded:
+		bob_fade = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
+		_cam_bob_phase += horizontal_speed * HEAD_BOB_CYCLES_PER_METER * TAU * delta
+	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * bob_fade
+	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * bob_fade
+	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
+
+	_camera.position = position + EYE_OFFSET + Vector3(0.0, dip + vertical_bob, 0.0) + \
+		right_vector * lateral_bob
+	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
+
+	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed)
+	var fov_fall := 0.0
+	if not grounded and velocity.y < 0.0:
+		fov_fall = FOV_FALL_MAX_DEGREES * smoothstep(0.0, FOV_FALL_FULL_MPS, -velocity.y)
+	_camera.fov = FOV_BASE + fov_ground + fov_fall
+
+
+func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
@@ -519,8 +591,7 @@ func _render_snapshot() -> void:
 	var support_velocity: Vector3 = _native.get_support_point_linear_velocity()
 	var traversal := int(_native.get_traversal_state())
 
-	_camera.position = position + EYE_OFFSET
-	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
+	_apply_camera_feel(position, velocity, grounded, delta)
 
 	_position_value.text = "POSITION  %8.2f %7.2f %8.2f m" % [position.x, position.y, position.z]
 	_velocity_value.text = "VELOCITY  %8.2f %7.2f %8.2f m/s" % [velocity.x, velocity.y, velocity.z]
