@@ -59,7 +59,9 @@ const FINGER_LENGTHS := [
 	[0.033, 0.020, 0.018],
 ]
 # Gloved fingers: thick enough that neighbours touch, as they do in a glove.
-const FINGER_RADII := [0.0118, 0.0108, 0.0098]
+# Radius at each phalanx's base; the last entry is the fingertip's.
+const FINGER_RADII := [0.0118, 0.0108, 0.0098, 0.0088]
+const THUMB_RADII := [0.0128, 0.0112, 0.0100]
 # Flexion per phalanx at full curl: proximal, middle, distal.
 const CURL_ANGLES := [1.25, 1.55, 1.0]
 
@@ -116,7 +118,7 @@ func build(sleeve: Material, band: Material, glove: Material, glove_dark: Materi
 		hand.cuff = _mesh(_cylinder(0.037, 0.041, 0.055), glove_dark)
 		hand.root = Node3D.new()
 		add_child(hand.root)
-		_build_hand(hand, glove, glove_dark)
+		_build_hand(hand, glove)
 		_hands.append(hand)
 	_build_remote(remote_body, remote_face, remote_button, stop_red, led)
 	for i in 2:
@@ -165,7 +167,7 @@ func _capsule(radius: float, length: float) -> CapsuleMesh:
 
 # Hand frame: origin at the wrist, +Y toward the fingertips, -Z the palm
 # face, +X = Y x Z. The thumb sits at -X on the right hand, +X on the left.
-func _build_hand(hand: Hand, glove: Material, glove_dark: Material) -> void:
+func _build_hand(hand: Hand, glove: Material) -> void:
 	var thumb_side := -hand.side
 	# A flattened pill with heel and knuckle pads: an ellipsoid tapers to a
 	# point at the wrist (a leaf), a box shows its corners (a mitt).
@@ -178,8 +180,16 @@ func _build_hand(hand: Hand, glove: Material, glove_dark: Material) -> void:
 	hand.root.add_child(palm_core)
 	_hand_part(hand.root, _capsule(0.016, 0.052), glove,
 		Vector3(thumb_side * 0.004, 0.018, -0.001), Vector3(0.0, 0.0, PI * 0.5))
-	_hand_part(hand.root, _capsule(0.0165, 0.060), glove_dark,
-		Vector3(thumb_side * 0.001, 0.095, 0.003), Vector3(0.0, 0.0, PI * 0.5))
+	# Knuckle line: flattened like the palm, so it rounds the palm's top edge
+	# instead of standing proud of it as a tube.
+	var knuckles := MeshInstance3D.new()
+	knuckles.mesh = _capsule(0.0150, 0.058)
+	knuckles.material_override = glove
+	knuckles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	knuckles.rotation = Vector3(0.0, 0.0, PI * 0.5)
+	knuckles.scale = Vector3(1.0, 1.0, 0.9)
+	knuckles.position = Vector3(thumb_side * 0.001, 0.094, 0.001)
+	hand.root.add_child(knuckles)
 	for f in 4:
 		var chain: Array = []
 		var parent := hand.root
@@ -188,9 +198,8 @@ func _build_hand(hand: Hand, glove: Material, glove_dark: Material) -> void:
 			var joint := Node3D.new()
 			joint.position = base if p == 0 else Vector3(0.0, FINGER_LENGTHS[f][p - 1], 0.0)
 			parent.add_child(joint)
-			_hand_part(joint, _capsule(FINGER_RADII[p], FINGER_LENGTHS[f][p]),
-				glove_dark if p == 2 else glove, Vector3(0.0, FINGER_LENGTHS[f][p] * 0.5, 0.0),
-				Vector3.ZERO)
+			_digit_segment(joint, FINGER_LENGTHS[f][p], FINGER_RADII[p], FINGER_RADII[p + 1],
+				glove, p == 2)
 			chain.append(joint)
 			parent = joint
 		hand.fingers.append(chain)
@@ -209,10 +218,22 @@ func _build_hand(hand: Hand, glove: Material, glove_dark: Material) -> void:
 		var joint := Node3D.new()
 		joint.position = Vector3.ZERO if p == 0 else Vector3(0.0, 0.038, 0.0)
 		thumb_parent.add_child(joint)
-		_hand_part(joint, _capsule(0.0128 if p == 0 else 0.0112, length),
-			glove_dark if p == 1 else glove, Vector3(0.0, length * 0.5, 0.0), Vector3.ZERO)
+		_digit_segment(joint, length, THUMB_RADII[p], THUMB_RADII[p + 1], glove, p == 1)
 		hand.thumb.append(joint)
 		thumb_parent = joint
+
+
+# One phalanx: a tube tapering from `r_base` at its joint to `r_end`, with a
+# ball of exactly `r_base` at the joint. The ball is the same radius as both
+# tubes meeting there, so a bent joint reads as one continuous rounded
+# finger, never a bead; the tip closes with a ball of `r_end`.
+func _digit_segment(joint: Node3D, length: float, r_base: float, r_end: float,
+		material: Material, is_tip: bool) -> void:
+	_hand_part(joint, _cylinder(r_end, r_base, length), material,
+		Vector3(0.0, length * 0.5, 0.0), Vector3.ZERO)
+	_hand_part(joint, _sphere(r_base), material, Vector3.ZERO, Vector3.ZERO)
+	if is_tip:
+		_hand_part(joint, _sphere(r_end), material, Vector3(0.0, length, 0.0), Vector3.ZERO)
 
 
 func _hand_part(parent: Node3D, mesh: Mesh, material: Material, at: Vector3,
