@@ -127,6 +127,8 @@ struct Snapshot final {
     // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
     // Edges under kStepMaximumHeight walked up (see try_step_up).
     std::uint64_t step_up_count = 0;
+    // Vaults begun by a second Jump inside the window after a takeoff.
+    std::uint64_t jump_vault_count = 0;
     std::uint32_t world_solid_bodies = 0;
     std::uint32_t world_solid_mirrors = 0;
     std::uint32_t world_solid_rejected = 0;

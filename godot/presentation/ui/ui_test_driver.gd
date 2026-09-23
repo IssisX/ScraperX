@@ -21,6 +21,7 @@ const SCENARIOS := {
 	"touch_gyro_aim": 8,
 	"touch_climb": 4,
 	"touch_vault": 3,
+	"touch_double_tap_vault": 3,
 	"touch_hang_drop": 5,
 	"touch_hang_climb": 5,
 	"touch_chute": 11,
@@ -49,7 +50,8 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if not bool(main._native.configure_initial_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
-	if scenario in ["touch_climb", "touch_vault", "touch_hang_drop", "touch_hang_climb"]:
+	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
+			"touch_hang_climb"]:
 		main._yaw = -PI * 0.5
 		main._pitch = 0.0
 	# HangApproach starts mid-air: the push toward the wall has to be held
@@ -79,6 +81,8 @@ func _run() -> void:
 			ok = await _touch_climb(&"climb", 2)
 		"touch_vault":
 			ok = await _touch_vault()
+		"touch_double_tap_vault":
+			ok = await _touch_double_tap_vault()
 		"touch_hang_drop":
 			ok = await _touch_hang(false)
 		"touch_hang_climb":
@@ -260,6 +264,39 @@ func _touch_vault() -> bool:
 	var reached_3: bool = await _wait_until(func() -> bool: return int(_native().get_accepted_traversal_count()) >= 1, 1.5)
 	if not reached_3:
 		return _fail("vault never completed")
+	_detail = "x_after=%.2f" % _position().x
+	return _position().x > 5.6
+
+
+# The same rail, vaulted with JUMP twice and ACTION never touched.
+func _touch_double_tap_vault() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	_stick_push(Vector2(0.0, -1.0))
+	var reached: bool = await _wait_until(func() -> bool: return _ctx()["action"]["id"] == &"climb", 2.5)
+	if not reached:
+		return _fail("the approach never reached the vault rail")
+	_tap(1, _center(&"jump"))
+	var lifted: bool = await _wait_until(
+		func() -> bool: return not bool(_native().is_player_grounded()), 0.3)
+	if not lifted:
+		return _fail("the first JUMP did not leave the ground")
+	await _seconds(0.08)
+	_tap(1, _center(&"jump"))
+	# Committed in the air, from the tap itself -- not by a buffered press
+	# that waited for the feet to find the rail top.
+	var landed := [false]
+	var vaulting: bool = await _wait_until(func() -> bool:
+		if int(_native().get_traversal_state()) == 3:
+			return true
+		landed[0] = landed[0] or bool(_native().is_player_grounded())
+		return false, 0.25)
+	if not vaulting or landed[0]:
+		return _fail("the second JUMP did not commit a vault in the air (state %d, landed %s)" % [
+			int(_native().get_traversal_state()), str(landed[0])])
+	_touch(0, _main._touch.stick_home(), false)
+	var done: bool = await _wait_until(func() -> bool: return int(_native().get_accepted_traversal_count()) >= 1, 1.5)
+	if not done:
+		return _fail("double-tap vault never completed")
 	_detail = "x_after=%.2f" % _position().x
 	return _position().x > 5.6
 

@@ -182,7 +182,7 @@ jobs:
           # (presentation/ui/ui_test_driver.gd). --fixed-fps makes simulated
           # time exact however fast the runner is.
           : > artifacts/godot-uitest.log
-          for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_hang_drop \
+          for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_hang_drop \
               touch_hang_climb touch_chute touch_lethal_feedback touch_sump touch_pendant \
               touch_pause pad_core pad_pendant keyboard_core; do
             timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \

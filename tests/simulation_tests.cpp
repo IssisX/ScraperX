@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <utility>
 
 namespace {
 
@@ -348,6 +349,50 @@ int main() {
     require(vaulted.aborted_traversal_count == 0, "a valid vault must not abort");
     require(vaulted.rejected_traversal_count == 0, "a valid vault must not be rejected");
 
+    // Double-tap Jump: the second press inside the window after a takeoff
+    // vaults the same rail, on the ground vault's own terms; a second press
+    // after the window, or with nothing vaultable ahead, is only a jump.
+    const auto jump_vault_attempt = [](const double facing_x, const std::uint32_t gap_ticks) {
+        Simulation run(InitialSpawn::VaultApproach);
+        (void)run.set_facing(facing_x, 0.0);
+        (void)run.set_move_input(0.0, 0.0);
+        (void)run.advance_frame(1.0);
+        (void)run.set_move_input(facing_x, 0.0);
+        if (facing_x > 0.0) {
+            (void)advance_until(run,
+                                [](const Snapshot &state) {
+                                    return state.ledge_available &&
+                                           state.ledge_entity_id == Simulation::kVaultRailEntityId;
+                                },
+                                2.0);
+        } else {
+            (void)run.advance_frame(0.5);
+        }
+        (void)run.request_jump();
+        for (std::uint32_t tick = 0; tick <= gap_ticks; ++tick) {
+            (void)run.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        (void)run.request_jump();
+        (void)run.advance_frame(Simulation::kFixedStepSeconds);
+        const bool vaulting = run.snapshot().traversal_state == TraversalState::Vaulting;
+        (void)advance_until(run, [](const Snapshot &state) { return state.player_grounded &&
+                                                                    state.traversal_state ==
+                                                                        TraversalState::None; },
+                            3.0);
+        return std::make_pair(vaulting, run.snapshot());
+    };
+    const auto [double_tap_vaulting, double_tapped] = jump_vault_attempt(1.0, 12);
+    require(double_tap_vaulting && double_tapped.jump_vault_count == 1,
+            "a second Jump 0.13 s after takeoff at the rail must commit a vault");
+    require(double_tapped.player_position.x > 5.6 && double_tapped.aborted_traversal_count == 0,
+            "the double-tap vault must cross the rail and land on the far side");
+    const auto [late_tap_vaulting, late_tapped] = jump_vault_attempt(1.0, 40);
+    require(!late_tap_vaulting && late_tapped.jump_vault_count == 0,
+            "a second Jump after the 0.30 s window must not vault");
+    const auto [away_tap_vaulting, away_tapped] = jump_vault_attempt(-1.0, 12);
+    require(!away_tap_vaulting && away_tapped.jump_vault_count == 0,
+            "a double-tap with nothing vaultable ahead must not vault");
+
     Simulation mantle(InitialSpawn::MantleApproach);
     require(mantle.set_facing(1.0, 0.0), "mantle facing must be accepted");
     require(mantle.advance_frame(1.0).accepted, "mantle settling interval must be accepted");
@@ -655,6 +700,7 @@ int main() {
               << " omega_y=" << omega_y
               << " hz=" << Simulation::kTickRateHz << '\n';
     std::cout << "PASS scraperx_sim athletic traversal: vault_x=" << vaulted.player_position.x
+              << " double_tap_vault_x=" << double_tapped.player_position.x
               << " vault_speed=" << horizontal_magnitude(vaulted.player_linear_velocity)
               << " mantle_support=" << mantled.support_entity_id
               << " mantle_rise_setback=" << mantle_rise_setback

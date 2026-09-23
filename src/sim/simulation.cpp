@@ -125,6 +125,13 @@ constexpr float kVaultCrossDistance = 1.30F;
 constexpr float kVaultApexClearance = 0.10F;
 constexpr float kVaultMaximumDrop = 1.40F;
 constexpr double kVaultDurationSeconds = 0.38;
+// Double-tap Jump: a second Jump this soon after a takeoff asks for the vault
+// the takeoff could have been. It is granted only on exactly the ground
+// vault's terms -- a real obstacle top 0.35-1.15 m over the takeoff floor and
+// a real landing beyond it -- so it answers a late press, and never makes a
+// vault the ground itself would have refused (Governing Law 4).
+constexpr std::uint32_t kJumpVaultWindowTicks =
+    static_cast<std::uint32_t>(0.30 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz));
 
 // Hang band expressed against the capsule centre: hands reach a ledge between
 // chest height and just above the head.
@@ -3764,9 +3771,42 @@ private:
             return;
         }
 
+        if (jump_vault_ticks_left_ > 0) {
+            --jump_vault_ticks_left_;
+            if (commands.jump_requested && try_begin_jump_vault(bodies)) {
+                jump_vault_ticks_left_ = 0;
+                return;
+            }
+        }
+
         if (commands.traversal_requested && !try_begin_ground_traversal(bodies)) {
             ++rejected_traversal_count_;
         }
+    }
+
+    // The vault the takeoff could have been: probed from the takeoff floor at
+    // the body's current plan position, with the same rise band and the same
+    // far-side landing test as a vault started on the ground.
+    [[nodiscard]] bool try_begin_jump_vault(JPH::BodyInterface &bodies) noexcept {
+        if (facing_.IsNearZero()) {
+            return false;
+        }
+        const JPH::RVec3 at = bodies.GetPosition(player_id_);
+        const JPH::RVec3 takeoff(at.GetX(), jump_takeoff_feet_y_ + kPlayerHalfHeight, at.GetZ());
+        const LedgeProbe probe =
+            probe_ledge(takeoff, facing_, kVaultMinimumRise, kVaultMaximumRise, false);
+        if (!probe.valid) {
+            return false;
+        }
+        JPH::RVec3 landing_centre;
+        JPH::BodyID landing_body;
+        if (!probe_vault_landing(probe, facing_, jump_takeoff_feet_y_, landing_centre,
+                                 landing_body)) {
+            return false;
+        }
+        begin_vault(bodies, probe, landing_centre, landing_body, at);
+        ++jump_vault_count_;
+        return true;
     }
 
     [[nodiscard]] bool apply_locomotion(JPH::BodyInterface &bodies,
@@ -3796,6 +3836,9 @@ private:
         const bool jump_started = commands.jump_requested && grounded_;
         if (jump_started) {
             player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
+            jump_takeoff_feet_y_ =
+                static_cast<float>(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
+            jump_vault_ticks_left_ = kJumpVaultWindowTicks;
         }
         bodies.SetLinearVelocity(player_id_, player_velocity);
         if (!jump_started && grounded_ && support_entity_id_ != 0) {
@@ -4353,6 +4396,7 @@ private:
         steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
 
         grounded_ = false;
+        jump_vault_ticks_left_ = 0;
         support_entity_id_ = 0;
         support_sample_ = {};
         airborne_inherited_velocity_ = JPH::Vec3::sZero();
@@ -4501,6 +4545,7 @@ private:
         state_.accepted_traversal_count = accepted_traversal_count_;
         state_.world_solid_bodies = world_solid_bodies_;
         state_.step_up_count = step_up_count_;
+        state_.jump_vault_count = jump_vault_count_;
         state_.world_solid_mirrors = world_solid_mirrors_;
         state_.world_solid_rejected = world_solid_rejected_;
         state_.rejected_traversal_count = rejected_traversal_count_;
@@ -4619,6 +4664,9 @@ private:
     double rotating_support_yaw_radians_ = 0.0;
 
     std::uint64_t step_up_count_ = 0;
+    std::uint64_t jump_vault_count_ = 0;
+    std::uint32_t jump_vault_ticks_left_ = 0;
+    float jump_takeoff_feet_y_ = 0.0F;
     std::uint32_t world_solid_bodies_ = 0;
     std::uint32_t world_solid_mirrors_ = 0;
     std::uint32_t world_solid_rejected_ = 0;

@@ -41,6 +41,10 @@ const CHUTE_OFFER_FALL_MPS := 6.5
 # timing assistance only (GDD 7.2): it never jumps from anything the native
 # does not report as ground at the moment it fires.
 const JUMP_BUFFER_SECONDS := 0.12
+# A second Jump this soon after one was sent goes straight to the native,
+# which vaults if the takeoff could have (its own window is 0.30 s of ticks;
+# this is a frame's slack wider so the native, not frame timing, decides).
+const DOUBLE_TAP_SECONDS := 0.35
 const CHECKPOINT_TOAST_RISE_METERS := 3.0
 const SLING_CHECK_SECONDS := 0.3
 
@@ -242,6 +246,7 @@ var _ctx := {}
 # screen. The native gates every pendant axis by station radius regardless.
 var _operating := &""
 var _jump_buffer := 0.0
+var _since_jump_sent := INF
 var _fb_traversal := 0
 var _fb_grounded := true
 var _fb_fall_speed := 0.0
@@ -623,7 +628,10 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"jump":
 				if _ctx["jump_ok"] or _ctx["hanging"]:
 					_native.request_jump()
+					_since_jump_sent = 0.0
 				else:
+					if _since_jump_sent <= DOUBLE_TAP_SECONDS:
+						_native.request_jump()
 					_jump_buffer = JUMP_BUFFER_SECONDS
 			&"action":
 				_perform_action()
@@ -654,9 +662,11 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"telemetry":
 				_settings.telemetry = not _settings.telemetry
 				_set_telemetry_visible(_settings.telemetry or _ci_mode)
+	_since_jump_sent += delta
 	if _jump_buffer > 0.0:
 		if _ctx["jump_ok"]:
 			_native.request_jump()
+			_since_jump_sent = 0.0
 			_jump_buffer = 0.0
 		else:
 			_jump_buffer = maxf(0.0, _jump_buffer - delta)
