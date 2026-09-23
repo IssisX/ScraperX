@@ -40,7 +40,7 @@ const NON_SOLID := [
 	"StandingWater", "StandingWaterTwo", "BannerMark", "SignPlateMark", "Banner",
 	"Rope", "LiftRope", "JibRope", "JibSling", "JibHoistCable", "NeedleHoistCable",
 	"TreadleCableA", "TreadleCableB", "Span", "CraneCable", "RopeFlightSide",
-	"RopeCradleSide", "ScrubLobe", "Waterfall", "SkyShear",
+	"RopeCradleSide", "ScrubLobe", "Waterfall",
 ]
 
 # Native bodies drawn one-for-one. Listed so the exporter never relies on
@@ -274,5 +274,5 @@ const SOLID := [
 	"SheaveB",
 	# Landscape.
 	"TreeTrunk", "TreeCanopy", "MountainPeak", "MountainSnowCap", "MountainRidgeFar",
-	"MountainRidgeFarSnow",
+	"MountainRidgeFarSnow", "ValleyFloor", "RimRidge", "RimRidgeSnow",
 ]

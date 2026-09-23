@@ -390,9 +390,6 @@ constexpr float kStackRampHalfWidth = 1.6F;
 // ended at the deck's underside with the player's head on it.
 constexpr float kStackStairwellStart = 7.5F;       // along the climb, from the stack centre
 constexpr float kStackStairwellHalfWidth = 2.1F;
-// Where the tower's unclimbable mass resumes above the playable slice.
-constexpr float kTowerMassBaseY =
-    static_cast<float>(kStackLevelCount) * kStackLevelHeight + 5.0F;
 
 // --- AS-001: Ascent Atlas §6 band B00, "Apron and Intake" (0 -> 24 m) -------
 // The first real campaign slice. Everything here is MOD-* content in the tower
@@ -1368,17 +1365,14 @@ public:
                            0.6F,
                            Simulation::kStaticDeckEntityId);
 
-        // The tower's upper mass: still 1.6 km of it, but it now begins above
-        // the playable slice instead of at grade. Everything below this line
-        // is the real, climbable frame built by build_stack().
-        const float mass_half_height =
-            static_cast<float>(Simulation::kTowerHeightMeters * 0.5) - kTowerMassBaseY * 0.5F;
-        // Set well back from the climbable frame: overhead and close, it read
-        // as a black void hanging over the stack rather than as a neighbouring
-        // structure receding into the weather.
+        // The neighbouring shaft: 1.6 km of unclimbable mass standing on
+        // grade, set well back from the climbable frame. Overhead and close,
+        // it read as a black void hanging over the stack; begun 159 m up
+        // with nothing under it, it read as a skyscraper floating in the air.
+        const float mass_half_height = static_cast<float>(Simulation::kTowerHeightMeters * 0.5);
         tower_id_ = add_box(bodies,
                             JPH::Vec3(46.0F, mass_half_height, 40.0F),
-                            JPH::RVec3(-30.0, kTowerMassBaseY + mass_half_height, -330.0),
+                            JPH::RVec3(-30.0, mass_half_height, -330.0),
                             JPH::EMotionType::Static,
                             object_layers::kStatic,
                             0.8F,

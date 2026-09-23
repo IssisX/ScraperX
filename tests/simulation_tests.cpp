@@ -2077,12 +2077,36 @@ int main() {
     require(stair_top.step_up_count > 0,
             "the route must engage the native step-up; no jump is ever requested");
 
+    // The yard sits in a basin, not on a slab in a void: off the grade's
+    // east edge the valley floor carries the player 0.3 m lower, the step
+    // back up is walked, and walking out to the rim ends against rock --
+    // grounded, low, and never past the ridge line.
+    Simulation basin(InitialSpawn::ExteriorGrade);
+    require(basin.advance_frame(0.5).accepted, "basin settling interval must be accepted");
+    walk_toward(basin, 270.0, -60.0, 70.0);
+    const auto on_valley = basin.snapshot();
+    require(on_valley.player_grounded && on_valley.player_position.x > 250.0 &&
+                std::abs(on_valley.player_position.y - (-0.3 + 0.9)) < 0.1,
+            "walking off the grade must land on the valley floor, not fall");
+    walk_toward(basin, 200.0, -60.0, 20.0);
+    const auto back_on_grade = basin.snapshot();
+    require(back_on_grade.player_grounded && back_on_grade.player_position.x < 230.0 &&
+                back_on_grade.player_position.y > 0.8,
+            "the 0.3 m step from the valley floor back onto the grade must be walked");
+    walk_toward(basin, 200.0, 1400.0, 320.0);
+    const auto at_rim = basin.snapshot();
+    const double rim_reach = std::hypot(at_rim.player_position.x - 0.0,
+                                        at_rim.player_position.z - (-100.0));
+    require(at_rim.player_grounded && at_rim.player_position.y < 5.0 && rim_reach < 1100.0,
+            "walking out to the basin rim must end against its rock, low and grounded");
+
     std::cout << "PASS scraperx_sim world solids: bodies=" << solid_loaded.world_solid_bodies
               << " mirrors=" << solid_loaded.world_solid_mirrors
               << " rejected=" << solid_loaded.world_solid_rejected
               << " buttress_foot_closest=" << foot_closest
               << " stair_top_y=" << stair_top.player_position.y
-              << " step_ups=" << stair_top.step_up_count << '\n';
+              << " step_ups=" << stair_top.step_up_count
+              << " rim_reach=" << rim_reach << '\n';
 
     return EXIT_SUCCESS;
 }

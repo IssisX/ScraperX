@@ -21,6 +21,7 @@ const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
+const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 # Traversal head motion, added on top of the player's own pitch and never
 # written into it: a hanging climber looks up at the grip (the lip sits ~46
 # degrees above a level gaze, outside the frame), a mantle nods down onto the
@@ -97,7 +98,6 @@ const STACK_RAMP_WIDTH := 3.2
 const STACK_STAIRWELL_START := 7.5
 const STACK_STAIRWELL_HALF_WIDTH := 2.1
 const STACK_FLIGHT_HALF_THICKNESS := 0.18
-const STACK_MASS_BASE_Y := 159.0
 
 # AS-001 B00 intake rise. Every figure here mirrors a kIntake* constant in
 # src/sim/simulation.cpp -- what is drawn and what is collided with are the
@@ -337,6 +337,7 @@ var _ci_proof_printed := false
 @onready var _intake_value: Label = $HUD/TopLeft/Intake
 @onready var _legal_forty_value: Label = $HUD/TopLeft/LegalForty
 @onready var _light_rig: Node3D = $LightRig
+var _sky_cycle: Node
 
 
 var _export_solids_path := ""
@@ -360,6 +361,10 @@ func _ready() -> void:
 	if _export_solids_path != "":
 		_export_solids()
 		return
+	_sky_cycle = SkyCycleScript.new()
+	_sky_cycle.name = "SkyCycle"
+	add_child(_sky_cycle)
+	_sky_cycle.setup($Overcast, $SkyFill, ($Environment as WorldEnvironment).environment)
 	_build_arms()
 	_build_interface()
 	_layout_hud()
@@ -1455,9 +1460,8 @@ func _build_world() -> void:
 
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
 	_add_box("Grade", Vector3(480.0, 1.0, 480.0), Vector3(0.0, -0.5, -60.0), asphalt)
-	var mass_half := 800.0 - STACK_MASS_BASE_Y * 0.5
-	_add_box("TowerMass", Vector3(92.0, mass_half * 2.0, 80.0),
-		Vector3(-30.0, STACK_MASS_BASE_Y + mass_half, -330.0), concrete)
+	# The neighbouring shaft stands on the ground: 1.6 km from grade up.
+	_add_box("TowerMass", Vector3(92.0, 1600.0, 80.0), Vector3(-30.0, 800.0, -330.0), concrete)
 
 	_build_stack(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
 	_build_stack_accents(verdigris, machine_blue, lichen)
@@ -1474,7 +1478,6 @@ func _build_world() -> void:
 	_build_gear_motif(mill_scale, oxidised)
 	_build_crane(mill_scale, hazard)
 	_build_foliage()
-	_build_sky_shear()
 	_build_lighting()
 
 
@@ -2780,25 +2783,6 @@ func _build_plume() -> void:
 		$TowerPresentation.add_child(vent)
 
 
-func _build_sky_shear() -> void:
-	# Thin high cloud that cuts the tower before the eye can finish it.
-	var shear := StandardMaterial3D.new()
-	shear.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	shear.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	shear.albedo_color = Color(0.30, 0.31, 0.33, 0.16)
-	shear.cull_mode = BaseMaterial3D.CULL_DISABLED
-	for level in [236.0, 318.0, 402.0, 520.0]:
-		var plane := PlaneMesh.new()
-		plane.size = Vector2(1400.0, 900.0)
-		plane.material = shear
-		var instance := MeshInstance3D.new()
-		instance.name = "SkyShear"
-		instance.set_meta(&"part", "SkyShear")
-		instance.mesh = plane
-		instance.position = Vector3(0.0, level, -170.0)
-		$TowerPresentation.add_child(instance)
-
-
 func _build_lighting() -> void:
 	# Sodium vapour: warm, low, and sourced from actual fittings on masts.
 	for mast in [Vector3(-10.0, 0.0, -24.0), Vector3(-10.0, 0.0, -62.0),
@@ -2882,6 +2866,61 @@ func _build_mountains_and_waterfall() -> void:
 
 	_build_waterfall(Vector3(200.0, 0.0, -560.0))
 	_build_foothill_forest()
+	_build_basin()
+
+
+# The yard sits in an alpine basin, not on a slab in a void. The valley floor
+# runs out under the rim, 0.3 m below grade (a step the feet walk, down and
+# back up). The rim is a closed ring of steep ridges: 44 cones on an 1100 m
+# circle, spaced closer than the smallest cone's base radius, so where two
+# meet the crease between them never flattens below ~54 degrees until it is
+# half their height up -- a wall of rock, not an invisible one, and the
+# same solid collision as everything else (solid_export.gd).
+const BASIN_CENTER := Vector3(0.0, 0.0, -100.0)
+const BASIN_RIM_RADIUS := 1100.0
+const BASIN_RIM_RIDGES := 44
+const VALLEY_FLOOR_TOP := -0.3
+
+
+func _build_basin() -> void:
+	var meadow := _material(Color("3f4634"), 0.0, 0.96, Color.BLACK, 1.0, _bump_concrete)
+	# A frame around the grade (x in [-240, 240], z in [-300, 180]), not a
+	# sheet under it: two surfaces 0.3 m apart z-fight from any distance.
+	var floor_y := VALLEY_FLOOR_TOP - 0.5
+	for piece in [
+			[Vector3(5200.0, 1.0, 2400.0), Vector3(0.0, floor_y, -1500.0)],
+			[Vector3(5200.0, 1.0, 2320.0), Vector3(0.0, floor_y, 1340.0)],
+			[Vector3(2360.0, 1.0, 480.0), Vector3(-1420.0, floor_y, -60.0)],
+			[Vector3(2360.0, 1.0, 480.0), Vector3(1420.0, floor_y, -60.0)]]:
+		_add_box("ValleyFloor", piece[0], piece[1], meadow)
+
+	var rock := _material(Color("353b41"), 0.03, 0.93)
+	var rock_warm := _material(Color("3d3934"), 0.03, 0.93)
+	var snow := _material(Color("b9c2cc"), 0.0, 0.78)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1100
+	for index in BASIN_RIM_RIDGES:
+		var angle := TAU * float(index) / float(BASIN_RIM_RIDGES) + rng.randf_range(-0.01, 0.01)
+		var reach := BASIN_RIM_RADIUS + rng.randf_range(-15.0, 15.0)
+		var height := rng.randf_range(280.0, 470.0)
+		var radius := height * 0.62
+		var base := BASIN_CENTER + Vector3(sin(angle) * reach, 0.0, cos(angle) * reach)
+		_add_cone("RimRidge", radius, height, base + Vector3(0.0, height * 0.5, 0.0),
+			rock if index % 3 != 0 else rock_warm)
+		if height > 400.0:
+			_add_cone("RimRidgeSnow", radius * 0.3, height * 0.28,
+				base + Vector3(0.0, height * 0.93, 0.0), snow)
+
+	# Conifers scattered over the meadow, clear of the yard and the tower.
+	var placed := 0
+	while placed < 48:
+		var angle := rng.randf_range(0.0, TAU)
+		var reach := rng.randf_range(330.0, BASIN_RIM_RADIUS - 260.0)
+		var at := BASIN_CENTER + Vector3(sin(angle) * reach, VALLEY_FLOOR_TOP, cos(angle) * reach)
+		if at.z < -420.0 and absf(at.x) < 700.0:
+			continue  # the near peaks' own foothill forest already covers the north
+		_add_tree(at, rng.randf_range(8.0, 15.0), rng)
+		placed += 1
 
 
 # A treeline at the base of the near peaks, mixed in with the rock cones
