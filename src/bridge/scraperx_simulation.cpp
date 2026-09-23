@@ -142,6 +142,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_fall_peak_speed_mps);
     godot::ClassDB::bind_method(godot::D_METHOD("get_last_impact_speed_mps"),
                                 &ScraperXSimulation::get_last_impact_speed_mps);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_lethal_impact_speed_mps"),
+                                &ScraperXSimulation::get_lethal_impact_speed_mps);
     godot::ClassDB::bind_method(godot::D_METHOD("is_parachute_deployed"),
                                 &ScraperXSimulation::is_parachute_deployed);
     godot::ClassDB::bind_method(godot::D_METHOD("get_checkpoint_position"),
@@ -490,6 +492,10 @@ double ScraperXSimulation::get_fall_peak_speed_mps() const {
 
 double ScraperXSimulation::get_last_impact_speed_mps() const {
     return simulation_->snapshot().last_impact_speed_mps;
+}
+
+double ScraperXSimulation::get_lethal_impact_speed_mps() const {
+    return sim::Simulation::kLethalImpactSpeedMps;
 }
 
 bool ScraperXSimulation::is_parachute_deployed() const {

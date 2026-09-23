@@ -801,7 +801,8 @@ constexpr float kSumpStationRadius = 2.5F;
 // fall (~13.1 m/s impact) must stay survivable per GDD 8.2; a genuine
 // tower-scale drop must not be. Terminal parachute speed (~9 m/s, derived
 // below) sits comfortably under this threshold with margin either side.
-constexpr float kLethalImpactSpeedMps = 20.0F;
+constexpr float kLethalImpactSpeedMps =
+    static_cast<float>(scraperx::sim::Simulation::kLethalImpactSpeedMps);
 
 // Quadratic drag a = -k*v*|v|. Solved for a target terminal speed v_t at
 // k = g / v_t^2 (net vertical accel is zero at v_t: g - k*v_t^2 = 0).

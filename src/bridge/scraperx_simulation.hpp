@@ -78,6 +78,7 @@ public:
     [[nodiscard]] std::int64_t get_fall_state() const;
     [[nodiscard]] double get_fall_peak_speed_mps() const;
     [[nodiscard]] double get_last_impact_speed_mps() const;
+    [[nodiscard]] double get_lethal_impact_speed_mps() const;
     [[nodiscard]] bool is_parachute_deployed() const;
     [[nodiscard]] godot::Vector3 get_checkpoint_position() const;
     [[nodiscard]] std::int64_t get_checkpoint_commit_count() const;

@@ -7,7 +7,32 @@ extends Node3D
 # freezing that value freezes the effect.
 
 const EYE_OFFSET := Vector3(0.0, 0.62, 0.0)
-const TOUCH_RADIUS := 100.0
+
+# Interface: every device (touch, pad, keyboard/mouse) is read by one router
+# into one verb vocabulary; the HUD, touch surface and pause menu draw from
+# one per-frame read of native state (_read_context). None of it decides
+# anything -- a verb becomes a native request_*, and the native says yes or no.
+const UiStyle := preload("res://presentation/ui/ui_style.gd")
+const InputRouter := preload("res://presentation/ui/input_router.gd")
+const TouchControls := preload("res://presentation/ui/touch_controls.gd")
+const Hud := preload("res://presentation/ui/hud.gd")
+const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
+const SettingsStore := preload("res://presentation/ui/settings_store.gd")
+# Loaded only for --uitest runs, so shipping builds never parse test code.
+const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
+# A hitch -- or the first frame after Android resumes a backgrounded app --
+# must not be paid for with a burst of native ticks in one frame. The excess
+# of that one frame simply runs slower than wall time, which nobody can see.
+const MAX_SIM_FRAME_DELTA := 0.1
+# Chute is offered once a fall is unmistakably a fall: a full-height jump
+# lands at ~5.5 m/s, so 6.5 m/s never pops the canopy button mid-hop.
+const CHUTE_OFFER_FALL_MPS := 6.5
+# A Jump pressed this long before touchdown fires on the grounded tick. Input
+# timing assistance only (GDD 7.2): it never jumps from anything the native
+# does not report as ground at the moment it fires.
+const JUMP_BUFFER_SECONDS := 0.12
+const CHECKPOINT_TOAST_RISE_METERS := 3.0
+const SLING_CHECK_SECONDS := 0.3
 
 # Locomotion-feel camera response. Pure presentation, driven every frame by
 # native player position/velocity/grounded state already read below -- never
@@ -182,11 +207,32 @@ var _cam_last_velocity_y := 0.0
 var _cam_landing_timer := 0.0
 var _cam_landing_strength := 0.0
 var _cam_bob_phase := 0.0
-var _move_touch_index := -1
-var _look_touch_index := -1
-var _move_touch_origin := Vector2.ZERO
-var _touch_move := Vector2.ZERO
 var _viewport_size := Vector2.ZERO
+
+var _router: Node
+var _touch: Control
+var _hud: Control
+var _pause_menu: Control
+var _settings: SettingsStore
+var _uitest: Node
+var _force_touch := false
+var _uitest_scenario := ""
+var _paused := false
+var _telemetry_on := false
+var _ctx := {}
+# Pendant "operate" mode is presentation state only: which controls are on
+# screen. The native gates every pendant axis by station radius regardless.
+var _operating := &""
+var _jump_buffer := 0.0
+var _fb_traversal := 0
+var _fb_grounded := true
+var _fb_fall_speed := 0.0
+var _fb_deaths := 0
+var _fb_chute := false
+var _fb_warned := false
+var _fb_best_checkpoint_y := 0.0
+var _sling_check_timer := 0.0
+var _sling_check_was_slung := false
 
 var _scoop_meshes: Array[MeshInstance3D] = []
 var _scoop_locals: Array[Vector3] = []
@@ -259,10 +305,6 @@ var _ci_proof_printed := false
 @onready var _machine_value: Label = $HUD/TopLeft/Machine
 @onready var _plant_value: Label = $HUD/TopLeft/Plant
 @onready var _tick_value: Label = $HUD/TopRight/Tick
-@onready var _touch_knob: ColorRect = $HUD/TouchMove/Knob
-@onready var _action_button: Control = $HUD/TouchAction
-@onready var _release_button: Control = $HUD/TouchRelease
-@onready var _parachute_button: Control = $HUD/TouchParachute
 @onready var _fall_value: Label = $HUD/TopLeft/Fall
 @onready var _jib_value: Label = $HUD/TopLeft/Jib
 @onready var _needle_value: Label = $HUD/TopLeft/Needle
@@ -276,11 +318,16 @@ func _ready() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--ci":
 			_ci_mode = true
+		elif argument == "--touch":
+			_force_touch = true
 		elif argument.begins_with("--capture="):
 			_capture_path = argument.trim_prefix("--capture=")
+		elif argument.begins_with("--uitest="):
+			_uitest_scenario = argument.trim_prefix("--uitest=")
 
 	RenderingServer.set_default_clear_color(Color("0e0d0c"))
 	_build_world()
+	_build_interface()
 	_layout_hud()
 	get_viewport().size_changed.connect(_layout_hud)
 
@@ -293,6 +340,15 @@ func _ready() -> void:
 		_fail_native("SCRAPERX_EXTENSION_INSTANTIATION_FAILED", 20)
 		return
 
+	if not _uitest_scenario.is_empty():
+		_uitest = (load(UI_TEST_DRIVER_PATH) as GDScript).new()
+		_uitest.name = "UiTestDriver"
+		add_child(_uitest)
+		if not _uitest.begin(self, _uitest_scenario, _capture_path):
+			push_error("SCRAPERX_UITEST_UNKNOWN_SCENARIO %s" % _uitest_scenario)
+			get_tree().quit(30)
+			return
+
 	if _ci_mode:
 		_yaw = atan2(-CI_APPROACH_FACING.x, -CI_APPROACH_FACING.y)
 		_pitch = 0.06
@@ -302,14 +358,25 @@ func _ready() -> void:
 		int(_viewport_size.x), int(_viewport_size.y),
 		_viewport_size.x / maxf(1.0, _viewport_size.y), _camera.fov, _camera.far])
 	_render_snapshot()
+	_ctx = _read_context()
+	_fb_traversal = int(_ctx["traversal"])
+	_fb_grounded = bool(_ctx["grounded"])
+	_fb_deaths = int(_ctx["deaths"])
+	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
 
 
 func _process(delta: float) -> void:
 	if _native == null:
 		return
 
+	var intent: Dictionary = _router.frame(delta)
+	if not _ci_mode:
+		var look: Vector2 = intent["look"]
+		_yaw -= look.x
+		_pitch = clampf(_pitch - look.y, -1.25, 1.35)
+
 	var position: Vector3 = _native.get_player_position()
-	var desired := _read_desired_movement()
+	var desired: Vector2 = intent["move"]
 	var facing := Vector2(-sin(_yaw), -cos(_yaw))
 
 	if _ci_mode:
@@ -324,8 +391,9 @@ func _process(delta: float) -> void:
 		_fail_native("SCRAPERX_MOVE_INPUT_REJECTED", 21)
 		return
 	_native.set_facing(facing.x, facing.y)
+	_dispatch(intent["verbs"], delta)
 
-	var jib_input := _read_jib_input()
+	var jib_input: Vector2 = intent["pendant"]
 	_native.set_jib_slew_input(jib_input.x)
 	_native.set_jib_hoist_input(jib_input.y)
 	# The B00 yard jib shares the same pendant axes. Both are station-gated
@@ -338,12 +406,17 @@ func _process(delta: float) -> void:
 	# no new key binding and keeps the same Raise(+)/Lower(-) verb.
 	_native.set_needle_hoist_input(jib_input.y)
 
-	var steps_advanced := int(_native.advance_frame(delta))
+	var steps_advanced := int(_native.advance_frame(minf(delta, MAX_SIM_FRAME_DELTA)))
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return
 
 	_render_snapshot(delta)
+	_ctx = _read_context()
+	_update_feedback(delta)
+	_touch.update_context(_ctx, delta)
+	_hud.family = _router.glyph_family()
+	_hud.update_hud(_ctx, delta)
 	_ambient_clock += delta
 	_update_ambient_dressing()
 
@@ -394,97 +467,404 @@ func _ci_observe() -> void:
 		_print_ci_phase("MACHINE_PROVEN")
 
 
-# --- input ------------------------------------------------------------------
+# --- interface: devices -> verbs -> native requests ---------------------------
 
 
-func _input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		var touch := event as InputEventScreenTouch
-		if touch.pressed and _touch_hits(_action_button, touch.position):
-			if _native != null:
-				_native.request_traversal()
-		elif touch.pressed and _touch_hits(_release_button, touch.position):
-			if _native != null:
+func _build_interface() -> void:
+	_settings = SettingsStore.new()
+	_settings.persistent = not _ci_mode and _uitest_scenario.is_empty()
+	_settings.load_from_disk()
+	var hud_layer: CanvasLayer = $HUD
+	_hud = Hud.new()
+	_hud.name = "Hud"
+	hud_layer.add_child(_hud)
+	_touch = TouchControls.new()
+	_touch.name = "TouchControls"
+	hud_layer.add_child(_touch)
+	_router = InputRouter.new()
+	_router.name = "InputRouter"
+	add_child(_router)
+	_router.touch = _touch
+	_touch.router = _router
+	_router.enabled = not _ci_mode
+	_router.capture_mouse = not OS.has_feature("mobile")
+	_router.accept_emulated_touch = _force_touch and not OS.has_feature("mobile")
+	var pause_layer := CanvasLayer.new()
+	pause_layer.name = "PauseLayer"
+	pause_layer.layer = 10
+	pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(pause_layer)
+	_pause_menu = PauseMenu.new()
+	_pause_menu.name = "PauseMenu"
+	_pause_menu.settings = _settings
+	pause_layer.add_child(_pause_menu)
+
+	_router.device_changed.connect(_on_device_changed)
+	_router.pad_disconnected.connect(_open_pause.bind(true))
+	_touch.pressed_feedback.connect(_haptic.bind(&"press", 1.0))
+	_pause_menu.resume_requested.connect(_resume)
+	_pause_menu.quit_requested.connect(func() -> void: get_tree().quit(0))
+	_pause_menu.settings_changed.connect(_apply_settings)
+	# Android's system back opens the pause menu instead of ending the climb.
+	get_tree().quit_on_go_back = false
+	_router.device = (InputRouter.Device.TOUCH if OS.has_feature("mobile") or _force_touch
+		else InputRouter.Device.KEYBOARD_MOUSE)
+	_on_device_changed(_router.device)
+	_apply_settings()
+
+
+func _apply_settings() -> void:
+	_router.look_sensitivity = _settings.look_sensitivity
+	_router.stick_sensitivity = _settings.stick_sensitivity
+	_router.invert_y = _settings.invert_y
+	_touch.set_touch_scale(_settings.touch_scale)
+	_set_telemetry_visible(_settings.telemetry or _ci_mode)
+
+
+func _on_device_changed(device: int) -> void:
+	var touch_active := device == InputRouter.Device.TOUCH
+	_touch.visible = touch_active
+	_hud.touch_active = touch_active
+	_hud.family = _router.glyph_family()
+
+
+func _set_telemetry_visible(on: bool) -> void:
+	_telemetry_on = on
+	($HUD/TopLeft as Control).visible = on
+	($HUD/TopRight as Control).visible = on
+	if on and _native != null:
+		_render_snapshot()
+
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+			_open_pause(true)
+		NOTIFICATION_WM_GO_BACK_REQUEST:
+			if _paused:
+				_pause_menu.back()
+			else:
+				_open_pause(true)
+
+
+# Pausing stops this node's _process, so no advance_frame call is made: the
+# simulation is frozen, not slowed. System-initiated pauses (focus loss, app
+# backgrounded, pad unplugged) never fire in proof runs.
+func _open_pause(from_system: bool = false) -> void:
+	if _paused or _ci_mode or _native == null:
+		return
+	if from_system and not _uitest_scenario.is_empty():
+		return
+	_paused = true
+	_router.gameplay_active = false
+	_router.clear_held()
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	var checkpoint: Vector3 = _ctx["checkpoint"]
+	var position: Vector3 = _ctx["position"]
+	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
+		position.y, checkpoint.y, int(_ctx["deaths"])])
+	get_tree().paused = true
+
+
+func _resume() -> void:
+	if not _paused:
+		return
+	_pause_menu.close()
+	_settings.save_to_disk()
+	get_tree().paused = false
+	_paused = false
+	_router.clear_held()
+	_router.gameplay_active = true
+	if _router.device == InputRouter.Device.KEYBOARD_MOUSE and _router.capture_mouse \
+			and not _router.accept_emulated_touch and _uitest_scenario.is_empty():
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+# One verb, one native request. Context (last frame's native read) only
+# chooses WHICH request a contextual verb means; whether it takes effect is
+# always the native's decision.
+func _dispatch(verbs: Array, delta: float) -> void:
+	for verb in verbs:
+		match verb:
+			&"jump":
+				if _ctx["jump_ok"] or _ctx["hanging"]:
+					_native.request_jump()
+				else:
+					_jump_buffer = JUMP_BUFFER_SECONDS
+			&"action":
+				_perform_action()
+			&"drop":
 				_native.request_release()
-		elif touch.pressed and _touch_hits(_parachute_button, touch.position):
-			if _native != null:
+			&"chute":
 				_native.request_parachute()
-		elif touch.pressed and touch.position.x < get_viewport().get_visible_rect().size.x * 0.5:
-			if _move_touch_index == -1:
-				_move_touch_index = touch.index
-				_move_touch_origin = touch.position
-		elif touch.pressed and _look_touch_index == -1:
-			_look_touch_index = touch.index
-		elif not touch.pressed and touch.index == _move_touch_index:
-			_move_touch_index = -1
-			_touch_move = Vector2.ZERO
-			_touch_knob.position = Vector2(56.0, 56.0)
-		elif not touch.pressed and touch.index == _look_touch_index:
-			_look_touch_index = -1
-	elif event is InputEventScreenDrag:
-		var drag := event as InputEventScreenDrag
-		if drag.index == _move_touch_index:
-			var offset := (drag.position - _move_touch_origin).limit_length(TOUCH_RADIUS)
-			_touch_move = Vector2(offset.x, -offset.y) / TOUCH_RADIUS
-			_touch_knob.position = Vector2(56.0, 56.0) + offset
-		elif drag.index == _look_touch_index:
-			_apply_look_delta(drag.relative)
-	elif event is InputEventMouseButton:
-		var button := event as InputEventMouseButton
-		if button.button_index == MOUSE_BUTTON_LEFT and button.pressed and not _ci_mode:
-			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_apply_look_delta((event as InputEventMouseMotion).relative)
-	elif event is InputEventKey:
-		var key := event as InputEventKey
-		if not key.pressed or key.echo:
-			return
-		if key.keycode == KEY_ESCAPE:
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		elif key.keycode == KEY_SPACE and _native != null:
+			&"back":
+				if _ctx["hanging"]:
+					_native.request_release()
+				elif _operating != &"":
+					_operating = &""
+			&"alt":
+				if _operating == &"intake":
+					_request_sling(not bool(_ctx["slung"]))
+				elif not _ctx["grounded"]:
+					_native.request_parachute()
+			&"sling_toggle":
+				_request_sling(not bool(_ctx["slung"]))
+			&"valve":
+				_native.request_valve_toggle()
+			&"sling_release":
+				_request_sling(false)
+			&"sling_attach":
+				_request_sling(true)
+			&"pause":
+				_open_pause()
+			&"telemetry":
+				_settings.telemetry = not _settings.telemetry
+				_set_telemetry_visible(_settings.telemetry or _ci_mode)
+	if _jump_buffer > 0.0:
+		if _ctx["jump_ok"]:
 			_native.request_jump()
-		elif key.keycode == KEY_E and _native != null:
+			_jump_buffer = 0.0
+		else:
+			_jump_buffer = maxf(0.0, _jump_buffer - delta)
+
+
+# Contextual Action is a gateway (Governing Law 27): it climbs what the
+# native affordance reports, opens a pendant's own controls, or works a
+# valve. It never operates a machine on the player's behalf.
+func _perform_action() -> void:
+	var action: Dictionary = _ctx["action"]
+	match action["id"]:
+		&"climb_up", &"climb":
 			_native.request_traversal()
-		elif key.keycode == KEY_Q and _native != null:
-			_native.request_release()
-		elif key.keycode == KEY_F and _native != null:
-			_native.request_parachute()
-		elif key.keycode == KEY_V and _native != null:
+		&"operate":
+			_operating = _ctx["station"]
+		&"done":
+			_operating = &""
+		&"valve":
 			_native.request_valve_toggle()
-		elif key.keycode == KEY_R and _native != null:
-			_native.request_intake_sling_release()
-		elif key.keycode == KEY_G and _native != null:
-			_native.request_intake_sling_attach()
+		_:
+			# Nothing reported in reach: ask anyway, exactly as the old E key
+			# did. The native decides there is no ledge (and counts it).
+			_native.request_traversal()
 
 
-func _touch_hits(control: Control, at: Vector2) -> bool:
-	return control != null and Rect2(control.global_position, control.size).has_point(at)
+func _request_sling(attach: bool) -> void:
+	if attach:
+		_native.request_intake_sling_attach()
+	else:
+		_native.request_intake_sling_release()
+	# Only at the pendant can the native act at all; there, a request that
+	# changes nothing gets said out loud instead of silently ignored.
+	if _ctx["station"] == &"intake":
+		_sling_check_was_slung = bool(_ctx["slung"])
+		_sling_check_timer = SLING_CHECK_SECONDS
 
 
-func _read_desired_movement() -> Vector2:
-	var keyboard := Vector2(
-		float(int(Input.is_key_pressed(KEY_D)) - int(Input.is_key_pressed(KEY_A))),
-		float(int(Input.is_key_pressed(KEY_W)) - int(Input.is_key_pressed(KEY_S)))
-	)
-	return (keyboard + _touch_move).limit_length(1.0)
+func _read_context() -> Dictionary:
+	var position: Vector3 = _native.get_player_position()
+	var velocity: Vector3 = _native.get_player_linear_velocity()
+	var grounded := bool(_native.is_player_grounded())
+	var traversal := int(_native.get_traversal_state())
+	var chute := bool(_native.is_parachute_deployed())
+	var ledge := bool(_native.is_ledge_available())
+	var lethal := float(_native.get_lethal_impact_speed_mps())
+	var station := &""
+	if bool(_native.is_intake_station_active()):
+		station = &"intake"
+	elif bool(_native.is_jib_station_active()):
+		station = &"jib"
+	elif bool(_native.is_needle_station_active()):
+		station = &"needle"
+	elif bool(_native.is_sump_station_active()):
+		station = &"sump"
+	var hanging := traversal == TRAVERSAL_HANGING
+	var free := traversal == TRAVERSAL_NONE
+	if _operating != &"" and (_operating != station or not grounded or not free):
+		_operating = &""
+	var climb_ok := grounded and free and ledge
+	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
+	if hanging:
+		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
+	elif not free:
+		pass
+	elif _operating != &"":
+		action = {"id": &"done", "label": "DONE", "icon": &"done", "detail": ""}
+	elif climb_ok:
+		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
+			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
+	elif grounded and station in [&"intake", &"jib", &"needle"]:
+		action = {"id": &"operate", "label": "OPERATE", "icon": &"operate",
+			"detail": {&"intake": "YARD JIB", &"jib": "KX-JIB", &"needle": "KX-NEEDLE"}[station]}
+	elif grounded and station == &"sump":
+		action = {"id": &"valve", "icon": &"valve", "detail": "SUMP",
+			"label": "OPEN VALVE" if bool(_native.is_sump_isolated()) else "CLOSE VALVE"}
+	return {
+		"position": position,
+		"velocity": velocity,
+		"grounded": grounded,
+		"traversal": traversal,
+		"hanging": hanging,
+		"chute": chute,
+		"jump_ok": grounded and free,
+		"climb_ok": climb_ok,
+		# Airborne, is_ledge_available is the native hang probe: an edge in
+		# the grab band, which engages as soon as the player pushes into it.
+		"grab_hint": not grounded and free and ledge,
+		"chute_ok": not grounded and free and (chute or -velocity.y > CHUTE_OFFER_FALL_MPS),
+		"danger": 0.0 if grounded else clampf(-velocity.y / maxf(lethal, 0.001), 0.0, 1.0),
+		"lethal": lethal,
+		"station": station,
+		"operating": _operating,
+		"slung": bool(_native.is_legal_forty_pack_slung()),
+		"action": action,
+		"checkpoint": _native.get_checkpoint_position(),
+		"deaths": int(_native.get_death_count()),
+		"tower_height": float(_native.get_tower_height_meters()),
+		"panel": _station_panel(),
+	}
 
 
-# WO-011 KX-JIB pendant: x is Drive (slew), y is Raise(+)/Lower(-). Arrow keys
-# so they never collide with WASD movement; effect is native-gated to the
-# station radius regardless of what this reads.
-func _read_jib_input() -> Vector2:
-	return Vector2(
-		float(int(Input.is_key_pressed(KEY_RIGHT)) - int(Input.is_key_pressed(KEY_LEFT))),
-		float(int(Input.is_key_pressed(KEY_UP)) - int(Input.is_key_pressed(KEY_DOWN)))
-	)
+# The operated machine's own readouts, straight from its native getters.
+# Row tone: 0 plain, 1 safe/engaged, 2 hazard.
+func _station_panel() -> Dictionary:
+	match _operating:
+		&"intake":
+			var throat_clear := bool(_native.is_intake_throat_clear())
+			var pins := bool(_native.does_intake_pack_pin_dog())
+			var travel := float(_native.get_legal_forty_swing_travel_radians())
+			var slung := bool(_native.is_legal_forty_pack_slung())
+			return {
+				"title": "YARD JIB PENDANT",
+				"subtitle": "B00 INTAKE RISE  /  MOD-YARD-JIB",
+				"rows": [
+					["BOOM", "%+.1f DEG" % rad_to_deg(float(_native.get_intake_boom_angle_radians())), 0],
+					["PACK HEIGHT", "%.2f M" % float(_native.get_intake_pack_position().y), 0],
+					["DOG THROAT", "OPEN" if throat_clear else ("PINNED" if pins else "SHUT"),
+						1 if throat_clear else 2],
+					["LEGAL 40 FLIGHT", "%.0f DEG" % rad_to_deg(travel), 1 if travel >= 0.85 else 0],
+					["SLING", "PACK SLUNG" if slung else "FREE", 0],
+				],
+				"verbs": [
+					[&"hoist", "HOIST"], [&"slew", "SLEW"],
+					[&"sling_release", "RELEASE PACK"] if slung else [&"sling_attach", "ATTACH PACK"],
+					[&"leave", "DONE"],
+				],
+			}
+		&"jib":
+			var hook: Vector3 = _native.get_jib_hook_position()
+			var crate: Vector3 = _native.get_jib_crate_position()
+			return {
+				"title": "KX-JIB PENDANT",
+				"subtitle": "KERNEL  /  FIRST FREIGHT",
+				"rows": [
+					["BOOM", "%+.1f DEG" % rad_to_deg(float(_native.get_jib_boom_angle_radians())), 0],
+					["HOOK HEIGHT", "%.2f M" % hook.y, 0],
+					["CRATE HEIGHT", "%.2f M" % crate.y, 0],
+				],
+				"verbs": [[&"hoist", "HOIST"], [&"slew", "DRIVE"], [&"leave", "DONE"]],
+			}
+		&"needle":
+			var seated := bool(_native.is_needle_seated())
+			return {
+				"title": "KX-NEEDLE PENDANT",
+				"subtitle": "KERNEL  /  STRUCTURAL COUPLING",
+				"rows": [
+					["NEEDLE HEIGHT", "%.2f M" % float(_native.get_needle_position().y), 0],
+					["SEAT", "SEATED" if seated else "UNSEATED", 1 if seated else 2],
+				],
+				"verbs": [[&"hoist", "RAISE / LOWER"], [&"leave", "DONE"]],
+			}
+	return {}
 
 
-func _apply_look_delta(delta: Vector2) -> void:
-	_yaw -= delta.x * 0.003
-	_pitch = clampf(_pitch - delta.y * 0.003, -1.25, 1.35)
+const HAPTICS := {
+	&"press": [12, 0.3],
+	&"tick": [16, 0.35],
+	&"grab": [30, 0.6],
+	&"land": [34, 0.85],
+	&"chute": [45, 0.7],
+	&"warn": [80, 0.9],
+	&"death": [150, 1.0],
+}
 
 
-# --- HUD sized to the bounds the device actually gives us --------------------
+func _haptic(kind: StringName, strength: float = 1.0) -> void:
+	if _ci_mode or not _settings.vibration or not HAPTICS.has(kind):
+		return
+	var spec: Array = HAPTICS[kind]
+	var duration_ms := int(float(spec[0]) * lerpf(0.6, 1.0, strength))
+	var amplitude := clampf(float(spec[1]) * strength, 0.05, 1.0)
+	match _router.device:
+		InputRouter.Device.TOUCH:
+			if OS.has_feature("mobile"):
+				Input.vibrate_handheld(duration_ms, amplitude)
+		InputRouter.Device.GAMEPAD:
+			if _router.active_pad >= 0:
+				var heavy := kind in [&"land", &"death", &"warn"]
+				Input.start_joy_vibration(_router.active_pad, amplitude * 0.8,
+					amplitude if heavy else amplitude * 0.25, float(duration_ms) / 1000.0)
+
+
+# State transitions become feedback: a grab, a landing, a canopy, a lethal
+# fall warning, a restore, a higher checkpoint. Each reads native state only.
+func _update_feedback(delta: float) -> void:
+	var traversal: int = _ctx["traversal"]
+	if traversal != _fb_traversal:
+		if traversal == TRAVERSAL_HANGING:
+			_haptic(&"grab")
+		elif traversal != TRAVERSAL_NONE:
+			_haptic(&"tick")
+		_fb_traversal = traversal
+	var grounded: bool = _ctx["grounded"]
+	var velocity: Vector3 = _ctx["velocity"]
+	var lethal: float = _ctx["lethal"]
+	# The native velocity read on the last airborne frame. Not the native's
+	# last_impact_speed: after a restore the player re-settles within a tick
+	# and that value is overwritten with the settle before any HUD sees it.
+	var fall_speed_before := _fb_fall_speed
+	if grounded and not _fb_grounded and fall_speed_before > 5.0:
+		_haptic(&"land", clampf(fall_speed_before / maxf(lethal, 0.001), 0.25, 1.0))
+	_fb_grounded = grounded
+	_fb_fall_speed = 0.0 if grounded else maxf(0.0, -velocity.y)
+
+	var deaths: int = _ctx["deaths"]
+	if deaths > _fb_deaths:
+		_fb_deaths = deaths
+		_operating = &""
+		var restored: Vector3 = _ctx["checkpoint"]
+		_hud.toast("LETHAL IMPACT", "FELL AT %.1f M/S  /  RESTORED TO CHECKPOINT %+.1f M" % [
+			fall_speed_before, restored.y], UiStyle.HAZARD, 3.4)
+		_hud.flash(UiStyle.HAZARD)
+		_haptic(&"death")
+
+	var chute: bool = _ctx["chute"]
+	if chute and not _fb_chute:
+		_haptic(&"chute")
+	_fb_chute = chute
+	if grounded:
+		_fb_warned = false
+	elif not chute and float(_ctx["danger"]) >= 0.75 and not _fb_warned:
+		_fb_warned = true
+		_haptic(&"warn")
+
+	var checkpoint_y: float = (_ctx["checkpoint"] as Vector3).y
+	if grounded and checkpoint_y > _fb_best_checkpoint_y + CHECKPOINT_TOAST_RISE_METERS:
+		_fb_best_checkpoint_y = checkpoint_y
+		_hud.toast("CHECKPOINT", "%+.1f M  SECURED" % checkpoint_y, UiStyle.SAFE)
+		_hud.show_altimeter(4.0)
+
+	if _sling_check_timer > 0.0:
+		_sling_check_timer -= delta
+		if _sling_check_timer <= 0.0 and bool(_ctx["slung"]) == _sling_check_was_slung:
+			if _sling_check_was_slung:
+				_hud.toast("RELEASE REFUSED", "PACK NOT SEATED AND SETTLED ON THE CRADLE",
+					UiStyle.AMBER, 2.6)
+			else:
+				_hud.toast("ATTACH REFUSED", "HOOK NOT SETTLED ON THE PADEYE", UiStyle.AMBER, 2.6)
+
+
+# --- telemetry overlay, sized to the bounds the device actually gives us ------
 
 
 func _layout_hud() -> void:
@@ -504,36 +884,30 @@ func _layout_hud() -> void:
 	for label in readouts:
 		if label == null:
 			continue
-		var base := 28.0 if label == _status else 16.0
+		var base := 24.0 if label == _status else 15.0
 		label.add_theme_font_size_override("font_size", int(roundf(base * scale)))
 
+	# Below the touch pause button, which owns the top-left corner.
 	var top_left: Control = $HUD/TopLeft
 	top_left.offset_left = gutter
-	top_left.offset_top = gutter
+	top_left.offset_top = gutter + roundf(150.0 * short_edge / 1856.0)
 	top_left.offset_right = gutter + _viewport_size.x * 0.52
 	# Size the box to what it actually has to hold, so the container never
 	# compresses a line out of legibility.
-	var line_height := roundf(16.0 * scale) + 9.0
-	top_left.offset_bottom = top_left.offset_top + roundf(28.0 * scale) + 9.0 \
+	var line_height := roundf(15.0 * scale) + 9.0
+	top_left.offset_bottom = top_left.offset_top + roundf(24.0 * scale) + 9.0 \
 		+ line_height * float(readouts.size())
 
+	# Top-centre: the top-right corner belongs to the altimeter.
 	var top_right: Control = $HUD/TopRight
-	top_right.offset_left = -_viewport_size.x * 0.44
+	top_right.anchor_left = 0.5
+	top_right.anchor_right = 0.5
+	top_right.offset_left = -_viewport_size.x * 0.2
+	top_right.offset_right = _viewport_size.x * 0.2
 	top_right.offset_top = gutter
-	top_right.offset_right = -gutter
-
-	var pad_size := roundf(206.0 * scale)
-	var pad: Control = $HUD/TouchMove
-	pad.offset_left = gutter + 12.0
-	pad.offset_right = pad.offset_left + pad_size
-	pad.offset_bottom = -(gutter + 12.0)
-	pad.offset_top = pad.offset_bottom - pad_size
-
-	for button in [_action_button, _release_button]:
-		if button == null:
-			continue
-		button.offset_right = -(gutter + 12.0)
-		button.offset_left = button.offset_right - roundf(184.0 * scale)
+	for child in top_right.get_children():
+		if child is Label:
+			(child as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
 # --- presentation mirror ----------------------------------------------------
@@ -587,11 +961,20 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
+
+	_apply_camera_feel(position, velocity, grounded, delta)
+	# The developer telemetry overlay costs a dozen string formats a frame;
+	# it is only paid for while the overlay is actually on screen.
+	if _telemetry_on:
+		_write_telemetry(position, velocity, grounded)
+	_mirror_machine(float(_native.get_valve_open_fraction()),
+		float(_native.get_orifice_mass_flow_kg_per_s()))
+
+
+func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> void:
 	var support := int(_native.get_support_entity_id())
 	var support_velocity: Vector3 = _native.get_support_point_linear_velocity()
 	var traversal := int(_native.get_traversal_state())
-
-	_apply_camera_feel(position, velocity, grounded, delta)
 
 	_position_value.text = "POSITION  %8.2f %7.2f %8.2f m" % [position.x, position.y, position.z]
 	_velocity_value.text = "VELOCITY  %8.2f %7.2f %8.2f m/s" % [velocity.x, velocity.y, velocity.z]
@@ -717,8 +1100,6 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_status.text = "PARACHUTE DEPLOYED"
 	else:
 		_status.text = "AIRBORNE / MOMENTUM PRESERVED"
-
-	_mirror_machine(valve, flow)
 
 
 func _mirror_machine(_valve: float, flow: float) -> void:

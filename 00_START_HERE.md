@@ -30,6 +30,7 @@ The one block to read before doing anything. Everything below is detail behind i
 | **Kernel** | `WO-000`–`WO-013`, all fourteen in source. **Closed set** |
 | **Ascent frontier** | `AS-001`–`AS-002` implemented; `AS-003`–`AS-004` planned; `AS-005`–`AS-007` imported, not re-derived; `AS-008`–`AS-015` unwritten |
 | **Integrated evidence** | **GREEN** at `bc1e084` — run [`35727055407`](https://github.com/IssisX/ScraperX/actions/runs/35727055407), all steps, 10/10 native falsifiers. `AS-002`'s own 11th falsifier group is green locally (`03_EXECUTION/ASCENT/AS-002_LEGAL_FORTY.md` Result record) but **not yet CI-integrated** — no run has executed this branch's head |
+| **Interface** | GDD §22 control surface in `godot/presentation/ui/`: touch (floating stick, drag-look, Jump, contextual Action, Drop/Chute on state, pendant controls only while operating), gamepad and keyboard over one verb vocabulary; sparse HUD (reticle cues, prompts, fall gauge against the native lethal speed, altimeter, station panel), pause/settings. 14 `--uitest` scenarios drive real input events into native state changes — green locally, wired into CI, **not yet CI-run** |
 | **Next code job** | **`AS-003`** — `CAP-HOOK5` acquire. Gate satisfied (`AS-002` implemented, its exit revalidated in source) |
 | **Next authoring job** | re-author **`AS-005`** against this branch |
 | **Authoring contract** | `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` |

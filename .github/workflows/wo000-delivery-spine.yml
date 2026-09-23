@@ -172,6 +172,24 @@ jobs:
           awk -F'peak_lift=' '/SCRAPERX_WO006_MACHINE_PROOF/ {split($2,a," "); exit (a[1]+0 > 6.0) ? 0 : 1}' \
             artifacts/godot-runtime.log
 
+      - name: Drive every control path through the real input pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Each scenario injects touch / gamepad / keyboard events through the
+          # viewport's own input pipeline and asserts a native state change
+          # (presentation/ui/ui_test_driver.gd). --fixed-fps makes simulated
+          # time exact however fast the runner is.
+          : > artifacts/godot-uitest.log
+          for scenario in touch_jump touch_move_look touch_climb touch_vault touch_hang_drop \
+              touch_hang_climb touch_chute touch_lethal_feedback touch_sump touch_pendant \
+              touch_pause pad_core pad_pendant keyboard_core; do
+            timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
+              -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
+            grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log
+          done
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest.log; then exit 1; fi
+
       - name: Cross-compile native graph for Android arm64
         shell: bash
         run: |
@@ -226,6 +244,7 @@ jobs:
           - the Godot runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856, 1.164) with stretch=expand, an 82 degree vertical field of view and a 2600 m far plane;
           - the same runtime spawned outdoors at grade, walked the tower approach, and observed the native machine open its valve past half and lift the platform past six metres;
           - one first-person approach-and-machine screenshot was captured from that runtime;
+          - fourteen scripted interface scenarios drove touch (jump, simultaneous move and look, climb, vault, hang then drop, hang then climb up, chute, lethal-fall announcement, sump valve, yard jib pendant, pause and resume), gamepad (move, jump, look, pause, KX-JIB pendant) and keyboard (move, jump, action, pause) through the viewport's real input pipeline, each asserting the resulting native state change;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
           - the APK checksum and checkpoint identity were recorded.

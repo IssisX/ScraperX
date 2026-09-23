@@ -228,6 +228,10 @@ public:
     static constexpr std::uint32_t kTickRateHz = 90;
     static constexpr double kFixedStepSeconds = 1.0 / static_cast<double>(kTickRateHz);
     static constexpr double kMaximumAcceptedFrameDeltaSeconds = 3600.0;
+    // WO-008 landing consequence: a genuine landing faster than this restores
+    // the checkpoint. Public so presentation can show the real bound (the
+    // fall-danger gauge) instead of mirroring a gameplay rule it cannot own.
+    static constexpr double kLethalImpactSpeedMps = 20.0;
     static constexpr std::uint64_t kStaticDeckEntityId = 1;
     static constexpr std::uint64_t kPlayerEntityId = 2;
     static constexpr std::uint64_t kTranslatingSupportEntityId = 3;
