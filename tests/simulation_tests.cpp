@@ -1569,7 +1569,7 @@ int main() {
     constexpr double kLegalFortyHingeX = 7.856;
     constexpr double kLegalFortyHingeZ = -112.5;
     constexpr double kLegalFortyMidLandingX = 9.350;
-    constexpr double kLegalFortyMidLandingZ = -114.80;
+    constexpr double kLegalFortyMidLandingZ = -115.80;
     constexpr double kLegalFortyWellX = -4.51;
     constexpr double kLegalFortyUpperFlightZ = -117.0;
     constexpr double kLegalFortyTravelFull = 0.907572; // stowed 8 deg .. deployed 60 deg
@@ -1765,7 +1765,7 @@ int main() {
             "the deployed flight must carry the player to the mid-landing at y >= 32.89");
     // Aligns to the upper flight's own (narrow, 1.80 m) z-band while still
     // on the wide mid-landing, for the same reason as the hinge crossing
-    // above: the landing's z in [-118.0, -111.6] does not fully overlap
+    // above: the landing's z in [-121.0, -110.6] does not fully overlap
     // the flight's own z in [-117.9, -116.1], and a diagonal from the
     // landing's centre (z = -114.80) reaches the landing's west edge
     // before it reaches the flight's own band, and falls through the gap
@@ -1934,29 +1934,57 @@ int main() {
     }
     require(skin_forty_settled,
             "the 20th mantle must finish and settle before the walkway crossing begins");
-    // -118.0: south of the upper flight's own z in [-117.9, -116.1] (its
-    // underside, descending toward its foot at x = 9.350, leaves a capsule
-    // under 2.1 m of headroom -- the well's own east-edge figure above --
-    // for any x past about 5.7, well before the walkway even ends), and now
-    // that kLegalFortyMidLandingHalfZ reaches this same z, continuously
-    // covered by the walkway or the landing the whole way across their
-    // shared seam at x = 8.30. Found by direct observation, in two
-    // separate failures this replaces: aiming for this band's own centre
-    // (-117.5) walked straight into the flight's own underside and stopped
-    // dead around x = 5.7, well short of the seam; aiming for its edge
-    // exactly (-118.0, before the landing was widened) fell through the gap
-    // between the two footprints instead. Continues to x = 9.8, east of the
-    // flight's own foot (9.350) entirely -- past that x the flight has no
-    // footprint left to overhang, at any z -- so the final approach below
-    // can safely turn north.
-    walk_toward(skin_forty, 0.0, -118.0, 10.0);
-    walk_toward(skin_forty, 9.8, -118.0, 15.0);
+    // The walkway's lane with standing headroom is z in [-120.65, -118.25]
+    // for the capsule's centre: the walkway's own south edge (-121.0) and
+    // the upper flight's own south edge (-117.9), each less the 0.35 m
+    // radius. North of it the flight's underside falls toward its foot at
+    // x = 9.350 and leaves under 2.1 m of headroom past x = 5.7. Rung 20's
+    // band alone, the walkway's old footprint, left [-118.65, -118.25]: a
+    // 0.4 m lane, reported by a player as an opening too small to fit
+    // through. Zigzag from one side of the lane to the other through the
+    // stretch where the flight is lowest, on foot: every waypoint reached,
+    // never below the walkway's own top, never by a mantle or a vault.
+    // Against the old footprint the first southern waypoint is past the
+    // walkway's edge. Ends at x = 9.8, east of the flight's own foot
+    // (9.350) -- past that x the flight has no footprint left to overhang,
+    // at any z -- so the final approach below can safely turn north.
+    const double walkway_lane[][2] = {
+        {0.0, -120.3}, {4.5, -118.6}, {6.5, -120.3}, {8.0, -118.6}, {9.8, -120.3}};
+    double walkway_lowest_y = skin_forty.snapshot().player_position.y;
+    bool walkway_traversed = false;
+    for (const auto &waypoint : walkway_lane) {
+        bool reached = false;
+        for (int i = 0; i < 12 * 90 && !reached; ++i) {
+            const auto state = skin_forty.snapshot();
+            double dx = waypoint[0] - state.player_position.x;
+            double dz = waypoint[1] - state.player_position.z;
+            const double len = std::hypot(dx, dz);
+            reached = len < 0.3;
+            if (len > 1.0e-6) {
+                dx /= len;
+                dz /= len;
+            }
+            (void)skin_forty.set_move_input(dx, dz);
+            (void)skin_forty.set_facing(dx, dz);
+            (void)skin_forty.advance_frame(Simulation::kFixedStepSeconds);
+            const auto after = skin_forty.snapshot();
+            walkway_lowest_y = std::min(walkway_lowest_y, after.player_position.y);
+            walkway_traversed =
+                walkway_traversed || after.traversal_state != TraversalState::None;
+        }
+        require(reached, "every point of the walkway's lane under the upper flight must be "
+                         "reachable on foot");
+    }
+    std::cout << "INFO AS-002 walkway lane: lowest_y=" << walkway_lowest_y << '\n';
+    require(walkway_lowest_y > kLegalFortyMidLandingSurfaceY + 0.70,
+            "crossing the walkway's lane must never drop below the walkway's own top");
+    require(!walkway_traversed, "the walkway's lane is walked, not mantled or vaulted");
     // From here to the landing's own centre, x only decreases from 9.8 to
     // 9.350 -- never west of the flight's own foot -- while z climbs clear
     // of its band, so this straight line never passes under it.
     walk_toward(skin_forty, kLegalFortyMidLandingX, kLegalFortyMidLandingZ, 15.0);
     // Same two-step crossing the ascent route above needed at this identical
-    // boundary: the landing's z in [-118.0, -111.6] does not fully overlap
+    // boundary: the landing's z in [-121.0, -110.6] does not fully overlap
     // the upper flight's own, narrower z in [-117.9, -116.1], so align to
     // the flight's own z-band first, while still on the wide landing, then
     // cross west along that band -- a direct diagonal from the landing's

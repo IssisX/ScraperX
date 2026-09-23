@@ -701,10 +701,10 @@ constexpr float kLegalFortyAttachSpeedToleranceMps = 0.20F;
 // rather than by matching a second copy of the same literal.
 constexpr float kLegalFortyMidLandingCenterX = 9.350F;
 constexpr float kLegalFortyMidLandingHalfX = 1.05F;
-constexpr float kLegalFortyMidLandingCenterZ = -114.80F;
-// 4.20, not the plan's own 3.20: south edge -119.00, matching the walkway's
+constexpr float kLegalFortyMidLandingCenterZ = -115.80F;
+// 5.20, not the plan's own 3.20: south edge -121.00, matching the walkway's
 // own south edge (kLegalFortySkinWalkwayCenterZ +/- HalfZ) exactly rather
-// than falling 1.0 m short of it at -118.00. The walkway and the landing
+// than falling 3.0 m short of it at -118.00. The walkway and the landing
 // touch at x = 8.30 with zero x-overlap, so the ONLY way across is through
 // whatever z-band both cover at once, and the upper flight above (its own
 // z in [-117.9, -116.1], underside descending toward its foot at this same
@@ -717,8 +717,9 @@ constexpr float kLegalFortyMidLandingCenterZ = -114.80F;
 // falling clean through the gap between the two footprints. Widening this
 // one edge to meet the walkway's own is the fix, not moving the walkway
 // (AS-002-owned on both sides, and the walkway's own z is independently
-// anchored to rung 20 -- see its own comment).
-constexpr float kLegalFortyMidLandingHalfZ = 4.20F;
+// anchored to rung 20 -- see its own comment). The walkway has since grown
+// 2 m south (its own comment has why); this edge follows it.
+constexpr float kLegalFortyMidLandingHalfZ = 5.20F;
 
 constexpr float kLegalFortyUpperFlightCenterX = 2.422F;
 constexpr float kLegalFortyUpperFlightCenterZ = -117.0F;
@@ -801,11 +802,11 @@ constexpr float kLegalFortySkinRungStepZMeters = 2.0F;
 
 // The walkway from rung 20's top to the mid-landing: flush with both (top
 // at 32.1872 m), touching rung 20's own east face at x = -5.8 and the
-// mid-landing's own west face at x = 8.30 so neither joint is a step. Its
-// z is rung 20's own (kLegalFortySkinRungFirstZ - 4 * step = -118.0),
-// comfortably inside the mid-landing's z in [-118.0, -111.6] and well
-// clear (>= 4.5 m) of the swing flight's own z in [-113.4, -111.6] on
-// every path, deployed or not.
+// mid-landing's own west face at x = 8.30 so neither joint is a step. It
+// covers rung 20's own z band (centre kLegalFortySkinRungFirstZ - 4 * step
+// = -118.0) and 2 m south of it, exactly the mid-landing's own south part,
+// and its north edge (-117.0) stays clear (>= 3.6 m) of the swing flight's
+// own z in [-113.4, -111.6] on every path, deployed or not.
 // Rungs 17-20 step 0.8 m west of the column. Directly above the bascule
 // flight's foot (x from -6.0), rung 17 on the column left 1.4 m of headroom
 // over the flight's first metre: the SHAFT braid walked into its underside.
@@ -814,8 +815,16 @@ constexpr float kLegalFortySkinRungStepZMeters = 2.0F;
 constexpr float kLegalFortySkinRungJogX = -0.8F;
 constexpr float kLegalFortySkinWalkwayMinX = -5.8F;  // rung 20's east face
 constexpr float kLegalFortySkinWalkwayMaxX = 8.30F;
-constexpr float kLegalFortySkinWalkwayCenterZ = -118.0F;
-constexpr float kLegalFortySkinWalkwayHalfZ = 1.00F;
+// z in [-121, -117]: rung 20's own band plus 2 m south of it. Rung 20's band
+// alone ([-119, -117]) runs under the upper flight's z in [-117.9, -116.1],
+// whose underside falls toward its foot to 0.6 m over the walkway at x = 8:
+// a standing capsule (radius 0.35) had one 0.4 m-wide lane, z in
+// [-118.65, -118.25], and anyone walking the walkway's middle met the slab
+// (reported by a player as an opening too small to fit through). South of
+// the flight the air is clear to the hall deck's underside (39.79 m, 7.6 m
+// up), so the added 2 m gives a 2.4 m lane with full headroom.
+constexpr float kLegalFortySkinWalkwayCenterZ = -119.0F;
+constexpr float kLegalFortySkinWalkwayHalfZ = 2.00F;
 
 // --- WO-013 Ascent Atlas v1.0 kernel: KX-SUMP / KX-GRATE -------------------
 // Atlas section 9: "wet sump makes KX-GRATE a hazard... isolated + drained
@@ -1799,7 +1808,10 @@ private:
         track(add_box(bodies, JPH::Vec3(0.9F, 1.25F, 0.8F), JPH::RVec3(28.3, 1.25, -94.05),
                       JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
                       Simulation::kMachinePylonEntityId));
-        track(add_box(bodies, JPH::Vec3(1.0F, 0.15F, 0.8F), JPH::RVec3(29.5, 3.65, -94.05),
+        // The landing starts at the second step's east face (x = 29.2). It used
+        // to start 0.7 m west of it, over the step: 1.0 m of headroom on the
+        // step's top, a slot a standing capsule walked into and wedged.
+        track(add_box(bodies, JPH::Vec3(1.0F, 0.15F, 0.8F), JPH::RVec3(30.2, 3.65, -94.05),
                       JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
                       Simulation::kMachinePylonEntityId));
 

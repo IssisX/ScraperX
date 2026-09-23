@@ -155,8 +155,8 @@ const LEGAL_FORTY_SWING_BRACKET_LOCAL_Y := -0.18
 const LEGAL_FORTY_SWING_SHEAVE_HEIGHT := 4.0
 const LEGAL_FORTY_MID_LANDING_X := 9.350
 const LEGAL_FORTY_MID_LANDING_HALF_X := 1.05
-const LEGAL_FORTY_MID_LANDING_Z := -114.80
-const LEGAL_FORTY_MID_LANDING_HALF_Z := 4.20
+const LEGAL_FORTY_MID_LANDING_Z := -115.80
+const LEGAL_FORTY_MID_LANDING_HALF_Z := 5.20
 const LEGAL_FORTY_UPPER_FLIGHT_X := 2.422
 const LEGAL_FORTY_UPPER_FLIGHT_Z := -117.0
 const LEGAL_FORTY_HALL_DECK_HALF_X := 10.0
@@ -176,8 +176,10 @@ const LEGAL_FORTY_SKIN_RUNG_STEP_Z := 2.0
 const LEGAL_FORTY_SKIN_RUNG_JOG_X := -0.8
 const LEGAL_FORTY_SKIN_WALKWAY_MIN_X := -5.8
 const LEGAL_FORTY_SKIN_WALKWAY_MAX_X := 8.30
-const LEGAL_FORTY_SKIN_WALKWAY_Z := -118.0
-const LEGAL_FORTY_SKIN_WALKWAY_HALF_Z := 1.00
+# z in [-121, -117]: 2 m south of rung 20's band, clear of the upper flight
+# overhead (kLegalFortySkinWalkwayCenterZ has why).
+const LEGAL_FORTY_SKIN_WALKWAY_Z := -119.0
+const LEGAL_FORTY_SKIN_WALKWAY_HALF_Z := 2.00
 const LEGAL_FORTY_CW_CRADLE_HALF_X := 1.50
 const LEGAL_FORTY_CW_CRADLE_HALF_Y := 0.90  # native: clears the B00 belt
 const LEGAL_FORTY_CW_CRADLE_HALF_Z := 1.20
@@ -2573,7 +2575,8 @@ func _build_plant(mill_scale: Material, oxidised: Material, galvanised: Material
 	_add_box("Catwalk", Vector3(5.2, 0.28, 18.0), Vector3(16.4, 8.55, -112.0), galvanised)
 	_add_box("AccessStepOne", Vector3(1.8, 1.25, 1.6), Vector3(27.0, 0.625, -94.05), mill_scale)
 	_add_box("AccessStepTwo", Vector3(1.8, 2.5, 1.6), Vector3(28.3, 1.25, -94.05), mill_scale)
-	_add_box("AccessLanding", Vector3(2.0, 0.3, 1.6), Vector3(29.5, 3.65, -94.05), galvanised)
+	# Starts at the second step's east face; over the step it left 1.0 m of headroom.
+	_add_box("AccessLanding", Vector3(2.0, 0.3, 1.6), Vector3(30.2, 3.65, -94.05), galvanised)
 	_add_box("ReturnBasin", Vector3(2.4, 0.28, 3.0), Vector3(31.82, 1.84, -96.0), oxidised, -0.20)
 	for guard_z in [-97.55, -94.45]:
 		_add_box("BasinGuard", Vector3(2.8, 0.9, 0.24), Vector3(31.82, 2.20, guard_z), faded)

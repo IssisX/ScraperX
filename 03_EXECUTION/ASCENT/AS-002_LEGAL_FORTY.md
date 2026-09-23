@@ -274,7 +274,8 @@ constant explaining why:
   route — the same one the SHAFT braid uses past that point.
 - **The mid-landing's own south edge moved from the plan's `z = -111.6`
   (`half_z = 3.20`, its literal geometry-table value) to `z = -119.0`
-  (`half_z = 4.20`).** The walkway above and the landing touch at `x = 8.30`
+  (`half_z = 4.20`), and later to `z = -121.0` (`center -115.80`,
+  `half_z = 5.20`) with the walkway below.** The walkway above and the landing touch at `x = 8.30`
   with zero x-overlap; the only safe crossing is whatever z-band both cover
   at once. The upper flight's own underside, directly overhead near that
   seam, leaves under `2.1 m` of capsule headroom (the same figure the hall
@@ -283,6 +284,18 @@ constant explaining why:
   plan's original `-111.6` edge, was not covered by the landing at all.
   Widening the landing's own south edge to meet the walkway's is the fix that
   needed no change to the walkway or the flight.
+- **The SKIN walkway is `4.0 m` deep, `z` in `[-121, -117]`, not rung 20's own
+  `2.0 m` band.** That band runs under the upper flight (`z` in
+  `[-117.9, -116.1]`), whose underside falls to `0.6 m` over the walkway at
+  `x = 8`: a standing capsule had one `0.4 m` lane (`z` in
+  `[-118.65, -118.25]`), and a player reported the top of the climb as an
+  opening too small to fit through. South of the flight the air is clear to
+  the hall deck's underside (`39.79 m`), so the walkway grows `2 m` south and
+  the mid-landing's south edge follows it; the lane is `2.4 m`. Falsifier: after
+  the 20-rung climb, a walk that zigzags between `z = -120.3` and `-118.6`
+  through the flight's low stretch reaches every point on foot and never drops
+  (`INFO AS-002 walkway lane: lowest_y=33.086`); on the old footprint it falls
+  off the walkway's edge (`lowest_y=20.63`).
 - **The hall well moved from the plan's `center x = -4.51`, `half_x = 3.00`
   to `center x = -1.65`, `half_x = 3.15`.** East edge: a capsule needs
   `~2.1 m` of headroom over an inclined surface, not the `~0.9 m` flat floor
