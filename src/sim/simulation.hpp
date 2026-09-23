@@ -125,6 +125,8 @@ struct Snapshot final {
     std::uint64_t accepted_traversal_count = 0;
     // Static dressing loaded from world_solids.inc: bodies built, drawn
     // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
+    // Edges under kStepMaximumHeight walked up (see try_step_up).
+    std::uint64_t step_up_count = 0;
     std::uint32_t world_solid_bodies = 0;
     std::uint32_t world_solid_mirrors = 0;
     std::uint32_t world_solid_rejected = 0;

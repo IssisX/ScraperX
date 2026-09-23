@@ -23,7 +23,7 @@ const MOVING := [
 	"JibHook", "KernelCrate", "CapacityStandLoad", "NeedleBeam", "SumpGrate", "IntakeBelt",
 	"BeltSlat", "DogPlate", "DogRib", "BoomSpine", "BoomLattice", "BoomTail", "BoomBallast",
 	"IntakeHook", "IntakePack", "PackBand", "PackBandUpper", "OverweightPack",
-	"SwingFlightSlab", "SwingTread", "SwingRail", "CwCradleFloor", "CwCradleRail",
+	"SwingFlightSlab", "SwingTread", "SwingRail", "CwCradleCar",
 	"NativeMovingLedge", "NativeRotatingSupport", "NativeTranslatingSupport",
 	# Yard crane boom: ambient sway, 25 m up a bare mast nothing can climb.
 	"CraneBoomArm", "CraneCounterArm", "CraneCounterweight", "CraneCrate",

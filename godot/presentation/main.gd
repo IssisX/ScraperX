@@ -88,6 +88,11 @@ const STACK_DECK_THICKNESS := 0.5
 const STACK_DECK_BAND_DEPTH := 9.0
 const STACK_COLUMN_SIZE := 1.6
 const STACK_RAMP_WIDTH := 3.2
+# Stairwell cut into each deck above the flight that arrives there; mirrors
+# kStackStairwellStart / kStackStairwellHalfWidth in simulation.cpp.
+const STACK_STAIRWELL_START := 7.5
+const STACK_STAIRWELL_HALF_WIDTH := 2.1
+const STACK_FLIGHT_HALF_THICKNESS := 0.18
 const STACK_MASS_BASE_Y := 159.0
 
 # AS-001 B00 intake rise. Every figure here mirrors a kIntake* constant in
@@ -161,14 +166,17 @@ const LEGAL_FORTY_SKIN_RUNG_FIRST := 16
 const LEGAL_FORTY_SKIN_RUNG_LAST := 20
 const LEGAL_FORTY_SKIN_RUNG_FIRST_Z := -110.0
 const LEGAL_FORTY_SKIN_RUNG_STEP_Z := 2.0
-const LEGAL_FORTY_SKIN_WALKWAY_MIN_X := -5.0
+# Rungs 17-20 sit 0.8 m west of the column, clear of the bascule flight's
+# foot (kLegalFortySkinRungJogX); the walkway starts at rung 20's east face.
+const LEGAL_FORTY_SKIN_RUNG_JOG_X := -0.8
+const LEGAL_FORTY_SKIN_WALKWAY_MIN_X := -5.8
 const LEGAL_FORTY_SKIN_WALKWAY_MAX_X := 8.30
 const LEGAL_FORTY_SKIN_WALKWAY_Z := -118.0
 const LEGAL_FORTY_SKIN_WALKWAY_HALF_Z := 1.00
 const LEGAL_FORTY_CW_CRADLE_HALF_X := 1.50
-const LEGAL_FORTY_CW_CRADLE_HALF_Y := 1.20
+const LEGAL_FORTY_CW_CRADLE_HALF_Y := 0.90  # native: clears the B00 belt
 const LEGAL_FORTY_CW_CRADLE_HALF_Z := 1.20
-const LEGAL_FORTY_CW_CRADLE_BUILD_Y := 4.0
+const LEGAL_FORTY_CW_CRADLE_BUILD_Y := 5.20 - LEGAL_FORTY_CW_CRADLE_HALF_Y  # top face at 5.20
 const LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_X := 0.35
 const LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Y := 4.0
 const LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Z := 0.35
@@ -1297,8 +1305,7 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 		var stowed_phi := PI * 0.5 - LEGAL_FORTY_STOWED_THETA
 		_legal_forty_swing_flight_pivot.rotation = Vector3(0.0, 0.0, stowed_phi - legal_forty_travel)
 	if _legal_forty_cradle_mesh != null:
-		_legal_forty_cradle_mesh.position = _native.get_legal_forty_cradle_position() + Vector3(
-			0.0, -LEGAL_FORTY_CW_CRADLE_HALF_Y, 0.0)
+		_legal_forty_cradle_mesh.position = _native.get_legal_forty_cradle_position()
 	if _legal_forty_rope_flight != null and _legal_forty_swing_flight_pivot != null:
 		var bracket_local := Vector3(
 			LEGAL_FORTY_SWING_BRACKET_LOCAL_X - LEGAL_FORTY_FLIGHT_HALF_LENGTH,
@@ -1690,19 +1697,12 @@ func _build_legal_forty(concrete: Material, mill_scale: Material, oxidised: Mate
 			LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Z * 2.0),
 		Vector3(cradle_x, LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Y, guide_mast_z), oxidised, forty)
 
-	# Three-sided open frame -- floor and two side rails, open in +-Z --
-	# matching the native body's own design intent (its collision shape is a
-	# single solid box; this is the visual it stands in for). _mirror_machine
-	# drives the whole group's position from the live cradle body every
-	# frame, so the rails only need to be positioned once, as children.
-	_legal_forty_cradle_mesh = _add_box_to("CwCradleFloor",
-		Vector3(LEGAL_FORTY_CW_CRADLE_HALF_X * 2.0, 0.2, LEGAL_FORTY_CW_CRADLE_HALF_Z * 2.0),
-		Vector3(cradle_x, LEGAL_FORTY_CW_CRADLE_BUILD_Y - LEGAL_FORTY_CW_CRADLE_HALF_Y, cradle_z),
-		rust_deep, forty)
-	for rail_x in [LEGAL_FORTY_CW_CRADLE_HALF_X - 0.1, -(LEGAL_FORTY_CW_CRADLE_HALF_X - 0.1)]:
-		_add_box_to("CwCradleRail",
-			Vector3(0.2, LEGAL_FORTY_CW_CRADLE_HALF_Y * 2.0, LEGAL_FORTY_CW_CRADLE_HALF_Z * 2.0),
-			Vector3(rail_x, LEGAL_FORTY_CW_CRADLE_HALF_Y, 0.0), rust_deep, _legal_forty_cradle_mesh)
+	# The car: a solid block, exactly the native body. The pack rides on its
+	# top face. _render_snapshot drives it from the live cradle every frame.
+	_legal_forty_cradle_mesh = _add_box_to("CwCradleCar",
+		Vector3(LEGAL_FORTY_CW_CRADLE_HALF_X * 2.0, LEGAL_FORTY_CW_CRADLE_HALF_Y * 2.0,
+			LEGAL_FORTY_CW_CRADLE_HALF_Z * 2.0),
+		Vector3(cradle_x, LEGAL_FORTY_CW_CRADLE_BUILD_Y, cradle_z), rust_deep, forty)
 
 	# ---- The rope: two segments over two fixed sheaves, matching the
 	# native pulley's own two runs (exactly like the treadle's own cable
@@ -1774,20 +1774,44 @@ func _build_legal_forty(concrete: Material, mill_scale: Material, oxidised: Mate
 		var top_y := float(rung) * INTAKE_SKIN_RUNG_RISE
 		var rung_z := LEGAL_FORTY_SKIN_RUNG_FIRST_Z - LEGAL_FORTY_SKIN_RUNG_STEP_Z * float(
 			rung - LEGAL_FORTY_SKIN_RUNG_FIRST)
+		var rung_x := INTAKE_HANDOFF_CENTER_X + (LEGAL_FORTY_SKIN_RUNG_JOG_X
+			if rung > LEGAL_FORTY_SKIN_RUNG_FIRST else 0.0)
 		_add_box_to("SkinRung%d" % rung, Vector3(2.0, 1.0, INTAKE_SKIN_RUNG_HALF_Z * 2.0),
-			Vector3(INTAKE_HANDOFF_CENTER_X, top_y - 0.5, rung_z), rust_deep, forty)
+			Vector3(rung_x, top_y - 0.5, rung_z), rust_deep, forty)
 		_add_box_to("SkinRungPlate%d" % rung, Vector3(2.1, 0.08, 1.9),
-			Vector3(INTAKE_HANDOFF_CENTER_X, top_y + 0.02, rung_z), galvanised, forty)
+			Vector3(rung_x, top_y + 0.02, rung_z), galvanised, forty)
 		if rung % 3 == 0:
 			_add_strut("SkinStay%d" % rung,
-				Vector3(INTAKE_HANDOFF_CENTER_X - 1.0, top_y, rung_z),
-				Vector3(INTAKE_HANDOFF_CENTER_X - 2.6, top_y - 3.0, rung_z + 1.2),
+				Vector3(rung_x - 1.0, top_y, rung_z),
+				Vector3(rung_x - 2.6, top_y - 3.0, rung_z + 1.2),
 				0.12, oxidised, forty)
 	var walk_cx := (LEGAL_FORTY_SKIN_WALKWAY_MIN_X + LEGAL_FORTY_SKIN_WALKWAY_MAX_X) * 0.5
 	var walk_hx := (LEGAL_FORTY_SKIN_WALKWAY_MAX_X - LEGAL_FORTY_SKIN_WALKWAY_MIN_X) * 0.5
 	_add_box_to("SkinWalkway", Vector3(walk_hx * 2.0, 0.36, LEGAL_FORTY_SKIN_WALKWAY_HALF_Z * 2.0),
 		Vector3(walk_cx, LEGAL_FORTY_MID_LANDING_SURFACE_Y - 0.18, LEGAL_FORTY_SKIN_WALKWAY_Z),
 		mill_scale, forty)
+
+
+# The deck band a flight arrives through, as Rect2 pieces in (x, z) about the
+# stack centre with z measured outward along the band's own side: full depth
+# before and after the well along x, two strips beside it.
+func _stairwell_band_pieces(well_side: float, band_center: float, flight_head: float) -> Array:
+	var band_in := band_center - STACK_DECK_BAND_DEPTH * 0.5
+	var band_out := band_center + STACK_DECK_BAND_DEPTH * 0.5
+	var well_in := band_center - STACK_STAIRWELL_HALF_WIDTH
+	var well_out := band_center + STACK_STAIRWELL_HALF_WIDTH
+	var spans := [
+		[-STACK_HALF_EXTENT, STACK_STAIRWELL_START, band_in, band_out],
+		[flight_head, STACK_HALF_EXTENT, band_in, band_out],
+		[STACK_STAIRWELL_START, flight_head, band_in, well_in],
+		[STACK_STAIRWELL_START, flight_head, well_out, band_out],
+	]
+	var pieces := []
+	for span in spans:
+		var x0: float = well_side * span[0]
+		var x1: float = well_side * span[1]
+		pieces.append(Rect2(minf(x0, x1), span[2], absf(x1 - x0), span[3] - span[2]))
+	return pieces
 
 
 # The stack: the tower's climbable lower section. Deck rings, columns and
@@ -1802,14 +1826,22 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 	var cx := STACK_CENTER.x
 	var cz := STACK_CENTER.z
 
+	var flight_head := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH
 	for level in range(1, STACK_LEVEL_COUNT + 1):
 		var deck_y := float(level) * STACK_LEVEL_HEIGHT
 		var slab_y := deck_y - STACK_DECK_THICKNESS * 0.5
 		var deck_material: Material = galvanised if level % 2 == 1 else mill_scale
+		var well_side := 1.0 if (level - 1) % 2 == 0 else -1.0
 
 		for sz in [1.0, -1.0]:
-			_add_box("StackDeck", Vector3(STACK_HALF_EXTENT * 2.0, STACK_DECK_THICKNESS,
-				STACK_DECK_BAND_DEPTH), Vector3(cx, slab_y, cz + sz * band_center), deck_material)
+			if sz != well_side:
+				_add_box("StackDeck", Vector3(STACK_HALF_EXTENT * 2.0, STACK_DECK_THICKNESS,
+					STACK_DECK_BAND_DEPTH), Vector3(cx, slab_y, cz + sz * band_center), deck_material)
+				continue
+			for piece in _stairwell_band_pieces(well_side, band_center, flight_head):
+				_add_box("StackDeck", Vector3(piece.size.x, STACK_DECK_THICKNESS, piece.size.y),
+					Vector3(cx + piece.get_center().x, slab_y, cz + sz * piece.get_center().y),
+					deck_material)
 		for sx in [1.0, -1.0]:
 			_add_box("StackDeck", Vector3(STACK_DECK_BAND_DEPTH, STACK_DECK_THICKNESS,
 				inner_half * 2.0), Vector3(cx + sx * band_center, slab_y, cz), deck_material)
@@ -1839,12 +1871,23 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 				_add_box("ShaftPost", Vector3(0.09, 1.1, 0.09),
 					Vector3(cx + post_x, deck_y + 0.55, cz + sz * inner_half), galvanised)
 
-		# Timber decking planks laid over the walking band, warm against iron.
+		# Timber decking planks laid over the walking band, warm against iron;
+		# broken where the stairwell opens.
 		for plank in range(-2, 3):
 			for sz in [1.0, -1.0]:
-				_add_box("DeckPlank", Vector3(STACK_HALF_EXTENT * 2.0 - 2.0, 0.08, 1.1),
-					Vector3(cx, deck_y + 0.05, cz + sz * (band_center + float(plank) * 1.35)),
-					timber)
+				var plank_z := band_center + float(plank) * 1.35
+				var over_well: bool = sz == well_side \
+					and absf(plank_z - band_center) - 0.55 < STACK_STAIRWELL_HALF_WIDTH
+				if not over_well:
+					_add_box("DeckPlank", Vector3(STACK_HALF_EXTENT * 2.0 - 2.0, 0.08, 1.1),
+						Vector3(cx, deck_y + 0.05, cz + sz * plank_z), timber)
+					continue
+				for run in [[-STACK_HALF_EXTENT + 1.0, STACK_STAIRWELL_START],
+						[flight_head, STACK_HALF_EXTENT - 1.0]]:
+					var x0: float = well_side * run[0]
+					var x1: float = well_side * run[1]
+					_add_box("DeckPlank", Vector3(absf(x1 - x0), 0.08, 1.1),
+						Vector3(cx + (x0 + x1) * 0.5, deck_y + 0.05, cz + sz * plank_z), timber)
 
 	# Columns, and the diagonal bracing that makes a frame a frame.
 	for level in range(0, STACK_LEVEL_COUNT):
@@ -1886,7 +1929,10 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		var length := sqrt(run * run + rise * rise)
 		var pitch := atan2(rise, run)
 		var side := 1.0 if level % 2 == 0 else -1.0
-		var flight_origin := Vector3(cx, base_y + rise * 0.5, cz + side * band_center)
+		# Set down by its half-thickness along its normal so the walking
+		# surface meets both floors flush (mirrors the native flight).
+		var flight_origin := Vector3(cx + side * STACK_FLIGHT_HALF_THICKNESS * sin(pitch),
+			base_y + rise * 0.5 - STACK_FLIGHT_HALF_THICKNESS * cos(pitch), cz + side * band_center)
 
 		var flight := _add_box("StairFlight", Vector3(length, 0.36, STACK_RAMP_WIDTH),
 			flight_origin, mill_scale)

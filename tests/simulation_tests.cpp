@@ -1637,6 +1637,31 @@ int main() {
             "the cradle must physically descend at least 1.40 m once loaded");
     require(deployed.legal_forty_swing_travel_radians <= kLegalFortyTravelFull + 1.0e-3,
             "the hinge must never exceed its own deployed limit");
+    // The loaded, deployed mechanism is at rest, and stays there: over two
+    // full strokes of the B00 belt (2 * 2 pi / 0.40 s) nothing may strike the
+    // car, knock the flight off its stop, or walk the seated pack. The plan's
+    // 1.20 m-half-height car hung below the belt's top and was rammed once a
+    // stroke until the pack fell off.
+    {
+        require(ascent.advance_frame(3.0).accepted, "deploy-arrival interval must be accepted");
+        const auto seated = ascent.snapshot();
+        double least_travel = std::numeric_limits<double>::infinity();
+        double most_pack_drift = 0.0;
+        for (std::uint32_t tick = 0; tick < 90 * 32; ++tick) {
+            (void)ascent.advance_frame(Simulation::kFixedStepSeconds);
+            const auto held = ascent.snapshot();
+            least_travel = std::min(least_travel, held.legal_forty_swing_travel_radians);
+            most_pack_drift = std::max(
+                most_pack_drift, std::hypot(held.intake_pack_position.x - seated.intake_pack_position.x,
+                                            held.intake_pack_position.z - seated.intake_pack_position.z));
+        }
+        require(least_travel >= 0.90,
+                "the loaded flight must hold its deployed stop through two belt strokes");
+        require(most_pack_drift < 0.05,
+                "the seated pack must not walk on the car while the flight is deployed");
+        std::cout << "INFO AS-002 deployed hold: least_travel=" << least_travel
+                  << " pack_drift=" << most_pack_drift << '\n';
+    }
 
     // Walk the route the deploy just opened: deck -> up the flight's own
     // incline to the hinge end -> across to the mid-landing -> up the
@@ -1988,10 +2013,30 @@ int main() {
     require(solid.snapshot().player_grounded,
             "the player stopped by the footing must still stand on the yard");
 
+    // Stack stairs are walked, not jumped, and lead somewhere. From the yard,
+    // straight up flight 0 (the +z band, climbing +x) with no jump ever
+    // requested: the capsule must arrive standing on level 1's deck, through
+    // the stairwell cut in it, instead of stalling under the deck's underside.
+    Simulation stair(InitialSpawn::ExteriorGrade);
+    require(stair.advance_frame(0.5).accepted, "stair settling interval must be accepted");
+    constexpr double kStairLaneZ = -150.0 + 21.5;
+    walk_toward(stair, -25.0, -118.0, 20.0);
+    walk_toward(stair, -25.0, kStairLaneZ, 6.0);
+    walk_toward(stair, -20.0, kStairLaneZ, 3.0);
+    walk_toward(stair, 22.0, kStairLaneZ, 12.0);
+    const auto stair_top = stair.snapshot();
+    require(stair_top.player_grounded && stair_top.player_position.y > 11.5 &&
+                stair_top.player_position.x > 18.0,
+            "walking up the stack's first flight must end standing on level 1's deck");
+    require(stair_top.step_up_count > 0,
+            "the route must engage the native step-up; no jump is ever requested");
+
     std::cout << "PASS scraperx_sim world solids: bodies=" << solid_loaded.world_solid_bodies
               << " mirrors=" << solid_loaded.world_solid_mirrors
               << " rejected=" << solid_loaded.world_solid_rejected
-              << " buttress_foot_closest=" << foot_closest << '\n';
+              << " buttress_foot_closest=" << foot_closest
+              << " stair_top_y=" << stair_top.player_position.y
+              << " step_ups=" << stair_top.step_up_count << '\n';
 
     return EXIT_SUCCESS;
 }

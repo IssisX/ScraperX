@@ -106,6 +106,14 @@ constexpr float kLandingSkin = 0.02F;
 constexpr float kLandingSupportProbeUp = 0.12F;
 constexpr float kLandingSupportTolerance = 0.10F;
 
+// Walking up a step. An edge lower than this in the path of a grounded,
+// walking body is climbed the way legs climb it; anything taller is a vault
+// or a mantle (both start at 0.35 m), so no height is left unclaimed.
+constexpr float kStepMaximumHeight = 0.35F;
+constexpr float kStepMinimumHeight = 0.02F;
+constexpr float kStepLookahead = 0.08F;
+constexpr float kStepMinimumSpeed = 0.2F;
+
 constexpr float kMantleMinimumRise = 0.35F;
 constexpr float kMantleMaximumRise = 1.85F;
 constexpr float kMantleClearanceLift = 0.12F;
@@ -368,6 +376,13 @@ constexpr float kStackDeckHalfThickness = 0.25F;
 constexpr float kStackDeckBandDepth = 9.0F;    // walkable perimeter band; leaves a 34 m shaft.
 constexpr float kStackColumnHalf = 0.8F;
 constexpr float kStackRampHalfWidth = 1.6F;
+// Each flight climbs under the deck band of the level it serves, so that deck
+// is cut open above the flight's upper run: from where headroom over the
+// slab falls under ~2.5 m to the flight's head, and 0.5 m clear of the slab
+// each side (the stringers guard the edges). Without the well every flight
+// ended at the deck's underside with the player's head on it.
+constexpr float kStackStairwellStart = 7.5F;       // along the climb, from the stack centre
+constexpr float kStackStairwellHalfWidth = 2.1F;
 // Where the tower's unclimbable mass resumes above the playable slice.
 constexpr float kTowerMassBaseY =
     static_cast<float>(kStackLevelCount) * kStackLevelHeight + 5.0F;
@@ -639,18 +654,30 @@ constexpr float kIntakeSwingBracketLocalY = -kIntakeStairSlabHalfY;
 // fault was gone.
 constexpr float kIntakeCwCradleTareMassKg = 500.0F;
 constexpr float kIntakeCwCradleHalfX = 1.50F;
-constexpr float kIntakeCwCradleHalfY = 1.20F;
+// 0.90, not the plan's 1.20. The plan's deployed car (centre 2.380) put its
+// underside at 1.18 m, under the B00 belt's 1.38 m top -- and the belt's
+// 18 m stroke carries its south end to z = -105 - 6 = -111, across the
+// car's x in [7.108, 8.0] and z in [-109.76, -107.36]. Once a stroke
+// (15.7 s) the belt rammed the loaded car, jerked the flight 0.045 rad off
+// its stop, and walked the seated pack 0.3-0.6 m per blow until it fell
+// (observed: off the car within ~40 s, nobody near it). The top face --
+// the seat and the rope's body point -- stays at the plan's 5.200 m, so
+// the rope, stroke and statics are unchanged; only the underside rises,
+// to 1.78 m deployed, 0.40 m over the belt.
+constexpr float kIntakeCwCradleHalfY = 0.90F;
 constexpr float kIntakeCwCradleHalfZ = 1.20F;
-constexpr float kIntakeCwCradleBuildCenterY = 4.0F;
+constexpr float kIntakeCwCradleTopBuildY = 5.20F;
+constexpr float kIntakeCwCradleBuildCenterY = kIntakeCwCradleTopBuildY - kIntakeCwCradleHalfY;
 constexpr float kIntakeCwCradleGuideHalfX = 0.35F;
 constexpr float kIntakeCwCradleGuideHalfY = 4.0F;
 constexpr float kIntakeCwCradleGuideHalfZ = 0.35F;
 // Jolt's SliderConstraintSettings::mAutoDetectPoint anchors displacement 0 at
 // the build pose (kNeedleStowedY's own comment: "travel is signed from the
-// spawn pose"), so the plan's absolute y in [1.80, 4.60] becomes signed
-// limits relative to the 4.00 m build centre.
-constexpr float kIntakeCwCradleLimitMinMeters = 1.80F - kIntakeCwCradleBuildCenterY;
-constexpr float kIntakeCwCradleLimitMaxMeters = 4.60F - kIntakeCwCradleBuildCenterY;
+// spawn pose"), so the plan's centre range y in [1.80, 4.60] -- top face in
+// [3.00, 5.80] -- becomes signed limits relative to the build pose. Stated
+// on the top face, they are unchanged by the car's height.
+constexpr float kIntakeCwCradleLimitMinMeters = 3.00F - kIntakeCwCradleTopBuildY;
+constexpr float kIntakeCwCradleLimitMaxMeters = 5.80F - kIntakeCwCradleTopBuildY;
 // The hook hangs at the boom tip, so working radius is fixed at the 12 m
 // boom; only the slew bearing chooses where the cradle sits on that circle.
 constexpr float kIntakeCwCradleBearingRadians = 0.80F; // of the 0.90 slew limit
@@ -769,13 +796,19 @@ constexpr float kLegalFortySkinRungFirstZ = -110.0F;
 constexpr float kLegalFortySkinRungStepZMeters = 2.0F;
 
 // The walkway from rung 20's top to the mid-landing: flush with both (top
-// at 32.1872 m), touching rung 20's own east face at x = -5.0 and the
+// at 32.1872 m), touching rung 20's own east face at x = -5.8 and the
 // mid-landing's own west face at x = 8.30 so neither joint is a step. Its
 // z is rung 20's own (kLegalFortySkinRungFirstZ - 4 * step = -118.0),
 // comfortably inside the mid-landing's z in [-118.0, -111.6] and well
 // clear (>= 4.5 m) of the swing flight's own z in [-113.4, -111.6] on
 // every path, deployed or not.
-constexpr float kLegalFortySkinWalkwayMinX = -5.0F;
+// Rungs 17-20 step 0.8 m west of the column. Directly above the bascule
+// flight's foot (x from -6.0), rung 17 on the column left 1.4 m of headroom
+// over the flight's first metre: the SHAFT braid walked into its underside.
+// West by 0.8 m, its east edge (-5.8) clears a capsule on the slope, and a
+// climber on the column line (-6.0) still strikes every face 0.2 m inside it.
+constexpr float kLegalFortySkinRungJogX = -0.8F;
+constexpr float kLegalFortySkinWalkwayMinX = -5.8F;  // rung 20's east face
 constexpr float kLegalFortySkinWalkwayMaxX = 8.30F;
 constexpr float kLegalFortySkinWalkwayCenterZ = -118.0F;
 constexpr float kLegalFortySkinWalkwayHalfZ = 1.00F;
@@ -2201,16 +2234,43 @@ private:
         const float band_center = kStackHalfExtent - kStackDeckBandDepth * 0.5F;
         const float inner_half = kStackHalfExtent - kStackDeckBandDepth;
 
+        const float flight_head = kStackHalfExtent - kStackDeckBandDepth;
         for (int level = 1; level <= kStackLevelCount; ++level) {
             const float deck_y = static_cast<float>(level) * kStackLevelHeight;
             const float slab_y = deck_y - kStackDeckHalfThickness;
+            // The flight arriving at this level: on band `well_side`, climbing
+            // toward x = well_side * flight_head.
+            const float well_side = ((level - 1) % 2 == 0) ? 1.0F : -1.0F;
 
             // Deck ring: two full-width bands and two inner bands, leaving a
             // 22 m shaft open through every level.
             for (const float sz : {1.0F, -1.0F}) {
-                frame(JPH::Vec3(kStackHalfExtent, kStackDeckHalfThickness,
-                                kStackDeckBandDepth * 0.5F),
-                      JPH::RVec3(kStackCenterX, slab_y, kStackCenterZ + sz * band_center));
+                const float band_z = kStackCenterZ + sz * band_center;
+                if (sz != well_side) {
+                    frame(JPH::Vec3(kStackHalfExtent, kStackDeckHalfThickness,
+                                    kStackDeckBandDepth * 0.5F),
+                          JPH::RVec3(kStackCenterX, slab_y, band_z));
+                    continue;
+                }
+                // Band with the stairwell: full depth before and after the
+                // well along x, two side strips beside it.
+                const auto span = [&](const float from, const float to, const float z0,
+                                      const float z1) {
+                    const float x0 = well_side * from;
+                    const float x1 = well_side * to;
+                    frame(JPH::Vec3(std::abs(x1 - x0) * 0.5F, kStackDeckHalfThickness,
+                                    std::abs(z1 - z0) * 0.5F),
+                          JPH::RVec3(kStackCenterX + (x0 + x1) * 0.5F, slab_y,
+                                     kStackCenterZ + sz * (z0 + z1) * 0.5F));
+                };
+                const float band_in = band_center - kStackDeckBandDepth * 0.5F;
+                const float band_out = band_center + kStackDeckBandDepth * 0.5F;
+                const float well_in = band_center - kStackStairwellHalfWidth;
+                const float well_out = band_center + kStackStairwellHalfWidth;
+                span(-kStackHalfExtent, kStackStairwellStart, band_in, band_out);
+                span(flight_head, kStackHalfExtent, band_in, band_out);
+                span(kStackStairwellStart, flight_head, band_in, well_in);
+                span(kStackStairwellStart, flight_head, well_out, band_out);
             }
             for (const float sx : {1.0F, -1.0F}) {
                 frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
@@ -2248,10 +2308,15 @@ private:
             const float length = std::sqrt(run * run + rise * rise);
             const float pitch = std::atan2(rise, run);
             const float side = (level % 2 == 0) ? 1.0F : -1.0F;
-            // Runs along X on alternating Z bands, climbing in +X or -X.
+            // Runs along X on alternating Z bands, climbing in +X or -X. The
+            // slab is set down by its own half-thickness along its normal so
+            // its walking surface meets the floor below and the deck above
+            // flush at both ends, not 0.19 m proud of them.
             const JPH::Quat rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), side * pitch);
-            frame(JPH::Vec3(length * 0.5F, 0.18F, kStackRampHalfWidth),
-                  JPH::RVec3(kStackCenterX, base_y + rise * 0.5F,
+            constexpr float kFlightHalfThickness = 0.18F;
+            frame(JPH::Vec3(length * 0.5F, kFlightHalfThickness, kStackRampHalfWidth),
+                  JPH::RVec3(kStackCenterX + side * kFlightHalfThickness * std::sin(pitch),
+                             base_y + rise * 0.5F - kFlightHalfThickness * std::cos(pitch),
                              kStackCenterZ + side * band_center),
                   rotation);
         }
@@ -2728,8 +2793,10 @@ private:
             const float rung_z = kLegalFortySkinRungFirstZ -
                                  kLegalFortySkinRungStepZMeters *
                                      static_cast<float>(rung - kLegalFortySkinRungFirst);
+            const float rung_x = kIntakeSkinCenterX +
+                                 (rung > kLegalFortySkinRungFirst ? kLegalFortySkinRungJogX : 0.0F);
             fixed(JPH::Vec3(kIntakeSkinRungHalfX, kIntakeSkinRungHalfY, kIntakeSkinRungHalfZ),
-                  JPH::RVec3(kIntakeSkinCenterX, top_y - kIntakeSkinRungHalfY, rung_z),
+                  JPH::RVec3(rung_x, top_y - kIntakeSkinRungHalfY, rung_z),
                   Simulation::kIntakeSkinEntityId);
         }
 
@@ -3731,7 +3798,67 @@ private:
             player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
         }
         bodies.SetLinearVelocity(player_id_, player_velocity);
+        if (!jump_started && grounded_ && support_entity_id_ != 0) {
+            try_step_up(bodies, player_velocity - reference_velocity, delta_seconds);
+        }
         return jump_started;
+    }
+
+    // The capsule swept from `from` by `displacement`: true on a hit, with
+    // the hit fraction and the surface normal (pointing out of what was hit).
+    [[nodiscard]] bool cast_capsule(const JPH::RVec3 from, const JPH::Vec3 displacement,
+                                    float &fraction, JPH::Vec3 &normal) const {
+        JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
+        const JPH::RShapeCast sweep(player_shape_, JPH::Vec3::sReplicate(1.0F),
+                                    JPH::RMat44::sTranslation(from), displacement);
+        const JPH::IgnoreSingleBodyFilter body_filter(player_id_);
+        physics_system_.GetNarrowPhaseQuery().CastShape(
+            sweep, JPH::ShapeCastSettings(), from, collector, {}, {}, body_filter);
+        if (!collector.HadHit()) {
+            return false;
+        }
+        fraction = collector.mHit.mFraction;
+        normal = -collector.mHit.mPenetrationAxis.NormalizedOr(JPH::Vec3::sZero());
+        return true;
+    }
+
+    // Stepping up. Blocked at the feet, clear with the body raised by the
+    // maximum step, and walkable support found by sweeping back down: then
+    // the body is lifted onto the step, as Jolt's own character controller
+    // walks stairs. Every stage is a sweep against real geometry, so nothing
+    // is passed through and nothing is stood on that is not there.
+    void try_step_up(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
+                     const float delta_seconds) {
+        const JPH::Vec3 horizontal(relative_velocity.GetX(), 0.0F, relative_velocity.GetZ());
+        const float speed = horizontal.Length();
+        if (speed < kStepMinimumSpeed) {
+            return;
+        }
+        const JPH::Vec3 ahead = horizontal / speed * (speed * delta_seconds + kStepLookahead);
+        const JPH::RVec3 at = bodies.GetPosition(player_id_);
+        float fraction = 1.0F;
+        JPH::Vec3 normal = JPH::Vec3::sZero();
+        if (!cast_capsule(at, ahead, fraction, normal) ||
+            normal.GetY() >= kSupportNormalThreshold) {
+            return;  // Nothing in the way, or only a slope the feet can walk.
+        }
+        const JPH::RVec3 raised = at + JPH::Vec3(0.0F, kStepMaximumHeight, 0.0F);
+        if (!capsule_pose_is_clear(raised) || cast_capsule(raised, ahead, fraction, normal)) {
+            return;  // No headroom, or the obstacle is taller than a step.
+        }
+        const JPH::RVec3 over = raised + ahead;
+        const JPH::Vec3 down(0.0F, -(kStepMaximumHeight + kStepMinimumHeight), 0.0F);
+        if (!cast_capsule(over, down, fraction, normal) ||
+            normal.GetY() < kSupportNormalThreshold) {
+            return;  // Nothing walkable to put the feet on.
+        }
+        const float rise = kStepMaximumHeight + down.GetY() * fraction;
+        if (rise < kStepMinimumHeight) {
+            return;
+        }
+        bodies.SetPosition(player_id_, at + JPH::Vec3(0.0F, rise + 0.01F, 0.0F),
+                           JPH::EActivation::Activate);
+        ++step_up_count_;
     }
 
     // Real quadratic drag opposing the full velocity vector, not a clamp: it
@@ -4373,6 +4500,7 @@ private:
 
         state_.accepted_traversal_count = accepted_traversal_count_;
         state_.world_solid_bodies = world_solid_bodies_;
+        state_.step_up_count = step_up_count_;
         state_.world_solid_mirrors = world_solid_mirrors_;
         state_.world_solid_rejected = world_solid_rejected_;
         state_.rejected_traversal_count = rejected_traversal_count_;
@@ -4490,6 +4618,7 @@ private:
     std::uint64_t support_entity_id_ = 0;
     double rotating_support_yaw_radians_ = 0.0;
 
+    std::uint64_t step_up_count_ = 0;
     std::uint32_t world_solid_bodies_ = 0;
     std::uint32_t world_solid_mirrors_ = 0;
     std::uint32_t world_solid_rejected_ = 0;

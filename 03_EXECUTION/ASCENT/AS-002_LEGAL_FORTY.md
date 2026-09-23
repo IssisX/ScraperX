@@ -223,6 +223,24 @@ constant explaining why:
   the loaded side of it: the ratio between "loaded" and "tare-only" demand on
   the flight's own `T_crit` is fixed by tare mass alone once the (frozen,
   `AS-001`-owned) `4000` kg pack sets the loaded side.
+- **`MOD-CW-CRADLE` car half-height `0.90`, not the plan's `1.20`; top face
+  unchanged at `5.200 m`.** §8.4's clearance list never checks the `B00`
+  belt. At the plan's deployed centre (`2.380`) the car's underside is at
+  `1.18 m`, under the belt's `1.38 m` top, and the belt's `18 m` stroke
+  carries its south end to `z = -111`, across the car's `x ∈ [7.108, 8.0]`.
+  Once per stroke (`15.7 s`) the belt rammed the loaded car, knocked the
+  flight `0.045 rad` off its stop, and walked the seated pack `0.3–0.6 m`
+  per blow until it fell off (observed within `~40 s`, nobody near it).
+  Keeping the top face — the seat and the rope's body point — where the plan
+  puts it leaves the rope, the `1.620 m` stroke and every statics number
+  unchanged; only the underside rises, to `1.78 m` deployed. The slider limits
+  are restated on the top face (`[3.00, 5.80]`), the same range. Falsifier:
+  the loaded flight holds `>= 0.90 rad` and the pack drifts `< 0.05 m` over two
+  full belt strokes (`INFO AS-002 deployed hold`).
+- **`MOD-SKIN-LADDER-S` rungs 17–20 step `0.8 m` west of the column.**
+  Directly over the deployed flight's foot, rung 17 on the column line left
+  `1.4 m` of headroom over the flight's first metre. The walkway's west end
+  follows rung 20 to `x = -5.8`.
 - **The retract falsifier's own failure was not a mass problem at all**, though
   it looked exactly like one and cost the most iteration: unloaded and
   re-slung, the flight sat frozen at its exact deployed limit for `20+ s`
