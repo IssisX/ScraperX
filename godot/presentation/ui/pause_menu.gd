@@ -16,6 +16,9 @@ const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 const PAGE_NONE := &""
 const PAGE_CONTROLS := &"controls"
 const PAGE_SETTINGS := &"settings"
+const PAGE_GRAPHICS := &"graphics"
+const PAGE_DISPLAY := &"display"
+const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY]
 
 var settings: SettingsStore
 var family := UiStyle.Family.KEYBOARD
@@ -34,6 +37,12 @@ var _controls_tabs := {}
 var _controls_family := UiStyle.Family.KEYBOARD
 var _settings_page: Control
 var _first_setting: Control
+# Every settings-style page, its first focusable row, the page rows are
+# being added to while building, and how to redraw a row from `settings`.
+var _pages := {}
+var _page_first := {}
+var _building: VBoxContainer
+var _refreshers := {}
 var _value_labels := {}
 var _footer: Control
 
@@ -81,13 +90,22 @@ func side_button_center(id: StringName) -> Vector2:
 	return button.get_global_rect().get_center()
 
 
+func page_first_center(page: StringName) -> Vector2:
+	var control: Control = _page_first[page]
+	return control.global_position + control.size * 0.5
+
+
 func current_page() -> StringName:
 	return _page
 
 
-# Height the settings rows need beyond their plate; > 0 means clipped rows.
+# Height the tallest settings page needs beyond its plate; > 0 means
+# clipped rows on at least one page.
 func settings_overflow() -> float:
-	return _settings_page.get_combined_minimum_size().y - _content.size.y
+	var worst := -INF
+	for page in _pages:
+		worst = maxf(worst, (_pages[page] as Control).get_combined_minimum_size().y - _content.size.y)
+	return worst
 
 
 func _input(event: InputEvent) -> void:
@@ -119,7 +137,8 @@ func _show_page(page: StringName) -> void:
 	_page = page
 	_plate.visible = page != PAGE_NONE
 	_controls_page.visible = page == PAGE_CONTROLS
-	_settings_page.visible = page == PAGE_SETTINGS
+	for id in _pages:
+		(_pages[id] as Control).visible = page == id
 	for id in _side_buttons:
 		var button: Button = _side_buttons[id]
 		button.add_theme_color_override("font_color",
@@ -130,8 +149,8 @@ func _show_page(page: StringName) -> void:
 		return
 	if page == PAGE_CONTROLS:
 		(_controls_tabs[_controls_family] as Button).grab_focus()
-	elif page == PAGE_SETTINGS and _first_setting != null:
-		_first_setting.grab_focus()
+	elif _page_first.has(page):
+		(_page_first[page] as Control).grab_focus()
 
 
 # --- construction ------------------------------------------------------------
@@ -144,6 +163,9 @@ func _build(viewport_size: Vector2) -> void:
 	_side_buttons.clear()
 	_controls_tabs.clear()
 	_value_labels.clear()
+	_pages.clear()
+	_page_first.clear()
+	_refreshers.clear()
 	_built_for = viewport_size
 	_u = UiStyle.unit(self)
 	theme = _make_theme()
@@ -185,7 +207,8 @@ func _build(viewport_size: Vector2) -> void:
 	gap.custom_minimum_size = Vector2(0.0, 36.0 * _u)
 	column.add_child(gap)
 
-	var entries := [[&"resume", "RESUME"], [PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"]]
+	var entries := [[&"resume", "RESUME"], [PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
+		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"]]
 	if not OS.has_feature("mobile"):
 		entries.append([&"quit", "QUIT TO DESKTOP"])
 	for entry in entries:
@@ -194,7 +217,8 @@ func _build(viewport_size: Vector2) -> void:
 		_side_buttons[entry[0]] = button
 	(_side_buttons[&"resume"] as Button).pressed.connect(func() -> void: resume_requested.emit())
 	(_side_buttons[PAGE_CONTROLS] as Button).pressed.connect(_show_page.bind(PAGE_CONTROLS))
-	(_side_buttons[PAGE_SETTINGS] as Button).pressed.connect(_show_page.bind(PAGE_SETTINGS))
+	for page in SETTING_PAGES:
+		(_side_buttons[page] as Button).pressed.connect(_show_page.bind(page))
 	if _side_buttons.has(&"quit"):
 		(_side_buttons[&"quit"] as Button).pressed.connect(func() -> void: quit_requested.emit())
 
@@ -224,6 +248,8 @@ func _build(viewport_size: Vector2) -> void:
 		safe.end.y - _content.position.y - 64.0 * _u)
 	_build_controls_page()
 	_build_settings_page()
+	_build_graphics_page()
+	_build_display_page()
 
 
 func _make_theme() -> Theme:
@@ -428,11 +454,25 @@ func _draw_controls() -> void:
 		y += 76.0 * _u
 
 
+func _begin_page(page: StringName) -> VBoxContainer:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", int(22.0 * _u))
+	_content.add_child(box)
+	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	box.visible = false
+	_pages[page] = box
+	_building = box
+	return box
+
+
+func _end_page(page: StringName, first: Control, note: String) -> void:
+	_page_first[page] = first
+	if not note.is_empty():
+		_building.add_child(_label(note, 21.0, UiStyle.PAPER_FAINT, UiStyle.font_label()))
+
+
 func _build_settings_page() -> void:
-	_settings_page = VBoxContainer.new()
-	_settings_page.add_theme_constant_override("separation", int(22.0 * _u))
-	_content.add_child(_settings_page)
-	_settings_page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_settings_page = _begin_page(PAGE_SETTINGS)
 	_first_setting = _slider_row("LOOK SENSITIVITY", &"look_sensitivity",
 		SettingsStore.LOOK_SENSITIVITY_RANGE, 0.05, "%.2fx")
 	_slider_row("STICK SENSITIVITY", &"stick_sensitivity", SettingsStore.STICK_SENSITIVITY_RANGE,
@@ -445,10 +485,42 @@ func _build_settings_page() -> void:
 		100.0)
 	_toggle_row("VIBRATION", &"vibration")
 	_toggle_row("TELEMETRY OVERLAY", &"telemetry")
-	var note := _label("Settings are saved on this device when you resume.", 21.0, UiStyle.PAPER_FAINT,
-		UiStyle.font_label())
-	_settings_page.add_child(note)
-	_settings_page.visible = false
+	_end_page(PAGE_SETTINGS, _first_setting, "Settings are saved on this device when you resume.")
+
+
+# The preset writes the four rows under it; touching any of them makes it
+# CUSTOM. Neither direction re-emits, so one change is one apply.
+func _build_graphics_page() -> void:
+	_begin_page(PAGE_GRAPHICS)
+	var first := _choice_row("QUALITY", &"quality", SettingsStore.QUALITY_NAMES,
+		func() -> void:
+			settings.apply_quality(settings.quality)
+			for key in [&"render_scale", &"shadow_quality", &"msaa", &"bloom"]:
+				_refreshers[key].call())
+	var to_custom := func() -> void:
+		if settings.quality != SettingsStore.QUALITY_CUSTOM:
+			settings.quality = SettingsStore.QUALITY_CUSTOM
+			_refreshers[&"quality"].call()
+	_slider_row("RENDER SCALE", &"render_scale", SettingsStore.RENDER_SCALE_RANGE, 0.05, "%.0f%%",
+		100.0, to_custom)
+	_choice_row("SHADOWS", &"shadow_quality", SettingsStore.SHADOW_NAMES, to_custom)
+	_choice_row("ANTI-ALIASING", &"msaa", SettingsStore.MSAA_NAMES, to_custom)
+	_toggle_row("BLOOM", &"bloom", to_custom)
+	_choice_row("FRAME RATE CAP", &"fps_cap", SettingsStore.FPS_CAP_NAMES)
+	_toggle_row("SHOW FPS", &"show_fps")
+	_end_page(PAGE_GRAPHICS, first,
+		"Lower render scale and shadows first if the device runs hot.")
+
+
+func _build_display_page() -> void:
+	_begin_page(PAGE_DISPLAY)
+	var first := _slider_row("FIELD OF VIEW", &"fov", SettingsStore.FOV_RANGE, 1.0, "%.0f")
+	_slider_row("BRIGHTNESS", &"brightness", SettingsStore.BRIGHTNESS_RANGE, 0.05, "%.2fx")
+	_toggle_row("HEAD BOB", &"head_bob")
+	_toggle_row("SPEED FOV KICK", &"speed_fov")
+	_choice_row("TIME OF DAY", &"time_of_day", SettingsStore.TIME_OF_DAY_NAMES)
+	_slider_row("DAY LENGTH", &"day_minutes", SettingsStore.DAY_MINUTES_RANGE, 1.0, "%.0f MIN")
+	_end_page(PAGE_DISPLAY, first, "")
 
 
 func _row(title: String) -> HBoxContainer:
@@ -458,12 +530,12 @@ func _row(title: String) -> HBoxContainer:
 	label.custom_minimum_size = Vector2(520.0 * _u, 0.0)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(label)
-	_settings_page.add_child(row)
+	_building.add_child(row)
 	return row
 
 
 func _slider_row(title: String, key: StringName, bounds: Vector2, step: float, format: String,
-		display_scale: float = 1.0) -> HSlider:
+		display_scale: float = 1.0, on_change: Callable = Callable()) -> HSlider:
 	var row := _row(title)
 	var slider := HSlider.new()
 	slider.min_value = bounds.x
@@ -481,11 +553,16 @@ func _slider_row(title: String, key: StringName, bounds: Vector2, step: float, f
 	slider.value_changed.connect(func(value: float) -> void:
 		settings.set(key, value)
 		value_label.text = format % (value * display_scale)
+		if on_change.is_valid():
+			on_change.call()
 		settings_changed.emit())
+	_refreshers[key] = func() -> void:
+		slider.set_value_no_signal(float(settings.get(key)))
+		value_label.text = format % (slider.value * display_scale)
 	return slider
 
 
-func _toggle_row(title: String, key: StringName) -> Button:
+func _toggle_row(title: String, key: StringName, on_change: Callable = Callable()) -> Button:
 	var row := _row(title)
 	var toggle := Button.new()
 	toggle.toggle_mode = true
@@ -498,8 +575,34 @@ func _toggle_row(title: String, key: StringName) -> Button:
 	toggle.toggled.connect(func(on: bool) -> void:
 		settings.set(key, on)
 		toggle.text = "ON" if on else "OFF"
+		if on_change.is_valid():
+			on_change.call()
 		settings_changed.emit())
+	_refreshers[key] = func() -> void:
+		toggle.set_pressed_no_signal(bool(settings.get(key)))
+		toggle.text = "ON" if toggle.button_pressed else "OFF"
 	return toggle
+
+
+# A named option that steps to the next on each press (wrapping), so it is one
+# tap on touch and one A / Enter on a pad or keyboard.
+func _choice_row(title: String, key: StringName, names: Array, on_change: Callable = Callable()) -> Button:
+	var row := _row(title)
+	var choice := Button.new()
+	choice.text = names[int(settings.get(key))]
+	choice.focus_mode = Control.FOCUS_ALL
+	choice.custom_minimum_size = Vector2(300.0 * _u, 0.0)
+	choice.add_theme_font_override("font", UiStyle.font_heavy())
+	row.add_child(choice)
+	choice.pressed.connect(func() -> void:
+		settings.set(key, (int(settings.get(key)) + 1) % names.size())
+		if on_change.is_valid():
+			on_change.call()
+		choice.text = names[int(settings.get(key))]
+		settings_changed.emit())
+	_refreshers[key] = func() -> void:
+		choice.text = names[int(settings.get(key))]
+	return choice
 
 
 func _draw_footer() -> void:

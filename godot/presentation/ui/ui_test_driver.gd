@@ -460,6 +460,25 @@ func _touch_pause() -> bool:
 	if overflow > 0.0:
 		return _fail("the settings rows overflow their plate by %.0f px" % overflow)
 	await _pose("pause_settings")
+	# GRAPHICS: one tap on QUALITY steps HIGH -> ULTRA, and the preset must
+	# reach the renderer, not just the label.
+	_click(_main._pause_menu.side_button_center(&"graphics"))
+	await _frames(2)
+	if _main._pause_menu.current_page() != &"graphics":
+		return _fail("tapping GRAPHICS did not open the graphics page")
+	_click(_main._pause_menu.page_first_center(&"graphics"))
+	await _frames(2)
+	var sun: DirectionalLight3D = _main.get_node("Overcast")
+	if _main._settings.quality != 3 or get_viewport().msaa_3d != Viewport.MSAA_4X \
+			or not is_equal_approx(sun.directional_shadow_max_distance, 300.0):
+		return _fail("QUALITY ULTRA did not reach the renderer (quality %d, msaa %d, shadow %.0f m)" % [
+			_main._settings.quality, get_viewport().msaa_3d, sun.directional_shadow_max_distance])
+	await _pose("pause_graphics")
+	_click(_main._pause_menu.side_button_center(&"display"))
+	await _frames(2)
+	if _main._pause_menu.current_page() != &"display":
+		return _fail("tapping DISPLAY did not open the display page")
+	await _pose("pause_display")
 	_click(_main._pause_menu.side_button_center(&"resume"))
 	await _frames(3)
 	if get_tree().paused:

@@ -20,6 +20,10 @@ const FILL_NIGHT_ENERGY := 0.2
 const DAY_EXPOSURE := 1.42  # main.tscn's own tonemap_exposure
 const NIGHT_EXPOSURE := 2.3
 
+# Player settings: DISPLAY > BRIGHTNESS and GRAPHICS > SHADOWS.
+var exposure_scale := 1.0
+var _shadows_on := true
+
 var hour := 10.5
 # Real minutes per 24 in-game hours; 0 holds the current hour.
 var day_minutes := 24.0
@@ -53,6 +57,29 @@ func setup(sun: DirectionalLight3D, fill: DirectionalLight3D, environment: Envir
 	# bright dome and read near-white (observed); the scene is lit by the sun,
 	# the fill, the sky ambient and its own lamps.
 	_environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+	_apply()
+
+
+# [atlas px, soft filter (RenderingServer.ShadowQuality), metres, cascades]
+# for LOW..ULTRA; 0 is off. HIGH is the project default (project.godot).
+const SHADOW_LEVELS := [
+	[],
+	[2048, 1, 120.0, DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS],
+	[4096, 2, 160.0, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS],
+	[4096, 3, 220.0, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS],
+	[8192, 4, 300.0, DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS],
+]
+
+
+func set_shadow_level(level: int) -> void:
+	var index := clampi(level, 0, SHADOW_LEVELS.size() - 1)
+	_shadows_on = index > 0
+	if _shadows_on:
+		var entry: Array = SHADOW_LEVELS[index]
+		RenderingServer.directional_shadow_atlas_set_size(entry[0], true)
+		RenderingServer.directional_soft_shadow_filter_set_quality(entry[1])
+		_sun.directional_shadow_max_distance = entry[2]
+		_sun.directional_shadow_mode = entry[3]
 	_apply()
 
 
@@ -98,7 +125,7 @@ func _apply() -> void:
 		var white := Color(1.0, 0.93, 0.84)
 		_sun.light_color = warm.lerp(white, smoothstep(0.05, 0.45, sun_dir.y))
 		_sun.light_energy = SUN_ENERGY * rise
-	_sun.shadow_enabled = _sun.light_energy > 0.01
+	_sun.shadow_enabled = _shadows_on and _sun.light_energy > 0.01
 	_fill.light_energy = lerpf(FILL_NIGHT_ENERGY, FILL_DAY_ENERGY, day)
 	_fill.light_color = Color(0.30, 0.36, 0.52).lerp(Color(0.58, 0.68, 0.82), day)
 	_sky_material.set_shader_parameter(&"day_factor", day)
@@ -113,4 +140,4 @@ func _apply() -> void:
 	_environment.fog_light_energy = lerpf(0.25, 0.4, day)
 	# Eyes adapt: night is dark, not black -- the yard stays readable by
 	# moonlight and its own lamps.
-	_environment.tonemap_exposure = lerpf(NIGHT_EXPOSURE, DAY_EXPOSURE, day)
+	_environment.tonemap_exposure = lerpf(NIGHT_EXPOSURE, DAY_EXPOSURE, day) * exposure_scale

@@ -229,6 +229,12 @@ var _cam_last_velocity_y := 0.0
 var _cam_landing_timer := 0.0
 var _cam_landing_strength := 0.0
 var _cam_bob_phase := 0.0
+# DISPLAY settings; the defaults are the tuned values above.
+var _fov_base := FOV_BASE
+var _head_bob_on := true
+var _speed_fov_on := true
+var _fps_label: Label
+var _fps_clock := 0.0
 var _viewport_size := Vector2.ZERO
 
 var _router: Node
@@ -407,6 +413,11 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _native == null:
 		return
+	if _fps_label.visible:
+		_fps_clock -= delta
+		if _fps_clock <= 0.0:
+			_fps_clock = 0.5
+			_fps_label.text = "%d FPS" % int(Engine.get_frames_per_second())
 
 	var intent: Dictionary = _router.frame(delta)
 	if not _ci_mode:
@@ -522,6 +533,15 @@ func _build_interface() -> void:
 	_touch = TouchControls.new()
 	_touch.name = "TouchControls"
 	hud_layer.add_child(_touch)
+	_fps_label = Label.new()
+	_fps_label.name = "FpsReadout"
+	_fps_label.add_theme_font_override("font", UiStyle.font_digits())
+	_fps_label.add_theme_font_size_override("font_size", 26)
+	_fps_label.add_theme_color_override("font_color", UiStyle.AMBER)
+	_fps_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_fps_label.position.y = 12.0
+	_fps_label.visible = false
+	hud_layer.add_child(_fps_label)
 	_router = InputRouter.new()
 	_router.name = "InputRouter"
 	add_child(_router)
@@ -562,6 +582,25 @@ func _apply_settings() -> void:
 	_router.gyro_sensitivity = _settings.gyro_sensitivity
 	_touch.set_touch_scale(_settings.touch_scale)
 	_set_telemetry_visible(_settings.telemetry or _ci_mode)
+	# GRAPHICS
+	var viewport := get_viewport()
+	viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	viewport.scaling_3d_scale = _settings.render_scale
+	viewport.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][_settings.msaa]
+	Engine.max_fps = SettingsStore.FPS_CAPS[_settings.fps_cap]
+	($Environment as WorldEnvironment).environment.glow_enabled = _settings.bloom
+	_sky_cycle.exposure_scale = _settings.brightness
+	_sky_cycle.set_shadow_level(_settings.shadow_quality)
+	_fps_label.visible = _settings.show_fps
+	# DISPLAY
+	_fov_base = _settings.fov
+	_head_bob_on = _settings.head_bob
+	_speed_fov_on = _settings.speed_fov
+	if _settings.time_of_day == 0:
+		_sky_cycle.day_minutes = _settings.day_minutes
+	else:
+		_sky_cycle.day_minutes = 0.0
+		_sky_cycle.set_hour(SettingsStore.TIME_OF_DAY_HOURS[_settings.time_of_day])
 
 
 func _on_device_changed(device: int) -> void:
@@ -1063,6 +1102,8 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool,
 	if grounded:
 		bob_fade = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
 		_cam_bob_phase += horizontal_speed * HEAD_BOB_CYCLES_PER_METER * TAU * delta
+	if not _head_bob_on:
+		bob_fade = 0.0
 	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * bob_fade
 	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * bob_fade
 	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
@@ -1075,7 +1116,10 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool,
 	var fov_fall := 0.0
 	if not grounded and velocity.y < 0.0:
 		fov_fall = FOV_FALL_MAX_DEGREES * smoothstep(0.0, FOV_FALL_FULL_MPS, -velocity.y)
-	_camera.fov = FOV_BASE + fov_ground + fov_fall
+	if not _speed_fov_on:
+		fov_ground = 0.0
+		fov_fall = 0.0
+	_camera.fov = _fov_base + fov_ground + fov_fall
 
 
 func _render_snapshot(delta: float = 0.0) -> void:
