@@ -102,7 +102,8 @@ jobs:
             "PASS scraperx_sim first structural coupling" \
             "PASS scraperx_sim first process coupling" \
             "PASS scraperx_sim B00 intake rise" \
-            "PASS scraperx_sim AS-002 Legal Forty"
+            "PASS scraperx_sim AS-002 Legal Forty" \
+            "PASS scraperx_sim world solids"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
@@ -189,6 +190,20 @@ jobs:
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest.log; then exit 1; fi
+
+      - name: World solids table matches the Godot builders
+        shell: bash
+        run: |
+          set -euo pipefail
+          # src/sim/world_solids.inc is generated from the presentation's
+          # builders (godot/presentation/solid_export.gd). The native suite
+          # above ran against the committed table; this proves that table is
+          # still exactly what the builders draw.
+          timeout 300s tools/godot/godot --headless --path godot \
+            -- "--export-solids=${GITHUB_WORKSPACE}/artifacts/world_solids.regenerated.inc" \
+            2>&1 | tee artifacts/world-solids-export.log
+          grep -F "SCRAPERX_SOLIDS boxes=" artifacts/world-solids-export.log
+          diff -u src/sim/world_solids.inc artifacts/world_solids.regenerated.inc
 
       - name: Cross-compile native graph for Android arm64
         shell: bash

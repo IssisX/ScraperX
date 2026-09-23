@@ -1950,5 +1950,48 @@ int main() {
               << " skin_forty_y=" << skin_forty_state.player_position.y
               << " jib_capped_hook_y=" << capped_deepest_hook_y << '\n';
 
+    // ---- World solids: every visible body is a body -----------------------
+    // The dressing drawn by the Godot builders (world_solids.inc) is native
+    // collision, not decoration. The buttress footings at the stack's corners
+    // are the case a player walked straight through: a 6 x 2.6 x 6 m block
+    // under a 2.4 m splayed leg. Walked into from the yard, the capsule must
+    // stop at its face -- centre never nearer than half-width (3.0 m) plus
+    // most of the capsule radius (0.35 m) on the dominant axis.
+    Simulation solid(InitialSpawn::ExteriorGrade);
+    require(solid.advance_frame(0.5).accepted, "world-solids settling interval must be accepted");
+    const auto solid_loaded = solid.snapshot();
+    require(solid_loaded.world_solid_rejected == 0,
+            "every generated hull must be a valid Jolt convex shape");
+    require(solid_loaded.world_solid_bodies > 1400,
+            "the generated world-solid table must load as native bodies");
+    require(solid_loaded.world_solid_mirrors > 0,
+            "drawn mirrors of owned bodies must be recognised and not doubled");
+    constexpr double kFootX = -39.0;
+    constexpr double kFootZ = -111.0;
+    double foot_closest = 1.0e9;
+    const auto track_foot = [&]() {
+        const auto at = solid.snapshot().player_position;
+        foot_closest = std::min(foot_closest,
+                                std::max(std::abs(at.x - kFootX), std::abs(at.z - kFootZ)));
+    };
+    for (std::uint32_t tick = 0; tick < 90 * 14; ++tick) {
+        walk_toward(solid, -30.0, -100.0, Simulation::kFixedStepSeconds);
+        track_foot();
+    }
+    for (std::uint32_t tick = 0; tick < 90 * 4; ++tick) {
+        walk_toward(solid, kFootX, kFootZ, Simulation::kFixedStepSeconds);
+        track_foot();
+    }
+    require(foot_closest < 3.6, "the walk must actually reach the buttress footing");
+    require(foot_closest > 3.25,
+            "walking into a buttress footing must be stopped at its face by native collision");
+    require(solid.snapshot().player_grounded,
+            "the player stopped by the footing must still stand on the yard");
+
+    std::cout << "PASS scraperx_sim world solids: bodies=" << solid_loaded.world_solid_bodies
+              << " mirrors=" << solid_loaded.world_solid_mirrors
+              << " rejected=" << solid_loaded.world_solid_rejected
+              << " buttress_foot_closest=" << foot_closest << '\n';
+
     return EXIT_SUCCESS;
 }

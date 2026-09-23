@@ -22,6 +22,7 @@
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
@@ -824,6 +825,24 @@ constexpr float kSumpStationRadius = 2.5F;
 // k = g / v_t^2 (net vertical accel is zero at v_t: g - k*v_t^2 = 0).
 constexpr float kParachuteDragCoefficient = 0.1211F; // v_t ~= 9 m/s at g=9.81
 
+// The presentation's static dressing as native collision (see
+// kWorldSolidEntityId). Boxes are oriented; hulls are world-space point sets.
+struct WorldSolidBox final {
+    float px, py, pz;
+    float qx, qy, qz, qw;
+    float hx, hy, hz;
+};
+struct WorldSolidHull final {
+    std::uint32_t first;
+    std::uint32_t count;
+};
+#include "sim/world_solids.inc"
+
+// A drawn box whose world bounds match an owned body this closely is that
+// body's mirror, not a second body.
+constexpr float kWorldSolidMirrorTolerance = 0.02F;
+constexpr float kWorldSolidFriction = 0.8F;
+
 constexpr float kTraversalStallTolerance = 0.22F;
 constexpr std::uint32_t kTraversalStallAbortTicks = 12;
 
@@ -1286,8 +1305,9 @@ public:
     explicit PhysicsWorld(const InitialSpawn initial_spawn)
         : temp_allocator_(8U * 1024U * 1024U),
           job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1) {
-        // Raised from 256: the climbable stack adds ~90 static frame bodies.
-        physics_system_.Init(1024,
+        // Raised from 1024: the world's solid dressing adds ~1 600 static
+        // bodies (world_solids.inc) on top of the ~300 the kernel owns.
+        physics_system_.Init(4096,
                              0,
                              2048,
                              1024,
@@ -1395,6 +1415,7 @@ public:
         build_kernel_sump(bodies);
         build_intake_rise(bodies);
         build_legal_forty(bodies);
+        build_world_solids(bodies);
 
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
         JPH::BodyCreationSettings player_settings(player_shape_,
@@ -2096,6 +2117,76 @@ private:
     // shaft, corner and mid-span columns carrying each deck, and a stair
     // ramp per level alternating sides so the ascent spirals. The player is
     // inside this, not looking at it.
+    // Everything the player can see is something the player can hit. The
+    // table is generated from the Godot builders (godot/presentation/
+    // solid_export.gd), so the world these tests walk is the world that is
+    // drawn. Built last, so a drawn mirror of a body already owned here is
+    // recognised by its bounds and skipped rather than doubled -- a second
+    // coincident body would split ledge probes and support identity.
+    void build_world_solids(JPH::BodyInterface &bodies) {
+        for (const WorldSolidBox &box : kWorldSolidBoxes) {
+            const JPH::Vec3 half(box.hx, box.hy, box.hz);
+            const JPH::RVec3 position(box.px, box.py, box.pz);
+            const JPH::Quat rotation = JPH::Quat(box.qx, box.qy, box.qz, box.qw).Normalized();
+            const JPH::AABox bounds = JPH::AABox(-half, half).Transformed(
+                JPH::Mat44::sRotationTranslation(rotation, JPH::Vec3(position)));
+            if (mirrors_owned_body(bounds)) {
+                ++world_solid_mirrors_;
+                continue;
+            }
+            const float convex_radius = std::min(JPH::cDefaultConvexRadius, half.ReduceMin());
+            add_shape_body(bodies, new JPH::BoxShape(half, convex_radius), position, rotation,
+                           JPH::EMotionType::Static, object_layers::kStatic, kWorldSolidFriction,
+                           Simulation::kWorldSolidEntityId, 0.0F);
+            ++world_solid_bodies_;
+        }
+        JPH::Array<JPH::Vec3> points;
+        for (const WorldSolidHull &hull : kWorldSolidHulls) {
+            JPH::DVec3 sum = JPH::DVec3::sZero();
+            for (std::uint32_t index = 0; index < hull.count; ++index) {
+                const float *point = &kWorldSolidHullPoints[(hull.first + index) * 3U];
+                sum += JPH::DVec3(point[0], point[1], point[2]);
+            }
+            const JPH::DVec3 centre = sum / static_cast<double>(std::max<std::uint32_t>(hull.count, 1U));
+            points.clear();
+            for (std::uint32_t index = 0; index < hull.count; ++index) {
+                const float *point = &kWorldSolidHullPoints[(hull.first + index) * 3U];
+                points.push_back(JPH::Vec3(static_cast<float>(point[0] - centre.GetX()),
+                                           static_cast<float>(point[1] - centre.GetY()),
+                                           static_cast<float>(point[2] - centre.GetZ())));
+            }
+            const JPH::ConvexHullShapeSettings settings(points.data(), static_cast<int>(points.size()));
+            const JPH::ShapeSettings::ShapeResult result = settings.Create();
+            if (result.HasError()) {
+                ++world_solid_rejected_;
+                continue;
+            }
+            add_shape_body(bodies, result.Get().GetPtr(),
+                           JPH::RVec3(centre.GetX(), centre.GetY(), centre.GetZ()),
+                           JPH::Quat::sIdentity(), JPH::EMotionType::Static, object_layers::kStatic,
+                           kWorldSolidFriction, Simulation::kWorldSolidEntityId, 0.0F);
+            ++world_solid_bodies_;
+        }
+    }
+
+    [[nodiscard]] bool mirrors_owned_body(const JPH::AABox &bounds) const {
+        JPH::AllHitCollisionCollector<JPH::CollideShapeBodyCollector> collector;
+        physics_system_.GetBroadPhaseQuery().CollideAABox(bounds, collector);
+        for (const JPH::BodyID id : collector.mHits) {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), id);
+            if (!lock.Succeeded() ||
+                lock.GetBody().GetUserData() == Simulation::kWorldSolidEntityId) {
+                continue;
+            }
+            const JPH::AABox owned = lock.GetBody().GetWorldSpaceBounds();
+            if ((owned.mMin - bounds.mMin).Abs().ReduceMax() < kWorldSolidMirrorTolerance &&
+                (owned.mMax - bounds.mMax).Abs().ReduceMax() < kWorldSolidMirrorTolerance) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void build_stack(JPH::BodyInterface &bodies) {
         const auto track = [this](const JPH::BodyID id) {
             machine_bodies_.push_back(id);
@@ -4281,6 +4372,9 @@ private:
         read_machine_state(bodies);
 
         state_.accepted_traversal_count = accepted_traversal_count_;
+        state_.world_solid_bodies = world_solid_bodies_;
+        state_.world_solid_mirrors = world_solid_mirrors_;
+        state_.world_solid_rejected = world_solid_rejected_;
         state_.rejected_traversal_count = rejected_traversal_count_;
         state_.aborted_traversal_count = aborted_traversal_count_;
 
@@ -4395,6 +4489,10 @@ private:
     bool grounded_ = false;
     std::uint64_t support_entity_id_ = 0;
     double rotating_support_yaw_radians_ = 0.0;
+
+    std::uint32_t world_solid_bodies_ = 0;
+    std::uint32_t world_solid_mirrors_ = 0;
+    std::uint32_t world_solid_rejected_ = 0;
 
     TraversalState traversal_state_ = TraversalState::None;
     JPH::BodyID traversal_body_;

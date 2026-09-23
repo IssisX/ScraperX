@@ -326,6 +326,9 @@ var _ci_proof_printed := false
 @onready var _light_rig: Node3D = $LightRig
 
 
+var _export_solids_path := ""
+
+
 func _ready() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--ci":
@@ -336,9 +339,14 @@ func _ready() -> void:
 			_capture_path = argument.trim_prefix("--capture=")
 		elif argument.begins_with("--uitest="):
 			_uitest_scenario = argument.trim_prefix("--uitest=")
+		elif argument.begins_with("--export-solids="):
+			_export_solids_path = argument.trim_prefix("--export-solids=")
 
 	RenderingServer.set_default_clear_color(Color("0e0d0c"))
 	_build_world()
+	if _export_solids_path != "":
+		_export_solids()
+		return
 	_build_arms()
 	_build_interface()
 	_layout_hud()
@@ -1560,6 +1568,7 @@ func _build_intake_rise(concrete: Material, mill_scale: Material, oxidised: Mate
 	cable.material = mill_scale
 	var cable_mesh := MeshInstance3D.new()
 	cable_mesh.name = "Span"
+	cable_mesh.set_meta(&"part", "Span")
 	cable_mesh.mesh = cable
 	_intake_hoist_cable.add_child(cable_mesh)
 
@@ -2281,6 +2290,8 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 		var gear_y := float(level) * STACK_LEVEL_HEIGHT + 3.4
 		var gear := Node3D.new()
 		gear.name = "StackGear"
+		gear.set_meta(&"solid_disc", Vector2(2.6 + 0.5, 0.8))
+		gear.set_meta(&"part", "StackGear")
 		gear.position = Vector3(cx - inner_half + 1.0, gear_y, cz - STACK_HALF_EXTENT + 1.2)
 		$TowerPresentation.add_child(gear)
 		_add_box_to("GearHub", Vector3(1.0, 1.0, 0.8), Vector3.ZERO, rust_deep, gear)
@@ -2376,8 +2387,10 @@ func _build_stack_continuation(oxidised: Material, rust_deep: Material, mill_sca
 				_add_box("UpperColumn", Vector3(STACK_COLUMN_SIZE * shrink, STACK_LEVEL_HEIGHT,
 					STACK_COLUMN_SIZE * shrink),
 					Vector3(cx + sx * half, mid_y, cz + sz * half), oxidised)
-		# A deck band every other level, and bracing on the faces between.
-		if level % 2 == 0:
+		# A deck band every other level, and bracing on the faces between. Not
+		# at the base level: the stack's own top deck (native) is there, and
+		# a second slab 0.25 m proud of it is a floor on a floor.
+		if level % 2 == 0 and level > base_level:
 			for sz in [1.0, -1.0]:
 				_add_box("UpperDeck", Vector3(half * 2.0, 0.5, 4.0),
 					Vector3(cx, base_y, cz + sz * (half - 2.0)), mill_scale)
@@ -2724,6 +2737,7 @@ func _build_sky_shear() -> void:
 		plane.material = shear
 		var instance := MeshInstance3D.new()
 		instance.name = "SkyShear"
+		instance.set_meta(&"part", "SkyShear")
 		instance.mesh = plane
 		instance.position = Vector3(0.0, level, -170.0)
 		$TowerPresentation.add_child(instance)
@@ -2890,6 +2904,7 @@ func _add_sphere(node_name: String, radius: float, at: Vector3,
 	sphere.rings = 6
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
+	instance.set_meta(&"part", node_name)
 	instance.mesh = sphere
 	instance.material_override = material
 	instance.position = at
@@ -2937,6 +2952,7 @@ func _build_waterfall(at: Vector3) -> void:
 	quad.material = falls
 	var instance := MeshInstance3D.new()
 	instance.name = "Waterfall"
+	instance.set_meta(&"part", "Waterfall")
 	instance.mesh = quad
 	instance.position = at + Vector3(0.0, 210.0, 0.0)
 	$TowerPresentation.add_child(instance)
@@ -3036,6 +3052,8 @@ func _build_gear_motif(mill_scale: Material, oxidised: Material) -> void:
 	# 5). Rotation is applied in _mirror_machine from the real machine phase.
 	_gear_pivot = Node3D.new()
 	_gear_pivot.name = "FaceGearPivot"
+	_gear_pivot.set_meta(&"solid_disc", Vector2(3.9 + 0.53, 0.7))
+	_gear_pivot.set_meta(&"part", "FaceGear")
 	_gear_pivot.position = Vector3(-30.0, 58.0, -142.4)
 	$TowerPresentation.add_child(_gear_pivot)
 	var hub := CylinderMesh.new()
@@ -3044,6 +3062,7 @@ func _build_gear_motif(mill_scale: Material, oxidised: Material) -> void:
 	hub.height = 0.7
 	hub.radial_segments = 20
 	var hub_instance := MeshInstance3D.new()
+	hub_instance.set_meta(&"part", "GearMotifHub")
 	hub_instance.mesh = hub
 	hub_instance.material_override = mill_scale
 	hub_instance.rotation = Vector3(deg_to_rad(90.0), 0.0, 0.0)
@@ -3064,6 +3083,7 @@ func _build_gear_motif(mill_scale: Material, oxidised: Material) -> void:
 	drum.height = 3.2
 	drum.radial_segments = 14
 	var drum_instance := MeshInstance3D.new()
+	drum_instance.set_meta(&"part", "FaceDrum")
 	drum_instance.mesh = drum
 	drum_instance.material_override = oxidised
 	drum_instance.rotation = Vector3(0.0, 0.0, deg_to_rad(90.0))
@@ -3102,6 +3122,7 @@ func _add_cone(node_name: String, radius: float, height: float, at: Vector3, mat
 	cone.radial_segments = 9
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
+	instance.set_meta(&"part", node_name)
 	instance.mesh = cone
 	instance.material_override = material
 	instance.position = at
@@ -3136,6 +3157,7 @@ func _add_cylinder(node_name: String, radius: float, height: float, at: Vector3,
 	cylinder.radial_segments = 12
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
+	instance.set_meta(&"part", node_name)
 	instance.mesh = cylinder
 	instance.material_override = material
 	instance.position = at
@@ -3156,6 +3178,10 @@ func _add_gear(node_name: String, at: Vector3, radius: float, teeth: int,
 	$TowerPresentation.add_child(gear)
 
 	var depth := maxf(0.5, radius * 0.16)
+	# It turns, so its collider is the volume it sweeps: rim and teeth out to
+	# 1.13 r, hub depth through.
+	gear.set_meta(&"solid_disc", Vector2(radius * 1.13, depth * 1.5))
+	gear.set_meta(&"part", node_name)
 	_add_box_to("GearHub", Vector3(radius * 0.38, radius * 0.38, depth * 1.5),
 		Vector3.ZERO, hub_material, gear)
 	for spoke in range(6):
@@ -3271,12 +3297,32 @@ func _add_box_to(node_name: String, size: Vector3, at: Vector3, material: Materi
 	mesh.material = material
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
+	instance.set_meta(&"part", node_name)
 	instance.mesh = mesh
 	instance.position = at
 	if not is_zero_approx(roll):
 		instance.rotation = Vector3(0.0, 0.0, roll)
 	parent.add_child(instance)
 	return instance
+
+
+# Tool mode: write the world's solid dressing for the native build and quit.
+func _export_solids() -> void:
+	var SolidExport: GDScript = load("res://presentation/solid_export.gd")
+	var collected: Dictionary = SolidExport.collect($TowerPresentation)
+	var unknown: Array = collected["unknown"]
+	if not unknown.is_empty():
+		push_error("SCRAPERX_SOLIDS_UNCLASSIFIED %s" % ", ".join(unknown))
+		get_tree().quit(41)
+		return
+	var error: Error = SolidExport.write_cpp(collected, _export_solids_path)
+	if error != OK:
+		push_error("SCRAPERX_SOLIDS_WRITE_FAILED code=%d path=%s" % [error, _export_solids_path])
+		get_tree().quit(42)
+		return
+	print("SCRAPERX_SOLIDS boxes=%d hulls=%d counts=%s" % [collected["boxes"].size(),
+		collected["hulls"].size(), str(collected["counts"])])
+	get_tree().quit(0)
 
 
 func _fail_native(reason: String, exit_code: int) -> void:

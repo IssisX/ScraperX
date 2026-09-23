@@ -123,6 +123,11 @@ struct Snapshot final {
     Vector3 ledge_point{};
     double ledge_rise_meters = 0.0;
     std::uint64_t accepted_traversal_count = 0;
+    // Static dressing loaded from world_solids.inc: bodies built, drawn
+    // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
+    std::uint32_t world_solid_bodies = 0;
+    std::uint32_t world_solid_mirrors = 0;
+    std::uint32_t world_solid_rejected = 0;
     std::uint64_t rejected_traversal_count = 0;
     std::uint64_t aborted_traversal_count = 0;
 
@@ -315,6 +320,10 @@ public:
     // ordinary rigid-body contact between them is never meaningful -- the
     // hinge constraint alone is what should relate their motion.
     static constexpr std::uint64_t kIntakeSwingAnchorEntityId = 50;
+    // Every static body drawn by the presentation's builders that the native
+    // world did not already own: frame dressing, footings, halls, rails,
+    // trees. Generated into world_solids.inc; see build_world_solids().
+    static constexpr std::uint64_t kWorldSolidEntityId = 51;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
