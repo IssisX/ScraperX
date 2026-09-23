@@ -173,7 +173,11 @@ func _touch_climb(expected: StringName, expected_state: int) -> bool:
 	var reached_2: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == expected_state, 0.2)
 	if not reached_2:
 		return _fail("ACTION did not commit traversal state %d" % expected_state)
-	await _wait_until(func() -> bool: return float(_native().get_traversal_progress()) >= 0.1, 0.3)
+	# The native step-in closes on the wall before the body rises, so both
+	# palms land on the lip, not on air an arm's length short of it.
+	var both_planted: bool = await _wait_until(func() -> bool: return _main._arms.planted_count() == 2, 0.6)
+	if not both_planted:
+		return _fail("hands never planted on the lip during the standing mantle")
 	await _pose("ground_mantle")
 	var completed_grounded := func() -> bool:
 		return int(_native().get_traversal_state()) == 0 and bool(_native().is_player_grounded())

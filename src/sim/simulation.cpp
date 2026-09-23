@@ -23,6 +23,7 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/PointConstraint.h>
@@ -124,6 +125,22 @@ constexpr float kHangDropBelowLedge = 1.05F;
 constexpr float kHangWallGap = 0.06F;
 constexpr float kHangMaximumClimbSpeed = 0.2F;
 constexpr double kHangIntentDotThreshold = 0.3;
+
+// A standing mantle steps in before it climbs. The probe offers a ledge from
+// 1.30 m out, and a body that rises from there hangs an arm's length off the
+// wall with nothing under its hands; a climber closes on the wall, hands on
+// the lip, then pulls. The step ends at the hang hold's own standoff, so a
+// mantle from the ground passes the wall distance a mantle from a hang starts
+// at -- and it is a step: swept clear of real geometry, onto real support, in
+// a frame the ground and the ledge share. Where any of that fails the step
+// shortens, down to none, and the climb starts where the player stands.
+constexpr float kMantleApproachStandoff = kPlayerRadius + kHangWallGap;
+constexpr float kMantleApproachSpeedMps = 3.0F;        // mean speed over the step
+constexpr float kMantleApproachLift = 0.05F;           // clears the resting contact
+constexpr float kMantleApproachSweepMargin = 0.02F;
+constexpr float kMantleApproachSupportSpacing = 0.10F;
+constexpr float kMantleApproachFrameDriftMps = 0.05F;  // ground vs ledge
+constexpr float kMantleApproachMaximumEntrySlope = 3.0F;
 
 // After a deliberate release the controller stops offering an automatic re-grab
 // for a moment, so letting go is a real decision rather than an instant re-hang.
@@ -1206,6 +1223,15 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
     }
     const float t = std::clamp((value - edge0) / (edge1 - edge0), 0.0F, 1.0F);
     return t * t * (3.0F - 2.0F * t);
+}
+
+// Cubic ease over [0, 1] that leaves at `entry_slope` (in units of the mean
+// rate) and arrives at rest: a Hermite segment, monotonic for slopes in
+// [0, 3], so a body entering it at speed carries that speed in.
+[[nodiscard]] float ease_to_rest(const float value, const float entry_slope) noexcept {
+    const float t = std::clamp(value, 0.0F, 1.0F);
+    const float slope = std::clamp(entry_slope, 0.0F, 3.0F);
+    return slope * t * (1.0F - t) * (1.0F - t) + t * t * (3.0F - 2.0F * t);
 }
 
 // WO-008 checkpoint capture: full rigid-body state for one dynamic machine
@@ -3708,19 +3734,104 @@ private:
         return true;
     }
 
+    // Real support under the capsule's axis at `centre`: walkable ground no
+    // deeper than the step's own lift plus the landing tolerance.
+    [[nodiscard]] bool step_is_supported(const JPH::RVec3 centre) const noexcept {
+        const JPH::RVec3 origin(centre.GetX(),
+                                centre.GetY() - kPlayerHalfHeight + kLandingSupportProbeUp,
+                                centre.GetZ());
+        const JPH::Vec3 direction(
+            0.0F, -(kLandingSupportProbeUp + kMantleApproachLift + kLandingSupportTolerance), 0.0F);
+        JPH::RayCastResult hit;
+        if (!cast_ray(origin, direction, hit)) {
+            return false;
+        }
+        const JPH::RVec3 point = JPH::RRayCast(origin, direction).GetPointOnRay(hit.mFraction);
+        return surface_normal(hit.mBodyID, hit.mSubShapeID2, point).GetY() >= kSupportNormalThreshold;
+    }
+
+    // Where a standing mantle's step-in ends (see kMantleApproachStandoff).
+    // Returns `origin` itself when no step is possible.
+    [[nodiscard]] JPH::RVec3 mantle_approach_end(const JPH::BodyInterface &bodies,
+                                                 const LedgeProbe &probe,
+                                                 const JPH::RVec3 origin) const noexcept {
+        // The path lives in the ledge's frame; ground moving against that
+        // frame would carry the feet off it mid-step.
+        const JPH::Vec3 drift = current_support_point_velocity(bodies) -
+                                bodies.GetPointVelocity(probe.ledge_body, origin);
+        if (drift.Length() > kMantleApproachFrameDriftMps) {
+            return origin;
+        }
+        const JPH::Vec3 to_wall(static_cast<float>(probe.wall_point.GetX() - origin.GetX()),
+                                0.0F,
+                                static_cast<float>(probe.wall_point.GetZ() - origin.GetZ()));
+        const float wall_distance = to_wall.Length();
+        const float travel = wall_distance - kMantleApproachStandoff;
+        if (travel <= kMantleApproachSweepMargin) {
+            return origin;
+        }
+        const JPH::Vec3 direction = to_wall / wall_distance;
+        const JPH::RVec3 lifted(origin.GetX(), origin.GetY() + kMantleApproachLift, origin.GetZ());
+        if (!capsule_pose_is_clear(lifted)) {
+            return origin;
+        }
+
+        JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
+        const JPH::RShapeCast sweep(player_shape_,
+                                    JPH::Vec3::sReplicate(1.0F),
+                                    JPH::RMat44::sTranslation(lifted),
+                                    direction * travel);
+        const JPH::IgnoreSingleBodyFilter body_filter(player_id_);
+        physics_system_.GetNarrowPhaseQuery().CastShape(
+            sweep, JPH::ShapeCastSettings(), lifted, collector, {}, {}, body_filter);
+        float allowed = travel;
+        if (collector.HadHit()) {
+            allowed = collector.mHit.mFraction * travel - kMantleApproachSweepMargin;
+        }
+
+        // Back off from the swept limit until the step ends on support: a step
+        // over a gap is a float, not a step.
+        for (; allowed > kMantleApproachSweepMargin; allowed -= kMantleApproachSupportSpacing) {
+            const JPH::RVec3 step_end = lifted + direction * allowed;
+            if (step_is_supported(step_end)) {
+                return step_end;
+            }
+        }
+        return origin;
+    }
+
     void begin_mantle(JPH::BodyInterface &bodies,
                       const LedgeProbe &probe,
                       const JPH::RVec3 origin) noexcept {
+        const JPH::RVec3 approach = mantle_approach_end(bodies, probe, origin);
+        const float step_length = static_cast<float>(
+            std::hypot(approach.GetX() - origin.GetX(), approach.GetZ() - origin.GetZ()));
+        const double approach_seconds = static_cast<double>(step_length / kMantleApproachSpeedMps);
+        // A player running in keeps their speed into the step; one standing
+        // still starts it from rest.
+        float entry_slope = 0.0F;
+        if (step_length > 0.0F) {
+            const JPH::Vec3 relative = bodies.GetLinearVelocity(player_id_) -
+                                       bodies.GetPointVelocity(probe.ledge_body, origin);
+            const float toward =
+                relative.GetX() * facing_.GetX() + relative.GetZ() * facing_.GetZ();
+            entry_slope = std::clamp(
+                toward / kMantleApproachSpeedMps, 0.0F, kMantleApproachMaximumEntrySlope);
+        }
+
         traversal_state_ = TraversalState::Mantling;
         traversal_body_ = probe.ledge_body;
         traversal_entity_id_ = probe.ledge_entity_id;
         traversal_target_body_ = probe.landing_body;
         traversal_local_start_ = to_support_local(bodies, traversal_body_, origin);
+        traversal_local_approach_ = to_support_local(bodies, traversal_body_, approach);
         traversal_local_ledge_ = to_support_local(bodies, traversal_body_, probe.ledge_point);
         traversal_local_target_ =
             to_support_local(bodies, traversal_target_body_, probe.landing_centre);
         traversal_progress_ = 0.0;
-        traversal_duration_ = kMantleDurationSeconds;
+        traversal_duration_ = kMantleDurationSeconds + approach_seconds;
+        traversal_approach_fraction_ = approach_seconds / traversal_duration_;
+        traversal_approach_entry_slope_ = entry_slope;
         traversal_stall_ticks_ = 0;
         traversal_desired_ = origin;
         traversal_exit_relative_velocity_ = JPH::Vec3::sZero();
@@ -3731,8 +3842,11 @@ private:
         const JPH::RVec3 origin = bodies.GetPosition(player_id_);
         traversal_state_ = TraversalState::Mantling;
         traversal_local_start_ = to_support_local(bodies, traversal_body_, origin);
+        traversal_local_approach_ = traversal_local_start_;
         traversal_progress_ = 0.0;
         traversal_duration_ = kMantleDurationSeconds;
+        traversal_approach_fraction_ = 0.0;
+        traversal_approach_entry_slope_ = 0.0F;
         traversal_stall_ticks_ = 0;
         traversal_desired_ = origin;
         traversal_exit_relative_velocity_ = JPH::Vec3::sZero();
@@ -3797,13 +3911,28 @@ private:
                               start.GetZ() + (target.GetZ() - start.GetZ()) * horizontal);
         }
 
-        const float vertical = smoothstep(0.0F, 0.55F, progress);
-        const float horizontal = smoothstep(0.45F, 1.0F, progress);
+        // Step in (standing mantles only), then the climb from the step's end.
+        const JPH::RVec3 approach =
+            from_support_local(bodies, traversal_body_, traversal_local_approach_);
+        const float approach_fraction = static_cast<float>(traversal_approach_fraction_);
+        if (progress < approach_fraction) {
+            const float phase = progress / approach_fraction;
+            const float along = ease_to_rest(phase, traversal_approach_entry_slope_);
+            const float up = smoothstep(0.0F, 1.0F, phase);
+            return JPH::RVec3(start.GetX() + (approach.GetX() - start.GetX()) * along,
+                              start.GetY() + (approach.GetY() - start.GetY()) * up,
+                              start.GetZ() + (approach.GetZ() - start.GetZ()) * along);
+        }
+        const float climb = approach_fraction > 0.0F
+                                ? (progress - approach_fraction) / (1.0F - approach_fraction)
+                                : progress;
+        const float vertical = smoothstep(0.0F, 0.55F, climb);
+        const float horizontal = smoothstep(0.45F, 1.0F, climb);
         const float lift =
-            kMantleClearanceLift * std::sin(static_cast<float>(kPi) * std::clamp(progress, 0.0F, 1.0F));
-        return JPH::RVec3(start.GetX() + (target.GetX() - start.GetX()) * horizontal,
-                          start.GetY() + (target.GetY() - start.GetY()) * vertical + lift,
-                          start.GetZ() + (target.GetZ() - start.GetZ()) * horizontal);
+            kMantleClearanceLift * std::sin(static_cast<float>(kPi) * std::clamp(climb, 0.0F, 1.0F));
+        return JPH::RVec3(approach.GetX() + (target.GetX() - approach.GetX()) * horizontal,
+                          approach.GetY() + (target.GetY() - approach.GetY()) * vertical + lift,
+                          approach.GetZ() + (target.GetZ() - approach.GetZ()) * horizontal);
     }
 
     void drive_traversal(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
@@ -4272,6 +4401,7 @@ private:
     JPH::BodyID traversal_target_body_;
     std::uint64_t traversal_entity_id_ = 0;
     JPH::Vec3 traversal_local_start_{JPH::Vec3::sZero()};
+    JPH::Vec3 traversal_local_approach_{JPH::Vec3::sZero()};
     JPH::Vec3 traversal_local_hold_{JPH::Vec3::sZero()};
     JPH::Vec3 traversal_local_ledge_{JPH::Vec3::sZero()};
     JPH::Vec3 traversal_local_apex_{JPH::Vec3::sZero()};
@@ -4280,6 +4410,8 @@ private:
     JPH::RVec3 traversal_desired_{JPH::RVec3::sZero()};
     double traversal_progress_ = 0.0;
     double traversal_duration_ = kMantleDurationSeconds;
+    double traversal_approach_fraction_ = 0.0;
+    float traversal_approach_entry_slope_ = 0.0F;
     std::uint32_t traversal_stall_ticks_ = 0;
     std::uint32_t regrab_lockout_ticks_ = 0;
     std::uint64_t accepted_traversal_count_ = 0;

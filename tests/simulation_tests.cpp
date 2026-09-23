@@ -363,6 +363,22 @@ int main() {
             "mantle commit tick must advance");
     require(mantle.snapshot().traversal_state == TraversalState::Mantling,
             "a real ledge above vault height must commit a native mantle");
+    // A standing mantle closes on the wall before it climbs. The ledge is
+    // offered an arm's length back (x = 7.9 against the face at 9.0); by the
+    // time the body has risen 0.1 m the capsule must stand at the hang
+    // standoff: outside the face (ledge point - top-probe inset 0.12 -
+    // radius 0.35 = 0.47 m back) and within reach of the lip.
+    double mantle_rise_x = mantle_ready.player_position.x;
+    require(advance_until(mantle,
+                          [&](const Snapshot &state) {
+                              mantle_rise_x = state.player_position.x;
+                              return state.player_position.y > mantle_ready.player_position.y + 0.1;
+                          },
+                          1.0),
+            "the standing mantle must begin to rise");
+    const double mantle_rise_setback = mantle_ready.ledge_point.x - mantle_rise_x;
+    require(mantle_rise_setback > 0.47 && mantle_rise_setback < 0.60,
+            "a standing mantle must step in to the hang standoff before it rises");
     require(advance_until(mantle,
                           [](const Snapshot &state) {
                               return state.player_grounded &&
@@ -641,6 +657,7 @@ int main() {
     std::cout << "PASS scraperx_sim athletic traversal: vault_x=" << vaulted.player_position.x
               << " vault_speed=" << horizontal_magnitude(vaulted.player_linear_velocity)
               << " mantle_support=" << mantled.support_entity_id
+              << " mantle_rise_setback=" << mantle_rise_setback
               << " mantle_y=" << mantled.player_position.y
               << " hang_support=" << hang_start.traversal_support_entity_id
               << " moving_hang_support=" << carried.traversal_support_entity_id
