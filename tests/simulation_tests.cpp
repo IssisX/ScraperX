@@ -2059,21 +2059,33 @@ int main() {
     require(solid.snapshot().player_grounded,
             "the player stopped by the footing must still stand on the yard");
 
-    // Stack stairs are walked, not jumped, and lead somewhere. From the yard,
-    // straight up flight 0 (the +z band, climbing +x) with no jump ever
-    // requested: the capsule must arrive standing on level 1's deck, through
-    // the stairwell cut in it, instead of stalling under the deck's underside.
+    // Stack stairs are walked, not jumped, and lead somewhere: from the yard,
+    // up all fourteen flights to the top deck with no jump ever requested.
+    // Each flight must end with the capsule standing on the deck it serves,
+    // through the stairwell cut in it, not stalled under that deck's
+    // underside; the route then walks the side band to the next flight's foot.
     Simulation stair(InitialSpawn::ExteriorGrade);
     require(stair.advance_frame(0.5).accepted, "stair settling interval must be accepted");
-    constexpr double kStairLaneZ = -150.0 + 21.5;
     walk_toward(stair, -25.0, -118.0, 20.0);
-    walk_toward(stair, -25.0, kStairLaneZ, 6.0);
-    walk_toward(stair, -20.0, kStairLaneZ, 3.0);
-    walk_toward(stair, 22.0, kStairLaneZ, 12.0);
+    walk_toward(stair, -25.0, -128.5, 6.0);
+    int stack_levels_reached = 0;
+    for (int level = 0; level < 14; ++level) {
+        const double side = (level % 2 == 0) ? 1.0 : -1.0;
+        const double band = -150.0 + side * 21.5;
+        walk_toward(stair, -side * 20.0, band, 12.0);
+        walk_toward(stair, side * 21.0, band, 16.0);
+        const auto head = stair.snapshot();
+        const double deck = 11.0 * (level + 1);
+        if (!(head.player_grounded && head.player_position.y > deck + 0.5 &&
+              head.player_position.y < deck + 1.5)) {
+            break;
+        }
+        stack_levels_reached = level + 1;
+        walk_toward(stair, side * 21.5, -150.0 - side * 21.5, 12.0);
+    }
     const auto stair_top = stair.snapshot();
-    require(stair_top.player_grounded && stair_top.player_position.y > 11.5 &&
-                stair_top.player_position.x > 18.0,
-            "walking up the stack's first flight must end standing on level 1's deck");
+    require(stack_levels_reached == 14,
+            "every stack flight must be walked up onto the deck it serves, grade to the top");
     require(stair_top.step_up_count > 0,
             "the route must engage the native step-up; no jump is ever requested");
 
@@ -2104,6 +2116,7 @@ int main() {
               << " mirrors=" << solid_loaded.world_solid_mirrors
               << " rejected=" << solid_loaded.world_solid_rejected
               << " buttress_foot_closest=" << foot_closest
+              << " stack_levels=" << stack_levels_reached
               << " stair_top_y=" << stair_top.player_position.y
               << " step_ups=" << stair_top.step_up_count
               << " rim_reach=" << rim_reach << '\n';
