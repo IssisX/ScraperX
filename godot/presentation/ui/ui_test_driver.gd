@@ -131,6 +131,8 @@ func _touch_jump() -> bool:
 	await _pose("jump")
 	if _main._router.device != InputRouter.Device.TOUCH:
 		return _fail("touch press did not switch the interface to touch")
+	if _main._audio.jumps < 1:
+		return _fail("the takeoff played no jump cue")
 	_detail = "vy_peak=%.2f" % peak[0]
 	return true
 
@@ -164,7 +166,11 @@ func _touch_move_look() -> bool:
 	var speed := Vector2(_velocity().x, _velocity().z).length()
 	if speed > 0.6:
 		return _fail("player still moving %.2f m/s after the stick was released" % speed)
-	_detail = "forward_m=%.2f turned_rad=%.3f settle_mps=%.2f" % [along, turned, speed]
+	# 4.9 m of walking at a 0.69 m stride is several footfalls, each a cue.
+	if _main._audio.steps < 4:
+		return _fail("walking %.2f m played %d footsteps" % [along, _main._audio.steps])
+	_detail = "forward_m=%.2f turned_rad=%.3f settle_mps=%.2f steps=%d" % [along, turned, speed,
+		_main._audio.steps]
 	return true
 
 
@@ -479,6 +485,11 @@ func _touch_pause() -> bool:
 	if _main._pause_menu.current_page() != &"display":
 		return _fail("tapping DISPLAY did not open the display page")
 	await _pose("pause_display")
+	_click(_main._pause_menu.side_button_center(&"audio"))
+	await _frames(2)
+	if _main._pause_menu.current_page() != &"audio":
+		return _fail("tapping AUDIO did not open the audio page")
+	await _pose("pause_audio")
 	_click(_main._pause_menu.side_button_center(&"resume"))
 	await _frames(3)
 	if get_tree().paused:

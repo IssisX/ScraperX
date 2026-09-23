@@ -16,6 +16,7 @@ const RENDER_SCALE_RANGE := Vector2(0.5, 1.0)
 const FOV_RANGE := Vector2(65.0, 100.0)
 const BRIGHTNESS_RANGE := Vector2(0.7, 1.4)
 const DAY_MINUTES_RANGE := Vector2(8.0, 60.0)
+const VOLUME_RANGE := Vector2(0.0, 1.0)
 
 # Graphics. A preset writes the four values under it; changing any of them
 # afterwards makes the preset CUSTOM.
@@ -57,6 +58,10 @@ var head_bob := true
 var speed_fov := true
 var time_of_day := 0
 var day_minutes := 24.0
+var master_volume := 0.8
+var effects_volume := 1.0
+var ambience_volume := 0.8
+var interface_volume := 0.7
 var persistent := true
 
 
@@ -101,6 +106,10 @@ func load_from_disk() -> void:
 	speed_fov = _read_bool(file, "speed_fov", speed_fov)
 	time_of_day = _read_index(file, "time_of_day", time_of_day, TIME_OF_DAY_NAMES.size())
 	day_minutes = _read_range(file, "day_minutes", day_minutes, DAY_MINUTES_RANGE)
+	master_volume = _read_range(file, "master_volume", master_volume, VOLUME_RANGE)
+	effects_volume = _read_range(file, "effects_volume", effects_volume, VOLUME_RANGE)
+	ambience_volume = _read_range(file, "ambience_volume", ambience_volume, VOLUME_RANGE)
+	interface_volume = _read_range(file, "interface_volume", interface_volume, VOLUME_RANGE)
 
 
 func save_to_disk() -> void:
@@ -116,7 +125,8 @@ func save_to_disk() -> void:
 	file.set_value(SECTION, "vibration", vibration)
 	file.set_value(SECTION, "telemetry", telemetry)
 	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "show_fps",
-			"fov", "brightness", "head_bob", "speed_fov", "time_of_day", "day_minutes"]:
+			"fov", "brightness", "head_bob", "speed_fov", "time_of_day", "day_minutes",
+			"master_volume", "effects_volume", "ambience_volume", "interface_volume"]:
 		file.set_value(SECTION, key, get(key))
 	var error := file.save(PATH)
 	if error != OK:

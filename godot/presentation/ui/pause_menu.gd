@@ -18,7 +18,8 @@ const PAGE_CONTROLS := &"controls"
 const PAGE_SETTINGS := &"settings"
 const PAGE_GRAPHICS := &"graphics"
 const PAGE_DISPLAY := &"display"
-const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY]
+const PAGE_AUDIO := &"audio"
+const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY, PAGE_AUDIO]
 
 var settings: SettingsStore
 var family := UiStyle.Family.KEYBOARD
@@ -208,7 +209,7 @@ func _build(viewport_size: Vector2) -> void:
 	column.add_child(gap)
 
 	var entries := [[&"resume", "RESUME"], [PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
-		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"]]
+		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"]]
 	if not OS.has_feature("mobile"):
 		entries.append([&"quit", "QUIT TO DESKTOP"])
 	for entry in entries:
@@ -250,6 +251,7 @@ func _build(viewport_size: Vector2) -> void:
 	_build_settings_page()
 	_build_graphics_page()
 	_build_display_page()
+	_build_audio_page()
 
 
 func _make_theme() -> Theme:
@@ -521,6 +523,15 @@ func _build_display_page() -> void:
 	_choice_row("TIME OF DAY", &"time_of_day", SettingsStore.TIME_OF_DAY_NAMES)
 	_slider_row("DAY LENGTH", &"day_minutes", SettingsStore.DAY_MINUTES_RANGE, 1.0, "%.0f MIN")
 	_end_page(PAGE_DISPLAY, first, "")
+
+
+func _build_audio_page() -> void:
+	_begin_page(PAGE_AUDIO)
+	var first := _slider_row("MASTER", &"master_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
+	_slider_row("EFFECTS", &"effects_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
+	_slider_row("AMBIENCE", &"ambience_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
+	_slider_row("INTERFACE", &"interface_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
+	_end_page(PAGE_AUDIO, first, "Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience.")
 
 
 func _row(title: String) -> HBoxContainer:

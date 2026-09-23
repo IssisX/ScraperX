@@ -22,6 +22,7 @@ const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
+const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 # Traversal head motion, added on top of the player's own pitch and never
 # written into it: a hanging climber looks up at the grip (the lip sits ~46
 # degrees above a level gaze, outside the frame), a mantle nods down onto the
@@ -344,6 +345,7 @@ var _ci_proof_printed := false
 @onready var _legal_forty_value: Label = $HUD/TopLeft/LegalForty
 @onready var _light_rig: Node3D = $LightRig
 var _sky_cycle: Node
+var _audio: Node
 
 
 var _export_solids_path := ""
@@ -371,6 +373,9 @@ func _ready() -> void:
 	_sky_cycle.name = "SkyCycle"
 	add_child(_sky_cycle)
 	_sky_cycle.setup($Overcast, $SkyFill, ($Environment as WorldEnvironment).environment)
+	_audio = AudioDirector.new()
+	_audio.name = "AudioDirector"
+	add_child(_audio)
 	_build_arms()
 	_build_interface()
 	_layout_hud()
@@ -592,6 +597,9 @@ func _apply_settings() -> void:
 	_sky_cycle.exposure_scale = _settings.brightness
 	_sky_cycle.set_shadow_level(_settings.shadow_quality)
 	_fps_label.visible = _settings.show_fps
+	# AUDIO
+	_audio.set_volumes(_settings.master_volume, _settings.effects_volume,
+		_settings.ambience_volume, _settings.interface_volume)
 	# DISPLAY
 	_fov_base = _settings.fov
 	_head_bob_on = _settings.head_bob
@@ -647,12 +655,14 @@ func _open_pause(from_system: bool = false) -> void:
 	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
 		position.y, checkpoint.y, int(_ctx["deaths"])])
 	get_tree().paused = true
+	_audio.ui_tap()
 
 
 func _resume() -> void:
 	if not _paused:
 		return
 	_pause_menu.close()
+	_audio.ui_tap(true)
 	_settings.save_to_disk()
 	get_tree().paused = false
 	_paused = false
@@ -1128,6 +1138,10 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	var grounded := bool(_native.is_player_grounded())
 
 	_apply_camera_feel(position, velocity, grounded, delta)
+	if delta > 0.0:
+		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
+			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
+			int(_native.get_death_count()))
 	# The developer telemetry overlay costs a dozen string formats a frame;
 	# it is only paid for while the overlay is actually on screen.
 	if _telemetry_on:
