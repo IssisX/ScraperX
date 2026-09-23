@@ -244,7 +244,7 @@ jobs:
           - the Godot runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856, 1.164) with stretch=expand, an 82 degree vertical field of view and a 2600 m far plane;
           - the same runtime spawned outdoors at grade, walked the tower approach, and observed the native machine open its valve past half and lift the platform past six metres;
           - one first-person approach-and-machine screenshot was captured from that runtime;
-          - fourteen scripted interface scenarios drove touch (jump, simultaneous move and look, climb, vault, hang then drop, hang then climb up, chute, lethal-fall announcement, sump valve, yard jib pendant, pause and resume), gamepad (move, jump, look, pause, KX-JIB pendant) and keyboard (move, jump, action, pause) through the viewport's real input pipeline, each asserting the resulting native state change;
+          - fourteen scripted interface scenarios drove touch (jump, simultaneous move and look, climb, vault, hang then drop, hang then climb up, chute, lethal-fall announcement, sump valve, yard jib pendant, pause and resume), gamepad (move, jump, look, pause, KX-JIB pendant) and keyboard (move, jump, action, pause) through the viewport's real input pipeline, each asserting the resulting native state change; the same runs asserted the first-person hands on the grip points the native hang ledge implies, planted on the ledge during a mantle, on the canopy toggles, and holding the crane remote;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
           - the APK checksum and checkpoint identity were recorded.

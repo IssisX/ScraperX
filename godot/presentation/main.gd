@@ -20,6 +20,16 @@ const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
+const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
+# Traversal head motion, added on top of the player's own pitch and never
+# written into it: a hanging climber looks up at the grip (the lip sits ~46
+# degrees above a level gaze, outside the frame), a mantle nods down onto the
+# hands taking the push. The offset eases back to exactly zero, so a player
+# who is not traversing sees the unaltered pitch -- the CI hold included.
+const VIEW_PITCH_HANGING := 0.32
+const VIEW_PITCH_MANTLING := -0.3
+const VIEW_PITCH_VAULTING := -0.12
+const VIEW_PITCH_RATE := 9.0
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
 # of that one frame simply runs slower than wall time, which nobody can see.
@@ -233,6 +243,8 @@ var _fb_warned := false
 var _fb_best_checkpoint_y := 0.0
 var _sling_check_timer := 0.0
 var _sling_check_was_slung := false
+var _arms: Node3D
+var _view_pitch_offset := 0.0
 
 var _scoop_meshes: Array[MeshInstance3D] = []
 var _scoop_locals: Array[Vector3] = []
@@ -327,6 +339,7 @@ func _ready() -> void:
 
 	RenderingServer.set_default_clear_color(Color("0e0d0c"))
 	_build_world()
+	_build_arms()
 	_build_interface()
 	_layout_hud()
 	get_viewport().size_changed.connect(_layout_hud)
@@ -374,6 +387,7 @@ func _process(delta: float) -> void:
 		var look: Vector2 = intent["look"]
 		_yaw -= look.x
 		_pitch = clampf(_pitch - look.y, -1.25, 1.35)
+	_update_view_pitch_offset(delta)
 
 	var position: Vector3 = _native.get_player_position()
 	var desired: Vector2 = intent["move"]
@@ -413,6 +427,7 @@ func _process(delta: float) -> void:
 
 	_render_snapshot(delta)
 	_ctx = _read_context()
+	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
 	_update_feedback(delta)
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
@@ -864,6 +879,79 @@ func _update_feedback(delta: float) -> void:
 				_hud.toast("ATTACH REFUSED", "HOOK NOT SETTLED ON THE PADEYE", UiStyle.AMBER, 2.6)
 
 
+# --- first-person arms ----------------------------------------------------------
+
+
+func _update_view_pitch_offset(delta: float) -> void:
+	var target := 0.0
+	match int(_ctx.get("traversal", TRAVERSAL_NONE)):
+		TRAVERSAL_HANGING:
+			target = VIEW_PITCH_HANGING
+		TRAVERSAL_MANTLING:
+			target = VIEW_PITCH_MANTLING
+		TRAVERSAL_VAULTING:
+			target = VIEW_PITCH_VAULTING
+	_view_pitch_offset = lerpf(_view_pitch_offset, target, 1.0 - exp(-VIEW_PITCH_RATE * delta))
+	if absf(_view_pitch_offset - target) < 0.0005:
+		_view_pitch_offset = target
+
+
+func _arm_material(color: Color, roughness: float, bump: NoiseTexture2D, grain: float,
+		emission_energy: float = 0.0) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = roughness
+	if emission_energy > 0.0:
+		material.emission_enabled = true
+		material.emission = color
+		material.emission_energy_multiplier = emission_energy
+	if bump != null:
+		# The world's own procedural normal noise, at weave/grain scale.
+		material.normal_enabled = true
+		material.normal_texture = bump
+		material.uv1_triplanar = true
+		material.uv1_scale = Vector3(grain, grain, grain)
+	return material
+
+
+func _build_arms() -> void:
+	_arms = FirstPersonArms.new()
+	_arms.name = "FirstPersonArms"
+	add_child(_arms)
+	_arms.build(
+		# Albedos sit dark on purpose: the yard's exposure lifts anything
+		# this close to the lens toward pastel.
+		_arm_material(Color("1f231c"), 0.93, _bump_concrete, 9.0),
+		_arm_material(Color("b8611d"), 0.55, null, 1.0, 0.1),
+		_arm_material(Color("3b2616"), 0.72, _bump_steel, 14.0),
+		_arm_material(Color("22170e"), 0.82, _bump_steel, 14.0),
+		_arm_material(Color("7d5806"), 0.5, null, 1.0),
+		_arm_material(Color("0c0c0d"), 0.62, null, 1.0),
+		_arm_material(Color("303033"), 0.5, null, 1.0),
+		_arm_material(Color("b8281b"), 0.45, null, 1.0),
+		_arm_material(Color("59e08a"), 0.4, null, 1.0, 2.2),
+		_arm_material(Color("d7d2c4"), 0.72, null, 1.0))
+
+
+# Everything the arms may know, all of it native or already-presented state.
+func _arms_state(intent: Dictionary) -> Dictionary:
+	return {
+		"traversal": int(_ctx["traversal"]),
+		"progress": float(_native.get_traversal_progress()),
+		"ledge_point": _native.get_traversal_ledge_point(),
+		"affordance": bool(_native.is_ledge_available()),
+		"affordance_point": _native.get_ledge_point(),
+		"position": _ctx["position"],
+		"velocity": _ctx["velocity"],
+		"grounded": bool(_ctx["grounded"]),
+		"chute": bool(_ctx["chute"]),
+		"operating": _operating,
+		"pendant": intent["pendant"],
+		"move": intent["move"],
+		"bob_phase": _cam_bob_phase,
+	}
+
+
 # --- telemetry overlay, sized to the bounds the device actually gives us ------
 
 
@@ -948,7 +1036,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool,
 
 	_camera.position = position + EYE_OFFSET + Vector3(0.0, dip + vertical_bob, 0.0) + \
 		right_vector * lateral_bob
-	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
+	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, 0.0)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed)
 	var fov_fall := 0.0

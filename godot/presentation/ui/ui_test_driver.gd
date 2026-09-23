@@ -121,6 +121,7 @@ func _touch_jump() -> bool:
 	var lifted: bool = await _wait_until(airborne_and_rising, 0.4)
 	if not lifted:
 		return _fail("touch jump did not leave the ground (peak vy %.2f)" % peak[0])
+	await _pose("jump")
 	if _main._router.device != InputRouter.Device.TOUCH:
 		return _fail("touch press did not switch the interface to touch")
 	_detail = "vy_peak=%.2f" % peak[0]
@@ -134,6 +135,7 @@ func _touch_move_look() -> bool:
 	var forward := Vector2(-sin(yaw_start), -cos(yaw_start))
 	_stick_push(Vector2(0.0, -1.0))
 	await _seconds(0.6)
+	await _pose("running")
 	# Second thumb looks while the first keeps walking: 200 canvas units at
 	# the default 0.003 rad/unit must turn exactly 0.6 rad.
 	var look_at := Vector2(_viewport_size().x * 0.78, _viewport_size().y * 0.45)
@@ -171,6 +173,8 @@ func _touch_climb(expected: StringName, expected_state: int) -> bool:
 	var reached_2: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == expected_state, 0.2)
 	if not reached_2:
 		return _fail("ACTION did not commit traversal state %d" % expected_state)
+	await _wait_until(func() -> bool: return float(_native().get_traversal_progress()) >= 0.1, 0.3)
+	await _pose("ground_mantle")
 	var completed_grounded := func() -> bool:
 		return int(_native().get_traversal_state()) == 0 and bool(_native().is_player_grounded())
 	var completed: bool = await _wait_until(completed_grounded, 2.5)
@@ -193,6 +197,7 @@ func _touch_vault() -> bool:
 	var reached_2: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 3, 0.2)
 	if not reached_2:
 		return _fail("ACTION did not commit a vault (state %d)" % int(_native().get_traversal_state()))
+	await _pose("vault")
 	_touch(0, _main._touch.stick_home(), false)
 	var reached_3: bool = await _wait_until(func() -> bool: return int(_native().get_accepted_traversal_count()) >= 1, 1.5)
 	if not reached_3:
@@ -211,16 +216,26 @@ func _touch_hang(climb: bool) -> bool:
 		return _fail("DROP was not offered while hanging")
 	if _main._touch.button_label(&"jump") != "CLIMB UP":
 		return _fail("JUMP did not relabel to CLIMB UP while hanging")
+	# Both hands on the native ledge, not near it: the rendered wrists sit on
+	# the grip points the native ledge point implies.
+	var grip_error: float = _main._arms.anchored_error()
+	if _main._arms.hand_poses() != [4, 4] or grip_error < 0.0 or grip_error > 0.02:
+		return _fail("hands not gripping the native ledge (poses %s, error %.3f m)" % [
+			str(_main._arms.hand_poses()), grip_error])
 	await _pose("hanging")
 	if climb:
 		_tap(1, _center(&"jump"))
 		var reached_2: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 2, 0.2)
 		if not reached_2:
 			return _fail("CLIMB UP did not commit the mantle")
+		var both_planted: bool = await _wait_until(func() -> bool: return _main._arms.planted_count() == 2, 0.3)
+		if not both_planted:
+			return _fail("hands never planted on the ledge during the mantle")
+		await _pose("mantle_mid")
 		var reached_3: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.5)
 		if not reached_3:
 			return _fail("mantle from hang never landed")
-		_detail = "top_y=%.2f" % _position().y
+		_detail = "top_y=%.2f grip_error_m=%.4f" % [_position().y, grip_error]
 		return _position().y > 4.4
 	_tap(1, _center(&"drop"))
 	var reached_4: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 0, 0.2)
@@ -242,6 +257,8 @@ func _touch_chute() -> bool:
 	if not reached_2:
 		return _fail("CHUTE did not deploy the canopy")
 	await _seconds(0.6)
+	if not _main._arms.risers_visible() or _main._arms.hand_poses() != [6, 6]:
+		return _fail("hands are not on the canopy toggles (poses %s)" % str(_main._arms.hand_poses()))
 	await _pose("canopy")
 	var reached_3: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 15.0)
 	if not reached_3:
@@ -297,6 +314,8 @@ func _touch_pendant() -> bool:
 	await _frames(3)
 	if _main._operating != &"intake" or not _main._touch.is_button_shown(&"pendant_left"):
 		return _fail("OPERATE did not open the pendant controls")
+	if not _main._arms.remote_visible():
+		return _fail("the crane remote is not in hand while operating")
 	await _seconds(0.3)
 	await _pose("pendant")
 	var boom_before := float(_native().get_intake_boom_angle_radians())
