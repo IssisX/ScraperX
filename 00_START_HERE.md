@@ -29,8 +29,8 @@ The one block to read before doing anything. Everything below is detail behind i
 | **Write branch** | `ScraperX-Claude` — the only one |
 | **Kernel** | `WO-000`–`WO-013`, all fourteen in source. **Closed set** |
 | **Ascent frontier** | `AS-001`–`AS-002` implemented; `AS-003`–`AS-004` planned; `AS-005`–`AS-007` imported, not re-derived; `AS-008`–`AS-015` unwritten |
-| **Integrated evidence** | **GREEN** at `bc1e084` — run [`35727055407`](https://github.com/IssisX/ScraperX/actions/runs/35727055407), all steps, 10/10 native falsifiers. `AS-002`'s own 11th falsifier group is green locally (`03_EXECUTION/ASCENT/AS-002_LEGAL_FORTY.md` Result record) but **not yet CI-integrated** — no run has executed this branch's head |
-| **Interface** | GDD §22 control surface in `godot/presentation/ui/`: touch (floating stick, drag-look, Jump, contextual Action, Drop/Chute on state, pendant controls only while operating), gamepad and keyboard over one verb vocabulary; sparse HUD (reticle cues, prompts, fall gauge against the native lethal speed, altimeter, station panel), pause/settings; first-person arms (`godot/presentation/first_person_arms.gd`) whose hands grip, plant and reach at the ledge points the native reports. 14 `--uitest` scenarios drive real input events into native state changes — green locally, wired into CI, **not yet CI-run** |
+| **Integrated evidence** | **RED** at `7e831a2` — runs [`35818695969`](https://github.com/IssisX/ScraperX/actions/runs/35818695969) (`c8b5eed`) and [`35820568808`](https://github.com/IssisX/ScraperX/actions/runs/35820568808) (`7e831a2`) fail at the Android arm64 cross-compile only: a file-local alias of `kLethalImpactSpeedMps` shadowed at its one use by the class constant, which NDK clang rejects under `-Werror` (`-Wunused-const-variable`; GCC does not warn). Every earlier step of `35820568808` passed, the 14 `--uitest` scenarios included. Alias removed in the next commit; its run is the next evidence. Last **GREEN**: `25335a2`, run [`35799920271`](https://github.com/IssisX/ScraperX/actions/runs/35799920271), all steps; `AS-002`'s falsifier group CI-integrated since run [`35798864772`](https://github.com/IssisX/ScraperX/actions/runs/35798864772) |
+| **Interface** | GDD §22 control surface in `godot/presentation/ui/`: touch (floating stick, drag-look, Jump, contextual Action, Drop/Chute on state, pendant controls only while operating), gamepad and keyboard over one verb vocabulary; sparse HUD (reticle cues, prompts, fall gauge against the native lethal speed, altimeter, station panel), pause/settings; first-person arms (`godot/presentation/first_person_arms.gd`) whose hands grip, plant and reach at the ledge points the native reports. 14 `--uitest` scenarios drive real input events into native state changes — all 14 passed in CI run `35820568808` |
 | **Next code job** | **`AS-003`** — `CAP-HOOK5` acquire. Gate satisfied (`AS-002` implemented, its exit revalidated in source) |
 | **Next authoring job** | re-author **`AS-005`** against this branch |
 | **Authoring contract** | `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` |
@@ -159,7 +159,7 @@ records, deliberately not rewritten. Retconning a proof record is worse than an 
 | Ticket | Slice | Band | Lifecycle | Provenance | Evidence |
 |---|---|---|---|---|---|
 | `AS-001` | apron → +24 m, intake rise | B00 | **IMPLEMENTED** | re-derived here | falsifier, green in run `35727055407` |
-| `AS-002` | first legal stand at +40 m | B00 | **IMPLEMENTED** | re-derived here | falsifier, green locally — not yet CI-integrated |
+| `AS-002` | first legal stand at +40 m | B00 | **IMPLEMENTED** | re-derived here | falsifier, green in run `35798864772` |
 | `AS-003` | `CAP-HOOK5` acquire | B00 | PLANNED | re-derived here | none — **next code job** |
 | `AS-004` | seat needles at 96 m | B01 | PLANNED | re-derived here | none |
 | `AS-005` | cage land at 120 m, or east climb | B01 exit | PLANNED | ⚠ imported | none |

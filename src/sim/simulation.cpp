@@ -800,9 +800,8 @@ constexpr float kSumpStationRadius = 2.5F;
 // WO-008 fall / parachute / checkpoint. An 8.8 m unassisted lift-platform
 // fall (~13.1 m/s impact) must stay survivable per GDD 8.2; a genuine
 // tower-scale drop must not be. Terminal parachute speed (~9 m/s, derived
-// below) sits comfortably under this threshold with margin either side.
-constexpr float kLethalImpactSpeedMps =
-    static_cast<float>(scraperx::sim::Simulation::kLethalImpactSpeedMps);
+// below) sits comfortably under that threshold -- Simulation::
+// kLethalImpactSpeedMps, public in simulation.hpp -- with margin either side.
 
 // Quadratic drag a = -k*v*|v|. Solved for a target terminal speed v_t at
 // k = g / v_t^2 (net vertical accel is zero at v_t: g - k*v_t^2 = 0).
