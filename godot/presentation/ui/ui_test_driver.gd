@@ -33,6 +33,8 @@ const SCENARIOS := {
 	"pad_core": 8,
 	"pad_pendant": 14,
 	"keyboard_core": 8,
+	# Needs a mixing audio driver: run under --write-movie (see _audio_mix).
+	"audio_mix": 8,
 }
 
 var _main: Node
@@ -111,6 +113,8 @@ func _run() -> void:
 			ok = await _pad_pendant()
 		"keyboard_core":
 			ok = await _keyboard_core()
+		"audio_mix":
+			ok = await _audio_mix()
 	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario, _detail])
 	get_tree().paused = false
 	get_tree().quit(0 if ok else 31)
@@ -704,6 +708,96 @@ func _keyboard_core() -> bool:
 		return _fail("ESC did not resume from the menu")
 	_detail = "forward_m=%.2f rejected=%d->%d" % [along, rejected_before, rejected_after]
 	return true
+
+
+# The sound a player hears, measured where it leaves Master (after the
+# limiter) and in the band a phone speaker reproduces, above 300 Hz. A
+# headless run's Dummy driver never mixes, so this runs under Movie Maker
+# (--write-movie), which mixes that same driver frame by frame. Standing
+# still, the yard's ambience must be there; walking, the footsteps must
+# stand out of it; nothing may clip.
+func _audio_mix() -> bool:
+	if AudioServer.get_driver_name() == "Dummy" and Engine.get_write_movie_path().is_empty():
+		return _fail("no mixing audio driver; run under --write-movie")
+	var capture := AudioEffectCapture.new()
+	capture.buffer_length = 1.0
+	AudioServer.add_bus_effect(AudioServer.get_bus_index(&"Master"), capture)
+	var ready: bool = await _wait_until(func() -> bool: return bool(_main._audio._bank_ready), 5.0)
+	if not ready:
+		return _fail("the sound bank never finished building")
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	# The ambience fades in from silence over its first seconds.
+	await _capture(capture, 2.5)
+	var standing := await _capture(capture, 1.0)
+	var steps_before: int = _main._audio.steps
+	_key(KEY_W, true)
+	var walking := await _capture(capture, 1.4)
+	_key(KEY_W, false)
+	var steps: int = _main._audio.steps - steps_before
+	var bed := _band_levels(standing)
+	var walk := _band_levels(walking)
+	var peak := 0.0
+	for x in standing + walking:
+		peak = maxf(peak, absf(x))
+	var peak_db := linear_to_db(maxf(peak, 1.0e-9))
+	_detail = "bed_db=%.1f steps_db=%.1f peak_db=%.1f steps=%d" % [bed.x, walk.y, peak_db, steps]
+	_main._audio.quiesce()
+	await _frames(3)
+	if steps < 3:
+		return _fail("walking 1.4 s played %d footsteps" % steps)
+	if bed.x < -40.0:
+		return _fail("standing still, the mix above 300 Hz sits at %.1f dBFS" % bed.x)
+	if walk.y < bed.x + 4.0:
+		return _fail("footsteps (%.1f dBFS) do not stand out of the ambience (%.1f)" % [walk.y, bed.x])
+	if peak_db > -0.5:
+		return _fail("the mix clips: sample peak %.2f dBFS" % peak_db)
+	return true
+
+
+# Mono samples leaving Master for `seconds` of game time.
+func _capture(capture: AudioEffectCapture, seconds: float) -> PackedFloat32Array:
+	var mono := PackedFloat32Array()
+	var waited := 0.0
+	while waited < seconds:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+		var available := capture.get_frames_available()
+		if available > 0:
+			for frame in capture.get_buffer(available):
+				mono.append((frame.x + frame.y) * 0.5)
+	return mono
+
+
+# 50 ms RMS levels above 300 Hz (two cascaded one-pole high-passes), as
+# (median, loudest) in dBFS.
+func _band_levels(mono: PackedFloat32Array) -> Vector2:
+	var rate := AudioServer.get_mix_rate()
+	var a := exp(-TAU * 300.0 / rate)
+	var x1 := 0.0
+	var y1 := 0.0
+	var x2 := 0.0
+	var y2 := 0.0
+	var window := int(rate * 0.05)
+	var levels: Array[float] = []
+	var energy := 0.0
+	var count := 0
+	for x in mono:
+		var h1 := a * (y1 + x - x1)
+		x1 = x
+		y1 = h1
+		var h2 := a * (y2 + h1 - x2)
+		x2 = h1
+		y2 = h2
+		energy += h2 * h2
+		count += 1
+		if count == window:
+			levels.append(linear_to_db(maxf(sqrt(energy / float(window)), 1.0e-9)))
+			energy = 0.0
+			count = 0
+	if levels.is_empty():
+		return Vector2(-200.0, -200.0)
+	levels.sort()
+	return Vector2(levels[levels.size() / 2], levels[levels.size() - 1])
 
 
 # --- helpers -------------------------------------------------------------------

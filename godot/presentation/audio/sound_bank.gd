@@ -3,6 +3,13 @@ extends RefCounted
 # seeded noise, filters and decaying partials -- no audio files ship. The
 # seed is fixed, so the bank is identical on every run and every device.
 #
+# Voiced for a phone speaker first. Those reproduce little under ~300 Hz, so
+# every clip carries its identity in the 300 Hz - 6 kHz band -- the grit of a
+# boot, the ring of steel, the hiss of air -- and keeps its low thump only
+# as weight for headphones. (Measured: the first bank put its energy in
+# 50-90 Hz thumps and hum; above 300 Hz a walk peaked at -27.6 dBFS and the
+# ambience sat at -48.6 dBFS, which on a phone is next to silence.)
+#
 # Not here, on purpose: the human fear voice that Governing Law 8 / GDD 8.4
 # require for large falls. Screams, gasps and panicked swearing cannot be
 # synthesised credibly; they need recorded performances.
@@ -27,13 +34,21 @@ func build() -> void:
 	clips[&"land_hard"] = _variants(2, _land.bind(1.0))
 	clips[&"grab"] = _variants(3, _grab)
 	clips[&"scrape"] = _variants(2, _scrape)
+	clips[&"rustle"] = _variants(2, _rustle)
 	clips[&"chute"] = [_wav(_chute())]
 	clips[&"impact_lethal"] = [_wav(_impact_lethal())]
 	clips[&"ui_tap"] = [_wav(_blip(2600.0, 0.03))]
 	clips[&"ui_back"] = [_wav(_blip(1500.0, 0.04))]
+	clips[&"clang"] = _variants(3, _clang)
+	clips[&"creak"] = _variants(2, _creak)
+	clips[&"bird"] = _variants(3, _bird)
 	clips[&"wind_loop"] = [_loop(_wind(4.5), 0.5)]
 	clips[&"rush_loop"] = [_loop(_rush(2.4), 0.4)]
-	clips[&"hum_loop"] = [_loop_exact(_hum(2.0))]
+	clips[&"hum_loop"] = [_loop(_hum(2.0), 0.3)]
+	clips[&"drone_loop"] = [_loop(_drone(3.6), 0.6)]
+	clips[&"hiss_loop"] = [_loop(_hiss(1.6), 0.3)]
+	clips[&"rattle_loop"] = [_loop(_rattle(1.4), 0.2)]
+	clips[&"motor_loop"] = [_loop(_motor(1.8), 0.3)]
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -47,66 +62,73 @@ func pick(name: StringName) -> AudioStreamWAV:
 # --- clips -------------------------------------------------------------------
 
 
-# Boot on concrete: a dull heel thump under a short gritty scuff.
+# Boot on concrete: a heel click, a short knock, gritty scuff, a little weight.
 func _step_concrete() -> PackedFloat32Array:
-	var out := _silence(0.11)
-	var lp := _rng.randf_range(1000.0, 1500.0)
-	_add_noise(out, 0.0, 0.11, 0.55, 0.018, lp)
-	_add_tone(out, _rng.randf_range(62.0, 78.0), 0.0, 0.08, 0.7, 0.022)
+	var out := _silence(0.15)
+	_add_band_noise(out, 0.0, 0.02, 0.9, 0.004, 1500.0, 6000.0)
+	_add_tone(out, _rng.randf_range(330.0, 420.0), 0.0, 0.05, 0.22, 0.008)
+	_add_band_noise(out, 0.006, 0.13, 0.75, 0.035, _rng.randf_range(500.0, 700.0),
+		_rng.randf_range(2600.0, 3600.0))
+	_add_tone(out, _rng.randf_range(62.0, 78.0), 0.0, 0.08, 0.35, 0.02)
 	return out
 
 
-# Boot on steel plate: the thump plus a faint inharmonic ring.
+# Boot on steel plate: the click and a bright inharmonic ring off the plate.
 func _step_metal() -> PackedFloat32Array:
-	var out := _silence(0.22)
-	_add_noise(out, 0.0, 0.06, 0.45, 0.012, 2600.0)
-	_add_tone(out, _rng.randf_range(80.0, 96.0), 0.0, 0.07, 0.55, 0.02)
+	var out := _silence(0.26)
+	_add_band_noise(out, 0.0, 0.03, 0.8, 0.005, 1200.0, 7000.0)
+	_add_tone(out, _rng.randf_range(80.0, 96.0), 0.0, 0.07, 0.3, 0.02)
 	var base := _rng.randf_range(380.0, 460.0)
-	for ratio in [1.0, 2.71, 5.18]:
-		_add_tone(out, base * ratio * _rng.randf_range(0.97, 1.03), 0.0, 0.22, 0.07 / ratio, 0.09)
+	for pair in [[1.0, 0.22], [2.71, 0.16], [5.18, 0.1], [8.4, 0.05]]:
+		_add_tone(out, base * pair[0] * _rng.randf_range(0.97, 1.03), 0.0, 0.26, pair[1],
+			0.11 / sqrt(pair[0]))
 	return out
 
 
-# Meadow: softer, darker, a little crackle of grit and stalks.
+# Meadow: a soft crunch of grit and stalks.
 func _step_earth() -> PackedFloat32Array:
-	var out := _silence(0.14)
-	_add_noise(out, 0.0, 0.14, 0.5, 0.03, 650.0)
-	for i in 6:
-		var at := _rng.randf_range(0.0, 0.06)
-		_add_noise(out, at, 0.004, 0.25, 0.002, 3200.0)
+	var out := _silence(0.16)
+	_add_band_noise(out, 0.0, 0.16, 0.7, 0.04, 300.0, 2200.0)
+	for i in 9:
+		var at := _rng.randf_range(0.0, 0.08)
+		_add_band_noise(out, at, 0.006, 0.4, 0.002, 2500.0, 7000.0)
+	_add_tone(out, 58.0, 0.0, 0.06, 0.25, 0.02)
 	return out
 
 
-# Push-off: a cloth whoosh that swells and falls.
+# Push-off: a cloth whoosh that swells and falls, and the shoe leaving.
 func _jump() -> PackedFloat32Array:
-	var out := _silence(0.2)
+	var out := _silence(0.24)
 	var n := out.size()
-	var lp := 0.0
-	var cutoff := _alpha(_rng.randf_range(1400.0, 1900.0))
+	var band := _band_noise_buffer(n, _rng.randf_range(500.0, 700.0),
+		_rng.randf_range(2200.0, 3000.0))
 	for i in n:
 		var t := float(i) / float(n)
-		lp += cutoff * (_rng.randf_range(-1.0, 1.0) - lp)
-		out[i] += lp * sin(PI * t) * 0.6
-	_add_tone(out, 70.0, 0.0, 0.05, 0.35, 0.015)
+		out[i] += band[i] * sin(PI * t) * 1.3
+	_add_band_noise(out, 0.0, 0.03, 0.5, 0.008, 800.0, 4000.0)
+	_add_tone(out, 70.0, 0.0, 0.05, 0.25, 0.015)
 	return out
 
 
-# Landing: weight arriving through the legs; `hard` deepens and lengthens it.
+# Landing: weight through the legs, the soles slapping; `hard` is heavier.
 func _land(hard: float) -> PackedFloat32Array:
-	var length := lerpf(0.18, 0.3, hard)
+	var length := lerpf(0.2, 0.34, hard)
 	var out := _silence(length)
-	_add_tone(out, lerpf(62.0, 44.0, hard), 0.0, length, 0.9, lerpf(0.035, 0.07, hard))
-	_add_noise(out, 0.0, length, lerpf(0.4, 0.65, hard), lerpf(0.03, 0.05, hard), lerpf(900.0, 700.0, hard))
+	_add_band_noise(out, 0.0, 0.03, lerpf(0.8, 1.0, hard), 0.006, 900.0, 6000.0)
+	_add_tone(out, lerpf(260.0, 190.0, hard), 0.0, 0.08, lerpf(0.3, 0.4, hard), 0.012)
+	_add_band_noise(out, 0.0, length, lerpf(0.6, 0.85, hard), lerpf(0.04, 0.07, hard), 250.0,
+		lerpf(2500.0, 1800.0, hard))
+	_add_tone(out, lerpf(62.0, 44.0, hard), 0.0, length, 0.5, lerpf(0.035, 0.07, hard))
 	return out
 
 
 # Palms slapping onto a steel lip.
 func _grab() -> PackedFloat32Array:
-	var out := _silence(0.16)
-	_add_noise(out, 0.0, 0.01, 0.8, 0.003, 5000.0)
+	var out := _silence(0.18)
+	_add_band_noise(out, 0.0, 0.012, 1.0, 0.003, 1500.0, 8000.0)
 	var base := _rng.randf_range(820.0, 980.0)
 	for ratio in [1.0, 2.43, 4.1]:
-		_add_tone(out, base * ratio, 0.0, 0.16, 0.12 / ratio, 0.05)
+		_add_tone(out, base * ratio, 0.0, 0.18, 0.16 / ratio, 0.05)
 	return out
 
 
@@ -114,97 +136,207 @@ func _grab() -> PackedFloat32Array:
 func _scrape() -> PackedFloat32Array:
 	var out := _silence(0.36)
 	var n := out.size()
-	var lp := 0.0
-	var hp := 0.0
-	var a_lp := _alpha(2600.0)
-	var a_hp := _alpha(700.0)
+	var band := _band_noise_buffer(n, 700.0, 2600.0)
 	var grain := 0.0
 	for i in n:
 		var t := float(i) / float(n)
-		var x := _rng.randf_range(-1.0, 1.0)
-		lp += a_lp * (x - lp)
-		hp += a_hp * (lp - hp)
 		if i % 90 == 0:
 			grain = _rng.randf_range(0.4, 1.0)
-		out[i] += (lp - hp) * grain * sin(PI * t) * 0.9
+		out[i] += band[i] * grain * sin(PI * t) * 1.6
+	return out
+
+
+# Clothing and kit shifting as the body folds down or straightens.
+func _rustle() -> PackedFloat32Array:
+	var out := _silence(0.2)
+	var n := out.size()
+	var band := _band_noise_buffer(n, 900.0, 4200.0)
+	var grain := 0.0
+	for i in n:
+		var t := float(i) / float(n)
+		if i % 60 == 0:
+			grain = _rng.randf_range(0.2, 1.0)
+		out[i] += band[i] * grain * pow(sin(PI * t), 1.5) * 1.2
 	return out
 
 
 # Canopy snapping open: a sharp crack then heavy flapping cloth.
 func _chute() -> PackedFloat32Array:
 	var out := _silence(0.7)
-	_add_noise(out, 0.0, 0.02, 0.9, 0.006, 4000.0)
+	_add_band_noise(out, 0.0, 0.02, 1.0, 0.006, 1500.0, 8000.0)
 	var n := out.size()
-	var lp := 0.0
-	var a := _alpha(900.0)
+	var band := _band_noise_buffer(n, 250.0, 2200.0)
 	for i in n:
 		var t := float(i) / float(MIX_RATE)
-		lp += a * (_rng.randf_range(-1.0, 1.0) - lp)
 		var flap := 0.5 + 0.5 * sin(TAU * 11.0 * t)
-		out[i] += lp * flap * exp(-t * 3.5) * 0.9
+		out[i] += band[i] * flap * exp(-t * 3.5) * 1.6
 	return out
 
 
 func _impact_lethal() -> PackedFloat32Array:
 	var out := _silence(0.5)
-	_add_tone(out, 36.0, 0.0, 0.5, 1.0, 0.12)
-	_add_noise(out, 0.0, 0.5, 0.8, 0.08, 600.0)
-	_add_noise(out, 0.01, 0.2, 0.4, 0.03, 2500.0)
+	_add_tone(out, 36.0, 0.0, 0.5, 0.8, 0.12)
+	_add_band_noise(out, 0.0, 0.5, 1.0, 0.08, 150.0, 2500.0)
+	_add_band_noise(out, 0.01, 0.2, 0.6, 0.03, 1500.0, 6000.0)
 	return out
 
 
 func _blip(freq: float, length: float) -> PackedFloat32Array:
 	var out := _silence(length)
 	_add_tone(out, freq, 0.0, length, 0.35, length * 0.3)
-	_add_noise(out, 0.0, 0.004, 0.2, 0.001, 6000.0)
+	_add_band_noise(out, 0.0, 0.004, 0.2, 0.001, 3000.0, 9000.0)
 	return out
 
 
-# Mountain wind: dark noise with slow gusts.
+# A heavy steel mass striking steel: the ballast landing on the tipper, the
+# return basin, the scoop. Inharmonic partials of a thick plate, long ring.
+func _clang() -> PackedFloat32Array:
+	var out := _silence(0.9)
+	_add_band_noise(out, 0.0, 0.02, 1.0, 0.004, 800.0, 8000.0)
+	var base := _rng.randf_range(190.0, 260.0)
+	for pair in [[1.0, 0.45, 0.35], [2.76, 0.35, 0.28], [5.40, 0.22, 0.2], [8.93, 0.12, 0.12],
+			[13.3, 0.06, 0.08]]:
+		_add_tone(out, base * pair[0] * _rng.randf_range(0.98, 1.02), 0.0, 0.9, pair[1], pair[2])
+	_add_tone(out, base * 0.5, 0.0, 0.3, 0.3, 0.06)
+	return out
+
+
+# A loaded hinge turning: stick-slip pulses through a wooden-steel body.
+func _creak() -> PackedFloat32Array:
+	var out := _silence(0.5)
+	var n := out.size()
+	var rate := _rng.randf_range(38.0, 60.0)
+	var body := _rng.randf_range(620.0, 900.0)
+	var phase := 0.0
+	var ring := 0.0
+	var ring_v := 0.0
+	var w := TAU * body / float(MIX_RATE)
+	for i in n:
+		var t := float(i) / float(n)
+		phase += (rate * (0.8 + 0.4 * t)) / float(MIX_RATE)
+		var pulse := 0.0
+		if phase >= 1.0:
+			phase -= 1.0
+			pulse = _rng.randf_range(0.6, 1.0)
+		# A damped resonator struck by each slip.
+		ring_v += pulse * 0.3 - w * w * ring - 0.02 * ring_v
+		ring += ring_v
+		out[i] += ring * sin(PI * t) * 0.9
+	return out
+
+
+# A small bird in the meadow conifers: two to four quick falling whistles.
+func _bird() -> PackedFloat32Array:
+	var out := _silence(0.7)
+	var at := 0.0
+	var notes := _rng.randi_range(2, 4)
+	var top := _rng.randf_range(3800.0, 5200.0)
+	for k in notes:
+		var length := _rng.randf_range(0.05, 0.09)
+		var first := int(at * MIX_RATE)
+		var last := mini(out.size(), first + int(length * MIX_RATE))
+		var phase := 0.0
+		for i in range(first, last):
+			var u := float(i - first) / float(last - first)
+			var freq := lerpf(top, top * 0.62, u) * (1.0 + 0.03 * sin(TAU * 38.0 * u))
+			phase += TAU * freq / float(MIX_RATE)
+			out[i] += sin(phase) * sin(PI * u) * 0.5
+		at += length + _rng.randf_range(0.04, 0.09)
+		top *= _rng.randf_range(0.9, 1.08)
+	return out
+
+
+# Mountain wind: broad air with slow gusts, and a thin whistle that wanders
+# with them.
 func _wind(length: float) -> PackedFloat32Array:
 	var out := _silence(length)
 	var n := out.size()
-	var lp1 := 0.0
-	var lp2 := 0.0
-	var a := _alpha(420.0)
+	var air := _band_noise_buffer(n, 160.0, 1400.0)
+	var whistle := _resonant_noise_buffer(n, 780.0, 0.25, 14.0)
 	var gust := 0.6
 	var gust_target := 0.6
 	for i in n:
 		if i % 2205 == 0:
 			gust_target = _rng.randf_range(0.35, 1.0)
 		gust += 0.0004 * (gust_target - gust)
-		lp1 += a * (_rng.randf_range(-1.0, 1.0) - lp1)
-		lp2 += a * (lp1 - lp2)
-		out[i] = lp2 * 3.2 * gust
+		out[i] = (air[i] * 2.2 + whistle[i] * 0.5 * gust) * gust
 	return out
 
 
 # Air tearing past a falling body: brighter, steadier.
 func _rush(length: float) -> PackedFloat32Array:
 	var out := _silence(length)
-	var n := out.size()
-	var lp := 0.0
-	var hp := 0.0
-	var a_lp := _alpha(3800.0)
-	var a_hp := _alpha(500.0)
-	for i in n:
-		lp += a_lp * (_rng.randf_range(-1.0, 1.0) - lp)
-		hp += a_hp * (lp - hp)
-		out[i] = (lp - hp) * 0.8
+	var band := _band_noise_buffer(out.size(), 500.0, 3800.0)
+	for i in out.size():
+		out[i] = band[i] * 1.4
 	return out
 
 
-# Motor and gearbox: mains fundamental, harmonics and a little grit. Whole
-# cycles only, so the loop point is seamless without a crossfade.
+# Motor and gearbox at the plant: mains hum for weight, the motor's slot
+# whine and bearing noise so it carries on a small speaker.
 func _hum(length: float) -> PackedFloat32Array:
 	var out := _silence(length)
-	for pair in [[50.0, 0.35], [100.0, 0.22], [150.0, 0.12], [300.0, 0.05]]:
+	for pair in [[50.0, 0.3], [100.0, 0.2], [150.0, 0.1], [300.0, 0.06], [600.0, 0.08],
+			[1200.0, 0.05], [1800.0, 0.025]]:
 		_add_tone(out, pair[0], 0.0, length, pair[1], 0.0)
-	var lp := 0.0
-	var a := _alpha(1200.0)
+	var bearing := _band_noise_buffer(out.size(), 1800.0, 4500.0)
 	for i in out.size():
-		lp += a * (_rng.randf_range(-1.0, 1.0) - lp)
-		out[i] += lp * 0.08
+		out[i] += bearing[i] * 0.25
+	return out
+
+
+# The yard itself, heard from anywhere in it: a far-off industrial bed of
+# rumble, distant machinery tones beating slowly against each other.
+func _drone(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var n := out.size()
+	var bed := _band_noise_buffer(n, 90.0, 900.0)
+	var swell := 0.7
+	var swell_target := 0.7
+	for i in n:
+		if i % 4410 == 0:
+			swell_target = _rng.randf_range(0.55, 1.0)
+		swell += 0.00025 * (swell_target - swell)
+		out[i] = bed[i] * 1.8 * swell
+	# Tones beating slowly: each partial's level swings at its own rate.
+	for pair in [[220.0, 0.05, 0.56], [331.0, 0.04, 0.28], [587.0, 0.02, 0.83]]:
+		var tone := _silence(length)
+		_add_tone(tone, pair[0], 0.0, length, pair[1], 0.0)
+		var swing := _silence(length)
+		_add_tone(swing, pair[2], 0.0, length, 0.4, 0.0)
+		for i in n:
+			out[i] += tone[i] * (0.6 + swing[i])
+	return out
+
+
+# Steam venting through the plant's orifice.
+func _hiss(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var band := _band_noise_buffer(out.size(), 1800.0, 8500.0)
+	for i in out.size():
+		out[i] = band[i] * 2.2 * (0.9 + 0.1 * sin(TAU * 7.0 * float(i) / float(MIX_RATE)))
+	return out
+
+
+# Hoist chain running over its sprocket: links clicking, each one ringing.
+func _rattle(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var at := 0.0
+	while at < length - 0.02:
+		_add_band_noise(out, at, 0.012, _rng.randf_range(0.4, 0.8), 0.002, 1800.0, 6500.0)
+		_add_tone(out, _rng.randf_range(1400.0, 2600.0), at, 0.03, 0.12, 0.008)
+		at += _rng.randf_range(0.022, 0.045)
+	return out
+
+
+# The lift's drive: a geared motor under load.
+func _motor(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	for k in range(1, 6):
+		_add_tone(out, 110.0 * float(k), 0.0, length, 0.18 / float(k), 0.0)
+	var grind := _band_noise_buffer(out.size(), 400.0, 1600.0)
+	for i in out.size():
+		out[i] += grind[i] * 0.5
 	return out
 
 
@@ -235,22 +367,96 @@ func _add_noise(out: PackedFloat32Array, start: float, length: float, gain: floa
 	var last := mini(out.size(), first + int(length * MIX_RATE))
 	var a := _alpha(cutoff_hz)
 	var lp := 0.0
+	var env := gain * 2.0
+	var decay := _decay(tau)
 	for i in range(first, last):
-		var t := float(i - first) / float(MIX_RATE)
 		lp += a * (_rng.randf_range(-1.0, 1.0) - lp)
-		out[i] += lp * gain * exp(-t / tau) * 2.0
+		out[i] += lp * env
+		env *= decay
 
 
-# A sine partial; tau 0 holds it at constant level.
+# Noise between two corner frequencies (a low-pass minus a lower low-pass,
+# each two poles), decaying with `tau`.
+func _add_band_noise(out: PackedFloat32Array, start: float, length: float, gain: float,
+		tau: float, low_hz: float, high_hz: float) -> void:
+	var first := int(start * MIX_RATE)
+	var last := mini(out.size(), first + int(length * MIX_RATE))
+	if last <= first:
+		return
+	var band := _band_noise_buffer(last - first, low_hz, high_hz)
+	var env := gain * 2.0
+	var decay := _decay(tau)
+	for i in range(first, last):
+		out[i] += band[i - first] * env
+		env *= decay
+
+
+func _band_noise_buffer(count: int, low_hz: float, high_hz: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(count)
+	var a_hi := _alpha(high_hz)
+	var a_lo := _alpha(low_hz)
+	var h1 := 0.0
+	var h2 := 0.0
+	var l1 := 0.0
+	var l2 := 0.0
+	for i in count:
+		var x := _rng.randf_range(-1.0, 1.0)
+		h1 += a_hi * (x - h1)
+		h2 += a_hi * (h1 - h2)
+		l1 += a_lo * (x - l1)
+		l2 += a_lo * (l1 - l2)
+		out[i] = h2 - l2
+	return out
+
+
+# Noise through a narrow resonance whose centre drifts by +/- `wander` of
+# itself at `drift_hz` cycles over the buffer's own length.
+func _resonant_noise_buffer(count: int, center_hz: float, wander: float,
+		drift_cycles: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(count)
+	var low := 0.0
+	var band := 0.0
+	var q := 0.08
+	for i in count:
+		var u := float(i) / float(count)
+		var f := center_hz * (1.0 + wander * sin(TAU * drift_cycles * u))
+		var k := 2.0 * sin(PI * f / float(MIX_RATE))
+		var x := _rng.randf_range(-1.0, 1.0)
+		low += k * band
+		var high := x - low - q * band
+		band += k * high
+		out[i] = band * 0.2
+	return out
+
+
+# A sine partial; tau 0 holds it at constant level. The sine runs as the
+# two-term recurrence s[n+1] = 2 cos(w) s[n] - s[n-1] and the envelope as a
+# running product: no sin or exp per sample, which is most of the bank's
+# build time in GDScript.
 func _add_tone(out: PackedFloat32Array, freq: float, start: float, length: float, gain: float,
 		tau: float) -> void:
 	var first := int(start * MIX_RATE)
 	var last := mini(out.size(), first + int(length * MIX_RATE))
 	var step := TAU * freq / float(MIX_RATE)
+	var coupling := 2.0 * cos(step)
+	var previous := -sin(step)
+	var current := 0.0
+	var env := gain
+	var decay := _decay(tau)
 	for i in range(first, last):
-		var k := float(i - first)
-		var env := 1.0 if tau <= 0.0 else exp(-k / (tau * float(MIX_RATE)))
-		out[i] += sin(step * k) * gain * env
+		out[i] += current * env
+		var next := coupling * current - previous
+		previous = current
+		current = next
+		env *= decay
+
+
+# Per-sample factor of an exponential decay with time constant `tau`
+# seconds; tau 0 means no decay.
+func _decay(tau: float) -> float:
+	return 1.0 if tau <= 0.0 else exp(-1.0 / (tau * float(MIX_RATE)))
 
 
 func _wav(samples: PackedFloat32Array, loop_end: int = -1) -> AudioStreamWAV:
@@ -289,7 +495,3 @@ func _loop(samples: PackedFloat32Array, fade_seconds: float) -> AudioStreamWAV:
 		var w := float(i) / float(fade)
 		out[i] = out[i] * w + samples[body + i] * (1.0 - w)
 	return _wav(out, out.size())
-
-
-func _loop_exact(samples: PackedFloat32Array) -> AudioStreamWAV:
-	return _wav(samples, samples.size())

@@ -192,6 +192,23 @@ jobs:
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest.log; then exit 1; fi
 
+      - name: Measure the mix a player hears
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The headless runs above use the Dummy audio driver, which never
+          # mixes, so they can only count cues. Movie Maker mixes that same
+          # driver frame by frame; audio_mix (ui_test_driver.gd) captures what
+          # leaves Master and requires audible ambience and footsteps above
+          # 300 Hz, where a phone speaker plays, with no clipping.
+          timeout 900s xvfb-run -a -s "-screen 0 1296x1114x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 \
+            --write-movie "${RUNNER_TEMP}/audio-mix.avi" -- --uitest=audio_mix \
+            2>&1 | tee artifacts/godot-audio-mix.log
+          rm -f "${RUNNER_TEMP}/audio-mix.avi"
+          grep -F "SCRAPERX_UITEST PASS audio_mix " artifacts/godot-audio-mix.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-audio-mix.log; then exit 1; fi
+
       - name: World solids table matches the Godot builders
         shell: bash
         run: |

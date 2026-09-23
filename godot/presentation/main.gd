@@ -390,6 +390,7 @@ func _ready() -> void:
 	_sky_cycle.setup($Overcast, $SkyFill, ($Environment as WorldEnvironment).environment)
 	_audio = AudioDirector.new()
 	_audio.name = "AudioDirector"
+	_audio.sky = _sky_cycle
 	add_child(_audio)
 	_build_arms()
 	_build_interface()
@@ -1164,12 +1165,18 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
+	var crouched := bool(_native.is_player_crouched())
 
-	_apply_camera_feel(position, velocity, grounded, bool(_native.is_player_crouched()), delta)
+	_apply_camera_feel(position, velocity, grounded, crouched, delta)
 	if delta > 0.0:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
-			int(_native.get_death_count()))
+			int(_native.get_death_count()), crouched)
+		_audio.update_machines(delta, float(_native.get_orifice_mass_flow_kg_per_s()),
+			_native.get_hoist_scoop_position(), _native.get_ballast_position(),
+			_native.get_ballast_linear_velocity(), _native.get_tipper_position(),
+			float(_native.get_tipper_angle_radians()), _native.get_lift_platform_position(),
+			_native.get_lift_platform_linear_velocity())
 	# The developer telemetry overlay costs a dozen string formats a frame;
 	# it is only paid for while the overlay is actually on screen.
 	if _telemetry_on:
