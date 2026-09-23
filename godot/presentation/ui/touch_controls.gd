@@ -3,8 +3,9 @@ extends Control
 # Fold-first touch surface, per GDD section 22 and Governing Law 27: the left
 # thumb moves, the right thumb looks, one contextual Action engages whatever
 # valid interaction the native affordances report, and machine controls exist
-# only while a machine is actually being operated. Jump is the one permanent
-# button because it is locomotion, not an interaction.
+# only while a machine is actually being operated. Jump and Crouch are the
+# permanent buttons because they are locomotion, not interactions; Crouch is
+# a toggle that reads STAND while the native reports the body crouched.
 #
 # Every touch index is owned by exactly one thing -- a button, the stick, or
 # look -- from press to release, so two thumbs never fight over a control.
@@ -18,6 +19,7 @@ const UiStyle := preload("res://presentation/ui/ui_style.gd")
 
 const B_JUMP := &"jump"
 const B_ACTION := &"action"
+const B_CROUCH := &"crouch"
 const B_DROP := &"drop"
 const B_CHUTE := &"chute"
 const B_PAUSE := &"pause"
@@ -67,8 +69,8 @@ var touch_scale := 1.0
 
 var _u := 1.0
 var _buttons := {}
-var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_DROP, B_CHUTE, B_UP, B_DOWN,
-	B_LEFT, B_RIGHT, B_SLING]
+var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_UP,
+	B_DOWN, B_LEFT, B_RIGHT, B_SLING]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -135,6 +137,8 @@ func _layout() -> void:
 	var jump := Vector2(corner.x - m - 170.0 * _u, corner.y - m - 190.0 * _u)
 	_place(B_JUMP, jump, 122.0)
 	_place(B_ACTION, jump + Vector2(-236.0, -150.0) * _u, 98.0)
+	# Over Jump, toward the edge: the same thumb slides up to it.
+	_place(B_CROUCH, jump + Vector2(40.0, -252.0) * _u, 78.0)
 	# Drop and Chute share one slot: hanging and free-falling never overlap,
 	# and "drop, then open the canopy" becomes the same thumb in one place.
 	_place(B_DROP, jump + Vector2(-306.0, 96.0) * _u, 86.0)
@@ -167,6 +171,8 @@ func _verb_for(id: StringName) -> StringName:
 			return &"jump"
 		B_ACTION:
 			return &"action"
+		B_CROUCH:
+			return &"crouch"
 		B_DROP:
 			return &"drop"
 		B_CHUTE:
@@ -334,6 +340,11 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 	var station: StringName = ctx["operating"]
 	_operating = station != &""
+	var crouch: TouchButton = _buttons[B_CROUCH]
+	crouch.shown = not _operating and not hanging
+	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
+	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
+	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
 	var has_x := station == &"jib" or station == &"intake"
 	_buttons[B_UP].shown = _operating
 	_buttons[B_DOWN].shown = _operating

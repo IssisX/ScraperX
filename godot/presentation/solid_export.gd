@@ -50,8 +50,8 @@ const MIRROR := [
 	"SkinRung", "BayBack", "BaySide", "BayJamb", "BayLintel", "MidLanding",
 	"UpperFlightSlab", "HallDeckNorth", "HallDeckSouth", "HallDeckEast", "HallDeckWest",
 	"SkinWalkway", "KernelDeck", "NativeVaultRail", "NativeMantleLedge", "NativeHangLedge",
-	"NativeBlockedLedge", "NativeBlockedCanopy", "Catwalk", "Vessel", "SumpApproachDeck",
-	"SumpFarDeck",
+	"NativeBlockedLedge", "NativeBlockedCanopy", "NativeCrawlBeam", "NativeCrawlPost", "Catwalk",
+	"Vessel", "SumpApproachDeck", "SumpFarDeck",
 ]
 
 const CYLINDER_SEGMENTS := 12

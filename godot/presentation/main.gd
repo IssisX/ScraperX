@@ -70,6 +70,14 @@ const LANDING_DIP_FULL_IMPACT_MPS := 9.0
 const HEAD_BOB_CYCLES_PER_METER := 0.72
 const HEAD_BOB_VERTICAL_METERS := 0.028
 const HEAD_BOB_LATERAL_METERS := 0.016
+# Crouched, the eye sits 0.95 m over the soles instead of 1.52: the native
+# capsule is 1.2 m, not 1.8 (kPlayerCrouchHalfHeight). The native swaps the
+# two in one tick with the soles fixed, so the eye is measured from the soles
+# and glides between the heights; the snap never reaches the view.
+const STAND_HALF_HEIGHT := 0.9
+const CROUCH_HALF_HEIGHT := 0.6
+const CROUCH_EYE_OVER_SOLES := 0.95
+const CROUCH_EYE_SECONDS := 0.16
 const HEAD_BOB_SPEED_FLOOR_MPS := 0.3
 const HEAD_BOB_SPEED_FULL_MPS := 3.0
 
@@ -232,6 +240,7 @@ var _cam_last_velocity_y := 0.0
 var _cam_landing_timer := 0.0
 var _cam_landing_strength := 0.0
 var _cam_bob_phase := 0.0
+var _crouch_eye := 0.0
 # DISPLAY settings; the defaults are the tuned values above.
 var _fov_base := FOV_BASE
 var _head_bob_on := true
@@ -256,6 +265,10 @@ var _ctx := {}
 var _operating := &""
 var _jump_buffer := 0.0
 var _since_jump_sent := INF
+# The crouch toggle (C, right-stick click, the touch button). Held Ctrl
+# crouches too, for as long as it is held; the native decides whether the
+# body can crouch or stand.
+var _crouch_toggled := false
 var _fb_traversal := 0
 var _fb_grounded := true
 var _fb_fall_speed := 0.0
@@ -450,6 +463,7 @@ func _process(delta: float) -> void:
 		return
 	_native.set_facing(facing.x, facing.y)
 	_dispatch(intent["verbs"], delta)
+	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]))
 
 	var jib_input: Vector2 = intent["pendant"]
 	_native.set_jib_slew_input(jib_input.x)
@@ -682,6 +696,8 @@ func _dispatch(verbs: Array, delta: float) -> void:
 	for verb in verbs:
 		match verb:
 			&"jump":
+				# A jump stands a crouched body first (natively), and ends the toggle.
+				_crouch_toggled = false
 				if _ctx["jump_ok"] or _ctx["hanging"]:
 					_native.request_jump()
 					_since_jump_sent = 0.0
@@ -690,7 +706,11 @@ func _dispatch(verbs: Array, delta: float) -> void:
 						_native.request_jump()
 					_jump_buffer = JUMP_BUFFER_SECONDS
 			&"action":
+				_crouch_toggled = false
 				_perform_action()
+			&"crouch":
+				# Does what the button says: crouched, it asks to stand.
+				_crouch_toggled = not bool(_ctx["crouched"])
 			&"drop":
 				_native.request_release()
 			&"chute":
@@ -802,6 +822,7 @@ func _read_context() -> Dictionary:
 		"position": position,
 		"velocity": velocity,
 		"grounded": grounded,
+		"crouched": bool(_native.is_player_crouched()),
 		"traversal": traversal,
 		"hanging": hanging,
 		"chute": chute,
@@ -1090,7 +1111,7 @@ func _layout_hud() -> void:
 # grounded player always reads back exactly EYE_OFFSET / FOV_BASE -- see this
 # file's own header comment on the constants block above for why that must
 # hold for the CI runtime proof.
-func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool,
+func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, crouched: bool,
 		delta: float) -> void:
 	if grounded and not _cam_was_grounded:
 		var impact := absf(_cam_last_velocity_y)
@@ -1120,8 +1141,13 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool,
 	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * bob_fade
 	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
 
-	_camera.position = position + EYE_OFFSET + Vector3(0.0, dip + vertical_bob, 0.0) + \
-		right_vector * lateral_bob
+	var eye := position + EYE_OFFSET
+	_crouch_eye = move_toward(_crouch_eye, 1.0 if crouched else 0.0, delta / CROUCH_EYE_SECONDS)
+	if crouched or _crouch_eye > 0.0:
+		var soles_y := position.y - (CROUCH_HALF_HEIGHT if crouched else STAND_HALF_HEIGHT)
+		eye.y = soles_y + lerpf(STAND_HALF_HEIGHT + EYE_OFFSET.y, CROUCH_EYE_OVER_SOLES,
+			smoothstep(0.0, 1.0, _crouch_eye))
+	_camera.position = eye + Vector3(0.0, dip + vertical_bob, 0.0) + right_vector * lateral_bob
 	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, 0.0)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed)
@@ -1139,7 +1165,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
 
-	_apply_camera_feel(position, velocity, grounded, delta)
+	_apply_camera_feel(position, velocity, grounded, bool(_native.is_player_crouched()), delta)
 	if delta > 0.0:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
@@ -2562,6 +2588,11 @@ func _build_legacy_fixtures(mill_scale: Material, galvanised: Material,
 	_moving_ledge_mesh = _add_box("NativeMovingLedge", Vector3(4.0, 3.6, 4.0), Vector3(9.0, 1.8, 12.5), galvanised)
 	_add_box("NativeBlockedLedge", Vector3(3.0, 1.55, 3.0), Vector3(-6.0, 0.775, -8.0), mill_scale)
 	_add_box("NativeBlockedCanopy", Vector3(4.4, 0.3, 4.4), Vector3(-6.0, 2.7, -8.0), faded)
+	# Crouch fixture (kCrawl* in simulation.cpp): a hazard-striped beam across a
+	# 4 m lane, its underside 1.45 m up, on two posts. Crouch to pass under.
+	_add_box("NativeCrawlBeam", Vector3(4.0, 0.4, 0.6), Vector3(-2.0, 1.65, -13.0), hazard)
+	for post_x in [-4.15, 0.15]:
+		_add_box("NativeCrawlPost", Vector3(0.3, 1.85, 0.3), Vector3(post_x, 0.925, -13.0), mill_scale)
 
 
 func _build_plant(mill_scale: Material, oxidised: Material, galvanised: Material,

@@ -103,6 +103,8 @@ struct Snapshot final {
     Vector3 player_position{};
     Vector3 player_linear_velocity{};
     bool player_grounded = false;
+    // Crouched: the short capsule (see Simulation::set_crouch_input).
+    bool player_crouched = false;
     std::uint64_t support_entity_id = 0;
     Vector3 support_contact_point{};
     Vector3 support_point_linear_velocity{};
@@ -328,6 +330,9 @@ public:
     // world did not already own: frame dressing, footings, halls, rails,
     // trees. Generated into world_solids.inc; see build_world_solids().
     static constexpr std::uint64_t kWorldSolidEntityId = 51;
+    // Crouch fixture beside the WO-003 traversal fixtures: a beam and its two
+    // posts, the beam's underside 1.45 m over the deck.
+    static constexpr std::uint64_t kCrawlBeamEntityId = 52;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -346,6 +351,15 @@ public:
     [[nodiscard]] bool request_jump() noexcept;
     [[nodiscard]] bool request_traversal() noexcept;
     [[nodiscard]] bool request_release() noexcept;
+
+    // Crouch (GDD 7.2, Governing Law 4). A held state, like set_move_input,
+    // not a one-shot: while true and the body is on the ground outside a
+    // traversal, it takes a 1.2 m capsule with its feet where they were;
+    // while false it stands again, but only where the full 1.8 m capsule is
+    // clear. So it can be crouched into a low gap and cannot stand up in one.
+    // A Jump or traversal request stands the body first, and is refused
+    // where it cannot stand.
+    [[nodiscard]] bool set_crouch_input(bool held) noexcept;
 
     // Toggles the always-carried parachute. Only takes effect while airborne
     // (GDD 8.3); queued and resolved on the authoritative tick like every
@@ -415,6 +429,7 @@ private:
     bool jump_requested_ = false;
     bool traversal_requested_ = false;
     bool release_requested_ = false;
+    bool crouch_input_ = false;
     bool parachute_toggle_requested_ = false;
     double jib_slew_input_ = 0.0;
     double jib_hoist_input_ = 0.0;

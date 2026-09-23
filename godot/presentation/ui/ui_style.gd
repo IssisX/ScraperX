@@ -33,6 +33,7 @@ const G_RT := &"rt"
 const G_DPAD_V := &"dpad_v"
 const G_DPAD_H := &"dpad_h"
 const G_LSTICK_FWD := &"lstick_fwd"
+const G_RSTICK_CLICK := &"rstick_click"
 
 # One binding table for every prompt and the pause menu's controls page:
 # verb -> [pad position, keyboard key label, touch icon]. It has to agree
@@ -43,6 +44,7 @@ const BINDINGS := {
 	&"action": [G_WEST, "E", &"climb"],
 	&"drop": [G_EAST, "Q", &"drop"],
 	&"chute": [G_NORTH, "F", &"chute"],
+	&"crouch": [G_RSTICK_CLICK, "C", &"crouch"],
 	&"grab": [G_LSTICK_FWD, "W", &"move"],
 	&"hoist": [G_DPAD_V, "#V", &"up"],
 	&"slew": [G_DPAD_H, "#H", &"left"],
@@ -227,6 +229,15 @@ static func draw_icon(ci: CanvasItem, icon: StringName, c: Vector2, r: float, co
 			chevron(ci, c + Vector2(0.0, -r * 0.18), r * 0.46, Vector2.UP, color, width)
 			chevron(ci, c + Vector2(0.0, r * 0.16), r * 0.46, Vector2.UP, with_alpha(color, 0.55), width)
 			ci.draw_line(c + Vector2(-r * 0.5, r * 0.56), c + Vector2(r * 0.5, r * 0.56), color, width, true)
+		&"crouch":
+			# Down under a low beam, onto the floor.
+			ci.draw_line(c + Vector2(-r * 0.56, -r * 0.5), c + Vector2(r * 0.56, -r * 0.5),
+				with_alpha(color, 0.55), width, true)
+			chevron(ci, c + Vector2(0.0, r * 0.02), r * 0.42, Vector2.DOWN, color, width)
+			ci.draw_line(c + Vector2(-r * 0.5, r * 0.56), c + Vector2(r * 0.5, r * 0.56), color, width, true)
+		&"stand":
+			chevron(ci, c + Vector2(0.0, -r * 0.08), r * 0.42, Vector2.UP, color, width)
+			ci.draw_line(c + Vector2(-r * 0.5, r * 0.56), c + Vector2(r * 0.5, r * 0.56), color, width, true)
 		&"climb":
 			# A block and the path over it: up the face, then onto the top.
 			ci.draw_rect(Rect2(c + Vector2(-r * 0.05, -r * 0.02), Vector2(r * 0.6, r * 0.58)),
@@ -332,7 +343,7 @@ static func glyph_width(family: int, glyph: StringName, key_label: String, h: fl
 	match glyph:
 		G_LT, G_RT, G_START, G_SELECT:
 			return h * 1.5
-		G_LSTICK_FWD:
+		G_LSTICK_FWD, G_RSTICK_CLICK:
 			return h * 1.05
 	return h
 
@@ -449,4 +460,10 @@ static func draw_glyph(ci: CanvasItem, family: int, glyph: StringName, key_label
 			ring(ci, c, r * 0.92, with_alpha(PAPER, 0.8 * alpha), line)
 			disc(ci, c + Vector2(0.0, -r * 0.3), r * 0.42, with_alpha(PAPER, 0.9 * alpha))
 			triangle(ci, c + Vector2(0.0, -r * 0.3), r * 0.2, Vector2.UP, with_alpha(INK, alpha))
+		G_RSTICK_CLICK:
+			# The right stick pressed in: a centred cap with a ring pushed around it.
+			ring(ci, c, r * 0.92, with_alpha(PAPER, 0.8 * alpha), line)
+			disc(ci, c, r * 0.5, with_alpha(PAPER, 0.9 * alpha))
+			var click := "R3" if family == Family.PLAYSTATION else ("R" if family == Family.NINTENDO else "RS")
+			text_centered(ci, font_label(), click, c, int(roundf(h * 0.3)), with_alpha(INK, alpha))
 	return width

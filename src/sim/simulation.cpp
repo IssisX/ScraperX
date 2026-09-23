@@ -87,6 +87,25 @@ constexpr double kMovingLedgeCenterZ = 12.5;
 // Player capsule: cylinder half-height 0.55 plus radius 0.35.
 constexpr float kPlayerRadius = 0.35F;
 constexpr float kPlayerHalfHeight = 0.9F;
+// Crouched (GDD 7.2): a 1.2 m capsule, same radius. The soles stay where they
+// are, so the centre drops by the difference in half-heights.
+constexpr float kPlayerCrouchHalfHeight = 0.6F;
+constexpr float kCrouchDrop = kPlayerHalfHeight - kPlayerCrouchHalfHeight;
+// Crouched walking tops out at 45 % of the standing speed (2.5 of 5.5 m/s).
+constexpr double kCrouchSpeedScale = 0.45;
+// The standing capsule is tested this far above the soles, so the floor it
+// already rests on does not read as an obstruction; a ceiling does.
+constexpr float kStandClearanceSkin = 0.05F;
+// Crouch fixture: a beam across a 4 m lane, underside 1.45 m over the deck --
+// under the standing capsule's 1.8 m, over the crouched one's 1.2 m -- on two
+// posts. Between the traversal fixtures and the kerb run at z = -16.
+constexpr float kCrawlLaneCenterX = -2.0F;
+constexpr float kCrawlLaneHalfX = 2.0F;
+constexpr float kCrawlBeamZ = -13.0F;
+constexpr float kCrawlBeamHalfZ = 0.3F;
+constexpr float kCrawlBeamUndersideY = 1.45F;
+constexpr float kCrawlBeamHalfY = 0.2F;
+constexpr float kCrawlPostHalf = 0.15F;
 
 // An athletic climber with gear. Left to Jolt's default density this capsule
 // weighs 602.9 kg -- freight, not a person -- which silently made the player
@@ -1451,6 +1470,23 @@ public:
                                            0.7F,
                                            Simulation::kBlockedLedgeCanopyEntityId);
 
+        {
+            const auto crawl_part = [this, &bodies](const JPH::Vec3 half, const JPH::RVec3 at) {
+                machine_bodies_.push_back(add_box(bodies, half, at, JPH::EMotionType::Static,
+                                                  object_layers::kStatic, 0.7F,
+                                                  Simulation::kCrawlBeamEntityId));
+            };
+            const float beam_top = kCrawlBeamUndersideY + 2.0F * kCrawlBeamHalfY;
+            crawl_part(JPH::Vec3(kCrawlLaneHalfX, kCrawlBeamHalfY, kCrawlBeamHalfZ),
+                       JPH::RVec3(kCrawlLaneCenterX, kCrawlBeamUndersideY + kCrawlBeamHalfY,
+                                  kCrawlBeamZ));
+            for (const float side : {-1.0F, 1.0F}) {
+                crawl_part(JPH::Vec3(kCrawlPostHalf, beam_top * 0.5F, kCrawlPostHalf),
+                           JPH::RVec3(kCrawlLaneCenterX + side * (kCrawlLaneHalfX + kCrawlPostHalf),
+                                      beam_top * 0.5F, kCrawlBeamZ));
+            }
+        }
+
         build_stack(bodies);
         build_machine(bodies);
         build_kernel_jib(bodies);
@@ -1461,6 +1497,8 @@ public:
         build_world_solids(bodies);
 
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
+        player_crouch_shape_ =
+            new JPH::CapsuleShape(kPlayerCrouchHalfHeight - kPlayerRadius, kPlayerRadius);
         JPH::BodyCreationSettings player_settings(player_shape_,
                                                   spawn_position(initial_spawn),
                                                   JPH::Quat::sIdentity(),
@@ -1541,6 +1579,7 @@ public:
         bool jump_requested = false;
         bool traversal_requested = false;
         bool release_requested = false;
+        bool crouch_held = false;
         bool parachute_toggle_requested = false;
         double jib_slew_input = 0.0;
         double jib_hoist_input = 0.0;
@@ -1581,6 +1620,7 @@ public:
         }
         facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
 
+        update_crouch(bodies, commands);
         apply_traversal_commands(bodies, commands);
 
         bool jump_started = false;
@@ -3587,12 +3627,22 @@ private:
         return lock.GetBody().GetWorldSpaceSurfaceNormal(sub_shape_id, point);
     }
 
+    // The capsule the body has now: standing, or crouched.
+    [[nodiscard]] const JPH::Shape *active_player_shape() const noexcept {
+        return crouched_ ? player_crouch_shape_.GetPtr() : player_shape_.GetPtr();
+    }
+
     [[nodiscard]] bool capsule_pose_is_clear(const JPH::RVec3 centre) const noexcept {
+        return shape_pose_is_clear(active_player_shape(), centre);
+    }
+
+    [[nodiscard]] bool shape_pose_is_clear(const JPH::Shape *shape,
+                                           const JPH::RVec3 centre) const noexcept {
         JPH::AnyHitCollisionCollector<JPH::CollideShapeCollector> collector;
         JPH::CollideShapeSettings settings;
         settings.mMaxSeparationDistance = 0.0F;
         const JPH::IgnoreSingleBodyFilter body_filter(player_id_);
-        physics_system_.GetNarrowPhaseQuery().CollideShape(player_shape_,
+        physics_system_.GetNarrowPhaseQuery().CollideShape(shape,
                                                            JPH::Vec3::sReplicate(1.0F),
                                                            JPH::RMat44::sTranslation(centre),
                                                            settings,
@@ -3759,6 +3809,49 @@ private:
 
     // ---- traversal state machine ----------------------------------------
 
+    // Crouch and stand (GDD 7.2, Governing Law 4). The body swaps capsules
+    // with its soles fixed: the centre moves by kCrouchDrop, nothing under
+    // the feet does. It crouches only from the ground and never inside a
+    // traversal (every traversal pose is a standing pose), and it stands
+    // only where the full standing capsule is clear, so a gap entered
+    // crouched keeps the body crouched until it is out of it. A Jump or a
+    // traversal request asks to stand first; where the body cannot, they
+    // are refused further down this tick.
+    void update_crouch(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
+        if (traversal_state_ != TraversalState::None) {
+            return;
+        }
+        const bool wants_up =
+            !commands.crouch_held || commands.jump_requested || commands.traversal_requested;
+        if (crouched_) {
+            if (wants_up) {
+                (void)try_stand(bodies);
+            }
+            return;
+        }
+        if (!wants_up && grounded_) {
+            const JPH::RVec3 at = bodies.GetPosition(player_id_);
+            bodies.SetShape(player_id_, player_crouch_shape_.GetPtr(), false,
+                            JPH::EActivation::Activate);
+            bodies.SetPosition(player_id_, at - JPH::Vec3(0.0F, kCrouchDrop, 0.0F),
+                               JPH::EActivation::Activate);
+            crouched_ = true;
+        }
+    }
+
+    [[nodiscard]] bool try_stand(JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 standing =
+            bodies.GetPosition(player_id_) + JPH::Vec3(0.0F, kCrouchDrop, 0.0F);
+        if (!shape_pose_is_clear(player_shape_.GetPtr(),
+                                 standing + JPH::Vec3(0.0F, kStandClearanceSkin, 0.0F))) {
+            return false;
+        }
+        bodies.SetShape(player_id_, player_shape_.GetPtr(), false, JPH::EActivation::Activate);
+        bodies.SetPosition(player_id_, standing, JPH::EActivation::Activate);
+        crouched_ = false;
+        return true;
+    }
+
     void apply_traversal_commands(JPH::BodyInterface &bodies,
                                   const StepCommands &commands) noexcept {
         if (traversal_state_ == TraversalState::Hanging) {
@@ -3772,6 +3865,16 @@ private:
 
         if (traversal_state_ != TraversalState::None) {
             if (commands.traversal_requested || commands.release_requested) {
+                ++rejected_traversal_count_;
+            }
+            return;
+        }
+
+        // Still crouched here means update_crouch could not stand the body:
+        // every vault, mantle and hang is a standing pose, so none begins.
+        if (crouched_) {
+            jump_vault_ticks_left_ = 0;
+            if (commands.traversal_requested) {
                 ++rejected_traversal_count_;
             }
             return;
@@ -3820,26 +3923,28 @@ private:
                                         const float delta_seconds) noexcept {
         JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
         JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
+        const double speed_scale = crouched_ ? kCrouchSpeedScale : 1.0;
 
         if (grounded_ && support_entity_id_ != 0) {
             reference_velocity = current_support_point_velocity(bodies);
             airborne_inherited_velocity_ = reference_velocity;
             approach_relative_horizontal_velocity(player_velocity,
                                                   reference_velocity,
-                                                  commands.move_input_x,
-                                                  commands.move_input_z,
+                                                  commands.move_input_x * speed_scale,
+                                                  commands.move_input_z * speed_scale,
                                                   kGroundAcceleration,
                                                   delta_seconds);
         } else {
             approach_relative_horizontal_velocity(player_velocity,
                                                   reference_velocity,
-                                                  commands.move_input_x,
-                                                  commands.move_input_z,
+                                                  commands.move_input_x * speed_scale,
+                                                  commands.move_input_z * speed_scale,
                                                   kAirAcceleration,
                                                   delta_seconds);
         }
 
-        const bool jump_started = commands.jump_requested && grounded_;
+        // Crouched here means there was no room to stand, so no room to jump.
+        const bool jump_started = commands.jump_requested && grounded_ && !crouched_;
         if (jump_started) {
             player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
             jump_takeoff_feet_y_ =
@@ -3858,7 +3963,7 @@ private:
     [[nodiscard]] bool cast_capsule(const JPH::RVec3 from, const JPH::Vec3 displacement,
                                     float &fraction, JPH::Vec3 &normal) const {
         JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
-        const JPH::RShapeCast sweep(player_shape_, JPH::Vec3::sReplicate(1.0F),
+        const JPH::RShapeCast sweep(active_player_shape(), JPH::Vec3::sReplicate(1.0F),
                                     JPH::RMat44::sTranslation(from), displacement);
         const JPH::IgnoreSingleBodyFilter body_filter(player_id_);
         physics_system_.GetNarrowPhaseQuery().CastShape(
@@ -3930,7 +4035,7 @@ private:
     }
 
     void try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
-        if (grounded_ || regrab_lockout_ticks_ > 0) {
+        if (grounded_ || crouched_ || regrab_lockout_ticks_ > 0) {
             return;
         }
         if (bodies.GetLinearVelocity(player_id_).GetY() > kHangMaximumClimbSpeed) {
@@ -4304,7 +4409,10 @@ private:
 
     void update_affordance(const JPH::BodyInterface &bodies) noexcept {
         affordance_ = {};
-        if (traversal_state_ != TraversalState::None || facing_.IsNearZero()) {
+        // The probes measure rises from standing feet and test standing
+        // landing poses; a crouched body is offered none (a request stands
+        // it first, see update_crouch).
+        if (traversal_state_ != TraversalState::None || facing_.IsNearZero() || crouched_) {
             return;
         }
 
@@ -4363,6 +4471,7 @@ private:
     // last standing." No dwell timer, no player-facing save action.
     void commit_checkpoint(const JPH::BodyInterface &bodies) noexcept {
         checkpoint_position_ = bodies.GetPosition(player_id_);
+        checkpoint_crouched_ = crouched_;
         commit_machine_checkpoint(bodies);
         ++checkpoint_commit_count_;
     }
@@ -4375,6 +4484,10 @@ private:
     // publishing a snapshot that mixes a teleported position with a contact
     // sample that referred to the pre-restore position.
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+        // The capsule the checkpoint was committed in: a crouched commit's
+        // centre is a crouched centre, and may sit under a low ceiling.
+        crouched_ = checkpoint_crouched_;
+        bodies.SetShape(player_id_, active_player_shape(), false, JPH::EActivation::Activate);
         bodies.SetPositionAndRotation(player_id_, checkpoint_position_, JPH::Quat::sIdentity(),
                                       JPH::EActivation::Activate);
         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
@@ -4503,6 +4616,7 @@ private:
         state_.player_linear_velocity =
             {player_velocity.GetX(), player_velocity.GetY(), player_velocity.GetZ()};
         state_.player_grounded = grounded_;
+        state_.player_crouched = crouched_;
         state_.support_entity_id = support_entity_id_;
         state_.support_contact_point = support_sample_.contact_point;
         state_.support_point_linear_velocity = support_sample_.point_velocity;
@@ -4577,6 +4691,7 @@ private:
     JPH::PhysicsSystem physics_system_;
     PlayerContactListener contact_listener_;
     JPH::RefConst<JPH::Shape> player_shape_;
+    JPH::RefConst<JPH::Shape> player_crouch_shape_;
     JPH::BodyID deck_id_;
     JPH::BodyID translating_support_id_;
     JPH::BodyID rotating_support_id_;
@@ -4673,6 +4788,7 @@ private:
     std::uint64_t jump_vault_count_ = 0;
     std::uint32_t jump_vault_ticks_left_ = 0;
     float jump_takeoff_feet_y_ = 0.0F;
+    bool crouched_ = false;
     std::uint32_t world_solid_bodies_ = 0;
     std::uint32_t world_solid_mirrors_ = 0;
     std::uint32_t world_solid_rejected_ = 0;
@@ -4725,6 +4841,7 @@ private:
         bool intake_pack_slung = true;
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
+    bool checkpoint_crouched_ = false;
     MachineCheckpoint checkpoint_{};
     std::uint64_t checkpoint_commit_count_ = 0;
     std::uint64_t death_count_ = 0;
@@ -4803,6 +4920,11 @@ bool Simulation::request_parachute() noexcept {
     return true;
 }
 
+bool Simulation::set_crouch_input(const bool held) noexcept {
+    crouch_input_ = held;
+    return true;
+}
+
 bool Simulation::set_jib_slew_input(const double value) noexcept {
     if (!std::isfinite(value)) {
         return false;
@@ -4870,6 +4992,7 @@ void Simulation::step_fixed() noexcept {
     commands.jump_requested = jump_requested_;
     commands.traversal_requested = traversal_requested_;
     commands.release_requested = release_requested_;
+    commands.crouch_held = crouch_input_;
     commands.parachute_toggle_requested = parachute_toggle_requested_;
     commands.jib_slew_input = jib_slew_input_;
     commands.jib_hoist_input = jib_hoist_input_;

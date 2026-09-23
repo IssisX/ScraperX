@@ -22,6 +22,7 @@ const SCENARIOS := {
 	"touch_climb": 4,
 	"touch_vault": 3,
 	"touch_double_tap_vault": 3,
+	"touch_crouch": 0,
 	"touch_hang_drop": 5,
 	"touch_hang_climb": 5,
 	"touch_chute": 11,
@@ -58,6 +59,11 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	# from the first tick, exactly as the native falsifier holds it.
 	if scenario.begins_with("touch_hang"):
 		_stick_push(Vector2(0.0, -1.0))
+	# From the static-deck spawn (0, -8) straight down the crawl beam's lane,
+	# toward (-2, -15).
+	if scenario == "touch_crouch":
+		main._yaw = atan2(2.0, 7.0)
+		main._pitch = 0.0
 	_run.call_deferred()
 	return true
 
@@ -83,6 +89,8 @@ func _run() -> void:
 			ok = await _touch_vault()
 		"touch_double_tap_vault":
 			ok = await _touch_double_tap_vault()
+		"touch_crouch":
+			ok = await _touch_crouch()
 		"touch_hang_drop":
 			ok = await _touch_hang(false)
 		"touch_hang_climb":
@@ -307,6 +315,58 @@ func _touch_double_tap_vault() -> bool:
 	return _position().x > 5.6
 
 
+# The crawl beam beside the dock has its underside 1.45 m up. Standing, the
+# walk stops at its face; CROUCH crouches the native body and the same walk
+# passes under; STAND raises it again in the open. The eye follows the body.
+func _touch_crouch() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not _main._touch.is_button_shown(&"crouch") or _main._touch.button_label(&"crouch") != "CROUCH":
+		return _fail("CROUCH was not offered standing on the deck")
+	_stick_push(Vector2(0.0, -1.0))
+	await _seconds(1.6)
+	var blocked_z := _position().z
+	if blocked_z < -12.7:
+		return _fail("a standing body walked in under the 1.45 m beam (z %.2f)" % blocked_z)
+	if bool(_native().is_player_crouched()):
+		return _fail("the body crouched before CROUCH was pressed")
+	await _pose("beam_blocks")
+	_tap(1, _center(&"crouch"))
+	var crouched: bool = await _wait_until(
+		func() -> bool: return bool(_native().is_player_crouched()), 0.2)
+	if not crouched:
+		return _fail("CROUCH did not crouch the native body")
+	var passed: bool = await _wait_until(func() -> bool: return _position().z < -13.9, 3.0)
+	if not passed:
+		return _fail("the crouched walk did not pass under the beam (z %.2f)" % _position().z)
+	if not bool(_native().is_player_crouched()):
+		return _fail("the body stood up while CROUCH was on")
+	_touch(0, _main._touch.stick_home(), false)
+	await _seconds(0.4)
+	var passed_z := _position().z
+	var eye_crouched := _eye_over_soles()
+	if _main._touch.button_label(&"crouch") != "STAND":
+		return _fail("the crouch button did not read STAND while crouched")
+	await _pose("crouched")
+	_tap(1, _center(&"crouch"))
+	var stood: bool = await _wait_until(
+		func() -> bool: return not bool(_native().is_player_crouched()), 0.2)
+	if not stood:
+		return _fail("STAND did not stand the native body in the open")
+	await _seconds(0.4)
+	var eye_standing := _eye_over_soles()
+	if absf(eye_crouched - 0.95) > 0.03 or absf(eye_standing - 1.52) > 0.03:
+		return _fail("eye over the soles %.2f crouched / %.2f standing, expected 0.95 / 1.52" % [
+			eye_crouched, eye_standing])
+	_detail = "blocked_z=%.2f passed_z=%.2f eye_crouched=%.2f eye_standing=%.2f" % [
+		blocked_z, passed_z, eye_crouched, eye_standing]
+	return true
+
+
+func _eye_over_soles() -> float:
+	var half := 0.6 if bool(_native().is_player_crouched()) else 0.9
+	return _main._camera.position.y - (_position().y - half)
+
+
 func _touch_hang(climb: bool) -> bool:
 	var reached: bool = await _wait_until(func() -> bool: return bool(_ctx()["hanging"]), 3.0)
 	if not reached:
@@ -523,6 +583,14 @@ func _pad_core() -> bool:
 	await _seconds(0.5)
 	_axis(JOY_AXIS_RIGHT_X, 0.0)
 	var turned: float = yaw_before - _main._yaw
+	_button(JOY_BUTTON_RIGHT_STICK)
+	var r3_crouched: bool = await _wait_until(
+		func() -> bool: return bool(_native().is_player_crouched()), 0.3)
+	_button(JOY_BUTTON_RIGHT_STICK)
+	var r3_stood: bool = await _wait_until(
+		func() -> bool: return not bool(_native().is_player_crouched()), 0.3)
+	if not (r3_crouched and r3_stood):
+		return _fail("the right-stick click did not toggle crouch on and off")
 	_button(JOY_BUTTON_START)
 	await _frames(2)
 	if not get_tree().paused:
@@ -597,6 +665,20 @@ func _keyboard_core() -> bool:
 	_key(KEY_E, false)
 	await _frames(3)
 	var rejected_after := int(_native().get_rejected_traversal_count())
+	_key(KEY_CTRL, true)
+	var ctrl_crouched: bool = await _wait_until(
+		func() -> bool: return bool(_native().is_player_crouched()), 0.3)
+	_key(KEY_CTRL, false)
+	var ctrl_stood: bool = await _wait_until(
+		func() -> bool: return not bool(_native().is_player_crouched()), 0.3)
+	_key(KEY_C, true)
+	_key(KEY_C, false)
+	var c_crouched: bool = await _wait_until(
+		func() -> bool: return bool(_native().is_player_crouched()), 0.3)
+	_key(KEY_C, true)
+	_key(KEY_C, false)
+	var c_stood: bool = await _wait_until(
+		func() -> bool: return not bool(_native().is_player_crouched()), 0.3)
 	_key(KEY_ESCAPE, true)
 	_key(KEY_ESCAPE, false)
 	await _frames(2)
@@ -612,6 +694,10 @@ func _keyboard_core() -> bool:
 	if rejected_after != rejected_before + 1:
 		return _fail("E with nothing in reach did not reach the native (rejected %d->%d)" % [
 			rejected_before, rejected_after])
+	if not (ctrl_crouched and ctrl_stood):
+		return _fail("holding Ctrl did not crouch, or letting go did not stand")
+	if not (c_crouched and c_stood):
+		return _fail("C did not toggle crouch on and off")
 	if not paused:
 		return _fail("ESC did not pause")
 	if get_tree().paused:

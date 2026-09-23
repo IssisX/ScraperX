@@ -10,7 +10,8 @@ extends Node
 #
 # Verbs: jump, action, drop, chute, back (pad B: drop / leave controls),
 # alt (pad Y: chute / sling), sling_toggle, valve, sling_release, sling_attach,
-# pause, telemetry.
+# crouch (a toggle: C, right-stick click, the touch button), pause, telemetry.
+# Held Ctrl is the one held crouch; frame() reports it as crouch_held.
 
 enum Device { KEYBOARD_MOUSE, GAMEPAD, TOUCH }
 
@@ -171,6 +172,8 @@ func _handle_key(key: InputEventKey) -> void:
 			_verbs.append(&"drop")
 		KEY_F:
 			_verbs.append(&"chute")
+		KEY_C:
+			_verbs.append(&"crouch")
 		KEY_V:
 			_verbs.append(&"valve")
 		KEY_R:
@@ -202,6 +205,8 @@ func _handle_pad_button(button: InputEventJoypadButton) -> void:
 			_verbs.append(&"back")
 		JOY_BUTTON_Y:
 			_verbs.append(&"alt")
+		JOY_BUTTON_RIGHT_STICK:
+			_verbs.append(&"crouch")
 		JOY_BUTTON_START:
 			_verbs.append(&"pause")
 		JOY_BUTTON_BACK:
@@ -318,7 +323,9 @@ func frame(delta: float) -> Dictionary:
 	var move := Vector2.ZERO
 	var look := Vector2.ZERO
 	var pendant := Vector2.ZERO
+	var crouch_held := false
 	if enabled and gameplay_active:
+		crouch_held = _keys.has(KEY_CTRL)
 		var keyboard := Vector2(_held(KEY_D) - _held(KEY_A), _held(KEY_W) - _held(KEY_S))
 		if keyboard != Vector2.ZERO:
 			keyboard = keyboard.normalized()
@@ -345,4 +352,5 @@ func frame(delta: float) -> Dictionary:
 	_mouse_look = Vector2.ZERO
 	var verbs: Array[StringName] = _verbs.duplicate()
 	_verbs.clear()
-	return {"move": move, "look": look, "pendant": pendant, "verbs": verbs}
+	return {"move": move, "look": look, "pendant": pendant, "verbs": verbs,
+		"crouch_held": crouch_held}

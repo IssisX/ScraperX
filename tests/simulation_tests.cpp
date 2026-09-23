@@ -2149,5 +2149,96 @@ int main() {
               << " step_ups=" << stair_top.step_up_count
               << " rim_reach=" << rim_reach << '\n';
 
+    // Crouch (GDD 7.2, Governing Law 4). The crawl beam beside the traversal
+    // fixtures has its underside 1.45 m over the deck: under the standing
+    // capsule's 1.8 m, over the crouched one's 1.2 m. Standing, the beam
+    // stops the body at its face; crouched, it walks under; beneath it,
+    // letting go of crouch does not stand it up, and neither Jump nor Action
+    // does anything; walked out past it, it stands up by itself.
+    constexpr double kCrawlLaneX = -2.0;
+    constexpr double kCrawlBeamZ = -13.0;
+    constexpr double kCrawlBeamHalfZ = 0.3;
+    constexpr double kCrouchSpeedLimit = 5.5 * 0.45;
+    Simulation crouch(InitialSpawn::StaticDeck);
+    require(crouch.advance_frame(1.0).accepted, "crouch settling interval must be accepted");
+    require(crouch.snapshot().player_grounded && !crouch.snapshot().player_crouched,
+            "the crouch run must start standing on the deck");
+    const double standing_deepest = walk_toward(crouch, kCrawlLaneX, kCrawlBeamZ - 2.0, 5.0);
+    require(standing_deepest > kCrawlBeamZ + kCrawlBeamHalfZ,
+            "a standing capsule must not get under a beam 1.45 m over the deck");
+    walk_toward(crouch, kCrawlLaneX, kCrawlBeamZ + 3.0, 2.0);
+    require(crouch.set_move_input(0.0, 0.0), "crouch stop input must be accepted");
+    require(crouch.advance_frame(0.5).accepted, "crouch standing settle must be accepted");
+    const auto crouch_standing = crouch.snapshot();
+    require(crouch_standing.player_grounded && !crouch_standing.player_crouched,
+            "backing off the beam must leave the body standing");
+
+    require(crouch.set_crouch_input(true), "crouch input must be accepted");
+    require(crouch.advance_frame(0.3).accepted, "crouch interval must be accepted");
+    const auto crouched = crouch.snapshot();
+    const double crouch_drop = crouch_standing.player_position.y - crouched.player_position.y;
+    require(crouched.player_crouched && crouched.player_grounded,
+            "crouch held on the ground must crouch the body");
+    require(std::abs(crouch_drop - 0.3) < 0.03,
+            "crouching must lower the centre by 0.3 m and leave the feet where they were");
+
+    double crouched_top_speed = 0.0;
+    for (int i = 0; i < 4 * 90; ++i) {
+        const auto state = crouch.snapshot();
+        double dx = kCrawlLaneX - state.player_position.x;
+        double dz = kCrawlBeamZ - state.player_position.z;
+        const double len = std::hypot(dx, dz);
+        if (len < 0.05) {
+            break;
+        }
+        (void)crouch.set_move_input(dx / len, dz / len);
+        (void)crouch.set_facing(dx / len, dz / len);
+        (void)crouch.advance_frame(Simulation::kFixedStepSeconds);
+        crouched_top_speed = std::max(crouched_top_speed,
+                                      horizontal_magnitude(crouch.snapshot().player_linear_velocity));
+    }
+    require(crouch.set_move_input(0.0, 0.0), "crouch stop input must be accepted");
+    require(crouch.advance_frame(0.3).accepted, "crouch under-beam settle must be accepted");
+    const auto under = crouch.snapshot();
+    require(std::abs(under.player_position.z - kCrawlBeamZ) < 0.3 && under.player_crouched &&
+                under.player_grounded,
+            "a crouched capsule must walk in under the beam and stand on the deck there");
+    require(crouched_top_speed > 2.0 && crouched_top_speed < kCrouchSpeedLimit + 0.05,
+            "crouched walking must run at the crouch speed, not the standing one");
+
+    require(crouch.set_crouch_input(false), "crouch release must be accepted");
+    require(crouch.advance_frame(0.5).accepted, "crouch release interval must be accepted");
+    require(crouch.snapshot().player_crouched,
+            "under the beam, letting go of crouch must not stand the body up into it");
+    const double under_y = crouch.snapshot().player_position.y;
+    const auto rejected_before = crouch.snapshot().rejected_traversal_count;
+    require(crouch.request_jump(), "a jump request under the beam must be queued");
+    require(crouch.advance_frame(0.3).accepted, "under-beam jump interval must be accepted");
+    const auto after_jump = crouch.snapshot();
+    require(after_jump.player_crouched && after_jump.player_grounded &&
+                after_jump.player_position.y < under_y + 0.05,
+            "with no room to stand there is no jump");
+    require(crouch.request_traversal(), "a traversal request under the beam must be queued");
+    require(crouch.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "under-beam traversal tick must advance");
+    require(crouch.snapshot().rejected_traversal_count == rejected_before + 1 &&
+                crouch.snapshot().traversal_state == TraversalState::None,
+            "a traversal request with no room to stand must be refused, and counted");
+
+    walk_toward(crouch, kCrawlLaneX, kCrawlBeamZ - 2.0, 3.0);
+    require(crouch.set_move_input(0.0, 0.0), "crouch exit stop input must be accepted");
+    require(crouch.advance_frame(0.5).accepted, "crouch exit settle must be accepted");
+    const auto beyond = crouch.snapshot();
+    require(beyond.player_position.z < kCrawlBeamZ - kCrawlBeamHalfZ - 0.35,
+            "the released-crouch body must still walk on out from under the beam");
+    require(!beyond.player_crouched && beyond.player_grounded &&
+                std::abs(beyond.player_position.y - crouch_standing.player_position.y) < 0.03,
+            "clear of the beam, a released crouch must stand the body back up");
+
+    std::cout << "PASS scraperx_sim crouch: standing_deepest_z=" << standing_deepest
+              << " crouch_drop=" << crouch_drop << " crouched_top_speed=" << crouched_top_speed
+              << " under_z=" << under.player_position.z
+              << " stood_y=" << beyond.player_position.y << '\n';
+
     return EXIT_SUCCESS;
 }
