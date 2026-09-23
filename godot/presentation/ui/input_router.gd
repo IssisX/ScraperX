@@ -32,6 +32,14 @@ const LOOK_BOOST_DELAY := 0.3
 const LOOK_BOOST_RAMP := 0.35
 const LOOK_BOOST_MAX := 1.6
 const DEVICE_SWITCH_AXIS := 0.45
+# Gyro aim, the one polled input: a rate the platform refreshes continuously,
+# not held state that could stick. Godot's Android layer (4.7-stable,
+# GodotInputHandler.onSensorChanged) rotates the sensor into screen axes --
+# x right, y up, z out of the glass -- so turning the device right is a
+# negative rate about y, and tipping its top edge toward you, to look up, a
+# positive rate about x. Below this rate the turn is tightened toward zero,
+# so a steady hand's sensor noise does not drift the view.
+const GYRO_TIGHTEN_RADIANS_PER_SECOND := 0.035
 const TRIGGER_DEADZONE := 0.08
 const AXIS_COUNT := 6
 
@@ -47,6 +55,8 @@ var capture_mouse := true
 var look_sensitivity := 1.0
 var stick_sensitivity := 1.0
 var invert_y := false
+var gyro_aim := false
+var gyro_sensitivity := 1.0
 var touch: Node = null
 
 var _keys := {}
@@ -286,6 +296,21 @@ func _stick_look(stick: Vector2, delta: float) -> Vector2:
 		direction.y * curved * STICK_LOOK_PITCH_RATE) * stick_sensitivity * delta
 
 
+# 1:1 at sensitivity 1.0: turn the device 90 degrees and the view turns 90.
+func _gyro_look(delta: float) -> Vector2:
+	if not gyro_aim:
+		return Vector2.ZERO
+	var rate := Input.get_gyroscope()
+	# A non-finite sample would poison the yaw it accumulates into for good.
+	if not rate.is_finite():
+		return Vector2.ZERO
+	var turn := Vector2(-rate.y, -rate.x)
+	var speed := turn.length()
+	if speed < GYRO_TIGHTEN_RADIANS_PER_SECOND:
+		turn *= speed / GYRO_TIGHTEN_RADIANS_PER_SECOND
+	return turn * gyro_sensitivity * delta
+
+
 # One frame of intent. look is in radians with screen orientation (x right,
 # y down), exactly what the old _apply_look_delta consumed; move is x right,
 # y forward; pendant is x slew/drive, y raise(+)/lower(-).
@@ -309,6 +334,8 @@ func frame(delta: float) -> Dictionary:
 		look += _stick_look(_stick(JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y), delta)
 		if invert_y:
 			look.y = -look.y
+		# After the invert: tipping the device up is looking up for everyone.
+		look += _gyro_look(delta)
 		pendant += Vector2(_held(KEY_RIGHT) - _held(KEY_LEFT), _held(KEY_UP) - _held(KEY_DOWN))
 		pendant += Vector2(
 			_pad_button(JOY_BUTTON_DPAD_RIGHT) - _pad_button(JOY_BUTTON_DPAD_LEFT),

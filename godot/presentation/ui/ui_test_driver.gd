@@ -18,6 +18,7 @@ const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 const SCENARIOS := {
 	"touch_jump": 8,
 	"touch_move_look": 8,
+	"touch_gyro_aim": 8,
 	"touch_climb": 4,
 	"touch_vault": 3,
 	"touch_hang_drop": 5,
@@ -72,6 +73,8 @@ func _run() -> void:
 			ok = await _touch_jump()
 		"touch_move_look":
 			ok = await _touch_move_look()
+		"touch_gyro_aim":
+			ok = await _touch_gyro_aim()
 		"touch_climb":
 			ok = await _touch_climb(&"climb", 2)
 		"touch_vault":
@@ -158,6 +161,57 @@ func _touch_move_look() -> bool:
 	if speed > 0.6:
 		return _fail("player still moving %.2f m/s after the stick was released" % speed)
 	_detail = "forward_m=%.2f turned_rad=%.3f settle_mps=%.2f" % [along, turned, speed]
+	return true
+
+
+# Gyro aim is inert until the player turns it on; then the device's own
+# rotation, injected where the platform writes it, turns the view by rate x
+# time, and the native walk that follows heads where the view now faces.
+func _touch_gyro_aim() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not bool(ProjectSettings.get_setting("input_devices/sensors/enable_gyroscope", false)):
+		return _fail("project.godot does not enable the Android gyroscope sensor")
+	var yaw_off: float = _main._yaw
+	Input.set_gyroscope(Vector3(0.0, -1.0, 0.0))
+	await _frames(30)
+	Input.set_gyroscope(Vector3.ZERO)
+	if absf(_main._yaw - yaw_off) > 1.0e-6:
+		return _fail("the device turned the view with GYRO AIM off")
+	_main._settings.gyro_aim = true
+	_main._apply_settings()
+	# 30 frames of a fixed 60 fps clock at 1 rad/s right and 0.4 rad/s up.
+	var yaw_start: float = _main._yaw
+	var pitch_start: float = _main._pitch
+	Input.set_gyroscope(Vector3(0.4, -1.0, 0.0))
+	await _frames(30)
+	Input.set_gyroscope(Vector3.ZERO)
+	await _frames(2)
+	var turned: float = yaw_start - _main._yaw
+	var raised: float = _main._pitch - pitch_start
+	if absf(turned - 0.5) > 0.02:
+		return _fail("turning the device right turned the view %.3f rad, expected 0.500" % turned)
+	if absf(raised - 0.2) > 0.02:
+		return _fail("tipping the device up raised the view %.3f rad, expected 0.200" % raised)
+	await _pose("gyro_turned")
+	var yaw_before_bad: float = _main._yaw
+	Input.set_gyroscope(Vector3(NAN, INF, 0.0))
+	await _frames(3)
+	Input.set_gyroscope(Vector3.ZERO)
+	if not is_equal_approx(_main._yaw, yaw_before_bad) or not is_finite(_main._pitch):
+		return _fail("a non-finite gyro sample moved or corrupted the view")
+	var start := _position()
+	var forward := Vector2(-sin(_main._yaw), -cos(_main._yaw))
+	_stick_push(Vector2(0.0, -1.0))
+	await _seconds(0.6)
+	_touch(0, _main._touch.stick_home(), false)
+	var moved := _position() - start
+	var heading := Vector2(moved.x, moved.z)
+	if heading.length() < 1.0:
+		return _fail("stick moved the player only %.2f m" % heading.length())
+	var alignment := heading.normalized().dot(forward)
+	if alignment < 0.98:
+		return _fail("the walk heads %.3f off the gyro-turned view" % acos(clampf(alignment, -1.0, 1.0)))
+	_detail = "turned_rad=%.3f raised_rad=%.3f walk_alignment=%.4f" % [turned, raised, alignment]
 	return true
 
 
@@ -361,6 +415,14 @@ func _touch_pause() -> bool:
 	if _main._pause_menu.current_page() != &"controls":
 		return _fail("tapping CONTROLS did not open the controls page")
 	await _pose("pause_controls")
+	_click(_main._pause_menu.side_button_center(&"settings"))
+	await _frames(2)
+	if _main._pause_menu.current_page() != &"settings":
+		return _fail("tapping SETTINGS did not open the settings page")
+	var overflow: float = _main._pause_menu.settings_overflow()
+	if overflow > 0.0:
+		return _fail("the settings rows overflow their plate by %.0f px" % overflow)
+	await _pose("pause_settings")
 	_click(_main._pause_menu.side_button_center(&"resume"))
 	await _frames(3)
 	if get_tree().paused:

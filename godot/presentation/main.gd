@@ -532,6 +532,8 @@ func _apply_settings() -> void:
 	_router.look_sensitivity = _settings.look_sensitivity
 	_router.stick_sensitivity = _settings.stick_sensitivity
 	_router.invert_y = _settings.invert_y
+	_router.gyro_aim = _settings.gyro_aim
+	_router.gyro_sensitivity = _settings.gyro_sensitivity
 	_touch.set_touch_scale(_settings.touch_scale)
 	_set_telemetry_visible(_settings.telemetry or _ci_mode)
 

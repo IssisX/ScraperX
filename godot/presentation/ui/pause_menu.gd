@@ -85,6 +85,11 @@ func current_page() -> StringName:
 	return _page
 
 
+# Height the settings rows need beyond their plate; > 0 means clipped rows.
+func settings_overflow() -> float:
+	return _settings_page.get_combined_minimum_size().y - _content.size.y
+
+
 func _input(event: InputEvent) -> void:
 	if not visible:
 		return
@@ -364,7 +369,7 @@ func _controls_rows(view_family: int) -> Array:
 	if view_family == UiStyle.Family.TOUCH:
 		return [
 			["icon", &"move", "LEFT THUMB", "Move - the stick appears where you touch"],
-			["icon", &"look", "RIGHT THUMB", "Look - drag anywhere free, even from Jump"],
+			["icon", &"look", "RIGHT THUMB", "Look - drag anywhere, even from Jump; Gyro Aim tilts"],
 			["icon", &"jump", "JUMP", "Jump; climbs up while hanging"],
 			["icon", &"climb", "ACTION", "Climb a ledge, operate a pendant, work a valve"],
 			["icon", &"drop", "DROP", "Let go of a ledge (only while hanging)"],
@@ -433,6 +438,9 @@ func _build_settings_page() -> void:
 	_slider_row("STICK SENSITIVITY", &"stick_sensitivity", SettingsStore.STICK_SENSITIVITY_RANGE,
 		0.05, "%.2fx")
 	_toggle_row("INVERT LOOK", &"invert_y")
+	_toggle_row("GYRO AIM", &"gyro_aim")
+	_slider_row("GYRO SENSITIVITY", &"gyro_sensitivity", SettingsStore.GYRO_SENSITIVITY_RANGE, 0.05,
+		"%.2fx")
 	_slider_row("TOUCH CONTROL SIZE", &"touch_scale", SettingsStore.TOUCH_SCALE_RANGE, 0.05, "%.0f%%",
 		100.0)
 	_toggle_row("VIBRATION", &"vibration")

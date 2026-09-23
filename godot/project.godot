@@ -26,6 +26,9 @@ window/handheld/orientation=4
 [input_devices]
 
 pointing/emulate_touch_from_mouse=true
+; Read once at startup on Android (Godot.kt onGodotMainLoopStarted); the
+; in-game GYRO AIM setting decides whether the rate is used.
+sensors/enable_gyroscope=true
 
 [rendering]
 
