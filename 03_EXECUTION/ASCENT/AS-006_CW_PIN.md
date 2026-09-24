@@ -1,312 +1,220 @@
-# SCRAPERX — AS-006 CW PIN (K2)
+# SCRAPERX — AS-006 COUNTERWEIGHT WELL (B02, 154 → 220 m)
 
 **Ascent Slice:** `AS-006`
 **Lifecycle:** `PLANNED` — contract exists, no corresponding source
-**Provenance:** ⚠ **imported from `ScraperX-Grok`, NOT re-derived.** Reference provenance only
-**Implementation gate:** re-author against this branch first, then `AS-005` implemented
-**Evidence:** none. A plan is never implementation evidence.
-**Depends on:** `AS-001`–`AS-005`; `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5 row `AS-006`
-
-> **Provenance.** Adopted from `ScraperX-Grok`, where this slice was authored as `WO-014_CW_PIN`.
-> Ticket numbers remapped per `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5.1. Geometry, ratings and
-> falsifiers carry over as **DESIGN TARGET**: they were never proven in source on that branch
-> (it has not compiled since 2026-09-20). Positions are re-sited against this branch's tower
-> at source `(0, —, -150)`.
->
-> **`PORTED`, not authored.** Everything below still quotes `ScraperX-Grok` source
-> constants — geometry, entity ids and persist versions that do not exist on
-> `ScraperX-Claude`. Treat it as design intent, not as a job ticket. Re-derive it
-> against real exit state first, as `AS-002`, `AS-003` and `AS-004` were.
+**Provenance:** re-derived here, against `77a4364`, under
+`03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`. Replaces the plan imported from `ScraperX-Grok`
+(their `WO-014_CW_PIN`), whose geometry, ids and persist versions describe a world that does not
+exist here. The file name is kept so `MANIFEST.txt` stays true.
+**Implementation gate:** this write-up. The plan's rules §3 are this slice's test contract.
+**Depends on:** `AS-001`–`AS-003` in source and green; the tower stair walkable to 154 m.
 
 ## Objective
 
-Close atlas §7 **K2**: pull `MOD-CW-PIN` **or** ride `MOD-CW-STACK` **or** climb west SKIN to 220 m.
-
-Pin pulled → stack mass/travel change → dumped block is a new body on a timber catch → ride or climb that ledge.
-
-This is not wet isolation. This is not `CAP-BLIND`. This is not TP-340.
+The first band of the mechanism ascent: from the tower stair's 154 m top deck to the 220 m ring,
+the top of Atlas band B02, *Counterweight Well*. Every lift in it runs on a counterweight: a skip,
+a derrick boom's own weight, a dumpster filled with rubble. Each is found unlinked, the player
+supplies the link and sets it off, and what each leaves behind feeds its neighbours. The band also
+has a climbing route that needs no lift.
 
 ## Existing truth
 
-After `AS-005` is in source:
+Measured from the native world at `77a4364` (bodies probed; `world_solids.inc` is the frame's
+source).
 
-- TP-120 ring around well `(-1.76, 120.00, 25.30)`
-- 120 m SKIN ring with **west stub** `(-17.00, 120.00, 25.30)`
-- `MOD-CAGE-1` lands at 120 only with `CAP-NEEDLE`; it is not the 120–220 elevator
-- well opening 5.00 × 5.00
-- last IDs after SKIN-E / TP-120 (coding assigns after that file’s last id)
-- persist v4
-- Fold-device execution is not proven
+| Datum | Value |
+|---|---|
+| Stair top deck (native `build_stack`, level 14) | top `154.00`; north band `x ∈ [-26, 26]`, `z ∈ [-133, -124]`; east and west bands `x ∈ ±[17, 26]`, `z ∈ [-167, -133]`; the stair arrives on the south band |
+| Well guard rail at 154 m | posts at `z = -133` and `z = -167`, `x ∈ {-17, -8.5, 0, 8.5, 17}`, and along `x = ±17`; top rail `155.01–155.09` |
+| Frame above 154 m (`world_solids.inc`) | tapering continuation to 418 m: corner columns, diagonal braces on the north and south faces, ring decks 4 m wide at every second level |
+| Ring 176 (top `176.25`) | north `z ∈ [-128.91, -124.91]`; south `z ∈ [-175.09, -171.09]`; sides `x ∈ ±[21.09, 25.09]` |
+| Ring 198 (top `198.25`) | north `z ∈ [-129.82, -125.82]`; south `z ∈ [-174.18, -170.18]`; sides `x ∈ ±[20.18, 24.18]` |
+| Ring 220 (top `220.25`) | north `z ∈ [-130.73, -126.73]`; south `z ∈ [-173.27, -169.27]`; sides `x ∈ ±[19.27, 23.27]` |
+| Open well | inside the rings' inner edges; nothing stands in it from 154 m up |
+| Reachable ceiling | 154 m walked in CI; 156.1 m upper bound over every body top (`tests/probes/ceiling`) |
+| Movement | walk, jump, vault, mantle, ledge hang, crouch, carry, parachute. **No** sprint, climb, shimmy or balance yet (plan §5 Step 2) |
+| Rigging | carry exists (`AS-003`); ropes exist only as fixed kernel links (`PulleyConstraint` on the treadle cable). **No** hook, pin, trip line, governor, breakable or flow kit yet |
 
-Atlas: band B02 has **no** Transfer Plate. 220 is a well-head landing inside `MOD-WELL-LEDGES`, not a new TP id.
+## Band layout
 
-Until AS-005 is coded, this file still inherits AS-004 geometry plus the DESIGN TARGET exit of AS-005. Do not implement this file before AS-005 is in source.
+Plan view, north up (−z is south). Every stage stands on or beside the north side of the well,
+where the stair's top deck is 9 m deep and the rings above step in by 0.9 m per 22 m.
 
-## Authority
+```
+ z=-124  ───────── 154 north deck (9 m) ─────────
+         [ A cage ][ B cage ]        C platform
+ z=-131  x -12..-9  x -8.7..-5.7     (198 ring, east)
+ z=-133  ── guard rail ── well ──────────────────
+         [ A skip ]                  [ C dumpster shaft above A ]
+```
 
-- Laws 2–7, 11–18, 21–27, 29, 32
-- GDD §§7.2–7.4, 11, 15–17, 23–24
-- Atlas §§3, 5 (band B02 has no TP), 6 band B02, 7 K2, 8.1, 8.3, 12, 13
-- TDD §§6, 8–11, 14
-- `AS-005_CAGE_OR_SKIN.md` §8.12
-- protocol AS-006
+| Stage | Archetype | Travel | Payload | Source of energy | Kind |
+|---|---|---|---|---|---|
+| **A — skip lift** | 01 counter-mass | 154.25 → 176.25 | cage 350 kg + rider | 800 kg skip, 22 m | re-armable |
+| **B — derrick boom** | 13, the boom as a swinging counterweight | 176.25 → 198.25 | cage 350 kg + rider | 2 500 kg lattice boom, centre of mass falls 11 m | one-shot |
+| **C — debris chute** (finale) | 12 debris-chute counterweight, cascading into A | 198.25 → 220.25 | platform 700 kg + rider | 900 kg of rubble in a dumpster, 44 m on a 2:1 purchase | one-shot source; its leftover re-arms A |
 
-## Owner
+### Links between stages (what each leaves behind)
 
-Native 90 Hz C++/Jolt. Godot presents.
+- **A → B.** A's cage, parked at the top of its travel, is the step into B's cage, which hangs 0.3 m
+  east of it at 176 m. From the 176 ring the gap to B's cage is 1.1 m: a jump, legal but not the
+  designed way.
+- **B → the band.** B's boom, once its guy has gone, hangs vertically from its pivot at 222 m down
+  to 200 m: a lattice you can climb from the 198 ring to a landing at the 220 ring. The wreckage
+  is a second way up the last section.
+- **C → A.** C's dumpster falls 44 m and stops just above A's parked cage. Its bottom gate trips on
+  the stop and the rubble drops into A's cage. A's cage then outweighs A's skip, sinks to 154 m,
+  and hauls the skip back up into its catch. The finale's leftover re-arms the band's first lift.
+- **The cascade.** One pull on C's chute gate: rubble fills the dumpster → the dumpster sinks and
+  lifts the platform to 220 m → it dumps into A's cage → A's cage sinks → A's skip is re-armed.
 
-## Allowed seam
+## Stage A — skip lift
 
-New bodies: `MOD-CW-STACK` (4 blocks), `MOD-CW-PIN`, timber catch, `MOD-DRUM-LOW` at 128 m, drum-access treads 120→128, `MOD-WELL-LEDGES`, SKIN-W rungs 120–220.
+**Found:** a steel cage on the 154 north deck at `x ∈ [-12.0, -9.0]`, `z ∈ [-132.8, -130.0]`, on
+vertical guides. In the well beside it, an 800 kg skip of steel billets hangs 22 m up, held in a
+catch. Its rope runs over head sheaves above the cage and down to a shackle hanging beside the
+cage's lifting eye. The rope is taut on the catch; nothing moves.
 
-Reuse: kinematic moving support (belt/cage class), carryable 32 kg (hook5 class), persist.
+**Missing link:** the shackle is not on the cage. The player takes it (carry) and hooks it onto the
+cage's eye (Action).
 
-Do not retitle kernel screw/cage as the stack. Do not add `MOD-HEADER-W`. Do not author TP-340.
+**Trigger:** a trip line from the skip's catch lever hangs to a handle on the deck. The player grabs
+the handle and pulls; the lever turns and the catch releases once the pin has left its hole.
 
-## Required causal path
+**Ride:** the skip falls 22 m; the cage rises 22 m. Net force with a rider is
+`(800 − 435) × 9.81 = 3 581 N`. A speed governor on the cage guide (a motor that can only brake,
+never push) holds the cage to 2.5 m/s; a sprung buffer stops it with the floor flush at 176.25.
 
-Ride (pin in):
+**Energy:** the skip releases `800 × 9.81 × 22 = 172.7 kJ`; the cage and rider gain
+`435 × 9.81 × 22 = 93.9 kJ`. The governor turns the rest into heat.
 
-    ACT[board stack top from TP-120; run MOD-DRUM-LOW]
-      → STATE[stack_top_y increases; 4 blocks, 16000 kg]
-      → WORLD[travel clamped to 188.00 m while pin is in]
-      → PLAY[moving support to 188; jump inherits stack v]
+**Other links:** the shackle on the cage lifts the cage. On the deck's ring bolt it holds the skip
+up and nothing moves. On a load heavier than 800 kg nothing lifts.
 
-Pin (K2):
+**Re-arming (physics decides: the skip survives).** Put 22 m of skip height back: load A's parked
+cage until it outweighs the skip. C's rubble does this (above). The cage sinks under the same
+governor, the skip rises into its catch and latches (a spring catch that closes when the skip is
+seated and slow), and the player tips the rubble out of the cage bed at 154 m.
 
-    ACT[pull MOD-CW-PIN while stack braked]
-      → STATE[pin body leaves the stack; bottom block detaches]
-      → WORLD[dumped block seated on catch at y = 136; remaining 3 blocks 12000 kg; travel max = 220.00]
-      → PLAY[climb the dumped block + well ledges, or ride the lighter stack to 220]
+## Stage B — derrick boom
 
-SKIN skip:
+**Found:** a construction derrick on the 198 north ring. Its 22 m lattice boom (2 500 kg) is
+pivoted at 222 m and held horizontal over the well by a rusted guy to the mast head. The boom's
+hoist line runs from a two-part block on the boom's tip over a fixed block above B's cage
+(`≈ 209.5 m`) and down to a shackle beside B's cage, which rests on its bottom stop at 176 m,
+0.3 m east of A's cage top position.
 
-    ACT[from 120 west stub, climb SKIN-W]
-      → STATE[support = SKIN-W rungs]
-      → WORLD[220 west head reachable; stack pose unchanged]
-      → PLAY[AS-007 entry without K2]
+**Missing link:** hook the hoist line's shackle onto B's cage.
 
-Stitch from previous:
+**Trigger:** the guy's turnbuckle pin, pulled by a trip line from inside B's cage.
 
-    TP-120 east/north remainders → walk to well lip → stack top is the next floor
-    120 west stub → SKIN-W is the next ladder
-    cage at 120 is parked north; it does not become the stack
+**Ride:** the boom swings down. Its weight's moment, `2 500 × 9.81 × 11 × cos φ`, exceeds the line's
+demand at every angle until the cage reaches its top: a statics sweep over block positions finds
+the cage's 22 m reached at `φ ≈ 48°` with a least margin of ~114 kN·m (two-part purchase). The cage
+governor holds 3 m/s.
 
-Stitch to next:
+**One-shot (physics decides: the source is destroyed).** At the top buffer the line's tension rises
+past its rating and it parts. The boom swings on to hang vertically against the mast. The guy and
+the line are both gone, so nothing puts the boom back. B's cage stays at 198 on its safety dogs
+(a spring catch on the guide). The hanging boom is the climbable wreckage (above).
 
-    220 well-head ledge and 220 SKIN-W head are AS-007’s floor
+**Energy:** the boom's centre of mass falls 11 m: `2 500 × 9.81 × 11 = 269.8 kJ`; the cage and rider
+gain 93.9 kJ.
 
-## Forbidden shortcuts
+## Stage C — debris chute (finale cascade)
 
-- `pin_pulled` flag as WORLD without the block body on the catch
-- stack teleport 120→220
-- SKIN-W walled off because the pin is in
-- using `MOD-CAGE-1` stroke above 120
-- animation dump
-- claiming Fold-device execution
+**Found:** a platform on the 198 north ring's east half, on guides to 220 m, hung by a 2:1 rope
+over a sheave at ≈ 224 m from a steel dumpster (250 kg empty) in a shaft directly above A's cage.
+A rubble hopper on the 220 ring holds 900 kg; its chute mouth is over the dumpster, jammed shut by
+a length of rebar.
 
-## Implementation scope
+**Missing link:** the dumpster's bail is off the rope's hook: hook it.
 
-Native + falsifiers; Godot twins; persist v5.
+**Trigger:** pull the rebar (trip line from the platform).
+
+**Ride:** rubble flows into the dumpster at 150 kg/s (a declared simplified granular model: mass
+moves from the hopper's inventory to the dumpster body; the stream is drawn). Empty, the dumpster
+cannot lift the platform: on the 2:1 purchase it must exceed `(700 + 85) / 2 = 392.5 kg`. Filled,
+it sinks 44 m while the platform rises 22 m under a 3 m/s governor, and the platform's dogs catch
+it at 220.25.
+
+**Energy:** rubble and dumpster fall 44 m: up to `1 150 × 9.81 × 44 = 496 kJ`; platform and rider gain
+`785 × 9.81 × 22 = 169.4 kJ`.
+
+**Cascade into A:** described under Links. C's source (the hopper's rubble) is spent: one-shot. Its
+wreckage is the emptied dumpster hanging above A's cage, climbable.
+
+## Climbing route, no lift
+
+Built from the Step 2 moves on structure of each kind, all on the west half of the well:
+
+| Section | Structure | Moves |
+|---|---|---|
+| 154 → 176 | a rung ladder at the 154 west band's inner edge, topping out at the 176 ring's edge | climb, mantle |
+| 176 → 198 | a vertical standpipe beside the 176 west ring, a shimmy along the 198 ring's edge to a gap in its rail | climb, shimmy, mantle |
+| 198 → 220 | a narrow beam across the well's south-west corner to a scaffold lattice panel rising to the 220 ring | balance, climb, mantle |
+
+Sprint and controlled drops are exercised between stages on the band's decks and rings.
+
+## Kit this slice builds
+
+Native, in a mechanism module owned by the physics world (plan §4):
+
+- **Ropes:** tension-only `PulleyConstraint`s with a fixed length, retargetable ends, and a ratio
+  for purchases. An end is either on a body's anchor or on a loose shackle body the player can
+  carry.
+- **Anchors:** named points on bodies (eyes, lugs, bails, ring bolts) with a hook radius.
+- **Guides:** `SliderConstraint`s with sprung end buffers, a two-way speed governor (a velocity
+  motor whose force limits are set each tick so it only ever opposes motion), and spring catches
+  that latch a seated, slow body.
+- **Catches and pins:** a constraint that exists while its pin is seated; a pin lever on a hinge that
+  a trip line turns.
+- **Trip lines and handles:** a rope from a handle body to a lever; the player pulls a handle with a
+  force-limited grip (`≤ 900 N`).
+- **Breakables:** a constraint removed when its solver impulse exceeds its rating over a step.
+- **Granular flow:** mass moved between bodies at a rate while a gate is open and the receiver is
+  under the stream.
+- **Energy ledger:** per stage, the source's potential-energy loss and the payload's gain, from
+  body states every step.
+- **Generic presentation:** every mechanism body and rope is declared by the native side (shape,
+  size, material class) and drawn by Godot from that declaration. Nothing is authored twice.
+
+Player verbs, all on the contextual Action (touch Action button, pad X, keyboard E): take a shackle
+(existing pick-up), **HOOK** it onto an anchor, **UNHOOK** a slack one, **GRAB** a handle and pull,
+**LET GO**. The HUD names the verb.
+
+## Falsifiers
+
+Groups in `tests/simulation_tests.cpp`, each printing a `PASS scraperx_sim AS-006 …` line that CI
+gates:
+
+1. **A no link, no lift** — pull A's trip line with the shackle unhooked: the skip falls, the cage
+   stays within 0.05 m of 154.25.
+2. **A ride** — hook, pull, ride from the deck: the rider stays grounded on the cage all the way;
+   the cage stops with its floor at 176.25 ± 0.05; its speed never exceeds 2.6 m/s; the rider's
+   and cage's energy gain is below the skip's release.
+3. **B no link, no lift**, and **B ride** — step from A's cage into B's cage, hook, pull: the cage
+   reaches 198.25; the line parts; the boom hangs within 5° of vertical; the cage is held at 198 by
+   its dogs; energy as in 2.
+4. **C and the cascade** — hook, pull the rebar: the platform reaches 220.25 and is held; the rubble
+   ends in A's cage; A's cage sinks to 154.25; A's skip is latched at its catch; with the rubble
+   tipped out, A lifts a rider to 176.25 again.
+5. **Climbing route** — from the 154 deck to the 220 ring with no lift touched.
+6. **Band, one run** — from the 154 deck to the 220 ring through A, B and C, driven only by player
+   inputs.
+7. **Checkpoint** — a lethal fall after A fires restores the rope, the catch and every stage body to
+   the committed state.
+8. **Prior** — every existing group, the Fold capture and the uitests unchanged.
 
 ## Out of scope
 
-`AS-007_WET_ISOLATION`. `CAP-BLIND`. `CAP-DOGKEY` (no new SHAFT cage landing this band). Fold 45 FPS. Art/VO. Reopening TP-120.
+Bands above 220 m (`AS-007`–`AS-009`). Fluids (B03). The Fold device.
 
-## Proof path
+## Exit state
 
-§8.11 tests; screenshot stack in the same well as the cage; kernel + AS-001–013 tests green. Result pending.
-
-## Completion
-
-- stack top is standable at y = 120.20 at spawn
-- drum at 128 m drives it; finite; brake holds
-- pin in: max y = 188.00; 4 blocks remain one welded stack
-- pin out: one 4000 kg block on catch at 136 m, climbable; remaining stack max y = 220.00
-- well ledges every 8 m, climbable
-- SKIN-W 120–220 real support
-- 220 well-head standable; commit there
-- Fold unverified
+The player stands on the 220 ring, arrived by A → B → C, by the climbing route, or by B's wreckage.
+A may be re-armed; B and C are spent. `AS-007` (B03, 220 → 340) begins from the 220 ring.
 
 ## Result record
 
 pending.
-
----
-
-## Mechanical close
-
-### 8.1 Identity
-
-| Field | Value |
-|---|---|
-| Atlas band | B02 Counterweight Well 120–220 |
-| Slice | K2 pin + stack ride + SKIN-W |
-| Live braids | SHAFT (stack). SKIN (west). FLOW not live |
-| Transfer Plate | none new. TP-120 inherited. 220 well-head is a refuge ledger (atlas §8.1) |
-| Modules | `MOD-CW-STACK`, `MOD-DRUM-LOW`, `MOD-CW-PIN`, `MOD-WELL-LEDGES` |
-| Forbidden | `MOD-HEADER-W`, `MOD-SUMP-3`, `MOD-BLIND-STATION`, `MOD-GIRDER-T` |
-| Capability consumed | none required. `CAP-NEEDLE` only affects whether the player arrived by cage |
-| Capability authored | none |
-
-### 8.2 Entry state
-
-- player **can** be on TP-120 or 120 west stub (or still in AS-004/013)
-- well xz `(-1.76, 25.30)`
-- cage may sit parked north of the well after a land; treat as parked kinematic furniture
-- west stub standable
-
-### 8.3 Geometry
-
-Well frozen. Stack must fit: plan 3.10 × 3.10.
-
-**Authoritative occupancy:** stack xz = `(-1.76, 25.30)`. After a legal land, AS-005 parks the cage north. If the player arrived by SKIN, the well is already empty at 120.
-
-#### MOD-CW-STACK (DESIGN TARGET)
-
-    xz = (-1.76, 25.30)
-    4 blocks, each half (1.55, 1.25, 1.55), mass 4000 kg
-    block i height center = stack_top_y - 1.25 - 2.50*i   # i = 0 top … 3 bottom
-    stack_top_y ∈ [120.20, 220.20] after pin-out
-    stack_top_y ∈ [120.20, 188.20] pin-in
-    speed: 4 blocks 0.55 m/s; 3 blocks 0.70 m/s
-    raise force:
-        F_4 = 16000 * 9.81 = 156960 N
-        F_3 = 12000 * 9.81 = 117720 N
-        F_rated = 160000 N  (DESIGN TARGET; stalls if extra freight is slung)
-
-Player stands on top block. Moving support rank 2. Jump inherits v.
-
-#### MOD-CW-PIN
-
-    mass 32 kg (atlas 25–40 kg unaided)
-    seated in top block, local (0.55, 0.20, 0.00)
-    pickup radius 1.20 m
-    pull only if stack |v| < 0.05 m/s and brake on
-    after pull: carryable like CAP-HOOK5. Not a mission flag.
-
-#### Timber catch
-
-    source (-1.76, 136.00, 22.50)
-    half (2.00, 0.20, 0.80)
-    climbable
-    dumped block snaps kinematic onto it, top ≈ 138.50 (2.5 m block)
-
-#### MOD-DRUM-LOW
-
-    room slab (4.00, 128.00, 31.00), half (4.00, 0.20, 3.00)
-    lever local, radius 3.00 m (inherit cage lever law)
-    access treads 120→128: inherit `kB00StairDY = 0.353`, `kB00StairDZ = 0.320`, 23 treads, run north from TP-120 north remainder
-    i = 1…23: y = 120.20 + 0.353*i, z = 31.29 + 0.320*i, x = -1.76
-    last y = 128.32
-
-This is the CW drum. It is not the cage winch in the pit at y = 4.
-
-#### MOD-WELL-LEDGES
-
-    y = 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 220
-    each: x = -4.90 (west lip), z = 25.30, half (0.80, 0.12, 1.20)
-    climbable, player + 40 kg
-    220 ledge is the **well-head**: extend half x to 4.00 so it meets AS-007’s north walk
-
-#### SKIN-W 120–220
-
-    x = -17.00
-    z = 25.30
-    y_top(i) = 120.20 + 0.400 * i
-    i = 1…250
-    last = 220.20
-    start overlaps 120 west stub
-
-### 8.4 Mechanism
-
-Drum lever: Raise / Lower / Brake (same toggle class as campaign cage).
-
-Pin-in travel: clamp stack_top_y to 188.20. At 188, stall `at_limit`. Ledges still exist above; player can step off at 184/188 and keep climbing.
-
-Pin-out: bottom block (i=3) becomes independent kinematic, snaps to catch (needle-seat class). Remaining three: clamp max 220.20.
-
-Catch exists before the dump. Do not drop 4000 kg as an un-held dynamic onto the player.
-
-Energy 3-block 120→220: `117720 N × 100 m = 11.8 MJ` over 100/0.70 ≈ 143 s. Mean power ~82 kW. DESIGN TARGET for the drum room.
-
-### 8.5 Occupancy
-
-| Envelope | Effect |
-|---|---|
-| pin in, command up, y → 188 | stall at_limit |
-| pin out, command up, y → 220 | stall at_limit |
-| raise with brake on | stall |
-| player in drum lever radius | drum live |
-| dumped block vs catch | snap; climbable |
-| SKIN-W | always legal |
-| cage vs stack AABB | after land, cage parks north; SKIN arrival: cage not in well |
-
-### 8.6 Causal path
-
-See Objective. Next file starts on 220 well-head **or** 220 SKIN-W head.
-
-### 8.7 Support handoff
-
-| Step | Member | Y | Type | Inherit v? |
-|---|---|---|---|---|
-| 0 | TP-120 / 120 west stub | 120.20 | static | no |
-| 1a | stack top | 120–220 | kinematic | **yes** |
-| 1b | SKIN-W | 120–220 | static | no |
-| 1c | dumped block + ledges | 136+ | static/kinematic | no |
-| 2 | 220 well-head | 220.20 | static | no |
-
-### 8.8 Failure
-
-| Trigger | World | Can | Must not |
-|---|---|---|---|
-| miss stack while moving | fall in well | chute; ledges | kill plane at 120 |
-| pin pulled in motion | rejected; pin stays | brake first | dump while slewing |
-| flag `pin_pulled` | no new body | — | walking empty catch |
-
-Well opening 5.00 vs capsule 0.70: chute **is** geometrically legal. Do not fake-deny.
-
-### 8.9 Recovery
-
-- never pull pin: ride to 188, climb ledges 188→220, or SKIN-W
-- never board stack: SKIN-W from 120 stub
-- dumped block: new floor at 136; down-climb ledges or stack
-- fall: apron field; TP-120 catch if they steer
-- two-way SKIN-W and ledges
-
-### 8.10 Persist
-
-Version 5. Import ≤4: pin in, 4 blocks, stack_top = 120.20.
-
-Fields:
-
-- `stack_top_y`, `stack_command`, `stack_brake`
-- `cw_pin_x,y,z`, `cw_pin_held`, `cw_pin_in_stack`
-- `block3_x,y,z`, `block3_dumped`
-
-Commit: dwell on 220 well-head or SKIN-W y ≥ 220.00. Also inherit TP-120 commits.
-
-### 8.11 Falsifiers
-
-1. `wo014_stack_is_support` — board at 120; drum raise; support_entity_id is stack; support v.y > 0.
-2. `wo014_pin_in_caps_188` — pin in; cannot exceed 188.5.
-3. `wo014_pin_dump_is_a_body` — brake; pull pin; block3 on catch; player can stand on it at y ≥ 136; `cw_pin_in_stack` false.
-4. `wo014_pin_out_reaches_220` — after dump, stack_top ≥ 220.
-5. `wo014_skin_w_skips_pin` — pin still in; player y ≥ 220 on SKIN-W; stack_top still 120.2 ± 0.5.
-6. `wo014_flag_is_not_a_block` — commit without pull; catch has no standable dumped mass.
-7. `wo014_jump_inherits` — jump from moving stack; player vx/vz matches stack before air.
-8. `wo014_prior_still_pass` — AS-001–013 + kernel PASS.
-
-### 8.12 Exit state
-
-- player **can** stand at y ≥ 220 on well-head **or** SKIN-W
-- stack pose as left (pin in at ≤188, or dumped, or at 220)
-- 220 well-head ledge exists
-- `MOD-HEADER-W` / blinds / sump **do not** exist yet
-- TP-120 still exists below
-- next file: wet header on the north side of this 220 floor
-
----
-
-**Stop. Do not begin the next file inside this one.**  
-Next file: `03_EXECUTION/ASCENT/AS-007_WET_ISOLATION.md`
