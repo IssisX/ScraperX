@@ -4,8 +4,9 @@
 **Lifecycle:** `PLANNED` — contract exists, no corresponding source
 **Provenance:** re-derived against this branch
 **Implementation gate:** `AS-003` implemented and its exit revalidated in source.
-`AS-003` is in source at `8f9e954`; revalidation below is **blocked on a design
-decision** (§ Revalidation against source, finding 1).
+`AS-003` is in source at `8f9e954`. Revalidation found the tower stair reaches every height this
+slice serves; the owner chose (B) on 2026-09-24 — the stair stays — so this slice is **not the
+next job**. The ascent above the stair follows `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`.
 **Evidence:** none. A plan is never implementation evidence.
 **Depends on:** `AS-001` and `AS-002` in source and green; `AS-003` in source
 (`CAP-HOOK5` acquirable); kernel falsifiers green; protocol §8.
@@ -229,6 +230,11 @@ legitimate. So the decision is a design one, not a code one:
   to `96 m`.
 
 No `AS-004` code until one is chosen.
+
+**Chosen: (B)**, by the owner on 2026-09-24: *"if a route genuinely works in the world, it
+works in the game."* The stair stays, and the next work moved to
+`03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`. This slice's machine route may return later as
+an optional stage.
 
 **2. The hall deck alone cannot reach the racks.** `40.19 + 3.75` (the measured
 running jump-grab reach above the floor it leaves) `= 43.94 < 48.36`. With the
