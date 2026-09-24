@@ -176,9 +176,11 @@ measurement, falsifiers; Godot twins; persist v4; CI proof lines.
 
 ## Revalidation against source (`8f9e954`)
 
-Probed with white-box builds of `simulation.cpp` outside the repo, planned
-members added as static boxes at their §8.3 poses. Every number is observed
-output; none is a falsifier yet.
+Probed with white-box builds of `simulation.cpp`, planned members added as
+static boxes at their §8.3 poses. Every number is observed output; none is a
+falsifier yet. The probes are `tests/probes/as004/` on the staging branch
+`claude/android-game-dev-continue-m045pq` at `a185567`, outside CMake and CI;
+rebuilt there and re-run, each reproduced the figures below.
 
 **1. The tower's own stair is free from grade to `154 m`, and it touches this
 slice.** `build_stack()` is the tower's climbable lower section (entity `11`,
