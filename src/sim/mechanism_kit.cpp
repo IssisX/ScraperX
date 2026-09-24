@@ -16,9 +16,12 @@ namespace {
 constexpr float kSlackTensionNewtons = 60.0F;
 // How close a hand must be to a hooked end to take it off.
 constexpr float kUnhookReach = 1.3F;
-// Hooking may take up at most this much slack beyond the rope's length:
-// more, and the rope would have to stretch.
-constexpr float kHookLengthTolerance = 0.03F;
+// Hook feasibility needs a small solver margin because a caught multi-tonne
+// body can sit millimetres off its nominal seat under constraint load. Five
+// centimetres is ~0.1% of AS-006 B's 48.6 m line: enough to absorb numerical
+// seat deflection, far below gameplay-scale travel, and it creates no motor
+// or stored-energy source.
+constexpr float kHookLengthTolerance = 0.05F;
 // A rope over its rating for this many consecutive steps parts. One step
 // over is a contact spike, not a sustained load.
 constexpr std::uint32_t kPartSteps = 2;
