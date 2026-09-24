@@ -18,6 +18,8 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
     src/sim/steam_plant.cpp
+    src/sim/mechanism_kit.cpp
+    src/sim/band_counterweight_well.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)

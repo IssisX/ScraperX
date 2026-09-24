@@ -1,5 +1,8 @@
 #include "sim/simulation.hpp"
 
+#include "sim/bands.hpp"
+#include "sim/mechanism_kit.hpp"
+
 #ifndef SCRAPERX_HAS_JOLT
 #error "WO-003 requires the pinned Jolt physics substrate"
 #endif
@@ -35,6 +38,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <memory>
 #include <vector>
 #include <cmath>
 #include <limits>
@@ -976,6 +980,12 @@ constexpr float kCarryTurnRadiansPerSecond = 3.0F;
 // taken off the floor at the edge of reach starts over 1 m below the hands
 // and closes on them, so it is held.
 constexpr float kCarrySlipDistance = 0.90F;
+// AS-006: a hand holds a mechanism-kit body -- a shackle, a trip-line handle,
+// a load -- with at most this force. Pulled harder for kGripSteps steps
+// running, the body is torn out of the hands. The AS-003 bar and block keep
+// the slip rule above alone.
+constexpr float kGripNewtons = 900.0F;
+constexpr std::uint32_t kGripSteps = 2;
 
 // --- WO-013 Ascent Atlas v1.0 kernel: KX-SUMP / KX-GRATE -------------------
 // Atlas section 9: "wet sump makes KX-GRATE a hazard... isolated + drained
@@ -1149,7 +1159,9 @@ struct SupportSample final {
 // in contact with both, so support-relative locomotion picks the machine.
 [[nodiscard]] bool entity_is_moving_support(const std::uint64_t entity_id) noexcept {
     using Sim = scraperx::sim::Simulation;
-    return entity_id == Sim::kTranslatingSupportEntityId ||
+    // Mechanism-kit bodies that move are machines by construction.
+    return scraperx::sim::kit::is_dynamic_entity(entity_id) ||
+           entity_id == Sim::kTranslatingSupportEntityId ||
            entity_id == Sim::kRotatingSupportEntityId ||
            entity_id == Sim::kMovingLedgeEntityId ||
            entity_id == Sim::kHoistScoopEntityId ||
@@ -1409,6 +1421,9 @@ private:
         return {10.30, 1.0, static_cast<double>(kHook5MinZ) + 2.2};
     case scraperx::sim::InitialSpawn::Hook5Apron:
         return {static_cast<double>(kHook5MaxX) + 1.5, 1.0, static_cast<double>(kHook5MinZ) - 3.0};
+    case scraperx::sim::InitialSpawn::StairTop:
+        // The 154 m deck's north band, north of Stage A's cage.
+        return {-10.5, 155.0, -128.2};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1674,6 +1689,12 @@ public:
         // routes proven against them are contact-order sensitive.
         build_hook5_rack(bodies);
 
+        // AS-006: the mechanism ascent's bands, built last for the same
+        // reason: every body before them keeps its id.
+        kit_ = std::make_unique<scraperx::sim::kit::Kit>(physics_system_, object_layers::kStatic,
+                                                        object_layers::kMoving);
+        scraperx::sim::bands::build_counterweight_well(*kit_, well_);
+
         physics_system_.OptimizeBroadPhase();
 
         checkpoint_position_ = JPH::RVec3(0.0, 0.9, 0.0);
@@ -1703,6 +1724,7 @@ public:
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
         }
+        kit_.reset();
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
             if (constraint != nullptr) {
                 physics_system_.RemoveConstraint(constraint);
@@ -1746,6 +1768,7 @@ public:
         bool crouch_held = false;
         bool pick_up_requested = false;
         bool set_down_requested = false;
+        bool rig_requested = false;
         bool parachute_toggle_requested = false;
         double jib_slew_input = 0.0;
         double jib_hoist_input = 0.0;
@@ -1787,6 +1810,7 @@ public:
         facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
 
         update_crouch(bodies, commands);
+        update_rig(bodies, commands);
         update_carry(bodies, commands, delta_seconds);
         apply_traversal_commands(bodies, commands);
 
@@ -1814,8 +1838,10 @@ public:
             drive_traversal(bodies, delta_seconds);
         }
 
+        kit_->pre_step(delta_seconds);
         contact_listener_.begin_tick();
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
+        kit_->post_step(delta_seconds);
 
         SupportSample support = contact_listener_.sample();
         if (jump_started || traversal_state_ != TraversalState::None) {
@@ -1862,6 +1888,10 @@ public:
 
     [[nodiscard]] bool traversal_committed() const noexcept {
         return traversal_state_ != TraversalState::None;
+    }
+
+    [[nodiscard]] const scraperx::sim::kit::Kit &kit() const noexcept {
+        return *kit_;
     }
 
     void set_feed_enabled(const bool enabled) noexcept {
@@ -4118,8 +4148,12 @@ private:
                bearing;
     }
 
-    // The middle of the carried body's top face, in its own frame.
-    [[nodiscard]] static JPH::Vec3 carry_handle(const std::uint64_t entity) noexcept {
+    // The middle of the carried body's top face, in its own frame; a kit
+    // body's handle is where its build put it.
+    [[nodiscard]] JPH::Vec3 carry_handle(const std::uint64_t entity) const noexcept {
+        if (scraperx::sim::kit::is_kit_entity(entity)) {
+            return kit_->carry_handle(entity);
+        }
         return JPH::Vec3(0.0F,
                          entity == Simulation::kHook5BarEntityId ? kHook5BarHalfSection
                                                                  : kHook5BlockHalfY,
@@ -4143,20 +4177,27 @@ private:
             {hook5_bar_id_, Simulation::kHook5BarEntityId},
             {hook5_block_id_, Simulation::kHook5BlockEntityId},
         };
-        for (const auto &[id, candidate_entity] : carryables) {
+        const auto consider = [&](const JPH::BodyID id, const std::uint64_t candidate_entity) {
             const JPH::Vec3 to_body(bodies.GetCenterOfMassPosition(id) - at);
             const float distance = to_body.Length();
             if (distance > best_distance ||
                 bodies.GetLinearVelocity(id).Length() > kCarryMaxBodySpeed) {
-                continue;
+                return;
             }
             const JPH::Vec3 flat(to_body.GetX(), 0.0F, to_body.GetZ());
             if (flat.Dot(facing_) < 0.0F) {
-                continue;
+                return;
             }
             best = id;
             best_distance = distance;
             entity = candidate_entity;
+        };
+        for (const auto &[id, candidate_entity] : carryables) {
+            consider(id, candidate_entity);
+        }
+        kit_->carry_candidates(kit_carryables_);
+        for (const auto &candidate : kit_carryables_) {
+            consider(candidate.id, candidate.entity);
         }
         return best;
     }
@@ -4175,6 +4216,7 @@ private:
         }
         carried_id_ = id;
         carried_entity_ = entity;
+        grip_over_steps_ = 0;
         contact_listener_.set_carried_entity(entity);
     }
 
@@ -4208,6 +4250,17 @@ private:
                                                   bodies.GetLinearVelocity(player_id_);
             if (apart.Length() > kCarrySlipDistance && apart.Dot(separating_velocity) > 0.0F) {
                 release_carry();
+                return;
+            }
+            // The grip: the force the hands put through the carry on the
+            // last step.
+            if (scraperx::sim::kit::is_kit_entity(carried_entity_)) {
+                const float pull =
+                    carry_constraint_->GetTotalLambdaPosition().Length() / delta_seconds;
+                grip_over_steps_ = pull > kGripNewtons ? grip_over_steps_ + 1U : 0U;
+                if (grip_over_steps_ >= kGripSteps) {
+                    release_carry();
+                }
             }
             return;
         }
@@ -4231,7 +4284,71 @@ private:
             attach_carry(hook5_bar_id_, committed_entity);
         } else if (committed_entity == Simulation::kHook5BlockEntityId) {
             attach_carry(hook5_block_id_, committed_entity);
+        } else if (scraperx::sim::kit::is_kit_entity(committed_entity)) {
+            const scraperx::sim::kit::BodyIndex body = kit_->body_for_entity(committed_entity);
+            if (kit_->body_enabled(body)) {
+                attach_carry(kit_->body_id(body), committed_entity);
+            }
         }
+    }
+
+    // ---- AS-006 rigging ------------------------------------------------------
+    // Where the hands are this tick: the carry point, whether or not anything
+    // is held.
+    [[nodiscard]] JPH::RVec3 hand_position(const JPH::BodyInterface &bodies) const noexcept {
+        return bodies.GetPosition(player_id_) + carry_hand_offset(facing_);
+    }
+
+    // What the rig command would do now, from poses and the carry alone.
+    void find_rig_action(const JPH::BodyInterface &bodies) noexcept {
+        rig_action_ = 0;
+        rig_target_entity_ = 0;
+        rig_anchor_ = scraperx::sim::kit::AnchorIndex{};
+        rig_rope_ = scraperx::sim::kit::RopeIndex{};
+        if (traversal_state_ != TraversalState::None) {
+            return;
+        }
+        if (carry_constraint_ != nullptr) {
+            if (kit_->carry_kind(carried_entity_) != scraperx::sim::kit::CarryKind::Shackle) {
+                return;
+            }
+            rig_anchor_ = kit_->hook_target(carried_entity_);
+            if (rig_anchor_.valid()) {
+                rig_action_ = 1;
+                rig_target_entity_ = kit_->anchor_entity(rig_anchor_);
+            }
+            return;
+        }
+        if (!grounded_) {
+            return;
+        }
+        rig_rope_ = kit_->unhook_target(hand_position(bodies));
+        if (rig_rope_.valid()) {
+            rig_action_ = 2;
+            rig_target_entity_ = kit_->rope_shackle_entity(rig_rope_);
+        }
+    }
+
+    // Hook: the shackle leaves the hands and the rope's end goes onto the
+    // anchor. Unhook: the end comes off the anchor onto its shackle, in the
+    // hands.
+    void update_rig(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
+        if (!commands.rig_requested) {
+            return;
+        }
+        find_rig_action(bodies);
+        if (rig_action_ == 1) {
+            const std::uint64_t shackle = carried_entity_;
+            release_carry();
+            (void)kit_->hook(shackle, rig_anchor_);
+        } else if (rig_action_ == 2) {
+            const std::uint64_t shackle = kit_->unhook(rig_rope_);
+            const scraperx::sim::kit::BodyIndex body = kit_->body_for_entity(shackle);
+            if (kit_->body_enabled(body)) {
+                attach_carry(kit_->body_id(body), shackle);
+            }
+        }
+        find_rig_action(bodies);
     }
 
     // Crouch and stand (GDD 7.2, Governing Law 4). The body swaps capsules
@@ -4846,6 +4963,7 @@ private:
         affordance_ = {};
         carry_target_entity_ = 0;
         (void)carry_candidate(bodies, carry_target_entity_);
+        find_rig_action(bodies);
         // The probes measure rises from standing feet and test standing
         // landing poses; a crouched body is offered none (a request stands
         // it first, see update_crouch). Hands full, no ledge is offered at all.
@@ -4906,6 +5024,7 @@ private:
         checkpoint_.hook5_block = capture_body(bodies, hook5_block_id_);
         checkpoint_.carrying_entity = carried_entity_;
         checkpoint_.intake_pack_slung = intake_pack_slung_;
+        kit_->capture(checkpoint_.kit);
     }
 
     // WO-008 automatic commit (GDD 9.1): every tick the player is grounded on
@@ -4952,6 +5071,13 @@ private:
         restore_body(bodies, hook5_door_id_, checkpoint_.hook5_door);
         restore_body(bodies, hook5_bar_id_, checkpoint_.hook5_bar);
         restore_body(bodies, hook5_block_id_, checkpoint_.hook5_block);
+        // A kit body in the hands may be one the restore takes out of the
+        // world (a shackle hooked at the commit): let go of it first.
+        if (carry_constraint_ != nullptr &&
+            scraperx::sim::kit::is_kit_entity(carried_entity_)) {
+            release_carry();
+        }
+        kit_->restore(checkpoint_.kit);
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
@@ -5067,6 +5193,28 @@ private:
             JPH::Vec3(block_position - JPH::RVec3(kHook5BlockSeatX, kHook5BlockSeatY,
                                                   kHook5BlockSeatZ))
                 .Length() <= kHook5InRackTolerance;
+
+        state_.rig_action = rig_action_;
+        state_.rig_target_entity_id = rig_target_entity_;
+        switch (kit_->carry_kind(carry_target_entity_)) {
+        case scraperx::sim::kit::CarryKind::Shackle:
+            state_.carry_target_kind = 1;
+            break;
+        case scraperx::sim::kit::CarryKind::Handle:
+            state_.carry_target_kind = 2;
+            break;
+        default:
+            state_.carry_target_kind = 0;
+            break;
+        }
+        const auto &kit = *kit_;
+        state_.well_a_cage_travel = kit.guide_travel(well_.a_cage_guide);
+        state_.well_a_skip_travel = kit.guide_travel(well_.a_skip_guide);
+        state_.well_a_cage_peak_speed = kit.guide_peak_speed(well_.a_cage_guide);
+        state_.well_a_catch_latched = kit.catch_latched(well_.a_catch);
+        state_.well_a_rope_end_entity_id = kit.rope_end_entity(well_.a_rope);
+        state_.well_a_rope_tension_n = kit.rope_tension(well_.a_rope);
+        state_.well_a_lever_angle = kit.lever_angle(well_.a_lever);
 
         const JPH::RVec3 rope_tipper =
             bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
@@ -5202,6 +5350,15 @@ private:
     JPH::BodyID carried_id_;
     std::uint64_t carried_entity_ = 0;
     std::uint64_t carry_target_entity_ = 0;
+    std::uint32_t grip_over_steps_ = 0;
+    // AS-006: the mechanism kit and the bands built from it.
+    std::unique_ptr<scraperx::sim::kit::Kit> kit_;
+    scraperx::sim::bands::CounterweightWell well_{};
+    mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
+    std::uint8_t rig_action_ = 0;
+    std::uint64_t rig_target_entity_ = 0;
+    scraperx::sim::kit::AnchorIndex rig_anchor_;
+    scraperx::sim::kit::RopeIndex rig_rope_;
     JPH::Ref<JPH::HingeConstraint> hook5_door_hinge_;
     JPH::BodyID hook5_door_id_;
     JPH::BodyID hook5_bar_id_;
@@ -5322,6 +5479,8 @@ private:
         BodyCheckpoint hook5_bar{};
         BodyCheckpoint hook5_block{};
         std::uint64_t carrying_entity = 0;
+        // AS-006: every kit body, rope end, parted rope and catch.
+        scraperx::sim::kit::Kit::Checkpoint kit{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
@@ -5418,6 +5577,92 @@ bool Simulation::request_set_down() noexcept {
     return true;
 }
 
+bool Simulation::request_rig() noexcept {
+    rig_requested_ = true;
+    return true;
+}
+
+namespace {
+
+[[nodiscard]] Vector3 to_sim_vector(const JPH::Vec3 value) noexcept {
+    return {value.GetX(), value.GetY(), value.GetZ()};
+}
+
+[[nodiscard]] Quaternion to_sim_quaternion(const JPH::Quat value) noexcept {
+    return {value.GetX(), value.GetY(), value.GetZ(), value.GetW()};
+}
+
+} // namespace
+
+std::uint32_t Simulation::kit_body_count() const noexcept {
+    return physics_world_->kit().body_count();
+}
+
+std::uint64_t Simulation::kit_body_entity(const std::uint32_t body) const noexcept {
+    return physics_world_->kit().body_entity(kit::BodyIndex{body});
+}
+
+bool Simulation::kit_body_dynamic(const std::uint32_t body) const noexcept {
+    return physics_world_->kit().body_dynamic(kit::BodyIndex{body});
+}
+
+bool Simulation::kit_body_enabled(const std::uint32_t body) const noexcept {
+    return physics_world_->kit().body_enabled(kit::BodyIndex{body});
+}
+
+std::uint32_t Simulation::kit_body_part_count(const std::uint32_t body) const noexcept {
+    return static_cast<std::uint32_t>(
+        physics_world_->kit().body_parts(kit::BodyIndex{body}).size());
+}
+
+KitPart Simulation::kit_body_part(const std::uint32_t body, const std::uint32_t part) const noexcept {
+    const std::vector<kit::Part> &parts = physics_world_->kit().body_parts(kit::BodyIndex{body});
+    if (part >= parts.size()) {
+        return {};
+    }
+    const kit::Part &source = parts[part];
+    return {to_sim_vector(source.half), to_sim_vector(source.offset),
+            to_sim_quaternion(source.rotation), static_cast<std::uint8_t>(source.material)};
+}
+
+Vector3 Simulation::kit_body_position(const std::uint32_t body) const noexcept {
+    return to_sim_vector(physics_world_->kit().body_position(kit::BodyIndex{body}));
+}
+
+Quaternion Simulation::kit_body_rotation(const std::uint32_t body) const noexcept {
+    return to_sim_quaternion(physics_world_->kit().body_rotation(kit::BodyIndex{body}));
+}
+
+Vector3 Simulation::kit_body_velocity(const std::uint32_t body) const noexcept {
+    return to_sim_vector(physics_world_->kit().body_velocity(kit::BodyIndex{body}));
+}
+
+double Simulation::kit_body_mass(const std::uint32_t body) const noexcept {
+    return physics_world_->kit().body_mass(kit::BodyIndex{body});
+}
+
+std::uint32_t Simulation::kit_body_index(const std::uint64_t entity) const noexcept {
+    return physics_world_->kit().body_for_entity(entity).value;
+}
+
+std::uint32_t Simulation::kit_cable_count() const noexcept {
+    return physics_world_->kit().cable_count();
+}
+
+std::uint32_t Simulation::kit_cable_points(const std::uint32_t cable, Vector3 *out,
+                                           const std::uint32_t capacity) const noexcept {
+    if (out == nullptr) {
+        return 0;
+    }
+    std::vector<JPH::RVec3> points;
+    physics_world_->kit().cable_polyline(cable, points);
+    const auto count = static_cast<std::uint32_t>(std::min<std::size_t>(points.size(), capacity));
+    for (std::uint32_t index = 0; index < count; ++index) {
+        out[index] = to_sim_vector(points[index]);
+    }
+    return count;
+}
+
 bool Simulation::set_jib_slew_input(const double value) noexcept {
     if (!std::isfinite(value)) {
         return false;
@@ -5488,6 +5733,7 @@ void Simulation::step_fixed() noexcept {
     commands.crouch_held = crouch_input_;
     commands.pick_up_requested = pick_up_requested_;
     commands.set_down_requested = set_down_requested_;
+    commands.rig_requested = rig_requested_;
     commands.parachute_toggle_requested = parachute_toggle_requested_;
     commands.jib_slew_input = jib_slew_input_;
     commands.jib_hoist_input = jib_hoist_input_;
@@ -5505,6 +5751,7 @@ void Simulation::step_fixed() noexcept {
     parachute_toggle_requested_ = false;
     pick_up_requested_ = false;
     set_down_requested_ = false;
+    rig_requested_ = false;
     valve_toggle_requested_ = false;
     intake_sling_release_requested_ = false;
     intake_sling_attach_requested_ = false;

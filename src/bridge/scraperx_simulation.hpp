@@ -3,7 +3,10 @@
 #include "sim/simulation.hpp"
 
 #include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/variant/packed_float32_array.hpp>
+#include <godot_cpp/variant/packed_vector3_array.hpp>
 #include <godot_cpp/variant/quaternion.hpp>
+#include <godot_cpp/variant/transform3d.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 
 #include <memory>
@@ -143,6 +146,34 @@ public:
     [[nodiscard]] godot::Quaternion get_hook5_bar_rotation() const;
     [[nodiscard]] godot::Vector3 get_hook5_block_position() const;
     [[nodiscard]] godot::Quaternion get_hook5_block_rotation() const;
+
+    // AS-006 and the mechanism kit. request_rig is the contextual rig verb
+    // (hook a carried shackle onto the anchor in reach, or take a slack
+    // hooked end off); get_rig_action says which it would do now: 0 none,
+    // 1 hook, 2 unhook. get_carry_target_kind names what a pick-up would
+    // take: 0 a load, 1 a rope's shackle, 2 a trip-line handle.
+    [[nodiscard]] bool request_rig();
+    [[nodiscard]] std::int64_t get_rig_action() const;
+    [[nodiscard]] std::int64_t get_rig_target_entity_id() const;
+    [[nodiscard]] std::int64_t get_carry_target_kind() const;
+    // Every kit body as the native declares it, for a presentation that
+    // draws exactly what collides: its boxes as 11 floats each (half x y z,
+    // offset x y z, rotation x y z w, material class), and its pose.
+    [[nodiscard]] std::int64_t get_kit_body_count() const;
+    [[nodiscard]] std::int64_t get_kit_body_entity_id(std::int64_t body) const;
+    [[nodiscard]] bool is_kit_body_dynamic(std::int64_t body) const;
+    [[nodiscard]] bool is_kit_body_enabled(std::int64_t body) const;
+    [[nodiscard]] godot::PackedFloat32Array get_kit_body_parts(std::int64_t body) const;
+    [[nodiscard]] godot::Transform3D get_kit_body_transform(std::int64_t body) const;
+    [[nodiscard]] std::int64_t get_kit_body_index(std::int64_t entity_id) const;
+    // Cables: the kit's ropes, then its trip lines, each as the points it is
+    // drawn through. Empty for a parted rope.
+    [[nodiscard]] std::int64_t get_kit_cable_count() const;
+    [[nodiscard]] godot::PackedVector3Array get_kit_cable_points(std::int64_t cable) const;
+    // Stage A, the skip lift, read back.
+    [[nodiscard]] double get_well_a_cage_travel() const;
+    [[nodiscard]] bool is_well_a_catch_latched() const;
+    [[nodiscard]] std::int64_t get_well_a_rope_end_entity_id() const;
 
 protected:
     static void _bind_methods();

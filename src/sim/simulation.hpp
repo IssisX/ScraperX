@@ -94,6 +94,19 @@ enum class InitialSpawn : std::uint8_t {
     // clear of the belt's corridor. Isolates "grade and the apron's own raised
     // surfaces cannot reach the cage" from the belt that can.
     Hook5Apron = 23,
+    // AS-006 falsifier spawn: on the stair's 154 m top deck, north band, just
+    // north of Stage A's cage and facing it. The stair itself is proven by
+    // the world-solids group; the band's tests start where it ends.
+    StairTop = 24,
+};
+
+// One box of a mechanism-kit body, in the body's frame: what the presentation
+// draws and what collides are the same list.
+struct KitPart final {
+    Vector3 half{};
+    Vector3 offset{};
+    Quaternion rotation{};
+    std::uint8_t material = 0;
 };
 
 enum class TraversalState : std::uint8_t {
@@ -257,6 +270,23 @@ struct Snapshot final {
     Quaternion hook5_bar_rotation{};
     Vector3 hook5_block_position{};
     Quaternion hook5_block_rotation{};
+
+    // AS-006 and the mechanism kit. rig_action is what request_rig would do
+    // now: 0 nothing, 1 hook the carried shackle onto rig_target_entity_id,
+    // 2 take a slack hooked end off rig_target_entity_id into the hands.
+    // carry_target_kind names what a pick-up would take: 0 a load, 1 a
+    // rope's shackle, 2 a handle.
+    std::uint8_t rig_action = 0;
+    std::uint64_t rig_target_entity_id = 0;
+    std::uint8_t carry_target_kind = 0;
+    // Stage A, the skip lift, read back from its bodies and constraints.
+    double well_a_cage_travel = 0.0;
+    double well_a_skip_travel = 0.0;
+    double well_a_cage_peak_speed = 0.0;
+    bool well_a_catch_latched = true;
+    std::uint64_t well_a_rope_end_entity_id = 0;
+    double well_a_rope_tension_n = 0.0;
+    double well_a_lever_angle = 0.0;
 };
 
 struct AdvanceResult final {
@@ -371,6 +401,15 @@ public:
     static constexpr std::uint64_t kHook5BarEntityId = 55;
     static constexpr std::uint64_t kHook5BlockEntityId = 56;
 
+    // AS-006, the Counterweight Well. Mechanism-kit ids: band structure from
+    // 1000, moving bodies from 2000 (sim/mechanism_kit.hpp).
+    static constexpr std::uint64_t kWellAFrameEntityId = 1000;
+    static constexpr std::uint64_t kWellACageEntityId = 2000;
+    static constexpr std::uint64_t kWellASkipEntityId = 2001;
+    static constexpr std::uint64_t kWellAShackleEntityId = 2002;
+    static constexpr std::uint64_t kWellALeverEntityId = 2003;
+    static constexpr std::uint64_t kWellAHandleEntityId = 2004;
+
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
     static constexpr double kTowerHeightMeters = 1600.0;
@@ -406,6 +445,12 @@ public:
     // falls, rests, and can be picked up again where it lies.
     [[nodiscard]] bool request_pick_up() noexcept;
     [[nodiscard]] bool request_set_down() noexcept;
+
+    // AS-006 rigging. One-shot, contextual, as snapshot.rig_action says:
+    // with a rope's shackle in the hands, hooks it onto the anchor in reach
+    // (the rope keeps its length, so a hook the rope cannot reach is
+    // refused); with empty hands, takes a slack hooked end off its anchor.
+    [[nodiscard]] bool request_rig() noexcept;
 
     // Toggles the always-carried parachute. Only takes effect while airborne
     // (GDD 8.3); queued and resolved on the authoritative tick like every
@@ -460,6 +505,27 @@ public:
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
+    // Mechanism-kit read back, for the presentation and the falsifiers. Body
+    // indices run 0 .. kit_body_count() - 1 in build order.
+    static constexpr std::uint32_t kKitNone = 0xFFFFFFFFU;
+    [[nodiscard]] std::uint32_t kit_body_count() const noexcept;
+    [[nodiscard]] std::uint64_t kit_body_entity(std::uint32_t body) const noexcept;
+    [[nodiscard]] bool kit_body_dynamic(std::uint32_t body) const noexcept;
+    [[nodiscard]] bool kit_body_enabled(std::uint32_t body) const noexcept;
+    [[nodiscard]] std::uint32_t kit_body_part_count(std::uint32_t body) const noexcept;
+    [[nodiscard]] KitPart kit_body_part(std::uint32_t body, std::uint32_t part) const noexcept;
+    [[nodiscard]] Vector3 kit_body_position(std::uint32_t body) const noexcept;
+    [[nodiscard]] Quaternion kit_body_rotation(std::uint32_t body) const noexcept;
+    [[nodiscard]] Vector3 kit_body_velocity(std::uint32_t body) const noexcept;
+    [[nodiscard]] double kit_body_mass(std::uint32_t body) const noexcept;
+    [[nodiscard]] std::uint32_t kit_body_index(std::uint64_t entity) const noexcept;
+    // Cables are the kit's ropes, then its trip lines.
+    [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;
+    // Writes up to capacity points of the cable as drawn (first end, sheaves,
+    // other end) and returns how many; 0 for a parted rope.
+    [[nodiscard]] std::uint32_t kit_cable_points(std::uint32_t cable, Vector3 *out,
+                                                 std::uint32_t capacity) const noexcept;
+
 private:
     class PhysicsWorld;
 
@@ -478,6 +544,7 @@ private:
     bool crouch_input_ = false;
     bool pick_up_requested_ = false;
     bool set_down_requested_ = false;
+    bool rig_requested_ = false;
     bool parachute_toggle_requested_ = false;
     double jib_slew_input_ = 0.0;
     double jib_hoist_input_ = 0.0;

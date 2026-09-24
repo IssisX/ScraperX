@@ -37,6 +37,11 @@ const PLANT_RELEASE_DEFICIT := 0.24
 const TOP_PROBE_INSET := 0.12
 const GRIP_HALF_SPAN := 0.13
 const PALM_HALF_THICKNESS := 0.017
+# Outside a traversal a hand closes on its target no faster than a person
+# reaches, so taking a load, hooking it on or letting it go is a movement,
+# not a jump. The hand still rides its target's own motion. Traversal poses
+# keep their rates: a mantle lifts the eye ~1.5 m in 0.3 s.
+const REACH_SPEED := 4.0
 
 const POSE_REST := 0
 const POSE_RUN := 1
@@ -407,8 +412,9 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			hand.world_rotation = target_rotation_world
 			hand.initialized = true
 		var blend := 1.0 - exp(-rate * delta)
+		var reach_step := REACH_SPEED * delta if traversal == 0 else INF
 		if anchored:
-			hand.world_wrist = hand.world_wrist.lerp(world_wrist, blend)
+			hand.world_wrist = world_wrist + _close(hand.world_wrist - world_wrist, blend, reach_step)
 			hand.world_rotation = hand.world_rotation.slerp(target_rotation_world, blend)
 			if hand.world_wrist.distance_to(world_wrist) < 0.012:
 				hand.world_wrist = world_wrist
@@ -421,7 +427,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			var carried := inverse * hand.world_wrist if not hand.local_valid else hand.local_wrist
 			var carried_rotation := (inverse.basis * Basis(hand.world_rotation)).get_rotation_quaternion() \
 				if not hand.local_valid else hand.local_rotation
-			hand.local_wrist = carried.lerp(local_target, blend)
+			hand.local_wrist = local_target + _close(carried - local_target, blend, reach_step)
 			hand.local_rotation = carried_rotation.slerp(local_rotation_target, blend)
 			hand.world_wrist = camera * hand.local_wrist
 			hand.world_rotation = (camera.basis * Basis(hand.local_rotation)).get_rotation_quaternion()
@@ -626,8 +632,20 @@ func _update_risers(show: bool) -> void:
 # --- test hooks for the scripted --uitest proof --------------------------------
 
 
+# An offset from a target after one frame of closing on it: `blend` of it
+# taken off, but never more than `limit` metres.
+func _close(offset: Vector3, blend: float, limit: float) -> Vector3:
+	return offset - (offset * blend).limit_length(limit)
+
+
 func hand_poses() -> Array:
 	return _hands.map(func(hand: Hand) -> int: return hand.pose)
+
+
+# Where each rendered wrist is in the world this frame, for proofs that a
+# hand moves between poses instead of jumping.
+func wrist_positions() -> Array:
+	return _hands.map(func(hand: Hand) -> Vector3: return hand.world_wrist)
 
 
 # Worst distance between a rendered wrist and the point the native ledge

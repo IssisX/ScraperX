@@ -280,6 +280,12 @@ static func draw_icon(ci: CanvasItem, icon: StringName, c: Vector2, r: float, co
 				color, false, width)
 			ci.draw_line(c + Vector2(0.0, r * 0.02), c + Vector2(0.0, -r * 0.42), color, width, true)
 			triangle(ci, c + Vector2(0.0, -r * 0.5), r * 0.2, Vector2.UP, color)
+		&"hook":
+			# A rope coming down to an open hook.
+			ci.draw_line(c + Vector2(0.0, -r * 0.62), c + Vector2(0.0, r * 0.1), color, width, true)
+			ci.draw_arc(c + Vector2(-r * 0.2, r * 0.1), r * 0.2, 0.0, PI, 12, color, width, true)
+			ci.draw_line(c + Vector2(-r * 0.4, r * 0.1), c + Vector2(-r * 0.4, -r * 0.08), color, width, true)
+			disc(ci, c + Vector2(0.0, -r * 0.62), width * 0.9, color)
 		&"set_down":
 			# A load lowered onto a floor line.
 			ci.draw_line(c + Vector2(-r * 0.56, r * 0.6), c + Vector2(r * 0.56, r * 0.6), color, width, true)

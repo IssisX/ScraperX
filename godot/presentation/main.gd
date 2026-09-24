@@ -235,6 +235,18 @@ const HOOK5_BLOCK_SEAT_Z := HOOK5_MAX_Z - HOOK5_WALL - 0.45
 const HOOK5_BAR_ENTITY_ID := 55
 const HOOK5_BLOCK_ENTITY_ID := 56
 
+# AS-006: the mechanism kit's entity ids (sim/mechanism_kit.hpp): band
+# structure from 1000, bodies that move from 2000. What a kit body is, how
+# big, what it is made of and where it is all come from the native.
+const KIT_ENTITY_MIN := 1000
+const KIT_ENTITY_MAX := 3000
+const KIT_PART_FLOATS := 11
+const KIT_CABLE_SEGMENTS := 4
+const KIT_CARRY_SHACKLE := 1
+const KIT_CARRY_HANDLE := 2
+const RIG_HOOK := 1
+const RIG_UNHOOK := 2
+
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -351,6 +363,10 @@ var _legal_forty_sheave_b := Vector3.ZERO
 var _hook5_door_pivot: Node3D
 var _hook5_bar_node: Node3D
 var _hook5_block_node: Node3D
+var _kit_root: Node3D
+var _kit_bodies: Array[Node3D] = []
+var _kit_dynamic: Array[bool] = []
+var _kit_cables: Array = []
 var _sump_grate_safe_material: Material
 var _sump_grate_hazard_material: Material
 var _stack_gears: Array[Node3D] = []
@@ -460,6 +476,8 @@ func _ready() -> void:
 	if _ci_mode:
 		_yaw = atan2(-CI_APPROACH_FACING.x, -CI_APPROACH_FACING.y)
 		_pitch = 0.06
+
+	_build_kit()
 
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006")
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
@@ -815,6 +833,8 @@ func _perform_action() -> void:
 			_native.request_pick_up()
 		&"set_down":
 			_native.request_set_down()
+		&"hook", &"unhook":
+			_native.request_rig()
 		_:
 			# Nothing reported in reach: ask anyway, exactly as the old E key
 			# did. The native decides there is no ledge (and counts it).
@@ -859,22 +879,34 @@ func _read_context() -> Dictionary:
 	# both the native's own reading, never guessed here.
 	var carrying := int(_native.get_carrying_entity_id())
 	var carry_target := int(_native.get_carry_target_entity_id())
+	# AS-006: the native's own rig reading -- hook what is carried onto the
+	# anchor in reach, or take a slack hooked end off -- and what kind of
+	# thing a pick-up would take.
+	var rig := int(_native.get_rig_action())
+	var rig_target := int(_native.get_rig_target_entity_id())
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	if hanging:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
 	elif not free:
 		pass
+	elif carrying != 0 and rig == RIG_HOOK:
+		action = {"id": &"hook", "label": "HOOK", "icon": &"hook",
+			"detail": "ONTO " + _kit_anchor_name(rig_target)}
 	elif carrying != 0:
-		# Both hands are on it: set down is the only thing Action can do.
-		action = {"id": &"set_down", "label": "SET DOWN", "icon": &"set_down",
-			"detail": _carry_name(carrying)}
+		# Both hands are on it: letting go is the only thing Action can do.
+		action = {"id": &"set_down", "label": "LET GO" if _is_kit(carrying) else "SET DOWN",
+			"icon": &"set_down", "detail": _carry_name(carrying)}
 	elif _operating != &"":
 		action = {"id": &"done", "label": "DONE", "icon": &"done", "detail": ""}
 	elif grounded and carry_target != 0:
 		# Ahead of CLIMB: the rack under the block is itself a mantle ledge,
 		# and whoever faces the block means the block.
-		action = {"id": &"pick_up", "label": "PICK UP", "icon": &"pick_up",
+		var kind := int(_native.get_carry_target_kind())
+		var verb := "GRAB" if kind == KIT_CARRY_HANDLE else ("TAKE" if kind == KIT_CARRY_SHACKLE else "PICK UP")
+		action = {"id": &"pick_up", "label": verb, "icon": &"pick_up",
 			"detail": _carry_name(carry_target)}
+	elif grounded and rig == RIG_UNHOOK:
+		action = {"id": &"unhook", "label": "UNHOOK", "icon": &"hook", "detail": "ROPE END"}
 	elif climb_ok:
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
 			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
@@ -917,7 +949,23 @@ func _carry_center(entity: int) -> Vector3:
 		return _native.get_hook5_block_position()
 	if entity == HOOK5_BAR_ENTITY_ID:
 		return _native.get_hook5_bar_position()
+	if _is_kit(entity):
+		var body := int(_native.get_kit_body_index(entity))
+		if body >= 0:
+			return (_native.get_kit_body_transform(body) as Transform3D).origin
 	return Vector3.ZERO
+
+
+func _carry_half(entity: int) -> float:
+	if entity == HOOK5_BLOCK_ENTITY_ID:
+		return HOOK5_BLOCK_HALF
+	if _is_kit(entity):
+		var body := int(_native.get_kit_body_index(entity))
+		var parts: PackedFloat32Array = _native.get_kit_body_parts(body) if body >= 0 \
+			else PackedFloat32Array()
+		if parts.size() >= KIT_PART_FLOATS:
+			return clampf(parts[0], 0.08, 0.30)
+	return 0.18
 
 
 func _carry_name(entity: int) -> String:
@@ -925,7 +973,25 @@ func _carry_name(entity: int) -> String:
 		return "HOOK BLOCK"
 	if entity == HOOK5_BAR_ENTITY_ID:
 		return "DOOR BAR"
-	return ""
+	match entity:
+		2002:
+			return "ROPE SHACKLE"
+		2004:
+			return "TRIP HANDLE"
+	return "ROPE END" if _is_kit(entity) else ""
+
+
+func _is_kit(entity: int) -> bool:
+	return entity >= KIT_ENTITY_MIN and entity < KIT_ENTITY_MAX
+
+
+func _kit_anchor_name(entity: int) -> String:
+	match entity:
+		1000:
+			return "BOLLARD"
+		2000:
+			return "CAGE EYE"
+	return "ANCHOR"
 
 
 # The operated machine's own readouts, straight from its native getters.
@@ -1136,7 +1202,7 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"operating": _operating,
 		"carrying": int(_ctx["carrying"]),
 		"carry_center": _carry_center(int(_ctx["carrying"])),
-		"carry_half": HOOK5_BLOCK_HALF if int(_ctx["carrying"]) == HOOK5_BLOCK_ENTITY_ID else 0.18,
+		"carry_half": _carry_half(int(_ctx["carrying"])),
 		"pendant": intent["pendant"],
 		"move": intent["move"],
 		"bob_phase": _cam_bob_phase,
@@ -1268,6 +1334,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_write_telemetry(position, velocity, grounded)
 	_mirror_machine(float(_native.get_valve_open_fraction()),
 		float(_native.get_orifice_mass_flow_kg_per_s()))
+	_render_kit()
 
 
 func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> void:
@@ -3754,6 +3821,99 @@ func _add_box_to(node_name: String, size: Vector3, at: Vector3, material: Materi
 		instance.rotation = Vector3(0.0, 0.0, roll)
 	parent.add_child(instance)
 	return instance
+
+
+# AS-006: the mechanism kit. Every kit body is declared by the native -- its
+# boxes, each box's material class, its pose -- and drawn here from that
+# declaration, so what the player sees is exactly what collides; nothing is
+# authored twice. Kit bodies live outside $TowerPresentation: they are native
+# collision already, never part of the exported solid dressing.
+func _build_kit() -> void:
+	_kit_root = Node3D.new()
+	_kit_root.name = "KitPresentation"
+	add_child(_kit_root)
+	# Indexed by the native's Material enum: steel, rust, timber, concrete,
+	# hazard, galvanised, rubble, yellow.
+	var palette: Array[Material] = [
+		_material(Color("2a2723"), 0.7, 0.55, Color.BLACK, 1.0, _bump_steel),
+		_material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_steel),
+		_material(Color("4a3420"), 0.02, 0.9, Color.BLACK, 1.0, _bump_timber),
+		_material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete),
+		_material(Color("a04d16"), 0.18, 0.76),
+		_material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_steel),
+		_material(Color("5b544b"), 0.0, 0.98, Color.BLACK, 1.0, _bump_concrete),
+		_material(Color("c19a2a"), 0.2, 0.62),
+	]
+	for body in int(_native.get_kit_body_count()):
+		var node := Node3D.new()
+		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
+		node.transform = _native.get_kit_body_transform(body)
+		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
+		for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
+			var mesh := BoxMesh.new()
+			mesh.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
+			mesh.material = palette[clampi(int(parts[p + 10]), 0, palette.size() - 1)]
+			var instance := MeshInstance3D.new()
+			instance.mesh = mesh
+			instance.transform = Transform3D(
+				Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
+				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
+			node.add_child(instance)
+		_kit_root.add_child(node)
+		_kit_bodies.append(node)
+		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
+	var cable := BoxMesh.new()
+	cable.size = Vector3(0.035, 0.035, 1.0)
+	cable.material = _material(Color("1b1916"), 0.6, 0.5)
+	for index in int(_native.get_kit_cable_count()):
+		var segments: Array[MeshInstance3D] = []
+		for segment in KIT_CABLE_SEGMENTS:
+			var instance := MeshInstance3D.new()
+			instance.name = "KitCable%d_%d" % [index, segment]
+			instance.mesh = cable
+			instance.visible = false
+			_kit_root.add_child(instance)
+			segments.append(instance)
+		_kit_cables.append(segments)
+	_render_kit()
+
+
+# Poses every moving kit body and lays every cable through its points, from
+# this frame's native state. A body the native has taken out of the world (a
+# shackle hooked onto an anchor) is hidden, not moved.
+func _render_kit() -> void:
+	if _kit_root == null:
+		return
+	for body in _kit_bodies.size():
+		if not _kit_dynamic[body]:
+			continue
+		var node: Node3D = _kit_bodies[body]
+		node.visible = bool(_native.is_kit_body_enabled(body))
+		if node.visible:
+			node.transform = _native.get_kit_body_transform(body)
+	for index in _kit_cables.size():
+		var points: PackedVector3Array = _native.get_kit_cable_points(index)
+		var segments: Array = _kit_cables[index]
+		for segment in segments.size():
+			var instance: MeshInstance3D = segments[segment]
+			if segment + 1 < points.size():
+				_lay_segment(instance, points[segment], points[segment + 1])
+			else:
+				instance.visible = false
+
+
+func _lay_segment(instance: MeshInstance3D, from: Vector3, to: Vector3) -> void:
+	var delta := to - from
+	var length := delta.length()
+	if length < 0.001:
+		instance.visible = false
+		return
+	var along := delta / length
+	var up := Vector3.UP if absf(along.y) < 0.99 else Vector3.RIGHT
+	var side := up.cross(along).normalized()
+	instance.transform = Transform3D(Basis(side, along.cross(side), along * length),
+		from + delta * 0.5)
+	instance.visible = true
 
 
 # Tool mode: write the world's solid dressing for the native build and quit.

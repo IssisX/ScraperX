@@ -34,6 +34,10 @@ const SCENARIOS := {
 	"pad_core": 8,
 	"pad_pendant": 14,
 	"keyboard_core": 8,
+	# AS-006 Stage A, rigged and ridden on each device from the stair's top deck.
+	"touch_rig": 24,
+	"pad_rig": 24,
+	"keyboard_rig": 24,
 	# Needs a mixing audio driver: run under --write-movie (see _audio_mix).
 	"audio_mix": 8,
 }
@@ -116,6 +120,12 @@ func _run() -> void:
 			ok = await _pad_pendant()
 		"keyboard_core":
 			ok = await _keyboard_core()
+		"touch_rig":
+			ok = await _rig(InputRouter.Device.TOUCH)
+		"pad_rig":
+			ok = await _rig(InputRouter.Device.GAMEPAD)
+		"keyboard_rig":
+			ok = await _rig(InputRouter.Device.KEYBOARD_MOUSE)
 		"audio_mix":
 			ok = await _audio_mix()
 	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario, _detail])
@@ -799,6 +809,215 @@ func _keyboard_core() -> bool:
 		return _fail("ESC did not resume from the menu")
 	_detail = "forward_m=%.2f rejected=%d->%d" % [along, rejected_before, rejected_after]
 	return true
+
+
+# AS-006 Stage A through the real input pipeline on one device: walk into
+# the skip lift's cage, UNHOOK the rope's end from the bollard, HOOK it onto
+# the cage's eye, GRAB the trip handle, step back until the catch lets go,
+# LET GO, and ride 22 m. Each verb is the one the HUD offers at that moment,
+# pressed on the device under test, and each is proven by the native state
+# it changed. The hands must move between poses, never jump.
+func _rig(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	for leg in [Vector2(-10.0, -129.2), Vector2(-10.2, -130.6), Vector2(-11.35, -131.95)]:
+		if not await _walk_to(device, leg, 0.2):
+			return _fail("the walk into the cage stalled at (%.2f, %.2f)" % [
+				_position().x, _position().z])
+	await _face(Vector2(-0.7, -0.7))
+	if not await _offered(&"unhook", "UNHOOK"):
+		return _fail("Action read '%s' facing the bollard, not UNHOOK" % _action_label())
+	var watch := _watch_wrists()
+	_act(device)
+	var holding_shackle: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 2002, 0.5)
+	if not holding_shackle:
+		return _fail("UNHOOK did not put the rope's shackle in the hands")
+	if not await _walk_to(device, Vector2(-11.35, -131.4), 0.2):
+		return _fail("the step to the cage's eye stalled")
+	await _face(Vector2(-1.0, 0.0))
+	if not await _offered(&"hook", "HOOK", "ONTO CAGE EYE"):
+		return _fail("Action read '%s %s' at the cage's eye, not HOOK ONTO CAGE EYE" % [
+			_action_label(), String(_ctx()["action"]["detail"])])
+	await _pose("rig_shackle")
+	_act(device)
+	var hooked: bool = await _wait_until(
+		func() -> bool: return int(_native().get_well_a_rope_end_entity_id()) == 2000, 0.5)
+	if not hooked:
+		return _fail("HOOK did not put the rope's end on the cage's eye (end %d, at %s, carrying %d)" % [
+			int(_native().get_well_a_rope_end_entity_id()), str(_position()),
+			int(_native().get_carrying_entity_id())])
+	if not await _walk_to(device, Vector2(-11.05, -130.35), 0.2):
+		return _fail("the step to the trip handle stalled")
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "GRAB"):
+		return _fail("Action read '%s' facing the trip handle, not GRAB" % _action_label())
+	_act(device)
+	var holding_handle: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 2004, 0.5)
+	if not holding_handle:
+		return _fail("GRAB did not put the trip handle in the hands")
+	await _seconds(0.5)
+	if _main._arms.hand_poses() != [8, 8]:
+		return _fail("hands not on the trip handle (poses %s)" % str(_main._arms.hand_poses()))
+	if _action_label() != "LET GO":
+		return _fail("Action read '%s' holding the handle, not LET GO" % _action_label())
+	await _pose("rig_handle")
+	_move(device, -0.6)
+	var tripped: bool = await _wait_until(
+		func() -> bool: return not bool(_native().is_well_a_catch_latched()), 3.0)
+	_move(device, 0.0)
+	if not tripped:
+		return _fail("stepping back with the handle never opened the catch")
+	_act(device)
+	var let_go: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 0, 0.5)
+	if not let_go:
+		return _fail("LET GO did not take the handle out of the hands")
+	var worst_jump := _stop_watch(watch)
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_native().get_well_a_cage_travel()) >= 21.95, 15.0)
+	if not arrived:
+		return _fail("the cage never reached the top (travel %.2f m)" %
+			float(_native().get_well_a_cage_travel()))
+	await _seconds(0.5)
+	await _pose("rig_top")
+	if int(_native().get_support_entity_id()) != 2000 or _position().y < 177.0:
+		return _fail("the rider is not standing in the cage at the top (y %.2f)" % _position().y)
+	# 0.10 m in a 60 Hz frame is 6 m/s across the view: faster than any reach.
+	if worst_jump > 0.10:
+		return _fail("a hand jumped %.3f m in one frame between poses (%s)" % [worst_jump,
+			str(watch.get("at", ""))])
+	_detail = "top_y=%.2f worst_wrist_step_m=%.3f" % [_position().y, worst_jump]
+	return true
+
+
+# Turns the view to face `direction` the way a thumb or a stick does, at up
+# to 4 rad/s, never in one frame.
+func _face(direction: Vector2) -> void:
+	var goal := atan2(-direction.x, -direction.y)
+	while true:
+		var left := wrapf(goal - float(_main._yaw), -PI, PI)
+		var step := 4.0 * get_process_delta_time()
+		if absf(left) <= step:
+			_main._yaw = goal
+			return
+		_main._yaw = float(_main._yaw) + signf(left) * step
+		await get_tree().process_frame
+
+
+func _action_label() -> String:
+	return String(_ctx()["action"]["label"])
+
+
+# Waits for the HUD to offer `id` with `label` (and `detail`, when given) on
+# the Action verb: what a player reads before pressing.
+func _offered(id: StringName, label: String, detail: String = "") -> bool:
+	return await _wait_until(func() -> bool: return _ctx()["action"]["id"] == id and \
+		_action_label() == label and \
+		(detail.is_empty() or String(_ctx()["action"]["detail"]) == detail), 1.5)
+
+
+# One press of the Action verb on the device under test.
+func _act(device: int) -> void:
+	match device:
+		InputRouter.Device.TOUCH:
+			_tap(1, _center(&"action"))
+		InputRouter.Device.GAMEPAD:
+			_button(JOY_BUTTON_X)
+		_:
+			_key(KEY_E, true)
+			_key(KEY_E, false)
+
+
+# Holds forward (+) or back (-) at `amount` of full throw on the device under
+# test; 0 lets go.
+func _move(device: int, amount: float) -> void:
+	_move_dir(device, Vector2(0.0, amount))
+
+
+# Holds the move input at `v` = (right, forward) of full throw, relative to
+# the view, on the device under test. A key has no throw: a component past
+# a third holds its key down.
+func _move_dir(device: int, v: Vector2) -> void:
+	match device:
+		InputRouter.Device.TOUCH:
+			if v.length() < 0.01:
+				_touch(0, _main._touch.stick_home(), false)
+			else:
+				_stick_hold(Vector2(v.x, -v.y), minf(v.length(), 1.0))
+		InputRouter.Device.GAMEPAD:
+			_axis(JOY_AXIS_LEFT_X, v.x)
+			_axis(JOY_AXIS_LEFT_Y, -v.y)
+		_:
+			_key(KEY_W, v.y > 0.33)
+			_key(KEY_S, v.y < -0.33)
+			_key(KEY_D, v.x > 0.33)
+			_key(KEY_A, v.x < -0.33)
+
+
+# Walks to a horizontal point without turning the view, the way a player
+# steps into place: the stick (or keys) pushed toward it relative to the
+# view, easing off near it -- a key pulses -- and stopping inside `tolerance`.
+func _walk_to(device: int, target: Vector2, tolerance: float) -> bool:
+	var waited := 0.0
+	var frame := 0
+	while waited < 6.0:
+		var at := _position()
+		var to := target - Vector2(at.x, at.z)
+		if to.length() <= tolerance:
+			_move_dir(device, Vector2.ZERO)
+			await _seconds(0.2)
+			return true
+		var yaw := float(_main._yaw)
+		var forward := Vector2(-sin(yaw), -cos(yaw))
+		var right := Vector2(cos(yaw), -sin(yaw))
+		var v := Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.25, 1.0)
+		if device == InputRouter.Device.KEYBOARD_MOUSE and to.length() < 0.8:
+			frame += 1
+			v = v.normalized() if frame % 6 < 2 else Vector2.ZERO
+		_move_dir(device, v)
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_move_dir(device, Vector2.ZERO)
+	return false
+
+
+# Holds the left stick at `amount` of full throw toward canvas `direction`.
+func _stick_hold(direction: Vector2, amount: float) -> void:
+	var home: Vector2 = _main._touch.stick_home()
+	var throw: float = TouchControls.STICK_THROW * float(_main._touch._u) * clampf(amount, 0.0, 1.0)
+	_touch(0, home, true)
+	_drag(0, home + direction.normalized() * throw, direction.normalized() * throw)
+
+
+# Samples both rendered wrists every frame until stopped, in the camera's
+# frame -- where a player sees them -- and reports the largest single-frame
+# move of either.
+func _watch_wrists() -> Dictionary:
+	var watch := {"running": true, "worst": 0.0}
+	_sample_wrists(watch)
+	return watch
+
+
+func _sample_wrists(watch: Dictionary) -> void:
+	var last: Array = []
+	while bool(watch["running"]):
+		var view: Transform3D = (_main._camera as Camera3D).global_transform.affine_inverse()
+		var now: Array = _main._arms.wrist_positions().map(
+			func(wrist: Vector3) -> Vector3: return view * wrist)
+		if last.size() == now.size():
+			for index in now.size():
+				var step: float = ((now[index] as Vector3) - (last[index] as Vector3)).length()
+				if step > float(watch["worst"]):
+					watch["worst"] = step
+					watch["at"] = "%s %s" % [str(_main._arms.hand_poses()), _action_label()]
+		last = now
+		await get_tree().process_frame
+
+
+func _stop_watch(watch: Dictionary) -> float:
+	watch["running"] = false
+	return float(watch["worst"])
 
 
 # The sound a player hears, measured where it leaves Master (after the

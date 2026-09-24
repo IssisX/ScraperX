@@ -1,7 +1,7 @@
 # SCRAPERX — AS-006 COUNTERWEIGHT WELL (B02, 154 → 220 m)
 
 **Ascent Slice:** `AS-006`
-**Lifecycle:** `PLANNED` — contract exists, no corresponding source
+**Lifecycle:** `IN PROGRESS` — Stage A built and tested; B, C and the climbing route to come
 **Provenance:** re-derived here, against `77a4364`, under
 `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`. Replaces the plan imported from `ScraperX-Grok`
 (their `WO-014_CW_PIN`), whose geometry, ids and persist versions describe a world that does not
@@ -71,30 +71,63 @@ where the stair's top deck is 9 m deep and the rings above step in by 0.9 m per 
 ## Stage A — skip lift
 
 **Found:** a steel cage on the 154 north deck at `x ∈ [-12.0, -9.0]`, `z ∈ [-132.8, -130.0]`, on
-vertical guides. In the well beside it, an 800 kg skip of steel billets hangs 22 m up, held in a
-catch. Its rope runs over head sheaves above the cage and down to a shackle hanging beside the
-cage's lifting eye. The rope is taut on the catch; nothing moves.
+vertical guides, open on its north and east sides. In the well beside it, an 800 kg skip of steel
+billets hangs 22 m up, held in a catch. Its rope runs over head sheaves at 191 m, one over the skip
+and one over the cage's lifting eye, down to a shackle made fast on a bollard west of the cage.
+Nothing moves.
 
-**Missing link:** the shackle is not on the cage. The player takes it (carry) and hooks it onto the
-cage's eye (Action).
+**Missing link:** the rope's end is on the bollard, not the cage. The player takes it off
+(**UNHOOK**, it comes into the hands) and hooks it onto the cage's eye (**HOOK**).
 
-**Trigger:** a trip line from the skip's catch lever hangs to a handle on the deck. The player grabs
-the handle and pulls; the lever turns and the catch releases once the pin has left its hole.
+**Trigger:** the catch's lever hangs from the head beam beside the skip. Its trip line runs down
+west of the cage to a gantry across the cage's open north side and ends in a handle hanging at a
+rider's hand height in front of the opening. The player takes the handle (**GRAB**) and steps back;
+the line turns the lever and the catch opens once its pin has left its hole (0.5 rad).
 
 **Ride:** the skip falls 22 m; the cage rises 22 m. Net force with a rider is
 `(800 − 435) × 9.81 = 3 581 N`. A speed governor on the cage guide (a motor that can only brake,
-never push) holds the cage to 2.5 m/s; a sprung buffer stops it with the floor flush at 176.25.
+never push) holds the cage to 2.5 m/s and slows it into its top stop with the floor flush at 176.25.
 
 **Energy:** the skip releases `800 × 9.81 × 22 = 172.7 kJ`; the cage and rider gain
 `435 × 9.81 × 22 = 93.9 kJ`. The governor turns the rest into heat.
 
-**Other links:** the shackle on the cage lifts the cage. On the deck's ring bolt it holds the skip
-up and nothing moves. On a load heavier than 800 kg nothing lifts.
+**Other links:** the rope on the cage lifts the cage. On the bollard it holds the skip, which drops
+only the bollard's 3 cm of slack when the catch opens, and nothing else moves. On a load heavier
+than 800 kg nothing lifts.
 
 **Re-arming (physics decides: the skip survives).** Put 22 m of skip height back: load A's parked
 cage until it outweighs the skip. C's rubble does this (above). The cage sinks under the same
 governor, the skip rises into its catch and latches (a spring catch that closes when the skip is
 seated and slow), and the player tips the rubble out of the cage bed at 154 m.
+
+### As built (Stage A)
+
+Where the build departs from the sketch above, and why:
+
+- **The eye is at knee height**, 0.80 m over the floor's centre, not hand height. The rope is
+  exactly long enough to reach the eye with the skip in its catch, so it is taut the moment it is
+  hooked; with the eye below the hands, a carried shackle is always on slack rope and can be walked
+  to the eye from anywhere within 2.4 m of the sheave. At hand height the rope was 5 cm short of
+  the hands and hauled the carrier off the deck (probe, scratch).
+- **The found end is on a bollard, not hanging free.** A free end would let an unlinked pull drop the
+  skip 22 m and haul the end out of reach: the stored energy released with no link, against rule 1.
+  The bollard's eye is 3 cm nearer the head sheave than the cage's eye.
+- **The catch draws the skip onto its seat.** Its pin holds the seat, not wherever the skip is when
+  the pin drops in, so after an unlinked pull the relatch lifts the skip the bollard's 3 cm and the
+  rope goes slack enough to unhook. Declared: the catch's spring does at most
+  `800 × 9.81 × 0.05 = 392 J` of work. Without it the unlinked pull stranded the stage (the rope
+  stayed loaded on the bollard and could not be unhooked).
+- **The lever is counterweighted**, 60 kg on stops, not sprung by a motor: a motor spring sagged
+  it 0.14 rad at rest, past the relatch threshold, so the catch could never relatch.
+- **The handle hangs from a gantry in front of the opening**, not from a stanchion by the north-west
+  post. Let go over the cage floor, the old handle was reeled into the post, caught, and carried up
+  (probe: a 15.7 kN spike on the rope before it tore free). From the gantry it is reeled back out
+  through the opening.
+- **Hands hold at most 900 N.** A kit handle, shackle or load pulled harder for two steps is torn
+  out of the hands (`kGripNewtons`). Pulling past the lever's stop, or holding on as the cage rises,
+  lets go instead of anchoring the rider.
+- **The rigging is done from inside the cage:** the bollard is reached facing south-west, the eye
+  facing west, the handle facing north. All three are also reachable from the deck.
 
 ## Stage B — derrick boom
 
@@ -188,8 +221,10 @@ Player verbs, all on the contextual Action (touch Action button, pad X, keyboard
 Groups in `tests/simulation_tests.cpp`, each printing a `PASS scraperx_sim AS-006 …` line that CI
 gates:
 
-1. **A no link, no lift** — pull A's trip line with the shackle unhooked: the skip falls, the cage
-   stays within 0.05 m of 154.25.
+1. **A no link, no lift** — with the rope's end still on the bollard, take the handle and pull past
+   the lever's stop: the catch opens, the bollard holds the skip within 0.05 m, the cage stays within
+   0.05 m of 154.25; let go, the catch seats the skip and unloads the rope, and the end comes off the
+   bollard onto the cage as before.
 2. **A ride** — hook, pull, ride from the deck: the rider stays grounded on the cage all the way;
    the cage stops with its floor at 176.25 ± 0.05; its speed never exceeds 2.6 m/s; the rider's
    and cage's energy gain is below the skip's release.
@@ -217,4 +252,23 @@ A may be re-armed; B and C are spent. `AS-007` (B03, 220 → 340) begins from th
 
 ## Result record
 
-pending.
+**Stage A — built, tested.** Kit (`src/sim/mechanism_kit.{hpp,cpp}`), band
+(`src/sim/band_counterweight_well.cpp`), bridge, generic Godot presentation (every kit body and
+cable drawn from the native declaration), and the Action verbs UNHOOK, HOOK, GRAB and LET GO on
+touch, gamepad and keyboard.
+
+Local runs on this tree (host Release build):
+
+| Proof | Observed |
+|---|---|
+| `PASS scraperx_sim AS-006 A no link` | `cage_worst=0 skip_drop=0.0324707 bollard_tension=62627.2 relatched=1 rerigged=1` (the tension is the peak of the 3 cm drop caught by a rigid rope; the held load is 7 844 N) |
+| `PASS scraperx_sim AS-006 A ride` | `ride_s=9.65556 floor_y=176.25 peak_speed=2.502 rode_on_cage=1 skip_released_J=172656 payload_gained_J=93884.1 energy_margin_J=1.78279 restored_y=177.133` |
+| every earlier native group | unchanged, suite exit 0 |
+| `touch_rig`, `pad_rig`, `keyboard_rig` | PASS, `top_y=177.14`, worst wrist step in view 0.073–0.075 m per 60 Hz frame (bound 0.10) |
+| every earlier UI scenario (18) | PASS |
+| world solids regenerated | identical to `src/sim/world_solids.inc` |
+
+The energy margin is smallest at the start of the ride, where both sides are near zero; the
+falsifier allows 1 cm of the rider's stance (8.3 J) and no more.
+
+Stages B and C, the climbing route and the band's one-run test: pending.

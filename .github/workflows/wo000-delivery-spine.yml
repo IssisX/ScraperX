@@ -107,7 +107,9 @@ jobs:
             "PASS scraperx_sim crouch" \
             "PASS scraperx_sim AS-003 apron" \
             "PASS scraperx_sim AS-003 cage" \
-            "PASS scraperx_sim AS-003 Hook5 Rack"
+            "PASS scraperx_sim AS-003 Hook5 Rack" \
+            "PASS scraperx_sim AS-006 A no link" \
+            "PASS scraperx_sim AS-006 A ride"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
@@ -172,6 +174,20 @@ jobs:
           awk -F'restored_y=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
             artifacts/native-falsifiers.log
           grep -F "restored_carry=56" artifacts/native-falsifiers.log
+          # AS-006 Stage A, the skip lift: no link, no lift (the cage never
+          # moves while the rope is on the bollard, and the stage re-rigs);
+          # linked, the rider rides 22 m to 176.25 under a brake-only
+          # governor, and the payload never out-earns the skip.
+          awk -F'cage_worst=' '/AS-006 A no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "relatched=1 rerigged=1" artifacts/native-falsifiers.log
+          awk -F'floor_y=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 >= 176.20 && a[1]+0 <= 176.30) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'peak_speed=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 <= 2.6) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "rode_on_cage=1" artifacts/native-falsifiers.log
+          awk -F'restored_y=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 >= 177.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
 
       - name: Run Godot at Fold aspect through native machine authority and capture proof
         shell: bash
@@ -216,7 +232,8 @@ jobs:
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
               touch_hang_climb touch_chute touch_lethal_feedback touch_sump touch_pendant \
-              touch_carry touch_pause pad_core pad_pendant keyboard_core; do
+              touch_carry touch_pause pad_core pad_pendant keyboard_core \
+              touch_rig pad_rig keyboard_rig; do
             timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

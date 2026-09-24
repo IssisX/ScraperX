@@ -20,7 +20,14 @@ namespace {
 // One past the last spawn, derived from the enum so a new spawn is never
 // silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
 constexpr std::int64_t kInitialSpawnCount =
-    static_cast<std::int64_t>(sim::InitialSpawn::Hook5Apron) + 1;
+    static_cast<std::int64_t>(sim::InitialSpawn::StairTop) + 1;
+
+// A kit index from script: negative or past the end reads as no body.
+[[nodiscard]] std::uint32_t kit_index(const std::int64_t index) {
+    return index >= 0 && index < static_cast<std::int64_t>(sim::Simulation::kKitNone)
+               ? static_cast<std::uint32_t>(index)
+               : sim::Simulation::kKitNone;
+}
 
 } // namespace
 
@@ -260,6 +267,38 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_hook5_block_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_block_rotation"),
                                 &ScraperXSimulation::get_hook5_block_rotation);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("request_rig"), &ScraperXSimulation::request_rig);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_rig_action"),
+                                &ScraperXSimulation::get_rig_action);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_rig_target_entity_id"),
+                                &ScraperXSimulation::get_rig_target_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_carry_target_kind"),
+                                &ScraperXSimulation::get_carry_target_kind);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_count"),
+                                &ScraperXSimulation::get_kit_body_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_entity_id", "body"),
+                                &ScraperXSimulation::get_kit_body_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_kit_body_dynamic", "body"),
+                                &ScraperXSimulation::is_kit_body_dynamic);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_kit_body_enabled", "body"),
+                                &ScraperXSimulation::is_kit_body_enabled);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_parts", "body"),
+                                &ScraperXSimulation::get_kit_body_parts);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_transform", "body"),
+                                &ScraperXSimulation::get_kit_body_transform);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_index", "entity_id"),
+                                &ScraperXSimulation::get_kit_body_index);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_cable_count"),
+                                &ScraperXSimulation::get_kit_cable_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_cable_points", "cable"),
+                                &ScraperXSimulation::get_kit_cable_points);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_cage_travel"),
+                                &ScraperXSimulation::get_well_a_cage_travel);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_well_a_catch_latched"),
+                                &ScraperXSimulation::is_well_a_catch_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_rope_end_entity_id"),
+                                &ScraperXSimulation::get_well_a_rope_end_entity_id);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -737,6 +776,95 @@ godot::Vector3 ScraperXSimulation::get_hook5_block_position() const {
 
 godot::Quaternion ScraperXSimulation::get_hook5_block_rotation() const {
     return to_godot(simulation_->snapshot().hook5_block_rotation);
+}
+
+bool ScraperXSimulation::request_rig() {
+    return simulation_->request_rig();
+}
+
+std::int64_t ScraperXSimulation::get_rig_action() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().rig_action);
+}
+
+std::int64_t ScraperXSimulation::get_rig_target_entity_id() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().rig_target_entity_id);
+}
+
+std::int64_t ScraperXSimulation::get_carry_target_kind() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().carry_target_kind);
+}
+
+std::int64_t ScraperXSimulation::get_kit_body_count() const {
+    return static_cast<std::int64_t>(simulation_->kit_body_count());
+}
+
+std::int64_t ScraperXSimulation::get_kit_body_entity_id(const std::int64_t body) const {
+    return static_cast<std::int64_t>(simulation_->kit_body_entity(kit_index(body)));
+}
+
+bool ScraperXSimulation::is_kit_body_dynamic(const std::int64_t body) const {
+    return simulation_->kit_body_dynamic(kit_index(body));
+}
+
+bool ScraperXSimulation::is_kit_body_enabled(const std::int64_t body) const {
+    return simulation_->kit_body_enabled(kit_index(body));
+}
+
+godot::PackedFloat32Array ScraperXSimulation::get_kit_body_parts(const std::int64_t body) const {
+    godot::PackedFloat32Array out;
+    const std::uint32_t index = kit_index(body);
+    const std::uint32_t count = simulation_->kit_body_part_count(index);
+    for (std::uint32_t part = 0; part < count; ++part) {
+        const sim::KitPart source = simulation_->kit_body_part(index, part);
+        for (const double value :
+             {source.half.x, source.half.y, source.half.z, source.offset.x, source.offset.y,
+              source.offset.z, source.rotation.x, source.rotation.y, source.rotation.z,
+              source.rotation.w, static_cast<double>(source.material)}) {
+            out.push_back(static_cast<float>(value));
+        }
+    }
+    return out;
+}
+
+godot::Transform3D ScraperXSimulation::get_kit_body_transform(const std::int64_t body) const {
+    const std::uint32_t index = kit_index(body);
+    return {godot::Basis(to_godot(simulation_->kit_body_rotation(index))),
+            to_godot(simulation_->kit_body_position(index))};
+}
+
+std::int64_t ScraperXSimulation::get_kit_body_index(const std::int64_t entity_id) const {
+    if (entity_id < 0) {
+        return -1;
+    }
+    const std::uint32_t index = simulation_->kit_body_index(static_cast<std::uint64_t>(entity_id));
+    return index == sim::Simulation::kKitNone ? -1 : static_cast<std::int64_t>(index);
+}
+
+std::int64_t ScraperXSimulation::get_kit_cable_count() const {
+    return static_cast<std::int64_t>(simulation_->kit_cable_count());
+}
+
+godot::PackedVector3Array ScraperXSimulation::get_kit_cable_points(const std::int64_t cable) const {
+    constexpr std::uint32_t kCapacity = 8;
+    sim::Vector3 points[kCapacity];
+    const std::uint32_t count = simulation_->kit_cable_points(kit_index(cable), points, kCapacity);
+    godot::PackedVector3Array out;
+    for (std::uint32_t index = 0; index < count; ++index) {
+        out.push_back(to_godot(points[index]));
+    }
+    return out;
+}
+
+double ScraperXSimulation::get_well_a_cage_travel() const {
+    return simulation_->snapshot().well_a_cage_travel;
+}
+
+bool ScraperXSimulation::is_well_a_catch_latched() const {
+    return simulation_->snapshot().well_a_catch_latched;
+}
+
+std::int64_t ScraperXSimulation::get_well_a_rope_end_entity_id() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().well_a_rope_end_entity_id);
 }
 
 } // namespace scraperx::bridge

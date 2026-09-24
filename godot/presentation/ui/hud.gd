@@ -139,7 +139,7 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 			TONE_DANGER if danger else TONE_NORMAL))
 	var action: Dictionary = ctx["action"]
 	match action["id"]:
-		&"climb", &"operate", &"pick_up", &"set_down":
+		&"climb", &"operate", &"pick_up", &"set_down", &"hook", &"unhook":
 			out.append(_prompt(&"action", action["label"], action["detail"]))
 		&"valve":
 			out.append(_prompt(&"valve", action["label"], action["detail"]))

@@ -420,6 +420,100 @@ bool pick_block_from_ground(scraperx::sim::Simulation &simulation) {
     return false;
 }
 
+// ---- AS-006, the Counterweight Well ----------------------------------------
+
+constexpr double kGravity = 9.81;
+constexpr double kRiderMassKg = 85.0;
+constexpr double kWellACageMassKg = 350.0;
+constexpr double kWellASkipMassKg = 800.0;
+constexpr double kWellACageFloorTop = 154.25;
+constexpr double kWellATravel = 22.0;
+// The energy rule is checked from body states every tick. A standing capsule
+// settles by millimetres on whatever floor it is on; 1 cm of that for the
+// 85 kg rider is the tolerance, so stance noise is never read as a motor.
+constexpr double kStanceJitterJ = kRiderMassKg * kGravity * 0.01;
+
+double kit_y(const scraperx::sim::Simulation &simulation, const std::uint64_t entity) {
+    return simulation.kit_body_position(simulation.kit_body_index(entity)).y;
+}
+
+// From the stair's top deck into Stage A's cage through its open north side,
+// east of the trip handle hanging in front of it.
+bool board_well_a(scraperx::sim::Simulation &simulation) {
+    return walk_to(simulation, -10.0, -129.2, 5.0) && walk_to(simulation, -10.2, -130.6, 4.0);
+}
+
+// Inside the cage: face the bollard south-west and take the rope's end off
+// it; face the cage's eye west and hook it on. Every step is the rig verb
+// the snapshot offers at that moment, never a forced state.
+bool rig_well_a(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!walk_to(simulation, -11.35, -131.95, 4.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(-0.7, -0.7);
+    (void)simulation.advance_frame(0.4);
+    const auto at_bollard = simulation.snapshot();
+    if (at_bollard.rig_action != 2 ||
+        at_bollard.rig_target_entity_id != Simulation::kWellAShackleEntityId) {
+        return false;
+    }
+    (void)simulation.request_rig();
+    (void)simulation.advance_frame(0.3);
+    if (simulation.snapshot().carrying_entity_id != Simulation::kWellAShackleEntityId ||
+        !walk_to(simulation, -11.35, -131.40, 3.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(-1.0, 0.0);
+    (void)simulation.advance_frame(0.5);
+    const auto at_eye = simulation.snapshot();
+    if (at_eye.rig_action != 1 || at_eye.rig_target_entity_id != Simulation::kWellACageEntityId) {
+        return false;
+    }
+    (void)simulation.request_rig();
+    (void)simulation.advance_frame(0.3);
+    const auto hooked = simulation.snapshot();
+    return hooked.carrying_entity_id == 0 &&
+           hooked.well_a_rope_end_entity_id == Simulation::kWellACageEntityId;
+}
+
+// Inside the cage at its open north side: take the trip handle hanging in
+// front of it and step back south at `pull` of full stick until the catch
+// lets go (or `seconds` pass), then let go of the handle. True once the
+// catch has been seen open.
+bool pull_well_a(scraperx::sim::Simulation &simulation, const double pull, const double seconds) {
+    using scraperx::sim::Simulation;
+    if (!walk_to(simulation, -11.05, -130.35, 3.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.5);
+    const auto facing = simulation.snapshot();
+    if (facing.carry_target_entity_id != Simulation::kWellAHandleEntityId ||
+        facing.carry_target_kind != 2) {
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(0.3);
+    if (simulation.snapshot().carrying_entity_id != Simulation::kWellAHandleEntityId) {
+        return false;
+    }
+    bool opened = false;
+    const auto ticks =
+        static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (std::uint32_t tick = 0; tick < ticks && !opened; ++tick) {
+        (void)simulation.set_move_input(0.0, -0.7 * pull);
+        (void)simulation.set_facing(0.0, 1.0);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        opened = !simulation.snapshot().well_a_catch_latched;
+    }
+    (void)simulation.set_move_input(0.0, 0.0);
+    if (simulation.snapshot().carrying_entity_id != 0) {
+        (void)simulation.request_set_down();
+    }
+    return opened;
+}
+
 } // namespace
 
 int main() {
@@ -3025,6 +3119,163 @@ int main() {
               << " forty_y=" << hook_forty.player_position.y
               << " restored_y=" << restored.player_position.y
               << " restored_carry=" << restored.carrying_entity_id << '\n';
+
+    // ---- AS-006 Stage A, the skip lift (03_EXECUTION/ASCENT/AS-006_CW_PIN.md)
+    //
+    // No link, no lift: as found, the rope's end is made fast on the bollard.
+    // Take the trip handle and keep pulling past the lever's stop: the catch
+    // lets go, the bollard holds the skip within its 0.03 m of slack, and the
+    // cage never moves. Let go: the lever falls back, the catch seats the
+    // skip again and takes the load off the rope, and the rope's end comes
+    // off the bollard onto the cage as before -- the stage is not stranded.
+    Simulation unlinked(InitialSpawn::StairTop);
+    require(unlinked.advance_frame(1.0).accepted, "the stair-top settle interval must be accepted");
+    const auto well_stair_top = unlinked.snapshot();
+    require(well_stair_top.player_grounded && well_stair_top.player_position.y > 154.8 &&
+                well_stair_top.player_position.y < 155.0,
+            "StairTop must stand the player on the stair's 154 m top deck");
+    require(well_stair_top.well_a_catch_latched &&
+                well_stair_top.well_a_rope_end_entity_id == Simulation::kWellAFrameEntityId,
+            "as found, the skip must be in its catch and the rope made fast on the bollard");
+    const double unlinked_skip_y0 = kit_y(unlinked, Simulation::kWellASkipEntityId);
+    const double unlinked_cage_y0 = kit_y(unlinked, Simulation::kWellACageEntityId);
+    require(board_well_a(unlinked), "the player must walk into Stage A's cage");
+    require(walk_to(unlinked, -11.05, -130.35, 3.0, 0.08),
+            "the player must reach the trip handle from inside the cage");
+    (void)unlinked.set_facing(0.0, 1.0);
+    (void)unlinked.advance_frame(0.5);
+    require(unlinked.snapshot().carry_target_entity_id == Simulation::kWellAHandleEntityId &&
+                unlinked.snapshot().carry_target_kind == 2,
+            "the trip handle must be offered to a player facing it from the cage");
+    (void)unlinked.request_pick_up();
+    (void)unlinked.advance_frame(0.3);
+    require(unlinked.snapshot().carrying_entity_id == Simulation::kWellAHandleEntityId,
+            "the player must take the trip handle");
+    double unlinked_cage_worst = 0.0;
+    double unlinked_skip_drop = 0.0;
+    double bollard_tension = 0.0;
+    bool unlinked_opened = false;
+    const auto note_unlinked = [&]() {
+        const auto state = unlinked.snapshot();
+        unlinked_opened = unlinked_opened || !state.well_a_catch_latched;
+        unlinked_cage_worst =
+            std::max(unlinked_cage_worst,
+                     std::abs(kit_y(unlinked, Simulation::kWellACageEntityId) - unlinked_cage_y0));
+        unlinked_skip_drop = std::max(
+            unlinked_skip_drop, unlinked_skip_y0 - kit_y(unlinked, Simulation::kWellASkipEntityId));
+        if (!state.well_a_catch_latched) {
+            bollard_tension = std::max(bollard_tension, state.well_a_rope_tension_n);
+        }
+    };
+    for (std::uint32_t tick = 0; tick < 90 * 3; ++tick) {
+        (void)unlinked.set_move_input(0.0, -0.35);
+        (void)unlinked.set_facing(0.0, 1.0);
+        (void)unlinked.advance_frame(Simulation::kFixedStepSeconds);
+        note_unlinked();
+    }
+    (void)unlinked.set_move_input(0.0, 0.0);
+    if (unlinked.snapshot().carrying_entity_id != 0) {
+        (void)unlinked.request_set_down();
+    }
+    for (std::uint32_t tick = 0; tick < 90 * 4; ++tick) {
+        (void)unlinked.advance_frame(Simulation::kFixedStepSeconds);
+        note_unlinked();
+    }
+    const auto after_unlinked = unlinked.snapshot();
+    require(unlinked_opened, "pulling the trip handle must open the catch, linked or not");
+    require(unlinked_cage_worst <= 0.05,
+            "no link, no lift: with the rope on the bollard the cage must not move");
+    require(unlinked_skip_drop <= 0.05,
+            "the bollard must hold the skip within its slack when the catch opens");
+    require(bollard_tension > 0.9 * kWellASkipMassKg * kGravity,
+            "with the catch open, the bollard must carry the skip's weight through the rope");
+    require(after_unlinked.well_a_catch_latched && after_unlinked.well_a_rope_tension_n < 60.0,
+            "let go, the catch must seat the skip again and take the load off the rope");
+    require(rig_well_a(unlinked),
+            "after the wasted pull the rope's end must still come off the bollard onto the cage");
+    std::cout << "PASS scraperx_sim AS-006 A no link: cage_worst=" << unlinked_cage_worst
+              << " skip_drop=" << unlinked_skip_drop << " bollard_tension=" << bollard_tension
+              << " relatched=" << int(after_unlinked.well_a_catch_latched) << " rerigged=1\n";
+
+    // The ride: take the rope's end off the bollard, hook it on the cage's
+    // eye, take the handle and step back. The skip falls 22 m and the cage
+    // carries the rider 22 m under a governor that can only brake. The rider
+    // stands on the cage the whole way; the floor stops flush with the 176
+    // ring; at no tick has the payload gained more energy than the skip
+    // released.
+    Simulation well(InitialSpawn::StairTop);
+    require(well.advance_frame(1.0).accepted, "the ride's settle interval must be accepted");
+    require(board_well_a(well) && rig_well_a(well),
+            "the player must rig Stage A from inside its cage");
+    const double skip_y0 = kit_y(well, Simulation::kWellASkipEntityId);
+    const double cage_y0 = kit_y(well, Simulation::kWellACageEntityId);
+    const double rider_y0 = well.snapshot().player_position.y;
+    require(pull_well_a(well, 0.5, 3.0), "stepping back with the handle must trip the catch");
+    const double well_ride_start = well.snapshot().simulation_time_seconds;
+    bool rode_on_cage = true;
+    double well_ride_seconds = 0.0;
+    double worst_energy_margin = std::numeric_limits<double>::infinity();
+    for (std::uint32_t tick = 0; tick < 90 * 20; ++tick) {
+        (void)well.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = well.snapshot();
+        const double cage_rise = kit_y(well, Simulation::kWellACageEntityId) - cage_y0;
+        if (cage_rise > 0.05 && cage_rise < kWellATravel - 0.05) {
+            rode_on_cage = rode_on_cage && state.player_grounded &&
+                           state.support_entity_id == Simulation::kWellACageEntityId;
+        }
+        const double released =
+            kWellASkipMassKg * kGravity * (skip_y0 - kit_y(well, Simulation::kWellASkipEntityId));
+        const double gained = kWellACageMassKg * kGravity * cage_rise +
+                              kRiderMassKg * kGravity * (state.player_position.y - rider_y0);
+        worst_energy_margin = std::min(worst_energy_margin, released - gained);
+        if (well_ride_seconds == 0.0 && state.well_a_cage_travel >= kWellATravel - 0.01) {
+            well_ride_seconds = state.simulation_time_seconds - well_ride_start;
+        }
+    }
+    const auto at_top = well.snapshot();
+    const double floor_y = kit_y(well, Simulation::kWellACageEntityId) + 0.10;
+    const double skip_released =
+        kWellASkipMassKg * kGravity * (skip_y0 - kit_y(well, Simulation::kWellASkipEntityId));
+    const double payload_gained =
+        kWellACageMassKg * kGravity * (kit_y(well, Simulation::kWellACageEntityId) - cage_y0) +
+        kRiderMassKg * kGravity * (at_top.player_position.y - rider_y0);
+    require(rode_on_cage, "the rider must stand on the cage for the whole ride");
+    require(std::abs(floor_y - (kWellACageFloorTop + kWellATravel)) <= 0.05,
+            "the cage's floor must stop flush with the 176 ring at 176.25 m");
+    require(at_top.well_a_cage_peak_speed <= 2.6, "the governor must hold the cage to 2.5 m/s");
+    require(at_top.player_grounded && at_top.support_entity_id == Simulation::kWellACageEntityId &&
+                at_top.player_position.y > 177.0,
+            "the rider must arrive standing in the cage at the top");
+    require(worst_energy_margin >= -kStanceJitterJ,
+            "at no tick may the payload have gained more energy than the skip released");
+
+    // Dying restores the last commit, machines included: from the parked
+    // cage walk off its open east side into the well. The fall is lethal,
+    // and the restore returns the rider to the cage with the stage as it was
+    // committed: the cage at the top, the rope on its eye.
+    const auto well_deaths = at_top.death_count;
+    for (std::uint32_t tick = 0; tick < 90 * 8 && well.snapshot().death_count == well_deaths;
+         ++tick) {
+        (void)well.set_move_input(well.snapshot().player_grounded ? 0.6 : 0.0, 0.0);
+        (void)well.set_facing(1.0, 0.0);
+        (void)well.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    require(well.snapshot().death_count == well_deaths + 1,
+            "walking off the parked cage must be a lethal fall");
+    (void)well.set_move_input(0.0, 0.0);
+    require(well.advance_frame(1.0).accepted, "the restore settle interval must be accepted");
+    const auto well_restored = well.snapshot();
+    require(well_restored.player_position.y > 177.0 &&
+                well_restored.support_entity_id == Simulation::kWellACageEntityId &&
+                std::abs(well_restored.well_a_cage_travel - kWellATravel) <= 0.05 &&
+                well_restored.well_a_rope_end_entity_id == Simulation::kWellACageEntityId,
+            "the restore must return the rider to the parked cage with the stage as committed");
+    std::cout << "PASS scraperx_sim AS-006 A ride: ride_s=" << well_ride_seconds
+              << " floor_y=" << floor_y << " peak_speed=" << at_top.well_a_cage_peak_speed
+              << " rode_on_cage=" << int(rode_on_cage) << " skip_released_J=" << skip_released
+              << " payload_gained_J=" << payload_gained
+              << " energy_margin_J=" << worst_energy_margin
+              << " restored_y=" << well_restored.player_position.y << '\n';
 
     return EXIT_SUCCESS;
 }
