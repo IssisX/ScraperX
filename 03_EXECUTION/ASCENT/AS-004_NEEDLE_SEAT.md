@@ -192,15 +192,20 @@ Its north face is `z = -124`, and its balconies and gantries hang to
 |---|---|---|---|
 | tower `44 m` deck, north edge | `MOD-HALL-DECK`, `40.19 m` | walk off, no jump | stands on it alive at `x = -8, -5, +5`; `x = 0, +8` stopped at the edge |
 | `MOD-HALL-DECK`, south edge | tower `33 m` deck, inside | running jump south | lands alive on it at `x = -8, -5`, under the `44 m` deck; `x = +5, +8` stopped at the edge; never onto the `44 m` deck |
+| tower `33 m` deck, north edge | `AS-002` mid-landing `32.19 m`, then up the upper flight | running jump north, then walk | lands on the mid-landing 6 of 6 at `x = -4, 4, 6`; stands on `MOD-HALL-DECK` 4 of 6; `x = -2, 0, 2, 8` stopped at the edge |
+| tower `11 m` and `22 m` decks, north edge | `MOD-STAIR-A` (entity `44`) | running jump north | lands on it alive 14 of 24, at `5.3–21.4 m` |
 | `51.35 m` balcony, `x ∈ [4.5, 8.5]`, `z ∈ [-124.4, -121.4]` | needle A stowed on its `48 m` rack | running jump north | stands on it alive at `x = 6.5, 8.0` |
 | `109.5 m` gantry, `x ∈ [1.9, 14.1]`, `z ∈ [-123.45, -122.15]` | needle A seated at `96 m` | walk off, no jump | stands on it alive at `x = 5, 6, 7, 7.5, 8, 9`; misses at `11`, past its end |
 | `95.35 m` balcony, `x ∈ [-16.5, -12.5]` | west pocket A | running jump | falls, 2 of 2 |
 
 Not established: a route from the tower's decks onto the `51.35 m` balcony or
 the `109.5 m` gantry — walking or jumping straight north off the `55 m` and
-`110 m` decks stopped or fell in all 5 probes. The first row does not need it:
-`AS-002`'s legal forty is reachable without `AS-001` or `AS-002`, and the same
-stair keeps climbing past the `120 m` that `AS-005` would build.
+`110 m` decks stopped or fell in all 5 probes. The first rows do not need it:
+every tower deck from `11 m` to `44 m` lands on an `AS-001`/`AS-002` body, so a
+walk up the tower already skips `AS-001`'s dog and `AS-002`'s bascule — which
+their SKIN braids also skip by design, but by climbing — and it keeps going past
+the `120 m` that `AS-005` would build. `CAP-HOOK5` is not skipped: it is a
+load, not a height.
 
 Neither the Atlas nor `AS-002` accounts for this route; the Atlas has no such
 stair. Governing Law 17 makes it valid play and forbids protecting the
@@ -208,11 +213,15 @@ machines' path with an invisible blocker; it keeps real access constraints
 legitimate. So the decision is a design one, not a code one:
 
 - **(A) close the tower's stair with a real, visible access constraint** —
-  a missing or collapsed flight, a locked door — below the hall deck *and*
-  above it, since the hall deck and the tower's `33 m` and `44 m` decks connect
-  both ways (rows 1–2). The machines become the way up to `120 m`. This reopens the
-  kernel `world solids` falsifier's fourteen-flight assertion, and every new
-  `AS-004` member still needs a reach audit; or
+  missing or collapsed flights, a locked door. One flight is not enough: with
+  only the `33→44 m` flight cut, nothing entered above `44 m` in 104 physics
+  attempts (every envelope candidate: the hall deck to the tower's north edge,
+  with and without the hook block stood on, and the west annex's ledges from
+  the `33 m` deck), but rows 3–4 still make B00 a walk. So all four
+  flights below `44 m` go, the `11–33 m` decks become islands the ascent can
+  touch but not climb, and the tower above `44 m` waits for a later slice to
+  reach it. This reopens the kernel `world solids` falsifier's fourteen-flight
+  assertion, and every new `AS-004` member still needs a reach audit; or
 - **(B) keep the tower's stair open as a route**, and treat this slice as optional
   content whose completion items no longer assert that `MOD-CAGE-1` is the way
   to `96 m`.
