@@ -244,6 +244,14 @@ const KIT_PART_FLOATS := 11
 const KIT_CABLE_SEGMENTS := 4
 const KIT_CARRY_SHACKLE := 1
 const KIT_CARRY_HANDLE := 2
+# Rubble, the native's declared granular model: a mass in each bin, a stream
+# while one pours, piles where spills land. Drawn at a loose bulk density; a
+# pile is drawn as a low skirt, no taller than a step, since it has no body.
+const KIT_BIN_FLOATS := 10
+const KIT_PILE_FLOATS := 4
+const KIT_MAX_PILES := 16
+const RUBBLE_DENSITY := 1600.0
+const RUBBLE_PILE_HEIGHT := 0.05
 const RIG_HOOK := 1
 const RIG_UNHOOK := 2
 
@@ -367,6 +375,12 @@ var _kit_root: Node3D
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
 var _kit_cables: Array = []
+# Per bin: the rubble layer on its floor (null for a static bin, whose
+# contents cannot be seen), that floor's box, and its stream.
+var _kit_bin_layers: Array = []
+var _kit_bin_floors: Array = []
+var _kit_bin_streams: Array[MeshInstance3D] = []
+var _kit_piles: Array[MeshInstance3D] = []
 var _sump_grate_safe_material: Material
 var _sump_grate_hazard_material: Material
 var _stack_gears: Array[Node3D] = []
@@ -974,10 +988,16 @@ func _carry_name(entity: int) -> String:
 	if entity == HOOK5_BAR_ENTITY_ID:
 		return "DOOR BAR"
 	match entity:
-		2002:
+		2002, 2012:
 			return "ROPE SHACKLE"
-		2004:
+		2004, 2014:
 			return "TRIP HANDLE"
+		2006:
+			return "TIP-OUT HANDLE"
+		2024:
+			return "REBAR LINE"
+		2026:
+			return "LATCH HANDLE"
 	return "ROPE END" if _is_kit(entity) else ""
 
 
@@ -989,7 +1009,9 @@ func _kit_anchor_name(entity: int) -> String:
 	match entity:
 		1000:
 			return "BOLLARD"
-		2000:
+		1001:
+			return "CLEAT"
+		2000, 2010:
 			return "CAGE EYE"
 	return "ANCHOR"
 
@@ -3875,6 +3897,50 @@ func _build_kit() -> void:
 			_kit_root.add_child(instance)
 			segments.append(instance)
 		_kit_cables.append(segments)
+	var stream_mesh := BoxMesh.new()
+	stream_mesh.size = Vector3(0.3, 0.3, 1.0)
+	stream_mesh.material = palette[6]
+	var bins: PackedFloat32Array = _native.get_kit_bins()
+	for b in range(0, bins.size() - KIT_BIN_FLOATS + 1, KIT_BIN_FLOATS):
+		var index := _kit_bin_streams.size()
+		var body := int(bins[b])
+		var layer: MeshInstance3D = null
+		var floor_box := PackedFloat32Array()
+		var moving := body >= 0 and body < _kit_dynamic.size() and _kit_dynamic[body]
+		var parts: PackedFloat32Array = _native.get_kit_body_parts(body) if moving \
+			else PackedFloat32Array()
+		if parts.size() >= KIT_PART_FLOATS:
+			# The rubble lies on the bin's floor, its first part.
+			floor_box = parts.slice(0, KIT_PART_FLOATS)
+			var layer_mesh := BoxMesh.new()
+			layer_mesh.material = palette[6]
+			layer = MeshInstance3D.new()
+			layer.name = "KitRubble%d" % index
+			layer.mesh = layer_mesh
+			layer.visible = false
+			_kit_bodies[body].add_child(layer)
+		_kit_bin_layers.append(layer)
+		_kit_bin_floors.append(floor_box)
+		var stream := MeshInstance3D.new()
+		stream.name = "KitStream%d" % index
+		stream.mesh = stream_mesh
+		stream.visible = false
+		_kit_root.add_child(stream)
+		_kit_bin_streams.append(stream)
+	var pile_mesh := CylinderMesh.new()
+	pile_mesh.top_radius = 0.6
+	pile_mesh.bottom_radius = 1.0
+	pile_mesh.height = 1.0
+	pile_mesh.radial_segments = 20
+	pile_mesh.rings = 1
+	pile_mesh.material = palette[6]
+	for index in KIT_MAX_PILES:
+		var pile := MeshInstance3D.new()
+		pile.name = "KitPile%d" % index
+		pile.mesh = pile_mesh
+		pile.visible = false
+		_kit_root.add_child(pile)
+		_kit_piles.append(pile)
 	_render_kit()
 
 
@@ -3900,6 +3966,52 @@ func _render_kit() -> void:
 				_lay_segment(instance, points[segment], points[segment + 1])
 			else:
 				instance.visible = false
+	_render_rubble()
+
+
+# Rubble from the native's bins and piles: a layer on each moving bin's floor
+# as deep as its contents would lie, a stream while a bin pours, and a low
+# skirt of spilled rubble where each pile landed.
+func _render_rubble() -> void:
+	var bins: PackedFloat32Array = _native.get_kit_bins()
+	for index in _kit_bin_streams.size():
+		var b := index * KIT_BIN_FLOATS
+		if b + KIT_BIN_FLOATS > bins.size():
+			break
+		var layer: MeshInstance3D = _kit_bin_layers[index]
+		if layer != null:
+			var floor_box: PackedFloat32Array = _kit_bin_floors[index]
+			var half_x := maxf(floor_box[0] - 0.06, 0.05)
+			var half_z := maxf(floor_box[2] - 0.06, 0.05)
+			var depth := bins[b + 1] / RUBBLE_DENSITY / (4.0 * half_x * half_z)
+			layer.visible = bins[b + 1] >= 1.0
+			if layer.visible:
+				var rotation := Basis(Quaternion(floor_box[6], floor_box[7], floor_box[8],
+					floor_box[9]))
+				var on_floor := Vector3(floor_box[3], floor_box[4], floor_box[5]) \
+					+ rotation * Vector3(0.0, floor_box[1] + depth * 0.5, 0.0)
+				layer.transform = Transform3D(
+					rotation * Basis.from_scale(Vector3(half_x * 2.0, depth, half_z * 2.0)),
+					on_floor)
+		var stream: MeshInstance3D = _kit_bin_streams[index]
+		if bins[b + 3] > 0.5:
+			_lay_segment(stream, Vector3(bins[b + 4], bins[b + 5], bins[b + 6]),
+				Vector3(bins[b + 7], bins[b + 8], bins[b + 9]))
+		else:
+			stream.visible = false
+	var piles: PackedFloat32Array = _native.get_kit_piles()
+	for index in _kit_piles.size():
+		var pile: MeshInstance3D = _kit_piles[index]
+		var p := index * KIT_PILE_FLOATS
+		pile.visible = p + KIT_PILE_FLOATS <= piles.size() and piles[p + 3] >= 1.0
+		if pile.visible:
+			# A frustum of this height and base radius r holds about
+			# 0.65 * PI * r^2 * height.
+			var volume := piles[p + 3] / RUBBLE_DENSITY
+			var radius := sqrt(volume / (0.65 * PI * RUBBLE_PILE_HEIGHT))
+			pile.transform = Transform3D(
+				Basis.from_scale(Vector3(radius, RUBBLE_PILE_HEIGHT, radius)),
+				Vector3(piles[p], piles[p + 1] + RUBBLE_PILE_HEIGHT * 0.5, piles[p + 2]))
 
 
 func _lay_segment(instance: MeshInstance3D, from: Vector3, to: Vector3) -> void:

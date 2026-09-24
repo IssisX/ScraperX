@@ -170,10 +170,21 @@ public:
     // drawn through. Empty for a parted rope.
     [[nodiscard]] std::int64_t get_kit_cable_count() const;
     [[nodiscard]] godot::PackedVector3Array get_kit_cable_points(std::int64_t cable) const;
+    // Rubble (the native's declared granular model), every bin as 10 floats:
+    // its kit body index, contents kg, capacity kg, flowing (0 or 1), and the
+    // stream's from and to points (zero unless flowing).
+    [[nodiscard]] godot::PackedFloat32Array get_kit_bins() const;
+    // Every pile of spilled rubble as 4 floats: where it lies, and its kg.
+    [[nodiscard]] godot::PackedFloat32Array get_kit_piles() const;
     // Stage A, the skip lift, read back.
     [[nodiscard]] double get_well_a_cage_travel() const;
     [[nodiscard]] bool is_well_a_catch_latched() const;
     [[nodiscard]] std::int64_t get_well_a_rope_end_entity_id() const;
+    // Stage C, the debris chute, read back.
+    [[nodiscard]] double get_well_c_platform_travel() const;
+    [[nodiscard]] bool is_well_c_catch_latched() const;
+    [[nodiscard]] double get_well_c_rebar_angle() const;
+    [[nodiscard]] double get_well_c_dumpster_kg() const;
 
 protected:
     static void _bind_methods();

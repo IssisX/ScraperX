@@ -93,6 +93,8 @@ using RopeIndex = Index<struct RopeTag>;
 using LeverIndex = Index<struct LeverTag>;
 using CatchIndex = Index<struct CatchTag>;
 using LineIndex = Index<struct LineTag>;
+using SlipIndex = Index<struct SlipTag>;
+using BinIndex = Index<struct BinTag>;
 
 class Kit final {
 public:
@@ -121,11 +123,18 @@ public:
     GuideIndex add_guide(BodyIndex body, JPH::Vec3 axis, float min_travel, float max_travel,
                          float governor_speed, float governor_force, float level_accel);
 
-    // A rope from body1's point over fixed1 ... fixed2 to its end. The end
-    // starts on end_body at end_point: a shackle body (loose end) or any
-    // body (an end that is already made fast). Length is fixed for the
-    // rope's life: max_length, tension only. rating_newtons == 0: it never
-    // parts.
+    // Safety dogs on a guide: a pawl drops into a rack tooth every `pitch`
+    // of travel, so the body climbs its guide but never falls back more than
+    // one tooth. Teeth are counted down from max_travel, so the top of travel
+    // is a tooth.
+    void set_dogs(GuideIndex guide, float pitch);
+
+    // A rope from body1's point over fixed1 ... fixed2 to its end:
+    // |p1 - fixed1| + ratio |end - fixed2| <= max_length, tension only. A
+    // ratio of 0.5 is a two-part purchase on body1's side: body1 is pulled
+    // twice as hard as the end and moves half as far. The end starts on
+    // end_body at end_point: a shackle body (loose end) or any body (an end
+    // already made fast). rating_newtons == 0: it never parts.
     RopeIndex add_rope(BodyIndex body1, JPH::Vec3 point1, JPH::RVec3 fixed1, BodyIndex end_body,
                        JPH::Vec3 end_point, JPH::RVec3 fixed2, float ratio, float max_length,
                        float rating_newtons);
@@ -143,6 +152,26 @@ public:
     // returned.
     CatchIndex add_catch(BodyIndex body, LeverIndex lever, float release_angle,
                          float seat_tolerance, bool relatch);
+
+    // A slip hook (a pelican hook) holding a rope's body1 end: shut while
+    // lever is below release_angle; past it, the hook opens and the rope runs
+    // out for good, as if parted.
+    SlipIndex add_slip(RopeIndex rope, LeverIndex lever, float release_angle);
+
+    // A bin holds rubble (declared granular model, AS-006 Stage C): its
+    // contents in kg, added to its body's mass when the body is dynamic
+    // (MotionProperties::ScaleToMass: the rubble spreads like the body, so
+    // inertia scales with mass). Its mouth is a point on its underside.
+    // While its gate lever is turned past gate_open_angle and the lever's
+    // pivot is within gate_reach of the mouth, rubble leaves the mouth at
+    // flow_rate and falls straight down to the first bin or the first static
+    // surface under it, passing any other moving body: a bin receives it up
+    // to its capacity; a static surface takes it as a spill, onto a pile
+    // there. The stream carries no momentum into what receives it, and a
+    // stream that finds nothing within kStreamReach does not run. Rubble in
+    // a bin lies on the bin's floor, its first part. gate invalid: no outlet.
+    BinIndex add_bin(BodyIndex body, float contents_kg, float capacity_kg, JPH::Vec3 mouth_local,
+                     LeverIndex gate, float gate_open_angle, float gate_reach, float flow_rate);
 
     // A trip line: a light rope from a lever's arm point over sheave1, along
     // to sheave2 and down to a handle hanging there, as laid. Pulling the
@@ -190,11 +219,21 @@ public:
         JPH::Vec3 angular = JPH::Vec3::sZero();
         bool enabled = true;
     };
+    // Rubble spilled onto a static surface: a pile where it landed. Spills
+    // landing within kPileMergeRadius of a pile join it; past kMaxPiles, a
+    // spill joins the nearest pile.
+    struct Pile final {
+        JPH::RVec3 at = JPH::RVec3::sZero();
+        float kg = 0.0F;
+    };
     struct Checkpoint final {
         std::vector<BodyState> bodies;
         std::vector<AnchorIndex> rope_anchor;   // invalid: on its shackle
+        std::vector<float> dog_floor;
+        std::vector<float> bin_contents;
         std::vector<bool> rope_parted;
         std::vector<bool> catch_latched;
+        std::vector<Pile> piles;
     };
     void capture(Checkpoint &out) const;
     void restore(const Checkpoint &in);
@@ -209,8 +248,12 @@ public:
     // Empty for an index the kit does not hold.
     [[nodiscard]] const std::vector<Part> &body_parts(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::RVec3 body_position(BodyIndex body) const noexcept;
+    // Where the body's mass is centred now, contents included (a bin's
+    // rubble is spread like the body).
+    [[nodiscard]] JPH::RVec3 body_center_of_mass(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Quat body_rotation(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Vec3 body_velocity(BodyIndex body) const noexcept;
+    // The body's mass now: its own, plus the rubble in it if it is a bin.
     [[nodiscard]] float body_mass(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::BodyID body_id(BodyIndex body) const noexcept;
     [[nodiscard]] BodyIndex body_for_entity(std::uint64_t entity) const noexcept;
@@ -218,8 +261,8 @@ public:
     [[nodiscard]] std::uint32_t rope_count() const noexcept {
         return static_cast<std::uint32_t>(ropes_.size());
     }
-    // The rope as drawn: its first end, its sheaves, its other end. Empty
-    // when parted.
+    // The rope as drawn: its first end, its sheaves, its other end. Parted
+    // or let go, only its end's side: from the end up to its sheave.
     void rope_polyline(RopeIndex rope, std::vector<JPH::RVec3> &out) const;
     // Everything drawn as a cable: the ropes, then the trip lines.
     [[nodiscard]] std::uint32_t cable_count() const noexcept {
@@ -230,7 +273,21 @@ public:
     // The entity of the body the rope's end is on now: an anchor's body, its
     // shackle, or the body it was made fast to.
     [[nodiscard]] std::uint64_t rope_end_entity(RopeIndex rope) const noexcept;
+    // The pull on the rope's first end (body1's side), N.
     [[nodiscard]] float rope_tension(RopeIndex rope) const noexcept;
+
+    [[nodiscard]] std::uint32_t bin_count() const noexcept {
+        return static_cast<std::uint32_t>(bins_.size());
+    }
+    [[nodiscard]] float bin_contents(BinIndex bin) const noexcept;
+    [[nodiscard]] float bin_capacity(BinIndex bin) const noexcept;
+    [[nodiscard]] BodyIndex bin_body(BinIndex bin) const noexcept;
+    // The stream leaving the bin this step: from its mouth down to where it
+    // lands. False when its gate is shut or it is empty.
+    [[nodiscard]] bool bin_stream(BinIndex bin, JPH::RVec3 &from, JPH::RVec3 &to) const noexcept;
+    // Rubble that has left the system onto static surfaces, kg.
+    [[nodiscard]] float spilled() const noexcept;
+    [[nodiscard]] const std::vector<Pile> &piles() const noexcept { return piles_; }
 
     [[nodiscard]] bool catch_latched(CatchIndex catch_index) const noexcept;
     [[nodiscard]] float lever_angle(LeverIndex lever) const noexcept;
@@ -264,6 +321,8 @@ private:
         float governor_force = 0.0F;
         float level_accel = 0.0F;
         float peak_speed = 0.0F;
+        float dog_pitch = 0.0F;     // 0: no dogs
+        float dog_floor = 0.0F;     // the tooth the pawl rests above
     };
     struct Rope final {
         BodyIndex body1;
@@ -286,6 +345,7 @@ private:
     struct Lever final {
         BodyIndex body;
         JPH::Ref<JPH::HingeConstraint> hinge;
+        JPH::RVec3 pivot = JPH::RVec3::sZero();   // world: every lever hinges on the world
     };
     struct Line final {
         BodyIndex lever_body;
@@ -295,6 +355,24 @@ private:
         JPH::RVec3 sheave1 = JPH::RVec3::sZero();
         JPH::RVec3 sheave2 = JPH::RVec3::sZero();
         JPH::Ref<JPH::TwoBodyConstraint> constraint;
+    };
+    struct Bin final {
+        BodyIndex body;
+        float contents = 0.0F;
+        float capacity = 0.0F;
+        JPH::Vec3 mouth = JPH::Vec3::sZero();
+        LeverIndex gate;
+        float gate_open_angle = 0.0F;
+        float gate_reach = 0.0F;
+        float flow_rate = 0.0F;
+        bool flowing = false;
+        JPH::RVec3 stream_from = JPH::RVec3::sZero();
+        JPH::RVec3 stream_to = JPH::RVec3::sZero();
+    };
+    struct Slip final {
+        RopeIndex rope;
+        LeverIndex lever;
+        float release_angle = 0.0F;
     };
     struct Catch final {
         BodyIndex body;
@@ -323,6 +401,12 @@ private:
     void latch(Catch &catch_record);
     void unlatch(Catch &catch_record);
     void govern(Guide &guide) noexcept;
+    void engage_dogs(Guide &guide);
+    void flow_bins(float delta_seconds);
+    void apply_bin_mass(const Bin &bin);
+    // The middle of the top of a bin's floor, its body's first part, local.
+    [[nodiscard]] JPH::Vec3 floor_top(const Bin &bin) const;
+    void spill(JPH::RVec3 at, float kg);
 
     JPH::PhysicsSystem &system_;
     JPH::ObjectLayer static_layer_;
@@ -334,6 +418,9 @@ private:
     std::vector<Lever> levers_;
     std::vector<Catch> catches_;
     std::vector<Line> lines_;
+    std::vector<Slip> slips_;
+    std::vector<Bin> bins_;
+    std::vector<Pile> piles_;
 };
 
 } // namespace scraperx::sim::kit

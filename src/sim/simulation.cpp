@@ -981,11 +981,12 @@ constexpr float kCarryTurnRadiansPerSecond = 3.0F;
 // and closes on them, so it is held.
 constexpr float kCarrySlipDistance = 0.90F;
 // AS-006: a hand holds a mechanism-kit body -- a shackle, a trip-line handle,
-// a load -- with at most this force. Pulled harder for kGripSteps steps
-// running, the body is torn out of the hands. The AS-003 bar and block keep
-// the slip rule above alone.
+// a load -- with at most this force. Pulled harder for kGripSeconds running,
+// the body is torn out of the hands: grip gives to a sustained pull (a lever
+// on its stop, a cage rising away), not to the jolt of a hand starting to
+// move. The AS-003 bar and block keep the slip rule above alone.
 constexpr float kGripNewtons = 900.0F;
-constexpr std::uint32_t kGripSteps = 2;
+constexpr float kGripSeconds = 0.10F;
 
 // --- WO-013 Ascent Atlas v1.0 kernel: KX-SUMP / KX-GRATE -------------------
 // Atlas section 9: "wet sump makes KX-GRATE a hazard... isolated + drained
@@ -1424,6 +1425,12 @@ private:
     case scraperx::sim::InitialSpawn::StairTop:
         // The 154 m deck's north band, north of Stage A's cage.
         return {-10.5, 155.0, -128.2};
+    case scraperx::sim::InitialSpawn::WellBCage:
+        // Inside B's cage, west of its middle.
+        return {-7.6, 177.2, -131.2};
+    case scraperx::sim::InitialSpawn::WellCPlatform:
+        // On C's platform, west of its middle.
+        return {-4.3, 199.2, -132.2};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -4216,7 +4223,7 @@ private:
         }
         carried_id_ = id;
         carried_entity_ = entity;
-        grip_over_steps_ = 0;
+        grip_over_seconds_ = 0.0F;
         contact_listener_.set_carried_entity(entity);
     }
 
@@ -4257,8 +4264,8 @@ private:
             if (scraperx::sim::kit::is_kit_entity(carried_entity_)) {
                 const float pull =
                     carry_constraint_->GetTotalLambdaPosition().Length() / delta_seconds;
-                grip_over_steps_ = pull > kGripNewtons ? grip_over_steps_ + 1U : 0U;
-                if (grip_over_steps_ >= kGripSteps) {
+                grip_over_seconds_ = pull > kGripNewtons ? grip_over_seconds_ + delta_seconds : 0.0F;
+                if (grip_over_seconds_ >= kGripSeconds) {
                     release_carry();
                 }
             }
@@ -5215,6 +5222,23 @@ private:
         state_.well_a_rope_end_entity_id = kit.rope_end_entity(well_.a_rope);
         state_.well_a_rope_tension_n = kit.rope_tension(well_.a_rope);
         state_.well_a_lever_angle = kit.lever_angle(well_.a_lever);
+        state_.well_b_cage_travel = kit.guide_travel(well_.b_cage_guide);
+        state_.well_b_cage_peak_speed = kit.guide_peak_speed(well_.b_cage_guide);
+        state_.well_b_boom_angle = kit.lever_angle(well_.b_boom_hinge);
+        state_.well_b_catch_latched = kit.catch_latched(well_.b_catch);
+        state_.well_b_rope_end_entity_id = kit.rope_end_entity(well_.b_rope);
+        state_.well_b_rope_let_go = kit.rope_parted(well_.b_rope);
+        state_.well_b_rope_tension_n = kit.rope_tension(well_.b_rope);
+        state_.well_c_platform_travel = kit.guide_travel(well_.c_platform_guide);
+        state_.well_c_platform_peak_speed = kit.guide_peak_speed(well_.c_platform_guide);
+        state_.well_c_dumpster_travel = kit.guide_travel(well_.c_dumpster_guide);
+        state_.well_c_catch_latched = kit.catch_latched(well_.c_catch);
+        state_.well_c_hopper_kg = kit.bin_contents(well_.c_hopper);
+        state_.well_c_dumpster_kg = kit.bin_contents(well_.c_dumpster_bin);
+        state_.well_a_cage_rubble_kg = kit.bin_contents(well_.a_cage_bin);
+        state_.well_rubble_spilled_kg = kit.spilled();
+        state_.well_c_rebar_angle = kit.lever_angle(well_.c_rebar);
+        state_.well_c_latch_angle = kit.lever_angle(well_.c_latch);
 
         const JPH::RVec3 rope_tipper =
             bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
@@ -5350,7 +5374,7 @@ private:
     JPH::BodyID carried_id_;
     std::uint64_t carried_entity_ = 0;
     std::uint64_t carry_target_entity_ = 0;
-    std::uint32_t grip_over_steps_ = 0;
+    float grip_over_seconds_ = 0.0F;
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     scraperx::sim::bands::CounterweightWell well_{};
@@ -5629,6 +5653,10 @@ Vector3 Simulation::kit_body_position(const std::uint32_t body) const noexcept {
     return to_sim_vector(physics_world_->kit().body_position(kit::BodyIndex{body}));
 }
 
+Vector3 Simulation::kit_body_center_of_mass(const std::uint32_t body) const noexcept {
+    return to_sim_vector(physics_world_->kit().body_center_of_mass(kit::BodyIndex{body}));
+}
+
 Quaternion Simulation::kit_body_rotation(const std::uint32_t body) const noexcept {
     return to_sim_quaternion(physics_world_->kit().body_rotation(kit::BodyIndex{body}));
 }
@@ -5661,6 +5689,42 @@ std::uint32_t Simulation::kit_cable_points(const std::uint32_t cable, Vector3 *o
         out[index] = to_sim_vector(points[index]);
     }
     return count;
+}
+
+std::uint32_t Simulation::kit_bin_count() const noexcept {
+    return physics_world_->kit().bin_count();
+}
+
+KitBin Simulation::kit_bin(const std::uint32_t bin) const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    KitBin out;
+    if (bin >= kit.bin_count()) {
+        return out;
+    }
+    const kit::BinIndex index{bin};
+    out.body = kit.bin_body(index).value;
+    out.contents_kg = kit.bin_contents(index);
+    out.capacity_kg = kit.bin_capacity(index);
+    JPH::RVec3 from;
+    JPH::RVec3 to;
+    out.flowing = kit.bin_stream(index, from, to);
+    if (out.flowing) {
+        out.stream_from = to_sim_vector(from);
+        out.stream_to = to_sim_vector(to);
+    }
+    return out;
+}
+
+std::uint32_t Simulation::kit_pile_count() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->kit().piles().size());
+}
+
+KitPile Simulation::kit_pile(const std::uint32_t pile) const noexcept {
+    const auto &piles = physics_world_->kit().piles();
+    if (pile >= piles.size()) {
+        return {};
+    }
+    return {to_sim_vector(piles[pile].at), piles[pile].kg};
 }
 
 bool Simulation::set_jib_slew_input(const double value) noexcept {

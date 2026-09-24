@@ -98,6 +98,12 @@ enum class InitialSpawn : std::uint8_t {
     // north of Stage A's cage and facing it. The stair itself is proven by
     // the world-solids group; the band's tests start where it ends.
     StairTop = 24,
+    // AS-006 Stage B falsifier spawn: standing in B's cage on its bottom stop
+    // at 176.25, as a rider who has stepped across from A's parked cage.
+    WellBCage = 25,
+    // AS-006 Stage C falsifier spawn: standing on C's platform on its bottom
+    // stop at 198.25, as a rider who has stepped across from B's parked cage.
+    WellCPlatform = 26,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -107,6 +113,24 @@ struct KitPart final {
     Vector3 offset{};
     Quaternion rotation{};
     std::uint8_t material = 0;
+};
+
+// A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it
+// is, the rubble in it, and while it pours, the stream from its mouth down to
+// where the stream lands. Its rubble lies on its floor, the body's first part.
+struct KitBin final {
+    std::uint32_t body = 0;
+    double contents_kg = 0.0;
+    double capacity_kg = 0.0;
+    bool flowing = false;
+    Vector3 stream_from{};
+    Vector3 stream_to{};
+};
+
+// Rubble spilled onto a static surface, piled where it landed.
+struct KitPile final {
+    Vector3 at{};
+    double kg = 0.0;
 };
 
 enum class TraversalState : std::uint8_t {
@@ -287,6 +311,25 @@ struct Snapshot final {
     std::uint64_t well_a_rope_end_entity_id = 0;
     double well_a_rope_tension_n = 0.0;
     double well_a_lever_angle = 0.0;
+    // Stage B, the derrick boom. The boom's angle is 0 level and pi/2 hanging.
+    double well_b_cage_travel = 0.0;
+    double well_b_cage_peak_speed = 0.0;
+    double well_b_boom_angle = 0.0;
+    bool well_b_catch_latched = true;
+    std::uint64_t well_b_rope_end_entity_id = 0;
+    bool well_b_rope_let_go = false;
+    double well_b_rope_tension_n = 0.0;
+    // Stage C and the cascade. Rubble in kg (the declared granular model).
+    double well_c_platform_travel = 0.0;
+    double well_c_platform_peak_speed = 0.0;
+    double well_c_dumpster_travel = 0.0;
+    bool well_c_catch_latched = true;
+    double well_c_hopper_kg = 0.0;
+    double well_c_dumpster_kg = 0.0;
+    double well_a_cage_rubble_kg = 0.0;
+    double well_rubble_spilled_kg = 0.0;
+    double well_c_rebar_angle = 0.0;
+    double well_c_latch_angle = 0.0;
 };
 
 struct AdvanceResult final {
@@ -409,6 +452,24 @@ public:
     static constexpr std::uint64_t kWellAShackleEntityId = 2002;
     static constexpr std::uint64_t kWellALeverEntityId = 2003;
     static constexpr std::uint64_t kWellAHandleEntityId = 2004;
+    static constexpr std::uint64_t kWellBFrameEntityId = 1001;
+    static constexpr std::uint64_t kWellBCageEntityId = 2010;
+    static constexpr std::uint64_t kWellBBoomEntityId = 2011;
+    static constexpr std::uint64_t kWellBShackleEntityId = 2012;
+    static constexpr std::uint64_t kWellBLeverEntityId = 2013;
+    static constexpr std::uint64_t kWellBHandleEntityId = 2014;
+    static constexpr std::uint64_t kWellBStrikerEntityId = 2015;
+    static constexpr std::uint64_t kWellCFrameEntityId = 1002;
+    static constexpr std::uint64_t kWellCHopperEntityId = 1003;
+    static constexpr std::uint64_t kWellCPlatformEntityId = 2020;
+    static constexpr std::uint64_t kWellCDumpsterEntityId = 2021;
+    static constexpr std::uint64_t kWellCLatchEntityId = 2022;
+    static constexpr std::uint64_t kWellCRebarEntityId = 2023;
+    static constexpr std::uint64_t kWellCHandleEntityId = 2024;
+    static constexpr std::uint64_t kWellCStrikerEntityId = 2025;
+    static constexpr std::uint64_t kWellATipOutEntityId = 2005;
+    static constexpr std::uint64_t kWellATipHandleEntityId = 2006;
+    static constexpr std::uint64_t kWellCLatchHandleEntityId = 2026;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -515,6 +576,7 @@ public:
     [[nodiscard]] std::uint32_t kit_body_part_count(std::uint32_t body) const noexcept;
     [[nodiscard]] KitPart kit_body_part(std::uint32_t body, std::uint32_t part) const noexcept;
     [[nodiscard]] Vector3 kit_body_position(std::uint32_t body) const noexcept;
+    [[nodiscard]] Vector3 kit_body_center_of_mass(std::uint32_t body) const noexcept;
     [[nodiscard]] Quaternion kit_body_rotation(std::uint32_t body) const noexcept;
     [[nodiscard]] Vector3 kit_body_velocity(std::uint32_t body) const noexcept;
     [[nodiscard]] double kit_body_mass(std::uint32_t body) const noexcept;
@@ -525,6 +587,11 @@ public:
     // other end) and returns how many; 0 for a parted rope.
     [[nodiscard]] std::uint32_t kit_cable_points(std::uint32_t cable, Vector3 *out,
                                                  std::uint32_t capacity) const noexcept;
+    // Indices run 0 .. count - 1; an index past the end reads as empty.
+    [[nodiscard]] std::uint32_t kit_bin_count() const noexcept;
+    [[nodiscard]] KitBin kit_bin(std::uint32_t bin) const noexcept;
+    [[nodiscard]] std::uint32_t kit_pile_count() const noexcept;
+    [[nodiscard]] KitPile kit_pile(std::uint32_t pile) const noexcept;
 
 private:
     class PhysicsWorld;

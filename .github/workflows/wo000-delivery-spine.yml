@@ -109,7 +109,12 @@ jobs:
             "PASS scraperx_sim AS-003 cage" \
             "PASS scraperx_sim AS-003 Hook5 Rack" \
             "PASS scraperx_sim AS-006 A no link" \
-            "PASS scraperx_sim AS-006 A ride"
+            "PASS scraperx_sim AS-006 A ride" \
+            "PASS scraperx_sim AS-006 B no link" \
+            "PASS scraperx_sim AS-006 B ride" \
+            "PASS scraperx_sim AS-006 C no link" \
+            "PASS scraperx_sim AS-006 C ride" \
+            "PASS scraperx_sim AS-006 band"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
@@ -188,6 +193,35 @@ jobs:
           grep -F "rode_on_cage=1" artifacts/native-falsifiers.log
           awk -F'restored_y=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 >= 177.0) ? 0 : 1}' \
             artifacts/native-falsifiers.log
+          # AS-006 Stages B and C and the band: neither lifts without its link;
+          # B's slip hook lets the line run at the top and the boom hangs; each
+          # car stands on its dogs flush with its ring; the band rides from the
+          # 154 m deck to the 220 ring in one run, re-arms A with C's rubble and
+          # rides A again.
+          awk -F'cage_worst=' '/AS-006 B no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'boom_drop=' '/AS-006 B no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'floor_y=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 198.18 && a[1]+0 <= 198.27) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'boom_angle=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 1.45) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "let_go=1 rode_on_cage=1" artifacts/native-falsifiers.log
+          awk -F'platform_worst=' '/AS-006 C no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'dumpster_kg=' '/AS-006 C no link/ {split($2,a," "); exit (a[1]+0 >= 899) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'floor_y=' '/AS-006 C ride/ {split($2,a," "); exit (a[1]+0 >= 220.18 && a[1]+0 <= 220.27) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'a_cage_rubble_kg=' '/AS-006 C ride/ {split($2,a," "); exit (a[1]+0 >= 899) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "rode_on_platform=1" artifacts/native-falsifiers.log
+          awk -F'y_220=' '/AS-006 band/ {split($2,a," "); exit (a[1]+0 >= 221.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'spilled_kg=' '/AS-006 band/ {split($2,a," "); exit (a[1]+0 >= 899) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'again_y=' '/AS-006 band/ {split($2,a," "); exit (a[1]+0 >= 177.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
 
       - name: Run Godot at Fold aspect through native machine authority and capture proof
         shell: bash
@@ -233,7 +267,7 @@ jobs:
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
               touch_hang_climb touch_chute touch_lethal_feedback touch_sump touch_pendant \
               touch_carry touch_pause pad_core pad_pendant keyboard_core \
-              touch_rig pad_rig keyboard_rig; do
+              touch_rig pad_rig keyboard_rig touch_debris pad_debris keyboard_debris; do
             timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

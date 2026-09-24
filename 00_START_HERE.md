@@ -34,7 +34,7 @@ The one block to read before doing anything. Everything below is detail behind i
 | **Sky and light** | `godot/presentation/sky_cycle.gd` + `sky.gdshader`: a moving sun (24 real minutes per day, noon elevation 58 deg) that becomes the moon at night on the one shadowed light, sky dome, drifting lit cloud deck, stars, dusk glow; ambient from the sky, fog and exposure follow the sun. Shadows: 4096 atlas on every platform (Android's default was 2048), PCF soft filter 3 (2 on mobile), four blended cascades over 220 m. Presentation only; native has no time of day |
 | **Audio** | `godot/presentation/audio/`: a bank synthesised at startup from seeded noise and partials (23 cues, ~0.35 s on a worker thread; no audio files ship), voiced for a phone speaker (identity above 300 Hz, low thump only for weight), and a director that plays what the native reports: footsteps on the head-bob stride (concrete / steel / meadow; softer crouched), jump, landings scaled by impact, ledge grab, vault/mantle scrape, crouch rustle, canopy, lethal impact; altitude wind, a distant yard bed and a falling-air rush; at the plant, positional motor hum, steam hiss from the native orifice flow, the hoist chain at the scoop's speed, the lift drive, clangs where the ballast loses velocity, the tipper's creak; birds near the ground by day. Master ends in a hard limiter (+6 dB in, -0.8 dB ceiling). The first bank measured -27.6 dBFS (footsteps) / -48.6 dBFS (ambience) above 300 Hz — next to silent on a phone; `audio_mix` now measures the mix leaving Master under Movie Maker (headless runs' Dummy driver never mixes): ambience -23.3, footsteps -14.5 dBFS above 300 Hz, peak -0.8, CI step "Measure the mix a player hears" (the same figures in run `35912759289`). Measured, **never listened to** — no output device here. **Not done: Governing Law 8's human fear voice on large falls — it needs recorded performances** |
 | **Interface** | GDD §22 control surface in `godot/presentation/ui/`: touch (floating stick, drag-look, Jump, contextual Action, Drop/Chute on state, pendant controls only while operating), gamepad and keyboard over one verb vocabulary; sparse HUD (reticle cues, prompts, fall gauge against the native lethal speed, altimeter, station panel), pause with SETTINGS, GRAPHICS (quality preset LOW-ULTRA, render scale, shadows OFF-ULTRA, MSAA, bloom, frame-rate cap, FPS readout) and DISPLAY (FOV, brightness, head bob, speed-FOV kick, time of day, day length) pages; first-person arms (`godot/presentation/first_person_arms.gd`) whose hands grip, plant and reach at the ledge points the native reports; a standing mantle steps in to the hang standoff before it climbs (swept, supported, skipped on moving ground) so the palms land on the lip; opt-in gyro aim (off by default; screen-axis mapping taken from Godot 4.7-stable's Android sensor code, not yet observed on a device); double-tap Jump vaults when the takeoff could have (native window 0.30 s, the ground vault's own probes); PICK UP / SET DOWN on the contextual Action for the native carry (Drop and Back also set down), both hands drawn on the load; crouch (native 1.2 m capsule, feet fixed; stands only where the full 1.8 m capsule clears, so a low gap keeps you down; Jump and Action stand first) on a touch CROUCH/STAND toggle, C or right-stick click, or held Ctrl, with the eye gliding 1.52 to 0.95 m. 18 headless `--uitest` scenarios drive real input events into native state changes (`touch_carry` added with `AS-003`); all 18, and the Movie Maker `audio_mix`, passed in CI run `36010028676` |
-| **Next code job** | **`AS-006` Stages B and C** — the derrick boom (a one-shot lift whose line parts and leaves the boom as a climbable lattice) and the debris-chute finale whose rubble re-arms Stage A; then **Step 2**, the movement the band's climbing route needs. Stage A and the rigging kit are built. Plan: `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` §5; slice: `03_EXECUTION/ASCENT/AS-006_CW_PIN.md` |
+| **Next code job** | **Step 2**, the movement (sprint, climb, shimmy, balance, controlled drop) the band's climbing route needs, then that route. `AS-006`'s three lifts are built: the skip lift, the derrick boom (a one-shot lift whose slip hook lets the line run and leaves the boom hanging as a lattice) and the debris-chute finale whose rubble re-arms the skip lift; one native run rides all three from the 154 m deck to the 220 ring. Plan: `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` §5; slice: `03_EXECUTION/ASCENT/AS-006_CW_PIN.md` |
 | **Next authoring job** | re-author **`AS-007`** (B03, 220 → 340 m) as the next linked-stage band, once `AS-006` is built |
 | **Authoring contract** | `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md`; for everything above the stair, `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` |
 | **Unproven** | Fold-device install, on-device execution, touch ergonomics, sustained frame rate. **No device access exists** |
@@ -170,7 +170,7 @@ records, deliberately not rewritten. Retconning a proof record is worse than an 
 | `AS-003` | `CAP-HOOK5` acquire | B00 | **IMPLEMENTED** | re-derived here | falsifiers, green in run `36010028676` (`AS-003 apron`, `cage`, `Hook5 Rack`; `touch_carry`) |
 | `AS-004` | seat needles at 96 m | B01 | PLANNED | re-derived here; revalidated; the stair stays, so not the next job | none |
 | `AS-005` | cage land at 120 m, or east climb | B01 exit | PLANNED | ⚠ imported | none |
-| `AS-006` | counterweight well, 154 → 220 m: skip lift, derrick boom, debris chute | B02 | IN PROGRESS | re-derived here under the mechanism ascent plan; Stage A built (rigging kit, skip lift, UNHOOK / HOOK / GRAB / LET GO on touch, gamepad and keyboard) — Stages B and C **next code job** | `PASS scraperx_sim AS-006 A no link`, `AS-006 A ride`; uitests `touch_rig`, `pad_rig`, `keyboard_rig` (local; CI pending) |
+| `AS-006` | counterweight well, 154 → 220 m: skip lift, derrick boom, debris chute | B02 | IN PROGRESS | re-derived here under the mechanism ascent plan; Stages A, B and C built (rigging kit with dogs, slip hooks and the declared rubble model; UNHOOK / HOOK / GRAB / LET GO on touch, gamepad and keyboard) and ridden in one run to the 220 ring; the climbing route waits on Step 2 | `PASS scraperx_sim AS-006 A no link`, `A ride`, `B no link`, `B ride`, `C no link`, `C ride`, `band`; uitests `touch_rig`, `pad_rig`, `keyboard_rig`, `touch_debris`, `pad_debris`, `keyboard_debris` (local; CI pending) |
 | `AS-007` | blind + drain, or north climb to 340 m | B03 | PLANNED | ⚠ imported | none |
 | `AS-008` | seat `MOD-GIRDER-T` | B04 | UNAUTHORED | — | none |
 | `AS-009` | hang rail / traveler stroke | B05 | UNAUTHORED | — | none |
@@ -188,7 +188,7 @@ records, deliberately not rewritten. Retconning a proof record is worse than an 
 
 ## 8. What is next
 
-> **Next job: code `AS-006` Stages B and C**, then Step 2's movement.
+> **Next job: Step 2's movement**, then `AS-006`'s climbing route.
 > `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`, locked with the owner on 2026-09-24. The
 > climb above the stair's 154 m top deck is built from linked lift stages that the player
 > completes and rides. Step 1 is built: the rigging kit (ropes with a carryable loose end,
@@ -198,8 +198,12 @@ records, deliberately not rewritten. Retconning a proof record is worse than an 
 > released; the rider rides the cage as a moving support; a death restores the stage as
 > committed.
 >
-> Next: Stage B (the derrick boom, one-shot, its boom left as a climbable lattice) and Stage C (the
-> debris chute, whose rubble re-arms A), then Step 2's moves for the band's climbing route.
+> Stages B and C are built too: the derrick boom (a cleat-found line hooked onto B's cage, a slip
+> hook that lets the line run at the top, the boom left hanging as a lattice) and the debris chute
+> (the rebar thrown, 900 kg of rubble into the dumpster, the keeper latch freed), whose spent
+> dumpster empties into A's parked cage and re-arms A. One native run rides all three from the
+> 154 m deck to the 220 ring, then comes down by parachute, tips A's rubble out and rides A again.
+> Next: Step 2's moves for the band's climbing route, then `AS-007`.
 > `AS-004` stays `PLANNED`: the stair stays (owner's direction), so its needles are no longer the
 > way to 96 m.
 

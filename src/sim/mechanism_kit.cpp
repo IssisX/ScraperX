@@ -1,12 +1,17 @@
 #include "sim/mechanism_kit.hpp"
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace scraperx::sim::kit {
 
@@ -29,6 +34,12 @@ constexpr float kGovernorDeadband = 0.01F;
 constexpr float kGovernorCreep = 0.08F;
 // A catch relatches only for a body this slow.
 constexpr float kRelatchSpeed = 0.15F;
+// How far a stream of rubble can fall looking for somewhere to land.
+constexpr float kStreamReach = 80.0F;
+// Spills landing this close to a pile join it; the kit keeps at most
+// kMaxPiles piles, and past that a spill joins the nearest.
+constexpr float kPileMergeRadius = 1.5F;
+constexpr std::size_t kMaxPiles = 16;
 
 [[nodiscard]] JPH::Ref<JPH::Shape> make_shape(const std::vector<Part> &parts) {
     const auto box = [](const Part &part) {
@@ -157,8 +168,13 @@ GuideIndex Kit::add_guide(const BodyIndex body, const JPH::Vec3 axis, const floa
     guide.governor_speed = governor_speed;
     guide.governor_force = governor_force;
     guide.level_accel = level_accel;
+    guide.dog_floor = min_travel;
     guides_.push_back(guide);
     return GuideIndex{static_cast<std::uint32_t>(guides_.size() - 1U)};
+}
+
+void Kit::set_dogs(const GuideIndex guide, const float pitch) {
+    guides_[guide.value].dog_pitch = pitch;
 }
 
 RopeIndex Kit::add_rope(const BodyIndex body1, const JPH::Vec3 point1, const JPH::RVec3 fixed1,
@@ -197,7 +213,7 @@ LeverIndex Kit::add_lever(const BodyIndex body, const JPH::RVec3 pivot, const JP
     JPH::Ref<JPH::HingeConstraint> hinge = static_cast<JPH::HingeConstraint *>(
         settings.Create(JPH::Body::sFixedToWorld, jolt_body(body)));
     system_.AddConstraint(hinge);
-    levers_.push_back({body, hinge});
+    levers_.push_back({body, hinge, pivot});
     return LeverIndex{static_cast<std::uint32_t>(levers_.size() - 1U)};
 }
 
@@ -213,6 +229,29 @@ CatchIndex Kit::add_catch(const BodyIndex body, const LeverIndex lever, const fl
     catches_.push_back(record);
     latch(catches_.back());
     return CatchIndex{static_cast<std::uint32_t>(catches_.size() - 1U)};
+}
+
+SlipIndex Kit::add_slip(const RopeIndex rope, const LeverIndex lever, const float release_angle) {
+    slips_.push_back({rope, lever, release_angle});
+    return SlipIndex{static_cast<std::uint32_t>(slips_.size() - 1U)};
+}
+
+BinIndex Kit::add_bin(const BodyIndex body, const float contents_kg, const float capacity_kg,
+                       const JPH::Vec3 mouth_local, const LeverIndex gate,
+                       const float gate_open_angle, const float gate_reach,
+                       const float flow_rate) {
+    Bin bin;
+    bin.body = body;
+    bin.contents = contents_kg;
+    bin.capacity = capacity_kg;
+    bin.mouth = mouth_local;
+    bin.gate = gate;
+    bin.gate_open_angle = gate_open_angle;
+    bin.gate_reach = gate_reach;
+    bin.flow_rate = flow_rate;
+    bins_.push_back(bin);
+    apply_bin_mass(bins_.back());
+    return BinIndex{static_cast<std::uint32_t>(bins_.size() - 1U)};
 }
 
 LineIndex Kit::add_trip_line(const BodyIndex lever_body, const JPH::Vec3 lever_point,
@@ -276,6 +315,15 @@ void Kit::govern(Guide &guide) noexcept {
 void Kit::pre_step(const float) {
     for (Guide &guide : guides_) {
         govern(guide);
+        engage_dogs(guide);
+    }
+    for (const Slip &slip : slips_) {
+        Rope &rope = ropes_[slip.rope.value];
+        if (!rope.parted && lever_angle(slip.lever) > slip.release_angle) {
+            disconnect_rope(rope);
+            rope.parted = true;
+            rope.tension = 0.0F;
+        }
     }
     for (Catch &catch_record : catches_) {
         const float angle = lever_angle(catch_record.lever);
@@ -298,7 +346,119 @@ void Kit::pre_step(const float) {
     }
 }
 
+void Kit::apply_bin_mass(const Bin &bin) {
+    const Body &record = bodies_[bin.body.value];
+    if (!record.dynamic) {
+        return;
+    }
+    jolt_body(bin.body).GetMotionProperties()->ScaleToMass(record.mass + bin.contents);
+}
+
+void Kit::flow_bins(const float delta_seconds) {
+    const JPH::NarrowPhaseQuery &query = system_.GetNarrowPhaseQueryNoLock();
+    for (Bin &bin : bins_) {
+        bin.flowing = false;
+        const Lever *gate = find(levers_, bin.gate);
+        if (gate == nullptr || bin.contents <= 0.0F || !bodies_[bin.body.value].enabled ||
+            lever_angle(bin.gate) <= bin.gate_open_angle) {
+            continue;
+        }
+        const JPH::RVec3 mouth = world_point(bin.body, bin.mouth);
+        if (JPH::Vec3(gate->pivot - mouth).Length() > bin.gate_reach) {
+            continue;
+        }
+        // Straight down from the mouth: the first bin, or the first static
+        // surface; moving bodies that are not bins are passed through.
+        const JPH::RRayCast ray{mouth, JPH::Vec3(0.0F, -kStreamReach, 0.0F)};
+        JPH::AllHitCollisionCollector<JPH::CastRayCollector> hits;
+        const JPH::IgnoreSingleBodyFilter not_self(bodies_[bin.body.value].id);
+        query.CastRay(ray, JPH::RayCastSettings(), hits, {}, {}, not_self);
+        hits.Sort();
+        Bin *receiver = nullptr;
+        float landed = 1.0F;
+        bool found = false;
+        for (const JPH::RayCastResult &hit : hits.mHits) {
+            for (Bin &candidate : bins_) {
+                if (&candidate != &bin && bodies_[candidate.body.value].id == hit.mBodyID) {
+                    receiver = &candidate;
+                }
+            }
+            const JPH::BodyLockRead lock(system_.GetBodyLockInterfaceNoLock(), hit.mBodyID);
+            const bool is_static = lock.Succeeded() && lock.GetBody().IsStatic();
+            if (receiver != nullptr || is_static) {
+                landed = hit.mFraction;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            continue;
+        }
+        float moved = std::min(bin.contents, bin.flow_rate * delta_seconds);
+        JPH::RVec3 lands = ray.GetPointOnRay(landed);
+        if (receiver != nullptr) {
+            moved = std::min(moved, std::max(0.0F, receiver->capacity - receiver->contents));
+            receiver->contents += moved;
+            apply_bin_mass(*receiver);
+            // Into a bin, the stream runs on past its rim or bail to its floor.
+            const JPH::RVec3 floor = world_point(receiver->body, floor_top(*receiver));
+            if (floor.GetY() < lands.GetY()) {
+                lands.SetY(floor.GetY());
+            }
+        } else {
+            spill(lands, moved);
+        }
+        if (moved <= 0.0F) {
+            continue;
+        }
+        bin.contents -= moved;
+        apply_bin_mass(bin);
+        bin.flowing = true;
+        bin.stream_from = mouth;
+        bin.stream_to = lands;
+    }
+}
+
+JPH::Vec3 Kit::floor_top(const Bin &bin) const {
+    const std::vector<Part> &parts = bodies_[bin.body.value].parts;
+    if (parts.empty()) {
+        return bin.mouth;
+    }
+    const Part &floor = parts.front();
+    return floor.offset + floor.rotation * JPH::Vec3(0.0F, floor.half.GetY(), 0.0F);
+}
+
+void Kit::spill(const JPH::RVec3 at, const float kg) {
+    if (kg <= 0.0F) {
+        return;
+    }
+    Pile *nearest = nullptr;
+    float nearest_distance = std::numeric_limits<float>::max();
+    for (Pile &pile : piles_) {
+        const float distance = JPH::Vec3(pile.at - at).Length();
+        if (distance < nearest_distance) {
+            nearest = &pile;
+            nearest_distance = distance;
+        }
+    }
+    if (nearest != nullptr &&
+        (nearest_distance <= kPileMergeRadius || piles_.size() >= kMaxPiles)) {
+        nearest->kg += kg;
+        return;
+    }
+    piles_.push_back({at, kg});
+}
+
+float Kit::spilled() const noexcept {
+    float kg = 0.0F;
+    for (const Pile &pile : piles_) {
+        kg += pile.kg;
+    }
+    return kg;
+}
+
 void Kit::post_step(const float delta_seconds) {
+    flow_bins(delta_seconds);
     for (Rope &rope : ropes_) {
         if (rope.constraint == nullptr) {
             rope.tension = 0.0F;
@@ -314,6 +474,22 @@ void Kit::post_step(const float delta_seconds) {
             rope.parted = true;
             rope.tension = 0.0F;
         }
+    }
+}
+
+void Kit::engage_dogs(Guide &guide) {
+    if (guide.dog_pitch <= 0.0F || guide.slider == nullptr) {
+        return;
+    }
+    // The highest tooth at or below the body's travel. A pawl that has
+    // dropped into a tooth never lifts out, so the floor only ever rises.
+    const float travel = guide.slider->GetCurrentPosition();
+    const float teeth_below_top =
+        std::ceil((guide.max_travel - travel) / guide.dog_pitch - 1.0e-3F);
+    const float tooth = guide.max_travel - teeth_below_top * guide.dog_pitch;
+    if (tooth > guide.dog_floor + 1.0e-4F) {
+        guide.dog_floor = tooth;
+        guide.slider->SetLimits(guide.dog_floor, guide.max_travel);
     }
 }
 
@@ -575,10 +751,19 @@ void Kit::capture(Checkpoint &out) const {
         out.rope_anchor[index] = ropes_[index].anchor;
         out.rope_parted[index] = ropes_[index].parted;
     }
+    out.dog_floor.resize(guides_.size());
+    for (std::size_t index = 0; index < guides_.size(); ++index) {
+        out.dog_floor[index] = guides_[index].dog_floor;
+    }
+    out.bin_contents.resize(bins_.size());
+    for (std::size_t index = 0; index < bins_.size(); ++index) {
+        out.bin_contents[index] = bins_[index].contents;
+    }
     out.catch_latched.resize(catches_.size());
     for (std::size_t index = 0; index < catches_.size(); ++index) {
         out.catch_latched[index] = catches_[index].pin != nullptr;
     }
+    out.piles = piles_;
 }
 
 void Kit::restore(const Checkpoint &in) {
@@ -616,6 +801,19 @@ void Kit::restore(const Checkpoint &in) {
         rope.anchor = in.rope_anchor[index];
         rope.over_rating_steps = 0;
         connect_rope(rope);
+    }
+    for (std::size_t index = 0; index < bins_.size(); ++index) {
+        bins_[index].contents = in.bin_contents[index];
+        bins_[index].flowing = false;
+        apply_bin_mass(bins_[index]);
+    }
+    piles_ = in.piles;
+    for (std::size_t index = 0; index < guides_.size(); ++index) {
+        Guide &guide = guides_[index];
+        guide.dog_floor = in.dog_floor[index];
+        if (guide.slider != nullptr) {
+            guide.slider->SetLimits(guide.dog_floor, guide.max_travel);
+        }
     }
     for (std::size_t index = 0; index < catches_.size(); ++index) {
         if (in.catch_latched[index]) {
@@ -656,6 +854,19 @@ JPH::RVec3 Kit::body_position(const BodyIndex body) const noexcept {
                            : record->parked;
 }
 
+JPH::RVec3 Kit::body_center_of_mass(const BodyIndex body) const noexcept {
+    const Body *record = find(bodies_, body);
+    if (record == nullptr) {
+        return JPH::RVec3::sZero();
+    }
+    const JPH::BodyInterface &bodies = system_.GetBodyInterfaceNoLock();
+    if (record->enabled) {
+        return bodies.GetCenterOfMassPosition(record->id);
+    }
+    return record->parked +
+           bodies.GetRotation(record->id) * bodies.GetShape(record->id)->GetCenterOfMass();
+}
+
 JPH::Quat Kit::body_rotation(const BodyIndex body) const noexcept {
     const Body *record = find(bodies_, body);
     return record != nullptr ? system_.GetBodyInterfaceNoLock().GetRotation(record->id)
@@ -671,7 +882,16 @@ JPH::Vec3 Kit::body_velocity(const BodyIndex body) const noexcept {
 
 float Kit::body_mass(const BodyIndex body) const noexcept {
     const Body *record = find(bodies_, body);
-    return record != nullptr ? record->mass : 0.0F;
+    if (record == nullptr) {
+        return 0.0F;
+    }
+    float mass = record->mass;
+    for (const Bin &bin : bins_) {
+        if (bin.body == body && record->dynamic) {
+            mass += bin.contents;
+        }
+    }
+    return mass;
 }
 
 JPH::BodyID Kit::body_id(const BodyIndex body) const noexcept {
@@ -691,7 +911,12 @@ BodyIndex Kit::body_for_entity(const std::uint64_t entity) const noexcept {
 void Kit::rope_polyline(const RopeIndex rope_index, std::vector<JPH::RVec3> &out) const {
     out.clear();
     const Rope *rope = find(ropes_, rope_index);
-    if (rope == nullptr || rope->parted) {
+    if (rope == nullptr) {
+        return;
+    }
+    if (rope->parted) {
+        out.push_back(rope->fixed2);
+        out.push_back(world_point(rope_end_body(*rope), rope_end_point(*rope)));
         return;
     }
     out.push_back(world_point(rope->body1, rope->point1));
@@ -732,6 +957,31 @@ std::uint64_t Kit::rope_end_entity(const RopeIndex rope) const noexcept {
 float Kit::rope_tension(const RopeIndex rope) const noexcept {
     const Rope *record = find(ropes_, rope);
     return record != nullptr ? record->tension : 0.0F;
+}
+
+float Kit::bin_contents(const BinIndex bin) const noexcept {
+    const Bin *record = find(bins_, bin);
+    return record != nullptr ? record->contents : 0.0F;
+}
+
+float Kit::bin_capacity(const BinIndex bin) const noexcept {
+    const Bin *record = find(bins_, bin);
+    return record != nullptr ? record->capacity : 0.0F;
+}
+
+BodyIndex Kit::bin_body(const BinIndex bin) const noexcept {
+    const Bin *record = find(bins_, bin);
+    return record != nullptr ? record->body : BodyIndex{};
+}
+
+bool Kit::bin_stream(const BinIndex bin, JPH::RVec3 &from, JPH::RVec3 &to) const noexcept {
+    const Bin *record = find(bins_, bin);
+    if (record == nullptr || !record->flowing) {
+        return false;
+    }
+    from = record->stream_from;
+    to = record->stream_to;
+    return true;
 }
 
 bool Kit::catch_latched(const CatchIndex catch_index) const noexcept {

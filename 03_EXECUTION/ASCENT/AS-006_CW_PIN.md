@@ -1,7 +1,8 @@
 # SCRAPERX — AS-006 COUNTERWEIGHT WELL (B02, 154 → 220 m)
 
 **Ascent Slice:** `AS-006`
-**Lifecycle:** `IN PROGRESS` — Stage A built and tested; B, C and the climbing route to come
+**Lifecycle:** `IN PROGRESS` — Stages A, B and C and the band's one-run test built and tested; the
+climbing route waits on Step 2's movement
 **Provenance:** re-derived here, against `77a4364`, under
 `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`. Replaces the plan imported from `ScraperX-Grok`
 (their `WO-014_CW_PIN`), whose geometry, ids and persist versions describe a world that does not
@@ -52,21 +53,24 @@ where the stair's top deck is 9 m deep and the rings above step in by 0.9 m per 
 |---|---|---|---|---|---|
 | **A — skip lift** | 01 counter-mass | 154.25 → 176.25 | cage 350 kg + rider | 800 kg skip, 22 m | re-armable |
 | **B — derrick boom** | 13, the boom as a swinging counterweight | 176.25 → 198.25 | cage 350 kg + rider | 2 500 kg lattice boom, centre of mass falls 11 m | one-shot |
-| **C — debris chute** (finale) | 12 debris-chute counterweight, cascading into A | 198.25 → 220.25 | platform 700 kg + rider | 900 kg of rubble in a dumpster, 44 m on a 2:1 purchase | one-shot source; its leftover re-arms A |
+| **C — debris chute** (finale) | 12 debris-chute counterweight, cascading into A | 198.25 → 220.25 | platform 700 kg + rider | 900 kg of rubble in a 250 kg dumpster, 22 m on a 1:1 rope (as built; sketched 44 m on 2:1) | one-shot source; its leftover re-arms A |
 
 ### Links between stages (what each leaves behind)
 
 - **A → B.** A's cage, parked at the top of its travel, is the step into B's cage, which hangs 0.3 m
   east of it at 176 m. From the 176 ring the gap to B's cage is 1.1 m: a jump, legal but not the
   designed way.
-- **B → the band.** B's boom, once its guy has gone, hangs vertically from its pivot at 222 m down
-  to 200 m: a lattice you can climb from the 198 ring to a landing at the 220 ring. The wreckage
-  is a second way up the last section.
-- **C → A.** C's dumpster falls 44 m and stops just above A's parked cage. Its bottom gate trips on
-  the stop and the rubble drops into A's cage. A's cage then outweighs A's skip, sinks to 154 m,
-  and hauls the skip back up into its catch. The finale's leftover re-arms the band's first lift.
-- **The cascade.** One pull on C's chute gate: rubble fills the dumpster → the dumpster sinks and
-  lifts the platform to 220 m → it dumps into A's cage → A's cage sinks → A's skip is re-armed.
+- **B → C.** B's cage, parked on its dogs at 198.20, is the step onto C's platform 0.5 m east of it.
+- **B → the band.** B's boom, once its line has run out, hangs vertically from its pivot at 222 m
+  down to 200 m: a lattice you can climb from the 198 ring to a landing at the 220 ring. The
+  wreckage is a second way up the last section.
+- **C → A.** C's dumpster falls 22 m (as built) and stops just above A's parked cage. Its bottom gate
+  trips on the stop and the rubble drops into A's cage. A's cage then outweighs A's skip, sinks to
+  154 m, and hauls the skip back up into its catch. The finale's leftover re-arms the band's first
+  lift.
+- **The cascade.** Throw C's rebar: rubble fills the dumpster → free the platform: the dumpster sinks
+  and lifts the platform to 220 m → it dumps into A's cage → A's cage sinks → A's skip is re-armed.
+  At 154 m, A's tip-out spills the rubble on the deck and A rides again.
 
 ## Stage A — skip lift
 
@@ -154,6 +158,30 @@ the line are both gone, so nothing puts the boom back. B's cage stays at 198 on 
 **Energy:** the boom's centre of mass falls 11 m: `2 500 × 9.81 × 11 = 269.8 kJ`; the cage and rider
 gain 93.9 kJ.
 
+### As built (Stage B)
+
+- **The boom pivots on the 220 ring, not the 198**, at `(0, 222, -131.3)`, east of B's cage, and
+  swings down through the open well at `x = 0`. Its hoist line runs from a two-part block at the
+  tip up to a block (S2) under the 242 ring's inner edge, across to a block (S) under the 220
+  ring's edge over B's eye, and down to the eye on B's cage's east face: the boom swinging down
+  draws the tip away from S2 and the cage rises twice as far. A statics sweep over S2 (scratch)
+  gives the full 22 m at a boom angle of about 61° with the boom's weight out-pulling the line by at
+  least 76 kN·m all the way. Pivoted at 198 over B's cage, the boom swept B's own column.
+- **A catch holds the boom level, not a guy and turnbuckle.** The same counterweighted catch lever
+  as A's, on a stand on the 220 ring, with its trip line down to a gantry across B's opening at
+  176 m. One kit catch instead of a second pin mechanism.
+- **The missing link is the line's end, found made fast on a cleat** hanging from that gantry in
+  front of B's opening, 3 cm nearer S than the cage's eye (A's bollard, again). Pulled unlinked,
+  the cleat holds the boom within its slack and the cage never moves.
+- **The line lets go at a slip hook, not by parting at a rating.** A rating trip depends on how hard
+  the governed cage meets its buffer; a slip hook (a pelican hook) on the line's dead end at S2 is
+  opened by a striker the cage's west top rail lifts in its last 6 cm. The line runs out, the boom
+  swings on to hang from its pivot, and nothing puts it back.
+- **Safety dogs** (a ratchet on B's guide, a tooth every 0.05 m) hold the cage up once the line has
+  gone: it settles at most one tooth, `198.20`, under the ring. While the line hauls the rider
+  stands on the cage; as it settles onto its dogs the rider is airborne for two ticks.
+- **Wreckage:** the boom hangs from 222 m to 200 m at `x = 0`, a lattice for Step 2's climbing.
+
 ## Stage C — debris chute (finale cascade)
 
 **Found:** a platform on the 198 north ring's east half, on guides to 220 m, hung by a 2:1 rope
@@ -177,6 +205,57 @@ it at 220.25.
 **Cascade into A:** described under Links. C's source (the hopper's rubble) is spent: one-shot. Its
 wreckage is the emptied dumpster hanging above A's cage, climbable.
 
+### As built (Stage C)
+
+- **A 1:1 rope, not 2:1.** The dumpster's column above A's parked cage is 22 m (the dumpster's floor
+  from 201.30 to 179.30, 0.29 m over A's top frame): a 44 m fall would take it through A's cage.
+  On 1:1 the full dumpster (1 150 kg) outweighs the platform and rider (785 kg) and moves 22 m to
+  the platform's 22 m. The rope runs from the platform's eye over two blocks on gallows on the 220
+  ring down to the dumpster's bail. Empty (250 kg) the dumpster cannot lift the platform (700 kg):
+  the platform rests on its stop and the rope holds the dumpster up at the top of its guide.
+- **The missing link is the counterweight's mass; the trigger is the platform's keeper latch.**
+  Found, the hopper's chute is jammed by a rebar and the platform is pinned by a counterweighted
+  latch lever. The rider throws the rebar clear (a trip line from a handle in front of the
+  platform) and the rubble pours into the dumpster; latched, the full dumpster just hangs. Pulling
+  the latch's handle frees the platform. Pulled with the dumpster empty, the latch frees a platform
+  that cannot rise, and seats itself again when let go. (The sketch's link, hooking the dumpster's
+  bail, was out of any rider's reach: the bail hangs 6 m west over B's column.)
+- **The rebar is thrown, not held.** A 12 kg, 1.7 m bar pinned at its west end; its line runs from a
+  lug 0.5 m along it over a sheave 0.8 m west of the pin, so a full pull (0.7 m of line) takes it
+  past upright and its own weight throws it onto a far stop. Short of upright it drops back into
+  the mouth. A hard pull tears the line out of the hands only after the bar is past upright.
+- **The gantry's sheaves hang a metre under its beam**, half a metre over the hands, so stepping back
+  draws a line out nearly level. From a sheave 1.55 m over the hands the first metre of a step paid
+  out almost no line, and the throw needed the rider backed against the platform's rail (probe: the
+  grip tore at 0.6 of full stick before the bar was upright).
+- **The cascade's striker** is a counterweighted lever lying north–south in A's column over A's
+  parked cage, clear of B's column and the dumpster's; the dumpster's last 0.18 m presses it about
+  0.47 rad, past its gate's 0.12 rad. Its first siting put its counterweight in B's column: B's cage
+  hit it 0.59 m up and stalled on its dogs (probe).
+- **A's tip-out:** a counterweighted lever over A's gantry, its handle in front of A's opening east of
+  the trip handle. Its linkage reaches A's floor gate only with the cage at the foot of its travel
+  (within 4 m of the lever's pivot). The gate opens at 0.25 rad of the lever's 0.55 and stays open
+  while the handle is held, dumping 450 kg/s onto the deck. The keeper latch uses the same release
+  and stop.
+
+### The declared granular model
+
+Rubble is not bodies. It is declared here and in `src/sim/mechanism_kit.hpp`:
+
+- A **bin** holds rubble as a mass added to its body (`ScaleToMass`: spread like the body, so its
+  inertia scales with it). Static bins (the hopper) weigh on nothing.
+- While a bin's gate lever is past its opening angle and within reach of its mouth, rubble leaves
+  the mouth at a fixed rate (150 kg/s; A's floor gate 450 kg/s) and falls straight down to the
+  first bin or static surface under it, passing every other moving body, with no momentum. A bin
+  takes it up to its capacity; a static surface takes it as a **spill** onto a pile where it lands
+  (spills within 1.5 m of a pile join it; at most 16 piles). A stream that finds nothing within
+  80 m does not run.
+- Rubble in a bin lies on the bin's floor (its body's first part); a stream into a bin is drawn to
+  that floor, past its rim or bail.
+- Bins' contents and piles are part of the checkpoint.
+- Drawn by Godot at 1 600 kg/m³: a layer on each moving bin's floor, the stream, and each pile as a
+  skirt no taller than a step (it has no collision).
+
 ## Climbing route, no lift
 
 Built from the Step 2 moves on structure of each kind, all on the west half of the well:
@@ -190,6 +269,11 @@ Built from the Step 2 moves on structure of each kind, all on the west half of t
 Sprint and controlled drops are exercised between stages on the band's decks and rings.
 
 ## Kit this slice builds
+
+As built, beyond the list below: safety **dogs** on guides (a ratchet whose pawl rests on the highest
+tooth passed), **slip hooks** on a rope's dead end opened by a lever, **bins, streams and piles**
+(the granular model above), per-body **damping**, and a centre-of-mass readback for the energy
+rule. Breakables (rated ropes) are in the kit; no AS-006 stage uses one.
 
 Native, in a mechanism module owned by the physics world (plan §4):
 
@@ -228,18 +312,29 @@ gates:
 2. **A ride** — hook, pull, ride from the deck: the rider stays grounded on the cage all the way;
    the cage stops with its floor at 176.25 ± 0.05; its speed never exceeds 2.6 m/s; the rider's
    and cage's energy gain is below the skip's release.
-3. **B no link, no lift**, and **B ride** — step from A's cage into B's cage, hook, pull: the cage
-   reaches 198.25; the line parts; the boom hangs within 5° of vertical; the cage is held at 198 by
-   its dogs; energy as in 2.
-4. **C and the cascade** — hook, pull the rebar: the platform reaches 220.25 and is held; the rubble
-   ends in A's cage; A's cage sinks to 154.25; A's skip is latched at its catch; with the rubble
-   tipped out, A lifts a rider to 176.25 again.
-5. **Climbing route** — from the 154 deck to the 220 ring with no lift touched.
-6. **Band, one run** — from the 154 deck to the 220 ring through A, B and C, driven only by player
-   inputs.
-7. **Checkpoint** — a lethal fall after A fires restores the rope, the catch and every stage body to
-   the committed state.
-8. **Prior** — every existing group, the Fold capture and the uitests unchanged.
+3. **B no link, no lift** — with the line's end on the cleat, pull past the lever's stop: the catch
+   opens, the cleat holds the boom within 0.05 m through a line tension at least the boom's weight
+   moment over its length, the cage never moves; let go, the catch seats the boom and unloads the
+   line, and the end comes off the cleat onto the cage.
+4. **B ride** — hook, pull, ride: the rider stands on the cage while the line hauls; the slip hook
+   lets go at the top; the boom hangs past 1.45 rad; the cage stands on its dogs within one tooth
+   under 198.25; speed ≤ 3.1 m/s; the payload never out-earns the boom's centre of mass; a death on
+   the 198 ring restores the spent stage as committed.
+5. **C no link, no lift** — the latch held open a second or more with the dumpster empty, then the
+   rebar thrown and the dumpster filled with the latch shut: neither the platform nor the dumpster
+   moves 0.05 m; mid-pour the stream falls from the mouth to the dumpster's floor.
+6. **C ride** — throw, fill, free: the rider rides the platform; the dumpster reaches the foot of its
+   guide and empties into A's cage; the platform stands on its dogs within one tooth under 220.25;
+   the payload never out-earns the dumpster and its rubble; a death on the 220 ring restores the
+   spent stage, the rubble in A's cage and none in the hopper.
+7. **Band, one run** — from the 154 deck to standing on the 220 ring through A, B and C on player
+   inputs alone; then the cascade (C's rubble into A's parked cage, A's cage down, A's skip back in
+   its catch); a parachute down to the deck; the tip-out held until the cage is empty and the rubble
+   lies in one pile under it; the re-armed A ridden to 176 again; and a death there restoring the
+   pile on the deck, not in the cage.
+8. **Climbing route** — from the 154 deck to the 220 ring with no lift touched (Step 2).
+9. **Prior** — every existing group, the Fold capture and the uitests unchanged; `touch_debris`,
+   `pad_debris` and `keyboard_debris` clear C's chute and free its platform on each device.
 
 ## Out of scope
 
@@ -271,4 +366,36 @@ Local runs on this tree (host Release build):
 The energy margin is smallest at the start of the ride, where both sides are near zero; the
 falsifier allows 1 cm of the rider's stance (8.3 J) and no more.
 
-Stages B and C, the climbing route and the band's one-run test: pending.
+**Stages B and C and the band — built, tested.** The same kit, extended (dogs, slip hooks, bins,
+streams and piles); bridge readbacks for bins, piles and Stage C; Godot draws the rubble; HUD names
+for every new handle and anchor (TRIP HANDLE, REBAR LINE, LATCH HANDLE, TIP-OUT HANDLE, CLEAT, CAGE
+EYE).
+
+| Proof | Observed |
+|---|---|
+| `PASS scraperx_sim AS-006 B no link` | `cage_worst=0 boom_drop=0.0132446 cleat_tension=112779 line_floor=12473.3 relatched=1 rerigged=1` (the tension is the peak of the catch letting go onto the cleat) |
+| `PASS scraperx_sim AS-006 B ride` | `ride_s=7.97778 floor_y=198.2 peak_speed=3.02203 boom_angle=1.57063 let_go=1 rode_on_cage=1 energy_margin_J=-3.58205 restored_y=199.147` |
+| `PASS scraperx_sim AS-006 C no link` | `platform_worst=0 dumpster_worst=0 latch_open_s=3.78889 dumpster_kg=900 rebar=2.20004` |
+| `PASS scraperx_sim AS-006 C ride` | `ride_s=8.6 floor_y=220.25 peak_speed=3.00098 released_J=248169 energy_margin_J=20.1975 a_cage_rubble_kg=900 rode_on_platform=1 restored_y=221.146` |
+| `PASS scraperx_sim AS-006 band` | `to_220_s=53.1889 y_220=221.15 rearmed_skip_travel=0.000427246 landed_impact=8.8914 spilled_kg=900 again_y=177.149` |
+| `touch_debris`, `pad_debris`, `keyboard_debris` | PASS, `top_y=221.15`, worst wrist step 0.082–0.086 m per 60 Hz frame |
+
+B's margin, −3.6 J at its worst tick, is inside the 8.3 J stance allowance: the rider settling on
+the cage at the start of the ride, before the boom has moved.
+
+Found and fixed on the way (each by the probe named):
+
+- **A stopped 0.21 m short** once C was built: the dumpster's guide rails reached down into the top
+  of A's column (the band probe: `A 21.79`). They now stop 0.1 m under the dumpster's lowest floor.
+- **A striker bracket had a negative half extent**, a box Jolt builds with a negative convex radius.
+- **A bin's gate reach was measured from the gate lever's centre of mass**, which swings as the lever
+  turns, not from its pivot as documented: the thrown rebar would have closed its own gate. Levers
+  now keep their pivot.
+- **The checkpoint did not keep spilled rubble.** A restore put the cage's rubble back and left the
+  spill counted: 900 kg became 1 800. Spills are now piles, and piles are checkpointed.
+- **A standing rider creeps under a steady handle load**, about 2 cm/s: locomotion sets the body's
+  velocity toward the stick each tick and the carry constraint adds `F·dt/m` after it (observed on
+  A's tip-out, source inspected). Not changed here; every held linkage keeps 0.2 m or more of
+  stroke inside its open band instead of the 3 cm the first tip-out had.
+
+The climbing route (Step 2): pending.

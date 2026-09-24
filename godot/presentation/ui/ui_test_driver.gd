@@ -38,6 +38,10 @@ const SCENARIOS := {
 	"touch_rig": 24,
 	"pad_rig": 24,
 	"keyboard_rig": 24,
+	# AS-006 Stage C, the chute cleared and the platform freed on each device.
+	"touch_debris": 26,
+	"pad_debris": 26,
+	"keyboard_debris": 26,
 	# Needs a mixing audio driver: run under --write-movie (see _audio_mix).
 	"audio_mix": 8,
 }
@@ -126,6 +130,12 @@ func _run() -> void:
 			ok = await _rig(InputRouter.Device.GAMEPAD)
 		"keyboard_rig":
 			ok = await _rig(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_debris":
+			ok = await _debris(InputRouter.Device.TOUCH)
+		"pad_debris":
+			ok = await _debris(InputRouter.Device.GAMEPAD)
+		"keyboard_debris":
+			ok = await _debris(InputRouter.Device.KEYBOARD_MOUSE)
 		"audio_mix":
 			ok = await _audio_mix()
 	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario, _detail])
@@ -889,6 +899,96 @@ func _rig(device: int) -> bool:
 			str(watch.get("at", ""))])
 	_detail = "top_y=%.2f worst_wrist_step_m=%.3f" % [_position().y, worst_jump]
 	return true
+
+
+# AS-006 Stage C from its platform at 198 m: GRAB the rebar's line, step
+# back until the rebar goes over upright and clear of the chute, LET GO, and
+# watch the rubble pour into the dumpster; GRAB the keeper latch's handle,
+# step back until the pin leaves the platform, LET GO, and ride 22 m to the
+# 220 ring. Each verb is the one the HUD offers, pressed on the device under
+# test, and proven by the native state it changed; the hands never jump.
+func _debris(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _walk_to(device, Vector2(-4.4, -131.6), 0.2):
+		return _fail("the step to the rebar's handle stalled")
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "GRAB", "REBAR LINE"):
+		return _fail("Action read '%s %s' facing the rebar's handle, not GRAB REBAR LINE" % [
+			_action_label(), String(_ctx()["action"]["detail"])])
+	var watch := _watch_wrists()
+	_act(device)
+	var holding_line: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 2024, 0.5)
+	if not holding_line:
+		return _fail("GRAB did not put the rebar's handle in the hands")
+	_move(device, -0.6)
+	var thrown: bool = await _wait_until(
+		func() -> bool: return float(_native().get_well_c_rebar_angle()) > 1.7, 3.0)
+	_move(device, 0.0)
+	if not thrown:
+		return _fail("stepping back never threw the rebar over (angle %.2f rad, at %s, carrying %d)" % [
+			float(_native().get_well_c_rebar_angle()), str(_position()),
+			int(_native().get_carrying_entity_id())])
+	# A hard pull can have the line torn out of the hands as the bar goes
+	# over; LET GO is only there to press while it is still held.
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not take the rebar's handle out of the hands")
+	# Turn to the chute across the well and watch it pour.
+	await _face(Vector2(-1.0, 0.2))
+	await _wait_until(func() -> bool: return float(_native().get_well_c_dumpster_kg()) > 300.0, 4.0)
+	await _pose("debris_pour")
+	var filled: bool = await _wait_until(
+		func() -> bool: return float(_native().get_well_c_dumpster_kg()) >= 899.0, 8.0)
+	if not filled:
+		return _fail("the dumpster never filled (%.0f kg)" % float(_native().get_well_c_dumpster_kg()))
+	if float(_native().get_well_c_platform_travel()) > 0.05:
+		return _fail("latched, the platform moved %.2f m" % float(_native().get_well_c_platform_travel()))
+	if not await _walk_to(device, Vector2(-3.0, -131.6), 0.2):
+		return _fail("the step to the latch's handle stalled")
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "GRAB", "LATCH HANDLE"):
+		return _fail("Action read '%s %s' facing the latch's handle, not GRAB LATCH HANDLE" % [
+			_action_label(), String(_ctx()["action"]["detail"])])
+	_act(device)
+	var holding_latch: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 2026, 0.5)
+	if not holding_latch:
+		return _fail("GRAB did not put the latch's handle in the hands")
+	_move(device, -0.6)
+	var freed: bool = await _wait_until(
+		func() -> bool: return not bool(_native().is_well_c_catch_latched()), 3.0)
+	_move(device, 0.0)
+	if not freed:
+		return _fail("stepping back with the latch's handle never freed the platform")
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not take the latch's handle out of the hands")
+	var worst_jump := _stop_watch(watch)
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_native().get_well_c_platform_travel()) >= 21.9, 15.0)
+	if not arrived:
+		return _fail("the platform never reached the top (travel %.2f m)" %
+			float(_native().get_well_c_platform_travel()))
+	await _seconds(0.5)
+	await _pose("debris_top")
+	if int(_native().get_support_entity_id()) != 2020 or _position().y < 221.0:
+		return _fail("the rider is not standing on the platform at the top (y %.2f)" % _position().y)
+	if worst_jump > 0.10:
+		return _fail("a hand jumped %.3f m in one frame between poses (%s)" % [worst_jump,
+			str(watch.get("at", ""))])
+	_detail = "top_y=%.2f worst_wrist_step_m=%.3f" % [_position().y, worst_jump]
+	return true
+
+
+# Presses LET GO when the hands still hold something, and waits for them to
+# be empty.
+func _let_go_if_held(device: int) -> bool:
+	if int(_native().get_carrying_entity_id()) == 0:
+		return true
+	if not await _offered(&"set_down", "LET GO"):
+		return false
+	_act(device)
+	return await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 0, 0.5)
 
 
 # Turns the view to face `direction` the way a thumb or a stick does, at up

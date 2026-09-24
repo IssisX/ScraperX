@@ -20,7 +20,7 @@ namespace {
 // One past the last spawn, derived from the enum so a new spawn is never
 // silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
 constexpr std::int64_t kInitialSpawnCount =
-    static_cast<std::int64_t>(sim::InitialSpawn::StairTop) + 1;
+    static_cast<std::int64_t>(sim::InitialSpawn::WellCPlatform) + 1;
 
 // A kit index from script: negative or past the end reads as no body.
 [[nodiscard]] std::uint32_t kit_index(const std::int64_t index) {
@@ -293,12 +293,23 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_kit_cable_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_cable_points", "cable"),
                                 &ScraperXSimulation::get_kit_cable_points);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_bins"), &ScraperXSimulation::get_kit_bins);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_piles"),
+                                &ScraperXSimulation::get_kit_piles);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_cage_travel"),
                                 &ScraperXSimulation::get_well_a_cage_travel);
     godot::ClassDB::bind_method(godot::D_METHOD("is_well_a_catch_latched"),
                                 &ScraperXSimulation::is_well_a_catch_latched);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_rope_end_entity_id"),
                                 &ScraperXSimulation::get_well_a_rope_end_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_c_platform_travel"),
+                                &ScraperXSimulation::get_well_c_platform_travel);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_well_c_catch_latched"),
+                                &ScraperXSimulation::is_well_c_catch_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_c_rebar_angle"),
+                                &ScraperXSimulation::get_well_c_rebar_angle);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_c_dumpster_kg"),
+                                &ScraperXSimulation::get_well_c_dumpster_kg);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -855,6 +866,36 @@ godot::PackedVector3Array ScraperXSimulation::get_kit_cable_points(const std::in
     return out;
 }
 
+godot::PackedFloat32Array ScraperXSimulation::get_kit_bins() const {
+    godot::PackedFloat32Array out;
+    for (std::uint32_t index = 0; index < simulation_->kit_bin_count(); ++index) {
+        const sim::KitBin bin = simulation_->kit_bin(index);
+        out.push_back(static_cast<float>(bin.body));
+        out.push_back(static_cast<float>(bin.contents_kg));
+        out.push_back(static_cast<float>(bin.capacity_kg));
+        out.push_back(bin.flowing ? 1.0F : 0.0F);
+        out.push_back(static_cast<float>(bin.stream_from.x));
+        out.push_back(static_cast<float>(bin.stream_from.y));
+        out.push_back(static_cast<float>(bin.stream_from.z));
+        out.push_back(static_cast<float>(bin.stream_to.x));
+        out.push_back(static_cast<float>(bin.stream_to.y));
+        out.push_back(static_cast<float>(bin.stream_to.z));
+    }
+    return out;
+}
+
+godot::PackedFloat32Array ScraperXSimulation::get_kit_piles() const {
+    godot::PackedFloat32Array out;
+    for (std::uint32_t index = 0; index < simulation_->kit_pile_count(); ++index) {
+        const sim::KitPile pile = simulation_->kit_pile(index);
+        out.push_back(static_cast<float>(pile.at.x));
+        out.push_back(static_cast<float>(pile.at.y));
+        out.push_back(static_cast<float>(pile.at.z));
+        out.push_back(static_cast<float>(pile.kg));
+    }
+    return out;
+}
+
 double ScraperXSimulation::get_well_a_cage_travel() const {
     return simulation_->snapshot().well_a_cage_travel;
 }
@@ -865,6 +906,22 @@ bool ScraperXSimulation::is_well_a_catch_latched() const {
 
 std::int64_t ScraperXSimulation::get_well_a_rope_end_entity_id() const {
     return static_cast<std::int64_t>(simulation_->snapshot().well_a_rope_end_entity_id);
+}
+
+double ScraperXSimulation::get_well_c_platform_travel() const {
+    return simulation_->snapshot().well_c_platform_travel;
+}
+
+bool ScraperXSimulation::is_well_c_catch_latched() const {
+    return simulation_->snapshot().well_c_catch_latched;
+}
+
+double ScraperXSimulation::get_well_c_rebar_angle() const {
+    return simulation_->snapshot().well_c_rebar_angle;
+}
+
+double ScraperXSimulation::get_well_c_dumpster_kg() const {
+    return simulation_->snapshot().well_c_dumpster_kg;
 }
 
 } // namespace scraperx::bridge
