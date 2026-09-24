@@ -212,10 +212,9 @@ constexpr float kGripMinBodyMassKg = 400.0F;
 // Where a hand looks for a hold: a box this big (across, up, along the
 // facing) round the point it aims at.
 const JPH::Vec3 kGripSearchHalf(0.30F, 0.30F, 0.35F);
-// Climbing: the body hangs this far off its holds' line and moves at these
-// rates. Its hands aim this high over its centre, this far in front of it
-// and this far to either side; one hand moves at a time.
-constexpr float kClimbStandoff = 0.42F;
+// Climbing: the body moves at these rates. Its hands aim this high over its
+// centre, this far in front of it and this far to either side; one hand
+// moves at a time.
 constexpr float kClimbUpSpeed = 0.9F;
 constexpr float kClimbDownSpeed = 1.2F;
 constexpr float kClimbSideSpeed = 0.6F;
