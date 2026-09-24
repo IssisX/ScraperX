@@ -31,6 +31,9 @@ const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const VIEW_PITCH_HANGING := 0.32
 const VIEW_PITCH_MANTLING := -0.3
 const VIEW_PITCH_VAULTING := -0.12
+# On a ladder or pipe the eye leans up toward the next holds, less than a hang
+# looks up at its lip.
+const VIEW_PITCH_CLIMBING := 0.18
 const VIEW_PITCH_RATE := 9.0
 # A hitch -- or the first frame after Android resumes a backgrounded app --
 # must not be paid for with a burst of native ticks in one frame. The excess
@@ -259,6 +262,10 @@ const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
+# Step 2 movement: on the holds of a ladder, pipe, bar or lattice; and
+# lowering over an edge into a hang.
+const TRAVERSAL_CLIMBING := 4
+const TRAVERSAL_LOWERING := 5
 
 # Mirrors scraperx::sim::FallState.
 const FALL_GROUNDED := 0
@@ -539,6 +546,7 @@ func _process(delta: float) -> void:
 	_native.set_facing(facing.x, facing.y)
 	_dispatch(intent["verbs"], delta)
 	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]))
+	_native.set_sprint_input(bool(intent["sprint_held"]))
 
 	var jib_input: Vector2 = intent["pendant"]
 	_native.set_jib_slew_input(jib_input.x)
@@ -773,7 +781,7 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"jump":
 				# A jump stands a crouched body first (natively), and ends the toggle.
 				_crouch_toggled = false
-				if _ctx["jump_ok"] or _ctx["hanging"]:
+				if _ctx["jump_ok"] or _ctx["hanging"] or _ctx["climbing"]:
 					_native.request_jump()
 					_since_jump_sent = 0.0
 				else:
@@ -787,7 +795,9 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				# Does what the button says: crouched, it asks to stand.
 				_crouch_toggled = not bool(_ctx["crouched"])
 			&"drop":
-				# Let go of whatever the hands are on: a ledge, or a load.
+				# Let go of whatever the hands are on: a ledge, a climb's
+				# holds, or a load. On the ground with an edge behind, the
+				# native lowers the body over it into a hang.
 				if int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
 				else:
@@ -795,12 +805,14 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"chute":
 				_native.request_parachute()
 			&"back":
-				if _ctx["hanging"]:
+				if _ctx["hanging"] or _ctx["climbing"]:
 					_native.request_release()
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
 				elif _operating != &"":
 					_operating = &""
+				elif _ctx["drop_ok"]:
+					_native.request_release()
 			&"alt":
 				if _operating == &"intake":
 					_request_sling(not bool(_ctx["slung"]))
@@ -885,7 +897,10 @@ func _read_context() -> Dictionary:
 	elif bool(_native.is_sump_station_active()):
 		station = &"sump"
 	var hanging := traversal == TRAVERSAL_HANGING
+	var climbing := traversal == TRAVERSAL_CLIMBING
 	var free := traversal == TRAVERSAL_NONE
+	var grip := bool(_native.is_grip_available())
+	var edge_drop := bool(_native.is_edge_drop_available())
 	if _operating != &"" and (_operating != station or not grounded or not free):
 		_operating = &""
 	var climb_ok := grounded and free and ledge
@@ -899,7 +914,7 @@ func _read_context() -> Dictionary:
 	var rig := int(_native.get_rig_action())
 	var rig_target := int(_native.get_rig_target_entity_id())
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
-	if hanging:
+	if hanging or climbing:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
 	elif not free:
 		pass
@@ -924,6 +939,9 @@ func _read_context() -> Dictionary:
 	elif climb_ok:
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
 			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
+	elif grounded and free and grip:
+		# A hold at hand height: a rung, a pipe, a scaffold bar.
+		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb", "detail": "HOLD"}
 	elif grounded and station in [&"intake", &"jib", &"needle"]:
 		action = {"id": &"operate", "label": "OPERATE", "icon": &"operate",
 			"detail": {&"intake": "YARD JIB", &"jib": "KX-JIB", &"needle": "KX-NEEDLE"}[station]}
@@ -937,6 +955,12 @@ func _read_context() -> Dictionary:
 		"crouched": bool(_native.is_player_crouched()),
 		"traversal": traversal,
 		"hanging": hanging,
+		"climbing": climbing,
+		# Drop at an edge behind lowers into a hang; on holds it lets go.
+		"drop_ok": hanging or climbing or (grounded and free and edge_drop and carrying == 0),
+		"edge_drop": edge_drop,
+		"sprinting": bool(_native.is_player_sprinting()),
+		"balancing": bool(_native.is_player_balancing()),
 		"chute": chute,
 		"jump_ok": grounded and free,
 		"climb_ok": climb_ok,
@@ -1102,7 +1126,7 @@ func _haptic(kind: StringName, strength: float = 1.0) -> void:
 func _update_feedback(delta: float) -> void:
 	var traversal: int = _ctx["traversal"]
 	if traversal != _fb_traversal:
-		if traversal == TRAVERSAL_HANGING:
+		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_CLIMBING:
 			_haptic(&"grab")
 		elif traversal != TRAVERSAL_NONE:
 			_haptic(&"tick")
@@ -1161,8 +1185,10 @@ func _update_feedback(delta: float) -> void:
 func _update_view_pitch_offset(delta: float) -> void:
 	var target := 0.0
 	match int(_ctx.get("traversal", TRAVERSAL_NONE)):
-		TRAVERSAL_HANGING:
+		TRAVERSAL_HANGING, TRAVERSAL_LOWERING:
 			target = VIEW_PITCH_HANGING
+		TRAVERSAL_CLIMBING:
+			target = VIEW_PITCH_CLIMBING
 		TRAVERSAL_MANTLING:
 			target = VIEW_PITCH_MANTLING
 		TRAVERSAL_VAULTING:
@@ -1215,6 +1241,11 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"traversal": int(_ctx["traversal"]),
 		"progress": float(_native.get_traversal_progress()),
 		"ledge_point": _native.get_traversal_ledge_point(),
+		"hand_left": _native.get_traversal_left_hand(),
+		"hand_right": _native.get_traversal_right_hand(),
+		"structure_normal": _native.get_traversal_normal(),
+		"sprinting": bool(_ctx["sprinting"]),
+		"balancing": bool(_ctx["balancing"]),
 		"affordance": bool(_native.is_ledge_available()),
 		"affordance_point": _native.get_ledge_point(),
 		"position": _ctx["position"],

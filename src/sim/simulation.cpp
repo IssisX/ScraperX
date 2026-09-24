@@ -196,6 +196,67 @@ constexpr float kMantleApproachMaximumEntrySlope = 3.0F;
 // for a moment, so letting go is a real decision rather than an instant re-hang.
 constexpr std::uint32_t kReleaseRegrabLockoutTicks = 27;
 
+// ---- Step 2 movement (03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md §8) ----
+// Sprint: 8.0 m/s against the 5.5 walk, with the stick at least 0.7 and
+// within 45 degrees of the facing.
+constexpr double kSprintSpeedScale = 8.0 / 5.5;
+constexpr double kSprintMinimumInput = 0.7;
+constexpr double kSprintMaximumAngleCos = 0.7071;
+// A hold: a member a hand can close round -- its two thinner dimensions at
+// most kGripMaxSection, its length at least kGripMinLength -- on a static
+// body, or on a moving one heavy enough to carry a climber (a 3 kg handle is
+// not a hold).
+constexpr float kGripMaxSection = 0.18F;
+constexpr float kGripMinLength = 0.25F;
+constexpr float kGripMinBodyMassKg = 400.0F;
+// Where a hand looks for a hold: a box this big (across, up, along the
+// facing) round the point it aims at.
+const JPH::Vec3 kGripSearchHalf(0.30F, 0.30F, 0.35F);
+// Climbing: the body hangs this far off its holds' line and moves at these
+// rates. Its hands aim this high over its centre, this far in front of it
+// and this far to either side; one hand moves at a time.
+constexpr float kClimbStandoff = 0.42F;
+constexpr float kClimbUpSpeed = 0.9F;
+constexpr float kClimbDownSpeed = 1.2F;
+constexpr float kClimbSideSpeed = 0.6F;
+constexpr double kClimbInputDeadzone = 0.2;
+constexpr float kClimbHandHigh = 0.80F;
+// Climbing on up needs a hold from chest height: a body pushes up on holds at
+// its chest, so it rises to the top of a pipe, not an arm's length short.
+constexpr float kClimbMoveAim = 0.50F;
+constexpr float kClimbHandMid = 0.45F;
+constexpr float kClimbHandLow = 0.20F;
+constexpr float kClimbHandReach = 0.40F;
+constexpr float kClimbHandSpan = 0.20F;
+constexpr float kClimbSideLead = 0.35F;
+constexpr std::uint32_t kClimbRegripTicks = 18;
+constexpr float kClimbJumpBackSpeed = 2.5F;
+constexpr float kClimbJumpUpSpeed = 4.0F;
+// Climbing down, the soles find ground this close under them and step off.
+constexpr float kClimbFootReach = 0.10F;
+// Shimmy along a hung ledge.
+constexpr float kShimmySpeed = 0.6F;
+// Balance: walking a support narrower than kBalanceMaxWidth and at least
+// kBalanceMinLength long. Sideways input under kBalanceStepOffInput is held on
+// the support's line; over it, the body steps off.
+constexpr float kBalanceMaxWidth = 0.50F;
+constexpr float kBalanceMinLength = 1.50F;
+constexpr double kBalanceSpeedScale = 2.0 / 5.5;
+constexpr double kBalanceStepOffInput = 0.8;
+constexpr float kBalanceCentering = 3.0F;
+constexpr float kBalanceCenteringMaxMps = 0.4F;
+// Controlled drop: an edge behind the body within kEdgeSearchReach, over a
+// drop of at least kEdgeDropMinimum, lowered over in kLoweringSeconds.
+constexpr float kEdgeSearchStart = 0.25F;
+constexpr float kEdgeSearchReach = 0.90F;
+constexpr float kEdgeSearchStep = 0.05F;
+constexpr float kEdgeDropMinimum = 1.5F;
+constexpr float kLipProbeDepth = 0.05F;
+constexpr float kClimbSweepRadius = 0.30F;
+// A hang's hands, either side of the body on the lip.
+constexpr float kHangHandSpan = 0.22F;
+constexpr double kLoweringSeconds = 0.6;
+
 // --- coupled machine geometry, metres / seconds / kilograms ---------------
 // The plant sits in the approach yard between grade spawn and the tower, so the
 // player meets it on the way in rather than being born inside it.
@@ -1431,6 +1492,11 @@ private:
     case scraperx::sim::InitialSpawn::WellCPlatform:
         // On C's platform, west of its middle.
         return {-4.3, 199.2, -132.2};
+    case scraperx::sim::InitialSpawn::Ring176East:
+        // On the 176 ring, 1 m in from its inner edge.
+        return {9.5, 177.2, -127.9};
+    case scraperx::sim::InitialSpawn::Ring198East:
+        return {11.0, 199.2, -127.5};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1452,11 +1518,12 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
                                            const double move_input_x,
                                            const double move_input_z,
                                            const float acceleration,
-                                           const float delta_seconds) noexcept {
+                                           const float delta_seconds,
+                                           const float full_speed = kPlayerMaximumRelativeSpeed) noexcept {
     float relative_x = world_velocity.GetX() - reference_velocity.GetX();
     float relative_z = world_velocity.GetZ() - reference_velocity.GetZ();
-    const float target_x = static_cast<float>(move_input_x) * kPlayerMaximumRelativeSpeed;
-    const float target_z = static_cast<float>(move_input_z) * kPlayerMaximumRelativeSpeed;
+    const float target_x = static_cast<float>(move_input_x) * full_speed;
+    const float target_z = static_cast<float>(move_input_z) * full_speed;
     float delta_x = target_x - relative_x;
     float delta_z = target_z - relative_z;
     const float delta_length = std::sqrt(delta_x * delta_x + delta_z * delta_z);
@@ -1537,6 +1604,71 @@ struct LedgeProbe final {
     std::uint64_t landing_entity_id = 0;
     float rise = 0.0F;
 };
+
+// Step 2 movement. A hold a hand has closed round: the point on the member's
+// axis, on the body the member belongs to.
+struct Grip final {
+    bool valid = false;
+    JPH::BodyID body;
+    std::uint64_t entity_id = 0;
+    JPH::RVec3 point{JPH::RVec3::sZero()};
+};
+
+// A ledge's lip, faced along a hang's normal: the top just inside the edge,
+// where a hanging body holds below it, and where a climb up it lands.
+struct Lip final {
+    bool valid = false;
+    JPH::BodyID body;
+    std::uint64_t entity_id = 0;
+    JPH::RVec3 ledge{JPH::RVec3::sZero()};
+    JPH::RVec3 hold{JPH::RVec3::sZero()};
+    JPH::RVec3 landing{JPH::RVec3::sZero()};
+};
+
+// One box of a body's shape, in world space.
+struct LeafBox final {
+    JPH::RVec3 centre{JPH::RVec3::sZero()};
+    JPH::Vec3 axes[3]{};
+    JPH::Vec3 half{JPH::Vec3::sZero()};
+};
+
+// A member a hand can close round (see kGripMaxSection): its long axis in
+// `long_axis`.
+[[nodiscard]] bool box_is_hold(const LeafBox &box, std::uint32_t &long_axis) noexcept {
+    long_axis = 0;
+    for (std::uint32_t axis = 1; axis < 3; ++axis) {
+        if (box.half[axis] > box.half[long_axis]) {
+            long_axis = axis;
+        }
+    }
+    if (2.0F * box.half[long_axis] < kGripMinLength) {
+        return false;
+    }
+    for (std::uint32_t axis = 0; axis < 3; ++axis) {
+        if (axis != long_axis && 2.0F * box.half[axis] > kGripMaxSection) {
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool leaf_box(const JPH::Body &body, const JPH::SubShapeID &sub_shape,
+                            LeafBox &out) noexcept {
+    JPH::SubShapeID remainder;
+    const JPH::TransformedShape leaf = body.GetShape()->GetSubShapeTransformedShape(
+        sub_shape, body.GetCenterOfMassPosition(), body.GetRotation(), JPH::Vec3::sReplicate(1.0F),
+        remainder);
+    if (leaf.mShape == nullptr || leaf.mShape->GetSubType() != JPH::EShapeSubType::Box) {
+        return false;
+    }
+    out.half = static_cast<const JPH::BoxShape *>(leaf.mShape.GetPtr())->GetHalfExtent();
+    const JPH::RMat44 frame = leaf.GetCenterOfMassTransform();
+    out.centre = frame.GetTranslation();
+    for (std::uint32_t axis = 0; axis < 3; ++axis) {
+        out.axes[axis] = frame.GetColumn3(axis).Normalized();
+    }
+    return true;
+}
 
 } // namespace
 
@@ -1676,6 +1808,11 @@ public:
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
         player_crouch_shape_ =
             new JPH::CapsuleShape(kPlayerCrouchHalfHeight - kPlayerRadius, kPlayerRadius);
+        grip_region_shape_ = new JPH::BoxShape(kGripSearchHalf);
+        // A climber's moves are swept with a body 5 cm slimmer than the
+        // capsule: a body on its holds already touches the rungs it climbs.
+        climb_sweep_shape_ =
+            new JPH::CapsuleShape(0.55F + kPlayerRadius - kClimbSweepRadius, kClimbSweepRadius);
         JPH::BodyCreationSettings player_settings(player_shape_,
                                                   spawn_position(initial_spawn),
                                                   JPH::Quat::sIdentity(),
@@ -1773,6 +1910,7 @@ public:
         bool traversal_requested = false;
         bool release_requested = false;
         bool crouch_held = false;
+        bool sprint_held = false;
         bool pick_up_requested = false;
         bool set_down_requested = false;
         bool rig_requested = false;
@@ -1820,6 +1958,11 @@ public:
         update_rig(bodies, commands);
         update_carry(bodies, commands, delta_seconds);
         apply_traversal_commands(bodies, commands);
+        if (traversal_state_ == TraversalState::Climbing) {
+            update_climb(bodies, commands, delta_seconds);
+        } else if (traversal_state_ == TraversalState::Hanging) {
+            update_shimmy(bodies, commands, delta_seconds);
+        }
 
         bool jump_started = false;
         if (traversal_state_ == TraversalState::None) {
@@ -1843,6 +1986,7 @@ public:
 
         if (traversal_state_ != TraversalState::None) {
             drive_traversal(bodies, delta_seconds);
+            load_hold(bodies);
         }
 
         kit_->pre_step(delta_seconds);
@@ -3915,6 +4059,47 @@ private:
         return physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, body_filter);
     }
 
+    // A ray for a wall. With see_past_holds, members a hand could close
+    // round (rungs, pipes, bars) are seen through, the way a climber on a
+    // ladder sees the wall behind it.
+    [[nodiscard]] bool cast_wall(const JPH::RVec3 origin, const JPH::Vec3 direction,
+                                 const bool see_past_holds, JPH::RayCastResult &hit,
+                                 JPH::RVec3 &point) const noexcept {
+        const float length = direction.Length();
+        if (length <= 0.0F) {
+            return false;
+        }
+        const JPH::Vec3 unit = direction / length;
+        JPH::RVec3 from = origin;
+        float left = length;
+        for (std::uint32_t pass = 0; pass < 4; ++pass) {
+            const JPH::Vec3 ray = unit * left;
+            if (!cast_ray(from, ray, hit)) {
+                return false;
+            }
+            point = JPH::RRayCast(from, ray).GetPointOnRay(hit.mFraction);
+            if (!see_past_holds || !is_hold(hit.mBodyID, hit.mSubShapeID2)) {
+                return true;
+            }
+            constexpr float kPastHold = 0.20F;
+            left -= hit.mFraction * left + kPastHold;
+            if (left <= 0.0F) {
+                return false;
+            }
+            from = point + unit * kPastHold;
+        }
+        return false;
+    }
+
+    [[nodiscard]] bool is_hold(const JPH::BodyID body_id,
+                               const JPH::SubShapeID &sub_shape_id) const noexcept {
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), body_id);
+        LeafBox box;
+        std::uint32_t long_axis = 0;
+        return lock.Succeeded() && leaf_box(lock.GetBody(), sub_shape_id, box) &&
+               box_is_hold(box, long_axis);
+    }
+
     [[nodiscard]] JPH::Vec3 surface_normal(const JPH::BodyID body_id,
                                            const JPH::SubShapeID &sub_shape_id,
                                            const JPH::RVec3 point) const noexcept {
@@ -3977,19 +4162,19 @@ private:
                                          const JPH::Vec3 facing,
                                          const float minimum_rise,
                                          const float maximum_rise,
-                                         const bool require_supported_landing) const noexcept {
+                                         const bool require_supported_landing,
+                                         const bool see_past_holds = false) const noexcept {
         LedgeProbe probe;
         if (facing.IsNearZero()) {
             return probe;
         }
 
         JPH::RayCastResult wall_hit;
-        if (!cast_ray(origin, facing * (kTraversalReach + kPlayerRadius), wall_hit)) {
+        JPH::RVec3 wall_point;
+        if (!cast_wall(origin, facing * (kTraversalReach + kPlayerRadius), see_past_holds, wall_hit,
+                       wall_point)) {
             return probe;
         }
-        const JPH::RVec3 wall_point =
-            JPH::RRayCast(origin, facing * (kTraversalReach + kPlayerRadius))
-                .GetPointOnRay(wall_hit.mFraction);
 
         const float feet_y = origin.GetY() - kPlayerHalfHeight;
         const JPH::RVec3 top_origin(wall_point.GetX() + facing.GetX() * kTopProbeInset,
@@ -4412,6 +4597,17 @@ private:
             return;
         }
 
+        if (traversal_state_ == TraversalState::Climbing) {
+            if (commands.release_requested) {
+                let_go_climb(bodies);
+            } else if (commands.jump_requested) {
+                jump_off_climb(bodies);
+            } else if (commands.traversal_requested && !try_top_out(bodies)) {
+                ++rejected_traversal_count_;
+            }
+            return;
+        }
+
         if (traversal_state_ != TraversalState::None) {
             if (commands.traversal_requested || commands.release_requested) {
                 ++rejected_traversal_count_;
@@ -4447,8 +4643,23 @@ private:
             }
         }
 
+        // Drop with an edge behind: lower over it into a hang.
+        if (commands.release_requested && grounded_) {
+            if (!try_begin_lowering(bodies)) {
+                ++rejected_traversal_count_;
+            }
+            return;
+        }
+
+        // Action: a vault or mantle where one is offered, else a hold faced
+        // at hand height is climbed.
         if (commands.traversal_requested && !try_begin_ground_traversal(bodies)) {
-            ++rejected_traversal_count_;
+            const Grip grip = grounded_ ? grip_in_front(bodies) : Grip{};
+            if (grip.valid) {
+                begin_climb(bodies, grip);
+            } else {
+                ++rejected_traversal_count_;
+            }
         }
     }
 
@@ -4483,23 +4694,61 @@ private:
         JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
         JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
         const double speed_scale = crouched_ ? kCrouchSpeedScale : 1.0;
+        double move_x = commands.move_input_x * speed_scale;
+        double move_z = commands.move_input_z * speed_scale;
+        sprinting_ = false;
+        balancing_ = false;
 
         if (grounded_ && support_entity_id_ != 0) {
             reference_velocity = current_support_point_velocity(bodies);
             airborne_inherited_velocity_ = reference_velocity;
+            const Beam beam = beam_underfoot(bodies);
+            const double input = std::hypot(commands.move_input_x, commands.move_input_z);
+            if (beam.valid) {
+                // On a beam: along it at a walk, held on its line unless the
+                // stick means to step off.
+                balancing_ = true;
+                const double along = move_x * beam.along.GetX() + move_z * beam.along.GetZ();
+                const double across = move_x * beam.across.GetX() + move_z * beam.across.GetZ();
+                if (std::abs(across) < kBalanceStepOffInput) {
+                    const double walk = std::clamp(along, -kBalanceSpeedScale, kBalanceSpeedScale);
+                    const double centre =
+                        std::clamp(-static_cast<double>(beam.offset * kBalanceCentering),
+                                   -static_cast<double>(kBalanceCenteringMaxMps),
+                                   static_cast<double>(kBalanceCenteringMaxMps)) /
+                        kPlayerMaximumRelativeSpeed;
+                    move_x = beam.along.GetX() * walk + beam.across.GetX() * centre;
+                    move_z = beam.along.GetZ() * walk + beam.across.GetZ() * centre;
+                }
+            } else if (commands.sprint_held && !crouched_ && carry_constraint_ == nullptr &&
+                       input >= kSprintMinimumInput &&
+                       (commands.move_input_x * facing_.GetX() +
+                        commands.move_input_z * facing_.GetZ()) >= kSprintMaximumAngleCos * input) {
+                sprinting_ = true;
+            }
+            const float full_speed = sprinting_
+                                         ? static_cast<float>(kPlayerMaximumRelativeSpeed * kSprintSpeedScale)
+                                         : kPlayerMaximumRelativeSpeed;
             approach_relative_horizontal_velocity(player_velocity,
                                                   reference_velocity,
-                                                  commands.move_input_x * speed_scale,
-                                                  commands.move_input_z * speed_scale,
+                                                  move_x,
+                                                  move_z,
                                                   kGroundAcceleration,
-                                                  delta_seconds);
+                                                  delta_seconds,
+                                                  full_speed);
+            // The air keeps what the ground gave: a running jump, or a run
+            // off an edge, carries its speed.
+            const JPH::Vec3 relative = player_velocity - reference_velocity;
+            air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed,
+                                       JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ()).Length());
         } else {
             approach_relative_horizontal_velocity(player_velocity,
                                                   reference_velocity,
-                                                  commands.move_input_x * speed_scale,
-                                                  commands.move_input_z * speed_scale,
+                                                  move_x,
+                                                  move_z,
                                                   kAirAcceleration,
-                                                  delta_seconds);
+                                                  delta_seconds,
+                                                  air_full_speed_);
         }
 
         // Crouched here means there was no room to stand, so no room to jump.
@@ -4616,6 +4865,13 @@ private:
                                              kPlayerHalfHeight + kHangMaximumRiseAboveCentre,
                                              true);
         if (!probe.valid) {
+            // No ledge: a hold reached for in the air is caught and climbed.
+            const Grip grip = find_grip(
+                origin, origin + JPH::Vec3(0.0F, kClimbHandMid, 0.0F) + facing_ * kClimbHandReach,
+                facing_);
+            if (grip.valid) {
+                begin_climb(bodies, grip);
+            }
             return;
         }
 
@@ -4627,6 +4883,7 @@ private:
         traversal_body_ = probe.ledge_body;
         traversal_entity_id_ = probe.ledge_entity_id;
         traversal_target_body_ = probe.landing_body;
+        traversal_normal_ = facing_;
         traversal_local_hold_ = to_support_local(bodies, traversal_body_, hold);
         traversal_local_ledge_ = to_support_local(bodies, traversal_body_, probe.ledge_point);
         traversal_local_target_ =
@@ -4826,6 +5083,17 @@ private:
         const JPH::RVec3 target =
             from_support_local(bodies, traversal_target_body_, traversal_local_target_);
 
+        if (traversal_state_ == TraversalState::Lowering) {
+            // Back over the edge at standing height, then down to the hold
+            // once the body is clear of the lip.
+            const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+            const float over = smoothstep(0.0F, 0.55F, progress);
+            const float down = smoothstep(0.55F, 1.0F, progress);
+            return JPH::RVec3(start.GetX() + (hold.GetX() - start.GetX()) * over,
+                              start.GetY() + (hold.GetY() - start.GetY()) * down,
+                              start.GetZ() + (hold.GetZ() - start.GetZ()) * over);
+        }
+
         if (traversal_state_ == TraversalState::Vaulting) {
             const JPH::RVec3 apex = from_support_local(bodies, traversal_body_, traversal_local_apex_);
             const float horizontal = progress;
@@ -4869,7 +5137,8 @@ private:
     void drive_traversal(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
         const JPH::RVec3 current = bodies.GetPosition(player_id_);
 
-        if (traversal_state_ == TraversalState::Hanging) {
+        if (traversal_state_ == TraversalState::Hanging ||
+            traversal_state_ == TraversalState::Climbing) {
             traversal_desired_ = from_support_local(bodies, traversal_body_, traversal_local_hold_);
         } else {
             traversal_progress_ =
@@ -4896,7 +5165,10 @@ private:
             return;
         }
 
-        if (traversal_state_ != TraversalState::Hanging && traversal_progress_ >= 1.0) {
+        if (traversal_state_ == TraversalState::Lowering && traversal_progress_ >= 1.0) {
+            finish_lowering();
+        } else if (traversal_state_ != TraversalState::Hanging &&
+                   traversal_state_ != TraversalState::Climbing && traversal_progress_ >= 1.0) {
             complete_traversal(bodies);
         }
     }
@@ -4956,8 +5228,537 @@ private:
         clear_traversal();
     }
 
+
+    // ---- Step 2 movement (MECHANISM_ASCENT_PLAN.md §8) --------------------
+
+    // A hang or climb on a dynamic body hangs the climber's weight on it at
+    // the hold: the structure feels who is on it. Static and kinematic
+    // bodies take no force.
+    void load_hold(JPH::BodyInterface &bodies) noexcept {
+        if ((traversal_state_ != TraversalState::Hanging &&
+             traversal_state_ != TraversalState::Climbing) ||
+            traversal_body_.IsInvalid() ||
+            bodies.GetMotionType(traversal_body_) != JPH::EMotionType::Dynamic) {
+            return;
+        }
+        const JPH::RVec3 at = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+        bodies.AddForce(traversal_body_, physics_system_.GetGravity() * kPlayerMassKg, at);
+    }
+
+    // Horizontal right of the structure a hang or climb faces.
+    [[nodiscard]] JPH::Vec3 traversal_right() const noexcept {
+        return JPH::Vec3(-traversal_normal_.GetZ(), 0.0F, traversal_normal_.GetX());
+    }
+
+    // The hold nearest `aim` that a hand in front of `centre` can close
+    // round: a box whose two thinner dimensions are at most kGripMaxSection
+    // and whose length is at least kGripMinLength, on a static body or one of
+    // at least kGripMinBodyMassKg, searched in a kGripSearchHalf box round
+    // `aim` squared to `facing`. The point is on the member's axis.
+    [[nodiscard]] Grip find_grip(const JPH::RVec3 centre, const JPH::RVec3 aim,
+                                 const JPH::Vec3 facing) const noexcept {
+        Grip best;
+        if (facing.IsNearZero()) {
+            return best;
+        }
+        const JPH::Quat rotation =
+            JPH::Quat::sRotation(JPH::Vec3::sAxisY(), std::atan2(facing.GetX(), facing.GetZ()));
+        JPH::CollideShapeSettings settings;
+        JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> hits;
+        const JPH::IgnoreSingleBodyFilter player_filter(player_id_);
+        const JPH::IgnoreSingleBodyFilterChained filter(carried_id_, player_filter);
+        physics_system_.GetNarrowPhaseQuery().CollideShape(
+            grip_region_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
+            JPH::RMat44::sRotationTranslation(rotation, aim), settings, aim, hits, {}, {}, filter);
+        float best_distance = std::numeric_limits<float>::max();
+        for (const JPH::CollideShapeResult &hit : hits.mHits) {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(),
+                                         hit.mBodyID2);
+            if (!lock.Succeeded()) {
+                continue;
+            }
+            const JPH::Body &body = lock.GetBody();
+            if (body.IsSensor() ||
+                (body.IsDynamic() &&
+                 body.GetMotionProperties()->GetInverseMass() * kGripMinBodyMassKg > 1.0F)) {
+                continue;
+            }
+            LeafBox box;
+            if (!leaf_box(body, hit.mSubShapeID2, box)) {
+                continue;
+            }
+            std::uint32_t long_axis = 0;
+            if (!box_is_hold(box, long_axis)) {
+                continue;
+            }
+            const JPH::Vec3 along = box.axes[long_axis];
+            const float half_length = box.half[long_axis];
+            const float t =
+                std::clamp(JPH::Vec3(aim - box.centre).Dot(along), -half_length, half_length);
+            const JPH::RVec3 point = box.centre + along * t;
+            // In front of the body: not beside it, not behind it.
+            if (JPH::Vec3(point - centre).Dot(facing) < 0.5F * kPlayerRadius) {
+                continue;
+            }
+            const float distance = JPH::Vec3(point - aim).Length();
+            if (distance < best_distance) {
+                best_distance = distance;
+                best.valid = true;
+                best.body = hit.mBodyID2;
+                best.entity_id = body.GetUserData();
+                best.point = point;
+            }
+        }
+        return best;
+    }
+
+    // Where a hand in front of `centre` aims: `height` over the centre,
+    // kClimbHandReach toward the structure, `across` to its right.
+    [[nodiscard]] JPH::RVec3 hand_aim(const JPH::RVec3 centre, const float height,
+                                      const float across) const noexcept {
+        return centre + JPH::Vec3(0.0F, height, 0.0F) + traversal_normal_ * kClimbHandReach +
+               traversal_right() * across;
+    }
+
+    [[nodiscard]] JPH::RVec3 hand_point(const JPH::BodyInterface &bodies,
+                                        const std::uint32_t hand) const noexcept {
+        return from_support_local(bodies, hands_[hand].body, hands_[hand].local);
+    }
+
+    void set_hand(const JPH::BodyInterface &bodies, const std::uint32_t hand,
+                  const Grip &grip) noexcept {
+        hands_[hand].body = grip.body;
+        hands_[hand].local = to_support_local(bodies, grip.body, grip.point);
+        hands_[hand].valid = true;
+    }
+
+    // Both hands onto the holds nearest their rest aims, left a little lower
+    // than right; a hand that finds none takes the hold the climb began on.
+    void take_hand_holds(const JPH::BodyInterface &bodies, const JPH::RVec3 centre,
+                         const Grip &fallback) noexcept {
+        for (std::uint32_t hand = 0; hand < 2; ++hand) {
+            const float side = hand == 0 ? -1.0F : 1.0F;
+            const float height = hand == 0 ? kClimbHandMid : kClimbHandMid + 0.2F;
+            const Grip grip =
+                find_grip(centre, hand_aim(centre, height, kClimbHandSpan * side), traversal_normal_);
+            set_hand(bodies, hand, grip.valid ? grip : fallback);
+        }
+        regrip_cooldown_ticks_ = 0;
+    }
+
+    // The swept move of a climbing or hanging body, slimmed so the holds it
+    // already touches do not stop it.
+    [[nodiscard]] bool climb_move_clear(const JPH::RVec3 from, const JPH::RVec3 to) const noexcept {
+        const JPH::Vec3 displacement(to - from);
+        if (displacement.IsNearZero(1.0e-10F)) {
+            return true;
+        }
+        JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
+        const JPH::RShapeCast sweep(climb_sweep_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
+                                    JPH::RMat44::sTranslation(from), displacement);
+        const JPH::IgnoreSingleBodyFilter player_filter(player_id_);
+        const JPH::IgnoreSingleBodyFilterChained filter(carried_id_, player_filter);
+        physics_system_.GetNarrowPhaseQuery().CastShape(sweep, JPH::ShapeCastSettings(), from,
+                                                        collector, {}, {}, filter);
+        return !collector.HadHit();
+    }
+
+    // Take hold of `grip` where the body is, facing it.
+    void begin_climb(JPH::BodyInterface &bodies, const Grip &grip) noexcept {
+        const JPH::RVec3 hold = bodies.GetPosition(player_id_);
+        traversal_state_ = TraversalState::Climbing;
+        traversal_body_ = grip.body;
+        traversal_entity_id_ = grip.entity_id;
+        traversal_target_body_ = {};
+        traversal_normal_ = facing_;
+        traversal_local_hold_ = to_support_local(bodies, traversal_body_, hold);
+        traversal_local_ledge_ = to_support_local(bodies, traversal_body_, grip.point);
+        traversal_progress_ = 0.0;
+        traversal_stall_ticks_ = 0;
+        traversal_desired_ = hold;
+        bodies.SetGravityFactor(player_id_, 0.0F);
+        take_hand_holds(bodies, hold, grip);
+        ++climb_count_;
+    }
+
+    // From the ground, a hold faced at hand height.
+    [[nodiscard]] Grip grip_in_front(const JPH::BodyInterface &bodies) const noexcept {
+        const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+        const JPH::RVec3 aim = centre + JPH::Vec3(0.0F, kClimbHandMid, 0.0F) + facing_ * kClimbHandReach;
+        return find_grip(centre, aim, facing_);
+    }
+
+    // Climbing, the stick toward the structure climbs, away climbs down,
+    // sideways moves across -- each only onto holds the hands can reach.
+    void update_climb(JPH::BodyInterface &bodies, const StepCommands &commands,
+                      const float delta_seconds) noexcept {
+        const JPH::Vec3 normal = traversal_normal_;
+        const JPH::Vec3 right = traversal_right();
+        const double up_input =
+            commands.move_input_x * normal.GetX() + commands.move_input_z * normal.GetZ();
+        const double side_input =
+            commands.move_input_x * right.GetX() + commands.move_input_z * right.GetZ();
+        const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+        JPH::RVec3 next = hold;
+        Grip carries;
+        if (up_input > kClimbInputDeadzone) {
+            // A ledge in reach is climbed over before any hold above it: grab
+            // rails that run on past a deck's edge must not carry the body
+            // past the height it can mantle from.
+            if (up_input > 0.5 && try_top_out(bodies)) {
+                return;
+            }
+            const JPH::RVec3 moved =
+                hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbUpSpeed * delta_seconds, 0.0F);
+            const Grip above = find_grip(moved, hand_aim(moved, kClimbMoveAim, 0.0F), normal);
+            if (above.valid) {
+                next = moved;
+                carries = above;
+            }
+        } else if (up_input < -kClimbInputDeadzone) {
+            const JPH::RVec3 moved =
+                hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbDownSpeed * delta_seconds, 0.0F);
+            if (feet_on_ground(moved)) {
+                step_off_climb(bodies);
+                return;
+            }
+            const Grip below = find_grip(moved, hand_aim(moved, kClimbHandLow, 0.0F), normal);
+            if (below.valid) {
+                next = moved;
+                carries = below;
+            }
+        }
+        if (std::abs(side_input) > kClimbInputDeadzone) {
+            const float lead = side_input > 0.0 ? kClimbSideLead : -kClimbSideLead;
+            const JPH::RVec3 moved =
+                next + right * (static_cast<float>(side_input) * kClimbSideSpeed * delta_seconds);
+            const Grip beside = find_grip(moved, hand_aim(moved, kClimbHandMid, lead), normal);
+            if (beside.valid) {
+                next = moved;
+                carries = beside;
+            }
+        }
+        if (carries.valid && climb_move_clear(hold, next)) {
+            traversal_body_ = carries.body;
+            traversal_entity_id_ = carries.entity_id;
+            traversal_local_hold_ = to_support_local(bodies, traversal_body_, next);
+            traversal_local_ledge_ = to_support_local(bodies, traversal_body_, carries.point);
+        }
+        move_hands(bodies, from_support_local(bodies, traversal_body_, traversal_local_hold_),
+                   up_input, side_input);
+    }
+
+    // Hand over hand: the hand furthest behind the way the body moves
+    // reaches ahead to the next hold, one hand every kClimbRegripTicks.
+    void move_hands(const JPH::BodyInterface &bodies, const JPH::RVec3 centre,
+                    const double up_input, const double side_input) noexcept {
+        if (regrip_cooldown_ticks_ > 0) {
+            --regrip_cooldown_ticks_;
+            return;
+        }
+        const JPH::Vec3 right = traversal_right();
+        std::int32_t mover = -1;
+        float height = kClimbHandMid;
+        float across = 0.0F;
+        const auto rise = [&](const std::uint32_t hand) {
+            return static_cast<float>(hand_point(bodies, hand).GetY() - centre.GetY());
+        };
+        const auto offset = [&](const std::uint32_t hand) {
+            return JPH::Vec3(hand_point(bodies, hand) - centre).Dot(right);
+        };
+        if (up_input > kClimbInputDeadzone) {
+            const std::uint32_t low = rise(0) <= rise(1) ? 0U : 1U;
+            if (rise(low) < kClimbHandMid - 0.15F) {
+                mover = static_cast<std::int32_t>(low);
+                height = kClimbHandHigh;
+            }
+        } else if (up_input < -kClimbInputDeadzone) {
+            const std::uint32_t high = rise(0) >= rise(1) ? 0U : 1U;
+            if (rise(high) > kClimbHandHigh + 0.10F) {
+                mover = static_cast<std::int32_t>(high);
+                height = kClimbHandLow;
+            }
+        } else if (std::abs(side_input) > kClimbInputDeadzone) {
+            const float sign = side_input > 0.0 ? 1.0F : -1.0F;
+            const std::uint32_t behind = offset(0) * sign <= offset(1) * sign ? 0U : 1U;
+            if (offset(behind) * sign < -kClimbHandSpan) {
+                mover = static_cast<std::int32_t>(behind);
+                across = sign * kClimbSideLead;
+            }
+        }
+        // A hand the body has left out of reach takes the nearest hold again.
+        for (std::uint32_t hand = 0; hand < 2 && mover < 0; ++hand) {
+            const JPH::RVec3 shoulder = centre + JPH::Vec3(0.0F, kClimbHandMid, 0.0F);
+            if (!hands_[hand].valid ||
+                JPH::Vec3(hand_point(bodies, hand) - shoulder).Length() > 0.95F) {
+                mover = static_cast<std::int32_t>(hand);
+                across = hand == 0 ? -kClimbHandSpan : kClimbHandSpan;
+            }
+        }
+        if (mover < 0) {
+            return;
+        }
+        const std::uint32_t hand = static_cast<std::uint32_t>(mover);
+        if (across == 0.0F) {
+            across = hand == 0 ? -kClimbHandSpan : kClimbHandSpan;
+        }
+        const Grip grip = find_grip(centre, hand_aim(centre, height, across), traversal_normal_);
+        if (grip.valid) {
+            set_hand(bodies, hand, grip);
+            regrip_cooldown_ticks_ = kClimbRegripTicks;
+        }
+    }
+
+    // Soles within kClimbFootReach of walkable ground under a body at `centre`.
+    [[nodiscard]] bool feet_on_ground(const JPH::RVec3 centre) const noexcept {
+        JPH::RayCastResult hit;
+        const JPH::Vec3 down(0.0F, -(kPlayerHalfHeight + kClimbFootReach), 0.0F);
+        if (!cast_ray(centre, down, hit)) {
+            return false;
+        }
+        const JPH::RVec3 point = JPH::RRayCast(centre, down).GetPointOnRay(hit.mFraction);
+        return surface_normal(hit.mBodyID, hit.mSubShapeID2, point).GetY() >= kSupportNormalThreshold;
+    }
+
+    // Climbing over a ledge in reach: the mantle takes over from where the
+    // body is. The ledge is looked for where the player looks, then along
+    // the structure's normal: a climber on a pipe faced from an angle looks
+    // round at the deck it means to climb onto.
+    [[nodiscard]] bool try_top_out(JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+        LedgeProbe probe;
+        if (!facing_.IsNearZero()) {
+            probe = probe_ledge(origin, facing_, kMantleMinimumRise, kMantleMaximumRise, true, true);
+        }
+        if (!probe.valid) {
+            probe = probe_ledge(origin, traversal_normal_, kMantleMinimumRise, kMantleMaximumRise,
+                                true, true);
+        }
+        if (!probe.valid) {
+            return false;
+        }
+        hands_[0].valid = false;
+        hands_[1].valid = false;
+        begin_mantle(bodies, probe, origin);
+        return true;
+    }
+
+    void step_off_climb(JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+        bodies.SetLinearVelocity(player_id_, bodies.GetPointVelocity(traversal_body_, hold));
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        ++accepted_traversal_count_;
+        clear_traversal();
+    }
+
+    void let_go_climb(JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+        const JPH::Vec3 support_velocity = bodies.GetPointVelocity(traversal_body_, hold);
+        bodies.SetLinearVelocity(player_id_, support_velocity);
+        airborne_inherited_velocity_ = support_velocity;
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
+        clear_traversal();
+    }
+
+    // Springing back off the structure, away from it and up.
+    void jump_off_climb(JPH::BodyInterface &bodies) noexcept {
+        const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+        const JPH::Vec3 support_velocity = bodies.GetPointVelocity(traversal_body_, hold);
+        bodies.SetLinearVelocity(player_id_, support_velocity -
+                                                 traversal_normal_ * kClimbJumpBackSpeed +
+                                                 JPH::Vec3(0.0F, kClimbJumpUpSpeed, 0.0F));
+        airborne_inherited_velocity_ = support_velocity;
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
+        clear_traversal();
+    }
+
+    // The lip of a ledge near `near` (a point on or near its top edge),
+    // faced along `normal`: a ray across just under the top onto its face,
+    // then a ray down onto the top just inside the face.
+    [[nodiscard]] Lip probe_lip(const JPH::RVec3 near, const JPH::Vec3 normal) const noexcept {
+        Lip lip;
+        const JPH::RVec3 outside =
+            near - normal * 0.5F - JPH::Vec3(0.0F, kLipProbeDepth, 0.0F);
+        const JPH::Vec3 across = normal * 0.9F;
+        JPH::RayCastResult face_hit;
+        if (!cast_ray(outside, across, face_hit)) {
+            return lip;
+        }
+        const JPH::RVec3 face = JPH::RRayCast(outside, across).GetPointOnRay(face_hit.mFraction);
+        const JPH::RVec3 above = face + normal * kTopProbeInset + JPH::Vec3(0.0F, 0.30F, 0.0F);
+        const JPH::Vec3 down(0.0F, -0.45F, 0.0F);
+        JPH::RayCastResult top_hit;
+        if (!cast_ray(above, down, top_hit) || top_hit.mBodyID != face_hit.mBodyID) {
+            return lip;
+        }
+        const JPH::RVec3 top = JPH::RRayCast(above, down).GetPointOnRay(top_hit.mFraction);
+        if (surface_normal(top_hit.mBodyID, top_hit.mSubShapeID2, top).GetY() <
+            kLedgeTopNormalThreshold) {
+            return lip;
+        }
+        lip.valid = true;
+        lip.body = face_hit.mBodyID;
+        lip.entity_id = physics_system_.GetBodyInterfaceNoLock().GetUserData(face_hit.mBodyID);
+        lip.ledge = top;
+        const JPH::RVec3 off_face = face - normal * (kPlayerRadius + kHangWallGap);
+        lip.hold = JPH::RVec3(off_face.GetX(), top.GetY() - kHangDropBelowLedge, off_face.GetZ());
+        const JPH::RVec3 inside = face + normal * kLandingInset;
+        lip.landing =
+            JPH::RVec3(inside.GetX(), top.GetY() + kPlayerHalfHeight + kLandingSkin, inside.GetZ());
+        return lip;
+    }
+
+    // Hanging, the stick sideways moves along the ledge while its lip goes
+    // on under the hands.
+    void update_shimmy(JPH::BodyInterface &bodies, const StepCommands &commands,
+                       const float delta_seconds) noexcept {
+        const JPH::Vec3 right = traversal_right();
+        const double side_input =
+            commands.move_input_x * right.GetX() + commands.move_input_z * right.GetZ();
+        if (std::abs(side_input) <= kClimbInputDeadzone || traversal_normal_.IsNearZero()) {
+            return;
+        }
+        const float lead = side_input > 0.0 ? 0.25F : -0.25F;
+        const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+        const JPH::RVec3 ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+        const JPH::Vec3 step = right * (static_cast<float>(side_input) * kShimmySpeed * delta_seconds);
+        const Lip at = probe_lip(ledge + step, traversal_normal_);
+        const Lip ahead = probe_lip(ledge + step + right * lead, traversal_normal_);
+        if (!at.valid || !ahead.valid || std::abs(at.ledge.GetY() - ledge.GetY()) > 0.15 ||
+            !climb_move_clear(hold, at.hold) || !capsule_pose_is_clear(at.landing)) {
+            return;
+        }
+        traversal_body_ = at.body;
+        traversal_entity_id_ = at.entity_id;
+        traversal_local_hold_ = to_support_local(bodies, at.body, at.hold);
+        traversal_local_ledge_ = to_support_local(bodies, at.body, at.ledge);
+        traversal_target_body_ = at.body;
+        traversal_local_target_ = to_support_local(bodies, at.body, at.landing);
+    }
+
+    // An edge behind a standing body with a drop beyond it: the floor ends
+    // within kEdgeSearchReach behind the body and nothing is under the space
+    // beyond for kEdgeDropMinimum, and a hanging body fits below its lip.
+    [[nodiscard]] Lip probe_edge_drop(const JPH::BodyInterface &bodies) const noexcept {
+        if (!grounded_ || crouched_ || carry_constraint_ != nullptr || facing_.IsNearZero()) {
+            return {};
+        }
+        const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+        const double feet_y = origin.GetY() - kPlayerHalfHeight;
+        const JPH::Vec3 back = -facing_;
+        for (float behind = kEdgeSearchStart; behind <= kEdgeSearchReach + 1.0e-4F;
+             behind += kEdgeSearchStep) {
+            const JPH::RVec3 at = origin + back * behind;
+            const JPH::RVec3 from(at.GetX(), feet_y + 0.05, at.GetZ());
+            JPH::RayCastResult floor;
+            if (cast_ray(from, JPH::Vec3(0.0F, -(0.05F + kEdgeDropMinimum), 0.0F), floor)) {
+                continue;
+            }
+            const JPH::RVec3 last = origin + back * (behind - kEdgeSearchStep);
+            const Lip lip = probe_lip(JPH::RVec3(last.GetX(), feet_y, last.GetZ()), facing_);
+            if (!lip.valid || std::abs(lip.ledge.GetY() - feet_y) > 0.10 ||
+                !capsule_pose_is_clear(lip.hold)) {
+                return {};
+            }
+            return lip;
+        }
+        return {};
+    }
+
+    // Drop, standing with an edge behind: lower over it into a hang.
+    [[nodiscard]] bool try_begin_lowering(JPH::BodyInterface &bodies) noexcept {
+        const Lip lip = probe_edge_drop(bodies);
+        if (!lip.valid) {
+            return false;
+        }
+        const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+        traversal_state_ = TraversalState::Lowering;
+        traversal_body_ = lip.body;
+        traversal_entity_id_ = lip.entity_id;
+        traversal_target_body_ = lip.body;
+        traversal_normal_ = facing_;
+        traversal_local_start_ = to_support_local(bodies, lip.body, origin);
+        traversal_local_hold_ = to_support_local(bodies, lip.body, lip.hold);
+        traversal_local_ledge_ = to_support_local(bodies, lip.body, lip.ledge);
+        traversal_local_target_ = to_support_local(bodies, lip.body, lip.landing);
+        traversal_progress_ = 0.0;
+        traversal_duration_ = kLoweringSeconds;
+        traversal_stall_ticks_ = 0;
+        traversal_desired_ = origin;
+        bodies.SetGravityFactor(player_id_, 0.0F);
+        return true;
+    }
+
+    // Lowered: hanging from the lip, as if the hang had been caught there.
+    void finish_lowering() noexcept {
+        traversal_state_ = TraversalState::Hanging;
+        traversal_progress_ = 0.0;
+        traversal_stall_ticks_ = 0;
+        ++accepted_traversal_count_;
+    }
+
+    // The support under a walking body, if it is a beam: a box narrower
+    // than kBalanceMaxWidth and at least kBalanceMinLength long, lying level.
+    struct Beam final {
+        bool valid = false;
+        JPH::Vec3 along{JPH::Vec3::sZero()};
+        JPH::Vec3 across{JPH::Vec3::sZero()};
+        float offset = 0.0F;
+    };
+
+    [[nodiscard]] Beam beam_underfoot(const JPH::BodyInterface &bodies) const noexcept {
+        Beam beam;
+        const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+        const float half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+        JPH::RayCastResult hit;
+        if (!cast_ray(centre, JPH::Vec3(0.0F, -(half_height + kCheckpointFootingSlack), 0.0F), hit)) {
+            return beam;
+        }
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), hit.mBodyID);
+        if (!lock.Succeeded()) {
+            return beam;
+        }
+        LeafBox box;
+        if (!leaf_box(lock.GetBody(), hit.mSubShapeID2, box)) {
+            return beam;
+        }
+        std::uint32_t up = 0;
+        for (std::uint32_t axis = 1; axis < 3; ++axis) {
+            if (std::abs(box.axes[axis].GetY()) > std::abs(box.axes[up].GetY())) {
+                up = axis;
+            }
+        }
+        if (std::abs(box.axes[up].GetY()) < 0.9F) {
+            return beam;
+        }
+        const std::uint32_t a = (up + 1) % 3;
+        const std::uint32_t b = (up + 2) % 3;
+        const std::uint32_t long_axis = box.half[a] >= box.half[b] ? a : b;
+        const std::uint32_t short_axis = long_axis == a ? b : a;
+        if (2.0F * box.half[short_axis] > kBalanceMaxWidth ||
+            2.0F * box.half[long_axis] < kBalanceMinLength) {
+            return beam;
+        }
+        JPH::Vec3 along = box.axes[long_axis];
+        along.SetY(0.0F);
+        if (along.IsNearZero()) {
+            return beam;
+        }
+        beam.valid = true;
+        beam.along = along.Normalized();
+        beam.across = JPH::Vec3(-beam.along.GetZ(), 0.0F, beam.along.GetX());
+        beam.offset = JPH::Vec3(centre - box.centre).Dot(beam.across);
+        return beam;
+    }
+
     void clear_traversal() noexcept {
         traversal_state_ = TraversalState::None;
+        traversal_normal_ = JPH::Vec3::sZero();
+        hands_[0].valid = false;
+        hands_[1].valid = false;
+        air_full_speed_ = kPlayerMaximumRelativeSpeed;
         traversal_body_ = {};
         traversal_target_body_ = {};
         traversal_entity_id_ = 0;
@@ -4968,9 +5769,16 @@ private:
 
     void update_affordance(const JPH::BodyInterface &bodies) noexcept {
         affordance_ = {};
+        grip_affordance_ = {};
+        edge_affordance_ = {};
         carry_target_entity_ = 0;
         (void)carry_candidate(bodies, carry_target_entity_);
         find_rig_action(bodies);
+        if (traversal_state_ == TraversalState::None && !crouched_ &&
+            carry_constraint_ == nullptr && !facing_.IsNearZero() && grounded_) {
+            grip_affordance_ = grip_in_front(bodies);
+            edge_affordance_ = probe_edge_drop(bodies);
+        }
         // The probes measure rises from standing feet and test standing
         // landing poses; a crouched body is offered none (a request stands
         // it first, see update_crouch). Hands full, no ledge is offered at all.
@@ -5107,6 +5915,9 @@ private:
         support_entity_id_ = 0;
         support_sample_ = {};
         airborne_inherited_velocity_ = JPH::Vec3::sZero();
+        air_full_speed_ = kPlayerMaximumRelativeSpeed;
+        sprinting_ = false;
+        balancing_ = false;
         fall_peak_speed_mps_ = 0.0F;
         pre_contact_fall_speed_mps_ = 0.0F;
         parachute_deployed_ = false;
@@ -5296,6 +6107,35 @@ private:
                 from_support_local(bodies, traversal_target_body_, traversal_local_target_));
         }
 
+        // Step 2: the hands' points, the structure's direction, the legs,
+        // and what a grounded body is offered.
+        state_.traversal_left_hand = {};
+        state_.traversal_right_hand = {};
+        state_.traversal_normal = {};
+        if (traversal_state_ != TraversalState::None) {
+            state_.traversal_normal = {traversal_normal_.GetX(), 0.0, traversal_normal_.GetZ()};
+        }
+        if (traversal_state_ == TraversalState::Climbing && hands_[0].valid && hands_[1].valid) {
+            state_.traversal_left_hand = to_vector3(hand_point(bodies, 0));
+            state_.traversal_right_hand = to_vector3(hand_point(bodies, 1));
+        } else if ((traversal_state_ == TraversalState::Hanging ||
+                    traversal_state_ == TraversalState::Lowering) &&
+                   !traversal_normal_.IsNearZero()) {
+            const JPH::RVec3 lip = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+            const JPH::Vec3 span = traversal_right() * kHangHandSpan;
+            state_.traversal_left_hand = to_vector3(lip - span);
+            state_.traversal_right_hand = to_vector3(lip + span);
+        }
+        state_.player_sprinting = sprinting_;
+        state_.player_balancing = balancing_;
+        state_.grip_available = grip_affordance_.valid;
+        state_.grip_entity_id = grip_affordance_.valid ? grip_affordance_.entity_id : 0;
+        state_.grip_point = grip_affordance_.valid ? to_vector3(grip_affordance_.point) : Vector3{};
+        state_.edge_drop_available = edge_affordance_.valid;
+        state_.edge_drop_point =
+            edge_affordance_.valid ? to_vector3(edge_affordance_.ledge) : Vector3{};
+        state_.climb_count = climb_count_;
+
         state_.ledge_available = affordance_.valid;
         state_.ledge_entity_id = affordance_.valid ? affordance_.ledge_entity_id : 0;
         state_.ledge_point = affordance_.valid ? to_vector3(affordance_.ledge_point) : Vector3{};
@@ -5333,6 +6173,8 @@ private:
     PlayerContactListener contact_listener_;
     JPH::RefConst<JPH::Shape> player_shape_;
     JPH::RefConst<JPH::Shape> player_crouch_shape_;
+    JPH::RefConst<JPH::Shape> grip_region_shape_;
+    JPH::RefConst<JPH::Shape> climb_sweep_shape_;
     JPH::BodyID deck_id_;
     JPH::BodyID translating_support_id_;
     JPH::BodyID rotating_support_id_;
@@ -5474,6 +6316,25 @@ private:
     std::uint64_t rejected_traversal_count_ = 0;
     std::uint64_t aborted_traversal_count_ = 0;
     LedgeProbe affordance_{};
+    // Step 2 movement. The direction a hang or a climb faces its structure;
+    // each hand's hold, in the frame of the body it is on; the affordances a
+    // grounded body is offered; and what the legs are doing.
+    struct HandHold final {
+        JPH::BodyID body;
+        JPH::Vec3 local{JPH::Vec3::sZero()};
+        bool valid = false;
+    };
+    JPH::Vec3 traversal_normal_{JPH::Vec3::sZero()};
+    HandHold hands_[2]{};
+    std::uint32_t regrip_cooldown_ticks_ = 0;
+    std::uint64_t climb_count_ = 0;
+    Grip grip_affordance_{};
+    Lip edge_affordance_{};
+    bool sprinting_ = false;
+    bool balancing_ = false;
+    // Top speed the air steers toward: the walk, or what the ground gave the
+    // body as it left it (a running jump keeps its speed).
+    float air_full_speed_ = kPlayerMaximumRelativeSpeed;
 
     struct MachineCheckpoint final {
         BodyCheckpoint ballast{};
@@ -5574,7 +6435,11 @@ void Simulation::set_boiler_feed_enabled(const bool enabled) noexcept {
 }
 
 bool Simulation::request_release() noexcept {
-    if (snapshot_.traversal_state != TraversalState::Hanging) {
+    const bool holding = snapshot_.traversal_state == TraversalState::Hanging ||
+                         snapshot_.traversal_state == TraversalState::Climbing;
+    const bool standing =
+        snapshot_.traversal_state == TraversalState::None && snapshot_.player_grounded;
+    if (!holding && !standing) {
         return false;
     }
     release_requested_ = true;
@@ -5588,6 +6453,11 @@ bool Simulation::request_parachute() noexcept {
 
 bool Simulation::set_crouch_input(const bool held) noexcept {
     crouch_input_ = held;
+    return true;
+}
+
+bool Simulation::set_sprint_input(const bool held) noexcept {
+    sprint_input_ = held;
     return true;
 }
 
@@ -5795,6 +6665,7 @@ void Simulation::step_fixed() noexcept {
     commands.traversal_requested = traversal_requested_;
     commands.release_requested = release_requested_;
     commands.crouch_held = crouch_input_;
+    commands.sprint_held = sprint_input_;
     commands.pick_up_requested = pick_up_requested_;
     commands.set_down_requested = set_down_requested_;
     commands.rig_requested = rig_requested_;

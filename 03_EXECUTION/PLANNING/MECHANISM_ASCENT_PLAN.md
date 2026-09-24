@@ -116,3 +116,24 @@ re-authored as `AS-006` (Atlas B02) before code.
   each band are re-authored as linked stages band by band.
 - Performance on the Fold: bands out of range sleep; water, air and gravel use the declared
   simplified models, not particles; each band's body budget is measured before it is accepted.
+
+## 8. Step 2, the movement, as specified before it is built
+
+Every move is native (the simulation decides; Godot shows and asks), works on any structure of
+its kind by what the structure is, not by a tag, and is driven like the existing traversals: the
+body is steered toward a point held in the frame of the body it is on, so a move on moving
+machinery rides with it and letting go keeps that body's velocity.
+
+| Move | What it works on | Rules |
+|---|---|---|
+| **Sprint** | any walkable ground | held (Shift, left-stick click, the touch stick pushed past its ring); standing, hands free, not balancing, stick at least 0.7 and within 45° of the facing: top speed 8.0 m/s against 5.5. A jump keeps its takeoff speed in the air while the stick holds forward: air control steers and slows, it never drags a running jump back to walking speed |
+| **Climb** | any member a hand can close round: its two thinner dimensions at most 0.18 m, its length at least 0.25 m (rungs, pipes, bars, lattice members, chords), static or moving | facing one within 0.8 m at hand height, Action (CLIMB) or moving into it in the air takes hold. The stick toward the structure climbs up (0.9 m/s), away climbs down (1.2 m/s), sideways moves across (0.6 m/s), each only while the hands find the next hold; the hands go hand over hand. At the top, climbing on with a ledge in reach mantles over; at the bottom the feet step off onto ground. Jump springs back off; Drop lets go |
+| **Shimmy** | any ledge a hang holds | hanging, the stick sideways moves along the ledge (0.6 m/s) while the ledge continues under the hands, re-probed every step; hand over hand |
+| **Balance** | any support narrower than 0.5 m and at least 1.5 m long (a beam, a pipe run, a rail) | walking on it: top speed 2.0 m/s along it; sideways input under 0.8 is held on its line, over 0.8 steps off; arms out |
+| **Controlled drop** | any edge with a drop behind it | at an edge, Drop lowers the body over it into a hang facing it (0.6 s); from a hang, Drop lets go; holding toward the wall while falling catches the next ledge below (the existing catch) |
+
+Falsifiers, one native group per move, each with its negative: no hold on a wide wall; no climb
+past the last hold; no sprint crouched or carrying; no balance on a wide deck; no drop-hang where
+nothing lies beyond the edge. And the band's no-lift route, 154 m to 220 m. Godot: every move on
+touch, pad and keyboard; the hands hold the native's hold points and travel between them at their
+reach speed; the camera never snaps.

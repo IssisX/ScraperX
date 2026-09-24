@@ -957,12 +957,89 @@ void build_stage_c(kit::Kit &kit, CounterweightWell &well) {
                        0.0F, 0.8F);
 }
 
+// ---- The climbing route: 154 -> 220 with no lift -----------------------------
+//
+// East of the machines, on the well side of the rings. Each climb faces the
+// ring it tops out onto, from the well side: the rings step 0.91 m further
+// into the well each level up, so a climber on the other side of a
+// structure would have the next ring over their head.
+//
+//  154 -> 176  a rung ladder standing on the 154 m deck against the 176
+//              ring's inner face (climb, mantle over the top);
+//  176 -> 198  an L of scaffold boards out from the 176 ring (balance) to a
+//              standpipe that rises to the 198 ring's edge (climb, mantle);
+//  198 -> 220  a catwalk out from the 198 ring under a scaffold panel hung
+//              off the 220 ring's face, caught with a jump (climb, mantle).
+//
+// Holds end at or under the deck they lead to, so the mantle over the top
+// passes above them. Rails, rungs and lattice members are 60 mm or less.
+constexpr float kMemberHalf = 0.03F;
+constexpr float kLadderX = 5.00F;
+constexpr float kLadderZ = -129.05F;     // 0.14 m off the 176 ring's face
+constexpr float kLadderHalfWidth = 0.28F;
+constexpr float kRungPitch = 0.30F;
+constexpr float kBoardHalfWidth = 0.15F;
+constexpr float kBoardTop = 176.45F;
+constexpr float kPipeX = 7.60F;
+constexpr float kPipeZ = -130.30F;
+constexpr float kPipeTop = 198.20F;
+constexpr float kCatwalkX = 11.00F;
+constexpr float kPanelZ = -130.86F;      // 0.13 m off the 220 ring's face
+constexpr float kPanelBottom = 200.30F;
+constexpr float kPanelTop = 220.20F;
+
+void build_climbing_route(kit::Kit &kit) {
+    using Sim = Simulation;
+    std::vector<Part> route;
+    // The ladder: two rails and a rung every 0.3 m up to the 176 ring. The
+    // rails stop at the deck's top: a body mantling over the ladder's head
+    // is wider than the gap between them.
+    const float rail_top = 176.25F;
+    for (const float side : {-1.0F, 1.0F}) {
+        route.push_back({JPH::Vec3(kMemberHalf, 0.5F * (rail_top - kDeckTop), kMemberHalf),
+                         JPH::Vec3(kLadderX + side * kLadderHalfWidth, 0.5F * (rail_top + kDeckTop), kLadderZ),
+                         JPH::Quat::sIdentity(), Material::Yellow});
+    }
+    for (float rung = kDeckTop + kRungPitch; rung <= 176.20F; rung += kRungPitch) {
+        route.push_back({JPH::Vec3(kLadderHalfWidth, 0.02F, 0.02F), JPH::Vec3(kLadderX, rung, kLadderZ),
+                         JPH::Quat::sIdentity(), Material::Steel});
+    }
+    // The boards: out south from the 176 ring, then east past the pipe.
+    const float board_mid = kBoardTop - 0.10F;
+    route.push_back({JPH::Vec3(kBoardHalfWidth, 0.10F, 1.225F),
+                     JPH::Vec3(7.05F, board_mid, -129.825F), JPH::Quat::sIdentity(), Material::Timber});
+    route.push_back({JPH::Vec3(0.80F, 0.10F, kBoardHalfWidth),
+                     JPH::Vec3(7.70F, board_mid, -130.90F), JPH::Quat::sIdentity(), Material::Timber});
+    // The standpipe on its foot bracket, to just under the 198 deck's top.
+    route.push_back({JPH::Vec3(0.05F, 0.5F * (kPipeTop - kBoardTop), 0.05F),
+                     JPH::Vec3(kPipeX, 0.5F * (kPipeTop + kBoardTop), kPipeZ), JPH::Quat::sIdentity(),
+                     Material::Galvanised});
+    route.push_back({JPH::Vec3(0.175F, 0.075F, 0.04F), JPH::Vec3(7.375F, 176.325F, kPipeZ),
+                     JPH::Quat::sIdentity(), Material::Rust});
+    // The catwalk, flush with the 198 ring, and the scaffold panel above it:
+    // verticals every 0.5 m, a horizontal every 0.4 m.
+    route.push_back({JPH::Vec3(0.50F, 0.05F, 1.14F), JPH::Vec3(kCatwalkX, 198.20F, -130.86F),
+                     JPH::Quat::sIdentity(), Material::Galvanised});
+    for (float x = 10.0F; x <= 12.01F; x += 0.5F) {
+        route.push_back({JPH::Vec3(kMemberHalf, 0.5F * (kPanelTop - kPanelBottom), kMemberHalf),
+                         JPH::Vec3(x, 0.5F * (kPanelTop + kPanelBottom), kPanelZ),
+                         JPH::Quat::sIdentity(), Material::Yellow});
+    }
+    for (float y = kPanelBottom; y <= kPanelTop + 0.01F; y += 0.4F) {
+        route.push_back({JPH::Vec3(1.03F, kMemberHalf, kMemberHalf), JPH::Vec3(11.0F, y, kPanelZ),
+                         JPH::Quat::sIdentity(), Material::Steel});
+    }
+    (void)kit.add_body(Sim::kWellRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(),
+                       0.0F, 0.8F);
+}
+
 } // namespace
 
 void build_counterweight_well(kit::Kit &kit, CounterweightWell &well) {
     build_stage_a(kit, well);
     build_stage_b(kit, well);
     build_stage_c(kit, well);
+    build_climbing_route(kit);
 }
 
 } // namespace scraperx::sim::bands

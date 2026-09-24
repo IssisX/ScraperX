@@ -374,3 +374,90 @@ jobs:
           path: artifacts/
           if-no-files-found: error
           retention-days: 90
+
+  # A playable APK for every push, independent of the proof path above: a red
+  # test must never cost the owner a build to try on the phone. This job does
+  # not prove anything; the proof job still exports and checksums its own APK.
+  playtest-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK and NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build
+          SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          test -x "${SDKMANAGER_PATH}"
+          yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
+          "${SDKMANAGER_PATH}" "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
+
+      - name: Install verified Godot 4.7 editor and Android template
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          curl --fail --location --retry 3 \
+            --output tools/godot/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          echo "${GODOT_BINARY_SHA256}  tools/godot/godot.zip" | sha256sum --check
+          unzip -q tools/godot/godot.zip -d tools/godot
+          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
+          chmod +x tools/godot/godot
+          curl --fail --location --retry 3 \
+            --output tools/godot/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA256}  tools/godot/templates.tpz" | sha256sum --check
+          unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
+            -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
+
+      - name: Build the native library for the editor and for Android arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build/host -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSCRAPERX_BUILD_BRIDGE=ON \
+            -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_TARGET=template_release
+          cmake --build build/host --target scraperx_native --parallel 2
+          cmake -S . -B build/android-arm64 -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-24 \
+            -DSCRAPERX_BUILD_BRIDGE=ON \
+            -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_TARGET=template_release
+          cmake --build build/android-arm64 --target scraperx_native --parallel 2
+          test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
+
+      - name: Export the playtest APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_NAME="ScraperX-${GITHUB_SHA::12}-arm64.apk"
+          mkdir -p playtest
+          tools/godot/godot --headless --path godot \
+            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/playtest/${APK_NAME}"
+          test -s "playtest/${APK_NAME}"
+          unzip -l "playtest/${APK_NAME}" | grep -F "lib/arm64-v8a/libscraperx_native.so"
+
+      - name: Publish the playtest APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScraperX-APK-${{ github.sha }}
+          path: playtest/*.apk
+          if-no-files-found: error
+          retention-days: 30

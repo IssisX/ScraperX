@@ -27,6 +27,7 @@ public:
     [[nodiscard]] bool request_release();
     [[nodiscard]] bool request_parachute();
     [[nodiscard]] bool set_crouch_input(bool held);
+    [[nodiscard]] bool set_sprint_input(bool held);
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);
     [[nodiscard]] std::int64_t get_tick_index() const;
     [[nodiscard]] double get_simulation_time_seconds() const;
@@ -52,6 +53,16 @@ public:
     [[nodiscard]] godot::Vector3 get_traversal_ledge_point() const;
     [[nodiscard]] godot::Vector3 get_traversal_target_point() const;
     [[nodiscard]] bool is_ledge_available() const;
+    // Step 2 movement read back: the points a traversal's hands are on, the
+    // direction it faces its structure, the legs, and what is offered.
+    [[nodiscard]] godot::Vector3 get_traversal_left_hand() const;
+    [[nodiscard]] godot::Vector3 get_traversal_right_hand() const;
+    [[nodiscard]] godot::Vector3 get_traversal_normal() const;
+    [[nodiscard]] bool is_player_sprinting() const;
+    [[nodiscard]] bool is_player_balancing() const;
+    [[nodiscard]] bool is_grip_available() const;
+    [[nodiscard]] godot::Vector3 get_grip_point() const;
+    [[nodiscard]] bool is_edge_drop_available() const;
     [[nodiscard]] std::int64_t get_ledge_entity_id() const;
     [[nodiscard]] godot::Vector3 get_ledge_point() const;
     [[nodiscard]] double get_ledge_rise_meters() const;

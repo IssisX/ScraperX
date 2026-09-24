@@ -130,6 +130,11 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 		out.append(_prompt(&"jump", "CLIMB UP"))
 		out.append(_prompt(&"drop", "DROP"))
 		return out
+	if ctx.get("climbing", false):
+		out.append(_prompt(&"action", "CLIMB UP", "AT THE TOP"))
+		out.append(_prompt(&"jump", "JUMP OFF"))
+		out.append(_prompt(&"drop", "LET GO"))
+		return out
 	if int(ctx["traversal"]) != 0:
 		return out
 	if ctx["grab_hint"]:
@@ -143,6 +148,8 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 			out.append(_prompt(&"action", action["label"], action["detail"]))
 		&"valve":
 			out.append(_prompt(&"valve", action["label"], action["detail"]))
+	if ctx.get("drop_ok", false):
+		out.append(_prompt(&"drop", "DROP DOWN", "OVER THE EDGE"))
 	return out
 
 

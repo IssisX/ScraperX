@@ -20,7 +20,7 @@ namespace {
 // One past the last spawn, derived from the enum so a new spawn is never
 // silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
 constexpr std::int64_t kInitialSpawnCount =
-    static_cast<std::int64_t>(sim::InitialSpawn::WellCPlatform) + 1;
+    static_cast<std::int64_t>(sim::InitialSpawn::Ring198East) + 1;
 
 // A kit index from script: negative or past the end reads as no body.
 [[nodiscard]] std::uint32_t kit_index(const std::int64_t index) {
@@ -51,6 +51,24 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::request_parachute);
     godot::ClassDB::bind_method(godot::D_METHOD("set_crouch_input", "held"),
                                 &ScraperXSimulation::set_crouch_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_sprint_input", "held"),
+                                &ScraperXSimulation::set_sprint_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_left_hand"),
+                                &ScraperXSimulation::get_traversal_left_hand);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_right_hand"),
+                                &ScraperXSimulation::get_traversal_right_hand);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_normal"),
+                                &ScraperXSimulation::get_traversal_normal);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_player_sprinting"),
+                                &ScraperXSimulation::is_player_sprinting);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_player_balancing"),
+                                &ScraperXSimulation::is_player_balancing);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_grip_available"),
+                                &ScraperXSimulation::is_grip_available);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_grip_point"),
+                                &ScraperXSimulation::get_grip_point);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_edge_drop_available"),
+                                &ScraperXSimulation::is_edge_drop_available);
     godot::ClassDB::bind_method(godot::D_METHOD("advance_frame", "frame_delta_seconds"),
                                 &ScraperXSimulation::advance_frame);
     godot::ClassDB::bind_method(godot::D_METHOD("get_tick_index"),
@@ -362,6 +380,10 @@ bool ScraperXSimulation::set_crouch_input(const bool held) {
     return simulation_->set_crouch_input(held);
 }
 
+bool ScraperXSimulation::set_sprint_input(const bool held) {
+    return simulation_->set_sprint_input(held);
+}
+
 std::int64_t ScraperXSimulation::advance_frame(const double frame_delta_seconds) {
     const auto result = simulation_->advance_frame(frame_delta_seconds);
     if (!result.accepted) {
@@ -467,6 +489,38 @@ godot::Vector3 ScraperXSimulation::get_traversal_target_point() const {
 
 bool ScraperXSimulation::is_ledge_available() const {
     return simulation_->snapshot().ledge_available;
+}
+
+godot::Vector3 ScraperXSimulation::get_traversal_left_hand() const {
+    return to_godot(simulation_->snapshot().traversal_left_hand);
+}
+
+godot::Vector3 ScraperXSimulation::get_traversal_right_hand() const {
+    return to_godot(simulation_->snapshot().traversal_right_hand);
+}
+
+godot::Vector3 ScraperXSimulation::get_traversal_normal() const {
+    return to_godot(simulation_->snapshot().traversal_normal);
+}
+
+bool ScraperXSimulation::is_player_sprinting() const {
+    return simulation_->snapshot().player_sprinting;
+}
+
+bool ScraperXSimulation::is_player_balancing() const {
+    return simulation_->snapshot().player_balancing;
+}
+
+bool ScraperXSimulation::is_grip_available() const {
+    return simulation_->snapshot().grip_available;
+}
+
+godot::Vector3 ScraperXSimulation::get_grip_point() const {
+    return to_godot(simulation_->snapshot().grip_point);
+}
+
+bool ScraperXSimulation::is_edge_drop_available() const {
+    return simulation_->snapshot().edge_drop_available;
 }
 
 std::int64_t ScraperXSimulation::get_ledge_entity_id() const {

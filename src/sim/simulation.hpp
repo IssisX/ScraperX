@@ -104,6 +104,11 @@ enum class InitialSpawn : std::uint8_t {
     // AS-006 Stage C falsifier spawn: standing on C's platform on its bottom
     // stop at 198.25, as a rider who has stepped across from B's parked cage.
     WellCPlatform = 26,
+    // Step 2 movement spawn: on the 176 ring east of the climbing route's
+    // boards, facing north with the ring's inner edge 1 m behind.
+    Ring176East = 27,
+    // And on the 198 ring, north of the route's catwalk.
+    Ring198East = 28,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -138,6 +143,10 @@ enum class TraversalState : std::uint8_t {
     Hanging = 1,
     Mantling = 2,
     Vaulting = 3,
+    // Step 2 (MECHANISM_ASCENT_PLAN.md §8): on the holds of a ladder, pipe,
+    // bar or lattice; and lowering over an edge into a hang.
+    Climbing = 4,
+    Lowering = 5,
 };
 
 // WO-008. Parachuting is a sub-state of Airborne, not a fourth motion primitive
@@ -178,6 +187,23 @@ struct Snapshot final {
     Vector3 ledge_point{};
     double ledge_rise_meters = 0.0;
     std::uint64_t accepted_traversal_count = 0;
+    // Step 2 movement. The points a traversal's hands are on (a climb's two
+    // holds; a hang's lip either side of the body) and the horizontal
+    // direction it faces the structure; zero outside a traversal.
+    Vector3 traversal_left_hand{};
+    Vector3 traversal_right_hand{};
+    Vector3 traversal_normal{};
+    bool player_sprinting = false;
+    // Walking a support narrower than 0.5 m and at least 1.5 m long.
+    bool player_balancing = false;
+    // A hold in reach at hand height, faced from the ground: Action climbs it.
+    bool grip_available = false;
+    std::uint64_t grip_entity_id = 0;
+    Vector3 grip_point{};
+    // An edge behind the body with a drop beyond it: Drop lowers into a hang.
+    bool edge_drop_available = false;
+    Vector3 edge_drop_point{};
+    std::uint64_t climb_count = 0;
     // Static dressing loaded from world_solids.inc: bodies built, drawn
     // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
     // Edges under kStepMaximumHeight walked up (see try_step_up).
@@ -470,6 +496,8 @@ public:
     static constexpr std::uint64_t kWellATipOutEntityId = 2005;
     static constexpr std::uint64_t kWellATipHandleEntityId = 2006;
     static constexpr std::uint64_t kWellCLatchHandleEntityId = 2026;
+    // AS-006's climbing route: ladder, boards, standpipe, catwalk, scaffold.
+    static constexpr std::uint64_t kWellRouteEntityId = 1004;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -487,6 +515,8 @@ public:
     [[nodiscard]] bool set_facing(double world_x, double world_z) noexcept;
     [[nodiscard]] bool request_jump() noexcept;
     [[nodiscard]] bool request_traversal() noexcept;
+    // Let go: of a hung ledge or a climb's holds; on the ground, with an edge
+    // behind the body and a drop beyond it, lower over it into a hang.
     [[nodiscard]] bool request_release() noexcept;
 
     // Crouch (GDD 7.2, Governing Law 4). A held state, like set_move_input,
@@ -497,6 +527,10 @@ public:
     // A Jump or traversal request stands the body first, and is refused
     // where it cannot stand.
     [[nodiscard]] bool set_crouch_input(bool held) noexcept;
+    // Sprint, held: the native sprints only standing, hands free, off a
+    // balance beam, with the stick at least 0.7 and within 45 degrees of the
+    // facing.
+    [[nodiscard]] bool set_sprint_input(bool held) noexcept;
 
     // AS-003 carry commands. One-shot, like request_valve_toggle. A pick-up
     // takes the carryable the snapshot names in carry_target_entity_id -- a
@@ -609,6 +643,7 @@ private:
     bool traversal_requested_ = false;
     bool release_requested_ = false;
     bool crouch_input_ = false;
+    bool sprint_input_ = false;
     bool pick_up_requested_ = false;
     bool set_down_requested_ = false;
     bool rig_requested_ = false;
