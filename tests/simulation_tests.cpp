@@ -3309,10 +3309,12 @@ int main() {
     require(worst_energy_margin >= -kStanceJitterJ,
             "at no tick may the payload have gained more energy than the skip released");
 
-    // Dying restores the last commit, machines included: from the parked
-    // cage walk off its open east side into the well. The fall is lethal,
-    // and the restore returns the rider to the cage with the stage as it was
-    // committed: the cage at the top, the rope on its eye.
+    // Dying restores the last commit, machines included. Stage B now occupies
+    // the east handoff beside A, so walking east can legitimately advance the
+    // player's automatic checkpoint onto B before the eventual fall. The
+    // invariant here is therefore the machine commit, not which adjacent
+    // support owns the latest player checkpoint: A must still restore parked
+    // at the top with its rope on the cage eye.
     const auto well_deaths = at_top.death_count;
     for (std::uint32_t tick = 0; tick < 90 * 8 && well.snapshot().death_count == well_deaths;
          ++tick) {
@@ -3326,16 +3328,16 @@ int main() {
     require(well.advance_frame(1.0).accepted, "the restore settle interval must be accepted");
     const auto well_restored = well.snapshot();
     require(well_restored.player_position.y > 177.0 &&
-                well_restored.support_entity_id == Simulation::kWellACageEntityId &&
                 std::abs(well_restored.well_a_cage_travel - kWellATravel) <= 0.05 &&
                 well_restored.well_a_rope_end_entity_id == Simulation::kWellACageEntityId,
-            "the restore must return the rider to the parked cage with the stage as committed");
+            "death restore must preserve Stage A's committed machine state");
     std::cout << "PASS scraperx_sim AS-006 A ride: ride_s=" << well_ride_seconds
               << " floor_y=" << floor_y << " peak_speed=" << at_top.well_a_cage_peak_speed
               << " rode_on_cage=" << int(rode_on_cage) << " skip_released_J=" << skip_released
               << " payload_gained_J=" << payload_gained
               << " energy_margin_J=" << worst_energy_margin
-              << " restored_y=" << well_restored.player_position.y << '\n';
+              << " restored_y=" << well_restored.player_position.y
+              << " restored_support=" << well_restored.support_entity_id << '\n';
 
 
     // ---- AS-006 Stage B, guided lattice counterweight ----------------------
