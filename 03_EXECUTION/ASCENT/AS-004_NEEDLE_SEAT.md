@@ -3,7 +3,9 @@
 **Ascent Slice:** `AS-004`
 **Lifecycle:** `PLANNED` — contract exists, no corresponding source
 **Provenance:** re-derived against this branch
-**Implementation gate:** `AS-003` implemented and its exit revalidated in source
+**Implementation gate:** `AS-003` implemented and its exit revalidated in source.
+`AS-003` is in source at `8f9e954`; revalidation below is **blocked on a design
+decision** (§ Revalidation against source, finding 1).
 **Evidence:** none. A plan is never implementation evidence.
 **Depends on:** `AS-001` and `AS-002` in source and green; `AS-003` in source
 (`CAP-HOOK5` acquirable); kernel falsifiers green; protocol §8.
@@ -35,19 +37,18 @@ The slice owns **one machine and one capability consumption**:
 
 ## Existing truth
 
-Frozen from `AS-001` source at `af8beca`; inherited from `AS-002`/`AS-003` as
-**DESIGN TARGET** until those land:
+Read from source at `8f9e954`, where `AS-001`–`AS-003` are all in source:
 
 | Datum | Value | Source |
 |---|---|---|
 | `MOD-HALL-DECK` walking surface | `40.1872 m`, `x ∈ [-10, 10]`, `z ∈ [-122.5, -107.7]` | `AS-002` §8.3 |
-| `MOD-STAIR-A` well in that deck | `x ∈ [-7.51, -1.51]`, `z ∈ [-119.2, -114.8]` | `AS-002` §8.3 |
+| `MOD-STAIR-A` well in that deck | `x ∈ [-4.80, 1.50]`, `z ∈ [-119.2, -114.8]` | source, as built (`AS-002` §8.3 planned `x ∈ [-7.51, -1.51]`) |
 | bascule hinge | `(7.856, 32.1872, -112.5)`, swings `y ∈ [16, 32]` | `AS-002` §8.3 |
 | `MOD-SKIN-LADDER-S` head | rung 25 top `40.1872 m`, fascia `z = -106.4` | `AS-002` §8.3 |
 | `MOD-HOOK5` block | `36 kg`, half `(0.30, 0.25, 0.30)`, carried on a point constraint | `AS-003` §8.4.3 |
 | carrying blocks traversal | vault, mantle and hang all refuse while held | `AS-003` §8.4.3 |
 | max `MOD-YARD-JIB` hook | `11.05 m` | `AS-001`, verified |
-| persist | v3 | `AS-003` §8.10 |
+| persist | the in-memory checkpoint, extended for the carry; no serialized save exists | `AS-003` result record |
 
 Proven primitives this slice reuses rather than reinvents:
 
@@ -173,6 +174,77 @@ measurement, falsifiers; Godot twins; persist v4; CI proof lines.
 - the kernel `KX-NEEDLE` still seats with no `CAP-HOOK5` anywhere near it
 - Fold install / on-device play remain unverified
 
+## Revalidation against source (`8f9e954`)
+
+Probed with white-box builds of `simulation.cpp` outside the repo, planned
+members added as static boxes at their §8.3 poses. Every number is observed
+output; none is a falsifier yet.
+
+**1. The tower's own stair is free from grade to `154 m`, and it touches this
+slice.** `build_stack()` is the tower's climbable lower section (entity `11`,
+*"the machine IS the building"*): decks every `11 m` (`11 … 154 m`) around an
+open shaft, with one stair flight per storey. The `world solids` falsifier
+asserts all fourteen flights are walked from the yard with no jump requested.
+Its north face is `z = -124`, and its balconies and gantries hang to
+`z = -121.4`, beside this slice's shaft:
+
+| from, as built | to | move | observed |
+|---|---|---|---|
+| tower `44 m` deck, north edge | `MOD-HALL-DECK`, `40.19 m` | walk off, no jump | stands on it alive at `x = -8, -5, +5`; `x = 0, +8` stopped at the edge |
+| `MOD-HALL-DECK`, south edge | tower `33 m` deck, inside | running jump south | lands alive on it at `x = -8, -5`, under the `44 m` deck; `x = +5, +8` stopped at the edge; never onto the `44 m` deck |
+| `51.35 m` balcony, `x ∈ [4.5, 8.5]`, `z ∈ [-124.4, -121.4]` | needle A stowed on its `48 m` rack | running jump north | stands on it alive at `x = 6.5, 8.0` |
+| `109.5 m` gantry, `x ∈ [1.9, 14.1]`, `z ∈ [-123.45, -122.15]` | needle A seated at `96 m` | walk off, no jump | stands on it alive at `x = 5, 6, 7, 7.5, 8, 9`; misses at `11`, past its end |
+| `95.35 m` balcony, `x ∈ [-16.5, -12.5]` | west pocket A | running jump | falls, 2 of 2 |
+
+Not established: a route from the tower's decks onto the `51.35 m` balcony or
+the `109.5 m` gantry — walking or jumping straight north off the `55 m` and
+`110 m` decks stopped or fell in all 5 probes. The first row does not need it:
+`AS-002`'s legal forty is reachable without `AS-001` or `AS-002`, and the same
+stair keeps climbing past the `120 m` that `AS-005` would build.
+
+Neither the Atlas nor `AS-002` accounts for this route; the Atlas has no such
+stair. Governing Law 17 makes it valid play and forbids protecting the
+machines' path with an invisible blocker; it keeps real access constraints
+legitimate. So the decision is a design one, not a code one:
+
+- **(A) close the tower's stair with a real, visible access constraint** —
+  a missing or collapsed flight, a locked door — below the hall deck *and*
+  above it, since the hall deck and the tower's `33 m` and `44 m` decks connect
+  both ways (rows 1–2). The machines become the way up to `120 m`. This reopens the
+  kernel `world solids` falsifier's fourteen-flight assertion, and every new
+  `AS-004` member still needs a reach audit; or
+- **(B) keep the tower's stair open as a route**, and treat this slice as optional
+  content whose completion items no longer assert that `MOD-CAGE-1` is the way
+  to `96 m`.
+
+No `AS-004` code until one is chosen.
+
+**2. The hall deck alone cannot reach the racks.** `40.19 + 3.75` (the measured
+running jump-grab reach above the floor it leaves) `= 43.94 < 48.36`. With the
+stair closed, `MOD-CAGE-1` is necessary.
+
+**3. The cage well is clear.** `x ∈ [-1.4, 1.4]`, `z ∈ [-112, -109]` against the
+as-built stair well at `z ≥ -114.8` leaves `2.80 m`, as planned; the plan's
+stair-well `x` datum was wrong and is corrected in Existing truth. No standable
+body lies in the shaft column between `40.19` and `121 m`.
+
+**4. Nothing in §8.3 carries the racks, pockets or drum head.** Racks at
+`48 m`, pockets at `96 m` and the drum head at `121 m` float; the nearest
+structure is the tower's north face at `z = -124`, `11 m` from the pocket line.
+Whatever carries them is climbable and needs the reach audit `AS-003`'s cage
+needed.
+
+**5. §8.3 stowed-needle datum.** A centre of `48.36` with half-height `0.25` sat
+`0.25 m` inside a rack whose top is `48.36`; §8.7 already had `48.61`. Corrected
+to centre `48.61`, top `48.86`, with falsifier 2.
+
+**6. Persist.** There is no serialized save and no v3 to bump. "Persist v4" in
+§8.10 means extending `MachineCheckpoint` and its restore topology the way
+`AS-003` did.
+
+**7. §8.9's parked-cage soft-lock stands** and remains `AS-005`'s to answer
+under (A); under (B) the tower's stair answers it.
+
 ## Result record
 
 pending.
@@ -219,7 +291,7 @@ Persist: inherit v3.
 | `MOD-NEEDLE-POCKETS` west ×2 | `(-9.0, 95.75, -112.8 / -108.2)` | `(0.50, 0.30, 0.65)` | no | tapered seat |
 | `MOD-NEEDLE-POCKETS` east ×2 | `(+9.0, 95.75, -112.8 / -108.2)` | `(0.50, 0.30, 0.65)` | no | tapered seat |
 | `48 m` racks ×2 | `(0.0, 48.11, -112.8 / -108.2)` | `(1.40, 0.25, 0.65)` | yes | rack deck |
-| `MOD-NEEDLE-A/B` stowed | `(0.0, 48.36, -112.8 / -108.2)` | as above | yes | on the rack |
+| `MOD-NEEDLE-A/B` stowed | `(0.0, 48.61, -112.8 / -108.2)` | as above | yes | on the rack, top `48.86` |
 | `MOD-GUIDE-RACK` rails ×2 | `(0.0, 80.0, -112.0 / -109.0)` | `(0.10, 40.0, 0.10)` | no | `y ∈ [40, 120]` |
 
 **Clearances, in metres:**
@@ -491,7 +563,7 @@ assumes both needles on their racks, nothing rigged, cage at `40.19`.
    `48.36`.
 2. `wo017_no_block_no_lift` — `CAP-HOOK5` left at grade. Lower the winch to the
    padeye, command Rig, raise for 30 s. Needle A's `y` stays within `0.05 m` of
-   `48.36`.
+   `48.61`.
 3. `wo017_block_is_the_load_path` — with the block rigged, the same command
    sequence raises needle A past `y = 90` within 90 s.
 4. `wo017_two_needles_sag_the_drum` — rig both, command up. The cage's `y`
