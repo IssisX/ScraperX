@@ -527,29 +527,45 @@ bool board_well_b(scraperx::sim::Simulation &simulation) {
 
 bool rig_well_b(scraperx::sim::Simulation &simulation) {
     using scraperx::sim::Simulation;
-    if (!walk_to(simulation, -8.45, -131.95, 3.0, 0.08)) return false;
+    const auto fail = [&](const char *step) {
+        const auto s = simulation.snapshot();
+        std::cout << "INFO AS-006 B rig fail: step=" << step
+                  << " pos=(" << s.player_position.x << ',' << s.player_position.y << ','
+                  << s.player_position.z << ") grounded=" << int(s.player_grounded)
+                  << " support=" << s.support_entity_id
+                  << " rig_action=" << int(s.rig_action)
+                  << " rig_target=" << s.rig_target_entity_id
+                  << " carrying=" << s.carrying_entity_id
+                  << " rope_end=" << s.well_b_rope_end_entity_id
+                  << " rope_tension=" << s.well_b_rope_tension_n
+                  << " cw_travel=" << s.well_b_counterweight_travel << '\n';
+        return false;
+    };
+    if (!walk_to(simulation, -8.45, -131.95, 3.0, 0.08)) return fail("walk_bollard");
     (void)simulation.set_facing(-0.65, -0.75);
     (void)simulation.advance_frame(0.4);
     const auto at_bollard = simulation.snapshot();
     if (at_bollard.rig_action != 2 ||
-        at_bollard.rig_target_entity_id != Simulation::kWellBShackleEntityId) return false;
+        at_bollard.rig_target_entity_id != Simulation::kWellBShackleEntityId)
+        return fail("offer_unhook");
     (void)simulation.request_rig();
     (void)simulation.advance_frame(0.3);
-    // Stand one hand-reach inside the east post, not inside the post's
-    // collision envelope. The hand then reaches the eye on the cage's east
-    // face exactly as Stage A approaches its west-face eye.
-    if (simulation.snapshot().carrying_entity_id != Simulation::kWellBShackleEntityId ||
-        !walk_to(simulation, -6.55, -131.40, 3.0, 0.08)) return false;
+    if (simulation.snapshot().carrying_entity_id != Simulation::kWellBShackleEntityId)
+        return fail("take_shackle");
+    if (!walk_to(simulation, -6.55, -131.40, 3.0, 0.08)) return fail("walk_eye");
     (void)simulation.set_facing(1.0, 0.0);
     (void)simulation.advance_frame(0.5);
     const auto at_eye = simulation.snapshot();
     if (at_eye.rig_action != 1 ||
-        at_eye.rig_target_entity_id != Simulation::kWellBCageEntityId) return false;
+        at_eye.rig_target_entity_id != Simulation::kWellBCageEntityId)
+        return fail("offer_hook");
     (void)simulation.request_rig();
     (void)simulation.advance_frame(0.3);
     const auto hooked = simulation.snapshot();
-    return hooked.carrying_entity_id == 0 &&
-           hooked.well_b_rope_end_entity_id == Simulation::kWellBCageEntityId;
+    if (hooked.carrying_entity_id != 0 ||
+        hooked.well_b_rope_end_entity_id != Simulation::kWellBCageEntityId)
+        return fail("hook_commit");
+    return true;
 }
 
 bool pull_well_b(scraperx::sim::Simulation &simulation, const double pull, const double seconds) {
