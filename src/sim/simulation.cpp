@@ -5215,6 +5215,13 @@ private:
         state_.well_a_rope_end_entity_id = kit.rope_end_entity(well_.a_rope);
         state_.well_a_rope_tension_n = kit.rope_tension(well_.a_rope);
         state_.well_a_lever_angle = kit.lever_angle(well_.a_lever);
+        state_.well_b_cage_travel = kit.guide_travel(well_.b_cage_guide);
+        state_.well_b_counterweight_travel = kit.guide_travel(well_.b_counterweight_guide);
+        state_.well_b_cage_peak_speed = kit.guide_peak_speed(well_.b_cage_guide);
+        state_.well_b_catch_latched = kit.catch_latched(well_.b_catch);
+        state_.well_b_rope_end_entity_id = kit.rope_end_entity(well_.b_rope);
+        state_.well_b_rope_tension_n = kit.rope_tension(well_.b_rope);
+        state_.well_b_lever_angle = kit.lever_angle(well_.b_lever);
 
         const JPH::RVec3 rope_tipper =
             bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);

@@ -428,6 +428,11 @@ constexpr double kWellACageMassKg = 350.0;
 constexpr double kWellASkipMassKg = 800.0;
 constexpr double kWellACageFloorTop = 154.25;
 constexpr double kWellATravel = 22.0;
+constexpr double kWellBCageMassKg = 350.0;
+constexpr double kWellBCounterweightMassKg = 2500.0;
+constexpr double kWellBCageFloorTop = 176.25;
+constexpr double kWellBTravel = 22.0;
+constexpr double kWellBCounterweightHalfHeight = 11.0;
 // The energy rule is checked from body states every tick. A standing capsule
 // settles by millimetres on whatever floor it is on; 1 cm of that for the
 // 85 kg rider is the tolerance, so stance noise is never read as a motor.
@@ -511,6 +516,61 @@ bool pull_well_a(scraperx::sim::Simulation &simulation, const double pull, const
     if (simulation.snapshot().carrying_entity_id != 0) {
         (void)simulation.request_set_down();
     }
+    return opened;
+}
+
+
+bool board_well_b(scraperx::sim::Simulation &simulation) {
+    return walk_to(simulation, -8.65, -131.40, 3.0, 0.08) &&
+           walk_to(simulation, -7.55, -131.40, 3.0, 0.08);
+}
+
+bool rig_well_b(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!walk_to(simulation, -8.45, -131.95, 3.0, 0.08)) return false;
+    (void)simulation.set_facing(-0.65, -0.75);
+    (void)simulation.advance_frame(0.4);
+    const auto at_bollard = simulation.snapshot();
+    if (at_bollard.rig_action != 2 ||
+        at_bollard.rig_target_entity_id != Simulation::kWellBShackleEntityId) return false;
+    (void)simulation.request_rig();
+    (void)simulation.advance_frame(0.3);
+    if (simulation.snapshot().carrying_entity_id != Simulation::kWellBShackleEntityId ||
+        !walk_to(simulation, -6.10, -131.40, 3.0, 0.08)) return false;
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.5);
+    const auto at_eye = simulation.snapshot();
+    if (at_eye.rig_action != 1 ||
+        at_eye.rig_target_entity_id != Simulation::kWellBCageEntityId) return false;
+    (void)simulation.request_rig();
+    (void)simulation.advance_frame(0.3);
+    const auto hooked = simulation.snapshot();
+    return hooked.carrying_entity_id == 0 &&
+           hooked.well_b_rope_end_entity_id == Simulation::kWellBCageEntityId;
+}
+
+bool pull_well_b(scraperx::sim::Simulation &simulation, const double pull, const double seconds) {
+    using scraperx::sim::Simulation;
+    if (!walk_to(simulation, -7.35, -130.35, 3.0, 0.08)) return false;
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.5);
+    const auto facing = simulation.snapshot();
+    if (facing.carry_target_entity_id != Simulation::kWellBHandleEntityId ||
+        facing.carry_target_kind != 2) return false;
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(0.3);
+    if (simulation.snapshot().carrying_entity_id != Simulation::kWellBHandleEntityId) return false;
+    bool opened = false;
+    const auto ticks =
+        static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (std::uint32_t tick = 0; tick < ticks && !opened; ++tick) {
+        (void)simulation.set_move_input(0.0, -0.7 * pull);
+        (void)simulation.set_facing(0.0, 1.0);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        opened = !simulation.snapshot().well_b_catch_latched;
+    }
+    (void)simulation.set_move_input(0.0, 0.0);
+    if (simulation.snapshot().carrying_entity_id != 0) (void)simulation.request_set_down();
     return opened;
 }
 
@@ -3276,6 +3336,96 @@ int main() {
               << " payload_gained_J=" << payload_gained
               << " energy_margin_J=" << worst_energy_margin
               << " restored_y=" << well_restored.player_position.y << '\n';
+
+
+    // ---- AS-006 Stage B, guided lattice counterweight ----------------------
+    require(board_well_b(well), "the rider must step directly from A's parked cage into B's cage");
+    require(well.snapshot().well_b_catch_latched &&
+                well.snapshot().well_b_rope_end_entity_id == Simulation::kWellBFrameEntityId,
+            "Stage B must be found caught with its rope made fast on the bollard");
+
+    const double b_unlinked_weight_y0 = kit_y(well, Simulation::kWellBCounterweightEntityId);
+    const double b_unlinked_cage_y0 = kit_y(well, Simulation::kWellBCageEntityId);
+    require(pull_well_b(well, 0.55, 3.0),
+            "Stage B's trip handle must withdraw the counterweight catch");
+    double b_unlinked_cage_worst = 0.0;
+    double b_unlinked_weight_drop = 0.0;
+    double b_bollard_tension = 0.0;
+    for (std::uint32_t tick = 0; tick < 90 * 4; ++tick) {
+        (void)well.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = well.snapshot();
+        b_unlinked_cage_worst =
+            std::max(b_unlinked_cage_worst,
+                     std::abs(kit_y(well, Simulation::kWellBCageEntityId) - b_unlinked_cage_y0));
+        b_unlinked_weight_drop =
+            std::max(b_unlinked_weight_drop,
+                     b_unlinked_weight_y0 - kit_y(well, Simulation::kWellBCounterweightEntityId));
+        if (!state.well_b_catch_latched)
+            b_bollard_tension = std::max(b_bollard_tension, state.well_b_rope_tension_n);
+    }
+    const auto b_relatched = well.snapshot();
+    require(b_unlinked_cage_worst <= 0.05,
+            "Stage B no link, no lift: the cage must remain parked");
+    require(b_unlinked_weight_drop <= 0.05,
+            "Stage B's bollard must arrest the lattice within its declared slack");
+    require(b_bollard_tension > 0.9 * kWellBCounterweightMassKg * kGravity,
+            "Stage B's bollard must carry the released lattice through the rope");
+    require(b_relatched.well_b_catch_latched && b_relatched.well_b_rope_tension_n < 60.0,
+            "letting go must re-seat B's lattice and unload its rope");
+    std::cout << "PASS scraperx_sim AS-006 B no link: cage_worst="
+              << b_unlinked_cage_worst << " lattice_drop=" << b_unlinked_weight_drop
+              << " bollard_tension=" << b_bollard_tension << " relatched=1\n";
+
+    require(rig_well_b(well),
+            "after the wasted pull, B's rope must come off the bollard and hook to its cage");
+    const double b_weight_y0 = kit_y(well, Simulation::kWellBCounterweightEntityId);
+    const double b_cage_y0 = kit_y(well, Simulation::kWellBCageEntityId);
+    const double b_rider_y0 = well.snapshot().player_position.y;
+    require(pull_well_b(well, 0.55, 3.0),
+            "with the rope on the cage, B's trip line must release the lattice");
+    const double b_ride_start = well.snapshot().simulation_time_seconds;
+    bool b_rode_on_cage = true;
+    double b_ride_seconds = 0.0;
+    double b_worst_energy_margin = std::numeric_limits<double>::infinity();
+    for (std::uint32_t tick = 0; tick < 90 * 20; ++tick) {
+        (void)well.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = well.snapshot();
+        const double cage_rise = kit_y(well, Simulation::kWellBCageEntityId) - b_cage_y0;
+        if (cage_rise > 0.05 && cage_rise < kWellBTravel - 0.05) {
+            b_rode_on_cage = b_rode_on_cage && state.player_grounded &&
+                             state.support_entity_id == Simulation::kWellBCageEntityId;
+        }
+        const double released =
+            kWellBCounterweightMassKg * kGravity *
+            (b_weight_y0 - kit_y(well, Simulation::kWellBCounterweightEntityId));
+        const double gained = kWellBCageMassKg * kGravity * cage_rise +
+                              kRiderMassKg * kGravity * (state.player_position.y - b_rider_y0);
+        b_worst_energy_margin = std::min(b_worst_energy_margin, released - gained);
+        if (b_ride_seconds == 0.0 && state.well_b_cage_travel >= kWellBTravel - 0.01)
+            b_ride_seconds = state.simulation_time_seconds - b_ride_start;
+    }
+    const auto b_top = well.snapshot();
+    const double b_floor_y = kit_y(well, Simulation::kWellBCageEntityId) + 0.10;
+    const double b_lattice_top =
+        kit_y(well, Simulation::kWellBCounterweightEntityId) + kWellBCounterweightHalfHeight;
+    require(b_rode_on_cage, "Stage B's rider must inherit the cage motion for the whole lift");
+    require(std::abs(b_floor_y - (kWellBCageFloorTop + kWellBTravel)) <= 0.05,
+            "Stage B's cage floor must stop flush with the 198.25 m ring");
+    require(b_top.well_b_cage_peak_speed <= 3.1,
+            "Stage B's brake-only governor must hold the cage to 3.0 m/s");
+    require(b_top.player_grounded && b_top.support_entity_id == Simulation::kWellBCageEntityId &&
+                b_top.player_position.y > 199.0,
+            "Stage B must arrive with the rider standing in its cage at the 198 ring");
+    require(b_worst_energy_margin >= -kStanceJitterJ,
+            "Stage B may not give the payload more potential energy than the lattice released");
+    require(std::abs(b_lattice_top - 198.25) <= 0.05,
+            "the spent 22 m lattice must finish spanning 176.25..198.25 as real structure");
+    std::cout << "PASS scraperx_sim AS-006 B ride: ride_s=" << b_ride_seconds
+              << " floor_y=" << b_floor_y
+              << " peak_speed=" << b_top.well_b_cage_peak_speed
+              << " rode_on_cage=" << int(b_rode_on_cage)
+              << " energy_margin_J=" << b_worst_energy_margin
+              << " lattice_top_y=" << b_lattice_top << '\n';
 
     return EXIT_SUCCESS;
 }

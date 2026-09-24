@@ -287,6 +287,13 @@ struct Snapshot final {
     std::uint64_t well_a_rope_end_entity_id = 0;
     double well_a_rope_tension_n = 0.0;
     double well_a_lever_angle = 0.0;
+    double well_b_cage_travel = 0.0;
+    double well_b_counterweight_travel = 0.0;
+    double well_b_cage_peak_speed = 0.0;
+    bool well_b_catch_latched = true;
+    std::uint64_t well_b_rope_end_entity_id = 0;
+    double well_b_rope_tension_n = 0.0;
+    double well_b_lever_angle = 0.0;
 };
 
 struct AdvanceResult final {
@@ -409,6 +416,12 @@ public:
     static constexpr std::uint64_t kWellAShackleEntityId = 2002;
     static constexpr std::uint64_t kWellALeverEntityId = 2003;
     static constexpr std::uint64_t kWellAHandleEntityId = 2004;
+    static constexpr std::uint64_t kWellBFrameEntityId = 1001;
+    static constexpr std::uint64_t kWellBCageEntityId = 2005;
+    static constexpr std::uint64_t kWellBCounterweightEntityId = 2006;
+    static constexpr std::uint64_t kWellBShackleEntityId = 2007;
+    static constexpr std::uint64_t kWellBLeverEntityId = 2008;
+    static constexpr std::uint64_t kWellBHandleEntityId = 2009;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

@@ -273,10 +273,245 @@ void build_stage_a(kit::Kit &kit, CounterweightWell &well) {
                             handle_top, kTripSheaveWest, kTripSheaveEast);
 }
 
+// ---- Stage B, the guided lattice counterweight ------------------------------
+//
+// A 2.5 t, 22 m lattice is stored vertically between the 198 and 220 rings.
+// The player moves its rope end from a bollard to the adjacent cage and trips
+// its catch. Gravity lowers the lattice 22 m while the cage rises 22 m. At
+// rest the lattice spans 176.25..198.25 m as permanent physical structure.
+constexpr float kBCageCenterX = -7.35F;
+constexpr float kBCageCenterZ = -131.40F;
+constexpr float kBCageHalfX = 1.45F;
+constexpr float kBCageHalfZ = 1.40F;
+constexpr float kBCageFloorHalfY = 0.10F;
+constexpr float kBCageFloorTop = 176.25F;
+constexpr float kBCageOriginY = kBCageFloorTop - kBCageFloorHalfY;
+constexpr float kBCagePostHeight = 2.70F;
+constexpr float kBCageMassKg = 350.0F;
+constexpr float kBTravel = 22.0F;
+constexpr float kBCageGovernorSpeed = 3.00F;
+constexpr float kBCageGovernorForce = 30000.0F;
+constexpr float kBCageLevelAccel = 2.5F;
+const JPH::Vec3 kBCageEyeLocal(kBCageHalfX + 0.12F, 0.80F, 0.0F);
+
+constexpr float kBWeightCenterX = -6.50F;
+constexpr float kBWeightCenterZ = -135.60F;
+constexpr float kBWeightHalfX = 0.62F;
+constexpr float kBWeightHalfY = 11.00F;
+constexpr float kBWeightHalfZ = 0.16F;
+constexpr float kBWeightTopCenterY = 209.25F;
+constexpr float kBWeightMassKg = 2500.0F;
+constexpr float kBSheaveY = 223.00F;
+
+const JPH::RVec3 kBLeverPivot(-8.75, 221.20, -135.60);
+constexpr float kBLeverArm = 1.00F;
+constexpr float kBLeverMassKg = 60.0F;
+constexpr float kBLeverReleaseAngle = 0.50F;
+constexpr float kBLeverTravel = 1.20F;
+constexpr float kBGantryZ = -129.55F;
+constexpr float kBGantryWestX = -9.70F;
+constexpr float kBGantryEastX = -6.10F;
+constexpr float kBGantryBeamY = 178.60F;
+const JPH::RVec3 kBTripSheaveWest(-9.35, 178.50, kBGantryZ);
+const JPH::RVec3 kBTripSheaveEast(-7.35, 178.50, kBGantryZ);
+constexpr float kBTripHandleDrop = 0.75F;
+constexpr float kBTripHandleHalfY = 0.04F;
+constexpr float kBBollardX = -8.70F;
+constexpr float kBBollardZ = -132.25F;
+constexpr float kBBollardHalfXZ = 0.12F;
+constexpr float kBBollardSlack = 0.03F;
+
+void build_stage_b(kit::Kit &kit, CounterweightWell &well) {
+    using Sim = Simulation;
+
+    const float post_y = kBCageFloorHalfY + 0.5F * kBCagePostHeight;
+    std::vector<Part> cage{
+        {JPH::Vec3(kBCageHalfX, kBCageFloorHalfY, kBCageHalfZ), JPH::Vec3::sZero(),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+    };
+    for (const float sx : {-1.0F, 1.0F}) {
+        for (const float sz : {-1.0F, 1.0F}) {
+            cage.push_back({JPH::Vec3(0.05F, 0.5F * kBCagePostHeight, 0.05F),
+                            JPH::Vec3(sx * (kBCageHalfX - 0.05F), post_y,
+                                      sz * (kBCageHalfZ - 0.05F)),
+                            JPH::Quat::sIdentity(), Material::Yellow});
+        }
+    }
+    const float top_y = kBCageFloorHalfY + kBCagePostHeight;
+    cage.push_back({JPH::Vec3(kBCageHalfX, 0.06F, 0.05F),
+                    JPH::Vec3(0.0F, top_y, kBCageHalfZ - 0.05F),
+                    JPH::Quat::sIdentity(), Material::Yellow});
+    cage.push_back({JPH::Vec3(kBCageHalfX, 0.06F, 0.05F),
+                    JPH::Vec3(0.0F, top_y, -kBCageHalfZ + 0.05F),
+                    JPH::Quat::sIdentity(), Material::Yellow});
+    cage.push_back({JPH::Vec3(0.05F, 0.06F, kBCageHalfZ),
+                    JPH::Vec3(-kBCageHalfX + 0.05F, top_y, 0.0F),
+                    JPH::Quat::sIdentity(), Material::Yellow});
+    cage.push_back({JPH::Vec3(0.05F, 0.06F, kBCageHalfZ),
+                    JPH::Vec3(kBCageHalfX - 0.05F, top_y, 0.0F),
+                    JPH::Quat::sIdentity(), Material::Yellow});
+    cage.push_back({JPH::Vec3(kBCageHalfX, 0.45F, 0.04F),
+                    JPH::Vec3(0.0F, 0.55F, -kBCageHalfZ + 0.04F),
+                    JPH::Quat::sIdentity(), Material::Galvanised});
+    cage.push_back({JPH::Vec3(0.12F, 0.06F, 0.06F),
+                    kBCageEyeLocal - JPH::Vec3(0.06F, 0.0F, 0.0F),
+                    JPH::Quat::sIdentity(), Material::Hazard});
+    well.b_cage = kit.add_body(
+        Sim::kWellBCageEntityId, cage,
+        JPH::RVec3(kBCageCenterX, kBCageOriginY, kBCageCenterZ),
+        JPH::Quat::sIdentity(), kBCageMassKg, 0.9F);
+    well.b_cage_guide = kit.add_guide(well.b_cage, JPH::Vec3::sAxisY(), 0.0F, kBTravel,
+                                      kBCageGovernorSpeed, kBCageGovernorForce,
+                                      kBCageLevelAccel);
+    well.b_cage_anchor = kit.add_anchor(well.b_cage, kBCageEyeLocal, 1.2F);
+
+    std::vector<Part> lattice;
+    lattice.reserve(15);
+    lattice.push_back({JPH::Vec3(0.06F, kBWeightHalfY, 0.06F),
+                       JPH::Vec3(-0.50F, 0.0F, 0.0F),
+                       JPH::Quat::sIdentity(), Material::Rust});
+    lattice.push_back({JPH::Vec3(0.06F, kBWeightHalfY, 0.06F),
+                       JPH::Vec3(0.50F, 0.0F, 0.0F),
+                       JPH::Quat::sIdentity(), Material::Rust});
+    for (int rung = -5; rung <= 5; ++rung) {
+        lattice.push_back({JPH::Vec3(kBWeightHalfX, 0.045F, kBWeightHalfZ),
+                           JPH::Vec3(0.0F, static_cast<float>(rung) * 2.0F, 0.0F),
+                           JPH::Quat::sIdentity(),
+                           (rung % 2 == 0) ? Material::Hazard : Material::Galvanised});
+    }
+    lattice.push_back({JPH::Vec3(kBWeightHalfX, 0.12F, kBWeightHalfZ),
+                       JPH::Vec3(0.0F, kBWeightHalfY - 0.12F, 0.0F),
+                       JPH::Quat::sIdentity(), Material::Yellow});
+    lattice.push_back({JPH::Vec3(kBWeightHalfX, 0.12F, kBWeightHalfZ),
+                       JPH::Vec3(0.0F, -kBWeightHalfY + 0.12F, 0.0F),
+                       JPH::Quat::sIdentity(), Material::Yellow});
+    well.b_counterweight = kit.add_body(
+        Sim::kWellBCounterweightEntityId, lattice,
+        JPH::RVec3(kBWeightCenterX, kBWeightTopCenterY, kBWeightCenterZ),
+        JPH::Quat::sIdentity(), kBWeightMassKg, 0.8F);
+    well.b_counterweight_guide =
+        kit.add_guide(well.b_counterweight, JPH::Vec3::sAxisY(), -kBTravel, 0.0F,
+                      0.0F, 0.0F, 0.0F);
+
+    const JPH::RVec3 cage_eye =
+        JPH::RVec3(kBCageCenterX, kBCageOriginY, kBCageCenterZ) + JPH::RVec3(kBCageEyeLocal);
+    const JPH::RVec3 cage_sheave(cage_eye.GetX(), kBSheaveY, cage_eye.GetZ());
+    const JPH::RVec3 weight_bail(kBWeightCenterX,
+                                 kBWeightTopCenterY + kBWeightHalfY + 0.20F,
+                                 kBWeightCenterZ);
+    const JPH::RVec3 weight_sheave(kBWeightCenterX, kBSheaveY, kBWeightCenterZ);
+    const float free_length = JPH::Vec3(cage_eye - cage_sheave).Length();
+    const float bollard_offset =
+        std::hypot(kBBollardX - cage_sheave.GetX(), kBBollardZ - cage_sheave.GetZ());
+    const float bollard_eye_y =
+        kBSheaveY - std::sqrt((free_length - kBBollardSlack) *
+                                  (free_length - kBBollardSlack) -
+                              bollard_offset * bollard_offset);
+
+    const float cage_rail_mid = 0.5F * (176.00F + 201.4F);
+    std::vector<Part> frame{
+        {JPH::Vec3(0.20F, 23.70F, 0.20F),
+         JPH::Vec3(-4.90F, 199.70F, -133.80F),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(2.20F, 0.16F, 2.45F),
+         JPH::Vec3(-6.85F, kBSheaveY + 0.40F, -133.45F),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(0.18F, 0.18F, 0.10F),
+         JPH::Vec3(cage_sheave.GetX(), kBSheaveY + 0.07F, cage_sheave.GetZ()),
+         JPH::Quat::sIdentity(), Material::Hazard},
+        {JPH::Vec3(0.18F, 0.18F, 0.10F),
+         JPH::Vec3(weight_sheave.GetX(), kBSheaveY + 0.07F, weight_sheave.GetZ()),
+         JPH::Quat::sIdentity(), Material::Hazard},
+        {JPH::Vec3(0.04F, 12.70F, 0.03F),
+         JPH::Vec3(kBCageCenterX - 1.15F, cage_rail_mid, -132.895F),
+         JPH::Quat::sIdentity(), Material::Steel},
+        {JPH::Vec3(0.04F, 12.70F, 0.03F),
+         JPH::Vec3(kBCageCenterX + 1.15F, cage_rail_mid, -132.895F),
+         JPH::Quat::sIdentity(), Material::Steel},
+        {JPH::Vec3(0.03F, 23.4F, 0.06F),
+         JPH::Vec3(kBWeightCenterX - 0.82F, 198.25F, kBWeightCenterZ),
+         JPH::Quat::sIdentity(), Material::Steel},
+        {JPH::Vec3(0.03F, 23.4F, 0.06F),
+         JPH::Vec3(kBWeightCenterX + 0.82F, 198.25F, kBWeightCenterZ),
+         JPH::Quat::sIdentity(), Material::Steel},
+        {JPH::Vec3(kBBollardHalfXZ,
+                   0.5F * (bollard_eye_y - 0.02F - 176.00F),
+                   kBBollardHalfXZ),
+         JPH::Vec3(kBBollardX,
+                   0.5F * (bollard_eye_y - 0.02F + 176.00F),
+                   kBBollardZ),
+         JPH::Quat::sIdentity(), Material::Hazard},
+        {JPH::Vec3(0.05F, 0.5F * (kBGantryBeamY + 0.05F - 176.00F), 0.05F),
+         JPH::Vec3(kBGantryWestX, 0.5F * (kBGantryBeamY + 0.05F + 176.00F), kBGantryZ),
+         JPH::Quat::sIdentity(), Material::Yellow},
+        {JPH::Vec3(0.05F, 0.5F * (kBGantryBeamY + 0.05F - 176.00F), 0.05F),
+         JPH::Vec3(kBGantryEastX, 0.5F * (kBGantryBeamY + 0.05F + 176.00F), kBGantryZ),
+         JPH::Quat::sIdentity(), Material::Yellow},
+        {JPH::Vec3(0.5F * (kBGantryEastX - kBGantryWestX) + 0.05F, 0.05F, 0.05F),
+         JPH::Vec3(0.5F * (kBGantryEastX + kBGantryWestX), kBGantryBeamY, kBGantryZ),
+         JPH::Quat::sIdentity(), Material::Yellow},
+    };
+    const kit::BodyIndex frame_body =
+        kit.add_body(Sim::kWellBFrameEntityId, frame, JPH::RVec3::sZero(),
+                     JPH::Quat::sIdentity(), 0.0F, 0.8F);
+    well.b_bollard_anchor =
+        kit.add_anchor(frame_body, JPH::Vec3(kBBollardX, bollard_eye_y, kBBollardZ), 1.2F);
+
+    const float rope_length =
+        JPH::Vec3(weight_bail - weight_sheave).Length() + free_length;
+    well.b_shackle = kit.add_body(
+        Sim::kWellBShackleEntityId,
+        {{JPH::Vec3(0.09F, 0.11F, 0.05F), JPH::Vec3::sZero(),
+          JPH::Quat::sIdentity(), Material::Hazard}},
+        JPH::RVec3(kBBollardX, bollard_eye_y + 0.11F, kBBollardZ),
+        JPH::Quat::sIdentity(), 8.0F, 0.6F);
+    kit.set_carry(well.b_shackle, kit::CarryKind::Shackle,
+                  JPH::Vec3(0.0F, 0.11F, 0.0F));
+    well.b_rope =
+        kit.add_rope(well.b_counterweight,
+                     JPH::Vec3(0.0F, kBWeightHalfY + 0.20F, 0.0F),
+                     weight_sheave, well.b_shackle,
+                     JPH::Vec3(0.0F, -0.11F, 0.0F), cage_sheave,
+                     1.0F, rope_length, 0.0F);
+    (void)kit.hook(Sim::kWellBShackleEntityId, well.b_bollard_anchor);
+
+    well.b_lever_body = kit.add_body(
+        Sim::kWellBLeverEntityId,
+        {{JPH::Vec3(0.5F * kBLeverArm, 0.05F, 0.05F),
+          JPH::Vec3(-0.5F * kBLeverArm, 0.0F, 0.0F),
+          JPH::Quat::sIdentity(), Material::Hazard},
+         {JPH::Vec3(0.15F, 0.25F, 0.15F),
+          JPH::Vec3(0.35F, 0.0F, 0.0F),
+          JPH::Quat::sIdentity(), Material::Rust}},
+        kBLeverPivot, JPH::Quat::sIdentity(), kBLeverMassKg, 0.5F);
+    well.b_lever =
+        kit.add_lever(well.b_lever_body, kBLeverPivot, JPH::Vec3::sAxisZ(),
+                      -JPH::Vec3::sAxisX(), 0.0F, kBLeverTravel);
+    well.b_catch =
+        kit.add_catch(well.b_counterweight, well.b_lever,
+                      kBLeverReleaseAngle, 0.05F, true);
+
+    const JPH::Vec3 handle_top(0.0F, kBTripHandleHalfY, 0.0F);
+    well.b_handle = kit.add_body(
+        Sim::kWellBHandleEntityId,
+        {{JPH::Vec3(0.22F, kBTripHandleHalfY, 0.04F), JPH::Vec3::sZero(),
+          JPH::Quat::sIdentity(), Material::Yellow}},
+        kBTripSheaveEast -
+            JPH::RVec3(0.0, kBTripHandleDrop + kBTripHandleHalfY, 0.0),
+        JPH::Quat::sIdentity(), 3.0F, 0.9F);
+    kit.set_carry(well.b_handle, kit::CarryKind::Handle, handle_top);
+    kit.set_damping(well.b_handle, 1.5F, 1.5F);
+    (void)kit.add_trip_line(well.b_lever_body,
+                            JPH::Vec3(-kBLeverArm, 0.0F, 0.0F),
+                            well.b_handle, handle_top,
+                            kBTripSheaveWest, kBTripSheaveEast);
+}
+
 } // namespace
 
 void build_counterweight_well(kit::Kit &kit, CounterweightWell &well) {
     build_stage_a(kit, well);
+    build_stage_b(kit, well);
 }
 
 } // namespace scraperx::sim::bands

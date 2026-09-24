@@ -22,6 +22,22 @@ struct CounterweightWell final {
     kit::CatchIndex a_catch;
     kit::AnchorIndex a_cage_anchor;
     kit::AnchorIndex a_bollard_anchor;
+
+    // Stage B, the guided lattice counterweight. The 22 m lattice is stored
+    // between the 198 and 220 rings; once released it falls to span 176..198
+    // while raising the adjacent cage to the 198 ring.
+    kit::BodyIndex b_cage;
+    kit::BodyIndex b_counterweight;
+    kit::BodyIndex b_shackle;
+    kit::BodyIndex b_lever_body;
+    kit::BodyIndex b_handle;
+    kit::GuideIndex b_cage_guide;
+    kit::GuideIndex b_counterweight_guide;
+    kit::RopeIndex b_rope;
+    kit::LeverIndex b_lever;
+    kit::CatchIndex b_catch;
+    kit::AnchorIndex b_cage_anchor;
+    kit::AnchorIndex b_bollard_anchor;
 };
 
 void build_counterweight_well(kit::Kit &kit, CounterweightWell &well);
