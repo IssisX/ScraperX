@@ -3,6 +3,7 @@
 #include "sim/simulation.hpp"
 
 #include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/variant/quaternion.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 
 #include <memory>
@@ -130,6 +131,18 @@ public:
     [[nodiscard]] double get_legal_forty_swing_travel_radians() const;
     [[nodiscard]] godot::Vector3 get_legal_forty_swing_flight_position() const;
     [[nodiscard]] godot::Vector3 get_legal_forty_cradle_position() const;
+
+    // AS-003 MOD-HOOK5-RACK: the carry commands, and the cage read back.
+    [[nodiscard]] bool request_pick_up();
+    [[nodiscard]] bool request_set_down();
+    [[nodiscard]] std::int64_t get_carrying_entity_id() const;
+    [[nodiscard]] std::int64_t get_carry_target_entity_id() const;
+    [[nodiscard]] bool is_hook_in_rack() const;
+    [[nodiscard]] double get_hook5_door_angle_radians() const;
+    [[nodiscard]] godot::Vector3 get_hook5_bar_position() const;
+    [[nodiscard]] godot::Quaternion get_hook5_bar_rotation() const;
+    [[nodiscard]] godot::Vector3 get_hook5_block_position() const;
+    [[nodiscard]] godot::Quaternion get_hook5_block_rotation() const;
 
 protected:
     static void _bind_methods();

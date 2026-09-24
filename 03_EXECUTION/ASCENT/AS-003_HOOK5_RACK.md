@@ -1,10 +1,25 @@
 # SCRAPERX — AS-003 HOOK5 RACK (CAP-HOOK5 ACQUIRE)
 
 **Ascent Slice:** `AS-003`
-**Lifecycle:** `PLANNED` — contract exists, no corresponding source
-**Provenance:** re-derived against this branch
-**Implementation gate:** `AS-002` implemented and its exit revalidated in source
-**Evidence:** none. A plan is never implementation evidence.
+**Lifecycle:** `IMPLEMENTED` — falsifiers green, source and tests in `claude/android-game-dev-continue-m045pq`
+**Provenance:** re-derived against this branch; built against that derivation, with deviations recorded in the Result record below wherever measurement disagreed with the plan
+**Implementation gate:** `AS-002` implemented and its exit revalidated in source. **Satisfied.**
+**Evidence:**
+
+```
+PASS scraperx_sim AS-003 apron: grade_peak_y=2.41139 pack_peak_y=4.21324
+  pack_closest=0.309441
+INFO AS-003 carry walk: loaded_v_at_0.25s=4.90744 free_v_at_0.25s=5.5
+  loaded_top=5.58061 free_top=5.5
+PASS scraperx_sim AS-003 cage: mashed_door=0.0352734 travelled_door=1.20154
+  carry_worst_gap=0.848285 repicked_y=0.987821 skin_mantles=15
+PASS scraperx_sim AS-003 Hook5 Rack: ride_s=10.6111 roof_y=5.36879
+  hatch_impact=9.35161 forty_y=41.0753 restored_y=41.0654 restored_carry=56
+SCRAPERX_UITEST PASS touch_carry door_rad=1.45 block=(9.87,0.30,-90.66)
+```
+
+Local runs of `scraperx_sim_tests` (every prior group green in the same run)
+and `--uitest=touch_carry`; CI integration is recorded in `00_START_HERE.md`.
 **Depends on:** `AS-001_INTAKE_RISE.md` in source and green; `AS-002_LEGAL_FORTY.md`
 in source; kernel falsifiers green; protocol `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §8.
 
@@ -172,7 +187,124 @@ door travelled. Android arm64 APK. Kernel, `AS-001` and `AS-002` green.
 
 ## Result record
 
-pending.
+The nine §8.11 falsifiers are three native groups (`tests/simulation_tests.cpp`,
+the AS-003 section before `EXIT_SUCCESS`) and one UI scenario:
+
+- **1** is `AS-003 apron`: from the `Hook5Apron` spawn, eleven running leaps at
+  every face but the belt's, each asserted to carry the body against the wall,
+  with jump and traversal mashed; then four leaps at the cage off the 9 t
+  pack's top, mantled from grade. No cage body is ever stood on, grabbed or
+  offered as a ledge; grade never rises past a plain jump (`2.41 m`).
+- **3, 4, 5, 6, 7** are `AS-003 cage`, one instance from the `Hook5Cage`
+  spawn: 30 s of every command mashed leaves the door at `0.035 rad` and the
+  bar in its brackets; lifted, carried north and set down, the bar frees the
+  door, which travels past `1.20 rad` with no door command (none exists). The
+  block comes off its rack, is carried out, toured for 10 s within `0.85 m`,
+  set down to rest, and picked up again off the ground. Held at the 9 t
+  pack's face, 5 s of traversal requests begin nothing and no ledge is
+  offered; set down, the same face mantles at once. Carried to
+  `MOD-SKIN-LADDER-S`'s foot, the first rung is neither offered nor climbed
+  while held; set down on the spot, the same rung is offered at once and the
+  same instance climbs to `+24 m` in 15 mantles. Falsifier 7 is asserted by
+  that behaviour -- the refusal and the offer bracket a set-down with nothing
+  else changing -- not by reading rung bodies, which no API exposes; the carry
+  code has no path that touches them.
+- **2, 8** and persist are `AS-003 Hook5 Rack`, one instance from the pendant:
+  `AS-002`'s freight and cradle sequence, then the belt ride onto the roof
+  (`10.6 s`, within two strokes), the hatch (`9.35 m/s`, non-lethal), the bar,
+  the block, out through the door, round the belt's north end, through the
+  throat, every flight of `MOD-STAIR-A`, the deployed flight and the upper
+  flight to `MOD-HALL-DECK` with the block held (`y = 41.08`). Walked off the
+  hall deck's north edge holding it, the 40 m fall is lethal and the restore
+  returns the body to the deck with the block in hand, and holds there.
+- **9**: every kernel, `AS-001` and `AS-002` group green in the same run; the
+  9 t proof load is still on the ground at the end.
+- `touch_carry` drives the same sequence inside the cage through the touch
+  pipeline: Action reads PICK UP at the bar and at the block and SET DOWN
+  while holding; the door swings open by itself; both rendered hands are on
+  the block (`POSE_CARRY`); it is carried out and set down on the apron.
+
+Measured, as §8.4.3 asked: the 36 kg load slows the launch -- `4.91 m/s` at
+`0.25 s` against `5.5` empty -- and leaves top speed unchanged.
+
+Deviations from the plan's numbers, each measured in the running solver and
+each explained at its own constant in `simulation.cpp`:
+
+- **Cage top `4.45 m`, not `2.90`.** The plan measured the lock against the
+  mantle ceiling alone. A running jump into a ledge grab reaches `3.75 m` above
+  the floor it leaves (measured against walls of every height), so `2.90` was
+  grabbable from grade. At `4.45` grade is `0.70 m` short and the belt's deck
+  (`5.13 m` reach) is `0.68 m` inside: the belt is still the key, jumped from
+  and grabbed rather than mantled.
+- **Sited at `z ∈ [-88, -84]`, not `[-106, -102]`.** A height lock holds only
+  if nothing but the key is within a jump, and running jumps carry far: a
+  `4.45 m` ledge is still grabbed across `6.3 m` of air from `1.38 m`, `6.8 m`
+  from `1.8 m`, and a `4.45 m` roof is landed on across `10.8 m` from `8 m` up.
+  At the plan's site the pendant catwalk, the 9 t pack's top, the bay's wall
+  top (off `MOD-STAIR-A`'s first landing) and the WO-006 lift all reached the
+  roof (7 of 48 probe leaps off the 9 t pack alone). At the new site a
+  1 006-leap audit -- grade round every face, the 9 t pack, the catwalk, its
+  ramp, the WO-006 catwalk, the WO-006 lift at its 9 m top -- reached a cage
+  body only from the lift, 3 times in 162, by an `11 m` leap: a machine-made
+  route, legal under Governing Law 17, recorded here and not blocked. The deck
+  lies alongside for `43 %` of its stroke (the plan's site: `57 %`), lingering
+  at the north end where the jump is made. §8.4.4's gap report stands and
+  grows: the crate coupling is not sited, and the cradle is now 20 m away.
+- **The door opens `1.45 rad` on `600 N·m`, not `1.35` on `6 000`.** The
+  rigid bar holds against any torque; at `6 000` the leaf pinned the bar in
+  its brackets with about `7 kN`, which lifting would have to fight. The
+  hinge is `0.20 m` behind the west jamb as §8.3 asks.
+- **Brackets, not keepers, and outside the leaf's sweep.** The plan's keepers
+  sat inside the `1.146 m` sweep and would have stopped the door with the bar
+  gone. Each bracket is a ledge under a bar end and a stop on its north face.
+- **Bar seated at `1.00 m`, rack top `0.60 m` in the north-east corner** (plan:
+  `1.30`, `0.90` mid-wall). The carry hands must be above every handle they
+  lift, or the constraint pulls the load into its support and hoists the
+  player instead (observed at the plan's `+0.30` with the bar at `1.30`); the
+  loads are seated low rather than the hands raised, because at chest height
+  the carried block's top sat at the eye and filled the view (seen in the
+  Fold capture). In a `2.3 m` room the `2.05 m` bar needs a clear place to be
+  set down; with the rack mid-wall every such place put one end on it.
+- **The carry point: `0.60 m` ahead, `0.35 m` above the body's centre**
+  (`1.25 m` over the soles), not `+0.30`; it swings round to the facing at
+  `3 rad/s` rather than with it -- an instant half-turn threw the hand point
+  `1.2 m` in one tick and the block out of it. A held body slips only when it
+  is more than `0.90 m` from the hands **and** still moving apart, so a wedged
+  bar lets go while a block lifted off the floor at the edge of reach does not.
+- **Persist is the existing checkpoint, extended.** This branch has no
+  serialized save and no "persist v2" to version; `MachineCheckpoint` gains
+  the door, bar and block bodies and the carried entity, and
+  `restore_carry_topology()` reconciles the constraint after a restore. A held
+  load is restored at rest with the body it is held by (restored with its
+  committed walking speed, it swung out of the still hands and dragged the
+  body back off the edge it had just been restored onto).
+- **Action puts PICK UP ahead of CLIMB.** The rack is itself a mantle ledge,
+  and whoever faces the block means the block. Drop and Back set down.
+- **The cage walls are drawn barred inside the native `0.30 m` slabs**, so the
+  block, the bar across the door and the hatch are seen from outside while
+  everything visible stays inside what is solid.
+
+Defects found on the way and fixed at their source, not routed around:
+
+- `DEFECT src/sim/simulation.cpp commit_checkpoint -> committed on any grounded
+  tick, including a capsule held by its rim with its centre 0.3 m past an
+  edge.` A lethal fall off that edge restored into the same slide, every time.
+  Commits now need firm footing: a ray straight down from the body's centre
+  meets walkable ground within its half-height plus `0.15 m`, which still
+  commits on the deployed 30-degree flight.
+- `DEFECT tests/simulation_tests.cpp AS-002 ascent -> its (-9, -108) waypoint,
+  0.3 m inside the handoff deck's north edge, dithered the body off the deck
+  -- a lethal 24 m fall the test never checked for.` It passed only because
+  the rim checkpoint happened to restore onto a working trajectory. The walk
+  now arrives and stops 1.3 m inside the edge, and the test asserts the route
+  kills no one.
+- `DEFECT src/bridge/scraperx_simulation.cpp kInitialSpawnCount -> the literal
+  21 had fallen behind the enum and refused IntakeHandoffDeck.` It is now
+  derived from the last spawn.
+
+Not done here: a Godot capture of the deck alongside the cage mid-window
+(the local captures are the cage interior, the carry and the approach);
+Fold-device execution remains unverified.
 
 ---
 

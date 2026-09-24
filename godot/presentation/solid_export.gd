@@ -24,6 +24,7 @@ const MOVING := [
 	"BeltSlat", "DogPlate", "DogRib", "BoomSpine", "BoomLattice", "BoomTail", "BoomBallast",
 	"IntakeHook", "IntakePack", "PackBand", "PackBandUpper", "OverweightPack",
 	"SwingFlightSlab", "SwingTread", "SwingRail", "CwCradleCar",
+	"Hook5DoorFrame", "Hook5DoorGrille", "Hook5BarBeam", "Hook5Block", "Hook5BlockBand",
 	"NativeMovingLedge", "NativeRotatingSupport", "NativeTranslatingSupport",
 	# Yard crane boom: ambient sway, 25 m up a bare mast nothing can climb.
 	"CraneBoomArm", "CraneCounterArm", "CraneCounterweight", "CraneCrate",
@@ -52,6 +53,11 @@ const MIRROR := [
 	"SkinWalkway", "KernelDeck", "NativeVaultRail", "NativeMantleLedge", "NativeHangLedge",
 	"NativeBlockedLedge", "NativeBlockedCanopy", "NativeCrawlBeam", "NativeCrawlPost", "Catwalk",
 	"Vessel", "SumpApproachDeck", "SumpFarDeck",
+	# AS-003's cage: the buttress, roof, header, brackets and rack are its
+	# native boxes; posts, rails and grille bars are drawn inside the native
+	# walls' own 0.30 m slabs.
+	"Hook5Buttress", "Hook5Roof", "Hook5Header", "Hook5Bracket", "Hook5Rack", "Hook5Post",
+	"Hook5Rail", "Hook5Grille",
 ]
 
 const CYLINDER_SEGMENTS := 12

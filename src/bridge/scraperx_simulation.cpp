@@ -12,7 +12,15 @@ namespace {
             static_cast<godot::real_t>(value.z)};
 }
 
-constexpr std::int64_t kInitialSpawnCount = 21;
+[[nodiscard]] godot::Quaternion to_godot(const sim::Quaternion &value) {
+    return {static_cast<godot::real_t>(value.x), static_cast<godot::real_t>(value.y),
+            static_cast<godot::real_t>(value.z), static_cast<godot::real_t>(value.w)};
+}
+
+// One past the last spawn, derived from the enum so a new spawn is never
+// silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
+constexpr std::int64_t kInitialSpawnCount =
+    static_cast<std::int64_t>(sim::InitialSpawn::Hook5Apron) + 1;
 
 } // namespace
 
@@ -231,6 +239,27 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_legal_forty_swing_flight_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_legal_forty_cradle_position"),
                                 &ScraperXSimulation::get_legal_forty_cradle_position);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("request_pick_up"),
+                                &ScraperXSimulation::request_pick_up);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_set_down"),
+                                &ScraperXSimulation::request_set_down);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_carrying_entity_id"),
+                                &ScraperXSimulation::get_carrying_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_carry_target_entity_id"),
+                                &ScraperXSimulation::get_carry_target_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_hook_in_rack"),
+                                &ScraperXSimulation::is_hook_in_rack);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_door_angle_radians"),
+                                &ScraperXSimulation::get_hook5_door_angle_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_bar_position"),
+                                &ScraperXSimulation::get_hook5_bar_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_bar_rotation"),
+                                &ScraperXSimulation::get_hook5_bar_rotation);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_block_position"),
+                                &ScraperXSimulation::get_hook5_block_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_block_rotation"),
+                                &ScraperXSimulation::get_hook5_block_rotation);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -668,6 +697,46 @@ godot::Vector3 ScraperXSimulation::get_legal_forty_swing_flight_position() const
 
 godot::Vector3 ScraperXSimulation::get_legal_forty_cradle_position() const {
     return to_godot(simulation_->snapshot().legal_forty_cradle_position);
+}
+
+bool ScraperXSimulation::request_pick_up() {
+    return simulation_->request_pick_up();
+}
+
+bool ScraperXSimulation::request_set_down() {
+    return simulation_->request_set_down();
+}
+
+std::int64_t ScraperXSimulation::get_carrying_entity_id() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().carrying_entity_id);
+}
+
+std::int64_t ScraperXSimulation::get_carry_target_entity_id() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().carry_target_entity_id);
+}
+
+bool ScraperXSimulation::is_hook_in_rack() const {
+    return simulation_->snapshot().hook_in_rack;
+}
+
+double ScraperXSimulation::get_hook5_door_angle_radians() const {
+    return simulation_->snapshot().hook5_door_angle_radians;
+}
+
+godot::Vector3 ScraperXSimulation::get_hook5_bar_position() const {
+    return to_godot(simulation_->snapshot().hook5_bar_position);
+}
+
+godot::Quaternion ScraperXSimulation::get_hook5_bar_rotation() const {
+    return to_godot(simulation_->snapshot().hook5_bar_rotation);
+}
+
+godot::Vector3 ScraperXSimulation::get_hook5_block_position() const {
+    return to_godot(simulation_->snapshot().hook5_block_position);
+}
+
+godot::Quaternion ScraperXSimulation::get_hook5_block_rotation() const {
+    return to_godot(simulation_->snapshot().hook5_block_rotation);
 }
 
 } // namespace scraperx::bridge

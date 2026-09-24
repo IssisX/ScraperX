@@ -46,6 +46,7 @@ const POSE_GRIP := 4
 const POSE_PLANT := 5
 const POSE_CHUTE := 6
 const POSE_REMOTE := 7
+const POSE_CARRY := 8
 
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -374,6 +375,8 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			pose = POSE_AIR
 		elif operating != &"":
 			pose = POSE_REMOTE
+		elif int(state.get("carrying", 0)) != 0:
+			pose = POSE_CARRY
 		elif chute:
 			pose = POSE_CHUTE
 		elif not grounded:
@@ -495,6 +498,16 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			var pendant: Vector2 = state["pendant"]
 			var pressing := absf(pendant.y) > 0.1 if side > 0.0 else absf(pendant.x) > 0.1
 			return [wrist, basis, false, 18.0, 0.7, 0.42 if pressing else 0.3]
+		POSE_CARRY:
+			# Both hands on the load, one either side of it, gripping its
+			# flanks: the native carry point is between them, so what the arms
+			# hold is what the hands hold. World-anchored, so the grip rides the
+			# load as it swings.
+			var centre: Vector3 = state["carry_center"]
+			var half: float = state["carry_half"]
+			var wrist := centre + torso_right * ((half + 0.035) * side) + Vector3.UP * 0.04
+			var basis := _hand_basis(Vector3.DOWN * 0.6 + forward * 0.5, torso_right * side)
+			return [wrist, basis, true, 22.0, 0.75, 0.5]
 		POSE_AIR:
 			# Arms thrown up for balance: palms turned in and down, fingers
 			# loose -- not a reach, which only an edge in range earns.

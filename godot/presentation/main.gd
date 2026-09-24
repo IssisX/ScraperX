@@ -197,6 +197,44 @@ const LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Y := 4.0
 const LEGAL_FORTY_CW_CRADLE_GUIDE_HALF_Z := 0.35
 const LEGAL_FORTY_CW_CRADLE_BEARING := 0.80
 
+# AS-003 MOD-HOOK5-RACK, mirrored from the kHook5* constants in
+# simulation.cpp: a cage locked by its height beside the belt's north stroke,
+# its door held shut by a bar lying in its swing, the hook block on a rack.
+const HOOK5_MIN_X := 8.0
+const HOOK5_MAX_X := 12.0
+const HOOK5_MIN_Z := -88.0
+const HOOK5_MAX_Z := -84.0
+const HOOK5_TOP_Y := 4.45
+const HOOK5_WALL_TOP_Y := 4.15
+const HOOK5_WALL := 0.30
+const HOOK5_BUTTRESS_MAX_X := 9.4
+const HOOK5_HATCH_MIN_X := 9.7
+const HOOK5_HATCH_MAX_X := 10.9
+const HOOK5_HATCH_MIN_Z := HOOK5_MIN_Z + 1.4
+const HOOK5_HATCH_MAX_Z := HOOK5_MIN_Z + 3.0
+const HOOK5_DOORWAY_MIN_X := 9.85
+const HOOK5_DOORWAY_MAX_X := 11.25
+const HOOK5_DOORWAY_TOP_Y := 2.20
+const HOOK5_DOOR_HINGE_X := 10.05
+const HOOK5_DOOR_Z := HOOK5_MIN_Z + 0.15
+const HOOK5_DOOR_HALF_LENGTH := 0.57
+const HOOK5_DOOR_HALF_HEIGHT := 1.06
+const HOOK5_DOOR_HALF_THICKNESS := 0.12
+const HOOK5_DOOR_CENTER_Y := 1.12
+const HOOK5_BAR_HALF_LENGTH := 1.025
+const HOOK5_BAR_HALF_SECTION := 0.09
+const HOOK5_BAR_CENTER_Y := 1.00
+const HOOK5_BAR_CENTER_Z := HOOK5_MIN_Z + 0.40
+const HOOK5_BRACKET_HALF_X := 0.10
+const HOOK5_BRACKET_XS := [9.60, 11.45]
+const HOOK5_BLOCK_HALF := 0.30
+const HOOK5_BLOCK_HALF_Y := 0.25
+const HOOK5_RACK_TOP_Y := 0.60
+const HOOK5_BLOCK_SEAT_X := 11.35
+const HOOK5_BLOCK_SEAT_Z := HOOK5_MAX_Z - HOOK5_WALL - 0.45
+const HOOK5_BAR_ENTITY_ID := 55
+const HOOK5_BLOCK_ENTITY_ID := 56
+
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -310,6 +348,9 @@ var _legal_forty_rope_flight: Node3D
 var _legal_forty_rope_cradle: Node3D
 var _legal_forty_sheave_a := Vector3.ZERO
 var _legal_forty_sheave_b := Vector3.ZERO
+var _hook5_door_pivot: Node3D
+var _hook5_bar_node: Node3D
+var _hook5_block_node: Node3D
 var _sump_grate_safe_material: Material
 var _sump_grate_hazard_material: Material
 var _stack_gears: Array[Node3D] = []
@@ -358,6 +399,7 @@ var _ci_proof_printed := false
 @onready var _sump_value: Label = $HUD/TopLeft/Sump
 @onready var _intake_value: Label = $HUD/TopLeft/Intake
 @onready var _legal_forty_value: Label = $HUD/TopLeft/LegalForty
+@onready var _hook5_value: Label = $HUD/TopLeft/Hook5
 @onready var _light_rig: Node3D = $LightRig
 var _sky_cycle: Node
 var _audio: Node
@@ -713,12 +755,18 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				# Does what the button says: crouched, it asks to stand.
 				_crouch_toggled = not bool(_ctx["crouched"])
 			&"drop":
-				_native.request_release()
+				# Let go of whatever the hands are on: a ledge, or a load.
+				if int(_ctx["carrying"]) != 0:
+					_native.request_set_down()
+				else:
+					_native.request_release()
 			&"chute":
 				_native.request_parachute()
 			&"back":
 				if _ctx["hanging"]:
 					_native.request_release()
+				elif int(_ctx["carrying"]) != 0:
+					_native.request_set_down()
 				elif _operating != &"":
 					_operating = &""
 			&"alt":
@@ -763,6 +811,10 @@ func _perform_action() -> void:
 			_operating = &""
 		&"valve":
 			_native.request_valve_toggle()
+		&"pick_up":
+			_native.request_pick_up()
+		&"set_down":
+			_native.request_set_down()
 		_:
 			# Nothing reported in reach: ask anyway, exactly as the old E key
 			# did. The native decides there is no ledge (and counts it).
@@ -803,13 +855,26 @@ func _read_context() -> Dictionary:
 	if _operating != &"" and (_operating != station or not grounded or not free):
 		_operating = &""
 	var climb_ok := grounded and free and ledge
+	# AS-003: what is on the carry point, and what a pick-up would take --
+	# both the native's own reading, never guessed here.
+	var carrying := int(_native.get_carrying_entity_id())
+	var carry_target := int(_native.get_carry_target_entity_id())
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	if hanging:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
 	elif not free:
 		pass
+	elif carrying != 0:
+		# Both hands are on it: set down is the only thing Action can do.
+		action = {"id": &"set_down", "label": "SET DOWN", "icon": &"set_down",
+			"detail": _carry_name(carrying)}
 	elif _operating != &"":
 		action = {"id": &"done", "label": "DONE", "icon": &"done", "detail": ""}
+	elif grounded and carry_target != 0:
+		# Ahead of CLIMB: the rack under the block is itself a mantle ledge,
+		# and whoever faces the block means the block.
+		action = {"id": &"pick_up", "label": "PICK UP", "icon": &"pick_up",
+			"detail": _carry_name(carry_target)}
 	elif climb_ok:
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
 			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
@@ -838,12 +903,29 @@ func _read_context() -> Dictionary:
 		"station": station,
 		"operating": _operating,
 		"slung": bool(_native.is_legal_forty_pack_slung()),
+		"carrying": carrying,
 		"action": action,
 		"checkpoint": _native.get_checkpoint_position(),
 		"deaths": int(_native.get_death_count()),
 		"tower_height": float(_native.get_tower_height_meters()),
 		"panel": _station_panel(),
 	}
+
+
+func _carry_center(entity: int) -> Vector3:
+	if entity == HOOK5_BLOCK_ENTITY_ID:
+		return _native.get_hook5_block_position()
+	if entity == HOOK5_BAR_ENTITY_ID:
+		return _native.get_hook5_bar_position()
+	return Vector3.ZERO
+
+
+func _carry_name(entity: int) -> String:
+	if entity == HOOK5_BLOCK_ENTITY_ID:
+		return "HOOK BLOCK"
+	if entity == HOOK5_BAR_ENTITY_ID:
+		return "DOOR BAR"
+	return ""
 
 
 # The operated machine's own readouts, straight from its native getters.
@@ -1052,6 +1134,9 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"grounded": bool(_ctx["grounded"]),
 		"chute": bool(_ctx["chute"]),
 		"operating": _operating,
+		"carrying": int(_ctx["carrying"]),
+		"carry_center": _carry_center(int(_ctx["carrying"])),
+		"carry_half": HOOK5_BLOCK_HALF if int(_ctx["carrying"]) == HOOK5_BLOCK_ENTITY_ID else 0.18,
 		"pendant": intent["pendant"],
 		"move": intent["move"],
 		"bob_phase": _cam_bob_phase,
@@ -1074,7 +1159,7 @@ func _layout_hud() -> void:
 	var readouts := [_status, _position_value, _velocity_value, _support_value,
 			_traversal_value, _machine_value, _plant_value, _tick_value,
 			_fall_value, _jib_value, _needle_value, _sump_value, _intake_value,
-			_legal_forty_value]
+			_legal_forty_value, _hook5_value]
 	for label in readouts:
 		if label == null:
 			continue
@@ -1278,6 +1363,17 @@ func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> v
 		float(_native.get_legal_forty_cradle_position().y)]
 	_legal_forty_value.modulate = Color("9ad6c4") if legal_forty_travel >= 0.85 else Color("d99a4a")
 
+	# AS-003. CAP-HOOK5 is the block's pose read back (hook_in_rack false),
+	# never a stored bit; the door angle is the hinge's own reading.
+	var carrying := int(_native.get_carrying_entity_id())
+	var hook_in_rack := bool(_native.is_hook_in_rack())
+	var door := float(_native.get_hook5_door_angle_radians())
+	_hook5_value.text = "HOOK 5  DOOR %4.2f rad  %s  HANDS %s" % [door,
+		"BLOCK IN RACK" if hook_in_rack else "CAP-HOOK5 (BLOCK OFF RACK)",
+		{0: "free", HOOK5_BAR_ENTITY_ID: "BAR", HOOK5_BLOCK_ENTITY_ID: "HOOK BLOCK"}.get(
+			carrying, "?")]
+	_hook5_value.modulate = Color("9ad6c4") if not hook_in_rack else Color("d99a4a")
+
 	if traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
 	elif traversal == TRAVERSAL_MANTLING:
@@ -1426,6 +1522,19 @@ func _mirror_machine(_valve: float, flow: float) -> void:
 			0.0, LEGAL_FORTY_CW_CRADLE_HALF_Y, 0.0)
 		_span_cable(_legal_forty_rope_cradle, cradle_top, _legal_forty_sheave_b)
 
+	# AS-003. The door hangs on a -Y hinge natively, so a positive angle swings
+	# its free end inward (+z): a negative turn about Godot's +Y. The bar and
+	# the block are free bodies, posed from their own native transforms.
+	if _hook5_door_pivot != null:
+		_hook5_door_pivot.rotation = Vector3(0.0,
+			-float(_native.get_hook5_door_angle_radians()), 0.0)
+	if _hook5_bar_node != null:
+		_hook5_bar_node.transform = Transform3D(Basis(_native.get_hook5_bar_rotation()),
+			_native.get_hook5_bar_position())
+	if _hook5_block_node != null:
+		_hook5_block_node.transform = Transform3D(Basis(_native.get_hook5_block_rotation()),
+			_native.get_hook5_block_position())
+
 	if _rope_mesh != null:
 		var from: Vector3 = _native.get_tipper_position() + Vector3(3.0, -0.2, 0.0).rotated(
 			Vector3(0.0, 0.0, 1.0), float(_native.get_tipper_angle_radians()))
@@ -1563,6 +1672,7 @@ func _build_world() -> void:
 		galvanised, faded_yellow, hazard, timber)
 	_build_legal_forty(concrete, mill_scale, oxidised, rust_deep, rust_bright,
 		galvanised, faded_yellow, hazard, timber)
+	_build_hook5_rack(concrete, mill_scale, oxidised, galvanised, faded_yellow, hazard)
 	_build_yard(concrete, mill_scale, faded_yellow, tar)
 	_build_legacy_fixtures(mill_scale, galvanised, hazard, faded_yellow)
 	_build_plant(mill_scale, oxidised, galvanised, hazard, faded_yellow)
@@ -1896,6 +2006,152 @@ func _build_legal_forty(concrete: Material, mill_scale: Material, oxidised: Mate
 	_add_box_to("SkinWalkway", Vector3(walk_hx * 2.0, 0.36, LEGAL_FORTY_SKIN_WALKWAY_HALF_Z * 2.0),
 		Vector3(walk_cx, LEGAL_FORTY_MID_LANDING_SURFACE_Y - 0.18, LEGAL_FORTY_SKIN_WALKWAY_Z),
 		mill_scale, forty)
+
+
+# AS-003: MOD-HOOK5-RACK. Natively the cage's walls are solid 0.30 m slabs;
+# here they are a steel frame barred inside that thickness, so everything
+# visible stays inside what is solid while the hook block on its rack, the bar
+# across the door and the hatch in the roof all read from outside -- a lock
+# has to be seen to be picked. The buttress the belt reaches is solid, its
+# grab edge painted. The door, the bar and the block are native bodies that
+# _mirror_machine drives every frame.
+func _build_hook5_rack(concrete: Material, mill_scale: Material, oxidised: Material,
+		galvanised: Material, faded: Material, hazard: Material) -> void:
+	var cage := Node3D.new()
+	cage.name = "Hook5Cage"
+	$TowerPresentation.add_child(cage)
+	var mid_z := (HOOK5_MIN_Z + HOOK5_MAX_Z) * 0.5
+	var span_z := HOOK5_MAX_Z - HOOK5_MIN_Z
+
+	_add_box_to("Hook5Buttress", Vector3(HOOK5_BUTTRESS_MAX_X - HOOK5_MIN_X, HOOK5_TOP_Y, span_z),
+		Vector3((HOOK5_MIN_X + HOOK5_BUTTRESS_MAX_X) * 0.5, HOOK5_TOP_Y * 0.5, mid_z),
+		concrete, cage)
+	_add_box_to("EdgeStripe", Vector3(0.02, 0.18, span_z),
+		Vector3(HOOK5_MIN_X - 0.01, HOOK5_TOP_Y - 0.09, mid_z), hazard, cage)
+
+	# North and east walls, barred; the south wall's two jambs and the header.
+	_add_barred_wall(cage, HOOK5_BUTTRESS_MAX_X, HOOK5_MAX_X, HOOK5_MAX_Z - HOOK5_WALL,
+		HOOK5_MAX_Z, HOOK5_WALL_TOP_Y, mill_scale, oxidised)
+	_add_barred_wall(cage, HOOK5_MAX_X - HOOK5_WALL, HOOK5_MAX_X, HOOK5_MIN_Z,
+		HOOK5_MAX_Z - HOOK5_WALL, HOOK5_WALL_TOP_Y, mill_scale, oxidised)
+	for jamb in [[HOOK5_BUTTRESS_MAX_X, HOOK5_DOORWAY_MIN_X],
+			[HOOK5_DOORWAY_MAX_X, HOOK5_MAX_X - HOOK5_WALL]]:
+		_add_box_to("Hook5Post", Vector3(jamb[1] - jamb[0], HOOK5_WALL_TOP_Y, HOOK5_WALL),
+			Vector3((jamb[0] + jamb[1]) * 0.5, HOOK5_WALL_TOP_Y * 0.5,
+				HOOK5_MIN_Z + HOOK5_WALL * 0.5), mill_scale, cage)
+	var header_height := HOOK5_WALL_TOP_Y - HOOK5_DOORWAY_TOP_Y
+	_add_box_to("Hook5Header",
+		Vector3(HOOK5_DOORWAY_MAX_X - HOOK5_DOORWAY_MIN_X, header_height, HOOK5_WALL),
+		Vector3((HOOK5_DOORWAY_MIN_X + HOOK5_DOORWAY_MAX_X) * 0.5,
+			HOOK5_DOORWAY_TOP_Y + header_height * 0.5, HOOK5_MIN_Z + HOOK5_WALL * 0.5),
+		galvanised, cage)
+	_add_sign_text("HOOK 5", Vector3((HOOK5_DOORWAY_MIN_X + HOOK5_DOORWAY_MAX_X) * 0.5,
+		HOOK5_DOORWAY_TOP_Y + header_height * 0.5, HOOK5_MIN_Z - 0.03), PI, 0.55,
+		Color("d8b04a"), cage)
+
+	# The roof: four plates round the hatch, the hatch's rim painted.
+	var roof_y := (HOOK5_WALL_TOP_Y + HOOK5_TOP_Y) * 0.5
+	var roof_h := HOOK5_TOP_Y - HOOK5_WALL_TOP_Y
+	for plate in [
+			[HOOK5_BUTTRESS_MAX_X, HOOK5_HATCH_MIN_X, HOOK5_MIN_Z, HOOK5_MAX_Z],
+			[HOOK5_HATCH_MAX_X, HOOK5_MAX_X, HOOK5_MIN_Z, HOOK5_MAX_Z],
+			[HOOK5_HATCH_MIN_X, HOOK5_HATCH_MAX_X, HOOK5_HATCH_MAX_Z, HOOK5_MAX_Z],
+			[HOOK5_HATCH_MIN_X, HOOK5_HATCH_MAX_X, HOOK5_MIN_Z, HOOK5_HATCH_MIN_Z]]:
+		_add_box_to("Hook5Roof", Vector3(plate[1] - plate[0], roof_h, plate[3] - plate[2]),
+			Vector3((plate[0] + plate[1]) * 0.5, roof_y, (plate[2] + plate[3]) * 0.5),
+			galvanised, cage)
+	for rim_x in [HOOK5_HATCH_MIN_X - 0.06, HOOK5_HATCH_MAX_X + 0.06]:
+		_add_box_to("EdgeStripe", Vector3(0.12, 0.01, HOOK5_HATCH_MAX_Z - HOOK5_HATCH_MIN_Z),
+			Vector3(rim_x, HOOK5_TOP_Y + 0.005, (HOOK5_HATCH_MIN_Z + HOOK5_HATCH_MAX_Z) * 0.5),
+			hazard, cage)
+	for rim_z in [HOOK5_HATCH_MIN_Z - 0.06, HOOK5_HATCH_MAX_Z + 0.06]:
+		_add_box_to("EdgeStripe", Vector3(HOOK5_HATCH_MAX_X - HOOK5_HATCH_MIN_X + 0.24, 0.01, 0.12),
+			Vector3((HOOK5_HATCH_MIN_X + HOOK5_HATCH_MAX_X) * 0.5, HOOK5_TOP_Y + 0.005, rim_z),
+			hazard, cage)
+
+	# The bar's two brackets (a ledge under each end and a stop on its north
+	# face), and the block's rack in the north-east corner: the native boxes.
+	var bar_bottom := HOOK5_BAR_CENTER_Y - HOOK5_BAR_HALF_SECTION
+	var bar_north := HOOK5_BAR_CENTER_Z + HOOK5_BAR_HALF_SECTION
+	var wall_inner_z := HOOK5_MIN_Z + HOOK5_WALL
+	for bracket_x in HOOK5_BRACKET_XS:
+		_add_box_to("Hook5Bracket", Vector3(HOOK5_BRACKET_HALF_X * 2.0, 0.08,
+			bar_north + 0.10 - wall_inner_z),
+			Vector3(bracket_x, bar_bottom - 0.04, (wall_inner_z + bar_north + 0.10) * 0.5),
+			oxidised, cage)
+		var stop_top := HOOK5_BAR_CENTER_Y + 0.02
+		_add_box_to("Hook5Bracket", Vector3(HOOK5_BRACKET_HALF_X * 2.0,
+			stop_top - (bar_bottom - 0.06), 0.10),
+			Vector3(bracket_x, (stop_top + bar_bottom - 0.06) * 0.5, bar_north + 0.05),
+			oxidised, cage)
+	_add_box_to("Hook5Rack", Vector3(HOOK5_MAX_X - HOOK5_WALL - 10.95, HOOK5_RACK_TOP_Y, 0.9),
+		Vector3((10.95 + HOOK5_MAX_X - HOOK5_WALL) * 0.5, HOOK5_RACK_TOP_Y * 0.5,
+			HOOK5_BLOCK_SEAT_Z), mill_scale, cage)
+
+	# MOD-HOOK5-DOOR: a barred leaf on its hinge, swung by the native angle.
+	_hook5_door_pivot = Node3D.new()
+	_hook5_door_pivot.name = "Hook5DoorPivot"
+	_hook5_door_pivot.position = Vector3(HOOK5_DOOR_HINGE_X, HOOK5_DOOR_CENTER_Y, HOOK5_DOOR_Z)
+	cage.add_child(_hook5_door_pivot)
+	var leaf_length := HOOK5_DOOR_HALF_LENGTH * 2.0
+	var leaf_height := HOOK5_DOOR_HALF_HEIGHT * 2.0
+	var leaf_depth := HOOK5_DOOR_HALF_THICKNESS * 2.0
+	for side in [0.07, leaf_length - 0.07]:
+		_add_box_to("Hook5DoorFrame", Vector3(0.14, leaf_height, leaf_depth),
+			Vector3(side, 0.0, 0.0), mill_scale, _hook5_door_pivot)
+	for edge in [-HOOK5_DOOR_HALF_HEIGHT + 0.07, HOOK5_DOOR_HALF_HEIGHT - 0.07]:
+		_add_box_to("Hook5DoorFrame", Vector3(leaf_length, 0.14, leaf_depth),
+			Vector3(HOOK5_DOOR_HALF_LENGTH, edge, 0.0), mill_scale, _hook5_door_pivot)
+	for bar_index in 5:
+		_add_box_to("Hook5DoorGrille", Vector3(0.05, leaf_height - 0.28, 0.05),
+			Vector3(0.23 + float(bar_index) * 0.18, 0.0, 0.0), oxidised, _hook5_door_pivot)
+
+	# MOD-HOOK5-BAR and the hook block (CAP-HOOK5): posed from native.
+	_hook5_bar_node = Node3D.new()
+	_hook5_bar_node.name = "Hook5BarBody"
+	cage.add_child(_hook5_bar_node)
+	_add_box_to("Hook5BarBeam", Vector3(HOOK5_BAR_HALF_LENGTH * 2.0, HOOK5_BAR_HALF_SECTION * 2.0,
+		HOOK5_BAR_HALF_SECTION * 2.0), Vector3.ZERO, hazard, _hook5_bar_node)
+	_hook5_block_node = Node3D.new()
+	_hook5_block_node.name = "Hook5BlockBody"
+	cage.add_child(_hook5_block_node)
+	_add_box_to("Hook5Block", Vector3(HOOK5_BLOCK_HALF * 2.0, HOOK5_BLOCK_HALF_Y * 2.0,
+		HOOK5_BLOCK_HALF * 2.0), Vector3.ZERO, faded, _hook5_block_node)
+	_add_box_to("Hook5BlockBand", Vector3(HOOK5_BLOCK_HALF * 2.0 + 0.02, 0.12,
+		HOOK5_BLOCK_HALF * 2.0 + 0.02), Vector3(0.0, -0.04, 0.0), mill_scale, _hook5_block_node)
+
+	var lamp := OmniLight3D.new()
+	lamp.name = "Hook5Lamp"
+	lamp.position = Vector3(10.9, HOOK5_WALL_TOP_Y - 0.4, HOOK5_BLOCK_SEAT_Z - 0.6)
+	lamp.light_color = Color(1.0, 0.78, 0.5)
+	lamp.light_energy = 1.4
+	lamp.omni_range = 5.0
+	cage.add_child(lamp)
+
+
+# A cage wall drawn as a frame barred inside the native slab x in [x0, x1],
+# z in [z0, z1], up to y1: posts at its ends, a rail top and bottom, and bars
+# every 0.18 m between -- none of it outside the slab.
+func _add_barred_wall(parent: Node3D, x0: float, x1: float, z0: float, z1: float, y1: float,
+		frame: Material, bars: Material) -> void:
+	var along_x := (x1 - x0) >= (z1 - z0)
+	var length := (x1 - x0) if along_x else (z1 - z0)
+	var depth := (z1 - z0) if along_x else (x1 - x0)
+	var centre := Vector3((x0 + x1) * 0.5, y1 * 0.5, (z0 + z1) * 0.5)
+	var axis := Vector3.RIGHT if along_x else Vector3.BACK
+	var lateral := Vector3(0.0, 0.0, depth) if along_x else Vector3(depth, 0.0, 0.0)
+	for end in [-1.0, 1.0]:
+		var post_size := axis * 0.2 + lateral + Vector3(0.0, y1, 0.0)
+		_add_box_to("Hook5Post", post_size, centre + axis * end * (length * 0.5 - 0.1), frame,
+			parent)
+	for rail_y in [0.1, y1 - 0.1]:
+		_add_box_to("Hook5Rail", axis * length + lateral + Vector3(0.0, 0.2, 0.0),
+			Vector3(centre.x, rail_y, centre.z), frame, parent)
+	var count := int(floor((length - 0.4) / 0.18))
+	for index in count:
+		var along := (float(index) - float(count - 1) * 0.5) * 0.18
+		_add_box_to("Hook5Grille", Vector3(0.05, y1 - 0.4, 0.05), centre + axis * along, bars,
+			parent)
 
 
 # The deck band a flight arrives through, as Rect2 pieces in (x, z) about the

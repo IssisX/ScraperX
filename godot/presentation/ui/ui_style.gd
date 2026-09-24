@@ -274,6 +274,19 @@ static func draw_icon(ci: CanvasItem, icon: StringName, c: Vector2, r: float, co
 			ci.draw_arc(c + Vector2(r * 0.12, -r * 0.08), r * 0.14, PI * 0.1, PI * 1.25, 10, color, width, true)
 			ci.draw_rect(Rect2(c + Vector2(-r * 0.36, r * 0.14), Vector2(r * 0.72, r * 0.44)),
 				with_alpha(color, 0.7), false, width)
+		&"pick_up":
+			# A load on the floor with an arrow lifting out of it.
+			ci.draw_rect(Rect2(c + Vector2(-r * 0.36, r * 0.1), Vector2(r * 0.72, r * 0.46)),
+				color, false, width)
+			ci.draw_line(c + Vector2(0.0, r * 0.02), c + Vector2(0.0, -r * 0.42), color, width, true)
+			triangle(ci, c + Vector2(0.0, -r * 0.5), r * 0.2, Vector2.UP, color)
+		&"set_down":
+			# A load lowered onto a floor line.
+			ci.draw_line(c + Vector2(-r * 0.56, r * 0.6), c + Vector2(r * 0.56, r * 0.6), color, width, true)
+			ci.draw_rect(Rect2(c + Vector2(-r * 0.32, r * 0.08), Vector2(r * 0.64, r * 0.42)),
+				with_alpha(color, 0.75), false, width)
+			ci.draw_line(c + Vector2(0.0, -r * 0.62), c + Vector2(0.0, -r * 0.2), color, width, true)
+			triangle(ci, c + Vector2(0.0, -r * 0.12), r * 0.18, Vector2.DOWN, color)
 		&"done":
 			ci.draw_polyline(PackedVector2Array([
 				c + Vector2(-r * 0.42, 0.0), c + Vector2(-r * 0.1, r * 0.32), c + Vector2(r * 0.46, -r * 0.3),

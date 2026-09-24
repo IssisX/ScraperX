@@ -29,6 +29,7 @@ const SCENARIOS := {
 	"touch_lethal_feedback": 11,
 	"touch_sump": 17,
 	"touch_pendant": 18,
+	"touch_carry": 22,
 	"touch_pause": 8,
 	"pad_core": 8,
 	"pad_pendant": 14,
@@ -105,6 +106,8 @@ func _run() -> void:
 			ok = await _touch_sump()
 		"touch_pendant":
 			ok = await _touch_pendant()
+		"touch_carry":
+			ok = await _touch_carry()
 		"touch_pause":
 			ok = await _touch_pause()
 		"pad_core":
@@ -364,6 +367,94 @@ func _touch_crouch() -> bool:
 	_detail = "blocked_z=%.2f passed_z=%.2f eye_crouched=%.2f eye_standing=%.2f" % [
 		blocked_z, passed_z, eye_crouched, eye_standing]
 	return true
+
+
+# AS-003 from the cage floor, all through the touch pipeline: facing the bar
+# across the inside of the door, Action reads PICK UP and takes it; backed off
+# with it, SET DOWN leaves the door to swing open on its own drive; facing the
+# rack, PICK UP takes the hook block with both hands shown on it; and it is
+# carried out through the doorway and set down on the apron.
+func _touch_carry() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	_main._yaw = 0.0  # south, at the bar
+	_stick_push(Vector2(0.0, -1.0))
+	var at_bar: bool = await _wait_until(func() -> bool: return _position().z <= -86.75, 2.0)
+	_touch(0, _main._touch.stick_home(), false)
+	if not at_bar:
+		return _fail("never reached the bar (z %.2f)" % _position().z)
+	await _seconds(0.4)
+	if _main._touch.button_label(&"action") != "PICK UP":
+		return _fail("Action read '%s' at the bar, not PICK UP" % _main._touch.button_label(&"action"))
+	_tap(1, _center(&"action"))
+	var holding_bar: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 55, 0.3)
+	if not holding_bar:
+		return _fail("PICK UP did not put the bar on the native carry point")
+	_stick_push(Vector2(0.0, 1.0))  # back away north, the bar still ahead
+	await _wait_until(func() -> bool: return _position().z >= -85.7, 2.0)
+	_touch(0, _main._touch.stick_home(), false)
+	await _seconds(0.3)
+	if _main._touch.button_label(&"action") != "SET DOWN":
+		return _fail("Action read '%s' holding the bar, not SET DOWN" % _main._touch.button_label(&"action"))
+	_tap(1, _center(&"action"))
+	var bar_down: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 0, 0.3)
+	if not bar_down:
+		return _fail("SET DOWN did not take the bar off the carry point")
+	var opened: bool = await _wait_until(
+		func() -> bool: return float(_native().get_hook5_door_angle_radians()) >= 1.2, 5.0)
+	if not opened:
+		return _fail("the door never travelled once the bar was set down (%.2f rad)" %
+			float(_native().get_hook5_door_angle_radians()))
+	await _pose("door_open")
+	_main._yaw = PI  # north, toward the rack's corner
+	_stick_push(Vector2(0.0, -1.0))
+	await _wait_until(func() -> bool: return _position().z >= -84.9, 2.0)
+	_touch(0, _main._touch.stick_home(), false)
+	_main._yaw = -PI * 0.5  # east, at the block
+	await _seconds(0.4)
+	if _main._touch.button_label(&"action") != "PICK UP":
+		return _fail("Action read '%s' at the rack, not PICK UP" % _main._touch.button_label(&"action"))
+	_tap(1, _center(&"action"))
+	var holding_block: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 56, 0.3)
+	if not holding_block:
+		return _fail("PICK UP did not put the hook block on the native carry point")
+	await _seconds(0.5)
+	if _main._arms.hand_poses() != [8, 8]:
+		return _fail("hands not on the block (poses %s)" % str(_main._arms.hand_poses()))
+	await _pose("holding_block")
+	# Out through the doorway, east of the travelled leaf.
+	for leg in [Vector2(10.7, -86.8), Vector2(10.7, -89.6)]:
+		var at: Vector3 = _position()
+		_main._yaw = atan2(-(leg.x - at.x), -(leg.y - at.z))
+		_stick_push(Vector2(0.0, -1.0))
+		var arrived: bool = await _wait_until(func() -> bool: return _position().z <= leg.y + 0.1, 3.0)
+		_touch(0, _main._touch.stick_home(), false)
+		if not arrived:
+			return _fail("the carry out stalled at (%.2f, %.2f)" % [_position().x, _position().z])
+	await _seconds(0.4)
+	if int(_native().get_carrying_entity_id()) != 56 or bool(_native().is_hook_in_rack()):
+		return _fail("the block was not held off its rack outside the cage")
+	await _pose("carried_out")
+	_tap(1, _center(&"action"))
+	var set_down: bool = await _wait_until(
+		func() -> bool: return int(_native().get_carrying_entity_id()) == 0, 0.3)
+	if not set_down:
+		return _fail("SET DOWN did not release the block outside")
+	await _seconds(1.5)
+	var block: Vector3 = _native().get_hook5_block_position()
+	# Back off south-east and look at the cage the way it is approached.
+	_main._yaw = atan2(-(10.3 - 13.5), -(-86.0 - (-94.0)))
+	_stick_push(Vector2(0.0, 1.0))
+	await _seconds(1.1)
+	_touch(0, _main._touch.stick_home(), false)
+	_main._pitch = 0.12
+	await _seconds(0.6)
+	await _pose("cage_exterior")
+	_detail = "door_rad=%.2f block=(%.2f,%.2f,%.2f)" % [
+		float(_native().get_hook5_door_angle_radians()), block.x, block.y, block.z]
+	return block.y < 0.4 and block.z < -88.0
 
 
 func _eye_over_soles() -> float:

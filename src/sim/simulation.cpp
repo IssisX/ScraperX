@@ -58,6 +58,17 @@ constexpr JPH::uint kCount = 2;
 constexpr double kPi = 3.14159265358979323846;
 
 constexpr float kSupportNormalThreshold = 0.55F;
+// Footing firm enough to commit a checkpoint on: the body's centre is over
+// what it stands on, so a ray straight down from it meets a walkable surface
+// within the capsule's half-height plus this slack. Grounded alone (above)
+// includes a capsule held up by its rim with its centre past an edge -- a
+// stance it cannot keep. Committed there, a lethal fall off that edge
+// restored the body into the same slide, every time (observed carrying the
+// hook block off MOD-HALL-DECK: committed 0.31 m past the edge, and with a
+// 32-degree normal limit instead, 0.16 m past it, still creeping off). The
+// slack covers the deployed 30-degree flight, where the surface under the
+// centre is 0.95 m down.
+constexpr float kCheckpointFootingSlack = 0.15F;
 constexpr float kPlayerMaximumRelativeSpeed = 5.5F;
 constexpr float kGroundAcceleration = 22.0F;
 // 14.0, not the original 8.0. Measured directly, by executing a jump and an
@@ -845,6 +856,127 @@ constexpr float kLegalFortySkinWalkwayMaxX = 8.30F;
 constexpr float kLegalFortySkinWalkwayCenterZ = -119.0F;
 constexpr float kLegalFortySkinWalkwayHalfZ = 2.00F;
 
+// --- AS-003 MOD-HOOK5-RACK: CAP-HOOK5 in a locked cage beside the belt -------
+// Atlas B00: "Hook block + slings in a locked cage opened by moving the crate
+// or circling the belt." There is no lock object: the cage is locked by
+// HEIGHT. Its top is out of reach from grade by every move and in reach from
+// MOD-INTAKE-BELT's deck.
+//
+// 4.45 m, not the plan's 2.90. The plan measured the lock against the mantle
+// ceiling (1.85 m) alone; a jump into a ledge grab reaches much higher.
+// Measured here against walls of every height, jumped at from a run: a grab
+// reaches 3.75 m above the floor it leaves -- 3.75 m from grade, 5.13 m from
+// the belt's 1.38 m deck. 2.90 m was grabbable from grade. 4.45 m is 0.70 m
+// out of reach from grade and 0.68 m inside reach from the deck, so the belt
+// is the key: jumped from and grabbed, not mantled.
+constexpr float kHook5CageTopY = 4.45F;
+constexpr float kHook5RoofHalfY = 0.15F;
+constexpr float kHook5WallTopY = kHook5CageTopY - 2.0F * kHook5RoofHalfY;  // 4.15, under the roof
+//
+// Sited at z in [-88, -84], 18 m north of the plan's [-106, -102]. A height
+// lock only holds if nothing but the key comes within a jump, and a running
+// jump carries far: it still grabs a 4.45 m ledge across 6.3 m of air from a
+// 1.38 m floor and 6.8 m from 1.8 m, and drops onto a 4.45 m roof across
+// 10.8 m from 8 m up (all measured). At the plan's site the pendant catwalk,
+// the 9 t pack's top, the intake bay's wall top (off MOD-STAIR-A's first
+// landing) and the WO-006 lift all reached the roof, so the belt was not a
+// key but one of five. Here, 8.1 m beyond the 9 t pack's farthest jostle, a
+// brute-force audit of 1 006 running jumps -- from grade round every face,
+// the 9 t pack, the pendant catwalk, its ramp, the WO-006 catwalk and the
+// WO-006 lift at its 9 m top -- reached a cage body only from the lift (3 of
+// its 162), by an 11 m leap: a machine-made route, and legal (Governing Law
+// 17). The deck still lies alongside for 43 % of its stroke, lingering near
+// its north end, where the jump is made.
+constexpr float kHook5MinX = 8.0F;      // the belt deck's east edge
+constexpr float kHook5MaxX = 12.0F;
+constexpr float kHook5MinZ = -88.0F;
+constexpr float kHook5MaxZ = kHook5MinZ + 4.0F;
+constexpr float kHook5ButtressMaxX = 9.4F;  // west buttress x in [8.0, 9.4], full height
+constexpr float kHook5WallThickness = 0.30F;
+// The hatch cut in the roof, over open floor west of the rack and north of
+// the door's sweep, so the drop lands clear of both. 1.2 x 1.6 m.
+constexpr float kHook5HatchMinX = 9.7F;
+constexpr float kHook5HatchMaxX = 10.9F;
+constexpr float kHook5HatchMinZ = kHook5MinZ + 1.4F;
+constexpr float kHook5HatchMaxZ = kHook5MinZ + 3.0F;
+// The south wall's doorway, 1.40 m under a 2.20 m header.
+constexpr float kHook5DoorwayMinX = 9.85F;
+constexpr float kHook5DoorwayMaxX = 11.25F;
+constexpr float kHook5DoorwayTopY = 2.20F;
+// MOD-HOOK5-DOOR: hinged 0.20 m back from the west jamb (MOD-DOG-A bound at
+// 0.31 rad because its hinge sat flush with its jamb), swinging INWARD under a
+// permanent opening drive commanded at build time and never again. Shut, the
+// leaf leaves 0.20 m at the hinge jamb and 0.06 m at the latch jamb.
+constexpr float kHook5DoorHingeX = 10.05F;
+constexpr float kHook5DoorZ = kHook5MinZ + 0.15F;          // the wall's mid-plane
+constexpr float kHook5DoorHalfLength = 0.57F;             // shut: x in [10.05, 11.19]
+constexpr float kHook5DoorHalfHeight = 1.06F;             // y in [0.06, 2.18]
+constexpr float kHook5DoorHalfThickness = 0.12F;
+constexpr float kHook5DoorCenterY = 1.12F;
+constexpr float kHook5DoorMassKg = 80.0F;
+constexpr float kHook5DoorOpenAngle = 1.45F;              // inward stop
+constexpr float kHook5DoorDriveSpeed = 0.55F;             // rad/s
+// 600 N*m, not the plan's 6 000: the rigid bar holds against any torque, and
+// a 6 000 N*m leaf pins the bar in its brackets with ~7 kN, so lifting it
+// would fight that much friction. 600 N*m swings the 80 kg leaf (34.7 kg*m^2
+// about the hinge) at 17 rad/s^2 and pins the bar with ~0.5 kN.
+constexpr float kHook5DoorDriveTorqueNm = 600.0F;
+// MOD-HOOK5-BAR: 38 kg across the inside of the doorway, 0.04 m north of the
+// shut leaf, so the drive stalls within 0.035 rad. Its ends sit in two
+// brackets -- a ledge under each end and a stop on its north face -- that are
+// OUTSIDE the leaf's sweep (radius 1.146 m about the hinge): the west one
+// behind the hinge, the east one 1.31 m from it. (The plan put the keepers
+// inside the sweep, where they would have stopped the door with the bar
+// gone.) Lift the bar out and nothing is left in the swing.
+constexpr float kHook5BarMassKg = 38.0F;
+constexpr float kHook5BarHalfLength = 1.025F;             // x in [9.50, 11.55]
+constexpr float kHook5BarHalfSection = 0.09F;
+constexpr float kHook5BarCenterX = 10.525F;
+constexpr float kHook5BarCenterY = 1.00F;    // handle 1.09, under the carry hands
+constexpr float kHook5BarCenterZ = kHook5MinZ + 0.40F;
+constexpr float kHook5BracketHalfX = 0.10F;
+constexpr float kHook5BracketWestX = 9.60F;
+constexpr float kHook5BracketEastX = 11.45F;
+// CAP-HOOK5: the 36 kg hook block on a pedestal rack in the north-east
+// corner. There, not mid-wall: the 2.05 m bar has to be set down somewhere in
+// a 2.3 m-wide room clear of the door's swing, and with the rack mid-wall
+// every such place put one end of the bar on it (observed).
+constexpr float kHook5BlockMassKg = 36.0F;
+constexpr float kHook5BlockHalf = 0.30F;
+constexpr float kHook5BlockHalfY = 0.25F;
+constexpr float kHook5RackTopY = 0.60F;       // block top 1.10, under the carry hands
+constexpr float kHook5BlockSeatX = 11.35F;
+constexpr float kHook5BlockSeatZ = kHook5MaxZ - kHook5WallThickness - 0.45F;
+constexpr float kHook5BlockSeatY = kHook5RackTopY + kHook5BlockHalfY;
+constexpr float kHook5InRackTolerance = 0.35F;            // hook_in_rack: within this of the seat
+
+// The carry (AS-003 §8.4.3). A carryable is picked up within kCarryReach of
+// the body's centre, at rest, in front of it; it hangs by the middle of its
+// top face from a point at the hands that follows the facing, so it swings.
+// The hands are at belly height, 1.25 m over the soles, and must be above the
+// handle of anything picked up -- off a rack, a bracket or the floor -- so the
+// pick-up lifts it and the ground carries the player. (Below a seated bar's
+// handle, the constraint pulled the bar down into its brackets, could not,
+// and hoisted the player off the floor instead -- observed.) So the bar and
+// the rack are seated low, not the hands raised: at chest height (1.55 m) the
+// block's top was at the eye and the carried load filled the view.
+constexpr float kCarryReach = 1.20F;
+constexpr float kCarryMaxBodySpeed = 0.50F;
+constexpr float kCarryHandForward = 0.60F;
+constexpr float kCarryHandUp = 0.35F;
+// The hands swing round to the facing at this rate, not with it: a 36 kg load
+// turns with the body, and a glance round would otherwise throw the hand
+// point 1.2 m in one tick and the load out of it (observed with an instant
+// half-turn). A half-turn with a load takes about a second.
+constexpr float kCarryTurnRadiansPerSecond = 3.0F;
+// A held body wedged hard enough that the hands are dragged this far from its
+// handle, and still moving apart, slips out of them. Nothing holds a wedged
+// steel member, and without this a bar jammed across a doorway would anchor
+// the player to it. "Still moving apart" is what spares a pick-up: a block
+// taken off the floor at the edge of reach starts over 1 m below the hands
+// and closes on them, so it is held.
+constexpr float kCarrySlipDistance = 0.90F;
+
 // --- WO-013 Ascent Atlas v1.0 kernel: KX-SUMP / KX-GRATE -------------------
 // Atlas section 9: "wet sump makes KX-GRATE a hazard... isolated + drained
 // grate is ordinary walkable support." A lumped process graph (WO-007's own
@@ -1054,6 +1186,13 @@ public:
         return result;
     }
 
+    // AS-003: the entity on the player's carry point, 0 for none. The player
+    // and what it holds share the carry point; contact between them is never
+    // meaningful, only the constraint relates them.
+    void set_carried_entity(const std::uint64_t entity) noexcept {
+        carried_entity_.store(entity, std::memory_order_relaxed);
+    }
+
     // AS-002: the deployed swing flight's own foot lands flush on top of the
     // (frozen, AS-001) handoff deck by design -- deployed foot at
     // (-6.000, 24.1872), exactly the deck's own centre and tread-surface
@@ -1097,7 +1236,13 @@ public:
              second_entity == Sim::kIntakeSwingAnchorEntityId) ||
             (first_entity == Sim::kIntakeSwingAnchorEntityId &&
              second_entity == Sim::kIntakeSwingFlightEntityId);
-        return (is_swing_flight_vs_handoff_deck || is_swing_flight_vs_hinge_anchor)
+        const std::uint64_t carried = carried_entity_.load(std::memory_order_relaxed);
+        const bool is_player_vs_carried =
+            carried != 0 &&
+            ((first_entity == Sim::kPlayerEntityId && second_entity == carried) ||
+             (first_entity == carried && second_entity == Sim::kPlayerEntityId));
+        return (is_swing_flight_vs_handoff_deck || is_swing_flight_vs_hinge_anchor ||
+                is_player_vs_carried)
                    ? JPH::ValidateResult::RejectAllContactsForThisBodyPair
                    : JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
     }
@@ -1193,6 +1338,7 @@ private:
 
     mutable std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
     SupportSample sample_{};
+    std::atomic<std::uint64_t> carried_entity_{0};
 };
 
 [[nodiscard]] JPH::RVec3 spawn_position(const scraperx::sim::InitialSpawn spawn) noexcept {
@@ -1258,6 +1404,11 @@ private:
         // On the +24.1872 m handoff deck itself, near its east edge, facing
         // MOD-STAIR-A-SWING's stowed footprint.
         return {-3.0, static_cast<double>(kIntakeHandoffY) + 1.0872, -112.5};
+    case scraperx::sim::InitialSpawn::Hook5Cage:
+        // On the cage floor under the roof hatch, where the drop lands.
+        return {10.30, 1.0, static_cast<double>(kHook5MinZ) + 2.2};
+    case scraperx::sim::InitialSpawn::Hook5Apron:
+        return {static_cast<double>(kHook5MaxX) + 1.5, 1.0, static_cast<double>(kHook5MinZ) - 3.0};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1345,6 +1496,10 @@ void restore_body(JPH::BodyInterface &bodies, const JPH::BodyID id,
 
 [[nodiscard]] scraperx::sim::Vector3 to_vector3(const JPH::RVec3 value) noexcept {
     return {value.GetX(), value.GetY(), value.GetZ()};
+}
+
+[[nodiscard]] scraperx::sim::Quaternion to_quaternion(const JPH::Quat value) noexcept {
+    return {value.GetX(), value.GetY(), value.GetZ(), value.GetW()};
 }
 
 // Result of one geometry probe against the authoritative Jolt world. Every
@@ -1515,6 +1670,10 @@ public:
         player_settings.mMassPropertiesOverride.mMass = kPlayerMassKg;
         player_id_ = bodies.CreateAndAddBody(player_settings, JPH::EActivation::Activate);
 
+        // Built last, so every body before it keeps the id it had: the ascent
+        // routes proven against them are contact-order sensitive.
+        build_hook5_rack(bodies);
+
         physics_system_.OptimizeBroadPhase();
 
         checkpoint_position_ = JPH::RVec3(0.0, 0.9, 0.0);
@@ -1540,6 +1699,10 @@ public:
             physics_system_.RemoveConstraint(intake_sling_pin_);
             intake_sling_pin_ = nullptr;
         }
+        if (carry_constraint_ != nullptr) {
+            physics_system_.RemoveConstraint(carry_constraint_);
+            carry_constraint_ = nullptr;
+        }
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
             if (constraint != nullptr) {
                 physics_system_.RemoveConstraint(constraint);
@@ -1553,6 +1716,7 @@ public:
         jib_hoist_slider_ = nullptr;
         needle_hoist_slider_ = nullptr;
         intake_swing_hinge_ = nullptr;
+        hook5_door_hinge_ = nullptr;
         auto &bodies = physics_system_.GetBodyInterface();
         for (auto it = machine_bodies_.rbegin(); it != machine_bodies_.rend(); ++it) {
             remove_and_destroy(bodies, *it);
@@ -1580,6 +1744,8 @@ public:
         bool traversal_requested = false;
         bool release_requested = false;
         bool crouch_held = false;
+        bool pick_up_requested = false;
+        bool set_down_requested = false;
         bool parachute_toggle_requested = false;
         double jib_slew_input = 0.0;
         double jib_hoist_input = 0.0;
@@ -1621,6 +1787,7 @@ public:
         facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
 
         update_crouch(bodies, commands);
+        update_carry(bodies, commands, delta_seconds);
         apply_traversal_commands(bodies, commands);
 
         bool jump_started = false;
@@ -1672,7 +1839,8 @@ public:
                 died_this_tick = true;
             }
         }
-        if (!died_this_tick && grounded_ && traversal_state_ == TraversalState::None) {
+        if (!died_this_tick && grounded_ && traversal_state_ == TraversalState::None &&
+            footing_is_firm(bodies)) {
             commit_checkpoint(bodies);
         }
         if (grounded_) {
@@ -2864,6 +3032,98 @@ private:
         }
     }
 
+    // ---- AS-003 MOD-HOOK5-RACK ------------------------------------------------
+    // A cage locked by its height, a door held shut by a bar lying in its
+    // swing, and the hook block on a rack inside. No lock object, no flag:
+    // see the kHook5* constants for every clearance.
+    void build_hook5_rack(JPH::BodyInterface &bodies) {
+        const auto box = [this, &bodies](const float x0, const float x1, const float y0,
+                                         const float y1, const float z0, const float z1) {
+            const JPH::BodyID id = add_box(
+                bodies, JPH::Vec3((x1 - x0) * 0.5F, (y1 - y0) * 0.5F, (z1 - z0) * 0.5F),
+                JPH::RVec3((x0 + x1) * 0.5F, (y0 + y1) * 0.5F, (z0 + z1) * 0.5F),
+                JPH::EMotionType::Static, object_layers::kStatic, 0.7F,
+                Simulation::kHook5CageEntityId);
+            machine_bodies_.push_back(id);
+            return id;
+        };
+        const float wall_inner_z = kHook5MinZ + kHook5WallThickness;
+        // The west buttress, full height: the one face the belt reaches.
+        box(kHook5MinX, kHook5ButtressMaxX, 0.0F, kHook5CageTopY, kHook5MinZ, kHook5MaxZ);
+        // North and east walls, up to the roof.
+        box(kHook5ButtressMaxX, kHook5MaxX, 0.0F, kHook5WallTopY,
+            kHook5MaxZ - kHook5WallThickness, kHook5MaxZ);
+        box(kHook5MaxX - kHook5WallThickness, kHook5MaxX, 0.0F, kHook5WallTopY, kHook5MinZ,
+            kHook5MaxZ - kHook5WallThickness);
+        // The south wall either side of the doorway, and the header over it.
+        const JPH::BodyID south_west = box(kHook5ButtressMaxX, kHook5DoorwayMinX, 0.0F,
+                                           kHook5WallTopY, kHook5MinZ, wall_inner_z);
+        box(kHook5DoorwayMaxX, kHook5MaxX - kHook5WallThickness, 0.0F, kHook5WallTopY,
+            kHook5MinZ, wall_inner_z);
+        box(kHook5DoorwayMinX, kHook5DoorwayMaxX, kHook5DoorwayTopY, kHook5WallTopY, kHook5MinZ,
+            wall_inner_z);
+        // The roof: four strips around the hatch.
+        box(kHook5ButtressMaxX, kHook5HatchMinX, kHook5WallTopY, kHook5CageTopY, kHook5MinZ,
+            kHook5MaxZ);
+        box(kHook5HatchMaxX, kHook5MaxX, kHook5WallTopY, kHook5CageTopY, kHook5MinZ, kHook5MaxZ);
+        box(kHook5HatchMinX, kHook5HatchMaxX, kHook5WallTopY, kHook5CageTopY, kHook5HatchMaxZ,
+            kHook5MaxZ);
+        box(kHook5HatchMinX, kHook5HatchMaxX, kHook5WallTopY, kHook5CageTopY, kHook5MinZ,
+            kHook5HatchMinZ);
+        // The bar's brackets: a ledge under each end, and a stop on its north
+        // face that rises only 0.02 m past the bar's centreline -- enough to
+        // take the door's push, low enough that a lift of 0.14 m clears it.
+        const float bar_bottom = kHook5BarCenterY - kHook5BarHalfSection;
+        const float bar_north = kHook5BarCenterZ + kHook5BarHalfSection;
+        for (const float bracket_x : {kHook5BracketWestX, kHook5BracketEastX}) {
+            box(bracket_x - kHook5BracketHalfX, bracket_x + kHook5BracketHalfX, bar_bottom - 0.08F,
+                bar_bottom, wall_inner_z, bar_north + 0.10F);
+            box(bracket_x - kHook5BracketHalfX, bracket_x + kHook5BracketHalfX, bar_bottom - 0.06F,
+                kHook5BarCenterY + 0.02F, bar_north, bar_north + 0.10F);
+        }
+        // The rack: a pedestal against the east wall.
+        box(10.95F, kHook5MaxX - kHook5WallThickness, 0.0F, kHook5RackTopY,
+            kHook5BlockSeatZ - 0.45F, kHook5BlockSeatZ + 0.45F);
+
+        // MOD-HOOK5-DOOR, driven open from build time and never commanded
+        // again. About -Y, positive rotation carries the leaf's far end toward
+        // +Z: into the cage, where the bar lies.
+        JPH::Body *door = add_shape_body(
+            bodies,
+            new JPH::BoxShape(JPH::Vec3(kHook5DoorHalfLength, kHook5DoorHalfHeight,
+                                        kHook5DoorHalfThickness)),
+            JPH::RVec3(kHook5DoorHingeX + kHook5DoorHalfLength, kHook5DoorCenterY, kHook5DoorZ),
+            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.5F,
+            Simulation::kHook5DoorEntityId, kHook5DoorMassKg);
+        hook5_door_id_ = door->GetID();
+        machine_bodies_.push_back(hook5_door_id_);
+        add_vertical_hinge(south_west, hook5_door_id_,
+                           JPH::RVec3(kHook5DoorHingeX, kHook5DoorCenterY, kHook5DoorZ), 0.0F,
+                           kHook5DoorOpenAngle, kHook5DoorDriveTorqueNm, &hook5_door_hinge_,
+                           -JPH::Vec3::sAxisY());
+        if (hook5_door_hinge_ != nullptr) {
+            hook5_door_hinge_->SetTargetAngularVelocity(kHook5DoorDriveSpeed);
+        }
+
+        // MOD-HOOK5-BAR and the hook block: plain bodies, at rest where they sit.
+        JPH::Body *bar = add_shape_body(
+            bodies,
+            new JPH::BoxShape(
+                JPH::Vec3(kHook5BarHalfLength, kHook5BarHalfSection, kHook5BarHalfSection)),
+            JPH::RVec3(kHook5BarCenterX, kHook5BarCenterY, kHook5BarCenterZ),
+            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.5F,
+            Simulation::kHook5BarEntityId, kHook5BarMassKg);
+        hook5_bar_id_ = bar->GetID();
+        machine_bodies_.push_back(hook5_bar_id_);
+        JPH::Body *block = add_shape_body(
+            bodies, new JPH::BoxShape(JPH::Vec3(kHook5BlockHalf, kHook5BlockHalfY, kHook5BlockHalf)),
+            JPH::RVec3(kHook5BlockSeatX, kHook5BlockSeatY, kHook5BlockSeatZ),
+            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
+            Simulation::kHook5BlockEntityId, kHook5BlockMassKg);
+        hook5_block_id_ = block->GetID();
+        machine_bodies_.push_back(hook5_block_id_);
+    }
+
     void build_kernel_sump(JPH::BodyInterface &bodies) {
         const auto track = [this](const JPH::BodyID id) {
             machine_bodies_.push_back(id);
@@ -2964,13 +3224,14 @@ private:
                             const float limit_min,
                             const float limit_max,
                             const float max_motor_torque_nm,
-                            JPH::Ref<JPH::HingeConstraint> *out) {
+                            JPH::Ref<JPH::HingeConstraint> *out,
+                            const JPH::Vec3 axis = JPH::Vec3::sAxisY()) {
         JPH::HingeConstraintSettings settings;
         settings.mSpace = JPH::EConstraintSpace::WorldSpace;
         settings.mPoint1 = point;
         settings.mPoint2 = point;
-        settings.mHingeAxis1 = JPH::Vec3::sAxisY();
-        settings.mHingeAxis2 = JPH::Vec3::sAxisY();
+        settings.mHingeAxis1 = axis;
+        settings.mHingeAxis2 = axis;
         settings.mNormalAxis1 = JPH::Vec3::sAxisX();
         settings.mNormalAxis2 = JPH::Vec3::sAxisX();
         settings.mLimitsMin = limit_min;
@@ -3627,6 +3888,23 @@ private:
         return lock.GetBody().GetWorldSpaceSurfaceNormal(sub_shape_id, point);
     }
 
+    // Firm footing, for a checkpoint (kCheckpointFootingSlack): a ray straight
+    // down from the body's centre meets a walkable surface within reach. The
+    // carried body is not footing, whatever it hangs over.
+    [[nodiscard]] bool footing_is_firm(const JPH::BodyInterface &bodies) const noexcept {
+        const float reach =
+            (crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight) + kCheckpointFootingSlack;
+        const JPH::RRayCast ray(bodies.GetPosition(player_id_), JPH::Vec3(0.0F, -reach, 0.0F));
+        JPH::RayCastResult hit;
+        const JPH::IgnoreSingleBodyFilter player_filter(player_id_);
+        const JPH::IgnoreSingleBodyFilterChained filter(carried_id_, player_filter);
+        if (!physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter)) {
+            return false;
+        }
+        return surface_normal(hit.mBodyID, hit.mSubShapeID2, ray.GetPointOnRay(hit.mFraction))
+                   .GetY() >= kSupportNormalThreshold;
+    }
+
     // The capsule the body has now: standing, or crouched.
     [[nodiscard]] const JPH::Shape *active_player_shape() const noexcept {
         return crouched_ ? player_crouch_shape_.GetPtr() : player_shape_.GetPtr();
@@ -3809,6 +4087,153 @@ private:
 
     // ---- traversal state machine ----------------------------------------
 
+    // ---- AS-003 carry ---------------------------------------------------------
+    // Where the carried body's handle is held, relative to the player's
+    // centre: forward along a horizontal bearing, a little above the centre.
+    [[nodiscard]] static JPH::Vec3 carry_hand_offset(const JPH::Vec3 bearing) noexcept {
+        return bearing * kCarryHandForward + JPH::Vec3(0.0F, kCarryHandUp, 0.0F);
+    }
+
+    // The bearing the hands hold the load on this tick: the load's present
+    // bearing from the body, turned toward the facing by at most
+    // kCarryTurnRadiansPerSecond. Derived from poses, so it adds no state.
+    [[nodiscard]] JPH::Vec3 carry_hand_bearing(const JPH::BodyInterface &bodies,
+                                               const float delta_seconds) const noexcept {
+        const JPH::Vec3 to_handle(
+            bodies.GetCenterOfMassTransform(carried_id_) * carry_handle(carried_entity_) -
+            bodies.GetPosition(player_id_));
+        const JPH::Vec3 flat(to_handle.GetX(), 0.0F, to_handle.GetZ());
+        if (flat.LengthSq() < 1.0e-4F) {
+            return facing_;
+        }
+        const JPH::Vec3 bearing = flat.Normalized();
+        if (facing_.IsNearZero()) {
+            return bearing;
+        }
+        // Signed angle from the bearing to the facing about +Y.
+        const float sine = bearing.GetZ() * facing_.GetX() - bearing.GetX() * facing_.GetZ();
+        const float angle = std::atan2(sine, bearing.Dot(facing_));
+        const float limit = kCarryTurnRadiansPerSecond * delta_seconds;
+        return JPH::Quat::sRotation(JPH::Vec3::sAxisY(), std::clamp(angle, -limit, limit)) *
+               bearing;
+    }
+
+    // The middle of the carried body's top face, in its own frame.
+    [[nodiscard]] static JPH::Vec3 carry_handle(const std::uint64_t entity) noexcept {
+        return JPH::Vec3(0.0F,
+                         entity == Simulation::kHook5BarEntityId ? kHook5BarHalfSection
+                                                                 : kHook5BlockHalfY,
+                         0.0F);
+    }
+
+    // What a pick-up would take now: the nearest carryable within reach of the
+    // body's centre, at rest, not behind it -- and only for a grounded body
+    // outside a traversal with its hands free.
+    JPH::BodyID carry_candidate(const JPH::BodyInterface &bodies,
+                                std::uint64_t &entity) const noexcept {
+        entity = 0;
+        JPH::BodyID best;
+        if (carry_constraint_ != nullptr || !grounded_ ||
+            traversal_state_ != TraversalState::None || facing_.IsNearZero()) {
+            return best;
+        }
+        const JPH::RVec3 at = bodies.GetPosition(player_id_);
+        float best_distance = kCarryReach;
+        const std::pair<JPH::BodyID, std::uint64_t> carryables[] = {
+            {hook5_bar_id_, Simulation::kHook5BarEntityId},
+            {hook5_block_id_, Simulation::kHook5BlockEntityId},
+        };
+        for (const auto &[id, candidate_entity] : carryables) {
+            const JPH::Vec3 to_body(bodies.GetCenterOfMassPosition(id) - at);
+            const float distance = to_body.Length();
+            if (distance > best_distance ||
+                bodies.GetLinearVelocity(id).Length() > kCarryMaxBodySpeed) {
+                continue;
+            }
+            const JPH::Vec3 flat(to_body.GetX(), 0.0F, to_body.GetZ());
+            if (flat.Dot(facing_) < 0.0F) {
+                continue;
+            }
+            best = id;
+            best_distance = distance;
+            entity = candidate_entity;
+        }
+        return best;
+    }
+
+    // A point constraint between the hands and the body's handle. Rotation is
+    // left free, so a block hangs and swings from it.
+    void attach_carry(const JPH::BodyID id, const std::uint64_t entity) noexcept {
+        JPH::PointConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::LocalToBodyCOM;
+        settings.mPoint1 = JPH::RVec3(carry_hand_offset(facing_));
+        settings.mPoint2 = JPH::RVec3(carry_handle(entity));
+        carry_constraint_ = static_cast<JPH::PointConstraint *>(
+            create_constraint(settings, player_id_, id, false));
+        if (carry_constraint_ == nullptr) {
+            return;
+        }
+        carried_id_ = id;
+        carried_entity_ = entity;
+        contact_listener_.set_carried_entity(entity);
+    }
+
+    // Removes the constraint and nothing else: the body falls and rests.
+    void release_carry() noexcept {
+        if (carry_constraint_ != nullptr) {
+            physics_system_.RemoveConstraint(carry_constraint_);
+            carry_constraint_ = nullptr;
+        }
+        carried_id_ = JPH::BodyID();
+        carried_entity_ = 0;
+        contact_listener_.set_carried_entity(0);
+    }
+
+    void update_carry(JPH::BodyInterface &bodies, const StepCommands &commands,
+                      const float delta_seconds) noexcept {
+        if (carry_constraint_ != nullptr) {
+            if (commands.set_down_requested) {
+                release_carry();
+                return;
+            }
+            // The hands swing round to the facing.
+            const JPH::Vec3 offset = carry_hand_offset(carry_hand_bearing(bodies, delta_seconds));
+            carry_constraint_->SetPoint1(JPH::EConstraintSpace::LocalToBodyCOM,
+                                         JPH::RVec3(offset));
+            const JPH::RVec3 hand = bodies.GetPosition(player_id_) + offset;
+            const JPH::RVec3 handle =
+                bodies.GetCenterOfMassTransform(carried_id_) * carry_handle(carried_entity_);
+            const JPH::Vec3 apart(handle - hand);
+            const JPH::Vec3 separating_velocity = bodies.GetPointVelocity(carried_id_, handle) -
+                                                  bodies.GetLinearVelocity(player_id_);
+            if (apart.Length() > kCarrySlipDistance && apart.Dot(separating_velocity) > 0.0F) {
+                release_carry();
+            }
+            return;
+        }
+        if (commands.pick_up_requested) {
+            std::uint64_t entity = 0;
+            const JPH::BodyID id = carry_candidate(bodies, entity);
+            if (!id.IsInvalid()) {
+                attach_carry(id, entity);
+            }
+        }
+    }
+
+    // Checkpoint reconciliation, the restore_needle_topology shape: after the
+    // bodies' poses are restored, make the carry match what was committed.
+    void restore_carry_topology(const std::uint64_t committed_entity) noexcept {
+        if (committed_entity == carried_entity_) {
+            return;
+        }
+        release_carry();
+        if (committed_entity == Simulation::kHook5BarEntityId) {
+            attach_carry(hook5_bar_id_, committed_entity);
+        } else if (committed_entity == Simulation::kHook5BlockEntityId) {
+            attach_carry(hook5_block_id_, committed_entity);
+        }
+    }
+
     // Crouch and stand (GDD 7.2, Governing Law 4). The body swaps capsules
     // with its soles fixed: the centre moves by kCrouchDrop, nothing under
     // the feet does. It crouches only from the ground and never inside a
@@ -3873,6 +4298,16 @@ private:
         // Still crouched here means update_crouch could not stand the body:
         // every vault, mantle and hang is a standing pose, so none begins.
         if (crouched_) {
+            jump_vault_ticks_left_ = 0;
+            if (commands.traversal_requested) {
+                ++rejected_traversal_count_;
+            }
+            return;
+        }
+
+        // Both hands on a carried body (AS-003 §8.4.3): vault, mantle and hang
+        // are all pull-ups, and none begins until it is set down.
+        if (carry_constraint_ != nullptr) {
             jump_vault_ticks_left_ = 0;
             if (commands.traversal_requested) {
                 ++rejected_traversal_count_;
@@ -4035,7 +4470,7 @@ private:
     }
 
     void try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
-        if (grounded_ || crouched_ || regrab_lockout_ticks_ > 0) {
+        if (grounded_ || crouched_ || carry_constraint_ != nullptr || regrab_lockout_ticks_ > 0) {
             return;
         }
         if (bodies.GetLinearVelocity(player_id_).GetY() > kHangMaximumClimbSpeed) {
@@ -4409,10 +4844,13 @@ private:
 
     void update_affordance(const JPH::BodyInterface &bodies) noexcept {
         affordance_ = {};
+        carry_target_entity_ = 0;
+        (void)carry_candidate(bodies, carry_target_entity_);
         // The probes measure rises from standing feet and test standing
         // landing poses; a crouched body is offered none (a request stands
-        // it first, see update_crouch).
-        if (traversal_state_ != TraversalState::None || facing_.IsNearZero() || crouched_) {
+        // it first, see update_crouch). Hands full, no ledge is offered at all.
+        if (traversal_state_ != TraversalState::None || facing_.IsNearZero() || crouched_ ||
+            carry_constraint_ != nullptr) {
             return;
         }
 
@@ -4463,12 +4901,17 @@ private:
         checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
         checkpoint_.intake_swing_flight = capture_body(bodies, intake_swing_flight_id_);
         checkpoint_.intake_cw_cradle = capture_body(bodies, intake_cw_cradle_id_);
+        checkpoint_.hook5_door = capture_body(bodies, hook5_door_id_);
+        checkpoint_.hook5_bar = capture_body(bodies, hook5_bar_id_);
+        checkpoint_.hook5_block = capture_body(bodies, hook5_block_id_);
+        checkpoint_.carrying_entity = carried_entity_;
         checkpoint_.intake_pack_slung = intake_pack_slung_;
     }
 
-    // WO-008 automatic commit (GDD 9.1): every tick the player is grounded and
-    // not mid-traversal, so the checkpoint is always "wherever the player was
-    // last standing." No dwell timer, no player-facing save action.
+    // WO-008 automatic commit (GDD 9.1): every tick the player is grounded on
+    // firm footing (kCheckpointFootingNormalY) and not mid-traversal, so the
+    // checkpoint is always "wherever the player was last standing." No dwell
+    // timer, no player-facing save action.
     void commit_checkpoint(const JPH::BodyInterface &bodies) noexcept {
         checkpoint_position_ = bodies.GetPosition(player_id_);
         checkpoint_crouched_ = crouched_;
@@ -4506,6 +4949,18 @@ private:
         restore_body(bodies, intake_swing_flight_id_, checkpoint_.intake_swing_flight);
         restore_body(bodies, intake_cw_cradle_id_, checkpoint_.intake_cw_cradle);
         restore_legal_forty_topology(checkpoint_.intake_pack_slung);
+        restore_body(bodies, hook5_door_id_, checkpoint_.hook5_door);
+        restore_body(bodies, hook5_bar_id_, checkpoint_.hook5_bar);
+        restore_body(bodies, hook5_block_id_, checkpoint_.hook5_block);
+        restore_carry_topology(checkpoint_.carrying_entity);
+        // The body comes back at rest, so what it holds does too. Restored
+        // with the walking speed it was committed at, the load swung out of
+        // the still hands and dragged the body back off the edge it had just
+        // been restored onto (observed at MOD-HALL-DECK's north edge).
+        if (carry_constraint_ != nullptr) {
+            bodies.SetLinearAndAngularVelocity(carried_id_, JPH::Vec3::sZero(),
+                                               JPH::Vec3::sZero());
+        }
         // No topology reconciliation call needed here, unlike the needle:
         // update_sump recomputes grate_safe_ and reasserts the grate's
         // sensor flag from sump_volume_kg_ unconditionally every tick, so
@@ -4598,6 +5053,20 @@ private:
         state_.legal_forty_swing_flight_position =
             to_vector3(bodies.GetPosition(intake_swing_flight_id_));
         state_.legal_forty_cradle_position = to_vector3(bodies.GetPosition(intake_cw_cradle_id_));
+
+        state_.carrying_entity_id = carried_entity_;
+        state_.carry_target_entity_id = carry_target_entity_;
+        state_.hook5_door_angle_radians =
+            hook5_door_hinge_ != nullptr ? hook5_door_hinge_->GetCurrentAngle() : 0.0;
+        const JPH::RVec3 block_position = bodies.GetPosition(hook5_block_id_);
+        state_.hook5_block_position = to_vector3(block_position);
+        state_.hook5_block_rotation = to_quaternion(bodies.GetRotation(hook5_block_id_));
+        state_.hook5_bar_position = to_vector3(bodies.GetPosition(hook5_bar_id_));
+        state_.hook5_bar_rotation = to_quaternion(bodies.GetRotation(hook5_bar_id_));
+        state_.hook_in_rack =
+            JPH::Vec3(block_position - JPH::RVec3(kHook5BlockSeatX, kHook5BlockSeatY,
+                                                  kHook5BlockSeatZ))
+                .Length() <= kHook5InRackTolerance;
 
         const JPH::RVec3 rope_tipper =
             bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
@@ -4728,6 +5197,15 @@ private:
     // sling_pack()/release_pack_to_cradle() -- same track_for_teardown=false
     // contract as the needle pins above.
     JPH::Ref<JPH::PointConstraint> intake_sling_pin_;
+    // AS-003: the carry, created/removed at runtime (track_for_teardown=false).
+    JPH::Ref<JPH::PointConstraint> carry_constraint_;
+    JPH::BodyID carried_id_;
+    std::uint64_t carried_entity_ = 0;
+    std::uint64_t carry_target_entity_ = 0;
+    JPH::Ref<JPH::HingeConstraint> hook5_door_hinge_;
+    JPH::BodyID hook5_door_id_;
+    JPH::BodyID hook5_bar_id_;
+    JPH::BodyID hook5_block_id_;
     JPH::BodyID scoop_ids_[4];
     JPH::Vec3 scoop_local_[4]{};
     JPH::BodyID ballast_id_;
@@ -4839,6 +5317,11 @@ private:
         BodyCheckpoint intake_swing_flight{};
         BodyCheckpoint intake_cw_cradle{};
         bool intake_pack_slung = true;
+        // AS-003: the door, the bar and the block, and what was being carried.
+        BodyCheckpoint hook5_door{};
+        BodyCheckpoint hook5_bar{};
+        BodyCheckpoint hook5_block{};
+        std::uint64_t carrying_entity = 0;
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
@@ -4925,6 +5408,16 @@ bool Simulation::set_crouch_input(const bool held) noexcept {
     return true;
 }
 
+bool Simulation::request_pick_up() noexcept {
+    pick_up_requested_ = true;
+    return true;
+}
+
+bool Simulation::request_set_down() noexcept {
+    set_down_requested_ = true;
+    return true;
+}
+
 bool Simulation::set_jib_slew_input(const double value) noexcept {
     if (!std::isfinite(value)) {
         return false;
@@ -4993,6 +5486,8 @@ void Simulation::step_fixed() noexcept {
     commands.traversal_requested = traversal_requested_;
     commands.release_requested = release_requested_;
     commands.crouch_held = crouch_input_;
+    commands.pick_up_requested = pick_up_requested_;
+    commands.set_down_requested = set_down_requested_;
     commands.parachute_toggle_requested = parachute_toggle_requested_;
     commands.jib_slew_input = jib_slew_input_;
     commands.jib_hoist_input = jib_hoist_input_;
@@ -5008,6 +5503,8 @@ void Simulation::step_fixed() noexcept {
     traversal_requested_ = false;
     release_requested_ = false;
     parachute_toggle_requested_ = false;
+    pick_up_requested_ = false;
+    set_down_requested_ = false;
     valve_toggle_requested_ = false;
     intake_sling_release_requested_ = false;
     intake_sling_attach_requested_ = false;

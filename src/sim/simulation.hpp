@@ -13,6 +13,13 @@ struct Vector3 final {
     double z = 0.0;
 };
 
+struct Quaternion final {
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+    double w = 1.0;
+};
+
 enum class InitialSpawn : std::uint8_t {
     StaticDeck = 0,
     TranslatingSupport = 1,
@@ -78,6 +85,15 @@ enum class InitialSpawn : std::uint8_t {
     // flight is not a route" (walk at it immediately) from the separately
     // proven jib/cradle mechanics, matching the throat/sump station pattern.
     IntakeHandoffDeck = 21,
+    // AS-003 falsifier spawn: inside MOD-HOOK5-RACK's cage, on the floor under
+    // the roof hatch -- where the drop from the roof lands. Isolates "the bar
+    // is a body, and moving it travels the door" and "the block is a body"
+    // from the separately proven way in over the roof.
+    Hook5Cage = 22,
+    // AS-003 falsifier spawn: on the apron at grade, south-east of the cage and
+    // clear of the belt's corridor. Isolates "grade and the apron's own raised
+    // surfaces cannot reach the cage" from the belt that can.
+    Hook5Apron = 23,
 };
 
 enum class TraversalState : std::uint8_t {
@@ -227,6 +243,20 @@ struct Snapshot final {
     double legal_forty_swing_travel_radians = 0.0;   // 0 stowed .. ~0.9076 deployed
     Vector3 legal_forty_swing_flight_position{};
     Vector3 legal_forty_cradle_position{};
+
+    // AS-003 MOD-HOOK5-RACK. carrying_entity_id is the body on the player's
+    // carry point (0 for none), read from the carry constraint's actual
+    // presence; carry_target_entity_id is what a pick-up would take this
+    // tick. hook_in_rack is derived from the block's pose, never stored, and
+    // CAP-HOOK5 is its negation.
+    std::uint64_t carrying_entity_id = 0;
+    std::uint64_t carry_target_entity_id = 0;
+    bool hook_in_rack = true;
+    double hook5_door_angle_radians = 0.0;   // 0 shut .. inward stop
+    Vector3 hook5_bar_position{};
+    Quaternion hook5_bar_rotation{};
+    Vector3 hook5_block_position{};
+    Quaternion hook5_block_rotation{};
 };
 
 struct AdvanceResult final {
@@ -333,6 +363,13 @@ public:
     // Crouch fixture beside the WO-003 traversal fixtures: a beam and its two
     // posts, the beam's underside 1.45 m over the deck.
     static constexpr std::uint64_t kCrawlBeamEntityId = 52;
+    // AS-003 MOD-HOOK5-RACK: the cage's static members (buttress, walls, roof,
+    // bar brackets, rack), its inward-swinging door, the bar holding the door
+    // shut, and the hook block itself (CAP-HOOK5).
+    static constexpr std::uint64_t kHook5CageEntityId = 53;
+    static constexpr std::uint64_t kHook5DoorEntityId = 54;
+    static constexpr std::uint64_t kHook5BarEntityId = 55;
+    static constexpr std::uint64_t kHook5BlockEntityId = 56;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -360,6 +397,15 @@ public:
     // A Jump or traversal request stands the body first, and is refused
     // where it cannot stand.
     [[nodiscard]] bool set_crouch_input(bool held) noexcept;
+
+    // AS-003 carry commands. One-shot, like request_valve_toggle. A pick-up
+    // takes the carryable the snapshot names in carry_target_entity_id -- a
+    // real body within reach, at rest, in front -- onto a point constraint at
+    // the hands; while held, no vault, mantle or hang begins (both hands are
+    // on it). Setting down removes the constraint and nothing else: the body
+    // falls, rests, and can be picked up again where it lies.
+    [[nodiscard]] bool request_pick_up() noexcept;
+    [[nodiscard]] bool request_set_down() noexcept;
 
     // Toggles the always-carried parachute. Only takes effect while airborne
     // (GDD 8.3); queued and resolved on the authoritative tick like every
@@ -430,6 +476,8 @@ private:
     bool traversal_requested_ = false;
     bool release_requested_ = false;
     bool crouch_input_ = false;
+    bool pick_up_requested_ = false;
+    bool set_down_requested_ = false;
     bool parachute_toggle_requested_ = false;
     double jib_slew_input_ = 0.0;
     double jib_hoist_input_ = 0.0;
