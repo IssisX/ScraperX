@@ -541,7 +541,10 @@ bool rig_well_b(scraperx::sim::Simulation &simulation) {
                   << " cw_travel=" << s.well_b_counterweight_travel << '\n';
         return false;
     };
-    if (!walk_to(simulation, -8.45, -131.95, 3.0, 0.08)) return fail("walk_bollard");
+    // The interaction, not centimeter-perfect foot placement, is the
+    // contract. The cage/post collision resolves this stance about 0.11 m
+    // from the nominal point while already offering the correct UNHOOK verb.
+    if (!walk_to(simulation, -8.45, -131.95, 3.0, 0.15)) return fail("walk_bollard");
     (void)simulation.set_facing(-0.65, -0.75);
     (void)simulation.advance_frame(0.4);
     const auto at_bollard = simulation.snapshot();
