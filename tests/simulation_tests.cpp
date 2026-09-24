@@ -535,8 +535,11 @@ bool rig_well_b(scraperx::sim::Simulation &simulation) {
         at_bollard.rig_target_entity_id != Simulation::kWellBShackleEntityId) return false;
     (void)simulation.request_rig();
     (void)simulation.advance_frame(0.3);
+    // Stand one hand-reach inside the east post, not inside the post's
+    // collision envelope. The hand then reaches the eye on the cage's east
+    // face exactly as Stage A approaches its west-face eye.
     if (simulation.snapshot().carrying_entity_id != Simulation::kWellBShackleEntityId ||
-        !walk_to(simulation, -6.10, -131.40, 3.0, 0.08)) return false;
+        !walk_to(simulation, -6.55, -131.40, 3.0, 0.08)) return false;
     (void)simulation.set_facing(1.0, 0.0);
     (void)simulation.advance_frame(0.5);
     const auto at_eye = simulation.snapshot();
