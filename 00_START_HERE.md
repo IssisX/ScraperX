@@ -1,9 +1,9 @@
 # SCRAPERX — START HERE
 
-**Write branch: `ScraperX-Claude`.** All implementation and all document writes land there.
+**Write branch: `ChatGPT`.** All implementation and all document writes land there.
 Other branches may be read to recover provenance. None of them is a write target, and none of
-them is an authority. `ScraperX-Grok` and `ChatGPT` are sibling experiments; planning material
-has been adopted from both, but where this tree and either of those disagree, **this tree wins**.
+them is an authority. `ScraperX-Claude` is the verified baseline this branch was reset from;
+where another branch and this tree disagree, **this tree wins**.
 
 ---
 
@@ -26,7 +26,7 @@ The one block to read before doing anything. Everything below is detail behind i
 
 | | |
 |---|---|
-| **Write branch** | `ScraperX-Claude` — the only one |
+| **Write branch** | `ChatGPT` — the only one |
 | **Kernel** | `WO-000`–`WO-013`, all fourteen in source. **Closed set** |
 | **Ascent frontier** | `AS-001`–`AS-003` implemented; `AS-004` planned, not next; `AS-005`–`AS-007` imported, not re-derived; `AS-008`–`AS-015` unwritten. Reachable ceiling 154 m (the tower stair); the ascent above it follows `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` |
 | **Integrated evidence** | **GREEN** at `8f9e954` — run [`36010028676`](https://github.com/IssisX/ScraperX/actions/runs/36010028676), all steps: native suite (`AS-003 apron`, `cage` and `Hook5 Rack` included, each held to its thresholds by the step's gates), Fold proof, all 18 `--uitest` scenarios (`touch_carry` included), the Movie Maker mix, world-solids drift check, Android arm64 cross-compile and APK export. Before it, green: [`35912759289`](https://github.com/IssisX/ScraperX/actions/runs/35912759289) (`0a77ec4`, 17 scenarios, `audio_mix bed_db=-23.3 steps_db=-14.5 peak_db=-0.8 steps=10`), [`35881134280`](https://github.com/IssisX/ScraperX/actions/runs/35881134280) (`0509496`, 16 scenarios), [`35880804993`](https://github.com/IssisX/ScraperX/actions/runs/35880804993) (`e413d8b`), [`35879820621`](https://github.com/IssisX/ScraperX/actions/runs/35879820621) (`45e610d`). Earlier: **GREEN** at `b4dc10b` — run [`35839443871`](https://github.com/IssisX/ScraperX/actions/runs/35839443871), all 15 scenarios then. Runs [`35818695969`](https://github.com/IssisX/ScraperX/actions/runs/35818695969) (`c8b5eed`) and [`35820568808`](https://github.com/IssisX/ScraperX/actions/runs/35820568808) (`7e831a2`) were red at the Android cross-compile only — a file-local alias of `kLethalImpactSpeedMps` that NDK clang rejects under `-Werror` (`-Wunused-const-variable`; GCC does not warn), removed in `a39974b`. `AS-002`'s falsifier group CI-integrated since run [`35798864772`](https://github.com/IssisX/ScraperX/actions/runs/35798864772) |

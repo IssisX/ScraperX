@@ -1,10 +1,9 @@
-name: ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)
+name: ScraperX — full proof path (kernel + ascent)
 
 on:
   push:
-    # ScraperX-Claude is the write/implementation branch. ScraperX-2 carries its
-    # own copy of this workflow, so listing it here was inert routing.
-    branches: [ScraperX-Claude]
+    # ChatGPT is the sole write/implementation branch for this line.
+    branches: [ChatGPT]
   workflow_dispatch:
 
 permissions:
@@ -109,7 +108,9 @@ jobs:
             "PASS scraperx_sim AS-003 cage" \
             "PASS scraperx_sim AS-003 Hook5 Rack" \
             "PASS scraperx_sim AS-006 A no link" \
-            "PASS scraperx_sim AS-006 A ride"
+            "PASS scraperx_sim AS-006 A ride" \
+            "PASS scraperx_sim AS-006 B no link" \
+            "PASS scraperx_sim AS-006 B ride"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
@@ -187,6 +188,20 @@ jobs:
             artifacts/native-falsifiers.log
           grep -F "rode_on_cage=1" artifacts/native-falsifiers.log
           awk -F'restored_y=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 >= 177.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          # AS-006 Stage B: the 2.5 t lattice cannot spend its stored height
+          # while the rope is still on the bollard; once re-rigged it raises
+          # the adjacent cage to 198.25 m and itself finishes as a 22 m
+          # physical lattice spanning 176.25..198.25.
+          awk -F'cage_worst=' '/AS-006 B no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'lattice_drop=' '/AS-006 B no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'floor_y=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 198.20 && a[1]+0 <= 198.30) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'peak_speed=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 <= 3.1) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'lattice_top_y=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 198.20 && a[1]+0 <= 198.30) ? 0 : 1}' \
             artifacts/native-falsifiers.log
 
       - name: Run Godot at Fold aspect through native machine authority and capture proof
