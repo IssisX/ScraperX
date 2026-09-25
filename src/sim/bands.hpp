@@ -226,4 +226,23 @@ struct FacadeCrane final {
 
 void build_facade_crane(kit::Kit &kit, FacadeCrane &crane);
 
+// AS-010, Atlas band B06, the first lift off TP-640.
+// 03_EXECUTION/ASCENT/AS-010_MIDSTACK.md.
+struct MidstackService final {
+    kit::BodyIndex m_cage;
+    kit::BodyIndex m_skip;
+    kit::BodyIndex m_shackle;
+    kit::BodyIndex m_lever_body;
+    kit::BodyIndex m_handle;
+    kit::GuideIndex m_cage_guide;
+    kit::GuideIndex m_skip_guide;
+    kit::RopeIndex m_rope;
+    kit::LeverIndex m_lever;
+    kit::CatchIndex m_catch;
+    kit::AnchorIndex m_cage_anchor;
+    kit::AnchorIndex m_bollard_anchor;
+};
+
+void build_midstack_service(kit::Kit &kit, MidstackService &service);
+
 } // namespace scraperx::sim::bands

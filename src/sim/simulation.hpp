@@ -122,6 +122,8 @@ enum class InitialSpawn : std::uint8_t {
     Ring484North = 35,
     CraneKCage = 36,
     CraneLCab = 37,
+    // AS-010: on TP-640, north of the service cage.
+    Plate640 = 38,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -223,6 +225,14 @@ struct CraneState final {
     bool l_cart_latched = false;
     double l_cart_travel = 0.0;
     double l_cab_travel = 0.0;
+};
+
+// AS-010's first lift: the service cage off TP-640.
+struct ServiceState final {
+    bool m_catch_latched = true;
+    double m_cage_travel = 0.0;
+    double m_skip_travel = 0.0;
+    std::uint64_t m_rope_end_entity_id = 0;
 };
 
 // Rubble spilled onto a static surface, piled where it landed.
@@ -659,6 +669,13 @@ public:
     static constexpr std::uint64_t kCraneLPinHandleEntityId = 2125;
     static constexpr std::uint64_t kCraneLClutchEntityId = 2126;
     static constexpr std::uint64_t kCraneLClutchHandleEntityId = 2127;
+    // AS-010, the service cage off TP-640.
+    static constexpr std::uint64_t kServiceFrameEntityId = 1012;
+    static constexpr std::uint64_t kServiceMCageEntityId = 2130;
+    static constexpr std::uint64_t kServiceMSkipEntityId = 2131;
+    static constexpr std::uint64_t kServiceMShackleEntityId = 2132;
+    static constexpr std::uint64_t kServiceMLeverEntityId = 2133;
+    static constexpr std::uint64_t kServiceMHandleEntityId = 2134;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -794,6 +811,7 @@ public:
     [[nodiscard]] WetState wet_state() const noexcept;
     [[nodiscard]] ShopState shop_state() const noexcept;
     [[nodiscard]] CraneState crane_state() const noexcept;
+    [[nodiscard]] ServiceState service_state() const noexcept;
 
 private:
     class PhysicsWorld;

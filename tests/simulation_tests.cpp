@@ -2112,6 +2112,59 @@ void run_ascent() {
               << " plate_y=" << top.player_position.y << '\n';
 }
 
+void run_service_lift() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    constexpr double kG = 9.81;
+    constexpr double kCageKg = 350.0;
+    constexpr double kSkipKg = 800.0;
+    constexpr double kTravel = 22.0;
+
+    Simulation unlinked(InitialSpawn::Plate640);
+    require(unlinked.advance_frame(1.0).accepted, "the 640 m plate settle interval must be accepted");
+    const auto on_plate = unlinked.snapshot();
+    require(on_plate.player_grounded && on_plate.player_position.y > 641.0 && on_plate.player_position.y < 641.5,
+            "Plate640 must stand the player on TP-640");
+    require(unlinked.service_state().m_catch_latched &&
+                unlinked.service_state().m_rope_end_entity_id == Simulation::kServiceFrameEntityId,
+            "as found, the skip must be caught and the rope made fast on the bollard");
+    require(walk_to(unlinked, -7.5, -145.8, 5.0) && walk_to(unlinked, -7.7, -147.2, 4.0),
+            "the player must walk into the service cage");
+    require(pull_handle(unlinked, -8.55, -146.95, Simulation::kServiceMHandleEntityId, 0.5, 3.0,
+                        [&](const scraperx::sim::Snapshot &) { return !unlinked.service_state().m_catch_latched; }),
+            "tripping the catch with the rope still on the bollard must open the catch");
+    require(std::abs(unlinked.service_state().m_cage_travel) < 0.05,
+            "no link, no lift: the cage must not rise while the rope is on the bollard");
+
+    Simulation ride(InitialSpawn::Plate640);
+    require(ride.advance_frame(1.0).accepted, "the ride settle interval must be accepted");
+    const double skip_y0 = kit_com_y(ride, Simulation::kServiceMSkipEntityId);
+    const double cage_y0 = kit_com_y(ride, Simulation::kServiceMCageEntityId);
+    require(walk_to(ride, -7.5, -145.8, 5.0) && walk_to(ride, -7.7, -147.2, 4.0),
+            "the rider must board the service cage");
+    require(rig_end(ride, -8.85, -148.55, -0.7, -0.7, Simulation::kServiceMShackleEntityId, -8.85, -148.00, -1.0,
+                    0.0, Simulation::kServiceMCageEntityId) &&
+                ride.service_state().m_rope_end_entity_id == Simulation::kServiceMCageEntityId,
+            "the rider must take the rope off the bollard and hook it to the cage");
+    require(pull_handle(ride, -8.55, -146.95, Simulation::kServiceMHandleEntityId, 0.5, 3.0,
+                        [&](const scraperx::sim::Snapshot &) { return !ride.service_state().m_catch_latched; }),
+            "pulling the trip handle must open the skip's catch");
+    require(wait_for(ride, 40.0,
+                     [&](const scraperx::sim::Snapshot &) { return ride.service_state().m_cage_travel >= kTravel - 0.05; }),
+            "the falling skip must raise the cage 22 m");
+    const auto top = ride.snapshot();
+    require(on_support(top, Simulation::kServiceMCageEntityId) && standing_above(top, 662.2),
+            "the rider must be standing on the cage at the top of the 22 m rise");
+    const double skip_drop = skip_y0 - kit_com_y(ride, Simulation::kServiceMSkipEntityId);
+    const double cage_rise = kit_com_y(ride, Simulation::kServiceMCageEntityId) - cage_y0;
+    const double source_j = kSkipKg * kG * skip_drop;
+    const double gain_j = (kCageKg + kRiderMassKg) * kG * cage_rise;
+    require(skip_drop > 21.0 && source_j + 50.0 >= gain_j,
+            "the skip's lost height must pay for the cage and the rider");
+    std::cout << "PASS scraperx_sim AS-010 M: rider_y=" << top.player_position.y << " cage_rise=" << cage_rise
+              << " skip_drop=" << skip_drop << " source_j=" << source_j << " gain_j=" << gain_j << '\n';
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
@@ -2168,6 +2221,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-009-wreck") {
         run_crane_wreckage();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-010") {
+        run_service_lift();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -5842,6 +5900,7 @@ int main() {
     run_crane_band();
     run_crane_route();
     run_crane_wreckage();
+    run_service_lift();
     run_ascent();
 
     return EXIT_SUCCESS;

@@ -1523,6 +1523,9 @@ private:
     case scraperx::sim::InitialSpawn::CraneLCab:
         // On L's cab, west of its middle.
         return {-3.6, 573.2, -160.1};
+    case scraperx::sim::InitialSpawn::Plate640:
+        // On TP-640, north of the service cage, the way StairTop stands north of A's.
+        return {-8.0, 641.25, -144.8};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1867,6 +1870,7 @@ public:
         scraperx::sim::bands::build_wet_isolation(*kit_, wet_);
         scraperx::sim::bands::build_plate_shop(*kit_, shop_);
         scraperx::sim::bands::build_facade_crane(*kit_, crane_);
+        scraperx::sim::bands::build_midstack_service(*kit_, service_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -2084,6 +2088,10 @@ public:
 
     [[nodiscard]] const scraperx::sim::bands::FacadeCrane &crane() const noexcept {
         return crane_;
+    }
+
+    [[nodiscard]] const scraperx::sim::bands::MidstackService &service() const noexcept {
+        return service_;
     }
 
     void set_feed_enabled(const bool enabled) noexcept {
@@ -6265,6 +6273,7 @@ private:
     scraperx::sim::bands::WetIsolation wet_{};
     scraperx::sim::bands::PlateShop shop_{};
     scraperx::sim::bands::FacadeCrane crane_{};
+    scraperx::sim::bands::MidstackService service_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
     std::uint8_t rig_action_ = 0;
     std::uint64_t rig_target_entity_ = 0;
@@ -6751,6 +6760,17 @@ CraneState Simulation::crane_state() const noexcept {
     out.l_cart_latched = kit.catch_latched(crane.l_cart_catch);
     out.l_cart_travel = kit.guide_travel(crane.l_cart_guide);
     out.l_cab_travel = kit.guide_travel(crane.l_cab_guide);
+    return out;
+}
+
+ServiceState Simulation::service_state() const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    const scraperx::sim::bands::MidstackService &service = physics_world_->service();
+    ServiceState out;
+    out.m_catch_latched = kit.catch_latched(service.m_catch);
+    out.m_cage_travel = kit.guide_travel(service.m_cage_guide);
+    out.m_skip_travel = kit.guide_travel(service.m_skip_guide);
+    out.m_rope_end_entity_id = kit.rope_end_entity(service.m_rope);
     return out;
 }
 
