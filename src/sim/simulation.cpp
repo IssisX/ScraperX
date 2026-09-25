@@ -75,16 +75,16 @@ constexpr float kWaterScrewStationRadius = 2.6F;
 
 // Ground water-weight lift. The valve only transfers water between owners;
 // gravity, the pulley and Jolt constraints decide whether anything moves.
-constexpr float kWaterLiftValveStationX = -13.80F;
+constexpr float kWaterLiftValveStationX = -14.45F;
 constexpr float kWaterLiftValveStationY = 0.90F;
-constexpr float kWaterLiftValveStationZ = -106.50F;
-constexpr float kWaterLiftReleaseStationX = -12.70F;
+constexpr float kWaterLiftValveStationZ = -107.00F;
+constexpr float kWaterLiftReleaseStationX = -14.45F;
 constexpr float kWaterLiftReleaseStationY = 0.90F;
-constexpr float kWaterLiftReleaseStationZ = -106.50F;
+constexpr float kWaterLiftReleaseStationZ = -108.00F;
 constexpr float kWaterLiftResetStationX = -9.45F;
 constexpr float kWaterLiftResetStationY = 9.05F;
 constexpr float kWaterLiftResetStationZ = -106.85F;
-constexpr float kWaterLiftStationRadius = 1.45F;
+constexpr float kWaterLiftStationRadius = 1.60F;
 constexpr double kWaterLiftBucketCapacityM3 = 2.0;
 constexpr double kWaterLiftFillRateM3S = 0.10;
 constexpr double kWaterLiftDrainRateM3S = 0.12;

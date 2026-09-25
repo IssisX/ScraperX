@@ -3329,8 +3329,12 @@ int main() {
                 "water-lift valve must be shut before release");
     };
     const auto board_lift_cage = [](Simulation &sim) {
-        require(walk_to(sim, -12.70, -107.10, 5.0, 0.12),
-                "player must be able to walk from the control panel onto the cage");
+        // The controls sit outside the west rail, leaving the north opening
+        // clear. Enter through that opening, then step left inside the cage to
+        // the release lever instead of pathing through a pedestal.
+        require(walk_to(sim, -12.50, -107.10, 5.0, 0.12) &&
+                    walk_to(sim, -13.35, -107.65, 3.0, 0.12),
+                "player must be able to enter the cage through its clear opening");
         require(sim.advance_frame(0.5).accepted, "cage stance must settle");
         const auto s = sim.snapshot();
         require(s.player_grounded &&
