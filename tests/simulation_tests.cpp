@@ -3410,10 +3410,16 @@ int main() {
     const double b_ride_start = well.snapshot().simulation_time_seconds;
     bool b_rode_on_cage = true;
     double b_ride_seconds = 0.0;
+    double b_ride_peak_speed = 0.0;
     double b_worst_energy_margin = std::numeric_limits<double>::infinity();
+    const auto b_cage_index = well.kit_body_index(Simulation::kWellBCageEntityId);
+    require(b_cage_index != Simulation::kKitNone,
+            "Stage B's cage must remain addressable through the mechanism kit");
     for (std::uint32_t tick = 0; tick < 90 * 20; ++tick) {
         (void)well.advance_frame(Simulation::kFixedStepSeconds);
         const auto state = well.snapshot();
+        const auto cage_velocity = well.kit_body_velocity(b_cage_index);
+        b_ride_peak_speed = std::max(b_ride_peak_speed, std::abs(cage_velocity.y));
         const double cage_rise = kit_y(well, Simulation::kWellBCageEntityId) - b_cage_y0;
         if (cage_rise > 0.05 && cage_rise < kWellBTravel - 0.05) {
             b_rode_on_cage = b_rode_on_cage && state.player_grounded &&
@@ -3435,8 +3441,12 @@ int main() {
     require(b_rode_on_cage, "Stage B's rider must inherit the cage motion for the whole lift");
     require(std::abs(b_floor_y - (kWellBCageFloorTop + kWellBTravel)) <= 0.05,
             "Stage B's cage floor must stop flush with the 198.25 m ring");
-    require(b_top.well_b_cage_peak_speed <= 3.1,
-            "Stage B's brake-only governor must hold the cage to 3.0 m/s");
+    // The guide's snapshot peak is lifetime-wide and can include the player's
+    // earlier Stage A handoff/death contact with this already-existing cage.
+    // Governor proof is ride-scoped: measure the cage's real body velocity
+    // only after B's catch has released and the powered lift has begun.
+    require(b_ride_peak_speed <= 3.1,
+            "Stage B's brake-only governor must hold the powered ride to 3.0 m/s");
     require(b_top.player_grounded && b_top.support_entity_id == Simulation::kWellBCageEntityId &&
                 b_top.player_position.y > 199.0,
             "Stage B must arrive with the rider standing in its cage at the 198 ring");
@@ -3446,7 +3456,8 @@ int main() {
             "the spent 22 m lattice must finish spanning 176.25..198.25 as real structure");
     std::cout << "PASS scraperx_sim AS-006 B ride: ride_s=" << b_ride_seconds
               << " floor_y=" << b_floor_y
-              << " peak_speed=" << b_top.well_b_cage_peak_speed
+              << " peak_speed=" << b_ride_peak_speed
+              << " lifetime_peak_speed=" << b_top.well_b_cage_peak_speed
               << " rode_on_cage=" << int(b_rode_on_cage)
               << " energy_margin_J=" << b_worst_energy_margin
               << " lattice_top_y=" << b_lattice_top << '\n';
