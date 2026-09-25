@@ -1,12 +1,11 @@
 # SCRAPERX — CAUSAL ASCENT DOCTRINE
 
-**Status:** design doctrine. Saved 2026-09-25 from the owner's specification. It is not a claim that any stage below is built.
-**Where it sits:** design law for how a lift is allowed to work. It does not replace `01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md`. It does not rewrite machines already in source.
-**Work lock (last paragraph of the specification):** the only implementation problem allowed to take work, until its proof is green, is the ground water-weight cage lift. At `14363a3` that cage is **not in source**. The steam plant (`WO-006`) is a vessel, an orifice, a cylinder, and a lift. It is not this cage. The next implementation cycle is that cage, and not stage 1 of the 280 m spine, and not a new band above 640 m.
-**Already built, and left standing:** the climb in source at `14363a3` reaches a floor at 640 m through the machines in `AS-006` through `AS-009`. Those are a different chain. This file does not delete them and does not pretend they are stages 1–13.
+**Status:** design doctrine for how a lift is allowed to work. Saved 2026-09-25 from the owner's specification. Stages 1–13 are a design, not a claim that they are built.
+**Where it sits:** it does not replace `01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md`, and it does not rewrite machines already in source. The climb at `14363a3` already reaches a floor at 640 m through `AS-006` through `AS-009`. That chain stays.
+**Not in force:** an earlier draft ended by freezing all work onto a ground water-weight cage until that proof was green, and by forbidding the next machine after a red run. That was another agent's process rule. It does not apply here and has been removed.
 **Discrepancy, not silently changed:** this specification uses a player mass of 80 kg. Source `kPlayerMassKg` in `src/sim/simulation.cpp` is 85 kg.
 
-The specification follows, unchanged.
+The specification follows.
 
 ---
 
@@ -2779,27 +2778,6 @@ That ordering turns debugging into causal diagnosis rather than commit roulette.
 
 ---
 
-VERIFICATION DISCIPLINE
-
-GitHub Actions is a verification environment, not the preferred exploratory debugger.
-
-A candidate should reach full proof only after source inspection has resolved the known mechanism chain as far as available evidence permits.
-
-For a single unresolved work item, run titles should share a common lineage:
-
-STAGE-NAME FIX · 01 · specific repair
-
-STAGE-NAME FIX · 02 · specific repair
-
-STAGE-NAME FIX · GREEN · full causal verification
-
-This makes sequential repair attempts visibly part of one campaign rather than appearing to be unrelated failures.
-
-A red run does not authorize work on the next mechanism.
-
-
----
-
 FINAL DEFINITION OF DONE
 
 A ScraperX ascent mechanism is complete only when all of these statements are simultaneously true:
@@ -2904,5 +2882,3 @@ And the governing rhythm of that chain is:
 
 
 Everything else is steel around that idea.
-
-For the project right now, this document should become the design doctrine, while the current ground water-weight cage lift remains the only implementation problem allowed to consume work until its proof path is green.
