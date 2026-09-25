@@ -3,7 +3,7 @@
 // The bands of the mechanism ascent, each built from the mechanism kit.
 // 03_EXECUTION/ASCENT/AS-006_CW_PIN.md is the Counterweight Well's contract,
 // AS-007_WET_ISOLATION.md Wet Isolation's, AS-008_PLATE_SHOP.md the Plate
-// Shop's.
+// Shop's, AS-009_FACADE_CRANE_STACK.md the Facade Crane Stack's.
 
 #include "sim/mechanism_kit.hpp"
 
@@ -179,5 +179,51 @@ struct PlateShop final {
 };
 
 void build_plate_shop(kit::Kit &kit, PlateShop &shop);
+
+// AS-009, Atlas band B05, 484 -> 640 m. 03_EXECUTION/ASCENT/AS-009_FACADE_CRANE_STACK.md.
+struct FacadeCrane final {
+    // Stage J, the traveler and the runaway wagon.
+    kit::BodyIndex j_traveler;
+    kit::BodyIndex j_wagon;
+    kit::BodyIndex j_joint;
+    kit::BodyIndex j_chock;
+    kit::BodyIndex j_handle;
+    kit::GuideIndex j_traveler_guide;
+    kit::GuideIndex j_wagon_guide;
+    kit::LeverIndex j_chock_lever;
+    kit::CatchIndex j_wagon_catch;
+    kit::RopeIndex j_rope;
+
+    // Stage K, the crane jib pendulum.
+    kit::BodyIndex k_cage;
+    kit::BodyIndex k_jib;
+    kit::BodyIndex k_pin;
+    kit::BodyIndex k_handle;
+    kit::BodyIndex k_shackle;
+    kit::GuideIndex k_cage_guide;
+    kit::LeverIndex k_jib_hinge;
+    kit::CatchIndex k_jib_catch;
+    kit::RopeIndex k_rope;
+    kit::AnchorIndex k_eye;
+
+    // Stage L, the kinetic winch.
+    kit::BodyIndex l_cab;
+    kit::BodyIndex l_cart;
+    kit::BodyIndex l_catch_body;
+    kit::BodyIndex l_weight;
+    kit::BodyIndex l_pin;
+    kit::BodyIndex l_pin_handle;
+    kit::BodyIndex l_clutch_body;
+    kit::BodyIndex l_clutch_handle;
+    kit::GuideIndex l_cab_guide;
+    kit::GuideIndex l_cart_guide;
+    kit::LeverIndex l_catch_lever;
+    kit::LeverIndex l_clutch_lever;
+    kit::CatchIndex l_cart_catch;
+    kit::CatchIndex l_weight_catch;
+    kit::RopeIndex l_rope;
+};
+
+void build_facade_crane(kit::Kit &kit, FacadeCrane &crane);
 
 } // namespace scraperx::sim::bands

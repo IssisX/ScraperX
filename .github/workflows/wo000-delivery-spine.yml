@@ -124,7 +124,13 @@ jobs:
             "PASS scraperx_sim AS-008 H" \
             "PASS scraperx_sim AS-008 I" \
             "PASS scraperx_sim AS-008 band" \
-            "PASS scraperx_sim AS-008 route"
+            "PASS scraperx_sim AS-008 route" \
+            "PASS scraperx_sim AS-009 J" \
+            "PASS scraperx_sim AS-009 K" \
+            "PASS scraperx_sim AS-009 L" \
+            "PASS scraperx_sim AS-009 band" \
+            "PASS scraperx_sim AS-009 route" \
+            "PASS scraperx_sim ascent 154 to TP-640"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done

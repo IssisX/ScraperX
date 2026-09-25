@@ -37,8 +37,9 @@ const TIME_OF_DAY_HOURS := [10.5, 6.4, 12.5, 18.3, 23.5]
 # Where a (re)start puts the player: the native's InitialSpawn for each, -1
 # for its default at grade. A playtest shortcut, not a save: every start is a
 # fresh world.
-const START_NAMES := ["GROUND", "154 M STAIR TOP", "220 M RING", "340 M PLATE", "374 M RING", "418 M CAGE"]
-const START_SPAWNS := [-1, 24, 29, 32, 33, 34]
+const START_NAMES := ["GROUND", "154 M STAIR TOP", "220 M RING", "340 M PLATE", "374 M RING", "418 M CAGE",
+	"484 M RING", "528 M CRANE CAGE", "572 M WINCH CAB"]
+const START_SPAWNS := [-1, 24, 29, 32, 33, 34, 35, 36, 37]
 
 var look_sensitivity := 1.0
 var stick_sensitivity := 1.0

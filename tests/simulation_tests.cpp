@@ -1534,6 +1534,426 @@ void run_plate_route() {
               << " top_y=" << top.player_position.y << " lifts_untouched=1\n";
 }
 
+// ---- AS-009, the Facade Crane Stack (484 -> 640 m) ------------------------------
+
+// From the 484 ring's north band, the rail joint off the ring and laid in its
+// cradle from J's traveler.
+bool lay_crane_joint(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!walk_to(simulation, 2.8, -139.0, 12.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.4);
+    if (simulation.snapshot().carry_target_entity_id != Simulation::kCraneJJointEntityId) {
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(0.4);
+    if (simulation.snapshot().carrying_entity_id != Simulation::kCraneJJointEntityId ||
+        !(walk_to(simulation, -0.3, -138.3, 8.0) && walk_to(simulation, -0.3, -136.2, 6.0, 0.08) &&
+          walk_to(simulation, 0.9, -136.2, 6.0, 0.08))) {
+        return false;
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.8);
+    (void)simulation.request_set_down();
+    (void)simulation.advance_frame(1.5);
+    return simulation.crane_state().j_rail_whole;
+}
+
+// On J's traveler, the wagon's chock lever pulled over by its lanyard's
+// handle beyond the traveler's north edge.
+bool pull_crane_chock(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    return pull_facing(simulation, 0.0, -135.5, 0.0, 1.0, Simulation::kCraneJHandleEntityId, 0.5, 4.0,
+                       [&](const scraperx::sim::Snapshot &) {
+                           return !simulation.crane_state().j_wagon_latched;
+                       });
+}
+
+// On K's cage: round its hanging shackle, take it, and hook it on the eye.
+bool rig_crane_k(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    // Straight to the cage's north side, along it clear of the shackle on its
+    // long rope, and round behind it.
+    const double x0 = simulation.snapshot().player_position.x;
+    if (!(walk_to(simulation, x0, -154.2, 6.0) && walk_to(simulation, -13.3, -154.2, 10.0) &&
+          walk_to(simulation, -13.3, -155.0, 4.0, 0.08))) {
+        return false;
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.4);
+    if (simulation.snapshot().carry_target_entity_id != Simulation::kCraneKShackleEntityId) {
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(0.4);
+    if (simulation.snapshot().carrying_entity_id != Simulation::kCraneKShackleEntityId ||
+        !walk_to(simulation, -12.3, -155.0, 4.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.8);
+    const auto at_eye = simulation.snapshot();
+    if (at_eye.rig_action != 1 || at_eye.rig_target_entity_id != Simulation::kCraneKCageEntityId) {
+        return false;
+    }
+    (void)simulation.request_rig();
+    (void)simulation.advance_frame(0.3);
+    return simulation.crane_state().k_rope_on_eye;
+}
+
+// The jib's pendant pin, drawn by its lanyard's handle beyond the cage's
+// north edge.
+bool pull_crane_pendant(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    return pull_facing(simulation, -12.6, -154.3, 0.0, 1.0, Simulation::kCraneKHandleEntityId, 0.5, 4.0,
+                       [&](const scraperx::sim::Snapshot &) {
+                           return !simulation.crane_state().k_jib_latched;
+                       });
+}
+
+// On L's cab: the winch's clutch lever thrown in by its handle beyond the
+// cab's north edge.
+bool throw_crane_clutch(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    return pull_facing(simulation, -3.7, -159.4, 0.0, 1.0, Simulation::kCraneLClutchHandleEntityId, 0.5, 4.0,
+                       [&](const scraperx::sim::Snapshot &) { return simulation.crane_state().l_clutch_in; });
+}
+
+// The drop weight's pin, drawn by its lanyard's handle beyond the cab's south
+// edge.
+bool pull_crane_drop(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    return pull_facing(simulation, -3.0, -160.8, 0.0, -1.0, Simulation::kCraneLPinHandleEntityId, 0.5, 4.0,
+                       [&](const scraperx::sim::Snapshot &) {
+                           return !simulation.crane_state().l_weight_latched;
+                       });
+}
+
+void run_facade_crane() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    constexpr double kG = 9.81;
+
+    // ---- J: the joint out, the traveler cannot pass the gap ----------------------
+    Simulation j_gap(InitialSpawn::Ring484North);
+    (void)j_gap.advance_frame(1.0);
+    require(!j_gap.crane_state().j_rail_whole && j_gap.crane_state().j_wagon_latched,
+            "as found, J's rail is missing its joint and the wagon stands chocked");
+    require(walk_to(j_gap, 0.0, -138.3, 8.0) && walk_to(j_gap, 0.0, -136.2, 6.0) && pull_crane_chock(j_gap),
+            "the rider must pull the wagon's chock from the traveler");
+    (void)j_gap.advance_frame(10.0);
+    require(j_gap.crane_state().j_traveler_travel < 0.05 && j_gap.crane_state().j_wagon_travel < 0.3,
+            "with the rail's joint out the traveler holds at the gap and the wagon on its rope");
+
+    // ---- J: the joint in, the ride -----------------------------------------------
+    Simulation j_ride(InitialSpawn::Ring484North);
+    (void)j_ride.advance_frame(1.0);
+    require(lay_crane_joint(j_ride), "the rider must lay the rail's joint in its cradle");
+    const double j_rider_y0 = j_ride.snapshot().player_position.y;
+    const double j_wagon_y0 = kit_com_y(j_ride, Simulation::kCraneJWagonEntityId);
+    require(pull_crane_chock(j_ride), "the rider must pull the wagon's chock, the rail whole");
+    const bool j_arrived = wait_for(j_ride, 60.0, [&](const scraperx::sim::Snapshot &) {
+        return j_ride.crane_state().j_traveler_travel >= 43.9;
+    });
+    (void)j_ride.advance_frame(1.0);
+    const auto j_top = j_ride.snapshot();
+    require(j_arrived, "the runaway wagon must drag J's traveler to the 528 ring");
+    require(on_support(j_top, Simulation::kCraneJTravelerEntityId), "the rider must ride J's traveler all the way");
+    const double j_gain = kRiderMassKg * kG * (j_top.player_position.y - j_rider_y0);
+    const double j_released = 4000.0 * kG * (j_wagon_y0 - kit_com_y(j_ride, Simulation::kCraneJWagonEntityId));
+    require(j_gain > 0.0 && j_gain <= j_released, "J's rider must never gain more than the wagon released");
+    std::cout << "PASS scraperx_sim AS-009 J: rider_y=" << j_top.player_position.y << " gain_J=" << j_gain
+              << " released_J=" << j_released << '\n';
+
+    // ---- K: the shackle free, the jib swings for nothing ----------------------------
+    Simulation k_free(InitialSpawn::CraneKCage);
+    (void)k_free.advance_frame(1.0);
+    require(!k_free.crane_state().k_rope_on_eye && k_free.crane_state().k_jib_latched,
+            "as found, K's shackle hangs free and the jib stands pinned level");
+    require(pull_crane_pendant(k_free), "the rider must pull the pendant's pin from the cage");
+    (void)k_free.advance_frame(20.0);
+    require(k_free.crane_state().k_jib_angle > 1.3 && k_free.crane_state().k_cage_travel < 0.05,
+            "with the shackle free the jib swings down and K's cage stays");
+
+    // ---- K: hooked on, the ride ----------------------------------------------------
+    Simulation k_ride(InitialSpawn::CraneKCage);
+    (void)k_ride.advance_frame(1.0);
+    require(rig_crane_k(k_ride), "the rider must hook K's shackle on the cage's eye");
+    const double k_rider_y0 = k_ride.snapshot().player_position.y;
+    const double k_jib_y0 = kit_com_y(k_ride, Simulation::kCraneKJibEntityId);
+    require(pull_crane_pendant(k_ride), "the rider must pull the pendant's pin, hooked on");
+    const bool k_arrived = wait_for(k_ride, 90.0, [&](const scraperx::sim::Snapshot &) {
+        return k_ride.crane_state().k_cage_travel >= 43.9;
+    });
+    (void)k_ride.advance_frame(1.0);
+    const auto k_top = k_ride.snapshot();
+    require(k_arrived, "the jib's swing must haul K's cage to the 572 ring");
+    require(on_support(k_top, Simulation::kCraneKCageEntityId), "the rider must ride K's cage all the way");
+    const double k_gain = kRiderMassKg * kG * (k_top.player_position.y - k_rider_y0);
+    const double k_released = 8000.0 * kG * (k_jib_y0 - kit_com_y(k_ride, Simulation::kCraneKJibEntityId));
+    require(k_gain > 0.0 && k_gain <= k_released, "K's rider must never gain more than the jib released");
+    std::cout << "PASS scraperx_sim AS-009 K: rider_y=" << k_top.player_position.y
+              << " jib_angle=" << k_ride.crane_state().k_jib_angle << " gain_J=" << k_gain
+              << " released_J=" << k_released << '\n';
+
+    // ---- L: the clutch out, the cart runs for nothing ---------------------------------
+    Simulation l_free(InitialSpawn::CraneLCab);
+    (void)l_free.advance_frame(1.0);
+    require(!l_free.crane_state().l_clutch_in && l_free.crane_state().l_cart_latched &&
+                l_free.crane_state().l_weight_latched,
+            "as found, L's clutch is out, the cart caught and the drop weight pinned");
+    require(pull_crane_drop(l_free), "the rider must pull the drop weight's pin from the cab");
+    (void)l_free.advance_frame(40.0);
+    require(!l_free.crane_state().l_cart_latched && l_free.crane_state().l_cart_travel > 40.0 &&
+                l_free.crane_state().l_cab_travel < 0.05,
+            "with the clutch out the weight trips the cart, it runs down, and L's cab stays");
+
+    // ---- L: the clutch in, the cascade and the ride -------------------------------------
+    Simulation l_ride(InitialSpawn::CraneLCab);
+    (void)l_ride.advance_frame(1.0);
+    require(throw_crane_clutch(l_ride), "the rider must throw the winch's clutch in");
+    const double l_rider_y0 = l_ride.snapshot().player_position.y;
+    const double l_cart_y0 = kit_com_y(l_ride, Simulation::kCraneLCartEntityId);
+    const double l_weight_y0 = kit_com_y(l_ride, Simulation::kCraneLWeightEntityId);
+    require(pull_crane_drop(l_ride), "the rider must pull the drop weight's pin, the clutch in");
+    const bool l_arrived = wait_for(l_ride, 90.0, [&](const scraperx::sim::Snapshot &) {
+        return l_ride.crane_state().l_cab_travel >= 67.9;
+    });
+    (void)l_ride.advance_frame(1.0);
+    const auto l_top = l_ride.snapshot();
+    require(l_arrived, "the cart's run must wind L's cab up into TP-640");
+    require(on_support(l_top, Simulation::kCraneLCabEntityId), "the rider must ride L's cab all the way");
+    const double l_gain = kRiderMassKg * kG * (l_top.player_position.y - l_rider_y0);
+    const double l_released =
+        4000.0 * kG * (l_cart_y0 - kit_com_y(l_ride, Simulation::kCraneLCartEntityId)) +
+        200.0 * kG * (l_weight_y0 - kit_com_y(l_ride, Simulation::kCraneLWeightEntityId));
+    require(l_gain > 0.0 && l_gain <= l_released, "L's rider must never gain more than the cart and weight released");
+    std::cout << "PASS scraperx_sim AS-009 L: rider_y=" << l_top.player_position.y << " gain_J=" << l_gain
+              << " released_J=" << l_released << '\n';
+}
+
+// AS-009's band from wherever on the 484 ring's west or north band: round to
+// J's joint and traveler, the ride to 528; round the 528 ring and over the
+// board to K's cage, hooked on, the pendant's pin, the ride to 572; over the
+// board and round the 572 ring to L's cab, the clutch, the drop weight, the
+// ride into TP-640; off onto the plate.
+bool climb_crane_band(scraperx::sim::Simulation &band) {
+    using scraperx::sim::Simulation;
+    const auto here = band.snapshot().player_position;
+    if (here.x < -8.0 && !walk_to(band, here.x, -140.3, 12.0)) {
+        std::cout << "band: round to the 484 ring's north band\n";
+        return false;
+    }
+    if (!(walk_to(band, -3.0, -140.3, 12.0) && lay_crane_joint(band) && pull_crane_chock(band))) {
+        std::cout << "band: J rigged and set off\n";
+        return false;
+    }
+    if (!wait_for(band, 60.0, [&](const scraperx::sim::Snapshot &) {
+            return band.crane_state().j_traveler_travel >= 43.9;
+        })) {
+        std::cout << "band: J's traveler to 528\n";
+        return false;
+    }
+    (void)band.advance_frame(1.0);
+    if (!(walk_to(band, 0.0, -138.6, 8.0) && walk_to(band, 0.0, -141.5, 8.0) && walk_to(band, -8.5, -141.5, 12.0) &&
+          walk_to(band, -8.5, -155.0, 16.0) && walk_to(band, -11.6, -155.0, 8.0))) {
+        const auto p = band.snapshot().player_position;
+        std::cout << "band: round the 528 ring to K's board, at " << p.x << ' ' << p.y << ' ' << p.z << '\n';
+        return false;
+    }
+    if (!(rig_crane_k(band) && pull_crane_pendant(band))) {
+        const auto p = band.snapshot().player_position;
+        std::cout << "band: K rigged and set off, at " << p.x << ' ' << p.y << ' ' << p.z << '\n';
+        return false;
+    }
+    if (!wait_for(band, 90.0, [&](const scraperx::sim::Snapshot &) {
+            return band.crane_state().k_cage_travel >= 43.9;
+        })) {
+        std::cout << "band: K's cage to 572\n";
+        return false;
+    }
+    (void)band.advance_frame(1.0);
+    if (!(walk_to(band, -11.9, -155.0, 6.0) && walk_to(band, -6.5, -155.0, 10.0) &&
+          walk_to(band, -6.5, -156.7, 6.0) && walk_to(band, -3.0, -156.7, 8.0) &&
+          walk_to(band, -3.0, -159.6, 6.0) && throw_crane_clutch(band) && pull_crane_drop(band))) {
+        std::cout << "band: over the board and round the 572 ring to L, clutch in and set off\n";
+        return false;
+    }
+    if (!wait_for(band, 90.0, [&](const scraperx::sim::Snapshot &) {
+            return band.crane_state().l_cab_travel >= 67.9;
+        })) {
+        std::cout << "band: L's cab to TP-640\n";
+        return false;
+    }
+    (void)band.advance_frame(1.0);
+    if (!walk_to(band, -3.0, -156.5, 8.0)) {
+        std::cout << "band: off L's cab onto TP-640\n";
+        return false;
+    }
+    (void)band.advance_frame(0.5);
+    return standing_above(band.snapshot(), 640.2);
+}
+
+void run_crane_band() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation band(InitialSpawn::Ring484North);
+    (void)band.advance_frame(1.0);
+    const double start = band.snapshot().simulation_time_seconds;
+    require(climb_crane_band(band), "band: the 484 ring to standing on TP-640 through J, K and L");
+    const auto top = band.snapshot();
+    std::cout << "PASS scraperx_sim AS-009 band: to_640_s=" << top.simulation_time_seconds - start
+              << " plate_y=" << top.player_position.y << '\n';
+}
+
+// AS-009's climbing route, on player inputs: from the 484 ring's north band to
+// the east band, one L of boards and a ladder per ring gap to 616, then the
+// ladder up through TP-640's hatch; every lift in the band where it was found.
+void run_crane_route() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation route(InitialSpawn::Ring484North);
+    (void)route.advance_frame(1.0);
+    const double start = route.snapshot().simulation_time_seconds;
+    require(walk_to(route, -3.0, -140.8, 6.0) && walk_to(route, 10.3, -140.8, 16.0) &&
+                walk_to(route, 10.3, -149.0, 12.0),
+            "route: along the 484 ring to its east band");
+    for (double h = 484.0; h < 615.9; h += 22.0) {
+        const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
+        const bool leg = walk_to(route, s + 0.25, -149.0, 12.0, 0.1) && walk_to(route, s - 1.67, -149.0, 8.0, 0.1) &&
+                         climb_wet_hold(route, s - 1.67, -150.0, 1.0, 0.0, false, h + 22.5);
+        if (!leg) {
+            std::cout << "route: stuck above " << h << " at y=" << route.snapshot().player_position.y << '\n';
+        }
+        require(leg, "route: boards and a ladder to the next ring");
+    }
+    require(climb_wet_hold(route, 4.9, -151.02, 0.0, 1.0, false, 640.5),
+            "route: the ladder up through TP-640's hatch");
+    const auto top = route.snapshot();
+    const auto crane = route.crane_state();
+    require(crane.j_traveler_travel < 0.02 && crane.k_cage_travel < 0.02 && crane.l_cab_travel < 0.02 &&
+                crane.j_wagon_latched && crane.k_jib_latched && crane.l_cart_latched,
+            "route: no lift in the band moved");
+    std::cout << "PASS scraperx_sim AS-009 route: seconds=" << top.simulation_time_seconds - start
+              << " top_y=" << top.player_position.y << " lifts_untouched=1\n";
+}
+
+// ---- The mechanism ascent in one run ---------------------------------------------
+
+// Fails the run with where it stopped: the leg, the height and the time.
+void require_leg(const scraperx::sim::Simulation &simulation, const bool ok, const char *leg) {
+    if (!ok) {
+        const auto state = simulation.snapshot();
+        std::cout << "ascent: stopped at " << leg << ", y=" << state.player_position.y
+                  << " t=" << state.simulation_time_seconds << '\n';
+    }
+    require(ok, leg);
+}
+
+// The goal's test (MECHANISM_ASCENT_PLAN.md, AS-006 to AS-009): one run on
+// player inputs from the tower stair's 154 m deck to standing on TP-640,
+// riding and climbing through all four bands' linked stages -- the
+// Counterweight Well, Wet Isolation, the Plate Shop and the Facade Crane
+// Stack -- with no spawn, placement or teleport between them.
+void run_ascent() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    Simulation run(InitialSpawn::StairTop);
+    (void)run.advance_frame(1.0);
+    const double start = run.snapshot().simulation_time_seconds;
+    const auto deaths = run.snapshot().death_count;
+
+    // B02, the Counterweight Well: A, B, C to the 220 ring.
+    require_leg(run, board_well_a(run) && rig_well_a(run) && pull_well_a(run, 0.5, 3.0), "A rigged and tripped");
+    require_leg(run,
+                wait_for(run, 16.0,
+                         [](const Snapshot &state) { return state.well_a_cage_travel >= kWellATravel - 0.01; }),
+                "A to the 176 ring");
+    (void)run.advance_frame(1.0);
+    require_leg(run,
+                walk_to(run, -9.4, -131.2, 4.0) && walk_to(run, -7.6, -131.2, 4.0) && rig_well_b(run) &&
+                    pull_well_b(run),
+                "across into B, rigged and tripped");
+    require_leg(run, wait_for(run, 16.0, [](const Snapshot &state) {
+                    return state.well_b_cage_travel >= kWellATravel - kWellDogPitch - 0.01;
+                }),
+                "B to the 198 ring");
+    (void)run.advance_frame(3.0);
+    require_leg(run,
+                walk_to(run, -6.2, -131.9, 4.0) && walk_to(run, -4.4, -131.9, 4.0) && clear_well_c_chute(run) &&
+                    fill_well_c(run, 10.0) && pull_well_c_latch(run, 3.0),
+                "across onto C, its chute cleared, filled and let go");
+    require_leg(run, wait_for(run, 16.0, [](const Snapshot &state) {
+                    return state.well_c_platform_travel >= kWellATravel - kWellDogPitch - 0.01;
+                }),
+                "C to the 220 ring");
+    (void)run.advance_frame(2.0);
+    require_leg(run, walk_to(run, -3.0, -129.0, 4.0), "off C onto the 220 ring");
+    const double at_220 = run.snapshot().simulation_time_seconds - start;
+
+    // B03, Wet Isolation: D, E, F to TP-340.
+    require_leg(run, walk_to(run, 2.5, -129.6, 8.0) && walk_to(run, 4.0, -129.2, 6.0) && seat_wet_spool(run) &&
+                         throw_wet_fill(run),
+                "along the 220 ring, D's spool seated and its fill thrown");
+    require_leg(run,
+                wait_for(run, 120.0,
+                         [&](const Snapshot &) { return run.wet_state().d_platform_travel >= 35.95; }),
+                "D to 256.25");
+    require_leg(run,
+                walk_to(run, 13.2, -134.5, 6.0) && walk_to(run, 13.2, -135.8, 6.0) && shut_wet_door(run) &&
+                    pull_wet_trip(run),
+                "into E's cab, its door shut and the chiller tripped");
+    require_leg(run,
+                wait_for(run, 90.0, [&](const Snapshot &) { return run.wet_state().e_cab_travel >= 41.95; }),
+                "E to 298.25");
+    require_leg(run,
+                walk_to(run, 13.4, -137.2, 4.0) && walk_to(run, 13.4, -139.9, 6.0) && couple_wet_hose(run) &&
+                    pull_wet_stop_valve(run),
+                "onto F, its hose coupled and its valve thrown");
+    require_leg(run,
+                wait_for(run, 90.0,
+                         [&](const Snapshot &) { return run.wet_state().f_platform_travel >= 41.95; }),
+                "F to TP-340");
+    require_leg(run, walk_to(run, 13.0, -137.2, 6.0), "off F onto TP-340");
+    const double at_340 = run.snapshot().simulation_time_seconds - start;
+
+    // B04, the Plate Shop: G, H, I and the ladder to the 484 ring.
+    require_leg(run, walk_to_shop_cleat(run) && rig_shop_g(run) && pull_shop_g(run), "G rigged and its pin pulled");
+    require_leg(run,
+                wait_for(run, 60.0,
+                         [&](const Snapshot &) { return run.shop_state().g_platform_travel >= 33.7; }),
+                "G to the 374 ring");
+    (void)run.advance_frame(1.0);
+    require_leg(run, walk_to(run, -14.5, -149.3, 8.0) && pull_shop_girder_pin(run) && board_shop_h(run) &&
+                         pull_shop_chock(run),
+                "the girder's tail pin out, over the gangway onto H, its chock pulled");
+    require_leg(run,
+                wait_for(run, 90.0,
+                         [&](const Snapshot &) { return run.shop_state().h_platform_travel >= 43.9; }),
+                "H to the 418 ring");
+    (void)run.advance_frame(1.0);
+    require_leg(run, rig_shop_i(run) && pull_shop_domino(run), "onto I's cage, hooked on, the domino's pin pulled");
+    require_leg(run,
+                wait_for(run, 90.0, [&](const Snapshot &) { return run.shop_state().i_cage_travel >= 43.9; }),
+                "I to 462.25");
+    (void)run.advance_frame(1.0);
+    require_leg(run, climb_wet_hold(run, -7.6, -145.6, -1.0, 0.0, false, 484.5), "up the ladder onto the 484 ring");
+    const double at_484 = run.snapshot().simulation_time_seconds - start;
+
+    // B05, the Facade Crane Stack: J, K, L into TP-640.
+    require_leg(run, climb_crane_band(run), "J, K and L to standing on TP-640");
+    const auto top = run.snapshot();
+    require(top.death_count == deaths && standing_above(top, 640.2),
+            "ascent: one run from the 154 m deck must end standing on TP-640, never having died");
+    std::cout << "PASS scraperx_sim ascent 154 to TP-640: seconds=" << top.simulation_time_seconds - start
+              << " at_220=" << at_220 << " at_340=" << at_340 << " at_484=" << at_484
+              << " plate_y=" << top.player_position.y << '\n';
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
@@ -1565,6 +1985,26 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-008-route") {
         run_plate_route();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-009") {
+        run_facade_crane();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-009-band") {
+        run_crane_band();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-009-route") {
+        run_crane_route();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "ascent") {
+        run_ascent();
         return EXIT_SUCCESS;
     }
     using scraperx::sim::InitialSpawn;
@@ -5192,6 +5632,10 @@ int main() {
     run_plate_shop();
     run_plate_band();
     run_plate_route();
+    run_facade_crane();
+    run_crane_band();
+    run_crane_route();
+    run_ascent();
 
     return EXIT_SUCCESS;
 }

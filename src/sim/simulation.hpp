@@ -119,6 +119,9 @@ enum class InitialSpawn : std::uint8_t {
     PlateTop = 32,
     Ring374West = 33,
     ShopICage = 34,
+    Ring484North = 35,
+    CraneKCage = 36,
+    CraneLCab = 37,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -203,6 +206,23 @@ struct ShopState final {
     double i_trip_angle = 0.0;
     double i_monolith_angle = 0.0;
     double i_cage_travel = 0.0;
+};
+
+// AS-009's machine state, for the falsifiers.
+struct CraneState final {
+    bool j_rail_whole = false;
+    bool j_wagon_latched = false;
+    double j_traveler_travel = 0.0;
+    double j_wagon_travel = 0.0;
+    bool k_rope_on_eye = false;
+    bool k_jib_latched = false;
+    double k_jib_angle = 0.0;
+    double k_cage_travel = 0.0;
+    bool l_clutch_in = false;
+    bool l_weight_latched = false;
+    bool l_cart_latched = false;
+    double l_cart_travel = 0.0;
+    double l_cab_travel = 0.0;
 };
 
 // Rubble spilled onto a static surface, piled where it landed.
@@ -617,6 +637,28 @@ public:
     static constexpr std::uint64_t kShopITripEntityId = 2094;
     static constexpr std::uint64_t kShopIHandleEntityId = 2095;
     static constexpr std::uint64_t kShopIShackleEntityId = 2096;
+    // AS-009, the Facade Crane Stack (Atlas B05): frame and route statics,
+    // then stages J, K, L.
+    static constexpr std::uint64_t kCraneFrameEntityId = 1010;
+    static constexpr std::uint64_t kCraneRouteEntityId = 1011;
+    static constexpr std::uint64_t kCraneJTravelerEntityId = 2100;
+    static constexpr std::uint64_t kCraneJWagonEntityId = 2101;
+    static constexpr std::uint64_t kCraneJJointEntityId = 2102;
+    static constexpr std::uint64_t kCraneJChockEntityId = 2103;
+    static constexpr std::uint64_t kCraneJHandleEntityId = 2104;
+    static constexpr std::uint64_t kCraneKCageEntityId = 2110;
+    static constexpr std::uint64_t kCraneKJibEntityId = 2111;
+    static constexpr std::uint64_t kCraneKPinEntityId = 2112;
+    static constexpr std::uint64_t kCraneKHandleEntityId = 2113;
+    static constexpr std::uint64_t kCraneKShackleEntityId = 2114;
+    static constexpr std::uint64_t kCraneLCabEntityId = 2120;
+    static constexpr std::uint64_t kCraneLCartEntityId = 2121;
+    static constexpr std::uint64_t kCraneLCatchEntityId = 2122;
+    static constexpr std::uint64_t kCraneLWeightEntityId = 2123;
+    static constexpr std::uint64_t kCraneLPinEntityId = 2124;
+    static constexpr std::uint64_t kCraneLPinHandleEntityId = 2125;
+    static constexpr std::uint64_t kCraneLClutchEntityId = 2126;
+    static constexpr std::uint64_t kCraneLClutchHandleEntityId = 2127;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -751,6 +793,7 @@ public:
     [[nodiscard]] KitSpout kit_spout(std::uint32_t spout) const noexcept;
     [[nodiscard]] WetState wet_state() const noexcept;
     [[nodiscard]] ShopState shop_state() const noexcept;
+    [[nodiscard]] CraneState crane_state() const noexcept;
 
 private:
     class PhysicsWorld;

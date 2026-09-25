@@ -132,6 +132,18 @@ public:
     // is a tooth.
     void set_dogs(GuideIndex guide, float pitch);
 
+    // A rail joint missing from a guide (declared, AS-009): the body's
+    // rollers cannot pass the gap, so its travel stops at gap_travel until
+    // the joint body lies in its seat -- within `tolerance` of `seat`, its x
+    // axis within `angle` of seat_axis -- as a pipe's spool (AS-007).
+    void set_rail_gap(GuideIndex guide, float gap_travel, BodyIndex joint, JPH::RVec3 seat,
+                      JPH::Vec3 seat_axis, float tolerance, float angle);
+
+    // A dog clutch between a winch's drums (declared, AS-009): the rope turns
+    // nothing until the lever is thrown past engage_angle; then it takes up
+    // its length as it is at that moment and holds from then on.
+    void add_clutch(RopeIndex rope, LeverIndex lever, float engage_angle);
+
     // A rope from body1's point over fixed1 ... fixed2 to its end:
     // |p1 - fixed1| + ratio |end - fixed2| <= max_length, tension only. A
     // ratio of 0.5 is a two-part purchase on body1's side: body1 is pulled
@@ -387,6 +399,10 @@ public:
     [[nodiscard]] bool catch_latched(CatchIndex catch_index) const noexcept;
     [[nodiscard]] float lever_angle(LeverIndex lever) const noexcept;
     [[nodiscard]] float guide_travel(GuideIndex guide) const noexcept;
+    // True while the guide has no rail gap or its joint lies in its seat.
+    [[nodiscard]] bool rail_whole(GuideIndex guide) const noexcept;
+    // True while a clutched rope's clutch is in, or the rope has no clutch.
+    [[nodiscard]] bool clutch_in(RopeIndex rope) const noexcept;
     [[nodiscard]] float guide_peak_speed(GuideIndex guide) const noexcept;
 
 private:
@@ -418,6 +434,14 @@ private:
         float peak_speed = 0.0F;
         float dog_pitch = 0.0F;     // 0: no dogs
         float dog_floor = 0.0F;     // the tooth the pawl rests above
+        BodyIndex gap_joint;        // invalid: no rail gap
+        JPH::RVec3 gap_seat = JPH::RVec3::sZero();
+        JPH::Vec3 gap_axis = JPH::Vec3::sAxisX();
+        float gap_travel = 0.0F;
+        float gap_tolerance = 0.0F;
+        float gap_angle = 0.0F;
+        float limit_low = 0.0F;     // the slider's limits as last set
+        float limit_high = 0.0F;
     };
     struct Rope final {
         BodyIndex body1;
@@ -435,6 +459,9 @@ private:
         std::uint32_t over_rating_steps = 0;
         bool parted = false;
         bool strut = false;
+        LeverIndex clutch;          // invalid: no clutch
+        float clutch_angle = 0.0F;
+        bool clutch_engaged = false;
         float tension = 0.0F;
         JPH::Ref<JPH::PulleyConstraint> constraint;
     };
@@ -570,6 +597,8 @@ private:
     void unlatch(Catch &catch_record);
     void govern(Guide &guide) noexcept;
     void engage_dogs(Guide &guide);
+    [[nodiscard]] bool gap_closed(const Guide &guide) const;
+    void apply_limits(Guide &guide);
     void flow_bins(float delta_seconds);
     void apply_bin_mass(const Bin &bin);
     // The middle of the top of a bin's floor, its body's first part, local.

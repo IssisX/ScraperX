@@ -193,12 +193,35 @@ GuideIndex Kit::add_guide(const BodyIndex body, const JPH::Vec3 axis, const floa
     guide.governor_force = governor_force;
     guide.level_accel = level_accel;
     guide.dog_floor = min_travel;
+    guide.limit_low = min_travel;
+    guide.limit_high = max_travel;
     guides_.push_back(guide);
     return GuideIndex{static_cast<std::uint32_t>(guides_.size() - 1U)};
 }
 
 void Kit::set_dogs(const GuideIndex guide, const float pitch) {
     guides_[guide.value].dog_pitch = pitch;
+}
+
+void Kit::set_rail_gap(const GuideIndex guide, const float gap_travel, const BodyIndex joint,
+                       const JPH::RVec3 seat, const JPH::Vec3 seat_axis, const float tolerance,
+                       const float angle) {
+    Guide &record = guides_[guide.value];
+    record.gap_joint = joint;
+    record.gap_seat = seat;
+    record.gap_axis = seat_axis.Normalized();
+    record.gap_travel = gap_travel;
+    record.gap_tolerance = tolerance;
+    record.gap_angle = angle;
+    apply_limits(record);
+}
+
+void Kit::add_clutch(const RopeIndex rope, const LeverIndex lever, const float engage_angle) {
+    Rope &record = ropes_[rope.value];
+    disconnect_rope(record);
+    record.clutch = lever;
+    record.clutch_angle = engage_angle;
+    record.clutch_engaged = false;
 }
 
 RopeIndex Kit::add_rope(const BodyIndex body1, const JPH::Vec3 point1, const JPH::RVec3 fixed1,
@@ -468,6 +491,18 @@ void Kit::pre_step(const float delta_seconds) {
     for (Guide &guide : guides_) {
         govern(guide);
         engage_dogs(guide);
+        apply_limits(guide);
+    }
+    for (Rope &rope : ropes_) {
+        if (rope.clutch.valid() && !rope.clutch_engaged && !rope.parted &&
+            lever_angle(rope.clutch) > rope.clutch_angle) {
+            // The dogs mesh: the rope holds from its length as it is now.
+            rope.clutch_engaged = true;
+            const BodyIndex end = rope_end_body(rope);
+            rope.length = JPH::Vec3(world_point(rope.body1, rope.point1) - rope.fixed1).Length() +
+                          rope.ratio * JPH::Vec3(world_point(end, rope_end_point(rope)) - rope.fixed2).Length();
+            connect_rope(rope);
+        }
     }
     for (const Slip &slip : slips_) {
         Rope &rope = ropes_[slip.rope.value];
@@ -895,7 +930,35 @@ void Kit::engage_dogs(Guide &guide) {
     const float tooth = guide.max_travel - teeth_below_top * guide.dog_pitch;
     if (tooth > guide.dog_floor + 1.0e-4F) {
         guide.dog_floor = tooth;
-        guide.slider->SetLimits(guide.dog_floor, guide.max_travel);
+    }
+}
+
+bool Kit::gap_closed(const Guide &guide) const {
+    if (!guide.gap_joint.valid()) {
+        return true;
+    }
+    if (!bodies_[guide.gap_joint.value].enabled) {
+        return false;
+    }
+    const JPH::Body &joint = jolt_body(guide.gap_joint);
+    const float off_seat = JPH::Vec3(joint.GetCenterOfMassPosition() - guide.gap_seat).Length();
+    const JPH::Vec3 axis = joint.GetRotation() * JPH::Vec3::sAxisX();
+    const float cosine = std::min(1.0F, std::abs(axis.Dot(guide.gap_axis)));
+    return off_seat <= guide.gap_tolerance && std::acos(cosine) <= guide.gap_angle;
+}
+
+// The slider's limits: the dogs' floor (or the bottom of travel) below, the
+// top of travel above -- or the rail gap while its joint is out.
+void Kit::apply_limits(Guide &guide) {
+    if (guide.slider == nullptr) {
+        return;
+    }
+    const float low = guide.dog_pitch > 0.0F ? guide.dog_floor : guide.min_travel;
+    const float high = gap_closed(guide) ? guide.max_travel : std::min(guide.gap_travel, guide.max_travel);
+    if (low != guide.limit_low || high != guide.limit_high) {
+        guide.limit_low = low;
+        guide.limit_high = std::max(low, high);
+        guide.slider->SetLimits(guide.limit_low, guide.limit_high);
     }
 }
 
@@ -928,6 +991,10 @@ JPH::Vec3 Kit::rope_end_point(const Rope &rope) const noexcept {
 
 void Kit::connect_rope(Rope &rope) {
     if (rope.parted || rope.constraint != nullptr) {
+        return;
+    }
+    // A winch whose clutch is out turns nothing.
+    if (rope.clutch.valid() && !rope.clutch_engaged) {
         return;
     }
     // An uncoupled hose holds nothing: its fluid runs out of the open end.
@@ -1483,6 +1550,16 @@ bool Kit::pipe_whole(const PipeIndex pipe) const noexcept {
 float Kit::cell_pressure(const CellIndex cell) const noexcept {
     const Cell *record = find(cells_, cell);
     return record != nullptr ? record->air / cell_volume(*record) : kAtmosphere;
+}
+
+bool Kit::rail_whole(const GuideIndex guide) const noexcept {
+    const Guide *record = find(guides_, guide);
+    return record != nullptr && gap_closed(*record);
+}
+
+bool Kit::clutch_in(const RopeIndex rope) const noexcept {
+    const Rope *record = find(ropes_, rope);
+    return record != nullptr && (!record->clutch.valid() || record->clutch_engaged);
 }
 
 bool Kit::catch_latched(const CatchIndex catch_index) const noexcept {

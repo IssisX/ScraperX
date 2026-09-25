@@ -1514,6 +1514,15 @@ private:
     case scraperx::sim::InitialSpawn::ShopICage:
         // On I's cage, west of its shackle.
         return {-7.3, 419.2, -145.6};
+    case scraperx::sim::InitialSpawn::Ring484North:
+        // On the 484 ring's north band west of J's traveler.
+        return {-3.0, 485.2, -139.6};
+    case scraperx::sim::InitialSpawn::CraneKCage:
+        // On K's cage, west of its shackle.
+        return {-13.2, 529.2, -155.0};
+    case scraperx::sim::InitialSpawn::CraneLCab:
+        // On L's cab, west of its middle.
+        return {-3.6, 573.2, -160.1};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1857,6 +1866,7 @@ public:
         scraperx::sim::bands::build_counterweight_well(*kit_, well_);
         scraperx::sim::bands::build_wet_isolation(*kit_, wet_);
         scraperx::sim::bands::build_plate_shop(*kit_, shop_);
+        scraperx::sim::bands::build_facade_crane(*kit_, crane_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -2070,6 +2080,10 @@ public:
 
     [[nodiscard]] const scraperx::sim::bands::PlateShop &shop() const noexcept {
         return shop_;
+    }
+
+    [[nodiscard]] const scraperx::sim::bands::FacadeCrane &crane() const noexcept {
+        return crane_;
     }
 
     void set_feed_enabled(const bool enabled) noexcept {
@@ -6250,6 +6264,7 @@ private:
     scraperx::sim::bands::CounterweightWell well_{};
     scraperx::sim::bands::WetIsolation wet_{};
     scraperx::sim::bands::PlateShop shop_{};
+    scraperx::sim::bands::FacadeCrane crane_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
     std::uint8_t rig_action_ = 0;
     std::uint64_t rig_target_entity_ = 0;
@@ -6716,6 +6731,26 @@ ShopState Simulation::shop_state() const noexcept {
     out.i_trip_angle = kit.lever_angle(shop.i_trip);
     out.i_monolith_angle = kit.lever_angle(shop.i_monolith_hinge);
     out.i_cage_travel = kit.guide_travel(shop.i_cage_guide);
+    return out;
+}
+
+CraneState Simulation::crane_state() const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    const scraperx::sim::bands::FacadeCrane &crane = physics_world_->crane();
+    CraneState out;
+    out.j_rail_whole = kit.rail_whole(crane.j_traveler_guide);
+    out.j_wagon_latched = kit.catch_latched(crane.j_wagon_catch);
+    out.j_traveler_travel = kit.guide_travel(crane.j_traveler_guide);
+    out.j_wagon_travel = kit.guide_travel(crane.j_wagon_guide);
+    out.k_rope_on_eye = kit.rope_end_entity(crane.k_rope) == Simulation::kCraneKCageEntityId;
+    out.k_jib_latched = kit.catch_latched(crane.k_jib_catch);
+    out.k_jib_angle = kit.lever_angle(crane.k_jib_hinge);
+    out.k_cage_travel = kit.guide_travel(crane.k_cage_guide);
+    out.l_clutch_in = kit.clutch_in(crane.l_rope);
+    out.l_weight_latched = kit.catch_latched(crane.l_weight_catch);
+    out.l_cart_latched = kit.catch_latched(crane.l_cart_catch);
+    out.l_cart_travel = kit.guide_travel(crane.l_cart_guide);
+    out.l_cab_travel = kit.guide_travel(crane.l_cab_guide);
     return out;
 }
 
