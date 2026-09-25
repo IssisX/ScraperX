@@ -1,1201 +1,1093 @@
-# SCRAPERX — CAUSAL ASCENT DOCTRINE
+# SCRAPERX
+# PROJECT CAUSALITY — COMPLETE ASCENT MASTER SPECIFICATION
+## PINNACLE CAUSAL-PHYSICS STANDARD
 
-**Status:** design doctrine for how a lift is allowed to work. Saved 2026-09-25 from the owner's specification. Stages 1–13 are a design, not a claim that they are built.
-**Where it sits:** it does not replace `01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md`, and it does not rewrite machines already in source. The climb at `14363a3` already reaches a floor at 640 m through `AS-006` through `AS-009`. That chain stays.
-**Not in force:** an earlier draft ended by freezing all work onto a ground water-weight cage until that proof was green, and by forbidding the next machine after a red run. That was another agent's process rule. It does not apply here and has been removed.
-**Discrepancy, not silently changed:** this specification uses a player mass of 80 kg. Source `kPlayerMassKg` in `src/sim/simulation.cpp` is 85 kg.
-
-The specification follows.
-
----
-
-SCRAPERX
-
-PROJECT CAUSALITY - COMPLETE ASCENT MASTER SPECIFICATION
-
-PINNACLE CAUSAL-PHYSICS STANDARD
-
-Coverage
-
-Tower elevation: 280 m → 680 m
-Mechanisms: 13 causally linked ascent stages
-Ultimate tower target: approximately 1600 m
-Authoritative simulation: native C++17 scraperx_sim + Jolt
-Simulation cadence: fixed 90 Hz
-Presentation / input / camera / HUD / Android: Godot 4.7
-
+**Coverage:** 280 m → 680 m  
+**Stages:** 13 causally linked ascent mechanisms  
+**Ultimate tower target:** approximately 1600 m  
+**Authoritative simulation:** native C++17 `scraperx_sim` + Jolt  
+**Simulation cadence:** fixed 90 Hz  
+**Presentation / input / camera / HUD / Android:** Godot 4.7
 
 ---
 
-PRIME DIRECTIVE
+# 0. DOCUMENT STATUS AND SCOPE
+
+This is a **timeless architecture and physics doctrine** for ScraperX.
+
+It defines:
+- causal-physics laws;
+- mechanism design standards;
+- simulation ownership;
+- energy, mass, travel, and capture requirements;
+- stage designs for 280 m → 680 m;
+- failure behavior;
+- falsification tests;
+- verification doctrine.
+
+It does **not** contain:
+- current branch state;
+- current commit SHAs;
+- current CI run IDs;
+- present debugging status;
+- temporary blockers;
+- active work-item sequencing;
+- “do not proceed until X is green” execution notes;
+- any other transient project-management state.
+
+Those belong in continuity / project-state documents, never in this master specification.
+
+---
+
+# 1. PRIME DIRECTIVE
 
 ScraperX is not a sequence of scripted elevators disguised as machinery.
 
-It is a causal physical world.
+It is a **causal physical world**.
 
 The player ascends because stored energy is released, transmitted through actual machinery, converted into motion, constrained by geometry, dissipated through physical processes, and finally captured by another mechanism.
 
 The governing chain is:
 
-> STORED ENERGY → RESTRAINT → PHYSICAL TRIGGER → FORCE TRANSMISSION → CONSTRAINED MOTION → GOVERNING / DISSIPATION → TERMINAL CAPTURE → PHYSICAL HANDOFF
-
-
+> **STORED ENERGY → RESTRAINT → PHYSICAL TRIGGER → FORCE TRANSMISSION → CONSTRAINED MOTION → GOVERNING / DISSIPATION → TERMINAL CAPTURE → PHYSICAL HANDOFF**
 
 Every consequential ascent mechanism must contain that entire chain.
 
 A mechanism fails specification if any missing physical link is replaced by:
+- an arbitrary height threshold;
+- a timer;
+- an invisible completion flag;
+- an animation callback;
+- a teleport;
+- direct position assignment;
+- fabricated velocity;
+- an unexplained impulse;
+- a hidden motor supplying undeclared energy;
+- a Godot animation that disagrees with the native rigid body;
+- a test-only shortcut that does not exist in play.
 
-an arbitrary height threshold;
+A script may **observe** physics.
 
-a timer;
-
-an invisible completion flag;
-
-an animation callback;
-
-a teleport;
-
-direct position assignment;
-
-fabricated velocity;
-
-an unexplained impulse;
-
-a hidden motor that supplies undeclared energy;
-
-a Godot animation that disagrees with the native rigid body;
-
-a test-only shortcut that does not exist in play.
-
-
-A script may observe physics.
-
-It may not secretly manufacture the result.
-
+It may not secretly **manufacture the result**.
 
 ---
 
-AUTHORITY CLASSES
+# 2. AUTHORITY CLASSES
 
-Not every number in this document has the same status.
+Not every number in this document has the same authority.
 
-To prevent fake exactness, every mechanism parameter belongs to one of four classes.
+Every mechanism parameter belongs to one of four classes.
 
-LAW
-
+## LAW
 A project invariant.
 
 Examples:
+- `g = 9.81 m/s²`
+- native simulation owns consequential physics
+- moving supports transfer velocity to the player
+- next-stage activation requires a physical terminal state
 
-g = 9.81 m/s²
-
-native simulation owns consequential physics
-
-moving supports transfer velocity to the player
-
-next-stage activation requires physical terminal state
-
-DERIVED
-
-A value that mathematically follows from accepted geometry or mass.
+## DERIVED
+A value that mathematically follows from accepted geometry, mass, or energy state.
 
 Examples:
+- counterweight potential energy
+- drum revolutions
+- hydraulic displacement
+- required static torque
+- ballistic velocity
 
-counterweight potential energy
-
-drum revolutions required
-
-hydraulic displacement
-
-minimum torque required
-
-DESIGN TARGET
-
-An engineering value deliberately chosen but still subject to solver validation.
+## DESIGN TARGET
+An engineering value deliberately selected but still subject to solver validation.
 
 Examples:
+- governor speed
+- clutch torque limit
+- brake coefficient
+- snubber travel
+- capture tolerance
 
-governor speed
-
-clutch torque limit
-
-brake coefficient
-
-snubber travel
-
-capture tolerance
-
-SOLVER-FIT
-
-A parameter that must be determined from actual Jolt behavior.
+## SOLVER-FIT
+A value that must be established from actual Jolt behavior.
 
 Examples:
+- constraint compliance
+- contact friction
+- restitution
+- damping
+- motor force limits
+- latch tolerance
+- CCD settings
 
-constraint compliance
+These values may be adjusted to make the declared physical mechanism behave correctly.
 
-contact friction
-
-restitution
-
-damping
-
-capture tolerance
-
-motor force bounds
-
-CCD settings
-
-These values may be adjusted to make the declared physical machine behave correctly.
-
-They may not be adjusted to create an undeclared source of energy.
-
+They may not be adjusted to introduce an undeclared source of energy.
 
 ---
 
-FUNDAMENTAL PHYSICAL CONSTANTS
+# 3. GLOBAL PHYSICAL CONSTANTS
 
-g = 9.81 m/s²
+Gravitational acceleration:
+
+`g = 9.81 m/s²`
 
 Reference player mass:
 
-m_player = 80 kg
+`m_player = 80 kg`
 
 Atmospheric reference pressure:
 
-P_atm = 101.3 kPa absolute
+`P_atm = 101.3 kPa absolute`
 
 Water density:
 
-rho_water ≈ 1000 kg/m³
+`rho_water ≈ 1000 kg/m³`
 
 Gravitational potential energy:
 
-ΔE_g = m g Δh
+`ΔE_g = m g Δh`
 
 Linear kinetic energy:
 
-E_k = 0.5 m v²
+`E_k = 0.5 m v²`
 
 Rotational kinetic energy:
 
-E_rot = 0.5 I ω²
+`E_rot = 0.5 I ω²`
 
 Hydraulic force:
 
-F = ΔP A
+`F = ΔP A`
 
 Hydraulic volume continuity:
 
-Q = A v
+`Q = A v`
 
 Buoyancy:
 
-F_b = rho V_displaced g
+`F_b = rho V_displaced g`
 
 Quadratic fluid drag:
 
-F_d = 0.5 rho C_d A v²
+`F_d = 0.5 rho C_d A v²`
 
 Rotational work:
 
-W = ∫ τ dθ
+`W = ∫ τ dθ`
 
 Linear work:
 
-W = ∫ F dx
+`W = ∫ F dx`
 
 No ideal equation above is by itself a sufficient simulation model.
 
-Where materially significant, the system must also account for:
-
-bearing loss, drivetrain efficiency, friction, fluid restriction, spring preload, rotating inertia, gas depletion, drag, added fluid mass, impact absorption, constraint compliance, cable elasticity or constraint response, and terminal dissipation.
-
-
----
-
-THE CAUSAL COMPLETENESS CONTRACT
-
-Every mechanism must explicitly identify the following.
-
-Energy reservoir
-
-Where did the usable energy physically exist before movement began?
-
-Examples:
-
-elevated mass;
-
-elevated water;
-
-compressed gas;
-
-compressed spring;
-
-spinning flywheel;
-
-hydraulic accumulator;
-
-buoyant displacement.
-
-
-If this cannot be identified, the mechanism has no legitimate energy source.
-
+Where materially significant, the system must also represent:
+- bearing loss;
+- drivetrain efficiency;
+- friction;
+- spring preload;
+- rotating inertia;
+- fluid restriction;
+- gas depletion;
+- hydrodynamic or aerodynamic drag;
+- added fluid mass;
+- impact absorption;
+- constraint compliance;
+- rope / cable elasticity or constraint response;
+- terminal dissipation.
 
 ---
 
-Restraint
+# 4. THE CAUSAL COMPLETENESS CONTRACT
+
+Every mechanism must explicitly identify all of the following.
+
+## 4.1 Energy reservoir
+
+Where did the usable energy physically exist **before movement began**?
+
+Permitted examples:
+- elevated mass;
+- elevated water;
+- compressed gas;
+- compressed spring;
+- spinning flywheel;
+- hydraulic accumulator;
+- buoyant displacement.
+
+If the reservoir cannot be identified, the mechanism has no legitimate power source.
+
+---
+
+## 4.2 Restraint
 
 What prevents the stored energy from releasing early?
 
 Examples:
+- dog;
+- pawl;
+- brake;
+- catch;
+- valve;
+- clutch;
+- lock pin;
+- hold-down.
 
-dog;
-
-pawl;
-
-brake;
-
-catch;
-
-valve;
-
-clutch;
-
-lock pin;
-
-hold-down.
-
-
-Stored energy without a restraint is not an armed machine.
-
-It is merely an already-moving system.
-
+Stored energy without restraint is not an armed machine.
 
 ---
 
-Trigger
+## 4.3 Trigger
 
 What physically changes the restraint?
 
 The previous stage may:
+- depress a plunger;
+- pull a cable;
+- rotate a dog;
+- shift a spool;
+- seat a follower;
+- release a pawl.
 
-depress a plunger;
+The trigger **permits** energy release.
 
-pull a cable;
-
-rotate a dog;
-
-shift a spool;
-
-seat a follower;
-
-release a pawl.
-
-
-The trigger permits energy release.
-
-It does not automatically provide that energy.
-
-This distinction is fundamental.
-
+It does not automatically **provide** that energy.
 
 ---
 
-Transmission
+## 4.4 Transmission
 
-There must be a continuous physical load path between source and carrier.
+A continuous physical load path must exist between source and carrier.
 
-Examples:
+Example:
 
-counterweight
-→ rope
-→ drum
-→ shaft
-→ gearbox
-→ screw
-→ carriage
+`counterweight → rope → drum → shaft → gearbox → screw → carriage`
 
 or:
 
-pressure vessel
-→ regulator
-→ valve
-→ cylinder chamber
-→ piston
-→ carriage
+`pressure vessel → regulator → valve → chamber → piston → carriage`
 
-Every force-producing link must have an authoritative owner.
-
+Every consequential force-producing link must have one authoritative owner.
 
 ---
 
-Geometric closure
+## 4.5 Geometric closure
 
-The machine's claimed travel must emerge from its geometry.
+The claimed travel must emerge from actual geometry.
 
 For a drum:
 
-x = r θ
+`x = r θ`
 
 For a screw:
 
-x = N P
+`x = N P`
 
 For gears:
 
-ω_out / ω_in = N_in / N_out
+`ω_out / ω_in = N_in / N_out`
 
 and approximately:
 
-τ_out / τ_in = N_out / N_in × efficiency
+`τ_out / τ_in = N_out / N_in × efficiency`
 
 For hydraulic displacement:
 
-A_in x_in = A_out x_out
+`A_in x_in = A_out x_out`
 
-For a pulley system:
+For pulley systems:
 
-rope-length conservation must produce the claimed inverse force/travel relationship.
+rope-length conservation must produce the claimed inverse force / travel relationship.
 
-The machine may not simultaneously multiply both force and distance without another source of energy.
-
+A mechanism may not multiply both force and distance without another energy source.
 
 ---
 
-Governed movement
+## 4.6 Governed movement
 
 Having enough energy to move is not enough.
 
-The mechanism must explain why it does not accelerate without bound.
+The mechanism must explain why it does **not accelerate without bound**.
 
-Possible devices include:
-
-centrifugal governor;
-
-friction band;
-
-hydraulic orifice;
-
-torque-limited clutch;
-
-eddy-current brake;
-
-pneumatic restriction;
-
-aerodynamic or hydrodynamic drag;
-
-cammed brake application;
-
-dashpot.
-
+Permitted control elements include:
+- centrifugal governor;
+- friction band;
+- hydraulic orifice;
+- torque-limited clutch;
+- eddy-current brake;
+- pneumatic restriction;
+- aerodynamic or hydrodynamic drag;
+- cammed brake application;
+- dashpot.
 
 The player may ride large machinery.
 
-The player may not be subjected to arbitrary solver violence because the design forgot the governor.
-
+The player may not be subjected to arbitrary solver violence because the design omitted a governor.
 
 ---
 
-Dissipation
+## 4.7 Dissipation
 
-Excess mechanical energy must go somewhere.
+Excess mechanical energy must have a physical destination.
 
 Valid destinations include:
+- friction heat;
+- hydraulic throttling;
+- gas exhaust;
+- fluid drag;
+- residual flywheel energy;
+- residual spring preload;
+- compliant deformation;
+- braking work;
+- residual counterweight potential.
 
-friction heat;
-
-hydraulic throttling;
-
-gas exhaust;
-
-fluid drag;
-
-residual flywheel energy;
-
-residual spring preload;
-
-compliant deformation;
-
-braking work;
-
-residual counterweight potential.
-
-
-Energy does not disappear because a mechanism reached a nice round elevation.
-
+Energy does not disappear because a mechanism reached a convenient elevation.
 
 ---
 
-Terminal capture
+## 4.8 Terminal capture
 
 Position alone is never a terminal condition.
 
-Every occupied moving carrier requires a physically credible sequence such as:
+Every occupied moving carrier requires a sequence equivalent to:
 
-approach → decelerate → align → capture → load transfer
+> **approach → decelerate → align → capture → load transfer**
 
-The capture must leave the player supported independently of a still-loaded drivetrain whenever the design requires it.
+The terminal assembly may use:
+- brake;
+- governor;
+- hydraulic cushion;
+- pneumatic cushion;
+- snubber;
+- compliant bumper;
+- pawl;
+- dog;
+- receiver;
+- docking fork;
+- over-centre latch.
 
+The final load must be physically supported.
 
 ---
 
-Handoff
+## 4.9 Handoff
 
 The terminal mechanism must physically create the next causal opportunity.
 
 Examples:
 
-capture dog seats
-→ dog linkage pulls next pawl
+`capture dog seats → linkage pulls next pawl`
 
-carriage finishes hydraulic cushion
-→ linkage opens sluice
+`carriage finishes cushion stroke → linkage opens sluice`
 
-indexing receiver locks
-→ receiver depresses next pilot
+`index receiver locks → receiver depresses next pilot`
 
-This is where the chain actually becomes continuous.
-
+The chain is continuous because one machine physically arrives and operates another.
 
 ---
 
-OBSERVATIONAL STATE MODEL
+# 5. OBSERVATIONAL STATE MODEL
 
-For reasoning, telemetry, and testing, mechanisms may be described as:
+Mechanisms may be described for telemetry and reasoning as:
 
-ARMED
+`ARMED`
 
-TRIGGERED
+`TRIGGERED`
 
-POWERING
+`POWERING`
 
-GOVERNED TRAVEL
+`GOVERNED TRAVEL`
 
-TERMINAL APPROACH
+`TERMINAL APPROACH`
 
-CAPTURED
+`CAPTURED`
 
-HANDOFF
+`HANDOFF`
 
-SPENT
+`SPENT`
 
 These are descriptions of physical reality.
 
-They are not permission for code such as:
+They are **not** permission for software state to create physical outcomes.
 
-if state == CAPTURED:
-    teleport_carrier_to_top()
+`CAPTURED` means a real catch or structural constraint is engaged.
 
-Instead:
+`POWERING` means measurable force or torque is crossing the declared drivetrain.
 
-CAPTURED means a real catch constraint is engaged.
+`SPENT` means the actual reservoir has lost usable energy, pressure, angular velocity, mass, or travel.
 
-POWERING means measurable force or torque is passing through the drivetrain.
-
-SPENT means the declared reservoir has actually lost usable energy or travel.
-
-The state label follows the machine. The machine never follows the label.
-
+> **The state label follows the machine. The machine never follows the label.**
 
 ---
 
-ENERGY LEDGER LAW
+# 6. ENERGY LEDGER LAW
 
 Every stage must maintain an explainable energy ledger.
 
 At minimum:
 
-E_source_initial
+`E_source_initial`
 
-E_source_remaining
+`E_source_remaining`
 
-ΔPE_carrier
+`ΔPE_carrier`
 
-ΔKE_linear
+`ΔKE_linear`
 
-ΔKE_rotational
+`ΔKE_rotational`
 
-E_dissipated_estimated
+`E_dissipated_estimated`
 
-A healthy stage approximately satisfies:
+A valid stage approximately satisfies:
 
-E_source_released >= ΔPE + ΔKE + modeled losses
+`E_source_released >= ΔPE + ΔKE + modeled losses`
 
 subject to numerical and modeling tolerance.
 
-A stage that creates substantially more mechanical energy than its source releases is broken.
+A stage creating substantially more mechanical energy than its source releases is broken.
 
-A stage that has large unaccounted disappearing energy is also suspect.
+A stage with large unexplained disappearing energy is also suspect.
 
-Engineering margin
+## Engineering margin
 
-The energy reservoir should ordinarily contain at least approximately 15% usable margin beyond expected required work and normal losses.
+The reservoir should ordinarily contain at least approximately **15% usable margin** beyond required work and expected losses.
 
-This is not a universal magic number.
+This is a design target, not a universal magic constant.
 
-High-dissipation systems may legitimately require considerably more.
+High-dissipation systems may legitimately require far more.
 
-What matters is that the margin is deliberate and its destination is known.
-
+The excess must still have a known destination.
 
 ---
 
-MASS AND INERTIA LEDGER
+# 7. MASS AND INERTIA LEDGER
 
 Mass never teleports between mechanisms.
 
-The only mass automatically travelling through the whole ascent is the player.
+The only mass automatically travelling through the ascent is the player.
 
-Every stage must separately state:
+Each stage must separately state:
+- player mass;
+- local carrier mass;
+- local ballast;
+- counterweight mass;
+- moving drivetrain mass;
+- materially significant rotational inertia.
 
-player mass;
+When the player leaves one carrier and enters another, the previous carrier does not remain in downstream calculations.
 
-local carrier mass;
+Likewise, large arms, wheels, drums, and flywheels require real inertia.
 
-local ballast;
-
-counterweights;
-
-moving drivetrain mass;
-
-rotational inertia that materially affects acceleration.
-
-
-When the player leaves a cage and enters another machine, the previous cage does not silently remain part of downstream mass calculations.
-
-Likewise, a flywheel's energy calculation is meaningless without its actual inertia.
-
-A giant arm's motion is not determined solely by the player hanging on its end.
-
-Its structural inertia matters.
-
+Payload mass alone is not enough.
 
 ---
 
-ONE-OWNER PHYSICS LAW
+# 8. ONE-OWNER PHYSICS LAW
 
-Every consequential quantity has exactly one authoritative owner.
+Every consequential physical quantity has exactly one authoritative owner.
 
-The native simulation owns quantities such as:
-
-rigid-body transforms;
-
-velocity;
-
-angular velocity;
-
-counterweight travel;
-
-cable state;
-
-guide travel;
-
-hinge angle;
-
-drum rotation;
-
-spring deflection;
-
-hydraulic pressure;
-
-pneumatic pressure;
-
-valve state when it controls force;
-
-water inventory;
-
-latch engagement;
-
-player support body;
-
-terminal capture.
-
+The native simulation owns:
+- rigid-body transforms;
+- linear velocity;
+- angular velocity;
+- counterweight travel;
+- cable / rope state;
+- guide travel;
+- hinge angle;
+- drum rotation;
+- spring deflection;
+- hydraulic pressure;
+- pneumatic pressure;
+- fluid inventory;
+- force-producing valve state;
+- latch engagement;
+- terminal capture;
+- player support body.
 
 Godot renders and presents those results.
 
-Godot does not independently animate a consequential object to where it is "supposed" to be.
+Godot does not independently animate a consequential mechanism to where it is “supposed” to be.
 
-If render state and simulation state disagree, simulation wins and presentation must be corrected.
-
+If presentation and simulation disagree, the presentation must be corrected.
 
 ---
 
-MOVING-SUPPORT LAW
+# 9. MOVING-SUPPORT LAW
 
 When the player stands on a moving rigid body, support velocity becomes part of player motion.
 
-This includes both:
+This includes:
+- linear support velocity;
+- angular motion around the support body's instantaneous rotation.
 
-linear velocity;
+Jumping from the support inherits appropriate momentum.
 
-angular motion around the support body's instantaneous rotation.
+This applies to:
+- elevator cages;
+- screw carriers;
+- pendulum platforms;
+- hydraulic lifts;
+- rotating arms;
+- gondolas;
+- pneumatic capsules;
+- buoyancy capsules.
 
-
-Jumping from the support inherits the appropriate momentum.
-
-The player must therefore remain physically coupled to:
-
-elevator cages;
-
-screw carriers;
-
-pendulum platforms;
-
-hydraulic lifts;
-
-rotating arms;
-
-gondolas;
-
-pneumatic capsules;
-
-buoyancy capsules.
-
-
-A mechanism that moves correctly while the player slides through it is not complete.
-
+A mechanism that moves correctly while the player slides off or fails to inherit motion is incomplete.
 
 ---
 
-FAILURE MUST ALSO BE CAUSAL
+# 10. FAILURE MUST ALSO BE CAUSAL
 
-A physical world needs legitimate failure.
+A causal world needs legitimate mechanical failure.
 
 Examples:
 
-insufficient counterweight
+insufficient counterweight  
 → carrier stalls
 
-insufficient spring preload
+insufficient spring preload  
 → anti-backdrive dog holds intermediate position
 
-low hydraulic pressure
+low hydraulic pressure  
 → ram stops short
 
-flywheel underspeed
-→ clutch cannot overcome static torque
+flywheel underspeed  
+→ clutch cannot overcome load torque
 
-low gas pressure
-→ emergency catch captures carrier lower in the shaft
+low pneumatic pressure  
+→ emergency catch captures lower
 
-governor overspeed
-→ brake closes
+governor overspeed  
+→ brake closes harder
 
-insufficient flood level
-→ buoyancy release remains locked
+insufficient flood level  
+→ buoyancy hold-down remains locked
 
-Failure may not silently invoke a backup success script.
-
+Failure may not silently invoke a scripted success state.
 
 ---
 
-REARMING LAW
+# 11. REARMING LAW
 
 The active ascent may be one-way, but every consumed reservoir requires a believable maintenance cycle.
 
 Examples:
+- service winches raise counterweights;
+- compressors recharge receivers;
+- pumps refill elevated water tanks;
+- motors rewind springs;
+- service drives spin flywheels;
+- pumps return dense process fluid;
+- ballast systems drain flooded shafts.
 
-service winch raises counterweights;
+These systems need not participate in the active ascent.
 
-compressor recharges receivers;
-
-pumps restore elevated water;
-
-maintenance motors rewind springs;
-
-auxiliary motors spin flywheels;
-
-pumps return process fluid;
-
-ballast system drains buoyancy shaft.
-
-
-These systems need not participate in the active player puzzle.
-
-Their conceptual existence prevents the tower from becoming a collection of supernatural one-use props.
-
+Their conceptual existence keeps the tower a machine rather than a set of supernatural one-shot props.
 
 ---
 
-MECHANISM PROOF STANDARD
+# 12. COLLISION TRUTH LAW
+
+Visible mechanical structure and collision structure must tell the same story.
+
+The player must not:
+- walk through structural beams;
+- stand on decorative geometry with no physical support;
+- be blocked by empty space;
+- pass through a massive terminal receiver;
+- fall through a moving carrier.
+
+Likewise, a moving mechanism must not be required to pass through static frame geometry to complete its designed travel.
+
+Every moving body requires a verified swept volume.
+
+For a body with path `P(t)` and collision shape `S`, the swept region:
+
+`⋃ S(P(t))`
+
+must remain clear of all static structure except deliberate contacts, guides, brakes, stops, and receivers.
+
+This requirement applies to the entire travel range, not only the start and end poses.
+
+---
+
+# 13. MECHANISM PROOF STANDARD
 
 Every completed mechanism requires both positive proof and destructive falsifiers.
 
-Positive proof
+## Positive proof
 
 Show:
+- source armed;
+- physical trigger occurs;
+- force enters transmission;
+- carrier moves;
+- governor bounds behavior;
+- terminal assembly captures;
+- player rides the actual moving support;
+- next mechanical linkage becomes available.
 
-source armed;
-
-trigger occurs physically;
-
-force enters transmission;
-
-carrier moves;
-
-governor bounds behavior;
-
-terminal system captures;
-
-player rides actual moving support;
-
-next mechanical linkage becomes available.
-
-
-Source falsifier
+## Source falsifier
 
 Remove, immobilize, discharge, or empty the declared source.
 
 Success must become impossible.
 
-Transmission falsifier
+## Transmission falsifier
 
 Disconnect one force-transmission link.
 
 Success must become impossible.
 
-Trigger falsifier
+## Trigger falsifier
 
 Place the player near the machine without allowing the previous terminal actuator to operate.
 
-The mechanism must remain restrained.
+The machine must remain restrained.
 
-Capture falsifier
+## Capture falsifier
 
 Remove or disable the terminal latch.
 
-The next mechanism must not become enabled anyway.
+The next mechanism must not activate anyway.
 
-Geometry proof
+## Geometry proof
 
 Record actual:
+- shaft turns;
+- cable travel;
+- piston displacement;
+- guide travel;
+- hinge angle;
+- cam travel;
+- pulley movement.
 
-turns;
+Claimed carrier travel must follow from those values.
 
-cable travel;
-
-piston displacement;
-
-guide travel;
-
-hinge angle;
-
-pulley motion;
-
-cam travel.
-
-
-Claimed carrier motion must follow.
-
-Robustness proof
+## Robustness proof
 
 Test a defined operating envelope around:
+- player payload;
+- source charge;
+- friction;
+- initial velocity;
+- timing;
+- contact conditions.
 
-player payload;
-
-source charge;
-
-friction;
-
-initial velocity;
-
-timing;
-
-contact conditions.
-
-
-The machine must tolerate ordinary variation instead of depending upon one numerically perfect trajectory.
-
+The mechanism must tolerate ordinary variation rather than depending on one numerically perfect trajectory.
 
 ---
 
-TELEMETRY CONTRACT
+# 14. TELEMETRY CONTRACT
 
-Every major mechanism should expose enough solver-derived telemetry to answer where the causal chain broke without turning CI into a slot machine.
+Every major mechanism should expose enough solver-derived telemetry to locate the broken causal seam without turning CI into exploratory guesswork.
 
 Useful fields include:
 
-source_energy
+`source_energy`
 
-source_position
+`source_position`
 
-source_velocity
+`source_velocity`
 
-transmitted_force
+`transmitted_force`
 
-transmitted_torque
+`transmitted_torque`
 
-rope_tension
+`rope_tension`
 
-drum_angle
+`drum_angle`
 
-carrier_travel
+`carrier_travel`
 
-carrier_velocity
+`carrier_velocity`
 
-carrier_peak_velocity
+`carrier_peak_velocity`
 
-governor_force
+`governor_force`
 
-brake_force
+`brake_force`
 
-latch_distance_to_seat
+`distance_to_terminal_seat`
 
-latch_engaged
+`catch_engaged`
 
-support_entity
+`support_entity`
 
-terminal_linkage_position
+`terminal_linkage_position`
 
-Hydraulic and pneumatic stages additionally expose:
+Hydraulic and pneumatic mechanisms additionally expose:
 
-reservoir_pressure
+`reservoir_pressure`
 
-chamber_pressure
+`chamber_pressure`
 
-valve_fraction
+`valve_fraction`
 
-flow_rate
+`flow_rate`
 
-fluid_volume
+`fluid_volume`
 
-Fluid-transfer stages expose conserved inventories.
+Fluid-transfer mechanisms expose conserved inventories.
 
 Telemetry reports physical facts.
 
-It does not drive them.
-
-
----
-
-ASCENT ARCHITECTURE
-
-Stage	Elevation	Primary reservoir	Primary transmission
-
-1	280 → 300 m	elevated counterweight	helical carrier
-2	300 → 320 m	pendulum gravitational energy	geared hoist
-3	320 → 340 m	torsional spring	capstan
-4	340 → 360 m	elevated drive block	hydraulic displacement
-5	360 → 380 m	elevated water	wheel → flywheel → swing arm
-6	380 → 400 m	compressed nitrogen	regulated piston
-7	400 → 420 m	elevator counterweight	rope / sheave system
-8	420 → 450 m	spinning flywheel	geared carrier wheel
-9	450 → 520 m	compressed gas	pneumatic launch + coast
-10	520 → 560 m	elevated dense fluid	escapement + screw
-11	560 → 600 m	pneumatic/hydraulic accumulator	captive ram → hub → pendulum
-12	600 → 640 m	8 tonne elevated weight	helical cam
-13	640 → 680 m	hydrostatic/buoyant state	displaced water
-
-
+It never drives them.
 
 ---
 
-STAGE 1
+# 15. CAUSAL DEBUGGING STANDARD
 
-GRAVITY-DRIVEN HELICAL CARRIER
+When a mechanism fails, do not begin by asking:
 
-280 → 300 m
+> Which assertion should be loosened?
+
+Ask:
+
+> At which physical seam did the declared causal chain stop being true?
+
+Inspect in this order:
+
+## SOURCE
+Did the reservoir actually contain the declared usable energy?
+
+## RESTRAINT / RELEASE
+Did the physical catch, pawl, valve, or clutch actually change state?
+
+## TRANSMISSION
+Did measurable force or torque cross the connection?
+
+## GEOMETRY
+Did the mechanism have enough real travel and clear swept volume?
+
+## FORCE BALANCE
+Was source force / torque sufficient against load and resistance?
+
+## GOVERNOR
+Did control hardware only oppose motion, or did it accidentally become the dominant restraint?
+
+## COLLISION
+Did unintended contact steal travel, jam the system, or create false support?
+
+## TERMINAL APPROACH
+Did the carrier actually enter the capture envelope at an acceptable velocity and orientation?
+
+## CAPTURE
+Could the latch physically seat at the carrier's real position, COM, velocity, and orientation?
+
+This diagnostic order is mandatory because it follows causality rather than symptoms.
+
+---
+
+# 16. VERIFICATION DISCIPLINE
+
+GitHub Actions or equivalent remote CI is a **verification environment**, not the preferred exploratory debugger.
+
+A verification candidate should be pushed only after source inspection and local reasoning have resolved the known causal chain as far as available evidence permits.
+
+For one unresolved work item, sequential verification candidates should share a stable lineage:
+
+`MECHANISM-NAME FIX · 01 · specific repair`
+
+`MECHANISM-NAME FIX · 02 · specific repair`
+
+`MECHANISM-NAME FIX · GREEN · full causal verification`
+
+The purpose is to make all repair attempts visibly part of one campaign.
+
+A red candidate does not redefine the mechanism, weaken its falsifiers, or justify unrelated work.
+
+---
+
+# 17. ASCENT ARCHITECTURE
+
+| Stage | Elevation | Primary reservoir | Primary transmission |
+|---|---:|---|---|
+| 1 | 280 → 300 m | elevated counterweight | helical carrier |
+| 2 | 300 → 320 m | pendulum gravitational energy | geared hoist |
+| 3 | 320 → 340 m | torsional spring | capstan |
+| 4 | 340 → 360 m | elevated drive block | hydraulic displacement |
+| 5 | 360 → 380 m | elevated water | waterwheel → flywheel → swing arm |
+| 6 | 380 → 400 m | compressed nitrogen | regulated piston |
+| 7 | 400 → 420 m | counterweight | rope / sheave elevator |
+| 8 | 420 → 450 m | spinning flywheel | geared carrier wheel |
+| 9 | 450 → 520 m | compressed gas | pneumatic launch + coast |
+| 10 | 520 → 560 m | elevated dense fluid | escapement + screw |
+| 11 | 560 → 600 m | accumulator / captive ram | ram → hub → pendulum |
+| 12 | 600 → 640 m | 8 tonne elevated weight | variable-pitch helical cam |
+| 13 | 640 → 680 m | hydrostatic / buoyant state | displaced water |
+
+---
+
+# 18. STAGE 1 — GRAVITY-DRIVEN HELICAL CARRIER
+## 280 m → 300 m
+
+### Functional role
 
 The first mechanism establishes the tower's fundamental grammar:
 
-something heavy falls, therefore the player rises.
+> **something heavy falls, therefore the player rises.**
 
-Occupied system
+### Occupied system
 
 Player:
 
-80 kg
+`80 kg`
 
-Carrier, rollers, restraint frame:
+Carrier, guide rollers, restraint frame:
 
-140 kg
+`140 kg`
 
-Total:
+Total lifted mass:
 
-m_load = 220 kg
+`m_load = 220 kg`
 
 Counterweight:
 
-340 kg
+`340 kg`
 
-Helical geometry
-
-Use a large helical drum or track with rolling followers rather than pretending a 2 m lead behaves like an ordinary threaded screw.
+### Helical geometry
 
 Axial advance:
 
-P = 2.00 m/revolution
+`P = 2.00 m/revolution`
 
 Required lift:
 
-20 m
+`20 m`
 
 Required shaft rotation:
 
-10 revolutions
+`10 revolutions`
 
-Drive spool:
+Drive spool radius:
 
-R = 0.300 m
+`R = 0.300 m`
 
 Counterweight travel:
 
-x = 10 × 2π × 0.300
+`x = 10 × 2π × 0.300`
 
-x = 18.85 m
+`x = 18.85 m`
 
 Use nominal 1:1 rotational drive between spool and helical carrier shaft.
 
-Energy
+### Energy
 
 Carrier:
 
-E_load = 220 × 9.81 × 20
-
-= 43.16 kJ
+`E_load = 220 × 9.81 × 20 = 43.16 kJ`
 
 Counterweight:
 
-E_source = 340 × 9.81 × 18.85
+`E_source = 340 × 9.81 × 18.85 = 62.87 kJ`
 
-= 62.87 kJ
+At approximately 75% effective efficiency:
 
-At 75% effective transmission efficiency:
+`E_usable ≈ 47.15 kJ`
 
-E_usable ≈ 47.15 kJ
+The stage has modest but positive margin.
 
-There is modest but positive margin.
-
-Torque
+### Torque
 
 Ideal carrier torque:
 
-τ = m g P / 2π
-
-≈ 687 Nm
+`τ = m g P / 2π ≈ 687 Nm`
 
 Approximate required input at 75% efficiency:
 
-≈ 916 Nm
+`≈ 916 Nm`
 
 Counterweight spool torque:
 
-340 × 9.81 × 0.300
-
-≈ 1001 Nm
+`340 × 9.81 × 0.300 ≈ 1001 Nm`
 
 The drivetrain remains torque-positive.
 
-Trigger
+### Trigger
 
-Player mass deflects the carrier suspension approximately 20-30 mm.
+Player mass deflects the carrier suspension approximately 20–30 mm.
 
-That movement withdraws the counterweight pawl.
+That physical movement withdraws the counterweight pawl.
 
-No software weight threshold supplies motion.
+### Governor
 
-Governor
-
-Shaft governor applies a friction band.
+A shaft governor applies a friction band.
 
 The counterweight remains the only positive power source.
 
-The governor may oppose shaft motion.
+The governor may oppose motion.
 
-It may not accelerate it.
+It may not accelerate the carrier.
 
-Terminal assembly
+### Terminal
 
-Final travel performs, in order:
-
-carrier enters guide receiver
-→ brake application increases
-→ drive clutch disengages
-→ structural dog seats
-→ load transfers into tower
+Carrier enters upper receiver  
+→ brake application increases  
+→ drive clutch disengages  
+→ structural dog seats  
+→ load transfers into tower  
 → dog travel operates Stage 2 sear.
 
 The counterweight receives its own compliant lower stop after drivetrain separation.
 
-
 ---
 
-STAGE 2
+# 19. STAGE 2 — GRAVITY PENDULUM HOIST
+## 300 m → 320 m
 
-GRAVITY PENDULUM HOIST
-
-300 → 320 m
-
-Source
+### Source
 
 Pendulum mass:
 
-1500 kg
+`1500 kg`
 
 Length:
 
-15 m
+`15 m`
 
 Powered sweep:
 
-90° → 15° from vertical
+`90° → 15° from vertical`
 
 Vertical bob descent:
 
-Δh = 15(cos15° - cos90°)
-
-≈ 14.489 m
+`Δh = 15(cos15° - cos90°) ≈ 14.489 m`
 
 Energy:
 
-≈ 213.2 kJ
+`≈ 213.2 kJ`
 
-Occupied load
+### Occupied load
 
-200 kg
+`200 kg`
 
 Lift work:
 
-200 × 9.81 × 20
-
-= 39.24 kJ
+`200 × 9.81 × 20 = 39.24 kJ`
 
 Energy supply is abundant.
 
 End-of-sweep torque is the controlling requirement.
 
-Drum closure
+### Drum closure
 
 Drum radius:
 
-0.80 m
+`0.80 m`
 
 Required drum turns:
 
-20 / (2π × 0.80)
-
-≈ 3.979 rev
+`20 / (2π × 0.80) ≈ 3.979 rev`
 
 Pendulum rotation:
 
-75° = 0.2083 rev
+`75° = 0.2083 rev`
 
-Speed-increasing ratio:
+Required speed increase:
 
-3.979 / 0.2083
+`3.979 / 0.2083 ≈ 19.10 : 1`
 
-≈ 19.10 : 1
-
-End torque
+### End torque
 
 Pendulum torque at 15°:
 
-1500 × 9.81 × 15 × sin15°
+`1500 × 9.81 × 15 × sin15° ≈ 57.1 kNm`
 
-≈ 57.1 kNm
+After approximately 19.1:1 speed increase and 80% efficiency, available output torque remains sufficient for the approximately:
 
-After a 19.1:1 speed increase and 80% efficiency, available output torque remains sufficient for the approximately:
-
-1.57 kNm
+`1.57 kNm`
 
 required at the hoist drum.
 
-Governing
+### Governing
 
-A rotary hydraulic damper bounds pendulum speed.
+A rotary hydraulic damper limits pendulum speed.
 
 A one-way sprag prevents carriage rollback.
 
 The pendulum never needs to strike bottom dead centre.
 
-Terminal
+### Terminal
 
-Tapered receiver
-→ hydraulic snubber
-→ structural pawl
-→ cable unload
+Tapered receiver  
+→ hydraulic snubber  
+→ structural pawl  
+→ cable unload  
 → Stage 3 spring-dog withdrawal.
-
 
 ---
 
-STAGE 3
+# 20. STAGE 3 — TORSIONAL MAINSPRING CAPSTAN
+## 320 m → 340 m
 
-TORSIONAL MAINSPRING CAPSTAN
+### Occupied mass
 
-320 → 340 m
-
-Occupied mass
-
-300 kg
+`300 kg`
 
 Lift requirement:
 
-58.86 kJ
+`58.86 kJ`
 
-Spring
+### Spring
 
-k = 750 Nm/rad
+`k = 750 Nm/rad`
 
 Initial deflection:
 
-20.566 rad
+`20.566 rad`
 
 Final retained deflection:
 
-8 rad
+`8 rad`
 
 Released angle:
 
 approximately:
 
-4π rad = 2 revolutions
+`4π rad = 2 revolutions`
 
 Released energy:
 
-≈ 134.61 kJ
+`≈ 134.6 kJ`
 
-At 70% usable efficiency:
+At approximately 70% usable efficiency:
 
-≈ 94.2 kJ
+`≈ 94.2 kJ`
 
 The spring retains substantial preload at the terminal state.
 
 It does not unwind to zero torque.
 
-Transmission
+### Transmission
 
 Spring shaft to capstan:
 
-2:1 speed increase
+`2:1 speed increase`
 
-Two spring revolutions therefore create four drum revolutions.
+Two spring revolutions therefore produce four drum revolutions.
 
 Drum radius:
 
-20 / 8π
+`20 / 8π ≈ 0.7958 m`
 
-≈ 0.7958 m
-
-Residual torque
+### Residual torque
 
 At terminal preload:
 
-τ_spring = 750 × 8
+`τ_spring = 750 × 8 = 6000 Nm`
 
-= 6000 Nm
+After the 2:1 speed increase and approximately 82% gear efficiency:
 
-After 2:1 speed increase and approximately 82% efficiency:
-
-τ_output ≈ 2460 Nm
+`τ_output ≈ 2460 Nm`
 
 Static drum requirement:
 
-≈ 2342 Nm
+`≈ 2342 Nm`
 
 Positive margin remains.
 
-Control
+### Control
 
 A centrifugal governor operates the brake.
 
@@ -1203,454 +1095,400 @@ A ratchet prevents reverse travel.
 
 The final approximately 3 m progressively increase brake torque.
 
-Terminal
+### Terminal
 
-Brake ramp
-→ drum clutch disengagement
-→ residual spring captured behind ratchet
-→ carriage receiver seats
+Brake ramp  
+→ drum clutch disengagement  
+→ residual spring captured behind ratchet  
+→ carriage receiver seats  
 → receiver withdraws Stage 4 block restraint.
-
 
 ---
 
-STAGE 4
+# 21. STAGE 4 — GRAVITY-HYDRAULIC DISPLACEMENT LIFT
+## 340 m → 360 m
 
-GRAVITY-HYDRAULIC DISPLACEMENT LIFT
-
-340 → 360 m
-
-Source
+### Source
 
 Drive block:
 
-5000 kg
+`5000 kg`
 
 Drop:
 
-4 m
+`4 m`
 
 Potential energy:
 
-196.2 kJ
+`196.2 kJ`
 
 Input piston area:
 
-4.0 m²
+`4.0 m²`
 
 Output piston area:
 
-0.8 m²
+`0.8 m²`
 
-Volume closure
+### Volume closure
 
 Input displacement:
 
-4 × 4 = 16 m³
+`4 × 4 = 16 m³`
 
 Output stroke:
 
-16 / 0.8
+`16 / 0.8 = 20 m`
 
-= 20 m
-
-This is exact displacement closure.
-
-Pressure
+### Pressure
 
 Drive-block gauge pressure:
 
-49,050 / 4
-
-≈ 12.26 kPa
+`49,050 / 4 ≈ 12.26 kPa`
 
 Output force:
 
-12.26 kPa × 0.8 m²
-
-≈ 9.81 kN
+`12.26 kPa × 0.8 m² ≈ 9.81 kN`
 
 Occupied carriage:
 
-400 kg
+`400 kg`
 
 Weight:
 
-3.924 kN
+`3.924 kN`
 
 There is substantial positive force margin.
 
-Flow governor
+### Flow governor
 
 Unrestricted acceleration is unacceptable.
 
 Meter-out flow is limited to approximately:
 
-0.8 m³/s
+`0.8 m³/s`
 
 Output velocity:
 
-1.0 m/s
+`1.0 m/s`
 
 Input block velocity:
 
-0.20 m/s
+`0.20 m/s`
 
 Nominal stroke duration:
 
-20 s
+`20 s`
 
 Excess hydraulic power is dissipated primarily across the restriction.
 
-Hydraulic implementation
+### Hydraulic implementation
 
-The authoritative model must contain:
-
-actual chamber volume;
-
-piston displacement;
-
-pressure differential;
-
-flow restriction;
-
-fluid inventory;
-
-leakage if significant;
-
-end cushioning.
-
+Authoritative state must include:
+- chamber volume;
+- piston displacement;
+- pressure differential;
+- flow restriction;
+- fluid inventory;
+- leakage if significant;
+- end cushioning.
 
 No direct player-force assignment is permitted.
 
-Terminal
+### Terminal
 
-Final metre enters hydraulic cushion
-→ upper mechanical dog seats
-→ carriage load transfers structurally
-→ only then may Stage 5 sluice linkage complete its stroke.
-
+Final metre enters hydraulic cushion  
+→ upper dog seats  
+→ carriage load transfers structurally  
+→ Stage 5 sluice linkage completes its stroke.
 
 ---
 
-STAGE 5
+# 22. STAGE 5 — WATERWHEEL / FLYWHEEL / CONTROLLED SWING ARM
+## 360 m → 380 m
 
-WATERWHEEL - FLYWHEEL - CONTROLLED SWING ARM
-
-360 → 380 m
-
-This stage is where spectacle begins to become dangerous unless the drivetrain is explicit.
-
-Water reservoir
+### Water reservoir
 
 Water mass:
 
-3000 kg
+`3000 kg`
 
 Effective head:
 
-12 m
+`12 m`
 
 Available energy:
 
-353.16 kJ
+`353.16 kJ`
 
-Flywheel
+### Flywheel
 
-I = 25,000 kg·m²
+`I = 25,000 kg·m²`
 
 Target:
 
-ω = 3.5 rad/s
+`ω = 3.5 rad/s`
 
 Stored energy:
 
-153.1 kJ
+`153.1 kJ`
 
-Required water-to-flywheel conversion at 50% efficiency:
+At approximately 50% water-to-flywheel conversion:
 
-approximately:
+required water energy is approximately:
 
-306 kJ
+`306 kJ`
 
-This fits beneath the available water head.
+which fits under the available hydraulic head.
 
-Arm geometry
+### Arm geometry
 
 Passenger radius:
 
-25 m
+`25 m`
 
 Counterweight radius:
 
-5 m
+`5 m`
 
 Passenger carrier:
 
-250 kg
+`250 kg`
 
 Counterweight:
 
-900 kg
+`900 kg`
 
-Define the starting arm as horizontal.
+Starting arm:
+
+horizontal
 
 Target angle:
 
-53.13°
+`53.13°`
 
 Passenger rise:
 
-25 sin53.13° = 20 m
+`25 sin53.13° = 20 m`
 
 Counterweight fall:
 
-5 sin53.13° = 4 m
+`5 sin53.13° = 4 m`
 
 Passenger PE increase:
 
-49.05 kJ
+`49.05 kJ`
 
-Counterweight release:
+Counterweight PE release:
 
-35.32 kJ
+`35.32 kJ`
 
-Net static requirement:
+Net static gravitational requirement:
 
-13.73 kJ
+`13.73 kJ`
 
-Static torque envelope
+### Static torque envelope
 
 Maximum gravity opposition occurs at the horizontal start:
 
-(250×25 - 900×5)g
+`(250×25 - 900×5)g ≈ 17.17 kNm`
 
-≈ 17.17 kNm
+A provisional approximately `20:1` reduction at 80% efficiency would require about:
 
-and decreases as the arm rises.
-
-A provisional approximately 20:1 reduction between flywheel and arm would require roughly:
-
-17.17 / (20 × 0.80)
-
-≈ 1.07 kNm
+`17.17 / (20 × 0.80) ≈ 1.07 kNm`
 
 at the flywheel merely to overcome initial static gravity.
 
-Actual clutch torque must additionally accelerate the real authored arm inertia.
+Actual clutch torque must also accelerate the authored arm inertia.
 
-Therefore the final clutch rating is SOLVER-FIT, not fabricated from payload mass alone.
+Therefore final clutch rating is `SOLVER-FIT`.
 
-Required correction to the old design
+### Transmission
 
-The previous document established energy but did not fully close the flywheel-to-arm torque path.
+The force path is:
 
-This specification requires:
+water fall  
+→ waterwheel  
+→ one-way clutch  
+→ flywheel  
+→ torque-limited clutch  
+→ reduction gearbox  
+→ arm shaft  
+→ occupied swing arm.
 
-flywheel
-→ torque-limited clutch
-→ reduction gearbox
-→ arm shaft
-→ balanced arm rigid body.
+### Terminal
 
-Terminal
-
-Over-centre receiver
-→ hydraulic angular snubber
-→ arm dog seats
-→ clutch opens
-→ structural receiver owns the load
+Over-centre receiver  
+→ hydraulic angular snubber  
+→ arm dog seats  
+→ clutch opens  
+→ structural receiver owns the load  
 → dog linkage shifts Stage 6 pilot.
-
 
 ---
 
-STAGE 6
+# 23. STAGE 6 — TWO-PHASE PNEUMATIC ASCENDER
+## 380 m → 400 m
 
-TWO-PHASE PNEUMATIC ASCENDER
-
-380 → 400 m
-
-Reservoir
+### Reservoir
 
 High-pressure nitrogen receiver:
 
 approximately:
 
-10 MPa
+`10 MPa`
 
-0.5 m³
+`0.5 m³`
 
-The high-pressure vessel feeds the low-pressure actuator only through a regulator.
+The reservoir feeds the actuator only through a regulator.
 
-The actuator does not see vessel pressure directly.
-
-Cylinder
+### Cylinder
 
 Area:
 
-0.30 m²
+`0.30 m²`
 
 Stroke:
 
-20 m
+`20 m`
 
 Occupied mass:
 
-180 kg
+`180 kg`
 
-Powered phase
+### Powered phase
 
 First 12 m:
 
-ΔP ≈ 8.0 kPa
+`ΔP ≈ 8.0 kPa`
 
 Force:
 
-2400 N
+`2400 N`
 
 Weight:
 
-1766 N
+`1766 N`
 
 Net:
 
-634 N
+`634 N`
 
 Acceleration:
 
-≈ 3.52 m/s²
+`≈ 3.52 m/s²`
 
 Velocity after 12 m:
 
-≈ 9.19 m/s
+`≈ 9.19 m/s`
 
-Braking phase
+### Braking phase
 
 Final 8 m:
 
-ΔP ≈ 2.715 kPa
+`ΔP ≈ 2.715 kPa`
 
 Upward force:
 
-≈ 815 N
+`≈ 815 N`
 
-Gravity now exceeds pneumatic thrust.
+Gravity exceeds pneumatic thrust.
 
-Net downward acceleration while still travelling upward:
+Approximate downward net acceleration while still travelling upward:
 
-≈ 5.29 m/s²
+`≈ 5.29 m/s²`
 
-The ideal trajectory approaches zero velocity near the top.
+The ideal trajectory approaches zero speed near the top.
 
-But exact zero is not required.
+Exact zero is not required.
 
-Robust terminal envelope
+### Terminal redundancy
 
 Final approximately 1 m includes:
-
-trapped-gas cushioning;
-
-progressive elastomer stop;
-
-capture dog.
-
+- trapped-gas cushioning;
+- progressive elastomer stop;
+- capture dog.
 
 It must tolerate variation in:
+- gas temperature;
+- seal friction;
+- payload;
+- regulator response.
 
-gas temperature;
+### Pneumatic model
 
-seal friction;
+Track:
+- reservoir gas mass;
+- reservoir pressure;
+- actuator chamber volume;
+- chamber pressure;
+- mass flow;
+- valve state.
 
-payload;
-
-regulator response.
-
-
-Pneumatic model
-
-Track real:
-
-reservoir mass
-
-reservoir pressure
-
-actuator chamber volume
-
-actuator pressure
-
-mass flow
-
-valve state
-
-Pressure evolves from gas state.
+Pressure evolves from actual gas state.
 
 No valve directly assigns acceleration.
 
-Handoff
+### Handoff
 
-Upper dog
-→ 120 mm linkage pull
+Upper dog  
+→ approximately 120 mm linkage pull  
 → Stage 7 counterweight restraint withdraws.
-
 
 ---
 
-STAGE 7
+# 24. STAGE 7 — GOVERNED COUNTERWEIGHT ELEVATOR
+## 400 m → 420 m
 
-GOVERNED COUNTERWEIGHT ELEVATOR
-
-400 → 420 m
-
-Masses
+### Masses
 
 Occupied cage:
 
-400 kg
+`400 kg`
 
 Counterweight:
 
-445 kg
+`445 kg`
 
 Equivalent rotating inertia:
 
-approximately 40 kg translational equivalent.
+approximately `40 kg` translational equivalent
 
 Effective accelerated mass:
 
-885 kg
+`885 kg`
 
 Driving imbalance:
 
-45 kg
+`45 kg`
 
 Force:
 
-441 N
+`441 N`
 
 Initial acceleration:
 
-≈ 0.499 m/s²
+`≈ 0.499 m/s²`
 
-Governor
+### Governor
 
 Target cage speed:
 
-≈ 2.5 m/s
+`≈ 2.5 m/s`
 
 Without governing, the cage would reach approximately:
 
-4.47 m/s
+`4.47 m/s`
 
 over 20 m.
 
-Distance needed to reach 2.5 m/s under initial ideal acceleration:
+Distance required to reach 2.5 m/s under ideal initial acceleration:
 
-≈ 6.26 m
+`≈ 6.26 m`
 
 The remaining travel is governor-limited.
 
-Upper transition
+### Upper transition
 
 Final approximately 4 m use a large cam rail.
 
@@ -1660,437 +1498,375 @@ Guide rollers carry side load.
 
 Rope remains primarily tensile.
 
-Terminal
+### Terminal
 
-Cam transition
-→ speed reduction
-→ upper pawl capture
-→ hoist unloading
-→ cradle completes Stage 8 clutch-pawl movement.
-
+Cam transition  
+→ speed reduction  
+→ upper pawl capture  
+→ hoist unloading  
+→ cradle completes Stage 8 clutch-pawl motion.
 
 ---
 
-STAGE 8
+# 25. STAGE 8 — STORED-INERTIA GONDOLA WHEEL
+## 420 m → 450 m
 
-STORED-INERTIA GONDOLA WHEEL
+### Flywheel
 
-420 → 450 m
+`I = 30,000 kg·m²`
 
-Flywheel
-
-I = 30,000 kg·m²
-
-ω_initial = 4 rad/s
+`ω_initial = 4 rad/s`
 
 Stored energy:
 
-240 kJ
+`240 kJ`
 
-Passenger carrier
+### Passenger carrier
 
-350 kg
+`350 kg`
 
 Vertical gain:
 
-30 m
+`30 m`
 
 Required gravitational work:
 
-≈ 103 kJ
+`≈ 103 kJ`
 
-Geometry
+### Geometry
 
 Carrier-wheel radius:
 
-15 m
+`15 m`
 
 Half revolution:
 
-180°
+`180°`
 
 Vertical rise:
 
-30 m
+`30 m`
 
-Transmission
+### Transmission
 
 Provisional reduction:
 
-20:1
+`20:1`
 
-Carrier-wheel maximum gravitational torque near the side position:
+Carrier-wheel maximum gravitational torque near side position:
 
-350 × 9.81 × 15
+`350 × 9.81 × 15 ≈ 51.5 kNm`
 
-≈ 51.5 kNm
+Assuming approximately 85% gearing efficiency, flywheel-side clutch torque must be at least roughly:
 
-Assuming approximately 85% gearing efficiency, the flywheel-side clutch must transmit at least roughly:
-
-51.5 / (20 × 0.85)
-
-≈ 3.03 kNm
+`51.5 / (20 × 0.85) ≈ 3.03 kNm`
 
 plus rotational acceleration demand.
 
-A clutch rating around this order is a design starting point, not a hidden motor setting.
-
-Energy extraction
+### Energy extraction
 
 The flywheel must visibly slow as the gondola rises.
 
-That is important.
-
 The player should be able to see energy leaving the reservoir.
 
-Terminal
+### Terminal
 
-Clutch unloads
-→ caliper brake engages
-→ wheel speed falls
-→ index dog enters structural receiver
-→ basket remains gravity-levelled
+Clutch unloads  
+→ caliper brake engages  
+→ wheel speed falls  
+→ index dog enters receiver  
+→ basket remains gravity-levelled  
 → transfer gate opens mechanically.
-
 
 ---
 
-STAGE 9
-
-REGULATED PNEUMATIC LAUNCH TUBE
-
-450 → 520 m
+# 26. STAGE 9 — REGULATED PNEUMATIC LAUNCH TUBE
+## 450 m → 520 m
 
 This is the longest and fastest occupied stage in this band.
 
 It therefore receives one of the strictest proof burdens.
 
-Capsule
+### Capsule
 
-480 kg
+`480 kg`
 
 Cylinder area:
 
-1.50 m²
+`1.50 m²`
 
 Total rise:
 
-70 m
+`70 m`
 
 Nominal powered region:
 
-approximately 55 m
+approximately `55 m`
 
 Nominal coast region:
 
-approximately 15 m
+approximately `15 m`
 
-Ideal coast requirement
+### Ideal coast requirement
 
 For 15 m under gravity alone:
 
-v_cut = sqrt(2gh)
-
-≈ 17.16 m/s
+`v_cut = sqrt(2gh) ≈ 17.16 m/s`
 
 Ideal powered net acceleration:
 
-≈ 2.675 m/s²
+`≈ 2.675 m/s²`
 
 Ideal piston differential pressure:
 
-≈ 4.00 kPa
+`≈ 4.00 kPa`
 
 Ideal actuator work:
 
-≈ 329.6 kJ
+`≈ 329.6 kJ`
 
-Important correction
+### Energy-margin correction
 
-That 329.6 kJ is essentially the exact ideal mechanical requirement.
+`329.6 kJ` is essentially the exact ideal mechanical requirement.
 
-It is not an acceptable source-energy budget by itself.
+It is **not** an acceptable reservoir budget by itself.
 
 Real operation requires margin for:
-
-seal friction;
-
-aerodynamic drag;
-
-regulator loss;
-
-gas cooling;
-
-guide friction;
-
-terminal correction.
-
+- seal friction;
+- aerodynamic drag;
+- regulator loss;
+- gas cooling;
+- guide friction;
+- terminal correction.
 
 Therefore:
 
-4.00 kPa is an analytical reference, not a frozen operating pressure.
+> **4.00 kPa is an analytical reference, not a frozen operating pressure.**
 
-The reservoir must contain materially more available energy than the ideal trajectory requires.
+The reservoir must contain materially more usable energy than the ideal trajectory consumes.
 
-The regulator and cut-off geometry then determine how much of that energy actually reaches the capsule.
+### Reservoir
 
-Reservoir
+A several-cubic-metre receiver around approximately `2.5 MPa gauge` is a plausible order-of-magnitude source.
 
-A several-cubic-metre receiver around approximately 2.5 MPa gauge is a plausible order-of-magnitude source.
+Final sizing must be derived from:
+- required downstream gas mass;
+- permissible pressure droop;
+- polytropic expansion;
+- regulator capacity.
 
-Actual sizing must be derived from:
-
-required downstream gas mass;
-
-permissible pressure droop;
-
-polytropic expansion;
-
-regulator capacity.
-
-
-Cut-off
+### Cut-off
 
 A real piston-position mechanism closes the main supply valve.
 
 After cut-off, the capsule coasts.
 
-No if y >= 505 propulsion change is authoritative.
+No height-threshold propulsion switch is authoritative.
 
-Upper correction zone
+### Upper correction zone
 
-Because drag and pneumatic conditions vary, the stage does not depend on reaching exactly 520.000 m at exactly 0.000 m/s.
+The stage does not depend on reaching exactly 520.000 m at exactly 0.000 m/s.
 
 The upper approximately 2 m contain:
+- air dashpot;
+- compliant docking carriage;
+- capture dogs.
 
-air dashpot;
+Overspeed is absorbed.
 
-compliant docking carriage;
+Slight underspeed is caught lower and completed through finite mechanical travel.
 
-capture dogs.
+### High-speed collision law
 
+At approximately 17 m/s, the capsule travels roughly:
 
-Slight overspeed is absorbed.
+`0.19 m`
 
-Slight underspeed is caught lower and completed by the docking carriage's finite travel.
+per 90 Hz physics tick.
 
-High-speed collision law
-
-The capsule uses robust continuous collision handling.
-
-At approximately 17 m/s, it traverses about:
-
-0.19 m
-
-during one 90 Hz physics tick.
-
-Terminal geometry must therefore have meaningful thickness.
-
-A thin overlap sensor is not a safety system.
-
+Terminal geometry must therefore have meaningful thickness and appropriate continuous collision handling.
 
 ---
 
-STAGE 10
+# 27. STAGE 10 — SEALED DENSE-FLUID ESCAPEMENT SCREW
+## 520 m → 560 m
 
-SEALED DENSE-FLUID ESCAPEMENT SCREW
-
-520 → 560 m
-
-Working fluid
+### Working fluid
 
 Mass:
 
-8000 kg
+`8000 kg`
 
 Effective drop:
 
-15 m
+`15 m`
 
 Available gravitational energy:
 
-≈ 1.177 MJ
+`≈ 1.177 MJ`
 
-The fluid remains inside a closed industrial circuit.
+The fluid remains in a closed industrial circuit.
 
-Mass-flow closure
+### Mass-flow closure
 
 Target stage duration:
 
-approximately 66.7 s
+approximately `66.7 s`
 
 If the full 8000 kg inventory participates once per ascent, average mass flow is approximately:
 
-120 kg/s
+`120 kg/s`
 
-This ties the visible process to a finite flow rate rather than vague "harmonic" behavior.
+This ties visible operation to finite flow rate.
 
-Escapement
+### Escapement
 
 Cycle frequency:
 
-≈ 1.2 Hz
+`≈ 1.2 Hz`
 
 Reduction:
 
-10:1
+`10:1`
 
 Output:
 
-0.12 rev/s
+`0.12 rev/s`
 
-7.2 rpm
+`7.2 rpm`
 
-Lift screw
+### Lift screw
 
 Pitch:
 
-5 m/rev
+`5 m/rev`
 
 Eight revolutions:
 
-40 m
+`40 m`
 
 Nominal carriage speed:
 
-0.60 m/s
+`0.60 m/s`
 
-Payload
+### Payload
 
-620 kg
+`620 kg`
 
 Required lift energy:
 
-≈ 243.3 kJ
+`≈ 243.3 kJ`
 
-The source contains considerable margin for:
+The source contains substantial margin for:
+- chamber impact;
+- gearing;
+- bearings;
+- governor loss;
+- turbulence.
 
-chamber impact;
+### Terminal
 
-gearing;
-
-bearings;
-
-governor loss;
-
-fluid turbulence.
-
-
-Terminal
-
-Coarse-thread terminal collar
-→ drive separation
-→ hold pawl
-→ follower unload
+Coarse-thread terminal collar  
+→ drive separation  
+→ hold pawl  
+→ follower unload  
 → Stage 11 pilot shift.
-
 
 ---
 
-STAGE 11
+# 28. STAGE 11 — CAPTIVE-RAM MOMENTUM PENDULUM
+## 560 m → 600 m
 
-CAPTIVE-RAM MOMENTUM PENDULUM
+No high-speed projectile may directly strike the occupied carrier.
 
-560 → 600 m
-
-No high-speed projectile ever strikes the occupied carrier.
-
-That architecture is prohibited.
-
-Captive ram
+### Captive ram
 
 Mass:
 
-600 kg
+`600 kg`
 
 Target velocity:
 
-46 m/s
+`46 m/s`
 
 Kinetic energy:
 
-634.8 kJ
+`634.8 kJ`
 
 Acceleration stroke:
 
-approximately 6 m
+approximately `6 m`
 
 Average acceleration:
 
 approximately:
 
-176 m/s²
+`176 m/s²`
 
 Average required drive force:
 
 approximately:
 
-106 kN
+`106 kN`
 
-This violence occurs entirely inside restrained machinery.
+This high acceleration occurs entirely inside restrained machinery.
 
-Energy receiver
+### Energy receiver
 
 The ram enters a long rack capture.
 
-The rack converts linear ram momentum into:
-
-hub flywheel energy;
-
-hydraulic accumulator pressure;
-
-controlled braking loss.
-
+The rack converts linear ram energy into:
+- hub flywheel energy;
+- hydraulic accumulator pressure;
+- controlled braking loss.
 
 The ram remains captive.
 
-Occupied pendulum
+### Occupied pendulum
 
 Mass:
 
-800 kg
+`800 kg`
 
 Arm length:
 
-50 m
+`50 m`
 
 Required rise:
 
-40 m
+`40 m`
 
 Required angular displacement:
 
-θ = acos(0.2)
-
-≈ 78.46°
+`θ = acos(0.2) ≈ 78.46°`
 
 Potential-energy increase:
 
-313.92 kJ
+`313.92 kJ`
 
-Transfer efficiency target
+### Transfer efficiency target
 
-At 60% ram-to-controlled-drive efficiency:
+At approximately 60% ram-to-controlled-drive efficiency:
 
-≈ 381 kJ
+`≈ 381 kJ`
 
-remains available.
+remains usable.
 
-This leaves approximately:
+This leaves roughly:
 
-67 kJ
+`67 kJ`
 
 beyond static gravitational work.
 
-Torque requirement
+### Torque requirement
 
-Pendulum gravitational torque is:
+Pendulum gravitational torque:
 
-τ_g = m g L sinθ
+`τ_g = m g L sinθ`
 
 Near the terminal angle this approaches roughly:
 
-385 kNm
+`385 kNm`
 
 Therefore energy arithmetic alone is insufficient.
 
@@ -2098,20 +1874,14 @@ The hub transmission must produce this torque.
 
 A high-ratio reduction or hydraulic rotary stage is mandatory.
 
-Its final ratio must be chosen from actual:
+Its final ratio must be chosen from:
+- real arm inertia;
+- target angular velocity;
+- hub flywheel speed;
+- clutch torque;
+- efficiency.
 
-arm inertia;
-
-target angular velocity;
-
-hub flywheel speed;
-
-clutch torque;
-
-efficiency.
-
-
-Governing
+### Governing
 
 The hub engages through finite torque.
 
@@ -2119,242 +1889,201 @@ The occupied arm accelerates over seconds.
 
 It is never struck.
 
-Terminal
+### Terminal
 
-Curved docking receivers progressively:
+Curved docking receivers:
+- remove drive torque;
+- increase hydraulic braking;
+- align the carriage;
+- capture structural load.
 
-remove drive torque;
+Capture then:
+- seats Stage 12 cam follower;
+- releases Stage 12 weight brake.
 
-increase hydraulic braking;
-
-align the carriage;
-
-capture structural load.
-
-
-Capture motion then:
-
-seats Stage 12 cam follower;
-
-releases Stage 12 weight brake.
-
-
-Both mechanical conditions must exist before Stage 12 can move.
-
+Both physical conditions must exist before Stage 12 can move.
 
 ---
 
-STAGE 12
+# 29. STAGE 12 — GRAVITY-DRIVEN VARIABLE-PITCH HELICAL CAM
+## 600 m → 640 m
 
-GRAVITY-DRIVEN VARIABLE-PITCH HELICAL CAM
+### Occupied carriage
 
-600 → 640 m
-
-Occupied carriage
-
-1200 kg
+`1200 kg`
 
 Rise:
 
-40 m
+`40 m`
 
 Potential-energy requirement:
 
-470.9 kJ
+`470.9 kJ`
 
-Drive weight
+### Drive weight
 
-8000 kg
+`8000 kg`
 
 Drop:
 
-20 m
+`20 m`
 
 Energy:
 
-1.570 MJ
+`1.570 MJ`
 
-Drive spool
+### Drive spool
 
 For four rotations over a 20 m cable payout:
 
-R = 20 / 8π
+`R = 20 / 8π ≈ 0.7958 m`
 
-≈ 0.7958 m
+Use direct 1:1 spool-to-cam rotation.
 
-Direct 1:1 spool-to-cam rotation.
+Four spool revolutions therefore produce four cam revolutions.
 
-Four weight-spool revolutions therefore produce four cam revolutions.
+### Variable-pitch correction
 
-Important correction
+A constant `10 m/rev` pitch conflicts with a flattened terminal groove.
 
-The previous version specified:
+Therefore use a variable-pitch rise law.
 
-10 m/rev
+Reference profile:
 
-and simultaneously claimed that the groove flattened during the final quarter-turn.
+First `3.5 revolutions`:
 
-Those statements conflict.
-
-If pitch changes, the total axial displacement must be integrated over the complete cam profile.
-
-Use a variable-pitch rise law instead.
-
-A viable reference profile is:
-
-First 3.5 revolutions:
-
-10.5 m/rev
+`10.5 m/rev`
 
 Travel:
 
-36.75 m
+`36.75 m`
 
-Final 0.5 revolution:
+Final `0.5 revolution`:
 
 pitch decreases approximately linearly from:
 
-10.5 m/rev → 2.5 m/rev
+`10.5 m/rev → 2.5 m/rev`
 
 Average final pitch:
 
-6.5 m/rev
+`6.5 m/rev`
 
 Final travel:
 
-3.25 m
+`3.25 m`
 
 Total:
 
-36.75 + 3.25 = 40.00 m
+`36.75 + 3.25 = 40.00 m`
 
-Now the geometry and terminal flattening agree.
+Now terminal flattening and total travel agree.
 
-Torque envelope
+### Torque envelope
 
 Maximum nominal pitch:
 
-10.5 m/rev
+`10.5 m/rev`
 
 Corresponding ideal axial-load torque:
 
-τ = F P / 2π
-
-approximately:
-
-19.67 kNm
+`τ = F P / 2π ≈ 19.67 kNm`
 
 Drive-weight spool torque:
 
-approximately:
-
-62.45 kNm
+`≈ 62.45 kNm`
 
 Substantial margin remains for friction and governing.
 
-Governor
+### Governor
 
 An independent shaft governor limits cam speed.
 
 The 8 tonne source weight must never free-fall.
 
-Terminal
+### Terminal
 
-Variable pitch progressively lowers axial speed.
-
-Then:
-
-upper fork captures carriage
-→ follower unloads
-→ carriage rests structurally
+Variable pitch lowers axial speed  
+→ upper fork captures carriage  
+→ follower unloads  
+→ carriage rests structurally  
 → terminal linkage operates Stage 13 flood pilot.
-
 
 ---
 
-STAGE 13
+# 30. STAGE 13 — CONTROLLED BUOYANCY SHAFT
+## 640 m → 680 m
 
-CONTROLLED BUOYANCY SHAFT
-
-640 → 680 m
-
-Capsule
+### Capsule
 
 Displaced volume:
 
-3.0 m³
+`3.0 m³`
 
 Total occupied mass:
 
-2400 kg
+`2400 kg`
 
-Displaced water mass:
+Equivalent displaced water mass:
 
-3000 kg
+`3000 kg`
 
 Gross buoyancy:
 
-29.43 kN
+`29.43 kN`
 
 Weight:
 
-23.54 kN
+`23.54 kN`
 
 Net static upward force:
 
-5.886 kN
+`5.886 kN`
 
-Simple rigid-body acceleration
+### Simple rigid-body acceleration
 
-Ignoring added water inertia:
+Ignoring added fluid inertia:
 
-a = 5886 / 2400
+`a = 5886 / 2400 ≈ 2.45 m/s²`
 
-≈ 2.45 m/s²
+### Added-mass correction
 
-Added-mass correction
+A body accelerating through water also accelerates surrounding fluid.
 
-A body accelerating through water must also accelerate some surrounding fluid.
+For a bluff capsule, an effective added mass on the order of half the displaced water mass is a useful first engineering estimate:
 
-For a roughly bluff capsule, an effective added mass of the order of one-half the displaced fluid mass is a useful first engineering estimate:
-
-m_added ≈ 1500 kg
+`m_added ≈ 1500 kg`
 
 Effective initial inertial mass:
 
-≈ 3900 kg
+`≈ 3900 kg`
 
-Corresponding initial acceleration becomes approximately:
+Approximate initial acceleration:
 
-5886 / 3900
+`5886 / 3900 ≈ 1.51 m/s²`
 
-≈ 1.51 m/s²
+The exact added-mass coefficient depends on actual capsule geometry.
 
-The exact coefficient depends on capsule geometry.
-
-Therefore the simulation should represent materially significant added-fluid inertia rather than assuming the dry rigid-body mass is the entire acceleration denominator.
-
-Drag-limited velocity
+### Drag-limited velocity
 
 Representative frontal area:
 
-≈ 2.515 m²
+`≈ 2.515 m²`
 
-Representative:
+Representative drag coefficient:
 
-C_d ≈ 0.47
+`C_d ≈ 0.47`
 
 Simple quadratic terminal velocity:
 
-≈ 3.16 m/s
+`≈ 3.16 m/s`
 
-Actual velocity will depend upon shaft clearance and capsule geometry.
+Actual velocity depends on shaft clearance and capsule geometry.
 
-Shaft geometry
+### Shaft geometry
 
-A shaft internal diameter on the order of approximately 2.6 m gives roughly:
+A shaft internal diameter around approximately `2.6 m` gives roughly:
 
-5.31 m²
+`5.31 m²`
 
 cross-sectional area.
 
@@ -2362,476 +2091,345 @@ Over 40 m:
 
 approximately:
 
-212 m³
+`212 m³`
 
-gross water column volume before subtracting capsule displacement and internal structure.
+gross water-column volume before subtracting capsule displacement and internal structure.
 
-A 500 m³ elevated reservoir therefore contains comfortable volume margin.
+A `500 m³` elevated reservoir provides comfortable volume margin.
 
-Hydrostatic pressure
+### Hydrostatic pressure
 
 At 40 m:
 
-ρgh ≈ 392 kPa gauge
+`ρgh ≈ 392 kPa gauge`
 
-The lower structure must therefore be engineered around roughly four atmospheres of additional hydrostatic pressure.
+The lower structure must therefore tolerate roughly four atmospheres of additional hydrostatic pressure.
 
 This applies to:
+- doors;
+- seals;
+- valve bodies;
+- inspection plates;
+- shaft joints;
+- capsule seals.
 
-doors;
+### Flood sequence
 
-seals;
-
-valve bodies;
-
-inspection plates;
-
-shaft joints;
-
-capsule seals.
-
-
-Flood sequence
-
-The sequence is mechanically enforced.
-
-FLOOD
-
-Stage 12 terminal pilot begins opening the large water gate.
+#### FLOOD
+Stage 12 terminal pilot begins opening the main water gate.
 
 Upper vents remain open.
 
 Capsule remains physically restrained.
 
-EQUALIZE
-
+#### EQUALIZE
 Shaft fills.
 
 A float or hydrostatic differential linkage confirms sufficient water level.
 
-RELEASE
+#### RELEASE
+Only the physical equalization state permits the hold-down latch to withdraw.
 
-Only this physical condition permits the hold-down latch to withdraw.
-
-ASCEND
-
+#### ASCEND
 The capsule rises because buoyancy exceeds weight.
 
-Not because incoming water secretly pushes it upward.
+It is not secretly propelled by incoming flood water.
 
-CAPTURE
-
+#### CAPTURE
 Upper flare increases drag and lateral control.
 
-Hydraulic bumper absorbs remaining velocity.
+Hydraulic bumper absorbs remaining motion.
 
-Mechanical collar captures capsule.
+Mechanical collar captures the capsule.
 
-Handoff beyond 680 m
+### Handoff beyond 680 m
 
-The upper filtration collar becomes the physical causal origin of the next band.
+The upper filtration collar becomes the physical causal origin of the next ascent band.
 
-Nothing beyond 680 m activates because the player merely crosses an altitude.
-
+Nothing beyond 680 m activates merely because the player crosses an altitude.
 
 ---
 
-COMPLETE 280-680 M CAUSAL SPINE
+# 31. COMPLETE 280 m → 680 m CAUSAL SPINE
 
-The entire sequence is:
+## Stage 1
 
-Stage 1
-
-player loads carrier
-→ counterweight restraint withdraws
-→ weight descends
-→ helical carrier rises
+player loads carrier  
+→ counterweight restraint withdraws  
+→ weight descends  
+→ helical carrier rises  
 → dock dog captures
 
 ↓
 
-Stage 2
+## Stage 2
 
-dock dog pulls pendulum sear
-→ pendulum falls
-→ gearbox drives drum
-→ carriage rises
+dock dog pulls pendulum sear  
+→ pendulum falls  
+→ gearbox drives drum  
+→ carriage rises  
 → hydraulic receiver captures
 
 ↓
 
-Stage 3
+## Stage 3
 
-receiver releases spring clutch
-→ spring unloads partially
-→ capstan lifts carrier
-→ brake governs
+receiver releases spring clutch  
+→ spring unloads partially  
+→ capstan lifts carrier  
+→ brake governs  
 → upper fork captures
 
 ↓
 
-Stage 4
+## Stage 4
 
-fork releases gravity block
-→ block pressurizes hydraulic circuit
-→ displaced fluid raises ram
-→ cushion arrests ram
+fork releases gravity block  
+→ block pressurizes hydraulic circuit  
+→ displaced fluid raises ram  
+→ cushion arrests ram  
 → top linkage opens sluice
 
 ↓
 
-Stage 5
+## Stage 5
 
-water descends
-→ waterwheel spins
-→ flywheel charges
-→ clutch feeds swing-arm gearbox
-→ arm rises
+water descends  
+→ waterwheel spins  
+→ flywheel charges  
+→ clutch feeds swing-arm gearbox  
+→ arm rises  
 → receiver captures
 
 ↓
 
-Stage 6
+## Stage 6
 
-receiver shifts pneumatic pilot
-→ regulated nitrogen enters cylinder
-→ carriage accelerates
-→ regulator changes regime
-→ gravity decelerates
+receiver shifts pneumatic pilot  
+→ regulated nitrogen enters cylinder  
+→ carriage accelerates  
+→ regulator changes pressure regime  
+→ gravity decelerates  
 → capture dog seats
 
 ↓
 
-Stage 7
+## Stage 7
 
-dog pulls counterweight latch
-→ counterweight falls
-→ elevator rises
-→ governor brakes
-→ cam rotates cradle
+dog pulls counterweight latch  
+→ counterweight falls  
+→ elevator rises  
+→ governor brakes  
+→ cam rotates cradle  
 → upper pawl captures
 
 ↓
 
-Stage 8
+## Stage 8
 
-captured cradle operates clutch pawl
-→ flywheel engages gearbox
-→ carrier wheel turns
-→ gondola rises
+captured cradle operates clutch pawl  
+→ flywheel engages gearbox  
+→ carrier wheel turns  
+→ gondola rises  
 → brake and index dog capture
 
 ↓
 
-Stage 9
+## Stage 9
 
-indexing receiver admits capsule and operates pilot
-→ low-pressure pneumatic force accelerates capsule
-→ mechanical cut-off closes supply
-→ capsule coasts
+indexing receiver admits capsule and operates pilot  
+→ low-pressure pneumatic force accelerates capsule  
+→ mechanical cut-off closes supply  
+→ capsule coasts  
 → upper correction system captures
 
 ↓
 
-Stage 10
+## Stage 10
 
-capture opens dense-fluid gate
-→ fluid mass descends
-→ escapement meters energy
-→ screw rotates
-→ carriage climbs
+capture opens dense-fluid gate  
+→ fluid descends  
+→ escapement meters energy  
+→ screw rotates  
+→ carriage climbs  
 → terminal collar captures
 
 ↓
 
-Stage 11
+## Stage 11
 
-collar shifts ram pilot
-→ captive ram accelerates
-→ rack captures ram energy
-→ hub stores/transmits energy
-→ finite clutch torque drives pendulum
+collar shifts ram pilot  
+→ captive ram accelerates  
+→ rack captures ram energy  
+→ hub stores / transmits energy  
+→ finite clutch torque drives pendulum  
 → progressive dock captures
 
 ↓
 
-Stage 12
+## Stage 12
 
-dock seats follower and releases weight
-→ weight rotates variable-pitch cam
-→ carriage climbs
-→ cam pitch falls
+dock seats follower and releases weight  
+→ weight rotates variable-pitch cam  
+→ carriage climbs  
+→ cam pitch falls  
 → upper fork captures
 
 ↓
 
-Stage 13
+## Stage 13
 
-fork operates flood pilot
-→ shaft fills
-→ hydrostatic release becomes possible
-→ hold-down withdraws
-→ buoyancy raises capsule
+fork operates flood pilot  
+→ shaft fills  
+→ hydrostatic release becomes valid  
+→ hold-down withdraws  
+→ buoyancy raises capsule  
 → upper collar captures.
 
-That is the causal spine.
+No stage needs supernatural knowledge that a previous puzzle was “completed.”
 
-No stage needs supernatural knowledge of whether the preceding "puzzle" has been completed.
-
-The machinery itself knows because the preceding machinery physically arrived.
-
+The next mechanism becomes available because the previous mechanism physically arrived.
 
 ---
 
-NATIVE IMPLEMENTATION CONTRACT
+# 32. NATIVE IMPLEMENTATION CONTRACT
 
 For every mechanism, the native simulation owns:
 
-Dynamic bodies
-
+## Dynamic bodies
 The actual moving masses.
 
-Constraints
+## Constraints
+Hinges, guides, pulleys, ropes, sliders, catches, clutches, and limits.
 
-Hinges, guides, pulleys, ropes, sliders, catches, clutches, and mechanical limits.
-
-Reservoir state
-
+## Reservoir state
 Mass, elevation, spring deflection, pressure, volume, flywheel angular velocity, fluid level.
 
-Control geometry
+## Control geometry
+The real mechanism that opens, closes, engages, or releases the power path.
 
-The physical mechanism that opens, closes, engages, or releases the power path.
-
-Force generation
-
+## Force generation
 All consequential forces and torques.
 
-Capture
-
+## Capture
 Real physical constraint state.
 
-Failure
-
-Stall, overspeed, insufficient energy, disconnected transmission, missed capture, or other legitimate physical consequence.
+## Failure
+Stall, overspeed, insufficient energy, disconnected transmission, missed capture, or other legitimate consequence.
 
 Godot receives and presents state.
 
 It does not own an alternate version of the machine.
 
-
 ---
 
-FLUID SIMULATION STANDARD
+# 33. FLUID MODELING STANDARD
 
 Full CFD is unnecessary.
 
 Decorative fake fluid is also insufficient.
 
-Use the lowest-order authoritative model that preserves the relevant causal physics.
+Use the lowest-order authoritative model capable of preserving the relevant causal physics.
 
-Hydraulic stages
-
-Track:
-
-pressure
-
-volume
-
-flow
-
-restriction
-
-piston displacement
-
-piston velocity
-
-force
-
-Pneumatic stages
+## Hydraulic systems
 
 Track:
+- pressure;
+- volume;
+- flow;
+- restriction;
+- piston displacement;
+- piston velocity;
+- force.
 
-gas mass
+## Pneumatic systems
 
-reservoir volume
+Track:
+- gas mass;
+- reservoir volume;
+- reservoir pressure;
+- chamber volume;
+- chamber pressure;
+- mass flow;
+- regulator state;
+- valve state.
 
-reservoir pressure
+Where appropriate, use an ideal-gas or polytropic approximation rather than assigning pressure directly.
 
-chamber volume
-
-chamber pressure
-
-mass flow
-
-regulator state
-
-valve state
-
-Where appropriate, use an ideal-gas / polytropic approximation rather than assigning pressure directly.
-
-Free-water inventories
+## Free-water inventories
 
 Track explicit conserved volume between reservoirs.
 
 Tank + pipe + bucket + basin water must balance within simulation tolerance.
 
-Buoyancy
+## Buoyancy systems
 
 Track:
-
-water level
-
-submerged volume
-
-buoyant force
-
-drag
-
-added mass
-
-guide contact
-
-capsule velocity
-
+- water level;
+- submerged volume;
+- buoyant force;
+- drag;
+- added mass;
+- guide contact;
+- capsule velocity.
 
 ---
 
-COLLISION STANDARD
+# 34. FINAL DEFINITION OF DONE
 
-Collision geometry must tell the same mechanical story as visible geometry.
+A ScraperX ascent mechanism is complete only when all of the following are simultaneously true:
 
-A player must not:
+**Its stored-energy source physically exists.**
 
-walk through structural beams;
+**Its source contains enough usable energy.**
 
-stand on decorative surfaces with no collision;
+**Its source remains restrained until the correct mechanical trigger occurs.**
 
-be blocked by empty air;
+**The previous mechanism physically produces that trigger.**
 
-pass through a supposedly massive terminal receiver;
+**A continuous transmission connects source to load.**
 
-fall through a moving carrier.
+**Its geometry produces the claimed displacement.**
 
+**Its swept volume is collision-valid.**
 
-High-speed bodies receive continuous collision treatment where discrete stepping is insufficient.
+**Its mass and inertia ledger closes.**
 
-Terminal structures are thick enough to exist physically at 90 Hz.
+**Its force and torque envelope closes.**
 
+**Its occupied motion remains within the intended acceleration and speed envelope.**
 
----
+**Excess energy has an identifiable destination.**
 
-CAUSAL DEBUGGING STANDARD
+**Movement comes from the declared source rather than an undeclared motor or script.**
 
-When a mechanism fails, do not begin by asking:
+**Visible geometry agrees with collision geometry.**
 
-> Which assertion should be loosened?
+**The player rides the true moving support and inherits its motion.**
 
+**Terminal approach physically dissipates residual motion.**
 
+**A real catch transfers the terminal load into structure.**
 
-Ask:
+**Removing the source prevents success.**
 
-> At which causal seam did the real machine stop behaving according to its declared physics?
+**Breaking the transmission prevents success.**
 
+**Removing the capture prevents the next stage from activating.**
 
+**A plausible mechanical failure mode exists.**
 
-Inspect in order:
+**A plausible rearming path exists.**
 
-SOURCE
+**Native state and Godot presentation agree.**
 
-Did the reservoir actually contain the declared energy?
-
-RESTRAINT / RELEASE
-
-Did the physical catch actually disengage?
-
-TRANSMISSION
-
-Did measurable force or torque cross the connection?
-
-GEOMETRY
-
-Did the mechanism have enough permitted travel?
-
-FORCE BALANCE
-
-Was available force sufficient against load and resistance?
-
-GOVERNOR
-
-Did braking oppose motion, or accidentally become the dominant restraint?
-
-COLLISION
-
-Did an unintended body steal travel or jam the mechanism?
-
-TERMINAL APPROACH
-
-Did the carrier actually enter the capture envelope?
-
-CAPTURE
-
-Could the latch physically seat at the carrier's real COM, velocity, and orientation?
-
-That ordering turns debugging into causal diagnosis rather than commit roulette.
-
-
----
-
-FINAL DEFINITION OF DONE
-
-A ScraperX ascent mechanism is complete only when all of these statements are simultaneously true:
-
-Its stored-energy source physically exists.
-
-Its source contains enough usable energy.
-
-Its source remains restrained until the correct mechanical trigger occurs.
-
-The previous mechanism physically produces that trigger.
-
-A continuous transmission connects source to load.
-
-Its geometry produces the claimed displacement.
-
-Its mass and inertia ledger closes.
-
-Its force and torque envelope closes.
-
-Its occupied motion remains within the intended acceleration and speed envelope.
-
-Excess energy has an identifiable destination.
-
-Movement comes from the declared physical source rather than an undeclared motor or script.
-
-Its visible geometry agrees with collision geometry.
-
-The player rides the true moving support and inherits its motion.
-
-Terminal approach physically dissipates residual motion.
-
-A real catch transfers the terminal load into structure.
-
-Removing the source prevents success.
-
-Breaking the transmission prevents success.
-
-Removing the capture prevents the next stage from activating.
-
-A plausible failure mode exists.
-
-A plausible rearming path exists.
-
-Native state and Godot presentation agree.
-
-The complete mechanism passes its positive proof and its falsifiers.
+**The complete mechanism passes positive proof and destructive falsifiers.**
 
 Only then is it GREEN.
 
-
 ---
 
-THE SCRAPERX MACHINE DOCTRINE
+# 35. THE SCRAPERX MACHINE DOCTRINE
 
 The tower should ultimately become readable without explanation.
 
@@ -2857,13 +2455,11 @@ They see that receiver pull the next restraint.
 
 Looking backward through hundreds of metres of machinery, the tower should tell its own story:
 
-> That moved because this fell.
-This turned because that pulled.
-That pressure existed because this reservoir was charged.
-This machine stopped because that brake absorbed its energy.
-The next machine woke because this one physically arrived.
-
-
+> **That moved because this fell.**  
+> **This turned because that pulled.**  
+> **That pressure existed because this reservoir was charged.**  
+> **This machine stopped because that brake absorbed its energy.**  
+> **The next machine woke because this one physically arrived.**
 
 That is the defining property of ScraperX.
 
@@ -2873,12 +2469,10 @@ Not merely interconnected puzzles.
 
 Not merely spectacle.
 
-A continuous, inspectable chain of physical consequence.
+**A continuous, inspectable chain of physical consequence.**
 
-And the governing rhythm of that chain is:
+The governing rhythm is:
 
-> STORE → RESTRAIN → RELEASE → TRANSMIT → MOVE → GOVERN → DISSIPATE → CAPTURE → HAND OFF
-
-
+> **STORE → RESTRAIN → RELEASE → TRANSMIT → MOVE → GOVERN → DISSIPATE → CAPTURE → HAND OFF**
 
 Everything else is steel around that idea.
