@@ -114,6 +114,11 @@ enum class InitialSpawn : std::uint8_t {
     Ring220North = 29,
     WetECab = 30,
     WetFPlatform = 31,
+    // AS-008: on TP-340 north of AS-007 F's hole; on the 374 ring's west
+    // band by H's gangway; in I's cage at the 418 ring.
+    PlateTop = 32,
+    Ring374West = 33,
+    ShopICage = 34,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -179,6 +184,25 @@ struct WetState final {
     double f_accumulator_travel = 0.0;
     double header_kg = 0.0;
     double drained_kg = 0.0;
+};
+
+// AS-008's machine state, for the falsifiers.
+struct ShopState final {
+    bool g_rope_on_eye = false;
+    bool g_tower_latched = false;
+    double g_platform_travel = 0.0;
+    double g_tower_travel = 0.0;
+    bool h_girder_latched = false;
+    bool h_trolley_latched = false;
+    double h_girder_angle = 0.0;
+    double h_platform_travel = 0.0;
+    bool i_rope_on_eye = false;
+    bool i_domino_latched = false;
+    bool i_monolith_latched = false;
+    double i_domino_angle = 0.0;
+    double i_trip_angle = 0.0;
+    double i_monolith_angle = 0.0;
+    double i_cage_travel = 0.0;
 };
 
 // Rubble spilled onto a static surface, piled where it landed.
@@ -571,6 +595,28 @@ public:
     static constexpr std::uint64_t kWetFHandleEntityId = 2054;
     static constexpr std::uint64_t kWetHeaderDumpEntityId = 2060;
     static constexpr std::uint64_t kWetHeaderHandleEntityId = 2061;
+    // AS-008 Plate Shop.
+    static constexpr std::uint64_t kShopFrameEntityId = 1007;
+    static constexpr std::uint64_t kShopRouteEntityId = 1008;
+    static constexpr std::uint64_t kUpperFrameEntityId = 1009;
+    static constexpr std::uint64_t kShopGPlatformEntityId = 2070;
+    static constexpr std::uint64_t kShopGTowerEntityId = 2071;
+    static constexpr std::uint64_t kShopGPinEntityId = 2072;
+    static constexpr std::uint64_t kShopGHandleEntityId = 2073;
+    static constexpr std::uint64_t kShopGShackleEntityId = 2074;
+    static constexpr std::uint64_t kShopHPlatformEntityId = 2080;
+    static constexpr std::uint64_t kShopHGirderEntityId = 2081;
+    static constexpr std::uint64_t kShopHTrolleyEntityId = 2082;
+    static constexpr std::uint64_t kShopHGirderPinEntityId = 2084;
+    static constexpr std::uint64_t kShopHChockEntityId = 2085;
+    static constexpr std::uint64_t kShopHHandleEntityId = 2086;
+    static constexpr std::uint64_t kShopICageEntityId = 2090;
+    static constexpr std::uint64_t kShopIMonolithEntityId = 2091;
+    static constexpr std::uint64_t kShopIDominoEntityId = 2092;
+    static constexpr std::uint64_t kShopIDominoPinEntityId = 2093;
+    static constexpr std::uint64_t kShopITripEntityId = 2094;
+    static constexpr std::uint64_t kShopIHandleEntityId = 2095;
+    static constexpr std::uint64_t kShopIShackleEntityId = 2096;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -704,6 +750,7 @@ public:
     [[nodiscard]] std::uint32_t kit_spout_count() const noexcept;
     [[nodiscard]] KitSpout kit_spout(std::uint32_t spout) const noexcept;
     [[nodiscard]] WetState wet_state() const noexcept;
+    [[nodiscard]] ShopState shop_state() const noexcept;
 
 private:
     class PhysicsWorld;

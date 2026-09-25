@@ -156,6 +156,13 @@ public:
     CatchIndex add_catch(BodyIndex body, LeverIndex lever, float release_angle,
                          float seat_tolerance, bool relatch);
 
+    // A pin catch (AS-008): holds body fast to the world while `pin` sits
+    // within pin_tolerance of where it was built -- a pin in its hole, a
+    // chock under a wheel. Carry or pull the pin out and the body goes. It
+    // relatches when the pin is back in and the body is back on its seat.
+    CatchIndex add_pin_catch(BodyIndex body, BodyIndex pin, float pin_tolerance,
+                             float seat_tolerance);
+
     // A slip hook (a pelican hook) holding a rope's body1 end: shut while
     // lever is below release_angle; past it, the hook opens and the rope runs
     // out for good, as if parted.
@@ -539,6 +546,9 @@ private:
         bool relatch = false;
         JPH::RVec3 seat = JPH::RVec3::sZero();
         JPH::Quat seat_rotation = JPH::Quat::sIdentity();
+        BodyIndex pin_body;                 // a pin catch's pin, invalid for a lever catch
+        JPH::RVec3 pin_seat = JPH::RVec3::sZero();
+        float pin_tolerance = 0.0F;
         JPH::Ref<JPH::FixedConstraint> pin;
     };
 

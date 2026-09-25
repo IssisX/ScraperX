@@ -490,6 +490,12 @@ func _ready() -> void:
 		_fail_native("SCRAPERX_EXTENSION_INSTANTIATION_FAILED", 20)
 		return
 
+	# The playtest start point (pause menu), before the native clock moves.
+	if _uitest_scenario.is_empty() and _settings.start_at > 0:
+		var spawn := int(_settings.START_SPAWNS[_settings.start_at])
+		if spawn >= 0:
+			_native.configure_initial_spawn(spawn)
+
 	if not _uitest_scenario.is_empty():
 		_uitest = (load(UI_TEST_DRIVER_PATH) as GDScript).new()
 		_uitest.name = "UiTestDriver"
@@ -674,6 +680,9 @@ func _build_interface() -> void:
 	_touch.pressed_feedback.connect(_haptic.bind(&"press", 1.0))
 	_pause_menu.resume_requested.connect(_resume)
 	_pause_menu.quit_requested.connect(func() -> void: get_tree().quit(0))
+	_pause_menu.restart_requested.connect(func() -> void:
+		get_tree().paused = false
+		get_tree().reload_current_scene())
 	_pause_menu.settings_changed.connect(_apply_settings)
 	# Android's system back opens the pause menu instead of ending the climb.
 	get_tree().quit_on_go_back = false
@@ -1045,6 +1054,16 @@ func _carry_name(entity: int) -> String:
 			return "STOP VALVE"
 		2061:
 			return "HEADER DUMP"
+		2072:
+			return "PROP PIN"
+		2073, 2086, 2095:
+			return "LANYARD"
+		2074, 2096:
+			return "ROPE SHACKLE"
+		2084:
+			return "TAIL PIN"
+		2093:
+			return "DOMINO PIN"
 	return "ROPE END" if _is_kit(entity) else ""
 
 
@@ -1062,6 +1081,12 @@ func _kit_anchor_name(entity: int) -> String:
 			return "CAGE EYE"
 		2050:
 			return "RAM INLET"
+		2070:
+			return "PLATFORM EYE"
+		2090:
+			return "CAGE EYE"
+		1007:
+			return "CLEAT"
 	return "ANCHOR"
 
 

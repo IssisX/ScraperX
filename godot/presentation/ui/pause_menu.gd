@@ -8,6 +8,7 @@ extends Control
 
 signal resume_requested
 signal quit_requested
+signal restart_requested
 signal settings_changed
 
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
@@ -208,7 +209,8 @@ func _build(viewport_size: Vector2) -> void:
 	gap.custom_minimum_size = Vector2(0.0, 36.0 * _u)
 	column.add_child(gap)
 
-	var entries := [[&"resume", "RESUME"], [PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
+	var entries := [[&"resume", "RESUME"], [&"start_at", _start_text()], [&"restart", "RESTART THERE"],
+		[PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
 		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"]]
 	if not OS.has_feature("mobile"):
 		entries.append([&"quit", "QUIT TO DESKTOP"])
@@ -217,6 +219,13 @@ func _build(viewport_size: Vector2) -> void:
 		column.add_child(button)
 		_side_buttons[entry[0]] = button
 	(_side_buttons[&"resume"] as Button).pressed.connect(func() -> void: resume_requested.emit())
+	# Start point: cycles where a restart puts the player; RESTART THERE
+	# starts a fresh world at it.
+	(_side_buttons[&"start_at"] as Button).pressed.connect(func() -> void:
+		settings.start_at = (settings.start_at + 1) % settings.START_NAMES.size()
+		settings.save_to_disk()
+		(_side_buttons[&"start_at"] as Button).text = _start_text())
+	(_side_buttons[&"restart"] as Button).pressed.connect(func() -> void: restart_requested.emit())
 	(_side_buttons[PAGE_CONTROLS] as Button).pressed.connect(_show_page.bind(PAGE_CONTROLS))
 	for page in SETTING_PAGES:
 		(_side_buttons[page] as Button).pressed.connect(_show_page.bind(page))
@@ -641,3 +650,7 @@ func _draw_footer() -> void:
 		x += 12.0 * _u
 		UiStyle.text(_footer, font, pair[1], Vector2(x, baseline), size, UiStyle.PAPER_DIM)
 		x += UiStyle.text_width(font, pair[1], size) + 34.0 * _u
+
+
+func _start_text() -> String:
+	return "START: %s" % settings.START_NAMES[clampi(settings.start_at, 0, settings.START_NAMES.size() - 1)]

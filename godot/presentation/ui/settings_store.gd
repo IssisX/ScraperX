@@ -34,6 +34,11 @@ const FPS_CAPS := [0, 30, 60, 90, 120]
 const FPS_CAP_NAMES := ["DISPLAY", "30", "60", "90", "120"]
 const TIME_OF_DAY_NAMES := ["CYCLE", "DAWN", "NOON", "DUSK", "NIGHT"]
 const TIME_OF_DAY_HOURS := [10.5, 6.4, 12.5, 18.3, 23.5]
+# Where a (re)start puts the player: the native's InitialSpawn for each, -1
+# for its default at grade. A playtest shortcut, not a save: every start is a
+# fresh world.
+const START_NAMES := ["GROUND", "154 M STAIR TOP", "220 M RING", "340 M PLATE", "374 M RING", "418 M CAGE"]
+const START_SPAWNS := [-1, 24, 29, 32, 33, 34]
 
 var look_sensitivity := 1.0
 var stick_sensitivity := 1.0
@@ -62,6 +67,7 @@ var master_volume := 0.8
 var effects_volume := 1.0
 var ambience_volume := 0.8
 var interface_volume := 0.7
+var start_at := 0
 var persistent := true
 
 
@@ -110,6 +116,7 @@ func load_from_disk() -> void:
 	effects_volume = _read_range(file, "effects_volume", effects_volume, VOLUME_RANGE)
 	ambience_volume = _read_range(file, "ambience_volume", ambience_volume, VOLUME_RANGE)
 	interface_volume = _read_range(file, "interface_volume", interface_volume, VOLUME_RANGE)
+	start_at = _read_index(file, "start_at", start_at, START_NAMES.size())
 
 
 func save_to_disk() -> void:
@@ -126,7 +133,7 @@ func save_to_disk() -> void:
 	file.set_value(SECTION, "telemetry", telemetry)
 	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "show_fps",
 			"fov", "brightness", "head_bob", "speed_fov", "time_of_day", "day_minutes",
-			"master_volume", "effects_volume", "ambience_volume", "interface_volume"]:
+			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "start_at"]:
 		file.set_value(SECTION, key, get(key))
 	var error := file.save(PATH)
 	if error != OK:

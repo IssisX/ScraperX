@@ -2,7 +2,8 @@
 
 // The bands of the mechanism ascent, each built from the mechanism kit.
 // 03_EXECUTION/ASCENT/AS-006_CW_PIN.md is the Counterweight Well's contract,
-// AS-007_WET_ISOLATION.md Wet Isolation's.
+// AS-007_WET_ISOLATION.md Wet Isolation's, AS-008_PLATE_SHOP.md the Plate
+// Shop's.
 
 #include "sim/mechanism_kit.hpp"
 
@@ -129,5 +130,54 @@ struct WetIsolation final {
 };
 
 void build_wet_isolation(kit::Kit &kit, WetIsolation &wet);
+
+// AS-008, Atlas band B04, 340 -> 484 m. 03_EXECUTION/ASCENT/AS-008_PLATE_SHOP.md.
+struct PlateShop final {
+    // Stage G, the scaffold slump.
+    kit::BodyIndex g_platform;
+    kit::BodyIndex g_tower;
+    kit::BodyIndex g_pin;
+    kit::BodyIndex g_handle;
+    kit::BodyIndex g_shackle;
+    kit::GuideIndex g_platform_guide;
+    kit::GuideIndex g_tower_guide;
+    kit::CatchIndex g_catch;
+    kit::RopeIndex g_rope;
+    kit::AnchorIndex g_eye;
+    kit::AnchorIndex g_cleat;
+
+    // Stage H, the girder tip.
+    kit::BodyIndex h_platform;
+    kit::BodyIndex h_girder;
+    kit::BodyIndex h_trolley;
+    kit::BodyIndex h_girder_pin;
+    kit::BodyIndex h_chock;
+    kit::BodyIndex h_handle;
+    kit::GuideIndex h_platform_guide;
+    kit::LeverIndex h_girder_hinge;
+    kit::LeverIndex h_chock_lever;
+    kit::CatchIndex h_girder_catch;
+    kit::CatchIndex h_trolley_catch;
+    kit::RopeIndex h_rope;
+
+    // Stage I, the domino and the monolith.
+    kit::BodyIndex i_cage;
+    kit::BodyIndex i_monolith;
+    kit::BodyIndex i_domino;
+    kit::BodyIndex i_domino_pin;
+    kit::BodyIndex i_trip_body;
+    kit::BodyIndex i_handle;
+    kit::BodyIndex i_shackle;
+    kit::GuideIndex i_cage_guide;
+    kit::LeverIndex i_monolith_hinge;
+    kit::LeverIndex i_domino_hinge;
+    kit::LeverIndex i_trip;
+    kit::CatchIndex i_domino_catch;
+    kit::CatchIndex i_monolith_catch;
+    kit::RopeIndex i_rope;
+    kit::AnchorIndex i_eye;
+};
+
+void build_plate_shop(kit::Kit &kit, PlateShop &shop);
 
 } // namespace scraperx::sim::bands

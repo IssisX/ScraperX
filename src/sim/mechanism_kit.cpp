@@ -256,6 +256,22 @@ CatchIndex Kit::add_catch(const BodyIndex body, const LeverIndex lever, const fl
     return CatchIndex{static_cast<std::uint32_t>(catches_.size() - 1U)};
 }
 
+CatchIndex Kit::add_pin_catch(const BodyIndex body, const BodyIndex pin,
+                             const float pin_tolerance, const float seat_tolerance) {
+    Catch record;
+    record.body = body;
+    record.seat_tolerance = seat_tolerance;
+    record.relatch = true;
+    record.seat = jolt_body(body).GetCenterOfMassPosition();
+    record.seat_rotation = jolt_body(body).GetRotation();
+    record.pin_body = pin;
+    record.pin_seat = jolt_body(pin).GetCenterOfMassPosition();
+    record.pin_tolerance = pin_tolerance;
+    catches_.push_back(record);
+    latch(catches_.back());
+    return CatchIndex{static_cast<std::uint32_t>(catches_.size() - 1U)};
+}
+
 SlipIndex Kit::add_slip(const RopeIndex rope, const LeverIndex lever, const float release_angle) {
     slips_.push_back({rope, lever, release_angle});
     return SlipIndex{static_cast<std::uint32_t>(slips_.size() - 1U)};
@@ -463,13 +479,21 @@ void Kit::pre_step(const float delta_seconds) {
     }
     for (Catch &catch_record : catches_) {
         const float angle = lever_angle(catch_record.lever);
+        bool pin_out = false;
+        if (catch_record.pin_body.valid()) {
+            const Body &pin = bodies_[catch_record.pin_body.value];
+            pin_out = !pin.enabled ||
+                      JPH::Vec3(jolt_body(catch_record.pin_body).GetCenterOfMassPosition() -
+                                catch_record.pin_seat)
+                              .Length() > catch_record.pin_tolerance;
+        }
         if (catch_record.pin != nullptr) {
-            if (catch_record.lever.valid() && angle > catch_record.release_angle) {
+            if ((catch_record.lever.valid() && angle > catch_record.release_angle) || pin_out) {
                 unlatch(catch_record);
             }
             continue;
         }
-        if (!catch_record.relatch || angle > 0.1F * catch_record.release_angle) {
+        if (!catch_record.relatch || pin_out || angle > 0.1F * catch_record.release_angle) {
             continue;
         }
         const JPH::Body &body = jolt_body(catch_record.body);

@@ -1505,6 +1505,15 @@ private:
     case scraperx::sim::InitialSpawn::WetFPlatform:
         // On F's platform, east of the hose.
         return {13.4, 299.2, -139.9};
+    case scraperx::sim::InitialSpawn::PlateTop:
+        // On TP-340 north of F's hole, as a rider off F's platform.
+        return {12.0, 341.2, -136.8};
+    case scraperx::sim::InitialSpawn::Ring374West:
+        // On the 374 ring's west band by H's gangway.
+        return {-14.5, 375.2, -145.6};
+    case scraperx::sim::InitialSpawn::ShopICage:
+        // On I's cage, west of its shackle.
+        return {-7.3, 419.2, -145.6};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1847,6 +1856,7 @@ public:
                                                         object_layers::kMoving);
         scraperx::sim::bands::build_counterweight_well(*kit_, well_);
         scraperx::sim::bands::build_wet_isolation(*kit_, wet_);
+        scraperx::sim::bands::build_plate_shop(*kit_, shop_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -2056,6 +2066,10 @@ public:
 
     [[nodiscard]] const scraperx::sim::bands::WetIsolation &wet() const noexcept {
         return wet_;
+    }
+
+    [[nodiscard]] const scraperx::sim::bands::PlateShop &shop() const noexcept {
+        return shop_;
     }
 
     void set_feed_enabled(const bool enabled) noexcept {
@@ -6235,6 +6249,7 @@ private:
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     scraperx::sim::bands::CounterweightWell well_{};
     scraperx::sim::bands::WetIsolation wet_{};
+    scraperx::sim::bands::PlateShop shop_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
     std::uint8_t rig_action_ = 0;
     std::uint64_t rig_target_entity_ = 0;
@@ -6679,6 +6694,28 @@ WetState Simulation::wet_state() const noexcept {
     out.f_accumulator_travel = kit.guide_travel(wet.f_accumulator_guide);
     out.header_kg = kit.pool_water(wet.header);
     out.drained_kg = kit.drained();
+    return out;
+}
+
+ShopState Simulation::shop_state() const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    const scraperx::sim::bands::PlateShop &shop = physics_world_->shop();
+    ShopState out;
+    out.g_rope_on_eye = kit.rope_end_entity(shop.g_rope) == Simulation::kShopGPlatformEntityId;
+    out.g_tower_latched = kit.catch_latched(shop.g_catch);
+    out.g_platform_travel = kit.guide_travel(shop.g_platform_guide);
+    out.g_tower_travel = kit.guide_travel(shop.g_tower_guide);
+    out.h_girder_latched = kit.catch_latched(shop.h_girder_catch);
+    out.h_trolley_latched = kit.catch_latched(shop.h_trolley_catch);
+    out.h_girder_angle = kit.lever_angle(shop.h_girder_hinge);
+    out.h_platform_travel = kit.guide_travel(shop.h_platform_guide);
+    out.i_rope_on_eye = kit.rope_end_entity(shop.i_rope) == Simulation::kShopICageEntityId;
+    out.i_domino_latched = kit.catch_latched(shop.i_domino_catch);
+    out.i_monolith_latched = kit.catch_latched(shop.i_monolith_catch);
+    out.i_domino_angle = kit.lever_angle(shop.i_domino_hinge);
+    out.i_trip_angle = kit.lever_angle(shop.i_trip);
+    out.i_monolith_angle = kit.lever_angle(shop.i_monolith_hinge);
+    out.i_cage_travel = kit.guide_travel(shop.i_cage_guide);
     return out;
 }
 
