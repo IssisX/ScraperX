@@ -3256,7 +3256,7 @@ int main() {
             std::max(worst_conservation,
                      std::abs((state.water_screw_basin_volume_m3 +
                                state.water_screw_tank_volume_m3) - initial_water));
-        if (state.water_screw_tank_volume_m3 >= 1.999) {
+        if (state.water_screw_tank_volume_m3 >= 2.0 - 1.0e-9) {
             screw_full = true;
             break;
         }
