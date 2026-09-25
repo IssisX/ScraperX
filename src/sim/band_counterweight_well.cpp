@@ -289,7 +289,11 @@ constexpr float kBCageOriginY = kBCageFloorTop - kBCageFloorHalfY;
 constexpr float kBCagePostHeight = 2.70F;
 constexpr float kBCageMassKg = 350.0F;
 constexpr float kBTravel = 22.0F;
-constexpr float kBCageGovernorSpeed = 3.00F;
+// 3.0 m/s is the Stage B safety ceiling. At the 90 Hz fixed step a motor
+// commanded exactly at that ceiling overshot to 3.14943 m/s before the next
+// braking solve. Command 2.85 m/s so the finite brake has response headroom
+// while preserving the declared 3.0 m/s maximum.
+constexpr float kBCageGovernorSpeed = 2.85F;
 // 42 kN gives the 2.5 t lattice/cage/rider system the same order of
 // finite brake reserve as proven Stage A: enough to cancel the static
 // imbalance and still achieve the declared 2.5 m/s^2 end-leveling decel.
