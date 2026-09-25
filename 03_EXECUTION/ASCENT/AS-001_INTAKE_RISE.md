@@ -165,3 +165,17 @@ Stop at the first stable ~+24 m handoff.
 - **Unverified boundary:** interactive desktop/Fold operation of the yard-jib pendant (it shares the kernel jib's Raise/Lower/Slew axes, wired and exercised headlessly but not hand-tested in a live session). Android install/execution, Fold 6 panel observation, touch ergonomics and sustained frame rate remain unverified — no device access. **`CAP-PENDANT` is not gated in this slice:** the Atlas has the pendant cold until the belt catwalk is reachable, and this branch makes the catwalk reachable from grade by a ramp, so "reach the pendant" is not yet a puzzle. That is `AS-003`'s capability work, not this slice's. **Riding MOD-INTAKE-BELT is legal but not separately falsified here** — the belt is kinematic and in the moving-support set, so the WO-002 support-point law already covers it; a dedicated ride falsifier is left to the slice that makes riding it necessary. The apron is the ground plane rather than a distinct `MOD-APRON` slab, since the existing 480 m ground already reaches the tower base. No persist fields were added: nothing in this slice has state that outlives its bodies.
 
 - **Regressions:** none observed. All nine prior native falsifiers and every Godot runtime proof line passed unchanged after this work order's changes.
+
+
+---
+
+## 2026-09-25 B00 ground-water route amendment
+
+The historical AS-001 result record above remains evidence for the crate → gate → stair route and is
+not rewritten. Current B00 product authority additionally contains `MOD-WATER-SCREW`,
+`MOD-WATER-TANK`, and the separately sequenced `MOD-WATER-LIFT`.
+
+The screw is a ground-level causal input mechanism: finite shaft work moves conserved basin water to
+the +5..+5.5 m tank. Its output contract is 2.0 m³ / 2000 kg measured in that tank. The water lift is
+a later mechanism cycle and may not be represented by a flag or implied by the screw's completion.
+Existing AS-001 freight/stair and outside-climb routes remain legal.

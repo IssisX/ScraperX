@@ -107,6 +107,7 @@ jobs:
             "PASS scraperx_sim AS-003 apron" \
             "PASS scraperx_sim AS-003 cage" \
             "PASS scraperx_sim AS-003 Hook5 Rack" \
+            "PASS scraperx_sim ground water screw" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \
@@ -175,6 +176,17 @@ jobs:
           awk -F'restored_y=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
             artifacts/native-falsifiers.log
           grep -F "restored_carry=56" artifacts/native-falsifiers.log
+          # Ground screw: finite drive raises the conserved water mass required
+          # by the receiving +8 m lift; rival shortcut conditions must fail.
+          awk -F'tank_m3=' '/ground water screw/ {split($2,a," "); exit (a[1]+0 >= 1.999) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'peak_rpm=' '/ground water screw/ {split($2,a," "); exit (a[1]+0 <= 22.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'peak_torque_nm=' '/ground water screw/ {split($2,a," "); exit (a[1]+0 <= 1500.01) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'shaft_work_J=' '/ground water screw/ {split($2,a," "); exit (a[1]+0 >= 196200) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "full_stop=1 reverse_return=1" artifacts/native-falsifiers.log
           # AS-006 Stage A, the skip lift: no link, no lift (the cage never
           # moves while the rope is on the bollard, and the stage re-rigs);
           # linked, the rider rides 22 m to 176.25 under a brake-only
@@ -247,7 +259,7 @@ jobs:
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
               touch_hang_climb touch_chute touch_lethal_feedback touch_sump touch_pendant \
-              touch_carry touch_pause pad_core pad_pendant keyboard_core \
+              touch_carry touch_water_screw touch_pause pad_core pad_pendant keyboard_core \
               touch_rig pad_rig keyboard_rig; do
             timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log

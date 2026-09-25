@@ -3202,6 +3202,107 @@ int main() {
               << " restored_y=" << restored.player_position.y
               << " restored_carry=" << restored.carrying_entity_id << '\n';
 
+
+    // ---- Ground Archimedes screw: conserved water is the output port -----
+    Simulation screw_off(InitialSpawn::WaterScrewStation);
+    require(screw_off.advance_frame(12.0).accepted, "stopped screw interval must advance");
+    require(std::abs(screw_off.snapshot().water_screw_tank_volume_m3) < 1.0e-9,
+            "motor off must move exactly no water to the upper tank");
+
+    Simulation low_inlet(InitialSpawn::WaterScrewStation);
+    low_inlet.set_water_screw_basin_volume_m3(0.10);
+    require(low_inlet.request_water_screw_toggle(), "low-inlet motor start must be accepted");
+    require(low_inlet.advance_frame(12.0).accepted, "low-inlet interval must advance");
+    require(low_inlet.snapshot().water_screw_tank_volume_m3 < 1.0e-6,
+            "an inlet below minimum immersion must not pump water");
+
+    Simulation under_torque(InitialSpawn::WaterScrewStation);
+    under_torque.set_water_screw_motor_torque_limit_nm(700.0);
+    require(under_torque.request_water_screw_toggle(), "under-torque start must be accepted");
+    require(under_torque.advance_frame(15.0).accepted, "under-torque interval must advance");
+    require(std::abs(under_torque.snapshot().water_screw_rpm) < 0.5 &&
+                under_torque.snapshot().water_screw_tank_volume_m3 < 1.0e-5,
+            "a motor below hydraulic plus bearing torque must stall instead of faking flow");
+
+    Simulation blocked_screw(InitialSpawn::WaterScrewStation);
+    blocked_screw.set_water_screw_outlet_blocked(true);
+    require(blocked_screw.request_water_screw_toggle(), "blocked-outlet start must be accepted");
+    require(blocked_screw.advance_frame(10.0).accepted, "blocked-outlet interval must advance");
+    require(blocked_screw.snapshot().water_screw_tank_volume_m3 < 1.0e-6,
+            "a blocked outlet must not fill the upper tank");
+
+    Simulation screw(InitialSpawn::WaterScrewStation);
+    require(screw.advance_frame(0.5).accepted, "water-screw station settle must advance");
+    require(screw.snapshot().water_screw_station_active,
+            "the real apron spawn must be in reach of the screw control");
+    require(screw.request_water_screw_toggle(), "normal screw start must be accepted");
+
+    double screw_peak_rpm = 0.0;
+    double screw_peak_torque = 0.0;
+    double screw_peak_flow = 0.0;
+    double worst_conservation = 0.0;
+    const double initial_water = screw.snapshot().water_screw_basin_volume_m3 +
+                                 screw.snapshot().water_screw_tank_volume_m3;
+    bool screw_full = false;
+    for (std::uint32_t tick = 0; tick < 90 * 125; ++tick) {
+        require(screw.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "water-screw fixed step must advance");
+        const auto state = screw.snapshot();
+        screw_peak_rpm = std::max(screw_peak_rpm, std::abs(state.water_screw_rpm));
+        screw_peak_torque =
+            std::max(screw_peak_torque, std::abs(state.water_screw_motor_torque_nm));
+        screw_peak_flow = std::max(screw_peak_flow, state.water_screw_flow_m3_s);
+        worst_conservation =
+            std::max(worst_conservation,
+                     std::abs((state.water_screw_basin_volume_m3 +
+                               state.water_screw_tank_volume_m3) - initial_water));
+        if (state.water_screw_tank_volume_m3 >= 1.999) {
+            screw_full = true;
+            break;
+        }
+    }
+    require(screw_full, "rated screw must deliver the next mechanism's full 2.0 m3 input");
+    const auto full_screw = screw.snapshot();
+    require(screw_peak_rpm <= 22.05, "finite screw drive must respect its 22 rpm rating");
+    require(screw_peak_torque <= 1500.01, "finite screw drive must respect 1.5 kN m torque");
+    require(screw_peak_flow > 0.020 && screw_peak_flow < 0.023,
+            "rated immersed screw must produce the derived ~0.022 m3/s flow");
+    require(worst_conservation < 1.0e-9,
+            "basin plus upper-tank water must be exactly conserved");
+    require(full_screw.water_screw_basin_volume_m3 > 0.39 &&
+                full_screw.water_screw_basin_volume_m3 < 0.41,
+            "2.0 m3 delivered from 2.4 m3 must leave ~0.4 m3 in the basin");
+    require(full_screw.water_screw_shaft_work_j >= 196200.0,
+            "full delivery must spend at least the conservative 196.2 kJ shaft budget");
+
+    const double full_before = full_screw.water_screw_tank_volume_m3;
+    require(screw.advance_frame(8.0).accepted, "full-tank recycle interval must advance");
+    const auto after_full = screw.snapshot();
+    require(std::abs(after_full.water_screw_tank_volume_m3 - full_before) < 1.0e-9 &&
+                std::abs(after_full.water_screw_flow_m3_s) < 1.0e-9,
+            "a full tank must stop net delivery rather than delete or create water");
+
+    screw.set_water_screw_drive_direction(-1);
+    require(screw.advance_frame(10.0).accepted, "reverse interval must advance");
+    const auto reversed_screw = screw.snapshot();
+    require(reversed_screw.water_screw_tank_volume_m3 < full_before - 0.10 &&
+                reversed_screw.water_screw_basin_volume_m3 >
+                    after_full.water_screw_basin_volume_m3 + 0.10,
+            "reverse shaft motion must return real water down to the basin");
+    require(std::abs((reversed_screw.water_screw_basin_volume_m3 +
+                      reversed_screw.water_screw_tank_volume_m3) - initial_water) < 1.0e-9,
+            "reverse flow must conserve the same water inventory");
+    std::cout << "PASS scraperx_sim ground water screw: tank_m3="
+              << full_screw.water_screw_tank_volume_m3
+              << " basin_m3=" << full_screw.water_screw_basin_volume_m3
+              << " peak_rpm=" << screw_peak_rpm
+              << " peak_torque_nm=" << screw_peak_torque
+              << " peak_flow_m3_s=" << screw_peak_flow
+              << " shaft_work_J=" << full_screw.water_screw_shaft_work_j
+              << " leakage_m3=" << full_screw.water_screw_leakage_m3
+              << " conserved_err=" << worst_conservation
+              << " full_stop=1 reverse_return=1" << '\n';
+
     // ---- AS-006 Stage A, the skip lift (03_EXECUTION/ASCENT/AS-006_CW_PIN.md)
     //
     // No link, no lift: as found, the rope's end is made fast on the bollard.

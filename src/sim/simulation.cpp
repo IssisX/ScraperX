@@ -2,6 +2,7 @@
 
 #include "sim/bands.hpp"
 #include "sim/mechanism_kit.hpp"
+#include "sim/water_screw.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
 #error "WO-003 requires the pinned Jolt physics substrate"
@@ -60,6 +61,17 @@ constexpr JPH::uint kCount = 2;
 } // namespace broadphase_layers
 
 constexpr double kPi = 3.14159265358979323846;
+
+constexpr float kWaterScrewX = -18.0F;
+constexpr float kWaterScrewLowY = 0.0F;
+constexpr float kWaterScrewLowZ = -98.0F;
+constexpr float kWaterScrewLength = 11.0F;
+constexpr float kWaterScrewIncline = 0.5235987756F;
+constexpr float kWaterScrewUpperY = 5.5F;
+constexpr float kWaterScrewUpperZ = -107.526279F;
+constexpr float kWaterScrewStationX = -14.0F;
+constexpr float kWaterScrewStationZ = -96.5F;
+constexpr float kWaterScrewStationRadius = 2.6F;
 
 constexpr float kSupportNormalThreshold = 0.55F;
 // Footing firm enough to commit a checkpoint on: the body's centre is over
@@ -1424,6 +1436,9 @@ private:
     case scraperx::sim::InitialSpawn::StairTop:
         // The 154 m deck's north band, north of Stage A's cage.
         return {-10.5, 155.0, -128.2};
+    case scraperx::sim::InitialSpawn::WaterScrewStation:
+        return {static_cast<double>(kWaterScrewStationX), 0.9,
+                static_cast<double>(kWaterScrewStationZ) - 0.8};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1663,6 +1678,7 @@ public:
         build_kernel_needle(bodies);
         build_kernel_sump(bodies);
         build_intake_rise(bodies);
+        build_water_screw(bodies);
         build_legal_forty(bodies);
         build_world_solids(bodies);
 
@@ -1774,6 +1790,7 @@ public:
         double jib_hoist_input = 0.0;
         double needle_hoist_input = 0.0;
         bool valve_toggle_requested = false;
+        bool water_screw_toggle_requested = false;
         double intake_slew_input = 0.0;
         double intake_hoist_input = 0.0;
         bool intake_sling_release_requested = false;
@@ -1794,6 +1811,7 @@ public:
         update_jib(bodies, commands.jib_slew_input, commands.jib_hoist_input);
         update_needle(bodies, commands.needle_hoist_input);
         update_sump(bodies, delta_seconds, commands.valve_toggle_requested);
+        update_water_screw(bodies, delta_seconds, commands.water_screw_toggle_requested);
         update_intake(bodies, commands.intake_slew_input, commands.intake_hoist_input);
         update_legal_forty(bodies, commands.intake_sling_release_requested,
                            commands.intake_sling_attach_requested);
@@ -1896,6 +1914,18 @@ public:
 
     void set_feed_enabled(const bool enabled) noexcept {
         steam_plant_.set_feed_enabled(enabled);
+    }
+    void set_water_screw_motor_torque_limit_nm(const double torque_nm) noexcept {
+        water_screw_.set_motor_torque_limit_nm(torque_nm);
+    }
+    void set_water_screw_outlet_blocked(const bool blocked) noexcept {
+        water_screw_.set_outlet_blocked(blocked);
+    }
+    void set_water_screw_drive_direction(const int direction) noexcept {
+        water_screw_.set_drive_direction(direction);
+    }
+    void set_water_screw_basin_volume_m3(const double volume_m3) noexcept {
+        water_screw_.set_basin_volume_m3(volume_m3);
     }
 
 private:
@@ -2822,6 +2852,59 @@ private:
     // recomputed here at this run's own 30 deg pitch, so it stays flush with
     // the deck below to the millimetre rather than by matching a second copy
     // of the same literal.
+
+    void build_water_screw(JPH::BodyInterface &bodies) {
+        const auto part = [this, &bodies](const JPH::Vec3 half, const JPH::RVec3 at,
+                                          const std::uint64_t entity,
+                                          const JPH::Quat rotation = JPH::Quat::sIdentity()) {
+            machine_bodies_.push_back(add_box(bodies, half, at, JPH::EMotionType::Static,
+                                              object_layers::kStatic, 0.75F, entity,
+                                              rotation));
+        };
+
+        const JPH::Quat incline =
+            JPH::Quat::sRotation(JPH::Vec3::sAxisX(), kWaterScrewIncline);
+        const JPH::RVec3 mid(kWaterScrewX, (kWaterScrewLowY + kWaterScrewUpperY) * 0.5F,
+                             (kWaterScrewLowZ + kWaterScrewUpperZ) * 0.5F);
+        part(JPH::Vec3(0.72F, 0.10F, kWaterScrewLength * 0.5F), mid,
+             Simulation::kWaterScrewFrameEntityId, incline);
+        for (const float side : {-1.0F, 1.0F}) {
+            part(JPH::Vec3(0.10F, 0.42F, kWaterScrewLength * 0.5F),
+                 JPH::RVec3(mid.GetX() + side * 0.62F, mid.GetY() + 0.25F, mid.GetZ()),
+                 Simulation::kWaterScrewFrameEntityId, incline);
+        }
+
+        part(JPH::Vec3(1.60F, 0.65F, 0.10F), JPH::RVec3(-18.0, 0.65, -96.4),
+             Simulation::kWaterScrewFrameEntityId);
+        part(JPH::Vec3(1.60F, 0.65F, 0.10F), JPH::RVec3(-18.0, 0.65, -98.6),
+             Simulation::kWaterScrewFrameEntityId);
+        part(JPH::Vec3(0.10F, 0.65F, 1.00F), JPH::RVec3(-19.1, 0.65, -97.5),
+             Simulation::kWaterScrewFrameEntityId);
+        part(JPH::Vec3(0.10F, 0.65F, 1.00F), JPH::RVec3(-16.9, 0.65, -97.5),
+             Simulation::kWaterScrewFrameEntityId);
+
+        part(JPH::Vec3(2.2F, 0.15F, 2.2F), JPH::RVec3(-18.0, 4.85, -108.2),
+             Simulation::kWaterScrewTankEntityId);
+        for (const float side : {-1.0F, 1.0F}) {
+            part(JPH::Vec3(0.12F, 0.45F, 1.15F),
+                 JPH::RVec3(-18.0 + side * 1.12F, 5.35, -108.2),
+                 Simulation::kWaterScrewTankEntityId);
+            part(JPH::Vec3(1.12F, 0.45F, 0.12F),
+                 JPH::RVec3(-18.0, 5.35, -108.2 + side * 1.12F),
+                 Simulation::kWaterScrewTankEntityId);
+        }
+        for (const float sx : {-1.0F, 1.0F}) {
+            for (const float sz : {-1.0F, 1.0F}) {
+                part(JPH::Vec3(0.14F, 2.35F, 0.14F),
+                     JPH::RVec3(-18.0 + sx * 1.75F, 2.35, -108.2 + sz * 1.75F),
+                     Simulation::kWaterScrewTankEntityId);
+            }
+        }
+        part(JPH::Vec3(0.32F, 0.85F, 0.32F),
+             JPH::RVec3(kWaterScrewStationX, 0.85, kWaterScrewStationZ),
+             Simulation::kWaterScrewStationEntityId);
+    }
+
     void build_legal_forty(JPH::BodyInterface &bodies) {
         const auto track = [this](const JPH::BodyID id) {
             machine_bodies_.push_back(id);
@@ -3640,6 +3723,19 @@ private:
     // contract as update_jib. The dog is deliberately absent from the command
     // path: its motor was commanded open at build time and is never touched
     // here, so the only thing that can change the throat is the pack moving.
+
+    void update_water_screw(const JPH::BodyInterface &bodies,
+                            const double delta_seconds,
+                            const bool toggle_requested) noexcept {
+        const JPH::RVec3 player = bodies.GetPosition(player_id_);
+        const float dx = static_cast<float>(player.GetX()) - kWaterScrewStationX;
+        const float dz = static_cast<float>(player.GetZ()) - kWaterScrewStationZ;
+        water_screw_station_active_ =
+            dx * dx + dz * dz <= kWaterScrewStationRadius * kWaterScrewStationRadius;
+        if (toggle_requested && water_screw_station_active_) water_screw_.toggle_motor();
+        water_screw_.step(delta_seconds);
+    }
+
     void update_intake(const JPH::BodyInterface &bodies,
                        const double slew_input,
                        const double hoist_input) noexcept {
@@ -5017,6 +5113,7 @@ private:
         checkpoint_.sump_isolated = sump_isolated_;
         checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
         checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
+        checkpoint_.water_screw = water_screw_.state();
         checkpoint_.intake_swing_flight = capture_body(bodies, intake_swing_flight_id_);
         checkpoint_.intake_cw_cradle = capture_body(bodies, intake_cw_cradle_id_);
         checkpoint_.hook5_door = capture_body(bodies, hook5_door_id_);
@@ -5094,6 +5191,7 @@ private:
         sump_volume_kg_ = checkpoint_.sump_volume_kg;
         sump_isolated_ = checkpoint_.sump_isolated;
         steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
+        water_screw_.restore_state(checkpoint_.water_screw);
 
         grounded_ = false;
         jump_vault_ticks_left_ = 0;
@@ -5163,6 +5261,18 @@ private:
         state_.sump_isolated = sump_isolated_;
         state_.sump_volume_kg = sump_volume_kg_;
         state_.grate_safe = grate_safe_;
+
+        const auto &screw = water_screw_.state();
+        state_.water_screw_station_active = water_screw_station_active_;
+        state_.water_screw_motor_enabled = screw.motor_enabled;
+        state_.water_screw_shaft_angle_radians = screw.shaft_angle_radians;
+        state_.water_screw_rpm = screw.shaft_rpm;
+        state_.water_screw_motor_torque_nm = screw.motor_torque_nm;
+        state_.water_screw_flow_m3_s = screw.delivered_flow_m3_s;
+        state_.water_screw_basin_volume_m3 = screw.basin_volume_m3;
+        state_.water_screw_tank_volume_m3 = screw.tank_volume_m3;
+        state_.water_screw_leakage_m3 = screw.cumulative_leakage_or_recycle_m3;
+        state_.water_screw_shaft_work_j = screw.shaft_work_j;
 
         state_.intake_station_active = intake_station_active_;
         state_.intake_boom_angle_radians = intake_boom_angle_;
@@ -5329,6 +5439,8 @@ private:
     JPH::BodyID player_id_;
 
     SteamPlant steam_plant_{};
+    WaterScrew water_screw_{};
+    bool water_screw_station_active_ = false;
     std::vector<JPH::BodyID> machine_bodies_;
     std::vector<JPH::Ref<JPH::TwoBodyConstraint>> machine_constraints_;
     JPH::Ref<JPH::HingeConstraint> tipper_hinge_;
@@ -5474,6 +5586,7 @@ private:
         bool sump_isolated = false;
         double vessel_mass_kg = 0.0;
         double cylinder_mass_kg = 0.0;
+        WaterScrewState water_screw{};
         // AS-002. The pack/hook and the dog are AS-001 gaps this ticket does
         // not reopen (00_START_HERE.md's record-gap convention): they are not
         // captured here either, unchanged from AS-001. MOD-STAIR-A-SWING and
@@ -5699,6 +5812,23 @@ bool Simulation::request_valve_toggle() noexcept {
     return true;
 }
 
+bool Simulation::request_water_screw_toggle() noexcept {
+    water_screw_toggle_requested_ = true;
+    return true;
+}
+void Simulation::set_water_screw_motor_torque_limit_nm(const double torque_nm) noexcept {
+    physics_world_->set_water_screw_motor_torque_limit_nm(torque_nm);
+}
+void Simulation::set_water_screw_outlet_blocked(const bool blocked) noexcept {
+    physics_world_->set_water_screw_outlet_blocked(blocked);
+}
+void Simulation::set_water_screw_drive_direction(const int direction) noexcept {
+    physics_world_->set_water_screw_drive_direction(direction);
+}
+void Simulation::set_water_screw_basin_volume_m3(const double volume_m3) noexcept {
+    physics_world_->set_water_screw_basin_volume_m3(volume_m3);
+}
+
 bool Simulation::set_intake_slew_input(const double value) noexcept {
     if (!std::isfinite(value)) {
         return false;
@@ -5746,6 +5876,7 @@ void Simulation::step_fixed() noexcept {
     commands.jib_hoist_input = jib_hoist_input_;
     commands.needle_hoist_input = needle_hoist_input_;
     commands.valve_toggle_requested = valve_toggle_requested_;
+    commands.water_screw_toggle_requested = water_screw_toggle_requested_;
     commands.intake_slew_input = intake_slew_input_;
     commands.intake_hoist_input = intake_hoist_input_;
     commands.intake_sling_release_requested = intake_sling_release_requested_;
@@ -5760,6 +5891,7 @@ void Simulation::step_fixed() noexcept {
     set_down_requested_ = false;
     rig_requested_ = false;
     valve_toggle_requested_ = false;
+    water_screw_toggle_requested_ = false;
     intake_sling_release_requested_ = false;
     intake_sling_attach_requested_ = false;
     ++tick_index_;

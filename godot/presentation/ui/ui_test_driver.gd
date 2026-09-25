@@ -30,6 +30,7 @@ const SCENARIOS := {
 	"touch_sump": 17,
 	"touch_pendant": 18,
 	"touch_carry": 22,
+	"touch_water_screw": 25,
 	"touch_pause": 8,
 	"pad_core": 8,
 	"pad_pendant": 14,
@@ -112,6 +113,8 @@ func _run() -> void:
 			ok = await _touch_pendant()
 		"touch_carry":
 			ok = await _touch_carry()
+		"touch_water_screw":
+			ok = await _touch_water_screw()
 		"touch_pause":
 			ok = await _touch_pause()
 		"pad_core":
@@ -569,6 +572,31 @@ func _touch_sump() -> bool:
 	if not reached_2:
 		return _fail("ACTION did not toggle the native sump valve")
 	_detail = "isolated %s->%s" % [before, not before]
+	return true
+
+
+
+func _touch_water_screw() -> bool:
+	var reached: bool = await _wait_until(
+		func() -> bool: return _ctx()["action"]["id"] == &"screw_toggle", 2.0)
+	if not reached:
+		return _fail("ACTION never offered the ground screw control")
+	if bool(_native().is_water_screw_motor_enabled()):
+		return _fail("ground screw must start stopped")
+	_tap(0, _center(&"action"))
+	var started: bool = await _wait_until(
+		func() -> bool: return bool(_native().is_water_screw_motor_enabled()), 0.3)
+	if not started:
+		return _fail("ACTION did not start the authoritative screw motor")
+	var turning: bool = await _wait_until(
+		func() -> bool: return absf(float(_native().get_water_screw_rpm())) > 2.0, 1.5)
+	if not turning:
+		return _fail("started screw did not produce native shaft rotation")
+	await _pose("water_screw_running")
+	_detail = "rpm=%.1f torque_nm=%.0f tank_m3=%.3f" % [
+		float(_native().get_water_screw_rpm()),
+		float(_native().get_water_screw_motor_torque_nm()),
+		float(_native().get_water_screw_tank_volume_m3())]
 	return true
 
 

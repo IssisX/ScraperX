@@ -81,6 +81,7 @@ var _hum: AudioStreamPlayer3D
 var _hiss: AudioStreamPlayer3D
 var _rattle: AudioStreamPlayer3D
 var _motor: AudioStreamPlayer3D
+var _water_screw_motor: AudioStreamPlayer3D
 var _stride := 0.0
 var _was_grounded := true
 var _last_vy := 0.0
@@ -130,6 +131,7 @@ func _ready() -> void:
 	_hiss = _positional_player(BUS_AMBIENCE, VESSEL_TOP, 6.0, 110.0)
 	_rattle = _positional_player(BUS_AMBIENCE, Vector3.ZERO, 5.0, 90.0)
 	_motor = _positional_player(BUS_AMBIENCE, Vector3.ZERO, 6.0, 100.0)
+	_water_screw_motor = _positional_player(BUS_AMBIENCE, Vector3(-18.0, 1.0, -98.0), 6.0, 100.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -171,15 +173,15 @@ func _on_bank_ready() -> void:
 		return
 	for pair in [[_wind, &"wind_loop"], [_rush, &"rush_loop"], [_drone, &"drone_loop"],
 			[_hum, &"hum_loop"], [_hiss, &"hiss_loop"], [_rattle, &"rattle_loop"],
-			[_motor, &"motor_loop"]]:
+			[_motor, &"motor_loop"], [_water_screw_motor, &"motor_loop"]]:
 		pair[0].stream = _bank.pick(pair[1])
 	_wind.volume_db = -60.0
 	_rush.volume_db = -60.0
 	_drone.volume_db = -60.0
 	_hum.volume_db = -6.0
-	for player in [_hiss, _rattle, _motor]:
+	for player in [_hiss, _rattle, _motor, _water_screw_motor]:
 		player.volume_db = -80.0
-	for player in [_wind, _rush, _drone, _hum, _hiss, _rattle, _motor]:
+	for player in [_wind, _rush, _drone, _hum, _hiss, _rattle, _motor, _water_screw_motor]:
 		player.play()
 
 
@@ -298,6 +300,19 @@ func update_machines(delta: float, flow_kg_s: float, scoop: Vector3, ballast: Ve
 	var drive := clampf(absf(lift_velocity.y) / LIFT_FULL_MPS, 0.0, 1.0)
 	_motor.volume_db = linear_to_db(maxf(drive, 0.0001)) - 5.0
 	_motor.pitch_scale = lerpf(0.75, 1.2, drive)
+
+
+
+# The screw sounds from authoritative shaft/load state, including a torque
+# growl when stalled and coast-down after the switch is released.
+func update_water_screw(rpm: float, torque_nm: float) -> void:
+	if not _bank_ready or _silent:
+		return
+	var speed := clampf(absf(rpm) / 22.0, 0.0, 1.0)
+	var load := clampf(absf(torque_nm) / 1500.0, 0.0, 1.0)
+	var audible := maxf(speed, load * 0.45)
+	_water_screw_motor.volume_db = linear_to_db(maxf(audible, 0.0001)) - 5.0
+	_water_screw_motor.pitch_scale = lerpf(0.62, 1.20, speed) * lerpf(0.92, 1.0, load)
 
 
 # Wind rises with altitude; a falling body hears the air tear past. The

@@ -20,7 +20,7 @@ namespace {
 // One past the last spawn, derived from the enum so a new spawn is never
 // silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
 constexpr std::int64_t kInitialSpawnCount =
-    static_cast<std::int64_t>(sim::InitialSpawn::StairTop) + 1;
+    static_cast<std::int64_t>(sim::InitialSpawn::WaterScrewStation) + 1;
 
 // A kit index from script: negative or past the end reads as no body.
 [[nodiscard]] std::uint32_t kit_index(const std::int64_t index) {
@@ -212,6 +212,29 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_sump_volume_kg);
     godot::ClassDB::bind_method(godot::D_METHOD("is_grate_safe"),
                                 &ScraperXSimulation::is_grate_safe);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("request_water_screw_toggle"),
+                                 &ScraperXSimulation::request_water_screw_toggle);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_water_screw_station_active"),
+                                 &ScraperXSimulation::is_water_screw_station_active);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_water_screw_motor_enabled"),
+                                 &ScraperXSimulation::is_water_screw_motor_enabled);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_screw_shaft_angle_radians"),
+                                 &ScraperXSimulation::get_water_screw_shaft_angle_radians);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_screw_rpm"),
+                                 &ScraperXSimulation::get_water_screw_rpm);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_screw_motor_torque_nm"),
+                                 &ScraperXSimulation::get_water_screw_motor_torque_nm);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_screw_flow_m3_s"),
+                                 &ScraperXSimulation::get_water_screw_flow_m3_s);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_screw_basin_volume_m3"),
+                                 &ScraperXSimulation::get_water_screw_basin_volume_m3);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_screw_tank_volume_m3"),
+                                 &ScraperXSimulation::get_water_screw_tank_volume_m3);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_screw_leakage_m3"),
+                                 &ScraperXSimulation::get_water_screw_leakage_m3);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_screw_shaft_work_j"),
+                                 &ScraperXSimulation::get_water_screw_shaft_work_j);
 
     godot::ClassDB::bind_method(godot::D_METHOD("set_intake_slew_input", "value"),
                                 &ScraperXSimulation::set_intake_slew_input);
@@ -672,6 +695,40 @@ double ScraperXSimulation::get_sump_volume_kg() const {
 
 bool ScraperXSimulation::is_grate_safe() const {
     return simulation_->snapshot().grate_safe;
+}
+
+bool ScraperXSimulation::request_water_screw_toggle() {
+    return simulation_->request_water_screw_toggle();
+}
+bool ScraperXSimulation::is_water_screw_station_active() const {
+    return simulation_->snapshot().water_screw_station_active;
+}
+bool ScraperXSimulation::is_water_screw_motor_enabled() const {
+    return simulation_->snapshot().water_screw_motor_enabled;
+}
+double ScraperXSimulation::get_water_screw_shaft_angle_radians() const {
+    return simulation_->snapshot().water_screw_shaft_angle_radians;
+}
+double ScraperXSimulation::get_water_screw_rpm() const {
+    return simulation_->snapshot().water_screw_rpm;
+}
+double ScraperXSimulation::get_water_screw_motor_torque_nm() const {
+    return simulation_->snapshot().water_screw_motor_torque_nm;
+}
+double ScraperXSimulation::get_water_screw_flow_m3_s() const {
+    return simulation_->snapshot().water_screw_flow_m3_s;
+}
+double ScraperXSimulation::get_water_screw_basin_volume_m3() const {
+    return simulation_->snapshot().water_screw_basin_volume_m3;
+}
+double ScraperXSimulation::get_water_screw_tank_volume_m3() const {
+    return simulation_->snapshot().water_screw_tank_volume_m3;
+}
+double ScraperXSimulation::get_water_screw_leakage_m3() const {
+    return simulation_->snapshot().water_screw_leakage_m3;
+}
+double ScraperXSimulation::get_water_screw_shaft_work_j() const {
+    return simulation_->snapshot().water_screw_shaft_work_j;
 }
 
 bool ScraperXSimulation::set_intake_slew_input(const double value) {

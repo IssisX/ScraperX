@@ -1,6 +1,6 @@
 # Ground ascent: Archimedes screw to weight-driven lift
 
-**Status:** DESIGN TARGET; neither mechanism is implemented or runtime verified.
+**Status:** FIRST MECHANISM IMPLEMENTED IN SOURCE; runtime/CI evidence pending this commit. Receiving lift remains PLANNED / NOT BUILT.
 **Write branch:** `ChatGPT`.
 **Purpose:** Preserve one connected ground-to-+8 m ascent contract while building and proving one mechanism per work cycle. This is a proposed B00 route change, not a revision of historical `AS-001`–`AS-003` evidence. The Atlas and relevant ascent ticket must be reconciled with the route before code is called complete.
 **Priority:** Ground mechanism rehabilitation before further `AS-006` upward construction. Restore the current required proof path to GREEN first.
@@ -11,7 +11,7 @@ At inspected commit `11c21d116c9d95ae2b60f418474a1ab02b7dccb5`, the moving belt 
 
 The Archimedes screw is the **first mechanism**: electric shaft rotation transports conserved water from the apron basin to an upper tank. The receiving **second mechanism** is a controlled water-weight lift. It consumes the raised water and carries the player from 0 to a stable +8 m landing. Both belong to one ascent stage; finish them in separate work cycles. A full tank alone is not player ascent.
 
-## First mechanism: Archimedes screw — NEXT WORK CYCLE
+## First mechanism: Archimedes screw — IMPLEMENTED / PROOF PENDING
 
 **Input:** a finite basin with at least 2.0 m³ available above the screw's minimum inlet immersion, player-accessible start/stop controls, and a torque-limited motor. The basin and upper tank water inventories must have one native simulation owner. The inlet must remain immersed during the claimed delivery; water does not appear by timer or mission state.
 

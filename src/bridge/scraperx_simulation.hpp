@@ -115,6 +115,20 @@ public:
     [[nodiscard]] double get_sump_volume_kg() const;
     [[nodiscard]] bool is_grate_safe() const;
 
+    // Ground Archimedes screw: gameplay exposes only the real control and
+    // authoritative observations; proof-boundary load setters stay native-only.
+    [[nodiscard]] bool request_water_screw_toggle();
+    [[nodiscard]] bool is_water_screw_station_active() const;
+    [[nodiscard]] bool is_water_screw_motor_enabled() const;
+    [[nodiscard]] double get_water_screw_shaft_angle_radians() const;
+    [[nodiscard]] double get_water_screw_rpm() const;
+    [[nodiscard]] double get_water_screw_motor_torque_nm() const;
+    [[nodiscard]] double get_water_screw_flow_m3_s() const;
+    [[nodiscard]] double get_water_screw_basin_volume_m3() const;
+    [[nodiscard]] double get_water_screw_tank_volume_m3() const;
+    [[nodiscard]] double get_water_screw_leakage_m3() const;
+    [[nodiscard]] double get_water_screw_shaft_work_j() const;
+
     // AS-001 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
     [[nodiscard]] bool set_intake_slew_input(double value);
     [[nodiscard]] bool set_intake_hoist_input(double value);

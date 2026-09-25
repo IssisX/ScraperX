@@ -145,6 +145,12 @@ const INTAKE_SKIN_RUNG_RISE := 1.6
 const INTAKE_SKIN_RUNG_COUNT := 15
 const INTAKE_SKIN_RUNG_HALF_Z := 1.0
 
+const WATER_SCREW_LOW := Vector3(-18.0, 0.0, -98.0)
+const WATER_SCREW_UPPER := Vector3(-18.0, 5.5, -107.526279)
+const WATER_SCREW_STATION := Vector3(-14.0, 0.0, -96.5)
+const WATER_SCREW_LENGTH := 11.0
+const WATER_SCREW_TANK_FLOOR_Y := 5.0
+
 # AS-002 Legal Forty (Ascent Atlas §6, band B00's 24-40 m leftover). Surface
 # heights read off simulation.cpp's own build-time derivation (handoff
 # tread-surface offset stacked with two more 8.000 m rises); geometry
@@ -354,6 +360,10 @@ var _intake_overweight_mesh: MeshInstance3D
 var _intake_dog_pivot: Node3D
 var _intake_hoist_cable: Node3D
 var _intake_belt_mesh: MeshInstance3D
+var _water_screw_root: Node3D
+var _water_screw_rotor: Node3D
+var _water_screw_basin_water: MeshInstance3D
+var _water_screw_tank_water: MeshInstance3D
 var _legal_forty_swing_flight_pivot: Node3D
 var _legal_forty_cradle_mesh: MeshInstance3D
 var _legal_forty_rope_flight: Node3D
@@ -829,6 +839,8 @@ func _perform_action() -> void:
 			_operating = &""
 		&"valve":
 			_native.request_valve_toggle()
+		&"screw_toggle":
+			_native.request_water_screw_toggle()
 		&"pick_up":
 			_native.request_pick_up()
 		&"set_down":
@@ -862,7 +874,9 @@ func _read_context() -> Dictionary:
 	var ledge := bool(_native.is_ledge_available())
 	var lethal := float(_native.get_lethal_impact_speed_mps())
 	var station := &""
-	if bool(_native.is_intake_station_active()):
+	if bool(_native.is_water_screw_station_active()):
+		station = &"water_screw"
+	elif bool(_native.is_intake_station_active()):
 		station = &"intake"
 	elif bool(_native.is_jib_station_active()):
 		station = &"jib"
@@ -907,6 +921,10 @@ func _read_context() -> Dictionary:
 			"detail": _carry_name(carry_target)}
 	elif grounded and rig == RIG_UNHOOK:
 		action = {"id": &"unhook", "label": "UNHOOK", "icon": &"hook", "detail": "ROPE END"}
+	elif grounded and station == &"water_screw":
+		var running := bool(_native.is_water_screw_motor_enabled())
+		action = {"id": &"screw_toggle", "label": "STOP SCREW" if running else "START SCREW",
+			"icon": &"operate", "detail": "UPPER TANK %.2f / 2.00 M3" % float(_native.get_water_screw_tank_volume_m3())}
 	elif climb_ok:
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
 			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
@@ -1328,12 +1346,15 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			_native.get_ballast_linear_velocity(), _native.get_tipper_position(),
 			float(_native.get_tipper_angle_radians()), _native.get_lift_platform_position(),
 			_native.get_lift_platform_linear_velocity())
+		_audio.update_water_screw(float(_native.get_water_screw_rpm()),
+			float(_native.get_water_screw_motor_torque_nm()))
 	# The developer telemetry overlay costs a dozen string formats a frame;
 	# it is only paid for while the overlay is actually on screen.
 	if _telemetry_on:
 		_write_telemetry(position, velocity, grounded)
 	_mirror_machine(float(_native.get_valve_open_fraction()),
 		float(_native.get_orifice_mass_flow_kg_per_s()))
+	_mirror_water_screw()
 	_render_kit()
 
 
@@ -1737,6 +1758,7 @@ func _build_world() -> void:
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
 	_build_intake_rise(concrete, mill_scale, oxidised, rust_deep, rust_bright,
 		galvanised, faded_yellow, hazard, timber)
+	_build_water_screw(concrete, mill_scale, oxidised, galvanised, faded_yellow, hazard)
 	_build_legal_forty(concrete, mill_scale, oxidised, rust_deep, rust_bright,
 		galvanised, faded_yellow, hazard, timber)
 	_build_hook5_rack(concrete, mill_scale, oxidised, galvanised, faded_yellow, hazard)
@@ -1930,6 +1952,117 @@ func _build_intake_rise(concrete: Material, mill_scale: Material, oxidised: Mate
 				Vector3(INTAKE_HANDOFF_CENTER_X - 1.0, top_y, rung_z),
 				Vector3(INTAKE_HANDOFF_CENTER_X - 2.6, top_y - 3.0, rung_z + 1.2),
 				0.12, oxidised, bay)
+
+
+
+# Ground Archimedes screw. Native state owns rotation and both water
+# inventories; this assembly only presents that state and does not get exported
+# into the static-solid table a second time.
+func _build_water_screw(concrete: Material, mill_scale: Material, oxidised: Material,
+		galvanised: Material, faded: Material, hazard: Material) -> void:
+	_water_screw_root = Node3D.new()
+	_water_screw_root.name = "GroundWaterScrew"
+	add_child(_water_screw_root)
+
+	var water := StandardMaterial3D.new()
+	water.albedo_color = Color(0.08, 0.28, 0.34, 0.76)
+	water.roughness = 0.18
+	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+
+	# 2 m² lower basin, with enough freeboard for the 2.4 m³ initial inventory.
+	_add_box_to("BasinSouth", Vector3(3.2, 1.3, 0.20), Vector3(-18.0, 0.65, -96.4),
+		concrete, _water_screw_root)
+	_add_box_to("BasinNorth", Vector3(3.2, 1.3, 0.20), Vector3(-18.0, 0.65, -98.6),
+		concrete, _water_screw_root)
+	for sx in [-1.0, 1.0]:
+		_add_box_to("BasinSide", Vector3(0.20, 1.3, 2.0),
+			Vector3(-18.0 + sx * 1.1, 0.65, -97.5), concrete, _water_screw_root)
+	_water_screw_basin_water = _add_box_to("BasinWater", Vector3(2.0, 1.0, 1.0),
+		Vector3(-18.0, 0.5, -97.5), water, _water_screw_root)
+
+	var axis := Node3D.new()
+	axis.name = "ScrewAxis"
+	axis.position = (WATER_SCREW_LOW + WATER_SCREW_UPPER) * 0.5
+	_water_screw_root.add_child(axis)
+	axis.look_at(WATER_SCREW_UPPER, Vector3.UP)
+
+	# Open trough, side rails, shaft and a helical sequence of flights.
+	_add_box_to("TroughBed", Vector3(1.45, 0.18, WATER_SCREW_LENGTH),
+		Vector3(0.0, -0.42, 0.0), galvanised, axis)
+	for side in [-1.0, 1.0]:
+		_add_box_to("TroughRail", Vector3(0.16, 0.72, WATER_SCREW_LENGTH),
+			Vector3(side * 0.62, -0.08, 0.0), oxidised, axis)
+	_water_screw_rotor = Node3D.new()
+	_water_screw_rotor.name = "FlightedRotor"
+	axis.add_child(_water_screw_rotor)
+	_add_box_to("Shaft", Vector3(0.22, 0.22, WATER_SCREW_LENGTH),
+		Vector3.ZERO, mill_scale, _water_screw_rotor)
+	for flight in 37:
+		var z := -5.4 + float(flight) * 0.30
+		var blade := _add_box_to("Flight", Vector3(1.28, 0.10, 0.22),
+			Vector3(0.0, 0.0, z), galvanised, _water_screw_rotor)
+		blade.rotation.z = float(flight) * PI
+
+	# Three braced trestles make the machine's load path readable.
+	for t in [0.22, 0.50, 0.78]:
+		var p := WATER_SCREW_LOW.lerp(WATER_SCREW_UPPER, t)
+		_add_strut("TrestleL", Vector3(p.x - 1.2, 0.0, p.z),
+			p + Vector3(-0.55, -0.25, 0.0), 0.16, oxidised, _water_screw_root)
+		_add_strut("TrestleR", Vector3(p.x + 1.2, 0.0, p.z),
+			p + Vector3(0.55, -0.25, 0.0), 0.16, oxidised, _water_screw_root)
+		_add_strut("TrestleTie", Vector3(p.x - 1.15, maxf(0.2, p.y * 0.45), p.z),
+			Vector3(p.x + 1.15, maxf(0.2, p.y * 0.45), p.z),
+			0.12, mill_scale, _water_screw_root)
+
+	# Reducer, motor and bearing blocks explain where finite shaft work enters.
+	_add_box_to("Reducer", Vector3(1.5, 1.1, 1.2),
+		WATER_SCREW_LOW + Vector3(0.0, 0.65, 1.0), faded, _water_screw_root)
+	var motor := _add_cylinder("DriveMotor", 0.45, 1.5,
+		WATER_SCREW_LOW + Vector3(1.1, 0.60, 1.0), mill_scale, _water_screw_root)
+	motor.rotation.z = deg_to_rad(90.0)
+	for p in [WATER_SCREW_LOW, WATER_SCREW_UPPER]:
+		_add_box_to("BearingPedestal", Vector3(1.5, 0.8, 0.9),
+			p + Vector3(0.0, 0.15, 0.0), oxidised, _water_screw_root)
+
+	# Independently supported 2 m³ tank at the screw's output port.
+	_add_box_to("TankDeck", Vector3(4.4, 0.30, 4.4), Vector3(-18.0, 4.85, -108.2),
+		mill_scale, _water_screw_root)
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			_add_box_to("TankLeg", Vector3(0.28, 4.7, 0.28),
+				Vector3(-18.0 + sx * 1.75, 2.35, -108.2 + sz * 1.75),
+				oxidised, _water_screw_root)
+	for side in [-1.0, 1.0]:
+		_add_box_to("TankSide", Vector3(0.24, 0.9, 2.3),
+			Vector3(-18.0 + side * 1.12, 5.35, -108.2), galvanised, _water_screw_root)
+		_add_box_to("TankEnd", Vector3(2.3, 0.9, 0.24),
+			Vector3(-18.0, 5.35, -108.2 + side * 1.12), galvanised, _water_screw_root)
+	_water_screw_tank_water = _add_box_to("TankWater", Vector3(2.0, 1.0, 2.0),
+		Vector3(-18.0, WATER_SCREW_TANK_FLOOR_Y, -108.2), water, _water_screw_root)
+	_add_box_to("OutletSpout", Vector3(0.65, 0.35, 1.5),
+		Vector3(-18.0, 5.55, -106.7), galvanised, _water_screw_root)
+
+	_add_box_to("ScrewControlPedestal", Vector3(0.64, 1.7, 0.64),
+		WATER_SCREW_STATION + Vector3(0.0, 0.85, 0.0), hazard, _water_screw_root)
+	_add_box_to("ScrewControlHead", Vector3(0.90, 0.55, 0.45),
+		WATER_SCREW_STATION + Vector3(0.0, 1.75, 0.0), faded, _water_screw_root)
+	_add_strut("PowerConduit", WATER_SCREW_STATION + Vector3(0.0, 0.35, 0.0),
+		WATER_SCREW_LOW + Vector3(1.0, 0.35, 1.0), 0.09, mill_scale, _water_screw_root)
+
+
+func _mirror_water_screw() -> void:
+	if _water_screw_rotor != null:
+		_water_screw_rotor.rotation.z = float(_native.get_water_screw_shaft_angle_radians())
+	if _water_screw_basin_water != null:
+		var basin_depth := clampf(float(_native.get_water_screw_basin_volume_m3()) / 2.0, 0.0, 1.25)
+		_water_screw_basin_water.visible = basin_depth > 0.002
+		_water_screw_basin_water.scale.y = maxf(0.002, basin_depth)
+		_water_screw_basin_water.position.y = basin_depth * 0.5
+	if _water_screw_tank_water != null:
+		var tank_depth := clampf(float(_native.get_water_screw_tank_volume_m3()) / 4.0, 0.0, 0.5)
+		_water_screw_tank_water.visible = tank_depth > 0.002
+		_water_screw_tank_water.scale.y = maxf(0.002, tank_depth)
+		_water_screw_tank_water.position.y = WATER_SCREW_TANK_FLOOR_Y + tank_depth * 0.5
 
 
 # AS-002 Legal Forty: the counterweighted-bascule flight and cradle that

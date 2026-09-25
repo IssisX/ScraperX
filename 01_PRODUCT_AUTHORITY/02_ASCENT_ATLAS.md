@@ -194,7 +194,7 @@ Module IDs are stable authored IDs for descriptors. They survive save/load.
 
 **Physical job.** Teach embodiment and state by a real jammed intake, not a cutscene. Give the player the first hoist and the first reason to go up.
 
-**Opening (first 10–15 minutes).** Player begins standing on the south apron at `z ≈ 1.2 m`, looking north-up the tower. A 4 t crate pack sits crooked on `MOD-INTAKE-BELT`, pinning gate `MOD-DOG-A`. The first SHAFT cage at 8 m is visible but dogs-out. A yard jib `MOD-YARD-JIB` is cold until the pendant on the belt catwalk is reachable. Wind, height, and the full 1.6 km shaft are readable immediately.
+**Opening (first 10–15 minutes).** Player begins standing on the south apron at `z ≈ 1.2 m`, looking north-up the tower. A 4 t crate pack sits crooked on `MOD-INTAKE-BELT`, pinning gate `MOD-DOG-A`. West of the intake, `MOD-WATER-SCREW` can raise conserved basin water into `MOD-WATER-TANK`; that stored mass is the required input for the separately built `MOD-WATER-LIFT` that will carry a player from grade to the first fixed +8 m dock. A yard jib `MOD-YARD-JIB` is cold until the pendant on the belt catwalk is reachable. Wind, height, and the full 1.6 km shaft are readable immediately.
 
 **Modules**
 
@@ -205,6 +205,9 @@ Module IDs are stable authored IDs for descriptors. They survive save/load.
 | `MOD-DOG-A` | Mechanical landing dog / gate pinned by the crate | freight + structure |
 | `MOD-YARD-JIB` | 12 m jib, 5 t SWL design target, finite torque/brake | freight |
 | `MOD-HOOK5-RACK` | Hook block + slings in a locked cage opened by moving the crate or circling the belt | capability |
+| `MOD-WATER-SCREW` | 11 m, 30° Archimedes screw; finite 1.5 kN·m drive raises conserved basin water | process + freight |
+| `MOD-WATER-TANK` | Supported +5 to +5.5 m tank holding at most 2.0 m³ / 2000 kg | process + freight |
+| `MOD-WATER-LIFT` | 2:1 water-weight cage route from grade to fixed +8 m dock; built only after its water input is proven | freight + traversal |
 | `MOD-STAIR-A` | Open stair to +40 m that is blocked by `MOD-DOG-A` until the gate can travel | traversal |
 | `MOD-SKIN-LADDER-S` | South facade ladder/ledge line to +40 m, always physically climbable, exposed | SKIN |
 
@@ -212,7 +215,8 @@ Module IDs are stable authored IDs for descriptors. They survive save/load.
 
 1. Shove/drag the crate off the dog **or** hook it with `MOD-YARD-JIB` and lift. Dog can close. Stair-A becomes a real route.  
 2. Belt still runs if not isolated; riding the belt is valid moving-support traversal.  
-3. Ignore the jib. Climb `MOD-SKIN-LADDER-S` to Transfer Hall catwalk and drop a chain to the crate from above (harder, fall risk).  
+3. Ignore the jib. Climb `MOD-SKIN-LADDER-S` to Transfer Hall catwalk and drop a chain to the crate from above (harder, fall risk).
+4. Run `MOD-WATER-SCREW` until `MOD-WATER-TANK` physically contains the required water mass; once `MOD-WATER-LIFT` is built, that mass can power the separate cage route to the fixed +8 m dock. The screw alone never counts as player ascent.  
 
 **Fall geography.** Apron is the primary chute landing. Falling from B00 is usually survivable without a chute. Falling *onto* the belt while it moves is a moving-support problem, not a kill plane.
 

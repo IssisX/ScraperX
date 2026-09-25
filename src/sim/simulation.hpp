@@ -98,6 +98,7 @@ enum class InitialSpawn : std::uint8_t {
     // north of Stage A's cage and facing it. The stair itself is proven by
     // the world-solids group; the band's tests start where it ends.
     StairTop = 24,
+    WaterScrewStation = 25,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -231,6 +232,18 @@ struct Snapshot final {
     bool sump_isolated = false;
     double sump_volume_kg = 0.0;
     bool grate_safe = false;
+
+    // Ground-water ascent. This is physical state, not a completion flag.
+    bool water_screw_station_active = false;
+    bool water_screw_motor_enabled = false;
+    double water_screw_shaft_angle_radians = 0.0;
+    double water_screw_rpm = 0.0;
+    double water_screw_motor_torque_nm = 0.0;
+    double water_screw_flow_m3_s = 0.0;
+    double water_screw_basin_volume_m3 = 0.0;
+    double water_screw_tank_volume_m3 = 0.0;
+    double water_screw_leakage_m3 = 0.0;
+    double water_screw_shaft_work_j = 0.0;
 
     // --- AS-001 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
     // MOD-YARD-JIB lifts the 4 t pack off MOD-DOG-A; the dog is a real hinged
@@ -407,6 +420,9 @@ public:
     static constexpr std::uint64_t kHook5DoorEntityId = 54;
     static constexpr std::uint64_t kHook5BarEntityId = 55;
     static constexpr std::uint64_t kHook5BlockEntityId = 56;
+    static constexpr std::uint64_t kWaterScrewFrameEntityId = 57;
+    static constexpr std::uint64_t kWaterScrewTankEntityId = 58;
+    static constexpr std::uint64_t kWaterScrewStationEntityId = 59;
 
     // AS-006, the Counterweight Well. Mechanism-kit ids: band structure from
     // 1000, moving bodies from 2000 (sim/mechanism_kit.hpp).
@@ -496,6 +512,12 @@ public:
     // the player is at the sump station.
     [[nodiscard]] bool request_valve_toggle() noexcept;
 
+    [[nodiscard]] bool request_water_screw_toggle() noexcept;
+    void set_water_screw_motor_torque_limit_nm(double torque_nm) noexcept;
+    void set_water_screw_outlet_blocked(bool blocked) noexcept;
+    void set_water_screw_drive_direction(int direction) noexcept;
+    void set_water_screw_basin_volume_m3(double volume_m3) noexcept;
+
     // AS-001 MOD-YARD-JIB pendant (CAP-PENDANT). Same continuous, persistent,
     // signed-axis contract as the kernel jib, gated on the B00 pendant station
     // rather than the kernel one. The dog has no command of its own: it is
@@ -565,6 +587,7 @@ private:
     double intake_slew_input_ = 0.0;
     double intake_hoist_input_ = 0.0;
     bool valve_toggle_requested_ = false;
+    bool water_screw_toggle_requested_ = false;
     bool intake_sling_release_requested_ = false;
     bool intake_sling_attach_requested_ = false;
     Snapshot snapshot_{};
