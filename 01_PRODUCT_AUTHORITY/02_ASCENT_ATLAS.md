@@ -207,7 +207,7 @@ Module IDs are stable authored IDs for descriptors. They survive save/load.
 | `MOD-HOOK5-RACK` | Hook block + slings in a locked cage opened by moving the crate or circling the belt | capability |
 | `MOD-WATER-SCREW` | 11 m, 30° Archimedes screw; finite 1.5 kN·m drive raises conserved basin water | process + freight |
 | `MOD-WATER-TANK` | Supported +5 to +5.5 m tank holding at most 2.0 m³ / 2000 kg | process + freight |
-| `MOD-WATER-LIFT` | 2:1 water-weight cage route from grade to fixed +8 m dock; built only after its water input is proven | freight + traversal |
+| `MOD-WATER-LIFT` | 2:1 water-weight cage route from grade to fixed +8 m dock; 2000 kg water bucket counter-mass, brake/governor, upper catch and gravity reset | freight + traversal |
 | `MOD-STAIR-A` | Open stair to +40 m that is blocked by `MOD-DOG-A` until the gate can travel | traversal |
 | `MOD-SKIN-LADDER-S` | South facade ladder/ledge line to +40 m, always physically climbable, exposed | SKIN |
 
@@ -216,7 +216,7 @@ Module IDs are stable authored IDs for descriptors. They survive save/load.
 1. Shove/drag the crate off the dog **or** hook it with `MOD-YARD-JIB` and lift. Dog can close. Stair-A becomes a real route.  
 2. Belt still runs if not isolated; riding the belt is valid moving-support traversal.  
 3. Ignore the jib. Climb `MOD-SKIN-LADDER-S` to Transfer Hall catwalk and drop a chain to the crate from above (harder, fall risk).
-4. Run `MOD-WATER-SCREW` until `MOD-WATER-TANK` physically contains the required water mass; once `MOD-WATER-LIFT` is built, that mass can power the separate cage route to the fixed +8 m dock. The screw alone never counts as player ascent.  
+4. Run `MOD-WATER-SCREW` until `MOD-WATER-TANK` physically contains the required water mass; open the lift fill valve to put that same water into the caught bucket, board the cage, then release the bucket catch. The 2:1 rope raises the cage to the fixed +8 m dock under finite braking. The screw alone never counts as player ascent.  
 
 **Fall geography.** Apron is the primary chute landing. Falling from B00 is usually survivable without a chute. Falling *onto* the belt while it moves is a moving-support problem, not a kill plane.
 

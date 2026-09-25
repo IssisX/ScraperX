@@ -1,0 +1,156 @@
+#include "sim/bands.hpp"
+#include "sim/simulation.hpp"
+
+namespace scraperx::sim::bands {
+namespace {
+
+using kit::Material;
+using kit::Part;
+
+constexpr float kCageX = -12.50F;
+constexpr float kCageZ = -108.20F;
+constexpr float kCageFloorHalfX = 1.35F;
+constexpr float kCageFloorHalfZ = 1.25F;
+constexpr float kCageFloorHalfY = 0.10F;
+constexpr float kCageFloorTop = 0.25F;
+constexpr float kCageOriginY = kCageFloorTop - kCageFloorHalfY;
+constexpr float kCagePostHeight = 2.40F;
+constexpr float kCageMassKg = 500.0F;
+constexpr float kCageTravel = 8.0F;
+constexpr float kCageGovernorSpeed = 2.20F;
+constexpr float kCageGovernorForce = 30000.0F;
+constexpr float kCageLevelAccel = 2.0F;
+const JPH::Vec3 kCageEyeLocal(0.0F, 2.20F, 0.0F);
+
+constexpr float kBucketX = -18.0F;
+constexpr float kBucketZ = -105.80F;
+constexpr float kBucketCenterTopY = 4.50F;
+constexpr float kBucketHalfX = 0.85F;
+constexpr float kBucketHalfY = 0.45F;
+constexpr float kBucketHalfZ = 0.85F;
+constexpr float kBucketDryMassKg = 200.0F;
+constexpr float kBucketTravel = 4.0F;
+const JPH::Vec3 kBucketEyeLocal(0.0F, 0.62F, 0.0F);
+
+constexpr float kSheaveY = 10.50F;
+constexpr float kPulleyRatio = 0.50F; // 4 m bucket drop -> 8 m cage rise
+constexpr float kRopeRatingN = 50000.0F;
+constexpr float kDockTopY = 8.25F;
+
+std::vector<Part> cage_parts() {
+    std::vector<Part> out{{
+        JPH::Vec3(kCageFloorHalfX, kCageFloorHalfY, kCageFloorHalfZ),
+        JPH::Vec3::sZero(), JPH::Quat::sIdentity(), Material::Galvanised}};
+    const float post_y = kCageFloorHalfY + 0.5F * kCagePostHeight;
+    for (float sx : {-1.0F, 1.0F}) {
+        for (float sz : {-1.0F, 1.0F}) {
+            out.push_back({JPH::Vec3(0.05F, 0.5F * kCagePostHeight, 0.05F),
+                           JPH::Vec3(sx * (kCageFloorHalfX - 0.05F), post_y,
+                                     sz * (kCageFloorHalfZ - 0.05F)),
+                           JPH::Quat::sIdentity(), Material::Yellow});
+        }
+    }
+    const float top = kCageFloorHalfY + kCagePostHeight;
+    out.push_back({JPH::Vec3(kCageFloorHalfX, 0.05F, 0.05F),
+                   JPH::Vec3(0.0F, top, kCageFloorHalfZ - 0.05F),
+                   JPH::Quat::sIdentity(), Material::Yellow});
+    out.push_back({JPH::Vec3(kCageFloorHalfX, 0.05F, 0.05F),
+                   JPH::Vec3(0.0F, top, -kCageFloorHalfZ + 0.05F),
+                   JPH::Quat::sIdentity(), Material::Yellow});
+    out.push_back({JPH::Vec3(0.05F, 0.45F, kCageFloorHalfZ),
+                   JPH::Vec3(-kCageFloorHalfX + 0.05F, 0.55F, 0.0F),
+                   JPH::Quat::sIdentity(), Material::Galvanised});
+    out.push_back({JPH::Vec3(0.05F, 0.45F, kCageFloorHalfZ),
+                   JPH::Vec3(kCageFloorHalfX - 0.05F, 0.55F, 0.0F),
+                   JPH::Quat::sIdentity(), Material::Galvanised});
+    return out;
+}
+
+std::vector<Part> bucket_parts() {
+    return {
+        {JPH::Vec3(kBucketHalfX, 0.08F, kBucketHalfZ),
+         JPH::Vec3(0.0F, -kBucketHalfY + 0.08F, 0.0F),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+        {JPH::Vec3(0.08F, kBucketHalfY, kBucketHalfZ),
+         JPH::Vec3(-kBucketHalfX + 0.08F, 0.0F, 0.0F),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+        {JPH::Vec3(0.08F, kBucketHalfY, kBucketHalfZ),
+         JPH::Vec3(kBucketHalfX - 0.08F, 0.0F, 0.0F),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+        {JPH::Vec3(kBucketHalfX, kBucketHalfY, 0.08F),
+         JPH::Vec3(0.0F, 0.0F, -kBucketHalfZ + 0.08F),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+        {JPH::Vec3(kBucketHalfX, kBucketHalfY, 0.08F),
+         JPH::Vec3(0.0F, 0.0F, kBucketHalfZ - 0.08F),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+        {JPH::Vec3(0.08F, 0.10F, 0.08F), kBucketEyeLocal,
+         JPH::Quat::sIdentity(), Material::Hazard},
+    };
+}
+
+} // namespace
+
+void build_ground_water_lift(kit::Kit &kit, GroundWaterLift &lift) {
+    using Sim = Simulation;
+    lift.cage = kit.add_body(Sim::kGroundWaterLiftCageEntityId, cage_parts(),
+                             JPH::RVec3(kCageX, kCageOriginY, kCageZ),
+                             JPH::Quat::sIdentity(), kCageMassKg, 0.9F);
+    lift.cage_guide = kit.add_guide(lift.cage, JPH::Vec3::sAxisY(), 0.0F, kCageTravel,
+                                    kCageGovernorSpeed, kCageGovernorForce, kCageLevelAccel);
+
+    lift.bucket = kit.add_body(Sim::kGroundWaterLiftBucketEntityId, bucket_parts(),
+                               JPH::RVec3(kBucketX, kBucketCenterTopY, kBucketZ),
+                               JPH::Quat::sIdentity(), kBucketDryMassKg, 0.7F);
+    lift.bucket_guide = kit.add_guide(lift.bucket, JPH::Vec3::sAxisY(), -kBucketTravel, 0.0F,
+                                      0.0F, 0.0F, 0.0F);
+
+    const JPH::RVec3 bucket_eye =
+        JPH::RVec3(kBucketX, kBucketCenterTopY, kBucketZ) + JPH::RVec3(kBucketEyeLocal);
+    const JPH::RVec3 cage_eye =
+        JPH::RVec3(kCageX, kCageOriginY, kCageZ) + JPH::RVec3(kCageEyeLocal);
+    const JPH::RVec3 bucket_sheave(kBucketX, kSheaveY, kBucketZ);
+    const JPH::RVec3 cage_sheave(kCageX, kSheaveY, kCageZ);
+    const float rope_length =
+        JPH::Vec3(bucket_eye - bucket_sheave).Length() +
+        kPulleyRatio * JPH::Vec3(cage_eye - cage_sheave).Length();
+    lift.rope = kit.add_rope(lift.bucket, kBucketEyeLocal, bucket_sheave,
+                             lift.cage, kCageEyeLocal, cage_sheave,
+                             kPulleyRatio, rope_length, kRopeRatingN);
+
+    lift.bucket_top_catch = kit.add_catch(lift.bucket, {}, 0.0F, 0.05F, true);
+    lift.cage_upper_catch =
+        kit.add_catch_at(lift.cage, {},
+                         JPH::RVec3(kCageX, kCageOriginY + kCageTravel, kCageZ),
+                         0.0F, 0.08F, true, false);
+
+    std::vector<Part> frame{
+        {JPH::Vec3(0.12F, 5.25F, 0.12F), JPH::Vec3(kCageX - 1.15F, 5.25F, kCageZ),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(0.12F, 5.25F, 0.12F), JPH::Vec3(kCageX + 1.15F, 5.25F, kCageZ),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(1.55F, 0.16F, 1.55F), JPH::Vec3(kCageX, kSheaveY + 0.25F, kCageZ),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(0.08F, 5.15F, 0.08F), JPH::Vec3(kBucketX - 1.00F, 5.15F, kBucketZ),
+         JPH::Quat::sIdentity(), Material::Steel},
+        {JPH::Vec3(0.08F, 5.15F, 0.08F), JPH::Vec3(kBucketX + 1.00F, 5.15F, kBucketZ),
+         JPH::Quat::sIdentity(), Material::Steel},
+        {JPH::Vec3(1.40F, 0.16F, 1.40F), JPH::Vec3(kBucketX, kSheaveY + 0.25F, kBucketZ),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(1.70F, 0.12F, 1.65F), JPH::Vec3(-9.45F, kDockTopY - 0.12F, kCageZ),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+        {JPH::Vec3(0.14F, 4.06F, 0.14F), JPH::Vec3(-8.10F, 4.06F, kCageZ + 1.30F),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(0.14F, 4.06F, 0.14F), JPH::Vec3(-8.10F, 4.06F, kCageZ - 1.30F),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(0.22F, 0.80F, 0.22F), JPH::Vec3(-13.80F, 0.80F, -106.50F),
+         JPH::Quat::sIdentity(), Material::Hazard},
+        {JPH::Vec3(0.22F, 0.80F, 0.22F), JPH::Vec3(-12.70F, 0.80F, -106.50F),
+         JPH::Quat::sIdentity(), Material::Yellow},
+        {JPH::Vec3(0.22F, 0.80F, 0.22F), JPH::Vec3(-9.45F, 9.05F, -106.85F),
+         JPH::Quat::sIdentity(), Material::Yellow},
+    };
+    lift.frame = kit.add_body(Sim::kGroundWaterLiftFrameEntityId, frame,
+                              JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.85F);
+}
+
+} // namespace scraperx::sim::bands

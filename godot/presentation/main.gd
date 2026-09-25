@@ -377,6 +377,7 @@ var _kit_root: Node3D
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
 var _kit_cables: Array = []
+var _water_lift_bucket_water: MeshInstance3D
 var _sump_grate_safe_material: Material
 var _sump_grate_hazard_material: Material
 var _stack_gears: Array[Node3D] = []
@@ -841,6 +842,12 @@ func _perform_action() -> void:
 			_native.request_valve_toggle()
 		&"screw_toggle":
 			_native.request_water_screw_toggle()
+		&"water_lift_valve":
+			_native.request_water_lift_valve_toggle()
+		&"water_lift_release":
+			_native.request_water_lift_release()
+		&"water_lift_reset":
+			_native.request_water_lift_reset()
 		&"pick_up":
 			_native.request_pick_up()
 		&"set_down":
@@ -874,7 +881,12 @@ func _read_context() -> Dictionary:
 	var ledge := bool(_native.is_ledge_available())
 	var lethal := float(_native.get_lethal_impact_speed_mps())
 	var station := &""
-	if bool(_native.is_water_screw_station_active()):
+	var water_lift_valve_station := bool(_native.is_water_lift_valve_station_active())
+	var water_lift_release_station := bool(_native.is_water_lift_release_station_active())
+	var water_lift_reset_station := bool(_native.is_water_lift_reset_station_active())
+	if water_lift_valve_station or water_lift_release_station or water_lift_reset_station:
+		station = &"water_lift"
+	elif bool(_native.is_water_screw_station_active()):
 		station = &"water_screw"
 	elif bool(_native.is_intake_station_active()):
 		station = &"intake"
@@ -921,6 +933,22 @@ func _read_context() -> Dictionary:
 			"detail": _carry_name(carry_target)}
 	elif grounded and rig == RIG_UNHOOK:
 		action = {"id": &"unhook", "label": "UNHOOK", "icon": &"hook", "detail": "ROPE END"}
+	elif grounded and station == &"water_lift":
+		var bucket_water := float(_native.get_water_lift_bucket_water_m3())
+		var fill_open := bool(_native.is_water_lift_valve_open())
+		var bucket_caught := bool(_native.is_water_lift_bucket_catch_latched())
+		var upper_caught := bool(_native.is_water_lift_upper_catch_latched())
+		if water_lift_reset_station and upper_caught and bucket_water < 0.02:
+			action = {"id": &"water_lift_reset", "label": "RESET LIFT", "icon": &"operate",
+				"detail": "RETURN CAGE / RAISE EMPTY BUCKET"}
+		elif water_lift_valve_station and (fill_open or bucket_water < 1.99):
+			action = {"id": &"water_lift_valve",
+				"label": "CLOSE FILL" if fill_open else "OPEN FILL",
+				"icon": &"valve",
+				"detail": "BUCKET %.2f / 2.00 M3" % bucket_water}
+		elif water_lift_release_station and bucket_caught:
+			action = {"id": &"water_lift_release", "label": "RELEASE LIFT", "icon": &"operate",
+				"detail": "BUCKET %.0f KG" % float(_native.get_water_lift_bucket_mass_kg())}
 	elif grounded and station == &"water_screw":
 		var running := bool(_native.is_water_screw_motor_enabled())
 		action = {"id": &"screw_toggle", "label": "STOP SCREW" if running else "START SCREW",
@@ -1348,6 +1376,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			_native.get_lift_platform_linear_velocity())
 		_audio.update_water_screw(float(_native.get_water_screw_rpm()),
 			float(_native.get_water_screw_motor_torque_nm()))
+		_audio.update_water_lift(float(_native.get_water_lift_valve_flow_m3_s()),
+			float(_native.get_water_lift_rope_tension_n()))
 	# The developer telemetry overlay costs a dozen string formats a frame;
 	# it is only paid for while the overlay is actually on screen.
 	if _telemetry_on:
@@ -3992,6 +4022,20 @@ func _build_kit() -> void:
 				Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
 			node.add_child(instance)
+		var entity := int(_native.get_kit_body_entity_id(body))
+		if entity == 2011:
+			var water_mesh := BoxMesh.new()
+			water_mesh.size = Vector3(1.50, 1.0, 1.50)
+			var water_mat := StandardMaterial3D.new()
+			water_mat.albedo_color = Color(0.08, 0.30, 0.38, 0.72)
+			water_mat.roughness = 0.16
+			water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			water_mesh.material = water_mat
+			_water_lift_bucket_water = MeshInstance3D.new()
+			_water_lift_bucket_water.name = "BucketWater"
+			_water_lift_bucket_water.mesh = water_mesh
+			_water_lift_bucket_water.visible = false
+			node.add_child(_water_lift_bucket_water)
 		_kit_root.add_child(node)
 		_kit_bodies.append(node)
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
@@ -4024,6 +4068,14 @@ func _render_kit() -> void:
 		node.visible = bool(_native.is_kit_body_enabled(body))
 		if node.visible:
 			node.transform = _native.get_kit_body_transform(body)
+	if _water_lift_bucket_water != null:
+		var volume := clampf(float(_native.get_water_lift_bucket_water_m3()), 0.0, 2.0)
+		var depth := clampf(volume / 2.25, 0.0, 0.88)
+		_water_lift_bucket_water.visible = depth > 0.002
+		if _water_lift_bucket_water.visible:
+			var water_mesh := _water_lift_bucket_water.mesh as BoxMesh
+			water_mesh.size = Vector3(1.50, depth, 1.50)
+			_water_lift_bucket_water.position = Vector3(0.0, -0.37 + depth * 0.5, 0.0)
 	for index in _kit_cables.size():
 		var points: PackedVector3Array = _native.get_kit_cable_points(index)
 		var segments: Array = _kit_cables[index]

@@ -99,6 +99,9 @@ enum class InitialSpawn : std::uint8_t {
     // the world-solids group; the band's tests start where it ends.
     StairTop = 24,
     WaterScrewStation = 25,
+    WaterLiftValveStation = 26,
+    WaterLiftCage = 27,
+    WaterLiftUpperDock = 28,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -244,6 +247,22 @@ struct Snapshot final {
     double water_screw_tank_volume_m3 = 0.0;
     double water_screw_leakage_m3 = 0.0;
     double water_screw_shaft_work_j = 0.0;
+
+    // Ground water-weight lift. Water volume remains conserved across the
+    // screw tank, moving bucket and basin; cage motion is solver output.
+    bool water_lift_valve_station_active = false;
+    bool water_lift_release_station_active = false;
+    bool water_lift_reset_station_active = false;
+    bool water_lift_valve_open = false;
+    double water_lift_valve_flow_m3_s = 0.0;
+    double water_lift_bucket_water_m3 = 0.0;
+    double water_lift_bucket_mass_kg = 200.0;
+    double water_lift_bucket_travel_m = 0.0;
+    double water_lift_cage_travel_m = 0.0;
+    double water_lift_cage_peak_speed_mps = 0.0;
+    double water_lift_rope_tension_n = 0.0;
+    bool water_lift_bucket_catch_latched = true;
+    bool water_lift_upper_catch_latched = false;
 
     // --- AS-001 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
     // MOD-YARD-JIB lifts the 4 t pack off MOD-DOG-A; the dog is a real hinged
@@ -439,6 +458,11 @@ public:
     static constexpr std::uint64_t kWellBLeverEntityId = 2008;
     static constexpr std::uint64_t kWellBHandleEntityId = 2009;
 
+    // B00 ground-water player lift. Continue the mechanism-kit identity bands.
+    static constexpr std::uint64_t kGroundWaterLiftFrameEntityId = 1002;
+    static constexpr std::uint64_t kGroundWaterLiftCageEntityId = 2010;
+    static constexpr std::uint64_t kGroundWaterLiftBucketEntityId = 2011;
+
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
     static constexpr double kTowerHeightMeters = 1600.0;
@@ -513,10 +537,18 @@ public:
     [[nodiscard]] bool request_valve_toggle() noexcept;
 
     [[nodiscard]] bool request_water_screw_toggle() noexcept;
+    [[nodiscard]] bool request_water_lift_valve_toggle() noexcept;
+    [[nodiscard]] bool request_water_lift_release() noexcept;
+    [[nodiscard]] bool request_water_lift_reset() noexcept;
+    void set_water_lift_rope_connected(bool connected) noexcept;
+    void set_water_lift_cage_mass_kg(double mass_kg) noexcept;
     void set_water_screw_motor_torque_limit_nm(double torque_nm) noexcept;
     void set_water_screw_outlet_blocked(bool blocked) noexcept;
     void set_water_screw_drive_direction(int direction) noexcept;
     void set_water_screw_basin_volume_m3(double volume_m3) noexcept;
+    // Native-test boundary: starts a downstream mechanism at the exact,
+    // already-proven upstream output while conserving the same water inventory.
+    void set_water_screw_tank_volume_m3_for_proof(double volume_m3) noexcept;
 
     // AS-001 MOD-YARD-JIB pendant (CAP-PENDANT). Same continuous, persistent,
     // signed-axis contract as the kernel jib, gated on the B00 pendant station
@@ -588,6 +620,9 @@ private:
     double intake_hoist_input_ = 0.0;
     bool valve_toggle_requested_ = false;
     bool water_screw_toggle_requested_ = false;
+    bool water_lift_valve_toggle_requested_ = false;
+    bool water_lift_release_requested_ = false;
+    bool water_lift_reset_requested_ = false;
     bool intake_sling_release_requested_ = false;
     bool intake_sling_attach_requested_ = false;
     Snapshot snapshot_{};

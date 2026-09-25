@@ -20,7 +20,7 @@ namespace {
 // One past the last spawn, derived from the enum so a new spawn is never
 // silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
 constexpr std::int64_t kInitialSpawnCount =
-    static_cast<std::int64_t>(sim::InitialSpawn::WaterScrewStation) + 1;
+    static_cast<std::int64_t>(sim::InitialSpawn::WaterLiftUpperDock) + 1;
 
 // A kit index from script: negative or past the end reads as no body.
 [[nodiscard]] std::uint32_t kit_index(const std::int64_t index) {
@@ -235,6 +235,39 @@ void ScraperXSimulation::_bind_methods() {
                                  &ScraperXSimulation::get_water_screw_leakage_m3);
     godot::ClassDB::bind_method(godot::D_METHOD("get_water_screw_shaft_work_j"),
                                  &ScraperXSimulation::get_water_screw_shaft_work_j);
+
+    godot::ClassDB::bind_method(godot::D_METHOD("request_water_lift_valve_toggle"),
+                                &ScraperXSimulation::request_water_lift_valve_toggle);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_water_lift_release"),
+                                &ScraperXSimulation::request_water_lift_release);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_water_lift_reset"),
+                                &ScraperXSimulation::request_water_lift_reset);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_water_lift_valve_station_active"),
+                                &ScraperXSimulation::is_water_lift_valve_station_active);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_water_lift_release_station_active"),
+                                &ScraperXSimulation::is_water_lift_release_station_active);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_water_lift_reset_station_active"),
+                                &ScraperXSimulation::is_water_lift_reset_station_active);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_water_lift_valve_open"),
+                                &ScraperXSimulation::is_water_lift_valve_open);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_lift_valve_flow_m3_s"),
+                                &ScraperXSimulation::get_water_lift_valve_flow_m3_s);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_lift_bucket_water_m3"),
+                                &ScraperXSimulation::get_water_lift_bucket_water_m3);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_lift_bucket_mass_kg"),
+                                &ScraperXSimulation::get_water_lift_bucket_mass_kg);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_lift_bucket_travel_m"),
+                                &ScraperXSimulation::get_water_lift_bucket_travel_m);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_lift_cage_travel_m"),
+                                &ScraperXSimulation::get_water_lift_cage_travel_m);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_lift_cage_peak_speed_mps"),
+                                &ScraperXSimulation::get_water_lift_cage_peak_speed_mps);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_water_lift_rope_tension_n"),
+                                &ScraperXSimulation::get_water_lift_rope_tension_n);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_water_lift_bucket_catch_latched"),
+                                &ScraperXSimulation::is_water_lift_bucket_catch_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_water_lift_upper_catch_latched"),
+                                &ScraperXSimulation::is_water_lift_upper_catch_latched);
 
     godot::ClassDB::bind_method(godot::D_METHOD("set_intake_slew_input", "value"),
                                 &ScraperXSimulation::set_intake_slew_input);
@@ -729,6 +762,55 @@ double ScraperXSimulation::get_water_screw_leakage_m3() const {
 }
 double ScraperXSimulation::get_water_screw_shaft_work_j() const {
     return simulation_->snapshot().water_screw_shaft_work_j;
+}
+
+bool ScraperXSimulation::request_water_lift_valve_toggle() {
+    return simulation_->request_water_lift_valve_toggle();
+}
+bool ScraperXSimulation::request_water_lift_release() {
+    return simulation_->request_water_lift_release();
+}
+bool ScraperXSimulation::request_water_lift_reset() {
+    return simulation_->request_water_lift_reset();
+}
+bool ScraperXSimulation::is_water_lift_valve_station_active() const {
+    return simulation_->snapshot().water_lift_valve_station_active;
+}
+bool ScraperXSimulation::is_water_lift_release_station_active() const {
+    return simulation_->snapshot().water_lift_release_station_active;
+}
+bool ScraperXSimulation::is_water_lift_reset_station_active() const {
+    return simulation_->snapshot().water_lift_reset_station_active;
+}
+bool ScraperXSimulation::is_water_lift_valve_open() const {
+    return simulation_->snapshot().water_lift_valve_open;
+}
+double ScraperXSimulation::get_water_lift_valve_flow_m3_s() const {
+    return simulation_->snapshot().water_lift_valve_flow_m3_s;
+}
+double ScraperXSimulation::get_water_lift_bucket_water_m3() const {
+    return simulation_->snapshot().water_lift_bucket_water_m3;
+}
+double ScraperXSimulation::get_water_lift_bucket_mass_kg() const {
+    return simulation_->snapshot().water_lift_bucket_mass_kg;
+}
+double ScraperXSimulation::get_water_lift_bucket_travel_m() const {
+    return simulation_->snapshot().water_lift_bucket_travel_m;
+}
+double ScraperXSimulation::get_water_lift_cage_travel_m() const {
+    return simulation_->snapshot().water_lift_cage_travel_m;
+}
+double ScraperXSimulation::get_water_lift_cage_peak_speed_mps() const {
+    return simulation_->snapshot().water_lift_cage_peak_speed_mps;
+}
+double ScraperXSimulation::get_water_lift_rope_tension_n() const {
+    return simulation_->snapshot().water_lift_rope_tension_n;
+}
+bool ScraperXSimulation::is_water_lift_bucket_catch_latched() const {
+    return simulation_->snapshot().water_lift_bucket_catch_latched;
+}
+bool ScraperXSimulation::is_water_lift_upper_catch_latched() const {
+    return simulation_->snapshot().water_lift_upper_catch_latched;
 }
 
 bool ScraperXSimulation::set_intake_slew_input(const double value) {

@@ -7,6 +7,21 @@
 
 namespace scraperx::sim::bands {
 
+// B00 ground-water ascent: stored water becomes the counter-mass that lifts
+// the player from grade to a fixed +8 m landing.
+struct GroundWaterLift final {
+    kit::BodyIndex frame;
+    kit::BodyIndex cage;
+    kit::BodyIndex bucket;
+    kit::GuideIndex cage_guide;
+    kit::GuideIndex bucket_guide;
+    kit::RopeIndex rope;
+    kit::CatchIndex bucket_top_catch;
+    kit::CatchIndex cage_upper_catch;
+};
+
+void build_ground_water_lift(kit::Kit &kit, GroundWaterLift &lift);
+
 // AS-006, Atlas band B02, 154 -> 220 m.
 struct CounterweightWell final {
     // Stage A, the skip lift.

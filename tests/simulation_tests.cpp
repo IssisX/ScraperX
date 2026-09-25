@@ -3303,6 +3303,185 @@ int main() {
               << " conserved_err=" << worst_conservation
               << " full_stop=1 reverse_return=1" << '\n';
 
+
+    // ---- Ground water-weight lift: upstream mass becomes player ascent ----
+    // The screw's delivery is already independently proven above. These runs
+    // seed that exact conserved output at the seam, then falsify the receiving
+    // mechanism itself. No seed supplies force, cage travel or catch state.
+    const auto seed_water_lift = [](Simulation &sim, const double tank_m3) {
+        sim.set_water_screw_tank_volume_m3_for_proof(tank_m3);
+        require(sim.advance_frame(0.2).accepted, "water-lift seam seed must settle");
+    };
+    const auto fill_bucket = [](Simulation &sim, const double expected_m3) {
+        require(sim.snapshot().water_lift_valve_station_active,
+                "water-lift fill control must be physically in reach");
+        require(sim.request_water_lift_valve_toggle(), "water-lift fill-open request accepted");
+        require(advance_until(
+                    sim,
+                    [expected_m3](const Snapshot &s) {
+                        return s.water_lift_bucket_water_m3 >= expected_m3 - 0.002;
+                    },
+                    24.0),
+                "tank water must physically transfer into the caught bucket");
+        require(sim.request_water_lift_valve_toggle(), "water-lift fill-close request accepted");
+        require(sim.advance_frame(0.2).accepted, "water-lift valve close must resolve");
+        require(!sim.snapshot().water_lift_valve_open,
+                "water-lift valve must be shut before release");
+    };
+    const auto board_lift_cage = [](Simulation &sim) {
+        require(walk_to(sim, -12.70, -107.10, 5.0, 0.12),
+                "player must be able to walk from the control panel onto the cage");
+        require(sim.advance_frame(0.5).accepted, "cage stance must settle");
+        const auto s = sim.snapshot();
+        require(s.player_grounded &&
+                    s.support_entity_id == Simulation::kGroundWaterLiftCageEntityId,
+                "player must stand on the real moving cage before release");
+        require(s.water_lift_release_station_active,
+                "release lever must be reachable from inside the cage");
+    };
+
+    Simulation water_lift_dry(InitialSpawn::WaterLiftValveStation);
+    require(water_lift_dry.advance_frame(0.5).accepted, "dry lift spawn settle");
+    board_lift_cage(water_lift_dry);
+    require(water_lift_dry.request_water_lift_release(), "dry lift release request accepted");
+    require(water_lift_dry.advance_frame(4.0).accepted, "dry lift interval must advance");
+    require(water_lift_dry.snapshot().water_lift_cage_travel_m < 0.05,
+            "an empty 200 kg bucket must not lift the player cage");
+
+    Simulation water_lift_partial(InitialSpawn::WaterLiftValveStation);
+    seed_water_lift(water_lift_partial, 0.40);
+    fill_bucket(water_lift_partial, 0.40);
+    board_lift_cage(water_lift_partial);
+    require(water_lift_partial.request_water_lift_release(),
+            "partial lift release request accepted");
+    require(water_lift_partial.advance_frame(5.0).accepted, "partial lift interval must advance");
+    require(water_lift_partial.snapshot().water_lift_cage_travel_m < 0.15,
+            "400 kg of water must fail by force balance, not an arbitrary fill flag");
+
+    Simulation water_lift_caught(InitialSpawn::WaterLiftValveStation);
+    seed_water_lift(water_lift_caught, 2.0);
+    fill_bucket(water_lift_caught, 2.0);
+    const double caught_before = water_lift_caught.snapshot().water_lift_cage_travel_m;
+    require(water_lift_caught.advance_frame(4.0).accepted, "caught lift interval must advance");
+    require(std::abs(water_lift_caught.snapshot().water_lift_cage_travel_m - caught_before) < 0.02,
+            "a full bucket still held by its physical catch must not move the cage");
+
+    Simulation water_lift_disconnected(InitialSpawn::WaterLiftValveStation);
+    seed_water_lift(water_lift_disconnected, 2.0);
+    fill_bucket(water_lift_disconnected, 2.0);
+    board_lift_cage(water_lift_disconnected);
+    water_lift_disconnected.set_water_lift_rope_connected(false);
+    require(water_lift_disconnected.request_water_lift_release(),
+            "disconnected lift release request accepted");
+    require(water_lift_disconnected.advance_frame(4.0).accepted,
+            "disconnected lift interval must advance");
+    require(water_lift_disconnected.snapshot().water_lift_cage_travel_m < 0.05,
+            "a disconnected rope must transmit no counterweight lift");
+
+    Simulation water_lift_overload(InitialSpawn::WaterLiftValveStation);
+    seed_water_lift(water_lift_overload, 2.0);
+    fill_bucket(water_lift_overload, 2.0);
+    water_lift_overload.set_water_lift_cage_mass_kg(1300.0);
+    board_lift_cage(water_lift_overload);
+    require(water_lift_overload.request_water_lift_release(),
+            "overloaded lift release request accepted");
+    require(water_lift_overload.advance_frame(5.0).accepted,
+            "overloaded lift interval must advance");
+    require(water_lift_overload.snapshot().water_lift_cage_travel_m < 0.15,
+            "an overloaded cage must fail from the real mass ratio");
+
+    Simulation water_lift(InitialSpawn::WaterLiftValveStation);
+    seed_water_lift(water_lift, 2.0);
+    const double water_total_start =
+        water_lift.snapshot().water_screw_basin_volume_m3 +
+        water_lift.snapshot().water_screw_tank_volume_m3 +
+        water_lift.snapshot().water_lift_bucket_water_m3;
+    fill_bucket(water_lift, 2.0);
+    require(water_lift.snapshot().water_lift_bucket_mass_kg > 2198.0,
+            "2.0 m3 must make the real bucket approximately 2200 kg");
+    board_lift_cage(water_lift);
+    require(water_lift.request_water_lift_release(), "rated lift release request accepted");
+
+    bool rode_moving_cage = false;
+    double lift_peak_rope_tension = 0.0;
+    bool lift_caught = false;
+    for (std::uint32_t tick = 0; tick < 12 * Simulation::kTickRateHz; ++tick) {
+        require(water_lift.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "rated water-lift step must advance");
+        const auto s = water_lift.snapshot();
+        lift_peak_rope_tension =
+            std::max(lift_peak_rope_tension, s.water_lift_rope_tension_n);
+        rode_moving_cage =
+            rode_moving_cage ||
+            (s.support_entity_id == Simulation::kGroundWaterLiftCageEntityId &&
+             s.water_lift_cage_travel_m > 0.25);
+        if (s.water_lift_upper_catch_latched) {
+            lift_caught = true;
+            break;
+        }
+    }
+    require(lift_caught,
+            "full conserved water load must lift and catch the cage at +8 m");
+    const auto lift_top = water_lift.snapshot();
+    require(rode_moving_cage,
+            "the player must ride the cage as a real moving support during ascent");
+    require(lift_top.water_lift_cage_travel_m > 7.90,
+            "upper catch must hold the cage at the +8 m travel seat");
+    require(lift_top.water_lift_cage_peak_speed_mps <= 2.35,
+            "finite brake/governor must keep cage speed near its 2.2 m/s rating");
+    require(lift_peak_rope_tension > 1000.0,
+            "the successful ascent must carry measurable solver rope tension");
+
+    require(advance_until(
+                water_lift,
+                [](const Snapshot &s) { return s.water_lift_bucket_water_m3 < 0.01; },
+                22.0),
+            "caught cage must hold while the lower bucket drains by gravity");
+    const auto drained = water_lift.snapshot();
+    require(drained.water_lift_upper_catch_latched &&
+                drained.water_lift_cage_travel_m > 7.90,
+            "drain must not release the player cage from the +8 m pawl");
+    const double water_total_drained =
+        drained.water_screw_basin_volume_m3 + drained.water_screw_tank_volume_m3 +
+        drained.water_lift_bucket_water_m3;
+    require(std::abs(water_total_drained - water_total_start) < 1.0e-8,
+            "tank -> bucket -> basin cycle must conserve the same water inventory");
+
+    require(walk_to(water_lift, -9.45, -108.20, 5.0, 0.18),
+            "player must step from caught cage onto the fixed +8 m dock");
+    require(water_lift.advance_frame(0.5).accepted, "upper dock stance must settle");
+    const auto on_dock = water_lift.snapshot();
+    require(on_dock.player_grounded &&
+                on_dock.support_entity_id == Simulation::kGroundWaterLiftFrameEntityId,
+            "the +8 m handoff must be fixed structural support, not the moving cage");
+    require(walk_to(water_lift, -9.45, -106.85, 3.0, 0.15),
+            "player must reach the reset control on the fixed upper dock");
+    require(water_lift.snapshot().water_lift_reset_station_active,
+            "upper reset control must be physically in reach");
+    require(water_lift.request_water_lift_reset(), "water-lift reset request accepted");
+    require(advance_until(
+                water_lift,
+                [](const Snapshot &s) {
+                    return s.water_lift_cage_travel_m < 0.08 &&
+                           s.water_lift_bucket_catch_latched;
+                },
+                14.0),
+            "empty bucket must rise back to its top catch as the cage resets");
+
+    const auto reset_lift = water_lift.snapshot();
+    require(reset_lift.water_lift_bucket_water_m3 < 0.01 &&
+                reset_lift.water_lift_cage_travel_m < 0.08,
+            "reset must finish with an empty caught bucket and cage back at grade");
+    std::cout << "PASS scraperx_sim ground water lift: cage_travel="
+              << lift_top.water_lift_cage_travel_m
+              << " peak_speed=" << lift_top.water_lift_cage_peak_speed_mps
+              << " rope_N=" << lift_peak_rope_tension
+              << " bucket_kg=" << lift_top.water_lift_bucket_mass_kg
+              << " dock_y=" << on_dock.player_position.y
+              << " conserved_err=" << std::abs(water_total_drained - water_total_start)
+              << " dry_fail=1 partial_fail=1 rope_fail=1 overload_fail=1"
+              << " moving_support=1 reset=1" << '\n';
+
     // ---- AS-006 Stage A, the skip lift (03_EXECUTION/ASCENT/AS-006_CW_PIN.md)
     //
     // No link, no lift: as found, the rope's end is made fast on the bollard.

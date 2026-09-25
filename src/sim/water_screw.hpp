@@ -55,6 +55,9 @@ public:
     void set_outlet_blocked(bool blocked) noexcept;
     void set_drive_direction(int direction) noexcept;
     void set_basin_volume_m3(double volume_m3) noexcept;
+    [[nodiscard]] double withdraw_tank_volume_m3(double requested_m3) noexcept;
+    [[nodiscard]] double return_to_basin_m3(double requested_m3) noexcept;
+    void set_tank_volume_m3_preserving_total(double target_m3) noexcept;
     void restore_state(const WaterScrewState &state) noexcept;
     void step(double delta_seconds) noexcept;
 

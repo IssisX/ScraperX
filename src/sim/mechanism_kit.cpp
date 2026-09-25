@@ -129,6 +129,23 @@ void Kit::set_damping(const BodyIndex body, const float linear, const float angu
     motion->SetAngularDamping(angular);
 }
 
+void Kit::set_body_mass(const BodyIndex body, const float mass_kg) {
+    if (!body.valid() || body.value >= bodies_.size() || mass_kg <= 0.0F ||
+        !bodies_[body.value].dynamic) {
+        return;
+    }
+    {
+        JPH::BodyLockWrite lock(system_.GetBodyLockInterface(), bodies_[body.value].id);
+        if (!lock.Succeeded()) return;
+        JPH::Body &jolt = lock.GetBody();
+        JPH::MassProperties mass = jolt.GetShape()->GetMassProperties();
+        mass.ScaleToMass(mass_kg);
+        jolt.GetMotionProperties()->SetMassProperties(JPH::EAllowedDOFs::All, mass);
+        bodies_[body.value].mass = mass_kg;
+    }
+    system_.GetBodyInterface().ActivateBody(bodies_[body.value].id);
+}
+
 AnchorIndex Kit::add_anchor(const BodyIndex body, const JPH::Vec3 local, const float reach) {
     anchors_.push_back({body, local, reach});
     return AnchorIndex{static_cast<std::uint32_t>(anchors_.size() - 1U)};
@@ -203,15 +220,23 @@ LeverIndex Kit::add_lever(const BodyIndex body, const JPH::RVec3 pivot, const JP
 
 CatchIndex Kit::add_catch(const BodyIndex body, const LeverIndex lever, const float release_angle,
                           const float seat_tolerance, const bool relatch) {
+    return add_catch_at(body, lever, jolt_body(body).GetCenterOfMassPosition(),
+                        release_angle, seat_tolerance, relatch, true);
+}
+
+CatchIndex Kit::add_catch_at(const BodyIndex body, const LeverIndex lever,
+                             const JPH::RVec3 seat, const float release_angle,
+                             const float seat_tolerance, const bool relatch,
+                             const bool initially_latched) {
     Catch record;
     record.body = body;
     record.lever = lever;
     record.release_angle = release_angle;
     record.seat_tolerance = seat_tolerance;
     record.relatch = relatch;
-    record.seat = jolt_body(body).GetCenterOfMassPosition();
+    record.seat = seat;
     catches_.push_back(record);
-    latch(catches_.back());
+    if (initially_latched) latch(catches_.back());
     return CatchIndex{static_cast<std::uint32_t>(catches_.size() - 1U)};
 }
 
@@ -285,7 +310,8 @@ void Kit::pre_step(const float) {
             }
             continue;
         }
-        if (!catch_record.relatch || angle > 0.1F * catch_record.release_angle) {
+        if (!catch_record.armed || !catch_record.relatch ||
+            angle > 0.1F * catch_record.release_angle) {
             continue;
         }
         const JPH::Body &body = jolt_body(catch_record.body);
@@ -541,6 +567,29 @@ std::uint64_t Kit::unhook(const RopeIndex rope_index) {
     return bodies_[rope.shackle.value].entity;
 }
 
+void Kit::set_rope_connected(const RopeIndex rope_index, const bool connected) {
+    Rope *rope = rope_index.value < ropes_.size() ? &ropes_[rope_index.value] : nullptr;
+    if (rope == nullptr || rope->parted) return;
+    if (connected) connect_rope(*rope);
+    else disconnect_rope(*rope);
+}
+
+void Kit::release_catch(const CatchIndex catch_index) {
+    if (catch_index.value >= catches_.size()) return;
+    catches_[catch_index.value].armed = false;
+    unlatch(catches_[catch_index.value]);
+}
+
+void Kit::arm_catch(const CatchIndex catch_index) {
+    if (catch_index.value < catches_.size()) catches_[catch_index.value].armed = true;
+}
+
+void Kit::engage_catch(const CatchIndex catch_index) {
+    if (catch_index.value >= catches_.size()) return;
+    catches_[catch_index.value].armed = true;
+    latch(catches_[catch_index.value]);
+}
+
 std::uint64_t Kit::anchor_entity(const AnchorIndex anchor) const noexcept {
     const Anchor *record = find(anchors_, anchor);
     return record != nullptr ? bodies_[record->body.value].entity : 0;
@@ -576,8 +625,10 @@ void Kit::capture(Checkpoint &out) const {
         out.rope_parted[index] = ropes_[index].parted;
     }
     out.catch_latched.resize(catches_.size());
+    out.catch_armed.resize(catches_.size());
     for (std::size_t index = 0; index < catches_.size(); ++index) {
         out.catch_latched[index] = catches_[index].pin != nullptr;
+        out.catch_armed[index] = catches_[index].armed;
     }
 }
 
@@ -618,6 +669,8 @@ void Kit::restore(const Checkpoint &in) {
         connect_rope(rope);
     }
     for (std::size_t index = 0; index < catches_.size(); ++index) {
+        catches_[index].armed =
+            index < in.catch_armed.size() ? in.catch_armed[index] : true;
         if (in.catch_latched[index]) {
             latch(catches_[index]);
         }

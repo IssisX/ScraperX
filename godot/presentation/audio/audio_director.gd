@@ -82,6 +82,8 @@ var _hiss: AudioStreamPlayer3D
 var _rattle: AudioStreamPlayer3D
 var _motor: AudioStreamPlayer3D
 var _water_screw_motor: AudioStreamPlayer3D
+var _water_lift_drive: AudioStreamPlayer3D
+var _water_lift_water: AudioStreamPlayer3D
 var _stride := 0.0
 var _was_grounded := true
 var _last_vy := 0.0
@@ -132,6 +134,8 @@ func _ready() -> void:
 	_rattle = _positional_player(BUS_AMBIENCE, Vector3.ZERO, 5.0, 90.0)
 	_motor = _positional_player(BUS_AMBIENCE, Vector3.ZERO, 6.0, 100.0)
 	_water_screw_motor = _positional_player(BUS_AMBIENCE, Vector3(-18.0, 1.0, -98.0), 6.0, 100.0)
+	_water_lift_drive = _positional_player(BUS_AMBIENCE, Vector3(-12.5, 4.0, -108.2), 5.0, 90.0)
+	_water_lift_water = _positional_player(BUS_AMBIENCE, Vector3(-18.0, 4.5, -105.8), 5.0, 80.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -173,15 +177,17 @@ func _on_bank_ready() -> void:
 		return
 	for pair in [[_wind, &"wind_loop"], [_rush, &"rush_loop"], [_drone, &"drone_loop"],
 			[_hum, &"hum_loop"], [_hiss, &"hiss_loop"], [_rattle, &"rattle_loop"],
-			[_motor, &"motor_loop"], [_water_screw_motor, &"motor_loop"]]:
+			[_motor, &"motor_loop"], [_water_screw_motor, &"motor_loop"],
+			[_water_lift_drive, &"rattle_loop"], [_water_lift_water, &"hiss_loop"]]:
 		pair[0].stream = _bank.pick(pair[1])
 	_wind.volume_db = -60.0
 	_rush.volume_db = -60.0
 	_drone.volume_db = -60.0
 	_hum.volume_db = -6.0
-	for player in [_hiss, _rattle, _motor, _water_screw_motor]:
+	for player in [_hiss, _rattle, _motor, _water_screw_motor, _water_lift_drive, _water_lift_water]:
 		player.volume_db = -80.0
-	for player in [_wind, _rush, _drone, _hum, _hiss, _rattle, _motor, _water_screw_motor]:
+	for player in [_wind, _rush, _drone, _hum, _hiss, _rattle, _motor, _water_screw_motor,
+			_water_lift_drive, _water_lift_water]:
 		player.play()
 
 
@@ -313,6 +319,19 @@ func update_water_screw(rpm: float, torque_nm: float) -> void:
 	var audible := maxf(speed, load * 0.45)
 	_water_screw_motor.volume_db = linear_to_db(maxf(audible, 0.0001)) - 5.0
 	_water_screw_motor.pitch_scale = lerpf(0.62, 1.20, speed) * lerpf(0.92, 1.0, load)
+
+
+# Water hiss follows measured transfer. Rope/cage machinery follows measured
+# solver tension, so a disconnected or unloaded lift goes quiet.
+func update_water_lift(flow_m3_s: float, rope_tension_n: float) -> void:
+	if not _bank_ready or _silent:
+		return
+	var flow := clampf(absf(flow_m3_s) / 0.12, 0.0, 1.0)
+	var load := clampf(absf(rope_tension_n) / 30000.0, 0.0, 1.0)
+	_water_lift_water.volume_db = linear_to_db(maxf(flow, 0.0001)) - 4.0
+	_water_lift_water.pitch_scale = lerpf(0.82, 1.18, flow)
+	_water_lift_drive.volume_db = linear_to_db(maxf(load, 0.0001)) - 7.0
+	_water_lift_drive.pitch_scale = lerpf(0.72, 1.08, load)
 
 
 # Wind rises with altitude; a falling body hears the air tear past. The

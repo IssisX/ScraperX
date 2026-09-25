@@ -129,6 +129,24 @@ public:
     [[nodiscard]] double get_water_screw_leakage_m3() const;
     [[nodiscard]] double get_water_screw_shaft_work_j() const;
 
+    // Ground water-weight lift.
+    [[nodiscard]] bool request_water_lift_valve_toggle();
+    [[nodiscard]] bool request_water_lift_release();
+    [[nodiscard]] bool request_water_lift_reset();
+    [[nodiscard]] bool is_water_lift_valve_station_active() const;
+    [[nodiscard]] bool is_water_lift_release_station_active() const;
+    [[nodiscard]] bool is_water_lift_reset_station_active() const;
+    [[nodiscard]] bool is_water_lift_valve_open() const;
+    [[nodiscard]] double get_water_lift_valve_flow_m3_s() const;
+    [[nodiscard]] double get_water_lift_bucket_water_m3() const;
+    [[nodiscard]] double get_water_lift_bucket_mass_kg() const;
+    [[nodiscard]] double get_water_lift_bucket_travel_m() const;
+    [[nodiscard]] double get_water_lift_cage_travel_m() const;
+    [[nodiscard]] double get_water_lift_cage_peak_speed_mps() const;
+    [[nodiscard]] double get_water_lift_rope_tension_n() const;
+    [[nodiscard]] bool is_water_lift_bucket_catch_latched() const;
+    [[nodiscard]] bool is_water_lift_upper_catch_latched() const;
+
     // AS-001 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
     [[nodiscard]] bool set_intake_slew_input(double value);
     [[nodiscard]] bool set_intake_hoist_input(double value);

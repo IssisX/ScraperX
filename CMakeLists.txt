@@ -21,6 +21,7 @@ add_library(scraperx_sim STATIC
     src/sim/water_screw.cpp
     src/sim/mechanism_kit.cpp
     src/sim/band_counterweight_well.cpp
+    src/sim/band_ground_water_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)

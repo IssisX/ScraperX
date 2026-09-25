@@ -111,6 +111,7 @@ public:
     // the line's own stiffness would settle: a handle bumped on its line
     // stops swinging in a second or two.
     void set_damping(BodyIndex body, float linear, float angular);
+    void set_body_mass(BodyIndex body, float mass_kg);
     AnchorIndex add_anchor(BodyIndex body, JPH::Vec3 local, float reach);
 
     // A straight guide along a world axis through the body's present
@@ -143,6 +144,9 @@ public:
     // returned.
     CatchIndex add_catch(BodyIndex body, LeverIndex lever, float release_angle,
                          float seat_tolerance, bool relatch);
+    CatchIndex add_catch_at(BodyIndex body, LeverIndex lever, JPH::RVec3 seat,
+                            float release_angle, float seat_tolerance, bool relatch,
+                            bool initially_latched);
 
     // A trip line: a light rope from a lever's arm point over sheave1, along
     // to sheave2 and down to a handle hanging there, as laid. Pulling the
@@ -179,6 +183,10 @@ public:
     // Moves the rope's end back onto its shackle, placed at the anchor.
     // Returns the shackle's entity, 0 when the rope has no hooked shackle.
     std::uint64_t unhook(RopeIndex rope);
+    void set_rope_connected(RopeIndex rope, bool connected);
+    void release_catch(CatchIndex catch_index);
+    void arm_catch(CatchIndex catch_index);
+    void engage_catch(CatchIndex catch_index);
     [[nodiscard]] std::uint64_t anchor_entity(AnchorIndex anchor) const noexcept;
     [[nodiscard]] std::uint64_t rope_shackle_entity(RopeIndex rope) const noexcept;
 
@@ -195,6 +203,7 @@ public:
         std::vector<AnchorIndex> rope_anchor;   // invalid: on its shackle
         std::vector<bool> rope_parted;
         std::vector<bool> catch_latched;
+        std::vector<bool> catch_armed;
     };
     void capture(Checkpoint &out) const;
     void restore(const Checkpoint &in);
@@ -302,6 +311,7 @@ private:
         float release_angle = 0.0F;
         float seat_tolerance = 0.0F;
         bool relatch = false;
+        bool armed = true;
         JPH::RVec3 seat = JPH::RVec3::sZero();
         JPH::Ref<JPH::FixedConstraint> pin;
     };

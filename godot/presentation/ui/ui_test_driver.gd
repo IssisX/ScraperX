@@ -31,6 +31,7 @@ const SCENARIOS := {
 	"touch_pendant": 18,
 	"touch_carry": 22,
 	"touch_water_screw": 25,
+	"touch_water_lift": 26,
 	"touch_pause": 8,
 	"pad_core": 8,
 	"pad_pendant": 14,
@@ -115,6 +116,8 @@ func _run() -> void:
 			ok = await _touch_carry()
 		"touch_water_screw":
 			ok = await _touch_water_screw()
+		"touch_water_lift":
+			ok = await _touch_water_lift()
 		"touch_pause":
 			ok = await _touch_pause()
 		"pad_core":
@@ -597,6 +600,25 @@ func _touch_water_screw() -> bool:
 		float(_native().get_water_screw_rpm()),
 		float(_native().get_water_screw_motor_torque_nm()),
 		float(_native().get_water_screw_tank_volume_m3())]
+	return true
+
+
+func _touch_water_lift() -> bool:
+	var reached: bool = await _wait_until(
+		func() -> bool: return _ctx()["action"]["id"] == &"water_lift_valve", 2.0)
+	if not reached:
+		return _fail("ACTION never offered the water-lift fill valve")
+	if bool(_native().is_water_lift_valve_open()):
+		return _fail("water-lift fill valve must start shut")
+	_tap(0, _center(&"action"))
+	var opened: bool = await _wait_until(
+		func() -> bool: return bool(_native().is_water_lift_valve_open()), 0.3)
+	if not opened:
+		return _fail("ACTION did not open the authoritative water-lift valve")
+	await _pose("water_lift_fill_control")
+	_detail = "valve_open=1 bucket_m3=%.3f cage_m=%.3f" % [
+		float(_native().get_water_lift_bucket_water_m3()),
+		float(_native().get_water_lift_cage_travel_m())]
 	return true
 
 

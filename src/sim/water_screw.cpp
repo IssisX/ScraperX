@@ -51,6 +51,36 @@ void WaterScrew::set_basin_volume_m3(const double volume_m3) noexcept {
     }
 }
 
+double WaterScrew::withdraw_tank_volume_m3(const double requested_m3) noexcept {
+    if (!std::isfinite(requested_m3) || requested_m3 <= 0.0) return 0.0;
+    const double moved = std::min(requested_m3, state_.tank_volume_m3);
+    state_.tank_volume_m3 -= moved;
+    return moved;
+}
+
+double WaterScrew::return_to_basin_m3(const double requested_m3) noexcept {
+    if (!std::isfinite(requested_m3) || requested_m3 <= 0.0) return 0.0;
+    const double room = config_.basin_capacity_m3 - state_.basin_volume_m3;
+    const double moved = std::min(requested_m3, std::max(0.0, room));
+    state_.basin_volume_m3 += moved;
+    return moved;
+}
+
+void WaterScrew::set_tank_volume_m3_preserving_total(const double target_m3) noexcept {
+    if (!std::isfinite(target_m3)) return;
+    const double target = std::clamp(target_m3, 0.0, config_.tank_capacity_m3);
+    if (target > state_.tank_volume_m3) {
+        const double moved = std::min(target - state_.tank_volume_m3, state_.basin_volume_m3);
+        state_.tank_volume_m3 += moved;
+        state_.basin_volume_m3 -= moved;
+    } else {
+        const double room = config_.basin_capacity_m3 - state_.basin_volume_m3;
+        const double moved = std::min(state_.tank_volume_m3 - target, std::max(0.0, room));
+        state_.tank_volume_m3 -= moved;
+        state_.basin_volume_m3 += moved;
+    }
+}
+
 void WaterScrew::restore_state(const WaterScrewState &state) noexcept {
     state_ = state;
     state_.motor_torque_limit_nm = std::max(0.0, state_.motor_torque_limit_nm);

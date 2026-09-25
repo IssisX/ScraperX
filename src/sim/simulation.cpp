@@ -73,6 +73,24 @@ constexpr float kWaterScrewStationX = -14.0F;
 constexpr float kWaterScrewStationZ = -96.5F;
 constexpr float kWaterScrewStationRadius = 2.6F;
 
+// Ground water-weight lift. The valve only transfers water between owners;
+// gravity, the pulley and Jolt constraints decide whether anything moves.
+constexpr float kWaterLiftValveStationX = -13.80F;
+constexpr float kWaterLiftValveStationY = 0.90F;
+constexpr float kWaterLiftValveStationZ = -106.50F;
+constexpr float kWaterLiftReleaseStationX = -12.70F;
+constexpr float kWaterLiftReleaseStationY = 0.90F;
+constexpr float kWaterLiftReleaseStationZ = -106.50F;
+constexpr float kWaterLiftResetStationX = -9.45F;
+constexpr float kWaterLiftResetStationY = 9.05F;
+constexpr float kWaterLiftResetStationZ = -106.85F;
+constexpr float kWaterLiftStationRadius = 1.45F;
+constexpr double kWaterLiftBucketCapacityM3 = 2.0;
+constexpr double kWaterLiftFillRateM3S = 0.10;
+constexpr double kWaterLiftDrainRateM3S = 0.12;
+constexpr double kWaterLiftBucketDryMassKg = 200.0;
+constexpr double kWaterDensityKgM3 = 1000.0;
+
 constexpr float kSupportNormalThreshold = 0.55F;
 // Footing firm enough to commit a checkpoint on: the body's centre is over
 // what it stands on, so a ray straight down from it meets a walkable surface
@@ -1439,6 +1457,12 @@ private:
     case scraperx::sim::InitialSpawn::WaterScrewStation:
         return {static_cast<double>(kWaterScrewStationX), 0.9,
                 static_cast<double>(kWaterScrewStationZ) - 0.8};
+    case scraperx::sim::InitialSpawn::WaterLiftValveStation:
+        return {kWaterLiftValveStationX, kWaterLiftValveStationY, kWaterLiftValveStationZ + 0.8};
+    case scraperx::sim::InitialSpawn::WaterLiftCage:
+        return {-12.50, 1.15, -108.20};
+    case scraperx::sim::InitialSpawn::WaterLiftUpperDock:
+        return {-9.45, 9.15, -108.20};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1709,6 +1733,7 @@ public:
         // reason: every body before them keeps its id.
         kit_ = std::make_unique<scraperx::sim::kit::Kit>(physics_system_, object_layers::kStatic,
                                                         object_layers::kMoving);
+        scraperx::sim::bands::build_ground_water_lift(*kit_, ground_water_lift_);
         scraperx::sim::bands::build_counterweight_well(*kit_, well_);
 
         physics_system_.OptimizeBroadPhase();
@@ -1791,6 +1816,9 @@ public:
         double needle_hoist_input = 0.0;
         bool valve_toggle_requested = false;
         bool water_screw_toggle_requested = false;
+        bool water_lift_valve_toggle_requested = false;
+        bool water_lift_release_requested = false;
+        bool water_lift_reset_requested = false;
         double intake_slew_input = 0.0;
         double intake_hoist_input = 0.0;
         bool intake_sling_release_requested = false;
@@ -1812,6 +1840,10 @@ public:
         update_needle(bodies, commands.needle_hoist_input);
         update_sump(bodies, delta_seconds, commands.valve_toggle_requested);
         update_water_screw(bodies, delta_seconds, commands.water_screw_toggle_requested);
+        update_water_lift(bodies, delta_seconds,
+                          commands.water_lift_valve_toggle_requested,
+                          commands.water_lift_release_requested,
+                          commands.water_lift_reset_requested);
         update_intake(bodies, commands.intake_slew_input, commands.intake_hoist_input);
         update_legal_forty(bodies, commands.intake_sling_release_requested,
                            commands.intake_sling_attach_requested);
@@ -1926,6 +1958,17 @@ public:
     }
     void set_water_screw_basin_volume_m3(const double volume_m3) noexcept {
         water_screw_.set_basin_volume_m3(volume_m3);
+    }
+    void set_water_screw_tank_volume_m3_for_proof(const double volume_m3) noexcept {
+        water_screw_.set_tank_volume_m3_preserving_total(volume_m3);
+    }
+    void set_water_lift_rope_connected(const bool connected) noexcept {
+        kit_->set_rope_connected(ground_water_lift_.rope, connected);
+    }
+    void set_water_lift_cage_mass_kg(const double mass_kg) noexcept {
+        if (std::isfinite(mass_kg) && mass_kg > 0.0) {
+            kit_->set_body_mass(ground_water_lift_.cage, static_cast<float>(mass_kg));
+        }
     }
 
 private:
@@ -3736,6 +3779,73 @@ private:
         water_screw_.step(delta_seconds);
     }
 
+
+    void update_water_lift(const JPH::BodyInterface &bodies,
+                           const double delta_seconds,
+                           const bool valve_toggle_requested,
+                           const bool release_requested,
+                           const bool reset_requested) noexcept {
+        const JPH::RVec3 player = bodies.GetPosition(player_id_);
+        const auto near_station = [&player](const float x, const float y, const float z) {
+            const JPH::Vec3 d = JPH::Vec3(player - JPH::RVec3(x, y, z));
+            return d.LengthSq() <= kWaterLiftStationRadius * kWaterLiftStationRadius;
+        };
+        water_lift_valve_station_active_ =
+            near_station(kWaterLiftValveStationX, kWaterLiftValveStationY, kWaterLiftValveStationZ);
+        water_lift_release_station_active_ =
+            near_station(kWaterLiftReleaseStationX, kWaterLiftReleaseStationY,
+                         kWaterLiftReleaseStationZ);
+        water_lift_reset_station_active_ =
+            near_station(kWaterLiftResetStationX, kWaterLiftResetStationY, kWaterLiftResetStationZ);
+
+        if (valve_toggle_requested && water_lift_valve_station_active_) {
+            water_lift_valve_open_ = !water_lift_valve_open_;
+        }
+        if (release_requested && water_lift_release_station_active_) {
+            kit_->release_catch(ground_water_lift_.bucket_top_catch);
+        }
+        if (reset_requested && water_lift_reset_station_active_) {
+            kit_->release_catch(ground_water_lift_.cage_upper_catch);
+        }
+
+        const double bucket_travel = kit_->guide_travel(ground_water_lift_.bucket_guide);
+        const double cage_travel = kit_->guide_travel(ground_water_lift_.cage_guide);
+        if (bucket_travel < -0.20) {
+            kit_->arm_catch(ground_water_lift_.bucket_top_catch);
+        }
+        if (cage_travel < 7.80) {
+            kit_->arm_catch(ground_water_lift_.cage_upper_catch);
+        }
+
+        water_lift_valve_flow_m3_s_ = 0.0;
+        if (water_lift_valve_open_ && bucket_travel > -0.08 &&
+            water_lift_bucket_water_m3_ < kWaterLiftBucketCapacityM3) {
+            const double request =
+                std::min(kWaterLiftFillRateM3S * delta_seconds,
+                         kWaterLiftBucketCapacityM3 - water_lift_bucket_water_m3_);
+            const double moved = water_screw_.withdraw_tank_volume_m3(request);
+            water_lift_bucket_water_m3_ += moved;
+            water_lift_valve_flow_m3_s_ = moved / delta_seconds;
+        }
+
+        // Once the bucket reaches its physical lower stop, its bottom drain
+        // returns the same water to the ground basin. No water is destroyed.
+        if (bucket_travel < -3.92 &&
+            kit_->catch_latched(ground_water_lift_.cage_upper_catch) &&
+            water_lift_bucket_water_m3_ > 0.0) {
+            const double request =
+                std::min(kWaterLiftDrainRateM3S * delta_seconds, water_lift_bucket_water_m3_);
+            const double moved = water_screw_.return_to_basin_m3(request);
+            water_lift_bucket_water_m3_ -= moved;
+            water_lift_valve_flow_m3_s_ = -moved / delta_seconds;
+        }
+
+        kit_->set_body_mass(
+            ground_water_lift_.bucket,
+            static_cast<float>(kWaterLiftBucketDryMassKg +
+                               kWaterDensityKgM3 * water_lift_bucket_water_m3_));
+    }
+
     void update_intake(const JPH::BodyInterface &bodies,
                        const double slew_input,
                        const double hoist_input) noexcept {
@@ -5114,6 +5224,8 @@ private:
         checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
         checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
         checkpoint_.water_screw = water_screw_.state();
+        checkpoint_.water_lift_bucket_water_m3 = water_lift_bucket_water_m3_;
+        checkpoint_.water_lift_valve_open = water_lift_valve_open_;
         checkpoint_.intake_swing_flight = capture_body(bodies, intake_swing_flight_id_);
         checkpoint_.intake_cw_cradle = capture_body(bodies, intake_cw_cradle_id_);
         checkpoint_.hook5_door = capture_body(bodies, hook5_door_id_);
@@ -5192,6 +5304,12 @@ private:
         sump_isolated_ = checkpoint_.sump_isolated;
         steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
         water_screw_.restore_state(checkpoint_.water_screw);
+        water_lift_bucket_water_m3_ = checkpoint_.water_lift_bucket_water_m3;
+        water_lift_valve_open_ = checkpoint_.water_lift_valve_open;
+        kit_->set_body_mass(
+            ground_water_lift_.bucket,
+            static_cast<float>(kWaterLiftBucketDryMassKg +
+                               kWaterDensityKgM3 * water_lift_bucket_water_m3_));
 
         grounded_ = false;
         jump_vault_ticks_left_ = 0;
@@ -5273,6 +5391,27 @@ private:
         state_.water_screw_tank_volume_m3 = screw.tank_volume_m3;
         state_.water_screw_leakage_m3 = screw.cumulative_leakage_or_recycle_m3;
         state_.water_screw_shaft_work_j = screw.shaft_work_j;
+
+        state_.water_lift_valve_station_active = water_lift_valve_station_active_;
+        state_.water_lift_release_station_active = water_lift_release_station_active_;
+        state_.water_lift_reset_station_active = water_lift_reset_station_active_;
+        state_.water_lift_valve_open = water_lift_valve_open_;
+        state_.water_lift_valve_flow_m3_s = water_lift_valve_flow_m3_s_;
+        state_.water_lift_bucket_water_m3 = water_lift_bucket_water_m3_;
+        state_.water_lift_bucket_mass_kg =
+            kit_->body_mass(ground_water_lift_.bucket);
+        state_.water_lift_bucket_travel_m =
+            kit_->guide_travel(ground_water_lift_.bucket_guide);
+        state_.water_lift_cage_travel_m =
+            kit_->guide_travel(ground_water_lift_.cage_guide);
+        state_.water_lift_cage_peak_speed_mps =
+            kit_->guide_peak_speed(ground_water_lift_.cage_guide);
+        state_.water_lift_rope_tension_n =
+            kit_->rope_tension(ground_water_lift_.rope);
+        state_.water_lift_bucket_catch_latched =
+            kit_->catch_latched(ground_water_lift_.bucket_top_catch);
+        state_.water_lift_upper_catch_latched =
+            kit_->catch_latched(ground_water_lift_.cage_upper_catch);
 
         state_.intake_station_active = intake_station_active_;
         state_.intake_boom_angle_radians = intake_boom_angle_;
@@ -5441,6 +5580,13 @@ private:
     SteamPlant steam_plant_{};
     WaterScrew water_screw_{};
     bool water_screw_station_active_ = false;
+    scraperx::sim::bands::GroundWaterLift ground_water_lift_{};
+    bool water_lift_valve_station_active_ = false;
+    bool water_lift_release_station_active_ = false;
+    bool water_lift_reset_station_active_ = false;
+    bool water_lift_valve_open_ = false;
+    double water_lift_valve_flow_m3_s_ = 0.0;
+    double water_lift_bucket_water_m3_ = 0.0;
     std::vector<JPH::BodyID> machine_bodies_;
     std::vector<JPH::Ref<JPH::TwoBodyConstraint>> machine_constraints_;
     JPH::Ref<JPH::HingeConstraint> tipper_hinge_;
@@ -5587,6 +5733,8 @@ private:
         double vessel_mass_kg = 0.0;
         double cylinder_mass_kg = 0.0;
         WaterScrewState water_screw{};
+        double water_lift_bucket_water_m3 = 0.0;
+        bool water_lift_valve_open = false;
         // AS-002. The pack/hook and the dog are AS-001 gaps this ticket does
         // not reopen (00_START_HERE.md's record-gap convention): they are not
         // captured here either, unchanged from AS-001. MOD-STAIR-A-SWING and
@@ -5816,6 +5964,24 @@ bool Simulation::request_water_screw_toggle() noexcept {
     water_screw_toggle_requested_ = true;
     return true;
 }
+bool Simulation::request_water_lift_valve_toggle() noexcept {
+    water_lift_valve_toggle_requested_ = true;
+    return true;
+}
+bool Simulation::request_water_lift_release() noexcept {
+    water_lift_release_requested_ = true;
+    return true;
+}
+bool Simulation::request_water_lift_reset() noexcept {
+    water_lift_reset_requested_ = true;
+    return true;
+}
+void Simulation::set_water_lift_rope_connected(const bool connected) noexcept {
+    physics_world_->set_water_lift_rope_connected(connected);
+}
+void Simulation::set_water_lift_cage_mass_kg(const double mass_kg) noexcept {
+    physics_world_->set_water_lift_cage_mass_kg(mass_kg);
+}
 void Simulation::set_water_screw_motor_torque_limit_nm(const double torque_nm) noexcept {
     physics_world_->set_water_screw_motor_torque_limit_nm(torque_nm);
 }
@@ -5827,6 +5993,9 @@ void Simulation::set_water_screw_drive_direction(const int direction) noexcept {
 }
 void Simulation::set_water_screw_basin_volume_m3(const double volume_m3) noexcept {
     physics_world_->set_water_screw_basin_volume_m3(volume_m3);
+}
+void Simulation::set_water_screw_tank_volume_m3_for_proof(const double volume_m3) noexcept {
+    physics_world_->set_water_screw_tank_volume_m3_for_proof(volume_m3);
 }
 
 bool Simulation::set_intake_slew_input(const double value) noexcept {
@@ -5877,6 +6046,9 @@ void Simulation::step_fixed() noexcept {
     commands.needle_hoist_input = needle_hoist_input_;
     commands.valve_toggle_requested = valve_toggle_requested_;
     commands.water_screw_toggle_requested = water_screw_toggle_requested_;
+    commands.water_lift_valve_toggle_requested = water_lift_valve_toggle_requested_;
+    commands.water_lift_release_requested = water_lift_release_requested_;
+    commands.water_lift_reset_requested = water_lift_reset_requested_;
     commands.intake_slew_input = intake_slew_input_;
     commands.intake_hoist_input = intake_hoist_input_;
     commands.intake_sling_release_requested = intake_sling_release_requested_;
@@ -5892,6 +6064,9 @@ void Simulation::step_fixed() noexcept {
     rig_requested_ = false;
     valve_toggle_requested_ = false;
     water_screw_toggle_requested_ = false;
+    water_lift_valve_toggle_requested_ = false;
+    water_lift_release_requested_ = false;
+    water_lift_reset_requested_ = false;
     intake_sling_release_requested_ = false;
     intake_sling_attach_requested_ = false;
     ++tick_index_;
