@@ -67,11 +67,11 @@ constexpr float kSupportNormalThreshold = 0.55F;
 // within the capsule's half-height plus this slack. Grounded alone (above)
 // includes a capsule held up by its rim with its centre past an edge -- a
 // stance it cannot keep. Committed there, a lethal fall off that edge
-// restored the body into the same slide, every time (observed carrying the
-// hook block off MOD-HALL-DECK: committed 0.31 m past the edge, and with a
-// 32-degree normal limit instead, 0.16 m past it, still creeping off). The
-// slack covers the deployed 30-degree flight, where the surface under the
-// centre is 0.95 m down.
+// restored the body into the same slide, every time (observed carrying a
+// load off a deck: committed 0.31 m past the edge, and with a 32-degree
+// normal limit instead, 0.16 m past it, still creeping off). The slack
+// covers a 30-degree slope, where the surface under the centre is 0.95 m
+// down.
 constexpr float kCheckpointFootingSlack = 0.15F;
 constexpr float kPlayerMaximumRelativeSpeed = 5.5F;
 constexpr float kGroundAcceleration = 22.0F;
@@ -256,212 +256,6 @@ constexpr float kClimbSweepRadius = 0.30F;
 constexpr float kHangHandSpan = 0.22F;
 constexpr double kLoweringSeconds = 0.6;
 
-// --- coupled machine geometry, metres / seconds / kilograms ---------------
-// The plant sits in the approach yard between grade spawn and the tower, so the
-// player meets it on the way in rather than being born inside it.
-constexpr double kMachineCyclePeriodSeconds = 26.0;
-constexpr float kScoopX = 34.0F;
-constexpr float kScoopZ = -96.0F;
-constexpr float kScoopBottomY = 0.03F;
-constexpr float kScoopTopY = 12.0F;
-constexpr float kScoopDischargeTilt = 0.62F;
-constexpr float kTipperHingeX = 29.0F;
-constexpr float kTipperHingeY = 3.6F;
-constexpr float kTipperZ = -96.0F;
-constexpr float kValveHingeX = 29.6F;
-constexpr float kValveHingeY = 7.2F;
-constexpr float kRopeSlackMeters = 0.15F;
-constexpr float kLiftMastX = 13.0F;
-constexpr float kLiftZ = -100.0F;
-constexpr float kLiftPlatformX = 16.4F;
-constexpr float kLiftPlatformRestY = 1.2F;
-constexpr float kLiftTravelMeters = 7.6F;
-constexpr float kCounterweightX = 11.6F;
-constexpr float kSheaveY = 10.4F;
-constexpr float kBallastMassKg = 380.0F;
-constexpr float kLiftPlatformMassKg = 2100.0F;
-constexpr float kCounterweightMassKg = 1800.0F;
-constexpr float kTipperMassKg = 900.0F;
-constexpr float kValveLeverMassKg = 90.0F;
-// Valve lever angle band that maps to a fully shut / fully open orifice.
-constexpr float kValveShutAngle = -0.05F;
-constexpr float kValveOpenAngle = 0.62F;
-
-// --- WO-010 catwalk treadle ------------------------------------------------
-// The player masses 85 kg and cannot shift a 900 kg counterweighted tipper, so
-// body-in-the-machine has to happen through a control built for a body. The
-// treadle is a see-saw on the catwalk deck: standing on the outboard end lifts
-// the inboard end, which hauls a cable to the valve lever's counterweight and
-// opens the orifice. Arms are equal, so this is reach and placement rather than
-// force multiplication -- the valve gear only needs ~190 N.m, which is human
-// scale by design, and the treadle is only reachable by someone the lift has
-// already carried up (WO-009).
-constexpr float kTreadleX = 16.4F;
-constexpr float kTreadleZ = -106.0F;
-constexpr float kTreadleHingeY = 9.09F;      // 0.40 m above the catwalk deck: a step, not a mantle.
-constexpr float kTreadlePlateMeters = 1.5F;  // Plate runs from the hinge out to -x.
-constexpr float kTreadleCableArm = 0.70F;    // Cable hangs from here, under a sheave.
-constexpr float kTreadleMassKg = 130.0F;
-// Rest is level (held against the min stop by the inboard counterweight, valve
-// shut); depressed is the throw that hauls the valve gear fully open.
-constexpr float kTreadleRestAngle = 0.0F;
-constexpr float kTreadleDepressedAngle = 0.24F;
-// Sheave heights above each cable anchor. The run is a real two-sheave cable
-// span across the yard, which is also what makes the linkage legible from the
-// catwalk: you can see what the pedal is wired to.
-constexpr float kTreadleSheaveRise = 2.0F;
-constexpr float kValveCableArm = 0.25F;      // Short arm: 0.17 m of travel, ~750 N to move.
-constexpr float kValveSheaveY = 9.6F;
-// Sheave masts stand clear of everything that swings: the treadle mast is set
-// off the walkway in z so the plate and the player never foul it, and the valve
-// mast is set off in z so it misses the lever's counterweight.
-constexpr float kTreadleMastZ = -105.0F;
-constexpr float kValveMastZ = -92.0F;
-constexpr float kCatwalkDeckY = 8.69F;
-
-// --- WO-011 Ascent Atlas v1.0 kernel: KX-JIB / KX-CRATE --------------------
-// Ascent Atlas section 9 places the WO-005..008 kernel at "z=0-24 m, plan cut
-// 36 m x 36 m" as its own bounded proof volume, separate from band content --
-// it is explicitly not the Kellerworks yard above. Sited well clear of it.
-constexpr float kKernelBaseX = 200.0F;
-constexpr float kKernelBaseZ = 0.0F;
-constexpr float kKernelDeckHalfExtent = 10.0F; // 20 m square kernel apron.
-
-constexpr float kJibMastX = kKernelBaseX;
-constexpr float kJibMastZ = kKernelBaseZ;
-constexpr float kJibMastHeight = 5.0F;
-constexpr float kJibBoomLength = 6.0F;
-constexpr float kJibBoomMassKg = 400.0F;
-// Slew is bounded, not a full 360 -- a compact pendant swinging a load between
-// a pickup point and a drop point, matching WO-005's "a compact pendant is
-// enough" scope note. +/-2.0 rad (~115 deg) covers pickup-to-drop with margin.
-constexpr float kJibSlewLimitRadians = 2.0F;
-// The crate+hook at the boom tip (radius ~4.65 m) carries most of the slew
-// moment of inertia: I ~= (1200+40)*4.65^2 + boom's own (1/3)*400*6^2 ~=
-// 31,600 kg*m^2. 6000 N*m -- an earlier, unmeasured guess -- produced 0.006
-// rad/s after 6 s of full command, not the target 0.5 rad/s. Measured via a
-// probe and corrected; this value is a real, falsifiable design target now,
-// not a guess (Atlas section 0.3).
-constexpr float kJibSlewMaxTorqueNm = 45000.0F;
-constexpr float kJibSlewMaxRateRadPerSec = 0.5F;
-
-constexpr float kJibHookMassKg = 40.0F;
-constexpr float kJibHoistMaxRateMetersPerSec = 1.0F;
-// The rated winch force. A finite, enforced Jolt motor limit (Governing Law 26:
-// a real constraint capacity, not a number that only appears in an HUD label).
-// Atlas section 0.3: masses/loads below this line are design targets, not
-// proof requirements, until a benchmark scene exists -- this WO is that scene.
-constexpr float kJibMaxLiftForceN = 20000.0F;
-
-constexpr float kCrateMassKg = 1200.0F; // weight ~11.8 kN, well inside rating.
-constexpr float kCrateHalfExtent = 0.75F;
-
-// A fixed, permanently-overweight capacity-proving stand: same rated winch
-// force as the jib's hoist, a load past that rating, always commanded to
-// raise. Proves "unlimited winch force" is forbidden without staging an
-// unsafe lift on the real jib (WO-005 forbidden-shortcuts list).
-constexpr float kCapacityStandX = kKernelBaseX + 8.0F;
-constexpr float kCapacityStandZ = kKernelBaseZ + 6.0F;
-constexpr float kCapacityStandMastHeight = 4.0F;
-constexpr float kCapacityStandLoadMassKg = 2500.0F; // weight ~24.5 kN > rating.
-constexpr float kCapacityStandLoadHalfExtent = 0.6F;
-
-// Pendant station: a fixed point near the mast base. Commands only take
-// effect within this radius (WO-005: "Action to enter station").
-constexpr float kJibStationX = kJibMastX - 2.5F;
-constexpr float kJibStationZ = kJibMastZ - 2.0F;
-constexpr float kJibStationRadius = 2.5F;
-
-// --- WO-012 Ascent Atlas v1.0 kernel: KX-NEEDLE / KX-POCKETS ---------------
-// Atlas section 9 kernel chain: "player seats KX-NEEDLE with the jib." A
-// second, minimal jib-pattern mechanism -- mast + one finite-force vertical
-// motor, no slew -- carries the beam. WO-006's own text sanctions this
-// reduction ("reduced-order connection... exact beam formulation remains
-// TDD-gated... do not invent FEM to finish this WO"): siting the mast
-// directly above the pocket centreline removes any need for slew, since the
-// beam only ever travels straight down into the seat. Sited well clear of
-// both the WO-011 jib's ~6.15 m swept reach and the capacity stand, inside
-// the same 36x36 m kernel envelope (Atlas section 9).
-constexpr float kNeedleGapCenterX = kKernelBaseX;
-constexpr float kNeedleGapCenterZ = kKernelBaseZ - 16.0F;
-constexpr float kNeedleGapWidthMeters = 3.2F; // clear span the beam must bridge.
-constexpr float kNeedlePierHalfExtentX = 2.5F;
-constexpr float kNeedlePierHalfExtentZ = 1.6F;
-constexpr float kNeedlePierHeight = 4.0F; // "one bay of frame" (Atlas section 9).
-constexpr float kNeedlePierTopY = kNeedlePierHeight;
-
-constexpr float kNeedlePierApproachX =
-    kNeedleGapCenterX - (kNeedleGapWidthMeters * 0.5F + kNeedlePierHalfExtentX);
-constexpr float kNeedlePierFarX =
-    kNeedleGapCenterX + (kNeedleGapWidthMeters * 0.5F + kNeedlePierHalfExtentX);
-
-// How far each end must rest onto its pier once seated.
-constexpr float kNeedleSeatOverlapMeters = 0.9F;
-constexpr float kNeedleBeamHalfLength = kNeedleGapWidthMeters * 0.5F + kNeedleSeatOverlapMeters;
-constexpr float kNeedleBeamHalfWidth = 0.5F;
-constexpr float kNeedleBeamHalfHeight = 0.18F;
-constexpr float kNeedleBeamMassKg = 900.0F; // GDD 17: real machinery, not player strength.
-
-// Rest (seated) height of the beam's centreline -- also the hard bottom of
-// the hoist's travel, so "reaches the bottom" and "reaches the seat" are the
-// same event, not two independently-tuned numbers that could drift apart.
-// The beam's *top* is set flush with the pier tops (seated into a pocket,
-// not resting proud on top of one): this locomotion is a raw dynamic
-// capsule with no step-up assist at all (confirmed by direct observation --
-// a proud-mounted beam, top 0.36 m above the pier, flatly blocked forward
-// walking rather than being climbed), so any step here is a wall, and a real
-// seated span has to be a level continuation of the pier top, not a curb.
-constexpr float kNeedleSeatedY = kNeedlePierTopY - kNeedleBeamHalfHeight;
-// Top of the notch block cut into each pier's gap-facing edge (see
-// build_kernel_needle): low enough that the seated beam's underside clears
-// it and its own top still lands flush with the main pier top.
-constexpr float kNeedlePocketNotchTopY = kNeedlePierTopY - 2.0F * kNeedleBeamHalfHeight;
-// Clearance between the notch's boundary and the beam's own resting edge,
-// well past JPH::BoxShape's default convex radius plus Jolt's default
-// speculative contact distance, so the main block's rounded corner can never
-// intercept the descending beam (see build_kernel_needle).
-constexpr float kNeedlePocketMarginMeters = 0.2F;
-
-// Pocket world points: the beam's two end centrelines when correctly seated.
-// The beam has no horizontal or slew freedom at all (see above), so these
-// are the only points its ends can ever occupy -- alignment is guaranteed by
-// construction, not by a tolerance check.
-constexpr float kNeedlePocketApproachX = kNeedleGapCenterX - kNeedleBeamHalfLength;
-constexpr float kNeedlePocketFarX = kNeedleGapCenterX + kNeedleBeamHalfLength;
-
-constexpr float kNeedleHoistMastHeight = 7.0F; // clears the beam's stowed pose above the piers.
-// Stowed (top of travel): near the mast head, clear of the piers entirely.
-constexpr float kNeedleStowedY = kNeedleHoistMastHeight - 0.8F;
-constexpr float kNeedleHoistMaxRateMetersPerSec = 0.6F;
-constexpr float kNeedleMaxLiftForceN = 16000.0F; // weight ~8.8 kN, well inside rating.
-
-// A rest-pose seat predicate (WO-006: "a model that can say seated => support
-// predicate true... optional sag only if the chosen reduced model already
-// exists" -- this one has none). Speed, not position, is the operative test:
-// position is already guaranteed by construction, so all that remains is
-// "has it actually come to rest at the bottom," not "is it approximately
-// somewhere near it."
-constexpr float kNeedleSeatPositionToleranceMeters = 0.12F;
-constexpr float kNeedleSeatSpeedToleranceMetersPerSec = 0.35F;
-// A sustained raise command while seated is the legal unseat path: it pulls
-// the pockets pins first (the beam cannot otherwise move at all while
-// rigidly pinned), then the same motor that lowered it lifts it clear -- a
-// real mechanism reversal, not a teleport or a flag flip.
-constexpr float kNeedleUnseatCommandThreshold = 0.5F;
-
-// Sited on the approach pier itself, not at grade: the pier top is the only
-// place a player standing at grade cannot climb back up to unaided (no
-// stair/ramp exists in this kernel slice), so the pendant has to be where
-// the operator can actually reach it and then step onto the seated beam.
-// At the pier's own centre, clear of the beam's horizontal footprint (which
-// starts at kNeedlePocketApproachX = 197.5) by well over kPlayerRadius --
-// close enough to that edge and the descending beam clips the standing
-// player and wedges them against its face (found by direct observation:
-// an earlier siting 0.1 m from that edge froze forward movement dead).
-constexpr float kNeedleStationX = kNeedlePierApproachX;
-constexpr float kNeedleStationZ = kNeedleGapCenterZ;
-constexpr float kNeedleStationRadius = 2.5F;
-
 // --- The stack: the tower's climbable lower section -------------------------
 // The machine IS the building. This is a real open steel frame the player
 // walks inside and outside of -- perimeter deck rings around a central shaft,
@@ -476,543 +270,6 @@ constexpr int kStackLevelCount = 14;           // decks at 11..154 m; level 0 is
 constexpr float kStackDeckHalfThickness = 0.25F;
 constexpr float kStackDeckBandDepth = 9.0F;    // walkable perimeter band; leaves a 34 m shaft.
 constexpr float kStackColumnHalf = 0.8F;
-constexpr float kStackRampHalfWidth = 1.6F;
-// Each flight climbs under the deck band of the level it serves, so that deck
-// is cut open above the flight's upper run: from where headroom over the
-// slab falls under ~2.5 m to the flight's head, and 0.5 m clear of the slab
-// each side (the stringers guard the edges). Without the well every flight
-// ended at the deck's underside with the player's head on it.
-constexpr float kStackStairwellStart = 7.5F;       // along the climb, from the stack centre
-constexpr float kStackStairwellHalfWidth = 2.1F;
-
-// --- AS-001: Ascent Atlas §6 band B00, "Apron and Intake" (0 -> 24 m) -------
-// The first real campaign slice. Everything here is MOD-* content in the tower
-// yard, sited against the stack's south face (z = kStackCenterZ +
-// kStackHalfExtent = -124) rather than at a bare origin.
-//
-// The causal chain this geometry exists to make true:
-//
-//   ACT  [work CAP-PENDANT: raise MOD-YARD-JIB's winch]
-//   STATE[finite winch force and slew torque; pack pose read back from Jolt]
-//   WORLD[the 4 t pack leaves MOD-DOG-A's swing envelope, so the dog's
-//         permanent opening torque is no longer resisted and the dog travels]
-//   PLAY [the MOD-STAIR-A throat is physically open; walk to +24 m]
-//
-// There is deliberately no "dog" command and no pinned/unpinned flag in the
-// simulation: the dog motor is commanded open on every tick from build time,
-// and is held shut only because 4000 kg of freight is physically in its way.
-//
-// The southern column row of build_stack() reaches to z = -123.2, so the bay's
-// back wall stands at -122.5 to clear it.
-constexpr float kIntakeBayCenterX = 0.0F;
-constexpr float kIntakeBayFrontZ = -110.5F;   // wall carrying the dog throat
-constexpr float kIntakeBayBackZ = -122.5F;    // 12 m deep bay
-constexpr float kIntakeBayHalfX = 10.0F;
-// 5 m of wall against a 1.85 m maximum mantle rise: the throat is the only way
-// in at grade, and that is a geometric fact, not an invisible wall.
-constexpr float kIntakeBayWallHeight = 5.0F;
-constexpr float kIntakeBayWallHalfZ = 0.30F;
-constexpr float kIntakeThroatHalfWidth = 1.30F;   // 2.60 m opening
-constexpr float kIntakeThroatHeight = 2.50F;      // capsule needs 1.80 m
-
-// MOD-DOG-A: a hinged landing dog filling the throat, swinging into the bay.
-// Every boundary is held off its neighbour by kIntakeDogClearance rather than
-// being exactly coincident: JPH::BoxShape carries a rounded convex radius, so
-// a plate built exactly flush with the jambs, the lintel and the ground jams
-// against all three and never travels. 0.06 m clears that and is still an
-// order of magnitude under the 0.70 m capsule, so the throat stays shut.
-constexpr float kIntakeDogClearance = 0.06F;
-constexpr float kIntakeDogHalfThickness = 0.20F;
-// The hinge sits at the plate's own end face, so the trailing corner sweeps a
-// circle of the plate's half-thickness as it opens. Setting the plate back by
-// that half-thickness plus the clearance is what keeps that corner out of the
-// west jamb -- without it the dog binds at ~0.31 rad and never travels.
-constexpr float kIntakeDogHalfWidth =
-    kIntakeThroatHalfWidth - kIntakeDogHalfThickness - kIntakeDogClearance;
-constexpr float kIntakeDogHalfHeight =
-    (kIntakeThroatHeight - 2.0F * kIntakeDogClearance) * 0.5F;
-constexpr float kIntakeDogCenterY = kIntakeDogClearance + kIntakeDogHalfHeight;
-constexpr float kIntakeDogMassKg = 900.0F;
-constexpr float kIntakeDogHingeX = kIntakeBayCenterX - kIntakeDogHalfWidth;
-constexpr float kIntakeDogRetractAngle = 1.45F;         // Atlas B00 figure
-constexpr float kIntakeDogRetractSpeed = 0.62F;         // rad/s, Atlas B00
-// Rated so the dog swings its own 900 kg plate but cannot shove freight:
-// breaking 4000 kg loose at mu = 0.6 needs 0.6 * 4000 * 9.81 = 23544 N, which
-// at the pack's ~2.0 m contact radius is 47088 N*m. 12000 N*m is a quarter of
-// that, and roughly five times what accelerating the plate alone demands
-// ((1/3) * 900 * 2.6^2 * 1.24 = 2515 N*m).
-constexpr float kIntakeDogMaxTorqueNm = 12000.0F;
-// Derived-predicate threshold only (HUD and falsifiers): the dog is "travelled"
-// once it has swung clear enough that the throat passes a 0.70 m capsule.
-constexpr float kIntakeThroatClearAngle = 1.20F;
-
-// MOD-YARD-JIB: Atlas B00 gives 12 m boom, 11.50 m boom height, 5 t SWL.
-constexpr float kIntakeGravity = 9.81F;
-constexpr float kIntakeJibSwlKg = 5000.0F;
-constexpr float kIntakeBoomLength = 12.0F;
-constexpr float kIntakeBoomHeight = 11.50F;
-constexpr float kIntakeJibMastX = kIntakeBayCenterX;
-// Sited so the boom's full working radius lands the pack just inside the
-// throat: close enough to be inside the dog's 2.48 m swing arc, and clear of
-// MOD-STAIR-A's southern edge at z = -114.7.
-constexpr float kIntakeJibMastZ = -100.2F;
-constexpr float kIntakeJibBoomMassKg = 2400.0F;
-constexpr float kIntakeJibHookMassKg = 120.0F;
-// tau = r * F = 12 * 5000 * 9.81 = 588600 N*m; winch F = 5000 * 9.81 = 49050 N.
-constexpr float kIntakeJibSlewTorqueNm =
-    kIntakeBoomLength * kIntakeJibSwlKg * kIntakeGravity;
-constexpr float kIntakeJibWinchForceN = kIntakeJibSwlKg * kIntakeGravity;
-constexpr float kIntakeJibSlewLimitRadians = 0.90F;     // Atlas B00
-constexpr float kIntakeJibSlewRateRadPerSec = 0.22F;    // Atlas B00
-constexpr float kIntakeJibHoistRateMetersPerSec = 0.85F; // Atlas B00
-
-// The 4 t pack, and the 9 t pack that proves the rating is real.
-constexpr float kIntakePackHalfX = 1.10F;
-constexpr float kIntakePackHalfY = 0.90F;
-constexpr float kIntakePackHalfZ = 1.15F;
-constexpr float kIntakePackMassKg = 4000.0F;   // 39240 N, inside 49050 N
-constexpr float kIntakeOverweightPackMassKg = 9000.0F; // 88290 N, outside it
-// Sited exactly at the boom's full working radius, straight down the -Z line
-// from the mast, and therefore squarely inside the dog's swing envelope.
-constexpr float kIntakePackZ = kIntakeJibMastZ - kIntakeBoomLength;
-constexpr float kIntakeOverweightStandX = 7.0F;
-constexpr float kIntakeOverweightStandZ = -98.0F;
-constexpr float kIntakeOverweightMastHeight = 9.0F;
-
-// MOD-INTAKE-BELT: 18 m stroke translating slat deck. Riding it is legal
-// (WO-002 support-point velocity law), so it is a moving support, not scenery.
-constexpr float kIntakeBeltX = 6.0F;
-constexpr float kIntakeBeltTopY = 1.38F;
-constexpr float kIntakeBeltHalfY = 0.18F;
-constexpr float kIntakeBeltCenterZ = -96.0F;
-constexpr float kIntakeBeltHalfX = 2.0F;
-constexpr float kIntakeBeltHalfZ = 6.0F;
-constexpr double kIntakeBeltStrokeMeters = 18.0;
-constexpr double kIntakeBeltAngularFrequency = 0.40; // Atlas B00 omega
-
-// CAP-PENDANT: the jib control, on the belt catwalk where Atlas B00 puts it.
-constexpr float kIntakePendantX = 3.0F;
-constexpr float kIntakePendantZ = -100.0F;
-constexpr float kIntakePendantTopY = kIntakeBeltTopY;
-constexpr float kIntakeStationRadius = 3.40F;  // Atlas B00
-
-// MOD-STAIR-A: six switchback flights of 4 m inside the bay, grade to +24 m.
-// Opposing flights run in two separate Z lanes joined by a landing at each
-// turn. Sharing one lane makes consecutive flights meet in a V whose apex
-// pinches below the 1.80 m standing capsule -- the player climbs to the pinch
-// and stops, which is a stair that cannot be walked.
-// Set far enough north that the south lane clears the pack's standing pose at
-// z = -113.35: a flight slab through the pack wedges the whole rig and the
-// winch creeps at 0.02 m/s instead of its rated 0.85.
-constexpr float kIntakeStairZ = -118.0F;
-constexpr float kIntakeStairLaneOffset = 2.0F;
-constexpr int kIntakeStairFlightCount = 6;
-constexpr float kIntakeStairFlightRise = 4.0F;
-constexpr float kIntakeStairHalfRun = 7.0F;     // 14 m run, 15.9 degree pitch
-constexpr float kIntakeStairHalfWidth = 1.8F;
-constexpr float kIntakeStairSlabHalfY = 0.18F;
-constexpr float kIntakeStairLandingX = 8.0F;
-constexpr float kIntakeStairLandingHalfX = 1.0F;
-constexpr float kIntakeStairLandingHalfZ =
-    kIntakeStairLaneOffset + kIntakeStairHalfWidth;
-constexpr float kIntakeHandoffY =
-    static_cast<float>(kIntakeStairFlightCount) * kIntakeStairFlightRise; // 24 m
-constexpr float kIntakeHandoffCenterX = -6.0F;
-constexpr float kIntakeHandoffHalfX = 4.0F;
-constexpr float kIntakeHandoffHalfY = 0.20F;
-constexpr float kIntakeHandoffSouthZ = -107.7F;  // meets the SKIN ladder head
-// Stops short of the odd-flight lane: run the deck over it and the top of
-// flight 5 is buried inside the deck instead of arriving on it.
-constexpr float kIntakeHandoffNorthZ = -117.5F;
-
-// MOD-SKIN-LADDER-S: the always-legal bypass. A stepped ledge line climbing
-// north up the apron toward the tower, because this game climbs by mantling
-// real bodies -- each rung is one box whose front face is the wall probe's
-// target and whose top face is the landing, which is what probe_ledge()
-// requires (wall hit and top hit must be the same body).
-//
-// Rung geometry is constrained, not chosen. With rise R, half-height H and
-// half-depth D:
-//   R - 2H <= 0.90   so the next rung is struck by the chest-height wall ray
-//   R <= kMantleMaximumRise
-//   2D - kLandingInset > kTraversalReach + kPlayerRadius
-// The third is what makes this climbable at all. A mantle drops the player
-// kLandingInset in from the rung's near edge; if the next rung's face is still
-// within probe reach from there, the player auto-grabs a hang the instant they
-// land, never becomes grounded, and the climb degenerates into a mantle-hang-
-// fall cycle that makes no height. A 2.00 m rung leaves 1.53 m of stand, which
-// is outside the 1.30 m reach, so every rung is a real footing the player
-// walks across before taking the next one.
-//
-// The rungs step straight north rather than staggering left and right for the
-// same reason: staggered rungs put the next target exactly where the mantle
-// lands you.
-constexpr float kIntakeSkinCenterX = kIntakeHandoffCenterX;
-constexpr float kIntakeSkinRungRise = 1.60F;
-constexpr float kIntakeSkinRungHalfX = 1.0F;
-constexpr float kIntakeSkinRungHalfY = 0.50F;
-constexpr float kIntakeSkinRungHalfZ = 1.00F;
-constexpr int kIntakeSkinRungCount = 15;       // tops at 1.6 .. 24.0 m
-// The head rung sits flush against the handoff deck's south edge, so both
-// braids -- MOD-STAIR-A and SKIN -- arrive on the same deck.
-constexpr float kIntakeSkinHeadZ = kIntakeHandoffSouthZ + kIntakeSkinRungHalfZ;
-constexpr float kIntakeSkinFootZ =
-    kIntakeSkinHeadZ + 2.0F * kIntakeSkinRungHalfZ *
-                           static_cast<float>(kIntakeSkinRungCount - 1);
-
-// --- AS-002 Legal Forty: MOD-STAIR-A-SWING, MOD-CW-CRADLE, MOD-HALL-DECK ---
-// Atlas band B00's 24-40 m leftover, chain K0 PLAY. A counterweighted
-// bascule: gravity alone holds the flight at its stowed hinge limit; only
-// real rope tension read back from the solver can beat that and swing it to
-// its deployed limit. With the sheave directly above the hinge, the sin(theta)
-// term cancels out of the torque balance (T_crit falls as theta rises), so
-// there is no stable intermediate pose -- both stops are hinge limits, not
-// soft targets.
-constexpr float kLegalFortyFlightLength = 16.0F;             // L: 8.000 m rise / sin(30 deg)
-constexpr float kLegalFortyFlightHalfLength = kLegalFortyFlightLength * 0.5F; // r from the hinge
-constexpr float kLegalFortyFlightHalfWidth = 0.90F;          // 1.80 m tread, one lane
-// 400 kg, not the plan's own 1900 kg (66 kg/m^2 "DESIGN TARGET" grating
-// density). T_crit(theta) = m_f*g*(L/2)*l(theta)/(r_a*h_s) is sound --
-// re-derived independently here, and the plan's own worked numbers (loaded
-// cradle 1.21x margin, empty cradle 0.37x) check out at 1900 kg -- but a
-// bare majority does not survive contact with the actual solver: built at
-// 1900 kg, the flight sat inert at its stowed limit under the real 4000 kg
-// pack for 80+ s of simulated time (verified). A hinge starting exactly at
-// a hard limit needs real headroom to depart it, not just >1x. 400 kg
-// (kIntakeCwCradleTareMassKg's own comment has the loaded-cradle side of
-// this same margin) is the value actually run end to end -- deploy under
-// the real pack, the full ascent walk to +40 m, checkpoint, and retract
-// once unloaded -- not a clean margin ratio picked in advance, the value
-// verified.
-constexpr float kLegalFortyFlightMassKg = 400.0F;
-constexpr float kLegalFortyFlightRiseMeters = 8.0F;          // per flight; two flights close 16.000 m
-
-// Swing hinge: world-Z axis, sited at the mid-landing's height above
-// MOD-STAIR-A's lower run. theta is measured from the downward vertical;
-// built at the stowed pose (8 deg) so the hinge's as-built angle is 0 -- the
-// same convention kIntakeDogEntityId already uses.
-constexpr float kIntakeSwingHingeX = 7.856F;
-constexpr float kIntakeSwingHingeZ = -112.5F;
-constexpr float kLegalFortyStowedThetaRadians = 0.139626F;   // 8 deg
-constexpr float kLegalFortyDeployedThetaRadians = 1.047198F; // 60 deg
-// Jolt's HingeConstraint::GetCurrentAngle() (Jolt/Physics/Constraints/
-// HingeConstraint.cpp) reports the physical rotation body2 has undergone
-// since construction, signed by the right-hand rule about the world hinge
-// axis (+Z). This flight is built with its local +X already pointing along
-// (sin(theta_stowed), cos(theta_stowed), 0); as theta increases toward
-// deployed, that direction rotates TOWARD world +X, which is a NEGATIVE
-// rotation about +Z -- so the reported angle runs stowed=0 to deployed
-// -0.907571 rad, and every reader below negates it back to a non-negative
-// "how far open" travel.
-constexpr float kIntakeSwingHingeTravelRadians =
-    kLegalFortyDeployedThetaRadians - kLegalFortyStowedThetaRadians; // 52 deg, 0.907571 rad
-
-// The rope bracket: r_a = 15.000 m from the hinge (Design Values), which on a
-// flight whose hinge is at local +8.00 and whose foot is at local -8.00 sits
-// at local x = 8.00 - 15.00 = -7.00 -- one metre inboard of the foot, on the
-// slab's underside so it clears the tread.
-constexpr float kIntakeSwingRopeLeverArmMeters = 15.0F;  // r_a
-// h_s, sheave above the hinge. The plan's own 4.0 m -- unlike the flight
-// and tare masses above and below, this one needed no retuning once
-// kIntakeSwingAnchorEntityId's own fix (excluding the flight from contact
-// with its own hinge anchor) was in place.
-constexpr float kIntakeSwingSheaveHeightMeters = 4.0F;
-constexpr float kIntakeSwingBracketLocalX =
-    kLegalFortyFlightHalfLength - kIntakeSwingRopeLeverArmMeters; // -7.00
-constexpr float kIntakeSwingBracketLocalY = -kIntakeStairSlabHalfY;
-
-// MOD-CW-CRADLE: a three-sided open frame (not a closed hopper -- a 2.4 m
-// hopper cannot take a 2.2 x 2.3 m pack), riding a free (unmotored) vertical
-// slider on a fixed guide mast. Built at the empty-cradle rest pose (the rope
-// taut, tension losing to the flight's own stowed-stop demand); loading the
-// pack lets the rope pull the cradle down and the flight up.
-// 500 kg, not the plan's own 1800 kg. The 4000 kg pack is AS-001's own,
-// frozen, so the ratio between "loaded" (tare+4000) and "tare-only" demand
-// on the flight's T_crit is fixed by tare mass alone -- see
-// kLegalFortyFlightMassKg's own comment on how thin a static-torque margin
-// the real solver tolerates.
-//
-// Retracting once looked like it needed a lighter tare still: at 500 kg
-// the unloaded, re-slung flight sat frozen at the exact deployed limit for
-// 20+ s, and dropping tare to 50 kg (an 80x ratio against the 4000 kg
-// pack) did make it depart -- but traded that for a worse fault, the
-// LOADED rest pose itself drifting closed and back over tens of degrees
-// while the pack was still seated. Neither number was the real problem:
-// direct diagnostic tracing of the stuck state (GetWorldSpaceContactPointOn1
-// on every contact touching the flight) found a real, continuous contact
-// between the flight and its OWN hinge anchor at the hinge point itself,
-// on top of and separate from the hinge constraint that is supposed to be
-// the only thing relating them -- the flight's cross-section is coincident
-// with that anchor at every sweep angle by construction, so any nonzero-
-// size anchor box (see kIntakeSwingAnchorEntityId's own comment at the
-// anchor's build site) keeps a sliver of it. Excluding that one body pair
-// from contact resolution, the same way OnContactValidate already excludes
-// the flight from the handoff deck, fixed retracting outright at the
-// original 500 kg -- no mass or geometry retuning needed once the real
-// fault was gone.
-constexpr float kIntakeCwCradleTareMassKg = 500.0F;
-constexpr float kIntakeCwCradleHalfX = 1.50F;
-// 0.90, not the plan's 1.20. The plan's deployed car (centre 2.380) put its
-// underside at 1.18 m, under the B00 belt's 1.38 m top -- and the belt's
-// 18 m stroke carries its south end to z = -105 - 6 = -111, across the
-// car's x in [7.108, 8.0] and z in [-109.76, -107.36]. Once a stroke
-// (15.7 s) the belt rammed the loaded car, jerked the flight 0.045 rad off
-// its stop, and walked the seated pack 0.3-0.6 m per blow until it fell
-// (observed: off the car within ~40 s, nobody near it). The top face --
-// the seat and the rope's body point -- stays at the plan's 5.200 m, so
-// the rope, stroke and statics are unchanged; only the underside rises,
-// to 1.78 m deployed, 0.40 m over the belt.
-constexpr float kIntakeCwCradleHalfY = 0.90F;
-constexpr float kIntakeCwCradleHalfZ = 1.20F;
-constexpr float kIntakeCwCradleTopBuildY = 5.20F;
-constexpr float kIntakeCwCradleBuildCenterY = kIntakeCwCradleTopBuildY - kIntakeCwCradleHalfY;
-constexpr float kIntakeCwCradleGuideHalfX = 0.35F;
-constexpr float kIntakeCwCradleGuideHalfY = 4.0F;
-constexpr float kIntakeCwCradleGuideHalfZ = 0.35F;
-// Jolt's SliderConstraintSettings::mAutoDetectPoint anchors displacement 0 at
-// the build pose (kNeedleStowedY's own comment: "travel is signed from the
-// spawn pose"), so the plan's centre range y in [1.80, 4.60] -- top face in
-// [3.00, 5.80] -- becomes signed limits relative to the build pose. Stated
-// on the top face, they are unchanged by the car's height.
-constexpr float kIntakeCwCradleLimitMinMeters = 3.00F - kIntakeCwCradleTopBuildY;
-constexpr float kIntakeCwCradleLimitMaxMeters = 5.80F - kIntakeCwCradleTopBuildY;
-// The hook hangs at the boom tip, so working radius is fixed at the 12 m
-// boom; only the slew bearing chooses where the cradle sits on that circle.
-constexpr float kIntakeCwCradleBearingRadians = 0.80F; // of the 0.90 slew limit
-
-// The sling release/attach envelopes (AS-002 Design Values 8.4.3).
-constexpr float kLegalFortyReleaseXZToleranceMeters = 0.55F;
-constexpr float kLegalFortyReleaseYToleranceMeters = 0.35F;
-constexpr float kLegalFortyReleaseSpeedToleranceMps = 0.15F;
-constexpr float kLegalFortyAttachToleranceMeters = 0.40F;
-constexpr float kLegalFortyAttachSpeedToleranceMps = 0.20F;
-
-// MOD-STAIR-A upper flight (static) + mid-landing + MOD-HALL-DECK. Sited by
-// the plan's own geometry table; each surface's height is derived at build
-// time from AS-001's own tread-surface offset (kIntakeHandoffY plus slab
-// half-thickness over cosine pitch) stacked with two more 8.000 m rises, so
-// the whole run stays flush to the handoff deck below it by construction
-// rather than by matching a second copy of the same literal.
-constexpr float kLegalFortyMidLandingCenterX = 9.350F;
-constexpr float kLegalFortyMidLandingHalfX = 1.05F;
-constexpr float kLegalFortyMidLandingCenterZ = -115.80F;
-// 5.20, not the plan's own 3.20: south edge -121.00, matching the walkway's
-// own south edge (kLegalFortySkinWalkwayCenterZ +/- HalfZ) exactly rather
-// than falling 3.0 m short of it at -118.00. The walkway and the landing
-// touch at x = 8.30 with zero x-overlap, so the ONLY way across is through
-// whatever z-band both cover at once, and the upper flight above (its own
-// z in [-117.9, -116.1], underside descending toward its foot at this same
-// x = 9.350) leaves a capsule under 2.1 m of headroom -- the same figure
-// the well's own east edge comment above derives -- for x greater than
-// about 5.7, ruling out the flight's own z-band as that crossing corridor
-// entirely. -118.00 (south of the flight, clear the whole way to its foot)
-// is the only band left, and at the plan's own 3.20 it was not covered by
-// the landing at all: found by direct observation, a capsule walked there
-// falling clean through the gap between the two footprints. Widening this
-// one edge to meet the walkway's own is the fix, not moving the walkway
-// (AS-002-owned on both sides, and the walkway's own z is independently
-// anchored to rung 20 -- see its own comment). The walkway has since grown
-// 2 m south (its own comment has why); this edge follows it.
-constexpr float kLegalFortyMidLandingHalfZ = 5.20F;
-
-constexpr float kLegalFortyUpperFlightCenterX = 2.422F;
-constexpr float kLegalFortyUpperFlightCenterZ = -117.0F;
-
-constexpr float kLegalFortyHallDeckHalfX = 10.0F;
-constexpr float kLegalFortyHallDeckCenterZ = -115.1F;
-constexpr float kLegalFortyHallDeckHalfZ = 7.40F;
-constexpr float kLegalFortyHallDeckHalfThickness = 0.20F;
-
-// The stair well MOD-HALL-DECK leaves open for MOD-STAIR-A to arrive
-// through. Both edges moved from the plan's own literal (center -4.51,
-// half 3.00, i.e. x in [-7.51, -1.51]) -- SKIN's own rung 20 never actually
-// depended on that literal (it stops at the mid-landing's own height, see
-// its own comment), so nothing else anchors it.
-//
-// East edge, -1.51 -> +1.50: a standing capsule needs roughly 2.1 m of
-// headroom over an inclined surface, not the ~0.9 m a flat floor needs, so
-// the upper flight's own climb -- rising 8.000 m over its 13.856 m
-// horizontal run from the mid-landing -- does not clear the east strip's
-// underside (39.787 m) until past where the original edge sat, and a
-// capsule walking the incline stops there, wedged under the deck a full
-// 2 m short of the opening it is trying to reach. Found by direct
-// observation, not derived: the incline height a stuck capsule reports
-// (37.726 m) versus the strip's underside (39.787 m) is short by exactly a
-// second capsule-height's worth of headroom, not the first.
-//
-// West edge, -7.51 -> -4.80: the flight's own top -- local -X end of its
-// rotated footprint, at x = -4.506 (see the flight's own comment) -- is
-// where it reaches +40.1872 m, but the original west edge left 3.0 m of
-// open well between that point and the nearest deck strip: real floor at
-// the right height with nothing beside it to step onto, so a capsule
-// walking off the flight's own edge falls through the well instead of
-// reaching MOD-HALL-DECK itself. -4.80 overlaps the west strip with the
-// flight's own last 0.3 m -- harmless, since Jolt does not solve contact
-// response between two static bodies, and flush joints elsewhere in this
-// file already rely on exactly that. Found the same way as the east edge:
-// direct observation of where the fall began.
-constexpr float kLegalFortyWellCenterX = -1.65F;
-constexpr float kLegalFortyWellHalfX = 3.15F;
-constexpr float kLegalFortyWellCenterZ = -117.0F;
-constexpr float kLegalFortyWellHalfZ = 2.20F;
-
-// MOD-SKIN-LADDER-S continuation, rungs 16-20: same column (x = -6.0) as
-// AS-001's rungs 1-15, resuming north of rung 15's own footprint and of the
-// handoff deck's south-edge transition (rung 15 spans z in [-107.7,-105.7];
-// that whole band, plus headroom above it, must stay clear or it becomes a
-// low ceiling over the exact spot AS-001's climb steps onto the deck --
-// found by direct observation: siting rung 16 at kIntakeSkinHeadZ (-106.7,
-// the natural next step) or even one metre north of it broke that proven
-// transition).
-//
-// Only 5 rungs, not the ten a straight climb all the way to +40 m would
-// need. That climb does not fit: MOD-HALL-DECK's own stair well is only
-// 4.40 m deep, and the mantle law below is a floor on the GAP between
-// rungs, not (as an earlier draft of this comment had it) on each rung's
-// own depth alone -- derived properly, flush-adjacent rungs land a mantle
-// kLandingInset short of the next rung's face, so step - kLandingInset >
-// kTraversalReach + kPlayerRadius, i.e. step > 1.77 m regardless of rung
-// depth. Nine rungs at that spacing need >= 14.2 m of clear run; the well
-// gives 4.4 m and the run north of rung 16 is hard-capped at 12.5 m by
-// build_stack()'s own southern columns (kIntakeBayBackZ's comment: they
-// reach z = -123.2). No single straight column threads both needles.
-//
-// So SKIN only climbs to the +32.1872 m mid-landing height here -- clear
-// of the well problem entirely, since none of these five rungs' tops come
-// anywhere near MOD-HALL-DECK's own y-band -- and a short static walkway
-// (below) carries the remaining, purely horizontal distance to the
-// mid-landing itself, from which MOD-STAIR-A's own (now-inclined) upper
-// flight is the rest of the route, exactly as the freight braid uses it.
-// Reuses AS-001's rung law verbatim for rise and depth (a derived
-// clearance, not a style choice -- see kIntakeSkinRungRise's comment):
-// rise 1.60 <= kMantleMaximumRise, 2 * half-depth - kLandingInset >
-// kTraversalReach + kPlayerRadius. Step is flush (2 * half-depth = 2.00 m),
-// matching AS-001's own rungs 1-15 and clearing the 1.77 m floor above with
-// margin.
-constexpr int kLegalFortySkinRungFirst = 16;
-constexpr int kLegalFortySkinRungLast = 20;    // tops at 32.1872 m, the mid-landing's height
-constexpr float kLegalFortySkinRungFirstZ = -110.0F;
-constexpr float kLegalFortySkinRungStepZMeters = 2.0F;
-
-// The walkway from rung 20's top to the mid-landing: flush with both (top
-// at 32.1872 m), touching rung 20's own east face at x = -5.8 and the
-// mid-landing's own west face at x = 8.30 so neither joint is a step. It
-// covers rung 20's own z band (centre kLegalFortySkinRungFirstZ - 4 * step
-// = -118.0) and 2 m south of it, exactly the mid-landing's own south part,
-// and its north edge (-117.0) stays clear (>= 3.6 m) of the swing flight's
-// own z in [-113.4, -111.6] on every path, deployed or not.
-// Rungs 17-20 step 0.8 m west of the column. Directly above the bascule
-// flight's foot (x from -6.0), rung 17 on the column left 1.4 m of headroom
-// over the flight's first metre: the SHAFT braid walked into its underside.
-// West by 0.8 m, its east edge (-5.8) clears a capsule on the slope, and a
-// climber on the column line (-6.0) still strikes every face 0.2 m inside it.
-constexpr float kLegalFortySkinRungJogX = -0.8F;
-constexpr float kLegalFortySkinWalkwayMinX = -5.8F;  // rung 20's east face
-constexpr float kLegalFortySkinWalkwayMaxX = 8.30F;
-// z in [-121, -117]: rung 20's own band plus 2 m south of it. Rung 20's band
-// alone ([-119, -117]) runs under the upper flight's z in [-117.9, -116.1],
-// whose underside falls toward its foot to 0.6 m over the walkway at x = 8:
-// a standing capsule (radius 0.35) had one 0.4 m-wide lane, z in
-// [-118.65, -118.25], and anyone walking the walkway's middle met the slab
-// (reported by a player as an opening too small to fit through). South of
-// the flight the air is clear to the hall deck's underside (39.79 m, 7.6 m
-// up), so the added 2 m gives a 2.4 m lane with full headroom.
-constexpr float kLegalFortySkinWalkwayCenterZ = -119.0F;
-constexpr float kLegalFortySkinWalkwayHalfZ = 2.00F;
-
-// --- AS-003 MOD-HOOK5-RACK: CAP-HOOK5 in a locked cage beside the belt -------
-// Atlas B00: "Hook block + slings in a locked cage opened by moving the crate
-// or circling the belt." There is no lock object: the cage is locked by
-// HEIGHT. Its top is out of reach from grade by every move and in reach from
-// MOD-INTAKE-BELT's deck.
-//
-// 4.45 m, not the plan's 2.90. The plan measured the lock against the mantle
-// ceiling (1.85 m) alone; a jump into a ledge grab reaches much higher.
-// Measured here against walls of every height, jumped at from a run: a grab
-// reaches 3.75 m above the floor it leaves -- 3.75 m from grade, 5.13 m from
-// the belt's 1.38 m deck. 2.90 m was grabbable from grade. 4.45 m is 0.70 m
-// out of reach from grade and 0.68 m inside reach from the deck, so the belt
-// is the key: jumped from and grabbed, not mantled.
-constexpr float kHook5CageTopY = 4.45F;
-constexpr float kHook5RoofHalfY = 0.15F;
-constexpr float kHook5WallTopY = kHook5CageTopY - 2.0F * kHook5RoofHalfY;  // 4.15, under the roof
-//
-// Sited at z in [-88, -84], 18 m north of the plan's [-106, -102]. A height
-// lock only holds if nothing but the key comes within a jump, and a running
-// jump carries far: it still grabs a 4.45 m ledge across 6.3 m of air from a
-// 1.38 m floor and 6.8 m from 1.8 m, and drops onto a 4.45 m roof across
-// 10.8 m from 8 m up (all measured). At the plan's site the pendant catwalk,
-// the 9 t pack's top, the intake bay's wall top (off MOD-STAIR-A's first
-// landing) and the WO-006 lift all reached the roof, so the belt was not a
-// key but one of five. Here, 8.1 m beyond the 9 t pack's farthest jostle, a
-// brute-force audit of 1 006 running jumps -- from grade round every face,
-// the 9 t pack, the pendant catwalk, its ramp, the WO-006 catwalk and the
-// WO-006 lift at its 9 m top -- reached a cage body only from the lift (3 of
-// its 162), by an 11 m leap: a machine-made route, and legal (Governing Law
-// 17). The deck still lies alongside for 43 % of its stroke, lingering near
-// its north end, where the jump is made.
-constexpr float kHook5MinX = 8.0F;      // the belt deck's east edge
-constexpr float kHook5MaxX = 12.0F;
-constexpr float kHook5MinZ = -88.0F;
-constexpr float kHook5MaxZ = kHook5MinZ + 4.0F;
-constexpr float kHook5ButtressMaxX = 9.4F;  // west buttress x in [8.0, 9.4], full height
-constexpr float kHook5WallThickness = 0.30F;
-// The hatch cut in the roof, over open floor west of the rack and north of
-// the door's sweep, so the drop lands clear of both. 1.2 x 1.6 m.
-constexpr float kHook5HatchMinX = 9.7F;
-constexpr float kHook5HatchMaxX = 10.9F;
-constexpr float kHook5HatchMinZ = kHook5MinZ + 1.4F;
-constexpr float kHook5HatchMaxZ = kHook5MinZ + 3.0F;
-// The south wall's doorway, 1.40 m under a 2.20 m header.
-constexpr float kHook5DoorwayMinX = 9.85F;
-constexpr float kHook5DoorwayMaxX = 11.25F;
-constexpr float kHook5DoorwayTopY = 2.20F;
-// MOD-HOOK5-DOOR: hinged 0.20 m back from the west jamb (MOD-DOG-A bound at
-// 0.31 rad because its hinge sat flush with its jamb), swinging INWARD under a
-// permanent opening drive commanded at build time and never again. Shut, the
-// leaf leaves 0.20 m at the hinge jamb and 0.06 m at the latch jamb.
-constexpr float kHook5DoorHingeX = 10.05F;
-constexpr float kHook5DoorZ = kHook5MinZ + 0.15F;          // the wall's mid-plane
-constexpr float kHook5DoorHalfLength = 0.57F;             // shut: x in [10.05, 11.19]
-constexpr float kHook5DoorHalfHeight = 1.06F;             // y in [0.06, 2.18]
-constexpr float kHook5DoorHalfThickness = 0.12F;
-constexpr float kHook5DoorCenterY = 1.12F;
-constexpr float kHook5DoorMassKg = 80.0F;
-constexpr float kHook5DoorOpenAngle = 1.45F;              // inward stop
-constexpr float kHook5DoorDriveSpeed = 0.55F;             // rad/s
-// 600 N*m, not the plan's 6 000: the rigid bar holds against any torque, and
-// a 6 000 N*m leaf pins the bar in its brackets with ~7 kN, so lifting it
-// would fight that much friction. 600 N*m swings the 80 kg leaf (34.7 kg*m^2
-// about the hinge) at 17 rad/s^2 and pins the bar with ~0.5 kN.
-constexpr float kHook5DoorDriveTorqueNm = 600.0F;
-// MOD-HOOK5-BAR: 38 kg across the inside of the doorway, 0.04 m north of the
-// shut leaf, so the drive stalls within 0.035 rad. Its ends sit in two
-// brackets -- a ledge under each end and a stop on its north face -- that are
-// OUTSIDE the leaf's sweep (radius 1.146 m about the hinge): the west one
-// behind the hinge, the east one 1.31 m from it. (The plan put the keepers
-// inside the sweep, where they would have stopped the door with the bar
-// gone.) Lift the bar out and nothing is left in the swing.
-constexpr float kHook5BarMassKg = 38.0F;
-constexpr float kHook5BarHalfLength = 1.025F;             // x in [9.50, 11.55]
-constexpr float kHook5BarHalfSection = 0.09F;
-constexpr float kHook5BarCenterX = 10.525F;
-constexpr float kHook5BarCenterY = 1.00F;    // handle 1.09, under the carry hands
-constexpr float kHook5BarCenterZ = kHook5MinZ + 0.40F;
-constexpr float kHook5BracketHalfX = 0.10F;
-constexpr float kHook5BracketWestX = 9.60F;
-constexpr float kHook5BracketEastX = 11.45F;
-// CAP-HOOK5: the 36 kg hook block on a pedestal rack in the north-east
-// corner. There, not mid-wall: the 2.05 m bar has to be set down somewhere in
-// a 2.3 m-wide room clear of the door's swing, and with the rack mid-wall
-// every such place put one end of the bar on it (observed).
-constexpr float kHook5BlockMassKg = 36.0F;
-constexpr float kHook5BlockHalf = 0.30F;
-constexpr float kHook5BlockHalfY = 0.25F;
-constexpr float kHook5RackTopY = 0.60F;       // block top 1.10, under the carry hands
-constexpr float kHook5BlockSeatX = 11.35F;
-constexpr float kHook5BlockSeatZ = kHook5MaxZ - kHook5WallThickness - 0.45F;
-constexpr float kHook5BlockSeatY = kHook5RackTopY + kHook5BlockHalfY;
-constexpr float kHook5InRackTolerance = 0.35F;            // hook_in_rack: within this of the seat
 
 // The carry (AS-003 §8.4.3). A carryable is picked up within kCarryReach of
 // the body's centre, at rest, in front of it; it hangs by the middle of its
@@ -1048,43 +305,8 @@ constexpr float kCarrySlipDistance = 0.90F;
 constexpr float kGripNewtons = 900.0F;
 constexpr float kGripSeconds = 0.10F;
 
-// --- WO-013 Ascent Atlas v1.0 kernel: KX-SUMP / KX-GRATE -------------------
-// Atlas section 9: "wet sump makes KX-GRATE a hazard... isolated + drained
-// grate is ordinary walkable support." A lumped process graph (WO-007's own
-// "Allowed seam": one volume, one isolation edge, one drain sink, one derived
-// safe predicate) -- no particle fluid, no second process engine.
-//
-// The walkway is elevated, like the needle's piers, rather than a hole cut
-// into the existing world deck: that deck is one solid box spanning nearly
-// the whole map, so a below-grade pit would need the deck itself carved
-// open, which nothing in this codebase does. A raised grate with real open
-// air beneath it, landing back on that same deck, reuses proven geometry.
-constexpr float kSumpCenterX = kKernelBaseX;         // 200
-constexpr float kSumpCenterZ = kKernelBaseZ + 16.0F; // clear of the jib (Z~0) and the needle (Z~-16).
-constexpr float kSumpPlatformTopY = 3.0F; // a real, clearly-survivable fall through (~7.7 m/s impact).
-constexpr float kSumpDeckHalfThickness = 0.15F;
-constexpr float kSumpDeckHalfZ = 1.5F;
-constexpr float kSumpApproachDeckHalfX = 1.5F;
-constexpr float kSumpGrateHalfX = 1.5F;
-constexpr float kSumpFarDeckHalfX = 1.5F;
-
-constexpr float kSumpGrateX = kSumpCenterX;
-constexpr float kSumpApproachDeckX = kSumpGrateX - kSumpGrateHalfX - kSumpApproachDeckHalfX;
-constexpr float kSumpFarDeckX = kSumpGrateX + kSumpGrateHalfX + kSumpFarDeckHalfX;
-
-// Lumped process state. Starts full (wet, unsafe) -- WO-006's needle and
-// WO-005's jib both start in their "nothing done yet" pose; the sump matches
-// that convention with "nothing isolated yet, still wet."
-constexpr float kSumpCapacityKg = 1000.0F;
-constexpr float kSumpInflowKgPerSec = 150.0F; // while the valve is open, inflow keeps it topped up.
-constexpr float kSumpDrainKgPerSec = 100.0F;  // always draining; only wins once isolated.
-
-constexpr float kSumpStationX = kSumpApproachDeckX;
-constexpr float kSumpStationZ = kSumpCenterZ;
-constexpr float kSumpStationRadius = 2.5F;
-
-// WO-008 fall / parachute / checkpoint. An 8.8 m unassisted lift-platform
-// fall (~13.1 m/s impact) must stay survivable per GDD 8.2; a genuine
+// WO-008 fall / parachute / checkpoint. A 12 m unassisted fall (~15.3 m/s
+// impact) must stay survivable per GDD 8.2; a genuine
 // tower-scale drop must not be. Terminal parachute speed (~9 m/s, derived
 // below) sits comfortably under that threshold -- Simulation::
 // kLethalImpactSpeedMps, public in simulation.hpp -- with margin either side.
@@ -1224,24 +446,7 @@ struct SupportSample final {
     return scraperx::sim::kit::is_dynamic_entity(entity_id) ||
            entity_id == Sim::kTranslatingSupportEntityId ||
            entity_id == Sim::kRotatingSupportEntityId ||
-           entity_id == Sim::kMovingLedgeEntityId ||
-           entity_id == Sim::kHoistScoopEntityId ||
-           entity_id == Sim::kTipperEntityId ||
-           entity_id == Sim::kLiftPlatformEntityId ||
-           entity_id == Sim::kCounterweightEntityId ||
-           entity_id == Sim::kTreadleEntityId ||
-           entity_id == Sim::kJibHookEntityId ||
-           entity_id == Sim::kCrateEntityId ||
-           entity_id == Sim::kNeedleBeamEntityId ||
-           entity_id == Sim::kIntakeBeltEntityId ||
-           entity_id == Sim::kIntakeJibHookEntityId ||
-           entity_id == Sim::kIntakePackEntityId ||
-           entity_id == Sim::kIntakeDogEntityId ||
-           // AS-002: the deployed swing flight is a dynamic body under real
-           // load, not scenery -- a player standing on it while it is still
-           // settling against its stop must inherit its point velocity under
-           // the WO-002 law, exactly like every other machine member above.
-           entity_id == Sim::kIntakeSwingFlightEntityId;
+           entity_id == Sim::kMovingLedgeEntityId;
 }
 
 class PlayerContactListener final : public JPH::ContactListener {
@@ -1266,58 +471,21 @@ public:
         carried_entity_.store(entity, std::memory_order_relaxed);
     }
 
-    // AS-002: the deployed swing flight's own foot lands flush on top of the
-    // (frozen, AS-001) handoff deck by design -- deployed foot at
-    // (-6.000, 24.1872), exactly the deck's own centre and tread-surface
-    // height (see kLegalFortyDeployedThetaRadians's comment). But the
-    // flight's length and its 8.000 m rise together force theta_deployed to
-    // 60 deg (cos 60 = rise / L = 8/16 = 0.5), so the final third of the
-    // sweep -- theta in [48.8 deg, 60 deg], confirmed by a rotated-box vs
-    // AABB separating-axis check -- drags the flight's own solid body
-    // through the deck's near corner: up to 0.36 m of overlap, 0.156 m of
-    // it still present at the final hinge-limit rest pose itself. No
-    // AS-002-owned knob (hinge position, flight length, deployed angle) can
-    // be retuned to clear this without unpicking the rope-crossing,
-    // mid-landing-gap, or T_crit statics numbers the plan derives from this
-    // exact geometry, and the deck itself is out of scope to touch. The
-    // plan's own design note already settles what the deck's role should
-    // be: "deployed foot must not bear: the stop is the hinge limit, not
-    // the deck" -- it was never meant to be a physical obstacle to the
-    // flight, so excluding this one body pair from collision is fidelity to
-    // that intent, not a workaround for it. Every other pair keeps ordinary
-    // collision, flight vs the player included, so a player caught in the
-    // sweep is still struck and shoved exactly as the plan's own "standing
-    // in the sweep when it deploys" note requires.
+    // The player and what it carries share the carry point: contact between
+    // them is never meaningful, only the constraint relates them.
     [[nodiscard]] JPH::ValidateResult OnContactValidate(
         const JPH::Body &first, const JPH::Body &second, JPH::RVec3Arg,
         const JPH::CollideShapeResult &) override {
         const auto first_entity = first.GetUserData();
         const auto second_entity = second.GetUserData();
         using Sim = scraperx::sim::Simulation;
-        const bool is_swing_flight_vs_handoff_deck =
-            (first_entity == Sim::kIntakeSwingFlightEntityId &&
-             second_entity == Sim::kIntakeHandoffEntityId) ||
-            (first_entity == Sim::kIntakeHandoffEntityId &&
-             second_entity == Sim::kIntakeSwingFlightEntityId);
-        // Same reasoning, second body pair: the flight's own cross-section
-        // is coincident with its hinge anchor at every sweep angle by
-        // construction, so contact between them is never meaningful -- see
-        // kIntakeSwingAnchorEntityId's own comment at the anchor's build
-        // site for the diagnostic trace that found this.
-        const bool is_swing_flight_vs_hinge_anchor =
-            (first_entity == Sim::kIntakeSwingFlightEntityId &&
-             second_entity == Sim::kIntakeSwingAnchorEntityId) ||
-            (first_entity == Sim::kIntakeSwingAnchorEntityId &&
-             second_entity == Sim::kIntakeSwingFlightEntityId);
         const std::uint64_t carried = carried_entity_.load(std::memory_order_relaxed);
         const bool is_player_vs_carried =
             carried != 0 &&
             ((first_entity == Sim::kPlayerEntityId && second_entity == carried) ||
              (first_entity == carried && second_entity == Sim::kPlayerEntityId));
-        return (is_swing_flight_vs_handoff_deck || is_swing_flight_vs_hinge_anchor ||
-                is_player_vs_carried)
-                   ? JPH::ValidateResult::RejectAllContactsForThisBodyPair
-                   : JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
+        return is_player_vs_carried ? JPH::ValidateResult::RejectAllContactsForThisBodyPair
+                                    : JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
     }
 
     void OnContactAdded(const JPH::Body &first,
@@ -1369,13 +537,11 @@ private:
             support_body = &first;
         }
 
-        // WO-013: a sensor body (the wet grate) still produces a full contact
-        // manifold -- Jolt's own doc comment is explicit that sensors "will
-        // receive collision callbacks, but will not cause any collision
-        // responses" -- so without this check a wet grate would read as
-        // real support from geometry alone, even though no physical force
-        // is actually holding the player up (they are in freefall through
-        // it). A sensor is never a valid support.
+        // A sensor body still produces a full contact manifold -- Jolt's own
+        // doc comment is explicit that sensors "will receive collision
+        // callbacks, but will not cause any collision responses" -- so without
+        // this check a sensor would read as real support from geometry alone,
+        // with nothing holding the player up. A sensor is never a support.
         if (support_body == nullptr || support_body->IsSensor() ||
             support_normal_y < kSupportNormalThreshold || support_rank(support_entity) == 0) {
             return;
@@ -1438,51 +604,7 @@ private:
         // ~12 m above the static deck: unmitigated free fall reaches
         // sqrt(2*g*12) ~= 15.3 m/s, under kLethalImpactSpeedMps with margin.
         return {0.0, 13.0, -8.0};
-    case scraperx::sim::InitialSpawn::CatwalkTreadle:
-        // Above the outboard half of the treadle plate, where a body has real
-        // leverage on the hinge.
-        return {15.3, 10.3, -106.0};
-    case scraperx::sim::InitialSpawn::KernelJibStation:
-        return {kJibStationX, 1.2, kJibStationZ};
-    case scraperx::sim::InitialSpawn::KernelCrateTop:
-        // Offset from the crate's centre so the player doesn't spawn inside
-        // the hook, which hangs directly above the centre via the pin link.
-        return {static_cast<double>(kJibMastX + kJibBoomLength) + 0.4, 2.4,
-                static_cast<double>(kJibMastZ)};
-    case scraperx::sim::InitialSpawn::KernelNeedleStation:
-        // On the approach pier top, not at grade: see the station-siting
-        // note by kNeedleStationX above.
-        return {static_cast<double>(kNeedleStationX), static_cast<double>(kNeedlePierTopY) + 1.0,
-                static_cast<double>(kNeedleStationZ)};
-    case scraperx::sim::InitialSpawn::KernelSumpStation:
-        // On the fixed approach decking, not the grate -- see the station-
-        // siting note by kSumpStationX above.
-        return {static_cast<double>(kSumpStationX), static_cast<double>(kSumpPlatformTopY) + 1.0,
-                static_cast<double>(kSumpStationZ)};
-    case scraperx::sim::InitialSpawn::IntakePendant:
-        // Standing on the belt catwalk at CAP-PENDANT, inside the station
-        // radius, so the freight sequence is driven without a climb.
-        return {static_cast<double>(kIntakePendantX),
-                static_cast<double>(kIntakePendantTopY) + 1.0,
-                static_cast<double>(kIntakePendantZ)};
-    case scraperx::sim::InitialSpawn::IntakeThroat:
-        // On the apron 3 m outside the MOD-DOG-A throat, facing into the bay.
-        return {static_cast<double>(kIntakeBayCenterX), 1.2,
-                static_cast<double>(kIntakeBayFrontZ) + 3.0};
-    case scraperx::sim::InitialSpawn::IntakeSkinFoot:
-        // On the apron just south of MOD-SKIN-LADDER-S's lowest rung.
-        return {static_cast<double>(kIntakeSkinCenterX), 1.2,
-                static_cast<double>(kIntakeSkinFootZ + kIntakeSkinRungHalfZ) + 1.2};
-    case scraperx::sim::InitialSpawn::IntakeHandoffDeck:
-        // On the +24.1872 m handoff deck itself, near its east edge, facing
-        // MOD-STAIR-A-SWING's stowed footprint.
-        return {-3.0, static_cast<double>(kIntakeHandoffY) + 1.0872, -112.5};
-    case scraperx::sim::InitialSpawn::Hook5Cage:
-        // On the cage floor under the roof hatch, where the drop lands.
-        return {10.30, 1.0, static_cast<double>(kHook5MinZ) + 2.2};
-    case scraperx::sim::InitialSpawn::Hook5Apron:
-        return {static_cast<double>(kHook5MaxX) + 1.5, 1.0, static_cast<double>(kHook5MinZ) - 3.0};
-    case scraperx::sim::InitialSpawn::StairTop:
+    case scraperx::sim::InitialSpawn::Deck154:
         // The 154 m deck's north band, north of Stage A's cage.
         return {-10.5, 155.0, -128.2};
     case scraperx::sim::InitialSpawn::WellBCage:
@@ -1523,10 +645,6 @@ private:
     case scraperx::sim::InitialSpawn::CraneLCab:
         // On L's cab, west of its middle.
         return {-3.6, 573.2, -160.1};
-    case scraperx::sim::InitialSpawn::MachineYard:
-        return {31.2, 5.0, -96.0};
-    case scraperx::sim::InitialSpawn::LiftPlatform:
-        return {16.4, 2.0, -100.0};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower
@@ -1584,37 +702,8 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
     return slope * t * (1.0F - t) * (1.0F - t) + t * t * (3.0F - 2.0F * t);
 }
 
-// WO-008 checkpoint capture: full rigid-body state for one dynamic machine
-// member. Kinematic bodies (supports, hoist scoop) deliberately have no
-// equivalent -- they are pure functions of the authoritative tick counter
-// and are always correct without restoration.
-struct BodyCheckpoint final {
-    JPH::RVec3 position{JPH::RVec3::sZero()};
-    JPH::Quat rotation = JPH::Quat::sIdentity();
-    JPH::Vec3 linear_velocity{JPH::Vec3::sZero()};
-    JPH::Vec3 angular_velocity{JPH::Vec3::sZero()};
-};
-
-[[nodiscard]] BodyCheckpoint capture_body(const JPH::BodyInterface &bodies,
-                                          const JPH::BodyID id) noexcept {
-    return {bodies.GetPosition(id), bodies.GetRotation(id), bodies.GetLinearVelocity(id),
-            bodies.GetAngularVelocity(id)};
-}
-
-void restore_body(JPH::BodyInterface &bodies, const JPH::BodyID id,
-                  const BodyCheckpoint &checkpoint) noexcept {
-    bodies.SetPositionAndRotation(id, checkpoint.position, checkpoint.rotation,
-                                  JPH::EActivation::Activate);
-    bodies.SetLinearAndAngularVelocity(id, checkpoint.linear_velocity,
-                                       checkpoint.angular_velocity);
-}
-
 [[nodiscard]] scraperx::sim::Vector3 to_vector3(const JPH::RVec3 value) noexcept {
     return {value.GetX(), value.GetY(), value.GetZ()};
-}
-
-[[nodiscard]] scraperx::sim::Quaternion to_quaternion(const JPH::Quat value) noexcept {
-    return {value.GetX(), value.GetY(), value.GetZ(), value.GetW()};
 }
 
 // Result of one geometry probe against the authoritative Jolt world. Every
@@ -1706,7 +795,7 @@ public:
         : temp_allocator_(8U * 1024U * 1024U),
           job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1) {
         // Raised from 1024: the world's solid dressing adds ~1 600 static
-        // bodies (world_solids.inc) on top of the ~300 the kernel owns.
+        // bodies (world_solids.inc) on top of the tower's and the bands'.
         physics_system_.Init(4096,
                              0,
                              2048,
@@ -1719,7 +808,7 @@ public:
         auto &bodies = physics_system_.GetBodyInterface();
 
         // Grade: the yard the player is born on, outdoors, wide enough to walk
-        // the tower approach and to carry the whole plant.
+        // the tower approach.
         deck_id_ = add_box(bodies,
                            JPH::Vec3(240.0F, 0.5F, 240.0F),
                            JPH::RVec3(0.0, -0.5, -60.0),
@@ -1741,94 +830,92 @@ public:
                             0.8F,
                             Simulation::kTowerEntityId);
 
-        translating_support_id_ = add_box(bodies,
-                                          JPH::Vec3(2.75F, 0.25F, 2.75F),
-                                          JPH::RVec3(0.0, 0.25, 8.0),
-                                          JPH::EMotionType::Kinematic,
-                                          object_layers::kMoving,
-                                          0.8F,
-                                          Simulation::kTranslatingSupportEntityId);
+        // The proving ground's movement fixtures (WO-002, WO-003): only in a
+        // world started at one of its spawns, never in the game's.
+        if (scraperx::sim::is_proving_spawn(initial_spawn)) {
+            translating_support_id_ = add_box(bodies,
+                                              JPH::Vec3(2.75F, 0.25F, 2.75F),
+                                              JPH::RVec3(0.0, 0.25, 8.0),
+                                              JPH::EMotionType::Kinematic,
+                                              object_layers::kMoving,
+                                              0.8F,
+                                              Simulation::kTranslatingSupportEntityId);
 
-        rotating_support_id_ = add_box(bodies,
-                                       JPH::Vec3(3.0F, 0.25F, 3.0F),
-                                       JPH::RVec3(-8.0, 0.25, 0.0),
+            rotating_support_id_ = add_box(bodies,
+                                           JPH::Vec3(3.0F, 0.25F, 3.0F),
+                                           JPH::RVec3(-8.0, 0.25, 0.0),
+                                           JPH::EMotionType::Kinematic,
+                                           object_layers::kMoving,
+                                           0.8F,
+                                           Simulation::kRotatingSupportEntityId);
+
+            vault_rail_id_ = add_box(bodies,
+                                     JPH::Vec3(0.22F, 0.475F, 2.5F),
+                                     JPH::RVec3(5.0, 0.475, -6.0),
+                                     JPH::EMotionType::Static,
+                                     object_layers::kStatic,
+                                     0.7F,
+                                     Simulation::kVaultRailEntityId);
+
+            mantle_ledge_id_ = add_box(bodies,
+                                       JPH::Vec3(2.0F, 0.775F, 2.0F),
+                                       JPH::RVec3(11.0, 0.775, -6.0),
+                                       JPH::EMotionType::Static,
+                                       object_layers::kStatic,
+                                       0.7F,
+                                       Simulation::kMantleLedgeEntityId);
+
+            hang_ledge_id_ = add_box(bodies,
+                                     JPH::Vec3(2.5F, 1.8F, 2.5F),
+                                     JPH::RVec3(11.0, 1.8, 4.0),
+                                     JPH::EMotionType::Static,
+                                     object_layers::kStatic,
+                                     0.7F,
+                                     Simulation::kHangLedgeEntityId);
+
+            moving_ledge_id_ = add_box(bodies,
+                                       JPH::Vec3(2.0F, 1.8F, 2.0F),
+                                       JPH::RVec3(9.0, 1.8, kMovingLedgeCenterZ),
                                        JPH::EMotionType::Kinematic,
                                        object_layers::kMoving,
                                        0.8F,
-                                       Simulation::kRotatingSupportEntityId);
+                                       Simulation::kMovingLedgeEntityId);
 
-        vault_rail_id_ = add_box(bodies,
-                                 JPH::Vec3(0.22F, 0.475F, 2.5F),
-                                 JPH::RVec3(5.0, 0.475, -6.0),
-                                 JPH::EMotionType::Static,
-                                 object_layers::kStatic,
-                                 0.7F,
-                                 Simulation::kVaultRailEntityId);
+            blocked_ledge_id_ = add_box(bodies,
+                                        JPH::Vec3(1.5F, 0.775F, 1.5F),
+                                        JPH::RVec3(-6.0, 0.775, -8.0),
+                                        JPH::EMotionType::Static,
+                                        object_layers::kStatic,
+                                        0.7F,
+                                        Simulation::kBlockedLedgeEntityId);
 
-        mantle_ledge_id_ = add_box(bodies,
-                                   JPH::Vec3(2.0F, 0.775F, 2.0F),
-                                   JPH::RVec3(11.0, 0.775, -6.0),
-                                   JPH::EMotionType::Static,
-                                   object_layers::kStatic,
-                                   0.7F,
-                                   Simulation::kMantleLedgeEntityId);
+            blocked_ledge_canopy_id_ = add_box(bodies,
+                                               JPH::Vec3(2.2F, 0.15F, 2.2F),
+                                               JPH::RVec3(-6.0, 2.7, -8.0),
+                                               JPH::EMotionType::Static,
+                                               object_layers::kStatic,
+                                               0.7F,
+                                               Simulation::kBlockedLedgeCanopyEntityId);
 
-        hang_ledge_id_ = add_box(bodies,
-                                 JPH::Vec3(2.5F, 1.8F, 2.5F),
-                                 JPH::RVec3(11.0, 1.8, 4.0),
-                                 JPH::EMotionType::Static,
-                                 object_layers::kStatic,
-                                 0.7F,
-                                 Simulation::kHangLedgeEntityId);
-
-        moving_ledge_id_ = add_box(bodies,
-                                   JPH::Vec3(2.0F, 1.8F, 2.0F),
-                                   JPH::RVec3(9.0, 1.8, kMovingLedgeCenterZ),
-                                   JPH::EMotionType::Kinematic,
-                                   object_layers::kMoving,
-                                   0.8F,
-                                   Simulation::kMovingLedgeEntityId);
-
-        blocked_ledge_id_ = add_box(bodies,
-                                    JPH::Vec3(1.5F, 0.775F, 1.5F),
-                                    JPH::RVec3(-6.0, 0.775, -8.0),
-                                    JPH::EMotionType::Static,
-                                    object_layers::kStatic,
-                                    0.7F,
-                                    Simulation::kBlockedLedgeEntityId);
-
-        blocked_ledge_canopy_id_ = add_box(bodies,
-                                           JPH::Vec3(2.2F, 0.15F, 2.2F),
-                                           JPH::RVec3(-6.0, 2.7, -8.0),
-                                           JPH::EMotionType::Static,
-                                           object_layers::kStatic,
-                                           0.7F,
-                                           Simulation::kBlockedLedgeCanopyEntityId);
-
-        {
-            const auto crawl_part = [this, &bodies](const JPH::Vec3 half, const JPH::RVec3 at) {
-                machine_bodies_.push_back(add_box(bodies, half, at, JPH::EMotionType::Static,
-                                                  object_layers::kStatic, 0.7F,
-                                                  Simulation::kCrawlBeamEntityId));
-            };
-            const float beam_top = kCrawlBeamUndersideY + 2.0F * kCrawlBeamHalfY;
-            crawl_part(JPH::Vec3(kCrawlLaneHalfX, kCrawlBeamHalfY, kCrawlBeamHalfZ),
-                       JPH::RVec3(kCrawlLaneCenterX, kCrawlBeamUndersideY + kCrawlBeamHalfY,
-                                  kCrawlBeamZ));
-            for (const float side : {-1.0F, 1.0F}) {
-                crawl_part(JPH::Vec3(kCrawlPostHalf, beam_top * 0.5F, kCrawlPostHalf),
-                           JPH::RVec3(kCrawlLaneCenterX + side * (kCrawlLaneHalfX + kCrawlPostHalf),
-                                      beam_top * 0.5F, kCrawlBeamZ));
+            {
+                const auto crawl_part = [this, &bodies](const JPH::Vec3 half, const JPH::RVec3 at) {
+                    machine_bodies_.push_back(add_box(bodies, half, at, JPH::EMotionType::Static,
+                                                      object_layers::kStatic, 0.7F,
+                                                      Simulation::kCrawlBeamEntityId));
+                };
+                const float beam_top = kCrawlBeamUndersideY + 2.0F * kCrawlBeamHalfY;
+                crawl_part(JPH::Vec3(kCrawlLaneHalfX, kCrawlBeamHalfY, kCrawlBeamHalfZ),
+                           JPH::RVec3(kCrawlLaneCenterX, kCrawlBeamUndersideY + kCrawlBeamHalfY,
+                                      kCrawlBeamZ));
+                for (const float side : {-1.0F, 1.0F}) {
+                    crawl_part(JPH::Vec3(kCrawlPostHalf, beam_top * 0.5F, kCrawlPostHalf),
+                               JPH::RVec3(kCrawlLaneCenterX + side * (kCrawlLaneHalfX + kCrawlPostHalf),
+                                          beam_top * 0.5F, kCrawlBeamZ));
+                }
             }
         }
 
         build_stack(bodies);
-        build_machine(bodies);
-        build_kernel_jib(bodies);
-        build_kernel_needle(bodies);
-        build_kernel_sump(bodies);
-        build_intake_rise(bodies);
-        build_legal_forty(bodies);
         build_world_solids(bodies);
 
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
@@ -1855,12 +942,7 @@ public:
         player_settings.mMassPropertiesOverride.mMass = kPlayerMassKg;
         player_id_ = bodies.CreateAndAddBody(player_settings, JPH::EActivation::Activate);
 
-        // Built last, so every body before it keeps the id it had: the ascent
-        // routes proven against them are contact-order sensitive.
-        build_hook5_rack(bodies);
-
-        // AS-006: the mechanism ascent's bands, built last for the same
-        // reason: every body before them keeps its id.
+        // AS-006: the mechanism ascent's bands, built after the player.
         kit_ = std::make_unique<scraperx::sim::kit::Kit>(physics_system_, object_layers::kStatic,
                                                         object_layers::kMoving);
         scraperx::sim::bands::build_counterweight_well(*kit_, well_);
@@ -1871,28 +953,13 @@ public:
         physics_system_.OptimizeBroadPhase();
 
         checkpoint_position_ = JPH::RVec3(0.0, 0.9, 0.0);
-        commit_machine_checkpoint(bodies);
+        commit_machine_checkpoint();
 
         read_state();
     }
 
     ~PhysicsWorld() {
         physics_system_.SetContactListener(nullptr);
-        // Dynamically-owned pins (track_for_teardown=false) are never in
-        // machine_constraints_, so the loop below cannot reach them -- remove
-        // whichever of them are currently seated before it runs.
-        if (needle_pin_approach_ != nullptr) {
-            physics_system_.RemoveConstraint(needle_pin_approach_);
-            needle_pin_approach_ = nullptr;
-        }
-        if (needle_pin_far_ != nullptr) {
-            physics_system_.RemoveConstraint(needle_pin_far_);
-            needle_pin_far_ = nullptr;
-        }
-        if (intake_sling_pin_ != nullptr) {
-            physics_system_.RemoveConstraint(intake_sling_pin_);
-            intake_sling_pin_ = nullptr;
-        }
         if (carry_constraint_ != nullptr) {
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
@@ -1904,14 +971,6 @@ public:
             }
         }
         machine_constraints_.clear();
-        tipper_hinge_ = nullptr;
-        valve_hinge_ = nullptr;
-        treadle_hinge_ = nullptr;
-        jib_slew_hinge_ = nullptr;
-        jib_hoist_slider_ = nullptr;
-        needle_hoist_slider_ = nullptr;
-        intake_swing_hinge_ = nullptr;
-        hook5_door_hinge_ = nullptr;
         auto &bodies = physics_system_.GetBodyInterface();
         for (auto it = machine_bodies_.rbegin(); it != machine_bodies_.rend(); ++it) {
             remove_and_destroy(bodies, *it);
@@ -1944,14 +1003,6 @@ public:
         bool set_down_requested = false;
         bool rig_requested = false;
         bool parachute_toggle_requested = false;
-        double jib_slew_input = 0.0;
-        double jib_hoist_input = 0.0;
-        double needle_hoist_input = 0.0;
-        bool valve_toggle_requested = false;
-        double intake_slew_input = 0.0;
-        double intake_hoist_input = 0.0;
-        bool intake_sling_release_requested = false;
-        bool intake_sling_attach_requested = false;
     };
 
     void step(const StepCommands &commands,
@@ -1963,14 +1014,6 @@ public:
 
         auto &bodies = physics_system_.GetBodyInterface();
         update_support_motion(bodies, delta_seconds, next_time_seconds);
-        update_scoop(bodies, delta_seconds, next_time_seconds);
-        update_plant(bodies, delta_seconds);
-        update_jib(bodies, commands.jib_slew_input, commands.jib_hoist_input);
-        update_needle(bodies, commands.needle_hoist_input);
-        update_sump(bodies, delta_seconds, commands.valve_toggle_requested);
-        update_intake(bodies, commands.intake_slew_input, commands.intake_hoist_input);
-        update_legal_forty(bodies, commands.intake_sling_release_requested,
-                           commands.intake_sling_attach_requested);
 
         // A toggle while airborne only: deploying/retracting on the ground is
         // meaningless and would let a grounded button-mash pre-arm the canopy.
@@ -2086,12 +1129,12 @@ public:
         return crane_;
     }
 
-    void set_feed_enabled(const bool enabled) noexcept {
-        steam_plant_.set_feed_enabled(enabled);
-    }
-
 private:
     static void remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {
+        // A proving-ground fixture is never built in the game's world.
+        if (body_id.IsInvalid()) {
+            return;
+        }
         bodies.RemoveBody(body_id);
         bodies.DestroyBody(body_id);
     }
@@ -2173,426 +1216,11 @@ private:
             return blocked_ledge_canopy_id_;
         case Simulation::kTowerEntityId:
             return tower_id_;
-        case Simulation::kHoistScoopEntityId:
-            return scoop_ids_[0];
-        case Simulation::kBallastEntityId:
-            return ballast_id_;
-        case Simulation::kTipperEntityId:
-            return tipper_id_;
-        case Simulation::kValveLeverEntityId:
-            return valve_lever_id_;
-        case Simulation::kLiftPlatformEntityId:
-            return lift_platform_id_;
-        case Simulation::kCounterweightEntityId:
-            return counterweight_id_;
-        case Simulation::kNeedlePierApproachEntityId:
-            return needle_pier_approach_id_;
-        case Simulation::kNeedlePierFarEntityId:
-            return needle_pier_far_id_;
-        case Simulation::kNeedleBeamEntityId:
-            return needle_beam_id_;
-        case Simulation::kSumpGrateEntityId:
-            return sump_grate_id_;
         default:
             return {};
         }
     }
 
-    // ---- coupled machine ------------------------------------------------
-    //
-    // One causal chain, all of it authoritative:
-    //   hoist scoop lifts ballast -> tips it onto a chute -> ballast falls onto a
-    //   hinged tipper -> tipper rotation drags a tension-only rope -> rope pulls a
-    //   counterweighted valve lever -> lever angle sets a real orifice area ->
-    //   orifice vents a finite pressure vessel into an actuator cylinder ->
-    //   cylinder pressure pushes a piston -> piston lifts a counterweighted
-    //   platform the player can stand on and ride.
-    //
-    // Nothing in the chain is scripted. Each link reads the previous link's
-    // actual body state, so the player can enter it mid-cycle, block it, ride it,
-    // or start it early by standing on the tipper.
-    void build_machine(JPH::BodyInterface &bodies) {
-        const auto track = [this](const JPH::BodyID id) {
-            machine_bodies_.push_back(id);
-            return id;
-        };
-
-        // Static plant structure.
-        const JPH::BodyID machine_pylon = track(add_box(
-            bodies, JPH::Vec3(0.55F, 1.45F, 1.4F), JPH::RVec3(kTipperHingeX, 1.45, kTipperZ),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-            Simulation::kMachinePylonEntityId));
-        const JPH::BodyID valve_pylon = track(add_box(
-            bodies, JPH::Vec3(0.3F, 3.6F, 0.3F), JPH::RVec3(kValveHingeX, 3.6, -92.25),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-            Simulation::kMachinePylonEntityId));
-        track(add_box(bodies, JPH::Vec3(0.4F, 6.2F, 0.4F), JPH::RVec3(35.9, 6.2, kScoopZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-                      Simulation::kMachinePylonEntityId));
-        track(add_box(bodies, JPH::Vec3(1.7F, 2.3F, 1.7F), JPH::RVec3(30.5, 2.3, -101.5),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.75F,
-                      Simulation::kVesselShellEntityId));
-        track(add_box(bodies, JPH::Vec3(0.9F, 0.625F, 0.8F), JPH::RVec3(27.0, 0.625, -94.05),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-                      Simulation::kMachinePylonEntityId));
-        track(add_box(bodies, JPH::Vec3(0.9F, 1.25F, 0.8F), JPH::RVec3(28.3, 1.25, -94.05),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-                      Simulation::kMachinePylonEntityId));
-        // The landing starts at the second step's east face (x = 29.2). It used
-        // to start 0.7 m west of it, over the step: 1.0 m of headroom on the
-        // step's top, a slot a standing capsule walked into and wedged.
-        track(add_box(bodies, JPH::Vec3(1.0F, 0.15F, 0.8F), JPH::RVec3(30.2, 3.65, -94.05),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-                      Simulation::kMachinePylonEntityId));
-
-        const JPH::BodyID lift_mast = track(add_box(
-            bodies, JPH::Vec3(0.4F, 5.6F, 0.4F), JPH::RVec3(kLiftMastX, 5.6, kLiftZ),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-            Simulation::kLiftMastEntityId));
-        track(add_box(bodies, JPH::Vec3(2.6F, 0.14F, 9.0F), JPH::RVec3(kLiftPlatformX, 8.55, -112.0),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.7F,
-                      Simulation::kCatwalkEntityId));
-
-        // Return basin: a sloped real surface that walks the ballast back to the
-        // hoist mouth under gravity and friction alone, with lane guards so it
-        // cannot wander out of the machine.
-        track(add_box(bodies, JPH::Vec3(1.2F, 0.14F, 1.5F), JPH::RVec3(31.82, 1.84, kScoopZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.30F,
-                      Simulation::kCatchBasinEntityId,
-                      JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), -0.20F)));
-        for (const float guard_z : {kScoopZ - 1.55F, kScoopZ + 1.55F}) {
-            track(add_box(bodies, JPH::Vec3(1.4F, 0.45F, 0.12F),
-                          JPH::RVec3(31.82, 2.20, guard_z), JPH::EMotionType::Static,
-                          object_layers::kStatic, 0.4F, Simulation::kChuteEntityId));
-        }
-
-        // Hoist scoop: four kinematic panels driven by one rigid transform, open
-        // on its -x face so a forward tilt discharges the ballast.
-        scoop_local_[0] = JPH::Vec3(0.0F, -0.03F, 0.0F);
-        scoop_local_[1] = JPH::Vec3(1.42F, 0.70F, 0.0F);
-        scoop_local_[2] = JPH::Vec3(0.0F, 0.70F, -1.42F);
-        scoop_local_[3] = JPH::Vec3(0.0F, 0.70F, 1.42F);
-        const JPH::Vec3 scoop_half[4] = {
-            JPH::Vec3(1.30F, 0.03F, 1.30F),
-            JPH::Vec3(0.12F, 0.70F, 1.30F),
-            JPH::Vec3(1.30F, 0.70F, 0.12F),
-            JPH::Vec3(1.30F, 0.70F, 0.12F),
-        };
-        for (int i = 0; i < 4; ++i) {
-            scoop_ids_[i] = track(add_box(
-                bodies, scoop_half[i],
-                JPH::RVec3(kScoopX + scoop_local_[i].GetX(),
-                           kScoopBottomY + scoop_local_[i].GetY(),
-                           kScoopZ + scoop_local_[i].GetZ()),
-                JPH::EMotionType::Kinematic, object_layers::kMoving, 0.25F,
-                Simulation::kHoistScoopEntityId));
-        }
-
-        // Ballast: a real 380 kg mass. The player can push it, be struck by it, or
-        // stand where it lands.
-        ballast_id_ = track(add_box(bodies, JPH::Vec3(0.42F, 0.42F, 0.42F),
-                                    JPH::RVec3(34.6, 1.0, kScoopZ), JPH::EMotionType::Dynamic,
-                                    object_layers::kMoving, 0.45F, Simulation::kBallastEntityId,
-                                    JPH::Quat::sIdentity(), kBallastMassKg));
-
-        // Tipper: beam plus an inboard counterweight lump, so it rests with the
-        // catch end raised and resets itself once the ballast rolls off.
-        JPH::StaticCompoundShapeSettings tipper_settings;
-        tipper_settings.AddShape(JPH::Vec3::sZero(), JPH::Quat::sIdentity(),
-                                 new JPH::BoxShape(JPH::Vec3(3.6F, 0.20F, 1.1F)));
-        tipper_settings.AddShape(JPH::Vec3(-3.95F, -0.30F, 0.0F), JPH::Quat::sIdentity(),
-                                 new JPH::BoxShape(JPH::Vec3(0.44F, 0.44F, 0.44F)));
-        JPH::Body *tipper = add_shape_body(
-            bodies, tipper_settings.Create().Get(),
-            JPH::RVec3(kTipperHingeX, kTipperHingeY, kTipperZ), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.30F,
-            Simulation::kTipperEntityId, kTipperMassKg);
-        tipper_id_ = track(tipper->GetID());
-
-        // Valve lever: arm plus an outboard counterweight, so gravity shuts the
-        // valve and only rope tension opens it.
-        JPH::StaticCompoundShapeSettings lever_settings;
-        lever_settings.AddShape(JPH::Vec3(-0.80F, 0.0F, 0.0F), JPH::Quat::sIdentity(),
-                                new JPH::BoxShape(JPH::Vec3(0.80F, 0.13F, 0.20F)));
-        lever_settings.AddShape(JPH::Vec3(0.62F, 0.0F, 0.0F), JPH::Quat::sIdentity(),
-                                new JPH::BoxShape(JPH::Vec3(0.34F, 0.34F, 0.34F)));
-        JPH::Body *lever = add_shape_body(
-            bodies, lever_settings.Create().Get(),
-            JPH::RVec3(kValveHingeX, kValveHingeY, -93.0), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
-            Simulation::kValveLeverEntityId, kValveLeverMassKg);
-        valve_lever_id_ = track(lever->GetID());
-
-        // WO-010 treadle: the plant's human-scale control, on the catwalk deck.
-        // A plate hinged at its inboard end with a counterweight just past the
-        // hinge, so it rests level against its stop with the valve shut, and an
-        // 85 kg body standing on it swings it down against that counterweight.
-        // Pylon top stops below the plate's underside so the hinge is free.
-        const JPH::BodyID treadle_pylon = track(add_box(
-            bodies, JPH::Vec3(0.24F, 0.155F, 0.34F),
-            JPH::RVec3(kTreadleX, kCatwalkDeckY + 0.155, kTreadleZ),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-            Simulation::kMachinePylonEntityId));
-        JPH::StaticCompoundShapeSettings treadle_settings;
-        treadle_settings.AddShape(
-            JPH::Vec3(-kTreadlePlateMeters * 0.5F, 0.0F, 0.0F), JPH::Quat::sIdentity(),
-            new JPH::BoxShape(JPH::Vec3(kTreadlePlateMeters * 0.5F, 0.04F, 0.55F)));
-        // Counterweight rides above the hinge line: only its x offset sets the
-        // restoring torque, so putting it high keeps it clear of the deck.
-        treadle_settings.AddShape(JPH::Vec3(0.55F, 0.42F, 0.0F), JPH::Quat::sIdentity(),
-                                  new JPH::BoxShape(JPH::Vec3(0.32F, 0.32F, 0.32F)));
-        JPH::Body *treadle = add_shape_body(
-            bodies, treadle_settings.Create().Get(),
-            JPH::RVec3(kTreadleX, kTreadleHingeY, kTreadleZ), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.9F,
-            Simulation::kTreadleEntityId, kTreadleMassKg);
-        treadle_id_ = track(treadle->GetID());
-        add_hinge(treadle_pylon, treadle_id_, JPH::RVec3(kTreadleX, kTreadleHingeY, kTreadleZ),
-                  kTreadleRestAngle, kTreadleDepressedAngle, &treadle_hinge_,
-                  Simulation::kMachinePylonEntityId);
-
-        // Sheave masts carrying the control cable. Static, and load-bearing only
-        // as pulley anchor points.
-        track(add_box(bodies, JPH::Vec3(0.10F, 1.0F, 0.10F),
-                      JPH::RVec3(kTreadleX - kTreadleCableArm, kCatwalkDeckY + 1.61,
-                                 kTreadleMastZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-                      Simulation::kMachinePylonEntityId));
-        track(add_box(bodies, JPH::Vec3(0.10F, 1.2F, 0.10F),
-                      JPH::RVec3(kValveHingeX + kValveCableArm, kValveSheaveY - 1.2, kValveMastZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-                      Simulation::kMachinePylonEntityId));
-
-        // Lift platform and its counterweight, each on a real vertical slider and
-        // joined by a real pulley rope.
-        JPH::Body *platform = add_shape_body(
-            bodies, new JPH::BoxShape(JPH::Vec3(2.3F, 0.16F, 2.3F)),
-            JPH::RVec3(kLiftPlatformX, kLiftPlatformRestY, kLiftZ), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.9F,
-            Simulation::kLiftPlatformEntityId, kLiftPlatformMassKg);
-        lift_platform_id_ = track(platform->GetID());
-
-        JPH::Body *counterweight = add_shape_body(
-            bodies, new JPH::BoxShape(JPH::Vec3(0.5F, 0.9F, 0.5F)),
-            JPH::RVec3(kCounterweightX, 7.4, kLiftZ), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
-            Simulation::kCounterweightEntityId, kCounterweightMassKg);
-        counterweight_id_ = track(counterweight->GetID());
-
-        add_hinge(machine_pylon, tipper_id_, JPH::RVec3(kTipperHingeX, kTipperHingeY, kTipperZ),
-                  -0.42F, 0.06F, &tipper_hinge_, Simulation::kMachinePylonEntityId);
-        add_hinge(valve_pylon, valve_lever_id_, JPH::RVec3(kValveHingeX, kValveHingeY, -93.0),
-                  kValveShutAngle, 0.95F, &valve_hinge_, Simulation::kMachinePylonEntityId);
-
-        add_slider(lift_mast, lift_platform_id_, 0.0F, kLiftTravelMeters);
-        add_slider(lift_mast, counterweight_id_, -kLiftTravelMeters, 0.0F);
-        // -1 max length is unchanged from before add_pulley took explicit
-        // points: Jolt auto-derives it from this exact as-built configuration
-        // (PulleyConstraint.cpp), so behaviour here is byte-identical.
-        (void)add_pulley(JPH::RVec3(kLiftPlatformX, kLiftPlatformRestY + 0.16, kLiftZ),
-                        JPH::RVec3(kLiftPlatformX, kSheaveY, kLiftZ), lift_platform_id_,
-                        JPH::RVec3(kCounterweightX, 8.3, kLiftZ),
-                        JPH::RVec3(kCounterweightX, kSheaveY, kLiftZ), counterweight_id_, 1.0F, 0.0F,
-                        -1.0F);
-        settle_machine();
-        add_rope();
-        add_treadle_cable();
-    }
-
-    // WO-011. Ascent Atlas v1.0 kernel (section 9): KX-JIB + KX-CRATE. A
-    // pendant-controlled crane, not an autonomous cycle -- everything here
-    // moves only in response to a real command, through a real, finite-force
-    // Jolt constraint motor, never a scripted animation or a teleport.
-    void build_kernel_jib(JPH::BodyInterface &bodies) {
-        const auto track = [this](const JPH::BodyID id) {
-            machine_bodies_.push_back(id);
-            return id;
-        };
-
-        // KX-DECK kernel patch: its own bounded apron, not the Kellerworks
-        // yard -- Ascent Atlas section 9 places the kernel at a separate,
-        // compressed scale.
-        track(add_box(bodies, JPH::Vec3(kKernelDeckHalfExtent, 0.3F, kKernelDeckHalfExtent),
-                      JPH::RVec3(kKernelBaseX, -0.3, kKernelBaseZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
-                      Simulation::kStaticDeckEntityId));
-
-        const JPH::BodyID jib_mast = track(add_box(
-            bodies, JPH::Vec3(0.35F, kJibMastHeight * 0.5F, 0.35F),
-            JPH::RVec3(kJibMastX, kJibMastHeight * 0.5F, kJibMastZ),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-            Simulation::kJibMastEntityId));
-
-        JPH::Body *boom = add_shape_body(
-            bodies, new JPH::BoxShape(JPH::Vec3(kJibBoomLength * 0.5F, 0.15F, 0.15F)),
-            JPH::RVec3(kJibMastX + kJibBoomLength * 0.5F, kJibMastHeight, kJibMastZ),
-            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.5F,
-            Simulation::kJibBoomEntityId, kJibBoomMassKg);
-        jib_boom_id_ = track(boom->GetID());
-
-        add_vertical_hinge(jib_mast, jib_boom_id_,
-                           JPH::RVec3(kJibMastX, kJibMastHeight, kJibMastZ),
-                           -kJibSlewLimitRadians, kJibSlewLimitRadians, kJibSlewMaxTorqueNm,
-                           &jib_slew_hinge_);
-
-        // Hook and crate both start near the deck: the crate is where a real
-        // load actually sits, and the hook is pre-rigged to it (WO-005 allows
-        // this -- "CAP-HOOK5 may be pre-placed on the crate for this WO").
-        // Raising is what "picks it up"; nothing snaps into a solved pose.
-        const float crate_start_y = kCrateHalfExtent;
-        const float link_y = crate_start_y + kCrateHalfExtent;
-        const float hook_start_y = link_y + 0.15F;
-        JPH::Body *crate = add_shape_body(
-            bodies,
-            new JPH::BoxShape(JPH::Vec3(kCrateHalfExtent, kCrateHalfExtent, kCrateHalfExtent)),
-            JPH::RVec3(kJibMastX + kJibBoomLength, crate_start_y, kJibMastZ),
-            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
-            Simulation::kCrateEntityId, kCrateMassKg);
-        crate_id_ = track(crate->GetID());
-
-        JPH::Body *hook = add_shape_body(
-            bodies, new JPH::BoxShape(JPH::Vec3(0.15F, 0.15F, 0.15F)),
-            JPH::RVec3(kJibMastX + kJibBoomLength, hook_start_y, kJibMastZ), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.4F,
-            Simulation::kJibHookEntityId, kJibHookMassKg);
-        jib_hook_id_ = track(hook->GetID());
-
-        add_point_link(jib_hook_id_, crate_id_,
-                      JPH::RVec3(kJibMastX + kJibBoomLength, link_y, kJibMastZ));
-
-        // Travel is signed from this starting (lowest) pose, matching every
-        // other slider in this file (lift platform, counterweight): 0 here,
-        // upward-only, so raising is unambiguously the positive direction.
-        const float hoist_travel = (kJibMastHeight - 0.35F) - hook_start_y;
-        add_motorized_slider(jib_boom_id_, jib_hook_id_, 0.0F, hoist_travel, kJibMaxLiftForceN,
-                             &jib_hoist_slider_);
-
-        // Capacity-proving stand: fixed, no slew, permanently overweight,
-        // always commanded to raise. Proves the rated force is real without
-        // staging that failure as an unsafe lift on the working jib (WO-005
-        // forbidden shortcuts: "unlimited winch force").
-        const JPH::BodyID stand_mast = track(add_box(
-            bodies, JPH::Vec3(0.3F, kCapacityStandMastHeight * 0.5F, 0.3F),
-            JPH::RVec3(kCapacityStandX, kCapacityStandMastHeight * 0.5F, kCapacityStandZ),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-            Simulation::kJibMastEntityId));
-        JPH::Body *stand_load = add_shape_body(
-            bodies,
-            new JPH::BoxShape(JPH::Vec3(kCapacityStandLoadHalfExtent, kCapacityStandLoadHalfExtent,
-                                        kCapacityStandLoadHalfExtent)),
-            JPH::RVec3(kCapacityStandX, kCapacityStandLoadHalfExtent, kCapacityStandZ),
-            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
-            Simulation::kCapacityStandEntityId, kCapacityStandLoadMassKg);
-        capacity_stand_load_id_ = track(stand_load->GetID());
-        JPH::Ref<JPH::SliderConstraint> stand_slider;
-        const float stand_travel = kCapacityStandMastHeight - kCapacityStandLoadHalfExtent -
-                                    kCapacityStandLoadHalfExtent;
-        add_motorized_slider(stand_mast, capacity_stand_load_id_, 0.0F, stand_travel,
-                             kJibMaxLiftForceN, &stand_slider);
-        stand_slider->SetTargetVelocity(kJibHoistMaxRateMetersPerSec);
-    }
-
-    // WO-012. Ascent Atlas v1.0 kernel (section 9): KX-NEEDLE + KX-POCKETS. A
-    // second, minimal jib-pattern hoist -- mast plus one finite-force
-    // vertical motor, no slew -- lowers the beam on a fixed vertical line
-    // directly above the gap. Two piers stand in for the atlas's KX-POCKETS;
-    // seating pins them to the beam at runtime (update_needle), never here.
-    void build_kernel_needle(JPH::BodyInterface &bodies) {
-        const auto track = [this](const JPH::BodyID id) {
-            machine_bodies_.push_back(id);
-            return id;
-        };
-
-        // Each pier is two boxes, not one: a full-height main block, and a
-        // shorter notch block under the overlap strip where the beam's end
-        // actually lands. Seating the beam flush with the pier top (see
-        // kNeedleSeatedY) means its underside has to have somewhere to go
-        // that isn't solid pier -- a real pocket is a recess, not a shelf.
-        //
-        // The notch's boundary against the main block is pulled back by
-        // kNeedlePocketMarginMeters, well clear of the beam's own edge --
-        // found necessary by direct observation: siting that boundary exactly
-        // at the beam's edge left the descending beam stopping ~4 cm short of
-        // its seat, against JPH::BoxShape's default rounded convex radius on
-        // the main block's corner, not the notch it was actually meant to
-        // land on.
-        const auto box_from_span = [](const float min_x, const float max_x) {
-            return std::pair<float, float>{(min_x + max_x) * 0.5F, (max_x - min_x) * 0.5F};
-        };
-        const float pier_top_y_half = kNeedlePierHeight * 0.5F;
-        const float notch_top_y_half = kNeedlePocketNotchTopY * 0.5F;
-
-        const float approach_outer_x = kNeedlePierApproachX + kNeedlePierHalfExtentX;
-        const float approach_inner_x = kNeedlePierApproachX - kNeedlePierHalfExtentX;
-        const float approach_notch_boundary_x = kNeedlePocketApproachX - kNeedlePocketMarginMeters;
-        const auto [approach_main_x, approach_main_half_x] =
-            box_from_span(approach_inner_x, approach_notch_boundary_x);
-        const auto [approach_notch_x, approach_notch_half_x] =
-            box_from_span(approach_notch_boundary_x, approach_outer_x);
-
-        track(add_box(bodies, JPH::Vec3(approach_main_half_x, pier_top_y_half, kNeedlePierHalfExtentZ),
-                      JPH::RVec3(approach_main_x, pier_top_y_half, kNeedleGapCenterZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
-                      Simulation::kNeedlePierApproachEntityId));
-        needle_pier_approach_id_ = track(add_box(
-            bodies, JPH::Vec3(approach_notch_half_x, notch_top_y_half, kNeedlePierHalfExtentZ),
-            JPH::RVec3(approach_notch_x, notch_top_y_half, kNeedleGapCenterZ),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
-            Simulation::kNeedlePierApproachEntityId));
-
-        const float far_outer_x = kNeedlePierFarX + kNeedlePierHalfExtentX;
-        const float far_inner_x = kNeedlePierFarX - kNeedlePierHalfExtentX;
-        const float far_notch_boundary_x = kNeedlePocketFarX + kNeedlePocketMarginMeters;
-        const auto [far_main_x, far_main_half_x] = box_from_span(far_notch_boundary_x, far_outer_x);
-        const auto [far_notch_x, far_notch_half_x] = box_from_span(far_inner_x, far_notch_boundary_x);
-
-        track(add_box(bodies, JPH::Vec3(far_main_half_x, pier_top_y_half, kNeedlePierHalfExtentZ),
-                      JPH::RVec3(far_main_x, pier_top_y_half, kNeedleGapCenterZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
-                      Simulation::kNeedlePierFarEntityId));
-        needle_pier_far_id_ = track(add_box(
-            bodies, JPH::Vec3(far_notch_half_x, notch_top_y_half, kNeedlePierHalfExtentZ),
-            JPH::RVec3(far_notch_x, notch_top_y_half, kNeedleGapCenterZ),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
-            Simulation::kNeedlePierFarEntityId));
-
-        // Mast (visual + mass) and a small fixed head at the top, directly
-        // above the gap centreline -- the head is the actual slider anchor,
-        // the mast beneath it is proof scaffolding like the capacity stand's,
-        // not a load-bearing member of the kernel chain.
-        track(add_box(bodies, JPH::Vec3(0.35F, kNeedleHoistMastHeight * 0.5F, 0.35F),
-                      JPH::RVec3(kNeedleGapCenterX, kNeedleHoistMastHeight * 0.5F,
-                                kNeedleGapCenterZ + kNeedlePierHalfExtentZ + 1.0F),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-                      Simulation::kNeedleHoistMastEntityId));
-        const JPH::BodyID needle_head = track(add_box(
-            bodies, JPH::Vec3(0.4F, 0.2F, 0.4F),
-            JPH::RVec3(kNeedleGapCenterX, kNeedleHoistMastHeight, kNeedleGapCenterZ),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-            Simulation::kNeedleHoistMastEntityId));
-
-        JPH::Body *beam = add_shape_body(
-            bodies,
-            new JPH::BoxShape(
-                JPH::Vec3(kNeedleBeamHalfLength, kNeedleBeamHalfHeight, kNeedleBeamHalfWidth)),
-            JPH::RVec3(kNeedleGapCenterX, kNeedleStowedY, kNeedleGapCenterZ), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.7F,
-            Simulation::kNeedleBeamEntityId, kNeedleBeamMassKg);
-        needle_beam_id_ = track(beam->GetID());
-
-        // Travel is signed from the spawn (stowed, top) pose: 0 here, and
-        // downward-only to the hard-limited seat height -- "reaches the
-        // bottom of travel" and "reaches the seat" are the same event.
-        const float travel_down = kNeedleStowedY - kNeedleSeatedY;
-        add_motorized_slider(needle_head, needle_beam_id_, -travel_down, 0.0F, kNeedleMaxLiftForceN,
-                             &needle_hoist_slider_);
-    }
-
-    // The stack: the tower's climbable lower section, as real static
-    // collision. A perimeter deck ring per level around an open central
-    // shaft, corner and mid-span columns carrying each deck, and a stair
-    // ramp per level alternating sides so the ascent spirals. The player is
-    // inside this, not looking at it.
     // Everything the player can see is something the player can hit. The
     // table is generated from the Godot builders (godot/presentation/
     // solid_export.gd), so the world these tests walk is the world that is
@@ -2663,61 +1291,31 @@ private:
         return false;
     }
 
+    // The stack: the tower's lower section, as real static collision. A
+    // perimeter deck ring per level round an open 34 m shaft, and corner and
+    // mid-span columns carrying each deck. There is no stair and no ramp: a
+    // level is gained by a machine or a climb.
     void build_stack(JPH::BodyInterface &bodies) {
-        const auto track = [this](const JPH::BodyID id) {
-            machine_bodies_.push_back(id);
-            return id;
-        };
-        const auto frame = [&](const JPH::Vec3 half_extent, const JPH::RVec3 position,
-                               const JPH::Quat rotation = JPH::Quat::sIdentity()) {
-            track(add_box(bodies, half_extent, position, JPH::EMotionType::Static,
-                          object_layers::kStatic, 0.85F, Simulation::kTowerEntityId, rotation));
+        const auto frame = [&](const JPH::Vec3 half_extent, const JPH::RVec3 position) {
+            machine_bodies_.push_back(add_box(bodies, half_extent, position,
+                                              JPH::EMotionType::Static, object_layers::kStatic,
+                                              0.85F, Simulation::kTowerEntityId));
         };
 
         const float band_center = kStackHalfExtent - kStackDeckBandDepth * 0.5F;
         const float inner_half = kStackHalfExtent - kStackDeckBandDepth;
-
-        const float flight_head = kStackHalfExtent - kStackDeckBandDepth;
         for (int level = 1; level <= kStackLevelCount; ++level) {
-            const float deck_y = static_cast<float>(level) * kStackLevelHeight;
-            const float slab_y = deck_y - kStackDeckHalfThickness;
-            // The flight arriving at this level: on band `well_side`, climbing
-            // toward x = well_side * flight_head.
-            const float well_side = ((level - 1) % 2 == 0) ? 1.0F : -1.0F;
-
-            // Deck ring: two full-width bands and two inner bands, leaving a
-            // 22 m shaft open through every level.
-            for (const float sz : {1.0F, -1.0F}) {
-                const float band_z = kStackCenterZ + sz * band_center;
-                if (sz != well_side) {
-                    frame(JPH::Vec3(kStackHalfExtent, kStackDeckHalfThickness,
-                                    kStackDeckBandDepth * 0.5F),
-                          JPH::RVec3(kStackCenterX, slab_y, band_z));
-                    continue;
-                }
-                // Band with the stairwell: full depth before and after the
-                // well along x, two side strips beside it.
-                const auto span = [&](const float from, const float to, const float z0,
-                                      const float z1) {
-                    const float x0 = well_side * from;
-                    const float x1 = well_side * to;
-                    frame(JPH::Vec3(std::abs(x1 - x0) * 0.5F, kStackDeckHalfThickness,
-                                    std::abs(z1 - z0) * 0.5F),
-                          JPH::RVec3(kStackCenterX + (x0 + x1) * 0.5F, slab_y,
-                                     kStackCenterZ + sz * (z0 + z1) * 0.5F));
-                };
-                const float band_in = band_center - kStackDeckBandDepth * 0.5F;
-                const float band_out = band_center + kStackDeckBandDepth * 0.5F;
-                const float well_in = band_center - kStackStairwellHalfWidth;
-                const float well_out = band_center + kStackStairwellHalfWidth;
-                span(-kStackHalfExtent, kStackStairwellStart, band_in, band_out);
-                span(flight_head, kStackHalfExtent, band_in, band_out);
-                span(kStackStairwellStart, flight_head, band_in, well_in);
-                span(kStackStairwellStart, flight_head, well_out, band_out);
+            const float slab_y =
+                static_cast<float>(level) * kStackLevelHeight - kStackDeckHalfThickness;
+            // Deck ring: two full-width bands and two inner bands.
+            for (const float side : {1.0F, -1.0F}) {
+                frame(JPH::Vec3(kStackHalfExtent, kStackDeckHalfThickness,
+                                kStackDeckBandDepth * 0.5F),
+                      JPH::RVec3(kStackCenterX, slab_y, kStackCenterZ + side * band_center));
             }
-            for (const float sx : {1.0F, -1.0F}) {
+            for (const float side : {1.0F, -1.0F}) {
                 frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
-                      JPH::RVec3(kStackCenterX + sx * band_center, slab_y, kStackCenterZ));
+                      JPH::RVec3(kStackCenterX + side * band_center, slab_y, kStackCenterZ));
             }
         }
 
@@ -2739,855 +1337,11 @@ private:
                                  kStackCenterZ + sx * kStackHalfExtent));
             }
         }
-
-        // Stair runs: one flight per storey, alternating sides so the climb
-        // spirals the perimeter rather than stacking in one corner. A single
-        // inclined slab per flight -- the visible steps are drawn on top of
-        // it, so what you see and what you stand on agree.
-        for (int level = 0; level < kStackLevelCount; ++level) {
-            const float base_y = static_cast<float>(level) * kStackLevelHeight;
-            const float run = kStackHalfExtent * 2.0F - kStackDeckBandDepth * 2.0F;
-            const float rise = kStackLevelHeight;
-            const float length = std::sqrt(run * run + rise * rise);
-            const float pitch = std::atan2(rise, run);
-            const float side = (level % 2 == 0) ? 1.0F : -1.0F;
-            // Runs along X on alternating Z bands, climbing in +X or -X. The
-            // slab is set down by its own half-thickness along its normal so
-            // its walking surface meets the floor below and the deck above
-            // flush at both ends, not 0.19 m proud of them.
-            const JPH::Quat rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), side * pitch);
-            constexpr float kFlightHalfThickness = 0.18F;
-            frame(JPH::Vec3(length * 0.5F, kFlightHalfThickness, kStackRampHalfWidth),
-                  JPH::RVec3(kStackCenterX + side * kFlightHalfThickness * std::sin(pitch),
-                             base_y + rise * 0.5F - kFlightHalfThickness * std::cos(pitch),
-                             kStackCenterZ + side * band_center),
-                  rotation);
-        }
     }
 
-    // WO-013. Ascent Atlas v1.0 kernel (section 9): KX-SUMP + KX-GRATE. Fixed
-    // approach/far decking flank one grate panel; only the grate's own
-    // collidability changes, driven by update_sump every tick. Starts wet
-    // (grate is a sensor -- see create) since the sump starts full.
-    // AS-001. Ascent Atlas §6 band B00: MOD-APRON, MOD-INTAKE-BELT,
-    // CAP-PENDANT, MOD-YARD-JIB, the 4 t pack, MOD-DOG-A, MOD-STAIR-A,
-    // MOD-SKIN-LADDER-S. The ground plane already reaches here, so MOD-APRON
-    // is the yard furniture standing on it rather than a second slab.
-    void build_intake_rise(JPH::BodyInterface &bodies) {
-        const auto track = [this](const JPH::BodyID id) {
-            machine_bodies_.push_back(id);
-            return id;
-        };
-        const auto fixed = [&](const JPH::Vec3 half_extent, const JPH::RVec3 position,
-                               const std::uint64_t entity_id,
-                               const JPH::Quat rotation = JPH::Quat::sIdentity()) {
-            return track(add_box(bodies, half_extent, position, JPH::EMotionType::Static,
-                                 object_layers::kStatic, 0.85F, entity_id, rotation));
-        };
-
-        // ---- the bay: back, sides, and the front wall carrying the throat --
-        const float bay_half_z = (kIntakeBayFrontZ - kIntakeBayBackZ) * 0.5F;
-        const float bay_center_z = (kIntakeBayFrontZ + kIntakeBayBackZ) * 0.5F;
-        const float wall_half_y = kIntakeBayWallHeight * 0.5F;
-
-        fixed(JPH::Vec3(kIntakeBayHalfX, wall_half_y, kIntakeBayWallHalfZ),
-              JPH::RVec3(kIntakeBayCenterX, wall_half_y, kIntakeBayBackZ),
-              Simulation::kIntakeBayEntityId);
-        for (const float sx : {1.0F, -1.0F}) {
-            fixed(JPH::Vec3(kIntakeBayWallHalfZ, wall_half_y, bay_half_z),
-                  JPH::RVec3(kIntakeBayCenterX + sx * kIntakeBayHalfX, wall_half_y, bay_center_z),
-                  Simulation::kIntakeBayEntityId);
-        }
-
-        // Front wall: two jambs plus a solid lintel over the throat. The
-        // lintel is what stops the throat from being mantled over once the
-        // dog is shut -- with it, a closed dog leaves no standable surface
-        // anywhere in the opening.
-        const float jamb_half_x = (kIntakeBayHalfX - kIntakeThroatHalfWidth) * 0.5F;
-        JPH::BodyID west_jamb;
-        for (const float sx : {1.0F, -1.0F}) {
-            const JPH::BodyID jamb =
-                fixed(JPH::Vec3(jamb_half_x, wall_half_y, kIntakeBayWallHalfZ),
-                      JPH::RVec3(kIntakeBayCenterX + sx * (kIntakeThroatHalfWidth + jamb_half_x),
-                                 wall_half_y, kIntakeBayFrontZ),
-                      Simulation::kIntakeBayEntityId);
-            if (sx < 0.0F) {
-                west_jamb = jamb;
-            }
-        }
-        const float lintel_half_y = (kIntakeBayWallHeight - kIntakeThroatHeight) * 0.5F;
-        fixed(JPH::Vec3(kIntakeThroatHalfWidth, lintel_half_y, kIntakeBayWallHalfZ),
-              JPH::RVec3(kIntakeBayCenterX, kIntakeThroatHeight + lintel_half_y,
-                         kIntakeBayFrontZ),
-              Simulation::kIntakeBayEntityId);
-
-        // ---- MOD-DOG-A ----------------------------------------------------
-        // Hinged at the west jamb, extending east to fill the throat at angle
-        // zero. Positive rotation about +Y carries its far end toward -Z, i.e.
-        // into the bay, which is where the pack is standing.
-        JPH::Body *dog = add_shape_body(
-            bodies,
-            new JPH::BoxShape(JPH::Vec3(kIntakeDogHalfWidth, kIntakeDogHalfHeight,
-                                        kIntakeDogHalfThickness)),
-            JPH::RVec3(kIntakeBayCenterX, kIntakeDogCenterY, kIntakeBayFrontZ),
-            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.7F,
-            Simulation::kIntakeDogEntityId, kIntakeDogMassKg);
-        intake_dog_id_ = track(dog->GetID());
-        add_vertical_hinge(west_jamb, intake_dog_id_,
-                           JPH::RVec3(kIntakeDogHingeX, kIntakeDogCenterY,
-                                      kIntakeBayFrontZ),
-                           0.0F, kIntakeDogRetractAngle, kIntakeDogMaxTorqueNm,
-                           &intake_dog_hinge_);
-        if (intake_dog_hinge_ != nullptr) {
-            // Commanded open from build time and never commanded otherwise.
-            // The pack is the only thing holding it shut.
-            intake_dog_hinge_->SetTargetAngularVelocity(kIntakeDogRetractSpeed);
-        }
-
-        // ---- MOD-INTAKE-BELT and the CAP-PENDANT catwalk -------------------
-        intake_belt_id_ = track(add_box(
-            bodies, JPH::Vec3(kIntakeBeltHalfX, kIntakeBeltHalfY, kIntakeBeltHalfZ),
-            JPH::RVec3(kIntakeBeltX, kIntakeBeltTopY - kIntakeBeltHalfY, kIntakeBeltCenterZ),
-            JPH::EMotionType::Kinematic, object_layers::kMoving, 0.9F,
-            Simulation::kIntakeBeltEntityId));
-
-        fixed(JPH::Vec3(1.6F, kIntakeBeltHalfY, 3.0F),
-              JPH::RVec3(kIntakePendantX, kIntakePendantTopY - kIntakeBeltHalfY,
-                         kIntakePendantZ),
-              Simulation::kIntakeApronEntityId);
-        // Ramp up to the catwalk so the pendant is reachable on foot without
-        // spending a mantle, matching how every other stair in this world works.
-        {
-            const float rise = kIntakePendantTopY;
-            const float run = 4.0F;
-            const float length = std::sqrt(run * run + rise * rise);
-            const float pitch = std::atan2(rise, run);
-            fixed(JPH::Vec3(1.6F, 0.15F, length * 0.5F),
-                  JPH::RVec3(kIntakePendantX, rise * 0.5F, kIntakePendantZ + 3.0F + run * 0.5F),
-                  Simulation::kIntakeApronEntityId,
-                  JPH::Quat::sRotation(JPH::Vec3::sAxisX(), pitch));
-        }
-
-        // ---- MOD-YARD-JIB --------------------------------------------------
-        const JPH::BodyID mast = fixed(
-            JPH::Vec3(0.45F, kIntakeBoomHeight * 0.5F, 0.45F),
-            JPH::RVec3(kIntakeJibMastX, kIntakeBoomHeight * 0.5F, kIntakeJibMastZ),
-            Simulation::kIntakeJibMastEntityId);
-
-        // Built already pointing -Z, down the line to the pack. The hinge takes
-        // its world-space normal axes at construction, so "angle zero" is this
-        // as-built pose and the +-0.90 rad slew limit sweeps symmetrically
-        // around the throat.
-        const JPH::Quat boom_rotation =
-            JPH::Quat::sRotation(JPH::Vec3::sAxisY(), static_cast<float>(kPi * 0.5));
-        JPH::Body *boom = add_shape_body(
-            bodies, new JPH::BoxShape(JPH::Vec3(kIntakeBoomLength * 0.5F, 0.22F, 0.22F)),
-            JPH::RVec3(kIntakeJibMastX, kIntakeBoomHeight,
-                       kIntakeJibMastZ - kIntakeBoomLength * 0.5F),
-            boom_rotation, JPH::EMotionType::Dynamic, object_layers::kMoving, 0.5F,
-            Simulation::kIntakeJibBoomEntityId, kIntakeJibBoomMassKg);
-        intake_boom_id_ = track(boom->GetID());
-        add_vertical_hinge(mast, intake_boom_id_,
-                           JPH::RVec3(kIntakeJibMastX, kIntakeBoomHeight, kIntakeJibMastZ),
-                           -kIntakeJibSlewLimitRadians, kIntakeJibSlewLimitRadians,
-                           kIntakeJibSlewTorqueNm, &intake_slew_hinge_);
-
-        // The pack sits on the apron under the boom tip, pre-slung (Atlas B00
-        // allows the rigging pre-placed; the hook is still a real constraint).
-        const float pack_start_y = kIntakePackHalfY;
-        const float pack_link_y = pack_start_y + kIntakePackHalfY;
-        const float hook_start_y = pack_link_y + 0.20F;
-        JPH::Body *pack = add_shape_body(
-            bodies,
-            new JPH::BoxShape(JPH::Vec3(kIntakePackHalfX, kIntakePackHalfY, kIntakePackHalfZ)),
-            JPH::RVec3(kIntakeBayCenterX, pack_start_y, kIntakePackZ), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
-            Simulation::kIntakePackEntityId, kIntakePackMassKg);
-        intake_pack_id_ = track(pack->GetID());
-
-        JPH::Body *hook = add_shape_body(
-            bodies, new JPH::BoxShape(JPH::Vec3(0.20F, 0.20F, 0.20F)),
-            JPH::RVec3(kIntakeBayCenterX, hook_start_y, kIntakePackZ), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Dynamic, object_layers::kMoving, 0.4F,
-            Simulation::kIntakeJibHookEntityId, kIntakeJibHookMassKg);
-        intake_hook_id_ = track(hook->GetID());
-        // AS-002 makes this releasable (release_pack_to_cradle() /
-        // sling_pack()): create_sling_pin() uses track_for_teardown=false,
-        // exactly the needle pins' contract, so it is intake_sling_pin_'s
-        // sole owner rather than also sitting in machine_constraints_, which
-        // Jolt's ConstraintManager::Remove would then assert on if it had
-        // already been removed once at runtime. Unchanged from AS-001: the
-        // pin point is pack_link_y, 0.20 m below the hook's own built
-        // hook_start_y -- not the hook's position -- so this is byte-
-        // identical to the add_point_link() call it replaces.
-        create_sling_pin(JPH::RVec3(kIntakeBayCenterX, pack_link_y, kIntakePackZ));
-
-        const float hoist_travel = (kIntakeBoomHeight - 0.45F) - hook_start_y;
-        add_motorized_slider(intake_boom_id_, intake_hook_id_, 0.0F, hoist_travel,
-                             kIntakeJibWinchForceN, &intake_hoist_slider_);
-
-        // The 9 t pack on its own fixed stand, permanently commanded up at the
-        // same rated winch force. It proves the rating is enforced by the
-        // solver without staging that failure as an unsafe lift on the working
-        // jib (Atlas B00: "9 t overweight must stall").
-        const JPH::BodyID overweight_mast = fixed(
-            JPH::Vec3(0.35F, kIntakeOverweightMastHeight * 0.5F, 0.35F),
-            JPH::RVec3(kIntakeOverweightStandX, kIntakeOverweightMastHeight * 0.5F,
-                       kIntakeOverweightStandZ),
-            Simulation::kIntakeJibMastEntityId);
-        JPH::Body *overweight = add_shape_body(
-            bodies,
-            new JPH::BoxShape(JPH::Vec3(kIntakePackHalfX, kIntakePackHalfY, kIntakePackHalfZ)),
-            JPH::RVec3(kIntakeOverweightStandX, kIntakePackHalfY, kIntakeOverweightStandZ),
-            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
-            Simulation::kIntakeOverweightPackEntityId, kIntakeOverweightPackMassKg);
-        intake_overweight_pack_id_ = track(overweight->GetID());
-        JPH::Ref<JPH::SliderConstraint> overweight_slider;
-        add_motorized_slider(overweight_mast, intake_overweight_pack_id_, 0.0F,
-                             kIntakeOverweightMastHeight - 2.0F * kIntakePackHalfY,
-                             kIntakeJibWinchForceN, &overweight_slider);
-        overweight_slider->SetTargetVelocity(kIntakeJibHoistRateMetersPerSec);
-
-        // ---- MOD-STAIR-A ---------------------------------------------------
-        // One inclined slab per flight, switchbacking along X, with a landing
-        // pad at each turn. Same pattern as build_stack(): what you see drawn
-        // on top and what you stand on are the same body.
-        const float flight_length =
-            std::sqrt(4.0F * kIntakeStairHalfRun * kIntakeStairHalfRun +
-                      kIntakeStairFlightRise * kIntakeStairFlightRise);
-        const float pitch = std::atan2(kIntakeStairFlightRise, 2.0F * kIntakeStairHalfRun);
-        // An inclined slab's walking surface stands this far above the line
-        // through its ends. Landings are raised to match, so a turn is a flush
-        // step and not a lip the no-step-assist capsule has to climb.
-        const float tread_surface = kIntakeStairSlabHalfY / std::cos(pitch);
-        const auto flight_side = [](const int flight) {
-            return (flight % 2 == 0) ? 1.0F : -1.0F;
-        };
-        for (int flight = 0; flight < kIntakeStairFlightCount; ++flight) {
-            const float base_y = static_cast<float>(flight) * kIntakeStairFlightRise;
-            // Even flights climb toward +X in the south lane, odd flights back
-            // toward -X in the north lane.
-            const float side = flight_side(flight);
-            fixed(JPH::Vec3(flight_length * 0.5F, kIntakeStairSlabHalfY, kIntakeStairHalfWidth),
-                  JPH::RVec3(kIntakeBayCenterX, base_y + kIntakeStairFlightRise * 0.5F,
-                             kIntakeStairZ + side * kIntakeStairLaneOffset),
-                  Simulation::kIntakeStairEntityId,
-                  JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), side * pitch));
-        }
-        // One landing at the foot of every flight, plus the one flight 5
-        // arrives on. Each spans both lanes, so a turn is a walk across it.
-        for (int flight = 0; flight <= kIntakeStairFlightCount; ++flight) {
-            const float base_y = static_cast<float>(flight) * kIntakeStairFlightRise;
-            fixed(JPH::Vec3(kIntakeStairLandingHalfX, kIntakeStairSlabHalfY,
-                            kIntakeStairLandingHalfZ),
-                  JPH::RVec3(kIntakeBayCenterX - flight_side(flight) * kIntakeStairLandingX,
-                             base_y + tread_surface - kIntakeStairSlabHalfY, kIntakeStairZ),
-                  Simulation::kIntakeStairEntityId);
-        }
-
-        // ---- the +24 m handoff ---------------------------------------------
-        // Reaches from the top of flight 5 south past the bay wall to meet the
-        // SKIN ladder head, so both braids arrive on the same deck.
-        const float handoff_half_z = (kIntakeHandoffSouthZ - kIntakeHandoffNorthZ) * 0.5F;
-        const float handoff_center_z = (kIntakeHandoffSouthZ + kIntakeHandoffNorthZ) * 0.5F;
-        fixed(JPH::Vec3(kIntakeHandoffHalfX, kIntakeHandoffHalfY, handoff_half_z),
-              JPH::RVec3(kIntakeHandoffCenterX,
-                         kIntakeHandoffY + tread_surface - kIntakeHandoffHalfY,
-                         handoff_center_z),
-              Simulation::kIntakeHandoffEntityId);
-
-        // ---- MOD-SKIN-LADDER-S ---------------------------------------------
-        for (int rung = 1; rung <= kIntakeSkinRungCount; ++rung) {
-            const float top_y = static_cast<float>(rung) * kIntakeSkinRungRise;
-            const float rung_z =
-                kIntakeSkinHeadZ + 2.0F * kIntakeSkinRungHalfZ *
-                                       static_cast<float>(kIntakeSkinRungCount - rung);
-            fixed(JPH::Vec3(kIntakeSkinRungHalfX, kIntakeSkinRungHalfY, kIntakeSkinRungHalfZ),
-                  JPH::RVec3(kIntakeSkinCenterX, top_y - kIntakeSkinRungHalfY, rung_z),
-                  Simulation::kIntakeSkinEntityId);
-        }
-    }
-
-    // AS-002. Ascent Atlas §6 band B00's 24.1872-40.1872 m leftover, chain K0
-    // PLAY. Everything above the handoff deck stacks off AS-001's own
-    // tread-surface offset (kIntakeHandoffY + slab-half-thickness / cos(pitch)),
-    // recomputed here at this run's own 30 deg pitch, so it stays flush with
-    // the deck below to the millimetre rather than by matching a second copy
-    // of the same literal.
-    void build_legal_forty(JPH::BodyInterface &bodies) {
-        const auto track = [this](const JPH::BodyID id) {
-            machine_bodies_.push_back(id);
-            return id;
-        };
-        const auto fixed = [&](const JPH::Vec3 half_extent, const JPH::RVec3 position,
-                               const std::uint64_t entity_id,
-                               const JPH::Quat rotation = JPH::Quat::sIdentity()) {
-            track(add_box(bodies, half_extent, position, JPH::EMotionType::Static,
-                          object_layers::kStatic, 0.85F, entity_id, rotation));
-        };
-
-        const float handoff_pitch = std::atan2(kIntakeStairFlightRise, 2.0F * kIntakeStairHalfRun);
-        const float handoff_tread_surface = kIntakeStairSlabHalfY / std::cos(handoff_pitch);
-        const float handoff_surface_y = kIntakeHandoffY + handoff_tread_surface;
-        const float mid_landing_surface_y = handoff_surface_y + kLegalFortyFlightRiseMeters;
-        const float hall_deck_surface_y = mid_landing_surface_y + kLegalFortyFlightRiseMeters;
-
-        // ---- MOD-STAIR-A-SWING: the dynamic bascule flight -------------------
-        const JPH::RVec3 hinge_point(kIntakeSwingHingeX, mid_landing_surface_y, kIntakeSwingHingeZ);
-        // R(phi), phi = pi/2 - theta, maps local +X to world (sin theta,
-        // cos theta, 0) about the world +Z hinge axis -- verified against
-        // Jolt::Quat::sRotation's own [axis*sin(angle/2), cos(angle/2)] form
-        // (see kIntakeSwingHingeTravelRadians's comment above). Built at
-        // theta_stowed, so this is also the body's as-built rotation.
-        const float stowed_phi = static_cast<float>(kPi) * 0.5F - kLegalFortyStowedThetaRadians;
-        const JPH::Quat stowed_rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), stowed_phi);
-        // Body centre = hinge - R(phi) * (half_length, 0, 0): the hinge sits at
-        // the body's own local (+half_length, 0, 0), its "top end".
-        const JPH::Vec3 hinge_to_centre_world =
-            stowed_rotation * JPH::Vec3(kLegalFortyFlightHalfLength, 0.0F, 0.0F);
-        const JPH::RVec3 swing_build_centre = hinge_point - hinge_to_centre_world;
-
-        JPH::Body *swing_flight = add_shape_body(
-            bodies,
-            new JPH::BoxShape(JPH::Vec3(kLegalFortyFlightHalfLength, kIntakeStairSlabHalfY,
-                                        kLegalFortyFlightHalfWidth)),
-            swing_build_centre, stowed_rotation, JPH::EMotionType::Dynamic, object_layers::kMoving,
-            0.7F, Simulation::kIntakeSwingFlightEntityId, kLegalFortyFlightMassKg);
-        intake_swing_flight_id_ = track(swing_flight->GetID());
-
-        // A small static anchor at the hinge point -- the hinge's first body,
-        // exactly like the needle hoist's fixed head (add_motorized_slider's
-        // own comment: "the head is the actual... anchor, the mast beneath it
-        // is proof scaffolding"). Sized well under the flight's own 0.18 m
-        // corner-sweep radius (this file's clearances note above, echoing
-        // the plan's own: "the slab's top-end corners lie 0.18 m off the
-        // hinge axis and sweep a 0.18 m circle") -- a cube of half-extent h
-        // reaches h*sqrt(2) at its corner, so h=0.08 stays inside that
-        // circle by 0.067 m at every angle. AS-001 lost a day to the
-        // opposite mistake once already (MOD-DOG-A's own hinge sitting
-        // flush with its jamb); this is that same trap, self-inflicted
-        // against AS-002's own anchor rather than a neighbour's structure --
-        // found by direct observation: at the old 0.30 m half-extent (bigger
-        // than the sweep radius on every side) the loaded flight never
-        // opened past a fraction of a degree, pinned by its own anchor.
-        //
-        // Shrinking it to 0.08 only thinned that same pinning, never removed
-        // it: the flight's own cross-section is coincident with the hinge
-        // pivot at every sweep angle by construction, so ANY nonzero-size
-        // anchor box keeps a sliver of solid overlap there always -- found
-        // by direct diagnostic tracing (OnContactAdded/Persisted instrumented
-        // to log the actual world-space contact point, not just entity IDs)
-        // showing a real, continuous PERSISTED contact at the hinge itself
-        // for the entire length of a 20+ s window in which the flight was
-        // otherwise correctly, fully unloaded and should have been relaxing
-        // freely under its own weight. kIntakeSwingAnchorEntityId gives this
-        // one body its own identity (unlike every other static piece of
-        // MOD-STAIR-A, which stays grouped under kIntakeStairEntityId) so
-        // OnContactValidate below can exclude exactly this pair, the same
-        // way it already excludes the flight from the handoff deck: the
-        // hinge CONSTRAINT is what relates the anchor and the flight, and
-        // ordinary contact resolution between them was never meaningful.
-        const JPH::BodyID swing_anchor = track(add_box(
-            bodies, JPH::Vec3(0.08F, 0.08F, 0.08F), hinge_point, JPH::EMotionType::Static,
-            object_layers::kStatic, 0.8F, Simulation::kIntakeSwingAnchorEntityId));
-        // Unmotored: gravity alone holds this at its stowed limit (jolt angle
-        // 0, this build pose) until MOD-CW-CRADLE's rope tension beats it.
-        // Limits are negative-only -- see kIntakeSwingHingeTravelRadians.
-        add_hinge(swing_anchor, intake_swing_flight_id_, hinge_point,
-                  -kIntakeSwingHingeTravelRadians, 0.0F, &intake_swing_hinge_,
-                  Simulation::kIntakeStairEntityId);
-
-        // ---- MOD-CW-CRADLE: dynamic car on a free vertical slider ------------
-        // The hook hangs at the boom tip, so working radius is fixed at the
-        // 12 m boom; only the slew bearing chooses where on that circle the
-        // cradle sits. Sited on the SAME (east, +X) side as the hinge/flight
-        // above, matching AS-002's own geometry table (hinge x=+7.856,
-        // cradle x=+8.608): hook_x = -boomLength*sin(angle) for a POSITIVE
-        // set_intake_slew_input, verified against the running mechanism, so
-        // reaching this +X cradle is a NEGATIVE slew command
-        // (kIntakeCwCradleBearingRadians is the magnitude; update_intake's
-        // sign is negated at every call site that targets the cradle).
-        const float cradle_x =
-            kIntakeJibMastX + kIntakeBoomLength * std::sin(kIntakeCwCradleBearingRadians);
-        const float cradle_z =
-            kIntakeJibMastZ - kIntakeBoomLength * std::cos(kIntakeCwCradleBearingRadians);
-        const JPH::RVec3 cradle_build_centre(cradle_x, kIntakeCwCradleBuildCenterY, cradle_z);
-
-        // Offset south of the car's own centreline, clear of the column the
-        // pack is lowered through -- found by direct observation: a mast
-        // built AT the car's own xz (matching the plan's literal "same xz")
-        // stood directly in that column, and the descending pack snagged its
-        // top on every attempt. add_slider only needs a static anchor body
-        // for the vertical constraint; nothing requires it to share the
-        // car's own xz, and the cradle is open in +-Z for exactly this kind
-        // of side approach.
-        const float guide_mast_z = cradle_z + 2.0F;
-        const JPH::BodyID cradle_guide = track(add_box(
-            bodies,
-            JPH::Vec3(kIntakeCwCradleGuideHalfX, kIntakeCwCradleGuideHalfY,
-                      kIntakeCwCradleGuideHalfZ),
-            JPH::RVec3(cradle_x, kIntakeCwCradleGuideHalfY, guide_mast_z), JPH::EMotionType::Static,
-            object_layers::kStatic, 0.8F, Simulation::kIntakeCwCradleEntityId));
-
-        // Three-sided open frame -- floor and two side rails, open in +-Z --
-        // not a closed hopper: a 2.4 m hopper cannot take the 2.2 x 2.3 m pack
-        // without pushing the cradle into the bay's front wall.
-        JPH::Body *cradle = add_shape_body(
-            bodies,
-            new JPH::BoxShape(JPH::Vec3(kIntakeCwCradleHalfX, kIntakeCwCradleHalfY,
-                                        kIntakeCwCradleHalfZ)),
-            cradle_build_centre, JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic,
-            object_layers::kMoving, 0.7F, Simulation::kIntakeCwCradleEntityId,
-            kIntakeCwCradleTareMassKg);
-        intake_cw_cradle_id_ = track(cradle->GetID());
-        add_slider(cradle_guide, intake_cw_cradle_id_, kIntakeCwCradleLimitMinMeters,
-                  kIntakeCwCradleLimitMaxMeters);
-
-        // ---- The rope: one generalised JPH::PulleyConstraint -----------------
-        const JPH::RVec3 sheave_a(kIntakeSwingHingeX,
-                                  mid_landing_surface_y + kIntakeSwingSheaveHeightMeters,
-                                  kIntakeSwingHingeZ);
-        const JPH::RVec3 sheave_b(cradle_x,
-                                  mid_landing_surface_y + kIntakeSwingSheaveHeightMeters,
-                                  cradle_z);
-        const JPH::RVec3 flight_bracket_point =
-            bodies.GetCenterOfMassTransform(intake_swing_flight_id_) *
-            JPH::RVec3(kIntakeSwingBracketLocalX, kIntakeSwingBracketLocalY, 0.0);
-        const JPH::RVec3 cradle_top_point =
-            bodies.GetCenterOfMassTransform(intake_cw_cradle_id_) *
-            JPH::RVec3(0.0, kIntakeCwCradleHalfY, 0.0);
-        const float flight_side_length = JPH::Vec3(sheave_a - flight_bracket_point).Length();
-        const float cradle_side_length_at_build =
-            JPH::Vec3(sheave_b - cradle_top_point).Length();
-        // Tension-only, rated per the T_crit derivation above (empty cradle
-        // 0.37x the stowed demand, loaded 1.21x): never pushes, and its total
-        // length is fixed at this as-built (empty-cradle, stowed-flight) sum,
-        // which is also this mechanism's one physically consistent rest state
-        // when the rope is fully taut.
-        intake_cw_pulley_ =
-            add_pulley(flight_bracket_point, sheave_a, intake_swing_flight_id_, cradle_top_point,
-                      sheave_b, intake_cw_cradle_id_, 1.0F, 0.0F,
-                      flight_side_length + cradle_side_length_at_build);
-
-        // ---- MOD-STAIR-A upper flight (static) + mid-landing ------------------
-        // An inclined slab like every other flight in this file -- AS-001's own
-        // pattern (Quat::sRotation(axisZ, side*pitch)), not the flat, unrotated
-        // box this was until now. Climbs toward -X (side = -1, "odd flights
-        // back toward -X" per flight_side's own comment): the un-rotated half-
-        // length (8.00) times cos(pitch) puts its rotated footprint at
-        // x in [-4.506, 9.350], which is exactly the well's own centre-X at
-        // the top end and the mid-landing's own centre-X at the foot -- this
-        // position was already sited for a rotated slab, only the rotation
-        // itself was missing.
-        const float upper_flight_pitch =
-            std::asin(kLegalFortyFlightRiseMeters / kLegalFortyFlightLength);
-        fixed(JPH::Vec3(kLegalFortyFlightHalfLength, kIntakeStairSlabHalfY,
-                        kLegalFortyFlightHalfWidth),
-              JPH::RVec3(kLegalFortyUpperFlightCenterX,
-                         mid_landing_surface_y + kLegalFortyFlightRiseMeters * 0.5F,
-                         kLegalFortyUpperFlightCenterZ),
-              Simulation::kIntakeStairEntityId,
-              JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), -upper_flight_pitch));
-        fixed(JPH::Vec3(kLegalFortyMidLandingHalfX, kIntakeStairSlabHalfY,
-                        kLegalFortyMidLandingHalfZ),
-              JPH::RVec3(kLegalFortyMidLandingCenterX, mid_landing_surface_y - kIntakeStairSlabHalfY,
-                         kLegalFortyMidLandingCenterZ),
-              Simulation::kIntakeStairEntityId);
-
-        // ---- MOD-HALL-DECK lower landing, with its stair well -----------------
-        // Four strips tiling the deck minus a rectangular well, exactly the
-        // jamb+lintel pattern the bay's own throat already uses, rotated from
-        // a wall opening to a floor opening.
-        const float well_min_x = kLegalFortyWellCenterX - kLegalFortyWellHalfX;
-        const float well_max_x = kLegalFortyWellCenterX + kLegalFortyWellHalfX;
-        const float well_min_z = kLegalFortyWellCenterZ - kLegalFortyWellHalfZ;
-        const float well_max_z = kLegalFortyWellCenterZ + kLegalFortyWellHalfZ;
-        const float deck_min_x = -kLegalFortyHallDeckHalfX;
-        const float deck_max_x = kLegalFortyHallDeckHalfX;
-        const float deck_min_z = kLegalFortyHallDeckCenterZ - kLegalFortyHallDeckHalfZ;
-        const float deck_max_z = kLegalFortyHallDeckCenterZ + kLegalFortyHallDeckHalfZ;
-        const float deck_center_y = hall_deck_surface_y - kLegalFortyHallDeckHalfThickness;
-        const auto span = [](const float lo, const float hi) {
-            return std::pair<float, float>{(lo + hi) * 0.5F, (hi - lo) * 0.5F};
-        };
-        const auto [south_cz, south_hz] = span(well_max_z, deck_max_z);
-        fixed(JPH::Vec3(kLegalFortyHallDeckHalfX, kLegalFortyHallDeckHalfThickness, south_hz),
-              JPH::RVec3(0.0F, deck_center_y, south_cz), Simulation::kIntakeHallDeckEntityId);
-        const auto [north_cz, north_hz] = span(deck_min_z, well_min_z);
-        fixed(JPH::Vec3(kLegalFortyHallDeckHalfX, kLegalFortyHallDeckHalfThickness, north_hz),
-              JPH::RVec3(0.0F, deck_center_y, north_cz), Simulation::kIntakeHallDeckEntityId);
-        const auto [west_cx, west_hx] = span(deck_min_x, well_min_x);
-        fixed(JPH::Vec3(west_hx, kLegalFortyHallDeckHalfThickness, kLegalFortyWellHalfZ),
-              JPH::RVec3(west_cx, deck_center_y, kLegalFortyWellCenterZ),
-              Simulation::kIntakeHallDeckEntityId);
-        const auto [east_cx, east_hx] = span(well_max_x, deck_max_x);
-        fixed(JPH::Vec3(east_hx, kLegalFortyHallDeckHalfThickness, kLegalFortyWellHalfZ),
-              JPH::RVec3(east_cx, deck_center_y, kLegalFortyWellCenterZ),
-              Simulation::kIntakeHallDeckEntityId);
-
-        // ---- MOD-SKIN-LADDER-S continuation, rungs 16-20 -----------------------
-        // Continues AS-001's own rung law north and up to the mid-landing's
-        // own height -- see the constants block above for why it stops there
-        // rather than climbing on to the hall deck directly.
-        for (int rung = kLegalFortySkinRungFirst; rung <= kLegalFortySkinRungLast; ++rung) {
-            const float top_y = handoff_surface_y +
-                                kIntakeSkinRungRise *
-                                    static_cast<float>(rung - kIntakeSkinRungCount);
-            const float rung_z = kLegalFortySkinRungFirstZ -
-                                 kLegalFortySkinRungStepZMeters *
-                                     static_cast<float>(rung - kLegalFortySkinRungFirst);
-            const float rung_x = kIntakeSkinCenterX +
-                                 (rung > kLegalFortySkinRungFirst ? kLegalFortySkinRungJogX : 0.0F);
-            fixed(JPH::Vec3(kIntakeSkinRungHalfX, kIntakeSkinRungHalfY, kIntakeSkinRungHalfZ),
-                  JPH::RVec3(rung_x, top_y - kIntakeSkinRungHalfY, rung_z),
-                  Simulation::kIntakeSkinEntityId);
-        }
-
-        // ---- the walkway from rung 20 to the mid-landing -----------------------
-        {
-            const auto [walk_cx, walk_hx] =
-                span(kLegalFortySkinWalkwayMinX, kLegalFortySkinWalkwayMaxX);
-            fixed(JPH::Vec3(walk_hx, kIntakeStairSlabHalfY, kLegalFortySkinWalkwayHalfZ),
-                  JPH::RVec3(walk_cx, mid_landing_surface_y - kIntakeStairSlabHalfY,
-                             kLegalFortySkinWalkwayCenterZ),
-                  Simulation::kIntakeStairEntityId);
-        }
-    }
-
-    // ---- AS-003 MOD-HOOK5-RACK ------------------------------------------------
-    // A cage locked by its height, a door held shut by a bar lying in its
-    // swing, and the hook block on a rack inside. No lock object, no flag:
-    // see the kHook5* constants for every clearance.
-    void build_hook5_rack(JPH::BodyInterface &bodies) {
-        const auto box = [this, &bodies](const float x0, const float x1, const float y0,
-                                         const float y1, const float z0, const float z1) {
-            const JPH::BodyID id = add_box(
-                bodies, JPH::Vec3((x1 - x0) * 0.5F, (y1 - y0) * 0.5F, (z1 - z0) * 0.5F),
-                JPH::RVec3((x0 + x1) * 0.5F, (y0 + y1) * 0.5F, (z0 + z1) * 0.5F),
-                JPH::EMotionType::Static, object_layers::kStatic, 0.7F,
-                Simulation::kHook5CageEntityId);
-            machine_bodies_.push_back(id);
-            return id;
-        };
-        const float wall_inner_z = kHook5MinZ + kHook5WallThickness;
-        // The west buttress, full height: the one face the belt reaches.
-        box(kHook5MinX, kHook5ButtressMaxX, 0.0F, kHook5CageTopY, kHook5MinZ, kHook5MaxZ);
-        // North and east walls, up to the roof.
-        box(kHook5ButtressMaxX, kHook5MaxX, 0.0F, kHook5WallTopY,
-            kHook5MaxZ - kHook5WallThickness, kHook5MaxZ);
-        box(kHook5MaxX - kHook5WallThickness, kHook5MaxX, 0.0F, kHook5WallTopY, kHook5MinZ,
-            kHook5MaxZ - kHook5WallThickness);
-        // The south wall either side of the doorway, and the header over it.
-        const JPH::BodyID south_west = box(kHook5ButtressMaxX, kHook5DoorwayMinX, 0.0F,
-                                           kHook5WallTopY, kHook5MinZ, wall_inner_z);
-        box(kHook5DoorwayMaxX, kHook5MaxX - kHook5WallThickness, 0.0F, kHook5WallTopY,
-            kHook5MinZ, wall_inner_z);
-        box(kHook5DoorwayMinX, kHook5DoorwayMaxX, kHook5DoorwayTopY, kHook5WallTopY, kHook5MinZ,
-            wall_inner_z);
-        // The roof: four strips around the hatch.
-        box(kHook5ButtressMaxX, kHook5HatchMinX, kHook5WallTopY, kHook5CageTopY, kHook5MinZ,
-            kHook5MaxZ);
-        box(kHook5HatchMaxX, kHook5MaxX, kHook5WallTopY, kHook5CageTopY, kHook5MinZ, kHook5MaxZ);
-        box(kHook5HatchMinX, kHook5HatchMaxX, kHook5WallTopY, kHook5CageTopY, kHook5HatchMaxZ,
-            kHook5MaxZ);
-        box(kHook5HatchMinX, kHook5HatchMaxX, kHook5WallTopY, kHook5CageTopY, kHook5MinZ,
-            kHook5HatchMinZ);
-        // The bar's brackets: a ledge under each end, and a stop on its north
-        // face that rises only 0.02 m past the bar's centreline -- enough to
-        // take the door's push, low enough that a lift of 0.14 m clears it.
-        const float bar_bottom = kHook5BarCenterY - kHook5BarHalfSection;
-        const float bar_north = kHook5BarCenterZ + kHook5BarHalfSection;
-        for (const float bracket_x : {kHook5BracketWestX, kHook5BracketEastX}) {
-            box(bracket_x - kHook5BracketHalfX, bracket_x + kHook5BracketHalfX, bar_bottom - 0.08F,
-                bar_bottom, wall_inner_z, bar_north + 0.10F);
-            box(bracket_x - kHook5BracketHalfX, bracket_x + kHook5BracketHalfX, bar_bottom - 0.06F,
-                kHook5BarCenterY + 0.02F, bar_north, bar_north + 0.10F);
-        }
-        // The rack: a pedestal against the east wall.
-        box(10.95F, kHook5MaxX - kHook5WallThickness, 0.0F, kHook5RackTopY,
-            kHook5BlockSeatZ - 0.45F, kHook5BlockSeatZ + 0.45F);
-
-        // MOD-HOOK5-DOOR, driven open from build time and never commanded
-        // again. About -Y, positive rotation carries the leaf's far end toward
-        // +Z: into the cage, where the bar lies.
-        JPH::Body *door = add_shape_body(
-            bodies,
-            new JPH::BoxShape(JPH::Vec3(kHook5DoorHalfLength, kHook5DoorHalfHeight,
-                                        kHook5DoorHalfThickness)),
-            JPH::RVec3(kHook5DoorHingeX + kHook5DoorHalfLength, kHook5DoorCenterY, kHook5DoorZ),
-            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.5F,
-            Simulation::kHook5DoorEntityId, kHook5DoorMassKg);
-        hook5_door_id_ = door->GetID();
-        machine_bodies_.push_back(hook5_door_id_);
-        add_vertical_hinge(south_west, hook5_door_id_,
-                           JPH::RVec3(kHook5DoorHingeX, kHook5DoorCenterY, kHook5DoorZ), 0.0F,
-                           kHook5DoorOpenAngle, kHook5DoorDriveTorqueNm, &hook5_door_hinge_,
-                           -JPH::Vec3::sAxisY());
-        if (hook5_door_hinge_ != nullptr) {
-            hook5_door_hinge_->SetTargetAngularVelocity(kHook5DoorDriveSpeed);
-        }
-
-        // MOD-HOOK5-BAR and the hook block: plain bodies, at rest where they sit.
-        JPH::Body *bar = add_shape_body(
-            bodies,
-            new JPH::BoxShape(
-                JPH::Vec3(kHook5BarHalfLength, kHook5BarHalfSection, kHook5BarHalfSection)),
-            JPH::RVec3(kHook5BarCenterX, kHook5BarCenterY, kHook5BarCenterZ),
-            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.5F,
-            Simulation::kHook5BarEntityId, kHook5BarMassKg);
-        hook5_bar_id_ = bar->GetID();
-        machine_bodies_.push_back(hook5_bar_id_);
-        JPH::Body *block = add_shape_body(
-            bodies, new JPH::BoxShape(JPH::Vec3(kHook5BlockHalf, kHook5BlockHalfY, kHook5BlockHalf)),
-            JPH::RVec3(kHook5BlockSeatX, kHook5BlockSeatY, kHook5BlockSeatZ),
-            JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
-            Simulation::kHook5BlockEntityId, kHook5BlockMassKg);
-        hook5_block_id_ = block->GetID();
-        machine_bodies_.push_back(hook5_block_id_);
-    }
-
-    void build_kernel_sump(JPH::BodyInterface &bodies) {
-        const auto track = [this](const JPH::BodyID id) {
-            machine_bodies_.push_back(id);
-            return id;
-        };
-
-        const float deck_y = kSumpPlatformTopY - kSumpDeckHalfThickness;
-        track(add_box(bodies,
-                      JPH::Vec3(kSumpApproachDeckHalfX, kSumpDeckHalfThickness, kSumpDeckHalfZ),
-                      JPH::RVec3(kSumpApproachDeckX, deck_y, kSumpCenterZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
-                      Simulation::kStaticDeckEntityId));
-        track(add_box(bodies, JPH::Vec3(kSumpFarDeckHalfX, kSumpDeckHalfThickness, kSumpDeckHalfZ),
-                      JPH::RVec3(kSumpFarDeckX, deck_y, kSumpCenterZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.9F,
-                      Simulation::kStaticDeckEntityId));
-
-        // Support legs, purely structural -- under each fixed deck section,
-        // clear of the grate span so nothing but the grate itself is ever the
-        // question of whether this walkway holds.
-        track(add_box(bodies, JPH::Vec3(0.25F, kSumpPlatformTopY * 0.5F, 0.25F),
-                      JPH::RVec3(kSumpApproachDeckX, kSumpPlatformTopY * 0.5F, kSumpCenterZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-                      Simulation::kStaticDeckEntityId));
-        track(add_box(bodies, JPH::Vec3(0.25F, kSumpPlatformTopY * 0.5F, 0.25F),
-                      JPH::RVec3(kSumpFarDeckX, kSumpPlatformTopY * 0.5F, kSumpCenterZ),
-                      JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
-                      Simulation::kStaticDeckEntityId));
-
-        JPH::Body *grate = add_shape_body(
-            bodies, new JPH::BoxShape(JPH::Vec3(kSumpGrateHalfX, kSumpDeckHalfThickness, kSumpDeckHalfZ)),
-            JPH::RVec3(kSumpGrateX, deck_y, kSumpCenterZ), JPH::Quat::sIdentity(),
-            JPH::EMotionType::Static, object_layers::kStatic, 0.9F, Simulation::kSumpGrateEntityId,
-            0.0F);
-        sump_grate_id_ = track(grate->GetID());
-        // The sump starts full (existing truth: wet is the default), so the
-        // grate starts as a sensor -- see update_sump for why a sensor alone
-        // is not the whole mechanism.
-        bodies.SetIsSensor(sump_grate_id_, true);
-        sump_volume_kg_ = kSumpCapacityKg;
-    }
-
-    // Lets the linkage reach its own resting pose before the rope is measured, so
-    // slack is slack against the machine as it actually hangs.
-    void settle_machine() noexcept {
-        for (int step = 0; step < 90; ++step) {
-            physics_system_.Update(static_cast<float>(Simulation::kFixedStepSeconds), 1,
-                                   &temp_allocator_, &job_system_);
-        }
-    }
-
-    void add_hinge(const JPH::BodyID anchor_id,
-                   const JPH::BodyID moving_id,
-                   const JPH::RVec3 point,
-                   const float limit_min,
-                   const float limit_max,
-                   JPH::Ref<JPH::HingeConstraint> *out,
-                   const std::uint64_t) {
-        JPH::HingeConstraintSettings settings;
-        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        settings.mPoint1 = point;
-        settings.mPoint2 = point;
-        settings.mHingeAxis1 = JPH::Vec3::sAxisZ();
-        settings.mHingeAxis2 = JPH::Vec3::sAxisZ();
-        settings.mNormalAxis1 = JPH::Vec3::sAxisX();
-        settings.mNormalAxis2 = JPH::Vec3::sAxisX();
-        settings.mLimitsMin = limit_min;
-        settings.mLimitsMax = limit_max;
-        JPH::TwoBodyConstraint *constraint = create_constraint(settings, anchor_id, moving_id);
-        if (constraint != nullptr && out != nullptr) {
-            *out = static_cast<JPH::HingeConstraint *>(constraint);
-        }
-    }
-
-    void add_slider(const JPH::BodyID anchor_id,
-                    const JPH::BodyID moving_id,
-                    const float limit_min,
-                    const float limit_max) {
-        JPH::SliderConstraintSettings settings;
-        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        settings.mAutoDetectPoint = true;
-        settings.SetSliderAxis(JPH::Vec3::sAxisY());
-        settings.mLimitsMin = limit_min;
-        settings.mLimitsMax = limit_max;
-        (void)create_constraint(settings, anchor_id, moving_id);
-    }
-
-    // WO-011. A vertical-axis hinge with a real, torque-limited Jolt motor --
-    // the jib's slew. EMotorState::Velocity drives toward a commanded angular
-    // velocity "limited only by max force/torque the motor can apply" (Jolt's
-    // own doc comment on EMotorState): exceeding that torque does not snap to
-    // the target, the body simply cannot reach it. That is the finite-actuator
-    // requirement (WO-005 forbidden shortcuts: "unlimited winch force"),
-    // enforced by the engine's own constraint solver, not by application code.
-    void add_vertical_hinge(const JPH::BodyID anchor_id,
-                            const JPH::BodyID moving_id,
-                            const JPH::RVec3 point,
-                            const float limit_min,
-                            const float limit_max,
-                            const float max_motor_torque_nm,
-                            JPH::Ref<JPH::HingeConstraint> *out,
-                            const JPH::Vec3 axis = JPH::Vec3::sAxisY()) {
-        JPH::HingeConstraintSettings settings;
-        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        settings.mPoint1 = point;
-        settings.mPoint2 = point;
-        settings.mHingeAxis1 = axis;
-        settings.mHingeAxis2 = axis;
-        settings.mNormalAxis1 = JPH::Vec3::sAxisX();
-        settings.mNormalAxis2 = JPH::Vec3::sAxisX();
-        settings.mLimitsMin = limit_min;
-        settings.mLimitsMax = limit_max;
-        settings.mMotorSettings.SetTorqueLimit(max_motor_torque_nm);
-        JPH::TwoBodyConstraint *constraint = create_constraint(settings, anchor_id, moving_id);
-        if (constraint == nullptr || out == nullptr) {
-            return;
-        }
-        auto *hinge = static_cast<JPH::HingeConstraint *>(constraint);
-        hinge->SetMotorState(JPH::EMotorState::Velocity);
-        hinge->SetTargetAngularVelocity(0.0F);
-        *out = hinge;
-    }
-
-    // A vertical slider with a real, force-limited motor -- the jib's hoist
-    // winch, and the capacity-proving stand that shares its rating. Same
-    // honesty property as the slew motor: EMotorState::Velocity can only push
-    // as hard as mMaxForceLimit, so an overweight load is not held, it sags or
-    // falls at a rate the deficit between weight and rated force actually
-    // produces -- not scripted, read back from the solver.
-    void add_motorized_slider(const JPH::BodyID anchor_id,
-                              const JPH::BodyID moving_id,
-                              const float limit_min,
-                              const float limit_max,
-                              const float max_motor_force_n,
-                              JPH::Ref<JPH::SliderConstraint> *out) {
-        JPH::SliderConstraintSettings settings;
-        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        settings.mAutoDetectPoint = true;
-        settings.SetSliderAxis(JPH::Vec3::sAxisY());
-        settings.mLimitsMin = limit_min;
-        settings.mLimitsMax = limit_max;
-        settings.mMotorSettings.SetForceLimit(max_motor_force_n);
-        JPH::TwoBodyConstraint *constraint = create_constraint(settings, anchor_id, moving_id);
-        if (constraint == nullptr || out == nullptr) {
-            return;
-        }
-        auto *slider = static_cast<JPH::SliderConstraint *>(constraint);
-        slider->SetMotorState(JPH::EMotorState::Velocity);
-        slider->SetTargetVelocity(0.0F);
-        *out = slider;
-    }
-
-    // A real pin between two bodies at one shared world point -- the hook-to-
-    // crate rigging. WO-005 allows the attachment pre-placed for this WO
-    // ("CAP-HOOK5 may be pre-placed on the crate... but the hook must still be
-    // a real constraint"); a PointConstraint fixes the pin but leaves rotation
-    // free, so the crate genuinely swings under the hook rather than being
-    // welded to it.
-    void add_point_link(const JPH::BodyID first_id,
-                        const JPH::BodyID second_id,
-                        const JPH::RVec3 point) {
-        JPH::PointConstraintSettings settings;
-        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        settings.mPoint1 = point;
-        settings.mPoint2 = point;
-        (void)create_constraint(settings, first_id, second_id);
-    }
-
-    // Tension-only rope: it can pull the valve lever but never push it, and it
-    // carries deliberate slack so the valve opens a beat after the strike.
-    void add_rope() {
-        const auto &bodies = physics_system_.GetBodyInterface();
-        const JPH::RVec3 tipper_point =
-            bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
-        const JPH::RVec3 lever_point =
-            bodies.GetCenterOfMassTransform(valve_lever_id_) * JPH::RVec3(-1.60, 0.0, 0.0);
-        rope_rest_length_ = JPH::Vec3(lever_point - tipper_point).Length();
-
-        JPH::DistanceConstraintSettings settings;
-        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        settings.mPoint1 = tipper_point;
-        settings.mPoint2 = lever_point;
-        settings.mMinDistance = 0.0F;
-        settings.mMaxDistance = rope_rest_length_ + kRopeSlackMeters;
-        (void)create_constraint(settings, tipper_id_, valve_lever_id_);
-    }
-
-    // WO-010 control cable. A real two-sheave run: pressing the treadle pays out
-    // cable on the catwalk side, which must be taken up on the valve side, so the
-    // valve lever's counterweight end is hauled up and the orifice opens. Like
-    // every rope here it can only pull -- when the player steps off, the treadle
-    // is returned by its own counterweight and the valve by its own, not by the
-    // cable pushing anything.
-    void add_treadle_cable() {
-        JPH::PulleyConstraintSettings settings;
-        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        settings.mBodyPoint1 =
-            JPH::RVec3(kTreadleX - kTreadleCableArm, kTreadleHingeY, kTreadleZ);
-        settings.mFixedPoint1 = JPH::RVec3(kTreadleX - kTreadleCableArm,
-                                           kTreadleHingeY + kTreadleSheaveRise, kTreadleMastZ);
-        settings.mBodyPoint2 = JPH::RVec3(kValveHingeX + kValveCableArm, kValveHingeY + 0.2, -93.0);
-        settings.mFixedPoint2 = JPH::RVec3(kValveHingeX + kValveCableArm, kValveSheaveY, kValveMastZ);
-        settings.mRatio = 1.0F;
-        settings.mMinLength = 0.0F;
-        settings.mMaxLength = -1.0F;
-        (void)create_constraint(settings, treadle_id_, valve_lever_id_);
-    }
-
-    // A tension-only rope over two sheaves: mMinLength=0 lets it go fully
-    // slack; mMaxLength caps it (Jolt auto-derives a negative mMaxLength from
-    // the configuration's length AT CONSTRUCTION -- PulleyConstraint.cpp's own
-    // "Calculate min/max length if it was not provided" -- so an explicit,
-    // computed mMaxLength is what makes this a real inextensible rope rather
-    // than one silently locked to whatever pose happened to be built).
-    // Generalised (AS-002) to take its own four points, bodies, ratio and
-    // length, so every rope in this file -- the Kellerworks lift and AS-002's
-    // counterweight cradle alike -- is one real JPH::PulleyConstraint, not a
-    // copy of this function.
-    JPH::PulleyConstraint *add_pulley(const JPH::RVec3 body_point_1,
-                                      const JPH::RVec3 fixed_point_1,
-                                      const JPH::BodyID body_1,
-                                      const JPH::RVec3 body_point_2,
-                                      const JPH::RVec3 fixed_point_2,
-                                      const JPH::BodyID body_2,
-                                      const float ratio,
-                                      const float min_length,
-                                      const float max_length) {
-        JPH::PulleyConstraintSettings settings;
-        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        settings.mBodyPoint1 = body_point_1;
-        settings.mFixedPoint1 = fixed_point_1;
-        settings.mBodyPoint2 = body_point_2;
-        settings.mFixedPoint2 = fixed_point_2;
-        settings.mRatio = ratio;
-        settings.mMinLength = min_length;
-        settings.mMaxLength = max_length;
-        return static_cast<JPH::PulleyConstraint *>(create_constraint(settings, body_1, body_2));
-    }
-
-    // track_for_teardown=false hands ownership entirely to the caller (WO-012
-    // needle pins, created and removed at runtime as the seat predicate
-    // changes): Jolt's ConstraintManager::Remove asserts on an already-
+    // track_for_teardown=false hands ownership entirely to the caller (the
+    // carry, created and removed at runtime): Jolt's ConstraintManager::Remove
+    // asserts on an already-
     // invalidated constraint index, so a constraint that might be removed
     // before the destructor runs must never also sit in machine_constraints_,
     // which is unconditionally removed there once. Exactly one owner removes
@@ -3619,418 +1373,6 @@ private:
             machine_constraints_.emplace_back(constraint);
         }
         return constraint;
-    }
-
-    // Kinematic skip-hoist cycle. Every phase is a function of authoritative
-    // simulation time, never wall clock, so the loop is deterministic and can be
-    // walked into at any point.
-    void update_scoop(JPH::BodyInterface &bodies,
-                      const float delta_seconds,
-                      const double next_time_seconds) noexcept {
-        const double phase = std::fmod(next_time_seconds, kMachineCyclePeriodSeconds);
-        machine_cycle_phase_seconds_ = phase;
-
-        float height = kScoopBottomY;
-        float tilt = 0.0F;
-        if (phase < 7.0) {
-            height = kScoopBottomY + (kScoopTopY - kScoopBottomY) *
-                                         smoothstep(0.0F, 1.0F, static_cast<float>(phase / 7.0));
-        } else if (phase < 9.0) {
-            height = kScoopTopY;
-        } else if (phase < 12.5) {
-            height = kScoopTopY;
-            tilt = kScoopDischargeTilt *
-                   smoothstep(0.0F, 1.0F, static_cast<float>((phase - 9.0) / 3.5));
-        } else if (phase < 14.0) {
-            height = kScoopTopY;
-            tilt = kScoopDischargeTilt;
-        } else if (phase < 16.0) {
-            height = kScoopTopY + (kScoopBottomY - kScoopTopY) *
-                                      smoothstep(0.0F, 1.0F, static_cast<float>((phase - 14.0) / 2.0));
-            tilt = kScoopDischargeTilt *
-                   (1.0F - smoothstep(0.0F, 1.0F, static_cast<float>((phase - 14.0) / 1.6)));
-        }
-
-        scoop_height_ = height;
-        scoop_tilt_ = tilt;
-        const JPH::Quat rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), tilt);
-        const JPH::RVec3 origin(kScoopX, height, kScoopZ);
-        for (int i = 0; i < 4; ++i) {
-            bodies.MoveKinematic(scoop_ids_[i], origin + rotation * scoop_local_[i], rotation,
-                                 delta_seconds);
-        }
-    }
-
-    // Reads the real valve lever angle, advances the plant on the same fixed
-    // step, and pushes the piston. Presentation never touches any of this.
-    void update_plant(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
-        float lever_angle = kValveShutAngle;
-        if (valve_hinge_ != nullptr) {
-            const float measured = valve_hinge_->GetCurrentAngle();
-            if (std::isfinite(measured)) {
-                lever_angle = measured;
-            }
-        }
-        valve_lever_angle_ = lever_angle;
-        if (treadle_hinge_ != nullptr) {
-            const float measured = treadle_hinge_->GetCurrentAngle();
-            if (std::isfinite(measured)) {
-                treadle_angle_ = measured;
-            }
-        }
-        const float span = kValveOpenAngle - kValveShutAngle;
-        const double fraction =
-            span > 1.0e-4F ? static_cast<double>((lever_angle - kValveShutAngle) / span) : 0.0;
-        steam_plant_.set_valve_open_fraction(fraction);
-        steam_plant_.step(static_cast<double>(delta_seconds));
-
-        const float piston_force = static_cast<float>(steam_plant_.state().piston_force_n);
-        if (piston_force > 0.0F) {
-            bodies.AddForce(lift_platform_id_, JPH::Vec3(0.0F, piston_force, 0.0F));
-        }
-    }
-
-    // WO-011 KX-JIB. Commands take effect only within the pendant station
-    // radius (WO-005: "Action to enter station"); away from it, both motors
-    // are forced to hold at zero velocity regardless of queued input, so
-    // walking off the station always safely brakes the jib rather than
-    // leaving it drifting on a stale command.
-    void update_jib(const JPH::BodyInterface &bodies,
-                    const double slew_input,
-                    const double hoist_input) noexcept {
-        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
-        const float station_dx = static_cast<float>(player_position.GetX()) - kJibStationX;
-        const float station_dz = static_cast<float>(player_position.GetZ()) - kJibStationZ;
-        const bool at_station =
-            (station_dx * station_dx + station_dz * station_dz) <=
-            (kJibStationRadius * kJibStationRadius);
-        jib_station_active_ = at_station;
-
-        const float slew =
-            at_station ? std::clamp(static_cast<float>(slew_input), -1.0F, 1.0F) : 0.0F;
-        const float hoist =
-            at_station ? std::clamp(static_cast<float>(hoist_input), -1.0F, 1.0F) : 0.0F;
-
-        if (jib_slew_hinge_ != nullptr) {
-            jib_slew_hinge_->SetTargetAngularVelocity(slew * kJibSlewMaxRateRadPerSec);
-            const float measured = jib_slew_hinge_->GetCurrentAngle();
-            if (std::isfinite(measured)) {
-                jib_boom_angle_ = measured;
-            }
-        }
-        if (jib_hoist_slider_ != nullptr) {
-            jib_hoist_slider_->SetTargetVelocity(hoist * kJibHoistMaxRateMetersPerSec);
-        }
-    }
-
-    // WO-012 KX-NEEDLE. Same station-gated, continuous-axis contract as
-    // update_jib. Seating and unseating are real topology changes -- two
-    // PointConstraint pockets added or removed at runtime -- driven entirely
-    // by this tick's measured position/speed or command, never a flag.
-    void update_needle(const JPH::BodyInterface &bodies, const double hoist_input) noexcept {
-        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
-        const float station_dx = static_cast<float>(player_position.GetX()) - kNeedleStationX;
-        const float station_dz = static_cast<float>(player_position.GetZ()) - kNeedleStationZ;
-        const bool at_station =
-            (station_dx * station_dx + station_dz * station_dz) <=
-            (kNeedleStationRadius * kNeedleStationRadius);
-        needle_station_active_ = at_station;
-
-        const float hoist =
-            at_station ? std::clamp(static_cast<float>(hoist_input), -1.0F, 1.0F) : 0.0F;
-        if (needle_hoist_slider_ != nullptr) {
-            needle_hoist_slider_->SetTargetVelocity(hoist * kNeedleHoistMaxRateMetersPerSec);
-        }
-
-        // Gated on "not actively raising": right after unseat_needle() removes
-        // the pins, the beam is still sitting exactly at the seat pose with
-        // near-zero velocity for at least one tick, since the motor needs real
-        // time to accelerate it away. Checking the seat predicate unconditionally
-        // would re-seat it that same tick, before a held raise command ever got
-        // a chance to move it -- found by direct observation (the unseat proof
-        // path never actually left the seated state). A held raise is an
-        // unambiguous "not trying to seat" signal, so it suppresses the check
-        // entirely rather than racing it.
-        if (!needle_seated_ && hoist <= 0.0F) {
-            const JPH::RVec3 beam_position = bodies.GetPosition(needle_beam_id_);
-            const JPH::Vec3 beam_velocity = bodies.GetLinearVelocity(needle_beam_id_);
-            const JPH::Vec3 beam_angular_velocity = bodies.GetAngularVelocity(needle_beam_id_);
-            const float height_error =
-                std::fabs(static_cast<float>(beam_position.GetY()) - kNeedleSeatedY);
-            const bool close_enough = height_error <= kNeedleSeatPositionToleranceMeters;
-            const bool settled = beam_velocity.Length() <= kNeedleSeatSpeedToleranceMetersPerSec &&
-                                 beam_angular_velocity.Length() <= kNeedleSeatSpeedToleranceMetersPerSec;
-            if (close_enough && settled) {
-                seat_needle();
-            }
-        } else if (needle_seated_ && hoist > kNeedleUnseatCommandThreshold) {
-            unseat_needle();
-        }
-    }
-
-    // Pins the beam into both piers at the fixed pocket points. The hoist
-    // slider is left connected (Governing Law 26 sidestep: no attach/detach
-    // system to invent -- see WO-012's design notes), which over-constrains
-    // the beam slightly but consistently, since the slider's own rest point
-    // already coincides exactly with these pocket points.
-    void seat_needle() noexcept {
-        JPH::PointConstraintSettings approach_settings;
-        approach_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        approach_settings.mPoint1 =
-            JPH::RVec3(kNeedlePocketApproachX, kNeedleSeatedY, kNeedleGapCenterZ);
-        approach_settings.mPoint2 = approach_settings.mPoint1;
-        needle_pin_approach_ = static_cast<JPH::PointConstraint *>(create_constraint(
-            approach_settings, needle_pier_approach_id_, needle_beam_id_, false));
-
-        JPH::PointConstraintSettings far_settings;
-        far_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        far_settings.mPoint1 = JPH::RVec3(kNeedlePocketFarX, kNeedleSeatedY, kNeedleGapCenterZ);
-        far_settings.mPoint2 = far_settings.mPoint1;
-        needle_pin_far_ = static_cast<JPH::PointConstraint *>(
-            create_constraint(far_settings, needle_pier_far_id_, needle_beam_id_, false));
-
-        needle_seated_ = true;
-    }
-
-    // Removes both pocket pins. The beam is still hoist-connected, so it does
-    // not fall -- the same motor that lowered it now lifts it clear on the
-    // next sustained raise, exactly reversing how it was seated.
-    void unseat_needle() noexcept {
-        if (needle_pin_approach_ != nullptr) {
-            physics_system_.RemoveConstraint(needle_pin_approach_);
-            needle_pin_approach_ = nullptr;
-        }
-        if (needle_pin_far_ != nullptr) {
-            physics_system_.RemoveConstraint(needle_pin_far_);
-            needle_pin_far_ = nullptr;
-        }
-        needle_seated_ = false;
-    }
-
-    // WO-012 checkpoint topology reconciliation: restore_from_checkpoint
-    // already restores the beam's continuous transform via restore_body
-    // (called just before this); this reconciles the discrete seated/unseated
-    // state to match what was actually committed, rather than leaving
-    // whatever pins happened to exist at the moment of death. Forbidden-
-    // shortcuts list (WO-006): "resetting seat on play-mode restart without
-    // going through checkpoint rules" -- this is that checkpoint rule.
-    void restore_needle_topology(const bool checkpoint_seated) noexcept {
-        if (checkpoint_seated && !needle_seated_) {
-            seat_needle();
-        } else if (!checkpoint_seated && needle_seated_) {
-            unseat_needle();
-        }
-    }
-
-    // WO-013 KX-SUMP. One lumped volume, one isolation edge, one drain sink,
-    // one derived predicate -- updated every authoritative tick, same as
-    // every other machine link in this file. The valve toggle is a one-shot
-    // Action (WO-006 text: "Player Action may... close a valve only at the
-    // real station"), gated by station radius exactly like the jib/needle
-    // pendants, but flips a binary state rather than driving a motor.
-    // AS-001 MOD-YARD-JIB / MOD-DOG-A. Same station-gated, continuous-axis
-    // contract as update_jib. The dog is deliberately absent from the command
-    // path: its motor was commanded open at build time and is never touched
-    // here, so the only thing that can change the throat is the pack moving.
-    void update_intake(const JPH::BodyInterface &bodies,
-                       const double slew_input,
-                       const double hoist_input) noexcept {
-        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
-        const float station_dx = static_cast<float>(player_position.GetX()) - kIntakePendantX;
-        const float station_dz = static_cast<float>(player_position.GetZ()) - kIntakePendantZ;
-        const bool at_station =
-            (station_dx * station_dx + station_dz * station_dz) <=
-            (kIntakeStationRadius * kIntakeStationRadius);
-        intake_station_active_ = at_station;
-
-        const float slew =
-            at_station ? std::clamp(static_cast<float>(slew_input), -1.0F, 1.0F) : 0.0F;
-        const float hoist =
-            at_station ? std::clamp(static_cast<float>(hoist_input), -1.0F, 1.0F) : 0.0F;
-
-        if (intake_slew_hinge_ != nullptr) {
-            intake_slew_hinge_->SetTargetAngularVelocity(slew * kIntakeJibSlewRateRadPerSec);
-            const float measured = intake_slew_hinge_->GetCurrentAngle();
-            if (std::isfinite(measured)) {
-                intake_boom_angle_ = measured;
-            }
-        }
-        if (intake_hoist_slider_ != nullptr) {
-            intake_hoist_slider_->SetTargetVelocity(hoist * kIntakeJibHoistRateMetersPerSec);
-        }
-
-        // Derived predicates, for the HUD and the falsifiers only. Nothing in
-        // this simulation branches on either of them: the dog is held by the
-        // pack's mass through the solver, and the throat is open or shut
-        // because a real body is or is not standing in it.
-        if (intake_dog_hinge_ != nullptr) {
-            const float measured = intake_dog_hinge_->GetCurrentAngle();
-            if (std::isfinite(measured)) {
-                intake_dog_angle_ = measured;
-            }
-        }
-        intake_throat_clear_ = intake_dog_angle_ >= kIntakeThroatClearAngle;
-
-        // "In the dog's way" means overlapping the quarter-disc its plate
-        // sweeps: within the swing radius of the hinge, and low enough that
-        // the plate would strike it.
-        const JPH::RVec3 pack = bodies.GetPosition(intake_pack_id_);
-        const float pack_dx = static_cast<float>(pack.GetX()) - kIntakeDogHingeX;
-        const float pack_dz = static_cast<float>(pack.GetZ()) - kIntakeBayFrontZ;
-        const float swing_radius = 2.0F * kIntakeDogHalfWidth + kIntakePackHalfZ;
-        intake_pack_pins_dog_ =
-            (pack_dx * pack_dx + pack_dz * pack_dz) <= (swing_radius * swing_radius) &&
-            static_cast<float>(pack.GetY()) - kIntakePackHalfY < kIntakeThroatHeight;
-    }
-
-    // AS-002 MOD-STAIR-A-SWING / MOD-CW-CRADLE. Reads the hinge every tick
-    // regardless of station (the flight keeps swinging under gravity/rope
-    // tension whether or not the player is anywhere near the pendant); the
-    // sling commands are gated on intake_station_active_, which update_intake
-    // -- called immediately before this every tick -- has just refreshed.
-    // Release and Attach are one-shot, exactly like the sump's valve toggle,
-    // gated additionally on physical tolerance: a command outside tolerance
-    // is accepted but produces no state change, rather than a pose-only
-    // predicate silently re-firing the instant geometry happens to line up
-    // -- WO-012's seat_needle/unseat_needle race, generalised in advance.
-    void update_legal_forty(const JPH::BodyInterface &bodies,
-                            const bool release_requested,
-                            const bool attach_requested) noexcept {
-        if (intake_swing_hinge_ != nullptr) {
-            const float measured = intake_swing_hinge_->GetCurrentAngle();
-            if (std::isfinite(measured)) {
-                // Jolt reports this NEGATIVE as the flight opens -- see
-                // kIntakeSwingHingeTravelRadians -- so travel is its negation.
-                intake_swing_travel_ =
-                    std::clamp(-measured, 0.0F, kIntakeSwingHingeTravelRadians);
-            }
-        }
-
-        if (!intake_station_active_) {
-            return;
-        }
-        if (release_requested && intake_pack_slung_) {
-            release_pack_to_cradle(bodies);
-        }
-        if (attach_requested && !intake_pack_slung_) {
-            sling_pack(bodies);
-        }
-    }
-
-    // Shared by release_pack_to_cradle (may release fire) and
-    // update_legal_forty's retract nudge (is the cradle genuinely unloaded)
-    // -- the same seated-pose tolerance, asked from two directions.
-    bool intake_pack_seated_on_cradle(const JPH::BodyInterface &bodies) const noexcept {
-        const JPH::RVec3 pack_position = bodies.GetPosition(intake_pack_id_);
-        const JPH::RVec3 cradle_position = bodies.GetPosition(intake_cw_cradle_id_);
-        // The pack's CENTRE when resting on the cradle floor sits one pack
-        // half-height above the cradle's own top face -- not at the top face
-        // itself. Found by direct observation: comparing pack.y against the
-        // bare top face read a settled, correctly-resting pack as 0.96 m out
-        // of tolerance.
-        const JPH::RVec3 cradle_seat(
-            cradle_position.GetX(),
-            cradle_position.GetY() + kIntakeCwCradleHalfY + kIntakePackHalfY,
-            cradle_position.GetZ());
-        const auto dx = static_cast<float>(pack_position.GetX() - cradle_seat.GetX());
-        const auto dz = static_cast<float>(pack_position.GetZ() - cradle_seat.GetZ());
-        const auto dy = static_cast<float>(pack_position.GetY() - cradle_seat.GetY());
-        const bool xz_in_tolerance =
-            (dx * dx + dz * dz) <=
-            (kLegalFortyReleaseXZToleranceMeters * kLegalFortyReleaseXZToleranceMeters);
-        const bool y_in_tolerance = std::fabs(dy) <= kLegalFortyReleaseYToleranceMeters;
-        return xz_in_tolerance && y_in_tolerance;
-    }
-
-    // Removes the hook-pack sling once the pack is physically seated on
-    // MOD-CW-CRADLE and settled. The rope-tension jump this causes -- read
-    // back from the solver on the next tick, never asserted here -- is the
-    // whole mechanism; this function's only job is deciding whether a real
-    // release may happen right now.
-    void release_pack_to_cradle(const JPH::BodyInterface &bodies) noexcept {
-        const bool settled = bodies.GetLinearVelocity(intake_pack_id_).Length() <=
-                             kLegalFortyReleaseSpeedToleranceMps;
-        if (!intake_pack_seated_on_cradle(bodies) || !settled) {
-            return;
-        }
-        remove_sling_pin();
-    }
-
-    // Re-creates the hook-pack sling once the hook is physically back over
-    // the pack's padeye and settled. Exact mirror of release_pack_to_cradle.
-    void sling_pack(const JPH::BodyInterface &bodies) noexcept {
-        const JPH::RVec3 hook_position = bodies.GetPosition(intake_hook_id_);
-        const JPH::RVec3 pack_position = bodies.GetPosition(intake_pack_id_);
-        const JPH::RVec3 padeye(pack_position.GetX(), pack_position.GetY() + kIntakePackHalfY,
-                                pack_position.GetZ());
-        const auto distance = static_cast<float>(JPH::Vec3(hook_position - padeye).Length());
-        const bool in_tolerance = distance <= kLegalFortyAttachToleranceMeters;
-        const bool settled = bodies.GetLinearVelocity(intake_hook_id_).Length() <=
-                             kLegalFortyAttachSpeedToleranceMps;
-        if (!in_tolerance || !settled) {
-            return;
-        }
-        create_sling_pin(hook_position);
-    }
-
-    // Raw, unconditional creation/removal -- shared by the tolerance-gated
-    // sling_pack()/release_pack_to_cradle() command path, the initial build
-    // in build_intake_rise, and restore_legal_forty_topology()'s checkpoint
-    // reconciliation, which must NOT re-apply the tolerance gate against
-    // bodies restore_from_checkpoint does not reposition (the pack/hook/dog
-    // are an AS-001 gap this ticket does not reopen -- see MachineCheckpoint).
-    void create_sling_pin(const JPH::RVec3 point) noexcept {
-        JPH::PointConstraintSettings sling_settings;
-        sling_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
-        sling_settings.mPoint1 = point;
-        sling_settings.mPoint2 = point;
-        intake_sling_pin_ = static_cast<JPH::PointConstraint *>(
-            create_constraint(sling_settings, intake_hook_id_, intake_pack_id_, false));
-        intake_pack_slung_ = true;
-    }
-
-    void remove_sling_pin() noexcept {
-        if (intake_sling_pin_ != nullptr) {
-            physics_system_.RemoveConstraint(intake_sling_pin_);
-            intake_sling_pin_ = nullptr;
-        }
-        intake_pack_slung_ = false;
-    }
-
-    // WO-012 checkpoint topology reconciliation, generalised: restore the
-    // discrete sling presence to match what was actually committed, rather
-    // than leaving whatever pin happened to exist at the moment of death.
-    void restore_legal_forty_topology(const bool checkpoint_slung) noexcept {
-        if (checkpoint_slung && !intake_pack_slung_) {
-            create_sling_pin(physics_system_.GetBodyInterface().GetPosition(intake_hook_id_));
-        } else if (!checkpoint_slung && intake_pack_slung_) {
-            remove_sling_pin();
-        }
-    }
-
-    void update_sump(JPH::BodyInterface &bodies, const float delta_seconds,
-                     const bool valve_toggle_requested) noexcept {
-        const JPH::RVec3 player_position = bodies.GetPosition(player_id_);
-        const float station_dx = static_cast<float>(player_position.GetX()) - kSumpStationX;
-        const float station_dz = static_cast<float>(player_position.GetZ()) - kSumpStationZ;
-        const bool at_station = (station_dx * station_dx + station_dz * station_dz) <=
-                                (kSumpStationRadius * kSumpStationRadius);
-        sump_station_active_ = at_station;
-
-        if (valve_toggle_requested && at_station) {
-            sump_isolated_ = !sump_isolated_;
-        }
-
-        const float inflow = sump_isolated_ ? 0.0F : kSumpInflowKgPerSec;
-        sump_volume_kg_ += (inflow - kSumpDrainKgPerSec) * delta_seconds;
-        sump_volume_kg_ = std::clamp(sump_volume_kg_, 0.0F, kSumpCapacityKg);
-
-        const bool grate_safe = sump_volume_kg_ <= 0.0F;
-        // Set every tick, not just on transition: a plain bool flag, cheap to
-        // reassert, and it removes any chance of a missed-edge desync between
-        // grate_safe_ and the body's actual sensor state.
-        bodies.SetIsSensor(sump_grate_id_, !grate_safe);
-        grate_safe_ = grate_safe;
     }
 
     [[nodiscard]] JPH::Vec3 current_support_point_velocity(
@@ -4075,18 +1417,6 @@ private:
                              JPH::Quat::sIdentity(),
                              delta_seconds);
 
-        // AS-001 MOD-INTAKE-BELT: an 18 m translating slat deck. Kinematic and
-        // in the moving-support set, so riding it inherits its velocity under
-        // the WO-002 support-point law rather than being scenery you slide on.
-        const double belt_z =
-            kIntakeBeltCenterZ +
-            0.5 * kIntakeBeltStrokeMeters *
-                std::sin(kIntakeBeltAngularFrequency * next_time_seconds);
-        bodies.MoveKinematic(
-            intake_belt_id_,
-            JPH::RVec3(kIntakeBeltX, kIntakeBeltTopY - kIntakeBeltHalfY, belt_z),
-            JPH::Quat::sIdentity(),
-            delta_seconds);
     }
 
     // ---- geometry probes -------------------------------------------------
@@ -4381,16 +1711,10 @@ private:
                bearing;
     }
 
-    // The middle of the carried body's top face, in its own frame; a kit
-    // body's handle is where its build put it.
+    // Where the carried kit body's handle is, in its own frame: where its
+    // build put it.
     [[nodiscard]] JPH::Vec3 carry_handle(const std::uint64_t entity) const noexcept {
-        if (scraperx::sim::kit::is_kit_entity(entity)) {
-            return kit_->carry_handle(entity);
-        }
-        return JPH::Vec3(0.0F,
-                         entity == Simulation::kHook5BarEntityId ? kHook5BarHalfSection
-                                                                 : kHook5BlockHalfY,
-                         0.0F);
+        return kit_->carry_handle(entity);
     }
 
     // What a pick-up would take now: the nearest carryable within reach of the
@@ -4406,10 +1730,6 @@ private:
         }
         const JPH::RVec3 at = bodies.GetPosition(player_id_);
         float best_distance = kCarryReach;
-        const std::pair<JPH::BodyID, std::uint64_t> carryables[] = {
-            {hook5_bar_id_, Simulation::kHook5BarEntityId},
-            {hook5_block_id_, Simulation::kHook5BlockEntityId},
-        };
         const auto consider = [&](const JPH::BodyID id, const std::uint64_t candidate_entity) {
             const JPH::Vec3 to_body(bodies.GetCenterOfMassPosition(id) - at);
             const float distance = to_body.Length();
@@ -4425,9 +1745,6 @@ private:
             best_distance = distance;
             entity = candidate_entity;
         };
-        for (const auto &[id, candidate_entity] : carryables) {
-            consider(id, candidate_entity);
-        }
         kit_->carry_candidates(kit_carryables_);
         for (const auto &candidate : kit_carryables_) {
             consider(candidate.id, candidate.entity);
@@ -4506,18 +1823,14 @@ private:
         }
     }
 
-    // Checkpoint reconciliation, the restore_needle_topology shape: after the
-    // bodies' poses are restored, make the carry match what was committed.
+    // Checkpoint reconciliation: after the bodies' poses are restored, make
+    // the carry match what was committed.
     void restore_carry_topology(const std::uint64_t committed_entity) noexcept {
         if (committed_entity == carried_entity_) {
             return;
         }
         release_carry();
-        if (committed_entity == Simulation::kHook5BarEntityId) {
-            attach_carry(hook5_bar_id_, committed_entity);
-        } else if (committed_entity == Simulation::kHook5BlockEntityId) {
-            attach_carry(hook5_block_id_, committed_entity);
-        } else if (scraperx::sim::kit::is_kit_entity(committed_entity)) {
+        if (scraperx::sim::kit::is_kit_entity(committed_entity)) {
             const scraperx::sim::kit::BodyIndex body = kit_->body_for_entity(committed_entity);
             if (kit_->body_enabled(body)) {
                 attach_carry(kit_->body_id(body), committed_entity);
@@ -5856,31 +3169,11 @@ private:
                                   true);
     }
 
-    // Machine half of a checkpoint (TDD 14.1: "machine/control state").
-    // Kinematic bodies are deliberately excluded -- see BodyCheckpoint comment.
-    void commit_machine_checkpoint(const JPH::BodyInterface &bodies) noexcept {
-        checkpoint_.ballast = capture_body(bodies, ballast_id_);
-        checkpoint_.tipper = capture_body(bodies, tipper_id_);
-        checkpoint_.valve_lever = capture_body(bodies, valve_lever_id_);
-        checkpoint_.treadle = capture_body(bodies, treadle_id_);
-        checkpoint_.lift_platform = capture_body(bodies, lift_platform_id_);
-        checkpoint_.counterweight = capture_body(bodies, counterweight_id_);
-        checkpoint_.jib_boom = capture_body(bodies, jib_boom_id_);
-        checkpoint_.jib_hook = capture_body(bodies, jib_hook_id_);
-        checkpoint_.crate = capture_body(bodies, crate_id_);
-        checkpoint_.needle_beam = capture_body(bodies, needle_beam_id_);
-        checkpoint_.needle_seated = needle_seated_;
-        checkpoint_.sump_volume_kg = sump_volume_kg_;
-        checkpoint_.sump_isolated = sump_isolated_;
-        checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
-        checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
-        checkpoint_.intake_swing_flight = capture_body(bodies, intake_swing_flight_id_);
-        checkpoint_.intake_cw_cradle = capture_body(bodies, intake_cw_cradle_id_);
-        checkpoint_.hook5_door = capture_body(bodies, hook5_door_id_);
-        checkpoint_.hook5_bar = capture_body(bodies, hook5_bar_id_);
-        checkpoint_.hook5_block = capture_body(bodies, hook5_block_id_);
+    // Machine half of a checkpoint (TDD 14.1: "machine/control state"): the
+    // carry and every kit body. Kinematic bodies are pure functions of the
+    // tick counter and need no restoring.
+    void commit_machine_checkpoint() noexcept {
         checkpoint_.carrying_entity = carried_entity_;
-        checkpoint_.intake_pack_slung = intake_pack_slung_;
         kit_->capture(checkpoint_.kit);
     }
 
@@ -5891,7 +3184,7 @@ private:
     void commit_checkpoint(const JPH::BodyInterface &bodies) noexcept {
         checkpoint_position_ = bodies.GetPosition(player_id_);
         checkpoint_crouched_ = crouched_;
-        commit_machine_checkpoint(bodies);
+        commit_machine_checkpoint();
         ++checkpoint_commit_count_;
     }
 
@@ -5911,23 +3204,6 @@ private:
                                       JPH::EActivation::Activate);
         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
 
-        restore_body(bodies, ballast_id_, checkpoint_.ballast);
-        restore_body(bodies, tipper_id_, checkpoint_.tipper);
-        restore_body(bodies, valve_lever_id_, checkpoint_.valve_lever);
-        restore_body(bodies, treadle_id_, checkpoint_.treadle);
-        restore_body(bodies, lift_platform_id_, checkpoint_.lift_platform);
-        restore_body(bodies, counterweight_id_, checkpoint_.counterweight);
-        restore_body(bodies, jib_boom_id_, checkpoint_.jib_boom);
-        restore_body(bodies, jib_hook_id_, checkpoint_.jib_hook);
-        restore_body(bodies, crate_id_, checkpoint_.crate);
-        restore_body(bodies, needle_beam_id_, checkpoint_.needle_beam);
-        restore_needle_topology(checkpoint_.needle_seated);
-        restore_body(bodies, intake_swing_flight_id_, checkpoint_.intake_swing_flight);
-        restore_body(bodies, intake_cw_cradle_id_, checkpoint_.intake_cw_cradle);
-        restore_legal_forty_topology(checkpoint_.intake_pack_slung);
-        restore_body(bodies, hook5_door_id_, checkpoint_.hook5_door);
-        restore_body(bodies, hook5_bar_id_, checkpoint_.hook5_bar);
-        restore_body(bodies, hook5_block_id_, checkpoint_.hook5_block);
         // A kit body in the hands may be one the restore takes out of the
         // world (a shackle hooked at the commit): let go of it first.
         if (carry_constraint_ != nullptr &&
@@ -5939,18 +3215,11 @@ private:
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
         // the still hands and dragged the body back off the edge it had just
-        // been restored onto (observed at MOD-HALL-DECK's north edge).
+        // been restored onto (observed at a deck's edge).
         if (carry_constraint_ != nullptr) {
             bodies.SetLinearAndAngularVelocity(carried_id_, JPH::Vec3::sZero(),
                                                JPH::Vec3::sZero());
         }
-        // No topology reconciliation call needed here, unlike the needle:
-        // update_sump recomputes grate_safe_ and reasserts the grate's
-        // sensor flag from sump_volume_kg_ unconditionally every tick, so
-        // restoring the scalar is the whole restore.
-        sump_volume_kg_ = checkpoint_.sump_volume_kg;
-        sump_isolated_ = checkpoint_.sump_isolated;
-        steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
 
         grounded_ = false;
         jump_vault_ticks_left_ = 0;
@@ -5966,93 +3235,9 @@ private:
         ++death_count_;
     }
 
-    void read_machine_state(const JPH::BodyInterface &bodies) noexcept {
-        state_.hoist_scoop_position = {kScoopX, scoop_height_, kScoopZ};
-        state_.hoist_scoop_tilt_radians = scoop_tilt_;
-
-        const JPH::RVec3 ballast_position = bodies.GetPosition(ballast_id_);
-        const JPH::Vec3 ballast_velocity = bodies.GetLinearVelocity(ballast_id_);
-        state_.ballast_position = to_vector3(ballast_position);
-        state_.ballast_linear_velocity =
-            {ballast_velocity.GetX(), ballast_velocity.GetY(), ballast_velocity.GetZ()};
-
-        state_.tipper_position = to_vector3(bodies.GetPosition(tipper_id_));
-        state_.tipper_angle_radians =
-            tipper_hinge_ != nullptr ? tipper_hinge_->GetCurrentAngle() : 0.0;
-        state_.valve_lever_angle_radians = valve_lever_angle_;
-        state_.treadle_angle_radians = treadle_angle_;
-
-        const JPH::RVec3 platform_position = bodies.GetPosition(lift_platform_id_);
-        const JPH::Vec3 platform_velocity = bodies.GetLinearVelocity(lift_platform_id_);
-        state_.lift_platform_position = to_vector3(platform_position);
-        state_.lift_platform_linear_velocity =
-            {platform_velocity.GetX(), platform_velocity.GetY(), platform_velocity.GetZ()};
-        state_.counterweight_position = to_vector3(bodies.GetPosition(counterweight_id_));
-
-        const auto &plant = steam_plant_.state();
-        state_.valve_open_fraction = plant.valve_open_fraction;
-        state_.vessel_pressure_pa = plant.vessel_pressure_pa;
-        state_.cylinder_pressure_pa = plant.cylinder_pressure_pa;
-        state_.orifice_mass_flow_kg_per_s = plant.orifice_mass_flow_kg_per_s;
-        state_.vented_mass_kg = plant.vented_mass_kg;
-        state_.piston_force_n = plant.piston_force_n;
-        state_.vessel_available_energy_j = steam_plant_.vessel_available_energy_j();
-        state_.machine_cycle_phase_seconds = machine_cycle_phase_seconds_;
-
-        state_.jib_station_active = jib_station_active_;
-        state_.jib_boom_angle_radians = jib_boom_angle_;
-        const JPH::Vec3 hook_velocity = bodies.GetLinearVelocity(jib_hook_id_);
-        state_.jib_hook_position = to_vector3(bodies.GetPosition(jib_hook_id_));
-        state_.jib_hook_linear_velocity =
-            {hook_velocity.GetX(), hook_velocity.GetY(), hook_velocity.GetZ()};
-        const JPH::Vec3 crate_velocity = bodies.GetLinearVelocity(crate_id_);
-        state_.jib_crate_position = to_vector3(bodies.GetPosition(crate_id_));
-        state_.jib_crate_linear_velocity =
-            {crate_velocity.GetX(), crate_velocity.GetY(), crate_velocity.GetZ()};
-        state_.jib_capacity_stand_load_position =
-            to_vector3(bodies.GetPosition(capacity_stand_load_id_));
-
-        state_.needle_station_active = needle_station_active_;
-        state_.needle_seated = needle_seated_;
-        const JPH::Vec3 needle_velocity = bodies.GetLinearVelocity(needle_beam_id_);
-        state_.needle_position = to_vector3(bodies.GetPosition(needle_beam_id_));
-        state_.needle_linear_velocity =
-            {needle_velocity.GetX(), needle_velocity.GetY(), needle_velocity.GetZ()};
-
-        state_.sump_station_active = sump_station_active_;
-        state_.sump_isolated = sump_isolated_;
-        state_.sump_volume_kg = sump_volume_kg_;
-        state_.grate_safe = grate_safe_;
-
-        state_.intake_station_active = intake_station_active_;
-        state_.intake_boom_angle_radians = intake_boom_angle_;
-        state_.intake_hook_position = to_vector3(bodies.GetPosition(intake_hook_id_));
-        state_.intake_pack_position = to_vector3(bodies.GetPosition(intake_pack_id_));
-        state_.intake_overweight_pack_position =
-            to_vector3(bodies.GetPosition(intake_overweight_pack_id_));
-        state_.intake_dog_angle_radians = intake_dog_angle_;
-        state_.intake_pack_pins_dog = intake_pack_pins_dog_;
-        state_.intake_throat_clear = intake_throat_clear_;
-
-        state_.legal_forty_pack_slung = intake_pack_slung_;
-        state_.legal_forty_swing_travel_radians = intake_swing_travel_;
-        state_.legal_forty_swing_flight_position =
-            to_vector3(bodies.GetPosition(intake_swing_flight_id_));
-        state_.legal_forty_cradle_position = to_vector3(bodies.GetPosition(intake_cw_cradle_id_));
-
+    void read_machine_state() noexcept {
         state_.carrying_entity_id = carried_entity_;
         state_.carry_target_entity_id = carry_target_entity_;
-        state_.hook5_door_angle_radians =
-            hook5_door_hinge_ != nullptr ? hook5_door_hinge_->GetCurrentAngle() : 0.0;
-        const JPH::RVec3 block_position = bodies.GetPosition(hook5_block_id_);
-        state_.hook5_block_position = to_vector3(block_position);
-        state_.hook5_block_rotation = to_quaternion(bodies.GetRotation(hook5_block_id_));
-        state_.hook5_bar_position = to_vector3(bodies.GetPosition(hook5_bar_id_));
-        state_.hook5_bar_rotation = to_quaternion(bodies.GetRotation(hook5_bar_id_));
-        state_.hook_in_rack =
-            JPH::Vec3(block_position - JPH::RVec3(kHook5BlockSeatX, kHook5BlockSeatY,
-                                                  kHook5BlockSeatZ))
-                .Length() <= kHook5InRackTolerance;
 
         state_.rig_action = rig_action_;
         state_.rig_target_entity_id = rig_target_entity_;
@@ -6092,13 +3277,6 @@ private:
         state_.well_rubble_spilled_kg = kit.spilled();
         state_.well_c_rebar_angle = kit.lever_angle(well_.c_rebar);
         state_.well_c_latch_angle = kit.lever_angle(well_.c_latch);
-
-        const JPH::RVec3 rope_tipper =
-            bodies.GetCenterOfMassTransform(tipper_id_) * JPH::RVec3(3.0, -0.2, 0.0);
-        const JPH::RVec3 rope_lever =
-            bodies.GetCenterOfMassTransform(valve_lever_id_) * JPH::RVec3(-1.60, 0.0, 0.0);
-        state_.rope_extension_meters =
-            JPH::Vec3(rope_lever - rope_tipper).Length() - rope_rest_length_;
     }
 
     void read_state() noexcept {
@@ -6183,7 +3361,7 @@ private:
         state_.ledge_point = affordance_.valid ? to_vector3(affordance_.ledge_point) : Vector3{};
         state_.ledge_rise_meters = affordance_.valid ? affordance_.rise : 0.0;
 
-        read_machine_state(bodies);
+        read_machine_state();
 
         state_.accepted_traversal_count = accepted_traversal_count_;
         state_.world_solid_bodies = world_solid_bodies_;
@@ -6229,30 +3407,8 @@ private:
     JPH::BodyID tower_id_;
     JPH::BodyID player_id_;
 
-    SteamPlant steam_plant_{};
     std::vector<JPH::BodyID> machine_bodies_;
     std::vector<JPH::Ref<JPH::TwoBodyConstraint>> machine_constraints_;
-    JPH::Ref<JPH::HingeConstraint> tipper_hinge_;
-    JPH::Ref<JPH::HingeConstraint> valve_hinge_;
-    JPH::Ref<JPH::HingeConstraint> treadle_hinge_;
-    JPH::Ref<JPH::HingeConstraint> jib_slew_hinge_;
-    JPH::Ref<JPH::SliderConstraint> jib_hoist_slider_;
-    JPH::Ref<JPH::SliderConstraint> needle_hoist_slider_;
-    JPH::Ref<JPH::HingeConstraint> intake_slew_hinge_;
-    JPH::Ref<JPH::SliderConstraint> intake_hoist_slider_;
-    JPH::Ref<JPH::HingeConstraint> intake_dog_hinge_;
-    // AS-002: unmotored -- gravity and MOD-CW-CRADLE's rope tension are the
-    // only actuators, so this carries no target-velocity state.
-    JPH::Ref<JPH::HingeConstraint> intake_swing_hinge_;
-    JPH::Ref<JPH::PulleyConstraint> intake_cw_pulley_;
-    // track_for_teardown=false: created/removed at runtime by seat_needle/
-    // unseat_needle, never through machine_constraints_. See create_constraint.
-    JPH::Ref<JPH::PointConstraint> needle_pin_approach_;
-    JPH::Ref<JPH::PointConstraint> needle_pin_far_;
-    // AS-002: the hook-pack sling, created/removed at runtime by
-    // sling_pack()/release_pack_to_cradle() -- same track_for_teardown=false
-    // contract as the needle pins above.
-    JPH::Ref<JPH::PointConstraint> intake_sling_pin_;
     // AS-003: the carry, created/removed at runtime (track_for_teardown=false).
     JPH::Ref<JPH::PointConstraint> carry_constraint_;
     JPH::BodyID carried_id_;
@@ -6270,59 +3426,6 @@ private:
     std::uint64_t rig_target_entity_ = 0;
     scraperx::sim::kit::AnchorIndex rig_anchor_;
     scraperx::sim::kit::RopeIndex rig_rope_;
-    JPH::Ref<JPH::HingeConstraint> hook5_door_hinge_;
-    JPH::BodyID hook5_door_id_;
-    JPH::BodyID hook5_bar_id_;
-    JPH::BodyID hook5_block_id_;
-    JPH::BodyID scoop_ids_[4];
-    JPH::Vec3 scoop_local_[4]{};
-    JPH::BodyID ballast_id_;
-    JPH::BodyID tipper_id_;
-    JPH::BodyID valve_lever_id_;
-    JPH::BodyID treadle_id_;
-    JPH::BodyID lift_platform_id_;
-    JPH::BodyID counterweight_id_;
-    JPH::BodyID jib_boom_id_;
-    JPH::BodyID jib_hook_id_;
-    JPH::BodyID crate_id_;
-    JPH::BodyID capacity_stand_load_id_;
-    JPH::BodyID needle_pier_approach_id_;
-    JPH::BodyID needle_pier_far_id_;
-    JPH::BodyID needle_beam_id_;
-    JPH::BodyID sump_grate_id_;
-    JPH::BodyID intake_belt_id_;
-    JPH::BodyID intake_boom_id_;
-    JPH::BodyID intake_hook_id_;
-    JPH::BodyID intake_pack_id_;
-    JPH::BodyID intake_overweight_pack_id_;
-    JPH::BodyID intake_dog_id_;
-    JPH::BodyID intake_swing_flight_id_;
-    JPH::BodyID intake_cw_cradle_id_;
-    // AS-002: the sling's actual presence -- read back for the snapshot and
-    // the checkpoint, never asserted. Starts true: AS-001 pre-slings the pack.
-    bool intake_pack_slung_ = true;
-    float scoop_height_ = kScoopBottomY;
-    float scoop_tilt_ = 0.0F;
-    float valve_lever_angle_ = kValveShutAngle;
-    float treadle_angle_ = kTreadleRestAngle;
-    float jib_boom_angle_ = 0.0F;
-    bool jib_station_active_ = false;
-    bool needle_station_active_ = false;
-    bool needle_seated_ = false;
-    bool sump_station_active_ = false;
-    bool sump_isolated_ = false;
-    float sump_volume_kg_ = 0.0F;
-    bool grate_safe_ = false;
-    bool intake_station_active_ = false;
-    float intake_boom_angle_ = 0.0F;
-    float intake_dog_angle_ = 0.0F;
-    bool intake_pack_pins_dog_ = false;
-    bool intake_throat_clear_ = false;
-    // AS-002: non-negative "how far open" travel, derived from the hinge's
-    // raw (negative-signed) angle -- see kIntakeSwingHingeTravelRadians.
-    float intake_swing_travel_ = 0.0F;
-    float rope_rest_length_ = 0.0F;
-    double machine_cycle_phase_seconds_ = 0.0;
     SupportSample support_sample_{};
     JPH::Vec3 airborne_inherited_velocity_{JPH::Vec3::sZero()};
     JPH::Vec3 facing_{JPH::Vec3::sZero()};
@@ -6382,34 +3485,9 @@ private:
     float air_full_speed_ = kPlayerMaximumRelativeSpeed;
 
     struct MachineCheckpoint final {
-        BodyCheckpoint ballast{};
-        BodyCheckpoint tipper{};
-        BodyCheckpoint valve_lever{};
-        BodyCheckpoint treadle{};
-        BodyCheckpoint lift_platform{};
-        BodyCheckpoint counterweight{};
-        BodyCheckpoint jib_boom{};
-        BodyCheckpoint jib_hook{};
-        BodyCheckpoint crate{};
-        BodyCheckpoint needle_beam{};
-        bool needle_seated = false;
-        float sump_volume_kg = 0.0F;
-        bool sump_isolated = false;
-        double vessel_mass_kg = 0.0;
-        double cylinder_mass_kg = 0.0;
-        // AS-002. The pack/hook and the dog are AS-001 gaps this ticket does
-        // not reopen (00_START_HERE.md's record-gap convention): they are not
-        // captured here either, unchanged from AS-001. MOD-STAIR-A-SWING and
-        // MOD-CW-CRADLE are this ticket's own bodies, so they are.
-        BodyCheckpoint intake_swing_flight{};
-        BodyCheckpoint intake_cw_cradle{};
-        bool intake_pack_slung = true;
-        // AS-003: the door, the bar and the block, and what was being carried.
-        BodyCheckpoint hook5_door{};
-        BodyCheckpoint hook5_bar{};
-        BodyCheckpoint hook5_block{};
+        // What was being carried, and every kit body, rope end, parted rope
+        // and catch.
         std::uint64_t carrying_entity = 0;
-        // AS-006: every kit body, rope end, parted rope and catch.
         scraperx::sim::kit::Kit::Checkpoint kit{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
@@ -6473,10 +3551,6 @@ bool Simulation::request_traversal() noexcept {
     }
     traversal_requested_ = true;
     return true;
-}
-
-void Simulation::set_boiler_feed_enabled(const bool enabled) noexcept {
-    physics_world_->set_feed_enabled(enabled);
 }
 
 bool Simulation::request_release() noexcept {
@@ -6754,61 +3828,6 @@ CraneState Simulation::crane_state() const noexcept {
     return out;
 }
 
-bool Simulation::set_jib_slew_input(const double value) noexcept {
-    if (!std::isfinite(value)) {
-        return false;
-    }
-    jib_slew_input_ = std::clamp(value, -1.0, 1.0);
-    return true;
-}
-
-bool Simulation::set_jib_hoist_input(const double value) noexcept {
-    if (!std::isfinite(value)) {
-        return false;
-    }
-    jib_hoist_input_ = std::clamp(value, -1.0, 1.0);
-    return true;
-}
-
-bool Simulation::set_needle_hoist_input(const double value) noexcept {
-    if (!std::isfinite(value)) {
-        return false;
-    }
-    needle_hoist_input_ = std::clamp(value, -1.0, 1.0);
-    return true;
-}
-
-bool Simulation::request_valve_toggle() noexcept {
-    valve_toggle_requested_ = true;
-    return true;
-}
-
-bool Simulation::set_intake_slew_input(const double value) noexcept {
-    if (!std::isfinite(value)) {
-        return false;
-    }
-    intake_slew_input_ = std::clamp(value, -1.0, 1.0);
-    return true;
-}
-
-bool Simulation::set_intake_hoist_input(const double value) noexcept {
-    if (!std::isfinite(value)) {
-        return false;
-    }
-    intake_hoist_input_ = std::clamp(value, -1.0, 1.0);
-    return true;
-}
-
-bool Simulation::request_intake_sling_release() noexcept {
-    intake_sling_release_requested_ = true;
-    return true;
-}
-
-bool Simulation::request_intake_sling_attach() noexcept {
-    intake_sling_attach_requested_ = true;
-    return true;
-}
-
 void Simulation::step_fixed() noexcept {
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -6827,14 +3846,6 @@ void Simulation::step_fixed() noexcept {
     commands.set_down_requested = set_down_requested_;
     commands.rig_requested = rig_requested_;
     commands.parachute_toggle_requested = parachute_toggle_requested_;
-    commands.jib_slew_input = jib_slew_input_;
-    commands.jib_hoist_input = jib_hoist_input_;
-    commands.needle_hoist_input = needle_hoist_input_;
-    commands.valve_toggle_requested = valve_toggle_requested_;
-    commands.intake_slew_input = intake_slew_input_;
-    commands.intake_hoist_input = intake_hoist_input_;
-    commands.intake_sling_release_requested = intake_sling_release_requested_;
-    commands.intake_sling_attach_requested = intake_sling_attach_requested_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     jump_requested_ = false;
@@ -6844,9 +3855,6 @@ void Simulation::step_fixed() noexcept {
     pick_up_requested_ = false;
     set_down_requested_ = false;
     rig_requested_ = false;
-    valve_toggle_requested_ = false;
-    intake_sling_release_requested_ = false;
-    intake_sling_attach_requested_ = false;
     ++tick_index_;
 
     snapshot_ = physics_world_->state();

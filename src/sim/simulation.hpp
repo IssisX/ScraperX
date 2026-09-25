@@ -1,7 +1,5 @@
 #pragma once
 
-#include "sim/steam_plant.hpp"
-
 #include <cstdint>
 #include <memory>
 
@@ -21,6 +19,10 @@ struct Quaternion final {
 };
 
 enum class InitialSpawn : std::uint8_t {
+    // The proving ground (WO-002, WO-003, WO-008): spawns beside the movement
+    // fixtures -- moving supports, a vault rail, mantle and hang ledges, a
+    // blocked ledge, a crawl beam -- which are built only in a world started
+    // at one of these spawns. The game's world has none of them.
     StaticDeck = 0,
     TranslatingSupport = 1,
     RotatingSupport = 2,
@@ -29,100 +31,51 @@ enum class InitialSpawn : std::uint8_t {
     HangApproach = 5,
     MovingLedgeApproach = 6,
     BlockedLedgeApproach = 7,
+    // The game's start: at grade, outdoors, south of the tower.
     ExteriorGrade = 8,
-    MachineYard = 9,
-    LiftPlatform = 10,
-    // WO-008 falsifier spawn: high above the static deck with no horizontal
-    // offset, so an unmitigated fall is unambiguously lethal and a
+    // WO-008 falsifier spawn (proving ground): high above the grade with no
+    // horizontal offset, so an unmitigated fall is unambiguously lethal and a
     // sufficiently early parachute deploy is unambiguously survivable.
-    HighDrop = 11,
-    // WO-008 falsifier spawn: a short ~12 m drop, comfortably under
-    // kLethalImpactSpeedMps, proving ordinary platforming falls stay
+    HighDrop = 9,
+    // WO-008 falsifier spawn (proving ground): a short ~12 m drop, comfortably
+    // under kLethalImpactSpeedMps, proving ordinary platforming falls stay
     // survivable (GDD 8.2) and are never mistaken for a lethal one.
-    SurvivableDrop = 12,
-    // WO-010 falsifier spawn: directly above the catwalk treadle, the plant's
-    // human-scale control. Isolates "a body on this pedal works the valve" from
-    // the separately-proven question of how the player reaches the catwalk.
-    CatwalkTreadle = 13,
-    // WO-011 falsifier spawn: at the KX-JIB pendant station, per Ascent Atlas
-    // v1.0 kernel (section 9). The atlas kernel is a bounded, separate proof
-    // volume -- not the Kellerworks yard -- so this spawns well clear of it.
-    KernelJibStation = 14,
-    // WO-011 falsifier spawn: directly on the crate's top surface, isolating
-    // "the crate is a real moving support" (WO-005 proof path item 3, WO-002
-    // law) from the separately-proven pendant/motor mechanics above.
-    KernelCrateTop = 15,
-    // WO-012 falsifier spawn: at the KX-NEEDLE pendant station, on the
-    // approach pier facing the gap. One spawn serves both "the unseated gap
-    // cannot be crossed" (walk forward immediately) and "seating it with the
-    // jib makes it walkable" (operate the hoist first) -- the station sits
-    // on the pier specifically so both are reachable without a climb move
-    // this kernel slice has no mechanism for.
-    KernelNeedleStation = 16,
-    // WO-013 falsifier spawn: at the KX-SUMP valve station, on the fixed
-    // approach decking facing the grate (not on the grate itself, which
-    // starts wet and unsafe). One spawn serves both "wet grate cannot be
-    // crossed" (walk forward immediately) and "isolate and drain makes it
-    // ordinary support" (close the valve first, then walk) -- matching the
-    // pattern established for the needle station.
-    KernelSumpStation = 17,
-    // AS-001 falsifier spawn: on the MOD-INTAKE-BELT catwalk at the
-    // MOD-YARD-JIB pendant, where CAP-PENDANT actually lives (Atlas B00). The
-    // whole freight sequence is driven from here without a climb.
-    IntakePendant = 18,
-    // AS-001 falsifier spawn: on the apron directly outside the MOD-DOG-A
-    // throat, facing the bay. One spawn serves both "MOD-STAIR-A is physically
-    // impassable while the pack pins the dog" (walk forward immediately) and
-    // "it is passable once the dog has travelled" -- matching the needle and
-    // sump station pattern.
-    IntakeThroat = 19,
-    // AS-001 falsifier spawn: at the foot of MOD-SKIN-LADDER-S. The SKIN braid
-    // is a legal bypass of the whole freight sequence (Atlas B00 coupling 3),
-    // so it is proven from its own spawn with the pack untouched.
-    IntakeSkinFoot = 20,
-    // AS-002 falsifier spawn: standing on the +24.1872 m handoff deck itself,
-    // facing MOD-STAIR-A-SWING's stowed footprint. Isolates "the unloaded
-    // flight is not a route" (walk at it immediately) from the separately
-    // proven jib/cradle mechanics, matching the throat/sump station pattern.
-    IntakeHandoffDeck = 21,
-    // AS-003 falsifier spawn: inside MOD-HOOK5-RACK's cage, on the floor under
-    // the roof hatch -- where the drop from the roof lands. Isolates "the bar
-    // is a body, and moving it travels the door" and "the block is a body"
-    // from the separately proven way in over the roof.
-    Hook5Cage = 22,
-    // AS-003 falsifier spawn: on the apron at grade, south-east of the cage and
-    // clear of the belt's corridor. Isolates "grade and the apron's own raised
-    // surfaces cannot reach the cage" from the belt that can.
-    Hook5Apron = 23,
-    // AS-006 falsifier spawn: on the stair's 154 m top deck, north band, just
-    // north of Stage A's cage and facing it. The stair itself is proven by
-    // the world-solids group; the band's tests start where it ends.
-    StairTop = 24,
+    SurvivableDrop = 10,
+    // AS-006: on the 154 m deck's north band, just north of Stage A's cage
+    // and facing it. The band's tests start here.
+    Deck154 = 11,
     // AS-006 Stage B falsifier spawn: standing in B's cage on its bottom stop
     // at 176.25, as a rider who has stepped across from A's parked cage.
-    WellBCage = 25,
+    WellBCage = 12,
     // AS-006 Stage C falsifier spawn: standing on C's platform on its bottom
     // stop at 198.25, as a rider who has stepped across from B's parked cage.
-    WellCPlatform = 26,
+    WellCPlatform = 13,
     // Step 2 movement spawn: on the 176 ring east of the climbing route's
     // boards, facing north with the ring's inner edge 1 m behind.
-    Ring176East = 27,
+    Ring176East = 14,
     // And on the 198 ring, north of the route's catwalk.
-    Ring198East = 28,
+    Ring198East = 15,
     // AS-007: on the 220 ring west of D's walkway, as a rider off C's
     // platform; in E's cab on its bottom stop; on F's platform.
-    Ring220North = 29,
-    WetECab = 30,
-    WetFPlatform = 31,
+    Ring220North = 16,
+    WetECab = 17,
+    WetFPlatform = 18,
     // AS-008: on TP-340 north of AS-007 F's hole; on the 374 ring's west
     // band by H's gangway; in I's cage at the 418 ring.
-    PlateTop = 32,
-    Ring374West = 33,
-    ShopICage = 34,
-    Ring484North = 35,
-    CraneKCage = 36,
-    CraneLCab = 37,
+    PlateTop = 19,
+    Ring374West = 20,
+    ShopICage = 21,
+    Ring484North = 22,
+    CraneKCage = 23,
+    CraneLCab = 24,
 };
+
+// A world started at one of these spawns is the proving ground: it carries
+// the movement fixtures. Every other world is the game's.
+[[nodiscard]] constexpr bool is_proving_spawn(const InitialSpawn spawn) noexcept {
+    return static_cast<std::uint8_t>(spawn) <= static_cast<std::uint8_t>(InitialSpawn::BlockedLedgeApproach) ||
+           spawn == InitialSpawn::HighDrop || spawn == InitialSpawn::SurvivableDrop;
+}
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
 // draws and what collides are the same list.
@@ -318,101 +271,11 @@ struct Snapshot final {
     std::uint64_t checkpoint_commit_count = 0;
     std::uint64_t death_count = 0;
 
-    // --- coupled machine: every field below is read back from the authoritative
-    // Jolt bodies or from the reduced-order steam plant, never authored.
-    Vector3 hoist_scoop_position{};
-    double hoist_scoop_tilt_radians = 0.0;
-    Vector3 ballast_position{};
-    Vector3 ballast_linear_velocity{};
-    Vector3 tipper_position{};
-    double tipper_angle_radians = 0.0;
-    double valve_lever_angle_radians = 0.0;
-    double treadle_angle_radians = 0.0;
-    double valve_open_fraction = 0.0;
-    double rope_extension_meters = 0.0;
-    Vector3 lift_platform_position{};
-    Vector3 lift_platform_linear_velocity{};
-    Vector3 counterweight_position{};
-    double vessel_pressure_pa = 0.0;
-    double cylinder_pressure_pa = 0.0;
-    double orifice_mass_flow_kg_per_s = 0.0;
-    double vented_mass_kg = 0.0;
-    double piston_force_n = 0.0;
-    double vessel_available_energy_j = 0.0;
-    double machine_cycle_phase_seconds = 0.0;
-
-    // --- WO-011 KX-JIB / KX-CRATE (Ascent Atlas v1.0 kernel, atlas-authority
-    // §9). A pendant-controlled crane, not an autonomous cycle: the boom slews
-    // and the hook raises/lowers only while the player is at the station and
-    // only as fast as a finite, real Jolt constraint motor allows.
-    bool jib_station_active = false;
-    double jib_boom_angle_radians = 0.0;
-    Vector3 jib_hook_position{};
-    Vector3 jib_hook_linear_velocity{};
-    Vector3 jib_crate_position{};
-    Vector3 jib_crate_linear_velocity{};
-    // A separate, fixed capacity-proving stand: the same rated winch force as
-    // the jib's hoist, permanently loaded past that rating, so "the winch
-    // force is finite" is falsifiable without staging an unsafe lift on the
-    // real jib.
-    Vector3 jib_capacity_stand_load_position{};
-
-    // --- WO-012 KX-NEEDLE / KX-POCKETS (Ascent Atlas v1.0 kernel, §9). A
-    // needle beam lowered by its own finite-force hoist; once its pose is
-    // within seat tolerance and settled, it is pinned into both pockets and
-    // becomes real, walkable structural support. Unseated, the gap has none.
-    bool needle_station_active = false;
-    bool needle_seated = false;
-    Vector3 needle_position{};
-    Vector3 needle_linear_velocity{};
-
-    // --- WO-013 KX-SUMP / KX-GRATE (Ascent Atlas v1.0 kernel, §9). A lumped
-    // process volume: one isolation edge (the valve), one drain sink, one
-    // derived "grate safe" predicate. The grate's own collidability is what
-    // changes -- not a decal, not a flag the traversal system trusts blindly.
-    bool sump_station_active = false;
-    bool sump_isolated = false;
-    double sump_volume_kg = 0.0;
-    bool grate_safe = false;
-
-    // --- AS-001 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
-    // MOD-YARD-JIB lifts the 4 t pack off MOD-DOG-A; the dog is a real hinged
-    // body under a permanent, finite opening torque, so it travels the instant
-    // the pack stops physically blocking its swing. Nothing here is a flag:
-    // intake_pack_pins_dog is derived from the pack's measured pose purely for
-    // the HUD and the falsifiers, and no simulation branch reads it.
-    bool intake_station_active = false;
-    double intake_boom_angle_radians = 0.0;
-    Vector3 intake_hook_position{};
-    Vector3 intake_pack_position{};
-    Vector3 intake_overweight_pack_position{};
-    double intake_dog_angle_radians = 0.0;
-    bool intake_pack_pins_dog = false;
-    bool intake_throat_clear = false;
-
-    // --- AS-002 Legal Forty (Ascent Atlas §6 band B00 leftover, §7 chain K0
-    // PLAY). MOD-STAIR-A-SWING is a passive, gravity-restored hinge; only
-    // MOD-CW-CRADLE's rope tension -- real solver tension, not a flag -- can
-    // swing it to its deployed stop. legal_forty_pack_slung is the hook-pack
-    // PointConstraint's actual presence, never a derived guess.
-    bool legal_forty_pack_slung = true;
-    double legal_forty_swing_travel_radians = 0.0;   // 0 stowed .. ~0.9076 deployed
-    Vector3 legal_forty_swing_flight_position{};
-    Vector3 legal_forty_cradle_position{};
-
-    // AS-003 MOD-HOOK5-RACK. carrying_entity_id is the body on the player's
-    // carry point (0 for none), read from the carry constraint's actual
-    // presence; carry_target_entity_id is what a pick-up would take this
-    // tick. hook_in_rack is derived from the block's pose, never stored, and
-    // CAP-HOOK5 is its negation.
+    // The carry. carrying_entity_id is the body on the player's carry point
+    // (0 for none), read from the carry constraint's actual presence;
+    // carry_target_entity_id is what a pick-up would take this tick.
     std::uint64_t carrying_entity_id = 0;
     std::uint64_t carry_target_entity_id = 0;
-    bool hook_in_rack = true;
-    double hook5_door_angle_radians = 0.0;   // 0 shut .. inward stop
-    Vector3 hook5_bar_position{};
-    Quaternion hook5_bar_rotation{};
-    Vector3 hook5_block_position{};
-    Quaternion hook5_block_rotation{};
 
     // AS-006 and the mechanism kit. rig_action is what request_rig would do
     // now: 0 nothing, 1 hook the carried shackle onto rig_target_entity_id,
@@ -476,78 +339,6 @@ public:
     static constexpr std::uint64_t kBlockedLedgeEntityId = 9;
     static constexpr std::uint64_t kBlockedLedgeCanopyEntityId = 10;
     static constexpr std::uint64_t kTowerEntityId = 11;
-    static constexpr std::uint64_t kHoistScoopEntityId = 12;
-    static constexpr std::uint64_t kBallastEntityId = 13;
-    static constexpr std::uint64_t kTipperEntityId = 14;
-    static constexpr std::uint64_t kValveLeverEntityId = 15;
-    static constexpr std::uint64_t kLiftPlatformEntityId = 16;
-    static constexpr std::uint64_t kCounterweightEntityId = 17;
-    static constexpr std::uint64_t kVesselShellEntityId = 18;
-    static constexpr std::uint64_t kCatwalkEntityId = 19;
-    static constexpr std::uint64_t kMachinePylonEntityId = 20;
-    static constexpr std::uint64_t kCatchBasinEntityId = 21;
-    static constexpr std::uint64_t kChuteEntityId = 22;
-    static constexpr std::uint64_t kLiftMastEntityId = 23;
-    // WO-010. The plant's human-scale control: a foot treadle on the catwalk,
-    // cabled across the yard to the valve gear. The player cannot move machine-
-    // scale mass with their body, so this is how a body enters the machine.
-    static constexpr std::uint64_t kTreadleEntityId = 24;
-    // WO-011 Ascent Atlas kernel entities (§9): KX-JIB is the mast+boom+hook,
-    // KX-CRATE is the load, plus a fixed, always-overweight capacity-proving
-    // stand that shares the jib's rated winch force.
-    static constexpr std::uint64_t kJibMastEntityId = 25;
-    static constexpr std::uint64_t kJibBoomEntityId = 26;
-    static constexpr std::uint64_t kJibHookEntityId = 27;
-    static constexpr std::uint64_t kCrateEntityId = 28;
-    static constexpr std::uint64_t kCapacityStandEntityId = 29;
-    // WO-012 Ascent Atlas kernel entities (§9): KX-NEEDLE is the seatable
-    // beam; KX-POCKETS is represented by the two piers it seats into. The
-    // hoist mast is proof scaffolding (a second, minimal jib-pattern
-    // mechanism), like WO-011's capacity stand -- not an atlas-named module.
-    static constexpr std::uint64_t kNeedlePierApproachEntityId = 30;
-    static constexpr std::uint64_t kNeedlePierFarEntityId = 31;
-    static constexpr std::uint64_t kNeedleHoistMastEntityId = 32;
-    static constexpr std::uint64_t kNeedleBeamEntityId = 33;
-    // WO-013 Ascent Atlas kernel entity (§9): KX-GRATE is the walkway whose
-    // collidability the process network derives. Falling through it lands on
-    // the existing world deck below -- a real, measured drop, not a new floor
-    // body invented just to catch it.
-    static constexpr std::uint64_t kSumpGrateEntityId = 34;
-
-    // AS-001 campaign entities (Ascent Atlas §6, band B00 "Apron and Intake").
-    // These are MOD-* campaign modules in the real tower yard, not KX-*
-    // kernel fixtures: the kernel at x ~ 200 stays untouched regression
-    // substrate and is never retitled into campaign geometry.
-    static constexpr std::uint64_t kIntakeApronEntityId = 35;
-    static constexpr std::uint64_t kIntakeBeltEntityId = 36;
-    static constexpr std::uint64_t kIntakeJibMastEntityId = 37;
-    static constexpr std::uint64_t kIntakeJibBoomEntityId = 38;
-    static constexpr std::uint64_t kIntakeJibHookEntityId = 39;
-    static constexpr std::uint64_t kIntakePackEntityId = 40;
-    static constexpr std::uint64_t kIntakeOverweightPackEntityId = 41;
-    static constexpr std::uint64_t kIntakeDogEntityId = 42;
-    static constexpr std::uint64_t kIntakeBayEntityId = 43;
-    static constexpr std::uint64_t kIntakeStairEntityId = 44;
-    static constexpr std::uint64_t kIntakeHandoffEntityId = 45;
-    static constexpr std::uint64_t kIntakeSkinEntityId = 46;
-
-    // AS-002 campaign entities (Ascent Atlas §6, band B00's 24-40 m leftover).
-    // MOD-STAIR-A's static upper flight, mid-landing and the SKIN continuation
-    // reuse kIntakeStairEntityId / kIntakeSkinEntityId above -- same modules,
-    // continued -- since only the dynamic swing flight and the cradle need
-    // their own identity.
-    static constexpr std::uint64_t kIntakeSwingFlightEntityId = 47;
-    static constexpr std::uint64_t kIntakeCwCradleEntityId = 48;
-    static constexpr std::uint64_t kIntakeHallDeckEntityId = 49;
-    // The swing hinge's own static anchor body (add_hinge's first body) --
-    // NOT grouped under kIntakeStairEntityId like the rest of the static
-    // structure above, because it alone needs to be excluded from contact
-    // with kIntakeSwingFlightEntityId (simulation.cpp's OnContactValidate):
-    // the flight's own cross-section is coincident with this anchor at
-    // every sweep angle by construction (it sits AT the hinge pivot), so
-    // ordinary rigid-body contact between them is never meaningful -- the
-    // hinge constraint alone is what should relate their motion.
-    static constexpr std::uint64_t kIntakeSwingAnchorEntityId = 50;
     // Every static body drawn by the presentation's builders that the native
     // world did not already own: frame dressing, footings, halls, rails,
     // trees. Generated into world_solids.inc; see build_world_solids().
@@ -555,13 +346,6 @@ public:
     // Crouch fixture beside the WO-003 traversal fixtures: a beam and its two
     // posts, the beam's underside 1.45 m over the deck.
     static constexpr std::uint64_t kCrawlBeamEntityId = 52;
-    // AS-003 MOD-HOOK5-RACK: the cage's static members (buttress, walls, roof,
-    // bar brackets, rack), its inward-swinging door, the bar holding the door
-    // shut, and the hook block itself (CAP-HOOK5).
-    static constexpr std::uint64_t kHook5CageEntityId = 53;
-    static constexpr std::uint64_t kHook5DoorEntityId = 54;
-    static constexpr std::uint64_t kHook5BarEntityId = 55;
-    static constexpr std::uint64_t kHook5BlockEntityId = 56;
 
     // AS-006, the Counterweight Well. Mechanism-kit ids: band structure from
     // 1000, moving bodies from 2000 (sim/mechanism_kit.hpp).
@@ -693,7 +477,7 @@ public:
     // facing.
     [[nodiscard]] bool set_sprint_input(bool held) noexcept;
 
-    // AS-003 carry commands. One-shot, like request_valve_toggle. A pick-up
+    // Carry commands. One-shot, like request_parachute. A pick-up
     // takes the carryable the snapshot names in carry_target_entity_id -- a
     // real body within reach, at rest, in front -- onto a point constraint at
     // the hands; while held, no vault, mantle or hang begins (both hands are
@@ -714,50 +498,6 @@ public:
     // produces no state change.
     [[nodiscard]] bool request_parachute() noexcept;
 
-    // WO-011 KX-JIB pendant commands. Continuous, persistent axes -- like
-    // set_move_input, not a one-shot event -- matching Drive (slew) and
-    // Raise/Lower (hoist); zero on either axis is the brake, not "let go":
-    // the winch motor holds against gravity up to its rated force, it does
-    // not free-fall the instant input stops. Both axes are clamped to
-    // [-1, 1] and take effect only while the player is at the station
-    // (jib_station_active); away from the station they are accepted as
-    // commands but produce no motion, exactly like a parachute request while
-    // grounded.
-    [[nodiscard]] bool set_jib_slew_input(double value) noexcept;
-    [[nodiscard]] bool set_jib_hoist_input(double value) noexcept;
-
-    // WO-012 KX-NEEDLE pendant command. Same continuous, persistent, signed-
-    // axis contract as the jib's hoist: positive raises, negative lowers,
-    // zero brakes against gravity up to the rated force. Takes effect only
-    // while the player is at the needle station.
-    [[nodiscard]] bool set_needle_hoist_input(double value) noexcept;
-
-    // WO-013 KX-SUMP valve command. A one-shot toggle, like request_parachute
-    // -- not a continuous axis, since isolation is a real binary state (open
-    // feeding the sump, or closed and letting the drain win) -- gated the
-    // same way: accepted as a command anywhere, but only takes effect while
-    // the player is at the sump station.
-    [[nodiscard]] bool request_valve_toggle() noexcept;
-
-    // AS-001 MOD-YARD-JIB pendant (CAP-PENDANT). Same continuous, persistent,
-    // signed-axis contract as the kernel jib, gated on the B00 pendant station
-    // rather than the kernel one. The dog has no command of its own: it is
-    // always under opening torque and is held only by the pack's mass.
-    [[nodiscard]] bool set_intake_slew_input(double value) noexcept;
-    [[nodiscard]] bool set_intake_hoist_input(double value) noexcept;
-
-    // AS-002 sling commands. One-shot, like request_valve_toggle -- not a
-    // held axis -- gated identically on the shared B00 pendant station, and
-    // further gated on the pack/hook actually being in physical tolerance
-    // (see update_legal_forty): a command outside tolerance is accepted but
-    // has no effect, exactly like every other pendant command away from its
-    // station.
-    [[nodiscard]] bool request_intake_sling_release() noexcept;
-    [[nodiscard]] bool request_intake_sling_attach() noexcept;
-
-    // Disables the boiler feed so the plant becomes a strictly finite reservoir.
-    // Used to prove the machine cannot manufacture work.
-    void set_boiler_feed_enabled(bool enabled) noexcept;
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
 
@@ -816,14 +556,6 @@ private:
     bool set_down_requested_ = false;
     bool rig_requested_ = false;
     bool parachute_toggle_requested_ = false;
-    double jib_slew_input_ = 0.0;
-    double jib_hoist_input_ = 0.0;
-    double needle_hoist_input_ = 0.0;
-    double intake_slew_input_ = 0.0;
-    double intake_hoist_input_ = 0.0;
-    bool valve_toggle_requested_ = false;
-    bool intake_sling_release_requested_ = false;
-    bool intake_sling_attach_requested_ = false;
     Snapshot snapshot_{};
 };
 

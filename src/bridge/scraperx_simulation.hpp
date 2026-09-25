@@ -70,26 +70,6 @@ public:
     [[nodiscard]] std::int64_t get_rejected_traversal_count() const;
     [[nodiscard]] std::int64_t get_aborted_traversal_count() const;
     [[nodiscard]] double get_tower_height_meters() const;
-    [[nodiscard]] godot::Vector3 get_hoist_scoop_position() const;
-    [[nodiscard]] double get_hoist_scoop_tilt_radians() const;
-    [[nodiscard]] godot::Vector3 get_ballast_position() const;
-    [[nodiscard]] godot::Vector3 get_ballast_linear_velocity() const;
-    [[nodiscard]] godot::Vector3 get_tipper_position() const;
-    [[nodiscard]] double get_tipper_angle_radians() const;
-    [[nodiscard]] double get_valve_lever_angle_radians() const;
-    [[nodiscard]] double get_treadle_angle_radians() const;
-    [[nodiscard]] double get_valve_open_fraction() const;
-    [[nodiscard]] double get_rope_extension_meters() const;
-    [[nodiscard]] godot::Vector3 get_lift_platform_position() const;
-    [[nodiscard]] godot::Vector3 get_lift_platform_linear_velocity() const;
-    [[nodiscard]] godot::Vector3 get_counterweight_position() const;
-    [[nodiscard]] double get_vessel_pressure_pa() const;
-    [[nodiscard]] double get_cylinder_pressure_pa() const;
-    [[nodiscard]] double get_orifice_mass_flow_kg_per_s() const;
-    [[nodiscard]] double get_vented_mass_kg() const;
-    [[nodiscard]] double get_piston_force_n() const;
-    [[nodiscard]] double get_vessel_available_energy_j() const;
-    [[nodiscard]] double get_machine_cycle_phase_seconds() const;
 
     // WO-008 fall / parachute / checkpoint.
     [[nodiscard]] std::int64_t get_fall_state() const;
@@ -101,62 +81,11 @@ public:
     [[nodiscard]] std::int64_t get_checkpoint_commit_count() const;
     [[nodiscard]] std::int64_t get_death_count() const;
 
-    // WO-011 KX-JIB / KX-CRATE (Ascent Atlas v1.0 kernel).
-    [[nodiscard]] bool set_jib_slew_input(double value);
-    [[nodiscard]] bool set_jib_hoist_input(double value);
-    [[nodiscard]] bool is_jib_station_active() const;
-    [[nodiscard]] double get_jib_boom_angle_radians() const;
-    [[nodiscard]] godot::Vector3 get_jib_hook_position() const;
-    [[nodiscard]] godot::Vector3 get_jib_hook_linear_velocity() const;
-    [[nodiscard]] godot::Vector3 get_jib_crate_position() const;
-    [[nodiscard]] godot::Vector3 get_jib_crate_linear_velocity() const;
-    [[nodiscard]] godot::Vector3 get_jib_capacity_stand_load_position() const;
-
-    // WO-012 KX-NEEDLE / KX-POCKETS (Ascent Atlas v1.0 kernel).
-    [[nodiscard]] bool set_needle_hoist_input(double value);
-    [[nodiscard]] bool is_needle_station_active() const;
-    [[nodiscard]] bool is_needle_seated() const;
-    [[nodiscard]] godot::Vector3 get_needle_position() const;
-    [[nodiscard]] godot::Vector3 get_needle_linear_velocity() const;
-
-    // WO-013 KX-SUMP / KX-GRATE (Ascent Atlas v1.0 kernel).
-    [[nodiscard]] bool request_valve_toggle();
-    [[nodiscard]] bool is_sump_station_active() const;
-    [[nodiscard]] bool is_sump_isolated() const;
-    [[nodiscard]] double get_sump_volume_kg() const;
-    [[nodiscard]] bool is_grate_safe() const;
-
-    // AS-001 B00 intake rise (Ascent Atlas §6 band B00, §7 chain K0).
-    [[nodiscard]] bool set_intake_slew_input(double value);
-    [[nodiscard]] bool set_intake_hoist_input(double value);
-    [[nodiscard]] bool is_intake_station_active() const;
-    [[nodiscard]] double get_intake_boom_angle_radians() const;
-    [[nodiscard]] godot::Vector3 get_intake_hook_position() const;
-    [[nodiscard]] godot::Vector3 get_intake_pack_position() const;
-    [[nodiscard]] godot::Vector3 get_intake_overweight_pack_position() const;
-    [[nodiscard]] double get_intake_dog_angle_radians() const;
-    [[nodiscard]] bool does_intake_pack_pin_dog() const;
-    [[nodiscard]] bool is_intake_throat_clear() const;
-
-    // AS-002 Legal Forty (Ascent Atlas §6, band B00's 24-40 m leftover).
-    [[nodiscard]] bool request_intake_sling_release();
-    [[nodiscard]] bool request_intake_sling_attach();
-    [[nodiscard]] bool is_legal_forty_pack_slung() const;
-    [[nodiscard]] double get_legal_forty_swing_travel_radians() const;
-    [[nodiscard]] godot::Vector3 get_legal_forty_swing_flight_position() const;
-    [[nodiscard]] godot::Vector3 get_legal_forty_cradle_position() const;
-
-    // AS-003 MOD-HOOK5-RACK: the carry commands, and the cage read back.
+    // The carry: pick up and set down, and what is held or would be.
     [[nodiscard]] bool request_pick_up();
     [[nodiscard]] bool request_set_down();
     [[nodiscard]] std::int64_t get_carrying_entity_id() const;
     [[nodiscard]] std::int64_t get_carry_target_entity_id() const;
-    [[nodiscard]] bool is_hook_in_rack() const;
-    [[nodiscard]] double get_hook5_door_angle_radians() const;
-    [[nodiscard]] godot::Vector3 get_hook5_bar_position() const;
-    [[nodiscard]] godot::Quaternion get_hook5_bar_rotation() const;
-    [[nodiscard]] godot::Vector3 get_hook5_block_position() const;
-    [[nodiscard]] godot::Quaternion get_hook5_block_rotation() const;
 
     // AS-006 and the mechanism kit. request_rig is the contextual rig verb
     // (hook a carried shackle onto the anchor in reach, or take a slack

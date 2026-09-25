@@ -1,16 +1,15 @@
 extends Node
 
 # Every device speaks one verb vocabulary; main.gd decides what a verb means
-# against native state (a Jump while hanging is the native mantle, an Action at
-# a pendant opens its controls). Held state is rebuilt only from events, never
+# against native state (a Jump while hanging is the native mantle, an Action
+# at a hold climbs it). Held state is rebuilt only from events, never
 # polled from Input, so an injected test event and a real device take exactly
 # one path -- and focus loss can clear it wholesale, because a key released
 # while the window was unfocused never arrives and a stuck key must not keep
 # walking the player off a ledge.
 #
-# Verbs: jump, action, drop, chute, back (pad B: drop / leave controls),
-# alt (pad Y: chute / sling), sling_toggle, valve, sling_release, sling_attach,
-# crouch (a toggle: C, right-stick click, the touch button), pause, telemetry.
+# Verbs: jump, action, drop, chute, back (pad B: let go / set down),
+# alt (pad Y: chute), crouch (a toggle: C, right-stick click, the touch button), pause, telemetry.
 # Held Ctrl is the one held crouch; frame() reports it as crouch_held.
 # Sprint is held too: Shift; a left-stick click, latched until the stick comes
 # back to rest; the touch stick pushed on past its ring. frame() reports it
@@ -44,7 +43,6 @@ const DEVICE_SWITCH_AXIS := 0.45
 # positive rate about x. Below this rate the turn is tightened toward zero,
 # so a steady hand's sensor noise does not drift the view.
 const GYRO_TIGHTEN_RADIANS_PER_SECOND := 0.035
-const TRIGGER_DEADZONE := 0.08
 const AXIS_COUNT := 6
 
 var device := Device.KEYBOARD_MOUSE
@@ -179,12 +177,6 @@ func _handle_key(key: InputEventKey) -> void:
 			_verbs.append(&"chute")
 		KEY_C:
 			_verbs.append(&"crouch")
-		KEY_V:
-			_verbs.append(&"valve")
-		KEY_R:
-			_verbs.append(&"sling_release")
-		KEY_G:
-			_verbs.append(&"sling_attach")
 		KEY_ESCAPE:
 			_verbs.append(&"pause")
 		KEY_F3:
@@ -267,10 +259,6 @@ func _held(code: Key) -> float:
 	return 1.0 if _keys.has(code) else 0.0
 
 
-func _pad_button(button: JoyButton) -> float:
-	return 1.0 if _buttons.has(button) else 0.0
-
-
 # Radial deadzone rescaled to the full range, so a small, deliberate push is
 # a small, deliberate walk rather than a jump from zero to 14 percent.
 func _stick(axis_x: int, axis_y: int) -> Vector2:
@@ -282,13 +270,6 @@ func _stick(axis_x: int, axis_y: int) -> Vector2:
 		return Vector2.ZERO
 	var scaled := minf(1.0, (magnitude - STICK_DEADZONE) / (1.0 - STICK_DEADZONE))
 	return value / magnitude * scaled
-
-
-func _trigger(axis: int) -> float:
-	if active_pad < 0:
-		return 0.0
-	var value := _axes[axis]
-	return 0.0 if value <= TRIGGER_DEADZONE else (value - TRIGGER_DEADZONE) / (1.0 - TRIGGER_DEADZONE)
 
 
 func _stick_look(stick: Vector2, delta: float) -> Vector2:
@@ -325,11 +306,10 @@ func _gyro_look(delta: float) -> Vector2:
 
 # One frame of intent. look is in radians with screen orientation (x right,
 # y down), exactly what the old _apply_look_delta consumed; move is x right,
-# y forward; pendant is x slew/drive, y raise(+)/lower(-).
+# y forward.
 func frame(delta: float) -> Dictionary:
 	var move := Vector2.ZERO
 	var look := Vector2.ZERO
-	var pendant := Vector2.ZERO
 	var crouch_held := false
 	var sprint_held := false
 	if enabled and gameplay_active:
@@ -347,7 +327,6 @@ func frame(delta: float) -> Dictionary:
 		if touch != null:
 			move += touch.move_vector
 			look_units += touch.take_look_delta()
-			pendant += touch.pendant_axes
 		move = move.limit_length(1.0)
 		look = look_units * LOOK_RADIANS_PER_UNIT * look_sensitivity
 		look += _stick_look(_stick(JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y), delta)
@@ -355,14 +334,8 @@ func frame(delta: float) -> Dictionary:
 			look.y = -look.y
 		# After the invert: tipping the device up is looking up for everyone.
 		look += _gyro_look(delta)
-		pendant += Vector2(_held(KEY_RIGHT) - _held(KEY_LEFT), _held(KEY_UP) - _held(KEY_DOWN))
-		pendant += Vector2(
-			_pad_button(JOY_BUTTON_DPAD_RIGHT) - _pad_button(JOY_BUTTON_DPAD_LEFT),
-			_pad_button(JOY_BUTTON_DPAD_UP) - _pad_button(JOY_BUTTON_DPAD_DOWN))
-		pendant.y += _trigger(JOY_AXIS_TRIGGER_RIGHT) - _trigger(JOY_AXIS_TRIGGER_LEFT)
-		pendant = Vector2(clampf(pendant.x, -1.0, 1.0), clampf(pendant.y, -1.0, 1.0))
 	_mouse_look = Vector2.ZERO
 	var verbs: Array[StringName] = _verbs.duplicate()
 	_verbs.clear()
-	return {"move": move, "look": look, "pendant": pendant, "verbs": verbs,
+	return {"move": move, "look": look, "verbs": verbs,
 		"crouch_held": crouch_held, "sprint_held": sprint_held}

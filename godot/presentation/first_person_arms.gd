@@ -356,7 +356,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	_last_traversal = traversal
 	var torso_right := forward.cross(Vector3.UP).normalized()
 	var speed := Vector2(velocity.x, velocity.z).length()
-	var operating: StringName = state["operating"]
+	var operating: StringName = state.get("operating", &"")
 	var chute: bool = state["chute"]
 
 	var remote_frame := Transform3D()
@@ -365,7 +365,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	_remote.visible = operating != &""
 	if _remote.visible:
 		_remote.global_transform = remote_frame
-		_update_remote_buttons(state["pendant"])
+		_update_remote_buttons(state.get("pendant", Vector2.ZERO))
 
 	for hand in _hands:
 		var raised := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING]
@@ -533,7 +533,7 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			var wrist := remote_frame * local_wrist
 			var rb := remote_frame.basis
 			var basis := _hand_basis(rb.y * 0.9 - rb.z * 0.35, rb.x * side)
-			var pendant: Vector2 = state["pendant"]
+			var pendant: Vector2 = state.get("pendant", Vector2.ZERO)
 			var pressing := absf(pendant.y) > 0.1 if side > 0.0 else absf(pendant.x) > 0.1
 			return [wrist, basis, false, 18.0, 0.7, 0.42 if pressing else 0.3]
 		POSE_CARRY:

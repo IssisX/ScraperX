@@ -3,7 +3,8 @@ extends Node
 # Scripted proof that every control path reaches the native authority. Each
 # scenario injects events through the real viewport input pipeline -- the
 # same _input the devices feed -- and asserts a NATIVE state change (tick,
-# traversal, velocity, station state), never a presentation variable alone.
+# traversal, velocity, carry and rig state), never a presentation variable
+# alone.
 #
 # One scenario per process, because the native spawn is fixed at tick 0:
 #   godot --headless --fixed-fps 60 --path godot -- --uitest=<scenario>
@@ -25,23 +26,19 @@ const SCENARIOS := {
 	"touch_crouch": 0,
 	"touch_hang_drop": 5,
 	"touch_hang_climb": 5,
-	"touch_chute": 11,
-	"touch_lethal_feedback": 11,
-	"touch_sump": 17,
-	"touch_pendant": 18,
-	"touch_carry": 22,
+	"touch_chute": 9,
+	"touch_lethal_feedback": 9,
 	"touch_pause": 8,
 	"pad_core": 8,
-	"pad_pendant": 14,
 	"keyboard_core": 8,
-	# AS-006 Stage A, rigged and ridden on each device from the stair's top deck.
-	"touch_rig": 24,
-	"pad_rig": 24,
-	"keyboard_rig": 24,
+	# AS-006 Stage A, rigged and ridden on each device from the 154 m deck.
+	"touch_rig": 11,
+	"pad_rig": 11,
+	"keyboard_rig": 11,
 	# AS-006 Stage C, the chute cleared and the platform freed on each device.
-	"touch_debris": 26,
-	"pad_debris": 26,
-	"keyboard_debris": 26,
+	"touch_debris": 13,
+	"pad_debris": 13,
+	"keyboard_debris": 13,
 	# Needs a mixing audio driver: run under --write-movie (see _audio_mix).
 	"audio_mix": 8,
 }
@@ -110,18 +107,10 @@ func _run() -> void:
 			ok = await _touch_chute()
 		"touch_lethal_feedback":
 			ok = await _touch_lethal_feedback()
-		"touch_sump":
-			ok = await _touch_sump()
-		"touch_pendant":
-			ok = await _touch_pendant()
-		"touch_carry":
-			ok = await _touch_carry()
 		"touch_pause":
 			ok = await _touch_pause()
 		"pad_core":
 			ok = await _pad_core()
-		"pad_pendant":
-			ok = await _pad_pendant()
 		"keyboard_core":
 			ok = await _keyboard_core()
 		"touch_rig":
@@ -389,94 +378,6 @@ func _touch_crouch() -> bool:
 	return true
 
 
-# AS-003 from the cage floor, all through the touch pipeline: facing the bar
-# across the inside of the door, Action reads PICK UP and takes it; backed off
-# with it, SET DOWN leaves the door to swing open on its own drive; facing the
-# rack, PICK UP takes the hook block with both hands shown on it; and it is
-# carried out through the doorway and set down on the apron.
-func _touch_carry() -> bool:
-	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
-	_main._yaw = 0.0  # south, at the bar
-	_stick_push(Vector2(0.0, -1.0))
-	var at_bar: bool = await _wait_until(func() -> bool: return _position().z <= -86.75, 2.0)
-	_touch(0, _main._touch.stick_home(), false)
-	if not at_bar:
-		return _fail("never reached the bar (z %.2f)" % _position().z)
-	await _seconds(0.4)
-	if _main._touch.button_label(&"action") != "PICK UP":
-		return _fail("Action read '%s' at the bar, not PICK UP" % _main._touch.button_label(&"action"))
-	_tap(1, _center(&"action"))
-	var holding_bar: bool = await _wait_until(
-		func() -> bool: return int(_native().get_carrying_entity_id()) == 55, 0.3)
-	if not holding_bar:
-		return _fail("PICK UP did not put the bar on the native carry point")
-	_stick_push(Vector2(0.0, 1.0))  # back away north, the bar still ahead
-	await _wait_until(func() -> bool: return _position().z >= -85.7, 2.0)
-	_touch(0, _main._touch.stick_home(), false)
-	await _seconds(0.3)
-	if _main._touch.button_label(&"action") != "SET DOWN":
-		return _fail("Action read '%s' holding the bar, not SET DOWN" % _main._touch.button_label(&"action"))
-	_tap(1, _center(&"action"))
-	var bar_down: bool = await _wait_until(
-		func() -> bool: return int(_native().get_carrying_entity_id()) == 0, 0.3)
-	if not bar_down:
-		return _fail("SET DOWN did not take the bar off the carry point")
-	var opened: bool = await _wait_until(
-		func() -> bool: return float(_native().get_hook5_door_angle_radians()) >= 1.2, 5.0)
-	if not opened:
-		return _fail("the door never travelled once the bar was set down (%.2f rad)" %
-			float(_native().get_hook5_door_angle_radians()))
-	await _pose("door_open")
-	_main._yaw = PI  # north, toward the rack's corner
-	_stick_push(Vector2(0.0, -1.0))
-	await _wait_until(func() -> bool: return _position().z >= -84.9, 2.0)
-	_touch(0, _main._touch.stick_home(), false)
-	_main._yaw = -PI * 0.5  # east, at the block
-	await _seconds(0.4)
-	if _main._touch.button_label(&"action") != "PICK UP":
-		return _fail("Action read '%s' at the rack, not PICK UP" % _main._touch.button_label(&"action"))
-	_tap(1, _center(&"action"))
-	var holding_block: bool = await _wait_until(
-		func() -> bool: return int(_native().get_carrying_entity_id()) == 56, 0.3)
-	if not holding_block:
-		return _fail("PICK UP did not put the hook block on the native carry point")
-	await _seconds(0.5)
-	if _main._arms.hand_poses() != [8, 8]:
-		return _fail("hands not on the block (poses %s)" % str(_main._arms.hand_poses()))
-	await _pose("holding_block")
-	# Out through the doorway, east of the travelled leaf.
-	for leg in [Vector2(10.7, -86.8), Vector2(10.7, -89.6)]:
-		var at: Vector3 = _position()
-		_main._yaw = atan2(-(leg.x - at.x), -(leg.y - at.z))
-		_stick_push(Vector2(0.0, -1.0))
-		var arrived: bool = await _wait_until(func() -> bool: return _position().z <= leg.y + 0.1, 3.0)
-		_touch(0, _main._touch.stick_home(), false)
-		if not arrived:
-			return _fail("the carry out stalled at (%.2f, %.2f)" % [_position().x, _position().z])
-	await _seconds(0.4)
-	if int(_native().get_carrying_entity_id()) != 56 or bool(_native().is_hook_in_rack()):
-		return _fail("the block was not held off its rack outside the cage")
-	await _pose("carried_out")
-	_tap(1, _center(&"action"))
-	var set_down: bool = await _wait_until(
-		func() -> bool: return int(_native().get_carrying_entity_id()) == 0, 0.3)
-	if not set_down:
-		return _fail("SET DOWN did not release the block outside")
-	await _seconds(1.5)
-	var block: Vector3 = _native().get_hook5_block_position()
-	# Back off south-east and look at the cage the way it is approached.
-	_main._yaw = atan2(-(10.3 - 13.5), -(-86.0 - (-94.0)))
-	_stick_push(Vector2(0.0, 1.0))
-	await _seconds(1.1)
-	_touch(0, _main._touch.stick_home(), false)
-	_main._pitch = 0.12
-	await _seconds(0.6)
-	await _pose("cage_exterior")
-	_detail = "door_rad=%.2f block=(%.2f,%.2f,%.2f)" % [
-		float(_native().get_hook5_door_angle_radians()), block.x, block.y, block.z]
-	return block.y < 0.4 and block.z < -88.0
-
-
 func _eye_over_soles() -> float:
 	var half := 0.6 if bool(_native().is_player_crouched()) else 0.9
 	return _main._camera.position.y - (_position().y - half)
@@ -567,53 +468,6 @@ func _touch_lethal_feedback() -> bool:
 	_detail = "toast='%s' lethal_mps=%.1f" % [sub, lethal]
 	# The announced speed must be the lethal fall it reports, not a settle.
 	return fell_at > lethal
-
-
-func _touch_sump() -> bool:
-	var reached: bool = await _wait_until(func() -> bool: return _ctx()["action"]["id"] == &"valve", 2.0)
-	if not reached:
-		return _fail("ACTION never offered the sump valve")
-	var before := bool(_native().is_sump_isolated())
-	_tap(0, _center(&"action"))
-	var reached_2: bool = await _wait_until(func() -> bool: return bool(_native().is_sump_isolated()) != before, 0.2)
-	if not reached_2:
-		return _fail("ACTION did not toggle the native sump valve")
-	_detail = "isolated %s->%s" % [before, not before]
-	return true
-
-
-func _touch_pendant() -> bool:
-	var reached: bool = await _wait_until(func() -> bool: return _ctx()["action"]["id"] == &"operate", 2.0)
-	if not reached:
-		return _fail("ACTION never offered OPERATE at the yard jib pendant")
-	_tap(0, _center(&"action"))
-	await _frames(3)
-	if _main._operating != &"intake" or not _main._touch.is_button_shown(&"pendant_left"):
-		return _fail("OPERATE did not open the pendant controls")
-	if not _main._arms.remote_visible():
-		return _fail("the crane remote is not in hand while operating")
-	await _seconds(0.3)
-	await _pose("pendant")
-	var boom_before := float(_native().get_intake_boom_angle_radians())
-	_touch(1, _center(&"pendant_left"), true)
-	await _seconds(1.0)
-	_touch(1, _center(&"pendant_left"), false)
-	var boom_after := float(_native().get_intake_boom_angle_radians())
-	var hook_before := float(_native().get_intake_hook_position().y)
-	_touch(1, _center(&"pendant_up"), true)
-	await _seconds(1.0)
-	_touch(1, _center(&"pendant_up"), false)
-	var hook_after := float(_native().get_intake_hook_position().y)
-	_tap(0, _center(&"action"))
-	await _frames(3)
-	if absf(boom_after - boom_before) < 0.02:
-		return _fail("holding SLEW did not move the native boom (%.4f rad)" % (boom_after - boom_before))
-	if absf(hook_after - hook_before) < 0.05:
-		return _fail("holding HOIST did not move the native hook (%.4f m)" % (hook_after - hook_before))
-	if _main._operating != &"":
-		return _fail("DONE did not close the pendant controls")
-	_detail = "boom_delta_rad=%.3f hook_delta_m=%.3f" % [boom_after - boom_before, hook_after - hook_before]
-	return true
 
 
 func _touch_pause() -> bool:
@@ -724,38 +578,6 @@ func _pad_core() -> bool:
 	if not frozen:
 		return _fail("native clock advanced while paused")
 	_detail = "forward_m=%.2f turned_rad=%.3f" % [along, turned]
-	return true
-
-
-func _pad_pendant() -> bool:
-	var reached: bool = await _wait_until(func() -> bool: return _ctx()["action"]["id"] == &"operate", 2.0)
-	if not reached:
-		return _fail("ACTION never offered OPERATE at the KX-JIB pendant")
-	_button(JOY_BUTTON_X)
-	await _frames(3)
-	if _main._operating != &"jib":
-		return _fail("X did not open the KX-JIB pendant")
-	await _seconds(0.3)
-	await _pose("pad_pendant")
-	var boom_before := float(_native().get_jib_boom_angle_radians())
-	_button(JOY_BUTTON_DPAD_LEFT, true)
-	await _seconds(1.0)
-	_button(JOY_BUTTON_DPAD_LEFT, false)
-	var boom_after := float(_native().get_jib_boom_angle_radians())
-	var hook_before := float(_native().get_jib_hook_position().y)
-	_axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)
-	await _seconds(1.0)
-	_axis(JOY_AXIS_TRIGGER_RIGHT, 0.0)
-	var hook_after := float(_native().get_jib_hook_position().y)
-	_button(JOY_BUTTON_B)
-	await _frames(3)
-	if absf(boom_after - boom_before) < 0.02:
-		return _fail("D-pad did not drive the native jib (%.4f rad)" % (boom_after - boom_before))
-	if absf(hook_after - hook_before) < 0.05:
-		return _fail("RT did not hoist the native hook (%.4f m)" % (hook_after - hook_before))
-	if _main._operating != &"":
-		return _fail("B did not leave the pendant controls")
-	_detail = "boom_delta_rad=%.3f hook_delta_m=%.3f" % [boom_after - boom_before, hook_after - hook_before]
 	return true
 
 

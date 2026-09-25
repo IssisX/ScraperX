@@ -85,7 +85,7 @@ mouse_filter = 2
 [node name="Eyebrow" type="Label" parent="HUD/TopLeft"]
 theme_override_colors/font_color = Color(0.76, 0.56, 0.3, 1)
 theme_override_font_sizes/font_size = 17
-text = "SCRAPERX  /  KELLERWORKS TOWER  /  PLANT 001"
+text = "SCRAPERX  /  KELLERWORKS TOWER"
 
 [node name="Status" type="Label" parent="HUD/TopLeft"]
 theme_override_colors/font_color = Color(0.86, 0.85, 0.82, 1)
@@ -112,50 +112,10 @@ theme_override_colors/font_color = Color(0.56, 0.55, 0.52, 1)
 theme_override_font_sizes/font_size = 16
 text = "TRAVERSAL"
 
-[node name="Machine" type="Label" parent="HUD/TopLeft"]
-theme_override_colors/font_color = Color(0.78, 0.6, 0.34, 1)
-theme_override_font_sizes/font_size = 16
-text = "PLANT"
-
-[node name="Plant" type="Label" parent="HUD/TopLeft"]
-theme_override_colors/font_color = Color(0.68, 0.64, 0.58, 1)
-theme_override_font_sizes/font_size = 16
-text = "VESSEL"
-
 [node name="Fall" type="Label" parent="HUD/TopLeft"]
 theme_override_colors/font_color = Color(0.62, 0.7, 0.66, 1)
 theme_override_font_sizes/font_size = 16
 text = "FALL"
-
-[node name="Jib" type="Label" parent="HUD/TopLeft"]
-theme_override_colors/font_color = Color(0.72, 0.66, 0.5, 1)
-theme_override_font_sizes/font_size = 16
-text = "JIB"
-
-[node name="Needle" type="Label" parent="HUD/TopLeft"]
-theme_override_colors/font_color = Color(0.6, 0.72, 0.66, 1)
-theme_override_font_sizes/font_size = 16
-text = "NEEDLE"
-
-[node name="Sump" type="Label" parent="HUD/TopLeft"]
-theme_override_colors/font_color = Color(0.74, 0.6, 0.36, 1)
-theme_override_font_sizes/font_size = 16
-text = "SUMP"
-
-[node name="Intake" type="Label" parent="HUD/TopLeft"]
-theme_override_colors/font_color = Color(0.72, 0.6, 0.38, 1)
-theme_override_font_sizes/font_size = 16
-text = "INTAKE"
-
-[node name="LegalForty" type="Label" parent="HUD/TopLeft"]
-theme_override_colors/font_color = Color(0.72, 0.6, 0.38, 1)
-theme_override_font_sizes/font_size = 16
-text = "LEGAL FORTY"
-
-[node name="Hook5" type="Label" parent="HUD/TopLeft"]
-theme_override_colors/font_color = Color(0.72, 0.6, 0.38, 1)
-theme_override_font_sizes/font_size = 16
-text = "HOOK 5"
 
 [node name="TopRight" type="VBoxContainer" parent="HUD"]
 anchors_preset = 1
@@ -179,6 +139,6 @@ horizontal_alignment = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.74, 0.5, 0.24, 1)
 theme_override_font_sizes/font_size = 15
-text = "B00 INTAKE RISE  /  APRON TO +24 M"
+text = "MECHANISM ASCENT  /  FROM GRADE"
 horizontal_alignment = 2
 

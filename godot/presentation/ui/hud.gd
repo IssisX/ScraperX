@@ -31,8 +31,6 @@ var _prompts: Array[Dictionary] = []
 var _alt_alpha := 0.0
 var _alt_timer := 0.0
 var _alt_anchor := NAN
-var _panel_alpha := 0.0
-var _panel := {}
 var _toasts: Array[Dictionary] = []
 var _flash := 0.0
 var _flash_color := UiStyle.HAZARD
@@ -94,10 +92,6 @@ func update_hud(ctx: Dictionary, delta: float) -> void:
 
 	_prompts = _build_prompts(ctx)
 	_prompt_alpha = move_toward(_prompt_alpha, 1.0 if not _prompts.is_empty() else 0.0, delta * 8.0)
-	var panel: Dictionary = ctx["panel"]
-	if not panel.is_empty():
-		_panel = panel
-	_panel_alpha = move_toward(_panel_alpha, 1.0 if not panel.is_empty() else 0.0, delta * 6.0)
 
 	for toast_entry in _toasts:
 		toast_entry["t"] = float(toast_entry["t"]) + delta
@@ -123,9 +117,6 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 		if ctx["chute_ok"] and danger:
 			out.append(_prompt(&"chute", "OPEN THE CHUTE", "", TONE_DANGER))
 		return out
-	if ctx["operating"] != &"":
-		out.append(_prompt(&"done", "DONE"))
-		return out
 	if ctx["hanging"]:
 		out.append(_prompt(&"jump", "CLIMB UP"))
 		out.append(_prompt(&"drop", "DROP"))
@@ -144,10 +135,8 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 			TONE_DANGER if danger else TONE_NORMAL))
 	var action: Dictionary = ctx["action"]
 	match action["id"]:
-		&"climb", &"operate", &"pick_up", &"set_down", &"hook", &"unhook":
+		&"climb", &"pick_up", &"set_down", &"hook", &"unhook":
 			out.append(_prompt(&"action", action["label"], action["detail"]))
-		&"valve":
-			out.append(_prompt(&"valve", action["label"], action["detail"]))
 	if ctx.get("drop_ok", false):
 		out.append(_prompt(&"drop", "DROP DOWN", "OVER THE EDGE"))
 	return out
@@ -166,8 +155,6 @@ func _draw() -> void:
 		_draw_prompts(center)
 	if _alt_alpha > 0.01:
 		_draw_altimeter()
-	if _panel_alpha > 0.01 and not _panel.is_empty():
-		_draw_station_panel()
 	if not _toasts.is_empty():
 		_draw_toasts()
 
@@ -323,59 +310,6 @@ func _draw_altimeter() -> void:
 	var player_y := rail_top + rail_height * (1.0 - clampf(position.y / tower, 0.0, 1.0))
 	UiStyle.triangle(self, Vector2(rail_x - 20.0 * u, player_y), 10.0 * u, Vector2.RIGHT,
 		UiStyle.with_alpha(UiStyle.AMBER, alpha))
-
-
-func _draw_station_panel() -> void:
-	var u := _u
-	var alpha := _panel_alpha
-	var rows: Array = _panel["rows"]
-	var verbs: Array = [] if touch_active else _panel["verbs"]
-	var width := 620.0 * u
-	var height := 118.0 * u + 46.0 * u * float(rows.size()) + 24.0 * u
-	if not verbs.is_empty():
-		height += 30.0 * u + 56.0 * u * float(verbs.size())
-	var origin := Vector2(_safe.position.x + 64.0 * u, _safe.position.y + _safe.size.y * 0.29)
-	var rect := Rect2(origin, Vector2(width, height))
-	UiStyle.plate(self, rect, UiStyle.with_alpha(UiStyle.INK, 0.8 * alpha),
-		UiStyle.with_alpha(UiStyle.AMBER, alpha), 6.0 * u, 22.0 * u)
-	UiStyle.hazard_band(self, Rect2(origin + Vector2(6.0 * u, 0.0), Vector2(width - 34.0 * u, 12.0 * u)),
-		UiStyle.with_alpha(UiStyle.AMBER, 0.9 * alpha), UiStyle.with_alpha(UiStyle.INK, 0.9 * alpha), 14.0 * u)
-	var left := origin.x + 32.0 * u
-	var right := origin.x + width - 32.0 * u
-	UiStyle.text(self, UiStyle.font_heavy(), _panel["title"], Vector2(left, origin.y + 64.0 * u),
-		int(roundf(34.0 * u)), UiStyle.with_alpha(UiStyle.PAPER, alpha))
-	UiStyle.text(self, UiStyle.font_label(), _panel["subtitle"], Vector2(left, origin.y + 94.0 * u),
-		int(roundf(19.0 * u)), UiStyle.with_alpha(UiStyle.PAPER_DIM, alpha))
-	var y := origin.y + 118.0 * u
-	for row in rows:
-		y += 46.0 * u
-		var tone_color := UiStyle.PAPER
-		match int(row[2]):
-			1:
-				tone_color = UiStyle.SAFE
-			2:
-				tone_color = UiStyle.HAZARD
-		UiStyle.text(self, UiStyle.font_label(), row[0], Vector2(left, y), int(roundf(21.0 * u)),
-			UiStyle.with_alpha(UiStyle.PAPER_DIM, alpha))
-		UiStyle.text(self, UiStyle.font_digits(), row[1], Vector2(right, y), int(roundf(27.0 * u)),
-			UiStyle.with_alpha(tone_color, alpha), HORIZONTAL_ALIGNMENT_RIGHT)
-	if verbs.is_empty():
-		return
-	y += 30.0 * u
-	draw_line(Vector2(left, y), Vector2(right, y), UiStyle.with_alpha(UiStyle.PAPER, 0.18 * alpha), 2.0 * u)
-	var h := 48.0 * u
-	var font := UiStyle.font_label()
-	var size := int(roundf(25.0 * u))
-	for entry in verbs:
-		y += 56.0 * u
-		var glyph_center := Vector2(left, y - 9.0 * u)
-		var used := UiStyle.draw_binding(self, family, entry[0], glyph_center, h, alpha)
-		# Pads hoist on the triggers too; the panel shows both ways in.
-		if entry[0] == &"hoist" and family not in [UiStyle.Family.KEYBOARD, UiStyle.Family.TOUCH]:
-			used += 10.0 * u + UiStyle.draw_binding(self, family, &"hoist_analog",
-				glyph_center + Vector2(used + 10.0 * u, 0.0), h, alpha)
-		UiStyle.text(self, font, entry[1], Vector2(left + used + 16.0 * u, y), size,
-			UiStyle.with_alpha(UiStyle.PAPER, alpha))
 
 
 func _draw_toasts() -> void:

@@ -23,11 +23,6 @@ const B_CROUCH := &"crouch"
 const B_DROP := &"drop"
 const B_CHUTE := &"chute"
 const B_PAUSE := &"pause"
-const B_UP := &"pendant_up"
-const B_DOWN := &"pendant_down"
-const B_LEFT := &"pendant_left"
-const B_RIGHT := &"pendant_right"
-const B_SLING := &"sling"
 
 const TONE_NORMAL := 0
 const TONE_PRIMARY := 1
@@ -69,13 +64,11 @@ class TouchButton:
 var router: Node
 var move_vector := Vector2.ZERO
 var sprint_latched := false
-var pendant_axes := Vector2.ZERO
 var touch_scale := 1.0
 
 var _u := 1.0
 var _buttons := {}
-var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_UP,
-	B_DOWN, B_LEFT, B_RIGHT, B_SLING]
+var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -84,9 +77,6 @@ var _stick_zone := Rect2()
 var _safe := Rect2()
 var _look_index := -1
 var _look_accum := Vector2.ZERO
-var _operating := false
-var _axis_names := ["", ""]
-var _pendant_center := Vector2.ZERO
 var _hint_clock := 0.0
 var _moved := false
 var _looked := false
@@ -99,16 +89,10 @@ func _ready() -> void:
 	for id in _order:
 		var button := TouchButton.new()
 		button.id = id
-		button.hold = id in [B_UP, B_DOWN, B_LEFT, B_RIGHT]
 		_buttons[id] = button
 	_buttons[B_PAUSE].icon = &"pause"
 	_buttons[B_DROP].icon = &"drop"
 	_buttons[B_DROP].label = "DROP"
-	_buttons[B_UP].icon = &"up"
-	_buttons[B_DOWN].icon = &"down"
-	_buttons[B_LEFT].icon = &"left"
-	_buttons[B_RIGHT].icon = &"right"
-	_buttons[B_SLING].icon = &"sling"
 	resized.connect(_layout)
 	_layout()
 
@@ -152,15 +136,6 @@ func _layout() -> void:
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
 		_safe.size.x * 0.46, _safe.size.y * 0.78)
-	# The pendant takes the stick's place: while operating, the left thumb
-	# is on the machine and the right thumb stays free to watch the load.
-	_pendant_center = _stick_home + Vector2(20.0, -40.0) * _u
-	var arm := 158.0 * _u
-	_place(B_UP, _pendant_center + Vector2(0.0, -arm), 80.0)
-	_place(B_DOWN, _pendant_center + Vector2(0.0, arm), 80.0)
-	_place(B_LEFT, _pendant_center + Vector2(-arm, 0.0), 80.0)
-	_place(B_RIGHT, _pendant_center + Vector2(arm, 0.0), 80.0)
-	_place(B_SLING, _pendant_center + Vector2(arm + 250.0 * _u, -arm * 0.6), 78.0)
 	queue_redraw()
 
 
@@ -184,8 +159,6 @@ func _verb_for(id: StringName) -> StringName:
 			return &"chute"
 		B_PAUSE:
 			return &"pause"
-		B_SLING:
-			return &"sling_toggle"
 	return &""
 
 
@@ -195,7 +168,6 @@ func reset_touches() -> void:
 	_look_accum = Vector2.ZERO
 	move_vector = Vector2.ZERO
 	sprint_latched = false
-	pendant_axes = Vector2.ZERO
 	for button in _buttons.values():
 		button.index = -1
 	queue_redraw()
@@ -234,7 +206,7 @@ func _touch_down(index: int, at: Vector2) -> bool:
 		pressed_feedback.emit()
 		queue_redraw()
 		return true
-	if _stick_index == -1 and not _operating and _stick_zone.has_point(at):
+	if _stick_index == -1 and _stick_zone.has_point(at):
 		_stick_index = index
 		_stick_origin = at
 		_stick_knob = Vector2.ZERO
@@ -355,57 +327,25 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		chute.tone = TONE_NORMAL
 	_buttons[B_PAUSE].shown = true
 
-	var station: StringName = ctx["operating"]
-	_operating = station != &""
 	var crouch: TouchButton = _buttons[B_CROUCH]
-	crouch.shown = not _operating and not hanging and not climbing
+	crouch.shown = not hanging and not climbing
 	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
 	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
 	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
-	var has_x := station == &"jib" or station == &"intake"
-	_buttons[B_UP].shown = _operating
-	_buttons[B_DOWN].shown = _operating
-	_buttons[B_LEFT].shown = _operating and has_x
-	_buttons[B_RIGHT].shown = _operating and has_x
-	var sling: TouchButton = _buttons[B_SLING]
-	sling.shown = station == &"intake"
-	sling.label = "RELEASE PACK" if ctx["slung"] else "ATTACH PACK"
-	sling.tone = TONE_PRIMARY
-	match station:
-		&"jib":
-			_axis_names = ["HOIST", "DRIVE"]
-		&"intake":
-			_axis_names = ["HOIST", "SLEW"]
-		&"needle":
-			_axis_names = ["RAISE / LOWER", ""]
-		_:
-			_axis_names = ["", ""]
-	if _operating and _stick_index != -1:
-		_touch_up(_stick_index)
 
 	for button in _buttons.values():
 		if not button.shown and button.index != -1:
 			button.index = -1
 		button.appear = move_toward(button.appear, 1.0 if button.shown else 0.0, APPEAR_RATE * delta)
 		button.flash = maxf(0.0, button.flash - delta * 3.5)
-	pendant_axes = Vector2(
-		_held(B_RIGHT) - _held(B_LEFT), _held(B_UP) - _held(B_DOWN))
 	if visible:
 		queue_redraw()
 
 
-func _held(id: StringName) -> float:
-	var button: TouchButton = _buttons[id]
-	return 1.0 if button.shown and button.index != -1 else 0.0
-
-
 func _draw() -> void:
-	if not _operating:
-		_draw_stick()
+	_draw_stick()
 	for id in _order:
 		_draw_button(_buttons[id])
-	if _operating:
-		_draw_pendant_labels()
 	_draw_hints()
 
 
@@ -480,24 +420,13 @@ func _draw_stick() -> void:
 		UiStyle.with_alpha(UiStyle.AMBER if magnitude > 0.97 else UiStyle.INK, 0.8), 3.0 * _u)
 
 
-func _draw_pendant_labels() -> void:
-	var size := int(roundf(22.0 * _u))
-	var font := UiStyle.font_label()
-	if not _axis_names[0].is_empty():
-		UiStyle.text_centered(self, font, _axis_names[0], _pendant_center + Vector2(0.0, -14.0 * _u),
-			size, UiStyle.PAPER, int(roundf(5.0 * _u)))
-	if not _axis_names[1].is_empty():
-		UiStyle.text_centered(self, font, _axis_names[1], _pendant_center + Vector2(0.0, 18.0 * _u),
-			size, UiStyle.PAPER_DIM, int(roundf(5.0 * _u)))
-
-
 func _draw_hints() -> void:
 	if _hint_clock > HINT_SECONDS or (_moved and _looked):
 		return
 	var alpha := clampf(_hint_clock * 2.0, 0.0, 1.0) * clampf(HINT_SECONDS - _hint_clock, 0.0, 1.0)
 	var size := int(roundf(26.0 * _u))
 	var font := UiStyle.font_label()
-	if not _moved and not _operating:
+	if not _moved:
 		UiStyle.text_centered(self, font, "MOVE", _stick_home + Vector2(0.0, -STICK_THROW * _u - 34.0 * _u),
 			size, UiStyle.with_alpha(UiStyle.PAPER, 0.8 * alpha), int(roundf(6.0 * _u)))
 	if not _looked:

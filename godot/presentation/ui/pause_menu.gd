@@ -409,10 +409,9 @@ func _controls_rows(view_family: int) -> Array:
 			["icon", &"look", "RIGHT THUMB", "Look - drag anywhere, even from Jump; Gyro Aim tilts"],
 			["icon", &"jump", "JUMP", "Jump; climbs up while hanging"],
 			["icon", &"crouch", "CROUCH", "Duck under low gaps; tap again to stand"],
-			["icon", &"climb", "ACTION", "Climb a ledge, operate a pendant, work a valve"],
-			["icon", &"drop", "DROP", "Let go of a ledge (only while hanging)"],
+			["icon", &"climb", "ACTION", "Climb a ledge or a hold; take a rope, handle or load"],
+			["icon", &"drop", "DROP", "Let go of a ledge or a hold; lower over an edge"],
 			["icon", &"chute", "CHUTE", "Open or stow the canopy (only while falling)"],
-			["icon", &"operate", "PENDANT", "Hold the arrows to drive the machine; Action = done"],
 			["icon", &"pause", "PAUSE", "This menu"],
 		]
 	var keyboard := view_family == UiStyle.Family.KEYBOARD
@@ -421,12 +420,9 @@ func _controls_rows(view_family: int) -> Array:
 		["key", "MOUSE", "LOOK", "Click to capture the pointer"] if keyboard else ["pad", UiStyle.G_LSTICK_FWD, "LOOK", "Right stick"],
 		["verb", &"jump", "JUMP", "Jump; climbs up while hanging"],
 		["verb", &"crouch", "CROUCH", "Toggle; or hold Ctrl" if keyboard else "Toggle: click the right stick"],
-		["verb", &"action", "ACTION", "Climb a ledge, operate a pendant, work a valve"],
-		["verb", &"drop", "DROP", "Let go of a ledge; leave pendant controls"],
+		["verb", &"action", "ACTION", "Climb a ledge or a hold; take a rope, handle or load"],
+		["verb", &"drop", "DROP", "Let go of a ledge, a hold or a load; lower over an edge"],
 		["verb", &"chute", "CHUTE", "Open or stow the canopy while falling"],
-		["verb", &"hoist", "HOIST / RAISE", "Pendant up and down" + ("" if keyboard else "; triggers are analog")],
-		["verb", &"slew", "SLEW / DRIVE", "Pendant left and right"],
-		["verb", &"sling_release", "SLING", "Release (R) or attach (G) the pack" if keyboard else "Release or attach the pack at the yard jib"],
 		["verb", &"pause", "PAUSE", "This menu"],
 		["verb", &"telemetry", "TELEMETRY", "Native readouts overlay"],
 	]
@@ -455,11 +451,7 @@ func _draw_controls() -> void:
 			"pad":
 				UiStyle.draw_glyph(view, view_family, row[1], "", left, h)
 			"verb":
-				var used := UiStyle.draw_binding(view, view_family, row[1], left, h)
-				if row[1] == &"sling_release" and view_family == UiStyle.Family.KEYBOARD:
-					UiStyle.draw_binding(view, view_family, &"sling_attach", left + Vector2(used + 12.0 * _u, 0.0), h)
-				elif row[1] == &"hoist" and view_family != UiStyle.Family.KEYBOARD:
-					UiStyle.draw_binding(view, view_family, &"hoist_analog", left + Vector2(used + 12.0 * _u, 0.0), h)
+				UiStyle.draw_binding(view, view_family, row[1], left, h)
 		UiStyle.text(view, UiStyle.font_heavy(), row[2], Vector2(name_x, y + baseline_offset), name_size,
 			UiStyle.PAPER)
 		UiStyle.text(view, font, row[3], Vector2(desc_x, y + baseline_offset), int(roundf(22.0 * _u)),

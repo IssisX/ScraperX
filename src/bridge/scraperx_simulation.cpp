@@ -133,46 +133,6 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_aborted_traversal_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_tower_height_meters"),
                                 &ScraperXSimulation::get_tower_height_meters);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_hoist_scoop_position"),
-                                &ScraperXSimulation::get_hoist_scoop_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_hoist_scoop_tilt_radians"),
-                                &ScraperXSimulation::get_hoist_scoop_tilt_radians);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_ballast_position"),
-                                &ScraperXSimulation::get_ballast_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_ballast_linear_velocity"),
-                                &ScraperXSimulation::get_ballast_linear_velocity);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_tipper_position"),
-                                &ScraperXSimulation::get_tipper_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_tipper_angle_radians"),
-                                &ScraperXSimulation::get_tipper_angle_radians);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_valve_lever_angle_radians"),
-                                &ScraperXSimulation::get_valve_lever_angle_radians);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_treadle_angle_radians"),
-                                &ScraperXSimulation::get_treadle_angle_radians);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_valve_open_fraction"),
-                                &ScraperXSimulation::get_valve_open_fraction);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_rope_extension_meters"),
-                                &ScraperXSimulation::get_rope_extension_meters);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_lift_platform_position"),
-                                &ScraperXSimulation::get_lift_platform_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_lift_platform_linear_velocity"),
-                                &ScraperXSimulation::get_lift_platform_linear_velocity);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_counterweight_position"),
-                                &ScraperXSimulation::get_counterweight_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_vessel_pressure_pa"),
-                                &ScraperXSimulation::get_vessel_pressure_pa);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_cylinder_pressure_pa"),
-                                &ScraperXSimulation::get_cylinder_pressure_pa);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_orifice_mass_flow_kg_per_s"),
-                                &ScraperXSimulation::get_orifice_mass_flow_kg_per_s);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_vented_mass_kg"),
-                                &ScraperXSimulation::get_vented_mass_kg);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_piston_force_n"),
-                                &ScraperXSimulation::get_piston_force_n);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_vessel_available_energy_j"),
-                                &ScraperXSimulation::get_vessel_available_energy_j);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_machine_cycle_phase_seconds"),
-                                &ScraperXSimulation::get_machine_cycle_phase_seconds);
     godot::ClassDB::bind_method(godot::D_METHOD("get_fall_state"),
                                 &ScraperXSimulation::get_fall_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_fall_peak_speed_mps"),
@@ -190,80 +150,10 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_death_count"),
                                 &ScraperXSimulation::get_death_count);
 
-    godot::ClassDB::bind_method(godot::D_METHOD("set_jib_slew_input", "value"),
-                                &ScraperXSimulation::set_jib_slew_input);
-    godot::ClassDB::bind_method(godot::D_METHOD("set_jib_hoist_input", "value"),
-                                &ScraperXSimulation::set_jib_hoist_input);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_jib_station_active"),
-                                &ScraperXSimulation::is_jib_station_active);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_boom_angle_radians"),
-                                &ScraperXSimulation::get_jib_boom_angle_radians);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_hook_position"),
-                                &ScraperXSimulation::get_jib_hook_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_hook_linear_velocity"),
-                                &ScraperXSimulation::get_jib_hook_linear_velocity);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_crate_position"),
-                                &ScraperXSimulation::get_jib_crate_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_crate_linear_velocity"),
-                                &ScraperXSimulation::get_jib_crate_linear_velocity);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_jib_capacity_stand_load_position"),
-                                &ScraperXSimulation::get_jib_capacity_stand_load_position);
 
-    godot::ClassDB::bind_method(godot::D_METHOD("set_needle_hoist_input", "value"),
-                                &ScraperXSimulation::set_needle_hoist_input);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_needle_station_active"),
-                                &ScraperXSimulation::is_needle_station_active);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_needle_seated"),
-                                &ScraperXSimulation::is_needle_seated);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_position"),
-                                &ScraperXSimulation::get_needle_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_needle_linear_velocity"),
-                                &ScraperXSimulation::get_needle_linear_velocity);
 
-    godot::ClassDB::bind_method(godot::D_METHOD("request_valve_toggle"),
-                                &ScraperXSimulation::request_valve_toggle);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_sump_station_active"),
-                                &ScraperXSimulation::is_sump_station_active);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_sump_isolated"),
-                                &ScraperXSimulation::is_sump_isolated);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_sump_volume_kg"),
-                                &ScraperXSimulation::get_sump_volume_kg);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_grate_safe"),
-                                &ScraperXSimulation::is_grate_safe);
 
-    godot::ClassDB::bind_method(godot::D_METHOD("set_intake_slew_input", "value"),
-                                &ScraperXSimulation::set_intake_slew_input);
-    godot::ClassDB::bind_method(godot::D_METHOD("set_intake_hoist_input", "value"),
-                                &ScraperXSimulation::set_intake_hoist_input);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_intake_station_active"),
-                                &ScraperXSimulation::is_intake_station_active);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_boom_angle_radians"),
-                                &ScraperXSimulation::get_intake_boom_angle_radians);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_hook_position"),
-                                &ScraperXSimulation::get_intake_hook_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_pack_position"),
-                                &ScraperXSimulation::get_intake_pack_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_overweight_pack_position"),
-                                &ScraperXSimulation::get_intake_overweight_pack_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_intake_dog_angle_radians"),
-                                &ScraperXSimulation::get_intake_dog_angle_radians);
-    godot::ClassDB::bind_method(godot::D_METHOD("does_intake_pack_pin_dog"),
-                                &ScraperXSimulation::does_intake_pack_pin_dog);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_intake_throat_clear"),
-                                &ScraperXSimulation::is_intake_throat_clear);
 
-    godot::ClassDB::bind_method(godot::D_METHOD("request_intake_sling_release"),
-                                &ScraperXSimulation::request_intake_sling_release);
-    godot::ClassDB::bind_method(godot::D_METHOD("request_intake_sling_attach"),
-                                &ScraperXSimulation::request_intake_sling_attach);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_legal_forty_pack_slung"),
-                                &ScraperXSimulation::is_legal_forty_pack_slung);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_legal_forty_swing_travel_radians"),
-                                &ScraperXSimulation::get_legal_forty_swing_travel_radians);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_legal_forty_swing_flight_position"),
-                                &ScraperXSimulation::get_legal_forty_swing_flight_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_legal_forty_cradle_position"),
-                                &ScraperXSimulation::get_legal_forty_cradle_position);
 
     godot::ClassDB::bind_method(godot::D_METHOD("request_pick_up"),
                                 &ScraperXSimulation::request_pick_up);
@@ -273,18 +163,6 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_carrying_entity_id);
     godot::ClassDB::bind_method(godot::D_METHOD("get_carry_target_entity_id"),
                                 &ScraperXSimulation::get_carry_target_entity_id);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_hook_in_rack"),
-                                &ScraperXSimulation::is_hook_in_rack);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_door_angle_radians"),
-                                &ScraperXSimulation::get_hook5_door_angle_radians);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_bar_position"),
-                                &ScraperXSimulation::get_hook5_bar_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_bar_rotation"),
-                                &ScraperXSimulation::get_hook5_bar_rotation);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_block_position"),
-                                &ScraperXSimulation::get_hook5_block_position);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_hook5_block_rotation"),
-                                &ScraperXSimulation::get_hook5_block_rotation);
 
     godot::ClassDB::bind_method(godot::D_METHOD("request_rig"), &ScraperXSimulation::request_rig);
     godot::ClassDB::bind_method(godot::D_METHOD("get_rig_action"),
@@ -551,86 +429,6 @@ std::int64_t ScraperXSimulation::get_aborted_traversal_count() const {
     return static_cast<std::int64_t>(simulation_->snapshot().aborted_traversal_count);
 }
 
-godot::Vector3 ScraperXSimulation::get_hoist_scoop_position() const {
-    return to_godot(simulation_->snapshot().hoist_scoop_position);
-}
-
-double ScraperXSimulation::get_hoist_scoop_tilt_radians() const {
-    return simulation_->snapshot().hoist_scoop_tilt_radians;
-}
-
-godot::Vector3 ScraperXSimulation::get_ballast_position() const {
-    return to_godot(simulation_->snapshot().ballast_position);
-}
-
-godot::Vector3 ScraperXSimulation::get_ballast_linear_velocity() const {
-    return to_godot(simulation_->snapshot().ballast_linear_velocity);
-}
-
-godot::Vector3 ScraperXSimulation::get_tipper_position() const {
-    return to_godot(simulation_->snapshot().tipper_position);
-}
-
-double ScraperXSimulation::get_tipper_angle_radians() const {
-    return simulation_->snapshot().tipper_angle_radians;
-}
-
-double ScraperXSimulation::get_valve_lever_angle_radians() const {
-    return simulation_->snapshot().valve_lever_angle_radians;
-}
-
-double ScraperXSimulation::get_treadle_angle_radians() const {
-    return simulation_->snapshot().treadle_angle_radians;
-}
-
-double ScraperXSimulation::get_valve_open_fraction() const {
-    return simulation_->snapshot().valve_open_fraction;
-}
-
-double ScraperXSimulation::get_rope_extension_meters() const {
-    return simulation_->snapshot().rope_extension_meters;
-}
-
-godot::Vector3 ScraperXSimulation::get_lift_platform_position() const {
-    return to_godot(simulation_->snapshot().lift_platform_position);
-}
-
-godot::Vector3 ScraperXSimulation::get_lift_platform_linear_velocity() const {
-    return to_godot(simulation_->snapshot().lift_platform_linear_velocity);
-}
-
-godot::Vector3 ScraperXSimulation::get_counterweight_position() const {
-    return to_godot(simulation_->snapshot().counterweight_position);
-}
-
-double ScraperXSimulation::get_vessel_pressure_pa() const {
-    return simulation_->snapshot().vessel_pressure_pa;
-}
-
-double ScraperXSimulation::get_cylinder_pressure_pa() const {
-    return simulation_->snapshot().cylinder_pressure_pa;
-}
-
-double ScraperXSimulation::get_orifice_mass_flow_kg_per_s() const {
-    return simulation_->snapshot().orifice_mass_flow_kg_per_s;
-}
-
-double ScraperXSimulation::get_vented_mass_kg() const {
-    return simulation_->snapshot().vented_mass_kg;
-}
-
-double ScraperXSimulation::get_piston_force_n() const {
-    return simulation_->snapshot().piston_force_n;
-}
-
-double ScraperXSimulation::get_vessel_available_energy_j() const {
-    return simulation_->snapshot().vessel_available_energy_j;
-}
-
-double ScraperXSimulation::get_machine_cycle_phase_seconds() const {
-    return simulation_->snapshot().machine_cycle_phase_seconds;
-}
-
 std::int64_t ScraperXSimulation::get_fall_state() const {
     return static_cast<std::int64_t>(static_cast<std::uint8_t>(simulation_->snapshot().fall_state));
 }
@@ -667,146 +465,6 @@ double ScraperXSimulation::get_tower_height_meters() const {
     return sim::Simulation::kTowerHeightMeters;
 }
 
-bool ScraperXSimulation::set_jib_slew_input(const double value) {
-    return simulation_->set_jib_slew_input(value);
-}
-
-bool ScraperXSimulation::set_jib_hoist_input(const double value) {
-    return simulation_->set_jib_hoist_input(value);
-}
-
-bool ScraperXSimulation::is_jib_station_active() const {
-    return simulation_->snapshot().jib_station_active;
-}
-
-double ScraperXSimulation::get_jib_boom_angle_radians() const {
-    return simulation_->snapshot().jib_boom_angle_radians;
-}
-
-godot::Vector3 ScraperXSimulation::get_jib_hook_position() const {
-    return to_godot(simulation_->snapshot().jib_hook_position);
-}
-
-godot::Vector3 ScraperXSimulation::get_jib_hook_linear_velocity() const {
-    return to_godot(simulation_->snapshot().jib_hook_linear_velocity);
-}
-
-godot::Vector3 ScraperXSimulation::get_jib_crate_position() const {
-    return to_godot(simulation_->snapshot().jib_crate_position);
-}
-
-godot::Vector3 ScraperXSimulation::get_jib_crate_linear_velocity() const {
-    return to_godot(simulation_->snapshot().jib_crate_linear_velocity);
-}
-
-godot::Vector3 ScraperXSimulation::get_jib_capacity_stand_load_position() const {
-    return to_godot(simulation_->snapshot().jib_capacity_stand_load_position);
-}
-
-bool ScraperXSimulation::set_needle_hoist_input(const double value) {
-    return simulation_->set_needle_hoist_input(value);
-}
-
-bool ScraperXSimulation::is_needle_station_active() const {
-    return simulation_->snapshot().needle_station_active;
-}
-
-bool ScraperXSimulation::is_needle_seated() const {
-    return simulation_->snapshot().needle_seated;
-}
-
-godot::Vector3 ScraperXSimulation::get_needle_position() const {
-    return to_godot(simulation_->snapshot().needle_position);
-}
-
-godot::Vector3 ScraperXSimulation::get_needle_linear_velocity() const {
-    return to_godot(simulation_->snapshot().needle_linear_velocity);
-}
-
-bool ScraperXSimulation::request_valve_toggle() {
-    return simulation_->request_valve_toggle();
-}
-
-bool ScraperXSimulation::is_sump_station_active() const {
-    return simulation_->snapshot().sump_station_active;
-}
-
-bool ScraperXSimulation::is_sump_isolated() const {
-    return simulation_->snapshot().sump_isolated;
-}
-
-double ScraperXSimulation::get_sump_volume_kg() const {
-    return simulation_->snapshot().sump_volume_kg;
-}
-
-bool ScraperXSimulation::is_grate_safe() const {
-    return simulation_->snapshot().grate_safe;
-}
-
-bool ScraperXSimulation::set_intake_slew_input(const double value) {
-    return simulation_->set_intake_slew_input(value);
-}
-
-bool ScraperXSimulation::set_intake_hoist_input(const double value) {
-    return simulation_->set_intake_hoist_input(value);
-}
-
-bool ScraperXSimulation::is_intake_station_active() const {
-    return simulation_->snapshot().intake_station_active;
-}
-
-double ScraperXSimulation::get_intake_boom_angle_radians() const {
-    return simulation_->snapshot().intake_boom_angle_radians;
-}
-
-godot::Vector3 ScraperXSimulation::get_intake_hook_position() const {
-    return to_godot(simulation_->snapshot().intake_hook_position);
-}
-
-godot::Vector3 ScraperXSimulation::get_intake_pack_position() const {
-    return to_godot(simulation_->snapshot().intake_pack_position);
-}
-
-godot::Vector3 ScraperXSimulation::get_intake_overweight_pack_position() const {
-    return to_godot(simulation_->snapshot().intake_overweight_pack_position);
-}
-
-double ScraperXSimulation::get_intake_dog_angle_radians() const {
-    return simulation_->snapshot().intake_dog_angle_radians;
-}
-
-bool ScraperXSimulation::does_intake_pack_pin_dog() const {
-    return simulation_->snapshot().intake_pack_pins_dog;
-}
-
-bool ScraperXSimulation::is_intake_throat_clear() const {
-    return simulation_->snapshot().intake_throat_clear;
-}
-
-bool ScraperXSimulation::request_intake_sling_release() {
-    return simulation_->request_intake_sling_release();
-}
-
-bool ScraperXSimulation::request_intake_sling_attach() {
-    return simulation_->request_intake_sling_attach();
-}
-
-bool ScraperXSimulation::is_legal_forty_pack_slung() const {
-    return simulation_->snapshot().legal_forty_pack_slung;
-}
-
-double ScraperXSimulation::get_legal_forty_swing_travel_radians() const {
-    return simulation_->snapshot().legal_forty_swing_travel_radians;
-}
-
-godot::Vector3 ScraperXSimulation::get_legal_forty_swing_flight_position() const {
-    return to_godot(simulation_->snapshot().legal_forty_swing_flight_position);
-}
-
-godot::Vector3 ScraperXSimulation::get_legal_forty_cradle_position() const {
-    return to_godot(simulation_->snapshot().legal_forty_cradle_position);
-}
-
 bool ScraperXSimulation::request_pick_up() {
     return simulation_->request_pick_up();
 }
@@ -821,30 +479,6 @@ std::int64_t ScraperXSimulation::get_carrying_entity_id() const {
 
 std::int64_t ScraperXSimulation::get_carry_target_entity_id() const {
     return static_cast<std::int64_t>(simulation_->snapshot().carry_target_entity_id);
-}
-
-bool ScraperXSimulation::is_hook_in_rack() const {
-    return simulation_->snapshot().hook_in_rack;
-}
-
-double ScraperXSimulation::get_hook5_door_angle_radians() const {
-    return simulation_->snapshot().hook5_door_angle_radians;
-}
-
-godot::Vector3 ScraperXSimulation::get_hook5_bar_position() const {
-    return to_godot(simulation_->snapshot().hook5_bar_position);
-}
-
-godot::Quaternion ScraperXSimulation::get_hook5_bar_rotation() const {
-    return to_godot(simulation_->snapshot().hook5_bar_rotation);
-}
-
-godot::Vector3 ScraperXSimulation::get_hook5_block_position() const {
-    return to_godot(simulation_->snapshot().hook5_block_position);
-}
-
-godot::Quaternion ScraperXSimulation::get_hook5_block_rotation() const {
-    return to_godot(simulation_->snapshot().hook5_block_rotation);
 }
 
 bool ScraperXSimulation::request_rig() {

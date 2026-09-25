@@ -2,8 +2,7 @@ extends Node
 # Turns what the native simulation reports into sound. It reads state; it
 # never writes it. Every cue comes from a change the native already
 # decided -- feet on a surface, a takeoff, a landing's real impact speed, a
-# grab, a mantle, a canopy, a death, the plant's steam flow, its ballast
-# striking steel -- so what is heard is what happened.
+# grab, a mantle, a canopy, a death -- so what is heard is what happened.
 #
 # Buses (created here, all into Master): Effects, Ambience, Interface; each
 # has a player volume on the AUDIO page. Master ends in a hard limiter, so
@@ -29,20 +28,6 @@ const JUMP_MIN_RISE := 2.5
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
-# Where the plant's sounds come from: the motor and gearbox by the firebox,
-# the steam from the top of the pressure vessel.
-const PLANT_POSITION := Vector3(30.5, 2.0, -100.0)
-const VESSEL_TOP := Vector3(30.5, 4.8, -101.5)
-# The plant's native ranges (measured over 90 s of its own cycle): orifice
-# flow to 2.27 kg/s, scoop 12 m/s, lift 5.7 m/s, ballast strikes 2-11 m/s
-# of velocity lost in one frame, tipper up to 1.3 rad/s.
-const FLOW_FULL_KG_S := 2.0
-const SCOOP_FULL_MPS := 4.0
-const LIFT_FULL_MPS := 3.0
-const BALLAST_STRIKE_MPS := 1.5
-const BALLAST_STRIKE_FULL_MPS := 9.0
-const TIPPER_CREAK_RAD_S := 0.35
-const CREAK_COOLDOWN := 0.6
 # Birds: only near the ground, only by day, now and then.
 const BIRD_CEILING_M := 30.0
 const BIRD_GAP_SECONDS := Vector2(2.5, 8.0)
@@ -54,8 +39,6 @@ var jumps := 0
 var landings := 0
 var grabs := 0
 var rustles := 0
-var clangs := 0
-var creaks := 0
 var birds := 0
 
 # The time of day, for the birds. Set by main.gd.
@@ -77,10 +60,6 @@ var _next_voice_3d := 0
 var _wind: AudioStreamPlayer
 var _rush: AudioStreamPlayer
 var _drone: AudioStreamPlayer
-var _hum: AudioStreamPlayer3D
-var _hiss: AudioStreamPlayer3D
-var _rattle: AudioStreamPlayer3D
-var _motor: AudioStreamPlayer3D
 var _stride := 0.0
 var _was_grounded := true
 var _last_vy := 0.0
@@ -88,12 +67,7 @@ var _last_traversal := 0
 var _last_chute := false
 var _last_deaths := -1
 var _last_crouched := false
-var _last_ballast_velocity := Vector3.ZERO
-var _last_scoop := Vector3.INF
-var _last_tipper := INF
-var _creak_cooldown := 0.0
 var _bird_clock := 3.0
-var _machines_seen := false
 
 
 func _ready() -> void:
@@ -126,10 +100,6 @@ func _ready() -> void:
 	_wind = _looping_player(BUS_AMBIENCE)
 	_rush = _looping_player(BUS_AMBIENCE)
 	_drone = _looping_player(BUS_AMBIENCE)
-	_hum = _positional_player(BUS_AMBIENCE, PLANT_POSITION, 8.0, 140.0)
-	_hiss = _positional_player(BUS_AMBIENCE, VESSEL_TOP, 6.0, 110.0)
-	_rattle = _positional_player(BUS_AMBIENCE, Vector3.ZERO, 5.0, 90.0)
-	_motor = _positional_player(BUS_AMBIENCE, Vector3.ZERO, 6.0, 100.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -169,17 +139,12 @@ func _on_bank_ready() -> void:
 		AudioServer.get_driver_name()])
 	if _silent:
 		return
-	for pair in [[_wind, &"wind_loop"], [_rush, &"rush_loop"], [_drone, &"drone_loop"],
-			[_hum, &"hum_loop"], [_hiss, &"hiss_loop"], [_rattle, &"rattle_loop"],
-			[_motor, &"motor_loop"]]:
+	for pair in [[_wind, &"wind_loop"], [_rush, &"rush_loop"], [_drone, &"drone_loop"]]:
 		pair[0].stream = _bank.pick(pair[1])
 	_wind.volume_db = -60.0
 	_rush.volume_db = -60.0
 	_drone.volume_db = -60.0
-	_hum.volume_db = -6.0
-	for player in [_hiss, _rattle, _motor]:
-		player.volume_db = -80.0
-	for player in [_wind, _rush, _drone, _hum, _hiss, _rattle, _motor]:
+	for player in [_wind, _rush, _drone]:
 		player.play()
 
 
@@ -256,48 +221,6 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	_last_crouched = crouched
 	_update_air(position, velocity, grounded, delta)
 	_update_birds(position, delta)
-
-
-# The coupled plant, as the native runs it: steam through the orifice,
-# the hoist chain, the lift drive, the ballast striking steel, the tipper's
-# hinge turning under load.
-func update_machines(delta: float, flow_kg_s: float, scoop: Vector3, ballast: Vector3,
-		ballast_velocity: Vector3, tipper: Vector3, tipper_angle: float, lift: Vector3,
-		lift_velocity: Vector3) -> void:
-	var scoop_speed := 0.0
-	var tipper_rate := 0.0
-	if _machines_seen and delta > 0.0:
-		scoop_speed = (scoop - _last_scoop).length() / delta
-		tipper_rate = absf(tipper_angle - _last_tipper) / delta
-		# Velocity lost in one frame: the ballast has hit something.
-		var lost := (_last_ballast_velocity - ballast_velocity).length()
-		if lost >= BALLAST_STRIKE_MPS:
-			clangs += 1
-			_play_at(&"clang", ballast,
-				linear_to_db(clampf(lost / BALLAST_STRIKE_FULL_MPS, 0.3, 1.0)) + 2.0,
-				randf_range(0.93, 1.07))
-	_creak_cooldown = maxf(0.0, _creak_cooldown - delta)
-	if tipper_rate >= TIPPER_CREAK_RAD_S and _creak_cooldown <= 0.0:
-		_creak_cooldown = CREAK_COOLDOWN
-		creaks += 1
-		_play_at(&"creak", tipper, -3.0, randf_range(0.9, 1.1))
-	_machines_seen = true
-	_last_scoop = scoop
-	_last_tipper = tipper_angle
-	_last_ballast_velocity = ballast_velocity
-	if not _bank_ready or _silent:
-		return
-	var steam := clampf(flow_kg_s / FLOW_FULL_KG_S, 0.0, 1.0)
-	_hiss.volume_db = linear_to_db(maxf(steam, 0.0001)) - 3.0
-	_hiss.pitch_scale = lerpf(0.85, 1.15, steam)
-	_rattle.position = scoop
-	var chain := clampf(scoop_speed / SCOOP_FULL_MPS, 0.0, 1.0)
-	_rattle.volume_db = linear_to_db(maxf(chain, 0.0001)) - 4.0
-	_rattle.pitch_scale = lerpf(0.8, 1.25, chain)
-	_motor.position = lift
-	var drive := clampf(absf(lift_velocity.y) / LIFT_FULL_MPS, 0.0, 1.0)
-	_motor.volume_db = linear_to_db(maxf(drive, 0.0001)) - 5.0
-	_motor.pitch_scale = lerpf(0.75, 1.2, drive)
 
 
 # Wind rises with altitude; a falling body hears the air tear past. The

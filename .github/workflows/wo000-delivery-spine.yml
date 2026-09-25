@@ -95,19 +95,9 @@ jobs:
           for proof in \
             "PASS scraperx_sim moving-support truth" \
             "PASS scraperx_sim athletic traversal" \
-            "PASS scraperx_sim first full causal chain" \
-            "PASS scraperx_sim coupled machine" \
             "PASS scraperx_sim fall/parachute/checkpoint" \
-            "PASS scraperx_sim first freight" \
-            "PASS scraperx_sim first structural coupling" \
-            "PASS scraperx_sim first process coupling" \
-            "PASS scraperx_sim B00 intake rise" \
-            "PASS scraperx_sim AS-002 Legal Forty" \
             "PASS scraperx_sim world solids" \
             "PASS scraperx_sim crouch" \
-            "PASS scraperx_sim AS-003 apron" \
-            "PASS scraperx_sim AS-003 cage" \
-            "PASS scraperx_sim AS-003 Hook5 Rack" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \
@@ -143,67 +133,6 @@ jobs:
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
-          # AS-001 B00: the intake rise closed, and it closed for physical
-          # reasons. Each of these is a separate link in the causal path.
-          grep -F "pinned_impassable=1" artifacts/native-falsifiers.log
-          grep -F "forced_impassable=1" artifacts/native-falsifiers.log
-          grep -F "skin_freight_untouched=1" artifacts/native-falsifiers.log
-          awk -F'skin_mantles=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 >= 15) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'handoff_y=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 > 24.8) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'overweight_y=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 < 1.2) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          # AS-002 Legal Forty: the counterweighted bascule deployed under
-          # the real 4 t pack, carried the ascent to +40 m and committed a
-          # checkpoint there, relaxed back on its own once unloaded, SKIN's
-          # bypass reached the same +40 m without ever touching the hinge,
-          # and the rated jib still cannot reach that height. Each is a
-          # separate link in the causal path, same as B00's own above.
-          awk -F'deployed_travel=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 0.85) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'cradle_drop=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 1.40) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'forty_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'checkpoint_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 40.0) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'retracted_travel=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 <= 0.20) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'skin_forty_mantles=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 20) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'skin_forty_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'jib_capped_hook_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 < 12.0) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          # AS-003 Hook5 Rack: the cage's lock is height -- grade never rises
-          # past a plain jump -- the seated bar held the door against every
-          # command and freeing it let the door travel on its own drive, the
-          # block rode the hands within 1 m and was picked up again off the
-          # ground, the hands-free SKIN climb ran its 15 mantles, the belt
-          # put the body on the roof within two strokes, the block reached
-          # +40 m held, and a lethal fall restored it in hand on the deck.
-          awk -F'grade_peak_y=' '/AS-003 apron/ {split($2,a," "); exit (a[1]+0 < 3.2) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'mashed_door=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'travelled_door=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 >= 1.20) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'carry_worst_gap=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 <= 1.0) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'repicked_y=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 > 0.8) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'skin_mantles=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 >= 15) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'ride_s=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 <= 32.0) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'roof_y=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 >= 5.15) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'forty_y=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          awk -F'restored_y=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
-            artifacts/native-falsifiers.log
-          grep -F "restored_carry=56" artifacts/native-falsifiers.log
           # AS-006 Stage A, the skip lift: no link, no lift (the cage never
           # moves while the rope is on the bollard, and the stage re-rigs);
           # linked, the rider rides 22 m to 176.25 under a brake-only
@@ -272,13 +201,6 @@ jobs:
           # WO-005: spawn is outdoors at grade with the tower still ahead.
           grep -F "SCRAPERX_WO005_APPROACH_PROOF" artifacts/godot-runtime.log
           grep -F "tower_height=1600" artifacts/godot-runtime.log
-          # WO-006: the coupled chain ran, and a shut valve passed exactly zero mass.
-          grep -F "SCRAPERX_WO006_MACHINE_PROOF" artifacts/godot-runtime.log
-          grep -F "shut_flow=0.00000" artifacts/godot-runtime.log
-          awk -F'peak_valve=' '/SCRAPERX_WO006_MACHINE_PROOF/ {split($2,a," "); exit (a[1]+0 > 0.5) ? 0 : 1}' \
-            artifacts/godot-runtime.log
-          awk -F'peak_lift=' '/SCRAPERX_WO006_MACHINE_PROOF/ {split($2,a," "); exit (a[1]+0 > 6.0) ? 0 : 1}' \
-            artifacts/godot-runtime.log
 
       - name: Drive every control path through the real input pipeline
         shell: bash
@@ -290,8 +212,7 @@ jobs:
           # time exact however fast the runner is.
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
-              touch_hang_climb touch_chute touch_lethal_feedback touch_sump touch_pendant \
-              touch_carry touch_pause pad_core pad_pendant keyboard_core \
+              touch_hang_climb touch_chute touch_lethal_feedback touch_pause pad_core keyboard_core \
               touch_rig pad_rig keyboard_rig touch_debris pad_debris keyboard_debris; do
             timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
@@ -380,11 +301,11 @@ jobs:
           - WO-002 moving-support regressions remained green: translating and rotating Jolt supports with stable entity IDs, real support-point velocity, material inherited jump momentum, and contact-point velocity matching \`v_linear + omega x r\` within the work-order tolerance;
           - native host tests proved the WO-003 traversal suite against real Jolt geometry: a vault that crosses a real rail onto a validated far landing while retaining approach momentum, a mantle that ends grounded on ledge entity 6, a ledge hang that holds against gravity on entity 7, a hang on the kinematic moving ledge (entity 8) carried at the support's own velocity and mantled onto that moving support, refusal of the obstructed landing behind entity 9/10 with no player rise, and traversal frame-partition invariance;
           - Godot 4.7 loaded the same current-source GDExtension, mirrored native support poses, jumped from support entity 3, and observed inherited momentum;
-          - WO-006 host tests proved the coupled machine: the falling ballast drives a hinged tipper, the tipper drags a tension-only rope, the rope opens a real valve, the valve vents a finite pressure vessel into an actuator cylinder, and the cylinder lifts a counterweighted platform past six metres; a shut valve passes exactly zero mass; with the boiler feed cut the vessel's available energy never increases and the lift fades; a player standing on the tipper opens the same valve; and the whole machine is frame-partition invariant;
+          - native host tests proved the mechanism bands' stages, bands, climbing routes and the one-run ascent from the 154 m deck to TP-640 on player inputs;
           - the Godot runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856, 1.164) with stretch=expand, an 82 degree vertical field of view and a 2600 m far plane;
-          - the same runtime spawned outdoors at grade, walked the tower approach, and observed the native machine open its valve past half and lift the platform past six metres;
-          - one first-person approach-and-machine screenshot was captured from that runtime;
-          - fourteen scripted interface scenarios drove touch (jump, simultaneous move and look, climb, vault, hang then drop, hang then climb up, chute, lethal-fall announcement, sump valve, yard jib pendant, pause and resume), gamepad (move, jump, look, pause, KX-JIB pendant) and keyboard (move, jump, action, pause) through the viewport's real input pipeline, each asserting the resulting native state change; the same runs asserted the first-person hands on the grip points the native hang ledge implies, planted on the ledge during a mantle, on the canopy toggles, and holding the crane remote;
+          - the same runtime spawned outdoors at grade and walked the tower approach;
+          - one first-person approach screenshot was captured from that runtime;
+          - scripted interface scenarios drove touch, gamepad and keyboard through the viewport's real input pipeline, each asserting the resulting native state change;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
           - the APK checksum and checkpoint identity were recorded.

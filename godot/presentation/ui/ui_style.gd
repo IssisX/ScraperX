@@ -46,14 +46,6 @@ const BINDINGS := {
 	&"chute": [G_NORTH, "F", &"chute"],
 	&"crouch": [G_RSTICK_CLICK, "C", &"crouch"],
 	&"grab": [G_LSTICK_FWD, "W", &"move"],
-	&"hoist": [G_DPAD_V, "#V", &"up"],
-	&"slew": [G_DPAD_H, "#H", &"left"],
-	&"hoist_analog": [G_RT, "", &"up"],
-	&"sling_release": [G_NORTH, "R", &"sling"],
-	&"sling_attach": [G_NORTH, "G", &"sling"],
-	&"done": [G_WEST, "E", &"done"],
-	&"leave": [G_EAST, "E", &"done"],
-	&"valve": [G_WEST, "E", &"valve"],
 	&"pause": [G_START, "ESC", &"pause"],
 	&"telemetry": [G_SELECT, "F3", &""],
 }
@@ -257,23 +249,6 @@ static func draw_icon(ci: CanvasItem, icon: StringName, c: Vector2, r: float, co
 			for fx in [-0.6, -0.2, 0.2, 0.6]:
 				ci.draw_line(c + Vector2(r * fx, -r * 0.02), knot, with_alpha(color, 0.8), width * 0.6, true)
 			disc(ci, knot, width * 0.9, color)
-		&"operate":
-			# Crane pendant: a hanging box with two buttons and its cable.
-			ci.draw_line(c + Vector2(0.0, -r * 0.62), c + Vector2(0.0, -r * 0.36), color, width, true)
-			ci.draw_rect(Rect2(c + Vector2(-r * 0.3, -r * 0.36), Vector2(r * 0.6, r * 0.96)), color, false, width)
-			triangle(ci, c + Vector2(0.0, -r * 0.1), r * 0.15, Vector2.UP, color)
-			triangle(ci, c + Vector2(0.0, r * 0.3), r * 0.15, Vector2.DOWN, color)
-		&"valve":
-			ring(ci, c, r * 0.5, color, width)
-			for i in 3:
-				var a := TAU * float(i) / 3.0 - PI * 0.5
-				ci.draw_line(c, c + Vector2(cos(a), sin(a)) * r * 0.5, color, width * 0.8, true)
-			disc(ci, c, width * 1.1, color)
-		&"sling":
-			ci.draw_line(c + Vector2(0.0, -r * 0.62), c + Vector2(0.0, -r * 0.2), color, width, true)
-			ci.draw_arc(c + Vector2(r * 0.12, -r * 0.08), r * 0.14, PI * 0.1, PI * 1.25, 10, color, width, true)
-			ci.draw_rect(Rect2(c + Vector2(-r * 0.36, r * 0.14), Vector2(r * 0.72, r * 0.44)),
-				with_alpha(color, 0.7), false, width)
 		&"pick_up":
 			# A load on the floor with an arrow lifting out of it.
 			ci.draw_rect(Rect2(c + Vector2(-r * 0.36, r * 0.1), Vector2(r * 0.72, r * 0.46)),
