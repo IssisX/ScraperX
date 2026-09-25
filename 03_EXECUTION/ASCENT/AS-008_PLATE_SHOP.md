@@ -1,8 +1,8 @@
 # SCRAPERX — AS-008 PLATE SHOP (B04, 340 → 484 m)
 
 **Ascent Slice:** `AS-008`
-**Lifecycle:** `BUILT` — stages G, H, I, the band run and the climbing route built and tested on
-player inputs
+**Lifecycle:** `BUILT` — stages G, H, I, the band run, the climbing route and every stage's
+climbable wreckage built and tested on player inputs
 **Provenance:** derived here under `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` and the Atlas's
 B04 (`01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`): constructive structure as the main verb, a transfer
 girder, K-braces, plate tables.
@@ -33,9 +33,9 @@ The stages climb the well's west half; the route its east band.
 
 | Stage | Archetype | Travel | Payload | Energy source | Kind |
 |---|---|---|---|---|---|
-| **G — scaffold slump** | 15 cascading scaffold collapse | 340.45 → 374.25 | platform 800 kg + rider | a 3 t scaffold tower slumping 34 m down its shaft | one-shot; the slumped tower's posts are a climb |
-| **H — girder tip** | 18 cantilever beam tip | 374.25 → 418.25 | platform 800 kg + rider | a 14 t plate trolley rolling out along a 4 t girder that tips 1 rad, through a four-part purchase | one-shot; the tipped girder's handrails are a climb |
-| **I — domino and monolith** (the band's cascade) | 03 leveraged impulse, as a cascade | 418.25 → 462.25 | cage 900 kg + rider | a domino tripping a 20 t monolith that falls 57°, through a four-part purchase | one-shot; the fallen monolith lies over the well |
+| **G — scaffold slump** | 15 cascading scaffold collapse | 340.45 → 374.25 | platform 800 kg + rider | a 3 t scaffold tower slumping 34 m down its shaft | one-shot; the slumped tower is a climb from the plate to its deck, beside the platform it lifted |
+| **H — girder tip** | 18 cantilever beam tip | 374.25 → 418.25 | platform 800 kg + rider | a 14 t plate trolley rolling out along a 4 t girder that tips 1 rad, through a four-part purchase | one-shot; the tipped girder's access ladder is a climb from the 374 ring to a landing on it |
+| **I — domino and monolith** (the band's cascade) | 03 leveraged impulse, as a cascade | 418.25 → 462.25 | cage 900 kg + rider | a domino tripping a 20 t monolith that falls 57°, through a four-part purchase | one-shot; the fallen monolith is a walkway from the cage to the 418 ring |
 
 ### Links between stages
 
@@ -55,6 +55,9 @@ The stages climb the well's west half; the route its east band.
 - **Set off:** from the platform, pull the prop's pin out by its lanyard. The tower slumps; the platform
   rises 34 m, governed.
 - **No link:** pin pulled with the rope on the cleat: the tower hangs on the cleat, the platform stays.
+- **Wreckage:** the slumped tower stands on the plate. A standard up the middle of its north face
+  climbs from the plate to the deck on its head, level with the platform it lifted; from the deck
+  the rider steps over the platform onto the 374 ring.
 
 ## Stage H — girder tip (374.25 → 418.25)
 
@@ -67,11 +70,14 @@ The stages climb the well's west half; the route its east band.
   past 2.5 m the girder tips and hauls the platform 44 m.
 - **No link:** chock pulled with the tail pinned: the trolley runs to the tip, the girder stays, the
   platform stays.
+- **Wreckage:** the girder rests tipped 1 rad with the trolley at its tip. Its access ladder, hung
+  off the track's west edge raked so that it stands plumb then, rises from just off the 374 ring's
+  inner edge to a landing that lies level beside the track, 4.5 m up.
 
 ## Stage I — the domino and the monolith, the band's cascade (418.25 → 462.25)
 
-- **Found:** on the 418 ring's north band a 20 t monolith leans 30° over the well on the edge of its
-  foot, held by the pawl of a trip lever. East of it a 5 m domino stands pinned, leaning toward the
+- **Found:** on the 418 ring's north band, east of the cage, a 20 t monolith leans 30° over the well
+  on the edge of its foot, held by the pawl of a trip lever. East of it a 5 m domino stands pinned, leaning toward the
   lever's arm. The purchase runs from the monolith's head over a gallows sheave at 441.5 m and a head
   sheave over the cage; its shackle hangs at the rope's end a metre from the cage's eye.
 - **Link:** hook the shackle on the cage's eye.
@@ -80,6 +86,9 @@ The stages climb the well's west half; the route its east band.
   guide; safety dogs hold it there.
 - **No link:** pin pulled with the shackle free: the cascade runs, the monolith falls to its stop and
   the free shackle runs up to 0.8 m under the head sheave; the cage stays.
+- **Wreckage:** the fallen monolith lies along the cage's east side, from the 418 ring out over the
+  well, its top 1.4 m over the cage's deck: from the cage the rider mantles onto it and walks it
+  back to the ring.
 
 ## Declared models
 
@@ -114,6 +123,7 @@ Built on `ScraperX-Claude` after `f0c8d6b`. Native falsifiers, all on player inp
 | `AS-008 I` | shackle free: pin pulled, the domino trips the monolith, which falls to its stop; cage still. Hooked on: cage to 462.25; gain 36.7 kJ against 0.91 MJ of monolith and domino drop |
 | `AS-008 band` | TP-340 to standing on the 484 ring in 116.0 s of sim time: G, the tail pin, the gangway, H, I's shackle and pin, the cascade, the ladder from the cage |
 | `AS-008 route` | TP-340 to standing on the 484 ring in 168.9 s with no lift: across the plate, a ladder, then six L's of boards and ladders. Every lift in the band where it was found |
+| `AS-008 wreckage` | G fired from the plate with no one aboard: the slumped tower climbed from the plate to its deck, then over the platform onto the 374 ring. I fired with its shackle free: from the cage up onto the fallen monolith and along it down onto the 418 ring. H's chock pulled with the tail pinned, then the pin drawn from the ring: the tipped girder's ladder climbed from the ring onto its landing, girder at 1.0 rad |
 
 Changed on the way:
 
@@ -135,3 +145,8 @@ Changed on the way:
   free, the shackle then stops short of the head sheave instead of running into it.
 - **The band ends with a climb:** the cage parks at 462.25 beside a ladder up the 484 ring's inner
   face.
+- **Each spent machine is a climb** (plan §3 rule 6), where a rider left below it can reach it. G's
+  tower, found filling its shaft, has a standard up its north face and a deck on its head. H's
+  girder, which tips over the well out of reach, carries an access ladder raked to stand plumb
+  when it rests tipped. I's monolith, domino and trip lever stand 2.2 m further west than first
+  built, so the fallen monolith lies beside the cage.

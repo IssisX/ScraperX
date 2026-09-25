@@ -115,6 +115,7 @@ jobs:
             "PASS scraperx_sim AS-006 C no link" \
             "PASS scraperx_sim AS-006 C ride" \
             "PASS scraperx_sim AS-006 band" \
+            "PASS scraperx_sim AS-006 route" \
             "PASS scraperx_sim AS-007 D" \
             "PASS scraperx_sim AS-007 E" \
             "PASS scraperx_sim AS-007 F" \
@@ -125,11 +126,17 @@ jobs:
             "PASS scraperx_sim AS-008 I" \
             "PASS scraperx_sim AS-008 band" \
             "PASS scraperx_sim AS-008 route" \
+            "PASS scraperx_sim AS-008 wreckage G" \
+            "PASS scraperx_sim AS-008 wreckage I" \
+            "PASS scraperx_sim AS-008 wreckage H" \
             "PASS scraperx_sim AS-009 J" \
             "PASS scraperx_sim AS-009 K" \
             "PASS scraperx_sim AS-009 L" \
             "PASS scraperx_sim AS-009 band" \
             "PASS scraperx_sim AS-009 route" \
+            "PASS scraperx_sim AS-009 wreckage K" \
+            "PASS scraperx_sim AS-009 wreckage J" \
+            "PASS scraperx_sim AS-009 wreckage L" \
             "PASS scraperx_sim ascent 154 to TP-640"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log

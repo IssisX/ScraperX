@@ -1534,6 +1534,100 @@ void run_plate_route() {
               << " top_y=" << top.player_position.y << " lifts_untouched=1\n";
 }
 
+// Takes hold of the wreck `entity` faced from (x, z) along (fx, fz) and climbs
+// it until standing above `top`; false as soon as the hold is not the wreck's.
+bool climb_wreck(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
+                 const double fz, const std::uint64_t entity, const double top) {
+    if (!walk_to(simulation, x, z, 10.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().grip_available) {
+        return false;
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    const auto hold = simulation.snapshot();
+    if (!is_climbing(hold) || hold.traversal_support_entity_id != entity) {
+        return false;
+    }
+    return hold_stick(simulation, fx, fz, fx, fz, 60.0,
+                      [top](const scraperx::sim::Snapshot &state) { return standing_above(state, top); });
+}
+
+// One-shot wreckage is climbable (MECHANISM_ASCENT_PLAN.md §3 rule 6), on
+// player inputs: each of AS-008's spent machines is reached and climbed.
+void run_plate_wreckage() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+
+    // ---- G, fired from the plate with no one aboard ---------------------------------
+    Simulation g(InitialSpawn::PlateTop);
+    (void)g.advance_frame(1.0);
+    require(walk_to_shop_cleat(g) && rig_shop_g(g), "G wreck: its rope hooked on the platform's eye");
+    require(walk_to(g, -8.3, -150.0, 6.0) && walk_to(g, -8.3, -147.6, 6.0) && walk_to(g, -11.3, -147.6, 6.0) &&
+                pull_facing(g, -11.3, -147.8, 0.0, -1.0, Simulation::kShopGHandleEntityId, 0.5, 4.0,
+                            [&](const scraperx::sim::Snapshot &) { return !g.shop_state().g_tower_latched; }),
+            "G wreck: off the platform and its pin pulled from the plate");
+    require(wait_for(g, 60.0, [&](const scraperx::sim::Snapshot &) { return g.shop_state().g_platform_travel >= 33.7; }) &&
+                g.snapshot().player_position.y < 342.0,
+            "G wreck: the tower slumps and lifts the platform without the rider");
+    require(climb_wreck(g, -8.0, -147.9, 0.0, -1.0, Simulation::kShopGTowerEntityId, 374.3) &&
+                g.snapshot().support_entity_id == Simulation::kShopGTowerEntityId,
+            "G wreck: the slumped tower climbed from the plate to its deck");
+    const double g_deck_y = g.snapshot().player_position.y;
+    require(walk_to(g, -8.0, -150.0, 6.0) && walk_to(g, -11.3, -150.0, 8.0) && walk_to(g, -14.5, -150.0, 8.0) &&
+                standing_above(g.snapshot(), 374.2),
+            "G wreck: from the tower's deck over the platform onto the 374 ring");
+    std::cout << "PASS scraperx_sim AS-008 wreckage G: deck_y=" << g_deck_y
+              << " ring_y=" << g.snapshot().player_position.y << '\n';
+
+    // ---- I, fired from the cage with its shackle free -----------------------------------
+    Simulation i(InitialSpawn::ShopICage);
+    (void)i.advance_frame(1.0);
+    require(pull_shop_domino(i) && wait_for(i, 20.0,
+                                            [&](const scraperx::sim::Snapshot &) {
+                                                return i.shop_state().i_monolith_angle > 0.95;
+                                            }) &&
+                i.shop_state().i_cage_travel < 0.05,
+            "I wreck: the cascade drops the monolith beside the cage, which stays");
+    require(walk_to(i, -5.6, -145.6, 6.0, 0.08), "I wreck: to the cage's east side");
+    (void)i.set_facing(1.0, 0.0);
+    (void)i.advance_frame(0.4);
+    (void)i.request_traversal();
+    require(wait_for(i, 3.0,
+                     [](const scraperx::sim::Snapshot &state) {
+                         return state.support_entity_id == scraperx::sim::Simulation::kShopIMonolithEntityId &&
+                                standing_above(state, 419.3);
+                     }),
+            "I wreck: up from the cage onto the fallen monolith");
+    const double i_slab_y = i.snapshot().player_position.y;
+    require(walk_to(i, -4.2, -138.2, 16.0) && walk_to(i, -4.2, -136.4, 6.0) &&
+                wait_for(i, 2.0, [](const scraperx::sim::Snapshot &state) { return standing_above(state, 418.2); }) &&
+                i.snapshot().player_position.y < 419.3,
+            "I wreck: along the monolith and down onto the 418 ring");
+    std::cout << "PASS scraperx_sim AS-008 wreckage I: slab_y=" << i_slab_y
+              << " ring_y=" << i.snapshot().player_position.y << '\n';
+
+    // ---- H, its chock pulled with the tail pinned, then the pin drawn from the ring ----
+    Simulation h(InitialSpawn::Ring374West);
+    (void)h.advance_frame(1.0);
+    require(board_shop_h(h) && pull_shop_chock(h) && walk_to(h, -9.6, -145.6, 6.0) &&
+                walk_to(h, -14.5, -145.6, 12.0) && pull_shop_girder_pin(h),
+            "H wreck: the chock pulled, back over the gangway, the girder's tail pin drawn");
+    require(wait_for(h, 60.0,
+                     [&](const scraperx::sim::Snapshot &) { return h.shop_state().h_platform_travel >= 43.9; }) &&
+                h.snapshot().player_position.y < 376.0,
+            "H wreck: the girder tips and lifts the platform without the rider");
+    require(walk_to(h, -6.6, -134.0, 8.0) &&
+                climb_wreck(h, -6.6, -136.75, 0.0, -1.0, Simulation::kShopHGirderEntityId, 378.7) &&
+                h.snapshot().support_entity_id == Simulation::kShopHGirderEntityId,
+            "H wreck: the tipped girder's ladder climbed from the 374 ring onto its landing");
+    std::cout << "PASS scraperx_sim AS-008 wreckage H: girder_angle=" << h.shop_state().h_girder_angle
+              << " landing_y=" << h.snapshot().player_position.y << '\n';
+}
+
 // ---- AS-009, the Facade Crane Stack (484 -> 640 m) ------------------------------
 
 // From the 484 ring's north band, the rail joint off the ring and laid in its
@@ -1841,6 +1935,70 @@ void run_crane_route() {
               << " top_y=" << top.player_position.y << " lifts_untouched=1\n";
 }
 
+// AS-009's one-shot wreckage, on player inputs: each spent machine reached and
+// climbed.
+void run_crane_wreckage() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+
+    // ---- K, its pendant pin pulled with the shackle free ------------------------------
+    Simulation k(InitialSpawn::CraneKCage);
+    (void)k.advance_frame(1.0);
+    require(pull_crane_pendant(k) &&
+                wait_for(k, 20.0, [&](const scraperx::sim::Snapshot &) { return k.crane_state().k_jib_angle > 1.56; }) &&
+                k.crane_state().k_cage_travel < 0.05,
+            "K wreck: the jib swings down to hang plumb, the cage stays");
+    require(walk_to(k, -12.6, -155.0, 4.0) && walk_to(k, -9.5, -155.0, 8.0),
+            "K wreck: off the cage over its board onto the 528 ring");
+    require(walk_to(k, -10.25, -151.0, 8.0, 0.08), "K wreck: to the ring's edge beside the hanging jib");
+    (void)k.set_facing(-1.0, 0.0);
+    (void)k.advance_frame(0.4);
+    (void)k.request_traversal();
+    (void)k.advance_frame(0.2);
+    const auto k_hold = k.snapshot();
+    require(is_climbing(k_hold) && k_hold.traversal_support_entity_id == Simulation::kCraneKJibEntityId,
+            "K wreck: a hold on the hanging jib");
+    require(hold_stick(k, -1.0, 0.0, -1.0, 0.0, 40.0,
+                       [](const scraperx::sim::Snapshot &state) { return state.player_position.y >= 551.3; }),
+            "K wreck: up the jib to its heel");
+    (void)k.request_jump();
+    require(hold_stick(k, 1.0, 0.0, 1.0, 0.0, 4.0,
+                       [](const scraperx::sim::Snapshot &state) { return standing_above(state, 550.2); }),
+            "K wreck: from the jib's heel back onto the 550 ring");
+    std::cout << "PASS scraperx_sim AS-009 wreckage K: jib_angle=" << k.crane_state().k_jib_angle
+              << " ring_y=" << k.snapshot().player_position.y << '\n';
+
+    // ---- J, ridden to the 528 ring, where its wagon's run ends beside the ring ----------
+    Simulation j(InitialSpawn::Ring484North);
+    (void)j.advance_frame(1.0);
+    require(lay_crane_joint(j) && pull_crane_chock(j) &&
+                wait_for(j, 60.0,
+                         [&](const scraperx::sim::Snapshot &) { return j.crane_state().j_traveler_travel >= 43.9; }),
+            "J wreck: J ridden to the 528 ring");
+    (void)j.advance_frame(1.0);
+    require(walk_to(j, 0.0, -138.6, 8.0) && walk_to(j, 0.0, -141.5, 8.0) && walk_to(j, 9.8, -141.5, 12.0),
+            "J wreck: off the traveler and along the 528 ring to its east band");
+    require(climb_wreck(j, 10.3, -142.0, 1.0, 0.0, Simulation::kCraneJWagonEntityId, 531.9) &&
+                j.snapshot().support_entity_id == Simulation::kCraneJWagonEntityId,
+            "J wreck: the spent wagon climbed from the ring onto its deck");
+    std::cout << "PASS scraperx_sim AS-009 wreckage J: wagon_travel=" << j.crane_state().j_wagon_travel
+              << " deck_y=" << j.snapshot().player_position.y << '\n';
+
+    // ---- L, its drop weight's pin pulled with the clutch out ----------------------------
+    Simulation l(InitialSpawn::CraneLCab);
+    (void)l.advance_frame(1.0);
+    require(pull_crane_drop(l) &&
+                wait_for(l, 40.0, [&](const scraperx::sim::Snapshot &) { return l.crane_state().l_cart_travel > 51.9; }) &&
+                l.crane_state().l_cab_travel < 0.05,
+            "L wreck: the cart runs down beside the 572 ring, the cab stays");
+    require(walk_to(l, -3.0, -158.3, 6.0) && walk_to(l, 0.1, -158.3, 8.0), "L wreck: off the cab onto the 572 ring");
+    require(climb_wreck(l, 0.1, -158.45, 0.0, -1.0, Simulation::kCraneLCartEntityId, 575.9) &&
+                l.snapshot().support_entity_id == Simulation::kCraneLCartEntityId,
+            "L wreck: the spent cart climbed from the ring onto its deck");
+    std::cout << "PASS scraperx_sim AS-009 wreckage L: cart_travel=" << l.crane_state().l_cart_travel
+              << " deck_y=" << l.snapshot().player_position.y << '\n';
+}
+
 // ---- The mechanism ascent in one run ---------------------------------------------
 
 // Fails the run with where it stopped: the leg, the height and the time.
@@ -1988,6 +2146,11 @@ int main() {
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-008-wreck") {
+        run_plate_wreckage();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-009") {
         run_facade_crane();
         return EXIT_SUCCESS;
@@ -2000,6 +2163,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-009-route") {
         run_crane_route();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-009-wreck") {
+        run_crane_wreckage();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -5632,9 +5800,11 @@ int main() {
     run_plate_shop();
     run_plate_band();
     run_plate_route();
+    run_plate_wreckage();
     run_facade_crane();
     run_crane_band();
     run_crane_route();
+    run_crane_wreckage();
     run_ascent();
 
     return EXIT_SUCCESS;

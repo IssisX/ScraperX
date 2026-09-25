@@ -1,8 +1,9 @@
 # SCRAPERX — AS-009 FACADE CRANE STACK (B05, 484 → 640 m)
 
 **Ascent Slice:** `AS-009`
-**Lifecycle:** `BUILT` — stages J, K, L, the band run, the climbing route and the goal's one-run
-ascent from the 154 m deck to TP-640 built and tested on player inputs
+**Lifecycle:** `BUILT` — stages J, K, L, the band run, the climbing route, every stage's climbable
+wreckage and the goal's one-run ascent from the 154 m deck to TP-640 built and tested on player
+inputs
 **Provenance:** derived here under `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` and the Atlas's
 B05 (`01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`): exterior as ordinary play, a facade traveler on
 rails with a missing rail joint (`MOD-TRAVELER`, `MOD-RAIL-JOINT`), a crane jib, TP-640.
@@ -31,9 +32,9 @@ it and sets it off; the last is the band's cascade. A climbing route needs no li
 
 | Stage | Archetype | Travel | Payload | Energy source | Face |
 |---|---|---|---|---|---|
-| **J — traveler and runaway wagon** | 14 runaway vehicle tether, with `MOD-TRAVELER` and `MOD-RAIL-JOINT` | 484.25 → 528.25 | traveler 900 kg + rider | a 4 t rail wagon running 44 m down a 60° incline, direct tow | north |
+| **J — traveler and runaway wagon** | 14 runaway vehicle tether, with `MOD-TRAVELER` and `MOD-RAIL-JOINT` | 484.25 → 528.25 | traveler 900 kg + rider | a 4 t rail wagon running 44 m down a 70° incline, direct tow | north |
 | **K — crane jib pendulum** | 13 crane jib pendulum | 528.25 → 572.25 | cage 900 kg + rider | an 8 t jib swinging from level to hanging, through a four-part purchase | west |
-| **L — kinetic winch** (the band's cascade) | 04 kinetic winch hoist | 572.25 → 640.25 | cab 900 kg + rider | a 4 t freight cart running 51 m down a 65° incline, through a two-drum winch (4 : 3) | south |
+| **L — kinetic winch** (the band's cascade) | 04 kinetic winch hoist | 572.25 → 640.25 | cab 900 kg + rider | a 4 t freight cart running 51 m down an 80° incline, through a two-drum winch (4 : 3) | south |
 
 ### Links between stages
 
@@ -47,13 +48,17 @@ it and sets it off; the last is the band's cascade. A climbing route needs no li
 
 - **Found:** a facade traveler on the north face at the 484 ring, its east rail missing the joint just
   above its rollers. The joint's splice block, 30 kg, lies on the ring; its tray beside the gap is
-  empty. A 4 t wagon stands chocked at the head of a 60° incline on the east face; its tow rope runs
-  over a sheave at the incline's head and a head sheave over the traveler down to the traveler's eye.
+  empty. A 4 t wagon stands chocked at the head of a 70° incline off the east face, 44 m above the
+  528 ring; its tow rope runs over a sheave at the incline's head and a head sheave over the
+  traveler down to the traveler's eye.
 - **Link:** carry the splice block onto the traveler and set it down in its tray.
 - **Set off:** from the traveler, pull the wagon's chock lever over by its lanyard. The wagon runs
   down its incline and drags the traveler 44 m up its rails, governed.
 - **No link:** the traveler's rollers cannot pass the gap; the chock pulled, the wagon holds on its
   rope, nothing moves.
+- **Wreckage:** the wagon's run ends beside the 528 ring's east band, near where the traveler parks.
+  It is built as a funicular car, its deck level and a grab bar plumb down its west side: from the
+  ring the rider climbs the spent wagon onto its deck.
 
 ## Stage K — crane jib pendulum (528.25 → 572.25)
 
@@ -61,20 +66,26 @@ it and sets it off; the last is the band's cascade. A climbing route needs no li
   by its pendant pinned to the mast. The jib's hoist rope runs from its tip over a snatch block at the
   mast's head and a head sheave over the cage; its shackle hangs at the rope's end by the cage's eye.
 - **Link:** hook the shackle on the cage's eye.
-- **Set off:** from the cage, pull the pendant's pin out by its lanyard. The jib swings down against
-  the mast; its tip pays out 11 m of rope through the four-part purchase and hauls the cage 44 m;
-  safety dogs hold it.
+- **Set off:** from the cage, pull the pendant's pin out by its lanyard. The jib swings down to hang
+  plumb from its heel; its tip pays out 11 m of rope through the four-part purchase and hauls the
+  cage 44 m; safety dogs hold it.
 - **No link:** the jib swings, the free shackle runs up, the cage stays.
+- **Wreckage:** the jib hangs plumb from its heel just off the 528 ring's west edge, south of the
+  mast. From the ring the rider climbs the chord along its underside 23 m to the heel and springs
+  back from it onto the 550 ring.
 
 ## Stage L — kinetic winch, the band's cascade (572.25 → 640.25)
 
-- **Found:** a 4 t freight cart at the head of an incline on the south face, held by a catch. Its
+- **Found:** a 4 t freight cart at the head of an 80° incline off the south face, 51 m above the
+  572 ring, held by a catch. Its
   rope runs to the small drum of a two-drum winch whose big drum hauls the cab. The winch's dog clutch
   is out. Over the catch's lever hangs a 200 kg drop weight on a pin.
 - **Link:** throw the winch's clutch lever in.
 - **Set off:** from the cab, pull the drop weight's pin by its lanyard. The weight falls on the catch's
   lever, the cart runs, the winch hauls the cab 68 m into TP-640's hole.
 - **No link:** the clutch out, the drums turn free: the cart runs down, the cab stays.
+- **Wreckage:** the cart's run ends beside the 572 ring's south band, east of the cab. It is built
+  as J's wagon is: from the ring the rider climbs its grab bar onto its deck.
 
 ## Declared models
 
@@ -103,11 +114,12 @@ Built on `ScraperX-Claude` after `c87a5a1`. Native falsifiers, all on player inp
 
 | Group | Result |
 |---|---|
-| `AS-009 J` | joint out: chock pulled, the traveler holds at the gap and the wagon on its rope, 10 s. Joint in: traveler to 528.25 with the rider; gain 36.7 kJ against 1.50 MJ of wagon drop |
-| `AS-009 K` | shackle free: pin pulled, the jib swings down, the free shackle runs up; cage still. Hooked on: cage to 572.25, jib at 1.35 rad; gain 36.7 kJ against 0.91 MJ of jib drop |
-| `AS-009 L` | clutch out: pin pulled, the weight trips the cart, which runs down; cab still. Clutch in: cab to 640.25, flush in TP-640; gain 56.7 kJ against 1.82 MJ of cart and weight drop |
+| `AS-009 J` | joint out: chock pulled, the traveler holds at the gap and the wagon on its rope, 10 s. Joint in: traveler to 528.25 with the rider; gain 36.7 kJ against 1.62 MJ of wagon drop |
+| `AS-009 K` | shackle free: pin pulled, the jib swings down, the free shackle runs up; cage still. Hooked on: cage to 572.35, a step above the 572 ring's board, jib at 1.57 rad; gain 36.8 kJ against 0.96 MJ of jib drop |
+| `AS-009 L` | clutch out: pin pulled, the weight trips the cart, which runs down; cab still. Clutch in: cab to 640.25, flush in TP-640; gain 56.7 kJ against 1.98 MJ of cart and weight drop |
 | `AS-009 band` | the 484 ring to standing on TP-640 in 96.0 s of sim time |
 | `AS-009 route` | the 484 ring to standing on TP-640 in 183.9 s with no lift: six L's of boards and ladders, then the ladder through the plate's hatch. Every lift in the band where it was found |
+| `AS-009 wreckage` | K fired with its shackle free: the jib hangs plumb at 1.5708 rad, climbed from the 528 ring to its heel and sprung from onto the 550 ring. J ridden: the spent wagon, 44.02 m down its incline beside the 528 ring, climbed onto its deck. L fired with its clutch out: the spent cart, 52 m down its incline beside the 572 ring, climbed onto its deck |
 | `ascent 154 to TP-640` | one run from the 154 m deck to standing on TP-640 in 370.2 s of sim time, never dying: the 220 ring at 52.2 s, TP-340 at 156.0 s, the 484 ring at 272.3 s, twelve stages ridden, every link made by the rider's hands |
 
 Changed on the way:
@@ -121,4 +133,12 @@ Changed on the way:
   that side had barred the way.
 - **The rider walks round K's shackle,** which hangs on 45 m of rope: bumped, it swings away for a
   quarter of a minute.
-- **L's winch pedestal stands clear of the catch lever's counterweight.**
+- **L's winch pedestal stands clear of the catch lever's counterweight;** since the incline's head
+  moved, the winch hangs from TP-640's underside.
+- **Each spent machine is a climb** (plan §3 rule 6). J's and L's inclines were steepened to 70° and
+  80° and lifted, so each vehicle's run ends beside the ring below its head (the 528 and the 572),
+  and both vehicles are funicular cars with level decks and plumb grab bars. K's jib swings in a
+  plane south of the mast, from a heel just off the 528 ring's edge, to hang plumb on its stop: a
+  catwalk along its top sets its weight so that it hangs hard on the stop instead of swinging
+  about it, and its snatch block stands 15.56 m over the heel so that a hooked cage reaches its
+  landing as the jib comes plumb. The cage's guide runs 0.4 m past its landing.

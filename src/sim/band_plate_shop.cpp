@@ -175,6 +175,13 @@ void build_stage_g(kit::Kit &kit, PlateShop &shop, std::vector<Part> &frame) {
                                 JPH::Vec3(side * (kTowerHalf - 0.06F), y, 0.0F), Material::Yellow));
         }
     }
+    // A standard up the middle of its north face and a deck on its head:
+    // slumped, the tower is a climb from the plate to a deck level with the
+    // platform it lifted.
+    tower.push_back(box(JPH::Vec3(0.05F, kTowerHalfY, 0.05F), JPH::Vec3(0.0F, 0.0F, kTowerHalf - 0.06F),
+                        Material::Galvanised));
+    tower.push_back(box(JPH::Vec3(kTowerHalf, 0.25F, kTowerHalf), JPH::Vec3(0.0F, kTowerHalfY - 0.05F, 0.0F),
+                        Material::Timber));
     shop.g_tower = kit.add_body(Sim::kShopGTowerEntityId, tower,
                                 JPH::RVec3(kTowerX, kTowerFoot + kTowerHalfY, kGZ), JPH::Quat::sIdentity(),
                                 kTowerMassKg, 0.6F);
@@ -245,6 +252,18 @@ const JPH::RVec3 kChockPivot(kGirderX + 1.15, 381.05, -135.8);
 constexpr float kChockArm = 0.7F;
 const JPH::RVec3 kChockLanyard1(kGirderX + 1.8, 381.8, -135.8);
 const JPH::RVec3 kChockLanyard2(kHX, 376.6, -144.0);
+// The angle the girder rests at once the platform is up: the purchase's
+// length decides it.
+constexpr float kGirderRest = 0.999F;
+
+// A part of the girder set to stand true when the girder rests tipped: its box
+// as it will lie in the world, carried back into the girder's own frame.
+Part tipped(const JPH::Vec3 half, const JPH::Vec3 world_centre, const Material material) {
+    const JPH::Quat back = JPH::Quat::sRotation(JPH::Vec3::sAxisX(), kGirderRest);
+    const JPH::Vec3 pivot(static_cast<float>(kGirderPivot.GetX()), static_cast<float>(kGirderPivot.GetY()),
+                          static_cast<float>(kGirderPivot.GetZ()));
+    return {half, back * (world_centre - pivot), back, material};
+}
 
 void build_stage_h(kit::Kit &kit, PlateShop &shop, std::vector<Part> &frame) {
     shop.h_platform = kit.add_body(Sim::kShopHPlatformEntityId, platform_parts(),
@@ -271,6 +290,13 @@ void build_stage_h(kit::Kit &kit, PlateShop &shop, std::vector<Part> &frame) {
         girder.push_back(box(JPH::Vec3(0.04F, 0.04F, 0.5F * length),
                              JPH::Vec3(side * (kGirderHalfW + 0.2F), 0.0F, mid), Material::Yellow));
     }
+    // Its access ladder off the track's west edge, a pole and a landing hung
+    // to stand plumb and level when the girder rests tipped: then the ladder
+    // stands just off the 374 ring's inner edge and the landing beside the
+    // track, 4.5 m up.
+    girder.push_back(tipped(JPH::Vec3(0.04F, 1.875F, 0.04F), JPH::Vec3(-6.6F, 376.875F, -137.35F), Material::Yellow));
+    girder.push_back(tipped(JPH::Vec3(0.6F, 0.25F, 0.55F), JPH::Vec3(-6.6F, 378.5F, -138.04F), Material::Galvanised));
+    girder.push_back(tipped(JPH::Vec3(0.05F, 0.75F, 0.05F), JPH::Vec3(-5.95F, 377.55F, -138.54F), Material::Steel));
     shop.h_girder = kit.add_body(Sim::kShopHGirderEntityId, girder, kGirderPivot, JPH::Quat::sIdentity(),
                                  kGirderMassKg, 0.05F);
     shop.h_girder_hinge = kit.add_lever(shop.h_girder, kGirderPivot, -JPH::Vec3::sAxisX(),
@@ -338,19 +364,22 @@ constexpr float kIDeckTop = 418.25F;
 constexpr float kITravel = 44.0F;           // to 462.25
 constexpr float kIMassKg = 900.0F;
 const JPH::Vec3 kIEyeLocal(1.0F, 1.1F, 0.0F);
-const JPH::RVec3 kMonolithEdge(-2.0, 418.25, -137.5);   // the foot's south edge, its hinge
+// The monolith stands east of the cage: fallen, it lies along the cage's east
+// side from the 418 ring out over the well.
+constexpr float kMonolithX = -4.2F;
+const JPH::RVec3 kMonolithEdge(kMonolithX, 418.25, -137.5);   // the foot's south edge, its hinge
 constexpr float kMonolithHalfY = 6.0F;
 constexpr float kMonolithLean = 0.5236F;    // 30 deg south, as found
 constexpr float kMonolithMassKg = 20000.0F;
 constexpr float kMonolithFall = 1.0F;       // rad, to its stop: the rope pays out 11.1 m
-const JPH::RVec3 kMonolithSheave(-2.0, 441.5, -140.2);
+const JPH::RVec3 kMonolithSheave(kMonolithX, 441.5, -140.2);
 constexpr float kIPurchase = 0.25F;
-const JPH::RVec3 kTripPivot(0.0, 419.5, -135.5);
-const JPH::RVec3 kDominoFoot(2.5, 418.25, -135.5);    // its foot's west edge, its hinge
+const JPH::RVec3 kTripPivot(kMonolithX + 2.0, 419.5, -135.5);
+const JPH::RVec3 kDominoFoot(kMonolithX + 4.5, 418.25, -135.5);    // its foot's west edge, its hinge
 constexpr float kDominoHalfY = 2.5F;
 constexpr float kDominoLean = 0.21F;        // west, toward the trip lever
-const JPH::RVec3 kDominoPinSeat(2.9, 418.45, -135.1);
-const JPH::RVec3 kDominoLanyard1(2.9, 418.45, -133.4);
+const JPH::RVec3 kDominoPinSeat(kMonolithX + 4.9, 418.45, -135.1);
+const JPH::RVec3 kDominoLanyard1(kMonolithX + 4.9, 418.45, -133.4);
 const JPH::RVec3 kDominoLanyard2(kIX, 420.2, -144.0);
 
 void build_stage_i(kit::Kit &kit, PlateShop &shop, std::vector<Part> &frame) {
@@ -420,8 +449,8 @@ void build_stage_i(kit::Kit &kit, PlateShop &shop, std::vector<Part> &frame) {
                                shop.i_shackle, JPH::Vec3::sZero(), f2, kIPurchase, rope_length, 0.0F);
     // The gallows on the 440 ring for the monolith's sheave, and the head
     // beam over the cage.
-    frame.push_back(span({-2.1F, 440.25F, -139.75F}, {-1.9F, 442.1F, -139.55F}, Material::Steel));
-    frame.push_back(span({-2.1F, 441.9F, -140.35F}, {-1.9F, 442.1F, -139.55F}, Material::Steel));
+    frame.push_back(span({kMonolithX - 0.1F, 440.25F, -139.75F}, {kMonolithX + 0.1F, 442.1F, -139.55F}, Material::Steel));
+    frame.push_back(span({kMonolithX - 0.1F, 441.9F, -140.35F}, {kMonolithX + 0.1F, 442.1F, -139.55F}, Material::Steel));
     frame.push_back(span({static_cast<float>(f2.GetX()) - 0.4F, 464.7F, kIZ - 0.15F},
                          {static_cast<float>(f2.GetX()) + 0.4F, 464.9F, kIZ + 0.15F}, Material::Steel));
 }

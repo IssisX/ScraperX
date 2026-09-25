@@ -219,11 +219,20 @@ const JPH::RVec3 kJJointSeat(kJTrayX, 485.0, kJZ);
 const JPH::RVec3 kJJointFound(3.5, 484.3, -139.0);
 constexpr float kWagonMassKg = 4000.0F;
 constexpr float kWagonTravel = 46.0F;
-constexpr float kWagonSlope = 1.0472F;      // 60 degrees
-const JPH::RVec3 kWagonHead(16.5, 530.0, -160.5);
-const JPH::RVec3 kJChockPivot(17.6, 530.4, -160.5);
-const JPH::RVec3 kJLanyard1(18.4, 531.1, -160.5);
+constexpr float kWagonSlope = 1.2217F;      // 70 degrees
+// The wagon's 44 m run ends beside the 528 ring's east band, where the
+// traveler it hauls parks: its head stands off the east face's south end.
+const JPH::RVec3 kWagonHead(11.6, 571.665, -157.656);
+const JPH::RVec3 kJChockPivot = kWagonHead + JPH::RVec3(1.1, 0.4, 0.0);
+const JPH::RVec3 kJLanyard1 = kWagonHead + JPH::RVec3(1.9, 1.1, 0.0);
 const JPH::RVec3 kJLanyard2(kJX, 486.19, kJZ + 1.6);
+
+// A box on a vehicle that runs along its incline without turning, as it
+// stands in the world: level, or plumb, whatever the slope.
+Part upright(const JPH::Quat slope, const JPH::Vec3 half, const JPH::Vec3 offset, const Material material) {
+    const JPH::Quat back = slope.Conjugated();
+    return {half, back * offset, back, material};
+}
 
 void build_stage_j(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) {
     crane.j_traveler = kit.add_body(Sim::kCraneJTravelerEntityId, platform_parts(false), JPH::RVec3(kJX, kJDeck, kJZ),
@@ -264,17 +273,21 @@ void build_stage_j(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) 
     kit.set_rail_gap(crane.j_traveler_guide, 0.02F, crane.j_joint, kJJointSeat, JPH::Vec3::sAxisX(), 0.25F, 3.2F);
 
     // The wagon at the head of its incline on the east face, down-north at
-    // 60 degrees, chocked.
+    // 70 degrees, chocked: a funicular car, its deck level and a grab bar
+    // plumb down its west side, so where it comes to rest it is a climb.
     const JPH::Quat slope = JPH::Quat::sRotation(JPH::Vec3::sAxisX(), kWagonSlope);
     const JPH::Vec3 down = slope * JPH::Vec3::sAxisZ();
     crane.j_wagon = kit.add_body(
         Sim::kCraneJWagonEntityId,
         {box(JPH::Vec3(0.7F, 0.6F, 1.2F), JPH::Vec3(0.0F, 0.3F, 0.0F), Material::Rust),
-         box(JPH::Vec3(0.6F, 0.35F, 1.0F), JPH::Vec3(0.0F, 1.25F, 0.0F), Material::Concrete)},
+         box(JPH::Vec3(0.6F, 0.35F, 1.0F), JPH::Vec3(0.0F, 1.25F, 0.0F), Material::Concrete),
+         upright(slope, JPH::Vec3(0.7F, 0.25F, 0.8F), JPH::Vec3(0.0F, 1.45F, 0.8F), Material::Galvanised),
+         upright(slope, JPH::Vec3(0.04F, 1.45F, 0.04F), JPH::Vec3(-0.75F, 0.25F, 0.6F), Material::Yellow)},
         kWagonHead, slope, kWagonMassKg, 0.2F);
     crane.j_wagon_guide = kit.add_guide(crane.j_wagon, down, 0.0F, kWagonTravel, 3.0F, 60000.0F, 1.0F);
     incline_track(frame, kWagonHead, slope, false, -3.5F, kWagonTravel + 1.5F, 0.35F);
-    crane.j_chock = add_standing_lever(kit, frame, Sim::kCraneJChockEntityId, kJChockPivot, 529.5F, crane.j_chock_lever);
+    crane.j_chock = add_standing_lever(kit, frame, Sim::kCraneJChockEntityId, kJChockPivot,
+                                       static_cast<float>(kWagonHead.GetY()) - 0.5F, crane.j_chock_lever);
     crane.j_wagon_catch = kit.add_catch(crane.j_wagon, crane.j_chock_lever, kLeverRelease, 0.05F, false);
     crane.j_handle = add_handle(kit, Sim::kCraneJHandleEntityId, kJLanyard2);
     (void)kit.add_trip_line(crane.j_chock, JPH::Vec3(-0.1F, kStandingArm, 0.0F), crane.j_handle,
@@ -295,15 +308,20 @@ void build_stage_j(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) 
 constexpr float kKX = -12.6F;
 constexpr float kKZ = -155.0F;
 constexpr float kKDeck = 528.25F;
-constexpr float kKTravel = 44.0F;           // to 572.25
+constexpr float kKStop = 44.4F;             // the guide's end, just past the 572 ring's board
 constexpr float kKMassKg = 900.0F;
 const JPH::Vec3 kKEyeLocal(1.0F, 1.1F, 0.0F);
 constexpr float kKPurchase = 0.25F;
-const JPH::RVec3 kJibHeel(-11.5, 552.0, kWellZ);
+// The jib swings in a plane south of the mast, from its heel just off the
+// 528 ring's west edge, down to hang plumb beside that edge.
+constexpr float kJibZ = -151.0F;
+const JPH::RVec3 kJibHeel(-11.3, 552.0, kJibZ);
 constexpr float kJibLength = 24.0F;
 constexpr float kJibMassKg = 8000.0F;
-constexpr float kJibFall = 1.5F;            // rad, from level to its stop by the mast
-const JPH::RVec3 kSnatchBlock(-11.5, 568.0, kWellZ);   // 16 m over the heel
+constexpr float kJibFall = 1.5708F;         // rad, from level to hanging plumb
+// Over the heel by as much as lets the jib hang plumb just as the cage,
+// hooked on, rises 44.15 m.
+const JPH::RVec3 kSnatchBlock(-11.3, 567.56, kJibZ);
 constexpr float kMastX0 = -10.5F;
 constexpr float kMastX1 = -9.7F;
 constexpr float kMastTop = 568.6F;
@@ -314,7 +332,7 @@ const JPH::RVec3 kKLanyard2(kKX, 530.19, kKZ + 1.6);
 void build_stage_k(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) {
     crane.k_cage = kit.add_body(Sim::kCraneKCageEntityId, platform_parts(true), JPH::RVec3(kKX, kKDeck, kKZ),
                                 JPH::Quat::sIdentity(), kKMassKg, 0.8F);
-    crane.k_cage_guide = kit.add_guide(crane.k_cage, JPH::Vec3::sAxisY(), 0.0F, kKTravel, 2.5F, 40000.0F, 1.0F);
+    crane.k_cage_guide = kit.add_guide(crane.k_cage, JPH::Vec3::sAxisY(), 0.0F, kKStop, 2.5F, 40000.0F, 1.0F);
     kit.set_dogs(crane.k_cage_guide, 0.05F);
     crane.k_eye = kit.add_anchor(crane.k_cage, kKEyeLocal, 1.2F);
     // Boards from the 528 ring onto the cage, and from the cage to the 572
@@ -336,18 +354,26 @@ void build_stage_k(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) 
         frame.push_back(span({kMastX0, y - 0.03F, kWellZ - 0.4F}, {kMastX1, y + 0.03F, kWellZ - 0.3F}, Material::Yellow));
         frame.push_back(span({kMastX0, y - 0.03F, kWellZ + 0.3F}, {kMastX1, y + 0.03F, kWellZ + 0.4F}, Material::Yellow));
     }
-    frame.push_back(span({static_cast<float>(kJibHeel.GetX()) + 0.06F, 551.2F, kWellZ - 0.2F},
-                         {kMastX0, 551.4F, kWellZ + 0.2F}, Material::Steel));
-    frame.push_back(span({static_cast<float>(kSnatchBlock.GetX()) - 0.1F, 568.1F, kWellZ - 0.1F},
-                         {kMastX0, 568.3F, kWellZ + 0.1F}, Material::Steel));
+    // The heel pin's cheek off the mast's south face, north of the jib; the
+    // snatch block's beam at the head.
+    const float heel_x = static_cast<float>(kJibHeel.GetX());
+    const float block_y = static_cast<float>(kSnatchBlock.GetY());
+    frame.push_back(span({heel_x - 0.2F, 551.6F, kJibZ + 0.57F}, {kMastX0, 552.4F, kWellZ - 0.37F}, Material::Steel));
+    frame.push_back(span({heel_x - 0.1F, block_y + 0.1F, kJibZ - 0.1F}, {kMastX0, block_y + 0.3F, kWellZ - 0.3F},
+                         Material::Steel));
 
-    // The jib, a truss level over the void from its heel, 8 t.
+    // The jib, a truss level over the void from its heel, 8 t, a catwalk along
+    // its top; a middle chord along its underside is the climb when it hangs.
+    // The catwalk's weight keeps it hanging hard on its stop, plumb, rather
+    // than swinging about it.
     std::vector<Part> jib;
     const float half = 0.5F * kJibLength;
     for (const float z : {-0.45F, 0.45F}) {
         jib.push_back(box(JPH::Vec3(half, 0.06F, 0.06F), JPH::Vec3(-half, -0.55F, z), Material::Yellow));
     }
     jib.push_back(box(JPH::Vec3(half, 0.06F, 0.06F), JPH::Vec3(-half, 0.55F, 0.0F), Material::Yellow));
+    jib.push_back(box(JPH::Vec3(half, 0.04F, 0.35F), JPH::Vec3(-half, 0.65F, 0.0F), Material::Steel));
+    jib.push_back(box(JPH::Vec3(half - 0.15F, 0.05F, 0.05F), JPH::Vec3(-half - 0.15F, -0.55F, 0.0F), Material::Yellow));
     for (float x = 1.0F; x < kJibLength - 0.5F; x += 1.0F) {
         for (const float z : {-0.45F, 0.45F}) {
             jib.push_back(box(JPH::Vec3(0.04F, 0.55F, 0.04F), JPH::Vec3(-x, 0.0F, z), Material::Yellow));
@@ -391,13 +417,15 @@ const JPH::Vec3 kLEyeLocal(1.0F, 1.1F, 0.0F);
 constexpr float kWinchRatio = 0.75F;        // the drums, 3 : 4
 constexpr float kCartMassKg = 4000.0F;
 constexpr float kCartTravel = 52.0F;
-constexpr float kCartSlope = 1.1345F;       // 65 degrees
-const JPH::RVec3 kCartHead(1.0, 574.0, -163.5);
-const JPH::RVec3 kCatchPivot(0.2, 574.9, -162.3);
+constexpr float kCartSlope = 1.3963F;       // 80 degrees
+// The cart's run ends beside the 572 ring's south band, east of the cab: its
+// head stands off the south face's east end, 51 m higher.
+const JPH::RVec3 kCartHead(9.63, 625.81, -159.75);
+const JPH::RVec3 kCatchPivot = kCartHead + JPH::RVec3(-0.8, 0.9, 1.4);
 constexpr float kCatchArm = 1.2F;
-const JPH::RVec3 kWeightAt(1.1, 577.0, -162.3);
-const JPH::RVec3 kWeightPinSeat(1.1, 577.45, -162.3);
-const JPH::RVec3 kWeightLanyard1(1.1, 577.45, -160.6);
+const JPH::RVec3 kWeightAt = kCartHead + JPH::RVec3(0.1, 3.0, 1.4);
+const JPH::RVec3 kWeightPinSeat = kCartHead + JPH::RVec3(0.1, 3.45, 1.4);
+const JPH::RVec3 kWeightLanyard1 = kCartHead + JPH::RVec3(0.1, 3.45, 3.1);
 const JPH::RVec3 kWeightLanyard2(kLX, 574.19, kLZ - 1.6);
 const JPH::RVec3 kClutchPivot(-5.3, 573.6, -157.4);
 const JPH::RVec3 kClutchLanyard1(-4.7, 574.4, -157.4);
@@ -410,14 +438,18 @@ void build_stage_l(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) 
     crane.l_cab_guide = kit.add_guide(crane.l_cab, JPH::Vec3::sAxisY(), 0.0F, kLTravel, 2.5F, 40000.0F, 1.0F);
     kit.set_dogs(crane.l_cab_guide, 0.05F);
 
-    // The cart at the head of its incline on the south face, down-east at
-    // 65 degrees, caught.
-    const JPH::Quat slope = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), -kCartSlope);
+    // The cart at the head of its incline on the south face, down-west at
+    // 80 degrees, caught: a funicular car, its deck level and a grab bar
+    // plumb down its north side.
+    const JPH::Quat slope = JPH::Quat::sRotation(JPH::Vec3::sAxisY(), JPH::JPH_PI) *
+                            JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), -kCartSlope);
     const JPH::Vec3 down = slope * JPH::Vec3::sAxisX();
     crane.l_cart = kit.add_body(
         Sim::kCraneLCartEntityId,
         {box(JPH::Vec3(1.1F, 0.5F, 0.7F), JPH::Vec3(0.0F, 0.25F, 0.0F), Material::Rust),
-         box(JPH::Vec3(0.9F, 0.3F, 0.6F), JPH::Vec3(0.0F, 1.05F, 0.0F), Material::Steel)},
+         box(JPH::Vec3(0.9F, 0.3F, 0.6F), JPH::Vec3(0.0F, 1.05F, 0.0F), Material::Steel),
+         upright(slope, JPH::Vec3(0.85F, 0.25F, 0.7F), JPH::Vec3(-0.45F, 1.15F, 0.0F), Material::Galvanised),
+         upright(slope, JPH::Vec3(0.04F, 1.25F, 0.04F), JPH::Vec3(-0.5F, 0.15F, 0.75F), Material::Yellow)},
         kCartHead, slope, kCartMassKg, 0.2F);
     crane.l_cart_guide = kit.add_guide(crane.l_cart, down, 0.0F, kCartTravel, 2.0F, 60000.0F, 1.0F);
     incline_track(frame, kCartHead, slope, true, -3.5F, kCartTravel + 1.5F, 0.3F);
@@ -433,9 +465,12 @@ void build_stage_l(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) 
     crane.l_catch_lever =
         kit.add_lever(crane.l_catch_body, kCatchPivot, -JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(), 0.0F, 1.2F);
     crane.l_cart_catch = kit.add_catch(crane.l_cart, crane.l_catch_lever, kLeverRelease, 0.05F, false);
-    frame.push_back(span({static_cast<float>(kCatchPivot.GetX()) - 0.1F, 573.0F, -162.12F},
-                         {static_cast<float>(kCatchPivot.GetX()) + 0.1F, 574.95F, -161.95F}, Material::Steel));
-    frame.push_back(span({0.5F, 573.2F, -162.7F}, {1.8F, 573.3F, -161.9F}, Material::Steel));
+    const JPH::Vec3 h = vec(kCartHead);
+    const JPH::Vec3 c = vec(kCatchPivot);
+    frame.push_back(span({c.GetX() - 0.1F, h.GetY() - 1.0F, c.GetZ() + 0.18F},
+                         {c.GetX() + 0.1F, c.GetY() + 0.05F, c.GetZ() + 0.35F}, Material::Steel));
+    frame.push_back(span({h.GetX() - 0.5F, h.GetY() - 0.8F, c.GetZ() - 0.4F}, {h.GetX() + 0.8F, h.GetY() - 0.7F, c.GetZ() + 0.4F},
+                         Material::Steel));
     crane.l_weight = kit.add_body(Sim::kCraneLWeightEntityId,
                                   {box(JPH::Vec3(0.25F, 0.25F, 0.25F), JPH::Vec3::sZero(), Material::Concrete)},
                                   kWeightAt, JPH::Quat::sIdentity(), 200.0F, 0.6F);
@@ -445,8 +480,9 @@ void build_stage_l(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) 
     (void)kit.add_trip_line(crane.l_pin, JPH::Vec3(0.0F, 0.0F, 0.25F), crane.l_pin_handle,
                             JPH::Vec3(0.0F, kHandleHalfY, 0.0F), kWeightLanyard1, kWeightLanyard2);
 
-    // The winch: the cart's rope on the small drum, the cab's on the big one,
-    // their dog clutch out; its lever on the 572 ring by the cab.
+    // The winch, hung from TP-640's underside at the incline's head: the
+    // cart's rope on the small drum, the cab's on the big one, their dog
+    // clutch out; its lever on the 572 ring by the cab.
     const JPH::Vec3 end1(-1.15F, 0.3F, 0.0F);
     const JPH::RVec3 p1 = kCartHead + JPH::RVec3(slope * end1);
     const JPH::RVec3 f1 = kCartHead + JPH::RVec3(slope * JPH::Vec3(-3.0F, 0.3F, 0.0F));
@@ -459,7 +495,7 @@ void build_stage_l(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) 
     for (const float r : {0.45F, 0.8F}) {
         frame.push_back(box(JPH::Vec3(r, r, 0.3F), w + JPH::Vec3(0.0F, 0.0F, r > 0.5F ? 0.7F : -0.1F), Material::Rust));
     }
-    frame.push_back(span({w.GetX() - 0.1F, 573.0F, w.GetZ() - 0.6F}, {w.GetX() + 0.1F, w.GetY() - 0.8F, w.GetZ() + 0.95F},
+    frame.push_back(span({w.GetX() - 0.1F, w.GetY() + 0.8F, w.GetZ() - 0.6F}, {w.GetX() + 0.1F, kPlateBottom, w.GetZ() + 0.95F},
                          Material::Steel));
     crane.l_clutch_body =
         add_standing_lever(kit, frame, Sim::kCraneLClutchEntityId, kClutchPivot, 572.25F, crane.l_clutch_lever);
