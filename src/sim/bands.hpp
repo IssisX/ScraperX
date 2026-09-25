@@ -1,7 +1,8 @@
 #pragma once
 
 // The bands of the mechanism ascent, each built from the mechanism kit.
-// 03_EXECUTION/ASCENT/AS-006_CW_PIN.md is the Counterweight Well's contract.
+// 03_EXECUTION/ASCENT/AS-006_CW_PIN.md is the Counterweight Well's contract,
+// AS-007_WET_ISOLATION.md Wet Isolation's.
 
 #include "sim/mechanism_kit.hpp"
 
@@ -64,5 +65,69 @@ struct CounterweightWell final {
 };
 
 void build_counterweight_well(kit::Kit &kit, CounterweightWell &well);
+
+// AS-007, Atlas band B03, 220 -> 340 m. 03_EXECUTION/ASCENT/AS-007_WET_ISOLATION.md.
+struct WetIsolation final {
+    // Stage D, the float ram.
+    kit::BodyIndex d_platform;       // platform, mast and float: one body
+    kit::BodyIndex d_spool;
+    kit::BodyIndex d_valve_body;
+    kit::BodyIndex d_valve_handle;
+    kit::BodyIndex d_drain_body;
+    kit::BodyIndex d_drain_handle;
+    kit::GuideIndex d_guide;
+    kit::LeverIndex d_valve;
+    kit::LeverIndex d_drain;
+    kit::PoolIndex d_tank;
+    kit::PoolIndex d_tube;
+    kit::PipeIndex d_fill;
+    kit::PipeIndex d_drain_pipe;
+
+    // Stage E, the chiller drop.
+    kit::BodyIndex e_cab;
+    kit::BodyIndex e_chiller;
+    kit::BodyIndex e_door;
+    kit::BodyIndex e_latch_body;
+    kit::BodyIndex e_lever_body;
+    kit::BodyIndex e_handle;
+    kit::BodyIndex e_bucket;
+    kit::BodyIndex e_striker_body;
+    kit::GuideIndex e_cab_guide;
+    kit::GuideIndex e_chiller_guide;
+    kit::GuideIndex e_bucket_guide;
+    kit::LeverIndex e_door_hinge;
+    kit::LeverIndex e_latch;
+    kit::LeverIndex e_lever;
+    kit::LeverIndex e_striker;
+    kit::CatchIndex e_door_catch;
+    kit::CatchIndex e_catch;
+    kit::CellIndex e_duct_cell;
+    kit::CellIndex e_cab_cell;
+    kit::RopeIndex e_rope;
+    kit::BinIndex e_bucket_bin;
+
+    // Stage F, the accumulator.
+    kit::BodyIndex f_platform;
+    kit::BodyIndex f_accumulator;
+    kit::BodyIndex f_hose;
+    kit::BodyIndex f_lever_body;
+    kit::BodyIndex f_handle;
+    kit::GuideIndex f_platform_guide;
+    kit::GuideIndex f_accumulator_guide;
+    kit::LeverIndex f_lever;
+    kit::CatchIndex f_catch;
+    kit::RopeIndex f_line;
+    kit::AnchorIndex f_inlet;
+
+    // The header on TP-340 and its cascade.
+    kit::BodyIndex header_dump_body;
+    kit::BodyIndex header_dump_handle;
+    kit::LeverIndex header_dump;
+    kit::PoolIndex header;
+    kit::PipeIndex header_to_tank;
+    kit::PipeIndex header_to_bucket;
+};
+
+void build_wet_isolation(kit::Kit &kit, WetIsolation &wet);
 
 } // namespace scraperx::sim::bands

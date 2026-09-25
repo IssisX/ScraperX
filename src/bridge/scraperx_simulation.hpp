@@ -181,12 +181,16 @@ public:
     // drawn through. Empty for a parted rope.
     [[nodiscard]] std::int64_t get_kit_cable_count() const;
     [[nodiscard]] godot::PackedVector3Array get_kit_cable_points(std::int64_t cable) const;
-    // Rubble (the native's declared granular model), every bin as 10 floats:
-    // its kit body index, contents kg, capacity kg, flowing (0 or 1), and the
-    // stream's from and to points (zero unless flowing).
+    // Rubble (the native's declared granular model), every bin as 11 floats:
+    // its kit body index, contents kg, capacity kg, flowing (0 or 1), the
+    // stream's from and to points (zero unless flowing), and 1 for water.
     [[nodiscard]] godot::PackedFloat32Array get_kit_bins() const;
     // Every pile of spilled rubble as 4 floats: where it lies, and its kg.
     [[nodiscard]] godot::PackedFloat32Array get_kit_piles() const;
+    // AS-007 water: per pool its box (min, max) and level; per pipe whether
+    // its spout pours this frame and from where to where.
+    [[nodiscard]] godot::PackedFloat32Array get_kit_pools() const;
+    [[nodiscard]] godot::PackedFloat32Array get_kit_spouts() const;
     // Stage A, the skip lift, read back.
     [[nodiscard]] double get_well_a_cage_travel() const;
     [[nodiscard]] bool is_well_a_catch_latched() const;

@@ -250,7 +250,9 @@ const KIT_CARRY_HANDLE := 2
 # Rubble, the native's declared granular model: a mass in each bin, a stream
 # while one pours, piles where spills land. Drawn at a loose bulk density; a
 # pile is drawn as a low skirt, no taller than a step, since it has no body.
-const KIT_BIN_FLOATS := 10
+const KIT_BIN_FLOATS := 11
+const KIT_POOL_FLOATS := 7
+const KIT_SPOUT_FLOATS := 7
 const KIT_PILE_FLOATS := 4
 const KIT_MAX_PILES := 16
 const RUBBLE_DENSITY := 1600.0
@@ -388,6 +390,9 @@ var _kit_bin_layers: Array = []
 var _kit_bin_floors: Array = []
 var _kit_bin_streams: Array[MeshInstance3D] = []
 var _kit_piles: Array[MeshInstance3D] = []
+# AS-007 water: a body of water per pool, a stream per spout.
+var _kit_pools: Array[MeshInstance3D] = []
+var _kit_spouts: Array[MeshInstance3D] = []
 var _sump_grate_safe_material: Material
 var _sump_grate_hazard_material: Material
 var _stack_gears: Array[Node3D] = []
@@ -1022,6 +1027,24 @@ func _carry_name(entity: int) -> String:
 			return "REBAR LINE"
 		2026:
 			return "LATCH HANDLE"
+		2031:
+			return "PIPE SPOOL"
+		2033:
+			return "FILL VALVE"
+		2035:
+			return "DRAIN HANDLE"
+		2042:
+			return "DOOR"
+		2043:
+			return "DOOR LATCH"
+		2045:
+			return "CHILLER TRIP"
+		2052:
+			return "HOSE"
+		2054:
+			return "STOP VALVE"
+		2061:
+			return "HEADER DUMP"
 	return "ROPE END" if _is_kit(entity) else ""
 
 
@@ -1037,6 +1060,8 @@ func _kit_anchor_name(entity: int) -> String:
 			return "CLEAT"
 		2000, 2010:
 			return "CAGE EYE"
+		2050:
+			return "RAM INLET"
 	return "ANCHOR"
 
 
@@ -3931,10 +3956,20 @@ func _build_kit() -> void:
 	var stream_mesh := BoxMesh.new()
 	stream_mesh.size = Vector3(0.3, 0.3, 1.0)
 	stream_mesh.material = palette[6]
+	var water := StandardMaterial3D.new()
+	water.albedo_color = Color(0.16, 0.30, 0.33, 0.74)
+	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	water.metallic = 0.1
+	water.roughness = 0.08
+	water.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var water_stream := BoxMesh.new()
+	water_stream.size = Vector3(0.22, 0.22, 1.0)
+	water_stream.material = water
 	var bins: PackedFloat32Array = _native.get_kit_bins()
 	for b in range(0, bins.size() - KIT_BIN_FLOATS + 1, KIT_BIN_FLOATS):
 		var index := _kit_bin_streams.size()
 		var body := int(bins[b])
+		var is_water := bins[b + 10] > 0.5
 		var layer: MeshInstance3D = null
 		var floor_box := PackedFloat32Array()
 		var moving := body >= 0 and body < _kit_dynamic.size() and _kit_dynamic[body]
@@ -3944,7 +3979,7 @@ func _build_kit() -> void:
 			# The rubble lies on the bin's floor, its first part.
 			floor_box = parts.slice(0, KIT_PART_FLOATS)
 			var layer_mesh := BoxMesh.new()
-			layer_mesh.material = palette[6]
+			layer_mesh.material = water if is_water else palette[6]
 			layer = MeshInstance3D.new()
 			layer.name = "KitRubble%d" % index
 			layer.mesh = layer_mesh
@@ -3954,7 +3989,7 @@ func _build_kit() -> void:
 		_kit_bin_floors.append(floor_box)
 		var stream := MeshInstance3D.new()
 		stream.name = "KitStream%d" % index
-		stream.mesh = stream_mesh
+		stream.mesh = water_stream if is_water else stream_mesh
 		stream.visible = false
 		_kit_root.add_child(stream)
 		_kit_bin_streams.append(stream)
@@ -3972,6 +4007,25 @@ func _build_kit() -> void:
 		pile.visible = false
 		_kit_root.add_child(pile)
 		_kit_piles.append(pile)
+	var pools: PackedFloat32Array = _native.get_kit_pools()
+	for p in range(0, pools.size() - KIT_POOL_FLOATS + 1, KIT_POOL_FLOATS):
+		var body_mesh := BoxMesh.new()
+		body_mesh.size = Vector3.ONE
+		body_mesh.material = water
+		var pool := MeshInstance3D.new()
+		pool.name = "KitPool%d" % _kit_pools.size()
+		pool.mesh = body_mesh
+		pool.visible = false
+		_kit_root.add_child(pool)
+		_kit_pools.append(pool)
+	var spouts: PackedFloat32Array = _native.get_kit_spouts()
+	for p in range(0, spouts.size() - KIT_SPOUT_FLOATS + 1, KIT_SPOUT_FLOATS):
+		var spout := MeshInstance3D.new()
+		spout.name = "KitSpout%d" % _kit_spouts.size()
+		spout.mesh = water_stream
+		spout.visible = false
+		_kit_root.add_child(spout)
+		_kit_spouts.append(spout)
 	_render_kit()
 
 
@@ -4014,7 +4068,8 @@ func _render_rubble() -> void:
 			var floor_box: PackedFloat32Array = _kit_bin_floors[index]
 			var half_x := maxf(floor_box[0] - 0.06, 0.05)
 			var half_z := maxf(floor_box[2] - 0.06, 0.05)
-			var depth := bins[b + 1] / RUBBLE_DENSITY / (4.0 * half_x * half_z)
+			var density := 1000.0 if bins[b + 10] > 0.5 else RUBBLE_DENSITY
+			var depth := bins[b + 1] / density / (4.0 * half_x * half_z)
 			layer.visible = bins[b + 1] >= 1.0
 			if layer.visible:
 				var rotation := Basis(Quaternion(floor_box[6], floor_box[7], floor_box[8],
@@ -4043,6 +4098,33 @@ func _render_rubble() -> void:
 			pile.transform = Transform3D(
 				Basis.from_scale(Vector3(radius, RUBBLE_PILE_HEIGHT, radius)),
 				Vector3(piles[p], piles[p + 1] + RUBBLE_PILE_HEIGHT * 0.5, piles[p + 2]))
+	_render_water()
+
+
+# Water (the native's declared model): each pool drawn from its floor to its
+# level, and a stream from each spout pouring this frame to where it lands.
+func _render_water() -> void:
+	var pools: PackedFloat32Array = _native.get_kit_pools()
+	for index in _kit_pools.size():
+		var p := index * KIT_POOL_FLOATS
+		var pool: MeshInstance3D = _kit_pools[index]
+		if p + KIT_POOL_FLOATS > pools.size():
+			pool.visible = false
+			continue
+		var low := Vector3(pools[p], pools[p + 1], pools[p + 2])
+		var high := Vector3(pools[p + 3], pools[p + 6], pools[p + 5])
+		pool.visible = high.y - low.y > 0.02
+		if pool.visible:
+			pool.transform = Transform3D(Basis.from_scale(high - low), (low + high) * 0.5)
+	var spouts: PackedFloat32Array = _native.get_kit_spouts()
+	for index in _kit_spouts.size():
+		var p := index * KIT_SPOUT_FLOATS
+		var spout: MeshInstance3D = _kit_spouts[index]
+		if p + KIT_SPOUT_FLOATS <= spouts.size() and spouts[p] > 0.5:
+			_lay_segment(spout, Vector3(spouts[p + 1], spouts[p + 2], spouts[p + 3]),
+				Vector3(spouts[p + 4], spouts[p + 5], spouts[p + 6]))
+		else:
+			spout.visible = false
 
 
 func _lay_segment(instance: MeshInstance3D, from: Vector3, to: Vector3) -> void:

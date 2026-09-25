@@ -95,6 +95,9 @@ using CatchIndex = Index<struct CatchTag>;
 using LineIndex = Index<struct LineTag>;
 using SlipIndex = Index<struct SlipTag>;
 using BinIndex = Index<struct BinTag>;
+using PoolIndex = Index<struct PoolTag>;
+using PipeIndex = Index<struct PipeTag>;
+using CellIndex = Index<struct CellTag>;
 
 class Kit final {
 public:
@@ -179,6 +182,67 @@ public:
     LineIndex add_trip_line(BodyIndex lever_body, JPH::Vec3 lever_point, BodyIndex handle_body,
                             JPH::Vec3 handle_point, JPH::RVec3 sheave1, JPH::RVec3 sheave2);
 
+    // As found: a catch standing open, and a body placed where it was left
+    // (a door hooked back). Build time only.
+    void open_catch(CatchIndex catch_index);
+    void place_body(BodyIndex body, JPH::RVec3 position, JPH::Quat rotation);
+
+    // Water in this bin (AS-007): what it spills drains away instead of
+    // lying in a pile.
+    void set_bin_water(BinIndex bin);
+
+    // A hydraulic line (declared model, AS-007): the rope becomes a push-only
+    // strut, |p1 - fixed1| + ratio |end - fixed2| >= what the line holds.
+    // Fixed points sit under the rams. It is connected only while its end is
+    // hooked (a coupled hose); coupling takes whatever fluid it holds then.
+    void set_strut(RopeIndex rope);
+
+    // ---- water (declared model, AS-007) ----------------------------------
+    // A pool is a sealed box of water between min and max (floor and top in
+    // y). Its level follows from its water and the displacement of the floats
+    // in it. A pipe into a full pool stops; water a float pushes over its top
+    // leaves it and drains away.
+    PoolIndex add_pool(JPH::Vec3 min_corner, JPH::Vec3 max_corner, float water_kg);
+    // A float: the body's box of half_x by half_z, from bottom_local (body
+    // y) up height, feels rho g A d up at its centre of mass, d its depth
+    // under the pool's level, and water drag on its vertical speed.
+    void add_float(PoolIndex pool, BodyIndex body, float half_x, float half_z,
+                   float bottom_local, float height);
+    // A pipe from a pool's outlet at from_y to another pool's inlet at to_y
+    // (both ways, from the higher head), or, with to invalid, to a spout at
+    // spout that pours down into the first bin under it or spills.
+    // Q = 0.6 area f sqrt(2 g dh), f the valve's opening between its shut
+    // and open angles (no valve: open).
+    PipeIndex add_pipe(PoolIndex from, float from_y, PoolIndex to, float to_y, JPH::RVec3 spout,
+                       float area, LeverIndex valve, float shut_angle, float open_angle);
+    // The pipe is whole only while spool's centre sits within tolerance of
+    // seat and its local x axis within angle_tolerance of axis (either way).
+    void set_pipe_spool(PipeIndex pipe, BodyIndex spool, JPH::RVec3 seat, JPH::Vec3 axis,
+                        float tolerance, float angle_tolerance);
+    // A charge line: while valve is past open_angle and the pool holds water
+    // over from_y, its head pushes body up with rho g (level - base_y) area,
+    // and the water that takes leaves the pool.
+    void add_charge(PoolIndex pool, float from_y, BodyIndex body, float area, float base_y,
+                    LeverIndex valve, float open_angle);
+
+    // ---- air (declared model, AS-007) ------------------------------------
+    // A sealed cell of air at atmospheric pressure as built, isothermal.
+    CellIndex add_cell(float volume_m3);
+    // A piston with the cell under it: the cell grows by area for each metre
+    // the body rises, and the body feels (P - P_atm) area up.
+    void add_piston(CellIndex cell, BodyIndex body, float area);
+    // A throttle between two cells: 0.6 area sqrt(2 rho dP), linear under
+    // 50 Pa.
+    void add_throttle(CellIndex a, CellIndex b, float area);
+    // A door in the cell's wall: it leaks area times its opening (its angle
+    // over full_angle), and the cell presses it outward along normal.
+    void add_door(CellIndex cell, LeverIndex door, float area, float full_angle,
+                  JPH::Vec3 normal);
+    // A vacuum breaker: admits air through area below P_atm - 100 Pa.
+    void add_breaker(CellIndex cell, float area);
+    // A bleed: a small opening to the air, always open, either way.
+    void add_bleed(CellIndex cell, float area);
+
     // ---- stepping -------------------------------------------------------
     void pre_step(float delta_seconds);
     void post_step(float delta_seconds);
@@ -234,6 +298,9 @@ public:
         std::vector<bool> rope_parted;
         std::vector<bool> catch_latched;
         std::vector<Pile> piles;
+        std::vector<float> pool_water;
+        std::vector<float> cell_air;
+        float drained = 0.0F;
     };
     void capture(Checkpoint &out) const;
     void restore(const Checkpoint &in);
@@ -282,12 +349,33 @@ public:
     [[nodiscard]] float bin_contents(BinIndex bin) const noexcept;
     [[nodiscard]] float bin_capacity(BinIndex bin) const noexcept;
     [[nodiscard]] BodyIndex bin_body(BinIndex bin) const noexcept;
+    [[nodiscard]] bool bin_water(BinIndex bin) const noexcept;
     // The stream leaving the bin this step: from its mouth down to where it
     // lands. False when its gate is shut or it is empty.
     [[nodiscard]] bool bin_stream(BinIndex bin, JPH::RVec3 &from, JPH::RVec3 &to) const noexcept;
     // Rubble that has left the system onto static surfaces, kg.
     [[nodiscard]] float spilled() const noexcept;
     [[nodiscard]] const std::vector<Pile> &piles() const noexcept { return piles_; }
+
+    [[nodiscard]] std::uint32_t pool_count() const noexcept {
+        return static_cast<std::uint32_t>(pools_.size());
+    }
+    [[nodiscard]] float pool_level(PoolIndex pool) const noexcept;
+    [[nodiscard]] float pool_water(PoolIndex pool) const noexcept;
+    [[nodiscard]] float pool_floor(PoolIndex pool) const noexcept;
+    // The pool's box, floor to top.
+    void pool_box(PoolIndex pool, JPH::Vec3 &min_corner, JPH::Vec3 &max_corner) const noexcept;
+    // Water gone from the system: overflows and spills, kg.
+    [[nodiscard]] float drained() const noexcept { return drained_; }
+    [[nodiscard]] std::uint32_t pipe_count() const noexcept {
+        return static_cast<std::uint32_t>(pipes_.size());
+    }
+    // A spout pouring this step: from the spout to where it lands.
+    [[nodiscard]] bool pipe_stream(PipeIndex pipe, JPH::RVec3 &from, JPH::RVec3 &to) const noexcept;
+    // The water through the pipe this step, kg/s (from -> to positive).
+    [[nodiscard]] float pipe_flow(PipeIndex pipe) const noexcept;
+    [[nodiscard]] bool pipe_whole(PipeIndex pipe) const noexcept;
+    [[nodiscard]] float cell_pressure(CellIndex cell) const noexcept;
 
     [[nodiscard]] bool catch_latched(CatchIndex catch_index) const noexcept;
     [[nodiscard]] float lever_angle(LeverIndex lever) const noexcept;
@@ -339,6 +427,7 @@ private:
         float rating = 0.0F;
         std::uint32_t over_rating_steps = 0;
         bool parted = false;
+        bool strut = false;
         float tension = 0.0F;
         JPH::Ref<JPH::PulleyConstraint> constraint;
     };
@@ -366,8 +455,76 @@ private:
         float gate_reach = 0.0F;
         float flow_rate = 0.0F;
         bool flowing = false;
+        bool water = false;
         JPH::RVec3 stream_from = JPH::RVec3::sZero();
         JPH::RVec3 stream_to = JPH::RVec3::sZero();
+    };
+    struct Float final {
+        BodyIndex body;
+        float half_x = 0.0F;
+        float half_z = 0.0F;
+        float bottom = 0.0F;   // body-local y
+        float height = 0.0F;
+    };
+    struct Pool final {
+        JPH::Vec3 min_corner = JPH::Vec3::sZero();
+        JPH::Vec3 max_corner = JPH::Vec3::sZero();
+        float water = 0.0F;   // kg
+        float level = 0.0F;
+        std::vector<Float> floats;
+    };
+    struct Pipe final {
+        PoolIndex from;
+        float from_y = 0.0F;
+        PoolIndex to;
+        float to_y = 0.0F;
+        JPH::RVec3 spout = JPH::RVec3::sZero();
+        float area = 0.0F;
+        LeverIndex valve;
+        float shut_angle = 0.0F;
+        float open_angle = 0.0F;
+        BodyIndex spool;
+        JPH::RVec3 seat = JPH::RVec3::sZero();
+        JPH::Vec3 seat_axis = JPH::Vec3::sAxisX();
+        float seat_tolerance = 0.0F;
+        float seat_angle = 0.0F;
+        float flow = 0.0F;   // kg/s this step
+        bool pouring = false;
+        JPH::RVec3 stream_to = JPH::RVec3::sZero();
+    };
+    struct Charge final {
+        PoolIndex pool;
+        float from_y = 0.0F;
+        BodyIndex body;
+        float area = 0.0F;
+        float base_y = 0.0F;
+        LeverIndex valve;
+        float open_angle = 0.0F;
+        float last_y = 0.0F;
+    };
+    struct Piston final {
+        BodyIndex body;
+        float area = 0.0F;
+        float rest_y = 0.0F;   // centre-of-mass height as built
+    };
+    struct Door final {
+        LeverIndex lever;
+        float area = 0.0F;
+        float full_angle = 1.0F;
+        JPH::Vec3 normal = JPH::Vec3::sAxisZ();
+    };
+    struct Cell final {
+        float volume0 = 0.0F;
+        float air = 0.0F;   // P V, Pa m^3
+        std::vector<Piston> pistons;
+        std::vector<Door> doors;
+        float breaker = 0.0F;
+        float bleed = 0.0F;
+    };
+    struct Throttle final {
+        CellIndex a;
+        CellIndex b;
+        float area = 0.0F;
     };
     struct Slip final {
         RopeIndex rope;
@@ -381,6 +538,7 @@ private:
         float seat_tolerance = 0.0F;
         bool relatch = false;
         JPH::RVec3 seat = JPH::RVec3::sZero();
+        JPH::Quat seat_rotation = JPH::Quat::sIdentity();
         JPH::Ref<JPH::FixedConstraint> pin;
     };
 
@@ -407,6 +565,17 @@ private:
     // The middle of the top of a bin's floor, its body's first part, local.
     [[nodiscard]] JPH::Vec3 floor_top(const Bin &bin) const;
     void spill(JPH::RVec3 at, float kg);
+    // Straight down from `from`, passing moving bodies that are not bins: the
+    // first bin, or the first static surface. False for nothing within
+    // kStreamReach.
+    bool land_stream(JPH::RVec3 from, JPH::BodyID ignore, Bin *&receiver, JPH::RVec3 &lands);
+    void flow_water(float delta_seconds);
+    void flow_air(float delta_seconds);
+    void press(float delta_seconds);
+    void settle_level(Pool &pool);
+    [[nodiscard]] float pool_volume_at(const Pool &pool, float level) const;
+    [[nodiscard]] float pipe_opening(const Pipe &pipe) const;
+    [[nodiscard]] float cell_volume(const Cell &cell) const;
 
     JPH::PhysicsSystem &system_;
     JPH::ObjectLayer static_layer_;
@@ -421,6 +590,12 @@ private:
     std::vector<Slip> slips_;
     std::vector<Bin> bins_;
     std::vector<Pile> piles_;
+    std::vector<Pool> pools_;
+    std::vector<Pipe> pipes_;
+    std::vector<Charge> charges_;
+    std::vector<Cell> cells_;
+    std::vector<Throttle> throttles_;
+    float drained_ = 0.0F;
 };
 
 } // namespace scraperx::sim::kit

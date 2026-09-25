@@ -41,6 +41,30 @@ constexpr float kStreamReach = 80.0F;
 constexpr float kPileMergeRadius = 1.5F;
 constexpr std::size_t kMaxPiles = 16;
 
+// The declared water and air models (AS-007).
+constexpr float kWaterDensity = 1000.0F;          // kg/m^3
+constexpr float kGravity = 9.81F;
+constexpr float kDischarge = 0.6F;                // orifice discharge coefficient
+constexpr float kHeadLinear = 0.05F;              // m: flow is linear in head below this
+constexpr float kFloatDrag = 2500.0F;             // N s/m per m^2 of float
+constexpr float kAtmosphere = 101325.0F;          // Pa
+constexpr float kAirDensity = 1.2F;               // kg/m^3 at kAtmosphere
+constexpr float kPressureLinear = 50.0F;          // Pa: flow is linear below this
+constexpr float kBreakerOpen = 100.0F;            // Pa under kAtmosphere
+constexpr float kMinCellVolume = 0.5F;            // m^3, a guard: no cell is ever empty
+
+// Orifice flow, m^3/s, through area for a pressure difference dp in a fluid
+// of density rho; linear below `linear` so a nearly-level pair does not
+// chatter.
+[[nodiscard]] float orifice(const float area, const float dp, const float rho,
+                            const float linear) {
+    const float magnitude = std::abs(dp);
+    if (magnitude < linear) {
+        return kDischarge * area * std::sqrt(2.0F * linear / rho) * (magnitude / linear);
+    }
+    return kDischarge * area * std::sqrt(2.0F * magnitude / rho);
+}
+
 [[nodiscard]] JPH::Ref<JPH::Shape> make_shape(const std::vector<Part> &parts) {
     const auto box = [](const Part &part) {
         const float smallest =
@@ -226,6 +250,7 @@ CatchIndex Kit::add_catch(const BodyIndex body, const LeverIndex lever, const fl
     record.seat_tolerance = seat_tolerance;
     record.relatch = relatch;
     record.seat = jolt_body(body).GetCenterOfMassPosition();
+    record.seat_rotation = jolt_body(body).GetRotation();
     catches_.push_back(record);
     latch(catches_.back());
     return CatchIndex{static_cast<std::uint32_t>(catches_.size() - 1U)};
@@ -279,6 +304,116 @@ LineIndex Kit::add_trip_line(const BodyIndex lever_body, const JPH::Vec3 lever_p
     return LineIndex{static_cast<std::uint32_t>(lines_.size() - 1U)};
 }
 
+void Kit::open_catch(const CatchIndex catch_index) {
+    unlatch(catches_[catch_index.value]);
+}
+
+void Kit::place_body(const BodyIndex body, const JPH::RVec3 position, const JPH::Quat rotation) {
+    system_.GetBodyInterface().SetPositionAndRotation(bodies_[body.value].id, position, rotation,
+                                                      JPH::EActivation::Activate);
+}
+
+void Kit::set_bin_water(const BinIndex bin) {
+    bins_[bin.value].water = true;
+}
+
+void Kit::set_strut(const RopeIndex rope) {
+    Rope &record = ropes_[rope.value];
+    disconnect_rope(record);
+    record.strut = true;
+    connect_rope(record);
+}
+
+PoolIndex Kit::add_pool(const JPH::Vec3 min_corner, const JPH::Vec3 max_corner,
+                        const float water_kg) {
+    Pool pool;
+    pool.min_corner = min_corner;
+    pool.max_corner = max_corner;
+    pool.water = water_kg;
+    pools_.push_back(pool);
+    settle_level(pools_.back());
+    return PoolIndex{static_cast<std::uint32_t>(pools_.size() - 1U)};
+}
+
+void Kit::add_float(const PoolIndex pool, const BodyIndex body, const float half_x,
+                    const float half_z, const float bottom_local, const float height) {
+    pools_[pool.value].floats.push_back({body, half_x, half_z, bottom_local, height});
+    settle_level(pools_[pool.value]);
+}
+
+PipeIndex Kit::add_pipe(const PoolIndex from, const float from_y, const PoolIndex to,
+                        const float to_y, const JPH::RVec3 spout, const float area,
+                        const LeverIndex valve, const float shut_angle, const float open_angle) {
+    Pipe pipe;
+    pipe.from = from;
+    pipe.from_y = from_y;
+    pipe.to = to;
+    pipe.to_y = to_y;
+    pipe.spout = spout;
+    pipe.area = area;
+    pipe.valve = valve;
+    pipe.shut_angle = shut_angle;
+    pipe.open_angle = open_angle;
+    pipes_.push_back(pipe);
+    return PipeIndex{static_cast<std::uint32_t>(pipes_.size() - 1U)};
+}
+
+void Kit::set_pipe_spool(const PipeIndex pipe, const BodyIndex spool, const JPH::RVec3 seat,
+                         const JPH::Vec3 axis, const float tolerance,
+                         const float angle_tolerance) {
+    Pipe &record = pipes_[pipe.value];
+    record.spool = spool;
+    record.seat = seat;
+    record.seat_axis = axis.Normalized();
+    record.seat_tolerance = tolerance;
+    record.seat_angle = angle_tolerance;
+}
+
+void Kit::add_charge(const PoolIndex pool, const float from_y, const BodyIndex body,
+                     const float area, const float base_y, const LeverIndex valve,
+                     const float open_angle) {
+    Charge charge;
+    charge.pool = pool;
+    charge.from_y = from_y;
+    charge.body = body;
+    charge.area = area;
+    charge.base_y = base_y;
+    charge.valve = valve;
+    charge.open_angle = open_angle;
+    charge.last_y = static_cast<float>(jolt_body(body).GetCenterOfMassPosition().GetY());
+    charges_.push_back(charge);
+}
+
+CellIndex Kit::add_cell(const float volume_m3) {
+    Cell cell;
+    cell.volume0 = volume_m3;
+    cell.air = kAtmosphere * volume_m3;
+    cells_.push_back(cell);
+    return CellIndex{static_cast<std::uint32_t>(cells_.size() - 1U)};
+}
+
+void Kit::add_piston(const CellIndex cell, const BodyIndex body, const float area) {
+    const float rest = static_cast<float>(jolt_body(body).GetCenterOfMassPosition().GetY());
+    cells_[cell.value].pistons.push_back({body, area, rest});
+}
+
+void Kit::add_throttle(const CellIndex a, const CellIndex b, const float area) {
+    throttles_.push_back({a, b, area});
+}
+
+void Kit::add_door(const CellIndex cell, const LeverIndex door, const float area,
+                   const float full_angle, const JPH::Vec3 normal) {
+    cells_[cell.value].doors.push_back({door, area, full_angle, normal.Normalized()});
+}
+
+void Kit::add_breaker(const CellIndex cell, const float area) {
+    cells_[cell.value].breaker = area;
+}
+
+void Kit::add_bleed(const CellIndex cell, const float area) {
+    cells_[cell.value].bleed = area;
+}
+
 // ---- stepping ---------------------------------------------------------------
 
 void Kit::govern(Guide &guide) noexcept {
@@ -312,7 +447,8 @@ void Kit::govern(Guide &guide) noexcept {
     }
 }
 
-void Kit::pre_step(const float) {
+void Kit::pre_step(const float delta_seconds) {
+    press(delta_seconds);
     for (Guide &guide : guides_) {
         govern(guide);
         engage_dogs(guide);
@@ -354,8 +490,41 @@ void Kit::apply_bin_mass(const Bin &bin) {
     jolt_body(bin.body).GetMotionProperties()->ScaleToMass(record.mass + bin.contents);
 }
 
-void Kit::flow_bins(const float delta_seconds) {
+bool Kit::land_stream(const JPH::RVec3 from, const JPH::BodyID ignore, Bin *&receiver,
+                      JPH::RVec3 &lands) {
+    // Straight down: the first bin, or the first static surface; moving
+    // bodies that are not bins are passed through.
     const JPH::NarrowPhaseQuery &query = system_.GetNarrowPhaseQueryNoLock();
+    const JPH::RRayCast ray{from, JPH::Vec3(0.0F, -kStreamReach, 0.0F)};
+    JPH::AllHitCollisionCollector<JPH::CastRayCollector> hits;
+    const JPH::IgnoreSingleBodyFilter not_self(ignore);
+    query.CastRay(ray, JPH::RayCastSettings(), hits, {}, {}, not_self);
+    hits.Sort();
+    receiver = nullptr;
+    for (const JPH::RayCastResult &hit : hits.mHits) {
+        for (Bin &candidate : bins_) {
+            if (bodies_[candidate.body.value].id == hit.mBodyID) {
+                receiver = &candidate;
+            }
+        }
+        const JPH::BodyLockRead lock(system_.GetBodyLockInterfaceNoLock(), hit.mBodyID);
+        const bool is_static = lock.Succeeded() && lock.GetBody().IsStatic();
+        if (receiver != nullptr || is_static) {
+            lands = ray.GetPointOnRay(hit.mFraction);
+            if (receiver != nullptr) {
+                // Into a bin, the stream runs on past its rim or bail to its floor.
+                const JPH::RVec3 floor = world_point(receiver->body, floor_top(*receiver));
+                if (floor.GetY() < lands.GetY()) {
+                    lands.SetY(floor.GetY());
+                }
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+void Kit::flow_bins(const float delta_seconds) {
     for (Bin &bin : bins_) {
         bin.flowing = false;
         const Lever *gate = find(levers_, bin.gate);
@@ -367,44 +536,18 @@ void Kit::flow_bins(const float delta_seconds) {
         if (JPH::Vec3(gate->pivot - mouth).Length() > bin.gate_reach) {
             continue;
         }
-        // Straight down from the mouth: the first bin, or the first static
-        // surface; moving bodies that are not bins are passed through.
-        const JPH::RRayCast ray{mouth, JPH::Vec3(0.0F, -kStreamReach, 0.0F)};
-        JPH::AllHitCollisionCollector<JPH::CastRayCollector> hits;
-        const JPH::IgnoreSingleBodyFilter not_self(bodies_[bin.body.value].id);
-        query.CastRay(ray, JPH::RayCastSettings(), hits, {}, {}, not_self);
-        hits.Sort();
         Bin *receiver = nullptr;
-        float landed = 1.0F;
-        bool found = false;
-        for (const JPH::RayCastResult &hit : hits.mHits) {
-            for (Bin &candidate : bins_) {
-                if (&candidate != &bin && bodies_[candidate.body.value].id == hit.mBodyID) {
-                    receiver = &candidate;
-                }
-            }
-            const JPH::BodyLockRead lock(system_.GetBodyLockInterfaceNoLock(), hit.mBodyID);
-            const bool is_static = lock.Succeeded() && lock.GetBody().IsStatic();
-            if (receiver != nullptr || is_static) {
-                landed = hit.mFraction;
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
+        JPH::RVec3 lands = mouth;
+        if (!land_stream(mouth, bodies_[bin.body.value].id, receiver, lands)) {
             continue;
         }
         float moved = std::min(bin.contents, bin.flow_rate * delta_seconds);
-        JPH::RVec3 lands = ray.GetPointOnRay(landed);
         if (receiver != nullptr) {
             moved = std::min(moved, std::max(0.0F, receiver->capacity - receiver->contents));
             receiver->contents += moved;
             apply_bin_mass(*receiver);
-            // Into a bin, the stream runs on past its rim or bail to its floor.
-            const JPH::RVec3 floor = world_point(receiver->body, floor_top(*receiver));
-            if (floor.GetY() < lands.GetY()) {
-                lands.SetY(floor.GetY());
-            }
+        } else if (bin.water) {
+            drained_ += moved;
         } else {
             spill(lands, moved);
         }
@@ -459,6 +602,8 @@ float Kit::spilled() const noexcept {
 
 void Kit::post_step(const float delta_seconds) {
     flow_bins(delta_seconds);
+    flow_water(delta_seconds);
+    flow_air(delta_seconds);
     for (Rope &rope : ropes_) {
         if (rope.constraint == nullptr) {
             rope.tension = 0.0F;
@@ -474,6 +619,243 @@ void Kit::post_step(const float delta_seconds) {
             rope.parted = true;
             rope.tension = 0.0F;
         }
+    }
+}
+
+// ---- water and air (declared models, AS-007) -------------------------------
+
+float Kit::pool_volume_at(const Pool &pool, const float level) const {
+    const JPH::Vec3 size = pool.max_corner - pool.min_corner;
+    float volume = size.GetX() * size.GetZ() * std::max(0.0F, level - pool.min_corner.GetY());
+    for (const Float &record : pool.floats) {
+        const float bottom = static_cast<float>(
+            (jolt_body(record.body).GetWorldTransform() * JPH::Vec3(0.0F, record.bottom, 0.0F))
+                .GetY());
+        volume -= 4.0F * record.half_x * record.half_z *
+                  std::clamp(level - bottom, 0.0F, record.height);
+    }
+    return volume;
+}
+
+void Kit::settle_level(Pool &pool) {
+    // The volume below a level only grows with it (a float is narrower than
+    // its pool), so bisect for the level that holds this much water.
+    const float volume = std::max(0.0F, pool.water) / kWaterDensity;
+    const JPH::Vec3 size = pool.max_corner - pool.min_corner;
+    const float area = std::max(1.0e-3F, size.GetX() * size.GetZ());
+    float low = pool.min_corner.GetY();
+    float high = pool.max_corner.GetY() + volume / area + 1.0F;
+    for (int step = 0; step < 32; ++step) {
+        const float middle = 0.5F * (low + high);
+        (pool_volume_at(pool, middle) < volume ? low : high) = middle;
+    }
+    pool.level = 0.5F * (low + high);
+    if (pool.level > pool.max_corner.GetY()) {
+        const float kept = pool_volume_at(pool, pool.max_corner.GetY()) * kWaterDensity;
+        drained_ += pool.water - kept;
+        pool.water = kept;
+        pool.level = pool.max_corner.GetY();
+    }
+}
+
+float Kit::pipe_opening(const Pipe &pipe) const {
+    float opening = 1.0F;
+    if (pipe.valve.valid()) {
+        const float span = pipe.open_angle - pipe.shut_angle;
+        opening = std::abs(span) < 1.0e-4F
+                      ? 1.0F
+                      : std::clamp((lever_angle(pipe.valve) - pipe.shut_angle) / span, 0.0F, 1.0F);
+    }
+    if (pipe.spool.valid()) {
+        const Body &spool = bodies_[pipe.spool.value];
+        if (!spool.enabled) {
+            return 0.0F;
+        }
+        const JPH::Body &body = jolt_body(pipe.spool);
+        const float off_seat = JPH::Vec3(body.GetCenterOfMassPosition() - pipe.seat).Length();
+        const JPH::Vec3 axis = body.GetRotation() * JPH::Vec3::sAxisX();
+        const float cosine = std::min(1.0F, std::abs(axis.Dot(pipe.seat_axis)));
+        if (off_seat > pipe.seat_tolerance || std::acos(cosine) > pipe.seat_angle) {
+            return 0.0F;
+        }
+    }
+    return opening;
+}
+
+float Kit::cell_volume(const Cell &cell) const {
+    float volume = cell.volume0;
+    for (const Piston &piston : cell.pistons) {
+        const float y =
+            static_cast<float>(jolt_body(piston.body).GetCenterOfMassPosition().GetY());
+        volume += piston.area * (y - piston.rest_y);
+    }
+    return std::max(kMinCellVolume, volume);
+}
+
+void Kit::press(const float) {
+    JPH::BodyInterface &bodies = system_.GetBodyInterfaceNoLock();
+    for (Pool &pool : pools_) {
+        settle_level(pool);
+        for (const Float &record : pool.floats) {
+            const JPH::Body &body = jolt_body(record.body);
+            const float bottom = static_cast<float>(
+                (body.GetWorldTransform() * JPH::Vec3(0.0F, record.bottom, 0.0F)).GetY());
+            const float depth = std::clamp(pool.level - bottom, 0.0F, record.height);
+            if (depth <= 0.0F) {
+                continue;
+            }
+            const float area = 4.0F * record.half_x * record.half_z;
+            const float lift = kWaterDensity * kGravity * area * depth -
+                               kFloatDrag * area * body.GetLinearVelocity().GetY();
+            bodies.AddForce(body.GetID(), JPH::Vec3(0.0F, lift, 0.0F));
+        }
+    }
+    for (const Cell &cell : cells_) {
+        const float gauge = cell.air / cell_volume(cell) - kAtmosphere;
+        for (const Piston &piston : cell.pistons) {
+            bodies.AddForce(bodies_[piston.body.value].id,
+                            JPH::Vec3(0.0F, gauge * piston.area, 0.0F));
+        }
+        for (const Door &door : cell.doors) {
+            const Lever &lever = levers_[door.lever.value];
+            const float shut =
+                1.0F - std::clamp(std::abs(lever_angle(door.lever)) / door.full_angle, 0.0F, 1.0F);
+            bodies.AddForce(bodies_[lever.body.value].id, door.normal * (gauge * door.area * shut));
+        }
+    }
+    for (const Charge &charge : charges_) {
+        const Pool &pool = pools_[charge.pool.value];
+        if (lever_angle(charge.valve) <= charge.open_angle || pool.level <= charge.from_y) {
+            continue;
+        }
+        const float push = kWaterDensity * kGravity * (pool.level - charge.base_y) * charge.area;
+        bodies.AddForce(bodies_[charge.body.value].id, JPH::Vec3(0.0F, std::max(0.0F, push), 0.0F));
+    }
+}
+
+void Kit::flow_water(const float delta_seconds) {
+    for (Pipe &pipe : pipes_) {
+        pipe.flow = 0.0F;
+        pipe.pouring = false;
+        const float opening = pipe_opening(pipe);
+        Pool &from = pools_[pipe.from.value];
+        if (opening <= 0.0F) {
+            continue;
+        }
+        const JPH::Vec3 from_size = from.max_corner - from.min_corner;
+        const float from_area = from_size.GetX() * from_size.GetZ();
+        if (pipe.to.valid()) {
+            Pool &to = pools_[pipe.to.value];
+            const JPH::Vec3 to_size = to.max_corner - to.min_corner;
+            const float to_area = to_size.GetX() * to_size.GetZ();
+            const float head_from = std::max(from.level, pipe.from_y);
+            const float head_to = std::max(to.level, pipe.to_y);
+            const float head = head_from - head_to;
+            Pool &source = head > 0.0F ? from : to;
+            Pool &sink = head > 0.0F ? to : from;
+            const float outlet = head > 0.0F ? pipe.from_y : pipe.to_y;
+            if (source.level <= outlet) {
+                continue;
+            }
+            float volume = orifice(pipe.area * opening, kWaterDensity * kGravity * head,
+                                   kWaterDensity, kWaterDensity * kGravity * kHeadLinear) *
+                           delta_seconds;
+            // Never past level: at most what would bring the heads together,
+            // and no more than a sealed pool has room for.
+            volume = std::min(volume, std::abs(head) / (1.0F / from_area + 1.0F / to_area));
+            volume = std::min(volume, pool_volume_at(source, source.level) -
+                                          pool_volume_at(source, outlet));
+            volume = std::min(volume, pool_volume_at(sink, sink.max_corner.GetY()) -
+                                          pool_volume_at(sink, sink.level));
+            const float kg = std::max(0.0F, volume) * kWaterDensity;
+            source.water -= kg;
+            sink.water += kg;
+            settle_level(source);
+            settle_level(sink);
+            pipe.flow = (head > 0.0F ? kg : -kg) / delta_seconds;
+            continue;
+        }
+        const float spout_y = static_cast<float>(pipe.spout.GetY());
+        if (from.level <= std::max(pipe.from_y, spout_y)) {
+            continue;
+        }
+        Bin *receiver = nullptr;
+        JPH::RVec3 lands = pipe.spout;
+        if (!land_stream(pipe.spout, JPH::BodyID(), receiver, lands)) {
+            continue;
+        }
+        float volume = orifice(pipe.area * opening,
+                               kWaterDensity * kGravity * (from.level - spout_y), kWaterDensity,
+                               kWaterDensity * kGravity * kHeadLinear) *
+                       delta_seconds;
+        volume = std::min(volume, pool_volume_at(from, from.level) -
+                                      pool_volume_at(from, std::max(pipe.from_y, spout_y)));
+        float kg = std::max(0.0F, volume) * kWaterDensity;
+        if (receiver != nullptr) {
+            kg = std::min(kg, std::max(0.0F, receiver->capacity - receiver->contents));
+            receiver->contents += kg;
+            apply_bin_mass(*receiver);
+        } else {
+            drained_ += kg;
+        }
+        if (kg <= 0.0F) {
+            continue;
+        }
+        from.water -= kg;
+        settle_level(from);
+        pipe.flow = kg / delta_seconds;
+        pipe.pouring = true;
+        pipe.stream_to = lands;
+    }
+    for (Charge &charge : charges_) {
+        const float y = static_cast<float>(jolt_body(charge.body).GetCenterOfMassPosition().GetY());
+        Pool &pool = pools_[charge.pool.value];
+        if (lever_angle(charge.valve) > charge.open_angle && pool.level > charge.from_y) {
+            // The ram's rise is water out of the pool; a fall pushes it back.
+            pool.water = std::max(0.0F, pool.water - kWaterDensity * charge.area * (y - charge.last_y));
+            settle_level(pool);
+        }
+        charge.last_y = y;
+    }
+}
+
+void Kit::flow_air(const float delta_seconds) {
+    for (const Throttle &throttle : throttles_) {
+        Cell &a = cells_[throttle.a.value];
+        Cell &b = cells_[throttle.b.value];
+        const float va = cell_volume(a);
+        const float vb = cell_volume(b);
+        const float pa = a.air / va;
+        const float pb = b.air / vb;
+        const float upstream = std::max(pa, pb);
+        const float rho = kAirDensity * upstream / kAtmosphere;
+        float moved = upstream * orifice(throttle.area, pa - pb, rho, kPressureLinear) * delta_seconds;
+        // Never past equal pressure.
+        const float equal = (a.air + b.air) / (va + vb);
+        moved = std::min(moved, std::abs(a.air - equal * va));
+        a.air += pa > pb ? -moved : moved;
+        b.air += pa > pb ? moved : -moved;
+    }
+    for (Cell &cell : cells_) {
+        const float volume = cell_volume(cell);
+        const float pressure = cell.air / volume;
+        const float gauge = pressure - kAtmosphere;
+        float leak = cell.bleed;
+        for (const Door &door : cell.doors) {
+            leak += door.area *
+                    std::clamp(std::abs(lever_angle(door.lever)) / door.full_angle, 0.0F, 1.0F);
+        }
+        if (gauge < -kBreakerOpen) {
+            leak += cell.breaker;
+        }
+        if (leak <= 0.0F) {
+            continue;
+        }
+        const float upstream = std::max(pressure, kAtmosphere);
+        const float rho = kAirDensity * upstream / kAtmosphere;
+        float moved = upstream * orifice(leak, gauge, rho, kPressureLinear) * delta_seconds;
+        moved = std::min(moved, std::abs(cell.air - kAtmosphere * volume));
+        cell.air += gauge > 0.0F ? -moved : moved;
     }
 }
 
@@ -524,6 +906,10 @@ void Kit::connect_rope(Rope &rope) {
     if (rope.parted || rope.constraint != nullptr) {
         return;
     }
+    // An uncoupled hose holds nothing: its fluid runs out of the open end.
+    if (rope.strut && !rope.anchor.valid()) {
+        return;
+    }
     const BodyIndex end = rope_end_body(rope);
     JPH::PulleyConstraintSettings settings;
     settings.mSpace = JPH::EConstraintSpace::WorldSpace;
@@ -534,6 +920,13 @@ void Kit::connect_rope(Rope &rope) {
     settings.mRatio = rope.ratio;
     settings.mMinLength = 0.0F;
     settings.mMaxLength = rope.length;
+    if (rope.strut) {
+        // Coupled, the line holds whatever fluid it holds now, and pushes.
+        rope.length = JPH::Vec3(settings.mBodyPoint1 - rope.fixed1).Length() +
+                      rope.ratio * JPH::Vec3(settings.mBodyPoint2 - rope.fixed2).Length();
+        settings.mMinLength = rope.length;
+        settings.mMaxLength = rope.length + 1.0e4F;
+    }
     rope.constraint = static_cast<JPH::PulleyConstraint *>(
         settings.Create(jolt_body(rope.body1), jolt_body(end)));
     system_.AddConstraint(rope.constraint);
@@ -571,15 +964,21 @@ void Kit::latch(Catch &catch_record) {
         return;
     }
     // The pin's taper draws the body onto its seat: the pin holds the seat,
-    // not wherever the body is when the pin drops in. A relatch within
-    // seat_tolerance lifts the body those last centimetres, which takes the
-    // load off a rope that had caught it. Declared: the catch's spring does
-    // at most m g seat_tolerance of work.
+    // not wherever the body is when the pin drops in -- its place and its
+    // turn (a door latched a few degrees open is drawn shut). A relatch
+    // within seat_tolerance lifts the body those last centimetres, which
+    // takes the load off a rope that had caught it. Declared: the catch's
+    // spring does at most m g seat_tolerance of work.
+    const JPH::Body &body = jolt_body(catch_record.body);
     JPH::FixedConstraintSettings settings;
     settings.mSpace = JPH::EConstraintSpace::WorldSpace;
     settings.mAutoDetectPoint = false;
     settings.mPoint1 = catch_record.seat;
-    settings.mPoint2 = jolt_body(catch_record.body).GetCenterOfMassPosition();
+    settings.mPoint2 = body.GetCenterOfMassPosition();
+    settings.mAxisX1 = catch_record.seat_rotation * JPH::Vec3::sAxisX();
+    settings.mAxisY1 = catch_record.seat_rotation * JPH::Vec3::sAxisY();
+    settings.mAxisX2 = body.GetRotation() * JPH::Vec3::sAxisX();
+    settings.mAxisY2 = body.GetRotation() * JPH::Vec3::sAxisY();
     catch_record.pin = static_cast<JPH::FixedConstraint *>(
         settings.Create(JPH::Body::sFixedToWorld, jolt_body(catch_record.body)));
     system_.AddConstraint(catch_record.pin);
@@ -648,7 +1047,7 @@ AnchorIndex Kit::hook_target(const std::uint64_t shackle_entity) const noexcept 
         }
         const float needed =
             first_leg + rope->ratio * JPH::Vec3(point - rope->fixed2).Length();
-        if (needed > rope->length + kHookLengthTolerance) {
+        if (!rope->strut && needed > rope->length + kHookLengthTolerance) {
             continue;
         }
         best = AnchorIndex{index};
@@ -764,6 +1163,15 @@ void Kit::capture(Checkpoint &out) const {
         out.catch_latched[index] = catches_[index].pin != nullptr;
     }
     out.piles = piles_;
+    out.pool_water.resize(pools_.size());
+    for (std::size_t index = 0; index < pools_.size(); ++index) {
+        out.pool_water[index] = pools_[index].water;
+    }
+    out.cell_air.resize(cells_.size());
+    for (std::size_t index = 0; index < cells_.size(); ++index) {
+        out.cell_air[index] = cells_[index].air;
+    }
+    out.drained = drained_;
 }
 
 void Kit::restore(const Checkpoint &in) {
@@ -808,6 +1216,18 @@ void Kit::restore(const Checkpoint &in) {
         apply_bin_mass(bins_[index]);
     }
     piles_ = in.piles;
+    for (std::size_t index = 0; index < pools_.size() && index < in.pool_water.size(); ++index) {
+        pools_[index].water = in.pool_water[index];
+        settle_level(pools_[index]);
+    }
+    for (std::size_t index = 0; index < cells_.size() && index < in.cell_air.size(); ++index) {
+        cells_[index].air = in.cell_air[index];
+    }
+    drained_ = in.drained;
+    for (Charge &charge : charges_) {
+        charge.last_y =
+            static_cast<float>(jolt_body(charge.body).GetCenterOfMassPosition().GetY());
+    }
     for (std::size_t index = 0; index < guides_.size(); ++index) {
         Guide &guide = guides_[index];
         guide.dog_floor = in.dog_floor[index];
@@ -969,6 +1389,11 @@ float Kit::bin_capacity(const BinIndex bin) const noexcept {
     return record != nullptr ? record->capacity : 0.0F;
 }
 
+bool Kit::bin_water(const BinIndex bin) const noexcept {
+    const Bin *record = find(bins_, bin);
+    return record != nullptr && record->water;
+}
+
 BodyIndex Kit::bin_body(const BinIndex bin) const noexcept {
     const Bin *record = find(bins_, bin);
     return record != nullptr ? record->body : BodyIndex{};
@@ -982,6 +1407,58 @@ bool Kit::bin_stream(const BinIndex bin, JPH::RVec3 &from, JPH::RVec3 &to) const
     from = record->stream_from;
     to = record->stream_to;
     return true;
+}
+
+float Kit::pool_level(const PoolIndex pool) const noexcept {
+    const Pool *record = find(pools_, pool);
+    return record != nullptr ? record->level : 0.0F;
+}
+
+float Kit::pool_water(const PoolIndex pool) const noexcept {
+    const Pool *record = find(pools_, pool);
+    return record != nullptr ? record->water : 0.0F;
+}
+
+float Kit::pool_floor(const PoolIndex pool) const noexcept {
+    const Pool *record = find(pools_, pool);
+    return record != nullptr ? record->min_corner.GetY() : 0.0F;
+}
+
+void Kit::pool_box(const PoolIndex pool, JPH::Vec3 &min_corner,
+                   JPH::Vec3 &max_corner) const noexcept {
+    const Pool *record = find(pools_, pool);
+    min_corner = record != nullptr ? record->min_corner : JPH::Vec3::sZero();
+    max_corner = record != nullptr ? record->max_corner : JPH::Vec3::sZero();
+}
+
+bool Kit::pipe_stream(const PipeIndex pipe, JPH::RVec3 &from, JPH::RVec3 &to) const noexcept {
+    const Pipe *record = find(pipes_, pipe);
+    if (record == nullptr || !record->pouring) {
+        return false;
+    }
+    from = record->spout;
+    to = record->stream_to;
+    return true;
+}
+
+float Kit::pipe_flow(const PipeIndex pipe) const noexcept {
+    const Pipe *record = find(pipes_, pipe);
+    return record != nullptr ? record->flow : 0.0F;
+}
+
+bool Kit::pipe_whole(const PipeIndex pipe) const noexcept {
+    const Pipe *record = find(pipes_, pipe);
+    if (record == nullptr) {
+        return false;
+    }
+    Pipe spool_only = *record;
+    spool_only.valve = LeverIndex{};
+    return pipe_opening(spool_only) > 0.0F;
+}
+
+float Kit::cell_pressure(const CellIndex cell) const noexcept {
+    const Cell *record = find(cells_, cell);
+    return record != nullptr ? record->air / cell_volume(*record) : kAtmosphere;
 }
 
 bool Kit::catch_latched(const CatchIndex catch_index) const noexcept {

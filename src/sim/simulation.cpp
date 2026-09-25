@@ -1496,6 +1496,15 @@ private:
         return {9.5, 177.2, -127.9};
     case scraperx::sim::InitialSpawn::Ring198East:
         return {11.0, 199.2, -127.5};
+    case scraperx::sim::InitialSpawn::Ring220North:
+        // On the 220 ring west of the spool, as a rider off C's platform.
+        return {4.0, 221.2, -129.2};
+    case scraperx::sim::InitialSpawn::WetECab:
+        // In E's cab on its bottom stop, south of its door.
+        return {13.0, 257.2, -137.2};
+    case scraperx::sim::InitialSpawn::WetFPlatform:
+        // On F's platform, east of the hose.
+        return {13.4, 299.2, -139.9};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1837,6 +1846,7 @@ public:
         kit_ = std::make_unique<scraperx::sim::kit::Kit>(physics_system_, object_layers::kStatic,
                                                         object_layers::kMoving);
         scraperx::sim::bands::build_counterweight_well(*kit_, well_);
+        scraperx::sim::bands::build_wet_isolation(*kit_, wet_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -2042,6 +2052,10 @@ public:
 
     [[nodiscard]] const scraperx::sim::kit::Kit &kit() const noexcept {
         return *kit_;
+    }
+
+    [[nodiscard]] const scraperx::sim::bands::WetIsolation &wet() const noexcept {
+        return wet_;
     }
 
     void set_feed_enabled(const bool enabled) noexcept {
@@ -6219,6 +6233,7 @@ private:
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     scraperx::sim::bands::CounterweightWell well_{};
+    scraperx::sim::bands::WetIsolation wet_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
     std::uint8_t rig_action_ = 0;
     std::uint64_t rig_target_entity_ = 0;
@@ -6574,6 +6589,7 @@ KitBin Simulation::kit_bin(const std::uint32_t bin) const noexcept {
     out.body = kit.bin_body(index).value;
     out.contents_kg = kit.bin_contents(index);
     out.capacity_kg = kit.bin_capacity(index);
+    out.water = kit.bin_water(index);
     JPH::RVec3 from;
     JPH::RVec3 to;
     out.flowing = kit.bin_stream(index, from, to);
@@ -6594,6 +6610,75 @@ KitPile Simulation::kit_pile(const std::uint32_t pile) const noexcept {
         return {};
     }
     return {to_sim_vector(piles[pile].at), piles[pile].kg};
+}
+
+std::uint32_t Simulation::kit_pool_count() const noexcept {
+    return physics_world_->kit().pool_count();
+}
+
+KitPool Simulation::kit_pool(const std::uint32_t pool) const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    KitPool out;
+    if (pool >= kit.pool_count()) {
+        return out;
+    }
+    const kit::PoolIndex index{pool};
+    JPH::Vec3 low;
+    JPH::Vec3 high;
+    kit.pool_box(index, low, high);
+    out.min_corner = to_sim_vector(JPH::RVec3(low));
+    out.max_corner = to_sim_vector(JPH::RVec3(high));
+    out.level_m = kit.pool_level(index);
+    out.water_kg = kit.pool_water(index);
+    return out;
+}
+
+std::uint32_t Simulation::kit_spout_count() const noexcept {
+    return physics_world_->kit().pipe_count();
+}
+
+KitSpout Simulation::kit_spout(const std::uint32_t spout) const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    KitSpout out;
+    JPH::RVec3 from;
+    JPH::RVec3 to;
+    if (spout < kit.pipe_count() && kit.pipe_stream(kit::PipeIndex{spout}, from, to)) {
+        out.pouring = true;
+        out.from = to_sim_vector(from);
+        out.to = to_sim_vector(to);
+    }
+    return out;
+}
+
+WetState Simulation::wet_state() const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    const scraperx::sim::bands::WetIsolation &wet = physics_world_->wet();
+    WetState out;
+    out.d_pipe_whole = kit.pipe_whole(wet.d_fill);
+    out.d_fill_kg_s = kit.pipe_flow(wet.d_fill);
+    out.d_tank_kg = kit.pool_water(wet.d_tank);
+    out.d_tube_kg = kit.pool_water(wet.d_tube);
+    out.d_tank_level = kit.pool_level(wet.d_tank);
+    out.d_tube_level = kit.pool_level(wet.d_tube);
+    out.d_platform_travel = kit.guide_travel(wet.d_guide);
+    out.d_valve_angle = kit.lever_angle(wet.d_valve);
+    out.d_drain_angle = kit.lever_angle(wet.d_drain);
+    out.dump_angle = kit.lever_angle(wet.header_dump);
+    out.e_door_latched = kit.catch_latched(wet.e_door_catch);
+    out.e_door_angle = kit.lever_angle(wet.e_door_hinge);
+    out.e_catch_latched = kit.catch_latched(wet.e_catch);
+    out.e_duct_pa = kit.cell_pressure(wet.e_duct_cell);
+    out.e_cab_pa = kit.cell_pressure(wet.e_cab_cell);
+    out.e_cab_travel = kit.guide_travel(wet.e_cab_guide);
+    out.e_chiller_travel = kit.guide_travel(wet.e_chiller_guide);
+    out.e_bucket_kg = kit.bin_contents(wet.e_bucket_bin);
+    out.f_catch_latched = kit.catch_latched(wet.f_catch);
+    out.f_hose_coupled = kit.rope_end_entity(wet.f_line) != Simulation::kWetFHoseEntityId;
+    out.f_platform_travel = kit.guide_travel(wet.f_platform_guide);
+    out.f_accumulator_travel = kit.guide_travel(wet.f_accumulator_guide);
+    out.header_kg = kit.pool_water(wet.header);
+    out.drained_kg = kit.drained();
+    return out;
 }
 
 bool Simulation::set_jib_slew_input(const double value) noexcept {

@@ -1,351 +1,167 @@
-# SCRAPERX — AS-007 WET ISOLATION (K3)
+# SCRAPERX — AS-007 WET ISOLATION (B03, 220 → 340 m)
 
 **Ascent Slice:** `AS-007`
-**Lifecycle:** `PLANNED` — contract exists, no corresponding source
-**Provenance:** ⚠ **imported from `ScraperX-Grok`, NOT re-derived.** Reference provenance only
-**Implementation gate:** re-author against this branch first, then `AS-006` implemented
-**Evidence:** none. A plan is never implementation evidence.
-**Depends on:** `AS-001`–`AS-006`; kernel `WO-013` is regression substrate only;
-`03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5 row `AS-007`
-
-> **Provenance.** Adopted from `ScraperX-Grok`, where this slice was authored as `WO-015_WET_ISOLATION`.
-> Ticket numbers remapped per `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5.1. Geometry, ratings and
-> falsifiers carry over as **DESIGN TARGET**: they were never proven in source on that branch
-> (it has not compiled since 2026-09-20). Positions are re-sited against this branch's tower
-> at source `(0, —, -150)`.
->
-> **`PORTED`, not authored.** Everything below still quotes `ScraperX-Grok` source
-> constants — geometry, entity ids and persist versions that do not exist on
-> `ScraperX-Claude`. Treat it as design intent, not as a job ticket. Re-derive it
-> against real exit state first, as `AS-002`, `AS-003` and `AS-004` were.
+**Lifecycle:** `IN PROGRESS` — stages D, E, F, the band run and its cascade built and tested;
+the climbing route is next
+**Provenance:** re-derived here under `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`. Replaces the
+plan imported from `ScraperX-Grok` (their `WO-015_WET_ISOLATION`), whose geometry and ids describe a
+world that does not exist here. The file name is kept so `MANIFEST.txt` stays true.
+**Implementation gate:** this write-up. The plan's rules §3 are this slice's test contract.
+**Depends on:** `AS-006` in source and green (the rider arrives on the 220 ring); Step 2 movement.
 
 ## Objective
 
-Close atlas §7 **K3**: insert `CAP-BLIND` and drain `MOD-SUMP-3`, **or** climb north SKIN around the wet core, and stand on TP-340.
+The second band of the mechanism ascent: from the 220 ring to the top of Transfer Plate TP-340, the
+top of Atlas band B03, *Wet Isolation*. Every lift in it runs on water or air: a float that rises
+on a flooding tube, a chiller that falls through a sealed duct and drives a cab up on the air it
+pushes, and a weight-loaded hydraulic accumulator. Each is found unlinked; the player links it and
+sets it off; what each leaves behind feeds its neighbours; a header on TP-340 re-arms the band in one
+cascade. A climbing route needs no lift.
 
-Blind + drain → header isolated, sump empty → `MOD-ISO-STAIR` is not a hazard → FLOW to 340 m.
+## Existing truth (`573dd84`, `world_solids.inc`)
 
-This is not the plate shop. This is not `MOD-GIRDER-T`.
+| Datum | Value |
+|---|---|
+| Ring decks | tops `220.25, 242.25, 264.25, 286.25, 308.25, 330.25`, 4 m wide |
+| Ring inner edges, north band (z) | `-130.73, -131.64, -132.55, -133.46, -134.37, -135.28` |
+| Ring inner edges, east band (x) | `19.27, 18.36, 17.45, 16.54, 15.63, 14.72` |
+| North-face braces | `z ≥ -131.5` up to 335.7 m; nothing else stands in the well's NE quarter |
+| AS-006 in the way | route catwalk and panel `x ∈ [9.97, 12.03]`, `z ≥ -132.0`, up to 220.2; boom and gallows at `x ≤ 0` |
+| TP-340 | does not exist; built here |
 
-## Existing truth
+Every B03 body keeps south of each ring's north inner edge and west of its east inner edge at the
+height it reaches, so nothing rising meets a ring.
 
-After `AS-006` is in source:
+## Band layout
 
-- 220 well-head ledge at well xz, y = 220.20
-- SKIN-W head at `(-17.00, 220.20, 25.30)`
-- stack / pin as the player left them
-- kernel `KX-SUMP` remains mill-only. Do not retitle it `MOD-SUMP-3`
-- persist v5
-- Fold-device execution is not proven
+Plan view, north up. Column x ranges are the shafts' outer faces.
 
-Atlas §14: band B03 fluid species may stay “wet and drainable.” DESIGN TARGET: water. Predicates do not depend on naming steam vs water.
+```
+ z=-130.7 ── 220 ring ───── walkway ─────
+          [ head tank 226-238 ][ D tube <220 / D platform 220-256 ]   x 5.5..11.45 | 11.55..14.45
+ z=-135.2 [ bucket ][ drop duct 254-306   ][ E cab shaft 254-298  ]
+ z=-138.4           [ accumulator 299-305 ][ F platform 298-340   ]
+          ── TP-340 (338.75-340.25) over the well, a hole over F ──
+```
 
-Until AS-006 is coded, this file still inherits the DESIGN TARGET exit of AS-006. Do not implement this file before AS-006 is in source.
+| Stage | Archetype | Travel | Payload | Energy source | Kind |
+|---|---|---|---|---|---|
+| **D — float ram** | 02 buoyancy, as a float on a mast in a flooding tube | 220.25 → 256.25 | platform, mast and float 2 500 kg + rider | 180 t in the head tank, falling into the tube | re-armable |
+| **E — chiller drop** | 05 pneumatic piston | 256.25 → 298.25 | cab 900 kg + rider | 5 t chiller falling 45 m through a sealed duct | re-armable (the cascade hoists it) |
+| **F — accumulator** | 08 hydraulic accumulator, weight-loaded | 298.25 → 340.25 | platform 1 000 kg + rider | 20 t accumulator falling 3 m, a 1:14 line | re-armable (the header recharges it) |
 
-## Authority
+### Links between stages
 
-- Laws 2–7, 11–18, 21–27, 29, 32
-- GDD §§7.2–7.4, 11, 15–17, 23–24
-- Atlas §§3, 4 (`CAP-BLIND`), 5 (TP-340), 6 band B03, 7 K3, 8.1, 8.3, 12, 13, 14
-- TDD §§6, 8–11, 14 (process)
-- WO-013: grate/sump class. Do not reopen. Do not gate kernel on `CAP-BLIND`
-- `AS-006_CW_PIN.md` §8.12
-- protocol AS-007
+- **D → E.** D's platform parks at 256.25, flush with E's cab and 0.25 m from its door.
+- **E → F.** E's cab parks at 298.25; F's platform waits 0.4 m south of its shaft's rim.
+- **F → TP-340.** F's platform stops flush in the plate's hole.
+- **The cascade.** On TP-340 the rider throws the header's dump. The riser feeds three places: a
+  spout over E's hoist bucket, which fills, outweighs the chiller, sinks and hoists it back into its
+  catch (the cab sinks back as the chiller draws its air), then tips out at the bottom; the charge
+  line under F's accumulator, whose head lifts it back 3 m while F's platform sinks to 298 in
+  exchange; and D's head tank, which refills. Pulling D's drain at 220 lets its platform down.
 
-## Owner
+## Stage D — float ram (220.25 → 256.25)
 
-Native 90 Hz C++/Jolt. Godot presents.
+- **Found:** a platform on a mast, flush with the 220 ring's walkway. The mast runs down through a
+  gland in the lid of a sealed tube (181–220) to a float resting on the tube's floor. A pipe runs from
+  the head tank (hung under the 242 ring) along the 220 ring and down into the tube's foot. One spool
+  of it lies on the ring beside its gap. The fill valve's lever stands beside the platform.
+- **Link:** carry the spool into its saddles. The pipe carries water only while the spool is seated
+  (axis within 0.08 m and 0.15 rad of the gap's).
+- **Set off:** from the platform, throw the fill valve over. Water runs tank → tube; the float rises
+  and pushes the platform 36 m to its stop. An overflow at 219.0 keeps the tube below its lid.
+- **No link:** throw the valve with the spool on the deck: nothing flows, nothing moves.
+- **Re-arm:** the drain lever on the walkway empties the tube (the platform sinks back); the cascade
+  refills the head tank.
 
-## Allowed seam
+## Stage E — chiller drop (256.25 → 298.25)
 
-New bodies: `MOD-HEADER-W`, `MOD-SUMP-3`, `MOD-BLIND-STATION` + blind body, `MOD-ISO-STAIR`, `MOD-WET-LOCK`, TP-340, SKIN-N 220–340.
+- **Found:** a cab in a sealed shaft, its floor a piston, its door hooked open toward D's platform. A
+  5 t chiller hangs at the top of a sealed duct beside it on a catch; the ducts' plenums meet at the
+  bottom through a throttle. A trip handle from the chiller's catch hangs in the cab.
+- **Link:** shut the door behind you. It swings to and its spring latch drops. Open, it leaks the
+  whole doorway; the cab needs 1.4 kPa and an open door holds under 0.1 kPa.
+- **Set off:** pull the handle. The chiller falls; the air it pushes through the throttle lifts the
+  cab 42 m to its stop, where the pressure holds it.
+- **No link:** pull the handle with the door open: the chiller falls, the air leaves by the door, the
+  cab stays on its stop. The chiller then waits for the cascade.
+- **Re-arm:** the cascade's bucket hoists the chiller back; the vacuum breaker lets air in behind it.
 
-Reuse: WO-013 isolate/drain inventory, hook5-style carryable, occupancy stall (wet lock like hook5 door / dog).
+## Stage F — accumulator (298.25 → 340.25)
 
-Do not retitle `KX-SUMP`. Do not add `MOD-SHOP-CRANE`.
+- **Found:** a platform on a ram, and beside it a 20 t accumulator held 3 m up by its stop valve. The
+  hose from the accumulator lies on the platform, its coupling free.
+- **Link:** couple the hose to the ram's inlet on the platform (the hook verb).
+- **Set off:** throw the stop valve. The accumulator sinks 3 m under a flow-limited governor; the
+  line lifts the platform 42 m into the plate's hole. Its fluid then holds it there.
+- **No link:** throw the valve uncoupled: the accumulator dumps its line through the open hose;
+  the platform stays.
+- **Re-arm:** the cascade's charge line.
 
-## Required causal path
+## Declared models
 
-FLOW (K3):
+- **Water.** Incompressible. A pool is a sealed prism: its level follows from its volume and the
+  displacement of any float in it. Pipes flow `Q = 0.6 A f √(2 g Δh)` from the higher head to the
+  lower, `f` the valve's opening; a spout pours into the first bin or pool below it. Water above a
+  pool's overflow, and water spilled from a bin, drains away.
+- **Buoyancy.** `ρ g A d` on a float, `d` its submerged depth clamped to its height, applied at its
+  centre of mass, with water drag on its vertical speed.
+- **Air.** Each cell is an isothermal ideal gas. A piston feels `(P − P_atm) A`. A throttle passes
+  `0.6 A √(2 ρ ΔP)` (linear under 50 Pa). An open door leaks its area times its opening. A vacuum
+  breaker admits air below `P_atm − 100 Pa`. Pistons are sealed to their shafts.
+- **Hydraulics.** Incompressible and push-only: a pulley constraint with a minimum length, ratio the
+  area ratio. Coupling takes whatever fluid the line holds then. The charge line pushes
+  `ρ g Δh A` up the accumulator while the dump is open.
 
-    ACT[take CAP-BLIND from MOD-BLIND-STATION; insert into MOD-HEADER-W; vent; open drain]
-      → STATE[header isolated; sump inventory → dry]
-      → WORLD[ISO-STAIR collision is ordinary; WET-LOCK can travel]
-      → PLAY[walk 220→340 on the stair; TP-340]
+## Climbing route, no lift
 
-Dump (atlas coupling 2):
+On the well side of the rings, like AS-006's: a ladder up the head tank from a walkway on the 220
+ring and a short ladder to the 242 ring; a board from the 242 ring (balance) to a panel on the 264
+ring's face; a shimmy along the 264 ring's lip to a pipe to the 286 ring; a ladder to the 308 ring; a
+controlled drop from the 308 ring onto a plank under a panel to the 330 ring; a ladder on TP-340's
+north face.
 
-    ACT[open dump without blind]
-      → STATE[sump fills; stair hazard true]
-      → WORLD[ISO-STAIR not a route; SKIN-N still legal]
-      → PLAY[north SKIN to 340]
+## Falsifiers (lean, per the owner: one test each where it counts)
 
-Skip:
+1. `AS-007 D` — no spool: valve thrown, platform still after 20 s; spool seated: platform to 256.25,
+   rider's gain ≤ the water's released head.
+2. `AS-007 E` — door open: handle pulled, cab still; door shut: cab to 298.25, gain ≤ chiller's drop.
+3. `AS-007 F` — hose free: valve thrown, platform still; hose coupled: platform to 340.25, gain ≤
+   accumulator's drop.
+4. `AS-007 band` — one run from the 220 ring to standing on TP-340 on player inputs, then the dump:
+   chiller back in its catch, accumulator back up, head tank refilled.
+5. `AS-007 route` — the climb from the 220 ring to TP-340 with no lift.
 
-    ACT[ignore blinds]
-      → STATE[header live; lock closed]
-      → WORLD[stair remains a hazard]
-      → PLAY[SKIN-N 220→340]
-
-Stitch from previous:
-
-    220 well-head → north 8 m of timber → blind station and header
-    220 SKIN-W head → walk 220 ring north → SKIN-N
-    stack does not become the 220–340 elevator
-
-Stitch to next (`AS-008_SHOP_GIRDER`, not in this pack):
-
-    TP-340 is the shop floor lip. Girder seating is the next ticket.
-
-## Forbidden shortcuts
-
-- `header_safe` flag as WORLD without blind pose + inventory
-- stair mesh-swap without collision change
-- SKIN-N walled because the header is live
-- kernel sump gated on `CAP-BLIND`
-- teleport 220→340
-- hard-fail mission (atlas §8.2: none)
-- Fold claimed
-
-## Implementation scope
-
-Native + falsifiers; Godot twins; persist v6.
+Touch is the only input surface this slice adds scenarios for (owner, 2026-09-24).
 
 ## Out of scope
 
-`AS-008_SHOP_GIRDER`. `CAP-TROLLEY`. Fold 45 FPS. Art/VO. Reopening K2.
-
-## Proof path
-
-§8.11; screenshot live header vs drained stair; kernel WO-013 still isolates mill sump without `CAP-BLIND`. Pending.
-
-## Completion
-
-- `CAP-BLIND` is a 32 kg body at the station
-- insert is a pose in the header, not a bool
-- drain empties `MOD-SUMP-3` only if isolated
-- live header: stair is a hazard (push / unsafe grate class); wet lock θ frozen
-- isolated+dry: stair is ordinary support 220–340; lock opens
-- SKIN-N reaches 340 with header still live
-- TP-340 standable; commit
-- Fold unverified
+Water on the player (no drowning, no current), sound, the Atlas stair flooding at 240.
 
 ## Result record
 
-pending.
+Built on `ScraperX-Claude` after `573dd84`. Native falsifiers, all on player inputs:
 
----
-
-## Mechanical close
-
-### 8.1 Identity
-
-| Field | Value |
+| Group | Result |
 |---|---|
-| Atlas band | B03 Wet Isolation 220–340 |
-| Slice | K3 blind + drain vs SKIN-N |
-| Live braids | FLOW (stair). SHAFT (not required). SKIN (north) |
-| Transfer Plate | **TP-340** |
-| Modules | `MOD-HEADER-W`, `MOD-SUMP-3`, `MOD-BLIND-STATION`, `MOD-ISO-STAIR`, `MOD-WET-LOCK` |
-| Forbidden | `MOD-GIRDER-T`, `MOD-SHOP-CRANE`, `MOD-TRAVELER` |
-| Capability authored | `CAP-BLIND` (carryable) |
-| Capability consumed | none required to skip |
+| `AS-007 D` | spool off: valve thrown, platform still 10 s, tube dry. Spool in: platform to 256.25 with the rider on it; gain 29.8 kJ against 74.6 MJ of water head released |
+| `AS-007 E` | door open: trip pulled, chiller falls 10 m+, cab still. Door shut: cab to 298.25 in about 28 s at 1.55 m/s on 1.3 kPa; gain 35.0 kJ against 2.07 MJ of chiller drop |
+| `AS-007 F` | hose free: valve thrown, accumulator dumps 3 m, platform still. Coupled: platform to 340.25; gain 35.0 kJ against 588.6 kJ of accumulator drop |
+| `AS-007 band` | 220 ring to standing on TP-340 in 102.8 s of sim time; the dump then hoists the chiller back into its catch (the cab sinks to its stop), recharges the accumulator (F's platform returns to 298.25) and refills D's tank (253 t) |
 
-### 8.2 Entry state
+Changed on the way:
 
-- player **can** stand at 220 well-head or SKIN-W 220
-- header is **live** (default)
-- sump inventory = 1.0 (full enough to make the stair a hazard)
-- wet lock closed
-- stack/pin frozen as left
-
-### 8.3 Geometry
-
-Service risers sit on the **north** face of the core (atlas §2.2). DESIGN TARGET north of the well.
-
-    well xz = (-1.76, 25.30)
-    north core ≈ source z = 45 (atlas y = +45 m, 90 m frame)
-
-#### 220 north walk (DESIGN TARGET)
-
-Timber from well-head to blind station. Climbable.
-
-    center (-1.76, 220.20, 35.00)
-    half (3.00, 0.12, 8.00)
-
-#### MOD-BLIND-STATION
-
-    source (2.40, 221.00, 42.00)
-    rack half (0.80, 0.90, 0.50)
-    blind body: 32 kg, half (0.25, 0.35, 0.08), seated (2.40, 221.10, 42.00)
-    pickup radius 1.20 m (hook5 class)
-
-`CAP-BLIND` WORLD: `!blind_in_rack` (held or inserted or dropped). Header isolation is a **separate** pose predicate.
-
-#### MOD-HEADER-W
-
-    line along x, source z = 44.00, y = 241.00
-    pipe half (8.00, 0.35, 0.35), center (0.00, 241.00, 44.00)
-    spectacle slot at (0.00, 241.00, 44.00)
-    insert: blind center within 0.20 m of slot, |yaw| ≤ 0.15 rad, not held
-    then kinematic snap; `header_isolated = true` (derived)
-
-Vent: station 1.50 m west of slot, radius 1.20 m, toggle. Isolation without vent: drain rate 0 (air-locked). With vent: drain legal.
-
-DESIGN TARGET pressure: 6 bar gauge. Not a solver. If not isolated, `MOD-ISO-STAIR` uses unsafe-grate rules (WO-013 class).
-
-#### MOD-SUMP-3
-
-    volume under the stair, center (0.00, 236.00, 40.00)
-    half (4.00, 4.00, 3.00)
-    inventory 0–1, default 1.0
-    dry threshold 0.08 (inherit `kSumpDryThreshold`)
-    drain rate 0.28 / s if isolated **and** vented **and** drain open
-    fill rate 0.45 / s if dump open and not isolated
-    drain wheel at (3.20, 221.50, 40.00), radius 2.80 m (inherit sump station)
-
-Water collision: when inventory > 0.08, fill the stair throat as a **hazard volume** (push + not legal support), not a kill plane.
-
-#### MOD-ISO-STAIR
-
-    220.20 → 340.20, north run
-    inherit rise 0.353, run 0.320
-    treads n = (340.20-220.20)/0.353 ≈ 340
-    every tread is a real box (same as STAIR-A)
-
-    x = 0.00
-    z_0 = 38.00, dz = +0.320 (north)
-    y_0 = 220.20
-
-When **not** (isolated and dry): support_rank 0 on treads that sit inside the sump AABB (y 232–248). Upper treads above the flood remain rank 1 so the player can see the stair die mid-flight.
-
-When isolated and dry: all treads rank 1.
-
-#### MOD-WET-LOCK
-
-    door at y = 260.00, z = 44.00, x = 0.00
-    half (1.10, 1.20, 0.12)
-    occupancy/process stall: θ = 0 while `!header_isolated`
-    after isolated+dry: θ → 1.20 like hook5 door
-    throat ≥ 0.90 m
-    blocks the stair landing at 260 until open
-
-#### SKIN-N 220–340
-
-    x = 0.00
-    z = 45.00
-    y_top(i) = 220.20 + 0.400 * i
-    i = 1…300
-    last = 340.20
-    always climbable
-
-220 ring north stub: from well-head/SKIN-W walk to (0.00, 220.20, 45.00).
-
-#### TP-340
-
-    center (0.00, 340.00, 25.30) extending north
-    half (12.00, 0.20, 16.00)
-    climbable
-    reconnect: stair top, SKIN-N top, and a lip back toward the well for later SHAFT (AS-008 guides — not built here)
-
-Commit: dwell, y ≥ 340.00, support is TP-340.
-
-### 8.4 Mechanism
-
-Predicates (derived):
-
-    cap_blind       = !blind_in_station_rack
-    header_isolated = blind snapped in slot
-    header_vented   = vent_open
-    sump_dry        = inventory ≤ 0.08
-    stair_safe      = header_isolated AND header_vented AND sump_dry
-    lock_free       = header_isolated
-
-Drain does nothing unless `header_isolated && header_vented`.
-
-Dump without blind: `inventory → 1.0` at fill rate; stair_safe false.
-
-Kernel WO-013 path untouched (`!intake_rise_` mill).
-
-### 8.5 Occupancy
-
-| Envelope | Effect |
-|---|---|
-| live header, stair in sump AABB | rank 0; push |
-| wet lock, !isolated | θ frozen 0 |
-| isolated+dry | lock travels; stair rank 1 |
-| SKIN-N | always |
-| blind in slot | isolation true |
-| blind in rack | cap_blind false; isolation false unless already snapped (removing from slot un-isolates) |
-
-Unseat blind: player pickup from slot; header live again; lock closes; if drain still open, dump hazard returns. Persistent. Legal.
-
-### 8.6 Causal path
-
-See Objective. Next ticket (`AS-008_SHOP_GIRDER`) inherits TP-340 as the shop floor.
-
-### 8.7 Support handoff
-
-| Step | Member | Y | Type |
-|---|---|---|---|
-| 0 | 220 well-head / SKIN-W | 220.20 | static |
-| 1a | ISO-STAIR (if safe) | 220–340 | static |
-| 1b | SKIN-N | 220–340 | static |
-| 2 | TP-340 | 340.20 | static |
-
-### 8.8 Failure
-
-| Trigger | World | Can | Must not |
-|---|---|---|---|
-| walk live stair in flood | no support / push | SKIN-N; back up | auto-drain |
-| drain without blind | inventory stays / fills | SKIN | stair_safe true |
-| flag `made_safe` | no collision change | — | walking live water |
-| kernel sump without CAP-BLIND | mill grate still works | — | campaign gate on kernel |
-| fall from 340 | long chute; apron or 220 well-head if steered | chute | powered lift |
-
-### 8.9 Recovery
-
-- lose the blind down the well: last commit; station does not respawn a second blind
-- never take the blind: SKIN-N
-- un-isolate after drain: stair dies again; SKIN still up
-- two-way SKIN-N and, when safe, two-way stair
-
-Atlas §3: TP-340 keeps a recovery that does not need `CAP-BLIND` — that **is** SKIN-N.
-
-### 8.10 Persist
-
-Version 6. Import ≤5: header live, inventory 1.0, blind in rack, lock closed.
-
-Fields:
-
-- `blind_x,y,z`, `blind_held`, `blind_in_rack`, `blind_inserted`
-- `header_vent_open`, `sump_inventory`, `sump_drain_open`
-- `wet_lock_angle`
-
-`stair_safe` / `cap_blind` derived. Commit on TP-340 dwell. Do not reset process on “band load.”
-
-### 8.11 Falsifiers
-
-1. `wo015_live_stair_is_not_a_floor` — default spawn 220; walk stair into sump AABB; support is never an ISO-STAIR id inside the flood.
-2. `wo015_lock_frozen_while_live` — θ < 0.10 after 3 s.
-3. `wo015_blind_is_a_body` — pick up; rack empty; `cap_blind` true; body not at seated pose.
-4. `wo015_insert_then_drain` — insert; vent; drain; inventory ≤ 0.08; stair support rank 1; lock θ ≥ 1.00; player y ≥ 340 via stair.
-5. `wo015_drain_without_blind_fails` — drain wheel only; inventory > 0.5; stair still unsafe.
-6. `wo015_skin_n_skips_process` — header live; player y ≥ 340 on SKIN-N; inventory still ≥ 0.9.
-7. `wo015_unseat_blind_relives` — after dry, remove blind; lock closes; flood treads rank 0 again.
-8. `wo015_flag_is_not_dry` — commit at 220 without insert; TP-340 does not appear under the player.
-9. `wo015_kernel_sump_ungated` — mill `SumpLanding` still isolates without `cap_blind`.
-10. Prior AS-001–014 + kernel PASS.
-
-### 8.12 Exit state
-
-- player **can** stand on TP-340 (y ≥ 340) via stair **or** SKIN-N
-- header/sump/blind as left (live skip is legal)
-- `MOD-GIRDER-T` does not exist yet
-- 220 well-head and TP-120 still exist below
-- next file: plate shop on TP-340, seat `MOD-GIRDER-T`
-
----
-
-**Stop. Do not begin the next file inside this one.**  
-Next file: `03_EXECUTION/ASCENT/AS-008_SHOP_GIRDER.md` — `UNAUTHORED`, does not exist yet
+- **The door opens into the cab.** Hooked open outward, it swung across the approach from D and a
+  rider walking in shut it on themselves. Opening inward, the rider pushes it wide going in, and
+  the cab's air presses it onto its frame.
+- **A catch now draws its body onto the seat's turn as well as its place** (`DEFECT
+  mechanism_kit latch`): the door latched a few degrees open and leaked 30 % of its doorway.
+- **The door's leaf stands 5 cm off each jamb:** swung inward, its hinge-side corner cut into the
+  wall and the contact solver shut it.
+- **Pools are sealed:** a pipe into a full pool stops. With an overflow, the refilled head tank
+  drained straight back through D's open fill into the full tube.
+- **E's vacuum breaker is on the cab's cell, with a small bleed:** on the duct's side it let the
+  rising chiller take outside air instead of the cab's, and the cab stayed 19 m up.
+- The spool's gap is 1.6 m between low guides on the deck (a carried spool swings); the handles
+  hang where a rider reaches them without walking into them.

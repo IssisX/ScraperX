@@ -20,7 +20,7 @@ namespace {
 // One past the last spawn, derived from the enum so a new spawn is never
 // silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
 constexpr std::int64_t kInitialSpawnCount =
-    static_cast<std::int64_t>(sim::InitialSpawn::Ring198East) + 1;
+    static_cast<std::int64_t>(sim::InitialSpawn::WetFPlatform) + 1;
 
 // A kit index from script: negative or past the end reads as no body.
 [[nodiscard]] std::uint32_t kit_index(const std::int64_t index) {
@@ -314,6 +314,10 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_bins"), &ScraperXSimulation::get_kit_bins);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_piles"),
                                 &ScraperXSimulation::get_kit_piles);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_pools"),
+                                &ScraperXSimulation::get_kit_pools);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_spouts"),
+                                &ScraperXSimulation::get_kit_spouts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_cage_travel"),
                                 &ScraperXSimulation::get_well_a_cage_travel);
     godot::ClassDB::bind_method(godot::D_METHOD("is_well_a_catch_latched"),
@@ -934,6 +938,37 @@ godot::PackedFloat32Array ScraperXSimulation::get_kit_bins() const {
         out.push_back(static_cast<float>(bin.stream_to.x));
         out.push_back(static_cast<float>(bin.stream_to.y));
         out.push_back(static_cast<float>(bin.stream_to.z));
+        out.push_back(bin.water ? 1.0F : 0.0F);
+    }
+    return out;
+}
+
+godot::PackedFloat32Array ScraperXSimulation::get_kit_pools() const {
+    godot::PackedFloat32Array out;
+    for (std::uint32_t index = 0; index < simulation_->kit_pool_count(); ++index) {
+        const sim::KitPool pool = simulation_->kit_pool(index);
+        out.push_back(static_cast<float>(pool.min_corner.x));
+        out.push_back(static_cast<float>(pool.min_corner.y));
+        out.push_back(static_cast<float>(pool.min_corner.z));
+        out.push_back(static_cast<float>(pool.max_corner.x));
+        out.push_back(static_cast<float>(pool.max_corner.y));
+        out.push_back(static_cast<float>(pool.max_corner.z));
+        out.push_back(static_cast<float>(pool.level_m));
+    }
+    return out;
+}
+
+godot::PackedFloat32Array ScraperXSimulation::get_kit_spouts() const {
+    godot::PackedFloat32Array out;
+    for (std::uint32_t index = 0; index < simulation_->kit_spout_count(); ++index) {
+        const sim::KitSpout spout = simulation_->kit_spout(index);
+        out.push_back(spout.pouring ? 1.0F : 0.0F);
+        out.push_back(static_cast<float>(spout.from.x));
+        out.push_back(static_cast<float>(spout.from.y));
+        out.push_back(static_cast<float>(spout.from.z));
+        out.push_back(static_cast<float>(spout.to.x));
+        out.push_back(static_cast<float>(spout.to.y));
+        out.push_back(static_cast<float>(spout.to.z));
     }
     return out;
 }

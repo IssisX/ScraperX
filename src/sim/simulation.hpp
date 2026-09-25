@@ -109,6 +109,11 @@ enum class InitialSpawn : std::uint8_t {
     Ring176East = 27,
     // And on the 198 ring, north of the route's catwalk.
     Ring198East = 28,
+    // AS-007: on the 220 ring west of D's walkway, as a rider off C's
+    // platform; in E's cab on its bottom stop; on F's platform.
+    Ring220North = 29,
+    WetECab = 30,
+    WetFPlatform = 31,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -128,8 +133,52 @@ struct KitBin final {
     double contents_kg = 0.0;
     double capacity_kg = 0.0;
     bool flowing = false;
+    bool water = false;
     Vector3 stream_from{};
     Vector3 stream_to{};
+};
+
+// A pool of the declared water model (AS-007): its box and its level.
+struct KitPool final {
+    Vector3 min_corner{};
+    Vector3 max_corner{};
+    double level_m = 0.0;
+    double water_kg = 0.0;
+};
+
+// A spout pouring this step, from the spout to where it lands.
+struct KitSpout final {
+    bool pouring = false;
+    Vector3 from{};
+    Vector3 to{};
+};
+
+// AS-007's machine state, for the falsifiers.
+struct WetState final {
+    bool d_pipe_whole = false;
+    double d_fill_kg_s = 0.0;
+    double d_tank_kg = 0.0;
+    double d_tube_kg = 0.0;
+    double d_tank_level = 0.0;
+    double d_tube_level = 0.0;
+    double d_platform_travel = 0.0;
+    double d_valve_angle = 0.0;
+    double d_drain_angle = 0.0;
+    double dump_angle = 0.0;
+    bool e_door_latched = false;
+    double e_door_angle = 0.0;
+    bool e_catch_latched = false;
+    double e_duct_pa = 0.0;
+    double e_cab_pa = 0.0;
+    double e_cab_travel = 0.0;
+    double e_chiller_travel = 0.0;
+    double e_bucket_kg = 0.0;
+    bool f_catch_latched = false;
+    bool f_hose_coupled = false;
+    double f_platform_travel = 0.0;
+    double f_accumulator_travel = 0.0;
+    double header_kg = 0.0;
+    double drained_kg = 0.0;
 };
 
 // Rubble spilled onto a static surface, piled where it landed.
@@ -498,6 +547,30 @@ public:
     static constexpr std::uint64_t kWellCLatchHandleEntityId = 2026;
     // AS-006's climbing route: ladder, boards, standpipe, catwalk, scaffold.
     static constexpr std::uint64_t kWellRouteEntityId = 1004;
+    // AS-007 Wet Isolation.
+    static constexpr std::uint64_t kWetFrameEntityId = 1005;
+    static constexpr std::uint64_t kWetRouteEntityId = 1006;
+    static constexpr std::uint64_t kWetDPlatformEntityId = 2030;
+    static constexpr std::uint64_t kWetDSpoolEntityId = 2031;
+    static constexpr std::uint64_t kWetDValveEntityId = 2032;
+    static constexpr std::uint64_t kWetDValveHandleEntityId = 2033;
+    static constexpr std::uint64_t kWetDDrainEntityId = 2034;
+    static constexpr std::uint64_t kWetDDrainHandleEntityId = 2035;
+    static constexpr std::uint64_t kWetECabEntityId = 2040;
+    static constexpr std::uint64_t kWetEChillerEntityId = 2041;
+    static constexpr std::uint64_t kWetEDoorEntityId = 2042;
+    static constexpr std::uint64_t kWetELatchEntityId = 2043;
+    static constexpr std::uint64_t kWetELeverEntityId = 2044;
+    static constexpr std::uint64_t kWetEHandleEntityId = 2045;
+    static constexpr std::uint64_t kWetEBucketEntityId = 2046;
+    static constexpr std::uint64_t kWetEStrikerEntityId = 2047;
+    static constexpr std::uint64_t kWetFPlatformEntityId = 2050;
+    static constexpr std::uint64_t kWetFAccumulatorEntityId = 2051;
+    static constexpr std::uint64_t kWetFHoseEntityId = 2052;
+    static constexpr std::uint64_t kWetFLeverEntityId = 2053;
+    static constexpr std::uint64_t kWetFHandleEntityId = 2054;
+    static constexpr std::uint64_t kWetHeaderDumpEntityId = 2060;
+    static constexpr std::uint64_t kWetHeaderHandleEntityId = 2061;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -626,6 +699,11 @@ public:
     [[nodiscard]] KitBin kit_bin(std::uint32_t bin) const noexcept;
     [[nodiscard]] std::uint32_t kit_pile_count() const noexcept;
     [[nodiscard]] KitPile kit_pile(std::uint32_t pile) const noexcept;
+    [[nodiscard]] std::uint32_t kit_pool_count() const noexcept;
+    [[nodiscard]] KitPool kit_pool(std::uint32_t pool) const noexcept;
+    [[nodiscard]] std::uint32_t kit_spout_count() const noexcept;
+    [[nodiscard]] KitSpout kit_spout(std::uint32_t spout) const noexcept;
+    [[nodiscard]] WetState wet_state() const noexcept;
 
 private:
     class PhysicsWorld;

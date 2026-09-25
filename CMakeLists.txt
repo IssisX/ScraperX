@@ -20,6 +20,7 @@ add_library(scraperx_sim STATIC
     src/sim/steam_plant.cpp
     src/sim/mechanism_kit.cpp
     src/sim/band_counterweight_well.cpp
+    src/sim/band_wet_isolation.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
