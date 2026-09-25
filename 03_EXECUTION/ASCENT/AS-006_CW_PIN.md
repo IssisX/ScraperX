@@ -53,7 +53,7 @@ where the stair's top deck is 9 m deep and the rings above step in by 0.9 m per 
 |---|---|---|---|---|---|
 | **A — skip lift** | 01 counter-mass | 154.25 → 176.25 | cage 350 kg + rider | 800 kg skip, 22 m | re-armable |
 | **B — derrick boom** | 13, the boom as a swinging counterweight | 176.25 → 198.25 | cage 350 kg + rider | 2 500 kg lattice boom, centre of mass falls 11 m | one-shot |
-| **C — debris chute** (finale) | 12 debris-chute counterweight, cascading into A | 198.25 → 220.25 | platform 700 kg + rider | 900 kg of rubble in a 250 kg dumpster, 22 m on a 1:1 rope (as built; sketched 44 m on 2:1) | one-shot source; its leftover re-arms A |
+| **C — debris chute** (finale) | 12 debris-chute counterweight, cascading into A | 198.25 → 220.25 | platform 700 kg + rider | 900 kg of rubble in a 400 kg dumpster, 22 m on a 1:1 rope (as built; sketched 44 m on 2:1) | one-shot source; its leftover re-arms A |
 
 ### Links between stages (what each leaves behind)
 
@@ -180,12 +180,16 @@ gain 93.9 kJ.
 - **Safety dogs** (a ratchet on B's guide, a tooth every 0.05 m) hold the cage up once the line has
   gone: it settles at most one tooth, `198.20`, under the ring. While the line hauls the rider
   stands on the cage; as it settles onto its dogs the rider is airborne for two ticks.
-- **Wreckage:** the boom hangs from 222 m to 200 m at `x = 0`, a lattice for Step 2's climbing.
+- **Wreckage:** the boom hangs from 222 m to 200 m at `x = 0`. A board runs off the 198 ring's
+  north band east of the boom's swing to beside where it hangs, and a stub below the boom's
+  south-east chord is in reach from the board's end: the rider takes hold, climbs the boom's east
+  face to the 220 ring's edge and, looking round at the ring, tops out onto it.
 
 ## Stage C — debris chute (finale cascade)
 
 **Found:** a platform on the 198 north ring's east half, on guides to 220 m, hung by a 2:1 rope
-over a sheave at ≈ 224 m from a steel dumpster (250 kg empty) in a shaft directly above A's cage.
+over a sheave at ≈ 224 m from a steel dumpster (400 kg empty, as built) in a shaft directly above
+A's cage.
 A rubble hopper on the 220 ring holds 900 kg; its chute mouth is over the dumpster, jammed shut by
 a length of rebar.
 
@@ -203,7 +207,9 @@ it at 220.25.
 `785 × 9.81 × 22 = 169.4 kJ`.
 
 **Cascade into A:** described under Links. C's source (the hopper's rubble) is spent: one-shot. Its
-wreckage is the emptied dumpster hanging above A's cage, climbable.
+wreckage is the emptied dumpster hanging above A's cage, climbable: with A re-armed and ridden back
+up, the dumpster hangs just over A's parked cage, and a grab bar down its west side climbs from the
+cage onto a grate over its top.
 
 ### As built (Stage C)
 
@@ -211,8 +217,10 @@ wreckage is the emptied dumpster hanging above A's cage, climbable.
   from 201.30 to 179.30, 0.29 m over A's top frame): a 44 m fall would take it through A's cage.
   On 1:1 the full dumpster (1 150 kg) outweighs the platform and rider (785 kg) and moves 22 m to
   the platform's 22 m. The rope runs from the platform's eye over two blocks on gallows on the 220
-  ring down to the dumpster's bail. Empty (250 kg) the dumpster cannot lift the platform (700 kg):
+  ring down to the dumpster's bail. Empty (400 kg) the dumpster cannot lift the platform (700 kg):
   the platform rests on its stop and the rope holds the dumpster up at the top of its guide.
+- **The dumpster is 400 kg and 1.5 m wide,** first 250 kg and 1.9 m: a hold must be on a body of
+  400 kg or more, and the narrower dumpster leaves a climber room between it and A's cage's rails.
 - **The missing link is the counterweight's mass; the trigger is the platform's keeper latch.**
   Found, the hopper's chute is jammed by a rebar and the platform is pinned by a counterweighted
   latch lever. The rider throws the rebar clear (a trip line from a handle in front of the
@@ -342,7 +350,8 @@ Bands above 220 m (`AS-007`–`AS-009`). Fluids (B03). The Fold device.
 
 ## Exit state
 
-The player stands on the 220 ring, arrived by A → B → C, by the climbing route, or by B's wreckage.
+The player stands on the 220 ring, arrived by A → B → C, by the climbing route, or by B's wreckage
+from the 198 ring.
 A may be re-armed; B and C are spent. `AS-007` (B03, 220 → 340) begins from the 220 ring.
 
 ## Result record
@@ -373,11 +382,13 @@ EYE).
 
 | Proof | Observed |
 |---|---|
-| `PASS scraperx_sim AS-006 B no link` | `cage_worst=0 boom_drop=0.0132446 cleat_tension=112779 line_floor=12473.3 relatched=1 rerigged=1` (the tension is the peak of the catch letting go onto the cleat) |
-| `PASS scraperx_sim AS-006 B ride` | `ride_s=7.97778 floor_y=198.2 peak_speed=3.02203 boom_angle=1.57063 let_go=1 rode_on_cage=1 energy_margin_J=-3.58205 restored_y=199.147` |
+| `PASS scraperx_sim AS-006 B no link` | `cage_worst=0 boom_drop=0.0132446 cleat_tension=113303 line_floor=12531.1 relatched=1 rerigged=1` (the tension is the peak of the catch letting go onto the cleat) |
+| `PASS scraperx_sim AS-006 B ride` | `ride_s=7.96667 floor_y=198.2 peak_speed=3.02214 boom_angle=1.57074 let_go=1 rode_on_cage=1 energy_margin_J=-3.63444 restored_y=199.147` |
+| `PASS scraperx_sim AS-006 wreckage B` | `ring_y=221.169`: from the restored 198 ring, out on the board, a hold on the hanging boom's stub, up its east face and over the 220 ring's edge |
 | `PASS scraperx_sim AS-006 C no link` | `platform_worst=0 dumpster_worst=0 latch_open_s=3.78889 dumpster_kg=900 rebar=2.20004` |
-| `PASS scraperx_sim AS-006 C ride` | `ride_s=8.6 floor_y=220.25 peak_speed=3.00098 released_J=248169 energy_margin_J=20.1975 a_cage_rubble_kg=900 rode_on_platform=1 restored_y=221.146` |
-| `PASS scraperx_sim AS-006 band` | `to_220_s=53.1889 y_220=221.15 rearmed_skip_travel=0.000427246 landed_impact=8.8914 spilled_kg=900 again_y=177.149` |
+| `PASS scraperx_sim AS-006 C ride` | `ride_s=8.4 floor_y=220.25 peak_speed=3.00158 released_J=280542 energy_margin_J=4.62538 a_cage_rubble_kg=900 rode_on_platform=1 restored_y=221.146` |
+| `PASS scraperx_sim AS-006 band` | `to_220_s=52.9778 y_220=221.15 rearmed_skip_travel=0.000427246 landed_impact=8.8914 spilled_kg=900 again_y=177.149` |
+| `PASS scraperx_sim AS-006 wreckage C` | `grate_y=181.579`: at the band's end, from A's parked cage up the spent dumpster's grab bar onto its grate |
 | `touch_debris`, `pad_debris`, `keyboard_debris` | PASS, `top_y=221.15`, worst wrist step 0.082–0.086 m per 60 Hz frame |
 
 B's margin, −3.6 J at its worst tick, is inside the 8.3 J stance allowance: the rider settling on
@@ -393,6 +404,10 @@ Found and fixed on the way (each by the probe named):
   now keep their pivot.
 - **The checkpoint did not keep spilled rubble.** A restore put the cage's rubble back and left the
   spill counted: 900 kg became 1 800. Spills are now piles, and piles are checkpointed.
+- **The one-shot wreckage was out of reach.** B's hanging boom stood 1.5 m off the 198 ring's edge
+  with its lower end 1.75 m over the ring, and C's dumpster, at 250 kg, was too light for its bail
+  to be a hold. B gained the board off the 198 ring and a stub under its south-east chord; C a
+  grab bar, a grate and 150 kg. Both are climbed in the tests above.
 - **A standing rider creeps under a steady handle load**, about 2 cm/s: locomotion sets the body's
   velocity toward the stick each tick and the carry constraint adds `F·dt/m` after it (observed on
   A's tip-out, source inspected). Not changed here; every held linkage keeps 0.2 m or more of

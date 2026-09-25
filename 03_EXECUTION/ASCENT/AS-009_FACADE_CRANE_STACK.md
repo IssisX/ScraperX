@@ -120,7 +120,7 @@ Built on `ScraperX-Claude` after `c87a5a1`. Native falsifiers, all on player inp
 | `AS-009 band` | the 484 ring to standing on TP-640 in 96.0 s of sim time |
 | `AS-009 route` | the 484 ring to standing on TP-640 in 183.9 s with no lift: six L's of boards and ladders, then the ladder through the plate's hatch. Every lift in the band where it was found |
 | `AS-009 wreckage` | K fired with its shackle free: the jib hangs plumb at 1.5708 rad, climbed from the 528 ring to its heel and sprung from onto the 550 ring. J ridden: the spent wagon, 44.02 m down its incline beside the 528 ring, climbed onto its deck. L fired with its clutch out: the spent cart, 52 m down its incline beside the 572 ring, climbed onto its deck |
-| `ascent 154 to TP-640` | one run from the 154 m deck to standing on TP-640 in 370.2 s of sim time, never dying: the 220 ring at 52.2 s, TP-340 at 156.0 s, the 484 ring at 272.3 s, twelve stages ridden, every link made by the rider's hands |
+| `ascent 154 to TP-640` | one run from the 154 m deck to standing on TP-640 in 369.7 s of sim time, never dying: the 220 ring at 52.0 s, TP-340 at 155.7 s, the 484 ring at 272.1 s, twelve stages ridden, every link made by the rider's hands |
 
 Changed on the way:
 

@@ -519,7 +519,7 @@ constexpr double kWellBBoomMassKg = 2500.0;
 constexpr double kWellBBoomLength = 22.0;
 constexpr double kWellBCageFloorTop = 176.25;
 constexpr double kWellCPlatformMassKg = 700.0;
-constexpr double kWellCDumpsterMassKg = 250.0;
+constexpr double kWellCDumpsterMassKg = 400.0;
 constexpr double kWellCPlatformFloorTop = 198.25;
 constexpr double kWellRubbleKg = 900.0;
 // The dogs that hold B's cage and C's platform at the top stand every
@@ -5111,6 +5111,27 @@ int main() {
               << " rode_on_cage=" << int(b_rode_on_cage) << " energy_margin_J=" << b_worst_margin
               << " restored_y=" << b_restored.player_position.y << '\n';
 
+    // B's wreckage: along the 198 ring and out on the board beside the spent
+    // boom, a hold on its lower end, the climb, and a look round at the 220
+    // ring to top out onto it.
+    require(walk_to(b_well, 1.0, -128.6, 14.0) && walk_to(b_well, 1.0, -131.8, 6.0, 0.08),
+            "B wreck: along the 198 ring and out on the board beside the hanging boom");
+    (void)b_well.set_facing(-1.0, 0.0);
+    (void)b_well.advance_frame(0.4);
+    require(b_well.snapshot().grip_available, "B wreck: the hanging boom's lower end in reach from the board");
+    (void)b_well.request_traversal();
+    (void)b_well.advance_frame(0.2);
+    require(is_climbing(b_well.snapshot()) &&
+                b_well.snapshot().traversal_support_entity_id == Simulation::kWellBBoomEntityId,
+            "B wreck: a hold on the hanging boom");
+    require(hold_stick(b_well, -1.0, 0.0, -1.0, 0.0, 40.0,
+                       [](const Snapshot &state) { return state.player_position.y >= 219.8; }),
+            "B wreck: up the boom to the 220 ring's edge");
+    require(hold_stick(b_well, -1.0, 0.0, 0.0, 1.0, 4.0,
+                       [](const Snapshot &state) { return standing_above(state, 220.2); }),
+            "B wreck: over the 220 ring's edge from the boom");
+    std::cout << "PASS scraperx_sim AS-006 wreckage B: ring_y=" << b_well.snapshot().player_position.y << '\n';
+
     // ---- AS-006 Stage C, the debris chute, the band's finale ------------------
     //
     // No link, no lift, both ways round. With the chute jammed the dumpster
@@ -5473,6 +5494,22 @@ int main() {
               << " landed_impact=" << band_landed.last_impact_speed_mps
               << " spilled_kg=" << tipped.well_rubble_spilled_kg
               << " again_y=" << band_again.player_position.y << '\n';
+
+    // C's wreckage: from A's parked cage, the spent dumpster hangs just over
+    // it; up its grab bar from the cage's west side and onto its grate.
+    require(walk_to(band, -11.45, -132.25, 6.0, 0.08), "C wreck: to the cage's west side under the spent dumpster");
+    (void)band.set_facing(1.0, 0.0);
+    (void)band.advance_frame(0.4);
+    (void)band.request_traversal();
+    (void)band.advance_frame(0.2);
+    require(is_climbing(band.snapshot()) &&
+                band.snapshot().traversal_support_entity_id == Simulation::kWellCDumpsterEntityId,
+            "C wreck: a hold on the spent dumpster's grab bar");
+    require(hold_stick(band, 1.0, 0.0, 1.0, 0.0, 20.0,
+                       [](const Snapshot &state) { return standing_above(state, 180.6); }) &&
+                band.snapshot().support_entity_id == Simulation::kWellCDumpsterEntityId,
+            "C wreck: up the bar and onto the dumpster's grate");
+    std::cout << "PASS scraperx_sim AS-006 wreckage C: grate_y=" << band.snapshot().player_position.y << '\n';
 
     // ---- Step 2 movement (03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md §8) --
     //

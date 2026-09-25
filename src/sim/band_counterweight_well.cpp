@@ -397,6 +397,11 @@ constexpr float kBStrikerRelease = 0.12F;
     }
     boom.push_back({JPH::Vec3(0.15F, 0.15F, 0.15F), kBoomBlockLocal, JPH::Quat::sIdentity(),
                     Material::Hazard});
+    // A stub on the chord that hangs on the east face's south side once the
+    // boom is spent: a hand's reach from the board off the 198 ring.
+    boom.push_back({JPH::Vec3(0.06F, 0.06F, 0.25F),
+                    JPH::Vec3(kBoomHalfSection, kBoomHalfSection, -kBoomLength - 0.25F),
+                    JPH::Quat::sIdentity(), Material::Yellow});
     return boom;
 }
 
@@ -478,6 +483,11 @@ void build_stage_b(kit::Kit &kit, CounterweightWell &well) {
          JPH::Quat::sIdentity(), Material::Rust},
         {JPH::Vec3(0.05F, 1.10F, 0.45F), JPH::Vec3(kBoomX + 0.55F, 221.35F, -130.95F),
          JPH::Quat::sIdentity(), Material::Rust},
+        // A board off the 198 ring's north band, east of the boom's swing, out
+        // beside where the spent boom hangs: from its end the boom is a climb
+        // to the 220 ring.
+        {JPH::Vec3(0.30F, 0.10F, 1.15F), JPH::Vec3(kBoomX + 1.0F, 198.15F, -130.95F),
+         JPH::Quat::sIdentity(), Material::Timber},
         // The lever's stand and pin.
         {JPH::Vec3(0.06F, 0.5F * (kBLeverPivot.GetY() + 0.35F - 220.25F), 0.06F),
          JPH::Vec3(kBLeverPivot.GetX(), 0.5F * (kBLeverPivot.GetY() + 0.35F + 220.25F), -130.45F),
@@ -596,11 +606,11 @@ constexpr float kCGallowsZ = -130.40F;   // posts on the 220 ring, inside its ed
 
 constexpr float kDumpsterX = -10.15F;
 constexpr float kDumpsterZ = -131.75F;
-constexpr float kDumpsterHalfX = 0.95F;
+constexpr float kDumpsterHalfX = 0.75F;    // room beside it in A's cage below
 constexpr float kDumpsterHalfY = 0.65F;
 constexpr float kDumpsterHalfZ = 0.85F;
 constexpr float kDumpsterBottomTop = 201.30F;   // its floor's underside, found
-constexpr float kDumpsterMassKg = 250.0F;
+constexpr float kDumpsterMassKg = 400.0F;       // enough to climb, still lighter than the platform
 constexpr float kDumpsterCapacityKg = 1000.0F;
 const JPH::Vec3 kDumpsterBailLocal(0.0F, kDumpsterHalfY + 0.50F, 0.0F);
 
@@ -750,6 +760,14 @@ void build_stage_c(kit::Kit &kit, CounterweightWell &well) {
          JPH::Quat::sIdentity(), Material::Hazard},
         {JPH::Vec3(kDumpsterHalfX, 0.04F, 0.04F), JPH::Vec3(0.0F, kDumpsterHalfY + 0.51F, 0.0F),
          JPH::Quat::sIdentity(), Material::Hazard},
+        // A grate over the open top, and a grab bar plumb down the west side
+        // by its south corner to 1.5 m under the floor: spent at the foot of
+        // its guide, over A's parked cage, the dumpster is a climb from the
+        // cage, and a climber's eye passes the bar to the wall behind it.
+        {JPH::Vec3(kDumpsterHalfX, 0.03F, kDumpsterHalfZ), JPH::Vec3(0.0F, kDumpsterHalfY + 0.03F, 0.0F),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+        {JPH::Vec3(0.04F, 1.40F, 0.04F), JPH::Vec3(-kDumpsterHalfX - 0.04F, -0.75F, -0.70F),
+         JPH::Quat::sIdentity(), Material::Yellow},
     };
     const float dumpster_center_y = kDumpsterBottomTop + kDumpsterHalfY;
     well.c_dumpster = kit.add_body(Sim::kWellCDumpsterEntityId, dumpster,
