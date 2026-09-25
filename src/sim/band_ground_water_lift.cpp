@@ -131,11 +131,27 @@ void build_ground_water_lift(kit::Kit &kit, GroundWaterLift &lift) {
         kit.add_catch_at(lift.cage, {}, cage_upper_seat, 0.0F, 0.08F, true, false);
 
     std::vector<Part> frame{
-        {JPH::Vec3(0.12F, 5.25F, 0.12F), JPH::Vec3(kCageX - 1.15F, 5.25F, kCageZ),
+        // The cage needs a collision-clear swept volume for its full 8 m rise.
+        // The previous two uprights sat at x +/-1.15 m inside the 2.70 m-wide
+        // cage floor, so the dynamic floor had to travel through static steel.
+        // Four corner posts now sit outside both floor extents and leave the
+        // east-side cage-to-dock handoff open through the centre.
+        {JPH::Vec3(0.10F, 5.45F, 0.10F),
+         JPH::Vec3(kCageX - 1.55F, 5.45F, kCageZ - 1.45F),
          JPH::Quat::sIdentity(), Material::Rust},
-        {JPH::Vec3(0.12F, 5.25F, 0.12F), JPH::Vec3(kCageX + 1.15F, 5.25F, kCageZ),
+        {JPH::Vec3(0.10F, 5.45F, 0.10F),
+         JPH::Vec3(kCageX - 1.55F, 5.45F, kCageZ + 1.45F),
          JPH::Quat::sIdentity(), Material::Rust},
-        {JPH::Vec3(1.55F, 0.16F, 1.55F), JPH::Vec3(kCageX, kSheaveY + 0.25F, kCageZ),
+        {JPH::Vec3(0.10F, 5.45F, 0.10F),
+         JPH::Vec3(kCageX + 1.55F, 5.45F, kCageZ - 1.45F),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(0.10F, 5.45F, 0.10F),
+         JPH::Vec3(kCageX + 1.55F, 5.45F, kCageZ + 1.45F),
+         JPH::Quat::sIdentity(), Material::Rust},
+        // At +8 m the cage roof reaches y=10.70 m. The old sheave support
+        // started at y=10.59 m and physically blocked the final 0.11 m before
+        // the upper catch seat. Keep the support above the complete swept roof.
+        {JPH::Vec3(1.75F, 0.16F, 1.65F), JPH::Vec3(kCageX, 11.05F, kCageZ),
          JPH::Quat::sIdentity(), Material::Rust},
         {JPH::Vec3(0.08F, 5.15F, 0.08F), JPH::Vec3(kBucketX - 1.00F, 5.15F, kBucketZ),
          JPH::Quat::sIdentity(), Material::Steel},
