@@ -3313,9 +3313,30 @@ int main() {
         require(sim.advance_frame(0.2).accepted, "water-lift seam seed must settle");
     };
     const auto fill_bucket = [](Simulation &sim, const double expected_m3) {
-        require(sim.snapshot().water_lift_valve_station_active,
+        const auto before = sim.snapshot();
+        require(before.water_lift_valve_station_active,
                 "water-lift fill control must be physically in reach");
+        require(before.water_screw_tank_volume_m3 >= expected_m3 - 0.002,
+                "water-lift seam seed must exist in the authoritative upper tank");
+        require(before.water_lift_bucket_catch_latched,
+                "water-lift bucket must be physically caught at the fill station");
         require(sim.request_water_lift_valve_toggle(), "water-lift fill-open request accepted");
+        require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "water-lift first fill tick must advance");
+        const auto first = sim.snapshot();
+        std::cout << "INFO ground water lift fill: expected_m3=" << expected_m3
+                  << " valve=" << first.water_lift_valve_open
+                  << " tank_m3=" << first.water_screw_tank_volume_m3
+                  << " bucket_m3=" << first.water_lift_bucket_water_m3
+                  << " bucket_travel=" << first.water_lift_bucket_travel_m
+                  << " caught=" << first.water_lift_bucket_catch_latched
+                  << " station=" << first.water_lift_valve_station_active
+                  << " deaths=" << first.death_count << '\n';
+        require(first.water_lift_valve_open,
+                "water-lift fill command must open the authoritative valve");
+        require(first.water_lift_bucket_water_m3 > before.water_lift_bucket_water_m3 &&
+                    first.water_screw_tank_volume_m3 < before.water_screw_tank_volume_m3,
+                "an open caught-bucket valve must transfer positive conserved water");
         require(advance_until(
                     sim,
                     [expected_m3](const Snapshot &s) {
