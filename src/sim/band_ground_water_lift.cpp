@@ -23,7 +23,11 @@ constexpr float kCageLevelAccel = 2.0F;
 const JPH::Vec3 kCageEyeLocal(0.0F, 2.20F, 0.0F);
 
 constexpr float kBucketX = -18.0F;
-constexpr float kBucketZ = -105.80F;
+// Keep the caught bucket fully outside the upper tank floor. The previous
+// -105.80 m center put the bucket 0.65 m into the tank slab in Z and 0.25 m
+// into it in Y, so contact resolution displaced the caught bucket before
+// release and stole stroke from the 4 m -> 8 m rope geometry.
+constexpr float kBucketZ = -104.90F;
 constexpr float kBucketCenterTopY = 4.50F;
 constexpr float kBucketHalfX = 0.85F;
 constexpr float kBucketHalfY = 0.45F;
