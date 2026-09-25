@@ -1133,11 +1133,109 @@ void run_wet_band() {
               << " header_kg=" << w.header_kg << " bucket_kg=" << w.e_bucket_kg << '\n';
 }
 
+// AS-007's climbing route: at (x, z) facing (fx, fz), take the hold in front
+// (jumping for it when `jump`) and climb, stick toward it, until standing
+// above top.
+bool climb_wet_hold(scraperx::sim::Simulation &simulation, const double x, const double z,
+                    const double fx, const double fz, const bool jump, const double top) {
+    if (!walk_to(simulation, x, z, 8.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.4);
+    if (jump) {
+        (void)simulation.request_jump();
+        if (!hold_stick(simulation, 0.6 * fx, 0.6 * fz, fx, fz, 3.0,
+                        [](const scraperx::sim::Snapshot &state) { return is_climbing(state); })) {
+            return false;
+        }
+    } else {
+        if (!simulation.snapshot().grip_available) {
+            return false;
+        }
+        (void)simulation.request_traversal();
+        (void)simulation.advance_frame(0.2);
+        if (!is_climbing(simulation.snapshot())) {
+            return false;
+        }
+    }
+    return hold_stick(simulation, fx, fz, fx, fz, 60.0,
+                      [top](const scraperx::sim::Snapshot &state) { return standing_above(state, top); });
+}
+
+void run_wet_route() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::TraversalState;
+    Simulation route(InitialSpawn::Ring220North);
+    (void)route.advance_frame(1.0);
+    const double start = route.snapshot().simulation_time_seconds;
+    // 220 -> 242: the L of boards, the ladder.
+    require(walk_to(route, 3.5, -130.5, 6.0, 0.1) && walk_to(route, 3.5, -132.4, 6.0, 0.1) &&
+                climb_wet_hold(route, 2.5, -132.4, 0.0, 1.0, false, 242.5),
+            "route: boards and ladder from the 220 ring to the 242");
+    // 242 -> 264: the beam, the panel caught with a jump.
+    require(walk_to(route, -1.0, -131.2, 8.0, 0.1) &&
+                climb_wet_hold(route, -1.0, -133.2, 0.0, 1.0, true, 264.5),
+            "route: the beam and the jump to the panel, to the 264 ring");
+    // 264: the bulkhead leaves only the lip. Back to the edge, drop into a
+    // hang, shimmy under it, climb back up.
+    require(walk_to(route, 1.2, -131.4, 6.0, 0.08), "route: west of the bulkhead on the 264 ring");
+    (void)route.set_facing(0.0, 1.0);
+    (void)hold_stick(route, 0.0, -0.4, 0.0, 1.0, 2.0, [](const scraperx::sim::Snapshot &state) {
+        return state.player_position.z <= -132.09;
+    });
+    (void)route.advance_frame(0.3);
+    require(route.snapshot().edge_drop_available, "route: the 264 ring's edge offers a drop");
+    (void)route.request_release();
+    require(wait_for(route, 1.5,
+                     [](const scraperx::sim::Snapshot &state) {
+                         return state.traversal_state == TraversalState::Hanging;
+                     }),
+            "route: the drop lowers the body into a hang on the lip");
+    require(hold_stick(route, 1.0, 0.0, 0.0, 1.0, 6.0,
+                       [](const scraperx::sim::Snapshot &state) { return state.player_position.x >= 3.45; }),
+            "route: the shimmy carries the body under the bulkhead");
+    (void)route.request_jump();
+    require(wait_for(route, 2.5,
+                     [](const scraperx::sim::Snapshot &state) { return standing_above(state, 264.5); }),
+            "route: up from the hang east of the bulkhead");
+    // 264 -> 286: the L of boards, the standpipe.
+    require(walk_to(route, 5.35, -132.2, 6.0, 0.1) && walk_to(route, 5.35, -134.4, 6.0, 0.1) &&
+                walk_to(route, 5.0, -134.4, 6.0, 0.1) &&
+                climb_wet_hold(route, 5.0, -134.2, 0.0, 1.0, false, 286.5),
+            "route: boards and standpipe to the 286 ring");
+    // 286 -> 308: the L of boards, the ladder.
+    require(walk_to(route, 4.0, -133.0, 6.0, 0.1) && walk_to(route, 4.0, -135.1, 6.0, 0.1) &&
+                climb_wet_hold(route, 3.0, -135.1, 0.0, 1.0, false, 308.5),
+            "route: boards and ladder to the 308 ring");
+    // 308 -> 330: the catwalk, the panel caught with a jump.
+    require(walk_to(route, 1.5, -134.0, 6.0, 0.1) &&
+                climb_wet_hold(route, 1.5, -135.95, 0.0, 1.0, true, 330.5),
+            "route: the catwalk and the jump to the panel, to the 330 ring");
+    // 330 -> TP-340: the ladder on the plate's north face, facing south.
+    require(climb_wet_hold(route, 3.0, -134.9, 0.0, -1.0, false, 340.5),
+            "route: the ladder on TP-340's face, onto the plate");
+    const auto top = route.snapshot();
+    const auto w = route.wet_state();
+    require(w.d_platform_travel < 0.02 && w.e_cab_travel < 0.05 && w.f_platform_travel < 0.05 &&
+                w.e_catch_latched && w.f_catch_latched,
+            "route: no lift in the band moved");
+    std::cout << "PASS scraperx_sim AS-007 route: seconds=" << top.simulation_time_seconds - start
+              << " top_y=" << top.player_position.y << " lifts_untouched=1\n";
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
         run_wet_isolation();
         run_wet_band();
+        run_wet_route();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-007-route") {
+        run_wet_route();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -4766,6 +4864,7 @@ int main() {
 
     run_wet_isolation();
     run_wet_band();
+    run_wet_route();
 
     return EXIT_SUCCESS;
 }

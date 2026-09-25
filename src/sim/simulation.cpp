@@ -5624,7 +5624,8 @@ private:
     }
 
     // Hanging, the stick sideways moves along the ledge while its lip goes
-    // on under the hands.
+    // on under the hands. Something standing on the ledge back from its lip
+    // does not stop a shimmy; only climbing up needs the landing clear.
     void update_shimmy(JPH::BodyInterface &bodies, const StepCommands &commands,
                        const float delta_seconds) noexcept {
         const JPH::Vec3 right = traversal_right();
@@ -5640,7 +5641,7 @@ private:
         const Lip at = probe_lip(ledge + step, traversal_normal_);
         const Lip ahead = probe_lip(ledge + step + right * lead, traversal_normal_);
         if (!at.valid || !ahead.valid || std::abs(at.ledge.GetY() - ledge.GetY()) > 0.15 ||
-            !climb_move_clear(hold, at.hold) || !capsule_pose_is_clear(at.landing)) {
+            !climb_move_clear(hold, at.hold)) {
             return;
         }
         traversal_body_ = at.body;

@@ -539,6 +539,80 @@ void build_plate_and_header(kit::Kit &kit, WetIsolation &wet, std::vector<Part> 
     frame.push_back(span({8.3F, kRamBase, -141.7F}, {8.5F, kPlateBottom, -141.5F}, Material::Galvanised));
 }
 
+// ---- The climbing route: 220 -> 340 with no lift ----------------------------
+//
+// West of the machines, on the well side of the rings, each climb facing the
+// ring it tops out onto (AS-006's rule):
+//
+//  220 -> 242  an L of boards out from the 220 ring to a ladder on the 242
+//              ring's face (balance, climb, mantle);
+//  242 -> 264  a beam out from the 242 ring under a scaffold panel on the
+//              264 ring's face, caught with a jump;
+//  264 -> 286  a bulkhead across the 264 ring leaves only its lip: drop over
+//              the edge, shimmy under it, climb back up; then an L of boards
+//              to a standpipe to the 286 ring;
+//  286 -> 308  an L of boards to a ladder on the 308 ring's face;
+//  308 -> 330  a catwalk under a panel on the 330 ring's face, jumped for;
+//  330 -> 340  a ladder on TP-340's north face, climbed facing south.
+constexpr float kMember = 0.03F;
+constexpr float kRung = 0.30F;
+constexpr float kBoardHalf = 0.15F;
+
+void route_ladder(std::vector<Part> &route, const float x, const float z, const float bottom,
+                  const float top) {
+    for (const float side : {-1.0F, 1.0F}) {
+        route.push_back(span({x + side * 0.28F - kMember, bottom, z - kMember},
+                             {x + side * 0.28F + kMember, top, z + kMember}, Material::Yellow));
+    }
+    for (float y = bottom + kRung; y <= top - 0.05F; y += kRung) {
+        route.push_back(box(JPH::Vec3(0.28F, 0.02F, 0.02F), JPH::Vec3(x, y, z), Material::Steel));
+    }
+}
+
+void route_panel(std::vector<Part> &route, const float x0, const float x1, const float z,
+                 const float bottom, const float top) {
+    for (float x = x0; x <= x1 + 0.01F; x += 0.5F) {
+        route.push_back(span({x - kMember, bottom, z - kMember}, {x + kMember, top, z + kMember},
+                             Material::Yellow));
+    }
+    for (float y = bottom; y <= top + 0.01F; y += 0.4F) {
+        route.push_back(span({x0 - kMember, y - kMember, z - kMember}, {x1 + kMember, y + kMember, z + kMember},
+                             Material::Steel));
+    }
+}
+
+void route_board(std::vector<Part> &route, const JPH::Vec3 low, const JPH::Vec3 high) {
+    route.push_back(span(low, high, Material::Timber));
+}
+
+void build_climbing_route(kit::Kit &kit) {
+    std::vector<Part> route;
+    // 220 -> 242.
+    route_board(route, {3.35F, 220.05F, -132.55F}, {3.65F, 220.25F, -130.73F});
+    route_board(route, {2.10F, 220.05F, -132.55F}, {3.35F, 220.25F, -132.25F});
+    route_ladder(route, 2.5F, -131.78F, 220.25F, 242.25F);
+    // 242 -> 264.
+    route_board(route, {-1.15F, 242.05F, -133.60F}, {-0.85F, 242.25F, -131.64F});
+    route_panel(route, -2.0F, 0.0F, -132.68F, 244.5F, 264.2F);
+    // 264 -> 286: the bulkhead, clear of the lip by 0.15 m, to the 286 ring.
+    route.push_back(span({2.4F, 264.25F, -132.40F}, {2.8F, 285.75F, -128.55F}, Material::Concrete));
+    route_board(route, {5.05F, 264.05F, -134.75F}, {5.65F, 264.25F, -132.55F});
+    route_board(route, {4.40F, 264.05F, -134.75F}, {5.05F, 264.25F, -134.15F});
+    route.push_back(span({5.0F - 0.05F, 264.25F, -133.60F - 0.05F}, {5.0F + 0.05F, 286.2F, -133.60F + 0.05F},
+                         Material::Galvanised));
+    // 286 -> 308.
+    route_board(route, {3.70F, 286.05F, -135.40F}, {4.30F, 286.25F, -133.46F});
+    route_board(route, {2.40F, 286.05F, -135.40F}, {3.70F, 286.25F, -134.80F});
+    route_ladder(route, 3.0F, -134.51F, 286.25F, 308.25F);
+    // 308 -> 330.
+    route.push_back(span({1.0F, 308.15F, -136.30F}, {2.0F, 308.25F, -134.37F}, Material::Galvanised));
+    route_panel(route, 0.5F, 2.5F, -135.41F, 310.5F, 330.2F);
+    // 330 -> TP-340, on the plate's north face.
+    route_ladder(route, 3.0F, -135.46F, 330.25F, kPlateTop);
+    (void)kit.add_body(Sim::kWetRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F,
+                       0.8F);
+}
+
 } // namespace
 
 void build_wet_isolation(kit::Kit &kit, WetIsolation &wet) {
@@ -547,6 +621,7 @@ void build_wet_isolation(kit::Kit &kit, WetIsolation &wet) {
     build_stage_e(kit, wet, frame);
     build_stage_f(kit, wet, frame);
     build_plate_and_header(kit, wet, frame);
+    build_climbing_route(kit);
     (void)kit.add_body(Sim::kWetFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F,
                        0.8F);
 }

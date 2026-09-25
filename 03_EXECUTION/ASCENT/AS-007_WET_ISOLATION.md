@@ -1,8 +1,8 @@
 # SCRAPERX — AS-007 WET ISOLATION (B03, 220 → 340 m)
 
 **Ascent Slice:** `AS-007`
-**Lifecycle:** `IN PROGRESS` — stages D, E, F, the band run and its cascade built and tested;
-the climbing route is next
+**Lifecycle:** `BUILT` — stages D, E, F, the band run, its cascade and the climbing route built
+and tested on player inputs
 **Provenance:** re-derived here under `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md`. Replaces the
 plan imported from `ScraperX-Grok` (their `WO-015_WET_ISOLATION`), whose geometry and ids describe a
 world that does not exist here. The file name is kept so `MANIFEST.txt` stays true.
@@ -116,11 +116,13 @@ Plan view, north up. Column x ranges are the shafts' outer faces.
 
 ## Climbing route, no lift
 
-On the well side of the rings, like AS-006's: a ladder up the head tank from a walkway on the 220
-ring and a short ladder to the 242 ring; a board from the 242 ring (balance) to a panel on the 264
-ring's face; a shimmy along the 264 ring's lip to a pipe to the 286 ring; a ladder to the 308 ring; a
-controlled drop from the 308 ring onto a plank under a panel to the 330 ring; a ladder on TP-340's
-north face.
+West of the machines, on the well side of the rings, each climb facing the ring it tops out onto
+(AS-006's rule): an L of boards out from the 220 ring to a ladder on the 242 ring's face (balance,
+climb); a beam out from the 242 ring under a scaffold panel on the 264 ring's face, caught with a
+jump; on the 264 ring a bulkhead leaves only the lip, so drop over the edge, shimmy under it and climb
+back up, then boards to a standpipe to the 286 ring; boards to a ladder on the 308 ring's face; a
+catwalk under a panel on the 330 ring's face, jumped for; a ladder on TP-340's north face, climbed
+facing south.
 
 ## Falsifiers (lean, per the owner: one test each where it counts)
 
@@ -148,6 +150,7 @@ Built on `ScraperX-Claude` after `573dd84`. Native falsifiers, all on player inp
 | `AS-007 D` | spool off: valve thrown, platform still 10 s, tube dry. Spool in: platform to 256.25 with the rider on it; gain 29.8 kJ against 74.6 MJ of water head released |
 | `AS-007 E` | door open: trip pulled, chiller falls 10 m+, cab still. Door shut: cab to 298.25 in about 28 s at 1.55 m/s on 1.3 kPa; gain 35.0 kJ against 2.07 MJ of chiller drop |
 | `AS-007 F` | hose free: valve thrown, accumulator dumps 3 m, platform still. Coupled: platform to 340.25; gain 35.0 kJ against 588.6 kJ of accumulator drop |
+| `AS-007 route` | 220 ring to standing on TP-340 in 139.8 s with no lift: boards, ladder, beam, panel, drop, shimmy under the bulkhead, standpipe, ladder, panel, the plate's ladder. Every lift in the band where it was found |
 | `AS-007 band` | 220 ring to standing on TP-340 in 102.8 s of sim time; the dump then hoists the chiller back into its catch (the cab sinks to its stop), recharges the accumulator (F's platform returns to 298.25) and refills D's tank (253 t) |
 
 Changed on the way:
@@ -165,3 +168,6 @@ Changed on the way:
   rising chiller take outside air instead of the cab's, and the cab stayed 19 m up.
 - The spool's gap is 1.6 m between low guides on the deck (a carried spool swings); the handles
   hang where a rider reaches them without walking into them.
+- **A shimmy passes under something standing back from the lip** (Step 2's shimmy had required the
+  climb-up landing clear at every step; only the climb up needs it). The route's bulkhead is the
+  case: it stands 0.15 m back from the 264 ring's edge.
