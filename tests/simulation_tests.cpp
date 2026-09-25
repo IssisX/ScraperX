@@ -3445,6 +3445,10 @@ int main() {
     // earlier Stage A handoff/death contact with this already-existing cage.
     // Governor proof is ride-scoped: measure the cage's real body velocity
     // only after B's catch has released and the powered lift has begun.
+    std::cout << "INFO AS-006 B governor: ride_peak=" << b_ride_peak_speed
+              << " lifetime_peak=" << b_top.well_b_cage_peak_speed
+              << " ride_s=" << b_ride_seconds
+              << " floor_y=" << b_floor_y << '\n';
     require(b_ride_peak_speed <= 3.1,
             "Stage B's brake-only governor must hold the powered ride to 3.0 m/s");
     require(b_top.player_grounded && b_top.support_entity_id == Simulation::kWellBCageEntityId &&
