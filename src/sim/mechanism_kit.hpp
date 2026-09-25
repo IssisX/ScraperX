@@ -218,6 +218,7 @@ public:
     // Empty for an index the kit does not hold.
     [[nodiscard]] const std::vector<Part> &body_parts(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::RVec3 body_position(BodyIndex body) const noexcept;
+    [[nodiscard]] JPH::RVec3 body_center_of_mass_position(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Quat body_rotation(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Vec3 body_velocity(BodyIndex body) const noexcept;
     [[nodiscard]] float body_mass(BodyIndex body) const noexcept;

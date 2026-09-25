@@ -118,10 +118,13 @@ void build_ground_water_lift(kit::Kit &kit, GroundWaterLift &lift) {
                              kPulleyRatio, rope_length, kRopeRatingN);
 
     lift.bucket_top_catch = kit.add_catch(lift.bucket, {}, 0.0F, 0.05F, true);
+    // Catch seats are center-of-mass coordinates. Compound cages can have a
+    // non-zero shape COM offset, so derive the +8 m seat from the actual Jolt
+    // COM instead of the authored shape origin.
+    const JPH::RVec3 cage_upper_seat =
+        kit.body_center_of_mass_position(lift.cage) + JPH::RVec3(0.0F, kCageTravel, 0.0F);
     lift.cage_upper_catch =
-        kit.add_catch_at(lift.cage, {},
-                         JPH::RVec3(kCageX, kCageOriginY + kCageTravel, kCageZ),
-                         0.0F, 0.08F, true, false);
+        kit.add_catch_at(lift.cage, {}, cage_upper_seat, 0.0F, 0.08F, true, false);
 
     std::vector<Part> frame{
         {JPH::Vec3(0.12F, 5.25F, 0.12F), JPH::Vec3(kCageX - 1.15F, 5.25F, kCageZ),

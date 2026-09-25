@@ -709,6 +709,13 @@ JPH::RVec3 Kit::body_position(const BodyIndex body) const noexcept {
                            : record->parked;
 }
 
+JPH::RVec3 Kit::body_center_of_mass_position(const BodyIndex body) const noexcept {
+    const Body *record = find(bodies_, body);
+    return record != nullptr && record->enabled
+               ? jolt_body(body).GetCenterOfMassPosition()
+               : JPH::RVec3::sZero();
+}
+
 JPH::Quat Kit::body_rotation(const BodyIndex body) const noexcept {
     const Body *record = find(bodies_, body);
     return record != nullptr ? system_.GetBodyInterfaceNoLock().GetRotation(record->id)
