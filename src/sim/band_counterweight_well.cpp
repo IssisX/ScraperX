@@ -290,7 +290,10 @@ constexpr float kBCagePostHeight = 2.70F;
 constexpr float kBCageMassKg = 350.0F;
 constexpr float kBTravel = 22.0F;
 constexpr float kBCageGovernorSpeed = 3.00F;
-constexpr float kBCageGovernorForce = 30000.0F;
+// 42 kN gives the 2.5 t lattice/cage/rider system the same order of
+// finite brake reserve as proven Stage A: enough to cancel the static
+// imbalance and still achieve the declared 2.5 m/s^2 end-leveling decel.
+constexpr float kBCageGovernorForce = 42000.0F;
 constexpr float kBCageLevelAccel = 2.5F;
 const JPH::Vec3 kBCageEyeLocal(kBCageHalfX + 0.12F, 0.80F, 0.0F);
 
