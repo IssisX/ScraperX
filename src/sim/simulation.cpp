@@ -3818,7 +3818,8 @@ private:
         }
 
         water_lift_valve_flow_m3_s_ = 0.0;
-        if (water_lift_valve_open_ && bucket_travel > -0.08 &&
+        if (water_lift_valve_open_ &&
+            kit_->catch_latched(ground_water_lift_.bucket_top_catch) &&
             water_lift_bucket_water_m3_ < kWaterLiftBucketCapacityM3) {
             const double request =
                 std::min(kWaterLiftFillRateM3S * delta_seconds,
