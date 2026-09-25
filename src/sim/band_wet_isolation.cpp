@@ -556,7 +556,6 @@ void build_plate_and_header(kit::Kit &kit, WetIsolation &wet, std::vector<Part> 
 //  330 -> 340  a ladder on TP-340's north face, climbed facing south.
 constexpr float kMember = 0.03F;
 constexpr float kRung = 0.30F;
-constexpr float kBoardHalf = 0.15F;
 
 void route_ladder(std::vector<Part> &route, const float x, const float z, const float bottom,
                   const float top) {
