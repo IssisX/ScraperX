@@ -178,6 +178,18 @@ struct CraneState final {
     double l_cab_travel = 0.0;
 };
 
+// Band 0, the Stack's machine state, for the falsifiers.
+struct StackState final {
+    // S1, the water-balance hoist.
+    double s1_cage_travel = 0.0;
+    double s1_cage_peak_speed = 0.0;
+    double s1_bucket_travel = 0.0;
+    double s1_bucket_water_kg = 0.0;
+    double s1_tank_water_kg = 0.0;
+    double s1_valve_angle = 0.0;
+    bool s1_catch_latched = false;
+};
+
 // Rubble spilled onto a static surface, piled where it landed.
 struct KitPile final {
     Vector3 at{};
@@ -443,6 +455,16 @@ public:
     static constexpr std::uint64_t kCraneLPinHandleEntityId = 2125;
     static constexpr std::uint64_t kCraneLClutchEntityId = 2126;
     static constexpr std::uint64_t kCraneLClutchHandleEntityId = 2127;
+    // Band 0, the Stack (grade -> 154 m): its static structure, then S1, the
+    // skip hoist.
+    static constexpr std::uint64_t kStackFrameEntityId = 1020;
+    static constexpr std::uint64_t kStackS1CageEntityId = 2200;
+    static constexpr std::uint64_t kStackS1BucketEntityId = 2201;
+    static constexpr std::uint64_t kStackS1ValveEntityId = 2202;
+    static constexpr std::uint64_t kStackS1LeverEntityId = 2203;
+    static constexpr std::uint64_t kStackS1HandleEntityId = 2204;
+    static constexpr std::uint64_t kStackS1FillHandleEntityId = 2205;
+    static constexpr std::uint64_t kStackS1StrikerEntityId = 2206;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -534,6 +556,7 @@ public:
     [[nodiscard]] WetState wet_state() const noexcept;
     [[nodiscard]] ShopState shop_state() const noexcept;
     [[nodiscard]] CraneState crane_state() const noexcept;
+    [[nodiscard]] StackState stack_state() const noexcept;
 
 private:
     class PhysicsWorld;

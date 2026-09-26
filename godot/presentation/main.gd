@@ -751,6 +751,10 @@ func _carry_name(entity: int) -> String:
 			return "DROP PIN"
 		2127:
 			return "CLUTCH HANDLE"
+		2204:
+			return "TRIP HANDLE"
+		2205:
+			return "FILL CHAIN"
 	return "ROPE END" if _is_kit(entity) else ""
 
 
@@ -1240,8 +1244,6 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 	for level in range(0, STACK_LEVEL_COUNT):
 		var base_y := float(level) * STACK_LEVEL_HEIGHT
 		var mid_y := base_y + STACK_LEVEL_HEIGHT * 0.5
-		var brace_length := sqrt(pow(STACK_LEVEL_HEIGHT, 2.0) + pow(STACK_HALF_EXTENT, 2.0))
-		var brace_pitch := atan2(STACK_LEVEL_HEIGHT, STACK_HALF_EXTENT)
 
 		for sx in [1.0, -1.0]:
 			for sz in [1.0, -1.0]:
@@ -1253,19 +1255,37 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 			_add_box("StackColumn", Vector3(STACK_COLUMN_SIZE, STACK_LEVEL_HEIGHT,
 				STACK_COLUMN_SIZE), Vector3(cx, mid_y, cz + sx * STACK_HALF_EXTENT), rust_deep)
 
-		# Cross bracing on all four outer faces.
-		for sz in [1.0, -1.0]:
-			for direction in [1.0, -1.0]:
-				var brace := _add_box("StackBrace", Vector3(brace_length, 0.45, 0.45),
-					Vector3(cx + direction * STACK_HALF_EXTENT * 0.5, mid_y,
-						cz + sz * STACK_HALF_EXTENT), oxidised)
-				brace.rotation = Vector3(0.0, 0.0, direction * brace_pitch)
-		for sx in [1.0, -1.0]:
-			for direction in [1.0, -1.0]:
-				var brace_z := _add_box("StackBrace", Vector3(0.45, 0.45, brace_length),
-					Vector3(cx + sx * STACK_HALF_EXTENT, mid_y,
-						cz + direction * STACK_HALF_EXTENT * 0.5), oxidised)
-				brace_z.rotation = Vector3(-direction * brace_pitch, 0.0, 0.0)
+
+	# The outer faces' bracing: a diagrid of two-storey diagonals, 22 m up over
+	# 13 m along the face, meeting at the corner and mid-span columns and at
+	# the edge beams half way between. At 59 degrees a brace's top is too steep
+	# to stand on (the native's support limit is 56), so no brace is a ramp
+	# from one deck to the next.
+	var tier_height := STACK_LEVEL_HEIGHT * 2.0
+	var half_bay := STACK_HALF_EXTENT * 0.5
+	for tier in range(0, int(STACK_LEVEL_COUNT / 2.0)):
+		var base_y := float(tier) * tier_height
+		for side in [1.0, -1.0]:
+			var outer := [0.0, side * half_bay, side * STACK_HALF_EXTENT]
+			var legs: Array = []
+			if tier % 2 == 0:
+				legs = [[outer[0], outer[1]], [outer[2], outer[1]]]
+			else:
+				legs = [[outer[1], outer[0]], [outer[1], outer[2]]]
+			for leg in legs:
+				var along0: float = leg[0]
+				var along1: float = leg[1]
+				var length := sqrt(pow(along1 - along0, 2.0) + pow(tier_height, 2.0))
+				var pitch := atan2(tier_height, along1 - along0)
+				var mid_along := 0.5 * (along0 + along1)
+				var mid_y := base_y + tier_height * 0.5
+				for face in [1.0, -1.0]:
+					var brace := _add_box("StackBrace", Vector3(length, 0.45, 0.45),
+						Vector3(cx + mid_along, mid_y, cz + face * STACK_HALF_EXTENT), oxidised)
+					brace.rotation = Vector3(0.0, 0.0, pitch)
+					var brace_z := _add_box("StackBrace", Vector3(0.45, 0.45, length),
+						Vector3(cx + face * STACK_HALF_EXTENT, mid_y, cz + mid_along), oxidised)
+					brace_z.rotation = Vector3(-pitch, 0.0, 0.0)
 
 	_build_stack_dressing(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded)
 	_build_stack_megastructure(mill_scale, oxidised, rust_deep, rust_bright, galvanised,

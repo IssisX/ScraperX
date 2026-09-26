@@ -98,6 +98,10 @@ jobs:
             "PASS scraperx_sim fall/parachute/checkpoint" \
             "PASS scraperx_sim world solids" \
             "PASS scraperx_sim crouch" \
+            "PASS scraperx_sim kerb" \
+            "PASS scraperx_sim S1 no link" \
+            "PASS scraperx_sim S1 ride" \
+            "PASS scraperx_sim S1 empty trip" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \

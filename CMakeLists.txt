@@ -22,6 +22,7 @@ add_library(scraperx_sim STATIC
     src/sim/band_wet_isolation.cpp
     src/sim/band_plate_shop.cpp
     src/sim/band_facade_crane.cpp
+    src/sim/band_stack.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)

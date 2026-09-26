@@ -244,6 +244,10 @@ constexpr double kBalanceSpeedScale = 2.0 / 5.5;
 constexpr double kBalanceStepOffInput = 0.8;
 constexpr float kBalanceCentering = 3.0F;
 constexpr float kBalanceCenteringMaxMps = 0.4F;
+// A beam must stand over a fall: the ground is probed this far out from
+// each side, from this far above its top, down to a step below it.
+constexpr float kBalanceSideProbe = 0.10F;
+constexpr float kBalanceSideProbeLift = 0.05F;
 // Controlled drop: an edge behind the body within kEdgeSearchReach, over a
 // drop of at least kEdgeDropMinimum, lowered over in kLoweringSeconds.
 constexpr float kEdgeSearchStart = 0.25F;
@@ -949,6 +953,8 @@ public:
         scraperx::sim::bands::build_wet_isolation(*kit_, wet_);
         scraperx::sim::bands::build_plate_shop(*kit_, shop_);
         scraperx::sim::bands::build_facade_crane(*kit_, crane_);
+        // Band 0, the Stack: the ascent from grade.
+        scraperx::sim::bands::build_stack(*kit_, stack_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -1127,6 +1133,10 @@ public:
 
     [[nodiscard]] const scraperx::sim::bands::FacadeCrane &crane() const noexcept {
         return crane_;
+    }
+
+    [[nodiscard]] const scraperx::sim::bands::Stack &stack() const noexcept {
+        return stack_;
     }
 
 private:
@@ -3101,10 +3111,31 @@ private:
         if (along.IsNearZero()) {
             return beam;
         }
+        const JPH::Vec3 unit_along = along.Normalized();
+        const JPH::Vec3 across(-unit_along.GetZ(), 0.0F, unit_along.GetX());
+        const float offset = JPH::Vec3(centre - box.centre).Dot(across);
+        // A beam is a beam over a fall. Ground within a step beside it (the
+        // yard's kerb, a sill) is walked on and off like any floor: held on
+        // its line, a body could not step down off a kerb.
+        const JPH::RVec3 underfoot =
+            centre + JPH::Vec3(0.0F, -(half_height + kCheckpointFootingSlack) * hit.mFraction, 0.0F) -
+            across * offset;
+        for (const float side : {-1.0F, 1.0F}) {
+            const JPH::RVec3 beside = underfoot +
+                                      across * (side * (box.half[short_axis] + kBalanceSideProbe)) +
+                                      JPH::Vec3(0.0F, kBalanceSideProbeLift, 0.0F);
+            JPH::RayCastResult below;
+            const JPH::Vec3 down(0.0F, -(kStepMaximumHeight + kBalanceSideProbeLift), 0.0F);
+            if (cast_ray(beside, down, below) &&
+                surface_normal(below.mBodyID, below.mSubShapeID2, beside + down * below.mFraction)
+                        .GetY() >= kSupportNormalThreshold) {
+                return beam;
+            }
+        }
         beam.valid = true;
-        beam.along = along.Normalized();
-        beam.across = JPH::Vec3(-beam.along.GetZ(), 0.0F, beam.along.GetX());
-        beam.offset = JPH::Vec3(centre - box.centre).Dot(beam.across);
+        beam.along = unit_along;
+        beam.across = across;
+        beam.offset = offset;
         return beam;
     }
 
@@ -3421,6 +3452,7 @@ private:
     scraperx::sim::bands::WetIsolation wet_{};
     scraperx::sim::bands::PlateShop shop_{};
     scraperx::sim::bands::FacadeCrane crane_{};
+    scraperx::sim::bands::Stack stack_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
     std::uint8_t rig_action_ = 0;
     std::uint64_t rig_target_entity_ = 0;
@@ -3825,6 +3857,20 @@ CraneState Simulation::crane_state() const noexcept {
     out.l_cart_latched = kit.catch_latched(crane.l_cart_catch);
     out.l_cart_travel = kit.guide_travel(crane.l_cart_guide);
     out.l_cab_travel = kit.guide_travel(crane.l_cab_guide);
+    return out;
+}
+
+StackState Simulation::stack_state() const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    const scraperx::sim::bands::Stack &stack = physics_world_->stack();
+    StackState out;
+    out.s1_cage_travel = kit.guide_travel(stack.s1_cage_guide);
+    out.s1_cage_peak_speed = kit.guide_peak_speed(stack.s1_cage_guide);
+    out.s1_bucket_travel = kit.guide_travel(stack.s1_bucket_guide);
+    out.s1_bucket_water_kg = kit.bin_contents(stack.s1_bin);
+    out.s1_tank_water_kg = kit.pool_water(stack.s1_tank);
+    out.s1_valve_angle = kit.lever_angle(stack.s1_valve);
+    out.s1_catch_latched = kit.catch_latched(stack.s1_catch);
     return out;
 }
 

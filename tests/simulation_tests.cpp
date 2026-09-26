@@ -1837,6 +1837,224 @@ void run_ascent() {
               << " plate_y=" << top.player_position.y << '\n';
 }
 
+// ---- Band 0, the Stack: S1, the water-balance hoist -------------------------
+
+constexpr double kS1CageMassKg = 300.0;
+constexpr double kS1BucketMassKg = 150.0;
+constexpr double kS1Travel = 21.8;
+constexpr double kS1FloorTopUp = 22.05;
+constexpr double kDeck2Top = 22.0;
+
+// From the yard: take the fill chain hanging in front of the bucket's fence,
+// step back south until the valve is open, and hold it there until the
+// bucket holds `water_kg` (or `seconds` pass); then let go.
+bool fill_s1(scraperx::sim::Simulation &simulation, const double water_kg, const double seconds) {
+    using scraperx::sim::Simulation;
+    if (!walk_to(simulation, 7.10, -117.0, 30.0) || !walk_to(simulation, 7.10, -117.70, 6.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.5);
+    if (simulation.snapshot().carry_target_entity_id != Simulation::kStackS1FillHandleEntityId) {
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(0.3);
+    const auto ticks =
+        static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    bool full = false;
+    for (std::uint32_t tick = 0; tick < ticks && !full; ++tick) {
+        if (simulation.snapshot().carrying_entity_id != Simulation::kStackS1FillHandleEntityId) {
+            return false;
+        }
+        const bool open = simulation.stack_state().s1_valve_angle > 0.7;
+        (void)simulation.set_move_input(0.0, open ? 0.0 : 0.35);
+        (void)simulation.set_facing(0.0, -1.0);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        full = simulation.stack_state().s1_bucket_water_kg >= water_kg;
+    }
+    (void)simulation.set_move_input(0.0, 0.0);
+    (void)simulation.request_set_down();
+    (void)simulation.advance_frame(0.3);
+    return full;
+}
+
+// In through the cage's open south side, east of the trip handle hanging in
+// the opening: take it and step back north into the cage until the catch
+// lets go.
+bool trip_s1_inside(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    return walk_to(simulation, 10.7, -117.3, 30.0) && walk_to(simulation, 10.7, -120.3, 5.0) &&
+           pull_handle(simulation, 9.5, -119.6, Simulation::kStackS1HandleEntityId, 0.5, 3.0,
+                       [&](const scraperx::sim::Snapshot &) {
+                           return !simulation.stack_state().s1_catch_latched;
+                       });
+}
+
+void run_stack() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+
+    // The yard's kerb is 0.5 m wide and 86 m long, but a step high: it is
+    // walked on and off, not balanced along. Held on its line as a beam, a
+    // body on it could not step down off it with a gentle stick.
+    Simulation kerb(InitialSpawn::ExteriorGrade);
+    require(kerb.advance_frame(0.5).accepted, "kerb settle interval must be accepted");
+    require(walk_to(kerb, 20.0, -117.0, 40.0) && walk_to(kerb, 20.0, -118.0, 6.0, 0.08),
+            "the walk must reach the top of the yard's kerb");
+    const auto on_kerb = kerb.snapshot();
+    for (std::uint32_t tick = 0; tick < 90; ++tick) {
+        (void)kerb.set_move_input(0.0, 0.35);
+        (void)kerb.set_facing(0.0, -1.0);
+        (void)kerb.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    const auto off_kerb = kerb.snapshot();
+    require(on_kerb.player_position.y > 1.1 && !on_kerb.player_balancing,
+            "standing on the yard's kerb must not be balancing");
+    require(off_kerb.player_position.z > on_kerb.player_position.z + 0.4 &&
+                off_kerb.player_position.y < 0.95,
+            "a gentle stick must step down off the yard's kerb");
+    std::cout << "PASS scraperx_sim kerb: on_y=" << on_kerb.player_position.y
+              << " stepped_z=" << off_kerb.player_position.z - on_kerb.player_position.z << "\n";
+
+    // (a) No link, no lift: walked in from the yard and tripped with the
+    // bucket empty, the catch opens and nothing moves -- 150 kg of bucket
+    // hangs on the rope against 385 kg of cage and rider. Let go, the catch
+    // seats again.
+    Simulation unlinked(InitialSpawn::ExteriorGrade);
+    require(unlinked.advance_frame(0.5).accepted, "S1 settle interval must be accepted");
+    require(trip_s1_inside(unlinked), "the player must walk from the yard into S1's cage and trip it");
+    double empty_cage_worst = 0.0;
+    double empty_bucket_worst = 0.0;
+    for (std::uint32_t tick = 0; tick < 90 * 4; ++tick) {
+        (void)unlinked.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = unlinked.stack_state();
+        empty_cage_worst = std::max(empty_cage_worst, std::abs(state.s1_cage_travel));
+        empty_bucket_worst = std::max(empty_bucket_worst, std::abs(state.s1_bucket_travel));
+    }
+    require(empty_cage_worst <= 0.05, "no link, no lift: tripped empty, S1's cage must not move");
+    require(empty_bucket_worst <= 0.05, "tripped empty, S1's bucket must stay at the top");
+    require(unlinked.stack_state().s1_catch_latched, "let go, S1's catch must seat again");
+    std::cout << "PASS scraperx_sim S1 no link: cage_worst=" << empty_cage_worst
+              << " bucket_worst=" << empty_bucket_worst << "\n";
+
+    // (b) The ride, from the game's spawn on player inputs: fill the bucket
+    // from the tank, walk into the cage, trip it. The bucket falls 21.8 m and
+    // the cage carries the rider 21.8 m under a governor that can only brake;
+    // at no tick has the payload gained more energy than the bucket and its
+    // water released.
+    Simulation ride(InitialSpawn::ExteriorGrade);
+    require(ride.advance_frame(0.5).accepted, "S1 ride settle interval must be accepted");
+    const double tank0 = ride.stack_state().s1_tank_water_kg;
+    require(fill_s1(ride, 900.0, 20.0), "holding the fill chain must fill S1's bucket from the tank");
+    (void)ride.advance_frame(1.0);
+    const auto filled = ride.stack_state();
+    require(filled.s1_bucket_water_kg >= 900.0 && filled.s1_valve_angle < 0.15,
+            "let go, the fill valve must shut with the bucket full");
+    require(std::abs(tank0 - filled.s1_tank_water_kg - filled.s1_bucket_water_kg) < 5.0,
+            "the bucket's water must have come out of the tank");
+    require(std::abs(filled.s1_cage_travel) <= 0.05 && filled.s1_catch_latched,
+            "filled, S1 must wait on its catch");
+    const double water = filled.s1_bucket_water_kg;
+    const double bucket_y0 = kit_y(ride, Simulation::kStackS1BucketEntityId);
+    const double cage_y0 = kit_y(ride, Simulation::kStackS1CageEntityId);
+    require(trip_s1_inside(ride), "stepping back into the cage with the trip handle must trip S1");
+    const double rider_y0 = ride.snapshot().player_position.y;
+    const double ride_start = ride.snapshot().simulation_time_seconds;
+    bool rode_on_cage = true;
+    double ride_seconds = 0.0;
+    double worst_margin = std::numeric_limits<double>::infinity();
+    for (std::uint32_t tick = 0; tick < 90 * 15 && ride_seconds == 0.0; ++tick) {
+        (void)ride.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = ride.snapshot();
+        const double rise = kit_y(ride, Simulation::kStackS1CageEntityId) - cage_y0;
+        if (rise > 0.05 && rise < kS1Travel - 0.05) {
+            rode_on_cage = rode_on_cage && state.player_grounded &&
+                           state.support_entity_id == Simulation::kStackS1CageEntityId;
+        }
+        const double released = (kS1BucketMassKg + water) * kGravity *
+                                (bucket_y0 - kit_y(ride, Simulation::kStackS1BucketEntityId));
+        const double gained = kS1CageMassKg * kGravity * rise +
+                              kRiderMassKg * kGravity * (state.player_position.y - rider_y0);
+        worst_margin = std::min(worst_margin, released - gained);
+        if (ride.stack_state().s1_cage_travel >= kS1Travel - 0.01) {
+            ride_seconds = state.simulation_time_seconds - ride_start;
+        }
+    }
+    const auto top_state = ride.stack_state();
+    const double floor_y = kit_y(ride, Simulation::kStackS1CageEntityId) + 0.10;
+    require(ride_seconds > 0.0, "S1's cage must reach the top of its travel");
+    require(rode_on_cage, "the rider must stand on S1's cage for the whole ride");
+    require(std::abs(floor_y - kS1FloorTopUp) <= 0.05, "S1's floor must stop at 22.05 m");
+    require(top_state.s1_cage_peak_speed <= 2.6, "S1's governor must hold the cage to 2.5 m/s");
+    require(worst_margin >= -kStanceJitterJ,
+            "at no tick may S1's payload have gained more energy than the bucket released");
+
+    // (d) The receiver: off the cage's open north side, along the gangway and
+    // onto deck 2's south band, standing on the tower.
+    require(walk_to(ride, 10.0, -123.2, 6.0) && walk_to(ride, 10.0, -126.5, 6.0),
+            "the rider must walk off S1's cage over the gangway onto deck 2");
+    (void)ride.advance_frame(0.5);
+    const auto on_deck = ride.snapshot();
+    require(on_deck.player_grounded && on_deck.player_position.y > kDeck2Top + 0.5 &&
+                on_deck.player_position.z < -124.0 &&
+                on_deck.support_entity_id == Simulation::kTowerEntityId,
+            "the rider must stand on deck 2's south band");
+
+    // Recovery: at the foot of its guide the bucket sits on the striker and
+    // drains; lighter than the cage again, it rises, the cage comes back down
+    // and the catch seats the bucket at the top. S1 is as it was found.
+    bool returned = false;
+    for (std::uint32_t tick = 0; tick < 90 * 60 && !returned; ++tick) {
+        (void)ride.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = ride.stack_state();
+        returned = std::abs(state.s1_cage_travel) <= 0.02 && state.s1_catch_latched &&
+                   std::abs(state.s1_bucket_travel) <= 0.05;
+    }
+    const auto back = ride.stack_state();
+    require(returned, "drained, S1's bucket must rise and bring the cage back down to the yard");
+    require(back.s1_bucket_water_kg < kS1CageMassKg - kS1BucketMassKg,
+            "S1's bucket must come back lighter than the cage");
+    std::cout << "PASS scraperx_sim S1 ride: ride_s=" << ride_seconds << " floor_y=" << floor_y
+              << " peak_speed=" << top_state.s1_cage_peak_speed << " water_kg=" << water
+              << " rode_on_cage=" << int(rode_on_cage) << " energy_margin_J=" << worst_margin
+              << " deck2_y=" << on_deck.player_position.y
+              << " return_water_kg=" << back.s1_bucket_water_kg << "\n";
+
+    // (c) Intervention: filled and tripped from the yard, nobody aboard, the
+    // cage goes up empty -- and comes back, so a wasted trip strands nothing.
+    Simulation empty(InitialSpawn::ExteriorGrade);
+    require(empty.advance_frame(0.5).accepted, "S1 empty-trip settle interval must be accepted");
+    require(fill_s1(empty, 900.0, 20.0), "the fill chain must fill S1's bucket");
+    require(pull_facing(empty, 9.5, -117.95, 0.0, -1.0, Simulation::kStackS1HandleEntityId, 0.5, 4.0,
+                        [&](const scraperx::sim::Snapshot &) {
+                            return !empty.stack_state().s1_catch_latched;
+                        }),
+            "the trip handle must also be pulled from the yard");
+    double empty_peak = 0.0;
+    bool empty_back = false;
+    for (std::uint32_t tick = 0; tick < 90 * 70 && !empty_back; ++tick) {
+        (void)empty.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = empty.stack_state();
+        empty_peak = std::max(empty_peak, state.s1_cage_travel);
+        empty_back = empty_peak > kS1Travel - 0.05 && std::abs(state.s1_cage_travel) <= 0.02 &&
+                     state.s1_catch_latched;
+    }
+    require(empty_peak > kS1Travel - 0.05, "tripped with nobody aboard, S1's cage must go up");
+    require(empty_back, "S1's empty cage must come back down to the yard by itself");
+    require(fill_s1(empty, 900.0, 20.0) && trip_s1_inside(empty),
+            "after an empty trip, S1 must fill and trip again");
+    bool again = false;
+    for (std::uint32_t tick = 0; tick < 90 * 15 && !again; ++tick) {
+        (void)empty.advance_frame(Simulation::kFixedStepSeconds);
+        again = empty.stack_state().s1_cage_travel >= kS1Travel - 0.01 &&
+                empty.snapshot().support_entity_id == Simulation::kStackS1CageEntityId;
+    }
+    require(again, "after an empty trip, S1 must still carry the rider to the top");
+    std::cout << "PASS scraperx_sim S1 empty trip: peak_travel=" << empty_peak
+              << " returned=1 rode_again=1\n";
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
@@ -1893,6 +2111,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-009-wreck") {
         run_crane_wreckage();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "stack") {
+        run_stack();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -3689,7 +3912,10 @@ int main() {
 
     // Balance: on the scaffold boards (0.3 m wide) the body walks at 2 m/s
     // along them and a sideways push under 0.8 keeps it on their line; a full
-    // push steps it off. On the ring's deck it is not balancing.
+    // push steps it off. On the ring's deck it is not balancing, nor on the
+    // boards' first metre, which lies over the deck: a step off them there
+    // lands on it. Out over the well (z < -129.0) the boards are a beam, and
+    // by -129.35 the walk has settled to the balance pace.
     Simulation beam(InitialSpawn::Ring176East);
     require(beam.advance_frame(1.0).accepted, "the balance settle interval must be accepted");
     const bool deck_balancing = beam.snapshot().player_balancing;
@@ -3700,7 +3926,7 @@ int main() {
     double beam_peak = 0.0;
     bool beam_flag = true;
     (void)hold_stick(beam, 0.0, -1.0, 0.0, -1.0, 0.6, [&](const Snapshot &state) {
-        if (state.player_position.z < -128.8) {
+        if (state.player_position.z < -129.35) {
             beam_peak = std::max(beam_peak, horizontal_speed(state));
             beam_flag = beam_flag && state.player_balancing;
         }
@@ -3752,6 +3978,7 @@ int main() {
               << " top_y=" << route_top.player_position.y << " climbs=" << route_top.climb_count
               << " lifts_untouched=1\n";
 
+    run_stack();
     run_wet_isolation();
     run_wet_band();
     run_wet_route();

@@ -3,7 +3,8 @@
 // The bands of the mechanism ascent, each built from the mechanism kit.
 // 03_EXECUTION/ASCENT/AS-006_CW_PIN.md is the Counterweight Well's contract,
 // AS-007_WET_ISOLATION.md Wet Isolation's, AS-008_PLATE_SHOP.md the Plate
-// Shop's, AS-009_FACADE_CRANE_STACK.md the Facade Crane Stack's.
+// Shop's, AS-009_FACADE_CRANE_STACK.md the Facade Crane Stack's; the Stack,
+// from grade, is 03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md's.
 
 #include "sim/mechanism_kit.hpp"
 
@@ -225,5 +226,29 @@ struct FacadeCrane final {
 };
 
 void build_facade_crane(kit::Kit &kit, FacadeCrane &crane);
+
+// Band 0, the Stack, grade -> 154 m. 03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md.
+struct Stack final {
+    // S1, the water-balance hoist: grade -> deck 2 on the south face.
+    kit::BodyIndex s1_cage;
+    kit::BodyIndex s1_bucket;
+    kit::BodyIndex s1_valve_body;
+    kit::BodyIndex s1_fill_handle;
+    kit::BodyIndex s1_lever_body;
+    kit::BodyIndex s1_handle;
+    kit::BodyIndex s1_striker_body;
+    kit::GuideIndex s1_cage_guide;
+    kit::GuideIndex s1_bucket_guide;
+    kit::RopeIndex s1_rope;
+    kit::LeverIndex s1_valve;
+    kit::LeverIndex s1_lever;
+    kit::LeverIndex s1_striker;
+    kit::CatchIndex s1_catch;
+    kit::BinIndex s1_bin;
+    kit::PoolIndex s1_tank;
+    kit::PipeIndex s1_fill;
+};
+
+void build_stack(kit::Kit &kit, Stack &stack);
 
 } // namespace scraperx::sim::bands

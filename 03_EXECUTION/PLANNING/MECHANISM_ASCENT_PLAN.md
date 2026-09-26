@@ -1,139 +1,95 @@
 # SCRAPERX — MECHANISM ASCENT PLAN
 
-**Status:** the current plan for the ascent above the tower stair's 154 m top deck.
-**Provenance:** locked with the owner on 2026-09-24 in a four-decision design pass over
-`Mechanism-Ideas-and-archetypes.md` (repository root; the owner's 20 lift archetypes).
-**Supersedes:** `AS-004` (needle seat) as the next job. `AS-004` stays `PLANNED` for a later
-pass; its Revalidation section records why.
+**Status:** the current plan for the whole ascent, from grade.
+**Provenance:** re-planned with the owner's direction of 2026-09-25: *"start from the ground level,
+and do all the mechanics and mechanisms all over again ... maybe a couple of mechanisms can be
+stacked, and then a climb, and then another mechanism, and then a climb"*, and the goal set with
+it: stacked, working machines and deliberately placed industrial obstacles, climbed and ridden
+from the ground to about 300 m. Built one machine per work cycle with the mechanism-chain-forge
+method (backward from the effect a stage must produce; contract; causal proof).
+**Supersedes:** this plan's 2026-09-24 version (the ascent above the tower stair). The owner's
+20 lift archetypes (`Mechanism-Ideas-and-archetypes.md`) remain the source of every machine.
 
-## 1. What the climb is
+## 1. What changed, and why
 
-The player climbs a 1 600 m working tower that is still being built upward. Its lift machinery
-is found broken or unlinked. The player completes each chain with what is lying around, rides
-the consequence upward, and climbs everything in between.
+The owner played the build and found every mechanism incomplete, the ramps no fun to climb,
+test cubes all over the yard, and machines that did not work. So, from 2026-09-25:
 
-Every lift is one archetype chain from the owner's document:
+| Before | Now |
+|---|---|
+| A stair of 14 ramp flights walked the player to 154 m; floating block steps and swing flights climbed the south face | No ramp or stair is a route. A level is gained by a machine or a designed climb |
+| Movement test blocks, three kernel test rigs, a steam plant and three half-mechanisms stood in the player's world | The game world holds only the building, its machines and its climbs. Movement test blocks exist only in a world started at one of their test spawns |
+| Parked lift cages, static gears, jib cranes with hanging crates stood on the tower as dressing | No machine is dressing: every machine in the world works |
+| The first stage stood at 154 m | The first stage stands at grade |
 
-```
-stored energy above  ->  a link the player supplies  ->  a trigger  ->  a linkage
-(mass, water, gravel,    (hook, pin, chock, wedge,       (pull, shove,   (pulley, lever,
- spring, vehicle,         cable, counterweight,           strike, cut)    gears, piston,
- a structure to fall)     brake)                                          buoyancy, capstan)
-                    ->  the player rides the payload  ->  an arrest at the next level
-```
+## 2. Rules every stage obeys
 
-One lift gains roughly 10–60 m, so the 1 450 m above the stair takes dozens of them, mutated and
-recombined from the 20 archetypes: keep each causal chain, change the objects, sizes, ratios
-and layout. The fuel for every lift is stored above it, because energy only flows downhill.
+1. **No link, no lift.** Stored energy stays stored until the player completes the chain.
+2. **Energy pays for height.** A payload never gains more potential energy than its source
+   released; checked from body states.
+3. **Every link is physical** — contact, constraint or force; no script, flag or teleport between
+   links. A simplified model (water, air, gravel) is declared in the stage record.
+4. **Rides are moving supports.** The rider inherits the payload's motion.
+5. **Nothing strands.** Dying restores the last commit, machines included.
+6. **Built to be read.** Every part is held by visible structure (no floating rails, sheaves or
+   blocks); what the player must handle is marked (hazard or yellow); the stored energy, the
+   missing link and the destination are visible from where the stage is found.
+7. **Climbs are designed, not free.** A climb is a sequence of different moves (mantle,
+   jump-and-hang, climb, shimmy, balance, drop) through industrial objects that are there for a
+   reason; no staircase of blocks. A climb never lets the player bypass the machine below it.
 
-## 2. Locked decisions
+## 3. The chain, grade to TP-340
 
-| # | Decision | What it commits |
-|---|---|---|
-| 1 | **Complete the chain, then ride** | Mechanisms are found broken or unlinked; the player supplies the missing link with objects in the world, and how it is linked changes the outcome (load → speed and force, anchor → destination). A general rigging kit works on any anchor in the building, so player-invented links work too |
-| 2 | **Linked stages** | Each stage is its own lift with a declared input (its fuel) and output (what it leaves). Neighbours are placed so outputs matter: a fallen mass sets off or becomes structure for the next stage, drained water fills another shaft, a swung boom becomes a bridge. Each band ends in one larger cascade |
-| 3 | **Physics decides re-arming** | A lift is re-armable when its energy source survives and energy can physically be put back (counterweights, hoppers, spools, re-dammed water); re-arming usually borrows energy from another lift. A lift that destroys its source (collapse, burst, snapped wire, breached wall) is one-shot and leaves climbable wreckage |
-| 4 | **First band above the stair** | From the 154 m top deck to 220 m, the top of Atlas band B02. The first height the game has never had |
+Band 0, **The Stack** (grade → 154 m), is new. Above it the existing bands carry on.
 
-Standing, by the owner's direction (*"if a route genuinely works in the world, it works in the
-game"*): the tower stair stays. No working route is removed to make a mechanism necessary.
+| # | Kind | Heights | Where | What the player does | Status |
+|---|---|---|---|---|---|
+| S1 | Machine: **water-balance hoist** (archetype 01, counter-mass; water as the mass) | 0 → 22 m | south face, east of centre | holds the fill chain until the empty bucket at the head is full from the header tank, walks into the cage and pulls the trip cord; the bucket falls 21.8 m and the cage rides up to a gangway onto deck 2. At the foot the bucket drains on a striker and the cage comes back down by itself | built and proven (cycle 1) |
+| C1 | Climb: **the facade** | 22 → 44 m | south face | bracket scaffold hung off deck 2 with missing boards and bays (climb, jump the gap, balance a ledger), then a service pipe and ledge to deck 4's edge | planned |
+| S2 | Machine: **ingot bucket** (archetype 01, player-supplied counter-mass) | 44 → 66 m | the shaft, south-east | the platform's counterweight bucket is empty; the player carries steel ingots off a pallet into it until it outweighs platform and rider, boards and pulls the trip | planned |
+| C2 | Climb: **the east hall** | 66 → 88 m | east side | the machine hall's roof and window sills, a pipe rack and a jump to deck 8 | planned |
+| S3 | Machine: **brake override** (archetype 17) | 88 → 132 m | the shaft, north | a freight car overloaded with pallets is held by a crowbar jammed in its brake; the player rides the counterweight and pulls the crowbar's cord; the car falls, the counterweight rises 44 m | planned |
+| C3 | Climb: **the crown** | 132 → 154 m | shaft and north band | beams, a hang-and-shimmy along deck 13's edge, a pipe to deck 14 | planned |
+| — | AS-006 Counterweight Well | 154 → 220 m | shaft | skip lift, derrick boom, debris chute; climbing route | built; to be reviewed against rule 6 |
+| — | AS-007 Wet Isolation | 220 → 340 m | shaft | water, air and hydraulics; climbing route | built; to be reviewed against rule 6 |
 
-## 3. Rules every stage obeys
+The route above 340 m (AS-008, AS-009) stays as built until the ascent reaches it.
 
-These are the test contract. Each stage's falsifiers assert all of them.
+## 4. Cycle 1 — S1, the water-balance hoist (contract, as built)
 
-1. **No link, no lift.** Until the player supplies the missing link, the stored energy stays
-   stored. A trigger on an unlinked stage moves no payload.
-2. **Energy pays for height.** The payload's gain in potential energy never exceeds the energy
-   its source released, measured from body states on every run. No hidden motor.
-3. **Every link is physical.** Contact, constraint or force. No script, flag, trigger volume or
-   teleport between links. Any simplified model (water, air, gravel) is declared in the stage
-   record and couples to real bodies.
-4. **Leftovers are real.** What a stage leaves stays in the world and feeds its neighbour as
-   designed; a player may link neighbours differently.
-5. **Rides are moving supports.** The player inherits the payload's motion; an arrest can
-   launch them, and that is physics, not a failure.
-6. **Nothing strands.** Every band keeps a climbing route that needs no lift; one-shot wreckage
-   is climbable; from any committed state the band can be climbed or re-armed. Dying restores the
-   last commit, machines included (GDD §9, Law 9).
+| Contract | Content |
+|---|---|
+| **Purpose and boundary** | Carry a rider from grade to deck 2 (22.0 m) on the tower's south face. Includes the cage, its guide and governor, the bucket and its guide, the rope, the catch with its lever and trip cord, the header tank with its valve, lever and fill chain, the striker and the bucket's drain, the headframe, the bucket's fence and deck 2's gangway (`src/sim/band_stack.cpp`). Excludes C1 and everything above deck 2 |
+| **Output** | The rider standing on deck 2's south band (support: the tower), at rest, within 25 s of pulling the cord |
+| **Receiver** | Deck 2, south band, top 22.00 m, reached over a fixed gangway from the cage's open north side. Acceptance: grounded on the tower with the body's centre above 22.5 m and north of z = −124.0 |
+| **State and rules** | Cage 300 kg on a vertical guide, governor 2.5 m/s brake-only (12 kN), easing into each stop. Bucket 150 kg empty, a bin of up to 1000 kg of water, on its own guide, held at the top by a relatching catch. One rope over two head sheaves (1:1), tension only, exactly long enough for the cage down and the bucket up. Header tank 12 t (a declared pool); its downpipe's valve opens with its lever (Q = 0.6 A f √(2 g Δh), A 0.03 m², ≈ 165 kg/s full open) and shuts by the lever's own weight when the chain is let go. At the foot of its guide the bucket lands on a striker that opens its drain (80 kg/s) |
+| **Input** | The rider's verbs only: GRAB the fill chain and hold it back (the valve opens; water runs into the bucket), LET GO; GRAB the trip handle and step back (the cord turns the catch lever past its release), LET GO |
+| **Capacity** | Full: net (1150 − 300 − 85) g ≈ 7.5 kN, braked by the governor to ≤ 2.5 m/s; 21.8 m in about 9.4 s. The rider needs more than 235 kg of water; the empty cage goes up on more than 150 kg |
+| **Use and recovery** | Found from the approach: the headframe with its tank is the tallest thing at the tower's foot; both handles hang yellow from a gantry at the cage's mouth. Nothing strands: at the foot the bucket drains, and once lighter than the cage it rises, the cage comes down, and the catch seats the bucket at the top, as found (the rider has about 10 s at the top to step off, or rides back down). A lethal fall restores the committed state, machine included |
+| **Proof** (native, `run_stack` in `tests/simulation_tests.cpp`) | (a) no link, no lift: tripped empty → cage travel ≤ 0.05 m, the catch seats again; (b) from the game's spawn on player inputs: fill to 900 kg, trip from inside, cage floor 22.04 m, peak 2.53 m/s, rider on the cage throughout, the payload's energy gain never above the bucket's release (margin +22 J); (d) the rider walks off over the gangway onto deck 2 (support: the tower); recovery: the bucket drains, the cage returns, the catch relatches; (c) intervention: filled and tripped from the yard with nobody aboard → the cage goes up empty, comes back by itself, and is filled and ridden again |
 
-## 4. What the archetypes are built from
+**Decision record.** The first build of S1 was a skip of scrap with the rope's end found on a
+bollard (the AS-006 A pattern). Two moves spent it for good: a trip pulled from the yard sends
+the cage up empty, and a trip with the rope's end dropped loose lets the skip drag it up to the
+head. Either strands the ascent at its first stage (rule 5). The water balance keeps the same
+counter-mass principle but returns itself: the counter-mass is let go at the bottom. The kit
+already carried every part of it (pools, pipes, water bins, strikers: AS-007 E).
 
-Every primitive below exists in the vendored Jolt. Pulleys already run in the game (the treadle
-cable); the rest are unused so far.
+**Defects found and repaired in this cycle.**
 
-| Kit | Engine primitive | Archetypes |
-|---|---|---|
-| Cables, pulleys, snatch blocks, block and tackle (tension only, slack allowed) | `PulleyConstraint`, `DistanceConstraint` | 01, 09, 11, 12, 13, 14, 15, 17, 20 |
-| Rigging: hook and unhook cable ends, insert and pull pins, chocks and wedges; drag and shove heavy loads | constraints created and removed at runtime, one owner, restored by the checkpoint | all |
-| Breakable parts: bolts shear, wires snap, straps part, walls breach at a load | constraint and contact impulse read each step | 01, 03, 05, 07, 08, 13, 15, 20 |
-| Levers, seesaws, pendulums, swinging structure | `HingeConstraint` | 03, 06, 08, 13, 18, 19, 20 |
-| Gears, spools, capstans, flywheels, rack and pinion | `GearConstraint`, `RackAndPinionConstraint` | 04, 06, 07, 16, 19 |
-| Springs and ratchets | `SpringSettings`; hinge limits that follow the pawl | 03, 07, 10 |
-| Rolling masses, carts, vehicles, treads, rails | rigid bodies, wheeled and tracked vehicle controllers, `PathConstraint` | 04, 06, 10, 11, 14, 15, 16, 18, 19 |
-| Water, air and oil (declared simplified models) | buoyancy impulse on real bodies; volume and pressure driving pistons | 02, 05, 08, 20 |
-| Gravel and debris flow (declared simplified model) | mass flowing into real bodies; stream impulse on wheel blades | 09, 12, 16 |
-| Structural collapse | many rigid bodies with breakable joints | 03, 08, 15 |
+| Defect | Invalid state | Transition that allowed it | Change that makes it unreachable |
+|---|---|---|---|
+| The stack's face braces were ramps | a 0.45 m brace at 23° is walkable (support normal 0.92 ≥ 0.55): deck to deck, grade to 154 m, round every machine | one brace per storey, 11 m over 26 m | a two-storey diagrid, 22 m over 13 m: 59°, normal 0.51, not a support (`main.gd`, regenerated `world_solids.inc`) |
+| The yard's kerb held the body on it | a body on the 0.5 m kerb could not step down off it with a gentle stick | `beam_underfoot` called every narrow long box a beam | a beam must stand over a fall: ground within a step beside it makes it a floor (`simulation.cpp`); regression test `kerb` |
+| The headframe's own brace blocked S1's exit | the east bay's top diagonal crossed the cage's north side at 22.8 m and ran through the gangway | a brace in every bay | the cage's bay is a portal in its top storey, with knee braces above the doorway |
+| The catch lever lay through a brace | the lever's arm overlapped the west-face brace, which pushed it past its release on the first step | the pivot placed without a clearance check | the pivot moved south of that brace |
 
-## 5. Build order
+**Status.** Specified and implemented; verified natively on player inputs from the game's spawn
+through the real receiver (deck 2) and the machine's return. Screenshot pass: the headframe,
+tank, fence, handles, cage and gangway are held by structure and read from the yard.
+Not yet verified on a device (the next APK).
 
-| Step | Work | Proves |
-|---|---|---|
-| 0 | This plan; the archetype document on the write branch; the ledger pointed here | the direction survives a new session |
-| 1 | Re-author `AS-006` as the band's slice (§6). Then the rigging kit, and the band's first stage: a counter-mass lift (Archetype 01) off the 154 m deck that the player completes with a hook and a release pin | rules 1, 2 and 5 on real bodies; the first metre above the stair's reach |
-| 2 | Movement: sprint; climbing on ladders, girders, pipes and lattice; shimmy; balance; controlled drop; momentum on and off moving machinery; touch, pad and keyboard; first-person hands | the parkour between and around stages |
-| 3 | The power-train, flow and breakable kits as the band's stages need them; the band's other stages from different families, including one one-shot stage with climbable wreckage, one re-armable stage, and one set off by a neighbour's leftovers; the finale cascade to 220 m; the band's climbing route | rules 3, 4 and 6 |
-| 4 | Band test: 154 m to 220 m by the linked stages and, separately, by the climbing route; a re-arm test; CI, Fold capture and Android green | the band as the pattern for every band above |
-
-After the first band: re-derive the Atlas above 220 m as linked-stage bands and build them
-upward, band by band, to the 1 600 m summit predicate (Atlas B11).
-
-## 6. First band sketch — 154 m to 220 m
-
-A sketch, not a spec; stage choices, masses and heights are tuned while building. It is
-re-authored as `AS-006` (Atlas B02) before code.
-
-- **Stage A — counter-mass lift (01), re-armable.** A cage on the 154 m deck under a sheave on
-  the frame above; a loaded skip stored higher up. The player hooks the cable to the cage and
-  pulls the release pin; the skip falls, the cage rises. The skip survives, so it can be winched
-  back up with energy borrowed from another stage.
-- **Stage B — one-shot with climbable wreckage.** For example a crane-jib pendulum (13): an
-  overloaded guy wire snaps, the swinging boom yanks a cage upward, and the boom comes to rest
-  against its mast as a climbable ramp.
-- **Stage C — set off by a neighbour's leftovers.** For example Stage A's falling skip lands on a
-  cantilever beam (18) or strikes a capstan (19) and powers another lift.
-- **Finale — a cascade of two families to 220 m.** For example a debris-chute counterweight (12)
-  set off by Stage B's wreckage.
-- **Climbing route.** The band's own structure, climbable end to end with the Step 2 moves.
-
-## 7. Consequences elsewhere
-
-- `AS-004` (needles) and `AS-005` (cage landing) are not the next jobs: the stair already reaches
-  their heights. Their machine routes may return later as optional stages.
-- `AS-006` (B02) is the next authoring job: re-authored against this tree as the first band.
-- `AS-007` onward are re-derived as linked-stage bands when their heights come up.
-- The Atlas keeps its band heights, datum and the 1 600 m summit predicate. The modules inside
-  each band are re-authored as linked stages band by band.
-- Performance on the Fold: bands out of range sleep; water, air and gravel use the declared
-  simplified models, not particles; each band's body budget is measured before it is accepted.
-
-## 8. Step 2, the movement, as specified before it is built
-
-Every move is native (the simulation decides; Godot shows and asks), works on any structure of
-its kind by what the structure is, not by a tag, and is driven like the existing traversals: the
-body is steered toward a point held in the frame of the body it is on, so a move on moving
-machinery rides with it and letting go keeps that body's velocity.
-
-| Move | What it works on | Rules |
-|---|---|---|
-| **Sprint** | any walkable ground | held (Shift, left-stick click, the touch stick pushed past its ring); standing, hands free, not balancing, stick at least 0.7 and within 45° of the facing: top speed 8.0 m/s against 5.5. A jump keeps its takeoff speed in the air while the stick holds forward: air control steers and slows, it never drags a running jump back to walking speed |
-| **Climb** | any member a hand can close round: its two thinner dimensions at most 0.18 m, its length at least 0.25 m (rungs, pipes, bars, lattice members, chords), static or moving | facing one within 0.8 m at hand height, Action (CLIMB) or moving into it in the air takes hold. The stick toward the structure climbs up (0.9 m/s), away climbs down (1.2 m/s), sideways moves across (0.6 m/s), each only while the hands find the next hold; the hands go hand over hand. At the top, climbing on with a ledge in reach mantles over; at the bottom the feet step off onto ground. Jump springs back off; Drop lets go |
-| **Shimmy** | any ledge a hang holds | hanging, the stick sideways moves along the ledge (0.6 m/s) while the ledge continues under the hands, re-probed every step; hand over hand |
-| **Balance** | any support narrower than 0.5 m and at least 1.5 m long (a beam, a pipe run, a rail) | walking on it: top speed 2.0 m/s along it; sideways input under 0.8 is held on its line, over 0.8 steps off; arms out |
-| **Controlled drop** | any edge with a drop behind it | at an edge, Drop lowers the body over it into a hang facing it (0.6 s); from a hang, Drop lets go; holding toward the wall while falling catches the next ledge below (the existing catch) |
-
-Falsifiers, one native group per move, each with its negative: no hold on a wide wall; no climb
-past the last hold; no sprint crouched or carrying; no balance on a wide deck; no drop-hang where
-nothing lies beyond the edge. And the band's no-lift route, 154 m to 220 m. Godot: every move on
-touch, pad and keyboard; the hands hold the native's hold points and travel between them at their
-reach speed; the camera never snaps.
+**Open ends.** C1 (the receiver's onward route, deck 2 → deck 4) is not built: its acceptance is
+"from deck 2's south band, reach deck 4 (44.0 m) with the movement verbs, and no climb from the
+yard reaches deck 2 without S1". It is the missing cause closest to the goal, downstream of S1.
+Status: next cycle (cycle 2).
