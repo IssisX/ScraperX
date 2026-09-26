@@ -33,3 +33,7 @@ The useful immediate home is the shared native Kit and the active pipe bridge's 
 The archive's native suite and corrected headless touch run establish its own observations. Its earlier 250 kN cable passes do not establish the corrected 1 MN rendered route. Neither archived success nor this source review establishes the adapted pipe route: current native/input/render checks must pass separately.
 
 Final geometry passes all six native route/control/recovery cases, including partial regrab and passive riding. Touch at 30 FPS, keyboard/gamepad at 60 FPS and first-person route captures pass locally. Ordinary startup now constructs this same assembly; the proofs use that default. On this ARM64 host, the retained full legacy suite currently fails at the old AS-002 mid-landing; an untouched `4cdb2bc` reconstruction fails at the identical assertion. This baseline comparison does not waive the delivery workflow's required regression gate.
+
+## Delivered adaptation
+
+The adapted production implementation is now `254eb28` on `ChatGPT`. [Exact delivery evidence](../../ASCENT/AS-016_DELIVERY_EVIDENCE.md) records the green full workflow, normal native and three-device input route, rendered capture inspection, decoded fall audio and verified ARM64 APK. The archived files remain unchanged and inactive. No second physics owner, overlapping assembly or archived entity ID was introduced.

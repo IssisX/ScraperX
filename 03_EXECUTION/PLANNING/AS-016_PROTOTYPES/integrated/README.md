@@ -1,6 +1,6 @@
 # AS-016 integration evidence
 
-Profile: **MACRO-TRAVERSAL-STRICT**. Local ARM64 desktop observations, 2026-09-26. Exact-SHA CI/APK status belongs to `00_START_HERE.md`; no Android installation/performance claim follows from this directory.
+Profile: **MACRO-TRAVERSAL-STRICT**. Local ARM64 desktop observations, 2026-09-26. [Exact-SHA CI/APK delivery](../../../ASCENT/AS-016_DELIVERY_EVIDENCE.md) is now verified for `254eb28`; no Android installation/performance claim follows from this directory.
 
 ## Final production construction
 
@@ -25,7 +25,7 @@ Profile: **MACRO-TRAVERSAL-STRICT**. Local ARM64 desktop observations, 2026-09-2
 
 Energy observation includes all dynamic bodies' gravity and principal-inertia kinetic energy, material elastic energy, actual hand work and permanent crush work. Remaining loss includes pipe/rack impacts and friction; it is not separately measured per-contact dissipation. The nominal 0.65 m constitutive stroke is geometrically limited to about 0.58 m by the sloped floor's eventual contact. Current run leaves >0.11 m actual floor clearance. The kinematic material collider follows plastic compression and omits up to 6 mm elastic indentation; only the pan striker drives that material law.
 
-Reproduce with the pinned CMake build, then `ctest --test-dir build/host -R pipe_bridge --output-on-failure`. Run `scraperx_pipe_bridge_refinement` directly for quantitative output. The standard workflow builds both test executables and gates all seven cases.
+Reproduce with the pinned CMake build, then `ctest --test-dir build/host -R pipe_bridge --output-on-failure`. Run `scraperx_pipe_bridge_refinement` directly for quantitative output. The standard workflow builds both test executables and gates all seven cases. They and the retained full suite passed in run `36269138275`.
 
 ## Input, presentation and sound
 

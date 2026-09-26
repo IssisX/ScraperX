@@ -1,7 +1,7 @@
 # AS-016 — Pipe-loaded balance bridge
 
 **Ascent Slice:** `AS-016`
-**Lifecycle:** IMPLEMENTED — native default and presentation integrated; exact-commit delivery verification pending
+**Lifecycle:** DELIVERED — native default and presentation integrated; exact-commit desktop proof and Android artifact verified. Device execution remains unproven.
 **Provenance:** design probes began at `360cffb`; implementation continues from `e8d9ca8`
 **Implementation gate:** loaded releases, pipe capture, arrest and the supported crossing must close in the bounded prototypes below before promotion to normal gameplay
 **Evidence:** current delivery status remains in `00_START_HERE.md`; [integrated observations](../PLANNING/AS-016_PROTOTYPES/integrated/README.md) distinguish final production tests from the earlier copied prototype
@@ -13,6 +13,8 @@ the separate swing/arrest, static native walking route and loaded releases.
 The selected upper cheek offset is 0.25 m. The independent swing evaluator
 passes all 27 cases against 54 native runs and rejects incomplete evidence.
 The final production assembly now closes actual moving-pan delivery, physical loaded release, arrest and native player crossing. The earlier isolated files remain design provenance.
+
+[Exact delivery evidence](AS-016_DELIVERY_EVIDENCE.md): gameplay `254eb28`, successful run `36269138275`, verified ARM64 APK.
 
 ## Production observations — 2026-09-26
 
