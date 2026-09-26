@@ -1074,6 +1074,9 @@ struct WorldSolidHull final {
     std::uint32_t count;
 };
 #include "sim/world_solids.inc"
+namespace regression_geometry {
+#include "../../tests/fixtures/world_solids.inc"
+}
 
 // A drawn box whose world bounds match an owned body this closely is that
 // body's mirror, not a second body.
@@ -1576,9 +1579,10 @@ namespace scraperx::sim {
 
 class Simulation::PhysicsWorld final {
 public:
-    explicit PhysicsWorld(const InitialSpawn initial_spawn)
+    explicit PhysicsWorld(const InitialSpawn initial_spawn, const WorldContent content)
         : temp_allocator_(8U * 1024U * 1024U),
-          job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1) {
+          job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1),
+          regression_fixtures_(content == WorldContent::RegressionFixtures) {
         // Raised from 1024: the world's solid dressing adds ~1 600 static
         // bodies (world_solids.inc) on top of the ~300 the kernel owns.
         physics_system_.Init(4096,
@@ -1615,95 +1619,101 @@ public:
                             0.8F,
                             Simulation::kTowerEntityId);
 
-        translating_support_id_ = add_box(bodies,
-                                          JPH::Vec3(2.75F, 0.25F, 2.75F),
-                                          JPH::RVec3(0.0, 0.25, 8.0),
-                                          JPH::EMotionType::Kinematic,
-                                          object_layers::kMoving,
-                                          0.8F,
-                                          Simulation::kTranslatingSupportEntityId);
+        if (regression_fixtures_) {
+            translating_support_id_ = add_box(bodies,
+                                              JPH::Vec3(2.75F, 0.25F, 2.75F),
+                                              JPH::RVec3(0.0, 0.25, 8.0),
+                                              JPH::EMotionType::Kinematic,
+                                              object_layers::kMoving,
+                                              0.8F,
+                                              Simulation::kTranslatingSupportEntityId);
 
-        rotating_support_id_ = add_box(bodies,
-                                       JPH::Vec3(3.0F, 0.25F, 3.0F),
-                                       JPH::RVec3(-8.0, 0.25, 0.0),
+            rotating_support_id_ = add_box(bodies,
+                                           JPH::Vec3(3.0F, 0.25F, 3.0F),
+                                           JPH::RVec3(-8.0, 0.25, 0.0),
+                                           JPH::EMotionType::Kinematic,
+                                           object_layers::kMoving,
+                                           0.8F,
+                                           Simulation::kRotatingSupportEntityId);
+
+            vault_rail_id_ = add_box(bodies,
+                                     JPH::Vec3(0.22F, 0.475F, 2.5F),
+                                     JPH::RVec3(5.0, 0.475, -6.0),
+                                     JPH::EMotionType::Static,
+                                     object_layers::kStatic,
+                                     0.7F,
+                                     Simulation::kVaultRailEntityId);
+
+            mantle_ledge_id_ = add_box(bodies,
+                                       JPH::Vec3(2.0F, 0.775F, 2.0F),
+                                       JPH::RVec3(11.0, 0.775, -6.0),
+                                       JPH::EMotionType::Static,
+                                       object_layers::kStatic,
+                                       0.7F,
+                                       Simulation::kMantleLedgeEntityId);
+
+            hang_ledge_id_ = add_box(bodies,
+                                     JPH::Vec3(2.5F, 1.8F, 2.5F),
+                                     JPH::RVec3(11.0, 1.8, 4.0),
+                                     JPH::EMotionType::Static,
+                                     object_layers::kStatic,
+                                     0.7F,
+                                     Simulation::kHangLedgeEntityId);
+
+            moving_ledge_id_ = add_box(bodies,
+                                       JPH::Vec3(2.0F, 1.8F, 2.0F),
+                                       JPH::RVec3(9.0, 1.8, kMovingLedgeCenterZ),
                                        JPH::EMotionType::Kinematic,
                                        object_layers::kMoving,
                                        0.8F,
-                                       Simulation::kRotatingSupportEntityId);
+                                       Simulation::kMovingLedgeEntityId);
 
-        vault_rail_id_ = add_box(bodies,
-                                 JPH::Vec3(0.22F, 0.475F, 2.5F),
-                                 JPH::RVec3(5.0, 0.475, -6.0),
-                                 JPH::EMotionType::Static,
-                                 object_layers::kStatic,
-                                 0.7F,
-                                 Simulation::kVaultRailEntityId);
+            blocked_ledge_id_ = add_box(bodies,
+                                        JPH::Vec3(1.5F, 0.775F, 1.5F),
+                                        JPH::RVec3(-6.0, 0.775, -8.0),
+                                        JPH::EMotionType::Static,
+                                        object_layers::kStatic,
+                                        0.7F,
+                                        Simulation::kBlockedLedgeEntityId);
 
-        mantle_ledge_id_ = add_box(bodies,
-                                   JPH::Vec3(2.0F, 0.775F, 2.0F),
-                                   JPH::RVec3(11.0, 0.775, -6.0),
-                                   JPH::EMotionType::Static,
-                                   object_layers::kStatic,
-                                   0.7F,
-                                   Simulation::kMantleLedgeEntityId);
+            blocked_ledge_canopy_id_ = add_box(bodies,
+                                               JPH::Vec3(2.2F, 0.15F, 2.2F),
+                                               JPH::RVec3(-6.0, 2.7, -8.0),
+                                               JPH::EMotionType::Static,
+                                               object_layers::kStatic,
+                                               0.7F,
+                                               Simulation::kBlockedLedgeCanopyEntityId);
 
-        hang_ledge_id_ = add_box(bodies,
-                                 JPH::Vec3(2.5F, 1.8F, 2.5F),
-                                 JPH::RVec3(11.0, 1.8, 4.0),
-                                 JPH::EMotionType::Static,
-                                 object_layers::kStatic,
-                                 0.7F,
-                                 Simulation::kHangLedgeEntityId);
-
-        moving_ledge_id_ = add_box(bodies,
-                                   JPH::Vec3(2.0F, 1.8F, 2.0F),
-                                   JPH::RVec3(9.0, 1.8, kMovingLedgeCenterZ),
-                                   JPH::EMotionType::Kinematic,
-                                   object_layers::kMoving,
-                                   0.8F,
-                                   Simulation::kMovingLedgeEntityId);
-
-        blocked_ledge_id_ = add_box(bodies,
-                                    JPH::Vec3(1.5F, 0.775F, 1.5F),
-                                    JPH::RVec3(-6.0, 0.775, -8.0),
-                                    JPH::EMotionType::Static,
-                                    object_layers::kStatic,
-                                    0.7F,
-                                    Simulation::kBlockedLedgeEntityId);
-
-        blocked_ledge_canopy_id_ = add_box(bodies,
-                                           JPH::Vec3(2.2F, 0.15F, 2.2F),
-                                           JPH::RVec3(-6.0, 2.7, -8.0),
-                                           JPH::EMotionType::Static,
-                                           object_layers::kStatic,
-                                           0.7F,
-                                           Simulation::kBlockedLedgeCanopyEntityId);
-
-        {
-            const auto crawl_part = [this, &bodies](const JPH::Vec3 half, const JPH::RVec3 at) {
-                machine_bodies_.push_back(add_box(bodies, half, at, JPH::EMotionType::Static,
-                                                  object_layers::kStatic, 0.7F,
-                                                  Simulation::kCrawlBeamEntityId));
-            };
-            const float beam_top = kCrawlBeamUndersideY + 2.0F * kCrawlBeamHalfY;
-            crawl_part(JPH::Vec3(kCrawlLaneHalfX, kCrawlBeamHalfY, kCrawlBeamHalfZ),
-                       JPH::RVec3(kCrawlLaneCenterX, kCrawlBeamUndersideY + kCrawlBeamHalfY,
-                                  kCrawlBeamZ));
-            for (const float side : {-1.0F, 1.0F}) {
-                crawl_part(JPH::Vec3(kCrawlPostHalf, beam_top * 0.5F, kCrawlPostHalf),
-                           JPH::RVec3(kCrawlLaneCenterX + side * (kCrawlLaneHalfX + kCrawlPostHalf),
-                                      beam_top * 0.5F, kCrawlBeamZ));
+            {
+                const auto crawl_part = [this, &bodies](const JPH::Vec3 half, const JPH::RVec3 at) {
+                    machine_bodies_.push_back(add_box(bodies, half, at, JPH::EMotionType::Static,
+                                                      object_layers::kStatic, 0.7F,
+                                                      Simulation::kCrawlBeamEntityId));
+                };
+                const float beam_top = kCrawlBeamUndersideY + 2.0F * kCrawlBeamHalfY;
+                crawl_part(JPH::Vec3(kCrawlLaneHalfX, kCrawlBeamHalfY, kCrawlBeamHalfZ),
+                           JPH::RVec3(kCrawlLaneCenterX, kCrawlBeamUndersideY + kCrawlBeamHalfY,
+                                      kCrawlBeamZ));
+                for (const float side : {-1.0F, 1.0F}) {
+                    crawl_part(JPH::Vec3(kCrawlPostHalf, beam_top * 0.5F, kCrawlPostHalf),
+                               JPH::RVec3(kCrawlLaneCenterX + side * (kCrawlLaneHalfX + kCrawlPostHalf),
+                                          beam_top * 0.5F, kCrawlBeamZ));
+                }
             }
+
         }
 
         build_stack(bodies);
-        build_machine(bodies);
-        build_kernel_jib(bodies);
-        build_kernel_needle(bodies);
-        build_kernel_sump(bodies);
-        build_intake_rise(bodies);
-        build_water_screw(bodies);
-        build_legal_forty(bodies);
+        if (regression_fixtures_) {
+            build_machine(bodies);
+            build_kernel_jib(bodies);
+            build_kernel_needle(bodies);
+            build_kernel_sump(bodies);
+            build_intake_rise(bodies);
+            build_water_screw(bodies);
+            build_legal_forty(bodies);
+        }
+
         build_world_solids(bodies);
 
         player_shape_ = new JPH::CapsuleShape(0.55F, kPlayerRadius);
@@ -1727,14 +1737,17 @@ public:
 
         // Built last, so every body before it keeps the id it had: the ascent
         // routes proven against them are contact-order sensitive.
-        build_hook5_rack(bodies);
+        if (regression_fixtures_) { build_hook5_rack(bodies); }
 
         // AS-006: the mechanism ascent's bands, built last for the same
         // reason: every body before them keeps its id.
         kit_ = std::make_unique<scraperx::sim::kit::Kit>(physics_system_, object_layers::kStatic,
                                                         object_layers::kMoving);
-        scraperx::sim::bands::build_ground_water_lift(*kit_, ground_water_lift_);
-        scraperx::sim::bands::build_counterweight_well(*kit_, well_);
+        if (regression_fixtures_) {
+            scraperx::sim::bands::build_ground_water_lift(*kit_, ground_water_lift_);
+            scraperx::sim::bands::build_counterweight_well(*kit_, well_);
+
+        }
 
         physics_system_.OptimizeBroadPhase();
 
@@ -1833,20 +1846,23 @@ public:
         const bool was_grounded_before_tick = grounded_;
 
         auto &bodies = physics_system_.GetBodyInterface();
-        update_support_motion(bodies, delta_seconds, next_time_seconds);
-        update_scoop(bodies, delta_seconds, next_time_seconds);
-        update_plant(bodies, delta_seconds);
-        update_jib(bodies, commands.jib_slew_input, commands.jib_hoist_input);
-        update_needle(bodies, commands.needle_hoist_input);
-        update_sump(bodies, delta_seconds, commands.valve_toggle_requested);
-        update_water_screw(bodies, delta_seconds, commands.water_screw_toggle_requested);
-        update_water_lift(bodies, delta_seconds,
-                          commands.water_lift_valve_toggle_requested,
-                          commands.water_lift_release_requested,
-                          commands.water_lift_reset_requested);
-        update_intake(bodies, commands.intake_slew_input, commands.intake_hoist_input);
-        update_legal_forty(bodies, commands.intake_sling_release_requested,
-                           commands.intake_sling_attach_requested);
+        if (regression_fixtures_) {
+            update_support_motion(bodies, delta_seconds, next_time_seconds);
+            update_scoop(bodies, delta_seconds, next_time_seconds);
+            update_plant(bodies, delta_seconds);
+            update_jib(bodies, commands.jib_slew_input, commands.jib_hoist_input);
+            update_needle(bodies, commands.needle_hoist_input);
+            update_sump(bodies, delta_seconds, commands.valve_toggle_requested);
+            update_water_screw(bodies, delta_seconds, commands.water_screw_toggle_requested);
+            update_water_lift(bodies, delta_seconds,
+                              commands.water_lift_valve_toggle_requested,
+                              commands.water_lift_release_requested,
+                              commands.water_lift_reset_requested);
+            update_intake(bodies, commands.intake_slew_input, commands.intake_hoist_input);
+            update_legal_forty(bodies, commands.intake_sling_release_requested,
+                               commands.intake_sling_attach_requested);
+
+        }
 
         // A toggle while airborne only: deploying/retracting on the ground is
         // meaningless and would let a grounded button-mash pre-arm the canopy.
@@ -1932,6 +1948,28 @@ public:
         read_state();
     }
 
+    [[nodiscard]] std::uint32_t entity_body_count(const std::uint64_t entity) const noexcept {
+        JPH::BodyIDVector ids;
+        physics_system_.GetBodies(ids);
+        std::uint32_t count = 0;
+        for (const auto id : ids) {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), id);
+            if (lock.Succeeded() && lock.GetBody().GetUserData() == entity) { ++count; }
+        }
+        return count;
+    }
+
+    [[nodiscard]] std::uint32_t moving_body_count() const noexcept {
+        JPH::BodyIDVector ids;
+        physics_system_.GetBodies(ids);
+        std::uint32_t count = 0;
+        for (const auto id : ids) {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), id);
+            if (lock.Succeeded() && !lock.GetBody().IsStatic()) { ++count; }
+        }
+        return count;
+    }
+
     [[nodiscard]] const Snapshot &state() const noexcept {
         return state_;
     }
@@ -1973,6 +2011,7 @@ public:
 
 private:
     static void remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {
+        if (body_id.IsInvalid()) { return; }
         bodies.RemoveBody(body_id);
         bodies.DestroyBody(body_id);
     }
@@ -2481,7 +2520,13 @@ private:
     // recognised by its bounds and skipped rather than doubled -- a second
     // coincident body would split ledge probes and support identity.
     void build_world_solids(JPH::BodyInterface &bodies) {
-        for (const WorldSolidBox &box : kWorldSolidBoxes) {
+        const WorldSolidBox *boxes = regression_fixtures_ ? regression_geometry::kWorldSolidBoxes : kWorldSolidBoxes;
+        const std::size_t box_count = regression_fixtures_ ? std::size(regression_geometry::kWorldSolidBoxes) : std::size(kWorldSolidBoxes);
+        const WorldSolidHull *hulls = regression_fixtures_ ? regression_geometry::kWorldSolidHulls : kWorldSolidHulls;
+        const std::size_t hull_count = regression_fixtures_ ? std::size(regression_geometry::kWorldSolidHulls) : std::size(kWorldSolidHulls);
+        const float *hull_points = regression_fixtures_ ? regression_geometry::kWorldSolidHullPoints : kWorldSolidHullPoints;
+        for (std::size_t i = 0; i < box_count; ++i) {
+            const WorldSolidBox &box = boxes[i];
             const JPH::Vec3 half(box.hx, box.hy, box.hz);
             const JPH::RVec3 position(box.px, box.py, box.pz);
             const JPH::Quat rotation = JPH::Quat(box.qx, box.qy, box.qz, box.qw).Normalized();
@@ -2498,16 +2543,17 @@ private:
             ++world_solid_bodies_;
         }
         JPH::Array<JPH::Vec3> points;
-        for (const WorldSolidHull &hull : kWorldSolidHulls) {
+        for (std::size_t i = 0; i < hull_count; ++i) {
+            const WorldSolidHull &hull = hulls[i];
             JPH::DVec3 sum = JPH::DVec3::sZero();
             for (std::uint32_t index = 0; index < hull.count; ++index) {
-                const float *point = &kWorldSolidHullPoints[(hull.first + index) * 3U];
+                const float *point = &hull_points[(hull.first + index) * 3U];
                 sum += JPH::DVec3(point[0], point[1], point[2]);
             }
             const JPH::DVec3 centre = sum / static_cast<double>(std::max<std::uint32_t>(hull.count, 1U));
             points.clear();
             for (std::uint32_t index = 0; index < hull.count; ++index) {
-                const float *point = &kWorldSolidHullPoints[(hull.first + index) * 3U];
+                const float *point = &hull_points[(hull.first + index) * 3U];
                 points.push_back(JPH::Vec3(static_cast<float>(point[0] - centre.GetX()),
                                            static_cast<float>(point[1] - centre.GetY()),
                                            static_cast<float>(point[2] - centre.GetZ())));
@@ -4385,6 +4431,7 @@ private:
             {hook5_block_id_, Simulation::kHook5BlockEntityId},
         };
         const auto consider = [&](const JPH::BodyID id, const std::uint64_t candidate_entity) {
+            if (id.IsInvalid()) { return; }
             const JPH::Vec3 to_body(bodies.GetCenterOfMassPosition(id) - at);
             const float distance = to_body.Length();
             if (distance > best_distance ||
@@ -5209,6 +5256,11 @@ private:
     // Machine half of a checkpoint (TDD 14.1: "machine/control state").
     // Kinematic bodies are deliberately excluded -- see BodyCheckpoint comment.
     void commit_machine_checkpoint(const JPH::BodyInterface &bodies) noexcept {
+        if (!regression_fixtures_) {
+            checkpoint_.carrying_entity = carried_entity_;
+            kit_->capture(checkpoint_.kit);
+            return;
+        }
         checkpoint_.ballast = capture_body(bodies, ballast_id_);
         checkpoint_.tipper = capture_body(bodies, tipper_id_);
         checkpoint_.valve_lever = capture_body(bodies, valve_lever_id_);
@@ -5264,23 +5316,26 @@ private:
                                       JPH::EActivation::Activate);
         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
 
-        restore_body(bodies, ballast_id_, checkpoint_.ballast);
-        restore_body(bodies, tipper_id_, checkpoint_.tipper);
-        restore_body(bodies, valve_lever_id_, checkpoint_.valve_lever);
-        restore_body(bodies, treadle_id_, checkpoint_.treadle);
-        restore_body(bodies, lift_platform_id_, checkpoint_.lift_platform);
-        restore_body(bodies, counterweight_id_, checkpoint_.counterweight);
-        restore_body(bodies, jib_boom_id_, checkpoint_.jib_boom);
-        restore_body(bodies, jib_hook_id_, checkpoint_.jib_hook);
-        restore_body(bodies, crate_id_, checkpoint_.crate);
-        restore_body(bodies, needle_beam_id_, checkpoint_.needle_beam);
-        restore_needle_topology(checkpoint_.needle_seated);
-        restore_body(bodies, intake_swing_flight_id_, checkpoint_.intake_swing_flight);
-        restore_body(bodies, intake_cw_cradle_id_, checkpoint_.intake_cw_cradle);
-        restore_legal_forty_topology(checkpoint_.intake_pack_slung);
-        restore_body(bodies, hook5_door_id_, checkpoint_.hook5_door);
-        restore_body(bodies, hook5_bar_id_, checkpoint_.hook5_bar);
-        restore_body(bodies, hook5_block_id_, checkpoint_.hook5_block);
+        if (regression_fixtures_) {
+            restore_body(bodies, ballast_id_, checkpoint_.ballast);
+            restore_body(bodies, tipper_id_, checkpoint_.tipper);
+            restore_body(bodies, valve_lever_id_, checkpoint_.valve_lever);
+            restore_body(bodies, treadle_id_, checkpoint_.treadle);
+            restore_body(bodies, lift_platform_id_, checkpoint_.lift_platform);
+            restore_body(bodies, counterweight_id_, checkpoint_.counterweight);
+            restore_body(bodies, jib_boom_id_, checkpoint_.jib_boom);
+            restore_body(bodies, jib_hook_id_, checkpoint_.jib_hook);
+            restore_body(bodies, crate_id_, checkpoint_.crate);
+            restore_body(bodies, needle_beam_id_, checkpoint_.needle_beam);
+            restore_needle_topology(checkpoint_.needle_seated);
+            restore_body(bodies, intake_swing_flight_id_, checkpoint_.intake_swing_flight);
+            restore_body(bodies, intake_cw_cradle_id_, checkpoint_.intake_cw_cradle);
+            restore_legal_forty_topology(checkpoint_.intake_pack_slung);
+            restore_body(bodies, hook5_door_id_, checkpoint_.hook5_door);
+            restore_body(bodies, hook5_bar_id_, checkpoint_.hook5_bar);
+            restore_body(bodies, hook5_block_id_, checkpoint_.hook5_block);
+        }
+
         // A kit body in the hands may be one the restore takes out of the
         // world (a shackle hooked at the commit): let go of it first.
         if (carry_constraint_ != nullptr &&
@@ -5301,16 +5356,19 @@ private:
         // update_sump recomputes grate_safe_ and reasserts the grate's
         // sensor flag from sump_volume_kg_ unconditionally every tick, so
         // restoring the scalar is the whole restore.
-        sump_volume_kg_ = checkpoint_.sump_volume_kg;
-        sump_isolated_ = checkpoint_.sump_isolated;
-        steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
-        water_screw_.restore_state(checkpoint_.water_screw);
-        water_lift_bucket_water_m3_ = checkpoint_.water_lift_bucket_water_m3;
-        water_lift_valve_open_ = checkpoint_.water_lift_valve_open;
-        kit_->set_body_mass(
-            ground_water_lift_.bucket,
-            static_cast<float>(kWaterLiftBucketDryMassKg +
-                               kWaterDensityKgM3 * water_lift_bucket_water_m3_));
+        if (regression_fixtures_) {
+            sump_volume_kg_ = checkpoint_.sump_volume_kg;
+            sump_isolated_ = checkpoint_.sump_isolated;
+            steam_plant_.restore_state(checkpoint_.vessel_mass_kg, checkpoint_.cylinder_mass_kg);
+            water_screw_.restore_state(checkpoint_.water_screw);
+            water_lift_bucket_water_m3_ = checkpoint_.water_lift_bucket_water_m3;
+            water_lift_valve_open_ = checkpoint_.water_lift_valve_open;
+            kit_->set_body_mass(
+                ground_water_lift_.bucket,
+                static_cast<float>(kWaterLiftBucketDryMassKg +
+                                   kWaterDensityKgM3 * water_lift_bucket_water_m3_));
+
+        }
 
         grounded_ = false;
         jump_vault_ticks_left_ = 0;
@@ -5324,6 +5382,11 @@ private:
     }
 
     void read_machine_state(const JPH::BodyInterface &bodies) noexcept {
+        state_.carrying_entity_id = carried_entity_;
+        state_.carry_target_entity_id = carry_target_entity_;
+        state_.rig_action = rig_action_;
+        state_.rig_target_entity_id = rig_target_entity_;
+        if (!regression_fixtures_) { return; }
         state_.hoist_scoop_position = {kScoopX, scoop_height_, kScoopZ};
         state_.hoist_scoop_tilt_radians = scoop_tilt_;
 
@@ -5495,26 +5558,29 @@ private:
         state_.support_contact_point = support_sample_.contact_point;
         state_.support_point_linear_velocity = support_sample_.point_velocity;
 
-        const JPH::RVec3 translating_position = bodies.GetPosition(translating_support_id_);
-        const JPH::Vec3 translating_velocity = bodies.GetLinearVelocity(translating_support_id_);
-        state_.translating_support_position = to_vector3(translating_position);
-        state_.translating_support_linear_velocity =
-            {translating_velocity.GetX(), translating_velocity.GetY(), translating_velocity.GetZ()};
+        if (regression_fixtures_) {
+            const JPH::RVec3 translating_position = bodies.GetPosition(translating_support_id_);
+            const JPH::Vec3 translating_velocity = bodies.GetLinearVelocity(translating_support_id_);
+            state_.translating_support_position = to_vector3(translating_position);
+            state_.translating_support_linear_velocity =
+                {translating_velocity.GetX(), translating_velocity.GetY(), translating_velocity.GetZ()};
 
-        const JPH::RVec3 rotating_position = bodies.GetPosition(rotating_support_id_);
-        const JPH::Vec3 rotating_angular_velocity = bodies.GetAngularVelocity(rotating_support_id_);
-        state_.rotating_support_position = to_vector3(rotating_position);
-        state_.rotating_support_yaw_radians = rotating_support_yaw_radians_;
-        state_.rotating_support_angular_velocity =
-            {rotating_angular_velocity.GetX(),
-             rotating_angular_velocity.GetY(),
-             rotating_angular_velocity.GetZ()};
+            const JPH::RVec3 rotating_position = bodies.GetPosition(rotating_support_id_);
+            const JPH::Vec3 rotating_angular_velocity = bodies.GetAngularVelocity(rotating_support_id_);
+            state_.rotating_support_position = to_vector3(rotating_position);
+            state_.rotating_support_yaw_radians = rotating_support_yaw_radians_;
+            state_.rotating_support_angular_velocity =
+                {rotating_angular_velocity.GetX(),
+                 rotating_angular_velocity.GetY(),
+                 rotating_angular_velocity.GetZ()};
 
-        const JPH::RVec3 moving_ledge_position = bodies.GetPosition(moving_ledge_id_);
-        const JPH::Vec3 moving_ledge_velocity = bodies.GetLinearVelocity(moving_ledge_id_);
-        state_.moving_ledge_position = to_vector3(moving_ledge_position);
-        state_.moving_ledge_linear_velocity =
-            {moving_ledge_velocity.GetX(), moving_ledge_velocity.GetY(), moving_ledge_velocity.GetZ()};
+            const JPH::RVec3 moving_ledge_position = bodies.GetPosition(moving_ledge_id_);
+            const JPH::Vec3 moving_ledge_velocity = bodies.GetLinearVelocity(moving_ledge_id_);
+            state_.moving_ledge_position = to_vector3(moving_ledge_position);
+            state_.moving_ledge_linear_velocity =
+                {moving_ledge_velocity.GetX(), moving_ledge_velocity.GetY(), moving_ledge_velocity.GetZ()};
+
+        }
 
         state_.traversal_state = traversal_state_;
         state_.traversal_support_entity_id = traversal_entity_id_;
@@ -5563,6 +5629,7 @@ private:
     ObjectVsBroadPhaseFilter object_vs_broadphase_filter_;
     ObjectLayerPairFilter object_layer_pair_filter_;
     JPH::PhysicsSystem physics_system_;
+    const bool regression_fixtures_;
     PlayerContactListener contact_listener_;
     JPH::RefConst<JPH::Shape> player_shape_;
     JPH::RefConst<JPH::Shape> player_crouch_shape_;
@@ -5764,13 +5831,20 @@ private:
     Snapshot state_{};
 };
 
-Simulation::Simulation(const InitialSpawn initial_spawn)
-    : physics_world_(std::make_unique<PhysicsWorld>(initial_spawn)) {
+Simulation::Simulation(const InitialSpawn initial_spawn, const WorldContent content)
+    : physics_world_(std::make_unique<PhysicsWorld>(initial_spawn, content)) {
     snapshot_ = physics_world_->state();
     snapshot_.fixed_step_seconds = kFixedStepSeconds;
 }
 
 Simulation::~Simulation() = default;
+
+std::uint32_t Simulation::entity_body_count(const std::uint64_t entity) const noexcept {
+    return physics_world_->entity_body_count(entity);
+}
+std::uint32_t Simulation::moving_body_count() const noexcept {
+    return physics_world_->moving_body_count();
+}
 
 bool Simulation::set_move_input(double world_x, double world_z) noexcept {
     if (!std::isfinite(world_x) || !std::isfinite(world_z)) {

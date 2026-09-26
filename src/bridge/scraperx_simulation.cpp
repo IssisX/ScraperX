@@ -35,6 +35,9 @@ ScraperXSimulation::ScraperXSimulation()
     : simulation_(std::make_unique<sim::Simulation>()) {}
 
 void ScraperXSimulation::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("configure_regression_spawn", "initial_spawn"), &ScraperXSimulation::configure_regression_spawn);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_entity_body_count", "entity"), &ScraperXSimulation::get_entity_body_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_moving_body_count"), &ScraperXSimulation::get_moving_body_count);
     godot::ClassDB::bind_method(godot::D_METHOD("configure_initial_spawn", "initial_spawn"),
                                 &ScraperXSimulation::configure_initial_spawn);
     godot::ClassDB::bind_method(godot::D_METHOD("set_move_input", "world_x", "world_z"),
@@ -355,6 +358,24 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_well_a_catch_latched);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_rope_end_entity_id"),
                                 &ScraperXSimulation::get_well_a_rope_end_entity_id);
+}
+
+bool ScraperXSimulation::configure_regression_spawn(const std::int64_t initial_spawn) {
+    if (initial_spawn < 0 || initial_spawn >= kInitialSpawnCount ||
+        simulation_->snapshot().tick_index != 0) {
+        return false;
+    }
+    simulation_ = std::make_unique<sim::Simulation>(
+        static_cast<sim::InitialSpawn>(initial_spawn), sim::WorldContent::RegressionFixtures);
+    return true;
+}
+
+std::int64_t ScraperXSimulation::get_entity_body_count(const std::int64_t entity) const {
+    return simulation_->entity_body_count(static_cast<std::uint64_t>(entity));
+}
+
+std::int64_t ScraperXSimulation::get_moving_body_count() const {
+    return simulation_->moving_body_count();
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {

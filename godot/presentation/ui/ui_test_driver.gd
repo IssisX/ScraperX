@@ -16,6 +16,7 @@ const InputRouter := preload("res://presentation/ui/input_router.gd")
 const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 
 const SCENARIOS := {
+	"ground_foundation": 8,
 	"touch_jump": 8,
 	"touch_move_look": 8,
 	"touch_gyro_aim": 8,
@@ -57,7 +58,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	_scenario = scenario
 	_capture_prefix = capture_prefix
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if not bool(main._native.configure_initial_spawn(int(SCENARIOS[scenario]))):
+	if scenario != "ground_foundation" and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -86,6 +87,8 @@ func _run() -> void:
 		await _frames(2)
 	var ok := false
 	match _scenario:
+		"ground_foundation":
+			ok = await _ground_foundation()
 		"touch_jump":
 			ok = await _touch_jump()
 		"touch_move_look":
@@ -145,6 +148,33 @@ func _fail(reason: String) -> bool:
 
 
 # --- scenarios -----------------------------------------------------------------
+
+func _ground_foundation() -> bool:
+	if _main._regression_scene:
+		return _fail("production proof selected a regression scene")
+	for entity in range(3, 60):
+		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
+			return _fail("retired native body %d remains" % entity)
+	if int(_native().get_moving_body_count()) != 1:
+		return _fail("a moving machine remains in the default world")
+	# Check actual scene nodes, independently of native enumeration. This also
+	# catches visual-only remnants that would not appear in the physics world.
+	var retired := ["IntakeBay", "WaterScrew", "LegalForty", "Hook5",
+		"StackGear", "GearMotif", "Crane", "GroundWater", "WellA", "WellB"]
+	for node in _main.get_node("TowerPresentation").find_children("*", "", true, false):
+		for prefix in retired:
+			if String(node.name).begins_with(prefix):
+				return _fail("retired scene node remains: " + String(node.name))
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.0):
+		return _fail("default player did not settle at grade")
+	await _pose("cleared_grade")
+	if not await _keyboard_core():
+		return false
+	# Look through the old intake/screw area with normal walking and turning.
+	await _face(Vector2(-1.0, -1.0))
+	await _pose("cleared_tower")
+	_detail = "retired_bodies=0 moving_bodies=1 retired_meshes=0 default_controls=1"
+	return true
 
 
 func _touch_jump() -> bool:

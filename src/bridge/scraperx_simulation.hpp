@@ -20,6 +20,9 @@ public:
     ScraperXSimulation();
 
     [[nodiscard]] bool configure_initial_spawn(std::int64_t initial_spawn);
+    [[nodiscard]] bool configure_regression_spawn(std::int64_t initial_spawn);
+    [[nodiscard]] std::int64_t get_entity_body_count(std::int64_t entity) const;
+    [[nodiscard]] std::int64_t get_moving_body_count() const;
     [[nodiscard]] bool set_move_input(double world_x, double world_z);
     [[nodiscard]] bool set_facing(double world_x, double world_z);
     [[nodiscard]] bool request_jump();

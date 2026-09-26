@@ -313,6 +313,7 @@ var _settings: SettingsStore
 var _uitest: Node
 var _force_touch := false
 var _uitest_scenario := ""
+var _regression_scene := false
 var _paused := false
 var _telemetry_on := false
 var _ctx := {}
@@ -439,6 +440,8 @@ func _ready() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument == "--ci":
 			_ci_mode = true
+		elif argument == "--regression-fixtures":
+			_regression_scene = true
 		elif argument == "--touch":
 			_force_touch = true
 		elif argument.begins_with("--capture="):
@@ -447,6 +450,11 @@ func _ready() -> void:
 			_uitest_scenario = argument.trim_prefix("--uitest=")
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
+
+	if not _uitest_scenario.is_empty() and _uitest_scenario != "ground_foundation":
+		_regression_scene = true
+	if _ci_mode:
+		_regression_scene = true
 
 	RenderingServer.set_default_clear_color(Color("0e0d0c"))
 	_build_world()
@@ -474,6 +482,8 @@ func _ready() -> void:
 	if _native == null:
 		_fail_native("SCRAPERX_EXTENSION_INSTANTIATION_FAILED", 20)
 		return
+	if _regression_scene and _uitest_scenario.is_empty():
+		_native.configure_regression_spawn(8)
 
 	if not _uitest_scenario.is_empty():
 		_uitest = (load(UI_TEST_DRIVER_PATH) as GDScript).new()
@@ -490,7 +500,8 @@ func _ready() -> void:
 
 	_build_kit()
 
-	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006")
+	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=%s" %
+		("regression_fixtures work_order=WO-006" if _regression_scene else "ground_foundation"))
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
 		int(_viewport_size.x), int(_viewport_size.y),
 		_viewport_size.x / maxf(1.0, _viewport_size.y), _camera.fov, _camera.far])
@@ -1369,22 +1380,24 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
 			int(_native.get_death_count()), crouched)
-		_audio.update_machines(delta, float(_native.get_orifice_mass_flow_kg_per_s()),
-			_native.get_hoist_scoop_position(), _native.get_ballast_position(),
-			_native.get_ballast_linear_velocity(), _native.get_tipper_position(),
-			float(_native.get_tipper_angle_radians()), _native.get_lift_platform_position(),
-			_native.get_lift_platform_linear_velocity())
-		_audio.update_water_screw(float(_native.get_water_screw_rpm()),
-			float(_native.get_water_screw_motor_torque_nm()))
-		_audio.update_water_lift(float(_native.get_water_lift_valve_flow_m3_s()),
-			float(_native.get_water_lift_rope_tension_n()))
+		if _regression_scene:
+			_audio.update_machines(delta, float(_native.get_orifice_mass_flow_kg_per_s()),
+				_native.get_hoist_scoop_position(), _native.get_ballast_position(),
+				_native.get_ballast_linear_velocity(), _native.get_tipper_position(),
+				float(_native.get_tipper_angle_radians()), _native.get_lift_platform_position(),
+				_native.get_lift_platform_linear_velocity())
+			_audio.update_water_screw(float(_native.get_water_screw_rpm()),
+				float(_native.get_water_screw_motor_torque_nm()))
+			_audio.update_water_lift(float(_native.get_water_lift_valve_flow_m3_s()),
+				float(_native.get_water_lift_rope_tension_n()))
 	# The developer telemetry overlay costs a dozen string formats a frame;
 	# it is only paid for while the overlay is actually on screen.
 	if _telemetry_on:
 		_write_telemetry(position, velocity, grounded)
-	_mirror_machine(float(_native.get_valve_open_fraction()),
-		float(_native.get_orifice_mass_flow_kg_per_s()))
-	_mirror_water_screw()
+	if _regression_scene:
+		_mirror_machine(float(_native.get_valve_open_fraction()),
+			float(_native.get_orifice_mass_flow_kg_per_s()))
+		_mirror_water_screw()
 	_render_kit()
 
 
@@ -1784,21 +1797,25 @@ func _build_world() -> void:
 	_add_box("TowerMass", Vector3(92.0, 1600.0, 80.0), Vector3(-30.0, 800.0, -330.0), concrete)
 
 	_build_stack(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
-	_build_stack_accents(verdigris, machine_blue, lichen)
-	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
-	_build_intake_rise(concrete, mill_scale, oxidised, rust_deep, rust_bright,
-		galvanised, faded_yellow, hazard, timber)
-	_build_water_screw(concrete, mill_scale, oxidised, galvanised, faded_yellow, hazard)
-	_build_legal_forty(concrete, mill_scale, oxidised, rust_deep, rust_bright,
-		galvanised, faded_yellow, hazard, timber)
-	_build_hook5_rack(concrete, mill_scale, oxidised, galvanised, faded_yellow, hazard)
-	_build_yard(concrete, mill_scale, faded_yellow, tar)
-	_build_legacy_fixtures(mill_scale, galvanised, hazard, faded_yellow)
-	_build_plant(mill_scale, oxidised, galvanised, hazard, faded_yellow)
+	if _regression_scene:
+		_build_stack_accents(verdigris, machine_blue, lichen)
+		_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
+		_build_intake_rise(concrete, mill_scale, oxidised, rust_deep, rust_bright,
+			galvanised, faded_yellow, hazard, timber)
+		_build_water_screw(concrete, mill_scale, oxidised, galvanised, faded_yellow, hazard)
+		_build_legal_forty(concrete, mill_scale, oxidised, rust_deep, rust_bright,
+			galvanised, faded_yellow, hazard, timber)
+		_build_hook5_rack(concrete, mill_scale, oxidised, galvanised, faded_yellow, hazard)
+		_build_yard(concrete, mill_scale, faded_yellow, tar)
+		_build_legacy_fixtures(mill_scale, galvanised, hazard, faded_yellow)
+		_build_plant(mill_scale, oxidised, galvanised, hazard, faded_yellow)
+	else:
+		_build_stack_continuation(oxidised, rust_deep, mill_scale, galvanised, faded_yellow)
 	_build_mountains_and_waterfall()
 	_build_kellerworks_signage(timber, faded_yellow)
-	_build_gear_motif(mill_scale, oxidised)
-	_build_crane(mill_scale, hazard)
+	if _regression_scene:
+		_build_gear_motif(mill_scale, oxidised)
+		_build_crane(mill_scale, hazard)
 	_build_foliage()
 	_build_lighting()
 
@@ -2541,6 +2558,10 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 				rust_bright)
 			stringer.rotation = Vector3(0.0, 0.0, side * pitch)
 
+	# Ordinary stairs remain the optional, slower route. Retired machines do not.
+	if not _regression_scene:
+		_build_stack_footings(rust_deep, oxidised, mill_scale)
+		return
 	_build_stack_dressing(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded)
 	_build_stack_megastructure(mill_scale, oxidised, rust_deep, rust_bright, galvanised,
 		faded, timber)
@@ -3393,6 +3414,8 @@ func _build_lighting() -> void:
 		base_flood.omni_attenuation = 1.3
 		_light_rig.add_child(base_flood)
 
+	if not _regression_scene:
+		return
 	_fire_box = OmniLight3D.new()
 	_fire_box.name = "FireBox"
 	_fire_box.position = Vector3(30.5, 1.2, -100.0)
@@ -3684,6 +3707,8 @@ func _build_kellerworks_signage(timber: Material, faded: Material) -> void:
 	$TowerPresentation.add_child(wordmark)
 	_add_chevron_mark(Vector3(0.0, 52.6, -142.1), 1.4, faded)
 
+	if not _regression_scene:
+		return
 	# Lift signage near the platform (identity doc item 7): a display
 	# designation distinct from the internal native entity ID (16).
 	_add_box("LiftSignBacking", Vector3(1.6, 1.0, 0.12), Vector3(13.0, 8.7, -99.1), backing)

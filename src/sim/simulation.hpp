@@ -20,6 +20,9 @@ struct Quaternion final {
     double w = 1.0;
 };
 
+// Production never constructs the retired campaign. Regression scenes are explicit test inputs.
+enum class WorldContent : std::uint8_t { GroundFoundation, RegressionFixtures };
+
 enum class InitialSpawn : std::uint8_t {
     StaticDeck = 0,
     TranslatingSupport = 1,
@@ -467,7 +470,10 @@ public:
     // player can resolve from grade; haze and stack plume shear it earlier.
     static constexpr double kTowerHeightMeters = 1600.0;
 
-    explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ExteriorGrade);
+    explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ExteriorGrade,
+                        WorldContent content = WorldContent::GroundFoundation);
+    [[nodiscard]] std::uint32_t entity_body_count(std::uint64_t entity) const noexcept;
+    [[nodiscard]] std::uint32_t moving_body_count() const noexcept;
     ~Simulation();
 
     Simulation(const Simulation &) = delete;

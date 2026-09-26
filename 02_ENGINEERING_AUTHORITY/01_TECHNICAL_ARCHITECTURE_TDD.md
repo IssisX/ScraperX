@@ -906,7 +906,7 @@ Demonstrate one complete chain on the kernel:
 
 This is the first point at which ScraperX has proven its defining architecture.
 
-Do not scale content before this slice is real. After it is real, assemble from atlas band B00 upward using the same primitives. Do not author a second tower.
+This slice is historical regression substrate. The owner-directed reset of 2026-09-26 removes the old campaign from normal play while retaining the full controller and ordinary fallback stairs/ramps. New macro mechanisms start from grade under the revised Atlas. Do not resume the retired B00/AS-001–015 content queue or treat fixture results as current campaign progress.
 
 That point has been passed. Band assembly is the `AS-*` queue in `03_EXECUTION/ASCENT/`; the kernel
 is closed and is now regression substrate only.

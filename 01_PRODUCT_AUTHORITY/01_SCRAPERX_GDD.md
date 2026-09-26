@@ -130,7 +130,7 @@ The opening must communicate by play that:
 - the tower extends far beyond the immediate problem;
 - ascent is the durable direction.
 
-The opening location and jammed-intake situation are specified in `02_ASCENT_ATLAS.md` band B00. Exact incident cast, dialogue, and scripted flavor beyond that physical problem remain unspecified.
+The opening location and ground-up macro mechanism direction are specified in `02_ASCENT_ATLAS.md`; the former jammed-intake campaign is retired by the owner-directed reset of 2026-09-26. Exact incident cast, dialogue, and scripted flavor beyond that physical problem remain unspecified.
 
 ---
 
@@ -355,6 +355,10 @@ Machine success must follow the authoritative machine state and physical constra
 # 16. Causal stacking and Rube-Goldberg play
 
 Large-scale causal stacking is a defining feature.
+
+The owner-directed ground reset of 2026-09-26 makes visual readability a first-order design constraint. Large rolling masses, gravity drops, levers, pendulums, falling slabs and direct contacts do the heavy work. Their full causal handoffs must be visible from ordinary play positions. Small retainers may release stored energy, but a long sequence of tiny, mostly invisible pin/valve/rigging operations is not the desired core play. Prefer fewer larger useful actions over intricate machinery that only telemetry explains.
+
+The old campaign, including its ground water screw/lift, is retired. Preserve the tower setting, complete parkour capability and ordinary ramps/stairs (and genuinely usable ladders where implemented) as an optional fallback while new mechanisms start at grade. Players who decline both mechanism solving and athletic climbing must still have a straightforward route; its longer travel is enough of a tradeoff. A new design must improve physical closure, appearance and useful pacing; a green test of the previous mechanism does not override the player's observed rejection.
 
 A representative chain is:
 
@@ -600,9 +604,9 @@ The following remain open because they are not required to define the product, o
 
 These are specified in `02_ASCENT_ATLAS.md` and must not be re-invented by a work order:
 
-- opening location and jammed-intake problem;
-- vertical datum, band cuts, braid identities, Transfer Plates;
-- named modules and kernel IDs used by WO-001–008;
+- opening location and the macro-mechanism reset;
+- vertical datum, authored support locations and receiving handoffs;
+- the distinction between current campaign content and historical kernel fixture IDs;
 - physical summit predicate on the 1600 m deck.
 
 Downstream work must use those atlas facts rather than author a second tower.

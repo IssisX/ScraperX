@@ -178,6 +178,7 @@ jobs:
           awk -F'restored_y=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
             artifacts/native-falsifiers.log
           grep -F "restored_carry=56" artifacts/native-falsifiers.log
+          # Retired regression fixture ONLY; not shipped campaign progress.
           # Ground screw: finite drive raises the conserved water mass required
           # by the receiving +8 m lift; rival shortcut conditions must fail.
           awk -F'tank_m3=' '/ground water screw/ {split($2,a," "); exit (a[1]+0 >= 1.999) ? 0 : 1}' \
@@ -241,7 +242,26 @@ jobs:
           awk -F'lattice_top_y=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 198.20 && a[1]+0 <= 198.30) ? 0 : 1}' \
             artifacts/native-falsifiers.log
 
-      - name: Run Godot at Fold aspect through native machine authority and capture proof
+      - name: Prove cleared default scene and retained fallback stairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=1 kit_bodies=0 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim fallback stairs: levels=14" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
+          mkdir -p artifacts/screenshots godot/.godot
+          printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            > godot/.godot/extension_list.cfg
+          timeout 300s xvfb-run -a -s "-screen 0 1728x1485x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
+            -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
+            2>&1 | tee artifacts/godot-foundation.log
+          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=1 retired_meshes=0 default_controls=1" artifacts/godot-foundation.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
+          test -s artifacts/screenshots/foundation_cleared_grade.png
+          test -s artifacts/screenshots/foundation_cleared_tower.png
+
+      - name: Regression fixture - native machine authority and Fold-aspect capture
         shell: bash
         run: |
           set -euo pipefail
@@ -273,7 +293,7 @@ jobs:
           awk -F'peak_lift=' '/SCRAPERX_WO006_MACHINE_PROOF/ {split($2,a," "); exit (a[1]+0 > 6.0) ? 0 : 1}' \
             artifacts/godot-runtime.log
 
-      - name: Drive every control path through the real input pipeline
+      - name: Regression fixtures - drive controller and mechanism input paths
         shell: bash
         run: |
           set -euo pipefail
@@ -322,6 +342,10 @@ jobs:
             2>&1 | tee artifacts/world-solids-export.log
           grep -F "SCRAPERX_SOLIDS boxes=" artifacts/world-solids-export.log
           diff -u src/sim/world_solids.inc artifacts/world_solids.regenerated.inc
+          timeout 300s tools/godot/godot --headless --path godot \
+            -- --regression-fixtures "--export-solids=${GITHUB_WORKSPACE}/artifacts/fixture_solids.regenerated.inc" \
+            2>&1 | tee artifacts/fixture-solids-export.log
+          diff -u tests/fixtures/world_solids.inc artifacts/fixture_solids.regenerated.inc
 
       - name: Cross-compile native graph for Android arm64
         shell: bash
@@ -362,28 +386,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > artifacts/WO-006-EVIDENCE.md <<EOF
-          # WO-004..006 Evidence
+          cat > artifacts/GROUND-RESET-EVIDENCE.md <<EOF
+          # Ground reset evidence
 
           Source commit: \`${GITHUB_SHA}\`
 
-          Proven by this workflow:
+          Proven for the default scene by this workflow:
 
-          - WO-001 fixed-step, invalid-input, static-support, and static-locomotion regressions remained green;
-          - WO-002 moving-support regressions remained green: translating and rotating Jolt supports with stable entity IDs, real support-point velocity, material inherited jump momentum, and contact-point velocity matching \`v_linear + omega x r\` within the work-order tolerance;
-          - native host tests proved the WO-003 traversal suite against real Jolt geometry: a vault that crosses a real rail onto a validated far landing while retaining approach momentum, a mantle that ends grounded on ledge entity 6, a ledge hang that holds against gravity on entity 7, a hang on the kinematic moving ledge (entity 8) carried at the support's own velocity and mantled onto that moving support, refusal of the obstructed landing behind entity 9/10 with no player rise, and traversal frame-partition invariance;
-          - Godot 4.7 loaded the same current-source GDExtension, mirrored native support poses, jumped from support entity 3, and observed inherited momentum;
-          - WO-006 host tests proved the coupled machine: the falling ballast drives a hinged tipper, the tipper drags a tension-only rope, the rope opens a real valve, the valve vents a finite pressure vessel into an actuator cylinder, and the cylinder lifts a counterweighted platform past six metres; a shut valve passes exactly zero mass; with the boiler feed cut the vessel's available energy never increases and the lift fades; a player standing on the tipper opens the same valve; and the whole machine is frame-partition invariant;
-          - one unseeded native player run starts the ground Archimedes screw, walks to the fill valve, transfers its conserved water to the bucket, boards and rides the moving cage eight metres, and stands on the fixed dock; the receiving bucket's clear geometry holds the modeled 2.0 m³ with freeboard;
-          - the Godot runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856, 1.164) with stretch=expand, an 82 degree vertical field of view and a 2600 m far plane;
-          - the same runtime spawned outdoors at grade, walked the tower approach, and observed the native machine open its valve past half and lift the platform past six metres;
-          - one first-person approach-and-machine screenshot was captured from that runtime;
-          - fourteen scripted interface scenarios drove touch (jump, simultaneous move and look, climb, vault, hang then drop, hang then climb up, chute, lethal-fall announcement, sump valve, yard jib pendant, pause and resume), gamepad (move, jump, look, pause, KX-JIB pendant) and keyboard (move, jump, action, pause) through the viewport's real input pipeline, each asserting the resulting native state change; the same runs asserted the first-person hands on the grip points the native hang ledge implies, planted on the ledge during a mantle, on the canopy toggles, and holding the crane remote;
-          - the native graph cross-compiled for Android arm64-v8a;
-          - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
-          - the APK checksum and checkpoint identity were recorded.
+          - Native body enumeration finds no retired campaign/fixture entities, one moving body (the player), and no mechanism-kit bodies or cables.
+          - Normal native locomotion, crouch, jump and grade landing execute without legacy construction.
+          - The default world's ordinary fallback staircase is walked through all fourteen flights to the 154 m deck without requesting a jump.
+          - The rendered default scene rejects retired machinery nodes and verifies actual input-driven player movement, jump, crouch and pause. Screenshots are foundation_cleared_grade.png and foundation_cleared_tower.png.
+          - Normal rendered solid geometry matches the native production table; separately selected regression geometry matches its separate fixture table.
+          - The native graph cross-compiles for Android arm64 and Godot exports the exact-source APK, with its native library, checkpoint identity and checksum.
 
-          Not proven here: APK installation, Android execution, Fold 6 observation on the real panel, sustained frame rate, thermals, touch ergonomics, the fall/parachute/checkpoint loop, load-bearing structural simulation, process/isolation networks, persistence, NPCs, missions, or a complete game loop.
+          Separately proven in explicitly selected regression fixtures:
+
+          - Retained physics/controller tests cover moving-support velocity, vault, mantle, hang, crouch, carry, parachute, falling/checkpoint behaviour and the old machine kernels.
+          - Legacy intake, water screw/lift, counterweight, plant and rigging scenarios remain regression tests. Their green results do not describe normal campaign content or validate the owner's rejected screw experience.
+          - The old approach-and-machine capture and audio_mix exercise the selected regression scene; they are not screenshots or device measurements of the cleared campaign.
+
+          Not proven: a replacement macro mechanism, APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals, a completed tower ascent or the proposed +8 m balance bridge. The owner-requested ordinary stairs remain an optional route, not a mechanism proof.
           EOF
 
       - name: Publish immutable checkpoint build and evidence

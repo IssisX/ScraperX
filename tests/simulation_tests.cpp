@@ -87,7 +87,7 @@ scraperx::sim::Snapshot run_mantle_command_stream(const bool single_fixed_steps)
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
 
-    Simulation simulation(InitialSpawn::MantleApproach);
+    Simulation simulation(InitialSpawn::MantleApproach, scraperx::sim::WorldContent::RegressionFixtures);
     require(simulation.set_facing(1.0, 0.0), "partition run must accept facing");
 
     const auto run_one_second = [&simulation, single_fixed_steps]() {
@@ -604,7 +604,79 @@ int main() {
     using scraperx::sim::Snapshot;
     using scraperx::sim::TraversalState;
 
-    Simulation partitioned;
+    // The actual shipped default must contain no retired machinery, including
+    // static frames or invisible colliders. Do not select a fixture spawn here.
+    {
+        Simulation foundation;
+        for (std::uint64_t entity = 3; entity <= 59; ++entity) {
+            if (entity == Simulation::kTowerEntityId || entity == Simulation::kWorldSolidEntityId) {
+                continue;
+            }
+            require(foundation.entity_body_count(entity) == 0,
+                    "default world must not construct a retired fixture or campaign body");
+        }
+        require(foundation.moving_body_count() == 1,
+                "the player must be the only moving body in the cleared foundation");
+        require(foundation.kit_body_count() == 0 && foundation.kit_cable_count() == 0,
+                "default world must not construct the water lift or upper counterweight lifts");
+        require(foundation.entity_body_count(Simulation::kTowerEntityId) > 1 &&
+                    foundation.entity_body_count(Simulation::kWorldSolidEntityId) > 0,
+                "the tower frame and environment must remain real collision geometry");
+        (void)foundation.advance_frame(1.0);
+        require(foundation.snapshot().player_grounded, "default player must settle at grade");
+        const auto start = foundation.snapshot().player_position;
+        (void)foundation.set_move_input(1.0, 0.0);
+        (void)foundation.advance_frame(0.5);
+        (void)foundation.set_move_input(0.0, 0.0);
+        require(foundation.snapshot().player_position.x > start.x + 1.0,
+                "normal locomotion must work without legacy machinery");
+        (void)foundation.set_crouch_input(true);
+        (void)foundation.advance_frame(0.2);
+        require(foundation.snapshot().player_crouched, "default crouch must remain functional");
+        (void)foundation.set_crouch_input(false);
+        (void)foundation.advance_frame(0.2);
+        (void)foundation.request_jump();
+        (void)foundation.advance_frame(0.1);
+        require(!foundation.snapshot().player_grounded && foundation.snapshot().player_linear_velocity.y > 2.0,
+                "default jump must remain functional");
+        (void)foundation.advance_frame(2.0);
+        require(foundation.snapshot().player_grounded && foundation.snapshot().death_count == 0,
+                "the default jump must land safely on grade");
+        std::cout << "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=1 kit_bodies=0 locomotion=1 crouch=1 jump=1\n";
+    }
+
+    {
+        Simulation fallback;
+        (void)fallback.advance_frame(0.5);
+        walk_toward(fallback, -25.0, -118.0, 20.0);
+        walk_toward(fallback, -25.0, -128.5, 6.0);
+        for (int level = 0; level < 14; ++level) {
+            const double side = level % 2 == 0 ? 1.0 : -1.0;
+            const double band = -150.0 + side * 21.5;
+            walk_toward(fallback, -side * 20.0, band, 12.0);
+            walk_toward(fallback, side * 21.0, band, 16.0);
+            const auto at = fallback.snapshot();
+            const double deck = 11.0 * (level + 1);
+            require(at.player_grounded && at.player_position.y > deck + 0.5 &&
+                        at.player_position.y < deck + 1.5,
+                    "default fallback must walk every flight without a machine or jump");
+            walk_toward(fallback, side * 21.5, -150.0 - side * 21.5, 12.0);
+        }
+        require(fallback.snapshot().death_count == 0,
+                "default fallback must reach the top without a death restore");
+        std::cout << "PASS scraperx_sim fallback stairs: levels=14 top_y="
+                  << fallback.snapshot().player_position.y << " jump_requests=0\n";
+
+        Simulation drop(InitialSpawn::HighDrop);
+        (void)drop.advance_frame(8.0);
+        require(drop.snapshot().death_count == 1 && drop.snapshot().player_grounded,
+                "default fatal fall must restore safely without any legacy body queries");
+        require(drop.moving_body_count() == 1 && drop.kit_body_count() == 0,
+                "checkpoint restore must not recreate retired machinery");
+        std::cout << "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0\n";
+    }
+
+    Simulation partitioned(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     for (std::uint32_t i = 0; i < Simulation::kTickRateHz; ++i) {
         const auto result = partitioned.advance_frame(Simulation::kFixedStepSeconds);
         require(result.accepted, "fixed-step input must be accepted");
@@ -616,7 +688,7 @@ int main() {
     require(nearly_equal(partitioned_snapshot.simulation_time_seconds, 1.0),
             "tick-derived simulation time must equal one second");
 
-    Simulation batched;
+    Simulation batched(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     const auto batched_result = batched.advance_frame(1.0);
     const auto batched_snapshot = batched.snapshot();
     require(batched_result.accepted, "one-second frame input must be accepted");
@@ -637,7 +709,7 @@ int main() {
                              1.0e-6),
             "frame partitioning must not change native player position");
 
-    Simulation remainder(InitialSpawn::StaticDeck);
+    Simulation remainder(InitialSpawn::StaticDeck, scraperx::sim::WorldContent::RegressionFixtures);
     require(remainder.advance_frame(Simulation::kFixedStepSeconds * 0.5).steps_advanced == 0,
             "half a fixed step must remain buffered");
     require(remainder.advance_frame(Simulation::kFixedStepSeconds * 0.5).steps_advanced == 1,
@@ -652,7 +724,7 @@ int main() {
     require(remainder.snapshot().tick_index == before_invalid.tick_index,
             "rejected frame input must not mutate authoritative state");
 
-    Simulation supported(InitialSpawn::StaticDeck);
+    Simulation supported(InitialSpawn::StaticDeck, scraperx::sim::WorldContent::RegressionFixtures);
     require(supported.advance_frame(2.0).accepted,
             "static-deck settling interval must be accepted");
     const auto supported_snapshot = supported.snapshot();
@@ -687,7 +759,7 @@ int main() {
                                 before_rejected_command.player_position) > 0.5,
             "a rejected movement command must not replace the last accepted command");
 
-    Simulation translating(InitialSpawn::TranslatingSupport);
+    Simulation translating(InitialSpawn::TranslatingSupport, scraperx::sim::WorldContent::RegressionFixtures);
     require(translating.set_move_input(0.0, 0.0),
             "zero relative movement must be accepted on a translating support");
     require(translating.advance_frame(1.0).accepted,
@@ -727,7 +799,7 @@ int main() {
     require(translating_airborne.player_linear_velocity.x * translating_support_velocity.x > 0.0,
             "air control must not immediately cancel inherited translating support momentum");
 
-    Simulation rotating(InitialSpawn::RotatingSupport);
+    Simulation rotating(InitialSpawn::RotatingSupport, scraperx::sim::WorldContent::RegressionFixtures);
     require(rotating.set_move_input(0.0, 0.0),
             "zero relative movement must be accepted on a rotating support");
     require(rotating.advance_frame(1.2).accepted,
@@ -763,7 +835,7 @@ int main() {
 
     // ---- WO-003 athletic traversal ---------------------------------------
 
-    Simulation vault(InitialSpawn::VaultApproach);
+    Simulation vault(InitialSpawn::VaultApproach, scraperx::sim::WorldContent::RegressionFixtures);
     require(vault.set_facing(1.0, 0.0), "vault facing must be accepted");
     require(vault.set_move_input(0.0, 0.0), "vault settle input must be accepted");
     require(vault.advance_frame(1.0).accepted, "vault settling interval must be accepted");
@@ -807,7 +879,7 @@ int main() {
     // vaults the same rail, on the ground vault's own terms; a second press
     // after the window, or with nothing vaultable ahead, is only a jump.
     const auto jump_vault_attempt = [](const double facing_x, const std::uint32_t gap_ticks) {
-        Simulation run(InitialSpawn::VaultApproach);
+        Simulation run(InitialSpawn::VaultApproach, scraperx::sim::WorldContent::RegressionFixtures);
         (void)run.set_facing(facing_x, 0.0);
         (void)run.set_move_input(0.0, 0.0);
         (void)run.advance_frame(1.0);
@@ -847,7 +919,7 @@ int main() {
     require(!away_tap_vaulting && away_tapped.jump_vault_count == 0,
             "a double-tap with nothing vaultable ahead must not vault");
 
-    Simulation mantle(InitialSpawn::MantleApproach);
+    Simulation mantle(InitialSpawn::MantleApproach, scraperx::sim::WorldContent::RegressionFixtures);
     require(mantle.set_facing(1.0, 0.0), "mantle facing must be accepted");
     require(mantle.advance_frame(1.0).accepted, "mantle settling interval must be accepted");
     const auto mantle_ready = mantle.snapshot();
@@ -892,7 +964,7 @@ int main() {
     require(mantled.accepted_traversal_count == 1, "the mantle must record one accepted traversal");
     require(mantled.aborted_traversal_count == 0, "a valid mantle must not abort");
 
-    Simulation hang(InitialSpawn::HangApproach);
+    Simulation hang(InitialSpawn::HangApproach, scraperx::sim::WorldContent::RegressionFixtures);
     require(hang.set_facing(1.0, 0.0), "hang facing must be accepted");
     require(hang.set_move_input(1.0, 0.0), "hang approach input must be accepted");
     require(advance_until(hang,
@@ -928,7 +1000,7 @@ int main() {
     require(hang.snapshot().player_position.y > 4.4,
             "the hang mantle must lift the player onto the real ledge top");
 
-    Simulation moving(InitialSpawn::MovingLedgeApproach);
+    Simulation moving(InitialSpawn::MovingLedgeApproach, scraperx::sim::WorldContent::RegressionFixtures);
     require(moving.set_facing(1.0, 0.0), "moving-ledge facing must be accepted");
     require(moving.set_move_input(1.0, 0.0), "moving-ledge approach input must be accepted");
     require(advance_until(moving,
@@ -972,7 +1044,7 @@ int main() {
                           2.0),
             "the moving mantle must end grounded on the kinematic support");
 
-    Simulation released(InitialSpawn::MovingLedgeApproach);
+    Simulation released(InitialSpawn::MovingLedgeApproach, scraperx::sim::WorldContent::RegressionFixtures);
     require(released.set_facing(1.0, 0.0), "release-test facing must be accepted");
     require(released.set_move_input(1.0, 0.0), "release-test approach input must be accepted");
     require(advance_until(released,
@@ -1001,7 +1073,7 @@ int main() {
     require(!released.request_release(),
             "release must be refused when the player is not hanging");
 
-    Simulation blocked(InitialSpawn::BlockedLedgeApproach);
+    Simulation blocked(InitialSpawn::BlockedLedgeApproach, scraperx::sim::WorldContent::RegressionFixtures);
     require(blocked.set_facing(-1.0, 0.0), "blocked-ledge facing must be accepted");
     require(blocked.advance_frame(1.0).accepted, "blocked-ledge settling interval must be accepted");
     const auto blocked_ready = blocked.snapshot();
@@ -1042,7 +1114,7 @@ int main() {
 
     // ---- WO-006 coupled machine -----------------------------------------
 
-    Simulation machine(InitialSpawn::ExteriorGrade);
+    Simulation machine(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     const auto machine_start = machine.snapshot();
     require(machine_start.player_position.z < -20.0 && machine_start.player_position.y < 2.0,
             "the default spawn must be outdoors at grade, short of the tower");
@@ -1073,7 +1145,7 @@ int main() {
 
     // Governing Law 24: the plant cannot manufacture work. With the boiler feed
     // cut it is a strictly finite reservoir, and the lift must fade and stop.
-    Simulation starved(InitialSpawn::ExteriorGrade);
+    Simulation starved(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     starved.set_boiler_feed_enabled(false);
     const auto starved_first = run_machine_cycles(starved, 26.0);
     require(starved_first.peak_lift_height > 5.0,
@@ -1103,7 +1175,7 @@ int main() {
     // capsule took Jolt's default density, 602.9 kg, and simply outweighed the
     // machine). Player authority over the plant must come from leverage and
     // timing, which is what the catwalk treadle below provides.
-    Simulation disturbed(InitialSpawn::MachineYard);
+    Simulation disturbed(InitialSpawn::MachineYard, scraperx::sim::WorldContent::RegressionFixtures);
     require(disturbed.set_facing(1.0, 0.0), "yard facing must be accepted");
     require(disturbed.set_move_input(1.0, 0.0), "yard approach input must be accepted");
     require(advance_until(disturbed,
@@ -1123,12 +1195,12 @@ int main() {
             "standing on the tipper must not open the valve by body mass alone");
 
     // The machine is fixed-step-owned like everything else.
-    Simulation machine_partitioned(InitialSpawn::ExteriorGrade);
+    Simulation machine_partitioned(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz * 20; ++tick) {
         require(machine_partitioned.advance_frame(Simulation::kFixedStepSeconds).accepted,
                 "machine partition step must be accepted");
     }
-    Simulation machine_batched(InitialSpawn::ExteriorGrade);
+    Simulation machine_batched(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     require(machine_batched.advance_frame(20.0).accepted,
             "machine batched interval must be accepted");
     const auto partitioned_machine = machine_partitioned.snapshot();
@@ -1168,7 +1240,7 @@ int main() {
               << " accepted=" << moving.snapshot().accepted_traversal_count << '\n';
     // ---- WO-008 fall / parachute / checkpoint ----------------------------
 
-    Simulation lethal(InitialSpawn::HighDrop);
+    Simulation lethal(InitialSpawn::HighDrop, scraperx::sim::WorldContent::RegressionFixtures);
     const auto lethal_start = lethal.snapshot();
     require(lethal_start.death_count == 0, "a fresh simulation must start with zero deaths");
     require(!advance_until(lethal,
@@ -1197,7 +1269,7 @@ int main() {
     require(std::abs(lethal_result.player_linear_velocity.y) < 0.05,
             "a checkpoint restore must zero velocity, not merely reposition the body");
 
-    Simulation survivable(InitialSpawn::SurvivableDrop);
+    Simulation survivable(InitialSpawn::SurvivableDrop, scraperx::sim::WorldContent::RegressionFixtures);
     require(advance_until(survivable,
                           [](const Snapshot &state) { return state.player_grounded; },
                           4.0),
@@ -1205,7 +1277,7 @@ int main() {
     require(survivable.snapshot().death_count == 0,
             "an ordinary ~12 m platforming fall must never be lethal (GDD 8.2)");
 
-    Simulation chuted(InitialSpawn::HighDrop);
+    Simulation chuted(InitialSpawn::HighDrop, scraperx::sim::WorldContent::RegressionFixtures);
     require(chuted.advance_frame(0.5).accepted, "early free-fall interval must be accepted");
     require(chuted.snapshot().fall_state == scraperx::sim::FallState::Airborne,
             "the player must be genuinely airborne before deploying");
@@ -1227,7 +1299,7 @@ int main() {
     require(chuted_result.last_impact_speed_mps > 5.0,
             "drag must be a real decelerating force, not an instant velocity clamp to near-zero");
 
-    Simulation late_chute(InitialSpawn::HighDrop);
+    Simulation late_chute(InitialSpawn::HighDrop, scraperx::sim::WorldContent::RegressionFixtures);
     require(advance_until(late_chute,
                           [](const Snapshot &state) {
                               return state.player_position.y < 3.0;
@@ -1243,7 +1315,7 @@ int main() {
                           2.0),
             "deploying too late must not fabricate a save: the fall must still kill");
 
-    Simulation grounded_parachute(InitialSpawn::StaticDeck);
+    Simulation grounded_parachute(InitialSpawn::StaticDeck, scraperx::sim::WorldContent::RegressionFixtures);
     require(grounded_parachute.advance_frame(1.0).accepted,
             "grounded settling interval must be accepted");
     require(grounded_parachute.snapshot().player_grounded,
@@ -1255,7 +1327,7 @@ int main() {
     require(!grounded_parachute.snapshot().parachute_deployed,
             "a deploy request while grounded must produce no state change (GDD 8.3)");
 
-    Simulation committed(InitialSpawn::MachineYard);
+    Simulation committed(InitialSpawn::MachineYard, scraperx::sim::WorldContent::RegressionFixtures);
     require(committed.set_facing(1.0, 0.0), "checkpoint test facing must be accepted");
     require(committed.set_move_input(1.0, 0.0), "checkpoint test approach input must be accepted");
     require(advance_until(committed,
@@ -1309,7 +1381,7 @@ int main() {
     // seeded at construction -- if restore is real, the ballast must return to
     // its pristine seeded height, not the height the autonomous cycle had
     // already carried it to by the moment of death.
-    Simulation machine_restore(InitialSpawn::HighDrop);
+    Simulation machine_restore(InitialSpawn::HighDrop, scraperx::sim::WorldContent::RegressionFixtures);
     const double seeded_ballast_y = machine_restore.snapshot().ballast_position.y;
     require(machine_restore.advance_frame(2.5).accepted,
             "letting the machine run autonomously before death must be accepted");
@@ -1330,12 +1402,12 @@ int main() {
             "the player, is part of the checkpoint");
 
     // Frame-partition invariance for the whole subsystem.
-    Simulation fall_partitioned(InitialSpawn::HighDrop);
+    Simulation fall_partitioned(InitialSpawn::HighDrop, scraperx::sim::WorldContent::RegressionFixtures);
     for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz * 4; ++tick) {
         require(fall_partitioned.advance_frame(Simulation::kFixedStepSeconds).accepted,
                 "fall-subsystem partition step must be accepted");
     }
-    Simulation fall_batched(InitialSpawn::HighDrop);
+    Simulation fall_batched(InitialSpawn::HighDrop, scraperx::sim::WorldContent::RegressionFixtures);
     require(fall_batched.advance_frame(4.0).accepted,
             "fall-subsystem batched interval must be accepted");
     const auto partitioned_fall = fall_partitioned.snapshot();
@@ -1365,7 +1437,7 @@ int main() {
     // What was never proven is that the structural/process consequence
     // (the piston lifting the platform) changes what is reachable, and that
     // the newly reached position is what the checkpoint system persists.
-    Simulation chain(InitialSpawn::LiftPlatform);
+    Simulation chain(InitialSpawn::LiftPlatform, scraperx::sim::WorldContent::RegressionFixtures);
     require(chain.set_facing(0.0, -1.0), "chain facing toward the catwalk must be accepted");
     require(chain.set_move_input(0.0, -1.0), "chain move-to-edge input must be accepted");
     require(advance_until(chain,
@@ -1444,7 +1516,7 @@ int main() {
     // catwalk mantle band for a fraction of a second every 26 s, whereas a body
     // standing on the pedal parks the lift inside that band for as long as it
     // stands there. GDD 16: change machinery -> change access -> change traversal.
-    Simulation idle_plant(InitialSpawn::MachineYard);
+    Simulation idle_plant(InitialSpawn::MachineYard, scraperx::sim::WorldContent::RegressionFixtures);
     require(idle_plant.advance_frame(8.0).accepted, "control-plant interval must be accepted");
     const auto idle_eight = idle_plant.snapshot();
     require(idle_eight.valve_open_fraction == 0.0,
@@ -1453,7 +1525,7 @@ int main() {
             "with nobody on the treadle the lift must still be parked -- the machine does not "
             "open this route on its own at this moment");
 
-    Simulation treadle(InitialSpawn::CatwalkTreadle);
+    Simulation treadle(InitialSpawn::CatwalkTreadle, scraperx::sim::WorldContent::RegressionFixtures);
     const auto treadle_spawn = treadle.snapshot();
     require(std::abs(treadle_spawn.treadle_angle_radians) < 0.01 &&
                 treadle_spawn.valve_open_fraction == 0.0,
@@ -1547,7 +1619,7 @@ int main() {
     // A pendant-controlled crane, not an autonomous cycle: Drive/Raise/Lower/
     // Brake through a real, finite-torque/force Jolt constraint motor, and
     // only while the player is at the station.
-    Simulation jib(InitialSpawn::KernelJibStation);
+    Simulation jib(InitialSpawn::KernelJibStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(jib.advance_frame(Simulation::kFixedStepSeconds).accepted,
             "jib settle tick must advance");
     const auto jib_idle = jib.snapshot();
@@ -1621,7 +1693,7 @@ int main() {
 
     // KX-CRATE is a real moving support (WO-005 proof path item 3, WO-002
     // law) -- proven directly, not inferred from the mechanism above.
-    Simulation rider(InitialSpawn::KernelCrateTop);
+    Simulation rider(InitialSpawn::KernelCrateTop, scraperx::sim::WorldContent::RegressionFixtures);
     require(rider.advance_frame(1.0).accepted, "crate-rider settle interval must be accepted");
     const auto riding = rider.snapshot();
     require(riding.player_grounded && riding.support_entity_id == Simulation::kCrateEntityId,
@@ -1630,7 +1702,7 @@ int main() {
     // The capacity-proving stand: same rated force as the jib's winch,
     // permanently overweight, continuously commanded to raise. If it ever
     // rises, the rated force is not real.
-    Simulation capacity(InitialSpawn::KernelJibStation);
+    Simulation capacity(InitialSpawn::KernelJibStation, scraperx::sim::WorldContent::RegressionFixtures);
     const double stand_start_y = capacity.snapshot().jib_capacity_stand_load_position.y;
     require(capacity.advance_frame(6.0).accepted, "capacity-stand interval must be accepted");
     const auto stand_after = capacity.snapshot();
@@ -1659,7 +1731,7 @@ int main() {
     // Unseated: the gap must not be crossable. Walking straight at it from
     // the pendant, with the hoist never touched, must not deliver a player
     // standing at pier-top height on the far side.
-    Simulation gap(InitialSpawn::KernelNeedleStation);
+    Simulation gap(InitialSpawn::KernelNeedleStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(gap.set_facing(1.0, 0.0), "gap approach facing must be accepted");
     require(gap.set_move_input(1.0, 0.0), "gap approach walk command must be accepted");
     require(gap.advance_frame(6.0).accepted, "gap crossing attempt interval must be accepted");
@@ -1674,7 +1746,7 @@ int main() {
 
     // Seat it: a sustained lower command from the pendant must settle the
     // beam into both pockets and flip the structural predicate.
-    Simulation crossing(InitialSpawn::KernelNeedleStation);
+    Simulation crossing(InitialSpawn::KernelNeedleStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(crossing.advance_frame(Simulation::kFixedStepSeconds).accepted,
             "needle settle tick must advance");
     const auto needle_idle = crossing.snapshot();
@@ -1720,7 +1792,7 @@ int main() {
     // Unseat: WO-006 proof path item 2, "if a legal unseat path exists" --
     // this one does (a sustained raise command from the pendant), so it must
     // actually remove the support it granted.
-    Simulation unseat_check(InitialSpawn::KernelNeedleStation);
+    Simulation unseat_check(InitialSpawn::KernelNeedleStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(unseat_check.set_needle_hoist_input(-1.0), "lower command must be accepted");
     require(unseat_check.advance_frame(6.0).accepted, "needle lower interval must be accepted");
     require(unseat_check.snapshot().needle_seated,
@@ -1744,7 +1816,7 @@ int main() {
     // immediately, proving the capture side of restore_from_checkpoint's
     // topology reconciliation is exercised, even though the restore side
     // is not end-to-end falsified here.
-    Simulation checkpoint_capture(InitialSpawn::KernelNeedleStation);
+    Simulation checkpoint_capture(InitialSpawn::KernelNeedleStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(checkpoint_capture.set_needle_hoist_input(-1.0), "capture-check lower must be accepted");
     require(checkpoint_capture.advance_frame(6.0).accepted, "capture-check lower must advance");
     const auto capture_state = checkpoint_capture.snapshot();
@@ -1769,7 +1841,7 @@ int main() {
 
     // A toggle request away from the station must have no effect -- isolation
     // is only legal "at the real station" (WO-006/007 text).
-    Simulation away(InitialSpawn::ExteriorGrade);
+    Simulation away(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     require(away.request_valve_toggle(), "off-station toggle request must be accepted as a command");
     require(away.advance_frame(1.0).accepted, "off-station settle interval must be accepted");
     require(!away.snapshot().sump_isolated,
@@ -1779,7 +1851,7 @@ int main() {
     // Wet (the default): the grate must not be a crossable support. Walking
     // straight at it from the station, with the valve never touched, must
     // drop the player through rather than deliver them to the far decking.
-    Simulation wet(InitialSpawn::KernelSumpStation);
+    Simulation wet(InitialSpawn::KernelSumpStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(wet.advance_frame(Simulation::kFixedStepSeconds).accepted, "sump settle tick must advance");
     const auto sump_idle = wet.snapshot();
     require(sump_idle.sump_station_active,
@@ -1802,7 +1874,7 @@ int main() {
     // Isolate and drain: a sustained toggle-and-wait at the station must
     // flip the derived predicate once the lumped volume actually reaches
     // zero -- not on a timer independent of that inventory.
-    Simulation dry(InitialSpawn::KernelSumpStation);
+    Simulation dry(InitialSpawn::KernelSumpStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(dry.request_valve_toggle(), "isolate command must be accepted");
     require(dry.advance_frame(Simulation::kFixedStepSeconds).accepted, "isolate tick must advance");
     require(dry.snapshot().sump_isolated, "the valve toggle must close the isolation edge");
@@ -1837,7 +1909,7 @@ int main() {
     // fail => unsafe"). A separate instance, staying at the station the
     // whole time: the crossing above ends off-station, and (correctly,
     // matching the jib/needle pendants) a toggle only takes effect there.
-    Simulation dump_check(InitialSpawn::KernelSumpStation);
+    Simulation dump_check(InitialSpawn::KernelSumpStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(dump_check.request_valve_toggle(), "isolate command must be accepted");
     require(dump_check.advance_frame(13.0).accepted, "drain interval must be accepted");
     require(dump_check.snapshot().grate_safe, "the sump must be drained before the dump path can "
@@ -1881,7 +1953,7 @@ int main() {
     constexpr double kHandoffSurfaceY = 24.19;
 
     // 1. Pinned: the throat is shut, and walking straight at it does not pass.
-    Simulation pinned(InitialSpawn::IntakeThroat);
+    Simulation pinned(InitialSpawn::IntakeThroat, scraperx::sim::WorldContent::RegressionFixtures);
     require(pinned.advance_frame(1.0).accepted, "intake settling interval must be accepted");
     const auto pinned_start = pinned.snapshot();
     require(pinned_start.intake_pack_pins_dog,
@@ -1900,7 +1972,7 @@ int main() {
 
     // 2. No command surface opens it. Every input the player has, off-station,
     //    hammered at once: none of them is a way past a physical body.
-    Simulation forced(InitialSpawn::IntakeThroat);
+    Simulation forced(InitialSpawn::IntakeThroat, scraperx::sim::WorldContent::RegressionFixtures);
     double forced_deepest = 0.0;
     for (std::uint32_t tick = 0; tick < 1260; ++tick) {
         (void)forced.set_intake_hoist_input(1.0);
@@ -1924,7 +1996,7 @@ int main() {
             "mashing every input must not produce passage a body is blocking");
 
     // 3. The rating is real: 9 t under the same rated winch force never rises.
-    Simulation rated(InitialSpawn::IntakePendant);
+    Simulation rated(InitialSpawn::IntakePendant, scraperx::sim::WorldContent::RegressionFixtures);
     require(rated.advance_frame(20.0).accepted, "overweight interval must be accepted");
     const auto rated_state = rated.snapshot();
     require(rated_state.intake_overweight_pack_position.y < 1.2,
@@ -1932,7 +2004,7 @@ int main() {
             "it is commanded up");
 
     // 4. Lift the pack, and the dog travels because nothing is in its way.
-    Simulation freight(InitialSpawn::IntakePendant);
+    Simulation freight(InitialSpawn::IntakePendant, scraperx::sim::WorldContent::RegressionFixtures);
     require(freight.advance_frame(0.5).accepted, "pendant settling interval must be accepted");
     require(freight.snapshot().intake_station_active,
             "the B00 pendant spawn must be inside CAP-PENDANT's station radius");
@@ -1968,7 +2040,7 @@ int main() {
 
     // 6. SKIN is a legal bypass: the same +24 m deck, freight untouched. The
     //    Atlas forbids walling SKIN off to protect the freight sequence.
-    Simulation skin(InitialSpawn::IntakeSkinFoot);
+    Simulation skin(InitialSpawn::IntakeSkinFoot, scraperx::sim::WorldContent::RegressionFixtures);
     require(skin.advance_frame(0.5).accepted, "skin settling interval must be accepted");
     std::uint32_t skin_mantles = 0;
     bool skin_arrived = false;
@@ -2031,7 +2103,7 @@ int main() {
     // 1. wo015_unloaded_flight_is_not_a_route: the stowed flight hangs up
     //    near the hinge, nowhere over the deck it will occupy once deployed
     //    -- walking and mantling at that empty footprint gets nowhere.
-    Simulation unrouted(InitialSpawn::IntakeHandoffDeck);
+    Simulation unrouted(InitialSpawn::IntakeHandoffDeck, scraperx::sim::WorldContent::RegressionFixtures);
     require(unrouted.advance_frame(0.5).accepted, "unrouted settling interval must be accepted");
     require(nearly_equal(unrouted.snapshot().legal_forty_swing_travel_radians, 0.0, 1.0e-3),
             "the swing flight must start at its stowed limit");
@@ -2065,7 +2137,7 @@ int main() {
     // 2. wo015_flag_is_not_a_stair: every command mashed at once, off
     //    station, for the same interval -- no command surface substitutes
     //    for the physical rope tension the hinge actually needs.
-    Simulation mashed(InitialSpawn::IntakeHandoffDeck);
+    Simulation mashed(InitialSpawn::IntakeHandoffDeck, scraperx::sim::WorldContent::RegressionFixtures);
     for (std::uint32_t tick = 0; tick < 90 * 14; ++tick) {
         (void)mashed.set_intake_hoist_input(-1.0);
         (void)mashed.set_intake_slew_input(1.0);
@@ -2090,7 +2162,7 @@ int main() {
     //    wo015_reaches_forty_and_commits: the real causal path, start to
     //    finish -- lift, slew to the cradle bearing, load it, and walk the
     //    route that opens all the way to the hall deck.
-    Simulation ascent(InitialSpawn::IntakePendant);
+    Simulation ascent(InitialSpawn::IntakePendant, scraperx::sim::WorldContent::RegressionFixtures);
     require(ascent.advance_frame(0.5).accepted, "ascent settling interval must be accepted");
     require(ascent.snapshot().intake_station_active,
             "the ascent spawn must be inside CAP-PENDANT's station radius");
@@ -2269,7 +2341,7 @@ int main() {
     // 4. wo015_unload_retracts: a fresh station-side instance -- the hinge
     //    relaxes back to its stowed limit once the cradle is unloaded again,
     //    reversible rather than a one-way flag.
-    Simulation retract(InitialSpawn::IntakePendant);
+    Simulation retract(InitialSpawn::IntakePendant, scraperx::sim::WorldContent::RegressionFixtures);
     require(retract.advance_frame(0.5).accepted, "retract settling interval must be accepted");
     require(retract.set_intake_hoist_input(1.0), "retract hoist-clear command must be accepted");
     require(advance_until(retract,
@@ -2342,7 +2414,7 @@ int main() {
     //    always-legal bypass -- now reaching the hall deck via the
     //    mid-landing walkway and the (always-present) static upper flight,
     //    with the freight sequence and the swing hinge both untouched.
-    Simulation skin_forty(InitialSpawn::IntakeSkinFoot);
+    Simulation skin_forty(InitialSpawn::IntakeSkinFoot, scraperx::sim::WorldContent::RegressionFixtures);
     require(skin_forty.advance_frame(0.5).accepted, "skin-forty settling interval must be "
                                                      "accepted");
     // IntakeSkinFoot spawns at the ladder's own base, so this climbs the
@@ -2484,7 +2556,7 @@ int main() {
     //    is unmoved by anything AS-002 added -- this is Design Values
     //    8.4.5's arithmetic made executable, so the gap cannot be quietly
     //    closed later by a boom change.
-    Simulation capped(InitialSpawn::IntakePendant);
+    Simulation capped(InitialSpawn::IntakePendant, scraperx::sim::WorldContent::RegressionFixtures);
     require(capped.advance_frame(0.5).accepted, "capped settling interval must be accepted");
     double capped_deepest_hook_y = capped.snapshot().intake_hook_position.y;
     for (std::uint32_t tick = 0; tick < 90 * 60; ++tick) {
@@ -2516,7 +2588,7 @@ int main() {
     // under a 2.4 m splayed leg. Walked into from the yard, the capsule must
     // stop at its face -- centre never nearer than half-width (3.0 m) plus
     // most of the capsule radius (0.35 m) on the dominant axis.
-    Simulation solid(InitialSpawn::ExteriorGrade);
+    Simulation solid(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     require(solid.advance_frame(0.5).accepted, "world-solids settling interval must be accepted");
     const auto solid_loaded = solid.snapshot();
     require(solid_loaded.world_solid_rejected == 0,
@@ -2552,7 +2624,7 @@ int main() {
     // Each flight must end with the capsule standing on the deck it serves,
     // through the stairwell cut in it, not stalled under that deck's
     // underside; the route then walks the side band to the next flight's foot.
-    Simulation stair(InitialSpawn::ExteriorGrade);
+    Simulation stair(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     require(stair.advance_frame(0.5).accepted, "stair settling interval must be accepted");
     walk_toward(stair, -25.0, -118.0, 20.0);
     walk_toward(stair, -25.0, -128.5, 6.0);
@@ -2581,7 +2653,7 @@ int main() {
     // east edge the valley floor carries the player 0.3 m lower, the step
     // back up is walked, and walking out to the rim ends against rock --
     // grounded, low, and never past the ridge line.
-    Simulation basin(InitialSpawn::ExteriorGrade);
+    Simulation basin(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
     require(basin.advance_frame(0.5).accepted, "basin settling interval must be accepted");
     walk_toward(basin, 270.0, -60.0, 70.0);
     const auto on_valley = basin.snapshot();
@@ -2619,7 +2691,7 @@ int main() {
     constexpr double kCrawlBeamZ = -13.0;
     constexpr double kCrawlBeamHalfZ = 0.3;
     constexpr double kCrouchSpeedLimit = 5.5 * 0.45;
-    Simulation crouch(InitialSpawn::StaticDeck);
+    Simulation crouch(InitialSpawn::StaticDeck, scraperx::sim::WorldContent::RegressionFixtures);
     require(crouch.advance_frame(1.0).accepted, "crouch settling interval must be accepted");
     require(crouch.snapshot().player_grounded && !crouch.snapshot().player_crouched,
             "the crouch run must start standing on the deck");
@@ -2712,7 +2784,7 @@ int main() {
     //    jump and traversal mashed; then the apron's nearest raised surface,
     //    the 9 t pack's top, jumped from at the cage. No cage body is ever
     //    stood on, grabbed, or offered.
-    Simulation apron(InitialSpawn::Hook5Apron);
+    Simulation apron(InitialSpawn::Hook5Apron, scraperx::sim::WorldContent::RegressionFixtures);
     require(apron.advance_frame(0.5).accepted, "hook apron settling interval must be accepted");
     CageReach from_grade;
     struct Leap final {
@@ -2801,7 +2873,7 @@ int main() {
     //    drive has been commanded open since build and stalls on the bar;
     //    there is no door command to find. Then the bar is lifted, carried
     //    north and set down, and the door travels by itself.
-    Simulation cage(InitialSpawn::Hook5Cage);
+    Simulation cage(InitialSpawn::Hook5Cage, scraperx::sim::WorldContent::RegressionFixtures);
     require(cage.advance_frame(1.0).accepted, "hook cage settling interval must be accepted");
     require(cage.snapshot().hook5_door_angle_radians <= 0.05 && cage.snapshot().hook_in_rack,
             "the cage must start shut on its bar with the hook block in its rack");
@@ -3044,7 +3116,7 @@ int main() {
     //    cage, the hatch, the bar, the block, out through the door, round the
     //    belt's north end, through the throat and up every flight to
     //    MOD-HALL-DECK with the block held all the way.
-    Simulation hook(InitialSpawn::IntakePendant);
+    Simulation hook(InitialSpawn::IntakePendant, scraperx::sim::WorldContent::RegressionFixtures);
     require(hook.advance_frame(0.5).accepted, "hook ascent settling interval must be accepted");
     require(hook.set_intake_hoist_input(1.0), "hook ascent hoist command must be accepted");
     require(advance_until(hook, [](const auto &state) { return state.intake_pack_position.y > 8.0; },
@@ -3204,19 +3276,19 @@ int main() {
 
 
     // ---- Ground Archimedes screw: conserved water is the output port -----
-    Simulation screw_off(InitialSpawn::WaterScrewStation);
+    Simulation screw_off(InitialSpawn::WaterScrewStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(screw_off.advance_frame(12.0).accepted, "stopped screw interval must advance");
     require(std::abs(screw_off.snapshot().water_screw_tank_volume_m3) < 1.0e-9,
             "motor off must move exactly no water to the upper tank");
 
-    Simulation low_inlet(InitialSpawn::WaterScrewStation);
+    Simulation low_inlet(InitialSpawn::WaterScrewStation, scraperx::sim::WorldContent::RegressionFixtures);
     low_inlet.set_water_screw_basin_volume_m3(0.10);
     require(low_inlet.request_water_screw_toggle(), "low-inlet motor start must be accepted");
     require(low_inlet.advance_frame(12.0).accepted, "low-inlet interval must advance");
     require(low_inlet.snapshot().water_screw_tank_volume_m3 < 1.0e-6,
             "an inlet below minimum immersion must not pump water");
 
-    Simulation under_torque(InitialSpawn::WaterScrewStation);
+    Simulation under_torque(InitialSpawn::WaterScrewStation, scraperx::sim::WorldContent::RegressionFixtures);
     under_torque.set_water_screw_motor_torque_limit_nm(700.0);
     require(under_torque.request_water_screw_toggle(), "under-torque start must be accepted");
     require(under_torque.advance_frame(15.0).accepted, "under-torque interval must advance");
@@ -3224,14 +3296,14 @@ int main() {
                 under_torque.snapshot().water_screw_tank_volume_m3 < 1.0e-5,
             "a motor below hydraulic plus bearing torque must stall instead of faking flow");
 
-    Simulation blocked_screw(InitialSpawn::WaterScrewStation);
+    Simulation blocked_screw(InitialSpawn::WaterScrewStation, scraperx::sim::WorldContent::RegressionFixtures);
     blocked_screw.set_water_screw_outlet_blocked(true);
     require(blocked_screw.request_water_screw_toggle(), "blocked-outlet start must be accepted");
     require(blocked_screw.advance_frame(10.0).accepted, "blocked-outlet interval must advance");
     require(blocked_screw.snapshot().water_screw_tank_volume_m3 < 1.0e-6,
             "a blocked outlet must not fill the upper tank");
 
-    Simulation screw(InitialSpawn::WaterScrewStation);
+    Simulation screw(InitialSpawn::WaterScrewStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(screw.advance_frame(0.5).accepted, "water-screw station settle must advance");
     require(screw.snapshot().water_screw_station_active,
             "the real apron spawn must be in reach of the screw control");
@@ -3365,7 +3437,7 @@ int main() {
                 "release lever must be reachable from inside the cage");
     };
 
-    Simulation water_lift_dry(InitialSpawn::WaterLiftValveStation);
+    Simulation water_lift_dry(InitialSpawn::WaterLiftValveStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(water_lift_dry.advance_frame(0.5).accepted, "dry lift spawn settle");
     board_lift_cage(water_lift_dry);
     require(water_lift_dry.request_water_lift_release(), "dry lift release request accepted");
@@ -3373,7 +3445,7 @@ int main() {
     require(water_lift_dry.snapshot().water_lift_cage_travel_m < 0.05,
             "an empty 200 kg bucket must not lift the player cage");
 
-    Simulation water_lift_partial(InitialSpawn::WaterLiftValveStation);
+    Simulation water_lift_partial(InitialSpawn::WaterLiftValveStation, scraperx::sim::WorldContent::RegressionFixtures);
     seed_water_lift(water_lift_partial, 0.40);
     fill_bucket(water_lift_partial, 0.40);
     board_lift_cage(water_lift_partial);
@@ -3383,7 +3455,7 @@ int main() {
     require(water_lift_partial.snapshot().water_lift_cage_travel_m < 0.15,
             "400 kg of water must fail by force balance, not an arbitrary fill flag");
 
-    Simulation water_lift_caught(InitialSpawn::WaterLiftValveStation);
+    Simulation water_lift_caught(InitialSpawn::WaterLiftValveStation, scraperx::sim::WorldContent::RegressionFixtures);
     seed_water_lift(water_lift_caught, 2.0);
     fill_bucket(water_lift_caught, 2.0);
     const double caught_before = water_lift_caught.snapshot().water_lift_cage_travel_m;
@@ -3391,7 +3463,7 @@ int main() {
     require(std::abs(water_lift_caught.snapshot().water_lift_cage_travel_m - caught_before) < 0.02,
             "a full bucket still held by its physical catch must not move the cage");
 
-    Simulation water_lift_disconnected(InitialSpawn::WaterLiftValveStation);
+    Simulation water_lift_disconnected(InitialSpawn::WaterLiftValveStation, scraperx::sim::WorldContent::RegressionFixtures);
     seed_water_lift(water_lift_disconnected, 2.0);
     fill_bucket(water_lift_disconnected, 2.0);
     board_lift_cage(water_lift_disconnected);
@@ -3403,7 +3475,7 @@ int main() {
     require(water_lift_disconnected.snapshot().water_lift_cage_travel_m < 0.05,
             "a disconnected rope must transmit no counterweight lift");
 
-    Simulation water_lift_overload(InitialSpawn::WaterLiftValveStation);
+    Simulation water_lift_overload(InitialSpawn::WaterLiftValveStation, scraperx::sim::WorldContent::RegressionFixtures);
     seed_water_lift(water_lift_overload, 2.0);
     fill_bucket(water_lift_overload, 2.0);
     water_lift_overload.set_water_lift_cage_mass_kg(1300.0);
@@ -3415,7 +3487,7 @@ int main() {
     require(water_lift_overload.snapshot().water_lift_cage_travel_m < 0.15,
             "an overloaded cage must fail from the real mass ratio");
 
-    Simulation water_lift(InitialSpawn::WaterLiftValveStation);
+    Simulation water_lift(InitialSpawn::WaterLiftValveStation, scraperx::sim::WorldContent::RegressionFixtures);
     seed_water_lift(water_lift, 2.0);
     const double water_total_start =
         water_lift.snapshot().water_screw_basin_volume_m3 +
@@ -3571,7 +3643,7 @@ int main() {
 
     // One uninterrupted player run closes the producer/receiver seam. No
     // tank seed, cage placement, catch override, or teleport is used here.
-    Simulation screw_ascent(InitialSpawn::WaterScrewStation);
+    Simulation screw_ascent(InitialSpawn::WaterScrewStation, scraperx::sim::WorldContent::RegressionFixtures);
     require(screw_ascent.advance_frame(0.5).accepted,
             "continuous ascent screw-station settle must advance");
     const auto ascent_start = screw_ascent.snapshot();
@@ -3644,7 +3716,7 @@ int main() {
     // cage never moves. Let go: the lever falls back, the catch seats the
     // skip again and takes the load off the rope, and the rope's end comes
     // off the bollard onto the cage as before -- the stage is not stranded.
-    Simulation unlinked(InitialSpawn::StairTop);
+    Simulation unlinked(InitialSpawn::StairTop, scraperx::sim::WorldContent::RegressionFixtures);
     require(unlinked.advance_frame(1.0).accepted, "the stair-top settle interval must be accepted");
     const auto well_stair_top = unlinked.snapshot();
     require(well_stair_top.player_grounded && well_stair_top.player_position.y > 154.8 &&
@@ -3719,7 +3791,7 @@ int main() {
     // stands on the cage the whole way; the floor stops flush with the 176
     // ring; at no tick has the payload gained more energy than the skip
     // released.
-    Simulation well(InitialSpawn::StairTop);
+    Simulation well(InitialSpawn::StairTop, scraperx::sim::WorldContent::RegressionFixtures);
     require(well.advance_frame(1.0).accepted, "the ride's settle interval must be accepted");
     require(board_well_a(well) && rig_well_a(well),
             "the player must rig Stage A from inside its cage");

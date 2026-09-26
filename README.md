@@ -1,47 +1,14 @@
 # ScraperX
 
-ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority package at the repository root. Read [`00_START_HERE.md`](00_START_HERE.md) before changing implementation.
+Godot 4.7 / C++17 / Jolt industrial ascent. Read [`00_START_HERE.md`](00_START_HERE.md) before changes. Writes go to `ChatGPT` only.
 
-## Where the project is
+## Current game
 
-Two classes of work, defined once in [`00_START_HERE.md`](00_START_HERE.md) §4 and never sharing
-an identifier:
+The owner-directed ground reset removes the legacy campaign, including the water screw/lift, intake machinery, upper lifts and machine-linked stair assemblies, from normal play. The tower structure, alpine setting, full parkour/controller and ordinary stairs/ramps remain. Those stairs are the optional fallback for a player who wants a straightforward route. No replacement macro mechanism is implemented yet.
 
-- **Kernel Work Orders** `WO-000`–`WO-013` in `03_EXECUTION/KERNEL/` — foundational engineering that proves
-  one tool type each on the `KX-*` substrate. A **closed set**. All fourteen are in source.
-- **Ascent Slices** `AS-001`–`AS-015` in `03_EXECUTION/ASCENT/` — the actual 1.6 km climb, one Atlas band
-  at a time. This is where new work happens.
+The revised [Atlas](01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md) proposes a pipe-loaded balance bridge from grade to a +8 m receiver. It includes preliminary geometry/work estimates and explicitly unresolved release, capture, stopping and recovery requirements. The [macro plan](03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md) defines delivery order; the [corrected catalogue](Mechanism-Ideas-and-archetypes.md) adapts the supplied Colossus ideas.
 
-`B00`–`B11` are Atlas band IDs — floors of the tower. They are never filenames and never tickets.
-
-```
-00_START_HERE.md              position, vocabulary, ledgers — read this first
-01_PRODUCT_AUTHORITY/         what the game is     (laws, GDD, atlas, + support/ provenance)
-02_ENGINEERING_AUTHORITY/     how work is executed (protocol, TDD, evidence snapshot)
-03_EXECUTION/KERNEL/          WO-000 .. WO-013     closed; regression substrate
-03_EXECUTION/ASCENT/          AS-001 .. AS-015     the live queue
-03_EXECUTION/PLANNING/        the ascent authoring contract
-03_EXECUTION/TEMPLATES/       ticket forms
-src/ tests/ godot/            implementation truth
-```
-
-**Proven** (CI run [`35727055407`](https://github.com/IssisX/ScraperX/actions/runs/35727055407),
-all steps green): 10 native falsifiers at exit 0; Godot 4.7 at Fold inner-panel aspect
-`2160x1856`; Android arm64 APK carrying `libscraperx_native.so`.
-
-The kernel proves: a native 90 Hz Jolt player; moving-support point velocity; vault / mantle /
-ledge / hang; a coupled steam plant whose every link reads the previous link's real body state;
-fall, parachute and automatic commit; freight on a finite jib; a seated beam that changes
-traversal; a process volume that decides whether a grate is walkable.
-
-`AS-001` builds the first real campaign ground: an apron, an 18 m intake belt, a 12 m / 5 t yard
-jib, a 4 t pack physically pinning a landing dog, a switchback stair and an exposed facade ladder
-to +24 m. The stair is shut because freight is standing in the dog's swing, and it opens because
-the jib moved that freight.
-
-**Next:** `AS-002` — first legal stand at +40 m. Planned, not coded.
-
-Still absent: bands B01–B11 above the hall deck, NPCs, missions, and the summit.
+Legacy machinery is retained only as an explicitly selected desktop/native regression fixture. Its test success is not campaign progress. AS-001–015 are retired; do not resume their queue.
 
 ## Build
 
@@ -58,8 +25,11 @@ cmake --build build/host
 ctest --test-dir build/host --output-on-failure
 ```
 
-The GitHub Actions workflow performs the full proof path: the full native suite, Linux GDExtension loading, a runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856) that walks the tower approach and observes the coupled machine work, one rendered first-person capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
+
+Default Godot launch loads the cleared foundation. `--uitest=ground_foundation` proves default input and removal. Legacy UI scenarios explicitly load regression fixtures. To regenerate collision tables, use normal `--export-solids=<path>` for `src/sim/world_solids.inc`, and add `--regression-fixtures` for `tests/fixtures/world_solids.inc`.
+
+CI runs the default-world proof and rendered capture, retained physics/controller regressions, both collision drift checks, Android arm64 build and APK export. Its artifact contains exact-commit checksums and evidence boundaries.
 
 ## Claim boundary
 
-An APK artifact proves production by the current source. It does not prove installation, execution on Android, or Fold 6 behavior. Those remain separate evidence states.
+An exported APK proves packaging. Installation, Android execution, device readability, touch ergonomics and sustained Fold 6 performance remain separate evidence states. No new mechanism is established by this cleanup or by a passing legacy fixture.

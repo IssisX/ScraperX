@@ -19,7 +19,7 @@ For implementation work, resolve conflicts in this order:
 6. **Current source, tests, build configuration, and runtime evidence** — implementation truth.
 7. **The one open ticket** — the exact bounded change being executed. That is a
    **Kernel Work Order** (`WO-000`–`WO-013`, `03_EXECUTION/KERNEL/`, closed set) or an
-   **Ascent Slice** (`AS-001`–`AS-015`, `03_EXECUTION/ASCENT/`). The two are different classes of
+   **Ascent Slice** (`AS-*`, `03_EXECUTION/ASCENT/`; AS-001–015 are retired). The two are different classes of
    work and never share an identifier. `00_START_HERE.md` §4 is the vocabulary.
 
 Writes land on **`ChatGPT`** only. Other branches are readable for provenance and are
@@ -47,9 +47,7 @@ Every implementation task loads:
 
 Load additional GDD/atlas/support material only when the task crosses into it.
 
-`WO-000` does not need the atlas. `WO-001`–`WO-004` need Atlas §§2 and 9. `WO-005`–`WO-013`
-need Atlas §§4, 7, 8, 9, 12. An `AS-*` slice needs Atlas §6 for **its own band only**, plus
-§§4, 5, 7, 12, 13 as that slice cites them — loading bands a slice does not own is how scope creeps.
+Historical WO references describe the atlas that existed when those records were written. New mechanism work loads the current Atlas datum, relevant candidate, receiving-support, recovery and acceptance sections. Do not revive the retired band queue through an old section reference.
 
 The goal is **small active context under one global authority tree**, not reduced authority and not a second package.
 
@@ -57,7 +55,7 @@ The goal is **small active context under one global authority tree**, not reduce
 
 ## 3. TICKET CONTRACT
 
-Every coding task begins with one bounded ticket. Kernel Work Orders use the fields below
+Every coding task has one bounded objective. An explicit owner-directed removal/reset may define that objective directly; it does not require a fictitious new mechanism ticket. New mechanism implementation uses one bounded ticket. Kernel Work Orders use the fields below
 (`03_EXECUTION/TEMPLATES/KERNEL_WORK_ORDER_TEMPLATE.md`). Ascent Slices use these fields **plus** the
 mechanical close in `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §8, which is not optional for them.
 
@@ -343,9 +341,9 @@ One current implementation slice. One change class. One proof path. A cross-docu
 
 The requester does **not** paste Laws, GDD, atlas, TDD, or the WO file when the model already has this package. Pasting is an implementation-AI duty, not a Fold-thumb duty.
 
-### Illegal asks
+### Requests that need bounded execution
 
-Reject these and name the one open ticket instead:
+Resolve these into the smallest complete authorized slice; do not silently start the whole tower:
 
 - build the game / the tower / the 1.6 km climb / “make it causal”;
 - dump the whole package as one prompt and expect a world;
@@ -363,7 +361,7 @@ For implementation requests, execute a ready ticket; do not substitute process w
 
 ### Model rule
 
-If the requester issues an illegal ask, do not comply and do not soothe. Point at the open ticket. If they insist on a whole-tower build, that is a Project-Guardian reject, not a bigger prompt.
+Use the owner’s intent to establish a concrete bounded result. A new explicit owner decision may supersede an old content plan; update affected owners together. Do not use retired paperwork to prevent an authorized removal or to demand that the user perform project administration.
 
 Load files yourself. Return one artifact or one status block. Do not assign copy-paste homework.
 
@@ -395,3 +393,7 @@ Documentation-only checks establish source/reference consistency, derivations an
 formatting, not new gameplay behavior or a new APK. Retain historical gameplay
 proof at its actual commit. Updating a plan does not repair a runtime defect it
 records, and none of these claim distinctions waive required code-candidate gates.
+
+## 18. Ground-reset proof boundary
+
+The normal scene and explicit regression fixtures are separate proof targets. Native default construction must omit all retired campaign bodies/cables; normal presentation and exported collision must omit their geometry. Retained old tests must select fixtures explicitly and must never be reported as current campaign progress. Preserve controller tests; add a default-world removal/input proof and a rendered capture. A planned mechanism remains unimplemented until its actual normal-input chain and receiving support are demonstrated.
