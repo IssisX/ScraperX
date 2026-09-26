@@ -124,6 +124,8 @@ enum class InitialSpawn : std::uint8_t {
     CraneLCab = 37,
     // AS-010: on TP-640, north of the service cage.
     Plate640 = 38,
+    // Where the crane ride steps off onto that same floor, south-east of the cage.
+    Plate640Dismount = 39,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation

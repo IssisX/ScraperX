@@ -30,7 +30,7 @@ The rider is supported by the cage floor at the top of its guides. The cage move
 
 ## Proof
 
-`SCRAPERX_ONLY=AS-010` passed locally: rider_y=663.335, cage_rise=21.95 m, skip_drop=21.95 m, source 172 kJ, gain 94 kJ. Unhooked, the cage did not rise.
+`SCRAPERX_ONLY=AS-010` passed locally: rider_y=663.335, cage_rise=21.95 m, skip_drop=21.95 m, source 172 kJ, gain 94 kJ. Unhooked, the cage did not rise. The same ride also starts from where the crane steps off onto the 640 m floor (`Plate640Dismount`, x=-3, z=-156.5) and ends at the same height.
 
 - Rope left on the bollard, catch tripped: the cage does not rise.
 - Rope hooked to the cage, catch tripped: the cage rises 22 m with the rider on it, and the skip's lost energy covers the cage and the rider.

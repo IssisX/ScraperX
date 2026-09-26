@@ -1526,6 +1526,9 @@ private:
     case scraperx::sim::InitialSpawn::Plate640:
         // On TP-640, north of the service cage, the way StairTop stands north of A's.
         return {-8.0, 641.25, -144.8};
+    case scraperx::sim::InitialSpawn::Plate640Dismount:
+        // Where L's cab steps the rider off onto TP-640.
+        return {-3.0, 641.25, -156.5};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:

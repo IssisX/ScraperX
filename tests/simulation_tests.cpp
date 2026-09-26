@@ -2011,7 +2011,34 @@ void require_leg(const scraperx::sim::Simulation &simulation, const bool ok, con
     require(ok, leg);
 }
 
-// The goal's test (MECHANISM_ASCENT_PLAN.md, AS-006 to AS-009): one run on
+// From wherever the rider is standing on TP-640: around the east side of the
+// service cage (its south face is railed), in through the open north side,
+// the rope off the bollard onto the eye, the catch tripped, and the ride.
+bool ride_service_cage(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!(walk_to(simulation, -5.5, -156.5, 10.0) && walk_to(simulation, -5.5, -145.8, 14.0) &&
+          walk_to(simulation, -7.5, -145.8, 6.0) && walk_to(simulation, -7.7, -147.2, 4.0))) {
+        return false;
+    }
+    if (!rig_end(simulation, -8.85, -148.55, -0.7, -0.7, Simulation::kServiceMShackleEntityId, -8.85, -148.00,
+                 -1.0, 0.0, Simulation::kServiceMCageEntityId) ||
+        simulation.service_state().m_rope_end_entity_id != Simulation::kServiceMCageEntityId) {
+        return false;
+    }
+    if (!pull_handle(simulation, -8.55, -146.95, Simulation::kServiceMHandleEntityId, 0.5, 3.0,
+                     [&](const scraperx::sim::Snapshot &) { return !simulation.service_state().m_catch_latched; })) {
+        return false;
+    }
+    if (!wait_for(simulation, 40.0, [&](const scraperx::sim::Snapshot &) {
+            return simulation.service_state().m_cage_travel >= 21.95;
+        })) {
+        return false;
+    }
+    const auto top = simulation.snapshot();
+    return on_support(top, Simulation::kServiceMCageEntityId) && standing_above(top, 662.2);
+}
+
+// The goal's test (MECHANISM_ASCENT_PLAN.md, AS-006 to AS-010): one run on
 // player inputs from the tower stair's 154 m deck to standing on TP-640,
 // riding and climbing through all four bands' linked stages -- the
 // Counterweight Well, Wet Isolation, the Plate Shop and the Facade Crane
@@ -2102,14 +2129,17 @@ void run_ascent() {
     require_leg(run, climb_wet_hold(run, -7.6, -145.6, -1.0, 0.0, false, 484.5), "up the ladder onto the 484 ring");
     const double at_484 = run.snapshot().simulation_time_seconds - start;
 
-    // B05, the Facade Crane Stack: J, K, L into TP-640.
+    // B05, the Facade Crane Stack: J, K, L into TP-640. Then the service cage.
     require_leg(run, climb_crane_band(run), "J, K and L to standing on TP-640");
+    const double at_640 = run.snapshot().simulation_time_seconds - start;
+    require_leg(run, ride_service_cage(run), "around the service cage, hooked on, and up");
     const auto top = run.snapshot();
-    require(top.death_count == deaths && standing_above(top, 640.2),
-            "ascent: one run from the 154 m deck must end standing on TP-640, never having died");
-    std::cout << "PASS scraperx_sim ascent 154 to TP-640: seconds=" << top.simulation_time_seconds - start
-              << " at_220=" << at_220 << " at_340=" << at_340 << " at_484=" << at_484
-              << " plate_y=" << top.player_position.y << '\n';
+    require(top.death_count == deaths && standing_above(top, 662.2) &&
+                on_support(top, Simulation::kServiceMCageEntityId),
+            "ascent: one run from the 154 m deck must end standing on the service cage, never having died");
+    std::cout << "PASS scraperx_sim ascent 154 to service cage: seconds=" << top.simulation_time_seconds - start
+              << " at_220=" << at_220 << " at_340=" << at_340 << " at_484=" << at_484 << " at_640=" << at_640
+              << " cage_y=" << top.player_position.y << '\n';
 }
 
 void run_service_lift() {
@@ -2163,6 +2193,22 @@ void run_service_lift() {
             "the skip's lost height must pay for the cage and the rider");
     std::cout << "PASS scraperx_sim AS-010 M: rider_y=" << top.player_position.y << " cage_rise=" << cage_rise
               << " skip_drop=" << skip_drop << " source_j=" << source_j << " gain_j=" << gain_j << '\n';
+}
+
+// Claude's climb steps off the crane onto TP-640 at (-3, -156.5). From that
+// spot, the same walk the one-run uses must reach the service cage and ride it.
+void run_service_from_dismount() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation from_crane(InitialSpawn::Plate640Dismount);
+    require(from_crane.advance_frame(1.0).accepted, "the dismount settle interval must be accepted");
+    const auto at = from_crane.snapshot();
+    require(at.player_grounded && at.player_position.y > 641.0 && at.player_position.y < 641.5,
+            "Plate640Dismount must stand where the crane ride leaves the rider");
+    require(ride_service_cage(from_crane),
+            "from the crane's step-off, the rider must reach the service cage and ride it");
+    std::cout << "PASS scraperx_sim AS-010 from the crane step-off: rider_y="
+              << from_crane.snapshot().player_position.y << '\n';
 }
 
 int main() {
@@ -2226,6 +2272,7 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-010") {
         run_service_lift();
+        run_service_from_dismount();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -5901,6 +5948,7 @@ int main() {
     run_crane_route();
     run_crane_wreckage();
     run_service_lift();
+    run_service_from_dismount();
     run_ascent();
 
     return EXIT_SUCCESS;
