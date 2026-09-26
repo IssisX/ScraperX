@@ -299,7 +299,7 @@ func _physics_process(delta: float) -> void:
 		_world.call("update_stage", _stage)
 	_move_player(delta)
 	if _stage != null:
-		var aboard := _player.is_on_floor() and _floor_collider() == _world.get("cage")
+		var aboard: bool = _player.is_on_floor() and _floor_collider() == _world.get("cage")
 		_stage.call("set_rider_on_cage", aboard)
 	_update_hud()
 
