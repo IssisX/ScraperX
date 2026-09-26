@@ -2,7 +2,8 @@ extends Node
 # Turns what the native simulation reports into sound. It reads state; it
 # never writes it. Every cue comes from a change the native already
 # decided -- feet on a surface, a takeoff, a landing's real impact speed, a
-# grab, a mantle, a canopy, a death -- so what is heard is what happened.
+# grab, a mantle, a canopy, a death, a machine moving and stopping -- so what
+# is heard is what happened.
 #
 # Buses (created here, all into Master): Effects, Ambience, Interface; each
 # has a player volume on the AUDIO page. Master ends in a hard limiter, so
@@ -28,6 +29,18 @@ const JUMP_MIN_RISE := 2.5
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
+# Machines: every moving kit body heavy enough to be one (main.gd) is heard
+# from its own motion as the native runs it -- a rattle while it moves, louder
+# with the speed of its farthest point; a creak now and then at a hinge while
+# a body turns on it; a clang where it stops harder than a governor stops it.
+# S1's cage eases into its stops at 2 m/s^2, and the recent peak a stop is
+# measured against falls at 3 m/s^2, so an eased stop leaves nothing to clang.
+const MACHINE_MOVE_MPS := 0.1
+const MACHINE_FULL_MPS := 3.0
+const MACHINE_PEAK_FALL := 3.0
+const MACHINE_CLANG_MPS := 0.8
+const MACHINE_CREAK_GAP := 0.9
+const MACHINE_LOOPS := 2
 # Birds: only near the ground, only by day, now and then.
 const BIRD_CEILING_M := 30.0
 const BIRD_GAP_SECONDS := Vector2(2.5, 8.0)
@@ -40,6 +53,8 @@ var landings := 0
 var grabs := 0
 var rustles := 0
 var birds := 0
+var creaks := 0
+var clangs := 0
 
 # The time of day, for the birds. Set by main.gd.
 var sky: Node = null
@@ -60,6 +75,8 @@ var _next_voice_3d := 0
 var _wind: AudioStreamPlayer
 var _rush: AudioStreamPlayer
 var _drone: AudioStreamPlayer
+var _machine_loops: Array[AudioStreamPlayer3D] = []
+var _machine_state := {}
 var _stride := 0.0
 var _was_grounded := true
 var _last_vy := 0.0
@@ -100,6 +117,8 @@ func _ready() -> void:
 	_wind = _looping_player(BUS_AMBIENCE)
 	_rush = _looping_player(BUS_AMBIENCE)
 	_drone = _looping_player(BUS_AMBIENCE)
+	for i in MACHINE_LOOPS:
+		_machine_loops.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, 110.0))
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -145,6 +164,10 @@ func _on_bank_ready() -> void:
 	_rush.volume_db = -60.0
 	_drone.volume_db = -60.0
 	for player in [_wind, _rush, _drone]:
+		player.play()
+	for player in _machine_loops:
+		player.stream = _bank.pick(&"rattle_loop")
+		player.volume_db = -80.0
 		player.play()
 
 
@@ -221,6 +244,46 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	_last_crouched = crouched
 	_update_air(position, velocity, grounded, delta)
 	_update_birds(position, delta)
+
+
+# Once per rendered frame, with every machine's motion as main.gd sampled it:
+# {body, speed, turning, at (its origin), tip_at (its farthest point)}.
+func update_machines(delta: float, machines: Array) -> void:
+	var moving: Array = []
+	for machine in machines:
+		var body: int = machine["body"]
+		var speed: float = machine["speed"]
+		var state: Dictionary = _machine_state.get(body, {"peak": 0.0, "creak": 0.0})
+		var peak := maxf(speed, float(state["peak"]) - MACHINE_PEAK_FALL * delta)
+		if speed < MACHINE_MOVE_MPS and peak >= MACHINE_CLANG_MPS:
+			clangs += 1
+			_play_at(&"clang", machine["tip_at"], linear_to_db(clampf(peak / MACHINE_FULL_MPS, 0.3, 1.0)),
+				randf_range(0.85, 1.0))
+			peak = 0.0
+		var creak: float = float(state["creak"]) - delta
+		if speed >= MACHINE_MOVE_MPS and bool(machine["turning"]) and creak <= 0.0:
+			creaks += 1
+			_play_at(&"creak", machine["at"],
+				linear_to_db(clampf(speed / MACHINE_FULL_MPS, 0.25, 1.0)) - 4.0, randf_range(0.8, 1.0))
+			creak = MACHINE_CREAK_GAP
+		state["peak"] = peak
+		state["creak"] = maxf(creak, 0.0)
+		_machine_state[body] = state
+		if speed >= MACHINE_MOVE_MPS:
+			moving.append(machine)
+	if not _bank_ready or _silent:
+		return
+	moving.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a["speed"]) > float(b["speed"]))
+	for i in _machine_loops.size():
+		var player := _machine_loops[i]
+		if i < moving.size():
+			var level := clampf(float(moving[i]["speed"]) / MACHINE_FULL_MPS, 0.05, 1.0)
+			player.position = moving[i]["at"]
+			player.volume_db = linear_to_db(level) - 6.0
+			player.pitch_scale = 0.8 + 0.3 * level
+		else:
+			player.volume_db = -80.0
 
 
 # Wind rises with altitude; a falling body hears the air tear past. The

@@ -179,6 +179,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_kit_body_dynamic);
     godot::ClassDB::bind_method(godot::D_METHOD("is_kit_body_enabled", "body"),
                                 &ScraperXSimulation::is_kit_body_enabled);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_mass", "body"),
+                                &ScraperXSimulation::get_kit_body_mass);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_parts", "body"),
                                 &ScraperXSimulation::get_kit_body_parts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_transform", "body"),
@@ -529,6 +531,10 @@ bool ScraperXSimulation::is_kit_body_dynamic(const std::int64_t body) const {
 
 bool ScraperXSimulation::is_kit_body_enabled(const std::int64_t body) const {
     return simulation_->kit_body_enabled(kit_index(body));
+}
+
+double ScraperXSimulation::get_kit_body_mass(const std::int64_t body) const {
+    return simulation_->kit_body_mass(kit_index(body));
 }
 
 godot::PackedFloat32Array ScraperXSimulation::get_kit_body_parts(const std::int64_t body) const {

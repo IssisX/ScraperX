@@ -45,6 +45,9 @@ const SCENARIOS := {
 	"touch_stack": 8,
 	"pad_stack": 8,
 	"keyboard_stack": 8,
+	# S2 alone, from deck 4's south band where C1 leaves the climber: quick to
+	# run under a real renderer, for its screenshots.
+	"pad_s2": 26,
 	# Needs a mixing audio driver: run under --write-movie (see _audio_mix).
 	"audio_mix": 8,
 }
@@ -58,6 +61,10 @@ const TOWER_ENTITY := 11
 var _main: Node
 var _scenario := ""
 var _capture_prefix := ""
+# What S2's leg measured, for the scenario's detail.
+var _s2_rest_angle := 0.0
+var _s2_creaks := 0
+var _s2_clangs := 0
 var _detail := ""
 
 
@@ -143,6 +150,8 @@ func _run() -> void:
 			ok = await _stack(InputRouter.Device.GAMEPAD)
 		"keyboard_stack":
 			ok = await _stack(InputRouter.Device.KEYBOARD_MOUSE)
+		"pad_s2":
+			ok = await _s2_alone(InputRouter.Device.GAMEPAD)
 		"audio_mix":
 			ok = await _audio_mix()
 	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario, _detail])
@@ -974,6 +983,29 @@ func _stack(device: int) -> bool:
 			int(_native().get_support_entity_id())])
 	await _pose("stack_deck4")
 	var at_deck4 := _position().y
+	if not await _s2_leg(device):
+		return false
+	await _pose("stack_deck5")
+	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
+	# faster than a sprint; only a snap moves the view that far.
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step,
+			str(body.get("at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	_detail = ("deck2_y=%.2f deck4_y=%.2f deck5_y=%.2f stair_rest_rad=%.4f swing_creaks=%d swing_clangs=%d " +
+		"seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f") % [
+		at_deck2, at_deck4, _position().y, _s2_rest_angle, _s2_creaks, _s2_clangs,
+		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step]
+	return true
+
+
+# S2, the swinging stair, from anywhere on deck 4's south band to deck 5 on the
+# device under test: west along deck 4 and out onto its landing, GRAB the trip
+# chain -- the lever throws, the catch lets the stair go -- LET GO, watch it
+# swing down into deck 5's jaws, hearing it go, and walk up it onto deck 5.
+func _s2_leg(device: int) -> bool:
 	# S2, the swinging stair: west along deck 4 and out onto its landing, under
 	# the trip chain hanging from the lever beside the upright stair.
 	if not await _go(device, Vector2(-17.5, -125.5), 0.15, 40.0) or \
@@ -986,6 +1018,8 @@ func _stack(device: int) -> bool:
 		return _fail("Action read '%s %s' under S2's chain, not GRAB TRIP CHAIN" % [
 			_action_label(), String(_ctx()["action"]["detail"])])
 	await _pose("stack_trip")
+	var creaks_before := int(_main._audio.creaks)
+	var clangs_before := int(_main._audio.clangs)
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2207, 0.5):
 		return _fail("GRAB did not put S2's trip chain in the hands")
@@ -1012,7 +1046,14 @@ func _stack(device: int) -> bool:
 	if not seated:
 		return _fail("S2's stair did not come to rest in its jaws (angle %.3f rad)" %
 			float(_native().get_stack_s2_stair_angle()))
-	var rest_angle := float(_native().get_stack_s2_stair_angle())
+	_s2_rest_angle = float(_native().get_stack_s2_stair_angle())
+	# Heard as it went: the hinge creaking as the stair turned, a clang where
+	# the jaws stopped it.
+	await _seconds(0.3)
+	_s2_creaks = int(_main._audio.creaks) - creaks_before
+	_s2_clangs = int(_main._audio.clangs) - clangs_before
+	if _s2_creaks < 3 or _s2_clangs < 1:
+		return _fail("S2's swing was not heard (%d creaks, %d clangs)" % [_s2_creaks, _s2_clangs])
 	await _pose("stack_stair")
 	# Up the stair at a walk to the middle of its top landing -- the keyboard's
 	# fine approach taps the keys, too slow to step up a riser -- and off the
@@ -1029,24 +1070,23 @@ func _stack(device: int) -> bool:
 			_position().y < 55.5:
 		return _fail("not standing on deck 5 (y %.2f, on %d)" % [_position().y,
 			int(_native().get_support_entity_id())])
-	if absf(float(_native().get_stack_s2_stair_angle()) - rest_angle) > 1.0e-3:
+	if absf(float(_native().get_stack_s2_stair_angle()) - _s2_rest_angle) > 1.0e-3:
 		return _fail("walked up, S2's stair moved in its jaws (%.4f rad)" %
-			(float(_native().get_stack_s2_stair_angle()) - rest_angle))
+			(float(_native().get_stack_s2_stair_angle()) - _s2_rest_angle))
 	await _face(Vector2(0.0, -1.0))
-	await _pose("stack_deck5")
-	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
-	# faster than a sprint; only a snap moves the view that far.
-	var worst_step := _stop_watch(body)
-	if worst_step > 0.25:
-		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step,
-			str(body.get("at", ""))])
-	if int(_native().get_death_count()) != 0:
-		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
-	_detail = ("deck2_y=%.2f deck4_y=%.2f deck5_y=%.2f stair_rest_rad=%.4f seconds=%.1f " +
-		"worst_wrist_step_m=%.3f worst_body_step_m=%.3f") % [
-		at_deck2, at_deck4, _position().y, rest_angle,
-		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step]
 	return true
+
+
+# S2 alone, from deck 4's south band.
+func _s2_alone(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	await _pose("s2_deck4")
+	if not await _s2_leg(device):
+		return false
+	await _pose("s2_deck5")
+	_detail = "deck5_y=%.2f stair_rest_rad=%.4f swing_creaks=%d swing_clangs=%d deaths=%d" % [
+		_position().y, _s2_rest_angle, _s2_creaks, _s2_clangs, int(_native().get_death_count())]
+	return int(_native().get_death_count()) == 0
 
 
 func _standing_above(y: float) -> bool:

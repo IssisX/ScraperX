@@ -293,7 +293,9 @@ stays down, and every checkpoint from then on is above it.
    (one jump) and end back on the landing.
 8. The game's input: `touch_stack`, `pad_stack` and `keyboard_stack` walk from the game's start at
    grade to deck 5 through the real input pipeline (95–97 s), and CI builds the APK only after
-   they pass.
+   they pass. They also hear the swing: the hinge creaking while the stair turns, a clang where
+   the trip lever hits its stop and where the jaws stop the stair (the audio reads the kit's own
+   motion: a machine is any moving kit body of 40 kg or more).
 
 ### 6.8 Kit capabilities added (they were the blockers)
 

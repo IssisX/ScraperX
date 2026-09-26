@@ -194,6 +194,11 @@ var _view_pitch_offset := 0.0
 var _kit_root: Node3D
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
+# The kit's machines, for the audio: every moving body of MACHINE_MIN_KG or
+# more, with the point of it farthest from its origin, whose speed is how fast
+# the machine moves.
+const MACHINE_MIN_KG := 40.0
+var _machines: Array[Dictionary] = []
 var _kit_cables: Array = []
 # Per bin: the rubble layer on its floor (null for a static bin, whose
 # contents cannot be seen), that floor's box, and its stream.
@@ -1063,6 +1068,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _telemetry_on:
 		_write_telemetry(position, velocity, grounded)
 	_render_kit()
+	_sample_machines(delta)
 
 
 func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> void:
@@ -2169,6 +2175,11 @@ func _build_kit() -> void:
 		_kit_root.add_child(node)
 		_kit_bodies.append(node)
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
+		if bool(_native.is_kit_body_dynamic(body)) and \
+				float(_native.get_kit_body_mass(body)) >= MACHINE_MIN_KG:
+			_machines.append({"body": body, "tip": _farthest_corner(parts), "last_tip": Vector3.INF,
+				"last_at": Vector3.INF, "speed": 0.0, "turning": false, "at": Vector3.ZERO,
+				"tip_at": Vector3.ZERO})
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
 	cable.material = _material(Color("1b1916"), 0.6, 0.5)
@@ -2256,6 +2267,47 @@ func _build_kit() -> void:
 		_kit_root.add_child(spout)
 		_kit_spouts.append(spout)
 	_render_kit()
+
+
+# The corner of a body's parts farthest from its origin, in its own frame.
+func _farthest_corner(parts: PackedFloat32Array) -> Vector3:
+	var best := Vector3.ZERO
+	for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
+		var basis := Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9]))
+		var centre := Vector3(parts[p + 3], parts[p + 4], parts[p + 5])
+		for corner in 8:
+			var flip := Vector3(1.0 if corner & 1 else -1.0, 1.0 if corner & 2 else -1.0,
+				1.0 if corner & 4 else -1.0)
+			var at := centre + basis * (flip * Vector3(parts[p], parts[p + 1], parts[p + 2]))
+			if at.length() > best.length():
+				best = at
+	return best
+
+
+# How fast each machine moves this frame, from the poses _render_kit just set:
+# its farthest point's speed, and whether it turns about its origin (a hinge)
+# rather than moving with it. The audio hears it from that.
+func _sample_machines(delta: float) -> void:
+	if delta <= 0.0 or _machines.is_empty():
+		return
+	for machine in _machines:
+		var node: Node3D = _kit_bodies[int(machine["body"])]
+		var tip: Vector3 = node.transform * (machine["tip"] as Vector3)
+		var at: Vector3 = node.transform.origin
+		var last_tip: Vector3 = machine["last_tip"]
+		var last_at: Vector3 = machine["last_at"]
+		var speed := 0.0
+		var origin_speed := 0.0
+		if last_tip != Vector3.INF and node.visible:
+			speed = tip.distance_to(last_tip) / delta
+			origin_speed = at.distance_to(last_at) / delta
+		machine["speed"] = speed
+		machine["turning"] = speed > 2.0 * origin_speed + 0.05
+		machine["at"] = at
+		machine["tip_at"] = tip
+		machine["last_tip"] = tip
+		machine["last_at"] = at
+	_audio.update_machines(delta, _machines)
 
 
 # Poses every moving kit body and lays every cable through its points, from

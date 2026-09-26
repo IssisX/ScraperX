@@ -103,6 +103,8 @@ public:
     [[nodiscard]] std::int64_t get_kit_body_entity_id(std::int64_t body) const;
     [[nodiscard]] bool is_kit_body_dynamic(std::int64_t body) const;
     [[nodiscard]] bool is_kit_body_enabled(std::int64_t body) const;
+    // The body's mass now, kg (a bin's contents included).
+    [[nodiscard]] double get_kit_body_mass(std::int64_t body) const;
     [[nodiscard]] godot::PackedFloat32Array get_kit_body_parts(std::int64_t body) const;
     [[nodiscard]] godot::Transform3D get_kit_body_transform(std::int64_t body) const;
     [[nodiscard]] std::int64_t get_kit_body_index(std::int64_t entity_id) const;
