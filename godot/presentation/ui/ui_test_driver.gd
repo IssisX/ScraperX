@@ -20,6 +20,7 @@ const SCENARIOS := {
 	"pipe_bridge": 8,
 	"touch_pipe_bridge": 8,
 	"keyboard_pipe_bridge": 8,
+	"touch_facade": 8,
 	"touch_jump": 8,
 	"touch_move_look": 8,
 	"touch_gyro_aim": 8,
@@ -61,7 +62,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	_scenario = scenario
 	_capture_prefix = capture_prefix
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -98,6 +99,8 @@ func _run() -> void:
 			ok = await _pipe_bridge(InputRouter.Device.TOUCH)
 		"keyboard_pipe_bridge":
 			ok = await _pipe_bridge(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_facade":
+			ok = await _touch_facade()
 		"touch_jump":
 			ok = await _touch_jump()
 		"touch_move_look":
@@ -226,6 +229,88 @@ func _pipe_bridge(device: int) -> bool:
 	_detail = "pipes=20 tip_y=%.4f arrival_y=%.3f native_input=1 deaths=0" % [tip, _position().y]
 	return true
 
+
+# AS-017: grade to +33 m, through the real touch controls and native world.
+func _touch_facade() -> bool:
+	var device := InputRouter.Device.TOUCH
+	if not await _pipe_bridge(device):
+		return false
+	for point in [Vector2(21.2, -124.4), Vector2(21.2, -121.3), Vector2(20, -121.3)]:
+		if not await _walk_to(device, point, 0.08, 20.0):
+			return _fail("facade approach %s" % _position())
+	await _face(Vector2(0, -1))
+	await _seconds(0.4)
+	await _pose("facade_approach")
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("cabinet mantle not offered")
+	_act(device)
+	if not await _wait_until(func() -> bool: return _standing_above(13.5), 2.0):
+		return _fail("cabinet mantle %s" % _position())
+	if not await _walk_to(device, Vector2(20, -122.1), 0.05, 3.0):
+		return _fail("cabinet launch position")
+	await _face(Vector2(0, -1))
+	await _seconds(0.3)
+	_tap(1, _center(&"jump"))
+	_move(device, 0.4)
+	var caught := await _wait_until(func() -> bool: return bool(_ctx()["hanging"]), 2.0)
+	_move(device, 0)
+	if not caught:
+		return _fail("duct hang %s" % _position())
+	await _seconds(0.3)
+	await _pose("duct_hang")
+	_tap(1, _center(&"jump"))
+	if not await _wait_until(func() -> bool: return _standing_above(17.0), 2.5):
+		return _fail("duct top-out %s" % _position())
+	for point in [Vector2(22.5, -123.05), Vector2(24, -123.0)]:
+		if not await _walk_to(device, point, 0.06, 6.0):
+			return _fail("duct traverse %s" % _position())
+	await _face(Vector2(0, -1))
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("vent grip not offered")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_ctx()["climbing"]), 1.0):
+		return _fail("touch action did not take vent hold")
+	_move(device, 1)
+	await _seconds(1.0)
+	await _pose("vent_climb")
+	var climbed := await _wait_until(func() -> bool: return _standing_above(22.5), 20.0)
+	_move(device, 0)
+	if not climbed:
+		return _fail("vent top-out %s" % _position())
+	for point in [Vector2(22, -125.2), Vector2(12.5, -125.2), Vector2(12.5, -119.65)]:
+		if not await _walk_to(device, point, 0.06, 12.0):
+			return _fail("monorail %s" % _position())
+	await _face(Vector2(0, -1))
+	await _seconds(0.3)
+	if bool(_native().is_grip_available()):
+		return _fail("ladder should require a leap")
+	await _pose("ladder_leap")
+	_tap(1, _center(&"jump"))
+	_move(device, 1.0)
+	caught = await _wait_until(func() -> bool: return bool(_ctx()["climbing"]), 2.0)
+	_move(device, 0)
+	if not caught:
+		return _fail("ladder catch %s" % _position())
+	_move(device, 1)
+	climbed = await _wait_until(func() -> bool: return _standing_above(33.5), 20.0)
+	_move(device, 0)
+	if not climbed:
+		return _fail("ladder top-out %s" % _position())
+	for point in [Vector2(12.5, -125), Vector2(11.2, -125.3)]:
+		if not await _walk_to(device, point, 0.1, 10.0):
+			return _fail("davit exit %s" % _position())
+	await _seconds(0.5)
+	await _face(Vector2(1, 1))
+	await _pose("facade_arrival")
+	if not _standing_above(33.5) or int(_native().get_support_entity_id()) != 11 \
+			or int(_native().get_death_count()) != 0:
+		return _fail("unsupported facade arrival %s" % _position())
+	_detail = "grade_to_33m=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
+	return true
+
+func _standing_above(height: float) -> bool:
+	return bool(_ctx()["grounded"]) and int(_ctx()["traversal"]) == 0 and _position().y > height
+
 func _ground_foundation() -> bool:
 	if _main._regression_scene:
 		return _fail("production proof selected a regression scene")
@@ -307,6 +392,18 @@ func _touch_move_look() -> bool:
 	# 4.9 m of walking at a 0.69 m stride is several footfalls, each a cue.
 	if _main._audio.steps < 4:
 		return _fail("walking %.2f m played %d footsteps" % [along, _main._audio.steps])
+	# Push beyond the touch ring to sprint; releasing it must clear the latch.
+	var home: Vector2 = _main._touch.stick_home()
+	var overshoot := TouchControls.STICK_THROW * float(_main._touch._u) * 1.35
+	_touch(0, home, true)
+	_drag(0, home + Vector2(0, -overshoot), Vector2(0, -overshoot))
+	await _seconds(0.8)
+	if not bool(_native().is_player_sprinting()) or Vector2(_velocity().x, _velocity().z).length() < 7.9:
+		return _fail("touch overshoot did not produce native sprint")
+	_touch(0, home, false)
+	await _seconds(0.6)
+	if bool(_native().is_player_sprinting()) or Vector2(_velocity().x, _velocity().z).length() > 0.6:
+		return _fail("released sprint left movement latched")
 	_detail = "forward_m=%.2f turned_rad=%.3f settle_mps=%.2f steps=%d" % [along, turned, speed,
 		_main._audio.steps]
 	return true

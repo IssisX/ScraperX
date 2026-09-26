@@ -39,6 +39,10 @@ const PRIMARY_FILL := Color("2b1a0b")
 const STICK_THROW := 150.0
 const STICK_KNOB := 60.0
 const STICK_DEADZONE := 0.1
+# Sprint: the thumb pushed on past the stick's ring, forward, latches it; it
+# holds while the stick stays pushed forward and lets go below half throw.
+const SPRINT_OVERSHOOT := 1.25
+const SPRINT_HOLD := 0.5
 const LOOK_SLOP := 26.0
 const HIT_SLOP := 1.22
 const APPEAR_RATE := 8.0
@@ -64,6 +68,7 @@ class TouchButton:
 
 var router: Node
 var move_vector := Vector2.ZERO
+var sprint_latched := false
 var pendant_axes := Vector2.ZERO
 var touch_scale := 1.0
 
@@ -189,6 +194,7 @@ func reset_touches() -> void:
 	_look_index = -1
 	_look_accum = Vector2.ZERO
 	move_vector = Vector2.ZERO
+	sprint_latched = false
 	pendant_axes = Vector2.ZERO
 	for button in _buttons.values():
 		button.index = -1
@@ -244,6 +250,8 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 	if index == _stick_index:
 		var throw := STICK_THROW * _u
 		var offset := at - _stick_origin
+		if offset.length() > throw * SPRINT_OVERSHOOT and -offset.y > absf(offset.x):
+			sprint_latched = true
 		if offset.length() > throw:
 			# The base follows a thumb that overshoots, so the stick never
 			# saturates into a dead direction the thumb is no longer pushing.
@@ -273,6 +281,7 @@ func _touch_up(index: int) -> bool:
 		_stick_index = -1
 		_stick_knob = Vector2.ZERO
 		move_vector = Vector2.ZERO
+		sprint_latched = false
 		queue_redraw()
 		return true
 	if index == _look_index:
@@ -292,9 +301,12 @@ func _update_stick_vector() -> void:
 	var magnitude := value.length()
 	if magnitude < STICK_DEADZONE:
 		move_vector = Vector2.ZERO
+		sprint_latched = false
 		return
 	var scaled := minf(1.0, (magnitude - STICK_DEADZONE) / (1.0 - STICK_DEADZONE))
 	move_vector = Vector2(value.x, -value.y) / magnitude * scaled
+	if move_vector.y < SPRINT_HOLD:
+		sprint_latched = false
 	if scaled > 0.3:
 		_moved = true
 
@@ -305,14 +317,15 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	if visible:
 		_hint_clock += delta
 	var hanging: bool = ctx["hanging"]
+	var climbing: bool = ctx.get("climbing", false)
 	var jump: TouchButton = _buttons[B_JUMP]
 	jump.shown = true
 	# Pressable while airborne on purpose: main.gd buffers a press made just
 	# before touchdown and fires it on the grounded tick. Dimmed, not dead.
 	jump.enabled = true
-	jump.dimmed = not (ctx["jump_ok"] or hanging)
+	jump.dimmed = not (ctx["jump_ok"] or hanging or climbing)
 	jump.icon = &"climb" if hanging else &"jump"
-	jump.label = "CLIMB UP" if hanging else "JUMP"
+	jump.label = "CLIMB UP" if hanging else ("JUMP OFF" if climbing else "JUMP")
 	jump.tone = TONE_PRIMARY
 
 	var action: TouchButton = _buttons[B_ACTION]
@@ -325,7 +338,11 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	action.label = act["label"]
 	action.tone = TONE_PRIMARY if action.enabled else TONE_GHOST
 
-	_buttons[B_DROP].shown = hanging
+	# Drop lets go of a ledge or a climb's holds, and at an edge behind the
+	# body lowers it over into a hang.
+	var drop: TouchButton = _buttons[B_DROP]
+	drop.shown = ctx.get("drop_ok", hanging)
+	drop.label = "DROP DOWN" if not (hanging or climbing) else "DROP"
 	var chute: TouchButton = _buttons[B_CHUTE]
 	chute.shown = ctx["chute_ok"] and not hanging
 	chute.icon = &"chute"
@@ -341,7 +358,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	var station: StringName = ctx["operating"]
 	_operating = station != &""
 	var crouch: TouchButton = _buttons[B_CROUCH]
-	crouch.shown = not _operating and not hanging
+	crouch.shown = not _operating and not hanging and not climbing
 	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
 	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
 	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
@@ -447,6 +464,10 @@ func _draw_stick() -> void:
 		clampf(_stick_origin.y, _safe.position.y + throw * 0.8, _safe.end.y - throw * 0.8))
 	UiStyle.disc(self, base, throw + 10.0 * _u, UiStyle.with_alpha(UiStyle.INK, 0.26))
 	UiStyle.ring(self, base, throw, UiStyle.with_alpha(UiStyle.PAPER, 0.4), 3.0 * _u)
+	if sprint_latched:
+		# Sprinting: an amber outer ring, where the thumb pushed through.
+		UiStyle.ring(self, base, throw * SPRINT_OVERSHOOT,
+			UiStyle.with_alpha(UiStyle.AMBER, 0.85), 4.0 * _u)
 	var offset := _stick_knob.limit_length(throw)
 	var magnitude := offset.length() / throw
 	if magnitude > STICK_DEADZONE:

@@ -20,7 +20,7 @@ Player waiting must buy visible, consequential motion. Target roughly 5–15 sec
 
 ## 4. Player capabilities and alternate routes
 
-Retain existing parkour, crouch, carry, jump and parachute contracts. Do not add invisible barriers or nerf jump/reach to protect a puzzle. If real frame geometry permits climbing, that route is valid. Keep ordinary ramps, stairs and, where a real supported ladder interaction exists, ladders as an uncomplicated fallback. Their longer route is the natural cost; do not lock them behind the puzzle or a fail counter. The current source retains ordinary stairs, not a new ladder-climbing verb. Remove the rejected machine-linked stair assemblies without removing this fallback.
+Retain existing parkour, crouch, carry, jump and parachute contracts. Do not add invisible barriers or nerf jump/reach to protect a puzzle. If real frame geometry permits climbing, that route is valid. Keep ordinary ramps, stairs and, where a real supported ladder interaction exists, ladders as an uncomplicated fallback. Their longer route is the natural cost; do not lock them behind the puzzle or a fail counter. The current source retains ordinary stairs; AS-017 adds a native climb on reachable thin holds. Remove the rejected machine-linked stair assemblies without removing this fallback.
 
 A mechanism's output should become a stable support, bridge or staircase. Avoid mandatory player launches across a skyscraper gap as the opening ascent. Physics may throw loose loads, but a launch must have a capture envelope and its misses must have a real aftermath.
 
@@ -72,6 +72,12 @@ Rollers and monoliths travel in visible lanes outside required player standing a
 `WO-000`–`WO-013` records and legacy AS test scenarios remain regression provenance. They are selected explicitly in test processes, never automatically constructed in the normal scene. Their entity IDs and local fixture coordinates are not the new campaign map. A successful old water/cage test does not establish an accepted opening mechanism.
 
 ## 10. Upper tower
+
+### AS-017 integration candidate: +11 → +33 m façade
+
+Adapt Claude C1's static service architecture to the current front frame by translating its original +22→44 m route down 11 m. One native Kit body, ID 1600, contains the fixed landing, cabinet, duct, vent, monorail, davit and hanging ladder; presentation draws its native parts. No sibling world builder or hoist is instantiated.
+
+The landing is X=[17.8,22.2], Z=[-124.05,-120.8], top +11 m. Cabinet top +12.7 m leads by a jump/hang to duct top +16.3 m. A thin vent at X=24, Z=-123.45 leads to the +22 m ring. From there a 0.3 m wide monorail at X=12.5 reaches Z=-119.3, top +22.3 m. The ladder's bottom rung is +24.6 m, requiring a leap; it leads to a davit at +33.3 m. The exit walks back to the tower ring near (11.2,33,-125.3), native tower support. A fall remains a real fall onto lower geometry or grade; committed checkpoint restoration is unchanged in authority. Native input/clearance and rendered fit are integration gates, not yet established by these coordinates.
 
 The retained tower silhouette, frame and deck rings are space for future authorship. The ordinary 154 m staircase remains as the owner-requested fallback. The old 198 m cage ride, 220 m connection and 340 m wet route are retired. Do not silently rebuild that schedule. Extend upward only from a demonstrated receiving support using the same large visible mechanics and legitimate parkour.
 

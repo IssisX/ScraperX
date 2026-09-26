@@ -52,10 +52,15 @@ const POSE_PLANT := 5
 const POSE_CHUTE := 6
 const POSE_REMOTE := 7
 const POSE_CARRY := 8
+# Step 2: a fist round each of a climb's two holds, and arms out on a beam.
+const POSE_CLIMB := 9
+const POSE_BALANCE := 10
 
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
+const TRAVERSAL_CLIMBING := 4
+const TRAVERSAL_LOWERING := 5
 
 const FINGER_LATERAL := [0.030, 0.010, -0.010, -0.028]
 const FINGER_LENGTHS := [
@@ -338,9 +343,16 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	# The wall a traversal is against does not turn when the player looks
 	# around mid-hang: the grip frame is fixed when the traversal begins.
 	if traversal != 0 and _last_traversal == 0:
+		# The native's own facing of the structure when it reports one (a
+		# climb, a hang, a lowering over an edge behind the body); else the
+		# way to the lip.
+		var normal: Vector3 = state.get("structure_normal", Vector3.ZERO)
 		var to_ledge := ledge - position
 		to_ledge.y = 0.0
-		_grip_forward = to_ledge.normalized() if to_ledge.length_squared() > 1.0e-4 else forward
+		if normal.length_squared() > 0.25:
+			_grip_forward = normal.normalized()
+		else:
+			_grip_forward = to_ledge.normalized() if to_ledge.length_squared() > 1.0e-4 else forward
 	_last_traversal = traversal
 	var torso_right := forward.cross(Vector3.UP).normalized()
 	var speed := Vector2(velocity.x, velocity.z).length()
@@ -356,12 +368,15 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		_update_remote_buttons(state["pendant"])
 
 	for hand in _hands:
-		var shoulder_local := SHOULDER_LOCAL_RAISED if traversal == TRAVERSAL_HANGING else SHOULDER_LOCAL
+		var raised := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING]
+		var shoulder_local := SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
 		var pose := POSE_REST
 		var reachable := true
-		if traversal == TRAVERSAL_HANGING:
+		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
 			pose = POSE_GRIP
+		elif traversal == TRAVERSAL_CLIMBING:
+			pose = POSE_CLIMB
 		elif traversal == TRAVERSAL_MANTLING or (traversal == TRAVERSAL_VAULTING and hand.side < 0.0):
 			# One-hand speed vault: only the left palm takes the rail.
 			var plant: Vector3 = _pose_target(hand, POSE_PLANT, state, camera, forward, torso_right,
@@ -386,6 +401,8 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			pose = POSE_CHUTE
 		elif not grounded:
 			pose = POSE_REACH if bool(state["affordance"]) else POSE_AIR
+		elif bool(state.get("balancing", false)):
+			pose = POSE_BALANCE
 		elif speed > 0.8:
 			pose = POSE_RUN
 		hand.pose = pose
@@ -412,7 +429,9 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			hand.world_rotation = target_rotation_world
 			hand.initialized = true
 		var blend := 1.0 - exp(-rate * delta)
-		var reach_step := REACH_SPEED * delta if traversal == 0 else INF
+		# A climbing hand moves from hold to hold at a reach's speed too.
+		var reach_step := REACH_SPEED * delta if traversal == 0 or traversal == TRAVERSAL_CLIMBING \
+			else INF
 		if anchored:
 			hand.world_wrist = world_wrist + _close(hand.world_wrist - world_wrist, blend, reach_step)
 			hand.world_rotation = hand.world_rotation.slerp(target_rotation_world, blend)
@@ -481,6 +500,19 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			# of the hand takes the push as the body rises past it.
 			var basis := _hand_basis(_grip_forward, Vector3.UP)
 			return [wrist, basis, true, 30.0, 0.1, 0.15]
+		POSE_CLIMB:
+			# A fist round the bar the native says this hand holds: palm to the
+			# structure, fingers over the far side, the wrist just under it.
+			var hold: Vector3 = state["hand_left"] if side < 0.0 else state["hand_right"]
+			var wrist := hold - _grip_forward * 0.045 + Vector3.DOWN * 0.035
+			var basis := _hand_basis(Vector3.UP * 0.8 + _grip_forward * 0.45, -_grip_forward)
+			return [wrist, basis, true, 14.0, 0.88, 0.55]
+		POSE_BALANCE:
+			# Arms out from the sides for balance, a slow sway between them.
+			var sway := sin(_clock * 2.1 + side * 0.7) * 0.03
+			var wrist := camera.origin + right * (0.40 * side) + up * (-0.24 + sway) - back * 0.30
+			var basis := _hand_basis(right * (0.8 * side) - back * 0.3, up)
+			return [wrist, basis, false, 8.0, 0.2, 0.2]
 		POSE_REACH:
 			var target: Vector3 = state["affordance_point"]
 			var along := forward.cross(Vector3.UP).normalized()
@@ -556,10 +588,12 @@ func _update_remote_buttons(pendant: Vector2) -> void:
 
 func _pole(pose: int, side: float, forward: Vector3, right: Vector3) -> Vector3:
 	match pose:
-		POSE_GRIP, POSE_PLANT, POSE_REACH:
+		POSE_GRIP, POSE_PLANT, POSE_REACH, POSE_CLIMB:
 			# Elbows below and behind the grip, a little out: the forearm
 			# climbs into frame from the lower corner.
 			return right * side * 0.35 - forward * 0.6 + Vector3.DOWN * 1.0
+		POSE_BALANCE:
+			return right * side * 0.3 + Vector3.DOWN * 1.0 - forward * 0.3
 		POSE_REMOTE, POSE_CHUTE:
 			return right * side * 0.9 + Vector3.DOWN * 1.0
 	return right * side * 0.5 + Vector3.DOWN * 1.0 - forward * 0.4

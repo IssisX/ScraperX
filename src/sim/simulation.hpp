@@ -123,6 +123,8 @@ enum class TraversalState : std::uint8_t {
     Hanging = 1,
     Mantling = 2,
     Vaulting = 3,
+    Climbing = 4,
+    Lowering = 5,
 };
 
 // WO-008. Parachuting is a sub-state of Airborne, not a fourth motion primitive
@@ -163,6 +165,23 @@ struct Snapshot final {
     Vector3 ledge_point{};
     double ledge_rise_meters = 0.0;
     std::uint64_t accepted_traversal_count = 0;
+    // Step 2 movement. The points a traversal's hands are on (a climb's two
+    // holds; a hang's lip either side of the body) and the horizontal
+    // direction it faces the structure; zero outside a traversal.
+    Vector3 traversal_left_hand{};
+    Vector3 traversal_right_hand{};
+    Vector3 traversal_normal{};
+    bool player_sprinting = false;
+    // Walking a support narrower than 0.5 m and at least 1.5 m long.
+    bool player_balancing = false;
+    // A hold in reach at hand height, faced from the ground: Action climbs it.
+    bool grip_available = false;
+    std::uint64_t grip_entity_id = 0;
+    Vector3 grip_point{};
+    // An edge behind the body with a drop beyond it: Drop lowers into a hang.
+    bool edge_drop_available = false;
+    Vector3 edge_drop_point{};
+    std::uint64_t climb_count = 0;
     // Static dressing loaded from world_solids.inc: bodies built, drawn
     // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
     // Edges under kStepMaximumHeight walked up (see try_step_up).
@@ -497,6 +516,7 @@ public:
     // A Jump or traversal request stands the body first, and is refused
     // where it cannot stand.
     [[nodiscard]] bool set_crouch_input(bool held) noexcept;
+    [[nodiscard]] bool set_sprint_input(bool held) noexcept;
 
     // AS-003 carry commands. One-shot, like request_valve_toggle. A pick-up
     // takes the carryable the snapshot names in carry_target_entity_id -- a
@@ -625,6 +645,7 @@ private:
     bool traversal_requested_ = false;
     bool release_requested_ = false;
     bool crouch_input_ = false;
+    bool sprint_input_ = false;
     bool pick_up_requested_ = false;
     bool set_down_requested_ = false;
     bool rig_requested_ = false;

@@ -82,7 +82,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_sim_tests scraperx_ascent_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
           ./build/host/scraperx_parkour_flow_tests | tee artifacts/parkour-flow.log
@@ -268,7 +268,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=33 kit_bodies=68 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=33 kit_bodies=69 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim fallback stairs: levels=14" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
           mkdir -p artifacts/screenshots godot/.godot
@@ -301,6 +301,20 @@ jobs:
           grep -F "SCRAPERX_UITEST PASS touch_pipe_bridge " artifacts/touch_pipe_bridge.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/*pipe_bridge.log; then exit 1; fi
           test -s artifacts/screenshots/pipe-bridge_tower_arrival.png
+
+      - name: Facade ascent - continuous touch route from grade to 33 metres
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./build/host/scraperx_ascent_route_tests | tee artifacts/ascent-route.log
+          timeout 600s xvfb-run -a -s "-screen 0 1296x1114x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 \
+            -- --uitest=touch_facade "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/facade" \
+            2>&1 | tee artifacts/touch-facade.log
+          grep -F "SCRAPERX_UITEST PASS touch_facade " artifacts/touch-facade.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-facade.log; then exit 1; fi
+          test -s artifacts/screenshots/facade_vent_climb.png
+          test -s artifacts/screenshots/facade_facade_arrival.png
 
       - name: Regression fixture - native machine authority and Fold-aspect capture
         shell: bash
@@ -441,7 +455,7 @@ jobs:
 
           Proven for the default scene by this workflow:
 
-          - Native body enumeration finds no retired campaign/fixture entities, 33 moving bodies (the player plus the pipe mechanism), 68 mechanism-kit bodies and two control cords.
+          - Native body enumeration finds no retired campaign/fixture entities, 33 moving bodies (the player plus the pipe mechanism), 69 mechanism-kit bodies (including the fixed facade) and two control cords.
           - Normal native locomotion, crouch, jump and grade landing execute without legacy construction.
           - The default world's ordinary fallback staircase is walked through all fourteen flights to the 154 m deck without requesting a jump.
           - The rendered default scene rejects retired machinery nodes and verifies actual input-driven player movement, jump, crouch and pause. Screenshots are foundation_cleared_grade.png and foundation_cleared_tower.png.

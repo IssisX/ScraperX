@@ -12,6 +12,9 @@ extends Node
 # alt (pad Y: chute / sling), sling_toggle, valve, sling_release, sling_attach,
 # crouch (a toggle: C, right-stick click, the touch button), pause, telemetry.
 # Held Ctrl is the one held crouch; frame() reports it as crouch_held.
+# Sprint is held too: Shift; a left-stick click, latched until the stick comes
+# back to rest; the touch stick pushed on past its ring. frame() reports it
+# as sprint_held.
 
 enum Device { KEYBOARD_MOUSE, GAMEPAD, TOUCH }
 
@@ -66,6 +69,7 @@ var _axes := PackedFloat32Array()
 var _mouse_look := Vector2.ZERO
 var _verbs: Array[StringName] = []
 var _boost_timer := 0.0
+var _pad_sprint := false
 
 
 func _ready() -> void:
@@ -103,6 +107,7 @@ func clear_held() -> void:
 	_axes.fill(0.0)
 	_mouse_look = Vector2.ZERO
 	_boost_timer = 0.0
+	_pad_sprint = false
 	if touch != null:
 		touch.reset_touches()
 
@@ -207,6 +212,8 @@ func _handle_pad_button(button: InputEventJoypadButton) -> void:
 			_verbs.append(&"alt")
 		JOY_BUTTON_RIGHT_STICK:
 			_verbs.append(&"crouch")
+		JOY_BUTTON_LEFT_STICK:
+			_pad_sprint = true
 		JOY_BUTTON_START:
 			_verbs.append(&"pause")
 		JOY_BUTTON_BACK:
@@ -324,12 +331,17 @@ func frame(delta: float) -> Dictionary:
 	var look := Vector2.ZERO
 	var pendant := Vector2.ZERO
 	var crouch_held := false
+	var sprint_held := false
 	if enabled and gameplay_active:
 		crouch_held = _keys.has(KEY_CTRL)
 		var keyboard := Vector2(_held(KEY_D) - _held(KEY_A), _held(KEY_W) - _held(KEY_S))
 		if keyboard != Vector2.ZERO:
 			keyboard = keyboard.normalized()
 		var left := _stick(JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y)
+		if left.length() < 0.3:
+			_pad_sprint = false
+		sprint_held = _keys.has(KEY_SHIFT) or _pad_sprint or \
+			(touch != null and bool(touch.sprint_latched))
 		move = keyboard + Vector2(left.x, -left.y)
 		var look_units := _mouse_look
 		if touch != null:
@@ -353,4 +365,4 @@ func frame(delta: float) -> Dictionary:
 	var verbs: Array[StringName] = _verbs.duplicate()
 	_verbs.clear()
 	return {"move": move, "look": look, "pendant": pendant, "verbs": verbs,
-		"crouch_held": crouch_held}
+		"crouch_held": crouch_held, "sprint_held": sprint_held}

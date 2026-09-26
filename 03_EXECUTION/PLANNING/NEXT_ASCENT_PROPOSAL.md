@@ -33,6 +33,10 @@ These are emphases within one persistent tower, not separate game modes. A legal
 
 The two new macro encounters are a **CHOSEN scope budget**, not a requirement for two new simulation systems. Resolve A before specifying C's detailed machinery. If the second placement cannot use the family's validated envelope, either choose a compatible placement or explicitly justify another family; do not silently scale all dimensions and declare the physics unchanged.
 
+### Integration revision after branch inspection (2026-09-26)
+
+The owner authorized reuse from sibling branches. Claude `f872c41` has a locally reproduced native façade climb and swinging stair, reaching +55 m in its own world. AS-017 now adapts its façade from our +11 m receiver to +33 m. This replaces A's proposed freight-frame implementation with proven climbing architecture; the frame remains a later candidate. Next, evaluate/adapt the swinging stair for +33→44 m, then close +44→66 m with a contrasting connection and meaningful route choice. The exact upper placement is unresolved. The +66 m whole-route, checkpoint, rendered, Android and device gates remain unchanged. Sibling tests establish reuse candidates, never current integrated height.
+
 ### First candidate: counterweighted tilting freight frame
 
 An idle freight transfer frame has a raised, visibly restrained counterweight. A large reachable release frees the frame; the descending weight raises the boarding end toward an upper freight landing. A structural receiver arrests and supports it. The player uses real moving support and exits onto the tower. The frame and its restraint must look like working industrial equipment, with their load path visible from the approach.
