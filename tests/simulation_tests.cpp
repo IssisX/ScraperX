@@ -2313,7 +2313,56 @@ void run_service_ladder() {
     std::cout << "PASS scraperx_sim AS-010 ladder backup: landing_y=" << route.snapshot().player_position.y << '\n';
 }
 
+void dump_apron(const scraperx::sim::Simulation &sim, const char *tag) {
+    const auto state = sim.apron_state();
+    const auto at = sim.snapshot();
+    std::cout << tag << " wedge=" << state.wedge_travel << " ball_z=" << state.ball_z << " pipe=" << state.pipe_x << ',' << state.pipe_y
+              << " scale=" << state.scale_angle << " latch=" << state.latch_angle << " door=" << state.door_angle
+              << " boulder_y=" << state.boulder_y << " wreck=" << state.wreck_angle << " slab_x=" << state.slab_x
+              << " seesaw=" << state.seesaw_angle << " player=" << at.player_position.x << ',' << at.player_position.y
+              << ',' << at.player_position.z << '\n';
+}
+
+// The first beat of the apron chain. The wedge holds the pipes. The ball is
+// the only thing that takes it out, and the player is who drives the ball.
+// The pipes then run. The basket does not catch them yet: the door stays
+// shut, and that is the check that the rest of the chain has not been tripped
+// by anything but those pipes.
+void run_apron_chain() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation held(InitialSpawn::ApronBall);
+    require(held.advance_frame(2.0).accepted, "the apron must settle");
+    const auto settled = held.apron_state();
+    require(held.advance_frame(4.0).accepted, "the unstruck chain must keep stepping");
+    const auto still = held.apron_state();
+    require(std::abs(still.wedge_travel - settled.wedge_travel) < 0.25 && still.boulder_y > 5.0,
+            "until the ball hits the wedge, the pipes stay and the door stays shut");
+
+    Simulation run(InitialSpawn::ApronBall);
+    require(run.advance_frame(1.5).accepted, "the apron approach must settle");
+    const double pipe_x = run.apron_state().pipe_x;
+    require(run.set_facing(0.0, 1.0), "facing the wedge must be accepted");
+    require(run.set_move_input(0.0, 1.0), "shoving the ball must be accepted");
+    require(run.advance_frame(4.0).accepted, "the shove must be allowed to land");
+    (void)run.set_move_input(0.0, 0.0);
+    require(run.advance_frame(6.0).accepted, "the pipes must be given time to run");
+    const auto gone = run.apron_state();
+    if (!(gone.wedge_travel > 4.0 && gone.pipe_x > pipe_x + 4.0)) {
+        dump_apron(run, "missed");
+    }
+    require(gone.wedge_travel > 4.0, "the ball must drive the wedge clear of the pipes");
+    require(gone.pipe_x > pipe_x + 4.0, "with the wedge gone, the pipes must run down the ramp");
+    std::cout << "PASS scraperx_sim apron chain: wedge=" << gone.wedge_travel << " pipe_x=" << gone.pipe_x
+              << " (was " << pipe_x << ")\n";
+}
+
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "APRON") {
+        run_apron_chain();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
         run_wet_isolation();
@@ -6055,6 +6104,7 @@ int main() {
     run_service_from_dismount();
     run_service_route();
     run_service_ladder();
+    run_apron_chain();
     run_ascent();
 
     return EXIT_SUCCESS;

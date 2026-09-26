@@ -1,8 +1,12 @@
 # The apron chain
 
-The old ascent plans are withdrawn. They stacked small, hard-to-see parts (screws, pins, springs, valves, capstans) and called that a lift. Those plans are not the build.
+The old ascent plans are withdrawn. They stacked small, hard-to-see parts and called that a lift. Those plans are not the build.
 
-This is the first machine, on the ground. One chain. Every part is big enough to read from where you stand. Gravity, a hinge, and a hit. Nothing else.
+This is the first machine, on the ground, east of where you are born. One chain. Every part is big enough to read from where you stand.
+
+**Built and proven so far:** the pipes sit on the ramp, and the wedge is the only thing holding them. You drive the ball into the wedge and it slides out. The pipes run. If you do not, the wedge stays and the door above stays shut.
+
+**Not proven:** the pipes do not land in the scale yet, so the door, the boulder, the hanging ball, the slabs and the seesaw are standing there and do not move. The seesaw does not lift you yet. That handoff is the next piece of this same chain, not a new idea.
 
 The native simulation owns the bodies. Godot only draws them. There is no joint in the presentation, and no motor.
 

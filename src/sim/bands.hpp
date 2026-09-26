@@ -245,4 +245,27 @@ struct MidstackService final {
 
 void build_midstack_service(kit::Kit &kit, MidstackService &service);
 
+// The apron chain, on the ground east of the grade spawn.
+struct ApronChain final {
+    kit::BodyIndex wedge;
+    kit::BodyIndex ball;
+    kit::BodyIndex pipe[6];
+    kit::BodyIndex scale;
+    kit::BodyIndex block;
+    kit::BodyIndex latch;
+    kit::BodyIndex door;
+    kit::BodyIndex boulder;
+    kit::BodyIndex wreck;
+    kit::BodyIndex slab[5];
+    kit::BodyIndex seesaw;
+    kit::GuideIndex wedge_guide;
+    kit::GuideIndex latch_guide;
+    kit::LeverIndex scale_hinge;
+    kit::LeverIndex door_hinge;
+    kit::LeverIndex wreck_hinge;
+    kit::LeverIndex seesaw_hinge;
+};
+
+void build_apron_chain(kit::Kit &kit, ApronChain &chain);
+
 } // namespace scraperx::sim::bands

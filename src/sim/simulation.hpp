@@ -126,6 +126,10 @@ enum class InitialSpawn : std::uint8_t {
     Plate640 = 38,
     // Where the crane ride steps off onto that same floor, south-east of the cage.
     Plate640Dismount = 39,
+    // The apron chain: beside the ball that knocks the wedge out, and on the
+    // seesaw deck that the chain lifts.
+    ApronBall = 40,
+    ApronDeck = 41,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -235,6 +239,22 @@ struct ServiceState final {
     double m_cage_travel = 0.0;
     double m_skip_travel = 0.0;
     std::uint64_t m_rope_end_entity_id = 0;
+};
+
+// Where the apron chain is, for the falsifier. Angles are the hinges, in
+// radians, from the pose they were built in.
+struct ApronState final {
+    double wedge_travel = 0.0;
+    double ball_z = 0.0;
+    double pipe_x = 0.0;
+    double pipe_y = 0.0;
+    double scale_angle = 0.0;
+    double latch_angle = 0.0;
+    double door_angle = 0.0;
+    double boulder_y = 0.0;
+    double wreck_angle = 0.0;
+    double slab_x = 0.0;
+    double seesaw_angle = 0.0;
 };
 
 // Rubble spilled onto a static surface, piled where it landed.
@@ -680,6 +700,20 @@ public:
     static constexpr std::uint64_t kServiceMLeverEntityId = 2133;
     static constexpr std::uint64_t kServiceMHandleEntityId = 2134;
 
+    // The apron chain. The frame is static. Everything else moves.
+    static constexpr std::uint64_t kApronFrameEntityId = 1014;
+    static constexpr std::uint64_t kApronWedgeEntityId = 2140;
+    static constexpr std::uint64_t kApronBallEntityId = 2141;
+    static constexpr std::uint64_t kApronPipeEntityId = 2142;
+    static constexpr std::uint64_t kApronScaleEntityId = 2148;
+    static constexpr std::uint64_t kApronBlockEntityId = 2149;
+    static constexpr std::uint64_t kApronLatchEntityId = 2150;
+    static constexpr std::uint64_t kApronDoorEntityId = 2151;
+    static constexpr std::uint64_t kApronBoulderEntityId = 2152;
+    static constexpr std::uint64_t kApronWreckEntityId = 2153;
+    static constexpr std::uint64_t kApronSlabEntityId = 2154;
+    static constexpr std::uint64_t kApronSeesawEntityId = 2159;
+
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
     static constexpr double kTowerHeightMeters = 1600.0;
@@ -815,6 +849,7 @@ public:
     [[nodiscard]] ShopState shop_state() const noexcept;
     [[nodiscard]] CraneState crane_state() const noexcept;
     [[nodiscard]] ServiceState service_state() const noexcept;
+    [[nodiscard]] ApronState apron_state() const noexcept;
 
 private:
     class PhysicsWorld;

@@ -1529,6 +1529,12 @@ private:
     case scraperx::sim::InitialSpawn::Plate640Dismount:
         // Where L's cab steps the rider off onto TP-640.
         return {-3.0, 641.25, -156.5};
+    case scraperx::sim::InitialSpawn::ApronBall:
+        // South of the ball, facing the wedge.
+        return {95.53, 3.80, -13.20};
+    case scraperx::sim::InitialSpawn::ApronDeck:
+        // On the seesaw's long deck, at the pose it is built in.
+        return {163.10, 2.70, -8.0};
     case scraperx::sim::InitialSpawn::MachineYard:
         return {31.2, 5.0, -96.0};
     case scraperx::sim::InitialSpawn::LiftPlatform:
@@ -1874,6 +1880,7 @@ public:
         scraperx::sim::bands::build_plate_shop(*kit_, shop_);
         scraperx::sim::bands::build_facade_crane(*kit_, crane_);
         scraperx::sim::bands::build_midstack_service(*kit_, service_);
+        scraperx::sim::bands::build_apron_chain(*kit_, apron_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -2095,6 +2102,10 @@ public:
 
     [[nodiscard]] const scraperx::sim::bands::MidstackService &service() const noexcept {
         return service_;
+    }
+
+    [[nodiscard]] const scraperx::sim::bands::ApronChain &apron() const noexcept {
+        return apron_;
     }
 
     void set_feed_enabled(const bool enabled) noexcept {
@@ -6277,6 +6288,7 @@ private:
     scraperx::sim::bands::PlateShop shop_{};
     scraperx::sim::bands::FacadeCrane crane_{};
     scraperx::sim::bands::MidstackService service_{};
+    scraperx::sim::bands::ApronChain apron_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
     std::uint8_t rig_action_ = 0;
     std::uint64_t rig_target_entity_ = 0;
@@ -6774,6 +6786,25 @@ ServiceState Simulation::service_state() const noexcept {
     out.m_cage_travel = kit.guide_travel(service.m_cage_guide);
     out.m_skip_travel = kit.guide_travel(service.m_skip_guide);
     out.m_rope_end_entity_id = kit.rope_end_entity(service.m_rope);
+    return out;
+}
+
+ApronState Simulation::apron_state() const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    const scraperx::sim::bands::ApronChain &apron = physics_world_->apron();
+    ApronState out;
+    out.wedge_travel = kit.guide_travel(apron.wedge_guide);
+    out.ball_z = kit.body_position(apron.ball).GetZ();
+    const JPH::RVec3 pipe = kit.body_position(apron.pipe[5]);
+    out.pipe_x = pipe.GetX();
+    out.pipe_y = pipe.GetY();
+    out.scale_angle = kit.lever_angle(apron.scale_hinge);
+    out.latch_angle = kit.guide_travel(apron.latch_guide);
+    out.door_angle = kit.lever_angle(apron.door_hinge);
+    out.boulder_y = kit.body_position(apron.boulder).GetY();
+    out.wreck_angle = kit.lever_angle(apron.wreck_hinge);
+    out.slab_x = kit.body_position(apron.slab[0]).GetX();
+    out.seesaw_angle = kit.lever_angle(apron.seesaw_hinge);
     return out;
 }
 
