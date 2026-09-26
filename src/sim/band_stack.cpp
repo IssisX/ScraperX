@@ -27,12 +27,14 @@ using kit::Part;
 // yard and north to the tower, and west of the cage an empty bucket hangs at
 // the top of its own guide, held by a catch. One rope runs from the bucket's
 // bail over two head sheaves and down to the cage's eye. Empty, the bucket
-// (150 kg) is lighter than the cage (300 kg): tripped, nothing moves. Holding
-// the fill chain opens the tank's valve and water runs into the bucket;
-// tripped with it full, the bucket falls 21.8 m and the cage rides 21.8 m to
-// a gangway onto deck 2 under a brake-only governor. At the foot of its guide
-// the bucket lands on a striker that opens its drain: emptied, it is lighter
-// than the cage again, and the cage comes back down to the yard by itself.
+// (150 kg) is lighter than the cage (300 kg). A chain hangs inside the cage
+// from the valve's lever over it: a rider who takes hold of it pulls it down,
+// the lever opens the tank's valve and lets the catch go, and water runs into
+// the bucket until it outweighs the cage with the rider in it. Then the bucket
+// falls 21.8 m and the cage rides 21.8 m to a gangway onto deck 2 under a
+// brake-only governor. At the foot of its guide the bucket lands on a striker
+// that opens its drain: emptied, it is lighter than the cage again, and the
+// cage comes back down to the yard by itself.
 constexpr float kDeck2Top = 22.00F;
 
 constexpr float kCageX = 10.00F;
@@ -63,10 +65,10 @@ constexpr float kBucketFloorY = 23.10F;        // at the top of its guide
 constexpr float kBucketMassKg = 150.0F;
 constexpr float kBucketCapacityKg = 1000.0F;
 constexpr float kBailY = kBucketFloorHalfY + kBucketWall + 0.10F;
-// The striker opens the drain while the bucket sits on it: 80 kg/s, slow
-// enough that a rider has ten seconds at the top to step off before the
+// The striker opens the drain while the bucket sits on it: 25 kg/s, slow
+// enough that a rider has several seconds at the top to step off before the
 // cage goes back down.
-constexpr float kDrainRate = 80.0F;
+constexpr float kDrainRate = 25.0F;
 const JPH::RVec3 kStrikerPivot(kBucketX, 1.29, kBucketZ + 0.90);
 
 constexpr float kSheaveY = 27.00F;
@@ -86,32 +88,30 @@ const JPH::Vec3 kTankMax(7.90F, 30.40F, -119.15F);
 constexpr float kTankWaterKg = 12000.0F;
 const JPH::RVec3 kSpout(7.10, 25.10, kBucketZ + 0.45);
 constexpr float kFillArea = 0.03F;             // m^2, the valve full open
-constexpr float kValveShut = 0.15F;
-constexpr float kValveOpen = 0.60F;
-
-// The two counterweighted levers: the catch's by the bucket's top, its 1 m
-// arm west over the headframe's west side; the valve's on the downpipe, its
-// arm south over the gantry. Each one's weight holds its arm up against its
-// stop, and a pull on its cord turns it down.
-// South of the west-face brace where the arm crosses that face.
-const JPH::RVec3 kLeverPivot(kBucketX - 1.10, 25.80, kBucketZ + 1.50);
-const JPH::RVec3 kValvePivot(kSpout.GetX(), 26.20, -119.55);
-constexpr float kLeverArm = 1.00F;
+// The valve's lever turns on the valve's own spindle, on the downpipe over
+// the bucket's bay: its 2.4 m arm reaches east over the headframe's middle
+// legs and the cage, and a counterweight west of the spindle holds it up on
+// its stop. Its chain hangs from the arm's end into the cage: taking hold of
+// it pulls it down to hand height, which turns the lever past the catch's
+// release and opens the valve. Let go, the lever returns, the valve shuts and
+// the catch seats the bucket again. Inside the cage, the chain is in reach
+// only of someone standing in it.
+const JPH::RVec3 kLeverPivot(kSpout.GetX(), 26.20, kSpout.GetZ() + 0.25);
+constexpr float kLeverArm = 2.40F;
+const JPH::Vec3 kLeverArmHalf(0.5F * kLeverArm, 0.08F, 0.05F);
+constexpr float kCounterweightAt = 0.60F;
+const JPH::Vec3 kCounterweightHalf(0.25F, 0.30F, 0.27F);
 constexpr float kLeverMassKg = 60.0F;
-constexpr float kLeverReleaseAngle = 0.50F;
-constexpr float kLeverTravel = 1.20F;
-// The cords drop to a gantry across the cage's south opening. The trip cord
-// runs along it and hangs its handle in the opening at a rider's hand height;
-// the fill chain hangs its handle west of the cage, in front of the bucket's
-// fence.
-constexpr float kGantryZ = -118.75F;
-constexpr float kGantryBeamY = 2.35F;
-constexpr float kGantryWestX = 4.30F;
-constexpr float kGantryEastX = 11.90F;
-const JPH::RVec3 kCordSheaveWest(kBucketX - 1.10 - kLeverArm, kGantryBeamY - 0.10, kGantryZ);
-const JPH::RVec3 kCordSheaveEast(9.50, kGantryBeamY - 0.10, kGantryZ);
-const JPH::RVec3 kFillSheave(kSpout.GetX(), kGantryBeamY - 0.20, kValvePivot.GetZ() + kLeverArm);
-constexpr float kHandleDrop = 0.75F;
+constexpr float kLeverTravel = 0.80F;
+constexpr float kCatchRelease = 0.15F;
+constexpr float kValveShut = 0.06F;
+constexpr float kValveOpen = 0.24F;
+constexpr float kChainTop = kCageFloorTop + 1.95F;   // the handle's top, at rest
+// The chain runs straight down from the arm's end past a guide point 1.3 m
+// under it, so every pull turns the lever, up to its dead point (0.50 rad,
+// 0.97 m of pull); above a rider's head at the top of the ride, and inside
+// the cage's open roof.
+constexpr float kChainGuideY = 24.90F;
 constexpr float kHandleHalfY = 0.04F;
 
 // The gangway from the cage's north side at the top onto deck 2.
@@ -188,27 +188,12 @@ constexpr float kGangwaySouthZ = -122.30F;
     return bucket;
 }
 
-// A counterweighted lever about `axis`: its arm along `arm` (a unit axis)
-// from the pivot, a block the other side.
-kit::BodyIndex add_lever_body(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 pivot,
-                              const JPH::Vec3 arm, const JPH::Vec3 axis, kit::LeverIndex &lever) {
-    const JPH::Vec3 along = arm.Abs();
-    const JPH::Vec3 arm_half =
-        along * (0.5F * kLeverArm) + (JPH::Vec3::sReplicate(1.0F) - along) * 0.05F;
-    const kit::BodyIndex body = kit.add_body(
-        entity,
-        {box(arm_half, arm * (0.5F * kLeverArm), Material::Hazard),
-         box(JPH::Vec3(0.15F, 0.25F, 0.15F), arm * -0.35F, Material::Rust)},
-        pivot, JPH::Quat::sIdentity(), kLeverMassKg, 0.5F);
-    lever = kit.add_lever(body, pivot, axis, arm, 0.0F, kLeverTravel);
-    return body;
-}
 
-kit::BodyIndex add_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 sheave) {
+// A handle hanging with its top at `top` on a chain from above.
+kit::BodyIndex add_chain_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 top) {
     const kit::BodyIndex handle = kit.add_body(
         entity, {box(JPH::Vec3(0.22F, kHandleHalfY, 0.04F), JPH::Vec3::sZero(), Material::Yellow)},
-        sheave - JPH::RVec3(0.0, kHandleDrop + kHandleHalfY, 0.0), JPH::Quat::sIdentity(), 3.0F,
-        0.9F);
+        top - JPH::RVec3(0.0, kHandleHalfY, 0.0), JPH::Quat::sIdentity(), 3.0F, 0.9F);
     kit.set_carry(handle, kit::CarryKind::Handle, JPH::Vec3(0.0F, kHandleHalfY, 0.0F));
     kit.set_damping(handle, 1.5F, 1.5F);
     return handle;
@@ -344,49 +329,20 @@ void build_s1_headframe(std::vector<Part> &frame, const JPH::RVec3 cage_sheave,
     frame.push_back(box(JPH::Vec3(0.5F * (kTankMin.GetX() - 0.03F - kRiserX + 0.10F), 0.10F, 0.10F),
                         JPH::Vec3(0.5F * (kTankMin.GetX() - 0.03F + kRiserX - 0.10F), kRiserTop, kRiserZ),
                         Material::Galvanised));
-    // The downpipe from the tank's floor to the spout, its valve, and the
-    // valve lever's spindle and hanger.
+    // The downpipe from the tank's floor to the spout, and its valve.
     const JPH::Vec3 spout(kSpout);
     const float pipe_top = kTankMin.GetY() - 0.20F;
     frame.push_back(box(JPH::Vec3(0.08F, 0.5F * (pipe_top - spout.GetY()), 0.08F),
                         JPH::Vec3(spout.GetX(), 0.5F * (pipe_top + spout.GetY()), spout.GetZ()),
                         Material::Galvanised));
-    const JPH::Vec3 valve(kValvePivot);
-    frame.push_back(box(JPH::Vec3(0.13F, 0.13F, 0.13F),
-                        JPH::Vec3(spout.GetX(), valve.GetY(), spout.GetZ()), Material::Hazard));
-    frame.push_back(box(JPH::Vec3(0.04F, 0.04F, 0.5F * (valve.GetZ() - spout.GetZ()) - 0.10F),
-                        JPH::Vec3(valve.GetX() + 0.24F, valve.GetY(), 0.5F * (valve.GetZ() + spout.GetZ())),
-                        Material::Steel));
-    frame.push_back(box(JPH::Vec3(0.06F, 0.5F * (pipe_top - valve.GetY()), 0.06F),
-                        JPH::Vec3(valve.GetX() + 0.36F, 0.5F * (pipe_top + valve.GetY()), valve.GetZ()),
-                        Material::Rust));
-    frame.push_back(box(JPH::Vec3(0.10F, 0.06F, 0.06F),
-                        JPH::Vec3(valve.GetX() + 0.26F, valve.GetY(), valve.GetZ()), Material::Rust));
-    // The catch lever's hanger from a joist under the tank.
+    // The valve's body, and its spindle out to the lever's hub.
     const JPH::Vec3 pivot(kLeverPivot);
-    frame.push_back(box(JPH::Vec3(0.08F, 0.08F, span_z), JPH::Vec3(pivot.GetX(), kHeadY - 0.10F, mid_z),
-                        Material::Rust));
-    frame.push_back(box(JPH::Vec3(0.06F, 0.5F * (kHeadY - 0.18F - pivot.GetY()), 0.06F),
-                        JPH::Vec3(pivot.GetX(), 0.5F * (kHeadY - 0.18F + pivot.GetY()), pivot.GetZ() + 0.25F),
-                        Material::Rust));
-    frame.push_back(box(JPH::Vec3(0.08F, 0.08F, 0.12F),
-                        JPH::Vec3(pivot.GetX(), pivot.GetY(), pivot.GetZ() + 0.18F), Material::Rust));
-    // The cords' gantry across the south opening: posts, beam, three sheaves.
-    for (const float x : {kGantryWestX, kGantryEastX}) {
-        frame.push_back(box(JPH::Vec3(0.05F, 0.5F * (kGantryBeamY + 0.05F), 0.05F),
-                            JPH::Vec3(x, 0.5F * (kGantryBeamY + 0.05F), kGantryZ), Material::Yellow));
-    }
-    frame.push_back(box(JPH::Vec3(0.5F * (kGantryEastX - kGantryWestX) + 0.05F, 0.05F, 0.05F),
-                        JPH::Vec3(0.5F * (kGantryEastX + kGantryWestX), kGantryBeamY, kGantryZ),
-                        Material::Yellow));
-    for (const JPH::RVec3 sheave : {kCordSheaveWest, kCordSheaveEast}) {
-        frame.push_back(box(JPH::Vec3(0.06F, 0.05F, 0.03F), JPH::Vec3(sheave), Material::Hazard));
-    }
-    const JPH::Vec3 fill(kFillSheave);
-    frame.push_back(box(JPH::Vec3(0.06F, 0.05F, 0.03F), fill, Material::Hazard));
-    frame.push_back(box(JPH::Vec3(0.03F, 0.5F * (kGantryBeamY - fill.GetY()), 0.5F * (fill.GetZ() - kGantryZ)),
-                        JPH::Vec3(fill.GetX(), 0.5F * (kGantryBeamY + fill.GetY()), 0.5F * (fill.GetZ() + kGantryZ)),
-                        Material::Yellow));
+    constexpr float kValveHalf = 0.13F;
+    frame.push_back(box(JPH::Vec3(kValveHalf, kValveHalf, kValveHalf),
+                        JPH::Vec3(spout.GetX(), pivot.GetY(), spout.GetZ()), Material::Hazard));
+    frame.push_back(span({pivot.GetX() - 0.04F, pivot.GetY() - 0.04F, spout.GetZ() + kValveHalf},
+                         {pivot.GetX() + 0.04F, pivot.GetY() + 0.04F, pivot.GetZ() - kLeverArmHalf.GetZ() - 0.01F},
+                         Material::Steel));
     // The gangway onto deck 2, on knee braces back to the face, with rails
     // along its sides.
     const float gangway_mid_z = 0.5F * (kGangwayNorthZ + kGangwaySouthZ);
@@ -434,26 +390,25 @@ void build_s1(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
 
     build_s1_headframe(frame, cage_sheave, bucket_sheave);
 
-    // ---- the catch, its lever and the trip cord --------------------------------
-    // About +z with the arm west, so turning its free end down is positive.
-    stack.s1_lever_body = add_lever_body(kit, Sim::kStackS1LeverEntityId, kLeverPivot,
-                                         -JPH::Vec3::sAxisX(), JPH::Vec3::sAxisZ(), stack.s1_lever);
-    stack.s1_catch = kit.add_catch(stack.s1_bucket, stack.s1_lever, kLeverReleaseAngle, 0.05F, true);
-    stack.s1_handle = add_handle(kit, Sim::kStackS1HandleEntityId, kCordSheaveEast);
-    (void)kit.add_trip_line(stack.s1_lever_body, JPH::Vec3(-kLeverArm, 0.0F, 0.0F), stack.s1_handle,
-                            JPH::Vec3(0.0F, kHandleHalfY, 0.0F), kCordSheaveWest, kCordSheaveEast);
-
-    // ---- the tank, its valve and the fill chain -------------------------------
-    // About +x with the arm south, so turning its free end down is positive.
-    stack.s1_valve_body = add_lever_body(kit, Sim::kStackS1ValveEntityId, kValvePivot,
-                                         JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(), stack.s1_valve);
-    stack.s1_fill_handle = add_handle(kit, Sim::kStackS1FillHandleEntityId, kFillSheave);
-    (void)kit.add_trip_line(stack.s1_valve_body, JPH::Vec3(0.0F, 0.0F, kLeverArm),
-                            stack.s1_fill_handle, JPH::Vec3(0.0F, kHandleHalfY, 0.0F), kFillSheave,
-                            kFillSheave);
+    // ---- the valve's lever, its chain, the valve and the catch -----------------
+    // About -z with the arm east, so the chain pulling its end down is positive.
+    stack.s1_lever_body = kit.add_body(
+        Sim::kStackS1LeverEntityId,
+        {box(kLeverArmHalf, JPH::Vec3(0.5F * kLeverArm, 0.0F, 0.0F), Material::Hazard),
+         box(kCounterweightHalf, JPH::Vec3(-kCounterweightAt, 0.0F, 0.0F), Material::Rust)},
+        kLeverPivot, JPH::Quat::sIdentity(), kLeverMassKg, 0.5F);
+    stack.s1_lever = kit.add_lever(stack.s1_lever_body, kLeverPivot, -JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(),
+                                   0.0F, kLeverTravel);
+    const JPH::RVec3 lever_end = kLeverPivot + JPH::RVec3(kLeverArm, 0.0, 0.0);
+    const JPH::RVec3 chain_top(lever_end.GetX(), kChainTop, lever_end.GetZ());
+    stack.s1_chain = add_chain_handle(kit, Sim::kStackS1ChainEntityId, chain_top);
+    const JPH::RVec3 chain_sheave(lever_end.GetX(), kChainGuideY, lever_end.GetZ());
+    (void)kit.add_trip_line(stack.s1_lever_body, JPH::Vec3(kLeverArm, 0.0F, 0.0F), stack.s1_chain,
+                            JPH::Vec3(0.0F, kHandleHalfY, 0.0F), chain_sheave, chain_sheave);
+    stack.s1_catch = kit.add_catch(stack.s1_bucket, stack.s1_lever, kCatchRelease, 0.05F, true);
     stack.s1_tank = kit.add_pool(kTankMin, kTankMax, kTankWaterKg);
     stack.s1_fill = kit.add_pipe(stack.s1_tank, kTankMin.GetY(), kit::PoolIndex{}, 0.0F, kSpout,
-                                 kFillArea, stack.s1_valve, kValveShut, kValveOpen);
+                                 kFillArea, stack.s1_lever, kValveShut, kValveOpen);
 
     // ---- the striker and the bucket's drain ------------------------------------
     // Its arm reaches north under the bucket's landing; a block south holds
@@ -506,12 +461,23 @@ constexpr float kDuctX1 = 24.40F;
 constexpr float kDuctBottom = 25.80F;
 constexpr float kDuctTop = 27.30F;
 constexpr float kDuctZ1 = -122.90F;
-// The vent stack from the duct up past deck 3's edge: a climber tops out
-// over the deck, not onto its edge beam, so the stack runs on 1 m above it.
+// The vent stack from the duct up to deck 3's edge. Where it meets the edge
+// a steel plate lies on the deck with its fascia down the edge beam's face:
+// one lip, flush from the beam's foot to the plate's top, that a climber on
+// the stack tops out over as soon as it is in reach. The mantle carries the
+// body straight up past the stack's head and over the plate, so the stack
+// tees off under the deck's top and its two outlets rise 1 m on either side
+// of that path, wider apart than a body.
 constexpr float kVentX = 24.00F;
 constexpr float kVentZ = -123.45F;
 constexpr float kVentHalf = 0.07F;
+constexpr float kVentTeeY = kDeck3Top - 0.30F;
+constexpr float kVentOutletHalfSpan = 0.50F;
 constexpr float kVentTop = kDeck3Top + 1.00F;
+constexpr float kVentPlateHalfX = 0.60F;
+constexpr float kVentPlateDepth = 0.95F;     // from the fascia in over the deck
+constexpr float kVentPlateThick = 0.03F;
+constexpr float kVentFascia = 0.04F;
 // Deck 3's monorail and deck 4's davit, one over the other, and the ladder
 // hung from the davit's arm with its stiles 1 m above the arm; its bottom
 // rung is a jump from the monorail, its stiles clear of a walker's head.
@@ -567,9 +533,22 @@ void build_c1(std::vector<Part> &route) {
 
     // ---- the vent stack, on the duct and clamped to deck 3's edge beam -------
     route.push_back(span({kVentX - kVentHalf, kDuctTop, kVentZ - kVentHalf},
-                         {kVentX + kVentHalf, kVentTop, kVentZ + kVentHalf}, Material::Galvanised));
-    route.push_back(span({kVentX - 0.03F, deck3_beam_bottom + 0.35F, kFaceOuterZ},
+                         {kVentX + kVentHalf, kVentTeeY + kVentHalf, kVentZ + kVentHalf}, Material::Galvanised));
+    route.push_back(span({kVentX - kVentOutletHalfSpan - kVentHalf, kVentTeeY - kVentHalf, kVentZ - kVentHalf},
+                         {kVentX + kVentOutletHalfSpan + kVentHalf, kVentTeeY + kVentHalf, kVentZ + kVentHalf},
+                         Material::Galvanised));
+    for (const float side : {-1.0F, 1.0F}) {
+        const float x = kVentX + side * kVentOutletHalfSpan;
+        route.push_back(span({x - kVentHalf, kVentTeeY - kVentHalf, kVentZ - kVentHalf},
+                             {x + kVentHalf, kVentTop, kVentZ + kVentHalf}, Material::Galvanised));
+    }
+    route.push_back(span({kVentX - 0.03F, deck3_beam_bottom + 0.35F, kFaceOuterZ + kVentFascia},
                          {kVentX + 0.03F, deck3_beam_bottom + 0.45F, kVentZ - kVentHalf}, Material::Steel));
+    route.push_back(span({kVentX - kVentPlateHalfX, kDeck3Top, kFaceOuterZ - kVentPlateDepth},
+                         {kVentX + kVentPlateHalfX, kDeck3Top + kVentPlateThick, kFaceOuterZ + kVentFascia},
+                         Material::Steel));
+    route.push_back(span({kVentX - kVentPlateHalfX, deck3_beam_bottom, kFaceOuterZ},
+                         {kVentX + kVentPlateHalfX, kDeck3Top, kFaceOuterZ + kVentFascia}, Material::Steel));
 
     // ---- deck 3's monorail -------------------------------------------------------
     route.push_back(span({kDavitX - 0.15F, kDeck3Top, kMonorailZ0}, {kDavitX + 0.15F, kMonorailTop, kMonorailZ1},

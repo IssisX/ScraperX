@@ -465,11 +465,9 @@ public:
     static constexpr std::uint64_t kStackRouteEntityId = 1021;
     static constexpr std::uint64_t kStackS1CageEntityId = 2200;
     static constexpr std::uint64_t kStackS1BucketEntityId = 2201;
-    static constexpr std::uint64_t kStackS1ValveEntityId = 2202;
-    static constexpr std::uint64_t kStackS1LeverEntityId = 2203;
-    static constexpr std::uint64_t kStackS1HandleEntityId = 2204;
-    static constexpr std::uint64_t kStackS1FillHandleEntityId = 2205;
-    static constexpr std::uint64_t kStackS1StrikerEntityId = 2206;
+    static constexpr std::uint64_t kStackS1LeverEntityId = 2202;
+    static constexpr std::uint64_t kStackS1ChainEntityId = 2203;
+    static constexpr std::uint64_t kStackS1StrikerEntityId = 2204;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

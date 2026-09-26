@@ -129,6 +129,11 @@ public:
     [[nodiscard]] bool is_well_c_catch_latched() const;
     [[nodiscard]] double get_well_c_rebar_angle() const;
     [[nodiscard]] double get_well_c_dumpster_kg() const;
+    // S1, the Stack's water-balance hoist, read back.
+    [[nodiscard]] double get_stack_s1_cage_travel() const;
+    [[nodiscard]] double get_stack_s1_bucket_water_kg() const;
+    [[nodiscard]] double get_stack_s1_valve_angle() const;
+    [[nodiscard]] bool is_stack_s1_catch_latched() const;
 
 protected:
     static void _bind_methods();

@@ -39,9 +39,20 @@ const SCENARIOS := {
 	"touch_debris": 13,
 	"pad_debris": 13,
 	"keyboard_debris": 13,
+	# The Stack from the game's own start at grade: S1 ridden to deck 2 and C1
+	# climbed to deck 4, on each device.
+	"touch_stack": 8,
+	"pad_stack": 8,
+	"keyboard_stack": 8,
 	# Needs a mixing audio driver: run under --write-movie (see _audio_mix).
 	"audio_mix": 8,
 }
+
+# The native's TraversalState and the tower's entity id, as main.gd reads them.
+const TRAVERSAL_NONE := 0
+const TRAVERSAL_HANGING := 1
+const TRAVERSAL_CLIMBING := 4
+const TOWER_ENTITY := 11
 
 var _main: Node
 var _scenario := ""
@@ -125,6 +136,12 @@ func _run() -> void:
 			ok = await _debris(InputRouter.Device.GAMEPAD)
 		"keyboard_debris":
 			ok = await _debris(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_stack":
+			ok = await _stack(InputRouter.Device.TOUCH)
+		"pad_stack":
+			ok = await _stack(InputRouter.Device.GAMEPAD)
+		"keyboard_stack":
+			ok = await _stack(InputRouter.Device.KEYBOARD_MOUSE)
 		"audio_mix":
 			ok = await _audio_mix()
 	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario, _detail])
@@ -801,6 +818,209 @@ func _debris(device: int) -> bool:
 	return true
 
 
+# The Stack from the game's own start at grade to deck 4, on the device under
+# test. Across the yard into S1's cage, GRAB the valve chain hanging in it and
+# hold on: the water runs into the bucket until it outweighs the cage and the
+# rider, and the cage carries them 21.8 m to deck 2. LET GO, off over the
+# gangway, and up C1: onto the cabinet, a jump to hang from the duct's lip,
+# up onto the duct and along it, up the vent stack onto deck 3, out along the
+# monorail, a leap for the davit's ladder, up it and back along the arm onto
+# deck 4. Every verb is the one the HUD offers at that moment, pressed on the
+# device; every leg is proven by the native state it changed.
+func _stack(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var body := _watch_body()
+	var started := int(_native().get_tick_index())
+	# S1, the water-balance hoist.
+	if not await _go(device, Vector2(10.0, -117.3), 0.3, 40.0):
+		return _fail("the walk across the yard to S1 stalled at %s" % str(_position()))
+	if not await _go(device, Vector2(10.0, -120.1), 0.1, 6.0):
+		return _fail("the step into S1's cage stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	if not await _offered(&"pick_up", "GRAB", "VALVE CHAIN"):
+		return _fail("Action read '%s %s' beside S1's chain, not GRAB VALVE CHAIN" % [
+			_action_label(), String(_ctx()["action"]["detail"])])
+	await _pose("stack_chain")
+	var wrists := _watch_wrists()
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2203, 0.5):
+		return _fail("GRAB did not put S1's valve chain in the hands")
+	var opened: bool = await _wait_until(func() -> bool:
+		return float(_native().get_stack_s1_valve_angle()) > 0.24 and \
+			not bool(_native().is_stack_s1_catch_latched()), 1.0)
+	if not opened:
+		return _fail("holding the chain did not open S1's valve and catch (lever %.2f rad)" %
+			float(_native().get_stack_s1_valve_angle()))
+	var counting: bool = await _wait_until(func() -> bool:
+		return _action_label() == "LET GO" and \
+			String(_ctx()["action"]["detail"]).begins_with("BUCKET") and \
+			float(_native().get_stack_s1_bucket_water_kg()) > 120.0, 2.0)
+	if not counting:
+		return _fail("holding the chain, the HUD read '%s %s', not the bucket filling" % [
+			_action_label(), String(_ctx()["action"]["detail"])])
+	await _pose("stack_filling")
+	var lifted: bool = await _wait_until(
+		func() -> bool: return float(_native().get_stack_s1_cage_travel()) > 3.0, 8.0)
+	if not lifted:
+		return _fail("held, S1's cage never left the yard (bucket %.0f kg)" %
+			float(_native().get_stack_s1_bucket_water_kg()))
+	await _pose("stack_ride")
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_native().get_stack_s1_cage_travel()) >= 21.79, 20.0)
+	if not arrived:
+		return _fail("S1's cage never reached deck 2 (travel %.2f m)" %
+			float(_native().get_stack_s1_cage_travel()))
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not take S1's chain out of the hands")
+	var worst_wrist := _stop_watch(wrists)
+	# 0.10 m in a 60 Hz frame is 6 m/s across the view: faster than any reach.
+	if worst_wrist > 0.10:
+		return _fail("a hand on S1's chain jumped %.3f m in one frame (%s)" % [worst_wrist,
+			str(wrists.get("at", ""))])
+	await _face(Vector2(0.0, -1.0))
+	if not (await _walk_to(device, Vector2(10.0, -123.2), 0.2) and \
+			await _walk_to(device, Vector2(10.0, -126.5), 0.2)):
+		return _fail("the walk off S1 over the gangway stalled at %s" % str(_position()))
+	await _seconds(0.3)
+	if int(_native().get_support_entity_id()) != TOWER_ENTITY or _position().y < 22.5:
+		return _fail("off S1, not standing on deck 2 (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	var at_deck2 := _position().y
+	await _pose("stack_deck2")
+	# C1, the facade: out onto the landing, round the cabinet, up onto it.
+	if not await _go(device, Vector2(21.2, -124.4), 0.15, 20.0) or \
+			not await _go(device, Vector2(21.2, -121.3), 0.15, 6.0) or \
+			not await _go(device, Vector2(20.0, -121.3), 0.08, 6.0):
+		return _fail("the walk to C1's cabinet stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, -1.0))
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("Action read '%s' facing the cabinet, not CLIMB" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return _standing_above(24.5), 2.0):
+		return _fail("CLIMB did not mantle onto the cabinet (y %.2f)" % _position().y)
+	# A jump from the cabinet to hang from the duct's lip, and up onto it.
+	if not await _walk_to(device, Vector2(20.0, -122.10), 0.05):
+		return _fail("the step to the cabinet's north edge stalled at %s" % str(_position()))
+	await _seconds(0.3)
+	_jump(device)
+	_move(device, 0.4)
+	var hung: bool = await _wait_until(
+		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_HANGING, 2.0)
+	_move(device, 0.0)
+	if not hung:
+		return _fail("the jump from the cabinet did not hang from the duct (at %s)" % str(_position()))
+	await _pose("stack_hang")
+	if not await _climb_up(device):
+		return _fail("CLIMB UP was not offered hanging from the duct (Action '%s', touch jump '%s')" % [
+			_action_label(), _main._touch.button_label(&"jump")])
+	if not await _wait_until(func() -> bool: return _standing_above(28.0), 2.5):
+		return _fail("CLIMB UP did not bring the climber up onto the duct (y %.2f)" % _position().y)
+	# Along the duct to the vent stack, and up it over deck 3's edge.
+	if not await _go(device, Vector2(22.5, -123.05), 0.1, 6.0) or \
+			not await _go(device, Vector2(24.0, -123.0), 0.06, 6.0):
+		return _fail("the walk along the duct stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, -1.0))
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("Action read '%s %s' facing the vent stack, not CLIMB HOLD" % [
+			_action_label(), String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
+		return _fail("CLIMB did not take hold of the vent stack")
+	_move(device, 1.0)
+	var on_deck3: bool = await _wait_until(func() -> bool: return _standing_above(33.5), 20.0)
+	_move(device, 0.0)
+	if not on_deck3:
+		return _fail("climbing the vent stack did not top out onto deck 3 (y %.2f)" % _position().y)
+	# Along deck 3 and out along the monorail under the davit's ladder.
+	if not await _go(device, Vector2(22.0, -125.2), 0.15, 6.0) or \
+			not await _go(device, Vector2(12.5, -125.2), 0.08, 12.0) or \
+			not await _go(device, Vector2(12.5, -119.65), 0.06, 12.0):
+		return _fail("the walk out along the monorail stalled at %s" % str(_position()))
+	await _seconds(0.3)
+	if not bool(_native().is_player_grounded()) or _position().y < 34.0:
+		return _fail("not standing at the monorail's end (y %.2f)" % _position().y)
+	# Turn to the ladder and leap for it; up it onto the davit's arm.
+	await _face(Vector2(0.0, -1.0))
+	await _seconds(0.3)
+	await _pose("stack_monorail")
+	_jump(device)
+	_move(device, 0.5)
+	var caught: bool = await _wait_until(
+		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 2.0)
+	if not caught:
+		_move(device, 0.0)
+		return _fail("the leap from the monorail did not catch the davit's ladder (at %s)" % str(_position()))
+	_move(device, 1.0)
+	var on_arm: bool = await _wait_until(func() -> bool: return _standing_above(44.5), 20.0)
+	_move(device, 0.0)
+	if not on_arm:
+		return _fail("up the ladder did not top out onto the davit's arm (y %.2f)" % _position().y)
+	await _face(Vector2(0.0, 1.0))
+	if not await _walk_to(device, Vector2(12.5, -125.0), 0.1, 10.0) or \
+			not await _go(device, Vector2(11.2, -125.3), 0.1, 4.0):
+		return _fail("the walk back along the arm onto deck 4 stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	if not bool(_native().is_player_grounded()) or int(_native().get_support_entity_id()) != TOWER_ENTITY or \
+			_position().y < 44.5:
+		return _fail("not standing on deck 4 (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	await _pose("stack_deck4")
+	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
+	# faster than a sprint; only a snap moves the view that far.
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step,
+			str(body.get("at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	_detail = "deck2_y=%.2f deck4_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f" % [
+		at_deck2, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist,
+		worst_step]
+	return true
+
+
+func _standing_above(y: float) -> bool:
+	return int(_native().get_traversal_state()) == TRAVERSAL_NONE and bool(_native().is_player_grounded()) and \
+		_position().y > y
+
+
+# Turns to face `target` and walks to it, the way a player crosses open ground.
+func _go(device: int, target: Vector2, tolerance: float, budget: float) -> bool:
+	var at := _position()
+	var to := target - Vector2(at.x, at.z)
+	if to.length() > tolerance:
+		await _face(to)
+	return await _walk_to(device, target, tolerance, budget)
+
+
+# Presses what reads CLIMB UP on the device under test while hanging: on
+# touch the jump button relabels to it; on a pad or keyboard it is Action.
+func _climb_up(device: int) -> bool:
+	if device == InputRouter.Device.TOUCH:
+		var relabelled: bool = await _wait_until(
+			func() -> bool: return _main._touch.button_label(&"jump") == "CLIMB UP", 1.5)
+		if not relabelled:
+			return false
+		_tap(2, _center(&"jump"))
+		return true
+	if not await _offered(&"climb_up", "CLIMB UP"):
+		return false
+	_act(device)
+	return true
+
+
+# One press of Jump on the device under test.
+func _jump(device: int) -> void:
+	match device:
+		InputRouter.Device.TOUCH:
+			_tap(2, _center(&"jump"))
+		InputRouter.Device.GAMEPAD:
+			_button(JOY_BUTTON_A)
+		_:
+			_key(KEY_SPACE, true)
+			_key(KEY_SPACE, false)
+
+
 # Presses LET GO when the hands still hold something, and waits for them to
 # be empty.
 func _let_go_if_held(device: int) -> bool:
@@ -880,10 +1100,10 @@ func _move_dir(device: int, v: Vector2) -> void:
 # Walks to a horizontal point without turning the view, the way a player
 # steps into place: the stick (or keys) pushed toward it relative to the
 # view, easing off near it -- a key pulses -- and stopping inside `tolerance`.
-func _walk_to(device: int, target: Vector2, tolerance: float) -> bool:
+func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.0) -> bool:
 	var waited := 0.0
 	var frame := 0
-	while waited < 6.0:
+	while waited < budget:
 		var at := _position()
 		var to := target - Vector2(at.x, at.z)
 		if to.length() <= tolerance:
@@ -932,9 +1152,32 @@ func _sample_wrists(watch: Dictionary) -> void:
 				var step: float = ((now[index] as Vector3) - (last[index] as Vector3)).length()
 				if step > float(watch["worst"]):
 					watch["worst"] = step
-					watch["at"] = "%s %s" % [str(_main._arms.hand_poses()), _action_label()]
+					watch["at"] = "%s %s traversal=%d at=%s" % [str(_main._arms.hand_poses()), _action_label(),
+						int(_native().get_traversal_state()), str(_position())]
 		last = now
 		await get_tree().process_frame
+
+
+# Samples the body's position every frame until stopped, and reports the
+# largest single-frame sideways move: a body the native walks, climbs and
+# mantles never jumps; a snap across a blocked path does.
+func _watch_body() -> Dictionary:
+	var watch := {"running": true, "worst": 0.0}
+	_sample_body(watch)
+	return watch
+
+
+func _sample_body(watch: Dictionary) -> void:
+	var last := _position()
+	while bool(watch["running"]):
+		await get_tree().process_frame
+		var now := _position()
+		var step := Vector2(now.x - last.x, now.z - last.z).length()
+		if step > float(watch["worst"]):
+			watch["worst"] = step
+			watch["at"] = "traversal=%d from %s to %s" % [int(_native().get_traversal_state()), str(last),
+				str(now)]
+		last = now
 
 
 func _stop_watch(watch: Dictionary) -> float:

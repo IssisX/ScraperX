@@ -116,6 +116,8 @@ const RUBBLE_DENSITY := 1600.0
 const RUBBLE_PILE_HEIGHT := 0.05
 const RIG_HOOK := 1
 const RIG_UNHOOK := 2
+# S1's valve chain (Simulation::kStackS1ChainEntityId).
+const STACK_S1_CHAIN := 2203
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -634,8 +636,12 @@ func _read_context() -> Dictionary:
 			"detail": "ONTO " + _kit_anchor_name(rig_target)}
 	elif carrying != 0:
 		# Both hands are on it: letting go is the only thing Action can do.
-		action = {"id": &"set_down", "label": "LET GO", "icon": &"set_down",
-			"detail": _carry_name(carrying)}
+		# Holding S1's valve chain, what the hold is doing: the water in the
+		# bucket, which lifts the cage once it outweighs cage and rider.
+		var held := _carry_name(carrying)
+		if carrying == STACK_S1_CHAIN:
+			held = "BUCKET %d KG" % roundi(float(_native.get_stack_s1_bucket_water_kg()))
+		action = {"id": &"set_down", "label": "LET GO", "icon": &"set_down", "detail": held}
 	elif grounded and carry_target != 0:
 		# Ahead of CLIMB: whatever a load rests on may itself be a mantle
 		# ledge, and whoever faces the load means the load.
@@ -751,10 +757,8 @@ func _carry_name(entity: int) -> String:
 			return "DROP PIN"
 		2127:
 			return "CLUTCH HANDLE"
-		2204:
-			return "TRIP HANDLE"
-		2205:
-			return "FILL CHAIN"
+		STACK_S1_CHAIN:
+			return "VALVE CHAIN"
 	return "ROPE END" if _is_kit(entity) else ""
 
 

@@ -232,15 +232,12 @@ struct Stack final {
     // S1, the water-balance hoist: grade -> deck 2 on the south face.
     kit::BodyIndex s1_cage;
     kit::BodyIndex s1_bucket;
-    kit::BodyIndex s1_valve_body;
-    kit::BodyIndex s1_fill_handle;
     kit::BodyIndex s1_lever_body;
-    kit::BodyIndex s1_handle;
+    kit::BodyIndex s1_chain;
     kit::BodyIndex s1_striker_body;
     kit::GuideIndex s1_cage_guide;
     kit::GuideIndex s1_bucket_guide;
     kit::RopeIndex s1_rope;
-    kit::LeverIndex s1_valve;
     kit::LeverIndex s1_lever;
     kit::LeverIndex s1_striker;
     kit::CatchIndex s1_catch;

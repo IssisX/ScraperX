@@ -3875,7 +3875,7 @@ StackState Simulation::stack_state() const noexcept {
     out.s1_bucket_travel = kit.guide_travel(stack.s1_bucket_guide);
     out.s1_bucket_water_kg = kit.bin_contents(stack.s1_bin);
     out.s1_tank_water_kg = kit.pool_water(stack.s1_tank);
-    out.s1_valve_angle = kit.lever_angle(stack.s1_valve);
+    out.s1_valve_angle = kit.lever_angle(stack.s1_lever);
     out.s1_catch_latched = kit.catch_latched(stack.s1_catch);
     return out;
 }

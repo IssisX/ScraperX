@@ -210,6 +210,14 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_well_c_rebar_angle);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_c_dumpster_kg"),
                                 &ScraperXSimulation::get_well_c_dumpster_kg);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s1_cage_travel"),
+                                &ScraperXSimulation::get_stack_s1_cage_travel);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s1_bucket_water_kg"),
+                                &ScraperXSimulation::get_stack_s1_bucket_water_kg);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s1_valve_angle"),
+                                &ScraperXSimulation::get_stack_s1_valve_angle);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s1_catch_latched"),
+                                &ScraperXSimulation::is_stack_s1_catch_latched);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -645,6 +653,22 @@ double ScraperXSimulation::get_well_c_rebar_angle() const {
 
 double ScraperXSimulation::get_well_c_dumpster_kg() const {
     return simulation_->snapshot().well_c_dumpster_kg;
+}
+
+double ScraperXSimulation::get_stack_s1_cage_travel() const {
+    return simulation_->stack_state().s1_cage_travel;
+}
+
+double ScraperXSimulation::get_stack_s1_bucket_water_kg() const {
+    return simulation_->stack_state().s1_bucket_water_kg;
+}
+
+double ScraperXSimulation::get_stack_s1_valve_angle() const {
+    return simulation_->stack_state().s1_valve_angle;
+}
+
+bool ScraperXSimulation::is_stack_s1_catch_latched() const {
+    return simulation_->stack_state().s1_catch_latched;
 }
 
 } // namespace scraperx::bridge

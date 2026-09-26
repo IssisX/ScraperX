@@ -99,9 +99,9 @@ jobs:
             "PASS scraperx_sim world solids" \
             "PASS scraperx_sim crouch" \
             "PASS scraperx_sim kerb" \
-            "PASS scraperx_sim S1 no link" \
+            "PASS scraperx_sim S1 tug" \
             "PASS scraperx_sim S1 ride" \
-            "PASS scraperx_sim S1 empty trip" \
+            "PASS scraperx_sim S1 stay aboard" \
             "PASS scraperx_sim C1 climb" \
             "PASS scraperx_sim Stack to deck 4" \
             "PASS scraperx_sim AS-006 A no link" \
@@ -219,7 +219,8 @@ jobs:
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
               touch_hang_climb touch_chute touch_lethal_feedback touch_pause pad_core keyboard_core \
-              touch_rig pad_rig keyboard_rig touch_debris pad_debris keyboard_debris; do
+              touch_rig pad_rig keyboard_rig touch_debris pad_debris keyboard_debris \
+              touch_stack pad_stack keyboard_stack; do
             timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log
@@ -327,10 +328,14 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-  # A playable APK for every push, independent of the proof path above: a red
-  # test must never cost the owner a build to try on the phone. This job does
-  # not prove anything; the proof job still exports and checksums its own APK.
+  # The playable APK, built only once the proof job above has passed -- and
+  # with it the Stack pathway scenarios (touch_stack, pad_stack,
+  # keyboard_stack), which walk from the game's own start at grade into S1,
+  # ride it on its valve chain and climb C1 to deck 4 through the real input
+  # pipeline on each device. A build whose ascent is not proven is not handed
+  # over to be played.
   playtest-apk:
+    needs: moving-support-truth
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
