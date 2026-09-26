@@ -81,6 +81,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_interpolation_alpha);
     godot::ClassDB::bind_method(godot::D_METHOD("get_player_position"),
                                 &ScraperXSimulation::get_player_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_player_render_position"),
+                                &ScraperXSimulation::get_player_render_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_player_linear_velocity"),
                                 &ScraperXSimulation::get_player_linear_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_grounded"),
@@ -179,6 +181,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_kit_body_dynamic);
     godot::ClassDB::bind_method(godot::D_METHOD("is_kit_body_enabled", "body"),
                                 &ScraperXSimulation::is_kit_body_enabled);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_mass", "body"),
+                                &ScraperXSimulation::get_kit_body_mass);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_parts", "body"),
                                 &ScraperXSimulation::get_kit_body_parts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_transform", "body"),
@@ -302,6 +306,10 @@ double ScraperXSimulation::get_interpolation_alpha() const {
 
 godot::Vector3 ScraperXSimulation::get_player_position() const {
     return to_godot(simulation_->snapshot().player_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_player_render_position() const {
+    return to_godot(simulation_->render_player_position());
 }
 
 godot::Vector3 ScraperXSimulation::get_player_linear_velocity() const {
@@ -519,6 +527,10 @@ bool ScraperXSimulation::is_kit_body_dynamic(const std::int64_t body) const {
 
 bool ScraperXSimulation::is_kit_body_enabled(const std::int64_t body) const {
     return simulation_->kit_body_enabled(kit_index(body));
+}
+
+double ScraperXSimulation::get_kit_body_mass(const std::int64_t body) const {
+    return simulation_->kit_body_mass(kit_index(body));
 }
 
 godot::PackedFloat32Array ScraperXSimulation::get_kit_body_parts(const std::int64_t body) const {

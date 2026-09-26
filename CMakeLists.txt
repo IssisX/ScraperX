@@ -72,6 +72,15 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
+    add_executable(scraperx_parkour_flow_tests tests/parkour_flow_tests.cpp)
+    target_link_libraries(scraperx_parkour_flow_tests PRIVATE scraperx_sim)
+    target_compile_options(scraperx_parkour_flow_tests PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wextra>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
+    )
+    add_test(NAME scraperx_sim.parkour_flow COMMAND scraperx_parkour_flow_tests)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

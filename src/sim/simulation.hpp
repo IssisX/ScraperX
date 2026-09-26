@@ -543,6 +543,9 @@ public:
 
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
+    // Read-only visual pose between fixed ticks. Physics, probes and input keep
+    // using snapshot().player_position as their sole authority.
+    [[nodiscard]] Vector3 render_player_position() const noexcept;
 
     // Mechanism-kit read back, for the presentation and the falsifiers. Body
     // indices run 0 .. kit_body_count() - 1 in build order.
@@ -601,6 +604,7 @@ private:
     bool rig_requested_ = false;
     bool parachute_toggle_requested_ = false;
     Snapshot snapshot_{};
+    Vector3 previous_player_position_{};
 };
 
 } // namespace scraperx::sim

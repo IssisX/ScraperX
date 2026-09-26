@@ -715,6 +715,15 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
     return slope * t * (1.0F - t) * (1.0F - t) + t * t * (3.0F - 2.0F * t);
 }
 
+// A vault should meet the run on both ends. Equal Hermite end slopes preserve
+// the incoming velocity along the landing path, while the middle absorbs the
+// remaining distance. Slopes in [0, 3] keep the path monotone.
+[[nodiscard]] float ease_with_carried_speed(const float value, const float slope) noexcept {
+    const float t = std::clamp(value, 0.0F, 1.0F);
+    const float s = std::clamp(slope, 0.0F, 3.0F);
+    return t * t * (3.0F - 2.0F * t) + s * t * (1.0F - t) * (1.0F - 2.0F * t);
+}
+
 [[nodiscard]] scraperx::sim::Vector3 to_vector3(const JPH::RVec3 value) noexcept {
     return {value.GetX(), value.GetY(), value.GetZ()};
 }
@@ -2430,6 +2439,16 @@ private:
             relative = relative * (kPlayerMaximumRelativeSpeed / relative_speed);
         }
 
+        const double travel_x = landing_centre.GetX() - origin.GetX();
+        const double travel_z = landing_centre.GetZ() - origin.GetZ();
+        const double travel_squared = travel_x * travel_x + travel_z * travel_z;
+        traversal_vault_horizontal_slope_ = travel_squared > 1.0e-6
+            ? std::clamp(static_cast<float>(
+                  kVaultDurationSeconds * (relative.GetX() * travel_x +
+                                           relative.GetZ() * travel_z) / travel_squared),
+                  0.0F, 3.0F)
+            : 0.0F;
+
         const JPH::RVec3 apex(origin.GetX(),
                               probe.ledge_point.GetY() + kPlayerHalfHeight + kVaultApexClearance,
                               origin.GetZ());
@@ -2469,7 +2488,8 @@ private:
 
         if (traversal_state_ == TraversalState::Vaulting) {
             const JPH::RVec3 apex = from_support_local(bodies, traversal_body_, traversal_local_apex_);
-            const float horizontal = progress;
+            const float horizontal = ease_with_carried_speed(
+                progress, traversal_vault_horizontal_slope_);
             float height;
             if (progress < 0.5F) {
                 height = start.GetY() +
@@ -3160,6 +3180,7 @@ private:
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
         traversal_exit_relative_velocity_ = JPH::Vec3::sZero();
+        traversal_vault_horizontal_slope_ = 0.0F;
     }
 
     void update_affordance(const JPH::BodyInterface &bodies) noexcept {
@@ -3494,6 +3515,7 @@ private:
     JPH::Vec3 traversal_local_apex_{JPH::Vec3::sZero()};
     JPH::Vec3 traversal_local_target_{JPH::Vec3::sZero()};
     JPH::Vec3 traversal_exit_relative_velocity_{JPH::Vec3::sZero()};
+    float traversal_vault_horizontal_slope_ = 0.0F;
     JPH::RVec3 traversal_desired_{JPH::RVec3::sZero()};
     double traversal_progress_ = 0.0;
     double traversal_duration_ = kMantleDurationSeconds;
@@ -3548,6 +3570,7 @@ Simulation::Simulation(const InitialSpawn initial_spawn)
     : physics_world_(std::make_unique<PhysicsWorld>(initial_spawn)) {
     snapshot_ = physics_world_->state();
     snapshot_.fixed_step_seconds = kFixedStepSeconds;
+    previous_player_position_ = snapshot_.player_position;
 }
 
 Simulation::~Simulation() = default;
@@ -3893,6 +3916,9 @@ StackState Simulation::stack_state() const noexcept {
 }
 
 void Simulation::step_fixed() noexcept {
+    const std::uint64_t previous_death_count = snapshot_.death_count;
+    const bool previous_crouched = snapshot_.player_crouched;
+    previous_player_position_ = snapshot_.player_position;
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
 
@@ -3922,6 +3948,14 @@ void Simulation::step_fixed() noexcept {
     ++tick_index_;
 
     snapshot_ = physics_world_->state();
+    const double render_dx = snapshot_.player_position.x - previous_player_position_.x;
+    const double render_dy = snapshot_.player_position.y - previous_player_position_.y;
+    const double render_dz = snapshot_.player_position.z - previous_player_position_.z;
+    if (snapshot_.death_count != previous_death_count ||
+        snapshot_.player_crouched != previous_crouched ||
+        render_dx * render_dx + render_dy * render_dy + render_dz * render_dz > 1.0) {
+        previous_player_position_ = snapshot_.player_position;
+    }
     snapshot_.tick_index = tick_index_;
     snapshot_.simulation_time_seconds =
         static_cast<double>(tick_index_) * kFixedStepSeconds;
@@ -3966,6 +4000,18 @@ Snapshot Simulation::snapshot() const noexcept {
     Snapshot result = snapshot_;
     result.interpolation_alpha = remainder_seconds_ / kFixedStepSeconds;
     return result;
+}
+
+Vector3 Simulation::render_player_position() const noexcept {
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    return {
+        previous_player_position_.x +
+            (snapshot_.player_position.x - previous_player_position_.x) * alpha,
+        previous_player_position_.y +
+            (snapshot_.player_position.y - previous_player_position_.y) * alpha,
+        previous_player_position_.z +
+            (snapshot_.player_position.z - previous_player_position_.z) * alpha,
+    };
 }
 
 } // namespace scraperx::sim

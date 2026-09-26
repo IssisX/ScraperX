@@ -82,6 +82,10 @@ const CROUCH_EYE_OVER_SOLES := 0.95
 const CROUCH_EYE_SECONDS := 0.16
 const HEAD_BOB_SPEED_FLOOR_MPS := 0.3
 const HEAD_BOB_SPEED_FULL_MPS := 3.0
+const HEAD_BOB_RESPONSE_PER_SECOND := 12.0
+const FOV_RESPONSE_PER_SECOND := 9.0
+const CAMERA_BANK_MAX_RADIANS := 1.5 * PI / 180.0
+const CAMERA_BANK_RESPONSE_PER_SECOND := 10.0
 
 
 # The stack. Mirrors the kStack* constants in simulation.cpp exactly -- these
@@ -153,6 +157,9 @@ var _cam_last_velocity_y := 0.0
 var _cam_landing_timer := 0.0
 var _cam_landing_strength := 0.0
 var _cam_bob_phase := 0.0
+var _cam_bob_weight := 0.0
+var _cam_fov_offset := 0.0
+var _cam_bank := 0.0
 var _crouch_eye := 0.0
 # DISPLAY settings; the defaults are the tuned values above.
 var _fov_base := FOV_BASE
@@ -192,6 +199,11 @@ var _view_pitch_offset := 0.0
 var _kit_root: Node3D
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
+# The kit's machines, for the audio: every moving body of MACHINE_MIN_KG or
+# more, with the point of it farthest from its origin, whose speed is how fast
+# the machine moves.
+const MACHINE_MIN_KG := 40.0
+var _machines: Array[Dictionary] = []
 var _kit_cables: Array = []
 # Per bin: the rubble layer on its floor (null for a static bin, whose
 # contents cannot be seen), that floor's box, and its stream.
@@ -1008,21 +1020,36 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if _cam_landing_timer > 0.0:
 		_cam_landing_timer = maxf(0.0, _cam_landing_timer - delta)
 		var t := 1.0 - _cam_landing_timer / LANDING_DIP_DURATION_SECONDS
-		dip = -_cam_landing_strength * LANDING_DIP_MAX_METERS * sin(PI * t)
+		var landing_wave := sin(PI * t)
+		dip = -_cam_landing_strength * LANDING_DIP_MAX_METERS * landing_wave * landing_wave
 
 	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
 	# 5.5 mirrors kPlayerMaximumRelativeSpeed (src/sim/simulation.cpp) -- a
 	# curve-shape input, not a gameplay bound, so the native constant is not
 	# exposed through the bridge just for this.
-	var bob_fade := 0.0
+	var bob_target := 0.0
 	if grounded:
-		bob_fade = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
+		bob_target = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
 		_cam_bob_phase += horizontal_speed * HEAD_BOB_CYCLES_PER_METER * TAU * delta
 	if not _head_bob_on:
-		bob_fade = 0.0
-	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * bob_fade
-	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * bob_fade
+		_cam_bob_weight = 0.0
+	else:
+		_cam_bob_weight = lerpf(_cam_bob_weight, bob_target,
+			1.0 - exp(-HEAD_BOB_RESPONSE_PER_SECOND * delta))
+		if absf(_cam_bob_weight - bob_target) < 0.001:
+			_cam_bob_weight = bob_target
+	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * _cam_bob_weight
+	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * _cam_bob_weight
 	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
+	if not _head_bob_on:
+		_cam_bank = 0.0
+	else:
+		var lateral_speed := velocity.dot(right_vector)
+		var bank_target := -CAMERA_BANK_MAX_RADIANS * clampf(lateral_speed / 5.5, -1.0, 1.0)
+		_cam_bank = lerpf(_cam_bank, bank_target,
+			1.0 - exp(-CAMERA_BANK_RESPONSE_PER_SECOND * delta))
+		if absf(_cam_bank - bank_target) < 0.0001:
+			_cam_bank = bank_target
 
 	var eye := position + EYE_OFFSET
 	_crouch_eye = move_toward(_crouch_eye, 1.0 if crouched else 0.0, delta / CROUCH_EYE_SECONDS)
@@ -1031,25 +1058,31 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		eye.y = soles_y + lerpf(STAND_HALF_HEIGHT + EYE_OFFSET.y, CROUCH_EYE_OVER_SOLES,
 			smoothstep(0.0, 1.0, _crouch_eye))
 	_camera.position = eye + Vector3(0.0, dip + vertical_bob, 0.0) + right_vector * lateral_bob
-	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, 0.0)
+	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, _cam_bank)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed)
 	var fov_fall := 0.0
 	if not grounded and velocity.y < 0.0:
 		fov_fall = FOV_FALL_MAX_DEGREES * smoothstep(0.0, FOV_FALL_FULL_MPS, -velocity.y)
 	if not _speed_fov_on:
-		fov_ground = 0.0
-		fov_fall = 0.0
-	_camera.fov = _fov_base + fov_ground + fov_fall
+		_cam_fov_offset = 0.0
+	else:
+		var fov_target := fov_ground + fov_fall
+		_cam_fov_offset = lerpf(_cam_fov_offset, fov_target,
+			1.0 - exp(-FOV_RESPONSE_PER_SECOND * delta))
+		if absf(_cam_fov_offset - fov_target) < 0.005:
+			_cam_fov_offset = fov_target
+	_camera.fov = _fov_base + _cam_fov_offset
 
 
 func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()
+	var render_position: Vector3 = _native.get_player_render_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
 	var crouched := bool(_native.is_player_crouched())
 
-	_apply_camera_feel(position, velocity, grounded, crouched, delta)
+	_apply_camera_feel(render_position, velocity, grounded, crouched, delta)
 	if delta > 0.0:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
@@ -1059,6 +1092,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _telemetry_on:
 		_write_telemetry(position, velocity, grounded)
 	_render_kit()
+	_sample_machines(delta)
 
 
 func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> void:
@@ -2165,6 +2199,11 @@ func _build_kit() -> void:
 		_kit_root.add_child(node)
 		_kit_bodies.append(node)
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
+		if bool(_native.is_kit_body_dynamic(body)) and \
+				float(_native.get_kit_body_mass(body)) >= MACHINE_MIN_KG:
+			_machines.append({"body": body, "tip": _farthest_corner(parts), "last_tip": Vector3.INF,
+				"last_at": Vector3.INF, "speed": 0.0, "turning": false, "at": Vector3.ZERO,
+				"tip_at": Vector3.ZERO})
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
 	cable.material = _material(Color("1b1916"), 0.6, 0.5)
@@ -2252,6 +2291,47 @@ func _build_kit() -> void:
 		_kit_root.add_child(spout)
 		_kit_spouts.append(spout)
 	_render_kit()
+
+
+# The corner of a body's parts farthest from its origin, in its own frame.
+func _farthest_corner(parts: PackedFloat32Array) -> Vector3:
+	var best := Vector3.ZERO
+	for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
+		var basis := Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9]))
+		var centre := Vector3(parts[p + 3], parts[p + 4], parts[p + 5])
+		for corner in 8:
+			var flip := Vector3(1.0 if corner & 1 else -1.0, 1.0 if corner & 2 else -1.0,
+				1.0 if corner & 4 else -1.0)
+			var at := centre + basis * (flip * Vector3(parts[p], parts[p + 1], parts[p + 2]))
+			if at.length() > best.length():
+				best = at
+	return best
+
+
+# How fast each machine moves this frame, from the poses _render_kit just set:
+# its farthest point's speed, and whether it turns about its origin (a hinge)
+# rather than moving with it. The audio hears it from that.
+func _sample_machines(delta: float) -> void:
+	if delta <= 0.0 or _machines.is_empty():
+		return
+	for machine in _machines:
+		var node: Node3D = _kit_bodies[int(machine["body"])]
+		var tip: Vector3 = node.transform * (machine["tip"] as Vector3)
+		var at: Vector3 = node.transform.origin
+		var last_tip: Vector3 = machine["last_tip"]
+		var last_at: Vector3 = machine["last_at"]
+		var speed := 0.0
+		var origin_speed := 0.0
+		if last_tip != Vector3.INF and node.visible:
+			speed = tip.distance_to(last_tip) / delta
+			origin_speed = at.distance_to(last_at) / delta
+		machine["speed"] = speed
+		machine["turning"] = speed > 2.0 * origin_speed + 0.05
+		machine["at"] = at
+		machine["tip_at"] = tip
+		machine["last_tip"] = tip
+		machine["last_at"] = at
+	_audio.update_machines(delta, _machines)
 
 
 # Poses every moving kit body and lays every cable through its points, from
