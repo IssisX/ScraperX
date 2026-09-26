@@ -192,13 +192,13 @@ jobs:
           # 2:1 pulley, not a completion flag. Wrong mass, no rope, or held
           # catch cannot produce ascent; the rider reaches a fixed +8 m dock
           # and the water returns to the basin before reset.
-          awk -F'cage_travel=' '/ground water lift/ {split($2,a," "); exit (a[1]+0 >= 7.90) ? 0 : 1}' \
+          awk -F'cage_travel=' '/PASS scraperx_sim ground water lift:/ {split($2,a," "); exit (a[1]+0 >= 7.90) ? 0 : 1}' \
             artifacts/native-falsifiers.log
-          awk -F'peak_speed=' '/ground water lift/ {split($2,a," "); exit (a[1]+0 <= 2.35) ? 0 : 1}' \
+          awk -F'peak_speed=' '/PASS scraperx_sim ground water lift:/ {split($2,a," "); exit (a[1]+0 <= 2.35) ? 0 : 1}' \
             artifacts/native-falsifiers.log
-          awk -F'dock_y=' '/ground water lift/ {split($2,a," "); exit (a[1]+0 >= 8.9) ? 0 : 1}' \
+          awk -F'dock_y=' '/PASS scraperx_sim ground water lift:/ {split($2,a," "); exit (a[1]+0 >= 8.9) ? 0 : 1}' \
             artifacts/native-falsifiers.log
-          awk -F'conserved_err=' '/ground water lift/ {split($2,a," "); exit (a[1]+0 <= 1e-8) ? 0 : 1}' \
+          awk -F'conserved_err=' '/PASS scraperx_sim ground water lift:/ {split($2,a," "); exit (a[1]+0 <= 1e-8) ? 0 : 1}' \
             artifacts/native-falsifiers.log
           grep -F "dry_fail=1 partial_fail=1 rope_fail=1 overload_fail=1 moving_support=1 reset=1" \
             artifacts/native-falsifiers.log
