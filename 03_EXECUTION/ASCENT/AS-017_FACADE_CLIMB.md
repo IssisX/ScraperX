@@ -33,3 +33,27 @@
 - Sprint reaches 8 m/s, retains 8 m/s through a jump, and carries 8.978 m versus walking's 6.172 m in the flat-ground probe. Crouch and sideways input do not sprint. Touch overshoot starts native sprint and release stops it. Existing vault-entry/exit and camera interpolation checks pass.
 - The full local ARM suite has the same AS-002 legacy deployed-flight failure and preceding measurements as `/data/data/com.termux/files/usr/tmp/scraperx-baseline-tests.log`. It is not waived: required x86 host CI remains a delivery gate.
 - This slice does not complete the +66 m milestone, establish Android execution, or establish Fold performance. Its successor must supply the next machine and upper connection.
+
+## First host run and render-cost repair
+
+Run `36278331701`, source `4dd1ca3`, passed the complete host native suite,
+camera proof, default rendered foundation and native/keyboard/gamepad pipe
+routes. Its software-rendered touch pipe route reached the raised bridge,
+then hit the 600-second process timeout before crossing. No APK was produced;
+this run is failed delivery evidence, not an accepted candidate.
+
+Kit presentation now batches each body's parts by material and compatible
+vertex channels. A local before/after comparison of every colored triangle
+retained all 8,992 triangles with the same quantized geometry SHA-256
+`8af5fe7697d4a78133bbbe3a28a2196cdb9a079d14f92897683514e353aaaa22`.
+Mesh submissions fall from 176 to 76; the façade falls from 69 to 5.
+Indexed boxes and unindexed tube bores remain separate surfaces. These counts
+prove less submission work, not measured device FPS.
+
+The rendered 30 FPS touch gate now runs the complete pipe route once, inside
+the continuous grade-to-33 m façade scenario. All pipe assertions and four
+pipe captures remain required. Its CPU-rendered capture window is 864×742
+at the same Fold aspect; the default and regression captures retain their
+larger windows. The longer combined route has a 900-second bound. Failed-run
+logs and available captures are retained as diagnostics, distinct from a
+published APK. Milestone logs expose progress even without screenshots.

@@ -1488,6 +1488,8 @@ func _axis(axis: JoyAxis, value: float) -> void:
 
 # Screenshots need a real renderer; headless proof runs skip them silently.
 func _pose(pose: String) -> void:
+	print("SCRAPERX_UITEST_POSE %s tick=%d position=%s elapsed_ms=%d" % [
+		pose, _native().get_tick_index(), _position(), Time.get_ticks_msec()])
 	if _capture_prefix.is_empty() or DisplayServer.get_name() == "headless":
 		return
 	await RenderingServer.frame_post_draw

@@ -294,25 +294,27 @@ jobs:
               -- "--uitest=${scenario}" 2>&1 | tee "artifacts/${scenario}.log"
             grep -F "SCRAPERX_UITEST PASS ${scenario} " "artifacts/${scenario}.log"
           done
-          timeout 600s xvfb-run -a -s "-screen 0 1296x1114x24" \
-            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 \
-            -- --uitest=touch_pipe_bridge "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/pipe-bridge" \
-            2>&1 | tee artifacts/touch_pipe_bridge.log
-          grep -F "SCRAPERX_UITEST PASS touch_pipe_bridge " artifacts/touch_pipe_bridge.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/*pipe_bridge.log; then exit 1; fi
-          test -s artifacts/screenshots/pipe-bridge_tower_arrival.png
 
-      - name: Facade ascent - continuous touch route from grade to 33 metres
+      - name: Pipe bridge and facade - continuous rendered touch route to 33 metres
         shell: bash
         run: |
           set -euo pipefail
           ./build/host/scraperx_ascent_route_tests | tee artifacts/ascent-route.log
-          timeout 600s xvfb-run -a -s "-screen 0 1296x1114x24" \
-            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 \
+          # This calls the complete existing touch pipe route before climbing.
+          # Render it once at the same Fold aspect; CPU-only CI renders at
+          # 864x742. Native input/physics still runs at fixed 30 FPS. Default
+          # and regression captures below retain their larger viewports.
+          timeout 900s xvfb-run -a -s "-screen 0 864x742x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility \
+            --resolution 864x742 --fixed-fps 30 \
             -- --uitest=touch_facade "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/facade" \
             2>&1 | tee artifacts/touch-facade.log
           grep -F "SCRAPERX_UITEST PASS touch_facade " artifacts/touch-facade.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-facade.log; then exit 1; fi
+          for pose in rack_ready loaded_pan bridge_raised tower_arrival; do
+            test -s "artifacts/screenshots/facade_${pose}.png"
+          done
           test -s artifacts/screenshots/facade_vent_climb.png
           test -s artifacts/screenshots/facade_facade_arrival.png
 
@@ -472,6 +474,15 @@ jobs:
 
           Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent. The owner-requested ordinary stairs remain an optional route, not a mechanism proof.
           EOF
+
+      - name: Retain failed-run diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScraperX-diagnostics-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Publish immutable checkpoint build and evidence
         uses: actions/upload-artifact@v4

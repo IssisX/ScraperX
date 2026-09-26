@@ -4125,9 +4125,14 @@ func _build_kit() -> void:
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
 		node.transform = _native.get_kit_body_transform(body)
 		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
+		# Parts on one rigid body share a pose. Batch their triangles by
+		# material once, instead of submitting every tread/rung separately.
+		# This retains the native shapes, local poses, UVs and tube bores.
+		var surfaces: Dictionary = {}
 		for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
 			var mesh: Mesh
-			var material: Material = palette[clampi(int(parts[p + 10]), 0, palette.size() - 1)]
+			var material_index := clampi(int(parts[p + 10]), 0, palette.size() - 1)
+			var material: Material = palette[material_index]
 			if int(parts[p + 11]) == 1:
 				if parts[p + 12] > 0.0:
 					mesh = _kit_tube(parts[p], parts[p + 12], parts[p + 1], material)
@@ -4143,11 +4148,27 @@ func _build_kit() -> void:
 				box.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
 				box.material = material
 				mesh = box
-			var instance := MeshInstance3D.new()
-			instance.mesh = mesh
-			instance.transform = Transform3D(
+			var local := Transform3D(
 				Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
+			for surface_index in mesh.get_surface_count():
+				# Indexed boxes and the unindexed tube bore need separate
+				# surfaces; mixing them would omit the unindexed triangles.
+				var channels := 0
+				var arrays := mesh.surface_get_arrays(surface_index)
+				for channel in arrays.size():
+					if arrays[channel] != null:
+						channels |= 1 << channel
+				var key := "%d/%d" % [material_index, channels]
+				if not surfaces.has(key):
+					var surface := SurfaceTool.new()
+					surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+					surface.set_material(material)
+					surfaces[key] = surface
+				surfaces[key].append_from(mesh, surface_index, local)
+		for surface in surfaces.values():
+			var instance := MeshInstance3D.new()
+			instance.mesh = surface.commit()
 			node.add_child(instance)
 		var entity := int(_native.get_kit_body_entity_id(body))
 		if entity == 2011:
