@@ -801,6 +801,8 @@ A red candidate does not redefine the mechanism, weaken its falsifiers, or justi
 
 # 17. ASCENT ARCHITECTURE
 
+**Withdrawn.** The thirteen stages below (screws, capstans, gas, dense fluid, a helical cam) are the intricate plans. They are not the build. The laws above this heading still stand: a fall has to pay for the rise, the player has to be the one who links it, and the support under them has to be a real body. The machine that replaces these stages is `COLOSSUS_APRON.md`.
+
 | Stage | Elevation | Primary reservoir | Primary transmission |
 |---|---:|---|---|
 | 1 | 280 → 300 m | elevated counterweight | helical carrier |

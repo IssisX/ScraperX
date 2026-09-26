@@ -1,6 +1,16 @@
 # SCRAPERX — MECHANISM ASCENT PLAN
 
-**Status:** the current plan for the ascent above the tower stair's 154 m top deck.
+**Withdrawn.** This plan, and the band contracts that follow it, did not produce lifts a person could read. Small links, hidden ratios, and parts you cannot see doing the work. Do not build the next stage from this file.
+
+The build is [the apron chain](COLOSSUS_APRON.md): pipes, a scale, a trapdoor, a wrecking ball, slabs, and a seesaw that lifts you. Ground level. About 12 m. Big parts only.
+
+The rules below are kept only as a record of what was tried. They are not an instruction to keep going.
+
+---
+
+# SCRAPERX — MECHANISM ASCENT PLAN (withdrawn record)
+
+**Status:** withdrawn record. Not the build. See `COLOSSUS_APRON.md`.
 **Provenance:** locked with the owner on 2026-09-24 in a four-decision design pass over
 `Mechanism-Ideas-and-archetypes.md` (repository root; the owner's 20 lift archetypes).
 **Supersedes:** `AS-004` (needle seat) as the next job. `AS-004` stays `PLANNED` for a later
