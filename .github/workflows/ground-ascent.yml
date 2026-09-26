@@ -83,7 +83,7 @@ jobs:
           timeout 300s xvfb-run -a -s '-screen 0 1296x1114x24' \
             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 90 \
             --script res://tests/ascent_smoke.gd \
-            -- '--capture=artifacts/screenshots/ground-ascent.png' \
+            -- "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/ground-ascent.png" \
             2>&1 | tee artifacts/godot-ride.log
           grep -F 'SCRAPERX_ASCENT_PASS' artifacts/godot-ride.log
           test -s artifacts/screenshots/ground-ascent.png
