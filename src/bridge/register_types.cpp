@@ -1,6 +1,6 @@
 #include "bridge/register_types.hpp"
 
-#include "bridge/scraperx_screw.hpp"
+#include "bridge/scraperx_simulation.hpp"
 
 #include <godot_cpp/godot.hpp>
 
@@ -8,7 +8,7 @@ void initialize_scraperx_module(const godot::ModuleInitializationLevel level) {
     if (level != godot::MODULE_INITIALIZATION_LEVEL_SCENE) {
         return;
     }
-    godot::ClassDB::register_class<scraperx::bridge::ScraperXScrew>();
+    godot::ClassDB::register_class<scraperx::bridge::ScraperXSimulation>();
 }
 
 void uninitialize_scraperx_module(const godot::ModuleInitializationLevel level) {
@@ -31,3 +31,4 @@ GDExtensionBool GDE_EXPORT scraperx_library_init(
 }
 
 }
+

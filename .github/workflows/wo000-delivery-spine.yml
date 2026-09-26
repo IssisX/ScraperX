@@ -1,0 +1,384 @@
+name: ScraperX — full proof path (kernel + ascent)
+
+on:
+  push:
+    # ChatGPT is the sole write/implementation branch for this line.
+    branches: [ChatGPT]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Every commit is an immutable build candidate. A newer push must never cancel an
+# older commit's build, otherwise that commit can lose its APK. "Build candidate",
+# not "checkpoint": a checkpoint in ScraperX is the in-sim commit_checkpoint(), and
+# the word is not reused for CI artefacts.
+concurrency:
+  group: scraperx-checkpoint-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: 4.7-stable
+  GODOT_BINARY_SHA256: 0b1a6c54c2c619c12e169fe9241edda4b81080b519451cec2984bf0d2c6cb73c
+  GODOT_TEMPLATES_SHA256: 9714459dc071907c0f3d5f17d608faf69e7cda21331fc5d39c4503ffa4e99eec
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  ANDROID_NDK_VERSION: 29.0.14206865
+
+jobs:
+  moving-support-truth:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install build and render prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
+          SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          test -x "${SDKMANAGER_PATH}"
+          yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
+          "${SDKMANAGER_PATH}" "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
+
+      - name: Install verified Godot 4.7 editor and Android template
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          curl --fail --location --retry 3 \
+            --output tools/godot/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          echo "${GODOT_BINARY_SHA256}  tools/godot/godot.zip" | sha256sum --check
+          unzip -q tools/godot/godot.zip -d tools/godot
+          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
+          chmod +x tools/godot/godot
+
+          curl --fail --location --retry 3 \
+            --output tools/godot/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA256}  tools/godot/templates.tpz" | sha256sum --check
+          unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
+            -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          tools/godot/godot --version
+
+      - name: Build native host graph and run the full native suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cmake -S . -B build/host -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSCRAPERX_BUILD_BRIDGE=ON \
+            -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_TARGET=template_release
+          cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
+          ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
+          grep -F "100% tests passed" artifacts/native-tests.log
+          # The falsifiers' own proof lines. ctest --output-on-failure prints a
+          # passing test's stdout nowhere, so native-tests.log carries only the
+          # aggregate verdict -- every PASS line the suite emits was invisible
+          # to this workflow until now. Run the binary directly for them.
+          # set -o pipefail means a non-zero exit still fails the step.
+          ./build/host/scraperx_sim_tests | tee artifacts/native-falsifiers.log
+          for proof in \
+            "PASS scraperx_sim moving-support truth" \
+            "PASS scraperx_sim athletic traversal" \
+            "PASS scraperx_sim first full causal chain" \
+            "PASS scraperx_sim coupled machine" \
+            "PASS scraperx_sim fall/parachute/checkpoint" \
+            "PASS scraperx_sim first freight" \
+            "PASS scraperx_sim first structural coupling" \
+            "PASS scraperx_sim first process coupling" \
+            "PASS scraperx_sim B00 intake rise" \
+            "PASS scraperx_sim AS-002 Legal Forty" \
+            "PASS scraperx_sim world solids" \
+            "PASS scraperx_sim crouch" \
+            "PASS scraperx_sim AS-003 apron" \
+            "PASS scraperx_sim AS-003 cage" \
+            "PASS scraperx_sim AS-003 Hook5 Rack" \
+            "PASS scraperx_sim ground water screw" \
+            "PASS scraperx_sim ground water lift" \
+            "PASS scraperx_sim AS-006 A no link" \
+            "PASS scraperx_sim AS-006 A ride" \
+            "PASS scraperx_sim AS-006 B no link" \
+            "PASS scraperx_sim AS-006 B ride"
+          do
+            grep -F "${proof}" artifacts/native-falsifiers.log
+          done
+          # AS-001 B00: the intake rise closed, and it closed for physical
+          # reasons. Each of these is a separate link in the causal path.
+          grep -F "pinned_impassable=1" artifacts/native-falsifiers.log
+          grep -F "forced_impassable=1" artifacts/native-falsifiers.log
+          grep -F "skin_freight_untouched=1" artifacts/native-falsifiers.log
+          awk -F'skin_mantles=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 >= 15) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'handoff_y=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 > 24.8) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'overweight_y=' '/B00 intake rise/ {split($2,a," "); exit (a[1]+0 < 1.2) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          # AS-002 Legal Forty: the counterweighted bascule deployed under
+          # the real 4 t pack, carried the ascent to +40 m and committed a
+          # checkpoint there, relaxed back on its own once unloaded, SKIN's
+          # bypass reached the same +40 m without ever touching the hinge,
+          # and the rated jib still cannot reach that height. Each is a
+          # separate link in the causal path, same as B00's own above.
+          awk -F'deployed_travel=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 0.85) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'cradle_drop=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 1.40) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'forty_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'checkpoint_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 40.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'retracted_travel=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 <= 0.20) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'skin_forty_mantles=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 20) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'skin_forty_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'jib_capped_hook_y=' '/AS-002 Legal Forty/ {split($2,a," "); exit (a[1]+0 < 12.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          # AS-003 Hook5 Rack: the cage's lock is height -- grade never rises
+          # past a plain jump -- the seated bar held the door against every
+          # command and freeing it let the door travel on its own drive, the
+          # block rode the hands within 1 m and was picked up again off the
+          # ground, the hands-free SKIN climb ran its 15 mantles, the belt
+          # put the body on the roof within two strokes, the block reached
+          # +40 m held, and a lethal fall restored it in hand on the deck.
+          awk -F'grade_peak_y=' '/AS-003 apron/ {split($2,a," "); exit (a[1]+0 < 3.2) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'mashed_door=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'travelled_door=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 >= 1.20) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'carry_worst_gap=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 <= 1.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'repicked_y=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 > 0.8) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'skin_mantles=' '/AS-003 cage/ {split($2,a," "); exit (a[1]+0 >= 15) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'ride_s=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 <= 32.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'roof_y=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 >= 5.15) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'forty_y=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'restored_y=' '/AS-003 Hook5 Rack/ {split($2,a," "); exit (a[1]+0 >= 40.88) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "restored_carry=56" artifacts/native-falsifiers.log
+          # Ground screw: finite drive raises the conserved water mass required
+          # by the receiving +8 m lift; rival shortcut conditions must fail.
+          awk -F'tank_m3=' '/ground water screw/ {split($2,a," "); exit (a[1]+0 >= 1.999) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'peak_rpm=' '/ground water screw/ {split($2,a," "); exit (a[1]+0 <= 22.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'peak_torque_nm=' '/ground water screw/ {split($2,a," "); exit (a[1]+0 <= 1500.01) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'shaft_work_J=' '/ground water screw/ {split($2,a," "); exit (a[1]+0 >= 196200) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "full_stop=1 reverse_return=1" artifacts/native-falsifiers.log
+          # Ground water lift: the upstream 2.0 m3 is a real mass input to a
+          # 2:1 pulley, not a completion flag. Wrong mass, no rope, or held
+          # catch cannot produce ascent; the rider reaches a fixed +8 m dock
+          # and the water returns to the basin before reset.
+          awk -F'cage_travel=' '/PASS scraperx_sim ground water lift:/ {split($2,a," "); exit (a[1]+0 >= 7.90) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'peak_speed=' '/PASS scraperx_sim ground water lift:/ {split($2,a," "); exit (a[1]+0 <= 2.35) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'dock_y=' '/PASS scraperx_sim ground water lift:/ {split($2,a," "); exit (a[1]+0 >= 8.9) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'conserved_err=' '/PASS scraperx_sim ground water lift:/ {split($2,a," "); exit (a[1]+0 <= 1e-8) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "dry_fail=1 partial_fail=1 rope_fail=1 overload_fail=1 moving_support=1 reset=1" \
+            artifacts/native-falsifiers.log
+          # AS-006 Stage A, the skip lift: no link, no lift (the cage never
+          # moves while the rope is on the bollard, and the stage re-rigs);
+          # linked, the rider rides 22 m to 176.25 under a brake-only
+          # governor, and the payload never out-earns the skip.
+          awk -F'cage_worst=' '/AS-006 A no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "relatched=1 rerigged=1" artifacts/native-falsifiers.log
+          awk -F'floor_y=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 >= 176.20 && a[1]+0 <= 176.30) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'peak_speed=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 <= 2.6) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "rode_on_cage=1" artifacts/native-falsifiers.log
+          awk -F'restored_y=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 >= 177.0) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          # AS-006 Stage B: the 2.5 t lattice cannot spend its stored height
+          # while the rope is still on the bollard; once re-rigged it raises
+          # the adjacent cage to 198.25 m and itself finishes as a 22 m
+          # physical lattice spanning 176.25..198.25.
+          awk -F'cage_worst=' '/AS-006 B no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'lattice_drop=' '/AS-006 B no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'floor_y=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 198.20 && a[1]+0 <= 198.30) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'peak_speed=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 <= 3.1) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'lattice_top_y=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 198.20 && a[1]+0 <= 198.30) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+
+      - name: Run Godot at Fold aspect through native machine authority and capture proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/screenshots godot/.godot
+          printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            > godot/.godot/extension_list.cfg
+          grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            godot/.godot/extension_list.cfg
+          timeout 300s xvfb-run -a -s "-screen 0 1728x1485x24" \
+            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 2400 \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo006-approach-and-machine.png" \
+            2>&1 | tee artifacts/godot-runtime.log
+          test -s artifacts/screenshots/wo006-approach-and-machine.png
+          grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
+          grep -F "work_order=WO-006" artifacts/godot-runtime.log
+          # WO-004: the viewport is the Fold inner panel, not a phone strip.
+          grep -F "SCRAPERX_WO004_VIEWPORT_PROOF" artifacts/godot-runtime.log
+          grep -F "width=2160 height=1856" artifacts/godot-runtime.log
+          grep -F "aspect=1.164" artifacts/godot-runtime.log
+          grep -F "stretch=expand" artifacts/godot-runtime.log
+          # WO-005: spawn is outdoors at grade with the tower still ahead.
+          grep -F "SCRAPERX_WO005_APPROACH_PROOF" artifacts/godot-runtime.log
+          grep -F "tower_height=1600" artifacts/godot-runtime.log
+          # WO-006: the coupled chain ran, and a shut valve passed exactly zero mass.
+          grep -F "SCRAPERX_WO006_MACHINE_PROOF" artifacts/godot-runtime.log
+          grep -F "shut_flow=0.00000" artifacts/godot-runtime.log
+          awk -F'peak_valve=' '/SCRAPERX_WO006_MACHINE_PROOF/ {split($2,a," "); exit (a[1]+0 > 0.5) ? 0 : 1}' \
+            artifacts/godot-runtime.log
+          awk -F'peak_lift=' '/SCRAPERX_WO006_MACHINE_PROOF/ {split($2,a," "); exit (a[1]+0 > 6.0) ? 0 : 1}' \
+            artifacts/godot-runtime.log
+
+      - name: Drive every control path through the real input pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Each scenario injects touch / gamepad / keyboard events through the
+          # viewport's own input pipeline and asserts a native state change
+          # (presentation/ui/ui_test_driver.gd). --fixed-fps makes simulated
+          # time exact however fast the runner is.
+          : > artifacts/godot-uitest.log
+          for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
+              touch_hang_climb touch_chute touch_lethal_feedback touch_sump touch_pendant \
+              touch_carry touch_water_screw touch_water_lift touch_pause pad_core pad_pendant keyboard_core \
+              touch_rig pad_rig keyboard_rig; do
+            timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
+              -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
+            grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log
+          done
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest.log; then exit 1; fi
+
+      - name: Measure the mix a player hears
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The headless runs above use the Dummy audio driver, which never
+          # mixes, so they can only count cues. Movie Maker mixes that same
+          # driver frame by frame; audio_mix (ui_test_driver.gd) captures what
+          # leaves Master and requires audible ambience and footsteps above
+          # 300 Hz, where a phone speaker plays, with no clipping.
+          timeout 900s xvfb-run -a -s "-screen 0 1296x1114x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 \
+            --write-movie "${RUNNER_TEMP}/audio-mix.avi" -- --uitest=audio_mix \
+            2>&1 | tee artifacts/godot-audio-mix.log
+          rm -f "${RUNNER_TEMP}/audio-mix.avi"
+          grep -F "SCRAPERX_UITEST PASS audio_mix " artifacts/godot-audio-mix.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-audio-mix.log; then exit 1; fi
+
+      - name: World solids table matches the Godot builders
+        shell: bash
+        run: |
+          set -euo pipefail
+          # src/sim/world_solids.inc is generated from the presentation's
+          # builders (godot/presentation/solid_export.gd). The native suite
+          # above ran against the committed table; this proves that table is
+          # still exactly what the builders draw.
+          timeout 300s tools/godot/godot --headless --path godot \
+            -- "--export-solids=${GITHUB_WORKSPACE}/artifacts/world_solids.regenerated.inc" \
+            2>&1 | tee artifacts/world-solids-export.log
+          grep -F "SCRAPERX_SOLIDS boxes=" artifacts/world-solids-export.log
+          diff -u src/sim/world_solids.inc artifacts/world_solids.regenerated.inc
+
+      - name: Cross-compile native graph for Android arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build/android-arm64 -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-24 \
+            -DSCRAPERX_BUILD_BRIDGE=ON \
+            -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_TARGET=template_release
+          cmake --build build/android-arm64 --target scraperx_native --parallel 2
+          test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
+          file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
+
+      - name: Export checkpoint Android arm64 APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHECKPOINT_ID="${GITHUB_SHA::12}"
+          APK_NAME="ScraperX-${CHECKPOINT_ID}-arm64.apk"
+          mkdir -p build/apk artifacts/apk
+          tools/godot/godot --headless --path godot \
+            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
+            2>&1 | tee artifacts/godot-android-export.log
+          test -s "build/apk/${APK_NAME}"
+          unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
+          grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
+          cp "build/apk/${APK_NAME}" artifacts/apk/
+          sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
+          printf 'branch=%s\ncommit=%s\napk=%s\n' \
+            "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
+            > artifacts/apk/CHECKPOINT.txt
+
+      - name: Record evidence boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > artifacts/WO-006-EVIDENCE.md <<EOF
+          # WO-004..006 Evidence
+
+          Source commit: \`${GITHUB_SHA}\`
+
+          Proven by this workflow:
+
+          - WO-001 fixed-step, invalid-input, static-support, and static-locomotion regressions remained green;
+          - WO-002 moving-support regressions remained green: translating and rotating Jolt supports with stable entity IDs, real support-point velocity, material inherited jump momentum, and contact-point velocity matching \`v_linear + omega x r\` within the work-order tolerance;
+          - native host tests proved the WO-003 traversal suite against real Jolt geometry: a vault that crosses a real rail onto a validated far landing while retaining approach momentum, a mantle that ends grounded on ledge entity 6, a ledge hang that holds against gravity on entity 7, a hang on the kinematic moving ledge (entity 8) carried at the support's own velocity and mantled onto that moving support, refusal of the obstructed landing behind entity 9/10 with no player rise, and traversal frame-partition invariance;
+          - Godot 4.7 loaded the same current-source GDExtension, mirrored native support poses, jumped from support entity 3, and observed inherited momentum;
+          - WO-006 host tests proved the coupled machine: the falling ballast drives a hinged tipper, the tipper drags a tension-only rope, the rope opens a real valve, the valve vents a finite pressure vessel into an actuator cylinder, and the cylinder lifts a counterweighted platform past six metres; a shut valve passes exactly zero mass; with the boiler feed cut the vessel's available energy never increases and the lift fades; a player standing on the tipper opens the same valve; and the whole machine is frame-partition invariant;
+          - the Godot runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856, 1.164) with stretch=expand, an 82 degree vertical field of view and a 2600 m far plane;
+          - the same runtime spawned outdoors at grade, walked the tower approach, and observed the native machine open its valve past half and lift the platform past six metres;
+          - one first-person approach-and-machine screenshot was captured from that runtime;
+          - fourteen scripted interface scenarios drove touch (jump, simultaneous move and look, climb, vault, hang then drop, hang then climb up, chute, lethal-fall announcement, sump valve, yard jib pendant, pause and resume), gamepad (move, jump, look, pause, KX-JIB pendant) and keyboard (move, jump, action, pause) through the viewport's real input pipeline, each asserting the resulting native state change; the same runs asserted the first-person hands on the grip points the native hang ledge implies, planted on the ledge during a mantle, on the canopy toggles, and holding the crane remote;
+          - the native graph cross-compiled for Android arm64-v8a;
+          - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
+          - the APK checksum and checkpoint identity were recorded.
+
+          Not proven here: APK installation, Android execution, Fold 6 observation on the real panel, sustained frame rate, thermals, touch ergonomics, the fall/parachute/checkpoint loop, load-bearing structural simulation, process/isolation networks, persistence, NPCs, missions, or a complete game loop.
+          EOF
+
+      - name: Publish immutable checkpoint build and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScraperX-build-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 90

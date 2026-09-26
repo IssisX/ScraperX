@@ -5,9 +5,9 @@ namespace scraperx::sim {
 struct WaterScrewConfig final {
     double water_density_kg_m3 = 1000.0;
     double gravity_m_s2 = 9.81;
-    double outside_diameter_m = 1.20;
-    double core_diameter_m = 0.25;
-    double pitch_m = 0.80;
+    double outside_diameter_m = 0.70;
+    double core_diameter_m = 0.20;
+    double pitch_m = 0.60;
     double fill_factor = 0.31;
     double intrinsic_leak_fraction = 0.087;
     double incline_radians = 0.5235987755982988;
@@ -15,11 +15,11 @@ struct WaterScrewConfig final {
     double outlet_elevation_m = 5.5;
     double hydraulic_efficiency = 0.55;
     double drivetrain_loss_factor = 1.03;
-    double nominal_rpm = 18.0;
-    double rated_motor_torque_nm = 5000.0;
-    double rotor_inertia_kg_m2 = 500.0;
-    double bearing_torque_nm = 180.0;
-    double viscous_drag_torque_nm = 100.0;
+    double nominal_rpm = 22.0;
+    double rated_motor_torque_nm = 1500.0;
+    double rotor_inertia_kg_m2 = 160.0;
+    double bearing_torque_nm = 80.0;
+    double viscous_drag_torque_nm = 35.0;
     double basin_area_m2 = 2.0;
     double basin_capacity_m3 = 2.5;
     double initial_basin_volume_m3 = 2.4;
@@ -33,7 +33,7 @@ struct WaterScrewState final {
     bool motor_enabled = false;
     bool outlet_blocked = false;
     int drive_direction = 1;
-    double motor_torque_limit_nm = 5000.0;
+    double motor_torque_limit_nm = 1500.0;
     double shaft_angle_radians = 0.0;
     double shaft_angular_velocity_rad_s = 0.0;
     double shaft_rpm = 0.0;
@@ -57,6 +57,8 @@ public:
     void set_basin_volume_m3(double volume_m3) noexcept;
     [[nodiscard]] double withdraw_tank_volume_m3(double requested_m3) noexcept;
     [[nodiscard]] double return_to_basin_m3(double requested_m3) noexcept;
+    void set_tank_volume_m3_preserving_total(double target_m3) noexcept;
+    void restore_state(const WaterScrewState &state) noexcept;
     void step(double delta_seconds) noexcept;
 
     [[nodiscard]] const WaterScrewState &state() const noexcept { return state_; }
