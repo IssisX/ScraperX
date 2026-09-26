@@ -203,6 +203,12 @@ void Kit::set_dogs(const GuideIndex guide, const float pitch) {
     guides_[guide.value].dog_pitch = pitch;
 }
 
+void Kit::set_guide_friction(const GuideIndex guide, const float max_friction_force) {
+    if (guide.valid() && guides_[guide.value].slider != nullptr) {
+        guides_[guide.value].slider->SetMaxFrictionForce(max_friction_force);
+    }
+}
+
 void Kit::set_rail_gap(const GuideIndex guide, const float gap_travel, const BodyIndex joint,
                        const JPH::RVec3 seat, const JPH::Vec3 seat_axis, const float tolerance,
                        const float angle) {

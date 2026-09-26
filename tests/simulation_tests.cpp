@@ -2116,6 +2116,78 @@ bool climb_c1(scraperx::sim::Simulation &simulation, C1Notes *notes = nullptr) {
            on_deck4.support_entity_id == Simulation::kTowerEntityId;
 }
 
+// ---- Band 0, the Stack: S2, the rolling-ballast walking beam ----------------
+
+constexpr double kDeck6Top = 66.0;
+constexpr double kS2CageMassKg = 300.0;
+constexpr double kS2CartMassKg = 3500.0;
+constexpr double kS2Travel = 22.0;
+constexpr double kS2FloorTopUp = 66.05;
+
+bool take_s2_handle(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!(walk_to(simulation, 10.0, -130.5, 30.0) && walk_to(simulation, 10.0, -137.4, 20.0, 0.08))) {
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.5);
+    const auto facing = simulation.snapshot();
+    if (facing.carry_target_entity_id != Simulation::kStackS2HandleEntityId || facing.carry_target_kind != 2) {
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    return simulation.snapshot().carrying_entity_id == Simulation::kStackS2HandleEntityId;
+}
+
+bool s2_handle_at_rest(const scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    const auto at = simulation.kit_body_position(simulation.kit_body_index(Simulation::kStackS2HandleEntityId));
+    return std::abs(at.x - 10.00) <= 0.15 && std::abs(at.y - (44.05 + 1.95)) <= 0.10 &&
+           std::abs(at.z - (-138.00)) <= 0.15 && simulation.snapshot().carrying_entity_id == 0;
+}
+
+struct S2Ride final {
+    bool reached_top = false;
+    bool rode_on_cage = true;
+    double seconds = 0.0;
+    double worst_margin_j = std::numeric_limits<double>::infinity();
+};
+
+S2Ride ride_s2(scraperx::sim::Simulation &simulation, const double seconds) {
+    using scraperx::sim::Simulation;
+    S2Ride ride;
+    const double start = simulation.snapshot().simulation_time_seconds;
+    const double cage_y0 = kit_y(simulation, Simulation::kStackS2CageEntityId);
+    const double rider_y0 = simulation.snapshot().player_position.y;
+    const auto ticks = static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (std::uint32_t tick = 0; tick < ticks && !ride.reached_top; ++tick) {
+        (void)simulation.set_move_input(0.0, 0.0);
+        (void)simulation.set_facing(0.0, -1.0);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = simulation.snapshot();
+        const auto stack = simulation.stack_state();
+        const double rise = kit_y(simulation, Simulation::kStackS2CageEntityId) - cage_y0;
+        const double rider_rise = state.player_position.y - rider_y0;
+        const double payload_gained = (kS2CageMassKg + 80.0) * kGravity * rider_rise;
+        const double released = kS2CartMassKg * kGravity * rise;
+        if (rise > 0.05) {
+            ride.worst_margin_j = std::min(ride.worst_margin_j, released - payload_gained);
+            if (state.support_entity_id != Simulation::kStackS2CageEntityId) {
+                ride.rode_on_cage = false;
+            }
+        }
+        if (stack.s2_cage_travel >= kS2Travel - 0.10) {
+            ride.reached_top = true;
+            ride.seconds = state.simulation_time_seconds - start;
+            (void)simulation.request_set_down();
+            (void)simulation.advance_frame(0.2);
+            break;
+        }
+    }
+    return ride;
+}
+
 void run_stack() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -2341,6 +2413,58 @@ void run_stack() {
     std::cout << "PASS scraperx_sim Stack to deck 4: seconds=" << band_top.simulation_time_seconds - band_start
               << " at_deck2=" << at_deck2 << " deck4_y=" << band_top.player_position.y
               << " worst_tick_step_m=" << g_path_watch.worst << "\n";
+
+    // S2 at rest: left alone for 10 s, the walking beam and cage wait as found.
+    Simulation s2_idle(InitialSpawn::Deck4South);
+    require(s2_idle.advance_frame(10.0).accepted, "S2 idle interval must be accepted");
+    const auto s2_idle_state = s2_idle.stack_state();
+    require(std::abs(s2_idle_state.s2_cage_travel) <= 0.03 && s2_idle_state.s2_chock_latched &&
+                s2_handle_at_rest(s2_idle),
+            "left alone, S2 must wait as found with chock latched");
+    std::cout << "PASS scraperx_sim S2 at rest: cage_travel=" << s2_idle_state.s2_cage_travel
+              << " chock_latched=" << s2_idle_state.s2_chock_latched << "\n";
+
+    // S2 ride: board cage at deck 4, pull chock lanyard, ride walking beam to deck 6.
+    Simulation s2_sim(InitialSpawn::Deck4South);
+    require(s2_sim.advance_frame(0.5).accepted, "S2 settle interval must be accepted");
+    require(take_s2_handle(s2_sim), "the player must walk from deck 4 into S2's cage and take hold of its lanyard");
+    const auto s2_rode = ride_s2(s2_sim, 20.0);
+    require(s2_rode.reached_top, "pulling S2's lanyard must carry the rider to deck 6");
+    require(s2_rode.rode_on_cage, "the rider must stand on S2's cage for the whole ride");
+    const auto s2_top_state = s2_sim.stack_state();
+    require(s2_top_state.s2_cage_peak_speed <= 2.6, "S2's governor must hold the cage to 2.5 m/s");
+    require(s2_rode.worst_margin_j >= 0.0, "S2 payload energy gain must not exceed source energy released");
+
+    // Walk off onto deck 6's south band
+    require(walk_to(s2_sim, 10.0, -133.0, 6.0) && walk_to(s2_sim, 10.0, -126.0, 6.0),
+            "the rider must walk off S2's cage over the upper gangway onto deck 6");
+    (void)s2_sim.advance_frame(0.5);
+    const auto on_deck6 = s2_sim.snapshot();
+    require(on_deck6.player_grounded && on_deck6.player_position.y > kDeck6Top + 0.5 &&
+                on_deck6.player_position.z < -124.0 &&
+                on_deck6.support_entity_id == Simulation::kTowerEntityId,
+            "the rider must stand on deck 6's south band");
+    const double s2_floor_y = kit_y(s2_sim, Simulation::kStackS2CageEntityId) + 0.10;
+    require(std::abs(s2_floor_y - kS2FloorTopUp) <= 0.05, "S2 floor must stop at 66.05 m");
+    std::cout << "PASS scraperx_sim S2 ride: ride_s=" << s2_rode.seconds
+              << " floor_y=" << s2_floor_y
+              << " peak_speed=" << s2_top_state.s2_cage_peak_speed
+              << " deck6_y=" << on_deck6.player_position.y << "\n";
+
+    // Full Stack ascent in one run from grade: S1 (0->22m) -> C1 (22->44m) -> S2 (44->66m)
+    require(take_s2_handle(band), "the Stack: from deck 4 into S2's cage and take hold of its lanyard");
+    const auto band_s2_rode = ride_s2(band, 20.0);
+    require(band_s2_rode.reached_top, "the Stack: S2 carries the rider to deck 6");
+    require(walk_to(band, 10.0, -133.0, 6.0) && walk_to(band, 10.0, -126.0, 6.0),
+            "the Stack: off S2 onto deck 6");
+    (void)band.advance_frame(0.5);
+    const auto band_deck6_top = band.snapshot();
+    require(band_deck6_top.death_count == 0, "the Stack: from the yard to deck 6 without dying");
+    require(band_deck6_top.player_grounded && band_deck6_top.player_position.y > kDeck6Top + 0.5,
+            "the Stack: standing on deck 6");
+    std::cout << "PASS scraperx_sim Stack to deck 6: seconds="
+              << band_deck6_top.simulation_time_seconds - band_start
+              << " deck6_y=" << band_deck6_top.player_position.y << "\n";
 }
 
 int main() {

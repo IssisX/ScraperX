@@ -132,6 +132,10 @@ public:
     // is a tooth.
     void set_dogs(GuideIndex guide, float pitch);
 
+    // Guide shoe friction: static and dynamic friction along the guide axis
+    // when not actively driven by the governor motor.
+    void set_guide_friction(GuideIndex guide, float max_friction_force);
+
     // A rail joint missing from a guide (declared, AS-009): the body's
     // rollers cannot pass the gap, so its travel stops at gap_travel until
     // the joint body lies in its seat -- within `tolerance` of `seat`, its x

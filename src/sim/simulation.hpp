@@ -72,6 +72,7 @@ enum class InitialSpawn : std::uint8_t {
     // off S1; on deck 4's south band by C1's davit, as a climber off C1.
     Deck2South = 25,
     Deck4South = 26,
+    Deck6South = 27,
 };
 
 // A world started at one of these spawns is the proving ground: it carries
@@ -192,6 +193,17 @@ struct StackState final {
     double s1_tank_water_kg = 0.0;
     double s1_valve_angle = 0.0;
     bool s1_catch_latched = false;
+    double s1_rope_tension = 0.0;
+
+    // S2, the rolling-ballast walking beam.
+    double s2_cage_travel = 0.0;
+    double s2_cage_peak_speed = 0.0;
+    double s2_cart_travel = 0.0;
+    double s2_beam_angle = 0.0;
+    double s2_chock_angle = 0.0;
+    bool s2_chock_latched = false;
+    bool s2_cage_latched = false;
+    double s2_rope_tension = 0.0;
 };
 
 // Rubble spilled onto a static surface, piled where it landed.
@@ -468,6 +480,12 @@ public:
     static constexpr std::uint64_t kStackS1LeverEntityId = 2202;
     static constexpr std::uint64_t kStackS1ChainEntityId = 2203;
     static constexpr std::uint64_t kStackS1StrikerEntityId = 2204;
+    // S2, the rolling-ballast walking beam.
+    static constexpr std::uint64_t kStackS2CageEntityId = 2210;
+    static constexpr std::uint64_t kStackS2BeamEntityId = 2211;
+    static constexpr std::uint64_t kStackS2CartEntityId = 2212;
+    static constexpr std::uint64_t kStackS2ChockEntityId = 2213;
+    static constexpr std::uint64_t kStackS2HandleEntityId = 2214;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

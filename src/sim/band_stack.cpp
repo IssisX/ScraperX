@@ -12,6 +12,7 @@
 #include "sim/simulation.hpp"
 
 #include <algorithm>
+#include <iostream>
 
 namespace scraperx::sim::bands {
 
@@ -596,12 +597,261 @@ void build_c1(std::vector<Part> &route) {
     }
 }
 
+// ---- S2, the rolling-ballast walking beam (archetype 18 mutated) -------------
+//
+// Bridges Deck 4 (44.0 m) to Deck 6 (66.0 m) across the southern edge of the
+// 34 m central shaft. A 24 m steel walking beam is balanced on a central
+// trunnion fulcrum at +55 m (kS2Pivot).
+// At rest, the walking beam is held tilted by a safety chock catch: its west
+// arm (carrying a 3500 kg pig-iron ballast cart) sits high at deck 6 elevation
+// (Y = 66.05), while its east arm sits low at deck 4 (Y = 44.05).
+// A tow cable runs from the west arm over headframe sheaves to a passenger cage
+// at the east arm.
+// Inside the cage, a trip handle hangs on a lanyard to the chock lever.
+// When the rider boards at deck 4 and pulls the lanyard, the catch releases:
+// the 3500 kg ballast cart drives the walking beam down, tilting the massive
+// girder across the atrium. As the west arm sinks 22 m, the tow rope hoists
+// the cage 22 m up to deck 6 under its 2.5 m/s brake governor. At deck 6,
+// safety dogs engage, and the rider walks off across the upper gangway onto
+// deck 6's south band.
+
+constexpr float kDeck5Top = 55.00F;
+constexpr float kDeck6Top = 66.00F;
+constexpr float kS2Travel = 22.00F;
+
+constexpr float kS2CageX = 10.00F;
+constexpr float kS2CageZ = -138.00F;
+constexpr float kS2CageHalfX = 1.50F;
+constexpr float kS2CageHalfZ = 1.40F;
+constexpr float kS2CageFloorHalfY = 0.10F;
+constexpr float kS2CageFloorTop = kDeck4Top + 0.05F; // 44.05 m
+constexpr float kS2CageOriginY = kS2CageFloorTop - kS2CageFloorHalfY;
+constexpr float kS2CageMassKg = 300.0F;
+constexpr float kS2CageGovernorSpeed = 2.50F;
+constexpr float kS2CageGovernorForce = 40000.0F;
+constexpr float kS2CageLevelAccel = 2.00F;
+const JPH::Vec3 kS2CageEyeLocal(-kS2CageHalfX - 0.12F, 0.80F, 0.0F);
+
+// The walking beam pivot (fulcrum):
+const JPH::RVec3 kS2Pivot(0.0, kDeck5Top, -141.0);
+constexpr float kS2BeamMassKg = 2400.0F; // 1500 kg ballast cart + 900 kg steel frame
+const JPH::Vec3 kS2BeamWestEye(-10.0F, 11.05F, 0.0F); // local to beam at angle 0
+
+// Chock lever at the trunnion stand:
+const JPH::RVec3 kS2ChockPivot(0.0, kDeck5Top + 1.20, -140.20);
+constexpr float kS2ChockArm = 1.80F;
+constexpr float kS2ChockMassKg = 35.0F;
+constexpr float kS2ChockTravel = 0.60F;
+constexpr float kS2ChockRelease = 0.15F;
+
+// Head sheaves:
+const JPH::RVec3 kS2SheaveWest(-10.0F, kDeck6Top + 3.00, -141.0);
+const JPH::RVec3 kS2SheaveEast(kS2CageX + kS2CageEyeLocal.GetX(), kDeck6Top + 3.00, -138.0);
+
+// Gangways:
+constexpr float kS2GangwayNorthZ = -138.0F + kS2CageHalfZ; // -136.60
+constexpr float kS2GangwayHalfX = 1.40F;
+
+[[nodiscard]] std::vector<Part> s2_cage_parts() {
+    const float post_half = 0.5F * kCagePostHeight;
+    const float post_y = kS2CageFloorHalfY + post_half;
+    const float top_y = kS2CageFloorHalfY + kCagePostHeight;
+    std::vector<Part> cage{
+        box(JPH::Vec3(kS2CageHalfX, kS2CageFloorHalfY, kS2CageHalfZ), JPH::Vec3::sZero(),
+            Material::Galvanised),
+    };
+    for (const float sx : {-1.0F, 1.0F}) {
+        for (const float sz : {-1.0F, 1.0F}) {
+            cage.push_back(box(JPH::Vec3(0.05F, post_half, 0.05F),
+                               JPH::Vec3(sx * (kS2CageHalfX - 0.05F), post_y, sz * (kS2CageHalfZ - 0.05F)),
+                               Material::Yellow));
+        }
+        cage.push_back(box(JPH::Vec3(kS2CageHalfX, 0.06F, 0.05F),
+                           JPH::Vec3(0.0F, top_y, sx * (kS2CageHalfZ - 0.05F)), Material::Yellow));
+        cage.push_back(box(JPH::Vec3(0.05F, 0.06F, kS2CageHalfZ),
+                           JPH::Vec3(sx * (kS2CageHalfX - 0.05F), top_y, 0.0F), Material::Yellow));
+        cage.push_back(box(JPH::Vec3(0.04F, 0.45F, kS2CageHalfZ - 0.10F),
+                           JPH::Vec3(sx * (kS2CageHalfX - 0.04F), 0.55F, 0.0F), Material::Galvanised));
+    }
+    cage.push_back(box(JPH::Vec3(0.12F, 0.06F, 0.06F),
+                       JPH::Vec3(-(kS2CageHalfX + 0.06F), kS2CageEyeLocal.GetY(), 0.0F),
+                       Material::Hazard));
+    return cage;
+}
+
+[[nodiscard]] std::vector<Part> s2_beam_parts() {
+    std::vector<Part> beam;
+    // Central trunnion bearing axle along Z
+    beam.push_back(box(JPH::Vec3(0.20F, 0.20F, 0.35F), JPH::Vec3::sZero(), Material::Steel));
+
+    // The walking beam main girder: top and bottom chords from west (-10, 11) to east (+10, -11)
+    const JPH::Vec3 west_pt(-10.0F, 11.05F, 0.0F);
+    const JPH::Vec3 east_pt(10.0F, -11.05F, 0.0F);
+    const JPH::Vec3 along = (east_pt - west_pt).Normalized();
+    const JPH::Vec3 normal(-along.GetY(), along.GetX(), 0.0F);
+
+    // Chords offset by normal (depth 0.35 m, leaves full trunnion clearance)
+    beam.push_back(strut(west_pt + normal * 0.35F, east_pt + normal * 0.35F, 0.09F, Material::Rust));
+    beam.push_back(strut(west_pt - normal * 0.35F, east_pt - normal * 0.35F, 0.09F, Material::Rust));
+
+    // Web struts along the beam
+    for (float t = 0.10F; t <= 0.90F; t += 0.10F) {
+        const JPH::Vec3 pt = west_pt * (1.0F - t) + east_pt * t;
+        beam.push_back(strut(pt - normal * 0.35F, pt + normal * 0.35F, 0.05F, Material::Steel));
+    }
+
+    // West Arm Ballast Cart (pig-iron trolley, 1500 kg):
+    // Mounted directly on the outer west arm (centered at t = 0.15, R ~ 12 m from fulcrum)
+    const JPH::Vec3 cart_center = west_pt * 0.85F + east_pt * 0.15F;
+    beam.push_back(box(JPH::Vec3(1.10F, 0.60F, 0.22F), cart_center + normal * 0.50F, Material::Concrete));
+    beam.push_back(box(JPH::Vec3(1.20F, 0.12F, 0.24F), cart_center + normal * 0.10F, Material::Rust));
+
+    // Eye plate on west tip
+    beam.push_back(box(JPH::Vec3(0.15F, 0.15F, 0.15F), west_pt, Material::Hazard));
+
+    // East Arm tip & eye plate
+    beam.push_back(box(JPH::Vec3(0.15F, 0.15F, 0.15F), east_pt, Material::Hazard));
+    return beam;
+}
+
+[[maybe_unused]] void build_crossover_gangway(std::vector<Part> &frame, const float deck_top) {
+    // 7-step industrial crossover bridge over the perimeter ShaftRail at Z = -133.00:
+    // Deck floor is at deck_top. ShaftRail top is at deck_top + 1.09 m.
+    // The crossover steps up by 0.28 m per step onto a bridge platform at deck_top + 1.18 m,
+    // embedding the rail inside the bridge platform, then steps back down onto the gangway.
+    frame.push_back(span({kS2CageX - kS2GangwayHalfX, deck_top - 0.10F, -131.50F},
+                         {kS2CageX + kS2GangwayHalfX, deck_top + 0.28F, -131.00F}, Material::Galvanised));
+    frame.push_back(span({kS2CageX - kS2GangwayHalfX, deck_top - 0.10F, -132.00F},
+                         {kS2CageX + kS2GangwayHalfX, deck_top + 0.56F, -131.50F}, Material::Galvanised));
+    frame.push_back(span({kS2CageX - kS2GangwayHalfX, deck_top - 0.10F, -132.50F},
+                         {kS2CageX + kS2GangwayHalfX, deck_top + 0.84F, -132.00F}, Material::Galvanised));
+    frame.push_back(span({kS2CageX - kS2GangwayHalfX, deck_top - 0.10F, -133.50F},
+                         {kS2CageX + kS2GangwayHalfX, deck_top + 1.18F, -132.50F}, Material::Galvanised));
+    frame.push_back(span({kS2CageX - kS2GangwayHalfX, deck_top - 0.10F, -134.00F},
+                         {kS2CageX + kS2GangwayHalfX, deck_top + 0.84F, -133.50F}, Material::Galvanised));
+    frame.push_back(span({kS2CageX - kS2GangwayHalfX, deck_top - 0.10F, -134.50F},
+                         {kS2CageX + kS2GangwayHalfX, deck_top + 0.56F, -134.00F}, Material::Galvanised));
+    frame.push_back(span({kS2CageX - kS2GangwayHalfX, deck_top - 0.10F, -135.00F},
+                         {kS2CageX + kS2GangwayHalfX, deck_top + 0.28F, -134.50F}, Material::Galvanised));
+    const float runway_north = kS2GangwayNorthZ + 0.05F; // -136.55F (5 cm sill clearance)
+    frame.push_back(span({kS2CageX - kS2GangwayHalfX, deck_top - 0.10F, runway_north},
+                         {kS2CageX + kS2GangwayHalfX, deck_top, -135.00F}, Material::Galvanised));
+
+    for (const float side : {-1.0F, 1.0F}) {
+        const float rail_x = kS2CageX + side * (kS2GangwayHalfX - 0.04F);
+        frame.push_back(span({rail_x - 0.04F, deck_top + 1.05F, runway_north},
+                             {rail_x + 0.04F, deck_top + 1.13F, -134.50F}, Material::Yellow));
+        frame.push_back(span({rail_x - 0.04F, deck_top + 2.15F, -134.50F},
+                             {rail_x + 0.04F, deck_top + 2.23F, -131.50F}, Material::Yellow));
+        frame.push_back(span({rail_x - 0.04F, deck_top, runway_north},
+                             {rail_x + 0.04F, deck_top + 1.05F, runway_north + 0.08F}, Material::Yellow));
+    }
+}
+
+void build_s2_frame(std::vector<Part> &frame) {
+    build_crossover_gangway(frame, kDeck4Top);
+    build_crossover_gangway(frame, kDeck6Top);
+
+    // Landing buffer beams under S2 cage sill at Deck 4 (5 cm clearance under cage floor at 43.85 m)
+    const float s2_sill_top = kS2CageOriginY - kS2CageFloorHalfY - 0.05F;
+    frame.push_back(span(JPH::Vec3(kS2CageX - kS2CageHalfX - 0.05F, s2_sill_top - 0.40F, kS2CageZ - kS2CageHalfZ - 0.05F),
+                         JPH::Vec3(kS2CageX + kS2CageHalfX + 0.05F, s2_sill_top, kS2CageZ + kS2CageHalfZ + 0.05F),
+                         Material::Steel));
+
+    // Vertical guide rails for S2 cage on its east side (with 12 cm running clearance)
+    const float guide_mid_y = 0.5F * (43.0F + 69.0F);
+    const float guide_half_y = 0.5F * (69.0F - 43.0F);
+    for (const float side : {-1.0F, 1.0F}) {
+        frame.push_back(box(JPH::Vec3(0.04F, guide_half_y, 0.10F),
+                            JPH::Vec3(kS2CageX + kS2CageHalfX + 0.16F, guide_mid_y,
+                                      kS2CageZ + side * 0.60F),
+                            Material::Steel));
+    }
+
+    // Central Trunnion A-frame stand (Y: 44.0 to 55.0, Z: -141.0)
+    for (const float sx : {-1.8F, 1.8F}) {
+        for (const float sz : {-1.0F, 1.0F}) {
+            frame.push_back(strut(JPH::Vec3(sx, kDeck4Top, -141.0F + sz * 0.85F),
+                                  JPH::Vec3(0.0F, kDeck5Top - 0.40F, -141.0F + sz * 0.55F), 0.10F,
+                                  Material::Steel));
+        }
+    }
+    // Trunnion bearing pillow blocks on north and south sides of fulcrum
+    for (const float sz : {-1.0F, 1.0F}) {
+        frame.push_back(box(JPH::Vec3(0.35F, 0.40F, 0.10F),
+                            JPH::Vec3(0.0F, kDeck5Top - 0.40F, -141.0F + sz * 0.55F),
+                            Material::Rust));
+    }
+
+    // Head sheaves support beam at Y = 69.0 spanning from west (Z = -141) to east (Z = -138)
+    frame.push_back(span(JPH::Vec3(-11.0F, kDeck6Top + 2.80F, -141.5F),
+                         JPH::Vec3(kS2CageX + 1.0F, kDeck6Top + 3.20F, -137.5F), Material::Yellow));
+    frame.push_back(box(JPH::Vec3(0.2F, 0.2F, 0.1F),
+                        JPH::Vec3(-10.0F, kDeck6Top + 3.00F, -141.0F), Material::Hazard));
+    frame.push_back(box(JPH::Vec3(0.2F, 0.2F, 0.1F),
+                        JPH::Vec3(kS2CageX + kS2CageEyeLocal.GetX(), kDeck6Top + 3.00F, -138.0F),
+                        Material::Hazard));
+}
+
+void build_s2(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
+    using Sim = Simulation;
+
+    // ---- The cage, on its vertical guide with governor and safety dogs ---------
+    stack.s2_cage = kit.add_body(Sim::kStackS2CageEntityId, s2_cage_parts(),
+                                 JPH::RVec3(kS2CageX, kS2CageOriginY, kS2CageZ), JPH::Quat::sIdentity(),
+                                 kS2CageMassKg, 0.9F);
+    stack.s2_cage_guide = kit.add_guide(stack.s2_cage, JPH::Vec3::sAxisY(), 0.0F, kS2Travel,
+                                        kS2CageGovernorSpeed, kS2CageGovernorForce, kS2CageLevelAccel);
+
+    // ---- The walking beam (teeter-totter), on central fulcrum trunnion ---------
+    stack.s2_beam = kit.add_body(Sim::kStackS2BeamEntityId, s2_beam_parts(),
+                                 kS2Pivot, JPH::Quat::sIdentity(), kS2BeamMassKg, 0.5F);
+    // Hinge around +Z axis: at rest angle = 0, can rotate up to 1.75 rad
+    stack.s2_beam_hinge = kit.add_lever(stack.s2_beam, kS2Pivot, JPH::Vec3::sAxisZ(),
+                                        JPH::Vec3::sAxisX(), 0.0F, 1.75F);
+
+    // ---- The tow rope: connects west arm to east cage -------------------------
+    const JPH::RVec3 eye_cage =
+        JPH::RVec3(kS2CageX, kS2CageOriginY, kS2CageZ) + JPH::RVec3(kS2CageEyeLocal);
+    const JPH::RVec3 eye_beam = kS2Pivot + JPH::RVec3(kS2BeamWestEye);
+    const float leg1 = JPH::Vec3(eye_beam - kS2SheaveWest).Length();
+    const float leg2 = JPH::Vec3(eye_cage - kS2SheaveEast).Length();
+    const float rope_len = leg1 + leg2;
+    stack.s2_rope = kit.add_rope(stack.s2_beam, kS2BeamWestEye, kS2SheaveWest,
+                                 stack.s2_cage, kS2CageEyeLocal, kS2SheaveEast, 1.0F, rope_len, 0.0F);
+
+    // ---- The chock lever, catch, trip line, and lanyard handle ---------------
+    stack.s2_chock_body = kit.add_body(
+        Sim::kStackS2ChockEntityId,
+        {box(JPH::Vec3(0.5F * kS2ChockArm, 0.06F, 0.05F), JPH::Vec3(0.5F * kS2ChockArm, 0.0F, 0.0F),
+             Material::Hazard),
+         box(JPH::Vec3(0.20F, 0.15F, 0.15F), JPH::Vec3(1.00F, 0.0F, 0.0F), Material::Rust)},
+        kS2ChockPivot, JPH::Quat::sIdentity(), kS2ChockMassKg, 0.5F);
+    stack.s2_chock_lever = kit.add_lever(stack.s2_chock_body, kS2ChockPivot, JPH::Vec3::sAxisZ(),
+                                         JPH::Vec3::sAxisX(), 0.0F, kS2ChockTravel);
+    stack.s2_catch = kit.add_catch(stack.s2_beam, stack.s2_chock_lever, kS2ChockRelease, 0.05F, true);
+    stack.s2_cage_catch = kit.add_catch(stack.s2_cage, stack.s2_chock_lever, kS2ChockRelease, 0.05F, true);
+
+    const JPH::RVec3 handle_top(kS2CageX, kS2CageFloorTop + 1.95F, kS2CageZ);
+    stack.s2_handle = add_chain_handle(kit, Sim::kStackS2HandleEntityId, handle_top);
+    kit.set_damping(stack.s2_handle, 8.0F, 8.0F);
+
+    const JPH::RVec3 trip_sheave1(kS2ChockPivot.GetX() + kS2ChockArm, kS2ChockPivot.GetY() + 0.60,
+                                  kS2ChockPivot.GetZ());
+    const JPH::RVec3 trip_sheave2(kS2CageX, kDeck6Top + 3.00, kS2CageZ);
+    (void)kit.add_trip_line(stack.s2_chock_body, JPH::Vec3(kS2ChockArm, 0.0F, 0.0F), stack.s2_handle,
+                            JPH::Vec3(0.0F, kHandleHalfY, 0.0F), trip_sheave1, trip_sheave2);
+
+    build_s2_frame(frame);
+}
+
 } // namespace
 
 void build_stack(kit::Kit &kit, Stack &stack) {
     using Sim = Simulation;
     std::vector<Part> frame;
     build_s1(kit, stack, frame);
+    build_s2(kit, stack, frame);
     (void)kit.add_body(Sim::kStackFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(),
                        0.0F, 0.8F);
     std::vector<Part> route;

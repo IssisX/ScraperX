@@ -4,7 +4,7 @@ on:
   push:
     # ScraperX-Claude is the write/implementation branch. ScraperX-2 carries its
     # own copy of this workflow, so listing it here was inert routing.
-    branches: [ScraperX-Claude]
+    branches: [ScraperX-Claude, Gemini]
   workflow_dispatch:
 
 permissions:
@@ -104,6 +104,9 @@ jobs:
             "PASS scraperx_sim S1 stay aboard" \
             "PASS scraperx_sim C1 climb" \
             "PASS scraperx_sim Stack to deck 4" \
+            "PASS scraperx_sim S2 at rest" \
+            "PASS scraperx_sim S2 ride" \
+            "PASS scraperx_sim Stack to deck 6" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \

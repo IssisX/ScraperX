@@ -60,8 +60,9 @@ if(SCRAPERX_WITH_JOLT)
     target_link_libraries(scraperx_sim PUBLIC Jolt)
     target_compile_definitions(scraperx_sim PUBLIC SCRAPERX_HAS_JOLT=1)
 endif()
+option(SCRAPERX_BUILD_TESTS "Build simulation tests regardless of platform" OFF)
 
-if(BUILD_TESTING AND NOT ANDROID)
+if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
     add_executable(scraperx_sim_tests tests/simulation_tests.cpp)
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_sim_tests PRIVATE

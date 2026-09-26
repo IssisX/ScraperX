@@ -655,6 +655,9 @@ private:
     case scraperx::sim::InitialSpawn::Deck4South:
         // On deck 4's south band, west of C1's davit.
         return {11.0, 45.2, -125.5};
+    case scraperx::sim::InitialSpawn::Deck6South:
+        // On deck 6's south band, by S2's upper gangway.
+        return {10.0, 67.2, -125.5};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower
@@ -3877,6 +3880,15 @@ StackState Simulation::stack_state() const noexcept {
     out.s1_tank_water_kg = kit.pool_water(stack.s1_tank);
     out.s1_valve_angle = kit.lever_angle(stack.s1_lever);
     out.s1_catch_latched = kit.catch_latched(stack.s1_catch);
+    out.s1_rope_tension = kit.rope_tension(stack.s1_rope);
+    out.s2_cage_travel = kit.guide_travel(stack.s2_cage_guide);
+    out.s2_cage_peak_speed = kit.guide_peak_speed(stack.s2_cage_guide);
+    out.s2_cart_travel = kit.guide_travel(stack.s2_cart_guide);
+    out.s2_beam_angle = kit.lever_angle(stack.s2_beam_hinge);
+    out.s2_chock_angle = kit.lever_angle(stack.s2_chock_lever);
+    out.s2_chock_latched = kit.catch_latched(stack.s2_catch);
+    out.s2_cage_latched = kit.catch_latched(stack.s2_cage_catch);
+    out.s2_rope_tension = kit.rope_tension(stack.s2_rope);
     return out;
 }
 

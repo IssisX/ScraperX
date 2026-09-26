@@ -244,6 +244,20 @@ struct Stack final {
     kit::BinIndex s1_bin;
     kit::PoolIndex s1_tank;
     kit::PipeIndex s1_fill;
+
+    // S2, the rolling-ballast walking beam: deck 4 -> deck 6.
+    kit::BodyIndex s2_cage;
+    kit::BodyIndex s2_beam;
+    kit::BodyIndex s2_cart;
+    kit::BodyIndex s2_chock_body;
+    kit::BodyIndex s2_handle;
+    kit::GuideIndex s2_cage_guide;
+    kit::GuideIndex s2_cart_guide;
+    kit::RopeIndex s2_rope;
+    kit::LeverIndex s2_beam_hinge;
+    kit::LeverIndex s2_chock_lever;
+    kit::CatchIndex s2_catch;
+    kit::CatchIndex s2_cage_catch;
 };
 
 void build_stack(kit::Kit &kit, Stack &stack);
