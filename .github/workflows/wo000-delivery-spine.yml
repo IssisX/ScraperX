@@ -82,9 +82,11 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_sim_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
+          ./build/host/scraperx_parkour_flow_tests | tee artifacts/parkour-flow.log
+          grep -F "PASS scraperx_sim parkour flow" artifacts/parkour-flow.log
           # The falsifiers' own proof lines. ctest --output-on-failure prints a
           # passing test's stdout nowhere, so native-tests.log carries only the
           # aggregate verdict -- every PASS line the suite emits was invisible
@@ -249,6 +251,18 @@ jobs:
           timeout 300s tools/godot/godot --headless --editor --import --path godot \
             2>&1 | tee artifacts/godot-import.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-import.log; then exit 1; fi
+
+      - name: Prove interpolated parkour camera and motion comfort
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p godot/.godot
+          printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            > godot/.godot/extension_list.cfg
+          timeout 180s tools/godot/godot --headless --path godot \
+            --script res://tests/parkour_camera_test.gd 2>&1 | tee artifacts/parkour-camera.log
+          grep -F "SCRAPERX_PARKOUR_CAMERA PASS" artifacts/parkour-camera.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/parkour-camera.log; then exit 1; fi
 
       - name: Prove default pipe bridge inventory and retained fallback stairs
         shell: bash

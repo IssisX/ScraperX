@@ -70,6 +70,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_interpolation_alpha);
     godot::ClassDB::bind_method(godot::D_METHOD("get_player_position"),
                                 &ScraperXSimulation::get_player_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_player_render_position"),
+                                &ScraperXSimulation::get_player_render_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_player_linear_velocity"),
                                 &ScraperXSimulation::get_player_linear_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_grounded"),
@@ -493,6 +495,10 @@ double ScraperXSimulation::get_interpolation_alpha() const {
 
 godot::Vector3 ScraperXSimulation::get_player_position() const {
     return to_godot(simulation_->snapshot().player_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_player_render_position() const {
+    return to_godot(simulation_->render_player_position());
 }
 
 godot::Vector3 ScraperXSimulation::get_player_linear_velocity() const {

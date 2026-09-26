@@ -41,6 +41,7 @@ public:
     [[nodiscard]] double get_fixed_step_seconds() const;
     [[nodiscard]] double get_interpolation_alpha() const;
     [[nodiscard]] godot::Vector3 get_player_position() const;
+    [[nodiscard]] godot::Vector3 get_player_render_position() const;
     [[nodiscard]] godot::Vector3 get_player_linear_velocity() const;
     [[nodiscard]] bool is_player_grounded() const;
     [[nodiscard]] bool is_player_crouched() const;

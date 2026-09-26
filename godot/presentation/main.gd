@@ -50,15 +50,9 @@ const DOUBLE_TAP_SECONDS := 0.35
 const CHECKPOINT_TOAST_RISE_METERS := 3.0
 const SLING_CHECK_SECONDS := 0.3
 
-# Locomotion-feel camera response. Pure presentation, driven every frame by
-# native player position/velocity/grounded state already read below -- never
-# the other way around, and never touching _native itself. Every term is a
-# function of CURRENT state (speed, ground contact, the last frame's own
-# vertical velocity), not an accumulating drift, so it always returns to
-# exactly baseline (no dip, no bob, FOV_BASE) the moment the player is
-# grounded and stationary -- the CI runtime proof's own OBSERVE hold, where
-# the player stands still, depends on that landing on the same fov=82.0 the
-# scene is built with.
+# Locomotion feel is presentation only: the native snapshot drives it and the
+# camera never feeds back into collision or movement. Exponential responses
+# follow native speed and contact without changing the authoritative pose.
 const FOV_BASE := 82.0
 const FOV_SPRINT_MAX_DEGREES := 4.0
 const FOV_FALL_MAX_DEGREES := 3.0
@@ -80,6 +74,10 @@ const CROUCH_EYE_OVER_SOLES := 0.95
 const CROUCH_EYE_SECONDS := 0.16
 const HEAD_BOB_SPEED_FLOOR_MPS := 0.3
 const HEAD_BOB_SPEED_FULL_MPS := 3.0
+const HEAD_BOB_RESPONSE_PER_SECOND := 12.0
+const FOV_RESPONSE_PER_SECOND := 9.0
+const CAMERA_BANK_MAX_RADIANS := 1.5 * PI / 180.0
+const CAMERA_BANK_RESPONSE_PER_SECOND := 10.0
 
 const TRANSLATING_SUPPORT_ENTITY_ID := 3
 const MANTLE_LEDGE_ENTITY_ID := 6
@@ -296,6 +294,9 @@ var _cam_last_velocity_y := 0.0
 var _cam_landing_timer := 0.0
 var _cam_landing_strength := 0.0
 var _cam_bob_phase := 0.0
+var _cam_bob_weight := 0.0
+var _cam_fov_offset := 0.0
+var _cam_bank := 0.0
 var _crouch_eye := 0.0
 # DISPLAY settings; the defaults are the tuned values above.
 var _fov_base := FOV_BASE
@@ -1320,11 +1321,8 @@ func _layout_hud() -> void:
 # --- presentation mirror ----------------------------------------------------
 
 
-# Every term is a pure function of THIS frame's native state (or a bounded
-# transient timer that provably reaches exactly zero), so a stationary,
-# grounded player always reads back exactly EYE_OFFSET / FOV_BASE -- see this
-# file's own header comment on the constants block above for why that must
-# hold for the CI runtime proof.
+# Bounded camera responses settle exactly to zero at rest. The physical player
+# position is never filtered here: native simulation supplies the render pose.
 func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, crouched: bool,
 		delta: float) -> void:
 	if grounded and not _cam_was_grounded:
@@ -1339,21 +1337,36 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if _cam_landing_timer > 0.0:
 		_cam_landing_timer = maxf(0.0, _cam_landing_timer - delta)
 		var t := 1.0 - _cam_landing_timer / LANDING_DIP_DURATION_SECONDS
-		dip = -_cam_landing_strength * LANDING_DIP_MAX_METERS * sin(PI * t)
+		var landing_wave := sin(PI * t)
+		dip = -_cam_landing_strength * LANDING_DIP_MAX_METERS * landing_wave * landing_wave
 
 	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
 	# 5.5 mirrors kPlayerMaximumRelativeSpeed (src/sim/simulation.cpp) -- a
 	# curve-shape input, not a gameplay bound, so the native constant is not
 	# exposed through the bridge just for this.
-	var bob_fade := 0.0
+	var bob_target := 0.0
 	if grounded:
-		bob_fade = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
+		bob_target = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
 		_cam_bob_phase += horizontal_speed * HEAD_BOB_CYCLES_PER_METER * TAU * delta
 	if not _head_bob_on:
-		bob_fade = 0.0
-	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * bob_fade
-	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * bob_fade
+		_cam_bob_weight = 0.0
+	else:
+		_cam_bob_weight = lerpf(_cam_bob_weight, bob_target,
+			1.0 - exp(-HEAD_BOB_RESPONSE_PER_SECOND * delta))
+		if absf(_cam_bob_weight - bob_target) < 0.001:
+			_cam_bob_weight = bob_target
+	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * _cam_bob_weight
+	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * _cam_bob_weight
 	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
+	if not _head_bob_on:
+		_cam_bank = 0.0
+	else:
+		var lateral_speed := velocity.dot(right_vector)
+		var bank_target := -CAMERA_BANK_MAX_RADIANS * clampf(lateral_speed / 5.5, -1.0, 1.0)
+		_cam_bank = lerpf(_cam_bank, bank_target,
+			1.0 - exp(-CAMERA_BANK_RESPONSE_PER_SECOND * delta))
+		if absf(_cam_bank - bank_target) < 0.0001:
+			_cam_bank = bank_target
 
 	var eye := position + EYE_OFFSET
 	_crouch_eye = move_toward(_crouch_eye, 1.0 if crouched else 0.0, delta / CROUCH_EYE_SECONDS)
@@ -1362,25 +1375,31 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		eye.y = soles_y + lerpf(STAND_HALF_HEIGHT + EYE_OFFSET.y, CROUCH_EYE_OVER_SOLES,
 			smoothstep(0.0, 1.0, _crouch_eye))
 	_camera.position = eye + Vector3(0.0, dip + vertical_bob, 0.0) + right_vector * lateral_bob
-	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, 0.0)
+	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, _cam_bank)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed)
 	var fov_fall := 0.0
 	if not grounded and velocity.y < 0.0:
 		fov_fall = FOV_FALL_MAX_DEGREES * smoothstep(0.0, FOV_FALL_FULL_MPS, -velocity.y)
 	if not _speed_fov_on:
-		fov_ground = 0.0
-		fov_fall = 0.0
-	_camera.fov = _fov_base + fov_ground + fov_fall
+		_cam_fov_offset = 0.0
+	else:
+		var fov_target := fov_ground + fov_fall
+		_cam_fov_offset = lerpf(_cam_fov_offset, fov_target,
+			1.0 - exp(-FOV_RESPONSE_PER_SECOND * delta))
+		if absf(_cam_fov_offset - fov_target) < 0.005:
+			_cam_fov_offset = fov_target
+	_camera.fov = _fov_base + _cam_fov_offset
 
 
 func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()
+	var render_position: Vector3 = _native.get_player_render_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
 	var crouched := bool(_native.is_player_crouched())
 
-	_apply_camera_feel(position, velocity, grounded, crouched, delta)
+	_apply_camera_feel(render_position, velocity, grounded, crouched, delta)
 	if delta > 0.0:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
