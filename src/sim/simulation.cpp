@@ -649,6 +649,12 @@ private:
     case scraperx::sim::InitialSpawn::CraneLCab:
         // On L's cab, west of its middle.
         return {-3.6, 573.2, -160.1};
+    case scraperx::sim::InitialSpawn::Deck2South:
+        // On deck 2's south band, north of S1's gangway.
+        return {10.0, 23.2, -125.5};
+    case scraperx::sim::InitialSpawn::Deck4South:
+        // On deck 4's south band, west of C1's davit.
+        return {11.0, 45.2, -125.5};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower

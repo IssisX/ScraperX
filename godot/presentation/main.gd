@@ -1468,7 +1468,8 @@ func _build_stack_accents(verdigris: Material, lichen: Material) -> void:
 
 	# A verdigris pipe run climbing the front face, distinct from the oxidised
 	# risers in the shaft -- copper service lines age to blue-green, not rust.
-	for sx in [1.0]:
+	# West of the centre: the east half of the face carries S1 and C1.
+	for sx in [-1.0]:
 		_add_cylinder("VerdigrisPipe", 0.4, STACK_LEVEL_HEIGHT * float(STACK_LEVEL_COUNT),
 			Vector3(cx + sx * (STACK_HALF_EXTENT - 4.5),
 				STACK_LEVEL_HEIGHT * float(STACK_LEVEL_COUNT) * 0.5, front_z + 0.9), verdigris)

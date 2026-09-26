@@ -68,6 +68,10 @@ enum class InitialSpawn : std::uint8_t {
     Ring484North = 22,
     CraneKCage = 23,
     CraneLCab = 24,
+    // Band 0, the Stack: on deck 2's south band by S1's gangway, as a rider
+    // off S1; on deck 4's south band by C1's davit, as a climber off C1.
+    Deck2South = 25,
+    Deck4South = 26,
 };
 
 // A world started at one of these spawns is the proving ground: it carries
@@ -458,6 +462,7 @@ public:
     // Band 0, the Stack (grade -> 154 m): its static structure, then S1, the
     // skip hoist.
     static constexpr std::uint64_t kStackFrameEntityId = 1020;
+    static constexpr std::uint64_t kStackRouteEntityId = 1021;
     static constexpr std::uint64_t kStackS1CageEntityId = 2200;
     static constexpr std::uint64_t kStackS1BucketEntityId = 2201;
     static constexpr std::uint64_t kStackS1ValveEntityId = 2202;

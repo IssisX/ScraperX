@@ -1844,6 +1844,7 @@ constexpr double kS1BucketMassKg = 150.0;
 constexpr double kS1Travel = 21.8;
 constexpr double kS1FloorTopUp = 22.05;
 constexpr double kDeck2Top = 22.0;
+constexpr double kDeck4Top = 44.0;
 
 // From the yard: take the fill chain hanging in front of the bucket's fence,
 // step back south until the valve is open, and hold it there until the
@@ -1889,6 +1890,127 @@ bool trip_s1_inside(scraperx::sim::Simulation &simulation) {
                        [&](const scraperx::sim::Snapshot &) {
                            return !simulation.stack_state().s1_catch_latched;
                        });
+}
+
+// ---- Band 0, the Stack: C1, the facade -----------------------------------------
+
+// Where a leg of C1 left the body, for a failure's message.
+void report_c1(const scraperx::sim::Simulation &simulation, const char *leg) {
+    const auto state = simulation.snapshot();
+    std::cout << "C1 " << leg << ": at=" << state.player_position.x << "," << state.player_position.y << ","
+              << state.player_position.z << " grounded=" << state.player_grounded
+              << " traversal=" << int(state.traversal_state) << " support=" << state.support_entity_id
+              << " ledge=" << state.ledge_available << " grip=" << state.grip_available << "\n";
+}
+
+// From deck 2's south band up C1 to deck 4, on player inputs: out onto the
+// landing, up onto the cabinet, a jump to hang from the duct's lip, up onto
+// the duct and along it, up the vent stack over deck 3's edge; along deck 3,
+// out along the monorail under the davit's ladder, a turn and a leap for it,
+// up it onto the davit's arm, and back along the arm onto deck 4.
+// What a climb of C1 saw on the way, for its falsifiers.
+struct C1Notes final {
+    bool ladder_in_reach_standing = true;
+};
+
+bool climb_c1(scraperx::sim::Simulation &simulation, C1Notes *notes = nullptr) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    // Out onto the landing, round the cabinet to its south side.
+    if (!(walk_to(simulation, 21.2, -124.4, 20.0) && walk_to(simulation, 21.2, -121.3, 6.0) &&
+          walk_to(simulation, 20.0, -121.3, 6.0, 0.08))) {
+        report_c1(simulation, "to the cabinet");
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().ledge_available) {
+        report_c1(simulation, "cabinet offered");
+        return false;
+    }
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 2.0, [](const Snapshot &state) { return standing_above(state, 24.5); })) {
+        report_c1(simulation, "mantle onto the cabinet");
+        return false;
+    }
+    // On the cabinet, clear of the duct's underside: jump, stick to the duct.
+    (void)walk_to(simulation, 20.0, -122.10, 2.0, 0.05);
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.0, -0.4, 0.0, -1.0, 2.0,
+                    [](const Snapshot &state) { return state.traversal_state == TraversalState::Hanging; })) {
+        report_c1(simulation, "hang on the duct's lip");
+        return false;
+    }
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!wait_for(simulation, 2.5, [](const Snapshot &state) { return standing_above(state, 28.0); })) {
+        report_c1(simulation, "up onto the duct");
+        return false;
+    }
+    // Along the duct to the vent stack, and up it over deck 3's edge.
+    if (!(walk_to(simulation, 22.5, -123.05, 6.0, 0.1) && walk_to(simulation, 24.0, -123.00, 6.0, 0.06))) {
+        report_c1(simulation, "along the duct");
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().grip_available) {
+        report_c1(simulation, "vent offered");
+        return false;
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    if (!is_climbing(simulation.snapshot()) ||
+        !hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 20.0,
+                    [](const Snapshot &state) { return standing_above(state, 33.5); })) {
+        report_c1(simulation, "up the vent onto deck 3");
+        return false;
+    }
+    // Along deck 3 to the monorail, out along it under the ladder to its end.
+    if (!(walk_to(simulation, 22.0, -125.2, 6.0) && walk_to(simulation, 12.5, -125.2, 12.0, 0.08) &&
+          walk_to(simulation, 12.5, -119.65, 12.0, 0.06))) {
+        report_c1(simulation, "out along the monorail");
+        return false;
+    }
+    (void)simulation.advance_frame(0.3);
+    const auto at_end = simulation.snapshot();
+    if (!at_end.player_grounded || at_end.player_position.y < 34.0) {
+        report_c1(simulation, "standing at the monorail's end");
+        return false;
+    }
+    // Turn to the ladder and leap for it: standing, it is out of reach.
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.3);
+    if (notes != nullptr) {
+        notes->ladder_in_reach_standing = simulation.snapshot().grip_available;
+    }
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.0, -0.3, 0.0, -1.0, 2.0,
+                    [](const Snapshot &state) { return is_climbing(state); })) {
+        report_c1(simulation, "catch the ladder");
+        return false;
+    }
+    // Up the ladder onto the davit's arm, and back along it onto deck 4.
+    if (!hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 20.0,
+                    [](const Snapshot &state) { return standing_above(state, 44.5); })) {
+        report_c1(simulation, "up the ladder onto the arm");
+        return false;
+    }
+    if (!walk_to(simulation, 12.5, -125.0, 10.0, 0.1)) {
+        report_c1(simulation, "back along the arm");
+        return false;
+    }
+    if (!walk_to(simulation, 11.2, -125.3, 4.0, 0.1)) {
+        report_c1(simulation, "off the arm onto deck 4");
+        return false;
+    }
+    (void)simulation.advance_frame(0.5);
+    const auto on_deck4 = simulation.snapshot();
+    return on_deck4.player_grounded && on_deck4.player_position.y > kDeck4Top + 0.5 &&
+           on_deck4.support_entity_id == Simulation::kTowerEntityId;
 }
 
 void run_stack() {
@@ -2053,6 +2175,38 @@ void run_stack() {
     require(again, "after an empty trip, S1 must still carry the rider to the top");
     std::cout << "PASS scraperx_sim S1 empty trip: peak_travel=" << empty_peak
               << " returned=1 rode_again=1\n";
+
+    // C1: from deck 2's south band, where S1 leaves its rider, up the facade
+    // to deck 4 on player inputs.
+    Simulation facade(InitialSpawn::Deck2South);
+    require(facade.advance_frame(1.0).accepted, "C1 settle interval must be accepted");
+    const double facade_start = facade.snapshot().simulation_time_seconds;
+    C1Notes notes;
+    require(climb_c1(facade, &notes), "C1 must carry a climber from deck 2 to deck 4");
+    require(!notes.ladder_in_reach_standing,
+            "the davit's ladder must be out of reach from the monorail without the leap");
+    const auto facade_top = facade.snapshot();
+    std::cout << "PASS scraperx_sim C1 climb: seconds=" << facade_top.simulation_time_seconds - facade_start
+              << " deck4_y=" << facade_top.player_position.y << " ladder_needs_leap=1\n";
+
+    // The Stack so far in one run from the game's spawn, on player inputs:
+    // fill S1's bucket, ride it to deck 2, climb C1 to deck 4.
+    Simulation band(InitialSpawn::ExteriorGrade);
+    require(band.advance_frame(0.5).accepted, "the Stack's settle interval must be accepted");
+    const double band_start = band.snapshot().simulation_time_seconds;
+    require(fill_s1(band, 900.0, 20.0) && trip_s1_inside(band), "the Stack: fill and trip S1");
+    require(wait_for(band, 15.0,
+                     [&](const scraperx::sim::Snapshot &) {
+                         return band.stack_state().s1_cage_travel >= kS1Travel - 0.01;
+                     }),
+            "the Stack: S1 carries the rider to deck 2");
+    require(walk_to(band, 10.0, -123.2, 6.0) && walk_to(band, 10.0, -126.0, 6.0),
+            "the Stack: off S1 onto deck 2");
+    const double at_deck2 = band.snapshot().simulation_time_seconds - band_start;
+    require(climb_c1(band), "the Stack: up C1 to deck 4");
+    const auto band_top = band.snapshot();
+    std::cout << "PASS scraperx_sim Stack to deck 4: seconds=" << band_top.simulation_time_seconds - band_start
+              << " at_deck2=" << at_deck2 << " deck4_y=" << band_top.player_position.y << "\n";
 }
 
 int main() {

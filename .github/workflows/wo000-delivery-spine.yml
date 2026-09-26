@@ -102,6 +102,8 @@ jobs:
             "PASS scraperx_sim S1 no link" \
             "PASS scraperx_sim S1 ride" \
             "PASS scraperx_sim S1 empty trip" \
+            "PASS scraperx_sim C1 climb" \
+            "PASS scraperx_sim Stack to deck 4" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \

@@ -45,7 +45,7 @@ Band 0, **The Stack** (grade → 154 m), is new. Above it the existing bands car
 | # | Kind | Heights | Where | What the player does | Status |
 |---|---|---|---|---|---|
 | S1 | Machine: **water-balance hoist** (archetype 01, counter-mass; water as the mass) | 0 → 22 m | south face, east of centre | holds the fill chain until the empty bucket at the head is full from the header tank, walks into the cage and pulls the trip cord; the bucket falls 21.8 m and the cage rides up to a gangway onto deck 2. At the foot the bucket drains on a striker and the cage comes back down by itself | built and proven (cycle 1) |
-| C1 | Climb: **the facade** | 22 → 44 m | south face | bracket scaffold hung off deck 2 with missing boards and bays (climb, jump the gap, balance a ledger), then a service pipe and ledge to deck 4's edge | planned |
+| C1 | Climb: **the facade** | 22 → 44 m | south face, east of S1 | out onto a loading landing, a mantle onto its switchgear cabinet, a jump to hang from the duct along the face, up onto the duct and along it, up a vent stack over deck 3's edge; out along deck 3's monorail under the ladder hung from deck 4's davit, a turn and a leap for it, up it onto the davit's arm and back along the arm onto deck 4 | built and proven (cycle 2) |
 | S2 | Machine: **ingot bucket** (archetype 01, player-supplied counter-mass) | 44 → 66 m | the shaft, south-east | the platform's counterweight bucket is empty; the player carries steel ingots off a pallet into it until it outweighs platform and rider, boards and pulls the trip | planned |
 | C2 | Climb: **the east hall** | 66 → 88 m | east side | the machine hall's roof and window sills, a pipe rack and a jump to deck 8 | planned |
 | S3 | Machine: **brake override** (archetype 17) | 88 → 132 m | the shaft, north | a freight car overloaded with pallets is held by a crowbar jammed in its brake; the player rides the counterweight and pulls the crowbar's cord; the car falls, the counterweight rises 44 m | planned |
@@ -89,7 +89,25 @@ through the real receiver (deck 2) and the machine's return. Screenshot pass: th
 tank, fence, handles, cage and gangway are held by structure and read from the yard.
 Not yet verified on a device (the next APK).
 
-**Open ends.** C1 (the receiver's onward route, deck 2 → deck 4) is not built: its acceptance is
-"from deck 2's south band, reach deck 4 (44.0 m) with the movement verbs, and no climb from the
-yard reaches deck 2 without S1". It is the missing cause closest to the goal, downstream of S1.
-Status: next cycle (cycle 2).
+## 5. Cycle 2 — C1, the facade (contract, as built)
+
+| Contract | Content |
+|---|---|
+| **Purpose and boundary** | Carry a climber from deck 2's south band (S1's receiver) to deck 4 (44.0 m) with the movement verbs, on the south face east of S1 (`build_c1` in `src/sim/band_stack.cpp`, one static body). Excludes S2 |
+| **Output** | The climber standing on deck 4's south band (support: the tower) |
+| **Receiver** | Deck 4, south band, top 44.00 m. Acceptance: grounded on the tower with the body's centre above 44.5 m |
+| **State and rules** | A sequence of distinct moves through objects with a reason to be there: a loading landing on knee braces off deck 2's edge beam (walk out over the drop); a switchgear cabinet 1.7 m tall on it (mantle); a duct 1.5 m deep along the face, hung on straps from deck 3's edge beam, its lip 3.6 m over the cabinet and 0.4 m clear of it (jump and hang at the top of the jump; climb up); the duct's top, 0.8 m wide over the drop (walk); a vent stack from the duct to 1 m above deck 3 (climb; the top-out is over deck 3, not its edge beam); deck 3's monorail, 0.3 m wide and 4.4 m past the face (balance); the ladder hung from deck 4's davit, its bottom rung 2.3 m over the monorail and out of reach standing (a leap, facing back to the building); the ladder's stiles and rungs stop at the davit's arm, so a climber tops out over them onto the arm; the arm, 0.35 m wide (balance back to the deck) |
+| **Input** | Walk, mantle (Action), jump, hang, climb up (jump from the hang), take hold (Action), climb, balance |
+| **Capacity** | Every rise inside the body's envelope: mantle 1.70 (≤ 1.85), hang 3.60 over the take-off (≤ 3.79 at the top of a jump), ladder rung 2.3 over the monorail (in reach only at the top of a jump). Braces and columns clear of every body pose on the route (the diagrid's braces cross deck 3's edge at x ±6.5 and ±19.5; the route tops out at x 24.0 and 12.5) |
+| **Use and recovery** | Seen from S1's gangway: the landing, cabinet and duct east along the face, the yellow monorail and the davit's ladder above. A fall from the route is lethal and restores the last footing on it or on the deck below it; nothing on the route is a dead end. Nothing of it reaches below deck 2, so its only foot is S1 |
+| **Proof** (native, `run_stack`) | From deck 2 on player inputs to deck 4 (31.7 s); standing at the monorail's end the ladder is out of reach (the leap is required); the Stack in one run from the game's spawn: fill and ride S1, climb C1, deck 4 in 69.6 s |
+
+**Changed on the way.** The verdigris main (dressing, 0.8 m, the face's full height) ran
+through the landing and the duct; it now climbs the west half of the south face. A ladder's
+rungs above a top-out point stopped the mantle over them (it stalled and aborted, and the
+climber carried on up the ladder): the davit's ladder ends at the arm, its grab handles stand
+wider than a body.
+
+**Open ends.** S2 (deck 4 → 66 m) is not built: its acceptance is "from deck 4's south band,
+reach 66 m (deck 6) by a machine the player completes". It is the missing cause closest to the
+goal, downstream of C1. Status: next cycle (cycle 3).
