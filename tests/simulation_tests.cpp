@@ -3479,8 +3479,9 @@ int main() {
     require(on_dock.player_grounded &&
                 on_dock.support_entity_id == Simulation::kGroundWaterLiftFrameEntityId,
             "the +8 m handoff must be fixed structural support, not the moving cage");
-    require(walk_to(water_lift, -9.45, -106.85, 3.0, 0.15),
-            "player must reach the reset control on the fixed upper dock");
+    // The reset pedestal itself is solid. The dock stance already lies
+    // within the control's reach; walking into its centre is not a legal
+    // navigation target.
     require(water_lift.snapshot().water_lift_reset_station_active,
             "upper reset control must be physically in reach");
     require(water_lift.request_water_lift_reset(), "water-lift reset request accepted");

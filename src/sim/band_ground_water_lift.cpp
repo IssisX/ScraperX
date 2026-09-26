@@ -23,11 +23,11 @@ constexpr float kCageLevelAccel = 2.0F;
 const JPH::Vec3 kCageEyeLocal(0.0F, 2.20F, 0.0F);
 
 constexpr float kBucketX = -18.0F;
-// Keep the caught bucket fully outside the upper tank floor. The previous
-// -105.80 m center put the bucket 0.65 m into the tank slab in Z and 0.25 m
-// into it in Y, so contact resolution displaced the caught bucket before
-// release and stole stroke from the 4 m -> 8 m rope geometry.
-constexpr float kBucketZ = -104.90F;
+// The 4 m descent must clear both the upper tank and the inclined screw.
+// At z=-104.90 the bucket overlapped the screw's swept assembly below it:
+// release gave zero rope tension and no cage rise. North of the tank, its
+// entire vertical swept volume has free clearance from the screw assembly.
+constexpr float kBucketZ = -111.50F;
 constexpr float kBucketCenterTopY = 4.50F;
 constexpr float kBucketHalfX = 0.85F;
 constexpr float kBucketHalfY = 0.45F;
@@ -64,9 +64,14 @@ std::vector<Part> cage_parts() {
     out.push_back({JPH::Vec3(0.05F, 0.45F, kCageFloorHalfZ),
                    JPH::Vec3(-kCageFloorHalfX + 0.05F, 0.55F, 0.0F),
                    JPH::Quat::sIdentity(), Material::Galvanised});
-    out.push_back({JPH::Vec3(0.05F, 0.45F, kCageFloorHalfZ),
-                   JPH::Vec3(kCageFloorHalfX - 0.05F, 0.55F, 0.0F),
-                   JPH::Quat::sIdentity(), Material::Galvanised});
+    // Leave a real central exit through the east guard at the fixed dock.
+    // Two short guard sections protect the ends without walling off the
+    // player's capsule when the cage is caught at +8 m.
+    for (float sz : {-1.0F, 1.0F}) {
+        out.push_back({JPH::Vec3(0.05F, 0.45F, 0.30F),
+                       JPH::Vec3(kCageFloorHalfX - 0.05F, 0.55F, sz * 0.95F),
+                       JPH::Quat::sIdentity(), Material::Galvanised});
+    }
     return out;
 }
 
@@ -159,7 +164,14 @@ void build_ground_water_lift(kit::Kit &kit, GroundWaterLift &lift) {
          JPH::Quat::sIdentity(), Material::Steel},
         {JPH::Vec3(1.40F, 0.16F, 1.40F), JPH::Vec3(kBucketX, kSheaveY + 0.25F, kBucketZ),
          JPH::Quat::sIdentity(), Material::Rust},
-        {JPH::Vec3(1.70F, 0.12F, 1.65F), JPH::Vec3(-9.45F, kDockTopY - 0.12F, kCageZ),
+        // A rigid outlet from the raised tank ends above the caught bucket.
+        // As a kit part it is both rendered and collided from the same body.
+        {JPH::Vec3(0.325F, 0.175F, 1.50F), JPH::Vec3(-18.0F, 5.55F, -110.25F),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+        // The dock begins 0.20 m beyond the cage floor's swept east edge.
+        // A flush edge met the moving cage post at y=8.03 and parted the
+        // loaded rope before it could reach its upper catch.
+        {JPH::Vec3(1.50F, 0.12F, 1.65F), JPH::Vec3(-9.45F, kDockTopY - 0.12F, kCageZ),
          JPH::Quat::sIdentity(), Material::Galvanised},
         {JPH::Vec3(0.14F, 4.06F, 0.14F), JPH::Vec3(-8.10F, 4.06F, kCageZ + 1.30F),
          JPH::Quat::sIdentity(), Material::Rust},

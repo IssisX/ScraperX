@@ -2069,9 +2069,6 @@ func _build_water_screw(concrete: Material, mill_scale: Material, oxidised: Mate
 			Vector3(-18.0, 5.35, -108.2 + side * 1.12), galvanised, _water_screw_root)
 	_water_screw_tank_water = _add_box_to("TankWater", Vector3(2.0, 1.0, 2.0),
 		Vector3(-18.0, WATER_SCREW_TANK_FLOOR_Y, -108.2), water, _water_screw_root)
-	_add_box_to("OutletSpout", Vector3(0.65, 0.35, 1.5),
-		Vector3(-18.0, 5.55, -106.7), galvanised, _water_screw_root)
-
 	_add_box_to("ScrewControlPedestal", Vector3(0.64, 1.7, 0.64),
 		WATER_SCREW_STATION + Vector3(0.0, 0.85, 0.0), hazard, _water_screw_root)
 	_add_box_to("ScrewControlHead", Vector3(0.90, 0.55, 0.45),

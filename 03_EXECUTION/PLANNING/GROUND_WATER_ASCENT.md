@@ -1,6 +1,6 @@
 # Ground ascent: Archimedes screw to weight-driven lift
 
-**Status:** SCREW GREEN-VERIFIED at c463439 / run 36160560044. RECEIVING WATER-WEIGHT LIFT IMPLEMENTED IN SOURCE; full runtime/CI proof pending this commit.
+**Status:** SCREW GREEN-VERIFIED at c463439 / run 36160560044. RECEIVING WATER-WEIGHT LIFT IMPLEMENTED IN SOURCE; local full native suite passed after the bucket/dock clearance repair. Full Fold/Android CI proof pending.
 **Write branch:** `ChatGPT`.
 **Purpose:** Preserve one connected ground-to-+8 m ascent contract while building and proving one mechanism per work cycle. This is a proposed B00 route change, not a revision of historical `AS-001`–`AS-003` evidence. The Atlas and relevant ascent ticket must be reconciled with the route before code is called complete.
 **Priority:** Ground mechanism rehabilitation before further `AS-006` upward construction. Restore the current required proof path to GREEN first.
@@ -23,7 +23,7 @@ The Archimedes screw is the **first mechanism**: electric shaft rotation transpo
 
 **First-mechanism proof:** operate from the real apron using normal controls; measure shaft angular speed and torque, basin loss, upper tank gain, leakage/backflow, and work. Falsify with motor off, insufficient inlet level, under-torque, blocked outlet, full tank, and reversed or stopped motion. Inspect the rendered screw, water, supports, collisions, and state-driven sound. Run affected regressions and a delivery build. Record observed runtime separately from source and design targets.
 
-## Second mechanism: water bucket and player lift — IMPLEMENTED / PROOF PENDING
+## Second mechanism: water bucket and player lift — IMPLEMENTED / LOCAL NATIVE PASS; FULL CI PENDING
 
 **Receiving input:** the same 2.0 m³ (`2000 kg`) water in the upper tank. A physical valve at the upper tank fills a bucket held near +4.5 m; the valve cannot create mass or open the lift by a completion flag. The bucket and its catch must support its full wet load before release. The player boards a guided cage at 0 m and releases the brake/catch from a reachable station after filling.
 
