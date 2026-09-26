@@ -3,12 +3,17 @@
 **Status:** the current plan for the whole ascent, from grade.
 **Provenance:** re-planned with the owner's direction of 2026-09-25: *"start from the ground level,
 and do all the mechanics and mechanisms all over again ... maybe a couple of mechanisms can be
-stacked, and then a climb, and then another mechanism, and then a climb"*, and the goal set with
-it: stacked, working machines and deliberately placed industrial obstacles, climbed and ridden
-from the ground to about 300 m. Built one machine per work cycle with the mechanism-chain-forge
-method (backward from the effect a stage must produce; contract; causal proof).
-**Supersedes:** this plan's 2026-09-24 version (the ascent above the tower stair). The owner's
-20 lift archetypes (`Mechanism-Ideas-and-archetypes.md`) remain the source of every machine.
+stacked, and then a climb, and then another mechanism, and then a climb"*. Revised 2026-09-26 on
+the owner's direction that the earlier plans *"didn't work, and we used them the first time"*
+and that the `ChatGPT` branch's new macro-mechanism planning should be taken and fixed: its
+authoring contract is adopted below (§2), its opening mechanism is audited with numbers (§7),
+and its catalogue is mapped onto what this engine can build (§8).
+**Method:** mechanism-chain-forge (backward from the effect; contract; causal proof) with the
+causal-mechanism-compiler's `MACRO-TRAVERSAL-STRICT` profile and its deterministic evaluator
+(`stage1dof.py`) for every drive, terminal and band claim.
+**Supersedes:** this plan's 2026-09-25 chain table, whose stages above C1 were listed as if they
+were designed. They were not; they are options now (§3). The owner's 20 lift archetypes
+(`Mechanism-Ideas-and-archetypes.md`) remain a source of ideas, not of designs.
 
 ## 1. What changed, and why
 
@@ -22,38 +27,100 @@ test cubes all over the yard, and machines that did not work. So, from 2026-09-2
 | Parked lift cages, static gears, jib cranes with hanging crates stood on the tower as dressing | No machine is dressing: every machine in the world works |
 | The first stage stood at 154 m | The first stage stands at grade |
 
-## 2. Rules every stage obeys
+And from 2026-09-26, after the owner could not operate S1 on the device and asked that no build be
+green unless the ascent itself is proven:
+
+| Before | Now |
+|---|---|
+| Stages were planned many storeys ahead, with heights, machines and verbs written down before any of them was derived | Only the next stage from a proven exit is designed, and only with numbers the evaluator has integrated. Everything above it is an option (§3) |
+| "Proven" meant native tests on player inputs | Proven means the stage is also played through the game's own input pipeline (touch, pad, keyboard) from the game's start, and CI builds the APK only after that passes |
+| A drive was sized for enough energy; surplus was margin | Surplus energy is the arrival speed. Every drive is shaped and every terminal is a catch, catch rack or pad sized for the whole band (§2.3) |
+
+## 2. The authoring contract (adopted from `ChatGPT`, corrected)
+
+### 2.1 Work backward, prove forward
+
+Start with the player's supported destination. Resolve the transfer geometry, the load path, the
+source's energy and the reachable control in that order, then run the whole chain forward from the
+game's start through normal input. Backward derivation is a design method, not evidence.
+
+| Contract | Must be stated before a line of code |
+|---|---|
+| Receiver | the native support the player ends on, its walking surface and clear standing area, stability with the player on it, the way on, and where a fall lands |
+| Transfer | capture geometry, clearances along the whole swept path, relative speeds at the handoff, allowed placement variation |
+| Transmission | the actual bodies, hinges, guides, ropes and contacts, their arm lengths and how the mechanical advantage changes over the stroke |
+| Source | mass, centre of mass and inertia; usable height; the drive Q(q) over the stroke; losses; what is left at the terminal |
+| Player access | a supported approach, a visible control, bounded effort (≤ 150 N over ≤ 0.3 m, DEFAULT), free hands, and what an early or late input does |
+| Persistence and retry | what is spent, what is lost, the way back, and a coherent checkpoint restore of the whole machine |
+
+Inputs and outputs match at the same instant in position, orientation, velocity, load, energy,
+constraint state and player access; the same altitude or the same label does not close a handoff.
+No hidden stubs, remote attachments, completion flags or pose snapping.
+
+### 2.2 Readability and pace
+
+Large geometric causes: something rolls, tips, swings, falls, lands or becomes a support. The
+source, the transfer and the outcome are seen from where the stage is found, without the HUD. The
+main motion lasts about 5–15 s (a pacing target measured in the run, never a timer). A stage's
+output is a stable support, bridge, stair or ride the player can use and leave; no mandatory
+launches across a gap. One or two player actions per stage; no compulsory carrying of pins,
+cables or tools ahead of a gravity event.
+
+### 2.3 Drive and terminal (the correction)
+
+The `ChatGPT` plan treats energy left over after the lift as margin. It is the arrival: an
+unshaped drive accelerates through the whole stroke and delivers that surplus into the receiver
+(§7: 11 m/s into the landing in 1.35 s). So every stage shows, with the evaluator:
+
+- the drive Q(q) shaped by geometry (an offset tail, a hanging chain, a changing arm) so that it
+  fades, crosses zero or reverses near the terminal;
+- a terminal that captures every band case: a catch rack where the incoming energy is uncertain
+  (a pile, a pour, a friction band), a pad or crush bed sized for the fastest case, a seat the
+  residual drive holds the body into;
+- the rest matrix: rider on, rider off, load spilled, handoff actuated;
+- h/4 convergence (`INTEGRATED`), and later the same numbers from the engine.
+
+### 2.4 Movement and units
+
+SI, Y up; the standing capsule is 1.8 m tall and 0.35 m in radius, 1.2 m crouched; step-up 0.35 m;
+mantle 0.35–1.85 m; hang catch up to 3.79 m above take-off at a jump's apex (source:
+`simulation.cpp`). Body centre, centre of mass and walking surface are different numbers. Movement
+is never retuned to hide a local geometry flaw.
+
+### 2.5 Evidence, readiness and proof
+
+Every number is typed CHOSEN, DERIVED, INTEGRATED, MEASURED, DEFAULT or UNRESOLVED. A critical
+unresolved release load, receiver, stopping law or recovery path makes a stage BLOCKED; a guessed
+number does not unblock it. A stage is proven when: the native falsifiers pass (no source → no
+motion; no link → no motion; the ledger closes; the rest matrix holds; the swept path is clear);
+it is played through the game's input pipeline from the game's start on touch, pad and keyboard;
+and CI builds the APK only after those pass. A fresh APK proves packaging only; the device is its
+own gate.
+
+### 2.6 Rules kept from the first plan
 
 1. **No link, no lift.** Stored energy stays stored until the player completes the chain.
-2. **Energy pays for height.** A payload never gains more potential energy than its source
-   released; checked from body states.
-3. **Every link is physical** — contact, constraint or force; no script, flag or teleport between
-   links. A simplified model (water, air, gravel) is declared in the stage record.
+2. **Energy pays for height,** checked from body states every tick.
+3. **Every link is physical:** contact, constraint or force; a simplified model (water, rubble)
+   is declared in the stage record.
 4. **Rides are moving supports.** The rider inherits the payload's motion.
-5. **Nothing strands.** Dying restores the last commit, machines included.
-6. **Built to be read.** Every part is held by visible structure (no floating rails, sheaves or
-   blocks); what the player must handle is marked (hazard or yellow); the stored energy, the
-   missing link and the destination are visible from where the stage is found.
-7. **Climbs are designed, not free.** A climb is a sequence of different moves (mantle,
-   jump-and-hang, climb, shimmy, balance, drop) through industrial objects that are there for a
-   reason; no staircase of blocks. A climb never lets the player bypass the machine below it.
+5. **Nothing strands.** Dying restores the last commit, machines included; a machine that can be
+   spent without the player riding it returns by itself or leaves another way on.
+6. **Built to be read.** Every part is held by visible structure; what the player handles is
+   marked (hazard or yellow).
+7. **Climbs are designed, not free**, and a climb never lets the player bypass the machine below it.
 
-## 3. The chain, grade to TP-340
+## 3. The chain
 
-Band 0, **The Stack** (grade → 154 m), is new. Above it the existing bands carry on.
+Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has heights and verbs.
 
 | # | Kind | Heights | Where | What the player does | Status |
 |---|---|---|---|---|---|
-| S1 | Machine: **water-balance hoist** (archetype 01, counter-mass; water as the mass) | 0 → 22 m | south face, east of centre | walks into the cage and takes hold of the valve chain hanging in it: held, it pulls the lever overhead down, which opens the header tank's valve and lets the bucket's catch go; water runs into the empty bucket at the head until it outweighs cage and rider, the bucket falls 21.8 m and the cage rides up to a gangway onto deck 2. At the foot the bucket drains on a striker and the cage comes back down by itself | built and proven (cycle 1; control repaired, cycle 1b) |
-| C1 | Climb: **the facade** | 22 → 44 m | south face, east of S1 | out onto a loading landing, a mantle onto its switchgear cabinet, a jump to hang from the duct along the face, up onto the duct and along it, up a vent stack over deck 3's edge; out along deck 3's monorail under the ladder hung from deck 4's davit, a turn and a leap for it, up it onto the davit's arm and back along the arm onto deck 4 | built and proven (cycle 2) |
-| S2 | Machine: **ingot bucket** (archetype 01, player-supplied counter-mass) | 44 → 66 m | the shaft, south-east | the platform's counterweight bucket is empty; the player carries steel ingots off a pallet into it until it outweighs platform and rider, boards and pulls the trip | planned |
-| C2 | Climb: **the east hall** | 66 → 88 m | east side | the machine hall's roof and window sills, a pipe rack and a jump to deck 8 | planned |
-| S3 | Machine: **brake override** (archetype 17) | 88 → 132 m | the shaft, north | a freight car overloaded with pallets is held by a crowbar jammed in its brake; the player rides the counterweight and pulls the crowbar's cord; the car falls, the counterweight rises 44 m | planned |
-| C3 | Climb: **the crown** | 132 → 154 m | shaft and north band | beams, a hang-and-shimmy along deck 13's edge, a pipe to deck 14 | planned |
-| — | AS-006 Counterweight Well | 154 → 220 m | shaft | skip lift, derrick boom, debris chute; climbing route | built; to be reviewed against rule 6 |
-| — | AS-007 Wet Isolation | 220 → 340 m | shaft | water, air and hydraulics; climbing route | built; to be reviewed against rule 6 |
-
-The route above 340 m (AS-008, AS-009) stays as built until the ascent reaches it.
+| S1 | Machine: **water-balance hoist** (counter-mass; water as the mass) | 0 → 22 m | south face, east of centre | walks into the cage and takes hold of the valve chain hanging in it: held, it pulls the lever overhead down, which opens the header tank's valve and lets the bucket's catch go; water runs into the empty bucket at the head until it outweighs cage and rider, the bucket falls 21.8 m and the cage rides up to a gangway onto deck 2. At the foot the bucket drains on a striker and the cage comes back down by itself | built and proven, natively and through the game's input on three devices (cycles 1, 1b) |
+| C1 | Climb: **the facade** | 22 → 44 m | south face, east of S1 | out onto a loading landing, a mantle onto its switchgear cabinet, a jump to hang from the duct along the face, up onto the duct and along it, up a vent stack over deck 3's edge; out along deck 3's monorail under the ladder hung from deck 4's davit, a turn and a leap for it, up it onto the davit's arm and back along the arm onto deck 4 | built and proven, natively and through the game's input on three devices (cycles 2, 1b) |
+| S2 | Machine: **the swinging stair** (ROTATE → DEPLOY; counterbalanced bascule) | 44 → 55 m | south face, west of centre | on deck 4, pulls the chain at the foot of a 17 m steel stair standing upright outside the face; its catch lets go and the stair swings down over 8 s, slowed by the 13.5 t counterweight behind its hinge, and seats on a padded bracket at deck 5's edge; the player walks up it onto deck 5 | designed (§6), INTEGRATED; BLOCKED on three kit capabilities (§6.8) |
+| — | Options above deck 5 | 55 → 154 m | — | a climb from deck 5; then candidates from §8 chosen from the exit S2 actually leaves. Nothing here is designed | options |
+| — | AS-006 … AS-009 (legacy bands) | 154 → 640 m | shaft | built by the retired plans, proven only natively (AS-006 A and C also through the game's input). Not part of the proven route | owner's decision: keep in the world for review, or retire from the default world as the `ChatGPT` branch did |
 
 ## 4. Cycle 1 — S1, the water-balance hoist (contract, as built)
 
@@ -134,6 +201,186 @@ wider than a body.
 |---|---|---|---|
 | The vent's top-out snapped the view 0.9 m sideways | the mantle over deck 3's edge ran the body into the vent stack's last metre above the deck; pushed aside, it was set back onto its path in one tick (0.58 m, native; 0.89 m in one frame through the game) | the stack ran 1 m above the deck so a climber's hands could reach a height the top-out probe accepts, and that metre stood in the mantle's path | a plate on the deck with its fascia down the edge beam gives one lip the probe accepts from lower down; the stack tees off under the deck and its outlets stand clear of the path. The C1 and Stack runs now fail on any sideways step over 0.15 m in a tick |
 
-**Open ends.** S2 (deck 4 → 66 m) is not built: its acceptance is "from deck 4's south band,
-reach 66 m (deck 6) by a machine the player completes". It is the missing cause closest to the
-goal, downstream of C1. Status: next cycle (cycle 3).
+**Open ends.** S2 (deck 4 → deck 5) is designed in §6 and is the missing cause closest to the
+goal, downstream of C1. Status: BLOCKED on three kit capabilities (§6.8), then next cycle.
+
+## 6. Cycle 3 — S2, the swinging stair (design, not built)
+
+Profile `MACRO-TRAVERSAL-STRICT`. Evaluator: `stage1dof.py`, beam model, h = 1 ms, every case
+rerun at h/4. The spec is at the end of this section.
+
+### 6.1 Outcome and receiver
+
+The player stands on deck 5's south band (support: the tower, top 55.00 m) having walked up a steel
+stair that swung down from upright and now rests on a padded bracket at deck 5's edge. Receiver:
+deck 5's walking surface reached from the stair's top landing over a static plate bridging the
+0.6 m to the face; clear standing area 2 × 3 m; a fall from the stair lands on deck 4's band or
+past the face (lethal: restores the last footing).
+
+### 6.2 Topology and rejected candidates
+
+ROTATE → DEPLOY: a counterbalanced bascule. The flight's own weight is the source; a cast
+counterweight behind the hinge shapes the drive; a pad on the hinge's last travel is the terminal;
+a catch released by a chain is the only player action.
+
+| Candidate | Rejected by |
+|---|---|
+| Ingot skip (the old plan's S2: carry four ingots into a counterweight skip, board, pull a trip) | a carrying chore ahead of a gravity event (§2.2); two ordered actions (the S1 failure's pattern); stepping off the platform with three ingots across while holding the trip sends it up empty and strands the player (DERIVED from the masses: 300 + 3·40 kg against 255 + 3·40 kg). Draft code parked, not pushed |
+| A second water-balance hoist | the same verb and the same motion as S1 |
+| Uncounterweighted falling stair | 114.7 kJ released into the seat: 0.77 rad/s, the top at 13 m/s (DERIVED) |
+
+### 6.3 Geometry (CHOSEN unless marked)
+
+| Item | Value |
+|---|---|
+| Hinge | (x −15.0, y 44.00, z −122.10), axis along z, on a bracket cantilevered from deck 4's edge beam |
+| Flight | 17.1 m hinge to top seat, 2.0 m wide (z −123.1 … −121.1), 44 treads of 0.25 rise × 0.30 going: pitch 39.8° seated; handrails as 0.2 × 0.06 flat bars (not holds, so the upright stair is not a ladder) |
+| Stored | upright at 82° (top at 60.9 m, DERIVED), 0.6 m clear of the face's edge beams and 0.67 m of its diagrid braces (they occupy z −124.3 … −123.7 and −124.2 … −123.8) |
+| Seated | 40.6° (the engine's frictionless case; DERIVED from the integrated rest angle): top landing 55.13 m, 0.13 m above deck 5, at x −2.0, clear of the x = 0 column (x −0.8 … 0.8) |
+| Counterweight | 13.5 t cast block, 1.24 m cube, 2.5 m from the hinge, 2° off diametrically opposite the flight: under deck 4 at 41.5 m stored, 42.3 m seated, outside the face |
+| Control | a chain at the foot landing on a catch lever (S1's pattern), reachable only from the landing |
+
+Swept volume: the flight sweeps the quarter-disc between 82° and 40.6° of radius 17.1 m about the
+hinge, x −12.6 … −2.0, outside the face; the counterweight sweeps x −15.3 … −16.8 at 41.5–42.3 m.
+Nothing static stands in either (checked against `world_solids.inc` and the stack's native
+columns, braces and edge beams).
+
+### 6.4 Mass, drive and energy
+
+| Quantity | Value | Evidence |
+|---|---|---|
+| Flight | 4,000 kg, COM 8.55 m, I_cm 97,470 kg·m² | CHOSEN; DERIVED (uniform flight, m L²/12) |
+| Pivot inertia | 474,255 kg·m² | DERIVED |
+| Q(q) | −g [4000·8.55 cos(q + 98°) + 13500·2.5 cos(q + 276°)] | DERIVED |
+| Held on the catch | Q(0) = 12.1 kN·m; breakaway 2.69 × the 4.5 kN·m static-friction corner | DERIVED; INTEGRATED |
+| Seated | Q = +11.0 kN·m: the flight rests into its pad | DERIVED |
+| Released vs stored | flight falls 2.924 m (114.7 kJ); counterweight rises 0.813 m (107.7 kJ); ≈ 7 kJ to the pad less hinge losses | DERIVED |
+| Hinge reaction | 171.7 kN static | DERIVED |
+
+### 6.5 Band sweep (INTEGRATED)
+
+Band: hinge friction 0 / 1.5 / 3 kN·m (the kit's hinge is frictionless; the band covers the
+engine binding and the pad's entry). Every case HELD_BY_BUFFER_FRICTION on the pad (a slide
+plate of 300 kN·m over the last 0.04 rad): swing 7.6–8.7 s, peak 0.163–0.188 rad/s (the top at
+2.8–3.2 m/s, just before the pad), rest angle 40.6–41.1° (the top landing 0.13–0.23 m above
+deck 5, inside one step), ledger residual ≤ 0.32 %, h/4 differences ≤ 1.2e−5 rad/s and 0.0005 s.
+
+### 6.6 Modes and rest matrix
+
+HELD (catch seated) --chain turns the catch lever past release--> SWINGING --flight enters the
+pad (q ≥ 0.693)--> PADDED --ω → 0, Q > 0--> SEATED. The catch does not relatch (the flight has
+left its seat); nothing rearms: the stair stays down and deck 5 stays reachable, and every
+checkpoint from then on is above it.
+
+| Rest variant | Result | Evidence |
+|---|---|---|
+| no rider | held into the pad by +11.0 kN·m | DERIVED |
+| rider (85 kg) on the top tread | +11.0 kN·m more into the pad; the pad holds 300 | DERIVED |
+| rider on the flight while it swings (jumped on) | lands on a moving support; the drive rises by at most 11 kN·m; still pads | DERIVED; to be checked in the engine |
+
+### 6.7 Falsifiers (engine, before the first ride is credited)
+
+1. No link: untouched for 60 s, the stair stays upright on its catch.
+2. The counterweight does the shaping: built without it, the flight reaches the pad at ≈ 0.77 rad/s
+   and overruns it (DERIVED prediction).
+3. Ledger: flight PE lost − counterweight PE gained − pad work − hinge work = kinetic energy,
+   residual ≤ 2 % of 114.7 kJ.
+4. Arrival: peak ≤ 0.19 rad/s; rest at 40.5–41.1°; the top landing within 0.25 m above deck 5.
+5. Swept path: no contact impulse on the flight or counterweight before the pad.
+6. Rest: a rider on the top tread and a rider jumping on the moving flight end with the flight
+   seated.
+7. The game's input: from deck 4 and from grade (the whole Stack), touch, pad and keyboard: to
+   the foot, GRAB the chain, wait, walk up onto deck 5.
+
+### 6.8 What the kit must gain first (the BLOCKED items)
+
+1. **Per-part density.** The kit spreads a body's mass evenly by volume; the counterweight must
+   carry 77 % of the lever's mass in about 40 % of its volume. A density per part, from which the
+   body's mass, centre and inertia are built.
+2. **A lever pad.** Friction on the hinge over the last part of a lever's travel (a declared slide
+   plate; the evaluator's `slide` buffer), holding the seated flight.
+3. **A catch on a hinged body.** The kit's catches have held only guided bodies; confirm a catch
+   holds a lever body still and lets it go cleanly, or add that case.
+
+### 6.9 Evaluator spec
+
+```json
+{
+ "name": "S2: counterbalanced swinging stair, deck 4 -> deck 5; pad as a hinge slide plate",
+ "model_kind": "beam",
+ "model": {
+  "masses": [
+   {"mass": 4000, "r": 8.55, "phi": 1.710423, "i_cm": 97470},
+   {"mass": 13500, "r": 2.5, "phi": 4.817109}
+  ],
+  "theta0": 0.0,
+  "torque_friction_kinetic": 1500,
+  "torque_friction_static": 4500
+ },
+ "terminal": {
+  "buffer": {"kind": "slide", "start": 0.693038, "stroke": 0.04, "force": 300000},
+  "stop_q": 0.733038
+ },
+ "band": {"model.torque_friction_kinetic": [0, 1500, 3000]},
+ "require": {
+  "allowed_outcomes": ["HELD_BY_BUFFER_FRICTION"],
+  "min_breakaway_ratio": 1.5,
+  "max_stop_impact_speed": 0.0,
+  "max_time_s": 15,
+  "convergence": {"peak_speed": {"abs": 0.002}, "time_s": {"abs": 0.05}}
+ }
+}
+```
+
+q is the flight's fall from 82° (radians); the flight's direction at q is 180° − (82° − q) in the
+evaluator's frame. The rest variants are not run for pad outcomes by the evaluator; §6.6 derives
+them.
+
+## 7. Audit of the `ChatGPT` branch's opening mechanism
+
+Its Atlas §6, the pipe-loaded balance bridge: 20 pipes of 800 kg roll into a pan on a 5 m short
+arm; the 20 m long arm, a 4 t deck, rises 21.72° to seat on a +8 m landing. Audited as written
+with the same evaluator (beam model; trunnion friction band 1.5–4.5 kN·m, DEFAULT ±50 %).
+
+| # | Finding | Evidence |
+|---|---|---|
+| 1 | As written the deck reaches its landing in 1.35 s at 0.556 rad/s: the far end strikes the seat at 11.1 m/s. The "139 kJ remaining" in its budget is not margin; it is the impact. The 5–15 s pacing target is also missed | INTEGRATED, 3 cases |
+| 2 | Shaping fixes the arrival: the short arm bent 49.3° below the deck's line (the tail offset) crosses the drive's zero at 0.198 rad; with a catch at the landing and a crush pad, every friction case falls back onto the catch at 0.015–0.039 rad/s in 4.0 s, held with a rider on the far end and with the pan emptied | INTEGRATED, 4 cases |
+| 3 | But a pile of pipes is not a known mass. Tuned for 16.0 t, the bridge falls short of its catch with 15.9 t in the pan (an eighth of one pipe missing) in every friction case but the lowest, and in every case at 15.6 t | INTEGRATED, per mass |
+| 4 | Robust form: the offset sized for the lightest credible load (47.5°, 15.2 t at the highest friction) and a catch rack every 0.005 rad (0.1 m at the far end) above a 0.05 rad crush bed: every case from 15.2 to 16.8 t captures, fall-back ≤ 0.032 rad/s (0.65 m/s at the far end), 3.2–4.0 s, held with a rider and emptied. The 16.8 t case crushes 0.0499 of the bed's 0.05 rad: a heavier load needs a longer bed, and 3.2–4.0 s is still under the 5 s pacing floor | INTEGRATED, 12 cases |
+| 5 | It is not buildable in this engine as specified: rolling hollow pipes need cylinder shapes, the level pan needs a hinge between two moving bodies, and the landing needs a catch rack on a lever and a crush bed. None exists in the kit (§8). A rubble pour through a gate (the kit's bins) gives the same macro loading with a known mass, which removes finding 3 at the source | source inspection |
+| 6 | Its +8 m landing has no onward route; the branch says so | its Atlas |
+
+Adopted from it: the authoring contract (§2.1), readability and pacing (§2.2), the complexity
+budget, the rule that a stage's output is a support the player uses and leaves, planning only from
+a proven exit, and its physics corrections to the Colossus sequence (§8). Not adopted: ordinary
+stairs to 154 m as a fallback (the owner's direction on this branch is that no stair is a route;
+a decision for the owner), and removing the legacy bands from the default world (§3, the
+owner's decision).
+
+## 8. The catalogue against this engine
+
+What the kit builds today (source: `mechanism_kit.hpp`): bodies made of boxes, one density each;
+world-fixed hinges between hard stops, without friction; straight guides with a brake-only
+governor that eases into each stop, dogs (a catch rack on a guide) and rail gaps; catches released
+by a lever or by pulling a pin, relatching; ropes over fixed sheaves (any ratio; a rating that
+parts; a clutch; a push-only strut); trip lines to handles; bins that pour rubble or water through
+a gated mouth and drain on a striker; pools and pipes with valves; rigging (shackles, anchors);
+carrying. Missing: round bodies, joints between two moving bodies, springs, pads and crush beds,
+fracture.
+
+| Family | Build now? | Missing | Notes (the `ChatGPT` corrections kept) |
+|---|---|---|---|
+| Counterweight lift, fixed or variable ballast | yes | — | S1. Unshaped: keep strokes short or near balance, or shape it |
+| Chain counterweight (drive fades as chain piles) | no | a rope end whose hanging mass falls with travel | the skill's worked example; the best shaped lift drive |
+| Bascule, swinging stair, drawbridge | yes, with §6.8 | per-part density, lever pad | S2. Offset tail places the drive's zero |
+| Balance bridge (beam + ballast) | partly | pan hinge on the beam, rolling bodies, catch rack on a lever | load it by a gated rubble pour, not a pipe avalanche (§7) |
+| Pendulum striking a receiver | yes (world hinge + contact) | — | strike before the apex, where there is speed; restitution is a separation ratio, not an energy source |
+| Toppling column, falling monoliths laying a stair | yes (boxes tipping on contact) | — | each upright slab is its own preloaded source; spacing follows the tip geometry; each rest pose must carry the player |
+| Tipping platform | yes | — | tips when the combined centre of mass passes the edge |
+| Gravity sled on a chute | yes (guide) | — | friction band spreads the apex by metres over long chutes: short paths, catch racks |
+| Block and tackle | yes (rope ratio) | — | force times distance is conserved |
+| Rolling roller, drum, spool, pipes | no | round bodies, a drum-wrap model | a drum's rotational energy counts; keep the cable engaged, never a snapped chain |
+| Spring plunger, scissor jack | no | springs | a pantograph adds no energy; derive preload, force against extension, recharge |
+| Newton's cradle | no, and not wanted | spheres | a rigid-body solver does not carry a compression wave; one pendulum does the same job |
+| High striker | yes | — | 100 kg up 100 m needs ≥ 98.1 kJ and 44.3 m/s at the launch; strike below the apex |
