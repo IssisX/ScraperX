@@ -53,6 +53,8 @@ The old `AS-001`–`AS-015` campaign schedule is retired. Authored AS-001–007 
 
 The local implementation completes the first useful chain from ordinary grade input through the +8 m receiver to the +11 m tower ring. The exact-source workflow and APK verification are complete for this AS-016 slice. The separate ballast prototype supplies compatible Kit/grip/checkpoint/input/audio components; its overlapping bridge geometry remains inactive. See its [compatibility review](03_EXECUTION/PLANNING/BALLAST_BRIDGE_MODULE/COMPATIBILITY_REVIEW.md). The later Colossus chain is outside this slice.
 
+The owner subsequently selected **mixed parkour and machines** and directed development to proceed using reusable macro primitives. [The development plan](03_EXECUTION/PLANNING/NEXT_ASCENT_PROPOSAL.md) targets a connected +66 m stretch, beginning with physical closure of a proposed +11 → +33 m transfer. Those are planning targets, not new playable-height claims. Execute one bounded slice at a time; the current delivered route remains the one recorded above.
+
 Publish code candidates to `ChatGPT` one at a time, without overlapping APK candidates or overwriting another model's branch work. Check the remote head before publication. Follow the exact SHA's workflow to terminal status and verify its required proof steps and APK artifact. A timer, old green run, document update or fixture proof is not completion.
 
 Distinguish implemented, built, APK produced, installed, executed, observed and verified on Fold. Current-source desktop proof cannot establish device behavior. Stop at the authorized slice.
