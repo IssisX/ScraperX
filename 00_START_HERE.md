@@ -190,7 +190,7 @@ active implementation instruction. The audit changes documents, not shipped mech
 
 | Producer → receiver | Established output / mismatch | Owning closure |
 |---|---|---|
-| Screw → water lift | Same conserved 2 m³ tank state; independent native producer/receiver proofs; lift test seeds tank output | `GROUND_WATER_ASCENT.md`: uninterrupted normal screw→lift→+12 route not yet exercised |
+| Screw → water lift | Same conserved 2 m³ tank state; separate failure-isolation proofs plus an unseeded native player run from screw control through the +8 m fixed dock | `GROUND_WATER_ASCENT.md`: uninterrupted +12 extension and the full Godot-input route remain unproven |
 | Water lift → AS-001 stair | Caught cage → fixed +8.25 dock → braced grating → +8 landing → +12.1872 landing | Native `ground water lift`, `dock_to_stair12=1`, green §2 run |
 | AS-001 → AS-002 | Stable +24.1872 handoff; AS-002 freight configuration must be prepared separately | Existing source/runtime; gate is not universal tower access |
 | AS-003 → AS-004 | Physical 36 kg block acquired at grade; receiver requires delivered rigging | No campaign needle interface; delivery/carry/attachment closure BLOCKED |
@@ -201,7 +201,7 @@ active implementation instruction. The audit changes documents, not shipped mech
 
 Material source/proof debts: intake checkpoint omits pack/hook/dog/crane bodies;
 AS-002 flight/handoff collision exclusion; AS-003 apparent barred-wall apertures;
-Kit catch seating work/strength is not a tracked finite spring model; water bucket geometry holds about 1.409 m³ to the rim versus a 2.0 m³ inventory limit;
+Kit catch seating work/strength is not a tracked finite spring model; the water bucket's former 1.409 m³ capacity mismatch is closed in the geometry at 2.229 m³ to the rim;
 water fill/drain uses bounded rates and pose/catch predicates rather than head-derived flow; B's speed
 test tolerates 3.1 m/s despite its 3.0 m/s design wording. These are scoped findings,
 not an assertion that each currently breaks the proven route. The reported belt

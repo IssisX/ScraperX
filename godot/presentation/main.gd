@@ -4022,7 +4022,7 @@ func _build_kit() -> void:
 		var entity := int(_native.get_kit_body_entity_id(body))
 		if entity == 2011:
 			var water_mesh := BoxMesh.new()
-			water_mesh.size = Vector3(1.50, 1.0, 1.50)
+			water_mesh.size = Vector3(1.54, 1.0, 1.54)
 			var water_mat := StandardMaterial3D.new()
 			water_mat.albedo_color = Color(0.08, 0.30, 0.38, 0.72)
 			water_mat.roughness = 0.16
@@ -4067,12 +4067,12 @@ func _render_kit() -> void:
 			node.transform = _native.get_kit_body_transform(body)
 	if _water_lift_bucket_water != null:
 		var volume := clampf(float(_native.get_water_lift_bucket_water_m3()), 0.0, 2.0)
-		var depth := clampf(volume / 2.25, 0.0, 0.88)
+		var depth := clampf(volume / (1.54 * 1.54), 0.0, 0.94)
 		_water_lift_bucket_water.visible = depth > 0.002
 		if _water_lift_bucket_water.visible:
 			var water_mesh := _water_lift_bucket_water.mesh as BoxMesh
-			water_mesh.size = Vector3(1.50, depth, 1.50)
-			_water_lift_bucket_water.position = Vector3(0.0, -0.37 + depth * 0.5, 0.0)
+			water_mesh.size = Vector3(1.54, depth, 1.54)
+			_water_lift_bucket_water.position = Vector3(0.0, -0.29 + depth * 0.5, 0.0)
 	for index in _kit_cables.size():
 		var points: PackedVector3Array = _native.get_kit_cable_points(index)
 		var segments: Array = _kit_cables[index]

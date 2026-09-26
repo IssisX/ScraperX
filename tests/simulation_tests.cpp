@@ -3317,7 +3317,7 @@ int main() {
         require(before.water_lift_valve_station_active,
                 "water-lift fill control must be physically in reach");
         require(before.water_screw_tank_volume_m3 >= expected_m3 - 0.002,
-                "water-lift seam seed must exist in the authoritative upper tank");
+                "water for the lift must exist in the authoritative upper tank");
         require(before.water_lift_bucket_catch_latched,
                 "water-lift bucket must be physically caught at the fill station");
         require(sim.request_water_lift_valve_toggle(), "water-lift fill-open request accepted");
@@ -3568,6 +3568,73 @@ int main() {
               << " conserved_err=" << std::abs(water_total_drained - water_total_start)
               << " dry_fail=1 partial_fail=1 rope_fail=1 overload_fail=1"
               << " moving_support=1 reset=1 dock_to_stair12=1" << '\n';
+
+    // One uninterrupted player run closes the producer/receiver seam. No
+    // tank seed, cage placement, catch override, or teleport is used here.
+    Simulation screw_ascent(InitialSpawn::WaterScrewStation);
+    require(screw_ascent.advance_frame(0.5).accepted,
+            "continuous ascent screw-station settle must advance");
+    const auto ascent_start = screw_ascent.snapshot();
+    const double ascent_water_total =
+        ascent_start.water_screw_basin_volume_m3 +
+        ascent_start.water_screw_tank_volume_m3 +
+        ascent_start.water_lift_bucket_water_m3;
+    require(ascent_start.water_screw_station_active &&
+                screw_ascent.request_water_screw_toggle(),
+            "player must start the ground screw at its real station");
+    require(advance_until(
+                screw_ascent,
+                [](const Snapshot &s) { return s.water_screw_tank_volume_m3 >= 1.999; },
+                125.0),
+            "running screw must supply the same tank used by the lift");
+    require(screw_ascent.request_water_screw_toggle() &&
+                screw_ascent.advance_frame(0.2).accepted,
+            "player must be able to stop the screw before leaving its station");
+    require(walk_to(screw_ascent, -14.45, -106.20, 8.0, 0.18),
+            "player must walk from the screw to the bucket fill valve");
+    require(screw_ascent.advance_frame(0.3).accepted &&
+                screw_ascent.snapshot().water_lift_valve_station_active,
+            "the walked-to valve must be physically in reach");
+    fill_bucket(screw_ascent, 2.0);
+    board_lift_cage(screw_ascent);
+    require(screw_ascent.request_water_lift_release(),
+            "boarded player must release the actual bucket catch");
+    bool ascent_supported_on_moving_cage = false;
+    bool ascent_caught = false;
+    for (std::uint32_t tick = 0; tick < 12 * Simulation::kTickRateHz; ++tick) {
+        require(screw_ascent.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "continuous player ascent tick must advance");
+        const auto s = screw_ascent.snapshot();
+        ascent_supported_on_moving_cage =
+            ascent_supported_on_moving_cage ||
+            (s.support_entity_id == Simulation::kGroundWaterLiftCageEntityId &&
+             s.water_lift_cage_travel_m > 0.25);
+        if (s.water_lift_upper_catch_latched) {
+            ascent_caught = true;
+            break;
+        }
+    }
+    require(ascent_caught && ascent_supported_on_moving_cage &&
+                screw_ascent.snapshot().water_lift_cage_travel_m > 7.90,
+            "screw-fed bucket must physically carry its player to +8 m");
+    require(walk_to(screw_ascent, -9.45, -108.20, 5.0, 0.18) &&
+                screw_ascent.advance_frame(0.5).accepted,
+            "player must step off the screw-fed lift onto its fixed dock");
+    const auto ascent_dock = screw_ascent.snapshot();
+    require(ascent_dock.player_grounded &&
+                ascent_dock.support_entity_id == Simulation::kGroundWaterLiftFrameEntityId,
+            "continuous screw ascent must end on fixed +8 m support");
+    const double ascent_water_end =
+        ascent_dock.water_screw_basin_volume_m3 +
+        ascent_dock.water_screw_tank_volume_m3 +
+        ascent_dock.water_lift_bucket_water_m3;
+    require(std::abs(ascent_water_end - ascent_water_total) < 1.0e-8,
+            "continuous screw ascent must conserve basin, tank, and bucket water");
+    std::cout << "PASS scraperx_sim continuous ground screw ascent: dock_y="
+              << ascent_dock.player_position.y
+              << " cage_travel=" << ascent_dock.water_lift_cage_travel_m
+              << " conserved_err=" << std::abs(ascent_water_end - ascent_water_total)
+              << " moving_support=1 no_seed=1" << '\n';
 
     // ---- AS-006 Stage A, the skip lift (03_EXECUTION/ASCENT/AS-006_CW_PIN.md)
     //

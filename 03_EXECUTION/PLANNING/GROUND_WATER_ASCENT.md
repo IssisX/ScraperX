@@ -69,15 +69,13 @@ hydraulic or spring-energy fidelity claim follows from the successful ride. Audi
 these producing laws before extending them to head-dependent or repeated-energy
 mechanisms; do not disguise an inferred interlock as visible modeled hardware.
 
-**Capacity mismatch found by this audit:** `bucket_parts()` gives outside half
-width/depth 0.85 m, walls 0.16 m thick, rim at local y=+0.45 and floor top at
--0.29. Its clear internal volume to the rim is therefore
-`(1.70-2×0.16)² × (0.45+0.29) = 1.409256 m³`, before freeboard, whereas
-`update_water_lift` permits 2.0 m³ (2000 kg). A green seeded inventory/ride test
-cannot prove that volume fits the visible vessel. The authoritative seam is the
-bucket geometry/capacity/overflow contract; preserve the working rope/controller
-when repairing it. This is a source-derived mismatch, not a newly exercised
-runtime failure, and remains unresolved by this documentation change.
+**Bucket capacity closure:** the prior 1.409256 m³ clear vessel contradicted
+the modeled 2.0 m³ load. The bucket now retains its 1.70 m outside width and
+the same -0.45 m bottom clearance, with 0.08 m thick walls and a +0.65 m rim.
+Its floor top is -0.29 m, giving `1.54² × 0.94 = 2.229304 m³` to the rim.
+The 2.0 m³ load leaves about 0.229 m³ of freeboard. The water mesh reads the
+same 1.54 m interior section and floor level. The rope eye is above the new
+rim; catch, guide, and four-metre stroke are retained.
 
 ## Dock-to-stair connection and original failure
 
@@ -103,12 +101,13 @@ crane/gate/outside routes. The lift is a legal entrance above the grade gate.
 
 ## Evidence and open boundaries
 
-The screw's delivery and receiving lift have separate runtime groups. The lift
-group seeds the conserved tank output with
-`set_water_screw_tank_volume_m3_for_proof`; it does **not** operate the screw and
-then ride in one uninterrupted normal-input run. The seed does not move the cage,
-set a catch or supply extra force, but it limits the end-to-end claim. A complete
-apron→start screw→fill→ride→dock→+12 route still needs that combined proof.
+The screw and receiving lift retain separate failure-isolation groups; the lift
+group seeds the tank with `set_water_screw_tank_volume_m3_for_proof` to isolate
+force and catch behavior. A further continuous native player run uses no seed:
+it starts the screw, walks to the fill valve, fills the bucket, boards, rides
+the moving cage and stands on the fixed +8 m dock, checking total water
+conservation. The complete apron→screw→dock→+12 stair route remains unproven in
+one uninterrupted run, as does the same full sequence through Godot input.
 
 Current in-memory checkpoint captures screw state, bucket water, valve state and
 Kit bodies/topology. Source inclusion is not proof of every loaded-water restore;

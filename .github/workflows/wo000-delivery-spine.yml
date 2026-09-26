@@ -109,6 +109,7 @@ jobs:
             "PASS scraperx_sim AS-003 Hook5 Rack" \
             "PASS scraperx_sim ground water screw" \
             "PASS scraperx_sim ground water lift" \
+            "PASS scraperx_sim continuous ground screw ascent" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \
@@ -202,6 +203,15 @@ jobs:
             artifacts/native-falsifiers.log
           grep -F "dry_fail=1 partial_fail=1 rope_fail=1 overload_fail=1 moving_support=1 reset=1" \
             artifacts/native-falsifiers.log
+          # One unseeded player run starts the screw, walks to the valve,
+          # fills and rides the cage, and finishes on the fixed +8 m dock.
+          awk -F'dock_y=' '/continuous ground screw ascent/ {split($2,a," "); exit (a[1]+0 >= 8.9) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'cage_travel=' '/continuous ground screw ascent/ {split($2,a," "); exit (a[1]+0 >= 7.90) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          awk -F'conserved_err=' '/continuous ground screw ascent/ {split($2,a," "); exit (a[1]+0 <= 1e-8) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
+          grep -F "moving_support=1 no_seed=1" artifacts/native-falsifiers.log
           # AS-006 Stage A, the skip lift: no link, no lift (the cage never
           # moves while the rope is on the bollard, and the stage re-rigs);
           # linked, the rider rides 22 m to 176.25 under a brake-only
@@ -364,6 +374,7 @@ jobs:
           - native host tests proved the WO-003 traversal suite against real Jolt geometry: a vault that crosses a real rail onto a validated far landing while retaining approach momentum, a mantle that ends grounded on ledge entity 6, a ledge hang that holds against gravity on entity 7, a hang on the kinematic moving ledge (entity 8) carried at the support's own velocity and mantled onto that moving support, refusal of the obstructed landing behind entity 9/10 with no player rise, and traversal frame-partition invariance;
           - Godot 4.7 loaded the same current-source GDExtension, mirrored native support poses, jumped from support entity 3, and observed inherited momentum;
           - WO-006 host tests proved the coupled machine: the falling ballast drives a hinged tipper, the tipper drags a tension-only rope, the rope opens a real valve, the valve vents a finite pressure vessel into an actuator cylinder, and the cylinder lifts a counterweighted platform past six metres; a shut valve passes exactly zero mass; with the boiler feed cut the vessel's available energy never increases and the lift fades; a player standing on the tipper opens the same valve; and the whole machine is frame-partition invariant;
+          - one unseeded native player run starts the ground Archimedes screw, walks to the fill valve, transfers its conserved water to the bucket, boards and rides the moving cage eight metres, and stands on the fixed dock; the receiving bucket's clear geometry holds the modeled 2.0 m³ with freeboard;
           - the Godot runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856, 1.164) with stretch=expand, an 82 degree vertical field of view and a 2600 m far plane;
           - the same runtime spawned outdoors at grade, walked the tower approach, and observed the native machine open its valve past half and lift the platform past six metres;
           - one first-person approach-and-machine screenshot was captured from that runtime;

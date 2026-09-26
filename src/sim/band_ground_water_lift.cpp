@@ -30,11 +30,27 @@ constexpr float kBucketX = -18.0F;
 constexpr float kBucketZ = -111.50F;
 constexpr float kBucketCenterTopY = 4.50F;
 constexpr float kBucketHalfX = 0.85F;
-constexpr float kBucketHalfY = 0.45F;
 constexpr float kBucketHalfZ = 0.85F;
+constexpr float kBucketBottomY = -0.45F;
+constexpr float kBucketRimY = 0.65F;
+constexpr float kBucketFloorHalfY = 0.08F;
+constexpr float kBucketWallHalfThickness = 0.04F;
 constexpr float kBucketDryMassKg = 200.0F;
 constexpr float kBucketTravel = 4.0F;
-const JPH::Vec3 kBucketEyeLocal(0.0F, 0.62F, 0.0F);
+const JPH::Vec3 kBucketEyeLocal(0.0F, 0.72F, 0.0F);
+
+// At the unchanged 1.70 m outside footprint, 80 mm walls leave a 1.54 m
+// square interior. The floor top is -0.29 m and the rim is +0.65 m, so the
+// vessel holds 2.229 m3 before spilling. Its bottom stays at -0.45 m and
+// still clears grade at the bucket's four-metre lower stop.
+constexpr float kBucketClearWidth =
+    2.0F * (kBucketHalfX - 2.0F * kBucketWallHalfThickness);
+constexpr float kBucketClearDepth =
+    2.0F * (kBucketHalfZ - 2.0F * kBucketWallHalfThickness);
+constexpr float kBucketFloorTopY = kBucketBottomY + 2.0F * kBucketFloorHalfY;
+constexpr float kBucketClearCapacityM3 =
+    kBucketClearWidth * kBucketClearDepth * (kBucketRimY - kBucketFloorTopY);
+static_assert(kBucketClearCapacityM3 >= 2.0F);
 
 constexpr float kSheaveY = 10.50F;
 constexpr float kPulleyRatio = 0.50F; // 4 m bucket drop -> 8 m cage rise
@@ -76,21 +92,23 @@ std::vector<Part> cage_parts() {
 }
 
 std::vector<Part> bucket_parts() {
+    constexpr float wall_half_height = (kBucketRimY - kBucketBottomY) * 0.5F;
+    constexpr float wall_center_y = (kBucketRimY + kBucketBottomY) * 0.5F;
     return {
-        {JPH::Vec3(kBucketHalfX, 0.08F, kBucketHalfZ),
-         JPH::Vec3(0.0F, -kBucketHalfY + 0.08F, 0.0F),
+        {JPH::Vec3(kBucketHalfX, kBucketFloorHalfY, kBucketHalfZ),
+         JPH::Vec3(0.0F, kBucketBottomY + kBucketFloorHalfY, 0.0F),
          JPH::Quat::sIdentity(), Material::Galvanised},
-        {JPH::Vec3(0.08F, kBucketHalfY, kBucketHalfZ),
-         JPH::Vec3(-kBucketHalfX + 0.08F, 0.0F, 0.0F),
+        {JPH::Vec3(kBucketWallHalfThickness, wall_half_height, kBucketHalfZ),
+         JPH::Vec3(-kBucketHalfX + kBucketWallHalfThickness, wall_center_y, 0.0F),
          JPH::Quat::sIdentity(), Material::Galvanised},
-        {JPH::Vec3(0.08F, kBucketHalfY, kBucketHalfZ),
-         JPH::Vec3(kBucketHalfX - 0.08F, 0.0F, 0.0F),
+        {JPH::Vec3(kBucketWallHalfThickness, wall_half_height, kBucketHalfZ),
+         JPH::Vec3(kBucketHalfX - kBucketWallHalfThickness, wall_center_y, 0.0F),
          JPH::Quat::sIdentity(), Material::Galvanised},
-        {JPH::Vec3(kBucketHalfX, kBucketHalfY, 0.08F),
-         JPH::Vec3(0.0F, 0.0F, -kBucketHalfZ + 0.08F),
+        {JPH::Vec3(kBucketHalfX, wall_half_height, kBucketWallHalfThickness),
+         JPH::Vec3(0.0F, wall_center_y, -kBucketHalfZ + kBucketWallHalfThickness),
          JPH::Quat::sIdentity(), Material::Galvanised},
-        {JPH::Vec3(kBucketHalfX, kBucketHalfY, 0.08F),
-         JPH::Vec3(0.0F, 0.0F, kBucketHalfZ - 0.08F),
+        {JPH::Vec3(kBucketHalfX, wall_half_height, kBucketWallHalfThickness),
+         JPH::Vec3(0.0F, wall_center_y, kBucketHalfZ - kBucketWallHalfThickness),
          JPH::Quat::sIdentity(), Material::Galvanised},
         {JPH::Vec3(0.08F, 0.10F, 0.08F), kBucketEyeLocal,
          JPH::Quat::sIdentity(), Material::Hazard},

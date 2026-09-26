@@ -79,7 +79,7 @@ route to force machine use. Restore the full tower baseline and retain this audi
 
 | Height / capability | Existing or proposed connection | Actual readiness |
 |---|---|---|
-| Grade→+8 m | Screw raises conserved water; bucket descent lifts the ridden cage to a fixed dock | Implemented with green segment proofs at `7e66eb6`; bucket capacity mismatch and uninterrupted normal pump→ride proof remain open |
+| Grade→+8 m | Screw raises conserved water; bucket descent lifts the ridden cage to a fixed dock | Segment proofs retain the `7e66eb6` evidence; a new unseeded native run exercises screw control→fill→ride→fixed dock, and bucket geometry now holds 2.0 m³ with freeboard. Branch CI and full Godot-input sequence are separate evidence gates |
 | +8→+12→+24 m | Supported grating with a real jump obstruction joins the existing switchback stair | Dock→+12 native traversal proven; existing stair continues to +24; no additional machine required for this connection |
 | Grade→+24 m alternative | Yard crane clears the gate, or player climbs the real outside ledges | Existing legal routes; preserve them |
 | +24→+40 m | Loaded cradle deploys swinging stair, or outside ledges reach the shared upper flight | Implemented; current collision/checkpoint debts are explicit in AS-002 |
