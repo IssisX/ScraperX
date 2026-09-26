@@ -179,3 +179,13 @@ The screw is a ground-level causal input mechanism: finite shaft work moves cons
 the +5..+5.5 m tank. Its output contract is 2.0 m³ / 2000 kg measured in that tank. The water lift is
 a later mechanism cycle and may not be represented by a flag or implied by the screw's completion.
 Existing AS-001 freight/stair and outside-climb routes remain legal.
+
+The dock-to-stair continuation is a short fixed transfer span supported by
+the existing +8 m dock and `MOD-STAIR-A`'s +8 m landing, with a solid
+0.70 m transverse brace to jump. The direct walk previously left the dock
+over a 4.35 m unsupported opening and fell to the lower flight; a timed
+jump could clear it, but there was no continuous structural handoff. Native
+lift-to-dock-to-span-to-stair traversal now reaches the stable +12 m landing
+without changing movement rules or the grade-level dog. This is an
+additional entrance to the stair above the dog, not a retroactive change to
+the historical crate/gate evidence or a completed +40 m exit.

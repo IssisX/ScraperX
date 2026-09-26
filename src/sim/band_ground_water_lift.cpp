@@ -173,6 +173,23 @@ void build_ground_water_lift(kit::Kit &kit, GroundWaterLift &lift) {
         // loaded rope before it could reach its upper catch.
         {JPH::Vec3(1.50F, 0.12F, 1.65F), JPH::Vec3(-9.45F, kDockTopY - 0.12F, kCageZ),
          JPH::Quat::sIdentity(), Material::Galvanised},
+        // A bolted transfer span rests on the dock at its south end and on
+        // MOD-STAIR-A's existing +8 m landing at its north end. The old
+        // 4.35 m opening made a timed leap the only way across; a missed
+        // launch dropped the player eight metres onto the lower flight.
+        // The narrow grating and its two longitudinal girders are one real
+        // static compound, so the visible route and Jolt contact agree.
+        {JPH::Vec3(0.85F, 0.10F, 2.55F), JPH::Vec3(-8.55F, kDockTopY - 0.10F, -112.15F),
+         JPH::Quat::sIdentity(), Material::Galvanised},
+        {JPH::Vec3(0.09F, 0.24F, 2.55F), JPH::Vec3(-9.43F, 7.91F, -112.15F),
+         JPH::Quat::sIdentity(), Material::Rust},
+        {JPH::Vec3(0.09F, 0.24F, 2.55F), JPH::Vec3(-7.67F, 7.91F, -112.15F),
+         JPH::Quat::sIdentity(), Material::Rust},
+        // A transverse stiffener joins the side girders above the grating.
+        // It is a solid 0.70 m hurdle, cleared by the existing jump,
+        // with a full landing length on the far side of the same span.
+        {JPH::Vec3(0.82F, 0.35F, 0.14F), JPH::Vec3(-8.55F, 8.60F, -112.05F),
+         JPH::Quat::sIdentity(), Material::Hazard},
         {JPH::Vec3(0.14F, 4.06F, 0.14F), JPH::Vec3(-8.10F, 4.06F, kCageZ + 1.30F),
          JPH::Quat::sIdentity(), Material::Rust},
         {JPH::Vec3(0.14F, 4.06F, 0.14F), JPH::Vec3(-8.10F, 4.06F, kCageZ - 1.30F),

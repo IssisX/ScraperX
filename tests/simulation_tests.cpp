@@ -3498,6 +3498,67 @@ int main() {
     require(reset_lift.water_lift_bucket_water_m3 < 0.01 &&
                 reset_lift.water_lift_cage_travel_m < 0.08,
             "reset must finish with an empty caught bucket and cage back at grade");
+
+    // Continue the actual lift ride through its fixed dock and the new
+    // transfer span. The cross brace is a real obstacle on the bridge; use the
+    // existing jump, brake in air, land on that same static compound, then
+    // walk onto MOD-STAIR-A and up its already-proven next flight.
+    require(walk_to(water_lift, -8.55, -110.85, 4.0, 0.10),
+            "the dock must feed the near end of the transfer span");
+    const auto on_span = water_lift.snapshot();
+    require(on_span.player_grounded &&
+                on_span.support_entity_id == Simulation::kGroundWaterLiftFrameEntityId &&
+                on_span.player_position.y > 9.0,
+            "the grating must support the player above the gate");
+    (void)walk_toward(water_lift, -8.55, -114.0, 1.0);
+    const auto at_brace = water_lift.snapshot();
+    require(at_brace.player_grounded &&
+                at_brace.support_entity_id == Simulation::kGroundWaterLiftFrameEntityId &&
+                at_brace.player_position.z > -111.70 &&
+                at_brace.player_position.z < -111.40,
+            "the visible cross brace must obstruct an ordinary walk on the grating");
+    require(water_lift.set_facing(0.0, -1.0) &&
+                water_lift.set_move_input(0.0, -1.0) &&
+                water_lift.request_jump(),
+            "the player must be able to jump the solid cross brace");
+    bool landed_on_span = false;
+    bool braked = false;
+    for (int tick = 0; tick < 3 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        const auto s = water_lift.snapshot();
+        if (!braked && !s.player_grounded && s.player_position.z < -113.0) {
+            require(water_lift.set_move_input(0.0, 0.0),
+                    "air control must accept a braking input");
+            braked = true;
+        }
+        require(water_lift.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "dock transfer jump tick must advance");
+        const auto after = water_lift.snapshot();
+        if (braked && after.player_grounded &&
+            after.support_entity_id == Simulation::kGroundWaterLiftFrameEntityId &&
+            after.player_position.z < -112.5) {
+            landed_on_span = true;
+            break;
+        }
+    }
+    require(landed_on_span,
+            "jump over the brace must settle on visible grating, not a hidden support");
+    require(walk_to(water_lift, -8.55, -115.5, 4.0, 0.15),
+            "the span must join the existing +8 m stair landing");
+    require(water_lift.advance_frame(0.3).accepted,
+            "the stair handoff must settle under ordinary contact");
+    require(water_lift.snapshot().player_grounded &&
+                water_lift.snapshot().support_entity_id == Simulation::kIntakeStairEntityId,
+            "the player must stand on the legal MOD-STAIR-A support");
+    require(walk_to(water_lift, 7.85, -116.0, 9.0, 0.16),
+            "the existing stair flight must carry the player to its next landing");
+    require(water_lift.advance_frame(0.5).accepted,
+            "the +12 m stair landing must hold a stable stance");
+    const auto dock_stair_top = water_lift.snapshot();
+    require(dock_stair_top.player_grounded &&
+                dock_stair_top.support_entity_id == Simulation::kIntakeStairEntityId &&
+                dock_stair_top.player_position.y > 12.95 &&
+                dock_stair_top.player_position.y < 13.25,
+            "the +8 m dock route must terminate on the stable +12 m stair landing");
     std::cout << "PASS scraperx_sim ground water lift: cage_travel="
               << lift_top.water_lift_cage_travel_m
               << " peak_speed=" << lift_top.water_lift_cage_peak_speed_mps
@@ -3506,7 +3567,7 @@ int main() {
               << " dock_y=" << on_dock.player_position.y
               << " conserved_err=" << std::abs(water_total_drained - water_total_start)
               << " dry_fail=1 partial_fail=1 rope_fail=1 overload_fail=1"
-              << " moving_support=1 reset=1" << '\n';
+              << " moving_support=1 reset=1 dock_to_stair12=1" << '\n';
 
     // ---- AS-006 Stage A, the skip lift (03_EXECUTION/ASCENT/AS-006_CW_PIN.md)
     //
