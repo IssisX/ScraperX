@@ -45,7 +45,7 @@ floor contact ray checking its actual support.
 
 ## Failure and recovery
 
-- A dry or underfilled bucket cannot lift the rider. A release that cannot
+- A dry or insufficiently filled bucket cannot lift the rider. A release that cannot
   move re-latches at grade, so the player can add water and try again.
 - A weak motor, dry inlet, blocked outlet, full tank, or reverse direction
   cannot fabricate an upward transfer.

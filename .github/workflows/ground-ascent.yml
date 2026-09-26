@@ -76,6 +76,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          trap 'status=$?; if [ "$status" -ne 0 ]; then grep -E "SCRIPT ERROR|SCRAPERX_ASCENT_FAIL|ERROR:" artifacts/godot-import.log artifacts/godot-ride.log 2>/dev/null | tail -n 12 | while IFS= read -r line; do echo "::error::$line"; done || true; fi' EXIT
           mkdir -p artifacts/screenshots godot/.godot
           printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' > godot/.godot/extension_list.cfg
           tools/godot/godot --headless --path godot --editor --quit 2>&1 | tee artifacts/godot-import.log

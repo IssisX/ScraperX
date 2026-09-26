@@ -189,6 +189,23 @@ int main() {
     require(dry_lift.lift_state().bucket_top_catch_latched,
             "dry release stranded the bucket catch");
 
+    scraperx::sim::WaterScrewConfig low_water;
+    low_water.initial_basin_volume_m3 = 0.50;
+    GroundStage partial_lift({}, low_water);
+    require(partial_lift.request_motor_toggle(3.5, 0.0, 0.5),
+            "partial-water setup could not start pump");
+    run_for(partial_lift, 90 * 45);
+    require(partial_lift.request_valve_toggle(3.5, 0.0, 0.5),
+            "partial-water valve inaccessible");
+    run_for(partial_lift, 90 * 15);
+    partial_lift.set_rider_on_cage(true);
+    require(partial_lift.request_release(4.0, 0.0, -9.0),
+            "partial-water release should be possible");
+    run_for(partial_lift, 90 * 5);
+    require(partial_lift.lift_state().cage_travel_m < 0.001 &&
+                partial_lift.lift_state().bucket_top_catch_latched,
+            "insufficient water lifted rider or stranded catch");
+
     std::cout << "PASS ground screw ascent: local control, finite drive, conserved "
                  "delivery, stall, blocked outlet, reverse, rider lift, catch, "
                  "drain, reset and fixed step\n";
