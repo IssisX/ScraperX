@@ -196,6 +196,10 @@ Ordinary parkour is not dominated by a universal stamina tax.
 
 Fatigue is **situational**: long hangs, extreme climbs, injury, or exceptional exertion may matter when the situation justifies it.
 
+## 7.6 Deferred movement enhancement
+
+Owner request, 2026-09-26: allow a backflip onto a support when the takeoff, clearance, trajectory and landing conditions permit it. This is a later enhancement, not part of the opening macro-mechanism work or a claim of current functionality.
+
 ---
 
 # 8. Height, falling, parachuting, and fear

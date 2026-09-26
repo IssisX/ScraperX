@@ -30,27 +30,32 @@ Every implemented handoff names its native support, top surface, pose, clear sta
 
 ## 6. Opening candidate: the pipe-loaded balance bridge
 
-**Not implemented; critical release/stop/clearance details remain BLOCKED.** This replaces the water screw idea, rather than repairing its visual rotor.
+**Not implemented. AS-016 is resolving this design with isolated geometry and native contact probes.** Promotion to normal play remains blocked until loaded release, pipe capture, arrest and the actual player handoff pass.
 
-The player sees a rack of heavy steel pipes above a wide short-arm pan. Releasing the rack lets pipes roll into the pan. Their weight rotates one large beam; its long arm is a broad deck that rises into a fixed landing. The beam rests on visible structural seats. The player then climbs the inclined deck from a permanent grade approach to that landing. Heavy work is gravity and leverage; no hidden lift or triggered teleport.
+The player sees a rack of heavy steel pipes above a wide short-arm pan. Releasing the rack lets pipes roll into the pan while a visible prop holds the beam. A second physical release frees the loaded beam. Its long arm is a broad walking deck; the pan descends onto a visible crush receiver that absorbs the motion and carries the residual load. The player climbs from a permanent grade approach, exits sideways onto a fixed landing, and continues to the first tower deck. Gravity and leverage supply the work.
 
-Preliminary design envelope, to be placed in the yard without intersecting current tower footings:
+Revised design envelope. Values below are CHOSEN unless a relation is shown; they are not production measurements. The former 4 t straight-tail sketch is rejected: its surplus energy is excessive, an underside long-arm seat has the wrong reaction direction, and a landing directly ahead of the tip obstructs the rising sweep.
 
 | Quantity | Candidate value / consequence |
 |---|---|
-| Useful receiver | +8.0 m walking surface; 3 × 4 m clear landing with a supported onward endpoint, not an assumed connection to the old stairs |
-| Long arm | 20 m from pivot to far support; 3 m usable width; preliminary moving deck mass 4,000 kg, COM 10 m from pivot |
-| Pivot surface datum | +0.6 m; permanent approach from grade must be authored and swept clear |
+| Useful receiver | +8.0 m walking surface; clear X=[7.56,10.56], Z=[−112.580635,−108.580635], a 3 × 4 m landing beside the bridge |
+| Long arm | 20 m walking deck, 3 m usable width, 0.4 m collider depth; 8,500 kg; COM local (10,−0.2) relative to the walking-surface pivot in the rotation plane |
+| Pivot surface datum | World (6,+0.6,−90), long arm toward −Z, hinge axis +X. Deck centre is P + 10(0,sinθ,−cosθ) − 0.2(0,cosθ,sinθ). |
 | Rotation | 0 to asin(7.4/20) ≈ 21.72 degrees; far end moves horizontally from 20 m to 18.58 m |
-| Short arm | 5 m; pan attachment descends 1.85 m; reserve a visible pit with clearance below the lowest body, not an underground collider shortcut |
-| Pipe ballast | Twenty 800 kg pipes = 16,000 kg captured load; pipe shape/inertia must reflect hollow steel cylinders, not a solid cylinder accidentally using the same inertia |
-| Loading rack | Elevated relative to pan, contained by side walls; exact placement, pipe delivery height and catch geometry unresolved |
-| Initial motion budget | Ballast descent after capture releases about 290.4 kJ. Deck COM rise needs 145.2 kJ; an 85 kg player rising 7.4 m needs 6.2 kJ. About 139 kJ remains **before** pan/beam inertia, bearings, collisions, braking and other losses are closed. Rack-to-pan impact is not credited as useful extra lift work. |
-| Static torque check | Captured ballast: 16,000g × 5 cos(theta); long deck: 4,000g × 10 cos(theta), plus player and all omitted member weights. These simplified moments favour raising the deck; they are not a structural or dynamic rating. |
+| Raised short arm | Attachment vector (−5,+2.8) in the rotation plane; pin starts at Y=3.4 and ends at Y=1.351289, a DERIVED 2.048711 m descent. The arm is diagonal rather than a low horizontal member. |
+| Level pan linkage | Two equal 5.73 m arms; fixed trunnions and corresponding pan pins separated vertically by 1.2 m. Arms outside the pan at X=3.4 and X=8.6; combined arm mass 1,000 kg. Crosshead and pan clearances still require native proof. |
+| Pan and pipe ballast | Pan 1,000 kg; twenty separate 800 kg pipes = 16,000 kg captured load. Four lanes of five sections; each section 1 m long, outer radius 0.4 m. With chosen steel density 7,850 kg/m³, inner radius sqrt(0.4²−800/(π×7850×1)) ≈ 0.357157 m. Use hollow-cylinder inertia. |
+| Pan envelope | Preliminary clear 4.4 m across X × 4.3 m along Z; attachment-to-lowest-bottom at most 1.10 m. Keep its full stroke above grade and keep linkage members outside the loading volume. |
+| Loading rack | Four contained lanes south of the pan, feeding toward −Z at a chosen 5° slope. Gate, release tackle, delivery clearance and complete capture remain native-probe work. |
+| Motion budget | Loaded pan releases 341.664 kJ; arms release 10.049 kJ; deck COM rise consumes 309.708 kJ. DERIVED net 42.004 kJ before bearings, crush, rider and other losses. An 85 kg rider at the far end consumes another 6.171 kJ. Rack impact is not credited as free lifting work. |
+| Reduced swing model | For rider mass m at distance r, Qg=9.81[(2500−mr)cosθ+47300sinθ] N·m; I=1,703,013.333+mr² kg·m². These derive from the declared mass layout; actual constructed mass properties must agree. |
+| Arrest reaction | Upward force under the descending pan produces opposing torque F(5cosθ+2.8sinθ). Finite crush work and used stroke are consequential state. Constitutive parameters, rebound and native agreement are being evaluated in AS-016. |
 
-The pan remains level through a real hinge and needs enough lateral restraint to retain pipes throughout the stroke. The player crosses after seating; normal physics still applies if they board early. The visible seat must carry the loaded beam and prevent rebound/slip. Use finite braking/damping with an energy ledger; never pose-snap or zero velocity on a completion condition.
+The side receiver avoids the tip's retracting arc. Its inclined entry occupies X=[7.56,10.56], Z=[−108.580635,−105.580635], with top plane Y=7.8−0.398264105(Z+108.580635). It ends with a 0.20 m rise onto the flat landing. A supported 3 m wide connector continues from Z=−112.580635,Y=8 to Z=−124,Y=11 and the existing first deck. The grade approach is west of the bridge: a short ramp reaches +0.6, then a side cheek joins the first 2 m of the deck. The operator returns around the south end of the rack rather than crossing the pan's swept volume.
 
-Critical work before implementation: dimensional CAD/primitive layout against actual tower coordinates; release geometry and required human effort under full preload; pipe containment and anti-wedge margins; full inertia and mass ledger; bearing/stop loads; finite arrest and seat stability; controller walking/step transitions at both ends; misses, unloading/rearming and checkpoint state. A 10 kg bowling ball does not automatically dislodge a wedge supporting tonnes. A large accessible release member may only retain/release energy; it must not supply the lifting work.
+These surfaces must accept a bounded stopping range, not one exact angle. Geometry screening is not a native walking proof. The player normally crosses after arrest; early boarding is included in the load cases. A finite material law may represent visible crushing, including elastic recovery and irreversible deformation. Do not pose-snap, erase velocity or replace the loaded contacts with a completion flag.
+
+Critical work before normal-play integration: loaded release convergence and reachable effort; actual pipe feeding and containment; constructed mass/inertia and joint reactions; finite arrest and stable crossing; native walking at both ends; miss aftermath and checkpoint state. A large accessible release member only frees stored energy. A 10 kg ball is not assumed to dislodge a wedge supporting tonnes.
 
 ## 7. Later chain direction
 
