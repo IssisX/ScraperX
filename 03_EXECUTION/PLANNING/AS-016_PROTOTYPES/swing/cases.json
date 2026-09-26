@@ -1,0 +1,84 @@
+{
+  "profile": "MACRO-TRAVERSAL-STRICT",
+  "scope": "isolated preloaded bridge/receiver fixture",
+  "gravity_m_s2": 9.81,
+  "deck": {
+    "mass_kg": 8500,
+    "length_m": 20,
+    "width_m": 3,
+    "thickness_m": 0.4,
+    "com_in_pivot_plane_m": [
+      10,
+      -0.2
+    ]
+  },
+  "arms": {
+    "count": 2,
+    "mass_each_kg": 500,
+    "vector_in_pivot_plane_m": [
+      -5,
+      2.8
+    ],
+    "square_section_m": 0.3,
+    "fixed_and_pan_pivot_vertical_separation_m": 1.2
+  },
+  "preloaded_pan": {
+    "mass_kg": 17000,
+    "composition": "1000kg pan + 20*800kg pipes represented as one rigid payload",
+    "com_below_main_pin_m": 0.7,
+    "striker_below_main_pin_m": 1
+  },
+  "receiver": {
+    "nominal_yield_N": 90000,
+    "stiffness_N_m": 15000000,
+    "available_stroke_m": 0.65,
+    "entry_striker_y_m": 0.8053712630033334
+  },
+  "band": {
+    "hinge_friction_Nm": [
+      1500,
+      3000,
+      4500
+    ],
+    "rider_mass_kg_and_distance_m": [
+      [
+        0,
+        0
+      ],
+      [
+        85,
+        10
+      ],
+      [
+        85,
+        20
+      ]
+    ],
+    "receiver_yield_N": [
+      85500,
+      90000,
+      94500
+    ]
+  },
+  "native_hz": [
+    90,
+    360
+  ],
+  "native_solver_iterations": {
+    "velocity": 10,
+    "position": 2
+  },
+  "evaluator_h_s": 0.001,
+  "evaluator_refinement_h_s": 0.00025,
+  "evidence_types": {
+    "geometry_masses_stiffness_yield": "CHOSEN",
+    "kinematic_force_energy_maps": "DERIVED",
+    "results": "INTEGRATED for isolated fixture only"
+  },
+  "abstractions": [
+    "Full ballast preloaded; no pipe delivery or capture",
+    "Attached fixed rider load; no character controller or dynamic rider departure",
+    "Moving/moving collisions disabled; no arm/pipe clearance proof",
+    "Centreline arm fixture; intended outboard arm geometry remains production work"
+  ]
+}

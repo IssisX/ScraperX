@@ -1,0 +1,6 @@
+{
+  "selected": false,
+  "native_walking": "Passed allfive7.53/7.55/8/8.17/8.20 cases",
+  "reason": "Rejected for insufficient declared full-corridor margin:27.817mm remaining vs60mm design margin. Not a failed walking proof.",
+  "replacement": "Selected -0.25m upper cheek passed targeted native tip7.53/8.20m and10analyticchecks. See selected-offset-025-observation/results.json."
+}

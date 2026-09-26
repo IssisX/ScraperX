@@ -1,0 +1,15 @@
+STATIC_RECEIVER_PROBE tip_target=8.2 spawn=(6,0.893588901,-25) no_teleport=1 jump_requests=0 mechanism_static=1
+WAYPOINT yard_east reached=1 pos=(10.0077534,0.893588901,-75.0969009) grounded=1 support=1 deaths=0 tick=896
+WAYPOINT release_station reached=1 pos=(9.99987698,0.893588901,-82.1099777) grounded=1 support=1 deaths=0 tick=1039
+WAYPOINT rack_south reached=1 pos=(10.0000019,0.893588901,-74.8988266) grounded=1 support=1 deaths=0 tick=1185
+WAYPOINT west_access reached=1 pos=(-0.693948746,0.893588901,-75.0009079) grounded=1 support=1 deaths=0 tick=1389
+WAYPOINT west_approach reached=1 pos=(-0.599043429,0.893588901,-86.1119614) grounded=1 support=1 deaths=0 tick=1599
+WAYPOINT ramp_foot reached=1 pos=(2.06463671,0.899999917,-85.9704361) grounded=1 support=1 deaths=0 tick=1670
+WAYPOINT lower_cheek reached=1 pos=(1.93823051,1.99173427,-91.167572) grounded=1 support=600 deaths=0 tick=1786
+WAYPOINT bridge_board reached=1 pos=(6.10175562,1.95519352,-91.0389481) grounded=1 support=601 deaths=0 tick=1883
+WAYPOINT bridge_cross reached=1 pos=(5.9995594,8.57222176,-107.146759) grounded=1 support=601 deaths=0 tick=2183
+WAYPOINT side_cheek reached=1 pos=(9.40028286,8.02321529,-106.939713) grounded=1 support=602 deaths=0 tick=2262
+WAYPOINT fixed_receiver reached=1 pos=(9.05328655,8.89999962,-110.677544) grounded=1 support=603 deaths=0 tick=2367
+WAYPOINT connector_start reached=1 pos=(9.06040478,8.89999962,-112.483162) grounded=1 support=603 deaths=0 tick=2425
+WAYPOINT native_ring reached=1 pos=(9.05998898,11.8999996,-125.496696) grounded=1 support=11 deaths=0 tick=2665
+PASS STATIC_RECEIVER_PROBE tip_target=8.2 ring_player_y=11.8999996 support=11 no_teleport=1 jump_requests=0 deaths=0 mechanism_static=1

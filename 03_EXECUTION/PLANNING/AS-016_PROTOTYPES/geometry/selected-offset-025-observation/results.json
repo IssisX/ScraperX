@@ -1,0 +1,441 @@
+{
+  "status": "Isolated STATIC downstream fixture; not an implemented mechanism",
+  "observed_utc": "2026-09-26T18:36:27.676995+00:00",
+  "source_commit": "360cffbe2374a37cd6e7b606f72443f26c0d8f93",
+  "cases": [
+    {
+      "tip_target_m": 7.53,
+      "pass": true,
+      "waypoints": [
+        {
+          "name": "yard_east",
+          "reached": true,
+          "player_centre_xyz": [
+            10.0077534,
+            0.893588901,
+            -75.0969009
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 896
+        },
+        {
+          "name": "release_station",
+          "reached": true,
+          "player_centre_xyz": [
+            9.99987698,
+            0.893588901,
+            -82.1099777
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1039
+        },
+        {
+          "name": "rack_south",
+          "reached": true,
+          "player_centre_xyz": [
+            10.0000019,
+            0.893588901,
+            -74.8988266
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1185
+        },
+        {
+          "name": "west_access",
+          "reached": true,
+          "player_centre_xyz": [
+            -0.693948746,
+            0.893588901,
+            -75.0009079
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1389
+        },
+        {
+          "name": "west_approach",
+          "reached": true,
+          "player_centre_xyz": [
+            -0.599043429,
+            0.893588901,
+            -86.1119614
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1599
+        },
+        {
+          "name": "ramp_foot",
+          "reached": true,
+          "player_centre_xyz": [
+            2.06463671,
+            0.899999917,
+            -85.9704361
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1670
+        },
+        {
+          "name": "lower_cheek",
+          "reached": true,
+          "player_centre_xyz": [
+            1.93823051,
+            1.99173427,
+            -91.167572
+          ],
+          "grounded": true,
+          "support_entity": 600,
+          "death_count": 0,
+          "tick": 1786
+        },
+        {
+          "name": "bridge_board",
+          "reached": true,
+          "player_centre_xyz": [
+            6.09229898,
+            1.91378033,
+            -91.0576172
+          ],
+          "grounded": true,
+          "support_entity": 601,
+          "death_count": 0,
+          "tick": 1883
+        },
+        {
+          "name": "bridge_cross",
+          "reached": true,
+          "player_centre_xyz": [
+            5.99951077,
+            7.86141205,
+            -107.159142
+          ],
+          "grounded": true,
+          "support_entity": 601,
+          "death_count": 0,
+          "tick": 2181
+        },
+        {
+          "name": "side_cheek",
+          "reached": true,
+          "player_centre_xyz": [
+            9.43583488,
+            8.06356716,
+            -107.041031
+          ],
+          "grounded": true,
+          "support_entity": 602,
+          "death_count": 0,
+          "tick": 2264
+        },
+        {
+          "name": "fixed_receiver",
+          "reached": true,
+          "player_centre_xyz": [
+            9.04812145,
+            8.89999962,
+            -110.720566
+          ],
+          "grounded": true,
+          "support_entity": 603,
+          "death_count": 0,
+          "tick": 2365
+        },
+        {
+          "name": "connector_start",
+          "reached": true,
+          "player_centre_xyz": [
+            9.06080246,
+            8.89999962,
+            -112.492798
+          ],
+          "grounded": true,
+          "support_entity": 603,
+          "death_count": 0,
+          "tick": 2422
+        },
+        {
+          "name": "native_ring",
+          "reached": true,
+          "player_centre_xyz": [
+            9.05997944,
+            11.8999996,
+            -125.506332
+          ],
+          "grounded": true,
+          "support_entity": 11,
+          "death_count": 0,
+          "tick": 2661
+        }
+      ],
+      "log": "static-walk-7.53.log",
+      "pass_line": "PASS STATIC_RECEIVER_PROBE tip_target=7.53 ring_player_y=11.8999996 support=11 no_teleport=1 jump_requests=0 deaths=0 mechanism_static=1"
+    },
+    {
+      "tip_target_m": 8.2,
+      "pass": true,
+      "waypoints": [
+        {
+          "name": "yard_east",
+          "reached": true,
+          "player_centre_xyz": [
+            10.0077534,
+            0.893588901,
+            -75.0969009
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 896
+        },
+        {
+          "name": "release_station",
+          "reached": true,
+          "player_centre_xyz": [
+            9.99987698,
+            0.893588901,
+            -82.1099777
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1039
+        },
+        {
+          "name": "rack_south",
+          "reached": true,
+          "player_centre_xyz": [
+            10.0000019,
+            0.893588901,
+            -74.8988266
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1185
+        },
+        {
+          "name": "west_access",
+          "reached": true,
+          "player_centre_xyz": [
+            -0.693948746,
+            0.893588901,
+            -75.0009079
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1389
+        },
+        {
+          "name": "west_approach",
+          "reached": true,
+          "player_centre_xyz": [
+            -0.599043429,
+            0.893588901,
+            -86.1119614
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1599
+        },
+        {
+          "name": "ramp_foot",
+          "reached": true,
+          "player_centre_xyz": [
+            2.06463671,
+            0.899999917,
+            -85.9704361
+          ],
+          "grounded": true,
+          "support_entity": 1,
+          "death_count": 0,
+          "tick": 1670
+        },
+        {
+          "name": "lower_cheek",
+          "reached": true,
+          "player_centre_xyz": [
+            1.93823051,
+            1.99173427,
+            -91.167572
+          ],
+          "grounded": true,
+          "support_entity": 600,
+          "death_count": 0,
+          "tick": 1786
+        },
+        {
+          "name": "bridge_board",
+          "reached": true,
+          "player_centre_xyz": [
+            6.10175562,
+            1.95519352,
+            -91.0389481
+          ],
+          "grounded": true,
+          "support_entity": 601,
+          "death_count": 0,
+          "tick": 1883
+        },
+        {
+          "name": "bridge_cross",
+          "reached": true,
+          "player_centre_xyz": [
+            5.9995594,
+            8.57222176,
+            -107.146759
+          ],
+          "grounded": true,
+          "support_entity": 601,
+          "death_count": 0,
+          "tick": 2183
+        },
+        {
+          "name": "side_cheek",
+          "reached": true,
+          "player_centre_xyz": [
+            9.40028286,
+            8.02321529,
+            -106.939713
+          ],
+          "grounded": true,
+          "support_entity": 602,
+          "death_count": 0,
+          "tick": 2262
+        },
+        {
+          "name": "fixed_receiver",
+          "reached": true,
+          "player_centre_xyz": [
+            9.05328655,
+            8.89999962,
+            -110.677544
+          ],
+          "grounded": true,
+          "support_entity": 603,
+          "death_count": 0,
+          "tick": 2367
+        },
+        {
+          "name": "connector_start",
+          "reached": true,
+          "player_centre_xyz": [
+            9.06040478,
+            8.89999962,
+            -112.483162
+          ],
+          "grounded": true,
+          "support_entity": 603,
+          "death_count": 0,
+          "tick": 2425
+        },
+        {
+          "name": "native_ring",
+          "reached": true,
+          "player_centre_xyz": [
+            9.05998898,
+            11.8999996,
+            -125.496696
+          ],
+          "grounded": true,
+          "support_entity": 11,
+          "death_count": 0,
+          "tick": 2665
+        }
+      ],
+      "log": "static-walk-8.20.log",
+      "pass_line": "PASS STATIC_RECEIVER_PROBE tip_target=8.2 ring_player_y=11.8999996 support=11 no_teleport=1 jump_requests=0 deaths=0 mechanism_static=1"
+    }
+  ],
+  "commands": [
+    [
+      "/data/data/com.termux/files/usr/bin/python",
+      "/data/data/com.termux/files/usr/tmp/scraperx-macro-design/make_static_walk_probe.py",
+      "--repo",
+      "/storage/emulated/0/Download/ScraperX-ChatGPT-rebuild",
+      "--out",
+      "/data/data/com.termux/files/usr/tmp/scraperx-macro-design/selected-offset-025-observation"
+    ],
+    [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--",
+      "/usr/bin/c++",
+      "-std=c++17",
+      "-O2",
+      "-DNDEBUG",
+      "-pthread",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/storage/emulated/0/Download/ScraperX-ChatGPT-rebuild/src",
+      "-I/storage/emulated/0/Download/ScraperX-ChatGPT-rebuild/src/sim",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+      "-c",
+      "/data/data/com.termux/files/usr/tmp/scraperx-macro-design/selected-offset-025-observation/simulation_static_walk.cpp",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-macro-design/selected-offset-025-observation/simulation_static_walk.o"
+    ],
+    [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--",
+      "/usr/bin/c++",
+      "-std=c++17",
+      "-O2",
+      "-DNDEBUG",
+      "-pthread",
+      "-I/storage/emulated/0/Download/ScraperX-ChatGPT-rebuild/src",
+      "/data/data/com.termux/files/usr/tmp/scraperx-macro-design/static_walk_main.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-macro-design/selected-offset-025-observation/simulation_static_walk.o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-macro-design/selected-offset-025-observation/static_walk_probe"
+    ],
+    [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--",
+      "env",
+      "SCRAPERX_PROBE_TIP_Y=7.53",
+      "/data/data/com.termux/files/usr/tmp/scraperx-macro-design/selected-offset-025-observation/static_walk_probe"
+    ],
+    [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--",
+      "env",
+      "SCRAPERX_PROBE_TIP_Y=8.20",
+      "/data/data/com.termux/files/usr/tmp/scraperx-macro-design/selected-offset-025-observation/static_walk_probe"
+    ]
+  ],
+  "artifact_sha256": {
+    "static-walk-fixture.patch": "6b0c2b585a8e42dc32bd7e6d492f98353f431f6ca7e77de36ecdf4e8c3684354",
+    "static_walk_main.cpp": "932260246d82a838b8ef49884cf4b36b7926c8ba62a20467d874304412cd6324",
+    "make_static_walk_probe.py": "cd1910a77e0c5de6977d544594ea25597f1ba4f0aa6f9d82f5e61e10f1f9d1ae",
+    "run_static_walk_probe.py": "40004270ec02b0fce4e7fe09f236db7c0a8503f093e17c9db8108d7c9efb2b89"
+  },
+  "limits": [
+    "Static bridge at terminal pose; no pipes, gate, pan, four-bar or arrest constructed",
+    "Grounded support asserted at settled waypoints, not continuously every frame",
+    "No teleport, player seeding, jump request, or movement retuning",
+    "Normal public native walk/facing inputs; no Godot/touch/Android device verification"
+  ]
+}

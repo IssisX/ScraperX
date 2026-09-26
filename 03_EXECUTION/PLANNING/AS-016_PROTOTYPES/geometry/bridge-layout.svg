@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="1190" viewBox="0 0 1360 1190"><style>text{font-family:Arial,sans-serif}</style>
+<rect x="0.00" y="0.00" width="1360.00" height="1190.00" fill="#f5f7fa" stroke="none" opacity="1"/>
+<text x="38.00" y="38.00" font-size="26" fill="#263447" font-weight="bold">SCRAPERX · Pipe-loaded balance bridge</text>
+<text x="38.00" y="64.00" font-size="15" fill="#9e451c" font-weight="bold">DESIGN PROPOSAL — NOT IMPLEMENTED · Metres · Source-linked geometry screening, not native walking proof</text>
+<text x="38.00" y="98.00" font-size="17" fill="#263447" font-weight="bold">SIDE ELEVATION  /  looking east, toward +X</text>
+<line x1="55.00" y1="414.00" x2="1260.00" y2="414.00" stroke="#d1d9e1" stroke-width="1" stroke-dasharray="5 5"/>
+<text x="1268.00" y="419.00" font-size="12" fill="#263447" font-weight="normal">+0m</text>
+<line x1="55.00" y1="322.00" x2="1260.00" y2="322.00" stroke="#d1d9e1" stroke-width="1" stroke-dasharray="5 5"/>
+<text x="1268.00" y="327.00" font-size="12" fill="#263447" font-weight="normal">+4m</text>
+<line x1="55.00" y1="230.00" x2="1260.00" y2="230.00" stroke="#d1d9e1" stroke-width="1" stroke-dasharray="5 5"/>
+<text x="1268.00" y="235.00" font-size="12" fill="#263447" font-weight="normal">+8m</text>
+<line x1="55.00" y1="161.00" x2="1260.00" y2="161.00" stroke="#d1d9e1" stroke-width="1" stroke-dasharray="5 5"/>
+<text x="1268.00" y="166.00" font-size="12" fill="#263447" font-weight="normal">+11m</text>
+<line x1="55.00" y1="414.00" x2="1251.00" y2="414.00" stroke="#42556a" stroke-width="3"/>
+<line x1="423.00" y1="400.20" x2="883.00" y2="400.20" stroke="#98a5b3" stroke-width="6" stroke-dasharray="7 5"/>
+<line x1="423.00" y1="400.20" x2="854.50" y2="240.81" stroke="#d99436" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="423.00" y1="400.20" x2="848.49" y2="225.40" stroke="#d99436" stroke-width="1.5" stroke-dasharray="4 4"/>
+<polygon points="423.00,400.20 850.35,230.00 853.76,238.55 426.40,408.75" fill="#3f7695" stroke="#28526e" opacity="1"/>
+<line x1="781.35" y1="263.23" x2="850.35" y2="235.75" stroke="#248468" stroke-width="6"/>
+<line x1="850.35" y1="230.00" x2="942.35" y2="230.00" stroke="#248468" stroke-width="7"/>
+<line x1="942.35" y1="230.00" x2="1205.00" y2="161.00" stroke="#248468" stroke-width="6"/>
+<line x1="1205.00" y1="161.00" x2="1251.00" y2="161.00" stroke="#37414d" stroke-width="8"/>
+<line x1="873.35" y1="414.00" x2="873.35" y2="234.60" stroke="#91a49c" stroke-width="4"/>
+<line x1="928.55" y1="414.00" x2="928.55" y2="234.60" stroke="#91a49c" stroke-width="4"/>
+<line x1="1090.00" y1="414.00" x2="1090.00" y2="195.81" stroke="#91a49c" stroke-width="4"/>
+<line x1="423.00" y1="400.20" x2="308.00" y2="335.80" stroke="#96a3b2" stroke-width="4" stroke-dasharray="5 4"/>
+<line x1="423.00" y1="372.60" x2="308.00" y2="308.20" stroke="#96a3b2" stroke-width="4" stroke-dasharray="5 4"/>
+<line x1="308.00" y1="335.80" x2="308.00" y2="308.20" stroke="#96a3b2" stroke-width="3" stroke-dasharray="5 4"/>
+<rect x="256.25" y="338.10" width="103.50" height="20.70" fill="#ccb28a" stroke="#96a3b2" opacity="0.4"/>
+<line x1="256.25" y1="358.80" x2="359.75" y2="358.80" stroke="#96a3b2" stroke-width="4" stroke-dasharray="5 4"/>
+<line x1="423.00" y1="400.20" x2="292.33" y2="382.92" stroke="#775b9b" stroke-width="4"/>
+<line x1="423.00" y1="372.60" x2="292.33" y2="355.32" stroke="#775b9b" stroke-width="4"/>
+<line x1="292.33" y1="382.92" x2="292.33" y2="355.32" stroke="#775b9b" stroke-width="3"/>
+<rect x="240.58" y="385.22" width="103.50" height="20.70" fill="#ccb28a" stroke="#775b9b" opacity="0.75"/>
+<line x1="240.58" y1="405.92" x2="344.08" y2="405.92" stroke="#775b9b" stroke-width="4"/>
+<line x1="255.10" y1="358.80" x2="112.50" y2="346.32" stroke="#ab7335" stroke-width="6"/>
+<circle cx="236.70" cy="347.99" r="9.2" fill="#c2ccd6" stroke="#50667a" stroke-width="3"/>
+<circle cx="212.55" cy="345.88" r="9.2" fill="#c2ccd6" stroke="#50667a" stroke-width="3"/>
+<circle cx="188.40" cy="343.76" r="9.2" fill="#c2ccd6" stroke="#50667a" stroke-width="3"/>
+<circle cx="164.25" cy="341.65" r="9.2" fill="#c2ccd6" stroke="#50667a" stroke-width="3"/>
+<circle cx="140.10" cy="339.54" r="9.2" fill="#c2ccd6" stroke="#50667a" stroke-width="3"/>
+<line x1="423.00" y1="414.00" x2="423.00" y2="372.60" stroke="#775b9b" stroke-width="5"/>
+<text x="62.00" y="451.00" font-size="13" fill="#263447" font-weight="normal">Rack + shallow pan remain above grade; vertical 1.2m four-bar separation is a proposal.</text>
+<text x="60.00" y="150.00" font-size="13" fill="#263447" font-weight="normal">20 pipes · 800kg each</text>
+<text x="60.00" y="169.00" font-size="12" fill="#263447" font-weight="normal">Four lanes × five; source transfer unverified</text>
+<text x="445.00" y="300.00" font-size="13" fill="#263447" font-weight="normal">Pivot walking surface +0.6m</text>
+<text x="600.00" y="210.00" font-size="15" fill="#263447" font-weight="bold">20m deck · 3m usable width</text>
+<text x="775.00" y="280.00" font-size="12" fill="#a25d11" font-weight="normal">Stress band: tip +7.53…+8.20m</text>
+<text x="857.00" y="177.00" font-size="13" fill="#17684e" font-weight="normal">Side cheek ends +7.75</text>
+<text x="868.00" y="196.00" font-size="13" fill="#17684e" font-weight="normal">0.25m step to +8 dock</text>
+<text x="1090.00" y="130.00" font-size="13" fill="#263447" font-weight="bold">Existing +11 ring</text>
+<text x="38.00" y="503.00" font-size="17" fill="#263447" font-weight="bold">PLAN  /  walking supports and reserved moving volumes</text>
+<line x1="110.00" y1="593.50" x2="450.00" y2="593.50" stroke="#d4dbe3" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="55.00" y="597.50" font-size="12" fill="#263447" font-weight="normal">Z -80</text>
+<line x1="110.00" y1="710.50" x2="450.00" y2="710.50" stroke="#d4dbe3" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="55.00" y="714.50" font-size="12" fill="#263447" font-weight="normal">Z -90</text>
+<line x1="110.00" y1="827.50" x2="450.00" y2="827.50" stroke="#d4dbe3" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="55.00" y="831.50" font-size="12" fill="#263447" font-weight="normal">Z -100</text>
+<line x1="110.00" y1="944.50" x2="450.00" y2="944.50" stroke="#d4dbe3" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="55.00" y="948.50" font-size="12" fill="#263447" font-weight="normal">Z -110</text>
+<line x1="110.00" y1="1061.50" x2="450.00" y2="1061.50" stroke="#d4dbe3" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="55.00" y="1065.50" font-size="12" fill="#263447" font-weight="normal">Z -120</text>
+<text x="157.00" y="526.00" font-size="12" fill="#263447" font-weight="normal">X0</text>
+<text x="259.00" y="526.00" font-size="12" fill="#263447" font-weight="normal">X6</text>
+<text x="327.00" y="526.00" font-size="12" fill="#263447" font-weight="normal">X10</text>
+<rect x="231.90" y="552.55" width="78.20" height="72.54" fill="#e9c99c" stroke="#ab7335" opacity="0.6"/>
+<rect x="231.90" y="617.48" width="78.20" height="60.84" fill="#d1c3e0" stroke="#775b9b" opacity="0.6"/>
+<rect x="172.40" y="647.91" width="56.10" height="8.19" fill="#eeb39f" stroke="#a04c36" opacity="0.8"/>
+<rect x="221.70" y="640.30" width="10.20" height="73.71" fill="#b4a0cc" stroke="#775b9b" opacity="0.65"/>
+<rect x="310.10" y="640.30" width="10.20" height="73.71" fill="#b4a0cc" stroke="#775b9b" opacity="0.65"/>
+<rect x="316.90" y="616.90" width="95.20" height="65.52" fill="#eeb39f" stroke="#a04c36" opacity="0.2"/>
+<rect x="176.48" y="663.70" width="51.00" height="46.80" fill="#a9d5c6" stroke="#248468" opacity="1"/>
+<rect x="176.48" y="710.50" width="68.00" height="21.74" fill="#91c4b0" stroke="#248468" opacity="1"/>
+<rect x="245.50" y="710.50" width="51.00" height="217.39" fill="#a4c5d8" stroke="#28526e" opacity="1"/>
+<rect x="297.52" y="892.79" width="51.00" height="35.10" fill="#91c4b0" stroke="#248468" opacity="1"/>
+<rect x="297.52" y="927.89" width="51.00" height="46.80" fill="#76b29b" stroke="#248468" opacity="1"/>
+<rect x="297.52" y="974.69" width="51.00" height="133.61" fill="#a9d5c6" stroke="#248468" opacity="1"/>
+<rect x="264.20" y="1108.30" width="100.30" height="28.08" fill="#a8afb8" stroke="#37414d" opacity="1"/>
+<line x1="201.98" y1="663.70" x2="201.98" y2="723.37" stroke="#e35839" stroke-width="2" stroke-dasharray="5 3"/>
+<line x1="201.98" y1="723.37" x2="271.00" y2="723.37" stroke="#e35839" stroke-width="2" stroke-dasharray="5 3"/>
+<line x1="271.00" y1="723.37" x2="271.00" y2="910.34" stroke="#e35839" stroke-width="2" stroke-dasharray="5 3"/>
+<line x1="271.00" y1="910.34" x2="323.02" y2="910.34" stroke="#e35839" stroke-width="2" stroke-dasharray="5 3"/>
+<line x1="323.02" y1="910.34" x2="323.02" y2="1122.34" stroke="#e35839" stroke-width="2" stroke-dasharray="5 3"/>
+<line x1="339.00" y1="616.90" x2="339.00" y2="535.00" stroke="#e35839" stroke-width="2" stroke-dasharray="5 3"/>
+<line x1="339.00" y1="535.00" x2="158.80" y2="535.00" stroke="#e35839" stroke-width="2" stroke-dasharray="5 3"/>
+<line x1="158.80" y1="535.00" x2="158.80" y2="663.70" stroke="#e35839" stroke-width="2" stroke-dasharray="5 3"/>
+<line x1="158.80" y1="663.70" x2="201.98" y2="663.70" stroke="#e35839" stroke-width="2" stroke-dasharray="5 3"/>
+<circle cx="339.0" cy="616.9" r="6" fill="#e35839"/>
+<line x1="356.00" y1="570.10" x2="500.00" y2="570.10" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="574.10" font-size="13" fill="#263447" font-weight="normal">RACK: 4 lanes; handle at X10 / Z−82</text>
+<line x1="356.00" y1="640.30" x2="500.00" y2="640.30" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="644.30" font-size="13" fill="#263447" font-weight="normal">PAN SWEEP: keep player outside</text>
+<line x1="356.00" y1="654.34" x2="500.00" y2="654.34" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="658.34" font-size="13" fill="#263447" font-weight="normal">Outboard release prop folds west</text>
+<line x1="356.00" y1="687.10" x2="500.00" y2="687.10" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="691.10" font-size="13" fill="#263447" font-weight="bold">GRADE APPROACH</text>
+<line x1="356.00" y1="722.20" x2="500.00" y2="722.20" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="726.20" font-size="13" fill="#263447" font-weight="normal">LOWER CHEEK</text>
+<line x1="356.00" y1="804.10" x2="500.00" y2="804.10" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="808.10" font-size="13" fill="#263447" font-weight="bold">MOVING DECK</text>
+<line x1="356.00" y1="897.70" x2="500.00" y2="897.70" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="901.70" font-size="13" fill="#263447" font-weight="normal">UPPER SIDE CHEEK</text>
+<line x1="356.00" y1="956.20" x2="500.00" y2="956.20" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="960.20" font-size="13" fill="#263447" font-weight="bold">FIXED +8 DOCK</text>
+<line x1="356.00" y1="1038.10" x2="500.00" y2="1038.10" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="1042.10" font-size="13" fill="#263447" font-weight="normal">ONWARD TO +11</text>
+<line x1="356.00" y1="1120.00" x2="500.00" y2="1120.00" stroke="#9ba8b5" stroke-width="1"/>
+<text x="512.00" y="1124.00" font-size="13" fill="#263447" font-weight="bold">NATIVE TOWER RING</text>
+<text x="890.00" y="548.00" font-size="16" fill="#263447" font-weight="bold">SCREENING RESULTS</text>
+<text x="890.00" y="578.00" font-size="12" fill="#17684e" font-weight="normal">PASS  route step heights within source limit</text>
+<text x="890.00" y="607.00" font-size="12" fill="#17684e" font-weight="normal">PASS  lateral gap less than capsule diameter</text>
+<text x="890.00" y="636.00" font-size="12" fill="#17684e" font-weight="normal">PASS  receiver step within source limit</text>
+<text x="890.00" y="665.00" font-size="12" fill="#17684e" font-weight="normal">PASS  full corridor step margin at least 60mm</text>
+<text x="890.00" y="694.00" font-size="12" fill="#17684e" font-weight="normal">PASS  receiver step margin at least 100mm</text>
+<text x="890.00" y="723.00" font-size="12" fill="#17684e" font-weight="normal">PASS  pan bottom remains above grade</text>
+<text x="890.00" y="752.00" font-size="12" fill="#17684e" font-weight="normal">PASS  standing capsule no existing solid</text>
+<text x="936.00" y="769.00" font-size="12" fill="#263447" font-weight="normal">penetrations at sampled points</text>
+<text x="890.00" y="797.00" font-size="12" fill="#17684e" font-weight="normal">PASS  no source hulls in region</text>
+<text x="890.00" y="826.00" font-size="12" fill="#17684e" font-weight="normal">PASS  release access no reserved body</text>
+<text x="936.00" y="843.00" font-size="12" fill="#263447" font-weight="normal">intersections at sampled points</text>
+<text x="890.00" y="871.00" font-size="12" fill="#17684e" font-weight="normal">PASS  walk route no reserved body intersections</text>
+<text x="936.00" y="888.00" font-size="12" fill="#263447" font-weight="normal">at sampled points</text>
+<text x="890.00" y="916.00" font-size="12" fill="#455367" font-weight="normal">Limit: sampled positions, not continuous sweeps.</text>
+<text x="890.00" y="939.00" font-size="12" fill="#455367" font-weight="normal">No native walking / Jolt contacts were run.</text>
+<text x="890.00" y="962.00" font-size="12" fill="#455367" font-weight="normal">Rack transfer and pan links remain unverified.</text>
+<text x="890.00" y="985.00" font-size="12" fill="#455367" font-weight="normal">Only proposed access route is screened.</text>
+<text x="890.00" y="1008.00" font-size="12" fill="#455367" font-weight="normal">Orange dashes: proposed player route.</text>
+<text x="890.00" y="1031.00" font-size="12" fill="#455367" font-weight="normal">Purple / tan: reserved moving/source volumes.</text>
+<text x="890.00" y="1105.00" font-size="13" fill="#263447" font-weight="normal">Upper side step: rise 0.272m / drop 0.477m.</text>
+<text x="890.00" y="1128.00" font-size="13" fill="#263447" font-weight="normal">Pan minimum bottom clearance: 0.190m.</text>
+<text x="38.00" y="1174.00" font-size="12" fill="#5e6b7b" font-weight="normal">Generated from check_bridge_geometry.py + current production world_solids.inc. Check JSON for hashes, assumptions and limits.</text>
+</svg>

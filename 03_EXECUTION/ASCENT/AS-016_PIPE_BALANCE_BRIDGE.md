@@ -6,6 +6,15 @@
 **Implementation gate:** loaded releases, pipe capture, arrest and the supported crossing must close in the bounded prototypes below before promotion to normal gameplay
 **Evidence:** current delivery status remains in `00_START_HERE.md`; isolated prototype results must not be reported as a completed ascent
 
+## Preserved prototype checkpoint — 2026-09-26
+
+[Local source and observations](../PLANNING/AS-016_PROTOTYPES/README.md) now cover
+the separate swing/arrest, static native walking route and loaded releases.
+The selected upper cheek offset is 0.25 m. The independent swing evaluator
+passes all 27 cases against 54 native runs and rejects incomplete evidence.
+The actual moving pan with twenty delivered pipes and the full loaded release
+is the current integration gate. Normal gameplay remains unchanged.
+
 ## Objective
 
 From ordinary grade play, release a rack of twenty heavy pipes into a balance pan, release the loaded beam, and use the resulting inclined bridge to reach a fixed +8 m landing and its supported connection to the existing +11 m deck.

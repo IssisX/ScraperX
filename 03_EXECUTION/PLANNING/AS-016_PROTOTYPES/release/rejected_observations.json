@@ -1,0 +1,40 @@
+{
+  "status": "REJECTED_STEP_DEPENDENT_DIRECT_RELEASE",
+  "observations": [
+    {
+      "case": "direct_rack_90_150",
+      "hz": 90,
+      "force_N": 150,
+      "deadcentre_s": 3.466667,
+      "pipe_crossed": 20,
+      "pipe_in_receiver": 20,
+      "work_J": 44.999313,
+      "stroke_m": 0.299995,
+      "hinge_drift_m": 0.000480812
+    },
+    {
+      "case": "direct_rack_360_150",
+      "hz": 360,
+      "force_N": 150,
+      "deadcentre_s": -1,
+      "pipe_crossed": 0,
+      "pipe_in_receiver": 0,
+      "work_J": 0,
+      "stroke_m": 0,
+      "hinge_drift_m": 9.1673e-05
+    },
+    {
+      "case": "direct_rack_360_450_diagnostic",
+      "hz": 360,
+      "force_N": 450,
+      "deadcentre_s": 3.186111,
+      "pipe_crossed": 20,
+      "pipe_in_receiver": 20,
+      "work_J": 134.99794,
+      "stroke_m": 0.299995,
+      "deadcentre_sample_work_J": 18.148,
+      "deadcentre_sample_stroke_m": 0.040329,
+      "note": "High-force diagnostic, exceeds desired player budget and is not selected."
+    }
+  ]
+}

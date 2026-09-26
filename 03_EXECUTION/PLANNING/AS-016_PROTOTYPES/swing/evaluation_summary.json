@@ -1,0 +1,46 @@
+{
+  "cases": 27,
+  "native_runs": 54,
+  "overall_pass": true,
+  "evidence_class": "INTEGRATED",
+  "scope": "isolated preloaded swing and receiver; no pipe loading, release, player walking, or mass detach",
+  "bed_top": 0.8053712630033334,
+  "h": 0.001,
+  "refinement_h": 0.00025,
+  "convergence_limits": {
+    "peak_tip_speed": 0.0005,
+    "first_turn_s": 0.003,
+    "plastic_front": 0.0002,
+    "post_2s_tip_min": 0.0005,
+    "post_2s_tip_max": 0.0005,
+    "post_2s_speed_max": 0.0005,
+    "peak_total_accel_g": 0.001
+  },
+  "cross_model_limits": {
+    "first_turn_diff_s": 0.05,
+    "peak_speed_diff": 0.015,
+    "front_diff": 0.005,
+    "envelope_low_diff": 0.02,
+    "envelope_high_diff": 0.02,
+    "peak_total_accel_diff_g": 0.01
+  },
+  "convergence_max": {
+    "peak_tip_speed": 5.489994884300131e-05,
+    "first_turn_s": 0.0007500000000000284,
+    "plastic_front": 2.2517483011075257e-05,
+    "post_2s_tip_min": 0.00011287169775542338,
+    "post_2s_tip_max": 8.204417141843834e-05,
+    "post_2s_speed_max": 0.0004472722321570699,
+    "peak_total_accel_g": 8.937233711164838e-05
+  },
+  "cross_model_max": {
+    "first_turn_diff_s": 0.01330600000000004,
+    "peak_speed_diff": 0.006173737820187597,
+    "front_diff": 0.004349383524093753,
+    "envelope_low_diff": 0.013837610356477015,
+    "envelope_high_diff": 0.01456645231873921,
+    "peak_total_accel_diff_g": 0.008702944659961298
+  },
+  "ledger_fraction_max": 2.5345796133858543e-06,
+  "failures": []
+}

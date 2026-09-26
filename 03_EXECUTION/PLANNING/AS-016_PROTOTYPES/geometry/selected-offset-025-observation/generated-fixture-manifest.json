@@ -1,0 +1,16 @@
+{
+  "status": "Isolated STATIC downstream fixture; not a mechanism",
+  "source_sha256": "763892be1ea758893b371a46833100ccdb8703e4ffa1dc513e9c7148ee3f400d",
+  "patch_sha256": "6b0c2b585a8e42dc32bd7e6d492f98353f431f6ca7e77de36ecdf4e8c3684354",
+  "generated_sha256": "318a7f05f4e34e87037dc7ae20ccb04630b85ab15e166abf1938542f5942e9f2",
+  "changes": [
+    "Include cstdlib",
+    "Inject static bridge, cheeks, dock and connector before build_world_solids"
+  ],
+  "unchanged": [
+    "controller and movement methods",
+    "spawn selection",
+    "simulation stepping",
+    "public input interface"
+  ]
+}

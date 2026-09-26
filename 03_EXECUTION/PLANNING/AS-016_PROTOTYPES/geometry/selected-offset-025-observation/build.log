@@ -1,0 +1,4 @@
+/data/data/com.termux/files/usr/tmp/scraperx-macro-design/selected-offset-025-observation/simulation_static_walk.cpp: In lambda function:
+/data/data/com.termux/files/usr/tmp/scraperx-macro-design/selected-offset-025-observation/simulation_static_walk.cpp:2480:90: note: parameter passing for argument of type 'std::pair<float, float>' when C++17 is enabled changed to match C++14 in GCC 10.1
+ 2480 |             return std::pair<float, float>{(min_x + max_x) * 0.5F, (max_x - min_x) * 0.5F};
+      |                                                                                          ^

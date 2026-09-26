@@ -1,0 +1,56 @@
+--- a/src/sim/simulation.cpp
++++ b/src/sim/simulation.cpp
+@@ -1,4 +1,5 @@
++#include <cstdlib>
+ #include "sim/simulation.hpp"
+ 
+ #include "sim/bands.hpp"
+ #include "sim/mechanism_kit.hpp"
+@@ -1711,8 +1712,47 @@
+             build_kernel_sump(bodies);
+             build_intake_rise(bodies);
+             build_water_screw(bodies);
+             build_legal_forty(bodies);
++        }
++
++
++        // SCRATCH DESIGN PROOF ONLY: all proposed bridge geometry is STATIC.
++        // No source release, transfer, mechanism dynamics or arrest is tested.
++        if (!regression_fixtures_) {
++            const double target = std::getenv("SCRAPERX_PROBE_TIP_Y") ?
++                std::atof(std::getenv("SCRAPERX_PROBE_TIP_Y")) : 8.0;
++            const double nominal = std::asin(7.4 / 20.0);
++            const double angle = std::asin((target - 0.6) / 20.0);
++            const double tip_z = -90.0 - 20.0 * std::cos(nominal);
++            const auto part = [&](const JPH::Vec3 half, const JPH::RVec3 at,
++                                  const JPH::Quat pose, const std::uint64_t id) {
++                machine_bodies_.push_back(add_box(bodies, half, at, JPH::EMotionType::Static,
++                                                  object_layers::kStatic, 0.85F, id, pose));
++            };
++            const auto slab = [&](const double x, const double width,
++                                  const double start_z, const double end_z,
++                                  const double start_y, const double end_y,
++                                  const double thickness, const std::uint64_t id) {
++                const double run = start_z - end_z;
++                const double rise = end_y - start_y;
++                const double pitch = std::atan2(rise, run);
++                const double half_depth = thickness * 0.5;
++                part(JPH::Vec3(static_cast<float>(width * 0.5), static_cast<float>(half_depth),
++                               static_cast<float>(std::hypot(run, rise) * 0.5)),
++                     JPH::RVec3(x, (start_y + end_y) * 0.5 - half_depth * std::cos(pitch),
++                                (start_z + end_z) * 0.5 - half_depth * std::sin(pitch)),
++                     JPH::Quat::sRotation(JPH::Vec3::sAxisX(), static_cast<float>(pitch)), id);
++            };
++            slab(1.94, 3.0, -86.0, -90.0, 0.0, 0.6, 0.30, 600);
++            slab(2.44, 4.0, -90.0, -90.0 - 2.0 * std::cos(nominal),
++                 0.6, 1.34, 0.30, 600);
++            slab(6.0, 3.0, -90.0, -90.0 - 20.0 * std::cos(angle), 0.6, target, 0.40, 601);
++            slab(9.06, 3.0, tip_z + 3.0, tip_z,
++                 7.8 - 3.0 * std::tan(nominal), 7.8, 0.30, 602);
++            part(JPH::Vec3(1.5F, 0.2F, 2.0F), JPH::RVec3(9.06, 7.8, tip_z - 2.0),
++                 JPH::Quat::sIdentity(), 603);
++            slab(9.06, 3.0, tip_z - 4.0, -124.0, 8.0, 11.0, 0.30, 604);
+         }
+ 
+         build_world_solids(bodies);
+ 

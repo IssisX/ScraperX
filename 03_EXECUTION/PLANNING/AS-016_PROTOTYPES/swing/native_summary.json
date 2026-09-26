@@ -1,0 +1,48 @@
+{
+  "runs": 54,
+  "ranges": {
+    "tip_y": [
+      7.553821564,
+      8.171246529
+    ],
+    "first_turn_s": [
+      5.922222,
+      9.455556
+    ],
+    "peak_tip_speed": [
+      3.147428632,
+      3.582156897
+    ],
+    "peak_tangent_accel_g": [
+      0.389825313,
+      0.465118557
+    ],
+    "peak_total_accel_g": [
+      0.395157019,
+      0.467540467
+    ],
+    "hinge_drift_max_m": [
+      7.0012e-05,
+      0.000393975
+    ],
+    "pan_tilt_max_rad": [
+      4.5671e-05,
+      0.000753108
+    ],
+    "penetration_max_m": [
+      0.322757461,
+      0.509894767
+    ],
+    "late_ledger_residual_max_J": [
+      0.337317,
+      250.102335
+    ],
+    "ultimate_floor_contacts": [
+      0,
+      0
+    ]
+  },
+  "after_plus_2_max_span": 0.029263019560000103,
+  "after_plus_2_max_speed": 0.230910722166,
+  "max_ledger_fraction": 0.006088825837223052
+}

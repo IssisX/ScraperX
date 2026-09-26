@@ -1,0 +1,263 @@
+{
+  "all_outcome_and_budget_checks_pass": true,
+  "cases": [
+    {
+      "case": "rack_release-90-150",
+      "failures": [],
+      "metrics": {
+        "armed_gate_motion_rad": 0.000983857,
+        "armed_prop_motion_rad": 2.078e-06,
+        "crossed_deadcentre_s": 3.211111,
+        "force_N": 150.0,
+        "hand_work_J": 43.500137,
+        "handle_stroke_max_m": 0.289993,
+        "hinge_drift_max_m": 0.000465526,
+        "hz": 90,
+        "pipe_crossed": 20,
+        "pipe_fastest_end_mps": 0.007873,
+        "pipe_in_receiver": 20,
+        "prop_max_rad": 0.897764802
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "rack_release-90-0",
+      "failures": [],
+      "metrics": {
+        "armed_gate_motion_rad": 0.000983857,
+        "armed_prop_motion_rad": 2.078e-06,
+        "crossed_deadcentre_s": -1.0,
+        "force_N": 0.0,
+        "hand_work_J": 0.0,
+        "handle_stroke_max_m": 0.0,
+        "hinge_drift_max_m": 0.000465526,
+        "hz": 90,
+        "pipe_crossed": 0,
+        "pipe_fastest_end_mps": 3.6e-05,
+        "pipe_in_receiver": 0,
+        "prop_max_rad": -0.008000085
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "bridge_prop_release-90-0.035-150",
+      "failures": [],
+      "metrics": {
+        "armed_prop_motion_rad": 0.000112575,
+        "deadcentre_s": 3.366667,
+        "deadcentre_stroke_m": 0.035978138,
+        "deadcentre_work_J": 5.435541,
+        "force_N": 150.0,
+        "hand_work_J": 43.538828,
+        "hinge_drift_m": 0.005031243,
+        "hz": 90,
+        "max_stroke_m": 0.290000051,
+        "offset_m": 0.035,
+        "release_hinge_drift_m": 0.000219335,
+        "shoe_max_rise_m": 0.0,
+        "shoe_min_y_m": 0.724166
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "bridge_prop_release-90-0.04-150",
+      "failures": [],
+      "metrics": {
+        "armed_prop_motion_rad": 0.000121937,
+        "deadcentre_s": 3.422222,
+        "deadcentre_stroke_m": 0.039658457,
+        "deadcentre_work_J": 5.990808,
+        "force_N": 150.0,
+        "hand_work_J": 43.542058,
+        "hinge_drift_m": 0.005070766,
+        "hz": 90,
+        "max_stroke_m": 0.290000126,
+        "offset_m": 0.04,
+        "release_hinge_drift_m": 0.000219577,
+        "shoe_max_rise_m": 0.0,
+        "shoe_min_y_m": 0.729052
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "bridge_prop_release-90-0.045-150",
+      "failures": [],
+      "metrics": {
+        "armed_prop_motion_rad": 0.000132029,
+        "deadcentre_s": 3.5,
+        "deadcentre_stroke_m": 0.044203281,
+        "deadcentre_work_J": 6.676045,
+        "force_N": 150.0,
+        "hand_work_J": 43.545554,
+        "hinge_drift_m": 0.005064921,
+        "hz": 90,
+        "max_stroke_m": 0.290000007,
+        "offset_m": 0.045,
+        "release_hinge_drift_m": 0.000222113,
+        "shoe_max_rise_m": 0.0,
+        "shoe_min_y_m": 0.726836
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "bridge_prop_release-90-0.04-0",
+      "failures": [],
+      "metrics": {
+        "armed_prop_motion_rad": 0.000121937,
+        "deadcentre_s": -1.0,
+        "deadcentre_stroke_m": -1.0,
+        "deadcentre_work_J": -1.0,
+        "force_N": 0.0,
+        "hand_work_J": 0.0,
+        "hinge_drift_m": 0.000149967,
+        "hz": 90,
+        "max_stroke_m": 0.0,
+        "offset_m": 0.04,
+        "release_hinge_drift_m": 0.000149967,
+        "shoe_max_rise_m": 0.0,
+        "shoe_min_y_m": 3.249096
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "rack_release-360-150",
+      "failures": [],
+      "metrics": {
+        "armed_gate_motion_rad": 0.000226566,
+        "armed_prop_motion_rad": 0.0,
+        "crossed_deadcentre_s": 3.230556,
+        "force_N": 150.0,
+        "hand_work_J": 43.498993,
+        "handle_stroke_max_m": 0.289993,
+        "hinge_drift_max_m": 9.9265e-05,
+        "hz": 360,
+        "pipe_crossed": 20,
+        "pipe_fastest_end_mps": 0.005002,
+        "pipe_in_receiver": 20,
+        "prop_max_rad": 0.808885872
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "rack_release-360-0",
+      "failures": [],
+      "metrics": {
+        "armed_gate_motion_rad": 0.000226566,
+        "armed_prop_motion_rad": 0.0,
+        "crossed_deadcentre_s": -1.0,
+        "force_N": 0.0,
+        "hand_work_J": 0.0,
+        "handle_stroke_max_m": 0.0,
+        "hinge_drift_max_m": 9.9265e-05,
+        "hz": 360,
+        "pipe_crossed": 0,
+        "pipe_fastest_end_mps": 5e-05,
+        "pipe_in_receiver": 0,
+        "prop_max_rad": -0.008000085
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "bridge_prop_release-360-0.035-150",
+      "failures": [],
+      "metrics": {
+        "armed_prop_motion_rad": 8.834e-06,
+        "deadcentre_s": 3.366667,
+        "deadcentre_stroke_m": 0.034278154,
+        "deadcentre_work_J": 5.153659,
+        "force_N": 150.0,
+        "hand_work_J": 43.511944,
+        "hinge_drift_m": 0.001032243,
+        "hz": 360,
+        "max_stroke_m": 0.290000051,
+        "offset_m": 0.035,
+        "release_hinge_drift_m": 1.5789e-05,
+        "shoe_max_rise_m": 0.0001297,
+        "shoe_min_y_m": 0.748663
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "bridge_prop_release-360-0.04-150",
+      "failures": [],
+      "metrics": {
+        "armed_prop_motion_rad": 9.857e-06,
+        "deadcentre_s": 3.433333,
+        "deadcentre_stroke_m": 0.038412005,
+        "deadcentre_work_J": 5.774103,
+        "force_N": 150.0,
+        "hand_work_J": 43.51231,
+        "hinge_drift_m": 0.00104524,
+        "hz": 360,
+        "max_stroke_m": 0.290000051,
+        "offset_m": 0.04,
+        "release_hinge_drift_m": 1.5806e-05,
+        "shoe_max_rise_m": 0.000190973,
+        "shoe_min_y_m": 0.748606
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "bridge_prop_release-360-0.045-150",
+      "failures": [],
+      "metrics": {
+        "armed_prop_motion_rad": 1.0847e-05,
+        "deadcentre_s": 3.533333,
+        "deadcentre_stroke_m": 0.043769598,
+        "deadcentre_work_J": 6.578118,
+        "force_N": 150.0,
+        "hand_work_J": 43.512695,
+        "hinge_drift_m": 0.001105513,
+        "hz": 360,
+        "max_stroke_m": 0.290000111,
+        "offset_m": 0.045,
+        "release_hinge_drift_m": 1.5856e-05,
+        "shoe_max_rise_m": 0.000263691,
+        "shoe_min_y_m": 0.748648
+      },
+      "outcome_and_budget_pass": true
+    },
+    {
+      "case": "bridge_prop_release-360-0.04-0",
+      "failures": [],
+      "metrics": {
+        "armed_prop_motion_rad": 9.857e-06,
+        "deadcentre_s": -1.0,
+        "deadcentre_stroke_m": -1.0,
+        "deadcentre_work_J": -1.0,
+        "force_N": 0.0,
+        "hand_work_J": 0.0,
+        "hinge_drift_m": 9.554e-06,
+        "hz": 360,
+        "max_stroke_m": 0.0,
+        "offset_m": 0.04,
+        "release_hinge_drift_m": 9.554e-06,
+        "shoe_max_rise_m": 0.0,
+        "shoe_min_y_m": 3.249631
+      },
+      "outcome_and_budget_pass": true
+    }
+  ],
+  "evidence_class": "OBSERVED_NATIVE_FIXTURE",
+  "jolt_commit": "e77f175595e64cb44218cc9d9d56fc365ad0e36a",
+  "not_proven": [
+    "Full moving bridge integration and reflected inertia in bridge-prop fixture",
+    "Player carry/input route, geometry sweep of rendered cable paths",
+    "Sheave rotational inertia and finite gate-stop impact ledger",
+    "Full causal-compiler convergence certification and mechanism energy ledger",
+    "Production Jolt settings, APK or Android-device behavior"
+  ],
+  "scope": "Loaded release contacts, input budgets and fixed-receiver collection.",
+  "solver": {
+    "damping": 0,
+    "gravity_mps2": 9.81,
+    "position_iterations": 4,
+    "sleeping": false,
+    "velocity_iterations": 20
+  },
+  "source_sha256": {
+    "bridge_prop_release.cpp": "0138cab1e42cbb7b9a6faa7adb7b2e40e491c1c11cbfcc9cf1dc0b4adf3ac2b5",
+    "rack_release.cpp": "179c9a1380b211fc15b5b94fa85887e023c329a1599e71939ac98c7da8758759",
+    "run_probes.py": "5509e6d5da5bbfc4509c91a80a499d9e0b3cdf06b9b448664e3e8e1e53bcbb03"
+  }
+}
