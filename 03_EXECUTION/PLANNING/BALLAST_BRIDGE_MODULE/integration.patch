@@ -1,0 +1,679 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fc7d05a3d8a77cf7ed3fc1f1b5115a4232d143d6..edb6c6c2536c7c89014785662b70b41ebecf854f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -22,6 +22,7 @@ add_library(scraperx_sim STATIC
+     src/sim/mechanism_kit.cpp
+     src/sim/band_counterweight_well.cpp
+     src/sim/band_ground_water_lift.cpp
++    src/sim/macro_bridge.cpp
+ )
+ target_include_directories(scraperx_sim PUBLIC src)
+ set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
+@@ -70,6 +71,9 @@ if(BUILD_TESTING AND NOT ANDROID)
+         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
+     )
+     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
++    add_executable(scraperx_macro_tests tests/macro_bridge_tests.cpp)
++    target_link_libraries(scraperx_macro_tests PRIVATE scraperx_sim)
++    add_test(NAME scraperx_sim.macro_bridge COMMAND scraperx_macro_tests)
+ endif()
+ 
+ if(SCRAPERX_BUILD_BRIDGE)
+diff --git a/godot/presentation/audio/audio_director.gd b/godot/presentation/audio/audio_director.gd
+index eb8c01034ed263c4fb577e2629d7c6aa79f57978..804b3598d1f0d75d3eef04f6df1a0ca76c1dabe0 100644
+--- a/godot/presentation/audio/audio_director.gd
++++ b/godot/presentation/audio/audio_director.gd
+@@ -97,6 +97,11 @@ var _last_tipper := INF
+ var _creak_cooldown := 0.0
+ var _bird_clock := 3.0
+ var _machines_seen := false
++var regression_machines := false
++var macro_motion_frames := 0
++var macro_stop_cues := 0
++var _macro_seated_sound := false
++var _macro_drive: AudioStreamPlayer3D
+ 
+ 
+ func _ready() -> void:
+@@ -135,6 +140,7 @@ func _ready() -> void:
+ 	_motor = _positional_player(BUS_AMBIENCE, Vector3.ZERO, 6.0, 100.0)
+ 	_water_screw_motor = _positional_player(BUS_AMBIENCE, Vector3(-18.0, 1.0, -98.0), 6.0, 100.0)
+ 	_water_lift_drive = _positional_player(BUS_AMBIENCE, Vector3(-12.5, 4.0, -108.2), 5.0, 90.0)
++	_macro_drive = _positional_player(BUS_AMBIENCE, Vector3(14.0, 5.0, -108.0), 12.0, 120.0)
+ 	_water_lift_water = _positional_player(BUS_AMBIENCE, Vector3(-18.0, 4.5, -105.8), 5.0, 80.0)
+ 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
+ 	# first frames are not held up; cues before it finishes are counted but
+@@ -178,16 +184,16 @@ func _on_bank_ready() -> void:
+ 	for pair in [[_wind, &"wind_loop"], [_rush, &"rush_loop"], [_drone, &"drone_loop"],
+ 			[_hum, &"hum_loop"], [_hiss, &"hiss_loop"], [_rattle, &"rattle_loop"],
+ 			[_motor, &"motor_loop"], [_water_screw_motor, &"motor_loop"],
+-			[_water_lift_drive, &"rattle_loop"], [_water_lift_water, &"hiss_loop"]]:
++			[_water_lift_drive, &"rattle_loop"], [_water_lift_water, &"hiss_loop"], [_macro_drive, &"rattle_loop"]]:
+ 		pair[0].stream = _bank.pick(pair[1])
+ 	_wind.volume_db = -60.0
+ 	_rush.volume_db = -60.0
+ 	_drone.volume_db = -60.0
+-	_hum.volume_db = -6.0
+-	for player in [_hiss, _rattle, _motor, _water_screw_motor, _water_lift_drive, _water_lift_water]:
++	_hum.volume_db = -6.0 if regression_machines else -80.0
++	for player in [_hiss, _rattle, _motor, _water_screw_motor, _water_lift_drive, _water_lift_water, _macro_drive]:
+ 		player.volume_db = -80.0
+ 	for player in [_wind, _rush, _drone, _hum, _hiss, _rattle, _motor, _water_screw_motor,
+-			_water_lift_drive, _water_lift_water]:
++			_water_lift_drive, _water_lift_water, _macro_drive]:
+ 		player.play()
+ 
+ 
+@@ -334,6 +340,24 @@ func update_water_lift(flow_m3_s: float, rope_tension_n: float) -> void:
+ 	_water_lift_drive.pitch_scale = lerpf(0.72, 1.08, load)
+ 
+ 
++# Consequential motion, not a timer or UI action, owns this machine's sound.
++func update_macro_bridge(speed: float, tension: float, nose: Vector3) -> void:
++	var moving := absf(speed) > 0.03 and tension > 100.0
++	if moving:
++		macro_motion_frames += 1
++	if nose.y < 10.65:
++		_macro_seated_sound = false
++	if nose.y > 10.70 and absf(speed) < 0.03 and not _macro_seated_sound:
++		_macro_seated_sound = true
++		macro_stop_cues += 1
++		_play_at(&"clang", nose, -5.0, 0.7, BUS_EFFECTS)
++	if not _bank_ready or _silent:
++		return
++	var gain := clampf(absf(speed) / 1.3, 0.0, 1.0) if moving else 0.0
++	_macro_drive.volume_db = linear_to_db(maxf(gain, 0.0001)) - 5.0
++	_macro_drive.pitch_scale = lerpf(0.65, 0.92, gain)
++
++
+ # Wind rises with altitude; a falling body hears the air tear past. The
+ # yard's distant industrial bed thins out as the climb leaves it below.
+ func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: float) -> void:
+diff --git a/godot/presentation/main.gd b/godot/presentation/main.gd
+index eb450f03d46b762963b7278e277ce49566bab8bc..86b2d3bea0355d3802cf3ad4502d3ea55955bf7c 100644
+--- a/godot/presentation/main.gd
++++ b/godot/presentation/main.gd
+@@ -451,7 +451,7 @@ func _ready() -> void:
+ 		elif argument.begins_with("--export-solids="):
+ 			_export_solids_path = argument.trim_prefix("--export-solids=")
+ 
+-	if not _uitest_scenario.is_empty() and _uitest_scenario != "ground_foundation":
++	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_macro", "keyboard_macro", "pad_macro"]:
+ 		_regression_scene = true
+ 	if _ci_mode:
+ 		_regression_scene = true
+@@ -467,6 +467,7 @@ func _ready() -> void:
+ 	_sky_cycle.setup($Overcast, $SkyFill, ($Environment as WorldEnvironment).environment)
+ 	_audio = AudioDirector.new()
+ 	_audio.name = "AudioDirector"
++	_audio.regression_machines = _regression_scene
+ 	_audio.sky = _sky_cycle
+ 	add_child(_audio)
+ 	_build_arms()
+@@ -1035,6 +1036,8 @@ func _carry_name(entity: int) -> String:
+ 			return "ROPE SHACKLE"
+ 		2004:
+ 			return "TRIP HANDLE"
++		2018:
++			return "BRIDGE RELEASE"
+ 	return "ROPE END" if _is_kit(entity) else ""
+ 
+ 
+@@ -1390,6 +1393,9 @@ func _render_snapshot(delta: float = 0.0) -> void:
+ 				float(_native.get_water_screw_motor_torque_nm()))
+ 			_audio.update_water_lift(float(_native.get_water_lift_valve_flow_m3_s()),
+ 				float(_native.get_water_lift_rope_tension_n()))
++		else:
++			var macro: Dictionary = _native.get_macro_bridge_state()
++			_audio.update_macro_bridge(float(macro["ballast_speed"]), float(macro["rope_tension"]), macro["nose"])
+ 	# The developer telemetry overlay costs a dozen string formats a frame;
+ 	# it is only paid for while the overlay is actually on screen.
+ 	if _telemetry_on:
+@@ -4045,6 +4051,8 @@ func _build_kit() -> void:
+ 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
+ 			node.add_child(instance)
+ 		var entity := int(_native.get_kit_body_entity_id(body))
++		if entity == 2017:
++			_add_sign_text("10 t", Vector3(0, 0.2, 1.02), 0.0, 0.42, Color("eee1b7"), node)
+ 		if entity == 2011:
+ 			var water_mesh := BoxMesh.new()
+ 			water_mesh.size = Vector3(1.54, 1.0, 1.54)
+@@ -4061,10 +4069,16 @@ func _build_kit() -> void:
+ 		_kit_root.add_child(node)
+ 		_kit_bodies.append(node)
+ 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
+-	var cable := BoxMesh.new()
+-	cable.size = Vector3(0.035, 0.035, 1.0)
+-	cable.material = _material(Color("1b1916"), 0.6, 0.5)
++	if not _regression_scene:
++		_add_sign_text("BALLAST BRIDGE\nGRAB + WALK BACK", Vector3(4.5, 2.03, -83.93), 0.0,
++			0.18, Color("f0d06c"), _kit_root)
++		_add_sign_text("01  /  11 m", Vector3(20.5, 11.55, -122.17), 0.0,
++			0.38, Color("f0d06c"), _kit_root)
+ 	for index in int(_native.get_kit_cable_count()):
++		var cable := BoxMesh.new()
++		var width := (0.12 if index == 0 else 0.045) if not _regression_scene else 0.035
++		cable.size = Vector3(width, width, 1.0)
++		cable.material = _material(Color("b2a383") if not _regression_scene else Color("1b1916"), 0.6, 0.5)
+ 		var segments: Array[MeshInstance3D] = []
+ 		for segment in KIT_CABLE_SEGMENTS:
+ 			var instance := MeshInstance3D.new()
+diff --git a/godot/presentation/ui/ui_test_driver.gd b/godot/presentation/ui/ui_test_driver.gd
+index f761b76b182abc3f1e46e02415ea0b9f1fd14878..27767e3720cb8eae28b7d0fbdf1088988a4cdccd 100644
+--- a/godot/presentation/ui/ui_test_driver.gd
++++ b/godot/presentation/ui/ui_test_driver.gd
+@@ -17,6 +17,9 @@ const TouchControls := preload("res://presentation/ui/touch_controls.gd")
+ 
+ const SCENARIOS := {
+ 	"ground_foundation": 8,
++	"touch_macro": 8,
++	"keyboard_macro": 8,
++	"pad_macro": 8,
+ 	"touch_jump": 8,
+ 	"touch_move_look": 8,
+ 	"touch_gyro_aim": 8,
+@@ -58,7 +61,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
+ 	_scenario = scenario
+ 	_capture_prefix = capture_prefix
+ 	process_mode = Node.PROCESS_MODE_ALWAYS
+-	if scenario != "ground_foundation" and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
++	if scenario not in ["ground_foundation", "touch_macro", "keyboard_macro", "pad_macro"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+ 		return false
+ 	# The traversal kernels are authored facing +x (native tests do the same).
+ 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
+@@ -89,6 +92,12 @@ func _run() -> void:
+ 	match _scenario:
+ 		"ground_foundation":
+ 			ok = await _ground_foundation()
++		"touch_macro":
++			ok = await _macro_bridge(InputRouter.Device.TOUCH)
++		"keyboard_macro":
++			ok = await _macro_bridge(InputRouter.Device.KEYBOARD_MOUSE)
++		"pad_macro":
++			ok = await _macro_bridge(InputRouter.Device.GAMEPAD)
+ 		"touch_jump":
+ 			ok = await _touch_jump()
+ 		"touch_move_look":
+@@ -155,8 +164,8 @@ func _ground_foundation() -> bool:
+ 	for entity in range(3, 60):
+ 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
+ 			return _fail("retired native body %d remains" % entity)
+-	if int(_native().get_moving_body_count()) != 1:
+-		return _fail("a moving machine remains in the default world")
++	if int(_native().get_moving_body_count()) != 5:
++		return _fail("default body set differs from player plus AS-016")
+ 	# Check actual scene nodes, independently of native enumeration. This also
+ 	# catches visual-only remnants that would not appear in the physics world.
+ 	var retired := ["IntakeBay", "WaterScrew", "LegalForty", "Hook5",
+@@ -173,7 +182,74 @@ func _ground_foundation() -> bool:
+ 	# Look through the old intake/screw area with normal walking and turning.
+ 	await _face(Vector2(-1.0, -1.0))
+ 	await _pose("cleared_tower")
+-	_detail = "retired_bodies=0 moving_bodies=1 retired_meshes=0 default_controls=1"
++	_detail = "retired_bodies=0 moving_bodies=5 retired_meshes=0 default_controls=1"
++	return true
++
++
++func _macro_bridge(device: int) -> bool:
++	if _main._regression_scene:
++		return _fail("macro selected regression content")
++	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
++	if not await _walk_to(device, Vector2(7, -83.1), 0.08, 24.0):
++		return _fail("normal approach failed at " + str(_position()))
++	await _face(Vector2(0, -1))
++	if not await _offered(&"pick_up", "GRAB", "BRIDGE RELEASE"):
++		return _fail("release grip was not offered at " + str(_position()))
++	await _pose("macro_ready")
++	_act(device)
++	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2018, 0.6):
++		return _fail("normal Action did not grab release")
++	await _seconds(0.2)
++	_move(device, -0.35 if device != InputRouter.Device.KEYBOARD_MOUSE else -1.0)
++	var pulled := await _wait_until(func() -> bool:
++		return float(_native().get_macro_bridge_state()["handle_angle"]) > 1.05, 6.0)
++	_move(device, 0.0)
++	if not pulled:
++		return _fail("pull failed: " + str(_native().get_macro_bridge_state()))
++	if int(_native().get_carrying_entity_id()) != 2018:
++		return _fail("pull lost the grip")
++	_act(device)
++	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 0, 0.6):
++		return _fail("release did not free hands")
++	await _face(Vector2(12, -35))
++	_main._pitch = 0.18
++	if not await _wait_until(func() -> bool:
++		return (_native().get_macro_bridge_state()["nose"] as Vector3).y > 4.0, 8.0):
++		return _fail("bridge did not physically rise")
++	await _pose("macro_moving")
++	if not await _wait_until(func() -> bool:
++		var m: Dictionary = _native().get_macro_bridge_state()
++		return (m["nose"] as Vector3).y > 10.70 and absf(float(m["ballast_speed"])) < 0.03, 12.0):
++		return _fail("bridge did not seat: " + str(_native().get_macro_bridge_state()))
++	await _seconds(0.4)
++	await _pose("macro_seated")
++	if not await _walk_to(device, Vector2(14, -90), 0.12, 10.0):
++		return _fail("bridge foot unreachable")
++	await _face(Vector2(0, -1))
++	_main._pitch = 0.10
++	if not await _walk_to(device, Vector2(14, -105), 0.12, 10.0):
++		return _fail("bridge climb failed")
++	await _pose("macro_climb")
++	if not await _walk_to(device, Vector2(14, -121.5), 0.12, 10.0):
++		return _fail("nose unreachable")
++	if int(_native().get_support_entity_id()) != 2016:
++		return _fail("bridge does not actually support player")
++	if not await _walk_to(device, Vector2(14, -123.7), 0.12):
++		return _fail("receiver handoff failed")
++	if int(_native().get_support_entity_id()) != 1016 or _position().y < 11.5:
++		return _fail("receiver support/height mismatch")
++	if not await _walk_to(device, Vector2(23, -126), 0.12):
++		return _fail("tower continuation failed")
++	if int(_native().get_support_entity_id()) not in [11, 51] or _position().y < 11.5:
++		return _fail("receiver is disconnected from original tower")
++	await _face(Vector2(-9, 20))
++	_main._pitch = -0.15
++	await _pose("macro_exit")
++	if int(_native().get_death_count()) != 0:
++		return _fail("normal route required a death restore")
++	if _main._audio.macro_motion_frames == 0 or _main._audio.macro_stop_cues == 0:
++		return _fail("native motion did not drive sound cues")
++	_detail = "default_spawn=1 grab_pull=1 physical_handoff=1 tower_deck_y=11 normal_input=1 deaths=0 audio_causality=1"
+ 	return true
+ 
+ 
+@@ -1038,10 +1114,10 @@ func _move_dir(device: int, v: Vector2) -> void:
+ # Walks to a horizontal point without turning the view, the way a player
+ # steps into place: the stick (or keys) pushed toward it relative to the
+ # view, easing off near it -- a key pulses -- and stopping inside `tolerance`.
+-func _walk_to(device: int, target: Vector2, tolerance: float) -> bool:
++func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.0) -> bool:
+ 	var waited := 0.0
+ 	var frame := 0
+-	while waited < 6.0:
++	while waited < budget:
+ 		var at := _position()
+ 		var to := target - Vector2(at.x, at.z)
+ 		if to.length() <= tolerance:
+diff --git a/src/bridge/scraperx_simulation.cpp b/src/bridge/scraperx_simulation.cpp
+index 93b268f97f2bb9a871c7fd9f4c28b7fa03b25ccf..1408b22f5a1e95808c41f409a6aa0e9cc4cabc14 100644
+--- a/src/bridge/scraperx_simulation.cpp
++++ b/src/bridge/scraperx_simulation.cpp
+@@ -336,6 +336,8 @@ void ScraperXSimulation::_bind_methods() {
+                                 &ScraperXSimulation::get_carry_target_kind);
+     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_count"),
+                                 &ScraperXSimulation::get_kit_body_count);
++    godot::ClassDB::bind_method(godot::D_METHOD("get_macro_bridge_state"),
++                                &ScraperXSimulation::get_macro_bridge_state);
+     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_entity_id", "body"),
+                                 &ScraperXSimulation::get_kit_body_entity_id);
+     godot::ClassDB::bind_method(godot::D_METHOD("is_kit_body_dynamic", "body"),
+@@ -958,6 +960,20 @@ std::int64_t ScraperXSimulation::get_kit_body_count() const {
+     return static_cast<std::int64_t>(simulation_->kit_body_count());
+ }
+ 
++godot::Dictionary ScraperXSimulation::get_macro_bridge_state() const {
++    const auto s = simulation_->snapshot();
++    godot::Dictionary out;
++    out["angle"] = s.macro_bridge_angle;
++    out["handle_angle"] = s.macro_handle_angle;
++    out["ballast_drop"] = s.macro_ballast_drop;
++    out["ballast_speed"] = s.macro_ballast_speed;
++    out["peak_speed"] = s.macro_peak_speed;
++    out["rope_tension"] = s.macro_rope_tension;
++    out["brake_work"] = s.macro_brake_work;
++    out["nose"] = to_godot(s.macro_nose_position);
++    return out;
++}
++
+ std::int64_t ScraperXSimulation::get_kit_body_entity_id(const std::int64_t body) const {
+     return static_cast<std::int64_t>(simulation_->kit_body_entity(kit_index(body)));
+ }
+diff --git a/src/bridge/scraperx_simulation.hpp b/src/bridge/scraperx_simulation.hpp
+index e603ce2f60de39e037a2645703ce8b53c6d1af7f..4313b994c96ecac37d5d78f1f071667b909f274e 100644
+--- a/src/bridge/scraperx_simulation.hpp
++++ b/src/bridge/scraperx_simulation.hpp
+@@ -8,6 +8,7 @@
+ #include <godot_cpp/variant/quaternion.hpp>
+ #include <godot_cpp/variant/transform3d.hpp>
+ #include <godot_cpp/variant/vector3.hpp>
++#include <godot_cpp/variant/dictionary.hpp>
+ 
+ #include <memory>
+ 
+@@ -195,6 +196,7 @@ public:
+     // draws exactly what collides: its boxes as 11 floats each (half x y z,
+     // offset x y z, rotation x y z w, material class), and its pose.
+     [[nodiscard]] std::int64_t get_kit_body_count() const;
++    [[nodiscard]] godot::Dictionary get_macro_bridge_state() const;
+     [[nodiscard]] std::int64_t get_kit_body_entity_id(std::int64_t body) const;
+     [[nodiscard]] bool is_kit_body_dynamic(std::int64_t body) const;
+     [[nodiscard]] bool is_kit_body_enabled(std::int64_t body) const;
+diff --git a/src/sim/mechanism_kit.cpp b/src/sim/mechanism_kit.cpp
+index b0e7321f4bed1da34c111000c33c3c7e96a038aa..2664609a2325216a7f06ee23ca5a42c29ee815cf 100644
+--- a/src/sim/mechanism_kit.cpp
++++ b/src/sim/mechanism_kit.cpp
+@@ -218,6 +218,20 @@ LeverIndex Kit::add_lever(const BodyIndex body, const JPH::RVec3 pivot, const JP
+     return LeverIndex{static_cast<std::uint32_t>(levers_.size() - 1U)};
+ }
+ 
++void Kit::set_guide_brake(const GuideIndex guide, const float force_newtons) {
++    if (guide.value < guides_.size()) guides_[guide.value].brake_force = std::max(0.0F, force_newtons);
++}
++
++void Kit::set_lever_friction(const LeverIndex lever, const float torque_newton_metres) {
++    if (lever.value < levers_.size())
++        levers_[lever.value].hinge->SetMaxFrictionTorque(std::max(0.0F, torque_newton_metres));
++}
++
++double Kit::guide_brake_work(const GuideIndex guide) const noexcept {
++    const Guide *record = find(guides_, guide);
++    return record != nullptr ? record->brake_work : 0.0;
++}
++
+ CatchIndex Kit::add_catch(const BodyIndex body, const LeverIndex lever, const float release_angle,
+                           const float seat_tolerance, const bool relatch) {
+     return add_catch_at(body, lever, jolt_body(body).GetCenterOfMassPosition(),
+@@ -273,8 +287,11 @@ void Kit::govern(Guide &guide) noexcept {
+     }
+     const JPH::Body &body = jolt_body(guide.body);
+     const float speed = body.GetLinearVelocity().Dot(guide.axis);
++    guide.pre_speed = speed;
+     guide.peak_speed = std::max(guide.peak_speed, std::abs(speed));
++    guide.slider->SetMaxFrictionForce(guide.brake_force);
+     if (guide.governor_speed <= 0.0F) {
++        guide.slider->SetMotorState(JPH::EMotorState::Off);
+         return;
+     }
+     const float travel = guide.slider->GetCurrentPosition();
+@@ -284,6 +301,14 @@ void Kit::govern(Guide &guide) noexcept {
+                             kGovernorCreep);
+     };
+     JPH::MotorSettings &motor = guide.slider->GetMotorSettings();
++    const float limit = speed > 0.0F ? allowed(guide.max_travel - travel)
++                                    : allowed(travel - guide.min_travel);
++    if (guide.brake_force > 0.0F && std::abs(speed) <= limit) {
++        // Jolt's zero-velocity Coulomb friction has a finite impulse bound.
++        // It holds under that bound and slips above it; no position motor.
++        guide.slider->SetMotorState(JPH::EMotorState::Off);
++        return;
++    }
+     if (speed > kGovernorDeadband) {
+         // Rising: brake toward the allowed speed, never push.
+         guide.slider->SetTargetVelocity(allowed(guide.max_travel - travel));
+@@ -325,6 +350,12 @@ void Kit::pre_step(const float) {
+ }
+ 
+ void Kit::post_step(const float delta_seconds) {
++    for (Guide &guide : guides_) {
++        const float after = jolt_body(guide.body).GetLinearVelocity().Dot(guide.axis);
++        // Signed work of the actual friction/governor impulse (not its rating).
++        guide.brake_work += guide.slider->GetTotalLambdaMotor() *
++                            0.5 * static_cast<double>(guide.pre_speed + after);
++    }
+     for (Rope &rope : ropes_) {
+         if (rope.constraint == nullptr) {
+             rope.tension = 0.0F;
+@@ -604,6 +635,12 @@ std::uint64_t Kit::rope_shackle_entity(const RopeIndex rope) const noexcept {
+ // ---- checkpoint -------------------------------------------------------------
+ 
+ void Kit::capture(Checkpoint &out) const {
++    out.guide_brake_work.clear();
++    out.guide_peak_speed.clear();
++    for (const Guide &guide : guides_) {
++        out.guide_brake_work.push_back(guide.brake_work);
++        out.guide_peak_speed.push_back(guide.peak_speed);
++    }
+     out.bodies.resize(bodies_.size());
+     const auto &bodies = system_.GetBodyInterfaceNoLock();
+     for (std::size_t index = 0; index < bodies_.size(); ++index) {
+@@ -636,6 +673,10 @@ void Kit::restore(const Checkpoint &in) {
+     if (in.bodies.size() != bodies_.size()) {
+         return;
+     }
++    for (std::size_t i = 0; i < guides_.size(); ++i) {
++        guides_[i].brake_work = i < in.guide_brake_work.size() ? in.guide_brake_work[i] : 0;
++        guides_[i].peak_speed = i < in.guide_peak_speed.size() ? in.guide_peak_speed[i] : 0;
++    }
+     for (Rope &rope : ropes_) {
+         disconnect_rope(rope);
+     }
+@@ -734,6 +775,18 @@ float Kit::body_mass(const BodyIndex body) const noexcept {
+     return record != nullptr ? record->mass : 0.0F;
+ }
+ 
++double Kit::body_kinetic_energy(const BodyIndex body) const noexcept {
++    const Body *record = find(bodies_, body);
++    if (record == nullptr || !record->dynamic || !record->enabled) return 0;
++    const auto &b = jolt_body(body);
++    const auto *m = b.GetMotionProperties();
++    const auto w = (b.GetRotation() * m->GetInertiaRotation()).Conjugated() * b.GetAngularVelocity();
++    const auto inv = m->GetInverseInertiaDiagonal();
++    double rotational = 0;
++    for (int i = 0; i < 3; ++i) if (inv[i] > 0) rotational += w[i] * w[i] / inv[i];
++    return 0.5 * (record->mass * b.GetLinearVelocity().LengthSq() + rotational);
++}
++
+ JPH::BodyID Kit::body_id(const BodyIndex body) const noexcept {
+     const Body *record = find(bodies_, body);
+     return record != nullptr ? record->id : JPH::BodyID();
+diff --git a/src/sim/mechanism_kit.hpp b/src/sim/mechanism_kit.hpp
+index 847ddcc8111d34987ad7a32b0a1e9f4f2621445f..6101f69990511b0367c49580c4967b579c71ba46 100644
+--- a/src/sim/mechanism_kit.hpp
++++ b/src/sim/mechanism_kit.hpp
+@@ -136,6 +136,11 @@ public:
+     // it: a counterweighted lever rests on a stop, and a pull turns it.
+     LeverIndex add_lever(BodyIndex body, JPH::RVec3 pivot, JPH::Vec3 axis, JPH::Vec3 normal,
+                          float min_angle, float max_angle);
++    // Passive friction only. A brake may dissipate work or hold a finite load;
++    // neither API prescribes a pose or drives a body toward a target position.
++    void set_guide_brake(GuideIndex guide, float force_newtons);
++    void set_lever_friction(LeverIndex lever, float torque_newton_metres);
++    [[nodiscard]] double guide_brake_work(GuideIndex guide) const noexcept;
+ 
+     // A catch holding body fast to the world while its pin is seated. The
+     // pin leaves its hole when lever turns past release_angle. relatch:
+@@ -204,6 +209,8 @@ public:
+         std::vector<bool> rope_parted;
+         std::vector<bool> catch_latched;
+         std::vector<bool> catch_armed;
++        std::vector<double> guide_brake_work;
++        std::vector<float> guide_peak_speed;
+     };
+     void capture(Checkpoint &out) const;
+     void restore(const Checkpoint &in);
+@@ -222,6 +229,7 @@ public:
+     [[nodiscard]] JPH::Quat body_rotation(BodyIndex body) const noexcept;
+     [[nodiscard]] JPH::Vec3 body_velocity(BodyIndex body) const noexcept;
+     [[nodiscard]] float body_mass(BodyIndex body) const noexcept;
++    [[nodiscard]] double body_kinetic_energy(BodyIndex body) const noexcept;
+     [[nodiscard]] JPH::BodyID body_id(BodyIndex body) const noexcept;
+     [[nodiscard]] BodyIndex body_for_entity(std::uint64_t entity) const noexcept;
+ 
+@@ -274,6 +282,9 @@ private:
+         float governor_force = 0.0F;
+         float level_accel = 0.0F;
+         float peak_speed = 0.0F;
++        float brake_force = 0.0F;
++        float pre_speed = 0.0F;
++        double brake_work = 0.0;
+     };
+     struct Rope final {
+         BodyIndex body1;
+diff --git a/src/sim/simulation.cpp b/src/sim/simulation.cpp
+index 967ec659c642d0b0685a16998221145e9703caa2..e7586407500d85000837606e647cc9f3aaf61388 100644
+--- a/src/sim/simulation.cpp
++++ b/src/sim/simulation.cpp
+@@ -1,4 +1,5 @@
+ #include "sim/simulation.hpp"
++#include "sim/macro_bridge.hpp"
+ 
+ #include "sim/bands.hpp"
+ #include "sim/mechanism_kit.hpp"
+@@ -1746,7 +1747,8 @@ public:
+         if (regression_fixtures_) {
+             scraperx::sim::bands::build_ground_water_lift(*kit_, ground_water_lift_);
+             scraperx::sim::bands::build_counterweight_well(*kit_, well_);
+-
++        } else {
++            macro_bridge_.build(*kit_);
+         }
+ 
+         physics_system_.OptimizeBroadPhase();
+@@ -1904,6 +1906,7 @@ public:
+             drive_traversal(bodies, delta_seconds);
+         }
+ 
++        if (!regression_fixtures_) macro_bridge_.pre_step(*kit_);
+         kit_->pre_step(delta_seconds);
+         contact_listener_.begin_tick();
+         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
+@@ -1982,6 +1985,14 @@ public:
+         return *kit_;
+     }
+ 
++    void set_macro_rope_connected_for_proof(const bool connected) noexcept {
++        if (!regression_fixtures_) kit_->set_rope_connected(macro_bridge_.rope, connected);
++    }
++    void set_macro_ballast_mass_for_proof(const double mass_kg) noexcept {
++        if (!regression_fixtures_ && std::isfinite(mass_kg) && mass_kg > 0)
++            kit_->set_body_mass(macro_bridge_.ballast, static_cast<float>(mass_kg));
++    }
++
+     void set_feed_enabled(const bool enabled) noexcept {
+         steam_plant_.set_feed_enabled(enabled);
+     }
+@@ -4432,7 +4443,12 @@ private:
+         };
+         const auto consider = [&](const JPH::BodyID id, const std::uint64_t candidate_entity) {
+             if (id.IsInvalid()) { return; }
+-            const JPH::Vec3 to_body(bodies.GetCenterOfMassPosition(id) - at);
++            // A long handle is grabbed at its actual grip, not its distant COM.
++            // Keep legacy load/shackle reach contracts unchanged.
++            const bool handle = kit_->carry_kind(candidate_entity) == scraperx::sim::kit::CarryKind::Handle;
++            const JPH::RVec3 target = handle ? bodies.GetCenterOfMassTransform(id) * carry_handle(candidate_entity)
++                                             : bodies.GetCenterOfMassPosition(id);
++            const JPH::Vec3 to_body(target - at);
+             const float distance = to_body.Length();
+             if (distance > best_distance ||
+                 bodies.GetLinearVelocity(id).Length() > kCarryMaxBodySpeed) {
+@@ -5386,7 +5402,25 @@ private:
+         state_.carry_target_entity_id = carry_target_entity_;
+         state_.rig_action = rig_action_;
+         state_.rig_target_entity_id = rig_target_entity_;
+-        if (!regression_fixtures_) { return; }
++        state_.carry_target_kind = kit_->carry_kind(carry_target_entity_) == scraperx::sim::kit::CarryKind::Handle ? 2 :
++                                   kit_->carry_kind(carry_target_entity_) == scraperx::sim::kit::CarryKind::Shackle ? 1 : 0;
++        if (!regression_fixtures_) {
++            state_.macro_bridge_angle = kit_->lever_angle(macro_bridge_.deck_hinge);
++            state_.macro_handle_angle = kit_->lever_angle(macro_bridge_.handle_hinge);
++            state_.macro_ballast_drop = -kit_->guide_travel(macro_bridge_.ballast_guide);
++            state_.macro_ballast_speed = kit_->body_velocity(macro_bridge_.ballast).GetY();
++            state_.macro_peak_speed = kit_->guide_peak_speed(macro_bridge_.ballast_guide);
++            state_.macro_rope_tension = kit_->rope_tension(macro_bridge_.rope);
++            state_.macro_brake_work = kit_->guide_brake_work(macro_bridge_.ballast_guide);
++            state_.macro_source_work = kit_->body_mass(macro_bridge_.ballast) * 9.81 * state_.macro_ballast_drop;
++            state_.macro_deck_potential = kit_->body_mass(macro_bridge_.deck) * 9.81 *
++                (kit_->body_center_of_mass_position(macro_bridge_.deck).GetY() - macro_bridge_.initial_deck_com_y);
++            state_.macro_kinetic_energy = kit_->body_kinetic_energy(macro_bridge_.deck) +
++                                          kit_->body_kinetic_energy(macro_bridge_.ballast);
++            state_.macro_nose_position = to_vector3(kit_->body_position(macro_bridge_.deck) +
++                kit_->body_rotation(macro_bridge_.deck) * JPH::Vec3(0, 0.06F, -32));
++            return;
++        }
+         state_.hoist_scoop_position = {kScoopX, scoop_height_, kScoopZ};
+         state_.hoist_scoop_tilt_radians = scoop_tilt_;
+ 
+@@ -5686,6 +5720,7 @@ private:
+     std::uint32_t grip_over_steps_ = 0;
+     // AS-006: the mechanism kit and the bands built from it.
+     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
++    scraperx::sim::macro::Bridge macro_bridge_;
+     scraperx::sim::bands::CounterweightWell well_{};
+     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
+     std::uint8_t rig_action_ = 0;
+@@ -6054,6 +6089,13 @@ bool Simulation::request_water_lift_reset() noexcept {
+ void Simulation::set_water_lift_rope_connected(const bool connected) noexcept {
+     physics_world_->set_water_lift_rope_connected(connected);
+ }
++
++void Simulation::set_macro_rope_connected_for_proof(const bool connected) noexcept {
++    physics_world_->set_macro_rope_connected_for_proof(connected);
++}
++void Simulation::set_macro_ballast_mass_for_proof(const double mass_kg) noexcept {
++    physics_world_->set_macro_ballast_mass_for_proof(mass_kg);
++}
+ void Simulation::set_water_lift_cage_mass_kg(const double mass_kg) noexcept {
+     physics_world_->set_water_lift_cage_mass_kg(mass_kg);
+ }
+diff --git a/src/sim/simulation.hpp b/src/sim/simulation.hpp
+index 17875ebea52707d4345fa4cf5f83d30941a12974..089baa2ad567463a1e3bf5151f589287c5ae5c3e 100644
+--- a/src/sim/simulation.hpp
++++ b/src/sim/simulation.hpp
+@@ -132,6 +132,18 @@ enum class FallState : std::uint8_t {
+ };
+ 
+ struct Snapshot final {
++    // AS-016 production macro. Read from bodies, constraints and brake impulses.
++    double macro_bridge_angle = 0.0;
++    double macro_handle_angle = 0.0;
++    double macro_ballast_drop = 0.0;
++    double macro_ballast_speed = 0.0;
++    double macro_peak_speed = 0.0;
++    double macro_rope_tension = 0.0;
++    double macro_brake_work = 0.0;
++    double macro_source_work = 0.0;
++    double macro_deck_potential = 0.0;
++    double macro_kinetic_energy = 0.0;
++    Vector3 macro_nose_position{};
+     std::uint64_t tick_index = 0;
+     double simulation_time_seconds = 0.0;
+     double fixed_step_seconds = 0.0;
+@@ -547,6 +559,9 @@ public:
+     [[nodiscard]] bool request_water_lift_release() noexcept;
+     [[nodiscard]] bool request_water_lift_reset() noexcept;
+     void set_water_lift_rope_connected(bool connected) noexcept;
++    // Causal interventions, native proof only; never exposed as player controls.
++    void set_macro_rope_connected_for_proof(bool connected) noexcept;
++    void set_macro_ballast_mass_for_proof(double mass_kg) noexcept;
+     void set_water_lift_cage_mass_kg(double mass_kg) noexcept;
+     void set_water_screw_motor_torque_limit_nm(double torque_nm) noexcept;
+     void set_water_screw_outlet_blocked(bool blocked) noexcept;
+diff --git a/tests/simulation_tests.cpp b/tests/simulation_tests.cpp
+index 66d446ccd9a7eb05d61dfa462a26ad4b740e89f5..ef13d652b138b886e9cb7b4361801a41afa9a92e 100644
+--- a/tests/simulation_tests.cpp
++++ b/tests/simulation_tests.cpp
+@@ -615,9 +615,12 @@ int main() {
+             require(foundation.entity_body_count(entity) == 0,
+                     "default world must not construct a retired fixture or campaign body");
+         }
+-        require(foundation.moving_body_count() == 1,
+-                "the player must be the only moving body in the cleared foundation");
+-        require(foundation.kit_body_count() == 0 && foundation.kit_cable_count() == 0,
++        for (std::uint64_t entity : {1000U, 1001U, 1002U, 2000U, 2001U, 2002U, 2003U,
++                                     2004U, 2005U, 2006U, 2007U, 2008U, 2009U, 2010U, 2011U})
++            require(foundation.entity_body_count(entity) == 0, "retired kit body remains absent");
++        require(foundation.moving_body_count() == 5,
++                "default moving bodies must be player plus the four AS-016 bodies");
++        require(foundation.kit_body_count() == 5 && foundation.kit_cable_count() == 2,
+                 "default world must not construct the water lift or upper counterweight lifts");
+         require(foundation.entity_body_count(Simulation::kTowerEntityId) > 1 &&
+                     foundation.entity_body_count(Simulation::kWorldSolidEntityId) > 0,
+@@ -642,7 +645,7 @@ int main() {
+         (void)foundation.advance_frame(2.0);
+         require(foundation.snapshot().player_grounded && foundation.snapshot().death_count == 0,
+                 "the default jump must land safely on grade");
+-        std::cout << "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=1 kit_bodies=0 locomotion=1 crouch=1 jump=1\n";
++        std::cout << "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=5 kit_bodies=5 locomotion=1 crouch=1 jump=1\n";
+     }
+ 
+     {
+@@ -671,7 +674,7 @@ int main() {
+         (void)drop.advance_frame(8.0);
+         require(drop.snapshot().death_count == 1 && drop.snapshot().player_grounded,
+                 "default fatal fall must restore safely without any legacy body queries");
+-        require(drop.moving_body_count() == 1 && drop.kit_body_count() == 0,
++        require(drop.moving_body_count() == 5 && drop.kit_body_count() == 5,
+                 "checkpoint restore must not recreate retired machinery");
+         std::cout << "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0\n";
+     }

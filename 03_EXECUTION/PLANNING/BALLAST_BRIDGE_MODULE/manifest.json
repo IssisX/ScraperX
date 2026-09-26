@@ -1,0 +1,128 @@
+{
+  "module": "ballast-bridge-prototype-v1",
+  "status": "inactive archived prototype; locally built and partially verified; not an APK delivery",
+  "captured_on": "2026-09-26",
+  "baseline_commit": "360cffbe2374a37cd6e7b606f72443f26c0d8f93",
+  "local_committed_ancestor": "3d0f3d3d530a6c22f0696e5c7856a3bc4e8f0990",
+  "includes_uncommitted_correction": "Main cable breaking limit 250000 -> 1000000 N; three pull speeds each exercised at 60/30 Hz frame partitions. Corrected source is included in source/, not only described.",
+  "runtime_snapshot_sha256": "c662643a15ff71ef4247acb8c28ef525b3450708567d1408a5ff679f1b491301",
+  "runtime_snapshot_hash_definition": "SHA-256 of sorted path + NUL + file SHA-256 + newline for runtime_files; reconstruct atop baseline_commit",
+  "runtime_files": [
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "ec55fbecf29f5c2bc60b368abd28d9cc72c01519c1b0fa9b3ba52d6d66cfe662",
+      "git_blob": "edb6c6c2536c7c89014785662b70b41ebecf854f",
+      "bytes": 4483,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "godot/presentation/audio/audio_director.gd",
+      "sha256": "f7d49c4c049aba96160adda2775be9020802880972818e02f34009b16a0fca01",
+      "git_blob": "804b3598d1f0d75d3eef04f6df1a0ca76c1dabe0",
+      "bytes": 17192,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "godot/presentation/main.gd",
+      "sha256": "fea9382b9c11a09ed54a63ac7bbc6993b408e707dc544acbda48d75975162158",
+      "git_blob": "86b2d3bea0355d3802cf3ad4502d3ea55955bf7c",
+      "bytes": 188274,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "godot/presentation/ui/ui_test_driver.gd",
+      "sha256": "a17ca6bdd066abe3d20d9838dfbecdac4c5a213d4733d9d177c8d7244076ef08",
+      "git_blob": "27767e3720cb8eae28b7d0fbdf1088988a4cdccd",
+      "bytes": 56885,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "src/bridge/scraperx_simulation.cpp",
+      "sha256": "2ade0ddb33f1a614dfbffa91e9edacd92cefc230caf86d89ec8918ba6fa4c191",
+      "git_blob": "1408b22f5a1e95808c41f409a6aa0e9cc4cabc14",
+      "bytes": 50886,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "src/bridge/scraperx_simulation.hpp",
+      "sha256": "cc37aeb14a6311425758e8e7ffb0531c4e75100bf5b00e636758fa5bca2ecdb5",
+      "git_blob": "4313b994c96ecac37d5d78f1f071667b909f274e",
+      "bytes": 12177,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "src/sim/macro_bridge.cpp",
+      "sha256": "1314354e4eb8a1cb2ee545d902ba80e400e633042ab15927f0bd161528241a33",
+      "git_blob": "1878435ef9a24d90d71704061332fcbf44dd1519",
+      "bytes": 8949,
+      "delivery": "source/src/sim/macro_bridge.cpp"
+    },
+    {
+      "path": "src/sim/macro_bridge.hpp",
+      "sha256": "869e9f3cf601a531f0e62a7a9ef170655e8efec2a83e6f17c2cf30159195291c",
+      "git_blob": "f93493f8ff73257c61971361ce5237956085d479",
+      "bytes": 952,
+      "delivery": "source/src/sim/macro_bridge.hpp"
+    },
+    {
+      "path": "src/sim/mechanism_kit.cpp",
+      "sha256": "246020336cd171285580a54aaa9f99bb5b880781afaf282590556c1c68d71810",
+      "git_blob": "2664609a2325216a7f06ee23ca5a42c29ee815cf",
+      "bytes": 34280,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "src/sim/mechanism_kit.hpp",
+      "sha256": "8eff4a3dd7c879bfcc9dae6007264d09dcfecc39a817d724316ef132da3ede97",
+      "git_blob": "6101f69990511b0367c49580c4967b579c71ba46",
+      "bytes": 16280,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "src/sim/simulation.cpp",
+      "sha256": "0183c3615c1a3075d51e9db1115ed5e26f92fe0ab69cb4a4b7a5b89d035a6832",
+      "git_blob": "e7586407500d85000837606e647cc9f3aaf61388",
+      "bytes": 324830,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "src/sim/simulation.hpp",
+      "sha256": "12c8a32253992e219e695fc99083353fd510f3cde33006a5039befe8e4310507",
+      "git_blob": "089baa2ad567463a1e3bf5151f589287c5ae5c3e",
+      "bytes": 33154,
+      "delivery": "integration.patch"
+    },
+    {
+      "path": "tests/macro_bridge_tests.cpp",
+      "sha256": "e8bc0641dec9be84c1a0f54b75fb997e3b8af2fb4881f387ff00255b21344162",
+      "git_blob": "30cbb5cf6337e248141ece4826843b805a2d2769",
+      "bytes": 10287,
+      "delivery": "source/tests/macro_bridge_tests.cpp"
+    },
+    {
+      "path": "tests/simulation_tests.cpp",
+      "sha256": "58216eaf277104fc83464b28c04f67606c29b1997f9b1c71d934dd287b75c47a",
+      "git_blob": "ef13d652b138b886e9cb7b4361801a41afa9a92e",
+      "bytes": 237010,
+      "delivery": "integration.patch"
+    }
+  ],
+  "dependencies": {
+    "godot": "4.7.stable.official.5b4e0cb0f",
+    "godot_cpp_commit": "507ed9d840c01a3c5b2a39af8bb4000bfac30bf5",
+    "jolt_commit": "e77f175595e64cb44218cc9d9d56fc365ad0e36a",
+    "native_fixed_hz": 90
+  },
+  "evidence_scope": {
+    "current_native_suite": "PASS (standalone scraperx_macro_tests only)",
+    "current_touch_30fps": "PASS, headless, normal spawn and normal input, tower support reached",
+    "current_full_native_regression": "INTERRUPTED by user stop; no current aggregate verdict",
+    "current_rendered_touch": "NOT RERUN after cable correction",
+    "prior_rendered_touch": "FAIL with 250 kN cable; diagnostic measured two consecutive steps at about 304/345 kN",
+    "prior_keyboard_gamepad": "PASS before cable correction; historical evidence only",
+    "ci_reference_patch": "authored but never run for this mechanism",
+    "android_apk": "NOT BUILT",
+    "device_execution": "NOT PERFORMED"
+  },
+  "publication_scope": "Only this archive and a discovery link are intended for the current ChatGPT branch; no activation or replacement of active pipe-bridge work."
+}

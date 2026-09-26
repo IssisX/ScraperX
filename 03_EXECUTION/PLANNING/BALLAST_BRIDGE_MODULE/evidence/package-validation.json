@@ -1,0 +1,10 @@
+{
+  "check": "archive reconstruction and integrity only; no new runtime test run",
+  "baseline": "360cffbe2374a37cd6e7b606f72443f26c0d8f93",
+  "runtime_snapshot_sha256": "c662643a15ff71ef4247acb8c28ef525b3450708567d1408a5ff679f1b491301",
+  "runtime_files_verified": 14,
+  "integration_patch_applies": true,
+  "optional_ci_patch_applies": true,
+  "unexpected_reconstruction_paths": [],
+  "runtime_verification": "See preserved historical evidence; unrun gates remain unrun."
+}

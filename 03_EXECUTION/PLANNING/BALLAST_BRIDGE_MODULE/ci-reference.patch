@@ -1,0 +1,103 @@
+diff --git a/.github/workflows/wo000-delivery-spine.yml b/.github/workflows/wo000-delivery-spine.yml
+index 88e586e5caad9df79d7dc1e1704c30fd38a98ede..ec39c241bf0f36bc782d9157453098277d4632d2 100644
+--- a/.github/workflows/wo000-delivery-spine.yml
++++ b/.github/workflows/wo000-delivery-spine.yml
+@@ -82,7 +82,7 @@ jobs:
+             -DSCRAPERX_BUILD_BRIDGE=ON \
+             -DSCRAPERX_WITH_JOLT=ON \
+             -DGODOTCPP_TARGET=template_release
+-          cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
++          cmake --build build/host --target scraperx_sim_tests scraperx_macro_tests scraperx_native --parallel 2
+           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
+           grep -F "100% tests passed" artifacts/native-tests.log
+           # The falsifiers' own proof lines. ctest --output-on-failure prints a
+@@ -242,11 +242,11 @@ jobs:
+           awk -F'lattice_top_y=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 198.20 && a[1]+0 <= 198.30) ? 0 : 1}' \
+             artifacts/native-falsifiers.log
+ 
+-      - name: Prove cleared default scene and retained fallback stairs
++      - name: Prove retired content absent and retain fallback stairs
+         shell: bash
+         run: |
+           set -euo pipefail
+-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=1 kit_bodies=0 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
++          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=5 kit_bodies=5 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+           grep -F "PASS scraperx_sim fallback stairs: levels=14" artifacts/native-falsifiers.log
+           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
+           mkdir -p artifacts/screenshots godot/.godot
+@@ -256,11 +256,33 @@ jobs:
+             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
+             -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
+             2>&1 | tee artifacts/godot-foundation.log
+-          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=1 retired_meshes=0 default_controls=1" artifacts/godot-foundation.log
++          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=5 retired_meshes=0 default_controls=1" artifacts/godot-foundation.log
+           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
+           test -s artifacts/screenshots/foundation_cleared_grade.png
+           test -s artifacts/screenshots/foundation_cleared_tower.png
+ 
++      - name: Prove AS-016 causal bridge and normal-input tower handoff
++        shell: bash
++        run: |
++          set -euo pipefail
++          ./build/host/scraperx_macro_tests | tee artifacts/macro-native.log
++          grep -F "PASS scraperx_macro complete: normal_route=1 idle=1 no_source=1 no_link=1 energy=1 checkpoint=1 retry=1 passenger=1 finite_brake=1 speed_variants=3" artifacts/macro-native.log
++          for scenario in keyboard_macro pad_macro; do
++            timeout 120s tools/godot/godot --headless --path godot --fixed-fps 60 \
++              -- "--uitest=${scenario}" 2>&1 | tee "artifacts/godot-${scenario}.log"
++            grep -F "SCRAPERX_UITEST PASS ${scenario} " "artifacts/godot-${scenario}.log"
++            if grep -E "SCRIPT ERROR|Parse Error" "artifacts/godot-${scenario}.log"; then exit 1; fi
++          done
++          timeout 1200s xvfb-run -a -s "-screen 0 1296x1114x24" \
++            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 \
++            -- --uitest=touch_macro "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/bridge" \
++            2>&1 | tee artifacts/godot-touch-macro.log
++          grep -F "SCRAPERX_UITEST PASS touch_macro default_spawn=1 grab_pull=1 physical_handoff=1 tower_deck_y=11 normal_input=1 deaths=0 audio_causality=1" artifacts/godot-touch-macro.log
++          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-touch-macro.log; then exit 1; fi
++          for pose in macro_ready macro_moving macro_seated macro_climb macro_exit; do
++            test -s "artifacts/screenshots/bridge_${pose}.png"
++          done
++
+       - name: Regression fixture - native machine authority and Fold-aspect capture
+         shell: bash
+         run: |
+@@ -382,18 +404,28 @@ jobs:
+             "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
+             > artifacts/apk/CHECKPOINT.txt
+ 
++      - name: Publish standalone arm64 APK
++        uses: actions/upload-artifact@v4
++        with:
++          name: ScraperX-apk-${{ github.sha }}
++          path: artifacts/apk/
++          if-no-files-found: error
++          retention-days: 90
++
+       - name: Record evidence boundaries
+         shell: bash
+         run: |
+           set -euo pipefail
+-          cat > artifacts/GROUND-RESET-EVIDENCE.md <<EOF
+-          # Ground reset evidence
++          cat > artifacts/AS-016-EVIDENCE.md <<EOF
++          # AS-016 ballast bridge evidence
+ 
+           Source commit: \`${GITHUB_SHA}\`
+ 
+           Proven for the default scene by this workflow:
+ 
+-          - Native body enumeration finds no retired campaign/fixture entities, one moving body (the player), and no mechanism-kit bodies or cables.
++          - Native body enumeration excludes retired campaign and fixture entities. Normal content contains the player and AS-016: one 12 t bridge, one 10 t ballast, a brake arm, a free release grip, two actual cable constraints and a fixed frame/receiver.
++          - The new native suite verifies the unseeded default-spawn route, idle stability, insufficient source, disconnected main cable, measured energy budget, finite overloaded brake slip, passive passenger transport, interrupted setup/re-grab, varied input speed and frame partitioning, and deployed-state restoration after a real lethal fall.
++          - Touch, keyboard and gamepad input operate the bridge and walk onto the original tower first deck. The touch sequence is rendered in bridge_macro_ready/moving/seated/climb/exit.png. This is desktop evidence, not device execution.
+           - Normal native locomotion, crouch, jump and grade landing execute without legacy construction.
+           - The default world's ordinary fallback staircase is walked through all fourteen flights to the 154 m deck without requesting a jump.
+           - The rendered default scene rejects retired machinery nodes and verifies actual input-driven player movement, jump, crouch and pause. Screenshots are foundation_cleared_grade.png and foundation_cleared_tower.png.
+@@ -406,7 +438,7 @@ jobs:
+           - Legacy intake, water screw/lift, counterweight, plant and rigging scenarios remain regression tests. Their green results do not describe normal campaign content or validate the owner's rejected screw experience.
+           - The old approach-and-machine capture and audio_mix exercise the selected regression scene; they are not screenshots or device measurements of the cleared campaign.
+ 
+-          Not proven: a replacement macro mechanism, APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals, a completed tower ascent or the proposed +8 m balance bridge. The owner-requested ordinary stairs remain an optional route, not a mechanism proof.
++          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent. The owner-requested ordinary stairs remain an optional route, not a mechanism proof.
+           EOF
+ 
+       - name: Publish immutable checkpoint build and evidence

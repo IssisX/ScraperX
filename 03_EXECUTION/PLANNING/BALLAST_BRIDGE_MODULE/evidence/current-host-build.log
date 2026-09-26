@@ -1,0 +1,8 @@
+[0/2] Re-checking globbed directories...
+[1/8] Building CXX object CMakeFiles/scraperx_macro_tests.dir/tests/macro_bridge_tests.cpp.o
+[2/8] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/macro_bridge.cpp.o
+[3/8] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/mechanism_kit.cpp.o
+[4/8] Linking CXX static library libscraperx_sim.a
+[5/8] Linking CXX shared library /workspace/scratch/ccae63eafb52/ScraperX-macro-plan/godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+[6/8] Linking CXX executable scraperx_macro_tests
+[7/8] Linking CXX executable scraperx_sim_tests

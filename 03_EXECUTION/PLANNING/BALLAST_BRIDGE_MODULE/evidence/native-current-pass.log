@@ -1,0 +1,24 @@
+PASS scraperx_macro idle: seconds=45 spontaneous_release=0
+PASS scraperx_macro stroke t=25.4667 player=6.99907,0.892914,-80.061 support=1 handle=1.30976 bridge=0.335814 nose=10.7618 drop=9.17789 v=1.01447e-08 peak=1.3 tension=98100 brake_J=-277228 source_J=900351 deck_J=620243 kinetic_J=5.14576e-13
+PASS scraperx_macro normal route t=37.8333 player=22.9445,11.9,-125.985 support=11 handle=1.30976 bridge=0.335814 nose=10.7618 drop=9.17788 v=1.49012e-08 peak=1.3 tension=98100 brake_J=-277228 source_J=900350 deck_J=620243 kinetic_J=1.11022e-12
+PASS scraperx_macro checkpoint: deployed_route_preserved=1 lethal_restore=1
+PASS scraperx_macro no source: ballast_kg=300 useful_ascent=0
+PASS scraperx_macro no link: source_descends=1 useful_ascent=0
+PASS scraperx_macro stroke t=31.2222 player=6.99914,0.880247,-80.0553 support=1 handle=1.25095 bridge=0.335815 nose=10.7619 drop=9.17791 v=7.45058e-09 peak=1.3 tension=98100 brake_J=-277434 source_J=900353 deck_J=620244 kinetic_J=2.77556e-13
+PASS scraperx_macro normal route t=43.5889 player=22.9445,11.9,-125.985 support=11 handle=1.25095 bridge=0.335829 nose=10.7623 drop=9.17825 v=1.01447e-08 peak=1.3 tension=98100 brake_J=-277434 source_J=900386 deck_J=620269 kinetic_J=5.14576e-13
+PASS scraperx_macro retry: unseeded_regrab=1 mixed_frame_partition=1
+PASS scraperx_macro passenger: early_board=1 passive_transport=1
+PASS scraperx_macro brake rating: overload_slips=1
+PASS scraperx_macro stroke t=26.1333 player=6.99906,0.892969,-80.0716 support=1 handle=1.20946 bridge=0.335815 nose=10.7619 drop=9.17789 v=1.49012e-08 peak=1.3 tension=98100 brake_J=-277261 source_J=900351 deck_J=620244 kinetic_J=1.11022e-12
+PASS scraperx_macro normal route t=38.5 player=22.9445,11.9,-125.985 support=11 handle=1.20946 bridge=0.335829 nose=10.7623 drop=9.17825 v=1.49012e-08 peak=1.3 tension=98100 brake_J=-277261 source_J=900387 deck_J=620269 kinetic_J=1.11022e-12
+PASS scraperx_macro stroke t=26.1333 player=6.99906,0.892969,-80.0716 support=1 handle=1.20946 bridge=0.335815 nose=10.7619 drop=9.17789 v=1.49012e-08 peak=1.3 tension=98100 brake_J=-277261 source_J=900351 deck_J=620244 kinetic_J=1.11022e-12
+PASS scraperx_macro normal route t=38.5 player=22.9445,11.9,-125.985 support=11 handle=1.20946 bridge=0.335829 nose=10.7623 drop=9.17825 v=1.49012e-08 peak=1.3 tension=98100 brake_J=-277261 source_J=900387 deck_J=620269 kinetic_J=1.11022e-12
+PASS scraperx_macro stroke t=24.4111 player=6.99907,0.892961,-80.0107 support=1 handle=1.51726 bridge=0.335815 nose=10.7619 drop=9.1779 v=7.45058e-09 peak=1.3 tension=98100 brake_J=-277390 source_J=900352 deck_J=620244 kinetic_J=2.7758e-13
+PASS scraperx_macro normal route t=36.8 player=22.9445,11.9,-125.985 support=11 handle=1.51726 bridge=0.335815 nose=10.7619 drop=9.1779 v=1.49012e-08 peak=1.3 tension=98100 brake_J=-277390 source_J=900352 deck_J=620244 kinetic_J=1.11022e-12
+PASS scraperx_macro stroke t=24.4111 player=6.99907,0.892961,-79.9681 support=1 handle=1.53431 bridge=0.335815 nose=10.7619 drop=9.1779 v=7.45058e-09 peak=1.3 tension=98100 brake_J=-277390 source_J=900352 deck_J=620244 kinetic_J=2.7758e-13
+PASS scraperx_macro normal route t=36.8 player=22.9445,11.9,-125.985 support=11 handle=1.53431 bridge=0.335815 nose=10.7619 drop=9.1779 v=7.45058e-09 peak=1.3 tension=98100 brake_J=-277390 source_J=900352 deck_J=620244 kinetic_J=2.77556e-13
+PASS scraperx_macro stroke t=23.6444 player=6.9991,0.893748,-79.3731 support=1 handle=1.55577 bridge=0.335817 nose=10.7619 drop=9.17796 v=-1.01447e-08 peak=1.3 tension=98100 brake_J=-277421 source_J=900358 deck_J=620248 kinetic_J=5.14577e-13
+PASS scraperx_macro normal route t=36.1222 player=22.9445,11.9,-125.985 support=11 handle=1.55577 bridge=0.335817 nose=10.7619 drop=9.17796 v=7.45058e-09 peak=1.3 tension=98100 brake_J=-277421 source_J=900358 deck_J=620248 kinetic_J=2.77628e-13
+PASS scraperx_macro stroke t=23.6444 player=6.9991,0.893757,-79.2576 support=1 handle=1.55619 bridge=0.335817 nose=10.7619 drop=9.17796 v=-1.01447e-08 peak=1.3 tension=98100 brake_J=-277421 source_J=900358 deck_J=620248 kinetic_J=5.14577e-13
+PASS scraperx_macro normal route t=36.1333 player=22.9445,11.9,-125.985 support=11 handle=1.55619 bridge=0.335817 nose=10.7619 drop=9.17796 v=0 peak=1.3 tension=98100 brake_J=-277421 source_J=900358 deck_J=620248 kinetic_J=3.88722e-17
+PASS scraperx_macro complete: normal_route=1 idle=1 no_source=1 no_link=1 energy=1 checkpoint=1 retry=1 passenger=1 finite_brake=1 speed_variants=3

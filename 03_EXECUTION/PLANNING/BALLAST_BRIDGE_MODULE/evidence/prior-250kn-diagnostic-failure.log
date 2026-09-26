@@ -1,0 +1,8 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=ground_foundation
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2600
+SCRAPERX_AUDIO_BANK clips=23 msec=364 driver=Dummy
+ROPE_OVER entity=2016 tension=303739.125000 rating=250000.000000 steps=1 y1=0.160018 y2=4.622620 v2=-0.275036
+ROPE_OVER entity=2016 tension=344749.156250 rating=250000.000000 steps=2 y1=0.160022 y2=4.622616 v2=-0.000981
+SCRAPERX_UITEST FAIL touch_macro reason=bridge did not seat: { "angle": -0.00000466900792, "handle_angle": 1.41482555866241, "ballast_drop": 9.31821632385254, "ballast_speed": -0.00000000269413, "peak_speed": 1.30000233650208, "rope_tension": 0.0, "brake_work": -291052.98419031, "nose": (14.0, 0.21985, -124.0) }
