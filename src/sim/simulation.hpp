@@ -192,6 +192,13 @@ struct StackState final {
     double s1_tank_water_kg = 0.0;
     double s1_valve_angle = 0.0;
     bool s1_catch_latched = false;
+    // S2, the swinging stair: its fall from upright about its hinge (rad,
+    // 0 stored), the rate of that fall (rad/s), the catch lever's angle.
+    double s2_stair_angle = 0.0;
+    double s2_stair_rate = 0.0;
+    double s2_catch_lever_angle = 0.0;
+    bool s2_catch_latched = false;
+    bool s2_on_pad = false;
 };
 
 // Rubble spilled onto a static surface, piled where it landed.
@@ -460,7 +467,7 @@ public:
     static constexpr std::uint64_t kCraneLClutchEntityId = 2126;
     static constexpr std::uint64_t kCraneLClutchHandleEntityId = 2127;
     // Band 0, the Stack (grade -> 154 m): its static structure, then S1, the
-    // skip hoist.
+    // water-balance hoist, and S2, the swinging stair.
     static constexpr std::uint64_t kStackFrameEntityId = 1020;
     static constexpr std::uint64_t kStackRouteEntityId = 1021;
     static constexpr std::uint64_t kStackS1CageEntityId = 2200;
@@ -468,6 +475,9 @@ public:
     static constexpr std::uint64_t kStackS1LeverEntityId = 2202;
     static constexpr std::uint64_t kStackS1ChainEntityId = 2203;
     static constexpr std::uint64_t kStackS1StrikerEntityId = 2204;
+    static constexpr std::uint64_t kStackS2StairEntityId = 2205;
+    static constexpr std::uint64_t kStackS2CatchLeverEntityId = 2206;
+    static constexpr std::uint64_t kStackS2ChainEntityId = 2207;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

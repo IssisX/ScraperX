@@ -218,6 +218,16 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_stack_s1_valve_angle);
     godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s1_catch_latched"),
                                 &ScraperXSimulation::is_stack_s1_catch_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_stair_angle"),
+                                &ScraperXSimulation::get_stack_s2_stair_angle);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_stair_rate"),
+                                &ScraperXSimulation::get_stack_s2_stair_rate);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_catch_lever_angle"),
+                                &ScraperXSimulation::get_stack_s2_catch_lever_angle);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s2_catch_latched"),
+                                &ScraperXSimulation::is_stack_s2_catch_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s2_on_pad"),
+                                &ScraperXSimulation::is_stack_s2_on_pad);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -669,6 +679,26 @@ double ScraperXSimulation::get_stack_s1_valve_angle() const {
 
 bool ScraperXSimulation::is_stack_s1_catch_latched() const {
     return simulation_->stack_state().s1_catch_latched;
+}
+
+double ScraperXSimulation::get_stack_s2_stair_angle() const {
+    return simulation_->stack_state().s2_stair_angle;
+}
+
+double ScraperXSimulation::get_stack_s2_stair_rate() const {
+    return simulation_->stack_state().s2_stair_rate;
+}
+
+double ScraperXSimulation::get_stack_s2_catch_lever_angle() const {
+    return simulation_->stack_state().s2_catch_lever_angle;
+}
+
+bool ScraperXSimulation::is_stack_s2_catch_latched() const {
+    return simulation_->stack_state().s2_catch_latched;
+}
+
+bool ScraperXSimulation::is_stack_s2_on_pad() const {
+    return simulation_->stack_state().s2_on_pad;
 }
 
 } // namespace scraperx::bridge

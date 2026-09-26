@@ -118,6 +118,8 @@ const RIG_HOOK := 1
 const RIG_UNHOOK := 2
 # S1's valve chain (Simulation::kStackS1ChainEntityId).
 const STACK_S1_CHAIN := 2203
+# S2's trip chain (Simulation::kStackS2ChainEntityId).
+const STACK_S2_CHAIN := 2207
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -759,6 +761,8 @@ func _carry_name(entity: int) -> String:
 			return "CLUTCH HANDLE"
 		STACK_S1_CHAIN:
 			return "VALVE CHAIN"
+		STACK_S2_CHAIN:
+			return "TRIP CHAIN"
 	return "ROPE END" if _is_kit(entity) else ""
 
 

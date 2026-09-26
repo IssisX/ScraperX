@@ -12,6 +12,7 @@
 #include "sim/simulation.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace scraperx::sim::bands {
 
@@ -189,12 +190,13 @@ constexpr float kGangwaySouthZ = -122.30F;
 }
 
 
-// A handle hanging with its top at `top` on a chain from above: a bar along
-// z, across the view of a rider facing the lever's arm, so both hands close on
-// it; hazard-striped, apart from the cage's yellow frame.
-kit::BodyIndex add_chain_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 top) {
+// A handle hanging with its top at `top` on a chain from above: a bar across
+// the view of a rider reaching for it (S1's along z, facing the lever's arm),
+// so both hands close on it; hazard-striped, apart from the yellow frames.
+kit::BodyIndex add_chain_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 top,
+                                const JPH::Vec3 half = JPH::Vec3(0.04F, kHandleHalfY, 0.22F)) {
     const kit::BodyIndex handle = kit.add_body(
-        entity, {box(JPH::Vec3(0.04F, kHandleHalfY, 0.22F), JPH::Vec3::sZero(), Material::Hazard)},
+        entity, {box(half, JPH::Vec3::sZero(), Material::Hazard)},
         top - JPH::RVec3(0.0, kHandleHalfY, 0.0), JPH::Quat::sIdentity(), 3.0F, 0.9F);
     kit.set_carry(handle, kit::CarryKind::Handle, JPH::Vec3(0.0F, kHandleHalfY, 0.0F));
     kit.set_damping(handle, 1.5F, 1.5F);
@@ -596,12 +598,284 @@ void build_c1(std::vector<Part> &route) {
     }
 }
 
+// ---- S2, the swinging stair (deck 4 -> deck 5) --------------------------------
+//
+// West of the centre column a landing runs out from deck 4 past the face. At
+// its east edge a 17 m steel stair stands almost upright on a hinge, and a
+// 13.5 t cast counterweight hangs 2.5 m behind the hinge under the landing:
+// stair and counterweight nearly balance, the pair's 17.5 t centred 7 cm on
+// the stair's side of the hinge. A trip lever beside the stair's foot hooks
+// over a lug on its south stringer; the lever's other arm reaches back over
+// the landing, and a chain hangs from it. Pulling the chain throws the lever
+// over its dead point: the hook lifts clear and stays clear, and the stair
+// swings down east over about eight seconds, the counterweight rising behind
+// it, until a blade under its top landing drives
+// into timber jaws on a bracket under deck 5's edge. The jaws grip the blade
+// (declared: the hinge carries 300 kN m of friction while the blade lies
+// between them) and hold the stair with its treads level and its top landing
+// level with deck 5, beside a plate onto the deck. Nothing rearms it: the
+// stair stays down.
+//
+// The stair's parts are laid out as it lies seated, about the hinge (x east,
+// y up, z across); it is built stored, turned up about the hinge by kS2Lift.
+// Its numbers are the plan's (MECHANISM_ASCENT_PLAN.md §6).
+constexpr float kDeck5Top = 55.00F;
+const JPH::RVec3 kS2Hinge(-15.00, 43.70, -122.10);
+constexpr float kS2Pitch = 0.70860367F;   // 40.6 deg, seated: the treads level
+constexpr float kS2Stored = 1.43116999F;  // 82 deg, upright on its catch
+constexpr float kS2Lift = kS2Stored - kS2Pitch;
+constexpr float kS2Rise = 0.25F;
+constexpr int kS2Treads = 43;             // then the top landing, the 44th rise
+constexpr float kS2FirstNosing = 0.25F;   // tread 1's nosing, east of the hinge
+constexpr float kS2LandingLength = 1.00F;
+constexpr float kS2StringerZ = 0.95F;
+constexpr float kS2StringerHalfZ = 0.06F;
+constexpr float kS2StringerTop = 0.08F;   // its faces about the pitch line
+constexpr float kS2StringerBottom = -0.42F;
+constexpr float kS2StringerFoot = -0.20F; // from the pitch line's point nearest the hinge
+constexpr float kS2TreadHalfZ = 0.89F;
+constexpr float kS2RailHeight = 1.00F;
+constexpr float kS2FlightMassKg = 4000.0F;
+constexpr float kS2CounterweightKg = 13500.0F;
+constexpr float kS2CounterweightArm = 2.50F;
+constexpr float kS2CounterweightRound = 0.03490659F;  // 2 deg past opposite the stair
+const JPH::Vec3 kS2CounterweightHalf(0.55F, 0.55F, 0.89F);
+// The jaws take the blade 0.0232 rad before the seat, where the empty stair
+// comes to rest. A rider running up it as it falls brings it on to the jaws'
+// bottom, the hinge's stop 0.015 rad past the seat, where the top landing is
+// still within a step (0.26 m) of deck 5.
+constexpr float kS2PadFrom = kS2Lift - 0.0232F;
+constexpr float kS2PadTo = kS2Lift + 0.0150F;
+constexpr float kS2PadTorque = 300000.0F;
+// The catch: a trip lever on a post at the landing's south edge. Its hook
+// (east) rests down over the lug under a cast weight on a mast over the pivot,
+// 11.5 deg east of upright; the chain hangs from its west arm's end over a
+// guide, the handle at hand height over the landing. Pulled 0.20 rad, the
+// weight passes over the pivot and throws the lever onto its far stop, where
+// it stays with the hook up: let go early or late, the hook cannot fall back
+// across the lug's path. The catch lets go only once the lever is past that
+// dead point.
+const JPH::RVec3 kS2CatchPivot(-16.00, 46.90, -120.90);
+constexpr float kS2CatchMassKg = 60.0F;
+constexpr float kS2CatchWeightKg = 50.0F;
+const JPH::Vec3 kS2CatchWeightHalf(0.15F, 0.15F, 0.04F);
+constexpr float kS2CatchTravel = 0.45F;
+constexpr float kS2CatchRelease = 0.26F;
+constexpr float kS2ChainArm = 1.50F;      // the chain's point, west of the pivot
+const JPH::RVec3 kS2ChainGuide(-17.50, 46.05, -120.90);
+constexpr float kS2ChainTop = kDeck4Top + 1.95F;
+
+// The stair about its hinge, seated.
+[[nodiscard]] std::vector<Part> s2_stair_parts() {
+    const float going = kS2Rise / std::tan(kS2Pitch);
+    const float foot_top = kDeck4Top - static_cast<float>(kS2Hinge.GetY());
+    const float top = foot_top + kS2Rise * static_cast<float>(kS2Treads + 1);
+    const float landing_x = kS2FirstNosing + static_cast<float>(kS2Treads) * going;
+    const JPH::Vec3 along(std::cos(kS2Pitch), std::sin(kS2Pitch), 0.0F);
+    const JPH::Vec3 across(-std::sin(kS2Pitch), std::cos(kS2Pitch), 0.0F);
+    const JPH::Quat pitched = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), kS2Pitch);
+    const auto pitch_y = [&](const float x) {
+        return foot_top + kS2Rise + (x - kS2FirstNosing) * std::tan(kS2Pitch);
+    };
+    const auto stringer_top_y = [&](const float x) {
+        return pitch_y(x) + kS2StringerTop / std::cos(kS2Pitch);
+    };
+    const JPH::Vec3 nosing1(kS2FirstNosing, pitch_y(kS2FirstNosing), 0.0F);
+    const JPH::Vec3 foot = nosing1 - nosing1.Dot(along) * along;
+    std::vector<Part> parts;
+    // Two stringers, from just behind the hinge to under the top landing.
+    const float stringer_end =
+        (landing_x - 0.15F - foot.GetX() - kS2StringerTop * across.GetX()) / along.GetX();
+    const float stringer_mid = 0.5F * (kS2StringerFoot + stringer_end);
+    const float stringer_t = 0.5F * (kS2StringerTop + kS2StringerBottom);
+    for (const float side : {-1.0F, 1.0F}) {
+        parts.push_back({JPH::Vec3(0.5F * (stringer_end - kS2StringerFoot),
+                                   0.5F * (kS2StringerTop - kS2StringerBottom), kS2StringerHalfZ),
+                         foot + stringer_mid * along + stringer_t * across +
+                             JPH::Vec3(0.0F, 0.0F, side * kS2StringerZ),
+                         pitched, Material::Yellow});
+    }
+    // The lug on the south stringer's outer face that the catch's hook holds.
+    parts.push_back({JPH::Vec3(0.10F, 0.10F, 0.135F),
+                     foot + 3.0F * along - 0.17F * across + JPH::Vec3(0.0F, 0.0F, 1.145F), pitched,
+                     Material::Hazard});
+    // The foot plate over the hinge, level with deck 4, then the treads.
+    parts.push_back(span({-0.30F, foot_top - 0.10F, -kS2TreadHalfZ},
+                         {kS2FirstNosing, foot_top, kS2TreadHalfZ}, Material::Galvanised));
+    for (int k = 1; k <= kS2Treads; ++k) {
+        const float x = kS2FirstNosing + static_cast<float>(k - 1) * going;
+        const float y = foot_top + kS2Rise * static_cast<float>(k);
+        parts.push_back(span({x, y - 0.05F, -kS2TreadHalfZ}, {x + going, y, kS2TreadHalfZ},
+                             Material::Galvanised));
+    }
+    // Risers close every step, the top landing's included. Stood upright,
+    // open treads would lie at 41 deg one above another, a slope a body
+    // pushing into them rides up; closed, their face leans back only 8 deg.
+    for (int k = 1; k <= kS2Treads + 1; ++k) {
+        const float x = kS2FirstNosing + static_cast<float>(k - 1) * going;
+        const float y = foot_top + kS2Rise * static_cast<float>(k);
+        parts.push_back(span({x - 0.03F, y - kS2Rise - 0.05F, -kS2TreadHalfZ}, {x, y, kS2TreadHalfZ},
+                             Material::Steel));
+    }
+    // The top landing over the full width, its beams, and the blade under it
+    // that the jaws take.
+    parts.push_back(span({landing_x, top - 0.12F, -1.01F},
+                         {landing_x + kS2LandingLength, top, 1.01F}, Material::Galvanised));
+    for (const float side : {-1.0F, 1.0F}) {
+        parts.push_back(span({landing_x - 0.30F, top - 0.50F, side * kS2StringerZ - 0.06F},
+                             {landing_x + kS2LandingLength, top - 0.12F, side * kS2StringerZ + 0.06F},
+                             Material::Yellow));
+    }
+    parts.push_back(span({landing_x + 0.30F, top - 1.10F, -0.03F},
+                         {landing_x + 0.80F, top - 0.12F, 0.03F}, Material::Steel));
+    // Handrails: flat posts and flat rails, 0.20 by 0.06, too broad to grip,
+    // so the upright stair is not a ladder. The north rail stops at the last
+    // tread: the top landing's north side is where the deck is.
+    for (const float side : {-1.0F, 1.0F}) {
+        const float z = side * 0.98F;
+        const float last = side < 0.0F ? landing_x - going : landing_x - 0.10F;
+        std::vector<float> xs;
+        for (int i = 0; i < 6; ++i) {
+            const float x = 1.2F + 2.3F * static_cast<float>(i);
+            if (x < last - 0.3F) {
+                xs.push_back(x);
+            }
+        }
+        xs.push_back(last);
+        for (const float x : xs) {
+            const float y = stringer_top_y(x);
+            parts.push_back(span({x - 0.10F, y, z - 0.03F}, {x + 0.10F, y + kS2RailHeight, z + 0.03F},
+                                 Material::Yellow));
+        }
+        const JPH::Vec3 a(xs.front(), stringer_top_y(xs.front()) + kS2RailHeight, z);
+        const JPH::Vec3 b(xs.back(), stringer_top_y(xs.back()) + kS2RailHeight, z);
+        parts.push_back({JPH::Vec3(0.5F * (b - a).Length() + 0.10F, 0.10F, 0.03F),
+                         0.5F * (a + b) - JPH::Vec3(0.0F, 0.10F, 0.0F), pitched, Material::Yellow});
+    }
+    const float landing_end = landing_x + kS2LandingLength;
+    for (const float x : {landing_x + 0.45F, landing_end - 0.03F}) {
+        parts.push_back(span({x - 0.10F, top, 0.95F}, {x + 0.10F, top + kS2RailHeight, 1.01F},
+                             Material::Yellow));
+    }
+    parts.push_back(span({landing_x - 0.10F, top + kS2RailHeight - 0.20F, 0.95F},
+                         {landing_end, top + kS2RailHeight, 1.01F}, Material::Yellow));
+    parts.push_back(span({landing_end - 0.06F, top, -0.95F}, {landing_end, top + kS2RailHeight, -0.75F},
+                         Material::Yellow));
+    parts.push_back(span({landing_end - 0.06F, top + kS2RailHeight - 0.20F, -0.95F},
+                         {landing_end, top + kS2RailHeight, 1.01F}, Material::Yellow));
+    // The hinge's shaft, its ends in the bearings.
+    parts.push_back(box(JPH::Vec3(0.15F, 0.15F, 1.15F), JPH::Vec3::sZero(), Material::Steel));
+
+    // The counterweight hangs 2.5 m behind the hinge, a little past opposite
+    // the stair's centre, on two arms in line with the stringers.
+    JPH::Vec3 centre = JPH::Vec3::sZero();   // volume-weighted: its direction is all that is used
+    for (const Part &part : parts) {
+        centre += 8.0F * part.half.GetX() * part.half.GetY() * part.half.GetZ() * part.offset;
+    }
+    const float heading = std::atan2(centre.GetY(), centre.GetX()) + JPH::JPH_PI + kS2CounterweightRound;
+    const JPH::Vec3 out(std::cos(heading), std::sin(heading), 0.0F);
+    const JPH::Quat turned = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), heading);
+    const float arm = kS2CounterweightArm + 0.30F;
+    for (const float side : {-1.0F, 1.0F}) {
+        parts.push_back({JPH::Vec3(0.5F * (arm + 0.15F), 0.20F, 0.06F),
+                         0.5F * (arm - 0.15F) * out + JPH::Vec3(0.0F, 0.0F, side * kS2StringerZ), turned,
+                         Material::Yellow});
+    }
+    const JPH::Vec3 &h = kS2CounterweightHalf;
+    parts.push_back({h, kS2CounterweightArm * out, turned, Material::Rust,
+                     kS2CounterweightKg / (8.0F * h.GetX() * h.GetY() * h.GetZ())});
+    return parts;
+}
+
+void build_s2_statics(std::vector<Part> &frame) {
+    // The landing from deck 4, over its edge beam, on side beams that carry
+    // the bearings and on cross beams at either end.
+    frame.push_back(span({-19.50F, kDeck4Top - 0.10F, -124.05F}, {-15.43F, kDeck4Top, -120.60F},
+                         Material::Galvanised));
+    frame.push_back(span({-19.50F, 43.40F, -123.70F}, {-14.20F, 43.90F, -123.40F}, Material::Rust));
+    frame.push_back(span({-19.50F, 43.40F, -120.80F}, {-14.20F, 43.90F, -120.58F}, Material::Rust));
+    frame.push_back(span({-19.50F, 43.40F, -123.70F}, {-19.25F, 43.90F, -120.58F}, Material::Rust));
+    frame.push_back(span({-14.40F, 43.30F, -123.70F}, {-14.20F, 43.80F, -120.58F}, Material::Rust));
+    frame.push_back(span({-15.25F, 43.40F, -123.57F}, {-14.75F, kDeck4Top, -123.29F}, Material::Steel));
+    frame.push_back(span({-15.25F, 43.40F, -120.91F}, {-14.75F, kDeck4Top, -120.63F}, Material::Steel));
+    // Rails round the landing's south edge and west end.
+    for (const float x : {-19.40F, -18.00F, -16.60F}) {
+        frame.push_back(span({x - 0.04F, kDeck4Top, -120.68F}, {x + 0.04F, kDeck4Top + 1.05F, -120.60F},
+                             Material::Yellow));
+    }
+    frame.push_back(span({-19.50F, kDeck4Top + 0.97F, -120.68F}, {-15.43F, kDeck4Top + 1.05F, -120.60F},
+                         Material::Yellow));
+    for (const float z : {-123.90F, -122.30F}) {
+        frame.push_back(span({-19.50F, kDeck4Top, z - 0.04F}, {-19.42F, kDeck4Top + 1.05F, z + 0.04F},
+                             Material::Yellow));
+    }
+    frame.push_back(span({-19.50F, kDeck4Top + 0.97F, -124.05F}, {-19.42F, kDeck4Top + 1.05F, -120.60F},
+                         Material::Yellow));
+    // The catch lever's post, and the chain's guide on a bracket off it.
+    frame.push_back(span({-16.10F, kDeck4Top, -120.80F}, {-15.90F, 47.10F, -120.60F}, Material::Rust));
+    frame.push_back(span({-17.55F, 46.05F, -120.80F}, {-16.10F, 46.15F, -120.70F}, Material::Rust));
+    frame.push_back(span({-17.55F, 46.05F, -120.95F}, {-17.45F, 46.15F, -120.80F}, Material::Hazard));
+    // Deck 5's receiver: timber jaws either side of the blade's path on a
+    // base plate, carried on two brackets hung from the edge beam's face.
+    frame.push_back(span({-2.20F, 53.55F, -122.42F}, {-1.05F, 54.20F, -122.17F}, Material::Timber));
+    frame.push_back(span({-2.20F, 53.55F, -122.03F}, {-1.05F, 54.20F, -121.78F}, Material::Timber));
+    frame.push_back(span({-2.30F, 53.45F, -122.47F}, {-0.95F, 53.55F, -121.73F}, Material::Steel));
+    for (const float x : {-2.00F, -1.25F}) {
+        frame.push_back(span({x - 0.10F, 53.15F, -123.70F}, {x + 0.10F, 53.45F, -121.73F}, Material::Rust));
+        frame.push_back(span({x - 0.10F, 53.15F, -123.70F}, {x + 0.10F, 54.30F, -123.60F}, Material::Rust));
+    }
+    // The plate from the top landing's north side onto deck 5, its edge
+    // striped.
+    frame.push_back(span({-2.45F, kDeck5Top - 0.12F, -124.05F}, {-1.20F, kDeck5Top, -123.26F},
+                         Material::Galvanised));
+    frame.push_back(span({-2.45F, kDeck5Top - 0.12F, -123.26F}, {-1.20F, kDeck5Top, -123.14F},
+                         Material::Hazard));
+}
+
+void build_s2(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
+    using Sim = Simulation;
+    build_s2_statics(frame);
+
+    // ---- the stair, stored upright on its hinge, frictionless but for its pad --
+    stack.s2_stair = kit.add_body(Sim::kStackS2StairEntityId, s2_stair_parts(), kS2Hinge,
+                                  JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), kS2Lift),
+                                  kS2FlightMassKg + kS2CounterweightKg, 0.8F);
+    kit.set_damping(stack.s2_stair, 0.0F, 0.0F);
+    // About -z, so its fall east is positive.
+    stack.s2_hinge = kit.add_lever(stack.s2_stair, kS2Hinge, -JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(),
+                                   0.0F, kS2PadTo);
+    kit.add_lever_pad(stack.s2_hinge, kS2PadFrom, kS2PadTo, kS2PadTorque);
+
+    // ---- the trip lever, its chain, and the catch -------------------------------
+    // About +z, so the chain pulling its west arm down is positive.
+    const JPH::Vec3 &w = kS2CatchWeightHalf;
+    stack.s2_catch_lever_body = kit.add_body(
+        Sim::kStackS2CatchLeverEntityId,
+        {box(JPH::Vec3(1.575F, 0.05F, 0.04F), JPH::Vec3(0.025F, 0.0F, 0.0F), Material::Hazard),
+         box(JPH::Vec3(0.05F, 0.20F, 0.04F), JPH::Vec3(1.55F, -0.15F, 0.0F), Material::Hazard),
+         box(JPH::Vec3(0.04F, 0.325F, 0.04F), JPH::Vec3(0.0F, 0.375F, 0.0F), Material::Rust),
+         {w, JPH::Vec3(0.12F, 0.75F, 0.0F), JPH::Quat::sIdentity(), Material::Rust,
+          kS2CatchWeightKg / (8.0F * w.GetX() * w.GetY() * w.GetZ())},
+         box(JPH::Vec3(0.04F, 0.04F, 0.025F), JPH::Vec3(0.0F, 0.0F, 0.065F), Material::Steel)},
+        kS2CatchPivot, JPH::Quat::sIdentity(), kS2CatchMassKg, 0.5F);
+    stack.s2_catch_lever = kit.add_lever(stack.s2_catch_lever_body, kS2CatchPivot, JPH::Vec3::sAxisZ(),
+                                         JPH::Vec3::sAxisX(), 0.0F, kS2CatchTravel);
+    const JPH::RVec3 chain_top(kS2ChainGuide.GetX(), kS2ChainTop, kS2ChainGuide.GetZ());
+    stack.s2_chain = add_chain_handle(kit, Sim::kStackS2ChainEntityId, chain_top,
+                                      JPH::Vec3(0.22F, kHandleHalfY, 0.04F));
+    (void)kit.add_trip_line(stack.s2_catch_lever_body, JPH::Vec3(-kS2ChainArm, -0.05F, 0.0F),
+                            stack.s2_chain, JPH::Vec3(0.0F, kHandleHalfY, 0.0F), kS2ChainGuide,
+                            kS2ChainGuide);
+    stack.s2_catch = kit.add_catch(stack.s2_stair, stack.s2_catch_lever, kS2CatchRelease, 0.05F, false);
+}
+
 } // namespace
 
 void build_stack(kit::Kit &kit, Stack &stack) {
     using Sim = Simulation;
     std::vector<Part> frame;
     build_s1(kit, stack, frame);
+    build_s2(kit, stack, frame);
     (void)kit.add_body(Sim::kStackFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(),
                        0.0F, 0.8F);
     std::vector<Part> route;

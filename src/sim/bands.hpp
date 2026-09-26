@@ -244,6 +244,13 @@ struct Stack final {
     kit::BinIndex s1_bin;
     kit::PoolIndex s1_tank;
     kit::PipeIndex s1_fill;
+    // S2, the swinging stair: deck 4 -> deck 5, west of the centre column.
+    kit::BodyIndex s2_stair;
+    kit::BodyIndex s2_catch_lever_body;
+    kit::BodyIndex s2_chain;
+    kit::LeverIndex s2_hinge;
+    kit::LeverIndex s2_catch_lever;
+    kit::CatchIndex s2_catch;
 };
 
 void build_stack(kit::Kit &kit, Stack &stack);

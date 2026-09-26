@@ -103,7 +103,10 @@ jobs:
             "PASS scraperx_sim S1 ride" \
             "PASS scraperx_sim S1 stay aboard" \
             "PASS scraperx_sim C1 climb" \
-            "PASS scraperx_sim Stack to deck 4" \
+            "PASS scraperx_sim S2 swing" \
+            "PASS scraperx_sim S2 eager rider" \
+            "PASS scraperx_sim S2 not a ladder" \
+            "PASS scraperx_sim Stack to deck 5" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \
@@ -331,9 +334,10 @@ jobs:
   # The playable APK, built only once the proof job above has passed -- and
   # with it the Stack pathway scenarios (touch_stack, pad_stack,
   # keyboard_stack), which walk from the game's own start at grade into S1,
-  # ride it on its valve chain and climb C1 to deck 4 through the real input
-  # pipeline on each device. A build whose ascent is not proven is not handed
-  # over to be played.
+  # ride it on its valve chain, climb C1 to deck 4, bring S2's stair down on
+  # its trip chain and walk up it to deck 5 through the real input pipeline on
+  # each device. A build whose ascent is not proven is not handed over to be
+  # played.
   playtest-apk:
     needs: moving-support-truth
     runs-on: ubuntu-24.04

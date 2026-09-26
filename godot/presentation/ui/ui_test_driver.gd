@@ -39,8 +39,9 @@ const SCENARIOS := {
 	"touch_debris": 13,
 	"pad_debris": 13,
 	"keyboard_debris": 13,
-	# The Stack from the game's own start at grade: S1 ridden to deck 2 and C1
-	# climbed to deck 4, on each device.
+	# The Stack from the game's own start at grade: S1 ridden to deck 2, C1
+	# climbed to deck 4, S2's stair brought down and walked up to deck 5, on
+	# each device.
 	"touch_stack": 8,
 	"pad_stack": 8,
 	"keyboard_stack": 8,
@@ -818,15 +819,18 @@ func _debris(device: int) -> bool:
 	return true
 
 
-# The Stack from the game's own start at grade to deck 4, on the device under
+# The Stack from the game's own start at grade to deck 5, on the device under
 # test. Across the yard into S1's cage, GRAB the valve chain hanging in it and
 # hold on: the water runs into the bucket until it outweighs the cage and the
 # rider, and the cage carries them 21.8 m to deck 2. LET GO, off over the
 # gangway, and up C1: onto the cabinet, a jump to hang from the duct's lip,
 # up onto the duct and along it, up the vent stack onto deck 3, out along the
 # monorail, a leap for the davit's ladder, up it and back along the arm onto
-# deck 4. Every verb is the one the HUD offers at that moment, pressed on the
-# device; every leg is proven by the native state it changed.
+# deck 4. West along deck 4 onto S2's landing, GRAB the trip chain: the lever
+# throws, the catch lets the stair go, and it swings down onto deck 5's jaws;
+# LET GO, and up the stair onto deck 5. Every verb is the one the HUD offers
+# at that moment, pressed on the device; every leg is proven by the native
+# state it changed.
 func _stack(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var body := _watch_body()
@@ -969,6 +973,67 @@ func _stack(device: int) -> bool:
 		return _fail("not standing on deck 4 (y %.2f, on %d)" % [_position().y,
 			int(_native().get_support_entity_id())])
 	await _pose("stack_deck4")
+	var at_deck4 := _position().y
+	# S2, the swinging stair: west along deck 4 and out onto its landing, under
+	# the trip chain hanging from the lever beside the upright stair.
+	if not await _go(device, Vector2(-17.5, -125.5), 0.15, 40.0) or \
+			not await _go(device, Vector2(-17.5, -121.5), 0.08, 8.0):
+		return _fail("the walk along deck 4 onto S2's landing stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	# Look up at the lever and its hook over the stair's lug.
+	await _tilt(0.3)
+	if not await _offered(&"pick_up", "GRAB", "TRIP CHAIN"):
+		return _fail("Action read '%s %s' under S2's chain, not GRAB TRIP CHAIN" % [
+			_action_label(), String(_ctx()["action"]["detail"])])
+	await _pose("stack_trip")
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2207, 0.5):
+		return _fail("GRAB did not put S2's trip chain in the hands")
+	var tripped: bool = await _wait_until(func() -> bool:
+		return float(_native().get_stack_s2_catch_lever_angle()) > 0.26 and \
+			not bool(_native().is_stack_s2_catch_latched()), 1.0)
+	if not tripped:
+		return _fail("holding the chain did not throw S2's trip lever (lever %.2f rad)" %
+			float(_native().get_stack_s2_catch_lever_angle()))
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not take S2's chain out of the hands")
+	await _tilt(0.0)
+	# Turn to watch the stair go down.
+	await _face(Vector2(1.0, 0.0))
+	var swinging: bool = await _wait_until(
+		func() -> bool: return float(_native().get_stack_s2_stair_angle()) > 0.35, 8.0)
+	if not swinging:
+		return _fail("S2's stair did not swing down (angle %.3f rad)" %
+			float(_native().get_stack_s2_stair_angle()))
+	await _pose("stack_swing")
+	var seated: bool = await _wait_until(func() -> bool:
+		return bool(_native().is_stack_s2_on_pad()) and \
+			absf(float(_native().get_stack_s2_stair_rate())) < 1.0e-4, 12.0)
+	if not seated:
+		return _fail("S2's stair did not come to rest in its jaws (angle %.3f rad)" %
+			float(_native().get_stack_s2_stair_angle()))
+	var rest_angle := float(_native().get_stack_s2_stair_angle())
+	await _pose("stack_stair")
+	# Up the stair at a walk to the middle of its top landing -- the keyboard's
+	# fine approach taps the keys, too slow to step up a riser -- and off the
+	# landing's north side onto deck 5.
+	if not await _go(device, Vector2(-16.4, -122.1), 0.1, 8.0) or \
+			not await _go(device, Vector2(-1.7, -122.1), 0.3, 20.0):
+		return _fail("the walk up S2's stair stalled at %s" % str(_position()))
+	await _pose("stack_stair_top")
+	if not await _go(device, Vector2(-1.8, -122.4), 0.1, 4.0) or \
+			not await _go(device, Vector2(-1.8, -125.5), 0.1, 6.0):
+		return _fail("the walk off S2's stair onto deck 5 stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	if not bool(_native().is_player_grounded()) or int(_native().get_support_entity_id()) != TOWER_ENTITY or \
+			_position().y < 55.5:
+		return _fail("not standing on deck 5 (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	if absf(float(_native().get_stack_s2_stair_angle()) - rest_angle) > 1.0e-3:
+		return _fail("walked up, S2's stair moved in its jaws (%.4f rad)" %
+			(float(_native().get_stack_s2_stair_angle()) - rest_angle))
+	await _face(Vector2(0.0, -1.0))
+	await _pose("stack_deck5")
 	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
 	# faster than a sprint; only a snap moves the view that far.
 	var worst_step := _stop_watch(body)
@@ -977,9 +1042,10 @@ func _stack(device: int) -> bool:
 			str(body.get("at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
-	_detail = "deck2_y=%.2f deck4_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f" % [
-		at_deck2, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist,
-		worst_step]
+	_detail = ("deck2_y=%.2f deck4_y=%.2f deck5_y=%.2f stair_rest_rad=%.4f seconds=%.1f " +
+		"worst_wrist_step_m=%.3f worst_body_step_m=%.3f") % [
+		at_deck2, at_deck4, _position().y, rest_angle,
+		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step]
 	return true
 
 

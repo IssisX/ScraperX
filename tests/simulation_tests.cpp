@@ -2116,6 +2116,266 @@ bool climb_c1(scraperx::sim::Simulation &simulation, C1Notes *notes = nullptr) {
            on_deck4.support_entity_id == Simulation::kTowerEntityId;
 }
 
+// ---- Band 0, the Stack: S2, the swinging stair -----------------------------------
+
+constexpr double kDeck5Top = 55.0;
+// The stair as designed (MECHANISM_ASCENT_PLAN.md §6): its flight and its
+// counterweight as masses about the hinge, their directions as stored, and
+// the pair's inertia about the hinge. q is the stair's fall from upright.
+constexpr double kS2HingeY = 43.70;
+constexpr double kS2FlightKg = 4000.0;
+constexpr double kS2FlightR = 8.415382;
+constexpr double kS2FlightStored = 1.450018;          // 83.08 deg
+constexpr double kS2CounterweightKg = 13500.0;
+constexpr double kS2CounterweightR = 2.5;
+constexpr double kS2CounterweightStored = -1.656383;  // -94.90 deg
+constexpr double kS2PivotInertia = 510983.7;
+constexpr double kS2PadFrom = 0.699366;
+constexpr double kS2Seat = 0.722566;                  // treads level
+constexpr double kS2Stop = kS2Seat + 0.015;           // the jaws' bottom
+// Where the chain's handle hangs at rest over the landing: its centre.
+constexpr double kS2ChainX = -17.50;
+constexpr double kS2ChainY = 45.91;
+constexpr double kS2ChainZ = -120.90;
+
+// From anywhere on deck 4's south band, west along it and out onto S2's
+// landing to stand under the chain: face it and take hold. True once the
+// chain is in the hands.
+bool take_s2_chain(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!(walk_to(simulation, -17.5, -125.5, 40.0) && walk_to(simulation, -17.5, -121.5, 8.0, 0.08))) {
+        return false;
+    }
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.5);
+    const auto facing = simulation.snapshot();
+    if (facing.carry_target_entity_id != Simulation::kStackS2ChainEntityId || facing.carry_target_kind != 2) {
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    return simulation.snapshot().carrying_entity_id == Simulation::kStackS2ChainEntityId;
+}
+
+// What one swing of S2 saw, from the catch letting go to the stair at rest.
+struct S2Swing final {
+    bool seated = false;
+    double seconds = 0.0;           // catch to rest
+    double pad_seconds = -1.0;      // catch to the jaws
+    double pad_rate = 0.0;          // entering the jaws, rad/s
+    double peak_rate = 0.0;
+    double rest_angle = 0.0;
+    double flight_released_j = 0.0; // at the jaws
+    double counterweight_gained_j = 0.0;
+    double worst_ledger_j = 0.0;    // before the jaws, |released - kinetic|
+};
+
+double s2_flight_y(const double q) { return kS2HingeY + kS2FlightR * std::sin(kS2FlightStored - q); }
+double s2_counterweight_y(const double q) {
+    return kS2HingeY + kS2CounterweightR * std::sin(kS2CounterweightStored - q);
+}
+
+// From the catch letting go until the stair has been still for a second (or
+// `seconds` pass), stepping `stick` each tick. Every tick before the jaws, the
+// energy the flight has released less what the counterweight has taken up is
+// compared with the pair's kinetic energy about the hinge.
+template <typename Stick>
+S2Swing swing_s2(scraperx::sim::Simulation &simulation, const double seconds, Stick stick) {
+    using scraperx::sim::Simulation;
+    S2Swing swing;
+    const double start = simulation.snapshot().simulation_time_seconds;
+    const double q0 = simulation.stack_state().s2_stair_angle;
+    double still = 0.0;
+    const auto ticks = static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (std::uint32_t tick = 0; tick < ticks && !swing.seated; ++tick) {
+        stick(simulation);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        const auto s = simulation.stack_state();
+        const double t = simulation.snapshot().simulation_time_seconds - start;
+        swing.peak_rate = std::max(swing.peak_rate, std::abs(s.s2_stair_rate));
+        const double released = kS2FlightKg * kGravity * (s2_flight_y(q0) - s2_flight_y(s.s2_stair_angle));
+        const double gained =
+            kS2CounterweightKg * kGravity * (s2_counterweight_y(s.s2_stair_angle) - s2_counterweight_y(q0));
+        const double kinetic = 0.5 * kS2PivotInertia * s.s2_stair_rate * s.s2_stair_rate;
+        if (swing.pad_seconds < 0.0) {
+            if (s.s2_on_pad) {
+                swing.pad_seconds = t;
+                swing.pad_rate = s.s2_stair_rate;
+                swing.flight_released_j = released;
+                swing.counterweight_gained_j = gained;
+            } else {
+                swing.worst_ledger_j = std::max(swing.worst_ledger_j, std::abs(released - gained - kinetic));
+            }
+        }
+        still = std::abs(s.s2_stair_rate) < 1.0e-4 ? still + Simulation::kFixedStepSeconds : 0.0;
+        if (swing.pad_seconds >= 0.0 && still >= 1.0) {
+            swing.seated = true;
+            swing.seconds = t;
+            swing.rest_angle = s.s2_stair_angle;
+        }
+    }
+    return swing;
+}
+
+// From S2's landing up the seated stair, off its top landing's north side and
+// onto deck 5's south band; true once standing there on the tower. The stair's
+// fall is watched: walked on, it must not move.
+bool climb_s2(scraperx::sim::Simulation &simulation, double *stair_moved = nullptr) {
+    using scraperx::sim::Simulation;
+    const double q0 = simulation.stack_state().s2_stair_angle;
+    const bool up = walk_to(simulation, -16.4, -122.1, 8.0, 0.1) && walk_to(simulation, -2.7, -122.1, 20.0, 0.1);
+    if (stair_moved != nullptr) {
+        *stair_moved = std::abs(simulation.stack_state().s2_stair_angle - q0);
+    }
+    if (!(up && walk_to(simulation, -1.8, -122.4, 4.0, 0.1) && walk_to(simulation, -1.8, -125.5, 6.0, 0.1))) {
+        return false;
+    }
+    (void)simulation.advance_frame(0.5);
+    const auto state = simulation.snapshot();
+    return state.player_grounded && state.player_position.y > kDeck5Top + 0.5 &&
+           state.player_position.z < -124.0 && state.support_entity_id == Simulation::kTowerEntityId;
+}
+
+void run_s2() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    const auto stand = [](Simulation &simulation) {
+        (void)simulation.set_move_input(0.0, 0.0);
+    };
+
+    // (1) No link: left alone, S2 waits as found -- the stair upright on its
+    // catch, the trip lever down on its stop, the chain hanging in reach.
+    Simulation idle(InitialSpawn::Deck4South);
+    require(idle.advance_frame(60.0).accepted, "S2 idle interval must be accepted");
+    const auto idle_state = idle.stack_state();
+    const auto chain_at = idle.kit_body_position(idle.kit_body_index(Simulation::kStackS2ChainEntityId));
+    require(idle_state.s2_catch_latched && std::abs(idle_state.s2_stair_angle) < 1.0e-4 &&
+                std::abs(idle_state.s2_catch_lever_angle) < 0.005,
+            "left alone for 60 s, S2's stair must stand on its catch with the trip lever down");
+    require(std::abs(chain_at.x - kS2ChainX) <= 0.10 && std::abs(chain_at.y - kS2ChainY) <= 0.06 &&
+                std::abs(chain_at.z - kS2ChainZ) <= 0.10,
+            "left alone, S2's chain must hang over the landing");
+    // The stair's mass lies where the plan puts it: 17.5 t, centred 7 cm from
+    // the hinge on the stair's side.
+    const auto stair = idle.kit_body_index(Simulation::kStackS2StairEntityId);
+    const auto com = idle.kit_body_center_of_mass(stair);
+    require(std::abs(idle.kit_body_mass(stair) - (kS2FlightKg + kS2CounterweightKg)) < 1.0 &&
+                std::abs(com.x - -14.9331) < 0.002 && std::abs(com.y - 43.6880) < 0.002,
+            "S2's stair must weigh 17.5 t, centred where its flight and counterweight put it");
+
+    // (2) One pull, from deck 4 on player inputs: along the band, out onto the
+    // landing, take hold of the chain. It throws the trip lever over its dead
+    // point: the hook lifts off the lug, the catch lets go, and the lever stays
+    // thrown when the chain is let go.
+    Simulation pull(InitialSpawn::Deck4South);
+    require(pull.advance_frame(0.5).accepted, "S2 settle interval must be accepted");
+    require(take_s2_chain(pull), "the player must walk from deck 4 onto S2's landing and take hold of its chain");
+    (void)pull.advance_frame(0.3);
+    const auto thrown = pull.stack_state();
+    require(!thrown.s2_catch_latched && thrown.s2_catch_lever_angle > 0.26,
+            "held, S2's chain must throw the trip lever past the catch's release");
+    (void)pull.request_set_down();
+    const auto swing = swing_s2(pull, 20.0, stand);
+    require(pull.stack_state().s2_catch_lever_angle > 0.40, "let go, S2's trip lever must stay thrown");
+    require(swing.seated, "S2's stair must swing down and come to rest");
+    // (3) The counterweight does the shaping: the flight releases ~100 kJ and
+    // the counterweight takes up all but ~6 kJ of it; what is left is the
+    // stair's motion, to within 2 % of the flight's release.
+    require(swing.counterweight_gained_j > 0.90 * swing.flight_released_j,
+            "S2's counterweight must take up at least 90 % of what the flight releases");
+    const double net = swing.flight_released_j - swing.counterweight_gained_j;
+    const double pad_kinetic = 0.5 * kS2PivotInertia * swing.pad_rate * swing.pad_rate;
+    require(std::abs(net - pad_kinetic) <= 0.02 * net && swing.worst_ledger_j <= 0.02 * net,
+            "every tick before the jaws, S2's motion must be what the flight released less what the "
+            "counterweight took up");
+    // (4) Arrival: slow into the jaws, held there, the treads level.
+    require(swing.peak_rate <= 0.19 && swing.pad_seconds > 6.0 && swing.pad_seconds < 12.0,
+            "S2's stair must swing down in 6 to 12 s at no more than 0.19 rad/s");
+    require(swing.rest_angle > kS2PadFrom && std::abs(swing.rest_angle - kS2Seat) <= 0.006,
+            "S2's stair must come to rest in its jaws within 0.35 deg of level treads");
+    (void)pull.advance_frame(10.0);
+    require(std::abs(pull.stack_state().s2_stair_angle - swing.rest_angle) < 1.0e-4 &&
+                pull.stack_state().s2_on_pad,
+            "seated, S2's stair must stay held in its jaws");
+    // (5) The receiver: up the stair to deck 5. A rider walking up it does not
+    // move it.
+    double moved = 1.0;
+    require(climb_s2(pull, &moved), "the player must walk up S2's stair onto deck 5");
+    require(moved < 1.0e-3, "walked up, S2's stair must not move in its jaws");
+    std::cout << "PASS scraperx_sim S2 swing: pad_s=" << swing.pad_seconds << " pad_rate=" << swing.pad_rate
+              << " peak_rate=" << swing.peak_rate << " rest_deg=" << 82.0 - swing.rest_angle * 180.0 / 3.14159265358979
+              << " flight_J=" << swing.flight_released_j << " counterweight_J=" << swing.counterweight_gained_j
+              << " kinetic_J=" << pad_kinetic << " worst_ledger_J=" << swing.worst_ledger_j
+              << " walked_move_rad=" << moved << " deck5_y=" << pull.snapshot().player_position.y << "\n";
+
+    // (6) The impatient rider: from the pull, straight on toward deck 5. The
+    // falling stair stops them at its foot until it will carry them; they run
+    // up it as it comes down, adding their weight to its fall, and it comes to
+    // rest in its jaws or on the jaws' bottom -- the top landing within a step
+    // of deck 5 either way -- and they walk off onto the deck.
+    Simulation eager(InitialSpawn::Deck4South);
+    require(eager.advance_frame(0.5).accepted, "S2 eager settle interval must be accepted");
+    require(take_s2_chain(eager), "S2: take hold of the chain");
+    (void)eager.advance_frame(0.3);
+    (void)eager.request_set_down();
+    (void)walk_to(eager, -16.4, -122.1, 4.0, 0.1);
+    const auto eager_swing =
+        swing_s2(eager, 25.0, [](Simulation &simulation) { steer_toward(simulation, -2.7, -122.1); });
+    require(eager_swing.seated && eager_swing.rest_angle >= kS2Seat - 0.006 &&
+                eager_swing.rest_angle <= kS2Stop + 1.0e-4,
+            "S2's stair must come to rest in its jaws with a rider running up it as it falls");
+    require(climb_s2(eager), "the eager rider must reach deck 5");
+    require(eager.snapshot().death_count == 0, "the eager rider must not die");
+    std::cout << "PASS scraperx_sim S2 eager rider: seconds=" << eager_swing.seconds
+              << " rest_deg=" << 82.0 - eager_swing.rest_angle * 180.0 / 3.14159265358979
+              << " peak_rate=" << eager_swing.peak_rate << " pad_s=" << eager_swing.pad_seconds << "\n";
+
+    // (7) The upright stair is not a ladder: from the landing, facing it and
+    // trying every way up it, again and again -- a jump into it, a climb, a
+    // mantle -- the body gets no higher than a standing jump takes it and
+    // comes back down onto the landing each time.
+    Simulation ladder(InitialSpawn::Deck4South);
+    require(ladder.advance_frame(0.5).accepted, "S2 ladder settle interval must be accepted");
+    require(walk_to(ladder, -17.5, -125.5, 40.0) && walk_to(ladder, -16.2, -122.1, 8.0, 0.08),
+            "the player must reach the stair's foot");
+    const double stand_y = ladder.snapshot().player_position.y;
+    double highest = 0.0;
+    double first_peak = 0.0;
+    double last_peak = 0.0;
+    for (int attempt = 0; attempt < 6; ++attempt) {
+        double peak = 0.0;
+        (void)ladder.set_facing(1.0, 0.0);
+        if (attempt % 2 == 0) {
+            (void)ladder.request_jump();
+        } else {
+            (void)ladder.request_traversal();
+        }
+        for (std::uint32_t tick = 0; tick < 180; ++tick) {
+            (void)ladder.set_move_input(1.0, 0.0);
+            (void)ladder.set_facing(1.0, 0.0);
+            if (tick % 20 == 0) {
+                (void)ladder.request_traversal();
+            }
+            (void)ladder.advance_frame(Simulation::kFixedStepSeconds);
+            peak = std::max(peak, ladder.snapshot().player_position.y);
+        }
+        first_peak = attempt == 0 ? peak : first_peak;
+        last_peak = peak;
+        highest = std::max(highest, peak);
+    }
+    (void)ladder.set_move_input(0.0, 0.0);
+    (void)ladder.advance_frame(1.0);
+    const auto after_ladder = ladder.snapshot();
+    require(ladder.stack_state().s2_catch_latched, "trying to climb it must not release S2's stair");
+    require(highest < stand_y + 1.54 + 0.40,
+            "the upright stair must not be climbed: nothing higher than a standing jump into it");
+    require(after_ladder.player_grounded && after_ladder.player_position.y < stand_y + 0.30,
+            "after every try at climbing the upright stair, the body must be back on the landing");
+    std::cout << "PASS scraperx_sim S2 not a ladder: stand_y=" << stand_y << " first_peak=" << first_peak
+              << " last_peak=" << last_peak << " highest=" << highest
+              << " end_y=" << after_ladder.player_position.y << "\n";
+}
+
 void run_stack() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -2320,8 +2580,12 @@ void run_stack() {
               << " deck4_y=" << facade_top.player_position.y << " ladder_needs_leap=1"
               << " worst_tick_step_m=" << g_path_watch.worst << "\n";
 
+    // S2: from deck 4 to deck 5.
+    run_s2();
+
     // The Stack so far in one run from the game's spawn, on player inputs:
-    // hold S1's chain, ride it to deck 2, climb C1 to deck 4.
+    // hold S1's chain, ride it to deck 2, climb C1 to deck 4, pull S2's chain
+    // and walk up its stair to deck 5.
     Simulation band(InitialSpawn::ExteriorGrade);
     require(band.advance_frame(0.5).accepted, "the Stack's settle interval must be accepted");
     const double band_start = band.snapshot().simulation_time_seconds;
@@ -2333,13 +2597,20 @@ void run_stack() {
             "the Stack: off S1 onto deck 2");
     const double at_deck2 = band.snapshot().simulation_time_seconds - band_start;
     require(climb_c1(band), "the Stack: up C1 to deck 4");
+    const double at_deck4 = band.snapshot().simulation_time_seconds - band_start;
+    require(take_s2_chain(band), "the Stack: along deck 4 onto S2's landing and take hold of its chain");
+    (void)band.advance_frame(0.3);
+    (void)band.request_set_down();
+    require(swing_s2(band, 20.0, [](Simulation &simulation) { (void)simulation.set_move_input(0.0, 0.0); }).seated,
+            "the Stack: S2's stair swings down to deck 5");
+    require(climb_s2(band), "the Stack: up S2's stair onto deck 5");
     g_path_watch.armed = false;
     require(g_path_watch.worst <= 0.15,
-            "the Stack: from the yard to deck 4 the body must never move more than 0.15 m sideways in one tick");
+            "the Stack: from the yard to deck 5 the body must never move more than 0.15 m sideways in one tick");
     const auto band_top = band.snapshot();
-    require(band_top.death_count == 0, "the Stack: from the yard to deck 4 without dying");
-    std::cout << "PASS scraperx_sim Stack to deck 4: seconds=" << band_top.simulation_time_seconds - band_start
-              << " at_deck2=" << at_deck2 << " deck4_y=" << band_top.player_position.y
+    require(band_top.death_count == 0, "the Stack: from the yard to deck 5 without dying");
+    std::cout << "PASS scraperx_sim Stack to deck 5: seconds=" << band_top.simulation_time_seconds - band_start
+              << " at_deck2=" << at_deck2 << " at_deck4=" << at_deck4 << " deck5_y=" << band_top.player_position.y
               << " worst_tick_step_m=" << g_path_watch.worst << "\n";
 }
 
@@ -2404,6 +2675,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "stack") {
         run_stack();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "s2") {
+        run_s2();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");

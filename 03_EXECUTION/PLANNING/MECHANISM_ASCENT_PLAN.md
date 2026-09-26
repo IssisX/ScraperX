@@ -118,7 +118,7 @@ Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has hei
 |---|---|---|---|---|---|
 | S1 | Machine: **water-balance hoist** (counter-mass; water as the mass) | 0 → 22 m | south face, east of centre | walks into the cage and takes hold of the valve chain hanging in it: held, it pulls the lever overhead down, which opens the header tank's valve and lets the bucket's catch go; water runs into the empty bucket at the head until it outweighs cage and rider, the bucket falls 21.8 m and the cage rides up to a gangway onto deck 2. At the foot the bucket drains on a striker and the cage comes back down by itself | built and proven, natively and through the game's input on three devices (cycles 1, 1b) |
 | C1 | Climb: **the facade** | 22 → 44 m | south face, east of S1 | out onto a loading landing, a mantle onto its switchgear cabinet, a jump to hang from the duct along the face, up onto the duct and along it, up a vent stack over deck 3's edge; out along deck 3's monorail under the ladder hung from deck 4's davit, a turn and a leap for it, up it onto the davit's arm and back along the arm onto deck 4 | built and proven, natively and through the game's input on three devices (cycles 2, 1b) |
-| S2 | Machine: **the swinging stair** (ROTATE → DEPLOY; counterbalanced bascule) | 44 → 55 m | south face, west of centre | on deck 4, pulls the chain at the foot of a 17 m steel stair standing upright outside the face; its catch lets go and the stair swings down over 8 s, slowed by the 13.5 t counterweight behind its hinge, and seats on a padded bracket at deck 5's edge; the player walks up it onto deck 5 | designed (§6), INTEGRATED; BLOCKED on three kit capabilities (§6.8) |
+| S2 | Machine: **the swinging stair** (ROTATE → DEPLOY; counterbalanced bascule) | 44 → 55 m | south face, west of centre | walks west along deck 4 onto a landing beside a 17 m steel stair standing upright outside the face, and takes hold of the chain hanging from a trip lever: it throws, the hook lifts off the stair's lug, and the stair swings down over 8 s, slowed by the 13.5 t counterweight behind its hinge, until a blade under its top landing drives into timber jaws at deck 5's edge; the player walks up it onto deck 5 | built and proven, natively and through the game's input on three devices (cycle 3) |
 | — | Options above deck 5 | 55 → 154 m | — | a climb from deck 5; then candidates from §8 chosen from the exit S2 actually leaves. Nothing here is designed | options |
 | — | AS-006 … AS-009 (legacy bands) | 154 → 640 m | shaft | built by the retired plans, proven only natively (AS-006 A and C also through the game's input). Not part of the proven route | owner's decision: keep in the world for review, or retire from the default world as the `ChatGPT` branch did |
 
@@ -201,125 +201,127 @@ wider than a body.
 |---|---|---|---|
 | The vent's top-out snapped the view 0.9 m sideways | the mantle over deck 3's edge ran the body into the vent stack's last metre above the deck; pushed aside, it was set back onto its path in one tick (0.58 m, native; 0.89 m in one frame through the game) | the stack ran 1 m above the deck so a climber's hands could reach a height the top-out probe accepts, and that metre stood in the mantle's path | a plate on the deck with its fascia down the edge beam gives one lip the probe accepts from lower down; the stack tees off under the deck and its outlets stand clear of the path. The C1 and Stack runs now fail on any sideways step over 0.15 m in a tick |
 
-**Open ends.** S2 (deck 4 → deck 5) is designed in §6 and is the missing cause closest to the
-goal, downstream of C1. Status: BLOCKED on three kit capabilities (§6.8), then next cycle.
+**Open ends.** S2 (deck 4 → deck 5), downstream of C1, is built and proven in §6.
 
-## 6. Cycle 3 — S2, the swinging stair (design, not built)
+## 6. Cycle 3 — S2, the swinging stair (contract, as built)
 
 Profile `MACRO-TRAVERSAL-STRICT`. Evaluator: `stage1dof.py`, beam model, h = 1 ms, every case
-rerun at h/4. The spec is at the end of this section.
+rerun at h/4 (spec at the end of this section). Engine: Jolt at 90 Hz; MEASURED numbers are the
+engine's, from `tests/simulation_tests.cpp` (`run_s2`) on player inputs.
 
 ### 6.1 Outcome and receiver
 
-The player stands on deck 5's south band (support: the tower, top 55.00 m) having walked up a steel
-stair that swung down from upright and now rests on a padded bracket at deck 5's edge. Receiver:
-deck 5's walking surface reached from the stair's top landing over a static plate bridging the
-0.6 m to the face; clear standing area 2 × 3 m; a fall from the stair lands on deck 4's band or
+The player stands on deck 5's south band (support: the tower, top 55.00 m) having walked up a 17 m
+steel stair that swung down from upright and rests with its treads level and its top landing level
+with deck 5. Receiver: deck 5, reached from the top landing's open north side over a static plate
+(x −2.45 … −1.20, z −124.05 … −123.14, top 55.00). A fall from the stair lands on deck 4's band or
 past the face (lethal: restores the last footing).
 
 ### 6.2 Topology and rejected candidates
 
 ROTATE → DEPLOY: a counterbalanced bascule. The flight's own weight is the source; a cast
-counterweight behind the hinge shapes the drive; a pad on the hinge's last travel is the terminal;
-a catch released by a chain is the only player action.
+counterweight behind the hinge shapes the drive; timber jaws on the last of the hinge's travel are
+the terminal; one pull on a chain is the only action.
 
 | Candidate | Rejected by |
 |---|---|
 | Ingot skip (the old plan's S2: carry four ingots into a counterweight skip, board, pull a trip) | a carrying chore ahead of a gravity event (§2.2); two ordered actions (the S1 failure's pattern); stepping off the platform with three ingots across while holding the trip sends it up empty and strands the player (DERIVED from the masses: 300 + 3·40 kg against 255 + 3·40 kg). Draft code parked, not pushed |
 | A second water-balance hoist | the same verb and the same motion as S1 |
 | Uncounterweighted falling stair | 114.7 kJ released into the seat: 0.77 rad/s, the top at 13 m/s (DERIVED) |
+| A gravity hook as the catch (the hook falls back when the chain is let go) | let go at once, the hook fell back across the lug's path and caught the stair after 0.018 rad; with 3.8 kN of lug on it, lifting it again needed about 2 kN at the chain, past the grip (900 N): a softlock (MEASURED). Replaced by a trip lever that throws over its dead point and stays thrown |
+| Open treads | stood upright, open treads lie at 41° one above another, and a body pushing into them rode up the stack (MEASURED). Every step is closed by a riser: the upright face then leans back only 8°, and a jump into it gets no higher than a jump |
 
-### 6.3 Geometry (CHOSEN unless marked)
+### 6.3 Geometry (as built)
 
 | Item | Value |
 |---|---|
-| Hinge | (x −15.0, y 44.00, z −122.10), axis along z, on a bracket cantilevered from deck 4's edge beam |
-| Flight | 17.1 m hinge to top seat, 2.0 m wide (z −123.1 … −121.1), 44 treads of 0.25 rise × 0.30 going: pitch 39.8° seated; handrails as 0.2 × 0.06 flat bars (not holds, so the upright stair is not a ladder) |
-| Stored | upright at 82° (top at 60.9 m, DERIVED), 0.6 m clear of the face's edge beams and 0.67 m of its diagrid braces (they occupy z −124.3 … −123.7 and −124.2 … −123.8) |
-| Seated | 40.6° (the engine's frictionless case; DERIVED from the integrated rest angle): top landing 55.13 m, 0.13 m above deck 5, at x −2.0, clear of the x = 0 column (x −0.8 … 0.8) |
-| Counterweight | 13.5 t cast block, 1.24 m cube, 2.5 m from the hinge, 2° off diametrically opposite the flight: under deck 4 at 41.5 m stored, 42.3 m seated, outside the face |
-| Control | a chain at the foot landing on a catch lever (S1's pattern), reachable only from the landing |
-
-Swept volume: the flight sweeps the quarter-disc between 82° and 40.6° of radius 17.1 m about the
-hinge, x −12.6 … −2.0, outside the face; the counterweight sweeps x −15.3 … −16.8 at 41.5–42.3 m.
-Nothing static stands in either (checked against `world_solids.inc` and the stack's native
-columns, braces and edge beams).
+| Hinge | (x −15.00, y 43.70, z −122.10), axis along z; its shaft's ends in bearings on the landing's side beams |
+| Flight | 43 treads and a top landing, rise 0.25, going 0.2917 (level at 40.6°), every step closed by a riser; two 0.5 m stringers at z ±0.95; flat 0.20 × 0.06 handrails and posts, too broad to grip; the 1.0 m top landing spans the full width, its north side open; a 0.5 m blade under it |
+| Stored | upright at 82° on its catch; the top landing at 61.3 m |
+| Seated | 40.6°: the foot plate at 44.00 (deck 4's level), the top landing at 55.00 (deck 5's), x −2.21 … −1.21 |
+| Counterweight | a cast block 1.1 × 1.1 × 1.78 m, 13.5 t (declared 6,268 kg/m³), 2.5 m from the hinge, 2° round from opposite the flight's centre, on two arms in line with the stringers, under the landing |
+| Landing (deck 4) | x −19.50 … −15.43, z −124.05 … −120.60, top 44.00, over deck 4's edge beam; side beams carry the bearings; rails on its south edge and west end |
+| Catch | a trip lever (60 kg, 50 of them a cast weight on a mast 11.5° east of upright over its pivot) on a post at the landing's south edge; its hook over a lug on the south stringer; the chain hangs from its west arm over a guide, the handle's top at 45.95 m |
+| Receiver (deck 5) | timber jaws (x −2.20 … −1.05, y 53.55 … 54.20) either side of the blade's path on a base plate, on two brackets hung from deck 5's edge beam; the plate onto the deck |
+| Swept volume | every stair part against every static part and the trip lever (down, at its dead point, thrown), at 401 angles from stored to the stop: 0.03 m clear (DERIVED) |
 
 ### 6.4 Mass, drive and energy
 
 | Quantity | Value | Evidence |
 |---|---|---|
-| Flight | 4,000 kg, COM 8.55 m, I_cm 97,470 kg·m² | CHOSEN; DERIVED (uniform flight, m L²/12) |
-| Pivot inertia | 474,255 kg·m² | DERIVED |
-| Q(q) | −g [4000·8.55 cos(q + 98°) + 13500·2.5 cos(q + 276°)] | DERIVED |
-| Held on the catch | Q(0) = 12.1 kN·m; breakaway 2.69 × the 4.5 kN·m static-friction corner | DERIVED; INTEGRATED |
-| Seated | Q = +11.0 kN·m: the flight rests into its pad | DERIVED |
-| Released vs stored | flight falls 2.924 m (114.7 kJ); counterweight rises 0.813 m (107.7 kJ); ≈ 7 kJ to the pad less hinge losses | DERIVED |
-| Hinge reaction | 171.7 kN static | DERIVED |
+| Flight | 4,000 kg over its parts by volume; centre 8.42 m from the hinge at 41.7° (seated); I_cm 140,612 kg·m² | CHOSEN; DERIVED from its parts |
+| Pair | 17.5 t, centred 6.8 cm from the hinge on the flight's side; 510,984 kg·m² about the hinge | DERIVED; mass and centre MEASURED as built |
+| Q(q) | 11.5 kN·m on the catch, 7.3 kN·m seated: the stair presses into its jaws | DERIVED |
+| Breakaway | 2.55 × the 4.5 kN·m static-friction corner of the band | INTEGRATED |
+| One swing | the flight drops 102.9 kJ; the counterweight takes up 95.9 kJ (93 %); 6.9 kJ is the swing | MEASURED |
 
-### 6.5 Band sweep (INTEGRATED)
+### 6.5 Band sweep (INTEGRATED) and the engine
 
-Band: hinge friction 0 / 1.5 / 3 kN·m (the kit's hinge is frictionless; the band covers the
-engine binding and the pad's entry). Every case HELD_BY_BUFFER_FRICTION on the pad (a slide
-plate of 300 kN·m over the last 0.04 rad): swing 7.6–8.7 s, peak 0.163–0.188 rad/s (the top at
-2.8–3.2 m/s, just before the pad), rest angle 40.6–41.1° (the top landing 0.13–0.23 m above
-deck 5, inside one step), ledger residual ≤ 0.32 %, h/4 differences ≤ 1.2e−5 rad/s and 0.0005 s.
+Band: hinge friction 0 / 1.5 / 3 kN·m. Every case HELD_BY_BUFFER_FRICTION in the jaws (300 kN·m
+from 0.0232 rad before the seat): swing 8.3–9.7 s, peak 0.137–0.165 rad/s (the top landing at
+2.4–2.9 m/s), rest 40.57–41.00° (the top landing within 0.13 m of deck 5), ledger residual ≤ 0.35 %,
+h/4 differences ≤ 7.3e−6 rad/s and 0.00075 s. The engine's hinge is frictionless: into the jaws
+at 7.96 s at 0.1645 rad/s, at rest at 40.56° (MEASURED; the evaluator's frictionless case gives
+0.1645 and 40.57°).
 
 ### 6.6 Modes and rest matrix
 
-HELD (catch seated) --chain turns the catch lever past release--> SWINGING --flight enters the
-pad (q ≥ 0.693)--> PADDED --ω → 0, Q > 0--> SEATED. The catch does not relatch (the flight has
-left its seat); nothing rearms: the stair stays down and deck 5 stays reachable, and every
-checkpoint from then on is above it.
+HELD (catch) --the chain pulls the trip lever past its dead point (0.20 rad); its weight throws it
+to its far stop, and the catch lets go at 0.26 rad--> SWINGING --the blade enters the jaws
+(q ≥ 0.6994)--> GRIPPED --ω = 0--> SEATED. The lever stays thrown and nothing relatches: the stair
+stays down, and every checkpoint from then on is above it.
 
 | Rest variant | Result | Evidence |
 |---|---|---|
-| no rider | held into the pad by +11.0 kN·m | DERIVED |
-| rider (85 kg) on the top tread | +11.0 kN·m more into the pad; the pad holds 300 | DERIVED |
-| rider on the flight while it swings (jumped on) | lands on a moving support; the drive rises by at most 11 kN·m; still pads | DERIVED; to be checked in the engine |
+| no rider | held by the jaws, pressing into them with 7.3 kN·m | MEASURED |
+| a rider walking up it | the stair moves 0.0001 rad | MEASURED |
+| a rider on the top landing through the swing | held by the jaws in three band cases; frictionless, it rides on to the jaws' bottom (the hinge's stop, 0.015 rad past level) at 0.050 rad/s | INTEGRATED |
+| a rider running up it as it falls | rests on the jaws' bottom at 39.74°, the top landing 0.26 m below deck 5 — a step; the rider walks off onto deck 5 | MEASURED |
 
-### 6.7 Falsifiers (engine, before the first ride is credited)
+### 6.7 Falsifiers (engine) — all pass
 
-1. No link: untouched for 60 s, the stair stays upright on its catch.
-2. The counterweight does the shaping: built without it, the flight reaches the pad at ≈ 0.77 rad/s
-   and overruns it (DERIVED prediction).
-3. Ledger: flight PE lost − counterweight PE gained − pad work − hinge work = kinetic energy,
-   residual ≤ 2 % of 114.7 kJ.
-4. Arrival: peak ≤ 0.19 rad/s; rest at 40.5–41.1°; the top landing within 0.25 m above deck 5.
-5. Swept path: no contact impulse on the flight or counterweight before the pad.
-6. Rest: a rider on the top tread and a rider jumping on the moving flight end with the flight
-   seated.
-7. The game's input: from deck 4 and from grade (the whole Stack), touch, pad and keyboard: to
-   the foot, GRAB the chain, wait, walk up onto deck 5.
+1. No link: untouched for 60 s, the stair stands on its catch, the lever down, the chain in reach.
+2. The counterweight does the shaping, and 3. the ledger: of the flight's 102.9 kJ the counterweight
+   takes up 95.9 kJ; the rest is the swing's kinetic energy, to within 6 J at every tick before
+   the jaws (limit 2 % of the swing).
+4. Arrival: 0.1645 rad/s peak (limit 0.19) into the jaws at 7.96 s; rest within 0.04° of level
+   (limit 0.35°).
+5. Swept path: the 6 J ledger bounds any contact before the jaws; the sweep is 0.03 m clear.
+6. Rest: walked up, the stair moves 0.0001 rad; an eager rider brings it onto the jaws' bottom
+   and still walks off onto deck 5.
+7. Not a ladder: six tries at the upright stair — jumps into it, climbs, mantles — reach 1.79 m
+   (one jump) and end back on the landing.
+8. The game's input: `touch_stack`, `pad_stack` and `keyboard_stack` walk from the game's start at
+   grade to deck 5 through the real input pipeline (95–97 s), and CI builds the APK only after
+   they pass.
 
-### 6.8 What the kit must gain first (the BLOCKED items)
+### 6.8 Kit capabilities added (they were the blockers)
 
-1. **Per-part density.** The kit spreads a body's mass evenly by volume; the counterweight must
-   carry 77 % of the lever's mass in about 40 % of its volume. A density per part, from which the
-   body's mass, centre and inertia are built.
-2. **A lever pad.** Friction on the hinge over the last part of a lever's travel (a declared slide
-   plate; the evaluator's `slide` buffer), holding the seated flight.
-3. **A catch on a hinged body.** The kit's catches have held only guided bodies; confirm a catch
-   holds a lever body still and lets it go cleanly, or add that case.
+1. **Per-part density** (`Part::density`): a declared part weighs density × volume, the rest of the
+   body's mass is spread over its other parts by volume, and its centre and inertia follow.
+   Bodies that declare none are built as before.
+2. **A lever pad** (`add_lever_pad`): friction on the hinge while the lever's angle lies in a range.
+3. **A catch on a hinged body**: the existing catch holds a lever body still (60 s) and lets it
+   go cleanly; no change was needed.
 
-### 6.9 Evaluator spec
+### 6.9 Evaluator spec (as built)
 
 ```json
 {
- "name": "S2: counterbalanced swinging stair, deck 4 -> deck 5; pad as a hinge slide plate",
+ "name": "S2 as built: counterbalanced swinging stair, deck 4 -> deck 5; jaws as a hinge slide plate",
  "model_kind": "beam",
  "model": {
   "masses": [
-   {"mass": 4000, "r": 8.55, "phi": 1.710423, "i_cm": 97470},
-   {"mass": 13500, "r": 2.5, "phi": 4.817109}
+   {"mass": 4000.0, "r": 8.415382, "phi": 1.691575, "i_cm": 140611.549},
+   {"mass": 13500.0, "r": 2.5, "phi": 4.797975, "i_cm": 2722.5}
   ],
   "theta0": 0.0,
   "torque_friction_kinetic": 1500,
   "torque_friction_static": 4500
  },
  "terminal": {
-  "buffer": {"kind": "slide", "start": 0.693038, "stroke": 0.04, "force": 300000},
-  "stop_q": 0.733038
+  "buffer": {"kind": "slide", "start": 0.699366, "stroke": 0.0382, "force": 300000.0},
+  "stop_q": 0.737566
  },
  "band": {"model.torque_friction_kinetic": [0, 1500, 3000]},
  "require": {
@@ -332,9 +334,8 @@ checkpoint from then on is above it.
 }
 ```
 
-q is the flight's fall from 82° (radians); the flight's direction at q is 180° − (82° − q) in the
-evaluator's frame. The rest variants are not run for pad outcomes by the evaluator; §6.6 derives
-them.
+q is the stair's fall from 82° (radians); its direction at q is 180° − (82° − q) in the
+evaluator's frame. The flight's mass and centre come from its parts as built (risers included).
 
 ## 7. Audit of the `ChatGPT` branch's opening mechanism
 
@@ -360,20 +361,20 @@ owner's decision).
 
 ## 8. The catalogue against this engine
 
-What the kit builds today (source: `mechanism_kit.hpp`): bodies made of boxes, one density each;
-world-fixed hinges between hard stops, without friction; straight guides with a brake-only
+What the kit builds today (source: `mechanism_kit.hpp`): bodies made of boxes, a density declared
+per box where it matters (§6.8); world-fixed hinges between hard stops, frictionless but for a pad
+over a range of angles; straight guides with a brake-only
 governor that eases into each stop, dogs (a catch rack on a guide) and rail gaps; catches released
 by a lever or by pulling a pin, relatching; ropes over fixed sheaves (any ratio; a rating that
 parts; a clutch; a push-only strut); trip lines to handles; bins that pour rubble or water through
 a gated mouth and drain on a striker; pools and pipes with valves; rigging (shackles, anchors);
-carrying. Missing: round bodies, joints between two moving bodies, springs, pads and crush beds,
-fracture.
+carrying. Missing: round bodies, joints between two moving bodies, springs, crush beds, fracture.
 
 | Family | Build now? | Missing | Notes (the `ChatGPT` corrections kept) |
 |---|---|---|---|
 | Counterweight lift, fixed or variable ballast | yes | — | S1. Unshaped: keep strokes short or near balance, or shape it |
 | Chain counterweight (drive fades as chain piles) | no | a rope end whose hanging mass falls with travel | the skill's worked example; the best shaped lift drive |
-| Bascule, swinging stair, drawbridge | yes, with §6.8 | per-part density, lever pad | S2. Offset tail places the drive's zero |
+| Bascule, swinging stair, drawbridge | yes | — | S2 (§6). Offset tail places the drive's zero; a trip lever, not a gravity hook, as its catch |
 | Balance bridge (beam + ballast) | partly | pan hinge on the beam, rolling bodies, catch rack on a lever | load it by a gated rubble pour, not a pipe avalanche (§7) |
 | Pendulum striking a receiver | yes (world hinge + contact) | — | strike before the apex, where there is speed; restitution is a separation ratio, not an energy source |
 | Toppling column, falling monoliths laying a stair | yes (boxes tipping on contact) | — | each upright slab is its own preloaded source; spacing follows the tip geometry; each rest pose must carry the player |

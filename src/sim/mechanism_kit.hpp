@@ -59,6 +59,9 @@ struct Part final {
     JPH::Vec3 offset = JPH::Vec3::sZero();
     JPH::Quat rotation = JPH::Quat::sIdentity();
     Material material = Material::Steel;
+    // kg/m^3, declared: a cast counterweight on a steel frame. 0: the part
+    // takes its share of the body's mass by volume (add_body).
+    float density = 0.0F;
 };
 
 // What a pick-up of this body is, for the prompt: a load, a rope's shackle,
@@ -108,7 +111,12 @@ public:
     Kit &operator=(const Kit &) = delete;
 
     // ---- building -------------------------------------------------------
-    // mass_kg == 0 makes a static body.
+    // mass_kg == 0 makes a static body. A moving body's mass is spread over
+    // its parts by volume, except that a part with a declared density weighs
+    // density x volume and the rest of mass_kg is spread over the others; its
+    // centre of mass and inertia follow from where that mass lies. When the
+    // declared parts are all there is, or weigh mass_kg or more, the others
+    // are weightless and the body weighs what its declared parts do.
     BodyIndex add_body(std::uint64_t entity, const std::vector<Part> &parts,
                        JPH::RVec3 position, JPH::Quat rotation, float mass_kg, float friction);
     void set_carry(BodyIndex body, CarryKind kind, JPH::Vec3 handle_local);
@@ -159,6 +167,13 @@ public:
     // it: a counterweighted lever rests on a stop, and a pull turns it.
     LeverIndex add_lever(BodyIndex body, JPH::RVec3 pivot, JPH::Vec3 axis, JPH::Vec3 normal,
                          float min_angle, float max_angle);
+
+    // A pad on a lever's last travel (declared slide plate, S2): while the
+    // lever's angle lies between from_angle and to_angle its hinge carries up
+    // to `torque` N m of friction either way -- a blade on the lever driven
+    // into timber jaws -- so a swinging lever is slowed to rest in the jaws
+    // and held there against anything less than `torque`.
+    void add_lever_pad(LeverIndex lever, float from_angle, float to_angle, float torque);
 
     // A catch holding body fast to the world while its pin is seated. The
     // pin leaves its hole when lever turns past release_angle. relatch:
@@ -398,6 +413,11 @@ public:
 
     [[nodiscard]] bool catch_latched(CatchIndex catch_index) const noexcept;
     [[nodiscard]] float lever_angle(LeverIndex lever) const noexcept;
+    // The lever's turning rate about its hinge axis, rad/s, positive toward
+    // its max_angle.
+    [[nodiscard]] float lever_rate(LeverIndex lever) const noexcept;
+    // True while the lever's angle lies on its pad.
+    [[nodiscard]] bool lever_on_pad(LeverIndex lever) const noexcept;
     [[nodiscard]] float guide_travel(GuideIndex guide) const noexcept;
     // True while the guide has no rail gap or its joint lies in its seat.
     [[nodiscard]] bool rail_whole(GuideIndex guide) const noexcept;
@@ -469,6 +489,10 @@ private:
         BodyIndex body;
         JPH::Ref<JPH::HingeConstraint> hinge;
         JPH::RVec3 pivot = JPH::RVec3::sZero();   // world: every lever hinges on the world
+        JPH::Vec3 axis = JPH::Vec3::sAxisZ();     // world, unit
+        float pad_from = 0.0F;
+        float pad_to = 0.0F;
+        float pad_torque = 0.0F;                  // 0: no pad
     };
     struct Line final {
         BodyIndex lever_body;

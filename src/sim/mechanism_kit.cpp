@@ -65,11 +65,21 @@ constexpr float kMinCellVolume = 0.5F;            // m^3, a guard: no cell is ev
     return kDischarge * area * std::sqrt(2.0F * magnitude / rho);
 }
 
-[[nodiscard]] JPH::Ref<JPH::Shape> make_shape(const std::vector<Part> &parts) {
-    const auto box = [](const Part &part) {
+[[nodiscard]] float part_volume(const Part &part) {
+    return 8.0F * part.half.GetX() * part.half.GetY() * part.half.GetZ();
+}
+
+// Each box weighs its declared density, or filler_density when it declares
+// none (Jolt's own 1000 kg/m^3 for a body whose mass is set afterwards).
+[[nodiscard]] JPH::Ref<JPH::Shape> make_shape(const std::vector<Part> &parts,
+                                              const float filler_density) {
+    const auto box = [filler_density](const Part &part) {
         const float smallest =
             std::min({part.half.GetX(), part.half.GetY(), part.half.GetZ()});
-        return new JPH::BoxShape(part.half, std::min(JPH::cDefaultConvexRadius, 0.5F * smallest));
+        auto *shape =
+            new JPH::BoxShape(part.half, std::min(JPH::cDefaultConvexRadius, 0.5F * smallest));
+        shape->SetDensity(part.density > 0.0F ? part.density : filler_density);
+        return shape;
     };
     if (parts.size() == 1 && parts.front().offset.IsNearZero() &&
         parts.front().rotation.IsClose(JPH::Quat::sIdentity())) {
@@ -127,14 +137,36 @@ BodyIndex Kit::add_body(const std::uint64_t entity, const std::vector<Part> &par
                         const JPH::RVec3 position, const JPH::Quat rotation, const float mass_kg,
                         const float friction) {
     const bool dynamic = mass_kg > 0.0F;
-    JPH::BodyCreationSettings settings(make_shape(parts), position, rotation,
+    float declared_kg = 0.0F;
+    float filler_m3 = 0.0F;
+    bool declared = false;
+    for (const Part &part : parts) {
+        if (part.density > 0.0F) {
+            declared = true;
+            declared_kg += part.density * part_volume(part);
+        } else {
+            filler_m3 += part_volume(part);
+        }
+    }
+    // With no declared part the shape keeps Jolt's default density and the
+    // mass is set over it: the path every body took before densities.
+    const bool weighed = dynamic && declared;
+    float filler_density = JPH::BoxShapeSettings().mDensity;
+    float body_kg = mass_kg;
+    if (weighed) {
+        JPH_ASSERT(filler_m3 <= 0.0F || declared_kg < mass_kg);
+        filler_density =
+            filler_m3 > 0.0F ? std::max(0.0F, mass_kg - declared_kg) / filler_m3 : 0.0F;
+        body_kg = declared_kg + filler_density * filler_m3;
+    }
+    JPH::BodyCreationSettings settings(make_shape(parts, filler_density), position, rotation,
                                        dynamic ? JPH::EMotionType::Dynamic
                                                : JPH::EMotionType::Static,
                                        dynamic ? moving_layer_ : static_layer_);
     settings.mFriction = friction;
     settings.mUserData = entity;
     settings.mAllowSleeping = false;
-    if (dynamic) {
+    if (dynamic && !weighed) {
         settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
         settings.mMassPropertiesOverride.mMass = mass_kg;
     }
@@ -146,7 +178,7 @@ BodyIndex Kit::add_body(const std::uint64_t entity, const std::vector<Part> &par
     record.id = body->GetID();
     record.entity = entity;
     record.dynamic = dynamic;
-    record.mass = mass_kg;
+    record.mass = body_kg;
     record.parts = parts;
     record.parked = position;
     bodies_.push_back(record);
@@ -260,8 +292,21 @@ LeverIndex Kit::add_lever(const BodyIndex body, const JPH::RVec3 pivot, const JP
     JPH::Ref<JPH::HingeConstraint> hinge = static_cast<JPH::HingeConstraint *>(
         settings.Create(JPH::Body::sFixedToWorld, jolt_body(body)));
     system_.AddConstraint(hinge);
-    levers_.push_back({body, hinge, pivot});
+    Lever lever;
+    lever.body = body;
+    lever.hinge = hinge;
+    lever.pivot = pivot;
+    lever.axis = axis.Normalized();
+    levers_.push_back(lever);
     return LeverIndex{static_cast<std::uint32_t>(levers_.size() - 1U)};
+}
+
+void Kit::add_lever_pad(const LeverIndex lever, const float from_angle, const float to_angle,
+                        const float torque) {
+    Lever &record = levers_[lever.value];
+    record.pad_from = std::min(from_angle, to_angle);
+    record.pad_to = std::max(from_angle, to_angle);
+    record.pad_torque = std::max(0.0F, torque);
 }
 
 CatchIndex Kit::add_catch(const BodyIndex body, const LeverIndex lever, const float release_angle,
@@ -492,6 +537,14 @@ void Kit::pre_step(const float delta_seconds) {
         govern(guide);
         engage_dogs(guide);
         apply_limits(guide);
+    }
+    for (std::uint32_t index = 0; index < levers_.size(); ++index) {
+        Lever &lever = levers_[index];
+        if (lever.pad_torque > 0.0F && lever.hinge != nullptr) {
+            // The jaws grip the blade only while it lies between them.
+            lever.hinge->SetMaxFrictionTorque(lever_on_pad(LeverIndex{index}) ? lever.pad_torque
+                                                                               : 0.0F);
+        }
     }
     for (Rope &rope : ropes_) {
         if (rope.clutch.valid() && !rope.clutch_engaged && !rope.parted &&
@@ -1570,6 +1623,25 @@ bool Kit::catch_latched(const CatchIndex catch_index) const noexcept {
 float Kit::lever_angle(const LeverIndex lever) const noexcept {
     const Lever *record = find(levers_, lever);
     return record != nullptr && record->hinge != nullptr ? record->hinge->GetCurrentAngle() : 0.0F;
+}
+
+float Kit::lever_rate(const LeverIndex lever) const noexcept {
+    const Lever *record = find(levers_, lever);
+    if (record == nullptr) {
+        return 0.0F;
+    }
+    return system_.GetBodyInterfaceNoLock()
+        .GetAngularVelocity(bodies_[record->body.value].id)
+        .Dot(record->axis);
+}
+
+bool Kit::lever_on_pad(const LeverIndex lever) const noexcept {
+    const Lever *record = find(levers_, lever);
+    if (record == nullptr || record->pad_torque <= 0.0F) {
+        return false;
+    }
+    const float angle = lever_angle(lever);
+    return angle >= record->pad_from && angle <= record->pad_to;
 }
 
 float Kit::guide_travel(const GuideIndex guide) const noexcept {

@@ -134,6 +134,13 @@ public:
     [[nodiscard]] double get_stack_s1_bucket_water_kg() const;
     [[nodiscard]] double get_stack_s1_valve_angle() const;
     [[nodiscard]] bool is_stack_s1_catch_latched() const;
+    // S2, the Stack's swinging stair, read back: its fall from upright (rad),
+    // the rate of that fall, the trip lever's angle, the catch, the jaws.
+    [[nodiscard]] double get_stack_s2_stair_angle() const;
+    [[nodiscard]] double get_stack_s2_stair_rate() const;
+    [[nodiscard]] double get_stack_s2_catch_lever_angle() const;
+    [[nodiscard]] bool is_stack_s2_catch_latched() const;
+    [[nodiscard]] bool is_stack_s2_on_pad() const;
 
 protected:
     static void _bind_methods();
