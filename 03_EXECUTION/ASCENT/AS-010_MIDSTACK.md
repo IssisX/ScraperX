@@ -6,7 +6,7 @@ Atlas band B06 starts at TP-640. This slice is one machine, not the band.
 
 A rider who starts standing on TP-640 ends standing on the service cage, 22 m higher, because an 800 kg skip fell 22 m.
 
-The landing above that cage, the rest of the band, and a climb that needs no lift are not built.
+The landing above the cage is in. You can step onto it from the cage, or mantle a stack of steel billets up to it. The billets do not line up; each one is a pull, not a step. A ladder on the east side is only there if you do not want to work that out. Neither climb trips the catch.
 
 ## The chain, built backward from that effect
 
@@ -26,7 +26,7 @@ The rider is supported by the cage floor at the top of its guides. The cage move
 | Energy | Skip releases about 173 kJ over 22 m. Cage plus rider gain about 94 kJ. The rest goes into the guide brake and the buffer. |
 | Re-arm | The skip is still a body at the bottom. Putting it back needs another machine, which this slice does not build. |
 | Open, upstream | None for this lift. The player is already on TP-640. |
-| Open, downstream | A floor and a way off the cage at 662 m, then the band's other two lifts and the no-lift climb to 780 m. Not built. |
+| Open, downstream | The other two lifts, and any climb past this landing toward 780 m. Not built. |
 
 ## Proof
 

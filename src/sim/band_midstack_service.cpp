@@ -11,7 +11,9 @@
 // 22 m. The rope is found made fast on a bollard. Until the rider takes that
 // end off the bollard and hooks it to the cage, tripping the catch does not
 // lift the cage. The skip survives at the bottom, so the lift can be armed
-// again. Nothing above this landing is built yet.
+// again. A landing sits level with the cage at the top. The way onto it
+// without the lift is a stack of steel billets, each one turned, each rise
+// too tall to step. A ladder on the east side is only the easy backup.
 
 namespace scraperx::sim::bands {
 
@@ -101,6 +103,25 @@ constexpr float kBollardSlack = 0.03F;
                     JPH::Vec3(-(kCageHalfX + 0.06F), kCageEyeLocal.GetY(), 0.0F), JPH::Quat::sIdentity(),
                     Material::Hazard});
     return cage;
+}
+
+// A ladder and a landing east of the cage, clear of its travel. The landing's
+// top matches the cage floor at the top of the rise, so a rider can step off
+// or climb the ladder and stand there without tripping the catch.
+Part span(const JPH::Vec3 low, const JPH::Vec3 high, const Material material) {
+    return {0.5F * (high - low), 0.5F * (high + low), JPH::Quat::sIdentity(), material};
+}
+
+void ladder(std::vector<Part> &parts, const float x, const float z, const float bottom, const float top) {
+    constexpr float kMember = 0.03F;
+    for (const float side : {-1.0F, 1.0F}) {
+        const float rail_z = z + side * 0.28F;
+        parts.push_back(span({x - kMember, bottom, rail_z - kMember}, {x + kMember, top, rail_z + kMember},
+                             Material::Yellow));
+    }
+    for (float y = bottom + 0.30F; y <= top - 0.05F; y += 0.30F) {
+        parts.push_back({JPH::Vec3(0.02F, 0.02F, 0.28F), JPH::Vec3(x, y, z), JPH::Quat::sIdentity(), Material::Steel});
+    }
 }
 
 } // namespace
@@ -218,6 +239,40 @@ void build_midstack_service(kit::Kit &kit, MidstackService &service) {
     kit.set_damping(service.m_handle, 1.5F, 1.5F);
     (void)kit.add_trip_line(service.m_lever_body, JPH::Vec3(-kLeverArm, 0.0F, 0.0F), service.m_handle, handle_top,
                             kTripSheaveWest, kTripSheaveEast);
+
+    const float landing_top = kCageFloorTop + kCageTravel - 0.05F;
+    std::vector<Part> route;
+    route.push_back(span({-6.15F, landing_top - 0.16F, kCageCenterZ - kCageHalfZ},
+                         {-4.55F, landing_top, kCageCenterZ + kCageHalfZ}, Material::Timber));
+    // The deck's east lip, for the ladder backup. The south lip is the last
+    // pull of the billet route.
+    route.push_back(span({-4.63F, landing_top - 1.20F, kCageCenterZ - kCageHalfZ},
+                         {-4.47F, landing_top, kCageCenterZ + kCageHalfZ}, Material::Timber));
+    route.push_back(span({-6.15F, landing_top - 1.25F, -149.62F}, {-4.55F, landing_top, -149.48F}, Material::Steel));
+    // The ladder is the easy way, left for someone who does not want to work
+    // out the billets. It is not the route.
+    ladder(route, -4.28F, kCageCenterZ, kDeckTop, landing_top - 0.40F);
+
+    // Steel billets, turned a quarter each time. Every rise is too tall to
+    // step and too tall to vault, and none of them lines up with the one
+    // under it, so the way up is a mantle, a walk to the next face, a mantle.
+    // The last billet is the wide one under the landing's south lip.
+    constexpr float kPlate = 640.25F;
+    constexpr float kRises[] = {1.70F, 1.80F, 1.65F, 1.80F, 1.75F, 1.80F, 1.60F, 1.70F, 1.65F, 1.75F, 1.55F};
+    constexpr float kSlots[4][4] = {
+        {-3.50F, -1.20F, -155.60F, -153.30F},
+        {-1.10F, 1.20F, -155.60F, -153.30F},
+        {-1.10F, 1.20F, -153.20F, -150.90F},
+        {-3.50F, -1.20F, -153.20F, -150.90F},
+    };
+    float top = kPlate;
+    for (int i = 0; i < 11; ++i) {
+        top += kRises[i];
+        const float *slot = kSlots[i % 4];
+        route.push_back(span({slot[0], top - (kRises[i] - 0.40F), slot[2]}, {slot[1], top, slot[3]}, Material::Steel));
+    }
+    route.push_back(span({-6.20F, 660.70F - 1.30F, -151.30F}, {-1.15F, 660.70F, -149.50F}, Material::Steel));
+    (void)kit.add_body(Sim::kServiceRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
 }
 
 } // namespace scraperx::sim::bands

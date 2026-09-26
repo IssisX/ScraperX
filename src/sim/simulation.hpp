@@ -673,6 +673,7 @@ public:
     static constexpr std::uint64_t kCraneLClutchHandleEntityId = 2127;
     // AS-010, the service cage off TP-640.
     static constexpr std::uint64_t kServiceFrameEntityId = 1012;
+    static constexpr std::uint64_t kServiceRouteEntityId = 1013;
     static constexpr std::uint64_t kServiceMCageEntityId = 2130;
     static constexpr std::uint64_t kServiceMSkipEntityId = 2131;
     static constexpr std::uint64_t kServiceMShackleEntityId = 2132;

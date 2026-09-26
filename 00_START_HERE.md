@@ -175,7 +175,7 @@ records, deliberately not rewritten. Retconning a proof record is worse than an 
 | `AS-007` | blind + drain, or north climb to 340 m | B03 | PLANNED | ⚠ imported | none |
 | `AS-008` | seat `MOD-GIRDER-T` | B04 | UNAUTHORED | — | none |
 | `AS-009` | hang rail / traveler stroke | B05 | UNAUTHORED | — | none |
-| `AS-010` | service cage off TP-640, 22 m | B06 | IN PROGRESS | re-derived here: one counter-mass lift, not the band | `PASS scraperx_sim AS-010 M`, `AS-010 from the crane step-off`, `ascent 154 to service cage` (local, 391 s, rider at 663.3 m) |
+| `AS-010` | service cage off TP-640, 22 m, plus the billet climb to the same landing | B06 | IN PROGRESS | the lift is one machine; the billets are the hard way up beside it | `PASS AS-010 M`, `from the crane step-off`, `AS-010 route` (billets, cage stays), `AS-010 ladder backup` |
 | `AS-011` | wind-frame structure / SKIN | B07 | UNAUTHORED | — | none |
 | `AS-012` | isolate high riser / drum clutch | B08 | UNAUTHORED | — | none |
 | `AS-013` | jack + seat crown beam | B09 | UNAUTHORED | — | none |

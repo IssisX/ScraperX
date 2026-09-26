@@ -2185,6 +2185,16 @@ void run_service_lift() {
     const auto top = ride.snapshot();
     require(on_support(top, Simulation::kServiceMCageEntityId) && standing_above(top, 662.2),
             "the rider must be standing on the cage at the top of the 22 m rise");
+    const bool stepped = walk_to(ride, -5.4, -147.2, 8.0);
+    if (!stepped) {
+        const auto stuck = ride.snapshot();
+        std::cout << "step-off stuck at " << stuck.player_position.x << ' ' << stuck.player_position.y << ' '
+                  << stuck.player_position.z << " support=" << stuck.support_entity_id
+                  << " grounded=" << stuck.player_grounded << '\n';
+    }
+    require(stepped && on_support(ride.snapshot(), Simulation::kServiceRouteEntityId) &&
+                standing_above(ride.snapshot(), 662.2),
+            "at the top, the rider must be able to step east off the cage onto the landing");
     const double skip_drop = skip_y0 - kit_com_y(ride, Simulation::kServiceMSkipEntityId);
     const double cage_rise = kit_com_y(ride, Simulation::kServiceMCageEntityId) - cage_y0;
     const double source_j = kSkipKg * kG * skip_drop;
@@ -2209,6 +2219,98 @@ void run_service_from_dismount() {
             "from the crane's step-off, the rider must reach the service cage and ride it");
     std::cout << "PASS scraperx_sim AS-010 from the crane step-off: rider_y="
               << from_crane.snapshot().player_position.y << '\n';
+}
+
+// Face a billet and mantle it. The rise is too tall to step and too tall to vault.
+bool mantle_face(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
+                 const double fz, const double min_y, const char *which) {
+    using scraperx::sim::TraversalState;
+    if (!walk_to(simulation, x, z, 8.0, 0.12)) {
+        const auto stuck = simulation.snapshot();
+        std::cout << which << " walk stuck at " << stuck.player_position.x << ' ' << stuck.player_position.y << ' '
+                  << stuck.player_position.z << '\n';
+        return false;
+    }
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.4);
+    const auto ready = simulation.snapshot();
+    if (!ready.ledge_available) {
+        std::cout << which << " no ledge at " << ready.player_position.x << ' ' << ready.player_position.y << ' '
+                  << ready.player_position.z << '\n';
+        return false;
+    }
+    if (!simulation.request_traversal()) {
+        return false;
+    }
+    (void)simulation.advance_frame(scraperx::sim::Simulation::kFixedStepSeconds);
+    if (simulation.snapshot().traversal_state != TraversalState::Mantling) {
+        std::cout << which << " did not mantle, rise=" << ready.ledge_rise_meters
+                  << " state=" << static_cast<int>(simulation.snapshot().traversal_state) << '\n';
+        return false;
+    }
+    const bool up = advance_until(
+        simulation,
+        [min_y](const scraperx::sim::Snapshot &state) {
+            return state.player_grounded && state.traversal_state == TraversalState::None &&
+                   state.player_position.y > min_y;
+        },
+        3.0);
+    if (!up) {
+        const auto stuck = simulation.snapshot();
+        std::cout << which << " mantle stuck at " << stuck.player_position.x << ' ' << stuck.player_position.y << ' '
+                  << stuck.player_position.z << " state=" << static_cast<int>(stuck.traversal_state) << '\n';
+    }
+    return up;
+}
+
+// The way up beside the cage: steel billets, a quarter-turn between each, then
+// the landing. The ladder is still there. This climb does not use it, and it
+// does not trip the catch.
+void run_service_route() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    struct Face {
+        double x, z, fx, fz, min_y;
+        const char *name;
+    };
+    const Face faces[] = {
+        {-2.35, -156.35, 0.0, 1.0, 642.4, "billet 0"},  {-1.75, -154.45, 1.0, 0.0, 644.2, "billet 1"},
+        {0.05, -153.90, 0.0, 1.0, 645.9, "billet 2"},   {-0.90, -152.05, -1.0, 0.0, 647.7, "billet 3"},
+        {-2.35, -152.80, 0.0, -1.0, 649.4, "billet 4"}, {-1.75, -154.45, 1.0, 0.0, 651.2, "billet 5"},
+        {0.05, -153.90, 0.0, 1.0, 652.8, "billet 6"},   {-0.90, -152.05, -1.0, 0.0, 654.5, "billet 7"},
+        {-2.35, -152.80, 0.0, -1.0, 656.2, "billet 8"}, {-1.75, -154.45, 1.0, 0.0, 657.9, "billet 9"},
+        {0.05, -153.90, 0.0, 1.0, 659.5, "billet 10"}, {-0.90, -151.05, -1.0, 0.0, 661.1, "girder"},
+        {-5.30, -150.20, 0.0, 1.0, 663.0, "landing"},
+    };
+    Simulation route(InitialSpawn::Plate640);
+    require(route.advance_frame(1.0).accepted, "the route settle interval must be accepted");
+    require(walk_to(route, 2.0, -144.8, 10.0) && walk_to(route, 2.0, -156.35, 12.0),
+            "the climber must get around to the billets without boarding the cage");
+    for (const Face &face : faces) {
+        require(mantle_face(route, face.x, face.z, face.fx, face.fz, face.min_y, face.name),
+                "each billet has to be mantled, not walked up");
+    }
+    require(on_support(route.snapshot(), Simulation::kServiceRouteEntityId) &&
+                standing_above(route.snapshot(), 662.2),
+            "the billet route must end standing on the landing");
+    require(route.service_state().m_catch_latched && std::abs(route.service_state().m_cage_travel) < 0.05,
+            "the billet route must not trip the catch or raise the cage");
+    std::cout << "PASS scraperx_sim AS-010 route: landing_y=" << route.snapshot().player_position.y
+              << " cage_travel=" << route.service_state().m_cage_travel << '\n';
+}
+
+// The ladder is the backup, not the way the route is meant to be read.
+void run_service_ladder() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation route(InitialSpawn::Plate640);
+    require(route.advance_frame(1.0).accepted, "the ladder settle interval must be accepted");
+    require(walk_to(route, -3.6, -144.8, 6.0), "the backup climb must get east of the cage");
+    require(climb_wet_hold(route, -3.6, -148.0, -1.0, 0.0, false, 662.2),
+            "the backup ladder must still reach the landing");
+    require(route.service_state().m_catch_latched && std::abs(route.service_state().m_cage_travel) < 0.05,
+            "the backup ladder must not raise the cage");
+    std::cout << "PASS scraperx_sim AS-010 ladder backup: landing_y=" << route.snapshot().player_position.y << '\n';
 }
 
 int main() {
@@ -2273,6 +2375,8 @@ int main() {
         only != nullptr && std::string(only) == "AS-010") {
         run_service_lift();
         run_service_from_dismount();
+        run_service_route();
+        run_service_ladder();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -5949,6 +6053,8 @@ int main() {
     run_crane_wreckage();
     run_service_lift();
     run_service_from_dismount();
+    run_service_route();
+    run_service_ladder();
     run_ascent();
 
     return EXIT_SUCCESS;
