@@ -837,6 +837,8 @@ func _stack(device: int) -> bool:
 	if not await _go(device, Vector2(10.0, -120.1), 0.1, 6.0):
 		return _fail("the step into S1's cage stalled at %s" % str(_position()))
 	await _face(Vector2(-1.0, 0.0))
+	# Look up at the chain hanging over the head, as a player does.
+	await _tilt(0.35)
 	if not await _offered(&"pick_up", "GRAB", "VALVE CHAIN"):
 		return _fail("Action read '%s %s' beside S1's chain, not GRAB VALVE CHAIN" % [
 			_action_label(), String(_ctx()["action"]["detail"])])
@@ -873,6 +875,7 @@ func _stack(device: int) -> bool:
 	if not await _let_go_if_held(device):
 		return _fail("LET GO did not take S1's chain out of the hands")
 	var worst_wrist := _stop_watch(wrists)
+	await _tilt(0.0)
 	# 0.10 m in a 60 Hz frame is 6 m/s across the view: faster than any reach.
 	if worst_wrist > 0.10:
 		return _fail("a hand on S1's chain jumped %.3f m in one frame (%s)" % [worst_wrist,
@@ -1044,6 +1047,14 @@ func _face(direction: Vector2) -> void:
 			_main._yaw = goal
 			return
 		_main._yaw = float(_main._yaw) + signf(left) * step
+		await get_tree().process_frame
+
+
+# Tilts the view to `pitch` the way a thumb or a stick does, at up to 2 rad/s.
+func _tilt(pitch: float) -> void:
+	while absf(pitch - float(_main._pitch)) > 1.0e-3:
+		var step := 2.0 * get_process_delta_time()
+		_main._pitch = move_toward(float(_main._pitch), pitch, step)
 		await get_tree().process_frame
 
 

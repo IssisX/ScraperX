@@ -189,10 +189,12 @@ constexpr float kGangwaySouthZ = -122.30F;
 }
 
 
-// A handle hanging with its top at `top` on a chain from above.
+// A handle hanging with its top at `top` on a chain from above: a bar along
+// z, across the view of a rider facing the lever's arm, so both hands close on
+// it.
 kit::BodyIndex add_chain_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 top) {
     const kit::BodyIndex handle = kit.add_body(
-        entity, {box(JPH::Vec3(0.22F, kHandleHalfY, 0.04F), JPH::Vec3::sZero(), Material::Yellow)},
+        entity, {box(JPH::Vec3(0.04F, kHandleHalfY, 0.22F), JPH::Vec3::sZero(), Material::Yellow)},
         top - JPH::RVec3(0.0, kHandleHalfY, 0.0), JPH::Quat::sIdentity(), 3.0F, 0.9F);
     kit.set_carry(handle, kit::CarryKind::Handle, JPH::Vec3(0.0F, kHandleHalfY, 0.0F));
     kit.set_damping(handle, 1.5F, 1.5F);
