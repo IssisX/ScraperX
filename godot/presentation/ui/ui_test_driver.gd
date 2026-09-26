@@ -17,6 +17,9 @@ const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 
 const SCENARIOS := {
 	"ground_foundation": 8,
+	"pipe_bridge": 8,
+	"touch_pipe_bridge": 8,
+	"keyboard_pipe_bridge": 8,
 	"touch_jump": 8,
 	"touch_move_look": 8,
 	"touch_gyro_aim": 8,
@@ -58,7 +61,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	_scenario = scenario
 	_capture_prefix = capture_prefix
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if scenario != "ground_foundation" and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -89,6 +92,12 @@ func _run() -> void:
 	match _scenario:
 		"ground_foundation":
 			ok = await _ground_foundation()
+		"pipe_bridge":
+			ok = await _pipe_bridge(InputRouter.Device.GAMEPAD)
+		"touch_pipe_bridge":
+			ok = await _pipe_bridge(InputRouter.Device.TOUCH)
+		"keyboard_pipe_bridge":
+			ok = await _pipe_bridge(InputRouter.Device.KEYBOARD_MOUSE)
 		"touch_jump":
 			ok = await _touch_jump()
 		"touch_move_look":
@@ -149,14 +158,82 @@ func _fail(reason: String) -> bool:
 
 # --- scenarios -----------------------------------------------------------------
 
+func _pipe_bridge(device: int) -> bool:
+	await _seconds(0.5)
+	for point in [Vector2(13, -75), Vector2(12.7, -78.95)]:
+		if not await _walk_to(device, point, 0.07, 20.0):
+			return _fail("rack approach at %s" % _position())
+	await _face(Vector2(-1, 0))
+	await _pose("rack_ready")
+	if not await _offered(&"pick_up", "GRAB"):
+		return _fail("release grip not offered at %s" % _position())
+	_act(device)
+	await _seconds(0.15)
+	if int(_native().get_carrying_entity_id()) != 2530:
+		return _fail("rack grip was not picked up")
+	_move(device, 0.35)
+	await _seconds(0.6)
+	_move(device, 0)
+	if int(_native().get_carrying_entity_id()) != 0:
+		_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_pipe_bridge_retained_pipes()) == 20, 12.0):
+		return _fail("rack did not load all twenty pipes")
+	await _pose("loaded_pan")
+	for point in [Vector2(12.7, -75), Vector2(-1.4, -75), Vector2(-1.4, -85.6), Vector2(-0.5, -85.6)]:
+		if not await _walk_to(device, point, 0.07, 20.0):
+			return _fail("bridge grip approach at %s" % _position())
+	await _face(Vector2(0, 1))
+	await _seconds(0.15)
+	if not await _offered(&"pick_up", "GRAB"):
+		return _fail("release grip not offered at %s" % _position())
+	_act(device)
+	await _seconds(0.15)
+	if int(_native().get_carrying_entity_id()) != 2505:
+		return _fail("bridge grip was not picked up pos=%s target=%d held=%d" % [
+			_position(), _native().get_carry_target_entity_id(), _native().get_carrying_entity_id()])
+	_move_dir(device, Vector2(0.35, 0))
+	await _seconds(0.6)
+	_move_dir(device, Vector2.ZERO)
+	if int(_native().get_carrying_entity_id()) != 0:
+		_act(device)
+	if not await _wait_until(func() -> bool: return float(_native().get_pipe_bridge_crush_front()) > 0.1, 15.0):
+		return _fail("pan never reached the crush receiver")
+	await _seconds(2.0)
+	var tip := float(_native().get_pipe_bridge_tip_height())
+	if tip < 7.53 or tip > 8.2:
+		return _fail("bridge height %.4f" % tip)
+	await _face(Vector2(1, -1))
+	await _pose("bridge_raised")
+	var tip_z := -90.0 - 20.0 * cos(asin(7.4 / 20.0))
+	var crossed_bridge := false
+	for point in [Vector2(-0.6, -86), Vector2(1.94, -86), Vector2(1.94, -91.1), Vector2(6, -91.1),
+			Vector2(6, tip_z + 1.5), Vector2(9.06, tip_z + 1.5), Vector2(9.06, tip_z - 2), Vector2(9.06, -125.2)]:
+		await _face(point - Vector2(_position().x, _position().z))
+		if not await _walk_to(device, point, 0.07, 20.0):
+			return _fail("crossing at %s" % _position())
+		if int(_native().get_support_entity_id()) == 2500:
+			crossed_bridge = true
+	if not crossed_bridge:
+		return _fail("route never used the actual moving deck")
+	if int(_native().get_support_entity_id()) not in [11, 51]:
+		return _fail("arrival is disconnected from the original tower")
+	await _face(Vector2(-0.1, 1))
+	await _pose("tower_arrival")
+	if _position().y < 11.6 or int(_native().get_death_count()) != 0:
+		return _fail("did not arrive alive at the tower ring")
+	if _main._audio.pipe_motion_frames == 0 or _main._audio.pipe_crush_cues == 0:
+		return _fail("observed motion and crush did not produce sound cues")
+	_detail = "pipes=20 tip_y=%.4f arrival_y=%.3f native_input=1 deaths=0" % [tip, _position().y]
+	return true
+
 func _ground_foundation() -> bool:
 	if _main._regression_scene:
 		return _fail("production proof selected a regression scene")
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 1:
-		return _fail("a moving machine remains in the default world")
+	if int(_native().get_moving_body_count()) != 33:
+		return _fail("default pipe bridge body inventory differs")
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
 	var retired := ["IntakeBay", "WaterScrew", "LegalForty", "Hook5",
@@ -173,7 +250,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=1 retired_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=33 retired_meshes=0 default_controls=1"
 	return true
 
 
@@ -1038,10 +1115,10 @@ func _move_dir(device: int, v: Vector2) -> void:
 # Walks to a horizontal point without turning the view, the way a player
 # steps into place: the stick (or keys) pushed toward it relative to the
 # view, easing off near it -- a key pulses -- and stopping inside `tolerance`.
-func _walk_to(device: int, target: Vector2, tolerance: float) -> bool:
+func _walk_to(device: int, target: Vector2, tolerance: float, timeout: float = 6.0) -> bool:
 	var waited := 0.0
 	var frame := 0
-	while waited < 6.0:
+	while waited < timeout:
 		var at := _position()
 		var to := target - Vector2(at.x, at.z)
 		if to.length() <= tolerance:

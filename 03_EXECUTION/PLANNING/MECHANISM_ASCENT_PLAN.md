@@ -1,11 +1,11 @@
 # Ground-up macro ascent plan
 
-**Scope:** owner-directed reset dated 2026-09-26. **Spatial owner:** `01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`. **Status/evidence owner:** `00_START_HERE.md` §2. No new mechanism is implemented by this plan.
+**Scope:** owner-directed reset dated 2026-09-26. **Spatial owner:** `01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`. **Status/evidence owner:** `00_START_HERE.md` §2. The first pipe-loaded bridge is implemented in source; current delivery evidence remains in `00_START_HERE.md`.
 
 ## Delivery order
 
 1. **Clear normal gameplay.** Remove all old campaign machinery, its colliders/cables and machine-linked stair assemblies, including the rejected water screw/lift. Retain tower/environment, the complete movement system, and ordinary stairs/ramps as the optional slower route. Future ladders need a genuine implemented climbing interaction. Separate regression fixtures explicitly. Prove the actual default scene has no legacy moving machinery and normal controls still reach the native player.
-2. **Close the first +8 m receiver on paper and in a bounded test layout.** Active under `AS-016_PIPE_BALANCE_BRIDGE.md` following the owner's instruction to continue. Begin with the landing, grade approach and walkable rotating deck. Derive release effort, pipe capture, full energy/inertia, finite stop and recovery. Use the revised Atlas geometry and mass budget. Do not promote a pipe avalanche before the downstream geometry can accept it.
+2. **Close the first +8 m receiver on paper and in a bounded test layout.** Completed locally under `AS-016_PIPE_BALANCE_BRIDGE.md` following the owner's instruction to continue. Begin with the landing, grade approach and walkable rotating deck. Derive release effort, pipe capture, full energy/inertia, finite stop and recovery. Use the revised Atlas geometry and mass budget. Do not promote a pipe avalanche before the downstream geometry can accept it.
 3. **Implement one useful chain.** Rack release → visible pipe motion → broad pan loading → rotating bridge → stable receiver → actual player walk onto it. Each link reads native physical state. No one-shot impulse to fake the whole chain, area signal that enables the next stage, event clock or invisible support.
 4. **Verify and stop.** Normal touch/controller input, first-person visibility, useful pacing, noise/placement variations, no-source/no-link falsifiers, early boarding/missed capture, checkpoint/retry, matching solid geometry, Android artifact. Device observations remain a separate gate.
 5. **Choose the next macro transfer from the proven exit.** A contained heavy roller and pendulum or falling stair slabs are options. The skyline, old band cuts or eleven-phase inspiration do not imply completed connections.
@@ -26,4 +26,4 @@ Keep one consequential owner. Existing native body, hinge, contact, moving-suppo
 
 ## Removed work
 
-AS-001–015 and the former ground-water plan no longer define an implementation queue. Their old implementations are legacy test fixtures, not campaign progress. The previous restoration is historical; the later explicit owner direction removes those mechanisms. No accepted +8 m mechanism frontier is retained. New mechanism development starts at grade; the ordinary stairs to 154 m remain a fallback, independently of mechanism completion.
+AS-001–015 and the former ground-water plan no longer define an implementation queue. Their old implementations are legacy test fixtures, not campaign progress. The previous restoration is historical; the later explicit owner direction removes those mechanisms. The old water lift is not an accepted +8 m frontier. AS-016 now supplies a new grade-to-+8 m route with a +11 m tower connection; the ordinary stairs to 154 m remain a fallback, independently of mechanism completion.

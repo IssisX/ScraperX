@@ -3,7 +3,9 @@
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
 
 #include <algorithm>
 #include <cmath>
@@ -31,10 +33,25 @@ constexpr float kGovernorCreep = 0.08F;
 constexpr float kRelatchSpeed = 0.15F;
 
 [[nodiscard]] JPH::Ref<JPH::Shape> make_shape(const std::vector<Part> &parts) {
-    const auto box = [](const Part &part) {
+    const auto box = [](const Part &part) -> JPH::Ref<JPH::Shape> {
         const float smallest =
             std::min({part.half.GetX(), part.half.GetY(), part.half.GetZ()});
-        return new JPH::BoxShape(part.half, std::min(JPH::cDefaultConvexRadius, 0.5F * smallest));
+        const float margin = part.convex_radius >= 0.0F ? part.convex_radius :
+            std::min(JPH::cDefaultConvexRadius, 0.5F * smallest);
+        if (part.shape == Part::Shape::Cylinder) {
+            JPH::CylinderShapeSettings settings(part.half.GetY(), part.half.GetX(), margin);
+            if (part.mass_kg > 0.0F) {
+                settings.mDensity = part.mass_kg /
+                    (JPH::JPH_PI * part.half.GetX() * part.half.GetX() * 2.0F * part.half.GetY());
+            }
+            return settings.Create().Get();
+        }
+        JPH::BoxShapeSettings settings(part.half, margin);
+        if (part.mass_kg > 0.0F) {
+            settings.mDensity = part.mass_kg /
+                (8.0F * part.half.GetX() * part.half.GetY() * part.half.GetZ());
+        }
+        return settings.Create().Get();
     };
     if (parts.size() == 1 && parts.front().offset.IsNearZero() &&
         parts.front().rotation.IsClose(JPH::Quat::sIdentity())) {
@@ -52,9 +69,11 @@ constexpr float kRelatchSpeed = 0.15F;
 
 Kit::Kit(JPH::PhysicsSystem &system, const JPH::ObjectLayer static_layer,
          const JPH::ObjectLayer moving_layer)
-    : system_(system), static_layer_(static_layer), moving_layer_(moving_layer) {}
+    : system_(system), static_layer_(static_layer), moving_layer_(moving_layer),
+      collision_groups_(new JPH::GroupFilterTable(2048)) {}
 
 Kit::~Kit() {
+    for (const auto &joint : fixed_joints_) system_.RemoveConstraint(joint);
     for (Rope &rope : ropes_) {
         disconnect_rope(rope);
     }
@@ -99,6 +118,8 @@ BodyIndex Kit::add_body(const std::uint64_t entity, const std::vector<Part> &par
     settings.mFriction = friction;
     settings.mUserData = entity;
     settings.mAllowSleeping = false;
+    settings.mCollisionGroup = JPH::CollisionGroup(collision_groups_, 0xA5016,
+        static_cast<JPH::CollisionGroup::SubGroupID>(bodies_.size()));
     if (dynamic) {
         settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
         settings.mMassPropertiesOverride.mMass = mass_kg;
@@ -127,6 +148,71 @@ void Kit::set_damping(const BodyIndex body, const float linear, const float angu
     JPH::MotionProperties *motion = jolt_body(body).GetMotionProperties();
     motion->SetLinearDamping(linear);
     motion->SetAngularDamping(angular);
+}
+
+void Kit::set_mass_properties(const BodyIndex body, const JPH::MassProperties &mass) {
+    jolt_body(body).GetMotionProperties()->SetMassProperties(JPH::EAllowedDOFs::All, mass);
+    bodies_[body.value].mass = mass.mMass;
+}
+
+void Kit::set_continuous_collision(const BodyIndex body) {
+    system_.GetBodyInterface().SetMotionQuality(body_id(body), JPH::EMotionQuality::LinearCast);
+}
+
+void Kit::disable_collision(const BodyIndex first, const BodyIndex second) {
+    collision_groups_->DisableCollision(first.value, second.value);
+}
+
+LeverIndex Kit::add_hinge(const BodyIndex first, const BodyIndex second,
+                          const JPH::RVec3 pivot, const JPH::Vec3 axis,
+                          const float friction_torque, const std::uint32_t velocity_steps,
+                          const std::uint32_t position_steps) {
+    JPH::HingeConstraintSettings settings;
+    settings.mPoint1 = settings.mPoint2 = pivot;
+    settings.mHingeAxis1 = settings.mHingeAxis2 = axis;
+    settings.mNormalAxis1 = settings.mNormalAxis2 = axis.GetNormalizedPerpendicular();
+    settings.mMaxFrictionTorque = friction_torque;
+    settings.mNumVelocityStepsOverride = velocity_steps;
+    settings.mNumPositionStepsOverride = position_steps;
+    auto hinge = JPH::Ref<JPH::HingeConstraint>(static_cast<JPH::HingeConstraint *>(
+        settings.Create(first.valid() ? jolt_body(first) : JPH::Body::sFixedToWorld,
+                        jolt_body(second))));
+    system_.AddConstraint(hinge);
+    if (first.valid()) disable_collision(first, second);
+    levers_.push_back({second, hinge});
+    return LeverIndex{static_cast<std::uint32_t>(levers_.size() - 1)};
+}
+
+void Kit::add_fixed_joint(const BodyIndex first, const BodyIndex second) {
+    JPH::FixedConstraintSettings settings;
+    settings.mAutoDetectPoint = true;
+    settings.mNumVelocityStepsOverride = 40;
+    settings.mNumPositionStepsOverride = 8;
+    JPH::Ref<JPH::TwoBodyConstraint> joint = settings.Create(jolt_body(first), jolt_body(second));
+    system_.AddConstraint(joint);
+    disable_collision(first, second);
+    fixed_joints_.push_back(joint);
+}
+
+LineIndex Kit::add_tie(const BodyIndex first, const JPH::Vec3 first_point,
+                       const BodyIndex second, const JPH::Vec3 second_point) {
+    JPH::DistanceConstraintSettings settings;
+    settings.mPoint1 = world_point(first, first_point);
+    settings.mPoint2 = world_point(second, second_point);
+    settings.mMinDistance = 0.0F;
+    settings.mMaxDistance = (settings.mPoint2 - settings.mPoint1).Length();
+    settings.mNumVelocityStepsOverride = 40;
+    settings.mNumPositionStepsOverride = 8;
+    Line line;
+    line.lever_body = first;
+    line.lever_point = first_point;
+    line.handle_body = second;
+    line.handle_point = second_point;
+    line.direct = true;
+    line.constraint = settings.Create(jolt_body(first), jolt_body(second));
+    system_.AddConstraint(line.constraint);
+    lines_.push_back(line);
+    return LineIndex{static_cast<std::uint32_t>(lines_.size() - 1)};
 }
 
 void Kit::set_body_mass(const BodyIndex body, const float mass_kg) {
@@ -604,6 +690,8 @@ std::uint64_t Kit::rope_shackle_entity(const RopeIndex rope) const noexcept {
 // ---- checkpoint -------------------------------------------------------------
 
 void Kit::capture(Checkpoint &out) const {
+    out.guide_peak_speed.clear();
+    for (const Guide &guide : guides_) out.guide_peak_speed.push_back(guide.peak_speed);
     out.bodies.resize(bodies_.size());
     const auto &bodies = system_.GetBodyInterfaceNoLock();
     for (std::size_t index = 0; index < bodies_.size(); ++index) {
@@ -635,6 +723,9 @@ void Kit::capture(Checkpoint &out) const {
 void Kit::restore(const Checkpoint &in) {
     if (in.bodies.size() != bodies_.size()) {
         return;
+    }
+    for (std::size_t i = 0; i < guides_.size(); ++i) {
+        guides_[i].peak_speed = i < in.guide_peak_speed.size() ? in.guide_peak_speed[i] : 0;
     }
     for (Rope &rope : ropes_) {
         disconnect_rope(rope);
@@ -734,6 +825,21 @@ float Kit::body_mass(const BodyIndex body) const noexcept {
     return record != nullptr ? record->mass : 0.0F;
 }
 
+// Adapted from ballast-bridge-prototype-v1: use the solver's actual principal
+// inertia, including per-part mass and the hollow-pipe inertia override.
+double Kit::body_kinetic_energy(const BodyIndex body) const noexcept {
+    const Body *record = find(bodies_, body);
+    if (record == nullptr || !record->dynamic || !record->enabled) return 0;
+    const auto &b = jolt_body(body);
+    if (!b.IsDynamic()) return 0;
+    const auto *motion = b.GetMotionProperties();
+    const auto w = (b.GetRotation() * motion->GetInertiaRotation()).Conjugated() * b.GetAngularVelocity();
+    const auto inverse = motion->GetInverseInertiaDiagonal();
+    double rotational = 0;
+    for (int i = 0; i < 3; ++i) if (inverse[i] > 0) rotational += w[i] * w[i] / inverse[i];
+    return .5 * (record->mass * b.GetLinearVelocity().LengthSq() + rotational);
+}
+
 JPH::BodyID Kit::body_id(const BodyIndex body) const noexcept {
     const Body *record = find(bodies_, body);
     return record != nullptr ? record->id : JPH::BodyID();
@@ -774,8 +880,10 @@ void Kit::cable_polyline(const std::uint32_t cable, std::vector<JPH::RVec3> &out
     }
     const Line &line = lines_[line_index];
     out.push_back(world_point(line.lever_body, line.lever_point));
-    out.push_back(line.sheave1);
-    out.push_back(line.sheave2);
+    if (!line.direct) {
+        out.push_back(line.sheave1);
+        out.push_back(line.sheave2);
+    }
     out.push_back(world_point(line.handle_body, line.handle_point));
 }
 

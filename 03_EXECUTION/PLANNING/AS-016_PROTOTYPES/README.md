@@ -27,8 +27,4 @@ observations are rejected. Each subdirectory records reproduction instructions
 and remaining abstractions. Source, compact observations and rejected cases are
 preserved; executables and generated copies of the engine are not included.
 
-**Next gate:** actual rack pipes → physically held moving pan → loaded prop
-release → finite arrest, with outboard arms and contacts enabled. Then bind the
-same construction into normal native/Godot gameplay and verify ordinary input,
-crossing, persistence, rendering and the exact Android candidate. No completed
-mechanism, APK or device execution is claimed by these prototypes.
+**Integrated continuation:** [production integration and preserved full-chain probe](integrated/README.md). The normal native construction now loads the moving pan, releases through reachable grips, arrests and carries the player to the tower. These older isolated results retain their stated limits; they do not become APK/device proof.

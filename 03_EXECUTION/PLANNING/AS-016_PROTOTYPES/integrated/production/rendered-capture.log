@@ -1,0 +1,33 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=ground_foundation
+SCRAPERX_VIEWPORT size=640x480 aspect=1.333 fov=82.0 far=2600
+SCRAPERX_AUDIO_BANK clips=23 msec=488 driver=Dummy
+BRIDGE_CAPTURE /storage/emulated/0/Download/ScraperX-ChatGPT-rebuild/artifacts/screenshots/pipe-bridge-readable/rack_ready.png position=(12.69055, 0.893589, -79.065) tip=0.5795 pipes=0
+ERROR: Parameter "getcwd(real_current_dir_name, 2048)" is null.
+   at: DirAccessUnix (drivers/unix/dir_access_unix.cpp:739)
+   GDScript backtrace (most recent call first):
+       [0] pose (res://presentation/ui/pipe_bridge_capture.gd:42)
+BRIDGE_CAPTURE /storage/emulated/0/Download/ScraperX-ChatGPT-rebuild/artifacts/screenshots/pipe-bridge-readable/loaded_pan.png position=(-0.530985, 0.89359, -85.60085) tip=0.6010 pipes=20
+ERROR: Parameter "getcwd(real_current_dir_name, 2048)" is null.
+   at: DirAccessUnix (drivers/unix/dir_access_unix.cpp:739)
+   GDScript backtrace (most recent call first):
+       [0] pose (res://presentation/ui/pipe_bridge_capture.gd:42)
+BRIDGE_CAPTURE /storage/emulated/0/Download/ScraperX-ChatGPT-rebuild/artifacts/screenshots/pipe-bridge-readable/raised_bridge.png position=(-1.636239, 0.894392, -85.60085) tip=8.0036 pipes=20
+ERROR: Parameter "getcwd(real_current_dir_name, 2048)" is null.
+   at: DirAccessUnix (drivers/unix/dir_access_unix.cpp:739)
+   GDScript backtrace (most recent call first):
+       [0] pose (res://presentation/ui/pipe_bridge_capture.gd:42)
+BRIDGE_CAPTURE /storage/emulated/0/Download/ScraperX-ChatGPT-rebuild/artifacts/screenshots/pipe-bridge-readable/tower_arrival.png position=(9.060428, 11.9, -125.5476) tip=8.0180 pipes=20
+BRIDGE_CAPTURE PASS
+ERROR: Parameter "getcwd(real_current_dir_name, 2048)" is null.
+   at: DirAccessUnix (drivers/unix/dir_access_unix.cpp:739)

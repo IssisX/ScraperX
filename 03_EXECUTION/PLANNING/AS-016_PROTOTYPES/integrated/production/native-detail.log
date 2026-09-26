@@ -1,0 +1,182 @@
+Start testing: Sep 26 15:14 CDT
+----------------------------------------------------------
+2/8 Testing: scraperx_sim.pipe_bridge_route
+2/8 Test: scraperx_sim.pipe_bridge_route
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/scraperx_pipe_bridge_tests"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build
+"scraperx_sim.pipe_bridge_route" start time: Sep 26 15:14 CDT
+Output:
+----------------------------------------------------------
+SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6928,0.893588,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2262,0.89359,-78.9852 target 2530 carrying 0 tip 0.601247 pipes 20 support 1 deaths 0
+BRIDGE_READY pos -0.506097,0.89359,-85.6052 target 2505 carrying 0 tip 0.601247 pipes 20 support 1 deaths 0
+BRIDGE_PICK pos -0.506097,0.89359,-85.6052 target 0 carrying 2505 tip 0.601247 pipes 20 support 1 deaths 0
+BRIDGE_LIFTED pos -1.61716,0.894059,-85.6052 target 0 carrying 0 tip 7.9812 pipes 20 support 1 deaths 0
+CROSS pos -0.57767,0.894059,-86.0087 target 0 carrying 0 tip 8.00183 pipes 20 support 1 deaths 0
+CROSS pos 2.18526,0.9,-85.9641 target 0 carrying 0 tip 7.98722 pipes 20 support 1 deaths 0
+CROSS pos 1.93647,1.99272,-91.1679 target 0 carrying 0 tip 7.98869 pipes 20 support 1524 deaths 0
+CROSS pos 6.09048,1.94688,-91.0553 target 0 carrying 0 tip 7.99858 pipes 20 support 2500 deaths 0
+CROSS pos 5.99941,8.36277,-107.183 target 0 carrying 0 tip 7.99312 pipes 20 support 2500 deaths 0
+CROSS pos 9.3017,8.02761,-106.951 target 0 carrying 0 tip 7.99614 pipes 20 support 1525 deaths 0
+CROSS pos 9.04403,8.9,-110.835 target 0 carrying 0 tip 8.00297 pipes 20 support 1526 deaths 0
+CROSS pos 9.06039,11.9,-125.551 target 0 carrying 0 tip 8.01361 pipes 20 support 11 deaths 0
+ARRIVED pos 9.06039,11.9,-125.551 target 0 carrying 0 tip 8.01361 pipes 20 support 11 deaths 0
+BEFORE_FALL pos 21.097,33.9,-128.501 target 0 carrying 0 tip 8.02933 pipes 20 support 11 deaths 0
+RESTORED pos 26.2659,33.7497,-128.501 target 0 carrying 0 tip 8.01271 pipes 20 support 51 deaths 1
+PASS scraperx_sim AS-016 full route pipes=20 arrival_y=11.9 death_restore=1 spent_crusher=0.45716
+<end of output>
+Test time =   4.81 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.pipe_bridge_route" end time: Sep 26 15:14 CDT
+"scraperx_sim.pipe_bridge_route" time elapsed: 00:00:04
+----------------------------------------------------------
+
+3/8 Testing: scraperx_sim.pipe_bridge_no_input
+3/8 Test: scraperx_sim.pipe_bridge_no_input
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/scraperx_pipe_bridge_tests" "1"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build
+"scraperx_sim.pipe_bridge_no_input" start time: Sep 26 15:14 CDT
+Output:
+----------------------------------------------------------
+SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+NO_INPUT pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+<end of output>
+Test time =   1.45 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.pipe_bridge_no_input" end time: Sep 26 15:14 CDT
+"scraperx_sim.pipe_bridge_no_input" time elapsed: 00:00:01
+----------------------------------------------------------
+
+4/8 Testing: scraperx_sim.pipe_bridge_rack_only
+4/8 Test: scraperx_sim.pipe_bridge_rack_only
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/scraperx_pipe_bridge_tests" "2"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build
+"scraperx_sim.pipe_bridge_rack_only" start time: Sep 26 15:14 CDT
+Output:
+----------------------------------------------------------
+SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6928,0.893588,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2262,0.89359,-78.9852 target 2530 carrying 0 tip 0.601247 pipes 20 support 1 deaths 0
+RACK_ONLY pos 12.2262,0.89359,-78.9852 target 2530 carrying 0 tip 0.601247 pipes 20 support 1 deaths 0
+<end of output>
+Test time =   1.96 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.pipe_bridge_rack_only" end time: Sep 26 15:14 CDT
+"scraperx_sim.pipe_bridge_rack_only" time elapsed: 00:00:01
+----------------------------------------------------------
+
+5/8 Testing: scraperx_sim.pipe_bridge_empty_release
+5/8 Test: scraperx_sim.pipe_bridge_empty_release
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/scraperx_pipe_bridge_tests" "3"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build
+"scraperx_sim.pipe_bridge_empty_release" start time: Sep 26 15:14 CDT
+Output:
+----------------------------------------------------------
+SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+BRIDGE_READY pos -0.506713,0.893589,-85.6073 target 2505 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+BRIDGE_PICK pos -0.506713,0.893589,-85.6073 target 0 carrying 2505 tip 0.579488 pipes 0 support 1 deaths 0
+BRIDGE_LIFTED pos -1.64023,0.893594,-85.6073 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+EMPTY_RELEASE pos -1.64023,0.893594,-85.6073 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+<end of output>
+Test time =   1.55 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.pipe_bridge_empty_release" end time: Sep 26 15:14 CDT
+"scraperx_sim.pipe_bridge_empty_release" time elapsed: 00:00:01
+----------------------------------------------------------
+
+6/8 Testing: scraperx_sim.pipe_bridge_regrab
+6/8 Test: scraperx_sim.pipe_bridge_regrab
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/scraperx_pipe_bridge_tests" "4"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build
+"scraperx_sim.pipe_bridge_regrab" start time: Sep 26 15:14 CDT
+Output:
+----------------------------------------------------------
+SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6928,0.893588,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+PARTIAL_PULL_REGRAB pos 12.6728,0.89359,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2273,0.89359,-78.9843 target 2530 carrying 0 tip 0.601321 pipes 20 support 1 deaths 0
+BRIDGE_READY pos -0.506097,0.89359,-85.6052 target 2505 carrying 0 tip 0.601321 pipes 20 support 1 deaths 0
+BRIDGE_PICK pos -0.506097,0.89359,-85.6052 target 0 carrying 2505 tip 0.601321 pipes 20 support 1 deaths 0
+BRIDGE_LIFTED pos -1.62563,0.893633,-85.6052 target 0 carrying 0 tip 8.00159 pipes 20 support 1 deaths 0
+CROSS pos -0.570013,0.893633,-86.0115 target 0 carrying 0 tip 7.9845 pipes 20 support 1 deaths 0
+CROSS pos 2.0561,0.900221,-85.9704 target 0 carrying 0 tip 7.99028 pipes 20 support 1 deaths 0
+CROSS pos 1.93833,1.99274,-91.1679 target 0 carrying 0 tip 7.98995 pipes 20 support 1524 deaths 0
+CROSS pos 6.09234,1.94748,-91.0548 target 0 carrying 0 tip 8.00893 pipes 20 support 2500 deaths 0
+CROSS pos 5.99952,8.3631,-107.164 target 0 carrying 0 tip 7.99036 pipes 20 support 2500 deaths 0
+CROSS pos 9.24356,8.03571,-106.971 target 0 carrying 0 tip 7.98847 pipes 20 support 1525 deaths 0
+CROSS pos 9.05652,8.9,-110.685 target 0 carrying 0 tip 8.01193 pipes 20 support 1526 deaths 0
+CROSS pos 9.06008,11.9,-125.549 target 0 carrying 0 tip 8.01765 pipes 20 support 11 deaths 0
+ARRIVED pos 9.06008,11.9,-125.549 target 0 carrying 0 tip 8.01765 pipes 20 support 11 deaths 0
+BEFORE_FALL pos 21.097,33.9,-128.501 target 0 carrying 0 tip 8.0328 pipes 20 support 11 deaths 0
+RESTORED pos 26.2659,33.7497,-128.501 target 0 carrying 0 tip 8.01979 pipes 20 support 51 deaths 1
+PASS scraperx_sim AS-016 full route pipes=20 arrival_y=11.9 death_restore=1 spent_crusher=0.458601
+<end of output>
+Test time =   5.06 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.pipe_bridge_regrab" end time: Sep 26 15:14 CDT
+"scraperx_sim.pipe_bridge_regrab" time elapsed: 00:00:05
+----------------------------------------------------------
+
+7/8 Testing: scraperx_sim.pipe_bridge_passenger
+7/8 Test: scraperx_sim.pipe_bridge_passenger
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/scraperx_pipe_bridge_tests" "5"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build
+"scraperx_sim.pipe_bridge_passenger" start time: Sep 26 15:14 CDT
+Output:
+----------------------------------------------------------
+SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6928,0.893588,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2262,0.89359,-78.9852 target 2530 carrying 0 tip 0.601247 pipes 20 support 1 deaths 0
+BRIDGE_READY pos -0.506097,0.89359,-85.6052 target 2505 carrying 0 tip 0.601247 pipes 20 support 1 deaths 0
+BRIDGE_PICK pos -0.506097,0.89359,-85.6052 target 0 carrying 2505 tip 0.601247 pipes 20 support 1 deaths 0
+BRIDGE_LIFTED pos -1.61716,0.894059,-85.6052 target 0 carrying 0 tip 0.629994 pipes 20 support 1 deaths 0
+CROSS pos -0.57767,0.894059,-86.0087 target 0 carrying 0 tip 0.740241 pipes 20 support 1 deaths 0
+CROSS pos 2.18526,0.9,-85.9641 target 0 carrying 0 tip 1.05588 pipes 20 support 1 deaths 0
+CROSS pos 1.93647,1.99272,-91.1679 target 0 carrying 0 tip 2.136 pipes 20 support 1524 deaths 0
+CROSS pos 6.22997,1.67523,-91.0513 target 0 carrying 0 tip 3.84993 pipes 20 support 2500 deaths 0
+PASSIVE_RIDER pos 6.22997,1.77818,-90.6391 target 0 carrying 0 tip 7.99094 pipes 20 support 2500 deaths 0
+CROSS pos 5.99888,8.35175,-107.161 target 0 carrying 0 tip 7.98363 pipes 20 support 2500 deaths 0
+CROSS pos 9.24247,8.03689,-106.974 target 0 carrying 0 tip 7.98249 pipes 20 support 1525 deaths 0
+CROSS pos 9.05719,8.9,-110.671 target 0 carrying 0 tip 7.99886 pipes 20 support 1526 deaths 0
+CROSS pos 9.06006,11.9,-125.526 target 0 carrying 0 tip 8.0086 pipes 20 support 11 deaths 0
+ARRIVED pos 9.06006,11.9,-125.526 target 0 carrying 0 tip 8.0086 pipes 20 support 11 deaths 0
+BEFORE_FALL pos 21.097,33.9,-128.501 target 0 carrying 0 tip 8.02152 pipes 20 support 11 deaths 0
+RESTORED pos 26.2658,33.7497,-128.501 target 0 carrying 0 tip 8.02143 pipes 20 support 51 deaths 1
+PASS scraperx_sim AS-016 full route pipes=20 arrival_y=11.9 death_restore=1 spent_crusher=0.456913
+<end of output>
+Test time =   4.86 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.pipe_bridge_passenger" end time: Sep 26 15:14 CDT
+"scraperx_sim.pipe_bridge_passenger" time elapsed: 00:00:04
+----------------------------------------------------------
+
+8/8 Testing: scraperx_sim.pipe_bridge_refinement
+8/8 Test: scraperx_sim.pipe_bridge_refinement
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/scraperx_pipe_bridge_refinement"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build
+"scraperx_sim.pipe_bridge_refinement" start time: Sep 26 15:14 CDT
+Output:
+----------------------------------------------------------
+hz=90 pipes=20 tip=8.023332596 front=0.4573617395 crush_work=41162.55655 input_work=83.52076113 other_loss=120472.0882 peak_ke=54908.02329
+hz=360 pipes=20 tip=8.002187729 front=0.4524773922 crush_work=40722.9653 input_work=83.52018893 other_loss=121023.6987 peak_ke=59483.1836
+PASS production pipe bridge refinement 90/360 Hz
+<end of output>
+Test time =   4.91 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.pipe_bridge_refinement" end time: Sep 26 15:14 CDT
+"scraperx_sim.pipe_bridge_refinement" time elapsed: 00:00:04
+----------------------------------------------------------
+
+End testing: Sep 26 15:14 CDT

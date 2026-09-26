@@ -1,0 +1,41 @@
+{
+  "performer": "Fabrizio84",
+  "license": "CC0-1.0",
+  "clips": [
+    {
+      "file": "wtf_1.ogg",
+      "source": "what_the_fuck.mp3",
+      "start_seconds": 0.6,
+      "duration_seconds": 1.43,
+      "sha256": "1d117835c4dcdcbeb4468212b98ed55a53bad8515b9dab066a287919a2317315"
+    },
+    {
+      "file": "wtf_2.ogg",
+      "source": "what_the_fuck.mp3",
+      "start_seconds": 4.4,
+      "duration_seconds": 1.22,
+      "sha256": "3077c76a22a024ba124f61edc76d8f9d876f76a466014fc946e249d360eb5ca5"
+    },
+    {
+      "file": "wtf_3.ogg",
+      "source": "what_the_fuck.mp3",
+      "start_seconds": 7.43,
+      "duration_seconds": 1.23,
+      "sha256": "46f0e0794719d4769eb428f8352a2d39d8faea8b910b3e245daa4a99416d34e8"
+    },
+    {
+      "file": "fuck_1.ogg",
+      "source": "fuck.mp3",
+      "start_seconds": 0,
+      "duration_seconds": 1.24,
+      "sha256": "876b4dcb34509389261f5c15b6a2daff60844d2ef03509026be79f0e821d77d3"
+    },
+    {
+      "file": "fuck_2.ogg",
+      "source": "fuck.mp3",
+      "start_seconds": 3.24,
+      "duration_seconds": 1.1,
+      "sha256": "8f1c7c673ed30919fcc1ebb07f91ae5c97d9197418d3fd57df3b7c7929b7d0e9"
+    }
+  ]
+}

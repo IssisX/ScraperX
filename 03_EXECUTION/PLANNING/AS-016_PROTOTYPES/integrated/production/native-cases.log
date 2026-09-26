@@ -1,0 +1,19 @@
+Test project /data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build
+    Start 2: scraperx_sim.pipe_bridge_route
+1/7 Test #2: scraperx_sim.pipe_bridge_route ...........   Passed    4.81 sec
+    Start 3: scraperx_sim.pipe_bridge_no_input
+2/7 Test #3: scraperx_sim.pipe_bridge_no_input ........   Passed    1.45 sec
+    Start 4: scraperx_sim.pipe_bridge_rack_only
+3/7 Test #4: scraperx_sim.pipe_bridge_rack_only .......   Passed    1.96 sec
+    Start 5: scraperx_sim.pipe_bridge_empty_release
+4/7 Test #5: scraperx_sim.pipe_bridge_empty_release ...   Passed    1.55 sec
+    Start 6: scraperx_sim.pipe_bridge_regrab
+5/7 Test #6: scraperx_sim.pipe_bridge_regrab ..........   Passed    5.06 sec
+    Start 7: scraperx_sim.pipe_bridge_passenger
+6/7 Test #7: scraperx_sim.pipe_bridge_passenger .......   Passed    4.86 sec
+    Start 8: scraperx_sim.pipe_bridge_refinement
+7/7 Test #8: scraperx_sim.pipe_bridge_refinement ......   Passed    4.91 sec
+
+100% tests passed, 0 tests failed out of 7
+
+Total Test time (real) =  24.65 sec

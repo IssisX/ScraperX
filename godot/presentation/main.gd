@@ -246,7 +246,7 @@ const HOOK5_BLOCK_ENTITY_ID := 56
 # big, what it is made of and where it is all come from the native.
 const KIT_ENTITY_MIN := 1000
 const KIT_ENTITY_MAX := 3000
-const KIT_PART_FLOATS := 11
+const KIT_PART_FLOATS := 13
 const KIT_CABLE_SEGMENTS := 4
 const KIT_CARRY_SHACKLE := 1
 const KIT_CARRY_HANDLE := 2
@@ -451,7 +451,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario != "ground_foundation":
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -467,6 +467,7 @@ func _ready() -> void:
 	_sky_cycle.setup($Overcast, $SkyFill, ($Environment as WorldEnvironment).environment)
 	_audio = AudioDirector.new()
 	_audio.name = "AudioDirector"
+	_audio.regression_machines = _regression_scene
 	_audio.sky = _sky_cycle
 	add_child(_audio)
 	_build_arms()
@@ -501,7 +502,7 @@ func _ready() -> void:
 	_build_kit()
 
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=%s" %
-		("regression_fixtures work_order=WO-006" if _regression_scene else "ground_foundation"))
+		("regression_fixtures work_order=WO-006" if _regression_scene else "pipe_bridge"))
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
 		int(_viewport_size.x), int(_viewport_size.y),
 		_viewport_size.x / maxf(1.0, _viewport_size.y), _camera.fov, _camera.far])
@@ -1009,7 +1010,7 @@ func _carry_center(entity: int) -> Vector3:
 	if _is_kit(entity):
 		var body := int(_native.get_kit_body_index(entity))
 		if body >= 0:
-			return (_native.get_kit_body_transform(body) as Transform3D).origin
+			return _native.get_kit_carry_grip_position(body)
 	return Vector3.ZERO
 
 
@@ -1031,6 +1032,10 @@ func _carry_name(entity: int) -> String:
 	if entity == HOOK5_BAR_ENTITY_ID:
 		return "DOOR BAR"
 	match entity:
+		2505:
+			return "BRIDGE RELEASE"
+		2530:
+			return "PIPE RACK RELEASE"
 		2002:
 			return "ROPE SHACKLE"
 		2004:
@@ -1390,6 +1395,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 				float(_native.get_water_screw_motor_torque_nm()))
 			_audio.update_water_lift(float(_native.get_water_lift_valve_flow_m3_s()),
 				float(_native.get_water_lift_rope_tension_n()))
+		else:
+			_audio.update_pipe_bridge(_native.get_pipe_bridge_audio_state(), int(_native.get_death_count()))
 	# The developer telemetry overlay costs a dozen string formats a frame;
 	# it is only paid for while the overlay is actually on screen.
 	if _telemetry_on:
@@ -4013,6 +4020,35 @@ func _add_box_to(node_name: String, size: Vector3, at: Vector3, material: Materi
 # declaration, so what the player sees is exactly what collides; nothing is
 # authored twice. Kit bodies live outside $TowerPresentation: they are native
 # collision already, never part of the exported solid dressing.
+func _kit_tube(outer: float, inner: float, half_length: float, material: Material) -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	surface.set_material(material)
+	for segment in 32:
+		var a := TAU * float(segment) / 32.0
+		var b := TAU * float(segment + 1) / 32.0
+		var na := Vector3(cos(a), 0, sin(a))
+		var nb := Vector3(cos(b), 0, sin(b))
+		for radius in [outer, inner]:
+			var sign_normal := 1.0 if radius == outer else -1.0
+			var corners: Array[Vector3] = [na * radius + Vector3.UP * half_length,
+				nb * radius + Vector3.UP * half_length, nb * radius - Vector3.UP * half_length,
+				na * radius - Vector3.UP * half_length]
+			var order := [0, 2, 1, 0, 3, 2] if radius == outer else [0, 1, 2, 0, 2, 3]
+			for i in order:
+				surface.set_normal((na if i in [0, 3] else nb) * sign_normal)
+				surface.add_vertex(corners[i])
+		for side in [-1.0, 1.0]:
+			var end: Vector3 = Vector3.UP * half_length * side
+			var corners: Array[Vector3] = [end + na * outer, end + nb * outer,
+				end + nb * inner, end + na * inner]
+			var order := [0, 1, 2, 0, 2, 3] if side > 0 else [0, 2, 1, 0, 3, 2]
+			for i in order:
+				surface.set_normal(Vector3.UP * side)
+				surface.add_vertex(corners[i])
+	return surface.commit()
+
+
 func _build_kit() -> void:
 	_kit_root = Node3D.new()
 	_kit_root.name = "KitPresentation"
@@ -4029,15 +4065,34 @@ func _build_kit() -> void:
 		_material(Color("5b544b"), 0.0, 0.98, Color.BLACK, 1.0, _bump_concrete),
 		_material(Color("c19a2a"), 0.2, 0.62),
 	]
+	if not _regression_scene:
+		# Broad painted/cast surfaces remain readable at normal play distance.
+		palette[0] = _material(Color("687174"), 0.35, 0.78)
+		palette[1] = _material(Color("86472d"), 0.12, 0.92)
+		palette[5] = _material(Color("879394"), 0.45, 0.68)
 	for body in int(_native.get_kit_body_count()):
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
 		node.transform = _native.get_kit_body_transform(body)
 		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
 		for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
-			var mesh := BoxMesh.new()
-			mesh.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
-			mesh.material = palette[clampi(int(parts[p + 10]), 0, palette.size() - 1)]
+			var mesh: Mesh
+			var material: Material = palette[clampi(int(parts[p + 10]), 0, palette.size() - 1)]
+			if int(parts[p + 11]) == 1:
+				if parts[p + 12] > 0.0:
+					mesh = _kit_tube(parts[p], parts[p + 12], parts[p + 1], material)
+				else:
+					var cylinder := CylinderMesh.new()
+					cylinder.top_radius = parts[p]
+					cylinder.bottom_radius = parts[p]
+					cylinder.height = parts[p + 1] * 2.0
+					cylinder.material = material
+					mesh = cylinder
+			else:
+				var box := BoxMesh.new()
+				box.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
+				box.material = material
+				mesh = box
 			var instance := MeshInstance3D.new()
 			instance.mesh = mesh
 			instance.transform = Transform3D(
@@ -4063,7 +4118,7 @@ func _build_kit() -> void:
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
-	cable.material = _material(Color("1b1916"), 0.6, 0.5)
+	cable.material = _material(Color("1b1916") if _regression_scene else Color("b2a383"), 0.6, 0.5)
 	for index in int(_native.get_kit_cable_count()):
 		var segments: Array[MeshInstance3D] = []
 		for segment in KIT_CABLE_SEGMENTS:

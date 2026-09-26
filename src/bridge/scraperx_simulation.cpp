@@ -36,6 +36,10 @@ ScraperXSimulation::ScraperXSimulation()
 
 void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("configure_regression_spawn", "initial_spawn"), &ScraperXSimulation::configure_regression_spawn);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_pipe_bridge_tip_height"), &ScraperXSimulation::get_pipe_bridge_tip_height);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_pipe_bridge_crush_front"), &ScraperXSimulation::get_pipe_bridge_crush_front);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_pipe_bridge_retained_pipes"), &ScraperXSimulation::get_pipe_bridge_retained_pipes);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_pipe_bridge_audio_state"), &ScraperXSimulation::get_pipe_bridge_audio_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_entity_body_count", "entity"), &ScraperXSimulation::get_entity_body_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_moving_body_count"), &ScraperXSimulation::get_moving_body_count);
     godot::ClassDB::bind_method(godot::D_METHOD("configure_initial_spawn", "initial_spawn"),
@@ -346,6 +350,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_kit_body_parts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_transform", "body"),
                                 &ScraperXSimulation::get_kit_body_transform);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_carry_grip_position", "body"),
+                                &ScraperXSimulation::get_kit_carry_grip_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_index", "entity_id"),
                                 &ScraperXSimulation::get_kit_body_index);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_cable_count"),
@@ -368,6 +374,37 @@ bool ScraperXSimulation::configure_regression_spawn(const std::int64_t initial_s
     simulation_ = std::make_unique<sim::Simulation>(
         static_cast<sim::InitialSpawn>(initial_spawn), sim::WorldContent::RegressionFixtures);
     return true;
+}
+
+double ScraperXSimulation::get_pipe_bridge_tip_height() const {
+    return simulation_->pipe_bridge_tip_height();
+}
+
+double ScraperXSimulation::get_pipe_bridge_crush_front() const {
+    return simulation_->pipe_bridge_crush_front();
+}
+
+godot::Vector3 ScraperXSimulation::get_kit_carry_grip_position(const std::int64_t body) const {
+    return to_godot(simulation_->kit_carry_grip_position(kit_index(body)));
+}
+
+
+std::int64_t ScraperXSimulation::get_pipe_bridge_retained_pipes() const {
+    return simulation_->pipe_bridge_retained_pipes();
+}
+
+godot::Dictionary ScraperXSimulation::get_pipe_bridge_audio_state() const {
+    godot::Dictionary out;
+    const auto pan = simulation_->kit_body_index(2502);
+    if (pan == sim::Simulation::kKitNone) return out;
+    double energy = 0;
+    for (std::uint64_t pipe = 2509; pipe <= 2528; ++pipe)
+        energy += simulation_->kit_body_kinetic_energy(simulation_->kit_body_index(pipe));
+    out["pan"] = to_godot(simulation_->kit_body_position(pan));
+    out["velocity"] = to_godot(simulation_->kit_body_velocity(pan));
+    out["pipe_energy"] = energy;
+    out["crush_front"] = simulation_->pipe_bridge_crush_front();
+    return out;
 }
 
 std::int64_t ScraperXSimulation::get_entity_body_count(const std::int64_t entity) const {
@@ -979,7 +1016,8 @@ godot::PackedFloat32Array ScraperXSimulation::get_kit_body_parts(const std::int6
         for (const double value :
              {source.half.x, source.half.y, source.half.z, source.offset.x, source.offset.y,
               source.offset.z, source.rotation.x, source.rotation.y, source.rotation.z,
-              source.rotation.w, static_cast<double>(source.material)}) {
+              source.rotation.w, static_cast<double>(source.material),
+              static_cast<double>(source.shape), source.inner_radius}) {
             out.push_back(static_cast<float>(value));
         }
     }

@@ -20,6 +20,7 @@ add_library(scraperx_sim STATIC
     src/sim/steam_plant.cpp
     src/sim/water_screw.cpp
     src/sim/mechanism_kit.cpp
+    src/sim/pipe_bridge.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_ground_water_lift.cpp
 )
@@ -70,6 +71,17 @@ if(BUILD_TESTING AND NOT ANDROID)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
+    add_executable(scraperx_pipe_bridge_tests tests/pipe_bridge_tests.cpp)
+    target_link_libraries(scraperx_pipe_bridge_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.pipe_bridge_route COMMAND scraperx_pipe_bridge_tests)
+    add_test(NAME scraperx_sim.pipe_bridge_no_input COMMAND scraperx_pipe_bridge_tests 1)
+    add_test(NAME scraperx_sim.pipe_bridge_rack_only COMMAND scraperx_pipe_bridge_tests 2)
+    add_test(NAME scraperx_sim.pipe_bridge_empty_release COMMAND scraperx_pipe_bridge_tests 3)
+    add_test(NAME scraperx_sim.pipe_bridge_regrab COMMAND scraperx_pipe_bridge_tests 4)
+    add_test(NAME scraperx_sim.pipe_bridge_passenger COMMAND scraperx_pipe_bridge_tests 5)
+    add_executable(scraperx_pipe_bridge_refinement tests/pipe_bridge_refinement.cpp)
+    target_link_libraries(scraperx_pipe_bridge_refinement PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.pipe_bridge_refinement COMMAND scraperx_pipe_bridge_refinement)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

@@ -1,0 +1,15 @@
+PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=33 kit_bodies=68 locomotion=1 crouch=1 jump=1
+PASS scraperx_sim fallback stairs: levels=14 top_y=154.9 jump_requests=0
+PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0
+PASS scraperx_sim moving-support truth: translating_support=3 translating_vx=1.08993 jump_vx=1.07124 rotating_support=4 rotating_point_v=(-0.547974,-1.07542) omega_y=0.800001 hz=90
+PASS scraperx_sim athletic traversal: vault_x=6.08 double_tap_vault_x=6.20222 vault_speed=5.5 mantle_support=6 mantle_rise_setback=0.53 mantle_y=2.46879 hang_support=7 moving_hang_support=8 moving_hang_vz=0.875645 moving_ledge_vz=0.865345 release_vz=0.945425 rejected=1 accepted=1
+PASS scraperx_sim player is the plant's missing component: rest_valve=0 held_treadle=0.135892 held_valve=0.776839 held_lift=7.7m idle_lift=1.2m store_spent_MJ=3.10307
+PASS scraperx_sim first full causal chain: gate_closed_at_rest=1 lift_at_gate=7.41205m rise=1.13796m reached_catwalk=1 commits=1553
+PASS scraperx_sim coupled machine: valve=0.726924 piston=14691N lift=8.80227m second_lift=8.81645m starved_energy=678952J player_valve=0 tower_m=1600
+PASS scraperx_sim fall/parachute/checkpoint: lethal_impact=34.6619 chuted_impact=8.8914 late_chute_deaths=1 grounded_deploy_blocked=1 commits=91 machine_restored=1 deaths=1
+PASS scraperx_sim first freight: station=1 raised_y=4.76116 braked_delta=-0.00368834 slewed_rad=2.00023 crate_carried=1 rides_crate=1 capacity_held=1
+PASS scraperx_sim first structural coupling: crossable_unseated=0 seated=1 support_over_gap=1 reached_far_pier=1 unseat_removed_support=1
+PASS scraperx_sim first process coupling: gated_off_station=1 wet_crossable=0 drained_safe=1 support_on_grate=1 reached_far_deck=1 dump_unsafe_again=1
+PASS scraperx_sim B00 intake rise: pinned_impassable=1 pinned_deepest_z=-110.517 forced_impassable=1 overweight_y=0.899998 lifted_y=4.54475 dog_rad=1.20319 handoff_y=25.0872 skin_mantles=15 skin_freight_untouched=1
+INFO AS-002 deployed hold: least_travel=0.907572 pack_drift=0.000520697
+FAIL: the deployed flight must carry the player to the mid-landing at y >= 32.89

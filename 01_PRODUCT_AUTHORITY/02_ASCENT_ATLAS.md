@@ -28,13 +28,13 @@ A mechanism's output should become a stable support, bridge or staircase. Avoid 
 
 Every implemented handoff names its native support, top surface, pose, clear standing area, approach and exit, stability at arrival and failure landing. A height label alone is insufficient. The receiving support and route away from it are built and tested before promoting an upstream spectacle to a playable mechanism.
 
-## 6. Opening candidate: the pipe-loaded balance bridge
+## 6. Opening mechanism: the pipe-loaded balance bridge
 
-**Not implemented. AS-016 is resolving this design with isolated geometry and native contact probes.** Promotion to normal play remains blocked until loaded release, pipe capture, arrest and the actual player handoff pass.
+**Implemented in native source as the normal opening mechanism.** AS-016 records current native/input/render observations; exact-commit workflow and APK status remain in `00_START_HERE.md`. Desktop proof does not establish Android execution.
 
 The player sees a rack of heavy steel pipes above a wide short-arm pan. Releasing the rack lets pipes roll into the pan while a visible prop holds the beam. A second physical release frees the loaded beam. Its long arm is a broad walking deck; the pan descends onto a visible crush receiver that absorbs the motion and carries the residual load. The player climbs from a permanent grade approach, exits sideways onto a fixed landing, and continues to the first tower deck. Gravity and leverage supply the work.
 
-Revised design envelope. Values below are CHOSEN unless a relation is shown; they are not production measurements. The former 4 t straight-tail sketch is rejected: its surplus energy is excessive, an underside long-arm seat has the wrong reaction direction, and a landing directly ahead of the tip obstructs the rising sweep.
+Implemented design envelope. Dimensions/material constants below are CHOSEN unless a relation is shown; runtime observations are separately classified in AS-016. The former 4 t straight-tail sketch is rejected: its surplus energy is excessive, an underside long-arm seat has the wrong reaction direction, and a landing directly ahead of the tip obstructs the rising sweep.
 
 | Quantity | Candidate value / consequence |
 |---|---|
@@ -43,19 +43,19 @@ Revised design envelope. Values below are CHOSEN unless a relation is shown; the
 | Pivot surface datum | World (6,+0.6,−90), long arm toward −Z, hinge axis +X. Deck centre is P + 10(0,sinθ,−cosθ) − 0.2(0,cosθ,sinθ). |
 | Rotation | 0 to asin(7.4/20) ≈ 21.72 degrees; far end moves horizontally from 20 m to 18.58 m |
 | Raised short arm | Attachment vector (−5,+2.8) in the rotation plane; pin starts at Y=3.4 and ends at Y=1.351289, a DERIVED 2.048711 m descent. The arm is diagonal rather than a low horizontal member. |
-| Level pan linkage | Two equal 5.73 m arms; fixed trunnions and corresponding pan pins separated vertically by 1.2 m. Arms outside the pan at X=3.4 and X=8.6; combined arm mass 1,000 kg. Crosshead and pan clearances still require native proof. |
+| Level pan linkage | Two equal 5.73 m arms; fixed trunnions and corresponding pan pins separated vertically by 1.2 m. Arms outside the pan at X=3.2 and X=8.8. Main assembly is 9,000 kg including the 8,500 kg deck and 500 kg arm/crosshead/shoe; auxiliary arm is 500 kg. The wider pin planes clear the retaining sides. |
 | Pan and pipe ballast | Pan 1,000 kg; twenty separate 800 kg pipes = 16,000 kg captured load. Four lanes of five sections; each section 1 m long, outer radius 0.4 m. With chosen steel density 7,850 kg/m³, inner radius sqrt(0.4²−800/(π×7850×1)) ≈ 0.357157 m. Use hollow-cylinder inertia. |
-| Pan envelope | Preliminary clear 4.4 m across X × 4.3 m along Z; attachment-to-lowest-bottom at most 1.10 m. Keep its full stroke above grade and keep linkage members outside the loading volume. |
-| Loading rack | Four contained lanes south of the pan, feeding toward −Z at a chosen 5° slope. Gate, release tackle, delivery clearance and complete capture remain native-probe work. |
+| Pan envelope | Floor 4.6 × 4.5 m, sloped 3° toward the front. Open side rails retain the pipes while exposing the load. Pan origin begins (6,2.4,−85); central striker underside is local Y=−0.15. A 0.3 m rear lip retains the delivered cargo. |
+| Loading rack | Four contained lanes south of the pan, feeding toward −Z at a chosen 5° slope. Rack nose is at +2.9 m. A top-hinged gate rests on a physical roller/prop, released through a 3:1 horizontal lever and direct cord. Twenty native pipes feed into the moving pan. |
 | Motion budget | Loaded pan releases 341.664 kJ; arms release 10.049 kJ; deck COM rise consumes 309.708 kJ. DERIVED net 42.004 kJ before bearings, crush, rider and other losses. An 85 kg rider at the far end consumes another 6.171 kJ. Rack impact is not credited as free lifting work. |
 | Reduced swing model | For rider mass m at distance r, Qg=9.81[(2500−mr)cosθ+47300sinθ] N·m; I=1,703,013.333+mr² kg·m². These derive from the declared mass layout; actual constructed mass properties must agree. |
-| Arrest reaction | Upward force under the descending pan produces opposing torque F(5cosθ+2.8sinθ). CHOSEN isolated-fixture material: 90 kN yield ±5%, 15 MN/m stiffness, 0.65 m available stroke. Finite crush work and used stroke are consequential state. These are design values, not measured timber properties; full loading and contact integration remains open. |
+| Arrest reaction | Upward force under the descending pan produces opposing torque F(5cosθ+2.8sinθ). CHOSEN material: 90 kN yield, 15 MN/m stiffness, 0.65 m constitutive stroke; the isolated sweep varied yield ±5%. Geometric floor contact limits usable compression to approximately 0.58 m. Finite crush work and used stroke are consequential state. These are design values, not measured timber properties; native source owns full loading and contact; measured final-source results are in AS-016. |
 
-The side receiver avoids the tip's retracting arc. Its inclined entry occupies X=[7.56,10.56], Z=[−108.580635,−105.580635], with top plane Y=7.75−0.398264105(Z+108.580635). It ends with a 0.25 m rise onto the flat landing. A supported 3 m wide connector continues from Z=−112.580635,Y=8 to Z=−124,Y=11 and the existing first deck. The grade approach is west of the bridge: a short ramp reaches +0.6, then a side cheek joins the first 2 m of the deck. The operator returns around the south end of the rack rather than crossing the pan's swept volume.
+The side receiver avoids the tip's retracting arc. Its inclined entry occupies X=[7.56,10.56], Z=[−108.580635,−105.580635], with top plane Y=7.75−0.398264105(Z+108.580635). It ends with a 0.25 m rise onto the flat landing. A supported 3 m wide connector continues from Z=−112.580635,Y=8 to Z=−124,Y=11 and the existing first deck. The grade approach is west of the bridge: a 2.5 m wide approach centred at X=1.69 reaches +0.8 at Z=−90.5, then a 4 m wide side cheek centred at X=2.44 joins the first 2 m of the deck. This clears the pivot crosshead. The operator returns around the south end of the rack rather than crossing the pan's swept volume.
 
 These surfaces must accept a bounded stopping range, not one exact angle. Geometry screening is not a native walking proof. The player normally crosses after arrest; early boarding is included in the load cases. A finite material law may represent visible crushing, including elastic recovery and irreversible deformation. Do not pose-snap, erase velocity or replace the loaded contacts with a completion flag.
 
-Critical work before normal-play integration: loaded release convergence and reachable effort; actual pipe feeding and containment; constructed mass/inertia and joint reactions; finite arrest and stable crossing; native walking at both ends; miss aftermath and checkpoint state. A large accessible release member only frees stored energy. A 10 kg ball is not assumed to dislodge a wedge supporting tonnes.
+Production ownership: `src/sim/pipe_bridge.cpp` constructs the one active assembly in Kit/Jolt. Control grips are 2530 (rack) and 2505 (bridge); no archived ballast-bridge geometry or IDs are instantiated. The material top begins at Y=0.655371263, and plastic deformation/work are checkpoint state. Native input, source controls, arrest, supported crossing and restoration have dedicated tests. A large accessible release member only frees stored energy. A 10 kg ball is not assumed to dislodge a wedge supporting tonnes.
 
 ## 7. Later chain direction
 

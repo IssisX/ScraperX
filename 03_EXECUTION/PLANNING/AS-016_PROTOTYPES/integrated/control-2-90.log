@@ -1,0 +1,66 @@
+t=0.0 q=-0.00008 tip=0.598 pan=2.400 inside=0 crossed=0 gate=0.000 prop=0.0167 work=0.00/0.00
+t=1.0 q=-0.00103 tip=0.579 pan=2.405 inside=0 crossed=0 gate=0.000 prop=0.0167 work=0.00/0.00
+t=2.0 q=-0.00103 tip=0.579 pan=2.405 inside=0 crossed=0 gate=0.000 prop=0.0167 work=0.00/0.00
+t=3.0 q=-0.00103 tip=0.579 pan=2.405 inside=0 crossed=0 gate=0.000 prop=0.0167 work=0.03/0.00
+t=4.0 q=-0.00103 tip=0.579 pan=2.405 inside=0 crossed=0 gate=0.005 prop=0.0167 work=41.52/0.00
+t=5.0 q=-0.00103 tip=0.579 pan=2.405 inside=0 crossed=0 gate=0.170 prop=0.0167 work=41.52/0.00
+t=6.0 q=-0.00103 tip=0.579 pan=2.405 inside=0 crossed=0 gate=0.570 prop=0.0167 work=41.52/0.00
+t=7.0 q=-0.00102 tip=0.579 pan=2.405 inside=8 crossed=8 gate=1.230 prop=0.0167 work=41.52/0.00
+t=8.0 q=-0.00102 tip=0.579 pan=2.405 inside=16 crossed=16 gate=1.897 prop=0.0165 work=41.52/0.00
+t=9.0 q=-0.00065 tip=0.586 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0164 work=41.52/0.00
+t=10.0 q=0.00019 tip=0.604 pan=2.399 inside=20 crossed=20 gate=1.897 prop=0.0158 work=41.52/0.00
+t=11.0 q=-0.00011 tip=0.598 pan=2.401 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=12.0 q=-0.00002 tip=0.600 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=13.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=14.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=15.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=16.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=17.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=18.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=19.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=20.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=21.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=22.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=23.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=24.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=25.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=26.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=27.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=28.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=29.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=30.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=31.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=32.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=33.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=34.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=35.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=36.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=37.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=38.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=39.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=40.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=41.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=42.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=43.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+t=44.0 q=0.00007 tip=0.601 pan=2.400 inside=20 crossed=20 gate=1.897 prop=0.0156 work=41.52/0.00
+RESULT {"hz":90,"mode":2,"all_loaded_s":8.377778,"bridge_deadcentre_s":-1.000000,"pan_y_before_release":2.399670,"tip_end":0.601360,"tip_max":0.627161,"retained_min_after_release":20,"hinge_drift_max":0.003348850,"pan_pitch_max":0.012300984,"rack_work_J":41.520309,"bridge_work_J":0.000000,"rack_stroke_m":0.276807,"bridge_stroke_m":0.002470,"plastic_work_J":0.000000,"hinge_friction_work_J":143.812423,"max_penetration":0.000000,"mechanical_release_J":117729.948346,"kinetic_end_J":0.000000}
+PIPE pipe_0 4.3474 2.7004 -86.8489 speed 0.000000
+PIPE pipe_1 4.3582 2.7423 -86.0654 speed 0.000000
+PIPE pipe_2 4.3827 2.7839 -85.2838 speed 0.000000
+PIPE pipe_3 4.3536 2.8256 -84.4936 speed 0.000000
+PIPE pipe_4 4.3395 2.8674 -83.6879 speed 0.000000
+PIPE pipe_5 5.4526 2.7006 -86.8498 speed 0.000000
+PIPE pipe_6 5.4379 2.7431 -86.0542 speed 0.000000
+PIPE pipe_7 5.4630 2.7826 -85.2748 speed 0.000000
+PIPE pipe_8 5.4511 2.8270 -84.4847 speed 0.000000
+PIPE pipe_9 5.4350 2.8692 -83.6868 speed 0.000000
+PIPE pipe_10 6.5511 2.7007 -86.8477 speed 0.000000
+PIPE pipe_11 6.5398 2.7424 -86.0692 speed 0.000000
+PIPE pipe_12 6.5552 2.7843 -85.2905 speed 0.000000
+PIPE pipe_13 6.5382 2.8262 -84.5054 speed 0.000000
+PIPE pipe_14 6.5510 2.8681 -83.7076 speed 0.000000
+PIPE pipe_15 7.6512 2.7006 -86.8491 speed 0.000000
+PIPE pipe_16 7.6789 2.7425 -86.0701 speed 0.000000
+PIPE pipe_17 7.6475 2.7846 -85.2871 speed 0.000000
+PIPE pipe_18 7.6473 2.8241 -84.4992 speed 0.000000
+PIPE pipe_19 7.6544 2.8678 -83.6868 speed 0.000000

@@ -10,6 +10,7 @@ extends Node
 # the mix can sit loud enough for a phone speaker without clipping.
 
 const SoundBank := preload("res://presentation/audio/sound_bank.gd")
+const FallReactions := preload("res://presentation/audio/fall_reactions.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 
 const BUS_EFFECTS := &"Effects"
@@ -97,6 +98,13 @@ var _last_tipper := INF
 var _creak_cooldown := 0.0
 var _bird_clock := 3.0
 var _machines_seen := false
+var fall_reactions: Node
+var regression_machines := false
+var pipe_motion_frames := 0
+var pipe_crush_cues := 0
+var _pipe_motion: AudioStreamPlayer3D
+var _pipe_front := 0.0
+var _pipe_deaths := -1
 
 
 func _ready() -> void:
@@ -109,6 +117,9 @@ func _ready() -> void:
 			AudioServer.set_bus_name(index, bus)
 			AudioServer.set_bus_send(index, &"Master")
 	var master := AudioServer.get_bus_index(&"Master")
+	fall_reactions = FallReactions.new()
+	fall_reactions.name = "FallReactions"
+	add_child(fall_reactions)
 	var has_limiter := false
 	for i in AudioServer.get_bus_effect_count(master):
 		has_limiter = has_limiter or AudioServer.get_bus_effect(master, i) is AudioEffectHardLimiter
@@ -136,6 +147,7 @@ func _ready() -> void:
 	_water_screw_motor = _positional_player(BUS_AMBIENCE, Vector3(-18.0, 1.0, -98.0), 6.0, 100.0)
 	_water_lift_drive = _positional_player(BUS_AMBIENCE, Vector3(-12.5, 4.0, -108.2), 5.0, 90.0)
 	_water_lift_water = _positional_player(BUS_AMBIENCE, Vector3(-18.0, 4.5, -105.8), 5.0, 80.0)
+	_pipe_motion = _positional_player(BUS_EFFECTS, Vector3(6, 2.4, -85), 10.0, 90.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -159,6 +171,7 @@ func _exit_tree() -> void:
 # first, or the playbacks leak at exit.
 func quiesce() -> void:
 	_silent = true
+	fall_reactions.quiesce()
 	for child in get_children():
 		if child is AudioStreamPlayer or child is AudioStreamPlayer3D:
 			child.stop()
@@ -178,16 +191,16 @@ func _on_bank_ready() -> void:
 	for pair in [[_wind, &"wind_loop"], [_rush, &"rush_loop"], [_drone, &"drone_loop"],
 			[_hum, &"hum_loop"], [_hiss, &"hiss_loop"], [_rattle, &"rattle_loop"],
 			[_motor, &"motor_loop"], [_water_screw_motor, &"motor_loop"],
-			[_water_lift_drive, &"rattle_loop"], [_water_lift_water, &"hiss_loop"]]:
+			[_water_lift_drive, &"rattle_loop"], [_water_lift_water, &"hiss_loop"], [_pipe_motion, &"rattle_loop"]]:
 		pair[0].stream = _bank.pick(pair[1])
 	_wind.volume_db = -60.0
 	_rush.volume_db = -60.0
 	_drone.volume_db = -60.0
-	_hum.volume_db = -6.0
-	for player in [_hiss, _rattle, _motor, _water_screw_motor, _water_lift_drive, _water_lift_water]:
+	_hum.volume_db = -6.0 if regression_machines else -80.0
+	for player in [_hiss, _rattle, _motor, _water_screw_motor, _water_lift_drive, _water_lift_water, _pipe_motion]:
 		player.volume_db = -80.0
 	for player in [_wind, _rush, _drone, _hum, _hiss, _rattle, _motor, _water_screw_motor,
-			_water_lift_drive, _water_lift_water]:
+			_water_lift_drive, _water_lift_water, _pipe_motion]:
 		player.play()
 
 
@@ -217,6 +230,7 @@ func ui_tap(back: bool = false) -> void:
 # Once per rendered frame, with the native state main.gd already read.
 func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool) -> void:
+	fall_reactions.update(delta, position, velocity, grounded, traversal, chute, deaths)
 	var horizontal := Vector2(velocity.x, velocity.z).length()
 
 	if grounded and traversal == 0 and horizontal > STEP_MIN_SPEED:
@@ -334,8 +348,28 @@ func update_water_lift(flow_m3_s: float, rope_tension_n: float) -> void:
 	_water_lift_drive.pitch_scale = lerpf(0.72, 1.08, load)
 
 
-# Wind rises with altitude; a falling body hears the air tear past. The
-# yard's distant industrial bed thins out as the climb leaves it below.
+# Native pan motion, loose-pipe energy and irreversible receiver compression
+# provide sound inputs without introducing presentation-owned progress.
+func update_pipe_bridge(state: Dictionary, deaths: int) -> void:
+	if state.is_empty():
+		return
+	var at: Vector3 = state["pan"]
+	var velocity: Vector3 = state["velocity"]
+	var front := float(state["crush_front"])
+	var gain := clampf(maxf(velocity.length() / 1.2, sqrt(maxf(0, state["pipe_energy"]) / 12000.0)), 0, 1)
+	if gain > 0.03:
+		pipe_motion_frames += 1
+	if deaths == _pipe_deaths and _pipe_front <= 0.001 and front > 0.001:
+		pipe_crush_cues += 1
+		_play_at(&"creak", at, -2.0, 0.72)
+	_pipe_front = front
+	_pipe_deaths = deaths
+	if _bank_ready and not _silent:
+		_pipe_motion.position = at
+		_pipe_motion.volume_db = linear_to_db(maxf(gain, 0.0001)) - 6.0
+		_pipe_motion.pitch_scale = lerpf(0.65, 1.0, gain)
+
+
 func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: float) -> void:
 	if not _bank_ready or _silent:
 		return
@@ -346,6 +380,8 @@ func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: fl
 	_drone.volume_db = lerpf(_drone.volume_db, drone_db, 1.0 - exp(-1.5 * delta))
 	var fall := 0.0 if grounded else clampf((-velocity.y - 6.0) / 24.0, 0.0, 1.0)
 	var rush_db := lerpf(-60.0, -2.0, sqrt(fall)) if fall > 0.0 else -60.0
+	if fall_reactions.speaking():
+		rush_db -= 8.0
 	_rush.volume_db = lerpf(_rush.volume_db, rush_db, 1.0 - exp(-6.0 * delta))
 	_rush.pitch_scale = lerpf(0.9, 1.35, fall)
 

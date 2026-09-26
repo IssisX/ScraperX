@@ -1,0 +1,19 @@
+SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579487 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579487 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6806,0.891956,-79.0051 target 0 carrying 2530 tip 0.579487 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2241,0.89143,-78.9396 target 2530 carrying 0 tip 0.601004 pipes 20 support 1 deaths 0
+BRIDGE_READY pos -0.280318,0.89143,-85.6041 target 2505 carrying 0 tip 0.601004 pipes 20 support 1 deaths 0
+BRIDGE_PICK pos -0.286885,0.894289,-85.6027 target 0 carrying 2505 tip 0.601004 pipes 20 support 1 deaths 0
+BRIDGE_LIFTED pos -1.39294,0.895814,-85.6024 target 0 carrying 0 tip 8.00802 pipes 20 support 1 deaths 0
+CROSS pos -0.620263,0.895814,-85.9898 target 0 carrying 0 tip 8.02219 pipes 20 support 1 deaths 0
+CROSS pos 2.05043,0.901593,-85.9781 target 0 carrying 0 tip 8.01973 pipes 20 support 1 deaths 0
+CROSS pos 1.93855,1.99011,-91.1613 target 0 carrying 0 tip 8.02179 pipes 20 support 1523 deaths 0
+CROSS pos 6.09216,1.94686,-91.056 target 0 carrying 0 tip 7.9954 pipes 20 support 2500 deaths 0
+CROSS pos 5.99956,8.37962,-107.146 target 0 carrying 0 tip 8.0225 pipes 20 support 2500 deaths 0
+CROSS pos 9.31298,8.02814,-106.952 target 0 carrying 0 tip 8.02241 pipes 20 support 1524 deaths 0
+CROSS pos 9.04324,8.9,-110.836 target 0 carrying 0 tip 7.99654 pipes 20 support 1525 deaths 0
+CROSS pos 9.06041,11.9,-125.551 target 0 carrying 0 tip 8.00029 pipes 20 support 11 deaths 0
+ARRIVED pos 9.06041,11.9,-125.551 target 0 carrying 0 tip 8.00029 pipes 20 support 11 deaths 0
+BEFORE_FALL pos 21.097,33.9,-128.501 target 0 carrying 0 tip 8.03548 pipes 20 support 11 deaths 0
+RESTORED pos 26.2659,33.7497,-128.501 target 0 carrying 0 tip 8.01541 pipes 20 support 51 deaths 1
+PASS scraperx_sim AS-016 full route pipes=20 arrival_y=11.9 death_restore=1 spent_crusher=0.458711

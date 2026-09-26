@@ -1,10 +1,10 @@
 # AS-016 — Pipe-loaded balance bridge
 
 **Ascent Slice:** `AS-016`
-**Lifecycle:** PLANNED — design and isolated native probes in progress; no gameplay mechanism added
-**Provenance:** re-derived against `360cffb` and the current native geometry
+**Lifecycle:** IMPLEMENTED — native default and presentation integrated; exact-commit delivery verification pending
+**Provenance:** design probes began at `360cffb`; implementation continues from `e8d9ca8`
 **Implementation gate:** loaded releases, pipe capture, arrest and the supported crossing must close in the bounded prototypes below before promotion to normal gameplay
-**Evidence:** current delivery status remains in `00_START_HERE.md`; isolated prototype results must not be reported as a completed ascent
+**Evidence:** current delivery status remains in `00_START_HERE.md`; [integrated observations](../PLANNING/AS-016_PROTOTYPES/integrated/README.md) distinguish final production tests from the earlier copied prototype
 
 ## Preserved prototype checkpoint — 2026-09-26
 
@@ -12,8 +12,20 @@
 the separate swing/arrest, static native walking route and loaded releases.
 The selected upper cheek offset is 0.25 m. The independent swing evaluator
 passes all 27 cases against 54 native runs and rejects incomplete evidence.
-The actual moving pan with twenty delivered pipes and the full loaded release
-is the current integration gate. Normal gameplay remains unchanged.
+The final production assembly now closes actual moving-pan delivery, physical loaded release, arrest and native player crossing. The earlier isolated files remain design provenance.
+
+## Production observations — 2026-09-26
+
+Profile: **MACRO-TRAVERSAL-STRICT**. Native source is the only physics owner; Godot reads its body/part state and forwards input. The ordinary constructor builds the pipe bridge, without a candidate flag.
+
+- INTEGRATED native route: actual player walks from grade, grabs rack grip 2530, delivers 20 independent pipes, grabs bridge grip 2505, crosses beam 2500 and the +8 m receiver, and arrives supported on the original +11 m tower.
+- Native controls cover idle, rack-only and empty-pan release; partial pull/regrab; boarding while the beam rises and being passively carried; and a real fatal fall restoring the deployed bridge, retained pipes and spent crusher.
+- Actual viewport inputs cover gamepad/keyboard at 60 FPS and touch at 30 FPS. Separate first-person rendered captures show the rack, loaded pan, raised route and tower arrival.
+- Kit adaptations from the inactive ballast archive: handle-only reach, grip classification before normal-world return, principal-inertia energy readback and guide peak-speed persistence. Actual-contact control grips and active material checkpoints remain authoritative. No alternate ballast assembly is instantiated.
+- The material boundary follows plastic compression; elastic indentation is at most 6 mm before yield. Other-body contacts with this boundary do not add to the pan-only constitutive law. The sloped pan can meet the ultimate floor near 0.58 m compression, so the nominal 0.65 m parameter is not a claim of that much unobstructed travel.
+- Human recorded fall reactions trigger only during dangerous falls, with bounded variation, escalation, wind ducking, and cancellation on recovery/pause/death. Sources and CC0 provenance accompany the assets.
+
+No APK installation, audible Android test or sustained Fold performance is established by desktop evidence.
 
 ## Objective
 

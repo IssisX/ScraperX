@@ -82,7 +82,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_sim_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
           # The falsifiers' own proof lines. ctest --output-on-failure prints a
@@ -242,11 +242,19 @@ jobs:
           awk -F'lattice_top_y=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 198.20 && a[1]+0 <= 198.30) ? 0 : 1}' \
             artifacts/native-falsifiers.log
 
-      - name: Prove cleared default scene and retained fallback stairs
+      - name: Import presentation resources
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=1 kit_bodies=0 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          timeout 300s tools/godot/godot --headless --editor --import --path godot \
+            2>&1 | tee artifacts/godot-import.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-import.log; then exit 1; fi
+
+      - name: Prove default pipe bridge inventory and retained fallback stairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=33 kit_bodies=68 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim fallback stairs: levels=14" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
           mkdir -p artifacts/screenshots godot/.godot
@@ -256,10 +264,29 @@ jobs:
             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
             -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
             2>&1 | tee artifacts/godot-foundation.log
-          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=1 retired_meshes=0 default_controls=1" artifacts/godot-foundation.log
+          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=33 retired_meshes=0 default_controls=1" artifacts/godot-foundation.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
           test -s artifacts/screenshots/foundation_cleared_grade.png
           test -s artifacts/screenshots/foundation_cleared_tower.png
+
+      - name: Pipe bridge - ordinary input, supported crossing and native material state
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./build/host/scraperx_pipe_bridge_tests | tee artifacts/pipe-bridge-native.log
+          grep -F "PASS scraperx_sim AS-016 full route" artifacts/pipe-bridge-native.log
+          for scenario in pipe_bridge keyboard_pipe_bridge; do
+            timeout 240s tools/godot/godot --headless --fixed-fps 60 --path godot \
+              -- "--uitest=${scenario}" 2>&1 | tee "artifacts/${scenario}.log"
+            grep -F "SCRAPERX_UITEST PASS ${scenario} " "artifacts/${scenario}.log"
+          done
+          timeout 600s xvfb-run -a -s "-screen 0 1296x1114x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 30 \
+            -- --uitest=touch_pipe_bridge "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/pipe-bridge" \
+            2>&1 | tee artifacts/touch_pipe_bridge.log
+          grep -F "SCRAPERX_UITEST PASS touch_pipe_bridge " artifacts/touch_pipe_bridge.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/*pipe_bridge.log; then exit 1; fi
+          test -s artifacts/screenshots/pipe-bridge_tower_arrival.png
 
       - name: Regression fixture - native machine authority and Fold-aspect capture
         shell: bash
@@ -328,6 +355,13 @@ jobs:
           rm -f "${RUNNER_TEMP}/audio-mix.avi"
           grep -F "SCRAPERX_UITEST PASS audio_mix " artifacts/godot-audio-mix.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-audio-mix.log; then exit 1; fi
+          timeout 180s xvfb-run -a tools/godot/godot --path godot --fixed-fps 60 \
+            --write-movie "${RUNNER_TEMP}/fall-voices.avi" \
+            --script res://presentation/audio/fall_reactions_test.gd \
+            2>&1 | tee artifacts/fall-voices.log
+          grep -F "SCRAPERX_FALL_VOICE" artifacts/fall-voices.log
+          if grep -E "SCRIPT ERROR|Parse Error|FALL_VOICE_FAIL" artifacts/fall-voices.log; then exit 1; fi
+          rm -f "${RUNNER_TEMP}/fall-voices.avi"
 
       - name: World solids table matches the Godot builders
         shell: bash
@@ -393,7 +427,7 @@ jobs:
 
           Proven for the default scene by this workflow:
 
-          - Native body enumeration finds no retired campaign/fixture entities, one moving body (the player), and no mechanism-kit bodies or cables.
+          - Native body enumeration finds no retired campaign/fixture entities, 33 moving bodies (the player plus the pipe mechanism), 68 mechanism-kit bodies and two control cords.
           - Normal native locomotion, crouch, jump and grade landing execute without legacy construction.
           - The default world's ordinary fallback staircase is walked through all fourteen flights to the 154 m deck without requesting a jump.
           - The rendered default scene rejects retired machinery nodes and verifies actual input-driven player movement, jump, crouch and pause. Screenshots are foundation_cleared_grade.png and foundation_cleared_tower.png.
@@ -406,7 +440,9 @@ jobs:
           - Legacy intake, water screw/lift, counterweight, plant and rigging scenarios remain regression tests. Their green results do not describe normal campaign content or validate the owner's rejected screw experience.
           - The old approach-and-machine capture and audio_mix exercise the selected regression scene; they are not screenshots or device measurements of the cleared campaign.
 
-          Not proven: a replacement macro mechanism, APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals, a completed tower ascent or the proposed +8 m balance bridge. The owner-requested ordinary stairs remain an optional route, not a mechanism proof.
+          The default pipe-loaded bridge loads twenty independent pipes, releases through actual reachable controls, arrests on finite material, and carries the player across the +8 m receiver to the original +11 m ring. Native no-input/source controls, regrabbing, passive riding, material checkpoint restoration and 90/360 Hz refinement pass. Touch at 30 FPS, keyboard and gamepad at 60 FPS use ordinary viewport input. Recorded human fall reactions pass cancellation and decoded-mix checks.
+
+          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent. The owner-requested ordinary stairs remain an optional route, not a mechanism proof.
           EOF
 
       - name: Publish immutable checkpoint build and evidence

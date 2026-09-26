@@ -21,7 +21,7 @@ struct Quaternion final {
 };
 
 // Production never constructs the retired campaign. Regression scenes are explicit test inputs.
-enum class WorldContent : std::uint8_t { GroundFoundation, RegressionFixtures };
+enum class WorldContent : std::uint8_t { GroundFoundation, RegressionFixtures, PipeBridge };
 
 enum class InitialSpawn : std::uint8_t {
     StaticDeck = 0,
@@ -114,6 +114,8 @@ struct KitPart final {
     Vector3 offset{};
     Quaternion rotation{};
     std::uint8_t material = 0;
+    std::uint8_t shape = 0;
+    double inner_radius = 0;
 };
 
 enum class TraversalState : std::uint8_t {
@@ -471,7 +473,7 @@ public:
     static constexpr double kTowerHeightMeters = 1600.0;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ExteriorGrade,
-                        WorldContent content = WorldContent::GroundFoundation);
+                        WorldContent content = WorldContent::PipeBridge);
     [[nodiscard]] std::uint32_t entity_body_count(std::uint64_t entity) const noexcept;
     [[nodiscard]] std::uint32_t moving_body_count() const noexcept;
     ~Simulation();
@@ -582,6 +584,9 @@ public:
     // indices run 0 .. kit_body_count() - 1 in build order.
     static constexpr std::uint32_t kKitNone = 0xFFFFFFFFU;
     [[nodiscard]] std::uint32_t kit_body_count() const noexcept;
+    [[nodiscard]] double pipe_bridge_tip_height() const noexcept;
+    [[nodiscard]] std::uint32_t pipe_bridge_retained_pipes() const noexcept;
+    [[nodiscard]] double pipe_bridge_crush_front() const noexcept;
     [[nodiscard]] std::uint64_t kit_body_entity(std::uint32_t body) const noexcept;
     [[nodiscard]] bool kit_body_dynamic(std::uint32_t body) const noexcept;
     [[nodiscard]] bool kit_body_enabled(std::uint32_t body) const noexcept;
@@ -591,6 +596,8 @@ public:
     [[nodiscard]] Quaternion kit_body_rotation(std::uint32_t body) const noexcept;
     [[nodiscard]] Vector3 kit_body_velocity(std::uint32_t body) const noexcept;
     [[nodiscard]] double kit_body_mass(std::uint32_t body) const noexcept;
+    [[nodiscard]] double kit_body_kinetic_energy(std::uint32_t body) const noexcept;
+    [[nodiscard]] Vector3 kit_carry_grip_position(std::uint32_t body) const noexcept;
     [[nodiscard]] std::uint32_t kit_body_index(std::uint64_t entity) const noexcept;
     // Cables are the kit's ropes, then its trip lines.
     [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;

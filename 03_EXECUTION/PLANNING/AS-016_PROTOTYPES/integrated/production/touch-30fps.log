@@ -1,0 +1,11 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=pipe_bridge
+SCRAPERX_VIEWPORT size=640x640 aspect=1.000 fov=82.0 far=2600
+SCRAPERX_AUDIO_BANK clips=23 msec=615 driver=Dummy
+SCRAPERX_UITEST PASS touch_pipe_bridge pipes=20 tip_y=8.0005 arrival_y=11.900 native_input=1 deaths=0
+ERROR: Parameter "getcwd(real_current_dir_name, 2048)" is null.
+   at: DirAccessUnix (drivers/unix/dir_access_unix.cpp:739)

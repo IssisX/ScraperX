@@ -8,6 +8,7 @@
 #include <godot_cpp/variant/quaternion.hpp>
 #include <godot_cpp/variant/transform3d.hpp>
 #include <godot_cpp/variant/vector3.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
 
 #include <memory>
 
@@ -21,6 +22,10 @@ public:
 
     [[nodiscard]] bool configure_initial_spawn(std::int64_t initial_spawn);
     [[nodiscard]] bool configure_regression_spawn(std::int64_t initial_spawn);
+    [[nodiscard]] double get_pipe_bridge_tip_height() const;
+    [[nodiscard]] double get_pipe_bridge_crush_front() const;
+    [[nodiscard]] std::int64_t get_pipe_bridge_retained_pipes() const;
+    [[nodiscard]] godot::Dictionary get_pipe_bridge_audio_state() const;
     [[nodiscard]] std::int64_t get_entity_body_count(std::int64_t entity) const;
     [[nodiscard]] std::int64_t get_moving_body_count() const;
     [[nodiscard]] bool set_move_input(double world_x, double world_z);
@@ -200,6 +205,7 @@ public:
     [[nodiscard]] bool is_kit_body_enabled(std::int64_t body) const;
     [[nodiscard]] godot::PackedFloat32Array get_kit_body_parts(std::int64_t body) const;
     [[nodiscard]] godot::Transform3D get_kit_body_transform(std::int64_t body) const;
+    [[nodiscard]] godot::Vector3 get_kit_carry_grip_position(std::int64_t body) const;
     [[nodiscard]] std::int64_t get_kit_body_index(std::int64_t entity_id) const;
     // Cables: the kit's ropes, then its trip lines, each as the points it is
     // drawn through. Empty for a parted rope.

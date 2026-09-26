@@ -1,0 +1,3 @@
+hz=90 pipes=20 tip=8.023332596 front=0.4573617395 crush_work=41162.55655 input_work=83.52076113 other_loss=120367.698 peak_ke=54908.02329 pan_pitch=0.01272422913 floor_gap=0.1182146615 post_min=7.987283707 post_max=8.03119278
+hz=360 pipes=20 tip=8.002187729 front=0.4524773922 crush_work=40722.9653 input_work=83.52018893 other_loss=120985.5748 peak_ke=59483.1836 pan_pitch=0.001826174674 floor_gap=0.1236361808 post_min=7.988903999 post_max=8.014266014
+PASS production pipe bridge refinement 90/360 Hz

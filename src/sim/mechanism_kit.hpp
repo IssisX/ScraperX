@@ -14,6 +14,7 @@
 
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/PulleyConstraint.h>
@@ -59,6 +60,13 @@ struct Part final {
     JPH::Vec3 offset = JPH::Vec3::sZero();
     JPH::Quat rotation = JPH::Quat::sIdentity();
     Material material = Material::Steel;
+    // Cylinder axis is local Y; half.x is its outside radius, half.y its
+    // half length. The bore is visual: it is smaller than the player capsule.
+    enum class Shape : std::uint8_t { Box = 0, Cylinder = 1 };
+    Shape shape = Shape::Box;
+    float mass_kg = 0.0F; // zero retains the legacy uniform-density shape
+    float inner_radius = 0.0F;
+    float convex_radius = -1.0F; // negative retains the kit's default margin
 };
 
 // What a pick-up of this body is, for the prompt: a load, a rope's shackle,
@@ -112,6 +120,9 @@ public:
     // stops swinging in a second or two.
     void set_damping(BodyIndex body, float linear, float angular);
     void set_body_mass(BodyIndex body, float mass_kg);
+    void set_mass_properties(BodyIndex body, const JPH::MassProperties &mass);
+    void set_continuous_collision(BodyIndex body);
+    void disable_collision(BodyIndex first, BodyIndex second);
     AnchorIndex add_anchor(BodyIndex body, JPH::Vec3 local, float reach);
 
     // A straight guide along a world axis through the body's present
@@ -136,6 +147,14 @@ public:
     // it: a counterweighted lever rests on a stop, and a pull turns it.
     LeverIndex add_lever(BodyIndex body, JPH::RVec3 pivot, JPH::Vec3 axis, JPH::Vec3 normal,
                          float min_angle, float max_angle);
+    // A persistent bearing, including body-to-body joints in an articulated
+    // frame. Invalid first means the fixed world. No release flag is involved.
+    LeverIndex add_hinge(BodyIndex first, BodyIndex second, JPH::RVec3 pivot,
+                         JPH::Vec3 axis, float friction_torque,
+                         std::uint32_t velocity_steps = 40, std::uint32_t position_steps = 8);
+    void add_fixed_joint(BodyIndex first, BodyIndex second);
+    LineIndex add_tie(BodyIndex first, JPH::Vec3 first_point,
+                      BodyIndex second, JPH::Vec3 second_point);
 
     // A catch holding body fast to the world while its pin is seated. The
     // pin leaves its hole when lever turns past release_angle. relatch:
@@ -204,6 +223,7 @@ public:
         std::vector<bool> rope_parted;
         std::vector<bool> catch_latched;
         std::vector<bool> catch_armed;
+        std::vector<float> guide_peak_speed;
     };
     void capture(Checkpoint &out) const;
     void restore(const Checkpoint &in);
@@ -222,6 +242,7 @@ public:
     [[nodiscard]] JPH::Quat body_rotation(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Vec3 body_velocity(BodyIndex body) const noexcept;
     [[nodiscard]] float body_mass(BodyIndex body) const noexcept;
+    [[nodiscard]] double body_kinetic_energy(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::BodyID body_id(BodyIndex body) const noexcept;
     [[nodiscard]] BodyIndex body_for_entity(std::uint64_t entity) const noexcept;
 
@@ -305,6 +326,7 @@ private:
         JPH::RVec3 sheave1 = JPH::RVec3::sZero();
         JPH::RVec3 sheave2 = JPH::RVec3::sZero();
         JPH::Ref<JPH::TwoBodyConstraint> constraint;
+        bool direct = false;
     };
     struct Catch final {
         BodyIndex body;
@@ -345,6 +367,8 @@ private:
     std::vector<Lever> levers_;
     std::vector<Catch> catches_;
     std::vector<Line> lines_;
+    std::vector<JPH::Ref<JPH::TwoBodyConstraint>> fixed_joints_;
+    JPH::Ref<JPH::GroupFilterTable> collision_groups_;
 };
 
 } // namespace scraperx::sim::kit
