@@ -847,6 +847,8 @@ func _stack(device: int) -> bool:
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2203, 0.5):
 		return _fail("GRAB did not put S1's valve chain in the hands")
+	# Down with the chain to the hands on it.
+	await _tilt(0.0)
 	var opened: bool = await _wait_until(func() -> bool:
 		return float(_native().get_stack_s1_valve_angle()) > 0.24 and \
 			not bool(_native().is_stack_s1_catch_latched()), 1.0)
@@ -875,7 +877,6 @@ func _stack(device: int) -> bool:
 	if not await _let_go_if_held(device):
 		return _fail("LET GO did not take S1's chain out of the hands")
 	var worst_wrist := _stop_watch(wrists)
-	await _tilt(0.0)
 	# 0.10 m in a 60 Hz frame is 6 m/s across the view: faster than any reach.
 	if worst_wrist > 0.10:
 		return _fail("a hand on S1's chain jumped %.3f m in one frame (%s)" % [worst_wrist,
