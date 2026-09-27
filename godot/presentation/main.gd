@@ -459,7 +459,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -1061,6 +1061,8 @@ func _carry_name(entity: int) -> String:
 			return "BRIDGE RELEASE"
 		2530:
 			return "PIPE RACK RELEASE"
+		2602:
+			return "STAIR CHAIN HANDLE"
 		2002:
 			return "ROPE SHACKLE"
 		2004:

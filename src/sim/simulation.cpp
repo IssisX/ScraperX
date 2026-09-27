@@ -3,6 +3,7 @@
 #include "sim/bands.hpp"
 #include "sim/mechanism_kit.hpp"
 #include "sim/pipe_bridge.hpp"
+#include "swing_stair.hpp"
 #include "sim/facade_route.hpp"
 #include "sim/water_screw.hpp"
 
@@ -1898,6 +1899,7 @@ public:
         if (content == WorldContent::PipeBridge) {
             pipe_bridge_ = std::make_unique<PipeBridge>(physics_system_, *kit_);
             build_facade_route(*kit_);
+            swing_stair_ = std::make_unique<SwingStair>(physics_system_, *kit_);
         }
 
         physics_system_.OptimizeBroadPhase();
@@ -1929,6 +1931,7 @@ public:
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
         }
+        swing_stair_.reset();
         pipe_bridge_.reset();
         kit_.reset();
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
@@ -2065,6 +2068,7 @@ public:
 
         kit_->pre_step(delta_seconds);
         if (pipe_bridge_) pipe_bridge_->pre_step(delta_seconds);
+        if (swing_stair_) swing_stair_->pre_step(delta_seconds);
         contact_listener_.begin_tick();
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
         kit_->post_step(delta_seconds);
@@ -6140,6 +6144,7 @@ private:
             checkpoint_.carrying_entity = carried_entity_;
             kit_->capture(checkpoint_.kit);
             if (pipe_bridge_) checkpoint_.pipe_bridge = pipe_bridge_->state();
+            if (swing_stair_) checkpoint_.swing_stair = swing_stair_->state();
             return;
         }
         checkpoint_.ballast = capture_body(bodies, ballast_id_);
@@ -6225,6 +6230,7 @@ private:
         }
         kit_->restore(checkpoint_.kit);
         if (pipe_bridge_) pipe_bridge_->restore(checkpoint_.pipe_bridge);
+        if (swing_stair_) swing_stair_->restore(checkpoint_.swing_stair);
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
@@ -6603,6 +6609,7 @@ private:
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     std::unique_ptr<PipeBridge> pipe_bridge_;
+    std::unique_ptr<SwingStair> swing_stair_;
     scraperx::sim::bands::CounterweightWell well_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
     std::uint8_t rig_action_ = 0;
@@ -6755,6 +6762,7 @@ private:
         // AS-006: every kit body, rope end, parted rope and catch.
         scraperx::sim::kit::Kit::Checkpoint kit{};
         PipeBridge::State pipe_bridge{};
+        SwingStair::State swing_stair{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;

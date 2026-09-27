@@ -22,6 +22,7 @@ add_library(scraperx_sim STATIC
     src/sim/mechanism_kit.cpp
     src/sim/facade_route.cpp
     src/sim/pipe_bridge.cpp
+    src/sim/swing_stair.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_ground_water_lift.cpp
 )
@@ -78,6 +79,11 @@ if(BUILD_TESTING AND NOT ANDROID)
     add_executable(scraperx_ascent_route_tests tests/ascent_route_tests.cpp)
     target_link_libraries(scraperx_ascent_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.ascent_route COMMAND scraperx_ascent_route_tests)
+    add_executable(scraperx_swing_stair_route_tests tests/swing_stair_route_tests.cpp)
+    target_link_libraries(scraperx_swing_stair_route_tests PRIVATE scraperx_sim)
+    foreach(mode RANGE 0 4)
+        add_test(NAME scraperx_sim.swing_stair_route_${mode} COMMAND scraperx_swing_stair_route_tests ${mode})
+    endforeach()
     add_executable(scraperx_pipe_bridge_tests tests/pipe_bridge_tests.cpp)
     target_link_libraries(scraperx_pipe_bridge_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.pipe_bridge_route COMMAND scraperx_pipe_bridge_tests)

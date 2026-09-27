@@ -21,6 +21,7 @@ const SCENARIOS := {
 	"touch_pipe_bridge": 8,
 	"keyboard_pipe_bridge": 8,
 	"touch_facade": 8,
+	"touch_stair": 8,
 	"touch_jump": 8,
 	"touch_move_look": 8,
 	"touch_gyro_aim": 8,
@@ -62,7 +63,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	_scenario = scenario
 	_capture_prefix = capture_prefix
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -101,6 +102,8 @@ func _run() -> void:
 			ok = await _pipe_bridge(InputRouter.Device.KEYBOARD_MOUSE)
 		"touch_facade":
 			ok = await _touch_facade()
+		"touch_stair":
+			ok = await _touch_stair()
 		"touch_jump":
 			ok = await _touch_jump()
 		"touch_move_look":
@@ -308,6 +311,68 @@ func _touch_facade() -> bool:
 	_detail = "grade_to_33m=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
 	return true
 
+
+# Continue the same ordinary touch route onto the moving stair and the +44 m deck.
+func _touch_stair() -> bool:
+	var device := InputRouter.Device.TOUCH
+	if not await _touch_facade():
+		return false
+	if int(_native().get_entity_body_count(2600)) != 1:
+		return _fail("swinging stair is absent from the normal scene")
+	# The actual hand point is 1.05 m above the standing capsule centre. Stop
+	# inside the normal 1.20 m reach, clear of the landing's south rail.
+	for point in [Vector2(-17.5, -125.5), Vector2(-17.5, -121.35)]:
+		if not await _walk_to(device, point, 0.08, 20.0):
+			return _fail("stair handle approach %s" % _position())
+	await _face(Vector2(0, 1))
+	await _seconds(0.5)
+	await _pose("stair_handle_ready")
+	if not await _offered(&"pick_up", "GRAB") or int(_native().get_carry_target_entity_id()) != 2602:
+		return _fail("stair chain handle was not offered: target=%d grounded=%s traversal=%d action=%s" % [
+			int(_native().get_carry_target_entity_id()),
+			str(_native().is_player_grounded()), int(_native().get_traversal_state()), str(_ctx()["action"])])
+	_act(device)
+	await _seconds(0.3)
+	if int(_native().get_carrying_entity_id()) != 2602:
+		return _fail("stair handle was not held")
+	_move(device, -0.35)
+	await _seconds(0.6)
+	_move(device, 0)
+	if int(_native().get_carrying_entity_id()) == 2602:
+		_act(device)
+	await _seconds(0.1)
+	await _pose("stair_released")
+	if not await _walk_to(device, Vector2(-16.4, -122.1), 0.1, 8.0):
+		return _fail("stair foot %s" % _position())
+	var used_flight := false
+	for x in [-15.2, -14.0, -12.0, -10.0, -8.0, -5.0, -2.7]:
+		if not await _walk_to(device, Vector2(x, -122.1), 0.1, 25.0):
+			return _fail("stair climb at %.1f: %s" % [x, _position()])
+		if int(_native().get_support_entity_id()) == 2600:
+			used_flight = true
+		if x == -10.0:
+			await _pose("stair_climb")
+	if not used_flight:
+		return _fail("player never stood on the moving flight")
+	await _seconds(0.3)
+	var stair_body := int(_native().get_kit_body_index(2600))
+	var stair_pose: Transform3D = _native().get_kit_body_transform(stair_body)
+	var exit_local := Vector3(0.25 + 43.0 * 0.25 / tan(0.70860367) + 0.45, 11.3, 0.0)
+	var exit_x := (stair_pose * exit_local).x
+	if not await _walk_to(device, Vector2(exit_x, -122.4), 0.1, 4.0):
+		return _fail("stair landing exit %s" % _position())
+	await _pose("stair_exit_ready")
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(exit_x, -125.5), 0.1, 6.0):
+		return _fail("stair deck jump %s" % _position())
+	await _seconds(0.5)
+	await _pose("stair_arrival")
+	if not _standing_above(44.5) or int(_native().get_support_entity_id()) != 11 \
+			or int(_native().get_death_count()) != 0:
+		return _fail("unsupported +44 m arrival %s" % _position())
+	_detail = "grade_to_44m=1 moving_stair=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
+	return true
+
 func _standing_above(height: float) -> bool:
 	return bool(_ctx()["grounded"]) and int(_ctx()["traversal"]) == 0 and _position().y > height
 
@@ -317,8 +382,8 @@ func _ground_foundation() -> bool:
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 33:
-		return _fail("default pipe bridge body inventory differs")
+	if int(_native().get_moving_body_count()) != 38:
+		return _fail("default pipe bridge and stair body inventory differs")
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
 	var retired := ["IntakeBay", "WaterScrew", "LegalForty", "Hook5",
@@ -335,7 +400,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=33 retired_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=38 retired_meshes=0 default_controls=1"
 	return true
 
 
