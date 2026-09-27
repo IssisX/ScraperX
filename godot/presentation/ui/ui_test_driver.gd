@@ -967,6 +967,8 @@ func _stack_c2(device: int) -> bool:
 	await _face(Vector2(0.0, -1.0))
 	await _seconds(0.3)
 	_jump(device)
+	if device == InputRouter.Device.KEYBOARD_MOUSE:
+		await _seconds(0.25)
 	_move(device, 0.4)
 	var c2_hung: bool = await _wait_until(
 		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_HANGING, 2.0)
@@ -1265,6 +1267,8 @@ func _stack(device: int) -> bool:
 		return _fail("the step to the cabinet's north edge stalled at %s" % str(_position()))
 	await _seconds(0.3)
 	_jump(device)
+	if device == InputRouter.Device.KEYBOARD_MOUSE:
+		await _seconds(0.25)
 	_move(device, 0.4)
 	var hung: bool = await _wait_until(
 		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_HANGING, 2.0)
