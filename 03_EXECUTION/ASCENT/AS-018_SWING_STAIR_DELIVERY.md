@@ -53,5 +53,6 @@ mass, receiver and exit bounds are recorded in [the Atlas](../../01_PRODUCT_AUTH
 
 The generated `GROUND-RESET-EVIDENCE.md` in the artifact summarizes the
 foundation and opening pipe mechanism. This ticket and the exact run's route
-log own the later +33→44 m claim. The +44→66 m continuation and route choice
-remain unauthored; a green Android export is not a completed tower ascent.
+log own the later +33→44 m claim. At this run's source SHA, the +44→66 m
+continuation was unauthored; the later AS-019 candidate is tracked in
+`00_START_HERE.md` §2. A green Android export is not a completed tower ascent.

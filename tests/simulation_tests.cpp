@@ -642,7 +642,7 @@ int main() {
         (void)foundation.advance_frame(2.0);
         require(foundation.snapshot().player_grounded && foundation.snapshot().death_count == 0,
                 "the default jump must land safely on grade");
-        std::cout << "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=38 kit_bodies=75 locomotion=1 crouch=1 jump=1\n";
+        std::cout << "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=43 kit_bodies=82 locomotion=1 crouch=1 jump=1\n";
     }
 
     {
