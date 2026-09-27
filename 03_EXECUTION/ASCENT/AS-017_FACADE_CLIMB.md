@@ -53,10 +53,15 @@ prove less submission work, not measured device FPS.
 The rendered 30 FPS touch gate runs the complete pipe route once, inside the
 continuous grade-to-33 m façade scenario. All pipe assertions and four pipe
 captures remain required. Run `36280224425` used an 864×742 Fold-aspect
-window and hit the 900-second bound. The next candidate uses 432×371 at the
-same aspect, retaining 30 FPS input frames, 90 Hz native physics and all six captures;
-the smaller rendered window is a throughput hypothesis, not a route or
-delivery pass. Default and regression captures retain their larger windows.
+window and hit the 900-second bound; the later docs-only run `36285233929`
+hit the same bound. A smaller `--resolution` window alone did not reduce
+Godot's internal 2160×1856 canvas viewport: a local rendered launch still
+reported 2161×1856. The next candidate temporarily sets both the design
+viewport and window to 432×371 for this one CPU-rendered route, then restores
+the shipped project settings before subsequent gates and APK export. A local
+launch confirmed a 432×371 viewport; full rendered traversal remains unproven.
+Input frames stay at 30 FPS, native physics at 90 Hz, and all six captures
+remain required. Default and regression captures retain their larger windows.
 Failed-run logs and available captures remain diagnostics, distinct from a
 published APK. Milestone logs expose progress even without screenshots.
 

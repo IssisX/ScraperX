@@ -302,14 +302,37 @@ jobs:
           set -euo pipefail
           ./build/host/scraperx_ascent_route_tests | tee artifacts/ascent-route.log
           # This calls the complete existing touch pipe route before climbing.
-          # Render it once at the same Fold aspect; CPU-only CI renders at
-          # 432x371. Frame cadence stays 30 FPS; native physics stays 90 Hz.
-          # Default and regression captures below retain larger viewports.
+          # --resolution changes the window, not the project's 2160x1856
+          # canvas viewport. Reduce both for this CPU-rendered route only;
+          # restore the shipped Fold project settings before later gates/export.
+          facade_project_backup="$(mktemp)"
+          cp godot/project.godot "$facade_project_backup"
+          restore_facade_project() {
+            cp "$facade_project_backup" godot/project.godot
+            rm -f "$facade_project_backup"
+          }
+          trap restore_facade_project EXIT
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('godot/project.godot')
+          text = path.read_text()
+          replacements = {
+              'window/size/viewport_width=2160': 'window/size/viewport_width=432',
+              'window/size/viewport_height=1856': 'window/size/viewport_height=371',
+              'window/size/window_width_override=1296': 'window/size/window_width_override=432',
+              'window/size/window_height_override=1114': 'window/size/window_height_override=371',
+          }
+          for old, new in replacements.items():
+              assert text.count(old) == 1, f'project viewport setting changed: {old}'
+              text = text.replace(old, new)
+          path.write_text(text)
+          PY
           timeout 900s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --path godot --rendering-method gl_compatibility \
             --resolution 432x371 --fixed-fps 30 \
             -- --uitest=touch_facade "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/facade" \
             2>&1 | tee artifacts/touch-facade.log
+          grep -F "SCRAPERX_VIEWPORT size=432x371" artifacts/touch-facade.log
           grep -F "SCRAPERX_UITEST PASS touch_facade " artifacts/touch-facade.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-facade.log; then exit 1; fi
           for pose in rack_ready loaded_pan bridge_raised tower_arrival; do
