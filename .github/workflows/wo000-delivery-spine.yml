@@ -316,12 +316,12 @@ jobs:
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/*pipe_bridge.log; then exit 1; fi
 
-      - name: Pipe bridge, facade and stair - continuous rendered touch route to 44 metres
+      - name: Pipe bridge, facade, stair, lift and exterior climb - rendered touch route to 66 metres
         shell: bash
         run: |
           set -euo pipefail
           ./build/host/scraperx_ascent_route_tests | tee artifacts/ascent-route.log
-          # This calls the complete touch pipe and facade route before the stair.
+          # This calls the complete touch pipe, facade and stair route first.
           # --resolution changes the window, not the project's 2160x1856
           # canvas viewport. Reduce both for this CPU-rendered route only;
           # restore the shipped Fold project settings before later gates/export.
@@ -350,16 +350,19 @@ jobs:
           timeout 1200s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --path godot --rendering-method gl_compatibility \
             --resolution 432x371 --fixed-fps 30 \
-            -- --uitest=touch_stair "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/stair" \
-            2>&1 | tee artifacts/touch-stair.log
-          grep -F "SCRAPERX_VIEWPORT size=432x371" artifacts/touch-stair.log
-          grep -F "SCRAPERX_UITEST PASS touch_stair " artifacts/touch-stair.log
-          if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-stair.log; then exit 1; fi
+            -- --uitest=touch_upper "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/upper" \
+            2>&1 | tee artifacts/touch-upper.log
+          grep -F "SCRAPERX_VIEWPORT size=432x371" artifacts/touch-upper.log
+          grep -F "SCRAPERX_UITEST PASS touch_upper " artifacts/touch-upper.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-upper.log; then exit 1; fi
           for pose in rack_ready loaded_pan bridge_raised tower_arrival; do
-            test -s "artifacts/screenshots/stair_${pose}.png"
+            test -s "artifacts/screenshots/upper_${pose}.png"
           done
           for pose in vent_climb facade_arrival stair_handle_ready stair_released stair_climb stair_exit_ready stair_arrival; do
-            test -s "artifacts/screenshots/stair_${pose}.png"
+            test -s "artifacts/screenshots/upper_${pose}.png"
+          done
+          for pose in upper_handle_ready upper_lift_rising upper_lift_seated deck_55m upper_duct_hang upper_vent_climb upper_arrival; do
+            test -s "artifacts/screenshots/upper_${pose}.png"
           done
 
       - name: Regression fixture - native machine authority and Fold-aspect capture

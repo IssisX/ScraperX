@@ -615,10 +615,10 @@ int main() {
             require(foundation.entity_body_count(entity) == 0,
                     "default world must not construct a retired fixture or campaign body");
         }
-        require(foundation.moving_body_count() == 38,
-                "default world must contain the player, pipe bridge and five stair movers");
-        require(foundation.kit_body_count() == 75 && foundation.kit_cable_count() == 3,
-                "default world must contain the pipe bridge, facade, stair and three control cords");
+        require(foundation.moving_body_count() == 43,
+                "default world must contain the player, pipe bridge, stair and upper lift movers");
+        require(foundation.kit_body_count() == 82 && foundation.kit_cable_count() == 5,
+                "default world must contain the pipe bridge, facade, stair, upper lift and five cables");
         require(foundation.entity_body_count(Simulation::kTowerEntityId) > 1 &&
                     foundation.entity_body_count(Simulation::kWorldSolidEntityId) > 0,
                 "the tower frame and environment must remain real collision geometry");
@@ -671,7 +671,7 @@ int main() {
         (void)drop.advance_frame(8.0);
         require(drop.snapshot().death_count == 1 && drop.snapshot().player_grounded,
                 "default fatal fall must restore safely without any legacy body queries");
-        require(drop.moving_body_count() == 38 && drop.kit_body_count() == 75,
+        require(drop.moving_body_count() == 43 && drop.kit_body_count() == 82,
                 "checkpoint restore must not recreate retired machinery");
         std::cout << "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0\n";
     }

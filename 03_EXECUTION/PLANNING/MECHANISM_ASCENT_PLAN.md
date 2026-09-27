@@ -1,6 +1,6 @@
 # Ground-up macro ascent plan
 
-**Scope:** owner-directed reset dated 2026-09-26. **Spatial owner:** `01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`. **Status/evidence owner:** `00_START_HERE.md` §2. The first pipe-loaded bridge is implemented in source; current delivery evidence remains in `00_START_HERE.md`.
+**Scope:** owner-directed reset dated 2026-09-26. **Spatial owner:** `01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`. **Status/evidence owner:** `00_START_HERE.md` §2. The pipe bridge, façade and swinging stair have green exact-source deliveries; the upper lift and exterior climb are a local candidate pending CI and Android delivery.
 
 ## Delivery order
 
@@ -10,7 +10,7 @@
 4. **Recorded AS-016 delivery.** At `254eb28`, normal input, route, checkpoint/retry, first-person render, collision and Android artifact gates passed. [The delivery record](../ASCENT/AS-016_DELIVERY_EVIDENCE.md) states the tested scope; it did not establish APK installation, Android execution or device performance.
 5. **Delivered AS-017 façade route.** The static façade route connects +11 to supported +33 m. [Start Here](../../00_START_HERE.md) §2 records the green exact-source run and Android artifact. Device play remains open.
 6. **Delivered AS-018 swinging stair.** The +33→44 m stair is integrated into the normal source with one Kit/Jolt owner. Three native grade→+44 m routes, two no-pull latch checks and a continuous rendered touch route from grade passed, including a fatal fall/checkpoint continuation in native mode 2. Exact-source `68e9422` passed retained gates and Android ARM64 export. [AS-018 delivery evidence](../ASCENT/AS-018_SWING_STAIR_DELIVERY.md) names the run, artifact and device boundary; [Start Here](../../00_START_HERE.md) §2 owns current status.
-7. **Author +44→66 m next.** The continuation, second distinct macro machine and meaningful route choice remain unauthored. These elevations are targets, not accepted delivery claims.
+7. **Verify AS-019 +44→66 m candidate.** A gravity-driven counterweight lift connects +44 to +55 m, and an exterior cabinet/duct/vent parkour route reaches the supported +66 m ring. The ordinary staircase remains a choice. Local ARM native grade-to-exit, no-pull and checkpoint cases, plus continuous headless touch, pass. [AS-019 candidate evidence](../ASCENT/AS-019_UPPER_COUNTERWEIGHT_AND_PARKOUR.md) lists the remaining rendered, strict physics, APK and Fold gates. +66 m is implemented locally but is not yet an accepted delivery claim.
 
 ## What counts as progress
 

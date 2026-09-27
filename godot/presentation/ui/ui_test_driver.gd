@@ -22,6 +22,7 @@ const SCENARIOS := {
 	"keyboard_pipe_bridge": 8,
 	"touch_facade": 8,
 	"touch_stair": 8,
+	"touch_upper": 8,
 	"touch_jump": 8,
 	"touch_move_look": 8,
 	"touch_gyro_aim": 8,
@@ -63,7 +64,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	_scenario = scenario
 	_capture_prefix = capture_prefix
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -104,6 +105,8 @@ func _run() -> void:
 			ok = await _touch_facade()
 		"touch_stair":
 			ok = await _touch_stair()
+		"touch_upper":
+			ok = await _touch_upper()
 		"touch_jump":
 			ok = await _touch_jump()
 		"touch_move_look":
@@ -378,6 +381,98 @@ func _touch_stair() -> bool:
 			or int(_native().get_death_count()) != 0:
 		return _fail("unsupported +44 m arrival %s" % _position())
 	_detail = "grade_to_44m=1 moving_stair=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
+	return true
+
+
+func _touch_upper() -> bool:
+	var device := InputRouter.Device.TOUCH
+	if not await _touch_stair():
+		return false
+	if int(_native().get_entity_body_count(2700)) != 1:
+		return _fail("upper lift absent from the normal scene")
+	for point in [Vector2(4.0, -125.5), Vector2(4.0, -116.7)]:
+		if not await _walk_to(device, point, 0.12, 12.0):
+			return _fail("upper lift boarding %s" % _position())
+	if int(_native().get_support_entity_id()) != 2700:
+		return _fail("upper lift did not support boarding %s" % _position())
+	await _face(Vector2(0, 1))
+	_main._pitch = -0.4
+	await _seconds(0.4)
+	await _pose("upper_handle_ready")
+	if not await _offered(&"pick_up", "GRAB") or int(_native().get_carry_target_entity_id()) != 2703:
+		return _fail("upper handle not offered at %s target=%d" % [
+			_position(), int(_native().get_carry_target_entity_id())])
+	_act(device)
+	await _seconds(0.3)
+	if int(_native().get_carrying_entity_id()) != 2703:
+		return _fail("upper handle was not held")
+	_move(device, -0.45)
+	await _seconds(0.35)
+	_move(device, 0.0)
+	if int(_native().get_carrying_entity_id()) == 2703:
+		_act(device)
+	if not await _wait_until(func() -> bool: return _standing_above(54.5) and \
+			int(_native().get_support_entity_id()) == 2700, 20.0):
+		return _fail("counterweight never raised the rider %s" % _position())
+	await _pose("upper_lift_rising")
+	await _seconds(3.0)
+	if not _standing_above(55.4) or int(_native().get_support_entity_id()) != 2700:
+		return _fail("upper lift did not settle as support %s" % _position())
+	await _pose("upper_lift_seated")
+	for point in [Vector2(4.0, -122.0), Vector2(4.0, -125.5)]:
+		if not await _walk_to(device, point, 0.12, 10.0):
+			return _fail("upper lift exit %s" % _position())
+	if not _standing_above(55.5) or int(_native().get_support_entity_id()) != 11:
+		return _fail("unsupported upper lift exit %s" % _position())
+	await _pose("deck_55m")
+	for point in [Vector2(4.0, -122.0), Vector2(2.4, -122.0)]:
+		if not await _walk_to(device, point, 0.12, 8.0):
+			return _fail("upper cabinet approach %s" % _position())
+	await _face(Vector2(-1, 0))
+	await _seconds(0.4)
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("upper cabinet mantle not offered at %s" % _position())
+	_act(device)
+	if not await _wait_until(func() -> bool: return _standing_above(57.0), 2.5):
+		return _fail("upper cabinet mantle %s" % _position())
+	if not await _walk_to(device, Vector2(1.4, -122.1), 0.08, 4.0):
+		return _fail("upper cabinet launch %s" % _position())
+	await _face(Vector2(0, -1))
+	await _seconds(0.3)
+	_tap(1, _center(&"jump"))
+	_move(device, 0.4)
+	var caught := await _wait_until(func() -> bool: return bool(_ctx()["hanging"]), 2.5)
+	_move(device, 0.0)
+	if not caught:
+		return _fail("upper duct hang %s" % _position())
+	await _pose("upper_duct_hang")
+	_tap(1, _center(&"jump"))
+	if not await _wait_until(func() -> bool: return _standing_above(60.5), 2.5):
+		return _fail("upper duct top-out %s" % _position())
+	if not await _walk_to(device, Vector2(5.4, -123.0), 0.08, 10.0):
+		return _fail("upper vent approach %s" % _position())
+	await _face(Vector2(0, -1))
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("upper vent grip not offered at %s" % _position())
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_ctx()["climbing"]), 1.0):
+		return _fail("upper vent did not take a hold")
+	_move(device, 1.0)
+	await _seconds(1.0)
+	await _pose("upper_vent_climb")
+	var climbed := await _wait_until(func() -> bool: return _standing_above(66.5), 20.0)
+	_move(device, 0.0)
+	if not climbed:
+		return _fail("upper vent top-out %s" % _position())
+	if not await _walk_to(device, Vector2(5.4, -125.4), 0.12, 6.0):
+		return _fail("upper deck exit %s" % _position())
+	await _seconds(0.5)
+	await _face(Vector2(0, 1))
+	await _pose("upper_arrival")
+	if not _standing_above(66.5) or int(_native().get_support_entity_id()) != 11 or \
+			int(_native().get_death_count()) != 0:
+		return _fail("unsupported +66 m arrival %s" % _position())
+	_detail = "grade_to_66m=1 counterweight_lift=1 parkour=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
 	return true
 
 func _standing_above(height: float) -> bool:

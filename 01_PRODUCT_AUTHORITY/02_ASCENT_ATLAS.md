@@ -1,10 +1,10 @@
 # SCRAPERX — ASCENT ATLAS: GROUND RESET
 
-**Status:** Product content authority, revised by owner direction on 2026-09-26. Subordinate to Laws and GDD. Section 6 records the implemented AS-016 design envelope; its exact-source runtime evidence is separate. Section 7 records the delivered AS-018 +33→44 m stair and its source geometry. Dimensions for later, unimplemented mechanisms are DESIGN TARGETS unless explicitly described as source.
+**Status:** Product content authority, revised by owner direction on 2026-09-26. Subordinate to Laws and GDD. Section 6 records the implemented AS-016 design envelope; its exact-source runtime evidence is separate. Section 7 records the delivered AS-018 +33→44 m stair; section 10 records AS-017 and the local AS-019 +44→66 m candidate. Dimensions for later, unimplemented mechanisms are DESIGN TARGETS unless explicitly described as source.
 
 ## 1. Content decision
 
-Retire the previous campaign, including its ground water screw/lift. Rebuild from grade using large, visibly connected basic mechanics. Keep the tower, atmosphere and full athletic movement. The previous fixed bands, intake problem, capability chores and AS-001–015 queue are not requirements for the new ascent. AS-017 authors a static façade route to +33 m, followed by the new AS-018 swinging stair to +44 m. Other upper mechanism routes are not silently restored.
+Retire the previous campaign, including its ground water screw/lift. Rebuild from grade using large, visibly connected basic mechanics. Keep the tower, atmosphere and full athletic movement. The previous fixed bands, intake problem, capability chores and AS-001–015 queue are not requirements for the new ascent. AS-017 authors a static façade route to +33 m, followed by AS-018's swinging stair to +44 m and the new AS-019 lift and exterior climb to +66 m. Other upper mechanism routes are not silently restored.
 
 ## 2. Datum and current world
 
@@ -63,7 +63,7 @@ The delivered AS-018 source connects the supported +33 m ring to the existing +4
 
 Integrated native modes 0/1/2 reached supported +44 m from grade; mode 2 restored a moving-stair checkpoint after a fatal fall and continued. Modes 3/4 prove that waiting or grabbing then releasing the handle without pulling leaves the stair latched. Local ARM Godot headless touch and the green exact-source rendered touch route reached tower support at Y=44.90. The latest Android ARM64 artifact contains this source. Fold installation, play and performance remain separate.
 
-The opening pipe bridge reaches its first receiver in the delivered AS-016 slice. The illustrative candidate chain remains pipe avalanche → balance bridge → released heavy roller → pendulum that seats a bridge → falling monoliths that lay a broad stair, with each output creating a new route. This is an optional design direction, not the committed phase order: the +11→33 m route is static façade parkour, and the +33→44 m stair is delivered. A later teeter-totter may deliver ballast to an upper receiver, but only after its trajectory and capture volume close. Each sequence may be shortened; eleven effects are not an obligation.
+The opening pipe bridge reaches its first receiver in the delivered AS-016 slice. The illustrative candidate chain remains pipe avalanche → balance bridge → released heavy roller → pendulum that seats a bridge → falling monoliths that lay a broad stair, with each output creating a new route. This is an optional design direction, not the committed phase order: the +11→33 m route is static façade parkour, the +33→44 m stair is delivered, and the +44→66 m lift/parkour route is a local candidate. A later teeter-totter may deliver ballast to an upper receiver, but only after its trajectory and capture volume close. Each sequence may be shortened; eleven effects are not an obligation.
 
 The full corrected Colossus evaluation lives in `Mechanism-Ideas-and-archetypes.md`. It is option material. No upper elevations, connecting spans or stored energy may be assumed from that catalogue.
 
@@ -82,6 +82,12 @@ For later roller or monolith designs, place travel in visible lanes outside requ
 Adapt Claude C1's static service architecture to the current front frame by translating its original +22→44 m route down 11 m. One native Kit body, ID 1600, contains the fixed landing, cabinet, duct, vent, monorail, davit and hanging ladder; presentation draws its native parts. No sibling world builder or hoist is instantiated.
 
 The landing is X=[17.8,22.2], Z=[-124.05,-120.8], top +11 m. Cabinet top +12.7 m leads by a jump/hang to duct top +16.3 m. A thin vent at X=24, Z=-123.45 leads to the +22 m ring. From there a 0.3 m wide monorail at X=12.5 reaches Z=-119.3, top +22.3 m. The ladder's bottom rung is +24.6 m, requiring a leap; it leads to a davit at +33.3 m. The exit walks back to the tower ring near (11.2,33,-125.3), native tower support. A fall remains a real fall onto lower geometry or grade; committed checkpoint restoration is unchanged in authority. Current implementation and acceptance status are tracked in `00_START_HERE.md`; coordinates alone do not prove every clearance case.
+
+### AS-019 upper lift and exterior route: +44 → +66 m
+
+The local normal source now places a 4 × 4 m guided lift outside the front tower face at X=[2,6], Z=[−120,−116], with its walking top at +44 m before release. The player boards from the +44 m ring and pulls a side handle at Z=−115.8, outside the moving platform's sweep. The 2.8 t platform rises as a 3.2 t counterweight at X=10, Z=−118 falls through a 1:1 overhead cable. A 1.6 m yielding timber bed begins at +45.3 m under the weight. A slow upper catch seats the platform's walking top at +54.96 m beside the fixed connector to the +55 m tower ring. Kit/Jolt owns frame 1700, parkour fixture 1701 and moving bodies 2700–2704; presentation draws the same native parts.
+
+From the +55 m ring, the player mantles a service cabinet near X=1.4, Z=−122 (top +56.7 m), catches and tops out on a duct (top +60.3 m), then climbs a narrow vent near X=5.4, Z=−123.45 onto the +66 m tower ring, support entity 11. The retained ordinary staircase is the optional alternate route. Local ARM native and headless touch runs reach supported +66 m; rendered exact-source, APK and Fold claims remain pending. [AS-019 evidence](../03_EXECUTION/ASCENT/AS-019_UPPER_COUNTERWEIGHT_AND_PARKOUR.md) owns measurements and remaining falsifiers.
 
 The retained tower silhouette, frame and deck rings are space for future authorship. The ordinary 154 m staircase remains as the owner-requested fallback. The old 198 m cage ride, 220 m connection and 340 m wet route are retired. Do not silently rebuild that schedule. Extend upward only from a demonstrated receiving support using the same large visible mechanics and legitimate parkour.
 

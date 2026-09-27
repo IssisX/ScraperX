@@ -1,4 +1,5 @@
 #include "sim/simulation.hpp"
+#include <array>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -208,6 +209,24 @@ int main(int argc, char **argv) {
         .01)
       return 20;
   if(s.entity_body_count(2600)!=1) { std::cerr<<"FAIL missing stair assembly\n";return 45; }
+  if ((mode == 5 || mode == 7) && (s.entity_body_count(2700) != 1 ||
+                    s.entity_body_count(2701) != 1 ||
+                    s.entity_body_count(2703) != 1)) {
+    std::cerr << "FAIL upper counterweight lift absent from normal route\n";
+    return 59;
+  }
+  if (mode == 6) {
+    const double platform_y = s.kit_body_position(s.kit_body_index(2700)).y;
+    const double weight_y = s.kit_body_position(s.kit_body_index(2701)).y;
+    wait(s, 25.0);
+    if (std::abs(s.kit_body_position(s.kit_body_index(2700)).y - platform_y) > .02 ||
+        std::abs(s.kit_body_position(s.kit_body_index(2701)).y - weight_y) > .02) {
+      std::cerr << "FAIL upper lift moved without a chain pull\n";
+      return 77;
+    }
+    std::cout << "PASS upper lift remains latched without a player pull\n";
+    return 0;
+  }
   const auto stair_angle = [&]() {
     const auto q = s.kit_body_rotation(s.kit_body_index(2600));
     return 2.0 * std::atan2(q.z, q.w);
@@ -360,6 +379,165 @@ int main(int argc, char **argv) {
   if(!walk_to(s,exit_x,-122.4,4,.1)) {report(s,"STAIR_EXIT_READY_FAIL");return 52;} report(s,"STAIR_EXIT_READY"); (void)s.request_jump(); if(!walk_to(s,exit_x,-125.5,6,.1)) {report(s,"STAIR_EXIT_FAIL");return 52;}
   wait(s,.5);report(s,"STAIR_44M");
   if(!standing_above(s.snapshot(),44.5) || s.snapshot().support_entity_id!=11 || s.snapshot().death_count!=(mode==2?1U:0U)) return 53;
+  if (mode == 5 || mode == 7) {
+    if (!walk_to(s, 4.0, -125.5, 8.0) || !walk_to(s, 4.0, -116.9, 8.0)) {
+      report(s, "LIFT_BOARDING_FAIL"); return 60;
+    }
+    report(s, "LIFT_BOARD");
+    if (s.snapshot().support_entity_id != 2700) return 61;
+    (void)s.set_facing(0, 1); wait(s, .5);
+    report(s, "LIFT_HANDLE_READY");
+    if (s.snapshot().carry_target_entity_id != 2703) return 62;
+    (void)s.request_pick_up(); wait(s, .3);
+    if (s.snapshot().carrying_entity_id != 2703) return 63;
+    (void)s.set_move_input(0, -.45); wait(s, .35);
+    (void)s.set_move_input(0, 0); (void)s.request_set_down();
+    std::cout << "LIFT_AFTER_PULL platform=" << s.kit_body_position(s.kit_body_index(2700)).y
+              << " weight=" << s.kit_body_position(s.kit_body_index(2701)).y
+              << " lever=" << s.kit_body_rotation(s.kit_body_index(2702)).z
+              << " player=" << s.snapshot().player_position.y << std::endl;
+    const auto lift_body = s.kit_body_index(2700);
+    double prior_speed = s.kit_body_velocity(lift_body).y;
+    double peak_speed = std::abs(prior_speed);
+    double peak_acceleration = 0.0;
+    double peak_acceleration_y = s.kit_body_position(lift_body).y;
+    double peak_speed_y = peak_acceleration_y;
+    std::array<double, 9> recent_speed{};
+    recent_speed.fill(prior_speed);
+    int ride_samples = 0;
+    double peak_tenth_second_acceleration = 0.0;
+    const auto advance_lift = [&]() {
+      (void)s.advance_frame(Simulation::kFixedStepSeconds);
+      const double speed = s.kit_body_velocity(lift_body).y;
+      const int sample_slot = ride_samples % int(recent_speed.size());
+      peak_tenth_second_acceleration = std::max(
+          peak_tenth_second_acceleration,
+          std::abs(speed - recent_speed[sample_slot]) /
+              (double(recent_speed.size()) * Simulation::kFixedStepSeconds));
+      recent_speed[sample_slot] = speed;
+      ++ride_samples;
+      if (std::abs(speed) > peak_speed) {
+        peak_speed = std::abs(speed);
+        peak_speed_y = s.kit_body_position(lift_body).y;
+      }
+      const double acceleration = std::abs(speed - prior_speed) / Simulation::kFixedStepSeconds;
+      if (acceleration > peak_acceleration) {
+        peak_acceleration = acceleration;
+        peak_acceleration_y = s.kit_body_position(lift_body).y;
+      }
+      prior_speed = speed;
+    };
+    bool lifted = false;
+    for (int i = 0; i < 20 * 90; ++i) {
+      const auto v = s.snapshot();
+      if (v.player_grounded && v.support_entity_id == 2700 &&
+          v.player_position.y > 54.5) { lifted = true; break; }
+      advance_lift();
+    }
+    if (!lifted) {
+      report(s, "LIFT_RIDE_FAIL");
+      std::cout << "LIFT_FINAL platform=" << s.kit_body_position(s.kit_body_index(2700)).y
+                << " weight=" << s.kit_body_position(s.kit_body_index(2701)).y
+                << " lever=" << s.kit_body_rotation(s.kit_body_index(2702)).z
+                << " player=" << s.snapshot().player_position.y << std::endl;
+      return 64;
+    }
+    for (int i = 0; i < 3 * 90; ++i) advance_lift();
+    std::cout << "LIFT_RIDE peak_speed=" << peak_speed << " at_y=" << peak_speed_y
+              << " peak_acceleration=" << peak_acceleration << " at_y=" << peak_acceleration_y
+              << " peak_tenth_second_acceleration=" << peak_tenth_second_acceleration
+              << std::endl;
+    if (peak_tenth_second_acceleration > 4.9) {
+      std::cerr << "FAIL lift acceleration exceeded the rider comfort limit\n";
+      return 80;
+    }
+    report(s, "LIFT_SETTLED");
+    const auto lift_position = s.kit_body_position(s.kit_body_index(2700));
+    const auto lift_velocity = s.kit_body_velocity(s.kit_body_index(2700));
+    const auto weight_position = s.kit_body_position(s.kit_body_index(2701));
+    std::cout << "LIFT_STABILITY platform=" << lift_position.y
+              << " speed=" << lift_velocity.y << " weight=" << weight_position.y << std::endl;
+    if (lift_position.y < 54.0 || std::abs(lift_velocity.y) > .2 ||
+        s.snapshot().support_entity_id != 2700) return 67;
+    if (mode == 7) {
+      const auto checkpoint = s.snapshot();
+      (void)s.set_facing(0, 1);
+      (void)s.request_jump();
+      (void)s.set_move_input(0, 1);
+      wait(s, 1.5);
+      (void)s.set_move_input(0, 0);
+      report(s, "UPPER_ABANDONED");
+      if (!wait_for(s, 12.0, [](const Snapshot &v) {
+            return v.death_count == 1 && v.player_grounded;
+          })) {
+        report(s, "UPPER_RESTORE_FAIL"); return 78;
+      }
+      const auto restored = s.snapshot();
+      report(s, "UPPER_RESTORED");
+      const double dx = restored.player_position.x - checkpoint.checkpoint_position.x;
+      const double dy = restored.player_position.y - checkpoint.checkpoint_position.y;
+      const double dz = restored.player_position.z - checkpoint.checkpoint_position.z;
+      if (restored.support_entity_id != 2700 ||
+          std::sqrt(dx * dx + dy * dy + dz * dz) > .20 ||
+          std::abs(s.kit_body_position(s.kit_body_index(2700)).y - lift_position.y) > .08 ||
+          std::abs(s.kit_body_position(s.kit_body_index(2701)).y - weight_position.y) > .08) {
+        std::cerr << "FAIL upper ride checkpoint did not restore the machine and player\n";
+        return 79;
+      }
+    }
+    if (!walk_to(s, 4.0, -122.0, 8.0) || !walk_to(s, 4.0, -125.5, 8.0)) {
+      report(s, "LIFT_EXIT_FAIL"); return 65;
+    }
+    wait(s, .5); report(s, "DECK_55M");
+    if (!standing_above(s.snapshot(), 55.5) || s.snapshot().support_entity_id != 11)
+      return 66;
+    // The second half is athletic: reach the service cabinet from the lift
+    // exit, hang on the duct, then climb the exposed vent onto deck six.
+    if (!walk_to(s, 4.0, -122.0, 6.0) || !walk_to(s, 2.40, -122.0, 6.0, .10)) {
+      report(s, "UPPER_CABINET_APPROACH_FAIL"); return 68;
+    }
+    (void)s.set_facing(-1, 0); wait(s, .4);
+    if (!s.snapshot().ledge_available) { report(s, "UPPER_CABINET_NOT_OFFERED"); return 69; }
+    (void)s.request_traversal();
+    if (!wait_for(s, 2.5, [](const Snapshot &v) { return standing_above(v, 57.0); })) {
+      report(s, "UPPER_CABINET_MANTLE_FAIL"); return 70;
+    }
+    (void)walk_to(s, 1.4, -122.1, 3.0, .06);
+    (void)s.set_facing(0, -1); wait(s, .3); (void)s.request_jump();
+    if (!hold_stick(s, 0, -.4, 0, -1, 2.5,
+                    [](const Snapshot &v) { return v.traversal_state == TraversalState::Hanging; })) {
+      report(s, "UPPER_DUCT_HANG_FAIL"); return 71;
+    }
+    (void)s.request_jump();
+    if (!wait_for(s, 2.5, [](const Snapshot &v) { return standing_above(v, 60.5); })) {
+      report(s, "UPPER_DUCT_TOP_FAIL"); return 72;
+    }
+    if (!walk_to(s, 5.4, -123.0, 10.0, .08)) {
+      report(s, "UPPER_VENT_APPROACH_FAIL"); return 73;
+    }
+    (void)s.set_facing(0, -1); wait(s, .4);
+    std::cout << "UPPER_VENT_READY grip=" << s.snapshot().grip_available
+              << " ledge=" << s.snapshot().ledge_available
+              << " x=" << s.snapshot().player_position.x
+              << " z=" << s.snapshot().player_position.z << std::endl;
+    (void)s.request_traversal();
+    wait(s, .2);
+    std::cout << "UPPER_VENT_AFTER_REQUEST state=" << int(s.snapshot().traversal_state)
+              << " y=" << s.snapshot().player_position.y << std::endl;
+    if (!is_climbing(s.snapshot()) ||
+        !hold_stick(s, 0, -1, 0, -1, 20.0,
+                    [](const Snapshot &v) { return standing_above(v, 66.5); })) {
+      report(s, "UPPER_VENT_CLIMB_FAIL"); return 74;
+    }
+    if (!walk_to(s, 5.4, -125.4, 5.0, .10)) {
+      report(s, "UPPER_66M_EXIT_FAIL"); return 75;
+    }
+    wait(s, .5); report(s, "DECK_66M");
+    if (!standing_above(s.snapshot(), 66.5) || s.snapshot().support_entity_id != 11)
+      return 76;
+    std::cout << "PASS normal-input grade to supported +66m via lift and exterior parkour\n";
+    return 0;
+  }
   std::cout<<"PASS grade -> pipe -> facade -> stair: supported +44m mode="<<mode<<std::endl;
   return 0;
 }

@@ -30,7 +30,6 @@ constexpr float kGovernorDeadband = 0.01F;
 // governed body always reaches its stop rather than hanging short of it.
 constexpr float kGovernorCreep = 0.08F;
 // A catch relatches only for a body this slow.
-constexpr float kRelatchSpeed = 0.15F;
 
 [[nodiscard]] JPH::Ref<JPH::Shape> make_shape(const std::vector<Part> &parts) {
     const auto box = [](const Part &part) -> JPH::Ref<JPH::Shape> {
@@ -313,12 +312,13 @@ CatchIndex Kit::add_catch(const BodyIndex body, const LeverIndex lever, const fl
 CatchIndex Kit::add_catch_at(const BodyIndex body, const LeverIndex lever,
                              const JPH::RVec3 seat, const float release_angle,
                              const float seat_tolerance, const bool relatch,
-                             const bool initially_latched) {
+                             const bool initially_latched, const float max_capture_speed) {
     Catch record;
     record.body = body;
     record.lever = lever;
     record.release_angle = release_angle;
     record.seat_tolerance = seat_tolerance;
+    record.max_capture_speed = max_capture_speed;
     record.relatch = relatch;
     record.seat = seat;
     catches_.push_back(record);
@@ -404,7 +404,7 @@ void Kit::pre_step(const float) {
         const float off_seat =
             JPH::Vec3(body.GetCenterOfMassPosition() - catch_record.seat).Length();
         if (off_seat <= catch_record.seat_tolerance &&
-            body.GetLinearVelocity().Length() < kRelatchSpeed) {
+            body.GetLinearVelocity().Length() < catch_record.max_capture_speed) {
             latch(catch_record);
         }
     }

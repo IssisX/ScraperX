@@ -165,7 +165,7 @@ public:
                          float seat_tolerance, bool relatch);
     CatchIndex add_catch_at(BodyIndex body, LeverIndex lever, JPH::RVec3 seat,
                             float release_angle, float seat_tolerance, bool relatch,
-                            bool initially_latched);
+                            bool initially_latched, float max_capture_speed = 0.15F);
 
     // A trip line: a light rope from a lever's arm point over sheave1, along
     // to sheave2 and down to a handle hanging there, as laid. Pulling the
@@ -333,6 +333,7 @@ private:
         LeverIndex lever;
         float release_angle = 0.0F;
         float seat_tolerance = 0.0F;
+        float max_capture_speed = 0.15F;
         bool relatch = false;
         bool armed = true;
         JPH::RVec3 seat = JPH::RVec3::sZero();
