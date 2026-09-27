@@ -24,10 +24,12 @@ These are emphases within one persistent tower, not separate game modes. A legal
 
 **CHOSEN planning target:** extend the new route from +11 m to +66 m, a **DERIVED +55 m** of additional ascent. These elevations use the existing **SOURCE 11 m ring spacing**. They are destination targets, not evidence of fit or a closed mechanism design.
 
-| Checkpoint in development | Intended playable result | What it resolves |
+The letters A–D below identify development phases, not save checkpoints or new `AS-*` ticket IDs. Current phase acceptance and pause/resume state are recorded in `00_START_HERE.md` §2 and §6.
+
+| Development phase | Intended playable result | What it resolves |
 |---|---|---|
 | **A: +11 → +33 m** (source implemented) | AS-017's façade climb adds static parkour traversal after the pipe bridge. Its delivery evidence is recorded in the status register. | Can the current movement system carry a readable exterior route above the opening machine? |
-| **B: +33 → +44 m** (planned; stair staging incomplete) | A swinging-stair adaptation is locally staged and is not active gameplay. See the status register for its exact unfinished checks. | Can a large machine create a stable climbable route with coherent moving-support checkpoint recovery? |
+| **B: +33 → +44 m** (local staging only; incomplete) | A swinging-stair adaptation is locally staged and is not active gameplay. See the status register for its exact unfinished checks. | Can a large machine create a stable climbable route with coherent moving-support checkpoint recovery? |
 | **C: +44 → +66 m** (unauthored) | A second machine encounter, route connection and meaningful choice still need a spatial and physical design. | Can the route offer a real choice while reusing validated work? |
 | **D: whole route** | Ordinary input from grade through the opening and all new connections, checkpoint continuation, rendered observation and an exact-source Android candidate. | Does the experience function as one connected piece of the game? |
 
@@ -61,6 +63,7 @@ The compiler's first checks are target support and onward route, then geometry, 
 Work inline as the sole writer on the existing local `ChatGPT` checkout. Preserve unrelated work and check the remote before publication. The +66 m objective is paused; the next mechanism contract is not ready for integration.
 
 - [x] **Implement A in source.** AS-017's source route exists; current delivery acceptance is recorded in `00_START_HERE.md`.
+- [ ] **Deliver A before integrating B.** Close AS-017's outstanding delivery gate and verify its exact-source Android artifact. Consult `00_START_HERE.md` §2 for the current candidate and result; local +33 m traversal alone does not satisfy this prerequisite.
 - [ ] **Close B: +33→44 m.** Continue from `artifacts/s2-staging-20260927/CHECKPOINT.md`; its current route and checkpoint gaps are recorded in `00_START_HERE.md` §6.
 - [ ] **Author C: +44→66 m.** Design the receiving support, mechanism, connection and meaningful route choice only after B is closed. Keep an accessible fallback and normal parkour traversal.
 - [ ] **Deliver D and judge the experience.** Run the connected input route, required native/render/collision/checkpoint gates, and exact-source Android export. Inspect the rendered approach, causal event and arrival. Record device installation/execution/performance separately; complete a sustained representative Fold check against the existing 45 FPS target before claiming mobile readiness.

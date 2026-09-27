@@ -2,8 +2,9 @@
 
 > **The kernel is a closed set.** `WO-000`–`WO-013` are all in source and no new `WO-*` is ever
 > created. This template is kept as the historical form those fourteen documents take. New work
-> is an **Ascent Slice** — see `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md`, whose §10
-> template carries these fields **plus** the §8 mechanical close.
+> is an **Ascent Slice** — use the ticket contract and header in
+> `02_ENGINEERING_AUTHORITY/00_EXECUTION_PROTOCOL.md` §3 and §3.1, plus the mechanical
+> close in `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §8.
 
 **Kernel Work Order:** `WO-___`
 **Lifecycle:** `IMPLEMENTED` (source exists) or `PLANNED` (contract only)

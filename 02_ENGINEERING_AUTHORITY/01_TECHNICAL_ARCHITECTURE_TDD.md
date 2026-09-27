@@ -831,18 +831,22 @@ A coding model may not pick one silently because it wants to proceed.
 
 ---
 
-## 24. First implementation sequence
+## 24. Historical first implementation sequence
 
-Do not begin with a giant tower, structural solver, or content production.
+This is the original bootstrap plan for the now-closed kernel. Its commands and `KX-*`
+identities describe that historical work, not the next ascent phase. The kernel slice and
+B01–B11 references belonged to the former Atlas. Current Atlas §9 instead defines the
+regression boundary; it does not supply a kernel layout to rebuild.
 
-The playable geometry for the kernel is the atlas **kernel slice** (`02_ASCENT_ATLAS.md` §9), not
-bands B01–B11.
+Use `00_START_HERE.md` §2 for current source and delivery status, the current Atlas for
+route placement, and `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` for continuation
+order. The old kernel must not be restarted as a prerequisite for that continuation.
 
 > **Numbering note.** The nine headings below are the *planned* sequence as this TDD first wrote
 > it. The repository's kernel grew to fourteen and renumbered five of them, because `WO-005`–`WO-010`
 > were already committed against other objectives before the atlas existed. The headings are left
 > as the historical plan; each `File:` line points at the document that actually carries that
-> content here. The full map is `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §5.1.
+> content here. These `File:` lines provide the historical numbering map.
 
 ### Work Order 000 — delivery spine
 File: `03_EXECUTION/KERNEL/WO-000_DELIVERY_SPINE.md`

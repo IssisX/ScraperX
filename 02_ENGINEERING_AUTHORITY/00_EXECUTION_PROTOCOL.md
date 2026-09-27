@@ -13,17 +13,19 @@ For implementation work, resolve conflicts in this order:
 
 1. **Governing Laws** — non-negotiable project constraints.
 2. **GDD** — product truth: what ScraperX must be.
-3. **Ascent Atlas** — spatial/content truth for the same game: datum, bands, braids, modules, kernel slice.
+3. **Ascent Atlas** — spatial/content truth for the same game: datum, active opening route, authored receiving supports, upper-route placement and summit destination.
 4. **This Execution Protocol** — execution and claim rules, subordinate to product authority.
 5. **Technical Architecture / TDD** — implementation ownership and system boundaries.
 6. **Current source, tests, build configuration, and runtime evidence** — implementation truth.
-7. **The one open ticket** — the exact bounded change being executed. That is a
-   **Kernel Work Order** (`WO-000`–`WO-013`, `03_EXECUTION/KERNEL/`, closed set) or an
-   **Ascent Slice** (`AS-*`, `03_EXECUTION/ASCENT/`; AS-001–015 are retired). The two are different classes of
-   work and never share an identifier. `00_START_HERE.md` §4 is the vocabulary.
+7. **The current bounded task** — the exact authorized change being executed. New ascent
+   implementation uses an **Ascent Slice** (`AS-*`, `03_EXECUTION/ASCENT/`; AS-001–015 are retired).
+   **Kernel Work Orders** (`WO-000`–`WO-013`, `03_EXECUTION/KERNEL/`) are closed historical
+   records, not open implementation tickets. `00_START_HERE.md` §4 is the vocabulary;
+   §3 below covers directly authorized resets and §15 covers documentation audits.
 
-Writes land on **`ChatGPT`** only. Other branches are readable for provenance and are
-never authorities.
+Writes land on **`ChatGPT`** only. Use this branch's documents and source for routine work.
+Consult another branch only to answer a specific unresolved provenance or reuse question;
+its content never becomes current authority merely by being newer or further along.
 
 Supporting decision/provenance documents are consulted only when a product decision needs tracing. They are not routine implementation context.
 
@@ -40,7 +42,7 @@ Do **not** dump the entire project package into every coding task.
 Every implementation task loads:
 
 - this Execution Protocol;
-- the one open ticket;
+- the current ticket or directly authorized bounded task;
 - the relevant source/tests/config;
 - the specific Governing Law, GDD, and atlas sections that constrain the task;
 - the relevant TDD sections.
@@ -105,8 +107,17 @@ in the `00_START_HERE.md` ledgers. Tickets point there and may retain explicitly
 historical observations/causal diagnoses. Historical records are not active geometry or
 parallel current-status instructions. READY/BLOCKED is separate from lifecycle and proof.
 
-`IMPLEMENTED` is a statement about source, never about proof. A green falsifier is the only thing
-that speaks for behaviour, and §11 governs what it is allowed to say.
+`IMPLEMENTED` is a statement about source, never about proof. Behaviour claims require
+the exercised path and observations appropriate to the claim under §6 and §11; a passing
+isolated test or negative control does not by itself prove a complete route.
+
+For new ascent tickets, `UNAUTHORED` means no slice contract exists, `PLANNED` means a
+contract exists but implementation has not started, `IN PROGRESS` includes partial or
+locally staged work, and `IMPLEMENTED` means the ticket's source is integrated into the
+active `ChatGPT` game. An ignored snapshot, integration patch or another branch's source
+does not establish integration. `DELIVERED` describes evidence for an exact candidate;
+it is not a source lifecycle value. Record that evidence in Start Here and dated delivery
+records, without promoting it to proof of device execution.
 
 `Provenance: imported, NOT re-derived` is a **hard gate**: the ticket's constants describe another
 branch's world. It must be re-authored against this tree before any of it is coded.
@@ -279,6 +290,13 @@ Never collapse these into “done.”
 
 Unknown remains unknown.
 
+For ascent, report supported walking-surface elevation above grade, and identify the
+route: newly authored campaign, ordinary fallback, or regression fixture. Capsule-centre
+height, bridge-tip height, another branch's route and future destination targets are
+different measurements. State source integration, observed traversal, APK production
+and device execution separately. Current phase and delivery status belongs in
+`00_START_HERE.md` §2; layout belongs in the Atlas and future order in the ascent plan.
+
 ---
 
 ## 12. STOP RULE
@@ -351,7 +369,8 @@ Resolve these into the smallest complete authorized slice; do not silently start
 - start a band the open slice does not own;
 - treat desktop, web, video, or a screenshot as Fold proof.
 
-Asking how to operate from the Fold is legal. Using process-chat to avoid `000` after that answer is not.
+Asking how to operate from the Fold is legal. Resume the authorized bounded task after
+answering; the closed WO-000 delivery work is not a prerequisite to repeat.
 
 ### Document rule
 
@@ -396,4 +415,4 @@ records, and none of these claim distinctions waive required code-candidate gate
 
 ## 18. Ground-reset proof boundary
 
-The normal scene and explicit regression fixtures are separate proof targets. Native default construction must omit all retired campaign bodies/cables; normal presentation and exported collision must omit their geometry. Retained old tests must select fixtures explicitly and must never be reported as current campaign progress. Preserve controller tests; add a default-world removal/input proof and a rendered capture. A planned mechanism remains unimplemented until its actual normal-input chain and receiving support are demonstrated.
+The normal scene and explicit regression fixtures are separate proof targets. Native default construction must omit all retired campaign bodies/cables; normal presentation and exported collision must omit their geometry. Retained old tests must select fixtures explicitly and must never be reported as current campaign progress. Preserve controller tests and retain the default-world removal/input proof and rendered capture. Source integration establishes `IMPLEMENTED`; acceptance still requires the actual normal-input chain, supported arrival and applicable delivery gates. Never report an implemented but unverified mechanism as an accepted playable delivery.

@@ -1,10 +1,10 @@
 # SCRAPERX — ASCENT ATLAS: GROUND RESET
 
-**Status:** Product content authority, revised by owner direction on 2026-09-26. Subordinate to Laws and GDD. **All proposed mechanism dimensions below are DESIGN TARGETS unless explicitly described as source.**
+**Status:** Product content authority, revised by owner direction on 2026-09-26. Subordinate to Laws and GDD. Section 6 records the implemented AS-016 design envelope; its exact-source runtime evidence is separate. Dimensions for later, unimplemented mechanisms are DESIGN TARGETS unless explicitly described as source.
 
 ## 1. Content decision
 
-Retire the previous campaign, including its ground water screw/lift. Rebuild from grade using large, visibly connected basic mechanics. Keep the tower, atmosphere and full athletic movement. The previous fixed bands, intake problem, capability chores and AS-001–015 queue are not requirements for the new ascent. Upper content is unauthored rather than silently restored.
+Retire the previous campaign, including its ground water screw/lift. Rebuild from grade using large, visibly connected basic mechanics. Keep the tower, atmosphere and full athletic movement. The previous fixed bands, intake problem, capability chores and AS-001–015 queue are not requirements for the new ascent. AS-017 now authors a static façade route to +33 m in source; upper mechanism routes beyond it are not silently restored.
 
 ## 2. Datum and current world
 
@@ -36,7 +36,7 @@ The player sees a rack of heavy steel pipes above a wide short-arm pan. Releasin
 
 Implemented design envelope. Dimensions/material constants below are CHOSEN unless a relation is shown; runtime observations are separately classified in AS-016. The former 4 t straight-tail sketch is rejected: its surplus energy is excessive, an underside long-arm seat has the wrong reaction direction, and a landing directly ahead of the tip obstructs the rising sweep.
 
-| Quantity | Candidate value / consequence |
+| Quantity | AS-016 design value / consequence |
 |---|---|
 | Useful receiver | +8.0 m walking surface; clear X=[7.56,10.56], Z=[−112.580635,−108.580635], a 3 × 4 m landing beside the bridge |
 | Long arm | 20 m walking deck, 3 m usable width, 0.4 m collider depth; 8,500 kg; COM local (10,−0.2) relative to the walking-surface pivot in the rotation plane |
@@ -59,13 +59,13 @@ Production ownership: `src/sim/pipe_bridge.cpp` constructs the one active assemb
 
 ## 7. Later chain direction
 
-After the first receiver is proven, combine selected macro operations with each output creating a new route. Candidate sequence: pipe avalanche → balance bridge → released heavy roller → pendulum that seats a bridge → falling monoliths that lay a broad stair. A later teeter-totter may deliver ballast to an upper receiver, but only after its trajectory and capture volume close. Each sequence may be shortened; eleven effects are not an obligation.
+The opening pipe bridge now reaches its first receiver in the delivered AS-016 slice. The illustrative candidate chain remains pipe avalanche → balance bridge → released heavy roller → pendulum that seats a bridge → falling monoliths that lay a broad stair, with each output creating a new route. This is an optional design direction, not the committed phase order: the current +11→33 m source route is static façade parkour, and the +33→44 m stair is local staging. A later teeter-totter may deliver ballast to an upper receiver, but only after its trajectory and capture volume close. Each sequence may be shortened; eleven effects are not an obligation.
 
 The full corrected Colossus evaluation lives in `Mechanism-Ideas-and-archetypes.md`. It is option material. No upper elevations, connecting spans or stored energy may be assumed from that catalogue.
 
 ## 8. Fall geography and aftermath
 
-Rollers and monoliths travel in visible lanes outside required player standing areas. Physical misses can block, damage or settle into the world. Provide reachable recovery controls/supports or preserve a valid alternate path. Do not delete fallen material to keep the scene tidy. Deliberately resetting to a checkpoint must restore a coherent whole mechanism, including velocities, inventory, links and already committed routes.
+For later roller or monolith designs, place travel in visible lanes outside required player standing areas. Physical misses can block, damage or settle into the world. Provide reachable recovery controls/supports or preserve a valid alternate path. Do not delete fallen material to keep the scene tidy. Deliberately resetting to a checkpoint must restore a coherent whole mechanism, including velocities, inventory, links and already committed routes.
 
 ## 9. Regression substrate
 

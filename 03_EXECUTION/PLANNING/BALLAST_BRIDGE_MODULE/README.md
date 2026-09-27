@@ -2,7 +2,7 @@
 
 **Inactive source archive.** This package preserves the separate ballast-powered bridge built locally on 2026-09-26. It is excluded from the CMake build and Godot project and does not change normal gameplay. The owner authorized preserving it for another model after stopping concurrent branch work.
 
-The current pipe-loaded balance bridge remains the active `AS-016` task. This archive neither replaces that task nor changes the Atlas. The original prototype's comments, tests and optional workflow patch also say `AS-016`; that is historical provenance, **not a second active ticket**. Use the descriptive identity `ballast-bridge-prototype-v1` when discussing this archive.
+The delivered pipe-loaded balance bridge remains the active `AS-016` mechanism in normal gameplay. This archive neither replaces it nor changes the Atlas. The original prototype's comments, tests and optional workflow patch also say `AS-016`; that is historical provenance, **not a second active ticket**. Use the descriptive identity `ballast-bridge-prototype-v1` when discussing this archive.
 
 ## What can be reused
 

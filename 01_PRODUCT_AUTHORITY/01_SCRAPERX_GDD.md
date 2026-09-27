@@ -9,7 +9,7 @@
 
 This GDD defines **what ScraperX is as a game**. It is subordinate to `00_GOVERNING_LAWS.md`; if the two conflict, the governing laws win until the conflict is deliberately resolved.
 
-The physical layout of that game — datum, bands, braids, named modules, capability objects, and the first kernel slice — is specified in `02_ASCENT_ATLAS.md`. The atlas is subordinate to this GDD. It may not redefine the genre, weaken parkour, script consequences the world does not own, or complete the campaign by anything other than physically reaching the summit.
+The current physical layout — datum, opening mechanism, authored receiving supports, upper-route placements and summit destination — is specified in `02_ASCENT_ATLAS.md`. The retired campaign's bands, named modules and capability queue are not current layout requirements. The atlas is subordinate to this GDD. It may not redefine the genre, weaken parkour, script consequences the world does not own, or complete the campaign by anything other than physically reaching the summit.
 
 This document does **not** choose the engine, rigid-body backend, structural solver, rope solver, process solver, programming language boundaries, package stack, or other implementation architecture. Those decisions belong to the technical architecture document and must satisfy this GDD rather than redefine it.
 
@@ -600,7 +600,7 @@ The following remain open because they are not required to define the product, o
 - exact population counts per layer;
 - exact checkpoint spacing in meters/minutes;
 - exact manual lift/push mass thresholds;
-- portable-tool roster beyond the atlas capability table;
+- portable-tool roster;
 - exact structural/material numerical models;
 - exact engine, physics backend, solver stack, or package set (TDD);
 - exact implementation-language and module boundaries (TDD);
@@ -611,7 +611,7 @@ These are specified in `02_ASCENT_ATLAS.md` and must not be re-invented by a wor
 - opening location and the macro-mechanism reset;
 - vertical datum, authored support locations and receiving handoffs;
 - the distinction between current campaign content and historical kernel fixture IDs;
-- physical summit predicate on the 1600 m deck.
+- physical summit predicate on supported geometry at the 1,600 m destination.
 
 Downstream work must use those atlas facts rather than author a second tower.
 

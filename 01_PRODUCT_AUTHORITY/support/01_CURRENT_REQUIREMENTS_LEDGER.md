@@ -1,9 +1,16 @@
-# SCRAPERX — CURRENT REQUIREMENTS LEDGER v1.2
+# SCRAPERX — PRE-GDD REQUIREMENTS LEDGER v1.2
 
-**Status:** CANONICAL PRE-GDD PRODUCT REQUIREMENTS  
+**Status:** HISTORICAL PRE-GDD PRODUCT REQUIREMENTS
+
 **Repository:** `ScraperX`  
 **Game/app:** `ScraperX`  
 **Governing authority:** `00_GOVERNING_LAWS.md`
+
+These rows preserve the requirements used to write the GDD. Consult them to trace a
+decision, not to determine the current ascent phase or implementation. Current product
+requirements live in the Laws/GDD, spatial content in the Atlas, technical choices in
+the TDD, and phase/delivery status in `00_START_HERE.md`. In particular, REQ-041 records
+Jolt's pre-selection status; it does not reopen the backend selected by the TDD.
 
 This ledger contains **game, product, runtime, and delivery requirements only**. Assistant behavior, document-writing rules, elicitation procedure, and conversational guardrails are not product requirements and do not belong here.
 

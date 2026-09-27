@@ -1,6 +1,6 @@
 # Macro mechanism ideas — corrected design catalogue
 
-Reworked from the owner's supplied Colossus Sequence and earlier lift ideas, 2026-09-26. These are **design options**, not verified blueprints or a mandatory eleven-stage course. The Atlas owns actual layout. Large visible objects must do useful work and leave playable aftermath; small release parts must not become the main activity.
+Reworked from the owner's supplied Colossus Sequence and earlier lift ideas, 2026-09-26. These are **design options**, not verified blueprints or a mandatory eleven-stage course, except that the pipe-rack/balance-bridge opening pattern below is now implemented. Its authoritative layout and evidence live in Atlas §6 and the AS-016 records. The Atlas owns actual layout. Large visible objects must do useful work and leave playable aftermath; small release parts must not become the main activity.
 
 ## Colossus: what survives and what changes
 
@@ -18,9 +18,9 @@ Reworked from the owner's supplied Colossus Sequence and earlier lift ideas, 202
 | 10. Scissor jack | A large visible extensible linkage can push across a gap. | A pantograph adds geometry and joint losses; it supplies no energy. Derive spring preload, force vs extension, singular configurations and the recharge source. Replace it with a plain spring-backed plunger or falling-weight ram when scissors add no meaningful capability. The output force must match the receiving lever's useful torque direction. |
 | 11. High striker | A large weighted lever can drive a visible vertical slider and ring a gong. | Raising 100 kg by 100 m requires at least 98.1 kJ and a ballistic launch speed above 44.3 m/s once losses and residual strike speed count. At its apex it cannot deliver a meaningful impact. Lower the travel or increase source work honestly; strike below the apex. A horizontal ram cannot push a downward-facing pad without an actual bell crank. Prefer the gong releasing a plainly visible gravity drawbridge whose receiver is already built. |
 
-## Adapted chains worth prototyping
+## Adapted chains: implemented opening route and future options
 
-**Pipe rack → balance bridge → landing.** The opening Atlas candidate. The player releases a large rack, sees pipes load the short arm, watches a long deck seat against a fixed +8 m receiver, then climbs it. It ends in useful geometry rather than another miniature release. Release, stopping and recovery are still unresolved design work.
+**Pipe rack → balance bridge → landing — implemented opening route.** This pattern is realized as the active native route described in [Atlas §6](01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md) and its [AS-016 design](03_EXECUTION/ASCENT/AS-016_PIPE_BALANCE_BRIDGE.md). Exact-source delivery evidence and its limits are recorded in [AS-016 delivery evidence](03_EXECUTION/ASCENT/AS-016_DELIVERY_EVIDENCE.md). Do not treat the release, stop, recovery or route as unresolved prototype work; this catalogue adds no proof beyond those records.
 
 **Rolling drum → cable → guided carriage.** A drum loses height while a continuously tensioned cable raises a platform. Use a real wrap model or valid pulley relation, include drum rotational energy and a finite brake, and provide fixed boarding/arrival supports. Show the whole load path. This is an alternative to the balance bridge, not an additional mandatory lift.
 

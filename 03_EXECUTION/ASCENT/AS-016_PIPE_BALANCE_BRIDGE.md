@@ -1,10 +1,10 @@
 # AS-016 — Pipe-loaded balance bridge
 
 **Ascent Slice:** `AS-016`
-**Lifecycle:** DELIVERED — native default and presentation integrated; exact-commit desktop proof and Android artifact verified. Device execution remains unproven.
-**Provenance:** design probes began at `360cffb`; implementation continues from `e8d9ca8`
-**Implementation gate:** satisfied. Loaded releases, pipe capture, arrest and supported crossing are integrated in normal gameplay and covered by the delivered exact-source workflow.
-**Evidence:** current delivery status remains in `00_START_HERE.md`; [integrated observations](../PLANNING/AS-016_PROTOTYPES/integrated/README.md) distinguish final production tests from the earlier copied prototype
+**Lifecycle:** IMPLEMENTED — native default and presentation integrated.
+**Provenance:** re-derived here; design probes began at `360cffb`, with integration based on `e8d9ca8`.
+**Implementation gate:** satisfied at integration: the receiver, release, capture, arrest and recovery contracts were resolved through the design probes recorded below. Delivery acceptance is separate.
+**Evidence:** [Start Here](../../00_START_HERE.md) §2 owns current delivery status; [integrated observations](../PLANNING/AS-016_PROTOTYPES/integrated/README.md) distinguish production results from the earlier copied prototype. Dated delivery evidence is retained below.
 
 ## Preserved prototype checkpoint — 2026-09-26
 

@@ -4,15 +4,17 @@
 
 ## Delivery order
 
-1. **Clear normal gameplay.** Remove all old campaign machinery, its colliders/cables and machine-linked stair assemblies, including the rejected water screw/lift. Retain tower/environment, the complete movement system, and ordinary stairs/ramps as the optional slower route. Future ladders need a genuine implemented climbing interaction. Separate regression fixtures explicitly. Prove the actual default scene has no legacy moving machinery and normal controls still reach the native player.
-2. **Close the first +8 m receiver on paper and in a bounded test layout.** Completed locally under `AS-016_PIPE_BALANCE_BRIDGE.md` following the owner's instruction to continue. Begin with the landing, grade approach and walkable rotating deck. Derive release effort, pipe capture, full energy/inertia, finite stop and recovery. Use the revised Atlas geometry and mass budget. Do not promote a pipe avalanche before the downstream geometry can accept it.
-3. **Implement one useful chain.** Rack release → visible pipe motion → broad pan loading → rotating bridge → stable receiver → actual player walk onto it. Each link reads native physical state. No one-shot impulse to fake the whole chain, area signal that enables the next stage, event clock or invisible support.
-4. **Verify and stop.** Normal touch/controller input, first-person visibility, useful pacing, noise/placement variations, no-source/no-link falsifiers, early boarding/missed capture, checkpoint/retry, matching solid geometry, Android artifact. Device observations remain a separate gate.
-5. **Continue from the +33 m source route.** AS-017 extends the route above the +11 m ring. Its current proof and delivery state is in [`00_START_HERE.md`](../../00_START_HERE.md). The selected +66 m objective is paused. If resumed, finish AS-017's delivery gate first, then close the locally staged +33→44 m stair route/checkpoint proof before authoring the +44→66 m connection and route choice. These are future targets, not accepted delivery claims.
+1. **Completed reset.** The old campaign machinery, its colliders/cables and machine-linked stair assemblies, including the rejected water screw/lift, were removed from normal gameplay. Tower/environment, the complete movement system, and ordinary stairs/ramps remain. Legacy machinery is isolated as regression fixtures; the cleared-foundation proof is recorded in `00_START_HERE.md` §2.
+2. **Completed AS-016 design and receiver.** The +8 m landing, grade approach, walkable rotating deck, release effort, pipe capture, energy/inertia, finite stop and recovery were resolved for the opening route. The Atlas owns its geometry and mass budget; `AS-016_PIPE_BALANCE_BRIDGE.md` records the implemented design.
+3. **Implemented AS-016 chain.** Rack release → visible pipe motion → broad pan loading → rotating bridge → stable receiver → actual player walk to the +11 m tower ring. Each link reads native physical state. The exact-source route and its limits are in `AS-016_DELIVERY_EVIDENCE.md`.
+4. **Recorded AS-016 delivery.** At `254eb28`, normal input, route, checkpoint/retry, first-person render, collision and Android artifact gates passed. [The delivery record](../ASCENT/AS-016_DELIVERY_EVIDENCE.md) states the tested scope; it did not establish APK installation, Android execution or device performance.
+5. **Continue through AS-017 before the later phases.** The static façade route is integrated from +11 to supported +33 m. [Start Here](../../00_START_HERE.md) §2 owns its current delivery gate and §6 owns the pause/resume checkpoint. On resumption, close any outstanding AS-017 delivery gate before integrating the locally staged +33→44 m stair. Close that stair's route/checkpoint proof before authoring the +44→66 m connection and route choice. These later elevations are targets, not accepted delivery claims.
 
 ## What counts as progress
 
 The destination is a stable support the player can use and leave. Moving water, rotating decoration, an attractive animation, a state flag, a barrel falling somewhere or a green fixture test does not complete ascent. Measure useful rise, supported arrival, duration and reset cost. At least one normal first-person observation must let a viewer identify source → transfer → outcome without reading telemetry.
+
+For each new mechanism, retain the verification scope: normal touch/controller input, first-person visibility, useful pacing, noise/placement variations, no-source/no-link falsifiers, early boarding/missed capture, checkpoint/retry, matching solid geometry and an exact-source Android artifact. Device observations remain a separate gate. A prior slice's green delivery does not satisfy these checks for a later machine.
 
 ## Complexity budget
 
@@ -20,9 +22,11 @@ Spend geometric and simulation detail where it changes a visible action. Favour 
 
 ## Physical and implementation boundaries
 
-The Atlas's first energy estimate is a screening calculation, not a design sign-off. Important unclosed quantities are listed there. Choose robust capture geometry before solver tuning; model actual hollow-pipe inertia, contact friction and dissipation. Do not promise cross-platform determinism without testing the exact pinned builds.
+The Atlas's energy estimate was a screening calculation, not proof of operation; AS-016's integrated tests and delivery record establish the bounded opening result. For later machines, close capture geometry, inertia, friction and dissipation in their own designs and verify them in runtime. Do not promise cross-platform determinism without testing the exact pinned builds.
 
 Keep one consequential owner. Existing native body, hinge, contact, moving-support and checkpoint capabilities are reusable; old campaign builders are not mandatory. New springs, brake laws, guides or fracture are added only if this slice needs them. Never replace full parkour with basic FPS movement to make a mechanism pass.
+
+No one-shot impulse may fake the whole chain, and no area signal, event clock or invisible support may manufacture its next stage.
 
 ## Removed work
 

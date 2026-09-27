@@ -4,11 +4,16 @@ Profile: **MACRO-TRAVERSAL-STRICT**. These files preserve local design work agai
 the cleared foundation at `360cffb` (gameplay unchanged at `64b8014`). They are
 engineering fixtures, excluded from normal gameplay and the Android package.
 
+The limits below describe those earlier fixtures, not the current implementation
+queue. AS-016 was subsequently integrated and delivered; follow the
+[production observations](integrated/README.md) and
+[dated delivery record](../../ASCENT/AS-016_DELIVERY_EVIDENCE.md) for that evidence.
+
 | Evidence | Result | Limit |
 |---|---|---|
 | [Swing](swing/README.md) | 27 load/friction/yield combinations, each at 90 and 360 Hz; independent converged calculation agrees within declared tolerances. | Preloaded rigid ballast, centreline arms, no moving-body contacts or player. |
 | [Geometry](geometry/STATIC_WALK_README.md) | Native player walks from ordinary spawn across static bridge poses at +7.53 and +8.20 m, then reaches the existing +11 m ring. | Static supports; no mechanism loading, release or moving crossing. |
-| [Releases](release/README.md) | 12 bounded observations: finite 150 N pulls release the rack and loaded prop; no-input controls hold. Actual twenty pipes reach the fixed receiver. | Separate fixtures; complete beam inertia, moving pan, sheave inertia and impact ledger remain open. |
+| [Releases](release/README.md) | 12 bounded observations: finite 150 N pulls release the rack and loaded prop; no-input controls hold. Actual twenty pipes reach the fixed receiver. | Separate fixtures; complete beam inertia, moving pan, sheave inertia and impact ledger were outside these probes. See the production record for integrated coverage and remaining limits. |
 
 The selected upper entry cheek is 0.25 m below the nominal bridge plane. Its
 worst upward transition over the screened stopping band is 0.272183 m, leaving
@@ -18,8 +23,8 @@ as rejected for inadequate margin, despite successful static walking.
 The swing's entire observed post-turn tip range is +7.5356 to +8.1821 m. Peak
 rigidly attached load acceleration is 0.46755 g. The finite receiver uses CHOSEN
 90 kN yield ±5%, 15 MN/m stiffness and 0.65 m stroke; its largest observed
-penetration is 0.50990 m. These values describe the isolated fixture, not the
-unbuilt complete mechanism or measured timber material.
+penetration is 0.50990 m. These values describe the isolated fixture; they are
+not measurements of the later integrated mechanism or of real timber material.
 
 The independent evaluator was rerun after adding exact case-grid validation.
 All 54 declared observations pass; deliberately missing, duplicated and NaN

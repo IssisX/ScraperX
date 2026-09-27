@@ -12,6 +12,16 @@ Large, visible loads, ramps, levers, pendulums and direct contacts do the heavy 
 
 The owner rejected the old campaign and requested its removal **in the game**, followed by new macro mechanics. This supersedes the earlier restoration/preservation instruction for campaign content. It does not authorize removal or simplification of parkour.
 
+Route elevations below name supported walking surfaces above grade. Capsule-centre and peak airborne heights are not ascent endpoints.
+
+| Ascent segment | Present state | Delivery boundary |
+|---|---|---|
+| Grade → +8 m receiver → +11 m ring | Active pipe-loaded balance bridge and supported tower connection (AS-016). | Green exact-source workflow and ARM64 APK at `254eb28`; also present in the later green `3034691` APK. No device execution proof. |
+| +11 → +33 m ring | AS-017 static façade parkour is integrated in source; local native/headless touch routes reach supported +33 m. | Continuous rendered touch gate failed for the AS-017 candidate; that candidate produced no APK. The last green APK predates AS-017. |
+| +33 → +44 m | Swinging stair exists only in ignored local staging. | Not integrated or delivered; no rendered route proof. Its route and checkpoint proof remain unfinished. |
+| +44 → +66 m | Connection, second machine and route choice are unauthored planning targets. | No integrated route or delivery proof. The +66 m objective is paused. |
+| Beyond +66 m toward the 1,600 m summit | Future campaign authorship. | The existing ordinary staircase to +154 m is an optional fallback, not proof of the new mechanism/parkour route or a completed ascent. |
+
 | Area | Current source and claim boundary |
 |---|---|
 | Normal gameplay source | The native pipe-loaded bridge reaches the +8 m receiver and +11 m tower ring. AS-017 then adds static façade traversal to a supported +33 m ring. |
@@ -70,5 +80,7 @@ Distinguish implemented, built, APK produced, installed, executed, observed and 
 The owner requested a clean stopping point. The +66 m goal is paused, not complete. See §2 for the current gameplay source, CI result and last green APK. The later documentation-only checkpoint commit is `88cbe5b`.
 
 Unpublished +33→44 m swinging-stair work is saved locally in ignored `artifacts/s2-staging-20260927/`, including source, Simulation integration patch, geometry, scripts, native results and checksums. Read its `CHECKPOINT.md` first. The latest exit-waypoint repair compiled but has not run; the checkpoint test still needs correction for checkpoints on moving supports. No S2 touch/render proof exists and this stair is not active in the game. This snapshot replaces reliance on temporary files for resuming the work; it is local and is not included in the remote branch.
+
+The snapshot's statement that AS-017 CI was still running is historical; §2 records the terminal result. A fresh clone may lack this ignored directory. Check that it exists before relying on its files, and report it as unavailable if missing; its name alone is not a recoverable implementation.
 
 On resume: resolve AS-017's failed rendered delivery and produce its exact-source Android artifact before building on that candidate. Then finish the staged stair route and correct its checkpoint test before publishing another gameplay candidate. The +44→66 m continuation and route choice remain outstanding.

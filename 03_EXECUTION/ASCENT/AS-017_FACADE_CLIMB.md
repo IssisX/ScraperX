@@ -1,8 +1,8 @@
 **Ascent Slice:** `AS-017`
 **Lifecycle:** IMPLEMENTED
 **Provenance:** re-derived here; implementation adapted from `ScraperX-Claude` `f872c41`
-**Implementation gate:** satisfied: static route fitted to existing rings; pre-integration normal-input test failed at the missing cabinet
-**Evidence:** Current integrated source, CI and artifact status: `00_START_HERE.md` §2. This ticket retains the design and local implementation observations.
+**Implementation gate:** satisfied: static route placement derived against the existing rings; the pre-integration normal-input test captured the missing-cabinet failure. Delivery acceptance is separate.
+**Evidence:** [Start Here](../../00_START_HERE.md) §2 owns current source, CI and artifact status. This ticket retains the design and source-specific observations below.
 
 # Façade climb from +11 m to +33 m
 
@@ -24,7 +24,7 @@
 
 **Completion:** AS-017 is implemented in source. Its current exact-source delivery state is owned by `00_START_HERE.md`; source lifecycle and delivery acceptance are separate fields.
 
-## Reuse boundaries and local observations
+## Reuse boundaries and local observations — 2026-09-26
 
 - Source provenance: Claude movement commit `6fdf8d0`, with current C1 grip/top-out refinements from `f872c41`. Adapted only movement, input and hand presentation; no sibling world construction, process systems, density layout or weakened CI gates.
 - Geometry uses source-local coordinates translated down 11 m by its Kit body. Current `Part` box/shape/mass layout is unchanged. ID 1600 is unique; the opening test checks all Kit entity IDs before operation.
@@ -57,3 +57,11 @@ at the same Fold aspect; the default and regression captures retain their
 larger windows. The longer combined route has a 900-second bound. Failed-run
 logs and available captures are retained as diagnostics, distinct from a
 published APK. Milestone logs expose progress even without screenshots.
+
+## Delivery checkpoint — 2026-09-27
+
+Gameplay source `13e1146b8fcebeb4e8d7cd18087cfb26bf83a84e`, workflow
+`36280224425`, failed the continuous rendered touch step and produced no APK.
+The local native/headless +33 m observations above do not establish rendered
+delivery. This is the recorded result for that source; current candidate and
+artifact status remain in Start Here §2.
