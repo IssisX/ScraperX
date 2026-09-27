@@ -2834,7 +2834,7 @@ void run_stack() {
     require(s3_rode.worst_margin_j >= 0.0, "S3 payload energy gain must not exceed source energy released");
 
     // Walk off onto deck 12 North band
-    require(walk_to(s3_sim, -8.0, -164.0, 6.0) && walk_to(s3_sim, -8.0, -170.0, 6.0),
+    require(walk_to(s3_sim, -8.0, -164.0, 6.0) && walk_to(s3_sim, -8.0, -171.2, 6.0),
             "the rider must walk off S3's cage over the upper gangway onto deck 12");
     (void)s3_sim.advance_frame(0.5);
     const auto on_deck12 = s3_sim.snapshot();
@@ -2870,7 +2870,7 @@ void run_stack() {
     require(take_s3_handle(band), "the Stack: from deck 8 into S3's cage and take hold of its trip handle");
     const auto band_s3_rode = ride_s3(band, 25.0);
     require(band_s3_rode.reached_top, "the Stack: S3 carries the rider to deck 12");
-    require(walk_to(band, -8.0, -164.0, 6.0) && walk_to(band, -8.0, -170.0, 6.0),
+    require(walk_to(band, -8.0, -164.0, 6.0) && walk_to(band, -8.0, -171.2, 6.0),
             "the Stack: off S3 onto deck 12 landing");
     require(climb_c3(band), "the Stack: up C3 to deck 14 (Deck154)");
     g_path_watch.armed = false;

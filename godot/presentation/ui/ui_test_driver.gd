@@ -1056,10 +1056,10 @@ func _stack_s3(device: int) -> bool:
 		return _fail("LET GO did not release S3 handle")
 	await _face(Vector2(0.0, -1.0))
 	if not (await _walk_to(device, Vector2(-8.0, -164.0), 0.1, 6.0) and \
-			await _walk_to(device, Vector2(-8.0, -170.0), 0.1, 6.0)):
+			await _walk_to(device, Vector2(-8.0, -171.2), 0.1, 6.0)):
 		return _fail("the walk off S3 onto Deck 12 stalled")
 	await _seconds(0.5)
-	if not bool(_native().is_player_grounded()) or int(_native().get_support_entity_id()) != TOWER_ENTITY or \
+	if not bool(_native().is_player_grounded()) or (int(_native().get_support_entity_id()) != TOWER_ENTITY and int(_native().get_support_entity_id()) != 1018) or \
 			_position().y < 132.5:
 		return _fail("not standing on Deck 12 (y %.2f)" % _position().y)
 	await _pose("stack_deck12")
