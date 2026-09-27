@@ -303,11 +303,11 @@ jobs:
           ./build/host/scraperx_ascent_route_tests | tee artifacts/ascent-route.log
           # This calls the complete existing touch pipe route before climbing.
           # Render it once at the same Fold aspect; CPU-only CI renders at
-          # 864x742. Native input/physics still runs at fixed 30 FPS. Default
-          # and regression captures below retain their larger viewports.
-          timeout 900s xvfb-run -a -s "-screen 0 864x742x24" \
+          # 432x371. Frame cadence stays 30 FPS; native physics stays 90 Hz.
+          # Default and regression captures below retain larger viewports.
+          timeout 900s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --path godot --rendering-method gl_compatibility \
-            --resolution 864x742 --fixed-fps 30 \
+            --resolution 432x371 --fixed-fps 30 \
             -- --uitest=touch_facade "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/facade" \
             2>&1 | tee artifacts/touch-facade.log
           grep -F "SCRAPERX_UITEST PASS touch_facade " artifacts/touch-facade.log

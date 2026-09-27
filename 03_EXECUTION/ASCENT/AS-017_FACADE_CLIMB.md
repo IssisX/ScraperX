@@ -50,12 +50,14 @@ Mesh submissions fall from 176 to 76; the façade falls from 69 to 5.
 Indexed boxes and unindexed tube bores remain separate surfaces. These counts
 prove less submission work, not measured device FPS.
 
-The rendered 30 FPS touch gate now runs the complete pipe route once, inside
-the continuous grade-to-33 m façade scenario. All pipe assertions and four
-pipe captures remain required. Its CPU-rendered capture window is 864×742
-at the same Fold aspect; the default and regression captures retain their
-larger windows. The longer combined route has a 900-second bound. Failed-run
-logs and available captures are retained as diagnostics, distinct from a
+The rendered 30 FPS touch gate runs the complete pipe route once, inside the
+continuous grade-to-33 m façade scenario. All pipe assertions and four pipe
+captures remain required. Run `36280224425` used an 864×742 Fold-aspect
+window and hit the 900-second bound. The next candidate uses 432×371 at the
+same aspect, retaining 30 FPS input frames, 90 Hz native physics and all six captures;
+the smaller rendered window is a throughput hypothesis, not a route or
+delivery pass. Default and regression captures retain their larger windows.
+Failed-run logs and available captures remain diagnostics, distinct from a
 published APK. Milestone logs expose progress even without screenshots.
 
 ## Delivery checkpoint — 2026-09-27
