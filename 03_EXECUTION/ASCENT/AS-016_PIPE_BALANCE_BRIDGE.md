@@ -3,7 +3,7 @@
 **Ascent Slice:** `AS-016`
 **Lifecycle:** DELIVERED — native default and presentation integrated; exact-commit desktop proof and Android artifact verified. Device execution remains unproven.
 **Provenance:** design probes began at `360cffb`; implementation continues from `e8d9ca8`
-**Implementation gate:** loaded releases, pipe capture, arrest and the supported crossing must close in the bounded prototypes below before promotion to normal gameplay
+**Implementation gate:** satisfied. Loaded releases, pipe capture, arrest and supported crossing are integrated in normal gameplay and covered by the delivered exact-source workflow.
 **Evidence:** current delivery status remains in `00_START_HERE.md`; [integrated observations](../PLANNING/AS-016_PROTOTYPES/integrated/README.md) distinguish final production tests from the earlier copied prototype
 
 ## Preserved prototype checkpoint — 2026-09-26
@@ -58,42 +58,46 @@ The two releases do not depend on an inventory counter, elapsed time or a succes
 - A single pan hinge does not enforce a level pan. The prototype uses a real four-bar linkage.
 - Model the deck's centre below its walking surface when deriving work and inertia. Do not confuse the walking datum with the body centre.
 
-## Bounded prototype order
+## Prototype closure record
+
+The sequence below records how the delivered slice was closed. It is historical design rationale, not an open implementation checklist. Current source and delivery evidence are owned by `00_START_HERE.md` §2 and the linked evidence files above.
 
 ### 1. Receiver and route geometry
 
-Check the complete bridge sweep and player approach/exit corridors against the current source collision geometry. Check the full stopping-angle band, not only the nominal +8 m tip. Produce a labelled plan/side drawing and reproducible geometry record. Then exercise the supported route with the native player before accepting it.
+The final sweep and player corridors were resolved against source geometry; the receiver accepts a range of stopping angles. The native player route and supporting geometry are recorded in the integrated observations linked above.
 
 ### 2. Loaded swing and arrest
 
-First isolate the four-bar with a declared preloaded pan. Compare the reduced calculation with native Jolt at the production 90 Hz and a refined step. Measure joint drift, pan tilt, work, plastic stroke, rebound, final support reaction and the full post-arrival motion envelope. A preloaded pan proves only this isolated stage.
+The four-bar and loaded swing were evaluated in isolation and then in the integrated native assembly at production and refined timesteps. The integrated observations report drift, pan tilt, work, stroke, rebound, support and post-arrival state.
 
 The crush material must track consumed stroke and elastic energy. It cannot regain plastic travel after rebound, reload or checkpoint restore. Choose a visible force-bearing volume and preserve a real ultimate support below it. Do not remove kinetic energy by setting velocity to zero.
 
 ### 3. Physical releases and pipe loading
 
-Test each loaded restraint with actual contact, finite control force and travel. An angle-triggered deletion of a fixed constraint does not establish loaded release effort. Use separate pipe bodies with the declared hollow-cylinder mass and inertia. Measure every pipe's actual entry, retained state, impact losses and containment; a seeded mass or a count-based force does not establish this stage.
+The accepted route uses reachable physical restraints and twenty separate hollow pipe bodies. Native cases cover release states, loading, early boarding, passive ride and restoration; see the integrated evidence for measured bounds.
 
 ### 4. Integrated mechanism and player crossing
 
-Join the proven pieces in one normal-input sequence from grade, without seeded inventory or player relocation. Render from the same native geometry and inspect the first-person release, loading, arrest and crossing. The stable destination and route onward are the completion condition.
+The final normal-input sequence starts from grade and reaches the supported +11 m deck. Rendered captures use the same native mechanism. The stable receiver and onward route are the completion condition met by this delivered slice.
 
-## Source seams for implementation
+## Implemented source ownership
 
-- A dedicated pipe-bridge native module owns construction, material state and telemetry.
-- `mechanism_kit.*` may gain the specific body-to-body hinge, mass-property or shape support this module needs. Existing primitive semantics remain explicit.
-- `simulation.*` constructs the new mechanism, forwards its control inputs, and captures/restores all mechanism state.
+- The dedicated pipe-bridge native module owns construction, material state and telemetry.
+- Kit owns bodies, hinges, mass properties and contacts; no alternate ballast assembly is constructed.
+- `simulation.*` builds the mechanism in the normal world, forwards control input and captures/restores its state.
 - `scraperx_simulation.*` exports observed state and geometry to Godot.
-- `main.gd` draws native geometry, labels reachable controls and presents relevant mechanism sound/feedback.
-- Native tests and a dedicated Godot input scenario exercise the real sequence. The delivery workflow checks those exact proofs and packages the candidate APK.
+- `main.gd` draws native geometry, labels reachable controls and presents mechanism feedback.
+- Native tests, the Godot input scenario and the delivery workflow exercise and package this sequence; exact current delivery evidence is linked above.
 
-Do not activate this mechanism in the normal scene while a critical prototype still fails. Keep isolated engineering fixtures out of normal play.
+This pipe bridge is the active normal-scene mechanism. Keep isolated engineering fixtures and the overlapping ballast alternative out of normal play.
 
 ## Recovery and persistence
 
 Spent pipes and crushed material remain physical state. A successful crossing leaves a reusable route. A spill or incomplete lift must leave an accessible return or alternative route. Checkpoint restore includes body poses and velocities, control/link states, pipe inventory and the crush material's plastic front and stored energy. Resetting a local progress flag cannot rearm it. Any physical rearm needs its own source of work; none is claimed by this ticket yet.
 
-## Acceptance
+## Accepted criteria
+
+These were the delivery conditions for AS-016 and are recorded as passed in the exact-source evidence above. They are not pending work for this slice.
 
 - Ordinary input completes rack release, pan loading, beam release, bridge crossing, fixed receiver arrival and onward exit.
 - Removing the source or a necessary load path prevents the claimed ascent through a physical cause.

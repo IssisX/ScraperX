@@ -73,11 +73,11 @@ Rollers and monoliths travel in visible lanes outside required player standing a
 
 ## 10. Upper tower
 
-### AS-017 integration candidate: +11 → +33 m façade
+### AS-017 façade route: +11 → +33 m
 
 Adapt Claude C1's static service architecture to the current front frame by translating its original +22→44 m route down 11 m. One native Kit body, ID 1600, contains the fixed landing, cabinet, duct, vent, monorail, davit and hanging ladder; presentation draws its native parts. No sibling world builder or hoist is instantiated.
 
-The landing is X=[17.8,22.2], Z=[-124.05,-120.8], top +11 m. Cabinet top +12.7 m leads by a jump/hang to duct top +16.3 m. A thin vent at X=24, Z=-123.45 leads to the +22 m ring. From there a 0.3 m wide monorail at X=12.5 reaches Z=-119.3, top +22.3 m. The ladder's bottom rung is +24.6 m, requiring a leap; it leads to a davit at +33.3 m. The exit walks back to the tower ring near (11.2,33,-125.3), native tower support. A fall remains a real fall onto lower geometry or grade; committed checkpoint restoration is unchanged in authority. Native input/clearance and rendered fit are integration gates, not yet established by these coordinates.
+The landing is X=[17.8,22.2], Z=[-124.05,-120.8], top +11 m. Cabinet top +12.7 m leads by a jump/hang to duct top +16.3 m. A thin vent at X=24, Z=-123.45 leads to the +22 m ring. From there a 0.3 m wide monorail at X=12.5 reaches Z=-119.3, top +22.3 m. The ladder's bottom rung is +24.6 m, requiring a leap; it leads to a davit at +33.3 m. The exit walks back to the tower ring near (11.2,33,-125.3), native tower support. A fall remains a real fall onto lower geometry or grade; committed checkpoint restoration is unchanged in authority. Current implementation and acceptance status are tracked in `00_START_HERE.md`; coordinates alone do not prove every clearance case.
 
 The retained tower silhouette, frame and deck rings are space for future authorship. The ordinary 154 m staircase remains as the owner-requested fallback. The old 198 m cage ride, 220 m connection and 340 m wet route are retired. Do not silently rebuild that schedule. Extend upward only from a demonstrated receiving support using the same large visible mechanics and legitimate parkour.
 

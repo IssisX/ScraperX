@@ -1,12 +1,12 @@
 # Development direction and next ascent proposal
 
-**Status:** Development plan, 2026-09-26. The owner selected **mixed parkour and machines** and directed us to proceed. The height targets and first mechanism below remain engineering proposals until their physical contracts close. This document authorizes no claim of additional playable height.
+**Status:** Owner-selected development plan, 2026-09-26; objective paused 2026-09-27. The owner selected **mixed parkour and machines**. Height targets remain plans until their routes are integrated and proved. This document is not current playable-height evidence.
 
 **Profile:** `MACRO-TRAVERSAL-STRICT` (project requirement). The Atlas remains spatial authority; `00_START_HERE.md` remains delivery/evidence authority. Superpowers supplies the design/execution workflow, Causal Mechanism Compiler supplies physical contracts, and ThreeSpine supplies relevant mathematical methods. Skills do not expand product scope by themselves.
 
 ## 1. Starting point
 
-The current source is `c2de2f3`, with gameplay delivery `3034691`. The demonstrated new mechanism route reaches the +11 m tower ring through the pipe bridge's +8 m receiver. These are existing delivery facts, not new tests performed for this proposal. The optional ordinary route to +154 m and the 1,600 m tower objective do not count as newly authored mechanism progress. Android packaging is recorded; actual Fold execution and sustained performance remain unproven.
+Current source, proof and artifact status is recorded in `00_START_HERE.md` §2. For this plan, AS-016 establishes the +11 m starting support; AS-017 source extends the route to +33 m. The optional ordinary route to +154 m and the 1,600 m tower objective do not count as newly authored mechanism progress.
 
 The next production question is whether the existing substrate lets us author useful new traversal substantially faster. Building another elaborate miniature mechanism would not answer it.
 
@@ -26,18 +26,20 @@ These are emphases within one persistent tower, not separate game modes. A legal
 
 | Checkpoint in development | Intended playable result | What it resolves |
 |---|---|---|
-| **A: +11 → +33 m** (CHOSEN) | One substantial macro transfer, with a supported approach, reachable operation and stable upper exit. | Can existing machinery primitives buy multiple levels without another framework or long setup sequence? |
-| **B: +33 → +44 m** (CHOSEN) | An authored exterior/interior parkour connection with a forgiving route and a more demanding shortcut that reconnect. | Does the new space feel athletic, readable and worth exploring between machine encounters? |
-| **C: +44 → +66 m** (CHOSEN) | A second macro encounter using the first encounter's proven family where it fits, with a different approach, intervention or consequence. | Does reuse reduce implementation effort without producing an obvious copy? |
+| **A: +11 → +33 m** (source implemented) | AS-017's façade climb adds static parkour traversal after the pipe bridge. Its delivery evidence is recorded in the status register. | Can the current movement system carry a readable exterior route above the opening machine? |
+| **B: +33 → +44 m** (planned; stair staging incomplete) | A swinging-stair adaptation is locally staged and is not active gameplay. See the status register for its exact unfinished checks. | Can a large machine create a stable climbable route with coherent moving-support checkpoint recovery? |
+| **C: +44 → +66 m** (unauthored) | A second machine encounter, route connection and meaningful choice still need a spatial and physical design. | Can the route offer a real choice while reusing validated work? |
 | **D: whole route** | Ordinary input from grade through the opening and all new connections, checkpoint continuation, rendered observation and an exact-source Android candidate. | Does the experience function as one connected piece of the game? |
 
-The two new macro encounters are a **CHOSEN scope budget**, not a requirement for two new simulation systems. Resolve A before specifying C's detailed machinery. If the second placement cannot use the family's validated envelope, either choose a compatible placement or explicitly justify another family; do not silently scale all dimensions and declare the physics unchanged.
+The later machinery encounters remain a **CHOSEN scope budget**, not a requirement for new simulation systems at every height. The +11→33 façade is parkour traversal, not a macro-machine transfer. Finish and integrate B before specifying C's detailed machinery. If C cannot use a validated envelope, choose a compatible placement or justify another family; do not silently scale dimensions and call the physics unchanged.
 
 ### Integration revision after branch inspection (2026-09-26)
 
-The owner authorized reuse from sibling branches. Claude `f872c41` has a locally reproduced native façade climb and swinging stair, reaching +55 m in its own world. AS-017 now adapts its façade from our +11 m receiver to +33 m. This replaces A's proposed freight-frame implementation with proven climbing architecture; the frame remains a later candidate. Next, evaluate/adapt the swinging stair for +33→44 m, then close +44→66 m with a contrasting connection and meaningful route choice. The exact upper placement is unresolved. The +66 m whole-route, checkpoint, rendered, Android and device gates remain unchanged. Sibling tests establish reuse candidates, never current integrated height.
+The owner authorized reuse from sibling branches. Claude `f872c41` provides reference evidence only. AS-017 adapts its façade route from our +11 m receiver to +33 m; see the status register for its delivery state. The proposed freight frame is deferred. The +33→44 m stair remains a local staging candidate, not active gameplay; its checkpoint and route evidence are unfinished. The +44→66 m connection and route choice remain unauthored. Sibling tests do not establish integrated height.
 
-### First candidate: counterweighted tilting freight frame
+### Deferred candidate: counterweighted tilting freight frame
+
+**Superseded planning sketch; do not treat this as the selected +11→33 m route or an active ticket.**
 
 An idle freight transfer frame has a raised, visibly restrained counterweight. A large reachable release frees the frame; the descending weight raises the boarding end toward an upper freight landing. A structural receiver arrests and supports it. The player uses real moving support and exits onto the tower. The frame and its restraint must look like working industrial equipment, with their load path visible from the approach.
 
@@ -56,22 +58,21 @@ The compiler's first checks are target support and onward route, then geometry, 
 
 ## 4. Build order and concrete ownership
 
-Work inline as the sole writer on the existing local `ChatGPT` checkout. Preserve unrelated work and check the remote before publication. This is a development plan; the next mechanism's numerical contract is intentionally not falsely labeled ready.
+Work inline as the sole writer on the existing local `ChatGPT` checkout. Preserve unrelated work and check the remote before publication. The +66 m objective is paused; the next mechanism contract is not ready for integration.
 
-- [ ] **Resolve A's receiving route and physical contract.** Name actual supports, standing surfaces, control access, reaction paths, permitted variations and recovery. Screen the existing tower sweep. Create a new AS-017 ticket only for the resulting closed slice; update the Atlas with accepted placement. A rejected candidate is a design result, not a reason to activate legacy machinery.
-- [ ] **Implement and prove A.** Add the selected native assembly, integrate normal-world construction and all new persistent state, render the authoritative bodies, and exercise the actual player's approach, operation, ride/crossing and upper departure. The route test must first fail because the new route is absent, then pass through normal input. Include source/link removal, unsafe boarding and checkpoint continuation cases that discriminate real failure.
-- [ ] **Author and traverse B.** Compose actual ledges, beams, work platforms and clearances using existing movement. Verify both routes with normal input and rendered first-person inspection. A valid unexpected route is accepted. Do not change global reach or jump to compensate for bad local geometry.
-- [ ] **Build C using demonstrated reuse.** Record which code and contracts are reused, and which spatial/load assumptions changed. Extract a shared component only when the second real use requires it. Re-run the affected physical envelope and receiver checks.
+- [x] **Implement A in source.** AS-017's source route exists; current delivery acceptance is recorded in `00_START_HERE.md`.
+- [ ] **Close B: +33→44 m.** Continue from `artifacts/s2-staging-20260927/CHECKPOINT.md`; its current route and checkpoint gaps are recorded in `00_START_HERE.md` §6.
+- [ ] **Author C: +44→66 m.** Design the receiving support, mechanism, connection and meaningful route choice only after B is closed. Keep an accessible fallback and normal parkour traversal.
 - [ ] **Deliver D and judge the experience.** Run the connected input route, required native/render/collision/checkpoint gates, and exact-source Android export. Inspect the rendered approach, causal event and arrival. Record device installation/execution/performance separately; complete a sustained representative Fold check against the existing 45 FPS target before claiming mobile readiness.
 
 | File / seam | Planned responsibility |
 |---|---|
-| `src/sim/freight_frame.hpp`, `.cpp` (proposed if this candidate survives) | Assembly construction and only the finite material/history state this mechanism actually needs. Kit/Jolt owns its bodies and constraints. |
+| `src/sim/freight_frame.hpp`, `.cpp` (deferred candidate only) | If reconsidered, assembly construction and only the finite material/history state that candidate needs. Kit/Jolt owns its bodies and constraints. This is not the current stair staging design. |
 | `src/sim/mechanism_kit.hpp`, `.cpp` | Reuse existing primitives. Add or extract behavior only for a demonstrated missing capability. |
 | `src/sim/simulation.cpp`, `.hpp` | Normal-world registration, unique entity allocation, stepping and checkpoint capture/restore for added state. |
 | `godot/presentation/main.gd` | Static route construction and necessary presentation through existing native body readback. No second mechanism simulator. |
 | `src/sim/world_solids.inc` | Regenerate from changed normal static geometry; do not hand-author a conflicting collision map. |
-| `tests/freight_frame_tests.cpp` (proposed), `CMakeLists.txt` | Normal-input ascent, causal negative cases, supported upper exit and continuation after checkpoint restore. Reuse existing helpers where appropriate. |
+| `tests/freight_frame_tests.cpp` (deferred candidate only), `CMakeLists.txt` | If the deferred frame is ever selected, add its route and causal tests using existing helpers. This is not the current stair staging design. |
 | `godot/presentation/ui/ui_test_driver.gd`, `.github/workflows/wo000-delivery-spine.yml` | Extend the existing input/render and delivery path for the new route, with clear source identity. |
 
 **Known reuse conflict:** Kit's optional guide governor is an artificial braking source unless a permitted physical device owns that action. Its automatic catch relatch also uses proximity/speed logic. Neither is automatically valid for the strict macro profile. A new primary load path must obtain restraint, arrest and capture from the modeled visible mechanism. Existing capabilities are a menu, not a blanket certificate.

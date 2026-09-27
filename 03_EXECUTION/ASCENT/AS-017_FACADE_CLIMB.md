@@ -2,7 +2,7 @@
 **Lifecycle:** IMPLEMENTED
 **Provenance:** re-derived here; implementation adapted from `ScraperX-Claude` `f872c41`
 **Implementation gate:** satisfied: static route fitted to existing rings; pre-integration normal-input test failed at the missing cabinet
-**Evidence:** `00_START_HERE.md`; local route proofs observed; rendered/CI/Android delivery pending
+**Evidence:** Current integrated source, CI and artifact status: `00_START_HERE.md` §2. This ticket retains the design and local implementation observations.
 
 # Façade climb from +11 m to +33 m
 
@@ -22,7 +22,7 @@
 
 **Proof path:** first failing normal-input grade→pipe→façade test; native supported +33 m arrival with no deaths; missing-hold and blocked-clearance cases; existing vault/moving-support and bridge regressions; bridge and touch-input wiring; rendered scene and exact-source Android delivery. Full +66 m, route choice and device gates remain subsequent work.
 
-**Completion:** native, touch and rendered evidence agree on a continuous route; checkpoint recovery resumes from committed supports; changes are published to ChatGPT with exact-source build evidence. Until then source work is an integration candidate.
+**Completion:** AS-017 is implemented in source. Its current exact-source delivery state is owned by `00_START_HERE.md`; source lifecycle and delivery acceptance are separate fields.
 
 ## Reuse boundaries and local observations
 

@@ -1793,10 +1793,10 @@ func _ledge_affordance_text() -> String:
 
 
 func _update_ambient_dressing() -> void:
-	# Clock-driven crane sway only. This is explicitly weather-class ambient
-	# motion (GDD term for non-authoritative background movement), never
-	# claimed as simulated rigging -- native-authoritative freight is a later
-	# work order (TDD section 9). Nothing here is queried by any other system.
+	# Clock-driven crane sway only. This is ambient presentation, not rigging or
+	# an interactive lift. Playable freight is owned separately by native
+	# simulation (currently the pipe-loaded bridge); nothing here is queried by
+	# the physics, route or mission systems.
 	if _crane_boom == null:
 		return
 	var sway := sin(_ambient_clock * 0.18) * 0.035

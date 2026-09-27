@@ -2,13 +2,15 @@
 
 Godot 4.7 / C++17 / Jolt industrial ascent. Read [`00_START_HERE.md`](00_START_HERE.md) before changes. Writes go to `ChatGPT` only.
 
-## Current game
+## Current game state — 2026-09-27
 
-The owner-directed ground reset removes the legacy campaign, including the water screw/lift, intake machinery, upper lifts and machine-linked stair assemblies, from normal play. The tower structure, alpine setting, full parkour/controller and ordinary stairs/ramps remain. Those stairs are the optional fallback for a player who wants a straightforward route. No replacement macro mechanism is implemented yet.
+The owner-directed reset retired the old campaign machinery, including the water screw/lift, intake sequence, upper lifts and machine-linked stair assemblies. The normal game keeps the tower, alpine setting, full parkour/controller and optional ordinary stairs to +154 m. The ambient yard crane and gear motifs remain presentation; the crane sway is not simulated rigging and does not operate or lift anything.
 
-The revised [Atlas](01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md) proposes a pipe-loaded balance bridge from grade to a +8 m receiver. It includes preliminary geometry/work estimates and explicitly unresolved release, capture, stopping and recovery requirements. The [macro plan](03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md) defines delivery order; the [corrected catalogue](Mechanism-Ideas-and-archetypes.md) adapts the supplied Colossus ideas.
+Current gameplay source contains the native pipe-loaded bridge from grade through +8 m to the +11 m tower ring, followed by AS-017's static façade route to +33 m. See [`00_START_HERE.md`](00_START_HERE.md) for the single current record of source, CI, artifact and device evidence.
 
-Legacy machinery is retained only as an explicitly selected desktop/native regression fixture. Its test success is not campaign progress. AS-001–015 are retired; do not resume their queue.
+The +33→44 m swinging-stair adaptation is local staging, not active gameplay. Its current state is recorded in [`00_START_HERE.md`](00_START_HERE.md). The +66 m objective is paused. The [Atlas](01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md) owns space; the [ascent plan](03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md) and [development proposal](03_EXECUTION/PLANNING/NEXT_ASCENT_PROPOSAL.md) hold future targets, not proof of playable height.
+
+Old machinery and traversal remain available only through explicitly selected regression fixtures. Fixture results are not campaign progress. AS-001–015 are retired; do not resume that queue.
 
 ## Build
 
@@ -26,10 +28,10 @@ ctest --test-dir build/host --output-on-failure
 ```
 
 
-Default Godot launch loads the cleared foundation. `--uitest=ground_foundation` proves default input and removal. Legacy UI scenarios explicitly load regression fixtures. To regenerate collision tables, use normal `--export-solids=<path>` for `src/sim/world_solids.inc`, and add `--regression-fixtures` for `tests/fixtures/world_solids.inc`.
+Normal Godot launch loads the current game world, including the pipe bridge and the AS-017 façade route. The explicit `--uitest=ground_foundation` scenario exercises the cleared-foundation regression case; it is not the normal game. Legacy UI scenarios explicitly load regression fixtures. To regenerate collision tables, use normal `--export-solids=<path>` for `src/sim/world_solids.inc`, and add `--regression-fixtures` for `tests/fixtures/world_solids.inc`.
 
 CI runs the default-world proof and rendered capture, retained physics/controller regressions, both collision drift checks, Android arm64 build and APK export. Its artifact contains exact-commit checksums and evidence boundaries.
 
 ## Claim boundary
 
-An exported APK proves packaging. Installation, Android execution, device readability, touch ergonomics and sustained Fold 6 performance remain separate evidence states. No new mechanism is established by this cleanup or by a passing legacy fixture.
+An exported APK proves packaging. Installation, Android execution, device readability, touch ergonomics and sustained Fold 6 performance remain separate evidence states. See [`00_START_HERE.md`](00_START_HERE.md) for the current candidate's exact evidence boundary.
