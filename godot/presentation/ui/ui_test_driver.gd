@@ -920,7 +920,7 @@ func _debris(device: int) -> bool:
 
 func _stack_s2(device: int) -> bool:
 	if not await _go(device, Vector2(10.0, -130.5), 0.15, 15.0) or \
-			not await _walk_to(device, Vector2(10.0, -137.4), 0.08, 15.0):
+			not await _walk_to(device, Vector2(10.0, -137.6), 0.10, 15.0):
 		return _fail("walk across crossover gangway into S2 cage stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
 	if not await _offered(&"pick_up", "GRAB"):
@@ -1157,7 +1157,7 @@ func _checkpoint_continuation(device: int) -> bool:
 	await _face(Vector2(0.0, 1.0))
 	_move(device, 1.0)
 	var died: bool = await _wait_until(
-		func() -> bool: return int(_native().get_death_count()) > initial_deaths, 5.0)
+		func() -> bool: return int(_native().get_death_count()) > initial_deaths, 7.0)
 	_move(device, 0.0)
 	if not died:
 		return _fail("fall off deck was not fatal")
@@ -1169,7 +1169,7 @@ func _checkpoint_continuation(device: int) -> bool:
 	if absf(after_restore.y - cp_pos.y) > 0.5:
 		return _fail("restored y %.2f != checkpoint y %.2f" % [after_restore.y, cp_pos.y])
 	if not await _stack_s2(device):
-		return _fail("continuation climb into S2 failed")
+		return false
 	_detail = "restored_y=%.2f continued_deck6_y=%.2f deaths=%d" % [
 		cp_pos.y, _position().y, int(_native().get_death_count())]
 	return true

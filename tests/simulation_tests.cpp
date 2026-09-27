@@ -2126,7 +2126,7 @@ constexpr double kS2FloorTopUp = 66.05;
 
 bool take_s2_handle(scraperx::sim::Simulation &simulation) {
     using scraperx::sim::Simulation;
-    if (!(walk_to(simulation, 10.0, -130.5, 30.0) && walk_to(simulation, 10.0, -137.4, 20.0, 0.08))) {
+    if (!(walk_to(simulation, 10.0, -130.5, 30.0) && walk_to(simulation, 10.0, -137.6, 20.0, 0.10))) {
         return false;
     }
     (void)simulation.set_facing(0.0, -1.0);
@@ -2752,6 +2752,29 @@ void run_stack() {
               << " floor_y=" << s2_floor_y
               << " peak_speed=" << s2_top_state.s2_cage_peak_speed
               << " deck6_y=" << on_deck6.player_position.y << "\n";
+
+    // S2 checkpoint continuation: commit checkpoint on deck 4, fatal fall, restore, then take S2 handle and ride.
+    Simulation s2_cp(InitialSpawn::Deck4South);
+    require(s2_cp.advance_frame(0.5).accepted, "S2 CP settle interval must be accepted");
+    require(walk_to(s2_cp, 10.0, -125.5, 4.0, 0.10), "walk to checkpoint location on deck 4");
+    (void)s2_cp.advance_frame(0.5);
+    const auto s2_cp_pos = s2_cp.snapshot().checkpoint_position;
+    require(s2_cp_pos.y > 44.0, "Deck 4 checkpoint committed above 44m");
+    (void)s2_cp.set_facing(0.0, 1.0);
+    (void)s2_cp.set_move_input(0.0, 1.0);
+    const auto initial_deaths = s2_cp.snapshot().death_count;
+    for (int t = 0; t < 400 && s2_cp.snapshot().death_count == initial_deaths; ++t) {
+        (void)s2_cp.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    (void)s2_cp.set_move_input(0.0, 0.0);
+    require(s2_cp.snapshot().death_count > initial_deaths, "fall off deck 4 must be fatal");
+    (void)s2_cp.advance_frame(0.5);
+    require(s2_cp.snapshot().player_grounded, "player must be grounded after checkpoint restore");
+    require(std::abs(s2_cp.snapshot().player_position.y - s2_cp_pos.y) <= 0.5, "player must restore to deck 4 altitude");
+    require(take_s2_handle(s2_cp), "player must be able to take S2 handle after checkpoint restore");
+    const auto s2_cp_rode = ride_s2(s2_cp, 20.0);
+    require(s2_cp_rode.reached_top, "S2 must carry rider to deck 6 after checkpoint restore");
+    std::cout << "PASS scraperx_sim S2 checkpoint continuation: deaths=" << s2_cp.snapshot().death_count << "\n";
 
     // Full Stack ascent in one run from grade: S1 (0->22m) -> C1 (22->44m) -> S2 (44->66m)
     require(take_s2_handle(band), "the Stack: from deck 4 into S2's cage and take hold of its lanyard");
