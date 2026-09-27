@@ -2492,6 +2492,7 @@ bool climb_c3(scraperx::sim::Simulation &simulation) {
 void run_stack() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
 
     // The yard's kerb is 0.5 m wide and 86 m long, but a step high: it is
     // walked on and off, not balanced along. Held on its line as a beam, a
@@ -2862,6 +2863,75 @@ void run_stack() {
               << " pos=(" << band_deck14_top.player_position.x << ", "
               << band_deck14_top.player_position.y << ", "
               << band_deck14_top.player_position.z << ")\n";
+
+    // ---- Mega-Ascent Continuation: Stack -> Counterweight Well (0 to 220 m) ----
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    require(board_well_a(band), "the Stack to A: board Stage A cage from Deck 14");
+    require(rig_well_a(band), "the Stack to A: rig Stage A shackle to cage eye");
+    require(pull_well_a(band, 0.5, 3.0), "the Stack to A: pull Stage A trip handle");
+    require(wait_for(band, 16.0, [](const Snapshot &state) {
+        return state.well_a_cage_travel >= kWellATravel - 0.01;
+    }), "the Stack to A: Stage A carries rider to Ring 176 (176.25 m)");
+    (void)band.advance_frame(1.0);
+    const auto band_ring176 = band.snapshot();
+    require(band_ring176.death_count == 0, "the Stack to Ring 176 without dying");
+    std::cout << "PASS scraperx_sim Stack to Ring 176: seconds="
+              << band_ring176.simulation_time_seconds - band_start
+              << " ring176_y=" << band_ring176.player_position.y << "\n";
+
+    // Step across into B's cage
+    require(walk_to(band, -9.4, -131.2, 4.0) && walk_to(band, -7.6, -131.2, 4.0),
+            "from A's parked cage the rider must step across into B's");
+    require(rig_well_b(band) && pull_well_b(band), "the rider must rig and trip Stage B");
+    require(wait_for(band, 16.0, [](const Snapshot &state) {
+        return state.well_b_cage_travel >= kWellATravel - kWellDogPitch - 0.01;
+    }), "B must carry the rider to the 198 ring");
+    (void)band.advance_frame(3.0);
+    require(band.snapshot().player_grounded &&
+            band.snapshot().support_entity_id == Simulation::kWellBCageEntityId,
+            "the rider must stand in B's parked cage");
+
+    // Step across onto C's platform
+    require(walk_to(band, -6.2, -131.9, 4.0) && walk_to(band, -4.4, -131.9, 4.0),
+            "from B's parked cage the rider must step across onto C's platform");
+    require(clear_well_c_chute(band) && fill_well_c(band, 10.0) && pull_well_c_latch(band, 3.0),
+            "the rider must clear C's chute, let the dumpster fill and pull the latch");
+    require(wait_for(band, 16.0, [](const Snapshot &state) {
+        return state.well_c_platform_travel >= kWellATravel - kWellDogPitch - 0.01;
+    }), "C must carry the rider to the 220 ring");
+    (void)band.advance_frame(2.0);
+
+    // Step off onto Ring 220
+    require(walk_to(band, -3.0, -129.0, 4.0), "from C's platform the rider must step onto the 220 ring");
+    (void)band.advance_frame(1.0);
+    g_path_watch.armed = false;
+    require(g_path_watch.worst <= 0.15,
+            "the Stack to 220m: body must never move more than 0.15 m sideways in one tick");
+    const auto band_ring220 = band.snapshot();
+    require(band_ring220.death_count == 0, "Grade to Ring 220 without dying");
+    require(band_ring220.player_grounded && band_ring220.player_position.y > 221.0 &&
+            band_ring220.player_position.y < 221.3 && band_ring220.player_position.z > -130.73 &&
+            band_ring220.support_entity_id != Simulation::kWellCPlatformEntityId,
+            "continuous ascent from Grade must end standing on Ring 220");
+    std::cout << "PASS scraperx_sim Stack to Ring 220: seconds="
+              << band_ring220.simulation_time_seconds - band_start
+              << " ring220_y=" << band_ring220.player_position.y << "\n";
+
+    // Verify cascade re-arms Stage A:
+    require(wait_for(band, 25.0, [](const Snapshot &state) {
+        return state.well_a_catch_latched && state.well_a_cage_travel <= 0.01;
+    }), "C's spent dumpster empties into A's cage, re-arming A");
+    const auto rearmed = band.snapshot();
+    require(rearmed.well_a_cage_rubble_kg >= kWellRubbleKg - 1.0 &&
+            rearmed.well_c_dumpster_kg <= 1.0 && rearmed.well_a_skip_travel >= -0.01,
+            "re-armed, A's skip must be up in its catch, rubble in its cage");
+    std::cout << "PASS scraperx_sim Mega-Ascent Grade to 220m: seconds="
+              << band_ring220.simulation_time_seconds - band_start
+              << " deck14_y=" << band_deck14_top.player_position.y
+              << " ring176_y=" << band_ring176.player_position.y
+              << " ring220_y=" << band_ring220.player_position.y
+              << " rearmed=1\n";
 }
 
 int main() {

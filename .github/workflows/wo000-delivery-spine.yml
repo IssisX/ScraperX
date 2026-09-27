@@ -114,6 +114,9 @@ jobs:
             "PASS scraperx_sim S3 ride" \
             "PASS scraperx_sim C3 climb" \
             "PASS scraperx_sim Stack to deck 14" \
+            "PASS scraperx_sim Stack to Ring 176" \
+            "PASS scraperx_sim Stack to Ring 220" \
+            "PASS scraperx_sim Mega-Ascent Grade to 220m" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \
