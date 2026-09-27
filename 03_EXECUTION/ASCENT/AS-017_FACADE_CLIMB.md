@@ -56,12 +56,13 @@ captures remain required. Run `36280224425` used an 864×742 Fold-aspect
 window and hit the 900-second bound; the later docs-only run `36285233929`
 hit the same bound. A smaller `--resolution` window alone did not reduce
 Godot's internal 2160×1856 canvas viewport: a local rendered launch still
-reported 2161×1856. The next candidate temporarily sets both the design
-viewport and window to 432×371 for this one CPU-rendered route, then restores
+reported 2161×1856. The subsequent candidate temporarily set both the design
+viewport and window to 432×371 for this one CPU-rendered route, then restored
 the shipped project settings before subsequent gates and APK export. A local
-launch confirmed a 432×371 viewport; full rendered traversal remains unproven.
-Input frames stay at 30 FPS, native physics at 90 Hz, and all six captures
-remain required. Default and regression captures retain their larger windows.
+launch confirmed a 432×371 viewport; full rendered traversal was still
+unproven at that checkpoint. Input frames stayed at 30 FPS, native physics at
+90 Hz, and all six captures remained required. Default and regression captures
+retained their larger windows.
 Failed-run logs and available captures remain diagnostics, distinct from a
 published APK. Milestone logs expose progress even without screenshots.
 
@@ -69,6 +70,10 @@ published APK. Milestone logs expose progress even without screenshots.
 
 Gameplay source `13e1146b8fcebeb4e8d7cd18087cfb26bf83a84e`, workflow
 `36280224425`, failed the continuous rendered touch step and produced no APK.
-The local native/headless +33 m observations above do not establish rendered
-delivery. This is the recorded result for that source; current candidate and
-artifact status remain in Start Here §2.
+The local native/headless +33 m observations above did not establish rendered
+delivery for that source. The later exact-source `baedf4562e04a8145f813538baffa14ee276a462`
+[run 36287329304](https://github.com/IssisX/ScraperX/actions/runs/36287329304)
+passed the continuous rendered grade-to-+33 m touch route, retained gates and
+Android ARM64 APK export. The earlier timeout discussion is historical, not a
+pending AS-017 gate. [Start Here](../../00_START_HERE.md) §2 owns the APK
+identity, checksum and device-execution boundary.
