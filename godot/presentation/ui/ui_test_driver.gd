@@ -964,6 +964,7 @@ func _stack_c2(device: int) -> bool:
 		return _fail("CLIMB did not mantle onto C2 cabinet (y %.2f)" % _position().y)
 	if not await _walk_to(device, Vector2(22.0, -138.6), 0.05, 3.0):
 		return _fail("step to cabinet north edge stalled")
+	await _face(Vector2(0.0, -1.0))
 	await _seconds(0.3)
 	_jump(device)
 	_move(device, 0.4)
