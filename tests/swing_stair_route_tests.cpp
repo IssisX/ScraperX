@@ -322,12 +322,18 @@ int main(int argc, char **argv) {
     if(mode==2 && x==-10.0) {
       const auto checkpoint=s.snapshot();
       const double checkpoint_front=front();
-      if(checkpoint.support_entity_id!=2600 || !checkpoint.player_grounded) return 55;
+      if(checkpoint.support_entity_id!=2600 || !checkpoint.player_grounded) {
+        std::cerr<<"FAIL mode2 checkpoint was not grounded on stair\n"; return 55;
+      }
       (void)s.set_facing(0,1); (void)s.request_jump(); (void)s.set_move_input(0,1);
       wait(s,1.0); (void)s.set_move_input(0,0);
       const double abandoned_front=front(); report(s,"ABANDONED");
-      if(abandoned_front<checkpoint_front+.05) return 56;
-      if(!wait_for(s,10,[](const Snapshot &v){return v.death_count==1 && v.player_grounded;})) return 54;
+      if(abandoned_front<checkpoint_front+.05) {
+        std::cerr<<"FAIL mode2 receiver did not move after abandoning stair\n"; return 56;
+      }
+      if(!wait_for(s,10,[](const Snapshot &v){return v.death_count==1 && v.player_grounded;})) {
+        std::cerr<<"FAIL mode2 fall did not restore checkpoint\n"; return 54;
+      }
       report(s,"STAIR_FALL_RESTORED");
       std::cout<<"CHECKPOINT_FRONT "<<checkpoint_front<<" ABANDONED_FRONT "<<abandoned_front<<" RESTORED_FRONT "<<front()<<std::endl;
       const auto restored=s.snapshot();
@@ -335,7 +341,9 @@ int main(int argc, char **argv) {
       const double restore_dy=restored.player_position.y-checkpoint.checkpoint_position.y;
       const double restore_dz=restored.player_position.z-checkpoint.checkpoint_position.z;
       if(front()>checkpoint_front+.05 || restored.death_count!=1 ||
-         std::sqrt(restore_dx*restore_dx+restore_dy*restore_dy+restore_dz*restore_dz)>.15) return 50;
+         std::sqrt(restore_dx*restore_dx+restore_dy*restore_dy+restore_dz*restore_dz)>.15) {
+        std::cerr<<"FAIL mode2 restored receiver or checkpoint diverged\n"; return 50;
+      }
     }
   }
   report(s,"STAIR_TOP");std::cout<<"PAD_FRONT "<<front()<<std::endl; wait(s,.3); report(s,"TOP_SETTLED");

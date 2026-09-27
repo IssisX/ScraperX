@@ -88,10 +88,13 @@ jobs:
             # are unavailable. Keep the exact failing test and nearby output.
             python3 - <<'PY'
           from pathlib import Path
+          import re
           lines = Path('artifacts/native-tests.log').read_text().splitlines()
           failures = [i for i, line in enumerate(lines) if '***Failed' in line or '***Timeout' in line]
           for index in failures[:4]:
-              message = '\n'.join(lines[max(0, index - 1):min(len(lines), index + 16)])
+              end = next((i for i in range(index + 1, len(lines))
+                          if re.match(r'^\s*Start\s+\d+:', lines[i])), len(lines))
+              message = '\n'.join(lines[max(0, index - 1):index + 1] + lines[max(index + 1, end - 16):end])
               escaped = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
               print(f'::error title=Native test failure::{escaped}')
           if not failures:
