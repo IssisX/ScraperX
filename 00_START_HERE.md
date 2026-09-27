@@ -63,3 +63,11 @@ The owner subsequently selected **mixed parkour and machines** and directed deve
 Publish code candidates to `ChatGPT` one at a time, without overlapping APK candidates or overwriting another model's branch work. Check the remote head before publication. Follow the exact SHA's workflow to terminal status and verify its required proof steps and APK artifact. A timer, old green run, document update or fixture proof is not completion.
 
 Distinguish implemented, built, APK produced, installed, executed, observed and verified on Fold. Current-source desktop proof cannot establish device behavior. Stop at the authorized slice.
+
+## 6. Paused checkpoint — 2026-09-27 UTC
+
+The owner requested a clean stopping point. The +66 m goal is paused, not complete. Published gameplay remains `13e1146b8fcebeb4e8d7cd18087cfb26bf83a84e`; local native/headless touch proof reaches supported +33 m. [Workflow 36280224425](https://github.com/IssisX/ScraperX/actions/runs/36280224425) was still running at the checkpoint, so rendered/Android acceptance is pending and the current delivered APK remains the version recorded above.
+
+Unpublished +33→44 m swinging-stair work is saved locally in ignored `artifacts/s2-staging-20260927/`, including source, Simulation integration patch, geometry, scripts, native results and checksums. Read its `CHECKPOINT.md` first. The latest exit-waypoint repair compiled but has not run; the checkpoint test still needs correction for checkpoints on moving supports. No S2 touch/render proof exists and this stair is not active in the game. This snapshot replaces reliance on temporary files for resuming the work; it is local and is not included in the remote branch.
+
+On resume: establish the current candidate's CI/artifact result, then finish the staged stair route and checkpoint tests before publishing another gameplay candidate. The +44→66 m continuation and route choice are still outstanding.
