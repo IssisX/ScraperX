@@ -258,6 +258,18 @@ struct Stack final {
     kit::LeverIndex s2_chock_lever;
     kit::CatchIndex s2_catch;
     kit::CatchIndex s2_cage_catch;
+
+    // S3, the brake-override hoist: deck 8 -> deck 12.
+    kit::BodyIndex s3_cage;
+    kit::BodyIndex s3_car;
+    kit::BodyIndex s3_brake_body;
+    kit::BodyIndex s3_handle;
+    kit::GuideIndex s3_cage_guide;
+    kit::GuideIndex s3_car_guide;
+    kit::RopeIndex s3_rope;
+    kit::LeverIndex s3_brake_lever;
+    kit::CatchIndex s3_catch;
+    kit::CatchIndex s3_cage_catch;
 };
 
 void build_stack(kit::Kit &kit, Stack &stack);

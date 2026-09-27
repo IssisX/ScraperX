@@ -109,6 +109,11 @@ jobs:
             "PASS scraperx_sim S2 at rest" \
             "PASS scraperx_sim S2 ride" \
             "PASS scraperx_sim Stack to deck 6" \
+            "PASS scraperx_sim C2 climb" \
+            "PASS scraperx_sim S3 at rest" \
+            "PASS scraperx_sim S3 ride" \
+            "PASS scraperx_sim C3 climb" \
+            "PASS scraperx_sim Stack to deck 14" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \

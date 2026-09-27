@@ -2188,6 +2188,307 @@ S2Ride ride_s2(scraperx::sim::Simulation &simulation, const double seconds) {
     return ride;
 }
 
+// ---- C2: The East Machinery Hall & Pipe Rack (66 -> 88 m) -------------------
+
+[[maybe_unused]] constexpr double kDeck7Top = 77.0;
+constexpr double kDeck8Top = 88.0;
+
+struct C2Notes final {
+    bool ladder_in_reach_standing = true;
+};
+
+void report_c2(const scraperx::sim::Simulation &simulation, const char *leg) {
+    const auto state = simulation.snapshot();
+    std::cout << "C2 " << leg << ": at=" << state.player_position.x << "," << state.player_position.y << ","
+              << state.player_position.z << " grounded=" << state.player_grounded
+              << " traversal=" << int(state.traversal_state) << " support=" << state.support_entity_id
+              << " ledge=" << state.ledge_available << " grip=" << state.grip_available << "\n";
+}
+
+bool climb_c2(scraperx::sim::Simulation &simulation, C2Notes *notes = nullptr) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+
+    if (!walk_to(simulation, 22.0, -125.5, 20.0)) {
+        report_c2(simulation, "walk along south band to x=22");
+        return false;
+    }
+    if (!walk_to(simulation, 22.0, -135.7, 15.0, 0.08)) {
+        report_c2(simulation, "walk north to cabinet");
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().ledge_available) {
+        report_c2(simulation, "cabinet ledge offered");
+        return false;
+    }
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 2.0, [](const Snapshot &state) { return standing_above(state, 68.5); })) {
+        report_c2(simulation, "mantle onto cabinet");
+        return false;
+    }
+    (void)walk_to(simulation, 22.0, -138.6, 2.0, 0.05);
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.0, -0.4, 0.0, -1.0, 2.0,
+                    [](const Snapshot &state) { return state.traversal_state == TraversalState::Hanging; })) {
+        report_c2(simulation, "hang on duct lip");
+        return false;
+    }
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!wait_for(simulation, 2.5, [](const Snapshot &state) { return standing_above(state, 72.0); })) {
+        report_c2(simulation, "up onto duct");
+        return false;
+    }
+    if (!(walk_to(simulation, 22.0, -142.0, 6.0, 0.1) && walk_to(simulation, 22.0, -148.05, 6.0, 0.06))) {
+        report_c2(simulation, "along duct to ladder");
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().grip_available) {
+        report_c2(simulation, "wall ladder grip offered");
+        return false;
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    if (!is_climbing(simulation.snapshot()) ||
+        !hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 20.0,
+                    [](const Snapshot &state) { return standing_above(state, 77.5); })) {
+        report_c2(simulation, "up wall ladder onto deck 7");
+        return false;
+    }
+    if (!(walk_to(simulation, 22.0, -155.0, 10.0) && walk_to(simulation, 20.0, -160.20, 10.0, 0.08))) {
+        report_c2(simulation, "on deck 7 to pipe rack");
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().ledge_available) {
+        report_c2(simulation, "pipe rack ledge offered");
+        return false;
+    }
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 2.0, [](const Snapshot &state) { return standing_above(state, 79.5); })) {
+        report_c2(simulation, "mantle onto pipe rack");
+        return false;
+    }
+    if (!(walk_to(simulation, 18.0, -162.0, 6.0, 0.1) && walk_to(simulation, 10.0, -162.0, 15.0, 0.08))) {
+        report_c2(simulation, "along monorail beam");
+        return false;
+    }
+    (void)simulation.advance_frame(0.3);
+    const auto at_monorail_end = simulation.snapshot();
+    if (!at_monorail_end.player_grounded || at_monorail_end.player_position.y < 82.5) {
+        report_c2(simulation, "standing at monorail end");
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.3);
+    if (notes != nullptr) {
+        notes->ladder_in_reach_standing = simulation.snapshot().grip_available;
+    }
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.0, -0.3, 0.0, -1.0, 2.0,
+                    [](const Snapshot &state) { return is_climbing(state); })) {
+        report_c2(simulation, "catch davit ladder");
+        return false;
+    }
+    if (!hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 20.0,
+                    [](const Snapshot &state) { return standing_above(state, 88.5); })) {
+        report_c2(simulation, "up davit ladder onto deck 8");
+        return false;
+    }
+    if (!(walk_to(simulation, 10.0, -165.0, 6.0, 0.1) && walk_to(simulation, 10.0, -170.0, 6.0, 0.1))) {
+        report_c2(simulation, "walk off davit arm onto deck 8");
+        return false;
+    }
+    (void)simulation.advance_frame(0.5);
+    const auto on_deck8 = simulation.snapshot();
+    return on_deck8.player_grounded && on_deck8.player_position.y > kDeck8Top + 0.5 &&
+           on_deck8.support_entity_id == Simulation::kTowerEntityId;
+}
+
+// ---- S3: The brake-override counterweight hoist (88 -> 132 m) ----------------
+
+constexpr double kDeck12Top = 132.0;
+constexpr double kS3CageMassKg = 400.0;
+constexpr double kS3CarMassKg = 3500.0;
+constexpr double kS3Travel = 44.0;
+constexpr double kS3FloorTopUp = 132.05;
+
+bool take_s3_handle(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!walk_to(simulation, -8.0, -170.0, 20.0)) {
+        const auto p = simulation.snapshot().player_position;
+        std::cout << "DEBUG take_s3_handle failed walk to (-8, -170), pos=(" << p.x << "," << p.y << "," << p.z << ")\n";
+        return false;
+    }
+    if (!walk_to(simulation, -8.0, -164.0, 10.0)) {
+        const auto p = simulation.snapshot().player_position;
+        std::cout << "DEBUG take_s3_handle failed walk to (-8, -164), pos=(" << p.x << "," << p.y << "," << p.z << ")\n";
+        return false;
+    }
+    if (!walk_to(simulation, -8.0, -157.6, 10.0, 0.08)) {
+        const auto p = simulation.snapshot().player_position;
+        std::cout << "DEBUG take_s3_handle failed walk to (-8, -157.6), pos=(" << p.x << "," << p.y << "," << p.z << ")\n";
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.5);
+    const auto facing = simulation.snapshot();
+    if (facing.carry_target_entity_id != Simulation::kStackS3HandleEntityId || facing.carry_target_kind != 2) {
+        std::cout << "DEBUG take_s3_handle target_id=" << facing.carry_target_entity_id
+                  << " kind=" << facing.carry_target_kind << "\n";
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    return simulation.snapshot().carrying_entity_id == Simulation::kStackS3HandleEntityId;
+}
+
+bool s3_handle_at_rest(const scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    const auto at = simulation.kit_body_position(simulation.kit_body_index(Simulation::kStackS3HandleEntityId));
+    return std::abs(at.x - (-8.00)) <= 0.15 && std::abs(at.y - (88.05 + 1.95)) <= 0.10 &&
+           std::abs(at.z - (-158.00)) <= 0.15 && simulation.snapshot().carrying_entity_id == 0;
+}
+
+struct S3Ride final {
+    bool reached_top = false;
+    bool rode_on_cage = true;
+    double seconds = 0.0;
+    double worst_margin_j = std::numeric_limits<double>::infinity();
+};
+
+S3Ride ride_s3(scraperx::sim::Simulation &simulation, const double seconds) {
+    using scraperx::sim::Simulation;
+    S3Ride ride;
+    const double start = simulation.snapshot().simulation_time_seconds;
+    const double cage_y0 = kit_y(simulation, Simulation::kStackS3CageEntityId);
+    const double rider_y0 = simulation.snapshot().player_position.y;
+    const auto ticks = static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (std::uint32_t tick = 0; tick < ticks && !ride.reached_top; ++tick) {
+        (void)simulation.set_move_input(0.0, 0.0);
+        (void)simulation.set_facing(0.0, -1.0);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = simulation.snapshot();
+        const auto stack = simulation.stack_state();
+        const double rise = kit_y(simulation, Simulation::kStackS3CageEntityId) - cage_y0;
+        const double rider_rise = state.player_position.y - rider_y0;
+        const double payload_gained = (kS3CageMassKg + 80.0) * kGravity * rider_rise;
+        const double released = kS3CarMassKg * kGravity * rise;
+        if (rise > 0.05) {
+            ride.worst_margin_j = std::min(ride.worst_margin_j, released - payload_gained);
+            if (state.support_entity_id != Simulation::kStackS3CageEntityId) {
+                ride.rode_on_cage = false;
+            }
+        }
+        if (stack.s3_cage_travel >= kS3Travel - 0.10) {
+            ride.reached_top = true;
+            ride.seconds = state.simulation_time_seconds - start;
+            (void)simulation.request_set_down();
+            (void)simulation.advance_frame(0.2);
+            break;
+        }
+    }
+    return ride;
+}
+
+// ---- C3: The Crown Trusses & High Riser Ladder (132 -> 154 m) ---------------
+
+[[maybe_unused]] constexpr double kDeck13Top = 143.0;
+constexpr double kDeck14Top = 154.0;
+
+bool climb_c3(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+
+    if (!walk_to(simulation, -10.5, -171.0, 10.0, 0.1)) {
+        std::cout << "DEBUG climb_c3 failed walk to (-10.5, -171), pos=("
+                  << simulation.snapshot().player_position.x << ","
+                  << simulation.snapshot().player_position.y << ","
+                  << simulation.snapshot().player_position.z << ")\n";
+        return false;
+    }
+    if (!walk_to(simulation, -10.5, -145.0, 20.0, 0.1)) {
+        std::cout << "DEBUG climb_c3 failed walk to (-10.5, -145), pos=("
+                  << simulation.snapshot().player_position.x << ","
+                  << simulation.snapshot().player_position.y << ","
+                  << simulation.snapshot().player_position.z << ")\n";
+        return false;
+    }
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().ledge_available) {
+        std::cout << "DEBUG climb_c3 ledge not available at (-10.5, -145), pos=("
+                  << simulation.snapshot().player_position.x << ","
+                  << simulation.snapshot().player_position.y << ","
+                  << simulation.snapshot().player_position.z << ")\n";
+        return false;
+    }
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 2.0, [](const Snapshot &state) { return standing_above(state, 138.0); })) {
+        std::cout << "DEBUG climb_c3 wait_for standing_above 138.0 failed\n";
+        return false;
+    }
+    if (!walk_to(simulation, -10.5, -135.85, 6.0, 0.08)) {
+        std::cout << "DEBUG climb_c3 failed walk to (-10.5, -135.85), pos=("
+                  << simulation.snapshot().player_position.x << ","
+                  << simulation.snapshot().player_position.y << ","
+                  << simulation.snapshot().player_position.z << ")\n";
+        return false;
+    }
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().grip_available) {
+        std::cout << "DEBUG climb_c3 grip not available at (-10.5, -135.85), pos=("
+                  << simulation.snapshot().player_position.x << ","
+                  << simulation.snapshot().player_position.y << ","
+                  << simulation.snapshot().player_position.z << ")\n";
+        return false;
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    if (!is_climbing(simulation.snapshot()) ||
+        !hold_stick(simulation, 0.0, 1.0, 0.0, 1.0, 20.0,
+                    [](const Snapshot &state) { return standing_above(state, 143.5); })) {
+        std::cout << "DEBUG climb_c3 ladder to deck 13 failed, pos=("
+                  << simulation.snapshot().player_position.x << ","
+                  << simulation.snapshot().player_position.y << ","
+                  << simulation.snapshot().player_position.z << ")\n";
+        return false;
+    }
+    if (!walk_to(simulation, -6.0, -133.85, 6.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().grip_available) {
+        return false;
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    if (!is_climbing(simulation.snapshot()) ||
+        !hold_stick(simulation, 0.0, 1.0, 0.0, 1.0, 30.0,
+                    [](const Snapshot &state) { return standing_above(state, 154.5); })) {
+        return false;
+    }
+    if (!(walk_to(simulation, -6.0, -130.0, 4.0, 0.1) &&
+          walk_to(simulation, -6.0, -128.2, 4.0, 0.1) &&
+          walk_to(simulation, -10.5, -128.2, 6.0, 0.1))) {
+        return false;
+    }
+    (void)simulation.advance_frame(0.5);
+    const auto on_deck14 = simulation.snapshot();
+    return on_deck14.player_grounded && on_deck14.player_position.y > kDeck14Top + 0.5 &&
+           on_deck14.support_entity_id == Simulation::kTowerEntityId;
+}
+
 void run_stack() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -2465,6 +2766,102 @@ void run_stack() {
     std::cout << "PASS scraperx_sim Stack to deck 6: seconds="
               << band_deck6_top.simulation_time_seconds - band_start
               << " deck6_y=" << band_deck6_top.player_position.y << "\n";
+
+    // C2 climb: from Deck 6 South band up to Deck 8 North band
+    Simulation c2_sim(InitialSpawn::Deck6South);
+    require(c2_sim.advance_frame(1.0).accepted, "C2 settle interval must be accepted");
+    const double c2_start = c2_sim.snapshot().simulation_time_seconds;
+    C2Notes c2_notes;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    const bool c2_climbed = climb_c2(c2_sim, &c2_notes);
+    g_path_watch.armed = false;
+    require(c2_climbed, "C2 must carry a climber from deck 6 to deck 8");
+    require(g_path_watch.worst <= 0.15,
+            "climbing C2, the body must never move more than 0.15 m sideways in one tick");
+    require(!c2_notes.ladder_in_reach_standing,
+            "the davit ladder on C2 must be out of reach standing on the monorail");
+    const auto c2_top = c2_sim.snapshot();
+    std::cout << "PASS scraperx_sim C2 climb: seconds=" << c2_top.simulation_time_seconds - c2_start
+              << " deck8_y=" << c2_top.player_position.y << " ladder_needs_leap=1\n";
+
+    // S3 at rest: left alone for 10 s, S3 waits as found
+    Simulation s3_idle(InitialSpawn::Deck8North);
+    require(s3_idle.advance_frame(10.0).accepted, "S3 idle interval must be accepted");
+    const auto s3_idle_state = s3_idle.stack_state();
+    std::cout << "S3 idle: travel=" << s3_idle_state.s3_cage_travel
+              << " latched=" << s3_idle_state.s3_brake_latched
+              << " handle=" << s3_handle_at_rest(s3_idle) << "\n";
+    require(std::abs(s3_idle_state.s3_cage_travel) <= 0.08 && s3_idle_state.s3_brake_latched &&
+                s3_handle_at_rest(s3_idle),
+            "left alone, S3 must wait as found with brake latched");
+    std::cout << "PASS scraperx_sim S3 at rest: cage_travel=" << s3_idle_state.s3_cage_travel
+              << " brake_latched=" << s3_idle_state.s3_brake_latched << "\n";
+
+    // S3 ride: board cage at deck 8, pull brake handle, ride 44 m to deck 12
+    Simulation s3_sim(InitialSpawn::Deck8North);
+    require(s3_sim.advance_frame(0.5).accepted, "S3 settle interval must be accepted");
+    require(take_s3_handle(s3_sim), "the player must walk from deck 8 into S3's cage and take hold of its trip handle");
+    const auto s3_rode = ride_s3(s3_sim, 25.0);
+    require(s3_rode.reached_top, "pulling S3's handle must carry the rider to deck 12");
+    require(s3_rode.rode_on_cage, "the rider must stand on S3's cage for the whole ride");
+    const auto s3_top_state = s3_sim.stack_state();
+    require(s3_top_state.s3_cage_peak_speed <= 2.6, "S3's governor must hold the cage to 2.5 m/s");
+    require(s3_rode.worst_margin_j >= 0.0, "S3 payload energy gain must not exceed source energy released");
+
+    // Walk off onto deck 12 North band
+    require(walk_to(s3_sim, -8.0, -164.0, 6.0) && walk_to(s3_sim, -8.0, -170.0, 6.0),
+            "the rider must walk off S3's cage over the upper gangway onto deck 12");
+    (void)s3_sim.advance_frame(0.5);
+    const auto on_deck12 = s3_sim.snapshot();
+    require(on_deck12.player_grounded && on_deck12.player_position.y > kDeck12Top + 0.5 &&
+                on_deck12.support_entity_id == Simulation::kTowerEntityId,
+            "the rider must stand on deck 12's north band");
+    const double s3_floor_y = kit_y(s3_sim, Simulation::kStackS3CageEntityId) + 0.10;
+    require(std::abs(s3_floor_y - kS3FloorTopUp) <= 0.05, "S3 floor must stop at 132.05 m");
+    std::cout << "PASS scraperx_sim S3 ride: ride_s=" << s3_rode.seconds
+              << " floor_y=" << s3_floor_y
+              << " peak_speed=" << s3_top_state.s3_cage_peak_speed
+              << " deck12_y=" << on_deck12.player_position.y << "\n";
+
+    // C3 climb: from Deck 12 to Deck 14 (154 m)
+    Simulation c3_sim(InitialSpawn::Deck12North);
+    require(c3_sim.advance_frame(1.0).accepted, "C3 settle interval must be accepted");
+    const double c3_start = c3_sim.snapshot().simulation_time_seconds;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    const bool c3_climbed = climb_c3(c3_sim);
+    g_path_watch.armed = false;
+    require(c3_climbed, "C3 must carry a climber from deck 12 to deck 14");
+    require(g_path_watch.worst <= 0.15,
+            "climbing C3, the body must never move more than 0.15 m sideways in one tick");
+    const auto c3_top = c3_sim.snapshot();
+    std::cout << "PASS scraperx_sim C3 climb: seconds=" << c3_top.simulation_time_seconds - c3_start
+              << " deck14_y=" << c3_top.player_position.y << "\n";
+
+    // Complete continuous Stack ascent in one unbroken run from Grade (0.0 m) to Deck 14 (+154.0 m)
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    require(climb_c2(band), "the Stack: up C2 to deck 8");
+    require(take_s3_handle(band), "the Stack: from deck 8 into S3's cage and take hold of its trip handle");
+    const auto band_s3_rode = ride_s3(band, 25.0);
+    require(band_s3_rode.reached_top, "the Stack: S3 carries the rider to deck 12");
+    require(walk_to(band, -8.0, -164.0, 6.0) && walk_to(band, -8.0, -170.0, 6.0),
+            "the Stack: off S3 onto deck 12 landing");
+    require(climb_c3(band), "the Stack: up C3 to deck 14 (Deck154)");
+    g_path_watch.armed = false;
+    require(g_path_watch.worst <= 0.15,
+            "the Stack: from yard to deck 14 the body must never move more than 0.15 m sideways in one tick");
+    const auto band_deck14_top = band.snapshot();
+    require(band_deck14_top.death_count == 0, "the Stack: from yard to deck 14 without dying");
+    require(band_deck14_top.player_grounded && band_deck14_top.player_position.y > kDeck14Top + 0.5,
+            "the Stack: standing on deck 14");
+    std::cout << "PASS scraperx_sim Stack to deck 14: seconds="
+              << band_deck14_top.simulation_time_seconds - band_start
+              << " deck14_y=" << band_deck14_top.player_position.y
+              << " pos=(" << band_deck14_top.player_position.x << ", "
+              << band_deck14_top.player_position.y << ", "
+              << band_deck14_top.player_position.z << ")\n";
 }
 
 int main() {

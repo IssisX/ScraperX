@@ -73,6 +73,8 @@ enum class InitialSpawn : std::uint8_t {
     Deck2South = 25,
     Deck4South = 26,
     Deck6South = 27,
+    Deck8North = 28,
+    Deck12North = 29,
 };
 
 // A world started at one of these spawns is the proving ground: it carries
@@ -204,6 +206,15 @@ struct StackState final {
     bool s2_chock_latched = false;
     bool s2_cage_latched = false;
     double s2_rope_tension = 0.0;
+
+    // S3, the brake-override hoist.
+    double s3_cage_travel = 0.0;
+    double s3_cage_peak_speed = 0.0;
+    double s3_car_travel = 0.0;
+    double s3_brake_angle = 0.0;
+    bool s3_brake_latched = false;
+    bool s3_cage_latched = false;
+    double s3_rope_tension = 0.0;
 };
 
 // Rubble spilled onto a static surface, piled where it landed.
@@ -475,6 +486,8 @@ public:
     // skip hoist.
     static constexpr std::uint64_t kStackFrameEntityId = 1020;
     static constexpr std::uint64_t kStackRouteEntityId = 1021;
+    static constexpr std::uint64_t kStackC2RouteEntityId = 1022;
+    static constexpr std::uint64_t kStackC3RouteEntityId = 1023;
     static constexpr std::uint64_t kStackS1CageEntityId = 2200;
     static constexpr std::uint64_t kStackS1BucketEntityId = 2201;
     static constexpr std::uint64_t kStackS1LeverEntityId = 2202;
@@ -486,6 +499,11 @@ public:
     static constexpr std::uint64_t kStackS2CartEntityId = 2212;
     static constexpr std::uint64_t kStackS2ChockEntityId = 2213;
     static constexpr std::uint64_t kStackS2HandleEntityId = 2214;
+    // S3, the brake-override elevator hoist.
+    static constexpr std::uint64_t kStackS3CageEntityId = 2220;
+    static constexpr std::uint64_t kStackS3CarEntityId = 2221;
+    static constexpr std::uint64_t kStackS3BrakeEntityId = 2222;
+    static constexpr std::uint64_t kStackS3HandleEntityId = 2223;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

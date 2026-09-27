@@ -222,6 +222,18 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_stack_s1_valve_angle);
     godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s1_catch_latched"),
                                 &ScraperXSimulation::is_stack_s1_catch_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_cage_travel"),
+                                &ScraperXSimulation::get_stack_s2_cage_travel);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_beam_angle"),
+                                &ScraperXSimulation::get_stack_s2_beam_angle);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s2_chock_latched"),
+                                &ScraperXSimulation::is_stack_s2_chock_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s3_cage_travel"),
+                                &ScraperXSimulation::get_stack_s3_cage_travel);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s3_brake_angle"),
+                                &ScraperXSimulation::get_stack_s3_brake_angle);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s3_brake_latched"),
+                                &ScraperXSimulation::is_stack_s3_brake_latched);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -681,6 +693,30 @@ double ScraperXSimulation::get_stack_s1_valve_angle() const {
 
 bool ScraperXSimulation::is_stack_s1_catch_latched() const {
     return simulation_->stack_state().s1_catch_latched;
+}
+
+double ScraperXSimulation::get_stack_s2_cage_travel() const {
+    return simulation_->stack_state().s2_cage_travel;
+}
+
+double ScraperXSimulation::get_stack_s2_beam_angle() const {
+    return simulation_->stack_state().s2_beam_angle;
+}
+
+bool ScraperXSimulation::is_stack_s2_chock_latched() const {
+    return simulation_->stack_state().s2_chock_latched;
+}
+
+double ScraperXSimulation::get_stack_s3_cage_travel() const {
+    return simulation_->stack_state().s3_cage_travel;
+}
+
+double ScraperXSimulation::get_stack_s3_brake_angle() const {
+    return simulation_->stack_state().s3_brake_angle;
+}
+
+bool ScraperXSimulation::is_stack_s3_brake_latched() const {
+    return simulation_->stack_state().s3_brake_latched;
 }
 
 } // namespace scraperx::bridge

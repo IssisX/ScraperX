@@ -658,6 +658,12 @@ private:
     case scraperx::sim::InitialSpawn::Deck6South:
         // On deck 6's south band, by S2's upper gangway.
         return {10.0, 67.2, -125.5};
+    case scraperx::sim::InitialSpawn::Deck8North:
+        // On deck 8's north band, where C2 lands.
+        return {10.0, 89.2, -170.0};
+    case scraperx::sim::InitialSpawn::Deck12North:
+        // On deck 12's north band, where S3 lands.
+        return {-8.0, 133.2, -170.0};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower
@@ -1342,8 +1348,25 @@ private:
                       JPH::RVec3(kStackCenterX, slab_y, kStackCenterZ + side * band_center));
             }
             for (const float side : {1.0F, -1.0F}) {
-                frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
-                      JPH::RVec3(kStackCenterX + side * band_center, slab_y, kStackCenterZ));
+                if (level == 7 && side > 0.0F) {
+                    // Level 7 East band has an equipment hatch / ladder well for C2 from Z = -148.70F to -145.00F:
+                    const float s_min_z = -145.00F;
+                    const float s_max_z = -133.00F;
+                    const float s_half_z = 0.5F * (s_max_z - s_min_z);
+                    const float s_center_z = 0.5F * (s_min_z + s_max_z);
+                    frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, s_half_z),
+                          JPH::RVec3(kStackCenterX + side * band_center, slab_y, s_center_z));
+
+                    const float n_min_z = -167.00F;
+                    const float n_max_z = -148.70F;
+                    const float n_half_z = 0.5F * (n_max_z - n_min_z);
+                    const float n_center_z = 0.5F * (n_min_z + n_max_z);
+                    frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, n_half_z),
+                          JPH::RVec3(kStackCenterX + side * band_center, slab_y, n_center_z));
+                } else {
+                    frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
+                          JPH::RVec3(kStackCenterX + side * band_center, slab_y, kStackCenterZ));
+                }
             }
         }
 
@@ -3912,6 +3935,13 @@ StackState Simulation::stack_state() const noexcept {
     out.s2_chock_latched = kit.catch_latched(stack.s2_catch);
     out.s2_cage_latched = kit.catch_latched(stack.s2_cage_catch);
     out.s2_rope_tension = kit.rope_tension(stack.s2_rope);
+    out.s3_cage_travel = kit.guide_travel(stack.s3_cage_guide);
+    out.s3_cage_peak_speed = kit.guide_peak_speed(stack.s3_cage_guide);
+    out.s3_car_travel = kit.guide_travel(stack.s3_car_guide);
+    out.s3_brake_angle = kit.lever_angle(stack.s3_brake_lever);
+    out.s3_brake_latched = kit.catch_latched(stack.s3_catch);
+    out.s3_cage_latched = kit.catch_latched(stack.s3_cage_catch);
+    out.s3_rope_tension = kit.rope_tension(stack.s3_rope);
     return out;
 }
 
