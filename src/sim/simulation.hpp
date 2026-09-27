@@ -197,7 +197,7 @@ struct StackState final {
     bool s1_catch_latched = false;
     double s1_rope_tension = 0.0;
 
-    // S2, the rolling-ballast walking beam.
+    // S2, the walking beam hoist with fixed ballast cart.
     double s2_cage_travel = 0.0;
     double s2_cage_peak_speed = 0.0;
     double s2_cart_travel = 0.0;
@@ -493,7 +493,7 @@ public:
     static constexpr std::uint64_t kStackS1LeverEntityId = 2202;
     static constexpr std::uint64_t kStackS1ChainEntityId = 2203;
     static constexpr std::uint64_t kStackS1StrikerEntityId = 2204;
-    // S2, the rolling-ballast walking beam.
+    // S2, the walking beam hoist with fixed ballast cart.
     static constexpr std::uint64_t kStackS2CageEntityId = 2210;
     static constexpr std::uint64_t kStackS2BeamEntityId = 2211;
     static constexpr std::uint64_t kStackS2CartEntityId = 2212;

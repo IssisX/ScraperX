@@ -206,6 +206,14 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_well_a_catch_latched);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_rope_end_entity_id"),
                                 &ScraperXSimulation::get_well_a_rope_end_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_b_cage_travel"),
+                                &ScraperXSimulation::get_well_b_cage_travel);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_well_b_catch_latched"),
+                                &ScraperXSimulation::is_well_b_catch_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_b_rope_end_entity_id"),
+                                &ScraperXSimulation::get_well_b_rope_end_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_b_boom_angle"),
+                                &ScraperXSimulation::get_well_b_boom_angle);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_c_platform_travel"),
                                 &ScraperXSimulation::get_well_c_platform_travel);
     godot::ClassDB::bind_method(godot::D_METHOD("is_well_c_catch_latched"),
@@ -661,6 +669,22 @@ bool ScraperXSimulation::is_well_a_catch_latched() const {
 
 std::int64_t ScraperXSimulation::get_well_a_rope_end_entity_id() const {
     return static_cast<std::int64_t>(simulation_->snapshot().well_a_rope_end_entity_id);
+}
+
+double ScraperXSimulation::get_well_b_cage_travel() const {
+    return simulation_->snapshot().well_b_cage_travel;
+}
+
+bool ScraperXSimulation::is_well_b_catch_latched() const {
+    return simulation_->snapshot().well_b_catch_latched;
+}
+
+std::int64_t ScraperXSimulation::get_well_b_rope_end_entity_id() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().well_b_rope_end_entity_id);
+}
+
+double ScraperXSimulation::get_well_b_boom_angle() const {
+    return simulation_->snapshot().well_b_boom_angle;
 }
 
 double ScraperXSimulation::get_well_c_platform_travel() const {

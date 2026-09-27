@@ -2116,11 +2116,11 @@ bool climb_c1(scraperx::sim::Simulation &simulation, C1Notes *notes = nullptr) {
            on_deck4.support_entity_id == Simulation::kTowerEntityId;
 }
 
-// ---- Band 0, the Stack: S2, the rolling-ballast walking beam ----------------
+// ---- Band 0, the Stack: S2, the walking beam hoist with fixed ballast cart --
 
 constexpr double kDeck6Top = 66.0;
 constexpr double kS2CageMassKg = 300.0;
-constexpr double kS2CartMassKg = 3500.0;
+constexpr double kS2CartMassKg = 1500.0; // West arm pig-iron ballast cart (beam total 2400 kg incl 900 kg frame)
 constexpr double kS2Travel = 22.0;
 constexpr double kS2FloorTopUp = 66.05;
 

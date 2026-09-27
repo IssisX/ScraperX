@@ -245,7 +245,7 @@ struct Stack final {
     kit::PoolIndex s1_tank;
     kit::PipeIndex s1_fill;
 
-    // S2, the rolling-ballast walking beam: deck 4 -> deck 6.
+    // S2, the walking beam hoist with fixed ballast cart: deck 4 -> deck 6.
     kit::BodyIndex s2_cage;
     kit::BodyIndex s2_beam;
     kit::BodyIndex s2_cart;

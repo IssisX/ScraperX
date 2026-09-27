@@ -597,19 +597,20 @@ void build_c1(std::vector<Part> &route) {
     }
 }
 
-// ---- S2, the rolling-ballast walking beam (archetype 18 mutated) -------------
+// ---- S2, the walking beam hoist with fixed ballast cart (archetype 18 mutated)
 //
 // Bridges Deck 4 (44.0 m) to Deck 6 (66.0 m) across the southern edge of the
 // 34 m central shaft. A 24 m steel walking beam is balanced on a central
 // trunnion fulcrum at +55 m (kS2Pivot).
 // At rest, the walking beam is held tilted by a safety chock catch: its west
-// arm (carrying a 3500 kg pig-iron ballast cart) sits high at deck 6 elevation
-// (Y = 66.05), while its east arm sits low at deck 4 (Y = 44.05).
+// arm (carrying a 1500 kg pig-iron ballast cart, 2400 kg total beam assembly)
+// sits high at deck 6 elevation (Y = 66.05), while its east arm sits low at
+// deck 4 (Y = 44.05).
 // A tow cable runs from the west arm over headframe sheaves to a passenger cage
 // at the east arm.
 // Inside the cage, a trip handle hangs on a lanyard to the chock lever.
 // When the rider boards at deck 4 and pulls the lanyard, the catch releases:
-// the 3500 kg ballast cart drives the walking beam down, tilting the massive
+// the 1500 kg ballast cart drives the walking beam down, tilting the massive
 // girder across the atrium. As the west arm sinks 22 m, the tow rope hoists
 // the cage 22 m up to deck 6 under its 2.5 m/s brake governor. At deck 6,
 // safety dogs engage, and the rider walks off across the upper gangway onto

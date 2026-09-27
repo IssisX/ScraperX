@@ -127,6 +127,11 @@ public:
     [[nodiscard]] double get_well_a_cage_travel() const;
     [[nodiscard]] bool is_well_a_catch_latched() const;
     [[nodiscard]] std::int64_t get_well_a_rope_end_entity_id() const;
+    // Stage B, the derrick boom hoist, read back.
+    [[nodiscard]] double get_well_b_cage_travel() const;
+    [[nodiscard]] bool is_well_b_catch_latched() const;
+    [[nodiscard]] std::int64_t get_well_b_rope_end_entity_id() const;
+    [[nodiscard]] double get_well_b_boom_angle() const;
     // Stage C, the debris chute, read back.
     [[nodiscard]] double get_well_c_platform_travel() const;
     [[nodiscard]] bool is_well_c_catch_latched() const;
