@@ -763,9 +763,10 @@ func _rig(device: int) -> bool:
 
 
 func _well_stage_b(device: int) -> bool:
-	if not (await _walk_to(device, Vector2(-9.4, -131.2), 0.2, 4.0) and \
-			await _walk_to(device, Vector2(-7.6, -131.2), 0.2, 4.0)):
-		return _fail("step across from A's parked cage into B's stalled")
+	if _position().x < -8.5:
+		if not (await _walk_to(device, Vector2(-9.4, -131.2), 0.2, 4.0) and \
+				await _walk_to(device, Vector2(-7.6, -131.2), 0.2, 4.0)):
+			return _fail("step across from A's parked cage into B's stalled")
 	if not await _walk_to(device, Vector2(-6.3, -130.35), 0.2, 4.0):
 		return _fail("the step to Stage B cleat stalled")
 	await _face(Vector2(0.0, 1.0))
@@ -836,9 +837,10 @@ func _boom(device: int) -> bool:
 
 
 func _well_stage_c(device: int) -> bool:
-	if not (await _walk_to(device, Vector2(-6.2, -131.9), 0.2, 4.0) and \
-			await _walk_to(device, Vector2(-4.4, -131.9), 0.2, 4.0)):
-		return _fail("step across onto Stage C platform stalled")
+	if _position().x < -5.0:
+		if not (await _walk_to(device, Vector2(-6.2, -131.9), 0.2, 4.0) and \
+				await _walk_to(device, Vector2(-4.4, -131.9), 0.2, 4.0)):
+			return _fail("step across onto Stage C platform stalled")
 	if not await _walk_to(device, Vector2(-4.4, -131.6), 0.2, 4.0):
 		return _fail("the step to the rebar's handle stalled")
 	await _face(Vector2(0.0, 1.0))
