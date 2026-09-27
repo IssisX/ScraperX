@@ -1,6 +1,6 @@
 # AS-019 — upper counterweight and exterior climb
 
-**Status: exact-source desktop route and Android APK green; Fold installation/play/performance unverified.** Profile: `MACRO-TRAVERSAL-STRICT`. This slice begins on the proven +44 m tower ring and ends only when the normal player stands on the native +66 m ring. The ordinary tower staircase remains an optional fallback; it cannot satisfy this slice's route proof.
+**Status: exact-source desktop route and Android APK tests passed; overall layout rejected; Fold installation/play/performance unverified.** Profile: `MACRO-TRAVERSAL-STRICT`. This slice begins on the proven +44 m tower ring and ends only when the normal player stands on the native +66 m ring. The owner's latest correction rejects the ordinary continuous ramp/stair backup. Its removal is pending; the previous tests do not prove the repaired layout.
 
 ## Physical route
 
@@ -8,7 +8,7 @@ The player walks east along the +44 m front band to a 4 m wide fixed approach at
 
 The weight descends into a wide visible 1.6 m yielding timber bed whose initial top is +45.3 m. Its chosen constitutive values are 15 kN yield force, 200 kN/m elastic stiffness, and 1.5 kN·s/m damping. That bed is the energy sink; guides and sheaves transmit force and reactions into the tower. Its consumed stroke and work counters are captured with the checkpoint. A slow upper catch seats the platform at body Y=54.76 m, leaving its walking surface nearly flush with the +55 m fixed connector. The upper exit goes back to the real +55 m ring without an airborne leap. The two connector decks stay outside the platform's swept volume. Every static or moving part visible to the player is a Kit collision part.
 
-From the +55 m ring the player traverses east to a compact service cabinet, catches the lip of a suspended duct, shimmies, and climbs a narrow vent/fascia onto the +66 m ring. This exterior path is a real use of the existing jump, hang, shimmy and climb verbs. It is authored away from the alternating ordinary stairwell. At +44 m the player chooses the exposed lift or the retained internal stairs; after the lift, the exterior parkour is the authored continuation. Neither choice disables the other.
+From the +55 m ring the player traverses east to a compact service cabinet, catches the lip of a suspended duct, shimmies, and climbs a narrow vent/fascia onto the +66 m ring. This exterior path uses the existing jump, hang, shimmy and climb verbs. The prior build also offered internal sloped flights at +44 m; that continuous bypass is now rejected and pending removal. The lift followed by exterior parkour is the authored continuation. A meaningful alternative must be designed and proven through parkour or mechanisms; the old bypass no longer satisfies that requirement.
 
 ## Closure and falsifiers
 
