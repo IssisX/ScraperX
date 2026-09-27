@@ -2303,7 +2303,7 @@ bool climb_c2(scraperx::sim::Simulation &simulation, C2Notes *notes = nullptr) {
         report_c2(simulation, "up davit ladder onto deck 8");
         return false;
     }
-    if (!(walk_to(simulation, 10.0, -165.0, 6.0, 0.1) && walk_to(simulation, 10.0, -170.0, 6.0, 0.1))) {
+    if (!(walk_to(simulation, 10.0, -165.0, 6.0, 0.1) && walk_to(simulation, 10.0, -171.2, 6.0, 0.1))) {
         report_c2(simulation, "walk off davit arm onto deck 8");
         return false;
     }

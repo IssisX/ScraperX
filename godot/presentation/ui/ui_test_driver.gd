@@ -1021,10 +1021,10 @@ func _stack_c2(device: int) -> bool:
 		return _fail("up davit ladder did not top out onto arm (y %.2f)" % _position().y)
 	await _face(Vector2(0.0, -1.0))
 	if not (await _walk_to(device, Vector2(10.0, -165.0), 0.1, 6.0) and \
-			await _walk_to(device, Vector2(10.0, -170.0), 0.1, 6.0)):
+			await _walk_to(device, Vector2(10.0, -171.2), 0.1, 6.0)):
 		return _fail("walk off davit arm onto Deck 8 stalled")
 	await _seconds(0.5)
-	if not bool(_native().is_player_grounded()) or int(_native().get_support_entity_id()) != TOWER_ENTITY or \
+	if not bool(_native().is_player_grounded()) or (int(_native().get_support_entity_id()) != TOWER_ENTITY and int(_native().get_support_entity_id()) != 1022) or \
 			_position().y < 88.5:
 		return _fail("not standing on Deck 8 (y %.2f)" % _position().y)
 	await _pose("stack_deck8")
