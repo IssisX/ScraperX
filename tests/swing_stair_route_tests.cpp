@@ -320,11 +320,16 @@ int main(int argc, char **argv) {
   auto front=[&](){return 44.9-.875-s.kit_body_position(pad).y;};
   if(!walk_to(s,-16.4,-122.1,8,.1)) {report(s,"STAIR_FOOT_FAIL");return 49;} report(s,"STAIR_FOOT"); for(double x : {-15.2,-14.0,-12.0,-10.0,-8.0,-5.0,-2.7}) { if(!walk_to(s,x,-122.1,25,.1)) {report(s,"STAIR_CLIMB_FAIL");return 49;} report(s,"STAIR_X");
     if(mode==2 && x==-10.0) {
+      // The moving tread can leave the walker airborne for a few frames at
+      // this horizontal waypoint. Commit a checkpoint only after real contact.
+      if (!wait_for(s, 2.0, [](const Snapshot &v) {
+            return v.player_grounded && v.support_entity_id == 2600;
+          })) {
+        report(s,"STAIR_CHECKPOINT_CONTACT_FAIL");
+        std::cerr<<"FAIL mode2 never regained moving-stair contact\n"; return 55;
+      }
       const auto checkpoint=s.snapshot();
       const double checkpoint_front=front();
-      if(checkpoint.support_entity_id!=2600 || !checkpoint.player_grounded) {
-        std::cerr<<"FAIL mode2 checkpoint was not grounded on stair\n"; return 55;
-      }
       (void)s.set_facing(0,1); (void)s.request_jump(); (void)s.set_move_input(0,1);
       wait(s,1.0); (void)s.set_move_input(0,0);
       const double abandoned_front=front(); report(s,"ABANDONED");
