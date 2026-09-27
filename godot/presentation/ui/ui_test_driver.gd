@@ -1519,9 +1519,13 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 		var forward := Vector2(-sin(yaw), -cos(yaw))
 		var right := Vector2(cos(yaw), -sin(yaw))
 		var v := Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.25, 1.0)
-		if device == InputRouter.Device.KEYBOARD_MOUSE and to.length() < 0.8:
-			frame += 1
-			v = v.normalized() if frame % 6 < 2 else Vector2.ZERO
+		if device == InputRouter.Device.KEYBOARD_MOUSE:
+			var lateral := to.dot(right)
+			if absf(lateral) > 0.04:
+				v.x = signf(lateral) * 0.5
+			if to.length() < 0.8:
+				frame += 1
+				v = v.normalized() if frame % 6 < 2 else Vector2.ZERO
 		_move_dir(device, v)
 		await get_tree().process_frame
 		waited += get_process_delta_time()
