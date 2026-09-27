@@ -325,6 +325,7 @@ func _touch_stair() -> bool:
 		if not await _walk_to(device, point, 0.08, 20.0):
 			return _fail("stair handle approach %s" % _position())
 	await _face(Vector2(0, 1))
+	_main._pitch = -0.75
 	await _seconds(0.5)
 	await _pose("stair_handle_ready")
 	if not await _offered(&"pick_up", "GRAB") or int(_native().get_carry_target_entity_id()) != 2602:
@@ -341,6 +342,8 @@ func _touch_stair() -> bool:
 	if int(_native().get_carrying_entity_id()) == 2602:
 		_act(device)
 	await _seconds(0.1)
+	await _face(Vector2(1, 0))
+	_main._pitch = -0.4
 	await _pose("stair_released")
 	if not await _walk_to(device, Vector2(-16.4, -122.1), 0.1, 8.0):
 		return _fail("stair foot %s" % _position())
@@ -351,6 +354,7 @@ func _touch_stair() -> bool:
 		if int(_native().get_support_entity_id()) == 2600:
 			used_flight = true
 		if x == -10.0:
+			_main._pitch = -0.55
 			await _pose("stair_climb")
 	if not used_flight:
 		return _fail("player never stood on the moving flight")
@@ -361,11 +365,14 @@ func _touch_stair() -> bool:
 	var exit_x := (stair_pose * exit_local).x
 	if not await _walk_to(device, Vector2(exit_x, -122.4), 0.1, 4.0):
 		return _fail("stair landing exit %s" % _position())
+	_main._pitch = -0.4
 	await _pose("stair_exit_ready")
 	_tap(1, _center(&"jump"))
 	if not await _walk_to(device, Vector2(exit_x, -125.5), 0.1, 6.0):
 		return _fail("stair deck jump %s" % _position())
 	await _seconds(0.5)
+	await _face(Vector2(0, 1))
+	_main._pitch = -0.4
 	await _pose("stair_arrival")
 	if not _standing_above(44.5) or int(_native().get_support_entity_id()) != 11 \
 			or int(_native().get_death_count()) != 0:
