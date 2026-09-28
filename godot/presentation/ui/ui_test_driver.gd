@@ -929,8 +929,10 @@ func _debris(device: int) -> bool:
 
 
 func _stack_s2(device: int) -> bool:
+	# Face each leg. The first approach is diagonal; keeping that yaw onto the
+	# crossover walks a keyboard into the west rail.
 	if not await _go(device, Vector2(10.0, -130.5), 0.15, 15.0) or \
-			not await _walk_to(device, Vector2(10.0, -137.6), 0.10, 15.0):
+			not await _go(device, Vector2(10.0, -137.6), 0.15, 15.0):
 		return _fail("walk across crossover gangway into S2 cage stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
 	if not await _offered(&"pick_up", "GRAB"):
