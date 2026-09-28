@@ -1149,9 +1149,9 @@ func _stack_upper(device: int) -> bool:
 		return false
 	var at_deck14 := _position().y
 	var worst_step := _stop_watch(body)
-	# One render frame can carry up to 0.1 s of a mantle. That is not a tick
-	# snap — the native suite still rejects more than 0.15 m in one tick.
-	if worst_step > 0.55:
+	# Fixed 60 fps vs a 90 Hz sim: a frame sometimes carries two ticks. Two
+	# legal 0.15 m ticks are 0.30 m on screen. That is not a teleport.
+	if worst_step > 0.36:
 		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
@@ -1376,10 +1376,10 @@ func _stack(device: int) -> bool:
 		return false
 	var at_ring220 := _position().y
 
-	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
-	# faster than a sprint; only a snap moves the view that far.
+	# Fixed 60 fps vs a 90 Hz sim: a frame sometimes carries two ticks. Two
+	# legal 0.15 m ticks are 0.30 m on screen. That is not a teleport.
 	var worst_step := _stop_watch(body)
-	if worst_step > 0.25:
+	if worst_step > 0.36:
 		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step,
 			str(body.get("at", ""))])
 	if int(_native().get_death_count()) != 0:
