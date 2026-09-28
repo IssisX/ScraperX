@@ -240,7 +240,7 @@
           '<div>Branch<b>' + esc(model.branch) + '</b></div>' +
           '<div>APK<b class="size">—</b></div>' +
           '<div>Build<b class="sha">—</b></div>' +
-          '<div>Published<b class="published">—</b></div>' +
+          '<div>Built<b class="built">—</b></div>' +
         '</div>' +
         '<a class="download" aria-disabled="true">Download ' + esc(model.file) + '</a>' +
         '<a class="details" target="_blank" rel="noopener">Open successful build ↗</a>' +
@@ -263,30 +263,45 @@
         const release = await releaseResponse.json();
         const assets = new Map((release.assets || []).map(a => [a.name, a]));
 
+        function publishedSourcePrefix(label) {
+          const row = String(release.body || '')
+            .split('\n')
+            .find(line => line.trimStart().startsWith('| ' + label + ' |'));
+          if (!row) return '';
+          const match = row.match(/[0-9a-f]{12}/i);
+          return match ? match[0].toLowerCase() : '';
+        }
+
         await Promise.all(models.map(async model => {
           const root = document.getElementById('card-' + model.label);
           const status = root.querySelector('.status');
           const download = root.querySelector('.download');
           const asset = assets.get(model.file);
+          const publishedPrefix = publishedSourcePrefix(model.label);
 
-          let run = null;
+          let runs = [];
           try {
             const response = await fetch(
               'https://api.github.com/repos/' + repo + '/actions/runs?branch=' +
-                encodeURIComponent(model.branch) + '&status=success&per_page=1',
+                encodeURIComponent(model.branch) + '&status=success&per_page=20',
               { headers: { 'Accept': 'application/vnd.github+json' }, cache: 'no-store' }
             );
             if (response.ok) {
               const data = await response.json();
-              run = data.workflow_runs && data.workflow_runs[0];
+              runs = data.workflow_runs || [];
             }
           } catch (_) {}
+
+          const newestSuccessfulRun = runs[0] || null;
+          const publishedRun = publishedPrefix
+            ? runs.find(candidate =>
+                String(candidate.head_sha || '').toLowerCase().startsWith(publishedPrefix))
+            : null;
 
           if (asset) {
             status.textContent = 'ready';
             status.className = 'status ok';
             root.querySelector('.size').textContent = bytes(asset.size);
-            root.querySelector('.published').textContent = ago(asset.updated_at);
             download.href = stableDownload(model.file);
             download.removeAttribute('aria-disabled');
           } else {
@@ -295,19 +310,25 @@
           }
 
           const details = root.querySelector('.details');
-          if (run) {
-            root.querySelector('.sha').textContent = String(run.head_sha || '').slice(0, 12);
-            details.href = run.html_url;
-            const assetTime = asset ? new Date(asset.updated_at).getTime() : 0;
-            const runTime = new Date(run.updated_at || run.created_at).getTime();
-            if (asset && runTime > assetTime + 15000) {
-              status.textContent = 'syncing';
-              status.className = 'status sync';
-            }
+          if (publishedRun) {
+            root.querySelector('.sha').textContent = String(publishedRun.head_sha || '').slice(0, 12);
+            root.querySelector('.built').textContent = ago(publishedRun.updated_at || publishedRun.created_at);
+            details.href = publishedRun.html_url;
+          } else if (newestSuccessfulRun) {
+            root.querySelector('.sha').textContent = publishedPrefix || String(newestSuccessfulRun.head_sha || '').slice(0, 12);
+            root.querySelector('.built').textContent = 'provenance unavailable';
+            details.href = newestSuccessfulRun.html_url;
           } else {
-            root.querySelector('.sha').textContent = '—';
+            root.querySelector('.sha').textContent = publishedPrefix || '—';
+            root.querySelector('.built').textContent = '—';
             details.href = 'https://github.com/' + repo + '/tree/' + encodeURIComponent(model.branch);
             details.textContent = 'Open branch ↗';
+          }
+
+          if (asset && publishedRun && newestSuccessfulRun &&
+              String(newestSuccessfulRun.head_sha || '') !== String(publishedRun.head_sha || '')) {
+            status.textContent = 'syncing';
+            status.className = 'status sync';
           }
         }));
 
