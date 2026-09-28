@@ -1016,7 +1016,7 @@ func _stack_c2(device: int) -> bool:
 		return _fail("mantle onto pipe rack failed (y %.2f)" % _position().y)
 	if not (await _go(device, Vector2(18.0, -162.0), 0.1, 6.0) and \
 			await _go(device, Vector2(10.0, -162.0), 0.08, 15.0)):
-		return _fail("walk along monorail beam stalled")
+		return _fail("walk along monorail beam stalled at %s" % str(_position()))
 	await _seconds(0.3)
 	if _position().y < 82.5:
 		return _fail("not standing at monorail beam end (y %.2f)" % _position().y)
@@ -1677,14 +1677,11 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 		var v := Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.25, 1.0)
 		if device == InputRouter.Device.KEYBOARD_MOUSE:
 			var lateral := to.dot(right)
-			var along := to.dot(forward)
-			# A key is full throw. Holding it beside forward is a 45° crab, and
-			# that crab walks the S2 crossover into the east rail. Strafe only
-			# when the cross-track miss is the larger one.
-			if absf(lateral) > 0.12 and absf(lateral) > absf(along) * 0.65:
-				v.x = signf(lateral)
-				if absf(along) < absf(lateral) * 0.65:
-					v.y = 0.0
+			# Keys are full throw, so strafe-plus-forward is a 45° crab. Step
+			# sideways back onto the line, then walk it. A long beam only has
+			# about 0.10 m of centreline to spare.
+			if absf(lateral) > 0.06:
+				v = Vector2(signf(lateral), 0.0)
 			else:
 				v.x = 0.0
 			if to.length() < 0.8:
