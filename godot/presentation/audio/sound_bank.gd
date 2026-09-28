@@ -16,7 +16,7 @@ extends RefCounted
 # (observed on the first bank's metal steps, grabs, clangs and UI taps).
 #
 # The human fear voice on large falls (GDD 8.4) is not synthesised here: it is
-# recorded speech, presentation/audio/voice/, played by the director.
+# generated speech, presentation/audio/voice/, played by the director.
 
 const MIX_RATE := 22050
 const STEP_VARIANTS := 4

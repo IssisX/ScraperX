@@ -12,8 +12,9 @@ Source of every clip:
     voice, itself trained on LibriVox public-domain recordings;
   * check: Whisper (OpenAI, MIT) transcribes each take; a take is rejected
     unless the transcript holds at least 60% of its line's distinct words and
-    it ends within ~0.45 s a word, so no clip ships that says something else,
-    nothing at all, or babbles on. A line with no passing take is left out.
+    it ends within ~0.45 s a word (screams longer), so no clip ships that says
+    something else, nothing at all, or babbles on. Every line ships: one that
+    no take passes fails the run, to be made again with --only and --takes.
 
 Setup (a throwaway venv, CPU only):
   python3 -m venv tts
@@ -36,8 +37,9 @@ import sys
 
 import numpy as np
 
-# Tier -> (exaggeration, [lines]). The director picks a tier from what the
-# fall is doing; within a tier it draws without repeats.
+# Tier -> (exaggeration, [lines]). A line may carry its own exaggeration as
+# (text, exaggeration). The director picks a tier from what the fall is
+# doing; within a tier it draws without repeats.
 #   yelp   -- the moment the ground goes: short, involuntary
 #   panic  -- still falling after the yelp
 #   terror -- a long fall: screaming, pleading, swearing
@@ -69,9 +71,10 @@ LINES = {
         "I should have taken the stairs!",
         "Grab something, grab something!",
         "Why? Why? Why?",
+        "Oh, motherfucker!",
     ]),
     "terror": (1.9, [
-        "Aaaaaaah! Aaaaaah!",
+        ("Aaaah! Aaaaaaaah!", 1.2),  # a pure scream babbles at 1.9
         "Aaaah! Fuck! Fuck!",
         "I'm gonna die, I'm gonna die, I'm gonna die!",
         "Mother fucker!",
@@ -113,18 +116,31 @@ def words(text):
 
 
 def match(expected, heard):
-    """Fraction of the line's distinct words the transcript contains. A
-    scream ("Aaaah") transcribes unpredictably, so vowel-only words count as
-    heard when the transcript holds any drawn-out vowel."""
+    """Fraction of the line's distinct words the transcript contains. A word
+    also counts when the transcript runs it into its neighbours, as it writes
+    "Mother fucker" as "MOTHERFUCKER" (a first version compared whole words
+    only and threw that take away). A scream ("Aaaah") transcribes
+    unpredictably, so vowel-only words count as heard when the transcript
+    holds any drawn-out vowel."""
     want = set(words(expected))
     got = set(words(heard))
+    run = re.sub(r"[^a-z]", "", heard.lower())
     if not want:
         return 0.0
     hit = 0
     for w in want:
-        if w in got or (re.fullmatch(r"a+h*", w) and re.search(r"a{2,}|ah", heard.lower())):
+        if (w in got or w.replace("'", "") in run
+                or (re.fullmatch(r"a+h*", w) and re.search(r"a{2,}|ah", heard.lower()))):
             hit += 1
     return hit / len(want)
+
+
+def time_limit(line):
+    """How long a take may run before it has babbled: ~0.45 s a word, and a
+    scream's drawn-out vowel (Aaaah) 0.6 s more."""
+    spoken = words(line)
+    screams = sum(1 for w in spoken if re.fullmatch(r"a+h*", w))
+    return 1.0 + 0.45 * len(spoken) + 0.6 * screams
 
 
 def trim(samples, rate, floor_db=-40.0):
@@ -170,7 +186,11 @@ def main():
     parser.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "..",
                                                       "godot", "presentation", "audio", "voice"))
     parser.add_argument("--work", default="voice_work")
+    parser.add_argument("--only", default="",
+                        help="regenerate only these lines, e.g. terror:3,yelp:5 (tier:index)")
+    parser.add_argument("--takes", type=int, default=TAKES)
     args = parser.parse_args()
+    only = {tuple(item.split(":")) for item in args.only.split(",") if item}
 
     import librosa
     import soundfile as sf
@@ -197,17 +217,19 @@ def main():
 
     tts.t3.inference = capped
     asr = whisper.load_model("small.en")
-    table = {}
     report = []
+    rejected = []
     for tier, (exaggeration, lines) in LINES.items():
-        table[tier] = []
-        for index, line in enumerate(lines):
+        for index, entry in enumerate(lines):
+            if only and (tier, str(index)) not in only:
+                continue
+            line, strength = (entry, exaggeration) if isinstance(entry, str) else entry
             best = None
-            limit = 1.0 + 0.45 * len(words(line))
+            limit = time_limit(line)
             budget["tokens"] = int(25 * 1.5 * limit)
-            for take in range(TAKES):
+            for take in range(args.takes):
                 torch.manual_seed(1000 * index + 17 * take + len(tier))
-                wav = tts.generate(line, audio_prompt_path=reference, exaggeration=exaggeration,
+                wav = tts.generate(line, audio_prompt_path=reference, exaggeration=strength,
                                    cfg_weight=0.3, temperature=0.9)
                 raw = wav.squeeze(0).numpy()
                 clip = trim(librosa.resample(raw, orig_sr=tts.sr, target_sr=MIX_RATE), MIX_RATE)
@@ -225,16 +247,23 @@ def main():
                 if best is not None and best[0] >= 1.0:
                     break
             if best is None:
-                report.append(f"REJECTED {tier}/{index} {line!r}")
+                rejected.append(f"{tier}:{index} {line!r}")
                 continue
-            name = f"{tier}_{len(table[tier]):02d}.ogg"
+            # Named for the line's place in LINES, so one line can be made
+            # again (--only) without renumbering the rest.
+            name = f"{tier}_{index:02d}.ogg"
             sf.write(os.path.join(args.out, name), finish(best[2], MIX_RATE, tier), MIX_RATE,
                      format="OGG", subtype="VORBIS")
             with open(os.path.join(args.out, name + ".import"), "w") as marker:
                 marker.write('[remap]\n\nimporter="keep"\n')
-            table[tier].append(name)
             report.append(f"{name} {best[1]:.2f}s match {best[0]:.2f} line {line!r} heard {best[3]!r}")
 
+    # The table lists every clip on disk, so a partial run (--only) keeps
+    # the lines it did not touch.
+    present = set(os.listdir(args.out))
+    table = {tier: [f"{tier}_{index:02d}.ogg" for index in range(len(lines))
+                    if f"{tier}_{index:02d}.ogg" in present]
+             for tier, (_, lines) in LINES.items()}
     with open(os.path.join(args.out, "..", "voice_lines.gd"), "w") as gd:
         gd.write("extends RefCounted\n")
         gd.write("# Written by src/voice/generate_fall_voice.py -- do not edit by hand.\n")
@@ -248,6 +277,11 @@ def main():
             gd.write("\t],\n")
         gd.write("}\n")
     print("\n".join(report))
+    # Every scripted line ships. One that no take could pass stops the run
+    # loudly, for more takes or a rewording -- it is never left out quietly.
+    if rejected:
+        print("NO PASSING TAKE (run again with --only and more --takes):\n  " + "\n  ".join(rejected))
+        sys.exit(1)
 
 
 if __name__ == "__main__":

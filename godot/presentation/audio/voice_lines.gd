@@ -14,6 +14,7 @@ const TIERS := {
 		"yelp_06.ogg",
 		"yelp_07.ogg",
 		"yelp_08.ogg",
+		"yelp_09.ogg",
 	],
 	&"panic": [
 		"panic_00.ogg",
@@ -28,6 +29,7 @@ const TIERS := {
 		"panic_09.ogg",
 		"panic_10.ogg",
 		"panic_11.ogg",
+		"panic_12.ogg",
 	],
 	&"terror": [
 		"terror_00.ogg",
@@ -40,6 +42,8 @@ const TIERS := {
 		"terror_07.ogg",
 		"terror_08.ogg",
 		"terror_09.ogg",
+		"terror_10.ogg",
+		"terror_11.ogg",
 	],
 	&"relief": [
 		"relief_00.ogg",

@@ -438,7 +438,7 @@ func _voice_stop() -> void:
 		_voice.stop()
 
 
-# The recorded lines (presentation/audio/voice/, listed by voice_lines.gd).
+# The spoken lines (presentation/audio/voice/, listed by voice_lines.gd).
 # Ogg pages are read here and decoded as they play: a few hundred kB, so
 # they load with the director, not on the bank's worker.
 func _load_voice() -> void:
