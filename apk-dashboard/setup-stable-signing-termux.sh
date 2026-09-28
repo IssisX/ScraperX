@@ -6,12 +6,13 @@ ALIAS="scraperx-dashboard"
 
 if command -v pkg >/dev/null 2>&1; then
   command -v gh >/dev/null 2>&1 || pkg install -y gh
-  command -v keytool >/dev/null 2>&1 || pkg install -y openjdk-17
+  command -v openssl >/dev/null 2>&1 || pkg install -y openssl
+  command -v base64 >/dev/null 2>&1 || pkg install -y coreutils
 fi
 
-for cmd in gh keytool base64; do
+for cmd in gh openssl base64; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "Missing $cmd. Install GitHub CLI and OpenJDK, then rerun." >&2
+    echo "Missing $cmd. Install GitHub CLI, OpenSSL, and coreutils, then rerun." >&2
     exit 1
   fi
 done
@@ -26,28 +27,29 @@ trap 'rm -rf "$tmp"' EXIT
 keystore="$tmp/scraperx-dashboard.p12"
 password="$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')"
 
-keytool -genkeypair -noprompt \
-  -storetype PKCS12 \
-  -keystore "$keystore" \
-  -storepass "$password" \
-  -keypass "$password" \
-  -alias "$ALIAS" \
-  -keyalg RSA \
-  -keysize 3072 \
-  -validity 10000 \
-  -dname "CN=ScraperX Development APK Dashboard,O=ScraperX,C=US"
+private_key="$tmp/private-key.pem"
+certificate="$tmp/certificate.pem"
+
+openssl req -x509 -newkey rsa:3072 -sha256 -nodes \
+  -keyout "$private_key" \
+  -out "$certificate" \
+  -days 10000 \
+  -subj "/CN=ScraperX Development APK Dashboard/O=ScraperX/C=US"
+
+openssl pkcs12 -export \
+  -out "$keystore" \
+  -inkey "$private_key" \
+  -in "$certificate" \
+  -name "$ALIAS" \
+  -passout "pass:$password"
 
 base64 < "$keystore" | tr -d '\n' | \
   gh secret set SCRAPERX_APK_KEYSTORE_B64 --repo "$REPO"
 printf '%s' "$password" | \
   gh secret set SCRAPERX_APK_KEYSTORE_PASSWORD --repo "$REPO"
 
-fingerprint="$(keytool -list -v \
-  -storetype PKCS12 \
-  -keystore "$keystore" \
-  -storepass "$password" \
-  -alias "$ALIAS" 2>/dev/null | \
-  awk -F': ' '/SHA256:/ {gsub(":","",$2); print tolower($2); exit}')"
+fingerprint="$(openssl x509 -in "$certificate" -noout -fingerprint -sha256 | \
+  cut -d= -f2 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
 
 echo
 echo "Stable ScraperX dashboard signing key installed."
