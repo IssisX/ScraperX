@@ -1677,11 +1677,16 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 		var v := Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.25, 1.0)
 		if device == InputRouter.Device.KEYBOARD_MOUSE:
 			var lateral := to.dot(right)
-			# Keys are full throw, so strafe-plus-forward is a 45° crab. Step
-			# sideways back onto the line, then walk it. A long beam only has
-			# about 0.10 m of centreline to spare.
+			# Keys are full throw, so strafe and forward together crab at 45°.
+			# A long beam still needs the small sideways miss taken out, but
+			# only on some frames: a pure strafe walks into the cage wall on
+			# the way to a handle.
 			if absf(lateral) > 0.06:
-				v = Vector2(signf(lateral), 0.0)
+				frame += 1
+				if frame % 4 == 0:
+					v = Vector2(signf(lateral), 0.0)
+				else:
+					v.x = 0.0
 			else:
 				v.x = 0.0
 			if to.length() < 0.8:
