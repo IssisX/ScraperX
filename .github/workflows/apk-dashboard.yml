@@ -24,6 +24,10 @@ permissions:
   actions: read
   contents: write
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
 concurrency:
   group: scraperx-apk-dashboard-publisher
   cancel-in-progress: true
@@ -38,12 +42,44 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          SCRAPERX_APK_KEYSTORE_B64: ${{ secrets.SCRAPERX_APK_KEYSTORE_B64 }}
+          SCRAPERX_APK_KEYSTORE_PASSWORD: ${{ secrets.SCRAPERX_APK_KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
 
           REPO="${GITHUB_REPOSITORY}"
           TAG="apk-latest"
-          mkdir -p out work
+          SIGNING_ALIAS="scraperx-dashboard"
+
+          # Never publish another ephemeral Godot debug signature. If the
+          # stable private key has not been provisioned yet, preserve the
+          # current release instead of creating another uninstall-required APK.
+          if [[ -z "${SCRAPERX_APK_KEYSTORE_B64:-}" || -z "${SCRAPERX_APK_KEYSTORE_PASSWORD:-}" ]]; then
+            echo "::notice title=Stable APK signing not configured::Run apk-dashboard/setup-stable-signing-termux.sh once; existing release assets are left untouched."
+            exit 0
+          fi
+
+          mkdir -p out work previous
+          KEYSTORE="${RUNNER_TEMP}/scraperx-dashboard.p12"
+          printf '%s' "${SCRAPERX_APK_KEYSTORE_B64}" | base64 --decode > "${KEYSTORE}"
+          chmod 600 "${KEYSTORE}"
+
+          APKSIGNER="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "${ANDROID_HOME}/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "${APKSIGNER}"
+          test -x "${ZIPALIGN}"
+          test -x "${AAPT}"
+
+          previous_cert=""
+          if gh release view "${TAG}" --repo "${REPO}" >/dev/null 2>&1; then
+            gh release download "${TAG}" --repo "${REPO}" --pattern manifest.json --dir previous >/dev/null 2>&1 || true
+            if [[ -s previous/manifest.json ]]; then
+              previous_cert="$(jq -r '.signing_certificate_sha256 // empty' previous/manifest.json)"
+            fi
+          fi
+
+          SIGNING_CERT=""
           generated_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           jq -n --arg generated_at "$generated_at" --arg repo "$REPO" \
             '{schema:1, generated_at:$generated_at, repo:$repo, builds:{}}' \
@@ -60,6 +96,8 @@ jobs:
           publish_branch() {
             local label="$1"
             local branch="$2"
+            local expected_package="$3"
+            local expected_label="$4"
             local target="out/ScraperX-${label}.apk"
             local branch_q
             branch_q="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$branch")"
@@ -131,10 +169,43 @@ jobs:
               return 0
             fi
 
-            cp "$apk" "$target"
-            local apk_sha apk_bytes current_sha
+            # Remove the runner-local Godot debug JAR signature, realign the
+            # APK, and sign it with the one stable dashboard development key.
+            local unsigned="${tmp}/unsigned.apk"
+            local aligned="${tmp}/aligned.apk"
+            cp "$apk" "$unsigned"
+            zip -q -d "$unsigned" \
+              'META-INF/*.RSA' 'META-INF/*.DSA' 'META-INF/*.EC' \
+              'META-INF/*.SF' 'META-INF/MANIFEST.MF' >/dev/null 2>&1 || true
+            "${ZIPALIGN}" -p -f 4 "$unsigned" "$aligned"
+            "${APKSIGNER}" sign \
+              --ks "${KEYSTORE}" \
+              --ks-key-alias "${SIGNING_ALIAS}" \
+              --ks-pass env:SCRAPERX_APK_KEYSTORE_PASSWORD \
+              --key-pass env:SCRAPERX_APK_KEYSTORE_PASSWORD \
+              --out "$target" "$aligned"
+
+            local verify_log="${tmp}/apksigner.txt"
+            "${APKSIGNER}" verify --verbose --print-certs "$target" | tee "$verify_log"
+            local cert_sha
+            cert_sha="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}' "$verify_log")"
+            test -n "$cert_sha"
+            if [[ -z "${SIGNING_CERT}" ]]; then
+              SIGNING_CERT="$cert_sha"
+            elif [[ "${SIGNING_CERT}" != "$cert_sha" ]]; then
+              echo "::error title=Signer split::${label} was signed by ${cert_sha}, expected ${SIGNING_CERT}"
+              exit 1
+            fi
+
+            local badging="${tmp}/badging.txt"
+            "${AAPT}" dump badging "$target" | tee "$badging"
+            grep -F "package: name='${expected_package}'" "$badging"
+            grep -F "application-label:'${expected_label}'" "$badging"
+
+            local apk_sha apk_bytes current_sha version_code
             apk_sha="$(sha256sum "$target" | awk '{print $1}')"
             apk_bytes="$(stat -c '%s' "$target")"
+            version_code="$(sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" "$badging" | head -n 1)"
             current_sha="$(gh api "/repos/${REPO}/branches/${branch_q}" --jq '.commit.sha')"
 
             update_manifest "$label" "$(jq -n \
@@ -147,6 +218,10 @@ jobs:
               --argjson artifact_id "$artifact_id" \
               --arg file "ScraperX-${label}.apk" \
               --arg apk_sha256 "$apk_sha" \
+              --arg signing_certificate_sha256 "$cert_sha" \
+              --arg package_id "$expected_package" \
+              --arg app_label "$expected_label" \
+              --arg version_code "$version_code" \
               --argjson bytes "$apk_bytes" \
               --argjson current "$(test "$source_sha" = "$current_sha" && echo true || echo false)" \
               '{
@@ -161,22 +236,38 @@ jobs:
                 source_artifact_id:$artifact_id,
                 file:$file,
                 apk_sha256:$apk_sha256,
+                signing_certificate_sha256:$signing_certificate_sha256,
+                package_id:$package_id,
+                app_label:$app_label,
+                version_code:$version_code,
                 bytes:$bytes
               }')"
 
-            echo "${label}: ${source_sha} -> ${target}"
+            echo "${label}: ${source_sha} -> ${target} signer=${cert_sha}"
             echo "::endgroup::"
           }
 
-          publish_branch "ChatGPT" "ChatGPT"
-          publish_branch "Gemini" "Gemini"
-          publish_branch "Claude" "ScraperX-Claude"
-          publish_branch "Grok" "ScraperX-Grok"
+          publish_branch "ChatGPT" "ChatGPT" "com.cory.scraperx.chatgpt" "ScraperX-ChatGPT"
+          publish_branch "Gemini" "Gemini" "com.cory.scraperx.gemini" "ScraperX-Gemini"
+          publish_branch "Claude" "ScraperX-Claude" "com.cory.scraperx.claude" "ScraperX-Claude"
+          publish_branch "Grok" "ScraperX-Grok" "com.cory.scraperx.grok" "ScraperX-Grok"
+
+          test -n "${SIGNING_CERT}"
+          if [[ -n "${previous_cert}" && "${previous_cert}" != "${SIGNING_CERT}" ]]; then
+            echo "::error title=Signing key changed::Refusing to break Android in-place updates. Previous stable signer ${previous_cert}; current secret resolves to ${SIGNING_CERT}."
+            exit 1
+          fi
+          jq --arg cert "${SIGNING_CERT}" \
+            '.stable_signing = true | .signing_certificate_sha256 = $cert' \
+            out/manifest.json > out/manifest.next.json
+          mv out/manifest.next.json out/manifest.json
 
           {
             echo "# ScraperX — latest successful model APKs"
             echo
             echo "This release is maintained automatically. Each filename is stable; its bytes are replaced only after a successful branch build publishes an APK artifact."
+            echo
+            echo "All four dashboard APKs are re-signed with one stable development certificate so same-model installs update in place. Signer SHA-256: \`${SIGNING_CERT}\`"
             echo
             echo "Generated: \\\`${generated_at}\\\`"
             echo
