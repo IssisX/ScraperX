@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0c10">
+  <meta name="color-scheme" content="dark">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <title>ScraperX Builds</title>
+  <style>
+    :root {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0a0c10;
+      color: #f5f7fa;
+      --muted: #9199a6;
+      --line: #242a34;
+      --panel: #12161d;
+      --panel-2: #171c24;
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+    }
+    * { box-sizing: border-box; }
+    html { background: #0a0c10; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% -12%, rgba(74,222,128,.09), transparent 34rem),
+        #0a0c10;
+    }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    .shell {
+      width: min(760px, 100%);
+      margin: 0 auto;
+      padding: max(22px, env(safe-area-inset-top)) 16px max(40px, env(safe-area-inset-bottom));
+    }
+    header { padding: 10px 2px 22px; }
+    .eyebrow {
+      color: #6ee7a0;
+      font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 8px 0 8px;
+      font-size: clamp(30px, 8vw, 48px);
+      line-height: .98;
+      letter-spacing: -.04em;
+    }
+    .intro {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .refresh {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-2);
+      color: #f5f7fa;
+      padding: 0 14px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    #checked {
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 0;
+    }
+    main { display: grid; gap: 12px; }
+    .card {
+      --accent: #94a3b8;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(255,255,255,.025), transparent 45%), var(--panel);
+      padding: 18px;
+      box-shadow: 0 14px 35px rgba(0,0,0,.18);
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: var(--accent);
+    }
+    .card[data-model="ChatGPT"] { --accent: #10b981; }
+    .card[data-model="Gemini"] { --accent: #7c9cff; }
+    .card[data-model="Claude"] { --accent: #f59e0b; }
+    .card[data-model="Grok"] { --accent: #e5e7eb; }
+    .topline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    .model {
+      font-size: 22px;
+      font-weight: 850;
+      letter-spacing: -.025em;
+    }
+    .status {
+      font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .status.ok { color: var(--ok); }
+    .status.sync { color: var(--warn); }
+    .status.bad { color: var(--bad); }
+    .meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 14px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .meta div {
+      min-width: 0;
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: #0d1117;
+      border: 1px solid #1e242d;
+    }
+    .meta b {
+      display: block;
+      color: #d8dee8;
+      margin-top: 3px;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .download {
+      display: flex;
+      min-height: 56px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      border-radius: 14px;
+      background: var(--accent);
+      color: #07090d;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: -.01em;
+    }
+    .download[aria-disabled="true"] {
+      pointer-events: none;
+      opacity: .35;
+    }
+    .details {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+      color: #aab2bf;
+      font-size: 12px;
+      text-decoration: none;
+    }
+    footer {
+      color: #727b89;
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 20px 4px 0;
+      text-align: center;
+    }
+    @media (min-width: 650px) {
+      main { grid-template-columns: 1fr 1fr; }
+      .shell { padding-left: 24px; padding-right: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="eyebrow">ScraperX · latest successful builds</div>
+      <h1>Pick a model.<br>Install the APK.</h1>
+      <p class="intro">No digging through Actions, no artifact archaeology. Each button always points at that branch's newest successfully published APK.</p>
+      <div class="toolbar">
+        <button class="refresh" id="refresh" type="button">Refresh</button>
+        <span id="checked">Checking GitHub…</span>
+      </div>
+    </header>
+    <main id="cards"></main>
+    <footer>
+      Updated automatically after successful model builds, with an hourly safety refresh.
+      A newer branch commit can exist while its last successful APK remains the download shown here.
+    </footer>
+  </div>
+
+  <script>
+    const repo = 'IssisX/ScraperX';
+    const tag = 'apk-latest';
+    const models = [
+      { label: 'ChatGPT', branch: 'ChatGPT', file: 'ScraperX-ChatGPT.apk' },
+      { label: 'Gemini', branch: 'Gemini', file: 'ScraperX-Gemini.apk' },
+      { label: 'Claude', branch: 'ScraperX-Claude', file: 'ScraperX-Claude.apk' },
+      { label: 'Grok', branch: 'ScraperX-Grok', file: 'ScraperX-Grok.apk' }
+    ];
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[c]));
+    }
+
+    function bytes(n) {
+      if (!Number.isFinite(n)) return '—';
+      return (n / 1048576).toFixed(1) + ' MB';
+    }
+
+    function ago(iso) {
+      if (!iso) return '—';
+      const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+      if (seconds < 90) return 'just now';
+      if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
+      if (seconds < 86400) return Math.floor(seconds / 3600) + ' hr ago';
+      return Math.floor(seconds / 86400) + ' d ago';
+    }
+
+    function stableDownload(file) {
+      return 'https://github.com/' + repo + '/releases/download/' + tag + '/' + encodeURIComponent(file);
+    }
+
+    function card(model) {
+      return '<section class="card" data-model="' + esc(model.label) + '" id="card-' + esc(model.label) + '">' +
+        '<div class="topline"><div class="model">' + esc(model.label) + '</div><div class="status">checking</div></div>' +
+        '<div class="meta">' +
+          '<div>Branch<b>' + esc(model.branch) + '</b></div>' +
+          '<div>APK<b class="size">—</b></div>' +
+          '<div>Build<b class="sha">—</b></div>' +
+          '<div>Published<b class="published">—</b></div>' +
+        '</div>' +
+        '<a class="download" aria-disabled="true">Download ' + esc(model.file) + '</a>' +
+        '<a class="details" target="_blank" rel="noopener">Open successful build ↗</a>' +
+      '</section>';
+    }
+
+    document.getElementById('cards').innerHTML = models.map(card).join('');
+
+    async function load() {
+      const button = document.getElementById('refresh');
+      button.disabled = true;
+      document.getElementById('checked').textContent = 'Checking GitHub…';
+
+      try {
+        const releaseResponse = await fetch(
+          'https://api.github.com/repos/' + repo + '/releases/tags/' + tag,
+          { headers: { 'Accept': 'application/vnd.github+json' }, cache: 'no-store' }
+        );
+        if (!releaseResponse.ok) throw new Error('Release not published yet');
+        const release = await releaseResponse.json();
+        const assets = new Map((release.assets || []).map(a => [a.name, a]));
+
+        await Promise.all(models.map(async model => {
+          const root = document.getElementById('card-' + model.label);
+          const status = root.querySelector('.status');
+          const download = root.querySelector('.download');
+          const asset = assets.get(model.file);
+
+          let run = null;
+          try {
+            const response = await fetch(
+              'https://api.github.com/repos/' + repo + '/actions/runs?branch=' +
+                encodeURIComponent(model.branch) + '&status=success&per_page=1',
+              { headers: { 'Accept': 'application/vnd.github+json' }, cache: 'no-store' }
+            );
+            if (response.ok) {
+              const data = await response.json();
+              run = data.workflow_runs && data.workflow_runs[0];
+            }
+          } catch (_) {}
+
+          if (asset) {
+            status.textContent = 'ready';
+            status.className = 'status ok';
+            root.querySelector('.size').textContent = bytes(asset.size);
+            root.querySelector('.published').textContent = ago(asset.updated_at);
+            download.href = stableDownload(model.file);
+            download.removeAttribute('aria-disabled');
+          } else {
+            status.textContent = 'unavailable';
+            status.className = 'status bad';
+          }
+
+          const details = root.querySelector('.details');
+          if (run) {
+            root.querySelector('.sha').textContent = String(run.head_sha || '').slice(0, 12);
+            details.href = run.html_url;
+            const assetTime = asset ? new Date(asset.updated_at).getTime() : 0;
+            const runTime = new Date(run.updated_at || run.created_at).getTime();
+            if (asset && runTime > assetTime + 15000) {
+              status.textContent = 'syncing';
+              status.className = 'status sync';
+            }
+          } else {
+            root.querySelector('.sha').textContent = '—';
+            details.href = 'https://github.com/' + repo + '/tree/' + encodeURIComponent(model.branch);
+            details.textContent = 'Open branch ↗';
+          }
+        }));
+
+        document.getElementById('checked').textContent = 'Checked ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+      } catch (error) {
+        document.getElementById('checked').textContent = error.message || 'Could not reach GitHub';
+        document.querySelectorAll('.status').forEach(node => {
+          node.textContent = 'offline';
+          node.className = 'status bad';
+        });
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    document.getElementById('refresh').addEventListener('click', load);
+    load();
+    setInterval(load, 5 * 60 * 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "ScraperX Builds",
+  "short_name": "ScraperX APKs",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0c10",
+  "theme_color": "#0a0c10",
+  "description": "Latest successful ScraperX APKs from each AI model branch.",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
