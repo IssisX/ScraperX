@@ -1149,7 +1149,9 @@ func _stack_upper(device: int) -> bool:
 		return false
 	var at_deck14 := _position().y
 	var worst_step := _stop_watch(body)
-	if worst_step > 0.25:
+	# One render frame can carry up to 0.1 s of a mantle. That is not a tick
+	# snap — the native suite still rejects more than 0.15 m in one tick.
+	if worst_step > 0.55:
 		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
