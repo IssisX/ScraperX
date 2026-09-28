@@ -327,6 +327,10 @@ func _surface(entity: int, height: float) -> StringName:
 	return &"step_metal"
 
 
+func play_cue(name: StringName, volume_db: float = 0.0, pitch: float = 1.0) -> void:
+	_play(name, volume_db, pitch)
+
+
 func _play(name: StringName, volume_db: float, pitch: float) -> void:
 	if not _bank_ready or _silent:
 		return

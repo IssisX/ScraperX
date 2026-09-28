@@ -37,6 +37,8 @@ func build() -> void:
 	clips[&"rustle"] = _variants(2, _rustle)
 	clips[&"chute"] = [_wav(_chute())]
 	clips[&"impact_lethal"] = [_wav(_impact_lethal())]
+	clips[&"fall_yell"] = _variants(3, _fall_yell)
+	clips[&"fall_gasp"] = _variants(2, _fall_gasp)
 	clips[&"ui_tap"] = [_wav(_blip(2600.0, 0.03))]
 	clips[&"ui_back"] = [_wav(_blip(1500.0, 0.04))]
 	clips[&"clang"] = _variants(3, _clang)
@@ -269,6 +271,41 @@ func _rush(length: float) -> PackedFloat32Array:
 	var band := _band_noise_buffer(out.size(), 500.0, 3800.0)
 	for i in out.size():
 		out[i] = band[i] * 1.4
+	return out
+
+
+# Panicked fear scream / vocal yell when dropping from fatal height:
+# Formant modeling of human throat/mouth with descending fundamental f0 and frantic vibrato.
+func _fall_yell() -> PackedFloat32Array:
+	var out := _silence(1.35)
+	var n := out.size()
+	var base_freq := _rng.randf_range(380.0, 460.0)
+	var f1 := _rng.randf_range(760.0, 840.0)
+	var f2 := _rng.randf_range(1380.0, 1500.0)
+	var phase_f0 := 0.0
+	var phase_f1 := 0.0
+	var phase_f2 := 0.0
+	for i in n:
+		var u := float(i) / float(n)
+		var vibrato := 1.0 + 0.06 * sin(TAU * 9.5 * u)
+		var f0 := lerpf(base_freq, base_freq * 0.72, u) * vibrato
+		phase_f0 += TAU * f0 / float(MIX_RATE)
+		phase_f1 += TAU * (f1 * vibrato) / float(MIX_RATE)
+		phase_f2 += TAU * (f2 * vibrato) / float(MIX_RATE)
+		var cord := sin(phase_f0) + 0.5 * sin(phase_f0 * 2.0) + 0.25 * sin(phase_f0 * 3.0)
+		var formant := 0.6 * sin(phase_f1) + 0.4 * sin(phase_f2)
+		var voice := cord * 0.5 + formant * 0.5
+		var env := sin(PI * clampf(u * 1.05, 0.0, 1.0))
+		out[i] += voice * env * 0.85
+	_add_band_noise(out, 0.02, 1.25, 0.45, 0.8, 1800.0, 4500.0)
+	return out
+
+
+# Sharp terror gasp when slipping off a support:
+func _fall_gasp() -> PackedFloat32Array:
+	var out := _silence(0.42)
+	_add_band_noise(out, 0.0, 0.38, 0.75, 0.22, 600.0, 3200.0)
+	_add_tone(out, 520.0, 0.02, 0.25, 0.4, 0.08)
 	return out
 
 

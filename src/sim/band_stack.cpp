@@ -365,6 +365,82 @@ void build_s1_headframe(std::vector<Part> &frame, const JPH::RVec3 cage_sheave,
     }
 }
 
+void build_yard_traversal(std::vector<Part> &frame) {
+    // 1. Transformer & Compressor Station (West Yard, x in [-14, -2], z in [-118, -111])
+    // Base concrete containment curb (height 0.30 m: step-up curb):
+    frame.push_back(span({-14.00F, 0.00F, -118.00F}, {-2.00F, 0.30F, -111.00F}, Material::Rust));
+
+    // Main step-up transformer 1 (rise 1.10 m from curb -> y = 1.40 m, vaultable):
+    frame.push_back(span({-12.50F, 0.30F, -117.00F}, {-8.50F, 1.40F, -113.00F}, Material::Steel));
+    frame.push_back(span({-12.55F, 1.32F, -117.05F}, {-8.45F, 1.40F, -117.00F}, Material::Hazard));
+    // Cooling radiator fins:
+    frame.push_back(span({-8.50F, 0.40F, -116.50F}, {-8.10F, 1.30F, -113.50F}, Material::Hazard));
+
+    // Compressor unit 2 (rise 1.10 m above transformer 1 -> y = 2.50 m, vault/mantle):
+    frame.push_back(span({-7.50F, 0.30F, -117.00F}, {-3.50F, 2.50F, -113.00F}, Material::Steel));
+    frame.push_back(span({-7.55F, 2.42F, -117.05F}, {-3.45F, 2.50F, -117.00F}, Material::Hazard));
+
+    // Elevated cable tray gantry (0.8 m wide balance beam at y = 3.95 m bridging east):
+    frame.push_back(span({-3.50F, 3.80F, -115.50F}, {1.80F, 3.95F, -114.70F}, Material::Yellow));
+    frame.push_back(box(JPH::Vec3(0.08F, 1.90F, 0.08F), JPH::Vec3(-0.85F, 1.90F, -115.10F), Material::Steel));
+    frame.push_back(box(JPH::Vec3(0.08F, 1.90F, 0.08F), JPH::Vec3(0.95F, 1.90F, -115.10F), Material::Steel));
+
+    // Pipe header & valve manifold (x in [1.8, 4.5], z in [-121.5, -119.5]):
+    frame.push_back(span({1.80F, 0.00F, -121.50F}, {4.50F, 1.20F, -119.50F}, Material::Rust));
+    frame.push_back(span({1.80F, 1.20F, -121.50F}, {4.50F, 4.20F, -120.00F}, Material::Steel));
+    frame.push_back(span({1.75F, 4.15F, -121.55F}, {4.55F, 4.25F, -119.95F}, Material::Hazard));
+
+    // 2. S1 Headframe West Service Tower (x in [1.8, 5.0], z in [-122.6, -119.1])
+    // Vertical structural corner columns:
+    for (const float x : {1.90F, 4.90F}) {
+        for (const float z : {-122.50F, -119.20F}) {
+            frame.push_back(box(JPH::Vec3(0.08F, 11.00F, 0.08F), JPH::Vec3(x, 11.00F, z), Material::Rust));
+        }
+    }
+
+    // Tier 1 Maintenance Catwalk (y = 7.50 m):
+    frame.push_back(span({1.80F, 7.38F, -122.60F}, {5.00F, 7.50F, -119.10F}, Material::Galvanised));
+    frame.push_back(span({1.75F, 7.50F, -119.20F}, {5.05F, 7.62F, -119.10F}, Material::Hazard));
+    frame.push_back(span({1.80F, 8.45F, -119.15F}, {5.00F, 8.55F, -119.10F}, Material::Yellow));
+    // Lower service ladder (y = 4.20 m to 7.50 m):
+    for (float y = 4.40F; y <= 7.40F; y += 0.30F) {
+        frame.push_back(box(JPH::Vec3(0.28F, 0.02F, 0.02F), JPH::Vec3(2.40F, y, -120.10F), Material::Steel));
+    }
+    for (const float side : {-1.0F, 1.0F}) {
+        frame.push_back(span({2.40F + side * 0.28F - 0.02F, 4.20F, -120.13F},
+                             {2.40F + side * 0.28F + 0.02F, 7.50F, -120.07F}, Material::Yellow));
+    }
+
+    // Tier 2 Compressor Platform & Outrigger Beam (y = 14.80 m):
+    frame.push_back(span({1.80F, 14.68F, -122.60F}, {4.80F, 14.80F, -119.10F}, Material::Steel));
+    // Mid service ladder (y = 7.50 m to 14.80 m):
+    for (float y = 7.70F; y <= 14.60F; y += 0.30F) {
+        frame.push_back(box(JPH::Vec3(0.28F, 0.02F, 0.02F), JPH::Vec3(4.50F, y, -119.25F), Material::Steel));
+    }
+    for (const float side : {-1.0F, 1.0F}) {
+        frame.push_back(span({4.50F + side * 0.28F - 0.02F, 7.50F, -119.28F},
+                             {4.50F + side * 0.28F + 0.02F, 14.80F, -119.22F}, Material::Yellow));
+    }
+    // Outrigger cantilever I-beam (balance beam extending toward the face):
+    frame.push_back(span({4.80F, 14.68F, -122.60F}, {7.80F, 14.80F, -122.10F}, Material::Yellow));
+    frame.push_back(strut(JPH::Vec3(4.80F, 11.20F, -122.35F), JPH::Vec3(7.50F, 14.68F, -122.35F), 0.08F, Material::Rust));
+
+    // Tier 3 Upper Service Gantry (y = 22.00 m, exact Deck 2 elevation):
+    frame.push_back(span({1.80F, 21.88F, -124.00F}, {5.00F, 22.00F, -119.10F}, Material::Galvanised));
+    // Upper service ladder (y = 14.80 m to 22.00 m):
+    for (float y = 15.00F; y <= 21.80F; y += 0.30F) {
+        frame.push_back(box(JPH::Vec3(0.28F, 0.02F, 0.02F), JPH::Vec3(2.40F, y, -122.45F), Material::Steel));
+    }
+    for (const float side : {-1.0F, 1.0F}) {
+        frame.push_back(span({2.40F + side * 0.28F - 0.02F, 14.80F, -122.48F},
+                             {2.40F + side * 0.28F + 0.02F, 22.00F, -122.42F}, Material::Yellow));
+    }
+    // Transfer gangway bridge connecting Tier 3 directly onto Deck 2 south-west band:
+    frame.push_back(span({1.80F, 21.90F, -125.00F}, {4.80F, 22.00F, -124.00F}, Material::Galvanised));
+    frame.push_back(span({1.80F, 22.00F, -124.05F}, {4.80F, 22.05F, -124.00F}, Material::Hazard));
+    frame.push_back(span({1.80F, 22.95F, -125.00F}, {1.88F, 23.05F, -124.00F}, Material::Yellow));
+}
+
 void build_s1(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
     using Sim = Simulation;
     // ---- the cage, on its guide under its governor ---------------------------
@@ -392,6 +468,7 @@ void build_s1(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
                                  stack.s1_cage, kCageEyeLocal, cage_sheave, 1.0F, length, 0.0F);
 
     build_s1_headframe(frame, cage_sheave, bucket_sheave);
+    build_yard_traversal(frame);
 
     // ---- the valve's lever, its chain, the valve and the catch -----------------
     // About -z with the arm east, so the chain pulling its end down is positive.
@@ -498,6 +575,119 @@ constexpr float kLadderTop = kArmTop + 1.00F;
 constexpr float kLadderHalfWidth = 0.28F;
 constexpr float kGrabHalfWidth = 0.45F;
 
+void build_deck2_traversal(std::vector<Part> &route) {
+    // 1. High-Voltage Transformer Blast Barrier & Capacitor Bank
+    // Located in south-east bay (x in [13.5, 17.5], z in [-131.0, -126.8])
+    // Clear of nominal path x in [10.0, 21.2], z in [-126.0, -124.4]
+    route.push_back(span({13.50F, kDeck2Top, -131.00F}, {13.80F, kDeck2Top + 2.20F, -126.80F}, Material::Rust));
+    route.push_back(span({14.20F, kDeck2Top, -130.50F}, {17.20F, kDeck2Top + 0.45F, -127.20F}, Material::Rust));
+    route.push_back(span({14.50F, kDeck2Top + 0.45F, -130.20F}, {16.80F, kDeck2Top + 1.55F, -128.80F}, Material::Steel));
+    route.push_back(span({14.45F, kDeck2Top + 1.47F, -130.25F}, {16.85F, kDeck2Top + 1.55F, -128.75F}, Material::Hazard));
+    route.push_back(span({15.45F, kDeck2Top + 1.40F, -128.80F}, {15.85F, kDeck2Top + 1.55F, -126.80F}, Material::Yellow));
+
+    // 2. Overhead Crane Runway I-Beam (Balance Beam High Route)
+    // West access stair up to crane runway I-beam (x in [6.5, 8.5], z from -126.0 to -129.7):
+    route.push_back(span({6.50F, kDeck2Top, -126.50F}, {8.50F, kDeck2Top + 0.27F, -126.00F}, Material::Steel));
+    route.push_back(span({6.50F, kDeck2Top, -127.00F}, {8.50F, kDeck2Top + 0.54F, -126.50F}, Material::Steel));
+    route.push_back(span({6.50F, kDeck2Top, -127.50F}, {8.50F, kDeck2Top + 0.81F, -127.00F}, Material::Steel));
+    route.push_back(span({6.50F, kDeck2Top, -128.00F}, {8.50F, kDeck2Top + 1.08F, -127.50F}, Material::Steel));
+    route.push_back(span({6.50F, kDeck2Top, -129.70F}, {8.20F, kDeck2Top + 1.35F, -128.00F}, Material::Steel));
+
+    // Narrow 0.40 m wide runway girder spanning east across open machinery bay:
+    route.push_back(span({8.20F, kDeck2Top + 1.20F, -129.70F}, {13.50F, kDeck2Top + 1.35F, -129.30F}, Material::Yellow));
+    route.push_back(span({8.15F, kDeck2Top + 1.27F, -129.75F}, {13.55F, kDeck2Top + 1.35F, -129.25F}, Material::Hazard));
+    for (const float col_x : {8.30F, 10.50F, 13.20F}) {
+        route.push_back(box(JPH::Vec3(0.08F, 0.60F, 0.08F), JPH::Vec3(col_x, kDeck2Top + 0.60F, -129.50F), Material::Steel));
+    }
+
+    // 3. Broken Catwalk with Angle-Iron Catch Lip
+    route.push_back(span({11.00F, kDeck2Top + 0.68F, -132.30F}, {14.20F, kDeck2Top + 0.80F, -131.30F}, Material::Galvanised));
+    route.push_back(span({11.00F, kDeck2Top + 0.80F, -131.35F}, {14.20F, kDeck2Top + 1.70F, -131.30F}, Material::Yellow));
+    for (float ly = kDeck2Top + 0.20F; ly <= kDeck2Top + 0.70F; ly += 0.25F) {
+        route.push_back(box(JPH::Vec3(0.25F, 0.02F, 0.02F), JPH::Vec3(11.30F, ly, -131.30F), Material::Steel));
+    }
+
+    // 2.20 m Gap from x = 14.20F to x = 16.40F
+    route.push_back(span({16.40F, kDeck2Top + 0.68F, -132.30F}, {18.50F, kDeck2Top + 0.80F, -131.30F}, Material::Galvanised));
+    route.push_back(span({16.38F, kDeck2Top + 0.72F, -132.30F}, {16.45F, kDeck2Top + 0.80F, -131.30F}, Material::Hazard));
+    route.push_back(span({16.60F, kDeck2Top + 0.80F, -131.35F}, {18.50F, kDeck2Top + 1.70F, -131.30F}, Material::Yellow));
+    route.push_back(span({17.80F, kDeck2Top - 0.05F, -131.30F}, {18.50F, kDeck2Top + 0.80F, -125.50F}, Material::Galvanised));
+}
+
+void build_c1_traversal_enhancements(std::vector<Part> &route) {
+    // 1. Suspended Maintenance Recovery Cradle under Davit Leap
+    constexpr float kCradleX0 = 10.00F;
+    constexpr float kCradleX1 = 15.00F;
+    constexpr float kCradleZ0 = -123.70F;
+    constexpr float kCradleZ1 = -118.00F;
+    constexpr float kCradleFloorY = 30.50F;
+
+    route.push_back(span({kCradleX0, kCradleFloorY - 0.10F, kCradleZ0},
+                         {kCradleX1, kCradleFloorY, kCradleZ1}, Material::Galvanised));
+    // Toe boards along perimeter
+    route.push_back(span({kCradleX0 - 0.02F, kCradleFloorY, kCradleZ1 - 0.02F},
+                         {kCradleX1 + 0.02F, kCradleFloorY + 0.15F, kCradleZ1 + 0.02F}, Material::Hazard));
+    route.push_back(span({kCradleX0 - 0.02F, kCradleFloorY, kCradleZ0},
+                         {kCradleX0 + 0.02F, kCradleFloorY + 0.15F, kCradleZ1}, Material::Hazard));
+    route.push_back(span({kCradleX1 - 0.02F, kCradleFloorY, kCradleZ0},
+                         {kCradleX1 + 0.02F, kCradleFloorY + 0.15F, kCradleZ1}, Material::Hazard));
+
+    // Guardrails on west, east, south edges
+    route.push_back(span({kCradleX0, kCradleFloorY + 0.95F, kCradleZ1 - 0.06F},
+                         {kCradleX1, kCradleFloorY + 1.05F, kCradleZ1}, Material::Yellow));
+    route.push_back(span({kCradleX0, kCradleFloorY + 0.95F, kCradleZ0},
+                         {kCradleX0 + 0.06F, kCradleFloorY + 1.05F, kCradleZ1}, Material::Yellow));
+    route.push_back(span({kCradleX1 - 0.06F, kCradleFloorY + 0.95F, kCradleZ0},
+                         {kCradleX1, kCradleFloorY + 1.05F, kCradleZ1}, Material::Yellow));
+
+    // Corner suspension hangers
+    for (const float sx : {kCradleX0 + 0.10F, kCradleX1 - 0.10F}) {
+        for (const float sz : {kCradleZ0 + 0.20F, kCradleZ1 - 0.10F}) {
+            route.push_back(box(JPH::Vec3(0.03F, 1.00F, 0.03F), JPH::Vec3(sx, kCradleFloorY + 1.00F, sz), Material::Steel));
+        }
+    }
+
+    // Vertical recovery ladder mounted to Deck 3 South fascia at X = 11.20F
+    constexpr float kRecLadderX = 11.20F;
+    constexpr float kRecLadderZ = -123.58F;
+    for (float y = kCradleFloorY + 0.30F; y <= kDeck3Top - 0.10F; y += 0.30F) {
+        route.push_back(box(JPH::Vec3(0.25F, 0.02F, 0.02F), JPH::Vec3(kRecLadderX, y, kRecLadderZ), Material::Steel));
+    }
+    // Stiles below deck top
+    for (const float side : {-1.0F, 1.0F}) {
+        const float x = kRecLadderX + side * 0.25F;
+        route.push_back(span({x - 0.02F, kCradleFloorY, kRecLadderZ - 0.02F},
+                             {x + 0.02F, kDeck3Top, kRecLadderZ + 0.02F}, Material::Yellow));
+        // Flared walk-through grab handles above deck top allowing body passage
+        const float grab_x = kRecLadderX + side * kGrabHalfWidth;
+        route.push_back(span({grab_x - 0.03F, kDeck3Top, kRecLadderZ - 0.02F},
+                             {grab_x + 0.03F, kDeck3Top + 0.90F, kRecLadderZ + 0.02F}, Material::Yellow));
+        route.push_back(span({std::min(x, grab_x) - 0.02F, kDeck3Top - 0.05F, kRecLadderZ - 0.02F},
+                             {std::max(x, grab_x) + 0.02F, kDeck3Top, kRecLadderZ + 0.02F}, Material::Yellow));
+    }
+
+    // Fascia wall plate and top landing floor plate on Deck 3
+    route.push_back(span({kRecLadderX - 0.60F, kDeck3Top - 1.20F, kFaceOuterZ},
+                         {kRecLadderX + 0.60F, kDeck3Top, kFaceOuterZ + 0.04F}, Material::Steel));
+    route.push_back(span({kRecLadderX - 0.60F, kDeck3Top, kFaceOuterZ - 1.20F},
+                         {kRecLadderX + 0.60F, kDeck3Top + 0.03F, kFaceOuterZ + 0.04F}, Material::Steel));
+
+    // 2. Alternative Exterior Diagrid Route for C1
+    route.push_back(span({24.40F, 27.38F, -123.50F}, {26.20F, 27.50F, -122.90F}, Material::Galvanised));
+    route.push_back(span({24.50F, 29.68F, -126.00F}, {26.20F, 29.80F, -124.00F}, Material::Galvanised));
+    route.push_back(span({24.50F, 29.80F, -124.06F}, {26.20F, 30.70F, -124.00F}, Material::Yellow));
+    for (float y = 27.70F; y <= 29.60F; y += 0.30F) {
+        route.push_back(box(JPH::Vec3(0.25F, 0.02F, 0.02F), JPH::Vec3(25.80F, y, -123.80F), Material::Steel));
+    }
+    for (const float side : {-1.0F, 1.0F}) {
+        route.push_back(span({25.80F + side * 0.25F - 0.02F, 27.50F, -123.83F},
+                             {25.80F + side * 0.25F + 0.02F, 29.80F, -123.77F}, Material::Yellow));
+    }
+    route.push_back(span({25.00F, 29.80F, -126.00F}, {25.80F, 30.80F, -127.20F}, Material::Steel));
+    route.push_back(span({25.00F, 30.80F, -127.20F}, {25.80F, 31.90F, -128.40F}, Material::Steel));
+    route.push_back(span({25.00F, 31.90F, -128.40F}, {25.80F, 33.00F, -129.60F}, Material::Yellow));
+}
+
 void build_c1(std::vector<Part> &route) {
     // ---- the loading landing and its cabinet ---------------------------------
     route.push_back(span({kLandingX0, kDeck2Top - 0.10F, -124.05F}, {kLandingX1, kDeck2Top, kLandingZ1},
@@ -595,6 +785,9 @@ void build_c1(std::vector<Part> &route) {
         route.push_back(box(JPH::Vec3(kLadderHalfWidth, 0.02F, 0.02F), JPH::Vec3(kDavitX, y, kLadderZ),
                             Material::Steel));
     }
+
+    build_deck2_traversal(route);
+    build_c1_traversal_enhancements(route);
 }
 
 // ---- S2, the walking beam hoist with fixed ballast cart (archetype 18 mutated)
@@ -749,9 +942,53 @@ constexpr float kS2GangwayHalfX = 1.40F;
     }
 }
 
+void build_deck4_traversal(std::vector<Part> &frame) {
+    // 1. High-Pressure Steam Separator & Receiver Skid (Deck 4 East Bay)
+    frame.push_back(span({15.00F, kDeck4Top, -131.00F}, {21.00F, kDeck4Top + 0.45F, -126.00F}, Material::Rust));
+    frame.push_back(span({15.50F, kDeck4Top + 0.45F, -130.50F}, {18.50F, kDeck4Top + 1.55F, -128.00F}, Material::Steel));
+    frame.push_back(span({15.45F, kDeck4Top + 1.47F, -130.55F}, {18.55F, kDeck4Top + 1.55F, -127.95F}, Material::Hazard));
+    frame.push_back(span({19.00F, kDeck4Top + 0.45F, -130.50F}, {20.80F, kDeck4Top + 2.65F, -127.50F}, Material::Steel));
+    frame.push_back(span({18.95F, kDeck4Top + 2.57F, -130.55F}, {20.85F, kDeck4Top + 2.65F, -127.45F}, Material::Hazard));
+
+    // 2. East Bay Runway Girder & Balance Beam
+    // South access stair from deck floor (44.0m) to runway girder (45.35m):
+    for (int step = 0; step < 5; ++step) {
+        const float z0 = -127.50F - static_cast<float>(step + 1) * 0.50F;
+        const float z1 = -127.50F - static_cast<float>(step) * 0.50F;
+        const float y = kDeck4Top + static_cast<float>(step + 1) * 0.27F;
+        frame.push_back(span({11.50F, kDeck4Top, z0}, {13.50F, y, z1}, Material::Steel));
+    }
+
+    // Narrow 0.40m wide runway balance girder spanning north across open machinery pit:
+    frame.push_back(span({12.30F, kDeck4Top + 1.20F, -133.50F}, {12.70F, kDeck4Top + 1.35F, -130.00F}, Material::Yellow));
+    frame.push_back(span({12.25F, kDeck4Top + 1.27F, -133.55F}, {12.75F, kDeck4Top + 1.35F, -129.95F}, Material::Hazard));
+    // Transverse bracing beam
+    frame.push_back(span({12.50F, kDeck4Top + 1.20F, -130.70F}, {15.50F, kDeck4Top + 1.35F, -130.30F}, Material::Yellow));
+    frame.push_back(span({12.45F, kDeck4Top + 1.27F, -130.75F}, {15.55F, kDeck4Top + 1.35F, -130.25F}, Material::Hazard));
+
+    // Support stanchions
+    frame.push_back(box(JPH::Vec3(0.08F, 0.60F, 0.08F), JPH::Vec3(12.50F, kDeck4Top + 0.60F, -133.50F), Material::Steel));
+    frame.push_back(box(JPH::Vec3(0.08F, 0.60F, 0.08F), JPH::Vec3(15.50F, kDeck4Top + 0.60F, -130.50F), Material::Steel));
+}
+
+void build_deck6_traversal(std::vector<Part> &frame) {
+    // 1. West Service Catwalk & Buffer Casing (Deck 6 South Band Machinery Bay, Z in [-133.0, -128.5])
+    frame.push_back(span({-11.50F, kDeck6Top, -133.00F}, {-8.00F, kDeck6Top + 0.45F, -128.50F}, Material::Galvanised));
+    frame.push_back(span({-10.80F, kDeck6Top + 0.45F, -132.50F}, {-9.20F, kDeck6Top + 1.55F, -129.50F}, Material::Rust));
+    frame.push_back(span({-10.85F, kDeck6Top + 1.47F, -132.55F}, {-9.15F, kDeck6Top + 1.55F, -129.45F}, Material::Hazard));
+    frame.push_back(span({-8.00F, kDeck6Top, -133.00F}, {-5.00F, kDeck6Top + 0.45F, -128.50F}, Material::Galvanised));
+
+    // 2. East Bay Machinery Housing & Balance Trough (Deck 6 South Band Machinery Bay, Z in [-133.0, -128.5])
+    frame.push_back(span({14.00F, kDeck6Top, -133.00F}, {18.00F, kDeck6Top + 1.10F, -128.50F}, Material::Steel));
+    frame.push_back(span({13.95F, kDeck6Top + 1.02F, -133.05F}, {18.05F, kDeck6Top + 1.10F, -128.45F}, Material::Hazard));
+    frame.push_back(span({15.80F, kDeck6Top + 0.95F, -133.00F}, {16.20F, kDeck6Top + 1.10F, -128.50F}, Material::Yellow));
+}
+
 void build_s2_frame(std::vector<Part> &frame) {
     build_crossover_gangway(frame, kDeck4Top);
     build_crossover_gangway(frame, kDeck6Top);
+    build_deck4_traversal(frame);
+    build_deck6_traversal(frame);
 
     // Landing buffer beams under S2 cage sill at Deck 4 (5 cm clearance under cage floor at 43.85 m)
     const float s2_sill_top = kS2CageOriginY - kS2CageFloorHalfY - 0.05F;
@@ -857,6 +1094,42 @@ void build_s2(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
 
 constexpr float kDeck7Top = 77.00F;
 constexpr float kDeck8Top = 88.00F;
+
+void build_c2_traversal_enhancements(std::vector<Part> &route) {
+    // Suspended Maintenance Recovery Cradle under C2 Davit Leap
+    constexpr float kC2CradleX0 = 8.50F;
+    constexpr float kC2CradleX1 = 11.50F;
+    constexpr float kC2CradleZ0 = -163.50F;
+    constexpr float kC2CradleZ1 = -160.50F;
+    constexpr float kC2CradleFloorY = 78.50F;
+
+    route.push_back(span({kC2CradleX0, kC2CradleFloorY - 0.10F, kC2CradleZ0},
+                         {kC2CradleX1, kC2CradleFloorY, kC2CradleZ1}, Material::Galvanised));
+    route.push_back(span({kC2CradleX0 - 0.02F, kC2CradleFloorY, kC2CradleZ0 - 0.02F},
+                         {kC2CradleX1 + 0.02F, kC2CradleFloorY + 0.15F, kC2CradleZ0 + 0.02F}, Material::Hazard));
+    route.push_back(span({kC2CradleX0 - 0.02F, kC2CradleFloorY, kC2CradleZ1 - 0.02F},
+                         {kC2CradleX1 + 0.02F, kC2CradleFloorY + 0.15F, kC2CradleZ1 + 0.02F}, Material::Hazard));
+    route.push_back(span({kC2CradleX0, kC2CradleFloorY + 0.95F, kC2CradleZ0},
+                         {kC2CradleX1, kC2CradleFloorY + 1.05F, kC2CradleZ0 + 0.06F}, Material::Yellow));
+    route.push_back(span({kC2CradleX0, kC2CradleFloorY + 0.95F, kC2CradleZ1 - 0.06F},
+                         {kC2CradleX1, kC2CradleFloorY + 1.05F, kC2CradleZ1}, Material::Yellow));
+    route.push_back(span({kC2CradleX0, kC2CradleFloorY + 0.95F, kC2CradleZ0},
+                         {kC2CradleX0 + 0.06F, kC2CradleFloorY + 1.05F, kC2CradleZ1}, Material::Yellow));
+
+    for (const float sx : {kC2CradleX0 + 0.10F, kC2CradleX1 - 0.10F}) {
+        for (const float sz : {kC2CradleZ0 + 0.10F, kC2CradleZ1 - 0.10F}) {
+            route.push_back(box(JPH::Vec3(0.03F, 1.20F, 0.03F), JPH::Vec3(sx, kC2CradleFloorY + 1.20F, sz), Material::Steel));
+        }
+    }
+
+    for (float y = kC2CradleFloorY + 0.30F; y <= 82.00F - 0.10F; y += 0.30F) {
+        route.push_back(box(JPH::Vec3(0.25F, 0.02F, 0.02F), JPH::Vec3(8.70F, y, -161.80F), Material::Steel));
+    }
+    for (const float side : {-1.0F, 1.0F}) {
+        route.push_back(span({8.70F + side * 0.25F - 0.02F, kC2CradleFloorY, -161.83F},
+                             {8.70F + side * 0.25F + 0.02F, 82.90F, -161.77F}, Material::Yellow));
+    }
+}
 
 void build_c2(std::vector<Part> &route) {
     // 1. Switchgear enclosure on Deck 6 East band (floor 66.00F, top 67.70F)
@@ -965,6 +1238,8 @@ void build_c2(std::vector<Part> &route) {
         route.push_back(span({grab_x - 0.03F, kC2DavitArmTop, kC2DavitLadderZ - 0.03F},
                              {grab_x + 0.03F, kC2DavitArmTop + 0.90F, kC2DavitLadderZ + 0.03F}, Material::Yellow));
     }
+
+    build_c2_traversal_enhancements(route);
 }
 
 // ---- S3, the brake-override counterweight hoist (archetype 17) --------------

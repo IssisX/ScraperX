@@ -256,3 +256,50 @@ Elev. (m)   Band / Section                      Coupling Mechanism / Challenge
 | **Mechanisms** | 1. Stage D (220 → 256 m): seat D's pipe spool, throw hydraulic fill valve.<br>2. Stage E (256 → 298 m): shut cab door, trip air reservoir, ride pressurized cab.<br>3. Stage F (298 → 340 m): open main accumulator, ride hydraulic ram platform to TP-340. |
 | **Acceptance Criteria** | 1. Grade to TP-340 in one unbroken physical simulation.<br>2. Complete execution across all three macro systems: Freight (S1/S2/S3/A/B/C), Traversal (C1/C2/C3/spine), and Process/Flow (D/E/F).<br>3. Rider arrives at TP-340 (y = 340.0 m) with 0 deaths. |
 | **Verification Gate** | `PASS scraperx_sim mega_ascent_grade_to_tp340` emitted and asserted in CI workflow. |
+
+---
+
+## 12. Cycle 11 — Industrial Athletic Traversal Layer & Parkour System Expansion
+
+### Objective & Philosophy
+Transform the mechanical environment into an intentional, collision-honest athletic climbing encounter. Every obstacle is physically grounded in industrial plausibility (cross-bracing, structural I-beams, broken catwalks, maintenance platforms, machinery housings, pipe runs, recovery cradles) and deliberately exercises ScraperX's core movement mechanics (jumping, vaulting, hanging, lateral shimmying, pulling up, support transfers, narrow-beam balancing, and fall recovery).
+
+### Traversal Geometry Specifications
+1. **West Yard Transformer & Compressor Station (Elevation 0.90 → 22.00 m):**
+   - 0.30 m containment curb step-up (satisfying `kStepMaximumHeight = 0.35m`).
+   - 1.10 m rise transformer casing (vaultable) and compressor skid (mantleable).
+   - Elevated cable tray gantry (y = 3.95 m) and S1 West Service Tower bridging to Deck 2 south-west band.
+2. **Deck 2 Overhead Crane Runway & Broken Catwalk (Elevation 22.00 → 24.25 m):**
+   - High-voltage transformer blast barrier (2.20 m) and capacitor banks.
+   - 5-step access stair (rise 0.27 m per step) ascending from y = 22.0 to 23.35 m.
+   - 0.40 m wide overhead crane runway girder cantilevered across the machinery bay triggering `player_balancing`.
+   - Broken catwalk with 2.20 m jump gap and angle-iron catch lip.
+3. **C1 Suspended Maintenance Recovery Cradle (Elevation 30.50 → 33.95 m):**
+   - Suspended 5x5 m steel grating platform under the C1 davit leap at y = 30.50 m (absorbs 2.8 m survivable falls).
+   - Perimeter toe boards, corner suspension hangers, and vertical maintenance ladder mounted to Deck 3 South fascia.
+   - Flared walk-through grab handles (0.90 m span) allowing smooth mantle top-out onto Deck 3 floor plate.
+   - Alternative exterior diagrid route with scaffold platform and stepped transfer beam.
+4. **Deck 4 Steam Receiver Skid & Runway Girder (Elevation 44.00 → 46.25 m):**
+   - Steam receiver and separator vessels east of the S2 cage corridor.
+   - 5-step access stair ascending from deck floor (44.0 m) to runway girder (45.35 m).
+   - 0.40 m wide balance runway girder spanning north across open machinery pit.
+5. **Deck 6 South Band Traversal (Elevation 66.00 → 67.55 m):**
+   - Catwalk and machinery housing relocated strictly south of Z = -128.5 m to preserve 100% collision-free sweep clearance for the 14-meter S2 walking beam at Z = -141.0 m.
+   - Unobstructed 3-meter walking corridor along Z = -125.5 m for C2 ascent.
+6. **C2 Suspended Maintenance Recovery Cradle (Elevation 78.50 → 82.90 m):**
+   - Suspended safety recovery cradle under the C2 davit leap with safety guardrails and recovery ladder.
+
+### Visceral Feel, Haptics & Humorous Vocalizations
+- **Haptic Tactile Profiles:** Custom vibration profiles for `vault` (24ms / 0.65 amp), `mantle` (42ms / 0.75 amp), and `balance` (18ms / 0.30 amp).
+- **Athletic Camera Feel:** Dynamic speed vault tuck dip (-0.07m) and apex roll bank (+0.035 rad), muscular mantle heave with hand-plant compression, tightrope balance micro-sway, and +4.5° dynamic FOV rush surge.
+- **Fear-Based Screaming & Profanity:** Procedural formant-modeled terror yells (`_fall_yell`) and profane expletives triggered when falling at speed (>11 m/s) or high danger (`FALL_SWEARS`), canopy deployment relief quips (`CHUTE_RELIEF`), and dry recovery quips on lethal checkpoint restore (`LETHAL_RESTORE_QUIPS`).
+
+### Verification & Falsification
+- `scraperx_sim_tests` asserts:
+  - `PASS scraperx_sim yard athletic approach: on_curb_y=1.2`
+  - `PASS scraperx_sim deck 2 crane runway: y=24.2495 balancing=1 crossed_x=12.363`
+  - `PASS scraperx_sim C1 recovery cradle: fell 2.8m safe landed_y=31.3664 recovered_deck3_y=33.9464`
+  - `PASS scraperx_sim deck 4 runway girder: y=46.25 balancing=1`
+- `scraperx_parkour_flow_tests`: 100% passing (`PASS scraperx_sim parkour flow`).
+- `ctest --test-dir build/host`: 100% tests passed (0 failures out of 2).
+- Full continuous Mega-Ascent Grade to 440m proven with zero regressions.
