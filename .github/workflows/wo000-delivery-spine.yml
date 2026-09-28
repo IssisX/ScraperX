@@ -295,7 +295,11 @@ jobs:
         run: |
           set -euo pipefail
           CHECKPOINT_ID="${GITHUB_SHA::12}"
-          APK_NAME="ScraperX-${CHECKPOINT_ID}-arm64.apk"
+          .github/scripts/android_identity.sh apply "${GITHUB_REF_NAME}" \
+            > "${RUNNER_TEMP}/android-identity.env"
+          # shellcheck disable=SC1091
+          source "${RUNNER_TEMP}/android-identity.env"
+          APK_NAME="${ANDROID_LABEL}-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
@@ -303,11 +307,17 @@ jobs:
           test -s "build/apk/${APK_NAME}"
           unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
+          .github/scripts/android_identity.sh verify \
+            "build/apk/${APK_NAME}" "${ANDROID_APPLICATION_ID}" "${ANDROID_LABEL}" \
+            | tee artifacts/apk/IDENTITY.txt
           cp "build/apk/${APK_NAME}" artifacts/apk/
           sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
-          printf 'branch=%s\ncommit=%s\napk=%s\n' \
+          printf 'branch=%s\ncommit=%s\napk=%s\nlabel=%s\napplication_id=%s\n' \
             "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
+            "${ANDROID_LABEL}" "${ANDROID_APPLICATION_ID}" \
             > artifacts/apk/CHECKPOINT.txt
+          printf 'ANDROID_LABEL=%s\nANDROID_APPLICATION_ID=%s\n' \
+            "${ANDROID_LABEL}" "${ANDROID_APPLICATION_ID}" >> "${GITHUB_ENV}"
 
       - name: Record evidence boundaries
         shell: bash
@@ -331,6 +341,7 @@ jobs:
           - scripted interface scenarios drove touch, gamepad and keyboard through the viewport's real input pipeline, each asserting the resulting native state change;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
+          - that APK's launcher label is \`${ANDROID_LABEL}\` and its application id is \`${ANDROID_APPLICATION_ID}\`, checked with aapt;
           - the APK checksum and checkpoint identity were recorded.
 
           Not proven here: APK installation, Android execution, Fold 6 observation on the real panel, sustained frame rate, thermals, touch ergonomics, the fall/parachute/checkpoint loop, load-bearing structural simulation, process/isolation networks, persistence, NPCs, missions, or a complete game loop.
@@ -420,12 +431,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK_NAME="ScraperX-${GITHUB_SHA::12}-arm64.apk"
           mkdir -p playtest
+          .github/scripts/android_identity.sh apply "${GITHUB_REF_NAME}" \
+            > "${RUNNER_TEMP}/android-identity.env"
+          # shellcheck disable=SC1091
+          source "${RUNNER_TEMP}/android-identity.env"
+          APK_NAME="${ANDROID_LABEL}-${GITHUB_SHA::12}-arm64.apk"
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/playtest/${APK_NAME}"
           test -s "playtest/${APK_NAME}"
           unzip -l "playtest/${APK_NAME}" | grep -F "lib/arm64-v8a/libscraperx_native.so"
+          .github/scripts/android_identity.sh verify \
+            "playtest/${APK_NAME}" "${ANDROID_APPLICATION_ID}" "${ANDROID_LABEL}"
 
       - name: Publish the playtest APK
         uses: actions/upload-artifact@v4
