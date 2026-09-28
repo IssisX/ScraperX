@@ -2,8 +2,23 @@
 
 **Write branch: `ScraperX-Claude`.** All implementation and all document writes land there.
 Other branches may be read to recover provenance. None of them is a write target, and none of
-them is an authority. `ScraperX-Grok` and `ChatGPT` are sibling experiments; planning material
-has been adopted from both, but where this tree and either of those disagree, **this tree wins**.
+them is an authority. `ScraperX-Grok`, `ChatGPT` and `Gemini` are sibling experiments; planning
+material has been adopted from `ChatGPT` and `ScraperX-Grok`, but where this tree and another
+branch disagree, **this tree wins**.
+
+**Owner directives**, dated, newest first. The owner builds several versions of this game at once;
+every request is checked against this list, and a repeat or a contradiction is pointed out.
+
+| Date | Directive | Status here |
+|---|---|---|
+| 2026-09-28 | Every APK from this branch is ScraperX-Claude, `com.cory.scraperx.claude`. Permanent | done; CI reads it back from every APK |
+| 2026-09-28 | Stairs, ladders and easy paths are only the backup route; the route is the machines and the parkour climbs | in the plan (§2.6 rule 8); no backup path built yet |
+| 2026-09-28 | Falls sound human: panicked yelling and real profanity, never filtered ("Motherfucker" ships) | done: 47 lines, every line of the script |
+| 2026-09-28 | Consider taking the `Gemini` branch's progress into this branch | assessed; waiting on the owner's go |
+| 2026-09-26 | No build is green unless the ascent is played through the game's own input from the game's start | done; CI builds the APK only after it |
+| 2026-09-26 | A mechanism does not need five steps | in the plan (§2.2: one or two player actions a stage) |
+| 2026-09-26 | The audio must not be "ting-ting-ping-ping" | done: the ringing cues re-voiced |
+| 2026-09-25 | Almost every mechanism was incomplete and did not lift the player: start over from grade, no test pieces in the player's world, every machine works | done here to 55 m (S1, C1, S2); movement test blocks only at test spawns; the old bands above 154 m kept for the owner's call |
 
 ---
 
