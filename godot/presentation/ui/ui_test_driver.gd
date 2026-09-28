@@ -1427,7 +1427,9 @@ func _service_skin(device: int) -> bool:
 	if not high:
 		_move(device, 0.0)
 		return _fail("the lattice climb stopped at y %.2f" % _position().y)
-	_move_dir(device, Vector2(1.0, 0.0))
+	# Facing the lattice (+Z), camera-left is east: the same world stick the
+	# native test holds, ( +1, +0.15 ). Camera-right walks off the bars.
+	_move_dir(device, Vector2(-1.0, 0.15))
 	var across: bool = await _wait_until(func() -> bool:
 		return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING and _position().x >= -13.75, 10.0)
 	_move_dir(device, Vector2.ZERO)
