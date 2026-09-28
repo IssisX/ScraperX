@@ -1679,9 +1679,9 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 			# A key is full throw. Holding it beside forward is a 45° crab, and
 			# that crab walks the S2 crossover into the east rail. Strafe only
 			# when the cross-track miss is the larger one.
-			if absf(lateral) > 0.45 and absf(lateral) > absf(along) * 0.5:
+			if absf(lateral) > 0.12 and absf(lateral) > absf(along) * 0.65:
 				v.x = signf(lateral)
-				if absf(along) < absf(lateral):
+				if absf(along) < absf(lateral) * 0.65:
 					v.y = 0.0
 			else:
 				v.x = 0.0
