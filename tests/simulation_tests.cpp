@@ -2489,6 +2489,84 @@ bool climb_c3(scraperx::sim::Simulation &simulation) {
            on_deck14.support_entity_id == Simulation::kTowerEntityId;
 }
 
+// Off S1 onto deck 2. The north door is a plate. East: vault the sill onto
+// the grate, balance the stringer, mantle the corbel, step down onto the
+// tower. Every move is a player input against the real controller.
+void report_s1_exit(const scraperx::sim::Simulation &simulation, const char *leg) {
+    const auto state = simulation.snapshot();
+    std::cout << "S1 exit " << leg << ": at=" << state.player_position.x << "," << state.player_position.y
+              << "," << state.player_position.z << " grounded=" << state.player_grounded
+              << " traversal=" << int(state.traversal_state) << " support=" << state.support_entity_id
+              << " ledge=" << state.ledge_available << " rise=" << state.ledge_rise_meters
+              << " balance=" << state.player_balancing << "\n";
+}
+
+bool exit_s1(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    // The well's north side is a plate. Walking at the deck must not reach it,
+    // and must not knock the rider off the cage.
+    const double pushed = walk_toward(simulation, 10.0, -128.0, 2.0);
+    const auto blocked = simulation.snapshot();
+    if (pushed < -122.6 || !blocked.player_grounded || blocked.player_position.y < 21.5) {
+        report_s1_exit(simulation, "north door");
+        std::cout << "S1 north push z=" << pushed << "\n";
+        return false;
+    }
+    if (!walk_to(simulation, 10.50, -120.80, 5.0, 0.12)) {
+        report_s1_exit(simulation, "to the sill");
+        return false;
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.35);
+    const auto at_sill = simulation.snapshot();
+    if (!at_sill.ledge_available || at_sill.ledge_rise_meters < 0.50 || at_sill.ledge_rise_meters > 1.15) {
+        report_s1_exit(simulation, "sill not a vault");
+        return false;
+    }
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 2.0, [](const Snapshot &state) {
+            return state.traversal_state == TraversalState::None && state.player_grounded &&
+                   state.player_position.x > 12.05 && state.player_position.x < 13.30 &&
+                   state.player_position.y > 22.2 && state.player_position.y < 23.3;
+        })) {
+        report_s1_exit(simulation, "vault onto the grate");
+        return false;
+    }
+    if (!walk_to(simulation, 15.75, -120.80, 8.0, 0.14)) {
+        report_s1_exit(simulation, "along the stringer");
+        return false;
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.35);
+    const auto at_corbel = simulation.snapshot();
+    if (!at_corbel.ledge_available || at_corbel.ledge_rise_meters < 1.20) {
+        report_s1_exit(simulation, "corbel not a mantle");
+        return false;
+    }
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 2.5, [](const Snapshot &state) {
+            return state.traversal_state == TraversalState::None && state.player_grounded &&
+                   state.player_position.y > 24.0;
+        })) {
+        report_s1_exit(simulation, "mantle onto the corbel");
+        return false;
+    }
+    if (!walk_to(simulation, 15.75, -126.2, 6.0, 0.35)) {
+        report_s1_exit(simulation, "off the corbel");
+        return false;
+    }
+    (void)simulation.advance_frame(0.5);
+    const auto on_deck = simulation.snapshot();
+    if (!(on_deck.player_grounded && on_deck.player_position.y > kDeck2Top + 0.5 &&
+          on_deck.player_position.z < -124.0 && on_deck.support_entity_id == Simulation::kTowerEntityId)) {
+        report_s1_exit(simulation, "not on deck 2");
+        return false;
+    }
+    return true;
+}
+
 void run_stack() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -2595,10 +2673,9 @@ void run_stack() {
     require(rode.worst_margin_j >= -kStanceJitterJ,
             "at no tick may S1's payload have gained more energy than the bucket released");
 
-    // (d) The receiver: off the cage's open north side, along the gangway and
-    // onto deck 2's south band, standing on the tower.
-    require(walk_to(ride, 10.0, -123.2, 6.0) && walk_to(ride, 10.0, -126.5, 6.0),
-            "the rider must walk off S1's cage over the gangway onto deck 2");
+    // (d) The receiver: vault the east sill, balance the stringer, mantle the
+    // corbel, and stand on deck 2's south band.
+    require(exit_s1(ride), "the rider must vault, balance and mantle off S1 onto deck 2");
     (void)ride.advance_frame(0.5);
     const auto on_deck = ride.snapshot();
     require(on_deck.player_grounded && on_deck.player_position.y > kDeck2Top + 0.5 &&
@@ -2703,8 +2780,7 @@ void run_stack() {
     g_path_watch.armed = true;
     require(take_s1_chain(band), "the Stack: into S1's cage and take hold of its chain");
     require(ride_s1(band, 20.0).reached_top, "the Stack: S1 carries the rider to deck 2");
-    require(walk_to(band, 10.0, -123.2, 6.0) && walk_to(band, 10.0, -126.0, 6.0),
-            "the Stack: off S1 onto deck 2");
+    require(exit_s1(band), "the Stack: vault, balance and mantle off S1 onto deck 2");
     const double at_deck2 = band.snapshot().simulation_time_seconds - band_start;
     require(climb_c1(band), "the Stack: up C1 to deck 4");
     g_path_watch.armed = false;

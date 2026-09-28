@@ -1195,8 +1195,10 @@ func _checkpoint_continuation(device: int) -> bool:
 # The Stack from the game's own start at grade to deck 4, on the device under
 # test. Across the yard into S1's cage, GRAB the valve chain hanging in it and
 # hold on: the water runs into the bucket until it outweighs the cage and the
-# rider, and the cage carries them 21.8 m to deck 2. LET GO, off over the
-# gangway, and up C1: onto the cabinet, a jump to hang from the duct's lip,
+# rider, and the cage carries them 21.8 m to the top of the well. LET GO, vault
+# the east sill onto the grate, balance the stringer, mantle the corbel, and
+# step down onto deck 2. Then up C1: onto the cabinet, a jump to hang from the
+# duct's lip,
 # up onto the duct and along it, up the vent stack onto deck 3, out along the
 # monorail, a leap for the davit's ladder, up it and back along the arm onto
 # deck 4. Every verb is the one the HUD offers at that moment, pressed on the
@@ -1255,14 +1257,32 @@ func _stack(device: int) -> bool:
 	if worst_wrist > 0.10:
 		return _fail("a hand on S1's chain jumped %.3f m in one frame (%s)" % [worst_wrist,
 			str(wrists.get("at", ""))])
+	await _face(Vector2(1.0, 0.0))
+	if not await _walk_to(device, Vector2(10.50, -120.80), 0.15, 6.0):
+		return _fail("the step to S1's east sill stalled at %s" % str(_position()))
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("Action read '%s' facing S1's sill, not CLIMB" % _action_label())
+	_act(device)
+	var on_grate: bool = await _wait_until(func() -> bool:
+		return _standing_above(22.2) and _position().y < 23.3 and _position().x > 12.05, 2.5)
+	if not on_grate:
+		return _fail("CLIMB did not vault off S1 onto the grate (at %s)" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _walk_to(device, Vector2(15.75, -120.80), 0.16, 8.0):
+		return _fail("the balance along S1's stringer stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
-	if not (await _walk_to(device, Vector2(10.0, -123.2), 0.2) and \
-			await _walk_to(device, Vector2(10.0, -126.5), 0.2)):
-		return _fail("the walk off S1 over the gangway stalled at %s" % str(_position()))
-	await _seconds(0.3)
-	if int(_native().get_support_entity_id()) != TOWER_ENTITY or _position().y < 22.5:
-		return _fail("off S1, not standing on deck 2 (y %.2f, on %d)" % [_position().y,
-			int(_native().get_support_entity_id())])
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("Action read '%s' facing S1's corbel, not CLIMB" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return _standing_above(24.0), 2.5):
+		return _fail("CLIMB did not mantle S1's corbel (y %.2f)" % _position().y)
+	await _face(Vector2(0.0, -1.0))
+	if not await _go(device, Vector2(15.75, -126.2), 0.35, 6.0):
+		return _fail("the step off S1's corbel stalled at %s" % str(_position()))
+	await _seconds(0.4)
+	if int(_native().get_support_entity_id()) != TOWER_ENTITY or _position().y < 22.5 or _position().z > -124.0:
+		return _fail("off S1, not standing on deck 2 (y %.2f, z %.2f, on %d)" % [_position().y,
+			_position().z, int(_native().get_support_entity_id())])
 	var at_deck2 := _position().y
 	await _pose("stack_deck2")
 	# C1, the facade: out onto the landing, round the cabinet, up onto it.

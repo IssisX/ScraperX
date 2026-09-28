@@ -32,8 +32,10 @@ using kit::Part;
 // from the valve's lever over it: a rider who takes hold of it pulls it down,
 // the lever opens the tank's valve and lets the catch go, and water runs into
 // the bucket until it outweighs the cage with the rider in it. Then the bucket
-// falls 21.8 m and the cage rides 21.8 m to a gangway onto deck 2 under a
-// brake-only governor. At the foot of its guide the bucket lands on a striker
+// falls 21.8 m and the cage rides 21.8 m up the well. The well's north side is
+// closed. The rider vaults an east sill onto a grate, balances a stringer, and
+// mantles a corbel onto deck 2. A brake-only governor holds the cage. At the
+// foot of its guide the bucket lands on a striker
 // that opens its drain: emptied, it is lighter than the cage again, and the
 // cage comes back down to the yard by itself.
 constexpr float kDeck2Top = 22.00F;
@@ -67,8 +69,9 @@ constexpr float kBucketMassKg = 150.0F;
 constexpr float kBucketCapacityKg = 1000.0F;
 constexpr float kBailY = kBucketFloorHalfY + kBucketWall + 0.10F;
 // The striker opens the drain while the bucket sits on it: 25 kg/s, slow
-// enough that a rider has several seconds at the top to step off before the
-// cage goes back down.
+// enough that a rider has several seconds at the top. The vault off the east
+// sill is under a second; after that the rider is on fixed steel and the
+// cage may go back down.
 constexpr float kDrainRate = 25.0F;
 const JPH::RVec3 kStrikerPivot(kBucketX, 1.29, kBucketZ + 0.90);
 
@@ -115,10 +118,28 @@ constexpr float kChainTop = kCageFloorTop + 1.95F;   // the handle's top, at res
 constexpr float kChainGuideY = 24.90F;
 constexpr float kHandleHalfY = 0.04F;
 
-// The gangway from the cage's north side at the top onto deck 2.
-constexpr float kGangwayHalfX = 1.40F;
-constexpr float kGangwayNorthZ = -124.05F;
-constexpr float kGangwaySouthZ = -122.30F;
+// The east sill is its own static body, outside the cage, so a vault off it
+// lands on the frame. The cage's east waist and header are open across the
+// guide gap; the rail itself is too thin for the vault probe. The sill's top
+// is 0.95 m over the cage floor at the top of the ride.
+constexpr float kSillFaceX = 11.58F;
+constexpr float kSillTop = 23.00F;
+
+// Where the vault lands, and the walk that follows. The grate's top is 1.35 m
+// under the sill at the top of the ride (inside the 1.40 m vault drop) and is
+// a different body from the cage, so the vault is a vault. The stringer is
+// 0.32 m wide and longer than 1.50 m, so it balances. The corbel's top is
+// 1.70 m over the stringer: over a jump (1.51 m) and over a vault (1.15 m),
+// inside a mantle (1.85 m). It runs north onto deck 2. The parapet and the
+// door plate stop a jump from the cage or the stringer reaching the deck or
+// the corbel's top. The east return stops a jump onto C1's landing.
+constexpr float kGrateTop = 21.65F;
+constexpr float kGrateCenterX = 12.55F;
+constexpr float kGrateCenterZ = -120.80F;
+constexpr float kExitZ = -120.80F;
+constexpr float kStringerTop = 21.65F;
+constexpr float kStringerHalfY = 0.11F;
+constexpr float kStringerHalfZ = 0.16F;
 
 [[nodiscard]] Part box(const JPH::Vec3 half, const JPH::Vec3 centre, const Material material) {
     return {half, centre, JPH::Quat::sIdentity(), material};
@@ -157,10 +178,24 @@ constexpr float kGangwaySouthZ = -122.30F;
         }
         cage.push_back(box(JPH::Vec3(kCageHalfX, 0.06F, 0.05F),
                            JPH::Vec3(0.0F, top_y, sx * (kCageHalfZ - 0.05F)), Material::Yellow));
-        cage.push_back(box(JPH::Vec3(0.05F, 0.06F, kCageHalfZ),
-                           JPH::Vec3(sx * (kCageHalfX - 0.05F), top_y, 0.0F), Material::Yellow));
-        cage.push_back(box(JPH::Vec3(0.04F, 0.45F, kCageHalfZ - 0.10F),
-                           JPH::Vec3(sx * (kCageHalfX - 0.04F), 0.55F, 0.0F), Material::Galvanised));
+        if (sx < 0.0F) {
+            cage.push_back(box(JPH::Vec3(0.05F, 0.06F, kCageHalfZ),
+                               JPH::Vec3(sx * (kCageHalfX - 0.05F), top_y, 0.0F), Material::Yellow));
+            cage.push_back(box(JPH::Vec3(0.04F, 0.45F, kCageHalfZ - 0.10F),
+                               JPH::Vec3(sx * (kCageHalfX - 0.04F), 0.55F, 0.0F), Material::Galvanised));
+        } else {
+            // East side open from local z -0.55 to 0.55: the fixed sill
+            // outside this gap is the vault. The header above the same gap
+            // is open so the vault's arc is not stopped by the top frame.
+            for (const float side : {-1.0F, 1.0F}) {
+                cage.push_back(box(JPH::Vec3(0.04F, 0.45F, 0.375F),
+                                   JPH::Vec3((kCageHalfX - 0.04F), 0.55F, side * 0.925F),
+                                   Material::Galvanised));
+                cage.push_back(box(JPH::Vec3(0.05F, 0.06F, 0.425F),
+                                   JPH::Vec3((kCageHalfX - 0.05F), top_y, side * 0.975F),
+                                   Material::Yellow));
+            }
+        }
     }
     cage.push_back(box(JPH::Vec3(0.12F, 0.06F, 0.06F),
                        JPH::Vec3(-(kCageHalfX + 0.06F), kCageEyeLocal.GetY(), 0.0F),
@@ -248,9 +283,9 @@ void build_s1_headframe(std::vector<Part> &frame, const JPH::RVec3 cage_sheave,
                                   Material::Rust));
         }
     }
-    // The cage's bay is a portal in its top storey, where the cage lets out
-    // north onto the gangway: knee braces in the head's corners, above the
-    // doorway.
+    // The cage's bay is a portal in its top storey. The well is closed by the
+    // door plate below; these knees stay above the doorway so they do not
+    // cross the cage.
     constexpr float kKneeFoot = 25.00F;
     constexpr float kKneeRun = 1.20F;
     frame.push_back(strut(JPH::Vec3(kLegXs[1] + 0.12F, kKneeFoot, kLegNorthZ),
@@ -332,11 +367,15 @@ void build_s1_headframe(std::vector<Part> &frame, const JPH::RVec3 cage_sheave,
     frame.push_back(box(JPH::Vec3(0.5F * (kTankMin.GetX() - 0.03F - kRiserX + 0.10F), 0.10F, 0.10F),
                         JPH::Vec3(0.5F * (kTankMin.GetX() - 0.03F + kRiserX - 0.10F), kRiserTop, kRiserZ),
                         Material::Galvanised));
-    // The downpipe from the tank's floor to the spout, and its valve.
+    // The downpipe from the tank's floor to just above the spout. It must not
+    // contain the spout point: the stream is a ray that starts there, and a
+    // pipe flush with that point becomes a hit once the frame's centre of
+    // mass shifts.
     const JPH::Vec3 spout(kSpout);
     const float pipe_top = kTankMin.GetY() - 0.20F;
-    frame.push_back(box(JPH::Vec3(0.08F, 0.5F * (pipe_top - spout.GetY()), 0.08F),
-                        JPH::Vec3(spout.GetX(), 0.5F * (pipe_top + spout.GetY()), spout.GetZ()),
+    const float pipe_bottom = spout.GetY() + 0.20F;
+    frame.push_back(box(JPH::Vec3(0.08F, 0.5F * (pipe_top - pipe_bottom), 0.08F),
+                        JPH::Vec3(spout.GetX(), 0.5F * (pipe_top + pipe_bottom), spout.GetZ()),
                         Material::Galvanised));
     // The valve's body, and its spindle out to the lever's hub.
     const JPH::Vec3 pivot(kLeverPivot);
@@ -346,23 +385,18 @@ void build_s1_headframe(std::vector<Part> &frame, const JPH::RVec3 cage_sheave,
     frame.push_back(span({pivot.GetX() - 0.04F, pivot.GetY() - 0.04F, spout.GetZ() + kValveHalf},
                          {pivot.GetX() + 0.04F, pivot.GetY() + 0.04F, pivot.GetZ() - kLeverArmHalf.GetZ() - 0.01F},
                          Material::Steel));
-    // The gangway onto deck 2, on knee braces back to the face, with rails
-    // along its sides.
-    const float gangway_mid_z = 0.5F * (kGangwayNorthZ + kGangwaySouthZ);
-    const float gangway_half_z = 0.5F * (kGangwaySouthZ - kGangwayNorthZ);
-    frame.push_back(box(JPH::Vec3(kGangwayHalfX, 0.05F, gangway_half_z),
-                        JPH::Vec3(kCageX, kDeck2Top - 0.05F, gangway_mid_z), Material::Galvanised));
-    for (const float side : {-1.0F, 1.0F}) {
-        const float x = kCageX + side * (kGangwayHalfX - 0.10F);
-        frame.push_back(strut(JPH::Vec3(x, kDeck2Top - 0.12F, kGangwaySouthZ - 0.10F),
-                              JPH::Vec3(x, kDeck2Top - 1.00F, -123.62F), 0.05F, Material::Rust));
-        const float rail_x = kCageX + side * (kGangwayHalfX - 0.04F);
-        frame.push_back(box(JPH::Vec3(0.04F, 0.04F, gangway_half_z - 0.10F),
-                            JPH::Vec3(rail_x, kDeck2Top + 1.05F, gangway_mid_z), Material::Yellow));
-        frame.push_back(box(JPH::Vec3(0.04F, 0.525F, 0.04F),
-                            JPH::Vec3(rail_x, kDeck2Top + 0.525F, kGangwaySouthZ - 0.12F),
-                            Material::Yellow));
-    }
+    // The exit off the cage, all of it fixed steel. See the constants above.
+    // None of these boxes may cross the spout's drop (x = 7.10, z = -120.35)
+    // or the bucket's column (x 5.90–7.50, z -121.50–-120.10).
+    frame.push_back(box(JPH::Vec3(0.70F, 0.10F, 0.45F),
+                        JPH::Vec3(kGrateCenterX, kGrateTop - 0.10F, kGrateCenterZ),
+                        Material::Galvanised));
+    frame.push_back(span({13.10F, kStringerTop - 2.0F * kStringerHalfY, kExitZ - kStringerHalfZ},
+                         {16.05F, kStringerTop, kExitZ + kStringerHalfZ}, Material::Yellow));
+    frame.push_back(span({15.20F, 20.60F, -124.90F}, {16.40F, 23.35F, -121.85F}, Material::Hazard));
+    frame.push_back(span({11.70F, 20.40F, -121.85F}, {15.00F, 26.20F, -121.50F}, Material::Rust));
+    frame.push_back(span({7.80F, 19.40F, -123.15F}, {12.60F, 26.40F, -122.55F}, Material::Rust));
+    frame.push_back(span({16.55F, 20.20F, -121.70F}, {17.05F, 26.20F, -119.85F}, Material::Rust));
 }
 
 void build_s1(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
@@ -392,6 +426,13 @@ void build_s1(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
                                  stack.s1_cage, kCageEyeLocal, cage_sheave, 1.0F, length, 0.0F);
 
     build_s1_headframe(frame, cage_sheave, bucket_sheave);
+
+    // The vault sill, outside the cage's east gap. A single box lives at its
+    // world position: a one-part compound is not a shape Jolt will build.
+    (void)kit.add_body(Sim::kStackS1SillEntityId,
+                       {box(JPH::Vec3(0.20F, 0.45F, 0.35F), JPH::Vec3::sZero(), Material::Hazard)},
+                       JPH::RVec3(kSillFaceX + 0.20F, kSillTop - 0.45F, kExitZ),
+                       JPH::Quat::sIdentity(), 0.0F, 0.8F);
 
     // ---- the valve's lever, its chain, the valve and the catch -----------------
     // About -z with the arm east, so the chain pulling its end down is positive.

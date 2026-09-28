@@ -650,7 +650,7 @@ private:
         // On L's cab, west of its middle.
         return {-3.6, 573.2, -160.1};
     case scraperx::sim::InitialSpawn::Deck2South:
-        // On deck 2's south band, north of S1's gangway.
+        // On deck 2's south band, north of S1's corbel.
         return {10.0, 23.2, -125.5};
     case scraperx::sim::InitialSpawn::Deck4South:
         // On deck 4's south band, west of C1's davit.

@@ -68,7 +68,7 @@ enum class InitialSpawn : std::uint8_t {
     Ring484North = 22,
     CraneKCage = 23,
     CraneLCab = 24,
-    // Band 0, the Stack: on deck 2's south band by S1's gangway, as a rider
+    // Band 0, the Stack: on deck 2's south band north of S1's corbel, as a rider
     // off S1; on deck 4's south band by C1's davit, as a climber off C1.
     Deck2South = 25,
     Deck4South = 26,
@@ -495,6 +495,7 @@ public:
     static constexpr std::uint64_t kStackS1LeverEntityId = 2202;
     static constexpr std::uint64_t kStackS1ChainEntityId = 2203;
     static constexpr std::uint64_t kStackS1StrikerEntityId = 2204;
+    static constexpr std::uint64_t kStackS1SillEntityId = 2205;
     // S2, the walking beam hoist with fixed ballast cart.
     static constexpr std::uint64_t kStackS2CageEntityId = 2210;
     static constexpr std::uint64_t kStackS2BeamEntityId = 2211;
