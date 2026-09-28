@@ -4,7 +4,7 @@ on:
   push:
     # ScraperX-Claude is the write/implementation branch. ScraperX-2 carries its
     # own copy of this workflow, so listing it here was inert routing.
-    branches: [ScraperX-Claude, Gemini]
+    branches: [ScraperX-Claude, Gemini, ScraperX-Grok]
   workflow_dispatch:
 
 permissions:
@@ -148,7 +148,8 @@ jobs:
             "PASS scraperx_sim AS-009 wreckage K" \
             "PASS scraperx_sim AS-009 wreckage J" \
             "PASS scraperx_sim AS-009 wreckage L" \
-            "PASS scraperx_sim ascent 154 to TP-640"
+            "PASS scraperx_sim ascent 154 to TP-640" \
+            "PASS scraperx_sim service skin"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
@@ -234,7 +235,8 @@ jobs:
               touch_hang_climb touch_chute touch_lethal_feedback touch_pause pad_core keyboard_core \
               touch_rig pad_rig keyboard_rig touch_boom pad_boom keyboard_boom touch_debris pad_debris keyboard_debris \
               touch_checkpoint touch_stack_upper pad_stack_upper keyboard_stack_upper \
-              touch_stack pad_stack keyboard_stack; do
+              touch_stack pad_stack keyboard_stack \
+              touch_skin pad_skin keyboard_skin; do
             timeout 300s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

@@ -75,6 +75,8 @@ enum class InitialSpawn : std::uint8_t {
     Deck6South = 27,
     Deck8North = 28,
     Deck12North = 29,
+    // B06 west service skin: on TP-640, south of the manifold, facing it.
+    ServiceSkinWest = 30,
 };
 
 // A world started at one of these spawns is the proving ground: it carries
@@ -504,6 +506,10 @@ public:
     static constexpr std::uint64_t kStackS3CarEntityId = 2221;
     static constexpr std::uint64_t kStackS3BrakeEntityId = 2222;
     static constexpr std::uint64_t kStackS3HandleEntityId = 2223;
+    // B06 west service skin. The manifold is its own body so the vault's
+    // landing is the plate, not the bar being cleared.
+    static constexpr std::uint64_t kSkinManifoldEntityId = 1030;
+    static constexpr std::uint64_t kSkinWestEntityId = 1031;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

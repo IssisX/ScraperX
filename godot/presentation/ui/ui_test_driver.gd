@@ -53,6 +53,10 @@ const SCENARIOS := {
 	"touch_stack": 8,
 	"pad_stack": 8,
 	"keyboard_stack": 8,
+	# B06 west service skin: TP-640 to the fixed deck at +672.25 m.
+	"touch_skin": 30,
+	"pad_skin": 30,
+	"keyboard_skin": 30,
 	# Needs a mixing audio driver: run under --write-movie (see _audio_mix).
 	"audio_mix": 8,
 }
@@ -165,6 +169,12 @@ func _run() -> void:
 			ok = await _stack(InputRouter.Device.GAMEPAD)
 		"keyboard_stack":
 			ok = await _stack(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_skin":
+			ok = await _service_skin(InputRouter.Device.TOUCH)
+		"pad_skin":
+			ok = await _service_skin(InputRouter.Device.GAMEPAD)
+		"keyboard_skin":
+			ok = await _service_skin(InputRouter.Device.KEYBOARD_MOUSE)
 		"audio_mix":
 			ok = await _audio_mix()
 	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario, _detail])
@@ -1374,6 +1384,148 @@ func _stack(device: int) -> bool:
 		at_deck2, at_deck4, at_deck6, at_deck8, at_deck12, at_deck14, at_ring176, at_ring198, at_ring220,
 		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step]
 	return true
+
+
+# B06 west service skin, on the device under test. The same verbs the native
+# route proves: vault the manifold, mantle the duct, balance the beam, leap
+# to the lattice, traverse to the balcony, crouch the tray, mantle the
+# handler, leap to the louver, jump back, and mantle the 672.25 m deck.
+func _service_skin(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	await _face(Vector2(0.0, 1.0))
+	await _seconds(0.3)
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("the manifold did not offer a vault (Action '%s' at %s)" % [
+			_action_label(), str(_position())])
+	_act(device)
+	if not await _wait_until(func() -> bool:
+		return _standing_above(640.5) and _position().z > -145.55 and _position().y < 642.2, 2.5):
+		return _fail("the vault did not land north of the manifold (at %s)" % str(_position()))
+	if not await _go(device, Vector2(-11.50, -144.40), 0.15, 8.0):
+		return _fail("the walk to the duct stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	await _seconds(0.3)
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("the duct did not offer a mantle (Action '%s')" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return _standing_above(642.40), 3.0):
+		return _fail("the mantle did not land on the duct (y %.2f)" % _position().y)
+	if not await _go(device, Vector2(-15.35, -142.35), 0.25, 14.0):
+		return _fail("the walk along the inspection beam stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	await _seconds(0.25)
+	_jump(device)
+	_move(device, 0.85)
+	var on_lattice: bool = await _wait_until(
+		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 2.2)
+	if not on_lattice:
+		_move(device, 0.0)
+		return _fail("the leap did not catch the lattice (at %s)" % str(_position()))
+	_move(device, 1.0)
+	var high: bool = await _wait_until(func() -> bool:
+		return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING and _position().y >= 649.50, 14.0)
+	if not high:
+		_move(device, 0.0)
+		return _fail("the lattice climb stopped at y %.2f" % _position().y)
+	_move_dir(device, Vector2(1.0, 0.0))
+	var across: bool = await _wait_until(func() -> bool:
+		return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING and _position().x >= -13.75, 10.0)
+	_move_dir(device, Vector2.ZERO)
+	if not across:
+		return _fail("the traverse did not reach the balcony (at %s)" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	await _seconds(0.2)
+	_act(device)
+	if not await _wait_until(func() -> bool: return _standing_above(650.90), 3.0):
+		return _fail("the mantle did not land on the balcony (y %.2f)" % _position().y)
+	if not await _go(device, Vector2(-12.10, -140.55), 0.18, 8.0):
+		return _fail("the walk to the tray stalled at %s" % str(_position()))
+	if not await _crouch_toggle(device, true):
+		return _fail("did not crouch at the tray")
+	if not await _go(device, Vector2(-12.10, -141.50), 0.18, 8.0):
+		return _fail("could not step into the tray (at %s)" % str(_position()))
+	_press_crouch(device)
+	await _seconds(0.35)
+	if not bool(_native().is_player_crouched()):
+		return _fail("the tray let a standing body through")
+	if not await _go(device, Vector2(-12.10, -144.75), 0.15, 12.0):
+		return _fail("the crouch through the tray stalled at %s" % str(_position()))
+	if not await _wait_until(func() -> bool:
+		return not bool(_native().is_player_crouched()) and bool(_native().is_player_grounded()), 1.5):
+		return _fail("could not stand past the tray (at %s)" % str(_position()))
+	if not await _go(device, Vector2(-12.35, -144.85), 0.15, 6.0):
+		return _fail("the walk to the handler stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	await _seconds(0.25)
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("the handler did not offer a mantle (Action '%s')" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return _standing_above(652.45), 3.0):
+		return _fail("the mantle did not land on the handler (y %.2f)" % _position().y)
+	if not await _go(device, Vector2(-13.90, -145.20), 0.15, 6.0):
+		return _fail("the walk to the handler's south edge stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, -1.0))
+	await _seconds(0.25)
+	_jump(device)
+	_move(device, 0.85)
+	var on_louver: bool = await _wait_until(
+		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 2.2)
+	if not on_louver:
+		_move(device, 0.0)
+		return _fail("the leap did not catch the louver (at %s)" % str(_position()))
+	_move(device, 1.0)
+	var louver_high: bool = await _wait_until(func() -> bool:
+		return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING and _position().y >= 657.15, 12.0)
+	if not louver_high:
+		_move(device, 0.0)
+		return _fail("the louver climb stopped at y %.2f" % _position().y)
+	_jump(device)
+	# Facing the louver (south). Back is north, which is where the throw goes.
+	_move(device, -1.0)
+	if not await _wait_until(func() -> bool: return _standing_above(656.70), 1.8):
+		_move(device, 0.0)
+		return _fail("the jump back missed the platform (at %s)" % str(_position()))
+	_move(device, 0.0)
+	if not await _go(device, Vector2(-12.70, -141.20), 0.18, 8.0):
+		return _fail("the walk to the brace ladder stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	await _seconds(0.3)
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("the brace ladder did not offer a hold (Action '%s')" % _action_label())
+	_act(device)
+	if not await _wait_until(
+		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.6):
+		return _fail("CLIMB did not take the brace ladder")
+	_move(device, 1.0)
+	var on_deck: bool = await _wait_until(func() -> bool: return _standing_above(672.85), 22.0)
+	_move(device, 0.0)
+	if not on_deck:
+		return _fail("the brace did not mantle onto the service deck (y %.2f)" % _position().y)
+	if int(_native().get_death_count()) != 0 or int(_native().get_support_entity_id()) != 1031:
+		return _fail("not alive on the service deck (deaths %d, support %d, at %s)" % [
+			int(_native().get_death_count()), int(_native().get_support_entity_id()), str(_position())])
+	_detail = "deck_y=%.2f deaths=0" % _position().y
+	return true
+
+
+func _press_crouch(device: int) -> void:
+	match device:
+		InputRouter.Device.TOUCH:
+			_tap(1, _center(&"crouch"))
+		InputRouter.Device.GAMEPAD:
+			_button(JOY_BUTTON_RIGHT_STICK)
+		_:
+			_key(KEY_C, true)
+			_key(KEY_C, false)
+
+
+# Crouch is a toggle on every device (touch button, right-stick click, C).
+func _crouch_toggle(device: int, down: bool) -> bool:
+	if bool(_native().is_player_crouched()) == down:
+		return true
+	_press_crouch(device)
+	return await _wait_until(
+		func() -> bool: return bool(_native().is_player_crouched()) == down, 0.5)
 
 
 func _standing_above(y: float) -> bool:

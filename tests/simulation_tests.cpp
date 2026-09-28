@@ -2957,7 +2957,246 @@ void run_stack() {
               << " rearmed=1\n";
 }
 
+// ---- B06 west service skin (TP-640 -> 672.25) --------------------------------
+
+void report_skin(const scraperx::sim::Simulation &simulation, const char *leg) {
+    const auto state = simulation.snapshot();
+    std::cout << "skin " << leg << ": at=" << state.player_position.x << "," << state.player_position.y << ","
+              << state.player_position.z << " grounded=" << state.player_grounded
+              << " crouched=" << state.player_crouched << " balancing=" << state.player_balancing
+              << " traversal=" << static_cast<int>(state.traversal_state)
+              << " support=" << state.support_entity_id << " ledge=" << state.ledge_available
+              << " rise=" << state.ledge_rise_meters << " grip=" << state.grip_available
+              << " deaths=" << state.death_count << "\n";
+}
+
+// The authored route, on player inputs. Each leg is one verb the geometry
+// offers, and the next leg is not available until that verb has been used.
+bool climb_service_skin(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+
+    auto fail = [&](const char *leg) {
+        report_skin(simulation, leg);
+        return false;
+    };
+
+    // South of the manifold, facing it. The bar offers a vault, not a hold.
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.4);
+    const auto at_bar = simulation.snapshot();
+    if (!at_bar.ledge_available || at_bar.ledge_rise_meters < 0.85 || at_bar.ledge_rise_meters > 1.05) {
+        return fail("manifold vault not offered");
+    }
+    if (at_bar.grip_available) {
+        return fail("a hold was offered at the manifold; the vault is the move");
+    }
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 2.0, [](const Snapshot &state) {
+            return state.traversal_state == TraversalState::Vaulting ||
+                   (state.player_grounded && state.player_position.z > -145.55 &&
+                    state.traversal_state == TraversalState::None);
+        })) {
+        return fail("vault the manifold");
+    }
+    if (!wait_for(simulation, 2.0, [](const Snapshot &state) {
+            return state.player_grounded && state.traversal_state == TraversalState::None &&
+                   state.player_position.z > -145.55 && state.player_position.y < 642.2;
+        })) {
+        return fail("land north of the manifold");
+    }
+
+    // Turn west. The duct's east face is a mantle; it is not in reach from
+    // the spawn, which is what the vault was for.
+    if (!(walk_to(simulation, -11.50, -144.40, 8.0, 0.12))) {
+        return fail("to the duct");
+    }
+    (void)simulation.set_facing(-1.0, 0.0);
+    (void)simulation.advance_frame(0.4);
+    const auto at_duct = simulation.snapshot();
+    if (!at_duct.ledge_available || at_duct.ledge_rise_meters < 1.30 || at_duct.ledge_rise_meters > 1.60) {
+        return fail("duct mantle not offered");
+    }
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 3.0, [](const Snapshot &state) { return standing_above(state, 642.40); })) {
+        return fail("mantle onto the duct");
+    }
+
+    // Out along the inspection beam. It must read as a balance, and the
+    // lattice must not be a hold while still standing on the beam.
+    bool balanced = false;
+    {
+        const auto ticks = static_cast<std::uint32_t>(12.0 * Simulation::kTickRateHz);
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            const auto state = simulation.snapshot();
+            if (state.player_balancing) {
+                balanced = true;
+            }
+            if (std::hypot(-15.35 - state.player_position.x, -142.35 - state.player_position.z) <= 0.18) {
+                break;
+            }
+            steer_toward(simulation, -15.35, -142.35, 0.55);
+            (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        (void)simulation.set_move_input(0.0, 0.0);
+    }
+    if (!balanced) {
+        return fail("the inspection beam was not a balance");
+    }
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.35);
+    if (simulation.snapshot().grip_available) {
+        return fail("the lattice was in reach from the beam; the jump is the move");
+    }
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.0, 0.85, 0.0, 1.0, 2.2,
+                    [](const Snapshot &state) { return is_climbing(state); })) {
+        return fail("catch the lattice");
+    }
+    // Up to the traverse holds. A top-out here is the canopy failing.
+    if (!hold_stick(simulation, 0.0, 1.0, 0.0, 1.0, 14.0, [](const Snapshot &state) {
+            return is_climbing(state) && state.player_position.y >= 649.50;
+        })) {
+        return fail("climb the lattice");
+    }
+    if (!is_climbing(simulation.snapshot())) {
+        return fail("the canopy let a top-out off the lattice");
+    }
+    // East along the holds, then face the balcony fascia and mantle.
+    if (!hold_stick(simulation, 1.0, 0.15, 0.0, 1.0, 10.0, [](const Snapshot &state) {
+            return is_climbing(state) && state.player_position.x >= -13.75;
+        })) {
+        return fail("traverse to the balcony");
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 3.0, [](const Snapshot &state) { return standing_above(state, 650.90); })) {
+        return fail("mantle onto the balcony");
+    }
+
+    // Under the tray. Standing is refused once the body is in the lane;
+    // crouched, the lane is open. Crouch on the apron, then step in.
+    if (!walk_to(simulation, -12.10, -140.55, 8.0, 0.18)) {
+        return fail("to the tray");
+    }
+    (void)simulation.set_crouch_input(true);
+    (void)simulation.advance_frame(0.3);
+    if (!simulation.snapshot().player_crouched) {
+        return fail("did not crouch under the tray");
+    }
+    if (!walk_to(simulation, -12.10, -141.50, 8.0, 0.18)) {
+        return fail("into the tray");
+    }
+    (void)simulation.set_crouch_input(false);
+    (void)simulation.advance_frame(0.3);
+    if (!simulation.snapshot().player_crouched) {
+        return fail("the tray let a standing body through");
+    }
+    (void)simulation.set_crouch_input(true);
+    if (!walk_to(simulation, -12.10, -144.75, 12.0, 0.12)) {
+        return fail("through the tray");
+    }
+    (void)simulation.set_crouch_input(false);
+    if (!wait_for(simulation, 1.5, [](const Snapshot &state) {
+            return !state.player_crouched && state.player_grounded;
+        })) {
+        return fail("could not stand past the tray");
+    }
+
+    if (!walk_to(simulation, -12.35, -144.85, 6.0, 0.15)) {
+        return fail("to the handler");
+    }
+    (void)simulation.set_facing(-1.0, 0.0);
+    (void)simulation.advance_frame(0.35);
+    const auto at_handler = simulation.snapshot();
+    if (!at_handler.ledge_available || at_handler.ledge_rise_meters < 1.40 ||
+        at_handler.ledge_rise_meters > 1.70) {
+        return fail("handler mantle not offered");
+    }
+    (void)simulation.request_traversal();
+    if (!wait_for(simulation, 3.0, [](const Snapshot &state) { return standing_above(state, 652.45); })) {
+        return fail("mantle onto the handler");
+    }
+
+    if (!walk_to(simulation, -13.90, -145.20, 6.0, 0.15)) {
+        return fail("to the handler's south edge");
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.3);
+    if (simulation.snapshot().grip_available) {
+        return fail("the louver was in reach from the handler");
+    }
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.0, -0.85, 0.0, -1.0, 2.2,
+                    [](const Snapshot &state) { return is_climbing(state); })) {
+        return fail("catch the louver");
+    }
+    if (!hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 12.0, [](const Snapshot &state) {
+            return is_climbing(state) && state.player_position.y >= 657.15;
+        })) {
+        return fail("climb the louver");
+    }
+    if (!is_climbing(simulation.snapshot())) {
+        return fail("the louver canopy let a top-out");
+    }
+    // Jump back. A neutral stick bleeds the 2.5 m/s throw off in a fifth of
+    // a second. Holding forward — full throw, which is all a key can do —
+    // keeps the throw and air-controls it out to about 4 m, still on the pad.
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.0, 1.0, 0.0, -1.0, 1.6, [](const Snapshot &state) {
+            return standing_above(state, 656.70);
+        })) {
+        return fail("jump back onto the platform");
+    }
+
+    if (!walk_to(simulation, -12.70, -141.20, 6.0, 0.16)) {
+        return fail("to the brace ladder");
+    }
+    (void)simulation.set_facing(0.0, 1.0);
+    (void)simulation.advance_frame(0.35);
+    if (!simulation.snapshot().grip_available) {
+        return fail("the brace ladder was not a hold");
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    if (!is_climbing(simulation.snapshot()) ||
+        !hold_stick(simulation, 0.0, 1.0, 0.0, 1.0, 22.0,
+                    [](const Snapshot &state) { return standing_above(state, 672.85); })) {
+        return fail("climb the brace onto the service deck");
+    }
+    const auto top = simulation.snapshot();
+    if (top.death_count != 0 || !top.player_grounded || top.player_position.y < 672.90 ||
+        top.support_entity_id != Simulation::kSkinWestEntityId) {
+        return fail("not standing on the 672.25 deck");
+    }
+    return true;
+}
+
+void run_service_skin() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation skin(InitialSpawn::ServiceSkinWest);
+    require(skin.advance_frame(0.5).accepted, "service skin settle must be accepted");
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    const double start = skin.snapshot().simulation_time_seconds;
+    const bool climbed = climb_service_skin(skin);
+    g_path_watch.armed = false;
+    require(climbed, "the west service skin must be climbed on player inputs");
+    require(g_path_watch.worst <= 0.15, "the service skin must not snap the body more than 0.15 m in one tick");
+    const auto top = skin.snapshot();
+    std::cout << "PASS scraperx_sim service skin: seconds=" << top.simulation_time_seconds - start
+              << " deck_y=" << top.player_position.y << " deaths=" << top.death_count
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+}
+
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "skin") {
+        run_service_skin();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
         run_wet_isolation();
@@ -4893,6 +5132,7 @@ int main() {
     run_crane_route();
     run_crane_wreckage();
     run_ascent();
+    run_service_skin();
 
     return EXIT_SUCCESS;
 }

@@ -664,6 +664,9 @@ private:
     case scraperx::sim::InitialSpawn::Deck12North:
         // On deck 12's north band, where S3 lands.
         return {-8.0, 133.2, -170.0};
+    case scraperx::sim::InitialSpawn::ServiceSkinWest:
+        // On TP-640, south of the service manifold, in the lane it crosses.
+        return {-10.30, 641.15, -147.15};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower
@@ -977,6 +980,7 @@ public:
         scraperx::sim::bands::build_wet_isolation(*kit_, wet_);
         scraperx::sim::bands::build_plate_shop(*kit_, shop_);
         scraperx::sim::bands::build_facade_crane(*kit_, crane_);
+        scraperx::sim::bands::build_service_skin(*kit_);
         // Band 0, the Stack: the ascent from grade.
         scraperx::sim::bands::build_stack(*kit_, stack_);
 
