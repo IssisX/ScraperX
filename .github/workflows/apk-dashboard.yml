@@ -37,11 +37,11 @@ jobs:
       - name: Publish newest successful APK from every model branch
         shell: bash
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
-          REPO="\${GITHUB_REPOSITORY}"
+          REPO="${GITHUB_REPOSITORY}"
           TAG="apk-latest"
           mkdir -p out work
           generated_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
@@ -60,13 +60,13 @@ jobs:
           publish_branch() {
             local label="$1"
             local branch="$2"
-            local target="out/ScraperX-\${label}.apk"
+            local target="out/ScraperX-${label}.apk"
             local branch_q
             branch_q="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$branch")"
 
-            echo "::group::\${label} / \${branch}"
+            echo "::group::${label} / ${branch}"
             local runs
-            runs="$(gh api "/repos/\${REPO}/actions/runs?branch=\${branch_q}&status=success&per_page=20")"
+            runs="$(gh api "/repos/${REPO}/actions/runs?branch=${branch_q}&status=success&per_page=20")"
 
             local selected_run=""
             local selected_artifact=""
@@ -75,7 +75,7 @@ jobs:
             while IFS= read -r row; do
               test -n "$row" || continue
               run_id="$(jq -r '.id' <<<"$row")"
-              artifacts="$(gh api "/repos/\${REPO}/actions/runs/\${run_id}/artifacts?per_page=100")"
+              artifacts="$(gh api "/repos/${REPO}/actions/runs/${run_id}/artifacts?per_page=100")"
               artifact="$(jq -c '
                 ([.artifacts[] | select(.expired == false) | select(.name | startswith("ScraperX-APK-"))][0])
                 //
@@ -90,7 +90,7 @@ jobs:
             done < <(jq -c '.workflow_runs[]' <<<"$runs")
 
             if test -z "$selected_run" || test -z "$selected_artifact"; then
-              echo "::warning title=\${label} APK unavailable::No non-expired APK/build artifact found in the 20 newest successful runs."
+              echo "::warning title=${label} APK unavailable::No non-expired APK/build artifact found in the 20 newest successful runs."
               update_manifest "$label" "$(jq -n --arg branch "$branch" \
                 '{status:"unavailable", branch:$branch, message:"No non-expired APK artifact found"}')"
               echo "::endgroup::"
@@ -105,24 +105,24 @@ jobs:
             run_url="$(jq -r '.html_url' <<<"$selected_run")"
             built_at="$(jq -r '.updated_at' <<<"$selected_run")"
 
-            local tmp="work/\${label}"
+            local tmp="work/${label}"
             rm -rf "$tmp"
             mkdir -p "$tmp"
             gh run download "$run_id" --repo "$REPO" --name "$artifact_name" --dir "$tmp"
 
             mapfile -t apks < <(find "$tmp" -type f -name '*.apk' -size +1M -print | sort)
             local apk=""
-            if test "\${#apks[@]}" -eq 1; then
-              apk="\${apks[0]}"
+            if test "${#apks[@]}" -eq 1; then
+              apk="${apks[0]}"
             else
-              mapfile -t named < <(find "$tmp" -type f -iname "*\${label}*.apk" -size +1M -print | sort)
-              if test "\${#named[@]}" -eq 1; then
-                apk="\${named[0]}"
+              mapfile -t named < <(find "$tmp" -type f -iname "*${label}*.apk" -size +1M -print | sort)
+              if test "${#named[@]}" -eq 1; then
+                apk="${named[0]}"
               fi
             fi
 
             if test -z "$apk"; then
-              echo "::warning title=\${label} APK ambiguous::Artifact \${artifact_name} contains \${#apks[@]} APK candidates; leaving previous stable release asset untouched."
+              echo "::warning title=${label} APK ambiguous::Artifact ${artifact_name} contains ${#apks[@]} APK candidates; leaving previous stable release asset untouched."
               update_manifest "$label" "$(jq -n \
                 --arg branch "$branch" --arg sha "$source_sha" --arg run_url "$run_url" \
                 --arg artifact "$artifact_name" \
@@ -135,7 +135,7 @@ jobs:
             local apk_sha apk_bytes current_sha
             apk_sha="$(sha256sum "$target" | awk '{print $1}')"
             apk_bytes="$(stat -c '%s' "$target")"
-            current_sha="$(gh api "/repos/\${REPO}/branches/\${branch_q}" --jq '.commit.sha')"
+            current_sha="$(gh api "/repos/${REPO}/branches/${branch_q}" --jq '.commit.sha')"
 
             update_manifest "$label" "$(jq -n \
               --arg branch "$branch" \
@@ -145,7 +145,7 @@ jobs:
               --arg built_at "$built_at" \
               --arg artifact "$artifact_name" \
               --argjson artifact_id "$artifact_id" \
-              --arg file "ScraperX-\${label}.apk" \
+              --arg file "ScraperX-${label}.apk" \
               --arg apk_sha256 "$apk_sha" \
               --argjson bytes "$apk_bytes" \
               --argjson current "$(test "$source_sha" = "$current_sha" && echo true || echo false)" \
@@ -164,7 +164,7 @@ jobs:
                 bytes:$bytes
               }')"
 
-            echo "\${label}: \${source_sha} -> \${target}"
+            echo "${label}: ${source_sha} -> ${target}"
             echo "::endgroup::"
           }
 
@@ -178,7 +178,7 @@ jobs:
             echo
             echo "This release is maintained automatically. Each filename is stable; its bytes are replaced only after a successful branch build publishes an APK artifact."
             echo
-            echo "Generated: \\\`\${generated_at}\\\`"
+            echo "Generated: \\\`${generated_at}\\\`"
             echo
             echo "| Model | Branch | Source | Current head? | Download |"
             echo "|---|---|---|---:|---|"
@@ -188,13 +188,13 @@ jobs:
                 branch="$(jq -r --arg label "$label" '.builds[$label].branch' out/manifest.json)"
                 sha="$(jq -r --arg label "$label" '.builds[$label].source_sha' out/manifest.json)"
                 current="$(jq -r --arg label "$label" '.builds[$label].source_is_current_head' out/manifest.json)"
-                echo "| \${label} | \\\`\${branch}\\\` | \\\`\${sha:0:12}\\\` | \${current} | [ScraperX-\${label}.apk](https://github.com/\${REPO}/releases/download/\${TAG}/ScraperX-\${label}.apk) |"
+                echo "| ${label} | \\\`${branch}\\\` | \\\`${sha:0:12}\\\` | ${current} | [ScraperX-${label}.apk](https://github.com/${REPO}/releases/download/${TAG}/ScraperX-${label}.apk) |"
               else
-                echo "| \${label} | — | — | — | unavailable in this refresh |"
+                echo "| ${label} | — | — | — | unavailable in this refresh |"
               fi
             done
             echo
-            echo "Machine-readable provenance: [manifest.json](https://github.com/\${REPO}/releases/download/\${TAG}/manifest.json)"
+            echo "Machine-readable provenance: [manifest.json](https://github.com/${REPO}/releases/download/${TAG}/manifest.json)"
           } > out/release-notes.md
 
           if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
@@ -213,8 +213,8 @@ jobs:
           fi
 
           mapfile -t publish_files < <(find out -maxdepth 1 -type f -name 'ScraperX-*.apk' -print | sort)
-          if test "\${#publish_files[@]}" -gt 0; then
-            gh release upload "$TAG" --repo "$REPO" --clobber "\${publish_files[@]}"
+          if test "${#publish_files[@]}" -gt 0; then
+            gh release upload "$TAG" --repo "$REPO" --clobber "${publish_files[@]}"
           fi
           gh release upload "$TAG" --repo "$REPO" --clobber out/manifest.json
 
