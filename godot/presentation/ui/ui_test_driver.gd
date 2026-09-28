@@ -48,8 +48,11 @@ const SCENARIOS := {
 	# S2 alone, from deck 4's south band where C1 leaves the climber: quick to
 	# run under a real renderer, for its screenshots.
 	"pad_s2": 26,
-	# Needs a mixing audio driver: run under --write-movie (see _audio_mix).
+	# The fear voice on a ~12 m drop lived through: a yelp, then pain.
+	"fall_voice": 10,
+	# Need a mixing audio driver: run under --write-movie (see _audio_mix).
 	"audio_mix": 8,
+	"audio_fall": 9,
 }
 
 # The native's TraversalState and the tower's entity id, as main.gd reads them.
@@ -102,6 +105,8 @@ func _run() -> void:
 	if _scenario.begins_with("touch_") and not _scenario.begins_with("touch_hang"):
 		_tap(7, Vector2(_viewport_size().x * 0.7, _viewport_size().y * 0.35))
 		await _frames(2)
+	# The same lines in the same order on every run of a scenario.
+	_main._audio.voice_rng.seed = 0x5C4A9E
 	var ok := false
 	match _scenario:
 		"touch_jump":
@@ -152,8 +157,12 @@ func _run() -> void:
 			ok = await _stack(InputRouter.Device.KEYBOARD_MOUSE)
 		"pad_s2":
 			ok = await _s2_alone(InputRouter.Device.GAMEPAD)
+		"fall_voice":
+			ok = await _fall_voice()
 		"audio_mix":
 			ok = await _audio_mix()
+		"audio_fall":
+			ok = await _audio_fall()
 	print("SCRAPERX_UITEST %s %s %s" % ["PASS" if ok else "FAIL", _scenario, _detail])
 	get_tree().paused = false
 	get_tree().quit(0 if ok else 31)
@@ -492,9 +501,36 @@ func _touch_lethal_feedback() -> bool:
 	var sub := String(toasts[-1]["sub"])
 	var fell_at := sub.get_slice(" ", 2).to_float()
 	var lethal := float(_native().get_lethal_impact_speed_mps())
-	_detail = "toast='%s' lethal_mps=%.1f" % [sub, lethal]
+	# The fear voice rode the whole fall -- a yelp, then panic or terror as
+	# it went on -- and the impact cut it dead.
+	var said: Dictionary = _main._audio.voice_lines
+	if int(said.get(&"yelp", 0)) < 1 or int(said.get(&"panic", 0)) + int(said.get(&"terror", 0)) < 1:
+		return _fail("the fear voice did not ride the fall: %s" % str(said))
+	if StringName(_main._audio._voice_tier) != &"":
+		return _fail("the fear voice runs on after the lethal impact (%s)" % _main._audio._voice_tier)
+	_detail = "toast='%s' lethal_mps=%.1f voice=%s cut=%d" % [sub, lethal, str(said),
+		int(_main._audio.voice_cut)]
 	# The announced speed must be the lethal fall it reports, not a settle.
 	return fell_at > lethal
+
+
+# SurvivableDrop: ~12 m with nothing to hold -- fast enough to yelp at, and a
+# hard landing lived through, which hurts.
+func _fall_voice() -> bool:
+	var landed: bool = await _wait_until(func() -> bool: return (bool(_native().is_player_grounded())
+		and _velocity().length() < 0.5), 6.0)
+	if not landed:
+		return _fail("the drop never landed")
+	var said: Dictionary = _main._audio.voice_lines
+	var impact := float(_native().get_last_impact_speed_mps())
+	_detail = "impact_mps=%.2f voice=%s" % [impact, str(said)]
+	if int(_native().get_death_count()) != 0:
+		return _fail("the survivable drop killed (%.1f m/s)" % impact)
+	if int(said.get(&"yelp", 0)) < 1:
+		return _fail("no yelp on a %.1f m/s drop" % impact)
+	if int(said.get(&"pain", 0)) < 1:
+		return _fail("a %.1f m/s landing lived through said nothing" % impact)
+	return true
 
 
 func _touch_pause() -> bool:
@@ -1345,6 +1381,81 @@ func _audio_mix() -> bool:
 	if peak_db > -0.5:
 		return _fail("the mix clips: sample peak %.2f dBFS" % peak_db)
 	return true
+
+
+# The fear voice as a player hears it: from the high drop to the lethal
+# impact, captured on the Voice bus and on the Ambience bus (the altitude
+# wind, the yard, the falling-air rush). While a line runs the voice must
+# stand 6 dB clear of the bed it ducks, and the mix leaving Master must not
+# clip.
+func _audio_fall() -> bool:
+	if AudioServer.get_driver_name() == "Dummy" and Engine.get_write_movie_path().is_empty():
+		return _fail("no mixing audio driver; run under --write-movie")
+	var captures: Array[AudioEffectCapture] = []
+	for bus in [&"Voice", &"Ambience", &"Master"]:
+		var capture := AudioEffectCapture.new()
+		capture.buffer_length = 1.0
+		AudioServer.add_bus_effect(AudioServer.get_bus_index(bus), capture)
+		captures.append(capture)
+	var ready: bool = await _wait_until(func() -> bool: return bool(_main._audio._bank_ready), 5.0)
+	if not ready:
+		return _fail("the sound bank never finished building")
+	var voice := PackedFloat32Array()
+	var air := PackedFloat32Array()
+	var master := PackedFloat32Array()
+	var waited := 0.0
+	while int(_native().get_death_count()) < 1 and waited < 12.0:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+		for pair in [[captures[0], voice], [captures[1], air], [captures[2], master]]:
+			var capture: AudioEffectCapture = pair[0]
+			var available := capture.get_frames_available()
+			if available > 0:
+				for frame in capture.get_buffer(available):
+					pair[1].append((frame.x + frame.y) * 0.5)
+	_main._audio.quiesce()
+	await _frames(3)
+	if int(_native().get_death_count()) < 1:
+		return _fail("the high drop never ended")
+	# 50 ms windows where the voice is speaking (within 20 dB of its loudest).
+	var window := int(AudioServer.get_mix_rate() * 0.05)
+	var count := mini(voice.size(), air.size()) / window
+	var voice_db: Array[float] = []
+	var air_db: Array[float] = []
+	var loudest := -200.0
+	for k in count:
+		loudest = maxf(loudest, _window_db(voice, k * window, window))
+	for k in count:
+		var v := _window_db(voice, k * window, window)
+		if v > loudest - 20.0 and v > -60.0:
+			voice_db.append(v)
+			air_db.append(_window_db(air, k * window, window))
+	var peak := 0.0
+	for x in master:
+		peak = maxf(peak, absf(x))
+	var peak_db := linear_to_db(maxf(peak, 1.0e-9))
+	if voice_db.is_empty():
+		return _fail("nothing was heard on the Voice bus in a %.1f s fall" % waited)
+	voice_db.sort()
+	air_db.sort()
+	var voice_mid := voice_db[voice_db.size() / 2]
+	var air_mid := air_db[air_db.size() / 2]
+	_detail = "voice_db=%.1f ambience_db=%.1f speaking_s=%.2f peak_db=%.1f voice=%s" % [voice_mid,
+		air_mid, voice_db.size() * 0.05, peak_db, str(_main._audio.voice_lines)]
+	if voice_db.size() * 0.05 < 1.0:
+		return _fail("the voice spoke for only %.2f s of the fall" % (voice_db.size() * 0.05))
+	if voice_mid < air_mid + 6.0:
+		return _fail("the voice (%.1f dBFS) is lost in the ambience (%.1f)" % [voice_mid, air_mid])
+	if peak_db > -0.5:
+		return _fail("the mix clips: sample peak %.2f dBFS" % peak_db)
+	return true
+
+
+func _window_db(mono: PackedFloat32Array, first: int, count: int) -> float:
+	var energy := 0.0
+	for i in range(first, mini(first + count, mono.size())):
+		energy += mono[i] * mono[i]
+	return linear_to_db(maxf(sqrt(energy / float(maxi(count, 1))), 1.0e-9))
 
 
 # Mono samples leaving Master for `seconds` of game time.

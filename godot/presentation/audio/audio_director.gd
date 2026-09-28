@@ -5,16 +5,19 @@ extends Node
 # grab, a mantle, a canopy, a death, a machine moving and stopping -- so what
 # is heard is what happened.
 #
-# Buses (created here, all into Master): Effects, Ambience, Interface; each
-# has a player volume on the AUDIO page. Master ends in a hard limiter, so
-# the mix can sit loud enough for a phone speaker without clipping.
+# Buses (created here): Effects, Ambience, Interface into Master, each with a
+# player volume on the AUDIO page; Voice, the climber's own, into Effects.
+# Master ends in a hard limiter, so the mix can sit loud enough for a phone
+# speaker without clipping.
 
 const SoundBank := preload("res://presentation/audio/sound_bank.gd")
+const VoiceLines := preload("res://presentation/audio/voice_lines.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 
 const BUS_EFFECTS := &"Effects"
 const BUS_AMBIENCE := &"Ambience"
 const BUS_INTERFACE := &"Interface"
+const BUS_VOICE := &"Voice"
 const EFFECT_VOICES := 6
 const POSITIONAL_VOICES := 5
 
@@ -30,7 +33,7 @@ const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
 # Machines: every moving kit body heavy enough to be one (main.gd) is heard
-# from its own motion as the native runs it -- a rattle while it moves, louder
+# from its own motion as the native runs it -- a groan while it moves, louder
 # with the speed of its farthest point; a creak now and then at a hinge while
 # a body turns on it; a clang where it stops harder than a governor stops it.
 # S1's cage eases into its stops at 2 m/s^2, and the recent peak a stop is
@@ -41,6 +44,20 @@ const MACHINE_PEAK_FALL := 3.0
 const MACHINE_CLANG_MPS := 0.8
 const MACHINE_CREAK_GAP := 0.9
 const MACHINE_LOOPS := 2
+# The climber's fear voice (GDD 8.4), from the fall the native is running:
+# a yelp once the drop is fast enough to mean it (10 m/s is 5.1 m of free
+# fall -- past any vault or step-down), then panic while it goes on, terror
+# once it has gone on for 45 m (a yelp alone lasts ~25 m of a fall). It
+# stops the instant the fall does: cut dead by a lethal impact, a groan or a
+# swear on a hard landing lived through, relief when the canopy opens or a
+# hand catches hold (a ledge, a ladder, a mantle).
+const VOICE_YELP_MPS := 10.0
+const VOICE_TERROR_DROP_M := 45.0
+const VOICE_GAP_SECONDS := Vector2(0.08, 0.3)
+# While a line is spoken the whole ambience bed (altitude wind, the yard,
+# the falling-air rush) ducks under it: at height the wind, not the rush, is
+# what a voice has to carry over.
+const VOICE_DUCK_DB := 8.0
 # Birds: only near the ground, only by day, now and then.
 const BIRD_CEILING_M := 30.0
 const BIRD_GAP_SECONDS := Vector2(2.5, 8.0)
@@ -55,6 +72,13 @@ var rustles := 0
 var birds := 0
 var creaks := 0
 var clangs := 0
+# Voice lines started, by tier (yelp, panic, terror, relief, pain), and how
+# many lines a lethal impact cut short.
+var voice_lines := {}
+var voice_cut := 0
+# Which line, and the breath before the next: random in play, seeded by the
+# scripted runs so they hear the same lines every time.
+var voice_rng := RandomNumberGenerator.new()
 
 # The time of day, for the birds. Set by main.gd.
 var sky: Node = null
@@ -75,7 +99,21 @@ var _next_voice_3d := 0
 var _wind: AudioStreamPlayer
 var _rush: AudioStreamPlayer
 var _drone: AudioStreamPlayer
+# The bed's levels before the voice's duck, smoothed separately from it.
+var _wind_db := -60.0
+var _drone_db := -60.0
+var _rush_db := -60.0
+var _duck_db := 0.0
 var _machine_loops: Array[AudioStreamPlayer3D] = []
+var _voice: AudioStreamPlayer
+var _voice_clips := {}   # tier -> Array[AudioStreamOggVorbis]
+var _voice_bags := {}    # tier -> clip indices not yet played this round
+var _voice_last := {}    # tier -> index played last
+var _voice_left := 0.0   # seconds of the current line still to run
+var _voice_tier := &""   # tier of the line running, "" when quiet
+var _fall_top := -INF    # highest point since the climber last had support
+var _fall_lines := 0     # fear lines said in this fall
+var _fall_worst := &""   # worst tier said in this fall
 var _machine_state := {}
 var _stride := 0.0
 var _was_grounded := true
@@ -90,12 +128,13 @@ var _bird_clock := 3.0
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_silent = AudioServer.get_driver_name() == "Dummy" and Engine.get_write_movie_path().is_empty()
-	for bus in [BUS_EFFECTS, BUS_AMBIENCE, BUS_INTERFACE]:
-		if AudioServer.get_bus_index(bus) < 0:
+	for pair in [[BUS_EFFECTS, &"Master"], [BUS_AMBIENCE, &"Master"], [BUS_INTERFACE, &"Master"],
+			[BUS_VOICE, BUS_EFFECTS]]:
+		if AudioServer.get_bus_index(pair[0]) < 0:
 			AudioServer.add_bus()
 			var index := AudioServer.bus_count - 1
-			AudioServer.set_bus_name(index, bus)
-			AudioServer.set_bus_send(index, &"Master")
+			AudioServer.set_bus_name(index, pair[0])
+			AudioServer.set_bus_send(index, pair[1])
 	var master := AudioServer.get_bus_index(&"Master")
 	var has_limiter := false
 	for i in AudioServer.get_bus_effect_count(master):
@@ -114,6 +153,9 @@ func _ready() -> void:
 		_voices.append(voice)
 	for i in POSITIONAL_VOICES:
 		_voices_3d.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 8.0, 160.0))
+	_voice = _looping_player(BUS_VOICE)
+	voice_rng.randomize()
+	_load_voice()
 	_wind = _looping_player(BUS_AMBIENCE)
 	_rush = _looping_player(BUS_AMBIENCE)
 	_drone = _looping_player(BUS_AMBIENCE)
@@ -134,6 +176,7 @@ func _exit_tree() -> void:
 			child.stop()
 			child.stream = null
 	_bank.clips.clear()
+	_voice_clips.clear()
 
 
 # Stops every player now, and starts nothing after. The mixer releases a
@@ -166,7 +209,7 @@ func _on_bank_ready() -> void:
 	for player in [_wind, _rush, _drone]:
 		player.play()
 	for player in _machine_loops:
-		player.stream = _bank.pick(&"rattle_loop")
+		player.stream = _bank.pick(&"groan_loop")
 		player.volume_db = -80.0
 		player.play()
 
@@ -235,6 +278,7 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		_play(&"chute", -1.0, 1.0)
 	if _last_deaths >= 0 and deaths > _last_deaths:
 		_play(&"impact_lethal", 0.0, 1.0)
+	_update_voice(delta, position, velocity, grounded, traversal, chute, deaths)
 
 	_was_grounded = grounded
 	_last_vy = velocity.y
@@ -292,14 +336,124 @@ func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: fl
 	if not _bank_ready or _silent:
 		return
 	var altitude := clampf(position.y / 150.0, 0.0, 1.0)
-	var wind_db := lerpf(-12.0, -4.0, altitude)
-	_wind.volume_db = lerpf(_wind.volume_db, wind_db, 1.0 - exp(-2.0 * delta))
-	var drone_db := lerpf(-13.0, -24.0, altitude)
-	_drone.volume_db = lerpf(_drone.volume_db, drone_db, 1.0 - exp(-1.5 * delta))
+	_wind_db = lerpf(_wind_db, lerpf(-12.0, -4.0, altitude), 1.0 - exp(-2.0 * delta))
+	_drone_db = lerpf(_drone_db, lerpf(-13.0, -24.0, altitude), 1.0 - exp(-1.5 * delta))
 	var fall := 0.0 if grounded else clampf((-velocity.y - 6.0) / 24.0, 0.0, 1.0)
 	var rush_db := lerpf(-60.0, -2.0, sqrt(fall)) if fall > 0.0 else -60.0
-	_rush.volume_db = lerpf(_rush.volume_db, rush_db, 1.0 - exp(-6.0 * delta))
+	_rush_db = lerpf(_rush_db, rush_db, 1.0 - exp(-6.0 * delta))
+	_duck_db = lerpf(_duck_db, VOICE_DUCK_DB if _voice_tier != &"" else 0.0, 1.0 - exp(-8.0 * delta))
+	_wind.volume_db = _wind_db - _duck_db
+	_drone.volume_db = _drone_db - _duck_db
+	_rush.volume_db = _rush_db - _duck_db
 	_rush.pitch_scale = lerpf(0.9, 1.35, fall)
+
+
+# The fear voice's state machine, once per frame. Between lines of one fall
+# `_voice_left` runs negative through a short breath before the next.
+func _update_voice(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
+		traversal: int, chute: bool, deaths: int) -> void:
+	var supported := grounded or traversal != 0 or chute
+	var voiced := _fall_lines > 0
+	if _last_deaths >= 0 and deaths > _last_deaths:
+		if _voice_tier != &"":
+			voice_cut += 1
+		_voice_stop()
+		_fall_reset(position)
+		return
+	if chute and not _last_chute and voiced:
+		_voice_say(&"relief")
+		_fall_reset(position)
+		return
+	if traversal != 0 and _last_traversal == 0 and voiced:
+		_voice_say(&"relief")
+		_fall_reset(position)
+		return
+	if grounded and not _was_grounded and voiced:
+		if -_last_vy >= LAND_HARD_IMPACT:
+			_voice_say(&"pain")
+		elif _fall_worst == &"terror":
+			_voice_say(&"relief")
+		else:
+			_voice_stop()
+		_fall_reset(position)
+		return
+	_voice_left -= delta
+	if _voice_left <= 0.0 and _voice_tier != &"":
+		_voice_tier = &""
+		_voice_left = -voice_rng.randf_range(VOICE_GAP_SECONDS.x, VOICE_GAP_SECONDS.y)
+	if supported:
+		_fall_reset(position)
+		return
+	_fall_top = maxf(_fall_top, position.y)
+	if _voice_tier != &"" or _voice_left > 0.0 or -velocity.y < VOICE_YELP_MPS:
+		return
+	var tier := &"yelp"
+	if _fall_lines > 0:
+		tier = &"terror" if _fall_top - position.y >= VOICE_TERROR_DROP_M else &"panic"
+	_voice_say(tier)
+	_fall_lines += 1
+	if tier == &"terror" or (tier == &"panic" and _fall_worst != &"terror"):
+		_fall_worst = tier
+
+
+func _fall_reset(position: Vector3) -> void:
+	_fall_top = position.y
+	_fall_lines = 0
+	_fall_worst = &""
+
+
+# Starts a line from `tier`, cutting any line still running. Counted and
+# timed whether or not a device mixes it, so the headless runs can follow it.
+func _voice_say(tier: StringName) -> void:
+	var clips: Array = _voice_clips.get(tier, [])
+	if clips.is_empty():
+		return
+	var bag: Array = _voice_bags.get(tier, [])
+	if bag.is_empty():
+		for i in clips.size():
+			if clips.size() == 1 or i != int(_voice_last.get(tier, -1)):
+				bag.append(i)
+		for i in range(bag.size() - 1, 0, -1):
+			var j := voice_rng.randi_range(0, i)
+			var held: int = bag[i]
+			bag[i] = bag[j]
+			bag[j] = held
+	var index: int = bag.pop_back()
+	_voice_bags[tier] = bag
+	_voice_last[tier] = index
+	var clip: AudioStream = clips[index]
+	voice_lines[tier] = int(voice_lines.get(tier, 0)) + 1
+	_voice_tier = tier
+	_voice_left = clip.get_length()
+	if _silent:
+		return
+	_voice.stream = clip
+	_voice.play()
+
+
+func _voice_stop() -> void:
+	_voice_tier = &""
+	_voice_left = 0.0
+	if not _silent:
+		_voice.stop()
+
+
+# The recorded lines (presentation/audio/voice/, listed by voice_lines.gd).
+# Ogg pages are read here and decoded as they play: a few hundred kB, so
+# they load with the director, not on the bank's worker.
+func _load_voice() -> void:
+	var count := 0
+	for tier in VoiceLines.TIERS:
+		var clips: Array = []
+		for file in VoiceLines.TIERS[tier]:
+			var clip := AudioStreamOggVorbis.load_from_file(VoiceLines.DIR + String(file))
+			if clip == null:
+				push_error("fear voice: cannot read %s%s" % [VoiceLines.DIR, file])
+				continue
+			clips.append(clip)
+		_voice_clips[tier] = clips
+		count += clips.size()
+	print("SCRAPERX_AUDIO_VOICE lines=%d" % count)
 
 
 # Now and then a bird in the conifers, somewhere around the listener, by day
