@@ -290,6 +290,10 @@ jobs:
           test -s "build/apk/${APK_NAME}"
           unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
+          # This branch's APK is ScraperX-Claude (com.cory.scraperx.claude),
+          # read back from the APK itself: label, package, and nothing that
+          # would stop it installing beside the other AI branches' builds.
+          .github/scripts/check_apk_identity.sh "build/apk/${APK_NAME}" | tee artifacts/apk-identity.log
           cp "build/apk/${APK_NAME}" artifacts/apk/
           sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
           printf 'branch=%s\ncommit=%s\napk=%s\n' \
@@ -318,6 +322,7 @@ jobs:
           - scripted interface scenarios drove touch, gamepad and keyboard through the viewport's real input pipeline, each asserting the resulting native state change;
           - the native graph cross-compiled for Android arm64-v8a;
           - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
+          - the APK's identity was read back from it: label ScraperX-Claude in every locale, package \`com.cory.scraperx.claude\`, every provider authority inside that package, no declared permission outside it, no shared user id;
           - the APK checksum and checkpoint identity were recorded.
 
           Not proven here: APK installation, Android execution, Fold 6 observation on the real panel, sustained frame rate, thermals, touch ergonomics, the fall/parachute/checkpoint loop, load-bearing structural simulation, process/isolation networks, persistence, NPCs, missions, or a complete game loop.
@@ -414,6 +419,7 @@ jobs:
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/playtest/${APK_NAME}"
           test -s "playtest/${APK_NAME}"
           unzip -l "playtest/${APK_NAME}" | grep -F "lib/arm64-v8a/libscraperx_native.so"
+          .github/scripts/check_apk_identity.sh "playtest/${APK_NAME}"
 
       - name: Publish the playtest APK
         uses: actions/upload-artifact@v4
