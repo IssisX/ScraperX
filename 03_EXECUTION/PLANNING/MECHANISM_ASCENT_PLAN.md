@@ -36,6 +36,12 @@ green unless the ascent itself is proven:
 | "Proven" meant native tests on player inputs | Proven means the stage is also played through the game's own input pipeline (touch, pad, keyboard) from the game's start, and CI builds the APK only after that passes |
 | A drive was sized for enough energy; surplus was margin | Surplus energy is the arrival speed. Every drive is shaped and every terminal is a catch, catch rack or pad sized for the whole band (§2.3) |
 
+And from 2026-09-28, the owner's direction on easy paths:
+
+| Before | Now |
+|---|---|
+| No stair, ramp or ladder was a route at all | The route is the machines and the parkour climbs. Stairs, ladders and other easy paths are the **backup** route, for a player who does not feel like working out the climb or the machine (§2.6, rule 8) |
+
 ## 2. The authoring contract (adopted from `ChatGPT`, corrected)
 
 ### 2.1 Work backward, prove forward
@@ -109,6 +115,10 @@ own gate.
 6. **Built to be read.** Every part is held by visible structure; what the player handles is
    marked (hazard or yellow).
 7. **Climbs are designed, not free**, and a climb never lets the player bypass the machine below it.
+8. **Easy paths are the backup.** A stair, ladder or plain walkway may take a player past a
+   stage when they do not feel like working out its climb or its machine. It is the backup, not
+   the route: each stage is designed around its machine or climb, and the backup is the plainer,
+   slower way beside it. It is the one sanctioned bypass (rule 7 still holds for climbs).
 
 ## 3. The chain
 
@@ -119,6 +129,7 @@ Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has hei
 | S1 | Machine: **water-balance hoist** (counter-mass; water as the mass) | 0 → 22 m | south face, east of centre | walks into the cage and takes hold of the valve chain hanging in it: held, it pulls the lever overhead down, which opens the header tank's valve and lets the bucket's catch go; water runs into the empty bucket at the head until it outweighs cage and rider, the bucket falls 21.8 m and the cage rides up to a gangway onto deck 2. At the foot the bucket drains on a striker and the cage comes back down by itself | built and proven, natively and through the game's input on three devices (cycles 1, 1b) |
 | C1 | Climb: **the facade** | 22 → 44 m | south face, east of S1 | out onto a loading landing, a mantle onto its switchgear cabinet, a jump to hang from the duct along the face, up onto the duct and along it, up a vent stack over deck 3's edge; out along deck 3's monorail under the ladder hung from deck 4's davit, a turn and a leap for it, up it onto the davit's arm and back along the arm onto deck 4 | built and proven, natively and through the game's input on three devices (cycles 2, 1b) |
 | S2 | Machine: **the swinging stair** (ROTATE → DEPLOY; counterbalanced bascule) | 44 → 55 m | south face, west of centre | walks west along deck 4 onto a landing beside a 17 m steel stair standing upright outside the face, and takes hold of the chain hanging from a trip lever: it throws, the hook lifts off the stair's lug, and the stair swings down over 8 s, slowed by the 13.5 t counterweight behind its hinge, until a blade under its top landing drives into timber jaws at deck 5's edge; the player walks up it onto deck 5 | built and proven, natively and through the game's input on three devices (cycle 3) |
+| — | Backup path (rule 8) | 0 → 55 m | — | a plain stair or ladder way past S1, C1 and S2 for a player who does not want to do them | not built |
 | — | Options above deck 5 | 55 → 154 m | — | a climb from deck 5; then candidates from §8 chosen from the exit S2 actually leaves. Nothing here is designed | options |
 | — | AS-006 … AS-009 (legacy bands) | 154 → 640 m | shaft | built by the retired plans, proven only natively (AS-006 A and C also through the game's input). Not part of the proven route | owner's decision: keep in the world for review, or retire from the default world as the `ChatGPT` branch did |
 
@@ -356,10 +367,11 @@ with the same evaluator (beam model; trunnion friction band 1.5–4.5 kN·m, DEF
 
 Adopted from it: the authoring contract (§2.1), readability and pacing (§2.2), the complexity
 budget, the rule that a stage's output is a support the player uses and leaves, planning only from
-a proven exit, and its physics corrections to the Colossus sequence (§8). Not adopted: ordinary
-stairs to 154 m as a fallback (the owner's direction on this branch is that no stair is a route;
-a decision for the owner), and removing the legacy bands from the default world (§3, the
-owner's decision).
+a proven exit, and its physics corrections to the Colossus sequence (§8). Its ordinary stairs as a
+fallback were not adopted while the owner's direction was that no stair is a route; the owner has
+since made easy paths the backup route (§2.6 rule 8), so a fallback is adopted in that role and is
+not yet built (§3). Not adopted: removing the legacy bands from the default world (§3, the owner's
+decision).
 
 ## 8. The catalogue against this engine
 
