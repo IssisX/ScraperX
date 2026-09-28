@@ -81,6 +81,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_interpolation_alpha);
     godot::ClassDB::bind_method(godot::D_METHOD("get_player_position"),
                                 &ScraperXSimulation::get_player_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_player_render_position"),
+                                &ScraperXSimulation::get_player_render_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_player_linear_velocity"),
                                 &ScraperXSimulation::get_player_linear_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_grounded"),
@@ -204,6 +206,14 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_well_a_catch_latched);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_rope_end_entity_id"),
                                 &ScraperXSimulation::get_well_a_rope_end_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_b_cage_travel"),
+                                &ScraperXSimulation::get_well_b_cage_travel);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_well_b_catch_latched"),
+                                &ScraperXSimulation::is_well_b_catch_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_b_rope_end_entity_id"),
+                                &ScraperXSimulation::get_well_b_rope_end_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_well_b_boom_angle"),
+                                &ScraperXSimulation::get_well_b_boom_angle);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_c_platform_travel"),
                                 &ScraperXSimulation::get_well_c_platform_travel);
     godot::ClassDB::bind_method(godot::D_METHOD("is_well_c_catch_latched"),
@@ -220,16 +230,18 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_stack_s1_valve_angle);
     godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s1_catch_latched"),
                                 &ScraperXSimulation::is_stack_s1_catch_latched);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_stair_angle"),
-                                &ScraperXSimulation::get_stack_s2_stair_angle);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_stair_rate"),
-                                &ScraperXSimulation::get_stack_s2_stair_rate);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_catch_lever_angle"),
-                                &ScraperXSimulation::get_stack_s2_catch_lever_angle);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s2_catch_latched"),
-                                &ScraperXSimulation::is_stack_s2_catch_latched);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s2_on_pad"),
-                                &ScraperXSimulation::is_stack_s2_on_pad);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_cage_travel"),
+                                &ScraperXSimulation::get_stack_s2_cage_travel);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_beam_angle"),
+                                &ScraperXSimulation::get_stack_s2_beam_angle);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s2_chock_latched"),
+                                &ScraperXSimulation::is_stack_s2_chock_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s3_cage_travel"),
+                                &ScraperXSimulation::get_stack_s3_cage_travel);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s3_brake_angle"),
+                                &ScraperXSimulation::get_stack_s3_brake_angle);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s3_brake_latched"),
+                                &ScraperXSimulation::is_stack_s3_brake_latched);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -314,6 +326,10 @@ double ScraperXSimulation::get_interpolation_alpha() const {
 
 godot::Vector3 ScraperXSimulation::get_player_position() const {
     return to_godot(simulation_->snapshot().player_position);
+}
+
+godot::Vector3 ScraperXSimulation::get_player_render_position() const {
+    return to_godot(simulation_->render_player_position());
 }
 
 godot::Vector3 ScraperXSimulation::get_player_linear_velocity() const {
@@ -655,6 +671,22 @@ std::int64_t ScraperXSimulation::get_well_a_rope_end_entity_id() const {
     return static_cast<std::int64_t>(simulation_->snapshot().well_a_rope_end_entity_id);
 }
 
+double ScraperXSimulation::get_well_b_cage_travel() const {
+    return simulation_->snapshot().well_b_cage_travel;
+}
+
+bool ScraperXSimulation::is_well_b_catch_latched() const {
+    return simulation_->snapshot().well_b_catch_latched;
+}
+
+std::int64_t ScraperXSimulation::get_well_b_rope_end_entity_id() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().well_b_rope_end_entity_id);
+}
+
+double ScraperXSimulation::get_well_b_boom_angle() const {
+    return simulation_->snapshot().well_b_boom_angle;
+}
+
 double ScraperXSimulation::get_well_c_platform_travel() const {
     return simulation_->snapshot().well_c_platform_travel;
 }
@@ -687,24 +719,28 @@ bool ScraperXSimulation::is_stack_s1_catch_latched() const {
     return simulation_->stack_state().s1_catch_latched;
 }
 
-double ScraperXSimulation::get_stack_s2_stair_angle() const {
-    return simulation_->stack_state().s2_stair_angle;
+double ScraperXSimulation::get_stack_s2_cage_travel() const {
+    return simulation_->stack_state().s2_cage_travel;
 }
 
-double ScraperXSimulation::get_stack_s2_stair_rate() const {
-    return simulation_->stack_state().s2_stair_rate;
+double ScraperXSimulation::get_stack_s2_beam_angle() const {
+    return simulation_->stack_state().s2_beam_angle;
 }
 
-double ScraperXSimulation::get_stack_s2_catch_lever_angle() const {
-    return simulation_->stack_state().s2_catch_lever_angle;
+bool ScraperXSimulation::is_stack_s2_chock_latched() const {
+    return simulation_->stack_state().s2_chock_latched;
 }
 
-bool ScraperXSimulation::is_stack_s2_catch_latched() const {
-    return simulation_->stack_state().s2_catch_latched;
+double ScraperXSimulation::get_stack_s3_cage_travel() const {
+    return simulation_->stack_state().s3_cage_travel;
 }
 
-bool ScraperXSimulation::is_stack_s2_on_pad() const {
-    return simulation_->stack_state().s2_on_pad;
+double ScraperXSimulation::get_stack_s3_brake_angle() const {
+    return simulation_->stack_state().s3_brake_angle;
+}
+
+bool ScraperXSimulation::is_stack_s3_brake_latched() const {
+    return simulation_->stack_state().s3_brake_latched;
 }
 
 } // namespace scraperx::bridge

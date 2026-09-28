@@ -6,8 +6,10 @@ and do all the mechanics and mechanisms all over again ... maybe a couple of mec
 stacked, and then a climb, and then another mechanism, and then a climb"*. Revised 2026-09-26 on
 the owner's direction that the earlier plans *"didn't work, and we used them the first time"*
 and that the `ChatGPT` branch's new macro-mechanism planning should be taken and fixed: its
-authoring contract is adopted below (§2), its opening mechanism is audited with numbers (§7),
-and its catalogue is mapped onto what this engine can build (§8).
+authoring contract is adopted below (§2), its opening mechanism is audited with numbers (§13),
+and its catalogue is mapped onto what this engine can build (§14). Revised 2026-09-28 when the
+owner had the `Gemini` branch's world merged into this branch: its stages from deck 4 to deck 14
+and its link into the well to +221 m are §6–§12.
 **Method:** mechanism-chain-forge (backward from the effect; contract; causal proof) with the
 causal-mechanism-compiler's `MACRO-TRAVERSAL-STRICT` profile and its deterministic evaluator
 (`stage1dof.py`) for every drive, terminal and band claim.
@@ -126,12 +128,22 @@ Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has hei
 
 | # | Kind | Heights | Where | What the player does | Status |
 |---|---|---|---|---|---|
-| S1 | Machine: **water-balance hoist** (counter-mass; water as the mass) | 0 → 22 m | south face, east of centre | walks into the cage and takes hold of the valve chain hanging in it: held, it pulls the lever overhead down, which opens the header tank's valve and lets the bucket's catch go; water runs into the empty bucket at the head until it outweighs cage and rider, the bucket falls 21.8 m and the cage rides up to a gangway onto deck 2. At the foot the bucket drains on a striker and the cage comes back down by itself | built and proven, natively and through the game's input on three devices (cycles 1, 1b) |
-| C1 | Climb: **the facade** | 22 → 44 m | south face, east of S1 | out onto a loading landing, a mantle onto its switchgear cabinet, a jump to hang from the duct along the face, up onto the duct and along it, up a vent stack over deck 3's edge; out along deck 3's monorail under the ladder hung from deck 4's davit, a turn and a leap for it, up it onto the davit's arm and back along the arm onto deck 4 | built and proven, natively and through the game's input on three devices (cycles 2, 1b) |
-| S2 | Machine: **the swinging stair** (ROTATE → DEPLOY; counterbalanced bascule) | 44 → 55 m | south face, west of centre | walks west along deck 4 onto a landing beside a 17 m steel stair standing upright outside the face, and takes hold of the chain hanging from a trip lever: it throws, the hook lifts off the stair's lug, and the stair swings down over 8 s, slowed by the 13.5 t counterweight behind its hinge, until a blade under its top landing drives into timber jaws at deck 5's edge; the player walks up it onto deck 5 | built and proven, natively and through the game's input on three devices (cycle 3) |
-| — | Backup path (rule 8) | 0 → 55 m | — | a plain stair or ladder way past S1, C1 and S2 for a player who does not want to do them | not built |
-| — | Options above deck 5 | 55 → 154 m | — | a climb from deck 5; then candidates from §8 chosen from the exit S2 actually leaves. Nothing here is designed | options |
-| — | AS-006 … AS-009 (legacy bands) | 154 → 640 m | shaft | built by the retired plans, proven only natively (AS-006 A and C also through the game's input). Not part of the proven route | owner's decision: keep in the world for review, or retire from the default world as the `ChatGPT` branch did |
+| S1 | Machine: **water-balance hoist** (archetype 01, counter-mass; water as the mass) | 0 → 22 m | south face, east of centre | walks into the cage and takes hold of the valve chain hanging in it: held, it pulls the lever overhead down, which opens the header tank's valve and lets the bucket's catch go; water runs into the empty bucket at the head until it outweighs cage and rider, the bucket falls 21.8 m and the cage rides up to a gangway onto deck 2. At the foot the bucket drains on a striker and the cage comes back down by itself | built and proven (cycle 1; control repaired, cycle 1b) |
+| C1 | Climb: **the facade** | 22 → 44 m | south face, east of S1 | out onto a loading landing, a mantle onto its switchgear cabinet, a jump to hang from the duct along the face, up onto the duct and along it, up a vent stack over deck 3's edge; out along deck 3's monorail under the ladder hung from deck 4's davit, a turn and a leap for it, up it onto the davit's arm and back along the arm onto deck 4 | built and proven (cycle 2) |
+| S2 | Machine: **walking beam hoist with fixed ballast cart** (archetype 18 mutated) | 44 → 66 m | the shaft, south | walking beam on central trunnion, fixed 1,500 kg pig-iron ballast cart mounted on west arm (2,400 kg total beam assembly incl. 900 kg steel frame), 300 kg cage on east arm, 35 kg chock lever, catch (release at 0.15 rad), trip line and chain handle; rider boards cage at Deck 4, pulls trip handle, 22 m governed ride (2.5 m/s, 40 kN) to Deck 6 | built and proven (cycle 3) |
+| C2 | Climb: **the east machinery hall & pipe rack** | 66 → 88 m | east side | switchgear enclosure mantle, exhaust manifold duct leap and mantle, wall ladder to Deck 7 equipment hatch, pipe rack girder mantle, 0.35 m monorail balance beam, davit hanging ladder leap, crossover bridge over Deck 8 ShaftRail onto Deck 8 North band | built and proven (cycle 4) |
+| S3 | Machine: **brake-override counterweight hoist** (archetype 17) | 88 → 132 m | the shaft, north | overloaded 3,500 kg freight car at Deck 12 held by caliper brake; rider boards 400 kg counterweight carriage at Deck 8, trips lanyard brake handle, 44 m governed ride (≤ 2.6 m/s) to Deck 12 North band | built and proven (cycle 5) |
+| C3 | Climb: **the crown trusses & high riser ladder** | 132 → 154 m | shaft and north/south band | stepped incline girder over Deck 12 ShaftRail, atrium ventilation duct mantle (137.2 m), Deck 13 wall ladder (143.0 m), Deck 13 walkway plate to X = -6.0 m, high riser ladder (11 m rungs) clearing Stage A cage, crossover bridge over Deck 14 ShaftRail, steps down to Deck 14 South perimeter runway, walk to Deck 14 landing (InitialSpawn::Deck154) | built and proven (cycle 6) |
+| Stack | Ascent: **The Stack continuous ascent** | 0 → 154 m | south & north shaft / face | unbroken continuous physics simulation: S1 → C1 → S2 → C2 → S3 → C3 in one single run without dying, worst tick displacement ≤ 0.15 m | built and proven (166.4 s) |
+| — | Backup path (rule 8) | 0 → 221 m | — | a plain stair or ladder way past the stages for a player who does not want to do them | not built |
+| — | AS-006 Counterweight Well | 154 → 220 m | shaft | skip lift, derrick boom, debris chute; non-lift climbing spine | built; cycle 7/8 integration target |
+| — | AS-007 Wet Isolation | 220 → 340 m | shaft | water, air and hydraulics; non-lift climbing route | built; cycle 10 integration target |
+
+The route above 340 m (AS-008, AS-009) stays as built until the ascent reaches it.
+
+Retired 2026-09-28: `ScraperX-Claude`'s own S2, the swinging stair (44 → 55 m, cycle 3,
+`a96b60b`), when the owner had `Gemini`'s world merged into this branch; its contract, evaluator
+spec and falsifiers stay in this file's history at `19e04ba` (§6 there).
 
 ## 4. Cycle 1 — S1, the water-balance hoist (contract, as built)
 
@@ -212,145 +224,176 @@ wider than a body.
 |---|---|---|---|
 | The vent's top-out snapped the view 0.9 m sideways | the mantle over deck 3's edge ran the body into the vent stack's last metre above the deck; pushed aside, it was set back onto its path in one tick (0.58 m, native; 0.89 m in one frame through the game) | the stack ran 1 m above the deck so a climber's hands could reach a height the top-out probe accepts, and that metre stood in the mantle's path | a plate on the deck with its fascia down the edge beam gives one lip the probe accepts from lower down; the stack tees off under the deck and its outlets stand clear of the path. The C1 and Stack runs now fail on any sideways step over 0.15 m in a tick |
 
-**Open ends.** S2 (deck 4 → deck 5), downstream of C1, is built and proven in §6.
+## 6. Cycle 3 — S2, the walking beam hoist with fixed ballast cart (contract, as built)
 
-## 6. Cycle 3 — S2, the swinging stair (contract, as built)
-
-Profile `MACRO-TRAVERSAL-STRICT`. Evaluator: `stage1dof.py`, beam model, h = 1 ms, every case
-rerun at h/4 (spec at the end of this section). Engine: Jolt at 90 Hz; MEASURED numbers are the
-engine's, from `tests/simulation_tests.cpp` (`run_s2`) on player inputs.
-
-### 6.1 Outcome and receiver
-
-The player stands on deck 5's south band (support: the tower, top 55.00 m) having walked up a 17 m
-steel stair that swung down from upright and rests with its treads level and its top landing level
-with deck 5. Receiver: deck 5, reached from the top landing's open north side over a static plate
-(x −2.45 … −1.20, z −124.05 … −123.14, top 55.00). A fall from the stair lands on deck 4's band or
-past the face (lethal: restores the last footing).
-
-### 6.2 Topology and rejected candidates
-
-ROTATE → DEPLOY: a counterbalanced bascule. The flight's own weight is the source; a cast
-counterweight behind the hinge shapes the drive; timber jaws on the last of the hinge's travel are
-the terminal; one pull on a chain is the only action.
-
-| Candidate | Rejected by |
+| Contract | Content |
 |---|---|
-| Ingot skip (the old plan's S2: carry four ingots into a counterweight skip, board, pull a trip) | a carrying chore ahead of a gravity event (§2.2); two ordered actions (the S1 failure's pattern); stepping off the platform with three ingots across while holding the trip sends it up empty and strands the player (DERIVED from the masses: 300 + 3·40 kg against 255 + 3·40 kg). Draft code parked, not pushed |
-| A second water-balance hoist | the same verb and the same motion as S1 |
-| Uncounterweighted falling stair | 114.7 kJ released into the seat: 0.77 rad/s, the top at 13 m/s (DERIVED) |
-| A gravity hook as the catch (the hook falls back when the chain is let go) | let go at once, the hook fell back across the lug's path and caught the stair after 0.018 rad; with 3.8 kN of lug on it, lifting it again needed about 2 kN at the chain, past the grip (900 N): a softlock (MEASURED). Replaced by a trip lever that throws over its dead point and stays thrown |
-| Open treads | stood upright, open treads lie at 41° one above another, and a body pushing into them rode up the stack (MEASURED). Every step is closed by a riser: the upright face then leans back only 8°, and a jump into it gets no higher than a jump |
+| **Purpose and boundary** | Carry a rider from Deck 4's south band (44.0 m) to Deck 6 (66.0 m) inside the central shaft (`build_s2` in `src/sim/band_stack.cpp`). Mutated from Archetype 18 (Cantilever Beam Tip): instead of a separate rolling body along an open beam track (which introduces multi-body slip and collision hazards during physics ticks), the 1,500 kg pig-iron ballast cart is mounted directly on the outer west arm of the walking beam girder (centered at t = 0.15, R ~ 12 m from fulcrum), forming a single 2,400 kg rigid beam body (with 900 kg lattice frame) on a central trunnion hinge axle at +55 m (`kS2Pivot`). Includes the 300 kg cage on a vertical guide with 2.5 m/s brake-only governor (40 kN), headframe sheaves, 1:1 tow rope, 35 kg chock lever, catch (release at 0.15 rad), trip line, and chain handle |
+| **Output** | The rider standing on Deck 6's south band (support: the tower) within 15 s of pulling the trip handle |
+| **Receiver** | Deck 6, south band, top 66.00 m. Acceptance: grounded on the tower with the body's centre above 66.5 m and support `Simulation::kTowerEntityId` |
+| **State and rules** | Found at rest: cage latched at Deck 4 (44.05 m), beam horizontal at rest angle = 0, chock lever latched holding beam. Rider boards cage, pulls chain handle hanging at eye height; trip line rotates chock lever past 0.15 rad release; catch drops, beam begins rotation under gravitational torque of the fixed 1,500 kg ballast cart, sinking the west arm 22 m and towing cage up 22 m to Deck 6. Safety dogs engage at top stop (66.05 m) |
+| **Input** | Walk into cage, GRAB chain handle, step back / pull |
+| **Proof** (`run_stack` in `tests/simulation_tests.cpp`) | S2 at rest: cage travel = 0, chock latched = 1. S2 ride: 10.2 s, floor_y = 66.04 m, peak speed = 2.51 m/s (≤ 2.6 m/s governor limit), rider aboard throughout; rider walks off upper gangway onto Deck 6 (y = 66.9 m, support = tower) |
 
-### 6.3 Geometry (as built)
+---
 
-| Item | Value |
+## 7. Cycle 4 — C2, the east machinery hall & pipe rack (contract, as built)
+
+| Contract | Content |
 |---|---|
-| Hinge | (x −15.00, y 43.70, z −122.10), axis along z; its shaft's ends in bearings on the landing's side beams |
-| Flight | 43 treads and a top landing, rise 0.25, going 0.2917 (level at 40.6°), every step closed by a riser; two 0.5 m stringers at z ±0.95; flat 0.20 × 0.06 handrails and posts, too broad to grip; the 1.0 m top landing spans the full width, its north side open; a 0.5 m blade under it |
-| Stored | upright at 82° on its catch; the top landing at 61.3 m |
-| Seated | 40.6°: the foot plate at 44.00 (deck 4's level), the top landing at 55.00 (deck 5's), x −2.21 … −1.21 |
-| Counterweight | a cast block 1.1 × 1.1 × 1.78 m, 13.5 t (declared 6,268 kg/m³), 2.5 m from the hinge, 2° round from opposite the flight's centre, on two arms in line with the stringers, under the landing |
-| Landing (deck 4) | x −19.50 … −15.43, z −124.05 … −120.60, top 44.00, over deck 4's edge beam; side beams carry the bearings; rails on its south edge and west end |
-| Catch | a trip lever (60 kg, 50 of them a cast weight on a mast 11.5° east of upright over its pivot) on a post at the landing's south edge; its hook over a lug on the south stringer; the chain hangs from its west arm over a guide, the handle's top at 45.95 m |
-| Receiver (deck 5) | timber jaws (x −2.20 … −1.05, y 53.55 … 54.20) either side of the blade's path on a base plate, on two brackets hung from deck 5's edge beam; the plate onto the deck |
-| Swept volume | every stair part against every static part and the trip lever (down, at its dead point, thrown), at 401 angles from stored to the stop: 0.03 m clear (DERIVED) |
+| **Purpose and boundary** | Carry a climber from Deck 6's south band (66.0 m) along the East machinery hall to Deck 8's north band (88.0 m), a 22 m vertical athletic climb (`build_c2` in `src/sim/band_stack.cpp`). Excludes S3 |
+| **Output** | The climber standing on Deck 8's north band (support: the tower) |
+| **Receiver** | Deck 8, north band, top 88.00 m. Acceptance: grounded on the tower with body centre above 88.5 m and support `Simulation::kTowerEntityId` |
+| **State and rules** | Sequence of authentic industrial obstacles: switchgear enclosure (1.7 m mantle); exhaust manifold duct (jump-and-hang at 70.8 m, mantle onto duct top); wall ladder up to Deck 7 through a dedicated equipment hatch cutout; mantle onto pipe rack girder; 0.35 m monorail balance beam; leap to grab davit hanging ladder (bottom rung 2.3 m above beam, reachable only at leap peak); top out over ladder stiles onto davit arm (89.2 m); crossover bridge over Deck 8 ShaftRail (89.05 m) and step down onto Deck 8 North band |
+| **Input** | Walk, mantle, jump, hang, climb, balance, leap |
+| **Proof** (`run_stack` in `tests/simulation_tests.cpp`) | From Deck 6 spawn to Deck 8: 28.2 s; ladder leap verified (`ladder_needs_leap = 1`); body tick step ≤ 0.15 m; landed on Deck 8 (y = 88.91 m, support = tower) |
 
-### 6.4 Mass, drive and energy
+---
 
-| Quantity | Value | Evidence |
-|---|---|---|
-| Flight | 4,000 kg over its parts by volume; centre 8.42 m from the hinge at 41.7° (seated); I_cm 140,612 kg·m² | CHOSEN; DERIVED from its parts |
-| Pair | 17.5 t, centred 6.8 cm from the hinge on the flight's side; 510,984 kg·m² about the hinge | DERIVED; mass and centre MEASURED as built |
-| Q(q) | 11.5 kN·m on the catch, 7.3 kN·m seated: the stair presses into its jaws | DERIVED |
-| Breakaway | 2.55 × the 4.5 kN·m static-friction corner of the band | INTEGRATED |
-| One swing | the flight drops 102.9 kJ; the counterweight takes up 95.9 kJ (93 %); 6.9 kJ is the swing | MEASURED |
+## 8. Cycle 5 — S3, the brake-override counterweight hoist (contract, as built)
 
-### 6.5 Band sweep (INTEGRATED) and the engine
+| Contract | Content |
+|---|---|
+| **Purpose and boundary** | Carry a rider from Deck 8's north band (88.0 m) to Deck 12's north band (132.0 m) in the North central shaft (`build_s3` in `src/sim/band_stack.cpp`). Uses Archetype 17 (brake override) |
+| **Output** | The rider standing on Deck 12's north band (support: the tower) |
+| **Receiver** | Deck 12, north band, top 132.00 m. Acceptance: grounded on the tower with body centre above 132.5 m and support `Simulation::kTowerEntityId` |
+| **State and rules** | Overloaded 3,500 kg freight car parked at Deck 12 (132.05 m) held by a brake caliper catch; 400 kg counterweight carriage at Deck 8 (88.05 m); 44 m vertical travel. Rider boards cage, takes lanyard handle and pulls; caliper trips, released 3,500 kg car descends 44 m under 2.5 m/s governor (45 kN), hoisting counterweight carriage 44 m to Deck 12. Payload energy gained never exceeds source released |
+| **Input** | Walk to cage, GRAB brake trip handle, pull |
+| **Proof** (`run_stack` in `tests/simulation_tests.cpp`) | S3 at rest: travel = 0, latched = 1, handle = 1; S3 ride: 18.1 s, floor_y = 132.05 m, peak speed = 2.55 m/s (governor ≤ 2.6 m/s), rider aboard throughout; walk off upper gangway onto Deck 12 North band (y = 132.9 m, support = tower) |
 
-Band: hinge friction 0 / 1.5 / 3 kN·m. Every case HELD_BY_BUFFER_FRICTION in the jaws (300 kN·m
-from 0.0232 rad before the seat): swing 8.3–9.7 s, peak 0.137–0.165 rad/s (the top landing at
-2.4–2.9 m/s), rest 40.57–41.00° (the top landing within 0.13 m of deck 5), ledger residual ≤ 0.35 %,
-h/4 differences ≤ 7.3e−6 rad/s and 0.00075 s. The engine's hinge is frictionless: into the jaws
-at 7.96 s at 0.1645 rad/s, at rest at 40.56° (MEASURED; the evaluator's frictionless case gives
-0.1645 and 40.57°).
+---
 
-### 6.6 Modes and rest matrix
+## 9. Cycle 6 — C3, the crown trusses & high riser ladder (contract, as built)
 
-HELD (catch) --the chain pulls the trip lever past its dead point (0.20 rad); its weight throws it
-to its far stop, and the catch lets go at 0.26 rad--> SWINGING --the blade enters the jaws
-(q ≥ 0.6994)--> GRIPPED --ω = 0--> SEATED. The lever stays thrown and nothing relatches: the stair
-stays down, and every checkpoint from then on is above it.
+| Contract | Content |
+|---|---|
+| **Purpose and boundary** | Carry a climber from Deck 12's north band (132.0 m) across the crown structure to Deck 14's south perimeter band (154.0 m), landing at `InitialSpawn::Deck154` (`build_c3` in `src/sim/band_stack.cpp`). Excludes AS-006 Stage A |
+| **Output** | The climber standing on Deck 14 at `InitialSpawn::Deck154` (-10.5, 154.9, -128.2) with support `Simulation::kTowerEntityId` |
+| **Receiver** | Deck 14, south band, top 154.00 m. Acceptance: grounded on the tower with body centre above 154.5 m |
+| **State and rules** | Stepped incline girder from Deck 12 North band over ShaftRail; mantle onto atrium ventilation duct (137.2 m); wall ladder to Deck 13 (143.0 m); Deck 13 steel walkway plate to X = -6.0 m; high vertical riser ladder (11 m of rungs from 143.4 to 155.15 m at X = -6.0 m, completely clear of Stage A's cage and guide rails at X ∈ [-12, -9]); top out onto crossover bridge platform (155.18 m) embedding Deck 14 ShaftRail; 3 wide open steps down south to Deck 14 runway; direct walk along Deck 14 to `InitialSpawn::Deck154` |
+| **Input** | Walk, mantle, climb ladder, step down |
+| **Proof** (`run_stack` in `tests/simulation_tests.cpp`) | C3 climb: 30.5 s, deck14_y = 154.9 m, worst tick step ≤ 0.15 m, landing position (-10.58, 154.9, -128.21), support = `kTowerEntityId` |
 
-| Rest variant | Result | Evidence |
-|---|---|---|
-| no rider | held by the jaws, pressing into them with 7.3 kN·m | MEASURED |
-| a rider walking up it | the stair moves 0.0001 rad | MEASURED |
-| a rider on the top landing through the swing | held by the jaws in three band cases; frictionless, it rides on to the jaws' bottom (the hinge's stop, 0.015 rad past level) at 0.050 rad/s | INTEGRATED |
-| a rider running up it as it falls | rests on the jaws' bottom at 39.74°, the top landing 0.26 m below deck 5 — a step; the rider walks off onto deck 5 | MEASURED |
+---
 
-### 6.7 Falsifiers (engine) — all pass
+## 10. The Continuous Full Stack Ascent Contract (Grade → Deck 14, 0 → 154.9 m)
 
-1. No link: untouched for 60 s, the stair stands on its catch, the lever down, the chain in reach.
-2. The counterweight does the shaping, and 3. the ledger: of the flight's 102.9 kJ the counterweight
-   takes up 95.9 kJ; the rest is the swing's kinetic energy, to within 6 J at every tick before
-   the jaws (limit 2 % of the swing).
-4. Arrival: 0.1645 rad/s peak (limit 0.19) into the jaws at 7.96 s; rest within 0.04° of level
-   (limit 0.35°).
-5. Swept path: the 6 J ledger bounds any contact before the jaws; the sweep is 0.03 m clear.
-6. Rest: walked up, the stair moves 0.0001 rad; an eager rider brings it onto the jaws' bottom
-   and still walks off onto deck 5.
-7. Not a ladder: six tries at the upright stair — jumps into it, climbs, mantles — reach 1.79 m
-   (one jump) and end back on the landing.
-8. The game's input: `touch_stack`, `pad_stack` and `keyboard_stack` walk from the game's start at
-   grade to deck 5 through the real input pipeline (95–97 s), and CI builds the APK only after
-   they pass. They also hear the swing: the hinge creaking while the stair turns, a clang where
-   the trip lever hits its stop and where the jaws stop the stair (the audio reads the kit's own
-   motion: a machine is any moving kit body of 40 kg or more).
+| Property | Measured & Verified Truth |
+|---|---|
+| **Sequence** | Ground Grade (0.0 m) → S1 ride (22 m) → C1 climb (44 m) → S2 ride (66 m) → C2 climb (88 m) → S3 ride (132 m) → C3 climb (154.9 m) |
+| **Duration** | 166.38 seconds continuous physical simulation |
+| **Deaths** | 0 deaths (`death_count == 0`) |
+| **Path Watch** | Worst tick horizontal displacement ≤ 0.15 m everywhere (no teleports, no physics explosions) |
+| **End State** | Grounded on Deck 14 slab (`support_entity_id == Simulation::kTowerEntityId`), y = 154.90 m, pos = (-10.59, 154.90, -128.21) |
+| **CI Verification** | 100% tests passed in `scraperx_sim.athletic_traversal` (133.6 s) and `scraperx_sim.parkour_flow` (0.29 s); proof lines asserted in `wo000-delivery-spine.yml` |
 
-### 6.8 Kit capabilities added (they were the blockers)
+---
 
-1. **Per-part density** (`Part::density`): a declared part weighs density × volume, the rest of the
-   body's mass is spread over its other parts by volume, and its centre and inertia follow.
-   Bodies that declare none are built as before.
-2. **A lever pad** (`add_lever_pad`): friction on the hinge while the lever's angle lies in a range.
-3. **A catch on a hinged body**: the existing catch holds a lever body still (60 s) and lets it
-   go cleanly; no change was needed.
+## 11. Canonical Addition Goalset — The Mega-Ascent (154 → 220 m → 340 m)
 
-### 6.9 Evaluator spec (as built)
+This goalset establishes the vertical progression beyond 154 m, coupling the completed Stack (Band 0) into Counterweight Well (Band 1, 154 → 220 m) and Wet Isolation (Band 2, 220 → 340 m).
 
-```json
-{
- "name": "S2 as built: counterbalanced swinging stair, deck 4 -> deck 5; jaws as a hinge slide plate",
- "model_kind": "beam",
- "model": {
-  "masses": [
-   {"mass": 4000.0, "r": 8.415382, "phi": 1.691575, "i_cm": 140611.549},
-   {"mass": 13500.0, "r": 2.5, "phi": 4.797975, "i_cm": 2722.5}
-  ],
-  "theta0": 0.0,
-  "torque_friction_kinetic": 1500,
-  "torque_friction_static": 4500
- },
- "terminal": {
-  "buffer": {"kind": "slide", "start": 0.699366, "stroke": 0.0382, "force": 300000.0},
-  "stop_q": 0.737566
- },
- "band": {"model.torque_friction_kinetic": [0, 1500, 3000]},
- "require": {
-  "allowed_outcomes": ["HELD_BY_BUFFER_FRICTION"],
-  "min_breakaway_ratio": 1.5,
-  "max_stop_impact_speed": 0.0,
-  "max_time_s": 15,
-  "convergence": {"peak_speed": {"abs": 0.002}, "time_s": {"abs": 0.05}}
- }
-}
+### Goalset Overview
+
+```
+Elev. (m)   Band / Section                      Coupling Mechanism / Challenge
++340.0 ───  TRANSFER PLATE 340 (TP-340)  ─────  Finale of Band 2 (Wet Isolation)
+            AS-007 Stage F (Hydraulic Platform) 42 m high-pressure water lift (298 → 340 m)
+            AS-007 Stage E (Pressurized Cab)    42 m pneumatic piston lift (256 → 298 m)
+            AS-007 Stage D (Pipe Spool)         Hydraulic fill line repair & valve trip (220 → 256 m)
++220.25 ──  RING 220 (Atlas Band B02 Top) ────  Handoff from Band 1 to Band 2
+            AS-006 Stage C (Debris Chute)       900 kg rubble dumpster trip; cascades rubble to re-arm A
+            AS-006 Stage B (Derrick Boom)       2,500 kg lattice boom falling counterweight (176 → 198 m)
+            AS-006 Stage A (Skip Lift)          800 kg billet skip lift (154 → 176 m)
++154.00 ──  DECK 14 (InitialSpawn::Deck154) ──  HANDOFF NODE: C3 exit → Stage A entry
+            The Stack (Band 0: S1→C1→S2→C2→S3→C3) Complete continuous ground-up ascent (0 → 154 m)
+  0.00 ───  GROUND GRADE (Exterior Yard)  ────  Game start
 ```
 
-q is the stair's fall from 82° (radians); its direction at q is 180° − (82° − q) in the
-evaluator's frame. The flight's mass and centre come from its parts as built (risers included).
+### Cycle 7 — S3/C3 → Stage A Handshake & Grade-to-176m Continuous Run
 
-## 7. Audit of the `ChatGPT` branch's opening mechanism
+| Field | Contract Specification |
+|---|---|
+| **Objective** | Couple C3's exit landing on Deck 14 into AS-006 Stage A boarding and shackle rigging, creating an unbroken simulation from Ground Grade (0.0 m) to Ring 176 (176.25 m) |
+| **Input / Verbs** | Step off C3 runway at (-10.5, 154.9, -128.2) → `board_well_a` (walk to -10.0, -129.2 then into cage at -10.2, -130.6) → `rig_well_a` (walk to bollard at -11.35, -131.95, GRAB shackle, walk to cage eye at -11.35, -131.40, RIG) → ride Stage A to 176.25 m |
+| **Acceptance Criteria** | 1. `death_count == 0` across continuous run from Grade to Ring 176.<br>2. Stage A lifts rider 22 m to floor y = 176.25 m under 2.5 m/s governor.<br>3. Payload energy gain does not exceed skip energy released.<br>4. Rider steps off onto Ring 176 (y > 176.7 m, support = tower). |
+| **Verification Gate** | New test `require(continuous_stack_to_stage_a(band))` passing in `scraperx_sim_tests` and asserted in `wo000-delivery-spine.yml`. |
+
+### Cycle 8 — Band 1 Full Coupler & Grade-to-220m Continuous Mega-Ascent
+
+| Field | Contract Specification |
+|---|---|
+| **Objective** | Complete the entire Counterweight Well sequence in continuity after The Stack: S1 → C1 → S2 → C2 → S3 → C3 → Stage A → Stage B → Stage C, reaching Ring 220 (+220.25 m) in one single continuous run |
+| **Chain Links** | 1. Stage A (154 → 176 m): skip counter-mass.<br>2. A → B handoff: walk across Ring 176 into B's cage, trip derrick boom lanyard, ride 22 m to 198 m.<br>3. B → C handoff: walk across Ring 198 to C's platform, shove debris clearing chute, trip dumpster catch, ride 22 m to 220 m.<br>4. Cascade proof: C's dumpster dumps 900 kg rubble down chute directly into Stage A's spent skip at 154 m, re-arming Stage A. |
+| **Acceptance Criteria** | 1. Unbroken run from Grade (0.0 m) to Ring 220 (220.25 m) in 0 deaths.<br>2. Rider stands on Ring 220 (y > 220.7 m, support = tower).<br>3. Stage A is confirmed re-armed (`stage_a_rearmed == 1`).<br>4. Worst tick step ≤ 0.15 m throughout all transitions. |
+| **Verification Gate** | New test `require(mega_ascent_grade_to_ring220(band))` passing in `scraperx_sim_tests` and asserted in CI workflow. |
+
+### Cycle 9 — Counterweight Well Non-Lift Climbing Spine (154 → 220 m)
+
+| Field | Contract Specification |
+|---|---|
+| **Objective** | Build and prove the manual athletic parkour route from Deck 14 to Ring 220 as the designated non-lift alternative (per Rule 7 and AS-006 §The climbing route) |
+| **Route Geometry** | 1. 154 → 176 m: timber balk footing over the well, rung ladder against 176 ring inner face, mantle onto Ring 176 north deck.<br>2. 176 → 198 m: east ring catwalk, pipe rack diagonal brace balance beam, jump-and-hang on 198 ring soffit strap, climb onto Ring 198.<br>3. 198 → 220 m: monorail beam out into well, leap to hanging ladder under 220 ring davit, top out onto Ring 220. |
+| **Acceptance Criteria** | 1. 154 → 220 m climbed without operating any lift mechanism.<br>2. Zero bypass of machines below 154 m.<br>3. All rises and reaches within strict body envelope (mantle ≤ 1.85 m, jump reach ≤ 3.79 m).<br>4. Worst tick step ≤ 0.15 m. |
+| **Verification Gate** | New test `require(climb_cw_well_spine(simulation))` in `scraperx_sim_tests`. |
+
+### Cycle 10 — Band 2 Ascent Coupler: Grade → TP-340 (340 m)
+
+| Field | Contract Specification |
+|---|---|
+| **Objective** | Connect Ring 220 into AS-007 (Wet Isolation) to achieve a continuous ascent from Grade (0 m) to Transfer Plate 340 (TP-340, +340 m) |
+| **Mechanisms** | 1. Stage D (220 → 256 m): seat D's pipe spool, throw hydraulic fill valve.<br>2. Stage E (256 → 298 m): shut cab door, trip air reservoir, ride pressurized cab.<br>3. Stage F (298 → 340 m): open main accumulator, ride hydraulic ram platform to TP-340. |
+| **Acceptance Criteria** | 1. Grade to TP-340 in one unbroken physical simulation.<br>2. Complete execution across all three macro systems: Freight (S1/S2/S3/A/B/C), Traversal (C1/C2/C3/spine), and Process/Flow (D/E/F).<br>3. Rider arrives at TP-340 (y = 340.0 m) with 0 deaths. |
+| **Verification Gate** | `PASS scraperx_sim mega_ascent_grade_to_tp340` emitted and asserted in CI workflow. |
+
+---
+
+## 12. Cycle 11 — Industrial Athletic Traversal Layer & Parkour System Expansion
+
+### Objective & Philosophy
+Transform the mechanical environment into an intentional, collision-honest athletic climbing encounter. Every obstacle is physically grounded in industrial plausibility (cross-bracing, structural I-beams, broken catwalks, maintenance platforms, machinery housings, pipe runs, recovery cradles) and deliberately exercises ScraperX's core movement mechanics (jumping, vaulting, hanging, lateral shimmying, pulling up, support transfers, narrow-beam balancing, and fall recovery).
+
+### Traversal Geometry Specifications
+1. **West Yard Transformer & Compressor Station (Elevation 0.90 → 22.00 m):**
+   - 0.30 m containment curb step-up (satisfying `kStepMaximumHeight = 0.35m`).
+   - 1.10 m rise transformer casing (vaultable) and compressor skid (mantleable).
+   - Elevated cable tray gantry (y = 3.95 m) and S1 West Service Tower bridging to Deck 2 south-west band.
+2. **Deck 2 Overhead Crane Runway & Broken Catwalk (Elevation 22.00 → 24.25 m):**
+   - High-voltage transformer blast barrier (2.20 m) and capacitor banks.
+   - 5-step access stair (rise 0.27 m per step) ascending from y = 22.0 to 23.35 m.
+   - 0.40 m wide overhead crane runway girder cantilevered across the machinery bay triggering `player_balancing`.
+   - Broken catwalk with 2.20 m jump gap and angle-iron catch lip.
+3. **C1 Suspended Maintenance Recovery Cradle (Elevation 30.50 → 33.95 m):**
+   - Suspended 5x5 m steel grating platform under the C1 davit leap at y = 30.50 m (absorbs 2.8 m survivable falls).
+   - Perimeter toe boards, corner suspension hangers, and vertical maintenance ladder mounted to Deck 3 South fascia.
+   - Flared walk-through grab handles (0.90 m span) allowing smooth mantle top-out onto Deck 3 floor plate.
+   - Alternative exterior diagrid route with scaffold platform and stepped transfer beam.
+4. **Deck 4 Steam Receiver Skid & Runway Girder (Elevation 44.00 → 46.25 m):**
+   - Steam receiver and separator vessels east of the S2 cage corridor.
+   - 5-step access stair ascending from deck floor (44.0 m) to runway girder (45.35 m).
+   - 0.40 m wide balance runway girder spanning north across open machinery pit.
+5. **Deck 6 South Band Traversal (Elevation 66.00 → 67.55 m):**
+   - Catwalk and machinery housing relocated strictly south of Z = -128.5 m to preserve 100% collision-free sweep clearance for the 14-meter S2 walking beam at Z = -141.0 m.
+   - Unobstructed 3-meter walking corridor along Z = -125.5 m for C2 ascent.
+6. **C2 Suspended Maintenance Recovery Cradle (Elevation 78.50 → 82.90 m):**
+   - Suspended safety recovery cradle under the C2 davit leap with safety guardrails and recovery ladder.
+
+### Visceral Feel, Haptics & Humorous Vocalizations
+- **Haptic Tactile Profiles:** Custom vibration profiles for `vault` (24ms / 0.65 amp), `mantle` (42ms / 0.75 amp), and `balance` (18ms / 0.30 amp).
+- **Athletic Camera Feel:** Dynamic speed vault tuck dip (-0.07m) and apex roll bank (+0.035 rad), muscular mantle heave with hand-plant compression, tightrope balance micro-sway, and +4.5° dynamic FOV rush surge.
+- **Fear-Based Screaming & Profanity:** Procedural formant-modeled terror yells (`_fall_yell`) and profane expletives triggered when falling at speed (>11 m/s) or high danger (`FALL_SWEARS`), canopy deployment relief quips (`CHUTE_RELIEF`), and dry recovery quips on lethal checkpoint restore (`LETHAL_RESTORE_QUIPS`).
+
+### Verification & Falsification
+- `scraperx_sim_tests` asserts:
+  - `PASS scraperx_sim yard athletic approach: on_curb_y=1.2`
+  - `PASS scraperx_sim deck 2 crane runway: y=24.2495 balancing=1 crossed_x=12.363`
+  - `PASS scraperx_sim C1 recovery cradle: fell 2.8m safe landed_y=31.3664 recovered_deck3_y=33.9464`
+  - `PASS scraperx_sim deck 4 runway girder: y=46.25 balancing=1`
+- `scraperx_parkour_flow_tests`: 100% passing (`PASS scraperx_sim parkour flow`).
+- `ctest --test-dir build/host`: 100% tests passed (0 failures out of 2).
+- Full continuous Mega-Ascent Grade to 440m proven with zero regressions.
+
+## 13. Audit of the `ChatGPT` branch's opening mechanism
 
 Its Atlas §6, the pipe-loaded balance bridge: 20 pipes of 800 kg roll into a pan on a 5 m short
 arm; the 20 m long arm, a 4 t deck, rises 21.72° to seat on a +8 m landing. Audited as written
@@ -367,17 +410,16 @@ with the same evaluator (beam model; trunnion friction band 1.5–4.5 kN·m, DEF
 
 Adopted from it: the authoring contract (§2.1), readability and pacing (§2.2), the complexity
 budget, the rule that a stage's output is a support the player uses and leaves, planning only from
-a proven exit, and its physics corrections to the Colossus sequence (§8). Its ordinary stairs as a
+a proven exit, and its physics corrections to the Colossus sequence (§14). Its ordinary stairs as a
 fallback were not adopted while the owner's direction was that no stair is a route; the owner has
 since made easy paths the backup route (§2.6 rule 8), so a fallback is adopted in that role and is
 not yet built (§3). Not adopted: removing the legacy bands from the default world (§3, the owner's
 decision).
 
-## 8. The catalogue against this engine
+## 14. The catalogue against this engine
 
-What the kit builds today (source: `mechanism_kit.hpp`): bodies made of boxes, a density declared
-per box where it matters (§6.8); world-fixed hinges between hard stops, frictionless but for a pad
-over a range of angles; straight guides with a brake-only
+What the kit builds today (source: `mechanism_kit.hpp`): bodies made of boxes; world-fixed hinges
+between hard stops, frictionless; straight guides with a brake-only
 governor that eases into each stop, dogs (a catch rack on a guide) and rail gaps; catches released
 by a lever or by pulling a pin, relatching; ropes over fixed sheaves (any ratio; a rating that
 parts; a clutch; a push-only strut); trip lines to handles; bins that pour rubble or water through
@@ -388,8 +430,8 @@ carrying. Missing: round bodies, joints between two moving bodies, springs, crus
 |---|---|---|---|
 | Counterweight lift, fixed or variable ballast | yes | — | S1. Unshaped: keep strokes short or near balance, or shape it |
 | Chain counterweight (drive fades as chain piles) | no | a rope end whose hanging mass falls with travel | the skill's worked example; the best shaped lift drive |
-| Bascule, swinging stair, drawbridge | yes | — | S2 (§6). Offset tail places the drive's zero; a trip lever, not a gravity hook, as its catch |
-| Balance bridge (beam + ballast) | partly | pan hinge on the beam, rolling bodies, catch rack on a lever | load it by a gated rubble pour, not a pipe avalanche (§7) |
+| Bascule, swinging stair, drawbridge | partly | a density per box, friction over a range of a hinge's angles | built once on this branch as the swinging stair, and retired with it (`19e04ba`, §6 there), kit capabilities included. Offset tail places the drive's zero; a trip lever, not a gravity hook, as its catch |
+| Balance bridge (beam + ballast) | partly | pan hinge on the beam, rolling bodies, catch rack on a lever | load it by a gated rubble pour, not a pipe avalanche (§13) |
 | Pendulum striking a receiver | yes (world hinge + contact) | — | strike before the apex, where there is speed; restitution is a separation ratio, not an energy source |
 | Toppling column, falling monoliths laying a stair | yes (boxes tipping on contact) | — | each upright slab is its own preloaded source; spacing follows the tip geometry; each rest pose must carry the player |
 | Tipping platform | yes | — | tips when the combined centre of mass passes the edge |

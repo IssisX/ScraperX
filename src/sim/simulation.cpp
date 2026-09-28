@@ -175,6 +175,11 @@ constexpr float kHangDropBelowLedge = 1.05F;
 constexpr float kHangWallGap = 0.06F;
 constexpr float kHangMaximumClimbSpeed = 0.2F;
 constexpr double kHangIntentDotThreshold = 0.3;
+// A caught ledge pulls the body in to its hold at this speed, never in one
+// tick: the probe takes a wall up to kTraversalReach past the capsule, and
+// a one-tick pull moved the body that whole gap in 11 ms (seen: 0.31 m in
+// one frame catching the C2 duct from a keyboard leap).
+constexpr float kHangPullInSpeed = 3.0F;
 
 // A standing mantle steps in before it climbs. The probe offers a ledge from
 // 1.30 m out, and a body that rises from there hangs an arm's length off the
@@ -655,6 +660,15 @@ private:
     case scraperx::sim::InitialSpawn::Deck4South:
         // On deck 4's south band, west of C1's davit.
         return {11.0, 45.2, -125.5};
+    case scraperx::sim::InitialSpawn::Deck6South:
+        // On deck 6's south band, by S2's upper gangway.
+        return {10.0, 67.2, -125.5};
+    case scraperx::sim::InitialSpawn::Deck8North:
+        // On deck 8's north band, where C2 lands.
+        return {10.0, 89.2, -170.0};
+    case scraperx::sim::InitialSpawn::Deck12North:
+        // On deck 12's north band, where S3 lands.
+        return {-8.0, 133.2, -170.0};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower
@@ -710,6 +724,15 @@ void approach_relative_horizontal_velocity(JPH::Vec3 &world_velocity,
     const float t = std::clamp(value, 0.0F, 1.0F);
     const float slope = std::clamp(entry_slope, 0.0F, 3.0F);
     return slope * t * (1.0F - t) * (1.0F - t) + t * t * (3.0F - 2.0F * t);
+}
+
+// A vault should meet the run on both ends. Equal Hermite end slopes preserve
+// the incoming velocity along the landing path, while the middle absorbs the
+// remaining distance. Slopes in [0, 3] keep the path monotone.
+[[nodiscard]] float ease_with_carried_speed(const float value, const float slope) noexcept {
+    const float t = std::clamp(value, 0.0F, 1.0F);
+    const float s = std::clamp(slope, 0.0F, 3.0F);
+    return t * t * (3.0F - 2.0F * t) + s * t * (1.0F - t) * (1.0F - 2.0F * t);
 }
 
 [[nodiscard]] scraperx::sim::Vector3 to_vector3(const JPH::RVec3 value) noexcept {
@@ -1330,8 +1353,25 @@ private:
                       JPH::RVec3(kStackCenterX, slab_y, kStackCenterZ + side * band_center));
             }
             for (const float side : {1.0F, -1.0F}) {
-                frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
-                      JPH::RVec3(kStackCenterX + side * band_center, slab_y, kStackCenterZ));
+                if (level == 7 && side > 0.0F) {
+                    // Level 7 East band has an equipment hatch / ladder well for C2 from Z = -148.70F to -145.00F:
+                    const float s_min_z = -145.00F;
+                    const float s_max_z = -133.00F;
+                    const float s_half_z = 0.5F * (s_max_z - s_min_z);
+                    const float s_center_z = 0.5F * (s_min_z + s_max_z);
+                    frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, s_half_z),
+                          JPH::RVec3(kStackCenterX + side * band_center, slab_y, s_center_z));
+
+                    const float n_min_z = -167.00F;
+                    const float n_max_z = -148.70F;
+                    const float n_half_z = 0.5F * (n_max_z - n_min_z);
+                    const float n_center_z = 0.5F * (n_min_z + n_max_z);
+                    frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, n_half_z),
+                          JPH::RVec3(kStackCenterX + side * band_center, slab_y, n_center_z));
+                } else {
+                    frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
+                          JPH::RVec3(kStackCenterX + side * band_center, slab_y, kStackCenterZ));
+                }
             }
         }
 
@@ -2250,6 +2290,7 @@ private:
                               probe.wall_point.GetZ() - facing_.GetZ() * (kPlayerRadius + kHangWallGap));
 
         traversal_state_ = TraversalState::Hanging;
+        traversal_entry_offset_ = JPH::Vec3(origin - hold);
         traversal_body_ = probe.ledge_body;
         traversal_entity_id_ = probe.ledge_entity_id;
         traversal_target_body_ = probe.landing_body;
@@ -2260,7 +2301,7 @@ private:
             to_support_local(bodies, traversal_target_body_, probe.landing_centre);
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
-        traversal_desired_ = hold;
+        traversal_desired_ = origin;
         bodies.SetGravityFactor(player_id_, 0.0F);
     }
 
@@ -2427,6 +2468,16 @@ private:
             relative = relative * (kPlayerMaximumRelativeSpeed / relative_speed);
         }
 
+        const double travel_x = landing_centre.GetX() - origin.GetX();
+        const double travel_z = landing_centre.GetZ() - origin.GetZ();
+        const double travel_squared = travel_x * travel_x + travel_z * travel_z;
+        traversal_vault_horizontal_slope_ = travel_squared > 1.0e-6
+            ? std::clamp(static_cast<float>(
+                  kVaultDurationSeconds * (relative.GetX() * travel_x +
+                                           relative.GetZ() * travel_z) / travel_squared),
+                  0.0F, 3.0F)
+            : 0.0F;
+
         const JPH::RVec3 apex(origin.GetX(),
                               probe.ledge_point.GetY() + kPlayerHalfHeight + kVaultApexClearance,
                               origin.GetZ());
@@ -2466,7 +2517,8 @@ private:
 
         if (traversal_state_ == TraversalState::Vaulting) {
             const JPH::RVec3 apex = from_support_local(bodies, traversal_body_, traversal_local_apex_);
-            const float horizontal = progress;
+            const float horizontal = ease_with_carried_speed(
+                progress, traversal_vault_horizontal_slope_);
             float height;
             if (progress < 0.5F) {
                 height = start.GetY() +
@@ -2509,7 +2561,12 @@ private:
 
         if (traversal_state_ == TraversalState::Hanging ||
             traversal_state_ == TraversalState::Climbing) {
-            traversal_desired_ = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+            const float pull = kHangPullInSpeed * delta_seconds;
+            const float gap = traversal_entry_offset_.Length();
+            traversal_entry_offset_ =
+                gap > pull ? traversal_entry_offset_ * ((gap - pull) / gap) : JPH::Vec3::sZero();
+            traversal_desired_ = from_support_local(bodies, traversal_body_, traversal_local_hold_) +
+                                 traversal_entry_offset_;
         } else {
             traversal_progress_ =
                 std::min(1.0, traversal_progress_ + static_cast<double>(delta_seconds) /
@@ -2737,6 +2794,7 @@ private:
     void begin_climb(JPH::BodyInterface &bodies, const Grip &grip) noexcept {
         const JPH::RVec3 hold = bodies.GetPosition(player_id_);
         traversal_state_ = TraversalState::Climbing;
+        traversal_entry_offset_ = JPH::Vec3::sZero();
         traversal_body_ = grip.body;
         traversal_entity_id_ = grip.entity_id;
         traversal_target_body_ = {};
@@ -3065,6 +3123,7 @@ private:
     // Lowered: hanging from the lip, as if the hang had been caught there.
     void finish_lowering() noexcept {
         traversal_state_ = TraversalState::Hanging;
+        traversal_entry_offset_ = JPH::Vec3::sZero();
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
         ++accepted_traversal_count_;
@@ -3157,6 +3216,7 @@ private:
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
         traversal_exit_relative_velocity_ = JPH::Vec3::sZero();
+        traversal_vault_horizontal_slope_ = 0.0F;
     }
 
     void update_affordance(const JPH::BodyInterface &bodies) noexcept {
@@ -3491,7 +3551,10 @@ private:
     JPH::Vec3 traversal_local_apex_{JPH::Vec3::sZero()};
     JPH::Vec3 traversal_local_target_{JPH::Vec3::sZero()};
     JPH::Vec3 traversal_exit_relative_velocity_{JPH::Vec3::sZero()};
+    float traversal_vault_horizontal_slope_ = 0.0F;
     JPH::RVec3 traversal_desired_{JPH::RVec3::sZero()};
+    // What is left of a caught ledge's pull-in (see kHangPullInSpeed).
+    JPH::Vec3 traversal_entry_offset_{JPH::Vec3::sZero()};
     double traversal_progress_ = 0.0;
     double traversal_duration_ = kMantleDurationSeconds;
     double traversal_approach_fraction_ = 0.0;
@@ -3545,6 +3608,7 @@ Simulation::Simulation(const InitialSpawn initial_spawn)
     : physics_world_(std::make_unique<PhysicsWorld>(initial_spawn)) {
     snapshot_ = physics_world_->state();
     snapshot_.fixed_step_seconds = kFixedStepSeconds;
+    previous_player_position_ = snapshot_.player_position;
 }
 
 Simulation::~Simulation() = default;
@@ -3877,15 +3941,29 @@ StackState Simulation::stack_state() const noexcept {
     out.s1_tank_water_kg = kit.pool_water(stack.s1_tank);
     out.s1_valve_angle = kit.lever_angle(stack.s1_lever);
     out.s1_catch_latched = kit.catch_latched(stack.s1_catch);
-    out.s2_stair_angle = kit.lever_angle(stack.s2_hinge);
-    out.s2_stair_rate = kit.lever_rate(stack.s2_hinge);
-    out.s2_catch_lever_angle = kit.lever_angle(stack.s2_catch_lever);
-    out.s2_catch_latched = kit.catch_latched(stack.s2_catch);
-    out.s2_on_pad = kit.lever_on_pad(stack.s2_hinge);
+    out.s1_rope_tension = kit.rope_tension(stack.s1_rope);
+    out.s2_cage_travel = kit.guide_travel(stack.s2_cage_guide);
+    out.s2_cage_peak_speed = kit.guide_peak_speed(stack.s2_cage_guide);
+    out.s2_cart_travel = kit.guide_travel(stack.s2_cart_guide);
+    out.s2_beam_angle = kit.lever_angle(stack.s2_beam_hinge);
+    out.s2_chock_angle = kit.lever_angle(stack.s2_chock_lever);
+    out.s2_chock_latched = kit.catch_latched(stack.s2_catch);
+    out.s2_cage_latched = kit.catch_latched(stack.s2_cage_catch);
+    out.s2_rope_tension = kit.rope_tension(stack.s2_rope);
+    out.s3_cage_travel = kit.guide_travel(stack.s3_cage_guide);
+    out.s3_cage_peak_speed = kit.guide_peak_speed(stack.s3_cage_guide);
+    out.s3_car_travel = kit.guide_travel(stack.s3_car_guide);
+    out.s3_brake_angle = kit.lever_angle(stack.s3_brake_lever);
+    out.s3_brake_latched = kit.catch_latched(stack.s3_catch);
+    out.s3_cage_latched = kit.catch_latched(stack.s3_cage_catch);
+    out.s3_rope_tension = kit.rope_tension(stack.s3_rope);
     return out;
 }
 
 void Simulation::step_fixed() noexcept {
+    const std::uint64_t previous_death_count = snapshot_.death_count;
+    const bool previous_crouched = snapshot_.player_crouched;
+    previous_player_position_ = snapshot_.player_position;
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
 
@@ -3915,6 +3993,14 @@ void Simulation::step_fixed() noexcept {
     ++tick_index_;
 
     snapshot_ = physics_world_->state();
+    const double render_dx = snapshot_.player_position.x - previous_player_position_.x;
+    const double render_dy = snapshot_.player_position.y - previous_player_position_.y;
+    const double render_dz = snapshot_.player_position.z - previous_player_position_.z;
+    if (snapshot_.death_count != previous_death_count ||
+        snapshot_.player_crouched != previous_crouched ||
+        render_dx * render_dx + render_dy * render_dy + render_dz * render_dz > 1.0) {
+        previous_player_position_ = snapshot_.player_position;
+    }
     snapshot_.tick_index = tick_index_;
     snapshot_.simulation_time_seconds =
         static_cast<double>(tick_index_) * kFixedStepSeconds;
@@ -3959,6 +4045,18 @@ Snapshot Simulation::snapshot() const noexcept {
     Snapshot result = snapshot_;
     result.interpolation_alpha = remainder_seconds_ / kFixedStepSeconds;
     return result;
+}
+
+Vector3 Simulation::render_player_position() const noexcept {
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    return {
+        previous_player_position_.x +
+            (snapshot_.player_position.x - previous_player_position_.x) * alpha,
+        previous_player_position_.y +
+            (snapshot_.player_position.y - previous_player_position_.y) * alpha,
+        previous_player_position_.z +
+            (snapshot_.player_position.z - previous_player_position_.z) * alpha,
+    };
 }
 
 } // namespace scraperx::sim

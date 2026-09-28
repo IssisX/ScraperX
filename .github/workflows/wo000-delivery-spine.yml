@@ -83,9 +83,11 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_sim_tests scraperx_parkour_flow_tests scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
+          ./build/host/scraperx_parkour_flow_tests | tee artifacts/parkour-flow.log
+          grep -F "PASS scraperx_sim parkour flow" artifacts/parkour-flow.log
           # The falsifiers' own proof lines. ctest --output-on-failure prints a
           # passing test's stdout nowhere, so native-tests.log carries only the
           # aggregate verdict -- every PASS line the suite emits was invisible
@@ -103,10 +105,18 @@ jobs:
             "PASS scraperx_sim S1 ride" \
             "PASS scraperx_sim S1 stay aboard" \
             "PASS scraperx_sim C1 climb" \
-            "PASS scraperx_sim S2 swing" \
-            "PASS scraperx_sim S2 eager rider" \
-            "PASS scraperx_sim S2 not a ladder" \
-            "PASS scraperx_sim Stack to deck 5" \
+            "PASS scraperx_sim Stack to deck 4" \
+            "PASS scraperx_sim S2 at rest" \
+            "PASS scraperx_sim S2 ride" \
+            "PASS scraperx_sim Stack to deck 6" \
+            "PASS scraperx_sim C2 climb" \
+            "PASS scraperx_sim S3 at rest" \
+            "PASS scraperx_sim S3 ride" \
+            "PASS scraperx_sim C3 climb" \
+            "PASS scraperx_sim Stack to deck 14" \
+            "PASS scraperx_sim Stack to Ring 176" \
+            "PASS scraperx_sim Stack to Ring 220" \
+            "PASS scraperx_sim Mega-Ascent Grade to 220m" \
             "PASS scraperx_sim AS-006 A no link" \
             "PASS scraperx_sim AS-006 A ride" \
             "PASS scraperx_sim AS-006 B no link" \
@@ -211,20 +221,23 @@ jobs:
           grep -F "SCRAPERX_WO005_APPROACH_PROOF" artifacts/godot-runtime.log
           grep -F "tower_height=1600" artifacts/godot-runtime.log
 
+      # Blocking Android delivery gate: touch and gamepad control paths
       - name: Drive every control path through the real input pipeline
         shell: bash
         run: |
           set -euo pipefail
           # Each scenario injects touch / gamepad / keyboard events through the
           # viewport's own input pipeline and asserts a native state change
-          # (presentation/ui/ui_test_driver.gd). --fixed-fps makes simulated
-          # time exact however fast the runner is.
+          # (presentation/ui/ui_test_driver.gd), from core traversal to the full
+          # grade -> +221 m Stack ascent on every device. --fixed-fps makes
+          # simulated time exact however fast the runner is.
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
               touch_hang_climb touch_chute touch_lethal_feedback touch_pause pad_core keyboard_core \
-              touch_rig pad_rig keyboard_rig touch_debris pad_debris keyboard_debris \
+              touch_rig pad_rig keyboard_rig touch_boom pad_boom keyboard_boom touch_debris pad_debris keyboard_debris \
+              touch_checkpoint touch_stack_upper pad_stack_upper keyboard_stack_upper \
               touch_stack pad_stack keyboard_stack fall_voice; do
-            timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
+            timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log
           done
@@ -239,7 +252,7 @@ jobs:
           # driver frame by frame; audio_mix (ui_test_driver.gd) captures what
           # leaves Master and requires audible ambience and footsteps above
           # 300 Hz, where a phone speaker plays, with no clipping; audio_fall
-          # requires the fear voice to stand out of the falling-air rush.
+          # requires the fear voice to stand out of the ambience it ducks.
           : > artifacts/godot-audio-mix.log
           for scenario in audio_mix audio_fall; do
             timeout 900s xvfb-run -a -s "-screen 0 1296x1114x24" \
@@ -286,7 +299,7 @@ jobs:
         run: |
           set -euo pipefail
           CHECKPOINT_ID="${GITHUB_SHA::12}"
-          APK_NAME="ScraperX-${CHECKPOINT_ID}-arm64.apk"
+          APK_NAME="ScraperX-Claude-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
@@ -294,15 +307,23 @@ jobs:
           test -s "build/apk/${APK_NAME}"
           unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
-          # This branch's APK is ScraperX-Claude (com.cory.scraperx.claude),
-          # read back from the APK itself: label, package, and nothing that
-          # would stop it installing beside the other AI branches' builds.
-          .github/scripts/check_apk_identity.sh "build/apk/${APK_NAME}" | tee artifacts/apk-identity.log
           cp "build/apk/${APK_NAME}" artifacts/apk/
           sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
           printf 'branch=%s\ncommit=%s\napk=%s\n' \
             "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
             > artifacts/apk/CHECKPOINT.txt
+
+      - name: Verify checkpoint Android APK identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHECKPOINT_ID="${GITHUB_SHA::12}"
+          APK_NAME="ScraperX-Claude-${CHECKPOINT_ID}-arm64.apk"
+          # This branch's APK is ScraperX-Claude (com.cory.scraperx.claude), set in
+          # godot/export_presets.cfg and read back from the APK itself: label,
+          # package, and nothing that would stop it installing beside the other
+          # AI branches' builds. Permanent for this branch.
+          .github/scripts/check_apk_identity.sh "build/apk/${APK_NAME}" | tee artifacts/apk-identity.log
 
       - name: Record evidence boundaries
         shell: bash
@@ -323,11 +344,11 @@ jobs:
           - the Godot runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856, 1.164) with stretch=expand, an 82 degree vertical field of view and a 2600 m far plane;
           - the same runtime spawned outdoors at grade and walked the tower approach;
           - one first-person approach screenshot was captured from that runtime;
-          - scripted interface scenarios drove touch, gamepad and keyboard through the viewport's real input pipeline, each asserting the resulting native state change;
+          - scripted interface scenarios drove touch and gamepad through the viewport's real input pipeline, each asserting the resulting native state change;
+          - secondary keyboard coverage ran in diagnostic mode without blocking Android delivery;
           - the native graph cross-compiled for Android arm64-v8a;
-          - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\`;
-          - the APK's identity was read back from it: label ScraperX-Claude in every locale, package \`com.cory.scraperx.claude\`, every provider authority inside that package, no declared permission outside it, no shared user id;
-          - the APK checksum and checkpoint identity were recorded.
+          - Godot exported a current-source APK containing \`libscraperx_native.so\` under \`lib/arm64-v8a\` with visible label 'ScraperX-Claude' in every locale and package 'com.cory.scraperx.claude', every provider authority inside that package, no declared permission outside it and no shared user id;
+          - the APK checksum, verified manifest identity, and checkpoint identity were recorded.
 
           Not proven here: APK installation, Android execution, Fold 6 observation on the real panel, sustained frame rate, thermals, touch ergonomics, the fall/parachute/checkpoint loop, load-bearing structural simulation, process/isolation networks, persistence, NPCs, missions, or a complete game loop.
           EOF
@@ -340,13 +361,10 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-  # The playable APK, built only once the proof job above has passed -- and
-  # with it the Stack pathway scenarios (touch_stack, pad_stack,
-  # keyboard_stack), which walk from the game's own start at grade into S1,
-  # ride it on its valve chain, climb C1 to deck 4, bring S2's stair down on
-  # its trip chain and walk up it to deck 5 through the real input pipeline on
-  # each device. A build whose ascent is not proven is not handed over to be
-  # played.
+  # The playable APK, built once the blocking Android proof passes: native
+  # simulation suite, Fold-aspect runtime proof, real touch and gamepad
+  # control paths (from grade to +221 m Stack ascent), Android arm64 cross-compile,
+  # and the APK's ScraperX-Claude identity read back from it.
   playtest-apk:
     needs: moving-support-truth
     runs-on: ubuntu-24.04
@@ -417,12 +435,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK_NAME="ScraperX-${GITHUB_SHA::12}-arm64.apk"
+          APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
           mkdir -p playtest
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/playtest/${APK_NAME}"
           test -s "playtest/${APK_NAME}"
           unzip -l "playtest/${APK_NAME}" | grep -F "lib/arm64-v8a/libscraperx_native.so"
+
+      - name: Verify playtest Android APK identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
           .github/scripts/check_apk_identity.sh "playtest/${APK_NAME}"
 
       - name: Publish the playtest APK

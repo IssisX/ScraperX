@@ -244,13 +244,32 @@ struct Stack final {
     kit::BinIndex s1_bin;
     kit::PoolIndex s1_tank;
     kit::PipeIndex s1_fill;
-    // S2, the swinging stair: deck 4 -> deck 5, west of the centre column.
-    kit::BodyIndex s2_stair;
-    kit::BodyIndex s2_catch_lever_body;
-    kit::BodyIndex s2_chain;
-    kit::LeverIndex s2_hinge;
-    kit::LeverIndex s2_catch_lever;
+
+    // S2, the walking beam hoist with fixed ballast cart: deck 4 -> deck 6.
+    kit::BodyIndex s2_cage;
+    kit::BodyIndex s2_beam;
+    kit::BodyIndex s2_cart;
+    kit::BodyIndex s2_chock_body;
+    kit::BodyIndex s2_handle;
+    kit::GuideIndex s2_cage_guide;
+    kit::GuideIndex s2_cart_guide;
+    kit::RopeIndex s2_rope;
+    kit::LeverIndex s2_beam_hinge;
+    kit::LeverIndex s2_chock_lever;
     kit::CatchIndex s2_catch;
+    kit::CatchIndex s2_cage_catch;
+
+    // S3, the brake-override hoist: deck 8 -> deck 12.
+    kit::BodyIndex s3_cage;
+    kit::BodyIndex s3_car;
+    kit::BodyIndex s3_brake_body;
+    kit::BodyIndex s3_handle;
+    kit::GuideIndex s3_cage_guide;
+    kit::GuideIndex s3_car_guide;
+    kit::RopeIndex s3_rope;
+    kit::LeverIndex s3_brake_lever;
+    kit::CatchIndex s3_catch;
+    kit::CatchIndex s3_cage_catch;
 };
 
 void build_stack(kit::Kit &kit, Stack &stack);

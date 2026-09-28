@@ -82,6 +82,10 @@ const CROUCH_EYE_OVER_SOLES := 0.95
 const CROUCH_EYE_SECONDS := 0.16
 const HEAD_BOB_SPEED_FLOOR_MPS := 0.3
 const HEAD_BOB_SPEED_FULL_MPS := 3.0
+const HEAD_BOB_RESPONSE_PER_SECOND := 12.0
+const FOV_RESPONSE_PER_SECOND := 9.0
+const CAMERA_BANK_MAX_RADIANS := 1.5 * PI / 180.0
+const CAMERA_BANK_RESPONSE_PER_SECOND := 10.0
 
 
 # The stack. Mirrors the kStack* constants in simulation.cpp exactly -- these
@@ -118,8 +122,6 @@ const RIG_HOOK := 1
 const RIG_UNHOOK := 2
 # S1's valve chain (Simulation::kStackS1ChainEntityId).
 const STACK_S1_CHAIN := 2203
-# S2's trip chain (Simulation::kStackS2ChainEntityId).
-const STACK_S2_CHAIN := 2207
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -155,6 +157,9 @@ var _cam_last_velocity_y := 0.0
 var _cam_landing_timer := 0.0
 var _cam_landing_strength := 0.0
 var _cam_bob_phase := 0.0
+var _cam_bob_weight := 0.0
+var _cam_fov_offset := 0.0
+var _cam_bank := 0.0
 var _crouch_eye := 0.0
 # DISPLAY settings; the defaults are the tuned values above.
 var _fov_base := FOV_BASE
@@ -766,8 +771,6 @@ func _carry_name(entity: int) -> String:
 			return "CLUTCH HANDLE"
 		STACK_S1_CHAIN:
 			return "VALVE CHAIN"
-		STACK_S2_CHAIN:
-			return "TRIP CHAIN"
 	return "ROPE END" if _is_kit(entity) else ""
 
 
@@ -794,10 +797,42 @@ func _kit_anchor_name(entity: int) -> String:
 	return "ANCHOR"
 
 
+const FALL_SWEARS := [
+	"HOLY SHIIIIIIII—!",
+	"WHAT THE F— NO NO NO NO!",
+	"SWEET MOTHER OF GOD HELP ME!",
+	"FUCK FUCK FUCK FUUUUUCK!",
+	"OH SHIT OH SHIT OH SHIIIIIT!",
+	"JESUS CHRIST MY LEGS!",
+	"NOT LIKE THIS! NOT LIKE THIIIIIS!",
+	"I REGRET EVERYTHING AAAAAAGH!",
+	"MY SPLEEEEEEN!",
+	"SON OF A BIIIIIIITCH!"
+]
+
+const CHUTE_RELIEF := [
+	"THANK FUCK FOR NYLON!",
+	"Holy sweet Jesus that was close.",
+	"I think I just shat my coveralls.",
+	"God bless whoever packed this canopy.",
+	"Never doing that again. (Until next deck)."
+]
+
+const LETHAL_RESTORE_QUIPS := [
+	"Floor taste: 2/10. Needs salt.",
+	"Physics: 1. Hubris: 0.",
+	"That's definitely going on the OSHA report.",
+	"Walk it off. Just a 40-meter spinal compression.",
+	"My ancestors felt that impact."
+]
+
 const HAPTICS := {
 	&"press": [12, 0.3],
 	&"tick": [16, 0.35],
 	&"grab": [30, 0.6],
+	&"vault": [24, 0.65],
+	&"mantle": [42, 0.75],
+	&"balance": [18, 0.30],
 	&"land": [34, 0.85],
 	&"chute": [45, 0.7],
 	&"warn": [80, 0.9],
@@ -829,6 +864,10 @@ func _update_feedback(delta: float) -> void:
 	if traversal != _fb_traversal:
 		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_CLIMBING:
 			_haptic(&"grab")
+		elif traversal == TRAVERSAL_VAULTING:
+			_haptic(&"vault")
+		elif traversal == TRAVERSAL_MANTLING:
+			_haptic(&"mantle")
 		elif traversal != TRAVERSAL_NONE:
 			_haptic(&"tick")
 		_fb_traversal = traversal
@@ -848,20 +887,26 @@ func _update_feedback(delta: float) -> void:
 	if deaths > _fb_deaths:
 		_fb_deaths = deaths
 		var restored: Vector3 = _ctx["checkpoint"]
-		_hud.toast("LETHAL IMPACT", "FELL AT %.1f M/S  /  RESTORED TO CHECKPOINT %+.1f M" % [
-			fall_speed_before, restored.y], UiStyle.HAZARD, 3.4)
+		var quip: String = LETHAL_RESTORE_QUIPS[randi() % LETHAL_RESTORE_QUIPS.size()]
+		_hud.toast("LETHAL IMPACT", "FELL AT %.1f M/S  /  %s  /  RESTORED TO CHECKPOINT %+.1f M" % [
+			fall_speed_before, quip, restored.y], UiStyle.HAZARD, 3.8)
 		_hud.flash(UiStyle.HAZARD)
 		_haptic(&"death")
 
 	var chute: bool = _ctx["chute"]
 	if chute and not _fb_chute:
 		_haptic(&"chute")
+		if _fb_warned:
+			var relief: String = CHUTE_RELIEF[randi() % CHUTE_RELIEF.size()]
+			_hud.toast("CANOPY DEPLOYED", relief, UiStyle.SAFE, 2.5)
 	_fb_chute = chute
 	if grounded:
 		_fb_warned = false
-	elif not chute and float(_ctx["danger"]) >= 0.75 and not _fb_warned:
+	elif not chute and (float(_ctx["danger"]) >= 0.70 or fall_speed_before > 11.0) and not _fb_warned:
 		_fb_warned = true
 		_haptic(&"warn")
+		var swear: String = FALL_SWEARS[randi() % FALL_SWEARS.size()]
+		_hud.toast("PANIC", swear, UiStyle.HAZARD, 2.2)
 
 	var checkpoint_y: float = (_ctx["checkpoint"] as Vector3).y
 	if grounded and checkpoint_y > _fb_best_checkpoint_y + CHECKPOINT_TOAST_RISE_METERS:
@@ -1017,21 +1062,60 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if _cam_landing_timer > 0.0:
 		_cam_landing_timer = maxf(0.0, _cam_landing_timer - delta)
 		var t := 1.0 - _cam_landing_timer / LANDING_DIP_DURATION_SECONDS
-		dip = -_cam_landing_strength * LANDING_DIP_MAX_METERS * sin(PI * t)
+		var landing_wave := sin(PI * t)
+		dip = -_cam_landing_strength * LANDING_DIP_MAX_METERS * landing_wave * landing_wave
 
 	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
 	# 5.5 mirrors kPlayerMaximumRelativeSpeed (src/sim/simulation.cpp) -- a
 	# curve-shape input, not a gameplay bound, so the native constant is not
 	# exposed through the bridge just for this.
-	var bob_fade := 0.0
+	var bob_target := 0.0
 	if grounded:
-		bob_fade = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
+		bob_target = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
 		_cam_bob_phase += horizontal_speed * HEAD_BOB_CYCLES_PER_METER * TAU * delta
 	if not _head_bob_on:
-		bob_fade = 0.0
-	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * bob_fade
-	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * bob_fade
+		_cam_bob_weight = 0.0
+	else:
+		_cam_bob_weight = lerpf(_cam_bob_weight, bob_target,
+			1.0 - exp(-HEAD_BOB_RESPONSE_PER_SECOND * delta))
+		if absf(_cam_bob_weight - bob_target) < 0.001:
+			_cam_bob_weight = bob_target
+	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * _cam_bob_weight
+	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * _cam_bob_weight
 	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
+	if not _head_bob_on:
+		_cam_bank = 0.0
+	else:
+		var lateral_speed := velocity.dot(right_vector)
+		var bank_target := -CAMERA_BANK_MAX_RADIANS * clampf(lateral_speed / 5.5, -1.0, 1.0)
+		_cam_bank = lerpf(_cam_bank, bank_target,
+			1.0 - exp(-CAMERA_BANK_RESPONSE_PER_SECOND * delta))
+		if absf(_cam_bank - bank_target) < 0.0001:
+			_cam_bank = bank_target
+
+	# Parkour movement dynamics and tactile camera feel:
+	var traversal: int = int(_ctx.get("traversal", TRAVERSAL_NONE))
+	var traversal_prog: float = float(_native.get_traversal_progress()) if _native else 0.0
+	var parkour_fov := 0.0
+	if traversal == TRAVERSAL_VAULTING:
+		# Athletic speed vault: tuck dip and subtle roll bank along apex
+		var vault_wave := sin(PI * clampf(traversal_prog, 0.0, 1.0))
+		dip += -0.07 * vault_wave
+		_cam_bank += 0.035 * vault_wave
+		parkour_fov = 4.5 * vault_wave
+	elif traversal == TRAVERSAL_MANTLING:
+		# Muscular mantle heave: hand plant compression then powerful crest push-up
+		if traversal_prog < 0.45:
+			dip += -0.05 * (1.0 - traversal_prog / 0.45)
+		else:
+			var mantle_heave := sin(PI * (traversal_prog - 0.45) / 0.55)
+			dip += 0.04 * mantle_heave
+		parkour_fov = 3.5 * sin(PI * clampf(traversal_prog, 0.0, 1.0))
+	elif bool(_ctx.get("balancing", false)) and grounded:
+		# Narrow beam balance micro-sway: subtle tightrope dynamic centering
+		var sway := sin(_cam_bob_phase * 0.75)
+		lateral_bob += 0.025 * sway
+		_cam_bank += 0.015 * sway
 
 	var eye := position + EYE_OFFSET
 	_crouch_eye = move_toward(_crouch_eye, 1.0 if crouched else 0.0, delta / CROUCH_EYE_SECONDS)
@@ -1040,25 +1124,31 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		eye.y = soles_y + lerpf(STAND_HALF_HEIGHT + EYE_OFFSET.y, CROUCH_EYE_OVER_SOLES,
 			smoothstep(0.0, 1.0, _crouch_eye))
 	_camera.position = eye + Vector3(0.0, dip + vertical_bob, 0.0) + right_vector * lateral_bob
-	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, 0.0)
+	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, _cam_bank)
 
-	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed)
+	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed) + parkour_fov
 	var fov_fall := 0.0
 	if not grounded and velocity.y < 0.0:
 		fov_fall = FOV_FALL_MAX_DEGREES * smoothstep(0.0, FOV_FALL_FULL_MPS, -velocity.y)
 	if not _speed_fov_on:
-		fov_ground = 0.0
-		fov_fall = 0.0
-	_camera.fov = _fov_base + fov_ground + fov_fall
+		_cam_fov_offset = 0.0
+	else:
+		var fov_target := fov_ground + fov_fall
+		_cam_fov_offset = lerpf(_cam_fov_offset, fov_target,
+			1.0 - exp(-FOV_RESPONSE_PER_SECOND * delta))
+		if absf(_cam_fov_offset - fov_target) < 0.005:
+			_cam_fov_offset = fov_target
+	_camera.fov = _fov_base + _cam_fov_offset
 
 
 func _render_snapshot(delta: float = 0.0) -> void:
 	var position: Vector3 = _native.get_player_position()
+	var render_position: Vector3 = _native.get_player_render_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
 	var crouched := bool(_native.is_player_crouched())
 
-	_apply_camera_feel(position, velocity, grounded, crouched, delta)
+	_apply_camera_feel(render_position, velocity, grounded, crouched, delta)
 	if delta > 0.0:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),

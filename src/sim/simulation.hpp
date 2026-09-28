@@ -72,6 +72,9 @@ enum class InitialSpawn : std::uint8_t {
     // off S1; on deck 4's south band by C1's davit, as a climber off C1.
     Deck2South = 25,
     Deck4South = 26,
+    Deck6South = 27,
+    Deck8North = 28,
+    Deck12North = 29,
 };
 
 // A world started at one of these spawns is the proving ground: it carries
@@ -192,13 +195,26 @@ struct StackState final {
     double s1_tank_water_kg = 0.0;
     double s1_valve_angle = 0.0;
     bool s1_catch_latched = false;
-    // S2, the swinging stair: its fall from upright about its hinge (rad,
-    // 0 stored), the rate of that fall (rad/s), the catch lever's angle.
-    double s2_stair_angle = 0.0;
-    double s2_stair_rate = 0.0;
-    double s2_catch_lever_angle = 0.0;
-    bool s2_catch_latched = false;
-    bool s2_on_pad = false;
+    double s1_rope_tension = 0.0;
+
+    // S2, the walking beam hoist with fixed ballast cart.
+    double s2_cage_travel = 0.0;
+    double s2_cage_peak_speed = 0.0;
+    double s2_cart_travel = 0.0;
+    double s2_beam_angle = 0.0;
+    double s2_chock_angle = 0.0;
+    bool s2_chock_latched = false;
+    bool s2_cage_latched = false;
+    double s2_rope_tension = 0.0;
+
+    // S3, the brake-override hoist.
+    double s3_cage_travel = 0.0;
+    double s3_cage_peak_speed = 0.0;
+    double s3_car_travel = 0.0;
+    double s3_brake_angle = 0.0;
+    bool s3_brake_latched = false;
+    bool s3_cage_latched = false;
+    double s3_rope_tension = 0.0;
 };
 
 // Rubble spilled onto a static surface, piled where it landed.
@@ -467,17 +483,27 @@ public:
     static constexpr std::uint64_t kCraneLClutchEntityId = 2126;
     static constexpr std::uint64_t kCraneLClutchHandleEntityId = 2127;
     // Band 0, the Stack (grade -> 154 m): its static structure, then S1, the
-    // water-balance hoist, and S2, the swinging stair.
+    // skip hoist.
     static constexpr std::uint64_t kStackFrameEntityId = 1020;
     static constexpr std::uint64_t kStackRouteEntityId = 1021;
+    static constexpr std::uint64_t kStackC2RouteEntityId = 1022;
+    static constexpr std::uint64_t kStackC3RouteEntityId = 1023;
     static constexpr std::uint64_t kStackS1CageEntityId = 2200;
     static constexpr std::uint64_t kStackS1BucketEntityId = 2201;
     static constexpr std::uint64_t kStackS1LeverEntityId = 2202;
     static constexpr std::uint64_t kStackS1ChainEntityId = 2203;
     static constexpr std::uint64_t kStackS1StrikerEntityId = 2204;
-    static constexpr std::uint64_t kStackS2StairEntityId = 2205;
-    static constexpr std::uint64_t kStackS2CatchLeverEntityId = 2206;
-    static constexpr std::uint64_t kStackS2ChainEntityId = 2207;
+    // S2, the walking beam hoist with fixed ballast cart.
+    static constexpr std::uint64_t kStackS2CageEntityId = 2210;
+    static constexpr std::uint64_t kStackS2BeamEntityId = 2211;
+    static constexpr std::uint64_t kStackS2CartEntityId = 2212;
+    static constexpr std::uint64_t kStackS2ChockEntityId = 2213;
+    static constexpr std::uint64_t kStackS2HandleEntityId = 2214;
+    // S3, the brake-override elevator hoist.
+    static constexpr std::uint64_t kStackS3CageEntityId = 2220;
+    static constexpr std::uint64_t kStackS3CarEntityId = 2221;
+    static constexpr std::uint64_t kStackS3BrakeEntityId = 2222;
+    static constexpr std::uint64_t kStackS3HandleEntityId = 2223;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
@@ -535,6 +561,9 @@ public:
 
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
+    // Read-only visual pose between fixed ticks. Physics, probes and input keep
+    // using snapshot().player_position as their sole authority.
+    [[nodiscard]] Vector3 render_player_position() const noexcept;
 
     // Mechanism-kit read back, for the presentation and the falsifiers. Body
     // indices run 0 .. kit_body_count() - 1 in build order.
@@ -593,6 +622,7 @@ private:
     bool rig_requested_ = false;
     bool parachute_toggle_requested_ = false;
     Snapshot snapshot_{};
+    Vector3 previous_player_position_{};
 };
 
 } // namespace scraperx::sim

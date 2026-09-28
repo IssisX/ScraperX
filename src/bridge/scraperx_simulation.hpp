@@ -34,6 +34,7 @@ public:
     [[nodiscard]] double get_fixed_step_seconds() const;
     [[nodiscard]] double get_interpolation_alpha() const;
     [[nodiscard]] godot::Vector3 get_player_position() const;
+    [[nodiscard]] godot::Vector3 get_player_render_position() const;
     [[nodiscard]] godot::Vector3 get_player_linear_velocity() const;
     [[nodiscard]] bool is_player_grounded() const;
     [[nodiscard]] bool is_player_crouched() const;
@@ -126,6 +127,11 @@ public:
     [[nodiscard]] double get_well_a_cage_travel() const;
     [[nodiscard]] bool is_well_a_catch_latched() const;
     [[nodiscard]] std::int64_t get_well_a_rope_end_entity_id() const;
+    // Stage B, the derrick boom hoist, read back.
+    [[nodiscard]] double get_well_b_cage_travel() const;
+    [[nodiscard]] bool is_well_b_catch_latched() const;
+    [[nodiscard]] std::int64_t get_well_b_rope_end_entity_id() const;
+    [[nodiscard]] double get_well_b_boom_angle() const;
     // Stage C, the debris chute, read back.
     [[nodiscard]] double get_well_c_platform_travel() const;
     [[nodiscard]] bool is_well_c_catch_latched() const;
@@ -136,13 +142,14 @@ public:
     [[nodiscard]] double get_stack_s1_bucket_water_kg() const;
     [[nodiscard]] double get_stack_s1_valve_angle() const;
     [[nodiscard]] bool is_stack_s1_catch_latched() const;
-    // S2, the Stack's swinging stair, read back: its fall from upright (rad),
-    // the rate of that fall, the trip lever's angle, the catch, the jaws.
-    [[nodiscard]] double get_stack_s2_stair_angle() const;
-    [[nodiscard]] double get_stack_s2_stair_rate() const;
-    [[nodiscard]] double get_stack_s2_catch_lever_angle() const;
-    [[nodiscard]] bool is_stack_s2_catch_latched() const;
-    [[nodiscard]] bool is_stack_s2_on_pad() const;
+    // S2, the Stack's walking-beam hoist, read back.
+    [[nodiscard]] double get_stack_s2_cage_travel() const;
+    [[nodiscard]] double get_stack_s2_beam_angle() const;
+    [[nodiscard]] bool is_stack_s2_chock_latched() const;
+    // S3, the Stack's brake-override hoist, read back.
+    [[nodiscard]] double get_stack_s3_cage_travel() const;
+    [[nodiscard]] double get_stack_s3_brake_angle() const;
+    [[nodiscard]] bool is_stack_s3_brake_latched() const;
 
 protected:
     static void _bind_methods();

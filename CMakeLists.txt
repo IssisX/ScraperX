@@ -60,8 +60,9 @@ if(SCRAPERX_WITH_JOLT)
     target_link_libraries(scraperx_sim PUBLIC Jolt)
     target_compile_definitions(scraperx_sim PUBLIC SCRAPERX_HAS_JOLT=1)
 endif()
+option(SCRAPERX_BUILD_TESTS "Build simulation tests regardless of platform" OFF)
 
-if(BUILD_TESTING AND NOT ANDROID)
+if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
     add_executable(scraperx_sim_tests tests/simulation_tests.cpp)
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_sim_tests PRIVATE
@@ -71,6 +72,15 @@ if(BUILD_TESTING AND NOT ANDROID)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
+    add_executable(scraperx_parkour_flow_tests tests/parkour_flow_tests.cpp)
+    target_link_libraries(scraperx_parkour_flow_tests PRIVATE scraperx_sim)
+    target_compile_options(scraperx_parkour_flow_tests PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wextra>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
+    )
+    add_test(NAME scraperx_sim.parkour_flow COMMAND scraperx_parkour_flow_tests)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)
