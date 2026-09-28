@@ -1675,11 +1675,19 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 		var v := Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.25, 1.0)
 		if device == InputRouter.Device.KEYBOARD_MOUSE:
 			var lateral := to.dot(right)
-			if absf(lateral) > 0.04:
-				v.x = signf(lateral) * 0.5
+			var along := to.dot(forward)
+			# A key is full throw. Holding it beside forward is a 45° crab, and
+			# that crab walks the S2 crossover into the east rail. Strafe only
+			# when the cross-track miss is the larger one.
+			if absf(lateral) > 0.45 and absf(lateral) > absf(along) * 0.5:
+				v.x = signf(lateral)
+				if absf(along) < absf(lateral):
+					v.y = 0.0
+			else:
+				v.x = 0.0
 			if to.length() < 0.8:
 				frame += 1
-				v = v.normalized() if frame % 6 < 2 else Vector2.ZERO
+				v = v.normalized() if v.length_squared() > 1.0e-6 and frame % 6 < 2 else Vector2.ZERO
 		_move_dir(device, v)
 		await get_tree().process_frame
 		waited += get_process_delta_time()
