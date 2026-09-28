@@ -2,6 +2,8 @@
 
 **Write branch: `ChatGPT` only.** Other branches and older builds are provenance, never write targets or current authority.
 
+**Android author identity law:** every APK produced from this branch must be named `ScraperX-ChatGPT.apk`, the installed app label must be `ScraperX-ChatGPT`, and the Android package ID is `com.cory.scraperx.chatgpt`. Commit/build provenance belongs in artifact metadata and checksums; it must not replace the author-identifying APK filename. CI must fail if this identity drifts.
+
 **Latest owner correction, 2026-09-27:** No continuous ordinary stair/ramp backup route. This supersedes all earlier fallback-preservation instructions. The 14-flight bypass is still in the current APK and must be removed from normal gameplay, including visible geometry and native collision. Reproduce the reported ledge pull-up failure and verify the repaired route before further ascent work. Passing tests on the previous source do not approve its layout or prove these repairs.
 
 ## 1. What the game is

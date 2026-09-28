@@ -474,23 +474,45 @@ jobs:
           test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
           file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
 
-      - name: Export checkpoint Android arm64 APK
+      - name: Export ChatGPT Android arm64 APK
         shell: bash
         run: |
           set -euo pipefail
-          CHECKPOINT_ID="${GITHUB_SHA::12}"
-          APK_NAME="ScraperX-${CHECKPOINT_ID}-arm64.apk"
+          APK_NAME="ScraperX-ChatGPT.apk"
+          PACKAGE_ID="com.cory.scraperx.chatgpt"
+          APP_LABEL="ScraperX-ChatGPT"
+
+          # Branch-author identity is a delivery contract, not cosmetic metadata.
+          # Keep commit provenance in CHECKPOINT.txt while the APK filename and
+          # installed app identity stay stable and immediately recognizable.
+          grep -F 'config/name="ScraperX-ChatGPT"' godot/project.godot
+          grep -F 'export_path="../build/apk/ScraperX-ChatGPT.apk"' godot/export_presets.cfg
+          grep -F 'package/unique_name="com.cory.scraperx.chatgpt"' godot/export_presets.cfg
+          grep -F 'package/name="ScraperX-ChatGPT"' godot/export_presets.cfg
+
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
             2>&1 | tee artifacts/godot-android-export.log
+
           test -s "build/apk/${APK_NAME}"
+          mapfile -t produced_apks < <(find build/apk -maxdepth 1 -type f -name '*.apk' -printf '%f\n' | sort)
+          test "${#produced_apks[@]}" -eq 1
+          test "${produced_apks[0]}" = "${APK_NAME}"
+
           unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
+
+          AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "${AAPT}"
+          "${AAPT}" dump badging "build/apk/${APK_NAME}" | tee artifacts/apk-badging.txt
+          grep -F "package: name='${PACKAGE_ID}'" artifacts/apk-badging.txt
+          grep -F "application-label:'${APP_LABEL}'" artifacts/apk-badging.txt
+
           cp "build/apk/${APK_NAME}" artifacts/apk/
           sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
-          printf 'branch=%s\ncommit=%s\napk=%s\n' \
-            "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" \
+          printf 'author=%s\nbranch=%s\ncommit=%s\napk=%s\npackage=%s\nlabel=%s\n' \
+            "ChatGPT" "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" "${PACKAGE_ID}" "${APP_LABEL}" \
             > artifacts/apk/CHECKPOINT.txt
 
       - name: Record evidence boundaries
