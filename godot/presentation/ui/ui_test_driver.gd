@@ -1677,19 +1677,22 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 		var v := Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.25, 1.0)
 		if device == InputRouter.Device.KEYBOARD_MOUSE:
 			var lateral := to.dot(right)
+			var along := to.dot(forward)
 			# Keys are full throw, so strafe and forward together crab at 45°.
-			# A long beam still needs the small sideways miss taken out, but
-			# only on some frames: a pure strafe walks into the cage wall on
-			# the way to a handle.
-			if absf(lateral) > 0.06:
-				frame += 1
-				if frame % 4 == 0:
-					v = Vector2(signf(lateral), 0.0)
-				else:
-					v.x = 0.0
+			# Mostly-sideways misses are a strafe. A long beam still gets a
+			# sideways nudge one frame in four, and that nudge is not pulsed
+			# away — the close-in pulse was erasing it, which left the rig
+			# walk 3 cm outside its tolerance.
+			var side_miss := absf(lateral) > 0.06
+			if side_miss and absf(lateral) >= absf(along):
+				v = Vector2(signf(lateral), 0.0)
 			else:
 				v.x = 0.0
-			if to.length() < 0.8:
+				if side_miss:
+					frame += 1
+					if frame % 4 == 0:
+						v = Vector2(signf(lateral), 0.0)
+			if to.length() < 0.8 and not (side_miss and absf(lateral) >= absf(along)):
 				frame += 1
 				v = v.normalized() if v.length_squared() > 1.0e-6 and frame % 6 < 2 else Vector2.ZERO
 		_move_dir(device, v)
