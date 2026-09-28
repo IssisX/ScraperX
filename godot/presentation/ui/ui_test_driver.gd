@@ -43,6 +43,10 @@ const SCENARIOS := {
 	"touch_debris": 13,
 	"pad_debris": 13,
 	"keyboard_debris": 13,
+	# AS-007, Wet Isolation, on its three machines from the 220 ring to TP-340.
+	"touch_wet": 16,
+	"pad_wet": 16,
+	"keyboard_wet": 16,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -66,8 +70,10 @@ const TRAVERSAL_HANGING := 1
 const TRAVERSAL_CLIMBING := 4
 const TOWER_ENTITY := 11
 # The walker's braking with nothing pressed, as the native has it: 22 m/s^2
-# on the ground, 14 in the air. Keys walking to a point let go by the weaker.
+# on the ground, 14 in the air. Keys walking to a point let go by the weaker;
+# with a load in the hands, which caps it (5.3 for D's 50 kg spool), by less.
 const KEY_BRAKE_MPS2 := 14.0
+const KEY_CARRY_BRAKE_MPS2 := 5.0
 
 var _main: Node
 var _scenario := ""
@@ -159,6 +165,12 @@ func _run() -> void:
 			ok = await _debris(InputRouter.Device.GAMEPAD)
 		"keyboard_debris":
 			ok = await _debris(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_wet":
+			ok = await _wet(InputRouter.Device.TOUCH)
+		"pad_wet":
+			ok = await _wet(InputRouter.Device.GAMEPAD)
+		"keyboard_wet":
+			ok = await _wet(InputRouter.Device.KEYBOARD_MOUSE)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -551,6 +563,11 @@ func _fall_voice() -> bool:
 
 func _touch_pause() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	# Every START option the settings offer must reach the native: a fresh
+	# native, its clock at 0, accepts each spawn the menu can ask for.
+	for spawn in _main._settings.START_SPAWNS:
+		if int(spawn) >= 0 and not bool(ClassDB.instantiate("ScraperXSimulation").configure_initial_spawn(int(spawn))):
+			return _fail("the native refused START option spawn %d" % int(spawn))
 	_tap(0, _center(&"pause"))
 	await _frames(2)
 	if not get_tree().paused:
@@ -954,6 +971,201 @@ func _debris(device: int) -> bool:
 		return _fail("a hand jumped %.3f m in one frame between poses (%s)" % [worst_jump,
 			str(watch.get("at", ""))])
 	_detail = "top_y=%.2f worst_wrist_step_m=%.3f" % [_position().y, worst_jump]
+	return true
+
+
+# AS-007, Wet Isolation, the way its native band test runs it: from the 220
+# ring, D's spool carried into its gap and its fill valve thrown, a ride on
+# the float's platform to 256 m; E's door drawn shut and its chiller tripped,
+# a ride in the cab on the chiller's air to 298 m; F's hose hooked onto the
+# ram's inlet and its stop valve thrown, a ride on the accumulator's platform,
+# and off onto TP-340.
+func _wet(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var wrists := _watch_wrists()
+	var body := _watch_body()
+	if not (await _wet_d(device) and await _wet_e(device) and await _wet_f(device)):
+		return false
+	var worst_wrist := _stop_watch(wrists)
+	var worst_step := _stop_watch(body)
+	if worst_wrist > 0.10:
+		return _fail("a hand jumped %.3f m in one frame between poses (%s)" % [worst_wrist,
+			str(wrists.get("at", ""))])
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	_detail = "plate_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f" % [
+		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step]
+	return true
+
+
+func _wet_state() -> Dictionary:
+	return _native().get_wet_state()
+
+
+# Faces the handle ahead at (x, z) along `facing`, GRABs `name` (entity
+# `handle`) and steps back with it until `done` holds, then lets go.
+func _pull_handle(device: int, at: Vector2, facing: Vector2, handle: int, name: String,
+		done: Callable) -> bool:
+	if not await _walk_to(device, at, 0.08, 6.0):
+		return _fail("the step to %s stalled at %s" % [name, str(_position())])
+	await _face(facing)
+	if not await _offered(&"pick_up", "GRAB", name):
+		return _fail("Action read '%s %s' facing %s, not GRAB" % [_action_label(),
+			String(_ctx()["action"]["detail"]), name])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == handle, 0.5):
+		return _fail("GRAB did not take %s" % name)
+	_move(device, -0.35)
+	var thrown: bool = await _wait_until(done, 4.0)
+	_move(device, 0.0)
+	if not thrown:
+		return _fail("stepping back with %s never threw it" % name)
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not take %s out of the hands" % name)
+	return true
+
+
+func _wet_d(device: int) -> bool:
+	if not await _go(device, Vector2(9.5, -130.6), 0.08, 12.0):
+		return _fail("the walk to D's spool stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "PICK UP", "PIPE SPOOL"):
+		return _fail("Action read '%s %s' facing D's spool, not PICK UP PIPE SPOOL" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2031, 0.5):
+		return _fail("PICK UP did not lift D's spool")
+	# Carried north into the gap as the native test carries it, at 0.35 of
+	# full throw to z -128.25 and a coast; a key, with no throw, walks it
+	# there and stops.
+	var carried := false
+	if device == InputRouter.Device.KEYBOARD_MOUSE:
+		carried = await _walk_to(device, Vector2(9.5, -128.17), 0.05, 6.0)
+	else:
+		_move(device, 0.35)
+		carried = await _wait_until(func() -> bool: return _position().z >= -128.25, 6.0)
+		_move(device, 0.0)
+	if not carried:
+		return _fail("carrying D's spool to its gap stalled at %s" % str(_position()))
+	# Steadied before it is set down, as a player does with a swinging load.
+	await _seconds(0.6)
+	var spool := int(_native().get_kit_body_index(2031))
+	var spool_last := (_native().get_kit_body_transform(spool) as Transform3D).origin
+	for frame in 180:
+		await get_tree().process_frame
+		var spool_now := (_native().get_kit_body_transform(spool) as Transform3D).origin
+		var swing := (spool_now - spool_last).length() / get_process_delta_time()
+		spool_last = spool_now
+		if swing < 0.05:
+			break
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not set D's spool down")
+	await _seconds(1.5)
+	if not bool(_wet_state()["d_pipe_whole"]):
+		return _fail("set down, D's spool did not close the fill line's gap")
+	if not (await _go(device, Vector2(13.4, -129.6), 0.15, 8.0) and \
+			await _go(device, Vector2(13.4, -132.7), 0.15, 6.0)):
+		return _fail("the walk onto D's platform stalled at %s" % str(_position()))
+	if not await _pull_handle(device, Vector2(12.3, -132.7), Vector2(0.0, 1.0), 2033, "FILL VALVE",
+			func() -> bool: return float(_wet_state()["d_valve_angle"]) > 1.8):
+		return false
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_wet_state()["d_platform_travel"]) >= 35.95, 120.0)
+	if not arrived:
+		return _fail("D's platform never reached 256 m (travel %.2f m)" % float(_wet_state()["d_platform_travel"]))
+	await _seconds(1.0)
+	await _pose("wet_d_top")
+	if int(_native().get_support_entity_id()) != 2030:
+		return _fail("the rider is not on D's platform at the top (y %.2f)" % _position().y)
+	return true
+
+
+func _wet_e(device: int) -> bool:
+	if not (await _go(device, Vector2(13.2, -134.5), 0.15, 6.0) and \
+			await _walk_to(device, Vector2(13.2, -135.8), 0.15, 6.0) and \
+			await _walk_to(device, Vector2(13.05, -136.4), 0.08, 6.0)):
+		return _fail("the walk through E's door into its cab stalled at %s" % str(_position()))
+	var leaf := int(_native().get_kit_body_index(2042))
+	var last := (_native().get_kit_body_transform(leaf) as Transform3D).origin
+	for frame in 240:
+		await get_tree().process_frame
+		var now := (_native().get_kit_body_transform(leaf) as Transform3D).origin
+		var moved := Vector2(now.x - last.x, now.z - last.z).length() / get_process_delta_time()
+		last = now
+		if moved < 0.2:
+			break
+	var at := _position()
+	await _face(Vector2(last.x - at.x, last.z - at.z))
+	if not await _offered(&"pick_up", "GRAB", "DOOR"):
+		return _fail("Action read '%s %s' facing E's door, not GRAB DOOR" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2042, 0.5):
+		return _fail("GRAB did not take E's door")
+	_move_world(device, Vector2(0.4, 0.0))
+	var latched: bool = await _wait_until(func() -> bool: return bool(_wet_state()["e_door_latched"]), 6.0)
+	_move_dir(device, Vector2.ZERO)
+	if not latched:
+		return _fail("drawing E's door east never latched it")
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not take E's door out of the hands")
+	if not await _pull_handle(device, Vector2(13.4, -136.65), Vector2(1.0, 0.0), 2045, "CHILLER TRIP",
+			func() -> bool: return not bool(_wet_state()["e_catch_latched"])):
+		return false
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_wet_state()["e_cab_travel"]) >= 41.95, 90.0)
+	if not arrived:
+		return _fail("E's cab never reached 298 m (travel %.2f m)" % float(_wet_state()["e_cab_travel"]))
+	await _seconds(1.0)
+	await _pose("wet_e_top")
+	if int(_native().get_support_entity_id()) != 2040:
+		return _fail("the rider is not in E's cab at the top (y %.2f)" % _position().y)
+	return true
+
+
+func _wet_f(device: int) -> bool:
+	if not (await _go(device, Vector2(13.4, -137.2), 0.15, 4.0) and \
+			await _walk_to(device, Vector2(13.4, -139.9), 0.15, 6.0) and \
+			await _walk_to(device, Vector2(12.6, -139.95), 0.08, 6.0)):
+		return _fail("the walk from E's cab onto F's platform stalled at %s" % str(_position()))
+	await _face(Vector2(-0.3, -0.95))
+	if not await _offered(&"pick_up", "TAKE", "HOSE"):
+		return _fail("Action read '%s %s' facing F's hose, not TAKE HOSE" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2052, 0.5):
+		return _fail("TAKE did not put F's hose in the hands")
+	if not await _walk_to(device, Vector2(12.4, -139.55), 0.08, 4.0):
+		return _fail("the step to the ram's inlet stalled at %s" % str(_position()))
+	await _face(Vector2(-0.6, 0.8))
+	if not await _offered(&"hook", "HOOK", "ONTO RAM INLET"):
+		return _fail("Action read '%s %s' at the ram's inlet, not HOOK ONTO RAM INLET" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_wet_state()["f_hose_coupled"]), 0.5):
+		return _fail("HOOK did not couple F's hose to the ram")
+	if not await _pull_handle(device, Vector2(12.25, -140.7), Vector2(0.0, -1.0), 2054, "STOP VALVE",
+			func() -> bool: return not bool(_wet_state()["f_catch_latched"])):
+		return false
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_wet_state()["f_platform_travel"]) >= 41.95, 90.0)
+	if not arrived:
+		var f := _wet_state()
+		return _fail("F's platform never reached TP-340 (travel %.2f m, hose coupled %s, catch latched %s, accumulator %.2f m)" % [
+			float(f["f_platform_travel"]), str(f["f_hose_coupled"]), str(f["f_catch_latched"]),
+			float(f["f_accumulator_travel"])])
+	await _seconds(1.0)
+	if not await _go(device, Vector2(13.0, -137.2), 0.15, 6.0):
+		return _fail("the step off F's platform onto TP-340 stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	await _pose("wet_plate")
+	if not bool(_native().is_player_grounded()) or _position().y < 340.25 or \
+			int(_native().get_support_entity_id()) != 1005:
+		return _fail("not standing on TP-340 (y %.2f, support %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
 	return true
 
 
@@ -1394,6 +1606,20 @@ func _stack(device: int) -> bool:
 		return false
 	var at_ring220 := _position().y
 
+	# Along the 220 ring to AS-007, and up its three machines to TP-340.
+	if not (await _go(device, Vector2(2.5, -129.6), 0.15, 8.0) and \
+			await _go(device, Vector2(4.0, -129.2), 0.15, 6.0)):
+		return _fail("the walk along the 220 ring to AS-007 stalled at %s" % str(_position()))
+	if not await _wet_d(device):
+		return false
+	var at_wet_d := _position().y
+	if not await _wet_e(device):
+		return false
+	var at_wet_e := _position().y
+	if not await _wet_f(device):
+		return false
+	var at_tp340 := _position().y
+
 	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
 	# faster than a sprint; only a snap moves the view that far.
 	var worst_step := _stop_watch(body)
@@ -1402,9 +1628,9 @@ func _stack(device: int) -> bool:
 			str(body.get("at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
-	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f" % [
+	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f wet_d_y=%.2f wet_e_y=%.2f tp340_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f" % [
 		at_deck2, at_deck4, at_deck6, at_deck8, at_deck12, at_deck14, at_ring176, at_ring198, at_ring220,
-		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step]
+		at_wet_d, at_wet_e, at_tp340, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step]
 	return true
 
 
@@ -1538,6 +1764,14 @@ func _move(device: int, amount: float) -> void:
 	_move_dir(device, Vector2(0.0, amount))
 
 
+# Holds the move input toward world (x, z) `w`, at its length of full throw,
+# without turning the view; a key, having no throw, is pressed full.
+func _move_world(device: int, w: Vector2) -> void:
+	var yaw := float(_main._yaw)
+	var v := Vector2(w.dot(Vector2(cos(yaw), -sin(yaw))), w.dot(Vector2(-sin(yaw), -cos(yaw))))
+	_move_dir(device, v.normalized() if device == InputRouter.Device.KEYBOARD_MOUSE else v)
+
+
 # Holds the move input at `v` = (right, forward) of full throw, relative to
 # the view, on the device under test. A key has no throw: a component past
 # a third holds its key down.
@@ -1586,7 +1820,8 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 		var v := Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.25, 1.0)
 		if keys:
 			var closing := maxf(speed.dot(to.normalized()), 0.0)
-			var stopping := closing * (get_process_delta_time() + closing / (2.0 * KEY_BRAKE_MPS2))
+			var brake := KEY_CARRY_BRAKE_MPS2 if int(_native().get_carrying_entity_id()) != 0 else KEY_BRAKE_MPS2
+			var stopping := closing * (get_process_delta_time() + closing / (2.0 * brake))
 			v = Vector2.ZERO if to.length() <= tolerance or stopping >= to.length() - 0.5 * tolerance else v.normalized()
 		_move_dir(device, v)
 		await get_tree().process_frame

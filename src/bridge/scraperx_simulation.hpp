@@ -3,6 +3,7 @@
 #include "sim/simulation.hpp"
 
 #include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/packed_vector3_array.hpp>
 #include <godot_cpp/variant/quaternion.hpp>
@@ -150,6 +151,11 @@ public:
     [[nodiscard]] double get_stack_s3_cage_travel() const;
     [[nodiscard]] double get_stack_s3_brake_angle() const;
     [[nodiscard]] bool is_stack_s3_brake_latched() const;
+    // AS-007, AS-008 and AS-009, read back whole: the native's own state,
+    // keyed by its field names.
+    [[nodiscard]] godot::Dictionary get_wet_state() const;
+    [[nodiscard]] godot::Dictionary get_shop_state() const;
+    [[nodiscard]] godot::Dictionary get_crane_state() const;
 
 protected:
     static void _bind_methods();

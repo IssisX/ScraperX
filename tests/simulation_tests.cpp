@@ -2596,9 +2596,15 @@ void run_stack() {
     require(tug.advance_frame(0.5).accepted, "S1 settle interval must be accepted");
     const double tug_tank0 = tug.stack_state().s1_tank_water_kg;
     require(take_s1_chain(tug), "the player must walk from the yard into S1's cage and take hold of its chain");
-    (void)tug.advance_frame(0.3);
-    const auto tugged = tug.stack_state();
-    require(tugged.s1_valve_angle >= 0.24 && !tugged.s1_catch_latched,
+    // The hands draw the chain's handle down to them at kCarryPullInSpeed
+    // (0.7 m, about a quarter second); held, it turns the lever past full
+    // open and lets the catch go.
+    require(advance_until(tug,
+                          [&](const scraperx::sim::Snapshot &) {
+                              const auto held = tug.stack_state();
+                              return held.s1_valve_angle >= 0.24 && !held.s1_catch_latched;
+                          },
+                          0.6),
             "held, S1's chain must turn its lever past full open and let the catch go");
     (void)tug.request_set_down();
     double tug_cage_worst = 0.0;
@@ -2618,7 +2624,9 @@ void run_stack() {
             "after a tug, S1's cage and bucket must not move");
     require(after_tug.s1_catch_latched && after_tug.s1_valve_angle < 0.03,
             "let go, S1's lever must come back up, shut the valve and seat the catch");
-    require(s1_chain_at_rest(tug), "let go, S1's chain must hang back where it was");
+    // Its damped swing brings it back within 0.1 m a few seconds after.
+    require(advance_until(tug, [&](const scraperx::sim::Snapshot &) { return s1_chain_at_rest(tug); }, 4.0),
+            "let go, S1's chain must hang back where it was");
     const double tug_water = after_tug.s1_bucket_water_kg;
     require(take_s1_chain(tug), "S1's chain must be taken again after a tug");
     const auto tug_ride = ride_s1(tug, 20.0);
@@ -3101,12 +3109,122 @@ void run_stack() {
               << " ring176_y=" << band_ring176.player_position.y
               << " ring220_y=" << band_ring220.player_position.y
               << " rearmed=1\n";
+
+    // On in the same run, cycle 10: along the 220 ring to AS-007 and up its
+    // three machines -- D's spool and fill, E's door and chiller, F's hose and
+    // stop valve -- onto TP-340.
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    require(walk_to(band, 2.5, -129.6, 8.0) && walk_to(band, 4.0, -129.2, 6.0) && seat_wet_spool(band) &&
+                throw_wet_fill(band),
+            "along the 220 ring, D's spool seated and its fill thrown");
+    require(wait_for(band, 120.0, [&](const Snapshot &) { return band.wet_state().d_platform_travel >= 35.95; }),
+            "D must carry the rider to 256.25");
+    require(walk_to(band, 13.2, -134.5, 6.0) && walk_to(band, 13.2, -135.8, 6.0) && shut_wet_door(band) &&
+                pull_wet_trip(band),
+            "into E's cab, its door shut and the chiller tripped");
+    require(wait_for(band, 90.0, [&](const Snapshot &) { return band.wet_state().e_cab_travel >= 41.95; }),
+            "E must carry the rider to 298.25");
+    require(walk_to(band, 13.4, -137.2, 4.0) && walk_to(band, 13.4, -139.9, 6.0) && couple_wet_hose(band) &&
+                pull_wet_stop_valve(band),
+            "onto F, its hose coupled and its stop valve thrown");
+    require(wait_for(band, 90.0, [&](const Snapshot &) { return band.wet_state().f_platform_travel >= 41.95; }),
+            "F must carry the rider to TP-340");
+    require(walk_to(band, 13.0, -137.2, 6.0), "off F onto TP-340");
+    (void)band.advance_frame(0.5);
+    g_path_watch.armed = false;
+    const auto band_tp340 = band.snapshot();
+    require(g_path_watch.worst <= 0.15,
+            "Ring 220 to TP-340: body must never move more than 0.15 m sideways in one tick");
+    require(band_tp340.death_count == 0 && band_tp340.player_grounded && band_tp340.player_position.y > 340.25 &&
+                band_tp340.support_entity_id == Simulation::kWetFrameEntityId,
+            "continuous ascent from Grade must end standing on TP-340");
+    std::cout << "PASS scraperx_sim Mega-Ascent Grade to TP-340: seconds="
+              << band_tp340.simulation_time_seconds - band_start
+              << " ring220_y=" << band_ring220.player_position.y << " tp340_y=" << band_tp340.player_position.y
+              << "\n";
+}
+
+// The hands' handling rules, each falsified on the machine that showed it
+// through the game's input: a taken handle is drawn in to the hands at
+// kCarryPullInSpeed (3 m/s), never snapped to them; and a heavy free load is
+// carried slowly and stopped gently enough to stay in them. (That a catch
+// never draws back a body already leaving its seat is falsified by pad_wet:
+// F relatched at 0.00 m under the old rule, on that input's timing, which
+// no native pull here reproduces.)
+void run_wet_handling() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+
+    // S1's chain handle hangs 0.7 m over the hands: taken, the hands draw it
+    // down at 3 m/s while it swings on its chain, never faster than the
+    // hands' own limit on screen, 0.1 m a frame (6 m/s). Snapped to the
+    // hands, it moved 0.23 m in the first tick.
+    Simulation chain(InitialSpawn::ExteriorGrade);
+    require(chain.advance_frame(0.5).accepted, "S1 chain settle interval must be accepted");
+    require(walk_to(chain, 10.0, -117.3, 30.0) && walk_to(chain, 10.0, kS1ChainZ, 6.0, 0.08),
+            "the player must walk into S1's cage");
+    (void)chain.set_facing(-1.0, 0.0);
+    (void)chain.advance_frame(0.5);
+    require(chain.snapshot().carry_target_entity_id == Simulation::kStackS1ChainEntityId,
+            "S1's chain must be in reach");
+    const auto handle = chain.kit_body_index(Simulation::kStackS1ChainEntityId);
+    auto handle_last = chain.kit_body_position(handle);
+    const double handle_y0 = handle_last.y;
+    (void)chain.request_pick_up();
+    double worst_handle_tick = 0.0;
+    for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz / 2; ++tick) {
+        require(chain.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "S1 chain pull-in tick must be accepted");
+        const auto now = chain.kit_body_position(handle);
+        worst_handle_tick =
+            std::max(worst_handle_tick, std::hypot(std::hypot(now.x - handle_last.x, now.y - handle_last.y),
+                                                   now.z - handle_last.z));
+        handle_last = now;
+    }
+    require(chain.snapshot().carrying_entity_id == Simulation::kStackS1ChainEntityId &&
+                handle_y0 - handle_last.y > 0.4,
+            "taken, S1's chain handle must come down to the hands");
+    require(worst_handle_tick <= 6.0 * Simulation::kFixedStepSeconds,
+            "a taken handle must be drawn in to the hands, not snapped to them");
+
+    // D's 50 kg spool, carried along the 220 ring at full stick and stopped:
+    // held to 1 - weight / (0.8 grip) of full speed (1.76 m/s), started and
+    // stopped within the grip, it stays in the hands. At full speed it was
+    // thrown.
+    Simulation spool(InitialSpawn::Ring220North);
+    (void)spool.advance_frame(1.0);
+    require(walk_to(spool, 9.5, -130.6, 8.0, 0.08), "the walk to D's spool must be accepted");
+    (void)spool.set_facing(0.0, 1.0);
+    (void)spool.advance_frame(0.4);
+    require(spool.snapshot().carry_target_entity_id == Simulation::kWetDSpoolEntityId,
+            "D's spool must be in reach");
+    (void)spool.request_pick_up();
+    (void)spool.advance_frame(0.5);
+    require(spool.snapshot().carrying_entity_id == Simulation::kWetDSpoolEntityId, "PICK UP must lift D's spool");
+    double spool_peak_speed = 0.0;
+    for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz; ++tick) {
+        (void)spool.set_move_input(-1.0, 0.0);
+        (void)spool.set_facing(0.0, 1.0);
+        (void)spool.advance_frame(Simulation::kFixedStepSeconds);
+        spool_peak_speed = std::max(spool_peak_speed, horizontal_magnitude(spool.snapshot().player_linear_velocity));
+    }
+    (void)spool.set_move_input(0.0, 0.0);
+    (void)spool.advance_frame(1.5);
+    require(spool_peak_speed <= 1.8, "carrying D's 50 kg spool, the carrier must be held to 1.76 m/s");
+    require(spool.snapshot().carrying_entity_id == Simulation::kWetDSpoolEntityId,
+            "carried at full stick and stopped, D's spool must stay in the hands");
+
+    std::cout << "PASS scraperx_sim handling: handle_tick_m=" << worst_handle_tick
+              << " spool_peak_mps=" << spool_peak_speed << "\n";
 }
 
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
         run_wet_isolation();
+        run_wet_handling();
         run_wet_band();
         run_wet_route();
         return EXIT_SUCCESS;
@@ -5064,6 +5182,7 @@ int main() {
 
     run_stack();
     run_wet_isolation();
+    run_wet_handling();
     run_wet_band();
     run_wet_route();
     run_plate_shop();

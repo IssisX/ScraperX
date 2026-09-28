@@ -34,6 +34,8 @@ constexpr float kGovernorDeadband = 0.01F;
 constexpr float kGovernorCreep = 0.08F;
 // A catch relatches only for a body this slow.
 constexpr float kRelatchSpeed = 0.15F;
+// Slower than this a body is at rest on its seat, whichever way it drifts.
+constexpr float kRelatchRestSpeed = 0.01F;
 // How far a stream of rubble can fall looking for somewhere to land.
 constexpr float kStreamReach = 80.0F;
 // Spills landing this close to a pile join it; the kit keeps at most
@@ -538,10 +540,16 @@ void Kit::pre_step(const float delta_seconds) {
             continue;
         }
         const JPH::Body &body = jolt_body(catch_record.body);
-        const float off_seat =
-            JPH::Vec3(body.GetCenterOfMassPosition() - catch_record.seat).Length();
-        if (off_seat <= catch_record.seat_tolerance &&
-            body.GetLinearVelocity().Length() < kRelatchSpeed) {
+        const JPH::Vec3 to_seat(catch_record.seat - body.GetCenterOfMassPosition());
+        const JPH::Vec3 velocity = body.GetLinearVelocity();
+        // A pawl takes a lug coming back past it, never one drawing away: a
+        // body still leaving its seat, however slowly, is not relatched. (F's
+        // 20 t accumulator creeps off its seat against the ram's load; let go
+        // in its first half second, the handle's lever fell back to rest and
+        // the catch drew it back up, and the platform and its rider down.)
+        const bool leaving = velocity.Length() >= kRelatchRestSpeed && velocity.Dot(to_seat) < 0.0F;
+        if (to_seat.Length() <= catch_record.seat_tolerance && velocity.Length() < kRelatchSpeed &&
+            !leaving) {
             latch(catch_record);
         }
     }

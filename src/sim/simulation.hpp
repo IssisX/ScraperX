@@ -75,6 +75,8 @@ enum class InitialSpawn : std::uint8_t {
     Deck6South = 27,
     Deck8North = 28,
     Deck12North = 29,
+    // Not a spawn: one past the last, so a spawn added above it is never refused.
+    Count,
 };
 
 // A world started at one of these spawns is the proving ground: it carries

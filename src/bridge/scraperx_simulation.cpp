@@ -17,10 +17,10 @@ namespace {
             static_cast<godot::real_t>(value.z), static_cast<godot::real_t>(value.w)};
 }
 
-// One past the last spawn, derived from the enum so a new spawn is never
-// silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
-constexpr std::int64_t kInitialSpawnCount =
-    static_cast<std::int64_t>(sim::InitialSpawn::Deck4South) + 1;
+// One past the last spawn, the enum's own sentinel: a literal (21, behind
+// IntakeHandoffDeck) and then the last enumerator (Deck4South, behind the 66,
+// 88 and 132 m decks) each fell behind the spawns added after them.
+constexpr std::int64_t kInitialSpawnCount = static_cast<std::int64_t>(sim::InitialSpawn::Count);
 
 // A kit index from script: negative or past the end reads as no body.
 [[nodiscard]] std::uint32_t kit_index(const std::int64_t index) {
@@ -242,6 +242,9 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_stack_s3_brake_angle);
     godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s3_brake_latched"),
                                 &ScraperXSimulation::is_stack_s3_brake_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_wet_state"), &ScraperXSimulation::get_wet_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_shop_state"), &ScraperXSimulation::get_shop_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_crane_state"), &ScraperXSimulation::get_crane_state);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -741,6 +744,76 @@ double ScraperXSimulation::get_stack_s3_brake_angle() const {
 
 bool ScraperXSimulation::is_stack_s3_brake_latched() const {
     return simulation_->stack_state().s3_brake_latched;
+}
+
+godot::Dictionary ScraperXSimulation::get_wet_state() const {
+    const sim::WetState state = simulation_->wet_state();
+    godot::Dictionary out;
+    out["d_pipe_whole"] = state.d_pipe_whole;
+    out["d_fill_kg_s"] = state.d_fill_kg_s;
+    out["d_tank_kg"] = state.d_tank_kg;
+    out["d_tube_kg"] = state.d_tube_kg;
+    out["d_tank_level"] = state.d_tank_level;
+    out["d_tube_level"] = state.d_tube_level;
+    out["d_platform_travel"] = state.d_platform_travel;
+    out["d_valve_angle"] = state.d_valve_angle;
+    out["d_drain_angle"] = state.d_drain_angle;
+    out["dump_angle"] = state.dump_angle;
+    out["e_door_latched"] = state.e_door_latched;
+    out["e_door_angle"] = state.e_door_angle;
+    out["e_catch_latched"] = state.e_catch_latched;
+    out["e_duct_pa"] = state.e_duct_pa;
+    out["e_cab_pa"] = state.e_cab_pa;
+    out["e_cab_travel"] = state.e_cab_travel;
+    out["e_chiller_travel"] = state.e_chiller_travel;
+    out["e_bucket_kg"] = state.e_bucket_kg;
+    out["f_catch_latched"] = state.f_catch_latched;
+    out["f_hose_coupled"] = state.f_hose_coupled;
+    out["f_platform_travel"] = state.f_platform_travel;
+    out["f_accumulator_travel"] = state.f_accumulator_travel;
+    out["header_kg"] = state.header_kg;
+    out["drained_kg"] = state.drained_kg;
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_shop_state() const {
+    const sim::ShopState state = simulation_->shop_state();
+    godot::Dictionary out;
+    out["g_rope_on_eye"] = state.g_rope_on_eye;
+    out["g_tower_latched"] = state.g_tower_latched;
+    out["g_platform_travel"] = state.g_platform_travel;
+    out["g_tower_travel"] = state.g_tower_travel;
+    out["h_girder_latched"] = state.h_girder_latched;
+    out["h_trolley_latched"] = state.h_trolley_latched;
+    out["h_girder_angle"] = state.h_girder_angle;
+    out["h_platform_travel"] = state.h_platform_travel;
+    out["i_rope_on_eye"] = state.i_rope_on_eye;
+    out["i_domino_latched"] = state.i_domino_latched;
+    out["i_monolith_latched"] = state.i_monolith_latched;
+    out["i_domino_angle"] = state.i_domino_angle;
+    out["i_trip_angle"] = state.i_trip_angle;
+    out["i_monolith_angle"] = state.i_monolith_angle;
+    out["i_cage_travel"] = state.i_cage_travel;
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_crane_state() const {
+    const sim::CraneState state = simulation_->crane_state();
+    godot::Dictionary out;
+    out["j_rail_whole"] = state.j_rail_whole;
+    out["j_wagon_latched"] = state.j_wagon_latched;
+    out["j_traveler_travel"] = state.j_traveler_travel;
+    out["j_wagon_travel"] = state.j_wagon_travel;
+    out["k_rope_on_eye"] = state.k_rope_on_eye;
+    out["k_jib_latched"] = state.k_jib_latched;
+    out["k_jib_angle"] = state.k_jib_angle;
+    out["k_cage_travel"] = state.k_cage_travel;
+    out["l_clutch_in"] = state.l_clutch_in;
+    out["l_weight_latched"] = state.l_weight_latched;
+    out["l_cart_latched"] = state.l_cart_latched;
+    out["l_cart_travel"] = state.l_cart_travel;
+    out["l_cab_travel"] = state.l_cab_travel;
+    return out;
 }
 
 } // namespace scraperx::bridge

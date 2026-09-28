@@ -137,7 +137,7 @@ Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has hei
 | Stack | Ascent: **The Stack continuous ascent** | 0 → 154 m | south & north shaft / face | unbroken continuous physics simulation: S1 → C1 → S2 → C2 → S3 → C3 in one single run without dying, worst tick displacement ≤ 0.15 m | built and proven (166.4 s) |
 | — | Backup path (rule 8) | 0 → 221 m | — | a plain stair or ladder way past the stages for a player who does not want to do them | not built |
 | — | AS-006 Counterweight Well | 154 → 220 m | shaft | skip lift, derrick boom, debris chute; non-lift climbing spine | built; cycle 7/8 integration target |
-| — | AS-007 Wet Isolation | 220 → 340 m | shaft | water, air and hydraulics; non-lift climbing route | built; cycle 10 integration target |
+| — | AS-007 Wet Isolation | 220 → 340 m | shaft | water, air and hydraulics; non-lift climbing route | built; played through the game's input on touch, pad and keyboard, in one run from grade to TP-340 (cycle 10, §11) |
 
 The route above 340 m (AS-008, AS-009) stays as built until the ascent reaches it.
 
@@ -345,6 +345,18 @@ Elev. (m)   Band / Section                      Coupling Mechanism / Challenge
 | **Mechanisms** | 1. Stage D (220 → 256 m): seat D's pipe spool, throw hydraulic fill valve.<br>2. Stage E (256 → 298 m): shut cab door, trip air reservoir, ride pressurized cab.<br>3. Stage F (298 → 340 m): open main accumulator, ride hydraulic ram platform to TP-340. |
 | **Acceptance Criteria** | 1. Grade to TP-340 in one unbroken physical simulation.<br>2. Complete execution across all three macro systems: Freight (S1/S2/S3/A/B/C), Traversal (C1/C2/C3/spine), and Process/Flow (D/E/F).<br>3. Rider arrives at TP-340 (y = 340.0 m) with 0 deaths. |
 | **Verification Gate** | `PASS scraperx_sim mega_ascent_grade_to_tp340` emitted and asserted in CI workflow. |
+
+**Result, cycle 10 (as built, 2026-09-28).** Native: `PASS scraperx_sim Mega-Ascent Grade to TP-340` (one simulation, 339 s, no deaths, no body step over 0.15 m a tick). Through the game's input: `touch_stack`, `pad_stack`, `keyboard_stack` from the game's start to standing on TP-340 (341.15 m, ~350 s each); `touch_wet`, `pad_wet`, `keyboard_wet` from the 220 ring start. All block the APK. Played through the input path, AS-007 exposed five defects the native tests on scripted inputs had not:
+
+| Defect | Invalid state | Transition that allowed it | Change that makes it unreachable |
+|---|---|---|---|
+| F relatched on a prompt LET GO (pad) | the 20 t accumulator drawn back up onto its seat, and the platform and rider back down, within 0.75 s of the trip | a relatching catch took any slow body inside its window, including one already leaving its seat | a catch takes back only a body at rest or returning to its seat (`mechanism_kit.cpp`); falsified by `pad_wet` |
+| E's door yanked open on GRAB | the 60 kg leaf swung at 6 m/s; the hands jumped 0.100 m in a frame | the carry's point constraint closed any hand-to-handle gap in one tick | the hands close on the handle where it is and draw it in at 3 m/s (`kCarryPullInSpeed`); falsifier `handling` (0.23 m in a tick snapped, 0.05 m drawn) |
+| D's spool thrown into the shaft (keyboard) | a 50 kg load carried at 5.5 m/s and stopped at 22 m/s^2: 1030 N at the hands, over the 900 N grip | carrying set no limit on speed or braking | a free load caps its carrier's speed (1 - weight / 0.8 grip) and acceleration within 80% of the grip: 1.76 m/s and 5.3 m/s^2 for the spool; falsifier `handling` |
+| D's spool seated or not by luck | the spool reached its gap up to 27 degrees off (the gap takes 20) | a load hung from one point spun freely in the hands | both hands hold a free load's turn as taken, with no more torque than the grip gives at its flanks |
+| The 66, 88 and 132 m START options loaded grade | the bridge refused spawns 27-29 | its spawn bound was the last enumerator at the time (Deck4South) | an enum sentinel, `InitialSpawn::Count`; falsified by `touch_pause`, which loads every START option |
+
+Also through the input path, the ledge-catch snap (cycle 6's C2 duct, keyboard): a hang caught at arm's length now pulls the body in at 3 m/s (`kHangPullInSpeed`); falsified natively (0.70 m in a tick snapped, 0.033 m pulled). **Open for the owner:** AS-007's lifts are a float (D), compressed air (E) and a hydraulic ram (F); the owner's catalogue lists these archetypes (02, 05, 08), while the `MACRO-TRAVERSAL-STRICT` profile this plan cites (its header) bans fluid drives and buoyancy on the primary path. They stay until the owner decides.
 
 ---
 

@@ -229,14 +229,15 @@ jobs:
           # Each scenario injects touch / gamepad / keyboard events through the
           # viewport's own input pipeline and asserts a native state change
           # (presentation/ui/ui_test_driver.gd), from core traversal to the full
-          # grade -> +221 m Stack ascent on every device. --fixed-fps makes
-          # simulated time exact however fast the runner is.
+          # grade -> +221 m Stack ascent and AS-007's machines from the 220 ring
+          # to TP-340 on every device. --fixed-fps makes simulated time exact
+          # however fast the runner is.
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
               touch_hang_climb touch_chute touch_lethal_feedback touch_pause pad_core keyboard_core \
               touch_rig pad_rig keyboard_rig touch_boom pad_boom keyboard_boom touch_debris pad_debris keyboard_debris \
               touch_checkpoint touch_stack_upper pad_stack_upper keyboard_stack_upper \
-              touch_stack pad_stack keyboard_stack fall_voice; do
+              touch_stack pad_stack keyboard_stack touch_wet pad_wet keyboard_wet fall_voice; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

@@ -313,6 +313,19 @@ constexpr float kCarrySlipDistance = 0.90F;
 // move. The AS-003 bar and block keep the slip rule above alone.
 constexpr float kGripNewtons = 900.0F;
 constexpr float kGripSeconds = 0.10F;
+// The least a load in the hands leaves the carrier to start and stop with.
+constexpr float kCarryMinimumAcceleration = 2.0F;
+// A carrier keeps a fifth of the grip in hand: carried at the grip's full
+// limit, D's spool swung past it on a keyboard's stop (933 N).
+constexpr float kCarryGripShare = 0.80F;
+// Both hands on a free load's flanks hold its turn about the vertical: this
+// far out from its middle, with the grip, and settling at this rate.
+constexpr float kCarryFlankArm = 0.30F;
+constexpr float kCarryYawRate = 8.0F;
+// A taken handle or load is drawn in to the hands at this speed, never in
+// one tick: taken where it is, E's door handle was pulled to the hands and
+// the 60 kg leaf swung open at 6 m/s.
+constexpr float kCarryPullInSpeed = 3.0F;
 
 // WO-008 fall / parachute / checkpoint. A 12 m unassisted fall (~15.3 m/s
 // impact) must stay survivable per GDD 8.2; a genuine
@@ -1811,9 +1824,14 @@ private:
     // A point constraint between the hands and the body's handle. Rotation is
     // left free, so a block hangs and swings from it.
     void attach_carry(const JPH::BodyID id, const std::uint64_t entity) noexcept {
+        const JPH::BodyInterface &bodies = physics_system_.GetBodyInterfaceNoLock();
+        const JPH::Vec3 offset = carry_hand_offset(facing_);
+        // The hands close on the handle where it is; update_carry draws it in.
+        carry_entry_offset_ = JPH::Vec3(bodies.GetCenterOfMassTransform(id) * carry_handle(entity) -
+                                        (bodies.GetPosition(player_id_) + offset));
         JPH::PointConstraintSettings settings;
         settings.mSpace = JPH::EConstraintSpace::LocalToBodyCOM;
-        settings.mPoint1 = JPH::RVec3(carry_hand_offset(facing_));
+        settings.mPoint1 = JPH::RVec3(offset + carry_entry_offset_);
         settings.mPoint2 = JPH::RVec3(carry_handle(entity));
         carry_constraint_ = static_cast<JPH::PointConstraint *>(
             create_constraint(settings, player_id_, id, false));
@@ -1823,6 +1841,7 @@ private:
         carried_id_ = id;
         carried_entity_ = entity;
         grip_over_seconds_ = 0.0F;
+        carry_yaw_ = load_yaw(bodies);
         contact_listener_.set_carried_entity(entity);
     }
 
@@ -1837,6 +1856,86 @@ private:
         contact_listener_.set_carried_entity(0);
     }
 
+    // The carried body's turn about the vertical: its own x axis, flattened.
+    [[nodiscard]] float load_yaw(const JPH::BodyInterface &bodies) const noexcept {
+        const JPH::Vec3 axis = bodies.GetRotation(carried_id_) * JPH::Vec3::sAxisX();
+        return std::atan2(-axis.GetZ(), axis.GetX());
+    }
+
+    // Both hands on a free load's flanks keep it from spinning in them: they
+    // hold its turn about the vertical as they took it, with no more torque
+    // than the grip gives at its flanks. Hung from one point it spun freely
+    // (D's spool came to its gap 27 degrees off, and the gap takes 20).
+    // Turned with the carrier instead, a load swept round in the hands as
+    // they walked a turning path, and knocked out of them (J's rail joint).
+    void hold_load_yaw(JPH::BodyInterface &bodies) noexcept {
+        if (carried_load_mass() <= 0.0F) {
+            return;
+        }
+        float inertia = 0.0F;
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), carried_id_);
+            if (!lock.Succeeded() || !lock.GetBody().IsDynamic()) {
+                return;
+            }
+            const float inverse = lock.GetBody().GetMotionProperties()->GetLocalSpaceInverseInertia()(1, 1);
+            inertia = inverse > 0.0F ? 1.0F / inverse : 0.0F;
+        }
+        const float error = std::remainder(carry_yaw_ - load_yaw(bodies), 2.0F * static_cast<float>(kPi));
+        const float spin = bodies.GetAngularVelocity(carried_id_).GetY();
+        const float limit = kGripNewtons * kCarryFlankArm;
+        const float torque = std::clamp(
+            inertia * (kCarryYawRate * kCarryYawRate * error - 2.0F * kCarryYawRate * spin), -limit, limit);
+        bodies.AddTorque(carried_id_, JPH::Vec3(0.0F, torque, 0.0F));
+    }
+
+    // The mass of the free load in the hands, or 0: a handle or a shackle is
+    // held up by its hinge or its line, not the hands.
+    [[nodiscard]] float carried_load_mass() const noexcept {
+        if (carry_constraint_ == nullptr || !scraperx::sim::kit::is_kit_entity(carried_entity_) ||
+            kit_->carry_kind(carried_entity_) != scraperx::sim::kit::CarryKind::Load) {
+            return 0.0F;
+        }
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), carried_id_);
+        if (!lock.Succeeded() || !lock.GetBody().IsDynamic()) {
+            return 0.0F;
+        }
+        const float inverse_mass = lock.GetBody().GetMotionProperties()->GetInverseMass();
+        return inverse_mass > 0.0F ? 1.0F / inverse_mass : 0.0F;
+    }
+
+    // A free load in the hands slows its carrier. It swings from the hands,
+    // which hold its weight, the force that accelerates it (up to twice it,
+    // as the swing overshoots) and the pull of the swing itself; past
+    // kGripNewtons for kGripSeconds it tears out of them. So the heavier it
+    // is against the grip (kCarryGripShare of it), the slower it is carried
+    // -- top speed scaled by 1 - weight / grip, 1.76 m/s for D's 50 kg spool
+    // -- and the more gently it is started and stopped: 5.3 m/s^2 for the
+    // spool. (Carried at a key's full 5.5 m/s and stopped at
+    // kGroundAcceleration, the spool was thrown out of the hands into the
+    // shaft: 1030 N at the hands.) A handle is not capped: capped, a rider
+    // drawing E's 60 kg door shut stalled against it.
+    [[nodiscard]] float carry_speed_scale() const noexcept {
+        const float mass = carried_load_mass();
+        if (mass <= 0.0F) {
+            return 1.0F;
+        }
+        const float weight = mass * physics_system_.GetGravity().Length();
+        return std::clamp(1.0F - weight / (kCarryGripShare * kGripNewtons), 0.0F, 1.0F);
+    }
+
+    [[nodiscard]] float carry_ground_acceleration() const noexcept {
+        const float mass = carried_load_mass();
+        if (mass <= 0.0F) {
+            return kGroundAcceleration;
+        }
+        const float weight = mass * physics_system_.GetGravity().Length();
+        const float grip = kCarryGripShare * kGripNewtons;
+        const float spare = grip * grip - weight * weight;
+        const float limit = spare > 0.0F ? std::sqrt(spare) / (2.0F * mass) : 0.0F;
+        return std::clamp(limit, kCarryMinimumAcceleration, kGroundAcceleration);
+    }
+
     void update_carry(JPH::BodyInterface &bodies, const StepCommands &commands,
                       const float delta_seconds) noexcept {
         if (carry_constraint_ != nullptr) {
@@ -1844,8 +1943,14 @@ private:
                 release_carry();
                 return;
             }
-            // The hands swing round to the facing.
-            const JPH::Vec3 offset = carry_hand_offset(carry_hand_bearing(bodies, delta_seconds));
+            // The hands swing round to the facing, drawing a handle just taken
+            // in to them at kCarryPullInSpeed.
+            const float pull_in = kCarryPullInSpeed * delta_seconds;
+            const float gap = carry_entry_offset_.Length();
+            carry_entry_offset_ =
+                gap > pull_in ? carry_entry_offset_ * ((gap - pull_in) / gap) : JPH::Vec3::sZero();
+            const JPH::Vec3 offset =
+                carry_hand_offset(carry_hand_bearing(bodies, delta_seconds)) + carry_entry_offset_;
             carry_constraint_->SetPoint1(JPH::EConstraintSpace::LocalToBodyCOM,
                                          JPH::RVec3(offset));
             const JPH::RVec3 hand = bodies.GetPosition(player_id_) + offset;
@@ -1868,6 +1973,7 @@ private:
                     release_carry();
                 }
             }
+            hold_load_yaw(bodies);
             return;
         }
         if (commands.pick_up_requested) {
@@ -2138,12 +2244,12 @@ private:
             }
             const float full_speed = sprinting_
                                          ? static_cast<float>(kPlayerMaximumRelativeSpeed * kSprintSpeedScale)
-                                         : kPlayerMaximumRelativeSpeed;
+                                         : kPlayerMaximumRelativeSpeed * carry_speed_scale();
             approach_relative_horizontal_velocity(player_velocity,
                                                   reference_velocity,
                                                   move_x,
                                                   move_z,
-                                                  kGroundAcceleration,
+                                                  carry_ground_acceleration(),
                                                   delta_seconds,
                                                   full_speed);
             // The air keeps what the ground gave: a running jump, or a run
@@ -3555,6 +3661,11 @@ private:
     JPH::RVec3 traversal_desired_{JPH::RVec3::sZero()};
     // What is left of a caught ledge's pull-in (see kHangPullInSpeed).
     JPH::Vec3 traversal_entry_offset_{JPH::Vec3::sZero()};
+    // What is left of a taken handle's pull-in (see kCarryPullInSpeed).
+    JPH::Vec3 carry_entry_offset_{JPH::Vec3::sZero()};
+    // A free load's turn about the vertical as the hands took it (see
+    // hold_load_yaw).
+    float carry_yaw_ = 0.0F;
     double traversal_progress_ = 0.0;
     double traversal_duration_ = kMantleDurationSeconds;
     double traversal_approach_fraction_ = 0.0;
