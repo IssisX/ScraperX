@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           base64 --decode ci/as020-candidate.patch.gz.b64 | gzip --decompress > /tmp/as020.patch
-          echo "76061abc871b6a5b941f9d80147c84d0b6a718278ef80d454ce55bb92b628014  /tmp/as020.patch" | sha256sum --check
+          echo "494d47047199539dc9f8706d08ad931276467867be58ffb4fb040ea5a34a375f  /tmp/as020.patch" | sha256sum --check
           git apply --check /tmp/as020.patch
           git apply /tmp/as020.patch
           git diff --check
