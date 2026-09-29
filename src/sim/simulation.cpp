@@ -579,13 +579,36 @@ private:
         };
 
         lock();
-        const int current_rank = support_rank(sample_.entity_id);
-        const int candidate_rank = support_rank(candidate.entity_id);
-        if (!sample_.grounded || candidate_rank > current_rank ||
-            (candidate_rank == current_rank && candidate.normal_y > sample_.normal_y)) {
+        if (!sample_.grounded || supports_better(candidate, sample_)) {
             sample_ = candidate;
         }
         unlock();
+    }
+
+    // Jolt calls the contact callbacks from its worker threads in no fixed
+    // order, so the pick among a tick's candidates must be a total order: with
+    // "first seen wins" on a tie, the rider's support -- and everything it
+    // carries -- differed from run to run.
+    [[nodiscard]] static bool supports_better(const SupportSample &candidate,
+                                              const SupportSample &current) noexcept {
+        const int candidate_rank = support_rank(candidate.entity_id);
+        const int current_rank = support_rank(current.entity_id);
+        if (candidate_rank != current_rank) {
+            return candidate_rank > current_rank;
+        }
+        if (candidate.normal_y != current.normal_y) {
+            return candidate.normal_y > current.normal_y;
+        }
+        if (candidate.contact_point.y != current.contact_point.y) {
+            return candidate.contact_point.y > current.contact_point.y;
+        }
+        if (candidate.entity_id != current.entity_id) {
+            return candidate.entity_id < current.entity_id;
+        }
+        if (candidate.contact_point.x != current.contact_point.x) {
+            return candidate.contact_point.x < current.contact_point.x;
+        }
+        return candidate.contact_point.z < current.contact_point.z;
     }
 
     void lock() const noexcept {
@@ -652,6 +675,9 @@ private:
     case scraperx::sim::InitialSpawn::PlateTop:
         // On TP-340 north of F's hole, as a rider off F's platform.
         return {12.0, 341.2, -136.8};
+    case scraperx::sim::InitialSpawn::PlateTop640:
+        // On TP-640 north of L's hole, as a rider off L's cab.
+        return {-3.0, 641.2, -156.5};
     case scraperx::sim::InitialSpawn::Ring374West:
         // On the 374 ring's west band by H's gangway.
         return {-14.5, 375.2, -145.6};
@@ -995,6 +1021,7 @@ public:
         scraperx::sim::bands::build_wet_isolation(*kit_, wet_);
         scraperx::sim::bands::build_plate_shop(*kit_, shop_);
         scraperx::sim::bands::build_facade_crane(*kit_, crane_);
+        scraperx::sim::bands::build_midstack_service(*kit_, service_);
         // Band 0, the Stack: the ascent from grade.
         scraperx::sim::bands::build_stack(*kit_, stack_);
 
@@ -1175,6 +1202,10 @@ public:
 
     [[nodiscard]] const scraperx::sim::bands::FacadeCrane &crane() const noexcept {
         return crane_;
+    }
+
+    [[nodiscard]] const scraperx::sim::bands::MidstackService &service() const noexcept {
+        return service_;
     }
 
     [[nodiscard]] const scraperx::sim::bands::Stack &stack() const noexcept {
@@ -3626,6 +3657,7 @@ private:
     scraperx::sim::bands::WetIsolation wet_{};
     scraperx::sim::bands::PlateShop shop_{};
     scraperx::sim::bands::FacadeCrane crane_{};
+    scraperx::sim::bands::MidstackService service_{};
     scraperx::sim::bands::Stack stack_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
     std::uint8_t rig_action_ = 0;
@@ -4041,6 +4073,20 @@ CraneState Simulation::crane_state() const noexcept {
     out.l_cart_latched = kit.catch_latched(crane.l_cart_catch);
     out.l_cart_travel = kit.guide_travel(crane.l_cart_guide);
     out.l_cab_travel = kit.guide_travel(crane.l_cab_guide);
+    return out;
+}
+
+ServiceState Simulation::service_state() const noexcept {
+    const kit::Kit &kit = physics_world_->kit();
+    const scraperx::sim::bands::MidstackService &service = physics_world_->service();
+    ServiceState out;
+    out.m_rope_on_eye = kit.rope_end_entity(service.m_rope) == Simulation::kServiceMCageEntityId;
+    out.m_reel_latched = kit.catch_latched(service.m_reel_catch);
+    out.m_cage_travel = kit.guide_travel(service.m_cage_guide);
+    out.m_reel_travel = kit.guide_travel(service.m_reel_guide);
+    out.m_reel_kg = kit.body_mass(service.m_reel);
+    out.m_cable_paid = kit.reel_paid(service.m_reel_cable);
+    out.m_rope_tension = kit.rope_tension(service.m_rope);
     return out;
 }
 

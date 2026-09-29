@@ -1,8 +1,21 @@
 #include "sim/simulation.hpp"
 
+#include <Jolt/Jolt.h>
+
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Core/JobSystemSingleThreaded.h>
+#include <Jolt/Core/Memory.h>
+#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Constraints/PulleyConstraint.h>
+#include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/RegisterTypes.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -1122,6 +1135,149 @@ bool pull_shop_domino(scraperx::sim::Simulation &simulation) {
                        });
 }
 
+// ---- The pulley seam: a rope made fast to a static body --------------------------------
+// Jolt's pulley part wrote a static body's lever arm never and read it every solve, times zero;
+// allocation garbage holding a NaN there tore the load to NaN the first time the rope went taut.
+// The constraint is allocated from memory filled with NaN, so the patch (third_party/
+// jolt_patch.cmake) decides the outcome, not whatever the allocator last held.
+
+namespace pulley_seam {
+
+JPH::AllocateFunction base_allocate = nullptr;
+JPH::AlignedAllocateFunction base_aligned_allocate = nullptr;
+
+void *poisoned_allocate(const size_t size) {
+    void *block = base_allocate(size);
+    if (block != nullptr) {
+        std::memset(block, 0xFF, size);   // every float reads NaN
+    }
+    return block;
+}
+
+void *poisoned_aligned_allocate(const size_t size, const size_t alignment) {
+    void *block = base_aligned_allocate(size, alignment);
+    if (block != nullptr) {
+        std::memset(block, 0xFF, size);
+    }
+    return block;
+}
+
+constexpr JPH::ObjectLayer kLayer = 0;
+
+class Layers final : public JPH::BroadPhaseLayerInterface {
+public:
+    [[nodiscard]] JPH::uint GetNumBroadPhaseLayers() const override { return 1; }
+    [[nodiscard]] JPH::BroadPhaseLayer GetBroadPhaseLayer(JPH::ObjectLayer) const override {
+        return JPH::BroadPhaseLayer(0);
+    }
+#if defined(JPH_EXTERNAL_PROFILE) || defined(JPH_PROFILE_ENABLED)
+    [[nodiscard]] const char *GetBroadPhaseLayerName(JPH::BroadPhaseLayer) const override {
+        return "ALL";
+    }
+#endif
+};
+
+class AllVsBroadPhase final : public JPH::ObjectVsBroadPhaseLayerFilter {
+public:
+    [[nodiscard]] bool ShouldCollide(JPH::ObjectLayer, JPH::BroadPhaseLayer) const override { return true; }
+};
+
+class AllPairs final : public JPH::ObjectLayerPairFilter {
+public:
+    [[nodiscard]] bool ShouldCollide(JPH::ObjectLayer, JPH::ObjectLayer) const override { return true; }
+};
+
+// A load hung 0.5 m slack on a rope over a sheave, the rope's other end on a static body.
+JPH::Ref<JPH::Constraint> hang(JPH::BodyInterface &bodies, JPH::Body &load, JPH::Body &fast,
+                               const JPH::RVec3 fast_point, const bool fast_is_first) {
+    const JPH::RVec3 top = bodies.GetCenterOfMassPosition(load.GetID()) + JPH::Vec3(0.0F, 0.5F, 0.0F);
+    JPH::PulleyConstraintSettings rope;
+    rope.mSpace = JPH::EConstraintSpace::WorldSpace;
+    const JPH::RVec3 load_sheave = top + JPH::Vec3(0.0F, 1.5F, 0.0F);
+    const JPH::RVec3 fast_sheave = fast_point + JPH::Vec3(0.0F, 1.0F, 0.0F);
+    rope.mBodyPoint1 = fast_is_first ? fast_point : top;
+    rope.mFixedPoint1 = fast_is_first ? fast_sheave : load_sheave;
+    rope.mBodyPoint2 = fast_is_first ? top : fast_point;
+    rope.mFixedPoint2 = fast_is_first ? load_sheave : fast_sheave;
+    rope.mMinLength = 0.0F;
+    rope.mMaxLength = 1.5F + 1.0F + 0.5F;
+
+    base_allocate = JPH::Allocate;
+    base_aligned_allocate = JPH::AlignedAllocate;
+    JPH::Allocate = &poisoned_allocate;
+    JPH::AlignedAllocate = &poisoned_aligned_allocate;
+    JPH::Ref<JPH::Constraint> constraint = fast_is_first ? rope.Create(fast, load) : rope.Create(load, fast);
+    JPH::Allocate = base_allocate;
+    JPH::AlignedAllocate = base_aligned_allocate;
+    return constraint;
+}
+
+}  // namespace pulley_seam
+
+void run_pulley_static_end() {
+    using namespace pulley_seam;
+    // No Simulation is alive here: hold the runtime the way its lease does.
+    require(JPH::Factory::sInstance == nullptr, "the pulley seam test must own the Jolt runtime");
+    JPH::RegisterDefaultAllocator();
+    JPH::Factory::sInstance = new JPH::Factory();
+    JPH::RegisterTypes();
+    double worst_speed = 0.0;
+    double worst_sag = 0.0;
+    bool finite = true;
+    {
+        Layers layers;
+        AllVsBroadPhase broad_phase_filter;
+        AllPairs pair_filter;
+        JPH::PhysicsSystem system;
+        system.Init(16, 0, 16, 16, layers, broad_phase_filter, pair_filter);
+        JPH::TempAllocatorImpl temp(1 << 20);
+        JPH::JobSystemSingleThreaded jobs(JPH::cMaxPhysicsJobs);
+        JPH::BodyInterface &bodies = system.GetBodyInterface();
+
+        const auto make = [&bodies](const JPH::RVec3 at, const JPH::EMotionType motion) -> JPH::Body & {
+            JPH::BodyCreationSettings settings(new JPH::BoxShape(JPH::Vec3(0.5F, 0.5F, 0.5F)), at,
+                                               JPH::Quat::sIdentity(), motion, kLayer);
+            JPH::Body *body = bodies.CreateBody(settings);
+            require(body != nullptr, "the pulley seam test must create its bodies");
+            bodies.AddBody(body->GetID(), motion == JPH::EMotionType::Dynamic ? JPH::EActivation::Activate
+                                                                               : JPH::EActivation::DontActivate);
+            return *body;
+        };
+        JPH::Body &beam = make(JPH::RVec3(0.0, 20.0, 0.0), JPH::EMotionType::Static);
+        JPH::Body &load_second = make(JPH::RVec3(-4.0, 10.0, 0.0), JPH::EMotionType::Dynamic);
+        JPH::Body &load_first = make(JPH::RVec3(4.0, 10.0, 0.0), JPH::EMotionType::Dynamic);
+        // The static end as body 2 (a rope made fast to a cleat) and as body 1 (the world).
+        const JPH::Ref<JPH::Constraint> cleat_rope =
+            hang(bodies, load_second, beam, JPH::RVec3(0.0, 19.5, 0.0), false);
+        const JPH::Ref<JPH::Constraint> world_rope =
+            hang(bodies, load_first, JPH::Body::sFixedToWorld, JPH::RVec3(8.0, 19.5, 0.0), true);
+        system.AddConstraint(cleat_rope);
+        system.AddConstraint(world_rope);
+
+        for (int tick = 0; tick < 180; ++tick) {
+            (void)system.Update(1.0F / 90.0F, 1, &temp, &jobs);
+        }
+        for (const JPH::Body *load : {&load_second, &load_first}) {
+            const JPH::RVec3 at = bodies.GetCenterOfMassPosition(load->GetID());
+            const JPH::Vec3 velocity = bodies.GetLinearVelocity(load->GetID());
+            finite = finite && std::isfinite(static_cast<double>(at.GetY())) &&
+                     std::isfinite(static_cast<double>(velocity.Length()));
+            worst_sag = std::max(worst_sag, std::abs(static_cast<double>(at.GetY()) - 9.5));
+            worst_speed = std::max(worst_speed, static_cast<double>(velocity.Length()));
+        }
+        system.RemoveConstraint(cleat_rope);
+        system.RemoveConstraint(world_rope);
+    }
+    JPH::UnregisterTypes();
+    delete JPH::Factory::sInstance;
+    JPH::Factory::sInstance = nullptr;
+    require(finite, "a rope made fast to a static body must hold its load finite, whatever the "
+                    "constraint's memory held");
+    require(worst_sag < 0.05 && worst_speed < 0.05,
+            "each load must hang still on its rope, 0.5 m below where it was let go");
+    std::cout << "PASS scraperx_sim pulley seam: sag_m=" << worst_sag << " speed=" << worst_speed << '\n';
+}
+
 void run_plate_shop() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -1764,6 +1920,187 @@ void run_crane_wreckage() {
             "L wreck: the spent cart climbed from the ring onto its deck");
     std::cout << "PASS scraperx_sim AS-009 wreckage L: cart_travel=" << l.crane_state().l_cart_travel
               << " deck_y=" << l.snapshot().player_position.y << '\n';
+}
+
+// ---- AS-010, Midstack Service (640 -> 780 m): stage M ---------------------------
+
+// The service lift's reel and cage, as its contract gives them: the reel's
+// drum and yoke, its cable's density and coil, and the cage.
+constexpr double kReelMassKg = 1339.5;
+constexpr double kCableKgPerM = 22.0;
+constexpr double kCableCoil = 23.0;
+constexpr double kServiceCageKg = 1500.0;
+
+// From L's hole on TP-640 north and west into the service cage, round the
+// shackle hanging over its middle, take it, and hook it on the cage's eye.
+bool rig_service_m(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!(walk_to(simulation, -3.0, -144.3, 12.0) && walk_to(simulation, -8.7, -144.3, 8.0) &&
+          walk_to(simulation, -8.7, -143.5, 4.0, 0.08))) {
+        return false;
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.4);
+    if (simulation.snapshot().carry_target_entity_id != Simulation::kServiceMShackleEntityId) {
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(0.4);
+    if (simulation.snapshot().carrying_entity_id != Simulation::kServiceMShackleEntityId ||
+        !walk_to(simulation, -7.7, -143.5, 4.0, 0.08)) {
+        return false;
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.8);
+    const auto at_eye = simulation.snapshot();
+    if (at_eye.rig_action != 1 || at_eye.rig_target_entity_id != Simulation::kServiceMCageEntityId) {
+        return false;
+    }
+    (void)simulation.request_rig();
+    (void)simulation.advance_frame(0.3);
+    return simulation.service_state().m_rope_on_eye;
+}
+
+// The reel's chock, pulled over by its lanyard's handle beyond the cage's
+// north rail.
+bool pull_service_chock(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    return pull_facing(simulation, -8.0, -142.8, 0.0, 1.0, Simulation::kServiceMHandleEntityId, 0.5, 4.0,
+                       [&](const scraperx::sim::Snapshot &) { return !simulation.service_state().m_reel_latched; });
+}
+
+// What the reel released falling `drop` metres: its drum and yoke all the
+// way, the cable still wound all the way, each paid-out metre as far as it
+// fell before it paid out.
+double reel_released(const double drop) {
+    const double paid = std::min(drop, kCableCoil);
+    return 9.81 * (kReelMassKg * drop + kCableKgPerM * ((kCableCoil - paid) * drop + 0.5 * paid * paid));
+}
+
+// The ride, from the reel let go until the cage stands still on its dogs:
+// its highest travel, its fastest speed, and how long it took.
+struct ServiceRide final {
+    bool settled = false;
+    double apex = 0.0;
+    double peak_speed = 0.0;
+    double seconds = 0.0;
+};
+
+ServiceRide ride_service_m(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    ServiceRide ride;
+    const double start = simulation.snapshot().simulation_time_seconds;
+    double last = simulation.service_state().m_cage_travel;
+    int still = 0;
+    const auto ticks = static_cast<std::uint32_t>(40.0 * static_cast<double>(Simulation::kTickRateHz));
+    for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        const double travel = simulation.service_state().m_cage_travel;
+        const double speed = std::abs(travel - last) / Simulation::kFixedStepSeconds;
+        last = travel;
+        ride.apex = std::max(ride.apex, travel);
+        ride.peak_speed = std::max(ride.peak_speed, speed);
+        still = travel > 1.0 && speed < 0.005 ? still + 1 : 0;
+        if (still >= static_cast<int>(Simulation::kTickRateHz)) {
+            ride.settled = true;
+            break;
+        }
+    }
+    ride.seconds = simulation.snapshot().simulation_time_seconds - start;
+    return ride;
+}
+
+void run_midstack_service() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    constexpr double kG = 9.81;
+
+    // ---- M: the shackle free, the reel falls for nothing ---------------------------
+    Simulation m_free(InitialSpawn::PlateTop640);
+    (void)m_free.advance_frame(1.0);
+    const auto found = m_free.service_state();
+    require(!found.m_rope_on_eye && found.m_reel_latched && found.m_cage_travel < 0.01 &&
+                std::abs(found.m_reel_kg - (kReelMassKg + kCableKgPerM * kCableCoil)) < 0.5,
+            "as found, M's shackle hangs free, its reel stands chocked at the top, full of cable");
+    require(walk_to(m_free, -3.0, -144.3, 12.0) && pull_service_chock(m_free),
+            "the rider must pull the reel's chock from the cage");
+    (void)m_free.advance_frame(15.0);
+    const auto spent = m_free.service_state();
+    require(spent.m_reel_travel > 22.0 && spent.m_cage_travel < 0.05 && spent.m_cable_paid > 22.0 &&
+                spent.m_reel_kg < kReelMassKg + kCableKgPerM * (kCableCoil - 22.0) + 0.5,
+            "with the shackle free the reel falls its shaft, paying out its cable, and M's cage stays");
+
+    // ---- M: hooked on, the ride ---------------------------------------------------
+    Simulation m_ride(InitialSpawn::PlateTop640);
+    (void)m_ride.advance_frame(1.0);
+    require(rig_service_m(m_ride), "the rider must hook M's shackle on the cage's eye");
+    const double rider_y0 = m_ride.snapshot().player_position.y;
+    const double cage_y0 = kit_com_y(m_ride, Simulation::kServiceMCageEntityId);
+    const double reel_y0 = kit_com_y(m_ride, Simulation::kServiceMReelEntityId);
+    require(pull_service_chock(m_ride), "the rider must pull the reel's chock, hooked on");
+    const ServiceRide ride = ride_service_m(m_ride);
+    const auto top = m_ride.snapshot();
+    const auto held = m_ride.service_state();
+    require(ride.settled, "M's cage must come to rest on its dogs");
+    require(held.m_cage_travel >= 21.05 && held.m_cage_travel < 22.9 && ride.apex < 22.9,
+            "the reel's fall must lift M's cage to the 662 deck and its dogs hold it there, clear of its stop");
+    require(ride.peak_speed <= 3.5, "M's cage must never pass 3.5 m/s: the reel's drive fades as it pays out");
+    require(on_support(top, Simulation::kServiceMCageEntityId), "the rider must ride M's cage all the way");
+    const double drop = reel_y0 - kit_com_y(m_ride, Simulation::kServiceMReelEntityId);
+    const double gain = kRiderMassKg * kG * (top.player_position.y - rider_y0) +
+                        kServiceCageKg * kG * (kit_com_y(m_ride, Simulation::kServiceMCageEntityId) - cage_y0);
+    const double released = reel_released(drop);
+    require(gain > 0.0 && gain <= released, "M's cage and rider must never gain more than the reel released");
+    std::cout << "PASS scraperx_sim AS-010 M: apex_m=" << ride.apex << " held_m=" << held.m_cage_travel
+              << " peak_mps=" << ride.peak_speed << " seconds=" << ride.seconds
+              << " rider_y=" << top.player_position.y << " reel_kg=" << held.m_reel_kg << " gain_J=" << gain
+              << " released_J=" << released << '\n';
+
+    // ---- M: the rider off at the top, the empty cage stays on its dogs --------------
+    require(walk_to(m_ride, -5.8, -143.5, 6.0), "off M's cage east onto the 662 deck");
+    (void)m_ride.advance_frame(1.0);
+    const auto off = m_ride.snapshot();
+    require(on_support(off, Simulation::kServiceFrameEntityId) && off.player_position.y > 662.5,
+            "the rider must stand on the 662 deck");
+    (void)m_ride.advance_frame(10.0);
+    require(std::abs(m_ride.service_state().m_cage_travel - held.m_cage_travel) < 0.01,
+            "empty, M's cage must stay where its dogs hold it");
+}
+
+// Stage M on player inputs from the TP-640 start: hooked on, the chock
+// pulled, the ride, off onto the 662 deck.
+void run_service_band() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation band(InitialSpawn::PlateTop640);
+    (void)band.advance_frame(1.0);
+    const double start = band.snapshot().simulation_time_seconds;
+    require(rig_service_m(band) && pull_service_chock(band), "band: M hooked on and its reel let go");
+    require(ride_service_m(band).settled, "band: M's cage on its dogs at the 662 deck");
+    require(walk_to(band, -5.8, -143.5, 6.0), "band: off M's cage onto the 662 deck");
+    (void)band.advance_frame(0.5);
+    const auto top = band.snapshot();
+    require(standing_above(top, 662.5), "band: standing on the 662 deck");
+    std::cout << "PASS scraperx_sim AS-010 band: to_662_s=" << top.simulation_time_seconds - start
+              << " deck_y=" << top.player_position.y << '\n';
+}
+
+// AS-010's climbing route, on player inputs: across TP-640 to the ladder
+// and up through the 662 deck's hatch, the lift where it was found.
+void run_service_route() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation route(InitialSpawn::PlateTop640);
+    (void)route.advance_frame(1.0);
+    const double start = route.snapshot().simulation_time_seconds;
+    require(walk_to(route, 8.9, -156.5, 12.0) &&
+                climb_wet_hold(route, 8.9, -146.02, 0.0, 1.0, false, 662.5),
+            "route: across TP-640 and up the ladder through the 662 deck's hatch");
+    const auto top = route.snapshot();
+    const auto service = route.service_state();
+    require(service.m_cage_travel < 0.02 && service.m_reel_latched, "route: the lift did not move");
+    std::cout << "PASS scraperx_sim AS-010 route: seconds=" << top.simulation_time_seconds - start
+              << " top_y=" << top.player_position.y << " lift_untouched=1\n";
 }
 
 // ---- The mechanism ascent in one run ---------------------------------------------
@@ -3280,6 +3617,21 @@ int main() {
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-010") {
+        run_midstack_service();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-010-band") {
+        run_service_band();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-010-route") {
+        run_service_route();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "stack") {
         run_stack();
         return EXIT_SUCCESS;
@@ -3294,6 +3646,8 @@ int main() {
     using scraperx::sim::Snapshot;
     using scraperx::sim::Vector3;
     using scraperx::sim::TraversalState;
+
+    run_pulley_static_end();
 
     Simulation partitioned;
     for (std::uint32_t i = 0; i < Simulation::kTickRateHz; ++i) {
@@ -5193,6 +5547,9 @@ int main() {
     run_crane_band();
     run_crane_route();
     run_crane_wreckage();
+    run_midstack_service();
+    run_service_band();
+    run_service_route();
     run_ascent();
 
     return EXIT_SUCCESS;

@@ -95,6 +95,7 @@ jobs:
           # set -o pipefail means a non-zero exit still fails the step.
           ./build/host/scraperx_sim_tests | tee artifacts/native-falsifiers.log
           for proof in \
+            "PASS scraperx_sim pulley seam" \
             "PASS scraperx_sim moving-support truth" \
             "PASS scraperx_sim athletic traversal" \
             "PASS scraperx_sim fall/parachute/checkpoint" \
@@ -148,6 +149,9 @@ jobs:
             "PASS scraperx_sim AS-009 wreckage K" \
             "PASS scraperx_sim AS-009 wreckage J" \
             "PASS scraperx_sim AS-009 wreckage L" \
+            "PASS scraperx_sim AS-010 M" \
+            "PASS scraperx_sim AS-010 band" \
+            "PASS scraperx_sim AS-010 route" \
             "PASS scraperx_sim ascent 154 to TP-640"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
@@ -229,8 +233,8 @@ jobs:
           # Each scenario injects touch / gamepad / keyboard events through the
           # viewport's own input pipeline and asserts a native state change
           # (presentation/ui/ui_test_driver.gd), from core traversal to the full
-          # grade -> TP-640 ascent (the Stack, AS-006, AS-007, AS-008 and
-          # AS-009) and each band above 220 m on its own, on every device.
+          # grade -> 662 m ascent (the Stack, AS-006 to AS-009 and AS-010's
+          # service lift) and each band above 220 m on its own, on every device.
           # --fixed-fps makes simulated time exact however fast the runner is.
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
@@ -238,7 +242,8 @@ jobs:
               touch_rig pad_rig keyboard_rig touch_boom pad_boom keyboard_boom touch_debris pad_debris keyboard_debris \
               touch_checkpoint touch_stack_upper pad_stack_upper keyboard_stack_upper \
               touch_stack pad_stack keyboard_stack touch_wet pad_wet keyboard_wet \
-              touch_shop pad_shop keyboard_shop touch_crane pad_crane keyboard_crane fall_voice; do
+              touch_shop pad_shop keyboard_shop touch_crane pad_crane keyboard_crane \
+              touch_service pad_service keyboard_service fall_voice; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

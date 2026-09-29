@@ -247,6 +247,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_wet_state"), &ScraperXSimulation::get_wet_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_shop_state"), &ScraperXSimulation::get_shop_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_crane_state"), &ScraperXSimulation::get_crane_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_service_state"), &ScraperXSimulation::get_service_state);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -819,6 +820,19 @@ godot::Dictionary ScraperXSimulation::get_crane_state() const {
     out["l_cart_latched"] = state.l_cart_latched;
     out["l_cart_travel"] = state.l_cart_travel;
     out["l_cab_travel"] = state.l_cab_travel;
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_service_state() const {
+    const sim::ServiceState state = simulation_->service_state();
+    godot::Dictionary out;
+    out["m_rope_on_eye"] = state.m_rope_on_eye;
+    out["m_reel_latched"] = state.m_reel_latched;
+    out["m_cage_travel"] = state.m_cage_travel;
+    out["m_reel_travel"] = state.m_reel_travel;
+    out["m_reel_kg"] = state.m_reel_kg;
+    out["m_cable_paid"] = state.m_cable_paid;
+    out["m_rope_tension"] = state.m_rope_tension;
     return out;
 }
 

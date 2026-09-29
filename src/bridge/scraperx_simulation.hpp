@@ -157,6 +157,7 @@ public:
     [[nodiscard]] godot::Dictionary get_wet_state() const;
     [[nodiscard]] godot::Dictionary get_shop_state() const;
     [[nodiscard]] godot::Dictionary get_crane_state() const;
+    [[nodiscard]] godot::Dictionary get_service_state() const;
 
 protected:
     static void _bind_methods();

@@ -269,8 +269,11 @@ void build_stage_j(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) 
                                  {box(JPH::Vec3(0.12F, 0.06F, 0.2F), JPH::Vec3::sZero(), Material::Galvanised)},
                                  kJJointFound, JPH::Quat::sIdentity(), 30.0F, 0.8F);
     kit.set_carry(crane.j_joint, kit::CarryKind::Load, JPH::Vec3(0.0F, 0.06F, 0.0F));
-    // Any way up, the block in its tray closes the gap.
-    kit.set_rail_gap(crane.j_traveler_guide, 0.02F, crane.j_joint, kJJointSeat, JPH::Vec3::sAxisX(), 0.25F, 3.2F);
+    // Any way up, the block in its tray closes the gap. Resting anywhere in
+    // the tray on any face, its centre lies within 0.28 m of the seat; the
+    // nearest rest outside it, on a cheek's top, is 0.31 m off. (0.25 m read
+    // a block on its side at the tray's east end as out.)
+    kit.set_rail_gap(crane.j_traveler_guide, 0.02F, crane.j_joint, kJJointSeat, JPH::Vec3::sAxisX(), 0.30F, 3.2F);
 
     // The wagon at the head of its incline on the east face, down-north at
     // 70 degrees, chocked: a funicular car, its deck level and a grab bar

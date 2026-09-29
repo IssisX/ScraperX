@@ -98,6 +98,7 @@ using BinIndex = Index<struct BinTag>;
 using PoolIndex = Index<struct PoolTag>;
 using PipeIndex = Index<struct PipeTag>;
 using CellIndex = Index<struct CellTag>;
+using ReelIndex = Index<struct ReelTag>;
 
 class Kit final {
 public:
@@ -226,6 +227,16 @@ public:
     // in it. A pipe into a full pool stops; water a float pushes over its top
     // leaves it and drains away.
     PoolIndex add_pool(JPH::Vec3 min_corner, JPH::Vec3 max_corner, float water_kg);
+    // A cable reel (declared model, AS-010): its drum turns in the body's
+    // yoke, the cable's end made fast at `anchor` above it. Every metre the
+    // body sinks below where it was built pays out a metre of cable, whose
+    // weight leaves the reel for the anchor, so the reel weighs its own mass
+    // and the cable still wound on it, linear_density kg a metre of
+    // coil_length. Paid out stays paid out: a reel drawn back up slackens
+    // its cable. The drum's spin is not simulated. Drawn as a cable from
+    // the anchor to the drum's rim at rim_local.
+    ReelIndex add_reel(BodyIndex body, JPH::RVec3 anchor, JPH::Vec3 rim_local, float linear_density,
+                       float coil_length);
     // A float: the body's box of half_x by half_z, from bottom_local (body
     // y) up height, feels rho g A d up at its centre of mass, d its depth
     // under the pool's level, and water drag on its vertical speed.
@@ -323,6 +334,7 @@ public:
         std::vector<Pile> piles;
         std::vector<float> pool_water;
         std::vector<float> cell_air;
+        std::vector<float> reel_paid;
         float drained = 0.0F;
     };
     void capture(Checkpoint &out) const;
@@ -343,7 +355,8 @@ public:
     [[nodiscard]] JPH::RVec3 body_center_of_mass(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Quat body_rotation(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Vec3 body_velocity(BodyIndex body) const noexcept;
-    // The body's mass now: its own, plus the rubble in it if it is a bin.
+    // The body's mass now: its own, plus the rubble in it if it is a bin,
+    // or the cable still wound on it if it is a reel.
     [[nodiscard]] float body_mass(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::BodyID body_id(BodyIndex body) const noexcept;
     [[nodiscard]] BodyIndex body_for_entity(std::uint64_t entity) const noexcept;
@@ -354,10 +367,14 @@ public:
     // The rope as drawn: its first end, its sheaves, its other end. Parted
     // or let go, only its end's side: from the end up to its sheave.
     void rope_polyline(RopeIndex rope, std::vector<JPH::RVec3> &out) const;
-    // Everything drawn as a cable: the ropes, then the trip lines.
+    // Everything drawn as a cable: the ropes, the trip lines, then the
+    // reels' paid-out cables.
     [[nodiscard]] std::uint32_t cable_count() const noexcept {
-        return static_cast<std::uint32_t>(ropes_.size() + lines_.size());
+        return static_cast<std::uint32_t>(ropes_.size() + lines_.size() + reels_.size());
     }
+    // A reel's cable paid out, m, and still wound on it, kg.
+    [[nodiscard]] float reel_paid(ReelIndex reel) const noexcept;
+    [[nodiscard]] float reel_wound_kg(ReelIndex reel) const noexcept;
     void cable_polyline(std::uint32_t cable, std::vector<JPH::RVec3> &out) const;
     [[nodiscard]] bool rope_parted(RopeIndex rope) const noexcept;
     // The entity of the body the rope's end is on now: an anchor's body, its
@@ -497,6 +514,15 @@ private:
         JPH::RVec3 stream_from = JPH::RVec3::sZero();
         JPH::RVec3 stream_to = JPH::RVec3::sZero();
     };
+    struct Reel final {
+        BodyIndex body;
+        JPH::RVec3 anchor = JPH::RVec3::sZero();
+        JPH::Vec3 rim = JPH::Vec3::sZero();
+        float density = 0.0F;   // kg per metre
+        float coil = 0.0F;      // m wound as built
+        double start_y = 0.0;   // the body's height as built
+        float paid = 0.0F;      // m paid out
+    };
     struct Float final {
         BodyIndex body;
         float half_x = 0.0F;
@@ -605,6 +631,7 @@ private:
     void apply_limits(Guide &guide);
     void flow_bins(float delta_seconds);
     void apply_bin_mass(const Bin &bin);
+    void apply_reel_mass(const Reel &reel);
     // The middle of the top of a bin's floor, its body's first part, local.
     [[nodiscard]] JPH::Vec3 floor_top(const Bin &bin) const;
     void spill(JPH::RVec3 at, float kg);
@@ -638,6 +665,7 @@ private:
     std::vector<Charge> charges_;
     std::vector<Cell> cells_;
     std::vector<Throttle> throttles_;
+    std::vector<Reel> reels_;
     float drained_ = 0.0F;
 };
 

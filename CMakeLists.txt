@@ -22,6 +22,7 @@ add_library(scraperx_sim STATIC
     src/sim/band_wet_isolation.cpp
     src/sim/band_plate_shop.cpp
     src/sim/band_facade_crane.cpp
+    src/sim/band_midstack_service.cpp
     src/sim/band_stack.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
@@ -54,6 +55,8 @@ if(SCRAPERX_WITH_JOLT)
         GIT_TAG ${SCRAPERX_JOLT_COMMIT}
         GIT_SHALLOW FALSE
         SOURCE_SUBDIR Build
+        PATCH_COMMAND ${CMAKE_COMMAND} -DJOLT_SOURCE_DIR=<SOURCE_DIR>
+                      -P ${CMAKE_CURRENT_SOURCE_DIR}/third_party/jolt_patch.cmake
     )
     FetchContent_MakeAvailable(jolt)
     set_target_properties(Jolt PROPERTIES POSITION_INDEPENDENT_CODE ON)

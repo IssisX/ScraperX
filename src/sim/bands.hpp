@@ -3,8 +3,9 @@
 // The bands of the mechanism ascent, each built from the mechanism kit.
 // 03_EXECUTION/ASCENT/AS-006_CW_PIN.md is the Counterweight Well's contract,
 // AS-007_WET_ISOLATION.md Wet Isolation's, AS-008_PLATE_SHOP.md the Plate
-// Shop's, AS-009_FACADE_CRANE_STACK.md the Facade Crane Stack's; the Stack,
-// from grade, is 03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md's.
+// Shop's, AS-009_FACADE_CRANE_STACK.md the Facade Crane Stack's,
+// AS-010_MIDSTACK_SERVICE.md Midstack Service's; the Stack, from grade, is
+// 03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md's.
 
 #include "sim/mechanism_kit.hpp"
 
@@ -226,6 +227,25 @@ struct FacadeCrane final {
 };
 
 void build_facade_crane(kit::Kit &kit, FacadeCrane &crane);
+
+// AS-010, Atlas band B06, 640 -> 780 m: so far its first stage.
+struct MidstackService final {
+    // Stage M, the service lift on the cable reel: TP-640 -> the 662 deck.
+    kit::BodyIndex m_cage;
+    kit::BodyIndex m_reel;
+    kit::BodyIndex m_chock;
+    kit::BodyIndex m_handle;
+    kit::BodyIndex m_shackle;
+    kit::GuideIndex m_cage_guide;
+    kit::GuideIndex m_reel_guide;
+    kit::LeverIndex m_chock_lever;
+    kit::CatchIndex m_reel_catch;
+    kit::RopeIndex m_rope;
+    kit::AnchorIndex m_eye;
+    kit::ReelIndex m_reel_cable;
+};
+
+void build_midstack_service(kit::Kit &kit, MidstackService &service);
 
 // Band 0, the Stack, grade -> 154 m. 03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md.
 struct Stack final {

@@ -382,6 +382,20 @@ PoolIndex Kit::add_pool(const JPH::Vec3 min_corner, const JPH::Vec3 max_corner,
     return PoolIndex{static_cast<std::uint32_t>(pools_.size() - 1U)};
 }
 
+ReelIndex Kit::add_reel(const BodyIndex body, const JPH::RVec3 anchor, const JPH::Vec3 rim_local,
+                        const float linear_density, const float coil_length) {
+    Reel reel;
+    reel.body = body;
+    reel.anchor = anchor;
+    reel.rim = rim_local;
+    reel.density = linear_density;
+    reel.coil = coil_length;
+    reel.start_y = jolt_body(body).GetPosition().GetY();
+    reels_.push_back(reel);
+    apply_reel_mass(reels_.back());
+    return ReelIndex{static_cast<std::uint32_t>(reels_.size() - 1U)};
+}
+
 void Kit::add_float(const PoolIndex pool, const BodyIndex body, const float half_x,
                     const float half_z, const float bottom_local, const float height) {
     pools_[pool.value].floats.push_back({body, half_x, half_z, bottom_local, height});
@@ -496,6 +510,15 @@ void Kit::govern(Guide &guide) noexcept {
 
 void Kit::pre_step(const float delta_seconds) {
     press(delta_seconds);
+    for (Reel &reel : reels_) {
+        // The cable below the drum's start stays where it paid out.
+        const double sunk = reel.start_y - jolt_body(reel.body).GetPosition().GetY();
+        const float paid = std::clamp(static_cast<float>(sunk), 0.0F, reel.coil);
+        if (paid > reel.paid) {
+            reel.paid = paid;
+            apply_reel_mass(reel);
+        }
+    }
     for (Guide &guide : guides_) {
         govern(guide);
         engage_dogs(guide);
@@ -561,6 +584,15 @@ void Kit::apply_bin_mass(const Bin &bin) {
         return;
     }
     jolt_body(bin.body).GetMotionProperties()->ScaleToMass(record.mass + bin.contents);
+}
+
+void Kit::apply_reel_mass(const Reel &reel) {
+    const Body &record = bodies_[reel.body.value];
+    if (!record.dynamic) {
+        return;
+    }
+    jolt_body(reel.body).GetMotionProperties()->ScaleToMass(record.mass +
+                                                            reel.density * (reel.coil - reel.paid));
 }
 
 bool Kit::land_stream(const JPH::RVec3 from, const JPH::BodyID ignore, Bin *&receiver,
@@ -1276,6 +1308,10 @@ void Kit::capture(Checkpoint &out) const {
     for (std::size_t index = 0; index < cells_.size(); ++index) {
         out.cell_air[index] = cells_[index].air;
     }
+    out.reel_paid.resize(reels_.size());
+    for (std::size_t index = 0; index < reels_.size(); ++index) {
+        out.reel_paid[index] = reels_[index].paid;
+    }
     out.drained = drained_;
 }
 
@@ -1324,6 +1360,10 @@ void Kit::restore(const Checkpoint &in) {
     for (std::size_t index = 0; index < pools_.size() && index < in.pool_water.size(); ++index) {
         pools_[index].water = in.pool_water[index];
         settle_level(pools_[index]);
+    }
+    for (std::size_t index = 0; index < reels_.size() && index < in.reel_paid.size(); ++index) {
+        reels_[index].paid = in.reel_paid[index];
+        apply_reel_mass(reels_[index]);
     }
     for (std::size_t index = 0; index < cells_.size() && index < in.cell_air.size(); ++index) {
         cells_[index].air = in.cell_air[index];
@@ -1416,6 +1456,11 @@ float Kit::body_mass(const BodyIndex body) const noexcept {
             mass += bin.contents;
         }
     }
+    for (const Reel &reel : reels_) {
+        if (reel.body == body && record->dynamic) {
+            mass += reel.density * (reel.coil - reel.paid);
+        }
+    }
     return mass;
 }
 
@@ -1460,6 +1505,12 @@ void Kit::cable_polyline(const std::uint32_t cable, std::vector<JPH::RVec3> &out
     out.clear();
     const std::size_t line_index = cable - ropes_.size();
     if (line_index >= lines_.size()) {
+        const std::size_t reel_index = line_index - lines_.size();
+        if (reel_index < reels_.size()) {
+            const Reel &reel = reels_[reel_index];
+            out.push_back(reel.anchor);
+            out.push_back(world_point(reel.body, reel.rim));
+        }
         return;
     }
     const Line &line = lines_[line_index];
@@ -1487,6 +1538,16 @@ float Kit::rope_tension(const RopeIndex rope) const noexcept {
 float Kit::bin_contents(const BinIndex bin) const noexcept {
     const Bin *record = find(bins_, bin);
     return record != nullptr ? record->contents : 0.0F;
+}
+
+float Kit::reel_paid(const ReelIndex reel) const noexcept {
+    const Reel *record = find(reels_, reel);
+    return record != nullptr ? record->paid : 0.0F;
+}
+
+float Kit::reel_wound_kg(const ReelIndex reel) const noexcept {
+    const Reel *record = find(reels_, reel);
+    return record != nullptr ? record->density * (record->coil - record->paid) : 0.0F;
 }
 
 float Kit::bin_capacity(const BinIndex bin) const noexcept {

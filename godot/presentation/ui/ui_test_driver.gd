@@ -55,6 +55,10 @@ const SCENARIOS := {
 	"touch_crane": 22,
 	"pad_crane": 22,
 	"keyboard_crane": 22,
+	# AS-010, Midstack Service, its service lift from TP-640 to the 662 deck.
+	"touch_service": 30,
+	"pad_service": 30,
+	"keyboard_service": 30,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -191,6 +195,12 @@ func _run() -> void:
 			ok = await _crane(InputRouter.Device.GAMEPAD)
 		"keyboard_crane":
 			ok = await _crane(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_service":
+			ok = await _service(InputRouter.Device.TOUCH)
+		"pad_service":
+			ok = await _service(InputRouter.Device.GAMEPAD)
+		"keyboard_service":
+			ok = await _service(InputRouter.Device.KEYBOARD_MOUSE)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1460,7 +1470,9 @@ func _crane_j(device: int) -> bool:
 		return _fail("LET GO did not set J's rail joint down")
 	await _seconds(1.5)
 	if not bool(_crane_state()["j_rail_whole"]):
-		return _fail("set down, J's rail joint did not close the rail's gap")
+		var rest := (_native().get_kit_body_transform(joint) as Transform3D).origin
+		return _fail("set down, J's rail joint did not close the rail's gap (it lies at %s, its seat (1.6, 485.0, -136.2); the rider at %s)" % [
+			str(rest), str(_position())])
 	if not await _pull_handle(device, Vector2(0.0, -135.5), Vector2(0.0, 1.0), 2104, "LANYARD",
 			func() -> bool: return not bool(_crane_state()["j_wagon_latched"])):
 		return false
@@ -1550,6 +1562,98 @@ func _crane_l(device: int) -> bool:
 	await _pose("crane_plate")
 	if not _standing_above(640.2):
 		return _fail("not standing on TP-640 (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
+# AS-010, Midstack Service, its first stage the way its native band test
+# runs it: from TP-640 into the service cage, the rope's shackle hooked on
+# the cage's eye and the reel's chock pulled by its lanyard; the reel falls
+# paying out its cable and hauls the cage to the 662 deck, where its dogs
+# hold it; off onto the deck.
+func _service(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var wrists := _watch_wrists()
+	var body := _watch_body()
+	if not await _service_m(device):
+		return false
+	var worst_wrist := _stop_watch(wrists)
+	var worst_step := _stop_watch(body)
+	if worst_wrist > 0.10:
+		return _fail("a hand jumped %.3f m in one frame between poses (%s)" % [worst_wrist,
+			str(wrists.get("at", ""))])
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	_detail = "deck662_y=%.2f held_m=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, float(_service_state()["m_cage_travel"]),
+		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step, float(body["lift"])]
+	return true
+
+
+func _service_state() -> Dictionary:
+	return _native().get_service_state()
+
+
+func _service_m(device: int) -> bool:
+	# From L's hole north across TP-640 and west into the service cage, round
+	# the shackle hanging over its middle.
+	if not (await _go(device, Vector2(-3.0, -144.3), 0.15, 12.0) and \
+			await _go(device, Vector2(-8.7, -144.3), 0.15, 8.0) and \
+			await _go(device, Vector2(-8.7, -143.5), 0.08, 4.0)):
+		return _fail("the walk into the service cage stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"pick_up", "TAKE", "ROPE SHACKLE"):
+		return _fail("Action read '%s %s' facing M's rope shackle, not TAKE ROPE SHACKLE" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2134, 0.5):
+		return _fail("TAKE did not put M's rope shackle in the hands")
+	if not await _walk_to(device, Vector2(-7.7, -143.5), 0.08, 4.0):
+		return _fail("the step to M's cage eye stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"hook", "HOOK", "ONTO CAGE EYE"):
+		return _fail("Action read '%s %s' at M's cage eye, not HOOK ONTO CAGE EYE" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_service_state()["m_rope_on_eye"]), 0.5):
+		return _fail("HOOK did not put M's rope on the cage's eye")
+	if not await _pull_handle(device, Vector2(-8.0, -142.8), Vector2(0.0, 1.0), 2133, "LANYARD",
+			func() -> bool: return not bool(_service_state()["m_reel_latched"])):
+		return false
+	# The ride, until the cage stands still on its dogs for a second.
+	var last := float(_service_state()["m_cage_travel"])
+	var still := 0.0
+	var waited := 0.0
+	while waited < 40.0 and still < 1.0:
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		waited += dt
+		var travel := float(_service_state()["m_cage_travel"])
+		still = still + dt if travel > 1.0 and absf(travel - last) < 0.0005 else 0.0
+		last = travel
+	var held := float(_service_state()["m_cage_travel"])
+	if still < 1.0 or held < 21.05:
+		return _fail("M's cage never came to rest on its dogs at the 662 deck (travel %.2f m, reel %.2f m)" % [
+			held, float(_service_state()["m_reel_travel"])])
+	await _pose("service_m_top")
+	if int(_native().get_support_entity_id()) != 2130:
+		return _fail("the rider is not in M's cage at the top (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	# Off east onto the 662 deck.
+	if not await _go(device, Vector2(-5.8, -143.5), 0.15, 6.0):
+		return _fail("the step off M's cage onto the 662 deck stalled at %s (on %d, crouched %s, grounded %s, v %s, cage %.3f m)" % [
+			str(_position()), int(_native().get_support_entity_id()), str(_native().is_player_crouched()),
+			str(_ctx()["grounded"]), str(_velocity()), float(_service_state()["m_cage_travel"])])
+	await _seconds(0.5)
+	await _pose("service_deck662")
+	if not _standing_above(662.5):
+		return _fail("not standing on the 662 deck (y %.2f, on %d)" % [_position().y,
 			int(_native().get_support_entity_id())])
 	return true
 
@@ -2033,6 +2137,11 @@ func _stack(device: int) -> bool:
 		return false
 	var at_tp640 := _position().y
 
+	# AS-010's service lift from TP-640 to the 662 deck.
+	if not await _service_m(device):
+		return false
+	var at_deck662 := _position().y
+
 	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
 	# faster than a sprint; only a snap moves the view that far.
 	var worst_step := _stop_watch(body)
@@ -2044,9 +2153,9 @@ func _stack(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
-	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f wet_d_y=%.2f wet_e_y=%.2f tp340_y=%.2f shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f crane_j_y=%.2f crane_k_y=%.2f tp640_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f wet_d_y=%.2f wet_e_y=%.2f tp340_y=%.2f shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f crane_j_y=%.2f crane_k_y=%.2f tp640_y=%.2f deck662_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		at_deck2, at_deck4, at_deck6, at_deck8, at_deck12, at_deck14, at_ring176, at_ring198, at_ring220,
-		at_wet_d, at_wet_e, at_tp340, at_shop_g, at_shop_h, at_ring484, at_crane_j, at_crane_k, at_tp640,
+		at_wet_d, at_wet_e, at_tp340, at_shop_g, at_shop_h, at_ring484, at_crane_j, at_crane_k, at_tp640, at_deck662,
 		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step, float(body["lift"])]
 	return true
 

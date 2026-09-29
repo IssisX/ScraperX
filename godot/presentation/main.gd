@@ -768,11 +768,11 @@ func _carry_name(entity: int) -> String:
 			return "DOMINO PIN"
 		2102:
 			return "RAIL JOINT"
-		2104, 2113, 2125:
+		2104, 2113, 2125, 2133:
 			return "LANYARD"
 		2112:
 			return "PENDANT PIN"
-		2114:
+		2114, 2134:
 			return "ROPE SHACKLE"
 		2124:
 			return "DROP PIN"
@@ -799,7 +799,7 @@ func _kit_anchor_name(entity: int) -> String:
 			return "RAM INLET"
 		2070:
 			return "PLATFORM EYE"
-		2090, 2110:
+		2090, 2110, 2130:
 			return "CAGE EYE"
 		1007:
 			return "CLEAT"

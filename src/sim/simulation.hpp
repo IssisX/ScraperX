@@ -75,6 +75,8 @@ enum class InitialSpawn : std::uint8_t {
     Deck6South = 27,
     Deck8North = 28,
     Deck12North = 29,
+    // AS-010: on TP-640 north of AS-009 L's hole, as a rider off L's cab.
+    PlateTop640 = 30,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };
@@ -185,6 +187,17 @@ struct CraneState final {
     bool l_cart_latched = false;
     double l_cart_travel = 0.0;
     double l_cab_travel = 0.0;
+};
+
+// AS-010's machine state, for the falsifiers.
+struct ServiceState final {
+    bool m_rope_on_eye = false;
+    bool m_reel_latched = false;
+    double m_cage_travel = 0.0;
+    double m_reel_travel = 0.0;
+    double m_reel_kg = 0.0;       // drum, yoke and the cable still wound
+    double m_cable_paid = 0.0;    // m
+    double m_rope_tension = 0.0;  // N
 };
 
 // Band 0, the Stack's machine state, for the falsifiers.
@@ -487,6 +500,15 @@ public:
     static constexpr std::uint64_t kCraneLPinHandleEntityId = 2125;
     static constexpr std::uint64_t kCraneLClutchEntityId = 2126;
     static constexpr std::uint64_t kCraneLClutchHandleEntityId = 2127;
+    // AS-010 Midstack Service: its static structure and its climbing route,
+    // then stage M, the service lift on the cable reel.
+    static constexpr std::uint64_t kServiceFrameEntityId = 1012;
+    static constexpr std::uint64_t kServiceRouteEntityId = 1013;
+    static constexpr std::uint64_t kServiceMCageEntityId = 2130;
+    static constexpr std::uint64_t kServiceMReelEntityId = 2131;
+    static constexpr std::uint64_t kServiceMChockEntityId = 2132;
+    static constexpr std::uint64_t kServiceMHandleEntityId = 2133;
+    static constexpr std::uint64_t kServiceMShackleEntityId = 2134;
     // Band 0, the Stack (grade -> 154 m): its static structure, then S1, the
     // skip hoist.
     static constexpr std::uint64_t kStackFrameEntityId = 1020;
@@ -603,6 +625,7 @@ public:
     [[nodiscard]] WetState wet_state() const noexcept;
     [[nodiscard]] ShopState shop_state() const noexcept;
     [[nodiscard]] CraneState crane_state() const noexcept;
+    [[nodiscard]] ServiceState service_state() const noexcept;
     [[nodiscard]] StackState stack_state() const noexcept;
 
 private:
