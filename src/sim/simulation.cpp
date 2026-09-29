@@ -514,14 +514,6 @@ constexpr int kStackLevelCount = 14;           // decks at 11..154 m; level 0 is
 constexpr float kStackDeckHalfThickness = 0.25F;
 constexpr float kStackDeckBandDepth = 9.0F;    // walkable perimeter band; leaves a 34 m shaft.
 constexpr float kStackColumnHalf = 0.8F;
-constexpr float kStackRampHalfWidth = 1.6F;
-// Each flight climbs under the deck band of the level it serves, so that deck
-// is cut open above the flight's upper run: from where headroom over the
-// slab falls under ~2.5 m to the flight's head, and 0.5 m clear of the slab
-// each side (the stringers guard the edges). Without the well every flight
-// ended at the deck's underside with the player's head on it.
-constexpr float kStackStairwellStart = 7.5F;       // along the climb, from the stack centre
-constexpr float kStackStairwellHalfWidth = 2.1F;
 
 // --- AS-001: Ascent Atlas §6 band B00, "Apron and Intake" (0 -> 24 m) -------
 // The first real campaign slice. Everything here is MOD-* content in the tower
@@ -1644,6 +1636,7 @@ struct LedgeProbe final {
     JPH::BodyID ledge_body;
     std::uint64_t ledge_entity_id = 0;
     JPH::RVec3 wall_point{};
+    JPH::Vec3 inward{JPH::Vec3::sZero()};
     JPH::RVec3 ledge_point{};
     JPH::RVec3 landing_centre{};
     JPH::BodyID landing_body;
@@ -2773,43 +2766,15 @@ private:
         const float band_center = kStackHalfExtent - kStackDeckBandDepth * 0.5F;
         const float inner_half = kStackHalfExtent - kStackDeckBandDepth;
 
-        const float flight_head = kStackHalfExtent - kStackDeckBandDepth;
+        // Continuous deck rings retain the tower's receiving surfaces while
+        // closing every opening cut for the rejected fourteen-flight bypass.
         for (int level = 1; level <= kStackLevelCount; ++level) {
             const float deck_y = static_cast<float>(level) * kStackLevelHeight;
             const float slab_y = deck_y - kStackDeckHalfThickness;
-            // The flight arriving at this level: on band `well_side`, climbing
-            // toward x = well_side * flight_head.
-            const float well_side = ((level - 1) % 2 == 0) ? 1.0F : -1.0F;
-
-            // Deck ring: two full-width bands and two inner bands, leaving a
-            // 22 m shaft open through every level.
             for (const float sz : {1.0F, -1.0F}) {
-                const float band_z = kStackCenterZ + sz * band_center;
-                if (sz != well_side) {
-                    frame(JPH::Vec3(kStackHalfExtent, kStackDeckHalfThickness,
-                                    kStackDeckBandDepth * 0.5F),
-                          JPH::RVec3(kStackCenterX, slab_y, band_z));
-                    continue;
-                }
-                // Band with the stairwell: full depth before and after the
-                // well along x, two side strips beside it.
-                const auto span = [&](const float from, const float to, const float z0,
-                                      const float z1) {
-                    const float x0 = well_side * from;
-                    const float x1 = well_side * to;
-                    frame(JPH::Vec3(std::abs(x1 - x0) * 0.5F, kStackDeckHalfThickness,
-                                    std::abs(z1 - z0) * 0.5F),
-                          JPH::RVec3(kStackCenterX + (x0 + x1) * 0.5F, slab_y,
-                                     kStackCenterZ + sz * (z0 + z1) * 0.5F));
-                };
-                const float band_in = band_center - kStackDeckBandDepth * 0.5F;
-                const float band_out = band_center + kStackDeckBandDepth * 0.5F;
-                const float well_in = band_center - kStackStairwellHalfWidth;
-                const float well_out = band_center + kStackStairwellHalfWidth;
-                span(-kStackHalfExtent, kStackStairwellStart, band_in, band_out);
-                span(flight_head, kStackHalfExtent, band_in, band_out);
-                span(kStackStairwellStart, flight_head, band_in, well_in);
-                span(kStackStairwellStart, flight_head, well_out, band_out);
+                frame(JPH::Vec3(kStackHalfExtent, kStackDeckHalfThickness,
+                                kStackDeckBandDepth * 0.5F),
+                      JPH::RVec3(kStackCenterX, slab_y, kStackCenterZ + sz * band_center));
             }
             for (const float sx : {1.0F, -1.0F}) {
                 frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
@@ -2817,7 +2782,9 @@ private:
             }
         }
 
-        // Columns: corners and edge mid-spans, one run per storey.
+        // Columns: corners and edge mid-spans, one run per storey. No ordinary
+        // stair or ramp bodies are built; ascent is authored by the campaign's
+        // mechanisms and parkour routes.
         for (int level = 0; level < kStackLevelCount; ++level) {
             const float base_y = static_cast<float>(level) * kStackLevelHeight;
             const float column_half = kStackLevelHeight * 0.5F;
@@ -2834,30 +2801,6 @@ private:
                       JPH::RVec3(kStackCenterX, base_y + column_half,
                                  kStackCenterZ + sx * kStackHalfExtent));
             }
-        }
-
-        // Stair runs: one flight per storey, alternating sides so the climb
-        // spirals the perimeter rather than stacking in one corner. A single
-        // inclined slab per flight -- the visible steps are drawn on top of
-        // it, so what you see and what you stand on agree.
-        for (int level = 0; level < kStackLevelCount; ++level) {
-            const float base_y = static_cast<float>(level) * kStackLevelHeight;
-            const float run = kStackHalfExtent * 2.0F - kStackDeckBandDepth * 2.0F;
-            const float rise = kStackLevelHeight;
-            const float length = std::sqrt(run * run + rise * rise);
-            const float pitch = std::atan2(rise, run);
-            const float side = (level % 2 == 0) ? 1.0F : -1.0F;
-            // Runs along X on alternating Z bands, climbing in +X or -X. The
-            // slab is set down by its own half-thickness along its normal so
-            // its walking surface meets the floor below and the deck above
-            // flush at both ends, not 0.19 m proud of them.
-            const JPH::Quat rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), side * pitch);
-            constexpr float kFlightHalfThickness = 0.18F;
-            frame(JPH::Vec3(length * 0.5F, kFlightHalfThickness, kStackRampHalfWidth),
-                  JPH::RVec3(kStackCenterX + side * kFlightHalfThickness * std::sin(pitch),
-                             base_y + rise * 0.5F - kFlightHalfThickness * std::cos(pitch),
-                             kStackCenterZ + side * band_center),
-                  rotation);
         }
     }
 
@@ -4447,10 +4390,23 @@ private:
             return probe;
         }
 
+        const JPH::Vec3 wall_surface =
+            surface_normal(wall_hit.mBodyID, wall_hit.mSubShapeID2, wall_point);
+        JPH::Vec3 outward(wall_surface.GetX(), 0.0F, wall_surface.GetZ());
+        if (outward.IsNearZero()) {
+            return probe;
+        }
+        outward = outward.Normalized();
+        const JPH::Vec3 inward = -outward;
+        const JPH::Vec3 intended = facing.Normalized();
+        if (intended.Dot(inward) <= 0.05F) {
+            return probe;
+        }
+
         const float feet_y = origin.GetY() - kPlayerHalfHeight;
-        const JPH::RVec3 top_origin(wall_point.GetX() + facing.GetX() * kTopProbeInset,
+        const JPH::RVec3 top_origin(wall_point.GetX() + inward.GetX() * kTopProbeInset,
                                     feet_y + maximum_rise + kTopProbeMargin,
-                                    wall_point.GetZ() + facing.GetZ() * kTopProbeInset);
+                                    wall_point.GetZ() + inward.GetZ() * kTopProbeInset);
         const float top_ray_length = maximum_rise + kTopProbeMargin - minimum_rise;
         if (top_ray_length <= 0.0F) {
             return probe;
@@ -4476,9 +4432,9 @@ private:
             return probe;
         }
 
-        const JPH::RVec3 landing_centre(wall_point.GetX() + facing.GetX() * kLandingInset,
+        const JPH::RVec3 landing_centre(wall_point.GetX() + inward.GetX() * kLandingInset,
                                         ledge_point.GetY() + kPlayerHalfHeight + kLandingSkin,
-                                        wall_point.GetZ() + facing.GetZ() * kLandingInset);
+                                        wall_point.GetZ() + inward.GetZ() * kLandingInset);
 
         JPH::BodyID landing_body = top_hit.mBodyID;
         if (require_supported_landing) {
@@ -4506,6 +4462,7 @@ private:
         probe.ledge_body = top_hit.mBodyID;
         probe.ledge_entity_id = bodies.GetUserData(top_hit.mBodyID);
         probe.wall_point = wall_point;
+        probe.inward = inward;
         probe.ledge_point = ledge_point;
         probe.landing_centre = landing_centre;
         probe.landing_body = landing_body;
@@ -5168,15 +5125,16 @@ private:
             return;
         }
 
-        const JPH::RVec3 hold(probe.wall_point.GetX() - facing_.GetX() * (kPlayerRadius + kHangWallGap),
-                              probe.ledge_point.GetY() - kHangDropBelowLedge,
-                              probe.wall_point.GetZ() - facing_.GetZ() * (kPlayerRadius + kHangWallGap));
+        const JPH::RVec3 hold(
+            probe.wall_point.GetX() - probe.inward.GetX() * (kPlayerRadius + kHangWallGap),
+            probe.ledge_point.GetY() - kHangDropBelowLedge,
+            probe.wall_point.GetZ() - probe.inward.GetZ() * (kPlayerRadius + kHangWallGap));
 
         traversal_state_ = TraversalState::Hanging;
         traversal_body_ = probe.ledge_body;
         traversal_entity_id_ = probe.ledge_entity_id;
         traversal_target_body_ = probe.landing_body;
-        traversal_normal_ = facing_;
+        traversal_normal_ = probe.inward;
         traversal_local_hold_ = to_support_local(bodies, traversal_body_, hold);
         traversal_local_ledge_ = to_support_local(bodies, traversal_body_, probe.ledge_point);
         traversal_local_target_ =

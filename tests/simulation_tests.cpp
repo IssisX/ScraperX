@@ -647,25 +647,24 @@ int main() {
 
     {
         Simulation fallback;
-        (void)fallback.advance_frame(0.5);
+        require(fallback.advance_frame(0.5).accepted,
+                "rejected-fallback settling interval must be accepted");
+        require(fallback.entity_body_count(Simulation::kTowerEntityId) == 169,
+                "the default tower must contain continuous deck rings and columns only");
         walk_toward(fallback, -25.0, -118.0, 20.0);
         walk_toward(fallback, -25.0, -128.5, 6.0);
-        for (int level = 0; level < 14; ++level) {
-            const double side = level % 2 == 0 ? 1.0 : -1.0;
-            const double band = -150.0 + side * 21.5;
-            walk_toward(fallback, -side * 20.0, band, 12.0);
-            walk_toward(fallback, side * 21.0, band, 16.0);
-            const auto at = fallback.snapshot();
-            const double deck = 11.0 * (level + 1);
-            require(at.player_grounded && at.player_position.y > deck + 0.5 &&
-                        at.player_position.y < deck + 1.5,
-                    "default fallback must walk every flight without a machine or jump");
-            walk_toward(fallback, side * 21.5, -150.0 - side * 21.5, 12.0);
-        }
-        require(fallback.snapshot().death_count == 0,
-                "default fallback must reach the top without a death restore");
-        std::cout << "PASS scraperx_sim fallback stairs: levels=14 top_y="
-                  << fallback.snapshot().player_position.y << " jump_requests=0\n";
+        walk_toward(fallback, 21.0, -128.5, 16.0);
+        const auto former_flight = fallback.snapshot();
+        require(former_flight.player_grounded && former_flight.death_count == 0,
+                "walking the former first-flight lane must remain supported at grade");
+        require(former_flight.player_position.x > 15.0,
+                "the former first-flight lane must remain traversable after ramp removal");
+        require(former_flight.player_position.y < 2.0,
+                "the rejected first flight must not raise the player above grade");
+        std::cout << "PASS scraperx_sim rejected fallback absent: tower_bodies="
+                  << fallback.entity_body_count(Simulation::kTowerEntityId)
+                  << " former_flight_y=" << former_flight.player_position.y
+                  << " jump_requests=0\n";
 
         Simulation drop(InitialSpawn::HighDrop);
         (void)drop.advance_frame(8.0);
@@ -918,6 +917,48 @@ int main() {
     const auto [away_tap_vaulting, away_tapped] = jump_vault_attempt(-1.0, 12);
     require(!away_tap_vaulting && away_tapped.jump_vault_count == 0,
             "a double-tap with nothing vaultable ahead must not vault");
+
+    // A close diagonal approach near the ledge's corner must use the wall face
+    // actually hit, not the requested facing vector, to locate the top and
+    // landing. The old facing-offset probe stepped sideways past this top.
+    Simulation oblique_mantle(InitialSpawn::MantleApproach,
+                              scraperx::sim::WorldContent::RegressionFixtures);
+    require(oblique_mantle.advance_frame(0.5).accepted,
+            "oblique mantle settling interval must be accepted");
+    require(walk_to(oblique_mantle, 8.45, -4.60, 2.0, 0.12),
+            "the player must reach the close oblique mantle approach");
+    require(oblique_mantle.set_move_input(0.0, 0.0),
+            "oblique mantle stop input must be accepted");
+    require(oblique_mantle.set_facing(1.0, 1.0),
+            "oblique mantle facing must be accepted");
+    require(oblique_mantle.advance_frame(0.2).accepted,
+            "oblique mantle probe interval must be accepted");
+    const auto oblique_ready = oblique_mantle.snapshot();
+    require(oblique_ready.player_grounded,
+            "the close oblique mantle approach must remain grounded");
+    require(oblique_ready.ledge_available &&
+                oblique_ready.ledge_entity_id == Simulation::kMantleLedgeEntityId,
+            "the close oblique wall hit must offer the real mantle ledge");
+    require(oblique_mantle.request_traversal(),
+            "oblique mantle traversal request must be accepted");
+    require(oblique_mantle.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "oblique mantle commit tick must advance");
+    require(oblique_mantle.snapshot().traversal_state == TraversalState::Mantling,
+            "the close oblique ledge must commit a native mantle");
+    require(advance_until(oblique_mantle,
+                          [](const Snapshot &state) {
+                              return state.player_grounded &&
+                                     state.support_entity_id == Simulation::kMantleLedgeEntityId;
+                          },
+                          2.5),
+            "the close oblique mantle must end supported on the real ledge");
+    const auto oblique_mantled = oblique_mantle.snapshot();
+    require(oblique_mantled.accepted_traversal_count == 1 &&
+                oblique_mantled.aborted_traversal_count == 0,
+            "the close oblique mantle must complete once without aborting");
+    std::cout << "PASS scraperx_sim oblique close pull-up: ledge="
+              << oblique_mantled.support_entity_id << " mantle="
+              << oblique_mantled.accepted_traversal_count << '\n';
 
     Simulation mantle(InitialSpawn::MantleApproach, scraperx::sim::WorldContent::RegressionFixtures);
     require(mantle.set_facing(1.0, 0.0), "mantle facing must be accepted");
@@ -2619,35 +2660,23 @@ int main() {
     require(solid.snapshot().player_grounded,
             "the player stopped by the footing must still stand on the yard");
 
-    // Stack stairs are walked, not jumped, and lead somewhere: from the yard,
-    // up all fourteen flights to the top deck with no jump ever requested.
-    // Each flight must end with the capsule standing on the deck it serves,
-    // through the stairwell cut in it, not stalled under that deck's
-    // underside; the route then walks the side band to the next flight's foot.
-    Simulation stair(InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::RegressionFixtures);
-    require(stair.advance_frame(0.5).accepted, "stair settling interval must be accepted");
-    walk_toward(stair, -25.0, -118.0, 20.0);
-    walk_toward(stair, -25.0, -128.5, 6.0);
-    int stack_levels_reached = 0;
-    for (int level = 0; level < 14; ++level) {
-        const double side = (level % 2 == 0) ? 1.0 : -1.0;
-        const double band = -150.0 + side * 21.5;
-        walk_toward(stair, -side * 20.0, band, 12.0);
-        walk_toward(stair, side * 21.0, band, 16.0);
-        const auto head = stair.snapshot();
-        const double deck = 11.0 * (level + 1);
-        if (!(head.player_grounded && head.player_position.y > deck + 0.5 &&
-              head.player_position.y < deck + 1.5)) {
-            break;
-        }
-        stack_levels_reached = level + 1;
-        walk_toward(stair, side * 21.5, -150.0 - side * 21.5, 12.0);
-    }
-    const auto stair_top = stair.snapshot();
-    require(stack_levels_reached == 14,
-            "every stack flight must be walked up onto the deck it serves, grade to the top");
-    require(stair_top.step_up_count > 0,
-            "the route must engage the native step-up; no jump is ever requested");
+    // The rejected fallback is absent from both native ownership and generated
+    // visible collision. The former first-flight lane remains grade-level and
+    // walkable instead of becoming a hidden or visual-only ramp.
+    Simulation former_stair(InitialSpawn::ExteriorGrade,
+                            scraperx::sim::WorldContent::RegressionFixtures);
+    require(former_stair.advance_frame(0.5).accepted,
+            "former-stair settling interval must be accepted");
+    require(former_stair.entity_body_count(Simulation::kTowerEntityId) == 169,
+            "continuous stack rings and columns must own exactly 169 native bodies");
+    walk_toward(former_stair, -25.0, -118.0, 20.0);
+    walk_toward(former_stair, -25.0, -128.5, 6.0);
+    walk_toward(former_stair, 21.0, -128.5, 16.0);
+    const auto former_stair_lane = former_stair.snapshot();
+    require(former_stair_lane.player_grounded && former_stair_lane.death_count == 0 &&
+                former_stair_lane.player_position.x > 15.0 &&
+                former_stair_lane.player_position.y < 2.0,
+            "generated solids must not reintroduce the rejected first ramp");
 
     // The yard sits in a basin, not on a slab in a void: off the grade's
     // east edge the valley floor carries the player 0.3 m lower, the step
@@ -2676,9 +2705,8 @@ int main() {
               << " mirrors=" << solid_loaded.world_solid_mirrors
               << " rejected=" << solid_loaded.world_solid_rejected
               << " buttress_foot_closest=" << foot_closest
-              << " stack_levels=" << stack_levels_reached
-              << " stair_top_y=" << stair_top.player_position.y
-              << " step_ups=" << stair_top.step_up_count
+              << " tower_bodies=" << former_stair.entity_body_count(Simulation::kTowerEntityId)
+              << " former_flight_y=" << former_stair_lane.player_position.y
               << " rim_reach=" << rim_reach << '\n';
 
     // Crouch (GDD 7.2, Governing Law 4). The crawl beam beside the traversal

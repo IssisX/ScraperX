@@ -490,10 +490,13 @@ func _ground_foundation() -> bool:
 	# catches visual-only remnants that would not appear in the physics world.
 	var retired := ["IntakeBay", "WaterScrew", "LegalForty", "Hook5",
 		"StackGear", "GearMotif", "Crane", "GroundWater", "WellA", "WellB"]
+	var rejected_fallback_parts := {"StairFlight": true, "StairTread": true, "StairStringer": true}
 	for node in _main.get_node("TowerPresentation").find_children("*", "", true, false):
 		for prefix in retired:
 			if String(node.name).begins_with(prefix):
 				return _fail("retired scene node remains: " + String(node.name))
+		if node.has_meta(&"part") and rejected_fallback_parts.has(String(node.get_meta(&"part"))):
+			return _fail("rejected fallback scene part remains: " + String(node.get_meta(&"part")))
 	if not await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.0):
 		return _fail("default player did not settle at grade")
 	await _pose("cleared_grade")
@@ -502,7 +505,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=43 retired_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=43 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
 	return true
 
 

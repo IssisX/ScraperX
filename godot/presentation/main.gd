@@ -102,12 +102,6 @@ const STACK_LEVEL_COUNT := 14
 const STACK_DECK_THICKNESS := 0.5
 const STACK_DECK_BAND_DEPTH := 9.0
 const STACK_COLUMN_SIZE := 1.6
-const STACK_RAMP_WIDTH := 3.2
-# Stairwell cut into each deck above the flight that arrives there; mirrors
-# kStackStairwellStart / kStackStairwellHalfWidth in simulation.cpp.
-const STACK_STAIRWELL_START := 7.5
-const STACK_STAIRWELL_HALF_WIDTH := 2.1
-const STACK_FLIGHT_HALF_THICKNESS := 0.18
 
 # AS-001 B00 intake rise. Every figure here mirrors a kIntake* constant in
 # src/sim/simulation.cpp -- what is drawn and what is collided with are the
@@ -2457,33 +2451,10 @@ func _add_barred_wall(parent: Node3D, x0: float, x1: float, z0: float, z1: float
 			parent)
 
 
-# The deck band a flight arrives through, as Rect2 pieces in (x, z) about the
-# stack centre with z measured outward along the band's own side: full depth
-# before and after the well along x, two strips beside it.
-func _stairwell_band_pieces(well_side: float, band_center: float, flight_head: float) -> Array:
-	var band_in := band_center - STACK_DECK_BAND_DEPTH * 0.5
-	var band_out := band_center + STACK_DECK_BAND_DEPTH * 0.5
-	var well_in := band_center - STACK_STAIRWELL_HALF_WIDTH
-	var well_out := band_center + STACK_STAIRWELL_HALF_WIDTH
-	var spans := [
-		[-STACK_HALF_EXTENT, STACK_STAIRWELL_START, band_in, band_out],
-		[flight_head, STACK_HALF_EXTENT, band_in, band_out],
-		[STACK_STAIRWELL_START, flight_head, band_in, well_in],
-		[STACK_STAIRWELL_START, flight_head, well_out, band_out],
-	]
-	var pieces := []
-	for span in spans:
-		var x0: float = well_side * span[0]
-		var x1: float = well_side * span[1]
-		pieces.append(Rect2(minf(x0, x1), span[2], absf(x1 - x0), span[3] - span[2]))
-	return pieces
-
-
-# The stack: the tower's climbable lower section. Deck rings, columns and
-# stair flights mirror real native collision one-for-one; bracing, rails,
-# steps, pipework and lamps are dressing hung on that frame. The player is
-# inside this structure, so it is built to be seen from within as well as
-# from the yard.
+# The stack: the tower's climbable lower section. Continuous deck rings and
+# columns mirror real native collision one-for-one; bracing, rails, pipework
+# and lamps are dressing hung on that frame. The rejected fourteen-flight
+# bypass is absent, so ascent comes from authored mechanisms and parkour.
 func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		rust_bright: Material, galvanised: Material, faded: Material, timber: Material) -> void:
 	var band_center := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH * 0.5
@@ -2491,22 +2462,14 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 	var cx := STACK_CENTER.x
 	var cz := STACK_CENTER.z
 
-	var flight_head := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH
 	for level in range(1, STACK_LEVEL_COUNT + 1):
 		var deck_y := float(level) * STACK_LEVEL_HEIGHT
 		var slab_y := deck_y - STACK_DECK_THICKNESS * 0.5
 		var deck_material: Material = galvanised if level % 2 == 1 else mill_scale
-		var well_side := 1.0 if (level - 1) % 2 == 0 else -1.0
 
 		for sz in [1.0, -1.0]:
-			if sz != well_side:
-				_add_box("StackDeck", Vector3(STACK_HALF_EXTENT * 2.0, STACK_DECK_THICKNESS,
-					STACK_DECK_BAND_DEPTH), Vector3(cx, slab_y, cz + sz * band_center), deck_material)
-				continue
-			for piece in _stairwell_band_pieces(well_side, band_center, flight_head):
-				_add_box("StackDeck", Vector3(piece.size.x, STACK_DECK_THICKNESS, piece.size.y),
-					Vector3(cx + piece.get_center().x, slab_y, cz + sz * piece.get_center().y),
-					deck_material)
+			_add_box("StackDeck", Vector3(STACK_HALF_EXTENT * 2.0, STACK_DECK_THICKNESS,
+				STACK_DECK_BAND_DEPTH), Vector3(cx, slab_y, cz + sz * band_center), deck_material)
 		for sx in [1.0, -1.0]:
 			_add_box("StackDeck", Vector3(STACK_DECK_BAND_DEPTH, STACK_DECK_THICKNESS,
 				inner_half * 2.0), Vector3(cx + sx * band_center, slab_y, cz), deck_material)
@@ -2536,23 +2499,12 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 				_add_box("ShaftPost", Vector3(0.09, 1.1, 0.09),
 					Vector3(cx + post_x, deck_y + 0.55, cz + sz * inner_half), galvanised)
 
-		# Timber decking planks laid over the walking band, warm against iron;
-		# broken where the stairwell opens.
+		# Timber decking planks laid continuously over each receiving band.
 		for plank in range(-2, 3):
 			for sz in [1.0, -1.0]:
 				var plank_z := band_center + float(plank) * 1.35
-				var over_well: bool = sz == well_side \
-					and absf(plank_z - band_center) - 0.55 < STACK_STAIRWELL_HALF_WIDTH
-				if not over_well:
-					_add_box("DeckPlank", Vector3(STACK_HALF_EXTENT * 2.0 - 2.0, 0.08, 1.1),
-						Vector3(cx, deck_y + 0.05, cz + sz * plank_z), timber)
-					continue
-				for run in [[-STACK_HALF_EXTENT + 1.0, STACK_STAIRWELL_START],
-						[flight_head, STACK_HALF_EXTENT - 1.0]]:
-					var x0: float = well_side * run[0]
-					var x1: float = well_side * run[1]
-					_add_box("DeckPlank", Vector3(absf(x1 - x0), 0.08, 1.1),
-						Vector3(cx + (x0 + x1) * 0.5, deck_y + 0.05, cz + sz * plank_z), timber)
+				_add_box("DeckPlank", Vector3(STACK_HALF_EXTENT * 2.0 - 2.0, 0.08, 1.1),
+					Vector3(cx, deck_y + 0.05, cz + sz * plank_z), timber)
 
 	# Columns, and the diagonal bracing that makes a frame a frame.
 	for level in range(0, STACK_LEVEL_COUNT):
@@ -2585,39 +2537,9 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 						cz + direction * STACK_HALF_EXTENT * 0.5), oxidised)
 				brace_z.rotation = Vector3(-direction * brace_pitch, 0.0, 0.0)
 
-	# Stair flights: the inclined slab is the native collision, the treads and
-	# stringers are drawn on top of it so the two agree.
-	for level in range(0, STACK_LEVEL_COUNT):
-		var base_y := float(level) * STACK_LEVEL_HEIGHT
-		var run := STACK_HALF_EXTENT * 2.0 - STACK_DECK_BAND_DEPTH * 2.0
-		var rise := STACK_LEVEL_HEIGHT
-		var length := sqrt(run * run + rise * rise)
-		var pitch := atan2(rise, run)
-		var side := 1.0 if level % 2 == 0 else -1.0
-		# Set down by its half-thickness along its normal so the walking
-		# surface meets both floors flush (mirrors the native flight).
-		var flight_origin := Vector3(cx + side * STACK_FLIGHT_HALF_THICKNESS * sin(pitch),
-			base_y + rise * 0.5 - STACK_FLIGHT_HALF_THICKNESS * cos(pitch), cz + side * band_center)
+	# No ordinary stair or ramp geometry is authored here.
 
-		var flight := _add_box("StairFlight", Vector3(length, 0.36, STACK_RAMP_WIDTH),
-			flight_origin, mill_scale)
-		flight.rotation = Vector3(0.0, 0.0, side * pitch)
-
-		var tread_count := 14
-		for step in range(tread_count):
-			var t := (float(step) + 0.5) / float(tread_count) - 0.5
-			var along := t * length
-			var step_position := flight_origin + Vector3(
-				along * cos(side * pitch), along * sin(side * pitch), 0.0)
-			_add_box("StairTread", Vector3(length / float(tread_count) * 0.86, 0.1,
-				STACK_RAMP_WIDTH * 0.94), step_position + Vector3(0.0, 0.26, 0.0), galvanised)
-		for rail_side in [1.0, -1.0]:
-			var stringer := _add_box("StairStringer", Vector3(length, 0.9, 0.12),
-				flight_origin + Vector3(0.0, 0.5, rail_side * STACK_RAMP_WIDTH * 0.5),
-				rust_bright)
-			stringer.rotation = Vector3(0.0, 0.0, side * pitch)
-
-	# Ordinary stairs remain the optional, slower route. Retired machines do not.
+	# The normal scene keeps only the collision-honest frame and authored ascent routes.
 	if not _regression_scene:
 		_build_stack_footings(rust_deep, oxidised, mill_scale)
 		return

@@ -36,7 +36,7 @@ const MOVING := [
 # a native surface (a solid lip there would snag every step), light glow,
 # cloth, rope and cable, low scrub, water, sky.
 const NON_SOLID := [
-	"DeckPlank", "DeckStreak", "StairTread", "Tread", "SkinRungPlate", "LaneStripe",
+	"DeckPlank", "DeckStreak", "Tread", "SkinRungPlate", "LaneStripe",
 	"EdgeStripe", "FloorLight", "FloorLightHigh", "ColumnLichen", "UpperLightBand",
 	"StandingWater", "StandingWaterTwo", "BannerMark", "SignPlateMark", "Banner",
 	"Rope", "LiftRope", "JibRope", "JibSling", "JibHoistCable", "NeedleHoistCable",
@@ -256,7 +256,7 @@ static func _f(value: float) -> String:
 
 const SOLID := [
 	# Stack frame dressing and its halls, gearing, lifts, jibs, bridges.
-	"ShaftEdgeBeam", "OuterEdgeBeam", "ShaftRail", "ShaftPost", "StackBrace", "StairStringer",
+	"ShaftEdgeBeam", "OuterEdgeBeam", "ShaftRail", "ShaftPost", "StackBrace",
 	"Buttress", "ButtressFoot", "ButtressTie", "MachineHall", "HallCapping", "HallSill",
 	"HallWindow", "HallWindowFront", "HallRib", "GearShaft", "WinchDrum", "DrumCable",
 	"DrumHousing", "CageRoof", "CagePost", "CageLamp", "CageFloor", "CageBack", "LiftGuide",

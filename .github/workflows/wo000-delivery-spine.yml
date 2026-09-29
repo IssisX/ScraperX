@@ -290,12 +290,13 @@ jobs:
           grep -F "SCRAPERX_PARKOUR_CAMERA PASS" artifacts/parkour-camera.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/parkour-camera.log; then exit 1; fi
 
-      - name: Prove default pipe bridge inventory and retained fallback stairs
+      - name: Prove default inventory and rejected fallback absence
         shell: bash
         run: |
           set -euo pipefail
           grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=43 kit_bodies=82 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
-          grep -F "PASS scraperx_sim fallback stairs: levels=14" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=169" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
           mkdir -p artifacts/screenshots godot/.godot
           printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
@@ -304,7 +305,7 @@ jobs:
             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
             -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
             2>&1 | tee artifacts/godot-foundation.log
-          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=43 retired_meshes=0 default_controls=1" artifacts/godot-foundation.log
+          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=43 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
           test -s artifacts/screenshots/foundation_cleared_grade.png
           test -s artifacts/screenshots/foundation_cleared_tower.png
@@ -551,7 +552,8 @@ jobs:
 
           - Native body enumeration finds no retired campaign/fixture entities and checks the exact current moving-body, mechanism-kit-body and cable counts in the default scene; the separate legacy fixture inventory remains isolated.
           - Normal native locomotion, crouch, jump and grade landing execute without legacy construction.
-          - The default world's ordinary fallback staircase is walked through all fourteen flights to the 154 m deck without requesting a jump.
+          - The rejected fourteen-flight inclined-slab bypass is absent from native collision and the rendered scene; continuous deck rings close its exposed wells.
+          - A close oblique ledge approach resolves the contacted wall face and completes a supported pull-up instead of probing sideways past the top.
           - The rendered default scene rejects retired machinery nodes and verifies actual input-driven player movement, jump, crouch and pause. Screenshots are foundation_cleared_grade.png and foundation_cleared_tower.png.
           - Normal rendered solid geometry matches the native production table; separately selected regression geometry matches its separate fixture table.
           - The native graph cross-compiles for Android arm64 and Godot exports the exact-source APK, with its native library, checkpoint identity and checksum.
@@ -566,7 +568,7 @@ jobs:
 
           The AS-019 normal route continues from grade through the pipe bridge, facade, swinging stair, counterweight lift and exterior parkour to a supported +66 m tower ring. Native no-pull and fatal-fall checkpoint continuation tests pass; rendered touch completes this route with zero deaths. This remains a desktop and exported-APK result until Fold installation, play and performance are observed.
 
-          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent. The owner-requested ordinary stairs remain an optional route, not a mechanism proof.
+          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent beyond the supported +66 m ring.
           EOF
 
       - name: Retain failed-run diagnostics
