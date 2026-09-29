@@ -1014,12 +1014,14 @@ func _stack_c2(device: int) -> bool:
 	_act(device)
 	if not await _wait_until(func() -> bool: return _standing_above(79.5), 2.0):
 		return _fail("mantle onto pipe rack failed (y %.2f)" % _position().y)
-	if not (await _go(device, Vector2(18.0, -162.0), 0.1, 6.0) and \
-			await _go(device, Vector2(10.0, -162.0), 0.08, 15.0)):
+	if not await _go(device, Vector2(18.0, -162.0), 0.1, 6.0):
+		return _fail("walk along monorail beam stalled at %s" % str(_position()))
+	# Keyboard strafe is a step off this beam. Forward only; the beam holds the line.
+	if not await _walk_beam(device, Vector2(10.15, -162.0), 0.12, 15.0):
 		return _fail("walk along monorail beam stalled at %s" % str(_position()))
 	await _seconds(0.3)
 	if _position().y < 82.5:
-		return _fail("not standing at monorail beam end (y %.2f)" % _position().y)
+		return _fail("not standing at monorail beam end (at %s)" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
 	await _seconds(0.3)
 	_jump(device)
@@ -1268,7 +1270,7 @@ func _stack(device: int) -> bool:
 	if not on_grate:
 		return _fail("CLIMB did not vault off S1 onto the grate (at %s)" % str(_position()))
 	await _face(Vector2(1.0, 0.0))
-	if not await _walk_to(device, Vector2(15.75, -120.80), 0.16, 8.0):
+	if not await _walk_beam(device, Vector2(15.75, -120.80), 0.16, 8.0):
 		return _fail("the balance along S1's stringer stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
 	if not await _offered(&"climb", "CLIMB"):
@@ -1722,6 +1724,46 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 		waited += get_process_delta_time()
 	_move_dir(device, Vector2.ZERO)
 	return false
+
+
+# Along a balance beam. A stick walks as usual. A keyboard does not strafe:
+# a strafe key steps off, and the arrival strafe on C2's monorail left the
+# body falling (y 81.41) after the walk had already reported arrival.
+func _walk_beam(device: int, target: Vector2, tolerance: float, budget: float) -> bool:
+	if device != InputRouter.Device.KEYBOARD_MOUSE:
+		return await _walk_to(device, target, tolerance, budget)
+	var elapsed := 0.0
+	while elapsed < budget:
+		var at := _position()
+		var to := target - Vector2(at.x, at.z)
+		var planar := Vector2(_velocity().x, _velocity().z).length()
+		if to.length() <= tolerance:
+			_move(device, 0.0)
+			if planar < 0.30:
+				await _seconds(0.15)
+				var still := target - Vector2(_position().x, _position().z)
+				if still.length() <= tolerance:
+					return true
+			elapsed += await _frame_dt()
+			continue
+		if to.length() > 0.02:
+			await _face(to)
+		if to.length() < 0.7:
+			_move(device, 1.0)
+			elapsed += await _frame_dt()
+			_move(device, 0.0)
+			elapsed += await _frame_dt()
+			elapsed += await _frame_dt()
+		else:
+			_move(device, 1.0)
+			elapsed += await _frame_dt()
+	_move(device, 0.0)
+	return false
+
+
+func _frame_dt() -> float:
+	await get_tree().process_frame
+	return get_process_delta_time()
 
 
 # Holds the left stick at `amount` of full throw toward canvas `direction`.

@@ -963,14 +963,12 @@ void build_c2(std::vector<Part> &route) {
     for (const auto &s : kSteps) {
         route.push_back(span({s.x0, 77.00F, kBeamZ0}, {s.x1, s.y, kBeamZ1}, Material::Yellow));
     }
-    // Level balance beam at Y = 82.00 from X = 13.00 out to X = 9.80.
-    // 0.35 m wide, so it is a beam: a walk is held on its line. The old 0.90 m
-    // slab was too wide to balance and too narrow for a keyboard's arrival
-    // strafe — the body reached this end already falling.
-    route.push_back(span({9.80F, 81.50F, -162.175F}, {13.00F, 82.00F, -161.825F}, Material::Yellow));
-    // Hazard cheek on the west face only. It must not be a second floor: a
-    // short cap under the stop point would turn balance off where the leap starts.
-    route.push_back(span({9.72F, 81.55F, -162.195F}, {9.80F, 82.00F, -161.805F}, Material::Hazard));
+    // Level balance beam, 0.35 m wide, from the last step out past the stop.
+    // The run past x = 9.80 is braking room: a keyboard arrival that is still
+    // moving must stay on steel. The cheek is the west face only, not a second
+    // floor — a short cap under the stop would turn balance off.
+    route.push_back(span({9.20F, 81.50F, -162.175F}, {13.00F, 82.00F, -161.825F}, Material::Yellow));
+    route.push_back(span({9.12F, 81.55F, -162.195F}, {9.20F, 82.00F, -161.805F}, Material::Hazard));
 
     // 5. Davit hanging ladder from Deck 8 (arm at 88.00F to 89.20F)
     constexpr float kC2DavitX = 10.00F;
