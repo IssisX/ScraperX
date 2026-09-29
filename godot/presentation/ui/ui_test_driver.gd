@@ -51,6 +51,10 @@ const SCENARIOS := {
 	"touch_shop": 19,
 	"pad_shop": 19,
 	"keyboard_shop": 19,
+	# AS-009, the Facade Crane Stack, on its three machines from the 484 ring to TP-640.
+	"touch_crane": 22,
+	"pad_crane": 22,
+	"keyboard_crane": 22,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -181,6 +185,12 @@ func _run() -> void:
 			ok = await _shop(InputRouter.Device.GAMEPAD)
 		"keyboard_shop":
 			ok = await _shop(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_crane":
+			ok = await _crane(InputRouter.Device.TOUCH)
+		"pad_crane":
+			ok = await _crane(InputRouter.Device.GAMEPAD)
+		"keyboard_crane":
+			ok = await _crane(InputRouter.Device.KEYBOARD_MOUSE)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1373,6 +1383,177 @@ func _shop_ladder(device: int) -> bool:
 	return true
 
 
+# AS-009, the Facade Crane Stack, the way its native band test runs it: from
+# the 484 ring, J's rail joint carried onto its traveler and laid in the
+# cradle, the wagon's chock pulled, a ride to the 528 ring; round the ring to
+# K's cage, its rope hooked on, the jib's pendant pin drawn, a ride to the 572
+# ring; round to L's cab, the winch's clutch thrown in and the drop weight's
+# pin drawn, a ride into TP-640; off onto the plate.
+func _crane(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var wrists := _watch_wrists()
+	var body := _watch_body()
+	if not await _crane_j(device):
+		return false
+	var at_j := _position().y
+	if not await _crane_k(device):
+		return false
+	var at_k := _position().y
+	if not await _crane_l(device):
+		return false
+	var worst_wrist := _stop_watch(wrists)
+	var worst_step := _stop_watch(body)
+	if worst_wrist > 0.10:
+		return _fail("a hand jumped %.3f m in one frame between poses (%s)" % [worst_wrist,
+			str(wrists.get("at", ""))])
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	_detail = "crane_j_y=%.2f crane_k_y=%.2f tp640_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		at_j, at_k, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step,
+		float(body["lift"])]
+	return true
+
+
+func _crane_state() -> Dictionary:
+	return _native().get_crane_state()
+
+
+func _crane_j(device: int) -> bool:
+	# Off the ladder from I's cage, round to the 484 ring's north band.
+	var here := _position()
+	if here.x < -8.0 and not await _go(device, Vector2(here.x, -140.3), 0.15, 12.0):
+		return _fail("the walk round to the 484 ring's north band stalled at %s" % str(_position()))
+	if not (await _go(device, Vector2(-3.0, -140.3), 0.15, 12.0) and \
+			await _go(device, Vector2(2.8, -139.0), 0.08, 12.0)):
+		return _fail("the walk to J's rail joint stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"pick_up", "PICK UP", "RAIL JOINT"):
+		return _fail("Action read '%s %s' facing J's rail joint, not PICK UP RAIL JOINT" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2102, 0.5):
+		return _fail("PICK UP did not lift J's rail joint")
+	# Onto J's traveler and to the cradle, the joint in hand.
+	if not (await _go(device, Vector2(-0.3, -138.3), 0.15, 8.0) and \
+			await _go(device, Vector2(-0.3, -136.2), 0.08, 6.0) and \
+			await _go(device, Vector2(0.9, -136.2), 0.08, 6.0)):
+		return _fail("carrying J's rail joint to its cradle stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	# Steadied before it is set down, as a player does with a swinging load.
+	await _seconds(0.6)
+	var joint := int(_native().get_kit_body_index(2102))
+	var joint_last := (_native().get_kit_body_transform(joint) as Transform3D).origin
+	for frame in 180:
+		await get_tree().process_frame
+		var joint_now := (_native().get_kit_body_transform(joint) as Transform3D).origin
+		var swing := (joint_now - joint_last).length() / get_process_delta_time()
+		joint_last = joint_now
+		if swing < 0.05:
+			break
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not set J's rail joint down")
+	await _seconds(1.5)
+	if not bool(_crane_state()["j_rail_whole"]):
+		return _fail("set down, J's rail joint did not close the rail's gap")
+	if not await _pull_handle(device, Vector2(0.0, -135.5), Vector2(0.0, 1.0), 2104, "LANYARD",
+			func() -> bool: return not bool(_crane_state()["j_wagon_latched"])):
+		return false
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_crane_state()["j_traveler_travel"]) >= 43.9, 60.0)
+	if not arrived:
+		return _fail("J's traveler never reached the 528 ring (travel %.2f m)" %
+			float(_crane_state()["j_traveler_travel"]))
+	await _seconds(1.0)
+	await _pose("crane_j_top")
+	if int(_native().get_support_entity_id()) != 2100:
+		return _fail("the rider is not on J's traveler at the top (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
+func _crane_k(device: int) -> bool:
+	# Off J round the 528 ring and over the board to K's cage.
+	if not (await _go(device, Vector2(0.0, -138.6), 0.15, 8.0) and \
+			await _go(device, Vector2(0.0, -141.5), 0.15, 8.0) and \
+			await _go(device, Vector2(-8.5, -141.5), 0.15, 12.0) and \
+			await _go(device, Vector2(-8.5, -155.0), 0.15, 16.0) and \
+			await _go(device, Vector2(-11.6, -155.0), 0.15, 8.0)):
+		return _fail("the walk round the 528 ring to K's cage stalled at %s" % str(_position()))
+	# To the cage's north side, along it clear of the shackle on its long
+	# rope, and round behind it.
+	if not (await _go(device, Vector2(_position().x, -154.2), 0.15, 6.0) and \
+			await _go(device, Vector2(-13.3, -154.2), 0.15, 10.0) and \
+			await _go(device, Vector2(-13.3, -155.0), 0.08, 4.0)):
+		return _fail("the walk round K's shackle stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"pick_up", "TAKE", "ROPE SHACKLE"):
+		return _fail("Action read '%s %s' facing K's rope shackle, not TAKE ROPE SHACKLE" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2114, 0.5):
+		return _fail("TAKE did not put K's rope shackle in the hands")
+	if not await _walk_to(device, Vector2(-12.3, -155.0), 0.08, 4.0):
+		return _fail("the step to K's cage eye stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"hook", "HOOK", "ONTO CAGE EYE"):
+		return _fail("Action read '%s %s' at K's cage eye, not HOOK ONTO CAGE EYE" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_crane_state()["k_rope_on_eye"]), 0.5):
+		return _fail("HOOK did not put K's rope on the cage's eye")
+	if not await _pull_handle(device, Vector2(-12.6, -154.3), Vector2(0.0, 1.0), 2113, "LANYARD",
+			func() -> bool: return not bool(_crane_state()["k_jib_latched"])):
+		return false
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_crane_state()["k_cage_travel"]) >= 43.9, 90.0)
+	if not arrived:
+		return _fail("K's cage never reached the 572 ring (travel %.2f m)" %
+			float(_crane_state()["k_cage_travel"]))
+	await _seconds(1.0)
+	await _pose("crane_k_top")
+	if int(_native().get_support_entity_id()) != 2110:
+		return _fail("the rider is not in K's cage at the top (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
+func _crane_l(device: int) -> bool:
+	# Over the board and round the 572 ring to L's cab.
+	if not (await _go(device, Vector2(-11.9, -155.0), 0.15, 6.0) and \
+			await _go(device, Vector2(-6.5, -155.0), 0.15, 10.0) and \
+			await _go(device, Vector2(-6.5, -156.7), 0.15, 6.0) and \
+			await _go(device, Vector2(-3.0, -156.7), 0.15, 8.0) and \
+			await _go(device, Vector2(-3.0, -159.6), 0.15, 6.0)):
+		return _fail("the walk round the 572 ring into L's cab stalled at %s" % str(_position()))
+	if not await _pull_handle(device, Vector2(-3.7, -159.4), Vector2(0.0, 1.0), 2127, "CLUTCH HANDLE",
+			func() -> bool: return bool(_crane_state()["l_clutch_in"])):
+		return false
+	if not await _pull_handle(device, Vector2(-3.0, -160.8), Vector2(0.0, -1.0), 2125, "LANYARD",
+			func() -> bool: return not bool(_crane_state()["l_weight_latched"])):
+		return false
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_crane_state()["l_cab_travel"]) >= 67.9, 90.0)
+	if not arrived:
+		var l := _crane_state()
+		return _fail("L's cab never reached TP-640 (travel %.2f m, clutch in %s, weight latched %s, cart latched %s)" % [
+			float(l["l_cab_travel"]), str(l["l_clutch_in"]), str(l["l_weight_latched"]), str(l["l_cart_latched"])])
+	await _seconds(1.0)
+	if not await _go(device, Vector2(-3.0, -156.5), 0.15, 8.0):
+		return _fail("the step off L's cab onto TP-640 stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	await _pose("crane_plate")
+	if not _standing_above(640.2):
+		return _fail("not standing on TP-640 (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
 func _stack_s2(device: int) -> bool:
 	if not await _go(device, Vector2(10.0, -130.5), 0.15, 15.0) or \
 			not await _walk_to(device, Vector2(10.0, -137.6), 0.10, 15.0):
@@ -1841,6 +2022,17 @@ func _stack(device: int) -> bool:
 		return false
 	var at_ring484 := _position().y
 
+	# Round the 484 ring to AS-009, up its three machines into TP-640.
+	if not await _crane_j(device):
+		return false
+	var at_crane_j := _position().y
+	if not await _crane_k(device):
+		return false
+	var at_crane_k := _position().y
+	if not await _crane_l(device):
+		return false
+	var at_tp640 := _position().y
+
 	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
 	# faster than a sprint; only a snap moves the view that far.
 	var worst_step := _stop_watch(body)
@@ -1852,9 +2044,9 @@ func _stack(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
-	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f wet_d_y=%.2f wet_e_y=%.2f tp340_y=%.2f shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f wet_d_y=%.2f wet_e_y=%.2f tp340_y=%.2f shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f crane_j_y=%.2f crane_k_y=%.2f tp640_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		at_deck2, at_deck4, at_deck6, at_deck8, at_deck12, at_deck14, at_ring176, at_ring198, at_ring220,
-		at_wet_d, at_wet_e, at_tp340, at_shop_g, at_shop_h, at_ring484,
+		at_wet_d, at_wet_e, at_tp340, at_shop_g, at_shop_h, at_ring484, at_crane_j, at_crane_k, at_tp640,
 		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step, float(body["lift"])]
 	return true
 
