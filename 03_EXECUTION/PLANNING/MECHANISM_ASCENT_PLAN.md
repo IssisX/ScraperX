@@ -141,7 +141,7 @@ Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has hei
 | — | AS-008 Plate Shop | 340 → 484 m | the well's west half | G, a netted scaffold tower slumping down its shaft; H, a transfer girder tipped by a plate trolley rolling past its fulcrum; I, a domino beam tripping a 20 t monolith whose fall hauls a cage; a ladder to the 484 ring | built; played through the game's input on touch, pad and keyboard, in one run from grade to TP-640 (cycle 10, §11) |
 | — | AS-009 Facade Crane Stack | 484 → 640 m | the tower's faces | J, a runaway rail wagon dragging a facade traveler up its rails once its missing rail joint is laid; K, a retired tower crane's jib swinging down like a pendulum; L, a freight cart's run down an incline driving a two-drum winch into TP-640 | built; played through the game's input on touch, pad and keyboard, in one run from grade to TP-640 (cycle 10, §11) |
 
-Above TP-640 (640 → 1,600 m) nothing is built: AS-010 to AS-015 are unauthored.
+Above TP-640 no route is built: only the tower's solid mass (`TowerMass` in the world solids) rises on to 1,600 m, and AS-010 to AS-015 are unauthored.
 
 Retired 2026-09-28: `ScraperX-Claude`'s own S2, the swinging stair (44 → 55 m, cycle 3,
 `a96b60b`), when the owner had `Gemini`'s world merged into this branch; its contract, evaluator
