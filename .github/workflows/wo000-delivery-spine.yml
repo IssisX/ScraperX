@@ -24,6 +24,12 @@ env:
   ANDROID_HOME: /usr/local/lib/android/sdk
   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
   ANDROID_NDK_VERSION: 29.0.14206865
+  # Public CI-only debug signer. This key exists solely so successive ChatGPT
+  # test APKs have one Android signer and can update in place on the Fold.
+  GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/ci/android/ScraperX-ChatGPT-debug.keystore
+  GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+  GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+  CHATGPT_SIGNER_SHA256: 9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4
 
 jobs:
   moving-support-truth:
@@ -490,6 +496,17 @@ jobs:
           grep -F 'package/unique_name="com.cory.scraperx.chatgpt"' godot/export_presets.cfg
           grep -F 'package/name="ScraperX-ChatGPT"' godot/export_presets.cfg
 
+          # A fresh GitHub runner must not invent a new signing identity. The
+          # committed debug-only keystore is the branch authority for test APKs.
+          test -s "${GODOT_ANDROID_KEYSTORE_DEBUG_PATH}"
+          keytool -list -v \
+            -keystore "${GODOT_ANDROID_KEYSTORE_DEBUG_PATH}" \
+            -storepass "${GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD}" \
+            -alias "${GODOT_ANDROID_KEYSTORE_DEBUG_USER}" \
+            | tee artifacts/chatgpt-debug-keystore.txt
+          KEYSTORE_SIGNER_SHA256="$(awk '/SHA256:/{gsub(":", "", $2); print tolower($2); exit}' artifacts/chatgpt-debug-keystore.txt)"
+          test "${KEYSTORE_SIGNER_SHA256}" = "${CHATGPT_SIGNER_SHA256}"
+
           mkdir -p build/apk artifacts/apk
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
@@ -509,10 +526,16 @@ jobs:
           grep -F "package: name='${PACKAGE_ID}'" artifacts/apk-badging.txt
           grep -F "application-label:'${APP_LABEL}'" artifacts/apk-badging.txt
 
+          APKSIGNER="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "${APKSIGNER}"
+          "${APKSIGNER}" verify --verbose --print-certs "build/apk/${APK_NAME}" \
+            | tee artifacts/apk-signing.txt
+          grep -F "Signer #1 certificate SHA-256 digest: ${CHATGPT_SIGNER_SHA256}" artifacts/apk-signing.txt
+
           cp "build/apk/${APK_NAME}" artifacts/apk/
           sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
-          printf 'author=%s\nbranch=%s\ncommit=%s\napk=%s\npackage=%s\nlabel=%s\n' \
-            "ChatGPT" "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" "${PACKAGE_ID}" "${APP_LABEL}" \
+          printf 'author=%s\nbranch=%s\ncommit=%s\napk=%s\npackage=%s\nlabel=%s\nsigner_sha256=%s\n' \
+            "ChatGPT" "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${APK_NAME}" "${PACKAGE_ID}" "${APP_LABEL}" "${CHATGPT_SIGNER_SHA256}" \
             > artifacts/apk/CHECKPOINT.txt
 
       - name: Record evidence boundaries
