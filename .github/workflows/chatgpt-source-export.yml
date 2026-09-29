@@ -1,4 +1,4 @@
-name: ChatGPT Source Export
+name: AS-020 Candidate Proof
 
 on:
   push:
@@ -10,17 +10,41 @@ permissions:
   contents: read
 
 jobs:
-  export:
-    runs-on: ubuntu-latest
+  native-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
-      - name: Check out exact branch head
+      - name: Check out exact ChatGPT-derived source
         uses: actions/checkout@v4
-      - name: Upload exact source tree
-        uses: actions/upload-artifact@v4
-        with:
-          name: chatgpt-exact-source
-          path: |
-            .
-            !.git/**
-          include-hidden-files: true
-          retention-days: 1
+
+      - name: Reconstruct and apply exact local candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode ci/as020-candidate.patch.gz.b64 | gzip --decompress > /tmp/as020.patch
+          echo "76061abc871b6a5b941f9d80147c84d0b6a718278ef80d454ce55bb92b628014  /tmp/as020.patch" | sha256sum --check
+          git apply --check /tmp/as020.patch
+          git apply /tmp/as020.patch
+          git diff --check
+
+      - name: Build native graph and run full native suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build
+          cmake -S . -B build/host -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSCRAPERX_BUILD_BRIDGE=OFF \
+            -DSCRAPERX_WITH_JOLT=ON
+          cmake --build build/host --target \
+            scraperx_sim_tests \
+            scraperx_ascent_route_tests \
+            scraperx_swing_stair_route_tests \
+            scraperx_parkour_flow_tests \
+            scraperx_pipe_bridge_tests \
+            scraperx_pipe_bridge_refinement \
+            --parallel 2
+          ctest --test-dir build/host --output-on-failure
+          ./build/host/scraperx_swing_stair_route_tests 8 | tee /tmp/as020-route.log
+          grep -F "PASS normal-input grade to supported +77m through the indexed flywheel" /tmp/as020-route.log
