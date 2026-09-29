@@ -1019,7 +1019,7 @@ func _stack_c2(device: int) -> bool:
 		return _fail("walk along monorail beam stalled at %s" % str(_position()))
 	await _seconds(0.3)
 	if _position().y < 82.5:
-		return _fail("not standing at monorail beam end (at %s)" % str(_position()))
+		return _fail("not standing at monorail beam end (y %.2f)" % _position().y)
 	await _face(Vector2(0.0, -1.0))
 	await _seconds(0.3)
 	_jump(device)
@@ -1691,18 +1691,8 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 		var to := target - Vector2(at.x, at.z)
 		if to.length() <= tolerance:
 			_move_dir(device, Vector2.ZERO)
-			# Inside the disk is not arrived if the body is still sliding. A
-			# key's last pulse is full throw; releasing it on the end of a
-			# beam carries the body off before the next check.
-			var planar := Vector2(_velocity().x, _velocity().z).length()
-			if planar < 0.25:
-				await _seconds(0.15)
-				var settled_to := target - Vector2(_position().x, _position().z)
-				if settled_to.length() <= tolerance and Vector2(_velocity().x, _velocity().z).length() < 0.35:
-					return true
-			await get_tree().process_frame
-			waited += get_process_delta_time()
-			continue
+			await _seconds(0.2)
+			return true
 		var yaw := float(_main._yaw)
 		var forward := Vector2(-sin(yaw), -cos(yaw))
 		var right := Vector2(cos(yaw), -sin(yaw))
@@ -1711,25 +1701,20 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 			var lateral := to.dot(right)
 			var along := to.dot(forward)
 			# Keys are full throw, so strafe and forward together crab at 45°.
-			# A sidestep of more than a foot is a strafe, and the arrival pulse
-			# must not clear it — that left a rig walk 3 cm short. A smaller
-			# miss is only "mostly sideways" because the point is close.
-			# Holding strafe there sprints off a beam, so it is a nudge, and
-			# that frame is not pulsed away.
+			# Mostly-sideways misses are a strafe. A long beam still gets a
+			# sideways nudge one frame in four, and that nudge is not pulsed
+			# away — the close-in pulse was erasing it, which left the rig
+			# walk 3 cm outside its tolerance.
 			var side_miss := absf(lateral) > 0.06
-			var mostly_side := side_miss and absf(lateral) >= absf(along)
-			var nudged := false
-			if mostly_side and absf(lateral) > 0.25:
+			if side_miss and absf(lateral) >= absf(along):
 				v = Vector2(signf(lateral), 0.0)
 			else:
 				v.x = 0.0
 				if side_miss:
 					frame += 1
-					var nudge_every := 2 if mostly_side else 4
-					if frame % nudge_every == 0:
+					if frame % 4 == 0:
 						v = Vector2(signf(lateral), 0.0)
-						nudged = true
-			if to.length() < 0.8 and not nudged and not (mostly_side and absf(lateral) > 0.25):
+			if to.length() < 0.8 and not (side_miss and absf(lateral) >= absf(along)):
 				frame += 1
 				v = v.normalized() if v.length_squared() > 1.0e-6 and frame % 6 < 2 else Vector2.ZERO
 		_move_dir(device, v)
