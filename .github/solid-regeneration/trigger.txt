@@ -1,1 +1,0 @@
-Regenerate normal and regression world-solid tables from commit 7d60fb8d1d2b775e6ab04cb46bba2ccdfc9ff625.
