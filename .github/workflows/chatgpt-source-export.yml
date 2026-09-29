@@ -1,0 +1,26 @@
+name: ChatGPT Source Export
+
+on:
+  push:
+    branches:
+      - chatgpt-source-export-20260929
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact branch head
+        uses: actions/checkout@v4
+      - name: Upload exact source tree
+        uses: actions/upload-artifact@v4
+        with:
+          name: chatgpt-exact-source
+          path: |
+            .
+            !.git/**
+          include-hidden-files: true
+          retention-days: 1
