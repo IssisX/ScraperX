@@ -151,6 +151,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_checkpoint_commit_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_death_count"),
                                 &ScraperXSimulation::get_death_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_step_up_meters"),
+                                &ScraperXSimulation::get_step_up_meters);
 
 
 
@@ -498,6 +500,10 @@ std::int64_t ScraperXSimulation::get_checkpoint_commit_count() const {
 
 std::int64_t ScraperXSimulation::get_death_count() const {
     return static_cast<std::int64_t>(simulation_->snapshot().death_count);
+}
+
+double ScraperXSimulation::get_step_up_meters() const {
+    return simulation_->snapshot().step_up_meters;
 }
 
 double ScraperXSimulation::get_tower_height_meters() const {

@@ -2337,6 +2337,7 @@ private:
         bodies.SetPosition(player_id_, at + JPH::Vec3(0.0F, rise + 0.01F, 0.0F),
                            JPH::EActivation::Activate);
         ++step_up_count_;
+        step_up_meters_ += static_cast<double>(rise + 0.01F);
     }
 
     // Real quadratic drag opposing the full velocity vector, not a clamp: it
@@ -3569,6 +3570,7 @@ private:
         state_.accepted_traversal_count = accepted_traversal_count_;
         state_.world_solid_bodies = world_solid_bodies_;
         state_.step_up_count = step_up_count_;
+        state_.step_up_meters = step_up_meters_;
         state_.jump_vault_count = jump_vault_count_;
         state_.world_solid_mirrors = world_solid_mirrors_;
         state_.world_solid_rejected = world_solid_rejected_;
@@ -3638,6 +3640,7 @@ private:
     double rotating_support_yaw_radians_ = 0.0;
 
     std::uint64_t step_up_count_ = 0;
+    double step_up_meters_ = 0.0;
     std::uint64_t jump_vault_count_ = 0;
     std::uint32_t jump_vault_ticks_left_ = 0;
     float jump_takeoff_feet_y_ = 0.0F;
@@ -4074,6 +4077,7 @@ StackState Simulation::stack_state() const noexcept {
 void Simulation::step_fixed() noexcept {
     const std::uint64_t previous_death_count = snapshot_.death_count;
     const bool previous_crouched = snapshot_.player_crouched;
+    const std::uint64_t previous_step_up_count = snapshot_.step_up_count;
     previous_player_position_ = snapshot_.player_position;
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
@@ -4107,8 +4111,11 @@ void Simulation::step_fixed() noexcept {
     const double render_dx = snapshot_.player_position.x - previous_player_position_.x;
     const double render_dy = snapshot_.player_position.y - previous_player_position_.y;
     const double render_dz = snapshot_.player_position.z - previous_player_position_.z;
+    // A crouch or a step lifts the body in one tick: the render pose takes it
+    // whole, and the presentation eases the eye over it from the snapshot.
     if (snapshot_.death_count != previous_death_count ||
         snapshot_.player_crouched != previous_crouched ||
+        snapshot_.step_up_count != previous_step_up_count ||
         render_dx * render_dx + render_dy * render_dy + render_dz * render_dz > 1.0) {
         previous_player_position_ = snapshot_.player_position;
     }

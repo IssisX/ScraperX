@@ -138,8 +138,9 @@ Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has hei
 | — | Backup path (rule 8) | 0 → 221 m | — | a plain stair or ladder way past the stages for a player who does not want to do them | not built |
 | — | AS-006 Counterweight Well | 154 → 220 m | shaft | skip lift, derrick boom, debris chute; non-lift climbing spine | built; cycle 7/8 integration target |
 | — | AS-007 Wet Isolation | 220 → 340 m | shaft | water, air and hydraulics; non-lift climbing route | built; played through the game's input on touch, pad and keyboard, in one run from grade to TP-340 (cycle 10, §11) |
+| — | AS-008 Plate Shop | 340 → 484 m | the well's west half | G, a netted scaffold tower slumping down its shaft; H, a transfer girder tipped by a plate trolley rolling past its fulcrum; I, a domino beam tripping a 20 t monolith whose fall hauls a cage; a ladder to the 484 ring | built; played through the game's input on touch, pad and keyboard, in one run from grade to the 484 ring (cycle 10, §11) |
 
-The route above 340 m (AS-008, AS-009) stays as built until the ascent reaches it.
+The route above 484 m (AS-009) stays as built until the ascent reaches it.
 
 Retired 2026-09-28: `ScraperX-Claude`'s own S2, the swinging stair (44 → 55 m, cycle 3,
 `a96b60b`), when the owner had `Gemini`'s world merged into this branch; its contract, evaluator
@@ -357,6 +358,14 @@ Elev. (m)   Band / Section                      Coupling Mechanism / Challenge
 | The 66, 88 and 132 m START options loaded grade | the bridge refused spawns 27-29 | its spawn bound was the last enumerator at the time (Deck4South) | an enum sentinel, `InitialSpawn::Count`; falsified by `touch_pause`, which loads every START option |
 
 Also through the input path, the ledge-catch snap (cycle 6's C2 duct, keyboard): a hang caught at arm's length now pulls the body in at 3 m/s (`kHangPullInSpeed`); falsified natively (0.70 m in a tick snapped, 0.033 m pulled). **Open for the owner:** AS-007's lifts are a float (D), compressed air (E) and a hydraulic ram (F); the owner's catalogue lists these archetypes (02, 05, 08), while the `MACRO-TRAVERSAL-STRICT` profile this plan cites (its header) bans fluid drives and buoyancy on the primary path. They stay until the owner decides.
+
+**Result, cycle 10 continued: AS-008 (as built, 2026-09-29).** Through the game's input: `touch_shop`, `pad_shop`, `keyboard_shop` from the TP-340 start (G's rope unhooked from its cleat, carried onto its platform and hooked on the eye, its prop pin drawn by the lanyard; the girder's tail pin carried out, over the gangway onto H, its chock yanked; across onto I's cage, its shackle hooked on, the domino's pin drawn; up the ladder) to standing on the 484 ring (485.15 m, ~123 s each); and `touch_stack`, `pad_stack`, `keyboard_stack` now run from the game's start through AS-008 to the 484 ring in one run (~473 s each). All block the APK. The input path exposed one defect the native tests could not see, because it is in the view:
+
+| Defect | Invalid state | Transition that allowed it | Change that makes it unreachable |
+|---|---|---|---|
+| The view popped on every step up (seen stepping onto G's platform with its rope in hand) | the eye rose 0.17 m in one frame; the hands, held on the rope's shackle, jumped 0.166 m across the view | a native step lifts the body up to 0.36 m in one tick, as Jolt's character walks stairs, and the eye was placed at the body | the native counts the lift (`step_up_meters`), the render pose takes a step tick whole, and the eye takes the lift as a lag it closes at 14/s, never slower than 1 m/s (`main.gd`); falsified by the stack and shop runs' view-lift bound, 0.10 m beyond the body's own motion in a frame (0.198 m with the ease removed, at most 0.071 m with it) |
+
+The hands are watched on AS-008's ropes, pins and lanyards, as on AS-007's machines and S1's chain; the ladder's top-out is not, because a mantle's reach to the lip is uncapped by design (`first_person_arms.gd`: the palm must land before the body rises past it) and moves a hand about 7 m/s.
 
 ---
 

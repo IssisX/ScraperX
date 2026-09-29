@@ -80,6 +80,13 @@ const STAND_HALF_HEIGHT := 0.9
 const CROUCH_HALF_HEIGHT := 0.6
 const CROUCH_EYE_OVER_SOLES := 0.95
 const CROUCH_EYE_SECONDS := 0.16
+# A step up is one native tick's lift of up to 0.36 m (kStepMaximumHeight and
+# its clearance), taken whole by the render pose. The eye takes it as a lag
+# below the body, closed at 14/s and never slower than 1 m/s, so it glides
+# onto the step and settles exactly on it: the snap never reaches the view.
+const STEP_EYE_RESPONSE_PER_SECOND := 14.0
+const STEP_EYE_MIN_MPS := 1.0
+const STEP_EYE_MAX_LAG := 0.36
 const HEAD_BOB_SPEED_FLOOR_MPS := 0.3
 const HEAD_BOB_SPEED_FULL_MPS := 3.0
 const HEAD_BOB_RESPONSE_PER_SECOND := 12.0
@@ -161,6 +168,8 @@ var _cam_bob_weight := 0.0
 var _cam_fov_offset := 0.0
 var _cam_bank := 0.0
 var _crouch_eye := 0.0
+var _step_eye_lag := 0.0
+var _step_meters_seen := 0.0
 # DISPLAY settings; the defaults are the tuned values above.
 var _fov_base := FOV_BASE
 var _head_bob_on := true
@@ -1123,6 +1132,14 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		var soles_y := position.y - (CROUCH_HALF_HEIGHT if crouched else STAND_HALF_HEIGHT)
 		eye.y = soles_y + lerpf(STAND_HALF_HEIGHT + EYE_OFFSET.y, CROUCH_EYE_OVER_SOLES,
 			smoothstep(0.0, 1.0, _crouch_eye))
+	# A new native (a restart) counts its steps from zero: only a rise lags.
+	var stepped_total := float(_native.get_step_up_meters())
+	if stepped_total > _step_meters_seen:
+		_step_eye_lag = maxf(_step_eye_lag - (stepped_total - _step_meters_seen), -STEP_EYE_MAX_LAG)
+	_step_meters_seen = stepped_total
+	_step_eye_lag = move_toward(_step_eye_lag, 0.0, maxf(STEP_EYE_MIN_MPS * delta,
+		-_step_eye_lag * (1.0 - exp(-STEP_EYE_RESPONSE_PER_SECOND * delta))))
+	eye.y += _step_eye_lag
 	_camera.position = eye + Vector3(0.0, dip + vertical_bob, 0.0) + right_vector * lateral_bob
 	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, _cam_bank)
 

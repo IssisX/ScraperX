@@ -47,6 +47,10 @@ const SCENARIOS := {
 	"touch_wet": 16,
 	"pad_wet": 16,
 	"keyboard_wet": 16,
+	# AS-008, the Plate Shop, on its three machines from TP-340 to the 484 ring.
+	"touch_shop": 19,
+	"pad_shop": 19,
+	"keyboard_shop": 19,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -171,6 +175,12 @@ func _run() -> void:
 			ok = await _wet(InputRouter.Device.GAMEPAD)
 		"keyboard_wet":
 			ok = await _wet(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_shop":
+			ok = await _shop(InputRouter.Device.TOUCH)
+		"pad_shop":
+			ok = await _shop(InputRouter.Device.GAMEPAD)
+		"keyboard_shop":
+			ok = await _shop(InputRouter.Device.KEYBOARD_MOUSE)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -994,6 +1004,9 @@ func _wet(device: int) -> bool:
 			str(wrists.get("at", ""))])
 	if worst_step > 0.25:
 		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
 	_detail = "plate_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f" % [
@@ -1166,6 +1179,197 @@ func _wet_f(device: int) -> bool:
 			int(_native().get_support_entity_id()) != 1005:
 		return _fail("not standing on TP-340 (y %.2f, support %d)" % [_position().y,
 			int(_native().get_support_entity_id())])
+	return true
+
+
+# AS-008, the Plate Shop, the way its native band test runs it: from TP-340,
+# G's rope off its cleat and hooked on its platform's eye, its prop pin
+# drawn, a ride to the 374 ring; the girder's tail pin carried out, over the
+# gangway onto H, its chock yanked, a ride to the 418 ring; across onto I's
+# cage, its rope hooked on, the domino's pin drawn, the cascade's ride to
+# 462 m; up the ladder onto the 484 ring.
+func _shop(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var wrists := _watch_wrists()
+	var body := _watch_body()
+	if not await _shop_g(device):
+		return false
+	var at_g := _position().y
+	if not await _shop_h(device):
+		return false
+	var at_h := _position().y
+	if not await _shop_i(device):
+		return false
+	# The hands are watched on the machines' ropes, pins and lanyards, as
+	# _wet and _stack watch them; a ladder's top-out is traversal, whose
+	# planted hands the climb scenarios prove.
+	var worst_wrist := _stop_watch(wrists)
+	if not await _shop_ladder(device):
+		return false
+	var worst_step := _stop_watch(body)
+	if worst_wrist > 0.10:
+		return _fail("a hand jumped %.3f m in one frame between poses (%s)" % [worst_wrist,
+			str(wrists.get("at", ""))])
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	_detail = "shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		at_g, at_h, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step,
+		float(body["lift"])]
+	return true
+
+
+func _shop_state() -> Dictionary:
+	return _native().get_shop_state()
+
+
+func _shop_g(device: int) -> bool:
+	# From TP-340 by F's hole, west past the header, to the south of G's cleat.
+	if not (await _go(device, Vector2(11.3, -138.0), 0.15, 6.0) and \
+			await _go(device, Vector2(1.0, -141.0), 0.15, 16.0) and \
+			await _go(device, Vector2(-5.0, -153.5), 0.15, 12.0) and \
+			await _go(device, Vector2(-9.7, -152.9), 0.08, 8.0)):
+		return _fail("the walk to G's cleat stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"unhook", "UNHOOK"):
+		return _fail("Action read '%s %s' facing G's cleat, not UNHOOK" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2074, 0.5):
+		return _fail("UNHOOK did not put G's rope shackle in the hands")
+	# Round the shaft's posts onto the platform, the rope in hand.
+	if not (await _go(device, Vector2(-8.5, -152.9), 0.15, 4.0) and \
+			await _go(device, Vector2(-8.5, -150.1), 0.15, 4.0) and \
+			await _go(device, Vector2(-11.2, -150.0), 0.08, 6.0)):
+		return _fail("carrying G's rope onto its platform stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"hook", "HOOK", "ONTO PLATFORM EYE"):
+		return _fail("Action read '%s %s' at G's platform eye, not HOOK ONTO PLATFORM EYE" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_shop_state()["g_rope_on_eye"]), 0.5):
+		return _fail("HOOK did not put G's rope on the platform's eye")
+	if not await _pull_handle(device, Vector2(-11.3, -149.25), Vector2(0.0, 1.0), 2073, "LANYARD",
+			func() -> bool: return not bool(_shop_state()["g_tower_latched"])):
+		return false
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_shop_state()["g_platform_travel"]) >= 33.7, 60.0)
+	if not arrived:
+		return _fail("G's platform never reached the 374 ring (travel %.2f m)" %
+			float(_shop_state()["g_platform_travel"]))
+	await _seconds(1.0)
+	await _pose("shop_g_top")
+	if int(_native().get_support_entity_id()) != 2070:
+		return _fail("the rider is not on G's platform at the top (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
+func _shop_h(device: int) -> bool:
+	# Off G onto the 374 ring, round its west band to the north band and the
+	# girder's tail pin.
+	if not (await _go(device, Vector2(-14.5, -149.3), 0.15, 8.0) and \
+			await _go(device, Vector2(-14.5, -134.3), 0.15, 16.0) and \
+			await _go(device, Vector2(-2.8, -134.0), 0.15, 16.0) and \
+			await _walk_to(device, Vector2(-3.6, -134.0), 0.08, 4.0)):
+		return _fail("the walk round the 374 ring to the girder's tail pin stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	if not await _offered(&"pick_up", "PICK UP", "TAIL PIN"):
+		return _fail("Action read '%s %s' facing the girder's tail pin, not PICK UP TAIL PIN" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2084, 0.5):
+		return _fail("PICK UP did not lift the girder's tail pin")
+	# Back a metre with it, out of its socket, and down.
+	if not await _walk_to(device, Vector2(-2.6, -134.0), 0.15, 4.0):
+		return _fail("stepping back with the tail pin stalled at %s" % str(_position()))
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not set the tail pin down")
+	await _seconds(1.0)
+	if bool(_shop_state()["h_girder_latched"]):
+		return _fail("the tail pin out, the girder is still latched")
+	# Round the ring to the gangway and over it onto H's platform.
+	if not (await _go(device, Vector2(-14.5, -134.3), 0.15, 16.0) and \
+			await _go(device, Vector2(-14.5, -145.6), 0.15, 16.0) and \
+			await _go(device, Vector2(-9.6, -145.6), 0.15, 10.0)):
+		return _fail("the walk over the gangway onto H stalled at %s" % str(_position()))
+	if not await _pull_handle(device, Vector2(-9.4, -144.9), Vector2(0.0, 1.0), 2086, "LANYARD",
+			func() -> bool: return not bool(_shop_state()["h_trolley_latched"])):
+		return false
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_shop_state()["h_platform_travel"]) >= 43.9, 90.0)
+	if not arrived:
+		return _fail("H's platform never reached the 418 ring (travel %.2f m)" %
+			float(_shop_state()["h_platform_travel"]))
+	await _seconds(1.0)
+	await _pose("shop_h_top")
+	if int(_native().get_support_entity_id()) != 2080:
+		return _fail("the rider is not on H's platform at the top (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
+func _shop_i(device: int) -> bool:
+	# Across onto I's cage; the rope's shackle hangs a metre west of the eye.
+	if not await _walk_to(device, Vector2(-7.3, -145.6), 0.08, 6.0):
+		return _fail("the step across onto I's cage stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"pick_up", "TAKE", "ROPE SHACKLE"):
+		return _fail("Action read '%s %s' facing I's rope shackle, not TAKE ROPE SHACKLE" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2096, 0.5):
+		return _fail("TAKE did not put I's rope shackle in the hands")
+	if not await _walk_to(device, Vector2(-6.3, -145.6), 0.08, 4.0):
+		return _fail("the step to I's cage eye stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"hook", "HOOK", "ONTO CAGE EYE"):
+		return _fail("Action read '%s %s' at I's cage eye, not HOOK ONTO CAGE EYE" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_shop_state()["i_rope_on_eye"]), 0.5):
+		return _fail("HOOK did not put I's rope on the cage's eye")
+	if not await _pull_handle(device, Vector2(-6.5, -144.9), Vector2(0.0, 1.0), 2095, "LANYARD",
+			func() -> bool: return not bool(_shop_state()["i_domino_latched"])):
+		return false
+	var arrived: bool = await _wait_until(
+		func() -> bool: return float(_shop_state()["i_cage_travel"]) >= 43.9, 90.0)
+	if not arrived:
+		var i := _shop_state()
+		return _fail("the cascade never hauled I's cage to 462 m (travel %.2f m, domino %.2f rad, trip %.2f rad, monolith %.2f rad)" % [
+			float(i["i_cage_travel"]), float(i["i_domino_angle"]), float(i["i_trip_angle"]),
+			float(i["i_monolith_angle"])])
+	await _seconds(1.0)
+	await _pose("shop_i_top")
+	if int(_native().get_support_entity_id()) != 2090:
+		return _fail("the rider is not in I's cage at the top (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
+# Up the ladder from I's cage onto the 484 ring.
+func _shop_ladder(device: int) -> bool:
+	if not await _walk_to(device, Vector2(-7.6, -145.6), 0.08, 6.0):
+		return _fail("the step to the ladder in I's cage stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("Action read '%s %s' facing the ladder from I's cage, not CLIMB HOLD" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
+		return _fail("CLIMB did not take hold of the ladder from I's cage")
+	_move(device, 1.0)
+	var on_ring: bool = await _wait_until(func() -> bool: return _standing_above(484.5), 60.0)
+	_move(device, 0.0)
+	if not on_ring:
+		return _fail("climbing the ladder did not top out onto the 484 ring (y %.2f)" % _position().y)
+	await _seconds(0.5)
+	await _pose("shop_ring484")
 	return true
 
 
@@ -1385,6 +1589,9 @@ func _stack_upper(device: int) -> bool:
 	var worst_step := _stop_watch(body)
 	if worst_step > 0.25:
 		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
 	_detail = "deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f seconds=%.1f worst_body_step_m=%.3f" % [
@@ -1620,17 +1827,35 @@ func _stack(device: int) -> bool:
 		return false
 	var at_tp340 := _position().y
 
+	# West across TP-340 to AS-008, up its three machines and the ladder to
+	# the 484 ring.
+	if not await _shop_g(device):
+		return false
+	var at_shop_g := _position().y
+	if not await _shop_h(device):
+		return false
+	var at_shop_h := _position().y
+	if not await _shop_i(device):
+		return false
+	if not await _shop_ladder(device):
+		return false
+	var at_ring484 := _position().y
+
 	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
 	# faster than a sprint; only a snap moves the view that far.
 	var worst_step := _stop_watch(body)
 	if worst_step > 0.25:
 		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step,
 			str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
-	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f wet_d_y=%.2f wet_e_y=%.2f tp340_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f" % [
+	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f wet_d_y=%.2f wet_e_y=%.2f tp340_y=%.2f shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		at_deck2, at_deck4, at_deck6, at_deck8, at_deck12, at_deck14, at_ring176, at_ring198, at_ring220,
-		at_wet_d, at_wet_e, at_tp340, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step]
+		at_wet_d, at_wet_e, at_tp340, at_shop_g, at_shop_h, at_ring484,
+		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step, float(body["lift"])]
 	return true
 
 
@@ -1866,15 +2091,21 @@ func _sample_wrists(watch: Dictionary) -> void:
 
 # Samples the body's position every frame until stopped, and reports the
 # largest single-frame sideways move: a body the native walks, climbs and
-# mantles never jumps; a snap across a blocked path does.
+# mantles never jumps; a snap across a blocked path does. It also keeps, as
+# "lift", the largest single-frame rise or fall of the eye beyond the body's
+# own continuous motion: a native step lifts the body in one tick, and the
+# view must glide over it, never show it in one frame.
 func _watch_body() -> Dictionary:
-	var watch := {"running": true, "worst": 0.0}
+	var watch := {"running": true, "worst": 0.0, "lift": 0.0}
 	_sample_body(watch)
 	return watch
 
 
 func _sample_body(watch: Dictionary) -> void:
 	var last := _position()
+	var last_eye := (_main._camera as Camera3D).global_transform.origin.y
+	var last_body := (_native().get_player_render_position() as Vector3).y
+	var last_steps := float(_native().get_step_up_meters())
 	while bool(watch["running"]):
 		await get_tree().process_frame
 		var now := _position()
@@ -1884,6 +2115,16 @@ func _sample_body(watch: Dictionary) -> void:
 			watch["at"] = "traversal=%d from %s to %s" % [int(_native().get_traversal_state()), str(last),
 				str(now)]
 		last = now
+		var eye := (_main._camera as Camera3D).global_transform.origin.y
+		var body := (_native().get_player_render_position() as Vector3).y
+		var steps := float(_native().get_step_up_meters())
+		var lift := absf((eye - last_eye) - (body - last_body - (steps - last_steps)))
+		if lift > float(watch["lift"]):
+			watch["lift"] = lift
+			watch["lift_at"] = "stepped %.3f m at %s" % [steps - last_steps, str(now)]
+		last_eye = eye
+		last_body = body
+		last_steps = steps
 
 
 func _stop_watch(watch: Dictionary) -> float:

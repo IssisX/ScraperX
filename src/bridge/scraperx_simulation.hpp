@@ -82,6 +82,7 @@ public:
     [[nodiscard]] godot::Vector3 get_checkpoint_position() const;
     [[nodiscard]] std::int64_t get_checkpoint_commit_count() const;
     [[nodiscard]] std::int64_t get_death_count() const;
+    [[nodiscard]] double get_step_up_meters() const;
 
     // The carry: pick up and set down, and what is held or would be.
     [[nodiscard]] bool request_pick_up();
