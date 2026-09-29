@@ -160,32 +160,12 @@ int main(int argc, char **argv) {
   report(s, "ARRIVED");
   if (s.snapshot().player_position.y < 11.6 || s.snapshot().death_count != 0)
     return 8;
-  // Reach the ordinary +33m ring, then step beyond its edge. A real lethal
-  // landing must restore the spent crusher and loaded bridge with the player.
-  for (auto point : {Vector3{21.5, 0, -128.5}, Vector3{21.5, 0, -171.5},
-                     Vector3{-21.5, 0, -171.5}, Vector3{-21.5, 0, -128.5},
-                     Vector3{21, 0, -128.5}}) {
-    if (!walk(s, point.x, point.z)) {
-      report(s, "RESTORE_APPROACH_FAIL");
-      return 24;
-    }
-  }
-  wait(s, 1);
-  report(s, "BEFORE_FALL");
-  if (s.snapshot().player_position.y < 33.5)
-    return 25;
-  const double spent = s.pipe_bridge_crush_front();
-  (void)s.set_move_input(1, 0);
-  wait(s, 1.3);
-  (void)s.set_move_input(0, 0);
-  wait(s, 5);
-  report(s, "RESTORED");
-  if (s.snapshot().death_count != 1 || s.snapshot().player_position.y < 33.5 ||
-      s.pipe_bridge_retained_pipes() != 20 ||
-      std::abs(s.pipe_bridge_crush_front() - spent) > .002)
-    return 26;
-  std::cout << "PASS scraperx_sim AS-016 full route pipes=20 arrival_y=11.9 "
-               "death_restore=1 spent_crusher="
-            << spent << std::endl;
+  // AS-016 owns the ordinary-input grade-to-+11 m mechanism variants. The
+  // onward +11-to-+33 m parkour and lethal-fall restore are exercised once by
+  // scraperx_sim.ascent_route through the real facade route, not by the
+  // rejected walking-only stair bypass that used to be duplicated here.
+  std::cout << "PASS scraperx_sim AS-016 route mode=" << mode
+            << " pipes=20 arrival_y=" << s.snapshot().player_position.y
+            << std::endl;
   return 0;
 }
