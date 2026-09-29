@@ -1134,7 +1134,13 @@ void run_plate_shop() {
             "as found, G's rope is made fast on its cleat and the tower stands pinned");
     require(board_shop_g(g_fast) && pull_shop_g(g_fast), "the rider must pull G's pin from the platform");
     (void)g_fast.advance_frame(10.0);
-    require(g_fast.shop_state().g_platform_travel < 0.02 && g_fast.shop_state().g_tower_travel > -0.2,
+    const auto g_hung = g_fast.shop_state();
+    const auto g_at = g_fast.snapshot();
+    std::cout << "G cleat platform=" << g_hung.g_platform_travel << " tower=" << g_hung.g_tower_travel
+              << " rope_on_eye=" << g_hung.g_rope_on_eye << " latched=" << g_hung.g_tower_latched
+              << " player=" << g_at.player_position.x << "," << g_at.player_position.y << ","
+              << g_at.player_position.z << "\n";
+    require(g_hung.g_platform_travel < 0.02 && g_hung.g_tower_travel > -0.2,
             "with the rope on its cleat the tower hangs on it and G's platform stays");
 
     // ---- G: the rope on the eye, the ride ------------------------------------------
