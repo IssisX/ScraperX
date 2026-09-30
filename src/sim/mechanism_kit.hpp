@@ -132,6 +132,11 @@ public:
     // to its stop gently instead of on the limit.
     GuideIndex add_guide(BodyIndex body, JPH::Vec3 axis, float min_travel, float max_travel,
                          float governor_speed, float governor_force, float level_accel);
+    // A carriage constrained to a rail carried by another moving body. The
+    // rail's dry friction is finite and passive; the player supplies the work
+    // to shift the carriage through its available travel.
+    void add_sliding_track(BodyIndex carrier, BodyIndex carriage, JPH::Vec3 world_axis,
+                           float min_travel, float max_travel, float friction_force);
 
     // A rope from body1's point over fixed1 ... fixed2 to its end. The end
     // starts on end_body at end_point: a shackle body (loose end) or any

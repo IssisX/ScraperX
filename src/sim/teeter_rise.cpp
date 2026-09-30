@@ -88,10 +88,13 @@ std::vector<Part> lower_stop_parts() {
 
 std::vector<Part> beam_parts() {
     return {
-        // Per-part densities give the compound its real centre of mass
-        // and inertia. The visible yellow tread is exactly its collider.
-        box({3.40F, 0.14F, 0.90F}, {1.60F, 0, 0}, Material::Yellow, 160.0F),
-        box({0.40F, 0.46F, 0.35F}, {-1.40F, -0.60F, 0}, Material::Rust, 369.0F),
+        // The carriage rail is visible on one side; the other side remains
+        // wide enough for the player to walk beside and push the carriage.
+        // Per-part masses make the compound COM and inertia match the model.
+        box({3.40F, 0.14F, 0.90F}, {1.60F, 0, 0}, Material::Yellow, 150.0F),
+        box({2.23F, 0.07F, 0.05F}, {2.40F, 0.24F, -0.75F}, Material::Steel, 5.0F),
+        box({2.23F, 0.07F, 0.05F}, {2.40F, 0.24F, -0.15F}, Material::Steel, 5.0F),
+        box({0.40F, 0.46F, 0.35F}, {-1.40F, -0.60F, 0}, Material::Rust, 540.0F),
     };
 }
 } // namespace
@@ -104,13 +107,28 @@ TeeterRise::TeeterRise(kit::Kit &kit) {
                        Quat::sIdentity(), 0.0F, 0.8F);
     (void)kit.add_body(1802, lower_stop_parts(), RVec3::sZero(),
                        Quat::sIdentity(), 0.0F, 0.8F);
+    const Quat initial_rotation = Quat::sRotation(Vec3::sAxisZ(), 0.10F);
     const auto beam = kit.add_body(2800, beam_parts(), kPivot,
-        Quat::sRotation(Vec3::sAxisZ(), 0.10F), 529.0F, 0.9F);
+        initial_rotation, 700.0F, 0.9F);
     // Losses belong to the visible bearing and stop contacts. Jolt's default
     // velocity damping would add an undeclared sink to the compiled assembly.
     kit.set_damping(beam, 0.0F, 0.0F);
     kit.set_continuous_collision(beam);
     (void)kit.add_hinge(frame, beam, kPivot, Vec3::sAxisZ(), 90.0F);
+
+    // A 65 kg visible steel carriage starts near the bearing. The player
+    // moves it along the beam; its gravity then reaches the hinge through a
+    // real two-body rail constraint. Dry rail friction holds the weight on
+    // the raised, unloaded beam; gravity drives it toward the outboard stop
+    // once the beam falls. End limits retain it on failure.
+    const RVec3 carriage_position = kPivot + RVec3(initial_rotation * Vec3(0.50F, 0.69F, -0.45F));
+    const auto carriage = kit.add_body(2801,
+        {box({0.33F, 0.55F, 0.22F}, Vec3::sZero(), Material::Rust, 65.0F)},
+        carriage_position, initial_rotation, 65.0F, 0.75F);
+    kit.set_damping(carriage, 0.0F, 0.0F);
+    kit.set_continuous_collision(carriage);
+    kit.add_sliding_track(beam, carriage, initial_rotation * Vec3::sAxisX(),
+                          0.0F, 3.80F, 100.0F);
 }
 
 } // namespace scraperx::sim

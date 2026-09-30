@@ -263,6 +263,25 @@ GuideIndex Kit::add_guide(const BodyIndex body, const JPH::Vec3 axis, const floa
     return GuideIndex{static_cast<std::uint32_t>(guides_.size() - 1U)};
 }
 
+void Kit::add_sliding_track(const BodyIndex carrier, const BodyIndex carriage,
+                            const JPH::Vec3 world_axis, const float min_travel,
+                            const float max_travel, const float friction_force) {
+    const JPH::Vec3 axis = world_axis.Normalized();
+    JPH::SliderConstraintSettings settings;
+    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    settings.mPoint1 = settings.mPoint2 = jolt_body(carriage).GetCenterOfMassPosition();
+    settings.mSliderAxis1 = settings.mSliderAxis2 = axis;
+    settings.mNormalAxis1 = settings.mNormalAxis2 = axis.GetNormalizedPerpendicular();
+    settings.mLimitsMin = min_travel;
+    settings.mLimitsMax = max_travel;
+    settings.mMaxFrictionForce = friction_force;
+    JPH::Ref<JPH::TwoBodyConstraint> joint =
+        settings.Create(jolt_body(carrier), jolt_body(carriage));
+    system_.AddConstraint(joint);
+    disable_collision(carrier, carriage);
+    fixed_joints_.push_back(joint);
+}
+
 RopeIndex Kit::add_rope(const BodyIndex body1, const JPH::Vec3 point1, const JPH::RVec3 fixed1,
                         const BodyIndex end_body, const JPH::Vec3 end_point,
                         const JPH::RVec3 fixed2, const float ratio, const float max_length,

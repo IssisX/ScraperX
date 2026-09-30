@@ -485,6 +485,7 @@ func _touch_teeter() -> bool:
 	if int(_native().get_entity_body_count(2800)) != 1:
 		return _fail("teeter absent from the normal route")
 	var beam := int(_native().get_kit_body_index(2800))
+	var ballast := int(_native().get_kit_body_index(2801))
 	for point in [Vector2(24.8, -125.4), Vector2(24.8, -139.0), Vector2(25.3, -139.0)]:
 		if not await _walk_to(device, point, 0.14, 20.0):
 			return _fail("teeter ring approach %s" % _position())
@@ -492,14 +493,27 @@ func _touch_teeter() -> bool:
 	await _pose("teeter_entry")
 	if not _standing_above(66.5) or int(_native().get_support_entity_id()) != 11:
 		return _fail("teeter entry lost the +66 m ring %s" % _position())
-	for point in [Vector2(27.2, -139.0), Vector2(29.8, -139.0)]:
+	for point in [Vector2(27.2, -139.0), Vector2(27.8, -139.45)]:
 		if not await _walk_to(device, point, 0.14, 12.0):
 			return _fail("teeter near-side loading %s" % _position())
+	await _face(Vector2(1, 0))
+	_main._pitch = -0.08
+	await _pose("teeter_ballast_near")
+	if _teeter_ballast_x(beam, ballast) > 1.0:
+		return _fail("ballast moved before contact %.3f" % _teeter_ballast_x(beam, ballast))
+	for point in [Vector2(29.8, -139.45), Vector2(31.95, -139.45)]:
+		if not await _walk_to(device, point, 0.14, 12.0):
+			return _fail("teeter ballast push %s position=%.3f" % [
+				_position(), _teeter_ballast_x(beam, ballast)])
 	await _seconds(0.5)
-	if int(_native().get_support_entity_id()) != 2800 or _teeter_angle(beam) < 0.05:
-		return _fail("near-side load tipped the beam %s angle=%.3f" % [
-			_position(), _teeter_angle(beam)])
-	if not await _walk_to(device, Vector2(32.8, -139.0), 0.14, 12.0):
+	await _face(Vector2(1, 0))
+	_main._pitch = -0.08
+	await _pose("teeter_ballast_far")
+	if int(_native().get_support_entity_id()) != 2800 or \
+			_teeter_ballast_x(beam, ballast) < 4.15:
+		return _fail("ballast did not reach the far stop %s position=%.3f" % [
+			_position(), _teeter_ballast_x(beam, ballast)])
+	if not await _walk_to(device, Vector2(32.8, -138.58), 0.14, 12.0):
 		return _fail("teeter far-side loading %s" % _position())
 	await _seconds(3.0)
 	await _face_teeter_pivot(beam)
@@ -511,7 +525,8 @@ func _touch_teeter() -> bool:
 	if not await _walk_to(device, Vector2(34.4, -139.0), 0.14, 12.0):
 		return _fail("teeter receiving shelf %s" % _position())
 	await _seconds(3.0)
-	await _face_teeter_pivot(beam)
+	await _face(Vector2(-1, 0))
+	_main._pitch = -0.16
 	await _pose("teeter_shelf")
 	if not _standing_above(64.0) or int(_native().get_support_entity_id()) != 1800 or \
 			_teeter_angle(beam) < 0.07:
@@ -541,7 +556,7 @@ func _touch_teeter() -> bool:
 	if not _standing_above(77.5) or int(_native().get_support_entity_id()) != 11 or \
 			int(_native().get_death_count()) != 0:
 		return _fail("teeter +77 m ring unsupported %s" % _position())
-	_detail = "grade_to_77m=1 player_loaded_teeter=1 physical_reset=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
+	_detail = "grade_to_77m=1 ballast_pushed=1 player_loaded_teeter=1 physical_reset=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
 	return true
 
 
@@ -558,6 +573,12 @@ func _teeter_angle(body: int) -> float:
 	return pose.basis.get_euler().z
 
 
+func _teeter_ballast_x(beam: int, ballast: int) -> float:
+	var beam_pose: Transform3D = _native().get_kit_body_transform(beam)
+	var carriage_pose: Transform3D = _native().get_kit_body_transform(ballast)
+	return (beam_pose.affine_inverse() * carriage_pose.origin).x
+
+
 func _standing_above(height: float) -> bool:
 	return bool(_ctx()["grounded"]) and int(_ctx()["traversal"]) == 0 and _position().y > height
 
@@ -567,7 +588,7 @@ func _ground_foundation() -> bool:
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 44:
+	if int(_native().get_moving_body_count()) != 45:
 		return _fail("default pipe bridge, stair, lift and teeter body inventory differs")
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
@@ -588,7 +609,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=44 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=45 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
 	return true
 
 

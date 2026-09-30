@@ -8,6 +8,7 @@
 #include <Jolt/Physics/Collision/ContactListener.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
+#include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/RegisterTypes.h>
 
 #include <algorithm>
@@ -17,7 +18,7 @@
 #include <stdexcept>
 
 // This is a binding test of the production assembly against the compiler's
-// one-coordinate beam model. Its rigid 85 kg compound fixture is NOT the upright,
+// one-coordinate held-carriage beam model. Its rigid 85 kg compound fixture is NOT the upright,
 // freely contacting, actively controlled gameplay player. teeter_route_tests
 // separately exercises that player, landings, departures and traversal.
 namespace {
@@ -25,8 +26,10 @@ using namespace JPH;
 using namespace scraperx::sim;
 constexpr double kGravity = 9.81;
 constexpr double kPivotY = 65.8;
-constexpr double kBeamInertia = 1928.9654666666666;
-constexpr double kLoadedInertia = kBeamInertia + 85.0 * 4.5 * 4.5;
+constexpr double kBeamInertia = 2357.4366666666665;
+constexpr double kCarriageInertia = 65.0 * (4.3 * 4.3 + 0.69 * 0.69) +
+                                    65.0 * (0.66 * 0.66 + 1.10 * 1.10) / 12.0;
+constexpr double kLoadedInertia = kBeamInertia + kCarriageInertia + 85.0 * 4.5 * 4.5;
 
 struct BP final : BroadPhaseLayerInterface {
     uint GetNumBroadPhaseLayers() const override { return 2; }
@@ -49,8 +52,9 @@ double angle(QuatArg q) { return 2.0 * std::atan2(q.GetZ(), q.GetW()); }
 
 // Independent closed-form gravitational potential, relative to pivot height.
 double potential(double a, bool loaded) {
-    const double mass_x = 160.0 * 1.6 - 369.0 * 1.4 + (loaded ? 85.0 * 4.5 : 0.0);
-    return kGravity * (mass_x * std::sin(a) - 369.0 * 0.6 * std::cos(a));
+    const double mass_x = -492.0 + 65.0 * 4.3 + (loaded ? 85.0 * 4.5 : 0.0);
+    const double mass_y = -321.6 + 65.0 * 0.69;
+    return kGravity * (mass_x * std::sin(a) + mass_y * std::cos(a));
 }
 
 struct StopContacts final : ContactListener {
@@ -109,6 +113,7 @@ Result run(int hz, bool loaded, double friction) {
         kit::Kit kit(system, 0, 1);
         TeeterRise assembly(kit);
         const auto beam = kit.body_for_entity(2800);
+        const auto carriage = kit.body_for_entity(2801);
         auto &bodies = system.GetBodyInterface();
         {
             BodyLockRead lock(system.GetBodyLockInterface(), kit.body_id(beam));
@@ -123,11 +128,19 @@ Result run(int hz, bool loaded, double friction) {
             double inertia_com = 0;
             for (int i = 0; i < 3; ++i) inertia_com += axis[i] * axis[i] / inverse[i];
             r.pivot_inertia = inertia_com + r.mass * (r.com_x*r.com_x + r.com_y*r.com_y);
-            r.mass_ok = std::abs(r.mass - 529.0) < 0.01 &&
-                std::abs(r.com_x - (-260.6 / 529.0)) < 0.00001 &&
-                std::abs(r.com_y - (-221.4 / 529.0)) < 0.00001 &&
+            r.mass_ok = std::abs(r.mass - 700.0) < 0.01 &&
+                std::abs(r.com_x - (-492.0 / 700.0)) < 0.00001 &&
+                std::abs(r.com_y - (-321.6 / 700.0)) < 0.00001 &&
                 std::abs(r.pivot_inertia - kBeamInertia) < 0.02;
             r.damping_ok = motion->GetLinearDamping() == 0 && motion->GetAngularDamping() == 0;
+        }
+        {
+            BodyLockRead lock(system.GetBodyLockInterface(), kit.body_id(carriage));
+            const auto *motion = lock.GetBody().GetMotionProperties();
+            r.mass_ok = r.mass_ok &&
+                std::abs(1.0 / motion->GetInverseMass() - 65.0) < 0.01;
+            r.damping_ok = r.damping_ok && motion->GetLinearDamping() == 0 &&
+                           motion->GetAngularDamping() == 0;
         }
         // The engine has one Coulomb-bearing torque. Set it directly on the
         // production hinge for equal static/kinetic band endpoints and for the
@@ -142,12 +155,30 @@ Result run(int hz, bool loaded, double friction) {
             ++hinges;
         }
         if (hinges != 1) throw std::runtime_error("missing/ambiguous production hinge");
+        unsigned sliders = 0;
+        for (const auto &constraint : system.GetConstraints()) {
+            if (constraint->GetSubType() != EConstraintSubType::Slider) continue;
+            const auto *slider = static_cast<const SliderConstraint *>(constraint.GetPtr());
+            if (slider->GetMaxFrictionForce() != 100.0F ||
+                slider->GetLimitsMin() != 0.0F || slider->GetLimitsMax() != 3.8F)
+                throw std::runtime_error("production ballast rail differs from compiled assembly");
+            ++sliders;
+        }
+        if (sliders != 1) throw std::runtime_error("missing/ambiguous production ballast rail");
         const double initial_angle = loaded ? 0.1 : -0.4;
+        const Quat start_rotation = Quat::sRotation(Vec3::sAxisZ(), float(initial_angle));
         if (!loaded) {
             // Initial condition of the reset experiment, before any stepping.
             bodies.SetPositionAndRotation(kit.body_id(beam), RVec3(28.5, kPivotY, -139),
-                Quat::sRotation(Vec3::sAxisZ(), float(initial_angle)), EActivation::Activate);
+                start_rotation, EActivation::Activate);
         }
+        // The gameplay player pushes the captive weight to this rail end
+        // before boarding. Both experiments start from that measured mode;
+        // the rail has no motor and the end stop is a real Jolt limit.
+        const RVec3 carriage_at_far = RVec3(28.5, kPivotY, -139.0) +
+            RVec3(start_rotation * Vec3(4.3F, 0.69F, -0.45F));
+        bodies.SetPositionAndRotation(kit.body_id(carriage), carriage_at_far,
+                                     start_rotation, EActivation::Activate);
         if (loaded) {
             // Preserve the exact production shape as a child. A tiny mass
             // proxy inside the deck supplies the compiler's rigid point load
@@ -164,8 +195,8 @@ Result run(int hz, bool loaded, double friction) {
             for (const auto &constraint : system.GetConstraints())
                 constraint->NotifyShapeChanged(kit.body_id(beam), delta_com);
         }
-        const auto energy = [&]() {
-            BodyLockRead lock(system.GetBodyLockInterface(), kit.body_id(beam));
+        const auto body_energy = [&](BodyID id) {
+            BodyLockRead lock(system.GetBodyLockInterface(), id);
             const auto &body = lock.GetBody();
             const auto *motion = body.GetMotionProperties();
             const double mass = 1.0 / motion->GetInverseMass();
@@ -176,6 +207,9 @@ Result run(int hz, bool loaded, double friction) {
             for (int i = 0; i < 3; ++i) rotation_energy += w[i] * w[i] / inverse[i];
             return mass * kGravity * (body.GetCenterOfMassPosition().GetY() - kPivotY) +
                    0.5 * (mass * body.GetLinearVelocity().LengthSq() + rotation_energy);
+        };
+        const auto energy = [&]() {
+            return body_energy(kit.body_id(beam)) + body_energy(kit.body_id(carriage));
         };
         const double initial_energy = energy();
         double previous_angle = angle(kit.body_rotation(beam));
@@ -209,8 +243,9 @@ Result run(int hz, bool loaded, double friction) {
                 r.peak_speed = std::max(r.peak_speed, r.impact_speed);
                 r.released = potential(initial_angle, loaded) - potential(r.impact_angle, loaded);
                 const double work = friction * std::abs(r.impact_angle - initial_angle);
-                // Tiny rigid proxy adds 0.022667 kg m² about its own centre.
-                const double inertia = loaded ? kLoadedInertia + 85.0 * 0.04 * 0.04 / 6 : kBeamInertia;
+                // Tiny rigid rider proxy adds 0.022667 kg m² about its own centre.
+                const double inertia = loaded ? kLoadedInertia + 85.0 * 0.04 * 0.04 / 6
+                                              : kBeamInertia + kCarriageInertia;
                 r.predicted_speed = std::sqrt(std::max(0.0, 2.0 * (r.released - work) / inertia));
             }
             previous_angle = a;

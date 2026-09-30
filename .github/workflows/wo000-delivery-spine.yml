@@ -294,7 +294,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=44 kit_bodies=86 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=45 kit_bodies=87 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=169" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
@@ -305,7 +305,7 @@ jobs:
             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
             -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
             2>&1 | tee artifacts/godot-foundation.log
-          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=44 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
+          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=45 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
           test -s artifacts/screenshots/foundation_cleared_grade.png
           test -s artifacts/screenshots/foundation_cleared_tower.png
@@ -374,7 +374,7 @@ jobs:
           for pose in upper_handle_ready upper_lift_rising upper_lift_seated deck_55m upper_duct_hang upper_vent_climb upper_arrival; do
             test -s "artifacts/screenshots/teeter_${pose}.png"
           done
-          for pose in teeter_entry teeter_loaded teeter_shelf teeter_climb teeter_arrival; do
+          for pose in teeter_entry teeter_ballast_near teeter_ballast_far teeter_loaded teeter_shelf teeter_climb teeter_arrival; do
             test -s "artifacts/screenshots/teeter_${pose}.png"
           done
 
@@ -537,7 +537,14 @@ jobs:
           test -x "${APKSIGNER}"
           "${APKSIGNER}" verify --verbose --print-certs "build/apk/${APK_NAME}" \
             | tee artifacts/apk-signing.txt
-          grep -F "Signer #1 certificate SHA-256 digest: ${CHATGPT_SIGNER_SHA256}" artifacts/apk-signing.txt
+          # Build-tools 36 prints "V3.0 Signer: ..." while earlier versions
+          # printed "Signer #1 ...". Verify the single signer and its digest,
+          # independent of that presentation label.
+          grep -F "Number of signers: 1" artifacts/apk-signing.txt
+          awk -v expected="${CHATGPT_SIGNER_SHA256}" '
+            /certificate SHA-256 digest:/ && tolower($NF) == expected { matched = 1 }
+            END { exit !matched }
+          ' artifacts/apk-signing.txt
 
           cp "build/apk/${APK_NAME}" artifacts/apk/
           sha256sum "artifacts/apk/${APK_NAME}" | tee artifacts/apk/SHA256SUMS.txt
@@ -572,9 +579,9 @@ jobs:
 
           The default pipe-loaded bridge loads twenty independent pipes, releases through actual reachable controls, arrests on finite material, and carries the player across the +8 m receiver to the original +11 m ring. Native no-input/source controls, regrabbing, passive riding, material checkpoint restoration and 90/360 Hz refinement pass. Touch at 30 FPS, keyboard and gamepad at 60 FPS use ordinary viewport input. Recorded human fall reactions pass cancellation and decoded-mix checks.
 
-          This record is emitted only after the preceding verification and export gates succeed. The AS-020 normal route continues from grade through the pipe bridge, facade, swinging stair, counterweight lift, exterior parkour and player-loaded teeter to a supported +77 m tower ring. Native teeter tests cover unloaded equilibrium, near/far/opposite loading, landing, unloading, physical stops, fall recovery, rotating-support departure and repeated initial conditions. Rendered touch completes the continuous route with zero deaths.
+          This record is emitted only after the preceding verification and export gates succeed. The AS-020 normal route continues from grade through the pipe bridge, facade, swinging stair, counterweight lift, exterior parkour and player-adjusted teeter to a supported +77 m tower ring. Native teeter tests cover unloaded equilibrium, rider-alone failure, ballast push, near/far/opposite loading, landing, unloading, physical stops, fall recovery, rotating-support departure and repeated initial conditions. Rendered touch completes the continuous route with zero deaths.
 
-          Desktop rendering evidence is captured explicitly by the touch_teeter scenario: teeter_teeter_entry.png, teeter_teeter_loaded.png, teeter_teeter_shelf.png, teeter_teeter_climb.png and teeter_teeter_arrival.png. PNG creation and native assertions pass here; a reviewer must separately inspect the images for visible geometry and motion. Android delivery evidence is the separately cross-compiled, exported and signature-checked APK from this source commit.
+          Desktop rendering evidence is captured explicitly by the touch_teeter scenario: teeter_teeter_entry.png, teeter_teeter_ballast_near.png, teeter_teeter_ballast_far.png, teeter_teeter_loaded.png, teeter_teeter_shelf.png, teeter_teeter_climb.png and teeter_teeter_arrival.png. PNG creation and native assertions pass here; a reviewer must separately inspect the images for visible geometry and motion. Android delivery evidence is the separately cross-compiled, exported and signature-checked APK from this source commit.
 
           Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent beyond the supported +77 m ring.
           EOF

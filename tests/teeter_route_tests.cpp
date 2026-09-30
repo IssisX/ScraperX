@@ -19,8 +19,15 @@ double angle(const Simulation &simulation) {
     return 2.0 * std::atan2(q.z, q.w);
 }
 
+double ballast_position(const Simulation &simulation) {
+    const auto p = simulation.kit_body_position(simulation.kit_body_index(2801));
+    const auto beam = simulation.kit_body_position(simulation.kit_body_index(2800));
+    const double q = angle(simulation);
+    return (p.x - beam.x) * std::cos(q) + (p.y - beam.y) * std::sin(q);
+}
+
 bool walk_to(Simulation &simulation, const double x, const double z,
-             const double seconds = 12.0) {
+             const double seconds = 12.0, const double pace = 1.0) {
     for (int tick = 0; tick < static_cast<int>(seconds * 90.0); ++tick) {
         const auto p = simulation.snapshot().player_position;
         const double dx = x - p.x;
@@ -31,7 +38,7 @@ bool walk_to(Simulation &simulation, const double x, const double z,
             return true;
         }
         const double scale = std::min(1.0, d / 0.6) / d;
-        (void)simulation.set_move_input(dx * scale, dz * scale);
+        (void)simulation.set_move_input(dx * scale * pace, dz * scale * pace);
         (void)simulation.set_facing(dx / d, dz / d);
         (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
     }
@@ -63,6 +70,20 @@ int main() {
                   << angle(simulation) << "\n";
         return 2;
     }
+    // A rider alone must be able to inspect the outboard end without
+    // operating the machine. The captive ballast supplies the missing
+    // moment only when the player has moved it along the visible rail.
+    Simulation no_ballast(InitialSpawn::TeeterEntry);
+    advance(no_ballast, 0.5);
+    if (!walk_to(no_ballast, 27.2, -139.0) ||
+        !walk_to(no_ballast, 32.8, -139.0)) return 22;
+    advance(no_ballast, 3.0);
+    report(no_ballast, "RIDER_ALONE");
+    if (no_ballast.snapshot().support_entity_id != 2800 ||
+        angle(no_ballast) < 0.02) {
+        std::cerr << "FAIL rider alone tipped the unadjusted beam\n";
+        return 23;
+    }
     Simulation rider(InitialSpawn::TeeterEntry);
     advance(rider, 0.5);
     report(rider, "ENTRY");
@@ -71,11 +92,18 @@ int main() {
     advance(rider, 0.5);
     report(rider, "OPPOSITE");
     if (rider.snapshot().support_entity_id != 2800 || angle(rider) < 0.07 ||
-        !walk_to(rider, 29.8, -139.0)) return 4;
+        !walk_to(rider, 27.8, -139.45)) return 4;
+    (void)rider.set_facing(1.0, 0.0);
+    advance(rider, 0.2);
+    std::cout << "BALLAST_READY position=" << ballast_position(rider) << "\n";
+    if (!walk_to(rider, 29.8, -139.45)) return 25;
     advance(rider, 0.5);
     report(rider, "NEAR");
     if (rider.snapshot().support_entity_id != 2800 || angle(rider) < 0.05 ||
-        !walk_to(rider, 32.8, -139.0)) return 5;
+        !walk_to(rider, 31.95, -139.45)) return 5;
+    std::cout << "BALLAST_MOVED position=" << ballast_position(rider) << "\n";
+    if (ballast_position(rider) < 4.15) return 26;
+    if (!walk_to(rider, 32.8, -138.58)) return 27;
     advance(rider, 4.0);
     report(rider, "FAR");
     const double far_angle = angle(rider);
@@ -113,10 +141,20 @@ int main() {
         rider.snapshot().support_entity_id != Simulation::kTowerEntityId ||
         rider.snapshot().death_count != 0) return 10;
     Simulation drop(InitialSpawn::TeeterFarDrop);
-    advance(drop, 2.0);
+    double drop_min_angle = angle(drop);
+    double angle_after_one_second = 0.0;
+    for (int tick = 0; tick < 720; ++tick) {
+        (void)drop.advance_frame(Simulation::kFixedStepSeconds);
+        drop_min_angle = std::min(drop_min_angle, angle(drop));
+        if (tick == 89) angle_after_one_second = angle(drop);
+    }
     report(drop, "LANDING");
+    std::cout << "LANDING_SWEEP one_second=" << angle_after_one_second
+              << " minimum=" << drop_min_angle << "\n";
     if (!drop.snapshot().player_grounded || drop.snapshot().support_entity_id != 2800 ||
-        angle(drop) > -0.4 || drop.snapshot().death_count != 0) return 11;
+        angle_after_one_second > -0.05 || drop_min_angle > -0.40 ||
+        angle(drop) > -0.40 || angle(drop) < -0.55 ||
+        drop.snapshot().death_count != 0) return 11;
     Simulation recovery(InitialSpawn::TeeterEntry);
     advance(recovery, 0.5);
     if (!walk_to(recovery, 30.5, -139.0)) return 18;
@@ -140,10 +178,14 @@ int main() {
         (void)depart.advance_frame(Simulation::kFixedStepSeconds);
         const auto contact = depart.snapshot();
         if (!contact.player_grounded || contact.support_entity_id != 2800 ||
-            std::abs(contact.support_point_linear_velocity.y) < 0.5) continue;
+            std::abs(contact.support_point_linear_velocity.y) < 0.5 ||
+            std::abs(contact.player_linear_velocity.x -
+                     contact.support_point_linear_velocity.x) > 0.15) continue;
         std::cout << "MOVING_SUPPORT velocity="
                   << contact.support_point_linear_velocity.x << ","
-                  << contact.support_point_linear_velocity.y << "\n";
+                  << contact.support_point_linear_velocity.y
+                  << " player_velocity=" << contact.player_linear_velocity.x << ","
+                  << contact.player_linear_velocity.y << "\n";
         (void)depart.request_jump();
         (void)depart.advance_frame(Simulation::kFixedStepSeconds);
         const auto airborne = depart.snapshot();
@@ -165,9 +207,13 @@ int main() {
     advance(replay, 0.5);
     if (!walk_to(replay, 27.2, -139.0)) return 12;
     advance(replay, 0.5);
-    if (!walk_to(replay, 29.8, -139.0)) return 13;
+    if (!walk_to(replay, 27.8, -139.45)) return 13;
+    (void)replay.set_facing(1.0, 0.0);
+    advance(replay, 0.2);
+    if (!walk_to(replay, 29.8, -139.45)) return 13;
     advance(replay, 0.5);
-    if (!walk_to(replay, 32.8, -139.0)) return 14;
+    if (!walk_to(replay, 31.95, -139.45) ||
+        !walk_to(replay, 32.8, -138.58)) return 14;
     advance(replay, 4.0);
     const auto repeated = replay.snapshot();
     report(replay, "REPLAY_FAR");
