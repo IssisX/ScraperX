@@ -177,6 +177,8 @@ func _fail(reason: String) -> bool:
 # --- scenarios -----------------------------------------------------------------
 
 func _pipe_bridge(device: int) -> bool:
+	if _main._regression_scene:
+		return _fail("continuous route selected retired regression fixtures")
 	await _seconds(0.5)
 	for point in [Vector2(13, -75), Vector2(12.7, -78.95)]:
 		if not await _walk_to(device, point, 0.07, 20.0):

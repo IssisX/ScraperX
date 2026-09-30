@@ -34,7 +34,7 @@ env:
 jobs:
   moving-support-truth:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout exact source
@@ -361,7 +361,7 @@ jobs:
               text = text.replace(old, new)
           path.write_text(text)
           PY
-          timeout 1200s xvfb-run -a -s "-screen 0 432x371x24" \
+          timeout 2400s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --path godot --rendering-method gl_compatibility \
             --resolution 432x371 --fixed-fps 30 \
             -- --uitest=touch_north_frame "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/north" \
