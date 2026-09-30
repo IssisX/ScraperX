@@ -678,6 +678,9 @@ private:
     case scraperx::sim::InitialSpawn::PlateTop640:
         // On TP-640 north of L's hole, as a rider off L's cab.
         return {-3.0, 641.2, -156.5};
+    case scraperx::sim::InitialSpawn::Deck662:
+        // On the 662 deck north of C4's cabinet, clear of M's shafts.
+        return {6.2, 663.05, -146.0};
     case scraperx::sim::InitialSpawn::Ring374West:
         // On the 374 ring's west band by H's gangway.
         return {-14.5, 375.2, -145.6};

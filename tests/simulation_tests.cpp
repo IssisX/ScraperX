@@ -2067,8 +2067,261 @@ void run_midstack_service() {
             "empty, M's cage must stay where its dogs hold it");
 }
 
-// Stage M on player inputs from the TP-640 start: hooked on, the chock
-// pulled, the ride, off onto the 662 deck.
+// ---- AS-010 C4, the service gantry (662 -> 684 m) --------------------------------
+
+// Where a leg of C4 left the body, for a failure's message.
+bool report_c4(const scraperx::sim::Simulation &simulation, const char *leg) {
+    const auto state = simulation.snapshot();
+    std::cout << "C4 " << leg << ": at=" << state.player_position.x << "," << state.player_position.y << ","
+              << state.player_position.z << " traversal=" << static_cast<int>(state.traversal_state)
+              << " grounded=" << state.player_grounded << " support=" << state.support_entity_id
+              << " ledge=" << state.ledge_available << " grip=" << state.grip_available
+              << " edge_drop=" << state.edge_drop_available << '\n';
+    return false;
+}
+
+// A jump from where the body stands to a lip 3.2 m up ahead, caught, and the
+// pull up onto it.
+bool c4_hang_up(scraperx::sim::Simulation &simulation, const double fx, const double fz, const double top,
+                const char *leg) {
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.4 * fx, 0.4 * fz, fx, fz, 2.0,
+                    [](const Snapshot &state) { return state.traversal_state == TraversalState::Hanging; })) {
+        return report_c4(simulation, leg);
+    }
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    return wait_for(simulation, 2.5, [top](const Snapshot &state) { return standing_above(state, top); }) ||
+           report_c4(simulation, leg);
+}
+
+// A mantle onto the ledge ahead.
+bool c4_mantle(scraperx::sim::Simulation &simulation, const double fx, const double fz, const double top,
+               const char *leg) {
+    using scraperx::sim::Snapshot;
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().ledge_available) {
+        return report_c4(simulation, leg);
+    }
+    (void)simulation.request_traversal();
+    return wait_for(simulation, 2.0, [top](const Snapshot &state) { return standing_above(state, top); }) ||
+           report_c4(simulation, leg);
+}
+
+// What a climb of C4 saw on the way, for its falsifiers.
+struct C4Notes final {
+    bool balanced = false;          // the beam held the body on its line
+    bool house_offered = false;     // anything offered facing the winch house from the runway
+    bool house_caught = false;      // a jump at the winch house, pushing in, caught anything
+    double shimmied = 0.0;          // how far the hang carried the body along the runway's lip
+};
+
+// From the 662 deck by C4's cabinet up onto its hoist runway, on player
+// inputs: the cabinet, the duct, the beam, the standpipe.
+bool climb_c4_to_runway(scraperx::sim::Simulation &simulation, C4Notes &seen) {
+    using scraperx::sim::Snapshot;
+    // The cabinet, from the deck.
+    if (!walk_to(simulation, 6.2, -149.1, 20.0, 0.08)) {
+        return report_c4(simulation, "to the cabinet");
+    }
+    if (!c4_mantle(simulation, 0.0, -1.0, 664.3, "onto the cabinet")) {
+        return false;
+    }
+    // The duct, from the cabinet's back edge.
+    (void)walk_to(simulation, 6.2, -150.9, 2.0, 0.05);
+    if (!c4_hang_up(simulation, 0.0, -1.0, 667.5, "up onto the duct")) {
+        return false;
+    }
+    // East along the duct and over the beam to the pump deck.
+    if (!(walk_to(simulation, 10.0, -152.3, 6.0, 0.1) && walk_to(simulation, 10.0, -153.9, 3.0, 0.1))) {
+        return report_c4(simulation, "onto the beam");
+    }
+    seen.balanced = simulation.snapshot().player_balancing;
+    if (!walk_to(simulation, 10.0, -158.0, 6.0, 0.1) || !standing_above(simulation.snapshot(), 667.5)) {
+        return report_c4(simulation, "over the beam");
+    }
+    // Up the standpipe onto the runway.
+    if (!walk_to(simulation, 9.5, -158.7, 4.0, 0.08)) {
+        return report_c4(simulation, "to the standpipe");
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().grip_available) {
+        return report_c4(simulation, "standpipe offered");
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    if (!is_climbing(simulation.snapshot()) ||
+        !hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 20.0,
+                    [](const Snapshot &state) { return standing_above(state, 675.3); })) {
+        return report_c4(simulation, "up the standpipe");
+    }
+    return true;
+}
+
+// From the 662 deck by C4's cabinet up the service gantry to the 684 deck, on
+// player inputs, the way a player who has worked it out climbs it.
+bool climb_c4(scraperx::sim::Simulation &simulation, C4Notes *notes = nullptr) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    C4Notes seen;
+    if (!climb_c4_to_runway(simulation, seen)) {
+        return false;
+    }
+    // The winch house: nothing to climb on it, from the runway.
+    if (!walk_to(simulation, 7.6, -160.8, 4.0, 0.08)) {
+        return report_c4(simulation, "to the winch house");
+    }
+    (void)simulation.set_facing(-1.0, 0.0);
+    (void)simulation.advance_frame(0.4);
+    seen.house_offered = simulation.snapshot().ledge_available || simulation.snapshot().grip_available;
+    // Jumped at, pushing in, it is out of any jump's reach and catches nothing.
+    (void)simulation.request_jump();
+    seen.house_caught = hold_stick(simulation, -0.4, 0.0, -1.0, 0.0, 1.5, [](const Snapshot &state) {
+        return state.traversal_state == TraversalState::Hanging || state.traversal_state == TraversalState::Climbing;
+    });
+    if (seen.house_caught || !wait_for(simulation, 1.0, [](const Snapshot &state) { return standing_above(state, 675.3); })) {
+        return report_c4(simulation, "back on the runway after the jump at the house");
+    }
+    // Over the runway's +z edge into a hang, west along its lip past the
+    // house, and up.
+    if (!walk_to(simulation, 7.8, -159.9, 4.0, 0.08)) {
+        return report_c4(simulation, "to the runway's edge");
+    }
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().edge_drop_available) {
+        return report_c4(simulation, "edge drop offered");
+    }
+    (void)simulation.request_release();
+    if (!wait_for(simulation, 1.5,
+                  [](const Snapshot &state) { return state.traversal_state == TraversalState::Hanging; })) {
+        return report_c4(simulation, "lowered into a hang");
+    }
+    // Hanging all the way: a body that loses the lip fails here, not later.
+    const double hung_x = simulation.snapshot().player_position.x;
+    bool let_go = false;
+    (void)hold_stick(simulation, -1.0, 0.0, 0.0, -1.0, 9.0, [&let_go](const Snapshot &state) {
+        let_go = state.traversal_state != TraversalState::Hanging;
+        return let_go || state.player_position.x <= 4.4;
+    });
+    if (let_go || simulation.snapshot().player_position.x > 4.4) {
+        return report_c4(simulation, "hanging along the lip past the house");
+    }
+    seen.shimmied = hung_x - simulation.snapshot().player_position.x;
+    (void)simulation.advance_frame(0.2);
+    (void)simulation.request_jump();
+    if (!wait_for(simulation, 2.5, [](const Snapshot &state) { return standing_above(state, 675.3); })) {
+        return report_c4(simulation, "up west of the house");
+    }
+    // Across the gap: a run along +z off the runway's west end.
+    if (!walk_to(simulation, 2.5, -161.2, 6.0, 0.1)) {
+        return report_c4(simulation, "to the run-up");
+    }
+    if (!hold_stick(simulation, 0.0, 1.0, 0.0, 1.0, 2.0,
+                    [](const Snapshot &state) { return state.player_position.z >= -159.9; })) {
+        return report_c4(simulation, "the run-up");
+    }
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.0, 1.0, 0.0, 1.0, 2.0, [](const Snapshot &state) {
+            return state.player_grounded && state.player_position.y > 675.0 && state.player_position.z > -156.4;
+        })) {
+        return report_c4(simulation, "across the gap");
+    }
+    // The gallery, from the landing's +z edge.
+    if (!walk_to(simulation, 2.5, -153.25, 4.0, 0.05)) {
+        return report_c4(simulation, "to the landing's edge");
+    }
+    if (!c4_hang_up(simulation, 0.0, 1.0, 678.5, "up onto the gallery")) {
+        return false;
+    }
+    // The riser, from the gallery's west end.
+    if (!walk_to(simulation, 0.9, -151.7, 6.0, 0.08)) {
+        return report_c4(simulation, "to the riser");
+    }
+    if (!c4_mantle(simulation, -1.0, 0.0, 680.0, "onto the riser")) {
+        return false;
+    }
+    // The hoist platform, from the riser's -z edge.
+    (void)walk_to(simulation, -0.8, -152.2, 3.0, 0.05);
+    if (!c4_hang_up(simulation, 0.0, -1.0, 683.2, "up onto the hoist platform")) {
+        return false;
+    }
+    // The 684 deck, from the hoist platform's west end.
+    if (!walk_to(simulation, -1.6, -153.7, 4.0, 0.08)) {
+        return report_c4(simulation, "to the 684 deck's edge");
+    }
+    if (!c4_mantle(simulation, -1.0, 0.0, 684.8, "onto the 684 deck")) {
+        return false;
+    }
+    if (!walk_to(simulation, -4.0, -153.7, 4.0, 0.1)) {
+        return report_c4(simulation, "onto the 684 deck");
+    }
+    (void)simulation.advance_frame(0.5);
+    if (notes != nullptr) {
+        *notes = seen;
+    }
+    const auto top = simulation.snapshot();
+    return (on_support(top, Simulation::kServiceFrameEntityId) && top.player_position.y > 684.8) ||
+           report_c4(simulation, "standing on the 684 deck");
+}
+
+// On foot from the runway's lip east of C4's winch house, the stick held
+// west (and a little into the lip, or into the house): whether the body
+// ever stands on the runway west of the house.
+bool c4_walks_past_house(const double stick_x, const double stick_z) {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    Simulation walker(InitialSpawn::Deck662);
+    (void)walker.advance_frame(1.0);
+    C4Notes seen;
+    require(climb_c4_to_runway(walker, seen) && walk_to(walker, 7.6, -159.6, 4.0, 0.05),
+            "C4: up onto the runway, by the winch house's lip");
+    bool past = false;
+    (void)hold_stick(walker, stick_x, stick_z, -1.0, 0.0, 3.0, [&past](const Snapshot &state) {
+        past = past || (state.player_grounded && state.player_position.y > 675.0 && state.player_position.x < 5.0);
+        return past;
+    });
+    return past;
+}
+
+void run_service_c4() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    for (const std::pair<double, double> &stick : {std::pair{-1.0, 0.0}, std::pair{-1.0, 0.1}, std::pair{-1.0, -0.2}}) {
+        require(!c4_walks_past_house(stick.first, stick.second),
+                "on foot, nothing gets past C4's winch house: the way past it is the hang");
+    }
+    Simulation c4(InitialSpawn::Deck662);
+    require(c4.advance_frame(1.0).accepted, "C4 settle interval must be accepted");
+    const double start = c4.snapshot().simulation_time_seconds;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    C4Notes notes;
+    const bool climbed = climb_c4(c4, &notes);
+    g_path_watch.armed = false;
+    require(climbed, "C4 must carry a climber from the 662 deck to the 684 deck");
+    require(notes.balanced, "C4's beam must hold its walker on its line");
+    require(!notes.house_offered, "C4's winch house must offer nothing to climb: the way past it is the hang");
+    require(!notes.house_caught, "jumped at from the runway, C4's winch house must catch nothing");
+    require(notes.shimmied >= 3.0, "C4's hang must carry the body along the runway's lip past the winch house");
+    require(g_path_watch.worst <= 0.15, "climbing C4, the body must never move more than 0.15 m sideways in one tick");
+    const auto top = c4.snapshot();
+    require(top.death_count == 0, "C4 must be climbed without a death");
+    std::cout << "PASS scraperx_sim AS-010 C4: seconds=" << top.simulation_time_seconds - start
+              << " deck684_y=" << top.player_position.y << " shimmied_m=" << notes.shimmied
+              << " worst_step_m=" << g_path_watch.worst << '\n';
+}
+
+// AS-010 on player inputs from the TP-640 start: M hooked on, the chock
+// pulled, the ride, off onto the 662 deck; then up C4 to the 684 deck.
 void run_service_band() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -2079,14 +2332,18 @@ void run_service_band() {
     require(ride_service_m(band).settled, "band: M's cage on its dogs at the 662 deck");
     require(walk_to(band, -5.8, -143.5, 6.0), "band: off M's cage onto the 662 deck");
     (void)band.advance_frame(0.5);
+    const auto deck662 = band.snapshot();
+    require(standing_above(deck662, 662.5), "band: standing on the 662 deck");
+    require(climb_c4(band), "band: up C4 to the 684 deck");
     const auto top = band.snapshot();
-    require(standing_above(top, 662.5), "band: standing on the 662 deck");
-    std::cout << "PASS scraperx_sim AS-010 band: to_662_s=" << top.simulation_time_seconds - start
-              << " deck_y=" << top.player_position.y << '\n';
+    require(top.death_count == 0, "band: no death from TP-640 to the 684 deck");
+    std::cout << "PASS scraperx_sim AS-010 band: to_662_s=" << deck662.simulation_time_seconds - start
+              << " to_684_s=" << top.simulation_time_seconds - start << " deck_y=" << top.player_position.y << '\n';
 }
 
-// AS-010's climbing route, on player inputs: across TP-640 to the ladder
-// and up through the 662 deck's hatch, the lift where it was found.
+// AS-010's climbing route, on player inputs: across TP-640 to the ladder,
+// up through the 662 deck's hatch, and up the second ladder through the 684
+// deck's, the lift where it was found.
 void run_service_route() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -2096,6 +2353,8 @@ void run_service_route() {
     require(walk_to(route, 8.9, -156.5, 12.0) &&
                 climb_wet_hold(route, 8.9, -146.02, 0.0, 1.0, false, 662.5),
             "route: across TP-640 and up the ladder through the 662 deck's hatch");
+    require(climb_wet_hold(route, -4.0, -146.02, 0.0, 1.0, false, 684.5),
+            "route: across the 662 deck and up the ladder through the 684 deck's hatch");
     const auto top = route.snapshot();
     const auto service = route.service_state();
     require(service.m_cage_travel < 0.02 && service.m_reel_latched, "route: the lift did not move");
@@ -3629,6 +3888,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-010-route") {
         run_service_route();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-010-c4") {
+        run_service_c4();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -5548,6 +5812,7 @@ int main() {
     run_crane_route();
     run_crane_wreckage();
     run_midstack_service();
+    run_service_c4();
     run_service_band();
     run_service_route();
     run_ascent();

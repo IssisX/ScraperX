@@ -77,6 +77,8 @@ enum class InitialSpawn : std::uint8_t {
     Deck12North = 29,
     // AS-010: on TP-640 north of AS-009 L's hole, as a rider off L's cab.
     PlateTop640 = 30,
+    // AS-010: on the 662 deck north of C4's cabinet, where a rider off M climbs on.
+    Deck662 = 31,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };
@@ -501,9 +503,11 @@ public:
     static constexpr std::uint64_t kCraneLClutchEntityId = 2126;
     static constexpr std::uint64_t kCraneLClutchHandleEntityId = 2127;
     // AS-010 Midstack Service: its static structure and its climbing route,
-    // then stage M, the service lift on the cable reel.
+    // C4, the service gantry climbed from the 662 deck to the 684 deck, then
+    // stage M, the service lift on the cable reel.
     static constexpr std::uint64_t kServiceFrameEntityId = 1012;
     static constexpr std::uint64_t kServiceRouteEntityId = 1013;
+    static constexpr std::uint64_t kServiceC4EntityId = 1014;
     static constexpr std::uint64_t kServiceMCageEntityId = 2130;
     static constexpr std::uint64_t kServiceMReelEntityId = 2131;
     static constexpr std::uint64_t kServiceMChockEntityId = 2132;

@@ -10,7 +10,8 @@
 // above it, so it pays out as the reel falls and its weight leaves the reel:
 // the drive fades through the stroke and turns, the cage rises to its apex
 // just past the deck and settles back onto its safety dogs. No governor: the
-// arrival is the machine's own.
+// arrival is the machine's own. Then C4, a climb: the service gantry, from
+// the 662 deck to the 684 deck on nothing but the player's movement.
 
 namespace scraperx::sim::bands {
 
@@ -162,6 +163,42 @@ void build_frame(std::vector<Part> &frame) {
     deck(kHatchX1, kHalf, z0, z1);
 }
 
+// ---- the 684 deck ------------------------------------------------------------------
+// Over the footprint's west, above M and its head frame. Its east edge is a
+// deep yellow girder, the face C4's last mantle takes and the line its
+// climber sees from the 662 deck; the backup ladder comes up through a hatch.
+constexpr float kUpperBottom = 683.6F;
+constexpr float kUpperTop = 684.1F;
+constexpr float kUpperEast = -2.0F;
+constexpr float kUpperGirderBottom = 682.9F;
+constexpr float kUpperHatchX0 = -4.8F;
+constexpr float kUpperHatchX1 = -3.2F;
+constexpr float kUpperHatchZ0 = -147.4F;
+constexpr float kUpperHatchZ1 = -145.25F;
+
+void build_upper_deck(std::vector<Part> &frame) {
+    // Columns from the 662 deck: the west corners over the 662 deck's own,
+    // and three along the east edge, thicker than any hold.
+    for (const float z : {kWellZ - kHalf + 0.4F, kWellZ + kHalf - 0.4F}) {
+        frame.push_back(span({-kHalf + 0.05F, kDeckTop, z - 0.35F}, {-kHalf + 0.75F, kUpperBottom, z + 0.35F},
+                             Material::Rust));
+    }
+    for (const float z : {kWellZ - kHalf + 0.4F, kWellZ, kWellZ + kHalf - 0.4F}) {
+        frame.push_back(span({kUpperEast - 1.0F, kDeckTop, z - 0.35F}, {kUpperEast - 0.3F, kUpperBottom, z + 0.35F},
+                             Material::Rust));
+    }
+    const auto deck = [&](const float x0, const float x1, const float z0, const float z1) {
+        frame.push_back(span({x0, kUpperBottom, z0}, {x1, kUpperTop, z1}, Material::Concrete));
+    };
+    const float z0 = kWellZ - kHalf;
+    const float z1 = kWellZ + kHalf;
+    deck(-kHalf, kUpperHatchX0, z0, z1);
+    deck(kUpperHatchX0, kUpperHatchX1, z0, kUpperHatchZ0);
+    deck(kUpperHatchX0, kUpperHatchX1, kUpperHatchZ1, z1);
+    deck(kUpperHatchX1, kUpperEast, z0, z1);
+    frame.push_back(span({kUpperEast - 0.3F, kUpperGirderBottom, z0}, {kUpperEast, kUpperBottom, z1}, Material::Yellow));
+}
+
 // ---- Stage M -----------------------------------------------------------------
 // Numbers from the evaluator (stage1dof.py, the contract's spec): INTEGRATED
 // over guide friction 50 to 150 N, every case caught on its fall-back.
@@ -263,11 +300,98 @@ void build_stage_m(kit::Kit &kit, MidstackService &service, std::vector<Part> &f
                                   1.0F, length, 0.0F);
 }
 
+// ---- C4, the service gantry: a climb from the 662 deck to the 684 deck --------------
+// One static body of cabinet, duct, beam, girder and plate, climbed on the
+// movement the native allows and nothing else, each move well inside its
+// envelope (simulation.cpp): mantles of 1.55 m (0.9 to 1.85 m), hangs caught
+// 3.2 m up (3.76 m reach) on faces 1.2 m or more deep, a standpipe, a level
+// beam, a drop over an edge into a hang and a shimmy past a winch house, a
+// 3 m gap. Each platform's face and top are this one body, as the ledge
+// probe needs; every column is thicker than a hold (0.18 m), so nothing but
+// the standpipe is climbed hand over hand. A miss lands on a lower platform
+// or the 662 deck, under the 20.4 m a body survives, but from the hoist
+// platform itself.
+constexpr float kC4Cabinet = 663.65F;       // the switchgear cabinet: mantle 1.55
+constexpr float kC4Duct = 666.85F;          // the duct and the pump deck: hang 3.2
+constexpr float kC4Runway = 674.6F;         // the hoist runway: the standpipe, 7.75
+constexpr float kC4Landing = 674.6F;        // across a 3 m gap from the runway
+constexpr float kC4Gallery = 677.8F;        // hang 3.2
+constexpr float kC4Riser = 679.35F;         // mantle 1.55
+constexpr float kC4Hoist = 682.55F;         // hang 3.2; mantle 1.55 onto the 684 deck
+constexpr float kC4Column = 0.2F;           // a column's half width
+
+void c4_column(std::vector<Part> &parts, const float x, const float z, const float top) {
+    parts.push_back(span({x - kC4Column, kDeckTop, z - kC4Column}, {x + kC4Column, top, z + kC4Column}, Material::Rust));
+}
+
+void build_c4(kit::Kit &kit) {
+    std::vector<Part> c4;
+    // 1. The switchgear cabinet, mantled from the 662 deck facing -z.
+    c4.push_back(span({5.0F, kDeckTop, -151.2F}, {7.4F, kC4Cabinet, -149.8F}, Material::Hazard));
+    // 2. The duct along x, its +z face 0.3 m past the cabinet: from the
+    // cabinet's back edge a jump catches its lip.
+    c4.push_back(span({1.0F, kC4Duct - 1.35F, -153.1F}, {11.0F, kC4Duct, -151.5F}, Material::Galvanised));
+    for (const float x : {1.4F, 10.6F}) {
+        c4_column(c4, x, -152.3F, kC4Duct - 1.35F);
+    }
+    // 3. A level beam from the duct's back edge to the pump deck: 0.4 m wide,
+    // 4.5 m long, open on both sides.
+    c4.push_back(span({9.8F, kC4Duct - 0.4F, -157.6F}, {10.2F, kC4Duct, -153.1F}, Material::Yellow));
+    c4.push_back(span({8.0F, kC4Duct - 0.5F, -161.5F}, {11.5F, kC4Duct, -157.6F}, Material::Steel));
+    for (const JPH::Vec3 at : {JPH::Vec3(8.3F, 0.0F, -161.2F), JPH::Vec3(8.3F, 0.0F, -157.9F),
+                               JPH::Vec3(11.2F, 0.0F, -157.9F)}) {
+        c4_column(c4, at.GetX(), at.GetZ(), kC4Duct - 0.5F);
+    }
+    c4.push_back(span({10.2F, kC4Duct, -161.3F}, {11.3F, kC4Duct + 1.0F, -160.3F}, Material::Rust));   // the pump
+    // 4. The standpipe up the runway's +z face, 0.14 m off it, a hold from the
+    // pump deck to 0.2 m under the runway's top.
+    c4.push_back(span({9.42F, kC4Duct, -159.34F}, {9.58F, kC4Runway - 0.2F, -159.18F}, Material::Yellow));
+    // 5. The hoist runway, a 1.2 m girder 10.5 m long, and its winch house:
+    // 4.2 m high, out of any jump's reach, filling the runway. From 0.35 m up
+    // its face stands flush with the runway's +z lip, over a plinth set 0.2 m
+    // back: to pass on foot a body would have to stand 0.35 m out beyond the
+    // lip, where the edge no longer holds it up, while a body hanging from
+    // the lip passes under the overhang, and the lip probe (0.25 m up, 0.12 m
+    // in) still finds the runway's top. The way west is over that lip,
+    // hanging, and along it.
+    c4.push_back(span({1.0F, kC4Runway - 1.2F, -161.8F}, {11.5F, kC4Runway, -159.4F}, Material::Rust));
+    for (const float x : {1.3F, 6.0F, 11.2F}) {
+        for (const float z : {-161.5F, -159.7F}) {
+            c4_column(c4, x, z, kC4Runway - 1.2F);
+        }
+    }
+    c4.push_back(span({5.0F, kC4Runway, -161.8F}, {7.0F, kC4Runway + 0.35F, -159.6F}, Material::Concrete));
+    c4.push_back(span({5.0F, kC4Runway + 0.35F, -161.8F}, {7.0F, kC4Runway + 4.2F, -159.4F}, Material::Concrete));
+    // 6. Across a 3 m gap in +z from the runway's west end, a landing.
+    c4.push_back(span({1.0F, kC4Landing - 0.3F, -156.4F}, {4.0F, kC4Landing, -152.9F}, Material::Galvanised));
+    for (const float x : {1.3F, 3.7F}) {
+        for (const float z : {-156.1F, -153.6F}) {
+            c4_column(c4, x, z, kC4Landing - 0.3F);
+        }
+    }
+    // 7. The gallery, its -z face 0.4 m past the landing's edge: a hang.
+    c4.push_back(span({0.5F, kC4Gallery - 1.35F, -152.5F}, {4.5F, kC4Gallery, -150.9F}, Material::Yellow));
+    for (const float x : {0.8F, 4.2F}) {
+        c4_column(c4, x, -151.1F, kC4Gallery - 1.35F);
+    }
+    // 8. The riser, a concrete shaft beside the gallery's west end: a mantle.
+    c4.push_back(span({-2.0F, kDeckTop, -152.5F}, {0.5F, kC4Riser, -150.9F}, Material::Concrete));
+    // 9. The hoist platform, its +z face 0.4 m past the riser's: a hang; from
+    // its west end a mantle onto the 684 deck.
+    c4.push_back(span({kUpperEast, kC4Hoist - 1.35F, -154.5F}, {0.8F, kC4Hoist, -152.9F}, Material::Yellow));
+    for (const float x : {-1.7F, 0.5F}) {
+        c4_column(c4, x, -154.2F, kC4Hoist - 1.35F);
+    }
+    (void)kit.add_body(Sim::kServiceC4EntityId, c4, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
+}
+
 // ---- the climbing route, no lift --------------------------------------------------
-// A ladder from TP-640 up through the deck's hatch.
+// The backup: ladders from TP-640 up through the 662 deck's hatch, and from
+// the 662 deck up through the 684 deck's.
 void build_climbing_route(kit::Kit &kit) {
     std::vector<Part> route;
     ladder(route, 0.5F * (kHatchX0 + kHatchX1), kHatchZ1 - 0.15F, true, kPlateTop, kDeckTop);
+    ladder(route, 0.5F * (kUpperHatchX0 + kUpperHatchX1), kUpperHatchZ1 - 0.15F, true, kDeckTop, kUpperTop);
     (void)kit.add_body(Sim::kServiceRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
 }
 
@@ -276,8 +400,10 @@ void build_climbing_route(kit::Kit &kit) {
 void build_midstack_service(kit::Kit &kit, MidstackService &service) {
     std::vector<Part> frame;
     build_frame(frame);
+    build_upper_deck(frame);
     build_stage_m(kit, service, frame);
     (void)kit.add_body(Sim::kServiceFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
+    build_c4(kit);
     build_climbing_route(kit);
 }
 
