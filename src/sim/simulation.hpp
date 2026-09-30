@@ -108,6 +108,8 @@ enum class InitialSpawn : std::uint8_t {
     // Isolated normal-world physics probes for the +66 m player rocker.
     TeeterEntry = 29,
     TeeterFarDrop = 30,
+    // Isolated normal-world probe at the demonstrated +77 m ring.
+    BracedBayEntry = 31,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation

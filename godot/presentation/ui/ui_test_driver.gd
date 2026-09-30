@@ -556,6 +556,15 @@ func _touch_teeter() -> bool:
 	if not _standing_above(77.5) or int(_native().get_support_entity_id()) != 11 or \
 			int(_native().get_death_count()) != 0:
 		return _fail("teeter +77 m ring unsupported %s" % _position())
+	# AS-021 approach framing from the earned ring. This capture proves only
+	# the visible layout; the full +88 m touch route is a separate handoff gate.
+	if not await _walk_to(device, Vector2(25.1, -131.0), 0.14, 12.0):
+		return _fail("braced bay approach along +77 m ring %s" % _position())
+	var bay_target := Vector3(31.0, 83.0, -137.0)
+	var to_bay: Vector3 = bay_target - _main._camera.global_position
+	await _face(Vector2(to_bay.x, to_bay.z))
+	_main._pitch = atan2(to_bay.y, Vector2(to_bay.x, to_bay.z).length())
+	await _pose("braced_bay_preview")
 	_detail = "grade_to_77m=1 ballast_pushed=1 player_loaded_teeter=1 physical_reset=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
 	return true
 

@@ -6,6 +6,7 @@
 #include "swing_stair.hpp"
 #include "sim/upper_ascent.hpp"
 #include "sim/teeter_rise.hpp"
+#include "sim/braced_bay.hpp"
 #include "sim/facade_route.hpp"
 #include "sim/water_screw.hpp"
 
@@ -108,6 +109,9 @@ constexpr float kSupportNormalThreshold = 0.55F;
 // slack covers the deployed 30-degree flight, where the surface under the
 // centre is 0.95 m down.
 constexpr float kCheckpointFootingSlack = 0.15F;
+// A checkpoint needs a small planar footprint, not one ray touching a
+// rounded edge. This still fits the narrow 0.30 m campaign girders.
+constexpr float kCheckpointFootingMargin = 0.10F;
 constexpr float kPlayerMaximumRelativeSpeed = 5.5F;
 constexpr float kGroundAcceleration = 22.0F;
 // 14.0, not the original 8.0. Measured directly, by executing a jump and an
@@ -1475,6 +1479,8 @@ private:
         return {25.3, 66.9, -139.0};
     case scraperx::sim::InitialSpawn::TeeterFarDrop:
         return {32.4, 70.0, -139.0};
+    case scraperx::sim::InitialSpawn::BracedBayEntry:
+        return {25.1, 77.9, -132.0};
     case scraperx::sim::InitialSpawn::CatwalkTreadle:
         // Above the outboard half of the treadle plate, where a body has real
         // leverage on the hinge.
@@ -1901,6 +1907,7 @@ public:
             swing_stair_ = std::make_unique<SwingStair>(physics_system_, *kit_);
             upper_ascent_ = std::make_unique<UpperAscent>(physics_system_, *kit_);
             teeter_rise_ = std::make_unique<TeeterRise>(*kit_);
+            build_braced_bay(*kit_);
         }
 
         physics_system_.OptimizeBroadPhase();
@@ -4338,21 +4345,50 @@ private:
         return lock.GetBody().GetWorldSpaceSurfaceNormal(sub_shape_id, point);
     }
 
-    // Firm footing, for a checkpoint (kCheckpointFootingSlack): a ray straight
-    // down from the body's centre meets a walkable surface within reach. The
-    // carried body is not footing, whatever it hangs over.
+    // A checkpoint must restore to a resting capsule on a small support
+    // patch. One centre ray also sees lower decking while the capsule is
+    // perched on a higher rounded edge: that state slowly slides off again
+    // after restore. Require the actual capsule/plane rest height and a
+    // cross of nearby points on that plane. The carried body is not footing.
     [[nodiscard]] bool footing_is_firm(const JPH::BodyInterface &bodies) const noexcept {
-        const float reach =
-            (crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight) + kCheckpointFootingSlack;
-        const JPH::RRayCast ray(bodies.GetPosition(player_id_), JPH::Vec3(0.0F, -reach, 0.0F));
+        const float half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+        const float reach = half_height + kCheckpointFootingSlack;
+        const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+        const JPH::Vec3 down(0.0F, -reach, 0.0F);
+        const JPH::RRayCast ray(centre, down);
         JPH::RayCastResult hit;
         const JPH::IgnoreSingleBodyFilter player_filter(player_id_);
         const JPH::IgnoreSingleBodyFilterChained filter(carried_id_, player_filter);
         if (!physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter)) {
             return false;
         }
-        return surface_normal(hit.mBodyID, hit.mSubShapeID2, ray.GetPointOnRay(hit.mFraction))
-                   .GetY() >= kSupportNormalThreshold;
+        const JPH::RVec3 point = ray.GetPointOnRay(hit.mFraction);
+        const JPH::Vec3 normal = surface_normal(hit.mBodyID, hit.mSubShapeID2, point);
+        if (normal.GetY() < kSupportNormalThreshold) return false;
+        // For a vertical capsule tangent to a plane, the vertical ray depth
+        // is cylinder_half_height + radius / normal.y. Permit twice Jolt's
+        // declared penetration slop, not an unrelated checkpoint tolerance.
+        const float tolerance = 2.0F * physics_system_.GetPhysicsSettings().mPenetrationSlop;
+        const float rest_depth = half_height - kPlayerRadius + kPlayerRadius / normal.GetY();
+        if (std::abs(reach * hit.mFraction - rest_depth) > tolerance) return false;
+        for (const JPH::Vec3 offset : {
+                 JPH::Vec3(kCheckpointFootingMargin, 0, 0),
+                 JPH::Vec3(-kCheckpointFootingMargin, 0, 0),
+                 JPH::Vec3(0, 0, kCheckpointFootingMargin),
+                 JPH::Vec3(0, 0, -kCheckpointFootingMargin)}) {
+            const JPH::RRayCast probe(centre + offset, down);
+            JPH::RayCastResult nearby;
+            if (!physics_system_.GetNarrowPhaseQuery().CastRay(probe, nearby, {}, {}, filter)) {
+                return false;
+            }
+            const JPH::RVec3 nearby_point = probe.GetPointOnRay(nearby.mFraction);
+            if (surface_normal(nearby.mBodyID, nearby.mSubShapeID2, nearby_point).GetY() <
+                    kSupportNormalThreshold ||
+                std::abs(JPH::Vec3(nearby_point - point).Dot(normal)) > tolerance) {
+                return false;
+            }
+        }
+        return true;
     }
 
     // The capsule the body has now: standing, or crouched.

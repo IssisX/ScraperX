@@ -88,7 +88,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_sim_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_native --parallel 2
           if ! ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log; then
             # The public run page exposes annotations even when its raw logs
             # are unavailable. Keep the exact failing test and nearby output.
@@ -294,7 +294,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=45 kit_bodies=87 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=45 kit_bodies=88 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=169" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
@@ -331,6 +331,7 @@ jobs:
           ./build/host/scraperx_teeter_route_tests | tee artifacts/teeter-native.log
           grep -F "PASS scraperx_sim AS-020 loaded teeter, recovery and +77 route" artifacts/teeter-native.log
           ./build/host/scraperx_teeter_physics_tests | tee artifacts/teeter-physics.log
+          ./build/host/scraperx_braced_bay_tests | tee artifacts/braced-bay-native.log
           # This calls the complete touch pipe, facade and stair route first.
           # --resolution changes the window, not the project's 2160x1856
           # canvas viewport. Reduce both for this CPU-rendered route only;
@@ -374,7 +375,7 @@ jobs:
           for pose in upper_handle_ready upper_lift_rising upper_lift_seated deck_55m upper_duct_hang upper_vent_climb upper_arrival; do
             test -s "artifacts/screenshots/teeter_${pose}.png"
           done
-          for pose in teeter_entry teeter_ballast_near teeter_ballast_far teeter_loaded teeter_shelf teeter_climb teeter_arrival; do
+          for pose in teeter_entry teeter_ballast_near teeter_ballast_far teeter_loaded teeter_shelf teeter_climb teeter_arrival braced_bay_preview; do
             test -s "artifacts/screenshots/teeter_${pose}.png"
           done
 
