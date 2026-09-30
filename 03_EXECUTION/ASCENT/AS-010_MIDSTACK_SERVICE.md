@@ -109,12 +109,18 @@ backup ladder).
 | 10 | hoist platform → 684 deck (684.1) | mantle 1.55 m over the yellow girder | as 1 |
 
 A faced ledge and its top are one body, as the ledge probe needs; every column is 0.4 m, thicker
-than a hold, so nothing but the standpipe is climbed hand over hand. A miss lands on a lower
-platform or the 662 deck, less than the 20.4 m a body survives, except from the hoist platform.
-Other lines are the player's to find. By the envelope's numbers, and not proven in the engine: a
-sprint off the runway may carry across the gap straight into the gallery's hang, a running diagonal
-off the runway's east end may reach the landing past the winch house, and the beam's 4.5 m gap is
-inside a walking jump.
+than a hold, so nothing but the standpipe is climbed hand over hand. Where the duct, the pump deck
+and the runway come within 1 m of the tower's faces, a parapet 0.8 m high and 0.25 m thick (under
+the 0.9 m the ledge probe starts at, over a step, thicker than a hold) stops a body walking into it
+from going off past the faces; a jump clears it. A miss elsewhere lands on a lower platform or the
+662 deck, less than the 20.4 m a body survives, except from the hoist platform; off the 684 deck's
+east edge it is 22 m to the 662 deck, and lethal.
+
+Other lines are the player's to find. Three found by the review work in the engine on this build
+(probes run 2026-09-30, no death in any): a diagonal jump, walking or sprinting, off the runway east
+of the winch house lands on the landing, so the hang is one way past the house and not the only
+one; a sprint off the runway west of the house catches the gallery's lip straight, and the body
+pulls up onto it; and a jump from the duct clears the beam's gap to the pump deck.
 
 ## Climbing route, no lift
 
@@ -129,7 +135,8 @@ deck, never past 3.5 m/s, the gain within the reel's release; empty, the cage st
 `AS-010 C4` (the 662 deck to standing on the 684 deck on player inputs, no death, no body step over
 0.15 m a tick; the beam holds its walker on its line; the winch house offers nothing to climb and
 catches nothing jumped at, and on foot, pushed west along the lip, into it or into the house,
-nothing gets past it; the body hangs all the way along the runway's lip past the house); `AS-010 band` (the TP-640 start through
+nothing gets past it; the body hangs all the way along the runway's lip past the house; walked
+into each of the five parapets, a body stays up on its platform); `AS-010 band` (the TP-640 start through
 M and C4 to standing on the 684 deck); `AS-010 route` (both ladders, the lift untouched). Through
 the game's input: `touch_service`, `pad_service`, `keyboard_service` (M), `touch_c4` (C4, from the
 662 deck), and the stack runs from the game's start: `touch_stack` on to the 684 deck, `pad_stack`
@@ -142,17 +149,20 @@ Built on `ScraperX-Claude` after `b35f1ed`.
 
 | Group | Result |
 |---|---|
-| `AS-010 M` | shackle free: the reel falls 22.9 m paying out its cable, the cage stays. Hooked on: apex 21.85 m, held at 21.80 m, peak 2.94 m/s, 12.2 s; gain 339.0 kJ against 343.3 kJ released; empty, it stays on its dogs |
-| `AS-010 C4` (2026-09-30) | the 662 deck to standing on the 684 deck (685.0 m) in 34.5 s, no death, worst body step 0.085 m a tick; balancing on the beam; the winch house offers nothing standing, catches nothing jumped at, and lets nothing past on foot (three pushes west along its lip); the body hangs all the way, 3.42 m along the runway's lip |
-| `AS-010 band` | TP-640 to standing on the 662 deck in 21.4 s, through C4 to the 684 deck in 57.8 s |
+| `AS-010 M` | shackle free: the reel falls 22.9 m paying out its cable, the cage stays. Hooked on: apex 21.85 m, held at 21.80 m, peak 2.93 m/s, 12.4 s; gain 339.0 kJ against 343.3 kJ released; empty, it stays on its dogs |
+| `AS-010 C4` (2026-09-30) | the 662 deck to standing on the 684 deck (685.0 m) in 34.5 s, no death, worst body step 0.085 m a tick; balancing on the beam; the winch house offers nothing standing, catches nothing jumped at, and lets nothing past on foot (three pushes west along its lip); the body hangs all the way, 3.42 m along the runway's lip; walked into each parapet, the body stays up (with any one parapet taken away, the walk into it ends past the tower's face) |
+| `AS-010 band` | TP-640 to standing on the 662 deck in 21.4 s, through C4 to the 684 deck in 57.7 s |
 | `AS-010 route` | both ladders, TP-640 to the 684 deck in 54.5 s, the lift untouched |
-| Input | `touch_service`, `pad_service`, `keyboard_service` from the TP-640 start: held at 21.60–21.70 m, off onto the deck; `touch_c4` from the 662 deck to the 684 deck (36.6 s); `touch_stack` from the game's start to the 684 deck (643.4 s), `pad_stack` and `keyboard_stack` to the 662 deck |
+| Input | `touch_service`, `pad_service`, `keyboard_service` from the TP-640 start: held at 21.60–21.80 m, off onto the deck; `touch_c4` from the 662 deck to the 684 deck (36.5 s); `touch_stack` from the game's start to the 684 deck (643.3 s), `pad_stack` and `keyboard_stack` to the 662 deck |
 
 What a review of C4 taught: the first winch house stood 0.3 m short of the runway's lip, and a
 walker got round it on the lip's edge, the capsule's rim holding it up to 0.29 m out beyond the lip
 (support down to a 0.55 normal), so the hang was not needed. The house now stands flush with the lip
 from 0.35 m up, and `AS-010 C4` pushes a walker west along the lip three ways; that check fails on
-the first house and passes on this one.
+the first house and passes on this one. The same review found the runway's and the pump deck's outer
+edges 0.2–0.5 m inside the tower's faces, so a step off them fell past the 662 deck and down the
+stack; the parapets came from that. The run-up to the gap starts 0.2 m further in (z −161.0), clear
+of the runway's parapet.
 
 Two things the input path taught: with 0.3 m dog teeth the cage could be held a tooth low, 0.4 m
 under the deck (past the walker's 0.35 m step), when the rider's own movements in the cage shifted

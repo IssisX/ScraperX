@@ -2121,10 +2121,9 @@ struct C4Notes final {
     double shimmied = 0.0;          // how far the hang carried the body along the runway's lip
 };
 
-// From the 662 deck by C4's cabinet up onto its hoist runway, on player
-// inputs: the cabinet, the duct, the beam, the standpipe.
-bool climb_c4_to_runway(scraperx::sim::Simulation &simulation, C4Notes &seen) {
-    using scraperx::sim::Snapshot;
+// From the 662 deck by C4's cabinet onto its duct, on player inputs: the
+// cabinet, then the duct from the cabinet's back edge.
+bool c4_to_duct(scraperx::sim::Simulation &simulation) {
     // The cabinet, from the deck.
     if (!walk_to(simulation, 6.2, -149.1, 20.0, 0.08)) {
         return report_c4(simulation, "to the cabinet");
@@ -2134,10 +2133,11 @@ bool climb_c4_to_runway(scraperx::sim::Simulation &simulation, C4Notes &seen) {
     }
     // The duct, from the cabinet's back edge.
     (void)walk_to(simulation, 6.2, -150.9, 2.0, 0.05);
-    if (!c4_hang_up(simulation, 0.0, -1.0, 667.5, "up onto the duct")) {
-        return false;
-    }
-    // East along the duct and over the beam to the pump deck.
+    return c4_hang_up(simulation, 0.0, -1.0, 667.5, "up onto the duct");
+}
+
+// East along C4's duct and over the beam to the pump deck.
+bool c4_duct_to_pump_deck(scraperx::sim::Simulation &simulation, C4Notes &seen) {
     if (!(walk_to(simulation, 10.0, -152.3, 6.0, 0.1) && walk_to(simulation, 10.0, -153.9, 3.0, 0.1))) {
         return report_c4(simulation, "onto the beam");
     }
@@ -2145,7 +2145,12 @@ bool climb_c4_to_runway(scraperx::sim::Simulation &simulation, C4Notes &seen) {
     if (!walk_to(simulation, 10.0, -158.0, 6.0, 0.1) || !standing_above(simulation.snapshot(), 667.5)) {
         return report_c4(simulation, "over the beam");
     }
-    // Up the standpipe onto the runway.
+    return true;
+}
+
+// Up C4's standpipe from the pump deck onto the runway.
+bool c4_pump_deck_to_runway(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Snapshot;
     if (!walk_to(simulation, 9.5, -158.7, 4.0, 0.08)) {
         return report_c4(simulation, "to the standpipe");
     }
@@ -2162,6 +2167,46 @@ bool climb_c4_to_runway(scraperx::sim::Simulation &simulation, C4Notes &seen) {
         return report_c4(simulation, "up the standpipe");
     }
     return true;
+}
+
+// From the 662 deck by C4's cabinet up onto its hoist runway, on player
+// inputs: the cabinet, the duct, the beam, the standpipe.
+bool climb_c4_to_runway(scraperx::sim::Simulation &simulation, C4Notes &seen) {
+    return c4_to_duct(simulation) && c4_duct_to_pump_deck(simulation, seen) && c4_pump_deck_to_runway(simulation);
+}
+
+// On one of C4's platforms, whose top is `top`, from (x, z), the stick held
+// toward the tower's face for 2 s: whether the body stays up on it.
+bool c4_stays_up(scraperx::sim::Simulation &simulation, const double x, const double z, const double stick_x,
+                 const double stick_z, const double top) {
+    using scraperx::sim::Snapshot;
+    if (!walk_to(simulation, x, z, 4.0, 0.1)) {
+        return report_c4(simulation, "to a parapet");
+    }
+    bool off = false;
+    (void)hold_stick(simulation, stick_x, stick_z, stick_x, stick_z, 2.0, [&off, top](const Snapshot &state) {
+        off = off || state.player_position.y < top + 0.5;
+        return off;
+    });
+    return (!off && standing_above(simulation.snapshot(), top + 0.5)) || report_c4(simulation, "at a parapet");
+}
+
+// Walked into the parapets where C4's duct, pump deck and runway come within
+// 1 m of the tower's faces: whether the body stays up on each platform.
+bool c4_parapets_hold() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    constexpr double kDuctTop = 666.85;     // the duct's and the pump deck's
+    constexpr double kRunwayTop = 674.6;
+    Simulation walker(InitialSpawn::Deck662);
+    (void)walker.advance_frame(1.0);
+    C4Notes seen;
+    return c4_to_duct(walker) && c4_stays_up(walker, 10.0, -152.3, 1.0, 0.0, kDuctTop) &&
+           c4_duct_to_pump_deck(walker, seen) && walk_to(walker, 8.8, -158.3, 3.0, 0.1) &&
+           c4_stays_up(walker, 8.8, -160.3, 0.0, -1.0, kDuctTop) && walk_to(walker, 8.8, -158.3, 3.0, 0.1) &&
+           c4_stays_up(walker, 10.5, -158.3, 1.0, 0.0, kDuctTop) && c4_pump_deck_to_runway(walker) &&
+           c4_stays_up(walker, 9.5, -160.6, 0.0, -1.0, kRunwayTop) &&
+           c4_stays_up(walker, 10.0, -160.6, 1.0, 0.0, kRunwayTop);
 }
 
 // From the 662 deck by C4's cabinet up the service gantry to the 684 deck, on
@@ -2221,7 +2266,7 @@ bool climb_c4(scraperx::sim::Simulation &simulation, C4Notes *notes = nullptr) {
         return report_c4(simulation, "up west of the house");
     }
     // Across the gap: a run along +z off the runway's west end.
-    if (!walk_to(simulation, 2.5, -161.2, 6.0, 0.1)) {
+    if (!walk_to(simulation, 2.5, -161.0, 6.0, 0.1)) {
         return report_c4(simulation, "to the run-up");
     }
     if (!hold_stick(simulation, 0.0, 1.0, 0.0, 1.0, 2.0,
@@ -2297,8 +2342,9 @@ void run_service_c4() {
     using scraperx::sim::Simulation;
     for (const std::pair<double, double> &stick : {std::pair{-1.0, 0.0}, std::pair{-1.0, 0.1}, std::pair{-1.0, -0.2}}) {
         require(!c4_walks_past_house(stick.first, stick.second),
-                "on foot, nothing gets past C4's winch house: the way past it is the hang");
+                "on foot along the runway, nothing gets past C4's winch house");
     }
+    require(c4_parapets_hold(), "walked into C4's parapets by the tower's faces, a body must stay up on its platform");
     Simulation c4(InitialSpawn::Deck662);
     require(c4.advance_frame(1.0).accepted, "C4 settle interval must be accepted");
     const double start = c4.snapshot().simulation_time_seconds;

@@ -1743,7 +1743,7 @@ func _service_c4(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return _standing_above(675.3), 2.5):
 		return _fail("C4: the climb up west of the winch house did not land (at %s)" % str(_position()))
 	# Across the gap: a run along +z off the runway's west end.
-	if not await _go(device, Vector2(2.5, -161.2), 0.1, 6.0):
+	if not await _go(device, Vector2(2.5, -161.0), 0.1, 6.0):
 		return _fail("C4: the walk to the run-up stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, 1.0))
 	_move(device, 1.0)

@@ -308,9 +308,12 @@ void build_stage_m(kit::Kit &kit, MidstackService &service, std::vector<Part> &f
 // beam, a drop over an edge into a hang and a shimmy past a winch house, a
 // 3 m gap. Each platform's face and top are this one body, as the ledge
 // probe needs; every column is thicker than a hold (0.18 m), so nothing but
-// the standpipe is climbed hand over hand. A miss lands on a lower platform
-// or the 662 deck, under the 20.4 m a body survives, but from the hoist
-// platform itself.
+// the standpipe is climbed hand over hand. Where the duct, the pump deck and
+// the runway come within 1 m of the tower's faces, a 0.8 m parapet (below the
+// 0.9 m the ledge probe starts at, above a step, thicker than a hold) keeps a
+// body walking into it from going off past the faces; a jump clears it. A
+// miss elsewhere lands on a lower platform or the 662 deck, under the 20.4 m
+// a body survives, except from the hoist platform.
 constexpr float kC4Cabinet = 663.65F;       // the switchgear cabinet: mantle 1.55
 constexpr float kC4Duct = 666.85F;          // the duct and the pump deck: hang 3.2
 constexpr float kC4Runway = 674.6F;         // the hoist runway: the standpipe, 7.75
@@ -319,9 +322,17 @@ constexpr float kC4Gallery = 677.8F;        // hang 3.2
 constexpr float kC4Riser = 679.35F;         // mantle 1.55
 constexpr float kC4Hoist = 682.55F;         // hang 3.2; mantle 1.55 onto the 684 deck
 constexpr float kC4Column = 0.2F;           // a column's half width
+constexpr float kC4Parapet = 0.8F;          // under the ledge probe's reach, over a step
+constexpr float kC4ParapetWidth = 0.25F;    // thicker than a hold
 
 void c4_column(std::vector<Part> &parts, const float x, const float z, const float top) {
     parts.push_back(span({x - kC4Column, kDeckTop, z - kC4Column}, {x + kC4Column, top, z + kC4Column}, Material::Rust));
+}
+
+// A parapet on a platform whose top is `top`, from (x0, z0) to (x1, z1).
+void c4_parapet(std::vector<Part> &parts, const float x0, const float z0, const float x1, const float z1,
+                const float top) {
+    parts.push_back(span({x0, top, z0}, {x1, top + kC4Parapet, z1}, Material::Concrete));
 }
 
 void build_c4(kit::Kit &kit) {
@@ -334,6 +345,7 @@ void build_c4(kit::Kit &kit) {
     for (const float x : {1.4F, 10.6F}) {
         c4_column(c4, x, -152.3F, kC4Duct - 1.35F);
     }
+    c4_parapet(c4, 11.0F - kC4ParapetWidth, -153.1F, 11.0F, -151.5F, kC4Duct);
     // 3. A level beam from the duct's back edge to the pump deck: 0.4 m wide,
     // 4.5 m long, open on both sides.
     c4.push_back(span({9.8F, kC4Duct - 0.4F, -157.6F}, {10.2F, kC4Duct, -153.1F}, Material::Yellow));
@@ -343,6 +355,8 @@ void build_c4(kit::Kit &kit) {
         c4_column(c4, at.GetX(), at.GetZ(), kC4Duct - 0.5F);
     }
     c4.push_back(span({10.2F, kC4Duct, -161.3F}, {11.3F, kC4Duct + 1.0F, -160.3F}, Material::Rust));   // the pump
+    c4_parapet(c4, 8.0F, -161.5F, 11.5F, -161.5F + kC4ParapetWidth, kC4Duct);
+    c4_parapet(c4, 11.5F - kC4ParapetWidth, -161.5F, 11.5F, -157.6F, kC4Duct);
     // 4. The standpipe up the runway's +z face, 0.14 m off it, a hold from the
     // pump deck to 0.2 m under the runway's top.
     c4.push_back(span({9.42F, kC4Duct, -159.34F}, {9.58F, kC4Runway - 0.2F, -159.18F}, Material::Yellow));
@@ -352,9 +366,12 @@ void build_c4(kit::Kit &kit) {
     // back: to pass on foot a body would have to stand 0.35 m out beyond the
     // lip, where the edge no longer holds it up, while a body hanging from
     // the lip passes under the overhang, and the lip probe (0.25 m up, 0.12 m
-    // in) still finds the runway's top. The way west is over that lip,
-    // hanging, and along it.
+    // in) still finds the runway's top. The way west along the runway is
+    // over that lip, hanging; a jump off its east part across to the landing
+    // is the other way past the house.
     c4.push_back(span({1.0F, kC4Runway - 1.2F, -161.8F}, {11.5F, kC4Runway, -159.4F}, Material::Rust));
+    c4_parapet(c4, 1.0F, -161.8F, 11.5F, -161.8F + kC4ParapetWidth, kC4Runway);
+    c4_parapet(c4, 11.5F - kC4ParapetWidth, -161.8F, 11.5F, -159.4F, kC4Runway);
     for (const float x : {1.3F, 6.0F, 11.2F}) {
         for (const float z : {-161.5F, -159.7F}) {
             c4_column(c4, x, z, kC4Runway - 1.2F);
