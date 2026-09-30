@@ -1,12 +1,14 @@
 # SCRAPERX — AS-010 MIDSTACK SERVICE (B06, 640 → 780 m)
 
 **Ascent Slice:** `AS-010`
-**Lifecycle:** `IN PROGRESS` — stage M, the service lift from TP-640 to the 662 deck, and C4, the
-service gantry climbed from the 662 deck to the 684 deck, built and played through the game's
-input; everything above the 684 deck is unbuilt
+**Lifecycle:** `IN PROGRESS` — stage M, the service lift from TP-640 to the 662 deck; C4, the
+service gantry climbed from the 662 deck to the 684 deck; and stage N, the granular discharge hoist
+from the 684 deck to the 706 deck, built and played through the game's input; everything above the
+706 deck is unbuilt
 **Provenance:** derived here under `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` and the Atlas's
 B06 (`01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`: `MOD-SERVICE-LIFT`, a second cage), from the owner's
-archetype 11, the industrial spool unwind (`Mechanism-Ideas-and-archetypes.md`).
+archetypes 11, the industrial spool unwind (M), and 09, the granular discharge hoist (N)
+(`Mechanism-Ideas-and-archetypes.md`).
 **Profile:** `MACRO-TRAVERSAL-STRICT`, the plan's. Unlike every lift below it, stage M has no
 governor: its arrival is its own drive's.
 **Implementation gate:** this write-up. The plan's rules §3 are this slice's test contract.
@@ -122,11 +124,94 @@ of the winch house lands on the landing, so the hang is one way past the house a
 one; a sprint off the runway west of the house catches the gallery's lip straight, and the body
 pulls up onto it; and a jump from the duct clears the beam's gap to the pump deck.
 
+## Stage N — the granular discharge hoist (684.3 → 706.4)
+
+After C4, a machine again: the owner's archetype 09 (*"a continuous flow of high-density material
+into a suspended bucket to gradually out-mass the payload"*), the catalogue's one entry the kit's
+bins already model. No catch and no governor: the gravel starts it, a chain stops it.
+
+- **Found:** on the 684 deck, 3 m west of where C4's climber steps off, a 2 t service cage railed
+  north and south (`kServiceNCageEntityId`, 2135), on a guide with safety dogs every 0.1 m and shoes
+  of 100 N friction. West of it, a steel hopper (500 kg, 1.2 m square and 1.4 m deep) hangs empty at
+  the top of its own guide from the hoist rope, which runs over the head and down to the cage's eye,
+  made fast; from the middle of the hopper's floor a chain of 33 kg/m hangs its whole 23 m to the
+  deck. The empty hopper and its chain (1,259 kg) are lighter than the cage, which stands on the
+  deck. Over the hopper, on the headframe, an aggregate bin (`kServiceNSiloEntityId`, 1015) holds
+  1,213 kg of gravel above a chute shut by a flap: a 3.3 m arm on a pin west of the chute, reaching
+  east under the chute's mouth and on over the cage, its counterweight up and west of the pin, so it
+  rests shut on its stop. From the arm's end a chain hangs down past a guide into the cage, its
+  handle 1.95 m over the cage's floor: in reach of someone standing in the cage and nowhere else.
+- **Set off:** GRAB the flap chain in the cage. It comes down to the hands, some 0.43 m, and draws
+  the arm past its dead point (0.13 rad); the flap falls open onto its other stop and stays there.
+  The bin pours 400 kg/s into the hopper (a chute 0.5 m square: Beverloo gives some 400 kg/s of
+  10 mm gravel). About 930 kg in, the hopper outweighs the cage and its rider and sinks, the last
+  of the gravel falling in with it. Every metre it sinks sets 33 kg of its chain down on the deck,
+  so the drive fades through the stroke and turns halfway; the cage rises past the 706 deck, slows,
+  and settles back onto its dogs. The rider steps off east onto the 706 deck.
+- **No pull, or a tug short of the dead point:** the flap falls shut again, no gravel moves, and the
+  cage stays.
+- **Pulled, then stepped out:** the empty cage outweighs the hopper by 85 kg less; it runs into its
+  head stop (3.8 m/s in the engine) and is held on the top tooth there. The stage is spent; the
+  ladder remains.
+
+The 706 deck (frame 1012, top 706.1) is a strip east of the cage from x −5.1 to −2.0, on columns
+from the 684 deck, railed with C4's 0.8 m parapets on every side but where the cage comes up to it;
+the ladder comes up through its hatch.
+
+## Declared models, stage N
+
+- **Gravel** as the kit's bins (AS-006 Stage C): a bin's contents add to its body's mass; the stream
+  falls straight down from the mouth to the hopper at a declared rate and carries no momentum into it.
+- **The hanging chain** (`Kit::add_chain`, new here): the hopper carries the chain's hanging part,
+  33 kg for every metre of its floor over the deck up to 23 m, both ways; what lies on the deck is
+  off it. The pile's own motion is not simulated. It is the evaluator's `chain_hang0` exactly.
+- **Safety dogs** as the kit's, the top of the guide a tooth; **no air drag** on the cage and the
+  hopper (Jolt's default linear damping set to zero, as M's).
+
+## Evaluator, stage N (stage1dof.py, INTEGRATED)
+
+h = 1 ms, every case rerun at h/4. The ride from the hopper's breakaway with its whole charge in
+it: in the engine the last 280 kg arrive in the first 0.1 m of travel.
+
+```json
+{
+ "name": "AS-010 N granular discharge hoist, the 684 deck to the 706 deck",
+ "g": 9.81,
+ "model_kind": "counterweight",
+ "model": {"block_mass": 1713.0, "chain_density": 33.0, "chain_hang0": 23.0, "cage_mass": 2000.0,
+           "rider_mass": 85.0, "n_falls": 1, "sheave_ieq": 0, "friction_kinetic": 135,
+           "friction_static": 280},
+ "terminal": {"catch_q": 21.1, "catch_pitch": 0.1, "stop_q": 22.9, "catch_pad_stroke": 0.05},
+ "band": {"model.friction_kinetic": [85, 135, 185]},
+ "require": {"allowed_outcomes": ["CAPTURED_FALLBACK"], "min_breakaway_ratio": 1.5,
+             "max_peak_accel_g": 0.3, "max_catch_pad_accel_g": 0.5, "max_stop_impact_speed": 0.0,
+             "max_peak_speed": 3.5, "max_time_s": 25,
+             "convergence": {"catch_speed_up": {"abs": 0.01}, "apex_q": {"abs": 0.01},
+                             "fallback_speed": {"abs": 0.01}}},
+ "rest_variants": [{"name": "rider_exits", "set": {"model.rider_mass": 0}}]
+}
+```
+
+| Case | Outcome | Apex | Held on dogs | Peak | Time | Pad | Rider gone |
+|---|---|---|---|---|---|---|---|
+| 85 N | CAPTURED_FALLBACK | 22.28 m | 22.2 m | 3.10 m/s | 11.7 s | 0.14 g | held |
+| 135 N | CAPTURED_FALLBACK | 21.99 m | 21.9 m | 3.06 m/s | 11.8 s | 0.14 g | held |
+| 185 N | CAPTURED_FALLBACK | 21.69 m | 21.6 m | 3.02 m/s | 11.8 s | 0.15 g | held |
+
+Breakaway 13.6; peak acceleration 0.09 g; the rope never below 18.6 kN; ledger residual under
+1.1 × 10⁻⁴. At the engine's own 100 N the evaluator's apex is 22.19 m and it holds at 22.1 m; the
+engine holds at 22.10 m. With the 706 deck at 706.1, the cage's floor stands between 0.2 m under
+and 0.4 m over it across the band. Rejected on the way: with no chain and the same start, the drive
+never turns and the cage runs into its stop (checked in the engine, below); a hopper that starts
+while gravel is still arriving was kept, not caught and released full, because a fast pour
+finishes in the first 0.1 m of travel.
+
 ## Climbing route, no lift
 
 The backup (plan §2.6 rule 8): a ladder from TP-640 up through a hatch in the 662 deck at x 8.1–9.7,
-z −147.4 to −145.25, and a second from the 662 deck up through a hatch in the 684 deck at x −4.8 to
-−3.2, z −147.4 to −145.25.
+z −147.4 to −145.25, a second from the 662 deck up through a hatch in the 684 deck at x −4.8 to
+−3.2, z −147.4 to −145.25, and a third from the 684 deck up through a hatch in the 706 deck at
+x −4.3 to −2.7, z −141.5 to −139.3.
 
 ## Falsifiers
 
@@ -136,12 +221,18 @@ deck, never past 3.5 m/s, the gain within the reel's release; empty, the cage st
 0.15 m a tick; the beam holds its walker on its line; the winch house offers nothing to climb and
 catches nothing jumped at, and on foot, pushed west along the lip, into it or into the house,
 nothing gets past it; the body hangs all the way along the runway's lip past the house; walked
-into each of the five parapets, a body stays up on its platform); `AS-010 band` (the TP-640 start through
-M and C4 to standing on the 684 deck); `AS-010 route` (both ladders, the lift untouched). Through
-the game's input: `touch_service`, `pad_service`, `keyboard_service` (M), `touch_c4` (C4, from the
-662 deck), and the stack runs from the game's start: `touch_stack` on to the 684 deck, `pad_stack`
-and `keyboard_stack` to the 662 deck (touch is the device the game is played on; the owner,
-2026-09-24: no keyboard or gamepad needed).
+into each of the five parapets, a body stays up on its platform); `AS-010 N` (as found nothing
+moves; a tug short of the dead point lets the flap fall shut and no gravel moves; pulled past it,
+the bin pours its whole charge into the hopper, the cage is held on its dogs a step from the 706
+deck either way, clear of its stop, never past 3.5 m/s, its rider aboard all the way and never
+moved over 0.15 m a tick, the gain within what the hopper, its gravel and its chain released, tick
+by tick; held with its rider aboard and after it steps off; sent up empty, held on its top tooth,
+the rider left on the 684 deck); `AS-010 band` (the TP-640 start through M, C4 and N to standing on
+the 706 deck); `AS-010 route` (the three ladders, the lifts untouched). Through the game's input:
+`touch_service`, `pad_service`, `keyboard_service` (M), `touch_c4` (C4, from the 662 deck),
+`touch_n` (N, from the 684 deck), and the stack runs from the game's start: `touch_stack` on to the
+706 deck, `pad_stack` and `keyboard_stack` to the 662 deck (touch is the device the game is played
+on; the owner, 2026-09-24: no keyboard or gamepad needed).
 
 ## Result record
 
@@ -149,11 +240,20 @@ Built on `ScraperX-Claude` after `b35f1ed`.
 
 | Group | Result |
 |---|---|
-| `AS-010 M` | shackle free: the reel falls 22.9 m paying out its cable, the cage stays. Hooked on: apex 21.85 m, held at 21.80 m, peak 2.93 m/s, 12.4 s; gain 339.0 kJ against 343.3 kJ released; empty, it stays on its dogs |
+| `AS-010 M` | shackle free: the reel falls 22.9 m paying out its cable, the cage stays. Hooked on: apex 21.85 m, held at 21.80 m, peak 2.94 m/s, 12.2 s (2.93 m/s and 12.4 s in the world before N's bodies; Jolt's ordering); gain 339.0 kJ against 343.3 kJ released; empty, it stays on its dogs |
 | `AS-010 C4` (2026-09-30) | the 662 deck to standing on the 684 deck (685.0 m) in 34.5 s, no death, worst body step 0.085 m a tick; balancing on the beam; the winch house offers nothing standing, catches nothing jumped at, and lets nothing past on foot (three pushes west along its lip); the body hangs all the way, 3.42 m along the runway's lip; walked into each parapet, the body stays up (with any one parapet taken away, the walk into it ends past the tower's face) |
-| `AS-010 band` | TP-640 to standing on the 662 deck in 21.4 s, through C4 to the 684 deck in 57.7 s |
-| `AS-010 route` | both ladders, TP-640 to the 684 deck in 54.5 s, the lift untouched |
-| Input | `touch_service`, `pad_service`, `keyboard_service` from the TP-640 start: held at 21.60–21.80 m, off onto the deck; `touch_c4` from the 662 deck to the 684 deck (36.5 s); `touch_stack` from the game's start to the 684 deck (643.3 s), `pad_stack` and `keyboard_stack` to the 662 deck |
+| `AS-010 N` (2026-09-30) | the flap drawn past its dead point by taking hold of its chain in the cage; the bin's 1,213 kg poured into the hopper; apex 22.12 m, held at 22.10 m (the cage's floor 0.30 m over the 706 deck), peak 3.07 m/s, 15.5 s from the flap falling open to the cage at rest; gain 452.0 kJ against 457.0 kJ released; worst body step 0.061 m a tick; held with its rider aboard and after it steps off onto the 706 deck; a tug short of the dead point moves nothing; sent up empty, held on its top tooth (22.90 m, 3.81 m/s into the head). With no chain and the same start the cage runs into its stop and the check fails |
+| `AS-010 band` | TP-640 to standing on the 662 deck in 21.2 s, through C4 to the 684 deck in 57.5 s, through N to the 706 deck in 77.4 s (N's new bodies moved Jolt's ordering enough to take 0.2 s off the first two) |
+| `AS-010 route` | the three ladders, TP-640 to the 706 deck in 79.4 s, the lifts untouched |
+| Input | `touch_service`, `pad_service`, `keyboard_service` from the TP-640 start: held at 21.60–21.80 m, off onto the deck; `touch_c4` from the 662 deck to the 684 deck (36.5 s); `touch_n` from the 684 deck to the 706 deck (21.7 s, held at 22.10 m); `touch_stack` from the game's start to the 706 deck (665.0 s, no death), `pad_stack` and `keyboard_stack` to the 662 deck |
+
+What building N taught. DEFECT, in the kit: a bin set its body's mass in the solver to the body's
+own and its contents, and a reel to the body's own and its wound cable, each overwriting the other;
+no body carried both until N's hopper, which carries a bin and a chain. One function now sets a
+body's mass from everything on it, and stage M's numbers came out the same to the last digit with
+it. And the flap's first placement put its counterweight through one of the hopper's guide posts
+and a strut through its own pin's hanger: the first run showed the flap stuck at 0.09 rad, short of
+its dead point. Both were moved clear, and the flap now goes over at 0.13 rad.
 
 What a review of C4 taught: the first winch house stood 0.3 m short of the runway's lip, and a
 walker got round it on the lip's edge, the capsule's rim holding it up to 0.29 m out beyond the lip

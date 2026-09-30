@@ -62,6 +62,9 @@ const SCENARIOS := {
 	# AS-010's C4, the service gantry, climbed from the 662 deck to the 684 deck
 	# on touch, the device the game is played on.
 	"touch_c4": 31,
+	# AS-010's stage N, the granular discharge hoist, from the 684 deck to the
+	# 706 deck on touch.
+	"touch_n": 32,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -208,6 +211,8 @@ func _run() -> void:
 			ok = await _service(InputRouter.Device.KEYBOARD_MOUSE)
 		"touch_c4":
 			ok = await _c4(InputRouter.Device.TOUCH)
+		"touch_n":
+			ok = await _n(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1665,6 +1670,90 @@ func _service_m(device: int) -> bool:
 	return true
 
 
+# AS-010's stage N alone, from the 684 deck start, on the device under test.
+func _n(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var wrists := _watch_wrists()
+	var body := _watch_body()
+	if not await _service_n(device):
+		return false
+	var worst_wrist := _stop_watch(wrists)
+	var worst_step := _stop_watch(body)
+	if worst_wrist > 0.10:
+		return _fail("a hand jumped %.3f m in one frame between poses (%s)" % [worst_wrist,
+			str(wrists.get("at", ""))])
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
+	_detail = "deck706_y=%.2f held_m=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, float(_service_state()["n_cage_travel"]),
+		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step, float(body["lift"])]
+	return true
+
+
+# AS-010's stage N, the granular discharge hoist, the way its native test
+# takes it: from the 684 deck into the cage beside the flap's chain, GRAB it:
+# it comes down to the hands and draws the flap's arm past its dead point,
+# and the flap falls open. LET GO; the bin pours into the hopper, which sinks
+# and hauls the cage to the 706 deck, where its dogs hold it; off east onto
+# the deck.
+func _service_n(device: int) -> bool:
+	if not (await _go(device, Vector2(-5.6, -155.35), 0.15, 20.0) and \
+			await _go(device, Vector2(-6.6, -155.35), 0.06, 6.0)):
+		return _fail("N: the walk into the cage stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	# Look up at the chain hanging over the head, as a player does.
+	await _tilt(0.35)
+	if not await _offered(&"pick_up", "GRAB", "FLAP CHAIN"):
+		return _fail("Action read '%s %s' beside N's chain, not GRAB FLAP CHAIN" % [
+			_action_label(), String(_ctx()["action"]["detail"])])
+	await _pose("service_n_chain")
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2138, 0.5):
+		return _fail("GRAB did not put N's flap chain in the hands")
+	await _tilt(0.0)
+	if not await _wait_until(func() -> bool: return float(_service_state()["n_gate_angle"]) >= 0.3, 4.0):
+		return _fail("holding the chain did not throw N's flap open (flap %.2f rad)" %
+			float(_service_state()["n_gate_angle"]))
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not take N's chain out of the hands")
+	await _pose("service_n_pour")
+	# The ride, until the cage stands still on its dogs for a second.
+	var last := float(_service_state()["n_cage_travel"])
+	var still := 0.0
+	var waited := 0.0
+	while waited < 40.0 and still < 1.0:
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		waited += dt
+		var travel := float(_service_state()["n_cage_travel"])
+		still = still + dt if travel > 1.0 and absf(travel - last) < 0.0005 else 0.0
+		last = travel
+	var held := float(_service_state()["n_cage_travel"])
+	if still < 1.0 or held < 21.45:
+		return _fail("N's cage never came to rest on its dogs at the 706 deck (travel %.2f m, hopper %.0f kg)" % [
+			held, float(_service_state()["n_hopper_kg"])])
+	await _pose("service_n_top")
+	if int(_native().get_support_entity_id()) != 2135:
+		return _fail("the rider is not in N's cage at the top (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	# Off east onto the 706 deck.
+	if not await _go(device, Vector2(-3.8, -155.0), 0.15, 6.0):
+		return _fail("the step off N's cage onto the 706 deck stalled at %s (on %d, cage %.3f m)" % [
+			str(_position()), int(_native().get_support_entity_id()), float(_service_state()["n_cage_travel"])])
+	await _seconds(0.5)
+	await _pose("service_deck706")
+	if int(_native().get_support_entity_id()) != SERVICE_FRAME_ENTITY or not _standing_above(706.6):
+		return _fail("not standing on the 706 deck (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
 # AS-010's C4 alone, from the 662 deck start, on the device under test.
 func _c4(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
@@ -2296,14 +2385,19 @@ func _stack(device: int) -> bool:
 		return false
 	var at_deck662 := _position().y
 
-	# AS-010's C4, the service gantry, to the 684 deck: on touch, the device
-	# the game is played on (the owner, 2026-09-24: no keyboard or gamepad
-	# needed); the pad and keyboard runs end on the 662 deck.
+	# AS-010's C4, the service gantry, to the 684 deck, and stage N, the
+	# granular discharge hoist, to the 706 deck: on touch, the device the game
+	# is played on (the owner, 2026-09-24: no keyboard or gamepad needed); the
+	# pad and keyboard runs end on the 662 deck.
 	var reached := ""
 	if device == InputRouter.Device.TOUCH:
 		if not await _service_c4(device):
 			return false
 		reached = " deck684_y=%.2f" % _position().y
+		# AS-010's stage N, the granular discharge hoist, to the 706 deck.
+		if not await _service_n(device):
+			return false
+		reached += " deck706_y=%.2f" % _position().y
 
 	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
 	# faster than a sprint; only a snap moves the view that far.

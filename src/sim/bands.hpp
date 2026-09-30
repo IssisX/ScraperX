@@ -243,6 +243,20 @@ struct MidstackService final {
     kit::RopeIndex m_rope;
     kit::AnchorIndex m_eye;
     kit::ReelIndex m_reel_cable;
+
+    // Stage N, the granular discharge hoist: the 684 deck -> the 706 deck.
+    kit::BodyIndex n_cage;
+    kit::BodyIndex n_hopper;
+    kit::BodyIndex n_gate;
+    kit::BodyIndex n_handle;
+    kit::BodyIndex n_silo;
+    kit::GuideIndex n_cage_guide;
+    kit::GuideIndex n_hopper_guide;
+    kit::LeverIndex n_gate_lever;
+    kit::BinIndex n_silo_bin;
+    kit::BinIndex n_hopper_bin;
+    kit::ChainIndex n_chain;
+    kit::RopeIndex n_rope;
 };
 
 void build_midstack_service(kit::Kit &kit, MidstackService &service);

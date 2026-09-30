@@ -681,6 +681,9 @@ private:
     case scraperx::sim::InitialSpawn::Deck662:
         // On the 662 deck north of C4's cabinet, clear of M's shafts.
         return {6.2, 663.05, -146.0};
+    case scraperx::sim::InitialSpawn::Deck684:
+        // On the 684 deck by its east girder, east of stage N's cage.
+        return {-3.2, 685.05, -155.0};
     case scraperx::sim::InitialSpawn::Ring374West:
         // On the 374 ring's west band by H's gangway.
         return {-14.5, 375.2, -145.6};
@@ -4090,6 +4093,15 @@ ServiceState Simulation::service_state() const noexcept {
     out.m_reel_kg = kit.body_mass(service.m_reel);
     out.m_cable_paid = kit.reel_paid(service.m_reel_cable);
     out.m_rope_tension = kit.rope_tension(service.m_rope);
+    out.n_cage_travel = kit.guide_travel(service.n_cage_guide);
+    out.n_cage_peak_speed = kit.guide_peak_speed(service.n_cage_guide);
+    out.n_hopper_travel = kit.guide_travel(service.n_hopper_guide);
+    out.n_gate_angle = kit.lever_angle(service.n_gate_lever);
+    out.n_silo_kg = kit.bin_contents(service.n_silo_bin);
+    out.n_hopper_kg = kit.bin_contents(service.n_hopper_bin);
+    out.n_chain_kg = kit.chain_hanging_kg(service.n_chain);
+    out.n_hopper_mass = kit.body_mass(service.n_hopper);
+    out.n_rope_tension = kit.rope_tension(service.n_rope);
     return out;
 }
 

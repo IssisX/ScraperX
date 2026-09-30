@@ -833,6 +833,12 @@ godot::Dictionary ScraperXSimulation::get_service_state() const {
     out["m_reel_kg"] = state.m_reel_kg;
     out["m_cable_paid"] = state.m_cable_paid;
     out["m_rope_tension"] = state.m_rope_tension;
+    out["n_cage_travel"] = state.n_cage_travel;
+    out["n_hopper_travel"] = state.n_hopper_travel;
+    out["n_gate_angle"] = state.n_gate_angle;
+    out["n_silo_kg"] = state.n_silo_kg;
+    out["n_hopper_kg"] = state.n_hopper_kg;
+    out["n_chain_kg"] = state.n_chain_kg;
     return out;
 }
 

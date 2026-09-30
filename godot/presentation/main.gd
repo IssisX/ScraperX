@@ -774,6 +774,8 @@ func _carry_name(entity: int) -> String:
 			return "PENDANT PIN"
 		2114, 2134:
 			return "ROPE SHACKLE"
+		2138:
+			return "FLAP CHAIN"
 		2124:
 			return "DROP PIN"
 		2127:

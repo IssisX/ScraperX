@@ -402,6 +402,238 @@ void build_c4(kit::Kit &kit) {
     (void)kit.add_body(Sim::kServiceC4EntityId, c4, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
 }
 
+// ---- Stage N, the granular discharge hoist: the 684 deck to the 706 deck ------------
+// The owner's archetype 09. A 2 t cage stands on the 684 deck; west of it a
+// steel hopper hangs empty at the top of its own guide from the rope over the
+// head, a chain hanging from its floor to the deck. Over the hopper, an
+// aggregate bin stands on the headframe, its chute shut by a counterweighted
+// flap whose arm reaches over the cage, a chain hanging from its end into the
+// cage. Taken hold of there, the chain draws the arm past its dead point and
+// the flap falls open: the bin pours into the hopper, which outweighs the
+// cage and its rider two-thirds of the way through the pour and sinks, the
+// last of the gravel falling in with it. Every metre it sinks sets a metre of
+// its chain down on the deck, so its drive fades through the stroke and
+// turns; the cage rises past the 706 deck and settles back onto its safety
+// dogs. No catch and no governor: the gravel starts it, the chain stops it.
+// Numbers from the evaluator (stage1dof.py, the contract's spec): INTEGRATED
+// over the guide friction band, every case caught on its fall-back.
+constexpr float kNX = -6.5F;                    // the cage, about its deck's top centre
+constexpr float kNZ = -155.0F;
+constexpr float kNDeck = kUpperTop + 0.2F;      // on the 684 deck
+constexpr float kNStop = 22.9F;                 // the guide's top, a dog's tooth
+constexpr float kNDogPitch = 0.1F;
+constexpr float kNFriction = 100.0F;            // N, the cage's guide shoes
+constexpr float kNCageMassKg = 2000.0F;
+const JPH::Vec3 kNEyeLocal(-1.0F, 1.1F, 0.25F);
+// The hopper, about its floor's centre: 1.2 m square inside, 1.4 m deep, a
+// bail across its top north of the pour.
+constexpr float kNHopperX = -10.0F;
+constexpr float kNHopperHalf = 0.6F;
+constexpr float kNHopperDepth = 1.4F;
+constexpr float kNHopperFloorHalf = 0.06F;
+constexpr float kNHopperWall = 0.03F;
+constexpr float kNHopperMassKg = 500.0F;
+constexpr float kNHopperCapacityKg = 1600.0F;   // more than the bin holds
+const JPH::Vec3 kNBailLocal(0.0F, kNHopperDepth + 0.2F, 0.25F);
+// Its chain, from the middle of its underside to the 684 deck: each metre the
+// hopper sinks sets 33 kg of it down.
+constexpr float kNChainKgPerM = 33.0F;
+constexpr float kNChainLength = 23.0F;          // a metre past the stroke
+constexpr float kNHopperY = kUpperTop + kNChainLength + kNHopperFloorHalf;
+// The bin: the charge, through a chute 0.5 m square (Beverloo: some 400 kg/s
+// of 10 mm gravel).
+constexpr float kNGravelKg = 1213.0F;
+constexpr float kNPourKgPerS = 400.0F;
+const JPH::RVec3 kNMouth(kNHopperX, 710.2, kNZ - 0.35);
+constexpr float kNBinBottom = 712.5F;
+constexpr float kNBinTop = 714.3F;
+// The flap turns about -z on a pin west of the chute, its arm reaching east
+// under the chute's mouth and on over the cage. Its weight rides up and west
+// of the pin, so it rests shut on its stop; pulled some 0.43 m, the arm's end
+// passes the dead point and the flap falls open onto its other stop, and
+// stays there.
+const JPH::RVec3 kNFlapPin(kNHopperX - 0.4, 710.05, kNZ - 0.35);
+constexpr float kNFlapArm = 3.3F;
+constexpr float kNFlapMassKg = 100.0F;
+constexpr float kNFlapOpen = 0.3F;              // past the dead point
+constexpr float kNFlapStop = 0.4F;
+constexpr float kNFlapReach = 0.6F;
+const JPH::Vec3 kNFlapWeight(-0.55F, 0.87F, -0.8F);   // clear of the hopper's posts
+constexpr float kNChainGuideDrop = 1.5F;        // the chain's guide under the arm's end
+constexpr float kNHandleTop = kNDeck + 1.95F;   // at rest, in the cage
+constexpr float kNSheaveY = 711.4F;
+// The headframe's posts: round the hopper's shaft, and east of the cage.
+constexpr float kNHeadY = 712.2F;
+constexpr float kNPostXs[3] = {-11.4F, -8.6F, -4.9F};
+constexpr float kNPostZs[2] = {-157.9F, -152.1F};
+// The 706 deck: a strip east of the cage, from the cage's side to over the
+// 684 deck's east girder, railed all round but where the cage comes to it;
+// the backup ladder up through its hatch.
+constexpr float kN706Bottom = 705.6F;
+constexpr float kN706Top = 706.1F;
+constexpr float kN706West = kNX + kPlatformHalf + 0.1F;
+constexpr float kN706East = kUpperEast;
+constexpr float kN706HatchX0 = -4.3F;
+constexpr float kN706HatchX1 = -2.7F;
+constexpr float kN706HatchZ0 = -141.5F;
+constexpr float kN706HatchZ1 = -139.3F;
+
+void build_stage_n_frame(std::vector<Part> &frame) {
+    const float z0 = kWellZ - kHalf;
+    const float z1 = kWellZ + kHalf;
+    // The headframe: posts from the 684 deck, beams along the head carrying
+    // the sheaves, the bin's bearers and the chain's guide.
+    for (const float x : kNPostXs) {
+        for (const float z : kNPostZs) {
+            frame.push_back(span({x - 0.15F, kUpperTop, z - 0.15F}, {x + 0.15F, kNHeadY, z + 0.15F},
+                                 Material::Yellow));
+        }
+    }
+    for (const float z : {kNPostZs[0], kNZ + 0.25F, kNPostZs[1]}) {
+        frame.push_back(span({kNPostXs[0] - 0.15F, kNHeadY - 0.3F, z - 0.15F},
+                             {kNPostXs[2] + 0.15F, kNHeadY, z + 0.15F}, Material::Yellow));
+    }
+    for (const float x : kNPostXs) {
+        frame.push_back(span({x - 0.15F, kNHeadY - 0.3F, kNPostZs[0] - 0.15F},
+                             {x + 0.15F, kNHeadY, kNPostZs[1] + 0.15F}, Material::Yellow));
+    }
+    for (const float z : {kNZ - 1.9F, kNZ - 0.2F}) {
+        frame.push_back(span({kNPostXs[0], kNHeadY, z - 0.15F}, {kNPostXs[1], kNHeadY + 0.3F, z + 0.15F},
+                             Material::Rust));
+    }
+    const float guide_x = kNHopperX + kNFlapArm - 0.4F;
+    const float guide_y = static_cast<float>(kNFlapPin.GetY()) - kNChainGuideDrop;
+    frame.push_back(span({guide_x - 0.04F, guide_y - 0.05F, kNZ - 0.2F}, {guide_x + 0.04F, kNHeadY - 0.3F, kNZ - 0.12F},
+                         Material::Steel));
+    // The flap's pin in a hanger from the bin, north of the arm.
+    frame.push_back(span({static_cast<float>(kNFlapPin.GetX()) - 0.05F, static_cast<float>(kNFlapPin.GetY()) - 0.06F,
+                          kNZ - 0.25F},
+                         {static_cast<float>(kNFlapPin.GetX()) + 0.05F, kNBinBottom, kNZ - 0.15F}, Material::Steel));
+    // The hopper's guide posts at its corners, and the cage's either side.
+    for (const float dx : {-0.78F, 0.78F}) {
+        for (const float dz : {-0.78F, 0.78F}) {
+            frame.push_back(span({kNHopperX + dx - 0.05F, kUpperTop, kNZ + dz - 0.05F},
+                                 {kNHopperX + dx + 0.05F, kNHeadY - 0.3F, kNZ + dz + 0.05F}, Material::Steel));
+        }
+    }
+    for (const float side : {-1.0F, 1.0F}) {
+        frame.push_back(span({kNX - 0.05F, kUpperTop, kNZ + side * 1.45F - 0.05F},
+                             {kNX + 0.05F, kNHeadY - 0.3F, kNZ + side * 1.45F + 0.05F}, Material::Steel));
+    }
+
+    // The 706 deck, on columns from the 684 deck, round its hatch.
+    for (const float z : {z0 + 0.4F, kWellZ, z1 - 0.4F}) {
+        frame.push_back(span({kN706East - 0.9F, kUpperTop, z - 0.25F}, {kN706East - 0.4F, kN706Bottom, z + 0.25F},
+                             Material::Rust));
+    }
+    for (const float z : {z0 + 0.4F, z1 - 0.4F}) {
+        frame.push_back(span({kN706West + 0.1F, kUpperTop, z - 0.25F}, {kN706West + 0.6F, kN706Bottom, z + 0.25F},
+                             Material::Rust));
+    }
+    const auto deck = [&](const float x0, const float x1, const float za, const float zb) {
+        frame.push_back(span({x0, kN706Bottom, za}, {x1, kN706Top, zb}, Material::Concrete));
+    };
+    deck(kN706West, kN706HatchX0, z0, z1);
+    deck(kN706HatchX0, kN706HatchX1, z0, kN706HatchZ0);
+    deck(kN706HatchX0, kN706HatchX1, kN706HatchZ1, z1);
+    deck(kN706HatchX1, kN706East, z0, z1);
+    // Parapets as C4's: along the east edge, the tower's faces, and the west
+    // edge either side of where the cage comes up.
+    const auto parapet = [&](const float x0, const float za, const float x1, const float zb) {
+        frame.push_back(span({x0, kN706Top, za}, {x1, kN706Top + kC4Parapet, zb}, Material::Concrete));
+    };
+    parapet(kN706East - kC4ParapetWidth, z0, kN706East, z1);
+    parapet(kN706West, z0, kN706East, z0 + kC4ParapetWidth);
+    parapet(kN706West, z1 - kC4ParapetWidth, kN706East, z1);
+    parapet(kN706West, z0, kN706West + kC4ParapetWidth, kNZ - kPlatformHalf - 0.1F);
+    parapet(kN706West, kNZ + kPlatformHalf + 0.1F, kN706West + kC4ParapetWidth, z1);
+}
+
+void build_stage_n(kit::Kit &kit, MidstackService &service) {
+    // The aggregate bin on its bearers, its chute down to the flap.
+    const std::vector<Part> bin{
+        span({kNHopperX - 0.7F, kNBinBottom, kNZ - 2.0F}, {kNHopperX + 0.7F, kNBinTop, kNZ - 0.1F},
+             Material::Galvanised),
+        span({kNHopperX - 0.25F, static_cast<float>(kNMouth.GetY()), kNZ - 0.6F},
+             {kNHopperX + 0.25F, kNBinBottom, kNZ - 0.1F}, Material::Hazard)};
+    service.n_silo = kit.add_body(Sim::kServiceNSiloEntityId, bin, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F,
+                                  0.8F);
+
+    // The flap: its arm under the chute's mouth and on east over the cage, a
+    // plate under the mouth, its weight on struts up and west of the pin.
+    const JPH::Vec3 weight_strut = kNFlapWeight - JPH::Vec3(0.0F, 0.0F, kNFlapWeight.GetZ());
+    service.n_gate = kit.add_body(
+        Sim::kServiceNGateEntityId,
+        {box(JPH::Vec3(0.5F * kNFlapArm, 0.05F, 0.05F), JPH::Vec3(0.5F * kNFlapArm, 0.0F, 0.0F), Material::Hazard),
+         box(JPH::Vec3(0.3F, 0.02F, 0.3F), JPH::Vec3(0.4F, 0.07F, 0.0F), Material::Steel),
+         box(JPH::Vec3(0.04F, 0.04F, 0.5F * -kNFlapWeight.GetZ()), JPH::Vec3(0.0F, 0.0F, 0.5F * kNFlapWeight.GetZ()),
+             Material::Steel),
+         turned(JPH::Vec3(0.5F * weight_strut.Length(), 0.04F, 0.04F),
+                0.5F * weight_strut + JPH::Vec3(0.0F, 0.0F, kNFlapWeight.GetZ()),
+                JPH::Quat::sFromTo(JPH::Vec3::sAxisX(), weight_strut.Normalized()), Material::Steel),
+         box(JPH::Vec3::sReplicate(0.25F), kNFlapWeight, Material::Rust)},
+        kNFlapPin, JPH::Quat::sIdentity(), kNFlapMassKg, 0.5F);
+    service.n_gate_lever = kit.add_lever(service.n_gate, kNFlapPin, -JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(), 0.0F,
+                                         kNFlapStop);
+    service.n_silo_bin = kit.add_bin(service.n_silo, kNGravelKg, kNGravelKg, vec(kNMouth), service.n_gate_lever,
+                                     kNFlapOpen, kNFlapReach, kNPourKgPerS);
+
+    // The chain from the arm's end, down past its guide into the cage.
+    const JPH::RVec3 arm_end = kNFlapPin + JPH::RVec3(kNFlapArm, 0.0, 0.0);
+    const JPH::RVec3 chain_guide = arm_end - JPH::RVec3(0.0, kNChainGuideDrop, 0.0);
+    service.n_handle = kit.add_body(Sim::kServiceNHandleEntityId,
+                                    {box(JPH::Vec3(0.04F, kHandleHalfY, 0.22F), JPH::Vec3::sZero(), Material::Hazard)},
+                                    JPH::RVec3(arm_end.GetX(), kNHandleTop - kHandleHalfY, arm_end.GetZ()),
+                                    JPH::Quat::sIdentity(), kHandleMassKg, 0.9F);
+    kit.set_carry(service.n_handle, kit::CarryKind::Handle, JPH::Vec3(0.0F, kHandleHalfY, 0.0F));
+    kit.set_damping(service.n_handle, 1.5F, 1.5F);
+    (void)kit.add_trip_line(service.n_gate, JPH::Vec3(kNFlapArm, 0.0F, 0.0F), service.n_handle,
+                            JPH::Vec3(0.0F, kHandleHalfY, 0.0F), chain_guide, chain_guide);
+
+    // The cage, on its guide with safety dogs and no governor.
+    service.n_cage = kit.add_body(Sim::kServiceNCageEntityId, cage_parts(), JPH::RVec3(kNX, kNDeck, kNZ),
+                                  JPH::Quat::sIdentity(), kNCageMassKg, 0.8F);
+    service.n_cage_guide = kit.add_guide(service.n_cage, JPH::Vec3::sAxisY(), 0.0F, kNStop, 0.0F, 0.0F, 0.0F);
+    kit.set_damping(service.n_cage, 0.0F, 0.05F);
+    kit.set_dogs(service.n_cage_guide, kNDogPitch);
+    kit.set_guide_friction(service.n_cage_guide, kNFriction);
+
+    // The hopper, empty at the top of its guide, its chain to the deck.
+    const float wall_y = 0.5F * (kNHopperDepth + kNHopperFloorHalf);
+    const float wall_half_y = 0.5F * (kNHopperDepth - kNHopperFloorHalf);
+    const float out = kNHopperHalf + kNHopperWall;
+    service.n_hopper = kit.add_body(
+        Sim::kServiceNHopperEntityId,
+        {box(JPH::Vec3(kNHopperHalf, kNHopperFloorHalf, kNHopperHalf), JPH::Vec3::sZero(), Material::Rust),
+         box(JPH::Vec3(kNHopperWall, wall_half_y, out), JPH::Vec3(-out, wall_y, 0.0F), Material::Rust),
+         box(JPH::Vec3(kNHopperWall, wall_half_y, out), JPH::Vec3(out, wall_y, 0.0F), Material::Rust),
+         box(JPH::Vec3(kNHopperHalf, wall_half_y, kNHopperWall), JPH::Vec3(0.0F, wall_y, -out), Material::Rust),
+         box(JPH::Vec3(kNHopperHalf, wall_half_y, kNHopperWall), JPH::Vec3(0.0F, wall_y, out), Material::Rust),
+         box(JPH::Vec3(out, 0.05F, kNHopperWall), JPH::Vec3(0.0F, kNHopperDepth, -out), Material::Hazard),
+         box(JPH::Vec3(0.03F, 0.12F, 0.04F), JPH::Vec3(-out, kNHopperDepth + 0.1F, kNBailLocal.GetZ()),
+             Material::Yellow),
+         box(JPH::Vec3(0.03F, 0.12F, 0.04F), JPH::Vec3(out, kNHopperDepth + 0.1F, kNBailLocal.GetZ()), Material::Yellow),
+         box(JPH::Vec3(out, 0.04F, 0.04F), kNBailLocal, Material::Yellow)},
+        JPH::RVec3(kNHopperX, kNHopperY, kNZ), JPH::Quat::sIdentity(), kNHopperMassKg, 0.6F);
+    service.n_hopper_guide = kit.add_guide(service.n_hopper, -JPH::Vec3::sAxisY(), 0.0F, kNStop, 0.0F, 0.0F, 0.0F);
+    kit.set_damping(service.n_hopper, 0.0F, 0.05F);
+    service.n_hopper_bin = kit.add_bin(service.n_hopper, 0.0F, kNHopperCapacityKg, JPH::Vec3::sZero(),
+                                       kit::LeverIndex{}, 0.0F, 0.0F, 0.0F);
+    service.n_chain = kit.add_chain(service.n_hopper, JPH::Vec3(0.0F, -kNHopperFloorHalf, 0.0F), kUpperTop,
+                                    kNChainKgPerM, kNChainLength);
+
+    // The hoist rope: the hopper's bail over its sheave, across the head to
+    // the sheave over the cage, down to the cage's eye, made fast.
+    const JPH::RVec3 bail = JPH::RVec3(kNHopperX, kNHopperY, kNZ) + JPH::RVec3(kNBailLocal);
+    const JPH::RVec3 f1(kNHopperX, kNSheaveY, bail.GetZ());
+    const JPH::RVec3 eye = JPH::RVec3(kNX, kNDeck, kNZ) + JPH::RVec3(kNEyeLocal);
+    const JPH::RVec3 f2(eye.GetX(), kNSheaveY, eye.GetZ());
+    const float length =
+        static_cast<float>(JPH::Vec3(bail - f1).Length()) + static_cast<float>(JPH::Vec3(eye - f2).Length());
+    service.n_rope = kit.add_rope(service.n_hopper, kNBailLocal, f1, service.n_cage, kNEyeLocal, f2, 1.0F, length,
+                                  0.0F);
+}
+
 // ---- the climbing route, no lift --------------------------------------------------
 // The backup: ladders from TP-640 up through the 662 deck's hatch, and from
 // the 662 deck up through the 684 deck's.
@@ -409,6 +641,7 @@ void build_climbing_route(kit::Kit &kit) {
     std::vector<Part> route;
     ladder(route, 0.5F * (kHatchX0 + kHatchX1), kHatchZ1 - 0.15F, true, kPlateTop, kDeckTop);
     ladder(route, 0.5F * (kUpperHatchX0 + kUpperHatchX1), kUpperHatchZ1 - 0.15F, true, kDeckTop, kUpperTop);
+    ladder(route, 0.5F * (kN706HatchX0 + kN706HatchX1), kN706HatchZ1 - 0.15F, true, kUpperTop, kN706Top);
     (void)kit.add_body(Sim::kServiceRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
 }
 
@@ -419,9 +652,11 @@ void build_midstack_service(kit::Kit &kit, MidstackService &service) {
     build_frame(frame);
     build_upper_deck(frame);
     build_stage_m(kit, service, frame);
+    build_stage_n_frame(frame);
     (void)kit.add_body(Sim::kServiceFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     build_c4(kit);
     build_climbing_route(kit);
+    build_stage_n(kit, service);
 }
 
 } // namespace scraperx::sim::bands

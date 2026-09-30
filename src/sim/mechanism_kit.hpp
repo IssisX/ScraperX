@@ -99,6 +99,7 @@ using PoolIndex = Index<struct PoolTag>;
 using PipeIndex = Index<struct PipeTag>;
 using CellIndex = Index<struct CellTag>;
 using ReelIndex = Index<struct ReelTag>;
+using ChainIndex = Index<struct ChainTag>;
 
 class Kit final {
 public:
@@ -237,6 +238,15 @@ public:
     // the anchor to the drum's rim at rim_local.
     ReelIndex add_reel(BodyIndex body, JPH::RVec3 anchor, JPH::Vec3 rim_local, float linear_density,
                        float coil_length);
+    // A hanging chain (declared model, AS-010 N): linear_density kg a metre,
+    // `length` long, from point_local on the body straight down to a floor at
+    // floor_y, where the rest of it lies piled. The body carries the part that
+    // hangs, linear_density times the point's height over the floor up to the
+    // chain's length, both ways: set down on the pile as the body sinks, taken
+    // up again as it rises. The pile's own motion is not simulated. Drawn from
+    // the point to the floor.
+    ChainIndex add_chain(BodyIndex body, JPH::Vec3 point_local, float floor_y, float linear_density,
+                         float length);
     // A float: the body's box of half_x by half_z, from bottom_local (body
     // y) up height, feels rho g A d up at its centre of mass, d its depth
     // under the pool's level, and water drag on its vertical speed.
@@ -356,7 +366,8 @@ public:
     [[nodiscard]] JPH::Quat body_rotation(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Vec3 body_velocity(BodyIndex body) const noexcept;
     // The body's mass now: its own, plus the rubble in it if it is a bin,
-    // or the cable still wound on it if it is a reel.
+    // the cable still wound on it if it is a reel, and the chain hanging
+    // from it.
     [[nodiscard]] float body_mass(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::BodyID body_id(BodyIndex body) const noexcept;
     [[nodiscard]] BodyIndex body_for_entity(std::uint64_t entity) const noexcept;
@@ -367,14 +378,16 @@ public:
     // The rope as drawn: its first end, its sheaves, its other end. Parted
     // or let go, only its end's side: from the end up to its sheave.
     void rope_polyline(RopeIndex rope, std::vector<JPH::RVec3> &out) const;
-    // Everything drawn as a cable: the ropes, the trip lines, then the
-    // reels' paid-out cables.
+    // Everything drawn as a cable: the ropes, the trip lines, the reels'
+    // paid-out cables, then the chains.
     [[nodiscard]] std::uint32_t cable_count() const noexcept {
-        return static_cast<std::uint32_t>(ropes_.size() + lines_.size() + reels_.size());
+        return static_cast<std::uint32_t>(ropes_.size() + lines_.size() + reels_.size() + chains_.size());
     }
     // A reel's cable paid out, m, and still wound on it, kg.
     [[nodiscard]] float reel_paid(ReelIndex reel) const noexcept;
     [[nodiscard]] float reel_wound_kg(ReelIndex reel) const noexcept;
+    // The chain's weight hanging from its body, kg.
+    [[nodiscard]] float chain_hanging_kg(ChainIndex chain) const noexcept;
     void cable_polyline(std::uint32_t cable, std::vector<JPH::RVec3> &out) const;
     [[nodiscard]] bool rope_parted(RopeIndex rope) const noexcept;
     // The entity of the body the rope's end is on now: an anchor's body, its
@@ -523,6 +536,14 @@ private:
         double start_y = 0.0;   // the body's height as built
         float paid = 0.0F;      // m paid out
     };
+    struct Chain final {
+        BodyIndex body;
+        JPH::Vec3 point = JPH::Vec3::sZero();
+        float floor = 0.0F;     // the pile's floor, world y
+        float density = 0.0F;   // kg per metre
+        float length = 0.0F;    // m
+        float hanging = 0.0F;   // m hanging from the body, as of the last step
+    };
     struct Float final {
         BodyIndex body;
         float half_x = 0.0F;
@@ -630,8 +651,11 @@ private:
     [[nodiscard]] bool gap_closed(const Guide &guide) const;
     void apply_limits(Guide &guide);
     void flow_bins(float delta_seconds);
-    void apply_bin_mass(const Bin &bin);
-    void apply_reel_mass(const Reel &reel);
+    // Sets the body's mass in the solver to body_mass(): its own and what its
+    // bins, reels and chains add, all together.
+    void apply_mass(BodyIndex body);
+    // How much of the chain hangs from its body where the body is now, m.
+    [[nodiscard]] float chain_hanging(const Chain &chain) const;
     // The middle of the top of a bin's floor, its body's first part, local.
     [[nodiscard]] JPH::Vec3 floor_top(const Bin &bin) const;
     void spill(JPH::RVec3 at, float kg);
@@ -666,6 +690,7 @@ private:
     std::vector<Cell> cells_;
     std::vector<Throttle> throttles_;
     std::vector<Reel> reels_;
+    std::vector<Chain> chains_;
     float drained_ = 0.0F;
 };
 

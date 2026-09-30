@@ -2366,6 +2366,215 @@ void run_service_c4() {
               << " worst_step_m=" << g_path_watch.worst << '\n';
 }
 
+// ---- AS-010 stage N, the granular discharge hoist (684 -> 706 m) -------------
+
+constexpr double kNCageKg = 2000.0;
+constexpr double kNGravelKg = 1213.0;
+constexpr double kNChainFullKg = 33.0 * 23.0;
+constexpr double kNDeck = 684.3;            // the cage's deck at rest
+constexpr double kN706Top = 706.1;
+constexpr double kNFlapOpen = 0.3;          // the flap past its dead point: the bin pours
+// Where N's flap chain hangs, in the cage.
+constexpr double kNChainX = -7.1;
+constexpr double kNChainZ = -155.35;
+
+// From the 684 deck into N's cage beside its chain: face it and take hold.
+// Hanging over the hands, it comes down to them, which draws the flap's arm
+// toward its dead point. True once the chain is in the hands.
+bool take_n_chain(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!(walk_to(simulation, -5.6, -155.35, 20.0) && walk_to(simulation, kNChainX + 0.5, kNChainZ, 6.0, 0.06))) {
+        return false;
+    }
+    (void)simulation.set_facing(-1.0, 0.0);
+    (void)simulation.advance_frame(0.5);
+    const auto facing = simulation.snapshot();
+    if (facing.carry_target_entity_id != Simulation::kServiceNHandleEntityId || facing.carry_target_kind != 2) {
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    return simulation.snapshot().carrying_entity_id == Simulation::kServiceNHandleEntityId;
+}
+
+// Holding N's chain until the flap lies open past its dead point, then let
+// go: true once it is open.
+bool open_n_flap(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!take_n_chain(simulation)) {
+        return false;
+    }
+    bool open = false;
+    observe_path(simulation, false);
+    for (int tick = 0; tick < 4 * 90 && !open; ++tick) {
+        (void)simulation.set_facing(-1.0, 0.0);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(simulation, true);
+        open = simulation.service_state().n_gate_angle >= kNFlapOpen;
+    }
+    (void)simulation.request_set_down();
+    return open;
+}
+
+// One ride of N from the flap falling open to the cage at rest on its dogs:
+// every tick, the energy the hopper released sinking (its gravel and the
+// chain hanging from it, as they are that tick) against what the cage and its
+// rider gained rising.
+struct NRide final {
+    bool settled = false;
+    bool rode_on_cage = true;
+    double apex = 0.0;
+    double peak_speed = 0.0;
+    double seconds = 0.0;
+    double gain = 0.0;
+    double released = 0.0;
+};
+
+NRide ride_service_n(scraperx::sim::Simulation &simulation, const bool rider_aboard) {
+    using scraperx::sim::Simulation;
+    constexpr double kG = 9.81;
+    NRide ride;
+    const double start = simulation.snapshot().simulation_time_seconds;
+    const double cage_y0 = kit_com_y(simulation, Simulation::kServiceNCageEntityId);
+    const double rider_y0 = simulation.snapshot().player_position.y;
+    double hopper_y = kit_com_y(simulation, Simulation::kServiceNHopperEntityId);
+    double last = simulation.service_state().n_cage_travel;
+    int still = 0;
+    observe_path(simulation, false);
+    for (int tick = 0; tick < 45 * 90; ++tick) {
+        const double hopper_kg = simulation.service_state().n_hopper_mass;
+        (void)simulation.set_move_input(0.0, 0.0);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(simulation, true);
+        const double now_y = kit_com_y(simulation, Simulation::kServiceNHopperEntityId);
+        ride.released += hopper_kg * kG * (hopper_y - now_y);
+        hopper_y = now_y;
+        const double travel = simulation.service_state().n_cage_travel;
+        const double speed = std::abs(travel - last) / Simulation::kFixedStepSeconds;
+        last = travel;
+        ride.apex = std::max(ride.apex, travel);
+        ride.peak_speed = std::max(ride.peak_speed, speed);
+        if (rider_aboard && travel > 0.05 && speed > 0.05) {
+            ride.rode_on_cage = ride.rode_on_cage && on_support(simulation.snapshot(), Simulation::kServiceNCageEntityId);
+        }
+        still = travel > 1.0 && speed < 0.005 ? still + 1 : 0;
+        if (still >= static_cast<int>(Simulation::kTickRateHz)) {
+            ride.settled = true;
+            break;
+        }
+    }
+    const auto end = simulation.snapshot();
+    ride.seconds = end.simulation_time_seconds - start;
+    ride.gain = kNCageKg * kG * (kit_com_y(simulation, Simulation::kServiceNCageEntityId) - cage_y0);
+    if (rider_aboard) {
+        ride.gain += kRiderMassKg * kG * (end.player_position.y - rider_y0);
+    }
+    return ride;
+}
+
+// Off N's cage at the top, east onto the 706 deck.
+bool step_off_n(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!walk_to(simulation, -3.8, -155.0, 6.0)) {
+        return false;
+    }
+    (void)simulation.advance_frame(0.5);
+    const auto off = simulation.snapshot();
+    return on_support(off, Simulation::kServiceFrameEntityId) && off.player_position.y > kN706Top + 0.5;
+}
+
+void run_service_n() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+
+    // ---- As found, nothing moves; a tug short of the dead point lets the flap
+    // fall shut again and no gravel moves ------------------------------------------
+    Simulation found(InitialSpawn::Deck684);
+    (void)found.advance_frame(1.0);
+    const auto as_found = found.service_state();
+    require(std::abs(as_found.n_gate_angle) < 0.01 && std::abs(as_found.n_silo_kg - kNGravelKg) < 0.5 &&
+                as_found.n_hopper_kg < 0.5 && std::abs(as_found.n_chain_kg - kNChainFullKg) < 0.5 &&
+                as_found.n_cage_travel < 0.01 && as_found.n_hopper_travel < 0.01,
+            "as found, N's flap is shut on a full bin, its hopper hangs empty at the top on its whole chain, the cage down");
+    (void)found.advance_frame(10.0);
+    const auto untouched = found.service_state();
+    require(untouched.n_cage_travel < 0.01 && untouched.n_hopper_travel < 0.01 &&
+                std::abs(untouched.n_silo_kg - kNGravelKg) < 0.5,
+            "untouched, N stays as found: the empty hopper is lighter than the cage");
+    // Beside the cage on the deck, east of it and then west, round the chain,
+    // facing it: out of reach.
+    Simulation reach(InitialSpawn::Deck684);
+    (void)reach.advance_frame(1.0);
+    require(walk_to(reach, -4.8, kNChainZ, 12.0, 0.06), "to beside N's cage on the 684 deck, east");
+    (void)reach.set_facing(-1.0, 0.0);
+    (void)reach.advance_frame(0.5);
+    const bool east_reach = reach.snapshot().carry_target_entity_id == Simulation::kServiceNHandleEntityId;
+    require(walk_to(reach, -4.8, -154.3, 6.0, 0.06) && walk_to(reach, -8.3, -154.3, 12.0, 0.06) &&
+                walk_to(reach, -8.3, kNChainZ, 6.0, 0.06),
+            "across N's cage clear of its chain, to beside it on the 684 deck, west");
+    (void)reach.set_facing(1.0, 0.0);
+    (void)reach.advance_frame(0.5);
+    const bool west_reach = reach.snapshot().carry_target_entity_id == Simulation::kServiceNHandleEntityId;
+    require(!east_reach && !west_reach, "N's flap chain must be in reach only from inside the cage");
+    require(take_n_chain(found), "the rider must take hold of N's chain from inside the cage");
+    (void)found.advance_frame(0.3);
+    (void)found.request_set_down();
+    (void)found.advance_frame(10.0);
+    const auto tugged = found.service_state();
+    require(tugged.n_gate_angle < 0.02 && std::abs(tugged.n_silo_kg - kNGravelKg) < 0.5 && tugged.n_cage_travel < 0.01,
+            "a tug on N's chain short of its dead point lets the flap fall shut again, and no gravel moves");
+
+    // ---- The ride ---------------------------------------------------------------
+    Simulation n(InitialSpawn::Deck684);
+    require(n.advance_frame(1.0).accepted, "N settle interval must be accepted");
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    require(open_n_flap(n), "the rider's pull must draw N's flap past its dead point and it must fall open");
+    const NRide ride = ride_service_n(n, true);
+    g_path_watch.armed = false;
+    const auto top = n.snapshot();
+    const auto held = n.service_state();
+    require(held.n_silo_kg < 0.5 && std::abs(held.n_hopper_kg - kNGravelKg) < 0.5,
+            "N's bin must pour its whole charge into the hopper");
+    require(ride.settled, "N's cage must come to rest on its dogs");
+    require(held.n_cage_travel >= kN706Top - 0.35 - kNDeck && held.n_cage_travel <= kN706Top + 0.65 - kNDeck &&
+                ride.apex < 22.9,
+            "the gravel must lift N's cage to the 706 deck, a step from it either way, clear of its stop");
+    require(ride.peak_speed <= 3.5, "N's cage must never pass 3.5 m/s: the chain sets its drive down as it goes");
+    require(ride.rode_on_cage && on_support(top, Simulation::kServiceNCageEntityId),
+            "the rider must ride N's cage all the way");
+    require(ride.gain > 0.0 && ride.gain <= ride.released,
+            "N's cage and rider must never gain more than the hopper, its gravel and its chain released");
+    require(g_path_watch.worst <= 0.15, "riding N, the body must never move more than 0.15 m in one tick");
+    (void)n.advance_frame(10.0);
+    require(std::abs(n.service_state().n_cage_travel - held.n_cage_travel) < 0.01,
+            "with its rider aboard, N's cage must stay on its dogs");
+    require(step_off_n(n), "the rider must step off N's cage onto the 706 deck");
+    (void)n.advance_frame(10.0);
+    require(std::abs(n.service_state().n_cage_travel - held.n_cage_travel) < 0.01,
+            "empty, N's cage must stay on its dogs: the hopper, its chain set down, is lighter than the cage");
+    require(n.snapshot().death_count == 0, "N must be ridden without a death");
+
+    // ---- The flap opened, the rider steps out: the cage goes up alone ------------
+    Simulation empty(InitialSpawn::Deck684);
+    (void)empty.advance_frame(1.0);
+    require(open_n_flap(empty) && walk_to(empty, -3.2, -155.0, 3.0) && empty.service_state().n_cage_travel < 0.01,
+            "the rider must be able to open N's flap and step out onto the 684 deck before the cage moves");
+    const NRide alone = ride_service_n(empty, false);
+    const auto alone_held = empty.service_state();
+    // The top of the guide is a dog's tooth: an empty cage that reaches its
+    // head is held there.
+    require(alone.settled && alone_held.n_cage_travel >= 21.1 && alone_held.n_cage_travel <= 22.91 &&
+                empty.snapshot().player_position.y < 685.5 && empty.snapshot().death_count == 0,
+            "sent up empty, N's cage must run to its head and come to rest on its dogs, the rider left on the 684 deck");
+
+    std::cout << "PASS scraperx_sim AS-010 N: apex_m=" << ride.apex << " held_m=" << held.n_cage_travel
+              << " peak_mps=" << ride.peak_speed << " seconds=" << ride.seconds
+              << " rider_y=" << top.player_position.y << " gain_J=" << ride.gain << " released_J=" << ride.released
+              << " empty_apex_m=" << alone.apex << " empty_peak_mps=" << alone.peak_speed
+              << " worst_step_m=" << g_path_watch.worst << '\n';
+}
+
 // AS-010 on player inputs from the TP-640 start: M hooked on, the chock
 // pulled, the ride, off onto the 662 deck; then up C4 to the 684 deck.
 void run_service_band() {
@@ -2381,10 +2590,14 @@ void run_service_band() {
     const auto deck662 = band.snapshot();
     require(standing_above(deck662, 662.5), "band: standing on the 662 deck");
     require(climb_c4(band), "band: up C4 to the 684 deck");
+    const auto deck684 = band.snapshot();
+    require(open_n_flap(band) && ride_service_n(band, true).settled, "band: N's flap open and its cage on its dogs");
+    require(step_off_n(band), "band: off N's cage onto the 706 deck");
     const auto top = band.snapshot();
-    require(top.death_count == 0, "band: no death from TP-640 to the 684 deck");
+    require(top.death_count == 0, "band: no death from TP-640 to the 706 deck");
     std::cout << "PASS scraperx_sim AS-010 band: to_662_s=" << deck662.simulation_time_seconds - start
-              << " to_684_s=" << top.simulation_time_seconds - start << " deck_y=" << top.player_position.y << '\n';
+              << " to_684_s=" << deck684.simulation_time_seconds - start
+              << " to_706_s=" << top.simulation_time_seconds - start << " deck_y=" << top.player_position.y << '\n';
 }
 
 // AS-010's climbing route, on player inputs: across TP-640 to the ladder,
@@ -2401,9 +2614,13 @@ void run_service_route() {
             "route: across TP-640 and up the ladder through the 662 deck's hatch");
     require(climb_wet_hold(route, -4.0, -146.02, 0.0, 1.0, false, 684.5),
             "route: across the 662 deck and up the ladder through the 684 deck's hatch");
+    require(climb_wet_hold(route, -3.5, -140.07, 0.0, 1.0, false, 706.5),
+            "route: across the 684 deck and up the ladder through the 706 deck's hatch");
     const auto top = route.snapshot();
     const auto service = route.service_state();
-    require(service.m_cage_travel < 0.02 && service.m_reel_latched, "route: the lift did not move");
+    require(service.m_cage_travel < 0.02 && service.m_reel_latched && service.n_cage_travel < 0.02 &&
+                service.n_gate_angle < 0.02,
+            "route: the lifts did not move");
     std::cout << "PASS scraperx_sim AS-010 route: seconds=" << top.simulation_time_seconds - start
               << " top_y=" << top.player_position.y << " lift_untouched=1\n";
 }
@@ -3924,6 +4141,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-010") {
         run_midstack_service();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-010-n") {
+        run_service_n();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -5859,6 +6081,7 @@ int main() {
     run_crane_wreckage();
     run_midstack_service();
     run_service_c4();
+    run_service_n();
     run_service_band();
     run_service_route();
     run_ascent();
