@@ -263,41 +263,21 @@
         if (!releaseResponse.ok) throw new Error('Release not published yet');
         const release = await releaseResponse.json();
         const assets = new Map((release.assets || []).map(a => [a.name, a]));
-
-        function publishedSourcePrefix(label) {
-          const row = String(release.body || '')
-            .split('\n')
-            .find(line => line.trimStart().startsWith('| ' + label + ' |'));
-          if (!row) return '';
-          const match = row.match(/[0-9a-f]{12}/i);
-          return match ? match[0].toLowerCase() : '';
-        }
+        const manifestAsset = assets.get('manifest.json');
+        if (!manifestAsset) throw new Error('Build provenance unavailable');
+        const manifestResponse = await fetch(
+          manifestAsset.browser_download_url + '?t=' + Date.now(),
+          { cache: 'no-store' }
+        );
+        if (!manifestResponse.ok) throw new Error('Build provenance unavailable');
+        const manifest = await manifestResponse.json();
 
         await Promise.all(models.map(async model => {
           const root = document.getElementById('card-' + model.label);
           const status = root.querySelector('.status');
           const download = root.querySelector('.download');
           const asset = assets.get(model.file);
-          const publishedPrefix = publishedSourcePrefix(model.label);
-
-          let runs = [];
-          try {
-            const response = await fetch(
-              'https://api.github.com/repos/' + repo + '/actions/runs?branch=' +
-                encodeURIComponent(model.branch) + '&status=success&per_page=20',
-              { headers: { 'Accept': 'application/vnd.github+json' }, cache: 'no-store' }
-            );
-            if (response.ok) {
-              const data = await response.json();
-              runs = data.workflow_runs || [];
-            }
-          } catch (_) {}
-
-          const newestSuccessfulRun = runs[0] || null;
-          const publishedRun = publishedPrefix
-            ? runs.find(candidate =>
-                String(candidate.head_sha || '').toLowerCase().startsWith(publishedPrefix))
-            : null;
+          const build = (manifest.builds || {})[model.label] || null;
 
           if (asset) {
             status.textContent = 'ready';
@@ -311,25 +291,20 @@
           }
 
           const details = root.querySelector('.details');
-          if (publishedRun) {
-            root.querySelector('.sha').textContent = String(publishedRun.head_sha || '').slice(0, 12);
-            root.querySelector('.built').textContent = ago(publishedRun.updated_at || publishedRun.created_at);
-            details.href = publishedRun.html_url;
-          } else if (newestSuccessfulRun) {
-            root.querySelector('.sha').textContent = publishedPrefix || String(newestSuccessfulRun.head_sha || '').slice(0, 12);
-            root.querySelector('.built').textContent = 'provenance unavailable';
-            details.href = newestSuccessfulRun.html_url;
+          if (build && build.status === 'ok') {
+            root.querySelector('.sha').textContent = String(build.source_sha || '').slice(0, 12) || '—';
+            root.querySelector('.built').textContent = ago(build.built_at);
+            details.href = build.run_url || ('https://github.com/' + repo + '/tree/' + encodeURIComponent(model.branch));
+
+            if (asset && build.source_is_current_head === false) {
+              status.textContent = 'syncing';
+              status.className = 'status sync';
+            }
           } else {
-            root.querySelector('.sha').textContent = publishedPrefix || '—';
+            root.querySelector('.sha').textContent = '—';
             root.querySelector('.built').textContent = '—';
             details.href = 'https://github.com/' + repo + '/tree/' + encodeURIComponent(model.branch);
             details.textContent = 'Open branch ↗';
-          }
-
-          if (asset && publishedRun && newestSuccessfulRun &&
-              String(newestSuccessfulRun.head_sha || '') !== String(publishedRun.head_sha || '')) {
-            status.textContent = 'syncing';
-            status.className = 'status sync';
           }
         }));
 
