@@ -751,8 +751,8 @@ func _touch_north_service_frame() -> bool:
 		return _fail("raised north lip not caught %s" % _position())
 	_main._pitch = 0.08
 	await _pose("north_frame_hang")
-	# Facing west, view-local left moves north along the actual lip.
-	_move_dir(device, Vector2(-1.0, 0.0))
+	# Facing west (yaw +PI/2), view-local right is world north (-Z).
+	_move_dir(device, Vector2(1.0, 0.0))
 	var crossed := await _wait_until(func() -> bool: return _position().z < -181.85, 5.0)
 	_move_dir(device, Vector2.ZERO)
 	if not crossed or not bool(_ctx()["hanging"]):
