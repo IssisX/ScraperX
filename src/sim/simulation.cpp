@@ -684,6 +684,9 @@ private:
     case scraperx::sim::InitialSpawn::Deck684:
         // On the 684 deck by its east girder, east of stage N's cage.
         return {-3.2, 685.05, -155.0};
+    case scraperx::sim::InitialSpawn::Deck706:
+        // On the 706 deck by where C5's plant floor opens off its east edge.
+        return {-3.5, 707.05, -147.5};
     case scraperx::sim::InitialSpawn::Ring374West:
         // On the 374 ring's west band by H's gangway.
         return {-14.5, 375.2, -145.6};

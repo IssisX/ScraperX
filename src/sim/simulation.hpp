@@ -82,6 +82,8 @@ enum class InitialSpawn : std::uint8_t {
     // AS-010: on the 684 deck east of stage N's cage, where C4's climber
     // steps off its last mantle.
     Deck684 = 32,
+    // AS-010: on the 706 deck by where C5's plant floor opens off it.
+    Deck706 = 33,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };
@@ -517,12 +519,15 @@ public:
     static constexpr std::uint64_t kCraneLClutchHandleEntityId = 2127;
     // AS-010 Midstack Service: its static structure and its climbing route,
     // C4, the service gantry climbed from the 662 deck to the 684 deck, stage
-    // N's silo; then stage M, the service lift on the cable reel, and stage
-    // N, the granular discharge hoist.
+    // N's silo, C5, the cooling plant climbed from the 706 deck to the 728
+    // deck, and its manifold; then stage M, the service lift on the cable
+    // reel, and stage N, the granular discharge hoist.
     static constexpr std::uint64_t kServiceFrameEntityId = 1012;
     static constexpr std::uint64_t kServiceRouteEntityId = 1013;
     static constexpr std::uint64_t kServiceC4EntityId = 1014;
     static constexpr std::uint64_t kServiceNSiloEntityId = 1015;
+    static constexpr std::uint64_t kServiceC5EntityId = 1016;
+    static constexpr std::uint64_t kServiceC5ManifoldEntityId = 1017;
     static constexpr std::uint64_t kServiceMCageEntityId = 2130;
     static constexpr std::uint64_t kServiceMReelEntityId = 2131;
     static constexpr std::uint64_t kServiceMChockEntityId = 2132;

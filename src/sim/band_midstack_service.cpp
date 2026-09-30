@@ -477,6 +477,9 @@ constexpr float kN706HatchX0 = -4.3F;
 constexpr float kN706HatchX1 = -2.7F;
 constexpr float kN706HatchZ0 = -141.5F;
 constexpr float kN706HatchZ1 = -139.3F;
+// Where C5's plant floor opens off the 706 deck's east edge.
+constexpr float kC5FloorZ0 = -149.0F;
+constexpr float kC5FloorZ1 = -141.0F;
 
 void build_stage_n_frame(std::vector<Part> &frame) {
     const float z0 = kWellZ - kHalf;
@@ -542,7 +545,8 @@ void build_stage_n_frame(std::vector<Part> &frame) {
     const auto parapet = [&](const float x0, const float za, const float x1, const float zb) {
         frame.push_back(span({x0, kN706Top, za}, {x1, kN706Top + kC4Parapet, zb}, Material::Concrete));
     };
-    parapet(kN706East - kC4ParapetWidth, z0, kN706East, z1);
+    parapet(kN706East - kC4ParapetWidth, z0, kN706East, kC5FloorZ0);
+    parapet(kN706East - kC4ParapetWidth, kC5FloorZ1, kN706East, z1);
     parapet(kN706West, z0, kN706East, z0 + kC4ParapetWidth);
     parapet(kN706West, z1 - kC4ParapetWidth, kN706East, z1);
     parapet(kN706West, z0, kN706West + kC4ParapetWidth, kNZ - kPlatformHalf - 0.1F);
@@ -634,6 +638,171 @@ void build_stage_n(kit::Kit &kit, MidstackService &service) {
                                   0.0F);
 }
 
+// ---- C5, the cooling plant: a climb from the 706 deck to the 728 deck --------------
+// After stage N, a climb again, as the owner laid the route out. Over the
+// footprint's north-east, on columns from the 662 deck: a plant floor off the
+// 706 deck with a pipe manifold across it to vault and a duct bank over it to
+// crawl under; a tank to mantle; its standpipe up to a platform; a sprint and
+// a jump over a 6.5 m gap, past any walking jump's 6.17 m, to a second; a hang
+// up, and another; a second standpipe; a mantle over the 728 deck's north
+// girder. A miss from the gap or the hangs lands on a platform or the plant
+// floor, under the 20.4 m a body survives. One static body, as C4's, but the
+// manifold: a vault lands on another body than the one it goes over.
+constexpr float kC5Floor = kN706Top;            // level with the 706 deck
+constexpr float kC5FloorX0 = kUpperEast;
+constexpr float kC5FloorX1 = 9.0F;
+constexpr float kC5ManifoldX0 = 0.0F;           // vault 1.0 over a 0.5 m manifold
+constexpr float kC5ManifoldX1 = 0.5F;
+constexpr float kC5DuctX0 = 3.0F;               // crawl 2 m, 1.45 m under the ducts
+constexpr float kC5DuctX1 = 5.0F;
+constexpr float kC5Tank = 707.7F;               // mantle 1.6
+constexpr float kC5TankX1 = 11.5F;
+constexpr float kC5PlatformZ0 = -144.2F;        // the south face of the platforms over the tank
+constexpr float kC5Upper = 714.0F;              // the standpipe 6.3; the gap 6.5
+constexpr float kC5GapX1 = 8.0F;                // the gap, from P1's west edge
+constexpr float kC5GapX0 = 1.5F;                // to P2's east edge
+constexpr float kC5Hang1 = 717.2F;              // hang 3.2
+constexpr float kC5Hang2 = 720.4F;              // hang 3.2
+constexpr float kC5Top = 726.5F;                // the second standpipe 6.1; mantle 1.6
+constexpr float kC5North = -138.25F;            // the platforms' north edges, by the face
+constexpr float kC5StopWall = 1.2F;             // where the jump's landing runs out
+constexpr float kC5LandingSlab = 0.4F;          // under the 0.45 m of face a hang needs
+// The 728 deck: over the footprint's east half south of the plant, its north
+// edge a girder for the last mantle; the backup ladder up through its hatch.
+constexpr float kD728Bottom = 727.6F;
+constexpr float kD728Top = 728.1F;
+constexpr float kD728North = -142.2F;
+constexpr float kD728GirderBottom = 727.3F;
+constexpr float kD728East = kHalf;
+constexpr float kD728HatchX0 = -1.9F;
+constexpr float kD728HatchX1 = -0.5F;
+constexpr float kD728HatchZ0 = -148.6F;
+constexpr float kD728HatchZ1 = -146.4F;
+// The top platform's south edge, 0.2 m short of the 728 deck's girder.
+constexpr float kC5TopSouth = kD728North + 0.2F;
+
+void c5_column(std::vector<Part> &parts, const float x, const float z, const float bottom, const float top) {
+    parts.push_back(span({x - kC4Column, bottom, z - kC4Column}, {x + kC4Column, top, z + kC4Column}, Material::Rust));
+}
+
+void build_c5_frame(std::vector<Part> &frame) {
+    const float z0 = kWellZ - kHalf;
+    // Columns: at the east face from the 662 deck; at the west edge from the
+    // 706 deck and the plant floor.
+    for (const float z : {z0 + 0.4F, kWellZ - 2.0F, kC5FloorZ1 - 2.0F}) {
+        c5_column(frame, kD728East - 0.2F, z, kDeckTop, kD728Bottom);
+    }
+    for (const float z : {z0 + 0.4F, kWellZ - 2.5F}) {
+        c5_column(frame, kUpperEast - 0.65F, z, kN706Top, kD728Bottom);
+    }
+    c5_column(frame, kUpperEast + 0.4F, kC5FloorZ1 - 2.0F, kC5Floor, kD728Bottom);
+    const auto deck = [&](const float x0, const float x1, const float za, const float zb) {
+        frame.push_back(span({x0, kD728Bottom, za}, {x1, kD728Top, zb}, Material::Concrete));
+    };
+    deck(kUpperEast, kD728HatchX0, z0, kD728North);
+    deck(kD728HatchX0, kD728HatchX1, z0, kD728HatchZ0);
+    deck(kD728HatchX0, kD728HatchX1, kD728HatchZ1, kD728North);
+    deck(kD728HatchX1, kD728East, z0, kD728North);
+    frame.push_back(span({kUpperEast, kD728GirderBottom, kD728North - 0.3F}, {kD728East, kD728Bottom, kD728North},
+                         Material::Yellow));
+    // Parapets but where the last mantle comes over the girder.
+    const auto parapet = [&](const float x0, const float za, const float x1, const float zb) {
+        frame.push_back(span({x0, kD728Top, za}, {x1, kD728Top + kC4Parapet, zb}, Material::Concrete));
+    };
+    parapet(kD728East - kC4ParapetWidth, z0, kD728East, kD728North);
+    parapet(kUpperEast, z0, kD728East, z0 + kC4ParapetWidth);
+    parapet(kUpperEast, z0, kUpperEast + kC4ParapetWidth, kD728North);
+    parapet(kUpperEast, kD728North - kC4ParapetWidth, 7.0F, kD728North);
+    parapet(kC5TankX1, kD728North - kC4ParapetWidth, kD728East, kD728North);
+}
+
+void build_c5(kit::Kit &kit) {
+    std::vector<Part> c5;
+    // 1. The plant floor off the 706 deck, railed where it meets the air, on
+    // columns from the 662 deck.
+    c5.push_back(span({kC5FloorX0, kC5Floor - 0.5F, kC5FloorZ0}, {kC5FloorX1, kC5Floor, kC5FloorZ1}, Material::Concrete));
+    c4_parapet(c5, kC5FloorX0, kC5FloorZ0, kC5FloorX1, kC5FloorZ0 + kC4ParapetWidth, kC5Floor);
+    c4_parapet(c5, kC5FloorX0, kC5FloorZ1 - kC4ParapetWidth, kC5FloorX1, kC5FloorZ1, kC5Floor);
+    for (const float x : {-1.6F, 3.8F, 8.4F}) {
+        for (const float z : {kC5FloorZ0 + 0.4F, kC5FloorZ1 - 0.4F}) {
+            c5_column(c5, x, z, kDeckTop, kC5Floor - 0.5F);
+        }
+    }
+    // 2. Past the manifold (its own body), a duct bank 1.45 m over the floor,
+    // spanning it over its parapets: under it on hands and knees.
+    c5.push_back(span({kC5DuctX0, kC5Floor + 1.45F, kC5FloorZ0}, {kC5DuctX1, kC5Floor + 2.5F, kC5FloorZ1},
+                      Material::Galvanised));
+    // Railed at its ends, which meet the air: dropped onto from the platform
+    // over it, a body walks off its sides onto the floor, not off its ends.
+    c4_parapet(c5, kC5DuctX0, kC5FloorZ0, kC5DuctX1, kC5FloorZ0 + kC4ParapetWidth, kC5Floor + 2.5F);
+    c4_parapet(c5, kC5DuctX0, kC5FloorZ1 - kC4ParapetWidth, kC5DuctX1, kC5FloorZ1, kC5Floor + 2.5F);
+    // 3. The tank across the floor's east end, on legs, railed round its top
+    // but on the floor's side; it runs on under the platform over it.
+    c5.push_back(span({kC5FloorX1, 700.0F, kC5FloorZ0}, {kC5TankX1, kC5Tank, kC5FloorZ1}, Material::Galvanised));
+    c4_parapet(c5, kC5FloorX1, kC5FloorZ0, kC5TankX1, kC5FloorZ0 + kC4ParapetWidth, kC5Tank);
+    c4_parapet(c5, kC5FloorX1, kC5FloorZ1 - kC4ParapetWidth, kC5TankX1, kC5FloorZ1, kC5Tank);
+    c4_parapet(c5, kC5TankX1 - kC4ParapetWidth, kC5FloorZ0, kC5TankX1, kC5FloorZ1, kC5Tank);
+    for (const float x : {9.4F, 11.1F}) {
+        for (const float z : {kC5FloorZ0 + 0.4F, kC5FloorZ1 - 0.4F}) {
+            c5_column(c5, x, z, kDeckTop, 700.0F);
+        }
+    }
+    // 4. Its standpipe, 0.06 m off the face of the platform over it: a hold
+    // from the tank's top to 0.2 m under the platform's.
+    c5.push_back(span({10.175F, kC5Tank, kC5PlatformZ0 - 0.2F}, {10.325F, kC5Upper - 0.2F, kC5PlatformZ0 - 0.06F},
+                      Material::Yellow));
+    // 5. Either side of the gap, platforms level at 714.0, railed to the
+    // faces. The far one is a slab too thin to hang from, so a jump short of
+    // it falls to the plant floor; where the jump lands, a wall to run out
+    // against.
+    c5.push_back(span({kC5GapX1, kC5Upper - 1.2F, kC5PlatformZ0}, {kC5TankX1, kC5Upper, kC5FloorZ1}, Material::Rust));
+    c4_parapet(c5, kC5TankX1 - kC4ParapetWidth, kC5PlatformZ0, kC5TankX1, kC5FloorZ1, kC5Upper);
+    c4_parapet(c5, kC5GapX1, kC5FloorZ1 - kC4ParapetWidth, kC5TankX1, kC5FloorZ1, kC5Upper);
+    c5.push_back(span({kC5FloorX0, kC5Upper - kC5LandingSlab, kC5PlatformZ0}, {kC5GapX0, kC5Upper, kC5FloorZ1},
+                      Material::Rust));
+    c5.push_back(span({kC5FloorX0, kC5Upper, kC5PlatformZ0}, {kC5FloorX0 + kC4ParapetWidth, kC5Upper + kC5StopWall,
+                                                             kC5FloorZ1},
+                      Material::Concrete));
+    c4_parapet(c5, kC5FloorX0, kC5FloorZ1 - kC4ParapetWidth, kC5GapX0, kC5FloorZ1, kC5Upper);
+    c5_column(c5, 8.4F, kC5FloorZ1 - 0.4F, kC5Floor, kC5Upper - 1.2F);
+    c5_column(c5, 11.1F, kC5FloorZ1 - 0.4F, kC5Tank, kC5Upper - 1.2F);
+    c5_column(c5, -1.6F, kC5FloorZ1 - 0.4F, kC5Floor, kC5Upper - kC5LandingSlab);
+    c5_column(c5, 1.1F, kC5PlatformZ0 + 0.4F, kC5Floor, kC5Upper - kC5LandingSlab);
+    // 6. North of the landing, over nothing but the 662 deck 55 m down, a
+    // platform 3.2 m up to hang from, railed on its west edge, where a step
+    // off would land beside the 706 deck's hatch and slide into it. East of
+    // that, a block 3.2 m higher standing on the platform's level, so its face
+    // closes the platform's east edge: nothing walks out under it. Its slab
+    // reaches as far south as the top platform on its east edge: a body
+    // stepping off the top platform's west edge anywhere lands on it, 6.1 m
+    // down, never 20.4 m onto the plant floor.
+    c5.push_back(span({kC5FloorX0, kC5Hang1 - 1.35F, kC5FloorZ1}, {3.0F, kC5Hang1, kC5North}, Material::Rust));
+    c4_parapet(c5, kC5FloorX0, kC5North - kC4ParapetWidth, 3.0F, kC5North, kC5Hang1);
+    c4_parapet(c5, kC5FloorX0, kC5FloorZ1, kC5FloorX0 + kC4ParapetWidth, kC5North - kC4ParapetWidth, kC5Hang1);
+    c5.push_back(span({3.0F, kC5Hang1, kC5FloorZ1}, {7.0F, kC5Hang2, kC5North}, Material::Rust));
+    c5.push_back(span({3.0F, kC5Hang2 - 1.35F, kC5TopSouth}, {7.0F, kC5Hang2, kC5FloorZ1}, Material::Rust));
+    c4_parapet(c5, 3.0F, kC5North - kC4ParapetWidth, 7.0F, kC5North, kC5Hang2);
+    // 7. The second standpipe up the face of the top platform, from the one
+    // below it; the top platform a block down to that one's level, its face
+    // closing that one's east edge as the one below's is closed.
+    c5.push_back(span({6.80F, kC5Hang2, -139.70F}, {6.94F, kC5Top - 0.2F, -139.56F}, Material::Yellow));
+    c5.push_back(span({7.0F, kC5Hang2, kC5TopSouth}, {kC5TankX1, kC5Top, kC5North}, Material::Rust));
+    c4_parapet(c5, 7.0F, kC5North - kC4ParapetWidth, kC5TankX1, kC5North, kC5Top);
+    c4_parapet(c5, kC5TankX1 - kC4ParapetWidth, kD728North + 0.2F, kC5TankX1, kC5North, kC5Top);
+    for (const float x : {-1.6F, 2.6F, 3.4F, 6.6F, 7.4F, 11.1F}) {
+        const float top = x < 3.0F ? kC5Hang1 - 1.35F : (x < 7.0F ? kC5Hang1 : kC5Hang2);
+        c5_column(c5, x, kC5North - 0.35F, kDeckTop, top);
+    }
+    (void)kit.add_body(Sim::kServiceC5EntityId, c5, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
+
+    // The manifold: a bundle of pipes across the plant floor, 1.0 m high and
+    // 0.5 m deep, parapet to parapet.
+    (void)kit.add_body(Sim::kServiceC5ManifoldEntityId,
+                       {span({kC5ManifoldX0, kC5Floor, kC5FloorZ0 + kC4ParapetWidth},
+                             {kC5ManifoldX1, kC5Floor + 1.0F, kC5FloorZ1 - kC4ParapetWidth}, Material::Steel)},
+                       JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
+}
+
 // ---- the climbing route, no lift --------------------------------------------------
 // The backup: ladders from TP-640 up through the 662 deck's hatch, and from
 // the 662 deck up through the 684 deck's.
@@ -641,7 +810,10 @@ void build_climbing_route(kit::Kit &kit) {
     std::vector<Part> route;
     ladder(route, 0.5F * (kHatchX0 + kHatchX1), kHatchZ1 - 0.15F, true, kPlateTop, kDeckTop);
     ladder(route, 0.5F * (kUpperHatchX0 + kUpperHatchX1), kUpperHatchZ1 - 0.15F, true, kDeckTop, kUpperTop);
-    ladder(route, 0.5F * (kN706HatchX0 + kN706HatchX1), kN706HatchZ1 - 0.15F, true, kUpperTop, kN706Top);
+    // Up the 706 deck's hatch facing south, onto the open deck: its hatch fills
+    // the strip's width between the parapets.
+    ladder(route, 0.5F * (kN706HatchX0 + kN706HatchX1), kN706HatchZ0 + 0.15F, true, kUpperTop, kN706Top);
+    ladder(route, 0.5F * (kD728HatchX0 + kD728HatchX1), kD728HatchZ0 + 0.15F, true, kC5Floor, kD728Top);
     (void)kit.add_body(Sim::kServiceRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
 }
 
@@ -653,10 +825,12 @@ void build_midstack_service(kit::Kit &kit, MidstackService &service) {
     build_upper_deck(frame);
     build_stage_m(kit, service, frame);
     build_stage_n_frame(frame);
+    build_c5_frame(frame);
     (void)kit.add_body(Sim::kServiceFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     build_c4(kit);
     build_climbing_route(kit);
     build_stage_n(kit, service);
+    build_c5(kit);
 }
 
 } // namespace scraperx::sim::bands

@@ -65,6 +65,9 @@ const SCENARIOS := {
 	# AS-010's stage N, the granular discharge hoist, from the 684 deck to the
 	# 706 deck on touch.
 	"touch_n": 32,
+	# AS-010's C5, the cooling plant, climbed from the 706 deck to the 728 deck
+	# on touch.
+	"touch_c5": 33,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -213,6 +216,8 @@ func _run() -> void:
 			ok = await _c4(InputRouter.Device.TOUCH)
 		"touch_n":
 			ok = await _n(InputRouter.Device.TOUCH)
+		"touch_c5":
+			ok = await _c5(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1754,6 +1759,125 @@ func _service_n(device: int) -> bool:
 	return true
 
 
+# AS-010's C5 alone, from the 706 deck start, on the device under test.
+func _c5(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var body := _watch_body()
+	if not await _service_c5(device):
+		return false
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	_detail = "deck728_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
+	return true
+
+
+# AS-010's C5, the cooling plant, the way its native climb takes it: from the
+# 706 deck over the manifold in a vault, under the duct bank crouched, onto
+# the tank, up its standpipe onto the platform over it, west along that at a
+# sprint and over the 6.5 m gap, a hang up onto the platform north of the
+# landing and one east of that, up the second standpipe, and over the 728
+# deck's north girder.
+func _service_c5(device: int) -> bool:
+	if not (await _go(device, Vector2(-3.3, -146.0), 0.1, 12.0) and \
+			await _go(device, Vector2(-0.85, -145.5), 0.06, 6.0)):
+		return _fail("C5: the walk to the manifold stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("C5: Action read '%s %s' facing the manifold, not CLIMB" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 3, 0.3):
+		return _fail("C5: Action did not vault the manifold (state %d)" % int(_native().get_traversal_state()))
+	if not await _wait_until(func() -> bool: return _standing_above(706.6) and _position().x > 0.9, 2.0):
+		return _fail("C5: the vault over the manifold did not land (at %s)" % str(_position()))
+	# Under the duct bank, crouched, and up again past it.
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_crouched()), 0.3):
+		return _fail("C5: CROUCH did not crouch the body before the duct bank")
+	if not await _go(device, Vector2(5.6, -145.5), 0.08, 8.0):
+		return _fail("C5: the crawl under the duct bank stalled at %s" % str(_position()))
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool: return not bool(_native().is_player_crouched()), 0.5):
+		return _fail("C5: STAND did not stand the body up past the duct bank")
+	# Onto the tank and up its standpipe onto the platform over it.
+	if not await _go(device, Vector2(8.5, -146.5), 0.06, 4.0):
+		return _fail("C5: the walk to the tank stalled at %s" % str(_position()))
+	if not await _c4_mantle(device, Vector2(1.0, 0.0), 708.2, "the tank"):
+		return false
+	if not await _c5_pipe(device, Vector2(10.25, -144.8), Vector2(0.0, 1.0), 714.5, "the tank's standpipe"):
+		return false
+	# West along the platform at a sprint, and over the gap.
+	if not await _go(device, Vector2(10.85, -142.6), 0.08, 4.0):
+		return _fail("C5: the walk to the run-up stalled at %s" % str(_position()))
+	await _face(Vector2(-1.0, 0.0))
+	await _seconds(0.2)
+	if not _stick_sprint():
+		_move(device, 0.0)
+		return _fail("C5: the stick pushed past its ring did not latch sprint")
+	if not await _wait_until(func() -> bool: return _position().x <= 8.45, 2.0):
+		_move(device, 0.0)
+		return _fail("C5: the run-up stalled at %s" % str(_position()))
+	if not bool(_ctx()["sprinting"]):
+		_move(device, 0.0)
+		return _fail("C5: not sprinting at the gap's edge (%.2f m/s)" % _walk_speed().length())
+	_jump(device)
+	var across: bool = await _wait_until(func() -> bool: return bool(_ctx()["grounded"]) and \
+		_position().y > 714.5 and _position().x < 1.5, 3.0)
+	_move(device, 0.0)
+	if not across:
+		return _fail("C5: the jump over the gap did not land on the far platform (at %s)" % str(_position()))
+	# A hang up onto the platform north of the landing, and one east of that.
+	if not await _go(device, Vector2(-0.5, -141.6), 0.05, 6.0):
+		return _fail("C5: the walk to the first platform's face stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(0.0, 1.0), 717.7, "the first platform"):
+		return false
+	if not await _go(device, Vector2(2.55, -139.6), 0.05, 6.0):
+		return _fail("C5: the walk to the second platform's face stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(1.0, 0.0), 720.9, "the second platform"):
+		return false
+	# Up the second standpipe, and over the 728 deck's north girder.
+	if not await _c5_pipe(device, Vector2(6.35, -139.63), Vector2(1.0, 0.0), 727.0, "the second standpipe"):
+		return false
+	if not await _go(device, Vector2(9.0, -141.75), 0.05, 6.0):
+		return _fail("C5: the walk to the 728 deck's girder stalled at %s" % str(_position()))
+	if not await _c4_mantle(device, Vector2(0.0, -1.0), 728.6, "the 728 deck"):
+		return false
+	await _seconds(0.5)
+	await _pose("service_deck728")
+	if int(_native().get_support_entity_id()) != SERVICE_FRAME_ENTITY or not _standing_above(728.8):
+		return _fail("C5: not standing on the 728 deck (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
+# Steps to `at` beside a standpipe, turns to `facing` it, takes it on CLIMB
+# HOLD and climbs until standing on what it tops out onto, above `top`.
+func _c5_pipe(device: int, at: Vector2, facing: Vector2, top: float, what: String) -> bool:
+	if not await _go(device, at, 0.06, 6.0):
+		return _fail("C5: the step to %s stalled at %s" % [what, str(_position())])
+	await _face(facing)
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("C5: Action read '%s %s' at %s, not CLIMB HOLD" % [_action_label(),
+			String(_ctx()["action"]["detail"]), what])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
+		return _fail("C5: CLIMB did not take %s" % what)
+	_move(device, 1.0)
+	var topped: bool = await _wait_until(func() -> bool: return _standing_above(top), 20.0)
+	_move(device, 0.0)
+	if not topped:
+		return _fail("C5: %s never topped out (at %s)" % [what, str(_position())])
+	return true
+
+
 # AS-010's C4 alone, from the 662 deck start, on the device under test.
 func _c4(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
@@ -1875,11 +1999,11 @@ func _service_c4(device: int) -> bool:
 func _c4_mantle(device: int, facing: Vector2, top: float, what: String) -> bool:
 	await _face(facing)
 	if not await _offered(&"climb", "CLIMB"):
-		return _fail("C4: Action read '%s %s' facing %s, not CLIMB" % [_action_label(),
+		return _fail("Action read '%s %s' facing %s, not CLIMB" % [_action_label(),
 			String(_ctx()["action"]["detail"]), what])
 	_act(device)
 	if not await _wait_until(func() -> bool: return _standing_above(top), 2.0):
-		return _fail("C4: the mantle onto %s did not land (at %s)" % [what, str(_position())])
+		return _fail("the mantle onto %s did not land (at %s)" % [what, str(_position())])
 	return true
 
 
@@ -1893,11 +2017,11 @@ func _c4_hang_up(device: int, facing: Vector2, top: float, what: String) -> bool
 		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_HANGING, 2.0)
 	_move(device, 0.0)
 	if not hung:
-		return _fail("C4: the jump for %s's lip never hung (at %s)" % [what, str(_position())])
+		return _fail("the jump for %s's lip never hung (at %s)" % [what, str(_position())])
 	if not await _climb_up(device):
-		return _fail("C4: CLIMB UP not offered hanging from %s" % what)
+		return _fail("CLIMB UP not offered hanging from %s" % what)
 	if not await _wait_until(func() -> bool: return _standing_above(top), 2.5):
-		return _fail("C4: the climb up onto %s did not land (at %s)" % [what, str(_position())])
+		return _fail("the climb up onto %s did not land (at %s)" % [what, str(_position())])
 	return true
 
 
@@ -2385,10 +2509,11 @@ func _stack(device: int) -> bool:
 		return false
 	var at_deck662 := _position().y
 
-	# AS-010's C4, the service gantry, to the 684 deck, and stage N, the
-	# granular discharge hoist, to the 706 deck: on touch, the device the game
-	# is played on (the owner, 2026-09-24: no keyboard or gamepad needed); the
-	# pad and keyboard runs end on the 662 deck.
+	# AS-010's C4, the service gantry, to the 684 deck, stage N, the granular
+	# discharge hoist, to the 706 deck, and C5, the cooling plant, to the 728
+	# deck: on touch, the device the game is played on (the owner, 2026-09-24:
+	# no keyboard or gamepad needed); the pad and keyboard runs end on the 662
+	# deck.
 	var reached := ""
 	if device == InputRouter.Device.TOUCH:
 		if not await _service_c4(device):
@@ -2398,6 +2523,10 @@ func _stack(device: int) -> bool:
 		if not await _service_n(device):
 			return false
 		reached += " deck706_y=%.2f" % _position().y
+		# AS-010's C5, the cooling plant, to the 728 deck.
+		if not await _service_c5(device):
+			return false
+		reached += " deck728_y=%.2f" % _position().y
 
 	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
 	# faster than a sprint; only a snap moves the view that far.
@@ -2674,7 +2803,7 @@ func _watch_body() -> Dictionary:
 func _sample_body(watch: Dictionary) -> void:
 	var last := _position()
 	var last_eye := (_main._camera as Camera3D).global_transform.origin.y
-	var last_body := (_native().get_player_render_position() as Vector3).y
+	var last_body := _render_soles_y()
 	var last_steps := float(_native().get_step_up_meters())
 	while bool(watch["running"]):
 		await get_tree().process_frame
@@ -2686,7 +2815,7 @@ func _sample_body(watch: Dictionary) -> void:
 				str(now)]
 		last = now
 		var eye := (_main._camera as Camera3D).global_transform.origin.y
-		var body := (_native().get_player_render_position() as Vector3).y
+		var body := _render_soles_y()
 		var steps := float(_native().get_step_up_meters())
 		var lift := absf((eye - last_eye) - (body - last_body - (steps - last_steps)))
 		if lift > float(watch["lift"]):
@@ -2695,6 +2824,14 @@ func _sample_body(watch: Dictionary) -> void:
 		last_eye = eye
 		last_body = body
 		last_steps = steps
+
+
+# The rendered body's soles, which the eye hangs from (main.gd): a crouch
+# swaps the native's capsule round them in one tick, its centre moving 0.3 m
+# while the soles stay put and the eye glides.
+func _render_soles_y() -> float:
+	return (_native().get_player_render_position() as Vector3).y - \
+		(0.6 if bool(_native().is_player_crouched()) else 0.9)
 
 
 func _stop_watch(watch: Dictionary) -> float:
@@ -2957,6 +3094,19 @@ func _stick_push(direction: Vector2) -> void:
 	for i in 3:
 		var at := home + direction.normalized() * throw * float(i + 1) / 3.0
 		_drag(0, at, direction.normalized() * throw / 3.0)
+
+
+# Pushes the left stick straight forward on past its ring, the way a thumb
+# latches sprint, and holds it there at full throw; _move(device, 0.0) lets
+# go. True when the touch layer reads sprint latched.
+func _stick_sprint() -> bool:
+	var home: Vector2 = _main._touch.stick_home()
+	var throw: float = TouchControls.STICK_THROW * float(_main._touch._u)
+	_touch(0, home, true)
+	# Four thirds of the throw: past SPRINT_OVERSHOOT's 1.25.
+	for i in 4:
+		_drag(0, home + Vector2(0.0, -throw) * float(i + 1) / 3.0, Vector2(0.0, -throw / 3.0))
+	return bool(_main._touch.sprint_latched)
 
 
 # A touch's GUI twin: emulated mouse events carry DEVICE_ID_EMULATION.

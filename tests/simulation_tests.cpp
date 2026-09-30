@@ -2575,6 +2575,275 @@ void run_service_n() {
               << " worst_step_m=" << g_path_watch.worst << '\n';
 }
 
+// ---- AS-010 C5, the cooling plant (706 -> 728 m) --------------------------------
+
+constexpr double kC5TankTop = 707.7;
+constexpr double kC5DuctTop = 708.6;
+constexpr double kC5FirstTop = 717.2;       // the first platform hung from, over the void
+constexpr double kC5SecondTop = 720.4;      // the second, the standpipe's foot
+
+// Where a leg of C5 left the body, for a failure's message.
+bool report_c5(const scraperx::sim::Simulation &simulation, const char *leg) {
+    const auto state = simulation.snapshot();
+    std::cout << "C5 " << leg << ": at=" << state.player_position.x << "," << state.player_position.y << ","
+              << state.player_position.z << " traversal=" << static_cast<int>(state.traversal_state)
+              << " grounded=" << state.player_grounded << " crouched=" << state.player_crouched
+              << " support=" << state.support_entity_id << " ledge=" << state.ledge_available
+              << " grip=" << state.grip_available << '\n';
+    return false;
+}
+
+// What a climb of C5 saw on the way, for its falsifiers.
+struct C5Notes final {
+    bool vaulted = false;        // the manifold went by in a vault
+    bool crawled = false;        // the body passed under the ducts crouched
+    double gap_speed = 0.0;      // the body's speed leaving the gap's edge, m/s
+};
+
+// Up C4's standpipe-style hold at (x, z) from where the body stands, facing
+// (fx, fz), until it stands on top above `top`.
+bool c5_pipe(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
+             const double fz, const double top, const char *leg) {
+    using scraperx::sim::Snapshot;
+    if (!walk_to(simulation, x, z, 6.0, 0.06)) {
+        return report_c5(simulation, leg);
+    }
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().grip_available) {
+        return report_c5(simulation, leg);
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    return (is_climbing(simulation.snapshot()) &&
+            hold_stick(simulation, fx, fz, fx, fz, 20.0, [top](const Snapshot &state) { return standing_above(state, top); })) ||
+           report_c5(simulation, leg);
+}
+
+// From the 706 deck over the manifold, under the duct bank, onto the tank, up
+// its standpipe and over the gap onto the landing, on player inputs.
+bool c5_to_landing(scraperx::sim::Simulation &simulation, C5Notes &seen) {
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    // 1. Onto the plant floor and over the manifold in a vault.
+    if (!(walk_to(simulation, -3.3, -146.0, 12.0) && walk_to(simulation, -0.85, -145.5, 12.0, 0.06))) {
+        return report_c5(simulation, "to the manifold");
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_traversal();
+    bool vaulting = false;
+    if (!hold_stick(simulation, 0.0, 0.0, 1.0, 0.0, 2.0, [&vaulting](const Snapshot &state) {
+            vaulting = vaulting || state.traversal_state == TraversalState::Vaulting;
+            return state.traversal_state == TraversalState::None && state.player_grounded &&
+                   state.player_position.x > 0.9;
+        })) {
+        return report_c5(simulation, "over the manifold");
+    }
+    seen.vaulted = vaulting;
+    // 2. Under the duct bank, crouched.
+    (void)simulation.set_crouch_input(true);
+    bool crawled = true;
+    if (!walk_to(simulation, 5.6, -145.5, 8.0, 0.08)) {
+        (void)simulation.set_crouch_input(false);
+        return report_c5(simulation, "under the ducts");
+    }
+    (void)simulation.set_crouch_input(false);
+    (void)simulation.advance_frame(0.3);
+    crawled = crawled && !simulation.snapshot().player_crouched;
+    seen.crawled = crawled;
+    // 3. Onto the tank.
+    if (!(walk_to(simulation, 8.5, -146.5, 4.0, 0.06) && c4_mantle(simulation, 1.0, 0.0, 708.2, "C5 onto the tank"))) {
+        return false;
+    }
+    // 4. Up its standpipe onto the platform over it.
+    if (!c5_pipe(simulation, 10.25, -144.8, 0.0, 1.0, 714.5, "up the tank's standpipe")) {
+        return false;
+    }
+    // 5. West along the platform at a sprint and over the gap.
+    if (!walk_to(simulation, 10.85, -142.6, 4.0, 0.08)) {
+        return report_c5(simulation, "to the run-up");
+    }
+    (void)simulation.set_facing(-1.0, 0.0);
+    (void)simulation.advance_frame(0.2);
+    (void)simulation.set_sprint_input(true);
+    if (!hold_stick(simulation, -1.0, 0.0, -1.0, 0.0, 2.0,
+                    [](const Snapshot &state) { return state.player_position.x <= 8.45; })) {
+        (void)simulation.set_sprint_input(false);
+        return report_c5(simulation, "the run-up");
+    }
+    seen.gap_speed = std::abs(simulation.snapshot().player_linear_velocity.x);
+    (void)simulation.request_jump();
+    const bool across = hold_stick(simulation, -1.0, 0.0, -1.0, 0.0, 3.0, [](const Snapshot &state) {
+        return state.player_grounded && state.player_position.y > 714.5 && state.player_position.x < 1.5;
+    });
+    (void)simulation.set_sprint_input(false);
+    (void)simulation.advance_frame(0.5);
+    if (!across) {
+        return report_c5(simulation, "across the gap");
+    }
+    return true;
+}
+
+// From the 706 deck up the cooling plant to the 728 deck, on player inputs,
+// the way a player who has worked it out climbs it.
+bool climb_c5(scraperx::sim::Simulation &simulation, C5Notes *notes = nullptr) {
+    using scraperx::sim::Simulation;
+    C5Notes seen;
+    if (!c5_to_landing(simulation, seen)) {
+        return false;
+    }
+    // 6. Up onto the platform north of the landing, and the one east of that.
+    if (!(walk_to(simulation, -0.5, -141.6, 6.0, 0.05) && c4_hang_up(simulation, 0.0, 1.0, 717.7, "C5 the first hang"))) {
+        return false;
+    }
+    if (!(walk_to(simulation, 2.55, -139.6, 6.0, 0.05) && c4_hang_up(simulation, 1.0, 0.0, 720.9, "C5 the second hang"))) {
+        return false;
+    }
+    // 7. Up the second standpipe onto the top platform.
+    if (!c5_pipe(simulation, 6.35, -139.63, 1.0, 0.0, 727.0, "up the second standpipe")) {
+        return false;
+    }
+    // 8. Over the 728 deck's north girder.
+    if (!(walk_to(simulation, 9.0, -141.75, 6.0, 0.05) && c4_mantle(simulation, 0.0, -1.0, 728.6, "C5 onto the 728 deck"))) {
+        return false;
+    }
+    (void)simulation.advance_frame(0.5);
+    if (notes != nullptr) {
+        *notes = seen;
+    }
+    const auto top = simulation.snapshot();
+    return (on_support(top, Simulation::kServiceFrameEntityId) && top.player_position.y > 728.8) ||
+           report_c5(simulation, "standing on the 728 deck");
+}
+
+// From the 706 deck over the manifold onto the plant floor: the start of
+// every C5 check.
+bool c5_over_manifold(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    if (!(walk_to(simulation, -3.3, -146.0, 12.0) && walk_to(simulation, -0.85, -145.5, 12.0, 0.06))) {
+        return report_c5(simulation, "to the manifold");
+    }
+    (void)simulation.set_facing(1.0, 0.0);
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_traversal();
+    return hold_stick(simulation, 0.0, 0.0, 1.0, 0.0, 2.0, [](const Snapshot &state) {
+               return state.traversal_state == TraversalState::None && state.player_grounded &&
+                      state.player_position.x > 0.9;
+           }) ||
+           report_c5(simulation, "over the manifold");
+}
+
+void run_service_c5() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+
+    // ---- Standing, nothing passes under the duct bank --------------------------------
+    Simulation upright(InitialSpawn::Deck706);
+    (void)upright.advance_frame(1.0);
+    require(c5_over_manifold(upright), "C5: over the manifold onto the plant floor");
+    (void)walk_to(upright, 5.6, -145.5, 4.0, 0.08);
+    require(upright.snapshot().player_position.x < 3.0,
+            "standing, a body must not get under C5's duct bank: the way on is crouched");
+
+    // ---- A walking jump falls short of the gap, onto the plant floor ------------------
+    Simulation walker(InitialSpawn::Deck706);
+    (void)walker.advance_frame(1.0);
+    C5Notes ignored;
+    require(c5_over_manifold(walker), "C5: over the manifold, for the walking jump");
+    (void)walker.set_crouch_input(true);
+    require(walk_to(walker, 5.6, -145.5, 8.0, 0.08), "C5: under the ducts, for the walking jump");
+    (void)walker.set_crouch_input(false);
+    (void)walker.advance_frame(0.3);
+    require(walk_to(walker, 8.5, -146.5, 4.0, 0.06) && c4_mantle(walker, 1.0, 0.0, 708.2, "C5 onto the tank") &&
+                c5_pipe(walker, 10.25, -144.8, 0.0, 1.0, 714.5, "up the tank's standpipe") &&
+                walk_to(walker, 10.85, -142.6, 4.0, 0.08),
+            "C5: up onto the platform over the tank, for the walking jump");
+    (void)walker.set_facing(-1.0, 0.0);
+    (void)walker.advance_frame(0.2);
+    (void)hold_stick(walker, -1.0, 0.0, -1.0, 0.0, 2.0, [](const Snapshot &state) { return state.player_position.x <= 8.45; });
+    (void)walker.request_jump();
+    (void)hold_stick(walker, -1.0, 0.0, -1.0, 0.0, 4.0,
+                     [](const Snapshot &state) { return state.player_grounded && state.player_position.y < 709.0; });
+    (void)walker.advance_frame(1.0);
+    const auto short_of = walker.snapshot();
+    require(short_of.player_position.y < 708.0 && short_of.death_count == 0,
+            "a walking jump must fall short of C5's gap and land on the plant floor, alive");
+
+    // ---- Walked into the tank top's rails, a body stays up -----------------------------
+    Simulation railed(InitialSpawn::Deck706);
+    (void)railed.advance_frame(1.0);
+    require(c5_over_manifold(railed), "C5: over the manifold, for the tank's rails");
+    (void)railed.set_crouch_input(true);
+    require(walk_to(railed, 5.6, -145.5, 8.0, 0.08), "C5: under the ducts, for the tank's rails");
+    (void)railed.set_crouch_input(false);
+    (void)railed.advance_frame(0.3);
+    require(walk_to(railed, 8.5, -146.5, 4.0, 0.06) && c4_mantle(railed, 1.0, 0.0, 708.2, "C5 onto the tank"),
+            "C5: onto the tank, for its rails");
+    require(c4_stays_up(railed, 10.3, -147.5, 0.0, -1.0, kC5TankTop) && c4_stays_up(railed, 10.3, -147.5, 1.0, 0.0, kC5TankTop) &&
+                c4_stays_up(railed, 10.3, -142.0, 0.0, 1.0, kC5TankTop),
+            "walked into the rails round C5's tank top, a body must stay up on it");
+
+    // ---- North of the landing, over the void: edges that hold and edges that drop ----
+    // The first and second platforms stand over nothing but the 662 deck, 55 m
+    // down. Walked into the first's west parapet (a step off it would land by
+    // the 706 deck's hatch and slide in) and into the faces over the first's
+    // and the second's east edges, a body stays up; stepped slowly off the top
+    // platform's west edge where it juts past the second's hang face, it lands
+    // on the second; stepped off the second's south edge, it lands on the duct
+    // bank; walked into the bank's ends, it stays up.
+    Simulation edges(InitialSpawn::Deck706);
+    (void)edges.advance_frame(1.0);
+    C5Notes unused;
+    require(c5_to_landing(edges, unused) && walk_to(edges, -0.5, -141.6, 6.0, 0.05) &&
+                c4_hang_up(edges, 0.0, 1.0, 717.7, "C5 the first hang"),
+            "C5: up onto the first platform, for its edges");
+    require(c4_stays_up(edges, -1.2, -140.3, -1.0, 0.0, kC5FirstTop) &&
+                c4_stays_up(edges, 2.3, -139.6, 1.0, 0.0, kC5FirstTop),
+            "walked into the first platform's west parapet and the face over its east edge, a body must stay up");
+    require(walk_to(edges, 2.55, -139.6, 6.0, 0.05) && c4_hang_up(edges, 1.0, 0.0, 720.9, "C5 the second hang"),
+            "C5: up onto the second platform, for its edges");
+    require(c4_stays_up(edges, 6.4, -140.0, 1.0, 0.0, kC5SecondTop),
+            "walked into the face over the second platform's east edge, a body must stay up");
+    require(c5_pipe(edges, 6.35, -139.63, 1.0, 0.0, 727.0, "up the second standpipe") &&
+                walk_to(edges, 7.6, -141.85, 6.0, 0.05),
+            "C5: onto the top platform where it juts, for its west edge");
+    (void)hold_stick(edges, -0.15, 0.0, -1.0, 0.0, 6.0, [](const Snapshot &state) { return state.player_position.y < 725.0; });
+    (void)wait_for(edges, 4.0, [](const Snapshot &state) { return state.player_grounded; });
+    require(standing_above(edges.snapshot(), kC5SecondTop + 0.5) && edges.snapshot().death_count == 0,
+            "stepped slowly off the top platform's west edge where it juts, a body must land on the second platform, alive");
+    require(walk_to(edges, 4.0, -141.6, 6.0, 0.05), "C5: to the second platform's south edge, over the duct bank");
+    (void)hold_stick(edges, 0.0, -0.15, 0.0, -1.0, 6.0, [](const Snapshot &state) { return state.player_position.y < 719.0; });
+    (void)wait_for(edges, 4.0, [](const Snapshot &state) { return state.player_grounded; });
+    require(standing_above(edges.snapshot(), kC5DuctTop + 0.5) && edges.snapshot().death_count == 0,
+            "stepped off the second platform's south edge, a body must land on the duct bank, alive");
+    require(c4_stays_up(edges, 4.0, -141.6, 0.0, 1.0, kC5DuctTop) &&
+                c4_stays_up(edges, 4.0, -148.3, 0.0, -1.0, kC5DuctTop),
+            "walked into the duct bank's ends, a body must stay up on it");
+
+    // ---- The climb -------------------------------------------------------------------
+    Simulation c5(InitialSpawn::Deck706);
+    require(c5.advance_frame(1.0).accepted, "C5 settle interval must be accepted");
+    const double start = c5.snapshot().simulation_time_seconds;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    C5Notes notes;
+    const bool climbed = climb_c5(c5, &notes);
+    g_path_watch.armed = false;
+    require(climbed, "C5 must carry a climber from the 706 deck to the 728 deck");
+    require(notes.vaulted, "C5's manifold must go by in a vault");
+    require(notes.crawled, "C5's duct bank must be passed crouched, and the body stand again past it");
+    require(notes.gap_speed > 7.5, "C5's gap must be taken at a sprint");
+    require(g_path_watch.worst <= 0.15, "climbing C5, the body must never move more than 0.15 m sideways in one tick");
+    const auto top = c5.snapshot();
+    require(top.death_count == 0, "C5 must be climbed without a death");
+    std::cout << "PASS scraperx_sim AS-010 C5: seconds=" << top.simulation_time_seconds - start
+              << " deck728_y=" << top.player_position.y << " gap_speed_mps=" << notes.gap_speed
+              << " walk_jump_landed_y=" << short_of.player_position.y << " worst_step_m=" << g_path_watch.worst << '\n';
+}
+
 // AS-010 on player inputs from the TP-640 start: M hooked on, the chock
 // pulled, the ride, off onto the 662 deck; then up C4 to the 684 deck.
 void run_service_band() {
@@ -2593,11 +2862,14 @@ void run_service_band() {
     const auto deck684 = band.snapshot();
     require(open_n_flap(band) && ride_service_n(band, true).settled, "band: N's flap open and its cage on its dogs");
     require(step_off_n(band), "band: off N's cage onto the 706 deck");
+    const auto deck706 = band.snapshot();
+    require(climb_c5(band), "band: up C5 to the 728 deck");
     const auto top = band.snapshot();
-    require(top.death_count == 0, "band: no death from TP-640 to the 706 deck");
+    require(top.death_count == 0, "band: no death from TP-640 to the 728 deck");
     std::cout << "PASS scraperx_sim AS-010 band: to_662_s=" << deck662.simulation_time_seconds - start
               << " to_684_s=" << deck684.simulation_time_seconds - start
-              << " to_706_s=" << top.simulation_time_seconds - start << " deck_y=" << top.player_position.y << '\n';
+              << " to_706_s=" << deck706.simulation_time_seconds - start
+              << " to_728_s=" << top.simulation_time_seconds - start << " deck_y=" << top.player_position.y << '\n';
 }
 
 // AS-010's climbing route, on player inputs: across TP-640 to the ladder,
@@ -2614,8 +2886,13 @@ void run_service_route() {
             "route: across TP-640 and up the ladder through the 662 deck's hatch");
     require(climb_wet_hold(route, -4.0, -146.02, 0.0, 1.0, false, 684.5),
             "route: across the 662 deck and up the ladder through the 684 deck's hatch");
-    require(climb_wet_hold(route, -3.5, -140.07, 0.0, 1.0, false, 706.5),
-            "route: across the 684 deck and up the ladder through the 706 deck's hatch");
+    require(walk_to(route, -2.6, -142.5, 8.0) && walk_to(route, -2.6, -140.5, 4.0) &&
+                climb_wet_hold(route, -3.5, -140.73, 0.0, -1.0, false, 706.5),
+            "route: across the 684 deck, round the ladder and up it through the 706 deck's hatch");
+    require(route.snapshot().player_position.z < -141.5,
+            "route: off the 706 deck's ladder onto the open deck, south of its hatch");
+    require(climb_wet_hold(route, -1.2, -147.83, 0.0, -1.0, false, 728.5),
+            "route: onto the plant floor and up the ladder through the 728 deck's hatch");
     const auto top = route.snapshot();
     const auto service = route.service_state();
     require(service.m_cage_travel < 0.02 && service.m_reel_latched && service.n_cage_travel < 0.02 &&
@@ -4141,6 +4418,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-010") {
         run_midstack_service();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-010-c5") {
+        run_service_c5();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -6082,6 +6364,7 @@ int main() {
     run_midstack_service();
     run_service_c4();
     run_service_n();
+    run_service_c5();
     run_service_band();
     run_service_route();
     run_ascent();

@@ -2,9 +2,9 @@
 
 **Ascent Slice:** `AS-010`
 **Lifecycle:** `IN PROGRESS` — stage M, the service lift from TP-640 to the 662 deck; C4, the
-service gantry climbed from the 662 deck to the 684 deck; and stage N, the granular discharge hoist
-from the 684 deck to the 706 deck, built and played through the game's input; everything above the
-706 deck is unbuilt
+service gantry climbed from the 662 deck to the 684 deck; stage N, the granular discharge hoist
+from the 684 deck to the 706 deck; and C5, the cooling plant climbed from the 706 deck to the 728
+deck, built and played through the game's input; everything above the 728 deck is unbuilt
 **Provenance:** derived here under `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` and the Atlas's
 B06 (`01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`: `MOD-SERVICE-LIFT`, a second cage), from the owner's
 archetypes 11, the industrial spool unwind (M), and 09, the granular discharge hoist (N)
@@ -206,12 +206,49 @@ never turns and the cage runs into its stop (checked in the engine, below); a ho
 while gravel is still arriving was kept, not caught and released full, because a fast pour
 finishes in the first 0.1 m of travel.
 
+## C5 — the cooling plant, a climb (706.1 → 728.1)
+
+After stage N, a climb again, as the owner laid the route out (2026-09-25). C5 is one static body
+(`kServiceC5EntityId`, 1016) and a pipe manifold of its own (`kServiceC5ManifoldEntityId`, 1017, so
+a vault over it lands on another body), over the footprint's north-east on columns from the 662
+deck, climbed on the player's movement and nothing else, to the **728 deck** (frame 1012: x −2 to
+12, z −162 to −142.2, top 728.1, a yellow girder along its north edge, and a hatch for the backup
+ladder). It asks for the three verbs C4 did not: a vault, a crawl and a sprint.
+
+| # | From → to (top, m) | Move | Envelope (`simulation.cpp`) |
+|---|---|---|---|
+| 1 | 706 deck → plant floor (706.1) | east through the opening in the 706 deck's east parapet, level | — |
+| 2 | over the manifold | a vault over a bundle of pipes 1.0 m high and 0.5 m deep, parapet to parapet | vault 0.9–1.15 m, onto another body |
+| 3 | under the duct bank | crouched, 2 m under ducts 1.45 m clear that span the floor over its parapets; standing, a walker stops at them | crouched 1.2 m tall, standing 1.8 m |
+| 4 | plant floor → tank (707.7) | mantle 1.6 m | 0.9–1.85 m |
+| 5 | tank → the platform over it (714.0) | its standpipe, 6.1 m hand over hand, over the top | hold ≤ 0.18 m section |
+| 6 | → the landing (714.0) | west along the platform at a sprint, and a jump over a 6.5 m gap. The landing is a 0.4 m slab, under the 0.45 m of face a hang needs, so a jump short of it is not saved by a hang: it falls to the plant floor. A wall 1.2 m high at its far end to run out against | 6.17 m walking, 8.98 m sprinting |
+| 7 | landing → first platform (717.2) | jump, hang, climb up: 3.2 m | lip ≤ 3.76 m above take-off |
+| 8 | first → second platform (720.4) | jump, hang, climb up: 3.2 m | as 7 |
+| 9 | second → top platform (726.5) | the second standpipe, 5.9 m, over the top | as 5 |
+| 10 | top platform → 728 deck (728.1) | mantle 1.6 m over the yellow girder | as 4 |
+
+The plant floor and the tank's top are railed where they meet the air. North of the landing, the
+first and second platforms stand over the void down to the 662 deck, so their edges there are
+closed: the first is railed on its west edge, where a step off would land by the 706 deck's hatch
+and slide into it; the second is a block standing on the first's level, and the top platform a
+block standing on the second's, so each one's face closes the edge of the one below; the second's
+slab reaches as far south as the top platform, so a step off the top platform's west edge anywhere
+lands on it; and the duct bank, which a body can drop onto from the second platform, is railed at
+its ends. What is left open drops a body onto something it survives: from the landing, 6.9–7.9 m to
+the plant floor; from the first platform's south edge, 11.1 m; from the second's, 11.8 m onto the
+duct bank or 14.3 m to the floor (16.8 m/s); from the top platform's west edge, 6.1 m onto the
+second (probes run 2026-09-30, slow steps and full runs, no death in any). The hatches are the
+exception, as on every deck of AS-010: the 706 deck's and the 728 deck's open 22 m down to the
+floor below, past the 20.4 m a body survives.
+
 ## Climbing route, no lift
 
 The backup (plan §2.6 rule 8): a ladder from TP-640 up through a hatch in the 662 deck at x 8.1–9.7,
 z −147.4 to −145.25, a second from the 662 deck up through a hatch in the 684 deck at x −4.8 to
-−3.2, z −147.4 to −145.25, and a third from the 684 deck up through a hatch in the 706 deck at
-x −4.3 to −2.7, z −141.5 to −139.3.
+−3.2, z −147.4 to −145.25, a third from the 684 deck up through a hatch in the 706 deck at
+x −4.3 to −2.7, z −141.5 to −139.3, coming up on its south side onto the open deck, and a fourth
+from C5's plant floor up through a hatch in the 728 deck at x −1.9 to −0.5, z −148.6 to −146.4.
 
 ## Falsifiers
 
@@ -227,12 +264,19 @@ the bin pours its whole charge into the hopper, the cage is held on its dogs a s
 deck either way, clear of its stop, never past 3.5 m/s, its rider aboard all the way and never
 moved over 0.15 m a tick, the gain within what the hopper, its gravel and its chain released, tick
 by tick; held with its rider aboard and after it steps off; sent up empty, held on its top tooth,
-the rider left on the 684 deck); `AS-010 band` (the TP-640 start through M, C4 and N to standing on
-the 706 deck); `AS-010 route` (the three ladders, the lifts untouched). Through the game's input:
-`touch_service`, `pad_service`, `keyboard_service` (M), `touch_c4` (C4, from the 662 deck),
-`touch_n` (N, from the 684 deck), and the stack runs from the game's start: `touch_stack` on to the
-706 deck, `pad_stack` and `keyboard_stack` to the 662 deck (touch is the device the game is played
-on; the owner, 2026-09-24: no keyboard or gamepad needed).
+the rider left on the 684 deck); `AS-010 C5` (the 706 deck to standing on the 728 deck on player
+inputs, no death, no body step over 0.15 m a tick; the manifold goes by in a vault and the duct bank
+crouched, and standing a walker stops at the ducts; the gap taken at a sprint, over 7.5 m/s, and a
+walking jump falls short onto the plant floor alive; walked into the tank top's rails, the first
+platform's west parapet, the faces over the first and second platforms' east edges and the duct
+bank's ends, a body stays up; stepped slowly off the top platform's west edge where it juts, it
+lands on the second, and off the second's south edge, on the duct bank); `AS-010 band` (the TP-640
+start through M, C4, N and C5 to standing on the 728 deck); `AS-010 route` (the four ladders, the
+lifts untouched). Through the game's input: `touch_service`, `pad_service`, `keyboard_service` (M),
+`touch_c4` (C4, from the 662 deck), `touch_n` (N, from the 684 deck), `touch_c5` (C5, from the 706
+deck), and the stack runs from the game's start: `touch_stack` on to the 728 deck, `pad_stack` and
+`keyboard_stack` to the 662 deck (touch is the device the game is played on; the owner, 2026-09-24:
+no keyboard or gamepad needed).
 
 ## Result record
 
@@ -243,9 +287,10 @@ Built on `ScraperX-Claude` after `b35f1ed`.
 | `AS-010 M` | shackle free: the reel falls 22.9 m paying out its cable, the cage stays. Hooked on: apex 21.85 m, held at 21.80 m, peak 2.94 m/s, 12.2 s (2.93 m/s and 12.4 s in the world before N's bodies; Jolt's ordering); gain 339.0 kJ against 343.3 kJ released; empty, it stays on its dogs |
 | `AS-010 C4` (2026-09-30) | the 662 deck to standing on the 684 deck (685.0 m) in 34.5 s, no death, worst body step 0.085 m a tick; balancing on the beam; the winch house offers nothing standing, catches nothing jumped at, and lets nothing past on foot (three pushes west along its lip); the body hangs all the way, 3.42 m along the runway's lip; walked into each parapet, the body stays up (with any one parapet taken away, the walk into it ends past the tower's face) |
 | `AS-010 N` (2026-09-30) | the flap drawn past its dead point by taking hold of its chain in the cage; the bin's 1,213 kg poured into the hopper; apex 22.12 m, held at 22.10 m (the cage's floor 0.30 m over the 706 deck), peak 3.07 m/s, 15.5 s from the flap falling open to the cage at rest; gain 452.0 kJ against 457.0 kJ released; worst body step 0.061 m a tick; held with its rider aboard and after it steps off onto the 706 deck; a tug short of the dead point moves nothing; sent up empty, held on its top tooth (22.90 m, 3.81 m/s into the head). With no chain and the same start the cage runs into its stop and the check fails |
-| `AS-010 band` | TP-640 to standing on the 662 deck in 21.2 s, through C4 to the 684 deck in 57.5 s, through N to the 706 deck in 77.4 s (N's new bodies moved Jolt's ordering enough to take 0.2 s off the first two) |
-| `AS-010 route` | the three ladders, TP-640 to the 706 deck in 79.4 s, the lifts untouched |
-| Input | `touch_service`, `pad_service`, `keyboard_service` from the TP-640 start: held at 21.60–21.80 m, off onto the deck; `touch_c4` from the 662 deck to the 684 deck (36.5 s); `touch_n` from the 684 deck to the 706 deck (21.7 s, held at 22.10 m); `touch_stack` from the game's start to the 706 deck (665.0 s, no death), `pad_stack` and `keyboard_stack` to the 662 deck |
+| `AS-010 C5` (2026-09-30) | the 706 deck to standing on the 728 deck (729.0 m) in 27.4 s, no death, worst body step 0.128 m a tick; the manifold vaulted, the duct bank passed crouched (standing, a walker stops short of it at x < 3.0); the gap taken at 8.0 m/s, and a walking jump falls short onto the plant floor (706.99 m), alive; walked into the tank top's rails, the first platform's west parapet, the faces over the first and second platforms' east edges and the duct bank's ends, the body stays up; stepped slowly off the top platform's west edge where it juts, it lands on the second platform, and off the second's south edge, on the duct bank. With the parapet, the blocks and the duct bank's rails taken away, the walk into the first platform's parapet ends off its edge; with the second platform's south strip taken away, the step off the top platform does not land on it; each check fails |
+| `AS-010 band` | TP-640 to standing on the 662 deck in 21.2 s, through C4 to the 684 deck in 57.5 s, through N to the 706 deck in 77.4 s, through C5 to the 728 deck in 106.2 s |
+| `AS-010 route` | the four ladders, TP-640 to the 728 deck in 105.0 s, the lifts untouched |
+| Input | `touch_service`, `pad_service`, `keyboard_service` from the TP-640 start: held at 21.60–21.80 m, off onto the deck; `touch_c4` from the 662 deck to the 684 deck (36.5 s); `touch_n` from the 684 deck to the 706 deck (21.7 s, held at 22.10 m); `touch_c5` from the 706 deck to the 728 deck (30.5 s), the first input-path proof of a sprint, latched by the stick pushed past its ring; `touch_stack` from the game's start to the 728 deck (696.6 s, no death), `pad_stack` and `keyboard_stack` to the 662 deck |
 
 What building N taught. DEFECT, in the kit: a bin set its body's mass in the solver to the body's
 own and its contents, and a reel to the body's own and its wound cable, each overwriting the other;
@@ -254,6 +299,23 @@ body's mass from everything on it, and stage M's numbers came out the same to th
 it. And the flap's first placement put its counterweight through one of the hopper's guide posts
 and a strut through its own pin's hanger: the first run showed the flap stuck at 0.09 rad, short of
 its dead point. Both were moved clear, and the flap now goes over at 0.13 rad.
+
+What building C5 taught. DEFECT, pushed with N: the third ladder came up through the 706 deck's
+hatch on its north side, into a pocket 1.05 m deep behind the hatch and closed by the parapets; the
+strips either side of the hatch, 0.55 m and 0.45 m wide, are narrower than a body. `AS-010 route`
+stood on the 706 deck there and passed. The ladder now comes up on the hatch's south side, facing
+the open deck, and the route goes on from there to the fourth ladder. Before C5 was committed,
+probes of its edges found its line sound and its edges not: stepped off slowly where the top
+platform jutted 1 m south of the second, a body fell 20.4 m to the plant floor at 19.0–19.97 m/s,
+against a lethal 20.0, and died in 2 of 9 probes; stepped off the first platform's west edge, it
+landed on the 706 deck's parapet beside the hatch and slid into the hatch, 22 m to the 684 deck,
+dead in 8 of 8; and the first and second platforms' east edges ran out under the next platform up
+(0.05 m and 3.1 m over a standing body's head) over the void. The closures above came from that, and `AS-010 C5`
+checks each. And the input path's view watch compared the eye with the body's centre, which a
+crouch moves 0.3 m in one tick while the soles stay put and the eye glides from them (`main.gd`):
+the first crouch it saw, in `touch_c5`, read as a 0.283 m jump of the view. The watch measures the
+body at its soles now, as the eye does, and the crouch's glide reads 0.090 m in a frame, under the
+0.10 m bound.
 
 What a review of C4 taught: the first winch house stood 0.3 m short of the runway's lip, and a
 walker got round it on the lip's edge, the capsule's rim holding it up to 0.29 m out beyond the lip
