@@ -257,6 +257,30 @@ struct MidstackService final {
     kit::BinIndex n_hopper_bin;
     kit::ChainIndex n_chain;
     kit::RopeIndex n_rope;
+
+    // Stage O, the gravel wheel: the 728 deck -> the 750 deck.
+    kit::BodyIndex o_cab;
+    kit::BodyIndex o_bucket;
+    kit::BodyIndex o_wheel;
+    kit::BodyIndex o_gate;
+    kit::BodyIndex o_latch;
+    kit::BodyIndex o_ram;
+    kit::BodyIndex o_chock;
+    kit::BodyIndex o_handle;
+    kit::BodyIndex o_bin;
+    kit::GuideIndex o_cab_guide;
+    kit::GuideIndex o_bucket_guide;
+    kit::WheelIndex o_wheel_turn;
+    kit::LeverIndex o_gate_lever;
+    kit::LeverIndex o_latch_lever;
+    kit::LeverIndex o_ram_lever;
+    kit::LeverIndex o_chock_lever;
+    kit::CatchIndex o_ram_catch;
+    kit::CatchIndex o_gate_catch;
+    kit::BinIndex o_bin_bin;
+    kit::BinIndex o_bucket_bin;
+    kit::ChainIndex o_chain;
+    kit::RopeIndex o_rope;
 };
 
 void build_midstack_service(kit::Kit &kit, MidstackService &service);

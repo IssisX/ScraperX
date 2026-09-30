@@ -839,6 +839,18 @@ godot::Dictionary ScraperXSimulation::get_service_state() const {
     out["n_silo_kg"] = state.n_silo_kg;
     out["n_hopper_kg"] = state.n_hopper_kg;
     out["n_chain_kg"] = state.n_chain_kg;
+    out["o_ram_latched"] = state.o_ram_latched;
+    out["o_gate_latched"] = state.o_gate_latched;
+    out["o_cab_travel"] = state.o_cab_travel;
+    out["o_bucket_travel"] = state.o_bucket_travel;
+    out["o_wheel_angle"] = state.o_wheel_angle;
+    out["o_ram_angle"] = state.o_ram_angle;
+    out["o_latch_angle"] = state.o_latch_angle;
+    out["o_gate_angle"] = state.o_gate_angle;
+    out["o_bin_kg"] = state.o_bin_kg;
+    out["o_bucket_kg"] = state.o_bucket_kg;
+    out["o_chain_kg"] = state.o_chain_kg;
+    out["o_rope_tension"] = state.o_rope_tension;
     return out;
 }
 

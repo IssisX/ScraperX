@@ -1,6 +1,7 @@
 #include "sim/bands.hpp"
 #include "sim/simulation.hpp"
 
+#include <cmath>
 #include <vector>
 
 // AS-010, Midstack Service (Atlas band B06, 640 -> 780 m). Contract:
@@ -681,6 +682,136 @@ constexpr float kD728HatchZ1 = -146.4F;
 // The top platform's south edge, 0.2 m short of the 728 deck's girder.
 constexpr float kC5TopSouth = kD728North + 0.2F;
 
+// ---- Stage O, the gravel wheel: the 728 deck to the 750 deck -----------------------
+// The owner's archetype 16: a stream of gravel turns a wheel whose axle winds
+// the lift, a low gear. A 2.4 t freight cab stands on the 728 deck; over it
+// on the head, a 4 m wheel and a 2 m drum turn on one axle along x. The
+// cab's cable leaves the drum's south side, and a rope leaves the wheel's
+// north rim for a steel bucket hanging empty at the top of its well, a chain
+// hanging from its floor 45 m down the well to C5's plant floor. Over the
+// bucket, a bin of gravel behind a gate held shut by a latch; east of the bin
+// a bundle of pipes hangs drawn back on its rigging from a beam on the head,
+// held there by a chock whose lanyard hangs beside the cab. Pulled from the
+// cab, the lanyard throws the chock: the bundle swings down, its pipes knock
+// the latch over, the gate falls open, and the bin pours into the bucket.
+// Some 140 kg in, the bucket outweighs half the cab and its rider -- the
+// wheel is twice the drum -- and sinks, the rest of the gravel falling in with
+// it; every two metres it sinks winds a metre of cable onto the drum and sets
+// 32 kg of its chain down, so its drive fades through the stroke and turns
+// halfway. The cab rises past the 750 deck and settles back onto its safety
+// dogs. No catch and no governor: the gravel starts it, the chain stops it.
+// Numbers from the evaluator (stage1dof.py, the contract's spec): INTEGRATED
+// over the guide friction band and the wheel's inertia, every case caught on
+// its fall-back.
+constexpr float kOX = 3.0F;                     // the cab, about its floor's top centre
+constexpr float kOZ = -150.9F;
+constexpr float kODeck = kD728Top + 0.2F;       // on the 728 deck
+constexpr float kOStop = 22.9F;                 // the guide's top, a dog's tooth
+constexpr float kODogPitch = 0.1F;
+constexpr float kOFriction = 100.0F;            // N, the cab's guide shoes
+constexpr float kOCabMassKg = 2400.0F;
+constexpr float kOEyeX = -1.0F;                 // the cable down the cab's west side
+const JPH::Vec3 kOEyeLocal(kOEyeX, 1.1F, 0.0F);
+// One axle along x over the cab: the drum over the cable, the wheel east of
+// the cab over the bucket, twice the drum's radius.
+constexpr float kOAxleY = 754.8F;
+constexpr float kOAxleZ = kOZ + 1.0F;           // the drum's radius north of the cable
+constexpr float kODrumRadius = 1.0F;
+constexpr float kOWheelRadius = 2.0F;           // 2 to 1
+constexpr float kODrumX = kOX + kOEyeX;
+constexpr float kOWheelX = 6.0F;
+constexpr float kOWheelMassKg = 2200.0F;        // wheel, drum and axle
+constexpr float kOAxleWest = 1.25F;             // the axle's ends, clear of its bearings
+constexpr float kOAxleEast = 6.55F;
+// The bucket, about its floor's centre, hanging from the wheel's north rim
+// at the top of its well: 1.2 m square inside, 1.4 m deep, its bail across
+// its top over the middle.
+constexpr float kOBucketX = kOWheelX;
+constexpr float kOBucketZ = kOAxleZ + kOWheelRadius;
+constexpr float kOBucketHalf = 0.6F;
+constexpr float kOBucketDepth = 1.4F;
+constexpr float kOBucketFloorHalf = 0.06F;
+constexpr float kOBucketWall = 0.03F;
+constexpr float kOBucketMassKg = 400.0F;
+constexpr float kOBucketCapacityKg = 900.0F;    // more than the bin holds
+const JPH::Vec3 kOBailLocal(0.0F, kOBucketDepth + 0.2F, 0.0F);
+// Its chain, from the middle of its underside down the well to C5's plant
+// floor: each metre the bucket sinks sets 16 kg of it down.
+constexpr float kOChainKgPerM = 16.0F;
+constexpr float kOChainLength = 45.0F;          // 0.8 m past the stroke
+constexpr float kOBucketY = kC5Floor + kOChainLength + kOBucketFloorHalf;
+constexpr float kOBucketStop = kOChainLength;   // its floor down on the plant floor
+// The well through the 728 and 750 decks, railed round on both.
+constexpr float kOWellX0 = kOBucketX - 0.75F;
+constexpr float kOWellX1 = kOBucketX + 0.75F;
+constexpr float kOWellZ0 = kOBucketZ - 0.75F;
+constexpr float kOWellZ1 = kOBucketZ + 0.75F;
+// The bin: the charge, through a chute 0.5 m square at 400 kg/s (Beverloo,
+// as N's).
+constexpr float kOGravelKg = 498.0F;
+constexpr float kOPourKgPerS = 400.0F;
+const JPH::RVec3 kOMouth(kOBucketX, 753.4, kOBucketZ + 0.4);
+constexpr float kOBinBottom = 753.9F;
+constexpr float kOBinTop = 755.7F;
+// The gate under the mouth on a pin along x north of it, weighted to fall
+// open, held shut by the latch's catch.
+const JPH::RVec3 kOGatePin(kOBucketX, 753.35, kOBucketZ + 0.7);
+constexpr float kOGateMassKg = 40.0F;
+constexpr float kOGateLength = 0.6F;
+constexpr float kOGateOpen = 0.3F;
+constexpr float kOGateStop = 1.2F;
+constexpr float kOGateReach = 0.6F;
+// The latch: a bar standing on a pin east of the bin, its weight leaning it
+// east onto its stop. Knocked west past its dead point, 0.06 rad, it falls
+// onto its other stop and stays; past 0.15 rad its pin is out of the gate.
+const JPH::RVec3 kOLatchPin(7.9, 753.6, kOBucketZ + 0.9);
+constexpr float kOLatchLength = 2.0F;
+constexpr float kOLatchLean = 0.06F;
+constexpr float kOLatchMassKg = 30.0F;
+constexpr float kOLatchRelease = 0.15F;
+constexpr float kOLatchStop = 0.5F;
+// The ram: a bundle of four pipes on rigging from a pivot beam, drawn back
+// east; let go, it swings down west through the latch's top, onto the stop
+// of its rigging 20 degrees past hanging.
+const JPH::RVec3 kORamPivot(9.0, 759.0, kOBucketZ + 0.9);
+constexpr float kORamLength = 4.0F;
+constexpr float kORamDrawn = 0.61F;             // 35 degrees east of hanging
+constexpr float kORamFar = 0.35F;
+constexpr float kORamMassKg = 800.0F;
+constexpr float kORamPostZ = 1.3F;              // its beam's posts either side
+// The chock holding it by its rigging, and its lanyard: over the head to a
+// sheave over the cab, and down into the cab, its handle hanging 1.6 m over
+// the floor, in reach from the cab and from nowhere else; the cab's floor
+// lifts it as it rises, the lanyard slack from the head.
+const JPH::RVec3 kOChockPivot(10.2, 756.6, kOBucketZ + 2.5);
+const JPH::RVec3 kOLanyard(kOX + 0.3, 757.6, kOZ - 0.3);
+constexpr float kOHeadTop = 757.95F;             // the head beam over the cab
+constexpr float kOHandleTop = kODeck + 1.6F;
+// The 750 deck over the 728 deck's east half: holes for the cab, the well
+// and the backup ladder's hatch.
+constexpr float kD750Bottom = 749.6F;
+constexpr float kD750Top = 750.1F;
+constexpr float kOCabHoleX0 = kOX - 1.4F;
+constexpr float kOCabHoleX1 = kOX + 1.4F;
+constexpr float kOCabHoleZ0 = kOZ - 1.55F;
+constexpr float kOCabHoleZ1 = kOZ + 1.55F;
+constexpr float kD750HatchX0 = 10.0F;
+constexpr float kD750HatchX1 = 11.4F;
+constexpr float kD750HatchZ0 = -158.2F;
+constexpr float kD750HatchZ1 = -156.0F;
+
+// C4's parapets round stage O's well, on the deck whose top is `top`.
+void well_rails(std::vector<Part> &frame, const float top) {
+    const float w = kC4ParapetWidth;
+    const auto rail = [&](const float x0, const float z0, const float x1, const float z1) {
+        frame.push_back(span({x0, top, z0}, {x1, top + kC4Parapet, z1}, Material::Concrete));
+    };
+    rail(kOWellX0 - w, kOWellZ0 - w, kOWellX1 + w, kOWellZ0);
+    rail(kOWellX0 - w, kOWellZ1, kOWellX1 + w, kOWellZ1 + w);
+    rail(kOWellX0 - w, kOWellZ0, kOWellX0, kOWellZ1);
+    rail(kOWellX1, kOWellZ0, kOWellX1 + w, kOWellZ1);
+}
+
 void c5_column(std::vector<Part> &parts, const float x, const float z, const float bottom, const float top) {
     parts.push_back(span({x - kC4Column, bottom, z - kC4Column}, {x + kC4Column, top, z + kC4Column}, Material::Rust));
 }
@@ -702,7 +833,10 @@ void build_c5_frame(std::vector<Part> &frame) {
     deck(kUpperEast, kD728HatchX0, z0, kD728North);
     deck(kD728HatchX0, kD728HatchX1, z0, kD728HatchZ0);
     deck(kD728HatchX0, kD728HatchX1, kD728HatchZ1, kD728North);
-    deck(kD728HatchX1, kD728East, z0, kD728North);
+    deck(kD728HatchX1, kD728East, z0, kOWellZ0);
+    deck(kD728HatchX1, kD728East, kOWellZ1, kD728North);
+    deck(kD728HatchX1, kOWellX0, kOWellZ0, kOWellZ1);
+    deck(kOWellX1, kD728East, kOWellZ0, kOWellZ1);
     frame.push_back(span({kUpperEast, kD728GirderBottom, kD728North - 0.3F}, {kD728East, kD728Bottom, kD728North},
                          Material::Yellow));
     // Parapets but where the last mantle comes over the girder.
@@ -714,6 +848,8 @@ void build_c5_frame(std::vector<Part> &frame) {
     parapet(kUpperEast, z0, kUpperEast + kC4ParapetWidth, kD728North);
     parapet(kUpperEast, kD728North - kC4ParapetWidth, 7.0F, kD728North);
     parapet(kC5TankX1, kD728North - kC4ParapetWidth, kD728East, kD728North);
+    // Round stage O's well, where its bucket goes down through the deck.
+    well_rails(frame, kD728Top);
 }
 
 void build_c5(kit::Kit &kit) {
@@ -803,6 +939,238 @@ void build_c5(kit::Kit &kit) {
                        JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
 }
 
+void build_stage_o_frame(std::vector<Part> &frame) {
+    const float z0 = kWellZ - kHalf;
+    // Columns from the 728 deck at the corners and between.
+    for (const float x : {kUpperEast + 0.3F, 5.0F, kD728East - 0.3F}) {
+        for (const float z : {z0 + 0.3F, kD728North - 0.3F}) {
+            frame.push_back(span({x - 0.2F, kD728Top, z - 0.2F}, {x + 0.2F, kD750Bottom, z + 0.2F}, Material::Rust));
+        }
+    }
+    // The 750 deck, round the cab's hole, the well and the ladder's hatch.
+    const auto deck = [&](const float x0, const float x1, const float za, const float zb) {
+        frame.push_back(span({x0, kD750Bottom, za}, {x1, kD750Top, zb}, Material::Concrete));
+    };
+    deck(kUpperEast, kD728East, z0, kD750HatchZ0);
+    deck(kUpperEast, kD750HatchX0, kD750HatchZ0, kD750HatchZ1);
+    deck(kD750HatchX1, kD728East, kD750HatchZ0, kD750HatchZ1);
+    deck(kUpperEast, kD728East, kD750HatchZ1, kOCabHoleZ0);
+    deck(kUpperEast, kOCabHoleX0, kOCabHoleZ0, kOCabHoleZ1);
+    deck(kOCabHoleX1, kD728East, kOCabHoleZ0, kOCabHoleZ1);
+    deck(kUpperEast, kD728East, kOCabHoleZ1, kOWellZ0);
+    deck(kUpperEast, kOWellX0, kOWellZ0, kOWellZ1);
+    deck(kOWellX1, kD728East, kOWellZ0, kOWellZ1);
+    deck(kUpperEast, kD728East, kOWellZ1, kD728North);
+    // Railed round its edges, round the well, and round the cab's hole but
+    // on its east side, where the rider steps off.
+    const float w = kC4ParapetWidth;
+    const auto parapet = [&](const float x0, const float za, const float x1, const float zb) {
+        frame.push_back(span({x0, kD750Top, za}, {x1, kD750Top + kC4Parapet, zb}, Material::Concrete));
+    };
+    parapet(kUpperEast, z0, kD728East, z0 + w);
+    parapet(kUpperEast, kD728North - w, kD728East, kD728North);
+    parapet(kUpperEast, z0, kUpperEast + w, kD728North);
+    parapet(kD728East - w, z0, kD728East, kD728North);
+    well_rails(frame, kD750Top);
+    parapet(kOCabHoleX0 - w, kOCabHoleZ0 - w, kOCabHoleX1, kOCabHoleZ0);
+    parapet(kOCabHoleX0 - w, kOCabHoleZ1, kOCabHoleX1, kOCabHoleZ1 + w);
+    parapet(kOCabHoleX0 - w, kOCabHoleZ0, kOCabHoleX0, kOCabHoleZ1);
+    // The cab's guide posts, either side, the 728 deck up past the drum to the
+    // head: a beam between them over the cab, whose sheave carries the
+    // handle's lanyard.
+    for (const float side : {-1.0F, 1.0F}) {
+        frame.push_back(span({kOX - 0.05F, kD728Top, kOZ + side * 1.45F - 0.05F},
+                             {kOX + 0.05F, kOHeadTop, kOZ + side * 1.45F + 0.05F}, Material::Steel));
+    }
+    frame.push_back(span({kOX - 0.05F, kOHeadTop - 0.25F, kOZ - 1.5F}, {kOX + 0.45F, kOHeadTop, kOZ + 1.5F},
+                         Material::Yellow));
+    // The axle's bearings on posts from the 750 deck.
+    for (const float x : {kOAxleWest - 0.2F, kOAxleEast + 0.2F}) {
+        frame.push_back(span({x - 0.12F, kD750Top, kOAxleZ - 0.12F}, {x + 0.12F, kOAxleY - 0.25F, kOAxleZ + 0.12F},
+                             Material::Yellow));
+        frame.push_back(span({x - 0.12F, kOAxleY - 0.25F, kOAxleZ - 0.25F}, {x + 0.12F, kOAxleY + 0.25F, kOAxleZ + 0.25F},
+                             Material::Steel));
+    }
+    // The bin's bearers, clear of the well and the bucket's rope.
+    for (const float x : {kOWellX0 - kC4ParapetWidth - 0.15F, kOWellX1 + kC4ParapetWidth + 0.15F}) {
+        for (const float z : {kOBucketZ + 0.5F, kOBucketZ + 1.6F}) {
+            frame.push_back(span({x - 0.08F, kD750Top, z - 0.08F}, {x + 0.08F, kOBinBottom, z + 0.08F}, Material::Yellow));
+        }
+    }
+    for (const float z : {kOBucketZ + 0.5F, kOBucketZ + 1.6F}) {
+        frame.push_back(span({kOWellX0 - kC4ParapetWidth - 0.23F, kOBinBottom - 0.2F, z - 0.08F},
+                             {kOWellX1 + kC4ParapetWidth + 0.23F, kOBinBottom, z + 0.08F}, Material::Yellow));
+    }
+    // The latch's post, the chock's, and the ram's beam on its posts.
+    const JPH::Vec3 latch = vec(kOLatchPin);
+    frame.push_back(span({latch.GetX() - 0.06F, kD750Top, latch.GetZ() - 0.12F},
+                         {latch.GetX() + 0.06F, latch.GetY() - 0.06F, latch.GetZ() + 0.12F}, Material::Steel));
+    const JPH::Vec3 chock = vec(kOChockPivot);
+    frame.push_back(span({chock.GetX() - 0.06F, kD750Top, chock.GetZ() - 0.12F},
+                         {chock.GetX() + 0.06F, chock.GetY() - 0.06F, chock.GetZ() + 0.12F}, Material::Steel));
+    const JPH::Vec3 pivot = vec(kORamPivot);
+    for (const float side : {-1.0F, 1.0F}) {
+        frame.push_back(span({pivot.GetX() - 0.12F, kD750Top, pivot.GetZ() + side * kORamPostZ - 0.12F},
+                             {pivot.GetX() + 0.12F, pivot.GetY() + 0.35F, pivot.GetZ() + side * kORamPostZ + 0.12F},
+                             Material::Yellow));
+    }
+    frame.push_back(span({pivot.GetX() - 0.12F, pivot.GetY() + 0.1F, pivot.GetZ() - kORamPostZ - 0.12F},
+                         {pivot.GetX() + 0.12F, pivot.GetY() + 0.35F, pivot.GetZ() + kORamPostZ + 0.12F},
+                         Material::Yellow));
+}
+
+void build_stage_o(kit::Kit &kit, MidstackService &service) {
+    // The bin on its bearers, its chute down to the gate.
+    const std::vector<Part> bin{
+        span({kOBucketX - 0.7F, kOBinBottom, kOBucketZ + 0.2F}, {kOBucketX + 0.7F, kOBinTop, kOBucketZ + 1.6F},
+             Material::Galvanised),
+        span({kOBucketX - 0.25F, static_cast<float>(kOMouth.GetY()), kOBucketZ + 0.15F},
+             {kOBucketX + 0.25F, kOBinBottom, kOBucketZ + 0.65F}, Material::Hazard)};
+    service.o_bin = kit.add_body(Sim::kServiceOBinEntityId, bin, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F,
+                                 0.8F);
+
+    // The gate: a plate under the mouth on its pin, weighted to fall open.
+    service.o_gate = kit.add_body(
+        Sim::kServiceOGateEntityId,
+        {box(JPH::Vec3(0.25F, 0.02F, 0.5F * kOGateLength), JPH::Vec3(0.0F, -0.02F, -0.5F * kOGateLength),
+             Material::Steel),
+         box(JPH::Vec3(0.25F, 0.04F, 0.03F), JPH::Vec3(0.0F, -0.06F, -kOGateLength + 0.03F), Material::Hazard)},
+        kOGatePin, JPH::Quat::sIdentity(), kOGateMassKg, 0.5F);
+    service.o_gate_lever = kit.add_lever(service.o_gate, kOGatePin, -JPH::Vec3::sAxisX(), JPH::Vec3::sAxisY(), 0.0F,
+                                         kOGateStop);
+    service.o_bin_bin = kit.add_bin(service.o_bin, kOGravelKg, kOGravelKg, vec(kOMouth), service.o_gate_lever,
+                                    kOGateOpen, kOGateReach, kOPourKgPerS);
+
+    // The latch, standing on its pin, leaning east onto its stop.
+    service.o_latch = kit.add_body(
+        Sim::kServiceOLatchEntityId,
+        {box(JPH::Vec3(0.05F, 0.5F * kOLatchLength, 0.05F), JPH::Vec3(kOLatchLean, 0.5F * kOLatchLength, 0.0F),
+             Material::Hazard),
+         box(JPH::Vec3(0.3F, 0.04F, 0.04F), JPH::Vec3(kOLatchLean - 0.3F, 0.3F, 0.0F), Material::Steel)},
+        kOLatchPin, JPH::Quat::sIdentity(), kOLatchMassKg, 0.6F);
+    service.o_latch_lever = kit.add_lever(service.o_latch, kOLatchPin, JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisY(), 0.0F,
+                                          kOLatchStop);
+    service.o_gate_catch = kit.add_catch(service.o_gate, service.o_latch_lever, kOLatchRelease, 0.05F, false);
+
+    // The ram: four pipes along z on two rigging bars from the pivot, built
+    // drawn back 35 degrees east of hanging.
+    std::vector<Part> ram;
+    for (const float dx : {-0.17F, 0.17F}) {
+        for (const float dy : {-0.17F, 0.17F}) {
+            ram.push_back(box(JPH::Vec3(0.15F, 0.15F, 0.8F), JPH::Vec3(dx, -kORamLength + dy, 0.0F), Material::Rust));
+        }
+    }
+    for (const float side : {-0.7F, 0.7F}) {
+        ram.push_back(box(JPH::Vec3(0.04F, 0.5F * (kORamLength - 0.35F), 0.04F),
+                          JPH::Vec3(0.0F, -0.5F * (kORamLength - 0.35F), side), Material::Yellow));
+    }
+    service.o_ram = kit.add_body(Sim::kServiceORamEntityId, ram, kORamPivot,
+                                 JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), kORamDrawn), kORamMassKg, 0.5F);
+    service.o_ram_lever = kit.add_lever(service.o_ram, kORamPivot, -JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(), -0.05F,
+                                        kORamDrawn + kORamFar);
+    // Its swing dies away as its rigging's friction and the air would take
+    // it (declared): it has done its work at the latch.
+    kit.set_damping(service.o_ram, 0.1F, 0.3F);
+
+    // The chock standing on its post, its weight east of its pin, holding the
+    // ram; its lanyard over the head and down beside the cab.
+    service.o_chock = kit.add_body(
+        Sim::kServiceOChockEntityId,
+        {box(JPH::Vec3(0.04F, 0.5F * kStandingArm, 0.04F), JPH::Vec3(0.1F, 0.5F * kStandingArm, 0.0F),
+             Material::Hazard)},
+        kOChockPivot, JPH::Quat::sIdentity(), 12.0F, 0.6F);
+    service.o_chock_lever = kit.add_lever(service.o_chock, kOChockPivot, JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisY(),
+                                          0.0F, 1.2F);
+    service.o_ram_catch = kit.add_catch(service.o_ram, service.o_chock_lever, kLeverRelease, 0.05F, false);
+    service.o_handle = kit.add_body(Sim::kServiceOHandleEntityId,
+                                    {box(JPH::Vec3(0.22F, kHandleHalfY, 0.04F), JPH::Vec3::sZero(), Material::Yellow)},
+                                    JPH::RVec3(kOLanyard.GetX(), kOHandleTop - kHandleHalfY, kOLanyard.GetZ()),
+                                    JPH::Quat::sIdentity(), kHandleMassKg, 0.9F);
+    kit.set_carry(service.o_handle, kit::CarryKind::Handle, JPH::Vec3(0.0F, kHandleHalfY, 0.0F));
+    kit.set_damping(service.o_handle, 1.5F, 1.5F);
+    (void)kit.add_trip_line(service.o_chock, JPH::Vec3(0.1F, kStandingArm, 0.0F), service.o_handle,
+                            JPH::Vec3(0.0F, kHandleHalfY, 0.0F), kOLanyard, kOLanyard);
+
+    // The cab, on its guide with safety dogs and no governor.
+    service.o_cab = kit.add_body(Sim::kServiceOCabEntityId, cage_parts(), JPH::RVec3(kOX, kODeck, kOZ),
+                                 JPH::Quat::sIdentity(), kOCabMassKg, 0.8F);
+    service.o_cab_guide = kit.add_guide(service.o_cab, JPH::Vec3::sAxisY(), 0.0F, kOStop, 0.0F, 0.0F, 0.0F);
+    kit.set_damping(service.o_cab, 0.0F, 0.05F);
+    kit.set_dogs(service.o_cab_guide, kODogPitch);
+    kit.set_guide_friction(service.o_cab_guide, kOFriction);
+
+    // The bucket, empty at the top of its well, its chain to the plant floor.
+    const float wall_y = 0.5F * (kOBucketDepth + kOBucketFloorHalf);
+    const float wall_half_y = 0.5F * (kOBucketDepth - kOBucketFloorHalf);
+    const float out = kOBucketHalf + kOBucketWall;
+    service.o_bucket = kit.add_body(
+        Sim::kServiceOBucketEntityId,
+        {box(JPH::Vec3(kOBucketHalf, kOBucketFloorHalf, kOBucketHalf), JPH::Vec3::sZero(), Material::Rust),
+         box(JPH::Vec3(kOBucketWall, wall_half_y, out), JPH::Vec3(-out, wall_y, 0.0F), Material::Rust),
+         box(JPH::Vec3(kOBucketWall, wall_half_y, out), JPH::Vec3(out, wall_y, 0.0F), Material::Rust),
+         box(JPH::Vec3(kOBucketHalf, wall_half_y, kOBucketWall), JPH::Vec3(0.0F, wall_y, -out), Material::Rust),
+         box(JPH::Vec3(kOBucketHalf, wall_half_y, kOBucketWall), JPH::Vec3(0.0F, wall_y, out), Material::Rust),
+         box(JPH::Vec3(out, 0.05F, kOBucketWall), JPH::Vec3(0.0F, kOBucketDepth, -out), Material::Hazard),
+         box(JPH::Vec3(0.03F, 0.12F, 0.04F), JPH::Vec3(-out, kOBucketDepth + 0.1F, 0.0F), Material::Yellow),
+         box(JPH::Vec3(0.03F, 0.12F, 0.04F), JPH::Vec3(out, kOBucketDepth + 0.1F, 0.0F), Material::Yellow),
+         box(JPH::Vec3(out, 0.04F, 0.04F), kOBailLocal, Material::Yellow)},
+        JPH::RVec3(kOBucketX, kOBucketY, kOBucketZ), JPH::Quat::sIdentity(), kOBucketMassKg, 0.6F);
+    service.o_bucket_guide = kit.add_guide(service.o_bucket, -JPH::Vec3::sAxisY(), 0.0F, kOBucketStop, 0.0F, 0.0F,
+                                           0.0F);
+    kit.set_damping(service.o_bucket, 0.0F, 0.05F);
+    service.o_bucket_bin = kit.add_bin(service.o_bucket, 0.0F, kOBucketCapacityKg, JPH::Vec3::sZero(),
+                                       kit::LeverIndex{}, 0.0F, 0.0F, 0.0F);
+    service.o_chain = kit.add_chain(service.o_bucket, JPH::Vec3(0.0F, -kOBucketFloorHalf, 0.0F), kC5Floor,
+                                    kOChainKgPerM, kOChainLength);
+
+    // The wheel, its drum and its axle, one body turning on the axle's
+    // bearings: a rim of sixteen segments on eight spokes, the drum of eight.
+    std::vector<Part> wheel;
+    constexpr int kRim = 16;
+    for (int i = 0; i < kRim; ++i) {
+        const float a = 6.2831853F * static_cast<float>(i) / static_cast<float>(kRim);
+        wheel.push_back(turned(JPH::Vec3(0.15F, 0.125F, 0.41F),
+                               JPH::Vec3(0.0F, kOWheelRadius * std::cos(a), kOWheelRadius * std::sin(a)),
+                               JPH::Quat::sRotation(JPH::Vec3::sAxisX(), a), Material::Rust));
+    }
+    for (int i = 0; i < 8; ++i) {
+        const float a = 6.2831853F * static_cast<float>(i) / 8.0F;
+        wheel.push_back(turned(JPH::Vec3(0.06F, 0.8F, 0.06F), JPH::Vec3(0.0F, 1.1F * std::cos(a), 1.1F * std::sin(a)),
+                               JPH::Quat::sRotation(JPH::Vec3::sAxisX(), a), Material::Yellow));
+    }
+    const float drum = kODrumX - kOWheelX;
+    for (int i = 0; i < 8; ++i) {
+        const float a = 6.2831853F * static_cast<float>(i) / 8.0F;
+        wheel.push_back(turned(JPH::Vec3(0.45F, 0.1F, 0.43F),
+                               JPH::Vec3(drum, (kODrumRadius - 0.1F) * std::cos(a), (kODrumRadius - 0.1F) * std::sin(a)),
+                               JPH::Quat::sRotation(JPH::Vec3::sAxisX(), a), Material::Steel));
+    }
+    wheel.push_back(box(JPH::Vec3(0.2F, 0.3F, 0.3F), JPH::Vec3::sZero(), Material::Steel));
+    wheel.push_back(box(JPH::Vec3(0.5F * (kOAxleEast - kOAxleWest), 0.15F, 0.15F),
+                        JPH::Vec3(0.5F * (kOAxleEast + kOAxleWest) - kOWheelX, 0.0F, 0.0F), Material::Steel));
+    const JPH::RVec3 axle(kOWheelX, kOAxleY, kOAxleZ);
+    service.o_wheel = kit.add_body(Sim::kServiceOWheelEntityId, wheel, axle, JPH::Quat::sIdentity(), kOWheelMassKg,
+                                   0.6F);
+    kit.set_damping(service.o_wheel, 0.0F, 0.0F);
+    service.o_wheel_turn = kit.add_wheel(service.o_wheel, axle, JPH::Vec3::sAxisX(), JPH::Vec3::sAxisY(),
+                                         service.o_bucket_guide, kOWheelRadius);
+
+    // The rope: from the bucket's bail up to the wheel's north rim, wound on
+    // it, and off the drum's south side down to the cab's eye, made fast; the
+    // wheel twice the drum, so the bucket is pulled half as hard as the cab
+    // and goes twice as far.
+    const JPH::RVec3 bail = JPH::RVec3(kOBucketX, kOBucketY, kOBucketZ) + JPH::RVec3(kOBailLocal);
+    const JPH::RVec3 f1(kOBucketX, kOAxleY, kOBucketZ);
+    const JPH::RVec3 eye = JPH::RVec3(kOX, kODeck, kOZ) + JPH::RVec3(kOEyeLocal);
+    const JPH::RVec3 f2(kODrumX, kOAxleY, kOAxleZ - kODrumRadius);
+    const float ratio = kOWheelRadius / kODrumRadius;
+    const float length = static_cast<float>(JPH::Vec3(bail - f1).Length()) +
+                         ratio * static_cast<float>(JPH::Vec3(eye - f2).Length());
+    service.o_rope = kit.add_rope(service.o_bucket, kOBailLocal, f1, service.o_cab, kOEyeLocal, f2, ratio, length,
+                                  0.0F);
+    kit.set_wound(service.o_rope);
+}
+
 // ---- the climbing route, no lift --------------------------------------------------
 // The backup: ladders from TP-640 up through the 662 deck's hatch, and from
 // the 662 deck up through the 684 deck's.
@@ -814,6 +1182,7 @@ void build_climbing_route(kit::Kit &kit) {
     // the strip's width between the parapets.
     ladder(route, 0.5F * (kN706HatchX0 + kN706HatchX1), kN706HatchZ0 + 0.15F, true, kUpperTop, kN706Top);
     ladder(route, 0.5F * (kD728HatchX0 + kD728HatchX1), kD728HatchZ0 + 0.15F, true, kC5Floor, kD728Top);
+    ladder(route, 0.5F * (kD750HatchX0 + kD750HatchX1), kD750HatchZ0 + 0.15F, true, kD728Top, kD750Top);
     (void)kit.add_body(Sim::kServiceRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
 }
 
@@ -826,11 +1195,13 @@ void build_midstack_service(kit::Kit &kit, MidstackService &service) {
     build_stage_m(kit, service, frame);
     build_stage_n_frame(frame);
     build_c5_frame(frame);
+    build_stage_o_frame(frame);
     (void)kit.add_body(Sim::kServiceFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     build_c4(kit);
     build_climbing_route(kit);
     build_stage_n(kit, service);
     build_c5(kit);
+    build_stage_o(kit, service);
 }
 
 } // namespace scraperx::sim::bands

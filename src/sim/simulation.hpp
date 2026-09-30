@@ -84,6 +84,9 @@ enum class InitialSpawn : std::uint8_t {
     Deck684 = 32,
     // AS-010: on the 706 deck by where C5's plant floor opens off it.
     Deck706 = 33,
+    // AS-010: on the 728 deck north-east of stage O's cab, where C5's
+    // climber comes over the girder.
+    Deck728 = 34,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };
@@ -215,6 +218,21 @@ struct ServiceState final {
     double n_chain_kg = 0.0;      // chain hanging from the hopper
     double n_hopper_mass = 0.0;   // the hopper, its gravel and its hanging chain
     double n_rope_tension = 0.0;  // N
+    // Stage O, the gravel wheel.
+    bool o_ram_latched = false;
+    bool o_gate_latched = false;
+    double o_cab_travel = 0.0;
+    double o_cab_peak_speed = 0.0;
+    double o_bucket_travel = 0.0;
+    double o_wheel_angle = 0.0;   // rad, in [-pi, pi]
+    double o_ram_angle = 0.0;
+    double o_latch_angle = 0.0;
+    double o_gate_angle = 0.0;
+    double o_bin_kg = 0.0;        // gravel still in the bin
+    double o_bucket_kg = 0.0;     // gravel in the bucket
+    double o_chain_kg = 0.0;      // chain hanging from the bucket
+    double o_bucket_mass = 0.0;   // the bucket, its gravel and its hanging chain
+    double o_rope_tension = 0.0;  // N, on the bucket's side of the wheel
 };
 
 // Band 0, the Stack's machine state, for the falsifiers.
@@ -528,6 +546,7 @@ public:
     static constexpr std::uint64_t kServiceNSiloEntityId = 1015;
     static constexpr std::uint64_t kServiceC5EntityId = 1016;
     static constexpr std::uint64_t kServiceC5ManifoldEntityId = 1017;
+    static constexpr std::uint64_t kServiceOBinEntityId = 1018;
     static constexpr std::uint64_t kServiceMCageEntityId = 2130;
     static constexpr std::uint64_t kServiceMReelEntityId = 2131;
     static constexpr std::uint64_t kServiceMChockEntityId = 2132;
@@ -537,6 +556,14 @@ public:
     static constexpr std::uint64_t kServiceNHopperEntityId = 2136;
     static constexpr std::uint64_t kServiceNGateEntityId = 2137;
     static constexpr std::uint64_t kServiceNHandleEntityId = 2138;
+    static constexpr std::uint64_t kServiceOCabEntityId = 2139;
+    static constexpr std::uint64_t kServiceOBucketEntityId = 2140;
+    static constexpr std::uint64_t kServiceOWheelEntityId = 2141;
+    static constexpr std::uint64_t kServiceOGateEntityId = 2142;
+    static constexpr std::uint64_t kServiceOLatchEntityId = 2143;
+    static constexpr std::uint64_t kServiceORamEntityId = 2144;
+    static constexpr std::uint64_t kServiceOChockEntityId = 2145;
+    static constexpr std::uint64_t kServiceOHandleEntityId = 2146;
     // Band 0, the Stack (grade -> 154 m): its static structure, then S1, the
     // skip hoist.
     static constexpr std::uint64_t kStackFrameEntityId = 1020;

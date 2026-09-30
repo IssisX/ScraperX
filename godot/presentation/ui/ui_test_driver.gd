@@ -68,6 +68,9 @@ const SCENARIOS := {
 	# AS-010's C5, the cooling plant, climbed from the 706 deck to the 728 deck
 	# on touch.
 	"touch_c5": 33,
+	# AS-010's stage O, the gravel wheel, from the 728 deck to the 750 deck on
+	# touch.
+	"touch_o": 34,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -218,6 +221,8 @@ func _run() -> void:
 			ok = await _n(InputRouter.Device.TOUCH)
 		"touch_c5":
 			ok = await _c5(InputRouter.Device.TOUCH)
+		"touch_o":
+			ok = await _o(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1759,6 +1764,78 @@ func _service_n(device: int) -> bool:
 	return true
 
 
+# AS-010's stage O alone, from the 728 deck start, on the device under test.
+func _o(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var wrists := _watch_wrists()
+	var body := _watch_body()
+	if not await _service_o(device):
+		return false
+	var worst_wrist := _stop_watch(wrists)
+	var worst_step := _stop_watch(body)
+	if worst_wrist > 0.10:
+		return _fail("a hand jumped %.3f m in one frame between poses (%s)" % [worst_wrist,
+			str(wrists.get("at", ""))])
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
+	_detail = "deck750_y=%.2f held_m=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, float(_service_state()["o_cab_travel"]),
+		float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step, float(body["lift"])]
+	return true
+
+
+# AS-010's stage O, the gravel wheel, the way its native test takes it: from
+# the 728 deck into the cab beside the chock's lanyard, GRAB it and step back
+# with it until the chock lets the ram go, and LET GO. The ram swings onto the
+# latch, the gate falls open and the gravel pours into the bucket, which sinks
+# down its well and hauls the cab, by the rope over the wheel, to the 750
+# deck, where its dogs hold it; off east onto the deck.
+func _service_o(device: int) -> bool:
+	if not (await _go(device, Vector2(8.0, -150.3), 0.15, 20.0) and \
+			await _go(device, Vector2(5.2, -150.4), 0.15, 6.0)):
+		return _fail("O: the walk to the cab stalled at %s" % str(_position()))
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _pull_handle(device, Vector2(3.3, -150.6), Vector2(0.0, -1.0), 2146, "CHOCK LANYARD",
+			func() -> bool: return not bool(_service_state()["o_ram_latched"])):
+		return false
+	await _pose("service_o_pour")
+	# The ride, until the cab stands still on its dogs for a second.
+	var last := float(_service_state()["o_cab_travel"])
+	var still := 0.0
+	var waited := 0.0
+	while waited < 60.0 and still < 1.0:
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		waited += dt
+		var travel := float(_service_state()["o_cab_travel"])
+		still = still + dt if travel > 1.0 and absf(travel - last) < 0.0005 else 0.0
+		last = travel
+	var held := float(_service_state()["o_cab_travel"])
+	if still < 1.0 or held < 21.45:
+		return _fail("O's cab never came to rest on its dogs at the 750 deck (travel %.2f m, bucket %.0f kg)" % [
+			held, float(_service_state()["o_bucket_kg"])])
+	await _pose("service_o_top")
+	if int(_native().get_support_entity_id()) != 2139:
+		return _fail("the rider is not in O's cab at the top (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	# Off east onto the 750 deck.
+	if not await _go(device, Vector2(5.2, -150.0), 0.15, 6.0):
+		return _fail("the step off O's cab onto the 750 deck stalled at %s (on %d, cab %.3f m)" % [
+			str(_position()), int(_native().get_support_entity_id()), float(_service_state()["o_cab_travel"])])
+	await _seconds(0.5)
+	await _pose("service_deck750")
+	if int(_native().get_support_entity_id()) != SERVICE_FRAME_ENTITY or not _standing_above(750.6):
+		return _fail("not standing on the 750 deck (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	return true
+
+
 # AS-010's C5 alone, from the 706 deck start, on the device under test.
 func _c5(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
@@ -2510,8 +2587,8 @@ func _stack(device: int) -> bool:
 	var at_deck662 := _position().y
 
 	# AS-010's C4, the service gantry, to the 684 deck, stage N, the granular
-	# discharge hoist, to the 706 deck, and C5, the cooling plant, to the 728
-	# deck: on touch, the device the game is played on (the owner, 2026-09-24:
+	# discharge hoist, to the 706 deck, C5, the cooling plant, to the 728 deck,
+	# and stage O, the gravel wheel, to the 750 deck: on touch, the device the game is played on (the owner, 2026-09-24:
 	# no keyboard or gamepad needed); the pad and keyboard runs end on the 662
 	# deck.
 	var reached := ""
@@ -2527,6 +2604,10 @@ func _stack(device: int) -> bool:
 		if not await _service_c5(device):
 			return false
 		reached += " deck728_y=%.2f" % _position().y
+		# AS-010's stage O, the gravel wheel, to the 750 deck.
+		if not await _service_o(device):
+			return false
+		reached += " deck750_y=%.2f" % _position().y
 
 	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
 	# faster than a sprint; only a snap moves the view that far.

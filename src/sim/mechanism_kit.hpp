@@ -17,6 +17,7 @@
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/PulleyConstraint.h>
+#include <Jolt/Physics/Constraints/RackAndPinionConstraint.h>
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
@@ -100,6 +101,7 @@ using PipeIndex = Index<struct PipeTag>;
 using CellIndex = Index<struct CellTag>;
 using ReelIndex = Index<struct ReelTag>;
 using ChainIndex = Index<struct ChainTag>;
+using WheelIndex = Index<struct WheelTag>;
 
 class Kit final {
 public:
@@ -159,6 +161,12 @@ public:
     RopeIndex add_rope(BodyIndex body1, JPH::Vec3 point1, JPH::RVec3 fixed1, BodyIndex end_body,
                        JPH::Vec3 end_point, JPH::RVec3 fixed2, float ratio, float max_length,
                        float rating_newtons);
+
+    // A rope wound on two drums on one axle (declared, AS-010 O): it leaves
+    // one drum at fixed1 and the other at fixed2, so the stretch between them
+    // is wound, not hanging. Drawn as two cables, body1's end up to fixed1
+    // and fixed2 down to its other end. Drawing only; build time.
+    void set_wound(RopeIndex rope);
 
     // A lever on a hinge fixed to the world, between stops at min_angle and
     // max_angle; the angle is 0 as built. Nothing but its own weight returns
@@ -247,6 +255,15 @@ public:
     // the point to the floor.
     ChainIndex add_chain(BodyIndex body, JPH::Vec3 point_local, float floor_y, float linear_density,
                          float length);
+    // A wheel wound with a rope (declared model, AS-010 O): the body turns
+    // freely on a hinge fixed to the world about `axis` through `pivot`, and
+    // the rope leaving its rim at `radius` for the body on `guide` holds the
+    // rim to that body's travel without slip, both ways, as a rope kept taut
+    // by what hangs on it does (a rack and pinion in the solver). A positive
+    // turn about axis goes with the guide's travel. The rope's pull is the
+    // rope's own (add_rope); the wheel adds its inertia, and turns as drawn.
+    WheelIndex add_wheel(BodyIndex body, JPH::RVec3 pivot, JPH::Vec3 axis, JPH::Vec3 normal, GuideIndex guide,
+                         float radius);
     // A float: the body's box of half_x by half_z, from bottom_local (body
     // y) up height, feels rho g A d up at its centre of mass, d its depth
     // under the pool's level, and water drag on its vertical speed.
@@ -379,15 +396,18 @@ public:
     // or let go, only its end's side: from the end up to its sheave.
     void rope_polyline(RopeIndex rope, std::vector<JPH::RVec3> &out) const;
     // Everything drawn as a cable: the ropes, the trip lines, the reels'
-    // paid-out cables, then the chains.
+    // paid-out cables, the chains, then the second halves of wound ropes.
     [[nodiscard]] std::uint32_t cable_count() const noexcept {
-        return static_cast<std::uint32_t>(ropes_.size() + lines_.size() + reels_.size() + chains_.size());
+        return static_cast<std::uint32_t>(ropes_.size() + lines_.size() + reels_.size() + chains_.size() +
+                                          wound_.size());
     }
     // A reel's cable paid out, m, and still wound on it, kg.
     [[nodiscard]] float reel_paid(ReelIndex reel) const noexcept;
     [[nodiscard]] float reel_wound_kg(ReelIndex reel) const noexcept;
     // The chain's weight hanging from its body, kg.
     [[nodiscard]] float chain_hanging_kg(ChainIndex chain) const noexcept;
+    // The wheel's angle on its hinge, radians in [-pi, pi] (0 as built).
+    [[nodiscard]] float wheel_angle(WheelIndex wheel) const noexcept;
     void cable_polyline(std::uint32_t cable, std::vector<JPH::RVec3> &out) const;
     [[nodiscard]] bool rope_parted(RopeIndex rope) const noexcept;
     // The entity of the body the rope's end is on now: an anchor's body, its
@@ -493,6 +513,7 @@ private:
         std::uint32_t over_rating_steps = 0;
         bool parted = false;
         bool strut = false;
+        bool wound = false;         // drawn as two cables (set_wound)
         LeverIndex clutch;          // invalid: no clutch
         float clutch_angle = 0.0F;
         bool clutch_engaged = false;
@@ -543,6 +564,11 @@ private:
         float density = 0.0F;   // kg per metre
         float length = 0.0F;    // m
         float hanging = 0.0F;   // m hanging from the body, as of the last step
+    };
+    struct Wheel final {
+        BodyIndex body;
+        JPH::Ref<JPH::HingeConstraint> hinge;
+        JPH::Ref<JPH::RackAndPinionConstraint> rope;   // the rim held to the guide's travel
     };
     struct Float final {
         BodyIndex body;
@@ -691,6 +717,8 @@ private:
     std::vector<Throttle> throttles_;
     std::vector<Reel> reels_;
     std::vector<Chain> chains_;
+    std::vector<Wheel> wheels_;
+    std::vector<RopeIndex> wound_;
     float drained_ = 0.0F;
 };
 

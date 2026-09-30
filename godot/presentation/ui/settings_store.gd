@@ -40,8 +40,8 @@ const TIME_OF_DAY_HOURS := [10.5, 6.4, 12.5, 18.3, 23.5]
 const START_NAMES := ["GROUND", "22 M DECK", "44 M DECK", "66 M DECK", "88 M DECK", "132 M DECK",
 	"154 M DECK", "176 M RING", "198 M RING", "220 M RING", "340 M PLATE",
 	"374 M RING", "418 M CAGE", "484 M RING", "528 M CRANE CAGE", "572 M WINCH CAB", "640 M PLATE", "662 M DECK",
-	"684 M DECK", "706 M DECK"]
-const START_SPAWNS := [-1, 25, 26, 27, 28, 29, 11, 12, 13, 16, 19, 20, 21, 22, 23, 24, 30, 31, 32, 33]
+	"684 M DECK", "706 M DECK", "728 M DECK"]
+const START_SPAWNS := [-1, 25, 26, 27, 28, 29, 11, 12, 13, 16, 19, 20, 21, 22, 23, 24, 30, 31, 32, 33, 34]
 
 var look_sensitivity := 1.0
 var stick_sensitivity := 1.0

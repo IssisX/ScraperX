@@ -114,6 +114,10 @@ Kit::~Kit() {
     for (Line &line : lines_) {
         system_.RemoveConstraint(line.constraint);
     }
+    for (Wheel &wheel : wheels_) {
+        system_.RemoveConstraint(wheel.rope);
+        system_.RemoveConstraint(wheel.hinge);
+    }
     auto &bodies = system_.GetBodyInterface();
     for (auto it = bodies_.rbegin(); it != bodies_.rend(); ++it) {
         if (it->enabled) {
@@ -254,6 +258,11 @@ RopeIndex Kit::add_rope(const BodyIndex body1, const JPH::Vec3 point1, const JPH
     ropes_.push_back(rope);
     connect_rope(ropes_.back());
     return RopeIndex{static_cast<std::uint32_t>(ropes_.size() - 1U)};
+}
+
+void Kit::set_wound(const RopeIndex rope) {
+    ropes_[rope.value].wound = true;
+    wound_.push_back(rope);
 }
 
 LeverIndex Kit::add_lever(const BodyIndex body, const JPH::RVec3 pivot, const JPH::Vec3 axis,
@@ -408,6 +417,31 @@ ChainIndex Kit::add_chain(const BodyIndex body, const JPH::Vec3 point_local, con
     chains_.push_back(chain);
     apply_mass(body);
     return ChainIndex{static_cast<std::uint32_t>(chains_.size() - 1U)};
+}
+
+WheelIndex Kit::add_wheel(const BodyIndex body, const JPH::RVec3 pivot, const JPH::Vec3 axis,
+                          const JPH::Vec3 normal, const GuideIndex guide, const float radius) {
+    const JPH::Vec3 unit = axis.Normalized();
+    JPH::HingeConstraintSettings hinge_settings;
+    hinge_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    hinge_settings.mPoint1 = hinge_settings.mPoint2 = pivot;
+    hinge_settings.mHingeAxis1 = hinge_settings.mHingeAxis2 = unit;
+    hinge_settings.mNormalAxis1 = hinge_settings.mNormalAxis2 = normal.Normalized();
+    JPH::Ref<JPH::HingeConstraint> hinge = static_cast<JPH::HingeConstraint *>(
+        hinge_settings.Create(JPH::Body::sFixedToWorld, jolt_body(body)));
+    system_.AddConstraint(hinge);
+    const Guide &rack = guides_[guide.value];
+    JPH::RackAndPinionConstraintSettings rope_settings;
+    rope_settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    rope_settings.mHingeAxis = unit;
+    rope_settings.mSliderAxis = rack.axis;
+    rope_settings.mRatio = 1.0F / radius;
+    JPH::Ref<JPH::RackAndPinionConstraint> rope = static_cast<JPH::RackAndPinionConstraint *>(
+        rope_settings.Create(jolt_body(body), jolt_body(rack.body)));
+    rope->SetConstraints(hinge, rack.slider);
+    system_.AddConstraint(rope);
+    wheels_.push_back({body, hinge, rope});
+    return WheelIndex{static_cast<std::uint32_t>(wheels_.size() - 1U)};
 }
 
 void Kit::add_float(const PoolIndex pool, const BodyIndex body, const float half_x,
@@ -1518,6 +1552,9 @@ void Kit::rope_polyline(const RopeIndex rope_index, std::vector<JPH::RVec3> &out
     }
     out.push_back(world_point(rope->body1, rope->point1));
     out.push_back(rope->fixed1);
+    if (rope->wound) {
+        return;
+    }
     if (JPH::Vec3(rope->fixed2 - rope->fixed1).LengthSq() > 1.0e-4F) {
         out.push_back(rope->fixed2);
     }
@@ -1545,6 +1582,15 @@ void Kit::cable_polyline(const std::uint32_t cable, std::vector<JPH::RVec3> &out
             const JPH::RVec3 from = world_point(chain.body, chain.point);
             out.push_back(from);
             out.push_back(JPH::RVec3(from.GetX(), static_cast<double>(chain.floor), from.GetZ()));
+            return;
+        }
+        const std::size_t wound_index = chain_index - chains_.size();
+        if (wound_index < wound_.size()) {
+            const Rope &rope = ropes_[wound_[wound_index].value];
+            if (!rope.parted) {
+                out.push_back(rope.fixed2);
+                out.push_back(world_point(rope_end_body(rope), rope_end_point(rope)));
+            }
         }
         return;
     }
@@ -1588,6 +1634,11 @@ float Kit::reel_wound_kg(const ReelIndex reel) const noexcept {
 float Kit::chain_hanging_kg(const ChainIndex chain) const noexcept {
     const Chain *record = find(chains_, chain);
     return record != nullptr ? record->density * record->hanging : 0.0F;
+}
+
+float Kit::wheel_angle(const WheelIndex wheel) const noexcept {
+    const Wheel *record = find(wheels_, wheel);
+    return record != nullptr && record->hinge != nullptr ? record->hinge->GetCurrentAngle() : 0.0F;
 }
 
 float Kit::bin_capacity(const BinIndex bin) const noexcept {

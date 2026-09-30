@@ -2844,8 +2844,314 @@ void run_service_c5() {
               << " walk_jump_landed_y=" << short_of.player_position.y << " worst_step_m=" << g_path_watch.worst << '\n';
 }
 
+// ---- AS-010 stage O, the gravel wheel (728 -> 750 m) -------------------------------
+
+constexpr double kOCabKg = 2400.0;
+constexpr double kOBucketKg = 400.0;
+constexpr double kOGravelKg = 498.0;
+constexpr double kOChainFullKg = 16.0 * 45.0;
+constexpr double kODeckTop = 728.3;         // the cab's floor at rest
+constexpr double kO750Top = 750.1;
+constexpr double kOStopTravel = 22.9;       // the guide's top, a dog's tooth
+constexpr double kOLatchRelease = 0.15;     // the latch's angle at which the gate lets go
+constexpr double kODrumRadius = 1.0;        // the wheel turns a radian for each metre the cab rises
+
+// From the 728 deck into O's cab, to beside the handle hanging in it: face it
+// and take hold. True once the handle is in the hands.
+bool take_o_handle(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    if (!(walk_to(simulation, 8.0, -150.3, 10.0) && walk_to(simulation, 5.2, -150.4, 6.0) &&
+          walk_to(simulation, 3.3, -150.6, 6.0, 0.06))) {
+        return false;
+    }
+    (void)wait_for(simulation, 2.0, [](const Snapshot &state) { return state.player_grounded; });
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.5);
+    const auto facing = simulation.snapshot();
+    if (facing.carry_target_entity_id != Simulation::kServiceOHandleEntityId || facing.carry_target_kind != 2) {
+        return false;
+    }
+    (void)simulation.request_pick_up();
+    (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    return simulation.snapshot().carrying_entity_id == Simulation::kServiceOHandleEntityId;
+}
+
+// Holding O's handle, step back until the chock lets the ram go, then let go
+// of it. True once the ram is free; `freed_at` is the time it was.
+bool pull_o_handle(scraperx::sim::Simulation &simulation, double *freed_at = nullptr) {
+    using scraperx::sim::Snapshot;
+    if (!take_o_handle(simulation)) {
+        return false;
+    }
+    const bool freed = hold_stick(simulation, 0.0, 0.35, 0.0, -1.0, 4.0, [&simulation](const Snapshot &) {
+        return !simulation.service_state().o_ram_latched;
+    });
+    if (freed && freed_at != nullptr) {
+        *freed_at = simulation.snapshot().simulation_time_seconds;
+    }
+    (void)simulation.request_set_down();
+    return freed;
+}
+
+// One ride of O from the ram let go to the cab at rest on its dogs. Every
+// tick, the energy the bucket released sinking (its gravel and the chain
+// hanging from it, as they are that tick) against what the cab and its rider
+// gained rising; and the order the causes came in.
+struct ORide final {
+    bool settled = false;
+    bool rode_on_cab = true;
+    bool in_order = false;
+    double apex = 0.0;
+    double peak_speed = 0.0;
+    double seconds = 0.0;
+    double gain = 0.0;
+    double released = 0.0;
+    double min_tension = 1.0e9;     // the rope, from the cab's first metre to its last two
+    double wheel_gap = 0.0;         // the wheel's turn against the cab's rise, rad
+};
+
+ORide ride_service_o(scraperx::sim::Simulation &simulation, const bool rider_aboard, const double ram_freed_at) {
+    using scraperx::sim::Simulation;
+    constexpr double kG = 9.81;
+    constexpr double kPi = 3.14159265358979323846;
+    ORide ride;
+    const double start = simulation.snapshot().simulation_time_seconds;
+    const double cab_y0 = kit_com_y(simulation, Simulation::kServiceOCabEntityId);
+    const double rider_y0 = simulation.snapshot().player_position.y;
+    double bucket_y = kit_com_y(simulation, Simulation::kServiceOBucketEntityId);
+    double last = simulation.service_state().o_cab_travel;
+    double wheel_last = simulation.service_state().o_wheel_angle;
+    double wheel_turn = 0.0;
+    double t_latch = -1.0;
+    double t_gate = -1.0;
+    double t_pour = -1.0;
+    double t_move = -1.0;
+    int still = 0;
+    observe_path(simulation, false);
+    for (int tick = 0; tick < 60 * 90; ++tick) {
+        const double bucket_kg = simulation.service_state().o_bucket_mass;
+        (void)simulation.set_move_input(0.0, 0.0);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(simulation, true);
+        const auto o = simulation.service_state();
+        const double now = simulation.snapshot().simulation_time_seconds;
+        const double now_y = kit_com_y(simulation, Simulation::kServiceOBucketEntityId);
+        ride.released += bucket_kg * kG * (bucket_y - now_y);
+        bucket_y = now_y;
+        double turn = o.o_wheel_angle - wheel_last;
+        turn = turn > kPi ? turn - 2.0 * kPi : (turn < -kPi ? turn + 2.0 * kPi : turn);
+        wheel_last = o.o_wheel_angle;
+        wheel_turn += turn;
+        ride.wheel_gap = std::max(ride.wheel_gap, std::abs(wheel_turn - o.o_cab_travel / kODrumRadius));
+        const double travel = o.o_cab_travel;
+        const double speed = std::abs(travel - last) / Simulation::kFixedStepSeconds;
+        last = travel;
+        ride.apex = std::max(ride.apex, travel);
+        ride.peak_speed = std::max(ride.peak_speed, speed);
+        if (t_latch < 0.0 && o.o_latch_angle >= kOLatchRelease) {
+            t_latch = now;
+        }
+        if (t_gate < 0.0 && !o.o_gate_latched) {
+            t_gate = now;
+        }
+        if (t_pour < 0.0 && o.o_bin_kg < kOGravelKg - 1.0) {
+            t_pour = now;
+        }
+        if (t_move < 0.0 && travel > 0.05) {
+            t_move = now;
+        }
+        if (travel > 1.0 && travel < kOStopTravel - 2.0 && speed > 0.05) {
+            ride.min_tension = std::min(ride.min_tension, o.o_rope_tension);
+        }
+        if (rider_aboard && travel > 0.05 && speed > 0.05) {
+            ride.rode_on_cab = ride.rode_on_cab && on_support(simulation.snapshot(), Simulation::kServiceOCabEntityId);
+        }
+        still = travel > 1.0 && speed < 0.005 ? still + 1 : 0;
+        if (still >= static_cast<int>(Simulation::kTickRateHz)) {
+            ride.settled = true;
+            break;
+        }
+    }
+    const auto end = simulation.snapshot();
+    ride.seconds = end.simulation_time_seconds - start;
+    ride.in_order = ram_freed_at >= 0.0 && t_latch >= ram_freed_at && t_gate >= t_latch && t_pour >= t_gate &&
+                    t_move >= t_pour;
+    ride.gain = kOCabKg * kG * (kit_com_y(simulation, Simulation::kServiceOCabEntityId) - cab_y0);
+    if (rider_aboard) {
+        ride.gain += kRiderMassKg * kG * (end.player_position.y - rider_y0);
+    }
+    return ride;
+}
+
+// Off O's cab at the top, east onto the 750 deck.
+bool step_off_o(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    if (!walk_to(simulation, 5.2, -150.0, 6.0)) {
+        return false;
+    }
+    (void)simulation.advance_frame(0.5);
+    const auto off = simulation.snapshot();
+    return on_support(off, Simulation::kServiceFrameEntityId) && off.player_position.y > kO750Top + 0.5;
+}
+
+void run_service_o() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    constexpr double kG = 9.81;
+
+    // ---- As found, nothing moves; a tug short of the chock's release lets it
+    // fall back and no gravel moves --------------------------------------------------
+    Simulation found(InitialSpawn::Deck728);
+    (void)found.advance_frame(2.0);
+    const auto as_found = found.service_state();
+    require(as_found.o_ram_latched && as_found.o_gate_latched && std::abs(as_found.o_bin_kg - kOGravelKg) < 0.5 &&
+                as_found.o_bucket_kg < 0.5 && std::abs(as_found.o_chain_kg - kOChainFullKg) < 0.5 &&
+                as_found.o_cab_travel < 0.01 && as_found.o_bucket_travel < 0.01 &&
+                std::abs(as_found.o_wheel_angle) < 0.01,
+            "as found, O's ram is chocked and its gate latched shut on a full bin, its bucket empty at the top of the "
+            "well on its whole chain, the cab down");
+    const double found_pull = (kOBucketKg + kOChainFullKg) * kG;
+    require(std::abs(as_found.o_rope_tension - found_pull) < 0.01 * found_pull,
+            "as found, O's rope must carry the empty bucket and its chain");
+    (void)found.advance_frame(10.0);
+    const auto untouched = found.service_state();
+    require(untouched.o_cab_travel < 0.01 && untouched.o_ram_latched && untouched.o_gate_latched &&
+                std::abs(untouched.o_bin_kg - kOGravelKg) < 0.5,
+            "untouched, O stays as found: the empty bucket and its chain are lighter than the cab");
+
+    // Beside the cab on the deck, east, south, north and west of it, facing
+    // it: the handle is out of reach.
+    Simulation reach(InitialSpawn::Deck728);
+    (void)reach.advance_frame(1.0);
+    bool reachable = false;
+    const auto look = [&reach, &reachable](const double fx, const double fz) {
+        (void)reach.set_facing(fx, fz);
+        (void)reach.advance_frame(0.5);
+        reachable = reachable || reach.snapshot().carry_target_entity_id == Simulation::kServiceOHandleEntityId;
+    };
+    require(walk_to(reach, 4.85, -151.2, 20.0, 0.08), "to beside O's cab on the 728 deck, east");
+    look(-1.0, 0.0);
+    require(walk_to(reach, 4.85, -153.6, 6.0, 0.1) && walk_to(reach, 3.3, -153.6, 6.0, 0.1),
+            "to beside O's cab on the 728 deck, south");
+    look(0.0, 1.0);
+    require(walk_to(reach, 0.9, -153.6, 6.0, 0.1) && walk_to(reach, 0.9, -148.2, 8.0, 0.1) &&
+                walk_to(reach, 3.3, -148.2, 6.0, 0.1),
+            "to beside O's cab on the 728 deck, north");
+    look(0.0, -1.0);
+    require(walk_to(reach, 0.9, -148.2, 6.0, 0.1) && walk_to(reach, 0.9, -151.2, 6.0, 0.1),
+            "to beside O's cab on the 728 deck, west");
+    look(1.0, 0.0);
+    require(!reachable, "O's handle must be in reach only from inside the cab");
+
+    Simulation tug(InitialSpawn::Deck728);
+    (void)tug.advance_frame(1.0);
+    require(take_o_handle(tug), "the rider must take hold of O's handle from inside the cab");
+    (void)hold_stick(tug, 0.0, 0.35, 0.0, -1.0, 0.2, [](const Snapshot &) { return false; });
+    (void)tug.request_set_down();
+    (void)tug.advance_frame(10.0);
+    const auto tugged = tug.service_state();
+    require(tugged.o_ram_latched && std::abs(tugged.o_bin_kg - kOGravelKg) < 0.5 && tugged.o_cab_travel < 0.01,
+            "a tug on O's handle short of the chock's release lets the chock fall back: the ram stays held and no "
+            "gravel moves");
+
+    // ---- The ride ---------------------------------------------------------------------
+    Simulation o(InitialSpawn::Deck728);
+    require(o.advance_frame(1.0).accepted, "O settle interval must be accepted");
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    double freed_at = -1.0;
+    require(pull_o_handle(o, &freed_at), "the rider's pull must draw O's chock clear of the ram");
+    const ORide ride = ride_service_o(o, true, freed_at);
+    g_path_watch.armed = false;
+    const auto top = o.snapshot();
+    const auto held = o.service_state();
+    require(held.o_bin_kg < 0.5 && std::abs(held.o_bucket_kg - kOGravelKg) < 0.5,
+            "O's bin must pour its whole charge into the bucket");
+    require(ride.in_order,
+            "O must go in its order: the chock lets the ram go, the ram trips the latch, the gate falls open, the "
+            "gravel pours, the cab rises");
+    require(ride.settled, "O's cab must come to rest on its dogs");
+    require(held.o_cab_travel >= kO750Top - 0.35 - kODeckTop && held.o_cab_travel <= kO750Top + 0.65 - kODeckTop &&
+                ride.apex < kOStopTravel,
+            "the gravel must lift O's cab to the 750 deck, a step from it either way, clear of its stop");
+    require(ride.peak_speed <= 3.5, "O's cab must never pass 3.5 m/s: the chain sets the bucket's drive down as it goes");
+    require(ride.wheel_gap <= 0.1,
+            "O's wheel must turn with the cab it lifts, a radian for each metre it rises");
+    require(ride.min_tension > 5000.0, "O's rope must stay taut all the way up");
+    require(ride.rode_on_cab && on_support(top, Simulation::kServiceOCabEntityId),
+            "the rider must ride O's cab all the way");
+    require(ride.gain > 0.0 && ride.gain <= ride.released,
+            "O's cab and rider must never gain more than the bucket, its gravel and its chain released");
+    const double at_rest = held.o_bucket_mass * kG;
+    require(std::abs(held.o_rope_tension - at_rest) < 0.02 * at_rest,
+            "at rest, O's rope must carry the weight of the bucket, its gravel and the chain still hanging");
+    require(g_path_watch.worst <= 0.15, "riding O, the body must never move more than 0.15 m in one tick");
+    (void)o.advance_frame(10.0);
+    require(std::abs(o.service_state().o_cab_travel - held.o_cab_travel) < 0.01,
+            "with its rider aboard, O's cab must stay on its dogs");
+    require(step_off_o(o), "the rider must step off O's cab onto the 750 deck");
+    (void)o.advance_frame(10.0);
+    require(std::abs(o.service_state().o_cab_travel - held.o_cab_travel) < 0.01,
+            "empty, O's cab must stay on its dogs: the bucket, its gravel and the chain still hanging are lighter");
+    require(o.snapshot().death_count == 0, "O must be ridden without a death");
+
+    // ---- The chock let go, the rider steps out: the cab goes up alone -------------------
+    Simulation empty(InitialSpawn::Deck728);
+    (void)empty.advance_frame(1.0);
+    double empty_freed = -1.0;
+    require(pull_o_handle(empty, &empty_freed) && walk_to(empty, 5.2, -150.0, 3.0, 0.15) &&
+                empty.service_state().o_cab_travel < 0.01,
+            "the rider must be able to free O's ram and step out onto the 728 deck before the cab moves");
+    const ORide alone = ride_service_o(empty, false, empty_freed);
+    const auto alone_held = empty.service_state();
+    // The top of the guide is a dog's tooth: an empty cab that reaches its
+    // head is held there.
+    require(alone.settled && alone.in_order && alone_held.o_cab_travel >= 21.1 &&
+                alone_held.o_cab_travel <= kOStopTravel + 0.01 && empty.snapshot().player_position.y < 729.5 &&
+                empty.snapshot().death_count == 0,
+            "sent up empty, O's cab must run to its head and come to rest on its dogs, the rider left on the 728 deck");
+
+    // ---- The decks' edges, the cab where it was found ---------------------------------
+    // Walked into the rails round the well on the 728 deck, and, up the ladder
+    // through the 750 deck's hatch, into the parapets round the 750 deck's four
+    // edges, the well, and the cab's hole (open only on the east side, where the
+    // cab lands, as N's cage lands over its west edge): a body stays up.
+    Simulation deck(InitialSpawn::Deck728);
+    (void)deck.advance_frame(1.0);
+    require(walk_to(deck, 8.0, -150.3, 10.0) && c4_stays_up(deck, 6.0, -150.3, 0.0, 1.0, 728.1),
+            "walked into the rail round O's well on the 728 deck, a body must stay up");
+    require(climb_wet_hold(deck, 10.7, -157.43, 0.0, -1.0, false, 750.5),
+            "O: up the ladder onto the 750 deck, for its edges");
+    require(c4_stays_up(deck, 9.0, -160.4, 0.0, -1.0, kO750Top),
+            "walked into the 750 deck's south parapet, a body must stay up");
+    require(walk_to(deck, 9.0, -150.0, 8.0) && c4_stays_up(deck, 11.0, -150.0, 1.0, 0.0, kO750Top),
+            "walked into the 750 deck's east parapet, a body must stay up");
+    require(c4_stays_up(deck, 11.0, -143.6, 0.0, 1.0, kO750Top),
+            "walked into the 750 deck's north parapet, a body must stay up");
+    require(walk_to(deck, 3.0, -143.6, 8.0, 0.1) && c4_stays_up(deck, 3.0, -147.5, 0.0, -1.0, kO750Top),
+            "walked into the parapet on the north side of O's cab hole, a body must stay up");
+    require(walk_to(deck, 0.5, -147.5, 6.0, 0.1) && c4_stays_up(deck, 0.5, -150.9, 1.0, 0.0, kO750Top),
+            "walked into the parapet on the west side of O's cab hole, a body must stay up");
+    require(walk_to(deck, 0.5, -153.6, 6.0, 0.1) && walk_to(deck, 3.0, -153.6, 6.0, 0.1) &&
+                c4_stays_up(deck, 3.0, -153.6, 0.0, 1.0, kO750Top),
+            "walked into the parapet on the south side of O's cab hole, a body must stay up");
+    require(c4_stays_up(deck, -0.8, -153.6, -1.0, 0.0, kO750Top),
+            "walked into the 750 deck's west parapet, a body must stay up");
+    require(deck.snapshot().death_count == 0, "O's decks must be walked without a death");
+
+    std::cout << "PASS scraperx_sim AS-010 O: apex_m=" << ride.apex << " held_m=" << held.o_cab_travel
+              << " peak_mps=" << ride.peak_speed << " seconds=" << ride.seconds << " rider_y=" << top.player_position.y
+              << " gain_J=" << ride.gain << " released_J=" << ride.released << " wheel_gap_rad=" << ride.wheel_gap
+              << " min_rope_N=" << ride.min_tension << " empty_apex_m=" << alone.apex
+              << " empty_peak_mps=" << alone.peak_speed << " worst_step_m=" << g_path_watch.worst << '\n';
+}
+
 // AS-010 on player inputs from the TP-640 start: M hooked on, the chock
-// pulled, the ride, off onto the 662 deck; then up C4 to the 684 deck.
+// pulled, the ride, off onto the 662 deck; up C4 to the 684 deck; N's flap
+// open, the ride, off onto the 706 deck; up C5 to the 728 deck; O's chock
+// drawn, the ride, off onto the 750 deck.
 void run_service_band() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -2864,12 +3170,18 @@ void run_service_band() {
     require(step_off_n(band), "band: off N's cage onto the 706 deck");
     const auto deck706 = band.snapshot();
     require(climb_c5(band), "band: up C5 to the 728 deck");
+    const auto deck728 = band.snapshot();
+    double band_freed = -1.0;
+    require(pull_o_handle(band, &band_freed) && ride_service_o(band, true, band_freed).settled,
+            "band: O's chock drawn and its cab on its dogs at the 750 deck");
+    require(step_off_o(band), "band: off O's cab onto the 750 deck");
     const auto top = band.snapshot();
-    require(top.death_count == 0, "band: no death from TP-640 to the 728 deck");
+    require(top.death_count == 0, "band: no death from TP-640 to the 750 deck");
     std::cout << "PASS scraperx_sim AS-010 band: to_662_s=" << deck662.simulation_time_seconds - start
               << " to_684_s=" << deck684.simulation_time_seconds - start
               << " to_706_s=" << deck706.simulation_time_seconds - start
-              << " to_728_s=" << top.simulation_time_seconds - start << " deck_y=" << top.player_position.y << '\n';
+              << " to_728_s=" << deck728.simulation_time_seconds - start
+              << " to_750_s=" << top.simulation_time_seconds - start << " deck_y=" << top.player_position.y << '\n';
 }
 
 // AS-010's climbing route, on player inputs: across TP-640 to the ladder,
@@ -2893,10 +3205,13 @@ void run_service_route() {
             "route: off the 706 deck's ladder onto the open deck, south of its hatch");
     require(climb_wet_hold(route, -1.2, -147.83, 0.0, -1.0, false, 728.5),
             "route: onto the plant floor and up the ladder through the 728 deck's hatch");
+    require(walk_to(route, -1.2, -157.43, 8.0) && climb_wet_hold(route, 10.7, -157.43, 0.0, -1.0, false, 750.5),
+            "route: across the 728 deck and up the ladder through the 750 deck's hatch");
     const auto top = route.snapshot();
     const auto service = route.service_state();
     require(service.m_cage_travel < 0.02 && service.m_reel_latched && service.n_cage_travel < 0.02 &&
-                service.n_gate_angle < 0.02,
+                service.n_gate_angle < 0.02 && service.o_cab_travel < 0.02 && service.o_ram_latched &&
+                service.o_gate_latched,
             "route: the lifts did not move");
     std::cout << "PASS scraperx_sim AS-010 route: seconds=" << top.simulation_time_seconds - start
               << " top_y=" << top.player_position.y << " lift_untouched=1\n";
@@ -4428,6 +4743,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-010-n") {
         run_service_n();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "AS-010-o") {
+        run_service_o();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -6365,6 +6685,7 @@ int main() {
     run_service_c4();
     run_service_n();
     run_service_c5();
+    run_service_o();
     run_service_band();
     run_service_route();
     run_ascent();

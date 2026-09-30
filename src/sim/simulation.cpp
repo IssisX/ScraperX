@@ -687,6 +687,9 @@ private:
     case scraperx::sim::InitialSpawn::Deck706:
         // On the 706 deck by where C5's plant floor opens off its east edge.
         return {-3.5, 707.05, -147.5};
+    case scraperx::sim::InitialSpawn::Deck728:
+        // On the 728 deck by C5's last mantle, north-east of stage O's cab.
+        return {9.0, 729.05, -144.0};
     case scraperx::sim::InitialSpawn::Ring374West:
         // On the 374 ring's west band by H's gangway.
         return {-14.5, 375.2, -145.6};
@@ -4105,6 +4108,20 @@ ServiceState Simulation::service_state() const noexcept {
     out.n_chain_kg = kit.chain_hanging_kg(service.n_chain);
     out.n_hopper_mass = kit.body_mass(service.n_hopper);
     out.n_rope_tension = kit.rope_tension(service.n_rope);
+    out.o_ram_latched = kit.catch_latched(service.o_ram_catch);
+    out.o_gate_latched = kit.catch_latched(service.o_gate_catch);
+    out.o_cab_travel = kit.guide_travel(service.o_cab_guide);
+    out.o_cab_peak_speed = kit.guide_peak_speed(service.o_cab_guide);
+    out.o_bucket_travel = kit.guide_travel(service.o_bucket_guide);
+    out.o_wheel_angle = kit.wheel_angle(service.o_wheel_turn);
+    out.o_ram_angle = kit.lever_angle(service.o_ram_lever);
+    out.o_latch_angle = kit.lever_angle(service.o_latch_lever);
+    out.o_gate_angle = kit.lever_angle(service.o_gate_lever);
+    out.o_bin_kg = kit.bin_contents(service.o_bin_bin);
+    out.o_bucket_kg = kit.bin_contents(service.o_bucket_bin);
+    out.o_chain_kg = kit.chain_hanging_kg(service.o_chain);
+    out.o_bucket_mass = kit.body_mass(service.o_bucket);
+    out.o_rope_tension = kit.rope_tension(service.o_rope);
     return out;
 }
 
