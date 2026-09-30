@@ -27,6 +27,7 @@ add_library(scraperx_sim STATIC
     src/sim/upper_ascent.cpp
     src/sim/teeter_rise.cpp
     src/sim/braced_bay.cpp
+    src/sim/north_service_frame.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_ground_water_lift.cpp
 )
@@ -108,6 +109,11 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_braced_bay_tests tests/braced_bay_tests.cpp)
     target_link_libraries(scraperx_braced_bay_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.braced_bay COMMAND scraperx_braced_bay_tests)
+    add_executable(scraperx_north_service_frame_tests tests/north_service_frame_tests.cpp)
+    target_link_libraries(scraperx_north_service_frame_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.north_service_frame COMMAND scraperx_north_service_frame_tests)
+    add_test(NAME scraperx_sim.north_service_frame_60hz COMMAND scraperx_north_service_frame_tests 60)
+    add_test(NAME scraperx_sim.north_service_frame_360hz COMMAND scraperx_north_service_frame_tests 360)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

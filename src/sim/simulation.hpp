@@ -110,6 +110,8 @@ enum class InitialSpawn : std::uint8_t {
     TeeterFarDrop = 30,
     // Isolated normal-world probe at the demonstrated +77 m ring.
     BracedBayEntry = 31,
+    // Focused normal-world entry on the existing +88 m north tower ring.
+    NorthFrameEntry = 32,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation

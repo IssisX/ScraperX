@@ -7,6 +7,7 @@
 #include "sim/upper_ascent.hpp"
 #include "sim/teeter_rise.hpp"
 #include "sim/braced_bay.hpp"
+#include "sim/north_service_frame.hpp"
 #include "sim/facade_route.hpp"
 #include "sim/water_screw.hpp"
 
@@ -1481,6 +1482,8 @@ private:
         return {32.4, 70.0, -139.0};
     case scraperx::sim::InitialSpawn::BracedBayEntry:
         return {25.1, 77.9, -132.0};
+    case scraperx::sim::InitialSpawn::NorthFrameEntry:
+        return {16.0, 88.9, -174.5};
     case scraperx::sim::InitialSpawn::CatwalkTreadle:
         // Above the outboard half of the treadle plate, where a body has real
         // leverage on the hinge.
@@ -1908,6 +1911,7 @@ public:
             upper_ascent_ = std::make_unique<UpperAscent>(physics_system_, *kit_);
             teeter_rise_ = std::make_unique<TeeterRise>(*kit_);
             build_braced_bay(*kit_);
+            build_north_service_frame(*kit_);
         }
 
         physics_system_.OptimizeBroadPhase();
@@ -4427,7 +4431,8 @@ private:
                                          const float minimum_rise,
                                          const float maximum_rise,
                                          const bool require_supported_landing,
-                                         const bool see_past_holds = false) const noexcept {
+                                         const bool see_past_holds = false,
+                                         const bool require_clear_landing = true) const noexcept {
         LedgeProbe probe;
         if (facing.IsNearZero()) {
             return probe;
@@ -4503,7 +4508,7 @@ private:
             landing_body = landing_hit.mBodyID;
         }
 
-        if (!capsule_pose_is_clear(landing_centre)) {
+        if (require_clear_landing && !capsule_pose_is_clear(landing_centre)) {
             return probe;
         }
 
@@ -5163,7 +5168,7 @@ private:
                                              facing_,
                                              kPlayerHalfHeight + kHangMinimumRiseAboveCentre,
                                              kPlayerHalfHeight + kHangMaximumRiseAboveCentre,
-                                             true);
+                                             true, false, false);
         if (!probe.valid) {
             // No ledge: a hold reached for in the air is caught and climbed.
             const Grip grip = find_grip(
@@ -5179,6 +5184,9 @@ private:
             probe.wall_point.GetX() - probe.inward.GetX() * (kPlayerRadius + kHangWallGap),
             probe.ledge_point.GetY() - kHangDropBelowLedge,
             probe.wall_point.GetZ() - probe.inward.GetZ() * (kPlayerRadius + kHangWallGap));
+        if (!capsule_pose_is_clear(hold)) {
+            return;
+        }
 
         traversal_state_ = TraversalState::Hanging;
         traversal_body_ = probe.ledge_body;
@@ -5328,6 +5336,16 @@ private:
     }
 
     void begin_mantle_from_hang(JPH::BodyInterface &bodies) noexcept {
+        // Catching a lip needs room for a hanging body. Climbing onto it is
+        // separately guarded by the current full standing capsule clearance.
+        // The support may have moved, or the player may have shimmied to a
+        // different patch since the initial catch.
+        const JPH::RVec3 landing =
+            from_support_local(bodies, traversal_target_body_, traversal_local_target_);
+        if (!capsule_pose_is_clear(landing)) {
+            ++rejected_traversal_count_;
+            return;
+        }
         const JPH::RVec3 origin = bodies.GetPosition(player_id_);
         traversal_state_ = TraversalState::Mantling;
         traversal_local_start_ = to_support_local(bodies, traversal_body_, origin);

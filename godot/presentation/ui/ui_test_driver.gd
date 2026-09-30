@@ -24,6 +24,8 @@ const SCENARIOS := {
 	"touch_stair": 8,
 	"touch_upper": 8,
 	"touch_teeter": 8,
+	"touch_braced_bay": 8,
+	"touch_north_frame": 8,
 	"touch_jump": 8,
 	"touch_move_look": 8,
 	"touch_gyro_aim": 8,
@@ -65,7 +67,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	_scenario = scenario
 	_capture_prefix = capture_prefix
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -110,6 +112,10 @@ func _run() -> void:
 			ok = await _touch_upper()
 		"touch_teeter":
 			ok = await _touch_teeter()
+		"touch_braced_bay":
+			ok = await _touch_braced_bay()
+		"touch_north_frame":
+			ok = await _touch_north_service_frame()
 		"touch_jump":
 			ok = await _touch_jump()
 		"touch_move_look":
@@ -566,6 +572,223 @@ func _touch_teeter() -> bool:
 	_main._pitch = atan2(to_bay.y, Vector2(to_bay.x, to_bay.z).length())
 	await _pose("braced_bay_preview")
 	_detail = "grade_to_77m=1 ballast_pushed=1 player_loaded_teeter=1 physical_reset=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
+	return true
+
+
+func _touch_braced_bay() -> bool:
+	if not await _touch_teeter():
+		return false
+	var device := InputRouter.Device.TOUCH
+	if int(_native().get_entity_body_count(1900)) != 1:
+		return _fail("braced bay absent from normal play")
+	if not await _walk_to(device, Vector2(28.0, -131.0), 0.14, 12.0):
+		return _fail("braced bay flat entry %s" % _position())
+	await _seconds(0.5)
+	await _face(Vector2(0, -1))
+	_main._pitch = 0.11
+	await _pose("braced_bay_entry")
+	if not await _walk_to(device, Vector2(28.0, -144.0), 0.14, 16.0):
+		return _fail("first inclined girder %s" % _position())
+	await _seconds(0.4)
+	if not _standing_above(82.6) or int(_native().get_support_entity_id()) != 1900:
+		return _fail("first braced bay landing unsupported %s" % _position())
+	if not await _walk_to(device, Vector2(29.0, -144.0), 0.14, 4.0):
+		return _fail("gap run-up %s" % _position())
+	await _seconds(0.4)
+	await _face(Vector2(1, 0))
+	_main._pitch = -0.08
+	await _pose("braced_bay_transfer")
+	_move_dir(device, Vector2(0, 1))
+	var at_takeoff := await _wait_until(
+		func() -> bool: return _position().x >= 30.0 or not bool(_ctx()["grounded"]), 1.0)
+	if not at_takeoff or not bool(_ctx()["grounded"]):
+		_move_dir(device, Vector2.ZERO)
+		return _fail("gap takeoff lost its supported run-up %s" % _position())
+	_tap(1, _center(&"jump"))
+	var airborne := false
+	var landed := false
+	var elapsed := 0.0
+	while elapsed < 3.0:
+		var at := _position()
+		var to := Vector2(33.7 - at.x, -144.0 - at.z)
+		var world_command := (to / 1.4).limit_length(1.0)
+		var yaw := float(_main._yaw)
+		var forward := Vector2(-sin(yaw), -cos(yaw))
+		var right := Vector2(cos(yaw), -sin(yaw))
+		_move_dir(device, Vector2(world_command.dot(right), world_command.dot(forward)))
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+		airborne = airborne or not bool(_ctx()["grounded"])
+		if airborne and bool(_ctx()["grounded"]) and _position().x > 33.2 and absf(_position().y - 82.9) < 0.12:
+			landed = true
+			break
+	_move_dir(device, Vector2.ZERO)
+	await _seconds(0.4)
+	if not landed or int(_native().get_support_entity_id()) != 1900:
+		return _fail("gap jump missed far landing %s" % _position())
+	if not await _walk_to(device, Vector2(34.0, -144.0), 0.14, 4.0):
+		return _fail("second girder alignment %s" % _position())
+	await _seconds(0.4)
+	await _face(Vector2(0, 1))
+	if not await _walk_to(device, Vector2(34.0, -139.4), 0.14, 8.0):
+		return _fail("second girder approach %s" % _position())
+	var walked_through := await _walk_to(device, Vector2(34.0, -136.7), 0.14, 3.0)
+	if walked_through or _position().z > -137.8:
+		return _fail("standing capsule passed through low member %s" % _position())
+	await _face(Vector2(0, 1))
+	_main._pitch = 0.16
+	await _pose("braced_bay_low_member")
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_crouched()), 0.3):
+		return _fail("crouch input failed at braced bay")
+	if not await _walk_to(device, Vector2(34.0, -136.7), 0.14, 8.0):
+		return _fail("crouched passage blocked %s" % _position())
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool: return not bool(_native().is_player_crouched()), 0.3):
+		return _fail("standing clearance missing beyond low member")
+	if not await _walk_to(device, Vector2(34.0, -131.5), 0.14, 10.0):
+		return _fail("upper braced bay junction %s" % _position())
+	await _seconds(0.4)
+	if not _standing_above(87.6) or int(_native().get_support_entity_id()) != 1900:
+		return _fail("upper braced bay junction unsupported %s" % _position())
+	await _face(Vector2(-1, 0))
+	_main._pitch = -0.12
+	await _pose("braced_bay_upper_junction")
+	if not await _walk_to(device, Vector2(34.0, -132.0), 0.14, 4.0):
+		return _fail("return girder turn %s" % _position())
+	await _seconds(0.3)
+	if not await _walk_to(device, Vector2(26.55, -132.0), 0.14, 13.0):
+		return _fail("return girder balance %s" % _position())
+	await _face(Vector2(-1, 0))
+	await _seconds(0.3)
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("tower +88 m mantle unavailable %s" % _position())
+	_act(device)
+	await _seconds(1.0)
+	if not await _walk_to(device, Vector2(24.8, -132.0), 0.14, 5.0):
+		return _fail("braced bay ring exit %s" % _position())
+	await _seconds(0.4)
+	await _face(Vector2(1, 0))
+	_main._pitch = -0.12
+	await _pose("braced_bay_arrival")
+	if not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 11 or \
+			absf(_position().y - 88.9) > 0.1 or int(_native().get_death_count()) != 0:
+		return _fail("braced bay +88 m ring unsupported %s" % _position())
+	_detail = "grade_to_88m=1 gap_jump=1 crouched_portal=1 mantle=1 support=11 deaths=0 arrival_y=%.3f" % _position().y
+	return true
+
+
+func _north_climb(device: int, target_centre_y: float, label: String) -> bool:
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("%s grip not offered %s" % [label, _position()])
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_ctx()["climbing"]), 1.0):
+		return _fail("%s grip not taken %s" % [label, _position()])
+	_move(device, 1.0)
+	var topped_out := await _wait_until(func() -> bool: return _standing_above(target_centre_y), 15.0)
+	_move(device, 0.0)
+	if not topped_out or int(_native().get_support_entity_id()) != 1901:
+		return _fail("%s top-out unsupported %s" % [label, _position()])
+	return true
+
+
+func _touch_north_service_frame() -> bool:
+	if not await _touch_braced_bay():
+		return false
+	var device := InputRouter.Device.TOUCH
+	if int(_native().get_entity_body_count(1901)) != 1:
+		return _fail("north service frame absent from normal play")
+	for point in [Vector2(24.8, -174.5), Vector2(16.0, -174.5), Vector2(16.0, -179.55)]:
+		if not await _walk_to(device, point, 0.14, 20.0):
+			return _fail("north frame +88 m entry %s" % _position())
+	await _face(Vector2(0, -1))
+	_main._pitch = 0.24
+	await _pose("north_frame_entry")
+	if not await _north_climb(device, 94.7, "first north climb"):
+		return false
+	await _face(Vector2(-1, 0))
+	_main._pitch = -0.14
+	await _pose("north_frame_first_rest")
+	for point in [Vector2(16.0, -181.2), Vector2(10.0, -181.2), Vector2(10.0, -179.55)]:
+		if not await _walk_to(device, point, 0.14, 9.0):
+			return _fail("north frame lateral transfer %s" % _position())
+	await _face(Vector2(0, 1))
+	if not await _north_climb(device, 98.2, "second north climb"):
+		return false
+	if not await _walk_to(device, Vector2(10.0, -177.55), 0.14, 6.0):
+		return _fail("north frame +99 m mantle approach %s" % _position())
+	await _face(Vector2(0, 1))
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("+99 m mantle not offered %s" % _position())
+	_act(device)
+	await _seconds(1.0)
+	if not await _walk_to(device, Vector2(10.0, -174.5), 0.14, 5.0):
+		return _fail("north frame +99 m ring exit %s" % _position())
+	await _seconds(0.4)
+	if not _standing_above(99.6) or int(_native().get_support_entity_id()) != 11:
+		return _fail("north frame +99 m ring unsupported %s" % _position())
+	await _face(Vector2(1, 0))
+	_main._pitch = -0.14
+	await _pose("north_frame_99m")
+	for point in [Vector2(16.0, -174.5), Vector2(16.0, -179.55)]:
+		if not await _walk_to(device, point, 0.14, 9.0):
+			return _fail("north frame upper entry %s" % _position())
+	await _face(Vector2(0, -1))
+	if not await _north_climb(device, 104.2, "upper north climb"):
+		return false
+	await _face(Vector2(-1, 0))
+	_main._pitch = -0.14
+	await _pose("north_frame_upper_rest")
+	if not await _walk_to(device, Vector2(15.1, -180.6), 0.14, 5.0):
+		return _fail("raised lip takeoff %s" % _position())
+	await _face(Vector2(-1, 0))
+	await _seconds(0.3)
+	_tap(1, _center(&"jump"))
+	_move(device, 0.5)
+	var caught := await _wait_until(func() -> bool: return bool(_ctx()["hanging"]), 2.0)
+	_move(device, 0.0)
+	if not caught:
+		return _fail("raised north lip not caught %s" % _position())
+	_main._pitch = 0.08
+	await _pose("north_frame_hang")
+	# Facing west, view-local left moves north along the actual lip.
+	_move_dir(device, Vector2(-1.0, 0.0))
+	var crossed := await _wait_until(func() -> bool: return _position().z < -181.85, 5.0)
+	_move_dir(device, Vector2.ZERO)
+	if not crossed or not bool(_ctx()["hanging"]):
+		return _fail("canopy shimmy missed clear pocket %s" % _position())
+	await _pose("north_frame_shimmy")
+	_tap(1, _center(&"jump"))
+	if not await _wait_until(func() -> bool: return _standing_above(106.7), 2.0):
+		return _fail("north frame hanging top-out %s" % _position())
+	await _face(Vector2(0, -1))
+	_main._pitch = -0.14
+	await _pose("north_frame_106m")
+	if not await _walk_to(device, Vector2(13.0, -182.75), 0.14, 5.0):
+		return _fail("final north ladder approach %s" % _position())
+	await _face(Vector2(0, -1))
+	if not await _north_climb(device, 109.2, "final north climb"):
+		return false
+	for point in [Vector2(15.5, -183.8), Vector2(15.5, -177.55)]:
+		if not await _walk_to(device, point, 0.14, 9.0):
+			return _fail("high catwalk to tower %s" % _position())
+	await _face(Vector2(0, 1))
+	_main._pitch = -0.14
+	await _pose("north_frame_upper_exit")
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("+110 m mantle not offered %s" % _position())
+	_act(device)
+	await _seconds(1.0)
+	if not await _walk_to(device, Vector2(15.5, -174.5), 0.14, 5.0):
+		return _fail("north frame +110 m ring exit %s" % _position())
+	await _seconds(0.4)
+	await _face(Vector2(0, -1))
+	_main._pitch = -0.22
+	await _pose("north_frame_110m")
+	if not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 11 or \
+			absf(_position().y - 110.9) > 0.1 or int(_native().get_death_count()) != 0:
+		return _fail("+110 m tower ring unsupported %s" % _position())
+	_detail = "grade_to_110m=1 north_frame=1 hanging_shimmy=1 support=11 deaths=0 arrival_y=%.3f" % _position().y
 	return true
 
 

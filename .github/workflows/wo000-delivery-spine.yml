@@ -88,7 +88,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_sim_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
           if ! ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log; then
             # The public run page exposes annotations even when its raw logs
             # are unavailable. Keep the exact failing test and nearby output.
@@ -294,7 +294,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=45 kit_bodies=88 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=45 kit_bodies=89 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=169" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
@@ -323,7 +323,7 @@ jobs:
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/*pipe_bridge.log; then exit 1; fi
 
-      - name: Pipe bridge through player-loaded teeter - rendered touch route to 77 metres
+      - name: Ground to north service frame - rendered touch route to 110 metres
         shell: bash
         run: |
           set -euo pipefail
@@ -332,6 +332,9 @@ jobs:
           grep -F "PASS scraperx_sim AS-020 loaded teeter, recovery and +77 route" artifacts/teeter-native.log
           ./build/host/scraperx_teeter_physics_tests | tee artifacts/teeter-physics.log
           ./build/host/scraperx_braced_bay_tests | tee artifacts/braced-bay-native.log
+          ./build/host/scraperx_north_service_frame_tests | tee artifacts/north-service-frame-native.log
+          ./build/host/scraperx_north_service_frame_tests 60 | tee -a artifacts/north-service-frame-native.log
+          ./build/host/scraperx_north_service_frame_tests 360 | tee -a artifacts/north-service-frame-native.log
           # This calls the complete touch pipe, facade and stair route first.
           # --resolution changes the window, not the project's 2160x1856
           # canvas viewport. Reduce both for this CPU-rendered route only;
@@ -361,22 +364,28 @@ jobs:
           timeout 1200s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --path godot --rendering-method gl_compatibility \
             --resolution 432x371 --fixed-fps 30 \
-            -- --uitest=touch_teeter "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/teeter" \
-            2>&1 | tee artifacts/touch-teeter.log
-          grep -F "SCRAPERX_VIEWPORT size=432x371" artifacts/touch-teeter.log
-          grep -F "SCRAPERX_UITEST PASS touch_teeter " artifacts/touch-teeter.log
-          if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-teeter.log; then exit 1; fi
+            -- --uitest=touch_north_frame "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/north" \
+            2>&1 | tee artifacts/touch-north-frame.log
+          grep -F "SCRAPERX_VIEWPORT size=432x371" artifacts/touch-north-frame.log
+          grep -F "SCRAPERX_UITEST PASS touch_north_frame " artifacts/touch-north-frame.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-north-frame.log; then exit 1; fi
           for pose in rack_ready loaded_pan bridge_raised tower_arrival; do
-            test -s "artifacts/screenshots/teeter_${pose}.png"
+            test -s "artifacts/screenshots/north_${pose}.png"
           done
           for pose in vent_climb facade_arrival stair_handle_ready stair_released stair_climb stair_exit_ready stair_arrival; do
-            test -s "artifacts/screenshots/teeter_${pose}.png"
+            test -s "artifacts/screenshots/north_${pose}.png"
           done
           for pose in upper_handle_ready upper_lift_rising upper_lift_seated deck_55m upper_duct_hang upper_vent_climb upper_arrival; do
-            test -s "artifacts/screenshots/teeter_${pose}.png"
+            test -s "artifacts/screenshots/north_${pose}.png"
           done
           for pose in teeter_entry teeter_ballast_near teeter_ballast_far teeter_loaded teeter_shelf teeter_climb teeter_arrival braced_bay_preview; do
-            test -s "artifacts/screenshots/teeter_${pose}.png"
+            test -s "artifacts/screenshots/north_${pose}.png"
+          done
+          for pose in braced_bay_entry braced_bay_transfer braced_bay_low_member braced_bay_upper_junction braced_bay_arrival; do
+            test -s "artifacts/screenshots/north_${pose}.png"
+          done
+          for pose in north_frame_entry north_frame_first_rest north_frame_99m north_frame_upper_rest north_frame_hang north_frame_shimmy north_frame_106m north_frame_upper_exit north_frame_110m; do
+            test -s "artifacts/screenshots/north_${pose}.png"
           done
 
       - name: Regression fixture - native machine authority and Fold-aspect capture
@@ -580,11 +589,11 @@ jobs:
 
           The default pipe-loaded bridge loads twenty independent pipes, releases through actual reachable controls, arrests on finite material, and carries the player across the +8 m receiver to the original +11 m ring. Native no-input/source controls, regrabbing, passive riding, material checkpoint restoration and 90/360 Hz refinement pass. Touch at 30 FPS, keyboard and gamepad at 60 FPS use ordinary viewport input. Recorded human fall reactions pass cancellation and decoded-mix checks.
 
-          This record is emitted only after the preceding verification and export gates succeed. The AS-020 normal route continues from grade through the pipe bridge, facade, swinging stair, counterweight lift, exterior parkour and player-adjusted teeter to a supported +77 m tower ring. Native teeter tests cover unloaded equilibrium, rider-alone failure, ballast push, near/far/opposite loading, landing, unloading, physical stops, fall recovery, rotating-support departure and repeated initial conditions. Rendered touch completes the continuous route with zero deaths.
+          This record is emitted only after the preceding verification and export gates succeed. The normal route continues from grade through the pipe bridge, facade, swinging stair, counterweight lift, exterior parkour, player-adjusted teeter, braced bay and north service frame to a supported +110 m tower ring. Native tests cover the teeter physics, braced-bay jump/crouch/recovery and north-frame climb, hanging transfer, shimmy, missed-hang retry and upper checkpoint. Rendered touch completes the continuous route with zero deaths.
 
-          Desktop rendering evidence is captured explicitly by the touch_teeter scenario: teeter_teeter_entry.png, teeter_teeter_ballast_near.png, teeter_teeter_ballast_far.png, teeter_teeter_loaded.png, teeter_teeter_shelf.png, teeter_teeter_climb.png and teeter_teeter_arrival.png. PNG creation and native assertions pass here; a reviewer must separately inspect the images for visible geometry and motion. Android delivery evidence is the separately cross-compiled, exported and signature-checked APK from this source commit.
+          Desktop rendering evidence is captured explicitly by the touch_north_frame scenario under artifacts/screenshots/north_*.png, including teeter, braced-bay and north-frame poses. PNG creation and native assertions pass here; a reviewer must separately inspect the images for visible geometry and motion. Android delivery evidence is the separately cross-compiled, exported and signature-checked APK from this source commit.
 
-          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent beyond the supported +77 m ring.
+          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent beyond the supported +110 m ring.
           EOF
 
       - name: Retain failed-run diagnostics
