@@ -188,7 +188,7 @@ jobs:
             local verify_log="${tmp}/apksigner.txt"
             "${APKSIGNER}" verify --verbose --print-certs "$target" | tee "$verify_log"
             local cert_sha
-            cert_sha="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}' "$verify_log")"
+            cert_sha="$(sed -n 's/^.*certificate SHA-256 digest:[[:space:]]*//p' "$verify_log" | head -n 1 | tr '[:upper:]' '[:lower:]')"
             test -n "$cert_sha"
             if [[ -z "${SIGNING_CERT}" ]]; then
               SIGNING_CERT="$cert_sha"
