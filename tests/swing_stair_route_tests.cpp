@@ -376,7 +376,15 @@ int main(int argc, char **argv) {
   const double angle=2*std::atan2(bq.z,bq.w);
   const double landing_x=.25+43*.25/std::tan(.70860367)+.45;
   const double exit_x=bp.x+landing_x*std::cos(angle)-11.3*std::sin(angle);
-  if(!walk_to(s,exit_x,-122.4,4,.1)) {report(s,"STAIR_EXIT_READY_FAIL");return 52;} report(s,"STAIR_EXIT_READY"); (void)s.request_jump(); if(!walk_to(s,exit_x,-125.5,6,.1)) {report(s,"STAIR_EXIT_FAIL");return 52;}
+  if(!walk_to(s,exit_x,-122.4,4,.1)) {report(s,"STAIR_EXIT_READY_FAIL");return 52;}
+  // Reaching a horizontal waypoint does not establish foot contact on a
+  // moving stair. Jump only after the final tread actually supports us.
+  if (!wait_for(s, 2.0, [](const Snapshot &v) { return v.player_grounded; })) {
+    report(s,"STAIR_EXIT_CONTACT_FAIL"); return 52;
+  }
+  report(s,"STAIR_EXIT_READY");
+  (void)s.request_jump();
+  if(!walk_to(s,exit_x,-125.5,6,.1)) {report(s,"STAIR_EXIT_FAIL");return 52;}
   wait(s,.5);report(s,"STAIR_44M");
   if(!standing_above(s.snapshot(),44.5) || s.snapshot().support_entity_id!=11 || s.snapshot().death_count!=(mode==2?1U:0U)) return 53;
   if (mode == 5 || mode == 7) {

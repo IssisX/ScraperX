@@ -11,6 +11,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(SCRAPERX_BUILD_BRIDGE "Build the Godot GDExtension bridge" ON)
 option(SCRAPERX_WITH_JOLT "Compile the pinned Jolt substrate into the native graph" ON)
+option(SCRAPERX_TESTS_ON_ANDROID "Build host-style native tests in Termux" OFF)
 
 set(SCRAPERX_GODOT_CPP_COMMIT "507ed9d840c01a3c5b2a39af8bb4000bfac30bf5" CACHE STRING "Pinned godot-cpp commit")
 set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING "Pinned Jolt commit")
@@ -24,6 +25,7 @@ add_library(scraperx_sim STATIC
     src/sim/pipe_bridge.cpp
     src/sim/swing_stair.cpp
     src/sim/upper_ascent.cpp
+    src/sim/teeter_rise.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_ground_water_lift.cpp
 )
@@ -64,7 +66,7 @@ if(SCRAPERX_WITH_JOLT)
     target_compile_definitions(scraperx_sim PUBLIC SCRAPERX_HAS_JOLT=1)
 endif()
 
-if(BUILD_TESTING AND NOT ANDROID)
+if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_sim_tests tests/simulation_tests.cpp)
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_sim_tests PRIVATE
@@ -96,6 +98,12 @@ if(BUILD_TESTING AND NOT ANDROID)
     add_executable(scraperx_pipe_bridge_refinement tests/pipe_bridge_refinement.cpp)
     target_link_libraries(scraperx_pipe_bridge_refinement PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.pipe_bridge_refinement COMMAND scraperx_pipe_bridge_refinement)
+    add_executable(scraperx_teeter_route_tests tests/teeter_route_tests.cpp)
+    target_link_libraries(scraperx_teeter_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.teeter_route COMMAND scraperx_teeter_route_tests)
+    add_executable(scraperx_teeter_physics_tests tests/teeter_physics_tests.cpp)
+    target_link_libraries(scraperx_teeter_physics_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.teeter_physics COMMAND scraperx_teeter_physics_tests)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

@@ -615,10 +615,10 @@ int main() {
             require(foundation.entity_body_count(entity) == 0,
                     "default world must not construct a retired fixture or campaign body");
         }
-        require(foundation.moving_body_count() == 43,
-                "default world must contain the player, pipe bridge, stair and upper lift movers");
-        require(foundation.kit_body_count() == 82 && foundation.kit_cable_count() == 5,
-                "default world must contain the pipe bridge, facade, stair, upper lift and five cables");
+        require(foundation.moving_body_count() == 44,
+                "default world must contain the player, pipe bridge, stair, upper lift and teeter movers");
+        require(foundation.kit_body_count() == 86 && foundation.kit_cable_count() == 5,
+                "default world must contain the pipe bridge, facade, stair, upper lift, teeter and five cables");
         require(foundation.entity_body_count(Simulation::kTowerEntityId) > 1 &&
                     foundation.entity_body_count(Simulation::kWorldSolidEntityId) > 0,
                 "the tower frame and environment must remain real collision geometry");
@@ -642,7 +642,7 @@ int main() {
         (void)foundation.advance_frame(2.0);
         require(foundation.snapshot().player_grounded && foundation.snapshot().death_count == 0,
                 "the default jump must land safely on grade");
-        std::cout << "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=43 kit_bodies=82 locomotion=1 crouch=1 jump=1\n";
+        std::cout << "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=44 kit_bodies=86 locomotion=1 crouch=1 jump=1\n";
     }
 
     {
@@ -670,7 +670,7 @@ int main() {
         (void)drop.advance_frame(8.0);
         require(drop.snapshot().death_count == 1 && drop.snapshot().player_grounded,
                 "default fatal fall must restore safely without any legacy body queries");
-        require(drop.moving_body_count() == 43 && drop.kit_body_count() == 82,
+        require(drop.moving_body_count() == 44 && drop.kit_body_count() == 86,
                 "checkpoint restore must not recreate retired machinery");
         std::cout << "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0\n";
     }

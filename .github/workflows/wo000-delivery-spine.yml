@@ -88,7 +88,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_sim_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_native --parallel 2
           if ! ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log; then
             # The public run page exposes annotations even when its raw logs
             # are unavailable. Keep the exact failing test and nearby output.
@@ -294,7 +294,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=43 kit_bodies=82 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=44 kit_bodies=86 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=169" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
@@ -305,7 +305,7 @@ jobs:
             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
             -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
             2>&1 | tee artifacts/godot-foundation.log
-          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=43 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
+          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=44 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
           test -s artifacts/screenshots/foundation_cleared_grade.png
           test -s artifacts/screenshots/foundation_cleared_tower.png
@@ -315,7 +315,7 @@ jobs:
         run: |
           set -euo pipefail
           ./build/host/scraperx_pipe_bridge_tests | tee artifacts/pipe-bridge-native.log
-          grep -F "PASS scraperx_sim AS-016 full route" artifacts/pipe-bridge-native.log
+          grep -F "PASS scraperx_sim AS-016 route mode=0" artifacts/pipe-bridge-native.log
           for scenario in pipe_bridge keyboard_pipe_bridge; do
             timeout 240s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee "artifacts/${scenario}.log"
@@ -323,11 +323,14 @@ jobs:
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/*pipe_bridge.log; then exit 1; fi
 
-      - name: Pipe bridge, facade, stair, lift and exterior climb - rendered touch route to 66 metres
+      - name: Pipe bridge through player-loaded teeter - rendered touch route to 77 metres
         shell: bash
         run: |
           set -euo pipefail
           ./build/host/scraperx_ascent_route_tests | tee artifacts/ascent-route.log
+          ./build/host/scraperx_teeter_route_tests | tee artifacts/teeter-native.log
+          grep -F "PASS scraperx_sim AS-020 loaded teeter, recovery and +77 route" artifacts/teeter-native.log
+          ./build/host/scraperx_teeter_physics_tests | tee artifacts/teeter-physics.log
           # This calls the complete touch pipe, facade and stair route first.
           # --resolution changes the window, not the project's 2160x1856
           # canvas viewport. Reduce both for this CPU-rendered route only;
@@ -357,19 +360,22 @@ jobs:
           timeout 1200s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --path godot --rendering-method gl_compatibility \
             --resolution 432x371 --fixed-fps 30 \
-            -- --uitest=touch_upper "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/upper" \
-            2>&1 | tee artifacts/touch-upper.log
-          grep -F "SCRAPERX_VIEWPORT size=432x371" artifacts/touch-upper.log
-          grep -F "SCRAPERX_UITEST PASS touch_upper " artifacts/touch-upper.log
-          if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-upper.log; then exit 1; fi
+            -- --uitest=touch_teeter "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/teeter" \
+            2>&1 | tee artifacts/touch-teeter.log
+          grep -F "SCRAPERX_VIEWPORT size=432x371" artifacts/touch-teeter.log
+          grep -F "SCRAPERX_UITEST PASS touch_teeter " artifacts/touch-teeter.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-teeter.log; then exit 1; fi
           for pose in rack_ready loaded_pan bridge_raised tower_arrival; do
-            test -s "artifacts/screenshots/upper_${pose}.png"
+            test -s "artifacts/screenshots/teeter_${pose}.png"
           done
           for pose in vent_climb facade_arrival stair_handle_ready stair_released stair_climb stair_exit_ready stair_arrival; do
-            test -s "artifacts/screenshots/upper_${pose}.png"
+            test -s "artifacts/screenshots/teeter_${pose}.png"
           done
           for pose in upper_handle_ready upper_lift_rising upper_lift_seated deck_55m upper_duct_hang upper_vent_climb upper_arrival; do
-            test -s "artifacts/screenshots/upper_${pose}.png"
+            test -s "artifacts/screenshots/teeter_${pose}.png"
+          done
+          for pose in teeter_entry teeter_loaded teeter_shelf teeter_climb teeter_arrival; do
+            test -s "artifacts/screenshots/teeter_${pose}.png"
           done
 
       - name: Regression fixture - native machine authority and Fold-aspect capture
@@ -566,9 +572,11 @@ jobs:
 
           The default pipe-loaded bridge loads twenty independent pipes, releases through actual reachable controls, arrests on finite material, and carries the player across the +8 m receiver to the original +11 m ring. Native no-input/source controls, regrabbing, passive riding, material checkpoint restoration and 90/360 Hz refinement pass. Touch at 30 FPS, keyboard and gamepad at 60 FPS use ordinary viewport input. Recorded human fall reactions pass cancellation and decoded-mix checks.
 
-          The AS-019 normal route continues from grade through the pipe bridge, facade, swinging stair, counterweight lift and exterior parkour to a supported +66 m tower ring. Native no-pull and fatal-fall checkpoint continuation tests pass; rendered touch completes this route with zero deaths. This remains a desktop and exported-APK result until Fold installation, play and performance are observed.
+          This record is emitted only after the preceding verification and export gates succeed. The AS-020 normal route continues from grade through the pipe bridge, facade, swinging stair, counterweight lift, exterior parkour and player-loaded teeter to a supported +77 m tower ring. Native teeter tests cover unloaded equilibrium, near/far/opposite loading, landing, unloading, physical stops, fall recovery, rotating-support departure and repeated initial conditions. Rendered touch completes the continuous route with zero deaths.
 
-          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent beyond the supported +66 m ring.
+          Desktop rendering evidence is captured explicitly by the touch_teeter scenario: teeter_teeter_entry.png, teeter_teeter_loaded.png, teeter_teeter_shelf.png, teeter_teeter_climb.png and teeter_teeter_arrival.png. PNG creation and native assertions pass here; a reviewer must separately inspect the images for visible geometry and motion. Android delivery evidence is the separately cross-compiled, exported and signature-checked APK from this source commit.
+
+          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent beyond the supported +77 m ring.
           EOF
 
       - name: Retain failed-run diagnostics

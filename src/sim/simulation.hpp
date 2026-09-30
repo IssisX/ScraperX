@@ -105,6 +105,9 @@ enum class InitialSpawn : std::uint8_t {
     WaterLiftValveStation = 26,
     WaterLiftCage = 27,
     WaterLiftUpperDock = 28,
+    // Isolated normal-world physics probes for the +66 m player rocker.
+    TeeterEntry = 29,
+    TeeterFarDrop = 30,
 };
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation

@@ -1,0 +1,54 @@
+{
+  "name": "AS-020 east service teeter, 85 kg rider at far deck tip",
+  "model_kind": "beam",
+  "model": {
+    "masses": [
+      {
+        "mass": 160.0,
+        "r": 1.6,
+        "phi": 3.141592653589793,
+        "i_cm": 617.5786666666667
+      },
+      {
+        "mass": 369.0,
+        "r": 1.5231546211727816,
+        "phi": -0.4048917862850834,
+        "i_cm": 45.70680000000001
+      },
+      {
+        "mass": 85.0,
+        "r": 4.5,
+        "phi": 3.141592653589793,
+        "i_cm": 0.0
+      }
+    ],
+    "theta0": -0.1,
+    "torque_friction_kinetic": 90.0
+  },
+  "terminal": {
+    "stop_q": 0.4673424268184423
+  },
+  "band": {
+    "model.torque_friction_kinetic": [
+      60.0,
+      90.0,
+      120.0
+    ]
+  },
+  "require": {
+    "allowed_outcomes": [
+      "CAPTURED_AT_STOP"
+    ],
+    "min_breakaway_ratio": 1.5,
+    "max_stop_impact_speed": 0.5,
+    "max_time_s": 20.0,
+    "convergence": {
+      "stop_impact_speed": {
+        "abs": 0.01
+      },
+      "time_s": {
+        "abs": 0.02
+      }
+    }
+  }
+}

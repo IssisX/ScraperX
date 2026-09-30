@@ -5,6 +5,7 @@
 #include "sim/pipe_bridge.hpp"
 #include "swing_stair.hpp"
 #include "sim/upper_ascent.hpp"
+#include "sim/teeter_rise.hpp"
 #include "sim/facade_route.hpp"
 #include "sim/water_screw.hpp"
 
@@ -1470,6 +1471,10 @@ private:
         // ~12 m above the static deck: unmitigated free fall reaches
         // sqrt(2*g*12) ~= 15.3 m/s, under kLethalImpactSpeedMps with margin.
         return {0.0, 13.0, -8.0};
+    case scraperx::sim::InitialSpawn::TeeterEntry:
+        return {25.3, 66.9, -139.0};
+    case scraperx::sim::InitialSpawn::TeeterFarDrop:
+        return {32.4, 70.0, -139.0};
     case scraperx::sim::InitialSpawn::CatwalkTreadle:
         // Above the outboard half of the treadle plate, where a body has real
         // leverage on the hinge.
@@ -1895,6 +1900,7 @@ public:
             build_facade_route(*kit_);
             swing_stair_ = std::make_unique<SwingStair>(physics_system_, *kit_);
             upper_ascent_ = std::make_unique<UpperAscent>(physics_system_, *kit_);
+            teeter_rise_ = std::make_unique<TeeterRise>(*kit_);
         }
 
         physics_system_.OptimizeBroadPhase();
@@ -2276,6 +2282,14 @@ private:
         case Simulation::kSumpGrateEntityId:
             return sump_grate_id_;
         default:
+            // The contact listener already reports Kit support entities.
+            // Resolve them to the same Jolt body for locomotion and jump
+            // momentum; otherwise a rotating Kit floor reads as stationary
+            // here even while its contact point is moving.
+            if (kit_ != nullptr && kit::is_kit_entity(entity_id)) {
+                const kit::BodyIndex body = kit_->body_for_entity(entity_id);
+                if (body.valid()) return kit_->body_id(body);
+            }
             return {};
         }
     }
@@ -6575,6 +6589,7 @@ private:
     std::unique_ptr<PipeBridge> pipe_bridge_;
     std::unique_ptr<SwingStair> swing_stair_;
     std::unique_ptr<UpperAscent> upper_ascent_;
+    std::unique_ptr<TeeterRise> teeter_rise_;
     scraperx::sim::bands::CounterweightWell well_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
     std::uint8_t rig_action_ = 0;

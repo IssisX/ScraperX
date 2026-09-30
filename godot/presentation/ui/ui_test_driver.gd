@@ -23,6 +23,7 @@ const SCENARIOS := {
 	"touch_facade": 8,
 	"touch_stair": 8,
 	"touch_upper": 8,
+	"touch_teeter": 8,
 	"touch_jump": 8,
 	"touch_move_look": 8,
 	"touch_gyro_aim": 8,
@@ -64,7 +65,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	_scenario = scenario
 	_capture_prefix = capture_prefix
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -107,6 +108,8 @@ func _run() -> void:
 			ok = await _touch_stair()
 		"touch_upper":
 			ok = await _touch_upper()
+		"touch_teeter":
+			ok = await _touch_teeter()
 		"touch_jump":
 			ok = await _touch_jump()
 		"touch_move_look":
@@ -475,6 +478,86 @@ func _touch_upper() -> bool:
 	_detail = "grade_to_66m=1 counterweight_lift=1 parkour=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
 	return true
 
+func _touch_teeter() -> bool:
+	if not await _touch_upper():
+		return false
+	var device := InputRouter.Device.TOUCH
+	if int(_native().get_entity_body_count(2800)) != 1:
+		return _fail("teeter absent from the normal route")
+	var beam := int(_native().get_kit_body_index(2800))
+	for point in [Vector2(24.8, -125.4), Vector2(24.8, -139.0), Vector2(25.3, -139.0)]:
+		if not await _walk_to(device, point, 0.14, 20.0):
+			return _fail("teeter ring approach %s" % _position())
+	await _face_teeter_pivot(beam)
+	await _pose("teeter_entry")
+	if not _standing_above(66.5) or int(_native().get_support_entity_id()) != 11:
+		return _fail("teeter entry lost the +66 m ring %s" % _position())
+	for point in [Vector2(27.2, -139.0), Vector2(29.8, -139.0)]:
+		if not await _walk_to(device, point, 0.14, 12.0):
+			return _fail("teeter near-side loading %s" % _position())
+	await _seconds(0.5)
+	if int(_native().get_support_entity_id()) != 2800 or _teeter_angle(beam) < 0.05:
+		return _fail("near-side load tipped the beam %s angle=%.3f" % [
+			_position(), _teeter_angle(beam)])
+	if not await _walk_to(device, Vector2(32.8, -139.0), 0.14, 12.0):
+		return _fail("teeter far-side loading %s" % _position())
+	await _seconds(3.0)
+	await _face_teeter_pivot(beam)
+	await _pose("teeter_loaded")
+	if not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 2800 or \
+			_teeter_angle(beam) > -0.4:
+		return _fail("player contact did not lower the far tip %s angle=%.3f" % [
+			_position(), _teeter_angle(beam)])
+	if not await _walk_to(device, Vector2(34.4, -139.0), 0.14, 12.0):
+		return _fail("teeter receiving shelf %s" % _position())
+	await _seconds(3.0)
+	await _face_teeter_pivot(beam)
+	await _pose("teeter_shelf")
+	if not _standing_above(64.0) or int(_native().get_support_entity_id()) != 1800 or \
+			_teeter_angle(beam) < 0.07:
+		return _fail("teeter failed to unload onto shelf %s angle=%.3f" % [
+			_position(), _teeter_angle(beam)])
+	if not await _walk_to(device, Vector2(34.72, -139.45), 0.14, 6.0):
+		return _fail("teeter grip approach %s" % _position())
+	await _face(Vector2(0, -1))
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("teeter upper grip not offered %s" % _position())
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_ctx()["climbing"]), 1.0):
+		return _fail("teeter upper grip not taken %s" % _position())
+	_move(device, 1.0)
+	await _seconds(6.0)
+	await _pose("teeter_climb")
+	var topped_out := await _wait_until(func() -> bool: return _standing_above(77.5), 20.0)
+	_move(device, 0.0)
+	if not topped_out:
+		return _fail("teeter upper climb did not top out %s" % _position())
+	if not await _walk_to(device, Vector2(25.1, -140.8), 0.14, 20.0):
+		return _fail("teeter +77 m catwalk exit %s" % _position())
+	await _seconds(0.5)
+	await _face(Vector2(1, 0))
+	_main._pitch = -0.25
+	await _pose("teeter_arrival")
+	if not _standing_above(77.5) or int(_native().get_support_entity_id()) != 11 or \
+			int(_native().get_death_count()) != 0:
+		return _fail("teeter +77 m ring unsupported %s" % _position())
+	_detail = "grade_to_77m=1 player_loaded_teeter=1 physical_reset=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
+	return true
+
+
+func _face_teeter_pivot(body: int) -> void:
+	var pose: Transform3D = _native().get_kit_body_transform(body)
+	var at := _position()
+	await _face(Vector2(pose.origin.x - at.x, pose.origin.z - at.z))
+	var to_pivot: Vector3 = pose.origin - _main._camera.global_position
+	_main._pitch = atan2(to_pivot.y, Vector2(to_pivot.x, to_pivot.z).length())
+
+
+func _teeter_angle(body: int) -> float:
+	var pose: Transform3D = _native().get_kit_body_transform(body)
+	return pose.basis.get_euler().z
+
+
 func _standing_above(height: float) -> bool:
 	return bool(_ctx()["grounded"]) and int(_ctx()["traversal"]) == 0 and _position().y > height
 
@@ -484,8 +567,8 @@ func _ground_foundation() -> bool:
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 43:
-		return _fail("default pipe bridge, stair and lift body inventory differs")
+	if int(_native().get_moving_body_count()) != 44:
+		return _fail("default pipe bridge, stair, lift and teeter body inventory differs")
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
 	var retired := ["IntakeBay", "WaterScrew", "LegalForty", "Hook5",
@@ -505,7 +588,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=43 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=44 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
 	return true
 
 
