@@ -1,6 +1,8 @@
 # Macro mechanism ideas — corrected design catalogue
 
-Reworked from the owner's supplied Colossus Sequence and earlier lift ideas, 2026-09-26. These are **design options**, not verified blueprints or a mandatory eleven-stage course, except that the pipe-rack/balance-bridge opening pattern below is now implemented. Its authoritative layout and evidence live in Atlas §6 and the AS-016 records. The Atlas owns actual layout. Large visible objects must do useful work and leave playable aftermath; small release parts must not become the main activity.
+Reworked from the owner's supplied Colossus Sequence and earlier lift ideas, 2026-09-26. These are **design options**, not verified blueprints or a mandatory eleven-stage course, except that the pipe-rack/balance-bridge opening pattern below is now implemented. Its authoritative layout and evidence live in Atlas §6 and the AS-016 records. The Atlas owns actual layout.
+
+GDD §16 owns encounter quality. Select or invent an assembly from a meaningful player problem; this catalogue is not a rotation to repeat. Reuse differently sized/shaped primitives and verified engineering, while changing what the player must infer, manipulate and traverse. Every extra stage must earn its place through a readable consequence or useful action. A simple lever may be sufficient, and a long chain may be unsuitable. Large visible objects must do useful work and leave playable aftermath; small release parts must not become the main activity.
 
 ## Colossus: what survives and what changes
 

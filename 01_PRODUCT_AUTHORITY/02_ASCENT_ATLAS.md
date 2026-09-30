@@ -1,6 +1,6 @@
 # SCRAPERX — ASCENT ATLAS: GROUND RESET
 
-**Status:** Product content authority, revised by owner direction on 2026-09-26. Subordinate to Laws and GDD. Section 6 records the implemented AS-016 design envelope; its exact-source runtime evidence is separate. Section 7 records the delivered AS-018 +33→44 m stair; section 10 records AS-017 and the local AS-019 +44→66 m candidate. Dimensions for later, unimplemented mechanisms are DESIGN TARGETS unless explicitly described as source.
+**Status:** Product content authority, revised by owner direction through 2026-09-30. Laws/GDD own product intent; this file owns spatial content. Sections 6, 7 and 10 retain existing slice labels and geometry. Current implementation/delivery evidence lives in `00_START_HERE.md` §2. Dimensions for unimplemented mechanisms are DESIGN TARGETS unless explicitly described as source.
 
 ## 1. Content decision
 
@@ -10,7 +10,7 @@ Retire the previous campaign, including its ground water screw/lift. Rebuild fro
 
 Use metres, kilograms, seconds and radians. Current native/Godot world is Y-up; grade walking surface is Y=0. Tower frame centre is X=0, Z=-150, half width 26 m. Lower deck rings are spaced 11 m in existing source. The distant tower mass reaches 1,600 m. Body centres, capsule centres, COM heights and walking surfaces are distinct.
 
-Normal player spawn is the exterior grade approach. Removed machine-linked stairs and machines cannot supply a handoff. The current 14-flight ramp/stair bypass to +154 m is rejected and pending removal from normal gameplay. The retained structure is a static collision representation, not proof of a deformable/load-rated skyscraper. The summit remains a product destination, not a currently reachable or fully authored route.
+Normal player spawn is the exterior grade approach. Removed machine-linked stairs and machines cannot supply a handoff. The former 14-flight ramp/stair bypass to +154 m was rejected and is removed in source preceding `b752edb`; current proof remains in Start Here §2. The retained structure is a static collision representation, not proof of a deformable/load-rated skyscraper. The summit remains a product destination, not a currently reachable or fully authored route.
 
 ## 3. Spatial and visual rules
 
@@ -20,9 +20,9 @@ Player waiting must buy visible, consequential motion. Target roughly 5–15 sec
 
 ## 4. Player capabilities and alternate routes
 
-Retain existing parkour, crouch, carry, jump and parachute contracts. Do not add invisible barriers or nerf jump/reach to protect a puzzle. If real frame geometry permits climbing, that route is valid. **Owner correction, 2026-09-27: no continuous stair/ramp backup route; the earlier last-option requirement is superseded.** Remove the 14 inclined fallback slabs and their associated step dressing from normal gameplay, with matching collision changes and safe deck boundaries. Alternate routes must offer real parkour or mechanism choices. AS-017 adds a native climb on reachable thin holds. The removal is authorized but not yet implemented.
+Retain existing parkour, crouch, carry, jump and parachute contracts. Do not add invisible barriers or nerf jump/reach to protect a puzzle. If real frame geometry permits climbing, that route is valid. **Owner correction, 2026-09-27: no continuous stair/ramp backup route; the earlier last-option requirement is superseded.** Remove the 14 inclined fallback slabs and their associated step dressing from normal gameplay, with matching collision changes and safe deck boundaries. Alternate routes must offer real parkour or mechanism choices. AS-017 adds a native climb on reachable thin holds. Source now implements the removal; do not equate this with device verification.
 
-A mechanism's output should become a stable support, bridge or staircase. Avoid mandatory player launches across a skyscraper gap as the opening ascent. Physics may throw loose loads, but a launch must have a capture envelope and its misses must have a real aftermath.
+A mechanism must provide a usable supported transfer and receiving route. Its moving surface may remain dynamic where real contact, velocity and clearance permit traversal; the destination must support the player’s next action. Avoid mandatory player launches across a skyscraper gap as the opening ascent. Physics may throw loose loads, but a launch must have a capture envelope and its misses must have a real aftermath.
 
 ## 5. Receiving-support convention
 
@@ -63,7 +63,7 @@ The delivered AS-018 source connects the supported +33 m ring to the existing +4
 
 Integrated native modes 0/1/2 reached supported +44 m from grade; mode 2 restored a moving-stair checkpoint after a fatal fall and continued. Modes 3/4 prove that waiting or grabbing then releasing the handle without pulling leaves the stair latched. Local ARM Godot headless touch and the green exact-source rendered touch route reached tower support at Y=44.90. The latest Android ARM64 artifact contains this source. Fold installation, play and performance remain separate.
 
-The opening pipe bridge reaches its first receiver in the delivered AS-016 slice. The illustrative candidate chain remains pipe avalanche → balance bridge → released heavy roller → pendulum that seats a bridge → falling monoliths that lay a broad stair, with each output creating a new route. This is an optional design direction, not the committed phase order: the +11→33 m route is static façade parkour, the +33→44 m stair is delivered, and the +44→66 m lift/parkour route is a local candidate. A later teeter-totter may deliver ballast to an upper receiver, but only after its trajectory and capture volume close. Each sequence may be shortened; eleven effects are not an obligation.
+The opening pipe bridge reaches its first receiver in the delivered AS-016 slice. The illustrative candidate chain remains pipe avalanche → balance bridge → released heavy roller → pendulum that seats a bridge → falling monoliths that lay a broad stair, with each output creating a new route. This is an optional design direction, not the committed phase order: the +11→33 m route is static façade parkour, the +33→44 m stair is delivered, and the +44→66 m lift/parkour route has historical exact-source desktop and APK delivery. Start Here records the current candidate and device boundary. A later teeter-totter may deliver ballast to an upper receiver, but only after its trajectory and capture volume close. Each sequence may be shortened; eleven effects are not an obligation.
 
 The full corrected Colossus evaluation lives in `Mechanism-Ideas-and-archetypes.md`. It is option material. No upper elevations, connecting spans or stored energy may be assumed from that catalogue.
 
@@ -87,9 +87,13 @@ The landing is X=[17.8,22.2], Z=[-124.05,-120.8], top +11 m. Cabinet top +12.7 m
 
 The local normal source now places a 4 × 4 m guided lift outside the front tower face at X=[2,6], Z=[−120,−116], with its walking top at +44 m before release. The player boards from the +44 m ring and pulls a side handle at Z=−115.8, outside the moving platform's sweep. The 2.8 t platform rises as a 3.2 t counterweight at X=10, Z=−118 falls through a 1:1 overhead cable. A 1.6 m yielding timber bed begins at +45.3 m under the weight. A slow upper catch seats the platform's walking top at +54.96 m beside the fixed connector to the +55 m tower ring. Kit/Jolt owns frame 1700, parkour fixture 1701 and moving bodies 2700–2704; presentation draws the same native parts.
 
-From the +55 m ring, the player mantles a service cabinet near X=1.4, Z=−122 (top +56.7 m), catches and tops out on a duct (top +60.3 m), then climbs a narrow vent near X=5.4, Z=−123.45 onto the +66 m tower ring, support entity 11. The current inclined-slab bypass is rejected and pending removal. Exact-source [run #182](https://github.com/IssisX/ScraperX/actions/runs/36302892635) passed continuous rendered grade→supported +66 m touch, native, retained and Android export gates. Fold installation, play and sustained performance remain unverified. [AS-019 evidence](../03_EXECUTION/ASCENT/AS-019_UPPER_COUNTERWEIGHT_AND_PARKOUR.md) owns measurements and remaining falsifiers.
+From the +55 m ring, the player mantles a service cabinet near X=1.4, Z=−122 (top +56.7 m), catches and tops out on a duct (top +60.3 m), then climbs a narrow vent near X=5.4, Z=−123.45 onto the +66 m tower ring, support entity 11. The former inclined-slab bypass is removed in later source; Start Here §2 owns the current verification boundary. Exact-source [run #182](https://github.com/IssisX/ScraperX/actions/runs/36302892635) passed continuous rendered grade→supported +66 m touch, native, retained and Android export gates. Fold installation, play and sustained performance remain unverified. [AS-019 evidence](../03_EXECUTION/ASCENT/AS-019_UPPER_COUNTERWEIGHT_AND_PARKOUR.md) owns measurements and remaining falsifiers.
 
 The retained tower silhouette, frame and deck rings are space for future authorship. The ordinary +154 m ramp/stair bypass is rejected; do not retain it as a backup. The old 198 m cage ride, 220 m connection and 340 m wet route are retired. Do not silently rebuild that schedule. Extend upward only from a demonstrated receiving support using the same large visible mechanics and legitimate parkour.
+
+**AS-020 east service teeter: source candidate +66 → +77 m.** At `fb19900`, Kit entity 2800 is a dynamic beam/counterweight hinged about +Z at `(28.5,65.8,-139)`. Fixed frame/entry/receiver/recovery is 1800; independent contact stops are 1801/1802. The beam spans local X=[−1.8,5.0], width 1.8 m, thickness 0.28 m; its 160 kg deck and 369 kg counterweight form one compound body. A lower shelf at +63.55 m leads to an exposed grip and +77 m receiving catwalk; a +55 m catch deck provides failure recovery. Full assembly dimensions, compiler calculations and native observations are in [the AS-020 contract](../evidence/teeter_stage.md). This entry records existing source geometry, not design acceptance of its automatic response or long climb. Apply GDD §16 before revising or repeating it; Start Here owns delivery evidence.
+
+**Current continuation target: supported +300 m.** Author varied physical problems and parkour between demonstrated receiving surfaces. No further machine coordinates or sequence are approved by this target alone. Preserve the 1,600 m destination and existing slice/entity identities.
 
 ## 11. Summit
 
@@ -103,4 +107,4 @@ Rolling/inertia and rotational-work derivations use [OpenStax rolling motion](ht
 
 ## 13. Acceptance
 
-Require unseeded normal-input operation, physical failure when the source/link is removed, plausible losses, stable actual player handoff, recovery/checkpoint continuation and first-person visual observation. Test variation in initial placement, timing and frame partitioning; test Android separately. A nominal run or restitution constant alone does not establish robust chain behaviour.
+Require normal-input operation from the declared default initial world without fixture teleportation, injected loads or prescribed poses, physical failure when the source/link is removed, plausible losses, stable actual player handoff, recovery/checkpoint continuation and first-person visual observation. Test variation in initial placement, timing and frame partitioning; test Android separately. A nominal run or restitution constant alone does not establish robust chain behaviour.

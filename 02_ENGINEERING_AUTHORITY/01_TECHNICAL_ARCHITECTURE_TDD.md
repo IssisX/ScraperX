@@ -209,6 +209,8 @@ If subsystems later parallelize, they must preserve the same tick dependency gra
 
 ScraperX needs reproducible causes, debugging, checkpoint integrity, and reliable tests. It does **not** currently require multiplayer lockstep or bit-identical desktop↔Android replay.
 
+Governing Laws §15 defines the causal contract: complete initial state plus fixed laws and ordered external inputs determines subsequent state. Include controller and constraint state, stored energy and any explicit RNG state in the reproducibility boundary. Record exact engine/build, platform, timestep, command stream, compared observables and tolerances. A repeated subset of observables does not prove complete checkpoint state or whole-world replay.
+
 Therefore:
 
 - same-build, same-command-stream deterministic replay is required for test scenes;
@@ -315,6 +317,8 @@ Grounded locomotion is relative to that support.
 Detachment/jump preserves relevant inherited support-point velocity.
 
 No Godot parenting trick is allowed to substitute for this.
+
+Trace a support’s stable entity ID to its actual native body before calculating point velocity; contact detection alone is insufficient if that lookup returns no body. For the current dynamic player, standing weight and landing impulses already pass through native contact. An added weight force would double-count them. Account separately for traversal modes that disable gravity and apply their own load.
 
 ### 8.5 Traversal assistance
 
@@ -729,6 +733,8 @@ Do not build every ABI by default if the actual target does not require it.
 
 ### 20.3 Remote automation
 
+Every APK build for this branch uses GitHub Actions. Local native compilation and probes may support investigation, but do not replace that delivery path. Preserve the branch’s `ScraperX-ChatGPT.apk` filename, `ScraperX-ChatGPT` app label, `com.cory.scraperx.chatgpt` package and stable test signer; identity gates are owned by the workflow and Start Here.
+
 CI must be capable of:
 
 1. checking out the repo including pinned dependencies;
@@ -765,6 +771,8 @@ Host-side native tests cover:
 Deterministic test scenes replay command streams and compare authoritative state predicates, not screenshots.
 
 Where floating-point exact equality is inappropriate, compare physically meaningful tolerances/invariants.
+
+Also exercise the real normal-input route and explicitly invoke rendered capture when visual/collision agreement is claimed. Inspect the resulting images, including approach, contact/motion and arrival. State predicates, visual observation and Android execution answer different questions; retain all evidence appropriate to the claim. Capture is an independent operation even when invoked within a CI job.
 
 ### 21.3 Android smoke path
 
@@ -910,7 +918,7 @@ Demonstrate one complete chain on the kernel:
 
 This is the first point at which ScraperX has proven its defining architecture.
 
-This slice and its remaining details are historical regression substrate. The owner-directed reset of 2026-09-26 removed the old campaign from normal play while retaining the full controller and ordinary fallback stairs/ramps. The revised Atlas owns the current ascent; the retired B00/AS-001–015 queue and legacy fixtures are not campaign progress. `WO-000`–`WO-013` are closed historical records, not a current content queue.
+This slice and its remaining details are historical regression substrate. The owner-directed reset of 2026-09-26 removed the old campaign from normal play while retaining the full controller and, at that historical point, ordinary fallback stairs/ramps. The later owner correction removed that bypass; see Start Here for current source and evidence. The revised Atlas owns the current ascent; the retired B00/AS-001–015 queue and legacy fixtures are not campaign progress. `WO-000`–`WO-013` are closed historical records, not a current content queue.
 
 ---
 

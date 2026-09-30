@@ -362,7 +362,7 @@ Large-scale causal stacking is a defining feature.
 
 The owner-directed ground reset of 2026-09-26 makes visual readability a first-order design constraint. Large rolling masses, gravity drops, levers, pendulums, falling slabs and direct contacts do the heavy work. Their full causal handoffs must be visible from ordinary play positions. Small retainers may release stored energy, but a long sequence of tiny, mostly invisible pin/valve/rigging operations is not the desired core play. Prefer fewer larger useful actions over intricate machinery that only telemetry explains.
 
-The old campaign, including its ground water screw/lift, is retired. Preserve the tower setting and complete parkour capability. **Owner correction, 2026-09-27: remove the continuous ordinary stair/ramp backup route. This supersedes the earlier fallback requirement.** Progress must come from authored parkour and working mechanisms. Short local access surfaces and machine-created crossings must serve those encounters; they cannot form a continuous easy bypass. Review the visible route and actual collision together before accepting a delivery. A passing automated route does not establish acceptable level design. The current 14-flight ramp network still exists and must be removed; this document change does not claim an implementation fix.
+The old campaign, including its ground water screw/lift, is retired. Preserve the tower setting and complete parkour capability. **Owner correction, 2026-09-27: remove the continuous ordinary stair/ramp backup route. This supersedes the earlier fallback requirement.** Progress must come from authored parkour and working mechanisms. Short local access surfaces and machine-created crossings must serve those encounters; they cannot form a continuous easy bypass. Review the visible route and actual collision together before accepting a delivery. A passing automated route does not establish acceptable level design. Current source and proof of the removal belong in `00_START_HERE.md` §2.
 
 A representative chain is:
 
@@ -375,6 +375,25 @@ The world owns the intermediate state. If the player reaches the same valid outc
 Causal complexity must remain legible enough that the player can form useful hypotheses from visible, audible, spatial, or operational evidence.
 
 ScraperX should prefer mechanisms with multiple plausible uses over one-purpose puzzle devices.
+
+**Owner clarification, 2026-09-30: creative physical challenges built from primitives.** Boxes, beams, cylinders, wedges, plates and simple joints are valid production building blocks. Make their dimensions, connections and operation legible. A simple working mechanism can provide a strong encounter; visual complexity, imported assets and a large number of stages are not measures of quality.
+
+Author each encounter around a clear player problem:
+
+- **Read:** show the receiving route, the current physical obstruction and the relevant load/support/connection from reachable play positions.
+- **Reason:** give the player a useful choice about position, balance, alignment, restraint, connection, timing or route. State what the player is meant to infer and what evidence supports that inference.
+- **Act:** let normal movement and available physical interactions change the relevant world state. Moving or adjusting objects must affect forces, constraints or access; an interaction must not merely set a solved flag.
+- **Observe:** let a good attempt, an ineffective attempt and a recoverable miss have understandable physical results. The player can revise a hypothesis from what the machine does.
+- **Traverse:** turn the changed state into useful parkour, a crossing or transport with an actual receiving surface and onward route. Demand movement skill as appropriate to the encounter.
+- **Continue or recover:** leave coherent aftermath, earned access and a physically funded reset or an explicit checkpoint recovery. Do not silently replenish spent energy or replace lost objects.
+
+Before repeating a mechanical family, compare it with recent encounters: what does the player notice, choose, manipulate and traverse differently? Changing size, color, height or waiting time alone is insufficient. Vary the physical problem and its spatial context while reusing sound implementation. Do not impose a fixed rotation of machine types or force all macro systems into every encounter.
+
+Use simple demonstrations and direct weight-responsive obstacles where they teach a relationship or sharpen traversal. Across the ascent, those encounters must develop into meaningful decisions and interventions; repeated step-on rides followed by long routine climbs do not meet the requested challenge. Keep athletic connecting stretches and physically valid alternative solutions. Requiring object delivery before every machine would become another repetitive template.
+
+Select the smallest coherent assembly that supports the intended problem. Remove a stage when it adds no decision, understandable transfer or useful aftermath. Elaborate chains, precision traps and arbitrary control sequences cannot substitute for a legible industrial machine. The authoring contract in `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` turns these criteria into a resolved physical design; numerical and normal-game verification must then test it.
+
+The current delivery objective is continuous ground-to-300 m traversal through varied working machinery and parkour, preserving the proven route as new slices are verified. The 1,600 m summit remains the larger product destination. Neither number establishes an implemented or verified height.
 
 ---
 
@@ -564,6 +583,8 @@ A proposed feature, content direction, or implementation shortcut fails the Scra
 14. **It creates a conventional combat loop as a primary progression system.**
 15. **It adds advanced simulation, mathematics, or dependencies without buying meaningful player capability, truthful consequence, reliability, performance, or reuse.**
 16. **It cannot plausibly ship and run on the actual Fold-class target without sacrificing the game's defining systems.**
+
+17. **It repeats a recent machine’s player problem with only cosmetic or dimensional changes, or adds stages that do not improve decisions, readable causality or traversal.**
 
 If a requested feature fails one of these tests, the correct project action is to redesign or reject the feature—not to rationalize the regression.
 

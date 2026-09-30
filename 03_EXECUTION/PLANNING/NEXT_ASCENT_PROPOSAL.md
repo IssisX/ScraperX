@@ -1,14 +1,14 @@
 # Development direction and next ascent proposal
 
-**Status:** Owner-selected development direction, active 2026-09-27. The owner selected **mixed parkour and machines**. AS-016–018 have green exact-source deliveries; AS-019 is an integrated local +66 m candidate awaiting CI, Android artifact and Fold proof. This document is a plan, not playable-height evidence; `00_START_HERE.md` §2 owns the latest result.
+**Status:** Retained development proposal from 2026-09-27, reconciled 2026-09-30. Mixed parkour and machines remains selected. The +66 m phases below preserve the earlier plan and its identifiers; they are not a second current queue. The current ground-to-300 m objective and delivery order live in `MECHANISM_ASCENT_PLAN.md`; current source and proof live in `00_START_HERE.md` §2.
 
 **Profile:** `MACRO-TRAVERSAL-STRICT` (project requirement). The Atlas remains spatial authority; `00_START_HERE.md` remains delivery/evidence authority. Superpowers supplies the design/execution workflow, Causal Mechanism Compiler supplies physical contracts, and ThreeSpine supplies relevant mathematical methods. Skills do not expand product scope by themselves.
 
 ## 1. Starting point
 
-Current source, proof and artifact status is recorded in `00_START_HERE.md` §2. AS-016 establishes the +11 m starting support; AS-017 and AS-018 reach the delivered +44 m support; AS-019 locally reaches supported +66 m. The optional ordinary route to +154 m and the 1,600 m tower objective do not count as newly authored mechanism progress.
+Current source, proof and artifact status is recorded in `00_START_HERE.md` §2. AS-016–019 have historical exact-source deliveries through +66 m. The continuous ordinary route to +154 m was subsequently rejected and removed. AS-020 and any further route must be judged against current evidence and GDD §16; neither the former fallback extent nor the 1,600 m destination proves authored progress.
 
-The current production question is whether the connected +66 m candidate reads clearly in rendered play and ships at a usable pace on the Fold. Building another elaborate miniature mechanism would not answer it.
+The production question is whether each connected slice provides readable physical decisions and worthwhile traversal while preserving earlier progress and surviving the actual delivery path.
 
 ## 2. Three directions
 
@@ -22,7 +22,7 @@ These are emphases within one persistent tower, not separate game modes. A legal
 
 ## 3. Recommended next playable slice
 
-**CHOSEN milestone:** extend the new route from +11 m to +66 m, a **DERIVED +55 m** of additional ascent. These elevations use the existing **SOURCE 11 m ring spacing**. Local AS-019 route proof now establishes a candidate; exact-source and device gates still decide delivery.
+**CHOSEN milestone:** the earlier +11→66 m plan below remains historical context, a **DERIVED +55 m** using **SOURCE 11 m ring spacing**. The latest owner-selected target is continuous grade→300 m. Start Here §2 records what has actually been demonstrated; the ascent plan owns continuation.
 
 The letters A–D below identify development phases, not save checkpoints or new `AS-*` ticket IDs. Current phase acceptance is recorded in `00_START_HERE.md` §2.
 
@@ -30,8 +30,8 @@ The letters A–D below identify development phases, not save checkpoints or new
 |---|---|---|
 | **A: +11 → +33 m** (delivered) | AS-017's façade climb adds static parkour traversal after the pipe bridge. Its exact-source delivery is in the status register. | The current movement system carries the exterior route. |
 | **B: +33 → +44 m** (delivered) | AS-018's swinging stair creates a stable climbable route with moving-support checkpoint recovery. | The first later macro machine works in normal gameplay. |
-| **C: +44 → +66 m** (local candidate) | AS-019's side-pull counterweight lift reaches +55 m; cabinet, duct and vent parkour reaches supported +66 m. The ordinary staircase remains an alternate route. | Native and headless touch routes pass locally; rendered exact-source and device evidence are pending. |
-| **D: whole route** (partly local) | Ordinary input from grade through AS-016–019 and checkpoint continuation pass locally. Rendered observation, exact-source Android artifact and Fold play remain. | The exact-source and device gates decide whether the whole stretch is accepted. |
+| **C: +44 → +66 m** (historical delivery) | AS-019’s side-pull counterweight lift reaches +55 m; cabinet, duct and vent parkour reaches supported +66 m. The formerly retained ordinary staircase was rejected and removed. | Exact-source desktop and APK evidence exists for the earlier delivery; current-source and device boundaries remain in Start Here. |
+| **D: whole route** (historical desktop delivery) | Ordinary input from grade through AS-016–019 was demonstrated at the recorded green source. | That does not establish acceptance of later changes, Fold play or sustained performance. |
 
 The later machinery encounters remain a **CHOSEN scope budget**, not a requirement for new simulation systems at every height. The +11→33 façade is parkour traversal, not a macro-machine transfer. AS-019 uses a separate Kit/Jolt lift, yielding bed and fixed exterior parkour. Its no-source/no-link falsifiers and parameter-band ledger are still open in the candidate evidence; do not confuse a passing route with those strict physics checks.
 
@@ -60,12 +60,12 @@ The compiler's first checks are target support and onward route, then geometry, 
 
 ## 4. Build order and concrete ownership
 
-Work inline as the sole writer on the existing local `ChatGPT` checkout. Preserve unrelated work and check the remote before publication. The +66 m objective is active; AS-019 is integrated locally and its exact-source workflow is the current delivery gate.
+Work in an agent-owned clone of `IssisX/ScraperX` on `ChatGPT`, preserving other agents’ work and checking the remote before publication. The current bounded task and its larger objective come from the latest owner instruction and ascent plan, not the completed A–D proposal.
 
 - [x] **Deliver A.** AS-017 has an exact-source route and Android artifact; see `00_START_HERE.md` §2.
 - [x] **Deliver B: +33→44 m.** AS-018's native, rendered, checkpoint and Android gates passed at `68e9422`.
-- [x] **Author C: +44→66 m.** AS-019 is in normal source with a supported local native/touch route, alternate stairs and checkpoint restoration. Its exact-source delivery remains open.
-- [ ] **Deliver D and judge the experience.** Complete the connected rendered input, collision and Android gates for AS-019. Inspect the rendered approach, causal event and arrival. Record device installation/execution/performance separately; complete a sustained representative Fold check against the existing 45 FPS target before claiming mobile readiness.
+- [x] **Author C: +44→66 m.** AS-019 is integrated and has a historical green delivery. Its then-retained alternate stairs were later removed; Start Here records the present source and evidence.
+- [ ] **Deliver D and judge the experience.** Historical desktop/Android export gates passed. Current-source readability, owner design acceptance, actual device play and sustained Fold performance require their own evidence. A green build does not close this experience review.
 
 | File / seam | Planned responsibility |
 |---|---|
@@ -83,8 +83,8 @@ Do not create a general mechanism editor, a second physics engine or a campaign 
 
 ## 5. How the rest of the game grows
 
-1. **Demonstrate the production method through +66 m.** Get a connected, readable stretch with contrasting play, useful height and repeatable authoring. Test the Android path early enough to expose a performance problem before multiplying it.
-2. **Complete a coherent lower district toward +154 m** (CHOSEN subsequent milestone, aligned with existing structural/fallback extent). Recombine proven families and author new situations, shortcuts and recovery routes. Introduce a bounded inhabited work area and a physical access objective when the traversal loop is established, consistent with the GDD's inhabited tower. Do not build a general city simulation as a prerequisite.
+1. **Demonstrate the production method in each new slice.** Preserve the recorded +66 m route while evaluating the next encounter for contrasting play, useful height, meaningful manipulation and repeatable authoring.
+2. **Complete connected ascent toward +300 m** (latest owner objective). Earlier +154 m planning is superseded as a delivery target; it was also the extent of a rejected bypass, not a required machine sequence. Recombine engineering while changing player problems and spatial situations. Inhabitants and larger systems remain GDD direction, not extra prerequisites silently added to this traversal task.
 3. **Expand toward the 1,600 m summit in connected districts.** Freight, load-bearing architecture and process/isolation supply different regional problems. Specify the next district in detail only after the previous one works. Add a new simulation capability when an authored encounter requires it; verify sleeping/streaming and committed-state restoration before multiplying active content beyond the demonstrated device budget.
 4. **Close the whole ascent.** Earned return routes, fall recovery, persistence, device performance, legibility and a physically reachable summit must work together. A distant skyline or a list of planned districts never counts as this milestone.
 
@@ -115,4 +115,4 @@ After each useful slice, report:
 - native, input, render, Android artifact and device evidence at their actual completion levels;
 - the next bounded task and any unresolved decision.
 
-**Suggested milestone goal:** Deliver a continuous, normal-input route from grade to a supported +66 m exit, with contrasting parkour and macro machinery, a meaningful route choice, correct checkpoint continuation, and an exact-source Android build; establish actual Fold play and sustained performance before calling it mobile-ready.
+**Suggested milestone goal:** use the current ascent plan’s ground-to-300 m objective, delivering verified connected slices with varied physical intervention and athletic traversal. Establish actual Fold play and sustained performance before claiming mobile readiness.

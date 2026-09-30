@@ -3,13 +3,13 @@
 **Status:** Engineering + requester execution authority  
 **Product / repository:** `ScraperX`  
 **Depends on:** `00_GOVERNING_LAWS.md`, `01_SCRAPERX_GDD.md`, `02_ASCENT_ATLAS.md`  
-**Purpose:** Keep implementation narrow, evidence-driven, and faithful to ScraperX. Bind the person issuing work to the same spine as the model doing it.
+**Purpose:** Keep implementation narrow, evidence-driven, and faithful to ScraperX; turn the owner’s intent into concrete work and accurate evidence without assigning project administration to the owner.
 
 ---
 
 ## 1. AUTHORITY STACK
 
-For implementation work, resolve conflicts in this order:
+Apply the owner’s latest explicit instruction first when it changes an earlier project decision. Reconcile the affected owners below; do not use their old wording to block that instruction. Otherwise resolve project-document conflicts in this order:
 
 1. **Governing Laws** — non-negotiable project constraints.
 2. **GDD** — product truth: what ScraperX must be.
@@ -29,7 +29,7 @@ its content never becomes current authority merely by being newer or further alo
 
 Supporting decision/provenance documents are consulted only when a product decision needs tracing. They are not routine implementation context.
 
-No work order may silently override a higher authority. If it conflicts, stop that mechanism and surface the conflict.
+An agent-authored work order cannot silently redefine product authority. Resolve an apparent conflict against the latest explicit owner instruction and current evidence; ask only when a material ambiguity cannot be resolved from them. Source/tests establish what exists, not whether an obsolete design remains desired.
 
 Do not create a parallel content brief outside `01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md`. If a band, module, or chain is missing, amend the atlas. Do not bolt on a second map.
 
@@ -57,7 +57,9 @@ The goal is **small active context under one global authority tree**, not reduce
 
 ## 3. TICKET CONTRACT
 
-Every coding task has one bounded objective. An explicit owner-directed removal/reset may define that objective directly; it does not require a fictitious new mechanism ticket. New mechanism implementation uses one bounded ticket. Kernel Work Orders use the fields below
+Every coding task has one bounded objective.
+
+The agent derives and records that objective from the owner’s natural-language request. The owner need not supply a ticket or use prescribed wording. A larger authorized objective proceeds through verified slices without silently shrinking to the first slice. An explicit owner-directed removal/reset may define that objective directly; it does not require a fictitious new mechanism ticket. New mechanism implementation uses one bounded ticket. Kernel Work Orders use the fields below
 (`03_EXECUTION/TEMPLATES/KERNEL_WORK_ORDER_TEMPLATE.md`). Ascent Slices use these fields **plus** the
 mechanical close in `03_EXECUTION/PLANNING/ASCENT_PRE_RESOLUTION.md` §8, which is not optional for them.
 
@@ -78,6 +80,8 @@ Every ticket must contain:
 **Proof path** — the actual build/runtime/device path that must demonstrate the result.
 
 **Completion** — observable conditions that end the task.
+
+**Player problem** — what the player must notice, decide and change; why it differs from recent encounters; how the physical result contributes to the receiving route. Use GDD §16 and the existing mechanical close rather than creating another content authority.
 
 If those fields cannot be stated clearly, the task is not ready to code.
 
@@ -140,7 +144,7 @@ A slice may cross several files or subsystems if the causal path genuinely requi
 
 A slice must not opportunistically expand into unrelated systems because they are nearby.
 
-Prefer one reusable primitive that unlocks several later behaviors over several disconnected features.
+Reuse verified bodies, shapes, joints and owner interfaces when they fit the derived assembly. Reusing engineering does not justify repeating the same player problem. Compare the intended experience against GDD §16 before selecting a familiar mechanism.
 
 ---
 
@@ -189,6 +193,8 @@ Use:
 - actual Fold-class execution for Fold behavior.
 
 Never upgrade one evidence class into another.
+
+For visual evidence, explicitly invoke the available capture path, verify that genuine images were produced, open them and inspect the relevant approach, action/contact, motion and supported arrival. Record the source/build, scenario and views actually inspected. A capture filename or passing log is not visual inspection. Screenshots can be collected independently of APK builds; neither proves the other. Still frames alone cannot prove impulse transfer or continuity, so pair them with runtime state traces and normal-input execution.
 
 ---
 
@@ -290,6 +296,10 @@ Never collapse these into “done.”
 
 Unknown remains unknown.
 
+Read the actual installed instructions for `superpowers`, `causal-mechanism-compiler` and `threespine` when the task calls for them. Apply the compiler before implementing a consequential assembly and ThreeSpine to its coupled dynamics/contact/traversal calculations; do not use skill names as evidence of completed work. Recover head, branch, local changes, active route and authoritative object identity before changing code. When a request targets a specific object that cannot be uniquely located, obtain the missing locator; when the owner authorizes a new obstacle generally, select a bounded design instead of inventing a missing-reference blocker.
+
+Minimize unsupported shortcuts: trace construction, collision, motion type, attachment, player contact, support tracking and rendered pose; repair the earliest broken causal connection. Distinguish measured facts, derivations, chosen design parameters and unresolved quantities. Valid reduced models remain permitted under Governing Laws §25: name assumptions, applicability and error/verification limits, and compare the consequential result with the implemented owner. A familiar pattern or plausible number is not evidence that this assembly closes.
+
 For ascent, report supported walking-surface elevation above grade, and identify the
 route: newly authored campaign, ordinary fallback, or regression fixture. Capsule-centre
 height, bridge-tip height, another branch's route and future destination targets are
@@ -301,19 +311,19 @@ and device execution separately. Current phase and delivery status belongs in
 
 ## 12. STOP RULE
 
-Stop the task when the Work Order completion condition is proven.
+Stop adding to a bounded slice when its completion condition is proven. If the owner has authorized a larger objective, continue with the next necessary slice within that objective; a slice boundary is not permission to abandon the remaining authorized work. Report an exact blocker when progress genuinely depends on missing information or unavailable execution.
 
 Do not continue adding polish, adjacent systems, cleanup, architecture, or speculative improvements unless they are required to make the current capability correct.
 
 If a newly discovered defect blocks the objective, repair it.
 
-If it does not block the objective, record it separately and stop.
+If it does not block the objective, record it separately and keep it outside the current slice. Continue any remaining authorized objective under the first paragraph of this section.
 
 ---
 
 ## 13. TDD PRODUCTION RULE
 
-The Technical Architecture / TDD must be derived from the frozen game, not used to redefine it.
+The Technical Architecture / TDD follows the established game and its latest explicit owner amendments. An implementation technique cannot redefine product direction by itself.
 
 The TDD must establish:
 
@@ -332,21 +342,17 @@ It must not add gameplay merely because an implementation technique makes that g
 
 ## 14. PROJECT-GUARDIAN RULE
 
-When a requested implementation would damage the frozen ScraperX objective, the correct response is to **reject the damaging mechanism**, explain the concrete conflict, and preserve the legitimate underlying goal through a compatible alternative.
-
-Compliance is not success.
-
-The success criterion is a real ScraperX capability that survives its authorities, runtime, and shipping path.
+Check a proposal against current owner intent, physical feasibility and the verified route. Explain a concrete conflict and offer a viable assembly or implementation when needed. The owner may change earlier product decisions; this rule does not authorize overriding that choice with stale documentation. Success requires the intended capability, an honest causal implementation and evidence through the relevant runtime and delivery path.
 
 ---
 
 ## 15. REQUESTER PROTOCOL
 
-This section binds Cory, and anyone briefing an implementation model.
-
-The requester’s workstation may be the Fold. That is normal. It is the shipping target. Tedium is not a license to skip work orders. It is a license to stop pretending the human is a desktop file clerk.
+The agent is responsible for turning natural-language direction into bounded, reviewable work. The requester may work entirely from the Fold; requests need no formal syntax and no document-management homework.
 
 ### Legal asks
+
+These are optional shorthand examples, not a whitelist or a prerequisite for authorization:
 
 - `Execute AS-NNN. Stop at its completion condition.` — the normal ask
 - `Author AS-NNN.` — write the plan, no code
@@ -361,7 +367,7 @@ The requester does **not** paste Laws, GDD, atlas, TDD, or the WO file when the 
 
 ### Requests that need bounded execution
 
-Resolve these into the smallest complete authorized slice; do not silently start the whole tower:
+Resolve these into a concrete objective and an ordered set of complete slices. Preserve the scope explicitly authorized; do not pretend a broad goal is already designed or complete:
 
 - build the game / the tower / the 1.6 km climb / “make it causal”;
 - dump the whole package as one prompt and expect a world;
@@ -378,7 +384,11 @@ New prose is justified when a ticket cannot name owner, seam or proof, or when t
 
 For implementation requests, execute a ready ticket; do not substitute process writing. For an authorized planning audit, repair contradictory document owners together without changing gameplay.
 
+Preserve filenames, headings/section numbers, ticket fields, AS/WO/REQ/KX and entity identifiers, and existing link targets during reconciliation. Edit the substance in its current owner. Keep historical observations tied to their original source and date. Check affected references and compare headings, IDs and local links before publishing; do not renumber or repurpose identities to make the prose cleaner. Any necessary reference change needs an explicit compatibility review.
+
 ### Model rule
+
+Develop rough, incomplete or weak ideas into coherent proposals using the owner’s intent and the verified world. Compare viable alternatives, resolve practical consequences and exercise independent engineering judgment within the authorized scope. Record which requirements came directly from the owner, which conclusions are derived, which parameters are chosen and which questions remain unresolved. Derived design guidance may improve an idea without being presented as a new owner decision or an already proven capability. Ordinary design work belongs to the agent; ask only for information or choices whose absence materially prevents sound progress.
 
 Use the owner’s intent to establish a concrete bounded result. A new explicit owner decision may supersede an old content plan; update affected owners together. Do not use retired paperwork to prevent an authorized removal or to demand that the user perform project administration.
 
@@ -392,12 +402,12 @@ Galaxy Fold 6 is both the proof device and, until a desktop exists, the only con
 
 Therefore:
 
-- commands must be thumb-legal: one line naming one ticket;
+- requests may be ordinary language or a short ticket reference; the agent resolves the execution contract;
 - deliverables are one downloadable artifact or a short status, not a reading list;
-- remote/CI build is the intended compile path (TDD §20.3);
+- every APK build runs through GitHub Actions (TDD §20.3); local native checks remain useful evidence within their stated platform limits;
 - “open these eight markdown files and paste them” is a protocol defect, not a user defect.
 
-Friction may be reduced. Scope may not. One open ticket at a time, always.
+Use an agent-owned clone of `IssisX/ScraperX` on `ChatGPT`, in temporary storage outside personal folders; verify its path, remote, branch, head and working tree before writes, and preserve others’ changes. A starting cwd does not identify the project. Do not use the owner’s original files or Android Downloads as a development tree or artifact destination. If an operation genuinely needs another location, explain that reason first. Follow the current environment’s permissions. Keep one implementation slice active while preserving the authorized larger objective.
 
 ## 17. Candidate and documentation publication
 
@@ -406,7 +416,7 @@ one at a time; no intentional concurrent APK candidates. Follow the exact run to
 terminal status. Estimate from comparable completed workflow/job paths, check around
 that estimate plus two minutes, and keep inspecting the same run if unfinished.
 A timer is not proof. On RED repair the first causal failure from its job/log;
-on GREEN verify all expected jobs and the APK/artifact. Stop at the slice boundary.
+on GREEN verify all expected jobs and the APK/artifact. Close the slice, then follow §12 for any remaining authorized objective.
 
 Documentation-only checks establish source/reference consistency, derivations and
 formatting, not new gameplay behavior or a new APK. Retain historical gameplay

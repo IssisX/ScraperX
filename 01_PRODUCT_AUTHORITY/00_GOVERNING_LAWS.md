@@ -1,6 +1,6 @@
 # SCRAPERX — GOVERNING LAWS v1.0
 
-**Status:** FROZEN BASELINE  
+**Status:** Established baseline, amended by explicit owner decisions; latest reconciliation 2026-09-30. Existing section labels are retained for reference continuity.
 **Repository:** `ScraperX`  
 **Game/app title:** `ScraperX`  
 **Purpose:** Define the non-negotiable design and engineering laws that all later requirements, GDD decisions, architecture, implementation, tools, content, and changes must obey.
@@ -12,6 +12,8 @@
 Legacy project history, old repositories, branches, builds, architecture, historical proper nouns, implementation assumptions, compatibility obligations, and absorbed context do not belong in the repository or authoritative design documents unless a requirement is explicitly re-established on its present merits.
 
 Past experience may inform judgment. Historical baggage may not become authority.
+
+This clean-room rule describes the project’s origin. It does not authorize discarding the current verified implementation, stable identifiers, or applicable contracts. Extend or repair the current authoritative owner unless the owner explicitly changes that scope.
 
 ## 2. ONE SKYSCRAPER, ONE PERSISTENT WORLD
 
@@ -113,6 +115,8 @@ The central gameplay is not merely navigating machinery.
 
 The player changes what the skyscraper can physically do.
 
+Mechanism encounters should ask the player to understand a visible physical condition and change it through grounded action: for example, position a load, alter balance, align a member, or establish support. The resulting capability must matter to ascent. A simple teeter-totter built from primitives qualifies when its physical behavior and traversal problem are useful; complexity and detailed assets are not prerequisites.
+
 Useful interventions may include moving mass, lifting, lowering, bracing, cutting, tensioning, unloading, rerigging, isolating, venting, rerouting, repositioning, supporting, repairing, deliberately damaging, or repurposing machinery and structure.
 
 ## 13. CAUSAL STACKING DEFINES SYSTEMIC PLAY
@@ -125,6 +129,8 @@ The exact chain is not scripted merely to produce spectacle.
 
 The world state creates the intermediate consequences.
 
+Chain length is not a quality target. Each link must add a readable consequence, a meaningful decision, or useful traversal. Reuse bodies, constraints and engineering, while varying the problem the player solves; recoloring or resizing the same automatic ride does not establish variety.
+
 ## 14. EMERGENCE MUST REMAIN LEGIBLE
 
 Complexity may produce unexpected outcomes. It may not become arbitrary chaos.
@@ -136,6 +142,10 @@ Important causal transitions must remain grounded in inspectable mechanisms and 
 Randomness may enrich deliberately stochastic phenomena, presentation, and variation.
 
 It may not arbitrarily decide consequential facts such as structural failure, machine success, route validity, topology, mission truth, or other deterministic physical outcomes when those outcomes should follow from authoritative state.
+
+**Owner’s causal law: “The initial state should determine the final state.”** For an interactive world, the complete initial physical state, fixed laws and ordered external inputs determine subsequent state. Player actions are physical inputs to that evolution, so different actions can legitimately produce different outcomes. Initial state includes poses, velocities, masses/inertias, attachments, stored energy, contact/material parameters and persistent mechanism state. Any permitted stochastic process also has explicit seeded state. An occupancy flag, elapsed-time cue or desired route result may not substitute for this causal evolution.
+
+Repeatability is an engineering requirement to verify within a declared build, solver, timestep and tolerance. This law does not claim that the present engine has proven whole-world or cross-platform bit-identical replay; TDD §5 owns that verification boundary.
 
 ## 16. MISSIONS DESCRIBE OUTCOMES, NOT HIDDEN SOLUTIONS
 
@@ -277,6 +287,8 @@ Combat, puzzles, instrumentation, destruction, and experimentation may exist.
 
 They remain subordinate to the governing game.
 
+Thoughtful physical problem solving belongs in the continuous ascent. The rejected drift is a sequence of isolated puzzles with hidden prescribed solutions; it is not a prohibition on requiring players to reason, experiment, reposition objects and exploit the changed world.
+
 ## 33. COMPLEXITY MUST PURCHASE PLAYER VALUE
 
 Advanced mathematics, physics, AI, procedural systems, simulation, tools, and architecture must materially purchase one or more of a new player verb, a new causal relationship, more truthful consequences, better reliability, greater control, better performance, reusable capability, or richer world behavior.
@@ -285,17 +297,17 @@ Given equal outcomes, prefer fewer authorities, synchronization boundaries, muta
 
 ## 34. THE GOVERNING GAME OUTRANKS INDIVIDUAL INSTRUCTIONS
 
-No later instruction—including one from Cory—automatically overrides these laws.
+The established game constrains agents’ unsolicited implementation choices. The owner’s latest explicit instruction may amend earlier project decisions, including these laws. Read this retained section label in that scope; it does not give stale documentation a veto over the owner.
 
-If a requested change would materially weaken skyscraper identity, ascent, athletic traversal, physical causality, persistent consequence, authority integrity, inhabited-world behavior, mobile viability, or the core systemic game, the damaging mechanism must be challenged.
-
-Preserve the legitimate objective where possible. Reject the part that harms the game.
+When a new instruction changes direction, apply it and reconcile the affected document owners. Explain concrete physical impossibilities or consequential tradeoffs using evidence, and resolve genuine missing information. Do not demand that the owner rewrite paperwork, repeat authorization, or accept a retired plan before work can continue.
 
 ## 35. CHANGE GATE
 
 A consequential proposed change must answer:
 
 **What player capability does this create?**
+
+**What must the player notice, decide and physically change, and how does this encounter differ from recent ones?**
 
 **Which authoritative state does it read or modify?**
 
