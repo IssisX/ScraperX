@@ -1,0 +1,209 @@
+extends Node3D
+
+## The launch rider is a visual rig, never a second physics body. Its origin
+## is the native capsule midpoint; an upright 1.86 m rider faces local -Z.
+## Every visible surface is an authored, bevelled or lofted ArrayMesh.
+## Parts are batched by material on each moving joint for the mobile renderer.
+
+const STATURE := 1.86
+const SOLE_Y := -0.90
+const HELMET_TOP_Y := 0.96
+
+var _built := false
+var _clock := 0.0
+var _materials: Dictionary = {}
+var _surfaces: Dictionary = {}
+var _torso: Node3D
+var _head: Node3D
+var _pelvis: Node3D
+var _limbs: Array[Dictionary] = []
+var _fingers: Array[Dictionary] = []
+
+
+func _ready() -> void:
+	build()
+
+
+func build() -> void:
+	if _built:
+		return
+	_built = true
+	name = "LaunchRider"
+	_palette()
+	_torso = _joint(self, "WorkJacket")
+	_pelvis = _joint(self, "HarnessPelvis")
+	_head = _joint(self, "ExpressiveHead")
+	_build_jacket()
+	_build_harness()
+	_build_face()
+	_build_helmet()
+	for side in [-1.0, 1.0]:
+		_build_arm(side)
+		_build_leg(side)
+	_finish_batches()
+	pose(0.0)
+
+
+func update_pose(player_position: Vector3, player_velocity: Vector3,
+		forward: Vector3, delta: float = 0.0, draw: float = 0.0) -> void:
+	build()
+	position = player_position
+	var horizontal := Vector3(forward.x, 0.0, forward.z)
+	if horizontal.length_squared() > 0.0001:
+		rotation = Vector3(0.0, atan2(-horizontal.x, -horizontal.z), 0.0)
+	_clock += maxf(delta, 0.0)
+	pose(player_velocity.length(), _clock, draw)
+
+
+func pose(speed: float, phase: float = 0.0, draw: float = 0.0) -> void:
+	if not _built:
+		build()
+	var airflow := smoothstep(3.0, 30.0, maxf(speed, 0.0))
+	var strain := clampf(draw, 0.0, 1.0)
+	var tuck := maxf(strain * 0.82, airflow * 0.72)
+	var shiver := sin(phase * 8.0) * airflow * 0.008
+	# A compact brace reads as a person being accelerated, with elbows and
+	# knees bending independently; the native midpoint stays fixed.
+	_torso.position = Vector3(0.0, -tuck * 0.055, -tuck * 0.028)
+	_torso.rotation.x = -tuck * 0.20
+	_pelvis.position = Vector3(0.0, -tuck * 0.035, tuck * 0.025)
+	_pelvis.rotation.x = tuck * 0.08
+	_head.position = _torso.position + _torso.basis * Vector3(0.0, 0.70, 0.0)
+	_head.rotation = Vector3(tuck * 0.07, shiver * 1.5, -shiver)
+	for limb in _limbs:
+		var s: float = limb.side
+		if limb.kind == "arm":
+			var shoulder := _torso.position + _torso.basis * Vector3(s * 0.248, 0.424, 0.0)
+			var elbow := Vector3(s * lerpf(0.295, 0.36, tuck),
+				lerpf(0.145, 0.21, tuck), lerpf(0.025, -0.10, tuck))
+			var wrist := Vector3(s * lerpf(0.28, 0.24, tuck),
+				lerpf(-0.115, 0.35, tuck), lerpf(-0.035, -0.31, tuck))
+			elbow.y += shiver * s
+			_span(limb.upper, shoulder, elbow, 0.29)
+			_span(limb.lower, elbow, wrist, 0.27)
+			limb.hand.position = wrist
+			limb.hand.basis = limb.lower.basis.orthonormalized()
+			limb.hand.rotate_object_local(Vector3.RIGHT, -tuck * 0.5)
+			limb.hand.rotate_object_local(Vector3.UP, s * tuck * 0.35)
+		else:
+			var hip := _pelvis.position + Vector3(s * 0.115, -0.105, 0.0)
+			var knee := Vector3(s * lerpf(0.13, 0.165, tuck),
+				lerpf(-0.475, -0.355, tuck), lerpf(-0.01, -0.34, tuck))
+			var ankle := Vector3(s * lerpf(0.145, 0.19, tuck),
+				lerpf(-0.80, -0.645, tuck), lerpf(0.03, -0.04, tuck))
+			_span(limb.upper, hip, knee, 0.38)
+			_span(limb.lower, knee, ankle, 0.34)
+			limb.boot.position = ankle
+			limb.boot.rotation = Vector3(-tuck * 0.24, s * 0.07, s * tuck * 0.05)
+	for finger in _fingers:
+		var curl := lerpf(0.19, 1.12, maxf(strain, airflow))
+		finger.base.rotation.x = -curl
+		finger.tip.rotation.x = -curl * 0.86
+
+
+func _palette() -> void:
+	for entry in [
+		["canvas", "455e52", 0.96, 0.0], ["panel", "617665", 0.96, 0.0],
+		["fold", "33473d", 0.98, 0.0], ["seam", "8d9b83", 0.99, 0.0],
+		["pants", "293b3b", 0.97, 0.0], ["pants_light", "3c4c49", 0.97, 0.0],
+		["rubber", "202625", 0.90, 0.0], ["glove", "816346", 0.90, 0.0],
+		["leather", "4a3b2c", 0.86, 0.0], ["stitch", "bba17a", 0.99, 0.0],
+		["strap", "9f7b3c", 0.90, 0.0], ["gold", "d0ab50", 0.72, 0.05],
+		["reflector", "e4d28d", 0.50, 0.12], ["metal", "aeb8b2", 0.36, 0.78],
+		["skin", "bc8b68", 0.90, 0.0], ["skin_shadow", "a57557", 0.94, 0.0],
+		["skin_light", "d0a181", 0.93, 0.0], ["hair", "342d27", 0.94, 0.0],
+		["lip", "845549", 0.94, 0.0], ["eye", "dfd8c1", 0.65, 0.0],
+		["iris", "415950", 0.55, 0.0], ["pupil", "192524", 0.52, 0.0],
+		["lamp", "f1e7b8", 0.35, 0.18]]:
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color(entry[1])
+		material.roughness = float(entry[2])
+		material.metallic = float(entry[3])
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_materials[entry[0]] = material
+
+
+func _joint(parent: Node3D, label: String) -> Node3D:
+	var result := Node3D.new()
+	result.name = label
+	parent.add_child(result)
+	return result
+
+
+func _build_jacket() -> void:
+	# The chest has shoulder breadth, a tapered waist, front/back thickness,
+	# hem overlap, collar and panelled construction rather than a pill.
+	_loft(_torso, "canvas", [Vector4(-0.08, 0.172, 0.112, 0.0),
+		Vector4(-0.025, 0.188, 0.125, 0.0), Vector4(0.17, 0.198, 0.132, 0.0),
+		Vector4(0.35, 0.231, 0.146, 0.012), Vector4(0.44, 0.231, 0.135, 0.018),
+		Vector4(0.50, 0.161, 0.105, 0.025)], 12)
+	_loft(_torso, "fold", [Vector4(-0.08, 0.175, 0.115, 0.0),
+		Vector4(-0.025, 0.190, 0.128, 0.0)], 12)
+	for s in [-1.0, 1.0]:
+		_poly(_torso, "panel", [Vector3(s * 0.020, 0.335, -0.133),
+			Vector3(s * 0.170, 0.35, -0.096), Vector3(s * 0.195, 0.24, -0.087),
+			Vector3(s * 0.024, 0.24, -0.137)], Vector3.FORWARD)
+		# Chest pocket with an actual flap, stitch and brass snap.
+		_box(_torso, "fold", Vector3(0.100, 0.089, 0.012), Vector3(s * 0.087, 0.259, -0.137), 0.005)
+		_box(_torso, "panel", Vector3(0.101, 0.030, 0.014), Vector3(s * 0.087, 0.302, -0.148), 0.004)
+		_box(_torso, "seam", Vector3(0.091, 0.003, 0.003), Vector3(s * 0.087, 0.288, -0.158), 0.001)
+		_box(_torso, "gold", Vector3(0.012, 0.008, 0.004), Vector3(s * 0.087, 0.299, -0.158), 0.002)
+		_poly(_torso, "panel", [Vector3(s * 0.075, 0.504, -0.087),
+			Vector3(s * 0.149, 0.472, -0.099), Vector3(s * 0.118, 0.391, -0.129),
+			Vector3(s * 0.043, 0.477, -0.108)], Vector3.FORWARD)
+		_line(_torso, "seam", Vector3(s * 0.177, 0.0, -0.088), Vector3(s * 0.203, 0.24, -0.082), 0.004)
+		_line(_torso, "reflector", Vector3(s * 0.07, 0.375, -0.137), Vector3(s * 0.205, 0.38, -0.068), 0.017)
+		# The folded hem and side seams catch daylight as the orbit passes.
+		_poly(_torso, "fold", [Vector3(s * 0.13, 0.06, -0.11),
+			Vector3(s * 0.184, 0.025, -0.08), Vector3(s * 0.169, 0.00, -0.096)], Vector3.FORWARD)
+	_box(_torso, "leather", Vector3(0.016, 0.45, 0.009), Vector3(0, 0.205, -0.143), 0.002)
+	_box(_torso, "metal", Vector3(0.010, 0.425, 0.007), Vector3(0, 0.205, -0.151), 0.001)
+	_box(_torso, "gold", Vector3(0.018, 0.027, 0.01), Vector3(0, 0.405, -0.162), 0.003)
+	_loft(_torso, "skin_shadow", [Vector4(0.49, 0.071, 0.065, 0),
+		Vector4(0.58, 0.067, 0.061, 0)], 10)
+	_loft(_torso, "fold", [Vector4(0.475, 0.090, 0.079, 0.007),
+		Vector4(0.533, 0.076, 0.074, 0.007)], 12)
+	# Small climbing pack, padded back panel and a strapped rope coil.
+	_box(_torso, "leather", Vector3(0.27, 0.35, 0.13), Vector3(0, 0.245, 0.178), 0.035)
+	_box(_torso, "fold", Vector3(0.23, 0.27, 0.027), Vector3(0, 0.245, 0.250), 0.018)
+	for y in [0.12, 0.21, 0.30, 0.39]:
+		_box(_torso, "panel", Vector3(0.195, 0.045, 0.025), Vector3(0, y, 0.267), 0.009)
+	for s in [-1.0, 1.0]:
+		_line(_torso, "strap", Vector3(s * 0.10, 0.07, 0.274), Vector3(s * 0.10, 0.41, 0.274), 0.026)
+	for ring in 3:
+		_loop(_torso, "stitch", Vector3(0.0, 0.265, 0.295 + ring * 0.014), Vector2(0.091, 0.119), 0.007, 20)
+	_box(_torso, "strap", Vector3(0.045, 0.09, 0.04), Vector3(0.0, 0.262, 0.329), 0.007)
+
+
+func _build_harness() -> void:
+	_loft(_pelvis, "pants", [Vector4(-0.19, 0.155, 0.112, 0.014),
+		Vector4(-0.075, 0.182, 0.125, 0.0), Vector4(0.01, 0.171, 0.117, 0)], 12)
+	_band(_pelvis, "leather", -0.035, 0.059, 0.194, 0.137, 0.011)
+	_band(_pelvis, "strap", -0.036, 0.037, 0.196, 0.140, 0.014)
+	_box(_pelvis, "metal", Vector3(0.064, 0.044, 0.018), Vector3(0, -0.035, -0.157), 0.006)
+	_box(_pelvis, "rubber", Vector3(0.041, 0.023, 0.007), Vector3(0, -0.035, -0.171), 0.003)
+	_box(_pelvis, "strap", Vector3(0.056, 0.15, 0.020), Vector3(0, -0.133, -0.124), 0.005)
+	for s in [-1.0, 1.0]:
+		var strap_points := [Vector3(s * 0.14, -0.035, -0.130),
+			Vector3(s * 0.154, 0.15, -0.142), Vector3(s * 0.16, 0.34, -0.136),
+			Vector3(s * 0.176, 0.447, -0.095), Vector3(s * 0.145, 0.493, 0.015),
+			Vector3(s * 0.16, 0.385, 0.165), Vector3(s * 0.15, 0.01, 0.145)]
+		for i in strap_points.size() - 1:
+			_line(_torso, "leather", strap_points[i], strap_points[i + 1], 0.044)
+			_line(_torso, "strap", strap_points[i] + Vector3(0, 0, -0.009),
+				strap_points[i + 1] + Vector3(0, 0, -0.009), 0.029)
+		_box(_torso, "metal", Vector3(0.05, 0.04, 0.025), Vector3(s * 0.158, 0.315, -0.160), 0.005)
+		_box(_torso, "rubber", Vector3(0.029, 0.022, 0.012), Vector3(s * 0.158, 0.315, -0.179), 0.003)
+		# Hip carabiners have open centres, gates and visible attachment loops.
+		_loop(_pelvis, "metal", Vector3(s * 0.185, -0.096, -0.123), Vector2(0.030, 0.048), 0.006, 12)
+		_line(_pelvis, "gold", Vector3(s * 0.205, -0.133, -0.132),
+			Vector3(s * 0.211, -0.080, -0.132), 0.009)
+		_line(_pelvis, "leather", Vector3(s * 0.18, -0.012, -0.124),
+			Vector3(s * 0.182, -0.066, -0.124), 0.017)
+		_line(_pelvis, "stitch", Vector3(s * 0.177, -0.11, 0.04),
+			Vector3(s * 0.23, -0.20, 0.105), 0.009)
+		_line(_pelvis, "stitch", Vector3(s * 0.23, -0.20, 0.105),
+			Vector3(s * 0.20, -0.27, 0.11), 0.009)
+	_loop(_pelvis, "metal", Vector3(0, -0.106, -0.166), Vector2(0.028, 0.027), 0.006, 12)
+
+

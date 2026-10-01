@@ -1,0 +1,71 @@
+{
+  "format_version": 1,
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "original_scratch_base": "f7a584dcceb576068f62e030e35d1b88e5cd4c5a",
+  "recovery_date": "2026-10-01",
+  "status": "partial recovery in progress",
+  "filesystem_access_restored": false,
+  "files": [
+    {
+      "archive_path": "03_EXECUTION/PLANNING/SCRATCH_RECOVERY_2026-10-01/tools/run-godot.sh",
+      "original_path": "/tmp/scraperx-runtime/run-godot.sh",
+      "blob_sha": "79b1f6bbf1094ea087bd52f870cf97673d887a94",
+      "mode": "100755",
+      "characters": 234,
+      "completeness": "complete retained helper",
+      "provenance": "Exact contents retained by settings agent; root uploaded and verified exact text readback. Not rerun after outage."
+    },
+    {
+      "archive_path": "03_EXECUTION/PLANNING/SCRATCH_RECOVERY_2026-10-01/source/godot/tests/climber_character_test.initial.gd",
+      "original_path": "godot/tests/climber_character_test.gd",
+      "blob_sha": "1fbada3c5833ea3ec2c2472ffd295642e7eda56a",
+      "mode": "100644",
+      "utf8_bytes": 5034,
+      "completeness": "complete earlier snapshot",
+      "provenance": "Exact initial Add File payload retained by character agent; uploaded and exact-compared by agent, read back by root. Precedes side-capture and comedy-test patches; not final test."
+    },
+    {
+      "archive_path": "03_EXECUTION/PLANNING/SCRATCH_RECOVERY_2026-10-01/parts/climber_character/base-001.gd.part",
+      "original_path": "godot/presentation/climber_character.gd",
+      "blob_sha": "8046a81bbf5902e542584ea9ff0719409ea8f2f9",
+      "mode": "100644",
+      "utf8_bytes": 9636,
+      "completeness": "exact partial initial-source chunk 1",
+      "provenance": "Exact initial Add File payload from extends Node3D through complete _build_harness and two separating blank lines. Requires forthcoming ordered chunks and later successful patches. Agent and root readbacks verified."
+    },
+    {
+      "archive_path": "03_EXECUTION/PLANNING/SCRATCH_RECOVERY_2026-10-01/source/godot/tests/slingshot_audio_test.pre-final-patch.gd",
+      "original_path": "godot/tests/slingshot_audio_test.gd",
+      "blob_sha": "fae8a790f238b935e00bbd5b01278eb972f819f4",
+      "mode": "100644",
+      "utf8_bytes": 12204,
+      "completeness": "complete earlier snapshot before final patch",
+      "provenance": "Exact retained file-read payload before final comedy/touch assertion patch. Contains the earlier misplaced energy comparison. Agent exact text comparison and root readback verified; final patch/source still pending."
+    }
+  ],
+  "known_gaps": [
+    {
+      "area": "native launcher and landing source",
+      "files": [
+        "src/sim/slingshot.hpp",
+        "src/sim/slingshot.cpp",
+        "tests/slingshot_machine_tests.cpp",
+        "tests/landing_tests.cpp"
+      ],
+      "reason": "Agent context compacted; no full file payload or complete historical patch survives; source filesystem remains inaccessible."
+    },
+    {
+      "area": "slingshot presentation",
+      "files": [
+        "godot/presentation/slingshot_view.gd",
+        "godot/presentation/slingshot_wood.gdshader",
+        "godot/presentation/slingshot_leather.gdshader",
+        "godot/presentation/slingshot_speed.gdshader",
+        "godot/presentation/landing_camera_response.gd"
+      ],
+      "reason": "Agent context compacted; full add-file bodies and patch sequences unavailable. Only failed pending touch draw-gating edit survives."
+    }
+  ],
+  "note": "These are preserved retained tool payloads, not newly implemented replacements. Runtime verification after recovery has not occurred. Initial snapshots and partial chunks are explicitly labeled."
+}
