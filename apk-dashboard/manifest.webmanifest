@@ -1,7 +1,7 @@
 {
   "name": "ScraperX Builds",
   "short_name": "ScraperX APKs",
-  "start_url": "./index.html?v=static-release-links-v1",
+  "start_url": "./index.html?v=rich-stable-v2",
   "display": "standalone",
   "background_color": "#0a0c10",
   "theme_color": "#0a0c10",
