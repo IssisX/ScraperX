@@ -196,6 +196,10 @@ Ordinary parkour is not dominated by a universal stamina tax.
 
 Fatigue is **situational**: long hangs, extreme climbs, injury, or exceptional exertion may matter when the situation justifies it.
 
+## 7.6 Deferred movement enhancement
+
+Owner request, 2026-09-26: allow a backflip onto a support when the takeoff, clearance, trajectory and landing conditions permit it. This is a later enhancement, not part of the current ascent slice and not a claim of current functionality.
+
 ---
 
 # 8. Height, falling, parachuting, and fear
@@ -356,6 +360,10 @@ Machine success must follow the authoritative machine state and physical constra
 
 Large-scale causal stacking is a defining feature.
 
+The owner-directed readability rule: large rolling masses, gravity drops, levers, pendulums, falling slabs and direct contacts do the heavy work. Their causal handoffs must be visible from ordinary play positions. Small retainers may release stored energy, but a long sequence of tiny, mostly invisible pin/valve/rigging operations is not the desired core play. Prefer fewer larger useful actions over intricate machinery that only telemetry explains.
+
+**Owner correction, 2026-09-27: a continuous ordinary stair or ramp that bypasses the authored machines and parkour is rejected.** This supersedes any earlier fallback requirement. Progress comes from authored parkour and working mechanisms. Short local access surfaces and machine-created crossings may serve an encounter; they cannot form a continuous easy bypass. A passing automated route does not establish acceptable level design.
+
 A representative chain is:
 
 **reposition mass → alter load/alignment → change machinery or process behavior → change geometry/hazard/access → change traversal → change inhabitant or mission possibilities.**
@@ -367,6 +375,21 @@ The world owns the intermediate state. If the player reaches the same valid outc
 Causal complexity must remain legible enough that the player can form useful hypotheses from visible, audible, spatial, or operational evidence.
 
 ScraperX should prefer mechanisms with multiple plausible uses over one-purpose puzzle devices.
+
+**Owner clarification, 2026-09-30: creative physical challenges built from primitives.** Boxes, beams, cylinders, wedges, plates and simple joints are valid production building blocks. Make their dimensions, connections and operation legible. A simple working mechanism can provide a strong encounter; visual complexity and a large number of stages are not measures of quality.
+
+Author each encounter around a clear player problem:
+
+- **Read:** show the receiving route, the current physical obstruction and the relevant load, support or connection from reachable play positions.
+- **Reason:** give the player a useful choice about position, balance, alignment, restraint, connection, timing or route.
+- **Act:** let normal movement and available physical interactions change the relevant world state. Moving or adjusting an object must affect forces, constraints or access. An interaction must not merely set a solved flag.
+- **Observe:** a good attempt, an ineffective attempt and a recoverable miss have understandable physical results.
+- **Traverse:** the changed state becomes parkour, a crossing or transport onto a real receiving surface. Demand movement skill as the encounter warrants.
+- **Continue or recover:** leave coherent aftermath and a physically funded reset or an explicit checkpoint recovery. Do not silently replenish spent energy or replace lost objects.
+
+Before repeating a mechanical family, ask what the player notices, chooses, manipulates and traverses differently. Changing size, color, height or waiting time alone is insufficient. Do not impose a fixed rotation of machine types. Repeated step-on rides followed by long routine climbs do not meet the requested challenge.
+
+The current delivery objective is continuous ground-to-300 m traversal through varied working machinery and parkour, preserving a proven route as new slices are verified. The 1,600 m summit remains the product destination. Neither number establishes an implemented or verified height. On this checkout the proven route is the one recorded in `00_START_HERE.md` §2, not another branch's campaign.
 
 ---
 
@@ -556,6 +579,8 @@ A proposed feature, content direction, or implementation shortcut fails the Scra
 14. **It creates a conventional combat loop as a primary progression system.**
 15. **It adds advanced simulation, mathematics, or dependencies without buying meaningful player capability, truthful consequence, reliability, performance, or reuse.**
 16. **It cannot plausibly ship and run on the actual Fold-class target without sacrificing the game's defining systems.**
+
+17. **It repeats a recent machine's player problem with only cosmetic or dimensional changes, or adds stages that do not improve decisions, readable causality or traversal.**
 
 If a requested feature fails one of these tests, the correct project action is to redesign or reject the feature—not to rationalize the regression.
 

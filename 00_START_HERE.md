@@ -17,6 +17,17 @@ The climb is won by operating real machines under finite limits. A route opens b
 moved, not because a predicate flipped. Nothing teleports, nothing has unlimited force, nothing
 bypasses collision, and no mechanism may strand the player without a legal recovery path.
 
+**Owner correction, through 2026-09-30, binding on this branch.** The complete initial physical
+state, the fixed laws and the ordered external inputs determine subsequent state. Player actions
+are those inputs, so different actions may produce different outcomes. An occupancy flag, an
+elapsed-time cue or a desired route result may not stand in for that evolution. Do not
+double-count the player's weight: standing contact already carries it. A continuous ordinary
+stair or ramp that bypasses the authored machines and parkour is rejected. Primitives are valid.
+Repeating the same automatic ride at a new size is not variety. Godot owns input and
+presentation; native state owns the consequence. Actions on this checkout are not a Fold
+playtest. This correction does not move this checkout onto `ChatGPT` or adopt that branch's
+package identity or campaign layout.
+
 ---
 
 ## 2. Current position

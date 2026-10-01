@@ -209,6 +209,8 @@ If subsystems later parallelize, they must preserve the same tick dependency gra
 
 ScraperX needs reproducible causes, debugging, checkpoint integrity, and reliable tests. It does **not** currently require multiplayer lockstep or bit-identical desktop↔Android replay.
 
+Governing Laws §15 defines the causal contract: complete initial state plus fixed laws and ordered external inputs determines subsequent state. Include controller and constraint state, stored energy and any explicit RNG state in the reproducibility boundary. Record exact engine/build, platform, timestep, command stream, compared observables and tolerances. A repeated subset of observables does not prove complete checkpoint state or whole-world replay.
+
 Therefore:
 
 - same-build, same-command-stream deterministic replay is required for test scenes;
@@ -315,6 +317,8 @@ Grounded locomotion is relative to that support.
 Detachment/jump preserves relevant inherited support-point velocity.
 
 No Godot parenting trick is allowed to substitute for this.
+
+Trace a support's stable entity ID to its actual native body before calculating point velocity; contact detection alone is insufficient if that lookup returns no body. For the current dynamic player, standing weight and landing impulses already pass through native contact. An added weight force would double-count them. Account separately for traversal modes that disable gravity and apply their own load.
 
 ### 8.5 Traversal assistance
 

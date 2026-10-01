@@ -129,7 +129,7 @@ A slice may cross several files or subsystems if the causal path genuinely requi
 
 A slice must not opportunistically expand into unrelated systems because they are nearby.
 
-Prefer one reusable primitive that unlocks several later behaviors over several disconnected features.
+Reuse verified bodies, shapes, joints and owner interfaces when they fit the derived assembly. Reusing engineering does not justify repeating the same player problem. Compare the intended experience against GDD §16 before selecting a familiar mechanism.
 
 ---
 
@@ -178,6 +178,8 @@ Use:
 - actual Fold-class execution for Fold behavior.
 
 Never upgrade one evidence class into another.
+
+For visual evidence, explicitly invoke the available capture path, verify that genuine images were produced, open them and inspect the relevant approach, action, contact, motion and supported arrival. Record the source, scenario and views actually inspected. A capture filename or a passing log is not visual inspection. Screenshots and an APK do not prove each other. Still frames alone cannot prove impulse transfer or continuity; pair them with runtime state traces and normal-input execution.
 
 ---
 
