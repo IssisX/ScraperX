@@ -1,5 +1,7 @@
 # Sol ascent implementation package
 
+**2026-10-01 continuation update:** The implementation and CI delivery milestones below have advanced since this plan was written. Source `4996a6e` passed [run 36788027524](https://github.com/IssisX/ScraperX/actions/runs/36788027524): full native 24/24, normal rendered grade→+110 m, explicit captures, retained gates and Android export. New image inspection and device play remain open. For the ChatGPT environment, begin with [CONTINUE_HERE_CHATGPT_CODEX.md](../../CONTINUE_HERE_CHATGPT_CODEX.md); its dated evidence supersedes older pending-run wording here. Keep this plan's task labels and physical constraints.
+
 > **For agentic workers:** Open the installed Superpowers root `SKILL.md`, then `skills/executing-plans/MODULE.md`. Apply the installed Causal Mechanism Compiler and `$threespine` to the relevant physical interfaces. The owner selected a model handoff: execute this package after they switch models; do not ask for permission at every local construction or test step.
 
 **Goal:** Deliver the existing +77→88 m braced bay and implement a substantial new +88→110 m north service-frame climb, preserving continuous ascent from grade and all earlier working machinery.
@@ -124,8 +126,9 @@ The broad ARM executable was separately run and still fails the already reproduc
 - [x] Independent review, support-post correction and final 20-test rerun.
 - [x] Substantial Sol package, bounded section framing, file ownership and acceptance.
 - [x] Follow the prior `2e622f7` candidate to successful exact-source Actions completion; it proves the previous +77 m rendered boundary.
-- [ ] Task 1: AS-021 full rendered touch and visual inspection.
+- [x] Follow `4996a6e` to green Actions completion: full native 24/24, grade→+110 m touch, retained gates and APK export. Downloaded APK checksum and CI identity/signing evidence checked at migration handoff.
+- [ ] Task 1: AS-021 full rendered touch passed in that run; visual inspection remains open.
 - [x] Task 2: AS-022 lower and upper native section through +110 m, with one Kit/render part list.
 - [x] Task 3: release, retry, varied catch starts, 90/60/360 Hz caller partitions and both checkpoint recoveries pass native.
-- [ ] Task 4: continuous rendered grade→+110 m, retained gates and exact-source APK.
+- [ ] Task 4: continuous rendered grade→+110 m, retained gates and exact-source APK passed; inspect AS-021/AS-022 captures and finish bounded visual acceptance records.
 - [ ] Device execution and sustained Fold performance when the device path actually permits observation.
