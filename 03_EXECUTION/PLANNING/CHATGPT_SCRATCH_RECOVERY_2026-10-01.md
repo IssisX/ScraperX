@@ -140,7 +140,7 @@ History is captured before every native fixed tick and explicitly rebased after 
 
 ## Presentation audio settings and debug tools
 
-Implemented Godot work includes slingshot_view.gd, wood/leather/speed shaders, main.gd, landing_camera_response.gd, climber_character.gd, audio_director.gd, sound_bank.gd, pause/settings scripts, and tests. Locate exact file paths with rg; authoritative known paths include godot/main.gd, godot/presentation/landing_camera_response.gd and godot/tests.
+Implemented Godot work includes slingshot_view.gd, wood/leather/speed shaders, main.gd, landing_camera_response.gd, climber_character.gd, audio_director.gd, sound_bank.gd, pause/settings scripts, and tests. Locate exact file paths with rg; authoritative known paths include godot/presentation/main.gd, godot/presentation/landing_camera_response.gd and godot/tests.
 
 Presentation:
 - Substantial beveled wood matching native collision members; thick rubber, stitched leather, metal hardware and actual retrieval handwheel.
@@ -309,3 +309,93 @@ Update the existing authoritative documentation and running to-do as each real b
 The connector confirmed ChatGPT was still at f7a584dcceb576068f62e030e35d1b88e5cd4c5a when this recovery record was prepared. The current remote gameplay therefore does not contain the local AS-023 slingshot changes described above. This documentation commit preserves the handoff only. Recover the original scratch tree if the platform can restore it; otherwise use the source inventory and prior evidence here to guide explicitly labeled reimplementation.
 
 The save was requested by the owner after the environment failed. It does not change product authority, merge gameplay code, or establish current runtime verification. No new APK/CI candidate should be inferred from this file.
+
+## Additional cached implementation details
+
+These details came from the implementation agents after the outage. They preserve known paths, small cached fragments and planned fixes. Full source text remains unavailable; this appendix is not a source archive.
+
+### Exact source locations
+
+```text
+src/sim/slingshot.hpp
+src/sim/slingshot.cpp
+src/sim/simulation.hpp
+src/sim/simulation.cpp
+tests/slingshot_machine_tests.cpp
+tests/landing_tests.cpp
+
+godot/presentation/main.gd
+godot/presentation/slingshot_view.gd
+godot/presentation/slingshot_wood.gdshader
+godot/presentation/slingshot_leather.gdshader
+godot/presentation/slingshot_speed.gdshader
+godot/presentation/climber_character.gd
+godot/presentation/landing_camera_response.gd
+godot/presentation/ui/ui_test_driver.gd
+godot/tests/slingshot_view_test.gd
+godot/tests/slingshot_visual_probe.gd
+godot/tests/landing_camera_test.gd
+```
+
+The earlier godot/main.gd reference is corrected to godot/presentation/main.gd.
+
+### Native details to preserve
+
+- Gimbal translation is fixed. Rotation X is limited to .33..1.50 radians, Y to -.82..+.82, Z fixed. Input targets clamp yaw to -.8..+.8 and elevation to .35..1.48.
+- Desired angular speed is bounded at .70 rad/s; torque at 20,000 Nm; predicted positive mechanical power at 200,000 * .88 W.
+- Gravity compensation uses the actual rail. Actual torque work uses measured quaternion displacement: EnsureWPositive(), then 2*atan2(length(xyz), w). This avoids tiny-angle acos precision loss. Positive work is divided by .88 for source accounting; negative work is dissipation.
+- Aim settles at angular error <.003 rad and angular speed <.025 rad/s.
+- At geometric track exit, the step listener disables the launch constraint/harness; owner code removes them later. Do not remove constraints inside the callback.
+- Spring forces are replaced by substep deltas because Jolt accumulated forces survive until the outer Update ends.
+- Weak release stays latched unless available spring work exceeds actual track gravitational work plus 1,000 J.
+- Temporary player/pouch collision exclusion ends at actual world-AABB separation with .10 m clearance. Preserve the original player collision group through reset/restore.
+- The cached corrected checkpoint rider-membership expression is:
+
+```cpp
+saved.seated || (saved.released && !saved.recovering)
+```
+
+### Pending native changes
+
+These are reconstruction instructions for the remaining changes, not applied source.
+
+1. In slingshot.cpp pre_step, remove auto-attach based solely on draw_input > 0 while physically in the pouch. Explicit Action authorizes boarding.
+2. In create_guide, retain a passive zero upper stop when held draw is <=.0001 m.
+3. In drive_ratchet, open travel only for a seated, settled, positive manual draw, or already paid retained draw. Illustrative predicate, with names adapted to actual source:
+
+```cpp
+allow_draw = harness_present && aim_ready && draw_effort > 0;
+upper_limit = (allow_draw || ratchet_draw_m > 0.0001)
+    ? maximum_draw_m
+    : 0.0;
+```
+
+4. Add an independent atomic carrier-contact witness, with a proposed note_carrier_contact() entry point. Contact Added/Persisted callbacks notify it for entity 2901. Consume it each tick and invalidate an initialized ledger during aim/draw as well as release/recovery. The pouch witness alone is insufficient because its current invalidation is phase-gated.
+5. Exercise actual production-world ground/tower geometry at low/high pitch and yaw extremes; bounded waits use actual aim_ready. Check fixed anchors, achieved angles and source peak <=200 kW.
+
+### Presentation integration contracts
+
+```text
+SlingshotView:
+  setup(main)
+  update_view(delta, state, player_render_position, player_velocity, camera)
+  get_simulation_scale()
+  is_cinematic_active()
+  cancel_cinematic()
+
+ClimberCharacter:
+  reaction(state, velocity, launch_phase)
+  update_pose(position, velocity, forward, delta, draw)
+
+LandingCameraResponse:
+  update(native_landing_dictionary, delta, enabled, right, forward)
+  reset()
+  translation: Vector3
+  rotation: Vector2
+```
+
+Read landing_approach_energy_j directly as normal energy; do not subtract tangent energy. Use interpolated native getters for visible transforms while inputs, energy and prediction read native authoritative state. Keep requested aim separate from actual rail angles. Gate trajectory forecast on seated && !released.
+
+Retrieval control position (7.5, .70, -56.8) is the post location, not a valid standing capsule centre. Touch staging uses approximately (7.5, .92, -57.2).
+
+The genuine touch scenario names are touch_slingshot and touch_slingshot_landing. No new keyboard/gamepad proof is required for this slice.
