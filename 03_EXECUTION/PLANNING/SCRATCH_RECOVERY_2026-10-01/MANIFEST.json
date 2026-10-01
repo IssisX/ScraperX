@@ -4,8 +4,8 @@
   "branch": "ChatGPT",
   "original_scratch_base": "f7a584dcceb576068f62e030e35d1b88e5cd4c5a",
   "recovery_date": "2026-10-01",
-  "status": "partial recovery in progress",
-  "filesystem_access_restored": false,
+  "status": "original filesystem recovered; full original checkout and evidence archived privately; this directory remains earlier partial fallback",
+  "filesystem_access_restored": true,
   "files": [
     {
       "archive_path": "03_EXECUTION/PLANNING/SCRATCH_RECOVERY_2026-10-01/tools/run-godot.sh",
@@ -44,7 +44,8 @@
       "provenance": "Exact retained file-read payload before final comedy/touch assertion patch. Contains the earlier misplaced energy comparison. Agent exact text comparison and root readback verified; final patch/source still pending."
     }
   ],
-  "known_gaps": [
+  "note": "Earlier partial tool-payload recovery is retained as history. Full original files are now preserved in the private archive. Runtime verification after recovery has not occurred.",
+  "resolved_outage_gaps": [
     {
       "area": "native launcher and landing source",
       "files": [
@@ -53,7 +54,8 @@
         "tests/slingshot_machine_tests.cpp",
         "tests/landing_tests.cpp"
       ],
-      "reason": "Agent context compacted; no full file payload or complete historical patch survives; source filesystem remains inaccessible."
+      "reason": "Agent context compacted; no full file payload or complete historical patch survives; source filesystem remains inaccessible.",
+      "resolution": "Original source filesystem restored; file preserved in the verified complete private checkout archive."
     },
     {
       "area": "slingshot presentation",
@@ -64,8 +66,26 @@
         "godot/presentation/slingshot_speed.gdshader",
         "godot/presentation/landing_camera_response.gd"
       ],
-      "reason": "Agent context compacted; full add-file bodies and patch sequences unavailable. Only failed pending touch draw-gating edit survives."
+      "reason": "Agent context compacted; full add-file bodies and patch sequences unavailable. Only failed pending touch draw-gating edit survives.",
+      "resolution": "Original source filesystem restored; file preserved in the verified complete private checkout archive."
     }
   ],
-  "note": "These are preserved retained tool payloads, not newly implemented replacements. Runtime verification after recovery has not occurred. Initial snapshots and partial chunks are explicitly labeled."
+  "full_archive": {
+    "file": "scraperx-chatgpt-scratch-full.tar.gz",
+    "bytes": 5648417,
+    "sha256": "b407b2770b665709b84f7b1a22d0d7c24e8510e2ae3b175d037bac43459e1918",
+    "storage": "Existing owner-private ScraperX recovery Page attachments",
+    "source_files": 597,
+    "source_directories": 237,
+    "differences": 0,
+    "git_fsck": "passed",
+    "self_contained_git": true
+  },
+  "evidence_archive": {
+    "file": "evidence-and-logs.tar.gz",
+    "bytes": 45709851,
+    "sha256": "8c95eed56da949a30ccd5e63fd30ded62a6992c824d0681b7208987bf14fa2d9",
+    "files": 281,
+    "private_parts": 6
+  }
 }

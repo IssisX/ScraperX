@@ -2,7 +2,7 @@
 
 This document preserves the ScraperX development state and recovery instructions from the disconnected Codex environment on October 1, 2026. It is a recovery artifact for the owner and a successor coding session, not another product specification.
 
-**Backup scope:** This document contains the known implementation state, source locations, prior test receipts, exact available pending patches, architecture constraints, and a running to-do. It does not contain the complete modified source tree or a verified Git patch. The executor disconnected before the actual uncommitted files could be exported. Do not treat this document as proof that the code itself has been backed up.
+**Backup scope — recovery completed, October 1, 2026:** The original scratch environment became accessible again. The full original checkout, including `.git`, tracked modifications and untracked source, is preserved in the owner’s existing private recovery Page as `scraperx-chatgpt-scratch-full.tar.gz` (5,648,417 bytes; SHA-256 `b407b2770b665709b84f7b1a22d0d7c24e8510e2ae3b175d037bac43459e1918`). All 597 files and 237 directories match the original exactly by path, type, bytes and permissions. An isolated extraction is a self-contained Git worktree and passes `git fsck --full`. The separate evidence archive contains 281 files and is also uploaded, in six checksum-verified parts. This GitHub directory remains the earlier partial fallback; the full archive is a separate private attachment. See [integrity receipt](SCRATCH_RECOVERY_2026-10-01/INTEGRITY_VERIFICATION.json). The latest gameplay candidate still requires its outstanding runtime verification.
 
 **Current status:** Final slingshot verification is incomplete. Earlier successful results predate the latest physical aiming mechanism. The environment returned 409 environment_offline and subsequently failed to start with an executor configuration capabilities error. Some final patches were rejected before mutation; some documentation edits have an unknown outcome and must be inspected before retrying.
 
@@ -17,7 +17,7 @@ This document preserves the ScraperX development state and recovery instructions
 - GPU screenshots: /tmp/scraperx-runtime/slingshot-visual-proof
 - Character captures: /tmp/scraperx-runtime/climber-proof and climber-comedy-proof
 
-All gameplay changes remained local and uncommitted at the outage. No gameplay-source push, merge, deployment, or final Android release occurred. This recovery document is the separately saved documentation artifact. Cloning the remote branch alone will not recover these local changes. Resuming a CLI session does not automatically move the filesystem.
+All gameplay changes remained local and uncommitted at the outage. No gameplay-source push, merge, deployment, or final Android release occurred. This recovery document and the earlier GitHub fragments preserve the outage history. The full original source is now a separately saved private archive; cloning the remote branch alone still does not include the local gameplay changes. Resuming a CLI session does not automatically move the filesystem.
 
 Before changing recovered files, capture the entire scratch clone including untracked sources. A Git diff alone omits new untracked files. Preserve the whole evidence directory too. Verify the archive contents and the Git patch against the original head before claiming a source backup exists.
 
@@ -269,7 +269,7 @@ Replace the broad future-authoring checkbox in the existing handoff:
 
 ## Running to do at the outage
 
-- [ ] Recover the actual scratch tree and evidence; archive tracked AND untracked files before more edits.
+- [x] Recover the original scratch tree and evidence; archive tracked AND untracked files before edits, upload independent private copies, verify all source bytes and isolated Git integrity.
 - [ ] Read current files to resolve unknown patch outcomes; do not recreate source from this summary as if it were a backup.
 - [ ] Apply coordinated explicit BOARD/approach draw gating and passive seat stop until actual manual draw.
 - [ ] Expose native aim_locked through Simulation, bridge and Godot; preserve touch requested-angle persistence.
@@ -295,7 +295,7 @@ No final approval or completion claim is justified until these gates are closed.
 Paste this into a successor coding session after recovering the actual scratch files:
 
 ```text
-Continue ScraperX branch ChatGPT from the recovered uncommitted scratch tree. First preserve the entire tree including untracked files and evidence, then inspect current source and existing AGENTS/authority documentation. The recovery Page is a handoff, not a source backup or competing product authority.
+Continue ScraperX branch ChatGPT from the recovered uncommitted scratch tree. First preserve the entire tree including untracked files and evidence, then inspect current source and existing AGENTS/authority documentation. The recovery Page now contains the verified full original checkout archive and separate evidence archive. Its prose remains a handoff, not a competing product authority.
 
 Maintain Jolt/C++ consequential physics and Godot presentation/input/camera/HUD/Android ownership. ScraperX is a 1000 m-plus physically causal first-person industrial ascent game; the slingshot is one opening encounter. Current focus is touch controls, sturdy visible wood/thick bands/leather, exaggerated manual player pull-back, persistent physical torque-driven aim, high actual launch, visible humorous human climber, all-contact momentum/footwork recovery and polished POV. Face detail is not a priority.
 
@@ -306,13 +306,13 @@ Update the existing authoritative documentation and running to-do as each real b
 
 ## GitHub recovery checkpoint
 
-The connector confirmed ChatGPT was still at f7a584dcceb576068f62e030e35d1b88e5cd4c5a when this recovery record was prepared. The current remote gameplay therefore does not contain the local AS-023 slingshot changes described above. This documentation commit preserves the handoff only. Recover the original scratch tree if the platform can restore it; otherwise use the source inventory and prior evidence here to guide explicitly labeled reimplementation.
+The connector confirmed ChatGPT was still at f7a584dcceb576068f62e030e35d1b88e5cd4c5a when this recovery record was prepared. The current remote gameplay therefore does not contain the local AS-023 slingshot changes described above. This documentation commit preserves the handoff only. The platform subsequently restored access to the original scratch tree. Use the verified full original archive; reimplementation from summary fragments is no longer necessary.
 
 The save was requested by the owner after the environment failed. It does not change product authority, merge gameplay code, or establish current runtime verification. No new APK/CI candidate should be inferred from this file.
 
 ## Additional cached implementation details
 
-These details came from the implementation agents after the outage. They preserve known paths, small cached fragments and planned fixes. Full source text remains unavailable; this appendix is not a source archive.
+These details came from the implementation agents after the outage. They preserve known paths, small cached fragments and planned fixes. At the time these notes were collected, full source text was unavailable. The original filesystem and full archive are now recovered; inspect their actual files before applying any proposed patch from this historical appendix.
 
 ### Exact source locations
 

@@ -1,0 +1,66 @@
+{
+  "result": "PASS",
+  "verified_at_utc": "2026-10-01T18:32:30.181976+00:00",
+  "scope": "Every archived repository member compared with the current original by path, type, file bytes via SHA256, symlink target and permission mode. Every evidence file fully read and inventoried with its SHA256. Git checked only in an isolated extracted copy. Original repository was read only; no builds or source modifications.",
+  "full_repository_archive": {
+    "path": "/workspace/scraperx-rescue-2026-10-01/scraperx-chatgpt-scratch-full.tar.gz",
+    "compressed_bytes": 5648417,
+    "sha256": "b407b2770b665709b84f7b1a22d0d7c24e8510e2ae3b175d037bac43459e1918",
+    "member_count": 834,
+    "type_counts": {
+      "directory": 237,
+      "file": 597
+    },
+    "uncompressed_regular_bytes": 17781314,
+    "top_level_counts": {
+      "scraperx-chatgpt-scratch": 834
+    },
+    "unsafe_member_paths": [],
+    "duplicate_member_paths": [],
+    "current_original": "/tmp/scraperx-chatgpt-scratch",
+    "differences_from_current_original": [],
+    "matches_expected_sha256": true,
+    "inventory_receipt": {
+      "path": "/workspace/scraperx-rescue-2026-10-01/source-archive-inventory.json",
+      "sha256": "0fc8e8796fa2e10a9add990f73a3ba5c0ceda314c6c83f26f702f19bb7420c72",
+      "member_count": 834
+    }
+  },
+  "evidence_archive": {
+    "path": "/workspace/scraperx-rescue-2026-10-01/evidence-and-logs.tar.gz",
+    "compressed_bytes": 45709851,
+    "sha256": "8c95eed56da949a30ccd5e63fd30ded62a6992c824d0681b7208987bf14fa2d9",
+    "member_count": 284,
+    "type_counts": {
+      "directory": 3,
+      "file": 281
+    },
+    "uncompressed_regular_bytes": 126224510,
+    "top_level_counts": {
+      "scraperx-current-evidence": 61,
+      "scraperx-recovery": 223
+    },
+    "unsafe_member_paths": [],
+    "duplicate_member_paths": [],
+    "current_original": null,
+    "differences_from_current_original": null,
+    "inventory_receipt": {
+      "path": "/workspace/scraperx-rescue-2026-10-01/evidence-archive-inventory.json",
+      "sha256": "f6219bb2f8d498d6fb90efbc1c271e7ea3bc58a9b3be9a4c53c90b9d06d8931f",
+      "member_count": 284
+    }
+  },
+  "git_self_containment": {
+    "self_contained": true,
+    "archive_git_entry_type": "directory",
+    "isolated_extraction_used": true,
+    "all_git_worktree_and_object_paths_internal_to_extracted_archive": true,
+    "has_external_object_alternates": false,
+    "inside_worktree": true,
+    "git_fsck_full_exit_code": 0,
+    "git_fsck_output_line_count": 0,
+    "git_status_exit_code": 0,
+    "git_status_entry_count": 46,
+    "limitation": "Native build dependencies and runtime tools outside this repository are separate from Git self containment."
+  }
+}
