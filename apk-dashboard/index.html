@@ -241,7 +241,7 @@
           '<div>Branch<b>' + esc(model.branch) + '</b></div>' +
           '<div>APK<b class="size">—</b></div>' +
           '<div>Build<b class="sha">—</b></div>' +
-          '<div>Built<b class="built">—</b></div>' +
+          '<div>Published<b class="built">—</b></div>' +
         '</div>' +
         '<a class="download" aria-disabled="true">Download ' + esc(model.file) + '</a>' +
         '<a class="details" target="_blank" rel="noopener">Open successful build ↗</a>' +
@@ -249,6 +249,62 @@
     }
 
     document.getElementById('cards').innerHTML = models.map(card).join('');
+
+    const cacheKey = 'scraperx-apk-dashboard-release-v1';
+
+    function sourceSha(releaseBody, label) {
+      const row = String(releaseBody || '')
+        .split('\n')
+        .find(line => line.trimStart().startsWith('| ' + label + ' |'));
+      if (!row) return '';
+      const match = row.match(/[0-9a-f]{12,40}/i);
+      return match ? match[0].toLowerCase() : '';
+    }
+
+    function renderRelease(release, cached = false) {
+      const assets = new Map((release.assets || []).map(a => [a.name, a]));
+
+      models.forEach(model => {
+        const root = document.getElementById('card-' + model.label);
+        const status = root.querySelector('.status');
+        const download = root.querySelector('.download');
+        const details = root.querySelector('.details');
+        const asset = assets.get(model.file);
+        const sha = sourceSha(release.body, model.label);
+
+        if (asset) {
+          status.textContent = 'ready';
+          status.className = 'status ok';
+          root.querySelector('.size').textContent = bytes(asset.size);
+          root.querySelector('.sha').textContent = sha.slice(0, 12) || '—';
+          root.querySelector('.built').textContent = ago(asset.updated_at || release.updated_at);
+          download.href = asset.browser_download_url || stableDownload(model.file);
+          download.removeAttribute('aria-disabled');
+
+          if (sha) {
+            details.href = 'https://github.com/' + repo + '/commit/' + sha;
+            details.textContent = 'Open published source ↗';
+          } else {
+            details.href = 'https://github.com/' + repo + '/tree/' + encodeURIComponent(model.branch);
+            details.textContent = 'Open branch ↗';
+          }
+        } else {
+          status.textContent = 'unavailable';
+          status.className = 'status bad';
+          root.querySelector('.size').textContent = '—';
+          root.querySelector('.sha').textContent = '—';
+          root.querySelector('.built').textContent = '—';
+          download.removeAttribute('href');
+          download.setAttribute('aria-disabled', 'true');
+          details.href = 'https://github.com/' + repo + '/tree/' + encodeURIComponent(model.branch);
+          details.textContent = 'Open branch ↗';
+        }
+      });
+
+      document.getElementById('checked').textContent = cached
+        ? 'Offline · showing last known builds'
+        : 'Checked ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+    }
 
     async function load() {
       const button = document.getElementById('refresh');
@@ -261,60 +317,22 @@
           { headers: { 'Accept': 'application/vnd.github+json' }, cache: 'no-store' }
         );
         if (!releaseResponse.ok) throw new Error('Release not published yet');
+
         const release = await releaseResponse.json();
-        const assets = new Map((release.assets || []).map(a => [a.name, a]));
-        const manifestAsset = assets.get('manifest.json');
-        if (!manifestAsset) throw new Error('Build provenance unavailable');
-        const manifestResponse = await fetch(
-          manifestAsset.browser_download_url + '?t=' + Date.now(),
-          { cache: 'no-store' }
-        );
-        if (!manifestResponse.ok) throw new Error('Build provenance unavailable');
-        const manifest = await manifestResponse.json();
-
-        await Promise.all(models.map(async model => {
-          const root = document.getElementById('card-' + model.label);
-          const status = root.querySelector('.status');
-          const download = root.querySelector('.download');
-          const asset = assets.get(model.file);
-          const build = (manifest.builds || {})[model.label] || null;
-
-          if (asset) {
-            status.textContent = 'ready';
-            status.className = 'status ok';
-            root.querySelector('.size').textContent = bytes(asset.size);
-            download.href = stableDownload(model.file);
-            download.removeAttribute('aria-disabled');
-          } else {
-            status.textContent = 'unavailable';
-            status.className = 'status bad';
-          }
-
-          const details = root.querySelector('.details');
-          if (build && build.status === 'ok') {
-            root.querySelector('.sha').textContent = String(build.source_sha || '').slice(0, 12) || '—';
-            root.querySelector('.built').textContent = ago(build.built_at);
-            details.href = build.run_url || ('https://github.com/' + repo + '/tree/' + encodeURIComponent(model.branch));
-
-            if (asset && build.source_is_current_head === false) {
-              status.textContent = 'syncing';
-              status.className = 'status sync';
-            }
-          } else {
-            root.querySelector('.sha').textContent = '—';
-            root.querySelector('.built').textContent = '—';
-            details.href = 'https://github.com/' + repo + '/tree/' + encodeURIComponent(model.branch);
-            details.textContent = 'Open branch ↗';
-          }
-        }));
-
-        document.getElementById('checked').textContent = 'Checked ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+        localStorage.setItem(cacheKey, JSON.stringify(release));
+        renderRelease(release);
       } catch (error) {
-        document.getElementById('checked').textContent = error.message || 'Could not reach GitHub';
-        document.querySelectorAll('.status').forEach(node => {
-          node.textContent = 'offline';
-          node.className = 'status bad';
-        });
+        try {
+          const cachedRelease = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+          if (!cachedRelease) throw new Error('No cached release');
+          renderRelease(cachedRelease, true);
+        } catch (_) {
+          document.getElementById('checked').textContent = 'Could not reach GitHub';
+          document.querySelectorAll('.status').forEach(node => {
+            node.textContent = 'offline';
+            node.className = 'status bad';
+          });
+        }
       } finally {
         button.disabled = false;
       }
