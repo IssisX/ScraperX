@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0a0c10">
   <meta name="color-scheme" content="dark">
-  <meta name="scraperx-dashboard-contract" content="static-release-links-v1">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="canonical" href="https://raw.githack.com/IssisX/ScraperX/main/apk-dashboard/index.html">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <title>ScraperX APKs</title>
+  <title>ScraperX Builds</title>
   <style>
     :root {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -18,8 +17,10 @@
       --muted: #9199a6;
       --line: #242a34;
       --panel: #12161d;
-      --panel-2: #0d1117;
+      --panel-2: #171c24;
       --ok: #4ade80;
+      --warn: #fbbf24;
+      --bad: #fb7185;
     }
     * { box-sizing: border-box; }
     html { background: #0a0c10; }
@@ -30,7 +31,7 @@
         radial-gradient(circle at 50% -12%, rgba(74,222,128,.09), transparent 34rem),
         #0a0c10;
     }
-    a { -webkit-tap-highlight-color: transparent; }
+    button, a { -webkit-tap-highlight-color: transparent; }
     .shell {
       width: min(760px, 100%);
       margin: 0 auto;
@@ -55,6 +56,27 @@
       font-size: 15px;
       line-height: 1.5;
     }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .refresh {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-2);
+      color: #f5f7fa;
+      padding: 0 14px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    #checked {
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 0;
+    }
     main { display: grid; gap: 12px; }
     .card {
       --accent: #94a3b8;
@@ -73,10 +95,10 @@
       width: 4px;
       background: var(--accent);
     }
-    .chatgpt { --accent: #10b981; }
-    .gemini { --accent: #7c9cff; }
-    .claude { --accent: #f59e0b; }
-    .grok { --accent: #e5e7eb; }
+    .card[data-model="ChatGPT"] { --accent: #10b981; }
+    .card[data-model="Gemini"] { --accent: #7c9cff; }
+    .card[data-model="Claude"] { --accent: #f59e0b; }
+    .card[data-model="Grok"] { --accent: #e5e7eb; }
     .topline {
       display: flex;
       align-items: center;
@@ -90,24 +112,36 @@
     }
     .status {
       font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-      color: var(--ok);
+      color: var(--muted);
       text-transform: uppercase;
       letter-spacing: .06em;
     }
+    .status.ok { color: var(--ok); }
+    .status.sync { color: var(--warn); }
+    .status.bad { color: var(--bad); }
     .meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
       margin: 14px 0;
-      padding: 10px;
-      border-radius: 10px;
-      background: var(--panel-2);
-      border: 1px solid #1e242d;
       color: var(--muted);
       font-size: 12px;
+    }
+    .meta div {
+      min-width: 0;
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: #0d1117;
+      border: 1px solid #1e242d;
     }
     .meta b {
       display: block;
       color: #d8dee8;
       margin-top: 3px;
       font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .download {
       display: flex;
@@ -122,6 +156,10 @@
       font-size: 16px;
       font-weight: 900;
       letter-spacing: -.01em;
+    }
+    .download[aria-disabled="true"] {
+      pointer-events: none;
+      opacity: .35;
     }
     .details {
       display: flex;
@@ -149,42 +187,143 @@
     <header>
       <div class="eyebrow">ScraperX · latest successful builds</div>
       <h1>Pick a model.<br>Install the APK.</h1>
-      <p class="intro">Each button is a permanent link to that model's latest successfully published ScraperX APK.</p>
+      <p class="intro">No digging through Actions, no artifact archaeology. Each button always points at that branch's newest successfully published APK.</p>
+      <div class="toolbar">
+        <button class="refresh" id="refresh" type="button">Refresh</button>
+        <span id="checked">Checking GitHub…</span>
+      </div>
     </header>
-
-    <main>
-      <section class="card chatgpt">
-        <div class="topline"><div class="model">ChatGPT</div><div class="status">ready</div></div>
-        <div class="meta">Branch<b>ChatGPT</b></div>
-        <a class="download" href="https://github.com/IssisX/ScraperX/releases/download/apk-latest/ScraperX-ChatGPT.apk">Download ScraperX-ChatGPT.apk</a>
-        <a class="details" href="https://github.com/IssisX/ScraperX/releases/tag/apk-latest" target="_blank" rel="noopener">Open release ↗</a>
-      </section>
-
-      <section class="card gemini">
-        <div class="topline"><div class="model">Gemini</div><div class="status">ready</div></div>
-        <div class="meta">Branch<b>Gemini</b></div>
-        <a class="download" href="https://github.com/IssisX/ScraperX/releases/download/apk-latest/ScraperX-Gemini.apk">Download ScraperX-Gemini.apk</a>
-        <a class="details" href="https://github.com/IssisX/ScraperX/releases/tag/apk-latest" target="_blank" rel="noopener">Open release ↗</a>
-      </section>
-
-      <section class="card claude">
-        <div class="topline"><div class="model">Claude</div><div class="status">ready</div></div>
-        <div class="meta">Branch<b>ScraperX-Claude</b></div>
-        <a class="download" href="https://github.com/IssisX/ScraperX/releases/download/apk-latest/ScraperX-Claude.apk">Download ScraperX-Claude.apk</a>
-        <a class="details" href="https://github.com/IssisX/ScraperX/releases/tag/apk-latest" target="_blank" rel="noopener">Open release ↗</a>
-      </section>
-
-      <section class="card grok">
-        <div class="topline"><div class="model">Grok</div><div class="status">ready</div></div>
-        <div class="meta">Branch<b>ScraperX-Grok</b></div>
-        <a class="download" href="https://github.com/IssisX/ScraperX/releases/download/apk-latest/ScraperX-Grok.apk">Download ScraperX-Grok.apk</a>
-        <a class="details" href="https://github.com/IssisX/ScraperX/releases/tag/apk-latest" target="_blank" rel="noopener">Open release ↗</a>
-      </section>
-    </main>
-
+    <main id="cards"></main>
     <footer>
-      Stable release links only. Branch development, workflow churn, API limits, and provenance metadata cannot change this dashboard's runtime behavior.
+      Updated automatically after successful model builds, with an hourly safety refresh.
+      Metadata is optional; the four stable release download links remain usable even if GitHub's API is temporarily unavailable.
     </footer>
   </div>
+
+  <script>
+    const repo = 'IssisX/ScraperX';
+    const tag = 'apk-latest';
+    const models = [
+      { label: 'ChatGPT', branch: 'ChatGPT', file: 'ScraperX-ChatGPT.apk' },
+      { label: 'Gemini', branch: 'Gemini', file: 'ScraperX-Gemini.apk' },
+      { label: 'Claude', branch: 'ScraperX-Claude', file: 'ScraperX-Claude.apk' },
+      { label: 'Grok', branch: 'ScraperX-Grok', file: 'ScraperX-Grok.apk' }
+    ];
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[c]));
+    }
+
+    function bytes(n) {
+      if (!Number.isFinite(n)) return '—';
+      return (n / 1048576).toFixed(1) + ' MB';
+    }
+
+    function ago(iso) {
+      if (!iso) return '—';
+      const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+      if (seconds < 90) return 'just now';
+      if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
+      if (seconds < 86400) return Math.floor(seconds / 3600) + ' hr ago';
+      return Math.floor(seconds / 86400) + ' d ago';
+    }
+
+    function stableDownload(file) {
+      return 'https://github.com/' + repo + '/releases/download/' + tag + '/' + encodeURIComponent(file);
+    }
+
+    function card(model) {
+      return '<section class="card" data-model="' + esc(model.label) + '" id="card-' + esc(model.label) + '">' +
+        '<div class="topline"><div class="model">' + esc(model.label) + '</div><div class="status ok">ready</div></div>' +
+        '<div class="meta">' +
+          '<div>Branch<b>' + esc(model.branch) + '</b></div>' +
+          '<div>APK<b class="size">—</b></div>' +
+          '<div>Build<b class="sha">—</b></div>' +
+          '<div>Built<b class="built">—</b></div>' +
+        '</div>' +
+        '<a class="download" href="' + stableDownload(model.file) + '">Download ' + esc(model.file) + '</a>' +
+        '<a class="details" target="_blank" rel="noopener">Open successful build ↗</a>' +
+      '</section>';
+    }
+
+    document.getElementById('cards').innerHTML = models.map(card).join('');
+
+    async function load() {
+      const button = document.getElementById('refresh');
+      button.disabled = true;
+      document.getElementById('checked').textContent = 'Checking GitHub…';
+
+      try {
+        const releaseResponse = await fetch(
+          'https://api.github.com/repos/' + repo + '/releases/tags/' + tag,
+          { headers: { 'Accept': 'application/vnd.github+json' }, cache: 'no-store' }
+        );
+        if (!releaseResponse.ok) throw new Error('metadata unavailable');
+
+        const release = await releaseResponse.json();
+        const assets = new Map((release.assets || []).map(a => [a.name, a]));
+
+        function publishedSourcePrefix(label) {
+          const row = String(release.body || '')
+            .split('\n')
+            .find(line => line.trimStart().startsWith('| ' + label + ' |'));
+          if (!row) return '';
+          const match = row.match(/[0-9a-f]{12,40}/i);
+          return match ? match[0].toLowerCase() : '';
+        }
+
+        models.forEach(model => {
+          const root = document.getElementById('card-' + model.label);
+          const status = root.querySelector('.status');
+          const download = root.querySelector('.download');
+          const details = root.querySelector('.details');
+          const asset = assets.get(model.file);
+          const source = publishedSourcePrefix(model.label);
+
+          if (asset) {
+            status.textContent = 'ready';
+            status.className = 'status ok';
+            root.querySelector('.size').textContent = bytes(asset.size);
+            root.querySelector('.sha').textContent = source.slice(0, 12) || '—';
+            root.querySelector('.built').textContent = ago(asset.updated_at || release.updated_at);
+            download.href = asset.browser_download_url || stableDownload(model.file);
+            download.removeAttribute('aria-disabled');
+
+            if (source) {
+              details.href = 'https://github.com/' + repo + '/commit/' + source;
+              details.textContent = 'Open published source ↗';
+            } else {
+              details.href = 'https://github.com/' + repo + '/releases/tag/' + tag;
+              details.textContent = 'Open release ↗';
+            }
+          } else {
+            status.textContent = 'unavailable';
+            status.className = 'status bad';
+            root.querySelector('.size').textContent = '—';
+            root.querySelector('.sha').textContent = '—';
+            root.querySelector('.built').textContent = '—';
+            download.removeAttribute('href');
+            download.setAttribute('aria-disabled', 'true');
+            details.href = 'https://github.com/' + repo + '/releases/tag/' + tag;
+            details.textContent = 'Open release ↗';
+          }
+        });
+
+        document.getElementById('checked').textContent =
+          'Checked ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+      } catch (_) {
+        document.getElementById('checked').textContent =
+          'Metadata unavailable · downloads still ready';
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    document.getElementById('refresh').addEventListener('click', load);
+    load();
+    setInterval(load, 5 * 60 * 1000);
+  </script>
 </body>
 </html>
