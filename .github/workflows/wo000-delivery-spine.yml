@@ -88,7 +88,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
           if ! ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log; then
             # The public run page exposes annotations even when its raw logs
             # are unavailable. Keep the exact failing test and nearby output.
@@ -290,12 +290,46 @@ jobs:
           grep -F "SCRAPERX_PARKOUR_CAMERA PASS" artifacts/parkour-camera.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/parkour-camera.log; then exit 1; fi
 
+      - name: Prove manual slingshot, character, settings and touch input
+        shell: bash
+        run: |
+          set -euo pipefail
+          for proof in slingshot_view climber_character settings_runtime landing_camera; do
+            timeout 180s tools/godot/godot --headless --fixed-fps 90 --path godot \
+              --script "res://tests/${proof}_test.gd" 2>&1 | tee "artifacts/${proof}.log"
+            if grep -E "SCRIPT ERROR|Parse Error|FAIL" "artifacts/${proof}.log"; then exit 1; fi
+          done
+          grep -F "SCRAPERX_SETTINGS_RUNTIME checks=" artifacts/settings_runtime.log
+          for scenario in touch_slingshot touch_slingshot_landing; do
+            timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
+              -- "--uitest=${scenario}" 2>&1 | tee "artifacts/${scenario}.log"
+            grep -F "SCRAPERX_UITEST PASS ${scenario} " "artifacts/${scenario}.log"
+            if grep -E "SCRIPT ERROR|Parse Error" "artifacts/${scenario}.log"; then exit 1; fi
+          done
+          mkdir -p artifacts/screenshots
+          timeout 300s xvfb-run -a -s "-screen 0 1296x1114x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility \
+            --script res://tests/slingshot_visual_probe.gd \
+            -- "--sling-probe-out=${GITHUB_WORKSPACE}/artifacts/screenshots/slingshot" \
+            2>&1 | tee artifacts/slingshot-visual.log
+          grep -F "SCRAPERX_SLINGSHOT_VISUAL_PROBE PASS" artifacts/slingshot-visual.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/slingshot-visual.log; then exit 1; fi
+          timeout 300s xvfb-run -a -s "-screen 0 432x371x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility \
+            --fixed-fps 30 --audio-driver Dummy \
+            --write-movie "${RUNNER_TEMP}/slingshot-audio.avi" \
+            --script res://tests/slingshot_audio_test.gd \
+            2>&1 | tee artifacts/slingshot-audio.log
+          grep -F "SCRAPERX_SLINGSHOT_AUDIO PASS" artifacts/slingshot-audio.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/slingshot-audio.log; then exit 1; fi
+          rm -f "${RUNNER_TEMP}/slingshot-audio.avi"
+
       - name: Prove default inventory and rejected fallback absence
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=45 kit_bodies=89 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
-          grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=169" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=15 kit_bodies=25 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=385" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
           mkdir -p artifacts/screenshots godot/.godot
@@ -305,12 +339,12 @@ jobs:
             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
             -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
             2>&1 | tee artifacts/godot-foundation.log
-          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=45 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
+          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=15 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
           test -s artifacts/screenshots/foundation_cleared_grade.png
           test -s artifacts/screenshots/foundation_cleared_tower.png
 
-      - name: Pipe bridge - ordinary input, supported crossing and native material state
+      - name: Historical pipe bridge fixture - ordinary input and native material state
         shell: bash
         run: |
           set -euo pipefail
@@ -323,7 +357,7 @@ jobs:
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/*pipe_bridge.log; then exit 1; fi
 
-      - name: Ground to north service frame - rendered touch route to 110 metres
+      - name: Historical opening fixture and retained upper route - rendered touch to 110 metres
         shell: bash
         run: |
           set -euo pipefail
@@ -587,13 +621,13 @@ jobs:
           - Legacy intake, water screw/lift, counterweight, plant and rigging scenarios remain regression tests. Their green results do not describe normal campaign content or validate the owner's rejected screw experience.
           - The old approach-and-machine capture and audio_mix exercise the selected regression scene; they are not screenshots or device measurements of the cleared campaign.
 
-          The default pipe-loaded bridge loads twenty independent pipes, releases through actual reachable controls, arrests on finite material, and carries the player across the +8 m receiver to the original +11 m ring. Native no-input/source controls, regrabbing, passive riding, material checkpoint restoration and 90/360 Hz refinement pass. Touch at 30 FPS, keyboard and gamepad at 60 FPS use ordinary viewport input. Recorded human fall reactions pass cancellation and decoded-mix checks.
+          The default opening is the manual wooden slingshot. Native model/machine/production tests verify finite manual charging, ratchet hold, input-dependent release, restart and timestep refinement. Normal viewport touch verifies boarding, manual draw, release, the humanoid orbit and return to first person. Persistent settings and native restarts cover Grade and all 32 supported tower rings through +352 m. Slingshot sound clips and gameplay output pass decoded/mixed audio checks. Launch, pouch and character views are captured in artifacts/screenshots/slingshot; their visual quality requires separate image inspection.
 
-          This record is emitted only after the preceding verification and export gates succeed. The normal route continues from grade through the pipe bridge, facade, swinging stair, counterweight lift, exterior parkour, player-adjusted teeter, braced bay and north service frame to a supported +110 m tower ring. Native tests cover the teeter physics, braced-bay jump/crouch/recovery and north-frame climb, hanging transfer, shimmy, missed-hang retry and upper checkpoint. Rendered touch completes the continuous route with zero deaths.
+          This record is emitted only after the preceding verification and export gates succeed. The old pipe bridge is explicitly selected for historical opening/upper-route regressions. Those tests cover the former continuous grade-to-+110 m route, teeter physics, braced-bay jump/crouch/recovery and north-frame climb/hang/shimmy/checkpoint. They preserve those authored encounters; their result does not establish a continuous route from the current slingshot. The new launcher tests separately report actual current-world flight and supported landing observations.
 
           Desktop rendering evidence is captured explicitly by the touch_north_frame scenario under artifacts/screenshots/north_*.png, including teeter, braced-bay and north-frame poses. PNG creation and native assertions pass here; a reviewer must separately inspect the images for visible geometry and motion. Android delivery evidence is the separately cross-compiled, exported and signature-checked APK from this source commit.
 
-          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a completed tower ascent beyond the supported +110 m ring.
+          Not proven: APK installation or Android execution, device visual readability, touch ergonomics, sustained Fold frame rate, thermals or a complete current-opening campaign playthrough.
           EOF
 
       - name: Retain failed-run diagnostics

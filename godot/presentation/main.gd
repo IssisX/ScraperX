@@ -14,10 +14,12 @@ const EYE_OFFSET := Vector3(0.0, 0.62, 0.0)
 # anything -- a verb becomes a native request_*, and the native says yes or no.
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
 const InputRouter := preload("res://presentation/ui/input_router.gd")
+const LandingCameraResponse := preload("res://presentation/landing_camera_response.gd")
 const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 const Hud := preload("res://presentation/ui/hud.gd")
 const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
+const SlingshotView := preload("res://presentation/slingshot_view.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
@@ -60,10 +62,6 @@ const FOV_BASE := 82.0
 const FOV_SPRINT_MAX_DEGREES := 4.0
 const FOV_FALL_MAX_DEGREES := 3.0
 const FOV_FALL_FULL_MPS := 14.0
-const LANDING_DIP_DURATION_SECONDS := 0.22
-const LANDING_DIP_MAX_METERS := 0.16
-const LANDING_DIP_MIN_IMPACT_MPS := 2.0
-const LANDING_DIP_FULL_IMPACT_MPS := 9.0
 const HEAD_BOB_CYCLES_PER_METER := 0.72
 const HEAD_BOB_VERTICAL_METERS := 0.028
 const HEAD_BOB_LATERAL_METERS := 0.016
@@ -98,7 +96,8 @@ const SUMP_GRATE_ENTITY_ID := 34
 const STACK_CENTER := Vector3(0.0, 0.0, -150.0)
 const STACK_HALF_EXTENT := 26.0
 const STACK_LEVEL_HEIGHT := 11.0
-const STACK_LEVEL_COUNT := 14
+const STACK_LEVEL_COUNT := 32
+const REGRESSION_STACK_LEVEL_COUNT := 14
 const STACK_DECK_THICKNESS := 0.5
 const STACK_DECK_BAND_DEPTH := 9.0
 const STACK_COLUMN_SIZE := 1.6
@@ -290,10 +289,7 @@ var _capture_scheduled := false
 var _ci_mode := false
 var _yaw := 0.0
 var _pitch := -0.02
-var _cam_was_grounded := true
-var _cam_last_velocity_y := 0.0
-var _cam_landing_timer := 0.0
-var _cam_landing_strength := 0.0
+var _landing_camera := LandingCameraResponse.new()
 var _cam_bob_phase := 0.0
 var _cam_bob_weight := 0.0
 var _cam_fov_offset := 0.0
@@ -311,6 +307,12 @@ var _router: Node
 var _touch: Control
 var _hud: Control
 var _pause_menu: Control
+var _slingshot_view: Node3D
+var _sling_prediction := PackedVector3Array()
+var _sling_preview_clock := 0.0
+var _sling_was_seated := false
+var _sling_goal_yaw := 0.0
+var _sling_goal_elevation := 1.4311699866353502
 var _settings: SettingsStore
 var _uitest: Node
 var _force_touch := false
@@ -453,7 +455,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -502,9 +504,13 @@ func _ready() -> void:
 		_pitch = 0.06
 
 	_build_kit()
+	if bool(_native.get_slingshot_state().get("available", false)):
+		_slingshot_view = SlingshotView.new()
+		add_child(_slingshot_view)
+		_slingshot_view.setup(self)
 
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=%s" %
-		("regression_fixtures work_order=WO-006" if _regression_scene else "pipe_bridge"))
+		("regression_fixtures work_order=WO-006" if _regression_scene else ("slingshot" if bool(_native.get_slingshot_state().get("available", false)) else "pipe_bridge_fixture")))
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
 		int(_viewport_size.x), int(_viewport_size.y),
 		_viewport_size.x / maxf(1.0, _viewport_size.y), _camera.fov, _camera.far])
@@ -525,15 +531,40 @@ func _process(delta: float) -> void:
 			_fps_clock = 0.5
 			_fps_label.text = "%d FPS" % int(Engine.get_frames_per_second())
 
+	var launcher: Dictionary = _native.get_slingshot_state()
+	var sling_seated := bool(launcher.get("seated", false))
+	var aiming := sling_seated and not bool(launcher.get("released", false))
+	var sling_recovering := bool(launcher.get("recovering", false))
+	var aim_locked := bool(launcher.get("aim_locked",
+		float(launcher.get("draw_m", 0.0)) > 0.03 or float(launcher.get("energy_j", 0.0)) > 1.0))
 	var intent: Dictionary = _router.frame(delta)
+	if aiming and not _sling_was_seated:
+		_sling_goal_yaw = float(launcher["yaw_rad"])
+		_sling_goal_elevation = float(launcher["elevation_rad"])
+	_sling_was_seated = aiming
 	if not _ci_mode:
 		var look: Vector2 = intent["look"]
-		_yaw -= look.x
-		_pitch = clampf(_pitch - look.y, -1.25, 1.35)
+		if aiming:
+			if not aim_locked:
+				_sling_goal_yaw = clampf(_sling_goal_yaw + look.x, -0.8, 0.8)
+				_sling_goal_elevation = clampf(_sling_goal_elevation - look.y, 0.35, 1.48)
+			else:
+				_sling_goal_yaw = float(launcher["yaw_rad"])
+				_sling_goal_elevation = float(launcher["elevation_rad"])
+			# Retain the requested angle while the real, finite-torque rail
+			# settles. The lens and reticle continue to show its actual axis.
+			_yaw = -float(launcher["yaw_rad"])
+			_pitch = float(launcher["elevation_rad"])
+		else:
+			_yaw -= look.x
+			_pitch = clampf(_pitch - look.y, -1.25, 1.35)
 	_update_view_pitch_offset(delta)
 
 	var position: Vector3 = _native.get_player_position()
 	var desired: Vector2 = intent["move"]
+	var sling_yaw := _sling_goal_yaw if aiming else float(launcher.get("yaw_rad", 0.0))
+	var sling_elevation := _sling_goal_elevation if aiming else float(launcher.get("elevation_rad", 1.4311699866))
+	_native.set_slingshot_input(maxf(0.0, -desired.y) if sling_seated or sling_recovering else 0.0, sling_yaw, sling_elevation)
 	var facing := Vector2(-sin(_yaw), -cos(_yaw))
 
 	if _ci_mode:
@@ -544,6 +575,8 @@ func _process(delta: float) -> void:
 	var forward := Vector2(-sin(_yaw), -cos(_yaw))
 	var right := Vector2(cos(_yaw), -sin(_yaw))
 	var world_move := right * desired.x + forward * desired.y
+	if sling_recovering:
+		world_move = Vector2.ZERO
 	if not _native.set_move_input(world_move.x, world_move.y):
 		_fail_native("SCRAPERX_MOVE_INPUT_REJECTED", 21)
 		return
@@ -565,7 +598,8 @@ func _process(delta: float) -> void:
 	# no new key binding and keeps the same Raise(+)/Lower(-) verb.
 	_native.set_needle_hoist_input(jib_input.y)
 
-	var steps_advanced := int(_native.advance_frame(minf(delta, MAX_SIM_FRAME_DELTA)))
+	var time_scale := float(_slingshot_view.get_simulation_scale()) if _slingshot_view != null else 1.0
+	var steps_advanced := int(_native.advance_frame(minf(delta, MAX_SIM_FRAME_DELTA) * time_scale))
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return
@@ -573,6 +607,16 @@ func _process(delta: float) -> void:
 	_render_snapshot(delta)
 	_ctx = _read_context()
 	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
+	if _slingshot_view != null:
+		var sling: Dictionary = _native.get_slingshot_render_state()
+		_audio.update_slingshot(sling, _native.get_player_linear_velocity())
+		sling["reduced_motion"] = not _settings.launch_cinematics
+		_sling_preview_clock -= delta
+		if bool(sling["seated"]) and not bool(sling["released"]) and _sling_preview_clock <= 0.0:
+			_sling_preview_clock = 0.2
+			_sling_prediction = _native.get_slingshot_prediction()
+		sling["trajectory_points"] = _sling_prediction
+		_slingshot_view.update_view(delta, sling, _native.get_player_render_position(), _native.get_player_linear_velocity(), _camera)
 	_update_feedback(delta)
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
@@ -674,6 +718,8 @@ func _build_interface() -> void:
 	_pause_menu.resume_requested.connect(_resume)
 	_pause_menu.quit_requested.connect(func() -> void: get_tree().quit(0))
 	_pause_menu.settings_changed.connect(_apply_settings)
+	_pause_menu.restart_requested.connect(_restart_at)
+	_pause_menu.checkpoint_restart_requested.connect(_restart_checkpoint)
 	# Android's system back opens the pause menu instead of ending the climb.
 	get_tree().quit_on_go_back = false
 	_router.device = (InputRouter.Device.TOUCH if OS.has_feature("mobile") or _force_touch
@@ -696,22 +742,46 @@ func _apply_settings() -> void:
 	viewport.scaling_3d_scale = _settings.render_scale
 	viewport.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][_settings.msaa]
 	Engine.max_fps = SettingsStore.FPS_CAPS[_settings.fps_cap]
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if _settings.vsync == 0
+		else DisplayServer.VSYNC_DISABLED)
+	_camera.far = _settings.view_distance
+	_apply_visual_detail($TowerPresentation, SettingsStore.DETAIL_DISTANCES[_settings.detail_distance])
 	($Environment as WorldEnvironment).environment.glow_enabled = _settings.bloom
 	_sky_cycle.exposure_scale = _settings.brightness
 	_sky_cycle.set_shadow_level(_settings.shadow_quality)
 	_fps_label.visible = _settings.show_fps
 	# AUDIO
-	_audio.set_volumes(_settings.master_volume, _settings.effects_volume,
+	_audio.set_volumes(0.0 if _settings.audio_muted else _settings.master_volume, _settings.effects_volume,
 		_settings.ambience_volume, _settings.interface_volume)
 	# DISPLAY
 	_fov_base = _settings.fov
 	_head_bob_on = _settings.head_bob
 	_speed_fov_on = _settings.speed_fov
+	if not OS.has_feature("mobile") and DisplayServer.get_name() != "headless":
+		var target_mode := DisplayServer.WINDOW_MODE_FULLSCREEN if _settings.window_mode == 1 \
+			else DisplayServer.WINDOW_MODE_WINDOWED
+		if DisplayServer.window_get_mode() != target_mode:
+			DisplayServer.window_set_mode(target_mode)
 	if _settings.time_of_day == 0:
 		_sky_cycle.day_minutes = _settings.day_minutes
 	else:
 		_sky_cycle.day_minutes = 0.0
 		_sky_cycle.set_hour(SettingsStore.TIME_OF_DAY_HOURS[_settings.time_of_day])
+
+
+# Procedural meshes have no generated mesh LOD. These explicitly decorative
+# parts therefore use distance culling instead. Native Kit parts and the
+# structural route never enter this list; collision/simulation stays intact.
+func _apply_visual_detail(node: Node, distance: float) -> void:
+	if node is GeometryInstance3D and node.get_meta(&"part", "") in [
+			"FaceBand", "FaceDuct", "FloorLight", "FloorLightHigh", "TimberCladding",
+			"LaneStripe", "TreeTrunk", "TreeCanopy", "ScrubLobe"]:
+		var geometry := node as GeometryInstance3D
+		geometry.visibility_range_end = distance
+		geometry.visibility_range_end_margin = 0.0
+		geometry.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+	for child in node.get_children():
+		_apply_visual_detail(child, distance)
 
 
 func _on_device_changed(device: int) -> void:
@@ -755,10 +825,40 @@ func _open_pause(from_system: bool = false) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var checkpoint: Vector3 = _ctx["checkpoint"]
 	var position: Vector3 = _ctx["position"]
+	_pause_menu.set_restart_context(position)
 	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
 		position.y, checkpoint.y, int(_ctx["deaths"])])
 	get_tree().paused = true
 	_audio.ui_tap()
+
+
+func _restart_at(position: Vector3) -> void:
+	var accepted := bool(_native.debug_restart_at(position))
+	_pause_menu.set_restart_result(accepted, "That position intersects the structure or is outside the world.")
+	if accepted:
+		_after_restart()
+
+
+func _restart_checkpoint() -> void:
+	if bool(_native.restart_checkpoint()):
+		_after_restart()
+
+
+func _after_restart() -> void:
+	_landing_camera.reset()
+	if _slingshot_view != null:
+		_slingshot_view.cancel_cinematic()
+	_sling_was_seated = false
+	_sling_preview_clock = 0.0
+	_sling_prediction = PackedVector3Array()
+	_operating = &""
+	_crouch_toggled = false
+	_jump_buffer = 0.0
+	_ctx = _read_context()
+	_fb_grounded = bool(_ctx["grounded"])
+	_fb_deaths = int(_ctx["deaths"])
+	_render_snapshot()
+	_resume()
 
 
 func _resume() -> void:
@@ -802,14 +902,18 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				# Let go of whatever the hands are on: a ledge, a climb's
 				# holds, or a load. On the ground with an edge behind, the
 				# native lowers the body over it into a hang.
-				if int(_ctx["carrying"]) != 0:
+				if bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
+					_native.request_slingshot_drop()
+				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
 				else:
 					_native.request_release()
 			&"chute":
 				_native.request_parachute()
 			&"back":
-				if _ctx["hanging"] or _ctx["climbing"]:
+				if bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
+					_native.request_slingshot_drop()
+				elif _ctx["hanging"] or _ctx["climbing"]:
 					_native.request_release()
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
@@ -851,6 +955,11 @@ func _dispatch(verbs: Array, delta: float) -> void:
 func _perform_action() -> void:
 	var action: Dictionary = _ctx["action"]
 	match action["id"]:
+		&"slingshot":
+			if bool(_native.get_slingshot_state().get("recovering", false)):
+				_native.request_slingshot_drop()
+			else:
+				_native.request_slingshot_action()
 		&"climb_up", &"climb":
 			_native.request_traversal()
 		&"operate":
@@ -892,6 +1001,8 @@ func _request_sling(attach: bool) -> void:
 
 
 func _read_context() -> Dictionary:
+	var sling: Dictionary = _native.get_slingshot_state()
+	var sling_seated := bool(sling.get("seated", false))
 	var position: Vector3 = _native.get_player_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
@@ -933,7 +1044,13 @@ func _read_context() -> Dictionary:
 	var rig := int(_native.get_rig_action())
 	var rig_target := int(_native.get_rig_target_entity_id())
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
-	if hanging or climbing:
+	if bool(sling.get("can_retrieve", false)) or bool(sling.get("recovering", false)):
+		action = {"id": &"slingshot", "label": "STOP RETRIEVAL" if bool(sling.get("recovering", false)) else "RETRIEVE POUCH", "icon": &"operate",
+			"detail": "HOLD BACK TO REEL" if bool(sling.get("recovering", false)) else "WOODEN SLINGSHOT"}
+	elif sling_seated or bool(sling.get("station_available", false)):
+		action = {"id": &"slingshot", "label": ("RELEASE" if bool(sling.get("release_ready", false)) else "DRAW MORE") if sling_seated else "ENTER POUCH", "icon": &"operate",
+			"detail": "PULL BACK TO STRETCH" if sling_seated else "WOODEN SLINGSHOT"}
+	elif hanging or climbing:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
 	elif not free:
 		pass
@@ -996,17 +1113,20 @@ func _read_context() -> Dictionary:
 		"hanging": hanging,
 		"climbing": climbing,
 		# Drop at an edge behind lowers into a hang; on holds it lets go.
-		"drop_ok": hanging or climbing or (grounded and free and edge_drop and carrying == 0),
+		"slingshot_seated": sling_seated,
+		"slingshot_recovering": bool(sling.get("recovering", false)),
+		"drop_ok": sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or (grounded and free and edge_drop and carrying == 0),
 		"edge_drop": edge_drop,
 		"sprinting": bool(_native.is_player_sprinting()),
 		"balancing": bool(_native.is_player_balancing()),
 		"chute": chute,
-		"jump_ok": grounded and free,
+		"jump_ok": grounded and free and not sling_seated,
 		"climb_ok": climb_ok,
 		# Airborne, is_ledge_available is the native hang probe: an edge in
 		# the grab band, which engages as soon as the player pushes into it.
 		"grab_hint": not grounded and free and ledge,
-		"chute_ok": not grounded and free and (chute or -velocity.y > CHUTE_OFFER_FALL_MPS),
+		"chute_ok": not grounded and free and (chute or -velocity.y > CHUTE_OFFER_FALL_MPS \
+			or (bool(sling.get("released", false)) and not sling_seated)),
 		"danger": 0.0 if grounded else clampf(-velocity.y / maxf(lethal, 0.001), 0.0, 1.0),
 		"lethal": lethal,
 		"station": station,
@@ -1352,21 +1472,6 @@ func _layout_hud() -> void:
 # position is never filtered here: native simulation supplies the render pose.
 func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, crouched: bool,
 		delta: float) -> void:
-	if grounded and not _cam_was_grounded:
-		var impact := absf(_cam_last_velocity_y)
-		_cam_landing_timer = LANDING_DIP_DURATION_SECONDS
-		_cam_landing_strength = smoothstep(LANDING_DIP_MIN_IMPACT_MPS,
-			LANDING_DIP_FULL_IMPACT_MPS, impact)
-	_cam_was_grounded = grounded
-	_cam_last_velocity_y = velocity.y
-
-	var dip := 0.0
-	if _cam_landing_timer > 0.0:
-		_cam_landing_timer = maxf(0.0, _cam_landing_timer - delta)
-		var t := 1.0 - _cam_landing_timer / LANDING_DIP_DURATION_SECONDS
-		var landing_wave := sin(PI * t)
-		dip = -_cam_landing_strength * LANDING_DIP_MAX_METERS * landing_wave * landing_wave
-
 	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
 	# 5.5 mirrors kPlayerMaximumRelativeSpeed (src/sim/simulation.cpp) -- a
 	# curve-shape input, not a gameplay bound, so the native constant is not
@@ -1385,6 +1490,9 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	var vertical_bob := HEAD_BOB_VERTICAL_METERS * sin(_cam_bob_phase) * _cam_bob_weight
 	var lateral_bob := HEAD_BOB_LATERAL_METERS * sin(_cam_bob_phase * 0.5) * _cam_bob_weight
 	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
+	var forward_vector := Vector3(-sin(_yaw), 0.0, -cos(_yaw))
+	var landing: Dictionary = _native.get_landing_state() if _native.has_method("get_landing_state") else {}
+	_landing_camera.update(landing, delta, _head_bob_on, right_vector, forward_vector)
 	if not _head_bob_on:
 		_cam_bank = 0.0
 	else:
@@ -1401,8 +1509,11 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		var soles_y := position.y - (CROUCH_HALF_HEIGHT if crouched else STAND_HALF_HEIGHT)
 		eye.y = soles_y + lerpf(STAND_HALF_HEIGHT + EYE_OFFSET.y, CROUCH_EYE_OVER_SOLES,
 			smoothstep(0.0, 1.0, _crouch_eye))
-	_camera.position = eye + Vector3(0.0, dip + vertical_bob, 0.0) + right_vector * lateral_bob
-	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, _cam_bank)
+	_camera.position = eye + Vector3.UP * (vertical_bob + _landing_camera.translation.y) \
+		+ right_vector * (lateral_bob + _landing_camera.translation.x) \
+		+ forward_vector * _landing_camera.translation.z
+	_camera.rotation = Vector3(_pitch + _view_pitch_offset + _landing_camera.rotation.x,
+		_yaw, _cam_bank + _landing_camera.rotation.y)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed)
 	var fov_fall := 0.0
@@ -2455,14 +2566,19 @@ func _add_barred_wall(parent: Node3D, x0: float, x1: float, z0: float, z1: float
 # columns mirror real native collision one-for-one; bracing, rails, pipework
 # and lamps are dressing hung on that frame. The rejected fourteen-flight
 # bypass is absent, so ascent comes from authored mechanisms and parkour.
+func _stack_level_count() -> int:
+	return REGRESSION_STACK_LEVEL_COUNT if _regression_scene else STACK_LEVEL_COUNT
+
+
 func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		rust_bright: Material, galvanised: Material, faded: Material, timber: Material) -> void:
 	var band_center := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH * 0.5
 	var inner_half := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH
 	var cx := STACK_CENTER.x
 	var cz := STACK_CENTER.z
+	var level_count := _stack_level_count()
 
-	for level in range(1, STACK_LEVEL_COUNT + 1):
+	for level in range(1, level_count + 1):
 		var deck_y := float(level) * STACK_LEVEL_HEIGHT
 		var slab_y := deck_y - STACK_DECK_THICKNESS * 0.5
 		var deck_material: Material = galvanised if level % 2 == 1 else mill_scale
@@ -2507,7 +2623,7 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 					Vector3(cx, deck_y + 0.05, cz + sz * plank_z), timber)
 
 	# Columns, and the diagonal bracing that makes a frame a frame.
-	for level in range(0, STACK_LEVEL_COUNT):
+	for level in range(0, level_count):
 		var base_y := float(level) * STACK_LEVEL_HEIGHT
 		var mid_y := base_y + STACK_LEVEL_HEIGHT * 0.5
 		var brace_length := sqrt(pow(STACK_LEVEL_HEIGHT, 2.0) + pow(STACK_HALF_EXTENT, 2.0))
@@ -2676,7 +2792,7 @@ func _build_stack_lifts(cage_yellow: Material, galvanised: Material, mill_scale:
 		window_lit: Material) -> void:
 	var cz := STACK_CENTER.z
 	var front_z := cz + STACK_HALF_EXTENT
-	var top_y := STACK_LEVEL_HEIGHT * float(STACK_LEVEL_COUNT)
+	var top_y := STACK_LEVEL_HEIGHT * float(_stack_level_count())
 
 	for shaft_index in range(2):
 		var lift_x := STACK_CENTER.x + (6.5 if shaft_index == 0 else -14.5)
@@ -2868,10 +2984,10 @@ func _build_stack_accents(verdigris: Material, machine_blue: Material,
 	# A verdigris pipe run climbing the front face, distinct from the oxidised
 	# risers in the shaft -- copper service lines age to blue-green, not rust.
 	for sx in [1.0]:
-		_add_cylinder("VerdigrisPipe", 0.4, STACK_LEVEL_HEIGHT * float(STACK_LEVEL_COUNT),
+		_add_cylinder("VerdigrisPipe", 0.4, STACK_LEVEL_HEIGHT * float(_stack_level_count()),
 			Vector3(cx + sx * (STACK_HALF_EXTENT - 4.5),
-				STACK_LEVEL_HEIGHT * float(STACK_LEVEL_COUNT) * 0.5, front_z + 0.9), verdigris)
-		for level in range(1, STACK_LEVEL_COUNT + 1):
+				STACK_LEVEL_HEIGHT * float(_stack_level_count()) * 0.5, front_z + 0.9), verdigris)
+		for level in range(1, _stack_level_count() + 1):
 			_add_box("VerdigrisFlange", Vector3(1.0, 0.3, 1.0),
 				Vector3(cx + sx * (STACK_HALF_EXTENT - 4.5), float(level) * STACK_LEVEL_HEIGHT - 1.2,
 					front_z + 0.9), verdigris)
@@ -2911,17 +3027,17 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 	for sx in [1.0, -1.0]:
 		for sz in [1.0, -1.0]:
 			var pipe_material: Material = oxidised if sx * sz > 0.0 else rust_bright
-			_add_box("Riser", Vector3(0.7, STACK_LEVEL_HEIGHT * STACK_LEVEL_COUNT, 0.7),
+			_add_box("Riser", Vector3(0.7, STACK_LEVEL_HEIGHT * _stack_level_count(), 0.7),
 				Vector3(cx + sx * (inner_half - 1.2),
-					STACK_LEVEL_HEIGHT * STACK_LEVEL_COUNT * 0.5,
+					STACK_LEVEL_HEIGHT * _stack_level_count() * 0.5,
 					cz + sz * (inner_half - 1.2)), pipe_material)
-			for level in range(1, STACK_LEVEL_COUNT + 1):
+			for level in range(1, _stack_level_count() + 1):
 				_add_box("RiserFlange", Vector3(1.1, 0.35, 1.1),
 					Vector3(cx + sx * (inner_half - 1.2), float(level) * STACK_LEVEL_HEIGHT - 1.4,
 						cz + sz * (inner_half - 1.2)), mill_scale)
 
 	# Drive gearing on alternating levels, big enough to read from the yard.
-	for level in range(1, STACK_LEVEL_COUNT):
+	for level in range(1, _stack_level_count()):
 		if level % 2 == 0:
 			continue
 		var gear_y := float(level) * STACK_LEVEL_HEIGHT + 3.4
@@ -2941,7 +3057,7 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 	# Vent stacks that the plume system can sit on later, plus lamp fittings
 	# throwing warm light into the frame.
 	var lamp_material := _material(Color("4a3a24"), 0.3, 0.7, Color("ffb04d"), 3.0)
-	for level in range(1, STACK_LEVEL_COUNT + 1):
+	for level in range(1, _stack_level_count() + 1):
 		var y := float(level) * STACK_LEVEL_HEIGHT
 		if level % 2 == 0:
 			continue
@@ -3009,8 +3125,8 @@ func _build_stack_continuation(oxidised: Material, rust_deep: Material, mill_sca
 		galvanised: Material, faded: Material) -> void:
 	var cx := STACK_CENTER.x
 	var cz := STACK_CENTER.z
-	var base_level := STACK_LEVEL_COUNT
-	var top_level := STACK_LEVEL_COUNT + 24
+	var base_level := _stack_level_count()
+	var top_level := _stack_level_count() + 24
 
 	for level in range(base_level, top_level):
 		var base_y := float(level) * STACK_LEVEL_HEIGHT
@@ -3338,7 +3454,7 @@ func _build_plume() -> void:
 
 	# Working steam venting from the frame itself, at a human scale -- the
 	# references are full of small, sharp vents, not fog banks.
-	for level in range(2, STACK_LEVEL_COUNT, 3):
+	for level in range(2, _stack_level_count(), 3):
 		var vent_y := float(level) * STACK_LEVEL_HEIGHT + 1.6
 		var vent := CPUParticles3D.new()
 		vent.name = "FrameVent"
@@ -4139,7 +4255,7 @@ func _render_kit() -> void:
 		var node: Node3D = _kit_bodies[body]
 		node.visible = bool(_native.is_kit_body_enabled(body))
 		if node.visible:
-			node.transform = _native.get_kit_body_transform(body)
+			node.transform = _native.get_kit_body_render_transform(body)
 	if _water_lift_bucket_water != null:
 		var volume := clampf(float(_native.get_water_lift_bucket_water_m3()), 0.0, 2.0)
 		var depth := clampf(volume / (1.54 * 1.54), 0.0, 0.94)
@@ -4149,7 +4265,7 @@ func _render_kit() -> void:
 			water_mesh.size = Vector3(1.54, depth, 1.54)
 			_water_lift_bucket_water.position = Vector3(0.0, -0.29 + depth * 0.5, 0.0)
 	for index in _kit_cables.size():
-		var points: PackedVector3Array = _native.get_kit_cable_points(index)
+		var points: PackedVector3Array = _native.get_kit_cable_render_points(index)
 		var segments: Array = _kit_cables[index]
 		for segment in segments.size():
 			var instance: MeshInstance3D = segments[segment]

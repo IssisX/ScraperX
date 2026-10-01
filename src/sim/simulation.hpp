@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace scraperx::sim {
 
@@ -21,7 +22,7 @@ struct Quaternion final {
 };
 
 // Production never constructs the retired campaign. Regression scenes are explicit test inputs.
-enum class WorldContent : std::uint8_t { GroundFoundation, RegressionFixtures, PipeBridge };
+enum class WorldContent : std::uint8_t { GroundFoundation, RegressionFixtures, PipeBridge, Slingshot };
 
 enum class InitialSpawn : std::uint8_t {
     StaticDeck = 0,
@@ -205,6 +206,21 @@ struct Snapshot final {
     FallState fall_state = FallState::Grounded;
     double fall_peak_speed_mps = 0.0;
     double last_impact_speed_mps = 0.0;
+    // Production landing receipts use actual pre-solve relative velocities.
+    // Approach energy is not a claim of measured dissipation in the support.
+    std::uint64_t landing_count = 0;
+    std::uint64_t landing_support_entity_id = 0;
+    double landing_approach_energy_j = 0.0;
+    double landing_tangent_energy_j = 0.0;
+    double landing_normal_speed_mps = 0.0;
+    double landing_tangent_speed_mps = 0.0;
+    double landing_observed_normal_impulse_ns = 0.0;
+    double landing_balance = 1.0;
+    double landing_recovery_seconds = 0.0;
+    double landing_recovery_work_j = 0.0;
+    double landing_jump_work_j = 0.0; // separate finite push-off impulse channel
+    bool landing_recovering = false;
+    Vector3 landing_slip_velocity{};
     bool parachute_deployed = false;
     Vector3 checkpoint_position{};
     std::uint64_t checkpoint_commit_count = 0;
@@ -364,6 +380,29 @@ struct AdvanceResult final {
     std::uint32_t steps_advanced = 0;
 };
 
+struct SlingshotSnapshot final {
+    bool available = false, station_available = false, seated = false;
+    bool drawing = false, released = false, can_retrieve = false, recovering = false;
+    bool guided_launch = false, track_exit = false, release_ready = false;
+    bool ledger_valid = true;
+    bool pouch_pair_excluded = false;
+    bool aim_ready = true;
+    bool aim_locked = false;
+    double draw_m = 0.0, energy_j = 0.0, work_j = 0.0, source_power_w = 0.0;
+    double yaw_rad = 0.0, elevation_rad = 1.4311699866353502;
+    double dissipated_work_j = 0.0, kinetic_j = 0.0, gravity_j = 0.0, energy_residual_j = 0.0;
+    double max_draw_m = 0.0, max_source_power_w = 0.0, band_rest_m = 0.0;
+    double retrieval_work_j = 0.0, retrieval_source_power_w = 0.0;
+    double aim_control_work_j = 0.0;
+    double aim_source_power_w = 0.0;
+    double target_yaw_rad = 0.0, target_elevation_rad = 1.4311699866353502;
+    Vector3 anchor_left{}, anchor_right{}, pouch_position{};
+    Vector3 neutral_position{};
+    Vector3 retrieval_control_position{};
+    Vector3 launch_track_start{}, launch_track_end{};
+    std::uint32_t launch_count = 0;
+};
+
 class Simulation final {
 public:
     static constexpr std::uint32_t kTickRateHz = 90;
@@ -499,7 +538,7 @@ public:
     static constexpr double kTowerHeightMeters = 1600.0;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ExteriorGrade,
-                        WorldContent content = WorldContent::PipeBridge);
+                        WorldContent content = WorldContent::Slingshot);
     [[nodiscard]] std::uint32_t entity_body_count(std::uint64_t entity) const noexcept;
     [[nodiscard]] std::uint32_t moving_body_count() const noexcept;
     ~Simulation();
@@ -514,6 +553,15 @@ public:
     [[nodiscard]] bool request_jump() noexcept;
     [[nodiscard]] bool request_traversal() noexcept;
     [[nodiscard]] bool request_release() noexcept;
+    // Explicit pause-menu/development tools. These never run as a gameplay
+    // consequence or bypass the launcher's physical trajectory.
+    [[nodiscard]] bool debug_restart_at(Vector3 capsule_centre) noexcept;
+    [[nodiscard]] bool restart_checkpoint() noexcept;
+    [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation) noexcept;
+    [[nodiscard]] bool request_slingshot_action() noexcept;
+    [[nodiscard]] bool request_slingshot_drop() noexcept;
+    [[nodiscard]] SlingshotSnapshot slingshot_state() const noexcept;
+    [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
 
     // Crouch (GDD 7.2, Governing Law 4). A held state, like set_move_input,
     // not a one-shot: while true and the body is on the ground outside a
@@ -624,6 +672,9 @@ public:
     [[nodiscard]] KitPart kit_body_part(std::uint32_t body, std::uint32_t part) const noexcept;
     [[nodiscard]] Vector3 kit_body_position(std::uint32_t body) const noexcept;
     [[nodiscard]] Quaternion kit_body_rotation(std::uint32_t body) const noexcept;
+    [[nodiscard]] Vector3 render_kit_body_position(std::uint32_t body) const noexcept;
+    [[nodiscard]] Quaternion render_kit_body_rotation(std::uint32_t body) const noexcept;
+    [[nodiscard]] SlingshotSnapshot render_slingshot_state() const noexcept;
     [[nodiscard]] Vector3 kit_body_velocity(std::uint32_t body) const noexcept;
     [[nodiscard]] double kit_body_mass(std::uint32_t body) const noexcept;
     [[nodiscard]] double kit_body_kinetic_energy(std::uint32_t body) const noexcept;
@@ -635,11 +686,14 @@ public:
     // other end) and returns how many; 0 for a parted rope.
     [[nodiscard]] std::uint32_t kit_cable_points(std::uint32_t cable, Vector3 *out,
                                                  std::uint32_t capacity) const noexcept;
+    [[nodiscard]] std::uint32_t render_kit_cable_points(std::uint32_t cable, Vector3 *out,
+                                                        std::uint32_t capacity) const noexcept;
 
 private:
     class PhysicsWorld;
 
     void step_fixed() noexcept;
+    void capture_render_history() noexcept;
 
     std::unique_ptr<PhysicsWorld> physics_world_;
     std::uint64_t tick_index_ = 0;
@@ -671,6 +725,12 @@ private:
     bool intake_sling_attach_requested_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
+    std::vector<Vector3> previous_kit_positions_;
+    std::vector<Quaternion> previous_kit_rotations_;
+    std::vector<std::vector<Vector3>> previous_cable_points_;
+    SlingshotSnapshot previous_slingshot_state_{};
+    double sling_draw_ = 0.0, sling_yaw_ = 0.0, sling_elevation_ = 1.4311699866353502;
+    bool sling_action_ = false, sling_drop_ = false;
 };
 
 } // namespace scraperx::sim

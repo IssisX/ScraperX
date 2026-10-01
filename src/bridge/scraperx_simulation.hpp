@@ -33,6 +33,16 @@ public:
     [[nodiscard]] bool request_jump();
     [[nodiscard]] bool request_traversal();
     [[nodiscard]] bool request_release();
+    [[nodiscard]] bool debug_restart_at(godot::Vector3 capsule_centre);
+    [[nodiscard]] bool restart_checkpoint();
+    [[nodiscard]] bool configure_pipe_bridge_fixture();
+    [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation);
+    [[nodiscard]] bool request_slingshot_action();
+    [[nodiscard]] bool request_slingshot_drop();
+    [[nodiscard]] godot::Dictionary get_slingshot_state() const;
+    [[nodiscard]] godot::Dictionary get_slingshot_render_state() const;
+    [[nodiscard]] godot::Dictionary get_landing_state() const;
+    [[nodiscard]] godot::PackedVector3Array get_slingshot_prediction() const;
     [[nodiscard]] bool request_parachute();
     [[nodiscard]] bool set_crouch_input(bool held);
     [[nodiscard]] bool set_sprint_input(bool held);
@@ -217,12 +227,14 @@ public:
     [[nodiscard]] bool is_kit_body_enabled(std::int64_t body) const;
     [[nodiscard]] godot::PackedFloat32Array get_kit_body_parts(std::int64_t body) const;
     [[nodiscard]] godot::Transform3D get_kit_body_transform(std::int64_t body) const;
+    [[nodiscard]] godot::Transform3D get_kit_body_render_transform(std::int64_t body) const;
     [[nodiscard]] godot::Vector3 get_kit_carry_grip_position(std::int64_t body) const;
     [[nodiscard]] std::int64_t get_kit_body_index(std::int64_t entity_id) const;
     // Cables: the kit's ropes, then its trip lines, each as the points it is
     // drawn through. Empty for a parted rope.
     [[nodiscard]] std::int64_t get_kit_cable_count() const;
     [[nodiscard]] godot::PackedVector3Array get_kit_cable_points(std::int64_t cable) const;
+    [[nodiscard]] godot::PackedVector3Array get_kit_cable_render_points(std::int64_t cable) const;
     // Stage A, the skip lift, read back.
     [[nodiscard]] double get_well_a_cage_travel() const;
     [[nodiscard]] bool is_well_a_catch_latched() const;

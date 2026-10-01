@@ -162,7 +162,7 @@ void finish_route(Simulation &s) {
 }
 
 void missed_gap_recovers() {
-    Simulation miss(InitialSpawn::BracedBayEntry);
+    Simulation miss(InitialSpawn::BracedBayEntry, scraperx::sim::WorldContent::PipeBridge);
     reach_first_landing(miss);
     (void)walk_to(miss, 33.7, -144.0, 2.0);
     report(miss, "GAP_WITHOUT_JUMP");
@@ -181,7 +181,7 @@ void missed_gap_recovers() {
 }
 
 void balance_allows_departure() {
-    Simulation side(InitialSpawn::BracedBayEntry);
+    Simulation side(InitialSpawn::BracedBayEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(side, 0.5);
     require(walk_to(side, 28, -131), "side-exit approach");
     advance(side, 0.5);
@@ -230,14 +230,14 @@ void upper_checkpoint_restores(Simulation &s) {
 int main() {
     // Removing the first brace or its receiving landing must fail here:
     // the player cannot manufacture five metres of rise from movement input.
-    Simulation route(InitialSpawn::BracedBayEntry);
+    Simulation route(InitialSpawn::BracedBayEntry, scraperx::sim::WorldContent::PipeBridge);
     reach_first_landing(route);
     cross_gap(route, 30.0, -144.0);
     finish_route(route);
     upper_checkpoint_restores(route);
     // A takeoff corridor, not one exact launch tick, must work.
     for (const auto &entry : {std::pair<double, double>{29.8, -144.2}, {30.3, -143.8}}) {
-        Simulation varied(InitialSpawn::BracedBayEntry);
+        Simulation varied(InitialSpawn::BracedBayEntry, scraperx::sim::WorldContent::PipeBridge);
         reach_first_landing(varied);
         cross_gap(varied, entry.first, entry.second);
     }

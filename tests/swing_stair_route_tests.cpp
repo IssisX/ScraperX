@@ -193,7 +193,7 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
 
 int main(int argc, char **argv) {
   const int mode=argc>1?std::stoi(argv[1]):0;
-  Simulation s;
+  Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::PipeBridge);
   wait(s, .5);
   report(s, "SPAWN");
   std::set<std::uint64_t> ids;

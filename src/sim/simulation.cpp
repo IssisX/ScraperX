@@ -3,6 +3,7 @@
 #include "sim/bands.hpp"
 #include "sim/mechanism_kit.hpp"
 #include "sim/pipe_bridge.hpp"
+#include "sim/slingshot.hpp"
 #include "swing_stair.hpp"
 #include "sim/upper_ascent.hpp"
 #include "sim/teeter_rise.hpp"
@@ -516,7 +517,8 @@ constexpr float kStackCenterX = 0.0F;
 constexpr float kStackCenterZ = -150.0F;
 constexpr float kStackHalfExtent = 26.0F;      // 52 m square footprint: a building, not a mast.
 constexpr float kStackLevelHeight = 11.0F;     // generous industrial floor-to-floor.
-constexpr int kStackLevelCount = 14;           // decks at 11..154 m; level 0 is grade.
+constexpr int kStackLevelCount = 32;           // real launch receivers at 11..352 m.
+constexpr int kRegressionStackLevelCount = 14;
 constexpr float kStackDeckHalfThickness = 0.25F;
 constexpr float kStackDeckBandDepth = 9.0F;    // walkable perimeter band; leaves a 34 m shaft.
 constexpr float kStackColumnHalf = 0.8F;
@@ -1252,6 +1254,12 @@ struct SupportSample final {
     scraperx::sim::Vector3 contact_point{};
     scraperx::sim::Vector3 point_velocity{};
     float normal_y = 0.0F;
+    scraperx::sim::Vector3 normal{0, 1, 0};
+    scraperx::sim::Vector3 player_point_velocity{};
+    scraperx::sim::Vector3 player_contact_point{};
+    float approach_normal_speed = 0.0F;
+    float approach_tangent_speed = 0.0F;
+    JPH::BodyID body_id;
 };
 
 // Supports that actually move. These outrank static ground when the player is
@@ -1284,15 +1292,26 @@ struct SupportSample final {
 
 class PlayerContactListener final : public JPH::ContactListener {
 public:
+    void set_landing_feedback(bool enabled) noexcept { landing_feedback_ = enabled; }
+    void set_slingshot(scraperx::sim::Slingshot *launcher) noexcept {
+        slingshot_ = launcher;
+    }
     void begin_tick() noexcept {
         lock();
         sample_ = {};
+        impact_sample_ = {};
         unlock();
     }
 
     [[nodiscard]] SupportSample sample() const noexcept {
         lock();
         const SupportSample result = sample_;
+        unlock();
+        return result;
+    }
+    [[nodiscard]] SupportSample impact_sample() const noexcept {
+        lock();
+        const auto result = impact_sample_;
         unlock();
         return result;
     }
@@ -1362,6 +1381,7 @@ public:
                         const JPH::Body &second,
                         const JPH::ContactManifold &manifold,
                         JPH::ContactSettings &) override {
+        observe_slingshot(first, second);
         observe_support(first, second, manifold);
     }
 
@@ -1369,10 +1389,22 @@ public:
                             const JPH::Body &second,
                             const JPH::ContactManifold &manifold,
                             JPH::ContactSettings &) override {
+        observe_slingshot(first, second);
         observe_support(first, second, manifold);
     }
 
 private:
+    void observe_slingshot(const JPH::Body &first, const JPH::Body &second) noexcept {
+        if (slingshot_ && (first.GetUserData() == scraperx::sim::Slingshot::kPouchEntity ||
+                          second.GetUserData() == scraperx::sim::Slingshot::kPouchEntity))
+            slingshot_->note_pouch_contact();
+        if (slingshot_ && (first.GetUserData() == scraperx::sim::Slingshot::kLaunchRailEntity ||
+                          second.GetUserData() == scraperx::sim::Slingshot::kLaunchRailEntity))
+            slingshot_->note_carrier_contact();
+        if (slingshot_ && (first.GetUserData() == scraperx::sim::Simulation::kPlayerEntityId ||
+                          second.GetUserData() == scraperx::sim::Simulation::kPlayerEntityId))
+            slingshot_->note_external_influence();
+    }
     [[nodiscard]] static int support_rank(const std::uint64_t entity_id) noexcept {
         if (entity_id == 0 || entity_id == scraperx::sim::Simulation::kPlayerEntityId) {
             return 0;
@@ -1393,6 +1425,9 @@ private:
         std::uint64_t support_entity = 0;
         float support_normal_y = 0.0F;
         JPH::RVec3 support_contact_point{};
+        JPH::RVec3 player_contact_point{};
+        JPH::Vec3 normal = JPH::Vec3::sZero();
+        const JPH::Body *player_body = nullptr;
         const JPH::Body *support_body = nullptr;
 
         if (first_entity == scraperx::sim::Simulation::kPlayerEntityId) {
@@ -1400,11 +1435,17 @@ private:
             support_normal_y = -manifold.mWorldSpaceNormal.GetY();
             support_contact_point = manifold.GetWorldSpaceContactPointOn2(0);
             support_body = &second;
+            player_body = &first;
+            player_contact_point = manifold.GetWorldSpaceContactPointOn1(0);
+            normal = -manifold.mWorldSpaceNormal;
         } else if (second_entity == scraperx::sim::Simulation::kPlayerEntityId) {
             support_entity = first_entity;
             support_normal_y = manifold.mWorldSpaceNormal.GetY();
             support_contact_point = manifold.GetWorldSpaceContactPointOn1(0);
             support_body = &first;
+            player_body = &second;
+            player_contact_point = manifold.GetWorldSpaceContactPointOn2(0);
+            normal = manifold.mWorldSpaceNormal;
         }
 
         // WO-013: a sensor body (the wet grate) still produces a full contact
@@ -1420,19 +1461,35 @@ private:
         }
 
         const JPH::Vec3 point_velocity = support_body->GetPointVelocity(support_contact_point);
+        const JPH::Vec3 player_velocity = player_body->GetPointVelocity(player_contact_point);
+        const JPH::Vec3 relative = player_velocity - point_velocity;
+        const float normal_velocity = relative.Dot(normal);
         const SupportSample candidate{
             true,
             support_entity,
             {support_contact_point.GetX(), support_contact_point.GetY(), support_contact_point.GetZ()},
             {point_velocity.GetX(), point_velocity.GetY(), point_velocity.GetZ()},
             support_normal_y,
+            {normal.GetX(), normal.GetY(), normal.GetZ()},
+            {player_velocity.GetX(), player_velocity.GetY(), player_velocity.GetZ()},
+            {player_contact_point.GetX(), player_contact_point.GetY(), player_contact_point.GetZ()},
+            std::max(0.0F, -normal_velocity),
+            (relative - normal * normal_velocity).Length(),
+            support_body->GetID(),
         };
 
         lock();
+        if (!impact_sample_.grounded || candidate.approach_normal_speed > impact_sample_.approach_normal_speed ||
+            (candidate.approach_normal_speed == impact_sample_.approach_normal_speed &&
+             candidate.entity_id < impact_sample_.entity_id))
+            impact_sample_ = candidate;
         const int current_rank = support_rank(sample_.entity_id);
         const int candidate_rank = support_rank(candidate.entity_id);
         if (!sample_.grounded || candidate_rank > current_rank ||
-            (candidate_rank == current_rank && candidate.normal_y > sample_.normal_y)) {
+            (candidate_rank == current_rank &&
+             ((!landing_feedback_ && candidate.normal_y > sample_.normal_y) ||
+              (landing_feedback_ && (candidate.approach_normal_speed > sample_.approach_normal_speed ||
+               (candidate.approach_normal_speed == sample_.approach_normal_speed && candidate.normal_y > sample_.normal_y)))))) {
             sample_ = candidate;
         }
         unlock();
@@ -1448,8 +1505,11 @@ private:
     }
 
     mutable std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
+    bool landing_feedback_ = false;
     SupportSample sample_{};
+    SupportSample impact_sample_{};
     std::atomic<std::uint64_t> carried_entity_{0};
+    scraperx::sim::Slingshot *slingshot_ = nullptr;
 };
 
 [[nodiscard]] JPH::RVec3 spawn_position(const scraperx::sim::InitialSpawn spawn) noexcept {
@@ -1733,6 +1793,7 @@ public:
         : temp_allocator_(8U * 1024U * 1024U),
           job_system_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, 1),
           regression_fixtures_(content == WorldContent::RegressionFixtures) {
+        contact_listener_.set_landing_feedback(content == WorldContent::Slingshot);
         // Raised from 1024: the world's solid dressing adds ~1 600 static
         // bodies (world_solids.inc) on top of the ~300 the kernel owns.
         physics_system_.Init(4096,
@@ -1888,6 +1949,8 @@ public:
         player_settings.mUserData = Simulation::kPlayerEntityId;
         player_settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
         player_settings.mMassPropertiesOverride.mMass = kPlayerMassKg;
+        if (content == WorldContent::Slingshot)
+            player_settings.mMotionQuality = JPH::EMotionQuality::LinearCast;
         player_id_ = bodies.CreateAndAddBody(player_settings, JPH::EActivation::Activate);
 
         // Built last, so every body before it keeps the id it had: the ascent
@@ -1904,8 +1967,11 @@ public:
 
         }
 
-        if (content == WorldContent::PipeBridge) {
-            pipe_bridge_ = std::make_unique<PipeBridge>(physics_system_, *kit_);
+        if (content == WorldContent::PipeBridge || content == WorldContent::Slingshot) {
+            if (content == WorldContent::PipeBridge)
+                pipe_bridge_ = std::make_unique<PipeBridge>(physics_system_, *kit_);
+            else
+                slingshot_ = std::make_unique<Slingshot>(physics_system_, *kit_, player_id_);
             build_facade_route(*kit_);
             swing_stair_ = std::make_unique<SwingStair>(physics_system_, *kit_);
             upper_ascent_ = std::make_unique<UpperAscent>(physics_system_, *kit_);
@@ -1914,6 +1980,7 @@ public:
             build_north_service_frame(*kit_);
         }
 
+        contact_listener_.set_slingshot(slingshot_.get());
         physics_system_.OptimizeBroadPhase();
 
         checkpoint_position_ = JPH::RVec3(0.0, 0.9, 0.0);
@@ -1946,6 +2013,7 @@ public:
         upper_ascent_.reset();
         swing_stair_.reset();
         pipe_bridge_.reset();
+        slingshot_.reset();
         kit_.reset();
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
             if (constraint != nullptr) {
@@ -2005,6 +2073,8 @@ public:
         double intake_hoist_input = 0.0;
         bool intake_sling_release_requested = false;
         bool intake_sling_attach_requested = false;
+        double sling_draw = 0.0, sling_yaw = 0.0, sling_elevation = 1.4311699866353502;
+        bool sling_action = false, sling_drop = false;
     };
 
     void step(const StepCommands &commands,
@@ -2013,6 +2083,8 @@ public:
         // WO-008: captured before anything this tick can change grounded_, so
         // it means exactly "was the player standing on something one tick ago."
         const bool was_grounded_before_tick = grounded_;
+        if (slingshot_) landing_recovery_seconds_ = std::max(0.0, landing_recovery_seconds_ - delta_seconds);
+        landing_applied_force_ = JPH::Vec3::sZero();
 
         auto &bodies = physics_system_.GetBodyInterface();
         if (regression_fixtures_) {
@@ -2044,19 +2116,42 @@ public:
         }
         facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
 
-        update_crouch(bodies, commands);
-        update_rig(bodies, commands);
-        update_carry(bodies, commands, delta_seconds);
-        apply_traversal_commands(bodies, commands);
-        if (traversal_state_ == TraversalState::Climbing) {
-            update_climb(bodies, commands, delta_seconds);
-        } else if (traversal_state_ == TraversalState::Hanging) {
-            update_shimmy(bodies, commands, delta_seconds);
+        if (!slingshot_ || !slingshot_->controls_player()) {
+            update_crouch(bodies, commands);
+            update_rig(bodies, commands);
+            update_carry(bodies, commands, delta_seconds);
+            apply_traversal_commands(bodies, commands);
+            if (traversal_state_ == TraversalState::Climbing) {
+                update_climb(bodies, commands, delta_seconds);
+            } else if (traversal_state_ == TraversalState::Hanging) {
+                update_shimmy(bodies, commands, delta_seconds);
+            }
         }
 
+        const bool sling_was_controlling = slingshot_ && slingshot_->controls_player();
+        if (slingshot_) slingshot_->pre_step(delta_seconds, commands.sling_draw,
+            commands.sling_yaw, commands.sling_elevation, commands.sling_action, commands.sling_drop);
+        const bool sling_controlling = slingshot_ && slingshot_->controls_player();
+        if (sling_was_controlling && !sling_controlling && slingshot_->state().released)
+            slingshot_flight_ = true;
+        if (sling_controlling) {
+            release_carry();
+            clear_traversal();
+            parachute_deployed_ = false;
+        }
+        if (grounded_ && support_entity_id_ != Slingshot::kPouchEntity && !sling_controlling) slingshot_flight_ = false;
         bool jump_started = false;
-        if (traversal_state_ == TraversalState::None) {
-            jump_started = apply_locomotion(bodies, commands, delta_seconds);
+        if (!sling_controlling && traversal_state_ == TraversalState::None) {
+            if (slingshot_flight_ && !grounded_) {
+                // Air steering is a bounded force. It does not replace the
+                // elastic launch velocity with the walking speed controller.
+                bodies.AddForce(player_id_, JPH::Vec3(float(commands.move_input_x * kPlayerMassKg * 2.0),
+                    0.0F, float(commands.move_input_z * kPlayerMassKg * 2.0)));
+                if (commands.move_input_x != 0.0 || commands.move_input_z != 0.0)
+                    slingshot_->note_external_influence();
+            } else {
+                jump_started = apply_locomotion(bodies, commands, delta_seconds);
+            }
             if (!jump_started) {
                 try_begin_hang(bodies, commands);
             }
@@ -2084,8 +2179,16 @@ public:
         if (swing_stair_) swing_stair_->pre_step(delta_seconds);
         if (upper_ascent_) upper_ascent_->pre_step(delta_seconds);
         contact_listener_.begin_tick();
-        physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
+        physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
+        if (!landing_applied_force_.IsNearZero()) {
+            const auto support_point_now = bodies.GetCenterOfMassTransform(landing_force_support_id_) *
+                                           landing_force_support_local_point_;
+            const auto displacement = JPH::Vec3(bodies.GetCenterOfMassPosition(player_id_) - landing_force_start_) -
+                                      JPH::Vec3(support_point_now - landing_force_support_start_);
+            landing_recovery_work_j_ += std::max(0.0F, landing_applied_force_.Dot(displacement));
+        }
         kit_->post_step(delta_seconds);
+        if (slingshot_) slingshot_->post_step(delta_seconds);
 
         SupportSample support = contact_listener_.sample();
         if (jump_started || traversal_state_ != TraversalState::None) {
@@ -2103,7 +2206,9 @@ public:
         bool died_this_tick = false;
         if (grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None &&
             !jump_started) {
-            last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
+            const auto impact = slingshot_ ? contact_listener_.impact_sample() : support;
+            if (slingshot_ && !sling_controlling) record_landing(bodies, impact);
+            last_impact_speed_mps_ = slingshot_ ? impact.approach_normal_speed : pre_contact_fall_speed_mps_;
             if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
                 restore_from_checkpoint(bodies);
                 died_this_tick = true;
@@ -2152,6 +2257,51 @@ public:
         return state_;
     }
 
+    bool debug_restart_at(const Vector3 centre) noexcept {
+        if (!std::isfinite(centre.x) || !std::isfinite(centre.y) || !std::isfinite(centre.z) ||
+            centre.y < kPlayerHalfHeight - .02 || centre.y > Simulation::kTowerHeightMeters + 100.0 ||
+            std::abs(centre.x) > 10000.0 || std::abs(centre.z) > 10000.0) return false;
+        const JPH::RVec3 destination(centre.x, centre.y, centre.z);
+        if (!shape_pose_is_clear(player_shape_.GetPtr(), destination, .02F)) return false;
+        auto &bodies = physics_system_.GetBodyInterface();
+        if (slingshot_) slingshot_->cancel_player_interaction();
+        slingshot_flight_ = false;
+        release_carry();
+        clear_traversal();
+        crouched_ = false;
+        bodies.SetShape(player_id_, player_shape_.GetPtr(), false, JPH::EActivation::Activate);
+        bodies.SetPositionAndRotation(player_id_, destination, JPH::Quat::sIdentity(), JPH::EActivation::Activate);
+        bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
+        grounded_ = false;
+        support_entity_id_ = 0;
+        support_sample_ = {};
+        airborne_inherited_velocity_ = JPH::Vec3::sZero();
+        parachute_deployed_ = false;
+        fall_peak_speed_mps_ = pre_contact_fall_speed_mps_ = last_impact_speed_mps_ = 0.0F;
+        clear_landing_recovery();
+        jump_vault_ticks_left_ = regrab_lockout_ticks_ = 0;
+        // An explicit debug relocation creates its own retry point. Ordinary
+        // walking still commits only on verified firm footing.
+        checkpoint_position_ = destination;
+        checkpoint_crouched_ = false;
+        commit_machine_checkpoint(bodies);
+        update_affordance(bodies);
+        read_state();
+        return true;
+    }
+
+    bool restart_checkpoint() noexcept {
+        auto &bodies = physics_system_.GetBodyInterface();
+        release_carry();
+        clear_traversal();
+        const auto deaths = death_count_;
+        restore_from_checkpoint(bodies);
+        death_count_ = deaths; // A menu restart is not a fatal fall.
+        update_affordance(bodies);
+        read_state();
+        return true;
+    }
+
     [[nodiscard]] bool traversal_committed() const noexcept {
         return traversal_state_ != TraversalState::None;
     }
@@ -2160,6 +2310,35 @@ public:
         return *kit_;
     }
     [[nodiscard]] const PipeBridge *pipe_bridge() const noexcept { return pipe_bridge_.get(); }
+    [[nodiscard]] const Slingshot *slingshot() const noexcept { return slingshot_.get(); }
+
+    [[nodiscard]] std::vector<Vector3> slingshot_prediction() const {
+        std::vector<Vector3> result;
+        if (!slingshot_ || !slingshot_->state().seated) return result;
+        JPH::IgnoreMultipleBodiesFilter filter;
+        filter.IgnoreBody(player_id_);
+        filter.IgnoreBody(kit_->body_id(slingshot_->pouch_body()));
+        filter.IgnoreBody(kit_->body_id(kit_->body_for_entity(Slingshot::kRailEntity)));
+        filter.IgnoreBody(kit_->body_id(kit_->body_for_entity(Slingshot::kLaunchRailEntity)));
+        const auto points = slingshot_->prediction();
+        if (points.empty()) return result;
+        result.push_back(to_vector3(points.front()));
+        for (std::size_t n = 1; n < points.size(); ++n) {
+            const auto from = points[n - 1];
+            const JPH::Vec3 displacement(points[n] - from);
+            JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
+            const JPH::RShapeCast sweep(player_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
+                JPH::RMat44::sTranslation(from), displacement);
+            physics_system_.GetNarrowPhaseQuery().CastShape(sweep, JPH::ShapeCastSettings(),
+                from, collector, {}, {}, filter);
+            if (collector.HadHit()) {
+                result.push_back(to_vector3(from + displacement * collector.mHit.mFraction));
+                break;
+            }
+            result.push_back(to_vector3(points[n]));
+        }
+        return result;
+    }
 
     void set_feed_enabled(const bool enabled) noexcept {
         steam_plant_.set_feed_enabled(enabled);
@@ -2790,10 +2969,11 @@ private:
 
         const float band_center = kStackHalfExtent - kStackDeckBandDepth * 0.5F;
         const float inner_half = kStackHalfExtent - kStackDeckBandDepth;
+        const int level_count = regression_fixtures_ ? kRegressionStackLevelCount : kStackLevelCount;
 
         // Continuous deck rings retain the tower's receiving surfaces while
         // closing every opening cut for the rejected fourteen-flight bypass.
-        for (int level = 1; level <= kStackLevelCount; ++level) {
+        for (int level = 1; level <= level_count; ++level) {
             const float deck_y = static_cast<float>(level) * kStackLevelHeight;
             const float slab_y = deck_y - kStackDeckHalfThickness;
             for (const float sz : {1.0F, -1.0F}) {
@@ -2810,7 +2990,7 @@ private:
         // Columns: corners and edge mid-spans, one run per storey. No ordinary
         // stair or ramp bodies are built; ascent is authored by the campaign's
         // mechanisms and parkour routes.
-        for (int level = 0; level < kStackLevelCount; ++level) {
+        for (int level = 0; level < level_count; ++level) {
             const float base_y = static_cast<float>(level) * kStackLevelHeight;
             const float column_half = kStackLevelHeight * 0.5F;
             for (const float sx : {1.0F, -1.0F}) {
@@ -4405,8 +4585,9 @@ private:
     }
 
     [[nodiscard]] bool shape_pose_is_clear(const JPH::Shape *shape,
-                                           const JPH::RVec3 centre) const noexcept {
-        JPH::AnyHitCollisionCollector<JPH::CollideShapeCollector> collector;
+                                           const JPH::RVec3 centre,
+                                           const float contact_slop = 0.0F) const noexcept {
+        JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> collector;
         JPH::CollideShapeSettings settings;
         settings.mMaxSeparationDistance = 0.0F;
         const JPH::IgnoreSingleBodyFilter body_filter(player_id_);
@@ -4419,7 +4600,10 @@ private:
                                                            {},
                                                            {},
                                                            body_filter);
-        return !collector.HadHit();
+        // Debug relocation may reuse a standing pose with ordinary solver
+        // contact slop. Traversal callers retain strict clearance by default.
+        return std::none_of(collector.mHits.begin(), collector.mHits.end(),
+            [contact_slop](const auto &hit) { return hit.mPenetrationDepth > contact_slop; });
     }
 
     // Finds a ledge in front of `origin`. Every returned field comes from a real
@@ -4993,6 +5177,96 @@ private:
         return true;
     }
 
+    void clear_landing_recovery() noexcept {
+        landing_recovery_seconds_ = landing_recovery_duration_ = landing_initial_balance_loss_ = 0;
+        landing_applied_force_ = JPH::Vec3::sZero();
+        landing_slip_velocity_ = JPH::Vec3::sZero();
+    }
+
+    void record_landing(const JPH::BodyInterface &bodies, const SupportSample &support) noexcept {
+        ++landing_count_;
+        landing_support_entity_id_ = support.entity_id;
+        landing_normal_speed_mps_ = support.approach_normal_speed;
+        landing_tangent_speed_mps_ = support.approach_tangent_speed;
+        landing_approach_energy_j_ = .5 * kPlayerMassKg * landing_normal_speed_mps_ * landing_normal_speed_mps_;
+        landing_tangent_energy_j_ = .5 * kPlayerMassKg * landing_tangent_speed_mps_ * landing_tangent_speed_mps_;
+        const JPH::Vec3 normal(float(support.normal.x), float(support.normal.y), float(support.normal.z));
+        const JPH::RVec3 player_point(support.player_contact_point.x, support.player_contact_point.y,
+                                     support.player_contact_point.z);
+        const JPH::Vec3 before(float(support.player_point_velocity.x), float(support.player_point_velocity.y),
+                               float(support.player_point_velocity.z));
+        const auto after = bodies.GetPointVelocity(player_id_, player_point);
+        // This is the body's observed normal momentum change across the
+        // contact interval. It includes intervening gravity/other contacts;
+        // it is not claimed as an isolated contact impulse or support loss.
+        landing_observed_normal_impulse_ns_ = kPlayerMassKg * (after - before).Dot(normal);
+        const JPH::RVec3 point(support.contact_point.x, support.contact_point.y, support.contact_point.z);
+        const auto relative = bodies.GetLinearVelocity(player_id_) - bodies.GetPointVelocity(support.body_id, point);
+        landing_slip_velocity_ = relative - normal * relative.Dot(normal);
+        landing_recovery_duration_ = std::clamp(.08 + .045 * landing_normal_speed_mps_ +
+            .06 * landing_slip_velocity_.Length(), .08, 2.0);
+        landing_recovery_seconds_ = landing_recovery_duration_;
+        landing_initial_balance_loss_ = std::clamp((landing_approach_energy_j_ +
+            .25 * landing_tangent_energy_j_) / 7000.0, 0.0, .90);
+    }
+
+    void apply_landing_recovery(JPH::BodyInterface &bodies, const StepCommands &commands,
+                                const float dt) noexcept {
+        const auto support_id = support_sample_.body_id;
+        if (support_id.IsInvalid()) return;
+        const JPH::RVec3 point(support_sample_.contact_point.x, support_sample_.contact_point.y,
+                               support_sample_.contact_point.z);
+        const JPH::Vec3 normal(float(support_sample_.normal.x), float(support_sample_.normal.y),
+                               float(support_sample_.normal.z));
+        const auto support_velocity = bodies.GetPointVelocity(support_id, point);
+        const auto relative = bodies.GetLinearVelocity(player_id_) - support_velocity;
+        const auto slip = relative - normal * relative.Dot(normal);
+        landing_slip_velocity_ = slip;
+        const double progress = landing_recovery_duration_ > 0 ?
+            std::clamp(landing_recovery_seconds_ / landing_recovery_duration_, 0.0, 1.0) : 0;
+        const double balance = 1.0 - landing_initial_balance_loss_ * progress;
+        const double speed = kPlayerMaximumRelativeSpeed * (crouched_ ? kCrouchSpeedScale : 1.0) * (.45 + .55 * balance);
+        sprinting_ = commands.sprint_held && !crouched_ && carry_constraint_ == nullptr;
+        const double desired_speed = speed * (sprinting_ ? kSprintSpeedScale : 1.0);
+        JPH::Vec3 desired(float(commands.move_input_x * desired_speed), 0, float(commands.move_input_z * desired_speed));
+        desired -= normal * desired.Dot(normal);
+        auto correction = (desired - slip) * (kPlayerMassKg / .18F);
+        const float traction_cap = .85F * kPlayerMassKg * -physics_system_.GetGravity().GetY() *
+                                   std::max(.3F, normal.GetY());
+        if (correction.Length() > traction_cap) correction *= traction_cap / correction.Length();
+        bool dynamic_support = false;
+        float effective_inverse_mass = 1.0F / kPlayerMassKg;
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), support_id);
+            dynamic_support = lock.Succeeded() && lock.GetBody().IsDynamic();
+            if (dynamic_support && !correction.IsNearZero()) {
+                const auto &body = lock.GetBody();
+                const auto lever = JPH::Vec3(point - body.GetCenterOfMassPosition());
+                const auto torque_axis = lever.Cross(correction.Normalized());
+                effective_inverse_mass += body.GetMotionProperties()->GetInverseMass() +
+                    torque_axis.Dot(body.GetInverseInertia().Multiply3x3(torque_axis));
+            }
+        }
+        // Include both bodies' translation and support rotation in the
+        // finite 3 kW positive-work prediction. Braking is dissipative work.
+        const float positive_power = correction.Dot(slip) +
+            .5F * correction.LengthSq() * effective_inverse_mass * dt;
+        if (positive_power > 3000.0F) correction *= 3000.0F / positive_power;
+        bodies.AddForce(player_id_, correction);
+        if (dynamic_support) bodies.AddForce(support_id, -correction, point);
+        landing_applied_force_ = correction;
+        landing_force_start_ = bodies.GetCenterOfMassPosition(player_id_);
+        landing_force_support_id_ = support_id;
+        landing_force_support_start_ = point;
+        landing_force_support_local_point_ = bodies.GetCenterOfMassTransform(support_id).Inversed() * point;
+        if ((desired - slip).Length() > .75F)
+            landing_recovery_seconds_ = std::max(landing_recovery_seconds_,
+                std::min(2.0, double((desired - slip).Length() / 8.0F)));
+        airborne_inherited_velocity_ = support_velocity;
+        balancing_ = true;
+        if (slingshot_ && !correction.IsNearZero()) slingshot_->note_external_influence();
+    }
+
     [[nodiscard]] bool apply_locomotion(JPH::BodyInterface &bodies,
                                         const StepCommands &commands,
                                         const float delta_seconds) noexcept {
@@ -5003,6 +5277,41 @@ private:
         double move_z = commands.move_input_z * speed_scale;
         sprinting_ = false;
         balancing_ = false;
+
+        if (slingshot_ && grounded_ && landing_recovery_seconds_ > 0 && support_entity_id_ != 0) {
+            if (commands.jump_requested && !crouched_) {
+                const auto support_velocity = current_support_point_velocity(bodies);
+                const auto before_velocity = bodies.GetLinearVelocity(player_id_);
+                const auto impulse = JPH::Vec3(0, kPlayerMassKg * std::max(0.0F,
+                    support_velocity.GetY() + kJumpSpeed - before_velocity.GetY()), 0);
+                bodies.AddImpulse(player_id_, impulse);
+                const auto support_id = support_sample_.body_id;
+                bool dynamic_support = false;
+                float inverse_mass = 1.0F / kPlayerMassKg;
+                {
+                    const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), support_id);
+                    dynamic_support = lock.Succeeded() && lock.GetBody().IsDynamic();
+                    if (dynamic_support) {
+                        const auto &support = lock.GetBody();
+                        const auto lever = JPH::Vec3(JPH::RVec3(support_sample_.contact_point.x,
+                            support_sample_.contact_point.y, support_sample_.contact_point.z) - support.GetCenterOfMassPosition());
+                        const auto rotation_axis = lever.Cross(JPH::Vec3::sAxisY());
+                        inverse_mass += support.GetMotionProperties()->GetInverseMass() +
+                            rotation_axis.Dot(support.GetInverseInertia().Multiply3x3(rotation_axis));
+                    }
+                }
+                landing_jump_work_j_ += std::max(0.0F,
+                    impulse.Dot(before_velocity - support_velocity) + .5F * impulse.LengthSq() * inverse_mass);
+                if (dynamic_support) bodies.AddImpulse(support_id, -impulse,
+                    JPH::RVec3(support_sample_.contact_point.x, support_sample_.contact_point.y, support_sample_.contact_point.z));
+                jump_takeoff_feet_y_ = float(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
+                jump_vault_ticks_left_ = kJumpVaultWindowTicks;
+                clear_landing_recovery();
+                return true;
+            }
+            apply_landing_recovery(bodies, commands, delta_seconds);
+            return false;
+        }
 
         if (grounded_ && support_entity_id_ != 0) {
             reference_velocity = current_support_point_velocity(bodies);
@@ -5140,6 +5449,7 @@ private:
         JPH::Vec3 velocity = bodies.GetLinearVelocity(player_id_);
         const float speed = velocity.Length();
         if (speed > 1.0e-4F) {
+            if (slingshot_) slingshot_->note_external_influence();
             const JPH::Vec3 drag_acceleration =
                 -(velocity / speed) * (kParachuteDragCoefficient * speed * speed);
             velocity += drag_acceleration * delta_seconds;
@@ -6174,6 +6484,7 @@ private:
             checkpoint_.carrying_entity = carried_entity_;
             kit_->capture(checkpoint_.kit);
             if (pipe_bridge_) checkpoint_.pipe_bridge = pipe_bridge_->state();
+            if (slingshot_) checkpoint_.slingshot = slingshot_->state();
             if (swing_stair_) checkpoint_.swing_stair = swing_stair_->state();
             if (upper_ascent_) checkpoint_.upper_ascent = upper_ascent_->state();
             return;
@@ -6225,6 +6536,8 @@ private:
     // publishing a snapshot that mixes a teleported position with a contact
     // sample that referred to the pre-restore position.
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+        if (slingshot_) slingshot_->detach();
+        slingshot_flight_ = false;
         // The capsule the checkpoint was committed in: a crouched commit's
         // centre is a crouched centre, and may sit under a low ceiling.
         crouched_ = checkpoint_crouched_;
@@ -6261,6 +6574,7 @@ private:
         }
         kit_->restore(checkpoint_.kit);
         if (pipe_bridge_) pipe_bridge_->restore(checkpoint_.pipe_bridge);
+        if (slingshot_) slingshot_->restore(checkpoint_.slingshot);
         if (swing_stair_) swing_stair_->restore(checkpoint_.swing_stair);
         if (upper_ascent_) upper_ascent_->restore(checkpoint_.upper_ascent);
         restore_carry_topology(checkpoint_.carrying_entity);
@@ -6300,6 +6614,7 @@ private:
         balancing_ = false;
         fall_peak_speed_mps_ = 0.0F;
         pre_contact_fall_speed_mps_ = 0.0F;
+        clear_landing_recovery();
         parachute_deployed_ = false;
         ++death_count_;
     }
@@ -6568,6 +6883,28 @@ private:
             : FallState::Grounded;
         state_.fall_peak_speed_mps = fall_peak_speed_mps_;
         state_.last_impact_speed_mps = last_impact_speed_mps_;
+        state_.landing_count = landing_count_;
+        state_.landing_support_entity_id = landing_support_entity_id_;
+        state_.landing_approach_energy_j = landing_approach_energy_j_;
+        state_.landing_tangent_energy_j = landing_tangent_energy_j_;
+        state_.landing_normal_speed_mps = landing_normal_speed_mps_;
+        state_.landing_tangent_speed_mps = landing_tangent_speed_mps_;
+        state_.landing_observed_normal_impulse_ns = landing_observed_normal_impulse_ns_;
+        state_.landing_recovery_seconds = landing_recovery_seconds_;
+        state_.landing_recovery_work_j = landing_recovery_work_j_;
+        state_.landing_jump_work_j = landing_jump_work_j_;
+        state_.landing_recovering = slingshot_ && grounded_ && landing_recovery_seconds_ > 0;
+        const double recovery_ratio = landing_recovery_duration_ > 0 ?
+            std::clamp(landing_recovery_seconds_ / landing_recovery_duration_, 0.0, 1.0) : 0;
+        state_.landing_balance = 1.0 - landing_initial_balance_loss_ * recovery_ratio;
+        if (slingshot_ && grounded_ && !support_sample_.body_id.IsInvalid()) {
+            const auto normal = JPH::Vec3(float(support_sample_.normal.x), float(support_sample_.normal.y),
+                                           float(support_sample_.normal.z));
+            const auto relative = bodies.GetLinearVelocity(player_id_) - current_support_point_velocity(bodies);
+            landing_slip_velocity_ = relative - normal * relative.Dot(normal);
+        }
+        state_.landing_slip_velocity = grounded_ ? Vector3{landing_slip_velocity_.GetX(), landing_slip_velocity_.GetY(),
+                                                          landing_slip_velocity_.GetZ()} : Vector3{};
         state_.parachute_deployed = parachute_deployed_;
         state_.checkpoint_position = to_vector3(checkpoint_position_);
         state_.checkpoint_commit_count = checkpoint_commit_count_;
@@ -6641,6 +6978,8 @@ private:
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     std::unique_ptr<PipeBridge> pipe_bridge_;
+    std::unique_ptr<Slingshot> slingshot_;
+    bool slingshot_flight_ = false;
     std::unique_ptr<SwingStair> swing_stair_;
     std::unique_ptr<UpperAscent> upper_ascent_;
     std::unique_ptr<TeeterRise> teeter_rise_;
@@ -6796,6 +7135,7 @@ private:
         // AS-006: every kit body, rope end, parted rope and catch.
         scraperx::sim::kit::Kit::Checkpoint kit{};
         PipeBridge::State pipe_bridge{};
+        Slingshot::State slingshot{};
         SwingStair::State swing_stair{};
         UpperAscent::State upper_ascent{};
     };
@@ -6808,6 +7148,19 @@ private:
     float fall_peak_speed_mps_ = 0.0F;
     float pre_contact_fall_speed_mps_ = 0.0F;
     float last_impact_speed_mps_ = 0.0F;
+    std::uint64_t landing_count_ = 0, landing_support_entity_id_ = 0;
+    double landing_approach_energy_j_ = 0, landing_tangent_energy_j_ = 0;
+    double landing_normal_speed_mps_ = 0, landing_tangent_speed_mps_ = 0;
+    double landing_observed_normal_impulse_ns_ = 0, landing_recovery_seconds_ = 0;
+    double landing_recovery_duration_ = 0, landing_initial_balance_loss_ = 0;
+    double landing_recovery_work_j_ = 0;
+    double landing_jump_work_j_ = 0;
+    JPH::Vec3 landing_slip_velocity_ = JPH::Vec3::sZero();
+    JPH::Vec3 landing_applied_force_ = JPH::Vec3::sZero();
+    JPH::RVec3 landing_force_start_ = JPH::RVec3::sZero();
+    JPH::BodyID landing_force_support_id_;
+    JPH::RVec3 landing_force_support_start_ = JPH::RVec3::sZero();
+    JPH::Vec3 landing_force_support_local_point_ = JPH::Vec3::sZero();
 
     Snapshot state_{};
 };
@@ -6816,10 +7169,127 @@ Simulation::Simulation(const InitialSpawn initial_spawn, const WorldContent cont
     : physics_world_(std::make_unique<PhysicsWorld>(initial_spawn, content)) {
     snapshot_ = physics_world_->state();
     snapshot_.fixed_step_seconds = kFixedStepSeconds;
-    previous_player_position_ = snapshot_.player_position;
+    capture_render_history();
 }
 
 Simulation::~Simulation() = default;
+
+bool Simulation::set_slingshot_input(double draw, double yaw, double elevation) noexcept {
+    if (!std::isfinite(draw) || !std::isfinite(yaw) || !std::isfinite(elevation)) return false;
+    sling_draw_ = std::clamp(draw, 0.0, 1.0);
+    sling_yaw_ = std::clamp(yaw, -0.8, 0.8);
+    sling_elevation_ = std::clamp(elevation, 0.35, 1.48);
+    return true;
+}
+
+bool Simulation::request_slingshot_action() noexcept {
+    if (!slingshot_state().available) return false;
+    sling_action_ = true;
+    return true;
+}
+
+bool Simulation::request_slingshot_drop() noexcept {
+    if (!slingshot_state().seated && !slingshot_state().recovering) return false;
+    sling_drop_ = true;
+    return true;
+}
+
+SlingshotSnapshot Simulation::slingshot_state() const noexcept {
+    SlingshotSnapshot result;
+    const auto *launcher = physics_world_->slingshot();
+    if (!launcher) return result;
+    const auto &state = launcher->state();
+    result.available = true;
+    result.max_draw_m = Slingshot::kMaximumDrawM;
+    result.max_source_power_w = Slingshot::kPlayerPowerW;
+    result.band_rest_m = state.band_rest_m;
+    result.neutral_position = to_vector3(Slingshot::neutral_position());
+    result.retrieval_control_position = to_vector3(Slingshot::retrieval_control_position());
+    result.station_available = state.station_available;
+    result.seated = state.seated;
+    result.drawing = state.drawing;
+    result.released = state.released;
+    result.can_retrieve = state.can_retrieve;
+    result.recovering = state.recovering;
+    result.guided_launch = state.guided_launch;
+    result.track_exit = state.track_exit;
+    result.release_ready = state.release_ready;
+    result.ledger_valid = state.ledger_valid;
+    result.pouch_pair_excluded = state.pouch_pair_excluded;
+    result.aim_control_work_j = state.aim_control_work_j;
+    result.aim_ready = state.aim_ready;
+    result.aim_locked = state.aim_locked;
+    result.aim_source_power_w = state.aim_source_power_w;
+    result.target_yaw_rad = state.target_yaw_rad;
+    result.target_elevation_rad = state.target_elevation_rad;
+    result.launch_track_start = to_vector3(state.launch_track_start);
+    result.launch_track_end = to_vector3(state.launch_track_end);
+    result.retrieval_work_j = state.retrieval_work_j;
+    result.retrieval_source_power_w = state.retrieval_source_power_w;
+    result.draw_m = state.draw_m;
+    result.energy_j = state.energy_j;
+    result.work_j = state.work_j;
+    result.source_power_w = state.source_power_w;
+    result.yaw_rad = state.yaw_rad;
+    result.elevation_rad = state.elevation_rad;
+    result.dissipated_work_j = state.dissipated_work_j;
+    result.kinetic_j = state.kinetic_j;
+    result.gravity_j = state.gravity_j;
+    result.energy_residual_j = state.energy_residual_j;
+    result.anchor_left = to_vector3(state.anchor_left);
+    result.anchor_right = to_vector3(state.anchor_right);
+    result.pouch_position = to_vector3(state.pouch_position);
+    result.launch_count = state.launch_count;
+    return result;
+}
+
+std::vector<Vector3> Simulation::slingshot_prediction() const {
+    return physics_world_->slingshot_prediction();
+}
+
+bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
+    if (!physics_world_->debug_restart_at(centre)) return false;
+    move_input_x_ = move_input_z_ = 0.0;
+    jump_requested_ = traversal_requested_ = release_requested_ = false;
+    parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
+    crouch_input_ = sprint_input_ = false;
+    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = 0.0;
+    intake_slew_input_ = intake_hoist_input_ = 0.0;
+    valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
+    water_lift_release_requested_ = water_lift_reset_requested_ = false;
+    intake_sling_release_requested_ = intake_sling_attach_requested_ = false;
+    sling_draw_ = 0.0;
+    sling_action_ = sling_drop_ = false;
+    snapshot_ = physics_world_->state();
+    snapshot_.tick_index = tick_index_;
+    snapshot_.simulation_time_seconds = tick_index_ * kFixedStepSeconds;
+    snapshot_.fixed_step_seconds = kFixedStepSeconds;
+    capture_render_history();
+    remainder_seconds_ = 0.0;
+    return true;
+}
+
+bool Simulation::restart_checkpoint() noexcept {
+    if (!physics_world_->restart_checkpoint()) return false;
+    move_input_x_ = move_input_z_ = 0.0;
+    jump_requested_ = traversal_requested_ = release_requested_ = false;
+    parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
+    crouch_input_ = sprint_input_ = false;
+    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = 0.0;
+    intake_slew_input_ = intake_hoist_input_ = 0.0;
+    valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
+    water_lift_release_requested_ = water_lift_reset_requested_ = false;
+    intake_sling_release_requested_ = intake_sling_attach_requested_ = false;
+    sling_draw_ = 0.0;
+    sling_action_ = sling_drop_ = false;
+    snapshot_ = physics_world_->state();
+    snapshot_.tick_index = tick_index_;
+    snapshot_.simulation_time_seconds = tick_index_ * kFixedStepSeconds;
+    snapshot_.fixed_step_seconds = kFixedStepSeconds;
+    capture_render_history();
+    remainder_seconds_ = 0.0;
+    return true;
+}
 
 std::uint32_t Simulation::entity_body_count(const std::uint64_t entity) const noexcept {
     return physics_world_->entity_body_count(entity);
@@ -7120,7 +7590,7 @@ bool Simulation::request_intake_sling_attach() noexcept {
 void Simulation::step_fixed() noexcept {
     const std::uint64_t previous_death_count = snapshot_.death_count;
     const bool previous_crouched = snapshot_.player_crouched;
-    previous_player_position_ = snapshot_.player_position;
+    capture_render_history();
     const double next_time_seconds =
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
 
@@ -7151,7 +7621,13 @@ void Simulation::step_fixed() noexcept {
     commands.intake_sling_release_requested = intake_sling_release_requested_;
     commands.intake_sling_attach_requested = intake_sling_attach_requested_;
 
+    commands.sling_draw = sling_draw_;
+    commands.sling_yaw = sling_yaw_;
+    commands.sling_elevation = sling_elevation_;
+    commands.sling_action = sling_action_;
+    commands.sling_drop = sling_drop_;
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
+    sling_action_ = sling_drop_ = false;
     jump_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;
@@ -7169,13 +7645,9 @@ void Simulation::step_fixed() noexcept {
     ++tick_index_;
 
     snapshot_ = physics_world_->state();
-    const double render_dx = snapshot_.player_position.x - previous_player_position_.x;
-    const double render_dy = snapshot_.player_position.y - previous_player_position_.y;
-    const double render_dz = snapshot_.player_position.z - previous_player_position_.z;
     if (snapshot_.death_count != previous_death_count ||
-        snapshot_.player_crouched != previous_crouched ||
-        render_dx * render_dx + render_dy * render_dy + render_dz * render_dz > 1.0) {
-        previous_player_position_ = snapshot_.player_position;
+        snapshot_.player_crouched != previous_crouched) {
+        capture_render_history();
     }
     snapshot_.tick_index = tick_index_;
     snapshot_.simulation_time_seconds =
@@ -7233,6 +7705,83 @@ Vector3 Simulation::render_player_position() const noexcept {
         previous_player_position_.z +
             (snapshot_.player_position.z - previous_player_position_.z) * alpha,
     };
+}
+
+void Simulation::capture_render_history() noexcept {
+    previous_player_position_ = snapshot_.player_position;
+    const auto count = kit_body_count();
+    previous_kit_positions_.resize(count);
+    previous_kit_rotations_.resize(count);
+    for (std::uint32_t i = 0; i < count; ++i) {
+        previous_kit_positions_[i] = kit_body_position(i);
+        previous_kit_rotations_[i] = kit_body_rotation(i);
+    }
+    previous_slingshot_state_ = slingshot_state();
+    previous_cable_points_.resize(kit_cable_count());
+    for (std::uint32_t cable = 0; cable < previous_cable_points_.size(); ++cable) {
+        auto &points = previous_cable_points_[cable];
+        points.resize(64);
+        points.resize(kit_cable_points(cable, points.data(), 64));
+    }
+}
+
+std::uint32_t Simulation::render_kit_cable_points(const std::uint32_t cable, Vector3 *out,
+                                                   const std::uint32_t capacity) const noexcept {
+    const auto count = kit_cable_points(cable, out, capacity);
+    // Rehooking or parting changes topology. Interpolating across that event
+    // could draw a rope that does not exist, so display the actual new shape.
+    if (cable >= previous_cable_points_.size() || previous_cable_points_[cable].size() != count)
+        return count;
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    for (std::uint32_t i = 0; i < count; ++i) {
+        const auto previous = previous_cable_points_[cable][i];
+        out[i] = {previous.x + (out[i].x - previous.x) * alpha,
+                  previous.y + (out[i].y - previous.y) * alpha,
+                  previous.z + (out[i].z - previous.z) * alpha};
+    }
+    return count;
+}
+
+Vector3 Simulation::render_kit_body_position(const std::uint32_t body) const noexcept {
+    const auto current = kit_body_position(body);
+    if (body >= previous_kit_positions_.size()) return current;
+    const auto previous = previous_kit_positions_[body];
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    return {previous.x + (current.x - previous.x) * alpha,
+            previous.y + (current.y - previous.y) * alpha,
+            previous.z + (current.z - previous.z) * alpha};
+}
+
+Quaternion Simulation::render_kit_body_rotation(const std::uint32_t body) const noexcept {
+    const auto current = kit_body_rotation(body);
+    if (body >= previous_kit_rotations_.size()) return current;
+    const auto previous = previous_kit_rotations_[body];
+    const JPH::Quat a(float(previous.x), float(previous.y), float(previous.z), float(previous.w));
+    const JPH::Quat b(float(current.x), float(current.y), float(current.z), float(current.w));
+    return to_quaternion(a.SLERP(b, float(std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0))));
+}
+
+SlingshotSnapshot Simulation::render_slingshot_state() const noexcept {
+    auto result = slingshot_state();
+    if (!result.available || !previous_slingshot_state_.available) return result;
+    const auto blend = [&](Vector3 previous, Vector3 current) {
+        const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+        return Vector3{previous.x + (current.x - previous.x) * alpha,
+                       previous.y + (current.y - previous.y) * alpha,
+                       previous.z + (current.z - previous.z) * alpha};
+    };
+    result.pouch_position = blend(previous_slingshot_state_.pouch_position, result.pouch_position);
+    // Read the interpolated fork transform, so bands stay attached to its
+    // rendered timber tips while authority continues to use raw body poses.
+    const auto frame = kit_body_index(Slingshot::kFrameEntity);
+    const auto position = render_kit_body_position(frame);
+    const auto rotation = render_kit_body_rotation(frame);
+    const JPH::Quat q(float(rotation.x), float(rotation.y), float(rotation.z), float(rotation.w));
+    const auto left = q * JPH::Vec3(float(-Slingshot::kHalfSpanM), 0.0F, float(-Slingshot::kForkRadiusM));
+    const auto right = q * JPH::Vec3(float(Slingshot::kHalfSpanM), 0.0F, float(-Slingshot::kForkRadiusM));
+    result.anchor_left = {position.x + left.GetX(), position.y + left.GetY(), position.z + left.GetZ()};
+    result.anchor_right = {position.x + right.GetX(), position.y + right.GetY(), position.z + right.GetZ()};
+    return result;
 }
 
 } // namespace scraperx::sim

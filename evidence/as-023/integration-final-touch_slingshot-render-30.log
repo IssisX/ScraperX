@@ -1,0 +1,25 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 19.1.7, 256 bits)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x1856 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=27 msec=333 driver=Dummy
+SCRAPERX_UITEST_POSE outside_pouch tick=17 position=(6.0, 0.9, -58.0) elapsed_ms=12560
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/touch30_outside_pouch.png
+SCRAPERX_UITEST_POSE manual_aim_settled tick=194 position=(6.0, 1.08, -54.69997) elapsed_ms=28539
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/touch30_manual_aim_settled.png
+SCRAPERX_UITEST_POSE seated_manual_draw tick=311 position=(6.0, 1.08, -54.69997) elapsed_ms=38087
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/touch30_seated_manual_draw.png
+SCRAPERX_UITEST_POSE charged_locked_aim tick=758 position=(6.0, 1.079999, -42.72024) elapsed_ms=69047
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/touch30_charged_locked_aim.png
+SCRAPERX_UITEST_POSE release_orbit tick=785 position=(6.006135, 16.05665, -44.82693) elapsed_ms=75056
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/touch30_release_orbit.png
+SCRAPERX_UITEST_POSE true_first_person_return tick=912 position=(6.055308, 126.0209, -61.73287) elapsed_ms=84446
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/touch30_true_first_person_return.png
+SCRAPERX_UITEST_POSE native_flight_apex tick=1575 position=(6.312016, 382.9155, -149.9899) elapsed_ms=115045
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/touch30_native_flight_apex.png
+SCRAPERX_UITEST_POSE retrieval_idle_cancel_available tick=1617 position=(7.5, 0.9, -57.2) elapsed_ms=118709
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/touch30_retrieval_idle_cancel_available.png
+SCRAPERX_UITEST PASS touch_slingshot staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=85.70 apex_m=383.00 retrieval_cancel_walk_m=2.64

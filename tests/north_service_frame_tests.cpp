@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
         }
         caller_frame_seconds = 1.0 / static_cast<double>(caller_hz);
     }
-    Simulation s(InitialSpawn::NorthFrameEntry);
+    Simulation s(InitialSpawn::NorthFrameEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(s, 0.5);
     const auto entry = s.snapshot();
     if (!entry.player_grounded || entry.support_entity_id != Simulation::kTowerEntityId ||

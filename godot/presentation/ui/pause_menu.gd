@@ -9,6 +9,8 @@ extends Control
 signal resume_requested
 signal quit_requested
 signal settings_changed
+signal checkpoint_restart_requested
+signal restart_requested(position: Vector3)
 
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
@@ -19,7 +21,8 @@ const PAGE_SETTINGS := &"settings"
 const PAGE_GRAPHICS := &"graphics"
 const PAGE_DISPLAY := &"display"
 const PAGE_AUDIO := &"audio"
-const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY, PAGE_AUDIO]
+const PAGE_RESTART := &"restart"
+const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY, PAGE_AUDIO, PAGE_RESTART]
 
 var settings: SettingsStore
 var family := UiStyle.Family.KEYBOARD
@@ -35,7 +38,7 @@ var _plate: Control
 var _controls_page: Control
 var _controls_view: Control
 var _controls_tabs := {}
-var _controls_family := UiStyle.Family.KEYBOARD
+var _controls_family := UiStyle.Family.TOUCH
 var _settings_page: Control
 var _first_setting: Control
 # Every settings-style page, its first focusable row, the page rows are
@@ -46,6 +49,10 @@ var _building: VBoxContainer
 var _refreshers := {}
 var _value_labels := {}
 var _footer: Control
+var _stack_rows := false
+var _save_timer: Timer
+var _restart_status: Label
+var _restart_current_position := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -53,10 +60,26 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
+	_save_timer = Timer.new()
+	_save_timer.one_shot = true
+	_save_timer.wait_time = 0.4
+	_save_timer.process_mode = Node.PROCESS_MODE_ALWAYS
+	_save_timer.timeout.connect(func() -> void: settings.save_to_disk())
+	add_child(_save_timer)
+	get_viewport().size_changed.connect(_resize_open_menu)
 
 
-func open(current_family: int, current_summary: String) -> void:
-	family = current_family
+func _resize_open_menu() -> void:
+	if not visible or get_viewport_rect().size == _built_for:
+		return
+	var selected := _page
+	_build(get_viewport_rect().size)
+	_summary_label.text = summary
+	_show_page(selected)
+
+
+func open(_current_family: int, current_summary: String) -> void:
+	family = UiStyle.Family.TOUCH
 	summary = current_summary
 	var viewport_size := get_viewport_rect().size
 	if viewport_size != _built_for:
@@ -71,10 +94,31 @@ func open(current_family: int, current_summary: String) -> void:
 
 
 func close() -> void:
+	if is_instance_valid(_save_timer):
+		_save_timer.stop()
+	settings.save_to_disk()
 	visible = false
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused != null and is_ancestor_of(focused):
 		focused.release_focus()
+
+
+func set_restart_context(position: Vector3) -> void:
+	_restart_current_position = position
+
+
+func set_restart_result(success: bool, message: String = "") -> void:
+	if _restart_status == null:
+		return
+	_restart_status.text = message if not message.is_empty() else (
+		"Restarted." if success else "Position blocked. Choose a clear location and try again.")
+	_restart_status.add_theme_color_override("font_color", UiStyle.SAFE if success else UiStyle.HAZARD)
+
+
+func _changed() -> void:
+	settings_changed.emit()
+	if is_instance_valid(_save_timer):
+		_save_timer.start()
 
 
 func press_resume() -> void:
@@ -100,12 +144,16 @@ func current_page() -> StringName:
 	return _page
 
 
-# Height the tallest settings page needs beyond its plate; > 0 means
-# clipped rows on at least one page.
+# Reports inaccessible overflow. Taller pages are accessible through their
+# scroll container, including automatic scrolling when pad focus moves.
 func settings_overflow() -> float:
-	var worst := -INF
+	var worst := 0.0
 	for page in _pages:
-		worst = maxf(worst, (_pages[page] as Control).get_combined_minimum_size().y - _content.size.y)
+		var scroll := _pages[page] as ScrollContainer
+		if scroll == null:
+			worst = maxf(worst, (_pages[page] as Control).get_combined_minimum_size().y - _content.size.y)
+		elif scroll.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED:
+			worst = maxf(worst, scroll.get_child(0).get_combined_minimum_size().x - scroll.size.x)
 	return worst
 
 
@@ -159,6 +207,8 @@ func _show_page(page: StringName) -> void:
 
 func _build(viewport_size: Vector2) -> void:
 	for child in get_children():
+		if child == _save_timer:
+			continue
 		remove_child(child)
 		child.queue_free()
 	_side_buttons.clear()
@@ -195,11 +245,18 @@ func _build(viewport_size: Vector2) -> void:
 	margin.add_theme_constant_override("margin_top", int(safe.position.y + 84.0 * _u))
 	margin.add_theme_constant_override("margin_bottom", int(64.0 * _u))
 	side.add_child(margin)
+	var side_scroll := ScrollContainer.new()
+	side_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	side_scroll.follow_focus = true
+	margin.add_child(side_scroll)
 	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", int(14.0 * _u))
-	margin.add_child(column)
+	side_scroll.add_child(column)
 
-	column.add_child(_label("SCRAPERX  /  KELLERWORKS TOWER", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label()))
+	var brand := _label("SCRAPERX  /  KELLERWORKS TOWER", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	brand.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(brand)
 	column.add_child(_label("PAUSED", 88.0, UiStyle.PAPER, UiStyle.font_heavy()))
 	_summary_label = _label(summary, 22.0, UiStyle.SAFE, UiStyle.font_label())
 	_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -209,7 +266,8 @@ func _build(viewport_size: Vector2) -> void:
 	column.add_child(gap)
 
 	var entries := [[&"resume", "RESUME"], [PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
-		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"]]
+		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"],
+		[PAGE_RESTART, "RESTART / SPAWN"]]
 	if not OS.has_feature("mobile"):
 		entries.append([&"quit", "QUIT TO DESKTOP"])
 	for entry in entries:
@@ -221,7 +279,9 @@ func _build(viewport_size: Vector2) -> void:
 	for page in SETTING_PAGES:
 		(_side_buttons[page] as Button).pressed.connect(_show_page.bind(page))
 	if _side_buttons.has(&"quit"):
-		(_side_buttons[&"quit"] as Button).pressed.connect(func() -> void: quit_requested.emit())
+		(_side_buttons[&"quit"] as Button).pressed.connect(func() -> void:
+			settings.save_to_disk()
+			quit_requested.emit())
 
 	var filler := Control.new()
 	filler.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -247,11 +307,13 @@ func _build(viewport_size: Vector2) -> void:
 	_content.position = Vector2(safe.position.x + side_width + 72.0 * _u, safe.position.y + 84.0 * _u)
 	_content.size = Vector2(safe.end.x - _content.position.x - 72.0 * _u,
 		safe.end.y - _content.position.y - 64.0 * _u)
+	_stack_rows = _content.size.x < 1020.0 * _u
 	_build_controls_page()
 	_build_settings_page()
 	_build_graphics_page()
 	_build_display_page()
 	_build_audio_page()
+	_build_restart_page()
 
 
 func _make_theme() -> Theme:
@@ -344,15 +406,20 @@ func _side_button(text: String) -> Button:
 
 
 func _build_controls_page() -> void:
-	_controls_page = VBoxContainer.new()
-	_controls_page.add_theme_constant_override("separation", int(24.0 * _u))
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	_controls_page = scroll
 	_content.add_child(_controls_page)
 	_controls_page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", int(24.0 * _u))
+	scroll.add_child(column)
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", int(16.0 * _u))
-	_controls_page.add_child(tabs)
-	for entry in [[UiStyle.Family.TOUCH, "TOUCH"], [UiStyle.Family.XBOX, "CONTROLLER"],
-			[UiStyle.Family.KEYBOARD, "KEYBOARD"]]:
+	column.add_child(tabs)
+	for entry in [[UiStyle.Family.TOUCH, "TOUCH"]]:
 		var tab := Button.new()
 		tab.text = entry[1]
 		tab.focus_mode = Control.FOCUS_ALL
@@ -362,18 +429,17 @@ func _build_controls_page() -> void:
 		tabs.add_child(tab)
 		_controls_tabs[entry[0]] = tab
 	_controls_view = Control.new()
-	_controls_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_controls_view.custom_minimum_size.y = 1300.0 * _u
 	_controls_view.draw.connect(_draw_controls)
-	_controls_page.add_child(_controls_view)
+	_controls_view.resized.connect(_refresh_controls_layout)
+	column.add_child(_controls_view)
 	_controls_page.visible = false
 
 
-# Tabs are keyed TOUCH / XBOX / KEYBOARD; a PlayStation or Nintendo pad in
-# use is drawn in its own glyphs on the controller tab.
-func _canonical(value: int) -> int:
-	if value in [UiStyle.Family.PLAYSTATION, UiStyle.Family.NINTENDO]:
-		return UiStyle.Family.XBOX
-	return value
+# Gameplay help follows the touch-only owner direction. Existing saved
+# input bindings remain available in settings and in regression fixtures.
+func _canonical(_value: int) -> int:
+	return UiStyle.Family.TOUCH
 
 
 func _view_family() -> int:
@@ -388,38 +454,48 @@ func _select_controls_family(value: int) -> void:
 	for key in _controls_tabs:
 		(_controls_tabs[key] as Button).add_theme_color_override("font_color",
 			UiStyle.AMBER if key == _controls_family else UiStyle.PAPER)
+	_refresh_controls_layout()
+	_controls_view.queue_redraw()
+
+
+func _controls_row_height(description: String) -> float:
+	var description_x := (190.0 if _stack_rows else 520.0) * _u
+	var width := maxf(1.0, _controls_view.size.x - description_x)
+	var text_size := UiStyle.font_label().get_multiline_string_size(description,
+		HORIZONTAL_ALIGNMENT_LEFT, width, int(roundf(22.0 * _u)))
+	return maxf((114.0 if _stack_rows else 76.0) * _u,
+		(78.0 if _stack_rows else 48.0) * _u + text_size.y)
+
+
+func _refresh_controls_layout() -> void:
+	if not is_instance_valid(_controls_view):
+		return
+	var height := 80.0 * _u
+	for row in _controls_rows(_view_family()):
+		height += _controls_row_height(row[3])
+	_controls_view.custom_minimum_size.y = height
 	_controls_view.queue_redraw()
 
 
 # [kind, value, name, description]; kind "verb" draws the shared binding,
 # "key" a keycap, "pad" a pad glyph, "icon" a touch icon.
-func _controls_rows(view_family: int) -> Array:
-	if view_family == UiStyle.Family.TOUCH:
-		return [
-			["icon", &"move", "LEFT THUMB", "Move - the stick appears where you touch"],
-			["icon", &"look", "RIGHT THUMB", "Look - drag anywhere, even from Jump; Gyro Aim tilts"],
-			["icon", &"jump", "JUMP", "Jump; climbs up while hanging"],
-			["icon", &"crouch", "CROUCH", "Duck under low gaps; tap again to stand"],
-			["icon", &"climb", "ACTION", "Climb a ledge, operate a pendant, work a valve"],
-			["icon", &"drop", "DROP", "Let go of a ledge (only while hanging)"],
-			["icon", &"chute", "CHUTE", "Open or stow the canopy (only while falling)"],
-			["icon", &"operate", "PENDANT", "Hold the arrows to drive the machine; Action = done"],
-			["icon", &"pause", "PAUSE", "This menu"],
-		]
-	var keyboard := view_family == UiStyle.Family.KEYBOARD
+func _controls_rows(_view_family: int) -> Array:
 	return [
-		["key", "WASD", "MOVE", "Walk and run"] if keyboard else ["pad", UiStyle.G_LSTICK_FWD, "MOVE", "Left stick"],
-		["key", "MOUSE", "LOOK", "Click to capture the pointer"] if keyboard else ["pad", UiStyle.G_LSTICK_FWD, "LOOK", "Right stick"],
-		["verb", &"jump", "JUMP", "Jump; climbs up while hanging"],
-		["verb", &"crouch", "CROUCH", "Toggle; or hold Ctrl" if keyboard else "Toggle: click the right stick"],
-		["verb", &"action", "ACTION", "Climb a ledge, operate a pendant, work a valve"],
-		["verb", &"drop", "DROP", "Let go of a ledge; leave pendant controls"],
-		["verb", &"chute", "CHUTE", "Open or stow the canopy while falling"],
-		["verb", &"hoist", "HOIST / RAISE", "Pendant up and down" + ("" if keyboard else "; triggers are analog")],
-		["verb", &"slew", "SLEW / DRIVE", "Pendant left and right"],
-		["verb", &"sling_release", "SLING", "Release (R) or attach (G) the pack" if keyboard else "Release or attach the pack at the yard jib"],
-		["verb", &"pause", "PAUSE", "This menu"],
-		["verb", &"telemetry", "TELEMETRY", "Native readouts overlay"],
+		["icon", &"move", "LEFT THUMB", "Move; the stick appears where you touch"],
+		["icon", &"look", "RIGHT THUMB", "Drag to look; Gyro Aim adds tilt"],
+		["icon", &"sling", "BOARD", "Stand in the leather pouch, then tap BOARD"],
+		["icon", &"look", "AIM", "Drag on the right while the bands are slack; aim locks when charged"],
+		["icon", &"move", "DRAW", "Pull the left stick backward; watch the power bar, then let go to hold"],
+		["icon", &"sling", "RELEASE", "Tap RELEASE to fire the chosen stretch"],
+		["icon", &"chute", "CHUTE / BRAKE", "After the pouch exit, open the canopy to brake ascent or descent; tap again to stow"],
+		["icon", &"operate", "RETRIEVE", "At the grade control, tap Action and pull backward to return the pouch"],
+		["icon", &"drop", "DROP", "Leave the pouch or a ledge; stop retrieval"],
+		["icon", &"jump", "JUMP", "Jump; climb up while hanging"],
+		["icon", &"crouch", "CROUCH", "Duck under low gaps; tap again to stand"],
+		["icon", &"climb", "ACTION", "Catch a ledge or operate a machine"],
+		["icon", &"move", "LANDING", "Impact and sideways speed affect balance; find your footing before moving on"],
+		["icon", &"operate", "MACHINE", "Hold its arrows or move its load; Action leaves pendant controls"],
+		["icon", &"pause", "PAUSE", "Options, checkpoint and supported-ring restarts"],
 	]
 
 
@@ -430,7 +506,7 @@ func _draw_controls() -> void:
 	var h := 50.0 * _u
 	var y := 40.0 * _u
 	var name_x := 190.0 * _u
-	var desc_x := 520.0 * _u
+	var desc_x := (190.0 if _stack_rows else 520.0) * _u
 	var name_size := int(roundf(28.0 * _u))
 	var baseline_offset := (font.get_ascent(name_size) - font.get_descent(name_size)) * 0.5
 	for row in _controls_rows(view_family):
@@ -453,26 +529,35 @@ func _draw_controls() -> void:
 					UiStyle.draw_binding(view, view_family, &"hoist_analog", left + Vector2(used + 12.0 * _u, 0.0), h)
 		UiStyle.text(view, UiStyle.font_heavy(), row[2], Vector2(name_x, y + baseline_offset), name_size,
 			UiStyle.PAPER)
-		UiStyle.text(view, font, row[3], Vector2(desc_x, y + baseline_offset), int(roundf(22.0 * _u)),
-			UiStyle.PAPER_DIM)
-		y += 76.0 * _u
+		view.draw_multiline_string(font, Vector2(desc_x, y + baseline_offset + (30.0 * _u if _stack_rows else 0.0)),
+			row[3], HORIZONTAL_ALIGNMENT_LEFT, maxf(1.0, view.size.x - desc_x), int(roundf(22.0 * _u)),
+			-1, UiStyle.PAPER_DIM)
+		y += _controls_row_height(row[3])
 
 
 func _begin_page(page: StringName) -> VBoxContainer:
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	_content.add_child(scroll)
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.visible = false
 	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", int(22.0 * _u))
-	_content.add_child(box)
-	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	box.visible = false
-	_pages[page] = box
+	scroll.add_child(box)
+	_pages[page] = scroll
 	_building = box
+	box.add_child(_label(String(page).to_upper(), 40.0, UiStyle.AMBER, UiStyle.font_heavy()))
 	return box
 
 
 func _end_page(page: StringName, first: Control, note: String) -> void:
 	_page_first[page] = first
 	if not note.is_empty():
-		_building.add_child(_label(note, 21.0, UiStyle.PAPER_FAINT, UiStyle.font_label()))
+		var label := _label(note, 21.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_building.add_child(label)
 
 
 func _build_settings_page() -> void:
@@ -489,17 +574,17 @@ func _build_settings_page() -> void:
 		100.0)
 	_toggle_row("VIBRATION", &"vibration")
 	_toggle_row("TELEMETRY OVERLAY", &"telemetry")
-	_end_page(PAGE_SETTINGS, _first_setting, "Settings are saved on this device when you resume.")
+	_end_page(PAGE_SETTINGS, _first_setting, "Changes apply immediately and are saved on this device. Scroll for more options.")
 
 
-# The preset writes the four rows under it; touching any of them makes it
+# The preset writes its detail/render rows; touching any makes it
 # CUSTOM. Neither direction re-emits, so one change is one apply.
 func _build_graphics_page() -> void:
 	_begin_page(PAGE_GRAPHICS)
 	var first := _choice_row("QUALITY", &"quality", SettingsStore.QUALITY_NAMES,
 		func() -> void:
 			settings.apply_quality(settings.quality)
-			for key in [&"render_scale", &"shadow_quality", &"msaa", &"bloom"]:
+			for key in [&"render_scale", &"shadow_quality", &"msaa", &"bloom", &"detail_distance", &"view_distance"]:
 				_refreshers[key].call())
 	var to_custom := func() -> void:
 		if settings.quality != SettingsStore.QUALITY_CUSTOM:
@@ -510,10 +595,14 @@ func _build_graphics_page() -> void:
 	_choice_row("SHADOWS", &"shadow_quality", SettingsStore.SHADOW_NAMES, to_custom)
 	_choice_row("ANTI-ALIASING", &"msaa", SettingsStore.MSAA_NAMES, to_custom)
 	_toggle_row("BLOOM", &"bloom", to_custom)
+	_choice_row("DETAIL / LOD", &"detail_distance", SettingsStore.DETAIL_DISTANCE_NAMES, to_custom)
+	_slider_row("DRAW DISTANCE", &"view_distance", SettingsStore.VIEW_DISTANCE_RANGE, 100.0,
+		"%.0f M", 1.0, to_custom)
+	_choice_row("VSYNC", &"vsync", SettingsStore.VSYNC_NAMES)
 	_choice_row("FRAME RATE CAP", &"fps_cap", SettingsStore.FPS_CAP_NAMES)
 	_toggle_row("SHOW FPS", &"show_fps")
 	_end_page(PAGE_GRAPHICS, first,
-		"Lower render scale and shadows first if the device runs hot.")
+		"Lower render scale, shadows and detail first if the device runs hot. Detail / LOD reduces distant decoration; physics stays active. Draw distance controls the rendered horizon.")
 
 
 func _build_display_page() -> void:
@@ -521,26 +610,115 @@ func _build_display_page() -> void:
 	var first := _slider_row("FIELD OF VIEW", &"fov", SettingsStore.FOV_RANGE, 1.0, "%.0f")
 	_slider_row("BRIGHTNESS", &"brightness", SettingsStore.BRIGHTNESS_RANGE, 0.05, "%.2fx")
 	_toggle_row("HEAD BOB", &"head_bob")
+	_toggle_row("LAUNCH CINEMATICS", &"launch_cinematics")
 	_toggle_row("SPEED FOV KICK", &"speed_fov")
 	_choice_row("TIME OF DAY", &"time_of_day", SettingsStore.TIME_OF_DAY_NAMES)
 	_slider_row("DAY LENGTH", &"day_minutes", SettingsStore.DAY_MINUTES_RANGE, 1.0, "%.0f MIN")
+	if not OS.has_feature("mobile"):
+		_choice_row("WINDOW MODE", &"window_mode", SettingsStore.WINDOW_MODE_NAMES)
 	_end_page(PAGE_DISPLAY, first, "")
 
 
 func _build_audio_page() -> void:
 	_begin_page(PAGE_AUDIO)
-	var first := _slider_row("MASTER", &"master_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
+	var first := _toggle_row("MUTE ALL", &"audio_muted")
+	_slider_row("MASTER", &"master_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("EFFECTS", &"effects_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("AMBIENCE", &"ambience_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("INTERFACE", &"interface_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_end_page(PAGE_AUDIO, first, "Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience.")
 
 
-func _row(title: String) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", int(28.0 * _u))
+func _build_restart_page() -> void:
+	_begin_page(PAGE_RESTART)
+	var checkpoint := _action_row("LAST SAFE CHECKPOINT", "RESTART AT CHECKPOINT",
+		func() -> void: checkpoint_restart_requested.emit())
+	_ring_choice_row()
+	_action_row("RING DESTINATION", "RESTART ON RING", func() -> void:
+		restart_requested.emit(settings.ring_position()))
+	_action_row("CURRENT LOCATION", "USE CURRENT XYZ", func() -> void:
+		settings.restart_x = _restart_current_position.x
+		settings.restart_y = _restart_current_position.y
+		settings.restart_z = _restart_current_position.z
+		for key in [&"restart_x", &"restart_y", &"restart_z"]:
+			_refreshers[key].call()
+		_changed())
+	_number_row("TOWER HEIGHT", &"restart_height", SettingsStore.RESTART_HEIGHT_RANGE, 0.5, " M")
+	_choice_row("TOWER SIDE", &"restart_side", SettingsStore.RESTART_SIDE_NAMES)
+	_number_row("OUTSIDE FACE", &"restart_clearance", SettingsStore.RESTART_CLEARANCE_RANGE, 0.5, " M")
+	_action_row("HEIGHT + SIDE", "RESTART THERE", func() -> void:
+		restart_requested.emit(settings.tower_restart_position()))
+	_number_row("EXACT X", &"restart_x", SettingsStore.RESTART_COORDINATE_RANGE, 0.1, " M")
+	_number_row("EXACT Y (CAPSULE CENTRE)", &"restart_y", SettingsStore.RESTART_COORDINATE_RANGE, 0.1, " M")
+	_number_row("EXACT Z", &"restart_z", SettingsStore.RESTART_COORDINATE_RANGE, 0.1, " M")
+	_action_row("EXACT COORDINATES", "RESTART AT XYZ", func() -> void:
+		restart_requested.emit(settings.exact_restart_position()))
+	_restart_status = _label("", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	_restart_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_building.add_child(_restart_status)
+	_end_page(PAGE_RESTART, checkpoint,
+		"Ring presets put you on existing tower decks. Arbitrary height or XYZ can have no floor: you can fall. Height is above grade; XYZ uses the capsule centre. Occupied positions are rejected. Press a restart button to apply the chosen destination.")
+
+
+# The expanded receiving frame has many rings. A directly selectable list
+# avoids cycling through every lower ring to choose a high restart point.
+func _ring_choice_row() -> OptionButton:
+	var row := _row("SUPPORTED TOWER RING")
+	var choice := OptionButton.new()
+	choice.focus_mode = Control.FOCUS_ALL
+	choice.custom_minimum_size = Vector2(300.0 * _u, 0.0)
+	choice.add_theme_font_override("font", UiStyle.font_heavy())
+	for caption in SettingsStore.RESTART_RING_NAMES:
+		choice.add_item(caption)
+	choice.select(settings.restart_ring)
+	choice.get_popup().add_theme_font_override("font", UiStyle.font_label())
+	choice.get_popup().add_theme_font_size_override("font_size", int(roundf(28.0 * _u)))
+	choice.item_selected.connect(func(index: int) -> void:
+		settings.restart_ring = index
+		_changed())
+	row.add_child(choice)
+	_refreshers[&"restart_ring"] = func() -> void: choice.select(settings.restart_ring)
+	return choice
+
+
+func _action_row(title: String, caption: String, action: Callable) -> Button:
+	var row := _row(title)
+	var button := Button.new()
+	button.text = caption
+	button.focus_mode = Control.FOCUS_ALL
+	button.add_theme_font_override("font", UiStyle.font_heavy())
+	button.add_theme_font_size_override("font_size", int(roundf(25.0 * _u)))
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.pressed.connect(action)
+	row.add_child(button)
+	return button
+
+
+func _number_row(title: String, key: StringName, bounds: Vector2, step: float, suffix: String) -> SpinBox:
+	var row := _row(title)
+	var number := SpinBox.new()
+	number.min_value = bounds.x
+	number.max_value = bounds.y
+	number.step = step
+	number.suffix = suffix
+	number.value = float(settings.get(key))
+	number.custom_minimum_size = Vector2(300.0 * _u, 64.0 * _u)
+	number.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	number.value_changed.connect(func(value: float) -> void:
+		settings.set(key, value)
+		_changed())
+	row.add_child(number)
+	_refreshers[key] = func() -> void: number.set_value_no_signal(float(settings.get(key)))
+	return number
+
+
+func _row(title: String) -> BoxContainer:
+	var row: BoxContainer = VBoxContainer.new() if _stack_rows else HBoxContainer.new()
+	row.add_theme_constant_override("separation", int(16.0 * _u))
 	var label := _label(title, 28.0, UiStyle.PAPER, UiStyle.font_label())
-	label.custom_minimum_size = Vector2(520.0 * _u, 0.0)
+	label.custom_minimum_size = Vector2(0.0 if _stack_rows else 410.0 * _u, 0.0)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(label)
 	_building.add_child(row)
@@ -550,25 +728,30 @@ func _row(title: String) -> HBoxContainer:
 func _slider_row(title: String, key: StringName, bounds: Vector2, step: float, format: String,
 		display_scale: float = 1.0, on_change: Callable = Callable()) -> HSlider:
 	var row := _row(title)
+	var values := HBoxContainer.new()
+	values.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	values.add_theme_constant_override("separation", int(16.0 * _u))
+	row.add_child(values)
 	var slider := HSlider.new()
 	slider.min_value = bounds.x
 	slider.max_value = bounds.y
 	slider.step = step
 	slider.value = float(settings.get(key))
 	slider.focus_mode = Control.FOCUS_ALL
-	slider.custom_minimum_size = Vector2(420.0 * _u, 56.0 * _u)
+	slider.custom_minimum_size = Vector2(260.0 * _u, 56.0 * _u)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(slider)
+	values.add_child(slider)
 	var value_label := _label(format % (slider.value * display_scale), 28.0, UiStyle.AMBER, UiStyle.font_digits())
 	value_label.custom_minimum_size = Vector2(140.0 * _u, 0.0)
 	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(value_label)
+	values.add_child(value_label)
 	slider.value_changed.connect(func(value: float) -> void:
 		settings.set(key, value)
 		value_label.text = format % (value * display_scale)
 		if on_change.is_valid():
 			on_change.call()
-		settings_changed.emit())
+		_changed())
 	_refreshers[key] = func() -> void:
 		slider.set_value_no_signal(float(settings.get(key)))
 		value_label.text = format % (slider.value * display_scale)
@@ -590,7 +773,7 @@ func _toggle_row(title: String, key: StringName, on_change: Callable = Callable(
 		toggle.text = "ON" if on else "OFF"
 		if on_change.is_valid():
 			on_change.call()
-		settings_changed.emit())
+		_changed())
 	_refreshers[key] = func() -> void:
 		toggle.set_pressed_no_signal(bool(settings.get(key)))
 		toggle.text = "ON" if toggle.button_pressed else "OFF"
@@ -612,7 +795,7 @@ func _choice_row(title: String, key: StringName, names: Array, on_change: Callab
 		if on_change.is_valid():
 			on_change.call()
 		choice.text = names[int(settings.get(key))]
-		settings_changed.emit())
+		_changed())
 	_refreshers[key] = func() -> void:
 		choice.text = names[int(settings.get(key))]
 	return choice

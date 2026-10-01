@@ -1,0 +1,36 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 19.1.7, 256 bits)
+
+Movie Maker mode enabled, recording movie in 1296×1114 @ 30 FPS...
+WARNING: Current available space on disk is low (6.06 GiB). MovieWriter will fail during movie recording if the disk runs out of available space.
+     at: begin (servers/movie_writer/movie_writer.cpp:117)
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=27 msec=547 driver=Dummy
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_band_stretch_0 effects_samples=45056 effects_peak=0.414943 effects_rms=0.115049 master_peak_db=-1.64
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_band_stretch_1 effects_samples=44032 effects_peak=0.441450 effects_rms=0.116962 master_peak_db=-1.10
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_sling_release_0 effects_samples=76800 effects_peak=0.954682 effects_rms=0.079862 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_rubber_squeak_0 effects_samples=38912 effects_peak=0.454029 effects_rms=0.165418 master_peak_db=-1.40
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_sling_wobble_0 effects_samples=60416 effects_peak=0.481953 effects_rms=0.102416 master_peak_db=-0.88
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=low_draw_native_draw effects_samples=156672 effects_peak=0.159036 effects_rms=0.034845 master_peak_db=-10.48
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=low_draw_native_release effects_samples=93184 effects_peak=0.769497 effects_rms=0.064113 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=low_draw_native_flight effects_samples=44032 effects_peak=0.000009 effects_rms=0.000000 master_peak_db=-6.45
+SCRAPERX_SLINGSHOT_AUDIO_NATIVE shot=low_draw draw_m=3.9568 energy_j=14578.6 source_limit_w=200000.0 draw_cues=4 release_cues=1 comedy_cues=1 launches=1 speed_mps=3.401 peak_release_speed_mps=15.989 rush_db=-59.97 touch_device=true
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=27 msec=310 driver=Dummy
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=full_draw_native_draw effects_samples=418816 effects_peak=0.330207 effects_rms=0.055701 master_peak_db=-4.16
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=full_draw_native_release effects_samples=93184 effects_peak=0.769497 effects_rms=0.064113 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=full_draw_native_flight effects_samples=45056 effects_peak=0.000000 effects_rms=0.000000 master_peak_db=-1.76
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=native_speed_rush_isolation effects_samples=28672 effects_peak=0.000000 effects_rms=0.000000 master_peak_db=-3.88
+SCRAPERX_SLINGSHOT_AUDIO_NATIVE shot=full_draw draw_m=11.9798 energy_j=418232.5 source_limit_w=200000.0 draw_cues=15 release_cues=1 comedy_cues=2 launches=1 speed_mps=74.063 peak_release_speed_mps=86.026 rush_db=-9.75 touch_device=true
+SCRAPERX_SLINGSHOT_AUDIO PASS checks=95 mix_peak_db=-0.80 driver=Dummy touch_events=34 movie=/tmp/scraperx-current-evidence/integration-audio.avi
+--------------------------------------------------------------------------------
+Done recording movie at path: /tmp/scraperx-current-evidence/integration-audio.avi
+501 frames at 30 FPS (movie length: 00:00:16:21), recorded in 00:00:35 (45% of real-time speed).
+CPU render time: 0.99 seconds (average: 1.98 ms/frame)
+GPU render time: 1.00 seconds (average: 2.00 ms/frame)
+Encoding time: 6.93 seconds (average: 13.83 ms/frame)
+--------------------------------------------------------------------------------

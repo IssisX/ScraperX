@@ -1,0 +1,27 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 19.1.7, 256 bits)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x1856 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=27 msec=327 driver=Dummy
+SCRAPERX_UITEST_POSE outside_pouch tick=17 position=(6.0, 0.9, -58.0) elapsed_ms=12536
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/roof30_outside_pouch.png
+SCRAPERX_UITEST_POSE manual_aim_settled tick=194 position=(6.0, 1.08, -54.69997) elapsed_ms=28954
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/roof30_manual_aim_settled.png
+SCRAPERX_UITEST_POSE seated_manual_draw tick=311 position=(6.0, 1.08, -54.69997) elapsed_ms=38680
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/roof30_seated_manual_draw.png
+SCRAPERX_UITEST_POSE charged_locked_aim tick=758 position=(6.0, 1.079999, -42.72024) elapsed_ms=70646
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/roof30_charged_locked_aim.png
+SCRAPERX_UITEST_POSE release_orbit tick=785 position=(6.006135, 16.05665, -44.82693) elapsed_ms=76731
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/roof30_release_orbit.png
+SCRAPERX_UITEST_POSE true_first_person_return tick=912 position=(6.055308, 126.0209, -61.73287) elapsed_ms=86113
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/roof30_true_first_person_return.png
+SCRAPERX_UITEST_POSE manual_airbrake_354m tick=1350 position=(6.22482, 355.3573, -120.0113) elapsed_ms=108119
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/roof30_manual_airbrake_354m.png
+SCRAPERX_UITEST_POSE supported_352m_roof tick=1632 position=(6.251519, 352.8998, -129.1705) elapsed_ms=119999
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/roof30_supported_352m_roof.png
+SCRAPERX_UITEST_POSE roof_touch_walk tick=1689 position=(6.258669, 352.8998, -131.6311) elapsed_ms=128538
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-current-evidence/screenshots/roof30_roof_touch_walk.png
+SCRAPERX_UITEST PASS touch_slingshot_landing staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=85.70 brake_height_m=354.63 braked_apex_m=362.17 supported_height_m=352.00 deaths=0 roof_walk_m=2.46 contact_j=3008.2 camera_dip_m=-0.0881

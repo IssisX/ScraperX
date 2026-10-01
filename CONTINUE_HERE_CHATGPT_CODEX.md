@@ -1,22 +1,56 @@
 # CONTINUE HERE — ScraperX in ChatGPT Codex
 
-**Handoff recorded: 2026-10-01. Repository: `IssisX/ScraperX`. Write branch: `ChatGPT` only.**
+**Handoff revised: 2026-10-01. Repository: `IssisX/ScraperX`. Write branch: `ChatGPT` only. The AS-023 source candidate is locally verified; the owner explicitly authorized commit/push to `ChatGPT`.**
 
-The owner is moving this work from Codex in Termux to Codex in the ChatGPT interface. They requested this continuity document and asked the previous implementation session to pause. This commit changes documentation only. Resume implementation when the owner asks to continue; there is no unfinished local source patch to recover.
+The original migration handoff below recorded a documentation-only pause after the historical +110 m delivery. The owner subsequently resumed work and selected a manual wooden slingshot at grade. Its latest revision requests sturdier wood, thicker rubber, faster finite arcade charging and several-hundred-metre launch capability; moving the machine farther back is permitted. The original local AS-023 changes are recovered; continue in that scratch. The old statement that no local source patch existed applies only to the earlier migration checkpoint.
 
-Suggested opening instruction for the new session:
+**Current owner instruction, after verification:** stop using Pages for this task; commit and push the complete verified implementation to `IssisX/ScraperX`, branch `ChatGPT`. This supersedes the earlier local-only pause. Preserve the four newer documentation-only remote commits. After publication, stop ready to select a **10–20 m** tower gap for a climbing section or a physically causal machine encounter. Do not claim Android/device acceptance from local desktop tests.
 
-> Work in IssisX/ScraperX on ChatGPT. Read CONTINUE_HERE_CHATGPT_CODEX.md, recover the current branch and evidence, and continue from its running to-do. Use your own isolated checkout. Preserve the working route and existing document/entity identifiers.
+Suggested continuation instruction:
+
+> Continue the verified AS-023 candidate on `IssisX/ScraperX`, branch `ChatGPT`. Read the current status and running to-do, plus the existing Atlas and evidence ledger. The original scratch is recovered and integration verification is complete. Do not restart recovery. Next, identify a real 10–20 m gap around/above the supported launch range, inspect its physical entry/receiver/exit, and select either climbing or a causal machine with the owner. Maintain native Jolt/C++ physics and Godot touch/presentation ownership; update existing documentation as behavior is established.
+
+### Model-switch checkpoint — 2026-10-01, GPT-6 Sol 6.1
+
+**Continuation after the switch:** the owner authorized and the agent completed explicit BOARD/draw restraint, native `aim_locked` bridge, real pouch/rail contact-audit and rejected-harness restore-membership repairs. Fresh final build passes **28/28 native gates**, shipping touch launch/retrieval and +352 m supported arrival (zero deaths), 2,894 settings checks and landing/parkour/presentation tests. Read-only review finds no remaining Important/Critical defects. Both real-rendered touch paths and 95 actual-mixer audio checks pass; final launcher/pouch/humanoid/HUD/POV/roof/options images were opened and inspected. This local verification slice is complete, with Android/device acceptance and the wider ascent still open. The paragraphs below record the historical pause boundary, not current stop/recovery instructions.
+
+**Owner requested pause at the model-switch boundary (historical):** stop gameplay implementation before switching models. After the environment recovered, only read-only source inspection occurred; no new gameplay edits, builds or runtime tests started. This handoff update is the only repository edit made to prepare the switch. The review agent was interrupted and no child agent is running. Resume implementation when the owner continues with the selected model.
+
+**Actual working source:** `/tmp/scraperx-chatgpt-scratch`, Git base `f7a584dcceb576068f62e030e35d1b88e5cd4c5a`, 46 modified/untracked status entries. The original `src/sim/slingshot.*`, `slingshot_model.*`, `godot/presentation/slingshot_view.gd`, `landing_camera_response.gd`, shaders, character, settings and tests are present. The separate Termux session found no missing edits in its log search; that finding does not describe the later recovery of the original cloud filesystem. Keep the recovered original source as the implementation authority.
+
+**Verified backup:** `/workspace/scraperx-rescue-2026-10-01/scraperx-chatgpt-scratch-full.tar.gz`, 5,648,417 bytes, SHA-256 `b407b2770b665709b84f7b1a22d0d7c24e8510e2ae3b175d037bac43459e1918`. Independent comparison found 597 files and 237 directories matching exactly; an isolated extraction passed `git fsck --full` and contains self-contained Git metadata. The archive predates this documentation-only checkpoint. Full source, separate evidence archive, integrity receipts and restore instructions are also saved outside the executor in the owner's [private recovery Page](https://chatgpt.com/space/page_b7ba9eea8ef081918148f248dd200836). Its latest attached copy of this handoff carries the model-switch checkpoint. If the environment becomes inaccessible, use those verified files; a new remote clone alone lacks the local gameplay changes. Remote commit `6deb651de90ffa5020a1be35faef10c8f3820b95` records recovery documentation only.
+
+**First complete repair slice at that pause (now repaired):** preserve approach → explicit BOARD → aim while slack → paid backward DRAW → physical release. Source inspection at the pause confirmed that `Slingshot::pre_step` auto-attached on positive draw input while in the pouch, and `godot/presentation/main.gd` forwards backward movement as draw when merely `station_available`. These cause approach motion to charge the machine and lock aiming prematurely. Remove that accidental authorization at the native owner and restrict the presentation request to seated/recovering control; preserve the real unoccupied seat restraint until authorized draw. Prove that backward approach cannot seat/charge, explicit BOARD works, and deliberate draw still stores work.
+
+**Adjacent unfinished integration at that pause (now repaired):** native `Slingshot::State::aim_locked` exists, but `SlingshotSnapshot` and the Godot dictionary do not yet forward it; complete that existing seam. The contact audit currently observes pouch contacts and phase-gates invalidation to release/recovery. Trace real launch-rail entity 2901 contacts through the production listener and invalidate the initialized closed-system ledger for outside contact during aim/draw as well; preserve the raw residual. Inspect before editing to avoid duplicating an owner or counting filtered internal joints as outside contacts.
+
+**Verification boundary at that pause (historical):** no verification job was running. The final physical-gimbal candidate still needs those repairs and a fresh build, all 28 native gates, shipping-scene touch boarding/draw/release/retrieval, real supported tower arrival, landing/Jump recovery, settings and camera/audio checks. Earlier ~384 m launch, +352 m arrival, 27 native gates and settings/audio receipts belong to preceding candidates. Actual Android device play remains unverified. Use `/tmp/scraperx-build-work`, `/tmp/scraperx-runtime/run-godot.sh` and `/tmp/scraperx-current-evidence` when still available; inspect their current configuration rather than assuming binaries match source. The game remains a 1,000 m-plus physically causal industrial ascent, with this slingshot as one opening encounter.
+
+**Post-integration backup:** the complete revised scratch is independently preserved locally at `/workspace/scraperx-rescue-2026-10-01/scraperx-local-verified-2026-10-01.tar.gz`. Its external integrity receipt verifies 597 files, zero byte/permission/path differences, self-contained Git and identical extracted Git status. This archive predates the owner's later commit/push instruction and corresponding documentation update. Pages work was stopped at the owner's correction; the current source/docs destination is the GitHub `ChatGPT` branch. Original recovery archives remain intact.
+
+**Skill continuity:** the Superpowers and Causal Mechanism Compiler root skills were read again during the brief resume. Two attempted Superpowers module reads failed to resolve before the owner paused. Discover valid module resource identifiers before claiming those workflows were applied; the failed reads made no code changes. Preserve the existing instructions to use `threespine` and applicable Godot verification guidance when their domains are touched.
 
 ## 1. The exact point to resume
 
+**Current AS-023 boundary, 2026-10-01:** The normal grade opening is the manual wooden slingshot. The higher-launch source and receiving-frame extension through +352 m are implemented in the agent-owned checkout based on `f7a584dcceb576068f62e030e35d1b88e5cd4c5a`; the current bounded local native/touch/render/audio proof is complete, with device and wider-route acceptance still open. Preserve the authored upper machinery/parkour. The old pipe bridge is selected explicitly by `WorldContent::PipeBridge` fixture tests; passing its grade→+110 m route does not prove continuity from the replacement opening. Do not restart the original opening design or silently restore the old bridge to normal play.
+
+Read [AS-023's bounded contract](03_EXECUTION/ASCENT/AS-023_MANUAL_SLINGSHOT.md), the [Atlas's current opening](01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md#6-opening-mechanism-the-pipe-loaded-balance-bridge) and [the local evidence ledger](evidence/manual_slingshot.md). The compiled fixed-fork revision is recorded in the Atlas. Fresh native refinement measures apex Y=384.344/384.167/384.223 m at 90/180/360 Hz, closed pre-impact residual 1.17/0.60/0.30%, and peak source 198.205 kW under 200 kW. Manual retrieval takes 5.044 s with 9.123 kW peak, zero final rubber energy and an actual second shot. All 33 restart destinations pass 2,894 checks. The full 28-gate suite and actual shipping-touch +352 m supported arrival pass; final real-render/audio inspection also passes, with actual device acceptance still open. The evidence ledger owns exact receipts. No successful CI/APK/installation/Android/Fold result has been observed for AS-023; branch publication may trigger CI. The owner explicitly authorized publishing this verified source candidate to `ChatGPT`; Android/device proof remains separate.
+
+**Current causal correction:** bolt the timber fork at 82° and read anchors from its static transform. Aim only the 60 kg rail using an actual SixDOF gimbal and finite 200 kW torque source while undrawn; measured Jolt angles/settled readiness permit a passive latch. Do not restore the unpaid kinematic fork aim or add gameplay aim/launch pose/velocity setters. Fresh native and touch measurements now verify this correction; use the evidence ledger for receipts. The landing model is an upright arcade capsule with contact impulses and finite ground recovery forces, not articulated feet or a ragdoll. Internal machine-member collision filters are declared separately from the sole player/pouch pair exclusion in AS-023.
+
+**Latest owner amendment:** ordinary gameplay is touch-only. Prioritize whole-body comic poses, thought bubbles and mechanical boing over facial detail. Native pre-contact support-relative normal/tangential energy and bounded physical footwork/recovery must govern all landings; smooth first-person impact/recovery presentation follows that result. Production-native and actual viewport touch full-draw/parachute sequences reach supported +352 m Tower with zero deaths and continued walking. The final 28-test suite passes, including native landing energy/recovery; shipping contact/camera checks pass. Final rendered/audio inspection passes; actual device play remains open.
+
+**Historical migration point before AS-023:**
+
 **The continuous normal touch route from grade to a supported +110 m tower ring has passed in GitHub Actions.** The last session paused before that run finished. Its successful result was checked while preparing this document. Do not restart AS-021/AS-022 implementation or treat that run as still pending.
 
-The next unfinished work is **visual review of the captured AS-021/AS-022 gameplay, recording the resulting acceptance/limitations, and any concrete corrections that review reveals**. APK installation, Android execution and sustained Fold performance remain unverified. Above +110 m, further ascent is a design/implementation frontier, not a completed route.
+The next unfinished work at that earlier migration point was **visual review of the captured AS-021/AS-022 gameplay, recording the resulting acceptance/limitations, and any concrete corrections that review reveals**. APK installation, Android execution and sustained Fold performance remain unverified. Above +110 m, further ascent is a design/implementation frontier, not a completed route.
 
 This is a continuity and evidence record, not a second product specification. [Start Here](00_START_HERE.md), the [Atlas](01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md) and the existing slice tickets retain their names and ownership. Older ticket paragraphs saying the +110 m rendered route/APK is pending describe the earlier local handoff; the dated result below supersedes that status. Their physical calculations and open visual/device concerns still matter.
 
 ## 2. Verified baseline and evidence
+
+**Historical baseline, preceding the AS-023 opening replacement.** Preserve these immutable run/APK identifiers. They do not describe the local higher-launch candidate; its receipt belongs in [manual_slingshot.md](evidence/manual_slingshot.md) and Start Here §2.
 
 | Item | Observed result |
 |---|---|
@@ -59,6 +93,12 @@ The previous agent-owned clone was `/data/data/com.termux/files/usr/tmp/scraperx
 
 ## 4. First work after the owner resumes
 
+**Current continuation:** recover the existing scratch changes and tool/build environment; collect the final rebuilt all-suite and full-world input/collision/supported-arrival receipts; inspect genuine wood/band/humanoid/reticle/prediction/orbit/first-person and final settings/restart views; preserve retained fixture regressions. Update the exact local receipt without inventing CI or device acceptance. Rebuild the bridge after consequential native edits; the current shipping-scene test already verifies all 33 Grade/ring presets. Keep further dynamic encounters around/above the new landing range as future authored slices, not implied by this frame extension.
+
+The latest integrated candidate also needs actual touch-brake roof arrival, landing-response measurements/tests across support/impact conditions, smooth first-person recovery and state-driven humor observation. Keep the 27-gate result attached to the prior stable source until all 28 rebuilt gates pass. Current rendered options proof passes 2,898 checks and its two pause captures have been inspected.
+
+The session's temporary paths and repository-relative Godot/CTest commands are in [the local evidence ledger](evidence/manual_slingshot.md#reproducible-local-proof-paths). A fresh environment must replace those paths with its own tools/output directories. The following list preserves the earlier migration's baseline-evidence recovery steps; it is not an instruction to substitute that old grade route for current AS-023 proof.
+
 1. Recheck the remote head and the run above. If source advanced, identify the newer source/run before applying these conclusions to it.
 2. Read this document, [Start Here §2](00_START_HERE.md#2-current-position--66-m-automated-route-passed-layout-rejected-repairs-and-fold-play-unverified-2026-09-27), the [execution protocol](02_ENGINEERING_AUTHORITY/00_EXECUTION_PROTOCOL.md), [AS-021](03_EXECUTION/ASCENT/AS-021_BRACED_BAY.md), [AS-022](03_EXECUTION/ASCENT/AS-022_NORTH_SERVICE_FRAME.md), and the [Sol package/running plan](03_EXECUTION/PLANNING/SOL_ASCENT_HANDOFF.md). Load only the relevant Laws/GDD/Atlas/TDD sections when a decision needs them.
 3. Retrieve the immutable evidence into agent-owned storage. With authenticated `gh`, from the clone in the isolated workspace:
@@ -78,17 +118,19 @@ The previous session visually inspected the older `2e622f7` braced-bay preview a
 
 ## 5. Current source owners and route
 
-Native C++17/Jolt owns consequential state at 90 Hz. Godot 4.7 owns input, presentation and Android delivery. The dynamic player is 85 kg. Preserve real contact, rotating-support velocity, departure momentum, unloading and the full parkour system.
+Native C++17/Jolt owns consequential state at 90 Hz. Godot 4.7 owns input, presentation and Android delivery. Current Simulation source uses an 85 kg dynamic player, coupled to a 15 kg pouch; the 60 kg physical carrier is also included in the AS-023 ledger. Actual rubber forces act through the real draw restraint and passive 12 m aimed guide 2901, using four Jolt collision substeps per fixed tick. Release sets no launch pose or velocity. Only the rider/pouch collision pair is filtered while joined and until measured 0.10 m AABB clearance; world/tower contacts remain active, and restart/drop/reset restore the pair. Actual transient CCD contact or external force sets `ledger_valid=false` while retaining the raw residual. The <2% proof concerns the closed pre-impact draw/guided phase only. The humanoid climber is a visual rig following the native capsule. Preserve real contact, rotating-support velocity, departure momentum, unloading and the full parkour system.
 
 | Route / owner | Current role |
 |---|---|
-| AS-016 through AS-019 | Active pipe-loaded balance bridge, façade climb, swinging stair, upper counterweight lift and exterior parkour connect grade to +66 m |
+| AS-023 / `src/sim/slingshot.*`, `slingshot_model.*` | Current normal grade opening: finite manual draw, held rubber stretch, actual pouch/rider coupling, passive guide release and manual retrieval; fixed-fork/finite-gimbal correction is being integrated, fresh receipt pending. |
+| AS-016 through AS-019 | AS-016 is now an explicit pipe-bridge fixture. AS-017 façade, AS-018 swinging stair and AS-019 counterweight lift/exterior parkour remain above the changed opening; the old complete grade chain is historical proof. |
 | `src/sim/teeter_rise.cpp`, `evidence/teeter_stage.md` | AS-020 +66→+77 m: dynamic yellow beam entity 2800, captive 65 kg ballast 2801, fixed frame 1800, stops 1801/1802. The player pushes ballast and loads the real hinged beam. This obstacle already exists and has physics/rendered proof. |
 | `src/sim/braced_bay.cpp`, `tests/braced_bay_tests.cpp` | AS-021 +77→+88 m: static Kit entity 1900, diagonal balance girders, a gap jump, crouched portal and return mantle |
 | `src/sim/north_service_frame.cpp`, `tests/north_service_frame_tests.cpp` | AS-022 +88→+110 m: static Kit entity 1901, offset climbs/rests, real +99 ring, raised jump/hang, canopy shimmy, final catwalk and mantle |
 | `src/sim/simulation.cpp`, `.hpp` | Active world construction, player controller, ledge/hang/mantle/contact/checkpoint owner; test-only `InitialSpawn::NorthFrameEntry = 32` |
 | `godot/presentation/ui/ui_test_driver.gd` | Ordinary viewport-input scenarios: `touch_north_frame` calls braced bay → teeter → earlier routes, beginning at normal grade spawn |
-| `godot/presentation/main.gd` | Normal versus regression scene selection; render construction and audio routing |
+| `godot/presentation/main.gd`, `slingshot_view.gd`, `climber_character.gd` | Normal/fixture selection; native slingshot input, Kit rendering, wood/leather/rubber, actual humanoid visual rig, aim/energy HUD, native projection, orbital camera/first-person return and audio routing |
+| `godot/presentation/ui/pause_menu.gd`, `settings_store.gd`, `tests/settings_runtime_test.gd` | Persistent input/graphics/display/audio controls and native-validated checkpoint, supported-ring, height/side and exact-XYZ restart actions. Grade/ring targets must match the enlarged source geometry. |
 | `.github/workflows/wo000-delivery-spine.yml` | Full native, Godot, rendered route, regression, audio, solids and Android build/export gates |
 
 The new static frames each use one authoritative Kit part list for both collision and rendering. Native traversal supplies the player action; these frames contain no moving machine coordinate or powered reset. Compiler LINK/contact/clearance checks and Three Spine locomotion calculations apply. Do not invent a dynamic mechanism sweep result for a static structure. Structural deformation and metal joint strength are not simulated.
@@ -104,7 +146,13 @@ The retired intake, water-lift/cage campaign and old upper route survive only as
 
 ## 6. Owner direction that must survive the migration
 
-- Build continuous supported ascent toward **+300 m** as the near-term milestone and the existing **1,600 m** tower destination. The owner described the larger scope as 1,000+ m; +300 m is not the final height.
+**Durable current charter, 2026-10-01:** first-person 3D, open industrial megastructure, unbroken physical ascent from ground through hundreds of metres and beyond 1,000 m toward the existing 1,600 m tower. Huge exposed height, heavy understandable cause and effect, satisfying danger and physical movement make the environment the main system. [The Atlas §1 summary](01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md#1-content-decision), [Governing Laws](01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md) and [GDD](01_PRODUCT_AUTHORITY/01_SCRAPERX_GDD.md) retain the authority; do not drift into a launcher-only game or a repeated generic obstacle course.
+
+Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torque, moving supports and mechanical state create the routes. Godot supplies touch input, presentation, camera, HUD and Android delivery. Preserve varied jump/vault/mantle/hang/shimmy/crouch/moving-support parkour and large visible machines that physically create paths: counterweights, racks, pulleys, pivots, gears, cranes, linkages, catches, lifts and hinges. Avoid repetitive machines, regular ramp/stairs and tiny unreadable generic obstacles. No progress teleport, invisible blocker, fake route flag, scripted machine substitute or fake physics may claim success. Authorized development/test restart tools are explicit non-progress actions, never ascent evidence.
+
+- Latest 2026-10-01 direction selects AS-023: sturdy wood, thick rubber, rapid finite arcade manual charging, a several-hundred-metre launch and the enlarged receiving frame. Setback is permitted. Preserve authored upper parkour/machinery and author other dynamic encounters around/above the demonstrated new landing range as continuing work. The latest owner instruction authorizes commit/push of this verified slice to `ChatGPT`.
+- Latest follow-up selects touch-only gameplay, body/thought-bubble/mechanical-boing humor, and native support-relative normal/tangential impact-energy response with bounded footwork/recovery for every landing. First-person impact/recovery presentation must remain smooth and follow native state. Facial refinement is not the focus; final touch/landing/camera/humor proof remains open.
+- Continue supported parkour/mechanism ascent beyond **1,000 m** toward the existing **1,600 m** tower destination. The earlier +300 m milestone and current +352 m slingshot receiving range are interim stages; the slingshot is one opening encounter, not the whole game.
 - Use simple primitives creatively. Many sections should be climbing/parkour; many should use real physical machines. Choose their mix for challenge, readability and pacing rather than a rigid alternation or repeated lift/ladder template.
 - Players should think, reposition loads or adjust world objects where the encounter benefits from it, then use the physical result to climb. A small coherent mechanism is enough. Avoid gratuitous chains and recurring tool/handle chores that add no useful decision.
 - The causal law is **initial physical state plus physical laws and ordered external inputs determines the outcome**. Do not force success with player-presence animation, invisible supports, authored body poses, trigger impulses, hidden energy, or double-counted player weight. State the tested determinism boundary rather than promising cross-platform bit identity.
@@ -112,9 +160,32 @@ The retired intake, water-lift/cage campaign and old upper route survive only as
 - Read and use the actual installed **Superpowers**, **Causal Mechanism Compiler**, and **`threespine`** instructions. Discover their locations in the new environment; old absolute skill paths are not portable. Do not merely claim use or invent an invocation. If a required skill is unavailable, report that exact limitation before claiming its workflow was applied. Use the actual Godot verification instructions when changing Godot code.
 - Latest explicit owner direction resolves contradictions in older project documentation, subject to the environment's higher-priority instructions. Preserve existing labels and links; make focused corrections rather than renaming/reorganizing the documentation.
 - Keep a running to-do. Work through routine, reversible implementation without repeated permission prompts. Respect real environment approval rules, explain a concrete access blocker if one occurs, and avoid the owner's personal files. APKs are built by GitHub Actions. Screenshots require explicit invocation and visual inspection; they are not supplied by an APK build automatically.
-- The owner prefers substantial, well-specified coding assignments for model handoff. Complete difficult physical/ownership decisions and identify a meaningful handoff boundary. They requested the prior session to pause; this document does not authorize silently continuing above +110 m during the migration.
+- The owner prefers substantial, well-specified coding assignments for model handoff. Complete difficult physical/ownership decisions and identify a meaningful handoff boundary. The prior migration session was paused; that historical boundary has since been superseded by the explicit AS-023 continuation above.
 
 ## 7. Running to-do at this handoff
+
+**Current AS-023 local revision:**
+
+- [x] Recover the original scratch and preserve verified source/evidence backups outside the executor.
+- [x] Prepare the GPT-6 Sol 6.1 checkpoint and pause without starting new gameplay edits or builds.
+- [x] Repair explicit BOARD/manual-draw authorization in native and touch input; prove approach cannot auto-seat or charge.
+- [x] Forward native `aim_locked` through the existing Simulation/bridge state seam.
+- [x] Extend outside-contact audit coverage to the launch rail during aim/draw; preserve raw residuals and verify production callbacks.
+- [x] Implement the first native manual-draw/held-stretch/release slice and Godot presentation/options.
+- [x] Load a locally built native extension in Godot 4.7 and exercise shipping-scene pause/settings/restart integration for the preceding variant.
+- [x] Explicitly capture and inspect current graphics/restart pages with the direct 33-choice ring selector.
+- [x] Complete the fixed 82° bolted fork / finite physical SixDOF rail-gimbal correction and reconcile final source in the Atlas.
+- [x] Measure final fixed-fork power/pre-impact residual/refinement, manual retrieval and second shot.
+- [x] Verify all 33 Grade/+11..+352 m restart choices, current standing XYZ, occupied-point rejection and real checkpoint restoration in the shipping scene.
+- [x] Assert final-candidate supported +352 m Tower arrival from full draw and ordered native/touch upward parachute, zero deaths and continued walking.
+- [x] Complete touch-only brake/roof scenario and native energy/footwork recovery for all landings; measure the resulting response.
+- [x] Collect the final rebuilt 28-test suite and actual touch-input/collision/supported-arrival receipt.
+- [x] Capture/inspect final wood/bands/pouch/humanoid/aim/launch/POV/roof/humor views and all three current options/help images; complete both real-rendered touch scenarios and 95 actual-mixer audio checks.
+- [x] Complete independent read-only candidate review; no remaining Important/Critical findings. State absent CI/APK/device evidence; publication is now explicitly owner-authorized.
+- [x] Preserve the post-integration source in an independently verified local backup and commit the exact proof receipts; original recovery backups remain intact.
+- [ ] Select a real 10–20 m tower gap with the owner, then compile/implement a climbing section or causal machine encounter with physical entry, receiver, exit and failure recovery.
+
+**Historical migration checklist, preserved for the preceding pipe-bridge source:**
 
 - [x] Commit and push AS-021/AS-022 source, native owner repairs and normal touch scenarios on `ChatGPT`.
 - [x] Verify local selected native tests and the complete 24-test x86 CI suite.
@@ -126,4 +197,4 @@ The retired intake, water-lift/cage campaign and old upper route survive only as
 - [ ] Observe actual APK installation/play and Fold performance if the new environment has a real device path. Otherwise retain this boundary explicitly.
 - [ ] On the owner's continuation instruction, compile the next useful encounter from the demonstrated +110 m receiver within the broader +300 m objective. No particular mechanism above that ring is selected by this handoff.
 
-There is no current native or CI failure to repair at `4996a6e`. Begin with the remaining visual evidence, not the historical failed run or a speculative rewrite. Recheck evidence whenever executable source changes.
+There was no native or CI failure to repair at the historical `4996a6e` migration point. Current work is the explicit AS-023 revision above; its changed source needs its own fresh receipt. Preserve the earlier IDs and proof rather than retesting old fixtures as current opening acceptance.

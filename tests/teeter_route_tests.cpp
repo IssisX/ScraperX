@@ -57,7 +57,7 @@ void report(const Simulation &simulation, const char *label) {
 } // namespace
 
 int main() {
-    Simulation simulation;
+    Simulation simulation(scraperx::sim::InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::PipeBridge);
     std::cout << "INVENTORY moving=" << simulation.moving_body_count()
               << " kit=" << simulation.kit_body_count() << "\n";
     if (simulation.entity_body_count(2800) != 1) {
@@ -73,7 +73,7 @@ int main() {
     // A rider alone must be able to inspect the outboard end without
     // operating the machine. The captive ballast supplies the missing
     // moment only when the player has moved it along the visible rail.
-    Simulation no_ballast(InitialSpawn::TeeterEntry);
+    Simulation no_ballast(InitialSpawn::TeeterEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(no_ballast, 0.5);
     if (!walk_to(no_ballast, 27.2, -139.0) ||
         !walk_to(no_ballast, 32.8, -139.0)) return 22;
@@ -84,7 +84,7 @@ int main() {
         std::cerr << "FAIL rider alone tipped the unadjusted beam\n";
         return 23;
     }
-    Simulation rider(InitialSpawn::TeeterEntry);
+    Simulation rider(InitialSpawn::TeeterEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(rider, 0.5);
     report(rider, "ENTRY");
     if (rider.snapshot().support_entity_id != Simulation::kTowerEntityId ||
@@ -140,7 +140,7 @@ int main() {
     if (!rider.snapshot().player_grounded || rider.snapshot().player_position.y < 77.5 ||
         rider.snapshot().support_entity_id != Simulation::kTowerEntityId ||
         rider.snapshot().death_count != 0) return 10;
-    Simulation drop(InitialSpawn::TeeterFarDrop);
+    Simulation drop(InitialSpawn::TeeterFarDrop, scraperx::sim::WorldContent::PipeBridge);
     double drop_min_angle = angle(drop);
     double angle_after_one_second = 0.0;
     for (int tick = 0; tick < 720; ++tick) {
@@ -155,7 +155,7 @@ int main() {
         angle_after_one_second > -0.05 || drop_min_angle > -0.40 ||
         angle(drop) > -0.40 || angle(drop) < -0.55 ||
         drop.snapshot().death_count != 0) return 11;
-    Simulation recovery(InitialSpawn::TeeterEntry);
+    Simulation recovery(InitialSpawn::TeeterEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(recovery, 0.5);
     if (!walk_to(recovery, 30.5, -139.0)) return 18;
     (void)walk_to(recovery, 30.5, -140.5, 4.0);
@@ -172,7 +172,7 @@ int main() {
         recovery.snapshot().support_entity_id != Simulation::kTowerEntityId ||
         std::abs(recovery.snapshot().player_position.y - 55.9) > 0.1 ||
         recovery.snapshot().death_count != 0) return 21;
-    Simulation depart(InitialSpawn::TeeterFarDrop);
+    Simulation depart(InitialSpawn::TeeterFarDrop, scraperx::sim::WorldContent::PipeBridge);
     bool jumped_from_motion = false;
     for (int tick = 0; tick < 180; ++tick) {
         (void)depart.advance_frame(Simulation::kFixedStepSeconds);
@@ -203,7 +203,7 @@ int main() {
         break;
     }
     if (!jumped_from_motion) return 16;
-    Simulation replay(InitialSpawn::TeeterEntry);
+    Simulation replay(InitialSpawn::TeeterEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(replay, 0.5);
     if (!walk_to(replay, 27.2, -139.0)) return 12;
     advance(replay, 0.5);

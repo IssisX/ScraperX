@@ -17,6 +17,10 @@ const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 
 const SCENARIOS := {
 	"ground_foundation": 8,
+	"keyboard_slingshot": 8,
+	"pad_slingshot": 8,
+	"touch_slingshot": 8,
+	"touch_slingshot_landing": 8,
 	"pipe_bridge": 8,
 	"touch_pipe_bridge": 8,
 	"keyboard_pipe_bridge": 8,
@@ -67,7 +71,11 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	_scenario = scenario
 	_capture_prefix = capture_prefix
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if scenario not in ["ground_foundation", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	# The removed opening survives only as an explicitly selected regression.
+	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
+		if not bool(main._native.configure_pipe_bridge_fixture()):
+			return false
+	if scenario not in ["ground_foundation", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -98,6 +106,14 @@ func _run() -> void:
 	match _scenario:
 		"ground_foundation":
 			ok = await _ground_foundation()
+		"keyboard_slingshot":
+			ok = await _slingshot(InputRouter.Device.KEYBOARD_MOUSE)
+		"pad_slingshot":
+			ok = await _slingshot(InputRouter.Device.GAMEPAD)
+		"touch_slingshot":
+			ok = await _slingshot(InputRouter.Device.TOUCH)
+		"touch_slingshot_landing":
+			ok = await _slingshot(InputRouter.Device.TOUCH, true)
 		"pipe_bridge":
 			ok = await _pipe_bridge(InputRouter.Device.GAMEPAD)
 		"touch_pipe_bridge":
@@ -175,6 +191,291 @@ func _fail(reason: String) -> bool:
 
 
 # --- scenarios -----------------------------------------------------------------
+
+func _slingshot(device: int, supported_landing: bool = false) -> bool:
+	if _main._regression_scene or not bool(_native().get_slingshot_state().get("available", false)):
+		return _fail("slingshot scenario did not select the shipping world")
+	_main._settings.head_bob = true
+	_main._head_bob_on = true
+	_main._settings.launch_cinematics = true
+	# Explicit test staging: outside the pouch at ground level, three metres
+	# toward the tower. Ordinary viewport movement then walks backwards
+	# along +Z onto the actual leather floor; boarding never teleports.
+	var station: Vector3 = _native().get_slingshot_state()["pouch_position"]
+	if not bool(_native().debug_restart_at(Vector3(station.x, 0.92, station.z - 3.0))):
+		return _fail("outside-pouch staging was rejected")
+	_main._yaw = 0.0 # Face -Z, so local backwards moves +Z into the pouch.
+	_main._pitch = 0.0
+	await _frames(3)
+	await _pose("outside_pouch")
+	_move(device, -1.0)
+	if not await _wait_until(func() -> bool: return bool(_native().get_slingshot_state()["station_available"]), 4.0):
+		_move(device, 0.0)
+		var missed: Dictionary = _native().get_slingshot_state()
+		return _fail("ordinary backwards movement did not enter leather pouch at %s pouch=%s recovering=%s" % [
+			_position(), missed["pouch_position"], missed["recovering"]])
+	_move(device, 0.0)
+	await _frames(2)
+	var approached: Dictionary = _native().get_slingshot_state()
+	if not approached.has("aim_locked"):
+		return _fail("native aim lock did not cross the actual Godot bridge")
+	if bool(approached["seated"]) or float(approached["energy_j"]) > 1.0 or float(approached["work_j"]) > 0.01:
+		return _fail("backward touch approach seated or charged before explicit BOARD")
+	if not await _offered(&"slingshot", "ENTER POUCH"):
+		return _fail("native pouch entry was not offered at %s" % _position())
+	var before_board := _position()
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_slingshot_state()["seated"]), 0.5):
+		return _fail("device Action did not fasten native pouch harness")
+	if _position().distance_to(before_board) > 0.12:
+		return _fail("boarding displaced rider instead of fastening present pose")
+	if not await _offered(&"slingshot", "DRAW MORE"):
+		return _fail("unfunded shot gave no draw-more explanation")
+	var uncharged_launches := int(_native().get_slingshot_state()["launch_count"])
+	_act(device)
+	await _frames(3)
+	if bool(_native().get_slingshot_state().get("release_ready", true)) \
+			or int(_native().get_slingshot_state()["launch_count"]) != uncharged_launches:
+		return _fail("unfunded Action released below the physical guide-exit energy")
+	if device == InputRouter.Device.TOUCH and not await _touch_rail_aim():
+		return false
+	await _pose("seated_manual_draw")
+	var draw_clock := 0.0
+	var peak_power := 0.0
+	var parameters: Dictionary = _native().get_slingshot_state()
+	var max_draw := float(parameters.get("max_draw_m", 12.0))
+	var target_draw := max_draw - 0.025 # Within the native stop's finite clearance.
+	var power_limit := float(parameters.get("max_source_power_w", 200000.0))
+	_move(device, -1.0)
+	while draw_clock < 15.0:
+		await get_tree().process_frame
+		draw_clock += get_process_delta_time()
+		var charging: Dictionary = _native().get_slingshot_state()
+		peak_power = maxf(peak_power, float(charging["source_power_w"]))
+		if float(charging["draw_m"]) >= target_draw:
+			break
+	_move(device, 0.0)
+	await _seconds(0.4) # The real carriage coasts into its one-way catch.
+	var charged: Dictionary = _native().get_slingshot_state()
+	if not bool(charged["aim_locked"]):
+		return _fail("funded manual draw failed to expose native aim lock")
+	var held_draw := float(charged["draw_m"])
+	var held_work := float(charged["work_j"])
+	var energy := float(charged["energy_j"])
+	if not bool(charged.get("release_ready", false)):
+		return _fail("funded full draw did not unlock native release")
+	if held_draw < target_draw - 0.02 or energy < 40000.0 or held_work < energy:
+		return _fail("manual draw was not physically funded: draw=%.3f energy=%.1f work=%.1f" % [held_draw, energy, held_work])
+	if not is_finite(peak_power) or peak_power < power_limit * 0.25 or peak_power > power_limit * 1.15 \
+			or held_work > power_limit * (draw_clock + 0.4) * 1.03:
+		return _fail("manual source power/work outside declared budget: peak=%.1f work=%.1f time=%.2f" % [peak_power, held_work, draw_clock])
+	await _seconds(0.6)
+	var held: Dictionary = _native().get_slingshot_state()
+	if absf(float(held["draw_m"]) - held_draw) > 0.03 or absf(float(held["work_j"]) - held_work) > 0.10:
+		return _fail("idle ratchet lost draw or accrued manual work")
+	await _slingshot_look_attempt(device)
+	var locked: Dictionary = _native().get_slingshot_state()
+	if absf(float(locked["yaw_rad"]) - float(charged["yaw_rad"])) > 0.00001 \
+			or absf(float(locked["elevation_rad"]) - float(charged["elevation_rad"])) > 0.00001 \
+			or absf(float(_main._yaw) + float(locked["yaw_rad"])) > 0.00001 \
+			or absf(float(_main._pitch) - float(locked["elevation_rad"])) > 0.00001:
+		return _fail("charged look gesture changed funded aim or misleading aiming lens")
+	await _pose("charged_locked_aim")
+	if not await _offered(&"slingshot", "RELEASE"):
+		return _fail("loaded Action did not offer RELEASE")
+	var launches := int(locked["launch_count"])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_slingshot_state()["launch_count"]) == launches + 1, 0.5):
+		return _fail("device Action did not remove native draw restraint")
+	if not bool(_native().get_slingshot_state()["released"]) or not _main._slingshot_view.is_cinematic_active():
+		return _fail("physical release did not start cinematic")
+	await _seconds(0.62)
+	var release_speed := _velocity().length()
+	if release_speed < 8.0 or not _main._slingshot_view._avatar.visible or _main._arms.visible:
+		return _fail("native spring release did not accelerate visible human rider: speed=%.2f" % release_speed)
+	if not _main._slingshot_view._hud.has_thought_bubble():
+		return _fail("actual rising release did not show its brief thought reaction")
+	await _pose("release_orbit")
+	if not await _wait_until(func() -> bool: return not _main._slingshot_view.is_cinematic_active(), 2.0):
+		return _fail("orbital camera did not return after brief sequence")
+	if _main._slingshot_view.get_simulation_scale() != 1.0 or not _main._arms.visible \
+			or _main._slingshot_view._avatar.visible or _main._slingshot_view._hud.has_thought_bubble():
+		return _fail("cinematic return did not restore real time and first-person body")
+	await _pose("true_first_person_return")
+	if supported_landing:
+		_detail = "staging=outside_pouch_then_walk draw_m=%.3f spring_kj=%.2f manual_kj=%.2f peak_kw=%.2f release_mps=%.2f" % \
+			[held_draw, energy / 1000.0, held_work / 1000.0, peak_power / 1000.0, release_speed]
+		return await _touch_launch_roof_landing()
+	var apex := _position().y
+	var flight_clock := 0.0
+	while flight_clock < 12.0:
+		await get_tree().process_frame
+		flight_clock += get_process_delta_time()
+		apex = maxf(apex, _position().y)
+		if _velocity().y < -1.0:
+			break
+	if apex < 250.0 or bool(_native().get_slingshot_state()["seated"]) or _velocity().y >= -1.0:
+		return _fail("real launch did not detach and reach useful tower height: apex=%.2f" % apex)
+	await _pose("native_flight_apex")
+	# A second explicit staging relocation isolates the ground retrieval UI
+	# after the measured flight. All retrieval/cancel/walking below again
+	# travels through ordinary viewport input; no native request_* shortcuts.
+	var neutral: Vector3 = _native().get_slingshot_state().get("neutral_position", station)
+	var control: Vector3 = _native().get_slingshot_state().get("retrieval_control_position",
+		neutral + Vector3(1.5, 0.35, -1.8))
+	# Native control identifies the handwheel, not the capsule's standing
+	# centre. Stand clear of the real pole at grade, inside its offer radius.
+	var control_standing := Vector3(control.x, neutral.y + 0.57, control.z - 0.4)
+	if not bool(_native().debug_restart_at(control_standing)):
+		return _fail("retrieval-control staging was rejected")
+	_main._slingshot_view.cancel_cinematic()
+	_main._yaw = 0.0
+	_main._pitch = 0.0
+	await _frames(3)
+	if not await _offered(&"slingshot", "RETRIEVE POUCH"):
+		return _fail("ground control did not offer physical pouch retrieval")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_slingshot_state()["recovering"]), 0.5):
+		return _fail("retrieval Action did not engage native tether")
+	await _seconds(0.3)
+	var recovering: Dictionary = _native().get_slingshot_state()
+	if absf(float(recovering["retrieval_work_j"])) > 0.10 or absf(float(recovering["retrieval_source_power_w"])) > 0.10:
+		return _fail("idle retrieval accrued unfunded manual work")
+	await _pose("retrieval_idle_cancel_available")
+	match device:
+		InputRouter.Device.TOUCH:
+			_tap(1, _center(&"drop"))
+		InputRouter.Device.GAMEPAD:
+			_button(JOY_BUTTON_B)
+		_:
+			_key(KEY_Q, true)
+			_key(KEY_Q, false)
+	if not await _wait_until(func() -> bool: return not bool(_native().get_slingshot_state()["recovering"]), 0.5):
+		return _fail("retrieval Drop did not release native tether")
+	var after_cancel := _position()
+	_move(device, 1.0)
+	await _seconds(0.6)
+	_move(device, 0.0)
+	var walked := Vector2(_position().x - after_cancel.x, _position().z - after_cancel.z).length()
+	if walked < 0.4:
+		return _fail("retrieval cancel kept native walking locked: %.3f m" % walked)
+	_detail = "staging=outside_pouch_then_walk draw_m=%.3f spring_kj=%.2f manual_kj=%.2f peak_kw=%.2f release_mps=%.2f apex_m=%.2f" % \
+		[held_draw, energy / 1000.0, held_work / 1000.0, peak_power / 1000.0, release_speed, apex]
+	_detail += " retrieval_cancel_walk_m=%.2f" % walked
+	return true
+
+
+func _touch_launch_roof_landing() -> bool:
+	var deaths := int(_native().get_death_count())
+	var landings := int(_native().get_landing_state()["landing_count"])
+	if not await _wait_until(func() -> bool: return _position().y >= 354.0 and _velocity().y > 0.0, 12.0):
+		return _fail("launched rider did not reach the manual roof-braking window")
+	if not bool(_ctx()["chute_ok"]) or not _main._touch.is_button_shown(&"chute"):
+		return _fail("touch interface did not offer its manual upward-flight brake")
+	var brake_height := _position().y
+	_tap(1, _center(&"chute"))
+	if not await _wait_until(func() -> bool: return bool(_native().is_parachute_deployed()), 0.4):
+		return _fail("real touch canopy press did not engage native drag")
+	await _pose("manual_airbrake_354m")
+	var apex := _position().y
+	var deepest_dip := 0.0
+	var clock := 0.0
+	while clock < 10.0:
+		await get_tree().process_frame
+		clock += get_process_delta_time()
+		apex = maxf(apex, _position().y)
+		deepest_dip = minf(deepest_dip, _main._landing_camera.translation.y)
+		if int(_native().get_death_count()) != deaths:
+			return _fail("manual touch roof arrival caused death")
+		if bool(_native().is_player_grounded()) and _position().y > 350.0:
+			break
+	if not bool(_native().is_player_grounded()) or _position().y < 350.0:
+		return _fail("manual touch brake did not produce supported +352 m roof arrival: %s" % _position())
+	var landing: Dictionary = _native().get_landing_state()
+	if int(landing["landing_count"]) <= landings or float(landing["landing_approach_energy_j"]) <= 0.0 \
+			or int(landing["landing_support_entity_id"]) <= 0:
+		return _fail("supported roof arrival emitted no real contact-energy witness")
+	if deepest_dip >= -0.0001 or deepest_dip < -0.25:
+		return _fail("actual roof contact produced no bounded knee camera response: %.5f" % deepest_dip)
+	await _seconds(0.35)
+	var look_start := _viewport_size() * Vector2(0.78, 0.28)
+	_touch(7, look_start, true)
+	_drag(7, look_start + Vector2(0.0, 650.0), Vector2(0.0, 650.0))
+	await _frames(3)
+	_touch(7, look_start + Vector2(0.0, 650.0), false)
+	await _pose("supported_352m_roof")
+	var stood := _position()
+	_move(InputRouter.Device.TOUCH, 1.0)
+	await _seconds(0.6)
+	_move(InputRouter.Device.TOUCH, 0.0)
+	var walked := Vector2(_position().x - stood.x, _position().z - stood.z).length()
+	if walked < 0.4 or not bool(_native().is_player_grounded()) or _position().y < 350.0 \
+			or int(_native().get_death_count()) != deaths:
+		return _fail("roof arrival did not permit continued ordinary touch walking")
+	await _pose("roof_touch_walk")
+	_detail += " brake_height_m=%.2f braked_apex_m=%.2f supported_height_m=%.2f deaths=%d roof_walk_m=%.2f contact_j=%.1f camera_dip_m=%.4f" % [
+		brake_height, apex, _position().y - 0.9, int(_native().get_death_count()) - deaths,
+		walked, float(landing["landing_approach_energy_j"]), deepest_dip]
+	return true
+
+
+func _touch_rail_aim() -> bool:
+	var initial: Dictionary = _native().get_slingshot_state()
+	if bool(initial.get("aim_locked", true)) or float(initial["energy_j"]) > 1.0:
+		return _fail("ordinary boarding preloaded bands and blocked unloaded aiming")
+	var initial_goal := float(_main._sling_goal_yaw)
+	var at := _viewport_size() * Vector2(0.80, 0.30)
+	_touch(7, at, true)
+	_drag(7, at + Vector2(24.0, 0.0), Vector2(24.0, 0.0))
+	await _frames(3)
+	_touch(7, at + Vector2(24.0, 0.0), false)
+	await _frames(2)
+	var requested := float(_main._sling_goal_yaw)
+	if absf(requested - initial_goal) < 0.001:
+		return _fail("one-shot touch look did not request a new rail angle")
+	await _seconds(0.25)
+	if absf(float(_main._sling_goal_yaw) - requested) > 0.000001:
+		return _fail("touch rail target was forgotten after finger lift")
+	if not await _wait_until(func() -> bool:
+			var rail: Dictionary = _native().get_slingshot_state()
+			return bool(rail.get("aim_ready", false)) and absf(float(rail["yaw_rad"]) - requested) < 0.012, 5.0):
+		return _fail("finite native rail did not settle near the retained touch target")
+	await _pose("manual_aim_settled")
+	_touch(7, at, true)
+	_drag(7, at - Vector2(24.0, 0.0), Vector2(-24.0, 0.0))
+	await _frames(3)
+	_touch(7, at - Vector2(24.0, 0.0), false)
+	if not await _wait_until(func() -> bool:
+			var rail: Dictionary = _native().get_slingshot_state()
+			return bool(rail.get("aim_ready", false)) and absf(float(rail["yaw_rad"]) - initial_goal) < 0.012, 5.0):
+		return _fail("reverse touch look did not return the physical rail to its initial goal")
+	await _seconds(0.4)
+	return true
+
+
+func _slingshot_look_attempt(device: int) -> void:
+	match device:
+		InputRouter.Device.TOUCH:
+			var at := _viewport_size() * Vector2(0.80, 0.30)
+			_touch(7, at, true)
+			_drag(7, at + Vector2(120, -70), Vector2(120, -70))
+			await _frames(3)
+			_touch(7, at + Vector2(120, -70), false)
+		InputRouter.Device.GAMEPAD:
+			_axis(JOY_AXIS_RIGHT_X, 0.8)
+			_axis(JOY_AXIS_RIGHT_Y, -0.6)
+			await _frames(5)
+			_axis(JOY_AXIS_RIGHT_X, 0.0)
+			_axis(JOY_AXIS_RIGHT_Y, 0.0)
+		_:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			var event := InputEventMouseMotion.new()
+			event.relative = Vector2(120, -70)
+			_push(event)
+			await _frames(3)
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	await _frames(2)
+
 
 func _pipe_bridge(device: int) -> bool:
 	if _main._regression_scene:
@@ -822,8 +1123,8 @@ func _ground_foundation() -> bool:
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 45:
-		return _fail("default pipe bridge, stair, lift and teeter body inventory differs")
+	if int(_native().get_moving_body_count()) != 15:
+		return _fail("default slingshot, stair, lift and teeter body inventory differs")
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
 	var retired := ["IntakeBay", "WaterScrew", "LegalForty", "Hook5",
@@ -843,7 +1144,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=45 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=15 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
 	return true
 
 

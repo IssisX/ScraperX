@@ -22,6 +22,8 @@ add_library(scraperx_sim STATIC
     src/sim/water_screw.cpp
     src/sim/mechanism_kit.cpp
     src/sim/facade_route.cpp
+    src/sim/slingshot.cpp
+    src/sim/slingshot_model.cpp
     src/sim/pipe_bridge.cpp
     src/sim/swing_stair.cpp
     src/sim/upper_ascent.cpp
@@ -69,6 +71,18 @@ if(SCRAPERX_WITH_JOLT)
 endif()
 
 if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
+    add_executable(scraperx_slingshot_model_tests tests/slingshot_model_tests.cpp)
+    target_link_libraries(scraperx_slingshot_model_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.slingshot_model COMMAND scraperx_slingshot_model_tests)
+    add_executable(scraperx_slingshot_machine_tests tests/slingshot_machine_tests.cpp)
+    target_link_libraries(scraperx_slingshot_machine_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.slingshot_machine COMMAND scraperx_slingshot_machine_tests)
+    add_executable(scraperx_launcher_tests tests/launcher_tests.cpp)
+    target_link_libraries(scraperx_launcher_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.launcher_and_restart COMMAND scraperx_launcher_tests)
+    add_executable(scraperx_landing_tests tests/landing_tests.cpp)
+    target_link_libraries(scraperx_landing_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.landing_response COMMAND scraperx_landing_tests)
     add_executable(scraperx_sim_tests tests/simulation_tests.cpp)
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_sim_tests PRIVATE

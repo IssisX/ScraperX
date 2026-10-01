@@ -20,7 +20,7 @@ namespace {
 // One past the last spawn, derived from the enum so a new spawn is never
 // silently refused (the literal 21 had fallen behind IntakeHandoffDeck).
 constexpr std::int64_t kInitialSpawnCount =
-    static_cast<std::int64_t>(sim::InitialSpawn::WaterLiftUpperDock) + 1;
+    static_cast<std::int64_t>(sim::InitialSpawn::NorthFrameEntry) + 1;
 
 // A kit index from script: negative or past the end reads as no body.
 [[nodiscard]] std::uint32_t kit_index(const std::int64_t index) {
@@ -35,6 +35,16 @@ ScraperXSimulation::ScraperXSimulation()
     : simulation_(std::make_unique<sim::Simulation>()) {}
 
 void ScraperXSimulation::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("set_slingshot_input", "draw", "yaw", "elevation"), &ScraperXSimulation::set_slingshot_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_action"), &ScraperXSimulation::request_slingshot_action);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_drop"), &ScraperXSimulation::request_slingshot_drop);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_state"), &ScraperXSimulation::get_slingshot_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_render_state"), &ScraperXSimulation::get_slingshot_render_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_landing_state"), &ScraperXSimulation::get_landing_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_prediction"), &ScraperXSimulation::get_slingshot_prediction);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_restart_at", "capsule_centre"), &ScraperXSimulation::debug_restart_at);
+    godot::ClassDB::bind_method(godot::D_METHOD("restart_checkpoint"), &ScraperXSimulation::restart_checkpoint);
+    godot::ClassDB::bind_method(godot::D_METHOD("configure_pipe_bridge_fixture"), &ScraperXSimulation::configure_pipe_bridge_fixture);
     godot::ClassDB::bind_method(godot::D_METHOD("configure_regression_spawn", "initial_spawn"), &ScraperXSimulation::configure_regression_spawn);
     godot::ClassDB::bind_method(godot::D_METHOD("get_pipe_bridge_tip_height"), &ScraperXSimulation::get_pipe_bridge_tip_height);
     godot::ClassDB::bind_method(godot::D_METHOD("get_pipe_bridge_crush_front"), &ScraperXSimulation::get_pipe_bridge_crush_front);
@@ -370,6 +380,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_kit_body_parts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_transform", "body"),
                                 &ScraperXSimulation::get_kit_body_transform);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_render_transform", "body"),
+                                &ScraperXSimulation::get_kit_body_render_transform);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_carry_grip_position", "body"),
                                 &ScraperXSimulation::get_kit_carry_grip_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_index", "entity_id"),
@@ -378,6 +390,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_kit_cable_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_cable_points", "cable"),
                                 &ScraperXSimulation::get_kit_cable_points);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_cable_render_points", "cable"),
+                                &ScraperXSimulation::get_kit_cable_render_points);
     godot::ClassDB::bind_method(godot::D_METHOD("get_well_a_cage_travel"),
                                 &ScraperXSimulation::get_well_a_cage_travel);
     godot::ClassDB::bind_method(godot::D_METHOD("is_well_a_catch_latched"),
@@ -475,6 +489,108 @@ bool ScraperXSimulation::request_traversal() {
 
 bool ScraperXSimulation::request_release() {
     return simulation_->request_release();
+}
+
+bool ScraperXSimulation::debug_restart_at(const godot::Vector3 centre) {
+    return simulation_->debug_restart_at({centre.x, centre.y, centre.z});
+}
+
+bool ScraperXSimulation::restart_checkpoint() {
+    return simulation_->restart_checkpoint();
+}
+
+bool ScraperXSimulation::configure_pipe_bridge_fixture() {
+    if (simulation_->snapshot().tick_index != 0) return false;
+    simulation_ = std::make_unique<sim::Simulation>(
+        sim::InitialSpawn::ExteriorGrade, sim::WorldContent::PipeBridge);
+    return true;
+}
+
+bool ScraperXSimulation::set_slingshot_input(double draw, double yaw, double elevation) {
+    return simulation_->set_slingshot_input(draw, yaw, elevation);
+}
+bool ScraperXSimulation::request_slingshot_action() {
+    return simulation_->request_slingshot_action();
+}
+bool ScraperXSimulation::request_slingshot_drop() {
+    return simulation_->request_slingshot_drop();
+}
+godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
+    const auto s = simulation_->slingshot_state();
+    godot::Dictionary out;
+    out["available"] = s.available;
+    out["station_available"] = s.station_available;
+    out["seated"] = s.seated;
+    out["drawing"] = s.drawing;
+    out["released"] = s.released;
+    out["can_retrieve"] = s.can_retrieve;
+    out["recovering"] = s.recovering;
+    out["guided_launch"] = s.guided_launch;
+    out["track_exit"] = s.track_exit;
+    out["release_ready"] = s.release_ready;
+    out["ledger_valid"] = s.ledger_valid;
+    out["pouch_pair_excluded"] = s.pouch_pair_excluded;
+    out["aim_control_work_j"] = s.aim_control_work_j;
+    out["aim_ready"] = s.aim_ready;
+    out["aim_locked"] = s.aim_locked;
+    out["aim_source_power_w"] = s.aim_source_power_w;
+    out["target_yaw_rad"] = s.target_yaw_rad;
+    out["target_elevation_rad"] = s.target_elevation_rad;
+    out["launch_track_start"] = to_godot(s.launch_track_start);
+    out["launch_track_end"] = to_godot(s.launch_track_end);
+    out["max_draw_m"] = s.max_draw_m;
+    out["max_source_power_w"] = s.max_source_power_w;
+    out["power_limit_w"] = s.max_source_power_w;
+    out["band_rest_m"] = s.band_rest_m;
+    out["neutral_position"] = to_godot(s.neutral_position);
+    out["retrieval_control_position"] = to_godot(s.retrieval_control_position);
+    out["retrieval_work_j"] = s.retrieval_work_j;
+    out["retrieval_source_power_w"] = s.retrieval_source_power_w;
+    out["energy_residual_j"] = s.energy_residual_j;
+    out["draw_m"] = s.draw_m;
+    out["energy_j"] = s.energy_j;
+    out["work_j"] = s.work_j;
+    out["source_power_w"] = s.source_power_w;
+    out["yaw_rad"] = s.yaw_rad;
+    out["elevation_rad"] = s.elevation_rad;
+    out["launch_count"] = s.launch_count;
+    out["anchor_left"] = to_godot(s.anchor_left);
+    out["anchor_right"] = to_godot(s.anchor_right);
+    out["pouch_position"] = to_godot(s.pouch_position);
+    return out;
+}
+godot::PackedVector3Array ScraperXSimulation::get_slingshot_prediction() const {
+    godot::PackedVector3Array out;
+    for (const auto point : simulation_->slingshot_prediction()) out.push_back(to_godot(point));
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_slingshot_render_state() const {
+    auto out = get_slingshot_state();
+    const auto s = simulation_->render_slingshot_state();
+    out["pouch_position"] = to_godot(s.pouch_position);
+    out["anchor_left"] = to_godot(s.anchor_left);
+    out["anchor_right"] = to_godot(s.anchor_right);
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_landing_state() const {
+    const auto &s = simulation_->snapshot();
+    godot::Dictionary out;
+    out["landing_count"] = s.landing_count;
+    out["landing_support_entity_id"] = s.landing_support_entity_id;
+    out["landing_approach_energy_j"] = s.landing_approach_energy_j;
+    out["landing_tangent_energy_j"] = s.landing_tangent_energy_j;
+    out["landing_normal_speed_mps"] = s.landing_normal_speed_mps;
+    out["landing_tangent_speed_mps"] = s.landing_tangent_speed_mps;
+    out["landing_observed_normal_impulse_ns"] = s.landing_observed_normal_impulse_ns;
+    out["landing_balance"] = s.landing_balance;
+    out["landing_recovery_seconds"] = s.landing_recovery_seconds;
+    out["landing_recovering"] = s.landing_recovering;
+    out["landing_slip_velocity"] = to_godot(s.landing_slip_velocity);
+    out["landing_recovery_work_j"] = s.landing_recovery_work_j;
+    out["landing_jump_work_j"] = s.landing_jump_work_j;
+    return out;
 }
 
 bool ScraperXSimulation::request_parachute() {
@@ -1090,6 +1206,12 @@ godot::Transform3D ScraperXSimulation::get_kit_body_transform(const std::int64_t
             to_godot(simulation_->kit_body_position(index))};
 }
 
+godot::Transform3D ScraperXSimulation::get_kit_body_render_transform(const std::int64_t body) const {
+    const std::uint32_t index = kit_index(body);
+    return {godot::Basis(to_godot(simulation_->render_kit_body_rotation(index))),
+            to_godot(simulation_->render_kit_body_position(index))};
+}
+
 std::int64_t ScraperXSimulation::get_kit_body_index(const std::int64_t entity_id) const {
     if (entity_id < 0) {
         return -1;
@@ -1115,6 +1237,15 @@ godot::PackedVector3Array ScraperXSimulation::get_kit_cable_points(const std::in
 
 double ScraperXSimulation::get_well_a_cage_travel() const {
     return simulation_->snapshot().well_a_cage_travel;
+}
+
+godot::PackedVector3Array ScraperXSimulation::get_kit_cable_render_points(const std::int64_t cable) const {
+    constexpr std::uint32_t kCapacity = 64;
+    sim::Vector3 points[kCapacity];
+    const std::uint32_t count = simulation_->render_kit_cable_points(kit_index(cable), points, kCapacity);
+    godot::PackedVector3Array out;
+    for (std::uint32_t index = 0; index < count; ++index) out.push_back(to_godot(points[index]));
+    return out;
 }
 
 bool ScraperXSimulation::is_well_a_catch_latched() const {

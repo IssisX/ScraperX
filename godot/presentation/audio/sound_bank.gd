@@ -41,6 +41,10 @@ func build() -> void:
 	clips[&"ui_back"] = [_wav(_blip(1500.0, 0.04))]
 	clips[&"clang"] = _variants(3, _clang)
 	clips[&"creak"] = _variants(2, _creak)
+	clips[&"band_stretch"] = _variants(2, _band_stretch)
+	clips[&"sling_release"] = [_wav(_sling_release())]
+	clips[&"rubber_squeak"] = [_wav(_rubber_squeak())]
+	clips[&"sling_wobble"] = [_wav(_sling_wobble())]
 	clips[&"bird"] = _variants(3, _bird)
 	clips[&"wind_loop"] = [_loop(_wind(4.5), 0.5)]
 	clips[&"rush_loop"] = [_loop(_rush(2.4), 0.4)]
@@ -60,6 +64,56 @@ func pick(name: StringName) -> AudioStreamWAV:
 
 
 # --- clips -------------------------------------------------------------------
+
+# Loaded rubber: a rising, rough resonance and short wooden grip creaks.
+func _band_stretch() -> PackedFloat32Array:
+	var out := _silence(0.30)
+	_add_band_noise(out, 0.0, 0.30, 0.32, 0.12, 350.0, 1800.0)
+	var phase := 0.0
+	for i in out.size():
+		var t := float(i) / MIX_RATE
+		phase += TAU * lerpf(240.0, 510.0, t / 0.30) / MIX_RATE
+		out[i] += sin(phase) * sin(PI * t / 0.30) * 0.26
+	_add_tone(out, 640.0, 0.0, 0.10, 0.16, 0.045)
+	return out
+
+
+# Spring release: a broad snap, falling twang and fast air displacement.
+func _sling_release() -> PackedFloat32Array:
+	var out := _silence(0.65)
+	_add_band_noise(out, 0.0, 0.055, 1.0, 0.015, 550.0, 6500.0)
+	_add_band_noise(out, 0.035, 0.52, 0.65, 0.16, 300.0, 3800.0)
+	var phase := 0.0
+	for i in out.size():
+		var t := float(i) / MIX_RATE
+		phase += TAU * lerpf(440.0, 110.0, minf(t / 0.65, 1.0)) / MIX_RATE
+		out[i] += sin(phase) * exp(-t * 8.0) * 0.45
+	_add_tone(out, 82.0, 0.0, 0.28, 0.6, 0.10)
+	return out
+
+
+# Boot on concrete: a heel click, a short knock, gritty scuff, a little weight.
+func _rubber_squeak() -> PackedFloat32Array:
+	var out := _silence(0.24)
+	var phase := 0.0
+	for i in out.size():
+		var t := float(i) / MIX_RATE
+		# A short rubber chirrup, with a deliberately anxious upward bend.
+		phase += TAU * (620.0 + 950.0 * pow(t / 0.24, 1.7)) / MIX_RATE
+		out[i] = (sin(phase) + 0.22 * sin(phase * 2.0)) * sin(PI * t / 0.24) * 0.42
+	return out
+
+
+func _sling_wobble() -> PackedFloat32Array:
+	var out := _silence(0.48)
+	var phase := 0.0
+	for i in out.size():
+		var t := float(i) / MIX_RATE
+		# An elastic, wobbling "boing" beneath the physical snap, never a voice.
+		var frequency := 190.0 + 310.0 * exp(-t * 7.0) + 65.0 * sin(t * 58.0) * exp(-t * 5.0)
+		phase += TAU * frequency / MIX_RATE
+		out[i] = (sin(phase) + 0.17 * sin(phase * 2.7)) * sin(minf(t / 0.025, 1.0) * PI * 0.5) * exp(-t * 8.0) * 0.5
+	return out
 
 
 # Boot on concrete: a heel click, a short knock, gritty scuff, a little weight.

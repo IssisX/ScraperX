@@ -105,6 +105,13 @@ var pipe_crush_cues := 0
 var _pipe_motion: AudioStreamPlayer3D
 var _pipe_front := 0.0
 var _pipe_deaths := -1
+var sling_releases := 0
+var sling_draw_cues := 0
+var sling_comedy_cues := 0
+var _sling_squeaked := false
+var _sling_launches := 0
+var _sling_draw := 0.0
+var _sling_air_speed := 0.0
 
 
 func _ready() -> void:
@@ -370,6 +377,33 @@ func update_pipe_bridge(state: Dictionary, deaths: int) -> void:
 		_pipe_motion.pitch_scale = lerpf(0.65, 1.0, gain)
 
 
+func update_slingshot(state: Dictionary, velocity: Vector3) -> void:
+	var launches := int(state.get("launch_count", 0))
+	if launches > _sling_launches:
+		sling_releases += 1
+		_play(&"sling_release", -2.0, 1.0)
+		_play(&"sling_wobble", -10.0, 1.0)
+		sling_comedy_cues += 1
+		_sling_squeaked = false
+	_sling_launches = launches
+	var draw := float(state.get("draw_m", 0.0))
+	var max_draw := maxf(0.01, float(state.get("max_draw_m", 12.0)))
+	if bool(state.get("drawing", false)) and draw > max_draw * 0.70 and not _sling_squeaked:
+		_sling_squeaked = true
+		sling_comedy_cues += 1
+		_play(&"rubber_squeak", -11.0, 1.0)
+	elif not bool(state.get("seated", false)) and not bool(state.get("released", false)):
+		_sling_squeaked = false
+	if bool(state.get("drawing", false)) and draw >= _sling_draw + 0.7:
+		_sling_draw = draw
+		sling_draw_cues += 1
+		var tension := clampf(draw / maxf(float(state.get("max_draw_m", 12.0)), 0.1), 0.0, 1.0)
+		_play(&"band_stretch", lerpf(-13.0, -5.0, tension), lerpf(0.75, 1.35, tension))
+	elif draw < _sling_draw:
+		_sling_draw = draw
+	_sling_air_speed = velocity.length() if bool(state.get("released", false)) else 0.0
+
+
 func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: float) -> void:
 	if not _bank_ready or _silent:
 		return
@@ -378,7 +412,8 @@ func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: fl
 	_wind.volume_db = lerpf(_wind.volume_db, wind_db, 1.0 - exp(-2.0 * delta))
 	var drone_db := lerpf(-13.0, -24.0, altitude)
 	_drone.volume_db = lerpf(_drone.volume_db, drone_db, 1.0 - exp(-1.5 * delta))
-	var fall := 0.0 if grounded else clampf((-velocity.y - 6.0) / 24.0, 0.0, 1.0)
+	var fall := 0.0 if grounded else maxf(clampf((-velocity.y - 6.0) / 24.0, 0.0, 1.0),
+		clampf((_sling_air_speed - 12.0) / 85.0, 0.0, 1.0))
 	var rush_db := lerpf(-60.0, -2.0, sqrt(fall)) if fall > 0.0 else -60.0
 	if fall_reactions.speaking():
 		rush_db -= 8.0
