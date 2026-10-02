@@ -5,25 +5,25 @@ OpenGL API 4.5 (Core Profile) Mesa 25.0.7-2+deb13u1 - Compatibility - Using Devi
 
 SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
 SCRAPERX_VIEWPORT size=2160x1856 aspect=1.164 fov=82.0 far=2000
-SCRAPERX_AUDIO_BANK clips=27 msec=790 driver=Dummy
-SCRAPERX_UITEST_POSE outside_pouch tick=17 position=(6.0, 0.9, -58.0) elapsed_ms=16886
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_outside_pouch.png
-SCRAPERX_UITEST_POSE manual_aim_settled tick=194 position=(6.0, 1.08, -54.69997) elapsed_ms=41360
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_manual_aim_settled.png
-SCRAPERX_UITEST_POSE seated_manual_draw tick=311 position=(6.0, 1.08, -54.69997) elapsed_ms=57225
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_seated_manual_draw.png
-SCRAPERX_UITEST_POSE charged_pitch_yaw_settled tick=947 position=(6.0, 1.079999, -42.72024) elapsed_ms=109611
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_charged_pitch_yaw_settled.png
-SCRAPERX_UITEST_POSE charged_adjustable_aim tick=1196 position=(6.0, 1.079999, -42.72024) elapsed_ms=126054
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_charged_adjustable_aim.png
-SCRAPERX_UITEST_POSE release_orbit tick=1208 position=(5.999995, 3.002128, -42.99616) elapsed_ms=133551
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_release_orbit.png
-SCRAPERX_UITEST_POSE true_first_person_return tick=1340 position=(5.999743, 118.2088, -60.7836) elapsed_ms=147150
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_true_first_person_return.png
-SCRAPERX_UITEST_POSE manual_airbrake_354m tick=1784 position=(5.998897, 354.8877, -121.1333) elapsed_ms=168877
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_manual_airbrake_354m.png
-SCRAPERX_UITEST_POSE supported_352m_roof tick=2063 position=(5.99882, 352.899, -130.3336) elapsed_ms=179973
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_supported_352m_roof.png
-SCRAPERX_UITEST_POSE roof_touch_walk tick=2120 position=(5.998761, 352.899, -132.61) elapsed_ms=187841
-SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/low-touch_roof_touch_walk.png
+SCRAPERX_AUDIO_BANK clips=27 msec=332 driver=Dummy
+SCRAPERX_UITEST_POSE outside_pouch tick=17 position=(6.0, 0.9, -58.0) elapsed_ms=12701
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_outside_pouch.png
+SCRAPERX_UITEST_POSE manual_aim_settled tick=194 position=(6.0, 1.08, -54.69997) elapsed_ms=34462
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_manual_aim_settled.png
+SCRAPERX_UITEST_POSE seated_manual_draw tick=311 position=(6.0, 1.08, -54.69997) elapsed_ms=47875
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_seated_manual_draw.png
+SCRAPERX_UITEST_POSE charged_pitch_yaw_settled tick=947 position=(6.0, 1.079999, -42.72024) elapsed_ms=98388
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_charged_pitch_yaw_settled.png
+SCRAPERX_UITEST_POSE charged_adjustable_aim tick=1196 position=(6.0, 1.079999, -42.72024) elapsed_ms=115850
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_charged_adjustable_aim.png
+SCRAPERX_UITEST_POSE release_orbit tick=1208 position=(5.999995, 3.002128, -42.99616) elapsed_ms=123570
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_release_orbit.png
+SCRAPERX_UITEST_POSE true_first_person_return tick=1340 position=(5.999743, 118.2088, -60.7836) elapsed_ms=142961
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_true_first_person_return.png
+SCRAPERX_UITEST_POSE manual_airbrake_354m tick=1784 position=(5.998897, 354.8877, -121.1333) elapsed_ms=164983
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_manual_airbrake_354m.png
+SCRAPERX_UITEST_POSE supported_352m_roof tick=2063 position=(5.99882, 352.899, -130.3336) elapsed_ms=176379
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_supported_352m_roof.png
+SCRAPERX_UITEST_POSE roof_touch_walk tick=2120 position=(5.998761, 352.899, -132.61) elapsed_ms=184270
+SCRAPERX_UITEST_SCREENSHOT /tmp/scraperx-runtime/delivery-touch_roof_touch_walk.png
 SCRAPERX_UITEST PASS touch_slingshot_landing staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=53.26 brake_height_m=354.14 braked_apex_m=361.82 supported_height_m=352.00 deaths=0 roof_walk_m=2.27 contact_j=2957.5 camera_dip_m=-0.0873

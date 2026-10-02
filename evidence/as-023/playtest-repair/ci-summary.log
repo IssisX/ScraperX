@@ -1,0 +1,45 @@
+Exact-source CI receipt, inspected 2026-10-02
+source=83822fca6b5f78c7f99cef95c0ac802fe3e3ad0a
+tree=7974cc85963dd52f0e2c0d046a6fdc893899c686
+run=37010670337 job=110849361581 conclusion=success steps_passed=23
+artifact=11229768800
+apk_sha256_independently_computed=35cd12ec83db3a24bc0479f912729e77afa59021a3e2a4144e1bc0618ffff540
+CHECKPOINT.txt source/package/label/signer agrees; CI signature verification log inspected.
+No local APK signature verifier or actual Android/device execution performed.
+
+--- Artifact member: native-tests.log ---
+100% tests passed, 0 tests failed out of 28
+Total Test time (real) =  64.31 sec
+
+--- Artifact member: touch_slingshot.log ---
+SCRAPERX_UITEST PASS touch_slingshot staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=37.54 apex_m=383.91 retrieval_cancel_walk_m=1.40
+
+--- Artifact member: touch_slingshot_landing.log ---
+SCRAPERX_UITEST PASS touch_slingshot_landing staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=37.54 brake_height_m=354.53 braked_apex_m=362.17 supported_height_m=352.00 deaths=0 roof_walk_m=1.53 contact_j=3024.2 camera_dip_m=-0.0583
+
+--- Artifact member: settings_runtime.log ---
+SCRAPERX_SETTINGS_RUNTIME checks=2894 failures=0 rings=33 decorative=704 structural=2033 native=1
+SCRAPERX_SETTINGS_RUNTIME_SOURCE draw_limit=12.00 power_limit=200000 neutral=(6.0, 0.35, -55.0)
+
+--- Artifact member: slingshot_view.log ---
+SCRAPERX_SLINGSHOT_VIEW PASS
+
+--- Artifact member: slingshot-visual.log ---
+SCRAPERX_SLINGSHOT_VISUAL_PROBE PASS draw_m=11.980 spring_kj=418.23 manual_kj=475.70 aim_deg=82.0
+
+--- Artifact member: slingshot-audio.log ---
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_band_stretch_0 effects_samples=45056 effects_peak=0.414943 effects_rms=0.115049 master_peak_db=-1.64
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_band_stretch_1 effects_samples=44032 effects_peak=0.441450 effects_rms=0.116962 master_peak_db=-1.10
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_sling_release_0 effects_samples=76800 effects_peak=0.954682 effects_rms=0.079862 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_rubber_squeak_0 effects_samples=38912 effects_peak=0.454029 effects_rms=0.165418 master_peak_db=-1.40
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_sling_wobble_0 effects_samples=60416 effects_peak=0.481953 effects_rms=0.102416 master_peak_db=-0.88
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=low_draw_native_draw effects_samples=156672 effects_peak=0.159036 effects_rms=0.034845 master_peak_db=-10.44
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=low_draw_native_release effects_samples=93184 effects_peak=0.769497 effects_rms=0.064113 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=low_draw_native_flight effects_samples=44032 effects_peak=0.000009 effects_rms=0.000000 master_peak_db=-6.45
+SCRAPERX_SLINGSHOT_AUDIO_NATIVE shot=low_draw draw_m=3.9568 energy_j=14578.6 source_limit_w=200000.0 draw_cues=4 release_cues=1 comedy_cues=1 launches=1 speed_mps=3.401 peak_release_speed_mps=15.989 rush_db=-59.97 touch_device=true
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=full_draw_native_draw effects_samples=418816 effects_peak=0.319713 effects_rms=0.055454 master_peak_db=-4.40
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=full_draw_native_release effects_samples=93184 effects_peak=0.769497 effects_rms=0.064113 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=full_draw_native_flight effects_samples=44032 effects_peak=0.000000 effects_rms=0.000000 master_peak_db=-1.24
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=native_speed_rush_isolation effects_samples=28672 effects_peak=0.000000 effects_rms=0.000000 master_peak_db=-3.79
+SCRAPERX_SLINGSHOT_AUDIO_NATIVE shot=full_draw draw_m=11.9798 energy_j=418232.5 source_limit_w=200000.0 draw_cues=15 release_cues=1 comedy_cues=2 launches=1 speed_mps=74.063 peak_release_speed_mps=86.026 rush_db=-9.75 touch_device=true
+SCRAPERX_SLINGSHOT_AUDIO PASS checks=95 mix_peak_db=-0.80 driver=Dummy touch_events=34 movie=/home/runner/work/_temp/slingshot-audio.avi
