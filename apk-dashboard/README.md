@@ -11,6 +11,30 @@ The manifest records source commits, artifact IDs, hashes, and signing identity.
 The published signing certificate must stay unchanged for in-place Android
 updates. A green game build alone does not prove successful publication.
 
+## Checks without redundant publication
+
+Scheduled checks remain enabled. For each model, the publisher compares the
+selected successful source commit and artifact ID with the last published
+manifest. It also checks the configured signing certificate, package identity,
+and the release asset's actual size and GitHub SHA-256 digest. Matching APKs
+are left untouched: no APK download, signing, or upload.
+
+When all four match, the job exits without editing the release, manifest, or
+timestamps. When one changes, only that APK is uploaded; the other models keep
+their assets, publication times, and provenance. A missing or mismatched asset
+is republished. If no usable new artifact exists, existing published provenance
+is retained. Checks are serialized without cancelling an active publication.
+
+Run the publisher regression fixture with:
+
+```sh
+python3 apk-dashboard/test-publisher.py
+```
+
+It executes the actual workflow shell with fixture GitHub/Android command
+boundaries and real certificate extraction. It checks publication decisions;
+live GitHub runs establish actual publication behavior.
+
 ## Signing setup and recovery
 
 Run `setup-stable-signing-termux.sh` with Bash. First-time setup retains the

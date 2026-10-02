@@ -30,7 +30,7 @@ env:
 
 concurrency:
   group: scraperx-apk-dashboard-publisher
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -38,6 +38,12 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      - uses: actions/checkout@v4
+      - name: Check signing and publication regression guards
+        shell: bash
+        run: |
+          python3 apk-dashboard/test-signing-setup.py
+          python3 apk-dashboard/test-publisher.py
       - name: Publish newest successful APK from every model branch
         shell: bash
         env:
@@ -73,6 +79,7 @@ jobs:
 
           previous_cert=""
           if gh release view "${TAG}" --repo "${REPO}" >/dev/null 2>&1; then
+            gh api "/repos/${REPO}/releases/tags/${TAG}" > previous/release.json
             gh release download "${TAG}" --repo "${REPO}" --pattern manifest.json --dir previous
             previous_cert="$(jq -er '.signing_certificate_sha256 | select(test("^[0-9a-f]{64}$"))' previous/manifest.json)"
           fi
@@ -89,11 +96,23 @@ jobs:
             exit 1
           fi
 
-          SIGNING_CERT=""
+          SIGNING_CERT="${configured_cert}"
           generated_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          jq -n --arg generated_at "$generated_at" --arg repo "$REPO" \
-            '{schema:1, generated_at:$generated_at, repo:$repo, builds:{}}' \
-            > out/manifest.json
+          if [[ -s previous/manifest.json ]]; then
+            cp previous/manifest.json out/manifest.json
+          else
+            jq -n --arg generated_at "$generated_at" --arg repo "$REPO" \
+              '{schema:1, generated_at:$generated_at, repo:$repo, builds:{}}' \
+              > out/manifest.json
+          fi
+
+          # Carry forward provenance for APKs that remain published unchanged.
+          # Refresh generated_at only when at least one APK actually changes.
+          retain_published() {
+            local label="$1"
+            jq -e --arg label "$label" '.builds[$label].status == "ok"' \
+              out/manifest.json >/dev/null
+          }
 
           update_manifest() {
             local label="$1"
@@ -139,8 +158,10 @@ jobs:
 
             if test -z "$selected_run" || test -z "$selected_artifact"; then
               echo "::warning title=${label} APK unavailable::No non-expired APK/build artifact found in the 20 newest successful runs."
-              update_manifest "$label" "$(jq -n --arg branch "$branch" \
+              if ! retain_published "$label"; then
+                update_manifest "$label" "$(jq -n --arg branch "$branch" \
                 '{status:"unavailable", branch:$branch, message:"No non-expired APK artifact found"}')"
+              fi
               echo "::endgroup::"
               return 0
             fi
@@ -152,6 +173,33 @@ jobs:
             source_sha="$(jq -r '.head_sha' <<<"$selected_run")"
             run_url="$(jq -r '.html_url' <<<"$selected_run")"
             built_at="$(jq -r '.updated_at' <<<"$selected_run")"
+
+            # The source artifact and published release bytes must both match.
+            # Branch HEAD movement alone is not a reason to replace an APK.
+            if [[ -s previous/manifest.json && -s previous/release.json ]] && \
+              jq -e -n \
+                --slurpfile manifest previous/manifest.json \
+                --slurpfile release previous/release.json \
+                --arg repo "$REPO" --arg label "$label" --arg branch "$branch" \
+                --arg sha "$source_sha" --argjson artifact_id "$artifact_id" \
+                --arg cert "$configured_cert" --arg file "ScraperX-${label}.apk" \
+                --arg package "$expected_package" --arg app_label "$expected_label" '
+                  $manifest[0] as $m | $m.builds[$label] as $b |
+                  $m.repo == $repo and $b.status == "ok" and
+                  $b.branch == $branch and $b.source_sha == $sha and
+                  $b.source_artifact_id == $artifact_id and
+                  $b.signing_certificate_sha256 == $cert and
+                  $b.package_id == $package and $b.app_label == $app_label and
+                  $b.file == $file and
+                  ([$release[0].assets[] | select(
+                    .name == $file and .state == "uploaded" and
+                    .size == $b.bytes and .digest == ("sha256:" + $b.apk_sha256)
+                  )] | length == 1)
+                ' >/dev/null; then
+              echo "${label}: unchanged source artifact and release digest; no APK download, signing, or upload."
+              echo "::endgroup::"
+              return 0
+            fi
 
             local tmp="work/${label}"
             rm -rf "$tmp"
@@ -171,10 +219,12 @@ jobs:
 
             if test -z "$apk"; then
               echo "::warning title=${label} APK ambiguous::Artifact ${artifact_name} contains ${#apks[@]} APK candidates; leaving previous stable release asset untouched."
-              update_manifest "$label" "$(jq -n \
+              if ! retain_published "$label"; then
+                update_manifest "$label" "$(jq -n \
                 --arg branch "$branch" --arg sha "$source_sha" --arg run_url "$run_url" \
                 --arg artifact "$artifact_name" \
                 '{status:"ambiguous", branch:$branch, source_sha:$sha, run_url:$run_url, artifact:$artifact, message:"Artifact did not contain exactly one selectable APK"}')"
+              fi
               echo "::endgroup::"
               return 0
             fi
@@ -262,13 +312,19 @@ jobs:
           publish_branch "Claude" "ScraperX-Claude" "com.cory.scraperx.claude" "ScraperX-Claude"
           publish_branch "Grok" "ScraperX-Grok" "com.cory.scraperx.grok" "ScraperX-Grok"
 
+          mapfile -t publish_files < <(find out -maxdepth 1 -type f -name 'ScraperX-*.apk' -print | sort)
+          if test "${#publish_files[@]}" -eq 0; then
+            echo "No APK changes to publish; release assets, manifest, notes, and timestamps left untouched."
+            exit 0
+          fi
+
           test -n "${SIGNING_CERT}"
           if [[ -n "${previous_cert}" && "${previous_cert}" != "${SIGNING_CERT}" ]]; then
             echo "::error title=Signing key changed::Refusing to break Android in-place updates. Previous stable signer ${previous_cert}; current secret resolves to ${SIGNING_CERT}."
             exit 1
           fi
-          jq --arg cert "${SIGNING_CERT}" \
-            '.stable_signing = true | .signing_certificate_sha256 = $cert' \
+          jq --arg cert "${SIGNING_CERT}" --arg generated_at "$generated_at" \
+            '.stable_signing = true | .signing_certificate_sha256 = $cert | .generated_at = $generated_at' \
             out/manifest.json > out/manifest.next.json
           mv out/manifest.next.json out/manifest.json
 
@@ -313,10 +369,7 @@ jobs:
               --prerelease
           fi
 
-          mapfile -t publish_files < <(find out -maxdepth 1 -type f -name 'ScraperX-*.apk' -print | sort)
-          if test "${#publish_files[@]}" -gt 0; then
-            gh release upload "$TAG" --repo "$REPO" --clobber "${publish_files[@]}"
-          fi
+          gh release upload "$TAG" --repo "$REPO" --clobber "${publish_files[@]}"
           gh release upload "$TAG" --repo "$REPO" --clobber out/manifest.json
 
           echo "Published stable release assets:"

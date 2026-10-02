@@ -154,7 +154,7 @@ class SigningSetupTests(unittest.TestCase):
     def test_actual_publisher_preflight_accepts_only_same_key(self):
         workflow = SCRIPT.parents[1] / ".github/workflows/apk-dashboard.yml"
         text = workflow.read_text()
-        snippet = text[text.index("          keytool -exportcert"):text.index('          SIGNING_CERT=""')]
+        snippet = text[text.index("          keytool -exportcert"):text.index('          SIGNING_CERT="${configured_cert}"')]
         for cert, expected in ((self.cert, 0), ("0" * 64, 1)):
             with self.subTest(cert=cert):
                 (self.case / "work").mkdir(exist_ok=True)
