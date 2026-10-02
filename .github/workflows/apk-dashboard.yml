@@ -27,6 +27,10 @@ permissions:
 env:
   ANDROID_HOME: /usr/local/lib/android/sdk
   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  # Cory approved this one-time reinstall migration on October 2, 2026.
+  # These exact certificates authorize no other signer replacement.
+  APPROVED_PREVIOUS_SIGNER: "22d547086ddee2df27eba7db9a54df2f4e1996c764d6b709ae91f9463bbb2cce"
+  APPROVED_NEW_SIGNER: "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a"
 
 concurrency:
   group: scraperx-apk-dashboard-publisher
@@ -55,8 +59,8 @@ jobs:
           # stable private key has not been provisioned yet, preserve the
           # current release instead of creating another uninstall-required APK.
           if [[ -z "${SCRAPERX_APK_KEYSTORE_B64:-}" || -z "${SCRAPERX_APK_KEYSTORE_PASSWORD:-}" ]]; then
-            echo "::notice title=Stable APK signing not configured::Run apk-dashboard/setup-stable-signing-termux.sh once; existing release assets are left untouched."
-            exit 0
+            echo "::error title=Stable APK signing not configured::Signing secrets are missing; existing release assets are left untouched. Restore the original signing backup."
+            exit 1
           fi
 
           mkdir -p out work previous
@@ -73,10 +77,25 @@ jobs:
 
           previous_cert=""
           if gh release view "${TAG}" --repo "${REPO}" >/dev/null 2>&1; then
-            gh release download "${TAG}" --repo "${REPO}" --pattern manifest.json --dir previous >/dev/null 2>&1 || true
-            if [[ -s previous/manifest.json ]]; then
-              previous_cert="$(jq -r '.signing_certificate_sha256 // empty' previous/manifest.json)"
-            fi
+            gh release download "${TAG}" --repo "${REPO}" --pattern manifest.json --dir previous
+            previous_cert="$(jq -er '.signing_certificate_sha256 | select(test("^[0-9a-f]{64}$"))' previous/manifest.json)"
+          fi
+
+          # Reject changed secrets before downloading or signing four APKs.
+          # Do not make a failed provenance download disable signer protection.
+          keytool -exportcert -rfc \
+            -keystore "${KEYSTORE}" -alias "${SIGNING_ALIAS}" \
+            -storepass:env SCRAPERX_APK_KEYSTORE_PASSWORD > work/signing-certificate.pem
+          configured_cert="$(openssl x509 -in work/signing-certificate.pem -noout -fingerprint -sha256 | \
+            cut -d= -f2 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          signer_migration_approved=false
+          if [[ "${previous_cert}" == "${APPROVED_PREVIOUS_SIGNER}" && "${configured_cert}" == "${APPROVED_NEW_SIGNER}" ]]; then
+            signer_migration_approved=true
+            echo "::notice title=Approved one-time signer migration::Existing model APKs require uninstall/reinstall once. Future updates retain signer ${configured_cert}."
+          fi
+          if [[ -n "${previous_cert}" && "${previous_cert}" != "${configured_cert}" && "${signer_migration_approved}" != true ]]; then
+            echo "::error title=Signing key changed::Published signer ${previous_cert}; configured signer ${configured_cert}. Restore the original .p12 and password using apk-dashboard/setup-stable-signing-termux.sh --restore. No release assets changed."
+            exit 1
           fi
 
           SIGNING_CERT=""
@@ -253,7 +272,7 @@ jobs:
           publish_branch "Grok" "ScraperX-Grok" "com.cory.scraperx.grok" "ScraperX-Grok"
 
           test -n "${SIGNING_CERT}"
-          if [[ -n "${previous_cert}" && "${previous_cert}" != "${SIGNING_CERT}" ]]; then
+          if [[ -n "${previous_cert}" && "${previous_cert}" != "${SIGNING_CERT}" && "${signer_migration_approved}" != true ]]; then
             echo "::error title=Signing key changed::Refusing to break Android in-place updates. Previous stable signer ${previous_cert}; current secret resolves to ${SIGNING_CERT}."
             exit 1
           fi
