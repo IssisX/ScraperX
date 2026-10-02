@@ -78,6 +78,8 @@ public:
     [[nodiscard]] godot::Vector3 get_traversal_left_hand() const;
     [[nodiscard]] godot::Vector3 get_traversal_right_hand() const;
     [[nodiscard]] godot::Vector3 get_traversal_normal() const;
+    [[nodiscard]] godot::Vector3 get_traversal_left_hand_render_position() const;
+    [[nodiscard]] godot::Vector3 get_traversal_right_hand_render_position() const;
     [[nodiscard]] bool is_player_sprinting() const;
     [[nodiscard]] bool is_player_balancing() const;
     [[nodiscard]] bool is_grip_available() const;
@@ -230,6 +232,7 @@ public:
     [[nodiscard]] bool is_kit_body_enabled(std::int64_t body) const;
     [[nodiscard]] godot::PackedFloat32Array get_kit_body_parts(std::int64_t body) const;
     [[nodiscard]] godot::Transform3D get_kit_body_transform(std::int64_t body) const;
+    [[nodiscard]] godot::Vector3 get_kit_body_linear_velocity(std::int64_t body) const;
     [[nodiscard]] godot::Transform3D get_kit_body_render_transform(std::int64_t body) const;
     [[nodiscard]] godot::Vector3 get_kit_carry_grip_position(std::int64_t body) const;
     [[nodiscard]] std::int64_t get_kit_body_index(std::int64_t entity_id) const;

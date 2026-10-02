@@ -151,6 +151,9 @@ func _new_scene() -> bool:
 		await process_frame
 	if not _check(bool(_main._audio._bank_ready) and not bool(_main._audio._silent), "bank ready with Movie Maker mixing enabled"):
 		return false
+	if not _check(_main._audio._ladder_strain.playing and _main._audio._ladder_strain.stream != null,
+			"passive ladder strain voice starts in the real mixer"):
+		return false
 	_main._audio.set_volumes(1.0, 1.0, 0.0, 1.0)
 	return true
 
@@ -192,11 +195,15 @@ func _shot(name: String, fraction: float, cinematic: bool = false) -> bool:
 	_move_back(true)
 	var arrived := await _wait(func() -> bool: return bool(native.get_slingshot_state()["station_available"]), 4.0)
 	_move_back(false)
-	if not _check(arrived, name + " ordinary backwards input reaches native pouch"):
+	if not _check(arrived, name + " ordinary backwards input reaches native pouch: position=%s move=%s" % [str(native.get_player_position()), str(_main._touch.move_vector)]):
 		return false
 	await _frames(3)
+	if not _check(await _wait(func() -> bool:
+		return bool(native.get_slingshot_state()["station_available"]) \
+			and _main._ctx.get("action", {}).get("id", &"") == &"slingshot", 2.0), name + " settled pouch offers BOARD"):
+		return false
 	_action()
-	if not _check(await _wait(func() -> bool: return bool(native.get_slingshot_state()["seated"]), 1.0), name + " viewport Action boards real harness"):
+	if not _check(await _wait(func() -> bool: return bool(native.get_slingshot_state()["seated"]), 1.0), name + " viewport Action boards real harness: rider=%s pouch=%s" % [str(native.get_player_position()), str(native.get_slingshot_state()["pouch_position"])]):
 		return false
 	await _seconds(0.6)
 	var draw_before: int = _main._audio.sling_draw_cues

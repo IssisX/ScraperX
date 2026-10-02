@@ -381,6 +381,7 @@ struct AdvanceResult final {
 };
 
 struct SlingshotSnapshot final {
+    double leather_deflection_m = 0.0, leather_energy_j = 0.0;
     bool available = false, station_available = false, seated = false;
     bool drawing = false, released = false, can_retrieve = false, recovering = false;
     bool guided_launch = false, track_exit = false, release_ready = false;
@@ -657,6 +658,7 @@ public:
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
     // using snapshot().player_position as their sole authority.
     [[nodiscard]] Vector3 render_player_position() const noexcept;
+    [[nodiscard]] Vector3 render_traversal_hand(bool left) const noexcept;
 
     // Mechanism-kit read back, for the presentation and the falsifiers. Body
     // indices run 0 .. kit_body_count() - 1 in build order.
@@ -727,6 +729,9 @@ private:
     bool intake_sling_attach_requested_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
+    Vector3 previous_left_hand_{}, previous_right_hand_{};
+    TraversalState previous_traversal_state_ = TraversalState::None;
+    std::uint64_t previous_traversal_support_ = 0;
     std::vector<Vector3> previous_kit_positions_;
     std::vector<Quaternion> previous_kit_rotations_;
     std::vector<std::vector<Vector3>> previous_cable_points_;

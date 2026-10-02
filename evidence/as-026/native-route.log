@@ -1,0 +1,17 @@
+PASS AS-026 missed jump recovery and checkpoint restore
+PASS AS-026 launch shelf supported
+CATCH y=116.426 x=7.16353 qz=0.000221578
+TRACE t=0 qz=-0.045167 x=6.45787 vy=0.828781 support=2960 y=116.37
+TRACE t=45 qz=-0.0532297 x=6.31665 vy=0.915985 support=2960 y=116.812
+TRACE t=90 qz=-0.0314359 x=6.61439 vy=0.97023 support=2960 y=117.282
+TRACE t=135 qz=-0.000931626 x=7.00877 vy=1.01967 support=2960 y=117.782
+TRACE t=180 qz=0.024218 x=7.31311 vy=0.997696 support=2960 y=118.291
+TRACE t=225 qz=0.0327039 x=7.41249 vy=0.893326 support=2960 y=118.765
+TRACE t=270 qz=0.0210807 x=7.30116 vy=0.793762 support=2960 y=119.185
+TRACE t=315 qz=-0.00528355 x=7.05995 vy=0.773849 support=2960 y=119.573
+FLIGHT x=6.62124 y=119.8 z=-180.671
+FLIGHT x=7.46925 y=120.553 z=-179.959
+FLIGHT x=8.79003 y=120.216 z=-179.318
+RECEIVER 10.0869,119.9,-178.688
+FINAL_GRIP state=4 xyz=8.4548,119.9,-178.462
+PASS AS-026 suspended_ladder support=11 walking_surface_m=121 deaths=0 swing_quaternion_span=0.0771162

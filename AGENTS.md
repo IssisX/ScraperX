@@ -32,8 +32,8 @@ Read these standing preferences at the start of work. They come from the user's 
 ### Process
 - Inspect existing work before changing it, and preserve completed or concurrent changes.
   Why: I warned against flattening the already completed cargo net.
-- Group related writes, finish integration and appropriate verification, then push.
-  Why: Constant write approvals and pushing before completion caused frustration.
+- Make authorized edits as needed without permission prompts or delaying them into an end-of-task batch; finish integration and appropriate verification before pushing.
+  Why: Repeated edit approvals block progress; the latest instruction explicitly removes any need to batch edits.
 - Use verification that can reject broken behavior; avoid redundant checking and unsolicited handoffs.
   Why: “Overtesting and oververifying,” and we are continuing together.
 - Use available development tools and relevant skills proactively when they improve the result.
@@ -50,6 +50,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I meant visceral engagement, with vibration as one component.
 - Fill traversal gaps with varied, physically coherent challenges and visible causal mechanisms.
   Why: I approved creative climbing, timed swinging, and Rube Goldberg mechanisms.
+- Make environmental additions playable and causally meaningful, and plan the next coherent pass after the current batch is finished and pushed.
+  Why: I requested extraordinary interactive content beyond cosmetics and suggested `/plan` for that next pass.
 - Make materials behave consistently with their appearance.
   Why: Cargo nets should yield; a leather pouch should not act like a wooden ledge.
 <!-- LEARNED-BY-LEARN:END -->

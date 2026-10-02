@@ -24,6 +24,7 @@ add_library(scraperx_sim STATIC
     src/sim/facade_route.cpp
     src/sim/cargo_net_route.cpp
     src/sim/cargo_net.cpp
+    src/sim/suspended_ladder.cpp
     src/sim/slingshot.cpp
     src/sim/slingshot_model.cpp
     src/sim/pipe_bridge.cpp
@@ -73,9 +74,16 @@ if(SCRAPERX_WITH_JOLT)
 endif()
 
 if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
+    add_executable(scraperx_suspended_ladder_tests tests/suspended_ladder_tests.cpp)
+    target_link_libraries(scraperx_suspended_ladder_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.suspended_ladder_route COMMAND scraperx_suspended_ladder_tests)
     add_executable(scraperx_cargo_net_tests tests/cargo_net_tests.cpp)
     target_link_libraries(scraperx_cargo_net_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.cargo_net_ground_route COMMAND scraperx_cargo_net_tests)
+    add_executable(scraperx_leather_pouch_tests tests/leather_pouch_tests.cpp)
+    target_link_libraries(scraperx_leather_pouch_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.leather_pouch COMMAND scraperx_leather_pouch_tests)
+
     add_executable(scraperx_slingshot_model_tests tests/slingshot_model_tests.cpp)
     target_link_libraries(scraperx_slingshot_model_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.slingshot_model COMMAND scraperx_slingshot_model_tests)

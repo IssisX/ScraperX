@@ -1,0 +1,20 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x432 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE outside_pouch tick=8 position=(6.0, 0.909706, -58.0) elapsed_ms=1573
+SCRAPERX_AUDIO_BANK clips=28 msec=500 driver=Dummy
+SCRAPERX_UITEST_POSE manual_aim_settled tick=166 position=(6.0, 1.133827, -55.04866) elapsed_ms=3033
+SCRAPERX_UITEST_POSE seated_manual_draw tick=274 position=(6.0, 1.133775, -55.04866) elapsed_ms=4308
+SCRAPERX_UITEST_POSE charged_pitch_yaw_settled tick=902 position=(6.0, 1.133775, -43.06893) elapsed_ms=12180
+SCRAPERX_UITEST_POSE charged_adjustable_aim tick=1144 position=(6.0, 1.133775, -43.06893) elapsed_ms=14599
+SCRAPERX_UITEST_POSE release_orbit tick=1148 position=(6.0, 1.993866, -43.21221) elapsed_ms=14881
+SCRAPERX_UITEST_POSE true_first_person_return tick=1291 position=(5.999727, 124.3788, -61.91113) elapsed_ms=17049
+SCRAPERX_UITEST_POSE native_flight_apex tick=1948 position=(5.998474, 378.2502, -149.089) elapsed_ms=27629
+SCRAPERX_UITEST_POSE retrieval_idle_cancel_available tick=1981 position=(8.35, 0.9, -57.2) elapsed_ms=28006
+SCRAPERX_UITEST_POSE returned_seat tick=2558 position=(8.35, 0.9, -57.2932) elapsed_ms=34687
+SCRAPERX_UITEST_POSE second_release tick=3080 position=(5.989455, 1.896098, -43.09846) elapsed_ms=41020
+SCRAPERX_UITEST PASS touch_slingshot staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=36.99 apex_m=378.30 retrieval_cancel_walk_m=1.35 retrieval_s=4.35 retrieval_j=967.63 retrieval_peak_kw=7.99 second_launch=1

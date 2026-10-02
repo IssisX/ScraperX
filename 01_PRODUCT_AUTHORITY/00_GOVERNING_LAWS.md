@@ -1,5 +1,8 @@
 # SCRAPERX — GOVERNING LAWS v1.0
 
+**Project-wide motto: “The input state determines the output.”** This applies to every mechanic: player intent, geometry, loads, motion, contacts and persistent state determine consequences. Presentation communicates those consequences; it must not manufacture them.
+
+
 **Status:** Established baseline, amended by explicit owner decisions; latest reconciliation 2026-09-30. Existing section labels are retained for reference continuity.
 **Repository:** `ScraperX`  
 **Game/app title:** `ScraperX`  

@@ -1,5 +1,8 @@
 # SCRAPERX — GAME DESIGN DOCUMENT
 
+**Project-wide motto: “The input state determines the output.”** Movement, machines, damage and recovery respond to the player and the actual world. Hands, POV, sound and vibration make that causality legible and visceral. Preserve player agency and readable feedback rather than prescribing a performance.
+
+
 **Version:** 1.1 — Product baseline + atlas integration  
 **Product:** ScraperX  
 **Repository:** `ScraperX`  

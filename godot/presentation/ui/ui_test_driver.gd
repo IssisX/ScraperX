@@ -18,6 +18,7 @@ const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 const SCENARIOS := {
 	"ground_foundation": 8,
 	"touch_cargo_net": 8,
+	"touch_suspended_ladder": 8,
 	"keyboard_slingshot": 8,
 	"pad_slingshot": 8,
 	"touch_slingshot": 8,
@@ -76,7 +77,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -107,6 +108,8 @@ func _run() -> void:
 	match _scenario:
 		"ground_foundation":
 			ok = await _ground_foundation()
+		"touch_suspended_ladder":
+			ok = await _touch_suspended_ladder()
 		"touch_cargo_net":
 			ok = await _touch_cargo_net()
 		"keyboard_slingshot":
@@ -386,7 +389,7 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 	var paused_work := float(_native().get_slingshot_state()["retrieval_work_j"])
 	await _seconds(0.3)
 	if absf(float(_native().get_slingshot_state()["retrieval_work_j"]) - paused_work) > 0.1:
-		return _fail("lifting the reel finger left manual work running")
+		return _fail("lifting the reel finger left manual work running: delta_j=%.3f power_w=%.3f touch_reel=%.1f touch_move=%s" % [float(_native().get_slingshot_state()["retrieval_work_j"]) - paused_work, float(_native().get_slingshot_state()["retrieval_source_power_w"]), _main._touch.reel_effort, str(_main._touch.move_vector)])
 	_reel(device, true)
 	while bool(_native().get_slingshot_state()["released"]) and retrieval_clock < 15.0:
 		await get_tree().process_frame
@@ -406,11 +409,13 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 		return _fail("ordinary walk could not approach the returned seat")
 	_main._yaw = 0.0
 	_main._pitch = 0.0
-	_move(device, -1.0)
-	var entered := await _wait_until(func() -> bool: return bool(_native().get_slingshot_state()["station_available"]), 3.0)
-	_move(device, 0.0)
-	if not entered:
-		return _fail("returned pouch cannot be entered by ordinary walking")
+	# Enter and stop inside the actual curved bowl before fastening. Holding
+	# full walking speed through it tests a ramp hop, not a boarding attempt.
+	var returned_pouch: Vector3 = _native().get_slingshot_state()["pouch_position"]
+	if not await _walk_to(device, Vector2(returned_pouch.x, returned_pouch.z), 0.10, 4.0):
+		return _fail("ordinary walking could not enter returned leather bowl")
+	if not await _wait_until(func() -> bool: return bool(_native().get_slingshot_state()["station_available"]), 1.0):
+		return _fail("returned leather bowl did not offer BOARD after stopping: rider=%s state=%s" % [_position(), _native().get_slingshot_state()])
 	await _frames(2)
 	if not await _offered(&"slingshot", "ENTER POUCH"):
 		return _fail("settled returned seat does not offer BOARD")
@@ -1183,6 +1188,86 @@ func _teeter_ballast_x(beam: int, ballast: int) -> float:
 func _standing_above(height: float) -> bool:
 	return bool(_ctx()["grounded"]) and int(_ctx()["traversal"]) == 0 and _position().y > height
 
+func _touch_suspended_ladder() -> bool:
+	var device := InputRouter.Device.TOUCH
+	# Explicit normal-world supported staging; not full campaign ascent proof.
+	if not _native().debug_restart_at(Vector3(10, 110.9, -174)):
+		return _fail("+110m supported staging rejected")
+	await _seconds(0.5)
+	if not await _walk_to(device, Vector2(10, -179.60), 0.12, 5.0):
+		return _fail("fixed ladder approach %s" % _position())
+	await _face(Vector2(0, -1))
+	await _pose("swing_approach")
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("fixed ladder grip unavailable")
+	_act(device)
+	await _seconds(0.2)
+	_move(device, 1.0)
+	var reached := await _wait_until(func() -> bool: return _standing_above(114.7), 8.0)
+	_move(device, 0.0)
+	if not reached:
+		return _fail("launch shelf not reached %s" % _position())
+	if not await _walk_to(device, Vector2(9.3, -180.25), 0.12, 4.0):
+		return _fail("launch edge not reached")
+	await _face(Vector2(-1, -0.25))
+	_main._pitch = -0.55
+	await _pose("swing_launch_view")
+	await _face(Vector2(0, -1))
+	_main._pitch = 0.0
+	_move_dir(device, Vector2(-1, 0.35))
+	_tap(1, _center(&"jump"))
+	var caught := await _wait_until(func() -> bool: return int(_native().get_traversal_support_entity_id()) == 2960, 1.5)
+	_move(device, 0.0)
+	if not caught:
+		return _fail("touch jump missed moving grip %s" % _position())
+	await _seconds(0.5)
+	await _pose("swing_caught")
+	var body := int(_native().get_kit_body_index(2960))
+	var first_angle := _teeter_angle(body)
+	var swing_span := [0.0]
+	_move(device, 1.0)
+	reached = await _wait_until(func() -> bool:
+		swing_span[0] = maxf(swing_span[0], absf(_teeter_angle(body) - first_angle))
+		return _position().y > 119.8, 8.0)
+	_move(device, 0.0)
+	if not reached or swing_span[0] < 0.002:
+		return _fail("loaded swing/climb not demonstrated reached=%s span=%.4f at=%s" % [reached, swing_span[0], _position()])
+	if not await _wait_until(func() -> bool: return (_native().get_kit_body_linear_velocity(body) as Vector3).x > 0.12, 6.7):
+		return _fail("rightward release phase unavailable")
+	await _pose("swing_release_height")
+	_move_dir(device, Vector2(0.7, -0.35))
+	_tap(1, _center(&"jump"))
+	reached = await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 1.7)
+	_move(device, 0.0)
+	await _seconds(0.3)
+	if not reached or not _standing_above(119.7) or int(_native().get_support_entity_id()) != 1960:
+		return _fail("swing release missed offset receiver reached=%s at=%s" % [reached, _position()])
+	await _face(Vector2(0, 1))
+	await _pose("swing_landing")
+	if not await _walk_to(device, Vector2(9, -178.45), 0.12, 4.0):
+		return _fail("receiver exit climb approach failed")
+	await _face(Vector2(0, 1))
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("upper climb unavailable %s" % _position())
+	_act(device)
+	await _seconds(0.2)
+	_move(device, 1.0)
+	reached = await _wait_until(func() -> bool: return _standing_above(121.7), 5.0)
+	_move(device, 0.0)
+	if not reached or not await _walk_to(device, Vector2(9, -174.5), 0.12, 4.0):
+		return _fail("+121m tower exit failed %s" % _position())
+	await _seconds(0.3)
+	await _pose("swing_tower_exit")
+	if int(_native().get_support_entity_id()) != 11 or int(_native().get_death_count()) != 0:
+		return _fail("+121m exit is unsupported or deaths occurred")
+	if _main._audio._bank_ready and not _main._audio._silent and not _main._audio._ladder_strain.playing:
+		return _fail("native-driven strain voice is not playing")
+	if _main._audio.ladder_motion_frames == 0 or _main._audio.climb_regrips == 0:
+		return _fail("state-driven swing feedback absent")
+	_detail = "staging=supported_110m swing_jump=1 supported_height_m=121 support=11 deaths=0 native_feedback=1"
+	return true
+
+
 func _touch_cargo_net() -> bool:
 	var device := InputRouter.Device.TOUCH
 	await _seconds(0.5)
@@ -1240,7 +1325,7 @@ func _ground_foundation() -> bool:
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 16:
+	if int(_native().get_moving_body_count()) != 17:
 		return _fail("default slingshot, stair, lift and teeter body inventory differs")
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
@@ -1261,7 +1346,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=16 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=17 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
 	return true
 
 

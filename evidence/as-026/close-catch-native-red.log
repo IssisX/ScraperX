@@ -1,0 +1,16 @@
+PASS AS-026 missed jump recovery and checkpoint restore
+PASS AS-026 launch shelf supported
+CATCH y=116.426 x=7.16353 qz=0.000221578
+TRACE t=0 qz=-0.051704 x=6.3711 vy=0.796093 support=2960 y=116.365
+TRACE t=45 qz=-0.0575183 x=6.26101 vy=0.900854 support=2960 y=116.81
+TRACE t=90 qz=-0.0575171 x=6.25696 vy=0.901264 support=2960 y=117.26
+TRACE t=135 qz=-0.0480239 x=6.37332 vy=0.9276 support=2960 y=117.716
+TRACE t=180 qz=-0.0225132 x=6.67845 vy=0.981845 support=2960 y=118.193
+TRACE t=225 qz=0.00734339 x=7.01145 vy=1.01206 support=2960 y=118.694
+TRACE t=270 qz=0.0280789 x=7.22594 vy=0.963364 support=2960 y=119.191
+TRACE t=315 qz=0.0304471 x=7.2533 vy=0.8638 support=2960 y=119.648
+FLIGHT x=6.511 y=119.708 z=-180.743
+FLIGHT x=7.34289 y=120.46 z=-180.142
+FLIGHT x=8.66391 y=120.122 z=-179.684
+RECEIVER 9.9123,119.391,-179.775
+FAIL AS-026 receiver braking holds footing at=9.9123,119.391,-179.775 traversal=0 grip=0 support=0

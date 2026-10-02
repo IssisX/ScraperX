@@ -85,6 +85,19 @@ func _run() -> void:
 		push_error("SCRAPERX_SLINGSHOT_PROBE real leather harness did not board")
 		quit(42)
 		return
+	for i in 90:
+		_main._native.advance_frame(dt)
+	var loaded: Dictionary = _main._native.get_slingshot_render_state()
+	if (loaded.get("leather_vertices", PackedVector3Array()) as PackedVector3Array).size() != 171 \
+			or float(loaded.get("leather_deflection_m", 0.0)) >= -0.015:
+		push_error("SCRAPERX_SLINGSHOT_PROBE native leather surface did not yield under rider load")
+		quit(42)
+		return
+	_view(0.0)
+	camera.position = station + Vector3(2.0, 1.65, 3.0)
+	camera.look_at(station + Vector3(0.0, 0.30, 0.0))
+	camera.fov = 60.0
+	await _capture("leather-pouch-loaded")
 	var elevation := float(initial["elevation_rad"])
 	var yaw := float(initial["yaw_rad"])
 	var max_draw := float(initial.get("max_draw_m", 12.0))

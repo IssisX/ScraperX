@@ -1,0 +1,12 @@
+gravity render fixture maximum_tick_m=1.10046
+seat available=1 p=1.07947 pouch=0.35
+shot draw=4.08226 energy=16016.8 apex=15.8755 landed_y=0 deaths=0 end=6,0.9,-55.4576 ascent_300m_x=0 launches=1
+seat available=1 p=1.07947 pouch=0.35
+shot draw=12 energy=420310 apex=378.795 landed_y=0 deaths=1 end=6,1.0794,-55.0094 ascent_300m_x=6 launches=1
+seat available=1 p=1.07947 pouch=0.35
+shot draw=12 energy=420310 apex=378.795 landed_y=0 deaths=1 end=6,1.0794,-55.0094 ascent_300m_x=6 launches=1
+seat available=1 p=1.07947 pouch=0.35
+shot draw=12 energy=420310 apex=361.126 landed_y=351.999 deaths=0 end=6,352.899,-128.746 ascent_300m_x=6 launches=1
+seat available=1 p=1.07947 pouch=0.35
+shot draw=12 energy=420312 apex=361.126 landed_y=0 deaths=1 end=6,1.07946,-55.0034 ascent_300m_x=17.0622 launches=1
+PASS launcher, real draw/release, deterministic native flight and restart boundary

@@ -1,5 +1,8 @@
 # ScraperX
 
+**“The input state determines the output.”** The project-wide design and engineering motto; see the governing laws and execution protocol.
+
+
 Godot 4.7 / C++17 / Jolt industrial ascent. Read [`00_START_HERE.md`](00_START_HERE.md) before changes. Writes go to `ChatGPT` only.
 
 ## Current game state — 2026-09-27

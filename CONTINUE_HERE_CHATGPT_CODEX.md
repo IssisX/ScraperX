@@ -1,12 +1,27 @@
 # CONTINUE HERE — ScraperX, canonical Termux / ChatGPT Codex handoff
 
+**Development motto: “The input state determines the output.”** Player input and native physical state drive outcomes; camera, hands, sound and vibration reflect those outcomes. Preserve this principle in every new mechanic.
+
+**Owner collaboration preference:** Interpret rough requests thoughtfully and turn their underlying intent into coherent, polished behavior. Use engineering and design judgment; do not mechanically copy a proposed mechanism that would weaken the objective. Explain material tradeoffs, absorb routine choices, make authorized edits as needed and finish useful work without repeated permission prompts. Keep decision/progress updates concise. Ask only when missing information materially changes the result.
+
+
 **Revised 2026-10-02. Repository `IssisX/ScraperX`; write branch `ChatGPT` only. The recovered original scratch is committed on GitHub. Do not restart source recovery or reset to an earlier delivery. This document is the continuation record; Start Here owns the current immutable APK receipt, the Atlas owns spatial parameters and AS-023 owns the launcher contract.**
+
+**Current restart checkpoint:** finish/publish the combined AS-026 suspended-ladder crossing, AS-023 native yielding leather pouch and AS-025 solids-export correction; then follow its exact-source Actions run to terminal status and verify any APK receipt. The combined source is not yet published. Read root `AGENTS.md`, this document and `00_START_HERE.md` completely before edits, inspect the actual repository/branch/head/worktree and preserve newer work. `df3a483` remains the last verified executable APK, not the current combined source. The owner requested a safe session restart; after this batch is finished/pushed and its delivery status is established, use the suggested `/plan` for the next coherent pass of playable, physically causal environmental interactions and varied traversal. Do not begin that broader pass while closing this batch.
+
+**Current local proof boundary:** AS-026 native and shipping touch establish the +110→121 m slice from explicit supported +110 m staging, support 11/deaths 0; six final rendered views and native-driven feedback were inspected, and normal/fixture solids regenerate without drift. Pouch native caller refinement at 90/180/360 Hz measures apex 378.796/378.848/378.901 m, pre-impact residual 7319/4282/2487 J and peak 197.975/198.060/198.205 kW. Shipping touch retrieval→ordinary walking into the measured returned pouch centre→BOARD→second launch passes: retrieval 4.35 s, 967.63 J, 7.99 kW; launch apex 378.30 m. Current touch manual-canopy landing reaches supported +352.00 m, zero deaths and 1.54 m walking. Final unloaded/loaded/whole-launcher pouch images were inspected. Actual mixed audio passes 159 checks, peak −0.80 dB. Combined publication and exact-source delivery remain pending; device play and continuous grade→121 ascent are not established. See [AS-026 ledger](evidence/as-026/README.md) and [launcher ledger](evidence/manual_slingshot.md).
+
+**Latest owner direction, 2026-10-02 — AS-026:** extend the first unauthored connection, +110→+121 m, with a harder suspended maintenance-ladder crossing: ordinary fixed climb, airborne moving catch, loaded climb, timed native-momentum Jump to an offset +119 m receiver, then short fixed climb onto the +121 m Tower ring. First-person hands/POV, sound and optional haptics follow actual physical state. Supported development spawning is authorized for focused slice work; it does not prove continuous grade ascent. The owner also authorizes continuing with varied complete sections, including parkour and visible causal/Rube Goldberg mechanisms, within the +300 m objective. This supersedes earlier instructions to stop upper construction at launcher acceptance. Device acceptance remains a separate evidence boundary. See [AS-026](03_EXECUTION/ASCENT/AS-026_SUSPENDED_MAINTENANCE_LADDER.md).
+
+**Preceding AS-024/025 publication:** source `5acb18ce792925121084cafdfec56ad403499233`; [run 37055476356](https://github.com/IssisX/ScraperX/actions/runs/37055476356) ended in failure at the solids exporter because new AS-025 fixture names were unclassified. Rules-only successor `135aa9f1c6e4af2bdb67ba84673e7827e9e9ed1e`, [run 37064000806](https://github.com/IssisX/ScraperX/actions/runs/37064000806), failed at the same unchanged-source gate. Neither produced an APK. The combined continuation classifies rigid fixtures as native static solids, slack cables/paint as decorative and regenerates the normal table; retained fixture geometry remains unchanged. Prior successful APK receipts below remain the last verified executable delivery.
 
 **Current owner request, 2026-10-02 — AS-024:** add one easy, creative ground-to-first-level route alongside the slingshot. This explicitly authorizes ground construction now without asserting launcher device acceptance. A broad cargo-net climb on a visible steel gantry reaches the existing **+11 m first ring**: ordinary walk-up → CLIMB → held forward → native top-out → supported walking. No staircase/ramp or slingshot use is required. The net uses actual native Jolt soft-body sag and loaded grips; final route evidence and Android delivery are tracked below. See [AS-024](03_EXECUTION/ASCENT/AS-024_CARGO_NET_ENTRY.md). The preceding verified APK below contains the launcher repair, not this new route.
 
 **Latest owner direction, 2026-10-02 — AS-025:** add restrained lived-in detail to the playable tower interior. Chosen mood: working mill with visible rust and slack cables, warm service lights, warning marks, and occasional sparks. The first presentation pass is implemented and standing-eye inspection captures have been reviewed; device appearance remains open.
 
 ## Current handoff: return-seat / cinematic / audibility repair
+
+**Historical delivered checkpoint (`df3a483`):** the receipts and acceptance stop in this subsection describe the preceding return-seat/camera/audio/guidance delivery. They remain immutable evidence for that source. The combined-batch restart checkpoint above and §7 are current; later explicit AS-026 and `/plan` directions supersede the old content stop.
 
 **Verified delivery, 2026-10-02:** source `df3a483bcc3a7f38629d520057413097a721e509`, reviewed tree `fd8b5a0eca4d99c801775ff14c5a2f03b0155e5f` on `ChatGPT`. [Exact-source run 37038456873](https://github.com/IssisX/ScraperX/actions/runs/37038456873) succeeded, job `110942357099`, 23 successful steps; the failure-only diagnostics step was skipped. Fresh x86 CI passes **28/28 native gates** (64.15 s), complete touch return/reboard/second-shot, +352 m supported landing with zero deaths, camera/focus/comfort, **2,894 settings checks**, **152 actual-mixer checks**, visual proof, retained routes/solids and Android ARM64 compilation/export. Download [artifact 11243377381](https://github.com/IssisX/ScraperX/actions/runs/37038456873/artifacts/11243377381), `ScraperX-build-df3a483bcc3a7f38629d520057413097a721e509`, and install `apk/ScraperX-ChatGPT.apk`. Artifact checkpoint names this exact source; the independently recomputed APK SHA-256 is `70dafc26f32101b6abffeeb3bb32ab49f3218c3651dcdb00934e89d2873fcadd` and matches `apk/SHA256SUMS.txt`. CI apksigner verifies the single stable signer `9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4`, package `com.cory.scraperx.chatgpt` and label `ScraperX-ChatGPT`; those logs were inspected. The downloaded ZIP digest also independently matches GitHub artifact metadata. Artifact expires 2026-12-31. Local APK cryptographic signature verification and Android execution were not performed. The source identity is artifact sidecar metadata, not an embedded APK commit label. Documentation-only successors do not imply another executable. Device acceptance remains open before the next 10–20 m section.
 
@@ -42,10 +57,10 @@ The preceding delivered repair did the following:
 
 ## First actions for the terminal agent
 
-1. Read this current handoff, Start Here, the execution protocol, AS-023 and the current Atlas opening. Inspect the checkout status and branch before writing. GitHub `ChatGPT` is the source authority; old cloud/Termux paths and session UUIDs are provenance only.
-2. Check the exact APK receipt in Start Here and the latest repair/to-do above. The follow-up slice is delivered at `df3a483` with verified exact-source CI/APK; obtain the owner’s device results before another gameplay candidate. Recovery is complete. The wider ascent remains unfinished and device acceptance is still the next content gate.
+1. Read root `AGENTS.md`, this continuation document and Start Here completely, then the execution protocol, AS-026, AS-023 and the current Atlas. Inspect repository identity, branch, revision and existing changes before writing. GitHub `ChatGPT` is the source authority; old cloud/Termux paths and session UUIDs are provenance only.
+2. Check the combined-batch publication state and exact-source Actions run in Start Here/§7. Follow any pending candidate to terminal status before publishing another; verify artifact/source/checksum if green, or repair the first causal failure if red. `df3a483` is the last verified executable receipt, not proof of the current combined batch. Recovery is complete; device acceptance remains separately open.
 3. On negative launcher feedback, reproduce the reported path in the real shipping scene, trace its native/input/presentation owner, fix that cause and verify the affected native and touch path. Choppy phone play needs frame-time evidence: compare walking, launch and impact on the same device, FPS display, quality presets and cinematics ON/OFF. Do not replace collision or motion with scripted flight to conceal a performance problem.
-4. On owner acceptance, jointly choose one actual 10–20 m gap around/above the demonstrated +352 m receiver. Inspect the built geometry first; no next section or machine has been selected. Compile physical entry/exit, work source, loads, clearances, failure and reset before coding. Preserve existing parkour and distinguish retained fixtures from normal campaign continuity.
+4. After the combined batch is finished/pushed and its delivery status is established, use the owner's suggested `/plan` for a coherent next pass of extraordinary playable content: varied traversal and meaningful environmental interactions with visible native physical causes. Inspect the built world and choose actual gaps; no next pass is implemented or accepted by this record. Compile physical entry/exit, work source, loads, clearances, failure and reset before coding. Preserve existing parkour and distinguish retained fixtures from campaign continuity.
 5. Maintain section 7’s running to-do and update the corresponding authoritative document immediately when runtime evidence changes a contract. Complete authorized reversible work without repeated confirmation; publish only to `ChatGPT` and build every APK in Actions.
 
 ## Current repair file map and verification procedure
@@ -84,12 +99,12 @@ GitHub carries the source, reference image and this handoff. A ChatGPT session U
 cd ~
 git clone --branch ChatGPT --single-branch https://github.com/IssisX/ScraperX.git ScraperX-terminal-20261002
 git -C ScraperX-terminal-20261002 status --short --branch
-codex -C "$HOME/ScraperX-terminal-20261002" "Read CONTINUE_HERE_CHATGPT_CODEX.md and 00_START_HERE.md. Continue from the current launcher playtest repair on ChatGPT. Do not restart recovery. Check the exact-source APK receipt and running to-do first. Preserve native Jolt/C++ physics and Godot touch/presentation ownership. Wait for the owner to accept the repaired launcher on device before selecting the next 10–20 m tower section; negative feedback requires launcher diagnosis/repair. Update the authoritative docs as you work."
+codex -C "$HOME/ScraperX-terminal-20261002" "Read AGENTS.md, CONTINUE_HERE_CHATGPT_CODEX.md and 00_START_HERE.md completely. Inspect Git identity/status and preserve newer work on ChatGPT. Recovery is complete. Check the combined AS026/pouch/AS025-solids batch and track its exact-source Actions candidate before another publication. Keep native C++/Jolt physics and Godot touch/presentation ownership. After this batch is finished/pushed and delivery status is established, use /plan for the next coherent playable, physically causal content pass. Update existing authorities and the running to-do."
 ```
 
 If that directory already exists, inspect its Git status and preserve any local edits before `git fetch origin ChatGPT` / `git merge --ff-only origin/ChatGPT`; do not overwrite it, reset it or force-push. Use the current branch head and Start Here's APK source SHA rather than assuming the latest documentation commit requires another APK. All APKs are built in GitHub Actions. Keep the branch-required `ScraperX-ChatGPT.apk` / `com.cory.scraperx.chatgpt` identity and stable debug signer; versionCode 1 / versionName 0.1.0 do not identify a source revision.
 
-The live executor scratch is `/tmp/scraperx-chatgpt-scratch`, build `/tmp/scraperx-build-work`, runtime/evidence `/tmp/scraperx-runtime`. These are provenance, not Termux dependencies. The prior source-recovery archives remain untouched; GitHub contains the original recovered implementation plus this repair.
+Historical executor paths were `/tmp/scraperx-chatgpt-scratch`, `/tmp/scraperx-build-work` and `/tmp/scraperx-runtime`. This continuation used an agent-owned writable temporary checkout and private ARM64 build/runtime caches; inspect actual paths after restart rather than depending on any prior cache. Published source and committed evidence are the portable authority. Recovery archives remain untouched; GitHub contains the recovered implementation and preceding published repairs.
 
 ## Historical model-switch and migration record
 
@@ -244,11 +259,20 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 - Compile new machines before coding: source of work, attachment, mass/COM/inertia, contact, travel, swept clearance, stops, entry/receiver, failure recovery and any physically powered reset. Repair the authoritative owner and preserve Godot/native Jolt responsibilities and identifiers.
 - Read and use the actual installed **Superpowers**, **Causal Mechanism Compiler**, and **`threespine`** instructions. Discover their locations in the new environment; old absolute skill paths are not portable. Do not merely claim use or invent an invocation. If a required skill is unavailable, report that exact limitation before claiming its workflow was applied. Use the actual Godot verification instructions when changing Godot code.
 - Latest explicit owner direction resolves contradictions in older project documentation, subject to the environment's higher-priority instructions. Preserve existing labels and links; make focused corrections rather than renaming/reorganizing the documentation.
-- Keep a running to-do. Work through routine, reversible implementation without repeated permission prompts. Batch routine writes and their checks in an agent-owned checkout inside the writable workspace; do not cause repeated access prompts by choosing an unwritable development location. Respect real environment approval rules, explain a concrete access blocker if one occurs, and avoid the owner's personal files. APKs are built by GitHub Actions. Screenshots require explicit invocation and visual inspection; they are not supplied by an APK build automatically.
-- The owner welcomes thoughtful interpretation of rough intent: identify the underlying experience/problem, propose concrete improvements and continue within the approved scope. When the owner explicitly requests approval for audit additions, ask once for those additions. Preserve this preference along with grouped routine writes; do not reduce collaboration to literal wording or repeatedly ask about already-authorized work. The owner also requested `/memories` after tool work; this committed record preserves the preference independently of client memory-command availability.
+- Keep a running to-do. Work through routine, reversible implementation without repeated permission prompts. Make authorized edits as needed in an agent-owned checkout inside the writable workspace; do not cause repeated access prompts by choosing an unwritable development location. Respect real environment approval rules, explain a concrete access blocker if one occurs, and avoid the owner's personal files. APKs are built by GitHub Actions. Screenshots require explicit invocation and visual inspection; they are not supplied by an APK build automatically.
+- The owner welcomes thoughtful interpretation of rough intent: identify the underlying experience/problem, propose concrete improvements and continue within the approved scope. When the owner explicitly requests approval for audit additions, ask once for those additions. Preserve this preference without delaying edits into an end-of-task batch; do not reduce collaboration to literal wording or repeatedly ask about already-authorized work. The owner also requested `/memories` after tool work; this committed record preserves the preference independently of client memory-command availability.
 - The owner prefers substantial, well-specified coding assignments for model handoff. Complete difficult physical/ownership decisions and identify a meaningful handoff boundary. The prior migration session was paused; that historical boundary has since been superseded by the explicit AS-023 continuation above.
 
 ## 7. Running to-do at this handoff
+
+**Current continuation — AS-026:**
+
+- [x] Select the real +110→+121 gap and implement shared native parts, passive hinge, real grips/load and offset receiving supports.
+- [x] Establish ordinary native/touch catch, climb, timed release and supported +121 m walking; test missed-jump recovery and read-only hand interpolation.
+- [x] Finish AS-026 rebuilt-source rendered inspection, current normal/fixture solids checks and native-driven feedback verification; six captures inspected, supported +121 m touch/native receipts complete.
+- [ ] Publish the complete reviewed continuation on ChatGPT and track one exact-source Actions APK candidate.
+- [ ] After this combined batch is finished/pushed, use the owner’s suggested `/plan` for a coherent playable-world pass: meaningful interactions, native physical causes and varied traversal, beyond cosmetics. Keep the larger gap-filling objective and report decisions concisely.
+- [ ] Observe device pacing, comfort and haptics when an actual device path exists.
 
 **Current single construction slice, owner-authorized 2026-10-02 — AS-024:**
 
@@ -264,7 +288,16 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 - [x] Compare the normal playable tower’s sparse interior frame with its denser presentation treatment; identify the missing interior dressing layer.
 - [x] Agree on an active mill mood with controlled wear: rusted risers, slack cable loops, caged work lights, warning marks, handwheels and a small recurring spark burst.
 - [x] Inspect lower-shaft standing-eye presentation captures; retain open traversal lanes. These inspection cameras prove dressing, not locomotion.
-- [x] Record the implemented working-mill treatment in the Atlas; keep it presentational and out of native collision authority.
+- [x] Record the implemented working-mill treatment in the Atlas; export rigid fixtures as native static solids while slack cable, paint, wheel trim and sparks remain decorative. No new service-fixture ascent mechanism is claimed.
+
+**Current leather-pouch continuation, 2026-10-02:**
+
+- [x] Preserve the good rubber bands; replace the wooden-looking seat with native cupped rest geometry and a yielding SixDOF fold, continuous native-driven leather rendering and stitches.
+- [x] Prove rider-loaded compliance, no manual work for the passive fold, per-port energy bounds, checkpoint restoration and three-cadence native launch/predictor behavior.
+- [x] Verify shipping touch physical return→ordinary walking into the measured returned pouch centre→BOARD→paid draw→second launch; native readiness remains authoritative and no approach relocation manufactures re-entry.
+- [x] Repair duplicate touch ownership so lifting the REEL finger immediately clears held work; actual mixed audio passes159 checks.
+- [x] Finish final shipping-driver launch/landing checks and final unloaded/loaded/whole-launcher pouch captures/inspection; current scoped receipts are in the leather-pouch ledger.
+- [ ] Publish together with AS-026/AS-025 solids and track the exact-source Actions APK; keep device behavior separately open.
 
 **Current follow-up feedback slice, 2026-10-02:**
 
@@ -277,7 +310,7 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 - [x] Inspect actual rendered charged guidance, return/seat-ready/second-shot controls with the declared capture-only 3D harness; repair overflow and complete read-only review.
 - [x] Publish one candidate `df3a483` on `ChatGPT`; verify terminal-success run `37038456873`, artifact `11243377381`, source identity, independently recomputed APK/ZIP checksums and inspected stable-signer logs.
 - [ ] Observe this APK on the owner's device: seat reuse, cinematic feel/comfort, fear audibility and receiver guidance. Phone frame pacing still needs device evidence.
-- [ ] After launcher acceptance, jointly select the next real 10–20 m tower section around/above +352 m.
+- [x] Superseded by explicit AS-026 continuation above: construction proceeds from the existing +110 m route; launcher/device acceptance remains separate.
 
 **Completed preceding AS-023 playtest repair, 2026-10-02:**
 
@@ -312,7 +345,7 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 - [x] Publish the complete verified AS-023 source to `ChatGPT` at `3d664e4` and verify its successful exact-source CI/APK delivery.
 - [x] Receive the preceding APK playtest and implement the bounded launcher repair above; renewed device acceptance remains open.
 - [ ] Inspect/fix `ScraperX APKs` build selection in its own implementation when that source is available; do not mistake stale downloader output for missing game source.
-- [ ] After the owner accepts the repaired launcher on device, select a real 10–20 m tower gap with the owner, then compile/implement a climbing section or causal machine encounter with physical entry, receiver, exit and failure recovery.
+- [x] Later owner direction selects and authorizes the +110→+121 m suspended-ladder encounter and continued varied sections; see AS-026 above.
 
 **Historical migration checklist, preserved for the preceding pipe-bridge source:**
 
@@ -326,4 +359,4 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 - [ ] Observe actual APK installation/play and Fold performance if the new environment has a real device path. Otherwise retain this boundary explicitly.
 - [ ] On the owner's continuation instruction, compile the next useful encounter from the demonstrated +110 m receiver within the broader +300 m objective. No particular mechanism above that ring is selected by this handoff.
 
-There was no native or CI failure to repair at the historical `4996a6e` migration point. Current work is the follow-up AS-023 return-seat/camera/audio/guidance slice above; its exact-source CI/APK delivery succeeds at `df3a483`; fresh CI passes all 28 native gates and Start Here owns the verified artifact receipt. The preceding repair’s successful receipt remains preserved. Preserve the earlier IDs and proof rather than retesting old fixtures as current opening acceptance.
+There was no native or CI failure to repair at the historical `4996a6e` migration point. The preceding return-seat/camera/audio/guidance delivery at `df3a483` passes exact-source run `37038456873`; retain its immutable APK receipt. Current work is the combined AS-026/leather-pouch/AS-025-solids batch and its publication/delivery boundary at the top and in §7. Historical success does not establish a new APK. After this batch, the next authorized step is the coherent playable-world `/plan`, with device acceptance separately open.

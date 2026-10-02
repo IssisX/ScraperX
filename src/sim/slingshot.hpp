@@ -50,6 +50,10 @@ public:
         bool pouch_pair_excluded = false;
         bool aim_ready = true;
         bool aim_locked = false;
+        double leather_deflection_m = 0.0;
+        double leather_energy_j = 0.0;
+        double leather_port_violation_j = 0.0;
+        JPH::RVec3 harness_rest_local = JPH::RVec3::sZero();
         double draw_m = 0.0;
         double ratchet_draw_m = 0.0;
         double energy_j = 0.0;
@@ -94,7 +98,7 @@ public:
     // Positive draw is backwards (+Z). The fixed fork anchors never move;
     // paid rail aiming is permitted with held draw until physical release.
     void pre_step(float delta_seconds, double draw_input, double yaw,
-                  double elevation, bool action, bool release);
+                  double elevation, bool action, bool release, bool rider_supported = false);
     void post_step(float delta_seconds);
     [[nodiscard]] bool controls_player() const noexcept { return harness_ != nullptr; }
     [[nodiscard]] const State &state() const noexcept { return state_; }
@@ -110,6 +114,7 @@ public:
     [[nodiscard]] static JPH::RVec3 retrieval_control_position() noexcept {
         return neutral_position() + JPH::RVec3(1.5, .35, -1.8);
     }
+    [[nodiscard]] static JPH::Vec3 leather_surface(float u, float v) noexcept;
     void detach();
     // Explicit relocation ends player operation while retaining all machine
     // bodies and stored spring energy at their measured physical state.
@@ -128,6 +133,7 @@ public:
 
 private:
     [[nodiscard]] bool player_in_pouch() const;
+    [[nodiscard]] bool unloaded_pouch_ready() const;
     [[nodiscard]] bool player_at_control() const;
     [[nodiscard]] slingshot::BandEvaluation bands(bool no_lock = false) const;
     void aim(double yaw, double elevation, float dt = 0.0F);
@@ -143,6 +149,7 @@ private:
     void create_launch_guide(bool restoring = false);
     void remove_launch_guide();
     void attach(bool checkpoint = false);
+    [[nodiscard]] double leather_deflection(bool no_lock = false) const;
     void refresh_state();
     void finish_previous_step(bool no_lock = false);
     void OnStep(const JPH::PhysicsStepListenerContext &context) override;
@@ -161,7 +168,7 @@ private:
     JPH::BodyID player_;
     kit::BodyIndex pouch_, frame_, rail_, launch_rail_;
     JPH::Ref<JPH::SliderConstraint> guide_;
-    JPH::Ref<JPH::PointConstraint> harness_;
+    JPH::Ref<JPH::SixDOFConstraint> harness_;
     JPH::Ref<JPH::SliderConstraint> carrier_guide_, launch_guide_;
     JPH::Ref<JPH::FixedConstraint> carrier_bind_;
     JPH::Ref<JPH::SixDOFConstraint> aim_gimbal_;
@@ -169,10 +176,14 @@ private:
     slingshot::AnchorPoints anchors_{};
     slingshot::BandParameters band_parameters_{10.44030650891055, kBandStiffnessNPerM, 15.0};
     State state_{};
+    bool rider_supported_ = false;
     bool step_pending_ = false;
     bool audit_rider_ = false;
     bool audit_initialized_ = false;
     float previous_dt_ = 0.0F;
+    double previous_leather_q_ = 0.0;
+    double previous_leather_energy_ = 0.0;
+    bool previous_leather_active_ = false;
     double previous_draw_ = 0.0;
     double previous_band_loss_w_ = 0.0;
     double initial_mechanical_energy_j_ = 0.0;

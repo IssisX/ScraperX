@@ -29,6 +29,9 @@ var _retrieval_wheel: Node3D
 var _retrieval_label: Label3D
 var _anchor_details: Array[Node3D] = []
 var _pouch: Node3D
+var _leather_mesh: MeshInstance3D
+var _leather_stitches: MultiMeshInstance3D
+var _leather_vertices := PackedVector3Array()
 var _guide_shoe: Node3D
 var _avatar: Node3D
 var _hud: AimHud
@@ -217,7 +220,7 @@ func _style_native_kit() -> void:
 	if pouch != null:
 		for child in pouch.get_children():
 			if child is MeshInstance3D:
-				child.material_override = _leather
+				child.visible = false
 	_styled_kit = true
 
 
@@ -439,41 +442,19 @@ func _build_pouch() -> void:
 	_pouch = Node3D.new()
 	_pouch.name = "LeatherCradle"
 	add_child(_pouch)
-	# Flexible side wings surround the native collidable seat. The seat
-	# itself is still drawn from the native box with the same leather shader.
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var rows := 8
-	var columns := 18
-	for row in rows:
-		for column in columns:
-			for corner in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1),
-					Vector2i(0, 0), Vector2i(1, 1), Vector2i(0, 1)]:
-				var u := float(column + corner.x) / float(columns)
-				var v := float(row + corner.y) / float(rows)
-				var x := (u - 0.5) * 1.66
-				var z := (v - 0.5) * 0.96
-				var y := -0.16 + pow(absf(x) / 0.83, 3.0) * 0.44 \
-					+ pow(absf(z) / 0.48, 5.0) * 0.16
-				surface.set_uv(Vector2(u, v))
-				surface.add_vertex(Vector3(x, y, z))
-	surface.generate_normals()
-	_mesh(_pouch, surface.commit(), _leather)
-	var seam := _material(Color("b9996b"), 0.96, 0.0)
-	# One instanced draw for 72 leather stitches, instead of 72 submissions.
+	# One continuous native-authored leather sheet replaces the box shelf.
+	_leather_mesh = MeshInstance3D.new()
+	_leather_mesh.name = "NativeLeatherSurface"
+	_leather_mesh.material_override = _leather
+	_pouch.add_child(_leather_mesh)
+	_leather_stitches = MultiMeshInstance3D.new()
+	_leather_stitches.material_override = _material(Color("b9996b"), 0.96, 0.0)
 	var stitches := MultiMesh.new()
 	stitches.transform_format = MultiMesh.TRANSFORM_3D
 	stitches.mesh = _box(Vector3(0.026, 0.009, 0.005))
-	stitches.instance_count = 72
-	for i in 72:
-		var x := -0.76 + float(i % 36) * 1.52 / 35.0
-		var z := -0.43 if i < 36 else 0.43
-		var y := -0.152 + pow(absf(x) / 0.83, 3.0) * 0.44 + pow(absf(z) / 0.48, 5.0) * 0.16
-		stitches.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(x, y, z)))
-	var stitch_mesh := MultiMeshInstance3D.new()
-	stitch_mesh.multimesh = stitches
-	stitch_mesh.material_override = seam
-	_pouch.add_child(stitch_mesh)
+	stitches.instance_count = 76
+	_leather_stitches.multimesh = stitches
+	_pouch.add_child(_leather_stitches)
 	for side in [-1.0, 1.0]:
 		_mesh(_pouch, _box(Vector3(0.055, 0.14, 0.50)), _leather, Vector3(side * 0.84, 0.45, 0.0))
 		_mesh(_pouch, _box(Vector3(0.075, 0.10, 0.20)), _brass, Vector3(side * 0.84, 0.48, 0.0))
@@ -499,6 +480,39 @@ func _build_pouch() -> void:
 
 func _update_pouch(state: Dictionary) -> void:
 	_pouch.position = state.get("pouch_position", Vector3.ZERO)
+	var vertices: PackedVector3Array = state.get("leather_vertices", PackedVector3Array())
+	if _leather_vertices.is_empty() and vertices.size() == 171:
+		_leather_vertices = vertices
+		var surface := SurfaceTool.new()
+		surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for row in 8:
+			for column in 18:
+				for corner in [Vector2i(0, 0), Vector2i(0, 1), Vector2i(1, 1),
+						Vector2i(0, 0), Vector2i(1, 1), Vector2i(1, 0)]:
+					var x: int = column + corner.x
+					var z: int = row + corner.y
+					surface.set_uv(Vector2(float(x)/18.0, float(z)/8.0))
+					surface.add_vertex(vertices[z*19+x])
+		surface.generate_normals()
+		_leather_mesh.mesh = surface.commit()
+	var flex := float(state.get("leather_deflection_m", 0.0))
+	_leather.set_shader_parameter("native_fold_m", flex)
+	# Stitches follow the same native fold; anchored rim stays taut.
+	if not _leather_vertices.is_empty():
+		var index := 0
+		for row in [0, 8]:
+			for column in 19:
+				var point := _leather_vertices[row*19+column] + Vector3.UP*0.008
+				_leather_stitches.multimesh.set_instance_transform(index, Transform3D(Basis.IDENTITY, point))
+				index += 1
+		for row in 8:
+			for column in [0, 18]:
+				var point := _leather_vertices[row*19+column] + Vector3.UP*0.008
+				_leather_stitches.multimesh.set_instance_transform(index, Transform3D(Basis.IDENTITY, point))
+				index += 1
+		# Remaining stitch slots are hidden, never left at the sheet centre.
+		for unused in range(index, 76):
+			_leather_stitches.multimesh.set_instance_transform(unused, Transform3D(Basis.IDENTITY.scaled(Vector3.ZERO), Vector3.ZERO))
 	# The native pouch has restricted angular DOFs and stays upright. Aim
 	# rotates the empty fork, not the leather body or its collision surface.
 	_pouch.rotation = Vector3.ZERO

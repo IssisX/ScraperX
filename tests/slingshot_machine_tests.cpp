@@ -184,6 +184,8 @@ Shot shoot(int hz, double target_draw) {
             require(std::abs(result.detach_velocity.GetX() - before.GetX()) < .1,
                     "slack detachment changed lateral momentum");
         }
+        require(world.machine->state().leather_port_violation_j < 1.0,
+                "leather material port injected unexplained energy");
         if (world.machine->state().ledger_valid)
             result.maximum_residual = std::max(result.maximum_residual,
                 std::abs(world.machine->state().energy_residual_j));
@@ -449,12 +451,18 @@ int main() {
             require(!world.machine->controls_player() &&
                     (bodies.GetLinearVelocity(world.player) - drop_velocity).Length() == 0,
                     "manual unseating authored momentum");
+            for (int step=0;step<world.hz/2 && !world.machine->state().station_available;++step)
+                world.tick(0,false,false,.3,.95);
             world.tick(0, true, false, .3, .95);
-            require(world.machine->controls_player(), "physically present rider could not rejoin held pouch");
+            require(world.machine->controls_player(), "physically resupported rider could not rejoin held pouch");
             for (int step = 0; step < world.hz; ++step) world.tick(0, false, false, .3, .95);
             kit::Kit::Checkpoint checkpoint;
             world.parts->capture(checkpoint);
             const auto saved = world.machine->state();
+            std::cout << "LEATHER reboard_rest_y=" << saved.harness_rest_local.GetY() << " q=" << saved.leather_deflection_m << "\n";
+            require(saved.harness_rest_local.GetY() >= .68 && saved.harness_rest_local.GetY() < .85 &&
+                    saved.leather_deflection_m < -.015 && saved.leather_deflection_m > -.10,
+                    "reboarding ratcheted the leather rest height or lost load compliance");
             const auto player_at = bodies.GetPosition(world.player);
             const auto player_velocity = bodies.GetLinearVelocity(world.player);
             world.tick(0, true, false, .3, .95);
@@ -493,6 +501,12 @@ int main() {
             for (int step = 0; step < world.hz; ++step) world.tick();
             require(world.machine->state().retrieval_work_j == 0 && !world.machine->state().guide_latched,
                     "retrieval without manual hold supplied work or relatched");
+            for (int step=0;step<world.hz*7/10;++step) world.tick(1);
+            for (int step=0;step<world.hz*15/100;++step) world.tick();
+            const double stopped_reel_work = world.machine->state().retrieval_work_j;
+            for (int step=0;step<world.hz*3/10;++step) world.tick();
+            require(std::abs(world.machine->state().retrieval_work_j-stopped_reel_work)<.1,
+                    "released reel counted stale motor impulse as manual work");
             double recovery_peak = 0;
             int recovery_ticks = 0;
             while (!world.machine->state().guide_latched && recovery_ticks < 15 * world.hz) {
@@ -510,6 +524,8 @@ int main() {
             require(world.machine->state().energy_residual_j == 0,
                     "new physically recovered shot retained stale ledger residual");
             bodies.SetPosition(world.player, world.machine->state().pouch_position + RVec3(0, .73, 0), EActivation::Activate);
+            for (int step=0;step<world.hz/2 && !world.machine->state().station_available;++step)
+                world.tick(0,false,false,.2,1.35);
             world.tick(0, true, false, .2, 1.35);
             require(world.machine->controls_player(),
                     "returned pouch could not board and select fresh aim");
@@ -552,7 +568,7 @@ int main() {
         for (const auto &shot : {short_shot, medium_shot, full_90, full_180, full_360})
             std::cout << "draw=" << shot.draw << " spring_J=" << shot.energy << " player_J=" << shot.work
                       << " apex_m=" << shot.apex << " exit_mps=" << shot.speed
-                      << " residual_J=" << shot.maximum_residual << " source_W=" << shot.maximum_power << '\n';
+                      << " predicted_apex_m=" << shot.predicted_apex << " residual_J=" << shot.maximum_residual << " source_W=" << shot.maximum_power << '\n';
         require(short_shot.apex < medium_shot.apex && medium_shot.apex < full_180.apex,
                 "player draw does not determine increasing tower height");
         require(full_180.apex > 300, "full manual draw fails substantial tower height");

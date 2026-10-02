@@ -1,4 +1,5 @@
 #include "bridge/scraperx_simulation.hpp"
+#include "sim/slingshot.hpp"
 
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -74,6 +75,10 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_traversal_left_hand);
     godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_right_hand"),
                                 &ScraperXSimulation::get_traversal_right_hand);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_left_hand_render_position"),
+                                &ScraperXSimulation::get_traversal_left_hand_render_position);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_right_hand_render_position"),
+                                &ScraperXSimulation::get_traversal_right_hand_render_position);
     godot::ClassDB::bind_method(godot::D_METHOD("get_traversal_normal"),
                                 &ScraperXSimulation::get_traversal_normal);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_sprinting"),
@@ -380,6 +385,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_kit_body_enabled);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_parts", "body"),
                                 &ScraperXSimulation::get_kit_body_parts);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_linear_velocity", "body"),
+                                &ScraperXSimulation::get_kit_body_linear_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_transform", "body"),
                                 &ScraperXSimulation::get_kit_body_transform);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_render_transform", "body"),
@@ -558,6 +565,8 @@ godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
     out["launch_count"] = s.launch_count;
     out["anchor_left"] = to_godot(s.anchor_left);
     out["anchor_right"] = to_godot(s.anchor_right);
+    out["leather_deflection_m"] = s.leather_deflection_m;
+    out["leather_energy_j"] = s.leather_energy_j;
     out["pouch_position"] = to_godot(s.pouch_position);
     return out;
 }
@@ -569,7 +578,15 @@ godot::PackedVector3Array ScraperXSimulation::get_slingshot_prediction() const {
 
 godot::Dictionary ScraperXSimulation::get_slingshot_render_state() const {
     auto out = get_slingshot_state();
+    godot::PackedVector3Array leather_vertices;
+    for (int row=0; row<=8; ++row) for (int column=0; column<=18; ++column) {
+        const auto v = sim::Slingshot::leather_surface(column/18.0F, row/8.0F);
+        leather_vertices.push_back(godot::Vector3(v.GetX(),v.GetY(),v.GetZ()));
+    }
+    out["leather_vertices"] = leather_vertices;
     const auto s = simulation_->render_slingshot_state();
+    out["leather_deflection_m"] = s.leather_deflection_m;
+    out["leather_energy_j"] = s.leather_energy_j;
     out["pouch_position"] = to_godot(s.pouch_position);
     out["anchor_left"] = to_godot(s.anchor_left);
     out["anchor_right"] = to_godot(s.anchor_right);
@@ -724,6 +741,14 @@ godot::Vector3 ScraperXSimulation::get_traversal_left_hand() const {
 
 godot::Vector3 ScraperXSimulation::get_traversal_right_hand() const {
     return to_godot(simulation_->snapshot().traversal_right_hand);
+}
+
+godot::Vector3 ScraperXSimulation::get_traversal_left_hand_render_position() const {
+    return to_godot(simulation_->render_traversal_hand(true));
+}
+
+godot::Vector3 ScraperXSimulation::get_traversal_right_hand_render_position() const {
+    return to_godot(simulation_->render_traversal_hand(false));
 }
 
 godot::Vector3 ScraperXSimulation::get_traversal_normal() const {
@@ -1211,6 +1236,10 @@ godot::PackedFloat32Array ScraperXSimulation::get_kit_body_parts(const std::int6
         }
     }
     return out;
+}
+
+godot::Vector3 ScraperXSimulation::get_kit_body_linear_velocity(const std::int64_t body) const {
+    return to_godot(simulation_->kit_body_velocity(kit_index(body)));
 }
 
 godot::Transform3D ScraperXSimulation::get_kit_body_transform(const std::int64_t body) const {

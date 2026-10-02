@@ -30,6 +30,7 @@ const JUMP_MIN_RISE := 2.5
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
+const TRAVERSAL_CLIMBING := 4
 # Where the plant's sounds come from: the motor and gearbox by the firebox,
 # the steam from the top of the pressure vessel.
 const PLANT_POSITION := Vector3(30.5, 2.0, -100.0)
@@ -113,6 +114,10 @@ var _sling_launches := 0
 var _sling_draw := 0.0
 var _sling_air_speed := 0.0
 var _bullet_time: AudioStreamPlayer
+var _ladder_strain: AudioStreamPlayer3D
+var ladder_motion_frames := 0
+var climb_regrips := 0
+var _ladder_gain := 0.0
 var _cinematic_active := false
 var _cinematic_air_duck_db := 0.0
 var sling_cinematic_cues := 0
@@ -161,6 +166,7 @@ func _ready() -> void:
 	_water_screw_motor = _positional_player(BUS_AMBIENCE, Vector3(-18.0, 1.0, -98.0), 6.0, 100.0)
 	_water_lift_drive = _positional_player(BUS_AMBIENCE, Vector3(-12.5, 4.0, -108.2), 5.0, 90.0)
 	_water_lift_water = _positional_player(BUS_AMBIENCE, Vector3(-18.0, 4.5, -105.8), 5.0, 80.0)
+	_ladder_strain = _positional_player(BUS_EFFECTS, Vector3(6, 124, -181.2), 6.0, 55.0)
 	_pipe_motion = _positional_player(BUS_EFFECTS, Vector3(6, 2.4, -85), 10.0, 90.0)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
@@ -206,16 +212,16 @@ func _on_bank_ready() -> void:
 	for pair in [[_wind, &"wind_loop"], [_rush, &"rush_loop"], [_drone, &"drone_loop"],
 			[_hum, &"hum_loop"], [_hiss, &"hiss_loop"], [_rattle, &"rattle_loop"],
 			[_motor, &"motor_loop"], [_water_screw_motor, &"motor_loop"],
-			[_water_lift_drive, &"rattle_loop"], [_water_lift_water, &"hiss_loop"], [_pipe_motion, &"rattle_loop"]]:
+			[_water_lift_drive, &"rattle_loop"], [_water_lift_water, &"hiss_loop"], [_pipe_motion, &"rattle_loop"], [_ladder_strain, &"rattle_loop"]]:
 		pair[0].stream = _bank.pick(pair[1])
 	_wind.volume_db = -60.0
 	_rush.volume_db = -60.0
 	_drone.volume_db = -60.0
 	_hum.volume_db = -6.0 if regression_machines else -80.0
-	for player in [_hiss, _rattle, _motor, _water_screw_motor, _water_lift_drive, _water_lift_water, _pipe_motion]:
+	for player in [_hiss, _rattle, _motor, _water_screw_motor, _water_lift_drive, _water_lift_water, _pipe_motion, _ladder_strain]:
 		player.volume_db = -80.0
 	for player in [_wind, _rush, _drone, _hum, _hiss, _rattle, _motor, _water_screw_motor,
-			_water_lift_drive, _water_lift_water, _pipe_motion]:
+			_water_lift_drive, _water_lift_water, _pipe_motion, _ladder_strain]:
 		player.play()
 
 
@@ -272,11 +278,14 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		_play(&"jump", -4.0, randf_range(0.95, 1.08))
 
 	if traversal != _last_traversal:
-		if traversal == TRAVERSAL_HANGING:
+		if traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING]:
 			grabs += 1
 			_play(&"grab", -2.0, randf_range(0.95, 1.05))
 		elif traversal == TRAVERSAL_MANTLING or traversal == TRAVERSAL_VAULTING:
 			_play(&"scrape", -4.0, randf_range(0.92, 1.08))
+		elif _last_traversal == TRAVERSAL_CLIMBING and traversal == 0 and velocity.y > JUMP_MIN_RISE and deaths == _last_deaths:
+			jumps += 1
+			_play(&"jump", -4.0, 1.06)
 	if crouched != _last_crouched:
 		rustles += 1
 		_play(&"rustle", -8.0, randf_range(0.9, 1.1) if crouched else randf_range(1.05, 1.2))
@@ -524,3 +533,20 @@ func cancel_launch_cinematic() -> void:
 	_cinematic_air_duck_db = 0.0
 	if _bullet_time != null:
 		_bullet_time.stop()
+
+
+func climb_regrip(at: Vector3) -> void:
+	climb_regrips += 1
+	_play_at(&"grab", at, -8.0, 1.10)
+
+
+# Passive bearing noise follows native COM speed. Loading makes the same
+# real movement louder; a settled, unloaded ladder goes quiet.
+func update_suspended_ladder(delta: float, velocity: Vector3, held: bool) -> void:
+	var target := clampf(velocity.length() / 1.0, 0.0, 1.0)
+	if target > 0.025:
+		ladder_motion_frames += 1
+	_ladder_gain = lerpf(_ladder_gain, target, 1.0 - exp(-10.0 * delta))
+	if _bank_ready and not _silent:
+		_ladder_strain.volume_db = linear_to_db(maxf(_ladder_gain, 0.0001)) - (7.0 if held else 14.0)
+		_ladder_strain.pitch_scale = lerpf(0.65, 1.12, _ladder_gain)

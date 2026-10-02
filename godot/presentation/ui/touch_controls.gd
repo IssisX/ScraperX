@@ -228,6 +228,9 @@ func handle_touch(event: InputEvent) -> bool:
 
 
 func _touch_down(index: int, at: Vector2) -> bool:
+	# A fresh press owns exactly one control, including finger-ID reuse.
+	# Clear every old owner so release cannot stop at an unrelated capture.
+	_touch_up(index)
 	for id in _order:
 		var button: TouchButton = _buttons[id]
 		if not button.shown or not button.enabled or button.index != -1 or button.appear < 0.2:
@@ -285,22 +288,24 @@ func _touch_drag(index: int, at: Vector2, relative: Vector2) -> bool:
 
 
 func _touch_up(index: int) -> bool:
+	var released := false
 	if index == _stick_index:
 		_stick_index = -1
 		_stick_knob = Vector2.ZERO
 		move_vector = Vector2.ZERO
 		sprint_latched = false
-		queue_redraw()
-		return true
+		released = true
 	if index == _look_index:
 		_look_index = -1
-		return true
+		released = true
 	for button in _buttons.values():
 		if button.index == index:
 			button.index = -1
-			queue_redraw()
-			return true
-	return false
+			released = true
+	if released:
+		reel_effort = _held(B_REEL)
+		queue_redraw()
+	return released
 
 
 func _update_stick_vector() -> void:

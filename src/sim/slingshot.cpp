@@ -36,20 +36,54 @@ Vec3 rotation_vector(Quat value) {
 }
 } // namespace
 
+// Passive leather folds stiffen as they become taut. This reduced-order
+// material law is solved by Jolt; it is not a cloth animation or a motor.
+namespace {
+constexpr double kLeatherLinear = 8000, kLeatherCubic = 12500000;
+double leather_energy(double q) { return .5*kLeatherLinear*q*q + .25*kLeatherCubic*q*q*q*q; }
+}
+Vec3 Slingshot::leather_surface(float u, float v) noexcept {
+    const float x = (u-.5F)*1.68F, z = (v-.5F)*1.30F;
+    const float back = std::clamp((z-.42F)/.23F, 0.0F, 1.0F);
+    return Vec3(x, -.17F - .12F*std::pow(std::max(0.0F,-z)/.65F, 2) +
+                      .44F*std::pow(std::abs(x)/.84F, 3) +
+                      .60F*back*back*(3-2*back), z);
+}
+double Slingshot::leather_deflection(bool no_lock) const {
+    if (harness_ == nullptr) return 0;
+    const auto &b = no_lock ? system_.GetBodyInterfaceNoLock() : system_.GetBodyInterface();
+    return (b.GetPosition(player_) - b.GetPosition(kit_.body_id(pouch_)) - state_.harness_rest_local).GetY();
+}
+
 Slingshot::Slingshot(PhysicsSystem &system, kit::Kit &kit, BodyID player)
     : system_(system), kit_(kit), player_(player) {
     {
         BodyLockRead lock(system_.GetBodyLockInterface(), player_);
         saved_player_group_ = lock.GetBody().GetCollisionGroup();
     }
-    // CHOSEN: a human-sized open leather pouch. All four load-bearing parts
-    // are in the same kit shape that is presented; no duplicate proxy floor.
-    const std::vector<kit::Part> pouch_parts{
-        box(Vec3(.80F, .06F, .65F), Vec3(0, -.23F, 0), kit::Material::Timber, 6),
-        box(Vec3(.04F, .25F, .65F), Vec3(-.84F, .15F, 0), kit::Material::Timber, 3),
-        box(Vec3(.04F, .25F, .65F), Vec3(.84F, .15F, 0), kit::Material::Timber, 3),
-        box(Vec3(.80F, .08F, .04F), Vec3(0, .34F, .69F), kit::Material::Timber, 3),
-    };
+    // A thin cupped leather carrier, not a flat wooden shelf. The native
+    // surface is also exported to presentation. While joined, rider support
+    // is the passive constitutive joint below, rather than these rest panels.
+    std::vector<kit::Part> pouch_parts;
+    constexpr int columns = 12, rows = 6;
+    for (int z = 0; z < rows; ++z) for (int x = 0; x < columns; ++x) {
+        const float u = (x + .5F) / columns, v = (z + .5F) / rows;
+        const float du = .5F/columns, dv = .5F/rows;
+        // Secants match cell edges. A tangent at a steep rolled rim would
+        // overshoot its visible height and create a different collider.
+        const auto centre = (leather_surface(u-du,v-dv)+leather_surface(u+du,v-dv)+
+                             leather_surface(u-du,v+dv)+leather_surface(u+du,v+dv))*.25F;
+        const auto dx = leather_surface(u+du,v) - leather_surface(u-du,v);
+        const auto dz = leather_surface(u,v+dv) - leather_surface(u,v-dv);
+        const auto normal = dz.Cross(dx).Normalized();
+        auto panel = box(Vec3(.84F / columns * std::sqrt(1 + std::pow(dx.GetY()/dx.GetX(), 2)),
+                              .012F, .65F / rows * std::sqrt(1 + std::pow(dz.GetY()/dz.GetZ(), 2))),
+                         centre - normal * .012F, kit::Material::Timber,
+                         kPouchMassKg / (columns * rows));
+        panel.rotation = Quat::sFromTo(Vec3::sAxisY(), normal);
+        panel.convex_radius = .002F;
+        pouch_parts.push_back(panel);
+    }
     pouch_ = kit_.add_body(kPouchEntity, pouch_parts, neutral_position(),
                           Quat::sIdentity(), kPouchMassKg, .8F);
     // Kit reserves 2048 collision-table entries; this player uses the final
@@ -57,7 +91,7 @@ Slingshot::Slingshot(PhysicsSystem &system, kit::Kit &kit, BodyID player)
     kit_.disable_collision(kit::BodyIndex{2047}, pouch_);
     kit_.set_damping(pouch_, 0, 0);
     kit_.set_continuous_collision(pouch_);
-    // The harness is a point joint. Keeping the pouch upright is a genuine
+    // Keeping the carrier upright is a genuine
     // restricted angular DOF, not a repeated orientation/velocity assignment.
     {
         BodyLockWrite lock(system_.GetBodyLockInterface(), kit_.body_id(pouch_));
@@ -360,7 +394,14 @@ bool Slingshot::player_in_pouch() const {
     return std::abs(relative.GetX()) <= .45 &&
            relative.GetZ() >= -.31 && relative.GetZ() <= .32 &&
            soles_local_y >= base_top_local - .05 &&
-           soles_local_y <= base_top_local + .12;
+           soles_local_y <= base_top_local + (rider_supported_ ? .22 : .12);
+}
+
+bool Slingshot::unloaded_pouch_ready() const {
+    if (state_.harness_rest_local.GetY() <= 0) return true;
+    // Real resting contact establishes the unloaded support at THIS bowl
+    // location. A former higher side must not block boarding at the centre.
+    return rider_supported_ || system_.WereBodiesInContact(player_, kit_.body_id(pouch_));
 }
 
 bool Slingshot::player_at_control() const {
@@ -373,16 +414,34 @@ bool Slingshot::player_at_control() const {
 }
 
 void Slingshot::attach(bool checkpoint) {
-    if (harness_ != nullptr || (!checkpoint && guide_ == nullptr) || !player_in_pouch()) return;
+    if (harness_ != nullptr || (!checkpoint && guide_ == nullptr)) return;
+    const auto relative = system_.GetBodyInterface().GetPosition(player_) -
+                          system_.GetBodyInterface().GetPosition(kit_.body_id(pouch_));
+    // Recreate an unloaded spring only once native contact has resupported
+    // the rider; do not rebuckle a freely falling, still-deflected fold.
+    if (!checkpoint && !unloaded_pouch_ready()) return;
+    const bool saved_fold_fits = checkpoint && std::abs(relative.GetX()) <= .45 &&
+        relative.GetZ() >= -.31 && relative.GetZ() <= .32 &&
+        std::abs(relative.GetY() - state_.harness_rest_local.GetY()) <= .20;
+    if (!player_in_pouch() && !saved_fold_fits) return;
     auto *pouch = system_.GetBodyLockInterfaceNoLock().TryGetBody(kit_.body_id(pouch_));
     auto *player = system_.GetBodyLockInterfaceNoLock().TryGetBody(player_);
     if (pouch == nullptr || player == nullptr) return;
-    PointConstraintSettings settings;
+    if (!checkpoint)
+        state_.harness_rest_local = player->GetCenterOfMassPosition() - pouch->GetPosition();
+    SixDOFConstraintSettings settings;
     settings.mSpace = EConstraintSpace::WorldSpace;
-    settings.mPoint1 = settings.mPoint2 = player->GetCenterOfMassPosition();
+    settings.mPosition1 = pouch->GetPosition() + state_.harness_rest_local;
+    settings.mPosition2 = player->GetCenterOfMassPosition();
+    settings.MakeFixedAxis(SixDOFConstraintSettings::TranslationX);
+    settings.MakeFixedAxis(SixDOFConstraintSettings::TranslationZ);
+    settings.mLimitMin[SixDOFConstraintSettings::TranslationY] = 0;
+    settings.mLimitMax[SixDOFConstraintSettings::TranslationY] = 0;
+    settings.mLimitsSpringSettings[SixDOFConstraintSettings::TranslationY] =
+        SpringSettings(ESpringMode::StiffnessAndDamping, 8000, 1200);
     settings.mNumVelocityStepsOverride = 40;
     settings.mNumPositionStepsOverride = 8;
-    harness_ = static_cast<PointConstraint *>(settings.Create(*pouch, *player));
+    harness_ = static_cast<SixDOFConstraint *>(settings.Create(*pouch, *player));
     system_.AddConstraint(harness_);
     // This dedicated subgroup disables only the joined pouch contact;
     // every other kit/world collision remains available.
@@ -411,6 +470,8 @@ void Slingshot::detach() {
         audit_rider_ = false;
     }
     if (harness_ != nullptr) {
+        // Unbuckling dissipates the remaining fold energy; it does not boost the rider.
+        state_.dissipated_work_j += leather_energy(leather_deflection());
         system_.RemoveConstraint(harness_);
         harness_ = nullptr;
         if (state_.released) collision_exclusion_active_ = true;
@@ -485,7 +546,7 @@ void Slingshot::refresh_state() {
     state_.pouch_pair_excluded = harness_ != nullptr || collision_exclusion_active_;
     state_.guide_latched = guide_ != nullptr;
     state_.can_retrieve = guide_ == nullptr && harness_ == nullptr && state_.released && player_at_control();
-    state_.station_available = (guide_ != nullptr && harness_ == nullptr && player_in_pouch()) ||
+    state_.station_available = (guide_ != nullptr && harness_ == nullptr && player_in_pouch() && unloaded_pouch_ready()) ||
                               state_.can_retrieve;
     double loaded_mass = kPouchMassKg;
     {
@@ -502,8 +563,10 @@ void Slingshot::refresh_state() {
     double mechanical = body_energy(kit_.body_id(pouch_), state_.kinetic_j, state_.gravity_j);
     mechanical += body_energy(kit_.body_id(launch_rail_), state_.kinetic_j, state_.gravity_j);
     if (audit_rider_) mechanical += body_energy(player_, state_.kinetic_j, state_.gravity_j);
+    state_.leather_deflection_m = leather_deflection();
+    state_.leather_energy_j = leather_energy(state_.leather_deflection_m);
     if (audit_initialized_)
-        state_.energy_residual_j = mechanical + state_.energy_j - initial_mechanical_energy_j_ -
+        state_.energy_residual_j = mechanical + state_.leather_energy_j + state_.energy_j - initial_mechanical_energy_j_ -
             state_.work_j + state_.transmission_loss_j + state_.dissipated_work_j;
 }
 
@@ -555,12 +618,24 @@ void Slingshot::finish_previous_step(bool no_lock) {
         state_.retrieval_braking_work_j += std::max(0.0, -mechanical_work);
         state_.dissipated_work_j += std::max(0.0, -mechanical_work);
     }
+    if (previous_leather_active_ && harness_ != nullptr && previous_dt_ > 0) {
+        const double q = leather_deflection(no_lock);
+        // Measure this material port, independently of the whole-machine
+        // residual: impulse times relative displacement plus stored energy.
+        const double port_work = harness_->GetTotalLambdaPosition().GetY() / previous_dt_ *
+                                 (q - previous_leather_q_);
+        const double loss = -port_work - (leather_energy(q) - previous_leather_energy_);
+        state_.dissipated_work_j += std::max(0.0, loss);
+        state_.leather_port_violation_j = std::max(state_.leather_port_violation_j, -loss);
+        if (loss < -1.0) state_.ledger_valid = false;
+    }
     state_.dissipated_work_j += previous_band_loss_w_ * previous_dt_;
     step_pending_ = false;
 }
 
 void Slingshot::pre_step(float dt, double draw_input, double yaw,
-                        double elevation, bool action, bool release) {
+                        double elevation, bool action, bool release, bool rider_supported) {
+    rider_supported_ = rider_supported;
     finish_previous_step();
     refresh_state();
     if (!(dt > 0) || !std::isfinite(dt)) return;
@@ -678,6 +753,20 @@ void Slingshot::OnStep(const PhysicsStepListenerContext &context) {
         if (harness_ != nullptr) harness_->SetEnabled(false);
         collision_exclusion_active_ = true;
         state_.track_exit = true;
+    }
+    previous_leather_active_ = harness_ != nullptr && harness_->GetEnabled();
+    if (previous_leather_active_) {
+        const double q = leather_deflection(true);
+        const double stiffness = kLeatherLinear + 3*kLeatherCubic*q*q;
+        const double elastic_force = kLeatherLinear*q + kLeatherCubic*q*q*q;
+        const float rest = float(q - elastic_force/stiffness);
+        // Tangent linearization of the fixed nonlinear material potential.
+        // X/Z retain the existing support contract; only the leather fold yields.
+        harness_->SetTranslationLimits(Vec3(0,rest,0), Vec3(0,rest,0));
+        harness_->SetLimitsSpringSettings(SixDOFConstraintSettings::TranslationY,
+            SpringSettings(ESpringMode::StiffnessAndDamping, float(stiffness), 1200));
+        previous_leather_q_ = q;
+        previous_leather_energy_ = leather_energy(q);
     }
     state_.draw_m = std::clamp(double(point.GetZ() - state_.guide_origin.GetZ()),
                               0.0, kMaximumDrawM);
@@ -859,7 +948,7 @@ void Slingshot::restore(const State &saved) {
         double mechanical = body_energy(kit_.body_id(pouch_), kinetic, gravity);
         mechanical += body_energy(kit_.body_id(launch_rail_), kinetic, gravity);
         if (audit_rider_) mechanical += body_energy(player_, kinetic, gravity);
-        initial_mechanical_energy_j_ = mechanical + saved.energy_j - saved.work_j +
+        initial_mechanical_energy_j_ = mechanical + saved.leather_energy_j + saved.energy_j - saved.work_j +
             saved.transmission_loss_j + saved.dissipated_work_j - saved.energy_residual_j;
         audit_initialized_ = true;
     }
@@ -927,39 +1016,51 @@ std::vector<RVec3> Slingshot::prediction(double duration_seconds, double sample_
         if (lock.Succeeded()) loaded_mass += 1.0 / lock.GetBody().GetMotionProperties()->GetInverseMass();
     }
     const auto gravity = model(RVec3(system_.GetGravity()));
-    constexpr double h = 1.0 / 480.0;
+    const double rider_mass = loaded_mass - kPouchMassKg;
+    constexpr double h = 1.0 / 1440.0;
     bool attached = true;
     double next_sample = 0;
     const auto axis = slingshot::aim_axis(state_.yaw_rad, state_.elevation_rad);
     const auto start = position;
-    velocity = axis * slingshot::dot(velocity, axis);
-    const auto acceleration = [&](slingshot::Vec3 p, slingshot::Vec3 v) {
-        if (!attached) return gravity;
-        const auto free_acceleration = slingshot::evaluate_bands(p, v, anchors_, band_parameters_).force_n /
-                                       loaded_mass + gravity;
-        return axis * slingshot::dot(free_acceleration, axis);
+    const auto rest = rider_offset - slingshot::Vec3{0, state_.leather_deflection_m, 0};
+    struct Fold { double s, speed, q, qspeed; };
+    Fold y{0, slingshot::dot(velocity,axis), state_.leather_deflection_m,
+        double(bodies.GetLinearVelocity(player_).GetY()) - velocity.y};
+    const auto derivative = [&](Fold f) {
+        const auto p = start + axis*f.s, v = axis*f.speed;
+        const auto band = slingshot::evaluate_bands(p,v,anchors_,band_parameters_).force_n;
+        const double fold_force = kLeatherLinear*f.q + kLeatherCubic*f.q*f.q*f.q + 1200*f.qspeed;
+        // Coupled rail/fold mass matrix: the real rider contributes both
+        // its vertical fold inertia and the rail's axial inertia.
+        const double rail_acceleration = (slingshot::dot(band,axis) +
+            loaded_mass*slingshot::dot(gravity,axis) - axis.y*(rider_mass*gravity.y-fold_force)) /
+            (loaded_mass-rider_mass*axis.y*axis.y);
+        return Fold{f.speed,rail_acceleration,f.qspeed,
+                    gravity.y-fold_force/rider_mass-axis.y*rail_acceleration};
+    };
+    const auto add = [](Fold f,Fold d,double dt) {
+        return Fold{f.s+d.s*dt,f.speed+d.speed*dt,f.q+d.q*dt,f.qspeed+d.qspeed*dt};
     };
     for (double t = 0; t <= duration_seconds; t += h) {
-        if (t + h * .5 >= next_sample) {
-            points.push_back(world(position + rider_offset));
+        if (t + h*.5 >= next_sample) {
+            points.push_back(world(attached ? start+axis*y.s+rest+slingshot::Vec3{0,y.q,0} : position));
             next_sample += sample_seconds;
         }
-        if (attached && slingshot::dot(position - start, axis) >= kLaunchTrackLengthM) attached = false;
-        // RK4 is a predictor only; production launch motion remains Jolt's.
-        const auto k1p = velocity;
-        const auto k1v = acceleration(position, velocity);
-        const auto k2p = velocity + k1v * (h * .5);
-        const auto k2v = acceleration(position + k1p * (h * .5), k2p);
-        const auto k3p = velocity + k2v * (h * .5);
-        const auto k3v = acceleration(position + k2p * (h * .5), k3p);
-        const auto k4p = velocity + k3v * h;
-        const auto k4v = acceleration(position + k3p * h, k4p);
-        position = position + (k1p + k2p * 2 + k3p * 2 + k4p) * (h / 6);
-        velocity = velocity + (k1v + k2v * 2 + k3v * 2 + k4v) * (h / 6);
-        if (attached && slingshot::dot(position - start, axis) < 0) {
-            position = start;
-            velocity = {};
+        if (attached && y.s >= kLaunchTrackLengthM) {
+            attached = false;
+            position = start+axis*y.s+rest+slingshot::Vec3{0,y.q,0};
+            velocity = axis*y.speed+slingshot::Vec3{0,y.qspeed,0};
         }
+        if (!attached) {
+            position = position + velocity*h + gravity*(.5*h*h);
+            velocity = velocity + gravity*h;
+            continue;
+        }
+        // Advisory integration only. The actual game is solved by Jolt.
+        const auto k1 = derivative(y), k2 = derivative(add(y,k1,h*.5));
+        const auto k3 = derivative(add(y,k2,h*.5)), k4 = derivative(add(y,k3,h));
+        y = add(add(add(add(y,k1,h/6),k2,h/3),k3,h/3),k4,h/6);
+        if (y.s < 0) { y.s=0; y.speed=0; }
     }
     return points;
 }

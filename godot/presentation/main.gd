@@ -294,6 +294,11 @@ var _cam_bob_phase := 0.0
 var _cam_bob_weight := 0.0
 var _cam_fov_offset := 0.0
 var _cam_bank := 0.0
+var _swing_bank := 0.0
+var _swing_last_velocity := Vector3.ZERO
+var _grip_relative_left := Vector3.ZERO
+var _grip_relative_right := Vector3.ZERO
+var _grip_feedback_cooldown := 0.0
 var _crouch_eye := 0.0
 # DISPLAY settings; the defaults are the tuned values above.
 var _fov_base := FOV_BASE
@@ -458,7 +463,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -1266,6 +1271,8 @@ const HAPTICS := {
 	&"press": [12, 0.3],
 	&"tick": [16, 0.35],
 	&"grab": [30, 0.6],
+	&"release": [18, 0.4],
+	&"strain": [20, 0.35],
 	&"land": [34, 0.85],
 	&"chute": [45, 0.7],
 	&"warn": [80, 0.9],
@@ -1299,7 +1306,21 @@ func _update_feedback(delta: float) -> void:
 			_haptic(&"grab")
 		elif traversal != TRAVERSAL_NONE:
 			_haptic(&"tick")
+		elif _fb_traversal == TRAVERSAL_CLIMBING and traversal == TRAVERSAL_NONE and (_ctx["velocity"] as Vector3).y > 1.0:
+			_haptic(&"release")
 		_fb_traversal = traversal
+	# Regrip cues follow actual hand changes relative to the climber, not
+	# a repeating timer or the whole ladder moving beneath held hands.
+	_grip_feedback_cooldown = maxf(0.0, _grip_feedback_cooldown - delta)
+	var left: Vector3 = _native.get_traversal_left_hand() - (_ctx["position"] as Vector3)
+	var right: Vector3 = _native.get_traversal_right_hand() - (_ctx["position"] as Vector3)
+	if traversal == TRAVERSAL_CLIMBING and _grip_feedback_cooldown <= 0.0:
+		if maxf(left.distance_to(_grip_relative_left), right.distance_to(_grip_relative_right)) > 0.16:
+			_haptic(&"tick")
+			_audio.climb_regrip(_native.get_traversal_left_hand())
+			_grip_feedback_cooldown = 0.18
+	_grip_relative_left = left
+	_grip_relative_right = right
 	var grounded: bool = _ctx["grounded"]
 	var velocity: Vector3 = _ctx["velocity"]
 	var lethal: float = _ctx["lethal"]
@@ -1410,8 +1431,8 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"traversal": int(_ctx["traversal"]),
 		"progress": float(_native.get_traversal_progress()),
 		"ledge_point": _native.get_traversal_ledge_point(),
-		"hand_left": _native.get_traversal_left_hand(),
-		"hand_right": _native.get_traversal_right_hand(),
+		"hand_left": _native.get_traversal_left_hand_render_position(),
+		"hand_right": _native.get_traversal_right_hand_render_position(),
 		"structure_normal": _native.get_traversal_normal(),
 		"sprinting": bool(_ctx["sprinting"]),
 		"balancing": bool(_ctx["balancing"]),
@@ -1524,8 +1545,14 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	_camera.position = eye + Vector3.UP * (vertical_bob + _landing_camera.translation.y) \
 		+ right_vector * (lateral_bob + _landing_camera.translation.x) \
 		+ forward_vector * _landing_camera.translation.z
+	var swing_target := 0.0
+	var ladder := int(_native.get_kit_body_index(2960))
+	if _head_bob_on and ladder >= 0 and int(_native.get_traversal_support_entity_id()) == 2960:
+		var frame: Transform3D = _native.get_kit_body_render_transform(ladder)
+		swing_target = clampf(frame.basis.get_euler().z * 0.30, -0.052, 0.052)
+	_swing_bank = lerpf(_swing_bank, swing_target, 1.0 - exp(-8.0 * delta)) if _head_bob_on else 0.0
 	_camera.rotation = Vector3(_pitch + _view_pitch_offset + _landing_camera.rotation.x,
-		_yaw, _cam_bank + _landing_camera.rotation.y)
+		_yaw, _cam_bank + _swing_bank + _landing_camera.rotation.y)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed)
 	var fov_fall := 0.0
@@ -1551,6 +1578,13 @@ func _render_snapshot(delta: float = 0.0) -> void:
 
 	_apply_camera_feel(render_position, velocity, grounded, crouched, delta)
 	if delta > 0.0:
+		var ladder := int(_native.get_kit_body_index(2960))
+		if ladder >= 0:
+			var swing_velocity: Vector3 = _native.get_kit_body_linear_velocity(ladder)
+			_audio.update_suspended_ladder(delta, swing_velocity, int(_native.get_traversal_support_entity_id()) == 2960)
+			if int(_native.get_traversal_support_entity_id()) == 2960 and (_swing_last_velocity - swing_velocity).length() > 0.30:
+				_haptic(&"strain", clampf((_swing_last_velocity - swing_velocity).length(), 0.3, 1.0))
+			_swing_last_velocity = swing_velocity
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
 			int(_native.get_death_count()), crouched)
@@ -2761,6 +2795,7 @@ func _build_stack_interior_dressing(oxidised: Material, rust_deep: Material,
 				# this is still maintained, even where the steel has gone red.
 			var wheel := MeshInstance3D.new()
 			wheel.name = "RustyValveWheel"
+			wheel.set_meta(&"part", "RustyValveWheel")
 			var wheel_mesh := TorusMesh.new()
 			wheel_mesh.inner_radius = 0.27
 			wheel_mesh.outer_radius = 0.34
@@ -4327,6 +4362,9 @@ func _build_kit() -> void:
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
 		node.transform = _native.get_kit_body_transform(body)
+		if int(_native.get_kit_body_entity_id(body)) == 1960:
+			_add_sign_text("SERVICE +121\nSWING TRANSFER", Vector3(11.6, 112.1, -180.42), 0.0, 0.22, Color("e7c67c"), node)
+			_add_sign_text("+121\nUP", Vector3(9, 121.8, -177.74), PI, 0.26, Color("e7c67c"), node)
 		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
 		# Parts on one rigid body share a pose. Batch their triangles by
 		# material once, instead of submitting every tread/rung separately.

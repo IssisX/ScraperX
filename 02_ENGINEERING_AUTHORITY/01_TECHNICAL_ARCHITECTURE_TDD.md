@@ -1,5 +1,8 @@
 # SCRAPERX — TECHNICAL ARCHITECTURE / TDD v1.0
 
+**Project-wide motto: “The input state determines the output.”** Godot forwards player intent; native simulation resolves consequential state; interpolated snapshots drive embodiment and feedback. Derive sound, camera and haptics from measured motion, contact and state transitions. Do not create a parallel success state or presentation-owned physical outcome.
+
+
 **Status:** Technical baseline  
 **Product / repository:** `ScraperX`  
 **Product authority:** `01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md` + `01_SCRAPERX_GDD.md` + `02_ASCENT_ATLAS.md`  

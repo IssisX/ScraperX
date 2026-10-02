@@ -88,7 +88,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_cargo_net_tests scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_leather_pouch_tests scraperx_suspended_ladder_tests scraperx_cargo_net_tests scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
           if ! ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log; then
             # The public run page exposes annotations even when its raw logs
             # are unavailable. Keep the exact failing test and nearby output.
@@ -294,13 +294,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for proof in slingshot_view climber_character settings_runtime landing_camera; do
+          for proof in touch_capture slingshot_view climber_character settings_runtime landing_camera; do
             timeout 180s tools/godot/godot --headless --fixed-fps 90 --path godot \
               --script "res://tests/${proof}_test.gd" 2>&1 | tee "artifacts/${proof}.log"
             if grep -E "SCRIPT ERROR|Parse Error|FAIL" "artifacts/${proof}.log"; then exit 1; fi
           done
           grep -F "SCRAPERX_SETTINGS_RUNTIME checks=" artifacts/settings_runtime.log
-          for scenario in touch_slingshot touch_slingshot_landing touch_cargo_net; do
+          for scenario in touch_slingshot touch_slingshot_landing touch_cargo_net touch_suspended_ladder; do
             timeout 180s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee "artifacts/${scenario}.log"
             grep -F "SCRAPERX_UITEST PASS ${scenario} " "artifacts/${scenario}.log"
@@ -328,7 +328,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=16 kit_bodies=26 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=17 kit_bodies=29 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=385" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
@@ -339,7 +339,7 @@ jobs:
             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
             -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
             2>&1 | tee artifacts/godot-foundation.log
-          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=16 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
+          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=17 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
           test -s artifacts/screenshots/foundation_cleared_grade.png
           test -s artifacts/screenshots/foundation_cleared_tower.png

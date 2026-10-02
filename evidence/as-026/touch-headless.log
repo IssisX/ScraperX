@@ -1,0 +1,15 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x432 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=989 driver=Dummy
+SCRAPERX_UITEST_POSE swing_approach tick=176 position=(10.0, 110.9, -179.5396) elapsed_ms=9469
+SCRAPERX_UITEST_POSE swing_launch_view tick=544 position=(9.145803, 114.8993, -180.1189) elapsed_ms=18939
+SCRAPERX_UITEST_POSE swing_caught tick=682 position=(6.308364, 116.3094, -180.7) elapsed_ms=20908
+SCRAPERX_UITEST_POSE swing_release_height tick=1108 position=(6.59954, 119.8137, -180.6989) elapsed_ms=27022
+SCRAPERX_UITEST_POSE swing_landing tick=1277 position=(10.42216, 119.9, -178.6087) elapsed_ms=29494
+SCRAPERX_UITEST_POSE swing_tower_exit tick=1537 position=(9.000896, 121.9, -174.5989) elapsed_ms=33066
+SCRAPERX_UITEST PASS touch_suspended_ladder staging=supported_110m swing_jump=1 supported_height_m=121 support=11 deaths=0 native_feedback=1

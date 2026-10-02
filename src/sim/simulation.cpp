@@ -12,6 +12,7 @@
 #include "sim/facade_route.hpp"
 #include "sim/cargo_net_route.hpp"
 #include "sim/cargo_net.hpp"
+#include "sim/suspended_ladder.hpp"
 #include "sim/water_screw.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
@@ -1984,6 +1985,7 @@ public:
             if (content == WorldContent::Slingshot) {
                 build_cargo_net_route(*kit_);
                 cargo_net_ = std::make_unique<CargoNet>(physics_system_, object_layers::kMoving);
+                build_suspended_ladder(*kit_);
             }
         }
 
@@ -2138,7 +2140,8 @@ public:
 
         const bool sling_was_controlling = slingshot_ && slingshot_->controls_player();
         if (slingshot_) slingshot_->pre_step(delta_seconds, commands.sling_draw,
-            commands.sling_yaw, commands.sling_elevation, commands.sling_action, commands.sling_drop);
+            commands.sling_yaw, commands.sling_elevation, commands.sling_action, commands.sling_drop,
+            grounded_ && support_entity_id_ == Slingshot::kPouchEntity);
         const bool sling_controlling = slingshot_ && slingshot_->controls_player();
         if (sling_was_controlling && !sling_controlling && slingshot_->state().released)
             slingshot_flight_ = true;
@@ -6060,7 +6063,18 @@ private:
 
     // Take hold of `grip` where the body is, facing it.
     void begin_climb(JPH::BodyInterface &bodies, const Grip &grip) noexcept {
-        const JPH::RVec3 hold = bodies.GetPosition(player_id_);
+        JPH::RVec3 hold = bodies.GetPosition(player_id_);
+        if (bodies.GetMotionType(grip.body) == JPH::EMotionType::Dynamic &&
+            !(cargo_net_ && grip.body == cargo_net_->body())) {
+            // A close airborne catch must not ask the climb servo to keep the
+            // capsule intersecting its held member: that contact pins a free
+            // structure. Resolve the native stance target outward, within the
+            // existing hand-search reach. Jolt still resolves every contact;
+            // no pose write or held-body collision exclusion is introduced.
+            const float clearance = kPlayerRadius + 0.5F * kGripMaxSection + kHangWallGap;
+            const float distance = JPH::Vec3(grip.point - hold).Dot(facing_);
+            if (distance < clearance) hold -= facing_ * (clearance - distance);
+        }
         traversal_state_ = TraversalState::Climbing;
         traversal_body_ = grip.body;
         traversal_entity_id_ = grip.entity_id;
@@ -7276,6 +7290,8 @@ SlingshotSnapshot Simulation::slingshot_state() const noexcept {
     const auto *launcher = physics_world_->slingshot();
     if (!launcher) return result;
     const auto &state = launcher->state();
+    result.leather_deflection_m = state.leather_deflection_m;
+    result.leather_energy_j = state.leather_energy_j;
     result.available = true;
     result.max_draw_m = Slingshot::kMaximumDrawM;
     result.max_source_power_w = Slingshot::kPlayerPowerW;
@@ -7795,8 +7811,26 @@ Vector3 Simulation::render_player_position() const noexcept {
     };
 }
 
+Vector3 Simulation::render_traversal_hand(const bool left) const noexcept {
+    const auto current = left ? snapshot_.traversal_left_hand : snapshot_.traversal_right_hand;
+    // Acquisition, release and restore must not sweep a hand in from an old
+    // hold or from the world origin. The arm presentation owns pose blending.
+    if (snapshot_.traversal_state != previous_traversal_state_ ||
+        snapshot_.traversal_support_entity_id != previous_traversal_support_)
+        return current;
+    const auto previous = left ? previous_left_hand_ : previous_right_hand_;
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    return {previous.x + (current.x - previous.x) * alpha,
+            previous.y + (current.y - previous.y) * alpha,
+            previous.z + (current.z - previous.z) * alpha};
+}
+
 void Simulation::capture_render_history() noexcept {
     previous_player_position_ = snapshot_.player_position;
+    previous_left_hand_ = snapshot_.traversal_left_hand;
+    previous_right_hand_ = snapshot_.traversal_right_hand;
+    previous_traversal_state_ = snapshot_.traversal_state;
+    previous_traversal_support_ = snapshot_.traversal_support_entity_id;
     const auto count = kit_body_count();
     previous_kit_positions_.resize(count);
     previous_kit_rotations_.resize(count);
@@ -7859,6 +7893,9 @@ SlingshotSnapshot Simulation::render_slingshot_state() const noexcept {
                        previous.z + (current.z - previous.z) * alpha};
     };
     result.pouch_position = blend(previous_slingshot_state_.pouch_position, result.pouch_position);
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    result.leather_deflection_m = previous_slingshot_state_.leather_deflection_m +
+        (result.leather_deflection_m - previous_slingshot_state_.leather_deflection_m) * alpha;
     // The aiming lens must use the same interpolated rail as its mesh.
     // Raw 90 Hz angles otherwise step even when body translation is smooth.
     const auto rail_rotation = render_kit_body_rotation(kit_body_index(Slingshot::kLaunchRailEntity));

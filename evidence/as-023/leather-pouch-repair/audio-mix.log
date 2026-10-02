@@ -1,0 +1,54 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+Movie Maker mode enabled, recording movie in 432×371 @ 30 FPS...
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=349 driver=Dummy
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_band_stretch_0 effects_samples=45056 effects_peak=0.414943 effects_rms=0.115049 master_peak_db=-1.64
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_band_stretch_1 effects_samples=44032 effects_peak=0.441450 effects_rms=0.116962 master_peak_db=-1.10
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_sling_release_0 effects_samples=76800 effects_peak=0.954682 effects_rms=0.079862 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_rubber_squeak_0 effects_samples=38912 effects_peak=0.454029 effects_rms=0.165418 master_peak_db=-1.40
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_sling_wobble_0 effects_samples=60416 effects_peak=0.481953 effects_rms=0.102416 master_peak_db=-0.88
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=clip_fixture_bullet_time_0 effects_samples=246784 effects_peak=0.721840 effects_rms=0.176617 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=low_draw_native_draw effects_samples=157696 effects_peak=0.184357 effects_rms=0.035307 master_peak_db=-9.36
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=low_draw_native_release effects_samples=92160 effects_peak=0.769497 effects_rms=0.064468 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=low_draw_native_flight effects_samples=45056 effects_peak=0.000005 effects_rms=0.000000 master_peak_db=-6.56
+SCRAPERX_SLINGSHOT_AUDIO_NATIVE shot=low_draw draw_m=3.9568 energy_j=14578.7 source_limit_w=200000.0 draw_cues=4 release_cues=1 comedy_cues=1 launches=1 speed_mps=2.845 peak_release_speed_mps=15.638 rush_db=-59.98 touch_device=true
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=401 driver=Dummy
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=full_draw_native_draw effects_samples=419840 effects_peak=0.328136 effects_rms=0.055327 master_peak_db=-4.37
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=full_draw_native_release effects_samples=92160 effects_peak=0.769497 effects_rms=0.064468 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=full_draw_native_flight effects_samples=45056 effects_peak=0.000000 effects_rms=0.000000 master_peak_db=-1.34
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=native_speed_rush_isolation effects_samples=28672 effects_peak=0.000000 effects_rms=0.000000 master_peak_db=-4.70
+SCRAPERX_SLINGSHOT_AUDIO_NATIVE shot=full_draw draw_m=11.9798 energy_j=418231.8 source_limit_w=200000.0 draw_cues=15 release_cues=1 comedy_cues=2 launches=1 speed_mps=73.406 peak_release_speed_mps=85.373 rush_db=-10.01 touch_device=true
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=429 driver=Dummy
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=cinematic_draw_native_draw effects_samples=418816 effects_peak=0.325526 effects_rms=0.055467 master_peak_db=-4.37
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=cinematic_draw_native_release effects_samples=93184 effects_peak=0.848237 effects_rms=0.120520 master_peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=native_cinematic_sound_isolation effects_samples=34816 effects_peak=0.216357 effects_rms=0.080854 master_peak_db=-8.02
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=cinematic_draw_native_flight effects_samples=44032 effects_peak=0.000002 effects_rms=0.000000 master_peak_db=-3.32
+SCRAPERX_SLINGSHOT_AUDIO_PHASE name=native_speed_rush_isolation effects_samples=29696 effects_peak=0.000000 effects_rms=0.000000 master_peak_db=-4.72
+SCRAPERX_SLINGSHOT_AUDIO_NATIVE shot=cinematic_draw draw_m=11.9798 energy_j=418231.8 source_limit_w=200000.0 draw_cues=15 release_cues=1 comedy_cues=2 launches=1 speed_mps=78.899 peak_release_speed_mps=85.394 rush_db=-8.13 touch_device=true
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=413 driver=Dummy
+SCRAPERX_FEAR_MIX voice_phone_db=-17.46 bed_phone_db=-26.82 peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO PASS checks=159 mix_peak_db=-0.80 driver=Dummy touch_events=56 movie=/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/leather-audio.avi
+--------------------------------------------------------------------------------
+Done recording movie at path: /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/leather-audio.avi
+1058 frames at 30 FPS (movie length: 00:00:35:08), recorded in 00:01:07 (52% of real-time speed).
+CPU render time: 26.63 seconds (average: 25.17 ms/frame)
+GPU render time: 26.36 seconds (average: 24.91 ms/frame)
+Encoding time: 1.63 seconds (average: 1.54 ms/frame)
+--------------------------------------------------------------------------------
