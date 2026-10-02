@@ -325,7 +325,7 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 		neutral + Vector3(1.5, 0.35, -1.8))
 	# Native control identifies the handwheel, not the capsule's standing
 	# centre. Stand clear of the real pole at grade, inside its offer radius.
-	var control_standing := Vector3(control.x, neutral.y + 0.57, control.z - 0.4)
+	var control_standing := Vector3(control.x + 0.85, neutral.y + 0.57, control.z - 0.4)
 	if not bool(_native().debug_restart_at(control_standing)):
 		return _fail("retrieval-control staging was rejected")
 	_main._slingshot_view.cancel_cinematic()
@@ -341,6 +341,8 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 	var recovering: Dictionary = _native().get_slingshot_state()
 	if absf(float(recovering["retrieval_work_j"])) > 0.10 or absf(float(recovering["retrieval_source_power_w"])) > 0.10:
 		return _fail("idle retrieval accrued unfunded manual work")
+	if device == InputRouter.Device.TOUCH and not _main._touch.is_button_shown(&"slingshot_reel"):
+		return _fail("retrieval has no dedicated hold-to-reel touch control")
 	await _pose("retrieval_idle_cancel_available")
 	match device:
 		InputRouter.Device.TOUCH:
@@ -362,6 +364,73 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 	_detail = "staging=outside_pouch_then_walk draw_m=%.3f spring_kj=%.2f manual_kj=%.2f peak_kw=%.2f release_mps=%.2f apex_m=%.2f" % \
 		[held_draw, energy / 1000.0, held_work / 1000.0, peak_power / 1000.0, release_speed, apex]
 	_detail += " retrieval_cancel_walk_m=%.2f" % walked
+	# From here every return/reboard/recharge input is ordinary viewport
+	# input. No relocation, reset, or machine-state assignment closes the loop.
+	if not await _walk_to(device, Vector2(control_standing.x, control_standing.z), 0.15):
+		return _fail("ordinary walking could not return to the wheel")
+	if not await _offered(&"slingshot", "RETRIEVE POUCH"):
+		return _fail("return wheel is not reachable from a clear standing position")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_slingshot_state()["recovering"]), 0.5):
+		return _fail("second retrieval attempt did not engage")
+	await _seconds(0.3)
+	var retrieval_clock := 0.0
+	var retrieval_peak := 0.0
+	_reel(device, true)
+	await _seconds(0.7)
+	_reel(device, false)
+	await _seconds(0.15)
+	var paused_work := float(_native().get_slingshot_state()["retrieval_work_j"])
+	await _seconds(0.3)
+	if absf(float(_native().get_slingshot_state()["retrieval_work_j"]) - paused_work) > 0.1:
+		return _fail("lifting the reel finger left manual work running")
+	_reel(device, true)
+	while bool(_native().get_slingshot_state()["released"]) and retrieval_clock < 15.0:
+		await get_tree().process_frame
+		retrieval_clock += get_process_delta_time()
+		retrieval_peak = maxf(retrieval_peak, float(_native().get_slingshot_state()["retrieval_source_power_w"]))
+	_reel(device, false)
+	var returned: Dictionary = _native().get_slingshot_state()
+	if bool(returned["released"]) or bool(returned["recovering"]) or float(returned["energy_j"]) >= 1.0:
+		return _fail("held reel did not capture a slack, reusable seat: %s" % returned)
+	if float(returned["retrieval_work_j"]) <= 0.0 or retrieval_peak > 22000.0:
+		return _fail("returned seat has no bounded physical work receipt")
+	await _frames(3) # Let the shipping context retire the held return control.
+	if device == InputRouter.Device.TOUCH and _main._touch.is_button_shown(&"slingshot_reel"):
+		return _fail("returned seat left the reel control active")
+	await _pose("returned_seat")
+	if not await _walk_to(device, Vector2(neutral.x, neutral.z - 2.0), 0.15):
+		return _fail("ordinary walk could not approach the returned seat")
+	_main._yaw = 0.0
+	_main._pitch = 0.0
+	_move(device, -1.0)
+	var entered := await _wait_until(func() -> bool: return bool(_native().get_slingshot_state()["station_available"]), 3.0)
+	_move(device, 0.0)
+	if not entered:
+		return _fail("returned pouch cannot be entered by ordinary walking")
+	await _frames(2)
+	if not await _offered(&"slingshot", "ENTER POUCH"):
+		return _fail("settled returned seat does not offer BOARD")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_slingshot_state()["seated"]), 0.5):
+		return _fail("returned seat cannot fasten a second rider p=%s v=%s action=%s native=%s" % [_position(), _velocity(), _action_label(), _native().get_slingshot_state()])
+	_move(device, -1.0)
+	var funded_again := await _wait_until(func() -> bool:
+		var reading: Dictionary = _native().get_slingshot_state()
+		return float(reading["draw_m"]) >= target_draw and bool(reading["release_ready"]), 15.0)
+	_move(device, 0.0)
+	if not funded_again:
+		return _fail("returned seat cannot be manually charged again")
+	await _seconds(0.4)
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_slingshot_state()["launch_count"]) == launches + 2, 0.5):
+		return _fail("second funded shot did not release")
+	await _seconds(0.62)
+	if _velocity().length() < 8.0 or not _main._slingshot_view.is_cinematic_active():
+		return _fail("second shot failed to accelerate or restart its cinematic")
+	await _pose("second_release")
+	_detail += " retrieval_s=%.2f retrieval_j=%.2f retrieval_peak_kw=%.2f second_launch=1" % [
+		retrieval_clock + 0.7, returned["retrieval_work_j"], retrieval_peak / 1000.0]
 	return true
 
 
@@ -370,12 +439,16 @@ func _touch_launch_roof_landing() -> bool:
 	var landings := int(_native().get_landing_state()["landing_count"])
 	if not await _wait_until(func() -> bool: return _position().y >= 354.0 and _velocity().y > 0.0, 12.0):
 		return _fail("launched rider did not reach the manual roof-braking window")
+	if not _main._slingshot_view._hud.landing_hint.contains("TAP CHUTE NOW") or bool(_native().is_parachute_deployed()):
+		return _fail("measured braking window has no manual canopy guidance, or guidance deployed it automatically")
 	if not bool(_ctx()["chute_ok"]) or not _main._touch.is_button_shown(&"chute"):
 		return _fail("touch interface did not offer its manual upward-flight brake")
 	var brake_height := _position().y
 	_tap(1, _center(&"chute"))
 	if not await _wait_until(func() -> bool: return bool(_native().is_parachute_deployed()), 0.4):
 		return _fail("real touch canopy press did not engage native drag")
+	if not _main._slingshot_view._hud.landing_hint.contains("CHUTE OPEN"):
+		return _fail("landing guidance did not reflect the real deployed canopy")
 	await _pose("manual_airbrake_354m")
 	var apex := _position().y
 	var deepest_dip := 0.0
@@ -403,6 +476,8 @@ func _touch_launch_roof_landing() -> bool:
 	_drag(7, look_start + Vector2(0.0, 650.0), Vector2(0.0, 650.0))
 	await _frames(3)
 	_touch(7, look_start + Vector2(0.0, 650.0), false)
+	if not _main._slingshot_view._hud.landing_hint.is_empty():
+		return _fail("landing guidance stayed on-screen after native supported arrival")
 	await _pose("supported_352m_roof")
 	var stood := _position()
 	_move(InputRouter.Device.TOUCH, 1.0)
@@ -2298,3 +2373,10 @@ func _pose(pose: String) -> void:
 		print("SCRAPERX_UITEST_SCREENSHOT %s" % path)
 	else:
 		push_error("SCRAPERX_UITEST_SCREENSHOT_FAILED %s" % path)
+
+
+func _reel(device: int, held: bool) -> void:
+	if device == InputRouter.Device.TOUCH:
+		_touch(0, _center(&"slingshot_reel"), held)
+	else:
+		_move(device, -1.0 if held else 0.0)

@@ -332,6 +332,7 @@ func frame(delta: float) -> Dictionary:
 	var pendant := Vector2.ZERO
 	var crouch_held := false
 	var sprint_held := false
+	var reel := 0.0
 	if enabled and gameplay_active:
 		crouch_held = _keys.has(KEY_CTRL)
 		var keyboard := Vector2(_held(KEY_D) - _held(KEY_A), _held(KEY_W) - _held(KEY_S))
@@ -348,6 +349,7 @@ func frame(delta: float) -> Dictionary:
 			move += touch.move_vector
 			look_units += touch.take_look_delta()
 			pendant += touch.pendant_axes
+			reel = float(touch.reel_effort)
 		move = move.limit_length(1.0)
 		look = look_units * LOOK_RADIANS_PER_UNIT * look_sensitivity
 		look += _stick_look(_stick(JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y), delta)
@@ -365,4 +367,4 @@ func frame(delta: float) -> Dictionary:
 	var verbs: Array[StringName] = _verbs.duplicate()
 	_verbs.clear()
 	return {"move": move, "look": look, "pendant": pendant, "verbs": verbs,
-		"crouch_held": crouch_held, "sprint_held": sprint_held}
+		"crouch_held": crouch_held, "sprint_held": sprint_held, "reel": reel}

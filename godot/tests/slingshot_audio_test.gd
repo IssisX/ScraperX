@@ -77,8 +77,8 @@ func _drain() -> void:
 		return
 	if is_instance_valid(_main) and _main._native != null:
 		_peak_native_speed = maxf(_peak_native_speed, _main._native.get_player_linear_velocity().length())
-		for name in [&"band_stretch", &"sling_release", &"rubber_squeak", &"sling_wobble"]:
-			for voice in _main._audio._voices:
+		for name in [&"band_stretch", &"sling_release", &"rubber_squeak", &"sling_wobble", &"bullet_time"]:
+			for voice in _main._audio._voices + [_main._audio._bullet_time]:
 				if voice.playing and voice.stream in _main._audio._bank.clips.get(name, []):
 					_played_gameplay_clips[name] = true
 	for frame in _effects.get_buffer(_effects.get_frames_available()):
@@ -159,7 +159,7 @@ func _clip_fixtures() -> void:
 	_clip_player = AudioStreamPlayer.new()
 	_clip_player.bus = &"Effects"
 	root.add_child(_clip_player)
-	for name in [&"band_stretch", &"sling_release", &"rubber_squeak", &"sling_wobble"]:
+	for name in [&"band_stretch", &"sling_release", &"rubber_squeak", &"sling_wobble", &"bullet_time"]:
 		var variants: Array = _main._audio._bank.clips.get(name, [])
 		_check(not variants.is_empty(), "bank includes " + String(name))
 		for index in variants.size():
@@ -179,7 +179,9 @@ func _clip_fixtures() -> void:
 	_clip_player.stream = null
 
 
-func _shot(name: String, fraction: float) -> bool:
+func _shot(name: String, fraction: float, cinematic: bool = false) -> bool:
+	_main._settings.launch_cinematics = cinematic
+	_main._settings.head_bob = true
 	_main.set_process(true)
 	var native: Object = _main._native
 	var station: Vector3 = native.get_slingshot_state()["neutral_position"]
@@ -258,6 +260,34 @@ func _shot(name: String, fraction: float) -> bool:
 	if fraction > 0.5:
 		_check(bool(state["released"]) and native.get_player_linear_velocity().length() > 12.0, name + " funded high draw produces sustained native flight")
 	_receipt(name + "_native_release")
+	if cinematic:
+		_check(_main._audio.sling_cinematic_cues == 1 and _main._audio._bullet_time.playing,
+			"real native release starts the reserved cinematic sound once")
+		_main._audio._voices.map(func(voice: AudioStreamPlayer) -> void: voice.stop())
+		_flush()
+		await _seconds(0.35)
+		_receipt("native_cinematic_sound_isolation")
+		_check(_main._audio._bullet_time.playing, "cinematic cue survives ordinary voice-pool reuse")
+		var cues_before := int(_main._audio.sling_cinematic_cues)
+		var pause_at: Vector2 = _main._touch.button_center(&"pause")
+		_touch(9, pause_at, true)
+		_touch(9, pause_at, false)
+		await _frames(3)
+		var paused_tick := int(native.get_tick_index())
+		_check(paused and not _main._audio._bullet_time.playing and _main._slingshot_view.get_simulation_scale() == 1.0,
+			"mid-shot viewport Pause stops cinema sound and restores the native time request")
+		await _frames(3)
+		_check(int(native.get_tick_index()) == paused_tick, "mid-shot pause freezes actual native stepping")
+		var resume_at: Vector2 = _main._pause_menu.resume_button_center()
+		_touch(9, resume_at, true)
+		_touch(9, resume_at, false)
+		await _frames(3)
+		_check(not paused and not _main._audio._bullet_time.playing and int(_main._audio.sling_cinematic_cues) == cues_before,
+			"viewport Resume cannot replay the same physical launch's sound")
+		_main._settings.launch_cinematics = false
+		await _frames(2)
+		_check(not _main._audio._bullet_time.playing and _main._audio._cinematic_air_duck_db == 0.0,
+			"comfort cancellation stops cinematic audio and restores the air mix")
 	_main._audio.set_volumes(1.0, 0.0, 1.0, 1.0)
 	_flush()
 	await _seconds(0.45)
@@ -322,7 +352,13 @@ func _run() -> void:
 	if await _new_scene():
 		await _shot("full_draw", 1.0)
 	await _dispose_scene()
-	_check(_shot_energies.size() == 2 and _shot_energies[1] > _shot_energies[0], "full native draw funds more energy than partial draw")
+	if await _new_scene():
+		await _shot("cinematic_draw", 1.0, true)
+	await _dispose_scene()
+	if await _new_scene():
+		await _fear_mix()
+	await _dispose_scene()
+	_check(_shot_energies.size() == 3 and _shot_energies[1] > _shot_energies[0], "full native draw funds more energy than partial draw")
 	_clip_player.queue_free()
 	await _frames(3)
 	if _failures.is_empty():
@@ -331,3 +367,49 @@ func _run() -> void:
 	else:
 		print("SCRAPERX_SLINGSHOT_AUDIO FAIL checks=%d failures=%d" % [_checks, _failures.size()])
 	quit(0 if _failures.is_empty() else 31)
+
+
+func _phone_rms(samples: PackedFloat32Array) -> float:
+	var low := 0.0
+	var energy := 0.0
+	var alpha := 1.0 - exp(-TAU * 300.0 / AudioServer.get_mix_rate())
+	# Samples are interleaved stereo; their channels carry the same centered
+	# voice. Use one channel for a consistent phone-band high-pass measure.
+	for i in range(0, samples.size(), 2):
+		low += alpha * (samples[i] - low)
+		energy += pow(samples[i] - low, 2)
+	return sqrt(energy / maxf(1.0, samples.size() / 2.0))
+
+
+func _fear_mix() -> void:
+	_main._audio.set_volumes(1.0, 1.0, 1.0, 1.0)
+	var ambience := AudioEffectCapture.new()
+	ambience.buffer_length = 1.0
+	AudioServer.add_bus_effect(AudioServer.get_bus_index(&"Ambience"), ambience)
+	_check(_main._native.debug_restart_at(Vector3(70, 1000, -25)), "fear mix stages a clear native gravity fall")
+	_main.set_process(true)
+	var voice_samples := PackedFloat32Array()
+	var bed_samples := PackedFloat32Array()
+	var peak := 0.0
+	for i in 210:
+		await process_frame
+		var effects := _effects.get_buffer(_effects.get_frames_available())
+		var bed := ambience.get_buffer(ambience.get_frames_available())
+		for frame in _master.get_buffer(_master.get_frames_available()):
+			peak = maxf(peak, maxf(absf(frame.x), absf(frame.y)))
+		if _main._audio.fall_reactions.speaking():
+			for frame in effects:
+				voice_samples.append(frame.x)
+				voice_samples.append(frame.y)
+			for frame in bed:
+				bed_samples.append(frame.x)
+				bed_samples.append(frame.y)
+	var voice_rms := _phone_rms(voice_samples)
+	var bed_rms := _phone_rms(bed_samples)
+	_check(_main._audio.fall_reactions.reactions >= 1 and voice_rms > 0.01,
+		"actual gravity fall plays a decoded human reaction with phone-band presence")
+	_check(voice_rms > bed_rms * 2.0, "human fear voice stands at least 6 dB above the ducked air bed")
+	_check(peak < db_to_linear(-0.5), "louder fear mix stays below the master limiter ceiling")
+	print("SCRAPERX_FEAR_MIX voice_phone_db=%.2f bed_phone_db=%.2f peak_db=%.2f" % [
+		linear_to_db(maxf(voice_rms, 0.000001)), linear_to_db(maxf(bed_rms, 0.000001)), linear_to_db(maxf(peak, 0.000001))])
+	AudioServer.remove_bus_effect(AudioServer.get_bus_index(&"Ambience"), AudioServer.get_bus_effect_count(AudioServer.get_bus_index(&"Ambience")) - 1)

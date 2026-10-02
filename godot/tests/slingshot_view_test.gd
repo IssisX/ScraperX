@@ -105,6 +105,10 @@ func _run() -> void:
 	if not _check(not view._preview_mesh.visible and not view._target_marker.visible,
 			"release hides forecast while the harness remains on its guide"):
 		return
+	var opening_blur: Variant = view._speed_material.get_shader_parameter("soft_blur")
+	if not _check(opening_blur != null and float(opening_blur) > 0.8,
+			"bullet-time opens softly blurred before the accelerating clear orbit"):
+		return
 	if not _check(view.get_simulation_scale() >= 0.06 and view.get_simulation_scale() < 0.08,
 			"release asks for elapsed-time slow motion"):
 		return
@@ -125,10 +129,38 @@ func _run() -> void:
 		view.update_view(1.0 / 60.0, state, player, Vector3(0.0, 18.0, -10.0), camera)
 	if not _check(view._hud.has_thought_bubble(), "brief rising release gets its bounded thought bubble"):
 		return
+	var first_rate := 0.0
+	var last_rate := 0.0
+	var previous_angle := 0.0
+	var sampled := false
+	var orbit_samples := 0
 	for i in 160:
 		camera.global_transform = normal
 		camera.fov = 82.0
 		view.update_view(1.0 / 60.0, state, player, Vector3(0.0, 18.0, -10.0), camera)
+		var shot: Dictionary = view.get_cinematic_state()
+		if view._cinematic_clock > 0.2 and view._cinematic_clock < view.ORBIT_SECONDS:
+			var offset := camera.global_position - player
+			var actual_angle := atan2(offset.x, offset.z)
+			if not _check(absf(wrapf(actual_angle + float(shot.angle_rad), -PI, PI)) < 0.0001,
+					"actual camera completes the measured orbital phase around the current rider"):
+				return
+			if sampled:
+				var rate := absf(wrapf(actual_angle - previous_angle, -PI, PI)) * 60.0
+				if not _check(rate >= last_rate - 0.001, "orbital lens accelerates until 360 degrees"):
+					return
+				last_rate = rate
+				if first_rate == 0.0:
+					first_rate = rate
+			previous_angle = actual_angle
+			sampled = true
+			orbit_samples += 1
+		elif view._cinematic_clock >= view.ORBIT_SECONDS:
+			if not _check(float(shot.orbit_phase) == 1.0 and float(shot.soft_blur) == 0.0,
+					"exact full revolution is clear before POV handoff"):
+				return
+	if not _check(orbit_samples > 100 and last_rate > first_rate * 4.0, "slow opening rushes into a much faster complete sweep"):
+		return
 	if not _check(not view.is_cinematic_active() and not view._avatar.visible and arms.visible \
 			and view.get_simulation_scale() == 1.0 and camera.global_transform == normal \
 			and not view._hud.has_thought_bubble(),
@@ -138,10 +170,19 @@ func _run() -> void:
 	view.update_view(1.0 / 60.0, state, player, Vector3(0.0, 18.0, -10.0), camera)
 	if not _check(view.is_cinematic_active(), "second physical release begins another shot"):
 		return
+	camera.global_transform = normal
+	view.update_view(0.4, state, player, Vector3.ZERO, camera)
+	var slow_frame := camera.global_position - player
+	camera.global_transform = normal
+	view.update_view(0.0, state, player, Vector3(0, 95, -35), camera)
+	# Zero elapsed presentation time cannot jitter the lens.
+	if not _check((camera.global_position - player).distance_to(slow_frame) < 0.001,
+			"camera framing is stable when no presentation time passes"):
+		return
 	view.cancel_cinematic()
 	if not _check(not view.is_cinematic_active() and view.get_simulation_scale() == 1.0 \
 			and not view._avatar.visible and not view._speed_rect.visible and arms.visible \
-			and view._hud.state.is_empty() and not view._hud.has_thought_bubble(),
+			and view._hud.state.is_empty() and view._hud.landing_hint.is_empty() and not view._hud.has_thought_bubble(),
 			"restart cancellation clears shot and stale launch interface"):
 		return
 	camera.global_transform = normal
@@ -188,6 +229,22 @@ func _run() -> void:
 	view.update_view(0.0, {}, player, Vector3.ZERO, camera)
 	if not _check(not view._hud.has_thought_bubble() and view.get_simulation_scale() == 1.0 \
 			and not view._avatar.visible, "empty native state clears lingering launch reaction"):
+		return
+	if not _check(view._hud.landing_hint.is_empty(), "empty state cancels stale landing advice"):
+		return
+	state.launch_count = 7
+	view.update_view(0.0, state, player, Vector3.ZERO, camera) # Baseline after cancellation.
+	state.launch_count = 8
+	state.seated = false
+	state.player_grounded = false
+	view.update_view(0.1, state, player, Vector3(0, 25, -10), camera)
+	if not _check(not view._hud.landing_hint.is_empty(), "real new release starts contextual landing advice"):
+		return
+	state.player_grounded = true
+	view.update_view(0.1, state, player, Vector3.ZERO, camera)
+	state.player_grounded = false
+	view.update_view(0.1, state, player, Vector3(0, 4, 0), camera)
+	if not _check(view._hud.landing_hint.is_empty(), "ordinary jump after landing does not replay launch advice"):
 		return
 	await process_frame
 	print("SCRAPERX_SLINGSHOT_VIEW PASS")

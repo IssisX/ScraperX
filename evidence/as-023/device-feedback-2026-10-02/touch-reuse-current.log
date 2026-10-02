@@ -1,0 +1,38 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_LOCAL_RENDER_SETTINGS width=432 height=371 quality=LOW shadows=OFF msaa=OFF native_tick_hz=90
+SCRAPERX_AUDIO_BANK clips=28 msec=514 driver=Dummy
+SCRAPERX_UITEST_POSE outside_pouch tick=8 position=(6.0, 0.909706, -58.0) elapsed_ms=3909
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_outside_pouch.png
+SCRAPERX_UITEST_POSE manual_aim_settled tick=178 position=(6.0, 1.19731, -54.69997) elapsed_ms=17055
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_manual_aim_settled.png
+SCRAPERX_UITEST_POSE seated_manual_draw tick=289 position=(6.0, 1.19731, -54.69997) elapsed_ms=27475
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_seated_manual_draw.png
+SCRAPERX_UITEST_POSE charged_pitch_yaw_settled tick=920 position=(6.0, 1.19731, -42.72024) elapsed_ms=61028
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_charged_pitch_yaw_settled.png
+SCRAPERX_UITEST_POSE charged_adjustable_aim tick=1165 position=(6.0, 1.19731, -42.72024) elapsed_ms=76089
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_charged_adjustable_aim.png
+SCRAPERX_UITEST_POSE release_orbit tick=1172 position=(5.999999, 2.094072, -42.84907) elapsed_ms=92617
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_release_orbit.png
+SCRAPERX_UITEST_POSE true_first_person_return tick=1315 position=(5.999726, 125.4961, -62.00745) elapsed_ms=155213
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_true_first_person_return.png
+SCRAPERX_UITEST_POSE native_flight_apex tick=1978 position=(5.998462, 383.8519, -152.1664) elapsed_ms=188234
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_native_flight_apex.png
+SCRAPERX_UITEST_POSE retrieval_idle_cancel_available tick=2012 position=(8.35, 0.9, -57.2) elapsed_ms=195138
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_retrieval_idle_cancel_available.png
+SCRAPERX_UITEST_POSE returned_seat tick=2614 position=(8.35, 0.9, -57.32834) elapsed_ms=227251
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_returned_seat.png
+SCRAPERX_UITEST_POSE second_release tick=3109 position=(6.045426, 2.527331, -43.35971) elapsed_ms=269340
+SCRAPERX_UITEST_SCREENSHOT /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/visual/reuse-current_second_release.png
+SCRAPERX_UITEST PASS touch_slingshot staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=37.54 apex_m=383.91 retrieval_cancel_walk_m=1.35 retrieval_s=4.57 retrieval_j=619.41 retrieval_peak_kw=9.37 second_launch=1

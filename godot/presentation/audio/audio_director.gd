@@ -112,6 +112,10 @@ var _sling_squeaked := false
 var _sling_launches := 0
 var _sling_draw := 0.0
 var _sling_air_speed := 0.0
+var _bullet_time: AudioStreamPlayer
+var _cinematic_active := false
+var _cinematic_air_duck_db := 0.0
+var sling_cinematic_cues := 0
 
 
 func _ready() -> void:
@@ -144,6 +148,9 @@ func _ready() -> void:
 		_voices.append(voice)
 	for i in POSITIONAL_VOICES:
 		_voices_3d.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 8.0, 160.0))
+	_bullet_time = AudioStreamPlayer.new()
+	_bullet_time.bus = BUS_EFFECTS
+	add_child(_bullet_time)
 	_wind = _looping_player(BUS_AMBIENCE)
 	_rush = _looping_player(BUS_AMBIENCE)
 	_drone = _looping_player(BUS_AMBIENCE)
@@ -179,6 +186,7 @@ func _exit_tree() -> void:
 func quiesce() -> void:
 	_silent = true
 	fall_reactions.quiesce()
+	cancel_launch_cinematic()
 	for child in get_children():
 		if child is AudioStreamPlayer or child is AudioStreamPlayer3D:
 			child.stop()
@@ -408,16 +416,18 @@ func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: fl
 	if not _bank_ready or _silent:
 		return
 	var altitude := clampf(position.y / 150.0, 0.0, 1.0)
-	var wind_db := lerpf(-12.0, -4.0, altitude)
-	_wind.volume_db = lerpf(_wind.volume_db, wind_db, 1.0 - exp(-2.0 * delta))
-	var drone_db := lerpf(-13.0, -24.0, altitude)
-	_drone.volume_db = lerpf(_drone.volume_db, drone_db, 1.0 - exp(-1.5 * delta))
+	# Duck the entire air bed while the human voice speaks, with a quick
+	# attack and smooth release. Raising only the voice left wind masking it.
+	var voice_duck := 12.0 if fall_reactions.speaking() else 0.0
+	var wind_db := lerpf(-12.0, -4.0, altitude) - voice_duck - _cinematic_air_duck_db
+	_wind.volume_db = lerpf(_wind.volume_db, wind_db, 1.0 - exp(-(18.0 if voice_duck > 0.0 else 2.0) * delta))
+	var drone_db := lerpf(-13.0, -24.0, altitude) - voice_duck - _cinematic_air_duck_db
+	_drone.volume_db = lerpf(_drone.volume_db, drone_db, 1.0 - exp(-(18.0 if voice_duck > 0.0 else 1.5) * delta))
 	var fall := 0.0 if grounded else maxf(clampf((-velocity.y - 6.0) / 24.0, 0.0, 1.0),
 		clampf((_sling_air_speed - 12.0) / 85.0, 0.0, 1.0))
 	var rush_db := lerpf(-60.0, -2.0, sqrt(fall)) if fall > 0.0 else -60.0
-	if fall_reactions.speaking():
-		rush_db -= 8.0
-	_rush.volume_db = lerpf(_rush.volume_db, rush_db, 1.0 - exp(-6.0 * delta))
+	rush_db -= voice_duck + _cinematic_air_duck_db
+	_rush.volume_db = lerpf(_rush.volume_db, rush_db, 1.0 - exp(-(18.0 if voice_duck > 0.0 else 6.0) * delta))
 	_rush.pitch_scale = lerpf(0.9, 1.35, fall)
 
 
@@ -488,3 +498,29 @@ func _positional_player(bus: StringName, at: Vector3, unit_size: float,
 	player.max_distance = max_distance
 	add_child(player)
 	return player
+
+
+# Read-only presentation clock shared with the orbital lens. A reserved
+# voice prevents footsteps or the spring snap from stealing the time cue.
+func update_launch_cinematic(shot: Dictionary) -> void:
+	var active := bool(shot.get("active", false))
+	var clock := float(shot.get("clock", 0.0))
+	var phase := float(shot.get("orbit_phase", 0.0))
+	if active and not _cinematic_active:
+		sling_cinematic_cues += 1
+		if _bank_ready and not _silent:
+			_bullet_time.stream = _bank.pick(&"bullet_time")
+			_bullet_time.play(maxf(0.0, clock))
+	_cinematic_active = active
+	if not active:
+		cancel_launch_cinematic()
+		return
+	_cinematic_air_duck_db = lerpf(14.0, 0.0, phase)
+	_bullet_time.volume_db = lerpf(-6.0, -2.0, phase)
+
+
+func cancel_launch_cinematic() -> void:
+	_cinematic_active = false
+	_cinematic_air_duck_db = 0.0
+	if _bullet_time != null:
+		_bullet_time.stop()

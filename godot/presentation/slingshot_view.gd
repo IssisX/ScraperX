@@ -9,8 +9,10 @@ const LeatherShader := preload("res://presentation/slingshot_leather.gdshader")
 const SpeedShader := preload("res://presentation/slingshot_speed.gdshader")
 const ClimberCharacter := preload("res://presentation/climber_character.gd")
 const Style := preload("res://presentation/ui/ui_style.gd")
-const CINEMATIC_SECONDS := 2.70
-const ORBIT_SECONDS := 2.12
+const Cinema := preload("res://presentation/launch_cinematic.gd")
+const LandingGuide := preload("res://presentation/slingshot_landing_guide.gd")
+const CINEMATIC_SECONDS := Cinema.TOTAL_SECONDS
+const ORBIT_SECONDS := Cinema.ORBIT_SECONDS
 const BAND_SEGMENTS := 8
 const FRAME_ENTITY := 1950
 const POUCH_ENTITY := 2900
@@ -41,6 +43,13 @@ var _cinematic_clock := -1.0
 var _cinematic_forward := Vector3.FORWARD
 var _cinematic_start := Transform3D.IDENTITY
 var _cinematic_start_player := Vector3.ZERO
+var _shot_velocity := Vector3.ZERO
+var _orbit_phase := 0.0
+var _focus_blur := 0.0
+var _seat_was_released := false
+var _seat_ready_seconds := 0.0
+var _landing_flight_active := false
+var _last_guided_launch := -1
 var _comfortable := true
 var _simulation_scale := 1.0
 var _preview_points := PackedVector3Array()
@@ -82,9 +91,16 @@ func get_simulation_scale() -> float:
 	return _simulation_scale
 
 
-func cancel_cinematic() -> void:
+func cancel_cinematic(clear_launch_guidance: bool = false) -> void:
+	if clear_launch_guidance:
+		_landing_flight_active = false
+		_last_guided_launch = -1
+	_seat_ready_seconds = 0.0
+	_seat_was_released = false
 	_cinematic_clock = -1.0
 	_simulation_scale = 1.0
+	_orbit_phase = 0.0
+	_focus_blur = 0.0
 	_last_launch = -1
 	if _avatar != null:
 		_avatar.visible = false
@@ -92,6 +108,7 @@ func cancel_cinematic() -> void:
 		_speed_rect.visible = false
 	if _hud != null:
 		_hud.state = {}
+		_hud.landing_hint = ""
 		_hud.cinematic = false
 		_hud.queue_redraw()
 	if _preview_mesh != null:
@@ -109,10 +126,15 @@ func is_cinematic_active() -> bool:
 	return _cinematic_clock >= 0.0 and _comfortable
 
 
+func get_cinematic_state() -> Dictionary:
+	return {"active": is_cinematic_active(), "clock": maxf(_cinematic_clock, 0.0),
+		"orbit_phase": _orbit_phase, "angle_rad": TAU * _orbit_phase, "soft_blur": _focus_blur}
+
+
 func update_view(delta: float, state: Dictionary, player_position: Vector3,
 		player_velocity: Vector3, camera: Camera3D) -> void:
 	if state.is_empty() or _main == null:
-		cancel_cinematic()
+		cancel_cinematic(true)
 		return
 	if not _styled_kit:
 		_style_native_kit()
@@ -130,10 +152,17 @@ func update_view(delta: float, state: Dictionary, player_position: Vector3,
 		_main.set("_pitch", elevation)
 		camera.rotation = Vector3(elevation, yaw, camera.rotation.z)
 	var launch := int(state.get("launch_count", 0))
+	if _last_guided_launch >= 0 and launch > _last_guided_launch:
+		_landing_flight_active = true
+	_last_guided_launch = launch
+	if not bool(state.get("released", false)) or (bool(state.get("player_grounded", false)) and not bool(state.get("seated", false))):
+		_landing_flight_active = false
 	if _last_launch >= 0 and launch > _last_launch and _comfortable:
 		_cinematic_clock = 0.0
 		_cinematic_start = camera.global_transform
 		_cinematic_start_player = player_position
+		_shot_velocity = player_velocity
+		_orbit_phase = 0.0
 		var yaw := float(state.get("yaw_rad", 0.0))
 		_cinematic_forward = Vector3(sin(yaw), 0.0, -cos(yaw))
 	_last_launch = launch
@@ -146,7 +175,14 @@ func update_view(delta: float, state: Dictionary, player_position: Vector3,
 	_update_cinematic(maxf(delta, 0.0), player_position, player_velocity, camera, state)
 	var router: Variant = _main.get("_router")
 	_hud.family = int(router.glyph_family()) if router != null else Style.Family.KEYBOARD
-	_hud.state = state
+	_seat_ready_seconds = maxf(0.0, _seat_ready_seconds - delta)
+	if _seat_was_released and not bool(state.get("released", false)) and player_position.distance_to(state.get("neutral_position", player_position)) < 24.0:
+		_seat_ready_seconds = 4.0
+	_seat_was_released = bool(state.get("released", false))
+	_hud.state = state.duplicate()
+	_hud.state["seat_ready"] = _seat_ready_seconds > 0.0
+	_hud.state["launch_flight"] = _landing_flight_active
+	_hud.landing_hint = LandingGuide.message(_hud.state, player_position, player_velocity)
 	_hud.cinematic = is_cinematic_active()
 	_hud.player_speed = player_velocity.length()
 	_hud.vertical_speed = player_velocity.y
@@ -486,29 +522,29 @@ func _build_retrieval_control() -> void:
 	_retrieval_control.add_child(_retrieval_wheel)
 	var steel := _material(Color("363c39"), 0.48, 0.6)
 	var ring := TorusMesh.new()
-	ring.inner_radius = 0.17
-	ring.outer_radius = 0.205
+	ring.inner_radius = 0.26
+	ring.outer_radius = 0.31
 	ring.rings = 24
 	ring.ring_segments = 8
 	var rim := _mesh(_retrieval_wheel, ring, steel)
 	rim.rotation.x = PI * 0.5
 	for angle in [0.0, TAU / 3.0, TAU * 2.0 / 3.0]:
-		var spoke := _mesh(_retrieval_wheel, _box(Vector3(0.025, 0.19, 0.025)), steel,
-			Vector3(-sin(angle), cos(angle), 0.0) * 0.085)
+		var spoke := _mesh(_retrieval_wheel, _box(Vector3(0.035, 0.29, 0.035)), steel,
+			Vector3(-sin(angle), cos(angle), 0.0) * 0.13)
 		spoke.rotation.z = angle
-	var grip := _mesh(_retrieval_wheel, _capsule(0.032, 0.11), _rubber, Vector3(0.17, 0.0, -0.06))
+	var grip := _mesh(_retrieval_wheel, _capsule(0.032, 0.11), _rubber, Vector3(0.26, 0.0, -0.06))
 	grip.rotation.x = PI * 0.5
 	_mesh(_retrieval_control, _sphere(0.052), _brass)
 	_retrieval_label = Label3D.new()
-	_retrieval_label.text = "POUCH RETURN"
+	_retrieval_label.text = "RETURN SEAT"
 	_retrieval_label.font = Style.font_label()
-	_retrieval_label.font_size = 32
-	_retrieval_label.pixel_size = 0.004
+	_retrieval_label.font_size = 44
+	_retrieval_label.pixel_size = 0.008
 	_retrieval_label.outline_size = 5
 	_retrieval_label.outline_modulate = Style.INK
 	_retrieval_label.modulate = Style.AMBER
 	_retrieval_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_retrieval_label.position = Vector3.UP * 0.6
+	_retrieval_label.position = Vector3.UP * 0.85
 	_retrieval_control.add_child(_retrieval_label)
 	_retrieval_control.visible = false
 
@@ -519,7 +555,8 @@ func _update_retrieval_control(state: Dictionary, player_position: Vector3) -> v
 		return
 	_retrieval_control.position = state["retrieval_control_position"]
 	_retrieval_wheel.rotation.z = fmod(float(state.get("retrieval_work_j", 0.0)) / 3500.0, TAU)
-	_retrieval_label.visible = bool(state.get("released", false)) \
+	_retrieval_label.text = "HOLD REEL TO RETURN SEAT" if bool(state.get("recovering", false)) else ("SEAT READY · WALK INTO POUCH" if _seat_ready_seconds > 0.0 else "RETURN SEAT · TAP ACTION")
+	_retrieval_label.visible = (bool(state.get("released", false)) or _seat_ready_seconds > 0.0) \
 		and not bool(state.get("seated", false)) \
 		and player_position.distance_to(_retrieval_control.position) < 24.0
 
@@ -564,6 +601,7 @@ func _update_cinematic(delta: float, position: Vector3, velocity: Vector3,
 	if arms != null:
 		arms.visible = not active
 	if not active:
+		_focus_blur = 0.0
 		return
 	var normal := camera.global_transform
 	_cinematic_clock += delta
@@ -572,38 +610,47 @@ func _update_cinematic(delta: float, position: Vector3, velocity: Vector3,
 		_cinematic_clock = -1.0
 		_avatar.visible = false
 		_speed_rect.visible = false
+		_focus_blur = 0.0
 		if arms != null:
 			arms.visible = true
 		return
-	# Slow motion begins at release, then progressively hands real elapsed
-	# time back to the same native solver; its fixed 90 Hz step stays intact.
-	# Bullet-time hold lets the lens travel while the real elastic release
-	# barely advances. An accelerating complete orbit then brings time back.
-	_simulation_scale = lerpf(0.06, 1.0, smoothstep(0.55, 1.95, t))
+	# The same real native trajectory carries the shot. Filter velocity for
+	# framing only; changing launch direction/speed changes the crane and
+	# look-ahead instead of replaying one rigid horizontal ring.
+	_simulation_scale = Cinema.simulation_scale(t)
 	_pose_avatar(position, velocity, delta, state)
+	_shot_velocity = _shot_velocity.lerp(velocity, 1.0 - exp(-5.0 * delta))
+	_orbit_phase = Cinema.orbit_phase(t)
 	var progress := clampf(t / ORBIT_SECONDS, 0.0, 1.0)
-	var angle := -TAU * pow(progress, 1.72)
+	var angle := -TAU * _orbit_phase
 	var right := _cinematic_forward.cross(Vector3.UP).normalized()
-	var radius := 3.35 + 0.65 * sin(progress * PI)
+	var speed := clampf(_shot_velocity.length() / 95.0, 0.0, 1.0)
+	var rise := clampf(_shot_velocity.y / 95.0, -1.0, 1.0)
+	var radius := 3.05 + speed * 0.7 + 0.45 * sin(progress * PI)
 	var offset := (-_cinematic_forward * cos(angle) + right * sin(angle)) * radius
-	var eye := position + offset + Vector3.UP * (0.72 + 0.38 * sin(progress * PI))
-	var target := position + Vector3.UP * 0.21 + _cinematic_forward * 0.42
-	var shot := Transform3D(Basis.looking_at(target - eye), eye)
-	var reveal := smoothstep(0.0, 0.13, t)
+	# A low opening cranes up as the rider rises, then dives back to eye
+	# level. Bounded banking follows the accelerating sweep, without shake.
+	var height := 0.36 + sin(progress * PI) * (0.55 + 0.5 * rise)
+	var eye := position + offset + Vector3.UP * height
+	var lead := _shot_velocity * 0.012
+	lead = lead.limit_length(1.0)
+	var target := position + Vector3.UP * 0.25 + lead
+	var shot_basis := Basis.looking_at(target - eye)
+	shot_basis = shot_basis.rotated((target - eye).normalized(), sin(angle) * speed * 0.045)
+	var shot := Transform3D(shot_basis, eye)
+	var reveal := smoothstep(0.0, 0.16, t)
 	var follow_start := _cinematic_start
 	follow_start.origin += position - _cinematic_start_player
 	shot = follow_start.interpolate_with(shot, reveal)
 	var return_weight := smoothstep(ORBIT_SECONDS, CINEMATIC_SECONDS, t)
 	camera.global_transform = shot.interpolate_with(normal, return_weight)
-	# Remove the exterior body before the lens reaches the helmet during
-	# the return. The normal first-person arms resume at the end of the shot.
 	_avatar.visible = return_weight < 0.72
-	var speed := clampf(velocity.length() / 38.0, 0.0, 1.0)
-	var rush := sin(progress * PI) * (0.35 + 0.65 * progress)
-	_speed_material.set_shader_parameter("strength", speed * rush * (1.0 - return_weight) * 0.035)
-	# The first-person return uses the player's current FOV and current
-	# look direction. Neither is cached or written into their input state.
-	camera.fov += speed * rush * (1.0 - return_weight) * 8.0
+	_focus_blur = Cinema.soft_blur(t)
+	_speed_material.set_shader_parameter("soft_blur", _focus_blur)
+	# Focus clears as the sweep accelerates. No late radial smearing hides
+	# the final full revolution or the first-person handoff.
+	_speed_material.set_shader_parameter("strength", 0.008 * _focus_blur)
+	camera.fov += (2.0 + speed * 4.0) * sin(progress * PI) * (1.0 - return_weight)
 
 
 func _build_target_marker() -> void:
@@ -660,16 +707,21 @@ class AimHud extends Control:
 	var player_speed := 0.0
 	var vertical_speed := 0.0
 	var launch_phase := -1.0
+	var landing_hint := ""
 
 	func has_thought_bubble() -> bool:
 		return cinematic and bool(state.get("released", false)) \
 			and vertical_speed > 8.0 and launch_phase >= 0.32 and launch_phase < 1.50
 
 	func _draw() -> void:
+		if not cinematic and not landing_hint.is_empty():
+			_draw_landing_hint(landing_hint)
 		var seated := bool(state.get("seated", false))
 		var retrieving := bool(state.get("recovering", false))
 		var retrieve_available := bool(state.get("can_retrieve", false))
 		if not seated and not cinematic and not retrieving and not retrieve_available:
+			if bool(state.get("seat_ready", false)):
+				_draw_landing_hint("SEAT READY · WALK INTO THE POUCH AND TAP ACTION")
 			return
 		var u := Ui.unit(self)
 		var safe := Ui.safe_rect(self)
@@ -693,20 +745,21 @@ class AimHud extends Control:
 				draw_circle(thought.position + Vector2(346.0, 145.0) * u, 3.0 * u, Ui.PAPER)
 			return
 		if not seated:
-			var rect := Rect2(Vector2(c.x - 320.0 * u, safe.position.y + 58.0 * u), Vector2(640.0, 146.0) * u)
+			var width := minf(900.0 * u, safe.size.x * 0.78)
+			var rect := Rect2(Vector2(c.x - width * 0.5, safe.position.y + 58.0 * u), Vector2(width, 146.0 * u))
 			Ui.plate(self, rect, Ui.with_alpha(Ui.INK, 0.88), Ui.AMBER, 3.0 * u, 12.0 * u)
-			Ui.text(self, Ui.font_label(), "POUCH RETRIEVAL", rect.position + Vector2(22.0, 35.0) * u,
+			Ui.text(self, Ui.font_label(), "RETURN SEAT", rect.position + Vector2(22.0, 35.0) * u,
 				int(25.0 * u), Ui.PAPER)
 			if retrieving:
-				Ui.text(self, Ui.font_digits(), "%.1f KJ SUPPLIED  /  %.1f KW PULL" % [
-					float(state.get("retrieval_work_j", 0.0)) / 1000.0,
+				Ui.text(self, Ui.font_digits(), "%.1f M TO CATCH  /  %.1f KW PULL" % [
+					(state.get("pouch_position", Vector3.ZERO) as Vector3).distance_to(state.get("neutral_position", Vector3.ZERO)),
 					float(state.get("retrieval_source_power_w", 0.0)) / 1000.0],
 					rect.position + Vector2(22.0, 80.0) * u, int(22.0 * u), Ui.AMBER)
 				var pull_hint := "MOVE BACK TO REEL"
 				if family == Ui.Family.KEYBOARD:
 					pull_hint = "HOLD S TO REEL"
 				elif family == Ui.Family.TOUCH:
-					pull_hint = "DRAG MOVE BACK TO REEL"
+					pull_hint = "HOLD REEL UNTIL READY"
 				Ui.text(self, Ui.font_label(), pull_hint,
 					rect.position + Vector2(22.0, 118.0) * u, int(18.0 * u), Ui.PAPER_DIM)
 				var left := rect.end.x - 147.0 * u
@@ -795,3 +848,32 @@ class AimHud extends Control:
 		elif predicted.size() > 1:
 			Ui.text(self, Ui.font_label(), "DOTTED ARC: PREDICTED CONTACT", p + Vector2(24.0, 232.0) * u,
 				int(16.0 * u), Ui.with_alpha(Ui.PAPER_DIM, 0.75))
+
+
+	func _draw_landing_hint(text: String) -> void:
+		var u := Ui.unit(self)
+		var safe := Ui.safe_rect(self)
+		var width := minf(1440.0 * u, safe.size.x * 0.78)
+		var font := Ui.font_label()
+		var font_size := int(28.0 * u)
+		var lines := _hint_lines(text, width - 48.0 * u, font, font_size)
+		var rect := Rect2(Vector2(size.x * 0.5 - width * 0.5, safe.position.y + 58.0 * u),
+			Vector2(width, (32.0 + 44.0 * lines.size()) * u))
+		Ui.plate(self, rect, Ui.with_alpha(Ui.INK, 0.88), Ui.AMBER, 2.0 * u, 10.0 * u)
+		for i in lines.size():
+			Ui.text(self, font, lines[i], rect.position + Vector2(width * 0.5, (44.0 + 44.0 * i) * u),
+				font_size, Ui.PAPER, HORIZONTAL_ALIGNMENT_CENTER)
+
+	func _hint_lines(text: String, width: float, font: Font, font_size: int) -> Array[String]:
+		var lines: Array[String] = []
+		var line := ""
+		for word in text.split(" ", false):
+			var candidate: String = word if line.is_empty() else line + " " + word
+			if not line.is_empty() and Ui.text_width(font, candidate, font_size) > width:
+				lines.append(line)
+				line = word
+			else:
+				line = candidate
+		if not line.is_empty():
+			lines.append(line)
+		return lines

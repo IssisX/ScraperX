@@ -563,7 +563,10 @@ func _process(delta: float) -> void:
 	var desired: Vector2 = intent["move"]
 	var sling_yaw := _sling_goal_yaw if aiming else float(launcher.get("yaw_rad", 0.0))
 	var sling_elevation := _sling_goal_elevation if aiming else float(launcher.get("elevation_rad", 1.4311699866))
-	_native.set_slingshot_input(maxf(0.0, -desired.y) if sling_seated or sling_recovering else 0.0, sling_yaw, sling_elevation)
+	var sling_effort := maxf(0.0, -desired.y) if sling_seated or sling_recovering else 0.0
+	if sling_recovering:
+		sling_effort = maxf(sling_effort, float(intent.get("reel", 0.0)))
+	_native.set_slingshot_input(sling_effort, sling_yaw, sling_elevation)
 	var facing := Vector2(-sin(_yaw), -cos(_yaw))
 
 	if _ci_mode:
@@ -610,12 +613,15 @@ func _process(delta: float) -> void:
 		var sling: Dictionary = _native.get_slingshot_render_state()
 		_audio.update_slingshot(sling, _native.get_player_linear_velocity())
 		sling["reduced_motion"] = not _settings.launch_cinematics
+		sling["player_grounded"] = _native.is_player_grounded()
+		sling["chute_deployed"] = _native.is_parachute_deployed()
 		_sling_preview_clock -= delta
 		if bool(sling["seated"]) and not bool(sling["released"]) and _sling_preview_clock <= 0.0:
 			_sling_preview_clock = 0.2
 			_sling_prediction = _native.get_slingshot_prediction()
 		sling["trajectory_points"] = _sling_prediction
 		_slingshot_view.update_view(delta, sling, _native.get_player_render_position(), _native.get_player_linear_velocity(), _camera)
+		_audio.update_launch_cinematic(_slingshot_view.get_cinematic_state())
 	_update_feedback(delta)
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
@@ -818,6 +824,9 @@ func _open_pause(from_system: bool = false) -> void:
 	if from_system and not _uitest_scenario.is_empty():
 		return
 	_paused = true
+	if _slingshot_view != null:
+		_slingshot_view.cancel_cinematic()
+	_audio.cancel_launch_cinematic()
 	_router.gameplay_active = false
 	_router.clear_held()
 	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -846,7 +855,8 @@ func _restart_checkpoint() -> void:
 func _after_restart() -> void:
 	_landing_camera.reset()
 	if _slingshot_view != null:
-		_slingshot_view.cancel_cinematic()
+		_slingshot_view.cancel_cinematic(true)
+	_audio.cancel_launch_cinematic()
 	_sling_was_seated = false
 	_sling_preview_clock = 0.0
 	_sling_prediction = PackedVector3Array()
@@ -1045,7 +1055,7 @@ func _read_context() -> Dictionary:
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	if bool(sling.get("can_retrieve", false)) or bool(sling.get("recovering", false)):
 		action = {"id": &"slingshot", "label": "STOP RETRIEVAL" if bool(sling.get("recovering", false)) else "RETRIEVE POUCH", "icon": &"operate",
-			"detail": "HOLD BACK TO REEL" if bool(sling.get("recovering", false)) else "WOODEN SLINGSHOT"}
+			"detail": "HOLD THE REEL CONTROL" if bool(sling.get("recovering", false)) else "RETURN THE SEAT"}
 	elif (sling_seated or bool(sling.get("station_available", false))) and not bool(sling.get("released", false)):
 		action = {"id": &"slingshot", "label": ("RELEASE" if bool(sling.get("release_ready", false)) else "DRAW MORE") if sling_seated else "ENTER POUCH", "icon": &"operate",
 			"detail": "PULL BACK TO STRETCH" if sling_seated else "WOODEN SLINGSHOT"}

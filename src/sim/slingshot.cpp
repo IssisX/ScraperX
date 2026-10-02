@@ -368,7 +368,7 @@ bool Slingshot::player_at_control() const {
     const auto offset = player - retrieval_control_position();
     const double ground_y = neutral_position().GetY() - .35;
     const double soles_y = player.GetY() - .9;
-    return double(offset.GetX()) * offset.GetX() + double(offset.GetZ()) * offset.GetZ() <= .75 * .75 &&
+    return double(offset.GetX()) * offset.GetX() + double(offset.GetZ()) * offset.GetZ() <= 1.25 * 1.25 &&
            soles_y >= ground_y - .08 && soles_y <= ground_y + .55;
 }
 

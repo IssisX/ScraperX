@@ -14,6 +14,7 @@ extends RefCounted
 # require for large falls. Screams, gasps and panicked swearing cannot be
 # synthesised credibly; they need recorded performances.
 
+const Cinema := preload("res://presentation/launch_cinematic.gd")
 const MIX_RATE := 22050
 const STEP_VARIANTS := 4
 
@@ -45,6 +46,7 @@ func build() -> void:
 	clips[&"sling_release"] = [_wav(_sling_release())]
 	clips[&"rubber_squeak"] = [_wav(_rubber_squeak())]
 	clips[&"sling_wobble"] = [_wav(_sling_wobble())]
+	clips[&"bullet_time"] = [_wav(_bullet_time())]
 	clips[&"bird"] = _variants(3, _bird)
 	clips[&"wind_loop"] = [_loop(_wind(4.5), 0.5)]
 	clips[&"rush_loop"] = [_loop(_rush(2.4), 0.4)]
@@ -549,3 +551,24 @@ func _loop(samples: PackedFloat32Array, fade_seconds: float) -> AudioStreamWAV:
 		var w := float(i) / float(fade)
 		out[i] = out[i] * w + samples[body + i] * (1.0 - w)
 	return _wav(out, out.size())
+
+
+# Original cinematic sound, not sampled movie audio: a stretched metallic
+# bloom, low pressure pulse and widening air sweep. Spectral opening and
+# acceleration follow the same clock as the 360-degree lens/focus.
+func _bullet_time() -> PackedFloat32Array:
+	var out := _silence(Cinema.ORBIT_SECONDS)
+	var phase := 0.0
+	var noise := 0.0
+	for i in out.size():
+		var t := float(i) / MIX_RATE
+		var orbit := Cinema.orbit_phase(t)
+		var cutoff := lerpf(240.0, 6500.0, sqrt(orbit))
+		noise += (1.0 - exp(-TAU * cutoff / MIX_RATE)) * (_rng.randf_range(-1.0, 1.0) - noise)
+		phase += TAU * lerpf(150.0, 1450.0, orbit) / MIX_RATE
+		var fade := smoothstep(0.0, 0.045, t) * (1.0 - smoothstep(Cinema.ORBIT_SECONDS - 0.16, Cinema.ORBIT_SECONDS, t))
+		var bloom := sin(TAU * 110.0 * t) * exp(-t * 1.3) * 0.32
+		bloom += (sin(TAU * 310.0 * t) + sin(TAU * 317.0 * t)) * exp(-t * 1.9) * 0.16
+		var sweep := noise * lerpf(0.12, 0.62, orbit) + sin(phase) * lerpf(0.19, 0.07, orbit)
+		out[i] = (bloom + sweep) * fade
+	return out

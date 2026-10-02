@@ -28,6 +28,7 @@ const B_DOWN := &"pendant_down"
 const B_LEFT := &"pendant_left"
 const B_RIGHT := &"pendant_right"
 const B_SLING := &"sling"
+const B_REEL := &"slingshot_reel"
 
 const TONE_NORMAL := 0
 const TONE_PRIMARY := 1
@@ -70,12 +71,13 @@ var router: Node
 var move_vector := Vector2.ZERO
 var sprint_latched := false
 var pendant_axes := Vector2.ZERO
+var reel_effort := 0.0
 var touch_scale := 1.0
 
 var _u := 1.0
 var _buttons := {}
 var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_UP,
-	B_DOWN, B_LEFT, B_RIGHT, B_SLING]
+	B_DOWN, B_LEFT, B_RIGHT, B_SLING, B_REEL]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -85,6 +87,7 @@ var _safe := Rect2()
 var _look_index := -1
 var _look_accum := Vector2.ZERO
 var _operating := false
+var _retrieving := false
 var _axis_names := ["", ""]
 var _pendant_center := Vector2.ZERO
 var _hint_clock := 0.0
@@ -99,7 +102,7 @@ func _ready() -> void:
 	for id in _order:
 		var button := TouchButton.new()
 		button.id = id
-		button.hold = id in [B_UP, B_DOWN, B_LEFT, B_RIGHT]
+		button.hold = id in [B_UP, B_DOWN, B_LEFT, B_RIGHT, B_REEL]
 		_buttons[id] = button
 	_buttons[B_PAUSE].icon = &"pause"
 	_buttons[B_DROP].icon = &"drop"
@@ -109,6 +112,9 @@ func _ready() -> void:
 	_buttons[B_LEFT].icon = &"left"
 	_buttons[B_RIGHT].icon = &"right"
 	_buttons[B_SLING].icon = &"sling"
+	_buttons[B_REEL].icon = &"operate"
+	_buttons[B_REEL].label = "HOLD TO REEL"
+	_buttons[B_REEL].tone = TONE_PRIMARY
 	resized.connect(_layout)
 	_layout()
 
@@ -156,6 +162,7 @@ func _layout() -> void:
 	# is on the machine and the right thumb stays free to watch the load.
 	_pendant_center = _stick_home + Vector2(20.0, -40.0) * _u
 	var arm := 158.0 * _u
+	_place(B_REEL, _pendant_center, 110.0)
 	_place(B_UP, _pendant_center + Vector2(0.0, -arm), 80.0)
 	_place(B_DOWN, _pendant_center + Vector2(0.0, arm), 80.0)
 	_place(B_LEFT, _pendant_center + Vector2(-arm, 0.0), 80.0)
@@ -196,6 +203,7 @@ func reset_touches() -> void:
 	move_vector = Vector2.ZERO
 	sprint_latched = false
 	pendant_axes = Vector2.ZERO
+	reel_effort = 0.0
 	for button in _buttons.values():
 		button.index = -1
 	queue_redraw()
@@ -234,7 +242,7 @@ func _touch_down(index: int, at: Vector2) -> bool:
 		pressed_feedback.emit()
 		queue_redraw()
 		return true
-	if _stick_index == -1 and not _operating and _stick_zone.has_point(at):
+	if _stick_index == -1 and not _operating and not _retrieving and _stick_zone.has_point(at):
 		_stick_index = index
 		_stick_origin = at
 		_stick_knob = Vector2.ZERO
@@ -357,8 +365,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 	var station: StringName = ctx["operating"]
 	_operating = station != &""
+	_retrieving = bool(ctx.get("slingshot_recovering", false))
+	_buttons[B_REEL].shown = _retrieving
 	var crouch: TouchButton = _buttons[B_CROUCH]
-	crouch.shown = not _operating and not hanging and not climbing
+	crouch.shown = not _operating and not _retrieving and not hanging and not climbing
 	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
 	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
 	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
@@ -380,7 +390,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 			_axis_names = ["RAISE / LOWER", ""]
 		_:
 			_axis_names = ["", ""]
-	if _operating and _stick_index != -1:
+	if (_operating or _retrieving) and _stick_index != -1:
 		_touch_up(_stick_index)
 
 	for button in _buttons.values():
@@ -390,6 +400,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		button.flash = maxf(0.0, button.flash - delta * 3.5)
 	pendant_axes = Vector2(
 		_held(B_RIGHT) - _held(B_LEFT), _held(B_UP) - _held(B_DOWN))
+	reel_effort = _held(B_REEL)
 	if visible:
 		queue_redraw()
 
@@ -400,7 +411,7 @@ func _held(id: StringName) -> float:
 
 
 func _draw() -> void:
-	if not _operating:
+	if not _operating and not _retrieving:
 		_draw_stick()
 	for id in _order:
 		_draw_button(_buttons[id])

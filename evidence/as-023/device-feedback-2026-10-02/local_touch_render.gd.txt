@@ -1,0 +1,18 @@
+extends SceneTree
+
+# Local software-rendering harness only. Shipping input, native source and
+# UI driver are unchanged; use actual player graphics settings to bound cost.
+func _initialize() -> void:
+	root.size = Vector2i(432, 371)
+	root.content_scale_size = Vector2i(432, 371)
+	root.disable_3d = true # Capture-only 3D; native/input continue on every frame.
+	_run.call_deferred()
+
+func _run() -> void:
+	var main = load("res://main.tscn").instantiate()
+	root.add_child(main)
+	main._settings.apply_quality(0)
+	main._settings.shadow_quality = 0
+	main._settings.msaa = 0
+	main._apply_settings()
+	print("SCRAPERX_LOCAL_RENDER_SETTINGS width=432 height=371 quality=LOW shadows=OFF msaa=OFF native_tick_hz=90")

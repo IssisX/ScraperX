@@ -1,0 +1,4 @@
+Runtime GDScript/shaders byte-match candidate source except the declared capture-only 3D switches in UiTestDriver._pose.
+No native/input/test assertion changes in this private wrapper.
+Shipping project.godot and extension selectors are untouched; private runtime uses ARM64 Linux selectors and 432x371 window.
+Native slingshot.cpp SHA256 9d11334dc4081d99a4453256762505d02f7a808a6a3be119ad0adf90495b8d26

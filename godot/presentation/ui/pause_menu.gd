@@ -488,7 +488,7 @@ func _controls_rows(_view_family: int) -> Array:
 		["icon", &"move", "DRAW", "Pull the left stick backward; watch the power bar, then let go to hold"],
 		["icon", &"sling", "RELEASE", "Tap RELEASE to fire the chosen stretch"],
 		["icon", &"chute", "CHUTE / BRAKE", "After the pouch exit, open the canopy to brake ascent or descent; tap again to stow"],
-		["icon", &"operate", "RETRIEVE", "At the grade control, tap Action and pull backward to return the pouch"],
+		["icon", &"operate", "RETRIEVE", "At the RETURN SEAT wheel, tap Action, then hold REEL until the seat latches"],
 		["icon", &"drop", "DROP", "Leave the pouch or a ledge; stop retrieval"],
 		["icon", &"jump", "JUMP", "Jump; climb up while hanging"],
 		["icon", &"crouch", "CROUCH", "Duck under low gaps; tap again to stand"],

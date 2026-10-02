@@ -1,0 +1,17 @@
+# Follow-up launcher feedback — 2026-10-02
+
+This slice is based on ChatGPT source `61808472f01f106c0e70d88fd74d348b071910fd`, a documentation successor to playable source `83822fc`. Start Here owns the immutable CI/APK receipt after publication. The evidence ledger explains the current measurements and limits.
+
+All current native Simulation and Godot bridge sources were compiled for Linux ARM64 with GCC 15.2 in Termux/proot Ubuntu. The host harness imports existing static libraries at the repository-pinned Jolt `e77f175595e64cb44218cc9d9d56fc365ad0e36a` and godot-cpp `507ed9d840c01a3c5b2a39af8bb4000bfac30bf5` revisions. Shipping CMake and Android delivery are unchanged. Godot is official 4.7 `5b4e0cb0f` ARM64 Linux.
+
+`native-arm64-last-test.log` records 27 passing gates and the retired AS-003 freight east-face failure. The unchanged-baseline counterfactual recompiles HEAD's slingshot.cpp, links that object before the current static Simulation archive (excluding its changed slingshot object), and uses the identical unchanged broad-test object and Jolt library. Its `baseline-native-arm64.log` reproduces the same failure. The only current native edit expands grade wheel reach from 0.75 to 1.25 m. No CI assertion is removed or weakened.
+
+View, settings, keyboard/pad reuse and touch roof logs use real native Simulation and shipping input. UI-test staging outside the pouch and at the ground wheel is explicit setup; after wheel staging there is no relocation/reset to manufacture recovery, reboarding or the second shot. The complete route includes finger-up stopping work, idle, cancellation, ordinary walking and a second funded release.
+
+`audio-final.log` comes from actual Movie Maker mixing, with 3D disabled as declared in the audio test. It is an audible-signal/limiter/presentation-state proof, not rendered-geometry or phone-speaker evidence. The reserved original time cue is mixed and mid-shot viewport Pause/Resume verifies frozen ticks, cancelled sound and no replay.
+
+The camera PNGs come from the native-driven visual probe and were opened for review. They show soft opening, clearer acceleration, clear 360-degree finish and actual POV restoration. The probe uses explicit native staging/input; these are not viewport-touch traversal receipts.
+
+Continuous software rendering of the full touch route was stopped because it was impractically slow; `stopped-*` logs are partial evidence, not passing routes or Android performance measurements. The follow-up capture harness uses actual LOW graphics with shadows/MSAA OFF at 432x371. It disables 3D between captures, enabling it for two real rendered frames at each shipping UiTestDriver._pose, then captures the actual viewport. All input, native stepping and gameplay assertions stay unchanged. `local_touch_render.gd.txt` and `runtime-source-identity.log` record this private verification harness. This supplies inspected UI/native-state captures, not a claim that every intermediate 3D frame was rendered. Shipping project/extension selectors and gameplay source stay unchanged; private runtime uses Linux ARM64 selectors.
+
+Fold execution, sustained frame rate, cinematic comfort and subjective speaker quality require device acceptance. No next 10–20 m tower section is selected before the owner accepts this launcher.

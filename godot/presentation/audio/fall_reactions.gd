@@ -33,7 +33,7 @@ func _ready() -> void:
 	_silent = AudioServer.get_driver_name() == "Dummy" and Engine.get_write_movie_path().is_empty()
 	_voice = AudioStreamPlayer.new()
 	_voice.bus = &"Effects"
-	_voice.volume_db = -6.0
+	_voice.volume_db = 3.0 # +9 dB over the preceding candidate; Master limits peaks.
 	add_child(_voice)
 
 
