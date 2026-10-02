@@ -1,4 +1,5 @@
 #pragma once
+#include <godot_cpp/variant/packed_int32_array.hpp>
 
 #include "sim/simulation.hpp"
 
@@ -221,6 +222,8 @@ public:
     // Every kit body as the native declares it, for a presentation that
     // draws exactly what collides: its boxes as 11 floats each (half x y z,
     // offset x y z, rotation x y z w, material class), and its pose.
+    [[nodiscard]] godot::PackedVector3Array get_cargo_net_vertices() const;
+    [[nodiscard]] godot::PackedInt32Array get_cargo_net_indices() const;
     [[nodiscard]] std::int64_t get_kit_body_count() const;
     [[nodiscard]] std::int64_t get_kit_body_entity_id(std::int64_t body) const;
     [[nodiscard]] bool is_kit_body_dynamic(std::int64_t body) const;

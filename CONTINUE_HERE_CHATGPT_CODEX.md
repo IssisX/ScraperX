@@ -2,6 +2,10 @@
 
 **Revised 2026-10-02. Repository `IssisX/ScraperX`; write branch `ChatGPT` only. The recovered original scratch is committed on GitHub. Do not restart source recovery or reset to an earlier delivery. This document is the continuation record; Start Here owns the current immutable APK receipt, the Atlas owns spatial parameters and AS-023 owns the launcher contract.**
 
+**Current owner request, 2026-10-02 — AS-024:** add one easy, creative ground-to-first-level route alongside the slingshot. This explicitly authorizes ground construction now without asserting launcher device acceptance. A broad cargo-net climb on a visible steel gantry reaches the existing **+11 m first ring**: ordinary walk-up → CLIMB → held forward → native top-out → supported walking. No staircase/ramp or slingshot use is required. The net uses actual native Jolt soft-body sag and loaded grips; final route evidence and Android delivery are tracked below. See [AS-024](03_EXECUTION/ASCENT/AS-024_CARGO_NET_ENTRY.md). The preceding verified APK below contains the launcher repair, not this new route.
+
+**Latest owner direction, 2026-10-02 — AS-025:** add restrained lived-in detail to the playable tower interior. Chosen mood: working mill with visible rust and slack cables, warm service lights, warning marks, and occasional sparks. The first presentation pass is implemented and standing-eye inspection captures have been reviewed; device appearance remains open.
+
 ## Current handoff: return-seat / cinematic / audibility repair
 
 **Verified delivery, 2026-10-02:** source `df3a483bcc3a7f38629d520057413097a721e509`, reviewed tree `fd8b5a0eca4d99c801775ff14c5a2f03b0155e5f` on `ChatGPT`. [Exact-source run 37038456873](https://github.com/IssisX/ScraperX/actions/runs/37038456873) succeeded, job `110942357099`, 23 successful steps; the failure-only diagnostics step was skipped. Fresh x86 CI passes **28/28 native gates** (64.15 s), complete touch return/reboard/second-shot, +352 m supported landing with zero deaths, camera/focus/comfort, **2,894 settings checks**, **152 actual-mixer checks**, visual proof, retained routes/solids and Android ARM64 compilation/export. Download [artifact 11243377381](https://github.com/IssisX/ScraperX/actions/runs/37038456873/artifacts/11243377381), `ScraperX-build-df3a483bcc3a7f38629d520057413097a721e509`, and install `apk/ScraperX-ChatGPT.apk`. Artifact checkpoint names this exact source; the independently recomputed APK SHA-256 is `70dafc26f32101b6abffeeb3bb32ab49f3218c3651dcdb00934e89d2873fcadd` and matches `apk/SHA256SUMS.txt`. CI apksigner verifies the single stable signer `9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4`, package `com.cory.scraperx.chatgpt` and label `ScraperX-ChatGPT`; those logs were inspected. The downloaded ZIP digest also independently matches GitHub artifact metadata. Artifact expires 2026-12-31. Local APK cryptographic signature verification and Android execution were not performed. The source identity is artifact sidecar metadata, not an embedded APK commit label. Documentation-only successors do not imply another executable. Device acceptance remains open before the next 10–20 m section.
@@ -245,6 +249,22 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 - The owner prefers substantial, well-specified coding assignments for model handoff. Complete difficult physical/ownership decisions and identify a meaningful handoff boundary. The prior migration session was paused; that historical boundary has since been superseded by the explicit AS-023 continuation above.
 
 ## 7. Running to-do at this handoff
+
+**Current single construction slice, owner-authorized 2026-10-02 — AS-024:**
+
+- [x] Add a broad cargo-net grade entry, native reachable grips/top-out and supported connection to the first +11 m ring; preserve the slingshot and retained fixture geometry.
+- [x] Prove native ordinary-input ascent on three lanes, including stop/resume and actual viewport-touch grade → climb → first-ring walking with zero deaths and no launcher work.
+- [x] Inspect current flexible-net entry, climbing, receiver and supported first-ring captures; headless and rendered shipping touch both pass.
+- [x] Prepare the combined AS-024/025 source candidate with inspected captures and current authoritative documentation.
+- [ ] Track its exact-source Actions APK delivery. Local cargo/foundation touch pass; the retained AS-003 carry fixture fails identically on unchanged baseline in ARM64 (see evidence), while 27 other retained gates pass.
+- [ ] Observe Android readability/ergonomics when installed. This ground route is authorized now; launcher device acceptance and further upper content remain separate open boundaries.
+
+**Current environment pass, owner-authorized 2026-10-02 — AS-025:**
+
+- [x] Compare the normal playable tower’s sparse interior frame with its denser presentation treatment; identify the missing interior dressing layer.
+- [x] Agree on an active mill mood with controlled wear: rusted risers, slack cable loops, caged work lights, warning marks, handwheels and a small recurring spark burst.
+- [x] Inspect lower-shaft standing-eye presentation captures; retain open traversal lanes. These inspection cameras prove dressing, not locomotion.
+- [x] Record the implemented working-mill treatment in the Atlas; keep it presentational and out of native collision authority.
 
 **Current follow-up feedback slice, 2026-10-02:**
 

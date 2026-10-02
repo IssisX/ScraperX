@@ -17,6 +17,7 @@ const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 
 const SCENARIOS := {
 	"ground_foundation": 8,
+	"touch_cargo_net": 8,
 	"keyboard_slingshot": 8,
 	"pad_slingshot": 8,
 	"touch_slingshot": 8,
@@ -75,7 +76,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -106,6 +107,8 @@ func _run() -> void:
 	match _scenario:
 		"ground_foundation":
 			ok = await _ground_foundation()
+		"touch_cargo_net":
+			ok = await _touch_cargo_net()
 		"keyboard_slingshot":
 			ok = await _slingshot(InputRouter.Device.KEYBOARD_MOUSE)
 		"pad_slingshot":
@@ -1180,13 +1183,64 @@ func _teeter_ballast_x(beam: int, ballast: int) -> float:
 func _standing_above(height: float) -> bool:
 	return bool(_ctx()["grounded"]) and int(_ctx()["traversal"]) == 0 and _position().y > height
 
+func _touch_cargo_net() -> bool:
+	var device := InputRouter.Device.TOUCH
+	await _seconds(0.5)
+	# Start at the ordinary grade spawn. No fixture, relocation, restart,
+	# launch or scripted ascent: all movement enters through viewport touch.
+	if not await _walk_to(device, Vector2(20.0, -110.0), 0.12, 35.0):
+		return _fail("cargo net grade approach %s" % _position())
+	await _face(Vector2(0, -1))
+	_main._pitch = 0.35
+	await _pose("cargo_net_entry")
+	if not await _walk_to(device, Vector2(20.0, -117.38), 0.12, 4.0):
+		return _fail("cargo net grip approach %s" % _position())
+	await _face(Vector2(0, -1))
+	_main._pitch = 0.0
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("cargo net CLIMB not offered %s" % _position())
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_ctx()["climbing"]), 0.8):
+		return _fail("cargo net touch Action did not take hold")
+	var still_y := _position().y
+	await _seconds(0.6)
+	if _position().y - still_y > 0.06:
+		return _fail("cargo net advanced without held input")
+	_move(device, 1.0)
+	if not await _wait_until(func() -> bool: return _position().y > 5.5, 8.0):
+		_move(device, 0.0)
+		return _fail("cargo net lower climb blocked %s" % _position())
+	_move(device, 0.0)
+	await _seconds(0.3)
+	await _pose("cargo_net_climbing")
+	_move(device, 1.0)
+	var arrived := await _wait_until(func() -> bool: return _standing_above(11.7), 9.0)
+	_move(device, 0.0)
+	if not arrived:
+		return _fail("cargo net top-out blocked %s" % _position())
+	await _seconds(0.4)
+	await _pose("cargo_net_receiver")
+	for point in [Vector2(18.5, -120.5), Vector2(18.5, -126.0)]:
+		if not await _walk_to(device, point, 0.12, 5.0):
+			return _fail("cargo net receiver to first ring %s" % _position())
+	await _seconds(0.4)
+	if not _standing_above(11.7) or absf(_position().y - 11.9) > 0.15 \
+			or int(_native().get_support_entity_id()) != 11 or int(_native().get_death_count()) != 0:
+		return _fail("cargo net first tower ring unsupported %s" % _position())
+	if float(_native().get_slingshot_state()["work_j"]) != 0.0:
+		return _fail("cargo net route used launcher work")
+	await _pose("cargo_net_first_ring")
+	_detail = "staging=ordinary_grade_spawn supported_height_m=11.00 deaths=0 slingshot_used=0"
+	return true
+
+
 func _ground_foundation() -> bool:
 	if _main._regression_scene:
 		return _fail("production proof selected a regression scene")
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 15:
+	if int(_native().get_moving_body_count()) != 16:
 		return _fail("default slingshot, stair, lift and teeter body inventory differs")
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
@@ -1207,7 +1261,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=15 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=16 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
 	return true
 
 

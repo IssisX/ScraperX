@@ -1,0 +1,2 @@
+Before the Jolt soft-body implementation, the otherwise passing rigid cargo route is rejected by:
+FAIL AS-024 climber load physically deflects the net and its real grip

@@ -378,6 +378,9 @@ var _legal_forty_sheave_b := Vector3.ZERO
 var _hook5_door_pivot: Node3D
 var _hook5_bar_node: Node3D
 var _hook5_block_node: Node3D
+var _cargo_net_mesh: MeshInstance3D
+var _cargo_net_indices := PackedInt32Array()
+var _cargo_net_material: StandardMaterial3D
 var _kit_root: Node3D
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
@@ -455,7 +458,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -2667,10 +2670,161 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 	# The normal scene keeps only the collision-honest frame and authored ascent routes.
 	if not _regression_scene:
 		_build_stack_footings(rust_deep, oxidised, mill_scale)
+		_build_stack_interior_dressing(oxidised, rust_deep, rust_bright, mill_scale, galvanised)
 		return
 	_build_stack_dressing(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded)
 	_build_stack_megastructure(mill_scale, oxidised, rust_deep, rust_bright, galvanised,
 		faded, timber)
+
+
+# Small maintenance traces make the hollow frame read as a place people have
+# worked in. These stay high or tight to the inside columns; the player's routes
+# and all consequential collision remain owned by the native world.
+func _build_stack_interior_dressing(oxidised: Material, rust_deep: Material,
+		rust_bright: Material, mill_scale: Material, galvanised: Material) -> void:
+	var cx := STACK_CENTER.x
+	var cz := STACK_CENTER.z
+	var inner_half := STACK_HALF_EXTENT - STACK_DECK_BAND_DEPTH
+	var levels := mini(_stack_level_count(), 10)
+	var run_height := float(levels) * STACK_LEVEL_HEIGHT - 2.0
+	var pipe_rust := _material(Color("80513a"), 0.48, 0.82)
+	var cable_dark := _material(Color("332c27"), 0.34, 0.93)
+	var warning_amber := _material(Color("c28b35"), 0.34, 0.68)
+	var lamp_glow := _material(Color("d7a75c"), 0.14, 0.55, Color("ffb74f"), 1.15)
+	var guard := _material(Color("4b463c"), 0.66, 0.72)
+
+	# Four process risers follow the inner column lines. Rust bands and flanges
+	# break their long runs into believable serviced sections.
+	for sx_value in [-1.0, 1.0]:
+		var sx: float = float(sx_value)
+		for sz_value in [-1.0, 1.0]:
+			var sz: float = float(sz_value)
+			var pipe_x: float = cx + sx * (inner_half - 1.35)
+			var pipe_z: float = cz + sz * (inner_half - 1.35)
+			_add_cylinder("InteriorProcessRiser", 0.22, run_height,
+				Vector3(pipe_x, run_height * 0.5 + 1.0, pipe_z), pipe_rust if sx == sz else oxidised)
+			_add_cylinder("InteriorReturnLine", 0.075, run_height,
+				Vector3(pipe_x + sx * 0.43, run_height * 0.5 + 1.0, pipe_z), mill_scale)
+			for level in range(1, levels):
+				var collar_y := float(level) * STACK_LEVEL_HEIGHT - 0.9
+				_add_cylinder("RiserCoupling", 0.31, 0.24,
+					Vector3(pipe_x, collar_y, pipe_z), rust_deep)
+				_add_box("RiserBracket", Vector3(0.82, 0.10, 0.12),
+					Vector3(pipe_x + sx * 0.22, collar_y - 0.36, pipe_z), galvanised)
+
+	# Short slack loops hang just below selected cross members. Segmented curves
+	# give the heavy cable a soft belly instead of a ruler-straight appearance.
+	for level in [2, 5, 8]:
+		var y := float(level) * STACK_LEVEL_HEIGHT + 3.0
+		var start := Vector3(cx - inner_half + 1.7, y, cz - inner_half + 1.4)
+		var finish := Vector3(cx - inner_half + 7.3, y - 0.15, cz - inner_half + 1.4)
+		_draw_sagging_service_cable(start, finish, 1.1, cable_dark, 8)
+		_draw_sagging_service_cable(start + Vector3(0.2, 0.0, 0.18),
+			finish + Vector3(0.2, 0.0, 0.18), 0.95, pipe_rust, 8)
+
+	# A few amber cages and warning chevrons make the first storeys legible at
+	# human scale, while the far side of each bay stays open to the huge shaft.
+	for level in [1, 6]:
+		var deck_y := float(level) * STACK_LEVEL_HEIGHT
+		var grate_at := Vector3(cx - inner_half + 2.2, deck_y + 0.055,
+			cz - inner_half - STACK_DECK_BAND_DEPTH * 0.5)
+		_add_box("ServiceCatwalkGrate", Vector3(2.8, 0.08, 1.05), grate_at, rust_deep)
+		for slot in range(9):
+			_add_box("CatwalkGrateBar", Vector3(0.045, 0.025, 0.97),
+				grate_at + Vector3(-1.2 + float(slot) * 0.3, 0.03, 0.0), galvanised)
+	for level in [1, 3, 6, 9]:
+		var sx := -1.0 if level % 2 == 1 else 1.0
+		var sz := -1.0
+		var at := Vector3(cx + sx * (inner_half - 0.65),
+			float(level) * STACK_LEVEL_HEIGHT + 3.8,
+			cz + sz * (inner_half - 1.0))
+		var housing := _add_box("CagedServiceLamp", Vector3(0.54, 0.34, 0.8), at, lamp_glow)
+		housing.rotation.y = PI * 0.25
+		for offset in [-0.27, 0.27]:
+			_add_box("LampGuard", Vector3(0.07, 0.48, 0.92), at + Vector3(offset, 0.0, 0.0), guard)
+		var work_light := OmniLight3D.new()
+		work_light.name = "WarmServiceLight"
+		work_light.position = at + Vector3(0.0, -0.1, 0.15)
+		work_light.light_color = Color("ffbf6e")
+		work_light.light_energy = 0.8
+		work_light.omni_range = 8.0
+		work_light.shadow_enabled = false
+		$TowerPresentation.add_child(work_light)
+		if level == 1 or level == 6:
+			var plate_at := at + Vector3(-sx * 0.7, -1.3, 0.0)
+			_add_box("CableHazardPlate", Vector3(1.25, 0.72, 0.09), plate_at, warning_amber)
+			for stripe in range(3):
+				var mark := _add_box("HazardSlash", Vector3(0.10, 0.7, 0.11),
+					plate_at + Vector3(-0.34 + float(stripe) * 0.34, 0.0, -0.06), rust_deep)
+				mark.rotation.z = -0.45
+				# Old handwheels at the base of each tagged service point show
+				# this is still maintained, even where the steel has gone red.
+			var wheel := MeshInstance3D.new()
+			wheel.name = "RustyValveWheel"
+			var wheel_mesh := TorusMesh.new()
+			wheel_mesh.inner_radius = 0.27
+			wheel_mesh.outer_radius = 0.34
+			wheel_mesh.rings = 8
+			wheel_mesh.ring_segments = 12
+			wheel.mesh = wheel_mesh
+			wheel.material_override = rust_bright
+			wheel.position = plate_at + Vector3(-sx * 0.28, -0.72, 0.03)
+			wheel.rotation.x = PI * 0.5
+			var pipe_at := Vector3(cx + sx * (inner_half - 1.35), wheel.position.y,
+				cz + sz * (inner_half - 1.35))
+			_add_strut("ValveServiceBranch", pipe_at, wheel.position, 0.10, pipe_rust)
+			_add_box("ValveServiceHousing", Vector3(0.32, 0.32, 0.32),
+				wheel.position + Vector3(0.0, 0.0, 0.20), rust_deep)
+			$TowerPresentation.add_child(wheel)
+
+	# One visibly tired junction spits a sparse handful of sparks. It is a small
+	# lighting cue high in the bay, not an interactive hazard or route mechanic.
+	var spark_point := Vector3(cx - inner_half + 1.65, STACK_LEVEL_HEIGHT * 2.45,
+		cz - inner_half + 1.4)
+	var spark_clip := _add_box("DamagedCableClip", Vector3(0.46, 0.22, 0.32),
+		spark_point, rust_deep)
+	spark_clip.rotation.z = 0.3
+	var sparks := GPUParticles3D.new()
+	sparks.name = "OccasionalServiceSparks"
+	sparks.position = spark_point + Vector3(0.0, -0.16, 0.0)
+	sparks.amount = 3
+	sparks.lifetime = 0.28
+	sparks.one_shot = true
+	sparks.emitting = true
+	sparks.explosiveness = 1.0
+	sparks.randomness = 0.65
+	var spark_process := ParticleProcessMaterial.new()
+	spark_process.direction = Vector3(0.15, -0.35, 0.1)
+	spark_process.spread = 150.0
+	spark_process.initial_velocity_min = 0.35
+	spark_process.initial_velocity_max = 1.25
+	spark_process.gravity = Vector3(0.0, -3.5, 0.0)
+	spark_process.scale_min = 0.5
+	spark_process.scale_max = 1.2
+	sparks.process_material = spark_process
+	var spark_mesh := SphereMesh.new()
+	spark_mesh.radius = 0.035
+	spark_mesh.height = 0.07
+	var spark_mat := _material(Color("ffe0a0"), 0.0, 0.45, Color("ff9a32"), 4.0)
+	spark_mesh.material = spark_mat
+	sparks.draw_pass_1 = spark_mesh
+	$TowerPresentation.add_child(sparks)
+	var spark_cycle := Timer.new()
+	spark_cycle.name = "ServiceSparkCycle"
+	spark_cycle.wait_time = 4.2
+	spark_cycle.autostart = true
+	spark_cycle.timeout.connect(func(): sparks.restart())
+	$TowerPresentation.add_child(spark_cycle)
+
+
+func _draw_sagging_service_cable(from: Vector3, to: Vector3, sag: float,
+		material: Material, segments: int) -> void:
+	var previous := from
+	for segment in range(1, segments + 1):
+		var t := float(segment) / float(segments)
+		var point := from.lerp(to, t) + Vector3(0.0, -sin(PI * t) * sag, 0.0)
+		_add_strut("SaggingServiceCable", previous, point, 0.055, material)
+		previous = point
 
 
 # Everything that makes the frame read as one vast working plant rather than
@@ -4228,6 +4382,16 @@ func _build_kit() -> void:
 			instance.mesh = surface.commit()
 			node.add_child(instance)
 		var entity := int(_native.get_kit_body_entity_id(body))
+		if entity == 1952:
+			var sign := Label3D.new()
+			sign.name = "CargoNetSign"
+			sign.text = "EASY WAY UP · FIRST DECK +11 M\nTAP CLIMB · HOLD FORWARD"
+			sign.position = Vector3(20.0, 2.8, -117.65)
+			sign.font_size = 44
+			sign.pixel_size = 0.006
+			sign.modulate = Color("fff0c4")
+			sign.outline_size = 12
+			node.add_child(sign)
 		if entity == 2011:
 			var water_mesh := BoxMesh.new()
 			water_mesh.size = Vector3(1.54, 1.0, 1.54)
@@ -4244,6 +4408,14 @@ func _build_kit() -> void:
 		_kit_root.add_child(node)
 		_kit_bodies.append(node)
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
+	_cargo_net_indices = _native.get_cargo_net_indices()
+	if not _cargo_net_indices.is_empty():
+		_cargo_net_mesh = MeshInstance3D.new()
+		_cargo_net_mesh.name = "NativeSoftCargoNet"
+		_cargo_net_mesh.mesh = ArrayMesh.new()
+		_cargo_net_material = _material(Color("dfb981"), 0.0, 0.97)
+		_cargo_net_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_kit_root.add_child(_cargo_net_mesh)
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
 	cable.material = _material(Color("1b1916") if _regression_scene else Color("b2a383"), 0.6, 0.5)
@@ -4263,7 +4435,35 @@ func _build_kit() -> void:
 # Poses every moving kit body and lays every cable through its points, from
 # this frame's native state. A body the native has taken out of the world (a
 # shackle hooked onto an anchor) is hidden, not moved.
+func _update_cargo_net() -> void:
+	if _cargo_net_mesh == null or DisplayServer.get_name() == "headless":
+		return
+	var vertices: PackedVector3Array = _native.get_cargo_net_vertices()
+	var normals := PackedVector3Array()
+	normals.resize(vertices.size())
+	for i in range(0, _cargo_net_indices.size(), 3):
+		var a := _cargo_net_indices[i]
+		var b := _cargo_net_indices[i + 1]
+		var c := _cargo_net_indices[i + 2]
+		var n := (vertices[b] - vertices[a]).cross(vertices[c] - vertices[a])
+		normals[a] += n
+		normals[b] += n
+		normals[c] += n
+	for i in normals.size():
+		normals[i] = normals[i].normalized()
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_INDEX] = _cargo_net_indices
+	var mesh := _cargo_net_mesh.mesh as ArrayMesh
+	mesh.clear_surfaces()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh.surface_set_material(0, _cargo_net_material)
+
+
 func _render_kit() -> void:
+	_update_cargo_net()
 	if _kit_root == null:
 		return
 	for body in _kit_bodies.size():

@@ -1,0 +1,93 @@
+[ 33%] Built target scraperx_sim
+[ 35%] Linking CXX executable scraperx_slingshot_model_tests
+[ 37%] Linking CXX executable scraperx_slingshot_machine_tests
+[ 39%] Built target scraperx_slingshot_model_tests
+[ 41%] Building CXX object CMakeFiles/scraperx_launcher_tests.dir/tests/launcher_tests.cpp.o
+[ 43%] Built target scraperx_slingshot_machine_tests
+[ 45%] Building CXX object CMakeFiles/scraperx_landing_tests.dir/tests/landing_tests.cpp.o
+[ 47%] Linking CXX executable scraperx_landing_tests
+[ 49%] Linking CXX executable scraperx_launcher_tests
+[ 49%] Built target scraperx_launcher_tests
+[ 49%] Built target scraperx_landing_tests
+[ 50%] Building CXX object CMakeFiles/scraperx_sim_tests.dir/tests/simulation_tests.cpp.o
+[ 52%] Building CXX object CMakeFiles/scraperx_parkour_flow_tests.dir/tests/parkour_flow_tests.cpp.o
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/tests/simulation_tests.cpp: In lambda function:
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/tests/simulation_tests.cpp:2996:52: note: parameter passing for argument of type 'std::pair<double, double>' when C++17 is enabled changed to match C++14 in GCC 10.1
+ 2996 |         return std::make_pair(speed_at_quarter, top);
+      |                                                    ^
+[ 54%] Linking CXX executable scraperx_parkour_flow_tests
+[ 54%] Built target scraperx_parkour_flow_tests
+[ 56%] Building CXX object CMakeFiles/scraperx_ascent_route_tests.dir/tests/ascent_route_tests.cpp.o
+[ 58%] Linking CXX executable scraperx_sim_tests
+[ 60%] Linking CXX executable scraperx_ascent_route_tests
+[ 60%] Built target scraperx_sim_tests
+[ 62%] Building CXX object CMakeFiles/scraperx_swing_stair_route_tests.dir/tests/swing_stair_route_tests.cpp.o
+[ 62%] Built target scraperx_ascent_route_tests
+[ 64%] Building CXX object CMakeFiles/scraperx_pipe_bridge_tests.dir/tests/pipe_bridge_tests.cpp.o
+[ 66%] Linking CXX executable scraperx_pipe_bridge_tests
+[ 67%] Linking CXX executable scraperx_swing_stair_route_tests
+[ 67%] Built target scraperx_pipe_bridge_tests
+[ 67%] Built target scraperx_swing_stair_route_tests
+[ 69%] Linking CXX executable scraperx_pipe_bridge_refinement
+[ 71%] Building CXX object CMakeFiles/scraperx_teeter_route_tests.dir/tests/teeter_route_tests.cpp.o
+[ 73%] Built target scraperx_pipe_bridge_refinement
+[ 75%] Linking CXX executable scraperx_teeter_physics_tests
+[ 77%] Built target scraperx_teeter_physics_tests
+[ 79%] Building CXX object CMakeFiles/scraperx_braced_bay_tests.dir/tests/braced_bay_tests.cpp.o
+[ 81%] Linking CXX executable scraperx_teeter_route_tests
+[ 81%] Built target scraperx_teeter_route_tests
+[ 83%] Building CXX object CMakeFiles/scraperx_north_service_frame_tests.dir/tests/north_service_frame_tests.cpp.o
+[ 84%] Linking CXX executable scraperx_braced_bay_tests
+[ 84%] Built target scraperx_braced_bay_tests
+[ 90%] Built target scraperx_native
+[ 92%] Building CXX object CMakeFiles/reuse_probe.dir/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp.o
+[ 94%] Linking CXX executable scraperx_north_service_frame_tests
+[ 94%] Built target scraperx_north_service_frame_tests
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp: In function 'void advance(scraperx::sim::Simulation&, double)':
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp:5:85: warning: ignoring return value of 'scraperx::sim::AdvanceResult scraperx::sim::Simulation::advance_frame(double)', declared with attribute 'nodiscard' [-Wunused-result]
+    5 | void advance(Simulation &s, double t) { for(int i=0;i<int(t*90);++i) s.advance_frame(1.0/90); }
+      |                                                                      ~~~~~~~~~~~~~~~^~~~~~~~
+In file included from /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp:1:
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/src/sim/simulation.hpp:655:33: note: declared here
+  655 |     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
+      |                                 ^~~~~~~~~~~~~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp: In function 'int main()':
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp:15:46: warning: ignoring return value of 'bool scraperx::sim::Simulation::request_slingshot_action()', declared with attribute 'nodiscard' [-Wunused-result]
+   15 |     advance(s,.5); s.request_slingshot_action(); advance(s,.2);
+      |                    ~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/src/sim/simulation.hpp:561:24: note: declared here
+  561 |     [[nodiscard]] bool request_slingshot_action() noexcept;
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp:16:26: warning: ignoring return value of 'bool scraperx::sim::Simulation::set_slingshot_input(double, double, double)', declared with attribute 'nodiscard' [-Wunused-result]
+   16 |     s.set_slingshot_input(1,0,1.4311699866353502); advance(s,12);
+      |     ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/src/sim/simulation.hpp:560:24: note: declared here
+  560 |     [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation) noexcept;
+      |                        ^~~~~~~~~~~~~~~~~~~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp:17:26: warning: ignoring return value of 'bool scraperx::sim::Simulation::set_slingshot_input(double, double, double)', declared with attribute 'nodiscard' [-Wunused-result]
+   17 |     s.set_slingshot_input(0,0,1.4311699866353502); advance(s,.5);
+      |     ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/src/sim/simulation.hpp:560:24: note: declared here
+  560 |     [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation) noexcept;
+      |                        ^~~~~~~~~~~~~~~~~~~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp:18:31: warning: ignoring return value of 'bool scraperx::sim::Simulation::request_slingshot_action()', declared with attribute 'nodiscard' [-Wunused-result]
+   18 |     s.request_slingshot_action(); advance(s,14);
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/src/sim/simulation.hpp:561:24: note: declared here
+  561 |     [[nodiscard]] bool request_slingshot_action() noexcept;
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp:21:46: warning: ignoring return value of 'bool scraperx::sim::Simulation::request_slingshot_action()', declared with attribute 'nodiscard' [-Wunused-result]
+   21 |     advance(s,.2); s.request_slingshot_action(); advance(s,.3);
+      |                    ~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/src/sim/simulation.hpp:561:24: note: declared here
+  561 |     [[nodiscard]] bool request_slingshot_action() noexcept;
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/reuse_probe.cpp:22:26: warning: ignoring return value of 'bool scraperx::sim::Simulation::set_slingshot_input(double, double, double)', declared with attribute 'nodiscard' [-Wunused-result]
+   22 |     s.set_slingshot_input(1,0,1.4311699866353502);
+      |     ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/src/sim/simulation.hpp:560:24: note: declared here
+  560 |     [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation) noexcept;
+      |                        ^~~~~~~~~~~~~~~~~~~
+[ 98%] Built target scraperx_cargo_net_tests
+[100%] Linking CXX executable reuse_probe
+[100%] Built target reuse_probe

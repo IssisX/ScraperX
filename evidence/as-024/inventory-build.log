@@ -1,0 +1,8 @@
+[ 90%] Built target scraperx_sim
+[ 95%] Building CXX object CMakeFiles/scraperx_sim_tests.dir/tests/simulation_tests.cpp.o
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/tests/simulation_tests.cpp: In lambda function:
+/data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-source/tests/simulation_tests.cpp:2996:52: note: parameter passing for argument of type 'std::pair<double, double>' when C++17 is enabled changed to match C++14 in GCC 10.1
+ 2996 |         return std::make_pair(speed_at_quarter, top);
+      |                                                    ^
+[100%] Linking CXX executable scraperx_sim_tests
+[100%] Built target scraperx_sim_tests

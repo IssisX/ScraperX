@@ -368,6 +368,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_rig_target_entity_id);
     godot::ClassDB::bind_method(godot::D_METHOD("get_carry_target_kind"),
                                 &ScraperXSimulation::get_carry_target_kind);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_cargo_net_vertices"), &ScraperXSimulation::get_cargo_net_vertices);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_cargo_net_indices"), &ScraperXSimulation::get_cargo_net_indices);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_count"),
                                 &ScraperXSimulation::get_kit_body_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_entity_id", "body"),
@@ -1165,6 +1167,17 @@ std::int64_t ScraperXSimulation::get_rig_target_entity_id() const {
 
 std::int64_t ScraperXSimulation::get_carry_target_kind() const {
     return static_cast<std::int64_t>(simulation_->snapshot().carry_target_kind);
+}
+
+godot::PackedVector3Array ScraperXSimulation::get_cargo_net_vertices() const {
+    godot::PackedVector3Array out;
+    for(const auto &v:simulation_->cargo_net_vertices(simulation_->snapshot().interpolation_alpha)) out.push_back(godot::Vector3(v.x,v.y,v.z));
+    return out;
+}
+godot::PackedInt32Array ScraperXSimulation::get_cargo_net_indices() const {
+    godot::PackedInt32Array out;
+    for(const auto i:simulation_->cargo_net_indices()) out.push_back(static_cast<std::int32_t>(i));
+    return out;
 }
 
 std::int64_t ScraperXSimulation::get_kit_body_count() const {

@@ -661,6 +661,8 @@ public:
     // Mechanism-kit read back, for the presentation and the falsifiers. Body
     // indices run 0 .. kit_body_count() - 1 in build order.
     static constexpr std::uint32_t kKitNone = 0xFFFFFFFFU;
+    [[nodiscard]] std::vector<Vector3> cargo_net_vertices(double alpha=1.0) const;
+    [[nodiscard]] std::vector<std::uint32_t> cargo_net_indices() const;
     [[nodiscard]] std::uint32_t kit_body_count() const noexcept;
     [[nodiscard]] double pipe_bridge_tip_height() const noexcept;
     [[nodiscard]] std::uint32_t pipe_bridge_retained_pipes() const noexcept;

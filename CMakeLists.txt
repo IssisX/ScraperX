@@ -22,6 +22,8 @@ add_library(scraperx_sim STATIC
     src/sim/water_screw.cpp
     src/sim/mechanism_kit.cpp
     src/sim/facade_route.cpp
+    src/sim/cargo_net_route.cpp
+    src/sim/cargo_net.cpp
     src/sim/slingshot.cpp
     src/sim/slingshot_model.cpp
     src/sim/pipe_bridge.cpp
@@ -71,6 +73,9 @@ if(SCRAPERX_WITH_JOLT)
 endif()
 
 if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
+    add_executable(scraperx_cargo_net_tests tests/cargo_net_tests.cpp)
+    target_link_libraries(scraperx_cargo_net_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.cargo_net_ground_route COMMAND scraperx_cargo_net_tests)
     add_executable(scraperx_slingshot_model_tests tests/slingshot_model_tests.cpp)
     target_link_libraries(scraperx_slingshot_model_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.slingshot_model COMMAND scraperx_slingshot_model_tests)

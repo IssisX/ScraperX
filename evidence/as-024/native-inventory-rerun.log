@@ -1,0 +1,34 @@
+Test project /data/data/com.termux/files/usr/tmp/scraperx-continuation-1pc10lpd/host-build
+    Start 5: scraperx_sim.athletic_traversal
+1/1 Test #5: scraperx_sim.athletic_traversal ...***Failed   78.96 sec
+PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=16 kit_bodies=26 locomotion=1 crouch=1 jump=1
+PASS scraperx_sim rejected fallback absent: tower_bodies=385 former_flight_y=0.9 jump_requests=0
+PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0
+PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1
+PASS scraperx_sim moving-support truth: translating_support=3 translating_vx=1.08993 jump_vx=1.07124 rotating_support=4 rotating_point_v=(-0.547974,-1.07542) omega_y=0.800001 hz=90
+PASS scraperx_sim athletic traversal: vault_x=6.08 double_tap_vault_x=6.20222 vault_speed=5.5 mantle_support=6 mantle_rise_setback=0.53 mantle_y=2.46879 hang_support=7 moving_hang_support=8 moving_hang_vz=0.875645 moving_ledge_vz=0.865345 release_vz=0.945425 rejected=1 accepted=1
+PASS scraperx_sim player is the plant's missing component: rest_valve=0 held_treadle=0.135892 held_valve=0.776839 held_lift=7.7m idle_lift=1.2m store_spent_MJ=3.10307
+PASS scraperx_sim first full causal chain: gate_closed_at_rest=1 lift_at_gate=7.41205m rise=1.13796m reached_catwalk=1 commits=1548
+PASS scraperx_sim coupled machine: valve=0.726924 piston=14691N lift=8.80227m second_lift=8.81645m starved_energy=678952J player_valve=0 tower_m=1600
+PASS scraperx_sim fall/parachute/checkpoint: lethal_impact=34.6619 chuted_impact=8.8914 late_chute_deaths=1 grounded_deploy_blocked=1 commits=91 machine_restored=1 deaths=1
+PASS scraperx_sim first freight: station=1 raised_y=4.76117 braked_delta=-0.00369406 slewed_rad=2.00024 crate_carried=1 rides_crate=1 capacity_held=1
+PASS scraperx_sim first structural coupling: crossable_unseated=0 seated=1 support_over_gap=1 reached_far_pier=1 unseat_removed_support=1
+PASS scraperx_sim first process coupling: gated_off_station=1 wet_crossable=0 drained_safe=1 support_on_grate=1 reached_far_deck=1 dump_unsafe_again=1
+PASS scraperx_sim B00 intake rise: pinned_impassable=1 pinned_deepest_z=-110.514 forced_impassable=1 overweight_y=0.899998 lifted_y=4.54681 dog_rad=1.20318 handoff_y=25.0872 skin_mantles=15 skin_freight_untouched=1
+INFO AS-002 deployed hold: least_travel=0.907572 pack_drift=0.000419725
+INFO AS-002 walkway lane: lowest_y=33.086
+PASS scraperx_sim AS-002 Legal Forty: unrouted_deepest_y=25.0872 flag_hinge=-0 cradle_drop=1.49766 deployed_travel=0.862406 mid_landing_y=33.0872 forty_y=41.0786 checkpoint_commits=20498 checkpoint_y=41.0786 retracted_travel=0.197692 skin_forty_mantles=20 skin_forty_y=41.0795 jib_capped_hook_y=11.2409
+PASS scraperx_sim world solids: bodies=1780 mirrors=29 rejected=0 buttress_foot_closest=3.34759 tower_bodies=169 former_flight_y=0.9 rim_reach=888.221
+PASS scraperx_sim crouch: standing_deepest_z=-12.3626 crouch_drop=0.3 crouched_top_speed=2.475 under_z=-13.082 stood_y=0.9
+PASS scraperx_sim AS-003 apron: grade_peak_y=2.41139 pack_peak_y=4.21328 pack_closest=0.29364
+INFO AS-003 carry walk: loaded_v_at_0.25s=3.54666 free_v_at_0.25s=5.5 loaded_top=5.60095 free_top=5.5
+FAIL: the carry must reach the 9 t pack's east face
+
+
+0% tests passed, 1 tests failed out of 1
+
+Total Test time (real) =  78.97 sec
+
+The following tests FAILED:
+	  5 - scraperx_sim.athletic_traversal (Failed)
+Errors while running CTest

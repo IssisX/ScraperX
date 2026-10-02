@@ -10,6 +10,8 @@
 #include "sim/braced_bay.hpp"
 #include "sim/north_service_frame.hpp"
 #include "sim/facade_route.hpp"
+#include "sim/cargo_net_route.hpp"
+#include "sim/cargo_net.hpp"
 #include "sim/water_screw.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
@@ -1978,6 +1980,11 @@ public:
             teeter_rise_ = std::make_unique<TeeterRise>(*kit_);
             build_braced_bay(*kit_);
             build_north_service_frame(*kit_);
+            // Append only to normal gameplay, preserving retained fixture body order.
+            if (content == WorldContent::Slingshot) {
+                build_cargo_net_route(*kit_);
+                cargo_net_ = std::make_unique<CargoNet>(physics_system_, object_layers::kMoving);
+            }
         }
 
         contact_listener_.set_slingshot(slingshot_.get());
@@ -2010,6 +2017,7 @@ public:
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
         }
+        cargo_net_.reset();
         upper_ascent_.reset();
         swing_stair_.reset();
         pipe_bridge_.reset();
@@ -2189,6 +2197,7 @@ public:
         }
         kit_->post_step(delta_seconds);
         if (slingshot_) slingshot_->post_step(delta_seconds);
+        if (cargo_net_) cargo_net_->refresh();
 
         SupportSample support = contact_listener_.sample();
         if (jump_started || traversal_state_ != TraversalState::None) {
@@ -2252,6 +2261,8 @@ public:
         }
         return count;
     }
+
+    [[nodiscard]] const CargoNet *cargo_net() const noexcept { return cargo_net_.get(); }
 
     [[nodiscard]] const Snapshot &state() const noexcept {
         return state_;
@@ -4471,10 +4482,17 @@ private:
 
     [[nodiscard]] bool cast_ray(const JPH::RVec3 origin,
                                 const JPH::Vec3 direction,
-                                JPH::RayCastResult &hit) const noexcept {
+                                JPH::RayCastResult &hit,
+                                const bool see_past_soft_holds = false) const noexcept {
         const JPH::RRayCast ray(origin, direction);
         hit.Reset();
         const JPH::IgnoreSingleBodyFilter body_filter(player_id_);
+        if (see_past_soft_holds && cargo_net_) {
+            // A curved mesh may sit immediately ahead of a ledge. Filter it
+            // from the query instead of advancing the ray into the wall.
+            const JPH::IgnoreSingleBodyFilterChained filter(cargo_net_->body(), body_filter);
+            return physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter);
+        }
         return physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, body_filter);
     }
 
@@ -4493,7 +4511,7 @@ private:
         float left = length;
         for (std::uint32_t pass = 0; pass < 4; ++pass) {
             const JPH::Vec3 ray = unit * left;
-            if (!cast_ray(from, ray, hit)) {
+            if (!cast_ray(from, ray, hit, see_past_holds)) {
                 return false;
             }
             point = JPH::RRayCast(from, ray).GetPointOnRay(hit.mFraction);
@@ -4512,6 +4530,7 @@ private:
 
     [[nodiscard]] bool is_hold(const JPH::BodyID body_id,
                                const JPH::SubShapeID &sub_shape_id) const noexcept {
+        if (cargo_net_ && body_id == cargo_net_->body()) return true;
         const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), body_id);
         LeafBox box;
         std::uint32_t long_axis = 0;
@@ -4762,6 +4781,7 @@ private:
         if (body_id.IsInvalid()) {
             return JPH::Vec3(world_point);
         }
+        if (cargo_net_ && body_id == cargo_net_->body()) return cargo_net_->material_point(world_point);
         return JPH::Vec3(bodies.GetCenterOfMassTransform(body_id).Inversed() * world_point);
     }
 
@@ -4771,6 +4791,7 @@ private:
         if (body_id.IsInvalid()) {
             return JPH::RVec3(local_point);
         }
+        if (cargo_net_ && body_id == cargo_net_->body()) return cargo_net_->world_point(local_point);
         return bodies.GetCenterOfMassTransform(body_id) * JPH::RVec3(local_point);
     }
 
@@ -5820,7 +5841,15 @@ private:
         }
         const JPH::RVec3 target =
             from_support_local(bodies, traversal_target_body_, traversal_local_target_);
-        return bodies.GetPointVelocity(traversal_target_body_, target);
+        return support_point_velocity(bodies, traversal_target_body_, target);
+    }
+
+    [[nodiscard]] JPH::Vec3 support_point_velocity(
+        const JPH::BodyInterface &bodies, JPH::BodyID body, JPH::RVec3 point) const noexcept {
+        if (cargo_net_ && body == cargo_net_->body()) {
+            return cargo_net_->material_velocity(cargo_net_->material_point(point));
+        }
+        return bodies.GetPointVelocity(body, point);
     }
 
     void complete_traversal(JPH::BodyInterface &bodies) noexcept {
@@ -5860,7 +5889,7 @@ private:
         const JPH::RVec3 ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
         const JPH::Vec3 support_velocity =
             traversal_body_.IsInvalid() ? JPH::Vec3::sZero()
-                                        : bodies.GetPointVelocity(traversal_body_, ledge);
+                                        : support_point_velocity(bodies, traversal_body_, ledge);
         bodies.SetLinearVelocity(player_id_, support_velocity);
         airborne_inherited_velocity_ = support_velocity;
         bodies.SetGravityFactor(player_id_, 1.0F);
@@ -5875,6 +5904,19 @@ private:
     // the hold: the structure feels who is on it. Static and kinematic
     // bodies take no force.
     void load_hold(JPH::BodyInterface &bodies) noexcept {
+        if (cargo_net_ && traversal_body_ == cargo_net_->body() && traversal_state_ == TraversalState::Climbing) {
+            // Same 80 kg rider load as rigid holds; a hand/foot force couple
+            // balances the body's stand-off moment and makes use physically wavy.
+            const auto centre = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+            const auto hands = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+            const JPH::Vec3 weight = physics_system_.GetGravity() * kPlayerMassKg;
+            const float separation = std::max(0.5F, static_cast<float>(hands.GetY()-centre.GetY())+0.55F);
+            const JPH::Vec3 pull = -traversal_normal_ * (-weight.GetY() * kClimbHandReach / separation);
+            cargo_net_->load(hands, weight + pull, static_cast<float>(Simulation::kFixedStepSeconds));
+            cargo_net_->load(centre + JPH::RVec3(0, -0.55, 0) + JPH::RVec3(traversal_normal_ * kClimbHandReach),
+                             -pull, static_cast<float>(Simulation::kFixedStepSeconds));
+            return;
+        }
         if ((traversal_state_ != TraversalState::Hanging &&
              traversal_state_ != TraversalState::Climbing) ||
             traversal_body_.IsInvalid() ||
@@ -5911,6 +5953,10 @@ private:
             grip_region_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
             JPH::RMat44::sRotationTranslation(rotation, aim), settings, aim, hits, {}, {}, filter);
         float best_distance = std::numeric_limits<float>::max();
+        if (cargo_net_ && cargo_net_->grip(centre, aim, facing, best.point)) {
+            best.valid = true; best.body = cargo_net_->body(); best.entity_id = CargoNet::kEntity;
+            best_distance = JPH::Vec3(best.point - aim).Length();
+        }
         for (const JPH::CollideShapeResult &hit : hits.mHits) {
             const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(),
                                          hit.mBodyID2);
@@ -5997,9 +6043,18 @@ private:
         const JPH::RShapeCast sweep(climb_sweep_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
                                     JPH::RMat44::sTranslation(from), displacement);
         const JPH::IgnoreSingleBodyFilter player_filter(player_id_);
-        const JPH::IgnoreSingleBodyFilterChained filter(carried_id_, player_filter);
-        physics_system_.GetNarrowPhaseQuery().CastShape(sweep, JPH::ShapeCastSettings(), from,
-                                                        collector, {}, {}, filter);
+        const JPH::IgnoreSingleBodyFilterChained carried_filter(carried_id_, player_filter);
+        if (cargo_net_ && traversal_body_ == cargo_net_->body()) {
+            // The held mesh bends around the climber; its own cloth contacts
+            // must not veto the hand-over-hand capsule sweep. Jolt still
+            // resolves the actual player/cloth contact during every step.
+            const JPH::IgnoreSingleBodyFilterChained held_net_filter(cargo_net_->body(), carried_filter);
+            physics_system_.GetNarrowPhaseQuery().CastShape(sweep, JPH::ShapeCastSettings(), from,
+                                                            collector, {}, {}, held_net_filter);
+        } else {
+            physics_system_.GetNarrowPhaseQuery().CastShape(sweep, JPH::ShapeCastSettings(), from,
+                                                            collector, {}, {}, carried_filter);
+        }
         return !collector.HadHit();
     }
 
@@ -6012,6 +6067,14 @@ private:
         traversal_target_body_ = {};
         traversal_normal_ = facing_;
         traversal_local_hold_ = to_support_local(bodies, traversal_body_, hold);
+        if (cargo_net_ && traversal_body_ == cargo_net_->body()) {
+            // Keep the capsule in front of the loaded mesh and receiver lip,
+            // within the existing hand reach, even after walking into the rope.
+            const float depth = traversal_local_hold_.GetZ();
+            const float side = std::abs(depth) > 0.001F ? std::copysign(1.0F, depth)
+                                                       : (facing_.GetZ() < 0.0F ? 1.0F : -1.0F);
+            traversal_local_hold_.SetZ(side * std::max(std::abs(depth), 0.77F));
+        }
         traversal_local_ledge_ = to_support_local(bodies, traversal_body_, grip.point);
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
@@ -6041,6 +6104,16 @@ private:
         const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
         JPH::RVec3 next = hold;
         Grip carries;
+        const auto follow_surface = [&](JPH::RVec3 moved) {
+            if (cargo_net_ && traversal_body_ == cargo_net_->body()) {
+                auto material = cargo_net_->material_point(moved);
+                // Advance on the actual curved mesh with the same stand-off,
+                // rather than accumulating depth error as its slope changes.
+                material.SetZ(traversal_local_hold_.GetZ());
+                return cargo_net_->world_point(material);
+            }
+            return moved;
+        };
         if (up_input > kClimbInputDeadzone) {
             // A ledge in reach is climbed over before any hold above it: grab
             // rails that run on past a deck's edge must not carry the body
@@ -6049,7 +6122,7 @@ private:
                 return;
             }
             const JPH::RVec3 moved =
-                hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbUpSpeed * delta_seconds, 0.0F);
+                follow_surface(hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbUpSpeed * delta_seconds, 0.0F));
             const Grip above = find_grip(moved, hand_aim(moved, kClimbMoveAim, 0.0F), normal);
             if (above.valid) {
                 next = moved;
@@ -6057,7 +6130,7 @@ private:
             }
         } else if (up_input < -kClimbInputDeadzone) {
             const JPH::RVec3 moved =
-                hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbDownSpeed * delta_seconds, 0.0F);
+                follow_surface(hold + JPH::Vec3(0.0F, static_cast<float>(up_input) * kClimbDownSpeed * delta_seconds, 0.0F));
             if (feet_on_ground(moved)) {
                 step_off_climb(bodies);
                 return;
@@ -6071,7 +6144,7 @@ private:
         if (std::abs(side_input) > kClimbInputDeadzone) {
             const float lead = side_input > 0.0 ? kClimbSideLead : -kClimbSideLead;
             const JPH::RVec3 moved =
-                next + right * (static_cast<float>(side_input) * kClimbSideSpeed * delta_seconds);
+                follow_surface(next + right * (static_cast<float>(side_input) * kClimbSideSpeed * delta_seconds));
             const Grip beside = find_grip(moved, hand_aim(moved, kClimbHandMid, lead), normal);
             if (beside.valid) {
                 next = moved;
@@ -6185,7 +6258,7 @@ private:
 
     void step_off_climb(JPH::BodyInterface &bodies) noexcept {
         const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
-        bodies.SetLinearVelocity(player_id_, bodies.GetPointVelocity(traversal_body_, hold));
+        bodies.SetLinearVelocity(player_id_, support_point_velocity(bodies, traversal_body_, hold));
         bodies.SetGravityFactor(player_id_, 1.0F);
         ++accepted_traversal_count_;
         clear_traversal();
@@ -6193,7 +6266,7 @@ private:
 
     void let_go_climb(JPH::BodyInterface &bodies) noexcept {
         const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
-        const JPH::Vec3 support_velocity = bodies.GetPointVelocity(traversal_body_, hold);
+        const JPH::Vec3 support_velocity = support_point_velocity(bodies, traversal_body_, hold);
         bodies.SetLinearVelocity(player_id_, support_velocity);
         airborne_inherited_velocity_ = support_velocity;
         bodies.SetGravityFactor(player_id_, 1.0F);
@@ -6204,7 +6277,7 @@ private:
     // Springing back off the structure, away from it and up.
     void jump_off_climb(JPH::BodyInterface &bodies) noexcept {
         const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
-        const JPH::Vec3 support_velocity = bodies.GetPointVelocity(traversal_body_, hold);
+        const JPH::Vec3 support_velocity = support_point_velocity(bodies, traversal_body_, hold);
         bodies.SetLinearVelocity(player_id_, support_velocity -
                                                  traversal_normal_ * kClimbJumpBackSpeed +
                                                  JPH::Vec3(0.0F, kClimbJumpUpSpeed, 0.0F));
@@ -6487,6 +6560,7 @@ private:
             if (slingshot_) checkpoint_.slingshot = slingshot_->state();
             if (swing_stair_) checkpoint_.swing_stair = swing_stair_->state();
             if (upper_ascent_) checkpoint_.upper_ascent = upper_ascent_->state();
+            if (cargo_net_) checkpoint_.cargo_net = cargo_net_->capture();
             return;
         }
         checkpoint_.ballast = capture_body(bodies, ballast_id_);
@@ -6577,6 +6651,7 @@ private:
         if (slingshot_) slingshot_->restore(checkpoint_.slingshot);
         if (swing_stair_) swing_stair_->restore(checkpoint_.swing_stair);
         if (upper_ascent_) upper_ascent_->restore(checkpoint_.upper_ascent);
+        if (cargo_net_) cargo_net_->restore(checkpoint_.cargo_net);
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
@@ -6982,6 +7057,7 @@ private:
     bool slingshot_flight_ = false;
     std::unique_ptr<SwingStair> swing_stair_;
     std::unique_ptr<UpperAscent> upper_ascent_;
+    std::unique_ptr<CargoNet> cargo_net_;
     std::unique_ptr<TeeterRise> teeter_rise_;
     scraperx::sim::bands::CounterweightWell well_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;
@@ -7138,6 +7214,7 @@ private:
         Slingshot::State slingshot{};
         SwingStair::State swing_stair{};
         UpperAscent::State upper_ascent{};
+        std::string cargo_net;
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
@@ -7397,6 +7474,17 @@ namespace {
 }
 
 } // namespace
+
+std::vector<Vector3> Simulation::cargo_net_vertices(const double alpha) const {
+    std::vector<Vector3> out;
+    const auto *net=physics_world_->cargo_net();
+    if(net) for(const auto &v:net->render_vertices(static_cast<float>(alpha))) out.push_back(to_vector3(v));
+    return out;
+}
+std::vector<std::uint32_t> Simulation::cargo_net_indices() const {
+    const auto *net=physics_world_->cargo_net();
+    return net ? net->indices() : std::vector<std::uint32_t>{};
+}
 
 std::uint32_t Simulation::kit_body_count() const noexcept {
     return physics_world_->kit().body_count();

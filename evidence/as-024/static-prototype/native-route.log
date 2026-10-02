@@ -1,0 +1,4 @@
+CARGO_TOP lane=19 position=19.0275,11.9,-118.542 grounded=1 climb_ticks=907 deaths=0
+PASS AS-024 grade_to_first_ring lane=19 supported_height_m=11 deaths=0
+CARGO_TOP lane=21 position=21.0353,11.9,-118.542 grounded=1 climb_ticks=907 deaths=0
+PASS AS-024 grade_to_first_ring lane=21 supported_height_m=11 deaths=0

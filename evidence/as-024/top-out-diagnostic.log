@@ -1,0 +1,13 @@
+TOP origin=19.019,10.2015,-117.132
+TOP wall=1952 point=19.019,10.2015,-118.123 normal=0,0,-1
+CARGO_TOP lane=19 position=19.019,10.5855,-117.133 grounded=0 climb_ticks=1800 deaths=0
+NET_DIAG row=0 point=19.96,0.41,-117.9
+NET_DIAG row=3 point=19.9601,1.81263,-117.94
+NET_DIAG row=6 point=19.9608,3.21728,-117.936
+NET_DIAG row=9 point=19.9606,4.622,-117.927
+NET_DIAG row=12 point=19.9601,6.02683,-117.922
+NET_DIAG row=15 point=19.9594,7.43176,-117.919
+NET_DIAG row=18 point=19.9589,8.83676,-117.916
+NET_DIAG row=21 point=19.9591,10.2418,-117.913
+HANDS 10.75,-117.9 / 10.75,-117.9
+FAIL AS-024 held forward tops out onto real +11 m support
