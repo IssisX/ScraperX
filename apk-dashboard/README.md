@@ -46,9 +46,12 @@ The release therefore still contained ChatGPT source `4996a6e8cca0`.
 The setup and preflight repairs prevent silent replacement and catch mismatches
 before APK processing. They do not recover the original key or resolve the current
 secret mismatch by themselves. Cory explicitly approved a one-time reinstall
-migration to the existing `911843...` signing secret on October 2, 2026. The
-temporary publisher exception accepts only that exact old/new certificate pair;
-remove it after successful publication. Dashboard UI is unchanged.
+migration to the existing `911843...` signing secret on October 2, 2026.
+Publisher run `37007234977` completed successfully and published all four APKs,
+including ChatGPT source `3d664e4abfcc`. The temporary exact-certificate migration
+exception has been removed; strict signer continuity is restored against the
+new published identity. Previously installed model APKs require uninstall and
+reinstall once. Dashboard UI is unchanged.
 
 Run the isolated signing-setup regression checks with:
 

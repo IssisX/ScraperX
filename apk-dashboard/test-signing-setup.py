@@ -155,16 +155,11 @@ class SigningSetupTests(unittest.TestCase):
         workflow = SCRIPT.parents[1] / ".github/workflows/apk-dashboard.yml"
         text = workflow.read_text()
         snippet = text[text.index("          keytool -exportcert"):text.index('          SIGNING_CERT=""')]
-        for cert, approved_old, approved_new, expected in (
-                (self.cert, "", "", 0),
-                ("0" * 64, "", "", 1),
-                ("0" * 64, "0" * 64, self.cert, 0),
-                ("0" * 64, "0" * 64, "1" * 64, 1)):
-            with self.subTest(cert=cert, migration=approved_new):
+        for cert, expected in ((self.cert, 0), ("0" * 64, 1)):
+            with self.subTest(cert=cert):
                 (self.case / "work").mkdir(exist_ok=True)
                 env = dict(os.environ, KEYSTORE=str(self.key), SIGNING_ALIAS="scraperx-dashboard",
-                           SCRAPERX_APK_KEYSTORE_PASSWORD=self.password.read_text(), previous_cert=cert,
-                           APPROVED_PREVIOUS_SIGNER=approved_old, APPROVED_NEW_SIGNER=approved_new)
+                           SCRAPERX_APK_KEYSTORE_PASSWORD=self.password.read_text(), previous_cert=cert)
                 r = subprocess.run(["bash", "-euo", "pipefail", "-c", textwrap.dedent(snippet)],
                                    cwd=self.case, env=env, capture_output=True, text=True)
                 self.assertEqual(r.returncode, expected, r.stderr)
