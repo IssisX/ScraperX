@@ -1,6 +1,6 @@
 # AS-026 — current proof ledger
 
-Base `5acb18ce792925121084cafdfec56ad403499233`, branch ChatGPT. Local AS-026 native, shipping-touch and rendered-capture proof is complete as of 2026-10-02. Explicit supported +110 m development staging is not ordinary grade→121 ascent proof. Publication and Android/Fold behavior remain unverified.
+Base `5acb18ce792925121084cafdfec56ad403499233`, branch ChatGPT. Local AS-026 native, shipping-touch and rendered-capture proof is complete as of 2026-10-02. Explicit supported +110 m development staging is not ordinary grade→121 ascent proof. Source `1055609d84f0313e69c1dee6f3c2360c20fc8c8c` is published; exact-source [run 37072892935](https://github.com/IssisX/ScraperX/actions/runs/37072892935) is in progress at restart. Android/Fold behavior remains unverified.
 
 `baseline-red.log` rejects the absent +110→121 connection. `pendulum_model.py/.json` are converged design-only uniform-rod estimates; production Jolt owns the actual compound body, contacts and player loading. [Native replay](native-route.log) passes missed-jump recovery, checkpoint restore, supported launch footing and the loaded crossing to Tower support11 at walking-surface121 m, deaths0. Its measured quaternion-z span during climb is0.0771162; this is an engine measurement, not a pendulum-model prediction or a claim that every legal alternative requires one swing phase.
 

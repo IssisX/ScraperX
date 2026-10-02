@@ -4,7 +4,7 @@
 
 
 **Ascent Slice:** `AS-026`
-**Lifecycle:** IMPLEMENTED; local native/touch/render proof complete; publication/device verification pending
+**Lifecycle:** PUBLISHED; local native/touch/render proof complete; exact-source CI in progress; device verification pending
 **Provenance:** re-derived here
 **Implementation gate:** latest owner explicitly authorizes finding/filling the next gap with a harder primitive-built machine/parkour section; supersedes the old launcher-acceptance content stop for this slice.
 **Evidence:** [AS-026 ledger](../../evidence/as-026/README.md); Start Here owns candidate delivery.
@@ -36,3 +36,5 @@ Implementation steps: native shared parts/joint → reachable jump/climb/receive
 Embodiment: existing native player LERP and Kit quaternion SLERP share one fixed-tick interpolation clock with new read-only hand render accessors. Grip acquisition/release/support changes do not interpolate across unrelated holds; the existing arm presentation blends poses. Bounded first-person swing bank follows the interpolated ladder angle, settles after release and respects the head-motion comfort toggle. Camera position remains the native rendered capsule pose. No forced view turn or staged camera shot replaces player aiming.
 
 Feedback: catch/regrip, upward climbing release and native landing transitions drive sound/haptics. Passive bearing rattle gain/pitch follow actual native COM speed and whether a rider holds it; stopped motion fades to silence. Abrupt native velocity loss drives a brief strain haptic. Vibration and audio settings remain authoritative. Headless cue counters prove state routing, not hardware vibration or audible mixing; device feel/performance remains open. Read-only review caught and corrected missing strain playback and climbing-release audio wiring. A timed release is demonstrated; necessity of a particular phase for every legal alternative is not established or artificially enforced.
+
+**Publication, 2026-10-02:** source `1055609d84f0313e69c1dee6f3c2360c20fc8c8c` is pushed to ChatGPT; exact-source [run 37072892935](https://github.com/IssisX/ScraperX/actions/runs/37072892935) is in progress at the requested session restart. Start Here owns subsequent delivery receipts.

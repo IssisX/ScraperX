@@ -10,7 +10,7 @@
 | Shipping touch landing | Manual canopy brake at 354.19 m reaches supported +352.00 m, zero deaths, 1.54 m further walking; contact 2912.7 J, camera dip −0.0572 m. |
 | Actual mixer | 159 checks/56 touch events; Master peak −0.80 dB. Movie Maker mixes genuine signals with Dummy output; it does not prove phone-speaker sound or hardware vibration. |
 | Current captures | Final unloaded, loaded and whole-launcher images were explicitly opened; native rest mesh has 171 vertices and loaded fold readback −0.035335 m. Compatibility/softpipe capture-only 3D does not establish continuous-render or device performance. Earlier `visual/` captures are historical iterations. |
-| Delivery/device | Publication and exact-source combined Actions/APK remain pending. `df3a483` is the last verified executable delivery; old green CI is not proof for this source. The retained AS-003 carry failure reproduces on unchanged ARM64 baseline; full x86 CI remains enabled. |
+| Delivery/device | Combined source `1055609d84f0313e69c1dee6f3c2360c20fc8c8c` is published; exact-source [run 37072892935](https://github.com/IssisX/ScraperX/actions/runs/37072892935) is in progress. `df3a483` is the last verified executable delivery; old green CI is not proof for this source. The retained AS-003 carry failure reproduces on unchanged ARM64 baseline; full x86 CI remains enabled. |
 
 The current reduced-order leather model uses native cupped compound rest panels for external collision and a passive native rider fold for compliance. External collider panels do not deform with the visual fold. It is not full cloth. After this batch is finished/pushed and delivery status is established, the owner suggested `/plan` for a coherent playable-world pass; device acceptance remains separately open.
 
