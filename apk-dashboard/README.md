@@ -35,6 +35,11 @@ It executes the actual workflow shell with fixture GitHub/Android command
 boundaries and real certificate extraction. It checks publication decisions;
 live GitHub runs establish actual publication behavior.
 
+Live verification on October 2, 2026: publisher run `37034221476` passed all
+18 regression checks and published the newer ChatGPT source `83822fca6b5f`.
+Gemini, Claude, and Grok were skipped; their release asset IDs, SHA-256 digests,
+and publication timestamps remained identical to the preceding release.
+
 ## Signing setup and recovery
 
 Run `setup-stable-signing-termux.sh` with Bash. First-time setup retains the
