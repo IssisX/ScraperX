@@ -1,0 +1,14 @@
+{
+  "source": "df3a483bcc3a7f38629d520057413097a721e509",
+  "tree": "fd8b5a0eca4d99c801775ff14c5a2f03b0155e5f",
+  "run": 37038456873,
+  "job": 110942357099,
+  "success_steps": 23,
+  "artifact": 11243377381,
+  "artifact_name": "ScraperX-build-df3a483bcc3a7f38629d520057413097a721e509",
+  "expires_at": "2026-12-31T17:06:25Z",
+  "zip_sha256": "332e60e93edf7f958c304b94f68411d0117016c41fa36fac9c2752126ed6ddb3",
+  "apk_sha256": "70dafc26f32101b6abffeeb3bb32ab49f3218c3651dcdb00934e89d2873fcadd",
+  "signer_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+  "signature_scope": "CI apksigner result inspected; local APK hash and artifact source independently verified; no local cryptographic signature verification or device execution"
+}

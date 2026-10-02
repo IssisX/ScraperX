@@ -1,0 +1,7 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=437 driver=Dummy
+SCRAPERX_SETTINGS_RUNTIME checks=2894 failures=0 rings=33 decorative=704 structural=2033 native=1
+SCRAPERX_SETTINGS_RUNTIME_SOURCE draw_limit=12.00 power_limit=200000 neutral=(6.0, 0.35, -55.0)

@@ -1,0 +1,14 @@
+Source: df3a483bcc3a7f38629d520057413097a721e509
+Reviewed tree: fd8b5a0eca4d99c801775ff14c5a2f03b0155e5f
+Run: 37038456873 success; job: 110942357099
+Artifact: 11243377381 ScraperX-build-df3a483bcc3a7f38629d520057413097a721e509
+APK SHA256: 70dafc26f32101b6abffeeb3bb32ab49f3218c3651dcdb00934e89d2873fcadd
+ZIP SHA256: 332e60e93edf7f958c304b94f68411d0117016c41fa36fac9c2752126ed6ddb3
+Stable signer (CI verified): 9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4
+Native: 28/28, 64.15 s; settings: 2894; mixer: 152
+SCRAPERX_UITEST PASS touch_slingshot staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=37.54 apex_m=383.91 retrieval_cancel_walk_m=1.35 retrieval_s=4.82 retrieval_j=597.57 retrieval_peak_kw=9.42 second_launch=1
+SCRAPERX_UITEST PASS touch_slingshot_landing staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=37.54 brake_height_m=354.26 braked_apex_m=361.94 supported_height_m=352.00 deaths=0 roof_walk_m=1.53 contact_j=2986.0 camera_dip_m=-0.0580
+SCRAPERX_FEAR_MIX voice_phone_db=-14.63 bed_phone_db=-26.75 peak_db=-0.80
+SCRAPERX_SLINGSHOT_AUDIO PASS checks=152 mix_peak_db=-0.80 driver=Dummy touch_events=56 movie=/home/runner/work/_temp/slingshot-audio.avi
+Current-source CI camera PNGs were explicitly inspected separately.
+No APK installation/Android execution/Fold performance or speaker-quality claim. Local ARM64 retired-fixture failure remains scoped separately from fresh x86 CI success.
