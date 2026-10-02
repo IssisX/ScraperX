@@ -42,7 +42,7 @@ Shot shot(double seconds, double yaw = 0, double elevation = Slingshot::State{}.
     machine = s.slingshot_state();
     const double draw = machine.draw_m, energy = machine.energy_j;
     require(draw > .1 && energy > 0, "manual work stores elastic energy");
-    require(machine.aim_locked, "charged native aim lock reaches the Simulation snapshot");
+    require(!machine.aim_locked, "charged native aiming remains available through the Simulation snapshot");
     require(machine.ledger_valid, "closed normal-world draw retained a stale pre-BOARD contact witness");
     advance(s, .5);
     require(std::abs(s.slingshot_state().draw_m - draw) < .03, "ratchet holds actual draw");
@@ -112,6 +112,35 @@ int main() {
         }
         std::cout << "gravity render fixture maximum_tick_m=" << maximum_distance << '\n';
         require(witnessed, "natural native fall exceeds the former render cutoff with margin");
+    }
+    {
+        Simulation aiming;
+        const auto neutral = aiming.slingshot_state().neutral_position;
+        require(aiming.debug_restart_at({neutral.x, neutral.y + .85, neutral.z}), "aim render proof stages at pouch");
+        advance(aiming, .5);
+        require(aiming.request_slingshot_action(), "aim render proof boards");
+        advance(aiming, .1);
+        require(aiming.set_slingshot_input(0, .3, 1.10), "aim render proof requests both axes");
+        advance(aiming, .1);
+        const auto previous = aiming.slingshot_state();
+        advance(aiming, Simulation::kFixedStepSeconds);
+        const auto current = aiming.slingshot_state();
+        const auto tick = aiming.snapshot().tick_index;
+        require(std::abs(current.yaw_rad - previous.yaw_rad) > .0001,
+                "finite native torque supplies distinct rotating rail endpoints");
+        require(aiming.advance_frame(Simulation::kFixedStepSeconds * .5).steps_advanced == 0,
+                "half-tick aim rendering does not step authority");
+        const auto q = aiming.render_kit_body_rotation(aiming.kit_body_index(Slingshot::kLaunchRailEntity));
+        const double axis_x = -2 * (q.x * q.z + q.w * q.y);
+        const double axis_y = 2 * (q.w * q.x - q.y * q.z);
+        const double axis_z = -(1 - 2 * (q.x * q.x + q.y * q.y));
+        const auto rendered = aiming.render_slingshot_state();
+        require(std::abs(rendered.yaw_rad - std::atan2(axis_x, -axis_z)) < 1e-5 &&
+                std::abs(rendered.elevation_rad - std::asin(axis_y)) < 1e-5 &&
+                std::abs(rendered.yaw_rad - current.yaw_rad) > .00001,
+                "aim camera angles share the rail mesh SLERP instead of raw tick angles");
+        require(aiming.snapshot().tick_index == tick && aiming.slingshot_state().yaw_rad == current.yaw_rad,
+                "aim rendering leaves measured native angles untouched");
     }
     {
         Simulation interpolated;

@@ -484,7 +484,7 @@ func _controls_rows(_view_family: int) -> Array:
 		["icon", &"move", "LEFT THUMB", "Move; the stick appears where you touch"],
 		["icon", &"look", "RIGHT THUMB", "Drag to look; Gyro Aim adds tilt"],
 		["icon", &"sling", "BOARD", "Stand in the leather pouch, then tap BOARD"],
-		["icon", &"look", "AIM", "Drag on the right while the bands are slack; aim locks when charged"],
+		["icon", &"look", "AIM", "Drag on the right to aim up/down and sideways, including with the bands drawn"],
 		["icon", &"move", "DRAW", "Pull the left stick backward; watch the power bar, then let go to hold"],
 		["icon", &"sling", "RELEASE", "Tap RELEASE to fire the chosen stretch"],
 		["icon", &"chute", "CHUTE / BRAKE", "After the pouch exit, open the canopy to brake ascent or descent; tap again to stow"],

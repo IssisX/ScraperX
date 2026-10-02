@@ -7771,6 +7771,14 @@ SlingshotSnapshot Simulation::render_slingshot_state() const noexcept {
                        previous.z + (current.z - previous.z) * alpha};
     };
     result.pouch_position = blend(previous_slingshot_state_.pouch_position, result.pouch_position);
+    // The aiming lens must use the same interpolated rail as its mesh.
+    // Raw 90 Hz angles otherwise step even when body translation is smooth.
+    const auto rail_rotation = render_kit_body_rotation(kit_body_index(Slingshot::kLaunchRailEntity));
+    const JPH::Quat rail_q(float(rail_rotation.x), float(rail_rotation.y),
+                          float(rail_rotation.z), float(rail_rotation.w));
+    const auto rail_axis = rail_q * JPH::Vec3(0, 0, -1);
+    result.yaw_rad = std::atan2(rail_axis.GetX(), -rail_axis.GetZ());
+    result.elevation_rad = std::asin(std::clamp(double(rail_axis.GetY()), -1.0, 1.0));
     // Read the interpolated fork transform, so bands stay attached to its
     // rendered timber tips while authority continues to use raw body poses.
     const auto frame = kit_body_index(Slingshot::kFrameEntity);

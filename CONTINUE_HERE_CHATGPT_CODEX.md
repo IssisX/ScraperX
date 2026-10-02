@@ -1,16 +1,41 @@
-# CONTINUE HERE — ScraperX in ChatGPT Codex
+# CONTINUE HERE — ScraperX, canonical Termux / ChatGPT Codex handoff
 
-**Handoff revised: 2026-10-02. Repository: `IssisX/ScraperX`. Write branch: `ChatGPT` only. AS-023 is published at `3d664e4abfcc5c0acbdb7537c72734248f6b4632`; its exact-source CI/APK delivery passes.**
+**Revised 2026-10-02. Repository `IssisX/ScraperX`; write branch `ChatGPT` only. The recovered original scratch is committed on GitHub. Do not restart source recovery or reset to an earlier delivery. This document is the continuation record; Start Here owns the current immutable APK receipt, the Atlas owns spatial parameters and AS-023 owns the launcher contract.**
 
-**Current delivery:** [Start Here](00_START_HERE.md) owns the current run, immutable APK download, checksum and device boundary. Use its AS-023 artifact, not the historical +110 m APK in §2 below. The recovered scratch was committed in full; a current `ChatGPT` clone contains the implementation. Recovery and publication instructions describing the earlier pause below are historical, not pending tasks. The owner reports the separate `ScraperX APKs` downloader selected an older build and is now testing the current APK downloaded manually; its selection code has not been inspected.
+## Current handoff: device playtest repair
 
-The original migration handoff below recorded a documentation-only pause after the historical +110 m delivery. The owner subsequently resumed work and selected a manual wooden slingshot at grade. Its latest revision requests sturdier wood, thicker rubber, faster finite arcade charging and several-hundred-metre launch capability; moving the machine farther back is permitted. The original local AS-023 changes are recovered; continue in that scratch. The old statement that no local source patch existed applies only to the earlier migration checkpoint.
+The owner manually tested the preceding `3d664e4` APK after discovering that the separate **ScraperX APKs** downloader selected an old build. The current report is real feedback on the slingshot: an unsuitable fork shape, pitch/yaw locked after drawing, choppy flight/collision, and a request for **Matrix-style accelerating 360° bullet time**. The next 10–20 m tower section is paused until the launcher is accepted on device.
 
-**Current owner instruction, after verification:** stop using Pages for this task; commit and push the complete verified implementation to `IssisX/ScraperX`, branch `ChatGPT`. This supersedes the earlier local-only pause. Preserve the four newer documentation-only remote commits. After publication, stop ready to select a **10–20 m** tower gap for a climbing section or a physically causal machine encounter. Do not claim Android/device acceptance from local desktop tests.
+The bounded repair in this checkout does the following:
 
-Suggested continuation instruction:
+- Replaces the rectangular frame with a conventional stout rounded wooden Y fork. Native capsule timber parts are also the rendered geometry. The original owner image is preserved at [evidence/as-023/reference/owner-slingshot-1423243.jpg](evidence/as-023/reference/owner-slingshot-1423243.jpg), SHA-256 `c23564db183f463fd3a10ac3ba26440ba5637edd063d4ea4614d32e6da6c9983`. Keep this file with the implementation; the terminal does not need the ChatGPT attachment path.
+- Permits touch pitch/yaw aiming **before or after drawing** through the existing native finite-work gimbal. The fixed band anchors, ground ratchet extension and launch calibration remain. Feasible limits are 20–85° elevation and ±46° yaw. Charged turning records source work; it does not move the heavy fork kinematically or inject rubber energy.
+- Derives the aiming lens angles from the same interpolated rail quaternion as its mesh. A no-physics half-tick regression verifies that camera angles differ from raw tick angles and match the rendered rail while native state remains unchanged.
+- Opens the release camera at **0.06× elapsed native time**, accelerates through a complete orbit over **2.12 s**, and returns to the player's current POV by **2.70 s**. The opening lens follows rider displacement instead of blending from a world position left behind at release. Speed warp and the existing humanoid/humor remain presentation. Comfort controls still cancel the orbit/time scaling. The native fixed tick stays 90 Hz.
+- Keeps the Grade start/backward boarding approach `(6,0.92,-58)` clear of the new visible/native steel foundation. The first model revision blocked this point; the real touch test caught it and the collider/mesh depth was repaired together.
 
-> Continue the verified AS-023 candidate on `IssisX/ScraperX`, branch `ChatGPT`. Read the current status and running to-do, plus the existing Atlas and evidence ledger. The original scratch is recovered and integration verification is complete. Do not restart recovery. Next, identify a real 10–20 m gap around/above the supported launch range, inspect its physical entry/receiver/exit, and select either climbing or a causal machine with the owner. Maintain native Jolt/C++ physics and Godot touch/presentation ownership; update existing documentation as behavior is established.
+**Verification so far:** full native suite **28/28**, 124.24 s; charged rail settles at yaw 0.279991 / elevation 1.10286 rad with 11.9798 m retained draw and 376.31 J added work. A release directly from that charged angle reaches `(27.8535,141.095,-119.02)` after two seconds through real guide exit and native momentum. Real shipping-scene headless touch launch reaches apex **383.91 m**; touch brake/landing reaches supported **+352 m**, **zero deaths**, **1.53 m** continued walking, 3,024 J contact and a −0.0583 m camera dip. All **2,894** settings checks pass. View/cancellation and actual native visual probe pass; the rounded fork/rider screenshots were explicitly opened. Read-only review found no Critical/Important defects; both minor findings were fixed. The 648×557 rendered touch route also passes (+352 m / zero deaths / 2.27 m walking); its charged pitch, rider, true POV and roof images were explicitly opened. Inspection caught a stale DRAW MORE action during released guide travel; the context condition is now repaired and headless proof rejects that action. Its final render recheck and exact-source CI/APK are pending at this publication checkpoint; update this paragraph when their results arrive.
+
+**Device boundary:** the owner observed Android execution and defects in the preceding APK. This repair has no direct device execution path here. The two identified camera interpolation/transition causes are repaired, but phone frame pacing, tower collision feel, cinematic comfort and touch ergonomics still need a fresh device playtest. Do not call desktop/native success a phone performance fix. The separate APK downloader has not been inspected.
+
+## Terminal continuation commands
+
+GitHub carries the source, reference image and this handoff. A ChatGPT session UUID does not transfer its executor or caches into Termux. Start a terminal Codex session in a fresh checkout so existing personal scratch work stays intact:
+
+```sh
+cd ~
+git clone --branch ChatGPT --single-branch https://github.com/IssisX/ScraperX.git ScraperX-terminal-20261002
+git -C ScraperX-terminal-20261002 status --short --branch
+codex -C "$HOME/ScraperX-terminal-20261002" "Read CONTINUE_HERE_CHATGPT_CODEX.md and 00_START_HERE.md. Continue from the current launcher playtest repair on ChatGPT. Do not restart recovery. Check the exact-source APK receipt and running to-do first. Preserve native Jolt/C++ physics and Godot touch/presentation ownership. Wait for fresh device feedback before selecting the next 10–20 m tower section. Update the authoritative docs as you work."
+```
+
+If that directory already exists, inspect its Git status and preserve any local edits before `git fetch origin ChatGPT` / `git merge --ff-only origin/ChatGPT`; do not overwrite it, reset it or force-push. Use the current branch head and Start Here's APK source SHA rather than assuming the latest documentation commit requires another APK. All APKs are built in GitHub Actions. Keep the branch-required `ScraperX-ChatGPT.apk` / `com.cory.scraperx.chatgpt` identity and stable debug signer; versionCode 1 / versionName 0.1.0 do not identify a source revision.
+
+The live executor scratch is `/tmp/scraperx-chatgpt-scratch`, build `/tmp/scraperx-build-work`, runtime/evidence `/tmp/scraperx-runtime`. These are provenance, not Termux dependencies. The prior source-recovery archives remain untouched; GitHub contains the original recovered implementation plus this repair.
+
+## Historical model-switch and migration record
+
+The sections below preserve earlier receipts and paths. Their pause/recovery/publication instructions are historical. The current handoff above and running to-do below supersede them; retain the source IDs when interpreting old measurements.
 
 ### Model-switch checkpoint — 2026-10-01, GPT-6 Sol 6.1
 
@@ -38,7 +63,7 @@ Suggested continuation instruction:
 
 Read [AS-023's bounded contract](03_EXECUTION/ASCENT/AS-023_MANUAL_SLINGSHOT.md), the [Atlas's current opening](01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md#6-opening-mechanism-the-pipe-loaded-balance-bridge) and [the local evidence ledger](evidence/manual_slingshot.md). The compiled fixed-fork revision is recorded in the Atlas. Fresh native refinement measures apex Y=384.344/384.167/384.223 m at 90/180/360 Hz, closed pre-impact residual 1.17/0.60/0.30%, and peak source 198.205 kW under 200 kW. Manual retrieval takes 5.044 s with 9.123 kW peak, zero final rubber energy and an actual second shot. All 33 restart destinations pass 2,894 checks. The full 28-gate suite and actual shipping-touch +352 m supported arrival pass; final real-render/audio inspection also passes, with actual device acceptance still open. The evidence ledger owns exact receipts. Source publication and exact-source CI/APK delivery now pass; see Start Here for the immutable build. Android/device/Fold acceptance remains separate and open.
 
-**Current causal correction:** bolt the timber fork at 82° and read anchors from its static transform. Aim only the 60 kg rail using an actual SixDOF gimbal and finite 200 kW torque source while undrawn; measured Jolt angles/settled readiness permit a passive latch. Do not restore the unpaid kinematic fork aim or add gameplay aim/launch pose/velocity setters. Fresh native and touch measurements now verify this correction; use the evidence ledger for receipts. The landing model is an upright arcade capsule with contact impulses and finite ground recovery forces, not articulated feet or a ragdoll. Internal machine-member collision filters are declared separately from the sole player/pouch pair exclusion in AS-023.
+**Current causal correction:** bolt the timber fork at 82° and read anchors from its static transform. Aim only the 60 kg rail using an actual SixDOF gimbal and finite 200 kW torque source with slack or drawn bands; measured Jolt angles/settled readiness permit a passive latch. Do not restore the unpaid kinematic fork aim or add gameplay aim/launch pose/velocity setters. Fresh native and touch measurements now verify this correction; use the evidence ledger for receipts. The landing model is an upright arcade capsule with contact impulses and finite ground recovery forces, not articulated feet or a ragdoll. Internal machine-member collision filters are declared separately from the sole player/pouch pair exclusion in AS-023.
 
 **Latest owner amendment:** ordinary gameplay is touch-only. Prioritize whole-body comic poses, thought bubbles and mechanical boing over facial detail. Native pre-contact support-relative normal/tangential energy and bounded physical footwork/recovery must govern all landings; smooth first-person impact/recovery presentation follows that result. Production-native and actual viewport touch full-draw/parachute sequences reach supported +352 m Tower with zero deaths and continued walking. The final 28-test suite passes, including native landing energy/recovery; shipping contact/camera checks pass. Final rendered/audio inspection passes; actual device play remains open.
 
@@ -95,7 +120,7 @@ The previous agent-owned clone was `/data/data/com.termux/files/usr/tmp/scraperx
 
 ## 4. First work after the owner resumes
 
-**Current continuation:** recover the existing scratch changes and tool/build environment; collect the final rebuilt all-suite and full-world input/collision/supported-arrival receipts; inspect genuine wood/band/humanoid/reticle/prediction/orbit/first-person and final settings/restart views; preserve retained fixture regressions. Update the exact local receipt without inventing CI or device acceptance. Rebuild the bridge after consequential native edits; the current shipping-scene test already verifies all 33 Grade/ring presets. Keep further dynamic encounters around/above the new landing range as future authored slices, not implied by this frame extension.
+**Historical continuation at the earlier recovery point:** recover the existing scratch changes and tool/build environment; collect the final rebuilt all-suite and full-world input/collision/supported-arrival receipts; inspect genuine wood/band/humanoid/reticle/prediction/orbit/first-person and final settings/restart views; preserve retained fixture regressions. Update the exact local receipt without inventing CI or device acceptance. Rebuild the bridge after consequential native edits; the current shipping-scene test already verifies all 33 Grade/ring presets. Keep further dynamic encounters around/above the new landing range as future authored slices, not implied by this frame extension.
 
 The latest integrated candidate also needs actual touch-brake roof arrival, landing-response measurements/tests across support/impact conditions, smooth first-person recovery and state-driven humor observation. Keep the 27-gate result attached to the prior stable source until all 28 rebuilt gates pass. Current rendered options proof passes 2,898 checks and its two pause captures have been inspected.
 
@@ -166,7 +191,16 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 
 ## 7. Running to-do at this handoff
 
-**Current AS-023 local revision:**
+**Current AS-023 playtest repair, 2026-10-02:**
+
+- [x] Reproduce charged native aim lock, replace it with paid loaded pitch/yaw aiming and preserve held extension.
+- [x] Replace the fork from the committed owner reference using shared native/rendered round timber parts; repair real Grade approach clearance.
+- [x] Verify half-tick rail/camera SLERP and displacement-following bullet-time opening; retain the native 90 Hz solver and comfort cancellation.
+- [x] Verify a real release directly from adjusted charged aim, full native suite, shipping headless touch launch/+352 m landing and all restart/settings checks.
+- [ ] Finish rendered touch inspection and publish the complete repair/reference/handoff on `ChatGPT`; verify the exact-source CI/APK to terminal status.
+- [ ] Observe the repair APK on the owner’s device: loaded aim range, collision feel, frame pacing and cinematic comfort. Profile reproducible frame-time problems before claiming a fix.
+
+**Completed preceding AS-023 integration:**
 
 - [x] Recover the original scratch and preserve verified source/evidence backups outside the executor.
 - [x] Prepare the GPT-6 Sol 6.1 checkpoint and pause without starting new gameplay edits or builds.
@@ -186,7 +220,7 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 - [x] Complete independent read-only candidate review; no remaining Important/Critical findings. State absent CI/APK/device evidence; publication is now explicitly owner-authorized.
 - [x] Preserve the post-integration source in an independently verified local backup and commit the exact proof receipts; original recovery backups remain intact.
 - [x] Publish the complete verified AS-023 source to `ChatGPT` at `3d664e4` and verify its successful exact-source CI/APK delivery.
-- [ ] Observe the owner's current APK playtest and resolve reproducible touch/gameplay defects before building the next section.
+- [x] Receive the preceding APK playtest and implement the bounded launcher repair above; renewed device acceptance remains open.
 - [ ] Inspect/fix `ScraperX APKs` build selection in its own implementation when that source is available; do not mistake stale downloader output for missing game source.
 - [ ] Select a real 10–20 m tower gap with the owner, then compile/implement a climbing section or causal machine encounter with physical entry, receiver, exit and failure recovery.
 

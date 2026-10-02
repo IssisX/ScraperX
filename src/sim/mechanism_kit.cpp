@@ -3,6 +3,7 @@
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
@@ -42,6 +43,15 @@ constexpr float kGovernorCreep = 0.08F;
             if (part.mass_kg > 0.0F) {
                 settings.mDensity = part.mass_kg /
                     (JPH::JPH_PI * part.half.GetX() * part.half.GetX() * 2.0F * part.half.GetY());
+            }
+            return settings.Create().Get();
+        }
+        if (part.shape == Part::Shape::Capsule) {
+            JPH::CapsuleShapeSettings settings(part.half.GetY(), part.half.GetX());
+            if (part.mass_kg > 0.0F) {
+                const float radius = part.half.GetX();
+                settings.mDensity = part.mass_kg /
+                    (JPH::JPH_PI * radius * radius * (2.0F * part.half.GetY() + 4.0F * radius / 3.0F));
             }
             return settings.Create().Get();
         }

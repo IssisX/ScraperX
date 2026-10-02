@@ -119,7 +119,7 @@ func _run() -> void:
 		_main._native.advance_frame((1.0 / 60.0) * _main._slingshot_view.get_simulation_scale())
 		_view(1.0 / 60.0)
 	await _capture("release-orbit-front-human-rider")
-	for i in 70:
+	for i in 110:
 		_main._native.advance_frame((1.0 / 60.0) * _main._slingshot_view.get_simulation_scale())
 		_view(1.0 / 60.0)
 	await _capture("return-to-true-pov")

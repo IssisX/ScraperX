@@ -105,18 +105,27 @@ func _run() -> void:
 	if not _check(not view._preview_mesh.visible and not view._target_marker.visible,
 			"release hides forecast while the harness remains on its guide"):
 		return
-	if not _check(view.get_simulation_scale() >= 0.16 and view.get_simulation_scale() < 0.18,
+	if not _check(view.get_simulation_scale() >= 0.06 and view.get_simulation_scale() < 0.08,
 			"release asks for elapsed-time slow motion"):
 		return
 	if not _check(view._avatar.position == player and state == native_before,
 			"cinematic rider follows native pose without mutating state"):
+		return
+	# A fast rider must carry the opening lens with them. Blending from a
+	# release-time world position used to leave the lens behind the body.
+	player += Vector3.UP * 12.0
+	normal.origin += Vector3.UP * 12.0
+	camera.global_transform = normal
+	view.update_view(1.0 / 60.0, state, player, Vector3(0.0, 86.0, -10.0), camera)
+	if not _check(camera.global_position.distance_to(player) < 4.5,
+			"bullet-time opening follows rider displacement without a stale world anchor"):
 		return
 	for i in 26:
 		camera.global_transform = normal
 		view.update_view(1.0 / 60.0, state, player, Vector3(0.0, 18.0, -10.0), camera)
 	if not _check(view._hud.has_thought_bubble(), "brief rising release gets its bounded thought bubble"):
 		return
-	for i in 130:
+	for i in 160:
 		camera.global_transform = normal
 		camera.fov = 82.0
 		view.update_view(1.0 / 60.0, state, player, Vector3(0.0, 18.0, -10.0), camera)

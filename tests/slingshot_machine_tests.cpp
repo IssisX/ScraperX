@@ -152,9 +152,7 @@ Shot shoot(int hz, double target_draw) {
     result.energy = world.machine->state().energy_j;
     result.work = world.machine->state().work_j;
     require(result.draw >= target_draw - .02, "finite muscle source could not reach requested draw");
-    const double charged_yaw = world.machine->state().yaw_rad;
-    world.tick(0, false, false, .5, .7);
-    require(std::abs(world.machine->state().yaw_rad - charged_yaw) < .001, "charged aim changed without paying work");
+    require(!world.machine->state().aim_locked, "charged rail remains available for paid aiming");
     // A released manual pull retains its small carriage momentum until the
     // springs slow it and the catch takes the load; it is not velocity-reset.
     for (int step = 0; step < hz / 4; ++step) world.tick();
@@ -206,6 +204,42 @@ int main() {
     RegisterTypes();
     int result = 0;
     try {
+    {
+        World world(90);
+        world.tick(0, true);
+        for (int step = 0; step < 15 * world.hz && world.machine->state().draw_m < 11.97; ++step)
+            world.tick(1);
+        for (int step = 0; step < world.hz; ++step) world.tick();
+        const auto held = world.machine->state();
+        require(held.draw_m > 11.9 && held.energy_j > 400000,
+                "charged aiming proof requires a real full manual draw");
+        require(!held.aim_locked, "held rubber must permit paid pitch and yaw aiming");
+        for (int step = 0; step < 10 * world.hz; ++step) {
+            world.tick(0, false, false, .28, 1.10);
+            if (world.machine->state().aim_ready &&
+                std::abs(world.machine->state().elevation_rad - 1.10) < .01) break;
+        }
+        const auto aimed = world.machine->state();
+        require(aimed.aim_ready && std::abs(aimed.yaw_rad - .28) < .01 &&
+                std::abs(aimed.elevation_rad - 1.10) < .01,
+                "charged gimbal must reach both requested angles");
+        require(std::abs(aimed.draw_m - held.draw_m) < .03 &&
+                std::abs(aimed.energy_j - held.energy_j) < 2000,
+                "charged aiming must retain actual ratchet stretch and rubber energy");
+        require(aimed.work_j > held.work_j,
+                "charged rail rotation must record finite actuator work");
+        std::cout << "charged aim yaw=" << aimed.yaw_rad << " elevation=" << aimed.elevation_rad
+                  << " draw=" << aimed.draw_m << " work_delta=" << aimed.work_j - held.work_j << '\n';
+        require(aimed.release_ready, "adjusted charged pose must permit physical release");
+        world.tick(0, true, false, .28, 1.10);
+        for (int step = 0; step < 2 * world.hz; ++step) world.tick(0, false, false, .28, 1.10);
+        const auto flight = world.physics.GetBodyInterface().GetPosition(world.player);
+        require(world.machine->state().released && !world.machine->state().seated &&
+                flight.GetX() > held.pouch_position.GetX() + 10 && flight.GetY() > 40,
+                "release must leave the real guide with momentum along the charged aim");
+        std::cout << "charged aimed release position=" << flight.GetX() << ',' << flight.GetY()
+                  << ',' << flight.GetZ() << '\n';
+    }
         {
             World world(90);
             for (int step = 0; step < world.hz; ++step) world.tick(1);
@@ -221,8 +255,8 @@ int main() {
                     "boarding momentum opened the undrawn seat restraint");
             for (int step = 0; step < world.hz; ++step) world.tick(1);
             require(world.machine->state().draw_m > .1 && world.machine->state().work_j > 0 &&
-                    world.machine->state().energy_j > 1.0 && world.machine->state().aim_locked,
-                    "authorized manual draw did not store real work and lock aim");
+                    world.machine->state().energy_j > 1.0 && !world.machine->state().aim_locked,
+                    "authorized manual draw did not store real work while retaining aim");
         }
         {
             World world(90);

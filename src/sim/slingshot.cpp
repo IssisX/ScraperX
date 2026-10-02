@@ -69,28 +69,45 @@ Slingshot::Slingshot(PhysicsSystem &system, kit::Kit &kit, BodyID player)
             EAllowedDOFs::TranslationY | EAllowedDOFs::TranslationZ, physical_mass);
     }
 
-    // Open-centred fork: thick timber arms and outer braces carry the anchor
-    // reactions into the broad grade feet, clear of the central launch path.
-    // The heavy fork is bolted to the grade foundation. It never rotates
-    // during gameplay; only the lighter physical launch rail aims.
-    std::vector<kit::Part> fork_parts;
-    for (const float x : {-3.0F, 3.0F}) {
-        fork_parts.push_back(box(Vec3(.8F, .8F, 5.0F), Vec3(x, 0, -5),
-                                 kit::Material::Timber, 4500));
-        fork_parts.push_back(box(Vec3(.65F, .75F, .55F), Vec3(x, 0, -10),
-                                 kit::Material::Yellow, 250));
-        auto brace = box(Vec3(.35F, .4F, 3.874F), Vec3(x * 1.25F, 0, -3.7F),
-                         kit::Material::Timber, 650);
-        brace.rotation = Quat::sRotation(Vec3::sAxisY(), x > 0 ? -.195F : .195F);
-        fork_parts.push_back(brace);
-    }
-    // Crossfoot is below the pouch, rather than across the airborne rider.
-    fork_parts.push_back(box(Vec3(4.25F, .35F, .55F), Vec3(0, -.85F, .85F),
-                             kit::Material::Timber, 1200));
-    for (const float z : {-3.5F, -8.2F})
-        fork_parts.push_back(box(Vec3(3.0F, .45F, .5F), Vec3(0, 0, z),
-                                 kit::Material::Timber, 1000));
+    // Reference-shaped, rooted Y fork. Capsule members are the same native
+    // parts Godot draws: stout round timber, curved branches, an open throat.
+    // Preserve the proven anchor positions; aim turns the paid guide only.
     const auto initial_rotation = Quat::sRotation(Vec3::sAxisX(), float(State{}.elevation_rad));
+    const auto inverse = initial_rotation.Conjugated();
+    const Vec3 tip = initial_rotation * Vec3(0, 0, -float(kForkRadiusM));
+    std::vector<kit::Part> fork_parts;
+    const auto timber = [&](Vec3 a, Vec3 b, float radius) {
+        kit::Part part;
+        const auto span = b - a;
+        part.shape = kit::Part::Shape::Capsule;
+        part.half = Vec3(radius, span.Length() * .5F, radius);
+        part.offset = inverse * ((a + b) * .5F);
+        part.rotation = inverse * Quat::sFromTo(Vec3::sAxisY(), span.Normalized());
+        part.material = kit::Material::Timber;
+        fork_parts.push_back(part);
+    };
+    const Vec3 root(0, .6F, -5.0F);
+    const Vec3 neck(0, 4.8F, -4.3F);
+    timber(root, neck, .90F);
+    for (const float side : {-1.0F, 1.0F}) {
+        const Vec3 control(side * float(kHalfSpanM), 4.9F, tip.GetZ());
+        const Vec3 end(side * float(kHalfSpanM), tip.GetY(), tip.GetZ());
+        Vec3 previous = neck;
+        for (int step = 1; step <= 14; ++step) {
+            const float t = float(step) / 14.0F;
+            const auto next = neck * ((1-t)*(1-t)) + control * (2*t*(1-t)) + end * (t*t);
+            timber(previous, next, .80F - .10F * t);
+            previous = next;
+        }
+    }
+    // Visible foundation bears the rooted handle. Its top stays below the
+    // pouch and does not bridge the launch corridor or approach path.
+    // Keep the Grade start / backward boarding approach at z=-58 clear of
+    // the foundation, including the player's 0.35 m collision radius.
+    auto foot = box(Vec3(2.8F, .20F, 1.1F), Vec3::sZero(), kit::Material::Steel);
+    foot.offset = inverse * Vec3(0, -.15F, -5.0F);
+    foot.rotation = inverse;
+    fork_parts.push_back(foot);
     frame_ = kit_.add_body(kFrameEntity, fork_parts, neutral_position(),
                           initial_rotation, 0, .8F);
     kit_.disable_collision(frame_, pouch_);
@@ -456,7 +473,10 @@ void Slingshot::refresh_state() {
     state_.draw_m = std::clamp(double(state_.pouch_position.GetZ() - state_.guide_origin.GetZ()),
                               0.0, kMaximumDrawM);
     state_.energy_j = bands().elastic_energy_j;
-    state_.aim_locked = guide_ == nullptr || state_.released || state_.energy_j > 1.0 || state_.draw_m > .03;
+    // The fixed fork's anchors do not move when the rail aims. The grade
+    // ratchet holds the actual pouch coordinate while a finite-work gimbal
+    // turns only the 60 kg rail. Loaded rubber therefore needs no aim lock.
+    state_.aim_locked = guide_ == nullptr || state_.released || state_.recovering;
     if (!state_.guided_launch && !state_.released)
         state_.launch_track_start = kit_.body_position(launch_rail_);
     state_.launch_track_end = state_.launch_track_start +
@@ -571,6 +591,8 @@ void Slingshot::pre_step(float dt, double draw_input, double yaw,
         state_.track_exit = false;
     }
     // Aim cannot borrow work from charged bands or move an attached rider.
+    // Unbinding the rail leaves the grade restraint and harness in place;
+    // the actual finite torque/work owner operates even with a held draw.
     if (!state_.aim_locked && (harness_ != nullptr || player_in_pouch()))
         aim(yaw, elevation, dt);
 

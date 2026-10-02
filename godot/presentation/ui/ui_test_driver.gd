@@ -257,8 +257,8 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 	_move(device, 0.0)
 	await _seconds(0.4) # The real carriage coasts into its one-way catch.
 	var charged: Dictionary = _native().get_slingshot_state()
-	if not bool(charged["aim_locked"]):
-		return _fail("funded manual draw failed to expose native aim lock")
+	if bool(charged["aim_locked"]):
+		return _fail("funded manual draw incorrectly locked touch aiming")
 	var held_draw := float(charged["draw_m"])
 	var held_work := float(charged["work_j"])
 	var energy := float(charged["energy_j"])
@@ -273,22 +273,22 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 	var held: Dictionary = _native().get_slingshot_state()
 	if absf(float(held["draw_m"]) - held_draw) > 0.03 or absf(float(held["work_j"]) - held_work) > 0.10:
 		return _fail("idle ratchet lost draw or accrued manual work")
-	await _slingshot_look_attempt(device)
-	var locked: Dictionary = _native().get_slingshot_state()
-	if absf(float(locked["yaw_rad"]) - float(charged["yaw_rad"])) > 0.00001 \
-			or absf(float(locked["elevation_rad"]) - float(charged["elevation_rad"])) > 0.00001 \
-			or absf(float(_main._yaw) + float(locked["yaw_rad"])) > 0.00001 \
-			or absf(float(_main._pitch) - float(locked["elevation_rad"])) > 0.00001:
-		return _fail("charged look gesture changed funded aim or misleading aiming lens")
-	await _pose("charged_locked_aim")
+	# A charged touch gesture must change both axes through native torque,
+	# retain draw, then return to the nominal roof shot for landing proof.
+	if device == InputRouter.Device.TOUCH and not await _touch_rail_aim(true):
+		return false
+	var aimed: Dictionary = _native().get_slingshot_state()
+	await _pose("charged_adjustable_aim")
 	if not await _offered(&"slingshot", "RELEASE"):
 		return _fail("loaded Action did not offer RELEASE")
-	var launches := int(locked["launch_count"])
+	var launches := int(aimed["launch_count"])
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_slingshot_state()["launch_count"]) == launches + 1, 0.5):
 		return _fail("device Action did not remove native draw restraint")
 	if not bool(_native().get_slingshot_state()["released"]) or not _main._slingshot_view.is_cinematic_active():
 		return _fail("physical release did not start cinematic")
+	if _main._read_context()["action"]["id"] == &"slingshot":
+		return _fail("released harness still offered a charging/release action")
 	await _seconds(0.62)
 	var release_speed := _velocity().length()
 	if release_speed < 8.0 or not _main._slingshot_view._avatar.visible or _main._arms.visible:
@@ -296,7 +296,7 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 	if not _main._slingshot_view._hud.has_thought_bubble():
 		return _fail("actual rising release did not show its brief thought reaction")
 	await _pose("release_orbit")
-	if not await _wait_until(func() -> bool: return not _main._slingshot_view.is_cinematic_active(), 2.0):
+	if not await _wait_until(func() -> bool: return not _main._slingshot_view.is_cinematic_active(), 3.0):
 		return _fail("orbital camera did not return after brief sequence")
 	if _main._slingshot_view.get_simulation_scale() != 1.0 or not _main._arms.visible \
 			or _main._slingshot_view._avatar.visible or _main._slingshot_view._hud.has_thought_bubble():
@@ -419,16 +419,18 @@ func _touch_launch_roof_landing() -> bool:
 	return true
 
 
-func _touch_rail_aim() -> bool:
+func _touch_rail_aim(charged: bool = false) -> bool:
 	var initial: Dictionary = _native().get_slingshot_state()
-	if bool(initial.get("aim_locked", true)) or float(initial["energy_j"]) > 1.0:
+	if bool(initial.get("aim_locked", true)) or (not charged and float(initial["energy_j"]) > 1.0):
 		return _fail("ordinary boarding preloaded bands and blocked unloaded aiming")
 	var initial_goal := float(_main._sling_goal_yaw)
+	var initial_pitch := float(_main._sling_goal_elevation)
+	var gesture := Vector2(45.0, 70.0) if charged else Vector2(24.0, 0.0)
 	var at := _viewport_size() * Vector2(0.80, 0.30)
 	_touch(7, at, true)
-	_drag(7, at + Vector2(24.0, 0.0), Vector2(24.0, 0.0))
+	_drag(7, at + gesture, gesture)
 	await _frames(3)
-	_touch(7, at + Vector2(24.0, 0.0), false)
+	_touch(7, at + gesture, false)
 	await _frames(2)
 	var requested := float(_main._sling_goal_yaw)
 	if absf(requested - initial_goal) < 0.001:
@@ -438,43 +440,29 @@ func _touch_rail_aim() -> bool:
 		return _fail("touch rail target was forgotten after finger lift")
 	if not await _wait_until(func() -> bool:
 			var rail: Dictionary = _native().get_slingshot_state()
-			return bool(rail.get("aim_ready", false)) and absf(float(rail["yaw_rad"]) - requested) < 0.012, 5.0):
+			return bool(rail.get("aim_ready", false)) and absf(float(rail["yaw_rad"]) - requested) < 0.012 \
+				and absf(float(rail["elevation_rad"]) - float(_main._sling_goal_elevation)) < 0.012, 5.0):
 		return _fail("finite native rail did not settle near the retained touch target")
-	await _pose("manual_aim_settled")
+	if charged:
+		var turned: Dictionary = _native().get_slingshot_state()
+		if absf(float(turned["elevation_rad"]) - initial_pitch) < 0.06 \
+				or absf(float(turned["draw_m"]) - float(initial["draw_m"])) > 0.03 \
+				or float(turned["work_j"]) <= float(initial["work_j"]):
+			return _fail("charged touch pitch did not move through paid torque with retained draw")
+		await _pose("charged_pitch_yaw_settled")
+	else:
+		await _pose("manual_aim_settled")
 	_touch(7, at, true)
-	_drag(7, at - Vector2(24.0, 0.0), Vector2(-24.0, 0.0))
+	_drag(7, at - gesture, -gesture)
 	await _frames(3)
-	_touch(7, at - Vector2(24.0, 0.0), false)
+	_touch(7, at - gesture, false)
 	if not await _wait_until(func() -> bool:
 			var rail: Dictionary = _native().get_slingshot_state()
-			return bool(rail.get("aim_ready", false)) and absf(float(rail["yaw_rad"]) - initial_goal) < 0.012, 5.0):
+			return bool(rail.get("aim_ready", false)) and absf(float(rail["yaw_rad"]) - initial_goal) < 0.012 \
+				and absf(float(rail["elevation_rad"]) - initial_pitch) < 0.012, 5.0):
 		return _fail("reverse touch look did not return the physical rail to its initial goal")
 	await _seconds(0.4)
 	return true
-
-
-func _slingshot_look_attempt(device: int) -> void:
-	match device:
-		InputRouter.Device.TOUCH:
-			var at := _viewport_size() * Vector2(0.80, 0.30)
-			_touch(7, at, true)
-			_drag(7, at + Vector2(120, -70), Vector2(120, -70))
-			await _frames(3)
-			_touch(7, at + Vector2(120, -70), false)
-		InputRouter.Device.GAMEPAD:
-			_axis(JOY_AXIS_RIGHT_X, 0.8)
-			_axis(JOY_AXIS_RIGHT_Y, -0.6)
-			await _frames(5)
-			_axis(JOY_AXIS_RIGHT_X, 0.0)
-			_axis(JOY_AXIS_RIGHT_Y, 0.0)
-		_:
-			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-			var event := InputEventMouseMotion.new()
-			event.relative = Vector2(120, -70)
-			_push(event)
-			await _frames(3)
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	await _frames(2)
 
 
 func _pipe_bridge(device: int) -> bool:

@@ -9,8 +9,8 @@ const LeatherShader := preload("res://presentation/slingshot_leather.gdshader")
 const SpeedShader := preload("res://presentation/slingshot_speed.gdshader")
 const ClimberCharacter := preload("res://presentation/climber_character.gd")
 const Style := preload("res://presentation/ui/ui_style.gd")
-const CINEMATIC_SECONDS := 2.10
-const ORBIT_SECONDS := 1.64
+const CINEMATIC_SECONDS := 2.70
+const ORBIT_SECONDS := 2.12
 const BAND_SEGMENTS := 8
 const FRAME_ENTITY := 1950
 const POUCH_ENTITY := 2900
@@ -40,6 +40,7 @@ var _last_launch := -1
 var _cinematic_clock := -1.0
 var _cinematic_forward := Vector3.FORWARD
 var _cinematic_start := Transform3D.IDENTITY
+var _cinematic_start_player := Vector3.ZERO
 var _comfortable := true
 var _simulation_scale := 1.0
 var _preview_points := PackedVector3Array()
@@ -121,9 +122,8 @@ func update_view(delta: float, state: Dictionary, player_position: Vector3,
 	_comfortable = not bool(state.get("reduced_motion", false)) \
 		and (settings == null or (bool(settings.get("head_bob")) and bool(settings.get("launch_cinematics"))))
 	if bool(state.get("seated", false)) and not bool(state.get("released", false)):
-		# The native clamps the unloaded fork and locks it while charged.
-		# Keep the aiming lens on that actual axis after every input sample,
-		# so a look gesture cannot imply a new unfunded launch direction.
+		# Charged and slack aim share the measured, interpolated rail axis.
+		# The finite native gimbal must move before the lens shows that aim.
 		var yaw := -float(state.get("yaw_rad", 0.0))
 		var elevation := float(state.get("elevation_rad", 0.0))
 		_main.set("_yaw", yaw)
@@ -133,6 +133,7 @@ func update_view(delta: float, state: Dictionary, player_position: Vector3,
 	if _last_launch >= 0 and launch > _last_launch and _comfortable:
 		_cinematic_clock = 0.0
 		_cinematic_start = camera.global_transform
+		_cinematic_start_player = player_position
 		var yaw := float(state.get("yaw_rad", 0.0))
 		_cinematic_forward = Vector3(sin(yaw), 0.0, -cos(yaw))
 	_last_launch = launch
@@ -196,11 +197,21 @@ func _native_timber_mesh(entity: int = FRAME_ENTITY) -> ArrayMesh:
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var count := 0
 	for p in range(0, parts.size() - 12, 13):
-		if int(parts[p + 10]) != 2 or int(parts[p + 11]) != 0:
+		if int(parts[p + 10]) != 2:
 			continue
 		var pose := Transform3D(Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
 			Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
-		_beveled_box(surface, Vector3(parts[p], parts[p + 1], parts[p + 2]), pose)
+		if int(parts[p + 11]) == 2:
+			var capsule := CapsuleMesh.new()
+			capsule.radius = parts[p]
+			capsule.height = 2.0 * (parts[p + 1] + parts[p])
+			capsule.radial_segments = 24
+			capsule.rings = 10
+			surface.append_from(capsule, 0, pose)
+		elif int(parts[p + 11]) == 0:
+			_beveled_box(surface, Vector3(parts[p], parts[p + 1], parts[p + 2]), pose)
+		else:
+			continue
 		count += 1
 	return surface.commit() if count > 0 else null
 
@@ -372,9 +383,9 @@ func _update_bands(state: Dictionary) -> void:
 	for side in 2:
 		var anchor: Vector3 = anchors[side]
 		_anchor_details[side].position = anchor
-		_anchor_details[side].basis = _fork_body.basis if _fork_body != null else \
-			Basis(Vector3.UP, -float(state.get("yaw_rad", 0.0))) \
-			* Basis(Vector3.RIGHT, float(state.get("elevation_rad", 0.0)))
+		# The new fork tips are upright in world space, irrespective of the
+		# separate rail's aim. Dressing stays on the actual fixed anchors.
+		_anchor_details[side].basis = Basis.IDENTITY
 		var span := pouch - anchor
 		var length := span.length()
 		var sag := minf(maxf(rest - length, 0.0) * 0.10, 0.70)
@@ -566,18 +577,22 @@ func _update_cinematic(delta: float, position: Vector3, velocity: Vector3,
 		return
 	# Slow motion begins at release, then progressively hands real elapsed
 	# time back to the same native solver; its fixed 90 Hz step stays intact.
-	_simulation_scale = lerpf(0.16, 1.0, smoothstep(0.20, 0.90, t))
+	# Bullet-time hold lets the lens travel while the real elastic release
+	# barely advances. An accelerating complete orbit then brings time back.
+	_simulation_scale = lerpf(0.06, 1.0, smoothstep(0.55, 1.95, t))
 	_pose_avatar(position, velocity, delta, state)
 	var progress := clampf(t / ORBIT_SECONDS, 0.0, 1.0)
 	var angle := -TAU * pow(progress, 1.72)
 	var right := _cinematic_forward.cross(Vector3.UP).normalized()
-	var radius := 3.10 + 1.0 * sin(progress * PI)
+	var radius := 3.35 + 0.65 * sin(progress * PI)
 	var offset := (-_cinematic_forward * cos(angle) + right * sin(angle)) * radius
-	var eye := position + offset + Vector3.UP * (0.95 + 0.65 * sin(progress * PI))
+	var eye := position + offset + Vector3.UP * (0.72 + 0.38 * sin(progress * PI))
 	var target := position + Vector3.UP * 0.21 + _cinematic_forward * 0.42
 	var shot := Transform3D(Basis.looking_at(target - eye), eye)
 	var reveal := smoothstep(0.0, 0.13, t)
-	shot = _cinematic_start.interpolate_with(shot, reveal)
+	var follow_start := _cinematic_start
+	follow_start.origin += position - _cinematic_start_player
+	shot = follow_start.interpolate_with(shot, reveal)
 	var return_weight := smoothstep(ORBIT_SECONDS, CINEMATIC_SECONDS, t)
 	camera.global_transform = shot.interpolate_with(normal, return_weight)
 	# Remove the exterior body before the lens reaches the helmet during
@@ -709,7 +724,7 @@ class AimHud extends Control:
 		var fraction := clampf(draw_m / max_draw, 0.0, 1.0)
 		var release_ready := bool(state.get("release_ready", true))
 		var aim_ready := bool(state.get("aim_ready", true))
-		var aim_locked := bool(state.get("aim_locked", draw_m > 0.03 or float(state.get("energy_j", 0.0)) > 1.0))
+		var aim_locked := bool(state.get("aim_locked", false))
 		var accent := Ui.AMBER.lerp(Ui.HAZARD, smoothstep(0.72, 1.0, fraction))
 		# The aim aperture contracts with actual draw, rather than time held.
 		var radius := lerpf(52.0, 31.0, fraction) * u
@@ -721,10 +736,14 @@ class AimHud extends Control:
 			c + Vector2(0.0, -radius - 27.0 * u), int(28.0 * u), Ui.PAPER,
 			HORIZONTAL_ALIGNMENT_CENTER, int(4.0 * u))
 		if aim_locked:
-			Ui.text(self, Ui.font_label(), "AIM LOCKED / BANDS LOADED", c + Vector2(0.0, radius + 32.0 * u),
+			Ui.text(self, Ui.font_label(), "RELEASED", c + Vector2(0.0, radius + 32.0 * u),
 				int(22.0 * u), Ui.PAPER_DIM, HORIZONTAL_ALIGNMENT_CENTER, int(4.0 * u))
 		elif not aim_ready:
 			Ui.text(self, Ui.font_label(), "AIMING...", c + Vector2(0.0, radius + 32.0 * u),
+				int(22.0 * u), Ui.PAPER_DIM, HORIZONTAL_ALIGNMENT_CENTER, int(4.0 * u))
+		else:
+			var aim_hint := "DRAG RIGHT SIDE TO AIM" if family == Ui.Family.TOUCH else "LOOK TO AIM"
+			Ui.text(self, Ui.font_label(), aim_hint, c + Vector2(0.0, radius + 32.0 * u),
 				int(22.0 * u), Ui.PAPER_DIM, HORIZONTAL_ALIGNMENT_CENTER, int(4.0 * u))
 		var predicted: PackedVector3Array = state.get("trajectory_points", PackedVector3Array())
 		if predicted.size() > 1:

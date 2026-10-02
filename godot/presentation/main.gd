@@ -535,8 +535,7 @@ func _process(delta: float) -> void:
 	var sling_seated := bool(launcher.get("seated", false))
 	var aiming := sling_seated and not bool(launcher.get("released", false))
 	var sling_recovering := bool(launcher.get("recovering", false))
-	var aim_locked := bool(launcher.get("aim_locked",
-		float(launcher.get("draw_m", 0.0)) > 0.03 or float(launcher.get("energy_j", 0.0)) > 1.0))
+	var aim_locked := bool(launcher.get("aim_locked", true))
 	var intent: Dictionary = _router.frame(delta)
 	if aiming and not _sling_was_seated:
 		_sling_goal_yaw = float(launcher["yaw_rad"])
@@ -1047,7 +1046,7 @@ func _read_context() -> Dictionary:
 	if bool(sling.get("can_retrieve", false)) or bool(sling.get("recovering", false)):
 		action = {"id": &"slingshot", "label": "STOP RETRIEVAL" if bool(sling.get("recovering", false)) else "RETRIEVE POUCH", "icon": &"operate",
 			"detail": "HOLD BACK TO REEL" if bool(sling.get("recovering", false)) else "WOODEN SLINGSHOT"}
-	elif sling_seated or bool(sling.get("station_available", false)):
+	elif (sling_seated or bool(sling.get("station_available", false))) and not bool(sling.get("released", false)):
 		action = {"id": &"slingshot", "label": ("RELEASE" if bool(sling.get("release_ready", false)) else "DRAW MORE") if sling_seated else "ENTER POUCH", "icon": &"operate",
 			"detail": "PULL BACK TO STRETCH" if sling_seated else "WOODEN SLINGSHOT"}
 	elif hanging or climbing:
@@ -4183,6 +4182,14 @@ func _build_kit() -> void:
 					cylinder.height = parts[p + 1] * 2.0
 					cylinder.material = material
 					mesh = cylinder
+			elif int(parts[p + 11]) == 2:
+				var capsule := CapsuleMesh.new()
+				capsule.radius = parts[p]
+				capsule.height = (parts[p + 1] + parts[p]) * 2.0
+				capsule.radial_segments = 20
+				capsule.rings = 8
+				capsule.material = material
+				mesh = capsule
 			else:
 				var box := BoxMesh.new()
 				box.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0

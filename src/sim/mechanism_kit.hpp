@@ -62,7 +62,9 @@ struct Part final {
     Material material = Material::Steel;
     // Cylinder axis is local Y; half.x is its outside radius, half.y its
     // half length. The bore is visual: it is smaller than the player capsule.
-    enum class Shape : std::uint8_t { Box = 0, Cylinder = 1 };
+    // Capsule: half.x is radius, half.y is half the straight section;
+    // its total end-to-end length is 2*(half.y+half.x), along local Y.
+    enum class Shape : std::uint8_t { Box = 0, Cylinder = 1, Capsule = 2 };
     Shape shape = Shape::Box;
     float mass_kg = 0.0F; // zero retains the legacy uniform-density shape
     float inner_radius = 0.0F;

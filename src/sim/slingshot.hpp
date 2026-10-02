@@ -91,8 +91,8 @@ public:
     Slingshot &operator=(const Slingshot &) = delete;
 
     // Aim arguments are absolute radians; yaw zero points toward -Z.
-    // Positive draw is backwards (+Z). Aim changes require an undrawn, slack
-    // pouch, so moving the fork cannot create an uncharged launch reservoir.
+    // Positive draw is backwards (+Z). The fixed fork anchors never move;
+    // paid rail aiming is permitted with held draw until physical release.
     void pre_step(float delta_seconds, double draw_input, double yaw,
                   double elevation, bool action, bool release);
     void post_step(float delta_seconds);

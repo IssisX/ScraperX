@@ -1,0 +1,10 @@
+charged aim yaw=0.279991 elevation=1.10286 draw=11.9798 work_delta=376.31
+charged aimed release position=27.8535,141.095,-119.02
+minimum aim=0.349932 ready=1 draw=0 work=439.794
+aim elevation=1.48 draw=0 U=9.48196e-09
+recovery seconds=5.04444 power=9122.72 pouch=0.356563,-54.9796 U=0
+draw=6.0166 spring_J=52235.7 player_J=60996.3 apex_m=53.3566 exit_mps=28.3158 residual_J=531.006 source_W=152710
+draw=9.01579 spring_J=179396 player_J=204860 apex_m=177.572 exit_mps=57.2749 residual_J=1295.61 source_W=195842
+draw=12 spring_J=420388 player_J=478232 apex_m=384.344 exit_mps=86.0739 residual_J=4916.27 source_W=197975
+draw=12 spring_J=420309 player_J=478188 apex_m=384.167 exit_mps=86.1095 residual_J=2529.17 source_W=198060
+draw=11.9991 spring_J=420210 player_J=478134 apex_m=384.223 exit_mps=86.1438 residual_J=1279.86 source_W=198205
