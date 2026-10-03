@@ -18,6 +18,8 @@ const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 const SCENARIOS := {
 	"ground_foundation": 8,
 	"touch_cargo_net": 8,
+	"touch_campaign_to_121": 8,
+	"touch_north_grip_diagnostic": 8,
 	"touch_suspended_ladder": 8,
 	"keyboard_slingshot": 8,
 	"pad_slingshot": 8,
@@ -77,7 +79,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -112,6 +114,10 @@ func _run() -> void:
 			ok = await _touch_suspended_ladder()
 		"touch_cargo_net":
 			ok = await _touch_cargo_net()
+		"touch_campaign_to_121":
+			ok = await _touch_campaign_to_121()
+		"touch_north_grip_diagnostic":
+			ok = await _touch_north_grip_diagnostic()
 		"keyboard_slingshot":
 			ok = await _slingshot(InputRouter.Device.KEYBOARD_MOUSE)
 		"pad_slingshot":
@@ -658,7 +664,11 @@ func _pipe_bridge(device: int) -> bool:
 # AS-017: grade to +33 m, through the real touch controls and native world.
 func _touch_facade() -> bool:
 	var device := InputRouter.Device.TOUCH
-	if not await _pipe_bridge(device):
+	if _scenario == "touch_campaign_to_121":
+		if not await _touch_cargo_net():
+			return false
+		print("SCRAPERX_CAMPAIGN cargo_net_exit at=%s support=%d" % [_position(), _native().get_support_entity_id()])
+	elif not await _pipe_bridge(device):
 		return false
 	for point in [Vector2(21.2, -124.4), Vector2(21.2, -121.3), Vector2(20, -121.3)]:
 		if not await _walk_to(device, point, 0.08, 20.0):
@@ -772,7 +782,16 @@ func _touch_stair() -> bool:
 	var used_flight := false
 	for x in [-15.2, -14.0, -12.0, -10.0, -8.0, -5.0, -2.7]:
 		if not await _walk_to(device, Vector2(x, -122.1), 0.1, 25.0):
-			return _fail("stair climb at %.1f: %s" % [x, _position()])
+			var flight := int(_native().get_kit_body_index(2600))
+			var flight_pose: Transform3D = _native().get_kit_body_transform(flight)
+			var sample_tick := int(_native().get_tick_index())
+			await _frames(2)
+			var sample_seconds := float(int(_native().get_tick_index()) - sample_tick) * float(_native().get_fixed_step_seconds())
+			var angular_z := angle_difference(flight_pose.basis.get_euler().z, _teeter_angle(flight)) / maxf(sample_seconds, 0.000001)
+			return _fail("stair climb at %.1f: %s support=%d grounded=%s traversal=%d velocity=%s flight_origin=%s flight_angle_z=%.6f flight_velocity=%s measured_angular_z_rad_s=%.6f grip=%s landing=%s deaths=%d" % [
+				x, _position(), _native().get_support_entity_id(), _ctx()["grounded"], _ctx()["traversal"], _velocity(),
+				flight_pose.origin, flight_pose.basis.get_euler().z, _native().get_kit_body_linear_velocity(flight), angular_z,
+				_native().is_grip_available(), _native().get_landing_state(), _native().get_death_count()])
 		if int(_native().get_support_entity_id()) == 2600:
 			used_flight = true
 		if x == -10.0:
@@ -1090,7 +1109,10 @@ func _touch_braced_bay() -> bool:
 
 func _north_climb(device: int, target_centre_y: float, label: String) -> bool:
 	if not await _offered(&"climb", "CLIMB", "HOLD"):
-		return _fail("%s grip not offered %s" % [label, _position()])
+		return _fail("%s grip not offered at=%s support=%d grounded=%s crouched=%s traversal=%d grip=%s grip_point=%s ledge=%s carrying=%d action=%s view_yaw_rad=%.6f" % [
+			label, _position(), _native().get_support_entity_id(), _native().is_player_grounded(),
+			_native().is_player_crouched(), _native().get_traversal_state(), _native().is_grip_available(),
+			_native().get_grip_point(), _native().is_ledge_available(), _native().get_carrying_entity_id(), _ctx()["action"], _main._yaw])
 	_act(device)
 	if not await _wait_until(func() -> bool: return bool(_ctx()["climbing"]), 1.0):
 		return _fail("%s grip not taken %s" % [label, _position()])
@@ -1099,6 +1121,33 @@ func _north_climb(device: int, target_centre_y: float, label: String) -> bool:
 	_move(device, 0.0)
 	if not topped_out or int(_native().get_support_entity_id()) != 1901:
 		return _fail("%s top-out unsupported %s" % [label, _position()])
+	return true
+
+
+func _touch_north_grip_diagnostic() -> bool:
+	# Explicit supported staging at the recorded failed stance. This bounded
+	# reach probe is not evidence of continuous ascent or an authored route.
+	if not _campaign_world_intact():
+		return false
+	if not _native().debug_restart_at(Vector3(15.9994, 99.9, -179.4491)):
+		return _fail("north grip diagnostic supported staging rejected")
+	await _face(Vector2(0, -1))
+	await _seconds(0.5)
+	print("SCRAPERX_NORTH_GRIP_DIAGNOSTIC before at=%s support=%d grounded=%s crouched=%s traversal=%d grip=%s grip_point=%s action=%s view_yaw_rad=%.6f" % [
+		_position(), _native().get_support_entity_id(), _native().is_player_grounded(),
+		_native().is_player_crouched(), _native().get_traversal_state(), _native().is_grip_available(),
+		_native().get_grip_point(), _ctx()["action"], _main._yaw])
+	if _native().is_grip_available():
+		return _fail("recorded north stance already offers native grip; reach hypothesis rejected")
+	if not await _walk_to(InputRouter.Device.TOUCH, Vector2(16, -179.55), 0.04, 2.0):
+		return _fail("north grip diagnostic closer stance unavailable")
+	await _seconds(0.5)
+	print("SCRAPERX_NORTH_GRIP_DIAGNOSTIC after at=%s support=%d grounded=%s grip=%s grip_point=%s action=%s" % [
+		_position(), _native().get_support_entity_id(), _native().is_player_grounded(),
+		_native().is_grip_available(), _native().get_grip_point(), _ctx()["action"]])
+	if not _native().is_grip_available() or not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("closer supported stance does not expose native grip; reach hypothesis rejected")
+	_detail = "staging=supported_recorded_99m_stance continuous_ascent=0 native_grip_before=0 native_grip_after=1 closer_viewport_touch=1"
 	return true
 
 
@@ -1140,8 +1189,10 @@ func _touch_north_service_frame() -> bool:
 	await _face(Vector2(1, 0))
 	_main._pitch = -0.14
 	await _pose("north_frame_99m")
+	# The former 0.14m stop could leave the hand search just outside the
+	# rung. Walk into the intended stance; native reach and CLIMB stay exact.
 	for point in [Vector2(16.0, -174.5), Vector2(16.0, -179.55)]:
-		if not await _walk_to(device, point, 0.14, 9.0):
+		if not await _walk_to(device, point, 0.04, 9.0):
 			return _fail("north frame upper entry %s" % _position())
 	await _face(Vector2(0, -1))
 	if not await _north_climb(device, 104.2, "upper north climb"):
@@ -1224,11 +1275,83 @@ func _teeter_ballast_x(beam: int, ballast: int) -> float:
 func _standing_above(height: float) -> bool:
 	return bool(_ctx()["grounded"]) and int(_ctx()["traversal"]) == 0 and _position().y > height
 
-func _touch_suspended_ladder() -> bool:
+func _campaign_world_intact() -> bool:
+	# The native launcher and absent retired bridge identify the normal world;
+	# presentation's regression flag alone cannot establish native identity.
+	if _main._regression_scene or not bool(_native().get_slingshot_state().get("available", false)) \
+			or int(_native().get_entity_body_count(2500)) != 0:
+		return _fail("campaign selected a fixture world")
+	if int(_native().get_death_count()) != 0 or float(_native().get_slingshot_state()["work_j"]) != 0.0:
+		return _fail("campaign used death recovery or launcher work at %s" % _position())
+	return true
+
+
+func _touch_campaign_to_121() -> bool:
+	if not _campaign_world_intact():
+		return false
+	# Existing upper-route helpers use the cargo-net opener only for this
+	# scenario. No fixture selection, restart or player relocation occurs.
+	if not await _touch_north_service_frame():
+		return false
+	if not _campaign_world_intact():
+		return false
+	print("SCRAPERX_CAMPAIGN north_frame_exit at=%s support=%d" % [_position(), _native().get_support_entity_id()])
+	if not await _touch_suspended_ladder(false):
+		return false
+	if not _campaign_world_intact():
+		return false
+	if not _standing_above(121.7) \
+			or absf(_position().y - 121.9) > 0.15 or int(_native().get_support_entity_id()) != 11:
+		return _fail("campaign +121m arrival unsupported at=%s" % _position())
+	_detail = "staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 supported_height_m=121 support=11 deaths=0 slingshot_work_j=0 world=slingshot"
+	return true
+
+
+func _swing_catch_sample(body: int, previous: Dictionary) -> void:
+	var tick := int(_native().get_tick_index())
+	if tick == int(previous["tick"]):
+		return
+	var pose: Transform3D = _native().get_kit_body_transform(body)
+	var angle := pose.basis.get_euler().z
+	# Track the same real rung midpoint, not a changing nearest point.
+	var midpoint := pose * Vector3(0, -7.82, 0)
+	var sample_seconds := float(tick - int(previous["tick"])) * float(_native().get_fixed_step_seconds())
+	var point_velocity := Vector3.ZERO
+	var angular_z := 0.0
+	if int(previous["tick"]) >= 0 and sample_seconds > 0.0:
+		point_velocity = (midpoint - (previous["midpoint"] as Vector3)) / sample_seconds
+		angular_z = angle_difference(float(previous["angle"]), angle) / sample_seconds
+	var facing := Vector3(-sin(float(_main._yaw)), 0, -cos(float(_main._yaw)))
+	var hand_aim := _position() + Vector3(0, 0.45, 0) + facing * 0.4
+	var aim_local := pose.affine_inverse() * hand_aim
+	var nearest := Vector3.ZERO
+	var distance := INF
+	for rung in 24:
+		var point := pose * Vector3(clampf(aim_local.x, -0.85, 0.85), -8.9 + 0.36 * rung, 0)
+		if point.distance_to(hand_aim) < distance:
+			nearest = point
+			distance = point.distance_to(hand_aim)
+	print("SCRAPERX_SWING_CATCH tick=%d player=%s player_velocity=%s grounded=%s crouched=%s traversal=%d view_yaw_rad=%.6f grip=%s grip_point=%s angle_z=%.6f origin=%s body_velocity=%s observed_rung_midpoint_velocity=%s observed_angular_z=%.6f nearest_rung=%s hand_distance=%.6f faced_depth=%.6f" % [
+		tick, _position(), _velocity(), _native().is_player_grounded(), _native().is_player_crouched(),
+		_native().get_traversal_state(), _main._yaw, _native().is_grip_available(), _native().get_grip_point(),
+		angle, pose.origin, _native().get_kit_body_linear_velocity(body), point_velocity, angular_z, nearest,
+		distance, (nearest - _position()).dot(facing)])
+	previous["tick"] = tick
+	previous["midpoint"] = midpoint
+	previous["angle"] = angle
+
+
+func _touch_suspended_ladder(stage_at_110: bool = true) -> bool:
 	var device := InputRouter.Device.TOUCH
 	# Explicit normal-world supported staging; not full campaign ascent proof.
-	if not _native().debug_restart_at(Vector3(10, 110.9, -174)):
-		return _fail("+110m supported staging rejected")
+	if stage_at_110:
+		if not _native().debug_restart_at(Vector3(10, 110.9, -174)):
+			return _fail("+110m supported staging rejected")
+	else:
+		# Walk the real +110m ring from the north-frame exit to the AS-026
+		# approach; retain the airborne catch and loaded moving climb below.
+		if not await _walk_to(device, Vector2(10, -174.5), 0.12, 5.0):
+			return _fail("north frame to suspended ladder ring transfer %s" % _position())
 	await _seconds(0.5)
 	if not await _walk_to(device, Vector2(10, -179.60), 0.12, 5.0):
 		return _fail("fixed ladder approach %s" % _position())
@@ -1243,22 +1366,33 @@ func _touch_suspended_ladder() -> bool:
 	_move(device, 0.0)
 	if not reached:
 		return _fail("launch shelf not reached %s" % _position())
-	if not await _walk_to(device, Vector2(9.3, -180.25), 0.12, 4.0):
+	# Stand near the shelf's front edge before the north-facing side jump.
+	# The old loose stop left z=-180.31: the descending capsule crossed the
+	# rung plane before its x coordinate entered the unchanged hand query.
+	if not await _walk_to(device, Vector2(9.15, -180.10), 0.04, 4.0):
 		return _fail("launch edge not reached")
+	if not _standing_above(114.7):
+		return _fail("launch edge lost supported footing %s" % _position())
 	await _face(Vector2(-1, -0.25))
 	_main._pitch = -0.55
 	await _pose("swing_launch_view")
+	# Catch from the front. Native acquisition retains this normal for hand
+	# loading and jump-off; turning the camera later cannot change that stance.
 	await _face(Vector2(0, -1))
 	_main._pitch = 0.0
+	var body := int(_native().get_kit_body_index(2960))
+	var catch_sample := {"tick": -1, "midpoint": Vector3.ZERO, "angle": 0.0}
+	_swing_catch_sample(body, catch_sample)
 	_move_dir(device, Vector2(-1, 0.35))
 	_tap(1, _center(&"jump"))
-	var caught := await _wait_until(func() -> bool: return int(_native().get_traversal_support_entity_id()) == 2960, 1.5)
+	var caught := await _wait_until(func() -> bool:
+		_swing_catch_sample(body, catch_sample)
+		return int(_native().get_traversal_support_entity_id()) == 2960, 1.5)
 	_move(device, 0.0)
 	if not caught:
 		return _fail("touch jump missed moving grip %s" % _position())
 	await _seconds(0.5)
 	await _pose("swing_caught")
-	var body := int(_native().get_kit_body_index(2960))
 	var first_angle := _teeter_angle(body)
 	var swing_span := [0.0]
 	_move(device, 1.0)
@@ -1268,8 +1402,21 @@ func _touch_suspended_ladder() -> bool:
 	_move(device, 0.0)
 	if not reached or swing_span[0] < 0.002:
 		return _fail("loaded swing/climb not demonstrated reached=%s span=%.4f at=%s" % [reached, swing_span[0], _position()])
-	if not await _wait_until(func() -> bool: return (_native().get_kit_body_linear_velocity(body) as Vector3).x > 0.12, 6.7):
-		return _fail("rightward release phase unavailable")
+	var phase := {"min_vx": INF, "max_vx": -INF, "min_angle": INF, "max_angle": -INF, "tick": -1}
+	print("SCRAPERX_SWING_RELEASE_START player=%s normal=%s loaded_span=%.6f" % [_position(), _native().get_traversal_normal(), swing_span[0]])
+	var rightward := await _wait_until(func() -> bool:
+		var velocity: Vector3 = _native().get_kit_body_linear_velocity(body)
+		var angle := _teeter_angle(body)
+		phase["min_vx"] = minf(phase["min_vx"], velocity.x)
+		phase["max_vx"] = maxf(phase["max_vx"], velocity.x)
+		phase["min_angle"] = minf(phase["min_angle"], angle)
+		phase["max_angle"] = maxf(phase["max_angle"], angle)
+		if int(_native().get_tick_index()) - int(phase["tick"]) >= 45:
+			phase["tick"] = int(_native().get_tick_index())
+			print("SCRAPERX_SWING_RELEASE_PHASE tick=%d player=%s velocity=%s angle=%.6f normal=%s support=%d" % [phase["tick"], _position(), velocity, angle, _native().get_traversal_normal(), _native().get_traversal_support_entity_id()])
+		return velocity.x > 0.12, 6.7)
+	if not rightward:
+		return _fail("rightward release phase unavailable phase=%s at=%s normal=%s" % [phase, _position(), _native().get_traversal_normal()])
 	await _pose("swing_release_height")
 	_move_dir(device, Vector2(0.7, -0.35))
 	_tap(1, _center(&"jump"))

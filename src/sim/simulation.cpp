@@ -2274,6 +2274,42 @@ public:
 
     [[nodiscard]] const CargoNet *cargo_net() const noexcept { return cargo_net_.get(); }
 
+    [[nodiscard]] RenderHandAnchor render_hand_anchor(const std::uint32_t hand) const noexcept {
+        RenderHandAnchor result;
+        const auto &bodies = physics_system_.GetBodyInterfaceNoLock();
+        JPH::BodyID body;
+        JPH::Vec3 point = JPH::Vec3::sZero();
+        if (traversal_state_ == TraversalState::Climbing && hands_[hand].valid) {
+            body = hands_[hand].body;
+            point = hands_[hand].local;
+            result.generation = hands_[hand].generation;
+        } else if ((traversal_state_ == TraversalState::Hanging || traversal_state_ == TraversalState::Lowering) &&
+                   !traversal_body_.IsInvalid() && !traversal_normal_.IsNearZero()) {
+            body = traversal_body_;
+            point = traversal_local_ledge_;
+            // Hanging hands use the existing world-space span around the lip.
+            // Rotate that span into the body's frame before interpolating it.
+            point += bodies.GetRotation(body).Conjugated() *
+                (traversal_right() * (hand == 0 ? -kHangHandSpan : kHangHandSpan));
+        } else return result;
+        if (body.IsInvalid()) return result;
+        result.support = body.GetIndexAndSequenceNumber();
+        result.valid = true;
+        result.deforming = cargo_net_ && body == cargo_net_->body();
+        if (!result.deforming) {
+            const auto index = kit_->body_for_entity(bodies.GetUserData(body));
+            if (index.valid() && kit_->body_id(index) == body) result.kit_body = index.value;
+            // Physical support locals are COM-relative. Kit draws GetPosition
+            // (the shape origin), so add the shape's actual COM offset once.
+            point += bodies.GetShape(body)->GetCenterOfMass();
+            result.origin = to_vector3(bodies.GetPosition(body));
+            const auto q = bodies.GetRotation(body);
+            result.rotation = {q.GetX(), q.GetY(), q.GetZ(), q.GetW()};
+        }
+        result.local = {point.GetX(), point.GetY(), point.GetZ()};
+        return result;
+    }
+
     [[nodiscard]] const Snapshot &state() const noexcept {
         return state_;
     }
@@ -5295,9 +5331,9 @@ private:
         landing_force_support_id_ = support_id;
         landing_force_support_start_ = point;
         landing_force_support_local_point_ = bodies.GetCenterOfMassTransform(support_id).Inversed() * point;
-        if ((desired - slip).Length() > .75F)
-            landing_recovery_seconds_ = std::max(landing_recovery_seconds_,
-                std::min(2.0, double((desired - slip).Length() / 8.0F)));
+        // Recovery belongs to the recorded impact. A blocked walking request
+        // is not a new impact and must not renew this finite interval: doing
+        // so bypasses ordinary step-up forever while pressing into a riser.
         airborne_inherited_velocity_ = support_velocity;
         balancing_ = true;
         if (slingshot_ && !correction.IsNearZero()) slingshot_->note_external_influence();
@@ -6028,8 +6064,11 @@ private:
 
     void set_hand(const JPH::BodyInterface &bodies, const std::uint32_t hand,
                   const Grip &grip) noexcept {
+        const auto local = to_support_local(bodies, grip.body, grip.point);
+        if (!hands_[hand].valid || hands_[hand].body != grip.body || hands_[hand].local != local)
+            ++hands_[hand].generation;
         hands_[hand].body = grip.body;
-        hands_[hand].local = to_support_local(bodies, grip.body, grip.point);
+        hands_[hand].local = local;
         hands_[hand].valid = true;
     }
 
@@ -7192,6 +7231,7 @@ private:
     struct HandHold final {
         JPH::BodyID body;
         JPH::Vec3 local{JPH::Vec3::sZero()};
+        std::uint64_t generation = 0;
         bool valid = false;
     };
     JPH::Vec3 traversal_normal_{JPH::Vec3::sZero()};
@@ -7836,13 +7876,52 @@ Vector3 Simulation::render_player_position() const noexcept {
 
 Vector3 Simulation::render_traversal_hand(const bool left) const noexcept {
     const auto current = left ? snapshot_.traversal_left_hand : snapshot_.traversal_right_hand;
-    // Acquisition, release and restore must not sweep a hand in from an old
-    // hold or from the world origin. The arm presentation owns pose blending.
+    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
+    const auto &previous_anchor = previous_hand_anchors_[left ? 0 : 1];
+    const auto anchor = physics_world_->render_hand_anchor(left ? 0 : 1);
+    if (anchor.valid) {
+        const bool retained = previous_anchor.valid && anchor.support == previous_anchor.support &&
+            anchor.generation == previous_anchor.generation && anchor.deforming == previous_anchor.deforming &&
+            snapshot_.traversal_state == previous_traversal_state_;
+        // Grip transfers snap the local coordinate, not the support's clock.
+        // A planted hand owns its support independently of the body's current
+        // principal traversal support.
+        auto local = anchor.local;
+        if (retained) {
+            local = {previous_anchor.local.x + (local.x - previous_anchor.local.x) * alpha,
+                     previous_anchor.local.y + (local.y - previous_anchor.local.y) * alpha,
+                     previous_anchor.local.z + (local.z - previous_anchor.local.z) * alpha};
+        }
+        if (anchor.deforming) {
+            const auto *net = physics_world_->cargo_net();
+            return to_sim_vector(net->render_world_point(
+                JPH::Vec3(float(local.x), float(local.y), float(local.z)), float(alpha)));
+        }
+        if (anchor.kit_body < previous_kit_positions_.size()) {
+            const auto position = render_kit_body_position(anchor.kit_body);
+            const auto rotation = render_kit_body_rotation(anchor.kit_body);
+            const auto offset = JPH::Quat(float(rotation.x), float(rotation.y), float(rotation.z), float(rotation.w)) *
+                JPH::Vec3(float(local.x), float(local.y), float(local.z));
+            return {position.x + offset.GetX(), position.y + offset.GetY(), position.z + offset.GetZ()};
+        }
+        // Non-Kit fixture supports use the captured hand owner's pose when
+        // available; new owner acquisition has no earlier pose in that history.
+        if (!previous_anchor.valid || anchor.support != previous_anchor.support) return current;
+        const JPH::Quat a(float(previous_anchor.rotation.x), float(previous_anchor.rotation.y),
+                          float(previous_anchor.rotation.z), float(previous_anchor.rotation.w));
+        const JPH::Quat b(float(anchor.rotation.x), float(anchor.rotation.y),
+                          float(anchor.rotation.z), float(anchor.rotation.w));
+        const auto offset = a.SLERP(b, float(alpha)) * JPH::Vec3(float(local.x), float(local.y), float(local.z));
+        return {previous_anchor.origin.x + (anchor.origin.x - previous_anchor.origin.x) * alpha + offset.GetX(),
+                previous_anchor.origin.y + (anchor.origin.y - previous_anchor.origin.y) * alpha + offset.GetY(),
+                previous_anchor.origin.z + (anchor.origin.z - previous_anchor.origin.z) * alpha + offset.GetZ()};
+    }
+    // Release and restore must not sweep a hand in from an old hold or from
+    // the world origin. The arm presentation owns action-pose blending.
     if (snapshot_.traversal_state != previous_traversal_state_ ||
         snapshot_.traversal_support_entity_id != previous_traversal_support_)
         return current;
     const auto previous = left ? previous_left_hand_ : previous_right_hand_;
-    const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
     return {previous.x + (current.x - previous.x) * alpha,
             previous.y + (current.y - previous.y) * alpha,
             previous.z + (current.z - previous.z) * alpha};
@@ -7852,6 +7931,8 @@ void Simulation::capture_render_history() noexcept {
     previous_player_position_ = snapshot_.player_position;
     previous_left_hand_ = snapshot_.traversal_left_hand;
     previous_right_hand_ = snapshot_.traversal_right_hand;
+    previous_hand_anchors_[0] = physics_world_->render_hand_anchor(0);
+    previous_hand_anchors_[1] = physics_world_->render_hand_anchor(1);
     previous_traversal_state_ = snapshot_.traversal_state;
     previous_traversal_support_ = snapshot_.traversal_support_entity_id;
     const auto count = kit_body_count();

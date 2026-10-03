@@ -700,6 +700,16 @@ public:
                                                         std::uint32_t capacity) const noexcept;
 
 private:
+    // Render metadata only. Physical holds remain owned by PhysicsWorld;
+    // rigid local points here use the visible shape origin, not its COM.
+    struct RenderHandAnchor final {
+        std::uint32_t support = ~std::uint32_t{0};
+        std::uint32_t kit_body = ~std::uint32_t{0};
+        std::uint64_t generation = 0;
+        Vector3 local{}, origin{};
+        Quaternion rotation{};
+        bool valid = false, deforming = false;
+    };
     class PhysicsWorld;
 
     void step_fixed() noexcept;
@@ -736,6 +746,7 @@ private:
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
     Vector3 previous_left_hand_{}, previous_right_hand_{};
+    RenderHandAnchor previous_hand_anchors_[2]{};
     TraversalState previous_traversal_state_ = TraversalState::None;
     std::uint64_t previous_traversal_support_ = 0;
     std::vector<Vector3> previous_kit_positions_;

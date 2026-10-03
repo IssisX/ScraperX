@@ -327,6 +327,15 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/slingshot-audio.log; then exit 1; fi
           rm -f "${RUNNER_TEMP}/slingshot-audio.avi"
 
+      - name: Prove uninterrupted normal cargo-net ascent to 121 metres
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 600s tools/godot/godot --headless --fixed-fps 60 --path godot \
+            -- --uitest=touch_campaign_to_121 2>&1 | tee artifacts/touch-campaign-to-121.log
+          grep -F "SCRAPERX_UITEST PASS touch_campaign_to_121 staging=ordinary_grade_spawn" artifacts/touch-campaign-to-121.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-campaign-to-121.log; then exit 1; fi
+
       - name: Prove default inventory and rejected fallback absence
         shell: bash
         run: |

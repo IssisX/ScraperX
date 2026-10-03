@@ -67,6 +67,26 @@ int main() {
     require(!heavy_sim.snapshot().landing_recovering && heavy_sim.snapshot().landing_balance == 1,
             "physical recovery never restored balance");
     require(heavy_sim.snapshot().landing_recovery_work_j > 0, "active recovery footwork supplied no measured work");
+
+    // Ordinary approach to the facade's broad switchgear cabinet.
+    // A blocked movement request is not another landing: it must not keep
+    // refreshing impact recovery and suppress the normal step-up path.
+    Simulation blocked_sim;
+    const auto blocked_landing = drop(blocked_sim, {20, 12.3, -121.15});
+    require(blocked_landing.landing_recovering, "cabinet approach recorded no recovery");
+    require(blocked_sim.set_move_input(0, -1), "cabinet approach input rejected");
+    tick(blocked_sim, 90 * 4);
+    const auto blocked = blocked_sim.snapshot();
+    std::cout << "cabinet approach at=" << blocked.player_position.x << ','
+              << blocked.player_position.y << ',' << blocked.player_position.z
+              << " recovery=" << blocked.landing_recovery_seconds
+              << " step_ups=" << blocked.step_up_count << '\n';
+    require(blocked.player_grounded && blocked.death_count == 0 &&
+            blocked.support_entity_id == 1600 &&
+            blocked.player_position.z > -121.55 && blocked.player_position.z < -121.30,
+            "cabinet did not physically block the grounded walking request");
+    require(!blocked.landing_recovering && blocked.landing_balance == 1,
+            "blocked walking request renewed impact recovery indefinitely");
     const auto stood = heavy_sim.snapshot().player_position;
     require(heavy_sim.debug_restart_at(stood), "actual settled grade pose failed solver-slop round trip");
     require(!heavy_sim.snapshot().landing_recovering && heavy_sim.snapshot().landing_balance == 1,

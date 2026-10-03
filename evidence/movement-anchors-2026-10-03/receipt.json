@@ -1,0 +1,94 @@
+{
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "base_commit": "2942fab1420aa2ffd600a425b590941e6a3e5916",
+  "source_identity": "Source files hashed before committing this candidate; not an APK receipt.",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "af9593a25c2886258cf32582cb31ad569656eacb54c3a901299e85e68504d79d",
+    "src/sim/simulation.hpp": "c7707b12570bea289443028d6f002a8f0792ce6d805214df1249b732cd9d90a2",
+    "src/sim/cargo_net.cpp": "6fab9e233af4978c142ba7dcede10df30e0aff44d8ab306f8c620a1304b7c1d8",
+    "src/sim/cargo_net.hpp": "c42ba7f7a346b05ce6b4d311ace2b3f47b5085b0183c6c50600735e158989f9a",
+    "tests/landing_tests.cpp": "a046c2e3e19e573fa62a48ca03586029daa76a304611c5d0179c77b50b98bf91",
+    "tests/cargo_net_tests.cpp": "aee1e51cb700a96e4ec257060e6f0ec8e96053befb81c7e4e8a501a7ad408c1d",
+    "tests/suspended_ladder_tests.cpp": "387d5e9c37b0098a84c18b8218effe36cc88ce912e91aac929e6e349d59db16b",
+    "godot/presentation/main.gd": "ba7698e413f5c6c35b025e92f9a370b28dfb87fdc092611bd0e18737d4fee239",
+    "godot/presentation/ui/ui_test_driver.gd": "6913a959acf7e099960927beaf822c41a575167d11861b0707a4152e3802d7da",
+    ".github/workflows/wo000-delivery-spine.yml": "da06b1553b523f2c4fae90d1ef331fdcf9f707be7eaeaefd5bfc3e3bd71519a4"
+  },
+  "local_native_extension_sha256": "5f969c729ac4d2f860ce77bc2106ffe0c0398d820dd5da78bb65f72782520f13",
+  "native_tests": {
+    "command": "ctest --test-dir host-build --output-on-failure -R scraperx_sim\\.(suspended_ladder_route|cargo_net_ground_route|landing_response|parkour_flow)$",
+    "result": "4/4 passed",
+    "exit_code": 0,
+    "wall_seconds": 24.51,
+    "log": "native-tests.log"
+  },
+  "normal_campaign": {
+    "scenario": "touch_campaign_to_121",
+    "exit_code": 0,
+    "ordinary_grade_spawn": true,
+    "world": "slingshot",
+    "fixture_selected": false,
+    "restart_after_spawn": false,
+    "supported_y_m": 121.9,
+    "support_entity_id": 11,
+    "deaths": 0,
+    "launcher_work_j": 0,
+    "wall_seconds": 174.289,
+    "log": "normal-campaign.log"
+  },
+  "rendered_slice": {
+    "scenario": "touch_suspended_ladder",
+    "exit_code": 0,
+    "staging": "supported_110m",
+    "renderer": "Mesa softpipe",
+    "viewport": [
+      432,
+      371
+    ],
+    "settings": "LOW, shadows off, MSAA off; 3D enabled only around explicit captures; shipping input/native stepping continue",
+    "fixed_fps": 60,
+    "supported_y_m": 121.9,
+    "support_entity_id": 11,
+    "deaths": 0,
+    "loaded_angle_span_rad": 0.175422,
+    "screenshots_inspected": 6,
+    "log": "rendered-ladder.log"
+  },
+  "bridge_probe": {
+    "evidence_kind": "Observed tool output on the same extension hash; separate final raw log not retained",
+    "result": "HAND_BRIDGE PASS actual_cargo_hold=1 retained_render_getters=2 tick=1807 alpha=0.5 left=(19.83918,1.370955,-117.7827) right=(20.22698,1.833426,-117.8575)",
+    "exit_code": 0
+  },
+  "independent_reviews": [
+    {
+      "scope": "hand correction closure",
+      "session": "sess_0e7129ef33d75d0b006ac16cc2994c8194ad1e59ba32dad38c",
+      "result": "No remaining introduced Important/Critical in supplied scoped repair; advisory, no local repository access."
+    },
+    {
+      "scope": "campaign driver and CI gate",
+      "session": "sess_03d65d9818625583006ac170c4a84c8197a70b64ff91092b07",
+      "result": "No supported introduced Critical/Important in supplied diff; complete retained helper bodies not supplied."
+    }
+  ],
+  "boundaries": [
+    "Exact-source Actions/APK for this candidate pending.",
+    "No Android device execution or sustained frame-time proof.",
+    "Rendered proof stages at +110; uninterrupted grade-to-121 proof is headless.",
+    "Non-Kit fixture new-owner acquisition retains raw endpoint fallback when no owner history is available.",
+    "Mixed-owner hand transfer and newly acquired net grip coordinates are not independently runtime-proven.",
+    "The long flexible rope-ladder prototype is separate and not implemented gameplay."
+  ],
+  "evidence_sha256": {
+    "native-tests.log": "002b6bf3917f74dad0bcfe94336f827754be848d75bc56c5ed988e42c61aef8d",
+    "normal-campaign.log": "ef610dbb7830370bae97c2c932106940035e4e7970248908962885b8663fa7ee",
+    "rendered-ladder.log": "16921f410eaa23a3f1c349806a05244656b142f5174dfa6fa36dc6958faec6bb",
+    "captures/ladder_swing_approach.png": "1ded3b0f1935db4b22b34d17c92277dbfa08211557421b265d34307b9b5f8a38",
+    "captures/ladder_swing_launch_view.png": "dcc582f1a17e755a9ee73ce1e64d834b727c369b8b5980f225a33b063618f853",
+    "captures/ladder_swing_caught.png": "66e2f52a709c68a547d231f96a15d841796a8a2b9ee4e71096eebca579a1e390",
+    "captures/ladder_swing_release_height.png": "75c0a72cc6a9ffeb3dd8f23c494811fc7553e4a83b4dcc91d63aaa85d25fcc86",
+    "captures/ladder_swing_landing.png": "45b0239ddf37120f2a5c6d24de2753d5682491fcd185e655d4c4fb19c9e71767",
+    "captures/ladder_swing_tower_exit.png": "c8fcad5e56c5ec8afa10a17937be5c0a7995f6ad054142d25bac59e88fd67541"
+  }
+}

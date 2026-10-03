@@ -1,0 +1,64 @@
+{
+  "source_commit": "f23a68ea3fecca3d4672e99b1dfd2ab9653158b4",
+  "branch": "ChatGPT",
+  "run_id": 37143768876,
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/37143768876",
+  "run_conclusion": "success",
+  "artifact_id": 11282852009,
+  "artifact_name": "ScraperX-build-f23a68ea3fecca3d4672e99b1dfd2ab9653158b4",
+  "artifact_zip_sha256": "ec69488ce01b8f7735681ef8a03e69ed1b9ce8c1e4ea4bfe52276457c805e2cc",
+  "apk_sha256": "0a4b92d8f4f8ff914e9df4b05139be356c199271435d1cc4b909c728ef74aa30",
+  "checkpoint": {
+    "author": "ChatGPT",
+    "branch": "ChatGPT",
+    "commit": "f23a68ea3fecca3d4672e99b1dfd2ab9653158b4",
+    "apk": "ScraperX-ChatGPT.apk",
+    "package": "com.cory.scraperx.chatgpt",
+    "label": "ScraperX-ChatGPT",
+    "signer_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4"
+  },
+  "signing_verification": "Retained CI apksigner log verifies APK v2 and v3; signer digest matches checkpoint.",
+  "native_ctests_passed": 31,
+  "motion": {
+    "rows": 189,
+    "seated_rows": 28,
+    "max_seated_contact_error_m": 4.7683716e-07,
+    "peak_specific_acceleration_mps2": 1067.29978017193,
+    "first_five_scales": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "final_scale": 1.0,
+    "native_elapsed_s": 2.3953333333333298,
+    "last_wall_s": 3.13333333333333,
+    "native_time_and_tick_monotonic": true,
+    "viewport": "864x742",
+    "shadow_quality": 3
+  },
+  "rendered_normal_touch": {
+    "receipt": "artifact/rendered-touch-slingshot-landing.log",
+    "viewport": "432x371",
+    "supported_height_m": 352.0,
+    "deaths": 0,
+    "roof_walk_m": 1.43,
+    "impact_energy_j": 2954.7,
+    "camera_dip_m": -0.0577
+  },
+  "selected_png_paths": [
+    "ci-images/cradled-rider-on-native-leather.png",
+    "ci-images/motion-006.png",
+    "ci-images/accelerating-clear-orbit.png",
+    "ci-images/return-to-true-pov.png",
+    "ci-images/shipping-launch_supported_352m_roof.png"
+  ],
+  "observed_boundaries": [
+    "No Android installation, execution, hardware audio/haptics, or sustained performance observed.",
+    "Parent opened the five selected images; retained views support seating, recoil, orbit, POV return and receiving roof.",
+    "CI lacks audio hardware and falls back to Dummy; separate recorded audio checks pass.",
+    "Android export reports missing project icon; project configuration unchanged from base 8833fab to executable source f23a68e.",
+    "Body response is an acceleration-driven visual rig, not native articulated limb collision physics."
+  ]
+}

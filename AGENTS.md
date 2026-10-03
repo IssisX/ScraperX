@@ -12,6 +12,8 @@ Read these standing preferences at the start of work. They come from the user's 
 ### Working with me
 - Interpret rough requests thoughtfully and turn them into coherent, high-quality results.
   Why: “Actually think,” rather than mechanically copying my wording.
+- Express my rough input as clear, polished intent, retaining its ambition and concrete requirements; use that interpretation to guide the work.
+  Why: I explicitly asked to up-interpret rough input into beautifully stated queries.
 - Preserve what I explicitly say works; restrict repairs to the problem I identify.
   Why: The rubber bands were good; the pouch needed changing.
 - Apply my latest correction immediately without asking me to repeat it.
@@ -26,6 +28,8 @@ Read these standing preferences at the start of work. They come from the user's 
 ### How to report
 - Give concise updates explaining decisions, current work, and meaningful findings.
   Why: “Keep me updated … concisely, throughout.”
+- Narrate phase changes and agent assignments before starting them: name the section, intended action and each agent's responsibility. Report material findings as work progresses.
+  Why: Seeing filenames and tool activity alone does not explain what is happening; I need succinct “now creating…” and “onto…” updates to follow development.
 - Answer direct questions directly before resuming work.
   Why: “Just answer.”
 - Report completed work, actual verification, and remaining limitations honestly.
@@ -34,14 +38,18 @@ Read these standing preferences at the start of work. They come from the user's 
 ### Process
 - Inspect existing work before changing it, and preserve completed or concurrent changes.
   Why: I warned against flattening the already completed cargo net.
-- Make authorized edits without repeated permission requests. Group related writes when practical to reduce approval interruptions; finish integration and appropriate verification before pushing.
-  Why: Constant file-write approvals block me from doing other things; use one coherent update where practical.
+- Make authorized edits as needed without repeated permission requests; finish integration and appropriate verification before pushing. Match writable work to the actual sandbox and role permissions.
+  Why: Constant file approvals block progress; edits should not be delayed into an end-of-task batch.
 - Use verification that can reject broken behavior; avoid redundant checking and unsolicited handoffs.
   Why: “Overtesting and oververifying,” and we are continuing together.
 - Use available development tools and relevant skills proactively when they improve the result.
   Why: I explicitly encouraged creative engineering and supported development tools.
-- Use suitable specialist agents proactively for bounded background work, and use supported hooks when useful. Assign ownership, preserve concurrent work, and keep integration and publication with the parent agent.
-  Why: I asked to use the appropriate agents on the appropriate sections of code and delegate background busy work.
+- Use a lean crew: the lead plus one worker by default; add a third only for a specific useful independent task. Count remote delegation too, reuse completed investigations, and finish workers when their assignments end. Super_Agent is suitable for bounded maintenance and review; verify its advice against the repository.
+  Why: I want useful delegation without excess agents, duplicated work or unnecessary cost. Role names do not identify a cheaper model.
+- Keep Super_Agent occupied when useful authorized work is ready, supplying the actual evidence and a bounded question. Queue the next useful task as its current assignment finishes; avoid duplicate investigations or invented busywork.
+  Why: I explicitly want this inexpensive agent taking useful work off the lead throughout development.
+- Apply the installed Godot package throughout development, selecting its relevant input, movement, camera, animation, world, material, lighting, audio, mobile, profiling, QA and export guidance for the section being built.
+  Why: I explicitly asked to use our Godot engine skills. Skills supply instructions; loading them does not require spawning more agents.
 
 ### ScraperX
 - Use “The input state determines the output” as a project-wide design rule.
@@ -62,4 +70,6 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I requested extraordinary interactive content beyond cosmetics and suggested `/plan` for that next pass.
 - Make materials behave consistently with their appearance.
   Why: Cargo nets should yield; a leather pouch should not act like a wooden ledge.
+- Give new objects and mechanisms the material response and dynamics their function calls for; treat physical depth as part of constructing the encounter.
+  Why: The cargo net illustrates the nuanced physics I expect in new content as we build the structure. Describe what is being added and how it behaves; repeated reassurance about retaining existing objects wastes attention.
 <!-- LEARNED-BY-LEARN:END -->

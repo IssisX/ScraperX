@@ -181,6 +181,8 @@ Required movement includes, where physically valid:
 
 Movement assistance may improve control and reduce input friction, but it may not fabricate support, pass through invalid geometry, erase relevant momentum, or turn an impossible motion into a valid one.
 
+**Owner direction, 2026-10-03 — contact-aware parkour:** develop fluid, sophisticated traversal that opens more of the actual industrial world to the player. Discover and use reachable rails, edges, handholds and footholds; transfer between contacts continuously; retain the weight and momentum of moving machinery. Native contact decisions, body movement, visible hand/foot placement and camera response must describe the same action at a consistent simulation/render timestamp. Prioritize usable contact geometry, smooth acquisition and release, and precise movement through varied structure. Interpolation must keep planted limbs attached to their rendered supports. The requested upgrade is an implementation objective, not a claim that independent articulated limb physics already exists.
+
 ## 7.3 Traversal readability
 
 Traversable geometry communicates primarily through **world geometry and physical intuition**.

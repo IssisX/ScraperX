@@ -43,6 +43,33 @@ void route(double lane) {
     settle(s,90);
     require(s.snapshot().player_position.y-before<0.06,"no held motion cannot climb upward; physical sag is allowed");
     require(std::abs(s.snapshot().traversal_left_hand.z-grip_z)>0.015,"climber load physically deflects the net and its real grip");
+    if(lane==20.0) {
+        // A retained material coordinate is linear in the SAME two mesh
+        // histories as the rendered vertices. This exercises the production
+        // per-hand sampler without allocating a whole mesh in that sampler.
+        int retained_samples=0;
+        for(int sample=0;sample<12;++sample) {
+            const auto before=s.snapshot();tick(s);const auto after=s.snapshot();
+            require(s.advance_frame(Simulation::kFixedStepSeconds*.5).steps_advanced==0,"net half-tick is render only");
+            for(bool left:{false,true}) {
+                const auto a=left?before.traversal_left_hand:before.traversal_right_hand;
+                const auto b=left?after.traversal_left_hand:after.traversal_right_hand;
+                const auto rendered=s.render_traversal_hand(left);
+                const auto gap=std::hypot(std::hypot(b.x-a.x,b.y-a.y),b.z-a.z);
+                if(gap<.01) {
+                    require(std::hypot(std::hypot(rendered.x-(a.x+b.x)*.5,rendered.y-(a.y+b.y)*.5),rendered.z-(a.z+b.z)*.5)<.00002,
+                            "retained net material anchor uses the mesh half-tick history");
+                    ++retained_samples;
+                }
+                // A changed material coordinate has different endpoints;
+                // a world-point midpoint does not describe its mesh binding.
+            }
+            require(s.snapshot().tick_index==after.tick_index && s.snapshot().player_position.y==after.player_position.y,
+                    "net render reads do not advance native player state");
+            require(s.advance_frame(Simulation::kFixedStepSeconds*.5).steps_advanced==1,"finish net render half-tick");
+        }
+        require(retained_samples>=12,"net render check actually exercises retained mesh holds");
+    }
     (void)s.set_move_input(0,-1);
     int climb_ticks=0;
     bool paused=false;

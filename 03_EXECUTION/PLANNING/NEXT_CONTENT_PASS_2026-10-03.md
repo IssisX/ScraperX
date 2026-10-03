@@ -1,13 +1,13 @@
 # Next content pass — west freight galleries (+121→187 m)
 
-**Status:** Proposal prepared by a background Cory architect on 2026-10-03 and revised after the owner's machine-scale clarification. Discuss after the AS-023 launch repair is verified and delivered. This does not authorize new gameplay implementation or certify numerically compiled machinery.
+**Status:** Mixed proposal approved by the owner on 2026-10-03 after the machine-scale clarification. Proceed with route integration, physical compilation and complete encounters. Exact-source AS-023 delivery must close before publishing new gameplay; approval of the layout does not certify numerically compiled machinery.
 **Authorities:** Start Here owns source/delivery truth; the Ascent Atlas owns placement; governing laws and GDD own product intent. Preserve existing AS identifiers. New encounter/entity identifiers must be reserved after checking active and fixture allocations.
 
 ## 1. Existing route and first gate
 
 Current normal-world construction includes the cargo net from grade to +11, retained AS-017–022 through +110 and the suspended ladder from +110 to +121. Their proofs are separate: the ladder starts at a staged +110 support, and the retained continuous +110 scenario selects the pipe-bridge fixture. The slingshot's supported +352 landing is another separate route.
 
-**Normal grade→121 continuity is unproven.** First exercise ordinary movement from the shipping grade spawn, use the cargo net and continue through the existing sections and AS-026 without fixture selection or debug relocation. Diagnose any actual connector failure before changing established encounters. A staged machine proof cannot close this integration gate.
+**Normal grade→121 continuity now passes locally, 2026-10-03.** Ordinary shipping touch begins at grade, climbs the yielding cargo net and retained upper route, catches and loads AS-026, lands on its offset receiver and reaches Tower support 11 at Y=121.9, deaths 0 and launcher work 0. The native landing-recovery timer and test approach corrections are recorded in the current movement/route evidence; exact-source Actions and Android delivery for this new candidate remain pending. A staged machine proof does not establish this continuity.
 
 The tower's rings and 1,600 m shell establish spatial framework, not completed ascent. The near-term campaign objective remains connected ground→300 m traversal.
 
@@ -17,7 +17,7 @@ A bounded +121→187 pass retains several distinct mechanisms and climbing encou
 
 | Experience | Chosen screening target | Player decision and physical consequence |
 |---|---|---|
-| Service-mast approach | +121 toward approximately +132 | Climb irregular short runs, traverse an exposed member and rest on real ledges. Reveal the first load/pan/crossing relationship from supported footing. |
+| Service-mast approach | +121 toward approximately +132 | Climb irregular short runs, traverse an exposed member and rest on real ledges. The owner's long breeze-driven rope ladder is being compiled for this approach, with a free tail below entry and a real upper attachment/receiver. Reveal the first load/pan/crossing relationship from supported footing. |
 | Rolling-drum bascule | Approximately +132→141 | Align a loading tongue and release one contained drum into a broad pan. Gravity and contact deploy a shorter crossing; traverse its arrested geometry to the onward climb. |
 | Offset freight-frame climb | Approximately +141→148 | Choose staggered holds/ledges or a shorter exposed transfer. Reach a safe inspection/loading area with a view of the larger machinery. |
 | Counterweighted freight truss | Approximately +148→173; screen a roughly 35–45 m structural span | Unload or reposition actual freight onto a fixed rack, changing torque. Release the restraint from supported ground; gravity deploys the truss. Climb its structural chords, grip runs and resting pockets, making lateral transfers to tower landings. |
@@ -31,6 +31,8 @@ Screen the west exterior first, beginning with X=[−38,−24.5], Z=[−167,−1
 ## 3. Compile before implementing machines
 
 All primary sources are finite and visible. Resolve geometry, mass/COM/inertia, contact/friction, restraints, swept clearance, end stops, entry/receiving support and recovery before coding the assembly.
+
+**Build consequential physical detail into new content.** The cargo net illustrates the depth the owner expects when adding different materials and mechanisms. Give each new assembly the material/contact model its function requires: rotational inertia and roll/slip for drums, tension and deformation for flexible structures, unilateral cable/contact loads, appropriate stiffness/compliance, restitution/friction, and remaining stroke/history for consumed arrest material. Use a rigid-body abstraction where it is justified; resolve deformation or material history where it changes contact, traversal, transfer or recovery. These physical responses belong in the functioning encounter. Later refinement deepens that behavior and its presentation. Record what is simulated, what is abstracted and the evidence that supports each choice.
 
 ### Counterweighted freight truss
 
@@ -66,6 +68,8 @@ Kit's automatic catch currently relatches using proximity/speed and installs a f
 
 A substantial GPT-6-sol implementation package becomes appropriate **after** the expert resolves placement, physical contracts, interfaces and acceptance behaviors:
 
+The responsibilities below are a file-ownership map, not four simultaneous agents. Use the lead plus one worker by default; reserve a third for a concrete independent check. Reuse gathered evidence and use the bounded remote Super_Agent where maintenance or review benefits from it. Godot specialist skills guide implementation directly without requiring additional agents.
+
 1. Integrator owns normal route continuity, Simulation registration/stepping and checkpoint integration.
 2. Native assembly worker owns the bounded gallery builders, bodies, constraints and required physical state.
 3. Presentation worker owns shared native readback, readable primitive geometry, ordinary input context and actual-state feedback.
@@ -83,3 +87,13 @@ The first complete delivery can be the service-mast approach, rolling-drum bascu
 - Pass relevant native, ordinary touch, solids and exact-source Actions/Android delivery gates. Device pacing and sustained 45 FPS need device evidence.
 
 Governing Law 37 applies throughout: first integrate a coherent playable foundation; return in planned passes for commercial-quality materials, embodiment, hands/POV, contact-derived sound/haptics, camera smoothness and device optimization. Each foundation already needs functioning causality and reliable recovery. Track the unfinished refinements without claiming release quality.
+
+## 6. Long rope-ladder amendment, owner direction 2026-10-03
+
+Build one genuinely flexible ladder first, then place a few at distinct useful locations throughout the larger tower. Screen an approximately 20–25 m hanging length for the service-mast approach; its required climb height and its free tail are separate quantities. These lengths and placement are CHOSEN screening targets, not measured clearance or solved dimensions. A light breeze supplies actual aerodynamic forces. Player catches, uneven hand loading, climbing and unloading must change rope tension and rung motion through native physics.
+
+The prototype must resolve two visible side strands, individual rung bodies, actual top attachments, taut/slack behavior, rope-mass abstraction, contact, rotational inertia, travel/sweep, grip capacity and the entry/upper receiving surfaces. Wind is a declared external energy source: use relative-air-velocity drag, record wind work and dissipation, and restore its deterministic state with the world. Native C++/Jolt owns motion; Godot draws the same interpolated strand/rung/hand states and supplies input and feedback.
+
+**Supported integration seams:** current grip discovery rejects dynamic bodies below 400 kg, and the current climbing path disables player gravity and applies its equivalent weight to one principal support. Lightweight flexible rungs need a resolved load-transfer model. Do not inflate rung mass, add duplicate weight or animate a rigid ladder to manufacture the requested behavior. The bounded native prototype must settle actual 85 kg player coupling before production integration. Air parameters, rope/rung masses, compliance, force/work limits, world placement and device cost remain UNRESOLVED until their deciding measurements.
+
+Screen later dynamic encounters for distinct traversal decisions: a suspended planked chain walkway whose footsteps generate coupled sway; a cargo sling whose loose load shifts its balance; a long hanging maintenance cage that players physically swing toward a receiver. These are candidates, not selected implementations. Choose each for a useful route, legible load path, recoverable failure and a different physical experience.

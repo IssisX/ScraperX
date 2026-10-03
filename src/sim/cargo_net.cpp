@@ -73,6 +73,22 @@ JPH::RVec3 CargoNet::surface(float c,float r) const noexcept {
     const float u=c-x,v=r-y;
     return (node(x,y)*(1-u)+node(x+1,y)*u)*(1-v)+(node(x,y+1)*(1-u)+node(x+1,y+1)*u)*v;
 }
+JPH::RVec3 CargoNet::surface(float c,float r,const std::vector<JPH::RVec3> &vertices) const noexcept {
+    c=std::clamp(c,0.0F,float(kColumns-1));r=std::clamp(r,0.0F,float(kRows-1));
+    const int x=std::min(int(c),kColumns-2),y=std::min(int(r),kRows-2);
+    const float u=c-x,v=r-y;
+    const auto at=[&](int column,int row) {
+        JPH::RVec3 sum=JPH::RVec3::sZero();
+        for(int k=0;k<4;++k) sum+=vertices[vertex(column,row,k)];
+        return sum*0.25;
+    };
+    return (at(x,y)*(1-u)+at(x+1,y)*u)*(1-v)+(at(x,y+1)*(1-u)+at(x+1,y+1)*u)*v;
+}
+JPH::RVec3 CargoNet::render_world_point(JPH::Vec3 material,float alpha) const noexcept {
+    alpha=std::clamp(alpha,0.0F,1.0F);
+    return surface(material.GetX(),material.GetY(),previous_vertices_)*(1-alpha)+
+           surface(material.GetX(),material.GetY(),vertices_)*alpha+JPH::RVec3(0,0,material.GetZ());
+}
 JPH::Vec3 CargoNet::material_point(JPH::RVec3 world) const noexcept {
     float c=std::clamp(float(world.GetX()-18)/kDX,0.0F,float(kColumns-1));
     float r=std::clamp(float(world.GetY()-0.45)/kDY,0.0F,float(kRows-1));
