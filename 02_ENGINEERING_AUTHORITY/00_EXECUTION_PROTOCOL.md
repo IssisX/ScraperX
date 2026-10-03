@@ -2,7 +2,7 @@
 
 **Project-wide motto: “The input state determines the output.”** For every change, identify authoritative inputs, the causal transition and observable output. Verification must distinguish changed input/state from an incorrect or canned result. This applies across gameplay, machines, touch controls, presentation and feedback.
 
-**Owner collaboration preference:** Interpret rough requests thoughtfully and turn their underlying intent into coherent, polished behavior. Use engineering and design judgment; do not mechanically copy a proposed mechanism that would weaken the objective. Explain material tradeoffs, absorb routine choices, make authorized edits as needed and finish useful work without repeated permission prompts. Keep decision/progress updates concise. Ask only when missing information materially changes the result.
+**Owner collaboration preference:** Interpret rough requests thoughtfully and turn their underlying intent into coherent, polished behavior. Use engineering and design judgment; do not mechanically copy a proposed mechanism that would weaken the objective. Explain material tradeoffs, absorb routine choices, make authorized edits as needed, group related writes where practical to reduce approval interruptions, and finish useful work without repeated permission prompts. Keep decision/progress updates concise. Ask only when missing information materially changes the result.
 
 
 **Status:** Engineering + requester execution authority  

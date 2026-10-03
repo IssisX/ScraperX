@@ -1,0 +1,78 @@
+{
+  "source": "6fccf35d0b953303681bd38faa5a7f49c37c9e37",
+  "run_id": 37082231565,
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/37082231565",
+  "job_id": 111085046747,
+  "run_status": "completed",
+  "run_conclusion": "success",
+  "job_status": "completed",
+  "job_conclusion": "success",
+  "started_at": "2026-10-03T00:28:47Z",
+  "job_completed_at": "2026-10-03T00:59:18Z",
+  "steps_success": 23,
+  "steps_skipped": [
+    "Retain failed-run diagnostics"
+  ],
+  "artifact_id": 11259532210,
+  "artifact_name": "ScraperX-build-6fccf35d0b953303681bd38faa5a7f49c37c9e37",
+  "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/37082231565/artifacts/11259532210",
+  "artifact_expires_at": "2027-01-01T00:28:47Z",
+  "artifact_size_metadata": 45610704,
+  "zip_size_downloaded": 45610704,
+  "zip_sha256": "a00730a68b86bd7245fc64848749d771f04cf531145ede360d1d5e6be62481fb",
+  "apk_path": "/data/data/com.termux/files/usr/tmp/scraperx-ci-6fccf35/build/apk/ScraperX-ChatGPT.apk",
+  "apk_size": 33336388,
+  "apk_sha256": "1968b3ddeea78b4c385b9b95586b8c755b2711a0dbf62e152521a6cab7624799",
+  "checkpoint": {
+    "author": "ChatGPT",
+    "branch": "ChatGPT",
+    "commit": "6fccf35d0b953303681bd38faa5a7f49c37c9e37",
+    "apk": "ScraperX-ChatGPT.apk",
+    "package": "com.cory.scraperx.chatgpt",
+    "label": "ScraperX-ChatGPT",
+    "signer_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4"
+  },
+  "ci_signer_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+  "native_test_count": 31,
+  "fall_clips": [
+    [
+      "wtf_1.ogg",
+      "0.912013"
+    ],
+    [
+      "wtf_2.ogg",
+      "0.912016"
+    ],
+    [
+      "wtf_3.ogg",
+      "0.912012"
+    ],
+    [
+      "fuck_1.ogg",
+      "0.912012"
+    ],
+    [
+      "fuck_2.ogg",
+      "0.648468"
+    ]
+  ],
+  "native_test_seconds": 56.61,
+  "settings_checks": 3069,
+  "settings_failures": 0,
+  "settings_rings": 33,
+  "fall_summary": {
+    "reactions": 2,
+    "mix_peak": 0.912013,
+    "recordings": 5,
+    "recording_peak": 0.912016,
+    "failures": 0
+  },
+  "artifact_file_count": 100,
+  "expected_files_checked": 95,
+  "ci_screenshot_count": 56,
+  "boundaries": [
+    "CI signature-verifier logs inspected; no local cryptographic signature verifier run",
+    "No APK installation or device execution/observation",
+    "New CI PNG presence checked; PNGs not visually inspected by this verifier"
+  ]
+}

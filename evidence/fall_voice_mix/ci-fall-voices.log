@@ -1,0 +1,20 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.2 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+
+Movie Maker mode enabled, recording movie in 1296×1114 @ 60 FPS...
+SCRAPERX_AUDIO_BANK clips=28 msec=235 driver=Dummy
+SCRAPERX_FALL_CLIP clip=wtf_1.ogg mix_peak=0.912013
+SCRAPERX_FALL_CLIP clip=wtf_2.ogg mix_peak=0.912016
+SCRAPERX_FALL_CLIP clip=wtf_3.ogg mix_peak=0.912012
+SCRAPERX_FALL_CLIP clip=fuck_1.ogg mix_peak=0.912012
+SCRAPERX_FALL_CLIP clip=fuck_2.ogg mix_peak=0.648468
+SCRAPERX_FALL_VOICE reactions=2 mix_peak=0.912013 recordings=5 recording_peak=0.912016 failures=0
+--------------------------------------------------------------------------------
+Done recording movie at path: /home/runner/work/_temp/fall-voices.avi
+735 frames at 60 FPS (movie length: 00:00:12:15), recorded in 00:00:10 (120% of real-time speed).
+CPU render time: 0.05 seconds (average: 0.07 ms/frame)
+GPU render time: 0.17 seconds (average: 0.23 ms/frame)
+Encoding time: 5.50 seconds (average: 7.49 ms/frame)
+--------------------------------------------------------------------------------

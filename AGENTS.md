@@ -16,6 +16,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: The rubber bands were good; the pouch needed changing.
 - Apply my latest correction immediately without asking me to repeat it.
   Why: Repeated clarification blocks progress.
+- Check my factual assumptions and proposed mechanisms against evidence, explain corrections calmly, and preserve the intended objective.
+  Why: “Always assume I could be wrong.”
 - Make routine decisions and complete authorized work without repeated permission requests.
   Why: “Make changes and PUSH.”
 - Ask before substantial new scope that I have not authorized; present a concrete recommendation.
@@ -32,8 +34,8 @@ Read these standing preferences at the start of work. They come from the user's 
 ### Process
 - Inspect existing work before changing it, and preserve completed or concurrent changes.
   Why: I warned against flattening the already completed cargo net.
-- Make authorized edits as needed without permission prompts or delaying them into an end-of-task batch; finish integration and appropriate verification before pushing.
-  Why: Repeated edit approvals block progress; the latest instruction explicitly removes any need to batch edits.
+- Make authorized edits without repeated permission requests. Group related writes when practical to reduce approval interruptions; finish integration and appropriate verification before pushing.
+  Why: Constant file-write approvals block me from doing other things; use one coherent update where practical.
 - Use verification that can reject broken behavior; avoid redundant checking and unsolicited handoffs.
   Why: “Overtesting and oververifying,” and we are continuing together.
 - Use available development tools and relevant skills proactively when they improve the result.
