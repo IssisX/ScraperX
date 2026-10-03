@@ -1,0 +1,623 @@
+{
+  "purpose": "Exact completed private design sources and receipts preserved at owner-requested pause; no gameplay integration claim.",
+  "files": [
+    {
+      "original": "design/rope-ladder/FINAL_RECEIPT.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/FINAL_RECEIPT.json",
+      "bytes": 3981,
+      "sha256": "5a886edac7a458526b0eecc338db7465330077d50da5fd6de9a47e09b8c69f8e"
+    },
+    {
+      "original": "design/rope-ladder/STAGE_CONTRACT.md",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/STAGE_CONTRACT.md",
+      "bytes": 12673,
+      "sha256": "d7aeae51b14183eb321de1f4f17ba8a801bcfa82e40614cbff26ca336213edad"
+    },
+    {
+      "original": "design/rope-ladder/build.sh",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/build.sh",
+      "bytes": 611,
+      "sha256": "550657e61d2fe1e0754054bd8cbf5ad0d9f48b90a4cebfafa32f9b2a4be576f1"
+    },
+    {
+      "original": "design/rope-ladder/case-breeze-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-breeze-360.log",
+      "bytes": 14023,
+      "sha256": "cc6c541111356cd346053a79f9539534217434e0025d71fdf809c66cbd6a1bfc"
+    },
+    {
+      "original": "design/rope-ladder/case-breeze-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-breeze-90.log",
+      "bytes": 13926,
+      "sha256": "231d7733cd107e99e44f867274073fdd230acbd433f9d213ef9bcd42137589e2"
+    },
+    {
+      "original": "design/rope-ladder/case-central_catch-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-central_catch-360.log",
+      "bytes": 16417,
+      "sha256": "c67cb094da0c383a6a972474a8e95bd2cac1937d1541bd202956add5eada52e6"
+    },
+    {
+      "original": "design/rope-ladder/case-central_catch-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-central_catch-90.log",
+      "bytes": 16352,
+      "sha256": "40583e993feb8c7ef4841535d8d8a6613685e8dcd991aba09421a4fed942e356"
+    },
+    {
+      "original": "design/rope-ladder/case-free_sway-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-free_sway-360.log",
+      "bytes": 14198,
+      "sha256": "e7d6de45bdfbb8cd04f788742567d4f9c2227ac21e946b411d5029e4ec729609"
+    },
+    {
+      "original": "design/rope-ladder/case-free_sway-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-free_sway-90.log",
+      "bytes": 14147,
+      "sha256": "22b0f5f59ba77816f2ead5965ee4aafa038e939c5b81b29bbb563a188b88a99d"
+    },
+    {
+      "original": "design/rope-ladder/case-left_catch-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-left_catch-360.log",
+      "bytes": 16453,
+      "sha256": "07535b087978c0705b0971e036143f40328b26741904c2f61f68a7409ca86ec6"
+    },
+    {
+      "original": "design/rope-ladder/case-left_catch-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-left_catch-90.log",
+      "bytes": 16352,
+      "sha256": "c9206f0815510ac118633d4b613072a482e23b610ce86edbd27cb6dd6a8c0d16"
+    },
+    {
+      "original": "design/rope-ladder/case-reverse-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-reverse-360.log",
+      "bytes": 14200,
+      "sha256": "ed47b925f3f628cfb1fa1252651cac9b7e22fcc429b2f10b9a5926aa4c63f2fa"
+    },
+    {
+      "original": "design/rope-ladder/case-reverse-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-reverse-90.log",
+      "bytes": 14135,
+      "sha256": "a7441206411502b78cd588c4758d22497369b16469502f0259356e1536c06edc"
+    },
+    {
+      "original": "design/rope-ladder/case-right_catch-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-right_catch-360.log",
+      "bytes": 16431,
+      "sha256": "82c28b776fb190587f576f5078c2ede6592ac1a0f5c75ec5c95c65ef2a7988bf"
+    },
+    {
+      "original": "design/rope-ladder/case-right_catch-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-right_catch-90.log",
+      "bytes": 16364,
+      "sha256": "0f2754ff212353fcb29ad07d103d2c5b2934f501cf80f1c3e299b6613ec7353a"
+    },
+    {
+      "original": "design/rope-ladder/case-still-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-still-360.log",
+      "bytes": 14772,
+      "sha256": "3eb4a39d6f97c4785b38fc2baafaa93b0011064008812e639f90f66659352f54"
+    },
+    {
+      "original": "design/rope-ladder/case-still-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/case-still-90.log",
+      "bytes": 14614,
+      "sha256": "3552a131f70c13b1aece41aa480480c4c5fd93728809c28f0712c8e235000202"
+    },
+    {
+      "original": "design/rope-ladder/cases-driver.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/cases-driver.log",
+      "bytes": 2152,
+      "sha256": "f04d10c8a098c07796f51b4563667e71579c224e0e80cc141185696d909cc5d7"
+    },
+    {
+      "original": "design/rope-ladder/native-cases.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/native-cases.json",
+      "bytes": 39049,
+      "sha256": "00d931c4d757fd2afb2767ca3d9c46eaf22099e4e1c20cd8463bb980c84c3a85"
+    },
+    {
+      "original": "design/rope-ladder/rider-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/rider-360.log",
+      "bytes": 15981,
+      "sha256": "d1baa62434db272a9d32b51fa4d9e0ef5f1cf6bd126fcd4fbe8645062d16bcbc"
+    },
+    {
+      "original": "design/rope-ladder/rider-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/rider-90.log",
+      "bytes": 15924,
+      "sha256": "895352ebfbb54418366bb2c7f6bce1605c4091c9acf66dc378ce2da26c6bc561"
+    },
+    {
+      "original": "design/rope-ladder/rope_ladder_probe-before-taut-binding.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/rope_ladder_probe-before-taut-binding.cpp",
+      "bytes": 15812,
+      "sha256": "6940f170d794cc8236e947ca4a88e631480d2956376d58e3442f0661501b1f4c"
+    },
+    {
+      "original": "design/rope-ladder/rope_ladder_probe.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/rope_ladder_probe.cpp",
+      "bytes": 16857,
+      "sha256": "c70b2309ae562b5b4fcfbe190546ab2d22138b535f9f454569044cec248c05db"
+    },
+    {
+      "original": "design/rope-ladder/run_cases.py",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/run_cases.py",
+      "bytes": 4199,
+      "sha256": "d07ff96ead0cd472e3315df003b9cbebe51a576632e47aaab7b7229be55f2fb0"
+    },
+    {
+      "original": "design/rope-ladder/unloaded-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/unloaded-360.log",
+      "bytes": 13585,
+      "sha256": "59822c1f8fa40d45f3c47147c6c1c96911a601f0b3381c7cb39d3c689c1efaf6"
+    },
+    {
+      "original": "design/rope-ladder/unloaded-90-iter256.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/unloaded-90-iter256.log",
+      "bytes": 13614,
+      "sha256": "59a29bcb98b5c116a3aa8792dc213533dbb8b0e54765141f3369309f44b7fa1a"
+    },
+    {
+      "original": "design/rope-ladder/unloaded-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/unloaded-90.log",
+      "bytes": 13584,
+      "sha256": "bd5b88cad0cdfabbf81aab290f56da06cbaaea62440ae8e3242b66c7741aa738"
+    },
+    {
+      "original": "design/rope-ladder/unloaded-fixed-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/unloaded-fixed-360.log",
+      "bytes": 13689,
+      "sha256": "816fd284cc11a7ceebf7bf5e7a7b3816caf7a89b5d334c651382223d1ebe7ff4"
+    },
+    {
+      "original": "design/rope-ladder/unloaded-fixed-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/unloaded-fixed-90.log",
+      "bytes": 13605,
+      "sha256": "c6a3ed0455e0f91d6b4b42743fc46e7abc7e331aaa647be075161a7e87f09441"
+    },
+    {
+      "original": "design/rope-ladder/verify_acceptance.py",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-ladder/verify_acceptance.py",
+      "bytes": 443,
+      "sha256": "063aa95e1c2d7265bf7b65a2c23f2d9acc88a81329d582b05dce650a760c1115"
+    },
+    {
+      "original": "design/rope-production-cadence/README.md",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-cadence/README.md",
+      "bytes": 3027,
+      "sha256": "b7e714cdcb8bdda88f10de01fb0447e046950152003b7c08109ba23cf59a95fe"
+    },
+    {
+      "original": "design/rope-production-cadence/quiet-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-cadence/quiet-360.log",
+      "bytes": 8780,
+      "sha256": "4c49d7dc55989874e9eac5f0e7ad922d9ee37d0a3e406674c7aa786a67878454"
+    },
+    {
+      "original": "design/rope-production-cadence/quiet-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-cadence/quiet-90.log",
+      "bytes": 8603,
+      "sha256": "25f5bcf10a1bd6bba3b51031cfe0f527f7607b6dfcc39ff61059d87ffb76db52"
+    },
+    {
+      "original": "design/rope-production-cadence/quiet_shipping_cadence.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-cadence/quiet_shipping_cadence.cpp",
+      "bytes": 10706,
+      "sha256": "f6d7c91340e1dbdf81fd52b29443784606b7613e421ac652e34b4fba292ea009"
+    },
+    {
+      "original": "design/rope-production-cadence/receipt.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-cadence/receipt.json",
+      "bytes": 3376,
+      "sha256": "02988b2e3144d373227d089afcc23adfe1cf2a02cfad1ce0be0c8764cff19bf1"
+    },
+    {
+      "original": "design/rope-elastic/CONTRACT_AND_RECEIPT.md",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/CONTRACT_AND_RECEIPT.md",
+      "bytes": 11295,
+      "sha256": "39c340bad07ca17524920e3fb93f823374c1c98fe4776d56a66f2af4d86195e6"
+    },
+    {
+      "original": "design/rope-elastic/build.sh",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/build.sh",
+      "bytes": 610,
+      "sha256": "08586eb7fc24a6d5eb50cfd2e95e46a01b2283103cd9d604250c4e464f4364ac"
+    },
+    {
+      "original": "design/rope-elastic/elastic_ladder_probe.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/elastic_ladder_probe.cpp",
+      "bytes": 14152,
+      "sha256": "3bf40ccbe337c032a6cf9ba6e87894501c4d36dc8f556c50f3500688fdcee504"
+    },
+    {
+      "original": "design/rope-elastic/elastic_ladder_quiet.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/elastic_ladder_quiet.cpp",
+      "bytes": 14152,
+      "sha256": "3bf40ccbe337c032a6cf9ba6e87894501c4d36dc8f556c50f3500688fdcee504"
+    },
+    {
+      "original": "design/rope-elastic/elastic_ladder_rider.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/elastic_ladder_rider.cpp",
+      "bytes": 21455,
+      "sha256": "f68e15096d0600b4ef0f88e2eeab85bb894a34a221b2d63b5bb61332d151e2dd"
+    },
+    {
+      "original": "design/rope-elastic/quiet-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/quiet-360.log",
+      "bytes": 7694,
+      "sha256": "9ff4ccd366d5d8c46495f8a9658a7ece75680958f95c7a3f474f254d8e260664"
+    },
+    {
+      "original": "design/rope-elastic/quiet-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/quiet-90.log",
+      "bytes": 7542,
+      "sha256": "566de3d235d3b53bfa9be1734261dc7e48866d4920732d6c2c07d1f5e8ac2af5"
+    },
+    {
+      "original": "design/rope-elastic/quiet_hashes.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/quiet_hashes.json",
+      "bytes": 368,
+      "sha256": "040a6cf57fa03778950d222eaabfebbe7da2001fe5f7e0536b438be4218faa60"
+    },
+    {
+      "original": "design/rope-elastic/receipt.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/receipt.json",
+      "bytes": 12659,
+      "sha256": "8ae0b5b59506590fce1a56d1559f97924c8e146824e0174f84df801d1336b89a"
+    },
+    {
+      "original": "design/rope-elastic/rider-360.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/rider-360.log",
+      "bytes": 9628,
+      "sha256": "bca6d8abf48ba1eea92d686a6d6f4b84bb405fcb63fe9031d36e825a37be209d"
+    },
+    {
+      "original": "design/rope-elastic/rider-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/rider-90.log",
+      "bytes": 9590,
+      "sha256": "0d65aad231565dbbaa2922012aac57c3685f7746f461e009bdf55c8774a7ed74"
+    },
+    {
+      "original": "design/rope-elastic/verify_receipt.py",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-elastic/verify_receipt.py",
+      "bytes": 2206,
+      "sha256": "13ad7efba57bb2d8d4ee065ca68e915f259468ed76c36fccf4fc4c5f0ee643da"
+    },
+    {
+      "original": "design/rope-production-binding/RECEIPT.md",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/RECEIPT.md",
+      "bytes": 6674,
+      "sha256": "ef14d7c26a7015e9beff9f19af23550a4dfc045eef189e01e2004655f4c6f143"
+    },
+    {
+      "original": "design/rope-production-binding/build.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original": "design/rope-production-binding/build.sh",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/build.sh",
+      "bytes": 560,
+      "sha256": "55e47f7f1116d0a2de2a9e332b6a1f31505e3d6b4b6023e9a39a0a7c4d562139"
+    },
+    {
+      "original": "design/rope-production-binding/quiet-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/quiet-90.log",
+      "bytes": 7635,
+      "sha256": "e74a17550e45de46fd25992606d9b51d4a527264e65bef3a3250355a14e747f5"
+    },
+    {
+      "original": "design/rope-production-binding/quiet-90.stderr.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/quiet-90.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original": "design/rope-production-binding/receipt.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/receipt.json",
+      "bytes": 8730,
+      "sha256": "fc65d8e4cc934e6c18ca1c612a6c6112602fcddce39111c6342f36ca9ff7853b"
+    },
+    {
+      "original": "design/rope-production-binding/rider-90.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/rider-90.log",
+      "bytes": 9686,
+      "sha256": "461e4b6708b08b81e5eb1ee7d435fcca004d30ce001ff59d515b52f88fad1fb0"
+    },
+    {
+      "original": "design/rope-production-binding/rider-90.stderr.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/rider-90.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original": "design/rope-production-binding/rope_binding_quiet.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/rope_binding_quiet.cpp",
+      "bytes": 14559,
+      "sha256": "cff9d9ffcfb1aaf50b9b9eb992a16688f8c4fab6b8c240fd5b8a37eb39d67877"
+    },
+    {
+      "original": "design/rope-production-binding/rope_binding_rider.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/rope_binding_rider.cpp",
+      "bytes": 21949,
+      "sha256": "760a30a55e440ad31dfb8aa8cc1d0d752f51c028e0b1259bc2672e11651614d6"
+    },
+    {
+      "original": "design/rope-production-binding/verify_receipt.py",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-production-binding/verify_receipt.py",
+      "bytes": 1741,
+      "sha256": "daadc18ad2180a4fad41a8a7c6268b825f5f620d2545ca0973bac8f73366a2d3"
+    },
+    {
+      "original": "design/rope-placement/PLACEMENT_SCREEN.md",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-placement/PLACEMENT_SCREEN.md",
+      "bytes": 3797,
+      "sha256": "b44b36d06356811a44ce2309976f2eb0ce4a88022cf10a4f94637648cb836ff2"
+    },
+    {
+      "original": "design/rope-placement/box-screen.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-placement/box-screen.json",
+      "bytes": 765,
+      "sha256": "536ebdc3391ba3b7b1bbadb1135a2af402c0a66eff5279e85b4a15a5aea8075f"
+    },
+    {
+      "original": "design/rope-placement/screen.py",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/rope-placement/screen.py",
+      "bytes": 2917,
+      "sha256": "5c5401e85ea1db8edf9c211f5472ff204acc3bba434ba27130d8799f05b998d7"
+    },
+    {
+      "original": "design/first-gallery/FINAL_RECEIPT.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/FINAL_RECEIPT.json",
+      "bytes": 558,
+      "sha256": "b633aa1de2f75331a749802f56a05c1f8b0c2e619b3c2a3f9e2c5ff458d58cf6"
+    },
+    {
+      "original": "design/first-gallery/README.md",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/README.md",
+      "bytes": 531,
+      "sha256": "d2372290388ccc52182593c91eb3d5440aec16d2e1ee10028e0d1dc791d759da"
+    },
+    {
+      "original": "design/first-gallery/STAGE_CONTRACT.md",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/STAGE_CONTRACT.md",
+      "bytes": 14724,
+      "sha256": "5ca1128b038952de3b00ffb7f2f07d2c1a61a9c826d4607bd66ea84fd334170d"
+    },
+    {
+      "original": "design/first-gallery/coupled-pan-probe.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/coupled-pan-probe.cpp",
+      "bytes": 7450,
+      "sha256": "b90d381f8f96142d45dca66c01a03211900cd65e883af079f64495c64af83d0e"
+    },
+    {
+      "original": "design/first-gallery/native-cases-receipt.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-cases-receipt.json",
+      "bytes": 8315,
+      "sha256": "a06a37503735f8825ebc458bc08b6dfcb5b72e29e9e8a4fdff15d56d7f18e891"
+    },
+    {
+      "original": "design/first-gallery/native-far-rider-360hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-far-rider-360hz.log",
+      "bytes": 10931,
+      "sha256": "dc23aa38bc671211ed6937af7d7946b70df1b7fc98f2a4fa2d42b5e7e895ede9"
+    },
+    {
+      "original": "design/first-gallery/native-far-rider-90hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-far-rider-90hz.log",
+      "bytes": 10875,
+      "sha256": "17483c7d9f3313c7b674d62a7c9d19e4bf7c4487c3c1e5bbc7adf04a861b8ae2"
+    },
+    {
+      "original": "design/first-gallery/native-high-drop-low-friction-360hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-high-drop-low-friction-360hz.log",
+      "bytes": 10966,
+      "sha256": "b25269ba62dfdd8d597e43b43be6c6357c5475ae3ee67f298eac1ab8859fe845"
+    },
+    {
+      "original": "design/first-gallery/native-high-drop-low-friction-90hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-high-drop-low-friction-90hz.log",
+      "bytes": 10901,
+      "sha256": "80d15ecf1e051345025daa2d83266208ed390554f6b110ee161860de04f0286a"
+    },
+    {
+      "original": "design/first-gallery/native-high-drop-low-friction.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-high-drop-low-friction.log",
+      "bytes": 10913,
+      "sha256": "ffeaa6b524cbfce62cf90ece4574c5c44a1e4fe3cff05f3b4529d9d81be4d4ca"
+    },
+    {
+      "original": "design/first-gallery/native-near-rider-360hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-near-rider-360hz.log",
+      "bytes": 10958,
+      "sha256": "bf15ca477eb46f98c07515699698ac30e10fa9e6e4d065dfc8c56b825ba3b2d9"
+    },
+    {
+      "original": "design/first-gallery/native-near-rider-90hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-near-rider-90hz.log",
+      "bytes": 10928,
+      "sha256": "a4dd2dc7a9aa478bf4f7fac5d18f0177ccfd82dbd84eead0567dd0f0aab2d8c1"
+    },
+    {
+      "original": "design/first-gallery/native-nominal-360hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-nominal-360hz.log",
+      "bytes": 10941,
+      "sha256": "c9725099cbc2cbd0f2ebeff4ec9f522919a460cd184992ffb401c27e1b7b9b3d"
+    },
+    {
+      "original": "design/first-gallery/native-nominal-90hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-nominal-90hz.log",
+      "bytes": 10903,
+      "sha256": "64240b48bf7713d0a2e789352cd0d40bc3ee38fcedf9e701dba4028de92f0a33"
+    },
+    {
+      "original": "design/first-gallery/native-opposite-load-360hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-opposite-load-360hz.log",
+      "bytes": 11031,
+      "sha256": "2419c2d1facae0e9680c8cdec70b66b683e23539d27fa31285ed24e6972d680e"
+    },
+    {
+      "original": "design/first-gallery/native-opposite-load-90hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-opposite-load-90hz.log",
+      "bytes": 11031,
+      "sha256": "a86719f2164b326edf8afd502d42efb29a30f4719ece000d2354786a150587ef"
+    },
+    {
+      "original": "design/first-gallery/native-opposite-load.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-opposite-load.log",
+      "bytes": 11004,
+      "sha256": "15031bc060878f7cd65a00d4fd737f566d756d328f0b50b9dbc556884a0cbfaa"
+    },
+    {
+      "original": "design/first-gallery/native-pan-far-rider.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-pan-far-rider.log",
+      "bytes": 11098,
+      "sha256": "980c390c1a1fac47d8b3f074d7a13ff798e5ab2f7161fb42f101501192d0df69"
+    },
+    {
+      "original": "design/first-gallery/native-pan-nominal-fine.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-pan-nominal-fine.log",
+      "bytes": 12237,
+      "sha256": "371cadddc3a35b4b448cf4985df2b8a3e100c739b852c69ef168bbd30cb95bbe"
+    },
+    {
+      "original": "design/first-gallery/native-pan-nominal.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-pan-nominal.log",
+      "bytes": 10898,
+      "sha256": "5791e3a6e0aa2588bfda0c459a1dbb65882b15dd8b791ab7fd931bd31335cc44"
+    },
+    {
+      "original": "design/first-gallery/native-source-absent-360hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-source-absent-360hz.log",
+      "bytes": 9801,
+      "sha256": "5168f926dcd104f17ad80bbc18faea097f34f4ea9d30e6e7a8d03da4ac805d56"
+    },
+    {
+      "original": "design/first-gallery/native-source-absent-90hz.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-source-absent-90hz.log",
+      "bytes": 9954,
+      "sha256": "7598b834e0e0b8b754116182d281666dc8792cfcef89b292f83db854b87c3fea"
+    },
+    {
+      "original": "design/first-gallery/native-source-absent.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/native-source-absent.log",
+      "bytes": 9946,
+      "sha256": "70824d1f9a4f50e748f10a0452adc946427cfd14873f2b41f9329521ff699577"
+    },
+    {
+      "original": "design/first-gallery/run-native-cases.py",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/run-native-cases.py",
+      "bytes": 1240,
+      "sha256": "f8e9101bb1f21ca7e837e85781dfb526d7045be692eca17b3538bf5f961143ea"
+    },
+    {
+      "original": "design/first-gallery/settled-beam-nominal.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/settled-beam-nominal.json",
+      "bytes": 1484,
+      "sha256": "56f3e64af651e9ce2305a6d4b34ba2cc18e92408c662f0e77340ac16561304d6"
+    },
+    {
+      "original": "design/first-gallery/settled-beam-report.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/settled-beam-report.json",
+      "bytes": 219968,
+      "sha256": "32411c25e7ab83d4437c30bc84c616c12425fb917b9fc4e59eff7ee437b638cd"
+    },
+    {
+      "original": "design/first-gallery/settled-beam-summary.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/settled-beam-summary.json",
+      "bytes": 311,
+      "sha256": "99e66bf1c51df15b58d9c46a6a77ae9e94d0f239cf650e1bd0393174a7cc9fce"
+    },
+    {
+      "original": "design/first-gallery/settled-beam-sweep.py",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/first-gallery/settled-beam-sweep.py",
+      "bytes": 3930,
+      "sha256": "0d5acf01ddb40e8a9820bbc14c690209863beacb9d0bfadab3204f8875123004"
+    },
+    {
+      "original": "design/drum-alignment/FEASIBILITY_SCREEN.md",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/FEASIBILITY_SCREEN.md",
+      "bytes": 5279,
+      "sha256": "30d661cd801bc03ce91cc0ed326c8362906e81101e87c0fba545e436cdbc0620"
+    },
+    {
+      "original": "design/drum-alignment/probe/RECEIPT.md",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/RECEIPT.md",
+      "bytes": 8149,
+      "sha256": "3a9a1605604c935f93b53971054c6c1568f921db3f633e3e2e4a0b93f4a9854f"
+    },
+    {
+      "original": "design/drum-alignment/probe/build.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original": "design/drum-alignment/probe/build.sh",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/build.sh",
+      "bytes": 492,
+      "sha256": "8f5070536e100ca4f96d3b79fcb5f04d5458c9bd20e58d95886d0a8b4667556c"
+    },
+    {
+      "original": "design/drum-alignment/probe/contact_probe.cpp",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/contact_probe.cpp",
+      "bytes": 16982,
+      "sha256": "da4e86978960a14ad5cdea20d7a3154d07fa10e3ece2488681aff58bc4eeed8e"
+    },
+    {
+      "original": "design/drum-alignment/probe/noinput.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/noinput.log",
+      "bytes": 6019,
+      "sha256": "b7169e2347c2efb660a0bb2d531c946c5bb876c5d4f31ca869873c43a4ff4c55"
+    },
+    {
+      "original": "design/drum-alignment/probe/noinput.stderr.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/noinput.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original": "design/drum-alignment/probe/receipt.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/receipt.json",
+      "bytes": 6528,
+      "sha256": "c59d3a273f9e81922d185f10416b53a28aebfa13d692141b9af7567649f82537"
+    },
+    {
+      "original": "design/drum-alignment/probe/verify_receipt.py",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/verify_receipt.py",
+      "bytes": 941,
+      "sha256": "a5cdfb1b9ab4ac99201c3667c4ba4f51438ba2d55183175e0977bce1400bc9d1"
+    },
+    {
+      "original": "design/drum-alignment/probe/withdraw.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/withdraw.log",
+      "bytes": 7130,
+      "sha256": "c82e4b0984f6aa7009d75c7cee04bfddd675f1e6c950b4cba2d48c36ec6526a9"
+    },
+    {
+      "original": "design/drum-alignment/probe/withdraw.stderr.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/drum-alignment/probe/withdraw.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original": "design/west-approach/normal-west-approach.log",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/west-approach/normal-west-approach.log",
+      "bytes": 24408,
+      "sha256": "b6dd96f00786c1a9d13dd2d48028500780b29aac29721c2ac45d6b2782677b9b"
+    },
+    {
+      "original": "design/west-approach/source-receipt.json",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/west-approach/source-receipt.json",
+      "bytes": 977,
+      "sha256": "38207491945d19bc34f327ae673bba9f94ed54da6e60d32eda0c3bba93484e47"
+    },
+    {
+      "original": "design/west-approach/ui_test_driver_private.gd.txt",
+      "saved": "evidence/west-gallery-compilation-2026-10-03/west-approach/ui_test_driver_private.gd.txt",
+      "bytes": 123682,
+      "sha256": "542845c472dca2b55ef7b9c579b9e961a3995c53546e84c966d794ee4eb8a91f"
+    }
+  ]
+}

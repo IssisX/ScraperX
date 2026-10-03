@@ -1,0 +1,6 @@
+FAIL static_load_and_release: first physical hand was not acquired
+FAIL command_sign_and_budget: first physical hand was not acquired
+FAIL dynamic_recoil: first physical hand was not acquired
+FAIL finite_landing_catch: first physical hand was not acquired
+FAIL invalid_holds_and_cleanup: first physical hand was not acquired
+physical hand checks: 0/5

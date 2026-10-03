@@ -1,0 +1,7 @@
+{
+  "base": "543d13e04c615af6869d46826214878446513200",
+  "scope": "Passive departure precision repair only; no physical-hand module in this binary.",
+  "native_extension_sha256": "fdd6c57968210cb6683b96d43ff7651407937fa38d5b89220518249cce35c644",
+  "simulation_source_sha256": "299252724ec269a8a1977a0241fc29432416929a2866075c030b48d529a9a583",
+  "driver_sha256": "6913a959acf7e099960927beaf822c41a575167d11861b0707a4152e3802d7da"
+}

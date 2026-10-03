@@ -12,6 +12,7 @@
 #include "sim/facade_route.hpp"
 #include "sim/cargo_net_route.hpp"
 #include "sim/cargo_net.hpp"
+#include "sim/physical_hand_climb.hpp"
 #include "sim/suspended_ladder.hpp"
 #include "sim/water_screw.hpp"
 
@@ -1989,6 +1990,7 @@ public:
             }
         }
 
+        physical_hands_ = std::make_unique<PhysicalHandClimb>(physics_system_, player_id_);
         contact_listener_.set_slingshot(slingshot_.get());
         physics_system_.OptimizeBroadPhase();
 
@@ -1999,6 +2001,7 @@ public:
     }
 
     ~PhysicsWorld() {
+        physical_hands_.reset();
         physics_system_.SetContactListener(nullptr);
         // Dynamically-owned pins (track_for_teardown=false) are never in
         // machine_constraints_, so the loop below cannot reach them -- remove
@@ -2181,7 +2184,7 @@ public:
             }
         }
 
-        if (traversal_state_ != TraversalState::None) {
+        if (traversal_state_ != TraversalState::None && !physical_hands_->active()) {
             drive_traversal(bodies, delta_seconds);
             load_hold(bodies);
         }
@@ -2192,6 +2195,7 @@ public:
         if (upper_ascent_) upper_ascent_->pre_step(delta_seconds);
         contact_listener_.begin_tick();
         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
+        physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
         if (!landing_applied_force_.IsNearZero()) {
             const auto support_point_now = bodies.GetCenterOfMassTransform(landing_force_support_id_) *
                                            landing_force_support_local_point_;
@@ -2204,7 +2208,7 @@ public:
         if (cargo_net_) cargo_net_->refresh();
 
         SupportSample support = contact_listener_.sample();
-        if (jump_started || traversal_state_ != TraversalState::None) {
+        if (jump_started || (traversal_state_ != TraversalState::None && !physical_hands_->active())) {
             support = {};
         }
         support_sample_ = support;
@@ -2217,7 +2221,8 @@ public:
         // always sets a support-relative landing velocity first -- so no
         // separate traversal exemption is needed.
         bool died_this_tick = false;
-        if (grounded_ && !was_grounded_before_tick && traversal_state_ == TraversalState::None &&
+        if (grounded_ && !was_grounded_before_tick &&
+            (traversal_state_ == TraversalState::None || physical_hands_->active()) &&
             !jump_started) {
             const auto impact = slingshot_ ? contact_listener_.impact_sample() : support;
             if (slingshot_ && !sling_controlling) record_landing(bodies, impact);
@@ -2236,7 +2241,7 @@ public:
             parachute_deployed_ = false;
         }
 
-        if (traversal_state_ != TraversalState::None) {
+        if (traversal_state_ != TraversalState::None && !physical_hands_->active()) {
             resolve_traversal_outcome(bodies);
         }
 
@@ -5941,7 +5946,8 @@ private:
         const JPH::Vec3 support_velocity =
             traversal_body_.IsInvalid() ? JPH::Vec3::sZero()
                                         : support_point_velocity(bodies, traversal_body_, ledge);
-        bodies.SetLinearVelocity(player_id_, support_velocity);
+        // Detachment changes the constraint, not the rider's momentum. The
+        // current velocity already includes motion acquired while attached.
         airborne_inherited_velocity_ = support_velocity;
         bodies.SetGravityFactor(player_id_, 1.0F);
         regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
@@ -6062,10 +6068,25 @@ private:
         return from_support_local(bodies, hands_[hand].body, hands_[hand].local);
     }
 
+    [[nodiscard]] bool grip_matches_climb_backend(const Grip &grip) const noexcept {
+        const bool net_grip = cargo_net_ && grip.body == cargo_net_->body();
+        const bool net_climb = cargo_net_ && traversal_body_ == cargo_net_->body();
+        return net_grip == net_climb;
+    }
+
     void set_hand(const JPH::BodyInterface &bodies, const std::uint32_t hand,
                   const Grip &grip) noexcept {
+        // The principal hold selects the backend before either hand attaches.
+        // A soft/rigid transfer needs an explicit reciprocal material adapter.
+        if (!grip_matches_climb_backend(grip)) return;
         const auto local = to_support_local(bodies, grip.body, grip.point);
-        if (!hands_[hand].valid || hands_[hand].body != grip.body || hands_[hand].local != local)
+        const bool changed = !hands_[hand].valid || hands_[hand].body != grip.body ||
+                             hands_[hand].local != local;
+        if (changed && !(cargo_net_ && grip.body == cargo_net_->body()) &&
+            !physical_hands_->attach(hand, grip.body, grip.point)) {
+            return;
+        }
+        if (changed)
             ++hands_[hand].generation;
         hands_[hand].body = grip.body;
         hands_[hand].local = local;
@@ -6081,7 +6102,7 @@ private:
             const float height = hand == 0 ? kClimbHandMid : kClimbHandMid + 0.2F;
             const Grip grip =
                 find_grip(centre, hand_aim(centre, height, kClimbHandSpan * side), traversal_normal_);
-            set_hand(bodies, hand, grip.valid ? grip : fallback);
+            set_hand(bodies, hand, grip.valid && grip_matches_climb_backend(grip) ? grip : fallback);
         }
         regrip_cooldown_ticks_ = 0;
     }
@@ -6144,8 +6165,14 @@ private:
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
         traversal_desired_ = hold;
-        bodies.SetGravityFactor(player_id_, 0.0F);
+        const bool deforming = cargo_net_ && grip.body == cargo_net_->body();
+        bodies.SetGravityFactor(player_id_, deforming ? 0.0F : 1.0F);
         take_hand_holds(bodies, hold, grip);
+        if (!deforming && !physical_hands_->active()) {
+            clear_traversal();
+            ++rejected_traversal_count_;
+            return;
+        }
         ++climb_count_;
     }
 
@@ -6166,7 +6193,8 @@ private:
             commands.move_input_x * normal.GetX() + commands.move_input_z * normal.GetZ();
         const double side_input =
             commands.move_input_x * right.GetX() + commands.move_input_z * right.GetZ();
-        const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+        const JPH::RVec3 hold = physical_hands_->active() ? bodies.GetPosition(player_id_) :
+            from_support_local(bodies, traversal_body_, traversal_local_hold_);
         JPH::RVec3 next = hold;
         Grip carries;
         const auto follow_surface = [&](JPH::RVec3 moved) {
@@ -6216,13 +6244,16 @@ private:
                 carries = beside;
             }
         }
-        if (carries.valid && climb_move_clear(hold, next)) {
+        if (carries.valid && grip_matches_climb_backend(carries) && climb_move_clear(hold, next)) {
+            if (physical_hands_->active())
+                physical_hands_->advance_targets(JPH::Vec3(next - hold), delta_seconds);
             traversal_body_ = carries.body;
             traversal_entity_id_ = carries.entity_id;
             traversal_local_hold_ = to_support_local(bodies, traversal_body_, next);
             traversal_local_ledge_ = to_support_local(bodies, traversal_body_, carries.point);
         }
-        move_hands(bodies, from_support_local(bodies, traversal_body_, traversal_local_hold_),
+        move_hands(bodies, physical_hands_->active() ? bodies.GetPosition(player_id_) :
+                   from_support_local(bodies, traversal_body_, traversal_local_hold_),
                    up_input, side_input);
     }
 
@@ -6281,7 +6312,7 @@ private:
             across = hand == 0 ? -kClimbHandSpan : kClimbHandSpan;
         }
         const Grip grip = find_grip(centre, hand_aim(centre, height, across), traversal_normal_);
-        if (grip.valid) {
+        if (grip.valid && grip_matches_climb_backend(grip)) {
             set_hand(bodies, hand, grip);
             regrip_cooldown_ticks_ = kClimbRegripTicks;
         }
@@ -6315,6 +6346,9 @@ private:
         if (!probe.valid) {
             return false;
         }
+        // The subsequent receiving-transfer pass replaces this legacy mantle.
+        // Remove hand constraints before its controller takes ownership.
+        physical_hands_->clear();
         hands_[0].valid = false;
         hands_[1].valid = false;
         begin_mantle(bodies, probe, origin);
@@ -6322,8 +6356,6 @@ private:
     }
 
     void step_off_climb(JPH::BodyInterface &bodies) noexcept {
-        const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
-        bodies.SetLinearVelocity(player_id_, support_point_velocity(bodies, traversal_body_, hold));
         bodies.SetGravityFactor(player_id_, 1.0F);
         ++accepted_traversal_count_;
         clear_traversal();
@@ -6332,7 +6364,8 @@ private:
     void let_go_climb(JPH::BodyInterface &bodies) noexcept {
         const JPH::RVec3 hold = from_support_local(bodies, traversal_body_, traversal_local_hold_);
         const JPH::Vec3 support_velocity = support_point_velocity(bodies, traversal_body_, hold);
-        bodies.SetLinearVelocity(player_id_, support_velocity);
+        // The rotating/deforming support velocity remains the reference for
+        // airborne steering. It must not replace the body's actual velocity.
         airborne_inherited_velocity_ = support_velocity;
         bodies.SetGravityFactor(player_id_, 1.0F);
         regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
@@ -6554,6 +6587,7 @@ private:
     }
 
     void clear_traversal() noexcept {
+        if (physical_hands_) physical_hands_->clear();
         traversal_state_ = TraversalState::None;
         traversal_normal_ = JPH::Vec3::sZero();
         hands_[0].valid = false;
@@ -6675,6 +6709,7 @@ private:
     // publishing a snapshot that mixes a teleported position with a contact
     // sample that referred to the pre-restore position.
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+        clear_traversal();
         if (slingshot_) slingshot_->detach();
         slingshot_flight_ = false;
         // The capsule the checkpoint was committed in: a crouched commit's
@@ -6983,9 +7018,9 @@ private:
         if (traversal_state_ != TraversalState::None) {
             state_.traversal_normal = {traversal_normal_.GetX(), 0.0, traversal_normal_.GetZ()};
         }
-        if (traversal_state_ == TraversalState::Climbing && hands_[0].valid && hands_[1].valid) {
-            state_.traversal_left_hand = to_vector3(hand_point(bodies, 0));
-            state_.traversal_right_hand = to_vector3(hand_point(bodies, 1));
+        if (traversal_state_ == TraversalState::Climbing) {
+            if (hands_[0].valid) state_.traversal_left_hand = to_vector3(hand_point(bodies, 0));
+            if (hands_[1].valid) state_.traversal_right_hand = to_vector3(hand_point(bodies, 1));
         } else if ((traversal_state_ == TraversalState::Hanging ||
                     traversal_state_ == TraversalState::Lowering) &&
                    !traversal_normal_.IsNearZero()) {
@@ -6994,6 +7029,19 @@ private:
             state_.traversal_left_hand = to_vector3(lip - span);
             state_.traversal_right_hand = to_vector3(lip + span);
         }
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), player_id_);
+            state_.player_gravity_factor = lock.Succeeded() ?
+                lock.GetBody().GetMotionProperties()->GetGravityFactor() : 1.0;
+        }
+        state_.traversal_hand_constraint_count = physical_hands_ ?
+            unsigned(physical_hands_->attached(0)) + unsigned(physical_hands_->attached(1)) : 0;
+        state_.traversal_left_hand_force = physical_hands_ ?
+            to_vector3(physical_hands_->hand_force(0)) : Vector3{};
+        state_.traversal_right_hand_force = physical_hands_ ?
+            to_vector3(physical_hands_->hand_force(1)) : Vector3{};
+        state_.traversal_command_work_bound_j = physical_hands_ ?
+            physical_hands_->command_work_bound_j() : 0;
         state_.player_sprinting = sprinting_;
         state_.player_balancing = balancing_;
         state_.grip_available = grip_affordance_.valid;
@@ -7126,6 +7174,7 @@ private:
     std::unique_ptr<SwingStair> swing_stair_;
     std::unique_ptr<UpperAscent> upper_ascent_;
     std::unique_ptr<CargoNet> cargo_net_;
+    std::unique_ptr<PhysicalHandClimb> physical_hands_;
     std::unique_ptr<TeeterRise> teeter_rise_;
     scraperx::sim::bands::CounterweightWell well_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;

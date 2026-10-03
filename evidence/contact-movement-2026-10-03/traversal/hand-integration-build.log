@@ -1,0 +1,17 @@
+[  9%] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/physical_hand_climb.cpp.o
+[  9%] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/simulation.cpp.o
+[ 13%] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/band_counterweight_well.cpp.o
+/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-source/src/sim/simulation.cpp: In lambda function:
+/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-source/src/sim/simulation.cpp:2873:90: note: parameter passing for argument of type 'std::pair<float, float>' when C++17 is enabled changed to match C++14 in GCC 10.1
+ 2873 |             return std::pair<float, float>{(min_x + max_x) * 0.5F, (max_x - min_x) * 0.5F};
+      |                                                                                          ^
+[ 18%] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/band_ground_water_lift.cpp.o
+[ 22%] Linking CXX static library libscraperx_sim.a
+[ 90%] Built target scraperx_sim
+[ 95%] Building CXX object CMakeFiles/scraperx_physical_traversal_tests.dir/tests/physical_traversal_tests.cpp.o
+[100%] Linking CXX executable scraperx_physical_traversal_tests
+[100%] Built target scraperx_physical_traversal_tests
+[ 90%] Built target scraperx_sim
+[ 95%] Building CXX object CMakeFiles/scraperx_suspended_ladder_tests.dir/tests/suspended_ladder_tests.cpp.o
+[100%] Linking CXX executable scraperx_suspended_ladder_tests
+[100%] Built target scraperx_suspended_ladder_tests

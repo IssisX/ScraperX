@@ -1,0 +1,15 @@
+Test project /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+    Start  1: scraperx_sim.physical_hand_climb
+1/5 Test  #1: scraperx_sim.physical_hand_climb ......   Passed    0.07 sec
+    Start  2: scraperx_sim.physical_traversal
+2/5 Test  #2: scraperx_sim.physical_traversal .......   Passed    8.58 sec
+    Start  3: scraperx_sim.suspended_ladder_route
+3/5 Test  #3: scraperx_sim.suspended_ladder_route ...   Passed   10.01 sec
+    Start  4: scraperx_sim.cargo_net_ground_route
+4/5 Test  #4: scraperx_sim.cargo_net_ground_route ...   Passed   34.48 sec
+    Start 11: scraperx_sim.parkour_flow
+5/5 Test #11: scraperx_sim.parkour_flow .............   Passed    0.62 sec
+
+100% tests passed, 0 tests failed out of 5
+
+Total Test time (real) =  53.80 sec

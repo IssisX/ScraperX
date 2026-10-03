@@ -1,0 +1,30 @@
+{
+  "evidence": "Conservative AABB intersection screen of generated normal-world box/hull records. Not a native swept/collision/traversal proof.",
+  "source_sha256": "3760a40c3ed6b576aca9fcf29df5f72d7e1c4bef6fdd52dee66fa30fdfb4298c",
+  "chosen_ladder_plane": [
+    -29.5,
+    135.6,
+    -158.0
+  ],
+  "chosen_screen_bounds": [
+    [
+      -30.5,
+      110.6,
+      -159.5
+    ],
+    [
+      -28.5,
+      136.6,
+      -156.5
+    ]
+  ],
+  "boxes_checked": 1316,
+  "box_intersections": [],
+  "hulls_checked": 666,
+  "hull_intersections": [],
+  "unresolved": [
+    "Authoritative native Kit assemblies must be checked.",
+    "Wind/catch/load/refinement must determine the true rope/rider envelope.",
+    "Entry, receiver, recovery and frame are not implemented."
+  ]
+}

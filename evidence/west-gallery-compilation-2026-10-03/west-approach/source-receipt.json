@@ -1,0 +1,21 @@
+{
+  "production_base": "543d13e04c615af6869d46826214878446513200",
+  "production_driver_sha256": "6913a959acf7e099960927beaf822c41a575167d11861b0707a4152e3802d7da",
+  "private_extended_driver_sha256": "542845c472dca2b55ef7b9c579b9e961a3995c53546e84c966d794ee4eb8a91f",
+  "native_extension_sha256": "5f969c729ac4d2f860ce77bc2106ffe0c0398d820dd5da78bb65f72782520f13",
+  "scope": "Ordinary shipping headless grade-to-121 plus four supported west-ring walking segments. No fixture selection/restart/relocation/new assemblies. No rendered proof.",
+  "exit_code": 0,
+  "log_sha256": "b6dd96f00786c1a9d13dd2d48028500780b29aac29721c2ac45d6b2782677b9b",
+  "actual_result": {
+    "supported_player_center_y_m": 121.9,
+    "support_entity": 11,
+    "deaths": 0,
+    "launcher_work_j": 0,
+    "final_player_center": [
+      -24.42377,
+      121.9,
+      -158.0015
+    ]
+  },
+  "verified_boundary": "Existing ring approach only; future ladder, receiver and machine clearance unverified."
+}

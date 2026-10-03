@@ -1,0 +1,50 @@
+still/90: exit=0 stretch=0.00265884m residual=15.4589J
+still/360: exit=0 stretch=0.000157356m residual=0.128366J
+breeze/90: exit=0 stretch=0.00263977m residual=14.6331J
+breeze/360: exit=0 stretch=0.000165939m residual=1.88257J
+reverse/90: exit=0 stretch=0.00263977m residual=14.5947J
+reverse/360: exit=0 stretch=0.000165939m residual=2.00051J
+free_sway/90: exit=0 stretch=0.00254327m residual=13.6123J
+free_sway/360: exit=0 stretch=0.000323892m residual=4.15503J
+central_catch/90: exit=0 stretch=0.00263977m residual=29.1694J
+central_catch/360: exit=0 stretch=0.000165939m residual=3.08692J
+left_catch/90: exit=0 stretch=0.00263977m residual=25.389J
+left_catch/360: exit=0 stretch=0.000165939m residual=3.96263J
+right_catch/90: exit=0 stretch=0.00263977m residual=25.4177J
+right_catch/360: exit=0 stretch=0.000165939m residual=3.28703J
+{
+  "case_count": 7,
+  "failed_cases": {
+    "still": [
+      "90: geometric extension exceeds chosen 1mm constraint tolerance",
+      "peak rung speed does not converge within 0.05m/s"
+    ],
+    "breeze": [
+      "90: geometric extension exceeds chosen 1mm constraint tolerance",
+      "peak rung speed does not converge within 0.05m/s"
+    ],
+    "reverse": [
+      "90: geometric extension exceeds chosen 1mm constraint tolerance",
+      "peak rung speed does not converge within 0.05m/s"
+    ],
+    "free_sway": [
+      "90: geometric extension exceeds chosen 1mm constraint tolerance"
+    ],
+    "central_catch": [
+      "90: geometric extension exceeds chosen 1mm constraint tolerance"
+    ],
+    "left_catch": [
+      "90: geometric extension exceeds chosen 1mm constraint tolerance",
+      "peak rung speed does not converge within 0.05m/s"
+    ],
+    "right_catch": [
+      "90: geometric extension exceeds chosen 1mm constraint tolerance",
+      "peak rung speed does not converge within 0.05m/s"
+    ]
+  },
+  "hashes": {
+    "rope_ladder_probe.cpp": "c70b2309ae562b5b4fcfbe190546ab2d22138b535f9f454569044cec248c05db",
+    "rope-ladder-probe": "31186af9e43d78f73662f7fcf85e46e6e94df52ca9761a84819f2592f2bab01d",
+    "run_cases.py": "d07ff96ead0cd472e3315df003b9cbebe51a576632e47aaab7b7229be55f2fb0"
+  }
+}

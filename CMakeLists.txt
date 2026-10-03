@@ -18,6 +18,7 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
+    src/sim/physical_hand_climb.cpp
     src/sim/steam_plant.cpp
     src/sim/water_screw.cpp
     src/sim/mechanism_kit.cpp
@@ -74,6 +75,14 @@ if(SCRAPERX_WITH_JOLT)
 endif()
 
 if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
+    add_executable(scraperx_physical_hand_climb_tests tests/physical_hand_climb_tests.cpp)
+    target_link_libraries(scraperx_physical_hand_climb_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.physical_hand_climb COMMAND scraperx_physical_hand_climb_tests)
+
+    add_executable(scraperx_physical_traversal_tests tests/physical_traversal_tests.cpp)
+    target_link_libraries(scraperx_physical_traversal_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.physical_traversal COMMAND scraperx_physical_traversal_tests)
+
     add_executable(scraperx_suspended_ladder_tests tests/suspended_ladder_tests.cpp)
     target_link_libraries(scraperx_suspended_ladder_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.suspended_ladder_route COMMAND scraperx_suspended_ladder_tests)

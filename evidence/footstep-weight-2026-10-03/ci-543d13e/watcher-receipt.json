@@ -1,0 +1,32 @@
+{
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "head_sha": "543d13e04c615af6869d46826214878446513200",
+  "run_id": 37158452295,
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/37158452295",
+  "run_started_at": "2026-10-03T22:26:29Z",
+  "run_updated_at": "2026-10-03T23:12:06Z",
+  "status": "completed",
+  "conclusion": "success",
+  "job_id": 111306655572,
+  "job_started_at": "2026-10-03T22:26:32Z",
+  "job_completed_at": "2026-10-03T23:12:05Z",
+  "job_elapsed_seconds": 2733,
+  "artifact_id": 11287534104,
+  "artifact_name": "ScraperX-build-543d13e04c615af6869d46826214878446513200",
+  "artifact_size_in_bytes": 55454143,
+  "artifact_digest": "sha256:28adc9e7b14447b7c94a692a2541a11c4441dd1cf2ea048ef7da669bc8af2849",
+  "artifact_created_at": "2026-10-03T23:12:04Z",
+  "artifact_expires_at": "2027-01-01T22:26:29Z",
+  "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/37158452295/artifacts/11287534104",
+  "footstep_contact_cases": {
+    "carried": {"conclusion": "PASS", "steps": 0, "expected_range": [0, 0]},
+    "walk_on_carrier": {"conclusion": "PASS", "steps": 5, "expected_range": [5, 6]},
+    "rotating_contact": {"conclusion": "PASS", "steps": 0, "expected_range": [0, 0]},
+    "fixed_floor": {"conclusion": "PASS", "steps": 5, "expected_range": [5, 6]},
+    "airborne": {"conclusion": "PASS", "steps": 0, "expected_range": [0, 0]}
+  },
+  "audio_mix_pass": "SCRAPERX_UITEST PASS audio_mix bed_db=-22.7 steps_db=-14.6 peak_db=-0.8 steps=10",
+  "campaign_pass": "SCRAPERX_UITEST PASS touch_campaign_to_121 staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 supported_height_m=121 support=11 deaths=0 slingshot_work_j=0 world=slingshot",
+  "boundaries": ["Workflow logs and artifact metadata read; APK not downloaded or inspected", "No screenshots downloaded or visually inspected", "No device installation or playtest", "No repository edits, local builds, commits, pushes or delegation"]
+}

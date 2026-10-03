@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+proot-distro login ubuntu --shared-tmp -- /usr/bin/c++ -O2 -std=c++17 -pthread -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -DNDEBUG -I/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src -I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/physical_hand_climb_tests.cpp /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/physical_hand_climb.cpp /data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a -o /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/proof/physical-hand-climb/green-tests

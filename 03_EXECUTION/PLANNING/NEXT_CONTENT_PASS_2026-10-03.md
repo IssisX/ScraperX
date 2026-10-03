@@ -36,6 +36,8 @@ All primary sources are finite and visible. Resolve geometry, mass/COM/inertia, 
 
 ### Counterweighted freight truss
 
+**Owner addition, 2026-10-03 — a large drawbridge:** develop this existing freight-truss stage as a counterweighted drawbridge, with the deck, pivot, counterweight and cable path visible from the approach. The player changes the actual load balance and releases a reachable restraint; gravity moves the bridge. Its deck/chords provide climbing and transfer choices toward real receivers. Preserve the mixed pass and this stage's identity. The scale remains the existing screening target; dimensions, load balance and stopping are unresolved until compilation.
+
 The visible restrained counterweight supplies finite gravitational energy through a hinge and declared transmission. Actual freight contact contributes opposing or assisting torque according to its position. Unloading changes the mechanical balance. Resolve the drive curve through the whole angular stroke; offset mass geometry must provide the intended operation without a prescribed pose or artificial governor.
 
 The load path is counterweight → declared transmission → truss hinge/structure → terminal receiver seats → tower frame. Freight, rider contacts and hand loads enter this same native assembly once. At deployment, physical seats/catch bodies carry the terminal load; a solved/capture flag cannot hold the route. The deployed structural chords, catwalks and holds must provide genuinely reachable climbing and lateral transfers, not decorative geometry over invisible supports.

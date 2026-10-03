@@ -1,0 +1,212 @@
+{
+  "status": "PRODUCTION_GLOBAL_LOCAL_CONSTRAINT_BINDING_VERIFIED_FOR_TWO_PRIVATE_FIXTURES",
+  "repo_head_at_start": "0ecf34196c59d9e521f11e529e3da65644ec29a9",
+  "branch": "ChatGPT",
+  "pinned_jolt": "e77f175595e64cb44218cc9d9d56fc365ad0e36a",
+  "runs": {
+    "quiet": {
+      "h": 0.0111111111111,
+      "call": "Update(float(h),4)",
+      "ticks": 1440,
+      "substep_callbacks": 5760,
+      "velocity_iterations": 10,
+      "position_iterations": 2,
+      "penetration_slop_m": 0.019999999553,
+      "local_velocity_override": 40,
+      "local_position_override": 8,
+      "stiffness_n_per_m": 250822.8125,
+      "material_damping_n_s_per_m": 0,
+      "actual_gravity": 9.81000041962,
+      "actual_rung_mass": 2.93738926061,
+      "actual_substep_s": 0.00277777784504,
+      "rest_length_sum_left_m": 23.8948802054,
+      "max_initial_preload_error_n": 0.00373165954522,
+      "initial_spring_energy_j": 61.0870464489,
+      "final_spring_energy_j": 61.0870464489,
+      "max_pose_change_m": 0,
+      "max_span_change_m": 0,
+      "max_lambda": 0,
+      "max_tension_last_substep_n": 864.474142123,
+      "max_static_last_substep_force_error_n": 0.0015035715918,
+      "rung_mass": 2.93738921285,
+      "min_initial_span": 0.396553069353,
+      "max_initial_span": 0.399942189455,
+      "max_speed": 6.33711351838e-06,
+      "max_stretch": 0.00344654917717,
+      "max_kinetic_j": 8.30025655187e-10,
+      "initial_energy_j": 30836.3506374,
+      "final_energy_j": 30836.3506374,
+      "final_energy_delta_j": 8.29459168017e-10,
+      "max_abs_energy_delta_j": 8.29459168017e-10,
+      "min_signed_energy_delta_j": 0,
+      "max_signed_energy_delta_j": 8.29459168017e-10,
+      "contacts_added": 0,
+      "contacts_persisted": 0,
+      "update_errors": 0,
+      "added_force_calls": 0,
+      "process_exit_code": 0
+    },
+    "rider": {
+      "h": 0.0111111111111,
+      "call": "Update(float(h),4)",
+      "ticks": 1440,
+      "substep_callbacks": 5760,
+      "velocity_iterations": 10,
+      "position_iterations": 2,
+      "penetration_slop_m": 0.019999999553,
+      "local_velocity_override": 40,
+      "local_position_override": 8,
+      "stiffness_n_per_m": 250822.8125,
+      "material_damping_n_s_per_m": 0,
+      "actual_gravity": 9.81000041962,
+      "actual_rung_mass": 2.93738926061,
+      "actual_substep_s": 0.00277777784504,
+      "rest_length_sum_left_m": 23.8948802054,
+      "max_initial_preload_error_n": 0.00373165954522,
+      "initial_spring_energy_j": 61.0870464489,
+      "final_spring_energy_j": 85.5960493311,
+      "max_pose_change_m": 0.184705257416,
+      "max_span_change_m": 0.0062141418457,
+      "max_lambda": 0,
+      "max_tension_last_substep_n": 2423.04611061,
+      "max_static_last_substep_force_error_n": 0.0015035715918,
+      "rung_mass": 2.93738921285,
+      "min_initial_span": 0.396553069353,
+      "max_initial_span": 0.399942189455,
+      "max_speed": 1.82459831238,
+      "max_stretch": 0.00966069102287,
+      "max_kinetic_j": 72.2230740025,
+      "initial_energy_j": 30836.3506374,
+      "final_energy_j": 34076.2150762,
+      "final_energy_delta_j": 3239.86443882,
+      "max_abs_energy_delta_j": 12493.6799773,
+      "min_signed_energy_delta_j": -12493.6799773,
+      "max_signed_energy_delta_j": 8.3127815742e-10,
+      "case": "central_catch_hold_release",
+      "player_mass": 84.9999983376,
+      "player_gravity_factor": 1,
+      "player_rotation_locked": true,
+      "inserted_energy_j": 15733.5444162,
+      "final_unclosed_mechanical_delta_j": -12493.6799773,
+      "max_player_speed_m_s": 16.8660011292,
+      "max_hand_force_last_substep_n": 866.025360118,
+      "catch_peak_hand_force_n": 866.025360118,
+      "max_hand_error_m": 0.231218338013,
+      "loaded_hand_error_m": 0.0844955868191,
+      "release_velocity_jump_m_s": 0,
+      "departure_capsule_speed_m_s": 0.0563213564456,
+      "departure_rung_point_speed_m_s": 0.040467929095,
+      "loaded_root_vertical_n": 2590.47641712,
+      "unloaded_root_vertical_n": 1726.41017278,
+      "loaded_left_strand_extension_sum_m": 0.15177887921,
+      "max_left_strand_extension_sum_m": 0.289779752493,
+      "player_floor_contact_events": 1899,
+      "player_other_contact_events": 0,
+      "contacts_added": 1,
+      "contacts_persisted": 1898,
+      "update_errors": 0,
+      "added_force_calls": 0,
+      "process_exit_code": 0
+    }
+  },
+  "native_runs": 2,
+  "native_build_exit_code": 0,
+  "frequency_refinement_proven": false,
+  "gameplay_implemented": false,
+  "commands": [
+    "sh /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/design/rope-production-binding/build.sh",
+    "proot-distro login ubuntu --shared-tmp -- /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/design/rope-production-binding/rope-binding-quiet 0.011111111111111111 > /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/design/rope-production-binding/quiet-90.log 2> /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/design/rope-production-binding/quiet-90.stderr.log",
+    "proot-distro login ubuntu --shared-tmp -- /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/design/rope-production-binding/rope-binding-rider 0.011111111111111111 > /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/design/rope-production-binding/rider-90.log 2> /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/design/rope-production-binding/rider-90.stderr.log"
+  ],
+  "comparison_to_frozen_90hz": {
+    "quiet": {
+      "max_speed": {
+        "previous": 6.33711351838e-06,
+        "current": 6.33711351838e-06,
+        "difference": 0.0
+      },
+      "max_span_change_m": {
+        "previous": 0,
+        "current": 0,
+        "difference": 0
+      },
+      "max_tension_last_substep_n": {
+        "previous": 864.474142123,
+        "current": 864.474142123,
+        "difference": 0.0
+      },
+      "max_abs_energy_delta_j": {
+        "previous": 8.29459168017e-10,
+        "current": 8.29459168017e-10,
+        "difference": 0.0
+      }
+    },
+    "rider": {
+      "max_speed": {
+        "previous": 1.82459819317,
+        "current": 1.82459831238,
+        "difference": 1.19210000093517e-07
+      },
+      "max_span_change_m": {
+        "previous": 0.0062141418457,
+        "current": 0.0062141418457,
+        "difference": 0.0
+      },
+      "max_tension_last_substep_n": {
+        "previous": 2423.04611061,
+        "current": 2423.04611061,
+        "difference": 0.0
+      },
+      "max_abs_energy_delta_j": {
+        "previous": 12480.9873747,
+        "current": 12493.6799773,
+        "difference": 12.6926026000001
+      },
+      "loaded_root_vertical_n": {
+        "previous": 2590.47086483,
+        "current": 2590.47641712,
+        "difference": 0.005552289999741333
+      },
+      "loaded_left_strand_extension_sum_m": {
+        "previous": 0.151778367051,
+        "current": 0.15177887921,
+        "difference": 5.121589999879106e-07
+      },
+      "max_left_strand_extension_sum_m": {
+        "previous": 0.289779752493,
+        "current": 0.289779752493,
+        "difference": 0.0
+      },
+      "departure_capsule_speed_m_s": {
+        "previous": 0.0563715845346,
+        "current": 0.0563213564456,
+        "difference": -5.02280890000012e-05
+      },
+      "release_velocity_jump_m_s": {
+        "previous": 0,
+        "current": 0,
+        "difference": 0
+      },
+      "final_unclosed_mechanical_delta_j": {
+        "previous": -12480.9873747,
+        "current": -12493.6799773,
+        "difference": -12.6926026000001
+      }
+    }
+  },
+  "hashes": {
+    "RECEIPT.md": "ef14d7c26a7015e9beff9f19af23550a4dfc045eef189e01e2004655f4c6f143",
+    "build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "build.sh": "55e47f7f1116d0a2de2a9e332b6a1f31505e3d6b4b6023e9a39a0a7c4d562139",
+    "quiet-90.log": "e74a17550e45de46fd25992606d9b51d4a527264e65bef3a3250355a14e747f5",
+    "quiet-90.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "rider-90.log": "461e4b6708b08b81e5eb1ee7d435fcca004d30ce001ff59d515b52f88fad1fb0",
+    "rider-90.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "rope-binding-quiet": "d50d1fbb2d5ff8fdbca06a1c40d01bac6c142332828fe12dfbfe9ad96ce7549a",
+    "rope-binding-rider": "d11b5cc2c02e21219fbeaf87b15cff227e752ccab08a4b222c221d22cbf76267",
+    "rope_binding_quiet.cpp": "cff9d9ffcfb1aaf50b9b9eb992a16688f8c4fab6b8c240fd5b8a37eb39d67877",
+    "rope_binding_rider.cpp": "760a30a55e440ad31dfb8aa8cc1d0d752f51c028e0b1259bc2672e11651614d6",
+    "verify_receipt.py": "daadc18ad2180a4fad41a8a7c6268b825f5f620d2545ca0973bac8f73366a2d3"
+  },
+  "frozen_elastic_file_hashes_verified": 14
+}

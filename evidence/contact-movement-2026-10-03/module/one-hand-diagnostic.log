@@ -1,0 +1,10 @@
+one-hand measured sag=0.278939 reaction=866.025 vy=-0.0288089
+FAIL static_load_and_release: remaining hand fails real weight transfer
+command ascent=0.199789 cumulative_bound=666.667
+PASS command_sign_and_budget
+recoil player_vx=1.57428 support_vx=1.44746 peak_force=366.954
+PASS dynamic_recoil
+catch minimum_y=2.60494 peak_force=866.025
+PASS finite_landing_catch
+PASS invalid_holds_and_cleanup
+physical hand checks: 4/5

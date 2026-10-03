@@ -1,0 +1,51 @@
+{
+  "source": "543d13e04c615af6869d46826214878446513200",
+  "artifact_id": 11287534104,
+  "zip_sha256": "28adc9e7b14447b7c94a692a2541a11c4441dd1cf2ea048ef7da669bc8af2849",
+  "apk_sha256": "699a05d551a3db21449b5a553d127f03bf1fbd15becd2c46ae4bbb6aca3c5824",
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "run_id": 37158452295,
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/37158452295",
+  "conclusion": "success",
+  "job_id": 111306655572,
+  "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/37158452295/artifacts/11287534104",
+  "artifact_bytes": 55454143,
+  "native_tests": {
+    "passed": 31,
+    "total": 31
+  },
+  "footstep_contact_cases": {
+    "passed": 5,
+    "total": 5
+  },
+  "signer_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+  "package": "com.cory.scraperx.chatgpt",
+  "label": "ScraperX-ChatGPT",
+  "apk_name": "ScraperX-ChatGPT.apk",
+  "verification": [
+    "Independently hashed downloaded ZIP and matched GitHub artifact metadata.",
+    "Independently hashed extracted APK and matched artifact SHA256SUMS.",
+    "Read actual source checkpoint, APK badging and CI signature logs: one stable signer, v2/v3 verified.",
+    "Read actual native, contact, audio and ordinary-route logs.",
+    "Opened and inspected the three retained CI screenshots in this session."
+  ],
+  "boundaries": [
+    "No local APK cryptographic signature check or Android execution.",
+    "No actual device listening, comfort, smoothness or sustained performance proof.",
+    "The three rendered fixture/launcher images belong to 543d13e; they do not prove subsequent rigid hand integration or a new flexible ladder."
+  ],
+  "proof_file_sha256": {
+    "apk-badging.txt": "62df7fcd47e83bfcebdcbe03c7b6d892bcd6355d85fcf6d967e318dec22c9b8a",
+    "apk-signing.txt": "f2e44baf74000a12b05d2aec93189ba37e0ceddb392139c8f9c55a8b616a83ac",
+    "artifact-metadata.json": "f882c1ad8c25b3a3f9c5730d2ab866fd499ecf64bc8807c18d22d8738a4dfc29",
+    "footstep_contact.log": "01ab1989522226674e25afb97d4fcc6ffa03477e68890c69392637270fa7879b",
+    "godot-audio-mix.log": "d3f6b1c764f5962c97545dad412bab7d670e48a8b437011982ca5f92f454e5fe",
+    "native-tests.log": "7e8996e60278c2d842dfafcb46b3d0060f8827e65ff4f2706bbd3286e9593ca6",
+    "screenshots/north_north_frame_99m.png": "f9531232c8a3900b08989c78527e3d571d43d458ca1aa47e6b906b561ce39c63",
+    "screenshots/north_north_frame_hang.png": "6564f77d7e4e9beebdfcb385a5ff1d5ea6c3e461a5dd34aaafcbb4acd9c509ec",
+    "screenshots/shipping-launch_supported_352m_roof.png": "d3804e1ed0197fe81093a6511ef73a9a3076caab82102beaca0cf00e99b1ef8c",
+    "touch-campaign-to-121.log": "1079b249148cb89ecde5cdb945c1ffc17fb558b9da083871508663e13743c3ff",
+    "watcher-receipt.json": "05e48b38c43e2b61abb2449b573f31fa7c3f122ab127d8968b6deeefdaac8c3f"
+  }
+}

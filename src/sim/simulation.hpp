@@ -179,6 +179,13 @@ struct Snapshot final {
     Vector3 traversal_left_hand{};
     Vector3 traversal_right_hand{};
     Vector3 traversal_normal{};
+    // Actual native contact/control readback. The command debit is a conservative
+    // bound; it does not claim measured muscle work or energy conservation.
+    double player_gravity_factor = 1.0;
+    std::uint32_t traversal_hand_constraint_count = 0;
+    Vector3 traversal_left_hand_force{};
+    Vector3 traversal_right_hand_force{};
+    double traversal_command_work_bound_j = 0.0;
     bool player_sprinting = false;
     // Walking a support narrower than 0.5 m and at least 1.5 m long.
     bool player_balancing = false;

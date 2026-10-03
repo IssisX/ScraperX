@@ -1,0 +1,2 @@
+PASS passive_departure surface=rigid_shipping_vent before_vy=0.900364 after_vy=0.791364 expected_vy=0.791364 error=3.24249e-08 grounded=0
+PASS passive_departure surface=deforming_cargo_net before_vy=0.554091 after_vy=0.445091 expected_vy=0.445091 error=3.24249e-08 grounded=0

@@ -1,0 +1,30 @@
+{
+  "base": "543d13e04c615af6869d46826214878446513200",
+  "scope": "Reviewed rigid PhysicalHandClimb gameplay integration and passive departure repair, symmetric soft/rigid backend guard. Soft net, Hanging, mantle and powered jump remain legacy controllers.",
+  "native_extension_sha256": "330268b3cedb565be468771c37cf624e10519ca8434969bcfbd55cba7ec6b52e",
+  "source_sha256": {
+    "CMakeLists.txt": "ab3e48fd946fd435df82608b962c29120d88a09380e264b206a4a705e7629022",
+    "src/sim/simulation.cpp": "90d40a0dd88a301a2e8cd982d42998a71ce16cb26330d8bc77954b58639e5dd2",
+    "src/sim/simulation.hpp": "88733f1cbee7af145c3cdd2a651018af67dcbae6b19187ea05129909262ffbd6",
+    "src/sim/physical_hand_climb.cpp": "0184995b0fa6b75d1d021d36fefd82f7580d8903cd5a078b5df888256b866605",
+    "src/sim/physical_hand_climb.hpp": "81345b16cda8b6163af40651131a392625161adf2ffd076352174eda12a43c34",
+    "tests/physical_hand_climb_tests.cpp": "80771305e5a5fa104f0c65ea83c5636324005a0fedf48e09d92bf9e755000bcf",
+    "tests/physical_traversal_tests.cpp": "513e40d2781fc8289a12873d472e3a22a021659acc7f77176ade64a614cd1858"
+  },
+  "driver_sha256": "6913a959acf7e099960927beaf822c41a575167d11861b0707a4152e3802d7da",
+  "runtime": "Godot 4.7 stable ARM64, ordinary headless shipping touch_campaign_to_121",
+  "result": "pass",
+  "exit_code": 0,
+  "log_sha256": "6029faba0ac6e0d7e842315ecab0eb0439ede3127d2b624e4b370880dfaa0e6e",
+  "pass_line": "SCRAPERX_UITEST PASS touch_campaign_to_121 staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 supported_height_m=121 support=11 deaths=0 slingshot_work_j=0 world=slingshot",
+  "final_position_m": [
+    9.00225,
+    121.9,
+    -174.5659
+  ],
+  "reported_final_pose_elapsed_ms": 236332,
+  "fixture_selection": false,
+  "player_relocation": false,
+  "rendered": false,
+  "device": false
+}

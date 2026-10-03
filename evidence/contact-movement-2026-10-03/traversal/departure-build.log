@@ -1,0 +1,7 @@
+[  5%] Building CXX object CMakeFiles/scraperx_sim.dir/src/sim/simulation.cpp.o
+/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-source/src/sim/simulation.cpp: In lambda function:
+/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-source/src/sim/simulation.cpp:2868:90: note: parameter passing for argument of type 'std::pair<float, float>' when C++17 is enabled changed to match C++14 in GCC 10.1
+ 2868 |             return std::pair<float, float>{(min_x + max_x) * 0.5F, (max_x - min_x) * 0.5F};
+      |                                                                                          ^
+[ 10%] Linking CXX static library libscraperx_sim.a
+[100%] Built target scraperx_sim

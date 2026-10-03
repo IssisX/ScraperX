@@ -1,0 +1,19 @@
+{
+  "base": "543d13e04c615af6869d46826214878446513200",
+  "scope": "Rigid PhysicalHandClimb gameplay integration and passive departure repair; soft net, hanging, mantle and powered jump remain legacy controllers. This run predates the final review guard correction.",
+  "native_extension_sha256": "1c6be932f2ae8d326655dbc9e942c9bdc2e907c4a4be6b3434cbe65919a72cd9",
+  "source_sha256": {
+    "CMakeLists.txt": "ab3e48fd946fd435df82608b962c29120d88a09380e264b206a4a705e7629022",
+    "src/sim/simulation.cpp": "875d0e9c187e9f1e3c8b82be620c0a11911d9090bc23d52ace795e6aac935a09",
+    "src/sim/simulation.hpp": "88733f1cbee7af145c3cdd2a651018af67dcbae6b19187ea05129909262ffbd6",
+    "src/sim/physical_hand_climb.cpp": "0184995b0fa6b75d1d021d36fefd82f7580d8903cd5a078b5df888256b866605",
+    "src/sim/physical_hand_climb.hpp": "81345b16cda8b6163af40651131a392625161adf2ffd076352174eda12a43c34",
+    "tests/physical_hand_climb_tests.cpp": "80771305e5a5fa104f0c65ea83c5636324005a0fedf48e09d92bf9e755000bcf",
+    "tests/physical_traversal_tests.cpp": "4e46747ee660764ad517a6c2ab3ed4d024ff4246d462deaac33a24c13d6c8c66"
+  },
+  "driver_sha256": "6913a959acf7e099960927beaf822c41a575167d11861b0707a4152e3802d7da",
+  "runtime": "Godot 4.7 stable ARM64, ordinary headless shipping touch_campaign_to_121",
+  "result": "pass",
+  "exit_code": 0,
+  "log_sha256": "05890420f7e9328e16535fc2cad195a7fe899b8f96dd2a4b2ad2fa7ef81d582b"
+}

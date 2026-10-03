@@ -1,0 +1,9 @@
+Test project /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+    Start 2: scraperx_sim.physical_traversal
+1/2 Test #2: scraperx_sim.physical_traversal .......   Passed    7.74 sec
+    Start 3: scraperx_sim.suspended_ladder_route
+2/2 Test #3: scraperx_sim.suspended_ladder_route ...   Passed    8.10 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =  15.86 sec

@@ -1,0 +1,12 @@
+[ 86%] Built target scraperx_sim
+[ 90%] Linking CXX shared library /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-source/godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+[100%] Built target scraperx_native
+[ 90%] Built target scraperx_sim
+[ 95%] Linking CXX executable scraperx_cargo_net_tests
+[100%] Built target scraperx_cargo_net_tests
+[ 90%] Built target scraperx_sim
+[ 95%] Linking CXX executable scraperx_suspended_ladder_tests
+[100%] Built target scraperx_suspended_ladder_tests
+[ 90%] Built target scraperx_sim
+[ 95%] Linking CXX executable scraperx_parkour_flow_tests
+[100%] Built target scraperx_parkour_flow_tests

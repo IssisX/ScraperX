@@ -1,0 +1,72 @@
+{
+  "status": "REJECTED_HARD_STRAND_BINDING",
+  "gameplay_status": "NOT_IMPLEMENTED",
+  "initial_repo_head": "2942fab1420aa2ffd600a425b590941e6a3e5916",
+  "branch": "ChatGPT",
+  "pinned_jolt": "e77f175595e64cb44218cc9d9d56fc365ad0e36a",
+  "native_processes": 14,
+  "native_exit_0": 14,
+  "acceptance_failed_cases": 7,
+  "deciding_counterexample": {
+    "case": "still",
+    "wind_source_j": [
+      0,
+      0
+    ],
+    "rider": false,
+    "contacts": [
+      0,
+      0
+    ],
+    "peak_speed_mps": [
+      0.6265106797,
+      0.1219161004
+    ],
+    "strand_extension_m": [
+      0.002658843994,
+      0.0001573562622
+    ],
+    "diagnostic_residual_j": [
+      15.4589258,
+      0.1283660066
+    ],
+    "post_2_5s_residual_drift_j": [
+      10.28821152,
+      0.0001586752281
+    ]
+  },
+  "next_discriminator": "Physically tensile elastic strands, explicit material k/c and a solved tare-loaded equilibrium; verify quiet equilibrium and90Hz/h4 force/elastic energy before catch/route integration.",
+  "writes": "Only private design/rope-ladder; no repository/shared-build/runtime changes",
+  "hashes": {
+    "rope_ladder_probe.cpp": "c70b2309ae562b5b4fcfbe190546ab2d22138b535f9f454569044cec248c05db",
+    "rope-ladder-probe": "31186af9e43d78f73662f7fcf85e46e6e94df52ca9761a84819f2592f2bab01d",
+    "unloaded-90.log": "bd5b88cad0cdfabbf81aab290f56da06cbaaea62440ae8e3242b66c7741aa738",
+    "rider-90.log": "895352ebfbb54418366bb2c7f6bce1605c4091c9acf66dc378ce2da26c6bc561",
+    "unloaded-360.log": "59822c1f8fa40d45f3c47147c6c1c96911a601f0b3381c7cb39d3c689c1efaf6",
+    "rider-360.log": "d1baa62434db272a9d32b51fa4d9e0ef5f1cf6bd126fcd4fbe8645062d16bcbc",
+    "unloaded-90-iter256.log": "59a29bcb98b5c116a3aa8792dc213533dbb8b0e54765141f3369309f44b7fa1a",
+    "rope_ladder_probe-before-taut-binding.cpp": "6940f170d794cc8236e947ca4a88e631480d2956376d58e3442f0661501b1f4c",
+    "unloaded-fixed-360.log": "816fd284cc11a7ceebf7bf5e7a7b3816caf7a89b5d334c651382223d1ebe7ff4",
+    "unloaded-fixed-90.log": "c6a3ed0455e0f91d6b4b42743fc46e7abc7e331aaa647be075161a7e87f09441",
+    "run_cases.py": "d07ff96ead0cd472e3315df003b9cbebe51a576632e47aaab7b7229be55f2fb0",
+    "cases-driver.log": "f04d10c8a098c07796f51b4563667e71579c224e0e80cc141185696d909cc5d7",
+    "case-still-90.log": "3552a131f70c13b1aece41aa480480c4c5fd93728809c28f0712c8e235000202",
+    "case-still-360.log": "3eb4a39d6f97c4785b38fc2baafaa93b0011064008812e639f90f66659352f54",
+    "case-breeze-90.log": "231d7733cd107e99e44f867274073fdd230acbd433f9d213ef9bcd42137589e2",
+    "case-breeze-360.log": "cc6c541111356cd346053a79f9539534217434e0025d71fdf809c66cbd6a1bfc",
+    "case-reverse-90.log": "a7441206411502b78cd588c4758d22497369b16469502f0259356e1536c06edc",
+    "case-reverse-360.log": "ed47b925f3f628cfb1fa1252651cac9b7e22fcc429b2f10b9a5926aa4c63f2fa",
+    "case-free_sway-90.log": "22b0f5f59ba77816f2ead5965ee4aafa038e939c5b81b29bbb563a188b88a99d",
+    "case-free_sway-360.log": "e7d6de45bdfbb8cd04f788742567d4f9c2227ac21e946b411d5029e4ec729609",
+    "case-central_catch-90.log": "40583e993feb8c7ef4841535d8d8a6613685e8dcd991aba09421a4fed942e356",
+    "case-central_catch-360.log": "c67cb094da0c383a6a972474a8e95bd2cac1937d1541bd202956add5eada52e6",
+    "case-left_catch-90.log": "c9206f0815510ac118633d4b613072a482e23b610ce86edbd27cb6dd6a8c0d16",
+    "case-left_catch-360.log": "07535b087978c0705b0971e036143f40328b26741904c2f61f68a7409ca86ec6",
+    "case-right_catch-90.log": "0f2754ff212353fcb29ad07d103d2c5b2934f501cf80f1c3e299b6613ec7353a",
+    "case-right_catch-360.log": "82c28b776fb190587f576f5078c2ede6592ac1a0f5c75ec5c95c65ef2a7988bf",
+    "native-cases.json": "00d931c4d757fd2afb2767ca3d9c46eaf22099e4e1c20cd8463bb980c84c3a85",
+    "STAGE_CONTRACT.md": "d7aeae51b14183eb321de1f4f17ba8a801bcfa82e40614cbff26ca336213edad",
+    "build.sh": "550657e61d2fe1e0754054bd8cbf5ad0d9f48b90a4cebfafa32f9b2a4be576f1",
+    "verify_acceptance.py": "063aa95e1c2d7265bf7b65a2c23f2d9acc88a81329d582b05dce650a760c1115"
+  }
+}

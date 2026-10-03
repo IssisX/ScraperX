@@ -1,0 +1,78 @@
+{
+  "name": "First-gallery settled-drum bascule submodel; excludes free-drum/contact transfer",
+  "g": 9.81,
+  "model_kind": "beam",
+  "model": {
+    "masses": [
+      {
+        "mass": 800,
+        "r": 3.0,
+        "phi": 3.141592653589793,
+        "i_cm": 2406.0000000000005
+      },
+      {
+        "mass": 800,
+        "r": 3.8,
+        "phi": 0.0,
+        "i_cm": 138.66666666666666
+      },
+      {
+        "mass": 160,
+        "r": 1.9,
+        "phi": 0.0,
+        "i_cm": 193.73333333333332
+      },
+      {
+        "mass": 360,
+        "r": 3.905124837953327,
+        "phi": 2.909035711784884,
+        "i_cm": 64.8
+      },
+      {
+        "mass": 0,
+        "r": 0.9,
+        "phi": 1.5707963267948966,
+        "i_cm": 0
+      }
+    ],
+    "theta0": -0.18,
+    "torque_friction_kinetic": 200,
+    "torque_friction_static": 350
+  },
+  "terminal": {
+    "min_q": -0.18,
+    "stop_q": 0.06,
+    "buffer": {
+      "kind": "crush",
+      "start": -0.06,
+      "stroke": 0.12,
+      "force": 22000
+    }
+  },
+  "band": {
+    "model.torque_friction_kinetic": [
+      100,
+      200,
+      300
+    ]
+  },
+  "t_max": 20,
+  "require": {
+    "allowed_outcomes": [
+      "HELD_BY_CRUSH_BED"
+    ],
+    "min_breakaway_ratio": 1.5,
+    "max_peak_speed": 0.45,
+    "max_stop_impact_speed": 0,
+    "max_time_s": 20,
+    "max_ledger_residual_fraction": 0.02,
+    "convergence": {
+      "peak_speed": {
+        "abs": 0.001
+      },
+      "time_s": {
+        "abs": 0.01
+      }
+    }
+  }
+}
