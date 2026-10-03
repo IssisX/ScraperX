@@ -1,0 +1,6 @@
+# Headless result excerpt (final output chunk), 2026-10-02
+# Godot 4.7 ARM64, --headless --fixed-fps 60, existing private runtime
+# Script: res://presentation/audio/fall_reactions_test.gd; process exit 0
+# Dummy without Movie Maker: behavioral proof only; decoded mix intentionally skipped.
+SCRAPERX_AUDIO_BANK clips=28 msec=348 driver=Dummy
+SCRAPERX_FALL_VOICE reactions=2 mix_peak=0.000000 recordings=0 recording_peak=0.000000 failures=0

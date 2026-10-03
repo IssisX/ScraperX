@@ -1,0 +1,26 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+Movie Maker mode enabled, recording movie in 432×371 @ 60 FPS...
+[DEBUG-audio-gate] gain_db=3.00 master_effects=2
+SCRAPERX_AUDIO_BANK clips=28 msec=342 driver=Dummy
+[DEBUG-audio-gate] clip=wtf_1.ogg effects_peak=0.764173508 master_peak=0.912013471 master_db=-0.800 samples=72704
+[DEBUG-audio-gate] clip=wtf_2.ogg effects_peak=1.019747615 master_peak=0.912015736 master_db=-0.800 samples=63488
+[DEBUG-audio-gate] clip=wtf_3.ogg effects_peak=0.534985781 master_peak=0.912011564 master_db=-0.800 samples=62976
+[DEBUG-audio-gate] clip=fuck_1.ogg effects_peak=0.534938157 master_peak=0.912011564 master_db=-0.800 samples=64000
+[DEBUG-audio-gate] clip=fuck_2.ogg effects_peak=0.335314721 master_peak=0.647615552 master_db=-3.774 samples=56832
+--------------------------------------------------------------------------------
+Done recording movie at path: /data/data/com.termux/files/usr/tmp/audio-gate-diagnosis/clip-probe.avi
+420 frames at 60 FPS (movie length: 00:00:07:00), recorded in 00:00:07 (100% of real-time speed).
+CPU render time: 0.02 seconds (average: 0.06 ms/frame)
+GPU render time: 0.02 seconds (average: 0.05 ms/frame)
+Encoding time: 0.88 seconds (average: 2.11 ms/frame)
+--------------------------------------------------------------------------------

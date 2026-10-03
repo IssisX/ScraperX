@@ -2,6 +2,7 @@ extends SceneTree
 ## Run with --headless --script res://presentation/audio/fall_reactions_test.gd.
 ## --write-movie also exercises decoding and the engine's actual audio mix.
 const Reactions := preload("res://presentation/audio/fall_reactions.gd")
+const Director := preload("res://presentation/audio/audio_director.gd")
 var failures := 0
 
 
@@ -16,8 +17,11 @@ func check(ok: bool, message: String) -> void:
 
 
 func _run() -> void:
-	AudioServer.add_bus()
-	AudioServer.set_bus_name(AudioServer.bus_count - 1, &"Effects")
+	var director := Director.new()
+	root.add_child(director)
+	# Keep the production buses/limiter; isolate recordings from synthesized ambience.
+	director.quiesce()
+	var mixing := AudioServer.get_driver_name() != "Dummy" or not Engine.get_write_movie_path().is_empty()
 	var voice := Reactions.new()
 	root.add_child(voice)
 	# Controlled readback sequences isolate cancellation, repetition and thresholds.
@@ -63,7 +67,10 @@ func _run() -> void:
 	root.add_child(voice)
 	var capture := AudioEffectCapture.new()
 	capture.buffer_length = 10.0
-	AudioServer.add_bus_effect(AudioServer.get_bus_index(&"Effects"), capture)
+	var master := AudioServer.get_bus_index(&"Master")
+	var capture_index := AudioServer.get_bus_effect_count(master)
+	# Appended after the Director's limiter: measure the output a player hears.
+	AudioServer.add_bus_effect(master, capture)
 	var peak := 0.0
 	for frame in 300:
 		native.advance_frame(1.0 / 60.0)
@@ -76,7 +83,7 @@ func _run() -> void:
 			peak = maxf(peak, maxf(absf(sample.x), absf(sample.y)))
 	check(voice.reactions >= 1 and voice.reactions <= 2, "native high fall reaction count %d" % voice.reactions)
 	check(not voice.speaking(), "death/landing left voice playing")
-	if not Engine.get_write_movie_path().is_empty():
+	if mixing:
 		check(peak > 0.01 and peak < 1.0, "decoded voice mix peak %f" % peak)
 	var fall_reactions := voice.reactions
 	voice.quiesce()
@@ -96,8 +103,42 @@ func _run() -> void:
 			deployed = true
 	check(deployed and native.is_parachute_deployed() and not voice.speaking(), "native canopy failed to cancel reaction")
 	voice.quiesce()
+	voice.queue_free()
 	for i in 5:
 		await process_frame
 	native = null
-	print("SCRAPERX_FALL_VOICE reactions=%d mix_peak=%.6f failures=%d" % [fall_reactions, peak, failures])
+	# Isolated decoded-clip coverage, separate from the native behavioral proof above.
+	# Use the real reaction player so its authored gain and Effects routing apply.
+	var recordings := 0
+	var recording_peak := 0.0
+	if mixing:
+		var recording_voice := Reactions.new()
+		root.add_child(recording_voice)
+		var player: AudioStreamPlayer = recording_voice._voice
+		var clips: Array[AudioStream] = Reactions.ALARM + Reactions.PANIC
+		for clip in clips:
+			capture.clear_buffer()
+			player.stream = clip
+			player.play()
+			var clip_peak := 0.0
+			var elapsed := 0.0
+			while elapsed < clip.get_length() + 0.15:
+				await process_frame
+				elapsed += root.get_process_delta_time()
+				for sample in capture.get_buffer(capture.get_frames_available()):
+					clip_peak = maxf(clip_peak, maxf(absf(sample.x), absf(sample.y)))
+			check(clip_peak > 0.01 and clip_peak < 1.0,
+				"decoded recording %s Master peak %f" % [clip.resource_path.get_file(), clip_peak])
+			recordings += 1
+			recording_peak = maxf(recording_peak, clip_peak)
+			print("SCRAPERX_FALL_CLIP clip=%s mix_peak=%.6f" % [clip.resource_path.get_file(), clip_peak])
+		check(recordings == 5, "decoded all five reaction recordings")
+		recording_voice.quiesce()
+		recording_voice.queue_free()
+	director.queue_free()
+	for i in 5:
+		await process_frame # Release stopped playbacks while Movie Maker still mixes.
+	AudioServer.remove_bus_effect(master, capture_index)
+	print("SCRAPERX_FALL_VOICE reactions=%d mix_peak=%.6f recordings=%d recording_peak=%.6f failures=%d" % [
+		fall_reactions, peak, recordings, recording_peak, failures])
 	quit(0 if failures == 0 else 1)

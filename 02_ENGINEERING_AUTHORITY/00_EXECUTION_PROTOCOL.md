@@ -58,6 +58,14 @@ Historical WO references describe the atlas that existed when those records were
 
 The goal is **small active context under one global authority tree**, not reduced authority and not a second package.
 
+### 2.1 Specialist agents and hooks
+
+Use available specialists proactively within the current implementation slice. Recon/mapper agents locate owners and call paths; diagnosticians isolate failures; architects and ScraperX mechanics resolve causal design; implementers own a defined file slice; documentation auditors reconcile affected authorities; reviewers and verifiers independently assess correctness and evidence. Use the closest available capability when a named role is absent.
+
+Give each agent a bounded objective, relevant context, an evidence boundary and explicit write ownership. Independent log/artifact work, targeted reference checks and documentation audits may run while the parent continues integration. Preserve concurrent edits, avoid duplicate scans and runtime checks, and coordinate shared build/runtime resources. Supporting agents do not start additional gameplay slices. The parent owns integration and the single publication path under §17.
+
+Use installed context and protection hooks where supported. Inspect their configuration and distinguish helper checks from observed live dispatch; report absent or unproven coverage honestly. Hooks support the existing ownership and preservation rules rather than adding routine permission gates.
+
 ---
 
 ## 3. TICKET CONTRACT

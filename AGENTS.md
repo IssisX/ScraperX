@@ -38,6 +38,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: “Overtesting and oververifying,” and we are continuing together.
 - Use available development tools and relevant skills proactively when they improve the result.
   Why: I explicitly encouraged creative engineering and supported development tools.
+- Use suitable specialist agents proactively for bounded background work, and use supported hooks when useful. Assign ownership, preserve concurrent work, and keep integration and publication with the parent agent.
+  Why: I asked to use the appropriate agents on the appropriate sections of code and delegate background busy work.
 
 ### ScraperX
 - Use “The input state determines the output” as a project-wide design rule.
