@@ -24,7 +24,16 @@
     "source_review": "P1 backend mixing repaired and source rechecked; no runtime reproduction of that specific mixed candidate path."
   },
   "delivery": {
-    "new_checkpoint_actions": "Not yet published at receipt creation; inspect exact commit after push.",
+    "new_checkpoint_actions": {
+      "branch": "ChatGPT",
+      "conclusion": null,
+      "head_sha": "61361c6b5db417da8ec5003f4e671297cff4fe27",
+      "path": ".github/workflows/wo000-delivery-spine.yml",
+      "run_id": 37162561352,
+      "status": "in_progress",
+      "updated_at": "2026-10-03T23:41:22Z",
+      "url": "https://github.com/IssisX/ScraperX/actions/runs/37162561352"
+    },
     "latest_verified_apk_source": "543d13e04c615af6869d46826214878446513200"
   },
   "boundaries": [
@@ -35,7 +44,8 @@
     "One-hand settling and oblique catch drop retain their measured limitations."
   ],
   "proof_file_sha256": {
-    "README.md": "155c040985fbdf9b5dd906f7b84924013456cadf55e2c7352d8119d57c96e01e",
+    "README.md": "50b446524355b6cf6e68f25cb4ce8d6b128a0d79d82f827ca299f746af3dc93d",
+    "actions-at-pause.json": "02dca879b0fea95fb0fead97fc4680d3c344c52bb491edd9ebf1feb496108449",
     "module/RECEIPT.md": "0cf307675fbdc6f4889872cf55066afdb3774db20e32a0d0a83dbd6d3876312d",
     "module/build.sh": "f4d4b176ca0776fcc629e7085aadde3acfc28125cbd770ac55d4ad4bc321cdd5",
     "module/first-implementation-run.log": "a1260182eba557a91209115d6254a88c4aa9b7accde83698f2f083a702770267",
@@ -45,6 +55,7 @@
     "module/physical_hand_climb.cpp": "0184995b0fa6b75d1d021d36fefd82f7580d8903cd5a078b5df888256b866605",
     "module/physical_hand_climb.hpp": "81345b16cda8b6163af40651131a392625161adf2ffd076352174eda12a43c34",
     "module/physical_hand_climb_tests.cpp": "80771305e5a5fa104f0c65ea83c5636324005a0fedf48e09d92bf9e755000bcf",
+    "module/receipt.json": "f098003aa68608910144b3561393e50327397726e0dc6ccf1429124084461c9a",
     "module/red-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "module/red-module.cpp": "29d613295b67c924ecb9af6ef308d7404b152ebf7fda126d4362f007a321627d",
     "module/red-run.log": "c953a5ac4a17c3ef7f23c96ff27ddb4bae7fd80bf3f4643af8275920268b4eb6",
@@ -68,7 +79,7 @@
     "traversal/hand-reviewed-build.log": "619ce643c4c4a89dfda94c5cff26248ecfa17c120d3a0857b40a87c8bdfaf020",
     "traversal/hand-reviewed-tests.log": "4c81f9b5ea8c39d4b8792a210448fbae8b17800e62d7698ad94305713e6d5ff6",
     "traversal/hand-runtime-source-before-review.json": "9892daa84caa57e6e8e12424cff1695e63f443ed6959ce7cd43b60343229d22a",
-    "traversal/hand-runtime-source.json": "60c6b542d4dc1174dd15b90ac89d26c2922c75c25b31f43b249831b9926beae5",
-    "module/receipt.json": "f098003aa68608910144b3561393e50327397726e0dc6ccf1429124084461c9a"
-  }
+    "traversal/hand-runtime-source.json": "60c6b542d4dc1174dd15b90ac89d26c2922c75c25b31f43b249831b9926beae5"
+  },
+  "published_native_source": "61361c6b5db417da8ec5003f4e671297cff4fe27"
 }

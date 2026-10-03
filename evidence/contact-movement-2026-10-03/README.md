@@ -24,3 +24,7 @@ Cargo-net climbing, `Hanging`, receiving `Mantling` and powered jump still use t
 The new native checkpoint has no new rendered-hand inspection, Android APK or device acceptance yet. The immutable green audio/movement APK at `543d13e` has its separate ledger. Follow this checkpoint's exact-source Actions after publication; do not transfer an older APK's green result to it. On explicit continuation, use `CONTACT_MOVEMENT_IMPLEMENTATION.md` for the next coupled contact slice and `CONTINUE_HERE_CHATGPT_CODEX.md` §7 for the running to-do.
 
 The completed rope-ladder and freight-gallery investigations are saved separately in `evidence/west-gallery-compilation-2026-10-03/`. Their accepted component and rejected assembly receipts retain their own scope. The owner requested a pause before another stage.
+
+## Publication and pause
+
+Native source `61361c6b5db417da8ec5003f4e671297cff4fe27` was pushed to `ChatGPT`. [Exact-source Actions run 37162561352](https://github.com/IssisX/ScraperX/actions/runs/37162561352) is in progress when paused; `actions-at-pause.json` is the actual API observation. All workers and local check processes have finished. Android/full-regression/rendered delivery for this new candidate remains unverified. Check this run first after the owner's continuation instruction. Documentation-only successors leave this executable source unchanged.
