@@ -294,7 +294,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for proof in touch_capture slingshot_view climber_character settings_runtime landing_camera; do
+          for proof in touch_capture slingshot_view climber_character settings_runtime landing_camera footstep_contact; do
             timeout 180s tools/godot/godot --headless --fixed-fps 90 --path godot \
               --script "res://tests/${proof}_test.gd" 2>&1 | tee "artifacts/${proof}.log"
             if grep -E "SCRIPT ERROR|Parse Error|FAIL" "artifacts/${proof}.log"; then exit 1; fi

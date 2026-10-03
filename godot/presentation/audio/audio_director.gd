@@ -250,9 +250,13 @@ func ui_tap(back: bool = false) -> void:
 
 # Once per rendered frame, with the native state main.gd already read.
 func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
-		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool) -> void:
+		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool,
+		support_point_velocity: Vector3 = Vector3.ZERO) -> void:
 	fall_reactions.update(delta, position, velocity, grounded, traversal, chute, deaths)
-	var horizontal := Vector2(velocity.x, velocity.z).length()
+	# A planted rider moves with the support without taking a step. Native
+	# point velocity includes rotation as well as the support's translation.
+	var foot_velocity := velocity - support_point_velocity if grounded else velocity
+	var horizontal := Vector2(foot_velocity.x, foot_velocity.z).length()
 
 	if grounded and traversal == 0 and horizontal > STEP_MIN_SPEED:
 		_stride += horizontal * delta

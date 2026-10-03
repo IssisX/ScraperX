@@ -1,0 +1,59 @@
+{
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "head_sha": "0ecf34196c59d9e521f11e529e3da65644ec29a9",
+  "run_id": 37154783835,
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/37154783835",
+  "run_started_at": "2026-10-03T21:20:55Z",
+  "status": "completed",
+  "conclusion": "success",
+  "job_id": 111295843093,
+  "job_started_at": "2026-10-03T21:20:58Z",
+  "job_completed_at": "2026-10-03T22:14:50Z",
+  "job_elapsed_seconds": 3232,
+  "campaign_step_started_at": "2026-10-03T21:33:53Z",
+  "campaign_step_completed_at": "2026-10-03T21:34:42Z",
+  "campaign_step_conclusion": "success",
+  "campaign_runtime_elapsed_ms": 48086,
+  "campaign_loaded_swing_span_rad": 0.074954,
+  "campaign_final_position": [
+    9.001135,
+    121.9,
+    -174.5339
+  ],
+  "campaign_pass": "SCRAPERX_UITEST PASS touch_campaign_to_121 staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 supported_height_m=121 support=11 deaths=0 slingshot_work_j=0 world=slingshot",
+  "artifact_id": 11285708590,
+  "artifact_name": "ScraperX-build-0ecf34196c59d9e521f11e529e3da65644ec29a9",
+  "artifact_size_in_bytes": 55428076,
+  "artifact_digest": "sha256:312bb82ba5d8cf5db01ff7f934b239ca451068cd3d353dde8af4b183b4280652",
+  "artifact_created_at": "2026-10-03T22:14:47Z",
+  "artifact_expires_at": "2027-01-01T21:20:55Z",
+  "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/37154783835/artifacts/11285708590",
+  "boundaries": [
+    "APK and ZIP downloaded and independently hashed; checkpoint and retained CI signing output inspected.",
+    "Five listed CI screenshots actually opened; retained upper route/launch views, not a continuous normal rendered ground-to-121 run.",
+    "Normal ground-to-121 proof is shipping headless touch; current local rendered AS-026 slice uses staging at +110.",
+    "No Android installation, target-device listening, pacing, comfort or sustained FPS proof.",
+    "Separate next-source footstep changes are not verified by this immutable run."
+  ],
+  "apk_sha256": "732286a16bee6352a15c919d721cb06facb96fb9e3f118ecdad9604c63d9cf30",
+  "artifact_zip_sha256": "312bb82ba5d8cf5db01ff7f934b239ca451068cd3d353dde8af4b183b4280652",
+  "checkpoint": {
+    "author": "ChatGPT",
+    "branch": "ChatGPT",
+    "commit": "0ecf34196c59d9e521f11e529e3da65644ec29a9",
+    "apk": "ScraperX-ChatGPT.apk",
+    "package": "com.cory.scraperx.chatgpt",
+    "label": "ScraperX-ChatGPT",
+    "signer_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4"
+  },
+  "native_tests_passed": 31,
+  "signing_evidence": "Inspected retained CI apksigner output: one signer, APK v2/v3 verified, matching stable signer/checkpoint. No local apksigner or Android execution.",
+  "screenshots_inspected": [
+    "north_north_frame_99m.png",
+    "north_north_frame_hang.png",
+    "north_ladder_leap.png",
+    "shipping-launch_seated_manual_draw.png",
+    "shipping-launch_supported_352m_roof.png"
+  ]
+}

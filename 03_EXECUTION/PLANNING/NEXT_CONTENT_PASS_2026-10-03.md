@@ -7,7 +7,7 @@
 
 Current normal-world construction includes the cargo net from grade to +11, retained AS-017–022 through +110 and the suspended ladder from +110 to +121. Their proofs are separate: the ladder starts at a staged +110 support, and the retained continuous +110 scenario selects the pipe-bridge fixture. The slingshot's supported +352 landing is another separate route.
 
-**Normal grade→121 continuity now passes locally, 2026-10-03.** Ordinary shipping touch begins at grade, climbs the yielding cargo net and retained upper route, catches and loads AS-026, lands on its offset receiver and reaches Tower support 11 at Y=121.9, deaths 0 and launcher work 0. The native landing-recovery timer and test approach corrections are recorded in the current movement/route evidence; exact-source Actions and Android delivery for this new candidate remain pending. A staged machine proof does not establish this continuity.
+**Normal grade→121 continuity now passes locally, 2026-10-03.** Ordinary shipping touch begins at grade, climbs the yielding cargo net and retained upper route, catches and loads AS-026, lands on its offset receiver and reaches Tower support 11 at Y=121.9, deaths 0 and launcher work 0. The native landing-recovery timer and test approach corrections are recorded in the current movement/route evidence; exact-source Actions and verified Android delivery close at movement source `0ecf341`, run `37154783835`. A staged machine proof does not establish this continuity.
 
 The tower's rings and 1,600 m shell establish spatial framework, not completed ascent. The near-term campaign objective remains connected ground→300 m traversal.
 

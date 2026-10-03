@@ -1587,7 +1587,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			_swing_last_velocity = swing_velocity
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
-			int(_native.get_death_count()), crouched)
+			int(_native.get_death_count()), crouched, _native.get_support_point_linear_velocity())
 		if _regression_scene:
 			_audio.update_machines(delta, float(_native.get_orifice_mass_flow_kg_per_s()),
 				_native.get_hoist_scoop_position(), _native.get_ballast_position(),

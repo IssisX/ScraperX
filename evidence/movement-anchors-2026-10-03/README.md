@@ -23,3 +23,13 @@ The captures use a private 432×371 LOW-quality softpipe harness, shadows/MSAA o
 Uninterrupted grade→121 is headless proof, while rendered proof is the staged upper slice. Exact-source Actions, APK identity and checksum remain pending for this candidate. Existing launch delivery `f23a68e` remains the latest verified APK until a successor is closed. Android play, comfort and sustained performance remain unverified.
 
 Non-Kit fixture acquisition still uses the current physics hand endpoint when its owner has no prior pose history. Runtime mixed-owner transfers and new net grip coordinates are not separately established by these checks. Broad contact-aware parkour and the breeze-driven flexible ladder remain further work; this repair implements neither by implication.
+
+## Exact-source Actions and APK closure
+
+Movement source `0ecf34196c59d9e521f11e529e3da65644ec29a9` is delivered through successful [run 37154783835](https://github.com/IssisX/ScraperX/actions/runs/37154783835), job `111295843093`, lasting 53m52s. All required gates pass, including 31 native tests, the new ordinary cargo-net campaign to +121.9 m, rendered retained-route/launch checks, input regressions, audio mix, solids comparison and Android arm64 export/signing.
+
+[Artifact 11285708590](https://github.com/IssisX/ScraperX/actions/runs/37154783835/artifacts/11285708590), `ScraperX-build-0ecf34196c59d9e521f11e529e3da65644ec29a9`, contains `apk/ScraperX-ChatGPT.apk`. Independently computed APK SHA-256: `732286a16bee6352a15c919d721cb06facb96fb9e3f118ecdad9604c63d9cf30`. ZIP SHA-256: `312bb82ba5d8cf5db01ff7f934b239ca451068cd3d353dde8af4b183b4280652`, matching GitHub metadata. Checkpoint commit/branch/package/label match, and retained CI signing verification reports the stable single signer.
+
+`ci-receipt.json` and selected CI logs preserve actual evidence. Five retained-route/launch PNGs were opened and inspected in addition to the six local staged AS-026 captures. The CI hang view shows hands on the rendered steel hold; retained footing and launch receiving geometry are visible. These views are inspection evidence, not device frame-time or continuous render-smoothness proof. Device play remains open.
+
+The new footstep repair is a separate source change and requires its own delivery receipt.

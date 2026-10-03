@@ -524,6 +524,20 @@ Presentation may amplify real events. It may not substitute fake events for miss
 
 The game may not claim that something bent, failed, held, moved, opened, broke, or became traversable when the authoritative state cannot support that claim.
 
+## 24.1 Commercial quality and satisfying physical feedback
+
+**Owner direction, 2026-10-03: ScraperX is a public-facing game sold for real money. Its movement, machinery, sound and atmosphere must earn that purchase.** Aim for the strongest console-quality experience affordable on the target hardware. A functioning framework begins an encounter's development; subsequent integrated passes deepen its embodiment, materials, dynamics and presentation. Track unfinished detail explicitly and keep returning to it as the tower grows.
+
+The intended experience is compelling through player agency: notice a physical possibility, test an idea, feel the object respond, execute a skillful movement and discover useful access. Build replay interest through different approaches, meaningful world state, expressive parkour and consequential material behavior. Large moving machinery should provide memorable scale and readable energy transfer. Technical sophistication earns its place through experiences players can feel, understand and enjoy.
+
+## 24.2 Weight, texture and a living soundscape
+
+**Immediate sound correction:** current footsteps sound thin and repetitively metallic to the owner. Boots need a substantial clunk or thump, with material-appropriate texture and short, damped resonance. A steel plate, concrete footing, timber member and loose ground should communicate different contact. Add scratches and scuffs when actual relative movement warrants them. Retain enough low-mid body to convey weight through phone speakers as well as headphones; assess the full mix rather than improving an isolated clip while masking it in play.
+
+Develop an inhabited industrial soundscape from actual operating and environmental state: load-bearing creaks, rope strain, rolling and slipping loads, impacts, material compression, airflow and spatially situated machinery. Use restrained variation, distance, occlusion and changes between exposed and enclosed spaces to make the tower feel alive. Real-world ambience may be authored where appropriate; consequential machine cues read authoritative native state. Sound must help players locate activity, judge effort and timing, distinguish secure support from moving material, and feel the result of their actions.
+
+Acceptance includes ordinary movement and machine operation, quiet and busy scenes, repeated actions, audible material distinction and an unclipped, intelligible mix. Inspect generated or recorded samples and the gameplay mix, then listen on the target device when that path is available. Cue counters, spectral checks and desktop recordings provide specific evidence; they do not establish final device sound quality or player satisfaction.
+
 ---
 
 # 25. Target-device and comfort constraints

@@ -118,37 +118,52 @@ func _sling_wobble() -> PackedFloat32Array:
 	return out
 
 
-# Boot on concrete: a heel click, a short knock, gritty scuff, a little weight.
+# Boot on concrete: a broad sole knock with grit trailing the impact.
+# Keep the old noise lengths/random draws so other seeded cues stay identical.
 func _step_concrete() -> PackedFloat32Array:
 	var out := _silence(0.15)
-	_add_band_noise(out, 0.0, 0.02, 0.9, 0.004, 1500.0, 6000.0)
-	_add_tone(out, _rng.randf_range(330.0, 420.0), 0.0, 0.05, 0.22, 0.008)
-	_add_band_noise(out, 0.006, 0.13, 0.75, 0.035, _rng.randf_range(500.0, 700.0),
-		_rng.randf_range(2600.0, 3600.0))
-	_add_tone(out, _rng.randf_range(62.0, 78.0), 0.0, 0.08, 0.35, 0.02)
+	_add_band_noise(out, 0.0, 0.02, 0.42, 0.006, 700.0, 4200.0)
+	var body := _rng.randf_range(310.0, 390.0)
+	_add_tone(out, body, 0.0, 0.07, 0.58, 0.017)
+	_add_tone(out, body * 1.63, 0.002, 0.05, 0.21, 0.010)
+	_add_band_noise(out, 0.006, 0.13, 0.75, 0.028, _rng.randf_range(300.0, 480.0),
+		_rng.randf_range(1800.0, 2600.0))
+	_add_tone(out, _rng.randf_range(95.0, 125.0), 0.0, 0.08, 0.38, 0.022)
 	return out
 
 
-# Boot on steel plate: the click and a bright inharmonic ring off the plate.
+# Boot loads a steel plate: dry body knock, damped flex, then a short sole scuff.
+# The same 30 ms noise draw excites the body and the delayed friction texture.
 func _step_metal() -> PackedFloat32Array:
 	var out := _silence(0.26)
-	_add_band_noise(out, 0.0, 0.03, 0.8, 0.005, 1200.0, 7000.0)
-	_add_tone(out, _rng.randf_range(80.0, 96.0), 0.0, 0.07, 0.3, 0.02)
-	var base := _rng.randf_range(380.0, 460.0)
-	for pair in [[1.0, 0.22], [2.71, 0.16], [5.18, 0.1], [8.4, 0.05]]:
-		_add_tone(out, base * pair[0] * _rng.randf_range(0.97, 1.03), 0.0, 0.26, pair[1],
-			0.11 / sqrt(pair[0]))
+	var contact := _band_noise_buffer(int(0.03 * MIX_RATE), 180.0, 4200.0)
+	var body_noise := 0.0
+	var body_alpha := _alpha(900.0)
+	var scuff_start := int(0.013 * MIX_RATE)
+	for i in contact.size():
+		var t := float(i) / MIX_RATE
+		body_noise += body_alpha * (contact[i] - body_noise)
+		out[i] += body_noise * 2.0 * exp(-t / 0.014)
+		out[scuff_start + i] += (contact[i] - body_noise) * 0.38 * exp(-t / 0.012)
+	_add_tone(out, _rng.randf_range(105.0, 140.0), 0.0, 0.07, 0.38, 0.022)
+	var base := _rng.randf_range(320.0, 380.0)
+	_add_tone(out, base * 0.63, 0.0, 0.065, 0.30, 0.017)
+	# The plate is loaded and damped by the boot, rather than ringing like a bell.
+	for pair in [[1.0, 0.48, 0.024], [2.71, 0.10, 0.010], [5.18, 0.045, 0.006], [8.4, 0.016, 0.004]]:
+		_add_tone(out, base * pair[0] * _rng.randf_range(0.97, 1.03), 0.0, 0.26, pair[1], pair[2])
 	return out
 
 
-# Meadow: a soft crunch of grit and stalks.
+# Earth: packed ground takes the weight; grit and stalks crunch under the sole.
 func _step_earth() -> PackedFloat32Array:
 	var out := _silence(0.16)
-	_add_band_noise(out, 0.0, 0.16, 0.7, 0.04, 300.0, 2200.0)
+	_add_band_noise(out, 0.0, 0.16, 0.80, 0.036, 180.0, 1700.0)
 	for i in 9:
 		var at := _rng.randf_range(0.0, 0.08)
-		_add_band_noise(out, at, 0.006, 0.4, 0.002, 2500.0, 7000.0)
-	_add_tone(out, 58.0, 0.0, 0.06, 0.25, 0.02)
+		_add_band_noise(out, at, 0.006, 0.22, 0.002, 1200.0, 4300.0)
+	_add_tone(out, 95.0, 0.0, 0.06, 0.30, 0.022)
+	_add_tone(out, 300.0, 0.0, 0.06, 0.32, 0.016)
+	_add_tone(out, 435.0, 0.002, 0.04, 0.12, 0.010)
 	return out
 
 

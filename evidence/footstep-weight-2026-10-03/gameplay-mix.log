@@ -1,0 +1,21 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+Movie Maker mode enabled, recording movie in 1296×1114 @ 30 FPS...
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_LOCAL_RENDER_SETTINGS width=432 height=371 quality=LOW shadows=OFF msaa=OFF native_tick_hz=90
+SCRAPERX_AUDIO_BANK clips=28 msec=1124 driver=Dummy
+SCRAPERX_UITEST PASS audio_mix bed_db=-22.7 steps_db=-15.3 peak_db=-0.8 steps=10
+--------------------------------------------------------------------------------
+Done recording movie at path: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/proof/footstep-weight/gameplay-mix.avi
+160 frames at 30 FPS (movie length: 00:00:05:10), recorded in 00:01:29 (5% of real-time speed).
+CPU render time: 3.38 seconds (average: 21.15 ms/frame)
+GPU render time: 3.21 seconds (average: 20.05 ms/frame)
+Encoding time: 4.98 seconds (average: 31.15 ms/frame)
+--------------------------------------------------------------------------------
