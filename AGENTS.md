@@ -56,6 +56,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I meant visceral engagement, with vibration as one component.
 - Fill traversal gaps with varied, physically coherent challenges and visible causal mechanisms.
   Why: I approved creative climbing, timed swinging, and Rube Goldberg mechanisms.
+- Vary encounter extent and deliberately include coherent machines spanning 20–50 m or more alongside shorter challenges. Use tower rings as supports and receivers, without forcing each encounter into one ring interval.
+  Why: I want large player-operated industrial motion, useful variety and efficient authoring rather than repetitive 10 m sections. GDD §16 owns the design guidance.
 - Make environmental additions playable and causally meaningful, and plan the next coherent pass after the current batch is finished and pushed.
   Why: I requested extraordinary interactive content beyond cosmetics and suggested `/plan` for that next pass.
 - Make materials behave consistently with their appearance.

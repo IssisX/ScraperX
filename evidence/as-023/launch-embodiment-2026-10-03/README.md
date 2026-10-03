@@ -1,6 +1,6 @@
 # AS-023 launch embodiment repair — 2026-10-03
 
-Repository `IssisX/ScraperX`, branch `ChatGPT`; inspected head `8833fab7b91643740e1368e856121fdca2667b4c`. Gameplay matches last green source `6fccf35d0b953303681bd38faa5a7f49c37c9e37`. Changes and proof are in progress. This is a bounded repair of launch seating, inertial body presentation and camera timing; it does not author another ascent section.
+Repository `IssisX/ScraperX`, branch `ChatGPT`; inspected base `8833fab7b91643740e1368e856121fdca2667b4c`, whose gameplay matches last green source `6fccf35d0b953303681bd38faa5a7f49c37c9e37`. The reviewed repair candidate is published as `f23a68ea3fecca3d4672e99b1dfd2ab9653158b4`; exact-source [run 37143768876](https://github.com/IssisX/ScraperX/actions/runs/37143768876) is the pending delivery authority. This is a bounded repair of launch seating, inertial body presentation and camera timing; it does not author another ascent section.
 
 ## Compiler repair record
 

@@ -1,6 +1,6 @@
 # Next content pass — west freight galleries (+121→187 m)
 
-**Status:** Proposal prepared by a background Cory architect on 2026-10-03. Discuss after the AS-023 launch repair is verified and delivered. This does not authorize new gameplay implementation or certify numerically compiled machinery.
+**Status:** Proposal prepared by a background Cory architect on 2026-10-03 and revised after the owner's machine-scale clarification. Discuss after the AS-023 launch repair is verified and delivered. This does not authorize new gameplay implementation or certify numerically compiled machinery.
 **Authorities:** Start Here owns source/delivery truth; the Ascent Atlas owns placement; governing laws and GDD own product intent. Preserve existing AS identifiers. New encounter/entity identifiers must be reserved after checking active and fixture allocations.
 
 ## 1. Existing route and first gate
@@ -13,48 +13,50 @@ The tower's rings and 1,600 m shell establish spatial framework, not completed a
 
 ## 2. Recommended swath
 
-A bounded +121→187 pass spans six existing 11 m ring intervals. These are chosen endpoints, not delivered heights. The local mix below is not a mandatory alternating template for the whole tower.
+A bounded +121→187 pass retains several distinct mechanisms and climbing encounters, with one larger freight assembly spanning several levels. The brief revision that replaced the whole pass with one giant truss overcorrected the owner's scale guidance and is superseded. Tower rings provide useful supports and receivers; their spacing does not determine encounter boundaries. GDD §16 records the direction to deliberately include coherent machines spanning 20–50 m or more alongside shorter challenges, without imposing that size on every machine.
 
-| Target | Encounter | Player decision and physical consequence |
+| Experience | Chosen screening target | Player decision and physical consequence |
 |---|---|---|
-| +121→132 | West service mast | Read offset structural access, climb short runs between rests, traverse an exposed member and mantle onto the ring. |
-| +132→143 | Rolling-drum bascule | Align a hinged loading tongue with a receiving pan, then release a contained heavy drum. Its gravity-driven contact loads the short arm and raises a usable span. |
-| +143→154 | Offset freight frame | Choose staggered holds and ledges or a shorter exposed transfer; both geometrically valid lines reconnect. |
-| +154→165 | Unload the freight cage | Push the real payload onto a fixed rack to reverse the lift's mass balance. Board and release the restrained counterweight; ride the resulting lift. |
-| +165→176 | Cage capture deploys haul span | The cage rests on physical catch bars. That load moves a rocker/release cable, freeing a separately counterweighted span into structural receivers. Cross and climb to the next ring. |
-| +176→187 | Upper service braid | Traverse a west/north corner through varied climbing and parkour transfers, ending on supported footing with room for continuation. |
+| Service-mast approach | +121 toward approximately +132 | Climb irregular short runs, traverse an exposed member and rest on real ledges. Reveal the first load/pan/crossing relationship from supported footing. |
+| Rolling-drum bascule | Approximately +132→141 | Align a loading tongue and release one contained drum into a broad pan. Gravity and contact deploy a shorter crossing; traverse its arrested geometry to the onward climb. |
+| Offset freight-frame climb | Approximately +141→148 | Choose staggered holds/ledges or a shorter exposed transfer. Reach a safe inspection/loading area with a view of the larger machinery. |
+| Counterweighted freight truss | Approximately +148→173; screen a roughly 35–45 m structural span | Unload or reposition actual freight onto a fixed rack, changing torque. Release the restraint from supported ground; gravity deploys the truss. Climb its structural chords, grip runs and resting pockets, making lateral transfers to tower landings. |
+| Physical capture opens a haul span | Approximately +173→180 access | The freight truss's terminal support reaction operates a visible rocker/release cable, freeing a separately counterweighted shorter span. Cross its physically supported geometry toward the upper climb. This is one purposeful handoff, not an extra puzzle chain. |
+| Upper service braid | Approximately +180→187 | Turn around the tower corner through shorter climbing and parkour transfers, ending on supported footing with room for continuation. |
 
-Screen the west exterior first: approximately X=[−38,−24.5], Z=[−167,−132]. This is a chosen search envelope, **not swept-clearance evidence**. Preserve the AS-026 ladder sweep and receiving tongue; use the existing ring support without coincident replacement slabs.
+These areas and spans are **chosen screening targets, not solved dimensions or verified height gains**. Their unequal sizes preserve the original variety while making room for a substantial mechanism. The larger truss creates climbing and lateral relocation instead of a prolonged stand-and-ride lift. Required vertical gain, span length and moving-body travel are different quantities and must be resolved separately. Show each machine's purpose from a safe approach, provide rests before exposed transfers, and reward successful traversal with stable receiving footing. Adjust encounter boundaries after physical compilation and blockout; the listed elevations are not quotas.
+
+Screen the west exterior first, beginning with X=[−38,−24.5], Z=[−167,−132]. This earlier envelope is a search starting point, **not clearance evidence or a volume proven to contain the larger truss**. Resolve the full swept volume before retaining placement. Preserve the AS-026 ladder sweep and receiving tongue; use existing ring support without coincident replacement slabs.
 
 ## 3. Compile before implementing machines
 
 All primary sources are finite and visible. Resolve geometry, mass/COM/inertia, contact/friction, restraints, swept clearance, end stops, entry/receiving support and recovery before coding the assembly.
 
-### Rolling-drum bascule
+### Counterweighted freight truss
 
-Energy comes from the drum's initial height and measured setup work. The load path is tongue → drum contact → pan → hinged span → arrest seat → frame. Use one controlled load, generous lead-ins and a broad receiver. Different tongue alignment must change actual contact and transfer outcomes. Resolve unloaded equilibrium, terminal reaction and loaded traversal stability; a solved flag cannot hold the span.
+The visible restrained counterweight supplies finite gravitational energy through a hinge and declared transmission. Actual freight contact contributes opposing or assisting torque according to its position. Unloading changes the mechanical balance. Resolve the drive curve through the whole angular stroke; offset mass geometry must provide the intended operation without a prescribed pose or artificial governor.
 
-### Unloading cage
+The load path is counterweight → declared transmission → truss hinge/structure → terminal receiver seats → tower frame. Freight, rider contacts and hand loads enter this same native assembly once. At deployment, physical seats/catch bodies carry the terminal load; a solved/capture flag cannot hold the route. The deployed structural chords, catwalks and holds must provide genuinely reachable climbing and lateral transfers, not decorative geometry over invisible supports.
 
-The payload must physically transfer onto a fixed rack. A payload still constrained to the moving cage remains mechanically coupled.
+### Freight manipulation and traversal
 
-With the existing 85 kg rider, screen balance using:
+Freight must physically transfer onto a fixed rack when the player unloads it. Freight still attached to the moving assembly remains mechanically coupled. Repositioned freight must change actual lever arms and contacts. Resolve player effort, rack access and safe release from supported ground; do not assume that a large industrial load can be moved by ordinary carrying.
 
-`platform_mass + 85 < counterweight_mass < platform_mass + 85 + cargo_mass`
+Use the existing 85 kg dynamic rider in the torque/contact calculation, including hand loads, early boarding, departure momentum and unloading. The preceding cage's simple vertical mass-balance inequality is not the governing equation for this rotating truss; derive moment arms, angular inertia, transmission geometry and their changing gravitational torques instead.
 
-Then derive friction and operating margins. Counterweight descent supplies finite work; guides do not supply powered ascent or an artificial governor. Resolve rider aboard/absent, overload, early release, missed boarding, arrest stroke and capture.
+Recover native jump, reach, mantle and moving-support metrics before fixing each required transfer. Screen first-person sightlines and camera clearance at inspection, release, intermediate rests and receiving surfaces. A required transfer must be possible with capabilities available before reaching it. A proposed shortcut remains optional until its native contact/momentum and receiving support are verified.
 
-### Cage-to-span handoff
+### Rolling-drum bascule and haul-span handoff
 
-The cage's actual holding-face contact operates a catch/rocker. Close release direction, available force, travel and work. The next span stays restrained after a failed cage capture and has its own declared initial gravity reservoir. Cage arrival releases that reservoir; it does not create its energy.
+The drum supplies a finite gravity source through tongue → actual drum contact → pan → bascule → terminal seat → fixed frame. Different alignment must change transfer outcomes. Resolve unloaded balance, loaded stability, containment, arrest and the onward receiver.
 
-This second stage earns its place by opening required access and leaving a useful return route.
+For the upper haul span, the deployed freight truss's actual terminal support reaction operates the rocker/release cable. The smaller span has its own visible initial gravitational reservoir; the handoff releases that energy without creating it. An absent/ineffective terminal contact leaves it restrained. Resolve release force, work, travel, sightlines, capture and supported crossing. Retain this stage only if it supplies useful access and a clearly visible causal handoff; remove it if it adds clutter without a distinct traversal purpose.
 
 ### Recovery and unresolved quantities
 
 Retain real lower catch decks and reachable re-entry holds. Spent drum/weights remain where they settle. No automatic recharge. Checkpoint restore reconstructs the committed assembly and energy state.
 
-**Unresolved:** exact dimensions/coordinates, masses/COM/inertia, player push/release effort, sweeps, friction bands, arrival speeds, absorber capacities, catch geometry and handoff margins. Use relevant ThreeSpine calculations, compiler falsifiers and native Jolt comparisons to close them. This proposal is not a substitute for those contracts.
+**Unresolved:** exact dimensions/coordinates and larger swept volume, masses/COM/inertia, freight manipulation/release effort, changing drive torque and transmission, friction bands, arrival speeds, finite arrest capacity, loaded/unloaded capture, early boarding, intermediate transfers, receiver footing and checkpoint restoration. Use relevant ThreeSpine calculations, compiler falsifiers and native Jolt comparisons to close them. This proposal is not a substitute for those contracts.
 
 ## 4. Ownership and work packages
 
@@ -69,13 +71,13 @@ A substantial GPT-6-sol implementation package becomes appropriate **after** the
 3. Presentation worker owns shared native readback, readable primitive geometry, ordinary input context and actual-state feedback.
 4. Verification/documentation worker owns causal falsifiers, continuous-route scenarios, inspected captures and authority/status reconciliation.
 
-The smallest complete first delivery is +121→143: mast climb, one functioning bascule, both receivers, recovery, checkpoint continuation and ordinary touch traversal. The remaining four sections form the follow-on package.
+The first complete delivery can be the service-mast approach, rolling-drum bascule, actual onward receiver and recovery, approximately +121→141 pending placement. Then deliver the offset climb and complete larger freight assembly to its stable upper receiver, followed by the useful haul-span handoff and upper continuation. Each machine must be delivered with its whole load path and traversal; never divide a moving assembly into partially working height tickets. Once expert compilation settles interfaces and acceptance, the remaining mixed pass forms a substantial GPT-6-sol package rather than tiny repeated assignments.
 
 ## 5. Acceptance and refinement
 
 - Prove normal shipping continuity; label staged/fixture evidence explicitly.
 - Prove receivers through grounded native support, clear standing area, continued walking and onward reach.
-- Remove the drum/cable/cargo transfer or handoff connection and require the corresponding capability to fail for its physical reason.
+- Remove the drum or change loading-tongue alignment and require its crossing outcome to change. Keep freight aboard/change its position and require the larger deployment to change for the measured mechanical reason. Remove the counterweight/transmission and require its transformation to fail. Remove terminal support and require stable arrival/haul-span release to fail.
 - Vary load placement, timing and friction; verify unloading, rider departure, misses and checkpoint restoration.
 - Inspect first-person source→transfer→outcome and a recoverable miss. Keep force, work, travel and energy evidence.
 - Pass relevant native, ordinary touch, solids and exact-source Actions/Android delivery gates. Device pacing and sustained 45 FPS need device evidence.
