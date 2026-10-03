@@ -68,6 +68,9 @@ func _run() -> void:
 		"band_rest_m": sqrt(109.0), "neutral_position": neutral,
 		"retrieval_control_position": neutral + Vector3(1.5, 0.35, -1.8),
 		"elevation_rad": elevation, "pouch_position": pouch,
+		"seat_surface_position": pouch + Vector3.DOWN * 0.17,
+		"simulation_time_seconds": 0.0, "rider_specific_acceleration": Vector3(0, 9.81, 0),
+		"guided_launch": true,
 		"anchor_left": anchor_midpoint + Vector3.LEFT * 3.0,
 		"anchor_right": anchor_midpoint + Vector3.RIGHT * 3.0,
 		"trajectory_points": PackedVector3Array([pouch, pouch + Vector3(0, 1, -2),
@@ -109,8 +112,8 @@ func _run() -> void:
 	if not _check(opening_blur != null and float(opening_blur) > 0.8,
 			"bullet-time opens softly blurred before the accelerating clear orbit"):
 		return
-	if not _check(view.get_simulation_scale() >= 0.06 and view.get_simulation_scale() < 0.08,
-			"release asks for elapsed-time slow motion"):
+	if not _check(view.get_simulation_scale() == 1.0,
+			"release first shows actual spring recoil before asking for slow motion"):
 		return
 	if not _check(view._avatar.position == player and state == native_before,
 			"cinematic rider follows native pose without mutating state"):
@@ -119,6 +122,8 @@ func _run() -> void:
 	# release-time world position used to leave the lens behind the body.
 	player += Vector3.UP * 12.0
 	normal.origin += Vector3.UP * 12.0
+	state.simulation_time_seconds = 0.15
+	state.rider_specific_acceleration = Vector3(0, 600, -100)
 	camera.global_transform = normal
 	view.update_view(1.0 / 60.0, state, player, Vector3(0.0, 86.0, -10.0), camera)
 	if not _check(camera.global_position.distance_to(player) < 4.5,
@@ -141,9 +146,10 @@ func _run() -> void:
 		var shot: Dictionary = view.get_cinematic_state()
 		if view._cinematic_clock > 0.2 and view._cinematic_clock < view.ORBIT_SECONDS:
 			var offset := camera.global_position - player
-			var actual_angle := atan2(offset.x, offset.z)
+			var frame_basis: Basis = shot.get("orbit_frame", Basis.IDENTITY)
+			var actual_angle := atan2(offset.dot(frame_basis.x), offset.dot(frame_basis.z))
 			if not _check(absf(wrapf(actual_angle + float(shot.angle_rad), -PI, PI)) < 0.0001,
-					"actual camera completes the measured orbital phase around the current rider"):
+					"actual camera completes the measured orbital phase in the physical flight frame"):
 				return
 			if sampled:
 				var rate := absf(wrapf(actual_angle - previous_angle, -PI, PI)) * 60.0
@@ -178,6 +184,15 @@ func _run() -> void:
 	# Zero elapsed presentation time cannot jitter the lens.
 	if not _check((camera.global_position - player).distance_to(slow_frame) < 0.001,
 			"camera framing is stable when no presentation time passes"):
+		return
+	var previous_axis: Vector3 = view.get_cinematic_state()["orbit_frame"].y
+	var changed_velocity := Vector3(70.0, 24.0, 40.0)
+	camera.global_transform = normal
+	view.update_view(0.5, state, player, changed_velocity, camera)
+	var changed_axis: Vector3 = view.get_cinematic_state()["orbit_frame"].y
+	if not _check(changed_axis.dot(changed_velocity.normalized()) > 0.97 \
+			and changed_axis.distance_to(previous_axis) > 0.3,
+			"positive elapsed time reorients the orbit toward a different actual flight direction"):
 		return
 	view.cancel_cinematic()
 	if not _check(not view.is_cinematic_active() and view.get_simulation_scale() == 1.0 \

@@ -14,8 +14,64 @@ void advance(Simulation &s, double seconds) {
     for (int n = 0; n < int(std::round(seconds * 90)); ++n)
         require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "fixed tick accepted");
 }
+void rider_observables() {
+    Simulation s;
+    advance(s, 1);
+    const auto standing = s.slingshot_state();
+    require(std::abs(standing.rider_specific_acceleration.y - 9.81) < .02,
+            "standing support supplies one g of specific acceleration");
+    require(s.debug_restart_at({70, 100, -25}), "rider observable stages a clear gravity fall");
+    const auto reset = s.slingshot_state();
+    require(reset.rider_specific_acceleration.y == 0 &&
+            s.render_slingshot_state().rider_specific_acceleration.y == 0,
+            "explicit restart clears the measured acceleration without a false impulse");
+    advance(s, .2);
+    const auto falling = s.slingshot_state();
+    require(std::abs(falling.rider_specific_acceleration.y) < .02 &&
+            s.snapshot().player_linear_velocity.y < -1,
+            "ballistic drift has gravity acceleration and zero specific load");
+    const auto tick = falling.tick_index;
+    const auto before_velocity = s.snapshot().player_linear_velocity;
+    require(s.advance_frame(0).steps_advanced == 0 && s.slingshot_state().tick_index == tick &&
+            s.slingshot_state().rider_specific_acceleration.y == falling.rider_specific_acceleration.y,
+            "zero-advance/read-only observation cannot evolve rider dynamics");
+    require(s.snapshot().player_linear_velocity.y == before_velocity.y,
+            "reading inertial evidence supplies no impulse");
+    const auto neutral = Slingshot::neutral_position();
+    require(s.debug_restart_at({neutral.GetX(), neutral.GetY() + .85, neutral.GetZ()}),
+            "rider seat proof stages at the actual basin centre");
+    advance(s, .5);
+    require(s.request_slingshot_action(), "rider seat proof boards");
+    advance(s, 1);
+    const auto seated = s.slingshot_state();
+    require(seated.seated && seated.harness_rest_local.y > .6 &&
+            std::abs(seated.seat_surface_position.y - seated.pouch_position.y + .17 -
+                     seated.leather_deflection_m) < .0001,
+            "seated pelvis target lies on the loaded leather basin rather than the capsule midpoint");
+    require(seated.fixed_step_seconds == Simulation::kFixedStepSeconds &&
+            seated.tick_index == s.snapshot().tick_index &&
+            seated.simulation_time_seconds == s.snapshot().simulation_time_seconds,
+            "rider samples identify their authoritative native clock");
+    require(s.set_slingshot_input(1, 0, Slingshot::State{}.elevation_rad),
+            "seat render proof draws through real native muscle work");
+    advance(s, .2);
+    const auto previous = s.slingshot_state();
+    advance(s, Simulation::kFixedStepSeconds);
+    const auto current = s.slingshot_state();
+    require(s.advance_frame(Simulation::kFixedStepSeconds * .5).steps_advanced == 0,
+            "seat render half tick leaves authoritative dynamics unchanged");
+    const auto rendered = s.render_slingshot_state();
+    require(std::abs(rendered.seat_surface_position.z -
+                     (previous.seat_surface_position.z + current.seat_surface_position.z) * .5) < .0001 &&
+            std::abs(rendered.simulation_time_seconds -
+                     (previous.simulation_time_seconds + current.simulation_time_seconds) * .5) < 1e-9,
+            "rider seat and inertial clock share the rendered native interpolation");
+    std::cout << "RIDER specific_g=" << standing.rider_specific_acceleration.y
+              << " freefall_specific=" << falling.rider_specific_acceleration.y
+              << " seat_local_y=" << seated.seat_surface_position.y - seated.pouch_position.y << '\n';
+}
 struct Shot {
-    double apex, draw, energy, landed_y;
+    double apex, draw, energy, landed_y, peak_specific_acceleration;
     Vector3 end, ascent_at_300m;
     std::uint64_t deaths;
     bool crossed_300m;
@@ -51,11 +107,17 @@ Shot shot(double seconds, double yaw = 0, double elevation = Slingshot::State{}.
     double landed_y = 0;
     bool deployed = false;
     bool crossed_300m = false;
+    double peak_specific_acceleration = 0;
     Vector3 ascent_at_300m{};
     for (int n = 0; n < 90 * 18; ++n) {
         const auto previous = s.snapshot().player_position;
         require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "flight tick accepted");
         const auto current = s.snapshot().player_position;
+        if (n < 90) {
+            const auto load = s.slingshot_state().rider_specific_acceleration;
+            peak_specific_acceleration = std::max(peak_specific_acceleration,
+                std::sqrt(load.x*load.x + load.y*load.y + load.z*load.z));
+        }
         apex = std::max(apex, current.y);
         if (!crossed_300m && s.snapshot().death_count == 0 && previous.y < 300 && current.y >= 300) {
             const double fraction = (300 - previous.y) / (current.y - previous.y);
@@ -80,12 +142,14 @@ Shot shot(double seconds, double yaw = 0, double elevation = Slingshot::State{}.
               << " end=" << s.snapshot().player_position.x << ',' << s.snapshot().player_position.y << ','
               << s.snapshot().player_position.z << " ascent_300m_x=" << ascent_at_300m.x
               << " launches=" << s.slingshot_state().launch_count << '\n';
+    std::cout << "RIDER launch_peak_specific_mps2=" << peak_specific_acceleration << '\n';
     require(s.slingshot_state().launch_count > 0, "release is recorded");
-    return {apex, draw, energy, landed_y, s.snapshot().player_position, ascent_at_300m,
+    return {apex, draw, energy, landed_y, peak_specific_acceleration, s.snapshot().player_position, ascent_at_300m,
             s.snapshot().death_count, crossed_300m};
 }
 }
 int main() {
+    rider_observables();
     {
         Simulation fast;
         // A clear, explicitly staged fall proves the former one-metre render
@@ -197,6 +261,9 @@ int main() {
     const auto high = shot(6);
     require(high.draw > low.draw && high.energy > low.energy, "more input creates more stretch and energy");
     require(high.apex > low.apex + 5, "greater draw produces a substantially higher native flight");
+    require(high.peak_specific_acceleration > 100 &&
+            high.peak_specific_acceleration > low.peak_specific_acceleration,
+            "real recoil load grows with the physical draw instead of a cinematic velocity/timer");
     require(high.apex > 250, "full draw reaches hundreds of metres in the actual shipping world");
     const auto replay = shot(6);
     require(std::abs(replay.apex - high.apex) < .001, "same initial state and fixed inputs reproduce flight");

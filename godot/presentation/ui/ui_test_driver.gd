@@ -284,6 +284,13 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 	if device == InputRouter.Device.TOUCH and not await _touch_rail_aim(true):
 		return false
 	var aimed: Dictionary = _native().get_slingshot_state()
+	var rendered_seat: Dictionary = _native().get_slingshot_render_state()
+	if not rendered_seat.has("seat_surface_position") or not rendered_seat.has("rider_specific_acceleration"):
+		return _fail("measured rider load and leather seat did not cross the shipping bridge")
+	var pelvis: Node3D = _main._slingshot_view._avatar.get_node("HarnessPelvis")
+	var seat_gap := (pelvis.global_transform * Vector3(0, -0.19, 0)).distance_to(rendered_seat["seat_surface_position"])
+	if seat_gap > 0.003:
+		return _fail("charged rider is not cradled on actual rendered leather: gap_m=%.4f" % seat_gap)
 	await _pose("charged_adjustable_aim")
 	if not await _offered(&"slingshot", "RELEASE"):
 		return _fail("loaded Action did not offer RELEASE")
@@ -295,7 +302,32 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 		return _fail("physical release did not start cinematic")
 	if _main._read_context()["action"]["id"] == &"slingshot":
 		return _fail("released harness still offered a charging/release action")
-	await _seconds(0.62)
+	var launch_time := float(_native().get_slingshot_state()["simulation_time_seconds"])
+	var launch_position := _position()
+	var recoil_peak := 0.0
+	var launch_clock := 0.0
+	var capture_index := 0
+	var capture_times := [0.12, 0.32, 0.62]
+	while launch_clock < 0.62:
+		await get_tree().process_frame
+		launch_clock += get_process_delta_time()
+		var rider_sample: Dictionary = _native().get_slingshot_state()
+		recoil_peak = maxf(recoil_peak, (rider_sample["rider_specific_acceleration"] as Vector3).length())
+		if float(rider_sample["simulation_time_seconds"]) - launch_time < 0.04 \
+				and _main._slingshot_view.get_simulation_scale() < 0.99:
+			return _fail("camera slowed the initial native recoil before it developed")
+		if capture_index < capture_times.size() and launch_clock >= capture_times[capture_index]:
+			print("SCRAPERX_LAUNCH_EMBODIMENT wall_s=%.3f native_s=%.3f displacement_m=%.3f speed_mps=%.3f specific_mps2=%.3f torso_rad=%s head_rad=%s scale=%.3f" % [
+				launch_clock, float(rider_sample["simulation_time_seconds"]) - launch_time,
+				_position().distance_to(launch_position), _velocity().length(),
+				(rider_sample["rider_specific_acceleration"] as Vector3).length(),
+				_main._slingshot_view._avatar.get_node("WorkJacket").rotation,
+				_main._slingshot_view._avatar.get_node("ExpressiveHead").rotation,
+				_main._slingshot_view.get_simulation_scale()])
+			await _pose("launch_embodiment_%d" % capture_index)
+			capture_index += 1
+	if recoil_peak < 100.0 or _position().distance_to(launch_position) < 4.0:
+		return _fail("shipping release did not expose real recoil and displacement: peak=%.2f displacement=%.2f" % [recoil_peak, _position().distance_to(launch_position)])
 	var release_speed := _velocity().length()
 	if release_speed < 8.0 or not _main._slingshot_view._avatar.visible or _main._arms.visible:
 		return _fail("native spring release did not accelerate visible human rider: speed=%.2f" % release_speed)
@@ -445,10 +477,14 @@ func _slingshot(device: int, supported_landing: bool = false) -> bool:
 func _touch_launch_roof_landing() -> bool:
 	var deaths := int(_native().get_death_count())
 	var landings := int(_native().get_landing_state()["landing_count"])
-	if not await _wait_until(func() -> bool: return _position().y >= 354.0 and _velocity().y > 0.0, 12.0):
+	# Guidance uses the interpolated visible rider, which can trail a physics tick.
+	if not await _wait_until(func() -> bool: return _native().get_player_render_position().y >= 354.0 and _velocity().y > 0.0, 12.0):
 		return _fail("launched rider did not reach the manual roof-braking window")
 	if not _main._slingshot_view._hud.landing_hint.contains("TAP CHUTE NOW") or bool(_native().is_parachute_deployed()):
-		return _fail("measured braking window has no manual canopy guidance, or guidance deployed it automatically")
+		return _fail("measured braking window has no manual canopy guidance, or guidance deployed it automatically: native_y=%.4f render_y=%.4f vy=%.4f hint=%s deployed=%s flight=%s" % [
+			_position().y, _native().get_player_render_position().y, _velocity().y,
+			_main._slingshot_view._hud.landing_hint, _native().is_parachute_deployed(),
+			_main._slingshot_view._landing_flight_active])
 	if not bool(_ctx()["chute_ok"]) or not _main._touch.is_button_shown(&"chute"):
 		return _fail("touch interface did not offer its manual upward-flight brake")
 	var brake_height := _position().y

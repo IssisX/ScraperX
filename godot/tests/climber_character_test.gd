@@ -56,7 +56,7 @@ func _run() -> void:
 	_check((rider.basis * Vector3.FORWARD).is_equal_approx(Vector3.LEFT), "body faces launch axis")
 	_check(rider.get_node("LeftLacedBoot").position.y > -0.78,
 		"fast flight bends the knees and tucks the feet")
-	_exercise_native_reactions(rider)
+	_exercise_loaded_body(rider)
 	rider.position = Vector3.ZERO
 	rider.rotation = Vector3.ZERO
 	rider.pose(0)
@@ -70,57 +70,82 @@ func _run() -> void:
 	quit(42 if _failed else 0)
 
 
-func _exercise_native_reactions(rider: Node3D) -> void:
-	var native_state := {"seated": true, "drawing": true, "released": false,
-		"draw_m": 9.0, "max_draw_m": 10.0}
-	var untouched := native_state.duplicate(true)
+func _exercise_loaded_body(rider: Node3D) -> void:
 	var actual_position := Vector3(11.0, 25.0, -7.0)
+	var seat := actual_position + Vector3(0, -0.90, 0)
+	var native_state := {"seated": true, "drawing": true, "released": false,
+		"draw_m": 9.0, "max_draw_m": 10.0, "seat_surface_position": seat,
+		"simulation_time_seconds": 1.0, "rider_specific_acceleration": Vector3(0, 9.81, 0)}
+	var untouched := native_state.duplicate(true)
 	for frame in 24:
+		native_state.simulation_time_seconds = 1.0 + float(frame) / 90.0
 		rider.reaction(native_state, Vector3.ZERO, -1.0)
 		rider.update_pose(actual_position, Vector3.ZERO, Vector3.FORWARD, 1.0 / 60.0)
-	_check(rider._comedy_charge > 0.85 and rider._comedy_launch == 0.0,
-		"charged nerves require actual seated draw rather than a speed guess")
+	var pelvis: Node3D = rider.get_node("HarnessPelvis")
+	_check((pelvis.global_transform * Vector3(0, -0.19, 0)).distance_to(seat) < 0.002,
+		"visible pelvis underside is cradled on the measured leather basin")
+	_check(rider.get_node("LeftLacedBoot").position.y > pelvis.position.y - 0.16,
+		"cradled knees fold forward instead of standing down through the pouch")
+	untouched.simulation_time_seconds = native_state.simulation_time_seconds
 	_check(native_state == untouched and rider.position == actual_position,
-		"reaction context never mutates native state or capsule position")
+		"load response never writes native state or mass-root position")
 	native_state.seated = false
 	native_state.released = true
 	var rising := Vector3(0.0, 45.0, -90.0)
-	rider.reaction(native_state, rising, 0.08)
-	rider.update_pose(actual_position, rising, Vector3.FORWARD, 1.0 / 60.0)
-	_check(rider._comedy_launch > 0.0 and rider._comedy_launch < 0.3,
-		"release reaction eases in rather than changing the pose in one frame")
-	for frame in 36:
-		rider.reaction(native_state, rising, 0.08 + float(frame) / 60.0)
+	var torso: Node3D = rider.get_node("WorkJacket")
+	var before: Transform3D = torso.transform
+	# Equal speed and wall time cannot manufacture response without native time.
+	native_state.rider_specific_acceleration = Vector3(0, 600, -160)
+	rider.reaction(native_state, rising, 0.8)
+	rider.update_pose(actual_position, rising, Vector3.FORWARD, 0.5)
+	_check(torso.transform.is_equal_approx(before), "zero native elapsed time freezes inertial pose despite a new wall-clock phase")
+	for frame in 9:
+		native_state.simulation_time_seconds += 1.0 / 90.0
+		rider.reaction(native_state, rising, 0.8)
 		rider.update_pose(actual_position, rising, Vector3.FORWARD, 1.0 / 60.0)
-	_check(rider._comedy_launch > 0.99 and rider._comedy_windmill > 0.7,
-		"native fast release progresses from tuck into the brief futile swim")
-	_check(rider._comedy_fall == 0.0, "rising velocity never invents a falling reaction")
+	_check(torso.transform.basis.get_rotation_quaternion().angle_to(before.basis.get_rotation_quaternion()) > 0.08,
+		"measured launch load creates perceptible torso recoil at the same speed")
+	_check(rider.get_node("ExpressiveHead").basis.get_rotation_quaternion().angle_to(torso.basis.get_rotation_quaternion()) > 0.02,
+		"head inertia lags the torso instead of moving as one rigid mannequin")
 	var shoulder: Node3D = rider.get_node("LeftUpperArm")
 	var elbow: Node3D = rider.get_node("LeftForearm")
 	var hand: Node3D = rider.get_node("LeftGlovedHand")
 	_check(absf(shoulder.position.distance_to(elbow.position) - 0.29) < 0.0001 \
 		and absf(elbow.position.distance_to(hand.position) - 0.27) < 0.0001,
-		"comic arm targets preserve both anatomical segment lengths")
-	var swim_hand := hand.position
-	var falling := Vector3(0, -22, -36)
-	for frame in 24:
-		rider.reaction(native_state, falling, 0.95)
-		rider.update_pose(actual_position, falling, Vector3.FORWARD, 1.0 / 60.0)
-	_check(rider._comedy_fall > 0.99 and hand.position.distance_to(swim_hand) > 0.05,
-		"actual downward velocity opens the limbs into a distinct falling flail")
-	var before_zero_delta: float = rider._comedy_fall
-	rider.reaction({}, Vector3.ZERO, -1.0)
-	rider.update_pose(actual_position, Vector3.ZERO, Vector3.FORWARD, 0.0)
-	_check(rider._comedy_fall == before_zero_delta, "zero elapsed time never advances a reaction")
-	native_state.reduced_motion = true
-	for frame in 48:
-		rider.reaction(native_state, falling, 0.95)
-		rider.update_pose(actual_position, falling, Vector3.FORWARD, 1.0 / 60.0)
-	_check(rider._comedy_windmill < 0.0001 and rider._comedy_fall < 0.0001,
-		"reduced motion suppresses the animated swim and flail")
-	for frame in 60:
-		rider.reaction({}, Vector3.ZERO, -1.0)
-		rider.update_pose(Vector3.ZERO, Vector3.ZERO, Vector3.FORWARD, 1.0 / 60.0)
+		"inertial arm targets preserve both anatomical segment lengths")
+	var thigh: Node3D = rider.get_node("LeftThigh")
+	var shin: Node3D = rider.get_node("LeftShin")
+	var boot: Node3D = rider.get_node("LeftLacedBoot")
+	_check(absf(thigh.position.distance_to(shin.position) - 0.38) < 0.0001 \
+		and absf(shin.position.distance_to(boot.position) - 0.34) < 0.0001,
+		"folded and recoiling legs preserve both anatomical segment lengths")
+	for part in [pelvis, torso, rider.get_node("ExpressiveHead"), shoulder, elbow, thigh, shin]:
+		_check(part.transform.is_finite() and absf(part.basis.orthonormalized().determinant() - 1.0) < 0.001,
+			"loaded anatomy retains finite right-handed frames")
+	var left := Character.new()
+	var right := Character.new()
+	root.add_child(left)
+	root.add_child(right)
+	for frame in 13:
+		for pair in [[left, -1.0], [right, 1.0]]:
+			var load := {"seated": false, "released": true, "simulation_time_seconds": float(frame) / 90.0,
+				"rider_specific_acceleration": Vector3(float(pair[1]) * 120.0, 0, 0)}
+			pair[0].reaction(load, rising, 0.5)
+			pair[0].update_pose(Vector3.ZERO, rising, Vector3.FORWARD, 1.0 / 60.0)
+	var left_roll: float = left.get_node("WorkJacket").rotation.z
+	var right_roll: float = right.get_node("WorkJacket").rotation.z
+	_check(left_roll * right_roll < -0.005, "opposite physical accelerations cause opposite body recoil at identical flight speed")
+	# Explicit relocation/restart may keep native time monotonic. The next
+	# baseline must not inherit a previous launch's joint angular momentum.
+	rider.reset_response()
+	native_state.simulation_time_seconds = 10.0
+	native_state.rider_specific_acceleration = Vector3.ZERO
+	rider.reaction(native_state, rising, 0.5)
+	rider.update_pose(actual_position, rising, Vector3.FORWARD, 0.0)
+	_check(torso.rotation.is_zero_approx() and rider.get_node("ExpressiveHead").rotation.is_zero_approx(),
+		"explicit restart clears old load response even when native tick time stays monotonic")
+	left.queue_free()
+	right.queue_free()
 
 
 func _capture(stage: Node3D, rider: Node3D, directory: String) -> void:

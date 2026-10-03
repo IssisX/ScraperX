@@ -114,7 +114,10 @@ public:
     [[nodiscard]] static JPH::RVec3 retrieval_control_position() noexcept {
         return neutral_position() + JPH::RVec3(1.5, .35, -1.8);
     }
-    [[nodiscard]] static JPH::Vec3 leather_surface(float u, float v) noexcept;
+    // Shared rest/fold surface. Deflection uses the same rim-anchored weight
+    // as the visible leather; default zero keeps the rest collision panels.
+    [[nodiscard]] static JPH::Vec3 leather_surface(float u, float v,
+                                                  float deflection_m = 0.0F) noexcept;
     void detach();
     // Explicit relocation ends player operation while retaining all machine
     // bodies and stored spring energy at their measured physical state.

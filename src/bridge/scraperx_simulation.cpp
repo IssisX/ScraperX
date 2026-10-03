@@ -527,6 +527,12 @@ bool ScraperXSimulation::request_slingshot_drop() {
 godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
     const auto s = simulation_->slingshot_state();
     godot::Dictionary out;
+    out["seat_surface_position"] = to_godot(s.seat_surface_position);
+    out["harness_rest_local"] = to_godot(s.harness_rest_local);
+    out["rider_specific_acceleration"] = to_godot(s.rider_specific_acceleration);
+    out["simulation_time_seconds"] = s.simulation_time_seconds;
+    out["fixed_step_seconds"] = s.fixed_step_seconds;
+    out["tick_index"] = s.tick_index;
     out["available"] = s.available;
     out["station_available"] = s.station_available;
     out["seated"] = s.seated;
@@ -585,6 +591,12 @@ godot::Dictionary ScraperXSimulation::get_slingshot_render_state() const {
     }
     out["leather_vertices"] = leather_vertices;
     const auto s = simulation_->render_slingshot_state();
+    out["seat_surface_position"] = to_godot(s.seat_surface_position);
+    out["harness_rest_local"] = to_godot(s.harness_rest_local);
+    out["rider_specific_acceleration"] = to_godot(s.rider_specific_acceleration);
+    out["simulation_time_seconds"] = s.simulation_time_seconds;
+    out["fixed_step_seconds"] = s.fixed_step_seconds;
+    out["tick_index"] = s.tick_index;
     out["leather_deflection_m"] = s.leather_deflection_m;
     out["leather_energy_j"] = s.leather_energy_j;
     out["pouch_position"] = to_godot(s.pouch_position);

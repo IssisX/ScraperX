@@ -3,7 +3,7 @@
 **Project-wide motto: “The input state determines the output.”** This applies to every mechanic: player intent, geometry, loads, motion, contacts and persistent state determine consequences. Presentation communicates those consequences; it must not manufacture them.
 
 
-**Status:** Established baseline, amended by explicit owner decisions; latest reconciliation 2026-09-30. Existing section labels are retained for reference continuity.
+**Status:** Established baseline, amended by explicit owner decisions; latest amendment 2026-10-03 (Law 37). Existing section labels are retained for reference continuity.
 **Repository:** `ScraperX`  
 **Game/app title:** `ScraperX`  
 **Purpose:** Define the non-negotiable design and engineering laws that all later requirements, GDD decisions, architecture, implementation, tools, content, and changes must obey.
@@ -327,3 +327,15 @@ If those questions cannot be answered materially, the change is not ready.
 > **Climb an enormous industrial skyscraper by mastering athletic movement and learning how its interconnected machinery, structure, and infrastructure work; physically change what the tower can do, survive the consequences, and use those changes to reach higher.**
 
 When two directions conflict, prefer the one that makes that statement more physically true.
+
+## 37. CONSOLE QUALITY THROUGH SUCCESSIVE REFINEMENT
+
+Aim for graphics, mechanics and physics as close to console quality as the shipping hardware can sustain. This is a continuing quality ambition; an early playable framework is a foundation for improvement, not the finished quality standard.
+
+ScraperX is intended for public release and sale for real money. It must look, feel and play as a finished commercial game. Framework completion is an internal development milestone. Release readiness requires coherent presentation, responsive and consistent controls, convincing physical response, readable interactions, reliable failure recovery and sustained device performance across the experience being sold. Visible rough edges and unresolved gameplay defects belong in the refinement backlog and must be resolved before claiming release quality.
+
+First establish the coherent world framework and integrate functioning traversal, machines, controls and recovery. Primitives and simplified representations are valid foundations when their geometry, contacts, energy transfer and consequences actually work. Unfinished regions and details must remain explicitly identified; their presence does not establish playability or verification.
+
+Then return through deliberate refinement passes as development continues: deepen material response, geometry, lighting, animation and embodiment; improve mechanical interaction, physical fidelity, smoothness, sound and tactile feedback where they improve the player's experience. Refine the existing authoritative owners and preserve proven routes and stable identifiers. The current launch embodiment repair exemplifies this progression from working machinery to more convincing rider motion and presentation.
+
+Maintain a running record of remaining refinements and observed defects so integration does not quietly become permanent approximation. Choose each pass for a concrete player benefit and verify that benefit through the actual gameplay path. Visual richness and physical detail must fit Law 28's sustained Android performance target; desktop appearance alone cannot establish console-like quality on the Fold.

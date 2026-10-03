@@ -307,13 +307,16 @@ jobs:
             if grep -E "SCRIPT ERROR|Parse Error" "artifacts/${scenario}.log"; then exit 1; fi
           done
           mkdir -p artifacts/screenshots
-          timeout 300s xvfb-run -a -s "-screen 0 1296x1114x24" \
+          timeout 600s xvfb-run -a -s "-screen 0 1296x1114x24" \
             tools/godot/godot --path godot --rendering-method gl_compatibility \
             --script res://tests/slingshot_visual_probe.gd \
-            -- "--sling-probe-out=${GITHUB_WORKSPACE}/artifacts/screenshots/slingshot" \
+            -- --sling-probe-motion --sling-probe-size=864x742 \
+            "--sling-probe-out=${GITHUB_WORKSPACE}/artifacts/screenshots/slingshot" \
             2>&1 | tee artifacts/slingshot-visual.log
           grep -F "SCRAPERX_SLINGSHOT_VISUAL_PROBE PASS" artifacts/slingshot-visual.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/slingshot-visual.log; then exit 1; fi
+          test -s artifacts/screenshots/slingshot/launch-motion.csv
+          test -s artifacts/screenshots/slingshot/motion-186.png
           timeout 300s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --path godot --rendering-method gl_compatibility \
             --fixed-fps 30 --audio-driver Dummy \
@@ -395,6 +398,16 @@ jobs:
               text = text.replace(old, new)
           path.write_text(text)
           PY
+          timeout 600s xvfb-run -a -s "-screen 0 432x371x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility \
+            --resolution 432x371 --fixed-fps 60 \
+            -- --uitest=touch_slingshot_landing "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/shipping-launch" \
+            2>&1 | tee artifacts/rendered-touch-slingshot-landing.log
+          grep -F "SCRAPERX_UITEST PASS touch_slingshot_landing " artifacts/rendered-touch-slingshot-landing.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/rendered-touch-slingshot-landing.log; then exit 1; fi
+          for pose in launch_embodiment_0 launch_embodiment_1 launch_embodiment_2 true_first_person_return supported_352m_roof; do
+            test -s "artifacts/screenshots/shipping-launch_${pose}.png"
+          done
           timeout 2400s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --path godot --rendering-method gl_compatibility \
             --resolution 432x371 --fixed-fps 30 \

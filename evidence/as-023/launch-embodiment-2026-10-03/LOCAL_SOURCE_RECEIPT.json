@@ -1,0 +1,25 @@
+{
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "base": "8833fab7b91643740e1368e856121fdca2667b4c",
+  "capture_settings": {
+    "viewport": "216x185",
+    "shadows": 0,
+    "renderer": "Mesa softpipe"
+  },
+  "source_sha256": {
+    "src/sim/simulation.cpp": "51132917392f019659f5d7dfec3c435f7724c5802516961c100859b0bd3d983c",
+    "src/sim/simulation.hpp": "8aa185375f8e890014160684f0a9000c688fc39dc88d84a30f788470582bd79e",
+    "src/sim/slingshot.cpp": "012dffc5234ef101e4ed62377549134610d5634fb0bd27e3f03699081ec3d581",
+    "src/sim/slingshot.hpp": "078002834520ca0fbfe03d74e3da3d260b74f04e79002e90242927d530747994",
+    "src/bridge/scraperx_simulation.cpp": "9d121cd1a9ef04fa75b02b24b268742c286c857e07408d6b27de74c6eeb856b1",
+    "godot/presentation/climber_character.gd": "1e843c7a838cce322f76bc669d20cd60e76376e4997e9c8ebd52d03dd344de7d",
+    "godot/presentation/slingshot_view.gd": "90a028baf27267094e3cae9eb415ff1cbf8fbd97044cd41c6ea8a07b3d0fd078",
+    "godot/presentation/launch_cinematic.gd": "97c0b710ecde32fc6380f325515139eaa8696146477ee325d0cdd141b085989c",
+    "godot/presentation/ui/ui_test_driver.gd": "5852c3aeed09a8d3e766949959e61f34828bf7a7316d072a550adc1d0865eec5",
+    "godot/tests/climber_character_test.gd": "38a9984047d851604e5a02e02c0c77f0501a069e7adfebddde6a5e2df25271d2",
+    "godot/tests/slingshot_view_test.gd": "00af048ce6d30840eeacc4003d78c4036302e0a56c48d2eef96f642d0c7e71df",
+    "godot/tests/slingshot_visual_probe.gd": "21d1172e158a8b88878facd26b4c869ac42c9e312a60e7bc3b538a63d58e340c",
+    "tests/launcher_tests.cpp": "30be979c405dac1763859c8338031761891f5e64615401d90c49debf9eee6ef8"
+  }
+}

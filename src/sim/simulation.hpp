@@ -381,6 +381,12 @@ struct AdvanceResult final {
 };
 
 struct SlingshotSnapshot final {
+    // Read-only rider evidence; no added mass, force or trajectory solver.
+    // World metres and world m/s², +Y up. Specific acceleration is a-g
+    // over the completed fixed tick; uniform gravitational flight is zero.
+    Vector3 seat_surface_position{}, harness_rest_local{}, rider_specific_acceleration{};
+    double simulation_time_seconds = 0.0, fixed_step_seconds = 0.0;
+    std::uint64_t tick_index = 0;
     double leather_deflection_m = 0.0, leather_energy_j = 0.0;
     bool available = false, station_available = false, seated = false;
     bool drawing = false, released = false, can_retrieve = false, recovering = false;

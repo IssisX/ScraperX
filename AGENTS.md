@@ -50,6 +50,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: This ownership is an explicit project requirement.
 - Make movement, interpolation, and camera motion exceptionally smooth.
   Why: Mechanics and POV must feel “buttery perfect.”
+- Aim for console quality graphics, mechanics and physics through successive refinement: integrate a functioning world framework first, then deepen its details as development continues. Track remaining improvements under Governing Law 37.
+  Why: I want working foundations followed by exquisite improvements; this is a public game sold for real money and must look, feel and play like a finished commercial game.
 - Derive immersive feedback from actual gameplay state, including sound, camera response, and vibration.
   Why: I meant visceral engagement, with vibration as one component.
 - Fill traversal gaps with varied, physically coherent challenges and visible causal mechanisms.

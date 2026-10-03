@@ -2097,6 +2097,7 @@ public:
         landing_applied_force_ = JPH::Vec3::sZero();
 
         auto &bodies = physics_system_.GetBodyInterface();
+        const auto rider_velocity_before = bodies.GetLinearVelocity(player_id_);
         if (regression_fixtures_) {
             update_support_motion(bodies, delta_seconds, next_time_seconds);
             update_scoop(bodies, delta_seconds, next_time_seconds);
@@ -2240,6 +2241,12 @@ public:
         }
 
         update_affordance(bodies);
+        // Measure the actual completed tick, including native support and
+        // harness impulses. Gravity alone creates no felt load. A checkpoint
+        // restore is a discontinuity, not an acceleration event.
+        rider_specific_acceleration_ = died_this_tick ? JPH::Vec3::sZero() :
+            (bodies.GetLinearVelocity(player_id_) - rider_velocity_before) / delta_seconds -
+            physics_system_.GetGravity();
         read_state();
     }
 
@@ -2286,6 +2293,7 @@ public:
         bodies.SetShape(player_id_, player_shape_.GetPtr(), false, JPH::EActivation::Activate);
         bodies.SetPositionAndRotation(player_id_, destination, JPH::Quat::sIdentity(), JPH::EActivation::Activate);
         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
+        rider_specific_acceleration_ = JPH::Vec3::sZero();
         grounded_ = false;
         support_entity_id_ = 0;
         support_sample_ = {};
@@ -2325,6 +2333,10 @@ public:
     }
     [[nodiscard]] const PipeBridge *pipe_bridge() const noexcept { return pipe_bridge_.get(); }
     [[nodiscard]] const Slingshot *slingshot() const noexcept { return slingshot_.get(); }
+    [[nodiscard]] Vector3 rider_specific_acceleration() const noexcept {
+        return {rider_specific_acceleration_.GetX(), rider_specific_acceleration_.GetY(),
+                rider_specific_acceleration_.GetZ()};
+    }
 
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const {
         std::vector<Vector3> result;
@@ -6634,6 +6646,8 @@ private:
                                       JPH::EActivation::Activate);
         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
 
+        rider_specific_acceleration_ = JPH::Vec3::sZero();
+
         if (regression_fixtures_) {
             restore_body(bodies, ballast_id_, checkpoint_.ballast);
             restore_body(bodies, tipper_id_, checkpoint_.tipper);
@@ -7069,6 +7083,7 @@ private:
     std::unique_ptr<PipeBridge> pipe_bridge_;
     std::unique_ptr<Slingshot> slingshot_;
     bool slingshot_flight_ = false;
+    JPH::Vec3 rider_specific_acceleration_ = JPH::Vec3::sZero();
     std::unique_ptr<SwingStair> swing_stair_;
     std::unique_ptr<UpperAscent> upper_ascent_;
     std::unique_ptr<CargoNet> cargo_net_;
@@ -7290,6 +7305,14 @@ SlingshotSnapshot Simulation::slingshot_state() const noexcept {
     const auto *launcher = physics_world_->slingshot();
     if (!launcher) return result;
     const auto &state = launcher->state();
+    result.tick_index = tick_index_;
+    result.simulation_time_seconds = tick_index_ * kFixedStepSeconds;
+    result.fixed_step_seconds = kFixedStepSeconds;
+    result.rider_specific_acceleration = physics_world_->rider_specific_acceleration();
+    result.harness_rest_local = to_vector3(state.harness_rest_local);
+    const auto seat = Slingshot::leather_surface(float(state.harness_rest_local.GetX()/1.68 + .5),
+        float(state.harness_rest_local.GetZ()/1.30 + .5), float(state.leather_deflection_m));
+    result.seat_surface_position = to_vector3(state.pouch_position + JPH::RVec3(seat));
     result.leather_deflection_m = state.leather_deflection_m;
     result.leather_energy_j = state.leather_energy_j;
     result.available = true;
@@ -7896,6 +7919,17 @@ SlingshotSnapshot Simulation::render_slingshot_state() const noexcept {
     const double alpha = std::clamp(remainder_seconds_ / kFixedStepSeconds, 0.0, 1.0);
     result.leather_deflection_m = previous_slingshot_state_.leather_deflection_m +
         (result.leather_deflection_m - previous_slingshot_state_.leather_deflection_m) * alpha;
+    result.simulation_time_seconds = previous_slingshot_state_.simulation_time_seconds +
+        (result.simulation_time_seconds - previous_slingshot_state_.simulation_time_seconds) * alpha;
+    result.rider_specific_acceleration = blend(previous_slingshot_state_.rider_specific_acceleration,
+                                               result.rider_specific_acceleration);
+    // Evaluate the same deflected surface on the rendered pouch. Independent
+    // target interpolation could separate the pelvis from its leather fold.
+    const auto seat = Slingshot::leather_surface(float(result.harness_rest_local.x/1.68 + .5),
+        float(result.harness_rest_local.z/1.30 + .5), float(result.leather_deflection_m));
+    result.seat_surface_position = {result.pouch_position.x + seat.GetX(),
+                                    result.pouch_position.y + seat.GetY(),
+                                    result.pouch_position.z + seat.GetZ()};
     // The aiming lens must use the same interpolated rail as its mesh.
     // Raw 90 Hz angles otherwise step even when body translation is smooth.
     const auto rail_rotation = render_kit_body_rotation(kit_body_index(Slingshot::kLaunchRailEntity));

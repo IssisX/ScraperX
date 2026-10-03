@@ -42,12 +42,15 @@ namespace {
 constexpr double kLeatherLinear = 8000, kLeatherCubic = 12500000;
 double leather_energy(double q) { return .5*kLeatherLinear*q*q + .25*kLeatherCubic*q*q*q*q; }
 }
-Vec3 Slingshot::leather_surface(float u, float v) noexcept {
+Vec3 Slingshot::leather_surface(float u, float v, float deflection_m) noexcept {
     const float x = (u-.5F)*1.68F, z = (v-.5F)*1.30F;
     const float back = std::clamp((z-.42F)/.23F, 0.0F, 1.0F);
+    const float nx = std::clamp(x/.84F, -1.0F, 1.0F);
+    const float nz = std::clamp(z/.65F, -1.0F, 1.0F);
+    const float fold = deflection_m * (1-nx*nx) * (1-nz*nz);
     return Vec3(x, -.17F - .12F*std::pow(std::max(0.0F,-z)/.65F, 2) +
                       .44F*std::pow(std::abs(x)/.84F, 3) +
-                      .60F*back*back*(3-2*back), z);
+                      .60F*back*back*(3-2*back) + fold, z);
 }
 double Slingshot::leather_deflection(bool no_lock) const {
     if (harness_ == nullptr) return 0;

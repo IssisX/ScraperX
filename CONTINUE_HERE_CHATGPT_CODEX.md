@@ -269,6 +269,19 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 
 ## 7. Running to-do at this handoff
 
+**Current bounded repair — AS-023 launch embodiment, owner feedback 2026-10-03:**
+
+- [x] Inspect current `ChatGPT` source and exact latest green Actions delivery; preserve the original dirty checkout and work in an independent temporary clone.
+- [x] Trace the physical rider/pouch connection, displayed body and shared camera/time clock. Native force-driven flight passes; the displayed hips miss the leather, the body root stays upright and immediate 6% elapsed time obscures recoil.
+- [x] Export the actual leather seat surface and fixed-tick rider specific acceleration; preserve native mass, forces, constraints and trajectory.
+- [x] Seat the visual rider in the real basin and solve bounded inertial joint motion from native acceleration/time. Show actual recoil before bullet time and frame the orbit from observed flight.
+- [x] Run scoped discriminating native/rig/camera tests, shipping touch launch/reuse/landing and explicitly capture and inspect the complete moving launch sequence at reduced local capture settings. CI owns the full default-setting render/regression and Android gates.
+- [ ] Review and publish one complete candidate on `ChatGPT`; follow its exact Actions run and verify APK source/checksum before resuming `/plan`.
+
+This correction has priority over next-section planning. [The repair ledger](evidence/as-023/launch-embodiment-2026-10-03/README.md) owns measured results and remaining boundaries. Preserve the completed cargo net, suspended ladder, mill treatment, pouch and rubber bands.
+
+Refinement backlog under Governing Law 37: verify Fold pacing/comfort, seated first-person eye alignment and automatic-death cancellation during an active launch cinematic; refine materials, embodiment and interactions through coherent commercial-quality passes. [The background Cory proposal](03_EXECUTION/PLANNING/NEXT_CONTENT_PASS_2026-10-03.md) recommends west freight galleries +121→187 with three climbing sections and three machines; its exact assemblies require numerical compilation and the normal grade→121 connectivity gate before implementation authorization.
+
 **Current continuation — AS-026:**
 
 - [x] Select the real +110→+121 gap and implement shared native parts, passive hinge, real grips/load and offset receiving supports.

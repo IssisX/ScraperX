@@ -1,7 +1,8 @@
 extends RefCounted
 
-# One presentation clock for the lens, focus and original time-stretch cue.
-# Native forces and the fixed tick never depend on this curve.
+# Orbit wall time drives lens, focus and the original rising time-stretch
+# sound. The slowdown curve receives time since measured recoil, while
+# body inertia uses interpolated native time. Native forces/tick stay fixed.
 const ORBIT_SECONDS := 2.40
 const TOTAL_SECONDS := 3.0
 
@@ -13,4 +14,8 @@ static func soft_blur(clock: float) -> float:
 	return 1.0 - smoothstep(0.02, 0.84, orbit_phase(clock))
 
 static func simulation_scale(clock: float) -> float:
-	return lerpf(0.06, 1.0, smoothstep(0.55, ORBIT_SECONDS, clock))
+	# This clock starts only after observed spring recoil. Ease into a bounded
+	# inspection beat; an immediate near-freeze used to hide the real impulse.
+	if clock < 0.10:
+		return lerpf(1.0, 0.28, smoothstep(0.0, 0.10, clock))
+	return lerpf(0.28, 1.0, smoothstep(0.35, 1.80, clock))

@@ -47,6 +47,10 @@ var _cinematic_forward := Vector3.FORWARD
 var _cinematic_start := Transform3D.IDENTITY
 var _cinematic_start_player := Vector3.ZERO
 var _shot_velocity := Vector3.ZERO
+var _flight_frame := Basis.IDENTITY
+var _release_simulation_time := 0.0
+var _recoil_seen := false
+var _bullet_clock := 0.0
 var _orbit_phase := 0.0
 var _focus_blur := 0.0
 var _seat_was_released := false
@@ -104,9 +108,12 @@ func cancel_cinematic(clear_launch_guidance: bool = false) -> void:
 	_simulation_scale = 1.0
 	_orbit_phase = 0.0
 	_focus_blur = 0.0
+	_recoil_seen = false
+	_bullet_clock = 0.0
 	_last_launch = -1
 	if _avatar != null:
 		_avatar.visible = false
+		_avatar.reset_response()
 	if _speed_rect != null:
 		_speed_rect.visible = false
 	if _hud != null:
@@ -131,7 +138,8 @@ func is_cinematic_active() -> bool:
 
 func get_cinematic_state() -> Dictionary:
 	return {"active": is_cinematic_active(), "clock": maxf(_cinematic_clock, 0.0),
-		"orbit_phase": _orbit_phase, "angle_rad": TAU * _orbit_phase, "soft_blur": _focus_blur}
+		"orbit_phase": _orbit_phase, "angle_rad": TAU * _orbit_phase, "soft_blur": _focus_blur,
+		"orbit_frame": _flight_frame, "recoil_seen": _recoil_seen}
 
 
 func update_view(delta: float, state: Dictionary, player_position: Vector3,
@@ -165,6 +173,9 @@ func update_view(delta: float, state: Dictionary, player_position: Vector3,
 		_cinematic_start = camera.global_transform
 		_cinematic_start_player = player_position
 		_shot_velocity = player_velocity
+		_release_simulation_time = float(state.get("simulation_time_seconds", 0.0))
+		_recoil_seen = false
+		_bullet_clock = 0.0
 		_orbit_phase = 0.0
 		var yaw := float(state.get("yaw_rad", 0.0))
 		_cinematic_forward = Vector3(sin(yaw), 0.0, -cos(yaw))
@@ -175,6 +186,9 @@ func update_view(delta: float, state: Dictionary, player_position: Vector3,
 	_update_pouch(state)
 	_update_retrieval_control(state, player_position)
 	_update_prediction(state)
+	# Warm the invisible seated rig before release, using the same native
+	# clock and seat surface as its first visible recoil frame.
+	_pose_avatar(player_position, player_velocity, delta, state)
 	_update_cinematic(maxf(delta, 0.0), player_position, player_velocity, camera, state)
 	var router: Variant = _main.get("_router")
 	_hud.family = int(router.glyph_family()) if router != null else Style.Family.KEYBOARD
@@ -578,7 +592,8 @@ func _update_retrieval_control(state: Dictionary, player_position: Vector3) -> v
 func _pose_avatar(player_position: Vector3, velocity: Vector3, delta: float, state: Dictionary) -> void:
 	if _avatar.has_method("reaction"):
 		_avatar.reaction(state, velocity, _cinematic_clock)
-	_avatar.update_pose(player_position, velocity, _cinematic_forward, delta)
+	var yaw := float(state.get("yaw_rad", 0.0))
+	_avatar.update_pose(player_position, velocity, Vector3(sin(yaw), 0, -cos(yaw)), delta)
 
 
 func _build_overlay() -> void:
@@ -631,24 +646,36 @@ func _update_cinematic(delta: float, position: Vector3, velocity: Vector3,
 	# The same real native trajectory carries the shot. Filter velocity for
 	# framing only; changing launch direction/speed changes the crane and
 	# look-ahead instead of replaying one rigid horizontal ring.
-	_simulation_scale = Cinema.simulation_scale(t)
-	_pose_avatar(position, velocity, delta, state)
+	var native_elapsed := float(state.get("simulation_time_seconds", _release_simulation_time)) - _release_simulation_time
+	if not _recoil_seen and native_elapsed >= 0.06 and velocity.length() >= 40.0:
+		_recoil_seen = true
+		_bullet_clock = 0.0
+	if _recoil_seen:
+		_bullet_clock += delta
+		_simulation_scale = Cinema.simulation_scale(_bullet_clock)
 	_shot_velocity = _shot_velocity.lerp(velocity, 1.0 - exp(-5.0 * delta))
 	_orbit_phase = Cinema.orbit_phase(t)
 	var progress := clampf(t / ORBIT_SECONDS, 0.0, 1.0)
 	var angle := -TAU * _orbit_phase
-	var right := _cinematic_forward.cross(Vector3.UP).normalized()
+	var flight_axis := _shot_velocity.normalized() if _shot_velocity.length_squared() > 1.0 else Vector3.UP
+	var right := _cinematic_forward.cross(Vector3.UP)
+	right -= flight_axis * right.dot(flight_axis)
+	if right.length_squared() < 0.0001:
+		right = flight_axis.cross(Vector3.FORWARD if absf(flight_axis.z) < 0.8 else Vector3.UP)
+	right = right.normalized()
+	_flight_frame = Basis(right, flight_axis, right.cross(flight_axis)).orthonormalized()
 	var speed := clampf(_shot_velocity.length() / 95.0, 0.0, 1.0)
 	var rise := clampf(_shot_velocity.y / 95.0, -1.0, 1.0)
 	var radius := 3.05 + speed * 0.7 + 0.45 * sin(progress * PI)
-	var offset := (-_cinematic_forward * cos(angle) + right * sin(angle)) * radius
+	var offset := (_flight_frame.z * cos(angle) + _flight_frame.x * sin(angle)) * radius
 	# A low opening cranes up as the rider rises, then dives back to eye
 	# level. Bounded banking follows the accelerating sweep, without shake.
 	var height := 0.36 + sin(progress * PI) * (0.55 + 0.5 * rise)
-	var eye := position + offset + Vector3.UP * height
+	var eye := position + offset + flight_axis * height
 	var lead := _shot_velocity * 0.012
 	lead = lead.limit_length(1.0)
-	var target := position + Vector3.UP * 0.25 + lead
+	var torso: Node3D = _avatar.get_node("WorkJacket")
+	var target := torso.global_position + torso.global_basis * Vector3.UP * 0.25 + lead
 	var shot_basis := Basis.looking_at(target - eye)
 	shot_basis = shot_basis.rotated((target - eye).normalized(), sin(angle) * speed * 0.045)
 	var shot := Transform3D(shot_basis, eye)

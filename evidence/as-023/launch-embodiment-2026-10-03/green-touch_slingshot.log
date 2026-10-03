@@ -1,0 +1,23 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE outside_pouch tick=8 position=(6.0, 0.909706, -58.0) elapsed_ms=1825
+SCRAPERX_AUDIO_BANK clips=28 msec=736 driver=Dummy
+SCRAPERX_UITEST_POSE manual_aim_settled tick=166 position=(6.0, 1.133827, -55.04866) elapsed_ms=3226
+SCRAPERX_UITEST_POSE seated_manual_draw tick=274 position=(6.0, 1.133775, -55.04866) elapsed_ms=4182
+SCRAPERX_UITEST_POSE charged_pitch_yaw_settled tick=902 position=(6.0, 1.133775, -43.06893) elapsed_ms=8585
+SCRAPERX_UITEST_POSE charged_adjustable_aim tick=1144 position=(6.0, 1.133775, -43.06893) elapsed_ms=10333
+SCRAPERX_LAUNCH_EMBODIMENT wall_s=0.133 native_s=0.111 displacement_m=5.588 speed_mps=77.499 specific_mps2=315.203 torso_rad=(0.925609, 0.0, -0.0) head_rad=(1.09, 0.003193, -0.002129) scale=0.333
+SCRAPERX_UITEST_POSE launch_embodiment_0 tick=1155 position=(5.999986, 6.705767, -43.88124) elapsed_ms=10421
+SCRAPERX_LAUNCH_EMBODIMENT wall_s=0.333 native_s=0.167 displacement_m=10.179 speed_mps=85.248 specific_mps2=63.565 torso_rad=(0.662001, 0.0, 0.0) head_rad=(1.01789, -0.000937, 0.000625) scale=0.280
+SCRAPERX_UITEST_POSE launch_embodiment_1 tick=1160 position=(5.999977, 11.25157, -44.52605) elapsed_ms=10517
+SCRAPERX_LAUNCH_EMBODIMENT wall_s=0.633 native_s=0.256 displacement_m=17.756 speed_mps=84.849 specific_mps2=0.001 torso_rad=(0.144462, 0.0, 0.0) head_rad=(0.099759, -0.000399, 0.000266) scale=0.330
+SCRAPERX_UITEST_POSE launch_embodiment_2 tick=1168 position=(5.999961, 18.75364, -45.58833) elapsed_ms=10651
+SCRAPERX_UITEST_POSE release_orbit tick=1168 position=(5.999961, 18.75364, -45.58833) elapsed_ms=10651
+SCRAPERX_UITEST_POSE true_first_person_return tick=1349 position=(5.999616, 167.8282, -69.60741) elapsed_ms=11962
+SCRAPERX_UITEST_POSE native_flight_apex tick=1949 position=(5.998472, 378.2382, -149.2217) elapsed_ms=15802
+SCRAPERX_UITEST_POSE retrieval_idle_cancel_available tick=1982 position=(8.35, 0.9, -57.2) elapsed_ms=16036
+SCRAPERX_UITEST_POSE returned_seat tick=2546 position=(8.35, 0.9, -57.2932) elapsed_ms=19794
+SCRAPERX_UITEST_POSE second_release tick=3086 position=(5.99648, 18.66586, -45.48228) elapsed_ms=23791
+SCRAPERX_UITEST PASS touch_slingshot staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=84.85 apex_m=378.30 retrieval_cancel_walk_m=1.35 retrieval_s=4.20 retrieval_j=1155.99 retrieval_peak_kw=8.06 second_launch=1

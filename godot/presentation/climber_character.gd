@@ -28,9 +28,26 @@ var _reaction_draw := 0.0
 var _reaction_phase := -1.0
 var _motion_amount := 1.0
 var _comedy_charge := 0.0
-var _comedy_launch := 0.0
-var _comedy_windmill := 0.0
-var _comedy_fall := 0.0
+var _native_state: Dictionary = {}
+var _last_native_time := -1.0
+var _pose_seated := false
+var _body_offset := Vector3.ZERO
+var _brace_weight := 0.0
+var _pose_speed := 0.0
+var _torso_motion := Vector2.ZERO
+var _torso_spin := Vector2.ZERO
+var _head_motion := Vector2.ZERO
+var _head_spin := Vector2.ZERO
+var _arm_motion := Vector2.ZERO
+var _arm_spin := Vector2.ZERO
+var _leg_motion := Vector2.ZERO
+var _leg_spin := Vector2.ZERO
+
+# Read-only articulated presentation: no extra collision/mass is introduced.
+# Native a-g loads these bounded joint oscillators; native elapsed time keeps
+# their inertia in the same clock as the pouch, including during bullet time.
+const PELVIS_CONTACT := Vector3(0.0, -0.19, 0.0)
+const RESPONSE_STEP := 1.0 / 360.0
 
 
 func reaction(state: Dictionary, _velocity: Vector3 = Vector3.ZERO,
@@ -43,6 +60,7 @@ func reaction(state: Dictionary, _velocity: Vector3 = Vector3.ZERO,
 		maxf(float(state.get("max_draw_m", 1.0)), 0.001), 0.0, 1.0)
 	_reaction_phase = launch_phase
 	_motion_amount = 0.0 if bool(state.get("reduced_motion", false)) else 1.0
+	_native_state = state
 
 
 func _ready() -> void:
@@ -76,26 +94,107 @@ func update_pose(player_position: Vector3, player_velocity: Vector3,
 	var horizontal := Vector3(forward.x, 0.0, forward.z)
 	if horizontal.length_squared() > 0.0001:
 		rotation = Vector3(0.0, atan2(-horizontal.x, -horizontal.z), 0.0)
-	_clock += maxf(delta, 0.0)
-	_update_reaction(player_velocity, delta)
-	pose(player_velocity.length(), _clock,
-		maxf(draw, _reaction_draw if _reaction_seated else 0.0))
+	var elapsed := maxf(delta, 0.0)
+	if _native_state.has("simulation_time_seconds"):
+		var now := float(_native_state.simulation_time_seconds)
+		elapsed = maxf(now - _last_native_time, 0.0) if _last_native_time >= 0.0 else 0.0
+		if _last_native_time < 0.0 or now < _last_native_time:
+			_reset_response()
+			_pose_seated = _reaction_seated
+			_brace_weight = 1.0 if _pose_seated else 0.0
+		_last_native_time = now
+	else:
+		# Authored standing/capture callers have no native clock. Gameplay does.
+		_last_native_time = -1.0
+		_brace_weight = smoothstep(3.0, 30.0, player_velocity.length()) * 0.72
+		_pose_speed = player_velocity.length()
+	if elapsed > 0.0:
+		_pose_seated = _reaction_seated
+		_pose_speed = player_velocity.length()
+		_advance_response(minf(elapsed, 0.10), player_velocity)
+	if _pose_seated and _native_state.has("seat_surface_position"):
+		_body_offset = to_local(_native_state.seat_surface_position) - PELVIS_CONTACT
+	pose(_pose_speed, _clock, maxf(draw, _reaction_draw if _pose_seated else 0.0))
 
 
-func _update_reaction(velocity: Vector3, delta: float) -> void:
-	var active := _reaction_released and _reaction_phase >= 0.0 and _reaction_phase < 2.10
-	var charge := _reaction_draw if _reaction_seated and not _reaction_released else 0.0
-	var launched := smoothstep(8.0, 42.0, velocity.length()) if active else 0.0
-	var descending := smoothstep(1.0, 12.0, -velocity.y) if active else 0.0
-	# The punch line is a short futile swim after the first protective tuck.
-	# Negative native vertical velocity opens the limbs into a falling flail.
-	var windmill := launched * smoothstep(0.22, 0.52, _reaction_phase) \
-		* (1.0 - smoothstep(1.22, 1.62, _reaction_phase)) * _motion_amount
-	var blend := 1.0 - exp(-minf(maxf(delta, 0.0), 0.1) * 14.0)
-	_comedy_charge = lerpf(_comedy_charge, charge, blend)
-	_comedy_launch = lerpf(_comedy_launch, launched, blend)
-	_comedy_windmill = lerpf(_comedy_windmill, windmill, blend)
-	_comedy_fall = lerpf(_comedy_fall, descending * _motion_amount, blend)
+func _reset_response() -> void:
+	_torso_motion = Vector2.ZERO
+	_torso_spin = Vector2.ZERO
+	_head_motion = Vector2.ZERO
+	_head_spin = Vector2.ZERO
+	_arm_motion = Vector2.ZERO
+	_arm_spin = Vector2.ZERO
+	_leg_motion = Vector2.ZERO
+	_leg_spin = Vector2.ZERO
+	_body_offset = Vector3.ZERO
+	_clock = 0.0
+	_pose_speed = 0.0
+	_comedy_charge = 0.0
+
+
+func reset_response() -> void:
+	# Explicit restart/cinema cancellation can preserve native tick numbering.
+	# Discard old load history and seed from the next real state sample.
+	_reset_response()
+	_native_state = {}
+	_last_native_time = -1.0
+	_pose_seated = false
+	_brace_weight = 0.0
+
+
+func _angular_load(acceleration: Vector3, lever_y: float, lever_z: float, inertia_per_mass: float) -> Vector2:
+	# r cross (-m*a_specific), divided by m-normalized inertia: rad/s².
+	return Vector2(-lever_y * acceleration.z + lever_z * acceleration.y,
+		lever_y * acceleration.x) / inertia_per_mass
+
+
+func _joint_step(angle: Vector2, spin: Vector2, load: Vector2,
+		target: Vector2, frequency: float, damping: float, limit: Vector2, h: float) -> Array[Vector2]:
+	var omega := TAU * frequency
+	spin += (load + (target - angle) * omega * omega - spin * (2.0 * damping * omega)) * h
+	angle += spin * h
+	for axis in 2:
+		if absf(angle[axis]) > limit[axis]:
+			angle[axis] = clampf(angle[axis], -limit[axis], limit[axis])
+			if angle[axis] * spin[axis] > 0.0:
+				spin[axis] = 0.0
+	return [angle, spin]
+
+
+func _advance_response(elapsed: float, _velocity: Vector3) -> void:
+	var acceleration: Vector3 = _native_state.get("rider_specific_acceleration", Vector3.ZERO)
+	acceleration = basis.inverse() * acceleration * _motion_amount
+	var steps := maxi(1, int(ceil(elapsed / RESPONSE_STEP)))
+	var h := elapsed / float(steps)
+	for step in steps:
+		_clock += h
+		var brace := 1.0 if _pose_seated else (0.72 if _reaction_released else 0.0)
+		_brace_weight = lerpf(_brace_weight, brace, 1.0 - exp(-8.0 * h))
+		if not _pose_seated:
+			var free_offset := Vector3(0, -0.30, 0) if _reaction_released else Vector3.ZERO
+			_body_offset = _body_offset.lerp(free_offset, 1.0 - exp(-2.8 * h))
+		var previous_spin := _torso_spin
+		var torso := _joint_step(_torso_motion, _torso_spin,
+			_angular_load(acceleration, 0.28, 0.08, 0.12), Vector2.ZERO,
+			4.0, 0.48, Vector2(0.70, 0.46), h)
+		_torso_motion = torso[0]
+		_torso_spin = torso[1]
+		var head := _joint_step(_head_motion, _head_spin,
+			_angular_load(acceleration, 0.14, 0.035, 0.035) - (_torso_spin - previous_spin) / h * 0.55,
+			_torso_motion, 6.0, 0.42, Vector2(0.85, 0.58), h)
+		_head_motion = head[0]
+		_head_spin = head[1]
+		var arm := _joint_step(_arm_motion, _arm_spin,
+			_angular_load(acceleration, 0.19, 0.035, 0.08), Vector2.ZERO,
+			3.1, 0.37, Vector2(0.75, 0.55), h)
+		_arm_motion = arm[0]
+		_arm_spin = arm[1]
+		var leg := _joint_step(_leg_motion, _leg_spin,
+			_angular_load(acceleration, -0.17, -0.06, 0.12), Vector2.ZERO,
+			3.6, 0.40, Vector2(0.55, 0.40), h)
+		_leg_motion = leg[0]
+		_leg_spin = leg[1]
+		_comedy_charge = lerpf(_comedy_charge, _reaction_draw if _pose_seated else 0.0, 1.0 - exp(-14.0 * h))
 
 
 func pose(speed: float, phase: float = 0.0, draw: float = 0.0) -> void:
@@ -103,69 +202,50 @@ func pose(speed: float, phase: float = 0.0, draw: float = 0.0) -> void:
 		build()
 	var airflow := smoothstep(3.0, 30.0, maxf(speed, 0.0))
 	var strain := clampf(draw, 0.0, 1.0)
-	var comedy_phase := _reaction_phase if _reaction_phase >= 0.0 else phase
-	var tuck := maxf(maxf(strain * 0.82, airflow * 0.72), _comedy_launch * 0.92)
+	var tuck := _brace_weight if _native_state.has("simulation_time_seconds") else maxf(strain * 0.82, airflow * 0.72)
 	var shiver := (sin(phase * 8.0) * airflow * 0.008 \
 		+ sin(phase * 16.0) * _comedy_charge * 0.006) * _motion_amount
-	var flail := clampf(maxf(_comedy_windmill * 0.86, _comedy_fall), 0.0, 1.0)
-	# A compact brace reads as a person being accelerated, with elbows and
-	# knees bending independently; the native midpoint stays fixed.
-	_torso.position = Vector3(0.0, -tuck * 0.055, -tuck * 0.028)
-	_torso.rotation.x = -tuck * 0.20 + _comedy_fall * 0.25
-	_pelvis.position = Vector3(0.0, -tuck * 0.035, tuck * 0.025)
-	_pelvis.rotation.x = tuck * 0.08
+	var pelvis_basis := Basis.from_euler(Vector3(_torso_motion.x * 0.18, 0, _torso_motion.y * 0.18))
+	_pelvis.basis = pelvis_basis
+	_pelvis.position = _body_offset
+	if _pose_seated and _native_state.has("seat_surface_position"):
+		# Rotate around the actual underside contact, rather than sinking into
+		# the bowl or moving a hidden native collision body to meet the mesh.
+		_pelvis.position = to_local(_native_state.seat_surface_position) - pelvis_basis * PELVIS_CONTACT
+	_torso.position = _pelvis.position + pelvis_basis * Vector3(0, 0.05 * tuck, 0.0)
+	_torso.rotation = Vector3(tuck * 0.24 + _torso_motion.x, 0, _torso_motion.y)
 	_head.position = _torso.position + _torso.basis * Vector3(0.0, 0.70, 0.0)
-	_head.rotation = Vector3(tuck * 0.07 - _comedy_launch * 0.07,
-		shiver * 1.5 + sin(comedy_phase * 5.2) * _comedy_launch * 0.13 * _motion_amount,
-		-shiver + sin(phase * 3.0) * _comedy_charge * 0.045 * _motion_amount)
+	_head.rotation = Vector3(tuck * 0.24 + _head_motion.x, shiver * 1.5,
+		_head_motion.y - shiver)
 	for limb in _limbs:
 		var s: float = limb.side
 		if limb.kind == "arm":
 			var shoulder := _torso.position + _torso.basis * Vector3(s * 0.248, 0.424, 0.0)
-			var elbow := Vector3(s * lerpf(0.295, 0.36, tuck),
-				lerpf(0.145, 0.21, tuck), lerpf(0.025, -0.10, tuck))
-			var wrist := Vector3(s * lerpf(0.28, 0.24, tuck),
-				lerpf(-0.115, 0.35, tuck), lerpf(-0.035, -0.31, tuck))
-			# Involuntary "protect the sandwich" hands bunch near the collar
-			# at release, then alternate overhead in a very unhelpful swim.
-			wrist = wrist.lerp(Vector3(s * 0.18, 0.45, -0.29), _comedy_launch * 0.8)
-			var swim := comedy_phase * 8.2 + (0.0 if s < 0.0 else PI)
-			var waving_wrist := Vector3(s * (0.43 + cos(swim) * 0.055),
-				0.49 + sin(swim) * 0.24, -0.10 + cos(swim) * 0.15)
-			wrist = wrist.lerp(waving_wrist, flail)
-			elbow = elbow.lerp(Vector3(s * 0.38, 0.36 + sin(swim) * 0.12, 0.05), flail)
-			elbow.y += shiver * s
-			if _comedy_launch > 0.001 or _comedy_charge > 0.001 or flail > 0.001:
-				var arm := _arm_bend(shoulder, wrist, elbow - shoulder)
-				elbow = arm[0]
-				wrist = arm[1]
+			var wrist_offset := Vector3(s * lerpf(0.032, -0.065, tuck), lerpf(-0.48, -0.08, tuck), -0.30 * tuck)
+			wrist_offset = Basis.from_euler(Vector3(_arm_motion.x, 0, _arm_motion.y)) * wrist_offset
+			var wrist := shoulder + wrist_offset
+			var arm := _two_bone(shoulder, wrist, Vector3(s, -0.45, 0.35), 0.29, 0.27)
+			var elbow := arm[0]
+			wrist = arm[1]
 			_span(limb.upper, shoulder, elbow, 0.29)
 			_span(limb.lower, elbow, wrist, 0.27)
 			limb.hand.position = wrist
 			limb.hand.basis = limb.lower.basis.orthonormalized()
-			limb.hand.rotate_object_local(Vector3.RIGHT,
-				-tuck * 0.5 + sin(swim) * flail * 0.6)
+			limb.hand.rotate_object_local(Vector3.RIGHT, -tuck * 0.5)
 			limb.hand.rotate_object_local(Vector3.UP, s * tuck * 0.35)
 		else:
-			var hip := _pelvis.position + Vector3(s * 0.115, -0.105, 0.0)
-			var knee := Vector3(s * lerpf(0.13, 0.165, tuck),
-				lerpf(-0.475, -0.355, tuck), lerpf(-0.01, -0.34, tuck))
-			var ankle := Vector3(s * lerpf(0.145, 0.19, tuck),
-				lerpf(-0.80, -0.645, tuck), lerpf(0.03, -0.04, tuck))
-			var bicycle := sin(comedy_phase * 7.0 + (0.0 if s < 0.0 else PI))
-			knee.y += _comedy_launch * 0.040 + bicycle * _comedy_windmill * 0.027
-			ankle.y += _comedy_launch * 0.045 + bicycle * _comedy_windmill * 0.055
-			ankle.z += bicycle * _comedy_windmill * 0.075
-			knee.x += s * _comedy_fall * 0.075
-			ankle.x += s * _comedy_fall * 0.11
+			var hip := _pelvis.position + pelvis_basis * Vector3(s * 0.115, -0.105, 0.0)
+			var ankle_offset := Vector3(s * 0.05, lerpf(-0.695, 0.18, tuck), lerpf(0.03, -0.56, tuck))
+			ankle_offset = Basis.from_euler(Vector3(_leg_motion.x, 0, _leg_motion.y)) * ankle_offset
+			var leg := _two_bone(hip, hip + ankle_offset, Vector3(0, 1, -0.35), 0.38, 0.34)
+			var knee := leg[0]
+			var ankle := leg[1]
 			_span(limb.upper, hip, knee, 0.38)
 			_span(limb.lower, knee, ankle, 0.34)
 			limb.boot.position = ankle
-			limb.boot.rotation = Vector3(-tuck * 0.24 + bicycle * _comedy_windmill * 0.16,
-				s * (0.07 + _comedy_fall * 0.13), s * tuck * 0.05)
+			limb.boot.rotation = Vector3(-tuck * 0.24 + _leg_motion.x, s * 0.07, _leg_motion.y)
 	for finger in _fingers:
 		var curl := lerpf(0.19, 1.12, maxf(strain, airflow))
-		curl = lerpf(curl, 0.13, flail)
 		finger.base.rotation.x = -curl
 		finger.tip.rotation.x = -curl * 0.86
 
@@ -173,15 +253,22 @@ func pose(speed: float, phase: float = 0.0, draw: float = 0.0) -> void:
 func _arm_bend(shoulder: Vector3, wanted_wrist: Vector3, pole: Vector3) -> Array[Vector3]:
 	# Analytic visual arm: the joke never stretches an arm or alters the
 	# rider's native centre/velocity. Keep the shoulder/elbow/wrist connected.
+	return _two_bone(shoulder, wanted_wrist, pole, 0.29, 0.27)
+
+
+func _two_bone(shoulder: Vector3, wanted_wrist: Vector3, pole: Vector3, upper: float, lower: float) -> Array[Vector3]:
 	var direction := wanted_wrist - shoulder
-	var distance := clampf(direction.length(), 0.06, 0.549)
+	var distance := clampf(direction.length(), absf(upper - lower) + 0.001, upper + lower - 0.001)
+	if direction.length_squared() < 0.000001:
+		direction = Vector3.DOWN
 	direction = direction.normalized()
 	var across := pole - direction * pole.dot(direction)
 	if across.length_squared() < 0.0001:
-		across = Vector3.RIGHT - direction * direction.x
+		var fallback := Vector3.RIGHT if absf(direction.x) < 0.8 else Vector3.UP
+		across = fallback - direction * fallback.dot(direction)
 	across = across.normalized()
-	var along := (0.29 * 0.29 - 0.27 * 0.27 + distance * distance) / (2.0 * distance)
-	var height := sqrt(maxf(0.29 * 0.29 - along * along, 0.0))
+	var along := (upper * upper - lower * lower + distance * distance) / (2.0 * distance)
+	var height := sqrt(maxf(upper * upper - along * along, 0.0))
 	return [shoulder + direction * along + across * height, shoulder + direction * distance]
 
 

@@ -1,0 +1,22 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE outside_pouch tick=8 position=(6.0, 0.909706, -58.0) elapsed_ms=1698
+SCRAPERX_AUDIO_BANK clips=28 msec=476 driver=Dummy
+SCRAPERX_UITEST_POSE manual_aim_settled tick=166 position=(6.0, 1.133827, -55.04866) elapsed_ms=2716
+SCRAPERX_UITEST_POSE seated_manual_draw tick=274 position=(6.0, 1.133775, -55.04866) elapsed_ms=3840
+SCRAPERX_UITEST_POSE charged_pitch_yaw_settled tick=902 position=(6.0, 1.133775, -43.06893) elapsed_ms=8867
+SCRAPERX_UITEST_POSE charged_adjustable_aim tick=1144 position=(6.0, 1.133775, -43.06893) elapsed_ms=10653
+SCRAPERX_LAUNCH_EMBODIMENT wall_s=0.133 native_s=0.111 displacement_m=5.588 speed_mps=77.499 specific_mps2=315.203 torso_rad=(0.925609, 0.0, -0.0) head_rad=(1.09, 0.003193, -0.002129) scale=0.333
+SCRAPERX_UITEST_POSE launch_embodiment_0 tick=1155 position=(5.999986, 6.705767, -43.88124) elapsed_ms=10747
+SCRAPERX_LAUNCH_EMBODIMENT wall_s=0.333 native_s=0.167 displacement_m=10.179 speed_mps=85.248 specific_mps2=63.565 torso_rad=(0.662001, 0.0, 0.0) head_rad=(1.01789, -0.000937, 0.000625) scale=0.280
+SCRAPERX_UITEST_POSE launch_embodiment_1 tick=1160 position=(5.999977, 11.25157, -44.52605) elapsed_ms=10833
+SCRAPERX_LAUNCH_EMBODIMENT wall_s=0.633 native_s=0.256 displacement_m=17.756 speed_mps=84.849 specific_mps2=0.001 torso_rad=(0.144462, 0.0, 0.0) head_rad=(0.099759, -0.000399, 0.000266) scale=0.330
+SCRAPERX_UITEST_POSE launch_embodiment_2 tick=1168 position=(5.999961, 18.75364, -45.58833) elapsed_ms=10979
+SCRAPERX_UITEST_POSE release_orbit tick=1168 position=(5.999961, 18.75364, -45.58833) elapsed_ms=10979
+SCRAPERX_UITEST_POSE true_first_person_return tick=1349 position=(5.999616, 167.8282, -69.60741) elapsed_ms=12451
+SCRAPERX_UITEST_POSE manual_airbrake_354m tick=1742 position=(5.998867, 354.8851, -121.7418) elapsed_ms=15272
+SCRAPERX_UITEST_POSE supported_352m_roof tick=2006 position=(5.998783, 352.9, -131.1609) elapsed_ms=17503
+SCRAPERX_UITEST_POSE roof_touch_walk tick=2060 position=(5.998783, 352.9, -132.61) elapsed_ms=18057
+SCRAPERX_UITEST PASS touch_slingshot_landing staging=outside_pouch_then_walk draw_m=11.980 spring_kj=418.23 manual_kj=475.72 peak_kw=197.93 release_mps=84.85 brake_height_m=354.43 braked_apex_m=361.36 supported_height_m=352.00 deaths=0 roof_walk_m=1.45 contact_j=2954.7 camera_dip_m=-0.0577
