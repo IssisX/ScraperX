@@ -633,11 +633,12 @@ godot::PackedFloat32Array ScraperXSimulation::get_kit_body_parts(const std::int6
     const std::uint32_t count = simulation_->kit_body_part_count(index);
     for (std::uint32_t part = 0; part < count; ++part) {
         const sim::KitPart source = simulation_->kit_body_part(index, part);
-        for (const double value :
-             {source.half.x, source.half.y, source.half.z, source.offset.x, source.offset.y,
-              source.offset.z, source.rotation.x, source.rotation.y, source.rotation.z,
-              source.rotation.w, static_cast<double>(source.material),
-              static_cast<double>(source.shape), source.inner_radius}) {
+        const double values[] = {
+            source.half.x, source.half.y, source.half.z, source.offset.x, source.offset.y,
+            source.offset.z, source.rotation.x, source.rotation.y, source.rotation.z,
+            source.rotation.w, static_cast<double>(source.material),
+            static_cast<double>(source.shape), static_cast<double>(source.inner_radius)};
+        for (const double value : values) {
             out.push_back(static_cast<float>(value));
         }
     }
