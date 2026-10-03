@@ -18,6 +18,8 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
     src/sim/mechanism_kit.cpp
+    src/sim/slingshot.cpp
+    src/sim/slingshot_model.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_wet_isolation.cpp
     src/sim/band_plate_shop.cpp
@@ -82,6 +84,24 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.parkour_flow COMMAND scraperx_parkour_flow_tests)
+    add_executable(scraperx_slingshot_model_tests tests/slingshot_model_tests.cpp)
+    target_link_libraries(scraperx_slingshot_model_tests PRIVATE scraperx_sim)
+    target_compile_options(scraperx_slingshot_model_tests PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wextra>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
+    )
+    add_test(NAME scraperx_sim.slingshot_model COMMAND scraperx_slingshot_model_tests)
+    add_executable(scraperx_slingshot_machine_tests tests/slingshot_machine_tests.cpp)
+    target_link_libraries(scraperx_slingshot_machine_tests PRIVATE scraperx_sim)
+    target_compile_options(scraperx_slingshot_machine_tests PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wextra>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
+    )
+    add_test(NAME scraperx_sim.slingshot_machine COMMAND scraperx_slingshot_machine_tests)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

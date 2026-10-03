@@ -3,6 +3,7 @@
 #include "sim/simulation.hpp"
 
 #include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/packed_vector3_array.hpp>
 #include <godot_cpp/variant/quaternion.hpp>
@@ -26,6 +27,10 @@ public:
     [[nodiscard]] bool request_traversal();
     [[nodiscard]] bool request_release();
     [[nodiscard]] bool request_parachute();
+    [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation);
+    [[nodiscard]] bool request_slingshot_action();
+    [[nodiscard]] bool request_slingshot_drop();
+    [[nodiscard]] godot::Dictionary get_slingshot_state() const;
     [[nodiscard]] bool set_crouch_input(bool held);
     [[nodiscard]] bool set_sprint_input(bool held);
     [[nodiscard]] std::int64_t advance_frame(double frame_delta_seconds);

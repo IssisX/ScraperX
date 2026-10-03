@@ -49,6 +49,14 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::request_release);
     godot::ClassDB::bind_method(godot::D_METHOD("request_parachute"),
                                 &ScraperXSimulation::request_parachute);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_slingshot_input", "draw", "yaw", "elevation"),
+                                &ScraperXSimulation::set_slingshot_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_action"),
+                                &ScraperXSimulation::request_slingshot_action);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_drop"),
+                                &ScraperXSimulation::request_slingshot_drop);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_state"),
+                                &ScraperXSimulation::get_slingshot_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_crouch_input", "held"),
                                 &ScraperXSimulation::set_crouch_input);
     godot::ClassDB::bind_method(godot::D_METHOD("set_sprint_input", "held"),
@@ -288,6 +296,72 @@ bool ScraperXSimulation::request_release() {
 
 bool ScraperXSimulation::request_parachute() {
     return simulation_->request_parachute();
+}
+
+bool ScraperXSimulation::set_slingshot_input(const double draw, const double yaw,
+                                             const double elevation) {
+    return simulation_->set_slingshot_input(draw, yaw, elevation);
+}
+
+bool ScraperXSimulation::request_slingshot_action() {
+    return simulation_->request_slingshot_action();
+}
+
+bool ScraperXSimulation::request_slingshot_drop() {
+    return simulation_->request_slingshot_drop();
+}
+
+godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
+    const sim::SlingshotSnapshot state = simulation_->slingshot_state();
+    godot::Dictionary out;
+    out["available"] = state.available;
+    out["station_available"] = state.station_available;
+    out["seated"] = state.seated;
+    out["drawing"] = state.drawing;
+    out["released"] = state.released;
+    out["can_retrieve"] = state.can_retrieve;
+    out["recovering"] = state.recovering;
+    out["guided_launch"] = state.guided_launch;
+    out["track_exit"] = state.track_exit;
+    out["release_ready"] = state.release_ready;
+    out["ledger_valid"] = state.ledger_valid;
+    out["pouch_pair_excluded"] = state.pouch_pair_excluded;
+    out["aim_ready"] = state.aim_ready;
+    out["aim_locked"] = state.aim_locked;
+    out["aim_control_work_j"] = state.aim_control_work_j;
+    out["aim_source_power_w"] = state.aim_source_power_w;
+    out["target_yaw_rad"] = state.target_yaw_rad;
+    out["target_elevation_rad"] = state.target_elevation_rad;
+    out["launch_track_start"] = to_godot(state.launch_track_start);
+    out["launch_track_end"] = to_godot(state.launch_track_end);
+    out["max_draw_m"] = state.max_draw_m;
+    out["max_source_power_w"] = state.max_source_power_w;
+    out["power_limit_w"] = state.max_source_power_w;
+    out["band_rest_m"] = state.band_rest_m;
+    out["neutral_position"] = to_godot(state.neutral_position);
+    out["retrieval_control_position"] = to_godot(state.retrieval_control_position);
+    out["retrieval_work_j"] = state.retrieval_work_j;
+    out["retrieval_source_power_w"] = state.retrieval_source_power_w;
+    out["energy_residual_j"] = state.energy_residual_j;
+    out["draw_m"] = state.draw_m;
+    out["energy_j"] = state.energy_j;
+    out["work_j"] = state.work_j;
+    out["source_power_w"] = state.source_power_w;
+    out["yaw_rad"] = state.yaw_rad;
+    out["elevation_rad"] = state.elevation_rad;
+    out["launch_count"] = static_cast<std::int64_t>(state.launch_count);
+    out["anchor_left"] = to_godot(state.anchor_left);
+    out["anchor_right"] = to_godot(state.anchor_right);
+    out["leather_deflection_m"] = state.leather_deflection_m;
+    out["leather_energy_j"] = state.leather_energy_j;
+    out["pouch_position"] = to_godot(state.pouch_position);
+    out["player_grounded"] = simulation_->snapshot().player_grounded;
+    godot::PackedVector3Array trajectory;
+    for (const sim::Vector3 point : simulation_->slingshot_prediction()) {
+        trajectory.push_back(to_godot(point));
+    }
+    out["trajectory_points"] = trajectory;
+    return out;
 }
 
 bool ScraperXSimulation::set_crouch_input(const bool held) {
@@ -562,7 +636,8 @@ godot::PackedFloat32Array ScraperXSimulation::get_kit_body_parts(const std::int6
         for (const double value :
              {source.half.x, source.half.y, source.half.z, source.offset.x, source.offset.y,
               source.offset.z, source.rotation.x, source.rotation.y, source.rotation.z,
-              source.rotation.w, static_cast<double>(source.material)}) {
+              source.rotation.w, static_cast<double>(source.material),
+              static_cast<double>(source.shape), source.inner_radius}) {
             out.push_back(static_cast<float>(value));
         }
     }

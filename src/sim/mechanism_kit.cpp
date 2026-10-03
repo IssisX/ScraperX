@@ -7,6 +7,8 @@
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 
 #include <algorithm>
@@ -66,18 +68,28 @@ constexpr float kMinCellVolume = 0.5F;            // m^3, a guard: no cell is ev
 }
 
 [[nodiscard]] JPH::Ref<JPH::Shape> make_shape(const std::vector<Part> &parts) {
-    const auto box = [](const Part &part) {
+    const auto part_shape = [](const Part &part) -> JPH::Ref<JPH::Shape> {
         const float smallest =
             std::min({part.half.GetX(), part.half.GetY(), part.half.GetZ()});
-        return new JPH::BoxShape(part.half, std::min(JPH::cDefaultConvexRadius, 0.5F * smallest));
+        const float margin = part.convex_radius >= 0.0F
+                                 ? part.convex_radius
+                                 : std::min(JPH::cDefaultConvexRadius, 0.5F * smallest);
+        if (part.shape == Part::Shape::Capsule) {
+            return new JPH::CapsuleShape(std::max(part.half.GetY(), 0.0F), part.half.GetX());
+        }
+        if (part.shape == Part::Shape::Cylinder) {
+            return new JPH::CylinderShape(part.half.GetY(), part.half.GetX(), margin);
+        }
+        return new JPH::BoxShape(part.half, margin);
     };
     if (parts.size() == 1 && parts.front().offset.IsNearZero() &&
-        parts.front().rotation.IsClose(JPH::Quat::sIdentity())) {
-        return box(parts.front());
+        parts.front().rotation.IsClose(JPH::Quat::sIdentity()) &&
+        parts.front().shape == Part::Shape::Box) {
+        return part_shape(parts.front());
     }
     JPH::StaticCompoundShapeSettings settings;
     for (const Part &part : parts) {
-        settings.AddShape(part.offset, part.rotation, box(part));
+        settings.AddShape(part.offset, part.rotation, part_shape(part));
     }
     const JPH::ShapeSettings::ShapeResult result = settings.Create();
     return result.Get();
@@ -87,7 +99,8 @@ constexpr float kMinCellVolume = 0.5F;            // m^3, a guard: no cell is ev
 
 Kit::Kit(JPH::PhysicsSystem &system, const JPH::ObjectLayer static_layer,
          const JPH::ObjectLayer moving_layer)
-    : system_(system), static_layer_(static_layer), moving_layer_(moving_layer) {}
+    : system_(system), static_layer_(static_layer), moving_layer_(moving_layer),
+      collision_groups_(new JPH::GroupFilterTable(2048)) {}
 
 Kit::~Kit() {
     for (Rope &rope : ropes_) {
@@ -134,6 +147,9 @@ BodyIndex Kit::add_body(const std::uint64_t entity, const std::vector<Part> &par
     settings.mFriction = friction;
     settings.mUserData = entity;
     settings.mAllowSleeping = false;
+    settings.mCollisionGroup = JPH::CollisionGroup(
+        collision_groups_, 0xA5016,
+        static_cast<JPH::CollisionGroup::SubGroupID>(bodies_.size()));
     if (dynamic) {
         settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
         settings.mMassPropertiesOverride.mMass = mass_kg;
@@ -162,6 +178,17 @@ void Kit::set_damping(const BodyIndex body, const float linear, const float angu
     JPH::MotionProperties *motion = jolt_body(body).GetMotionProperties();
     motion->SetLinearDamping(linear);
     motion->SetAngularDamping(angular);
+}
+
+void Kit::set_continuous_collision(const BodyIndex body) {
+    system_.GetBodyInterface().SetMotionQuality(body_id(body), JPH::EMotionQuality::LinearCast);
+}
+
+void Kit::disable_collision(const BodyIndex first, const BodyIndex second) {
+    if (collision_groups_ == nullptr || first.value >= 2048U || second.value >= 2048U) {
+        return;
+    }
+    collision_groups_->DisableCollision(first.value, second.value);
 }
 
 AnchorIndex Kit::add_anchor(const BodyIndex body, const JPH::Vec3 local, const float reach) {

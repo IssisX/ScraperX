@@ -83,7 +83,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_parkour_flow_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_sim_tests scraperx_parkour_flow_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_native --parallel 2
           ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
           grep -F "100% tests passed" artifacts/native-tests.log
           ./build/host/scraperx_parkour_flow_tests | tee artifacts/parkour-flow.log

@@ -25,8 +25,15 @@ double-count the player's weight: standing contact already carries it. A continu
 stair or ramp that bypasses the authored machines and parkour is rejected. Primitives are valid.
 Repeating the same automatic ride at a new size is not variety. Godot owns input and
 presentation; native state owns the consequence. Actions on this checkout are not a Fold
-playtest. This correction does not move this checkout onto `ChatGPT` or adopt that branch's
-package identity or campaign layout.
+playtest.
+
+**Brought across from `ChatGPT` on 2026-10-03, without taking that branch's campaign.** The
+manual wooden slingshot (AS-023) stands in the yard at `(-18, 0.35, -42)`, west of the
+grade-to-stack walk. Boarding, draw, aim, release, leather-pouch yield, retrieval and the
+band energy ledger are the native machine from that branch. Walking the stack is still the
+route; the shot is an additional machine, not a deleted opening. Cargo-net entry, the suspended
+maintenance ladder, and the ChatGPT world-collision table were not merged: they replace this
+branch's layout rather than sit beside it. Package identity stays `ScraperX-Grok`.
 
 ---
 

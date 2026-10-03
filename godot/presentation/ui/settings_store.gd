@@ -62,6 +62,7 @@ var show_fps := false
 var fov := 82.0
 var brightness := 1.0
 var head_bob := true
+var launch_cinematics := true
 var speed_fov := true
 var time_of_day := 0
 var day_minutes := 24.0
@@ -111,6 +112,7 @@ func load_from_disk() -> void:
 	fov = _read_range(file, "fov", fov, FOV_RANGE)
 	brightness = _read_range(file, "brightness", brightness, BRIGHTNESS_RANGE)
 	head_bob = _read_bool(file, "head_bob", head_bob)
+	launch_cinematics = _read_bool(file, "launch_cinematics", launch_cinematics)
 	speed_fov = _read_bool(file, "speed_fov", speed_fov)
 	time_of_day = _read_index(file, "time_of_day", time_of_day, TIME_OF_DAY_NAMES.size())
 	day_minutes = _read_range(file, "day_minutes", day_minutes, DAY_MINUTES_RANGE)
@@ -134,7 +136,7 @@ func save_to_disk() -> void:
 	file.set_value(SECTION, "vibration", vibration)
 	file.set_value(SECTION, "telemetry", telemetry)
 	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "show_fps",
-			"fov", "brightness", "head_bob", "speed_fov", "time_of_day", "day_minutes",
+			"fov", "brightness", "head_bob", "launch_cinematics", "speed_fov", "time_of_day", "day_minutes",
 			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "start_at"]:
 		file.set_value(SECTION, key, get(key))
 	var error := file.save(PATH)

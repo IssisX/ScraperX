@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace scraperx::sim {
 
@@ -93,6 +94,8 @@ struct KitPart final {
     Vector3 offset{};
     Quaternion rotation{};
     std::uint8_t material = 0;
+    std::uint8_t shape = 0;
+    float inner_radius = 0.0F;
 };
 
 // A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it
@@ -360,6 +363,51 @@ struct AdvanceResult final {
     std::uint32_t steps_advanced = 0;
 };
 
+// Read-back for the yard slingshot. Presentation draws bands and the leather
+// pouch from these measured values; it does not integrate them.
+struct SlingshotSnapshot final {
+    bool available = false;
+    bool station_available = false;
+    bool seated = false;
+    bool drawing = false;
+    bool released = false;
+    bool can_retrieve = false;
+    bool recovering = false;
+    bool guided_launch = false;
+    bool track_exit = false;
+    bool release_ready = false;
+    bool ledger_valid = true;
+    bool pouch_pair_excluded = false;
+    bool aim_ready = true;
+    bool aim_locked = false;
+    double draw_m = 0.0;
+    double energy_j = 0.0;
+    double work_j = 0.0;
+    double source_power_w = 0.0;
+    double yaw_rad = 0.0;
+    double elevation_rad = 1.4311699866353502;
+    double energy_residual_j = 0.0;
+    double max_draw_m = 0.0;
+    double max_source_power_w = 0.0;
+    double band_rest_m = 0.0;
+    double retrieval_work_j = 0.0;
+    double retrieval_source_power_w = 0.0;
+    double aim_control_work_j = 0.0;
+    double aim_source_power_w = 0.0;
+    double target_yaw_rad = 0.0;
+    double target_elevation_rad = 1.4311699866353502;
+    double leather_deflection_m = 0.0;
+    double leather_energy_j = 0.0;
+    Vector3 anchor_left{};
+    Vector3 anchor_right{};
+    Vector3 pouch_position{};
+    Vector3 neutral_position{};
+    Vector3 retrieval_control_position{};
+    Vector3 launch_track_start{};
+    Vector3 launch_track_end{};
+    std::uint32_t launch_count = 0;
+};
+
 class Simulation final {
 public:
     static constexpr std::uint32_t kTickRateHz = 90;
@@ -566,6 +614,16 @@ public:
     // produces no state change.
     [[nodiscard]] bool request_parachute() noexcept;
 
+    // Yard slingshot, ported from the ChatGPT line. Draw is held effort in
+    // [0, 1]; yaw and elevation are absolute radians. Action boards, releases
+    // a ready shot, or starts retrieval. Drop unbuckles. None of these set a
+    // launch velocity: the bands and the leather pouch do.
+    [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation) noexcept;
+    [[nodiscard]] bool request_slingshot_action() noexcept;
+    [[nodiscard]] bool request_slingshot_drop() noexcept;
+    [[nodiscard]] SlingshotSnapshot slingshot_state() const noexcept;
+    [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
+
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
@@ -628,6 +686,11 @@ private:
     bool set_down_requested_ = false;
     bool rig_requested_ = false;
     bool parachute_toggle_requested_ = false;
+    double sling_draw_ = 0.0;
+    double sling_yaw_ = 0.0;
+    double sling_elevation_ = 1.4311699866353502;
+    bool sling_action_requested_ = false;
+    bool sling_drop_requested_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
 };

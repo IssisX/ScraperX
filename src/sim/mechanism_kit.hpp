@@ -14,6 +14,7 @@
 
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/PulleyConstraint.h>
@@ -59,6 +60,14 @@ struct Part final {
     JPH::Vec3 offset = JPH::Vec3::sZero();
     JPH::Quat rotation = JPH::Quat::sIdentity();
     Material material = Material::Steel;
+    // Cylinder axis is local Y; half.x is its outside radius, half.y its
+    // half length. Capsule: half.x is radius, half.y is half the straight
+    // section. Box remains the default so every earlier band is unchanged.
+    enum class Shape : std::uint8_t { Box = 0, Cylinder = 1, Capsule = 2 };
+    Shape shape = Shape::Box;
+    float mass_kg = 0.0F;
+    float inner_radius = 0.0F;
+    float convex_radius = -1.0F;
 };
 
 // What a pick-up of this body is, for the prompt: a load, a rope's shackle,
@@ -116,6 +125,11 @@ public:
     // the line's own stiffness would settle: a handle bumped on its line
     // stops swinging in a second or two.
     void set_damping(BodyIndex body, float linear, float angular);
+    void set_continuous_collision(BodyIndex body);
+    // Pair exclusion inside the kit's 2048-entry group table. Subgroup 2047
+    // is reserved for the player while harnessed to the yard slingshot, so a
+    // leather pouch does not behave like a wooden ledge under the rider.
+    void disable_collision(BodyIndex first, BodyIndex second);
     AnchorIndex add_anchor(BodyIndex body, JPH::Vec3 local, float reach);
 
     // A straight guide along a world axis through the body's present
@@ -623,6 +637,7 @@ private:
     JPH::PhysicsSystem &system_;
     JPH::ObjectLayer static_layer_;
     JPH::ObjectLayer moving_layer_;
+    JPH::Ref<JPH::GroupFilterTable> collision_groups_;
     std::vector<Body> bodies_;
     std::vector<Anchor> anchors_;
     std::vector<Guide> guides_;

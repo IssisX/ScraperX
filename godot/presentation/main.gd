@@ -23,6 +23,7 @@ const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
+const SlingshotView := preload("res://presentation/slingshot_view.gd")
 # Traversal head motion, added on top of the player's own pitch and never
 # written into it: a hanging climber looks up at the grip (the lip sits ~46
 # degrees above a level gaze, outside the frame), a mantle nods down onto the
@@ -104,7 +105,7 @@ const STACK_COLUMN_SIZE := 1.6
 const KIT_ENTITY_MIN := 1000
 const KIT_DYNAMIC_ENTITY_MIN := 2000
 const KIT_ENTITY_MAX := 3000
-const KIT_PART_FLOATS := 11
+const KIT_PART_FLOATS := 13
 const KIT_CABLE_SEGMENTS := 4
 const KIT_CARRY_SHACKLE := 1
 const KIT_CARRY_HANDLE := 2
@@ -152,6 +153,10 @@ var _capture_scheduled := false
 var _ci_mode := false
 var _yaw := 0.0
 var _pitch := -0.02
+var _slingshot_view: Node3D
+var _sling_goal_yaw := 0.0
+var _sling_goal_elevation := 1.4311699866353502
+var _sling_was_seated := false
 var _cam_was_grounded := true
 var _cam_last_velocity_y := 0.0
 var _cam_landing_timer := 0.0
@@ -295,6 +300,9 @@ func _ready() -> void:
 		_pitch = 0.06
 
 	_build_kit()
+	_slingshot_view = SlingshotView.new()
+	add_child(_slingshot_view)
+	_slingshot_view.setup(self)
 
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006")
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
@@ -318,14 +326,39 @@ func _process(delta: float) -> void:
 			_fps_label.text = "%d FPS" % int(Engine.get_frames_per_second())
 
 	var intent: Dictionary = _router.frame(delta)
+	var launcher: Dictionary = _native.get_slingshot_state()
+	var sling_seated := bool(launcher.get("seated", false))
+	var aiming := sling_seated and not bool(launcher.get("released", false))
+	var sling_recovering := bool(launcher.get("recovering", false))
+	var aim_locked := bool(launcher.get("aim_locked", true))
+	if aiming and not _sling_was_seated:
+		_sling_goal_yaw = float(launcher.get("yaw_rad", 0.0))
+		_sling_goal_elevation = float(launcher.get("elevation_rad", 1.4311699866353502))
+	_sling_was_seated = aiming
 	if not _ci_mode:
 		var look: Vector2 = intent["look"]
-		_yaw -= look.x
-		_pitch = clampf(_pitch - look.y, -1.25, 1.35)
+		if aiming:
+			if not aim_locked:
+				_sling_goal_yaw = clampf(_sling_goal_yaw + look.x, -0.8, 0.8)
+				_sling_goal_elevation = clampf(_sling_goal_elevation - look.y, 0.35, 1.48)
+			else:
+				_sling_goal_yaw = float(launcher.get("yaw_rad", _sling_goal_yaw))
+				_sling_goal_elevation = float(launcher.get("elevation_rad", _sling_goal_elevation))
+			_yaw = -float(launcher.get("yaw_rad", 0.0))
+			_pitch = float(launcher.get("elevation_rad", 0.0))
+		else:
+			_yaw -= look.x
+			_pitch = clampf(_pitch - look.y, -1.25, 1.35)
 	_update_view_pitch_offset(delta)
 
 	var position: Vector3 = _native.get_player_position()
 	var desired: Vector2 = intent["move"]
+	var sling_yaw := _sling_goal_yaw if aiming else float(launcher.get("yaw_rad", 0.0))
+	var sling_elevation := _sling_goal_elevation if aiming else float(launcher.get("elevation_rad", 1.4311699866353502))
+	var sling_effort := maxf(0.0, -desired.y) if sling_seated or sling_recovering else 0.0
+	if not _native.set_slingshot_input(sling_effort, sling_yaw, sling_elevation):
+		_fail_native("SCRAPERX_SLING_INPUT_REJECTED", 21)
+		return
 	var facing := Vector2(-sin(_yaw), -cos(_yaw))
 
 	if _ci_mode:
@@ -336,6 +369,8 @@ func _process(delta: float) -> void:
 	var forward := Vector2(-sin(_yaw), -cos(_yaw))
 	var right := Vector2(cos(_yaw), -sin(_yaw))
 	var world_move := right * desired.x + forward * desired.y
+	if sling_recovering:
+		world_move = Vector2.ZERO
 	if not _native.set_move_input(world_move.x, world_move.y):
 		_fail_native("SCRAPERX_MOVE_INPUT_REJECTED", 21)
 		return
@@ -345,12 +380,16 @@ func _process(delta: float) -> void:
 	_native.set_sprint_input(bool(intent["sprint_held"]))
 
 
-	var steps_advanced := int(_native.advance_frame(minf(delta, MAX_SIM_FRAME_DELTA)))
+	var time_scale := 1.0 if _slingshot_view == null else float(_slingshot_view.get_simulation_scale())
+	var steps_advanced := int(_native.advance_frame(minf(delta, MAX_SIM_FRAME_DELTA) * time_scale))
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return
 
 	_render_snapshot(delta)
+	if _slingshot_view != null:
+		_slingshot_view.update_view(delta, _native.get_slingshot_state(),
+			_native.get_player_render_position(), _native.get_player_linear_velocity(), _camera)
 	_ctx = _read_context()
 	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
 	_update_feedback(delta)
@@ -513,6 +552,8 @@ func _open_pause(from_system: bool = false) -> void:
 	_paused = true
 	_router.gameplay_active = false
 	_router.clear_held()
+	if _slingshot_view != null:
+		_slingshot_view.cancel_cinematic()
 	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var checkpoint: Vector3 = _ctx["checkpoint"]
@@ -561,17 +602,18 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				# Does what the button says: crouched, it asks to stand.
 				_crouch_toggled = not bool(_ctx["crouched"])
 			&"drop":
-				# Let go of whatever the hands are on: a ledge, a climb's
-				# holds, or a load. On the ground with an edge behind, the
-				# native lowers the body over it into a hang.
-				if int(_ctx["carrying"]) != 0:
+				if bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
+					_native.request_slingshot_drop()
+				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
 				else:
 					_native.request_release()
 			&"chute":
 				_native.request_parachute()
 			&"back":
-				if _ctx["hanging"] or _ctx["climbing"]:
+				if bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
+					_native.request_slingshot_drop()
+				elif _ctx["hanging"] or _ctx["climbing"]:
 					_native.request_release()
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
@@ -601,6 +643,11 @@ func _dispatch(verbs: Array, delta: float) -> void:
 func _perform_action() -> void:
 	var action: Dictionary = _ctx["action"]
 	match action["id"]:
+		&"slingshot":
+			if bool(_native.get_slingshot_state().get("recovering", false)):
+				_native.request_slingshot_drop()
+			else:
+				_native.request_slingshot_action()
 		&"climb_up", &"climb":
 			_native.request_traversal()
 		&"pick_up":
@@ -638,8 +685,20 @@ func _read_context() -> Dictionary:
 	# thing a pick-up would take.
 	var rig := int(_native.get_rig_action())
 	var rig_target := int(_native.get_rig_target_entity_id())
+	var sling: Dictionary = _native.get_slingshot_state()
+	var sling_seated := bool(sling.get("seated", false))
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
-	if hanging or climbing:
+	if bool(sling.get("can_retrieve", false)) or bool(sling.get("recovering", false)):
+		action = {"id": &"slingshot",
+			"label": "STOP RETRIEVAL" if bool(sling.get("recovering", false)) else "RETRIEVE POUCH",
+			"icon": &"operate",
+			"detail": "HOLD THE REEL CONTROL" if bool(sling.get("recovering", false)) else "RETURN THE SEAT"}
+	elif (sling_seated or bool(sling.get("station_available", false))) and not bool(sling.get("released", false)):
+		action = {"id": &"slingshot",
+			"label": ("RELEASE" if bool(sling.get("release_ready", false)) else "DRAW MORE") if sling_seated else "ENTER POUCH",
+			"icon": &"operate",
+			"detail": "PULL BACK TO STRETCH" if sling_seated else "WOODEN SLINGSHOT"}
+	elif hanging or climbing:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
 	elif not free:
 		pass
@@ -692,6 +751,8 @@ func _read_context() -> Dictionary:
 		"danger": 0.0 if grounded else clampf(-velocity.y / maxf(lethal, 0.001), 0.0, 1.0),
 		"lethal": lethal,
 		"carrying": carrying,
+		"slingshot_seated": sling_seated,
+		"slingshot_recovering": bool(sling.get("recovering", false)),
 		"action": action,
 		"checkpoint": _native.get_checkpoint_position(),
 		"deaths": int(_native.get_death_count()),
