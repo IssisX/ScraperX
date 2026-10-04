@@ -357,6 +357,10 @@ godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
     out["leather_deflection_m"] = state.leather_deflection_m;
     out["leather_energy_j"] = state.leather_energy_j;
     out["pouch_position"] = to_godot(state.pouch_position);
+    out["seat_surface_position"] = to_godot(state.seat_surface_position);
+    out["harness_rest_local"] = to_godot(state.harness_rest_local);
+    out["rider_specific_acceleration"] = to_godot(state.rider_specific_acceleration);
+    out["simulation_time_seconds"] = simulation_->snapshot().simulation_time_seconds;
     out["player_grounded"] = simulation_->snapshot().player_grounded;
     // The 12 s shot integration is only for the aim preview. Running it on
     // every frame, twice, kept the grade climb from finishing inside the

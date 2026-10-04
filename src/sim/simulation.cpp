@@ -1147,6 +1147,7 @@ public:
                                  on_pouch);
         }
 
+        const JPH::Vec3 rider_velocity_before = bodies.GetLinearVelocity(player_id_);
         kit_->pre_step(delta_seconds);
         contact_listener_.begin_tick();
         const int collision_steps =
@@ -1200,6 +1201,13 @@ public:
         }
 
         update_affordance(bodies);
+        // Gravity alone is not a felt load. A checkpoint restore is a
+        // discontinuity, not an acceleration.
+        rider_specific_acceleration_ = died_this_tick || delta_seconds <= 0.0F
+                                           ? JPH::Vec3::sZero()
+                                           : (bodies.GetLinearVelocity(player_id_) - rider_velocity_before) /
+                                                     delta_seconds -
+                                                 physics_system_.GetGravity();
         read_state();
     }
 
@@ -1217,6 +1225,11 @@ public:
 
     [[nodiscard]] const scraperx::sim::Slingshot *slingshot() const noexcept {
         return slingshot_.get();
+    }
+
+    [[nodiscard]] scraperx::sim::Vector3 rider_specific_acceleration() const noexcept {
+        return {rider_specific_acceleration_.GetX(), rider_specific_acceleration_.GetY(),
+                rider_specific_acceleration_.GetZ()};
     }
 
     [[nodiscard]] const scraperx::sim::bands::WetIsolation &wet() const noexcept {
@@ -3359,6 +3372,7 @@ private:
         bodies.SetPositionAndRotation(player_id_, checkpoint_position_, JPH::Quat::sIdentity(),
                                       JPH::EActivation::Activate);
         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
+        rider_specific_acceleration_ = JPH::Vec3::sZero();
 
         // A kit body in the hands may be one the restore takes out of the
         // world (a shackle hooked at the commit): let go of it first.
@@ -3658,6 +3672,7 @@ private:
     float fall_peak_speed_mps_ = 0.0F;
     float pre_contact_fall_speed_mps_ = 0.0F;
     float last_impact_speed_mps_ = 0.0F;
+    JPH::Vec3 rider_specific_acceleration_ = JPH::Vec3::sZero();
 
     Snapshot state_{};
 };
@@ -4090,6 +4105,13 @@ SlingshotSnapshot Simulation::slingshot_state() const noexcept {
     result.anchor_left = as_vec(state.anchor_left);
     result.anchor_right = as_vec(state.anchor_right);
     result.pouch_position = as_vec(state.pouch_position);
+    result.harness_rest_local = as_vec(state.harness_rest_local);
+    const JPH::Vec3 seat = Slingshot::leather_surface(
+        static_cast<float>(state.harness_rest_local.GetX() / 1.68 + 0.5),
+        static_cast<float>(state.harness_rest_local.GetZ() / 1.30 + 0.5),
+        static_cast<float>(state.leather_deflection_m));
+    result.seat_surface_position = as_vec(state.pouch_position + JPH::RVec3(seat));
+    result.rider_specific_acceleration = physics_world_->rider_specific_acceleration();
     return result;
 }
 

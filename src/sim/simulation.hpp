@@ -405,6 +405,11 @@ struct SlingshotSnapshot final {
     Vector3 retrieval_control_position{};
     Vector3 launch_track_start{};
     Vector3 launch_track_end{};
+    // Where the leather is under the rider, and the acceleration the body
+    // actually felt this tick, gravity removed. Both are reads of the step.
+    Vector3 seat_surface_position{};
+    Vector3 harness_rest_local{};
+    Vector3 rider_specific_acceleration{};
     std::uint32_t launch_count = 0;
 };
 

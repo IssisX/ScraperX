@@ -8,6 +8,7 @@ extends Node3D
 const STATURE := 1.86
 const SOLE_Y := -0.90
 const HELMET_TOP_Y := 0.96
+const PELVIS_CONTACT := Vector3(0.0, -0.19, 0.0)
 const HEAD_PROFILE := [Vector4(-0.145, 0.060, 0.069, -0.006),
 	Vector4(-0.112, 0.094, 0.085, -0.003), Vector4(-0.043, 0.121, 0.105, 0.004),
 	Vector4(0.030, 0.125, 0.115, 0.010), Vector4(0.096, 0.114, 0.107, 0.017),
@@ -31,6 +32,7 @@ var _comedy_charge := 0.0
 var _comedy_launch := 0.0
 var _comedy_windmill := 0.0
 var _comedy_fall := 0.0
+var _native_state: Dictionary = {}
 
 
 func reaction(state: Dictionary, _velocity: Vector3 = Vector3.ZERO,
@@ -43,6 +45,7 @@ func reaction(state: Dictionary, _velocity: Vector3 = Vector3.ZERO,
 		maxf(float(state.get("max_draw_m", 1.0)), 0.001), 0.0, 1.0)
 	_reaction_phase = launch_phase
 	_motion_amount = 0.0 if bool(state.get("reduced_motion", false)) else 1.0
+	_native_state = state
 
 
 func _ready() -> void:
@@ -114,6 +117,12 @@ func pose(speed: float, phase: float = 0.0, draw: float = 0.0) -> void:
 	_torso.rotation.x = -tuck * 0.20 + _comedy_fall * 0.25
 	_pelvis.position = Vector3(0.0, -tuck * 0.035, tuck * 0.025)
 	_pelvis.rotation.x = tuck * 0.08
+	if _reaction_seated and _native_state.has("seat_surface_position"):
+		# The underside of the pelvis stays on the measured leather fold.
+		_pelvis.position = to_local(_native_state.seat_surface_position) - _pelvis.basis * PELVIS_CONTACT
+	var felt: Vector3 = basis.inverse() * _native_state.get("rider_specific_acceleration", Vector3.ZERO)
+	_torso.rotation.x += clampf(-felt.z * 0.004, -0.35, 0.35) * _motion_amount
+	_torso.rotation.z += clampf(felt.x * 0.004, -0.25, 0.25) * _motion_amount
 	_head.position = _torso.position + _torso.basis * Vector3(0.0, 0.70, 0.0)
 	_head.rotation = Vector3(tuck * 0.07 - _comedy_launch * 0.07,
 		shiver * 1.5 + sin(comedy_phase * 5.2) * _comedy_launch * 0.13 * _motion_amount,
