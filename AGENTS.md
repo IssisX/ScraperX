@@ -49,8 +49,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: “Overtesting and oververifying,” and we are continuing together.
 - Use available development tools and relevant skills proactively when they improve the result.
   Why: I explicitly encouraged creative engineering and supported development tools.
-- Apply the multi-agent system actively wherever it makes us most productive. The root owns integration and delivery; assign up to five useful children to bounded, non-overlapping work, keep each write surface with one owner, reuse findings and close completed assignments. Do not create jobs to fill slots. Super_Agent remains useful for bounded maintenance and review; verify its advice against the repository.
-  Why: The owner's 2026-10-04 direction replaces the earlier default crew size with productive delegation and a lean root context. Role names do not identify a cheaper model.
+- **Standing owner law: the root directly owns difficult diagnosis, engineering decisions and repairs.** Use agents for bounded evidence gathering and routine work when that improves productivity; do not hand the central problem to a child and wait on its judgment. Keep one writer per surface, preserve concurrent work and close completed assignments.
+  Why: The owner explicitly required root-led problem solving on 2026-10-04, superseding the earlier delegation guidance for difficult work.
 - Keep Super_Agent occupied when useful authorized work is ready, supplying the actual evidence and a bounded question. Queue the next useful task as its current assignment finishes; avoid duplicate investigations or invented busywork.
   Why: I explicitly want this inexpensive agent taking useful work off the lead throughout development.
 - Apply the installed Godot package throughout development, selecting its relevant input, movement, camera, animation, world, material, lighting, audio, mobile, profiling, QA and export guidance for the section being built.

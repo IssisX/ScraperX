@@ -1,0 +1,9 @@
+# Pre-extraction rigid kit records
+
+`kit-normal-numeric.json.gz` and `kit-fixture-numeric.json.gz` contain the complete rigid mesh channels, surface materials and signs emitted by the exact `godot/presentation/main.gd` from commit `03d50dcd2cdce65c6037ad964950ea075759826f`, before KitView extraction. Native source and SlingshotView are unchanged since that reference. The historical Main was loaded in an isolated actual-renderer project with the same current dependencies; the expected builder was neither recreated nor copied from current KitView.
+
+The capture uses Godot 4.7 official ARM64 / X11 / softpipe / Compatibility, 192×164, LOW, fixed60. Normal contains 29 bodies; historical regression mode contains 15. Files are deterministic gzip (mtime0) of numeric JSON. Packed channel types and complete ordered values retain bores, UVs, indices, normals and transformed parts. Material and sign fields are retained; sign transforms use numeric basis/origin components.
+
+`kit_view_test.gd` compares numeric values with tolerance `1e-4` (0.1 mm for geometry), while requiring array lengths, channel presence/types and text to match. A 10 mm vertex alteration is rejected. This replaces binary hashes of floating-point serialization, which matched on ARM but failed on CI. The exact first differing field in that failed CI run was not emitted; the new comparator reports the first mismatching path. The original hash-only JSON files are retained as historical evidence.
+
+[The root repair receipt](../../../evidence/kit-net-audio-2026-10-04/kit-ci-repair/receipt.json) owns exact source, capture/test/native/fixture hashes, actual normal and fixture passing logs, and the combined geometry/hidden-leather negative control. This is geometry proof; exact-source CI/APK delivery is separately required.

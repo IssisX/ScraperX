@@ -1,0 +1,20 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=192x164 aspect=1.171 fov=82.0 far=2000
+ERROR: SCRAPERX_KIT_VIEW FAIL rigid meshes/materials/signs equal pre-extraction baseline rigid/0/1/0/1/0/0/0/1/0/0 actual=-0.83106952905655 expected=-0.82106952905655
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tests/kit_view_negative_control.gd:22)
+       [1] _run (res://tests/kit_view_negative_control.gd:257)
+SCRAPERX_AUDIO_BANK clips=28 msec=1039 driver=Dummy
+ERROR: SCRAPERX_KIT_VIEW FAIL enabled pouch has visible native leather
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tests/kit_view_negative_control.gd:22)
+       [1] _sample (res://tests/kit_view_negative_control.gd:117)
+       [2] _run (res://tests/kit_view_negative_control.gd:266)
+SCRAPERX_KIT_VIEW FAIL checks=32811 rigid_bodies=29 renderer=X11

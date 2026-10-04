@@ -1,0 +1,38 @@
+2026-10-04T22:08:32.8469487Z timeout 180s xvfb-run -a -s "-screen 0 192x164x24" \
+2026-10-04T22:08:32.8469840Z   tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \
+2026-10-04T22:08:32.8470240Z   --script res://tests/kit_view_test.gd 2>&1 | tee artifacts/kit-view-normal.log
+
+2026-10-04T22:08:33.0164008Z WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+2026-10-04T22:08:33.0164446Z      at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+2026-10-04T22:08:33.0603932Z OpenGL API 4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.2 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+2026-10-04T22:08:33.0608015Z libpulse.so.0: cannot open shared object file: No such file or directory
+2026-10-04T22:08:33.0608485Z libpulse.so.0: cannot open shared object file: No such file or directory
+2026-10-04T22:08:33.0615425Z ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+2026-10-04T22:08:33.0616025Z ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+2026-10-04T22:08:33.0616536Z ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+2026-10-04T22:08:33.0617015Z ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+2026-10-04T22:08:33.0617381Z ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
+2026-10-04T22:08:33.0617736Z ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+2026-10-04T22:08:33.0618119Z ALSA lib conf.c:5731:(snd_config_expand) Evaluate error: No such file or directory
+2026-10-04T22:08:33.0618421Z ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM default
+2026-10-04T22:08:33.0618706Z ERROR: Condition "status < 0" is true. Returning: ERR_CANT_OPEN
+2026-10-04T22:08:33.0618978Z    at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)
+2026-10-04T22:08:33.0635717Z WARNING: All audio drivers failed, falling back to the dummy driver.
+2026-10-04T22:08:33.0636079Z      at: initialize (servers/audio/audio_server.cpp:258)
+2026-10-04T22:08:33.0636275Z 
+2026-10-04T22:08:33.5418486Z SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+2026-10-04T22:08:33.5418995Z SCRAPERX_VIEWPORT size=192x164 aspect=1.171 fov=82.0 far=2000
+2026-10-04T22:08:33.6446435Z ERROR: SCRAPERX_KIT_VIEW FAIL rigid meshes/materials/signs equal pre-extraction baseline
+2026-10-04T22:08:33.6446851Z    at: push_error (core/variant/variant_utility.cpp:1023)
+2026-10-04T22:08:33.6447278Z    GDScript backtrace (most recent call first):
+2026-10-04T22:08:33.6447594Z        [0] _check (res://tests/kit_view_test.gd:20)
+2026-10-04T22:08:33.6447887Z        [1] _run (res://tests/kit_view_test.gd:185)
+2026-10-04T22:08:37.3899453Z SCRAPERX_AUDIO_BANK clips=28 msec=247 driver=Dummy
+2026-10-04T22:08:37.7338123Z ERROR: SCRAPERX_KIT_VIEW FAIL enabled body has a visible mesh 0
+2026-10-04T22:08:37.7338519Z    at: push_error (core/variant/variant_utility.cpp:1023)
+2026-10-04T22:08:37.7338787Z    GDScript backtrace (most recent call first):
+2026-10-04T22:08:37.7339251Z        [0] _check (res://tests/kit_view_test.gd:20)
+2026-10-04T22:08:37.7339494Z        [1] _sample (res://tests/kit_view_test.gd:72)
+2026-10-04T22:08:37.7339852Z        [2] _run (res://tests/kit_view_test.gd:201)
+2026-10-04T22:08:38.3816047Z SCRAPERX_KIT_VIEW FAIL checks=32786 rigid_bodies=29 renderer=X11
+2026-10-04T22:08:38.6542210Z ##[error]Process completed with exit code 1.

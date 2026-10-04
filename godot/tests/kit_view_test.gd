@@ -1,7 +1,9 @@
 extends SceneTree
 
 # Real shipping scene and native bridge, with an actual renderer. The stored
-# baseline describes rigid meshes/materials/signs before extraction. Native
+# numeric baseline describes rigid meshes/materials/signs before extraction.
+# Floating channels allow 0.1 mm/1e-4 rounding differences across ARM/x86;
+# channel presence, topology, materials and signs still have to match. Native
 # snapshots independently check moving poses, cable endpoints and net motion.
 var _main: Node3D
 var _failures: Array[String] = []
@@ -28,6 +30,43 @@ func _material_record(material: Material) -> Array:
 	return []
 
 
+func _channel_record(channel: Variant) -> Variant:
+	if channel == null:
+		return null
+	var values: Array = []
+	for value in channel:
+		match typeof(value):
+			TYPE_VECTOR2:
+				values.append([value.x, value.y])
+			TYPE_VECTOR3:
+				values.append([value.x, value.y, value.z])
+			TYPE_VECTOR4:
+				values.append([value.x, value.y, value.z, value.w])
+			TYPE_COLOR:
+				values.append([value.r, value.g, value.b, value.a])
+			_:
+				values.append(value)
+	return [typeof(channel), values]
+
+
+func _first_difference(actual: Variant, expected: Variant, path: String = "rigid") -> String:
+	if (actual is float or actual is int) and (expected is float or expected is int):
+		if is_finite(float(actual)) and is_finite(float(expected)) \
+				and absf(float(actual) - float(expected)) <= 0.0001:
+			return ""
+	elif actual is Array and expected is Array:
+		if actual.size() != expected.size():
+			return "%s length actual=%d expected=%d" % [path, actual.size(), expected.size()]
+		for i in actual.size():
+			var difference := _first_difference(actual[i], expected[i], "%s/%d" % [path, i])
+			if not difference.is_empty():
+				return difference
+		return ""
+	elif actual == expected:
+		return ""
+	return "%s actual=%s expected=%s" % [path, str(actual), str(expected)]
+
+
 func _rigid_record(kit: Node3D) -> Array:
 	var result: Array = []
 	for body in kit.get_children():
@@ -39,14 +78,21 @@ func _rigid_record(kit: Node3D) -> Array:
 				var mesh := (child as MeshInstance3D).mesh
 				var surfaces: Array = []
 				for surface in mesh.get_surface_count():
-					# Binary mesh channels catch omitted bores, UVs, batching and
-					# part transforms without rebuilding expected geometry here.
-					surfaces.append([var_to_bytes(mesh.surface_get_arrays(surface)).hex_encode().sha256_text(),
-						_material_record(mesh.surface_get_material(surface))])
+					# Compare original channels numerically, rather than hashing
+					# platform-dependent serialized floating-point bits.
+					var channels: Array = []
+					for channel in mesh.surface_get_arrays(surface):
+						channels.append(_channel_record(channel))
+					surfaces.append([channels, _material_record(mesh.surface_get_material(surface))])
 				children.append(["mesh", surfaces])
 			elif child is Label3D:
 				var label := child as Label3D
-				children.append(["sign", label.text, str(label.transform), label.font_size,
+				var frame := label.transform
+				var pose := [frame.basis.x.x, frame.basis.x.y, frame.basis.x.z,
+					frame.basis.y.x, frame.basis.y.y, frame.basis.y.z,
+					frame.basis.z.x, frame.basis.z.y, frame.basis.z.z,
+					frame.origin.x, frame.origin.y, frame.origin.z]
+				children.append(["sign", label.text, pose, label.font_size,
 					label.pixel_size, label.modulate.to_html(true), label.outline_size,
 					label.double_sided])
 		result.append([String(body.name), children])
@@ -64,12 +110,25 @@ func _sample(kit: Node3D, native: Object) -> void:
 			var enabled := bool(native.is_kit_body_enabled(body))
 			_check(node.visible == enabled and node.is_visible_in_tree() == enabled, "dynamic/tree visibility %d" % body)
 			if enabled:
-				var drawable_meshes := node.find_children("*", "MeshInstance3D", true, false)
-				var has_drawable_mesh := false
-				for mesh_node in drawable_meshes:
-					if (mesh_node as MeshInstance3D).mesh != null and mesh_node.is_visible_in_tree():
-						has_drawable_mesh = true
-				_check(has_drawable_mesh, "enabled body has a visible mesh %d" % body)
+				if int(native.get_kit_body_entity_id(body)) == 2900:
+					# SlingshotView replaces this rigid proxy with native leather.
+					var view := _main._slingshot_view as Node3D
+					var leather := view.get_node_or_null("LeatherCradle/NativeLeatherSurface") as MeshInstance3D if view != null else null
+					_check(leather != null and leather.mesh != null and leather.is_visible_in_tree(),
+						"enabled pouch has visible native leather")
+					if leather != null and leather.mesh != null:
+						_check(leather.mesh.get_surface_count() == 1 and leather.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() == 864,
+							"pouch draws complete native leather surface")
+						var state: Dictionary = native.get_slingshot_render_state()
+						_check(state.has("pouch_position") and (leather.get_parent() as Node3D).global_position.distance_to(state["pouch_position"]) < 0.0001,
+							"leather pouch follows native render position")
+				else:
+					var drawable_meshes := node.find_children("*", "MeshInstance3D", true, false)
+					var has_drawable_mesh := false
+					for mesh_node in drawable_meshes:
+						if (mesh_node as MeshInstance3D).mesh != null and mesh_node.is_visible_in_tree():
+							has_drawable_mesh = true
+					_check(has_drawable_mesh, "enabled body has a visible mesh %d" % body)
 				var expected: Transform3D = native.get_kit_body_render_transform(body)
 				_check(node.transform.is_equal_approx(expected), "interpolated body pose %d" % body)
 	for cable in int(native.get_kit_cable_count()):
@@ -178,19 +237,24 @@ func _run() -> void:
 	_main._apply_settings()
 	await process_frame
 	var kit := _main.get_node("KitPresentation") as Node3D
-	var record := JSON.stringify(_rigid_record(kit))
+	var record := _rigid_record(kit)
 	var fixture := "--regression-fixtures" in OS.get_cmdline_user_args()
 	_regression_fixtures = fixture
-	var baseline := "res://tests/fixtures/kit-fixture.json" if fixture else "res://tests/fixtures/kit-normal.json"
-	_check(record == FileAccess.get_file_as_string(baseline).strip_edges(),
-		"rigid meshes/materials/signs equal pre-extraction baseline")
+	var baseline := "res://tests/fixtures/kit-fixture-numeric.json.gz" if fixture else "res://tests/fixtures/kit-normal-numeric.json.gz"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--kit-record="):
 			var file := FileAccess.open(arg.trim_prefix("--kit-record="), FileAccess.WRITE)
-			file.store_string(record + "\n")
+			file.store_string(JSON.stringify(record) + "\n")
 		if arg.begins_with("--kit-baseline="):
-			_check(record == FileAccess.get_file_as_string(arg.trim_prefix("--kit-baseline=")).strip_edges(),
-				"rigid meshes/materials/signs equal pre-extraction baseline")
+			baseline = arg.trim_prefix("--kit-baseline=")
+	var baseline_bytes := FileAccess.get_file_as_bytes(baseline)
+	if baseline.ends_with(".gz"):
+		baseline_bytes = baseline_bytes.decompress_dynamic(32 * 1024 * 1024, FileAccess.COMPRESSION_GZIP)
+	var expected: Variant = JSON.parse_string(baseline_bytes.get_string_from_utf8())
+	_check(expected is Array, "pre-extraction numeric baseline loads")
+	if expected is Array:
+		var difference := _first_difference(record, expected)
+		_check(difference.is_empty(), "rigid meshes/materials/signs equal pre-extraction baseline " + difference)
 	var script: Script = kit.get_script()
 	_check(script != null and script.resource_path == "res://presentation/kit_view.gd",
 		"KitPresentation owns extracted rendering")

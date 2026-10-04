@@ -1,0 +1,64 @@
+{
+  "kind": "root-owned narrow KitView CI repair",
+  "candidate_parent": "11e99fb0e4961e2e7ad3bc7f399199106e7b5e42",
+  "failed_run": "https://github.com/IssisX/ScraperX/actions/runs/37236422395",
+  "source_of_expected_geometry": "03d50dcd2cdce65c6037ad964950ea075759826f:godot/presentation/main.gd",
+  "historical_main_sha256": "0960c01ad8e0c9df17740ff18b02de924d76f2bb3540e006c421e0f89f7c444d",
+  "capture_tool_sha256": "3b836bd2202bced9285d39d545b199822031c247eaf9b72e2a3949d306ed571b",
+  "fixed_test_sha256": "b4558979ac1ba99cccee9ca0b53b99cfacda6d2fb47b7d14df2bbaa8847cc8b7",
+  "native_library_sha256": "9ff20444d0733bdcf6ff2353ee4d80aa2025f8c39d9b3e324d1d08a75f615198",
+  "runtime": "Godot 4.7.stable.official.5b4e0cb0f ARM64, Ubuntu/proot, X11/Mesa softpipe, Compatibility, LOW, 192x164, fixed60, Dummy audio for geometry checks",
+  "causes": {
+    "visibility": "Source-confirmed: SlingshotView hides KitBody2900 rigid proxy and renders LeatherCradle/NativeLeatherSurface. Old guard rejected this existing intended owner split; reproduced locally.",
+    "parity": "Old record hashes platform-sensitive serialized floating channels. Whole original hash record matches current ARM; x86 CI mismatches. Exact original CI divergent field was not logged, so portability is source-supported but original field-level cause remains unclassified until numeric CI proof."
+  },
+  "normal": {
+    "exit": 0,
+    "checks": 32811,
+    "bodies": 29
+  },
+  "fixture": {
+    "exit": 0,
+    "checks": 1695,
+    "bodies": 15
+  },
+  "negative_control": {
+    "exit": 1,
+    "faults": [
+      "10 mm reference vertex offset",
+      "hidden actual native leather surface"
+    ],
+    "both_rejected": true,
+    "private_test_sha256": "baa85763e7a4c276aacaae35e21c4bd2d60e39fa3a70c693c3c1fdce28f7c471"
+  },
+  "fixtures": {
+    "normal": {
+      "path": "godot/tests/fixtures/kit-normal-numeric.json.gz",
+      "sha256": "70f21381f993ae9b4c447a8bcabd90632d1996e3aff340c18a66799511e0dc37",
+      "bytes": 1281214,
+      "numeric_json_sha256": "f7a52566e2388bca983e1d3ba7c5a9d24f04fd22c9e892acc6f5559abbb1fb8c"
+    },
+    "fixture": {
+      "path": "godot/tests/fixtures/kit-fixture-numeric.json.gz",
+      "sha256": "c5ca65b636f14f344821bac1676e37163db8adb945f05424b538b3b00ba3c711",
+      "bytes": 13107,
+      "numeric_json_sha256": "4a198930ba6211b1cc2bd4e3778931f85151b800a9f899379e4ec86875022a77"
+    }
+  },
+  "limits": [
+    "Native source and SlingshotView unchanged since historical reference.",
+    "Old binary-hash goldens retained unchanged as historical evidence.",
+    "New full numeric records are captured from exact historical Main, not current KitView.",
+    "Numeric tolerance 1e-4; channel types, lengths, topology and text remain enforced.",
+    "Actual X11 drawing; these local geometry runs are not x86 CI/APK or device proof.",
+    "proot stderr shm-helper warnings occurred; both positive processes exited0 and negative exited1."
+  ],
+  "log_sha256": {
+    "normal-red.log": "ac29947ee7f04d6e514f94e4280cae98829393063434704e5a1b7be2a7331e70",
+    "original-normal-capture.log": "e88eb8155cce19e236939c6786bea32b86f8f2deae4cd108a53d58ffcbc676ad",
+    "original-fixture-capture.log": "713bb11557600614d129cf093995befcc3bee79dd5854f0fe34a63eb1201dbcb",
+    "normal-green.log": "a8d9573815b18b5726ed1df9bbd1e5c92df931ce7a759e8c09eec9e840ede048",
+    "fixture-green.log": "8f5486e96721fa7cc397b5b9fdb3eac3ded936bf155d5b859adb2bc2c4e55120",
+    "negative-control.log": "95391c505c08a6b113997e633a1f50762c4e740ffb24d3212018e9921402d6aa"
+  }
+}
