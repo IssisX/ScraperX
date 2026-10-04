@@ -1,0 +1,3 @@
+# Pending cargo-net rendering regression
+
+`kit_route_render_test.gd` is exact unfinished test-first work preserved for restart, outside the shipping Godot project. Its observed RED is retained in `evidence/kit-net-audio-2026-10-04/net-red.log`. Copy it into `godot/tests/` when implementing the rounded net and run it through the existing native-backed touch driver. The test currently rejects the missing rounded `Strands`/`Knots` nodes; geometry is not implemented. Revisit edge-specific connectivity assertions and expected node/mesh contract with the chosen implementation. Do not wire a knowingly pending RED test into the passing delivery workflow.

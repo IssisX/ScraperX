@@ -1,0 +1,17 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=192x164 aspect=1.171 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=492 driver=Dummy
+ERROR: SCRAPERX_KIT_VIEW FAIL KitPresentation owns extracted rendering
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tests/kit_view_test.gd:19)
+       [1] _run (res://tests/kit_view_test.gd:120)
+SCRAPERX_KIT_VIEW FAIL checks=1297 rigid_bodies=15 renderer=X11
