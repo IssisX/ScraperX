@@ -1,5 +1,7 @@
 # RESTART HERE — ScraperX / ChatGPT
 
+**Latest continuation handoff:** read [CONTINUATION_HANDOFF_CODEX.md](CONTINUATION_HANDOFF_CODEX.md) first. It includes the live repository inspection and newly observed CI audio-mix failure. The detailed tooling and saved implementation information below remain useful.
+
 **Owner-requested quick restart checkpoint, 2026-10-04.** Resume this bounded batch after starting the new session/profile. This is saved work in progress, not a completed delivery. All local workers and runtime captures are stopped. The larger movement/content goal remains paused.
 
 ## Scope and checkout
