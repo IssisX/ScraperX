@@ -1,0 +1,244 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1165 driver=Dummy
+SCRAPERX_UITEST_POSE jump tick=25 position=(6.0, 0.953489, -25.0) elapsed_ms=5082
+SCRAPERX_UITEST PASS touch_jump vy_peak=5.39
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1338 driver=Dummy
+SCRAPERX_UITEST_POSE running tick=78 position=(6.0, 0.893589, -27.64273) elapsed_ms=6205
+SCRAPERX_UITEST PASS touch_move_look forward_m=4.89 turned_rad=0.600 settle_mps=0.00 steps=18
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1173 driver=Dummy
+SCRAPERX_UITEST_POSE gyro_turned tick=117 position=(6.0, 0.893589, -25.0) elapsed_ms=7074
+SCRAPERX_UITEST PASS touch_gyro_aim turned_rad=0.500 raised_rad=0.200 walk_alignment=1.0000
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1180 driver=Dummy
+SCRAPERX_UITEST_POSE climb_prompt tick=24 position=(7.9, 0.893589, -6.0) elapsed_ms=4805
+SCRAPERX_UITEST_POSE ground_mantle tick=39 position=(8.461857, 0.934303, -6.0) elapsed_ms=5034
+SCRAPERX_UITEST PASS touch_climb state=2 rise_m=1.58
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1192 driver=Dummy
+SCRAPERX_UITEST_POSE vault tick=75 position=(3.66385, 0.933562, -6.0) elapsed_ms=6386
+SCRAPERX_UITEST PASS touch_vault x_after=6.08
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1170 driver=Dummy
+SCRAPERX_UITEST PASS touch_double_tap_vault x_after=6.08
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=505 driver=Dummy
+SCRAPERX_UITEST_POSE beam_blocks tick=205 position=(-2.253763, 0.88, -12.36258) elapsed_ms=4135
+SCRAPERX_UITEST_POSE crouched tick=306 position=(-2.807312, 0.58, -14.0258) elapsed_ms=4753
+SCRAPERX_UITEST PASS touch_crouch blocked_z=-12.36 passed_z=-14.03 eye_crouched=0.95 eye_standing=1.52
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=586 driver=Dummy
+SCRAPERX_UITEST_POSE hanging tick=84 position=(8.103316, 2.147998, 4.0) elapsed_ms=2330
+SCRAPERX_UITEST PASS touch_hang_drop vy_after_release=-0.08
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=496 driver=Dummy
+SCRAPERX_UITEST_POSE hanging tick=84 position=(8.103316, 2.147998, 4.0) elapsed_ms=1835
+SCRAPERX_UITEST_POSE mantle_mid tick=93 position=(8.103316, 3.178312, 4.0) elapsed_ms=1903
+SCRAPERX_UITEST PASS touch_hang_climb top_y=4.52 grip_error_m=0.0000
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=534 driver=Dummy
+SCRAPERX_UITEST_POSE canopy tick=120 position=(0.0, 54.58873, -8.0) elapsed_ms=3886
+SCRAPERX_UITEST PASS touch_chute offered_at_mps=6.54 impact_mps=8.89
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1170 driver=Dummy
+SCRAPERX_UITEST_POSE fall_danger tick=147 position=(0.0, 48.82552, -8.0) elapsed_ms=8025
+SCRAPERX_UITEST_POSE lethal_toast tick=351 position=(0.0, 0.9, 0.0) elapsed_ms=13060
+SCRAPERX_UITEST PASS touch_lethal_feedback toast='FELL AT 34.7 M/S  /  RESTORED TO CHECKPOINT +0.9 M' lethal_mps=20.0
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1163 driver=Dummy
+SCRAPERX_UITEST PASS touch_sump isolated false->true
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1496 driver=Dummy
+SCRAPERX_UITEST_POSE pendant tick=45 position=(3.0, 2.28, -100.0) elapsed_ms=5464
+SCRAPERX_UITEST PASS touch_pendant boom_delta_rad=-0.081 hook_delta_m=0.721
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=483 driver=Dummy
+SCRAPERX_UITEST_POSE door_open tick=274 position=(10.42038, 0.88, -84.82857) elapsed_ms=6387
+SCRAPERX_UITEST_POSE holding_block tick=360 position=(10.48881, 0.87995, -84.81023) elapsed_ms=8520
+SCRAPERX_UITEST_POSE carried_out tick=610 position=(10.59371, 0.895458, -90.50374) elapsed_ms=14690
+SCRAPERX_UITEST_POSE cage_exterior tick=901 position=(12.84162, 0.895458, -96.1202) elapsed_ms=21568
+SCRAPERX_UITEST PASS touch_carry door_rad=1.45 block=(9.75,0.25,-90.23)
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1171 driver=Dummy
+SCRAPERX_UITEST_POSE water_screw_running tick=9 position=(-14.0, 0.9, -97.3) elapsed_ms=4685
+SCRAPERX_UITEST PASS touch_water_screw rpm=2.2 torque_nm=1500 tank_m3=0.000
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE water_lift_fill_control tick=6 position=(-14.45, 0.9, -106.2) elapsed_ms=4002
+SCRAPERX_UITEST PASS touch_water_lift valve_open=1 bucket_m3=0.000 cage_m=0.000
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=468 driver=Dummy
+SCRAPERX_UITEST_POSE pause_menu tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=1559
+SCRAPERX_UITEST_POSE pause_controls tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=1577
+SCRAPERX_UITEST_POSE pause_settings tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=1587
+SCRAPERX_UITEST_POSE pause_graphics tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=1626
+SCRAPERX_UITEST_POSE pause_display tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=1635
+SCRAPERX_UITEST_POSE pause_audio tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=1644
+SCRAPERX_UITEST PASS touch_pause frozen_tick=25 advanced_to=39
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=620 driver=Dummy
+SCRAPERX_UITEST PASS pad_core forward_m=4.84 turned_rad=1.848
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1171 driver=Dummy
+SCRAPERX_UITEST_POSE pad_pendant tick=55 position=(197.5, 0.893589, -2.0) elapsed_ms=5865
+SCRAPERX_UITEST PASS pad_pendant boom_delta_rad=-0.048 hook_delta_m=0.931
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1173 driver=Dummy
+SCRAPERX_UITEST_POSE keyboard_pause tick=300 position=(6.0, 0.888587, -30.50003) elapsed_ms=11751
+SCRAPERX_UITEST PASS keyboard_core forward_m=4.84 rejected=0->1
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=478 driver=Dummy
+SCRAPERX_UITEST_POSE rig_shackle tick=259 position=(-11.35804, 155.1296, -131.5748) elapsed_ms=9421
+SCRAPERX_UITEST_POSE rig_handle tick=396 position=(-11.06812, 155.1299, -130.4221) elapsed_ms=12553
+SCRAPERX_UITEST_POSE rig_top tick=1339 position=(-11.06806, 177.1298, -131.629) elapsed_ms=33894
+SCRAPERX_UITEST PASS touch_rig top_y=177.13 worst_wrist_step_m=0.074
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1716 driver=Dummy
+SCRAPERX_UITEST_POSE rig_shackle tick=261 position=(-11.3571, 155.1297, -131.5788) elapsed_ms=10123
+SCRAPERX_UITEST_POSE rig_handle tick=399 position=(-11.08869, 155.1299, -130.5048) elapsed_ms=13620
+SCRAPERX_UITEST_POSE rig_top tick=1342 position=(-11.08863, 177.1298, -131.6994) elapsed_ms=34122
+SCRAPERX_UITEST PASS pad_rig top_y=177.13 worst_wrist_step_m=0.074
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=773 driver=Dummy
+SCRAPERX_UITEST_POSE rig_shackle tick=468 position=(-11.43379, 155.1306, -131.5807) elapsed_ms=13074
+SCRAPERX_UITEST_POSE rig_handle tick=612 position=(-11.02308, 155.1306, -130.4803) elapsed_ms=16581
+SCRAPERX_UITEST_POSE rig_top tick=1548 position=(-11.02304, 177.1312, -132.2541) elapsed_ms=38312
+SCRAPERX_UITEST PASS keyboard_rig top_y=177.13 worst_wrist_step_m=0.075

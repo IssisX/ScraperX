@@ -1892,6 +1892,27 @@ func _touch_hang(climb: bool) -> bool:
 	if _main._arms.hand_poses() != [4, 4] or grip_error < 0.0 or grip_error > 0.02:
 		return _fail("hands not gripping the native ledge (poses %s, error %.3f m)" % [
 			str(_main._arms.hand_poses()), grip_error])
+	# Native per-hand grips, not a reconstructed central lip, own the pose.
+	var normal: Vector3 = _native().get_traversal_normal()
+	for hand in _main._arms._hands:
+		var hold: Vector3 = _native().get_traversal_left_hand_render_position() if hand.side < 0.0 \
+			else _native().get_traversal_right_hand_render_position()
+		var expected: Vector3 = hold - normal * (_main._arms.TOP_PROBE_INSET + 0.034) + Vector3.DOWN * 0.074
+		if hand.anchor.distance_to(expected) > 0.002:
+			return _fail("hanging wrist target does not follow its native hand")
+	# Looking around moves the head, not the loaded torso or planted wrists.
+	var old_yaw: float = _main._yaw
+	var old_pitch: float = _main._pitch
+	_main._yaw += PI * 0.5
+	_main._pitch = 0.2
+	await _seconds(0.1)
+	var head_grip_error: float = _main._arms.anchored_error()
+	if int(_native().get_traversal_state()) != 1 or _main._arms.hand_poses() != [4, 4] \
+			or head_grip_error < 0.0 or head_grip_error > 0.02:
+		return _fail("head rotation detached a loaded hanging wrist")
+	_main._yaw = old_yaw
+	_main._pitch = old_pitch
+	await _frames(2)
 	await _pose("hanging")
 	if climb:
 		_tap(1, _center(&"jump"))
@@ -1905,14 +1926,14 @@ func _touch_hang(climb: bool) -> bool:
 		var reached_3: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.5)
 		if not reached_3:
 			return _fail("mantle from hang never landed")
-		_detail = "top_y=%.2f grip_error_m=%.4f" % [_position().y, grip_error]
+		_detail = "top_y=%.2f grip_error_m=%.4f head_grip_error_m=%.4f" % [_position().y, grip_error, head_grip_error]
 		return _position().y > 4.4
 	_tap(1, _center(&"drop"))
 	var reached_4: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 0, 0.2)
 	if not reached_4:
 		return _fail("DROP did not release the hang")
 	await _frames(2)
-	_detail = "vy_after_release=%.2f" % _velocity().y
+	_detail = "vy_after_release=%.2f grip_error_m=%.4f head_grip_error_m=%.4f" % [_velocity().y, grip_error, head_grip_error]
 	return _velocity().y <= 0.0
 
 

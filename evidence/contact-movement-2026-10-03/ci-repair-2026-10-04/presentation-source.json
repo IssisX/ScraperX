@@ -1,0 +1,9 @@
+{
+  "base": "c26ad49",
+  "native_library_source": "dcf34382f351e8ba4a74eef04c04c1bb7dc218ee",
+  "files": {
+    "godot/presentation/main.gd": "0960c01ad8e0c9df17740ff18b02de924d76f2bb3540e006c421e0f89f7c444d",
+    "godot/presentation/first_person_arms.gd": "88f3b67ba4e350ae8f668b101b001aa9a95a2d8b567e500508a28e54e56f4630",
+    "godot/presentation/ui/ui_test_driver.gd": "05ea07a3cd040971963f117db3f38d3489f71b76d3eb0d45cc9231b90c7e7abf"
+  }
+}

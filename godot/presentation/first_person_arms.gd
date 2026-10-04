@@ -25,6 +25,11 @@ const SHOULDER_LOCAL := Vector3(0.17, -0.30, 0.18)
 # Arms raised to a grip rise from lower and nearer the centre, so the
 # forearms climb out of the bottom corners instead of crossing the frame.
 const SHOULDER_LOCAL_RAISED := Vector3(0.14, -0.46, 0.12)
+# Loaded hanging shoulders follow the native torso, independently of head
+# rotation/dip. The old low camera viewmodel could not reach a finite catch.
+const HANG_SHOULDER_HEIGHT := 0.55
+const HANG_SHOULDER_HALF_SPAN := 0.17
+const HANG_SHOULDER_BACK := 0.08
 # The native capsule holds the eye 0.41 m off a hang wall; a real body pulls
 # in. The shoulder may lean this far toward an out-of-reach anchor.
 const MAX_LEAN := 0.3
@@ -371,6 +376,10 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var raised := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING]
 		var shoulder_local := SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
+		if traversal == TRAVERSAL_HANGING:
+			var grip_right := _grip_forward.cross(Vector3.UP).normalized()
+			shoulder = (state["render_position"] as Vector3) + Vector3.UP * HANG_SHOULDER_HEIGHT \
+				+ grip_right * (HANG_SHOULDER_HALF_SPAN * hand.side) - _grip_forward * HANG_SHOULDER_BACK
 		var pose := POSE_REST
 		var reachable := true
 		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
@@ -487,6 +496,11 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 				# over onto the top -- from below, knuckles on the edge.
 				var hook := lip - _grip_forward * 0.034 + Vector3.DOWN * 0.074 \
 					+ along * (GRIP_HALF_SPAN * side)
+				if int(state["traversal"]) == TRAVERSAL_HANGING:
+					# Each native hand owns its independently probed support point.
+					# Convert the inset top probe to the existing hook wrist pose.
+					var hold: Vector3 = state["hand_left"] if side < 0.0 else state["hand_right"]
+					hook = hold - _grip_forward * (TOP_PROBE_INSET + 0.034) + Vector3.DOWN * 0.074
 				var hook_basis := _hand_basis(Vector3.UP * 0.95 + _grip_forward * 0.3, -_grip_forward)
 				return [hook, hook_basis, true, 30.0, 0.8, 0.35]
 			var span := GRIP_HALF_SPAN * 0.9

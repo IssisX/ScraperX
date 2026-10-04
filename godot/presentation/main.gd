@@ -1431,6 +1431,7 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"traversal": int(_ctx["traversal"]),
 		"progress": float(_native.get_traversal_progress()),
 		"ledge_point": _native.get_traversal_ledge_point(),
+		"render_position": _native.get_player_render_position(),
 		"hand_left": _native.get_traversal_left_hand_render_position(),
 		"hand_right": _native.get_traversal_right_hand_render_position(),
 		"structure_normal": _native.get_traversal_normal(),
