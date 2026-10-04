@@ -36,6 +36,7 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I want to know when the work is finished so we can plan what follows.
 
 ### Process
+- Screenshots and image inspection are optional diagnostics, not acceptance or delivery requirements. Keep substantive native, gameplay/runtime and regression checks. APK delivery passes only when the exact-source GitHub Actions run succeeds and exports the verified APK; an exported APK from a red run does not pass. This 2026-10-04 owner correction supersedes older screenshot checklists.
 - Inspect existing work before changing it, and preserve completed or concurrent changes.
   Why: I warned against flattening the already completed cargo net.
 - Make authorized edits as needed without repeated permission requests; finish integration and appropriate verification before pushing. Match writable work to the actual sandbox and role permissions.

@@ -1,0 +1,9 @@
+{
+  "source": "dcf34382f351e8ba4a74eef04c04c1bb7dc218ee",
+  "native_library_sha256": "9ff20444d0733bdcf6ff2353ee4d80aa2025f8c39d9b3e324d1d08a75f615198",
+  "presentation_files": {
+    "presentation/main.gd": "de93b391c48b5ba403a7845ae7c4874bd792318870ee3b241f14f88e84ac9fb4",
+    "presentation/ui/ui_test_driver.gd": "6913a959acf7e099960927beaf822c41a575167d11861b0707a4152e3802d7da",
+    "presentation/climber_character.gd": "1e843c7a838cce322f76bc669d20cd60e76376e4997e9c8ebd52d03dd344de7d"
+  }
+}

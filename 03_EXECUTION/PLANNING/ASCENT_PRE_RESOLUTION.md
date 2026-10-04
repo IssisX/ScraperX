@@ -24,7 +24,7 @@ Inputs and outputs match at the same instant in position, orientation, velocity,
 
 ## Readability and pace
 
-Use large geometric causes: something rolls, tips, swings, strikes, lands or becomes supported. See the major handoff from the approach or operating position. Record an actual first-person pass and a miss; UI telemetry is supplementary. Prefer wide capture regions to intricate projectile catches. The normal path must be worth doing even when legal parkour offers an alternative. Do not defend a weak mechanism with invisible barriers.
+Use large geometric causes: something rolls, tips, swings, strikes, lands or becomes supported. See the major handoff from the approach or operating position. Exercise an actual first-person pass and a miss and record the gameplay outcome; screenshots are optional diagnostics. UI telemetry is supplementary. Prefer wide capture regions to intricate projectile catches. The normal path must be worth doing even when legal parkour offers an alternative. Do not defend a weak mechanism with invisible barriers.
 
 ## Movement and units
 

@@ -75,7 +75,7 @@ The responsibilities below are a file-ownership map, not four simultaneous agent
 1. Integrator owns normal route continuity, Simulation registration/stepping and checkpoint integration.
 2. Native assembly worker owns the bounded gallery builders, bodies, constraints and required physical state.
 3. Presentation worker owns shared native readback, readable primitive geometry, ordinary input context and actual-state feedback.
-4. Verification/documentation worker owns causal falsifiers, continuous-route scenarios, inspected captures and authority/status reconciliation.
+4. Verification/documentation worker owns causal falsifiers, continuous-route scenarios, runtime evidence and authority/status reconciliation. Screenshots are optional diagnostics.
 
 The first complete delivery can be the service-mast approach, rolling-drum bascule, actual onward receiver and recovery, approximately +121→141 pending placement. Then deliver the offset climb and complete larger freight assembly to its stable upper receiver, followed by the useful haul-span handoff and upper continuation. Each machine must be delivered with its whole load path and traversal; never divide a moving assembly into partially working height tickets. Once expert compilation settles interfaces and acceptance, the remaining mixed pass forms a substantial GPT-6-sol package rather than tiny repeated assignments.
 

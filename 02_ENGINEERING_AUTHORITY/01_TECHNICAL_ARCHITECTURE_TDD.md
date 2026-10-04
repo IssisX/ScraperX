@@ -775,7 +775,7 @@ Deterministic test scenes replay command streams and compare authoritative state
 
 Where floating-point exact equality is inappropriate, compare physically meaningful tolerances/invariants.
 
-Also exercise the real normal-input route and explicitly invoke rendered capture when visual/collision agreement is claimed. Inspect the resulting images, including approach, contact/motion and arrival. State predicates, visual observation and Android execution answer different questions; retain all evidence appropriate to the claim. Capture is an independent operation even when invoked within a CI job.
+Also exercise the real normal-input route and verify collision, support and rendered pose through actual runtime state and presentation checks. Screenshots and image inspection are optional diagnostics, not acceptance or delivery gates (owner correction, 2026-10-04). If a claim relies on an image, inspect that image before making the claim. State predicates, visual observation and Android execution answer different questions; retain evidence appropriate to the claim. APK delivery requires a green exact-source GitHub Actions export and verified provenance.
 
 ### 21.3 Android smoke path
 

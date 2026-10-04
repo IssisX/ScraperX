@@ -207,7 +207,7 @@ Use:
 
 Never upgrade one evidence class into another.
 
-For visual evidence, explicitly invoke the available capture path, verify that genuine images were produced, open them and inspect the relevant approach, action/contact, motion and supported arrival. Record the source/build, scenario and views actually inspected. A capture filename or passing log is not visual inspection. Screenshots can be collected independently of APK builds; neither proves the other. Still frames alone cannot prove impulse transfer or continuity, so pair them with runtime state traces and normal-input execution.
+Owner correction, 2026-10-04: screenshots and image inspection are optional diagnostics, not acceptance or delivery gates. Verify gameplay through substantive native tests, normal-input runtime execution and state traces. APK delivery requires a successful exact-source GitHub Actions run that exports the APK, with verified provenance; an APK from a red run does not pass. If images are used to support a specific visual claim, inspect those actual images and record the source/build, scenario and views inspected. A filename is not visual inspection, and a still frame cannot establish impulse transfer, continuity or Android execution.
 
 ---
 

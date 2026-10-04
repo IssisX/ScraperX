@@ -101,7 +101,7 @@ mkdir -p build/bridge-captures
 xvfb-run -a -s '-screen 0 1296x1114x24' godot --path godot --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 30 -- --uitest=touch_macro "--capture=$(pwd)/build/bridge-captures/bridge"
 ```
 
-`godot` above means the repository-pinned 4.7 binary available on PATH; substitute its actual executable path if necessary. `xvfb-run` requires Xvfb/xauth or an equivalent real display. The rendered route should capture `macro_ready`, `macro_moving`, `macro_seated`, `macro_climb` and `macro_exit`; inspect those images and require the actual PASS result. The final rendered rerun is a pending check, not a promise of success.
+`godot` above means the repository-pinned 4.7 binary available on PATH; substitute its actual executable path if necessary. `xvfb-run` requires Xvfb/xauth or an equivalent real display. Require the actual rendered-route PASS result. Optional diagnostic captures use `macro_ready`, `macro_moving`, `macro_seated`, `macro_climb` and `macro_exit`; their existence or inspection is not an acceptance gate (owner correction, 2026-10-04). The final rendered rerun is a pending check, not a promise of success.
 
 ## How the current implementation owner should use it
 

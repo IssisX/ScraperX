@@ -20,7 +20,7 @@ The 2.2 m transfer gap [CHOSEN] has broad 2.5 m longitudinal landings. With 5.5 
 
 **Rejected candidates.** Another cabinet–duct–vent climb repeats AS-017/019. Another bare pole repeats AS-020's long exit. A new lift after the teeter repeats the recent ride pattern without a distinct physical decision. A continuous broad diagonal walkway removes the intended balance and gap decisions.
 
-**Proof / completion.** Native tests must reach real +82 m, +87 m and tower +88 m supports, observe balance on the inclined girders, distinguish walking off the gap from a successful jump, distinguish standing obstruction from crouched passage, preserve deliberate departure and verify recovery/retry. Test more than one takeoff location on the same geometry. The full gameplay proof must extend the existing grade→+77 m rendered touch sequence with ordinary input, explicitly capture approach/transfer/low member/arrival, inspect those images, preserve the retained routes and run the GitHub Actions APK path. Do not promote native-only proof to completed delivery.
+**Proof / completion.** Native tests must reach real +82 m, +87 m and tower +88 m supports, observe balance on the inclined girders, distinguish walking off the gap from a successful jump, distinguish standing obstruction from crouched passage, preserve deliberate departure and verify recovery/retry. Test more than one takeoff location on the same geometry. The full gameplay proof must extend the existing grade→+77 m rendered touch sequence with ordinary input, verify approach/transfer/low member/arrival through runtime state, preserve the retained routes and obtain a green GitHub Actions APK build. Screenshots are optional diagnostics. Do not promote native-only proof to completed delivery.
 
 ## Local evidence and model handoff
 
@@ -51,7 +51,7 @@ For capsule radius `r`, half-height `H` and upward unit plane normal `n`, vertic
 
 Local ARM native CTest selection excluding `scraperx_sim.athletic_traversal` passed 20/20. The excluded broad executable was also run: early foundation, locomotion, support and checkpoint checks passed before the known retired AS-002 mid-landing failure. That failure was separately reproduced on the preceding baseline; do not delete or weaken its CI gate. A fresh full x86 Actions run remains required. Independent review found no critical/important defect and reproduced the route and retry pass.
 
-Godot currently adds only an explicitly requested `braced_bay_preview` pose to the existing +77 m touch scenario. It does not claim rendered +88 m traversal. Full normal-input grade→+88 m, first-person inspection, current-source Android build and Fold execution remain distinct outstanding gates.
+Godot currently adds only an explicitly requested `braced_bay_preview` pose to the existing +77 m touch scenario. It does not claim rendered +88 m traversal. Full normal-input grade→+88 m, current-source green Actions APK delivery and Fold execution remain distinct evidence boundaries; screenshot inspection is optional.
 
 ### Exact input handoff
 
@@ -61,6 +61,6 @@ Port the operations in `tests/braced_bay_tests.cpp` through the existing viewpor
 2. On the +82 m landing move to `(29,-144)`, settle, face +X and accelerate. At X>=30 while still grounded, press the touch jump control. Steer toward `(33.7,-144)` using `clamp_length((target-position)/1.4,1)` in world X/Z converted to view right/forward; wait for an observed airborne interval then grounded arrival near Y=82.9. Stop input and settle. Use state observations for success; a timeout only diagnoses failure.
 3. Align `(34,-144)` while on the flat landing. Walk to `(34,-139.4)`; show standing obstruction, toggle crouch through the actual touch button, move to `(34,-136.7)`, then stand after clear.
 4. Continue `(34,-131.5)`, settle, align `(34,-132)`, then balance to `(26.55,-132)`. Face -X, require the real mantle affordance, press Action and walk onto `(24.8,-132)`.
-5. Require grounded support 11, centre Y=88.9 within the native test’s tolerance and zero deaths. Capture approach, first landing/gap, crouch passage, upper junction and supported arrival, with camera directions that expose the relevant geometry. Inspect each actual image.
+5. Require grounded support 11, centre Y=88.9 within the native test’s tolerance and zero deaths. Verify approach, first landing/gap, crouch passage, upper junction and supported arrival through ordinary gameplay and runtime state. Screenshots are optional diagnostics.
 
 The larger coding assignment and running to-do are in [the Sol package](../PLANNING/SOL_ASCENT_HANDOFF.md). Completing this touch port alone does not finish that assignment.

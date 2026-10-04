@@ -1,6 +1,6 @@
 # Sol ascent implementation package
 
-**2026-10-01 continuation update:** The implementation and CI delivery milestones below have advanced since this plan was written. Source `4996a6e` passed [run 36788027524](https://github.com/IssisX/ScraperX/actions/runs/36788027524): full native 24/24, normal rendered grade→+110 m, explicit captures, retained gates and Android export. New image inspection and device play remain open. For the ChatGPT environment, begin with [CONTINUE_HERE_CHATGPT_CODEX.md](../../CONTINUE_HERE_CHATGPT_CODEX.md); its dated evidence supersedes older pending-run wording here. Keep this plan's task labels and physical constraints.
+**2026-10-01 continuation update:** The implementation and CI delivery milestones below have advanced since this plan was written. Source `4996a6e` passed [run 36788027524](https://github.com/IssisX/ScraperX/actions/runs/36788027524): full native 24/24, normal rendered grade→+110 m, explicit captures, retained gates and Android export. Device play remains open; image inspection is optional under the 2026-10-04 owner correction. For the ChatGPT environment, begin with [CONTINUE_HERE_CHATGPT_CODEX.md](../../CONTINUE_HERE_CHATGPT_CODEX.md); its dated evidence supersedes older pending-run wording here. Keep this plan's task labels and physical constraints.
 
 > **For agentic workers:** Open the installed Superpowers root `SKILL.md`, then `skills/executing-plans/MODULE.md`. Apply the installed Causal Mechanism Compiler and `$threespine` to the relevant physical interfaces. The owner selected a model handoff: execute this package after they switch models; do not ask for permission at every local construction or test step.
 
@@ -48,7 +48,7 @@ _move_dir(device, Vector2(world_command.dot(right), world_command.dot(forward)))
 
 Use the existing touch jump/crouch button events, `_act`, `_face`, `_wait_until`, `_pose` and `process_frame`; no direct position, velocity or native movement setters. `_walk_to` does not turn the camera: face along each narrow beam before entering it. Stop and settle on the flat approaches before changing axes.
 
-- [ ] Capture `braced_bay_entry`, `braced_bay_transfer`, `braced_bay_low_member`, `braced_bay_upper_junction`, `braced_bay_arrival`. Assert each PNG exists in CI and inspect actual images; a file-existence check is not visual verification. Final log must distinguish walking-surface +88 from capsule-centre +88.9.
+- [ ] Verify entry, transfer, low-member passage, upper junction and supported arrival through ordinary gameplay and native state. Optional diagnostic captures retain names `braced_bay_entry`, `braced_bay_transfer`, `braced_bay_low_member`, `braced_bay_upper_junction`, `braced_bay_arrival`; their existence or inspection is not an acceptance gate. Final log must distinguish walking-surface +88 from capsule-centre +88.9.
 - [ ] Extend the existing rendered continuous route invocation to the new scenario and retain previous pose requirements. Run headless input first if available, then the actual renderer at the existing tested settings. Preserve shipping viewport settings after CI’s temporary capture settings.
 - [ ] Record a bounded AS-021 delivery result and commit only the relevant source/evidence. An upstream CI failure remains a failure even when this local test passes.
 
@@ -73,7 +73,7 @@ Call once immediately after `build_braced_bay(*kit_)` in the active `WorldConten
 - [x] Write and run native route assertions for entry, both tower receivers and a missing-route failure before construction. Use ordinary movement and traversal inputs between route beats.
 - [x] Implement and test the lower subsection, lateral turn and +99 receiver; record source dimensions in the Atlas and ticket.
 - [x] Implement and test the upper subsection, blocked first top-out, shimmy pocket and +110 mantle.
-- [x] Provide frame/tiebacks, rests and real release/retry contact. First ladder pacing and visual readability remain subject to screenshot/play inspection.
+- [x] Provide frame/tiebacks, rests and real release/retry contact. Assess first ladder pacing and readability through play; screenshots are optional diagnostics.
 - [ ] Verify ordinary movement from AS-021’s actual +88 arrival along the tower to the AS-022 entry. Then verify the connected native +77→110 route; focused section spawns alone cannot establish continuity.
 - [x] Add the executable/CTest and workflow target. Update the active-world count for exactly one added Kit body.
 
@@ -108,7 +108,7 @@ CMC profile is `MACRO-TRAVERSAL-STRICT`; use LINK for these static support inter
 **Files:** `godot/presentation/ui/ui_test_driver.gd`; `.github/workflows/wo000-delivery-spine.yml`; AS-022 evidence, Atlas status, Start Here §2 and the running plan.
 
 - [x] Add `_touch_north_service_frame() -> bool` calling `_touch_braced_bay()` first, with a normal-spawn scenario and viewport events. Its runtime pass and zero-death claim await CI.
-- [ ] Explicitly capture the north entry, lower transfer, +99 rest, hanging/top-out pocket, upper transfer and supported +110 arrival. Show holds and landing depth from ordinary first-person distance. Inspect images; repair misleading framing, intersecting geometry and obscured exits at their owner.
+- [ ] Verify the north entry, lower transfer, +99 rest, hanging/top-out pocket, upper transfer and supported +110 arrival through ordinary first-person gameplay and native state. Repair observed misleading framing, intersecting geometry and obscured exits at their owner. Screenshots are optional diagnostics.
 - [ ] Preserve native machine physics tests, prior normal route, regression inputs/render/audio, both collision-table comparisons, fixed-tick/replay checks and author APK identity. Do not edit generated world-solids tables for Kit-owned geometry; only regenerate them if their actual Godot-owned source changed.
 - [ ] Publish to `ChatGPT`, identify the exact SHA’s workflow and follow it to terminal status. Build/export the APK in Actions, download it into agent temporary storage, verify its source metadata/signature/checksum and report those actual results. A successful artifact upload alone does not prove every required gate ran.
 - [ ] Update the running to-do and current evidence without changing historical run claims. Separate desktop input/render, Android build, installed execution and sustained Fold performance. Stop at the supported +110 handoff or report the exact blocker; do not invent an upper-machine design to fill a progress report.
@@ -127,8 +127,8 @@ The broad ARM executable was separately run and still fails the already reproduc
 - [x] Substantial Sol package, bounded section framing, file ownership and acceptance.
 - [x] Follow the prior `2e622f7` candidate to successful exact-source Actions completion; it proves the previous +77 m rendered boundary.
 - [x] Follow `4996a6e` to green Actions completion: full native 24/24, grade→+110 m touch, retained gates and APK export. Downloaded APK checksum and CI identity/signing evidence checked at migration handoff.
-- [ ] Task 1: AS-021 full rendered touch passed in that run; visual inspection remains open.
+- [ ] Task 1: AS-021 full rendered touch passed in that run; screenshot inspection is optional.
 - [x] Task 2: AS-022 lower and upper native section through +110 m, with one Kit/render part list.
 - [x] Task 3: release, retry, varied catch starts, 90/60/360 Hz caller partitions and both checkpoint recoveries pass native.
-- [ ] Task 4: continuous rendered grade→+110 m, retained gates and exact-source APK passed; inspect AS-021/AS-022 captures and finish bounded visual acceptance records.
+- [ ] Task 4: continuous rendered grade→+110 m, retained gates and exact-source APK passed; record actual runtime and delivery evidence; AS-021/AS-022 screenshots are optional diagnostics.
 - [ ] Device execution and sustained Fold performance when the device path actually permits observation.
