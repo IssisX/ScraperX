@@ -1,0 +1,26 @@
+2026-10-03T23:49:50.0040400Z Unable to find executable: /home/runner/work/ScraperX/ScraperX/build/host/scraperx_physical_hand_climb_tests
+2026-10-03T23:49:50.0041126Z Unable to find executable: /home/runner/work/ScraperX/ScraperX/build/host/scraperx_physical_traversal_tests
+2026-10-03T23:49:50.0041725Z  1/33 Test  #1: scraperx_sim.physical_hand_climb .........***Not Run   0.00 sec
+2026-10-03T23:49:50.0060909Z  2/33 Test  #2: scraperx_sim.physical_traversal ..........***Not Run   0.00 sec
+2026-10-03T23:51:25.6418404Z FAIL released lip does not recover on the real +103.5 m rest
+2026-10-03T23:51:26.6524894Z FAIL released lip does not recover on the real +103.5 m rest
+2026-10-03T23:51:27.6214821Z FAIL released lip does not recover on the real +103.5 m rest
+2026-10-03T23:51:27.6218337Z 85% tests passed, 5 tests failed out of 33
+2026-10-03T23:51:27.6218772Z Total Test time (real) =  97.68 sec
+2026-10-03T23:51:27.6219224Z The following tests FAILED:
+2026-10-03T23:51:27.6219631Z 	  1 - scraperx_sim.physical_hand_climb (Not Run)
+2026-10-03T23:51:27.6219971Z 	  2 - scraperx_sim.physical_traversal (Not Run)
+2026-10-03T23:51:27.6223611Z 	 31 - scraperx_sim.north_service_frame (Failed)
+2026-10-03T23:51:27.6224294Z 	 32 - scraperx_sim.north_service_frame_60hz (Failed)
+2026-10-03T23:51:27.6224837Z 	 33 - scraperx_sim.north_service_frame_360hz (Failed)
+FAIL released lip does not recover on the real +103.5 m rest
+FAIL released lip does not recover on the real +103.5 m rest
+FAIL released lip does not recover on the real +103.5 m rest
+85% tests passed, 5 tests failed out of 33
+Total Test time (real) =  97.68 sec
+The following tests FAILED:
+	  1 - scraperx_sim.physical_hand_climb (Not Run)
+	  2 - scraperx_sim.physical_traversal (Not Run)
+	 31 - scraperx_sim.north_service_frame (Failed)
+	 32 - scraperx_sim.north_service_frame_60hz (Failed)
+	 33 - scraperx_sim.north_service_frame_360hz (Failed)

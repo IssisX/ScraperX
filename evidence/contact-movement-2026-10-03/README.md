@@ -28,3 +28,8 @@ The completed rope-ladder and freight-gallery investigations are saved separatel
 ## Publication and pause
 
 Native source `61361c6b5db417da8ec5003f4e671297cff4fe27` was pushed to `ChatGPT`. [Exact-source Actions run 37162561352](https://github.com/IssisX/ScraperX/actions/runs/37162561352) is in progress when paused; `actions-at-pause.json` is the actual API observation. All workers and local check processes have finished. Android/full-regression/rendered delivery for this new candidate remains unverified. Check this run first after the owner's continuation instruction. Documentation-only successors leave this executable source unchanged.
+
+
+## Delivery observation, 2026-10-04
+
+The run pending at the historical pause has now completed with failure. [The failure checkpoint](ci-61361c6/README.md) records the five failed/not-run native gates, fresh three-case local reproduction, supported source observations and unresolved velocity/impact discriminator. Android/rendered delivery did not run. No gameplay or workflow repair is included in this documentation-only checkpoint; all workers and checks are finished and the owner-requested pause remains in effect.
