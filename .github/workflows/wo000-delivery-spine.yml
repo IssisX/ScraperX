@@ -470,6 +470,46 @@ jobs:
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest.log; then exit 1; fi
 
+      - name: Render-native kit and retired mechanism proofs
+        shell: bash
+        run: |
+          set -euo pipefail
+          # These are actual Compatibility draws under Xvfb. Headless runs
+          # cannot prove that the native snapshot reaches visible geometry.
+          timeout 180s xvfb-run -a -s "-screen 0 192x164x24" \
+            tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \
+            --script res://tests/kit_view_test.gd 2>&1 | tee artifacts/kit-view-normal.log
+          grep -F "SCRAPERX_KIT_VIEW PASS" artifacts/kit-view-normal.log
+          timeout 180s xvfb-run -a -s "-screen 0 192x164x24" \
+            tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \
+            --script res://tests/kit_view_test.gd -- --regression-fixtures \
+            2>&1 | tee artifacts/kit-view-fixtures.log
+          grep -F "SCRAPERX_KIT_VIEW PASS" artifacts/kit-view-fixtures.log
+          timeout 300s xvfb-run -a -s "-screen 0 432x371x24" \
+            tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \
+            --script res://tests/kit_route_render_test.gd -- --kit-route=touch_cargo_net \
+            2>&1 | tee artifacts/kit-route-render.log
+          grep -F "SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_climbing" artifacts/kit-route-render.log
+          grep -F "SCRAPERX_UITEST PASS touch_cargo_net" artifacts/kit-route-render.log
+          timeout 180s xvfb-run -a -s "-screen 0 432x371x24" \
+            tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \
+            --script res://tests/kit_mechanism_render_test.gd \
+            2>&1 | tee artifacts/kit-mechanism-shackle.log
+          grep -F "SCRAPERX_KIT_MECHANISM PASS mode=shackle" artifacts/kit-mechanism-shackle.log
+          if grep -E "SCRIPT ERROR|Parse Error|KIT_(VIEW|ROUTE_RENDER|MECHANISM) FAIL" \
+              artifacts/kit-view-normal.log artifacts/kit-view-fixtures.log \
+              artifacts/kit-route-render.log artifacts/kit-mechanism-shackle.log; then exit 1; fi
+          # One invocation covers resource validity and all36 recorded takes/
+          # phases through the actual controller and limiter.
+          timeout 180s xvfb-run -a -s "-screen 0 192x164x24" \
+            tools/godot/godot --fixed-fps 30 --path godot --rendering-method gl_compatibility \
+            --write-movie "${RUNNER_TEMP}/recorded-footsteps.avi" \
+            --script res://tests/recorded_footsteps_test.gd \
+            2>&1 | tee artifacts/recorded-footsteps.log
+          grep -F "RECORDED_FOOTSTEPS_MIX PASS cases=36" artifacts/recorded-footsteps.log
+          if grep -E "SCRIPT ERROR|Parse Error|RECORDED_FOOTSTEPS.*FAIL" \
+              artifacts/recorded-footsteps.log; then exit 1; fi
+
       - name: Measure the mix a player hears
         shell: bash
         run: |

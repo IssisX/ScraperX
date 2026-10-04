@@ -6,6 +6,7 @@ extends SceneTree
 var _main: Node3D
 var _failures: Array[String] = []
 var _checks := 0
+var _regression_fixtures := false
 
 
 func _initialize() -> void:
@@ -60,8 +61,15 @@ func _sample(kit: Node3D, native: Object) -> void:
 		if node == null:
 			continue
 		if bool(native.is_kit_body_dynamic(body)):
-			_check(node.visible == bool(native.is_kit_body_enabled(body)), "dynamic visibility %d" % body)
-			if node.visible:
+			var enabled := bool(native.is_kit_body_enabled(body))
+			_check(node.visible == enabled and node.is_visible_in_tree() == enabled, "dynamic/tree visibility %d" % body)
+			if enabled:
+				var drawable_meshes := node.find_children("*", "MeshInstance3D", true, false)
+				var has_drawable_mesh := false
+				for mesh_node in drawable_meshes:
+					if (mesh_node as MeshInstance3D).mesh != null and mesh_node.is_visible_in_tree():
+						has_drawable_mesh = true
+				_check(has_drawable_mesh, "enabled body has a visible mesh %d" % body)
 				var expected: Transform3D = native.get_kit_body_render_transform(body)
 				_check(node.transform.is_equal_approx(expected), "interpolated body pose %d" % body)
 	for cable in int(native.get_kit_cable_count()):
@@ -74,44 +82,86 @@ func _sample(kit: Node3D, native: Object) -> void:
 			var used := segment + 1 < points.size()
 			if used:
 				used = points[segment].distance_to(points[segment + 1]) >= 0.001
-			_check(node.visible == used, "cable visibility")
+			_check(node.visible == used and node.is_visible_in_tree() == used, "cable/tree visibility")
+			_check(not used or node.mesh != null, "visible cable has a mesh")
 			if used:
 				_check((node.transform * Vector3(0, 0, -0.5)).distance_to(points[segment]) < 0.0001,
 					"cable start follows native")
 				_check((node.transform * Vector3(0, 0, 0.5)).distance_to(points[segment + 1]) < 0.0001,
 					"cable end follows native")
 	var vertices: PackedVector3Array = native.get_cargo_net_vertices()
-	if not vertices.is_empty():
-		var net := kit.get_node_or_null("NativeSoftCargoNet") as Node3D
-		_check(net != null, "native net display missing")
-		if net == null:
-			return
-		_check(net.global_transform == Transform3D.IDENTITY, "net world vertex frame")
-		var strands := net.get_node_or_null("Strands") as MultiMeshInstance3D
-		var knots := net.get_node_or_null("Knots") as MultiMeshInstance3D
-		_check(strands != null and knots != null, "rounded net batches missing")
-		if strands == null or knots == null:
-			return
-		_check(knots.multimesh.instance_count == 207 and strands.multimesh.instance_count == 382,
-			"open native weave display")
-		for i in knots.multimesh.instance_count:
-			var centre := Vector3.ZERO
-			for corner in 4:
-				centre += vertices[i * 4 + corner] * 0.25
-			_check(knots.multimesh.get_instance_transform(i).origin.distance_to(centre) < 0.0001,
-				"net knot follows interpolated native mean")
-		for i in strands.multimesh.instance_count:
-			var pose := strands.multimesh.get_instance_transform(i)
-			_check(pose.is_finite() and absf(pose.basis.z.length() * 2.0 - 0.07) < 0.0001,
-				"net rounded world depth 70 mm")
-			_check(absf(pose.basis.x.length() * 2.0 - 0.08) < 0.01,
-				"unloaded net retains native ribbon width")
-			_check(strands.multimesh.custom_aabb.encloses(pose * strands.multimesh.mesh.get_aabb()),
-				"net rope bounds contain geometry")
-		var tick := int(native.get_tick_index())
-		kit.render_view()
-		_check(int(native.get_tick_index()) == tick and native.get_cargo_net_vertices() == vertices,
-			"net presentation is read-only")
+	var indices: PackedInt32Array = native.get_cargo_net_indices()
+	var net := kit.get_node_or_null("NativeSoftCargoNet") as Node3D
+	if vertices.is_empty():
+		_check(_regression_fixtures, "normal world native cargo net is empty")
+		_check(indices.is_empty(), "empty native net retains triangle indices")
+		_check(net == null or not net.visible, "empty native net display is hidden")
+		return
+	_check(vertices.size() == 828, "native net has all 207 four-corner knots")
+	_check(indices.size() == 3534, "native net has complete woven faces")
+	_check(net != null and net.visible and net.is_visible_in_tree(), "nonempty native net display is visible in tree")
+	if net == null:
+		return
+	_check(net.global_transform == Transform3D.IDENTITY, "net world vertex frame")
+	var strands := net.get_node_or_null("Strands") as MultiMeshInstance3D
+	var knots := net.get_node_or_null("Knots") as MultiMeshInstance3D
+	_check(strands != null and knots != null and strands.is_visible_in_tree() and knots.is_visible_in_tree(),
+		"rounded net batches missing or hidden in tree")
+	if strands == null or knots == null:
+		return
+	_check(strands.multimesh != null and knots.multimesh != null, "net multimesh resources exist")
+	if strands.multimesh == null or knots.multimesh == null:
+		return
+	_check(strands.multimesh.mesh != null and knots.multimesh.mesh != null, "net source meshes exist")
+	if strands.multimesh.mesh == null or knots.multimesh.mesh == null:
+		return
+	_check(knots.multimesh.instance_count == 207 and strands.multimesh.instance_count == 382,
+		"open native weave display")
+	_check(knots.multimesh.custom_aabb.size.is_finite() and strands.multimesh.custom_aabb.size.is_finite(),
+		"net batch bounds are finite")
+	for i in knots.multimesh.instance_count:
+		var p := i * 4
+		var centre := Vector3.ZERO
+		for corner in 4:
+			centre += vertices[p + corner] * 0.25
+		var right := (vertices[p + 1] + vertices[p + 3] - vertices[p] - vertices[p + 2]) * 0.25
+		var up := (vertices[p + 2] + vertices[p + 3] - vertices[p] - vertices[p + 1]) * 0.25
+		var normal := right.cross(up)
+		var pose := knots.multimesh.get_instance_transform(i)
+		_check(pose.is_finite() and pose.origin.distance_to(centre) < 0.0001,
+			"net knot follows interpolated native mean")
+		if right.length_squared() > 0.000000000001 and up.length_squared() > 0.000000000001 \
+			and normal.length_squared() > 0.000000000001:
+			var expected_x := right * sqrt(2.0)
+			var expected_y := up * sqrt(2.0)
+			var expected_z := normal.normalized() * 0.035
+			_check(pose.basis.x.distance_to(expected_x) < 0.0001
+				and pose.basis.y.distance_to(expected_y) < 0.0001
+				and pose.basis.z.distance_to(expected_z) < 0.0001,
+				"net knot orientation and profile follow native corners")
+		else:
+			_check(pose.basis.x.length_squared() < 0.000000000001
+				and pose.basis.y.length_squared() < 0.000000000001
+				and pose.basis.z.length_squared() < 0.000000000001,
+				"degenerate native knot frame is suppressed")
+		var knot_bounds := pose * knots.multimesh.mesh.get_aabb()
+		_check(knots.multimesh.custom_aabb.encloses(knot_bounds),
+			"net knot batch bounds contain transformed geometry")
+		for corner in 4:
+			_check(knot_bounds.grow(0.0001).has_point(vertices[p + corner]),
+				"rounded knot bounds cover native corner")
+	for i in strands.multimesh.instance_count:
+		var pose := strands.multimesh.get_instance_transform(i)
+		_check(pose.is_finite() and absf(pose.basis.z.length() * 2.0 - 0.07) < 0.0001,
+			"net rounded world depth 70 mm")
+		_check(absf(pose.basis.x.length() * 2.0 - 0.08) < 0.01,
+			"unloaded net retains native ribbon width")
+		_check(strands.multimesh.custom_aabb.encloses(pose * strands.multimesh.mesh.get_aabb()),
+			"net rope bounds contain transformed geometry")
+	var tick := int(native.get_tick_index())
+	kit.render_view()
+	_check(int(native.get_tick_index()) == tick and native.get_cargo_net_vertices() == vertices,
+		"net presentation is read-only")
 
 
 func _run() -> void:
@@ -130,6 +180,7 @@ func _run() -> void:
 	var kit := _main.get_node("KitPresentation") as Node3D
 	var record := JSON.stringify(_rigid_record(kit))
 	var fixture := "--regression-fixtures" in OS.get_cmdline_user_args()
+	_regression_fixtures = fixture
 	var baseline := "res://tests/fixtures/kit-fixture.json" if fixture else "res://tests/fixtures/kit-normal.json"
 	_check(record == FileAccess.get_file_as_string(baseline).strip_edges(),
 		"rigid meshes/materials/signs equal pre-extraction baseline")

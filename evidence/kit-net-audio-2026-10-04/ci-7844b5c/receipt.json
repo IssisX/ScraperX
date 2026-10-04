@@ -1,0 +1,80 @@
+{
+  "source": "7844b5c96ae9b66dbf22e4c18f0409e27d33ba56",
+  "branch": "ChatGPT",
+  "run_id": 37228283068,
+  "run_attempt": 1,
+  "run_event": "push",
+  "run_conclusion": "success",
+  "job_id": 111512396228,
+  "job_name": "moving-support-truth",
+  "job_started_at": "2026-10-04T19:26:37Z",
+  "job_completed_at": "2026-10-04T20:13:57Z",
+  "artifact_id": 11314460651,
+  "artifact_name": "ScraperX-build-7844b5c96ae9b66dbf22e4c18f0409e27d33ba56",
+  "zip_bytes": 55658866,
+  "zip_sha256": "34d5578287f9e42f4d87ebaa0eceb421146349d4872479fe8f958bba49b5ac10",
+  "zip_digest_matches_live_api": true,
+  "apk_relative_path": "apk/ScraperX-ChatGPT.apk",
+  "apk_bytes": 33561468,
+  "apk_sha256": "54c0407348789ad6365eb581dc9694d09e1efd94ebaa0d12dc3eac8e0c43d844",
+  "apk_checksum_matches_manifest": true,
+  "package": "com.cory.scraperx.chatgpt",
+  "label": "ScraperX-ChatGPT",
+  "abi": "arm64-v8a",
+  "ci_signature_evidence": "Verifies; v2 and v3 verified; 1 signer",
+  "signer_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+  "local_cryptographic_signature_verification_run": false,
+  "native_tests": {
+    "passed": 33,
+    "failed": 0,
+    "seconds": 80.07
+  },
+  "regression_input_scenarios": {
+    "passed": 23
+  },
+  "audio_mix": {
+    "bed_db": -22.6,
+    "steps_db": -18.3,
+    "separation_db": 4.3,
+    "peak_db": -0.8,
+    "steps": 10
+  },
+  "normal_ascent": {
+    "supported_height_m": 121,
+    "support": 11,
+    "deaths": 0,
+    "slingshot_work_j": 0,
+    "ordinary_grade_spawn": true
+  },
+  "historical_rendered_route": {
+    "grade_to_110m": true,
+    "deaths": 0,
+    "arrival_y": 110.9
+  },
+  "missing_baseline_ci_tests": [
+    "kit_view_test",
+    "kit_route_render_test",
+    "kit_mechanism_render_test",
+    "recorded_footsteps_test"
+  ],
+  "prior_audio_failure": {
+    "run_id": 37226116280,
+    "job_id": 111505994445,
+    "steps_db": -18.9,
+    "bed_db": -22.6,
+    "exit_code": 31,
+    "classification": "unresolved differing outcomes; no audio-owner source change to this successful source"
+  },
+  "boundaries": [
+    "baseline CI and APK only; does not prove later integrated candidate",
+    "new dedicated render/resource tests were not run by baseline workflow",
+    "no local APK cryptographic signature verification",
+    "no Android installation or device observation",
+    "no subjective listening or sustained device performance proof"
+  ],
+  "verification_date_utc": "2026-10-04",
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/37228283068",
+  "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/37228283068/artifacts/11314460651",
+  "source_identity_evidence": "Live run SHA, actual checkout log and artifact CHECKPOINT.txt agree; compiled KitView and recorded sound-bank assets are present in the APK.",
+  "package_identity_evidence": "Actual CI aapt badging; no local binary-manifest parser was run."
+}

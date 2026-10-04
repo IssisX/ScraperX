@@ -1,0 +1,10 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+Movie Maker mode enabled, recording movie in 192×164 @ 30 FPS...
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=192x164 aspect=1.171 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=669 driver=Dummy
+AUDIO_LOW_GRAPHICS_ADAPTER quality=LOW render_scale=0.75 shadows=1 msaa=0 bloom=false detail=0 far=1000.0 audio_master=0.80 audio_effects=1.00 audio_ambience=0.80 audio_interface=0.70 muted=false master_bus_db=-1.94 native_tick=0

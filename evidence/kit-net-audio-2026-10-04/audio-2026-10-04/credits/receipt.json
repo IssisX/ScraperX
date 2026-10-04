@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "scope": "independent desktop Audio-page canonical credit runtime; no Android/export/device/audio listening proof",
+  "repo_head": "ac45fa090667e6d4763bc35be0a47794cdb73c1c",
+  "working_tree_changes": true,
+  "godot_version": "4.7.stable.official.5b4e0cb0f",
+  "positive": {
+    "exit_code": 0,
+    "exit_code_evidence": "observed exec/write_stdin process completion",
+    "display": "X11",
+    "rendering_method": "gl_compatibility",
+    "rasterizer": "softpipe",
+    "viewport": [
+      432,
+      371
+    ],
+    "fixed_fps": 60,
+    "result_line": "CREDIT_RUNTIME PASS renderer=X11 chars=1653 wheel_scroll=208 content_h=863.0 page_h=334.0 final_lines_reachable=true",
+    "checks": [
+      "canonical FileAccess availability and required creator/license/adaptation markers",
+      "production Audio button and complete Label text",
+      "retained ScrollContainer and word wrapping; no horizontal overflow",
+      "real viewport wheel input advances scroll",
+      "actual post-draw final lines reachable at maximum scroll"
+    ],
+    "log": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-credit-review/receipt-logs/credit-runtime-positive.godot.log",
+      "sha256": "24a1d80a2f39477b996351b6c988f034bdc203539ddbdfdf087472aef494d416",
+      "source": "Godot engine file log from executed positive runtime; not synthesized stdout",
+      "retained_file": "credit-runtime-positive.godot.log"
+    }
+  },
+  "negative_control": {
+    "exit_code": 1,
+    "exit_code_evidence": "observed subprocess return code",
+    "display": "headless",
+    "change": "temporarily renamed private runtime NOTICE.txt; repository untouched; restored afterward",
+    "result_line": "ERROR: CREDIT_RUNTIME FAIL canonical NOTICE.txt is unavailable at runtime",
+    "log": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-credit-review/receipt-logs/credit-runtime-missing-notice.godot.log",
+      "sha256": "a2e329a8f879544181a09a21ac47cffcac70092232deed48c0cbbbb1634493b8",
+      "source": "Godot engine file log from executed missing-notice negative control",
+      "retained_file": "credit-runtime-missing-notice.godot.log"
+    }
+  },
+  "probe": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-credit-review/runtime/credit_probe.gd",
+    "sha256": "9c43124b0cb3653c1aa1ba2a9041c52386f4647d2bb39029df836b195823139b"
+  },
+  "project": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-credit-review/runtime/project.godot",
+    "sha256": "0443e370d0733c85d045c701495592e3d2535bba2d47837d559094732208c9a3"
+  },
+  "tested_production_files": [
+    {
+      "repo_path": "godot/presentation/ui/pause_menu.gd",
+      "tested_path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-credit-review/runtime/presentation/ui/pause_menu.gd",
+      "sha256": "a6f9c033bd2a47c40d01f8cff049e7a443202910a5547cd45a9634d471cfa01c",
+      "matches_current_repo_at_receipt": true
+    },
+    {
+      "repo_path": "godot/presentation/ui/ui_style.gd",
+      "tested_path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-credit-review/runtime/presentation/ui/ui_style.gd",
+      "sha256": "d5c87e65eca5ee77428d1883b144730638615dfef2af069d88e19e8bf6a47704",
+      "matches_current_repo_at_receipt": true
+    },
+    {
+      "repo_path": "godot/presentation/ui/settings_store.gd",
+      "tested_path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-credit-review/runtime/presentation/ui/settings_store.gd",
+      "sha256": "b098865e487ad619cdbe63da1caaf4c9f0a8ad4e049dc1a2a46f34f76190d93e",
+      "matches_current_repo_at_receipt": true
+    },
+    {
+      "repo_path": "godot/assets/audio/footsteps/NOTICE.txt",
+      "tested_path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-credit-review/runtime/assets/audio/footsteps/NOTICE.txt",
+      "sha256": "21b549b626ee312beff348fc92906ed83bf5434c18dd4e254d530327eedc8faf",
+      "matches_current_repo_at_receipt": true
+    }
+  ],
+  "notice_restored": true,
+  "limitations": [
+    "fixture executes the production UI in an isolated project, not the full native game",
+    "ALSA unavailable; Godot used Dummy audio; irrelevant to UI rendering check",
+    "exact final APK/PCK notice inclusion and digest remain unverified",
+    "no installation, listening, touch-device or physical-device observation"
+  ]
+}

@@ -1,0 +1,52 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+Movie Maker mode enabled, recording movie in 192×164 @ 30 FPS...
+RECORDED_FOOTSTEPS PASS surfaces=3 variants=12 pcm=16-bit distinct=true
+SCRAPERX_AUDIO_BANK clips=28 msec=746 driver=Dummy
+RECORDED_FOOTSTEPS_MIX case=step_concrete/0/0 bed_db=-21.93 steps_db=-13.38 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/0/1 bed_db=-21.93 steps_db=-13.48 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/0/2 bed_db=-21.93 steps_db=-13.85 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/1/0 bed_db=-21.93 steps_db=-14.90 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_concrete/1/1 bed_db=-21.93 steps_db=-14.81 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/1/2 bed_db=-21.93 steps_db=-14.54 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/2/0 bed_db=-21.93 steps_db=-13.53 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_concrete/2/1 bed_db=-21.93 steps_db=-13.82 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/2/2 bed_db=-21.93 steps_db=-13.54 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/3/0 bed_db=-21.93 steps_db=-14.18 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_concrete/3/1 bed_db=-21.93 steps_db=-13.07 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/3/2 bed_db=-21.93 steps_db=-12.88 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/0/0 bed_db=-21.93 steps_db=-12.99 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_metal/0/1 bed_db=-21.93 steps_db=-13.25 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/0/2 bed_db=-21.93 steps_db=-14.19 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/1/0 bed_db=-21.93 steps_db=-14.07 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_metal/1/1 bed_db=-21.93 steps_db=-13.63 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/1/2 bed_db=-21.93 steps_db=-14.01 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/2/0 bed_db=-21.93 steps_db=-14.74 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_metal/2/1 bed_db=-21.93 steps_db=-14.98 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/2/2 bed_db=-21.93 steps_db=-14.81 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/3/0 bed_db=-21.93 steps_db=-14.64 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_metal/3/1 bed_db=-21.93 steps_db=-14.64 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/3/2 bed_db=-21.93 steps_db=-14.45 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/0/0 bed_db=-21.93 steps_db=-12.69 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/0/1 bed_db=-21.93 steps_db=-12.48 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_earth/0/2 bed_db=-21.93 steps_db=-12.80 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/1/0 bed_db=-21.93 steps_db=-13.83 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/1/1 bed_db=-21.93 steps_db=-14.35 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_earth/1/2 bed_db=-21.93 steps_db=-14.40 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/2/0 bed_db=-21.93 steps_db=-12.98 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/2/1 bed_db=-21.93 steps_db=-13.71 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_earth/2/2 bed_db=-21.93 steps_db=-13.27 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/3/0 bed_db=-21.93 steps_db=-13.58 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/3/1 bed_db=-21.93 steps_db=-13.69 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_earth/3/2 bed_db=-21.93 steps_db=-14.21 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX PASS cases=36
+--------------------------------------------------------------------------------
+Done recording movie at path: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-footstep-sources/alternate-concrete/candidates/actual-director-master-36.avi
+1245 frames at 30 FPS (movie length: 00:00:41:15), recorded in 00:01:04 (64% of real-time speed).
+CPU render time: 0.22 seconds (average: 0.18 ms/frame)
+GPU render time: 0.20 seconds (average: 0.16 ms/frame)
+Encoding time: 1.03 seconds (average: 0.83 ms/frame)
+--------------------------------------------------------------------------------

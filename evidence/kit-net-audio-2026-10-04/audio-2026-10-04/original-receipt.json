@@ -1,0 +1,8 @@
+{
+  "result": "FAIL",
+  "scope": "Original pre-repair recorded bank; actual production controller/limiter, same36case oracle. Resourcechecks pass, every prominencecase fails.",
+  "log_sha256": "737be8f6340dcad20ef68e8057e6f532e5f59bf2825ed4b6fbdc3ae13ff39371",
+  "reported_cases": 36,
+  "minimum_separation_db": 0.5500000000000007,
+  "capture_stage": "post_limiter_pre_master_fader"
+}

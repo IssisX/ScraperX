@@ -1,0 +1,33 @@
+{
+  "result": "PASS",
+  "cases": 36,
+  "capture_stage": "post_limiter_pre_master_fader",
+  "master_volume_linear": 0.8,
+  "master_gain_db": -1.938200260161128,
+  "minimum_separation_db": {
+    "step_concrete": 7.03,
+    "step_metal": 6.95,
+    "step_earth": 7.53
+  },
+  "maximum_raw_capture_peak_dbfs": -0.8,
+  "minimum_steps_per_case": 4,
+  "log_sha256": "2d49d2e6547c2ef44f976ff3b351a24de3db182bb63dabb30bbffd6712a89eb8",
+  "tested_script_sha256": "9619cae3303578771044229d06d1f1794b43188dd05b645d533b3a595a386198",
+  "godot": "4.7.stable.official.5b4e0cb0f",
+  "renderer": "Compatibility / X11 Mesa softpipe",
+  "scope": "Actual production AudioDirector cue selection/stride/pitch/pool/buses/limiter; controlled material/velocity inputs. Full native-input scene and APK proof are separate.",
+  "clips": {
+    "concrete_01.wav": "9823ada6f58225725fd42037fc90320bdf75aa58d11d42e8b342a561d76a56a0",
+    "concrete_02.wav": "9e6f180b8ad2890be4340f3ab837e89c9b683f22033b81807c4c52dbd8dcee60",
+    "concrete_03.wav": "e2b53f467b14b5ce442d4854101fcb3ff67dc3d21e6eab327c0faaa0d27dd1ca",
+    "concrete_04.wav": "b428dea47a65388ab99d19e2868d7356c2766cce5e4e9ffe20867c1ae01ff2b2",
+    "metal_01.wav": "352a52a6c81e41148e4855d6207a64ae23b7d887bbfd168e12d59312334b36c5",
+    "metal_02.wav": "f9c08b037a53ae940d1d4848f6da8387cbbed3d3de3345558342728610828160",
+    "metal_03.wav": "17d380e21cef2512ac19236ddd184c7051c7877d2828a00a82e81262abc7e1e6",
+    "metal_04.wav": "5828c289dc31a9e605e448d3f75c48694f42606d52e87f48344e210f353a55b3",
+    "earth_01.wav": "fc3252333b8cb4e1f661ba93d5bdaebd91d32b1c79539a99e7edb4645f711539",
+    "earth_02.wav": "94093c5c3ac75238313f7506d54d9978371e3ca5a1a095d874409f21808661e9",
+    "earth_03.wav": "8e67b570b45a959a5f5f56749e04d5d5258cdfc5719a46e0158c13d8d3b09da3",
+    "earth_04.wav": "5f517097a6a64aab55d470420d4e420670ef517893e3fa571f0a2431eaa25258"
+  }
+}

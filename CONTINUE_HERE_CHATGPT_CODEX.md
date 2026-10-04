@@ -277,16 +277,14 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 
 ## 7. Running to-do at this handoff
 
-**Current bounded presentation batch — second owner-requested quick restart checkpoint, 2026-10-04:** extraction and recorded footsteps are saved; rounded native-driven net geometry is now implemented. An actual rendered ordinary-touch route reached the first ring with 0.28759 m deformation, no deaths and no launcher work. Final bounds/degeneracy/empty-net guards and strengthened assertions need a fresh combined run. All four final scripts parse. Helpers/captures are stopped; mechanism draft and partial audio proof are preserved. [RESTART_HERE_CODEX.md](RESTART_HERE_CODEX.md) owns exact pickup steps and source boundaries. Current hand placement remains owner-confirmed accurate.
+**Current continuation, 2026-10-04:** the bounded KitView / rounded native-driven net / recorded-footstep batch is active. Baseline executable `7844b5c` has verified green Actions run `37228283068`; the present candidate includes later test and recording changes and is not yet delivered. Actual normal/fixture view and ordinary cargo-route checks passed before the last resource/visibility guards; the route reaches the first ring with 0.28759 m native deformation, zero deaths and no launcher work. Twelve replacement recordings pass all 36 actual controller/limiter cases, plus integrated resource and five contact checks; exported credits preserve CC0 / CC BY source terms. The native-input full-scene audio probe passes at 10.2 dB prominence and −0.8 dBFS captured peak; its local adapter omits 3D drawing after the first frame while preserving native/input/audio execution. The shackle check passes three real visibility states. Water-lift stages are retired, so the extra new lift gate is removed; existing historical regressions remain. Implementation is ready for the required exact-source Actions/APK delivery. [The scoped ledger](evidence/kit-net-audio-2026-10-04/README.md) owns receipts and limitations. Preserve accurate hands and native physics. Stop after this bounded batch; the broader movement/content goal remains saved.
 
-- [x] Verify clean agent-owned `ChatGPT` at `03d50dc`, existing green executable `b1da5f3`, rendering owners and exact consumers.
-- [x] Extract the five mechanism routines and their display state into `kit_view.gd` with explicit dependencies; normal/fixture actual-renderer baseline parity passes (29/15 bodies). Independent source review reports no material finding.
-- [x] Implement native-driven rounded display (207 knots/382 links); actual-renderer ordinary-touch loaded climb/top-out reaches the first ring. This is a render proxy for existing native open ribbons.
-- [ ] Fresh final-source rendered net/rigid parity and relevant hand/input checks; final guard/profile/wrist assertions are parsed but not runtime-verified.
-- [x] Replace concrete/steel/earth step-bank entries with twelve small licensed recordings (`188f90e`); recorded-resource load/format and five contact-timing cases pass.
-- [ ] Verify the new recording shipping mix and subjective sound quality.
-- [x] Save completed worker work, original baselines, net RED/partial/route-green proof, unverified mechanism draft and final parse receipt for restart. [The scoped evidence](evidence/kit-net-audio-2026-10-04/README.md) distinguishes actual results and final-source boundaries.
-- [ ] Verify solids, relevant rendered/input regressions and the combined source; push to `ChatGPT` and close a green exact-source Actions APK export. Stop after this bounded batch.
+- [x] Preserve verified ChatGPT baseline and historical receipts; extraction and rounded native-driven net remain implemented.
+- [x] Close final native-net presence, two-wrist, knot orientation/profile/bounds and rigid golden-parity assertions through actual rendering.
+- [x] Adopt twelve licensed replacement recordings with source hashes and exported/in-game credits; resource/contact checks and all36 controller/limiter cases pass.
+- [x] Check fixture body/cable/shackle visibility through three actual native hook/unhook states. The extra retired water-lift check was removed after owner scope clarification.
+- [x] Close unchanged native-input full-scene audio-mix probe; local3D rendering omission is recorded. Subjective/device quality stays separate.
+- [ ] Wire the four passing standalone tests, finish source review, push ChatGPT and verify green exact-source Actions/APK provenance/checksum. Stop after this batch.
 
 **Current bounded repair — AS-023 launch embodiment, owner feedback 2026-10-03:**
 

@@ -1,72 +1,277 @@
 {
-  "checked_date": "2026-10-04",
-  "license": "CC0 1.0 Universal",
-  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-  "license_basis": "Each Freesound source page identifies the recording as Creative Commons 0 and states that commercial copying, modification, and distribution are allowed without permission.",
-  "edit": {
-    "method": "One separated boot impact trimmed from each real source recording's public HQ MP3 preview.",
-    "duration_seconds": 0.32,
-    "format": "PCM WAV, mono, signed 16-bit little-endian",
-    "sample_rate_hz": 22050,
-    "normalization": "Each crop peak-normalized to -1.5 dBFS with scalar gain.",
-    "fade_in_seconds": 0.004,
-    "fade_out_seconds": 0.018,
-    "tools": "FFmpeg decode/trim/resample and Python wave/numpy scalar normalization/fades."
-  },
+  "format": "mono 22050 Hz signed 16-bit PCM WAV",
+  "peak_target_dbfs": -1.5,
+  "changes": "Whole-clip decode/resample and peak normalization only; no additional trimming, fades, EQ or compression.",
   "sources": [
     {
-      "id": 272253,
-      "creator": "sturmankin",
-      "title": "concrete_17a_boots_walk.wav",
-      "page_url": "https://freesound.org/people/sturmankin/sounds/272253/",
-      "description": "Walking on concrete: boots. Recorded with a ZOOM H2 in a basement and normalized with Audacity.",
-      "listed_original": "WAV, mono, 48000 Hz, 16-bit, 30.181 seconds, 2.8 MB",
+      "id": "fantozzi_stone",
+      "creator": "Fantozzi",
+      "pack_editor": "qubodup",
+      "title": "Fantozzi's Footsteps (Grass/Sand & Stone)",
+      "source_page": "https://opengameart.org/content/fantozzis-footsteps-grasssand-stone",
+      "original_pack_page": "https://freesound.org/people/Fantozzi/packs/10338/",
+      "archive_url": "https://opengameart.org/sites/default/files/Fantozzi-footsteps.7z",
+      "archive_sha256": "415d360e0911c1c1c5355ee94023b772e6f4044f59b9b580610e7dbffd1840fd",
       "license": "CC0 1.0 Universal",
-      "preview_url": "https://cdn.freesound.org/previews/272/272253_4181170-hq.mp3",
-      "preview_sha256": "5e50e3b32143287b5483c45d912398a6b1d8f5e78cf503021f3cbf6cc6ff79f3",
-      "preview_decode": "MP3, mono, 48000 Hz, 191 kb/s, 30.181646 seconds",
-      "outputs": [
-        {"file": "concrete_01.wav", "trim_start_seconds": 9.14, "trim_duration_seconds": 0.32, "sha256": "cb028dada012ef9110f6e20c02d1521596b184959f5df1ef169758a280233bf3"},
-        {"file": "concrete_02.wav", "trim_start_seconds": 10.54, "trim_duration_seconds": 0.32, "sha256": "d84c94fef92d05389a80aa0995aa1499984b79bc3382b4ea267741b359ad4078"},
-        {"file": "concrete_03.wav", "trim_start_seconds": 14.24, "trim_duration_seconds": 0.32, "sha256": "9606020dc8d889b01f2e07b5b405e958e97c671d80b94b991b27b62e2e70541b"},
-        {"file": "concrete_04.wav", "trim_start_seconds": 28.28, "trim_duration_seconds": 0.32, "sha256": "f85dc9de313e657ae66d20fe4a12ef433d844c870117a00f09e16c5713099033"}
-      ]
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "processing": "Source FLAC -> FFmpeg decode/resample to mono 22050 Hz signed 16-bit PCM WAV -> whole clip peak-normalization to -1.5 dBFS. No cropping, compression, EQ, or other processing.",
+      "recording_method": "Recorded handmade Foley, not field recordings of boots on concrete. The original WalksForGames author describes corks stepped against pepper/salt or other surfaces; the redistributed Stone variants represent hard surfaces.",
+      "recording_method_page": "https://freesound.org/people/Fantozzi/sounds/166306/"
     },
     {
-      "id": 749711,
-      "creator": "RFCaldas",
-      "title": "Steps boots on metal surface",
-      "page_url": "https://freesound.org/people/RFCaldas/sounds/749711/",
-      "description": "Man's footsteps with boots walking on a metallic surface.",
-      "listed_original": "WAV, stereo, 48000 Hz, 24-bit, 18.431 seconds, 5.1 MB",
-      "license": "CC0 1.0 Universal",
-      "preview_url": "https://cdn.freesound.org/previews/749/749711_3838926-hq.mp3",
-      "preview_sha256": "b3e40b5a35bc885b731790be3b352896331ea5aaf24fc2d65856aed7e9c279de",
-      "preview_decode": "MP3, stereo, 48000 Hz, 185 kb/s, 18.432000 seconds; downmixed to mono",
-      "outputs": [
-        {"file": "metal_01.wav", "trim_start_seconds": 4.56, "trim_duration_seconds": 0.32, "sha256": "22670672c764dcc7fb7c42027a97b07b873f6a7b327021deb5dfbe400bc0b14c"},
-        {"file": "metal_02.wav", "trim_start_seconds": 7.14, "trim_duration_seconds": 0.32, "sha256": "fa2e492cb0352f98a150769db83d01be1552dfd23b2c7e7c78ec0c1cf3dc3716"},
-        {"file": "metal_03.wav", "trim_start_seconds": 11.24, "trim_duration_seconds": 0.32, "sha256": "f0be2f199be619c7e621c21507b9c78ad89bdec9bd45bbc6152225982f20d470"},
-        {"file": "metal_04.wav", "trim_start_seconds": 15.30, "trim_duration_seconds": 0.32, "sha256": "d261072c0e85a4b50a5a0a3d3f0ed46b397a32ee5e0f9a01544c7ed098fa8e82"}
-      ]
+      "id": "eelke_metal",
+      "creator": "Eelke",
+      "pack_editor": "congusbongus",
+      "title": "fboots on aluminum ladder 01",
+      "source_page": "https://freesound.org/people/Eelke/sounds/462598/",
+      "collection_page": "https://opengameart.org/content/footsteps-on-different-surfaces",
+      "archive_url": "https://opengameart.org/sites/default/files/footsteps_0.zip",
+      "archive_sha256": "542564e7f6b3a0b89a0d08542438e030e77a46303855fe5bf1644a48185861e9",
+      "license": "CC BY 3.0 (distributed OpenGameArt archive)",
+      "license_url": "https://creativecommons.org/licenses/by/3.0/",
+      "embedded_notice": "Derived from fboots on aluminum ladder 01 by Eelke\nhttps://freesound.org/people/Eelke/sounds/462598/\n\nhttp://creativecommons.org/licenses/by/3.0/",
+      "current_original_page_license": "CC BY 4.0",
+      "current_original_page_license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "processing": "Source OGG -> GStreamer Vorbis decode, mono S16LE, 22050 Hz resample -> whole clip peak normalization to -1.5 dBFS -> PCM WAV. No cropping, compression, EQ, or other processing."
     },
     {
-      "id": 278913,
-      "creator": "sturmankin",
-      "title": "soil_17a_boots_walk.wav",
-      "page_url": "https://freesound.org/people/sturmankin/sounds/278913/",
-      "description": "Walking on soil: boots. Recorded with a ZOOM H2 in a basement on a wooden container placed on carpet filled with soil, then normalized with Audacity.",
-      "listed_original": "WAV, mono, 48000 Hz, 16-bit, 33.813 seconds, 3.1 MB",
-      "license": "CC0 1.0 Universal",
-      "preview_url": "https://cdn.freesound.org/previews/278/278913_4181170-hq.mp3",
-      "preview_sha256": "d28f473f611bf4a6f9dfbd24d0b5ee2692a511500951594cdcf573818262c879",
-      "preview_decode": "MP3, mono, 48000 Hz, 187 kb/s, 33.813688 seconds",
-      "outputs": [
-        {"file": "earth_01.wav", "trim_start_seconds": 8.54, "trim_duration_seconds": 0.32, "sha256": "467a31c1937b9be75e119142b9d6034caef04c5cf158f8b8d21a85e4415f4cbf"},
-        {"file": "earth_02.wav", "trim_start_seconds": 13.82, "trim_duration_seconds": 0.32, "sha256": "e3d935b9d51978ced8e6cefa38e4bf40b5581d6fcc01f7ad631d4e4d395df825"},
-        {"file": "earth_03.wav", "trim_start_seconds": 17.16, "trim_duration_seconds": 0.32, "sha256": "6aeec5777fe089bcc6f0679a693edb50889a3cf4c9286a343cdaafdc6b225dd9"},
-        {"file": "earth_04.wav", "trim_start_seconds": 22.04, "trim_duration_seconds": 0.32, "sha256": "6ec4c4939b6eb28c2fac922c406305dc41c9f64b382aafc22359489a6d542b99"}
-      ]
+      "id": "ali_gravel",
+      "creator": "Ali_6868",
+      "pack_editor": "congusbongus",
+      "title": "Pack: Gravel Footsteps",
+      "source_page": "https://freesound.org/people/Ali_6868/packs/21608/",
+      "collection_page": "https://opengameart.org/content/footsteps-on-different-surfaces",
+      "archive_url": "https://opengameart.org/sites/default/files/footsteps_0.zip",
+      "archive_sha256": "542564e7f6b3a0b89a0d08542438e030e77a46303855fe5bf1644a48185861e9",
+      "license": "CC0 1.0 Universal (gravel folder); collection credit retained under CC BY 3.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "embedded_notice": "Derived from Pack: Gravel Footsteps by Ali_6868\nhttps://freesound.org/people/Ali_6868/packs/21608/\n\nhttps://creativecommons.org/publicdomain/zero/1.0/",
+      "processing": "Source OGG -> GStreamer Vorbis decode, mono S16LE, 22050 Hz resample -> whole clip peak normalization to -1.5 dBFS -> PCM WAV. No cropping, compression, EQ, or other processing."
+    }
+  ],
+  "clips": [
+    {
+      "output": "concrete_01.wav",
+      "original_archive_path": "Fantozzi-footsteps/flac/Fantozzi-StoneR2.flac",
+      "source_sha256": "d66330b4a32e93b0dfdcb8c53667654de8702a0fa48b2d06c48d94dc66b3e1cc",
+      "output_sha256": "9823ada6f58225725fd42037fc90320bdf75aa58d11d42e8b342a561d76a56a0",
+      "duration_s": 0.32263,
+      "gain_db": -1.236,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -16.15,
+        -21.83,
+        -22.93,
+        -21.56,
+        -29.47,
+        -34.78
+      ],
+      "loudest_window_dbfs": -16.15,
+      "median_window_dbfs": -21.83,
+      "source_id": "fantozzi_stone"
+    },
+    {
+      "output": "concrete_02.wav",
+      "original_archive_path": "Fantozzi-footsteps/flac/Fantozzi-StoneL1.flac",
+      "source_sha256": "7cfa4a2f500ae2bd19a961022296611d837c34ca2e556fe68deb692388f49971",
+      "output_sha256": "9e6f180b8ad2890be4340f3ab837e89c9b683f22033b81807c4c52dbd8dcee60",
+      "duration_s": 0.372925,
+      "gain_db": -1.363,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -16.39,
+        -24.62,
+        -26.97,
+        -32.02,
+        -32.35,
+        -34.93,
+        -40.62
+      ],
+      "loudest_window_dbfs": -16.39,
+      "median_window_dbfs": -32.02,
+      "source_id": "fantozzi_stone"
+    },
+    {
+      "output": "concrete_03.wav",
+      "original_archive_path": "Fantozzi-footsteps/flac/Fantozzi-StoneL2.flac",
+      "source_sha256": "dcbd6be44af4b3206daa36c5398035ca527bb057c51ce00482b9ca6356be2468",
+      "output_sha256": "e2b53f467b14b5ce442d4854101fcb3ff67dc3d21e6eab327c0faaa0d27dd1ca",
+      "duration_s": 0.331655,
+      "gain_db": -0.9,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -18.93,
+        -16.53,
+        -21.99,
+        -27.89,
+        -33.55,
+        -40.64
+      ],
+      "loudest_window_dbfs": -16.53,
+      "median_window_dbfs": -21.99,
+      "source_id": "fantozzi_stone"
+    },
+    {
+      "output": "concrete_04.wav",
+      "original_archive_path": "Fantozzi-footsteps/flac/Fantozzi-StoneL3.flac",
+      "source_sha256": "37a25f4254cf8f2e56d271912b0569f3bb15c57bf3fde9de492466eb23853b0d",
+      "output_sha256": "b428dea47a65388ab99d19e2868d7356c2766cce5e4e9ffe20867c1ae01ff2b2",
+      "duration_s": 0.33093,
+      "gain_db": -1.392,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -28.4,
+        -17.49,
+        -17.24,
+        -22.68,
+        -27.18,
+        -33.86
+      ],
+      "loudest_window_dbfs": -17.24,
+      "median_window_dbfs": -22.68,
+      "source_id": "fantozzi_stone"
+    },
+    {
+      "output": "metal_01.wav",
+      "source_archive_path": "footsteps/metal/1.ogg",
+      "source_sha256": "d9a8005ce36786ce98d565961b6c506e83a9b99f5af8ef47d37692197ae55862",
+      "output_sha256": "352a52a6c81e41148e4855d6207a64ae23b7d887bbfd168e12d59312334b36c5",
+      "duration_s": 0.348209,
+      "gain_db": 2.823,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -15.71,
+        -27.79,
+        -36.6,
+        -36.93,
+        -40.26,
+        -50.06
+      ],
+      "median_window_dbfs": -36.6,
+      "loudest_window_dbfs": -15.71,
+      "source_id": "eelke_metal"
+    },
+    {
+      "output": "metal_02.wav",
+      "source_archive_path": "footsteps/metal/5.ogg",
+      "source_sha256": "81f31cbe3ede086c6f0588602a34826b5c6eacc1c3b956092cf55f2b76db81f6",
+      "output_sha256": "f9c08b037a53ae940d1d4848f6da8387cbbed3d3de3345558342728610828160",
+      "duration_s": 0.285578,
+      "gain_db": 0.794,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -15.78,
+        -30.29,
+        -39.07,
+        -42.89,
+        -44.55
+      ],
+      "median_window_dbfs": -39.07,
+      "loudest_window_dbfs": -15.78,
+      "source_id": "eelke_metal"
+    },
+    {
+      "output": "metal_03.wav",
+      "source_archive_path": "footsteps/metal/7.ogg",
+      "source_sha256": "b330ac4f2b147808920b12153c5a81433bbf233f48c942fc5dddedd2586631aa",
+      "output_sha256": "17d380e21cef2512ac19236ddd184c7051c7877d2828a00a82e81262abc7e1e6",
+      "duration_s": 0.17034,
+      "gain_db": -0.577,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -16.72,
+        -30.47,
+        -38.75
+      ],
+      "median_window_dbfs": -30.47,
+      "loudest_window_dbfs": -16.72,
+      "source_id": "eelke_metal"
+    },
+    {
+      "output": "metal_04.wav",
+      "source_archive_path": "footsteps/metal/3.ogg",
+      "source_sha256": "3d619b68ec3e8e1d92429a9d21b370f6d36a8d4a6576d4d240057c335a181ffe",
+      "output_sha256": "5828c289dc31a9e605e448d3f75c48694f42606d52e87f48344e210f353a55b3",
+      "duration_s": 0.185397,
+      "gain_db": 2.664,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -17.54,
+        -21.54,
+        -33.22
+      ],
+      "median_window_dbfs": -21.54,
+      "loudest_window_dbfs": -17.54,
+      "source_id": "eelke_metal"
+    },
+    {
+      "output": "earth_01.wav",
+      "source_archive_path": "footsteps/gravel/1.ogg",
+      "source_sha256": "9a7a083c54c10e5bedafc7f1473967fc074418e798b97c0ad378dcf49b91b35c",
+      "output_sha256": "fc3252333b8cb4e1f661ba93d5bdaebd91d32b1c79539a99e7edb4645f711539",
+      "duration_s": 0.106485,
+      "gain_db": 6.139,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -14.97,
+        -17.47
+      ],
+      "median_window_dbfs": -14.97,
+      "loudest_window_dbfs": -14.97,
+      "source_id": "ali_gravel"
+    },
+    {
+      "output": "earth_02.wav",
+      "source_archive_path": "footsteps/gravel/8.ogg",
+      "source_sha256": "8fe7d1d6cf9c77ef4d135c2315db0fad841656c352c5f5b71b4dbf0e1cae9828",
+      "output_sha256": "94093c5c3ac75238313f7506d54d9978371e3ca5a1a095d874409f21808661e9",
+      "duration_s": 0.195374,
+      "gain_db": 6.995,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -17.7,
+        -16.42,
+        -27.52
+      ],
+      "median_window_dbfs": -17.7,
+      "loudest_window_dbfs": -16.42,
+      "source_id": "ali_gravel"
+    },
+    {
+      "output": "earth_03.wav",
+      "source_archive_path": "footsteps/gravel/2.ogg",
+      "source_sha256": "cdf6230d7e83d5b4bea374bfde49ea0e596c26755dbc35a1e07f520ff856edee",
+      "output_sha256": "8e67b570b45a959a5f5f56749e04d5d5258cdfc5719a46e0158c13d8d3b09da3",
+      "duration_s": 0.226213,
+      "gain_db": 5.634,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -17.94,
+        -16.77,
+        -21.19,
+        -23.48
+      ],
+      "median_window_dbfs": -17.94,
+      "loudest_window_dbfs": -16.77,
+      "source_id": "ali_gravel"
+    },
+    {
+      "output": "earth_04.wav",
+      "source_archive_path": "footsteps/gravel/9.ogg",
+      "source_sha256": "3828235f14cb0b9044160febe334b41d55305e016a7bfa809e2e768dc1eb4650",
+      "output_sha256": "5f517097a6a64aab55d470420d4e420670ef517893e3fa571f0a2431eaa25258",
+      "duration_s": 0.207392,
+      "gain_db": 4.495,
+      "peak_dbfs": -1.5,
+      "dual_300hz_hp_50ms_windows_dbfs": [
+        -18.99,
+        -18.32,
+        -17.92,
+        -26.32
+      ],
+      "median_window_dbfs": -18.32,
+      "loudest_window_dbfs": -17.92,
+      "source_id": "ali_gravel"
     }
   ]
 }

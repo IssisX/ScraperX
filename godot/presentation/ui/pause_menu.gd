@@ -626,7 +626,9 @@ func _build_audio_page() -> void:
 	_slider_row("EFFECTS", &"effects_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("AMBIENCE", &"ambience_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("INTERFACE", &"interface_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
-	_end_page(PAGE_AUDIO, first, "Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience.")
+	var note := "Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience."
+	var credits := FileAccess.get_file_as_string("res://assets/audio/footsteps/NOTICE.txt")
+	_end_page(PAGE_AUDIO, first, note + "\n\n" + credits)
 
 
 func _build_restart_page() -> void:

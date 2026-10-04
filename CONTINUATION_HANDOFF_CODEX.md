@@ -1,3 +1,9 @@
+## Current execution frontier
+
+**Current continuation, 2026-10-04:** the bounded KitView / rounded native-driven net / recorded-footstep batch is active. Baseline executable `7844b5c` has verified green Actions run `37228283068`; the present candidate includes later test and recording changes and is not yet delivered. Actual normal/fixture view and ordinary cargo-route checks passed before the last resource/visibility guards; the route reaches the first ring with 0.28759 m native deformation, zero deaths and no launcher work. Twelve replacement recordings pass all 36 actual controller/limiter cases, plus integrated resource and five contact checks; exported credits preserve CC0 / CC BY source terms. The native-input full-scene audio probe passes at 10.2 dB prominence and −0.8 dBFS captured peak; its local adapter omits 3D drawing after the first frame while preserving native/input/audio execution. The shackle check passes three real visibility states. Water-lift stages are retired, so the extra new lift gate is removed; existing historical regressions remain. Implementation is ready for the required exact-source Actions/APK delivery. [The scoped ledger](evidence/kit-net-audio-2026-10-04/README.md) owns receipts and limitations. Preserve accurate hands and native physics. Stop after this bounded batch; the broader movement/content goal remains saved.
+
+The numbered inspection/checkpoint sections below preserve the earlier `ac45fa0` baseline and failure history. Their stopped-worker, in-progress-CI and unverified-assertion statements are historical; the live repository and this frontier supersede them.
+
 ## 1. CURRENT OBJECTIVE
 
 Finish one bounded presentation batch for **IssisX/ScraperX**, exclusively on **`ChatGPT`**:
@@ -164,8 +170,6 @@ Use separate runtime copies for concurrent workers. Do not overwrite scripts in 
 
 ## 8. EXACT NEXT ACTION
 
-**Resolve the shipping recorded-footstep mix failure first.** Inspect the newest result of run `37228283068`, then reproduce and diagnose the existing Movie Maker `audio_mix` probe at the current executable source.
-
-The relevant owners are `sound_bank.gd`, `audio_director.gd` and `_audio_mix()` in `presentation/ui/ui_test_driver.gd`; the workflow command is under **“Measure the mix a player hears.”** Preserve its 4 dB prominence and −0.5 dBFS peak requirements. Establish the cause before choosing a gain, sample or mixing repair.
+Finalize the scoped CI wiring and publish the already-implemented candidate only to `ChatGPT`. Follow its exact-source Actions run to terminal status; do not repeat completed local probes. Repair only a failure that blocks delivery. Verify the green APK source/checksum before closing this bounded batch. Do not reopen settled hand/native physics or begin the broader movement pass during this delivery. Preserve the 4 dB prominence and −0.5 dBFS captured peak requirements.
 
 HANDOFF COMPLETE

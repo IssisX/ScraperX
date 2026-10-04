@@ -1,0 +1,20 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+Movie Maker mode enabled, recording movie in 192×164 @ 30 FPS...
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=192x164 aspect=1.171 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=974 driver=Dummy
+AUDIO_LOW_GRAPHICS_ADAPTER quality=LOW render_scale=0.75 shadows=1 msaa=0 bloom=false detail=0 far=1000.0 audio_master=0.80 audio_effects=1.00 audio_ambience=0.80 audio_interface=0.70 muted=false master_bus_db=-1.94 native_tick=0
+AUDIO_RENDER_OMISSION disable_3d=true listener_3d=true camera_current=true native_tick=2
+AUDIO_RENDER_OMISSION_AUDIT audio_defaults_unchanged=true bank_ready=true silent=false native_tick=95 effects_voices=6 wind_playing=true drone_playing=true hum_playing=true
+SCRAPERX_UITEST PASS audio_mix bed_db=-23.2 steps_db=-13.0 peak_db=-0.8 steps=10
+--------------------------------------------------------------------------------
+Done recording movie at path: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-audio-final-proof/audio-mix-render-omission.avi
+160 frames at 30 FPS (movie length: 00:00:05:10), recorded in 00:00:32 (15% of real-time speed).
+CPU render time: 0.57 seconds (average: 3.57 ms/frame)
+GPU render time: 0.32 seconds (average: 2.02 ms/frame)
+Encoding time: 0.18 seconds (average: 1.14 ms/frame)
+--------------------------------------------------------------------------------

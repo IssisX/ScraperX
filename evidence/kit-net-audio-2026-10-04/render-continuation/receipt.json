@@ -1,0 +1,8 @@
+{
+  "scope": "Retained AS-006 native public hook/unhook display; checked revision predates final shackle-only simplification. Final source runs in CI.",
+  "result": "PASS",
+  "poses": 3,
+  "render_checks": 99,
+  "log_sha256": "23897bcb06079619ec8d2f698cd81ce0d8af3399ae570f6d6615e7ed8ce9f6d0",
+  "final_source_runtime_status": "pending exact-source CI"
+}

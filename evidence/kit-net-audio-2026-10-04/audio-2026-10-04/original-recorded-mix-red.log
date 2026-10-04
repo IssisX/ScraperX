@@ -1,0 +1,268 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+Movie Maker mode enabled, recording movie in 192×164 @ 30 FPS...
+RECORDED_FOOTSTEPS PASS surfaces=3 variants=12 pcm=16-bit distinct=true
+SCRAPERX_AUDIO_BANK clips=28 msec=1138 driver=Dummy
+RECORDED_FOOTSTEPS_MIX case=step_concrete/0/0 bed_db=-21.93 steps_db=-19.46 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/0/0 lacks prominence or headroom: separation=2.46 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/0/1 bed_db=-21.93 steps_db=-18.43 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/0/1 lacks prominence or headroom: separation=3.50 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/0/2 bed_db=-21.93 steps_db=-19.09 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/0/2 lacks prominence or headroom: separation=2.83 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/1/0 bed_db=-21.93 steps_db=-18.13 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/1/0 lacks prominence or headroom: separation=3.80 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/1/1 bed_db=-21.93 steps_db=-19.12 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/1/1 lacks prominence or headroom: separation=2.81 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/1/2 bed_db=-21.93 steps_db=-19.12 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/1/2 lacks prominence or headroom: separation=2.81 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/2/0 bed_db=-21.93 steps_db=-18.90 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/2/0 lacks prominence or headroom: separation=3.02 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/2/1 bed_db=-21.93 steps_db=-19.80 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/2/1 lacks prominence or headroom: separation=2.13 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/2/2 bed_db=-21.93 steps_db=-19.86 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/2/2 lacks prominence or headroom: separation=2.07 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/3/0 bed_db=-21.93 steps_db=-19.79 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/3/0 lacks prominence or headroom: separation=2.14 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/3/1 bed_db=-21.93 steps_db=-19.15 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/3/1 lacks prominence or headroom: separation=2.78 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_concrete/3/2 bed_db=-21.93 steps_db=-19.78 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_concrete/3/2 lacks prominence or headroom: separation=2.15 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/0/0 bed_db=-21.93 steps_db=-19.56 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/0/0 lacks prominence or headroom: separation=2.37 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/0/1 bed_db=-21.93 steps_db=-18.95 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/0/1 lacks prominence or headroom: separation=2.98 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/0/2 bed_db=-21.93 steps_db=-19.25 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/0/2 lacks prominence or headroom: separation=2.68 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/1/0 bed_db=-21.93 steps_db=-18.35 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/1/0 lacks prominence or headroom: separation=3.58 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/1/1 bed_db=-21.93 steps_db=-18.83 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/1/1 lacks prominence or headroom: separation=3.10 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/1/2 bed_db=-21.93 steps_db=-18.59 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/1/2 lacks prominence or headroom: separation=3.34 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/2/0 bed_db=-21.93 steps_db=-18.49 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/2/0 lacks prominence or headroom: separation=3.44 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/2/1 bed_db=-21.93 steps_db=-19.01 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/2/1 lacks prominence or headroom: separation=2.92 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/2/2 bed_db=-21.93 steps_db=-18.60 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/2/2 lacks prominence or headroom: separation=3.33 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/3/0 bed_db=-21.93 steps_db=-20.37 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/3/0 lacks prominence or headroom: separation=1.56 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/3/1 bed_db=-21.93 steps_db=-20.65 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/3/1 lacks prominence or headroom: separation=1.28 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_metal/3/2 bed_db=-21.93 steps_db=-20.76 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_metal/3/2 lacks prominence or headroom: separation=1.17 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/0/0 bed_db=-21.93 steps_db=-19.64 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/0/0 lacks prominence or headroom: separation=2.29 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/0/1 bed_db=-21.93 steps_db=-20.80 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/0/1 lacks prominence or headroom: separation=1.13 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/0/2 bed_db=-21.93 steps_db=-19.60 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/0/2 lacks prominence or headroom: separation=2.33 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/1/0 bed_db=-21.93 steps_db=-20.90 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/1/0 lacks prominence or headroom: separation=1.03 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/1/1 bed_db=-21.93 steps_db=-20.37 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/1/1 lacks prominence or headroom: separation=1.56 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/1/2 bed_db=-21.93 steps_db=-20.81 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/1/2 lacks prominence or headroom: separation=1.12 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/2/0 bed_db=-21.93 steps_db=-19.80 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/2/0 lacks prominence or headroom: separation=2.13 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/2/1 bed_db=-21.93 steps_db=-21.38 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/2/1 lacks prominence or headroom: separation=0.55 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/2/2 bed_db=-21.93 steps_db=-19.40 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/2/2 lacks prominence or headroom: separation=2.53 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/3/0 bed_db=-21.93 steps_db=-19.57 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/3/0 lacks prominence or headroom: separation=2.36 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/3/1 bed_db=-21.93 steps_db=-20.33 peak_db=-0.80 steps=5
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/3/1 lacks prominence or headroom: separation=1.60 dB peak=-0.80 dBFS steps=5
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX case=step_earth/3/2 bed_db=-21.93 steps_db=-20.35 peak_db=-0.80 steps=4
+ERROR: RECORDED_FOOTSTEPS: mix step_earth/3/2 lacks prominence or headroom: separation=1.57 dB peak=-0.80 dBFS steps=4
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tests/recorded_footsteps_test.gd:156)
+       [1] _mix_all_variants (res://tests/recorded_footsteps_test.gd:100)
+       [2] _capture_mix (res://tests/recorded_footsteps_test.gd:121)
+RECORDED_FOOTSTEPS_MIX FAIL cases=36
+--------------------------------------------------------------------------------
+Done recording movie at path: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-proof/recorded-mix-red.avi
+1248 frames at 30 FPS (movie length: 00:00:41:18), recorded in 00:00:56 (73% of real-time speed).
+CPU render time: 0.24 seconds (average: 0.19 ms/frame)
+GPU render time: 0.22 seconds (average: 0.18 ms/frame)
+Encoding time: 1.06 seconds (average: 0.85 ms/frame)
+--------------------------------------------------------------------------------

@@ -41,12 +41,16 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I warned against flattening the already completed cargo net.
 - Make authorized edits as needed without repeated permission requests; finish integration and appropriate verification before pushing. Match writable work to the actual sandbox and role permissions.
   Why: Constant file approvals block progress; edits should not be delayed into an end-of-task batch.
+- The owner grants standing authorization for routine ScraperX file edits and asks to step away without repeated prompts. Batch authorized workspace changes; do not add discretionary confirmation gates. A host-enforced approval still requires its real response.
+  Why: The owner explicitly reaffirmed file access and autonomous execution on 2026-10-04.
 - Use verification that can reject broken behavior; avoid redundant checking and unsolicited handoffs.
+- **Standing owner law: never let checking, verifying or testing become the main task or expand beyond the smallest sufficient checks for the authorized change.** Reuse completed evidence, then proceed to required delivery; repair only a failure that blocks it.
+  Why: The owner reaffirmed this limit on 2026-10-04.
   Why: “Overtesting and oververifying,” and we are continuing together.
 - Use available development tools and relevant skills proactively when they improve the result.
   Why: I explicitly encouraged creative engineering and supported development tools.
-- Use a lean crew: the lead plus one worker by default; add a third only for a specific useful independent task. Count remote delegation too, reuse completed investigations, and finish workers when their assignments end. Super_Agent is suitable for bounded maintenance and review; verify its advice against the repository.
-  Why: I want useful delegation without excess agents, duplicated work or unnecessary cost. Role names do not identify a cheaper model.
+- Apply the multi-agent system actively wherever it makes us most productive. The root owns integration and delivery; assign up to five useful children to bounded, non-overlapping work, keep each write surface with one owner, reuse findings and close completed assignments. Do not create jobs to fill slots. Super_Agent remains useful for bounded maintenance and review; verify its advice against the repository.
+  Why: The owner's 2026-10-04 direction replaces the earlier default crew size with productive delegation and a lean root context. Role names do not identify a cheaper model.
 - Keep Super_Agent occupied when useful authorized work is ready, supplying the actual evidence and a bounded question. Queue the next useful task as its current assignment finishes; avoid duplicate investigations or invented busywork.
   Why: I explicitly want this inexpensive agent taking useful work off the lead throughout development.
 - Apply the installed Godot package throughout development, selecting its relevant input, movement, camera, animation, world, material, lighting, audio, mobile, profiling, QA and export guidance for the section being built.

@@ -1,8 +1,8 @@
 extends RefCounted
 # Procedural presentation cues are synthesized once at startup from seeded
-# noise, filters and decaying partials. Footsteps are short recorded boot
-# samples; their source and CC0 terms live beside the WAVs. The seed is fixed,
-# so the generated cues are identical on every run and every device.
+# noise, filters and decaying partials. Footsteps are short recorded
+# samples; sources and CC0 / CC BY terms are in assets/audio/footsteps/NOTICE.txt.
+# The fixed seed makes generated cues identical on every run and every device.
 #
 # Voiced for a phone speaker first. Those reproduce little under ~300 Hz, so
 # every clip carries its identity in the 300 Hz - 6 kHz band -- the grit of a
