@@ -13,4 +13,8 @@ static func soft_blur(clock: float) -> float:
 	return 1.0 - smoothstep(0.02, 0.84, orbit_phase(clock))
 
 static func simulation_scale(clock: float) -> float:
-	return lerpf(0.06, 1.0, smoothstep(0.55, ORBIT_SECONDS, clock))
+	# This clock starts only after the shot is moving. Ease into a short
+	# inspection beat. An immediate near-freeze hides the impulse.
+	if clock < 0.10:
+		return lerpf(1.0, 0.28, smoothstep(0.0, 0.10, clock))
+	return lerpf(0.28, 1.0, smoothstep(0.35, 1.80, clock))

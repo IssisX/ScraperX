@@ -338,4 +338,5 @@ func frame(delta: float) -> Dictionary:
 	var verbs: Array[StringName] = _verbs.duplicate()
 	_verbs.clear()
 	return {"move": move, "look": look, "verbs": verbs,
-		"crouch_held": crouch_held, "sprint_held": sprint_held}
+		"crouch_held": crouch_held, "sprint_held": sprint_held,
+		"reel": 0.0 if touch == null else float(touch.reel_effort)}

@@ -356,6 +356,8 @@ func _process(delta: float) -> void:
 	var sling_yaw := _sling_goal_yaw if aiming else float(launcher.get("yaw_rad", 0.0))
 	var sling_elevation := _sling_goal_elevation if aiming else float(launcher.get("elevation_rad", 1.4311699866353502))
 	var sling_effort := maxf(0.0, -desired.y) if sling_seated or sling_recovering else 0.0
+	if sling_recovering:
+		sling_effort = maxf(sling_effort, float(intent.get("reel", 0.0)))
 	if not _native.set_slingshot_input(sling_effort, sling_yaw, sling_elevation):
 		_fail_native("SCRAPERX_SLING_INPUT_REJECTED", 21)
 		return

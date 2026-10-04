@@ -23,6 +23,7 @@ const B_CROUCH := &"crouch"
 const B_DROP := &"drop"
 const B_CHUTE := &"chute"
 const B_PAUSE := &"pause"
+const B_REEL := &"slingshot_reel"
 
 const TONE_NORMAL := 0
 const TONE_PRIMARY := 1
@@ -64,11 +65,12 @@ class TouchButton:
 var router: Node
 var move_vector := Vector2.ZERO
 var sprint_latched := false
+var reel_effort := 0.0
 var touch_scale := 1.0
 
 var _u := 1.0
 var _buttons := {}
-var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE]
+var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_REEL]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -81,6 +83,7 @@ var _hint_clock := 0.0
 var _moved := false
 var _looked := false
 var _clock := 0.0
+var _retrieving := false
 
 
 func _ready() -> void:
@@ -93,6 +96,10 @@ func _ready() -> void:
 	_buttons[B_PAUSE].icon = &"pause"
 	_buttons[B_DROP].icon = &"drop"
 	_buttons[B_DROP].label = "DROP"
+	_buttons[B_REEL].hold = true
+	_buttons[B_REEL].icon = &"operate"
+	_buttons[B_REEL].label = "HOLD TO REEL"
+	_buttons[B_REEL].tone = TONE_PRIMARY
 	resized.connect(_layout)
 	_layout()
 
@@ -133,6 +140,7 @@ func _layout() -> void:
 	_place(B_DROP, jump + Vector2(-306.0, 96.0) * _u, 86.0)
 	_place(B_CHUTE, jump + Vector2(-306.0, 96.0) * _u, 86.0)
 	_place(B_PAUSE, _safe.position + Vector2(m, m) + Vector2(52.0, 52.0) * _u, 52.0)
+	_place(B_REEL, Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 520.0 * _u), 96.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
 		_safe.size.x * 0.46, _safe.size.y * 0.78)
@@ -168,6 +176,7 @@ func reset_touches() -> void:
 	_look_accum = Vector2.ZERO
 	move_vector = Vector2.ZERO
 	sprint_latched = false
+	reel_effort = 0.0
 	for button in _buttons.values():
 		button.index = -1
 	queue_redraw()
@@ -192,6 +201,8 @@ func handle_touch(event: InputEvent) -> bool:
 
 
 func _touch_down(index: int, at: Vector2) -> bool:
+	# A fresh press owns exactly one control, including a reused finger id.
+	_touch_up(index)
 	for id in _order:
 		var button: TouchButton = _buttons[id]
 		if not button.shown or not button.enabled or button.index != -1 or button.appear < 0.2:
@@ -206,7 +217,7 @@ func _touch_down(index: int, at: Vector2) -> bool:
 		pressed_feedback.emit()
 		queue_redraw()
 		return true
-	if _stick_index == -1 and _stick_zone.has_point(at):
+	if _stick_index == -1 and not _retrieving and _stick_zone.has_point(at):
 		_stick_index = index
 		_stick_origin = at
 		_stick_knob = Vector2.ZERO
@@ -327,11 +338,19 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		chute.tone = TONE_NORMAL
 	_buttons[B_PAUSE].shown = true
 
+	_retrieving = bool(ctx.get("slingshot_recovering", false))
 	var crouch: TouchButton = _buttons[B_CROUCH]
-	crouch.shown = not hanging and not climbing
+	crouch.shown = not hanging and not climbing and not _retrieving
 	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
 	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
 	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
+
+	var reel: TouchButton = _buttons[B_REEL]
+	reel.shown = _retrieving
+	reel.enabled = _retrieving
+	if _retrieving and _stick_index != -1:
+		_touch_up(_stick_index)
+	reel_effort = 1.0 if reel.shown and reel.index != -1 else 0.0
 
 	for button in _buttons.values():
 		if not button.shown and button.index != -1:
@@ -343,7 +362,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 
 func _draw() -> void:
-	_draw_stick()
+	if not _retrieving:
+		_draw_stick()
 	for id in _order:
 		_draw_button(_buttons[id])
 	_draw_hints()
