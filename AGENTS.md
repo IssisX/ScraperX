@@ -26,6 +26,7 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I welcomed the audit and approved its landing-guidance recommendation.
 
 ### How to report
+- Give every user-facing reply in two separate parts: the original response, followed directly by the same response in sixth-grade language. Preserve the facts and next steps in both. This is the owner's communication law of 2026-10-04.
 - Give concise updates explaining decisions, current work, and meaningful findings.
   Why: “Keep me updated … concisely, throughout.”
 - Narrate phase changes and agent assignments before starting them: name the section, intended action and each agent's responsibility. Report material findings as work progresses.
