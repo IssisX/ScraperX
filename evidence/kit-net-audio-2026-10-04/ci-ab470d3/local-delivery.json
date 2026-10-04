@@ -1,0 +1,9 @@
+{
+  "source_commit": "ab470d36bf4cc7faca68a0b64f556fbbc272ad9c",
+  "run_id": 37240309543,
+  "artifact_id": 11318486370,
+  "local_apk": "/storage/emulated/0/Download/ScraperX-ChatGPT-ab470d3.apk",
+  "bytes": 33561554,
+  "sha256": "4d5d90e80fdd3904dbe22fbaf7f6d5fcb613dca07b2e0c9948190cdf239ce7b2",
+  "copied_file_sha256_matches_verified_artifact": true
+}

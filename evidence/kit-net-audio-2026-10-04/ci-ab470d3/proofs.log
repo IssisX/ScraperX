@@ -1,0 +1,54 @@
+2026-10-04T22:41:16.5052371Z 100% tests passed, 0 tests failed out of 33
+SCRAPERX_KIT_VIEW PASS checks=32811 rigid_bodies=29 renderer=X11
+SCRAPERX_KIT_VIEW PASS checks=1695 rigid_bodies=15 renderer=X11
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_entry bodies=29 cables=3 deformation_m=0.00000 renderer=X11
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_climbing bodies=29 cables=3 deformation_m=0.28636 renderer=X11
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_receiver bodies=29 cables=3 deformation_m=0.28636 renderer=X11
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_first_ring bodies=29 cables=3 deformation_m=0.28636 renderer=X11
+SCRAPERX_UITEST PASS touch_cargo_net staging=ordinary_grade_spawn supported_height_m=11.00 deaths=0 slingshot_used=0
+SCRAPERX_KIT_MECHANISM PASS mode=shackle as006_shackle_unhooked_visible_then_hooked_hidden poses=3 render_checks=99
+RECORDED_FOOTSTEPS_MIX case=step_concrete/0/0 bed_db=-21.93 steps_db=-13.38 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/0/1 bed_db=-21.93 steps_db=-13.48 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/0/2 bed_db=-21.93 steps_db=-13.85 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/1/0 bed_db=-21.93 steps_db=-14.90 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_concrete/1/1 bed_db=-21.93 steps_db=-15.14 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/1/2 bed_db=-21.93 steps_db=-14.48 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/2/0 bed_db=-21.93 steps_db=-13.53 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_concrete/2/1 bed_db=-21.93 steps_db=-13.67 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/2/2 bed_db=-21.93 steps_db=-13.77 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/3/0 bed_db=-21.93 steps_db=-14.18 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_concrete/3/1 bed_db=-21.93 steps_db=-13.55 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_concrete/3/2 bed_db=-21.93 steps_db=-12.88 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/0/0 bed_db=-21.93 steps_db=-12.99 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_metal/0/1 bed_db=-21.93 steps_db=-13.25 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/0/2 bed_db=-21.93 steps_db=-14.05 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/1/0 bed_db=-21.93 steps_db=-14.57 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_metal/1/1 bed_db=-21.93 steps_db=-13.63 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/1/2 bed_db=-21.93 steps_db=-14.01 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/2/0 bed_db=-21.93 steps_db=-14.74 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_metal/2/1 bed_db=-21.93 steps_db=-15.02 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/2/2 bed_db=-21.93 steps_db=-14.81 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/3/0 bed_db=-21.93 steps_db=-14.64 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_metal/3/1 bed_db=-21.93 steps_db=-14.78 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_metal/3/2 bed_db=-21.93 steps_db=-14.45 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/0/0 bed_db=-21.93 steps_db=-12.69 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/0/1 bed_db=-21.93 steps_db=-12.48 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_earth/0/2 bed_db=-21.93 steps_db=-12.79 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/1/0 bed_db=-21.93 steps_db=-13.83 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/1/1 bed_db=-21.93 steps_db=-14.35 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_earth/1/2 bed_db=-21.93 steps_db=-14.40 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/2/0 bed_db=-21.93 steps_db=-12.98 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/2/1 bed_db=-21.93 steps_db=-13.46 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_earth/2/2 bed_db=-21.93 steps_db=-13.05 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/3/0 bed_db=-21.93 steps_db=-14.09 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX case=step_earth/3/1 bed_db=-21.93 steps_db=-13.69 peak_db=-0.80 steps=5
+RECORDED_FOOTSTEPS_MIX case=step_earth/3/2 bed_db=-21.93 steps_db=-15.11 peak_db=-0.80 steps=4
+RECORDED_FOOTSTEPS_MIX PASS cases=36
+2026-10-04T23:24:00.6485175Z SCRAPERX_UITEST PASS audio_mix bed_db=-22.6 steps_db=-13.3 peak_db=-0.8 steps=10
+2026-10-04T23:32:07.6170021Z package: name='com.cory.scraperx.chatgpt' versionCode='1' versionName='0.1.0' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+2026-10-04T23:32:07.6172302Z application-label:'ScraperX-ChatGPT'
+2026-10-04T23:32:07.6213928Z native-code: 'arm64-v8a'
+2026-10-04T23:32:08.1372469Z Verified using v2 scheme (APK Signature Scheme v2): true
+2026-10-04T23:32:08.1373125Z Verified using v3 scheme (APK Signature Scheme v3): true
+2026-10-04T23:32:08.1376299Z Number of signers: 1
+2026-10-04T23:32:08.1396099Z V3.0 Signer: certificate SHA-256 digest: 9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4

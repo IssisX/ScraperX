@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "repository": "IssisX/ScraperX",
+  "run": {
+    "id": 37240309543,
+    "html_url": "https://github.com/IssisX/ScraperX/actions/runs/37240309543",
+    "head_sha": "ab470d36bf4cc7faca68a0b64f556fbbc272ad9c",
+    "head_branch": "ChatGPT",
+    "event": "push",
+    "attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-10-04T22:30:59Z",
+    "terminal_updated_at": "2026-10-04T23:32:13Z",
+    "tree_sha": "9f40a6ecb494b6b81554188a4c0c435bd1b108f5"
+  },
+  "job": {
+    "id": 111547534044,
+    "name": "moving-support-truth",
+    "conclusion": "success"
+  },
+  "duration_seconds_from_run_start_to_terminal_update": 3674,
+  "artifact": {
+    "id": 11318486370,
+    "name": "ScraperX-build-ab470d36bf4cc7faca68a0b64f556fbbc272ad9c",
+    "size_in_bytes": 55640449,
+    "publisher_digest": "sha256:6aa62717cde1dcb83ff9d76131a125020bf369e63f0fd011500cc9d20c3378c3",
+    "created_at": "2026-10-04T23:32:10Z",
+    "expires_at": "2027-01-02T22:30:59Z",
+    "html_url": "https://github.com/IssisX/ScraperX/actions/runs/37240309543/artifacts/11318486370",
+    "independent_zip_sha256": "6aa62717cde1dcb83ff9d76131a125020bf369e63f0fd011500cc9d20c3378c3",
+    "publisher_digest_matches": true,
+    "local_path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-delivery-ab470d3/artifact.zip"
+  },
+  "apk": {
+    "archive_member": "apk/ScraperX-ChatGPT.apk",
+    "bytes": 33561554,
+    "independent_sha256": "4d5d90e80fdd3904dbe22fbaf7f6d5fcb613dca07b2e0c9948190cdf239ce7b2",
+    "sha256sums_matches": true,
+    "local_path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/continuation-delivery-ab470d3/ScraperX-ChatGPT.apk",
+    "checkpoint_source_matches_run": true,
+    "package": "com.cory.scraperx.chatgpt",
+    "label": "ScraperX-ChatGPT",
+    "architecture_ci": "arm64-v8a"
+  },
+  "signing": {
+    "evidence": "Actual CI apksigner verify output; no local cryptographic re-verification",
+    "signers": 1,
+    "v2_verified": true,
+    "v3_verified": true,
+    "certificate_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+    "matches_checkpoint_and_stable_identity": true
+  },
+  "notice": {
+    "apk_zip_member": "assets/assets/audio/footsteps/NOTICE.txt",
+    "bytes": 1655,
+    "apk_sha256": "21b549b626ee312beff348fc92906ed83bf5434c18dd4e254d530327eedc8faf",
+    "source_path": "godot/assets/audio/footsteps/NOTICE.txt",
+    "source_commit": "ab470d36bf4cc7faca68a0b64f556fbbc272ad9c",
+    "source_sha256": "21b549b626ee312beff348fc92906ed83bf5434c18dd4e254d530327eedc8faf",
+    "exact_byte_equality": true
+  },
+  "proofs": {
+    "native_tests": {
+      "passed": 33,
+      "failed": 0
+    },
+    "kit_view_normal": {
+      "checks": 32811,
+      "rigid_bodies": 29,
+      "renderer": "X11"
+    },
+    "kit_view_regression_fixtures": {
+      "checks": 1695,
+      "rigid_bodies": 15,
+      "renderer": "X11"
+    },
+    "cargo_route": {
+      "drawn_poses": 4,
+      "native_bodies": 29,
+      "cables": 3,
+      "climbing_deformation_m": 0.28636,
+      "supported_height_m": 11,
+      "deaths": 0,
+      "slingshot_used": 0,
+      "renderer": "X11"
+    },
+    "shackle": {
+      "poses": 3,
+      "render_checks": 99,
+      "unhooked_visible_then_hooked_hidden": true
+    },
+    "recorded_footsteps": {
+      "cases": 36,
+      "minimum_separation_db": 6.79,
+      "minimum_by_surface_db": {
+        "step_concrete": 6.79,
+        "step_metal": 6.91,
+        "step_earth": 6.82
+      },
+      "max_peak_db": -0.8,
+      "minimum_steps": 4,
+      "capture_stage": "post_limiter_pre_master_fader"
+    },
+    "original_scene_audio_mix": {
+      "bed_db": -22.6,
+      "steps_db": -13.3,
+      "separation_db": 9.3,
+      "peak_db": -0.8,
+      "steps": 10,
+      "capture_stage": "post_limiter_pre_master_fader"
+    },
+    "source_archive_log_digests": {
+      "kit-view-normal.log": {
+        "archive_member": "kit-view-normal.log",
+        "sha256": "d3f1e133f1bd86d67dd79d6a8df0e3ac6e988d3830218f6c59cf86a0f136706a"
+      },
+      "kit-view-fixtures.log": {
+        "archive_member": "kit-view-fixtures.log",
+        "sha256": "52870219b6425b9ab69e27cac4ded91d48d92f1c040ab7efbab0cb4119e3d516"
+      },
+      "kit-route-render.log": {
+        "archive_member": "kit-route-render.log",
+        "sha256": "a70e5f9c890b30a1847c355cb9e56cb0363bbaf39becaa07b41dbda1f860b633"
+      },
+      "kit-mechanism-shackle.log": {
+        "archive_member": "kit-mechanism-shackle.log",
+        "sha256": "8849cfcca706dbbb0e6fb615a3cd15034aae4aae9781f566a7c6effde9c1dfc7"
+      },
+      "recorded-footsteps.log": {
+        "archive_member": "recorded-footsteps.log",
+        "sha256": "24624c16ff56765475d41e6ca45f3a19ea7eecc53dd7b5652f42a452e621c4fa"
+      }
+    },
+    "selected_log": {
+      "path": "proofs.log",
+      "sha256": "b367abbb430e46bd35425d919043c78c52415bd8bc7562f0efcb34ad21203d84"
+    }
+  },
+  "boundaries": {
+    "source_and_actions": "Exact pushed source tested and workflow terminal success",
+    "build": "Android arm64 APK exported; independent immutable ZIP/APK digest verification",
+    "runtime": "Desktop CI native/input/render/audio behavior only",
+    "installation": "not observed",
+    "physical_device": "not observed",
+    "human_listening": "not performed",
+    "screenshots": "optional; no screenshot acceptance claim",
+    "signature": "CI cryptographic verification observed; local signature verification unrun",
+    "audio": "Capture follows limiter and precedes Master fader; absolute final-output levels are lower at shipped Master0.8; prominence unchanged"
+  },
+  "writes": "Selected metadata/proofs only; no binaries, raw session logs or credentials published"
+}
