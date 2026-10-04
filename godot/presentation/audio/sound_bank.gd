@@ -1,7 +1,8 @@
 extends RefCounted
-# Every sound the presentation plays, synthesised once at startup from
-# seeded noise, filters and decaying partials -- no audio files ship. The
-# seed is fixed, so the bank is identical on every run and every device.
+# Procedural presentation cues are synthesized once at startup from seeded
+# noise, filters and decaying partials. Footsteps are short recorded boot
+# samples; their source and CC0 terms live beside the WAVs. The seed is fixed,
+# so the generated cues are identical on every run and every device.
 #
 # Voiced for a phone speaker first. Those reproduce little under ~300 Hz, so
 # every clip carries its identity in the 300 Hz - 6 kHz band -- the grit of a
@@ -17,6 +18,24 @@ extends RefCounted
 const Cinema := preload("res://presentation/launch_cinematic.gd")
 const MIX_RATE := 22050
 const STEP_VARIANTS := 4
+const RECORDED_CONCRETE_STEPS := [
+	preload("res://assets/audio/footsteps/concrete_01.wav"),
+	preload("res://assets/audio/footsteps/concrete_02.wav"),
+	preload("res://assets/audio/footsteps/concrete_03.wav"),
+	preload("res://assets/audio/footsteps/concrete_04.wav"),
+]
+const RECORDED_METAL_STEPS := [
+	preload("res://assets/audio/footsteps/metal_01.wav"),
+	preload("res://assets/audio/footsteps/metal_02.wav"),
+	preload("res://assets/audio/footsteps/metal_03.wav"),
+	preload("res://assets/audio/footsteps/metal_04.wav"),
+]
+const RECORDED_EARTH_STEPS := [
+	preload("res://assets/audio/footsteps/earth_01.wav"),
+	preload("res://assets/audio/footsteps/earth_02.wav"),
+	preload("res://assets/audio/footsteps/earth_03.wav"),
+	preload("res://assets/audio/footsteps/earth_04.wav"),
+]
 
 var clips := {}   # StringName -> Array[AudioStreamWAV] (variants)
 var build_msec := 0
@@ -27,9 +46,14 @@ var _rng := RandomNumberGenerator.new()
 func build() -> void:
 	var started := Time.get_ticks_msec()
 	_rng.seed = 0x5C4A9E
-	clips[&"step_concrete"] = _variants(STEP_VARIANTS, _step_concrete)
-	clips[&"step_metal"] = _variants(STEP_VARIANTS, _step_metal)
-	clips[&"step_earth"] = _variants(STEP_VARIANTS, _step_earth)
+	# The seeded RNG also feeds later procedural cues. Consume the former step
+	# recipe draws so replacing their audible output doesn't change those cues.
+	_consume_legacy_step_draws(_step_concrete)
+	_consume_legacy_step_draws(_step_metal)
+	_consume_legacy_step_draws(_step_earth)
+	clips[&"step_concrete"] = RECORDED_CONCRETE_STEPS
+	clips[&"step_metal"] = RECORDED_METAL_STEPS
+	clips[&"step_earth"] = RECORDED_EARTH_STEPS
 	clips[&"jump"] = _variants(2, _jump)
 	clips[&"land_soft"] = _variants(2, _land.bind(0.0))
 	clips[&"land_hard"] = _variants(2, _land.bind(1.0))
@@ -63,6 +87,12 @@ func pick(name: StringName) -> AudioStreamWAV:
 	if list.is_empty():
 		return null
 	return list[_rng.randi_range(0, list.size() - 1)]
+
+
+func _consume_legacy_step_draws(generator: Callable) -> void:
+	for _variant_index in STEP_VARIANTS:
+		var discarded: PackedFloat32Array = generator.call()
+		discarded.clear()
 
 
 # --- clips -------------------------------------------------------------------

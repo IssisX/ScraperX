@@ -1,0 +1,72 @@
+{
+  "checked_date": "2026-10-04",
+  "license": "CC0 1.0 Universal",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "license_basis": "Each Freesound source page identifies the recording as Creative Commons 0 and states that commercial copying, modification, and distribution are allowed without permission.",
+  "edit": {
+    "method": "One separated boot impact trimmed from each real source recording's public HQ MP3 preview.",
+    "duration_seconds": 0.32,
+    "format": "PCM WAV, mono, signed 16-bit little-endian",
+    "sample_rate_hz": 22050,
+    "normalization": "Each crop peak-normalized to -1.5 dBFS with scalar gain.",
+    "fade_in_seconds": 0.004,
+    "fade_out_seconds": 0.018,
+    "tools": "FFmpeg decode/trim/resample and Python wave/numpy scalar normalization/fades."
+  },
+  "sources": [
+    {
+      "id": 272253,
+      "creator": "sturmankin",
+      "title": "concrete_17a_boots_walk.wav",
+      "page_url": "https://freesound.org/people/sturmankin/sounds/272253/",
+      "description": "Walking on concrete: boots. Recorded with a ZOOM H2 in a basement and normalized with Audacity.",
+      "listed_original": "WAV, mono, 48000 Hz, 16-bit, 30.181 seconds, 2.8 MB",
+      "license": "CC0 1.0 Universal",
+      "preview_url": "https://cdn.freesound.org/previews/272/272253_4181170-hq.mp3",
+      "preview_sha256": "5e50e3b32143287b5483c45d912398a6b1d8f5e78cf503021f3cbf6cc6ff79f3",
+      "preview_decode": "MP3, mono, 48000 Hz, 191 kb/s, 30.181646 seconds",
+      "outputs": [
+        {"file": "concrete_01.wav", "trim_start_seconds": 9.14, "trim_duration_seconds": 0.32, "sha256": "cb028dada012ef9110f6e20c02d1521596b184959f5df1ef169758a280233bf3"},
+        {"file": "concrete_02.wav", "trim_start_seconds": 10.54, "trim_duration_seconds": 0.32, "sha256": "d84c94fef92d05389a80aa0995aa1499984b79bc3382b4ea267741b359ad4078"},
+        {"file": "concrete_03.wav", "trim_start_seconds": 14.24, "trim_duration_seconds": 0.32, "sha256": "9606020dc8d889b01f2e07b5b405e958e97c671d80b94b991b27b62e2e70541b"},
+        {"file": "concrete_04.wav", "trim_start_seconds": 28.28, "trim_duration_seconds": 0.32, "sha256": "f85dc9de313e657ae66d20fe4a12ef433d844c870117a00f09e16c5713099033"}
+      ]
+    },
+    {
+      "id": 749711,
+      "creator": "RFCaldas",
+      "title": "Steps boots on metal surface",
+      "page_url": "https://freesound.org/people/RFCaldas/sounds/749711/",
+      "description": "Man's footsteps with boots walking on a metallic surface.",
+      "listed_original": "WAV, stereo, 48000 Hz, 24-bit, 18.431 seconds, 5.1 MB",
+      "license": "CC0 1.0 Universal",
+      "preview_url": "https://cdn.freesound.org/previews/749/749711_3838926-hq.mp3",
+      "preview_sha256": "b3e40b5a35bc885b731790be3b352896331ea5aaf24fc2d65856aed7e9c279de",
+      "preview_decode": "MP3, stereo, 48000 Hz, 185 kb/s, 18.432000 seconds; downmixed to mono",
+      "outputs": [
+        {"file": "metal_01.wav", "trim_start_seconds": 4.56, "trim_duration_seconds": 0.32, "sha256": "22670672c764dcc7fb7c42027a97b07b873f6a7b327021deb5dfbe400bc0b14c"},
+        {"file": "metal_02.wav", "trim_start_seconds": 7.14, "trim_duration_seconds": 0.32, "sha256": "fa2e492cb0352f98a150769db83d01be1552dfd23b2c7e7c78ec0c1cf3dc3716"},
+        {"file": "metal_03.wav", "trim_start_seconds": 11.24, "trim_duration_seconds": 0.32, "sha256": "f0be2f199be619c7e621c21507b9c78ad89bdec9bd45bbc6152225982f20d470"},
+        {"file": "metal_04.wav", "trim_start_seconds": 15.30, "trim_duration_seconds": 0.32, "sha256": "d261072c0e85a4b50a5a0a3d3f0ed46b397a32ee5e0f9a01544c7ed098fa8e82"}
+      ]
+    },
+    {
+      "id": 278913,
+      "creator": "sturmankin",
+      "title": "soil_17a_boots_walk.wav",
+      "page_url": "https://freesound.org/people/sturmankin/sounds/278913/",
+      "description": "Walking on soil: boots. Recorded with a ZOOM H2 in a basement on a wooden container placed on carpet filled with soil, then normalized with Audacity.",
+      "listed_original": "WAV, mono, 48000 Hz, 16-bit, 33.813 seconds, 3.1 MB",
+      "license": "CC0 1.0 Universal",
+      "preview_url": "https://cdn.freesound.org/previews/278/278913_4181170-hq.mp3",
+      "preview_sha256": "d28f473f611bf4a6f9dfbd24d0b5ee2692a511500951594cdcf573818262c879",
+      "preview_decode": "MP3, mono, 48000 Hz, 187 kb/s, 33.813688 seconds",
+      "outputs": [
+        {"file": "earth_01.wav", "trim_start_seconds": 8.54, "trim_duration_seconds": 0.32, "sha256": "467a31c1937b9be75e119142b9d6034caef04c5cf158f8b8d21a85e4415f4cbf"},
+        {"file": "earth_02.wav", "trim_start_seconds": 13.82, "trim_duration_seconds": 0.32, "sha256": "e3d935b9d51978ced8e6cefa38e4bf40b5581d6fcc01f7ad631d4e4d395df825"},
+        {"file": "earth_03.wav", "trim_start_seconds": 17.16, "trim_duration_seconds": 0.32, "sha256": "6aeec5777fe089bcc6f0679a693edb50889a3cf4c9286a343cdaafdc6b225dd9"},
+        {"file": "earth_04.wav", "trim_start_seconds": 22.04, "trim_duration_seconds": 0.32, "sha256": "6ec4c4939b6eb28c2fac922c406305dc41c9f64b382aafc22359489a6d542b99"}
+      ]
+    }
+  ]
+}
