@@ -1,0 +1,20 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=686 driver=Dummy
+SCRAPERX_UITEST_POSE cargo_net_entry tick=1507 position=(19.99273, 0.9, -109.9544) elapsed_ms=111019
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_entry bodies=29 cables=3 deformation_m=0.00000 renderer=X11
+SCRAPERX_UITEST_POSE cargo_net_climbing tick=2166 position=(19.99477, 5.51508, -117.1973) elapsed_ms=176024
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_climbing bodies=29 cables=3 deformation_m=0.28759 renderer=X11
+SCRAPERX_UITEST_POSE cargo_net_receiver tick=2673 position=(20.00226, 11.9, -118.4825) elapsed_ms=236553
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_receiver bodies=29 cables=3 deformation_m=0.28759 renderer=X11
+SCRAPERX_UITEST_POSE cargo_net_first_ring tick=2920 position=(18.50058, 11.9, -125.9327) elapsed_ms=266600
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_first_ring bodies=29 cables=3 deformation_m=0.28759 renderer=X11
+SCRAPERX_UITEST PASS touch_cargo_net staging=ordinary_grade_spawn supported_height_m=11.00 deaths=0 slingshot_used=0

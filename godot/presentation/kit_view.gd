@@ -8,9 +8,16 @@ const KIT_CABLE_SEGMENTS := 4
 
 var _native: Object
 var _create_sign: Callable
-var _cargo_net_mesh: MeshInstance3D
+var _cargo_net_mesh: Node3D
 var _cargo_net_indices := PackedInt32Array()
 var _cargo_net_material: StandardMaterial3D
+var _cargo_net_knots: MultiMesh
+var _cargo_net_strands: MultiMesh
+var _cargo_net_links: Array[Vector2i] = []
+var _cargo_net_cross_edges: Array[Vector4i] = []
+# Display depth, aligned with existing particle standoff; native query faces
+# remain the open ribbons. This is a rounded read-only render proxy.
+const CARGO_NET_HALF_DEPTH := 0.035
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
 var _kit_cables: Array = []
@@ -149,10 +156,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
 	_cargo_net_indices = _native.get_cargo_net_indices()
 	if not _cargo_net_indices.is_empty():
-		_cargo_net_mesh = MeshInstance3D.new()
-		_cargo_net_mesh.name = "NativeSoftCargoNet"
-		_cargo_net_mesh.mesh = ArrayMesh.new()
-		add_child(_cargo_net_mesh)
+		_build_cargo_net()
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
 	cable.material = cable_material
@@ -169,36 +173,112 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 	_render_kit()
 
 
-# Poses every moving kit body and lays every cable through its points, from
-# this frame's native state. A body the native has taken out of the world (a
-# shackle hooked onto an anchor) is hidden, not moved.
+# Native CargoNet exposes four corners per knot and two triangles per woven
+# quad. Derive links from that topology, without authoring another grid.
+func _build_cargo_net() -> void:
+	_cargo_net_mesh = Node3D.new()
+	_cargo_net_mesh.name = "NativeSoftCargoNet"
+	add_child(_cargo_net_mesh)
+	var vertices: PackedVector3Array = _native.get_cargo_net_vertices()
+	for i in range(0, _cargo_net_indices.size(), 6):
+		var a := _cargo_net_indices[i]
+		var b := _cargo_net_indices[i + 1]
+		var c := _cargo_net_indices[i + 2]
+		var d := _cargo_net_indices[i + 5]
+		var node_a := a / 4
+		var node_b := b / 4
+		var node_c := c / 4
+		if node_a == node_b and node_a == node_c:
+			continue # Knot face; its rounded display follows all four corners.
+		if node_a != node_b:
+			_cargo_net_links.append(Vector2i(node_a, node_b))
+			_cargo_net_cross_edges.append(Vector4i(a, d, b, c))
+		else:
+			_cargo_net_links.append(Vector2i(node_a, node_c))
+			_cargo_net_cross_edges.append(Vector4i(a, b, d, c))
+	var rope := CylinderMesh.new()
+	rope.top_radius = 1.0
+	rope.bottom_radius = 1.0
+	rope.height = 1.0
+	rope.radial_segments = 16
+	rope.rings = 1
+	rope.material = _cargo_net_material
+	_cargo_net_strands = _net_instances("Strands", rope, _cargo_net_links.size())
+	var knot := SphereMesh.new()
+	knot.radius = 1.0
+	knot.height = 2.0
+	knot.radial_segments = 16
+	knot.rings = 7
+	knot.material = _cargo_net_material
+	_cargo_net_knots = _net_instances("Knots", knot, vertices.size() / 4)
+
+
+func _net_instances(node_name: String, mesh: Mesh, count: int) -> MultiMesh:
+	var instances := MultiMesh.new()
+	instances.transform_format = MultiMesh.TRANSFORM_3D
+	instances.mesh = mesh
+	instances.instance_count = count
+	var node := MultiMeshInstance3D.new()
+	node.name = node_name
+	node.multimesh = instances
+	_cargo_net_mesh.add_child(node)
+	return instances
+
+
 func _update_cargo_net() -> void:
 	if _cargo_net_mesh == null or DisplayServer.get_name() == "headless":
 		return
 	var vertices: PackedVector3Array = _native.get_cargo_net_vertices()
-	var normals := PackedVector3Array()
-	normals.resize(vertices.size())
-	for i in range(0, _cargo_net_indices.size(), 3):
-		var a := _cargo_net_indices[i]
-		var b := _cargo_net_indices[i + 1]
-		var c := _cargo_net_indices[i + 2]
-		var n := (vertices[b] - vertices[a]).cross(vertices[c] - vertices[a])
-		normals[a] += n
-		normals[b] += n
-		normals[c] += n
-	for i in normals.size():
-		normals[i] = normals[i].normalized()
-	var arrays: Array = []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_NORMAL] = normals
-	arrays[Mesh.ARRAY_INDEX] = _cargo_net_indices
-	var mesh := _cargo_net_mesh.mesh as ArrayMesh
-	mesh.clear_surfaces()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	mesh.surface_set_material(0, _cargo_net_material)
+	# Regression fixture selection can remove the native soft body after
+	# startup. Its old display must disappear with that body.
+	_cargo_net_mesh.visible = not vertices.is_empty()
+	if vertices.is_empty():
+		return
+	var centres := PackedVector3Array()
+	centres.resize(_cargo_net_knots.instance_count)
+	var bounds := AABB(vertices[0], Vector3.ZERO)
+	for i in centres.size():
+		var p := i * 4
+		var centre := (vertices[p] + vertices[p + 1] + vertices[p + 2] + vertices[p + 3]) * 0.25
+		var right := (vertices[p + 1] + vertices[p + 3] - vertices[p] - vertices[p + 2]) * 0.25
+		var up := (vertices[p + 2] + vertices[p + 3] - vertices[p] - vertices[p + 1]) * 0.25
+		var normal := right.cross(up)
+		centres[i] = centre
+		# Affine rounded proxy follows average stretch/shear/orientation.
+		# sqrt(2) spans planar parallelogram corners, not arbitrary warp.
+		var basis := Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
+		if normal.length_squared() > 0.000000000001:
+			basis = Basis(right * sqrt(2.0), up * sqrt(2.0), normal.normalized() * CARGO_NET_HALF_DEPTH)
+		var pose := Transform3D(basis, centre)
+		_cargo_net_knots.set_instance_transform(i, pose)
+		bounds = bounds.merge(pose * _cargo_net_knots.mesh.get_aabb())
+	for i in _cargo_net_links.size():
+		var link := _cargo_net_links[i]
+		var from := centres[link.x]
+		var to := centres[link.y]
+		var delta := to - from
+		var length := delta.length()
+		var edge := _cargo_net_cross_edges[i]
+		# The in-plane width follows the native ribbon, retaining its 80 mm
+		# unloaded width. Display depth supplies a rounded cross-section.
+		var cross_edge := (vertices[edge.y] - vertices[edge.x] + vertices[edge.w] - vertices[edge.z]) * 0.25
+		var basis := Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
+		if length >= 0.001:
+			var along := delta / length
+			var right := cross_edge - along * cross_edge.dot(along)
+			if right.length_squared() > 0.000000000001:
+				var normal := right.normalized().cross(along)
+				basis = Basis(right, delta, normal * CARGO_NET_HALF_DEPTH)
+		var pose := Transform3D(basis, (from + to) * 0.5)
+		_cargo_net_strands.set_instance_transform(i, pose)
+		bounds = bounds.merge(pose * _cargo_net_strands.mesh.get_aabb())
+	# One shared geometry batch per primitive; bounds include live deformation.
+	_cargo_net_knots.custom_aabb = bounds
+	_cargo_net_strands.custom_aabb = bounds
 
 
+# Poses moving kit bodies and cables from this frame's native snapshot.
+# A disabled native body is hidden without replacing its physical state.
 func _render_kit() -> void:
 	_update_cargo_net()
 	if _native == null:
@@ -241,5 +321,3 @@ func _lay_segment(instance: MeshInstance3D, from: Vector3, to: Vector3) -> void:
 	instance.transform = Transform3D(Basis(side, along.cross(side), along * length),
 		from + delta * 0.5)
 	instance.visible = true
-
-

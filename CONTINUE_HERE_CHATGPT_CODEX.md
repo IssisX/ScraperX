@@ -277,14 +277,15 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 
 ## 7. Running to-do at this handoff
 
-**Current bounded presentation batch — paused for owner-requested Codex restart, 2026-10-04:** cargo-net appearance, recorded footsteps and the mechanism-render extraction are separate changes. Geometry preservation applies to the extraction baseline; the following cargo-net change intentionally makes the net thicker and rounded. Current hand placement is owner-confirmed accurate and remains a regression contract.
+**Current bounded presentation batch — second owner-requested quick restart checkpoint, 2026-10-04:** extraction and recorded footsteps are saved; rounded native-driven net geometry is now implemented. An actual rendered ordinary-touch route reached the first ring with 0.28759 m deformation, no deaths and no launcher work. Final bounds/degeneracy/empty-net guards and strengthened assertions need a fresh combined run. All four final scripts parse. Helpers/captures are stopped; mechanism draft and partial audio proof are preserved. [RESTART_HERE_CODEX.md](RESTART_HERE_CODEX.md) owns exact pickup steps and source boundaries. Current hand placement remains owner-confirmed accurate.
 
 - [x] Verify clean agent-owned `ChatGPT` at `03d50dc`, existing green executable `b1da5f3`, rendering owners and exact consumers.
 - [x] Extract the five mechanism routines and their display state into `kit_view.gd` with explicit dependencies; normal/fixture actual-renderer baseline parity passes (29/15 bodies). Independent source review reports no material finding.
-- [ ] Give the net a rounded, substantial cross-section driven by its actual interpolated Jolt vertices; exercise loaded deformation and ordinary touch top-out.
+- [x] Implement native-driven rounded display (207 knots/382 links); actual-renderer ordinary-touch loaded climb/top-out reaches the first ring. This is a render proxy for existing native open ribbons.
+- [ ] Fresh final-source rendered net/rigid parity and relevant hand/input checks; final guard/profile/wrist assertions are parsed but not runtime-verified.
 - [x] Replace concrete/steel/earth step-bank entries with twelve small licensed recordings (`188f90e`); recorded-resource load/format and five contact-timing cases pass.
 - [ ] Verify the new recording shipping mix and subjective sound quality.
-- [x] Save completed worker work, original rendering baselines, exact net test-first RED source and proof for restart. [RESTART_HERE_CODEX.md](RESTART_HERE_CODEX.md) owns pickup instructions; [the scoped evidence](evidence/kit-net-audio-2026-10-04/README.md) distinguishes passed, failed and unrun checks.
+- [x] Save completed worker work, original baselines, net RED/partial/route-green proof, unverified mechanism draft and final parse receipt for restart. [The scoped evidence](evidence/kit-net-audio-2026-10-04/README.md) distinguishes actual results and final-source boundaries.
 - [ ] Verify solids, relevant rendered/input regressions and the combined source; push to `ChatGPT` and close a green exact-source Actions APK export. Stop after this bounded batch.
 
 **Current bounded repair — AS-023 launch embodiment, owner feedback 2026-10-03:**

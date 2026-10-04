@@ -590,6 +590,8 @@ Critical scene objects are **mirrors**, not authorities.
 
 Mechanism rendering is owned by `godot/presentation/kit_view.gd`, the direct `KitPresentation` child of main. Main prepares the shared palette/materials and sign factory, calls `setup(native, palette, cable_material, cargo_net_material, create_sign)` at startup, and calls `render_view()` after native frame advancement. The view owns body meshes, cable segments, cargo-net display and bucket water; its bridge access is read-only and native getters supply the render timestamp. Shared world builders, materials, camera and frame coordination remain in main.
 
+`NativeSoftCargoNet` now groups two shared MultiMesh batches: native-index-derived rounded links and affine knot proxies. Actual interpolated vertices determine their centres, widths and frames. The view assumes the existing identity world presentation frame and contains transformed mesh bounds for live deformation. Native collision/grip topology remains the open ribbon triangles; added display depth does not create cylindrical collision. Affine knots/uniform links approximate nonplanar warp, taper and twist. Empty native net snapshots hide the obsolete display during fixture changes. Native forces, controller/grip anchors and hand placement remain owned by their existing systems.
+
 A critical Godot node stores its stable `EntityId` and renders from snapshots.
 
 No script may write a critical node transform and thereby change simulation truth.

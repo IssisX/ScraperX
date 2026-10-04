@@ -80,18 +80,38 @@ func _sample(kit: Node3D, native: Object) -> void:
 					"cable start follows native")
 				_check((node.transform * Vector3(0, 0, 0.5)).distance_to(points[segment + 1]) < 0.0001,
 					"cable end follows native")
-	var net := kit.get_node_or_null("NativeSoftCargoNet") as MeshInstance3D
-	if net != null:
-		_check(net.mesh.get_surface_count() == 1, "net mesh update ran with renderer")
-		if net.mesh.get_surface_count() == 1:
-			var arrays := net.mesh.surface_get_arrays(0)
-			var vertices: PackedVector3Array = native.get_cargo_net_vertices()
-			_check(arrays[Mesh.ARRAY_VERTEX] == vertices, "net interpolated native vertices")
-			_check(arrays[Mesh.ARRAY_INDEX] == native.get_cargo_net_indices(), "net native topology")
-			var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
-			_check(normals.size() == vertices.size(), "net normals count")
-			for normal in normals:
-				_check(normal.is_finite() and absf(normal.length() - 1.0) < 0.001, "net normals finite/unit")
+	var vertices: PackedVector3Array = native.get_cargo_net_vertices()
+	if not vertices.is_empty():
+		var net := kit.get_node_or_null("NativeSoftCargoNet") as Node3D
+		_check(net != null, "native net display missing")
+		if net == null:
+			return
+		_check(net.global_transform == Transform3D.IDENTITY, "net world vertex frame")
+		var strands := net.get_node_or_null("Strands") as MultiMeshInstance3D
+		var knots := net.get_node_or_null("Knots") as MultiMeshInstance3D
+		_check(strands != null and knots != null, "rounded net batches missing")
+		if strands == null or knots == null:
+			return
+		_check(knots.multimesh.instance_count == 207 and strands.multimesh.instance_count == 382,
+			"open native weave display")
+		for i in knots.multimesh.instance_count:
+			var centre := Vector3.ZERO
+			for corner in 4:
+				centre += vertices[i * 4 + corner] * 0.25
+			_check(knots.multimesh.get_instance_transform(i).origin.distance_to(centre) < 0.0001,
+				"net knot follows interpolated native mean")
+		for i in strands.multimesh.instance_count:
+			var pose := strands.multimesh.get_instance_transform(i)
+			_check(pose.is_finite() and absf(pose.basis.z.length() * 2.0 - 0.07) < 0.0001,
+				"net rounded world depth 70 mm")
+			_check(absf(pose.basis.x.length() * 2.0 - 0.08) < 0.01,
+				"unloaded net retains native ribbon width")
+			_check(strands.multimesh.custom_aabb.encloses(pose * strands.multimesh.mesh.get_aabb()),
+				"net rope bounds contain geometry")
+		var tick := int(native.get_tick_index())
+		kit.render_view()
+		_check(int(native.get_tick_index()) == tick and native.get_cargo_net_vertices() == vertices,
+			"net presentation is read-only")
 
 
 func _run() -> void:

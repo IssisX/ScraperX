@@ -1,49 +1,54 @@
 # RESTART HERE — ScraperX / ChatGPT
 
-**Owner-requested safe Codex restart checkpoint, 2026-10-04.** This file is a pickup guide. `AGENTS.md` and the existing `CONTINUE_HERE_CHATGPT_CODEX.md` §7 keep their authority and labels. Resume the bounded batch when the owner continues; the larger movement/content goal remains paused.
+**Owner-requested quick restart checkpoint, 2026-10-04.** Resume this bounded batch after starting the new session/profile. This is saved work in progress, not a completed delivery. All local workers and runtime captures are stopped. The larger movement/content goal remains paused.
 
-## Current work
+## Scope and checkout
 
-Three separate jobs were approved:
+Repository `https://github.com/IssisX/ScraperX.git`, exact branch **ChatGPT**. Agent-owned clone:
+`/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo`.
+Verify identity, HEAD, status, origin and applicable instructions before edits. Use this clone if present; otherwise clone into a writable temporary development directory outside personal Downloads. Current explicit owner instructions take precedence over contradictory older documentation.
 
-1. Extract mechanism rendering from `main.gd` into `kit_view.gd`, preserving behavior during extraction.
-2. Change the cargo net's geometry: substantial, rounded ropes/rungs, with visible deformation from actual native state.
-3. Replace the rejected synthetic “ting-ting” footsteps with real recorded footsteps.
+The three approved jobs are mechanism-render extraction, rounded/deforming cargo-net appearance, and real recorded footsteps. Geometry preservation applied to extraction; the later net change intentionally changes its geometry. Existing hand placement is owner-confirmed accurate. Native C++/Jolt owns physics; Godot owns presentation/input. Stop after this batch and its green exact-source Actions/APK. Leave simulation.cpp, world builders, camera/telemetry and broader test restructuring for later.
 
-The owner clarified that unchanged net geometry applied only to job 1. Job 2 deliberately changes that geometry. The owner confirms current hand placement is accurate and grabs real geometry; preserve that proven behavior. Keep native C++17/Jolt physics ownership, read-only Godot presentation, real contact and the proven ordinary route. Stop after this bounded batch; leave simulation.cpp, world builders, camera/telemetry and wider test-suite restructuring for separate tasks.
+## Saved implementation
 
-## Saved code
+- Extraction `b140e05`: five routines and kit/cable/net/bucket display state moved from main into `godot/presentation/kit_view.gd`. The view is the existing direct `KitPresentation` child. Interface: `setup(native, palette, cable_material, cargo_net_material, create_sign)`, `render_view()`. Main retains startup/frame coordination and shared materials/sign creation. Existing rigid node paths, timber styling and physics responsibilities remain.
+- Recorded footsteps `188f90e3774d356ae9c2c8255212fa7cc9097d65`: twelve CC0 concrete/metal/earth recordings, provenance/license files and committed PCM imports. Legacy step-generator RNG draws are consumed so later procedural cues keep their existing random sequence. Cadence, pitch, contact timing and mixer are unchanged.
+- Previous restart `609c857c601340d27fab7fcff4fc0997119c8537`.
+- This checkpoint adds rounded net display: **207 shared sphere knots / 382 shared cylinder links**, two MultiMesh batches at the existing `NativeSoftCargoNet` path. Connectivity comes from actual native indices; centres, orientation and in-plane widths follow interpolated native vertices. Unloaded links are nominally 80 mm wide / 70 mm deep. Collapsed frames are suppressed; bounds union actual transformed mesh AABBs; fixture removal hides the obsolete net display.
+- Native net remains entity **1953**, Jolt 9×23 four-corner open ribbon weave, pinned end rows. No native/hand/physics tuning was changed. Rounded surfaces are a render proxy, not new cylindrical collision: Jolt vertex radius .035 m is particle standoff, while native ray/grip queries use triangles. Affine knots and uniform cylinders approximate warping/taper/twist; do not claim exact collision matching or finite reciprocal hand-constraint proof.
 
-- Exact repository `https://github.com/IssisX/ScraperX.git`, exact branch `ChatGPT`.
-- Agent-owned checkout: `/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo`. Use it if present; inspect identity/status/HEAD before writing. Otherwise make a fresh owned clone in a writable temporary development location, outside personal Downloads.
-- Starting source `03d50dcd2cdce65c6037ad964950ea075759826f`.
-- Extraction commit **`b140e05`**: five functions plus kit/body/cable/net/water state live in `godot/presentation/kit_view.gd`. `KitPresentation` is this module itself, directly beneath main. `setup(native, palette, cable_material, cargo_net_material, create_sign)` and `render_view()` form the interface. Main keeps shared materials/sign creation and startup/frame coordination. Existing `KitBody1950/1951/2900` paths and timber styling are significant to slingshot_view.
-- Audio commit **`188f90e3774d356ae9c2c8255212fa7cc9097d65`**: sound bank now preloads four concrete, four metal and four earth bootsteps; original non-step procedural RNG draws are consumed to preserve other cues. WAV/import/license/provenance files are committed under `godot/assets/audio/footsteps/`. Cadence, pitch, mixer and native contacts are unchanged.
-- **No net geometry implementation yet.** Exact pending test source is `03_EXECUTION/PLANNING/KIT_NET_AUDIO_CHECKPOINT_2026-10-04/kit_route_render_test.gd`, deliberately outside the Godot test project. Its actual RED rejects missing rounded strands/knots after ordinary touch reaches the entry.
+## Actual evidence and limits
 
-## What was proven
+The scoped ledger is `evidence/kit-net-audio-2026-10-04/README.md`. Preserve historical receipts and their source boundaries.
 
-Read `evidence/kit-net-audio-2026-10-04/README.md` and its saved test logs. Actual renderer parity covers 29 normal and 15 fixture bodies, mesh batching/materials/signs, native interpolation/cables and the original flat net. A fresh reviewer found no material extraction defect. The twelve loaded PCM recording variants and five contact cases pass. Both regenerated collision tables match byte for byte.
+- Extraction: normal/fixture renderer parity for 29/15 bodies, mesh channels/materials/signs, poses/cables and original flat net. Both generated collision tables matched byte for byte. Twelve recorded PCM resources and five contact-timing cases passed before this checkpoint.
+- New actual-renderer ordinary-touch net route **exited 0**: entry → loaded climb → native top-out → supported first ring, Y=11.9, zero deaths, no launcher work. Observed maximum native displacement **0.28759 m**. Log: `net-green-touch.log`. Its runtime loaded the initial rounded implementation/test; final degeneracy/bounds/empty-net guards and strengthened wrist/profile assertions were edited during that run and therefore still need a fresh combined run.
+- The first 192×164 test stalled because the minimum UI scale placed CLIMB over stick home: home(71.5,92.5), action(76.5,65), action hit radius29.9. The touch harness now uses **432×371**. This is a test viewport repair, not physics tuning. 192×164 is only suitable for passive render checks.
+- Fresh Godot 4.7 ARM64 `--check-only` passed all four final scripts: kit_view, kit_view_test, kit_route_render_test, kit_mechanism_render_test. Parsing is not runtime proof.
+- Independent local review found no material source defect. Remote Super_Agent reviewed the net frame/profile mathematics; its degeneracy/bounds advice was incorporated. Both reviews were source/advisory evidence, not runtime acceptance.
+- Mechanism test `godot/tests/kit_mechanism_render_test.gd` is saved and parses, but was stopped before its first pose. It attempts a real touch pump/fill/lift/drain cycle; it is an **unverified draft**. Its earlier attempt exposed an empty-native-net update error; the new guard is present but needs execution.
+- Audio worker imported a private runtime successfully but stopped Movie Maker by owner request (exit130) before mix measurements. No subjective listening or Master mix result was obtained.
+- No new tests have been wired into Actions. Baseline run **37226116280** for609c857 was still in its historical rendered +110 m step at checkpoint. A checkpoint push may supersede that run. Last verified green APK remains source **b1da5f3**, run **37214576377**, artifact **11309435499**; it does not prove this checkpoint.
 
-These receipts do not prove loaded mechanism transfers, water fill/drain, subjective sound quality, final new geometry, Android device performance, or a new green APK. New standalone tests are not yet added to Actions. The last verified green delivery is source `b1da5f3`, [run 37214576377](https://github.com/IssisX/ScraperX/actions/runs/37214576377). Check Actions for the restart checkpoint's exact HEAD first; source on branch is newer than that last accepted APK. Every new APK is built in Actions and must come from a green exact-source run.
+## Next actions, in order
 
-## First actions after restart
+1. Read this file, current AGENTS/user instructions, `00_START_HERE.md`, and `CONTINUE_HERE_CHATGPT_CODEX.md` §7. Inspect actual source/status and newest exact-source Actions run; repair a real CI failure before moving on.
+2. Fresh final-source rendered `kit_route_render_test.gd` at432×371, plus normal/fixture `kit_view_test.gd`. Retain rigid golden parity. Binary ARM golden hashes may differ on x86; establish actual differences before changing baselines.
+3. Close review test gaps: explicitly require nonempty native net at cargo poses, exactly two wrists, and meaningful knot orientation/bounds checks. These were reviewer recommendations, not executed assertions. Verify relevant hand/input regressions and both solids exports; preserve the proven hand code.
+4. Verify moving mechanisms/cables/shackle hiding and bucket filling/draining. Inspect the saved mechanism draft before using it. A shorter test may use legitimate public machine commands in a retired fixture and real native evolution; do not assign volume/poses or repair physics to force extraction proof. Classify fixture vs normal gameplay. Do not rebuild a large route if a bounded display test answers the question.
+5. Finish existing `audio_mix` shipping Master probe (Movie Maker, not Dummy). Collect actual prominence/band/peak/step metrics. Recorded-resource load proof exists; subjective listening/device quality remains separate.
+6. Add only useful passing standalone tests to `.github/workflows/wo000-delivery-spine.yml` as a separate wiring change. Update authoritative docs/checkpoint and scoped receipts, push ChatGPT, verify the final exact-source green Actions run and APK provenance/checksum. APKs are built only in Actions. Stop at this batch.
 
-1. Verify repository/ChatGPT/HEAD/worktree/local changes and current Actions state. Read applicable instructions, current checkpoint and the scoped evidence; preserve concurrent edits. All local workers were finished at the restart boundary.
-2. Continue the cargo-net geometry implementation in `kit_view.gd` (or an explicit bounded display helper if justified). The native net is entity 1953, one Jolt soft body: `src/sim/cargo_net.cpp`, 9×23 four-corner knots, open ribbon links, pinned upper/lower rows and 0.035 m collision vertex radius. The bridge supplies native interpolated vertices/indices. Current view draws flat double-sided triangles, explaining the paper-thin appearance.
-3. An efficient candidate is shared rounded cylinder/sphere geometry through MultiMesh strands/knots. Derive knot centres from their four actual vertices and connectivity from native indices, rather than duplicate a grid or animate player presence. Resolve visible cross-section versus the actual collision/grip envelope explicitly. Native loading and interpolation own deformation; do not add decorative motion to claim physics. This candidate is a design direction, **not implemented source**.
-4. Bring the saved net test into `godot/tests/`, strengthen edge-specific adjacency and actual loaded deformation checks as appropriate, then exercise ordinary-touch climb/top-out with real rendering. The test subclasses the existing shipping touch driver and renders its telling poses on slow local software hosts. Headless execution skips the net update and cannot establish its rendering. Existing flat-net assertions in `kit_view_test.gd` apply to the extraction baseline; intentionally replace them with truthful rounded-geometry assertions while retaining rigid-body parity.
-5. Close the extraction's remaining meaningful rendered moving-body/cable and bucket fill/drain boundaries, then the new recorded-footstep shipping mix. Use relevant route/hand-placement regressions and both solids comparisons. Update existing authoritative docs and §7; keep changes separate and push only ChatGPT. Wire useful passing standalone tests into the available delivery path with a small separate wiring change.
-6. Close final exact-source green Actions/APK provenance. Report code, actual proof and remaining device/listening boundary plainly. Stop at this batch.
+## Local tooling and concurrency
 
-## Local tools if still present
+Task root `/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao`.
+Godot4.7ARM64 `/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64` exists and executes via Ubuntu/proot.
+`proot-distro login ubuntu --shared-tmp -- /bin/bash -c '...'`.
+Use Xvfb / `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=softpipe`, Compatibility renderer; llvmpipe previously SIGILL. LOW/tiny local settings are test-only.
 
-Task root: `/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao`.
+`runtime-kit` was synchronized to checkpoint source after its completed route run. `runtime-green` retains the old baseline. Native library SHA256 `9ff20444d0733bdcf6ff2353ee4d80aa2025f8c39d9b3e324d1d08a75f615198`; native source unchanged in this batch. Each future worker must use a **separate runtime**, not overwrite shared scripts during a parent's run. An interrupted mechanism worker used runtime-kit despite its assignment; loaded-script source boundaries above must be respected.
 
-- Godot 4.7 ARM64: `/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64`.
-- Ubuntu/proot wrapper: `proot-distro login ubuntu --shared-tmp -- /bin/bash -c '...'`.
-- `runtime-green` retains the original executable baseline. `runtime-kit` has extraction, new audio/PCM imports, native library and test resources; synchronize future source deliberately and run import after asset changes. Do not confuse runtime scratch with branch source.
-- Rendering succeeded via `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=softpipe xvfb-run -a`, Compatibility renderer. Prior llvmpipe on this host can SIGILL. Test-only 192×164/LOW settings are not shipped settings or device quality proof.
-- Raw temporary receipts: `proof/kit-net-audio`. Useful selected receipts are committed; raw session logs and build binaries are not published.
-- Existing host build/source/native caches are beneath the task root; native source did not change in this batch. APKs stay in Actions.
+Private audio runtime/proof: `runtime-audio-recorded`, `runtime-audio-recorded-proof` (partial AVI/log, no mix result). Raw scoped proof: `proof/kit-net-audio`. Publish selected diagnostic receipts only; never raw session logs, credentials or build binaries.
 
+Useful delegation: parent owns net/integration; one tester owns bounded mechanism proof/wiring; another owns audio mix. Final reviewer may be read-only. Remote MCP `mcp__super_agent__ask_super_agent` accepts a self-contained `prompt` and is advisory. Do not invent jobs just to occupy agents. At this checkpoint every worker is finished, with no pending background tasks promised.
