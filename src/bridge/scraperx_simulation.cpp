@@ -1,5 +1,7 @@
 #include "bridge/scraperx_simulation.hpp"
 
+#include "sim/slingshot.hpp"
+
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
@@ -356,11 +358,28 @@ godot::Dictionary ScraperXSimulation::get_slingshot_state() const {
     out["leather_energy_j"] = state.leather_energy_j;
     out["pouch_position"] = to_godot(state.pouch_position);
     out["player_grounded"] = simulation_->snapshot().player_grounded;
+    // The 12 s shot integration is only for the aim preview. Running it on
+    // every frame, twice, kept the grade climb from finishing inside the
+    // delivery timeout.
     godot::PackedVector3Array trajectory;
-    for (const sim::Vector3 point : simulation_->slingshot_prediction()) {
-        trajectory.push_back(to_godot(point));
+    if (state.available && state.seated && !state.released) {
+        for (const sim::Vector3 point : simulation_->slingshot_prediction()) {
+            trajectory.push_back(to_godot(point));
+        }
     }
     out["trajectory_points"] = trajectory;
+    if (state.available) {
+        godot::PackedVector3Array leather_vertices;
+        for (int row = 0; row <= 8; ++row) {
+            for (int column = 0; column <= 18; ++column) {
+                const JPH::Vec3 vertex =
+                    sim::Slingshot::leather_surface(static_cast<float>(column) / 18.0F,
+                                                    static_cast<float>(row) / 8.0F);
+                leather_vertices.push_back(godot::Vector3(vertex.GetX(), vertex.GetY(), vertex.GetZ()));
+            }
+        }
+        out["leather_vertices"] = leather_vertices;
+    }
     return out;
 }
 
