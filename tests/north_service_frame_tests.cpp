@@ -249,10 +249,40 @@ int main(int argc, char **argv) {
     (void)s.set_facing(-1, 0);
     (void)s.request_jump();
     (void)s.set_move_input(-0.5, 0);
+    const auto trace = [](const char *label, const scraperx::sim::Snapshot &p) {
+        std::cout << label << " pos=" << p.player_position.x << ',' << p.player_position.y
+                  << ',' << p.player_position.z << " vel=" << p.player_linear_velocity.x
+                  << ',' << p.player_linear_velocity.y << ',' << p.player_linear_velocity.z
+                  << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " deaths=" << p.death_count << " impact=" << p.last_impact_speed_mps << '\n';
+    };
     bool caught = false;
     for (int tick = 0; tick < 2 * 90; ++tick) {
+        const auto before = s.snapshot();
         advance(s, Simulation::kFixedStepSeconds);
         if (s.snapshot().traversal_state == scraperx::sim::TraversalState::Hanging) {
+            trace("PRE_CATCH", before);
+            const auto capture = s.snapshot();
+            trace("FIRST_HANG", capture);
+            // Two 1500 N hands, 85 kg, gravity and bounded air steering
+            // permit less than 0.7 m/s per 90 Hz tick, without other contact.
+            // A 60 Hz caller may observe two native ticks in one snapshot.
+            const double delta_v = std::hypot(
+                capture.player_linear_velocity.x - before.player_linear_velocity.x,
+                capture.player_linear_velocity.y - before.player_linear_velocity.y,
+                capture.player_linear_velocity.z - before.player_linear_velocity.z);
+            const double native_ticks = double(capture.tick_index - before.tick_index);
+            const double displacement = std::hypot(
+                capture.player_position.x - before.player_position.x,
+                capture.player_position.y - before.player_position.y,
+                capture.player_position.z - before.player_position.z);
+            if (capture.player_gravity_factor != 1.0 ||
+                capture.traversal_hand_constraint_count != 2 ||
+                delta_v > 0.7 * native_ticks || displacement > 0.1 * native_ticks) {
+                std::cerr << "FAIL lip catch bypasses finite gravity-on hands delta_v="
+                          << delta_v << " displacement=" << displacement << '\n';
+                return EXIT_FAILURE;
+            }
             caught = true;
             break;
         }
@@ -269,6 +299,7 @@ int main(int argc, char **argv) {
               << s.snapshot().player_position.y << ',' << s.snapshot().player_position.z << '\n';
     (void)s.request_release();
     advance(s, 1.0);
+    trace("RELEASE_RESULT", s.snapshot());
     if (!s.snapshot().player_grounded || s.snapshot().support_entity_id != 1901 ||
         std::abs(s.snapshot().player_position.y - 104.4) > 0.12 || s.snapshot().death_count != 1) {
         std::cerr << "FAIL released lip does not recover on the real +103.5 m rest\n";

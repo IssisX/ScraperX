@@ -1,0 +1,13 @@
+one-hand at4s sag=0.278939 reaction=866.025 vy=-0.0288089
+static sag=0.0833883 reaction=833.846 one_sag=0.166768 peak_force=866.025
+PASS static_load_and_release
+command ascent=0.199789 cumulative_bound=666.667
+PASS command_sign_and_budget
+recoil player_vx=1.57428 support_vx=1.44746 peak_force=366.954
+PASS dynamic_recoil
+catch minimum_y=2.60494 peak_force=1500
+PASS finite_landing_catch
+kinematic regrip tracking_vx=0.600085
+PASS kinematic_tracking_and_regrip
+PASS invalid_holds_and_cleanup
+physical hand checks: 6/6

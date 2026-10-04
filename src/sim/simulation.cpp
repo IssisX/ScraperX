@@ -2184,11 +2184,24 @@ public:
             }
         }
 
+        if (traversal_state_ == TraversalState::Hanging && physical_hands_->active()) {
+            // Request a bounded rest-target change, never the root velocity.
+            // Measure commanded position rather than actual compliant sag.
+            const auto goal = from_support_local(bodies, traversal_body_, traversal_local_hold_);
+            physical_hands_->advance_targets(JPH::Vec3(goal - physical_hands_->commanded_position()),
+                                             delta_seconds);
+        }
         if (traversal_state_ != TraversalState::None && !physical_hands_->active()) {
             drive_traversal(bodies, delta_seconds);
             load_hold(bodies);
         }
 
+        if (physical_hands_->active() && !was_grounded_before_tick) {
+            // Finite hand catches still collide with real receivers. Sample
+            // their incoming speed too, rather than reuse an earlier free fall.
+            pre_contact_fall_speed_mps_ = std::max(0.0F, -bodies.GetLinearVelocity(player_id_).GetY());
+            fall_peak_speed_mps_ = std::max(fall_peak_speed_mps_, pre_contact_fall_speed_mps_);
+        }
         kit_->pre_step(delta_seconds);
         if (pipe_bridge_) pipe_bridge_->pre_step(delta_seconds);
         if (swing_stair_) swing_stair_->pre_step(delta_seconds);
@@ -2284,7 +2297,8 @@ public:
         const auto &bodies = physics_system_.GetBodyInterfaceNoLock();
         JPH::BodyID body;
         JPH::Vec3 point = JPH::Vec3::sZero();
-        if (traversal_state_ == TraversalState::Climbing && hands_[hand].valid) {
+        if ((traversal_state_ == TraversalState::Climbing ||
+             traversal_state_ == TraversalState::Hanging) && hands_[hand].valid) {
             body = hands_[hand].body;
             point = hands_[hand].local;
             result.generation = hands_[hand].generation;
@@ -5534,6 +5548,27 @@ private:
         }
     }
 
+    [[nodiscard]] bool acquire_hang_hands(JPH::BodyInterface &bodies) noexcept {
+        const auto lip = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+        for (unsigned hand = 0; hand < 2; ++hand) {
+            const auto aim = lip + traversal_right() * (hand == 0 ? -kHangHandSpan : kHangHandSpan);
+            const auto actual = probe_lip(aim, traversal_normal_);
+            if (!actual.valid || actual.body != traversal_body_ ||
+                std::abs(actual.ledge.GetY() - lip.GetY()) > 0.15 ||
+                !physical_hands_->attach(hand, traversal_body_, actual.ledge)) {
+                physical_hands_->clear();
+                hands_[0].valid = hands_[1].valid = false;
+                return false;
+            }
+            ++hands_[hand].generation;
+            hands_[hand].body = traversal_body_;
+            hands_[hand].local = to_support_local(bodies, traversal_body_, actual.ledge);
+            hands_[hand].valid = true;
+        }
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        return true;
+    }
+
     void try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
         if (grounded_ || crouched_ || carry_constraint_ != nullptr || regrab_lockout_ticks_ > 0) {
             return;
@@ -5587,7 +5622,10 @@ private:
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
         traversal_desired_ = hold;
-        bodies.SetGravityFactor(player_id_, 0.0F);
+        if (!acquire_hang_hands(bodies)) {
+            clear_traversal();
+            ++rejected_traversal_count_;
+        }
     }
 
     [[nodiscard]] bool try_begin_ground_traversal(JPH::BodyInterface &bodies) noexcept {
@@ -5734,6 +5772,7 @@ private:
             return;
         }
         const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+        physical_hands_->clear();
         traversal_state_ = TraversalState::Mantling;
         traversal_local_start_ = to_support_local(bodies, traversal_body_, origin);
         traversal_local_approach_ = traversal_local_start_;
@@ -5883,7 +5922,7 @@ private:
         }
 
         if (traversal_state_ == TraversalState::Lowering && traversal_progress_ >= 1.0) {
-            finish_lowering();
+            finish_lowering(bodies);
         } else if (traversal_state_ != TraversalState::Hanging &&
                    traversal_state_ != TraversalState::Climbing && traversal_progress_ >= 1.0) {
             complete_traversal(bodies);
@@ -6439,8 +6478,28 @@ private:
         const Lip at = probe_lip(ledge + step, traversal_normal_);
         const Lip ahead = probe_lip(ledge + step + right * lead, traversal_normal_);
         if (!at.valid || !ahead.valid || std::abs(at.ledge.GetY() - ledge.GetY()) > 0.15 ||
-            !climb_move_clear(hold, at.hold)) {
+            !climb_move_clear(bodies.GetPosition(player_id_),
+                              bodies.GetPosition(player_id_) + JPH::Vec3(at.hold - hold))) {
             return;
+        }
+        std::array<JPH::RVec3, 2> grips;
+        for (unsigned hand = 0; hand < 2; ++hand) {
+            const auto aim = at.ledge + right * (hand == 0 ? -kHangHandSpan : kHangHandSpan);
+            const auto actual = probe_lip(aim, traversal_normal_);
+            if (!actual.valid || actual.body != at.body ||
+                std::abs(actual.ledge.GetY() - at.ledge.GetY()) > 0.15) return;
+            grips[hand] = actual.ledge;
+        }
+        for (unsigned hand = 0; hand < 2; ++hand) {
+            const auto grip = grips[hand];
+            if (!physical_hands_->regrip(hand, at.body, grip)) {
+                release_hang(bodies);
+                return;
+            }
+            ++hands_[hand].generation;
+            hands_[hand].body = at.body;
+            hands_[hand].local = to_support_local(bodies, at.body, grip);
+            hands_[hand].valid = true;
         }
         traversal_body_ = at.body;
         traversal_entity_id_ = at.entity_id;
@@ -6504,8 +6563,12 @@ private:
     }
 
     // Lowered: hanging from the lip, as if the hang had been caught there.
-    void finish_lowering() noexcept {
+    void finish_lowering(JPH::BodyInterface &bodies) noexcept {
         traversal_state_ = TraversalState::Hanging;
+        if (!acquire_hang_hands(bodies)) {
+            abort_traversal(bodies);
+            return;
+        }
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
         ++accepted_traversal_count_;
@@ -7018,7 +7081,8 @@ private:
         if (traversal_state_ != TraversalState::None) {
             state_.traversal_normal = {traversal_normal_.GetX(), 0.0, traversal_normal_.GetZ()};
         }
-        if (traversal_state_ == TraversalState::Climbing) {
+        if (traversal_state_ == TraversalState::Climbing ||
+            traversal_state_ == TraversalState::Hanging) {
             if (hands_[0].valid) state_.traversal_left_hand = to_vector3(hand_point(bodies, 0));
             if (hands_[1].valid) state_.traversal_right_hand = to_vector3(hand_point(bodies, 1));
         } else if ((traversal_state_ == TraversalState::Hanging ||

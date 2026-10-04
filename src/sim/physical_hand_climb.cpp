@@ -17,23 +17,45 @@ PhysicalHandClimb::PhysicalHandClimb(JPH::PhysicsSystem &system, JPH::BodyID pla
     : system_(system), player_(player) {}
 PhysicalHandClimb::~PhysicalHandClimb() { clear(); }
 bool PhysicalHandClimb::attach(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip) {
+    return replace(hand, support, actual_grip, false);
+}
+bool PhysicalHandClimb::regrip(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip) {
+    return replace(hand, support, actual_grip, true);
+}
+bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip,
+                                bool preserve_extension) {
     using namespace JPH;
     if (hand >= hands_.size() || player_.IsInvalid() || support.IsInvalid() ||
         support == player_ || !finite(actual_grip)) return false;
-    const BodyID ids[] { player_, support };
+    const BodyID previous_support = attached(hand) ? hands_[hand]->GetBody2()->GetID() : support;
+    const BodyID ids[] { player_, support, previous_support };
     Ref<SixDOFConstraint> constraint;
     bool wake_support = false;
     {
-        BodyLockMultiWrite lock(system_.GetBodyLockInterface(), ids, 2);
+        BodyLockMultiWrite lock(system_.GetBodyLockInterface(), ids, 3);
         Body *player = lock.GetBody(0), *hold = lock.GetBody(1);
         if (player == nullptr || hold == nullptr || !player->IsRigidBody() || !hold->IsRigidBody() ||
-            !player->IsDynamic() || (!hold->IsStatic() && !hold->IsDynamic()) ||
+            !player->IsDynamic() ||
             player->IsSensor() || hold->IsSensor() || !player->IsInBroadPhase() || !hold->IsInBroadPhase()) return false;
         const auto translation = EAllowedDOFs::TranslationX | EAllowedDOFs::TranslationY | EAllowedDOFs::TranslationZ;
         if (player->GetMotionProperties()->GetAllowedDOFs() != translation) return false;
         SixDOFConstraintSettings settings;
         settings.mSpace = EConstraintSpace::WorldSpace;
         settings.mPosition1 = settings.mPosition2 = actual_grip;
+        Vec3 target = Vec3::sZero();
+        if (preserve_extension && attached(hand)) {
+            const Body *previous = lock.GetBody(2);
+            if (previous == nullptr || !previous->IsInBroadPhase()) return false;
+            const auto &old = hands_[hand];
+            const RVec3 old_grip = previous->GetCenterOfMassTransform() *
+                                  old->GetConstraintToBody2Matrix().GetTranslation();
+            settings.mPosition1 = player->GetCenterOfMassTransform() *
+                                  old->GetConstraintToBody1Matrix().GetTranslation();
+            // The upright player's constraint axes are world identity. Moving
+            // the support anchor changes separation and target equally, so
+            // neither existing spring error nor body momentum is reset.
+            target = old->GetTargetPositionCS() + Vec3(actual_grip - old_grip);
+        }
         settings.mNumVelocityStepsOverride = 40;
         settings.mNumPositionStepsOverride = 8;
         for (int i = 0; i < SixDOFConstraintSettings::EAxis::Num; ++i)
@@ -45,7 +67,7 @@ bool PhysicalHandClimb::attach(unsigned hand, JPH::BodyID support, JPH::RVec3 ac
         constraint = static_cast<SixDOFConstraint *>(settings.Create(*player, *hold));
         for (int i = 0; i < 3; ++i)
             constraint->SetMotorState(static_cast<SixDOFConstraint::EAxis>(i), EMotorState::Position);
-        constraint->SetTargetPositionCS(Vec3::sZero());
+        constraint->SetTargetPositionCS(target);
         constraint->SetTargetVelocityCS(Vec3::sZero());
         wake_support = hold->IsDynamic();
     }
@@ -111,6 +133,27 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
     system_.GetBodyInterface().ActivateBody(player_);
     last_bound_ = debit;
     command_bound_ += debit;
+}
+JPH::RVec3 PhysicalHandClimb::commanded_position() const {
+    using namespace JPH;
+    const BodyID ids[] { player_, attached(0) ? hands_[0]->GetBody2()->GetID() : player_,
+                        attached(1) ? hands_[1]->GetBody2()->GetID() : player_ };
+    BodyLockMultiRead lock(system_.GetBodyLockInterface(), ids, 3);
+    const Body *player = lock.GetBody(0);
+    if (player == nullptr) return RVec3::sZero();
+    RVec3 sum = RVec3::sZero();
+    unsigned count = 0;
+    for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
+        const Body *hold = lock.GetBody(i + 1);
+        if (hold == nullptr) continue;
+        const RVec3 anchor1 = player->GetCenterOfMassTransform() *
+                             hands_[i]->GetConstraintToBody1Matrix().GetTranslation();
+        const RVec3 anchor2 = hold->GetCenterOfMassTransform() *
+                             hands_[i]->GetConstraintToBody2Matrix().GetTranslation();
+        sum += anchor2 - Vec3(anchor1 - player->GetPosition()) - hands_[i]->GetTargetPositionCS();
+        ++count;
+    }
+    return count ? sum / float(count) : player->GetPosition();
 }
 void PhysicalHandClimb::post_step(float collision_dt) {
     if (!std::isfinite(collision_dt) || collision_dt <= 0.0F) return;

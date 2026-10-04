@@ -33,3 +33,8 @@ Native source `61361c6b5db417da8ec5003f4e671297cff4fe27` was pushed to `ChatGPT`
 ## Delivery observation, 2026-10-04
 
 The run pending at the historical pause has now completed with failure. [The failure checkpoint](ci-61361c6/README.md) records the five failed/not-run native gates, fresh three-case local reproduction, supported source observations and unresolved velocity/impact discriminator. Android/rendered delivery did not run. No gameplay or workflow repair is included in this documentation-only checkpoint; all workers and checks are finished and the owner-requested pause remains in effect.
+
+
+## Bounded repair follow-up, 2026-10-04
+
+The owner authorized making the failed APK build green while broader movement work stays paused. [The repair ledger](ci-repair-2026-10-04/README.md) records measured fatal catch velocity and finite native Hanging, including kinematic holds, exact-extension regrip, actual lip anchors, lowering/mantle ownership handoffs and CI build-target repair. The earlier sections retain their historical checkpoint scope; Hanging no longer uses the root driver in this follow-up. Delivery remains pending until exact-source Actions and the actual APK are verified.

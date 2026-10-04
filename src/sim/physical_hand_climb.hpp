@@ -15,11 +15,15 @@ public:
     PhysicalHandClimb(const PhysicalHandClimb &) = delete;
     PhysicalHandClimb &operator=(const PhysicalHandClimb &) = delete;
     bool attach(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip);
+    // Relocate a real grip while preserving the current spring extension.
+    bool regrip(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip);
     void detach(unsigned hand);
     void clear();
     [[nodiscard]] bool active() const noexcept;
     [[nodiscard]] bool attached(unsigned hand) const noexcept;
     void advance_targets(JPH::Vec3 desired_player_displacement, float dt);
+    // Neutral actuator position from current anchors/targets; not actual pose.
+    [[nodiscard]] JPH::RVec3 commanded_position() const;
     // Jolt exposes the LAST collision-step impulse, not the outer update's sum.
     // Pass that collision step's dt (shipping Update(h,4): h/4). May be sampled
     // under the step-listener lock; it reads constraints, never acquires body locks.
@@ -33,6 +37,7 @@ public:
     [[nodiscard]] double command_work_bound_j() const noexcept { return command_bound_; }
     [[nodiscard]] double last_command_work_bound_j() const noexcept { return last_bound_; }
 private:
+    bool replace(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip, bool preserve_extension);
     JPH::PhysicsSystem &system_;
     JPH::BodyID player_;
     std::array<JPH::Ref<JPH::SixDOFConstraint>, 2> hands_;

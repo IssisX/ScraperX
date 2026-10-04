@@ -1,0 +1,11 @@
+[ 90%] Built target scraperx_sim
+[ 95%] Building CXX object CMakeFiles/scraperx_north_service_frame_tests.dir/tests/north_service_frame_tests.cpp.o
+[100%] Linking CXX executable scraperx_north_service_frame_tests
+[100%] Built target scraperx_north_service_frame_tests
+FIRST_REST 16,94.9188,-180.462
+SECOND_REST 10.0355,98.4188,-178.638
+PRE_CATCH pos=14.38,105.469,-180.596 vel=0,-2.893,0 grounded=0 support=0 deaths=1 impact=0
+FIRST_HANG pos=14.44,104.95,-180.596 vel=5.39995,-46.6727,0 grounded=0 support=0 deaths=1 impact=0
+HANG_START 14.44,104.95,-180.596
+RELEASE_RESULT pos=15.1315,104.4,-180.596 vel=0,0,0 grounded=1 support=1901 deaths=2 impact=0
+FAIL released lip does not recover on the real +103.5 m rest

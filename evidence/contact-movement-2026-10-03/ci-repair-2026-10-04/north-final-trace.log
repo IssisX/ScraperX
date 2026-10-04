@@ -1,0 +1,69 @@
+Start testing: Oct 04 09:46 CDT
+----------------------------------------------------------
+31/33 Testing: scraperx_sim.north_service_frame
+31/33 Test: scraperx_sim.north_service_frame
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_north_service_frame_tests"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+"scraperx_sim.north_service_frame" start time: Oct 04 09:46 CDT
+Output:
+----------------------------------------------------------
+FIRST_REST 16,94.9188,-180.462
+SECOND_REST 10.0355,98.4188,-178.638
+PRE_CATCH pos=14.38,105.469,-180.596 vel=0,-2.893,0 grounded=0 support=0 deaths=1 impact=0
+FIRST_HANG pos=14.38,105.437,-180.596 vel=0,-2.84144,0 grounded=0 support=0 deaths=1 impact=0
+HANG_START 14.38,105.437,-180.596
+RELEASE_RESULT pos=14.38,104.38,-180.596 vel=0,0,0 grounded=1 support=1901 deaths=1 impact=5.34845
+PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=90
+<end of output>
+Test time =   3.73 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.north_service_frame" end time: Oct 04 09:46 CDT
+"scraperx_sim.north_service_frame" time elapsed: 00:00:03
+----------------------------------------------------------
+
+32/33 Testing: scraperx_sim.north_service_frame_60hz
+32/33 Test: scraperx_sim.north_service_frame_60hz
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_north_service_frame_tests" "60"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+"scraperx_sim.north_service_frame_60hz" start time: Oct 04 09:46 CDT
+Output:
+----------------------------------------------------------
+FIRST_REST 16,94.9188,-180.462
+SECOND_REST 10.0323,98.4188,-178.638
+PRE_CATCH pos=14.38,105.469,-180.598 vel=0,-2.893,0 grounded=0 support=0 deaths=1 impact=0
+FIRST_HANG pos=14.38,105.437,-180.598 vel=0,-2.84144,0 grounded=0 support=0 deaths=1 impact=0
+HANG_START 14.38,105.437,-180.598
+RELEASE_RESULT pos=14.38,104.38,-180.598 vel=0,0,0 grounded=1 support=1901 deaths=1 impact=5.34845
+PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=60
+<end of output>
+Test time =   3.89 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.north_service_frame_60hz" end time: Oct 04 09:46 CDT
+"scraperx_sim.north_service_frame_60hz" time elapsed: 00:00:03
+----------------------------------------------------------
+
+33/33 Testing: scraperx_sim.north_service_frame_360hz
+33/33 Test: scraperx_sim.north_service_frame_360hz
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_north_service_frame_tests" "360"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+"scraperx_sim.north_service_frame_360hz" start time: Oct 04 09:46 CDT
+Output:
+----------------------------------------------------------
+FIRST_REST 16,94.9188,-180.462
+SECOND_REST 10.0355,98.4188,-178.638
+PRE_CATCH pos=14.38,105.469,-180.596 vel=0,-2.893,0 grounded=0 support=0 deaths=1 impact=0
+FIRST_HANG pos=14.38,105.437,-180.596 vel=0,-2.84144,0 grounded=0 support=0 deaths=1 impact=0
+HANG_START 14.38,105.437,-180.596
+RELEASE_RESULT pos=14.38,104.38,-180.596 vel=0,0,0 grounded=1 support=1901 deaths=1 impact=5.34845
+PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=360
+<end of output>
+Test time =   3.90 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.north_service_frame_360hz" end time: Oct 04 09:46 CDT
+"scraperx_sim.north_service_frame_360hz" time elapsed: 00:00:03
+----------------------------------------------------------
+
+End testing: Oct 04 09:46 CDT

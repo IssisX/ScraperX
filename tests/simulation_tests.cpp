@@ -1019,12 +1019,21 @@ int main() {
     require(hang_start.traversal_support_entity_id == Simulation::kHangLedgeEntityId,
             "the hang must name the real ledge entity");
     require(!hang_start.player_grounded, "a hang is not grounded support");
+    require(hang_start.player_gravity_factor == 1.0 &&
+                hang_start.traversal_hand_constraint_count == 2,
+            "a caught lip must use two finite hands with gravity active");
+    // Catching has finite deceleration and compliant weight support. First
+    // catch is not a settled pose; require settling before measuring drift.
+    require(hang.advance_frame(2.0).accepted, "finite catch settling interval must be accepted");
+    const auto hang_settled = hang.snapshot();
+    require(std::abs(hang_settled.player_linear_velocity.y) < 0.08,
+            "the finite catch must arrest falling motion, not drift forever");
     require(hang.advance_frame(1.0).accepted, "hang hold interval must be accepted");
     const auto hang_held = hang.snapshot();
     require(hang_held.traversal_state == TraversalState::Hanging,
             "the hang must hold against gravity on real geometry");
-    require(std::abs(hang_held.player_position.y - hang_start.player_position.y) < 0.05,
-            "a hang on a static ledge must not drift");
+    require(std::abs(hang_held.player_position.y - hang_settled.player_position.y) < 0.05,
+            "a settled finite hang on a static ledge must not drift");
 
     require(hang.request_jump(), "mantle-from-hang request must be accepted");
     require(hang.advance_frame(Simulation::kFixedStepSeconds).accepted,

@@ -61,7 +61,7 @@ struct World {
     Contacts contacts;
     std::vector<BodyID> ids;
     BodyID player, support;
-    explicit World(bool dynamic_support = false, Vec3 velocity = Vec3::sZero()) {
+    explicit World(bool dynamic_support = false, Vec3 velocity = Vec3::sZero(), bool kinematic_support = false) {
         system.Init(64, 0, 128, 256, bp, bv, lp);
         system.SetGravity(Vec3(0, -9.81F, 0));
         system.SetContactListener(&contacts);
@@ -78,8 +78,9 @@ struct World {
         p.mLinearVelocity = velocity;
         player = add(p);
         BodyCreationSettings s(new BoxShape(Vec3(0.5F, 0.1F, 0.1F)), RVec3(0, 5.1, 0.65),
-                               Quat::sIdentity(), dynamic_support ? EMotionType::Dynamic : EMotionType::Static,
-                               dynamic_support ? 1 : 0);
+                               Quat::sIdentity(), kinematic_support ? EMotionType::Kinematic :
+                               (dynamic_support ? EMotionType::Dynamic : EMotionType::Static),
+                               (dynamic_support || kinematic_support) ? 1 : 0);
         s.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
         s.mMassPropertiesOverride.mMass = 25.0F;
         s.mLinearDamping = s.mAngularDamping = 0; s.mAllowSleeping = false;
@@ -206,6 +207,40 @@ void finite_landing_catch() {
     check(w.contacts.count == 0, "catch fixture had external collision");
     std::cout << "catch minimum_y=" << minimum_y << " peak_force=" << hands.peak_hand_force_n() << '\n';
 }
+void kinematic_tracking_and_regrip() {
+    World w(false, Vec3::sZero(), true);
+    auto &bodies = w.system.GetBodyInterface();
+    bodies.SetLinearVelocity(w.support, Vec3(0.6F, 0, 0));
+    PhysicalHandClimb hands(w.system, w.player);
+    w.acquire(hands);
+    w.tick(hands, 360);
+    check(std::abs(w.velocity(w.player).GetX() - 0.6F) < 0.005,
+          "finite hands did not acquire prescribed support motion");
+    const auto velocity = w.velocity(w.player);
+    const auto rest = hands.commanded_position();
+    // The new real grip is 0.2 m along the same moving visible edge. A
+    // replacement must preserve the old elastic extension and neutral root.
+    const auto grip = w.position(w.support) + Vec3(0.0F, -0.1F, -0.1F);
+    check(hands.regrip(0, w.support, grip), "moving-lip regrip rejected");
+    check(Vec3(hands.commanded_position() - rest).Length() < 0.00002F,
+          "regrip reset the acquired offset or spring extension");
+    check((w.velocity(w.player) - velocity).LengthSq() == 0,
+          "regrip overwrote actual departure momentum");
+    w.tick(hands, 90);
+    check(std::abs(hands.hand_force(0).GetY() + hands.hand_force(1).GetY() - weight) < 2,
+          "regrip lost gravity load or double-counted player weight");
+    check(hands.peak_hand_force_n() <= PhysicalHandClimb::force_bound_n() + 0.05F,
+          "kinematic grip bypassed finite force bound");
+    const auto departure = w.velocity(w.player);
+    hands.clear();
+    check((w.velocity(w.player) - departure).LengthSq() == 0,
+          "kinematic release copied prescribed velocity");
+    w.tick(hands, 9);
+    check(std::abs(w.velocity(w.player).GetY() - departure.GetY() + 9.81F * 9 * h) < 0.002,
+          "kinematic release did not restore free fall");
+    check(w.contacts.count == 0, "kinematic fixture contact faked hand support");
+    std::cout << "kinematic regrip tracking_vx=" << departure.GetX() << '\n';
+}
 void invalid_holds_and_cleanup() {
     World w;
     {
@@ -237,11 +272,12 @@ int main() {
     for (const auto &test : std::vector<std::pair<const char *, void (*)()>> {
         { "static_load_and_release", static_load_and_release }, { "command_sign_and_budget", command_sign_and_budget },
         { "dynamic_recoil", dynamic_recoil }, { "finite_landing_catch", finite_landing_catch },
+        { "kinematic_tracking_and_regrip", kinematic_tracking_and_regrip },
         { "invalid_holds_and_cleanup", invalid_holds_and_cleanup } }) {
         try { test.second(); std::cout << "PASS " << test.first << '\n'; }
         catch (const std::exception &e) { ++failures; std::cerr << "FAIL " << test.first << ": " << e.what() << '\n'; }
     }
     JPH::UnregisterTypes(); delete JPH::Factory::sInstance; JPH::Factory::sInstance = nullptr;
-    std::cout << "physical hand checks: " << 5 - failures << "/5\n";
+    std::cout << "physical hand checks: " << 6 - failures << "/6\n";
     return failures ? 1 : 0;
 }

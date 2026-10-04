@@ -1,0 +1,119 @@
+[ 32%] Built target scraperx_sim
+[ 34%] Linking CXX executable scraperx_physical_traversal_tests
+[ 36%] Building CXX object CMakeFiles/scraperx_physical_hand_climb_tests.dir/tests/physical_hand_climb_tests.cpp.o
+[ 37%] Built target scraperx_physical_traversal_tests
+[ 39%] Linking CXX executable scraperx_suspended_ladder_tests
+[ 40%] Built target scraperx_suspended_ladder_tests
+[ 42%] Linking CXX executable scraperx_cargo_net_tests
+[ 44%] Built target scraperx_cargo_net_tests
+[ 45%] Building CXX object CMakeFiles/scraperx_leather_pouch_tests.dir/tests/leather_pouch_tests.cpp.o
+[ 47%] Linking CXX executable scraperx_physical_hand_climb_tests
+[ 47%] Built target scraperx_physical_hand_climb_tests
+[ 49%] Linking CXX executable scraperx_slingshot_model_tests
+[ 50%] Built target scraperx_slingshot_model_tests
+[ 52%] Linking CXX executable scraperx_slingshot_machine_tests
+[ 54%] Linking CXX executable scraperx_leather_pouch_tests
+[ 55%] Built target scraperx_slingshot_machine_tests
+[ 57%] Building CXX object CMakeFiles/scraperx_launcher_tests.dir/tests/launcher_tests.cpp.o
+[ 57%] Built target scraperx_leather_pouch_tests
+[ 59%] Building CXX object CMakeFiles/scraperx_landing_tests.dir/tests/landing_tests.cpp.o
+[ 60%] Linking CXX executable scraperx_launcher_tests
+[ 62%] Linking CXX executable scraperx_landing_tests
+[ 62%] Built target scraperx_launcher_tests
+[ 65%] Built target scraperx_sim_tests
+[ 65%] Built target scraperx_landing_tests
+[ 67%] Building CXX object CMakeFiles/scraperx_ascent_route_tests.dir/tests/ascent_route_tests.cpp.o
+[ 68%] Linking CXX executable scraperx_parkour_flow_tests
+[ 70%] Built target scraperx_parkour_flow_tests
+[ 72%] Building CXX object CMakeFiles/scraperx_swing_stair_route_tests.dir/tests/swing_stair_route_tests.cpp.o
+[ 73%] Linking CXX executable scraperx_ascent_route_tests
+[ 75%] Linking CXX executable scraperx_swing_stair_route_tests
+[ 75%] Built target scraperx_ascent_route_tests
+[ 77%] Building CXX object CMakeFiles/scraperx_pipe_bridge_tests.dir/tests/pipe_bridge_tests.cpp.o
+[ 77%] Built target scraperx_swing_stair_route_tests
+[ 78%] Building CXX object CMakeFiles/scraperx_pipe_bridge_refinement.dir/tests/pipe_bridge_refinement.cpp.o
+[ 80%] Linking CXX executable scraperx_pipe_bridge_tests
+[ 80%] Built target scraperx_pipe_bridge_tests
+[ 81%] Building CXX object CMakeFiles/scraperx_teeter_route_tests.dir/tests/teeter_route_tests.cpp.o
+[ 83%] Linking CXX executable scraperx_pipe_bridge_refinement
+[ 83%] Built target scraperx_pipe_bridge_refinement
+[ 85%] Building CXX object CMakeFiles/scraperx_teeter_physics_tests.dir/tests/teeter_physics_tests.cpp.o
+[ 86%] Linking CXX executable scraperx_teeter_route_tests
+[ 86%] Built target scraperx_teeter_route_tests
+[ 88%] Building CXX object CMakeFiles/scraperx_braced_bay_tests.dir/tests/braced_bay_tests.cpp.o
+[ 90%] Linking CXX executable scraperx_braced_bay_tests
+[ 90%] Built target scraperx_braced_bay_tests
+[ 91%] Linking CXX executable scraperx_teeter_physics_tests
+[ 95%] Built target scraperx_north_service_frame_tests
+[ 96%] Linking CXX shared library /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-source/godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+[ 96%] Built target scraperx_teeter_physics_tests
+[100%] Built target scraperx_native
+Test project /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+      Start  1: scraperx_sim.physical_hand_climb
+ 1/32 Test  #1: scraperx_sim.physical_hand_climb .........   Passed    0.26 sec
+      Start  2: scraperx_sim.physical_traversal
+ 2/32 Test  #2: scraperx_sim.physical_traversal ..........   Passed    7.80 sec
+      Start  3: scraperx_sim.suspended_ladder_route
+ 3/32 Test  #3: scraperx_sim.suspended_ladder_route ......   Passed   10.92 sec
+      Start  4: scraperx_sim.cargo_net_ground_route
+ 4/32 Test  #4: scraperx_sim.cargo_net_ground_route ......   Passed   32.11 sec
+      Start  5: scraperx_sim.leather_pouch
+ 5/32 Test  #5: scraperx_sim.leather_pouch ...............   Passed    0.92 sec
+      Start  6: scraperx_sim.slingshot_model
+ 6/32 Test  #6: scraperx_sim.slingshot_model .............   Passed    0.18 sec
+      Start  7: scraperx_sim.slingshot_machine
+ 7/32 Test  #7: scraperx_sim.slingshot_machine ...........   Passed    1.28 sec
+      Start  8: scraperx_sim.launcher_and_restart
+ 8/32 Test  #8: scraperx_sim.launcher_and_restart ........   Passed   39.17 sec
+      Start  9: scraperx_sim.landing_response
+ 9/32 Test  #9: scraperx_sim.landing_response ............   Passed    4.81 sec
+      Start 10: scraperx_sim.parkour_flow
+10/32 Test #10: scraperx_sim.parkour_flow ................   Passed    0.61 sec
+      Start 11: scraperx_sim.ascent_route
+11/32 Test #11: scraperx_sim.ascent_route ................   Passed    6.59 sec
+      Start 12: scraperx_sim.swing_stair_route_0
+12/32 Test #12: scraperx_sim.swing_stair_route_0 .........   Passed    6.73 sec
+      Start 13: scraperx_sim.swing_stair_route_1
+13/32 Test #13: scraperx_sim.swing_stair_route_1 .........   Passed    6.39 sec
+      Start 14: scraperx_sim.swing_stair_route_2
+14/32 Test #14: scraperx_sim.swing_stair_route_2 .........   Passed    7.65 sec
+      Start 15: scraperx_sim.swing_stair_route_3
+15/32 Test #15: scraperx_sim.swing_stair_route_3 .........   Passed    7.95 sec
+      Start 16: scraperx_sim.swing_stair_route_4
+16/32 Test #16: scraperx_sim.swing_stair_route_4 .........   Passed    6.32 sec
+      Start 17: scraperx_sim.swing_stair_route_5
+17/32 Test #17: scraperx_sim.swing_stair_route_5 .........   Passed    7.42 sec
+      Start 18: scraperx_sim.swing_stair_route_6
+18/32 Test #18: scraperx_sim.swing_stair_route_6 .........   Passed    1.55 sec
+      Start 19: scraperx_sim.swing_stair_route_7
+19/32 Test #19: scraperx_sim.swing_stair_route_7 .........   Passed    7.51 sec
+      Start 20: scraperx_sim.pipe_bridge_route
+20/32 Test #20: scraperx_sim.pipe_bridge_route ...........   Passed    3.17 sec
+      Start 21: scraperx_sim.pipe_bridge_no_input
+21/32 Test #21: scraperx_sim.pipe_bridge_no_input ........   Passed    2.34 sec
+      Start 22: scraperx_sim.pipe_bridge_rack_only
+22/32 Test #22: scraperx_sim.pipe_bridge_rack_only .......   Passed    3.16 sec
+      Start 23: scraperx_sim.pipe_bridge_empty_release
+23/32 Test #23: scraperx_sim.pipe_bridge_empty_release ...   Passed    1.73 sec
+      Start 24: scraperx_sim.pipe_bridge_regrab
+24/32 Test #24: scraperx_sim.pipe_bridge_regrab ..........   Passed    3.90 sec
+      Start 25: scraperx_sim.pipe_bridge_passenger
+25/32 Test #25: scraperx_sim.pipe_bridge_passenger .......   Passed    6.33 sec
+      Start 26: scraperx_sim.pipe_bridge_refinement
+26/32 Test #26: scraperx_sim.pipe_bridge_refinement ......   Passed    6.18 sec
+      Start 27: scraperx_sim.teeter_route
+27/32 Test #27: scraperx_sim.teeter_route ................   Passed    6.87 sec
+      Start 28: scraperx_sim.teeter_physics
+28/32 Test #28: scraperx_sim.teeter_physics ..............   Passed    1.04 sec
+      Start 29: scraperx_sim.braced_bay
+29/32 Test #29: scraperx_sim.braced_bay ..................   Passed    6.45 sec
+      Start 30: scraperx_sim.north_service_frame
+30/32 Test #30: scraperx_sim.north_service_frame .........   Passed    4.66 sec
+      Start 31: scraperx_sim.north_service_frame_60hz
+31/32 Test #31: scraperx_sim.north_service_frame_60hz ....   Passed    5.17 sec
+      Start 32: scraperx_sim.north_service_frame_360hz
+32/32 Test #32: scraperx_sim.north_service_frame_360hz ...   Passed    6.05 sec
+
+100% tests passed, 0 tests failed out of 32
+
+Total Test time (real) = 213.48 sec
