@@ -1,0 +1,160 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE jump tick=25 position=(6.0, 0.953489, -25.0) elapsed_ms=765
+SCRAPERX_UITEST PASS touch_jump vy_peak=5.39
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE running tick=78 position=(6.0, 0.893589, -27.64273) elapsed_ms=775
+SCRAPERX_UITEST PASS touch_move_look forward_m=4.89 turned_rad=0.600 settle_mps=0.00 steps=18
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE gyro_turned tick=117 position=(6.0, 0.893589, -25.0) elapsed_ms=806
+SCRAPERX_UITEST PASS touch_gyro_aim turned_rad=0.500 raised_rad=0.200 walk_alignment=1.0000
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE climb_prompt tick=24 position=(7.9, 0.893589, -6.0) elapsed_ms=804
+SCRAPERX_UITEST_POSE ground_mantle tick=39 position=(8.461857, 0.934303, -6.0) elapsed_ms=812
+SCRAPERX_UITEST PASS touch_climb state=2 rise_m=1.58
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE vault tick=75 position=(3.66385, 0.933562, -6.0) elapsed_ms=778
+SCRAPERX_UITEST PASS touch_vault x_after=6.08
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST PASS touch_double_tap_vault x_after=6.08
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE beam_blocks tick=205 position=(-2.253763, 0.88, -12.36258) elapsed_ms=859
+SCRAPERX_UITEST_POSE crouched tick=306 position=(-2.807312, 0.58, -14.0258) elapsed_ms=914
+SCRAPERX_AUDIO_BANK clips=28 msec=438 driver=Dummy
+SCRAPERX_UITEST PASS touch_crouch blocked_z=-12.36 passed_z=-14.03 eye_crouched=0.95 eye_standing=1.52
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE hanging tick=84 position=(8.103316, 2.147998, 4.0) elapsed_ms=786
+SCRAPERX_UITEST PASS touch_hang_drop vy_after_release=-0.08 grip_error_m=0.0000 head_grip_error_m=0.0000
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE hanging tick=84 position=(8.103316, 2.147998, 4.0) elapsed_ms=787
+SCRAPERX_UITEST_POSE mantle_mid tick=93 position=(8.103316, 3.178312, 4.0) elapsed_ms=793
+SCRAPERX_UITEST PASS touch_hang_climb top_y=4.52 grip_error_m=0.0000 head_grip_error_m=0.0000
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE canopy tick=120 position=(0.0, 54.58873, -8.0) elapsed_ms=803
+SCRAPERX_AUDIO_BANK clips=28 msec=448 driver=Dummy
+SCRAPERX_UITEST PASS touch_chute offered_at_mps=6.54 impact_mps=8.89
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE fall_danger tick=147 position=(0.0, 48.82552, -8.0) elapsed_ms=825
+SCRAPERX_AUDIO_BANK clips=28 msec=442 driver=Dummy
+SCRAPERX_UITEST_POSE lethal_toast tick=351 position=(0.0, 0.9, 0.0) elapsed_ms=959
+SCRAPERX_UITEST PASS touch_lethal_feedback toast='FELL AT 34.7 M/S  /  RESTORED TO CHECKPOINT +0.9 M' lethal_mps=20.0
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST PASS touch_sump isolated false->true
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE pendant tick=45 position=(3.0, 2.28, -100.0) elapsed_ms=773
+SCRAPERX_UITEST PASS touch_pendant boom_delta_rad=-0.081 hook_delta_m=0.721
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE door_open tick=274 position=(10.42038, 0.88, -84.82852) elapsed_ms=881
+SCRAPERX_AUDIO_BANK clips=28 msec=441 driver=Dummy
+SCRAPERX_UITEST_POSE holding_block tick=360 position=(10.48882, 0.87995, -84.81015) elapsed_ms=927
+SCRAPERX_UITEST_POSE carried_out tick=610 position=(10.60787, 0.895485, -90.44978) elapsed_ms=1062
+SCRAPERX_UITEST_POSE cage_exterior tick=901 position=(12.85577, 0.895485, -96.06628) elapsed_ms=1219
+SCRAPERX_UITEST PASS touch_carry door_rad=1.45 block=(9.75,0.25,-90.18)
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE water_screw_running tick=9 position=(-14.0, 0.9, -97.3) elapsed_ms=742
+SCRAPERX_UITEST PASS touch_water_screw rpm=2.2 torque_nm=1500 tank_m3=0.000
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE water_lift_fill_control tick=6 position=(-14.45, 0.9, -106.2) elapsed_ms=741
+SCRAPERX_UITEST PASS touch_water_lift valve_open=1 bucket_m3=0.000 cage_m=0.000
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE pause_menu tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=783
+SCRAPERX_UITEST_POSE pause_controls tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=786
+SCRAPERX_UITEST_POSE pause_settings tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=788
+SCRAPERX_UITEST_POSE pause_graphics tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=794
+SCRAPERX_UITEST_POSE pause_display tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=795
+SCRAPERX_UITEST_POSE pause_audio tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=796
+SCRAPERX_UITEST PASS touch_pause frozen_tick=25 advanced_to=39
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST PASS pad_core forward_m=4.84 turned_rad=1.848
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE pad_pendant tick=55 position=(197.5, 0.893589, -2.0) elapsed_ms=768
+SCRAPERX_UITEST PASS pad_pendant boom_delta_rad=-0.048 hook_delta_m=0.931
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE keyboard_pause tick=300 position=(6.0, 0.888587, -30.50003) elapsed_ms=899
+SCRAPERX_UITEST PASS keyboard_core forward_m=4.84 rejected=0->1
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE rig_shackle tick=259 position=(-11.35804, 155.1296, -131.5748) elapsed_ms=913
+SCRAPERX_AUDIO_BANK clips=28 msec=441 driver=Dummy
+SCRAPERX_UITEST_POSE rig_handle tick=396 position=(-11.06812, 155.1299, -130.4221) elapsed_ms=996
+SCRAPERX_UITEST_POSE rig_top tick=1339 position=(-11.06806, 177.1298, -131.629) elapsed_ms=1573
+SCRAPERX_UITEST PASS touch_rig top_y=177.13 worst_wrist_step_m=0.074
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE rig_shackle tick=261 position=(-11.3571, 155.1297, -131.5788) elapsed_ms=867
+SCRAPERX_AUDIO_BANK clips=28 msec=455 driver=Dummy
+SCRAPERX_UITEST_POSE rig_handle tick=399 position=(-11.08869, 155.1299, -130.5048) elapsed_ms=936
+SCRAPERX_UITEST_POSE rig_top tick=1342 position=(-11.08863, 177.1298, -131.6994) elapsed_ms=1395
+SCRAPERX_UITEST PASS pad_rig top_y=177.13 worst_wrist_step_m=0.074
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=453 driver=Dummy
+SCRAPERX_UITEST_POSE rig_shackle tick=468 position=(-11.4338, 155.1306, -131.5807) elapsed_ms=974
+SCRAPERX_UITEST_POSE rig_handle tick=612 position=(-11.02308, 155.1306, -130.4803) elapsed_ms=1045
+SCRAPERX_UITEST_POSE rig_top tick=1548 position=(-11.02304, 177.1312, -132.2541) elapsed_ms=1540
+SCRAPERX_UITEST PASS keyboard_rig top_y=177.13 worst_wrist_step_m=0.075

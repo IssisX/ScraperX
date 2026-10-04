@@ -1,0 +1,230 @@
+{
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "source_commit": "b1da5f3d240c9c7834b759a1e0aabee7288e6603",
+  "run_id": 37214576377,
+  "job_id": 111472369212,
+  "run_status": "completed",
+  "run_conclusion": "success",
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/37214576377",
+  "artifact_id": 11309435499,
+  "artifact_name": "ScraperX-build-b1da5f3d240c9c7834b759a1e0aabee7288e6603",
+  "artifact_url": "https://github.com/IssisX/ScraperX/actions/runs/37214576377/artifacts/11309435499",
+  "artifact_size_bytes": 55443866,
+  "artifact_sha256": "5e7c62ed7316b7d7f34e0fef0b16881ff9270bfd6418ecd83a80706463b3c4b3",
+  "artifact_expires_at": "2027-01-02T15:51:25Z",
+  "apk_file": "apk/ScraperX-ChatGPT.apk",
+  "apk_sha256": "fda99a9879d2dac41495331bc2e675101c5917f4ae32bf20000c7b1c43edb04a",
+  "package": "com.cory.scraperx.chatgpt",
+  "label": "ScraperX-ChatGPT",
+  "signer_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+  "signer_evidence": "CI apksigner verification; independently downloaded APK checksum matches",
+  "native_tests_passed": 33,
+  "input_scenarios_passed": 23,
+  "steps": [
+    {
+      "completedAt": "2026-10-04T15:51:30Z",
+      "conclusion": "success",
+      "name": "Set up job",
+      "number": 1,
+      "startedAt": "2026-10-04T15:51:29Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T15:51:31Z",
+      "conclusion": "success",
+      "name": "Checkout exact source",
+      "number": 2,
+      "startedAt": "2026-10-04T15:51:30Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T15:51:32Z",
+      "conclusion": "success",
+      "name": "Configure Java 17",
+      "number": 3,
+      "startedAt": "2026-10-04T15:51:31Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T15:51:51Z",
+      "conclusion": "success",
+      "name": "Install build and render prerequisites",
+      "number": 4,
+      "startedAt": "2026-10-04T15:51:32Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T15:51:57Z",
+      "conclusion": "success",
+      "name": "Install verified Godot 4.7 editor and Android template",
+      "number": 5,
+      "startedAt": "2026-10-04T15:51:51Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:02:20Z",
+      "conclusion": "success",
+      "name": "Build native host graph and run the full native suite",
+      "number": 6,
+      "startedAt": "2026-10-04T15:51:57Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:02:26Z",
+      "conclusion": "success",
+      "name": "Import presentation resources",
+      "number": 7,
+      "startedAt": "2026-10-04T16:02:20Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:02:27Z",
+      "conclusion": "success",
+      "name": "Prove interpolated parkour camera and motion comfort",
+      "number": 8,
+      "startedAt": "2026-10-04T16:02:26Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:05:25Z",
+      "conclusion": "success",
+      "name": "Prove manual slingshot, character, settings and touch input",
+      "number": 9,
+      "startedAt": "2026-10-04T16:02:27Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:06:13Z",
+      "conclusion": "success",
+      "name": "Prove uninterrupted normal cargo-net ascent to 121 metres",
+      "number": 10,
+      "startedAt": "2026-10-04T16:05:25Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:09:23Z",
+      "conclusion": "success",
+      "name": "Prove default inventory and rejected fallback absence",
+      "number": 11,
+      "startedAt": "2026-10-04T16:06:13Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:09:31Z",
+      "conclusion": "success",
+      "name": "Historical pipe bridge fixture - ordinary input and native material state",
+      "number": 12,
+      "startedAt": "2026-10-04T16:09:23Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:38:12Z",
+      "conclusion": "success",
+      "name": "Historical opening fixture and retained upper route - rendered touch to 110 metres",
+      "number": 13,
+      "startedAt": "2026-10-04T16:09:31Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:40:54Z",
+      "conclusion": "success",
+      "name": "Regression fixture - native machine authority and Fold-aspect capture",
+      "number": 14,
+      "startedAt": "2026-10-04T16:38:12Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:41:20Z",
+      "conclusion": "success",
+      "name": "Regression fixtures - drive controller and mechanism input paths",
+      "number": 15,
+      "startedAt": "2026-10-04T16:40:54Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:44:02Z",
+      "conclusion": "success",
+      "name": "Measure the mix a player hears",
+      "number": 16,
+      "startedAt": "2026-10-04T16:41:20Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:44:04Z",
+      "conclusion": "success",
+      "name": "World solids table matches the Godot builders",
+      "number": 17,
+      "startedAt": "2026-10-04T16:44:02Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:51:50Z",
+      "conclusion": "success",
+      "name": "Cross-compile native graph for Android arm64",
+      "number": 18,
+      "startedAt": "2026-10-04T16:44:04Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:52:02Z",
+      "conclusion": "success",
+      "name": "Export ChatGPT Android arm64 APK",
+      "number": 19,
+      "startedAt": "2026-10-04T16:51:50Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:52:02Z",
+      "conclusion": "success",
+      "name": "Record evidence boundaries",
+      "number": 20,
+      "startedAt": "2026-10-04T16:52:02Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:52:02Z",
+      "conclusion": "skipped",
+      "name": "Retain failed-run diagnostics",
+      "number": 21,
+      "startedAt": "2026-10-04T16:52:02Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:52:05Z",
+      "conclusion": "success",
+      "name": "Publish immutable checkpoint build and evidence",
+      "number": 22,
+      "startedAt": "2026-10-04T16:52:02Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:52:05Z",
+      "conclusion": "success",
+      "name": "Post Configure Java 17",
+      "number": 43,
+      "startedAt": "2026-10-04T16:52:05Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:52:05Z",
+      "conclusion": "success",
+      "name": "Post Checkout exact source",
+      "number": 44,
+      "startedAt": "2026-10-04T16:52:05Z",
+      "status": "completed"
+    },
+    {
+      "completedAt": "2026-10-04T16:52:05Z",
+      "conclusion": "success",
+      "name": "Complete job",
+      "number": 45,
+      "startedAt": "2026-10-04T16:52:05Z",
+      "status": "completed"
+    }
+  ],
+  "screenshots_required": false,
+  "screenshots_inspected": false,
+  "android_device_execution_verified": false,
+  "broader_movement_goal": "paused and unfinished"
+}
