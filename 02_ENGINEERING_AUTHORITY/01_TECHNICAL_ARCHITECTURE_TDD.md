@@ -588,6 +588,8 @@ Godot owns:
 
 Critical scene objects are **mirrors**, not authorities.
 
+Mechanism rendering is owned by `godot/presentation/kit_view.gd`, the direct `KitPresentation` child of main. Main prepares the shared palette/materials and sign factory, calls `setup(native, palette, cable_material, cargo_net_material, create_sign)` at startup, and calls `render_view()` after native frame advancement. The view owns body meshes, cable segments, cargo-net display and bucket water; its bridge access is read-only and native getters supply the render timestamp. Shared world builders, materials, camera and frame coordination remain in main.
+
 A critical Godot node stores its stable `EntityId` and renders from snapshots.
 
 No script may write a critical node transform and thereby change simulation truth.

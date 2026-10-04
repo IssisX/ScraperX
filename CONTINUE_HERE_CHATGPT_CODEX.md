@@ -277,6 +277,14 @@ Consequential C++/Jolt geometry, collision, forces, constraints, momentum, torqu
 
 ## 7. Running to-do at this handoff
 
+**Current bounded presentation batch, owner clarification 2026-10-04:** cargo-net appearance, recorded footsteps and the mechanism-render extraction are separate changes. Geometry preservation applies to the extraction baseline; the following cargo-net change intentionally makes the net thicker and rounded. Current hand placement is owner-confirmed accurate and remains a regression contract.
+
+- [x] Verify clean agent-owned `ChatGPT` at `03d50dc`, existing green executable `b1da5f3`, rendering owners and exact consumers.
+- [x] Extract the five mechanism routines and their display state into `kit_view.gd` with explicit dependencies; normal/fixture actual-renderer baseline parity passes (29/15 bodies). Independent source review reports no material finding.
+- [ ] Give the net a rounded, substantial cross-section driven by its actual interpolated Jolt vertices; exercise loaded deformation and ordinary touch top-out.
+- [ ] Replace concrete/steel/earth step-bank entries with small licensed recordings; verify contact timing and the shipping mix.
+- [ ] Verify solids, relevant rendered/input regressions and the combined source; push to `ChatGPT` and close a green exact-source Actions APK export. Stop after this bounded batch.
+
 **Current bounded repair — AS-023 launch embodiment, owner feedback 2026-10-03:**
 
 - [x] Inspect current `ChatGPT` source and exact latest green Actions delivery; preserve the original dirty checkout and work in an independent temporary clone.
