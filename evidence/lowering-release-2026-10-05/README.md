@@ -51,7 +51,7 @@ was caught by parsing and read-only review, corrected, and the shipping test
 then exited 0. Diff whitespace checks pass; review found no further introduced
 defect. No screenshot or device-performance claim is made.
 
-## Delivery boundary and continuation
+## Historical delivery boundary (superseded below)
 
 Local repair only: no push, new Actions run or APK. The configured `GH_TOKEN`
 is invalid, and the read-only Actions request to
@@ -72,3 +72,15 @@ any uncommitted work. After this fix is published, fetch ChatGPT and incorporate
 it only by fast-forward when the checkout is clean; never reset local work or
 force-push. Restore Actions access and inspect outstanding candidates before
 publication, then verify the exact-source run and APK if green.
+
+## Subsequent authorized delivery and cargo fixture repair
+
+The repair was safely pushed to ChatGPT as `950ff2c`. The earlier gh error
+was an ordinary CLI authentication/access error, not a policy denial; its
+root cause was not independently proven. Normal existing Git access worked.
+Actions run 37330962282 subsequently reproduced the cargo gate failure.
+The owner authorized bounded diagnosis and a test-only correction of the
+invalid grounded-load fixture. [Cargo fixture evidence](cargo-fixture/README.md)
+records the before/after measurements, broken-path falsifier and all 33 native
+gates plus Godot settings and cargo touch gates green. No unrelated facade
+work was resumed. The latest delivery report supersedes historical status.
