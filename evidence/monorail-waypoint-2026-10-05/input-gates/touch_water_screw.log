@@ -1,0 +1,6 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE water_screw_running tick=9 position=(-14.0, 0.9, -97.3) elapsed_ms=772
+SCRAPERX_UITEST PASS touch_water_screw rpm=2.2 torque_nm=1500 tank_m3=0.000

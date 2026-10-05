@@ -1,0 +1,7 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE climb_prompt tick=24 position=(7.9, 0.893589, -6.0) elapsed_ms=789
+SCRAPERX_UITEST_POSE ground_mantle tick=39 position=(8.461857, 0.934303, -6.0) elapsed_ms=797
+SCRAPERX_UITEST PASS touch_climb state=2 rise_m=1.58

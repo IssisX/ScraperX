@@ -1,0 +1,7 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_HANG_RIG shoulder_shift_m=0.2693 shoulder_span_m=0.3685 wrist_error_m=0.0000
+SCRAPERX_UITEST_POSE hanging tick=84 position=(8.103316, 2.147998, 4.0) elapsed_ms=866
+SCRAPERX_UITEST PASS touch_hang_drop vy_after_release=-0.08 grip_error_m=0.0000 head_grip_error_m=0.0000

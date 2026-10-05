@@ -1,0 +1,14 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+HANG_SAG sample=0 state=1 error=0.03448176383972 player=(8.107823, 2.140135, 4.0)
+HANG_SAG sample=5 state=1 error=0.0 player=(8.092736, 2.452341, 4.0)
+HANG_SAG sample=10 state=1 error=0.0 player=(8.090517, 2.466435, 4.0)
+HANG_SAG sample=15 state=1 error=0.0 player=(8.090086, 2.467505, 4.0)
+SCRAPERX_AUDIO_BANK clips=28 msec=443 driver=Dummy
+HANG_SAG sample=20 state=1 error=0.0 player=(8.090014, 2.466909, 4.0)
+HANG_SAG sample=25 state=1 error=0.0 player=(8.090004, 2.46671, 4.0)
+HANG_SAG_WORST 0.03448176383972
+SCRAPERX_UITEST_POSE hanging tick=388 position=(8.090001, 2.466648, 4.0) elapsed_ms=1043
+SCRAPERX_UITEST PASS touch_hang_drop vy_after_release=-0.54 grip_error_m=0.0000 head_grip_error_m=0.0000

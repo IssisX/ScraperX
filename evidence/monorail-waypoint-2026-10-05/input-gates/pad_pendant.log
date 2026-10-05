@@ -1,0 +1,6 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE pad_pendant tick=55 position=(197.5, 0.893589, -2.0) elapsed_ms=781
+SCRAPERX_UITEST PASS pad_pendant boom_delta_rad=-0.048 hook_delta_m=0.931

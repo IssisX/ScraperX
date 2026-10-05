@@ -1,0 +1,14 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=517 driver=Dummy
+SCRAPERX_UITEST_POSE cargo_net_entry tick=1597 position=(19.98975, 0.9, -113.9313) elapsed_ms=4901
+SCRAPERX_UITEST_POSE cargo_net_climbing tick=2596 position=(19.97968, 5.614784, -117.1742) elapsed_ms=7412
+SCRAPERX_UITEST_POSE cargo_net_receiver tick=3487 position=(19.97934, 11.8958, -118.4755) elapsed_ms=9689
+SCRAPERX_UITEST_POSE cargo_net_first_ring tick=3921 position=(18.49973, 11.9, -125.8812) elapsed_ms=10877
+SCRAPERX_CAMPAIGN cargo_net_exit at=(18.49973, 11.9, -125.8812) support=11
+SCRAPERX_UITEST_POSE facade_approach tick=4324 position=(20.00851, 11.87563, -121.2853) elapsed_ms=12000
+SCRAPERX_UITEST_POSE duct_hang tick=4816 position=(20.00047, 15.07291, -122.4165) elapsed_ms=13217
+SCRAPERX_UITEST_POSE vent_climb tick=5539 position=(23.99676, 17.9825, -122.9996) elapsed_ms=15009
+SCRAPERX_UITEST FAIL touch_campaign_to_121 reason=monorail (12.97421, 23.17807, -125.2)

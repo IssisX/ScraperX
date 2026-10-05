@@ -1,0 +1,9 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE rig_shackle tick=261 position=(-11.3571, 155.1297, -131.5788) elapsed_ms=887
+SCRAPERX_AUDIO_BANK clips=28 msec=464 driver=Dummy
+SCRAPERX_UITEST_POSE rig_handle tick=399 position=(-11.08869, 155.1299, -130.5048) elapsed_ms=967
+SCRAPERX_UITEST_POSE rig_top tick=1342 position=(-11.08863, 177.1298, -131.6994) elapsed_ms=1512
+SCRAPERX_UITEST PASS pad_rig top_y=177.13 worst_wrist_step_m=0.074

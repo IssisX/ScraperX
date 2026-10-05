@@ -1917,9 +1917,28 @@ func _touch_hang(climb: bool) -> bool:
 	_main._pitch = 0.2
 	await _seconds(0.1)
 	var head_grip_error: float = _main._arms.anchored_error()
+	var hand_span: Vector3 = _native().get_traversal_right_hand_render_position() - _native().get_traversal_left_hand_render_position()
+	var shoulder_shift := 0.0
+	var shoulders: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO]
+	for hand in _main._arms._hands:
+		var shoulder: Vector3 = 2.0 * hand.upper.global_position - hand.elbow.global_position
+		var base: Vector3 = _native().get_player_render_position() + Vector3.UP * _main._arms.HANG_SHOULDER_HEIGHT \
+			+ hand_span.normalized() * (_main._arms.HANG_SHOULDER_HALF_SPAN * hand.side) \
+			- normal * _main._arms.HANG_SHOULDER_BACK
+		shoulder_shift = maxf(shoulder_shift, shoulder.distance_to(base))
+		shoulders[0 if hand.side < 0.0 else 1] = shoulder
+		var forearm_length: float = hand.elbow.global_position.distance_to(hand.root.global_position)
+		if absf(forearm_length - _main._arms.FOREARM) > 0.002:
+			return _fail("loaded hang stretched a forearm: %.4f m" % forearm_length)
 	if int(_native().get_traversal_state()) != 1 or _main._arms.hand_poses() != [4, 4] \
 			or head_grip_error < 0.0 or head_grip_error > 0.02:
-		return _fail("head rotation detached a loaded hanging wrist")
+		return _fail("loaded hanging wrist left its native grip after head turn: %.4f m" % head_grip_error)
+	# A planted wrist alone can hide crossed shoulders. Each shoulder must
+	# remain on its own side of the actual native hand pair.
+	if (shoulders[1] - shoulders[0]).dot(hand_span) <= 0.0:
+		return _fail("hanging shoulders cross their native hand assignment")
+	print("SCRAPERX_HANG_RIG shoulder_shift_m=%.4f shoulder_span_m=%.4f wrist_error_m=%.4f" % [
+		shoulder_shift, shoulders[0].distance_to(shoulders[1]), head_grip_error])
 	_main._yaw = old_yaw
 	_main._pitch = old_pitch
 	await _frames(2)
@@ -2441,6 +2460,7 @@ func _walk_to(device: int, target: Vector2, tolerance: float, timeout: float = 6
 	var waited := 0.0
 	var frame := 0
 	var physical := false
+	var accumulated := Vector2.ZERO
 	while waited < timeout:
 		var at := _position()
 		var to := target - Vector2(at.x, at.z)
@@ -2461,7 +2481,17 @@ func _walk_to(device: int, target: Vector2, tolerance: float, timeout: float = 6
 			# Early braking through real device input; retain native inertia and
 			# wait for actual supported, low-slip arrival. Invert the device
 			# deadzone so small deliberate adjustments reach the input owner.
-			amount = 0.0 if to.length() <= tolerance else minf(1.0, to.length() / 2.75)
+			# A loaded lip needs sustained input: proportional easing alone can
+			# stall on its rounded contact. Bound accumulated effort near the
+			# target, and brake actual support-relative velocity. All motion
+			# still comes through the device; arrival checks remain unchanged.
+			if to.length() > 0.75:
+				accumulated = Vector2.ZERO
+			elif to.length() > tolerance:
+				accumulated = (accumulated + to * get_process_delta_time() * 0.4).limit_length(0.35)
+			var correction := to / 2.75 + accumulated - Vector2(slip.x, slip.z) * 0.12
+			direction = Vector2(correction.dot(right), correction.dot(forward)).normalized()
+			amount = 0.0 if to.length() <= tolerance else minf(1.0, correction.length())
 			if device != InputRouter.Device.KEYBOARD_MOUSE and amount > 0.0:
 				var deadzone := TouchControls.STICK_DEADZONE if device == InputRouter.Device.TOUCH else InputRouter.STICK_DEADZONE
 				amount = deadzone + (1.0 - deadzone) * amount

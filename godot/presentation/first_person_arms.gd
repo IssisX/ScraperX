@@ -377,7 +377,12 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var shoulder_local := SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
 		if traversal == TRAVERSAL_HANGING:
-			var grip_right := _grip_forward.cross(Vector3.UP).normalized()
+			# Hanging hand indices come from the native lip pair. Orient the
+			# shoulders from that pair too: normal-derived right can reverse
+			# their assignment and make both arms reach across the torso.
+			var grip_span: Vector3 = state["hand_right"] - state["hand_left"]
+			var grip_right := grip_span.normalized() if grip_span.length_squared() > 1.0e-6 \
+				else _grip_forward.cross(Vector3.UP).normalized()
 			shoulder = (state["render_position"] as Vector3) + Vector3.UP * HANG_SHOULDER_HEIGHT \
 				+ grip_right * (HANG_SHOULDER_HALF_SPAN * hand.side) - _grip_forward * HANG_SHOULDER_BACK
 		var pose := POSE_REST

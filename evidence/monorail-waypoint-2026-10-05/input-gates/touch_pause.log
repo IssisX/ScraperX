@@ -1,0 +1,11 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE pause_menu tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=818
+SCRAPERX_UITEST_POSE pause_controls tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=822
+SCRAPERX_UITEST_POSE pause_settings tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=824
+SCRAPERX_UITEST_POSE pause_graphics tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=831
+SCRAPERX_UITEST_POSE pause_display tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=833
+SCRAPERX_UITEST_POSE pause_audio tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=836
+SCRAPERX_UITEST PASS touch_pause frozen_tick=25 advanced_to=39
