@@ -191,6 +191,69 @@ bool receiver_walk_off() {
     return ok;
 }
 
+bool lowering_release(bool cargo, bool immediate) {
+    Simulation s;
+    // Supported staging isolates the shipping cargo receiver's edge. No
+    // traversal state, hand constraint or departure velocity is injected.
+    if (!s.debug_restart_at(cargo ? scraperx::sim::Vector3{22, 12.0, -120.3} :
+                                   scraperx::sim::Vector3{20, 17.2, -123.15})) return false;
+    for (int i = 0; i < 180; ++i) if (!tick(s)) return false;
+    (void)s.set_facing(cargo ? -1 : 0, cargo ? 0 : -1);
+    if (!tick(s) || !s.snapshot().player_grounded ||
+        s.snapshot().support_entity_id != (cargo ? 2952U : 2561U) || !s.snapshot().edge_drop_available) {
+        const auto state = s.snapshot();
+        std::cerr << "FAIL lowering receiver has no supported edge offer position="
+                  << state.player_position.x << ',' << state.player_position.y << ',' << state.player_position.z
+                  << " grounded=" << state.player_grounded << " support=" << state.support_entity_id
+                  << " edge=" << state.edge_drop_available << '\n';
+        return false;
+    }
+    (void)s.request_release();
+    if (!tick(s) || s.snapshot().traversal_state != TraversalState::Lowering ||
+        s.snapshot().traversal_hand_constraint_count != 2 ||
+        s.snapshot().player_gravity_factor != 1.0) {
+        std::cerr << "FAIL Drop must begin finite gravity-on receiver lowering\n";
+        return false;
+    }
+    if (!immediate && !cargo) {
+        for (int i = 0; i < 900; ++i) {
+            const auto state = s.snapshot();
+            if (!state.player_grounded && state.player_linear_velocity.y < -.2) break;
+            if (!tick(s) || s.snapshot().traversal_state != TraversalState::Lowering) return false;
+        }
+        if (s.snapshot().player_grounded || s.snapshot().player_linear_velocity.y >= -.2) return false;
+    }
+    if (!immediate && cargo)
+        for (int i = 0; i < 90; ++i) if (!tick(s)) return false;
+    const auto before = s.snapshot();
+    const bool accepted = s.request_release();
+    if (!tick(s)) return false;
+    const auto after = s.snapshot();
+    const double error = std::abs(after.player_linear_velocity.y - before.player_linear_velocity.y +
+                                  9.81 * Simulation::kFixedStepSeconds);
+    bool ok = accepted && before.traversal_state == TraversalState::Lowering &&
+        after.traversal_state == TraversalState::None &&
+        after.traversal_hand_constraint_count == 0 && after.player_gravity_factor == 1.0 &&
+        after.rejected_traversal_count == before.rejected_traversal_count;
+    if (!immediate && !cargo) ok = ok && !after.player_grounded && error < .002;
+    // Keep pressing toward the nearby lip: release must not immediately
+    // auto-catch or leave a delayed lowering target active.
+    (void)s.set_move_input(cargo ? -1 : 0, cargo ? 0 : -1);
+    for (int i = 0; i < 6; ++i) {
+        if (!tick(s)) return false;
+        ok = ok && s.snapshot().traversal_state == TraversalState::None &&
+            s.snapshot().traversal_hand_constraint_count == 0;
+    }
+    std::cout << (ok ? "PASS" : "FAIL") << " lowering_release cargo=" << cargo << " immediate=" << immediate
+              << " accepted=" << accepted
+              << " before_state=" << int(before.traversal_state)
+              << " after_state=" << int(after.traversal_state)
+              << " hands=" << after.traversal_hand_constraint_count
+              << " rejected_delta=" << after.rejected_traversal_count - before.rejected_traversal_count
+              << " gravity_velocity_error=" << error << '\n';
+    return ok;
+}
+
 bool rotating_departure() {
     Simulation s;
     // Actual AS-026 entry shelf; development staging is not campaign proof.
@@ -225,13 +288,16 @@ bool rotating_departure() {
 }
 
 int main() {
+    const bool lowering_early = lowering_release(true, true);
+    const bool lowering_delayed = lowering_release(true, false);
+    const bool lowering_airborne = lowering_release(false, false);
     const bool rigid = rigid_departure();
     const bool deforming = deforming_departure();
     const bool jumping = deforming_departure(true);
     const bool traction = selected_support_traction();
     const bool walkoff = receiver_walk_off();
     const bool rotating = rotating_departure();
-    if (!rigid || !deforming || !jumping || !traction || !walkoff || !rotating) {
+    if (!lowering_early || !lowering_delayed || !lowering_airborne || !rigid || !deforming || !jumping || !traction || !walkoff || !rotating) {
         std::cerr << "FAIL physical traversal: rigid=" << rigid
                   << " deforming=" << deforming << " rotating=" << rotating << '\n';
         return 1;

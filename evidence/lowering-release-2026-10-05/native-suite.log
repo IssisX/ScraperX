@@ -1,0 +1,77 @@
+Test project /tmp/scraperx-build
+      Start  1: scraperx_sim.physical_hand_climb
+      Start  2: scraperx_sim.physical_traversal
+      Start  3: scraperx_sim.suspended_ladder_route
+ 1/33 Test  #1: scraperx_sim.physical_hand_climb .........   Passed    0.34 sec
+      Start  4: scraperx_sim.cargo_net_ground_route
+ 2/33 Test  #4: scraperx_sim.cargo_net_ground_route ......***Failed    6.28 sec
+FAIL AS-024 climber load physically deflects the net and its real grip
+
+      Start  5: scraperx_sim.leather_pouch
+ 3/33 Test  #5: scraperx_sim.leather_pouch ...............   Passed    0.62 sec
+      Start  6: scraperx_sim.slingshot_model
+ 4/33 Test  #6: scraperx_sim.slingshot_model .............   Passed    0.17 sec
+      Start  7: scraperx_sim.slingshot_machine
+ 5/33 Test  #7: scraperx_sim.slingshot_machine ...........   Passed    0.90 sec
+      Start  8: scraperx_sim.launcher_and_restart
+ 6/33 Test  #3: scraperx_sim.suspended_ladder_route ......   Passed    8.74 sec
+      Start  9: scraperx_sim.landing_response
+ 7/33 Test  #9: scraperx_sim.landing_response ............   Passed    3.96 sec
+      Start 10: scraperx_sim.athletic_traversal
+ 8/33 Test  #2: scraperx_sim.physical_traversal ..........   Passed   19.06 sec
+      Start 11: scraperx_sim.parkour_flow
+ 9/33 Test #11: scraperx_sim.parkour_flow ................   Passed    0.17 sec
+      Start 12: scraperx_sim.ascent_route
+10/33 Test #12: scraperx_sim.ascent_route ................   Passed    3.77 sec
+      Start 13: scraperx_sim.swing_stair_route_0
+11/33 Test #13: scraperx_sim.swing_stair_route_0 .........   Passed    4.34 sec
+      Start 14: scraperx_sim.swing_stair_route_1
+12/33 Test #14: scraperx_sim.swing_stair_route_1 .........   Passed    4.31 sec
+      Start 15: scraperx_sim.swing_stair_route_2
+13/33 Test #15: scraperx_sim.swing_stair_route_2 .........   Passed    4.76 sec
+      Start 16: scraperx_sim.swing_stair_route_3
+14/33 Test #16: scraperx_sim.swing_stair_route_3 .........   Passed    4.22 sec
+      Start 17: scraperx_sim.swing_stair_route_4
+15/33 Test #17: scraperx_sim.swing_stair_route_4 .........   Passed    4.30 sec
+      Start 18: scraperx_sim.swing_stair_route_5
+16/33 Test #18: scraperx_sim.swing_stair_route_5 .........   Passed    4.76 sec
+      Start 19: scraperx_sim.swing_stair_route_6
+17/33 Test #19: scraperx_sim.swing_stair_route_6 .........   Passed    0.71 sec
+      Start 20: scraperx_sim.swing_stair_route_7
+18/33 Test  #8: scraperx_sim.launcher_and_restart ........   Passed   43.70 sec
+      Start 21: scraperx_sim.pipe_bridge_route
+19/33 Test #21: scraperx_sim.pipe_bridge_route ...........   Passed    1.82 sec
+      Start 22: scraperx_sim.pipe_bridge_no_input
+20/33 Test #22: scraperx_sim.pipe_bridge_no_input ........   Passed    1.27 sec
+      Start 23: scraperx_sim.pipe_bridge_rack_only
+21/33 Test #23: scraperx_sim.pipe_bridge_rack_only .......   Passed    1.52 sec
+      Start 24: scraperx_sim.pipe_bridge_empty_release
+22/33 Test #20: scraperx_sim.swing_stair_route_7 .........   Passed    6.41 sec
+      Start 25: scraperx_sim.pipe_bridge_regrab
+23/33 Test #24: scraperx_sim.pipe_bridge_empty_release ...   Passed    0.97 sec
+      Start 26: scraperx_sim.pipe_bridge_passenger
+24/33 Test #25: scraperx_sim.pipe_bridge_regrab ..........   Passed    1.85 sec
+      Start 27: scraperx_sim.pipe_bridge_refinement
+25/33 Test #26: scraperx_sim.pipe_bridge_passenger .......   Passed    2.06 sec
+      Start 28: scraperx_sim.teeter_route
+26/33 Test #28: scraperx_sim.teeter_route ................   Passed    2.33 sec
+      Start 29: scraperx_sim.teeter_physics
+27/33 Test #29: scraperx_sim.teeter_physics ..............   Passed    0.51 sec
+      Start 30: scraperx_sim.braced_bay
+28/33 Test #27: scraperx_sim.pipe_bridge_refinement ......   Passed    4.38 sec
+      Start 31: scraperx_sim.north_service_frame
+29/33 Test #30: scraperx_sim.braced_bay ..................   Passed    3.19 sec
+      Start 32: scraperx_sim.north_service_frame_60hz
+30/33 Test #31: scraperx_sim.north_service_frame .........   Passed    3.01 sec
+      Start 33: scraperx_sim.north_service_frame_360hz
+31/33 Test #32: scraperx_sim.north_service_frame_60hz ....   Passed    3.46 sec
+32/33 Test #33: scraperx_sim.north_service_frame_360hz ...   Passed    3.18 sec
+33/33 Test #10: scraperx_sim.athletic_traversal ..........   Passed   57.90 sec
+
+97% tests passed, 1 tests failed out of 33
+
+Total Test time (real) =  70.60 sec
+
+The following tests FAILED:
+	  4 - scraperx_sim.cargo_net_ground_route (Failed)
+Errors while running CTest

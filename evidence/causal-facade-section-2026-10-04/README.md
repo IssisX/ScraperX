@@ -9,3 +9,11 @@ Observed local evidence: the actual-renderer KitView passed33283 checks with38 r
 Cargo source21aca60 is independently delivered: green run37249764305 and verified Downloads APK. AS-018 swing-stair conversion remains unedited; remaining owners are finite approach/receiver frame, frame-relative hinge/catch/lever/sheaves, and reciprocal dynamic crush pads. Preserve its current machine/layout.
 
 Resume first action: repair confirmed Drop cancellation gap during physical Lowering. apply_traversal_commands currently rejects release in Lowering (~simulation.cpp5223); allow active physical hands to detach through the existing momentum-preserving release owner, then check that path. Shipping touch proof and facade delivery remain pending.
+
+2026-10-05 bounded repair update: the specific Lowering release gap above is
+repaired and locally verified through native and real touch regressions; see
+[the repair receipt](../lowering-release-2026-10-05/README.md). Publication/APK
+verification is blocked by forbidden Actions access, and the full local suite
+has one cargo-net assertion failure reproduced on unchanged `d06b365`. This
+supersedes only the saved Drop-repair action. The façade checkpoint, its
+unfinished shipping proof and all other paused work remain unchanged.

@@ -1,0 +1,35 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=449 driver=Dummy
+ERROR: SCRAPERX_SETTINGS_RUNTIME FAIL Drop remains reachable at cargo lowering press 1
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tests/settings_runtime_test.gd:25)
+       [1] _check_lowering_drop (res://tests/settings_runtime_test.gd:225)
+       [2] _run (res://tests/settings_runtime_test.gd:198)
+       [3] _frames (res://tests/settings_runtime_test.gd:30)
+ERROR: SCRAPERX_SETTINGS_RUNTIME FAIL Drop caption distinguishes lowering entry from detachment
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tests/settings_runtime_test.gd:25)
+       [1] _check_lowering_drop (res://tests/settings_runtime_test.gd:226)
+       [2] _run (res://tests/settings_runtime_test.gd:198)
+       [3] _frames (res://tests/settings_runtime_test.gd:30)
+ERROR: SCRAPERX_SETTINGS_RUNTIME FAIL cargo touch press produces the Drop verb
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tests/settings_runtime_test.gd:25)
+       [1] _check_lowering_drop (res://tests/settings_runtime_test.gd:236)
+       [2] _run (res://tests/settings_runtime_test.gd:198)
+       [3] _frames (res://tests/settings_runtime_test.gd:30)
+ERROR: SCRAPERX_SETTINGS_RUNTIME FAIL cargo touch Drop enters Lowering then releases it
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tests/settings_runtime_test.gd:25)
+       [1] _check_lowering_drop (res://tests/settings_runtime_test.gd:239)
+       [2] _run (res://tests/settings_runtime_test.gd:198)
+       [3] _frames (res://tests/settings_runtime_test.gd:30)
+SCRAPERX_SETTINGS_RUNTIME checks=3078 failures=4 rings=33 decorative=704 structural=2208 native=1
+SCRAPERX_SETTINGS_RUNTIME_SOURCE draw_limit=12.00 power_limit=200000 neutral=(6.0, 0.35, -55.0)

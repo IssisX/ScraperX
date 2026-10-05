@@ -195,6 +195,7 @@ func _run() -> void:
 	_check(native.get_player_position().distance_to(checkpoint) < 0.001,
 		"checkpoint menu signal invokes native restoration")
 	_check(native.get_death_count() == deaths, "checkpoint menu restart does not add a death")
+	_check_lowering_drop(main)
 	print("SCRAPERX_SETTINGS_RUNTIME checks=%d failures=%d rings=%d decorative=%d structural=%d native=1" %
 		[_checks, _failures.size(), SettingsStore.RESTART_RING_HEIGHTS.size(), decoration_count, structural_count])
 	var launcher: Dictionary = native.get_slingshot_state()
@@ -205,3 +206,35 @@ func _run() -> void:
 	main.queue_free()
 	await process_frame
 	quit(0 if _failures.is_empty() else 42)
+
+
+func _check_lowering_drop(main: Node) -> void:
+	# Real cargo receiver, real context and touch hit testing. Staging supplies
+	# footing only; the two Drop presses must enter and cancel native lowering.
+	var native: Object = main._native
+	_check(native.debug_restart_at(Vector3(22, 12, -120.3)), "cargo Drop staging accepted")
+	native.set_move_input(0.0, 0.0)
+	native.set_facing(-1.0, 0.0)
+	for _step in range(180):
+		native.advance_frame(native.get_fixed_step_seconds())
+	main._router.clear_held()
+	main._router.gameplay_active = true
+	for press in range(2):
+		main._ctx = main._read_context()
+		main._touch.update_context(main._ctx, 1.0)
+		_check(main._touch.is_button_shown(&"drop"), "Drop remains reachable at cargo lowering press %d" % press)
+		_check(main._touch.button_label(&"drop") == ("DROP DOWN" if press == 0 else "DROP"),
+			"Drop caption distinguishes lowering entry from detachment")
+		var touch := InputEventScreenTouch.new()
+		touch.index = 17
+		touch.position = main._touch.button_center(&"drop")
+		touch.pressed = true
+		main._touch.handle_touch(touch)
+		touch.pressed = false
+		main._touch.handle_touch(touch)
+		var input: Dictionary = main._router.frame(native.get_fixed_step_seconds())
+		_check(input["verbs"].has(&"drop"), "cargo touch press produces the Drop verb")
+		main._dispatch(input["verbs"], native.get_fixed_step_seconds())
+		native.advance_frame(native.get_fixed_step_seconds())
+		_check(native.get_traversal_state() == (5 if press == 0 else 0),
+			"cargo touch Drop enters Lowering then releases it")

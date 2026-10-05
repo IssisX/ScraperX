@@ -923,7 +923,7 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"back":
 				if bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
 					_native.request_slingshot_drop()
-				elif _ctx["hanging"] or _ctx["climbing"]:
+				elif _ctx["hanging"] or _ctx["climbing"] or _ctx["lowering"]:
 					_native.request_release()
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
@@ -1038,6 +1038,7 @@ func _read_context() -> Dictionary:
 		station = &"sump"
 	var hanging := traversal == TRAVERSAL_HANGING
 	var climbing := traversal == TRAVERSAL_CLIMBING
+	var lowering := traversal == TRAVERSAL_LOWERING
 	var free := traversal == TRAVERSAL_NONE
 	var grip := bool(_native.is_grip_available())
 	var edge_drop := bool(_native.is_edge_drop_available())
@@ -1122,10 +1123,11 @@ func _read_context() -> Dictionary:
 		"traversal": traversal,
 		"hanging": hanging,
 		"climbing": climbing,
+		"lowering": lowering,
 		# Drop at an edge behind lowers into a hang; on holds it lets go.
 		"slingshot_seated": sling_seated,
 		"slingshot_recovering": bool(sling.get("recovering", false)),
-		"drop_ok": sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or (grounded and free and edge_drop and carrying == 0),
+		"drop_ok": sling_seated or bool(sling.get("recovering", false)) or hanging or climbing or lowering or (grounded and free and edge_drop and carrying == 0),
 		"edge_drop": edge_drop,
 		"sprinting": bool(_native.is_player_sprinting()),
 		"balancing": bool(_native.is_player_balancing()),

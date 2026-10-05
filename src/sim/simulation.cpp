@@ -5198,6 +5198,12 @@ private:
 
     void apply_traversal_commands(JPH::BodyInterface &bodies,
                                   const StepCommands &commands) noexcept {
+        if (traversal_state_ == TraversalState::Lowering && commands.release_requested) {
+            // Lowering still owns the hands. Drop cancels that ownership
+            // through the same passive, momentum-preserving release as a hang.
+            release_hang(bodies);
+            return;
+        }
         if (traversal_state_ == TraversalState::Hanging) {
             if (commands.release_requested) {
                 release_hang(bodies);
@@ -7890,7 +7896,8 @@ void Simulation::set_boiler_feed_enabled(const bool enabled) noexcept {
 
 bool Simulation::request_release() noexcept {
     const bool holding = snapshot_.traversal_state == TraversalState::Hanging ||
-                         snapshot_.traversal_state == TraversalState::Climbing;
+                         snapshot_.traversal_state == TraversalState::Climbing ||
+                         snapshot_.traversal_state == TraversalState::Lowering;
     const bool standing =
         snapshot_.traversal_state == TraversalState::None && snapshot_.player_grounded;
     if (!holding && !standing) {
