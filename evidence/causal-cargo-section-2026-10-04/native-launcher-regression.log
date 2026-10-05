@@ -1,0 +1,36 @@
+Start testing: Oct 04 19:52 CDT
+----------------------------------------------------------
+8/33 Testing: scraperx_sim.launcher_and_restart
+8/33 Test: scraperx_sim.launcher_and_restart
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_launcher_tests"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+"scraperx_sim.launcher_and_restart" start time: Oct 04 19:52 CDT
+Output:
+----------------------------------------------------------
+RIDER specific_g=9.81 freefall_specific=-1.81198e-05 seat_local_y=-0.205338
+gravity render fixture maximum_tick_m=1.10046
+seat available=1 p=1.08003 pouch=0.35
+shot draw=4.08226 energy=16016.9 apex=15.8761 landed_y=0 deaths=0 end=6,0.9,-55.4559 ascent_300m_x=0 launches=1
+RIDER launch_peak_specific_mps2=302.791
+seat available=1 p=1.08003 pouch=0.35
+shot draw=12 energy=420310 apex=378.796 landed_y=0 deaths=1 end=6,1.08003,-55 ascent_300m_x=6 launches=1
+RIDER launch_peak_specific_mps2=1068.7
+seat available=1 p=1.08003 pouch=0.35
+shot draw=12 energy=420310 apex=378.796 landed_y=0 deaths=1 end=6,1.08003,-55 ascent_300m_x=6 launches=1
+RIDER launch_peak_specific_mps2=1068.7
+seat available=1 p=1.08003 pouch=0.35
+shot draw=12 energy=420310 apex=361.127 landed_y=352 deaths=0 end=6,352.9,-128.743 ascent_300m_x=6 launches=1
+RIDER launch_peak_specific_mps2=1068.7
+seat available=1 p=1.08003 pouch=0.35
+shot draw=12 energy=420311 apex=361.127 landed_y=0 deaths=1 end=6,1.08003,-55 ascent_300m_x=17.0622 launches=1
+RIDER launch_peak_specific_mps2=1068.38
+PASS launcher, real draw/release, deterministic native flight and restart boundary
+<end of output>
+Test time =  39.53 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.launcher_and_restart" end time: Oct 04 19:53 CDT
+"scraperx_sim.launcher_and_restart" time elapsed: 00:00:39
+----------------------------------------------------------
+
+End testing: Oct 04 19:53 CDT

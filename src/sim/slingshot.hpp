@@ -89,7 +89,9 @@ public:
         std::uint32_t launch_count = 0;
     };
 
-    Slingshot(JPH::PhysicsSystem &system, kit::Kit &kit, JPH::BodyID player);
+    Slingshot(JPH::PhysicsSystem &system, kit::Kit &kit, JPH::BodyID player, bool external_substeps = false);
+    // PhysicsWorld serializes owners touching the rider at the collision-step seam.
+    void collision_step(const JPH::PhysicsStepListenerContext &context) { OnStep(context); }
     ~Slingshot();
     Slingshot(const Slingshot &) = delete;
     Slingshot &operator=(const Slingshot &) = delete;
@@ -166,6 +168,7 @@ private:
     [[nodiscard]] double body_energy(JPH::BodyID id, double &kinetic,
                                      double &gravity) const;
 
+    bool external_substeps_;
     JPH::PhysicsSystem &system_;
     kit::Kit &kit_;
     JPH::BodyID player_;

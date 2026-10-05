@@ -1,0 +1,9 @@
+{
+  "session_id": 12343,
+  "exit_code": 0,
+  "observed_result": "SCRAPERX_KIT_VIEW PASS checks=32909 rigid_bodies=31 renderer=X11",
+  "renderer": "Godot4.7 ARM64 X11 Compatibility softpipe 192x164",
+  "audio_imported": true,
+  "oracle": "unchanged original28 normal bodies plus explicitly derived3 cargo records; original fixture oracle unchanged",
+  "limits": "geometry/pose evidence, not full route or device execution"
+}

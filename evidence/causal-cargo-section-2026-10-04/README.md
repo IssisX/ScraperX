@@ -1,0 +1,9 @@
+# Causal cargo section — current evidence
+
+The full section is ordinary grade → flexible net1953 → finite gantry/deck2952 → first Tower11 ring. Tread2954 and all gameplay gantry members respond physically; only concrete1952, grade and Tower backbone remain static. Native Jolt owns loads, finite hand muscles, clip/frame reactions, contact walking and departure momentum. Godot mirrors native mesh/parts/grips.
+
+`native-section-initial.log` records the actual three affected native targets:8/8 hand fixtures, three passive release surfaces plus bounded cargo Jump and ordinary plate traction, and ordinary lanes19/20/21 with repeated receiver Action. `native-departures-receipt.json` records the completed release-guard/ordinary walk-off target; `native-launcher-regression.log` records the actual production launcher/restart pass. `render-geometry-receipt.json` records32909 passing numeric/pose checks after imports. Actual complete shipping-route and exact-source CI/APK receipts are pending. The first private-renderer launch had missing recorded-footstep imports; it is an environmental failure, not successful whole-scene runtime evidence. Importing the existing assets repairs the private project; it does not change shipped audio.
+
+The original pre-extraction numeric oracle remains intact for every unaffected body. Only the declared cargo ownership/geometry changes have a derived scoped oracle. This ledger does not yet claim completed CI/APK delivery or Android-device execution/performance.
+
+The shipping Action approach now stops at the actual grounded offer, through ordinary touch, rather than an old fixed mesh coordinate that can auto-catch a genuinely airborne player. The upper-lift test deadline is12s to allow finite receiver settling; actual solver support remains its only arrival condition. The initial9s deadline expired at Y11.954/Z−118.164 while the native handoff was still moving toward footing; this was not accepted as arrival.

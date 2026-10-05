@@ -26,6 +26,9 @@ void walk(Simulation &s, double x, double z, int limit=2700) {
 }
 void route(double lane) {
     Simulation s;
+    const auto gantry=s.kit_body_index(2952);
+    require(gantry!=Simulation::kKitNone && s.kit_body_dynamic(gantry) && s.kit_body_mass(gantry)>1000,
+            "gameplay gantry and receiver have finite native mass");
     settle(s);
     walk(s,lane,-114.0);
     (void)s.set_facing(0,-1);
@@ -38,6 +41,8 @@ void route(double lane) {
     require(s.snapshot().grip_available,"cargo mesh offers a real reachable native grip");
     (void)s.request_traversal(); tick(s);
     require((s.snapshot().traversal_state==scraperx::sim::TraversalState::Climbing),"Action takes the mesh through existing climbing authority");
+    require(s.snapshot().player_gravity_factor==1.0,"soft hands retain actual rider gravity");
+    require(s.snapshot().traversal_hand_constraint_count==2,"net climb has two finite physical hand attachments");
     const double before=s.snapshot().player_position.y;
     const double grip_z=s.snapshot().traversal_left_hand.z;
     settle(s,90);
@@ -72,19 +77,28 @@ void route(double lane) {
     }
     (void)s.set_move_input(0,-1);
     int climb_ticks=0;
-    bool paused=false;
+    bool paused=false, transfer_action_exercised=false;
     for (int i=0; i<1800; ++i) {
+        const auto previous=s.snapshot();
+        if (!transfer_action_exercised && previous.traversal_support_entity_id==2952 &&
+            previous.traversal_state==scraperx::sim::TraversalState::Climbing) {
+            (void)s.request_traversal();
+            transfer_action_exercised=true;
+        }
         tick(s);
+        require(s.snapshot().player_gravity_factor==1.0,"entire cargo climb and receiver transfer retain gravity");
         if(lane==20.0 && !paused && s.snapshot().player_position.y>5.5) { settle(s,27); (void)s.set_move_input(0,-1); paused=true; }
         if((s.snapshot().traversal_state==scraperx::sim::TraversalState::Climbing)) ++climb_ticks;
         if (s.snapshot().player_grounded && s.snapshot().player_position.y > 11.7) break;
     }
+    require(transfer_action_exercised,"Action regression reached the actual receiving transfer");
     settle(s);
     auto p=s.snapshot();
     std::cout << "CARGO_TOP lane=" << lane << " position=" << p.player_position.x << ',' << p.player_position.y << ',' << p.player_position.z << " grounded=" << p.player_grounded << " climb_ticks=" << climb_ticks << " deaths=" << p.death_count << '\n';
     if(!p.player_grounded) {
         const auto vertices=s.cargo_net_vertices();
         for(int r=0;r<23;r+=3) { auto v=vertices[4*(r*9+4)];std::cout << "NET_DIAG row=" << r << " point=" << v.x << ',' << v.y << ',' << v.z << '\n'; }
+        std::cout << "HAND_FORCE left=" << p.traversal_left_hand_force.y << "," << p.traversal_left_hand_force.z << " right=" << p.traversal_right_hand_force.y << "," << p.traversal_right_hand_force.z << " target=" << p.traversal_target_point.y << "," << p.traversal_target_point.z << " command_bound=" << p.traversal_command_work_bound_j << " gravity=" << p.player_gravity_factor << " attachments=" << p.traversal_hand_constraint_count << "\n";
         std::cout << "HANDS " << p.traversal_left_hand.y << ',' << p.traversal_left_hand.z << " / " << p.traversal_right_hand.y << ',' << p.traversal_right_hand.z << '\n';
     }
     require(p.player_grounded && !(p.traversal_state==scraperx::sim::TraversalState::Climbing) && p.player_position.y > 11.7 && p.player_position.y < 12.1,"held forward tops out onto real +11 m support");

@@ -128,7 +128,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			instance.mesh = surface.commit()
 			node.add_child(instance)
 		var entity := int(_native.get_kit_body_entity_id(body))
-		if entity == 1952:
+		if entity == 2952:
 			var sign := Label3D.new()
 			sign.name = "CargoNetSign"
 			sign.text = "EASY WAY UP · FIRST DECK +11 M\nTAP CLIMB · HOLD FORWARD"

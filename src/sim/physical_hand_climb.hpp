@@ -8,9 +8,10 @@ namespace scraperx::sim {
 // Owner-thread operations: attach/detach/commands run outside PhysicsSystem::Update.
 // Clear before removing either constrained body, and before destroying the system.
 // The production player's rotational DOFs must remain locked while attached.
+class CargoNet;
 class PhysicalHandClimb final {
 public:
-    PhysicalHandClimb(JPH::PhysicsSystem &system, JPH::BodyID player);
+    PhysicalHandClimb(JPH::PhysicsSystem &system, JPH::BodyID player, CargoNet *net = nullptr);
     ~PhysicalHandClimb();
     PhysicalHandClimb(const PhysicalHandClimb &) = delete;
     PhysicalHandClimb &operator=(const PhysicalHandClimb &) = delete;
@@ -27,6 +28,8 @@ public:
     // Jolt exposes the LAST collision-step impulse, not the outer update's sum.
     // Pass that collision step's dt (shipping Update(h,4): h/4). May be sampled
     // under the step-listener lock; it reads constraints, never acquires body locks.
+    // Soft/rigid material coupling runs in the single serialized collision callback.
+    void pre_step(float dt, bool bodies_locked = false);
     void post_step(float collision_dt);
     [[nodiscard]] JPH::Vec3 hand_force(unsigned hand) const noexcept;
     [[nodiscard]] float peak_hand_force_n() const noexcept { return peak_force_; }
@@ -40,6 +43,13 @@ private:
     bool replace(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip, bool preserve_extension);
     JPH::PhysicsSystem &system_;
     JPH::BodyID player_;
+    CargoNet *net_;
+    struct SoftHand {
+        bool attached=false;
+        JPH::Vec3 material=JPH::Vec3::sZero();
+        JPH::Vec3 rest_offset=JPH::Vec3::sZero();
+    };
+    std::array<SoftHand, 2> soft_;
     std::array<JPH::Ref<JPH::SixDOFConstraint>, 2> hands_;
     std::array<JPH::Vec3, 2> forces_ { JPH::Vec3::sZero(), JPH::Vec3::sZero() };
     float peak_force_ = 0.0F;

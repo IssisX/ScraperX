@@ -1,0 +1,20 @@
+{
+  "verification": "executed current physical_traversal target; actual tool result, not invented stdout",
+  "session_id": 51683,
+  "exit_code": 0,
+  "observed_result": "1/1 Test #2 scraperx_sim.physical_traversal Passed 29.69 sec",
+  "covers": [
+    "rigid vent Drop",
+    "net Drop",
+    "net finite hand-stroke Jump",
+    "ordinary plate traction after impact recovery",
+    "receiver walk-off momentum",
+    "rotating AS026 Drop"
+  ],
+  "bounds": {
+    "walkoff_horizontal_momentum_error_mps": 0.002,
+    "passive_vertical_velocity_error_mps": 0.002,
+    "net_jump_command_debit_j": 600.01
+  },
+  "remaining_changes": "consistent guard for physical transfer onto static Tower and selected double-tap vault added afterward; exact-source CI will build and exercise final source"
+}

@@ -1456,15 +1456,22 @@ func _touch_cargo_net() -> bool:
 	await _seconds(0.5)
 	# Start at the ordinary grade spawn. No fixture, relocation, restart,
 	# launch or scripted ascent: all movement enters through viewport touch.
-	if not await _walk_to(device, Vector2(20.0, -110.0), 0.12, 35.0):
+	if not await _walk_to(device, Vector2(20.0, -114.0), 0.12, 35.0):
 		return _fail("cargo net grade approach %s" % _position())
 	await _face(Vector2(0, -1))
 	_main._pitch = 0.35
 	await _pose("cargo_net_entry")
-	if not await _walk_to(device, Vector2(20.0, -117.38), 0.12, 4.0):
-		return _fail("cargo net grip approach %s" % _position())
-	await _face(Vector2(0, -1))
 	_main._pitch = 0.0
+	# Stop at the actual grounded CLIMB offer. Driving to a fixed rest-mesh
+	# coordinate can pass the offer and legitimately auto-catch while airborne
+	# on the finite tread/net; that does not exercise the requested Action.
+	_move(device, 0.25)
+	var offered := await _wait_until(func() -> bool: return bool(_native().is_player_grounded()) \
+		and bool(_native().is_grip_available()), 6.0)
+	_move(device, 0.0)
+	if not offered or bool(_ctx()["climbing"]):
+		return _fail("cargo net grounded grip approach %s" % _position())
+	await _face(Vector2(0, -1))
 	if not await _offered(&"climb", "CLIMB"):
 		return _fail("cargo net CLIMB not offered %s" % _position())
 	_act(device)
@@ -1482,7 +1489,9 @@ func _touch_cargo_net() -> bool:
 	await _seconds(0.3)
 	await _pose("cargo_net_climbing")
 	_move(device, 1.0)
-	var arrived := await _wait_until(func() -> bool: return _standing_above(11.7), 9.0)
+	# Allow compliant grip/receiver settling after the lift. This remains a
+	# bounded test deadline; only actual supported contact proves arrival.
+	var arrived := await _wait_until(func() -> bool: return _standing_above(11.7), 12.0)
 	_move(device, 0.0)
 	if not arrived:
 		return _fail("cargo net top-out blocked %s" % _position())
@@ -1508,7 +1517,7 @@ func _ground_foundation() -> bool:
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 17:
+	if int(_native().get_moving_body_count()) != 19:
 		return _fail("default slingshot, stair, lift and teeter body inventory differs")
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
@@ -1529,7 +1538,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=17 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=19 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
 	return true
 
 

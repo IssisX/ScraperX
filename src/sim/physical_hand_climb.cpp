@@ -1,4 +1,5 @@
 #include "sim/physical_hand_climb.hpp"
+#include "sim/cargo_net.hpp"
 #include <Jolt/Physics/Body/BodyLockMulti.h>
 #include <algorithm>
 #include <cmath>
@@ -13,8 +14,8 @@ double length(JPH::Vec3 v) {
     return std::hypot(double(v.GetX()), double(v.GetY()), double(v.GetZ()));
 }
 }
-PhysicalHandClimb::PhysicalHandClimb(JPH::PhysicsSystem &system, JPH::BodyID player)
-    : system_(system), player_(player) {}
+PhysicalHandClimb::PhysicalHandClimb(JPH::PhysicsSystem &system, JPH::BodyID player, CargoNet *net)
+    : system_(system), player_(player), net_(net) {}
 PhysicalHandClimb::~PhysicalHandClimb() { clear(); }
 bool PhysicalHandClimb::attach(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip) {
     return replace(hand, support, actual_grip, false);
@@ -27,7 +28,21 @@ bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 a
     using namespace JPH;
     if (hand >= hands_.size() || player_.IsInvalid() || support.IsInvalid() ||
         support == player_ || !finite(actual_grip)) return false;
-    const BodyID previous_support = attached(hand) ? hands_[hand]->GetBody2()->GetID() : support;
+    if (net_ && support == net_->body()) {
+        const BodyLockRead lock(system_.GetBodyLockInterface(), player_);
+        if (!lock.Succeeded() || !lock.GetBody().IsDynamic()) return false;
+        const auto material=net_->material_point(actual_grip);
+        const auto actual=net_->world_point(material);
+        Vec3 offset(lock.GetBody().GetPosition()-actual);
+        if (preserve_extension && soft_[hand].attached)
+            offset=soft_[hand].rest_offset+Vec3(net_->world_point(soft_[hand].material)-actual);
+        detach(hand);
+        soft_[hand]={true,material,offset};
+        return true;
+    }
+    const BodyID previous_support = hands_[hand] ? hands_[hand]->GetBody2()->GetID() : support;
+    // A rigid replacement is only extension-preserving for another rigid grip.
+    preserve_extension=preserve_extension && hands_[hand].GetPtr()!=nullptr;
     const BodyID ids[] { player_, support, previous_support };
     Ref<SixDOFConstraint> constraint;
     bool wake_support = false;
@@ -83,7 +98,8 @@ bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 a
 }
 void PhysicalHandClimb::detach(unsigned hand) {
     if (!attached(hand)) return;
-    system_.RemoveConstraint(hands_[hand].GetPtr());
+    soft_[hand].attached=false;
+    if (hands_[hand]) system_.RemoveConstraint(hands_[hand].GetPtr());
     hands_[hand] = nullptr;
     forces_[hand] = JPH::Vec3::sZero();
 }
@@ -93,7 +109,7 @@ void PhysicalHandClimb::clear() {
 }
 bool PhysicalHandClimb::active() const noexcept { return attached(0) || attached(1); }
 bool PhysicalHandClimb::attached(unsigned hand) const noexcept {
-    return hand < hands_.size() && hands_[hand].GetPtr() != nullptr;
+    return hand < hands_.size() && (hands_[hand].GetPtr() != nullptr || soft_[hand].attached);
 }
 void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, float dt) {
     using namespace JPH;
@@ -115,9 +131,9 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
                          float(double(desired_player_displacement.GetZ()) * scale));
         debit = 0.0;
         for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
-            const auto previous = hands_[i]->GetTargetPositionCS();
+            const auto previous = soft_[i].attached ? soft_[i].rest_offset : hands_[i]->GetTargetPositionCS();
             // Jolt's separation is p2-p1. Positive player motion reduces it.
-            targets[i] = previous - delta;
+            targets[i] = soft_[i].attached ? previous + delta : previous - delta;
             if (!finite(targets[i])) return;
             debit += force_bound_n() * length(targets[i] - previous);
         }
@@ -126,6 +142,7 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
     }
     if (debit > budget) return;
     for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
+        if (soft_[i].attached) { soft_[i].rest_offset=targets[i]; continue; }
         hands_[i]->SetTargetPositionCS(targets[i]);
         const Body *hold = hands_[i]->GetBody2();
         if (hold->IsDynamic()) system_.GetBodyInterface().ActivateBody(hold->GetID());
@@ -136,14 +153,17 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
 }
 JPH::RVec3 PhysicalHandClimb::commanded_position() const {
     using namespace JPH;
-    const BodyID ids[] { player_, attached(0) ? hands_[0]->GetBody2()->GetID() : player_,
-                        attached(1) ? hands_[1]->GetBody2()->GetID() : player_ };
+    const BodyID ids[] { player_, hands_[0] ? hands_[0]->GetBody2()->GetID() : player_,
+                        hands_[1] ? hands_[1]->GetBody2()->GetID() : player_ };
     BodyLockMultiRead lock(system_.GetBodyLockInterface(), ids, 3);
     const Body *player = lock.GetBody(0);
     if (player == nullptr) return RVec3::sZero();
     RVec3 sum = RVec3::sZero();
     unsigned count = 0;
     for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
+        if (soft_[i].attached) {
+            sum+=net_->world_point(soft_[i].material)+RVec3(soft_[i].rest_offset); ++count; continue;
+        }
         const Body *hold = lock.GetBody(i + 1);
         if (hold == nullptr) continue;
         const RVec3 anchor1 = player->GetCenterOfMassTransform() *
@@ -155,9 +175,32 @@ JPH::RVec3 PhysicalHandClimb::commanded_position() const {
     }
     return count ? sum / float(count) : player->GetPosition();
 }
+void PhysicalHandClimb::pre_step(float dt, bool bodies_locked) {
+    using namespace JPH;
+    if (!net_ || !std::isfinite(dt) || dt<=0) return;
+    auto &bodies=bodies_locked ? system_.GetBodyInterfaceNoLock() : system_.GetBodyInterface();
+    for (unsigned i=0;i<soft_.size();++i) if (soft_[i].attached) {
+        const auto &hand=soft_[i];
+        const auto target=net_->world_point(hand.material)+RVec3(hand.rest_offset);
+        const auto error=Vec3(target-bodies.GetPosition(player_));
+        const auto relative=bodies.GetLinearVelocity(player_)-net_->material_velocity(hand.material);
+        // Resolve the actual Kelvin-Voigt hand force at every collision step.
+        // For the lightest sampled knot (0.24kg), 60Ns/m is near its ~69Ns/m
+        // critical damping at5000N/m. Shipping h/4 keeps the explicit pair
+        // stable; there is no root velocity write or surrogate rider load.
+        constexpr float stiffness=5000.0F,damping=60.0F;
+        auto impulse=(error*stiffness-relative*damping)*dt;
+        const float cap=force_bound_n()*dt;
+        if (impulse.Length()>cap) impulse*=cap/impulse.Length();
+        bodies.AddImpulse(player_,impulse);
+        net_->impulse(hand.material,-impulse);
+        forces_[i]=impulse/dt;
+        peak_force_=std::max(peak_force_,forces_[i].Length());
+    }
+}
 void PhysicalHandClimb::post_step(float collision_dt) {
     if (!std::isfinite(collision_dt) || collision_dt <= 0.0F) return;
-    for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
+    for (unsigned i = 0; i < hands_.size(); ++i) if (hands_[i]) {
         // Translation axes were world identity at acquisition and the upright
         // player's rotation is locked. Lambda acts on body2, opposite on player.
         forces_[i] = -hands_[i]->GetTotalLambdaMotorTranslation() / collision_dt;

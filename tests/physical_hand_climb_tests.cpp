@@ -1,5 +1,7 @@
 #include <Jolt/Jolt.h>
 #include "sim/physical_hand_climb.hpp"
+#include "sim/cargo_net.hpp"
+#include "sim/cargo_net_route.hpp"
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/JobSystemSingleThreaded.h>
 #include <Jolt/Core/TempAllocator.h>
@@ -241,6 +243,77 @@ void kinematic_tracking_and_regrip() {
     check(w.contacts.count == 0, "kinematic fixture contact faked hand support");
     std::cout << "kinematic regrip tracking_vx=" << departure.GetX() << '\n';
 }
+void soft_material_reaction() {
+    World w;
+    scraperx::sim::CargoNet net(w.system,1,w.support);
+    auto &bodies=w.system.GetBodyInterface();
+    const Vec3 material(4,10,0);
+    const auto grip=net.world_point(material);
+    bodies.SetPosition(w.player,grip+Vec3(0,-0.5F,0.8F),EActivation::Activate);
+    bodies.SetLinearVelocity(w.player,Vec3(2,0,0));
+    PhysicalHandClimb hands(w.system,w.player,&net);
+    const auto incoming=w.velocity(w.player);
+    check(hands.attach(0,net.body(),grip) && hands.attach(1,net.body(),grip),"real soft grips rejected");
+    check((w.velocity(w.player)-incoming).LengthSq()==0,"soft catch overwrote incoming momentum");
+    const auto before=net.material_velocity(material);
+    hands.pre_step(h/4);
+    const auto rider_delta=w.velocity(w.player)-incoming;
+    const auto rope_delta=net.material_velocity(material)-before;
+    // Exact knot: four vertices of0.06kg, each with sampler weight1/4.
+    // No gravity/integration/contact occurs between the velocity samples.
+    check((rider_delta*85.0F+rope_delta*0.24F).Length()<0.00003F,"soft grip failed reciprocal momentum balance");
+    check(rope_delta.GetX()>0.01F && rider_delta.GetX()<0,"soft catch did not recoil actual rope material");
+    check(hands.hand_force(0).Length()>0 && hands.hand_force(0).Length()<=1500.01F,"soft grip force absent or unbounded");
+    const auto neutral=hands.commanded_position();
+    const auto velocity=w.velocity(w.player);
+    check(hands.regrip(0,net.body(),net.world_point(Vec3(5,10,0))),"soft regrip rejected");
+    check(Vec3(hands.commanded_position()-neutral).Length()<0.00003F,"soft regrip reset spring extension");
+    check((w.velocity(w.player)-velocity).LengthSq()==0,"soft regrip changed momentum");
+    hands.advance_targets(Vec3(0,100,0),h);
+    check(hands.last_command_work_bound_j()>33.3 && hands.last_command_work_bound_j()<=3000.0*h+0.0001,"soft command bypassed shared work bound");
+    hands.clear();
+    check((w.velocity(w.player)-velocity).LengthSq()==0 && !hands.active(),"soft release changed momentum or left attachments");
+    std::cout<<"soft reciprocal impulse residual="<<(rider_delta*85.0F+rope_delta*0.24F).Length()<<'\n';
+}
+void net_frame_reaction() {
+    World w;
+    scraperx::sim::kit::Kit kit(w.system,0,1);
+    const auto frame=scraperx::sim::build_cargo_net_route(kit);
+    scraperx::sim::CargoNet net(w.system,1,kit.body_id(frame));
+    struct Attachments final : PhysicsStepListener {
+        scraperx::sim::CargoNet &net;
+        explicit Attachments(scraperx::sim::CargoNet &n):net(n) {}
+        void OnStep(const PhysicsStepListenerContext &c) override { net.pre_step(c.mDeltaTime); }
+    } attachments(net);
+    w.system.AddStepListener(&attachments);
+    const auto tick=[&](int count) {
+        while(count-->0) {
+            check(w.system.Update(h,4,&w.temporary,&w.jobs)==EPhysicsUpdateError::None,"net-frame native update failed");
+            net.refresh();
+        }
+    };
+    tick(120);
+    const auto before=net.world_point(Vec3(4,22,0));
+    auto &bodies=w.system.GetBodyInterface();
+    bodies.AddImpulse(kit.body_id(frame),Vec3(8000,0,0));
+    const auto frame_v=bodies.GetLinearVelocity(kit.body_id(frame));
+    Vec3 rope_v[18]; unsigned node=0;
+    for(int row:{0,22}) for(int column=0;column<9;++column)
+        rope_v[node++]=net.material_velocity(Vec3(float(column),float(row),0));
+    net.pre_step(h/4);
+    auto residual=(bodies.GetLinearVelocity(kit.body_id(frame))-frame_v)*kit.body_mass(frame);
+    node=0;
+    for(int row:{0,22}) for(int column=0;column<9;++column)
+        residual+=(net.material_velocity(Vec3(float(column),float(row),0))-rope_v[node++])*0.24F;
+    check(residual.Length()<0.02F,"attachment forces failed net/frame momentum balance");
+    tick(6);
+    const auto after=net.world_point(Vec3(4,22,0));
+    check(std::abs(after.GetX()-before.GetX())>0.001,"net ends stayed pinned in world as frame moved");
+    check(finite(after) && kit.body_kinetic_energy(frame)>0,"finite structure failed actual impulse response");
+    w.system.RemoveStepListener(&attachments);
+    std::cout<<"net-frame mass="<<kit.body_mass(frame)<<" anchor_dx="<<after.GetX()-before.GetX()
+             <<" momentum_residual="<<residual.Length()<<'\n';
+}
 void invalid_holds_and_cleanup() {
     World w;
     {
@@ -273,11 +346,13 @@ int main() {
         { "static_load_and_release", static_load_and_release }, { "command_sign_and_budget", command_sign_and_budget },
         { "dynamic_recoil", dynamic_recoil }, { "finite_landing_catch", finite_landing_catch },
         { "kinematic_tracking_and_regrip", kinematic_tracking_and_regrip },
+        { "soft_material_reaction", soft_material_reaction },
+        { "net_frame_reaction", net_frame_reaction },
         { "invalid_holds_and_cleanup", invalid_holds_and_cleanup } }) {
         try { test.second(); std::cout << "PASS " << test.first << '\n'; }
         catch (const std::exception &e) { ++failures; std::cerr << "FAIL " << test.first << ": " << e.what() << '\n'; }
     }
     JPH::UnregisterTypes(); delete JPH::Factory::sInstance; JPH::Factory::sInstance = nullptr;
-    std::cout << "physical hand checks: " << 6 - failures << "/6\n";
+    std::cout << "physical hand checks: " << 8 - failures << "/8\n";
     return failures ? 1 : 0;
 }

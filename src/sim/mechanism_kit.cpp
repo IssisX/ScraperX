@@ -7,6 +7,7 @@
 #include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
+#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 
 #include <algorithm>
 #include <cmath>
@@ -201,6 +202,31 @@ void Kit::add_fixed_joint(const BodyIndex first, const BodyIndex second) {
     system_.AddConstraint(joint);
     disable_collision(first, second);
     fixed_joints_.push_back(joint);
+}
+
+void Kit::add_elastic_mount(BodyIndex foundation,BodyIndex structure,JPH::RVec3 point,
+                            float translation_stiffness,float translation_damping,
+                            float rotation_stiffness,float rotation_damping) {
+    JPH::SixDOFConstraintSettings settings;
+    settings.mPosition1=settings.mPosition2=point;
+    settings.mNumVelocityStepsOverride=40;
+    settings.mNumPositionStepsOverride=8;
+    for (int i=0;i<JPH::SixDOFConstraintSettings::Num;++i) {
+        settings.MakeFreeAxis(static_cast<JPH::SixDOFConstraintSettings::EAxis>(i));
+        settings.mMotorSettings[i].mSpringSettings=JPH::SpringSettings(
+            JPH::ESpringMode::StiffnessAndDamping,
+            i<3?translation_stiffness:rotation_stiffness,
+            i<3?translation_damping:rotation_damping);
+    }
+    auto mount=JPH::Ref<JPH::SixDOFConstraint>(static_cast<JPH::SixDOFConstraint *>(
+        settings.Create(jolt_body(foundation),jolt_body(structure))));
+    for (int i=0;i<JPH::SixDOFConstraintSettings::Num;++i)
+        mount->SetMotorState(static_cast<JPH::SixDOFConstraint::EAxis>(i),JPH::EMotorState::Position);
+    // Constant zero separation/orientation is the spring's neutral pose.
+    // The solver supplies reaction from extension; this target never advances.
+    system_.AddConstraint(mount);
+    disable_collision(foundation,structure);
+    fixed_joints_.emplace_back(mount.GetPtr());
 }
 
 LineIndex Kit::add_tie(const BodyIndex first, const JPH::Vec3 first_point,

@@ -58,8 +58,8 @@ double Slingshot::leather_deflection(bool no_lock) const {
     return (b.GetPosition(player_) - b.GetPosition(kit_.body_id(pouch_)) - state_.harness_rest_local).GetY();
 }
 
-Slingshot::Slingshot(PhysicsSystem &system, kit::Kit &kit, BodyID player)
-    : system_(system), kit_(kit), player_(player) {
+Slingshot::Slingshot(PhysicsSystem &system, kit::Kit &kit, BodyID player, bool external_substeps)
+    : external_substeps_(external_substeps), system_(system), kit_(kit), player_(player) {
     {
         BodyLockRead lock(system_.GetBodyLockInterface(), player_);
         saved_player_group_ = lock.GetBody().GetCollisionGroup();
@@ -185,11 +185,11 @@ Slingshot::Slingshot(PhysicsSystem &system, kit::Kit &kit, BodyID player)
     bind_carrier();
     create_guide(0);
     refresh_state();
-    system_.AddStepListener(this);
+    if (!external_substeps_) system_.AddStepListener(this);
 }
 
 Slingshot::~Slingshot() {
-    system_.RemoveStepListener(this);
+    if (!external_substeps_) system_.RemoveStepListener(this);
     detach();
     system_.GetBodyInterface().SetCollisionGroup(player_, saved_player_group_);
     remove_launch_guide();

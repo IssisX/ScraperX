@@ -253,6 +253,29 @@ func _run() -> void:
 	var expected: Variant = JSON.parse_string(baseline_bytes.get_string_from_utf8())
 	_check(expected is Array, "pre-extraction numeric baseline loads")
 	if expected is Array:
+		if not fixture:
+			# Preserve the entire original oracle for every unaffected body. The
+			# explicit cargo migration is derived from that oracle, never captured
+			# from the current renderer and blessed as its own expectation.
+			var actual_original: Array = []
+			var expected_original: Array = []
+			var actual_cargo: Array = []
+			for body in record:
+				if body[0] in ["KitBody1952", "KitBody2952", "KitBody2954"]:
+					actual_cargo.append(body)
+				else:
+					actual_original.append(body)
+			for body in expected:
+				if body[0] != "KitBody1952":
+					expected_original.append(body)
+			var cargo_bytes := FileAccess.get_file_as_bytes("res://tests/fixtures/kit-causal-cargo-numeric.json.gz")
+			var expected_cargo: Variant = JSON.parse_string(cargo_bytes.decompress_dynamic(
+				32 * 1024 * 1024, FileAccess.COMPRESSION_GZIP).get_string_from_utf8())
+			_check(expected_cargo is Array, "derived cargo migration oracle loads")
+			var cargo_difference := _first_difference(actual_cargo, expected_cargo, "cargo")
+			_check(cargo_difference.is_empty(), "explicit causal cargo mesh migration " + cargo_difference)
+			record = actual_original
+			expected = expected_original
 		var difference := _first_difference(record, expected)
 		_check(difference.is_empty(), "rigid meshes/materials/signs equal pre-extraction baseline " + difference)
 	var script: Script = kit.get_script()

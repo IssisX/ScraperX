@@ -29,16 +29,17 @@ bool walk(Simulation &s, double x, double z) {
     return false;
 }
 
-bool passive_departure(Simulation &s, const char *surface, bool physical) {
+bool passive_departure(Simulation &s, const char *surface) {
     (void)s.set_move_input(0, -1);
-    for (int i = 0; i < 90; ++i) {
+    for (int i = 0; i < 360; ++i) {
         if (!tick(s) || s.snapshot().traversal_state != TraversalState::Climbing) return false;
+        // Acquire a genuinely ascending departure, rather than assuming every
+        // compliant support settles into it at the same elapsed time.
+        if (i >= 89 && s.snapshot().player_linear_velocity.y > .25) break;
     }
     const auto before = s.snapshot();
-    const bool backend_ok = physical ?
-        before.player_gravity_factor == 1.0 && before.traversal_hand_constraint_count == 2 &&
-            before.traversal_command_work_bound_j > 0 :
-        before.player_gravity_factor == 0.0 && before.traversal_hand_constraint_count == 0;
+    const bool backend_ok = before.player_gravity_factor == 1.0 &&
+        before.traversal_hand_constraint_count == 2 && before.traversal_command_work_bound_j > 0;
     if (!backend_ok) {
         std::cerr << "FAIL climb backend surface=" << surface
                   << " gravity=" << before.player_gravity_factor
@@ -86,10 +87,10 @@ bool rigid_departure() {
                   << " grip=" << s.snapshot().grip_entity_id << '\n';
         return false;
     }
-    return passive_departure(s, "rigid_shipping_vent", true);
+    return passive_departure(s, "rigid_shipping_vent");
 }
 
-bool deforming_departure() {
+bool deforming_departure(bool jumping=false) {
     Simulation s;
     for (int i = 0; i < 45; ++i) if (!tick(s)) return false;
     // Actual ordinary grade approach to the cargo net, without relocation.
@@ -114,7 +115,80 @@ bool deforming_departure() {
     if (!s.snapshot().player_grounded || !s.snapshot().grip_available) return false;
     (void)s.request_traversal();
     if (!tick(s) || s.snapshot().traversal_state != TraversalState::Climbing) return false;
-    return passive_departure(s, "deforming_cargo_net", false);
+    if (!jumping) return passive_departure(s, "deforming_cargo_net");
+    (void)s.set_move_input(0,-1);
+    for (int i=0;i<450 && s.snapshot().player_position.y<2.0;++i)
+        if (!tick(s) || s.snapshot().traversal_state!=TraversalState::Climbing) return false;
+    const auto before=s.snapshot();
+    (void)s.set_move_input(0,0);
+    (void)s.request_jump();
+    if (!tick(s)) return false;
+    const auto pushed=s.snapshot();
+    if (pushed.traversal_state!=TraversalState::Climbing || pushed.traversal_hand_constraint_count!=2 ||
+        pushed.player_gravity_factor!=1.0 ||
+        std::abs(pushed.player_linear_velocity.y-before.player_linear_velocity.y)>.35 ||
+        pushed.traversal_command_work_bound_j<=before.traversal_command_work_bound_j) {
+        std::cerr<<"FAIL cargo Jump must start a finite reciprocal muscle stroke, not reset velocity\n";
+        return false;
+    }
+    for(int i=0;i<24 && s.snapshot().traversal_state==TraversalState::Climbing;++i)
+        if(!tick(s)) return false;
+    const auto released=s.snapshot();
+    const double debit=released.traversal_command_work_bound_j-before.traversal_command_work_bound_j;
+    if(released.traversal_state!=TraversalState::None || released.traversal_hand_constraint_count!=0 ||
+       debit<=0 || debit>600.01 || released.player_grounded) return false;
+    if(!tick(s)) return false;
+    const bool free=std::abs(s.snapshot().player_linear_velocity.y-released.player_linear_velocity.y+
+                             9.81*Simulation::kFixedStepSeconds)<.002;
+    std::cout<<(free?"PASS":"FAIL")<<" cargo_jump finite_stroke_debit="<<debit
+             <<" departure_vy="<<released.player_linear_velocity.y<<'\n';
+    return free;
+}
+
+bool selected_support_traction() {
+    Simulation s;
+    if(!s.debug_restart_at({20,1.0,-116.7})) return false;
+    for(int i=0;i<180;++i) if(!tick(s)) return false;
+    const auto before=s.snapshot();
+    if(!before.player_grounded || before.support_entity_id!=2954 || before.landing_recovery_seconds>0) {
+        std::cerr<<"FAIL tread traction staging must reach ordinary grounded walking\n";
+        return false;
+    }
+    (void)s.set_move_input(1,0);
+    if(!tick(s)) return false;
+    const auto after=s.snapshot();
+    const bool ok=after.landing_recovery_work_j>before.landing_recovery_work_j &&
+        after.player_linear_velocity.x-before.player_linear_velocity.x>0 &&
+        after.player_linear_velocity.x-before.player_linear_velocity.x<.10;
+    std::cout<<(ok?"PASS":"FAIL")<<" ordinary_tread_traction force_work_delta="
+             <<after.landing_recovery_work_j-before.landing_recovery_work_j
+             <<" dvx="<<after.player_linear_velocity.x-before.player_linear_velocity.x<<'\n';
+    return ok;
+}
+
+bool receiver_walk_off() {
+    Simulation s;
+    // Development staging isolates an ordinary walking departure. The cargo
+    // route separately proves this receiver is reached from grade without it.
+    if(!s.debug_restart_at({20,12.0,-119.0})) return false;
+    for(int i=0;i<180;++i) if(!tick(s)) return false;
+    if(!s.snapshot().player_grounded || s.snapshot().support_entity_id!=2952) return false;
+    (void)s.set_facing(0,1);
+    (void)s.set_move_input(0,1);
+    for(int i=0;i<180 && s.snapshot().player_grounded;++i) if(!tick(s)) return false;
+    const auto before=s.snapshot();
+    if(before.player_grounded || before.traversal_state!=TraversalState::None ||
+       before.player_linear_velocity.z<1.0) return false;
+    (void)s.set_move_input(0,0);
+    if(!tick(s)) return false;
+    const auto after=s.snapshot();
+    const double error=std::hypot(after.player_linear_velocity.x-before.player_linear_velocity.x,
+                                  after.player_linear_velocity.z-before.player_linear_velocity.z);
+    const bool ok=after.traversal_state==TraversalState::None && error<.002 &&
+        std::abs(after.player_linear_velocity.y-before.player_linear_velocity.y+
+                 9.81*Simulation::kFixedStepSeconds)<.002;
+    std::cout<<(ok?"PASS":"FAIL")<<" receiver_walk_off momentum_error="<<error<<'\n';
+    return ok;
 }
 
 bool rotating_departure() {
@@ -143,7 +217,7 @@ bool rotating_departure() {
         if (!tick(s)) return false;
         if (s.snapshot().traversal_state == TraversalState::Climbing &&
             s.snapshot().traversal_support_entity_id == 2960)
-            return passive_departure(s, "rotating_as026", true);
+            return passive_departure(s, "rotating_as026");
     }
     std::cerr << "FAIL rotating departure did not catch actual AS-026\n";
     return false;
@@ -153,8 +227,11 @@ bool rotating_departure() {
 int main() {
     const bool rigid = rigid_departure();
     const bool deforming = deforming_departure();
+    const bool jumping = deforming_departure(true);
+    const bool traction = selected_support_traction();
+    const bool walkoff = receiver_walk_off();
     const bool rotating = rotating_departure();
-    if (!rigid || !deforming || !rotating) {
+    if (!rigid || !deforming || !jumping || !traction || !walkoff || !rotating) {
         std::cerr << "FAIL physical traversal: rigid=" << rigid
                   << " deforming=" << deforming << " rotating=" << rotating << '\n';
         return 1;

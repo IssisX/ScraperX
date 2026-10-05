@@ -160,6 +160,10 @@ public:
                          JPH::Vec3 axis, float friction_torque,
                          std::uint32_t velocity_steps = 40, std::uint32_t position_steps = 8);
     void add_fixed_joint(BodyIndex first, BodyIndex second);
+    // Passive elastic anchorage: fixed neutral frames, no moving motor target.
+    void add_elastic_mount(BodyIndex foundation, BodyIndex structure, JPH::RVec3 point,
+                           float translation_stiffness, float translation_damping,
+                           float rotation_stiffness, float rotation_damping);
     LineIndex add_tie(BodyIndex first, JPH::Vec3 first_point,
                       BodyIndex second, JPH::Vec3 second_point);
 
