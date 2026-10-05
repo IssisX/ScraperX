@@ -1,0 +1,5 @@
+LOWER_RING position=(-25.000000,121.900002,-162.000000) grounded=1 support=11 energy=1200000.000
+BOARDED position=(-30.796455,121.894127,-162.000000) grounded=1 support=2973 energy=1200000.000
+AT_RECEIVER position=(-30.796455,143.890335,-162.000000) grounded=1 support=2973 energy=532341.160
+UPPER_RING position=(-24.739704,143.899994,-162.000000) grounded=1 support=11 energy=532341.160
+PASS ordinary native walk-on, physical ride, release and walk-off; debug staging only on initial121m ring; direct fixture drive input remains

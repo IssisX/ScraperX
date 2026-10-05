@@ -14,6 +14,7 @@
 #include "sim/cargo_net.hpp"
 #include "sim/physical_hand_climb.hpp"
 #include "sim/suspended_ladder.hpp"
+#include "sim/service_lift.hpp"
 #include "sim/water_screw.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
@@ -1267,7 +1268,7 @@ struct SupportSample final {
 };
 
 [[nodiscard]] bool entity_is_causal_section_support(std::uint64_t entity) noexcept {
-    return entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
+    return scraperx::sim::ServiceLift::owns_support(entity) || entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
         scraperx::sim::is_facade_route_entity(entity);
 }
 
@@ -1996,6 +1997,7 @@ public:
                 const auto frame=build_cargo_net_route(*kit_);
                 cargo_net_ = std::make_unique<CargoNet>(physics_system_, object_layers::kMoving,kit_->body_id(frame));
                 build_suspended_ladder(*kit_);
+                service_lift_ = std::make_unique<ServiceLift>(physics_system_, *kit_);
             }
         }
 
@@ -2038,6 +2040,7 @@ public:
         swing_stair_.reset();
         pipe_bridge_.reset();
         slingshot_.reset();
+        service_lift_.reset();
         kit_.reset();
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
             if (constraint != nullptr) {
@@ -2088,6 +2091,7 @@ public:
         double jib_slew_input = 0.0;
         double jib_hoist_input = 0.0;
         double needle_hoist_input = 0.0;
+        double service_lift_input = 0.0;
         bool valve_toggle_requested = false;
         bool water_screw_toggle_requested = false;
         bool water_lift_valve_toggle_requested = false;
@@ -2107,6 +2111,7 @@ public:
         if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
         physical_hands_->pre_step(context.mDeltaTime, true);
         slingshot_->collision_step(context);
+        if (service_lift_) service_lift_->collision_step(context.mDeltaTime);
     }
 
     void step(const StepCommands &commands,
@@ -2229,6 +2234,18 @@ public:
         if (pipe_bridge_) pipe_bridge_->pre_step(delta_seconds);
         if (swing_stair_) swing_stair_->pre_step(delta_seconds);
         if (upper_ascent_) upper_ascent_->pre_step(delta_seconds);
+        if (service_lift_) {
+            const bool reachable = service_lift_station(bodies) != ServiceLift::Station::None;
+            if (reachable && commands.service_lift_input != 0.0 && !service_lift_retry_available_) {
+                // A named, explicit retry restores this complete checkpoint;
+                // ordinary checkpoint commits continue preserving spent energy.
+                service_lift_retry_checkpoint_ = checkpoint_;
+                service_lift_retry_position_ = checkpoint_position_;
+                service_lift_retry_crouched_ = checkpoint_crouched_;
+                service_lift_retry_available_ = true;
+            }
+            service_lift_->pre_step(reachable ? static_cast<float>(commands.service_lift_input) : 0.0F);
+        }
         contact_listener_.begin_tick();
         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
         physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
@@ -2239,6 +2256,7 @@ public:
                                       JPH::Vec3(support_point_now - landing_force_support_start_);
             landing_recovery_work_j_ += std::max(0.0F, landing_applied_force_.Dot(displacement));
         }
+        if (service_lift_) service_lift_->post_step();
         kit_->post_step(delta_seconds);
         if (slingshot_) slingshot_->post_step(delta_seconds);
         if (cargo_net_) cargo_net_->refresh();
@@ -2394,6 +2412,14 @@ public:
         commit_machine_checkpoint(bodies);
         update_affordance(bodies);
         read_state();
+        return true;
+    }
+
+    bool select_service_lift_retry() noexcept {
+        if (!service_lift_retry_available_) return false;
+        checkpoint_ = service_lift_retry_checkpoint_;
+        checkpoint_position_ = service_lift_retry_position_;
+        checkpoint_crouched_ = service_lift_retry_crouched_;
         return true;
     }
 
@@ -6995,6 +7021,7 @@ private:
             if (swing_stair_) checkpoint_.swing_stair = swing_stair_->state();
             if (upper_ascent_) checkpoint_.upper_ascent = upper_ascent_->state();
             if (cargo_net_) checkpoint_.cargo_net = cargo_net_->capture();
+            if (service_lift_) checkpoint_.service_lift = service_lift_->state();
             return;
         }
         checkpoint_.ballast = capture_body(bodies, ballast_id_);
@@ -7091,6 +7118,7 @@ private:
         if (swing_stair_) swing_stair_->restore(checkpoint_.swing_stair);
         if (upper_ascent_) upper_ascent_->restore(checkpoint_.upper_ascent);
         if (cargo_net_) cargo_net_->restore(checkpoint_.cargo_net);
+        if (service_lift_) service_lift_->restore(checkpoint_.service_lift);
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
@@ -7133,7 +7161,47 @@ private:
         ++death_count_;
     }
 
+    [[nodiscard]] ServiceLift::Station service_lift_station(const JPH::BodyInterface &bodies, const bool require_footing = true) const noexcept {
+        using Station = ServiceLift::Station;
+        if (!service_lift_ || (require_footing && !grounded_) || traversal_state_ != TraversalState::None || carried_entity_ != 0)
+            return Station::None;
+        const auto player = bodies.GetPosition(player_id_);
+        const auto eye = player + JPH::Vec3(0, .55F, 0);
+        Station nearest = Station::None;
+        double nearest_distance = 1.65 * 1.65;
+        for (const auto station : {Station::Deck, Station::Lower, Station::Upper}) {
+            const bool supported = station == Station::Deck ? support_entity_id_ == ServiceLift::kDeckEntity :
+                (support_entity_id_ == 11 || support_entity_id_ == ServiceLift::kLandingEntity);
+            if (require_footing && !supported) continue;
+            const auto target = service_lift_->station_position(station);
+            const double distance = (target - player).LengthSq();
+            if (distance > nearest_distance) continue;
+            const auto ray = JPH::Vec3(target - eye);
+            JPH::RayCastResult hit;
+            if (!cast_ray(eye, ray, hit)) continue;
+            const auto expected = station == Station::Deck ? ServiceLift::kDeckEntity : ServiceLift::kLandingEntity;
+            // Reject intervening structure, including another part of the same compound.
+            if (bodies.GetUserData(hit.mBodyID) != expected || (1.0F - hit.mFraction) * ray.Length() > .28F) continue;
+            nearest = station;
+            nearest_distance = distance;
+        }
+        return nearest;
+    }
+
     void read_machine_state(const JPH::BodyInterface &bodies) noexcept {
+        if (service_lift_) {
+            const auto lift = service_lift_->state();
+            state_.service_lift_station = static_cast<std::uint8_t>(service_lift_station(bodies));
+            state_.service_lift_reachable_station = static_cast<std::uint8_t>(service_lift_station(bodies, false));
+            state_.service_lift_retry_available = service_lift_retry_available_;
+            state_.service_lift_surface_y = service_lift_->walking_surface_y();
+            state_.service_lift_energy_j = lift.energy_j;
+            state_.service_lift_capacity_j = service_lift_->design().capacity_j;
+            state_.service_lift_force_n = lift.actuator_force_n;
+            state_.service_lift_power_w = lift.electrical_power_w;
+            state_.service_lift_braking = lift.braking;
+            state_.service_lift_energy_cutoff = lift.energy_cutoff;
+        }
         state_.carrying_entity_id = carried_entity_;
         state_.carry_target_entity_id = carry_target_entity_;
         state_.rig_action = rig_action_;
@@ -7507,6 +7575,7 @@ private:
     std::uint32_t grip_over_steps_ = 0;
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
+    std::unique_ptr<ServiceLift> service_lift_;
     std::unique_ptr<PipeBridge> pipe_bridge_;
     std::unique_ptr<Slingshot> slingshot_;
     bool slingshot_flight_ = false;
@@ -7678,10 +7747,15 @@ private:
         SwingStair::State swing_stair{};
         UpperAscent::State upper_ascent{};
         std::string cargo_net;
+        ServiceLift::State service_lift{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
     MachineCheckpoint checkpoint_{};
+    MachineCheckpoint service_lift_retry_checkpoint_{};
+    JPH::RVec3 service_lift_retry_position_{JPH::RVec3::sZero()};
+    bool service_lift_retry_crouched_ = false;
+    bool service_lift_retry_available_ = false;
     std::uint64_t checkpoint_commit_count_ = 0;
     std::uint64_t death_count_ = 0;
     bool parachute_deployed_ = false;
@@ -7803,7 +7877,7 @@ bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     jump_requested_ = traversal_requested_ = release_requested_ = false;
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
     crouch_input_ = sprint_input_ = false;
-    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = 0.0;
+    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = 0.0;
     intake_slew_input_ = intake_hoist_input_ = 0.0;
     valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
     water_lift_release_requested_ = water_lift_reset_requested_ = false;
@@ -7819,13 +7893,18 @@ bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     return true;
 }
 
+bool Simulation::restart_service_lift_attempt() noexcept {
+    if (!physics_world_->select_service_lift_retry()) return false;
+    return restart_checkpoint();
+}
+
 bool Simulation::restart_checkpoint() noexcept {
     if (!physics_world_->restart_checkpoint()) return false;
     move_input_x_ = move_input_z_ = 0.0;
     jump_requested_ = traversal_requested_ = release_requested_ = false;
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
     crouch_input_ = sprint_input_ = false;
-    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = 0.0;
+    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = 0.0;
     intake_slew_input_ = intake_hoist_input_ = 0.0;
     valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
     water_lift_release_requested_ = water_lift_reset_requested_ = false;
@@ -8080,6 +8159,12 @@ bool Simulation::set_needle_hoist_input(const double value) noexcept {
     return true;
 }
 
+bool Simulation::set_service_lift_input(const double value) noexcept {
+    if (!std::isfinite(value)) return false;
+    service_lift_input_ = std::clamp(value, -1.0, 1.0);
+    return true;
+}
+
 bool Simulation::request_valve_toggle() noexcept {
     valve_toggle_requested_ = true;
     return true;
@@ -8173,6 +8258,7 @@ void Simulation::step_fixed() noexcept {
     commands.jib_slew_input = jib_slew_input_;
     commands.jib_hoist_input = jib_hoist_input_;
     commands.needle_hoist_input = needle_hoist_input_;
+    commands.service_lift_input = service_lift_input_;
     commands.valve_toggle_requested = valve_toggle_requested_;
     commands.water_screw_toggle_requested = water_screw_toggle_requested_;
     commands.water_lift_valve_toggle_requested = water_lift_valve_toggle_requested_;

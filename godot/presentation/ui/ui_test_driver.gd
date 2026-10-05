@@ -19,6 +19,8 @@ const SCENARIOS := {
 	"ground_foundation": 8,
 	"touch_cargo_net": 8,
 	"touch_campaign_to_121": 8,
+	"touch_campaign_to_143": 8,
+	"touch_service_lift": 8,
 	"touch_causal_facade": 8,
 	"touch_north_grip_diagnostic": 8,
 	"touch_suspended_ladder": 8,
@@ -80,7 +82,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_service_lift", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -117,6 +119,10 @@ func _run() -> void:
 			ok = await _touch_cargo_net()
 		"touch_campaign_to_121":
 			ok = await _touch_campaign_to_121()
+		"touch_campaign_to_143":
+			ok = await _touch_campaign_to_143()
+		"touch_service_lift":
+			ok = await _touch_service_lift(true)
 		"touch_north_grip_diagnostic":
 			ok = await _touch_north_grip_diagnostic()
 		"keyboard_slingshot":
@@ -665,7 +671,7 @@ func _pipe_bridge(device: int) -> bool:
 # AS-017: grade to +33 m, through the real touch controls and native world.
 func _touch_facade() -> bool:
 	var device := InputRouter.Device.TOUCH
-	if _scenario in ["touch_campaign_to_121", "touch_causal_facade"]:
+	if _scenario in ["touch_campaign_to_121", "touch_campaign_to_143", "touch_service_lift", "touch_causal_facade"]:
 		if not await _touch_cargo_net():
 			return false
 		print("SCRAPERX_CAMPAIGN cargo_net_exit at=%s support=%d" % [_position(), _native().get_support_entity_id()])
@@ -1305,6 +1311,73 @@ func _touch_campaign_to_121() -> bool:
 			or absf(_position().y - 121.9) > 0.15 or int(_native().get_support_entity_id()) != 11:
 		return _fail("campaign +121m arrival unsupported at=%s" % _position())
 	_detail = "staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 supported_height_m=121 support=11 deaths=0 slingshot_work_j=0 world=slingshot"
+	return true
+
+
+func _touch_campaign_to_143() -> bool:
+	if not await _touch_campaign_to_121():
+		return false
+	print("SCRAPERX_CAMPAIGN supported_height_m=121 support=11 deaths=0 staging=ordinary_grade_spawn")
+	if not await _touch_service_lift(false) or not _campaign_world_intact():
+		return false
+	_detail = "staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 service_lift=1 supported_height_m=143 support=11 deaths=0 slingshot_work_j=0 world=slingshot"
+	return true
+
+
+func _touch_service_lift(stage_at_121: bool) -> bool:
+	var device := InputRouter.Device.TOUCH
+	if stage_at_121:
+		if not _native().debug_restart_at(Vector3(-25, 121.9, -162)):
+			return _fail("service lift lower-ring staging rejected")
+		await _seconds(0.5)
+	else:
+		for point in [Vector2(-22, -174.5), Vector2(-22, -162), Vector2(-25, -162)]:
+			if not await _walk_to(device, point, 0.12, 10.0):
+				return _fail("121m ring approach to service lift failed at=%s" % _position())
+	if not await _walk_to(device, Vector2(-27.4, -162), 0.12, 6.0):
+		return _fail("lower landing approach failed")
+	if int(_native().get_service_lift_state()["station"]) != 2:
+		return _fail("lower call station is not reachable")
+	if not await _walk_to(device, Vector2(-30.8, -162), 0.12, 6.0):
+		return _fail("physical lift boarding failed")
+	await _face(Vector2(1.1, -0.75))
+	if int(_native().get_support_entity_id()) != 2973 or not await _offered(&"operate", "OPERATE", "SERVICE LIFT"):
+		return _fail("deck station does not offer OPERATE at=%s" % _position())
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"service_lift" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("service lift pendant did not open")
+	var before: Dictionary = _native().get_service_lift_state()
+	_touch(1, _center(&"pendant_up"), true)
+	await _seconds(3.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(0.5)
+	var paused: Dictionary = _native().get_service_lift_state()
+	if float(paused["surface_y"]) < float(before["surface_y"]) + 0.5 or not bool(paused["braking"]):
+		return _fail("touch hold/release did not drive and brake native lift")
+	var stopped_height := float(paused["surface_y"])
+	await _seconds(0.5)
+	if absf(float(_native().get_service_lift_state()["surface_y"]) - stopped_height) > 0.02:
+		return _fail("released lift does not hold its height")
+	_touch(1, _center(&"pendant_up"), true)
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_service_lift_state()["surface_y"]) >= 142.98, 65.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(0.5)
+	if not reached or not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 2973:
+		return _fail("touch ride failed before143m receiver at=%s station=%s" % [_position(), _native().get_service_lift_state()])
+	var arrival: Dictionary = _native().get_service_lift_state()
+	if not bool(arrival["braking"]) or float(arrival["energy_j"]) >= float(before["energy_j"]) or float(arrival["energy_j"]) <= 0:
+		return _fail("lift arrival is not a finite-energy braked state")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("DONE did not release lift operation")
+	if not await _walk_to(device, Vector2(-24.7, -162), 0.12, 8.0):
+		return _fail("physical143m exit failed at=%s" % _position())
+	if not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 11 or absf(_position().y - 143.9) > 0.15:
+		return _fail("143m arrival is not supported by Tower11")
+	_detail = "staging=supported_121m shipping_touch=1 hold_release=1 finite_energy=1 supported_height_m=143 support=11 deaths=%d" % int(_native().get_death_count())
 	return true
 
 
@@ -2465,7 +2538,7 @@ func _walk_to(device: int, target: Vector2, tolerance: float, timeout: float = 6
 		var at := _position()
 		var to := target - Vector2(at.x, at.z)
 		var owner := int(_native().get_support_entity_id())
-		physical = physical or owner in [1600, 2952, 2954] or (owner >= 2560 and owner <= 2566)
+		physical = physical or owner in [1600, 2952, 2954] or (owner >= 2560 and owner <= 2566) or (owner >= 1970 and owner <= 1972) or (owner >= 2970 and owner <= 2978)
 		var slip: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
 		var settled := bool(_ctx()["grounded"]) and Vector2(slip.x, slip.z).length() < 0.15
 		if to.length() <= tolerance and (not physical or settled):

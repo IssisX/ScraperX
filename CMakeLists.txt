@@ -26,6 +26,7 @@ add_library(scraperx_sim STATIC
     src/sim/cargo_net_route.cpp
     src/sim/cargo_net.cpp
     src/sim/suspended_ladder.cpp
+    src/sim/service_lift.cpp
     src/sim/slingshot.cpp
     src/sim/slingshot_model.cpp
     src/sim/pipe_bridge.cpp
@@ -82,6 +83,14 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_physical_traversal_tests tests/physical_traversal_tests.cpp)
     target_link_libraries(scraperx_physical_traversal_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.physical_traversal COMMAND scraperx_physical_traversal_tests)
+
+    add_executable(scraperx_service_lift_physics_tests tests/service_lift_physics_tests.cpp)
+    target_link_libraries(scraperx_service_lift_physics_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.service_lift_physics COMMAND scraperx_service_lift_physics_tests)
+
+    add_executable(scraperx_service_lift_route_tests tests/service_lift_route_tests.cpp)
+    target_link_libraries(scraperx_service_lift_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.service_lift_route COMMAND scraperx_service_lift_route_tests)
 
     add_executable(scraperx_suspended_ladder_tests tests/suspended_ladder_tests.cpp)
     target_link_libraries(scraperx_suspended_ladder_tests PRIVATE scraperx_sim)

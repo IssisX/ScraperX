@@ -36,6 +36,9 @@ ScraperXSimulation::ScraperXSimulation()
     : simulation_(std::make_unique<sim::Simulation>()) {}
 
 void ScraperXSimulation::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("set_service_lift_input", "value"), &ScraperXSimulation::set_service_lift_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_service_lift_state"), &ScraperXSimulation::get_service_lift_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("restart_service_lift_attempt"), &ScraperXSimulation::restart_service_lift_attempt);
     godot::ClassDB::bind_method(godot::D_METHOD("set_slingshot_input", "draw", "yaw", "elevation"), &ScraperXSimulation::set_slingshot_input);
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_action"), &ScraperXSimulation::request_slingshot_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_slingshot_drop"), &ScraperXSimulation::request_slingshot_drop);
@@ -517,6 +520,27 @@ bool ScraperXSimulation::configure_pipe_bridge_fixture() {
 
 bool ScraperXSimulation::set_slingshot_input(double draw, double yaw, double elevation) {
     return simulation_->set_slingshot_input(draw, yaw, elevation);
+}
+bool ScraperXSimulation::set_service_lift_input(double value) {
+    return simulation_->set_service_lift_input(value);
+}
+bool ScraperXSimulation::restart_service_lift_attempt() {
+    return simulation_->restart_service_lift_attempt();
+}
+godot::Dictionary ScraperXSimulation::get_service_lift_state() const {
+    const auto &state = simulation_->snapshot();
+    godot::Dictionary out;
+    out["station"] = static_cast<std::int64_t>(state.service_lift_station);
+    out["reachable_station"] = static_cast<std::int64_t>(state.service_lift_reachable_station);
+    out["retry_available"] = state.service_lift_retry_available;
+    out["surface_y"] = state.service_lift_surface_y;
+    out["energy_j"] = state.service_lift_energy_j;
+    out["capacity_j"] = state.service_lift_capacity_j;
+    out["force_n"] = state.service_lift_force_n;
+    out["power_w"] = state.service_lift_power_w;
+    out["braking"] = state.service_lift_braking;
+    out["energy_cutoff"] = state.service_lift_energy_cutoff;
+    return out;
 }
 bool ScraperXSimulation::request_slingshot_action() {
     return simulation_->request_slingshot_action();

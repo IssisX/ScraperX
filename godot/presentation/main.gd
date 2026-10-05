@@ -456,7 +456,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_north_grip_diagnostic", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_service_lift", "touch_north_grip_diagnostic", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -600,6 +600,8 @@ func _process(delta: float) -> void:
 	# the two stations are never in range simultaneously, so reusing it needs
 	# no new key binding and keeps the same Raise(+)/Lower(-) verb.
 	_native.set_needle_hoist_input(jib_input.y)
+	# Operation is a UI mode; native station reach and brake state own motion.
+	_native.set_service_lift_input(jib_input.y if _operating == &"service_lift" else 0.0)
 
 	var time_scale := float(_slingshot_view.get_simulation_scale()) if _slingshot_view != null else 1.0
 	var steps_advanced := int(_native.advance_frame(minf(delta, MAX_SIM_FRAME_DELTA) * time_scale))
@@ -726,6 +728,7 @@ func _build_interface() -> void:
 	_pause_menu.settings_changed.connect(_apply_settings)
 	_pause_menu.restart_requested.connect(_restart_at)
 	_pause_menu.checkpoint_restart_requested.connect(_restart_checkpoint)
+	_pause_menu.lift_attempt_restart_requested.connect(_restart_lift_attempt)
 	# Android's system back opens the pause menu instead of ending the climb.
 	get_tree().quit_on_go_back = false
 	_router.device = (InputRouter.Device.TOUCH if OS.has_feature("mobile") or _force_touch
@@ -834,7 +837,7 @@ func _open_pause(from_system: bool = false) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var checkpoint: Vector3 = _ctx["checkpoint"]
 	var position: Vector3 = _ctx["position"]
-	_pause_menu.set_restart_context(position)
+	_pause_menu.set_restart_context(position, bool(_native.get_service_lift_state()["retry_available"]))
 	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
 		position.y, checkpoint.y, int(_ctx["deaths"])])
 	get_tree().paused = true
@@ -850,6 +853,13 @@ func _restart_at(position: Vector3) -> void:
 
 func _restart_checkpoint() -> void:
 	if bool(_native.restart_checkpoint()):
+		_after_restart()
+
+
+func _restart_lift_attempt() -> void:
+	var accepted := bool(_native.restart_service_lift_attempt())
+	_pause_menu.set_restart_result(accepted, "" if accepted else "No saved lift attempt is available.")
+	if accepted:
 		_after_restart()
 
 
@@ -1021,10 +1031,13 @@ func _read_context() -> Dictionary:
 	var ledge := bool(_native.is_ledge_available())
 	var lethal := float(_native.get_lethal_impact_speed_mps())
 	var station := &""
+	var service_lift: Dictionary = _native.get_service_lift_state()
 	var water_lift_valve_station := bool(_native.is_water_lift_valve_station_active())
 	var water_lift_release_station := bool(_native.is_water_lift_release_station_active())
 	var water_lift_reset_station := bool(_native.is_water_lift_reset_station_active())
-	if water_lift_valve_station or water_lift_release_station or water_lift_reset_station:
+	if int(service_lift["station"]) != 0 or (_operating == &"service_lift" and int(service_lift["reachable_station"]) != 0):
+		station = &"service_lift"
+	elif water_lift_valve_station or water_lift_release_station or water_lift_reset_station:
 		station = &"water_lift"
 	elif bool(_native.is_water_screw_station_active()):
 		station = &"water_screw"
@@ -1042,7 +1055,12 @@ func _read_context() -> Dictionary:
 	var free := traversal == TRAVERSAL_NONE
 	var grip := bool(_native.is_grip_available())
 	var edge_drop := bool(_native.is_edge_drop_available())
-	if _operating != &"" and (_operating != station or not grounded or not free):
+	# Reach preserves the pendant through brief unweighting; only native
+	# supported footing authorizes drive effort on each physics tick.
+	var lift_reachable := _operating == &"service_lift" and int(service_lift["reachable_station"]) != 0 \
+		and free and int(_native.get_carrying_entity_id()) == 0
+	if _operating != &"" and (_operating != station or (not grounded and not lift_reachable) or not free \
+			or (_operating == &"service_lift" and not lift_reachable)):
 		_operating = &""
 	var climb_ok := grounded and free and ledge
 	# AS-003: what is on the carry point, and what a pick-up would take --
@@ -1103,6 +1121,8 @@ func _read_context() -> Dictionary:
 		var running := bool(_native.is_water_screw_motor_enabled())
 		action = {"id": &"screw_toggle", "label": "STOP SCREW" if running else "START SCREW",
 			"icon": &"operate", "detail": "UPPER TANK %.2f / 2.00 M3" % float(_native.get_water_screw_tank_volume_m3())}
+	elif grounded and station == &"service_lift":
+		action = {"id": &"operate", "label": "OPERATE", "icon": &"operate", "detail": "SERVICE LIFT"}
 	elif climb_ok:
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
 			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
@@ -1213,6 +1233,20 @@ func _kit_anchor_name(entity: int) -> String:
 # Row tone: 0 plain, 1 safe/engaged, 2 hazard.
 func _station_panel() -> Dictionary:
 	match _operating:
+		&"service_lift":
+			var lift: Dictionary = _native.get_service_lift_state()
+			var cutoff := bool(lift["energy_cutoff"])
+			return {
+				"title": "SERVICE LIFT",
+				"subtitle": "HOLD UP / DOWN  /  RELEASE TO BRAKE",
+				"rows": [
+					["DECK", "%+.1f M" % float(lift["surface_y"]), 0],
+					["ENERGY", "%.0f / %.0f KJ" % [float(lift["energy_j"]) / 1000.0, float(lift["capacity_j"]) / 1000.0], 2 if cutoff else 0],
+					["BRAKE", "APPLIED" if bool(lift["braking"]) else "RELEASED", 0],
+					["POWER", "ENERGY CUTOFF" if cutoff else "%.1f KW" % (float(lift["power_w"]) / 1000.0), 2 if cutoff else 0],
+				],
+				"verbs": [[&"hoist", "RAISE / LOWER"], [&"leave", "DONE"]],
+			}
 		&"intake":
 			var throat_clear := bool(_native.is_intake_throat_clear())
 			var pins := bool(_native.does_intake_pack_pin_dog())

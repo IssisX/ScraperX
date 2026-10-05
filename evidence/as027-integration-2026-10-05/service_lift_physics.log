@@ -1,0 +1,5 @@
+AS027_CUTOFF supplied=1000 remaining=87.1267 drop=0.000526428 peak_w=20900.1 overdraft=0
+AS027_CUTOFF supplied=250000 remaining=532.706 drop=0 peak_w=189999 overdraft=0
+AS027_OBSTRUCTION y=122 force=-1.1e+06 peak_w=185431 energy=4.58879e+06 overdraft=0
+AS027_CYCLE mass=18970.2 effective_mass=12258.1 force=1.1e+06 brake=1.3e+06 rating=250000 capacity=4.75e+06 remaining=1.23658e+06 return_error=-0.016716
+PASS AS027 finite source, native cutoff, obstruction and exhausted checkpoint

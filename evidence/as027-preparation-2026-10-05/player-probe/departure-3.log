@@ -1,0 +1,3 @@
+START grounded=1 support=2973 player_y=121.893234
+DEPARTURE mode=3 initial_vy=0.475113 final_vy=-6.538495 mean_force_n=-47519.918
+PLAYER_PROBE mode=3 player=(-36.20554,135.46724,-162.00000) support=0 grounded=0 deck_y=136.763107 work_j=389737.947 peak_force_n=199999.984 max_gap_m=0.000087 unsupported_ticks=0

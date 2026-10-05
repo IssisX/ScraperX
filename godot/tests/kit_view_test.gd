@@ -261,13 +261,23 @@ func _run() -> void:
 			var expected_original: Array = []
 			var actual_cargo: Array = []
 			var actual_facade: Array = []
+			var added_lift: Array[String] = []
+			const LIFT_BODIES := ["KitBody1970", "KitBody1971", "KitBody1972", "KitBody2970", "KitBody2971", "KitBody2972", "KitBody2973", "KitBody2974", "KitBody2975", "KitBody2976", "KitBody2977", "KitBody2978"]
 			for body in record:
-				if body[0] in ["KitBody1952", "KitBody2952", "KitBody2954"]:
+				# Appended AS-027 bodies have no pre-extraction counterpart.
+				# Keep every prior body in its original oracle; native pose/visibility
+				# checks below also cover each new moving assembly.
+				if body[0] in LIFT_BODIES:
+					added_lift.append(body[0])
+					_check(not body[1].is_empty(), "lift assembly has drawable geometry " + body[0])
+				elif body[0] in ["KitBody1952", "KitBody2952", "KitBody2954"]:
 					actual_cargo.append(body)
 				elif body[0] in ["KitBody1600", "KitBody2560", "KitBody2561", "KitBody2562", "KitBody2563", "KitBody2564", "KitBody2565", "KitBody2566"]:
 					actual_facade.append(body)
 				else:
 					actual_original.append(body)
+			added_lift.sort()
+			_check(added_lift == LIFT_BODIES, "all twelve added lift assemblies render exactly once")
 			for body in expected:
 				if body[0] not in ["KitBody1952", "KitBody1600"]:
 					expected_original.append(body)

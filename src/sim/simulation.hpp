@@ -277,6 +277,16 @@ struct Snapshot final {
     // within seat tolerance and settled, it is pinned into both pockets and
     // becomes real, walkable structural support. Unseated, the gap has none.
     bool needle_station_active = false;
+    std::uint8_t service_lift_station = 0;
+    std::uint8_t service_lift_reachable_station = 0;
+    bool service_lift_retry_available = false;
+    double service_lift_surface_y = 0;
+    double service_lift_energy_j = 0;
+    double service_lift_capacity_j = 0;
+    double service_lift_force_n = 0;
+    double service_lift_power_w = 0;
+    bool service_lift_braking = true;
+    bool service_lift_energy_cutoff = false;
     bool needle_seated = false;
     Vector3 needle_position{};
     Vector3 needle_linear_velocity{};
@@ -571,6 +581,7 @@ public:
     // consequence or bypass the launcher's physical trajectory.
     [[nodiscard]] bool debug_restart_at(Vector3 capsule_centre) noexcept;
     [[nodiscard]] bool restart_checkpoint() noexcept;
+    [[nodiscard]] bool restart_service_lift_attempt() noexcept;
     [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation) noexcept;
     [[nodiscard]] bool request_slingshot_action() noexcept;
     [[nodiscard]] bool request_slingshot_drop() noexcept;
@@ -625,6 +636,7 @@ public:
     // zero brakes against gravity up to the rated force. Takes effect only
     // while the player is at the needle station.
     [[nodiscard]] bool set_needle_hoist_input(double value) noexcept;
+    [[nodiscard]] bool set_service_lift_input(double value) noexcept;
 
     // WO-013 KX-SUMP valve command. A one-shot toggle, like request_parachute
     // -- not a continuous axis, since isolation is a real binary state (open
@@ -741,6 +753,7 @@ private:
     double jib_slew_input_ = 0.0;
     double jib_hoist_input_ = 0.0;
     double needle_hoist_input_ = 0.0;
+    double service_lift_input_ = 0.0;
     double intake_slew_input_ = 0.0;
     double intake_hoist_input_ = 0.0;
     bool valve_toggle_requested_ = false;

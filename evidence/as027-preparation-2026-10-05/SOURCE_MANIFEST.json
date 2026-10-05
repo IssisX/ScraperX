@@ -1,0 +1,60 @@
+{
+  "provenance": "Reconstructed supplied source text; verified against parent-supplied original hashes. Not full ZIP verification.",
+  "files": [
+    {
+      "path": "include/machine.hpp",
+      "bytes": 3083,
+      "sha256": "78b6f6dc1e807375bfb32802803b9617c0b41a7967cf2d2a0a31be49742b8d05",
+      "matches_supplied": true
+    },
+    {
+      "path": "src/machine.cpp",
+      "bytes": 5968,
+      "sha256": "502211011d83bac94381918548374ef8ad1619e5b5b1c22e05a9e40dcf0020e8",
+      "matches_supplied": true
+    },
+    {
+      "path": "src/scissor_lift.cpp",
+      "bytes": 1610,
+      "sha256": "afb156fb3b108d9a81bb9d32a5146acdc900338223d4f8f206e17d323290ef4c",
+      "matches_supplied": true
+    },
+    {
+      "path": "src/wall_bridge.cpp",
+      "bytes": 931,
+      "sha256": "ba9ddf20697e112e23877ebeafe14a05763b441bfb91b2fc26948a6e51863a3f",
+      "matches_supplied": true
+    },
+    {
+      "path": "src/parallel_ferry.cpp",
+      "bytes": 1270,
+      "sha256": "b5c201cb10a81f7247081f57a2d8c62265698292398dadc01624e49f6b65bc21",
+      "matches_supplied": true
+    },
+    {
+      "path": "src/cam_walkway.cpp",
+      "bytes": 913,
+      "sha256": "ffedc710a39996ea8ac0c658a58e689d2fbfd7cabbb628ce430230fdab61329f",
+      "matches_supplied": true
+    },
+    {
+      "path": "src/yielding_catwalk.cpp",
+      "bytes": 700,
+      "sha256": "fff59d10a59cae7e4360f71ed91bb42aed923d0fec91df1cdcaa053b8044b79d",
+      "matches_supplied": true
+    },
+    {
+      "path": "vendor/JoltPhysics/LICENSE",
+      "bytes": 1052,
+      "sha256": "800abe35d64ad9defd636ff1ee8c961e06f0ebca3ef8d10083e8aa0e8ef86ac3",
+      "matches_supplied": true,
+      "provenance": "Identical pinned Jolt license bytes from current native dependency"
+    }
+  ],
+  "missing": [
+    "AGENT_IMPORT.md",
+    "integration/integration-notes.md",
+    "modules.json",
+    "README.md"
+  ]
+}

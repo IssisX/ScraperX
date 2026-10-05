@@ -1,0 +1,9 @@
+Test project /tmp/scraperx-build
+    Start 3: scraperx_sim.service_lift_physics
+1/2 Test #3: scraperx_sim.service_lift_physics ...   Passed    4.21 sec
+    Start 4: scraperx_sim.service_lift_route
+2/2 Test #4: scraperx_sim.service_lift_route .....   Passed   18.93 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  23.14 sec

@@ -1,0 +1,35 @@
+t=0.00 rise=-0.00137 foot=0.00019 vy=-0.12343 force=-9598.1 work=0.0
+t=2.00 rise=-0.02001 foot=0.00293 vy=0.00001 force=-110968.8 work=0.6
+t=4.00 rise=1.49668 foot=-0.21800 vy=1.41112 force=-153964.1 work=37519.1
+t=6.00 rise=3.97903 foot=-0.65926 vy=1.10984 force=-117122.0 work=95025.6
+t=8.00 rise=6.01229 foot=-1.09995 vy=0.93668 force=-99163.8 work=142381.7
+t=10.00 rise=7.75949 foot=-1.54044 vy=0.81775 force=-86733.5 work=183164.8
+t=12.00 rise=9.30182 foot=-1.98083 vy=0.72897 force=-77402.9 work=219207.5
+t=14.00 rise=10.68687 foot=-2.42118 vy=0.65899 force=-70022.4 work=251600.6
+t=16.00 rise=11.94547 foot=-2.86150 vy=0.60166 force=-63963.1 work=281051.0
+t=18.00 rise=13.09893 foot=-3.30177 vy=0.55335 force=-58848.9 work=308050.6
+t=20.00 rise=14.16280 foot=-3.74202 vy=0.51173 force=-54437.7 work=332959.9
+t=22.00 rise=15.14881 foot=-4.18222 vy=0.47524 force=-50566.2 work=356049.2
+t=24.00 rise=16.06601 foot=-4.62242 vy=0.44278 force=-47120.3 work=377531.9
+t=20.00 rise=14.16171 foot=-3.74178 vy=0.41322 force=-12772.7 work=332854.8
+t=22.00 rise=15.14393 foot=-4.18025 vy=0.47543 force=-50583.7 work=355951.5
+t=24.00 rise=16.06148 foot=-4.62038 vy=0.44295 force=-47136.2 work=377438.1
+REPLAY position_error_m=0.00438118 velocity_error_mps=0.00016117
+t=26.00 rise=16.91741 foot=-5.06048 vy=0.41371 force=-44031.0 work=397484.4
+t=28.00 rise=17.71760 foot=-5.50058 vy=0.38712 force=-41205.8 work=416227.9
+t=30.00 rise=18.46689 foot=-5.94067 vy=0.36272 force=-38612.9 work=433780.7
+t=32.00 rise=19.16929 foot=-6.38075 vy=0.34017 force=-36215.1 work=450236.4
+t=34.00 rise=19.82821 foot=-6.82085 vy=0.31918 force=-33982.8 work=465675.1
+t=36.00 rise=20.44656 foot=-7.26095 vy=0.29953 force=-31892.3 work=480163.5
+t=38.00 rise=21.02677 foot=-7.70103 vy=0.28103 force=-29924.2 work=493759.2
+t=40.00 rise=21.57100 foot=-8.14112 vy=0.26353 force=-28062.4 work=506512.8
+t=42.00 rise=22.08114 foot=-8.58120 vy=0.24691 force=-26293.4 work=518467.9
+t=44.00 rise=22.55884 foot=-9.02128 vy=0.23105 force=-24605.8 work=529662.9
+t=46.00 rise=23.00301 foot=-9.45880 vy=0.19316 force=-22661.9 work=540057.7
+t=48.00 rise=23.21983 foot=-9.68375 vy=0.05480 force=-22100.3 work=545087.8
+t=50.00 rise=23.28290 foot=-9.75065 vy=0.00959 force=-19687.6 work=546560.0
+t=52.00 rise=23.28279 foot=-9.75063 vy=0.00000 force=-21967.2 work=546560.0
+t=54.00 rise=23.28279 foot=-9.75063 vy=0.00000 force=-21967.2 work=546560.0
+t=56.00 rise=23.28279 foot=-9.75063 vy=0.00000 force=-21967.2 work=546560.0
+RESULT hz=90 rider=0.0 cap=200000 mode=0 rise=23.282789 theory=23.309595 work_j=546560.045 peak_force_n=199999.984 peak_joint_m=0.002089 peak_speed=1.42084 off_drop_m=0.000000 rider_gap=0.000000 max_rider_offset=0.000000 errors=0
+LEDGER settled_travel_m=23.302801 delta_pe_j=546371.219 positive_work_j=546560.045 peak_power_w=34147.163 positive_work_minus_pe_fraction=0.000345 eccentric_m=0.00

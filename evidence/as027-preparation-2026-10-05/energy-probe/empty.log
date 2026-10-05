@@ -1,0 +1,42 @@
+CONTACT 2973 2979
+t=0.00 rise=-0.00137 foot=0.00019 vy=-0.12343 force=-9598.1 work=0.0
+t=2.00 rise=-0.02001 foot=0.00293 vy=0.00000 force=-110524.0 work=0.0
+t=4.00 rise=-0.02001 foot=0.00293 vy=-0.00000 force=-110524.0 work=0.0
+t=6.00 rise=-0.02001 foot=0.00293 vy=0.00000 force=-110524.0 work=0.0
+t=8.00 rise=-0.02001 foot=0.00293 vy=-0.00000 force=-110524.0 work=0.0
+t=10.00 rise=-0.02001 foot=0.00293 vy=0.00000 force=-110524.0 work=0.0
+t=12.00 rise=-0.02001 foot=0.00293 vy=0.00000 force=-110524.0 work=0.0
+t=14.00 rise=-0.02001 foot=0.00293 vy=-0.00000 force=-110524.0 work=0.0
+t=16.00 rise=-0.02001 foot=0.00293 vy=-0.00000 force=-110524.0 work=0.0
+t=18.00 rise=-0.02001 foot=0.00293 vy=-0.00000 force=-110524.0 work=0.0
+t=20.00 rise=-0.02001 foot=0.00293 vy=-0.00000 force=-110524.0 work=0.0
+t=22.00 rise=-0.02001 foot=0.00293 vy=0.00000 force=-110524.0 work=0.0
+t=24.00 rise=-0.02001 foot=0.00293 vy=0.00000 force=-110524.0 work=0.0
+t=20.00 rise=-0.02002 foot=0.00306 vy=-0.00137 force=-8801.4 work=0.0
+t=22.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=24.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+REPLAY position_error_m=0.00000000 velocity_error_mps=0.00000001
+t=26.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=28.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=30.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=32.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=34.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=36.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=38.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=40.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=42.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=44.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=46.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=48.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=50.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=52.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=54.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=56.00 rise=-0.02001 foot=0.00304 vy=-0.00000 force=-15306.9 work=0.0
+t=58.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=60.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=62.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+t=64.00 rise=-0.02001 foot=0.00304 vy=-0.00000 force=-15306.9 work=0.0
+t=66.00 rise=-0.02001 foot=0.00304 vy=0.00000 force=-15306.9 work=0.0
+RESULT hz=90 rider=85.0 cap=200000 mode=0 rise=-0.020012 theory=23.309595 work_j=0.000 peak_force_n=0.000 peak_joint_m=0.002089 peak_speed=0.59156 off_drop_m=0.000000 rider_gap=-0.005451 max_rider_offset=0.000132 errors=0
+ENERGY remaining_j=0.000000 capacity_j=0.000 peak_electrical_w=0.000 overdraft_j=0.000000 cutoff=0 max_rise_m=0.000000 cutoff_drop_m=0.000000
+LEDGER settled_travel_m=0.000000 delta_pe_j=-4.093 positive_work_j=0.000 peak_power_w=0.000 positive_work_minus_pe_fraction=4.093472 eccentric_m=0.00

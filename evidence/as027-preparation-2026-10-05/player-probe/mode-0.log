@@ -1,0 +1,2 @@
+START grounded=1 support=11 player_y=121.900002
+PLAYER_PROBE mode=0 player=(-22.00000,121.90000,-162.00000) support=11 grounded=1 deck_y=135.846115 work_j=355226.899 peak_force_n=194860.328 max_gap_m=0.000000 unsupported_ticks=0

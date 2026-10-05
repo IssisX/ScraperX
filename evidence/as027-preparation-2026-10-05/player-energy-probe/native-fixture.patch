@@ -1,0 +1,88 @@
+--- a/src/sim/simulation.cpp
++++ b/scratch/simulation.cpp
+@@ -1,3 +1,4 @@
++#include "lift_fixture.hpp"
+ #include "sim/simulation.hpp"
+ 
+ #include "sim/bands.hpp"
+@@ -1267,7 +1268,7 @@
+ };
+ 
+ [[nodiscard]] bool entity_is_causal_section_support(std::uint64_t entity) noexcept {
+-    return entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
++    return entity==2973 || entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
+         scraperx::sim::is_facade_route_entity(entity);
+ }
+ 
+@@ -1996,6 +1997,7 @@
+                 const auto frame=build_cargo_net_route(*kit_);
+                 cargo_net_ = std::make_unique<CargoNet>(physics_system_, object_layers::kMoving,kit_->body_id(frame));
+                 build_suspended_ladder(*kit_);
++                fixture_lift_ = std::make_unique<scraperx::sim::insertable::LiftFixture>(*kit_,physics_system_);
+             }
+         }
+ 
+@@ -2038,6 +2040,7 @@
+         swing_stair_.reset();
+         pipe_bridge_.reset();
+         slingshot_.reset();
++        fixture_lift_.reset();
+         kit_.reset();
+         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
+             if (constraint != nullptr) {
+@@ -2107,6 +2110,7 @@
+         if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
+         physical_hands_->pre_step(context.mDeltaTime, true);
+         slingshot_->collision_step(context);
++        if(fixture_lift_)fixture_lift_->collision_step(context);
+     }
+ 
+     void step(const StepCommands &commands,
+@@ -2229,6 +2233,7 @@
+         if (pipe_bridge_) pipe_bridge_->pre_step(delta_seconds);
+         if (swing_stair_) swing_stair_->pre_step(delta_seconds);
+         if (upper_ascent_) upper_ascent_->pre_step(delta_seconds);
++        if(fixture_lift_)fixture_lift_->pre(delta_seconds);
+         contact_listener_.begin_tick();
+         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
+         physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
+@@ -2239,6 +2244,7 @@
+                                       JPH::Vec3(support_point_now - landing_force_support_start_);
+             landing_recovery_work_j_ += std::max(0.0F, landing_applied_force_.Dot(displacement));
+         }
++        if(fixture_lift_)fixture_lift_->post(delta_seconds);
+         kit_->post_step(delta_seconds);
+         if (slingshot_) slingshot_->post_step(delta_seconds);
+         if (cargo_net_) cargo_net_->refresh();
+@@ -6995,6 +7001,7 @@
+             if (swing_stair_) checkpoint_.swing_stair = swing_stair_->state();
+             if (upper_ascent_) checkpoint_.upper_ascent = upper_ascent_->state();
+             if (cargo_net_) checkpoint_.cargo_net = cargo_net_->capture();
++            if(fixture_lift_)checkpoint_.fixture_lift=fixture_lift_->capture();
+             return;
+         }
+         checkpoint_.ballast = capture_body(bodies, ballast_id_);
+@@ -7091,6 +7098,7 @@
+         if (swing_stair_) swing_stair_->restore(checkpoint_.swing_stair);
+         if (upper_ascent_) upper_ascent_->restore(checkpoint_.upper_ascent);
+         if (cargo_net_) cargo_net_->restore(checkpoint_.cargo_net);
++        if(fixture_lift_)fixture_lift_->restore(checkpoint_.fixture_lift);
+         restore_carry_topology(checkpoint_.carrying_entity);
+         // The body comes back at rest, so what it holds does too. Restored
+         // with the walking speed it was committed at, the load swung out of
+@@ -7507,6 +7515,7 @@
+     std::uint32_t grip_over_steps_ = 0;
+     // AS-006: the mechanism kit and the bands built from it.
+     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
++    std::unique_ptr<scraperx::sim::insertable::LiftFixture> fixture_lift_;
+     std::unique_ptr<PipeBridge> pipe_bridge_;
+     std::unique_ptr<Slingshot> slingshot_;
+     bool slingshot_flight_ = false;
+@@ -7678,6 +7687,7 @@
+         SwingStair::State swing_stair{};
+         UpperAscent::State upper_ascent{};
+         std::string cargo_net;
++        scraperx::sim::insertable::LiftFixture::State fixture_lift{};
+     };
+     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
+     bool checkpoint_crouched_ = false;

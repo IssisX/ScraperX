@@ -1,0 +1,3 @@
+AS027_LOAD unloaded_force=648242 loaded_force=652769 unloaded_draw=534929 loaded_draw=538678
+AS027_DEPART support_vy=-0.23786 takeoff_vy=5.12972 brake_drop=0
+PASS AS027 native approach/boarding/weight/release/checkpoint/ride/exit/limits/reverse/departure; initial fixture staging only

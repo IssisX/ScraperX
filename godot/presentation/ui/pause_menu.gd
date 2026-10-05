@@ -10,6 +10,7 @@ signal resume_requested
 signal quit_requested
 signal settings_changed
 signal checkpoint_restart_requested
+signal lift_attempt_restart_requested
 signal restart_requested(position: Vector3)
 
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
@@ -53,6 +54,8 @@ var _stack_rows := false
 var _save_timer: Timer
 var _restart_status: Label
 var _restart_current_position := Vector3.ZERO
+var _lift_retry_available := false
+var _lift_retry_button: Button
 
 
 func _ready() -> void:
@@ -103,8 +106,11 @@ func close() -> void:
 		focused.release_focus()
 
 
-func set_restart_context(position: Vector3) -> void:
+func set_restart_context(position: Vector3, lift_retry_available: bool = false) -> void:
 	_restart_current_position = position
+	_lift_retry_available = lift_retry_available
+	if is_instance_valid(_lift_retry_button):
+		_lift_retry_button.disabled = not _lift_retry_available
 
 
 func set_restart_result(success: bool, message: String = "") -> void:
@@ -635,6 +641,12 @@ func _build_restart_page() -> void:
 	_begin_page(PAGE_RESTART)
 	var checkpoint := _action_row("LAST SAFE CHECKPOINT", "RESTART AT CHECKPOINT",
 		func() -> void: checkpoint_restart_requested.emit())
+	_lift_retry_button = _action_row("SAVED LIFT ATTEMPT", "RESTART LIFT ATTEMPT",
+		func() -> void: lift_attempt_restart_requested.emit())
+	_lift_retry_button.disabled = not _lift_retry_available
+	var lift_note := _label("Return to the checkpoint saved before you first operated the lift. This also restores the machines and remaining energy at that checkpoint. Available after your first lift command.", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	lift_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_building.add_child(lift_note)
 	_ring_choice_row()
 	_action_row("RING DESTINATION", "RESTART ON RING", func() -> void:
 		restart_requested.emit(settings.ring_position()))

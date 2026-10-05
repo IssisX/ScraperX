@@ -88,7 +88,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_physical_hand_climb_tests scraperx_physical_traversal_tests scraperx_leather_pouch_tests scraperx_suspended_ladder_tests scraperx_cargo_net_tests scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_service_lift_physics_tests scraperx_service_lift_route_tests scraperx_physical_hand_climb_tests scraperx_physical_traversal_tests scraperx_leather_pouch_tests scraperx_suspended_ladder_tests scraperx_cargo_net_tests scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
           if ! ctest --test-dir build/host --output-on-failure --test-output-size-passed 2147483647 \
               --output-junit "${GITHUB_WORKSPACE}/artifacts/native-tests.xml" | tee artifacts/native-tests.log; then
             # The public run page exposes annotations even when its raw logs
@@ -357,20 +357,21 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/slingshot-audio.log; then exit 1; fi
           rm -f "${RUNNER_TEMP}/slingshot-audio.avi"
 
-      - name: Prove uninterrupted normal cargo-net ascent to 121 metres
+      - name: Prove uninterrupted cargo-net and service-lift ascent to 143 metres
         shell: bash
         run: |
           set -euo pipefail
           timeout 600s tools/godot/godot --headless --fixed-fps 60 --path godot \
-            -- --uitest=touch_campaign_to_121 2>&1 | tee artifacts/touch-campaign-to-121.log
-          grep -F "SCRAPERX_UITEST PASS touch_campaign_to_121 staging=ordinary_grade_spawn" artifacts/touch-campaign-to-121.log
+            -- --uitest=touch_campaign_to_143 2>&1 | tee artifacts/touch-campaign-to-121.log
+          grep -F "SCRAPERX_CAMPAIGN supported_height_m=121 support=11 deaths=0 staging=ordinary_grade_spawn" artifacts/touch-campaign-to-121.log
+          grep -F "SCRAPERX_UITEST PASS touch_campaign_to_143 staging=ordinary_grade_spawn" artifacts/touch-campaign-to-121.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-campaign-to-121.log; then exit 1; fi
 
       - name: Prove default inventory and rejected fallback absence
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=27 kit_bodies=38 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=36 kit_bodies=50 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=385" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log

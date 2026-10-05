@@ -1,0 +1,430 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=442 driver=Dummy
+SCRAPERX_UITEST_POSE cargo_net_entry tick=1597 position=(19.98975, 0.9, -113.9313) elapsed_ms=5295
+SCRAPERX_UITEST_POSE cargo_net_climbing tick=2596 position=(19.97968, 5.614784, -117.1742) elapsed_ms=7926
+SCRAPERX_UITEST_POSE cargo_net_receiver tick=3487 position=(19.97934, 11.8958, -118.4755) elapsed_ms=10274
+SCRAPERX_UITEST_POSE cargo_net_first_ring tick=4011 position=(18.49989, 11.9, -125.8896) elapsed_ms=11602
+SCRAPERX_CAMPAIGN cargo_net_exit at=(18.49989, 11.9, -125.8896) support=11
+SCRAPERX_UITEST_POSE facade_approach tick=4516 position=(19.97321, 11.87494, -121.2886) elapsed_ms=12904
+SCRAPERX_UITEST_POSE duct_hang tick=5011 position=(19.99894, 15.07035, -122.4108) elapsed_ms=14201
+SCRAPERX_UITEST_POSE vent_climb tick=5832 position=(24.03538, 17.98279, -122.998) elapsed_ms=16321
+SCRAPERX_UITEST_POSE ladder_leap tick=7276 position=(12.50017, 23.19674, -119.7075) elapsed_ms=20062
+SCRAPERX_UITEST_POSE facade_arrival tick=8938 position=(11.28976, 33.9, -125.2809) elapsed_ms=24373
+SCRAPERX_UITEST_POSE stair_handle_ready tick=9616 position=(-17.49951, 33.9, -121.3958) elapsed_ms=26211
+SCRAPERX_UITEST_POSE stair_released tick=9742 position=(-17.49951, 33.9, -122.0596) elapsed_ms=26544
+SCRAPERX_UITEST_POSE stair_climb tick=11140 position=(-10.11189, 38.59866, -122.1001) elapsed_ms=30328
+SCRAPERX_UITEST_POSE stair_exit_ready tick=12325 position=(-2.226857, 45.32489, -122.373) elapsed_ms=33574
+SCRAPERX_UITEST_POSE stair_arrival tick=12495 position=(-2.095353, 44.9, -125.8287) elapsed_ms=34033
+SCRAPERX_UITEST_POSE upper_handle_ready tick=13005 position=(4.011496, 44.9, -116.7864) elapsed_ms=35408
+SCRAPERX_UITEST_POSE upper_lift_rising tick=13663 position=(4.011496, 54.50282, -117.5196) elapsed_ms=37157
+SCRAPERX_UITEST_POSE upper_lift_seated tick=13935 position=(4.011483, 55.86002, -117.5196) elapsed_ms=37882
+SCRAPERX_UITEST_POSE deck_55m tick=14295 position=(4.06061, 55.89998, -125.4258) elapsed_ms=38859
+SCRAPERX_UITEST_POSE upper_duct_hang tick=14925 position=(1.445157, 59.15417, -122.5498) elapsed_ms=40533
+SCRAPERX_UITEST_POSE upper_vent_climb tick=15168 position=(5.351088, 61.77796, -123.0046) elapsed_ms=41226
+SCRAPERX_UITEST_POSE upper_arrival tick=15841 position=(5.424267, 66.9, -126.005) elapsed_ms=43007
+SCRAPERX_UITEST_POSE teeter_entry tick=16527 position=(25.18834, 66.9, -138.9921) elapsed_ms=44894
+SCRAPERX_UITEST_POSE teeter_ballast_near tick=16636 position=(27.77726, 66.76798, -139.4369) elapsed_ms=45187
+SCRAPERX_UITEST_POSE teeter_ballast_far tick=16848 position=(31.91655, 66.98936, -139.45) elapsed_ms=45753
+SCRAPERX_UITEST_POSE teeter_loaded tick=17254 position=(32.81894, 64.7173, -138.4068) elapsed_ms=46829
+SCRAPERX_UITEST_POSE teeter_shelf tick=17586 position=(35.38306, 64.45, -139.3595) elapsed_ms=47695
+SCRAPERX_UITEST_POSE teeter_climb tick=18214 position=(34.83587, 68.26325, -139.4343) elapsed_ms=49326
+SCRAPERX_UITEST_POSE teeter_arrival tick=19695 position=(25.14017, 77.9, -140.7994) elapsed_ms=53187
+SCRAPERX_UITEST_POSE braced_bay_preview tick=19906 position=(25.10034, 77.9, -131.0852) elapsed_ms=53851
+SCRAPERX_UITEST_POSE braced_bay_entry tick=20049 position=(27.97079, 77.9, -131.0008) elapsed_ms=54256
+SCRAPERX_UITEST_POSE braced_bay_transfer tick=20742 position=(28.89319, 82.9, -144.0648) elapsed_ms=56077
+SCRAPERX_UITEST_POSE braced_bay_low_member tick=21489 position=(33.99978, 84.88374, -138.711) elapsed_ms=57967
+SCRAPERX_UITEST_POSE braced_bay_upper_junction tick=21961 position=(33.99997, 87.9, -131.3792) elapsed_ms=59276
+SCRAPERX_UITEST_POSE braced_bay_arrival tick=22642 position=(24.91901, 88.9, -131.9996) elapsed_ms=61084
+SCRAPERX_UITEST_POSE north_frame_entry tick=23700 position=(16.00072, 88.9, -179.49) elapsed_ms=63735
+SCRAPERX_UITEST_POSE north_frame_first_rest tick=24337 position=(16.00072, 94.9, -180.4725) elapsed_ms=65384
+SCRAPERX_UITEST_POSE north_frame_99m tick=25168 position=(10.00001, 99.9, -174.5984) elapsed_ms=67608
+SCRAPERX_UITEST_POSE north_frame_upper_rest tick=25908 position=(15.99993, 104.4, -180.4725) elapsed_ms=69472
+SCRAPERX_UITEST_POSE north_frame_hang tick=26070 position=(14.38004, 105.4052, -180.5833) elapsed_ms=69910
+SCRAPERX_UITEST_POSE north_frame_shimmy tick=26263 position=(14.44009, 104.8658, -181.8531) elapsed_ms=70353
+SCRAPERX_UITEST_POSE north_frame_106m tick=26337 position=(13.56, 106.9, -181.8702) elapsed_ms=70520
+SCRAPERX_UITEST_POSE north_frame_upper_exit tick=26817 position=(15.49895, 109.3998, -177.6222) elapsed_ms=71765
+SCRAPERX_UITEST_POSE north_frame_110m tick=27079 position=(15.49997, 110.9, -174.5532) elapsed_ms=72460
+SCRAPERX_CAMPAIGN north_frame_exit at=(15.49997, 110.9, -174.5532) support=11
+SCRAPERX_UITEST_POSE swing_approach tick=27367 position=(10.00034, 110.9, -179.5715) elapsed_ms=73243
+SCRAPERX_UITEST_POSE swing_launch_view tick=27822 position=(9.160801, 114.8992, -180.1104) elapsed_ms=74428
+SCRAPERX_SWING_CATCH tick=27850 player=(9.160801, 114.8992, -180.1104) player_velocity=(0.0, 0.0, 0.0) grounded=true crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844046, 115.4594, -181.2) hand_distance=2.419724 faced_depth=1.089600
+SCRAPERX_SWING_CATCH tick=27852 player=(9.154041, 115.0187, -180.1128) player_velocity=(-0.377543, 5.282001, -0.13214) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844046, 115.4594, -181.2) hand_distance=2.410071 faced_depth=1.087219
+SCRAPERX_SWING_CATCH tick=27853 player=(9.148216, 115.0766, -180.1148) player_velocity=(-0.524366, 5.173002, -0.183528) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844046, 115.4594, -181.2) hand_distance=2.404834 faced_depth=1.085205
+SCRAPERX_SWING_CATCH tick=27855 player=(9.131668, 115.1889, -180.1206) player_velocity=(-0.818011, 4.955004, -0.286304) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844297, 115.8194, -181.2) hand_distance=2.392963 faced_depth=1.079407
+SCRAPERX_SWING_CATCH tick=27856 player=(9.120949, 115.2431, -180.1243) player_velocity=(-0.964833, 4.846004, -0.337692) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844297, 115.8194, -181.2) hand_distance=2.378160 faced_depth=1.075684
+SCRAPERX_SWING_CATCH tick=27858 player=(9.094612, 115.3481, -180.1335) player_velocity=(-1.258478, 4.628006, -0.440467) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844297, 115.8194, -181.2) hand_distance=2.347032 faced_depth=1.066467
+SCRAPERX_SWING_CATCH tick=27859 player=(9.078999, 115.3988, -180.139) player_velocity=(-1.4053, 4.519007, -0.491855) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844297, 115.8194, -181.2) hand_distance=2.330589 faced_depth=1.060974
+SCRAPERX_SWING_CATCH tick=27861 player=(9.042873, 115.4965, -180.1517) player_velocity=(-1.698945, 4.301008, -0.594631) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844297, 115.8194, -181.2) hand_distance=2.295698 faced_depth=1.048340
+SCRAPERX_SWING_CATCH tick=27862 player=(9.022366, 115.5435, -180.1589) player_velocity=(-1.845768, 4.192009, -0.646019) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844297, 115.8194, -181.2) hand_distance=2.277137 faced_depth=1.041138
+SCRAPERX_SWING_CATCH tick=27864 player=(8.976456, 115.6339, -180.1749) player_velocity=(-2.139412, 3.97401, -0.748794) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844548, 116.1794, -181.2) hand_distance=2.223710 faced_depth=1.025085
+SCRAPERX_SWING_CATCH tick=27865 player=(8.951054, 115.6773, -180.1838) player_velocity=(-2.286235, 3.86501, -0.800182) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844548, 116.1794, -181.2) hand_distance=2.195395 faced_depth=1.016174
+SCRAPERX_SWING_CATCH tick=27867 player=(8.895355, 115.7605, -180.2033) player_velocity=(-2.57988, 3.64701, -0.902958) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844548, 116.1794, -181.2) hand_distance=2.136080 faced_depth=0.996704
+SCRAPERX_SWING_CATCH tick=27868 player=(8.865059, 115.8003, -180.2139) player_velocity=(-2.726702, 3.538009, -0.954346) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844548, 116.1794, -181.2) hand_distance=2.104990 faced_depth=0.986084
+SCRAPERX_SWING_CATCH tick=27870 player=(8.799572, 115.8762, -180.2368) player_velocity=(-3.020347, 3.320009, -1.057122) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.844548, 116.1794, -181.2) hand_distance=2.039815 faced_depth=0.963196
+SCRAPERX_SWING_CATCH tick=27871 player=(8.764381, 115.9123, -180.2491) player_velocity=(-3.16717, 3.211009, -1.108509) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.8448, 116.5394, -181.2) hand_distance=2.004902 faced_depth=0.950867
+SCRAPERX_SWING_CATCH tick=27873 player=(8.689106, 115.9809, -180.2755) player_velocity=(-3.460814, 2.993008, -1.211285) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.8448, 116.5394, -181.2) hand_distance=1.920507 faced_depth=0.924500
+SCRAPERX_SWING_CATCH tick=27874 player=(8.649021, 116.0134, -180.2895) player_velocity=(-3.607637, 2.884008, -1.262673) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.8448, 116.5394, -181.2) hand_distance=1.876585 faced_depth=0.910461
+SCRAPERX_SWING_CATCH tick=27876 player=(8.563957, 116.0748, -180.3193) player_velocity=(-3.901282, 2.666008, -1.365449) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.8448, 116.5394, -181.2) hand_distance=1.785154 faced_depth=0.880676
+SCRAPERX_SWING_CATCH tick=27877 player=(8.518978, 116.1037, -180.3351) player_velocity=(-4.048104, 2.557008, -1.416837) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.8448, 116.5394, -181.2) hand_distance=1.737596 faced_depth=0.864929
+SCRAPERX_SWING_CATCH tick=27879 player=(8.424126, 116.1578, -180.3683) player_velocity=(-4.341749, 2.339007, -1.519613) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.8448, 116.5394, -181.2) hand_distance=1.638698 faced_depth=0.831726
+SCRAPERX_SWING_CATCH tick=27880 player=(8.374252, 116.183, -180.3857) player_velocity=(-4.488572, 2.230007, -1.571) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.8448, 116.5394, -181.2) hand_distance=1.587326 faced_depth=0.814270
+SCRAPERX_SWING_CATCH tick=27882 player=(8.269611, 116.2298, -180.4223) player_velocity=(-4.782217, 2.012007, -1.673776) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.8448, 116.5394, -181.2) hand_distance=1.480682 faced_depth=0.777649
+SCRAPERX_SWING_CATCH tick=27883 player=(8.214844, 116.2514, -180.4415) player_velocity=(-4.929039, 1.903006, -1.725164) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.8448, 116.5394, -181.2) hand_distance=1.425404 faced_depth=0.758484
+SCRAPERX_SWING_CATCH tick=27885 player=(8.100761, 116.291, -180.4814) player_velocity=(-5.191221, 1.685006, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=1.305147 faced_depth=0.718567
+SCRAPERX_SWING_CATCH tick=27886 player=(8.043079, 116.3089, -180.5016) player_velocity=(-5.191221, 1.576006, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=1.242592 faced_depth=0.698364
+SCRAPERX_SWING_CATCH tick=27888 player=(7.927718, 116.3412, -180.542) player_velocity=(-5.191221, 1.358005, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=1.118223 faced_depth=0.657959
+SCRAPERX_SWING_CATCH tick=27889 player=(7.870038, 116.3556, -180.5622) player_velocity=(-5.191221, 1.249005, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=1.056380 faced_depth=0.637756
+SCRAPERX_SWING_CATCH tick=27891 player=(7.754678, 116.3806, -180.6026) player_velocity=(-5.191221, 1.031005, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=0.933332 faced_depth=0.597351
+SCRAPERX_SWING_CATCH tick=27892 player=(7.696998, 116.3913, -180.6228) player_velocity=(-5.191221, 0.922005, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=0.872110 faced_depth=0.577148
+SCRAPERX_SWING_CATCH tick=27894 player=(7.581637, 116.4091, -180.6633) player_velocity=(-5.191221, 0.704005, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=0.750260 faced_depth=0.536743
+SCRAPERX_SWING_CATCH tick=27895 player=(7.523957, 116.4161, -180.6835) player_velocity=(-5.191221, 0.595005, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=0.689642 faced_depth=0.516541
+SCRAPERX_SWING_CATCH tick=27897 player=(7.408597, 116.4266, -180.7239) player_velocity=(-5.191221, 0.377005, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=0.569124 faced_depth=0.476135
+SCRAPERX_SWING_CATCH tick=27898 player=(7.350917, 116.4301, -180.7441) player_velocity=(-5.191221, 0.268005, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=0.509318 faced_depth=0.455933
+SCRAPERX_SWING_CATCH tick=27900 player=(7.235557, 116.4333, -180.7845) player_velocity=(-5.191221, 0.050005, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=0.391148 faced_depth=0.415527
+SCRAPERX_SWING_CATCH tick=27901 player=(7.177876, 116.4331, -180.8047) player_velocity=(-5.191221, -0.058995, -1.816928) grounded=false crouched=false traversal=0 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.000698 origin=(6.000004, 124.0, -181.2) body_velocity=(-0.0, 0.0, 0.0) observed_rung_midpoint_velocity=(0.0, 0.0, 0.0) observed_angular_z=0.000000 nearest_rung=(6.845051, 116.8994, -181.2) hand_distance=0.333260 faced_depth=0.395325
+SCRAPERX_SWING_CATCH tick=27903 player=(7.092893, 116.4291, -180.7941) player_velocity=(-3.332539, -0.269139, 1.11943) grounded=false crouched=false traversal=4 view_yaw_rad=-0.000000 grip=false grip_point=(0.0, 0.0, 0.0) angle_z=-0.002003 origin=(6.0, 124.0, -181.2) body_velocity=(-0.374312, 0.000666, 0.0) observed_rung_midpoint_velocity=(-0.459623, 0.000343, 0.0) observed_angular_z=-0.058746 nearest_rung=(6.835776, 116.8983, -181.2) hand_distance=0.257905 faced_depth=0.405930
+SCRAPERX_UITEST_POSE swing_caught tick=27949 position=(6.530326, 116.312, -180.8175) elapsed_ms=74713
+SCRAPERX_SWING_RELEASE_START player=(6.481906, 119.8107, -180.77) normal=(0.0, 0.0, -1.0) loaded_span=0.151717
+SCRAPERX_SWING_RELEASE_PHASE tick=28471 player=(6.481906, 119.8107, -180.77) velocity=(0.328803, -0.03131, 0.0) angle=-0.094740 normal=(0.0, 0.0, -1.0) support=2960
+SCRAPERX_UITEST_POSE swing_release_height tick=28471 position=(6.481906, 119.8107, -180.77) elapsed_ms=75918
+SCRAPERX_UITEST_POSE swing_landing tick=28641 position=(10.31293, 119.9, -178.6885) elapsed_ms=76306
+SCRAPERX_UITEST_POSE swing_tower_exit tick=28909 position=(9.002252, 121.9, -174.5659) elapsed_ms=76995
+SCRAPERX_CAMPAIGN supported_height_m=121 support=11 deaths=0 staging=ordinary_grade_spawn
+AS027_TRACE tick=30547 operating=service_lift axes=(0.0, 0.0) grounded=true player=(-30.79172, 124.4793, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 123.579327392578, "energy_j": 4355119.59666049, "capacity_j": 4750000.0, "force_n": -686820.6875, "power_w": 0.0, "braking": true, "energy_cutoff": false }
+AS027_TRACE tick=30997 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.79172, 128.1099, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 127.209942626953, "energy_j": 3804244.59103711, "capacity_j": 4750000.0, "force_n": -501195.65625, "power_w": 113817.43339677, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=31447 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.79172, 131.4185, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 130.518643188477, "energy_j": 3307021.86752936, "capacity_j": 4750000.0, "force_n": -390927.0, "power_w": 88831.3264378212, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=31897 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.79172, 134.0768, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 133.176907348633, "energy_j": 2906841.25523303, "capacity_j": 4750000.0, "force_n": -322692.125, "power_w": 73369.7805818968, "braking": false, "energy_cutoff": false }
+AS027_POSE b=2973 p=-31.000000,133.007996,-162.000000 q=-0.000000,0.707107,-0.000000,0.707107 n=-0.987281,-0.000000,0.158983
+AS027_CONTACT a=1971 b=2973 depth=0.268020 p=-28.990000,133.038010,-152.305252 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.048849,133.008377,-161.985855 q=0.000747,0.700943,-0.000702,0.713216 n=0.000002,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.033483 p=-28.867073,132.733124,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.048849,133.008377,-161.985855 q=0.000747,0.700943,-0.000702,0.713216 n=-0.999962,-0.000000,-0.008679
+AS027_CONTACT a=1971 b=2973 depth=0.123540 p=-33.290001,133.041931,-152.340012 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.073763,133.010544,-162.009949 q=0.000744,0.698822,-0.000678,0.715295 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022187 p=-28.949499,132.735123,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.073763,133.010544,-162.009949 q=0.000744,0.698822,-0.000678,0.715295 n=-0.999932,0.000000,-0.011650
+AS027_CONTACT a=1971 b=2973 depth=0.041101 p=-28.990000,133.035126,-152.317825 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074013,133.012558,-162.010040 q=0.000596,0.698809,-0.000547,0.715308 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022169 p=-28.950008,132.738281,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074013,133.012558,-162.010040 q=0.000596,0.698809,-0.000547,0.715308 n=-0.999932,0.000000,-0.011669
+AS027_CONTACT a=1971 b=2973 depth=0.040474 p=-28.990000,133.038284,-152.317841 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074141,133.014450,-162.010040 q=0.000544,0.698811,-0.000491,0.715306 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022157 p=-28.950047,132.740463,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074141,133.014450,-162.010040 q=0.000544,0.698811,-0.000491,0.715306 n=-0.999932,0.000000,-0.011667
+AS027_CONTACT a=1971 b=2973 depth=0.040388 p=-28.990000,133.040466,-152.317856 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074202,133.016235,-162.010071 q=0.000503,0.698813,-0.000444,0.715304 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022125 p=-28.949997,132.742432,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074202,133.016235,-162.010071 q=0.000503,0.698813,-0.000444,0.715304 n=-0.999932,0.000000,-0.011663
+AS027_CONTACT a=1971 b=2973 depth=0.040401 p=-28.990000,133.042435,-152.317886 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074295,133.017944,-162.010056 q=0.000490,0.698816,-0.000427,0.715301 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022123 p=-28.950014,132.744186,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074295,133.017944,-162.010056 q=0.000490,0.698816,-0.000427,0.715301 n=-0.999932,0.000000,-0.011659
+AS027_CONTACT a=1971 b=2973 depth=0.040371 p=-28.990000,133.044174,-152.317886 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074396,133.019531,-162.010056 q=0.000481,0.698819,-0.000415,0.715298 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022103 p=-28.950026,132.745789,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074396,133.019531,-162.010056 q=0.000481,0.698819,-0.000415,0.715298 n=-0.999932,0.000000,-0.011655
+AS027_CONTACT a=1971 b=2973 depth=0.040352 p=-28.990000,133.045792,-152.317902 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074476,133.021118,-162.010040 q=0.000476,0.698822,-0.000407,0.715296 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022102 p=-28.950029,132.747375,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074476,133.021118,-162.010040 q=0.000476,0.698822,-0.000407,0.715296 n=-0.999932,0.000000,-0.011652
+AS027_CONTACT a=1971 b=2973 depth=0.040342 p=-28.990000,133.047379,-152.317902 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074551,133.022690,-162.010025 q=0.000472,0.698824,-0.000401,0.715293 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022102 p=-28.950033,132.748962,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074551,133.022690,-162.010025 q=0.000472,0.698824,-0.000401,0.715293 n=-0.999932,0.000000,-0.011648
+AS027_CONTACT a=1971 b=2973 depth=0.040333 p=-28.990000,133.048950,-152.317902 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074610,133.024170,-162.010010 q=0.000469,0.698826,-0.000397,0.715292 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022105 p=-28.950039,132.750443,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074610,133.024170,-162.010010 q=0.000469,0.698826,-0.000397,0.715292 n=-0.999932,0.000000,-0.011646
+AS027_CONTACT a=1971 b=2973 depth=0.040325 p=-28.990000,133.050446,-152.317902 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074657,133.025635,-162.010010 q=0.000467,0.698828,-0.000393,0.715290 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022094 p=-28.950041,132.751907,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074657,133.025635,-162.010010 q=0.000467,0.698828,-0.000393,0.715290 n=-0.999932,0.000000,-0.011643
+AS027_CONTACT a=1971 b=2973 depth=0.040321 p=-28.990000,133.051910,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074696,133.027084,-162.009995 q=0.000465,0.698829,-0.000391,0.715289 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022102 p=-28.950043,132.753357,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074696,133.027084,-162.009995 q=0.000465,0.698829,-0.000391,0.715289 n=-0.999932,0.000000,-0.011642
+AS027_CONTACT a=1971 b=2973 depth=0.040317 p=-28.990000,133.053360,-152.317902 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074726,133.028534,-162.009995 q=0.000465,0.698830,-0.000390,0.715288 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022096 p=-28.950045,132.754807,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074726,133.028534,-162.009995 q=0.000465,0.698830,-0.000390,0.715288 n=-0.999932,0.000000,-0.011640
+AS027_CONTACT a=1971 b=2973 depth=0.040315 p=-28.990000,133.054810,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074760,133.029984,-162.009995 q=0.000465,0.698831,-0.000389,0.715287 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022089 p=-28.950052,132.756256,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074760,133.029984,-162.009995 q=0.000465,0.698831,-0.000389,0.715287 n=-0.999932,0.000000,-0.011639
+AS027_CONTACT a=1971 b=2973 depth=0.040306 p=-28.990000,133.056244,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074780,133.031433,-162.009995 q=0.000465,0.698831,-0.000389,0.715286 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950056,132.757690,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074780,133.031433,-162.009995 q=0.000465,0.698831,-0.000389,0.715286 n=-0.999932,0.000000,-0.011638
+AS027_CONTACT a=1971 b=2973 depth=0.040303 p=-28.990000,133.057693,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074797,133.032898,-162.009995 q=0.000466,0.698832,-0.000389,0.715285 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022080 p=-28.950054,132.759140,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074797,133.032898,-162.009995 q=0.000466,0.698832,-0.000389,0.715285 n=-0.999932,0.000000,-0.011637
+AS027_CONTACT a=1971 b=2973 depth=0.040305 p=-28.990000,133.059143,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074814,133.034348,-162.009995 q=0.000466,0.698833,-0.000389,0.715285 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022076 p=-28.950054,132.760574,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074814,133.034348,-162.009995 q=0.000466,0.698833,-0.000389,0.715285 n=-0.999932,0.000000,-0.011636
+AS027_CONTACT a=1971 b=2973 depth=0.040306 p=-28.990000,133.060577,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074823,133.035797,-162.009995 q=0.000467,0.698833,-0.000389,0.715285 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022075 p=-28.950058,132.762024,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074823,133.035797,-162.009995 q=0.000467,0.698833,-0.000389,0.715285 n=-0.999932,0.000000,-0.011636
+AS027_CONTACT a=1971 b=2973 depth=0.040303 p=-28.990000,133.062012,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074841,133.037247,-162.009979 q=0.000468,0.698834,-0.000389,0.715284 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950062,132.763458,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074841,133.037247,-162.009979 q=0.000468,0.698834,-0.000389,0.715284 n=-0.999932,0.000000,-0.011635
+AS027_CONTACT a=1971 b=2973 depth=0.040300 p=-28.990000,133.063461,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074844,133.038620,-162.009979 q=0.000468,0.698834,-0.000389,0.715284 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950066,132.764832,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074844,133.038620,-162.009979 q=0.000468,0.698834,-0.000389,0.715284 n=-0.999932,0.000000,-0.011635
+AS027_CONTACT a=1971 b=2973 depth=0.040296 p=-28.990000,133.064819,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074854,133.039963,-162.009979 q=0.000469,0.698834,-0.000390,0.715284 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022083 p=-28.950066,132.766159,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074854,133.039963,-162.009979 q=0.000469,0.698834,-0.000390,0.715284 n=-0.999932,0.000000,-0.011634
+AS027_CONTACT a=1971 b=2973 depth=0.040296 p=-28.990000,133.066162,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074867,133.041290,-162.009979 q=0.000469,0.698835,-0.000390,0.715283 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022080 p=-28.950062,132.767487,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074867,133.041290,-162.009979 q=0.000469,0.698835,-0.000390,0.715283 n=-0.999932,0.000000,-0.011634
+AS027_CONTACT a=1971 b=2973 depth=0.040300 p=-28.990000,133.067490,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074871,133.042618,-162.009979 q=0.000470,0.698834,-0.000391,0.715283 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022080 p=-28.950068,132.768814,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074871,133.042618,-162.009979 q=0.000470,0.698834,-0.000391,0.715283 n=-0.999932,0.000000,-0.011634
+AS027_CONTACT a=1971 b=2973 depth=0.040294 p=-28.990000,133.068817,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074879,133.043945,-162.009979 q=0.000470,0.698835,-0.000391,0.715283 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022078 p=-28.950066,132.770126,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074879,133.043945,-162.009979 q=0.000470,0.698835,-0.000391,0.715283 n=-0.999932,0.000000,-0.011633
+AS027_CONTACT a=1971 b=2973 depth=0.040296 p=-28.990000,133.070129,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074881,133.045273,-162.009979 q=0.000471,0.698835,-0.000392,0.715283 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022078 p=-28.950064,132.771454,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074881,133.045273,-162.009979 q=0.000471,0.698835,-0.000392,0.715283 n=-0.999932,0.000000,-0.011633
+AS027_CONTACT a=1971 b=2973 depth=0.040299 p=-28.990000,133.071457,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074886,133.046600,-162.009979 q=0.000472,0.698835,-0.000392,0.715283 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022077 p=-28.950069,132.772781,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074886,133.046600,-162.009979 q=0.000472,0.698835,-0.000392,0.715283 n=-0.999932,0.000000,-0.011633
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.072784,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074902,133.047928,-162.009979 q=0.000472,0.698836,-0.000393,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022074 p=-28.950069,132.774109,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074902,133.047928,-162.009979 q=0.000472,0.698836,-0.000393,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.074112,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074898,133.049255,-162.009979 q=0.000472,0.698835,-0.000393,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022074 p=-28.950068,132.775436,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074898,133.049255,-162.009979 q=0.000472,0.698835,-0.000393,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040296 p=-28.990000,133.075439,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074898,133.050583,-162.009979 q=0.000473,0.698835,-0.000393,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022074 p=-28.950068,132.776764,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074898,133.050583,-162.009979 q=0.000473,0.698835,-0.000393,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040296 p=-28.990000,133.076752,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074900,133.051910,-162.009979 q=0.000473,0.698835,-0.000394,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022074 p=-28.950069,132.778091,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074900,133.051910,-162.009979 q=0.000473,0.698835,-0.000394,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040294 p=-28.990000,133.078079,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074900,133.053238,-162.009979 q=0.000473,0.698836,-0.000394,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022073 p=-28.950068,132.779404,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074900,133.053238,-162.009979 q=0.000473,0.698836,-0.000394,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040297 p=-28.990000,133.079407,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074903,133.054565,-162.009979 q=0.000474,0.698836,-0.000394,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022073 p=-28.950068,132.780731,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074903,133.054565,-162.009979 q=0.000474,0.698836,-0.000394,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040297 p=-28.990000,133.080734,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074903,133.055893,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022073 p=-28.950068,132.782059,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074903,133.055893,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040297 p=-28.990000,133.082062,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074902,133.057220,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022072 p=-28.950069,132.783386,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074902,133.057220,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.083389,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074907,133.058533,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022071 p=-28.950071,132.784698,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074907,133.058533,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040294 p=-28.990000,133.084702,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074909,133.059845,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022071 p=-28.950069,132.786011,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074909,133.059845,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040296 p=-28.990000,133.085999,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.061157,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950073,132.787323,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.061157,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040292 p=-28.990000,133.087311,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.062469,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022085 p=-28.950071,132.788635,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.062469,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.088623,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.063782,-162.009979 q=0.000475,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950068,132.789948,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.063782,-162.009979 q=0.000475,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040298 p=-28.990000,133.089935,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.065094,-162.009979 q=0.000475,0.698836,-0.000396,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022071 p=-28.950073,132.791260,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.065094,-162.009979 q=0.000475,0.698836,-0.000396,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040292 p=-28.990000,133.091248,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.066406,-162.009964 q=0.000475,0.698836,-0.000396,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950073,132.792557,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.066406,-162.009964 q=0.000475,0.698836,-0.000396,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040292 p=-28.990000,133.092560,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.067719,-162.009964 q=0.000475,0.698836,-0.000396,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022085 p=-28.950071,132.793869,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.067719,-162.009964 q=0.000475,0.698836,-0.000396,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.093872,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.069031,-162.009964 q=0.000475,0.698836,-0.000396,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950071,132.795197,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.069031,-162.009964 q=0.000475,0.698836,-0.000396,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.095184,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.070343,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022085 p=-28.950071,132.796509,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.070343,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.096497,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.071655,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950071,132.797821,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.071655,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.097809,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.072968,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022085 p=-28.950068,132.799133,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.072968,-162.009964 q=0.000475,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040298 p=-28.990000,133.099136,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.074310,-162.009979 q=0.000475,0.698836,-0.000396,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950069,132.800476,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.074310,-162.009979 q=0.000475,0.698836,-0.000396,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040298 p=-28.990000,133.100464,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.075623,-162.009979 q=0.000475,0.698836,-0.000396,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950073,132.801788,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.075623,-162.009979 q=0.000475,0.698836,-0.000396,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040293 p=-28.990000,133.101776,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.076950,-162.009979 q=0.000475,0.698836,-0.000396,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022071 p=-28.950075,132.803116,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.076950,-162.009979 q=0.000475,0.698836,-0.000396,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040291 p=-28.990000,133.103119,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074911,133.078262,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022071 p=-28.950073,132.804428,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074911,133.078262,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040293 p=-28.990000,133.104431,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.079590,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950071,132.805756,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.079590,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040294 p=-28.990000,133.105759,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.080917,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950073,132.807083,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.080917,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040292 p=-28.990000,133.107086,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.082230,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022085 p=-28.950073,132.808395,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.082230,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040292 p=-28.990000,133.108398,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.083557,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950071,132.809723,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.083557,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.109726,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.084885,-162.009979 q=0.000475,0.698836,-0.000395,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022072 p=-28.950075,132.811050,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.084885,-162.009979 q=0.000475,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040291 p=-28.990000,133.111053,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.086197,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022071 p=-28.950075,132.812363,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.086197,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040291 p=-28.990000,133.112366,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.087524,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950073,132.813690,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.087524,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040292 p=-28.990000,133.113693,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.088837,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950075,132.815002,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.088837,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040291 p=-28.990000,133.115005,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.090164,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950071,132.816330,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.090164,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040293 p=-28.990000,133.116333,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.091476,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950071,132.817642,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.091476,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040293 p=-28.990000,133.117645,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.092819,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022069 p=-28.950069,132.818985,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.092819,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040296 p=-28.990000,133.118988,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.094131,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950071,132.820297,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.094131,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.120300,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.095444,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950073,132.821609,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.095444,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040291 p=-28.990000,133.121613,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.096771,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022071 p=-28.950073,132.822937,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.096771,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040291 p=-28.990000,133.122940,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.098083,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950073,132.824249,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.098083,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040292 p=-28.990000,133.124252,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.099396,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950071,132.825562,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.099396,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040293 p=-28.990000,133.125565,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.100708,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022085 p=-28.950069,132.826874,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.100708,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040296 p=-28.990000,133.126877,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.102020,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950069,132.828186,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.102020,-162.009979 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040296 p=-28.990000,133.128189,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.103333,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022086 p=-28.950073,132.829498,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.103333,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040292 p=-28.990000,133.129501,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074911,133.104645,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022085 p=-28.950068,132.830811,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074911,133.104645,-162.009964 q=0.000474,0.698836,-0.000395,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040297 p=-28.990000,133.130814,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.105957,-162.009964 q=0.000474,0.698836,-0.000395,0.715281 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022084 p=-28.950068,132.832123,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.105957,-162.009964 q=0.000474,0.698836,-0.000395,0.715281 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040298 p=-28.990000,133.132126,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074917,133.107269,-162.009979 q=0.000474,0.698836,-0.000394,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950071,132.833435,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074917,133.107269,-162.009979 q=0.000474,0.698836,-0.000394,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040293 p=-28.990000,133.133438,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074911,133.108582,-162.009964 q=0.000474,0.698836,-0.000394,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022087 p=-28.950071,132.834747,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074911,133.108582,-162.009964 q=0.000474,0.698836,-0.000394,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.134750,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074913,133.109894,-162.009964 q=0.000474,0.698836,-0.000394,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022087 p=-28.950073,132.836060,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074913,133.109894,-162.009964 q=0.000474,0.698836,-0.000394,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040293 p=-28.990000,133.136063,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074917,133.111206,-162.009964 q=0.000474,0.698836,-0.000394,0.715281 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022084 p=-28.950066,132.837372,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074917,133.111206,-162.009964 q=0.000474,0.698836,-0.000394,0.715281 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040300 p=-28.990000,133.137375,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074919,133.112518,-162.009964 q=0.000473,0.698836,-0.000394,0.715281 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022084 p=-28.950066,132.838684,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074919,133.112518,-162.009964 q=0.000473,0.698836,-0.000394,0.715281 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040300 p=-28.990000,133.138687,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074919,133.113831,-162.009964 q=0.000473,0.698836,-0.000394,0.715281 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022084 p=-28.950066,132.839996,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074919,133.113831,-162.009964 q=0.000473,0.698836,-0.000394,0.715281 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040300 p=-28.990000,133.139999,-152.317917 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074915,133.115143,-162.009979 q=0.000473,0.698836,-0.000394,0.715282 n=-0.000000,0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022070 p=-28.950069,132.841324,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074915,133.115143,-162.009979 q=0.000473,0.698836,-0.000394,0.715282 n=-0.999932,0.000000,-0.011631
+AS027_CONTACT a=1971 b=2973 depth=0.040295 p=-28.990000,133.141312,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074911,133.116455,-162.009979 q=0.000473,0.698836,-0.000394,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022071 p=-28.950071,132.842621,-152.340012 sub=4294967281,4294967269
+AS027_POSE b=2973 p=-31.074911,133.116455,-162.009979 q=0.000473,0.698836,-0.000394,0.715282 n=-0.999932,0.000000,-0.011632
+AS027_CONTACT a=1971 b=2973 depth=0.040293 p=-28.990000,133.142624,-152.317932 sub=4294967281,4294967272
+AS027_POSE b=2973 p=-31.074909,133.117767,-162.009979 q=0.000473,0.698836,-0.000394,0.715282 n=-0.000000,-0.000000,-1.000000
+AS027_CONTACT a=1971 b=2973 depth=0.022071 p=-28.950071,132.843933,-152.340012 sub=4294967281,4294967269
+AS027_TRACE tick=32347 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.78251, 136.2368, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 135.342678833008, "energy_j": 1886599.64261936, "capacity_j": 4750000.0, "force_n": -1100000.0, "power_w": 241949.212897402, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=32797 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.7757, 138.1311, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 137.23815612793, "energy_j": 788926.337156295, "capacity_j": 4750000.0, "force_n": -744332.5, "power_w": 168910.543172458, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=33247 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.77227, 139.158, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 138.266445922852, "energy_j": 166257.422021161, "capacity_j": 4750000.0, "force_n": -1100000.0, "power_w": 250.0, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=33697 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.76884, 139.158, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 138.266445922852, "energy_j": 165007.421990893, "capacity_j": 4750000.0, "force_n": -1100000.0, "power_w": 250.0, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=34147 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.7654, 139.158, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 138.266445922852, "energy_j": 163757.421960625, "capacity_j": 4750000.0, "force_n": -1100000.0, "power_w": 250.0, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=34597 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.76197, 139.158, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 138.266445922852, "energy_j": 162507.421930357, "capacity_j": 4750000.0, "force_n": -1100000.0, "power_w": 250.0, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=35047 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.75854, 139.158, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 138.266445922852, "energy_j": 161257.421900089, "capacity_j": 4750000.0, "force_n": -1100000.0, "power_w": 250.0, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=35497 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.7551, 139.158, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 138.266445922852, "energy_j": 160007.421869821, "capacity_j": 4750000.0, "force_n": -1100000.0, "power_w": 250.0, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=35947 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.75167, 139.158, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 138.266445922852, "energy_j": 158757.421839553, "capacity_j": 4750000.0, "force_n": -1100000.0, "power_w": 250.0, "braking": false, "energy_cutoff": false }
+AS027_TRACE tick=36397 operating=service_lift axes=(0.0, 1.0) grounded=true player=(-30.74824, 139.158, -162.0002) state={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 138.266445922852, "energy_j": 157507.421809285, "capacity_j": 4750000.0, "force_n": -1100000.0, "power_w": 250.0, "braking": false, "energy_cutoff": false }
+SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=touch ride failed before143m receiver at=(-30.74787, 139.158, -162.0002) station={ "station": 1, "reachable_station": 1, "retry_available": true, "surface_y": 138.266445922852, "energy_j": 157499.08847575, "capacity_j": 4750000.0, "force_n": -1100000.5, "power_w": 0.0, "braking": true, "energy_cutoff": false }

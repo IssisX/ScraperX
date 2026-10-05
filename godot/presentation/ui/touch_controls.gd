@@ -387,6 +387,8 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	sling.label = "RELEASE PACK" if ctx["slung"] else "ATTACH PACK"
 	sling.tone = TONE_PRIMARY
 	match station:
+		&"service_lift":
+			_axis_names = ["SERVICE LIFT", ""]
 		&"jib":
 			_axis_names = ["HOIST", "DRIVE"]
 		&"intake":

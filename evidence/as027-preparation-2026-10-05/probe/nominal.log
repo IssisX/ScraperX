@@ -1,0 +1,7 @@
+t=0.00 rise=-0.00134 foot=0.00019 vy=-0.12101 force=-9295.1 work=0.0
+t=10.00 rise=8.16425 foot=-1.65133 vy=0.79368 force=-87140.9 work=199482.4
+t=20.00 rise=14.42083 foot=-3.85405 vy=0.50024 force=-55170.8 work=351047.1
+t=30.00 rise=18.80030 foot=-6.11073 vy=1.04175 force=43289.5 work=456383.1
+t=40.00 rise=21.94237 foot=-8.45903 vy=0.25230 force=-27714.3 work=535437.9
+t=50.00 rise=23.30968 foot=-9.77880 vy=0.00021 force=-27177.2 work=569858.4
+RESULT hz=90 rider=85.0 cap=200000 power_loss=0 rise=23.309919 theory=23.309595 work_j=569858.412 peak_force_n=199999.984 peak_joint_m=0.031054 peak_speed=2.17114 off_drop_m=0.000000 rider_gap=0.000001 errors=0

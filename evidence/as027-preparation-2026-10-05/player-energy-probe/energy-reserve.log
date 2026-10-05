@@ -1,0 +1,4 @@
+START grounded=1 support=2973 player_y=121.893234
+DEPARTURE mode=1 initial_vy=0.000001 final_vy=0.000001 mean_force_n=-180815.867
+ENERGY capacity_j=1000.000 remaining_j=22.270356 peak_electrical_w=6693.656 overdraft_j=0.000000000 cutoff=1 stop_drop_m=0.000000
+PLAYER_PROBE mode=1 player=(-31.00000,121.91954,-162.00000) support=2973 grounded=1 deck_y=120.719536 work_j=782.184 peak_force_n=199999.984 max_gap_m=0.000912 unsupported_ticks=0

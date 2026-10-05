@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Linux-c++"
+	tests="2"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname="5386039060f6"
+	time="23"
+	timestamp="2026-10-05T18:11:43"
+	>
+	<testcase name="scraperx_sim.service_lift_physics" classname="scraperx_sim.service_lift_physics" time="4.20745" status="run">
+		<properties/>
+		<system-out>AS027_CUTOFF supplied=1000 remaining=87.1267 drop=0.000526428 peak_w=20900.1 overdraft=0
+AS027_CUTOFF supplied=250000 remaining=532.706 drop=0 peak_w=189999 overdraft=0
+AS027_OBSTRUCTION y=122 force=-1.1e+06 peak_w=185431 energy=4.58879e+06 overdraft=0
+AS027_CYCLE mass=18970.2 effective_mass=12258.1 force=1.1e+06 brake=1.3e+06 rating=250000 capacity=4.75e+06 remaining=1.23658e+06 return_error=-0.016716
+PASS AS027 finite source, native cutoff, obstruction and exhausted checkpoint
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.service_lift_route" classname="scraperx_sim.service_lift_route" time="18.9306" status="run">
+		<properties/>
+		<system-out>AS027_LOAD unloaded_force=648242 loaded_force=652769 unloaded_draw=534929 loaded_draw=538678
+AS027_DEPART support_vy=-0.23786 takeoff_vy=5.12972 brake_drop=0
+PASS AS027 native approach/boarding/weight/release/checkpoint/ride/exit/limits/reverse/departure; initial fixture staging only
+</system-out>
+	</testcase>
+</testsuite>

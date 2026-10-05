@@ -1,0 +1,56 @@
+--- a/src/sim/simulation.cpp
++++ b/src/sim/simulation.cpp
+@@ -1,3 +1,4 @@
++#include "lift_fixture.hpp"
+ #include "sim/simulation.hpp"
+ 
+ #include "sim/bands.hpp"
+@@ -1267,7 +1268,7 @@
+ };
+ 
+ [[nodiscard]] bool entity_is_causal_section_support(std::uint64_t entity) noexcept {
+-    return entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
++    return entity==2973 || entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
+         scraperx::sim::is_facade_route_entity(entity);
+ }
+ 
+@@ -1996,6 +1997,7 @@
+                 const auto frame=build_cargo_net_route(*kit_);
+                 cargo_net_ = std::make_unique<CargoNet>(physics_system_, object_layers::kMoving,kit_->body_id(frame));
+                 build_suspended_ladder(*kit_);
++                fixture_lift_ = std::make_unique<scraperx::sim::insertable::LiftFixture>(*kit_,physics_system_);
+             }
+         }
+ 
+@@ -2038,6 +2040,7 @@
+         swing_stair_.reset();
+         pipe_bridge_.reset();
+         slingshot_.reset();
++        fixture_lift_.reset();
+         kit_.reset();
+         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
+             if (constraint != nullptr) {
+@@ -2229,6 +2232,7 @@
+         if (pipe_bridge_) pipe_bridge_->pre_step(delta_seconds);
+         if (swing_stair_) swing_stair_->pre_step(delta_seconds);
+         if (upper_ascent_) upper_ascent_->pre_step(delta_seconds);
++        if(fixture_lift_)fixture_lift_->pre(delta_seconds);
+         contact_listener_.begin_tick();
+         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
+         physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
+@@ -2239,6 +2243,7 @@
+                                       JPH::Vec3(support_point_now - landing_force_support_start_);
+             landing_recovery_work_j_ += std::max(0.0F, landing_applied_force_.Dot(displacement));
+         }
++        if(fixture_lift_)fixture_lift_->post(delta_seconds);
+         kit_->post_step(delta_seconds);
+         if (slingshot_) slingshot_->post_step(delta_seconds);
+         if (cargo_net_) cargo_net_->refresh();
+@@ -7507,6 +7512,7 @@
+     std::uint32_t grip_over_steps_ = 0;
+     // AS-006: the mechanism kit and the bands built from it.
+     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
++    std::unique_ptr<scraperx::sim::insertable::LiftFixture> fixture_lift_;
+     std::unique_ptr<PipeBridge> pipe_bridge_;
+     std::unique_ptr<Slingshot> slingshot_;
+     bool slingshot_flight_ = false;
