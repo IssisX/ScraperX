@@ -89,7 +89,8 @@ jobs:
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
           cmake --build build/host --target scraperx_physical_hand_climb_tests scraperx_physical_traversal_tests scraperx_leather_pouch_tests scraperx_suspended_ladder_tests scraperx_cargo_net_tests scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
-          if ! ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log; then
+          if ! ctest --test-dir build/host --output-on-failure --test-output-size-passed 2147483647 \
+              --output-junit "${GITHUB_WORKSPACE}/artifacts/native-tests.xml" | tee artifacts/native-tests.log; then
             # The public run page exposes annotations even when its raw logs
             # are unavailable. Keep the exact failing test and nearby output.
             python3 - <<'PY'
@@ -111,14 +112,44 @@ jobs:
             exit 1
           fi
           grep -F "100% tests passed" artifacts/native-tests.log
-          ./build/host/scraperx_parkour_flow_tests | tee artifacts/parkour-flow.log
+          # Preserve each proof's original artifact path using captured output
+          # from its one CTest execution, including all three north-frame rates.
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = ET.parse('artifacts/native-tests.xml').getroot()
+          cases = {}
+          for case in root.iter('testcase'):
+              name = case.attrib['name']
+              if name in cases:
+                  raise SystemExit(f'Duplicate CTest result: {name}')
+              cases[name] = case
+          logs = {
+              'parkour-flow.log': ['parkour_flow'],
+              'native-falsifiers.log': ['athletic_traversal'],
+              'pipe-bridge-native.log': ['pipe_bridge_route'],
+              'ascent-route.log': ['ascent_route'],
+              'teeter-native.log': ['teeter_route'],
+              'teeter-physics.log': ['teeter_physics'],
+              'braced-bay-native.log': ['braced_bay'],
+              'north-service-frame-native.log': [
+                  'north_service_frame', 'north_service_frame_60hz', 'north_service_frame_360hz'],
+          }
+          for filename, names in logs.items():
+              outputs = []
+              for suffix in names:
+                  name = 'scraperx_sim.' + suffix
+                  case = cases.get(name)
+                  if case is None or case.attrib.get('status') != 'run' or any(
+                          case.find(tag) is not None for tag in ('failure', 'error', 'skipped')):
+                      raise SystemExit(f'Missing or unsuccessful CTest result: {name}')
+                  output = case.findtext('system-out', '')
+                  if not output.strip():
+                      raise SystemExit(f'Missing CTest proof output: {name}')
+                  outputs.append(output.rstrip('\n') + '\n')
+              Path('artifacts', filename).write_text(''.join(outputs))
+          PYTHON
           grep -F "PASS scraperx_sim parkour flow" artifacts/parkour-flow.log
-          # The falsifiers' own proof lines. ctest --output-on-failure prints a
-          # passing test's stdout nowhere, so native-tests.log carries only the
-          # aggregate verdict -- every PASS line the suite emits was invisible
-          # to this workflow until now. Run the binary directly for them.
-          # set -o pipefail means a non-zero exit still fails the step.
-          ./build/host/scraperx_sim_tests | tee artifacts/native-falsifiers.log
           for proof in \
             "PASS scraperx_sim moving-support truth" \
             "PASS scraperx_sim athletic traversal" \
@@ -357,7 +388,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./build/host/scraperx_pipe_bridge_tests | tee artifacts/pipe-bridge-native.log
           grep -F "PASS scraperx_sim AS-016 route mode=0" artifacts/pipe-bridge-native.log
           for scenario in pipe_bridge keyboard_pipe_bridge; do
             timeout 240s tools/godot/godot --headless --fixed-fps 60 --path godot \
@@ -370,14 +400,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./build/host/scraperx_ascent_route_tests | tee artifacts/ascent-route.log
-          ./build/host/scraperx_teeter_route_tests | tee artifacts/teeter-native.log
           grep -F "PASS scraperx_sim AS-020 loaded teeter, recovery and +77 route" artifacts/teeter-native.log
-          ./build/host/scraperx_teeter_physics_tests | tee artifacts/teeter-physics.log
-          ./build/host/scraperx_braced_bay_tests | tee artifacts/braced-bay-native.log
-          ./build/host/scraperx_north_service_frame_tests | tee artifacts/north-service-frame-native.log
-          ./build/host/scraperx_north_service_frame_tests 60 | tee -a artifacts/north-service-frame-native.log
-          ./build/host/scraperx_north_service_frame_tests 360 | tee -a artifacts/north-service-frame-native.log
           # This calls the complete touch pipe, facade and stair route first.
           # --resolution changes the window, not the project's 2160x1856
           # canvas viewport. Reduce both for this CPU-rendered route only;
