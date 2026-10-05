@@ -165,6 +165,41 @@ void Kit::set_mass_properties(const BodyIndex body, const JPH::MassProperties &m
     bodies_[body.value].mass = mass.mMass;
 }
 
+float Kit::point_inverse_mass(BodyIndex index,JPH::RVec3 point,JPH::Vec3 direction) const {
+    std::vector<const JPH::Body *> cluster{&jolt_body(index)};
+    bool changed=true;
+    while(changed) {
+        changed=false;
+        for(const auto &joint:fixed_joints_) {
+            if(joint->GetSubType()!=JPH::EConstraintSubType::Fixed) continue;
+            const auto first=joint->GetBody1(),second=joint->GetBody2();
+            const bool has_first=std::find(cluster.begin(),cluster.end(),first)!=cluster.end();
+            const bool has_second=std::find(cluster.begin(),cluster.end(),second)!=cluster.end();
+            if(has_first!=has_second) { cluster.push_back(has_first?second:first);changed=true; }
+        }
+    }
+    float mass=0;
+    const auto origin=cluster.front()->GetCenterOfMassPosition();
+    auto weighted=JPH::Vec3::sZero();
+    for(const auto body:cluster) {
+        if(!body->IsDynamic()) return 0;
+        const float m=1.0F/body->GetMotionProperties()->GetInverseMass();
+        mass+=m;
+        weighted+=m*JPH::Vec3(body->GetCenterOfMassPosition()-origin);
+    }
+    const auto centre=origin+weighted/mass;
+    auto inertia=JPH::Mat44::sZero();
+    for(const auto body:cluster) {
+        JPH::MassProperties piece;
+        piece.mMass=1.0F/body->GetMotionProperties()->GetInverseMass();
+        piece.mInertia=body->GetInverseInertia().Inversed3x3();
+        piece.Translate(JPH::Vec3(body->GetCenterOfMassPosition()-centre));
+        inertia+=piece.mInertia;
+    }
+    const auto axis=JPH::Vec3(point-centre).Cross(direction.Normalized());
+    return 1.0F/mass+axis.Dot(inertia.Inversed3x3().Multiply3x3(axis));
+}
+
 void Kit::set_continuous_collision(const BodyIndex body) {
     system_.GetBodyInterface().SetMotionQuality(body_id(body), JPH::EMotionQuality::LinearCast);
 }
@@ -219,13 +254,13 @@ void Kit::add_elastic_mount(BodyIndex foundation,BodyIndex structure,JPH::RVec3 
             i<3?translation_damping:rotation_damping);
     }
     auto mount=JPH::Ref<JPH::SixDOFConstraint>(static_cast<JPH::SixDOFConstraint *>(
-        settings.Create(jolt_body(foundation),jolt_body(structure))));
+        settings.Create(foundation.valid()?jolt_body(foundation):JPH::Body::sFixedToWorld,jolt_body(structure))));
     for (int i=0;i<JPH::SixDOFConstraintSettings::Num;++i)
         mount->SetMotorState(static_cast<JPH::SixDOFConstraint::EAxis>(i),JPH::EMotorState::Position);
     // Constant zero separation/orientation is the spring's neutral pose.
     // The solver supplies reaction from extension; this target never advances.
     system_.AddConstraint(mount);
-    disable_collision(foundation,structure);
+    if(foundation.valid()) disable_collision(foundation,structure);
     fixed_joints_.emplace_back(mount.GetPtr());
 }
 

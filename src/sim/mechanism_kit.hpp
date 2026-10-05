@@ -123,6 +123,10 @@ public:
     void set_damping(BodyIndex body, float linear, float angular);
     void set_body_mass(BodyIndex body, float mass_kg);
     void set_mass_properties(BodyIndex body, const JPH::MassProperties &mass);
+    // Impulse mobility of the actual fixed-joint cluster at a world point.
+    // Elastic mounts/sliders remain finite separate DOFs, never credited as welds.
+    [[nodiscard]] float point_inverse_mass(BodyIndex body, JPH::RVec3 point,
+                                           JPH::Vec3 direction) const;
     void set_continuous_collision(BodyIndex body);
     void disable_collision(BodyIndex first, BodyIndex second);
     AnchorIndex add_anchor(BodyIndex body, JPH::Vec3 local, float reach);
@@ -161,6 +165,7 @@ public:
                          std::uint32_t velocity_steps = 40, std::uint32_t position_steps = 8);
     void add_fixed_joint(BodyIndex first, BodyIndex second);
     // Passive elastic anchorage: fixed neutral frames, no moving motor target.
+    // Invalid foundation is an attachment to the permitted static backbone.
     void add_elastic_mount(BodyIndex foundation, BodyIndex structure, JPH::RVec3 point,
                            float translation_stiffness, float translation_damping,
                            float rotation_stiffness, float rotation_damping);

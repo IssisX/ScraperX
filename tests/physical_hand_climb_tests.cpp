@@ -2,6 +2,7 @@
 #include "sim/physical_hand_climb.hpp"
 #include "sim/cargo_net.hpp"
 #include "sim/cargo_net_route.hpp"
+#include "sim/facade_route.hpp"
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/JobSystemSingleThreaded.h>
 #include <Jolt/Core/TempAllocator.h>
@@ -314,6 +315,40 @@ void net_frame_reaction() {
     std::cout<<"net-frame mass="<<kit.body_mass(frame)<<" anchor_dx="<<after.GetX()-before.GetX()
              <<" momentum_residual="<<residual.Length()<<'\n';
 }
+void facade_structural_response() {
+    World w;
+    scraperx::sim::kit::Kit kit(w.system,0,1);
+    scraperx::sim::build_facade_route(kit);
+    check(kit.body_count()==8,"facade structural ownership is incomplete");
+    for(unsigned i=0;i<kit.body_count();++i) {
+        check(kit.body_mass({i})>0,"facade member remains massless/static");
+        check(w.system.GetBodyInterface().GetMotionType(kit.body_id({i}))==EMotionType::Dynamic,
+              "facade member does not participate in native dynamics");
+    }
+    auto &bodies=w.system.GetBodyInterface();
+    const auto ladder=kit.body_for_entity(2566);
+    const auto carriage=kit.body_for_entity(2564);
+    const auto point=[&](scraperx::sim::kit::BodyIndex b,RVec3 authored) {
+        return bodies.GetWorldTransform(kit.body_id(b))*Vec3(authored);
+    };
+    for(unsigned i=0;i<90;++i) w.system.Update(h,4,&w.temporary,&w.jobs);
+    const auto rung=point(ladder,{12.5,35.6,-120.15});
+    const auto neutral_carriage=bodies.GetPosition(kit.body_id(carriage));
+    bodies.AddImpulse(kit.body_id(ladder),Vec3(100,0,0),rung);
+    bodies.AddImpulse(kit.body_id(carriage),Vec3(0,0,250));
+    float deflection=0;
+    for(unsigned i=0;i<30;++i) {
+        w.system.Update(h,4,&w.temporary,&w.jobs);
+        deflection=std::max(deflection,float((point(ladder,{12.5,35.6,-120.15})-rung).Length()));
+    }
+    const auto carriage_travel=bodies.GetPosition(kit.body_id(carriage))-neutral_carriage;
+    check(deflection>0.0001F && deflection<0.20F,"mounted ladder has no finite bounded load response");
+    check(carriage_travel.GetZ()>0.01 && carriage_travel.GetZ()<1.10,
+          "trolley failed passive actual-impulse rail travel");
+    check(finite(carriage_travel),"facade coupling produced nonfinite state");
+    std::cout<<"facade ladder_deflection_m="<<deflection
+        <<" carriage_travel_m="<<carriage_travel.GetZ()<<'\n';
+}
 void invalid_holds_and_cleanup() {
     World w;
     {
@@ -348,11 +383,12 @@ int main() {
         { "kinematic_tracking_and_regrip", kinematic_tracking_and_regrip },
         { "soft_material_reaction", soft_material_reaction },
         { "net_frame_reaction", net_frame_reaction },
+        { "facade_structural_response", facade_structural_response },
         { "invalid_holds_and_cleanup", invalid_holds_and_cleanup } }) {
         try { test.second(); std::cout << "PASS " << test.first << '\n'; }
         catch (const std::exception &e) { ++failures; std::cerr << "FAIL " << test.first << ": " << e.what() << '\n'; }
     }
     JPH::UnregisterTypes(); delete JPH::Factory::sInstance; JPH::Factory::sInstance = nullptr;
-    std::cout << "physical hand checks: " << 8 - failures << "/8\n";
+    std::cout << "physical hand checks: " << 9 - failures << "/9\n";
     return failures ? 1 : 0;
 }

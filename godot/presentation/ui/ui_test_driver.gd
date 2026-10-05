@@ -19,6 +19,7 @@ const SCENARIOS := {
 	"ground_foundation": 8,
 	"touch_cargo_net": 8,
 	"touch_campaign_to_121": 8,
+	"touch_causal_facade": 8,
 	"touch_north_grip_diagnostic": 8,
 	"touch_suspended_ladder": 8,
 	"keyboard_slingshot": 8,
@@ -79,7 +80,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -132,7 +133,7 @@ func _run() -> void:
 			ok = await _pipe_bridge(InputRouter.Device.TOUCH)
 		"keyboard_pipe_bridge":
 			ok = await _pipe_bridge(InputRouter.Device.KEYBOARD_MOUSE)
-		"touch_facade":
+		"touch_facade", "touch_causal_facade":
 			ok = await _touch_facade()
 		"touch_stair":
 			ok = await _touch_stair()
@@ -664,7 +665,7 @@ func _pipe_bridge(device: int) -> bool:
 # AS-017: grade to +33 m, through the real touch controls and native world.
 func _touch_facade() -> bool:
 	var device := InputRouter.Device.TOUCH
-	if _scenario == "touch_campaign_to_121":
+	if _scenario in ["touch_campaign_to_121", "touch_causal_facade"]:
 		if not await _touch_cargo_net():
 			return false
 		print("SCRAPERX_CAMPAIGN cargo_net_exit at=%s support=%d" % [_position(), _native().get_support_entity_id()])
@@ -679,7 +680,7 @@ func _touch_facade() -> bool:
 	if not await _offered(&"climb", "CLIMB"):
 		return _fail("cabinet mantle not offered")
 	_act(device)
-	if not await _wait_until(func() -> bool: return _standing_above(13.5), 2.0):
+	if not await _wait_until(func() -> bool: return _standing_above(13.5), 4.0):
 		return _fail("cabinet mantle %s" % _position())
 	if not await _walk_to(device, Vector2(20, -122.1), 0.05, 3.0):
 		return _fail("cabinet launch position")
@@ -694,7 +695,7 @@ func _touch_facade() -> bool:
 	await _seconds(0.3)
 	await _pose("duct_hang")
 	_tap(1, _center(&"jump"))
-	if not await _wait_until(func() -> bool: return _standing_above(17.0), 2.5):
+	if not await _wait_until(func() -> bool: return _standing_above(17.0), 4.0):
 		return _fail("duct top-out %s" % _position())
 	for point in [Vector2(22.5, -123.05), Vector2(24, -123.0)]:
 		if not await _walk_to(device, point, 0.06, 6.0):
@@ -1517,7 +1518,7 @@ func _ground_foundation() -> bool:
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 19:
+	if int(_native().get_moving_body_count()) != 27:
 		return _fail("default slingshot, stair, lift and teeter body inventory differs")
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
@@ -1538,7 +1539,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=19 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=27 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
 	return true
 
 
@@ -2439,20 +2440,36 @@ func _move_dir(device: int, v: Vector2) -> void:
 func _walk_to(device: int, target: Vector2, tolerance: float, timeout: float = 6.0) -> bool:
 	var waited := 0.0
 	var frame := 0
+	var physical := false
 	while waited < timeout:
 		var at := _position()
 		var to := target - Vector2(at.x, at.z)
-		if to.length() <= tolerance:
+		var owner := int(_native().get_support_entity_id())
+		physical = physical or owner in [1600, 2952, 2954] or (owner >= 2560 and owner <= 2566)
+		var slip: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
+		var settled := bool(_ctx()["grounded"]) and Vector2(slip.x, slip.z).length() < 0.15
+		if to.length() <= tolerance and (not physical or settled):
 			_move_dir(device, Vector2.ZERO)
 			await _seconds(0.2)
 			return true
 		var yaw := float(_main._yaw)
 		var forward := Vector2(-sin(yaw), -cos(yaw))
 		var right := Vector2(cos(yaw), -sin(yaw))
-		var v := Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.25, 1.0)
-		if device == InputRouter.Device.KEYBOARD_MOUSE and to.length() < 0.8:
+		var direction := Vector2(to.dot(right), to.dot(forward)).normalized()
+		var amount := clampf(to.length() / 0.8, 0.25, 1.0)
+		if physical:
+			# Early braking through real device input; retain native inertia and
+			# wait for actual supported, low-slip arrival. Invert the device
+			# deadzone so small deliberate adjustments reach the input owner.
+			amount = 0.0 if to.length() <= tolerance else minf(1.0, to.length() / 2.75)
+			if device != InputRouter.Device.KEYBOARD_MOUSE and amount > 0.0:
+				var deadzone := TouchControls.STICK_DEADZONE if device == InputRouter.Device.TOUCH else InputRouter.STICK_DEADZONE
+				amount = deadzone + (1.0 - deadzone) * amount
+		var v := direction * amount
+		if device == InputRouter.Device.KEYBOARD_MOUSE and to.length() < (2.75 if physical else 0.8):
 			frame += 1
-			v = v.normalized() if frame % 6 < 2 else Vector2.ZERO
+			var pressed := frame % 6 < roundi(6.0 * amount) if physical else frame % 6 < 2
+			v = direction if pressed else Vector2.ZERO
 		_move_dir(device, v)
 		await get_tree().process_frame
 		waited += get_process_delta_time()

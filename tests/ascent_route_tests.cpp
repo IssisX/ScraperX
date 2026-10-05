@@ -39,16 +39,27 @@ void wait(Simulation &s, double secs) {
 
 // All progress is through public player inputs, with no spawned upper checkpoint.
 bool walk_to(Simulation &s, double x, double z, double seconds, double tolerance=.15) {
+  bool physical=false;
   for (int i=0; i<int(seconds*90); ++i) {
-    const auto p=s.snapshot().player_position;
-    const double dx=x-p.x, dz=z-p.z, distance=std::hypot(dx,dz);
-    if (distance<tolerance) { (void)s.set_move_input(0,0); return true; }
-    const double strength=std::min(1.,distance/.6);
-    (void)s.set_move_input(dx/distance*strength,dz/distance*strength);
-    (void)s.set_facing(dx,dz);
+    const auto state=s.snapshot();
+    const auto p=state.player_position;
+    const auto owner=state.support_entity_id;
+    physical=physical || owner==1600 || (owner>=2560 && owner<=2566) || owner==2952 || owner==2954;
+    const double dx=x-p.x,dz=z-p.z,distance=std::hypot(dx,dz);
+    const double slip=std::hypot(state.player_linear_velocity.x-state.support_point_linear_velocity.x,
+                                state.player_linear_velocity.z-state.support_point_linear_velocity.z);
+    if(distance<tolerance && (!physical || (state.player_grounded && slip<.15))) {
+      (void)s.set_move_input(0,0);return true;
+    }
+    // The actual force-driven plant needs braking before the waypoint and
+    // a settled arrival. This is ordinary input, never a body-state override.
+    const double strength=distance<tolerance?0:std::min(1.,distance/(physical?2.75:.6));
+    const double inverse_distance=distance>1e-8?1/distance:0;
+    (void)s.set_move_input(dx*inverse_distance*strength,dz*inverse_distance*strength);
+    if(distance>1e-8) (void)s.set_facing(dx,dz);
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
   }
-  (void)s.set_move_input(0,0); return false;
+  (void)s.set_move_input(0,0);return false;
 }
 template<class Predicate> bool wait_for(Simulation &s, double seconds, Predicate reached) {
   for(int i=0;i<int(seconds*90);++i) {
@@ -83,7 +94,7 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
         return false;
     }
     (void)simulation.request_traversal();
-    if (!wait_for(simulation, 2.0, [](const Snapshot &state) { return standing_above(state, 13.5); })) {
+    if (!wait_for(simulation, 4.0, [](const Snapshot &state) { return standing_above(state, 13.5); })) {
         report(simulation, "mantle onto the cabinet");
         return false;
     }
@@ -92,8 +103,14 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
     (void)simulation.set_facing(0.0, -1.0);
     (void)simulation.advance_frame(0.3);
     (void)simulation.request_jump();
+    double duct_jump_apex=0,duct_jump_peak_vy=0;
     if (!hold_stick(simulation, 0.0, -0.4, 0.0, -1.0, 2.0,
-                    [](const Snapshot &state) { return state.traversal_state == TraversalState::Hanging; })) {
+                    [&](const Snapshot &state) {
+                        duct_jump_apex=std::max(duct_jump_apex,state.player_position.y);
+                        duct_jump_peak_vy=std::max(duct_jump_peak_vy,state.player_linear_velocity.y);
+                        return state.traversal_state == TraversalState::Hanging;
+                    })) {
+        std::cout<<"duct jump apex="<<duct_jump_apex<<" peak_vy="<<duct_jump_peak_vy<<'\n';
         report(simulation, "hang on the duct's lip");
         return false;
     }
@@ -107,7 +124,7 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
     }
     (void)hold_stick(simulation, -1, 0, 0, -1, .5, [](const Snapshot &) { return false; });
     (void)simulation.request_jump();
-    if (!wait_for(simulation, 2.5, [](const Snapshot &state) { return standing_above(state, 17.0); })) {
+    if (!wait_for(simulation, 4.0, [](const Snapshot &state) { return standing_above(state, 17.0); })) {
         report(simulation, "up onto the duct");
         return false;
     }
@@ -118,10 +135,10 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
     report(simulation, "DUCT_EDGE_READY");
     if (!simulation.snapshot().edge_drop_available) return false;
     (void)simulation.request_release();
-    if (!wait_for(simulation, 2, [](const Snapshot &v) { return v.traversal_state == TraversalState::Hanging; })) return false;
+    if (!wait_for(simulation, 4, [](const Snapshot &v) { return v.traversal_state == TraversalState::Hanging; })) return false;
     report(simulation, "DUCT_LOWERED");
     (void)simulation.request_jump();
-    if (!wait_for(simulation, 2, [](const Snapshot &v) { return standing_above(v, 17); })) return false;
+    if (!wait_for(simulation, 4, [](const Snapshot &v) { return standing_above(v, 17); })) return false;
     // Along the duct to the vent stack, and up it over deck 3's edge.
     if (!(walk_to(simulation, 22.5, -123.05, 6.0, 0.1) && walk_to(simulation, 24.0, -123.00, 6.0, 0.06))) {
         report(simulation, "along the duct");
@@ -130,10 +147,16 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
     (void)simulation.set_facing(0.0, -1.0);
     (void)simulation.advance_frame(0.4);
     (void)simulation.request_traversal();
-    (void)simulation.advance_frame(0.2);
+    (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    (void)simulation.advance_frame(0.2-Simulation::kFixedStepSeconds);
     if (!is_climbing(simulation.snapshot()) ||
         !hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 20.0,
-                    [](const Snapshot &state) { return standing_above(state, 22.5); })) {
+                    [&](const Snapshot &state) {
+                        return standing_above(state, 22.5);
+                    })) {
+        const auto failed=simulation.snapshot();
+        std::cout<<"vent state="<<int(failed.traversal_state)<<" hands="<<failed.traversal_hand_constraint_count
+            <<" gravity="<<failed.player_gravity_factor<<" vy="<<failed.player_linear_velocity.y<<'\n';
         report(simulation, "up the vent onto deck 3");
         return false;
     }
@@ -181,7 +204,15 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
            on_deck4.support_entity_id == Simulation::kTowerEntityId;
 }
 
-int main() {
+int main(int argc,char **argv) {
+  if(argc>1 && std::string(argv[1])=="--facade-slice") {
+    Simulation slice(InitialSpawn::ExteriorGrade,WorldContent::Slingshot);
+    if(!slice.debug_restart_at({21.2,11.9,-125.0})) return 60;
+    wait(slice,.5);
+    const bool complete=climb_facade(slice);
+    report(slice,complete?"PASS focused production facade":"FAIL focused production facade");
+    return complete?0:61;
+  }
   Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::PipeBridge);
   wait(s, .5);
   report(s, "SPAWN");

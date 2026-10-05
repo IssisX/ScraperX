@@ -1266,8 +1266,9 @@ struct SupportSample final {
     JPH::BodyID body_id;
 };
 
-[[nodiscard]] bool entity_is_causal_cargo_support(std::uint64_t entity) noexcept {
-    return entity==scraperx::sim::kCargoGantryEntity || entity==2954;
+[[nodiscard]] bool entity_is_causal_section_support(std::uint64_t entity) noexcept {
+    return entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
+        scraperx::sim::is_facade_route_entity(entity);
 }
 
 // Supports that actually move. These outrank static ground when the player is
@@ -1276,6 +1277,7 @@ struct SupportSample final {
     using Sim = scraperx::sim::Simulation;
     // Mechanism-kit bodies that move are machines by construction.
     return scraperx::sim::kit::is_dynamic_entity(entity_id) ||
+           scraperx::sim::is_facade_route_entity(entity_id) ||
            entity_id == Sim::kTranslatingSupportEntityId ||
            entity_id == Sim::kRotatingSupportEntityId ||
            entity_id == Sim::kMovingLedgeEntityId ||
@@ -1379,7 +1381,10 @@ public:
             carried != 0 &&
             ((first_entity == Sim::kPlayerEntityId && second_entity == carried) ||
              (first_entity == carried && second_entity == Sim::kPlayerEntityId));
-        return (is_swing_flight_vs_handoff_deck || is_swing_flight_vs_hinge_anchor ||
+        const bool is_facade_embedded_attachment =
+            (first_entity==Sim::kTowerEntityId && scraperx::sim::is_facade_tower_attachment(second_entity)) ||
+            (second_entity==Sim::kTowerEntityId && scraperx::sim::is_facade_tower_attachment(first_entity));
+        return (is_facade_embedded_attachment || is_swing_flight_vs_handoff_deck || is_swing_flight_vs_hinge_anchor ||
                 is_player_vs_carried)
                    ? JPH::ValidateResult::RejectAllContactsForThisBodyPair
                    : JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
@@ -2198,6 +2203,9 @@ public:
             }
         }
 
+        if (traversal_state_ == TraversalState::Lowering && physical_hands_->active())
+            update_physical_lowering(bodies,delta_seconds);
+
         if (traversal_state_ == TraversalState::Hanging && physical_hands_->active()) {
             // Request a bounded rest-target change, never the root velocity.
             // Measure commanded position rather than actual compliant sag.
@@ -2242,6 +2250,11 @@ public:
         support_sample_ = support;
         grounded_ = support.grounded;
         support_entity_id_ = support.entity_id;
+        if(grounded_ && physical_step_pending_) {
+            if(bodies.GetPosition(player_id_).GetY()-kPlayerHalfHeight-
+               physical_step_start_feet_y_>=kStepMinimumHeight) ++step_up_count_;
+            physical_step_pending_=false;
+        }
 
         // WO-008: a genuine (non-traversal, non-jump) landing is the one
         // moment fall consequence is resolved. Traversal-completion landings
@@ -2358,6 +2371,7 @@ public:
         if (slingshot_) slingshot_->cancel_player_interaction();
         slingshot_flight_ = false;
         causal_airborne_ = false;
+        physical_step_pending_ = false;
         release_carry();
         clear_traversal();
         crouched_ = false;
@@ -5273,7 +5287,7 @@ private:
         if (!probe.valid) {
             return false;
         }
-        if(entity_is_causal_cargo_support(probe.ledge_entity_id))
+        if(entity_is_causal_section_support(probe.ledge_entity_id))
             return begin_cargo_transfer(bodies,probe,at);
         JPH::RVec3 landing_centre;
         JPH::BodyID landing_body;
@@ -5340,7 +5354,7 @@ private:
         JPH::Vec3 desired(float(commands.move_input_x * desired_speed), 0, float(commands.move_input_z * desired_speed));
         desired -= normal * desired.Dot(normal);
         auto correction = (desired - slip) * (kPlayerMassKg / .18F);
-        const float traction_cap = (entity_is_causal_cargo_support(support_sample_.entity_id) ? .8F : .85F) * kPlayerMassKg * -physics_system_.GetGravity().GetY() *
+        const float traction_cap = (entity_is_causal_section_support(support_sample_.entity_id) ? .8F : .85F) * kPlayerMassKg * -physics_system_.GetGravity().GetY() *
                                    std::max(.3F, normal.GetY());
         if (correction.Length() > traction_cap) correction *= traction_cap / correction.Length();
         bool dynamic_support = false;
@@ -5395,8 +5409,20 @@ private:
         }
         if(grounded_) causal_airborne_=false;
 
-        const bool causal_support=entity_is_causal_cargo_support(support_entity_id_);
-        if (slingshot_ && grounded_ && (landing_recovery_seconds_ > 0 || causal_support) && support_entity_id_ != 0) {
+        const bool causal_support=entity_is_causal_section_support(support_entity_id_);
+        bool causal_step=false;
+        if(grounded_ && !causal_support) {
+            const JPH::Vec3 intended(float(commands.move_input_x*kPlayerMaximumRelativeSpeed),0,
+                                     float(commands.move_input_z*kPlayerMaximumRelativeSpeed));
+            if(intended.Length()>kStepMinimumSpeed) {
+                float fraction;JPH::Vec3 normal;JPH::BodyID obstacle;
+                causal_step=cast_capsule(bodies.GetPosition(player_id_),
+                    intended*delta_seconds+intended.Normalized()*kStepLookahead,fraction,normal,&obstacle) &&
+                    entity_is_causal_section_support(bodies.GetUserData(obstacle));
+            }
+        }
+        if ((slingshot_ || causal_support || causal_step) && grounded_ &&
+            (landing_recovery_seconds_ > 0 || causal_support || causal_step) && support_entity_id_ != 0) {
             if (commands.jump_requested && !crouched_) {
                 const auto support_velocity = current_support_point_velocity(bodies);
                 const auto before_velocity = bodies.GetLinearVelocity(player_id_);
@@ -5413,7 +5439,11 @@ private:
                         const auto lever = JPH::Vec3(JPH::RVec3(support_sample_.contact_point.x,
                             support_sample_.contact_point.y, support_sample_.contact_point.z) - support.GetCenterOfMassPosition());
                         const auto rotation_axis = lever.Cross(JPH::Vec3::sAxisY());
-                        inverse_mass += support.GetMotionProperties()->GetInverseMass() +
+                        const auto kit_body=kit_->body_for_entity(support.GetUserData());
+                        inverse_mass += kit_body.valid() ? kit_->point_inverse_mass(kit_body,
+                            JPH::RVec3(support_sample_.contact_point.x,support_sample_.contact_point.y,
+                                      support_sample_.contact_point.z),JPH::Vec3::sAxisY()) :
+                            support.GetMotionProperties()->GetInverseMass() +
                             rotation_axis.Dot(support.GetInverseInertia().Multiply3x3(rotation_axis));
                     }
                 }
@@ -5441,7 +5471,12 @@ private:
             // The same reciprocal contact-force owner remains active for ordinary
             // cargo walking after the impact-recovery interval has expired.
             apply_landing_recovery(bodies, commands, delta_seconds);
-            if(causal_support) causal_airborne_=true;
+            if(causal_support || causal_step) causal_airborne_=true;
+            if(causal_support || causal_step) {
+                const JPH::Vec3 intended(float(commands.move_input_x*kPlayerMaximumRelativeSpeed),0,
+                                         float(commands.move_input_z*kPlayerMaximumRelativeSpeed));
+                if(try_step_up(bodies,intended,delta_seconds)) return true;
+            }
             const auto relative=bodies.GetLinearVelocity(player_id_)-current_support_point_velocity(bodies);
             air_full_speed_=std::max(kPlayerMaximumRelativeSpeed,JPH::Vec3(relative.GetX(),0,relative.GetZ()).Length());
             return false;
@@ -5535,15 +5570,15 @@ private:
 
     // Stepping up. Blocked at the feet, clear with the body raised by the
     // maximum step, and walkable support found by sweeping back down: then
-    // the body is lifted onto the step, as Jolt's own character controller
-    // walks stairs. Every stage is a sweep against real geometry, so nothing
-    // is passed through and nothing is stood on that is not there.
-    void try_step_up(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
+    // unconverted surfaces retain the existing character step. Converted
+    // members request bounded reciprocal leg work from actual foot contact;
+    // their rise is resolved by gravity and collision, never a pose write.
+    bool try_step_up(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
                      const float delta_seconds) {
         const JPH::Vec3 horizontal(relative_velocity.GetX(), 0.0F, relative_velocity.GetZ());
         const float speed = horizontal.Length();
         if (speed < kStepMinimumSpeed) {
-            return;
+            return false;
         }
         const JPH::Vec3 ahead = horizontal / speed * (speed * delta_seconds + kStepLookahead);
         const JPH::RVec3 at = bodies.GetPosition(player_id_);
@@ -5552,27 +5587,57 @@ private:
         JPH::BodyID obstacle;
         if (!cast_capsule(at, ahead, fraction, normal,&obstacle) ||
             normal.GetY() >= kSupportNormalThreshold) {
-            return;  // Nothing in the way, or only a slope the feet can walk.
+            return false;  // Nothing in the way, or only a slope the feet can walk.
         }
-        if(entity_is_causal_cargo_support(support_entity_id_) ||
-           entity_is_causal_cargo_support(bodies.GetUserData(obstacle))) return;
+        const bool physical=entity_is_causal_section_support(support_entity_id_) ||
+            entity_is_causal_section_support(bodies.GetUserData(obstacle));
         const JPH::RVec3 raised = at + JPH::Vec3(0.0F, kStepMaximumHeight, 0.0F);
         if (!capsule_pose_is_clear(raised) || cast_capsule(raised, ahead, fraction, normal)) {
-            return;  // No headroom, or the obstacle is taller than a step.
+            return false;  // No headroom, or the obstacle is taller than a step.
         }
         const JPH::RVec3 over = raised + ahead;
         const JPH::Vec3 down(0.0F, -(kStepMaximumHeight + kStepMinimumHeight), 0.0F);
         if (!cast_capsule(over, down, fraction, normal) ||
             normal.GetY() < kSupportNormalThreshold) {
-            return;  // Nothing walkable to put the feet on.
+            return false;  // Nothing walkable to put the feet on.
         }
         const float rise = kStepMaximumHeight + down.GetY() * fraction;
         if (rise < kStepMinimumHeight) {
-            return;
+            return false;
+        }
+        if(physical) {
+            // A swept low riser requests leg work, never a prescribed pose.
+            // The actual current foot contact takes the reciprocal impulse;
+            // native gravity/contact decide whether the step is achieved.
+            if(support_sample_.body_id.IsInvalid()) return false;
+            const auto contact=JPH::RVec3(support_sample_.contact_point.x,support_sample_.contact_point.y,
+                                          support_sample_.contact_point.z);
+            const auto support=support_sample_.body_id;
+            const auto relative=bodies.GetLinearVelocity(player_id_)-bodies.GetPointVelocity(support,contact);
+            const float takeoff=std::sqrt(2.0F*-physics_system_.GetGravity().GetY()*(rise+0.08F));
+            auto impulse=JPH::Vec3(0,kPlayerMassKg*std::max(0.0F,takeoff-relative.GetY()),0);
+            float inverse=1.0F/kPlayerMassKg;
+            const bool dynamic=bodies.GetMotionType(support)==JPH::EMotionType::Dynamic;
+            if(dynamic) {
+                const auto body=kit_->body_for_entity(bodies.GetUserData(support));
+                if(body.valid()) inverse+=kit_->point_inverse_mass(body,contact,JPH::Vec3::sAxisY());
+            }
+            const double budget=kPlayerMassKg*-physics_system_.GetGravity().GetY()*(rise+0.08F);
+            const double linear=impulse.Dot(relative),quadratic=.5*double(impulse.LengthSq())*inverse;
+            if(linear+quadratic>budget)
+                impulse*=float(2*budget/(linear+std::sqrt(linear*linear+4*quadratic*budget)));
+            bodies.AddImpulse(player_id_,impulse);
+            if(dynamic) bodies.AddImpulse(support,-impulse,contact);
+            landing_jump_work_j_+=std::max(0.0F,impulse.Dot(relative)+.5F*impulse.LengthSq()*inverse);
+            causal_airborne_=true;
+            physical_step_pending_=true;
+            physical_step_start_feet_y_=at.GetY()-kPlayerHalfHeight;
+            return true;
         }
         bodies.SetPosition(player_id_, at + JPH::Vec3(0.0F, rise + 0.01F, 0.0F),
                            JPH::EActivation::Activate);
         ++step_up_count_;
+        return false;
     }
 
     // Real quadratic drag opposing the full velocity vector, not a clamp: it
@@ -5595,16 +5660,33 @@ private:
         }
     }
 
+    [[nodiscard]] bool probe_lip_pair(JPH::RVec3 ledge,JPH::Vec3 inward,JPH::BodyID owner,
+                                      Lip (&lips)[2]) const noexcept {
+        const JPH::Vec3 right(inward.GetZ(),0,-inward.GetX());
+        // CHOSEN hand spacing adapts to actual available edge width. Both
+        // grips must still be distinct real surfaces on the named body;
+        // maximum reach is unchanged and no wider beam is fabricated.
+        for(float span:{kHangHandSpan,0.14F,0.08F}) {
+            bool valid=true;
+            for(unsigned hand=0;hand<2;++hand) {
+                lips[hand]=probe_lip(ledge+right*(hand==0?-span:span),inward);
+                if(!lips[hand].valid || lips[hand].body!=owner) {valid=false;break;}
+            }
+            if(valid && JPH::Vec3(lips[0].ledge-lips[1].ledge).Length()>0.10F) return true;
+        }
+        return false;
+    }
+
     [[nodiscard]] bool acquire_hang_hands(JPH::BodyInterface &bodies) noexcept {
         const auto lip = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+        Lip lips[2];
+        if(!probe_lip_pair(lip,traversal_normal_,traversal_body_,lips)) return false;
         for (unsigned hand = 0; hand < 2; ++hand) {
-            const auto aim = lip + traversal_right() * (hand == 0 ? -kHangHandSpan : kHangHandSpan);
-            const auto actual = probe_lip(aim, traversal_normal_);
-            if (!actual.valid || actual.body != traversal_body_ ||
-                std::abs(actual.ledge.GetY() - lip.GetY()) > 0.15 ||
-                !physical_hands_->attach(hand, traversal_body_, actual.ledge)) {
+            const auto &actual=lips[hand];
+            if(std::abs(actual.ledge.GetY()-lip.GetY())>0.15 ||
+               !physical_hands_->attach(hand,traversal_body_,actual.ledge)) {
                 physical_hands_->clear();
-                hands_[0].valid = hands_[1].valid = false;
+                hands_[0].valid=hands_[1].valid=false;
                 return false;
             }
             ++hands_[hand].generation;
@@ -5686,7 +5768,7 @@ private:
         const LedgeProbe vault_probe =
             probe_ledge(origin, facing_, kVaultMinimumRise, kVaultMaximumRise, false);
         if (vault_probe.valid) {
-            if(entity_is_causal_cargo_support(vault_probe.ledge_entity_id))
+            if(entity_is_causal_section_support(vault_probe.ledge_entity_id))
                 return begin_cargo_transfer(bodies,vault_probe,origin);
             JPH::RVec3 landing_centre;
             JPH::BodyID landing_body;
@@ -5701,7 +5783,7 @@ private:
         if (!mantle_probe.valid) {
             return false;
         }
-        if(entity_is_causal_cargo_support(mantle_probe.ledge_entity_id))
+        if(entity_is_causal_section_support(mantle_probe.ledge_entity_id))
             return begin_cargo_transfer(bodies,mantle_probe,origin);
         begin_mantle(bodies, mantle_probe, origin);
         return true;
@@ -5823,7 +5905,7 @@ private:
             return;
         }
         const JPH::RVec3 origin = bodies.GetPosition(player_id_);
-        if(entity_is_causal_cargo_support(traversal_entity_id_)) {
+        if(entity_is_causal_section_support(traversal_entity_id_)) {
             LedgeProbe probe;
             probe.ledge_body=traversal_body_;
             probe.ledge_entity_id=traversal_entity_id_;
@@ -6043,7 +6125,7 @@ private:
     }
 
     void release_hang(JPH::BodyInterface &bodies) noexcept {
-        if(entity_is_causal_cargo_support(traversal_entity_id_)) causal_airborne_=true;
+        if(entity_is_causal_section_support(traversal_entity_id_)) causal_airborne_=true;
         const JPH::RVec3 ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
         const JPH::Vec3 support_velocity =
             traversal_body_.IsInvalid() ? JPH::Vec3::sZero()
@@ -6110,8 +6192,11 @@ private:
                 continue;
             }
             const JPH::Body &body = lock.GetBody();
+            // Mounted facade members remain usable holds even when their real
+            // sheet/tube mass is below the loose-handle exclusion threshold.
+            // Their native joints, not extra ballast, carry the player's load.
             if (body.IsSensor() ||
-                (body.IsDynamic() &&
+                (body.IsDynamic() && !is_facade_route_entity(body.GetUserData()) &&
                  body.GetMotionProperties()->GetInverseMass() * kGripMinBodyMassKg > 1.0F)) {
                 continue;
             }
@@ -6171,7 +6256,8 @@ private:
         const auto local = to_support_local(bodies, grip.body, grip.point);
         const bool changed = !hands_[hand].valid || hands_[hand].body != grip.body ||
                              hands_[hand].local != local;
-        if (changed && !(cargo_net_ && grip.body == cargo_net_->body() && physical_hands_->attached(hand)
+        if (changed && !(physical_hands_->attached(hand) &&
+            ((cargo_net_ && grip.body == cargo_net_->body()) || is_facade_route_entity(grip.entity_id))
             ? physical_hands_->regrip(hand, grip.body, grip.point)
             : physical_hands_->attach(hand, grip.body, grip.point))) {
             return;
@@ -6460,7 +6546,10 @@ private:
             return false;
         }
         if ((cargo_net_ && traversal_body_ == cargo_net_->body()) ||
-            entity_is_causal_cargo_support(traversal_entity_id_)) {
+            entity_is_causal_section_support(traversal_entity_id_) ||
+            entity_is_causal_section_support(probe.ledge_entity_id) ||
+            (!probe.landing_body.IsInvalid() &&
+             entity_is_causal_section_support(bodies.GetUserData(probe.landing_body)))) {
             return begin_cargo_transfer(bodies,probe,origin);
         }
         // Other sections retain their existing mantle controller.
@@ -6476,11 +6565,7 @@ private:
         const auto shoulder=origin+JPH::Vec3(0,kClimbHandMid,0);
         if (JPH::Vec3(probe.ledge_point-shoulder).Length()>1.05F) return false;
         Lip lips[2];
-        const JPH::Vec3 right(probe.inward.GetZ(),0,-probe.inward.GetX());
-        for (unsigned hand=0;hand<2;++hand) {
-            lips[hand]=probe_lip(probe.ledge_point+right*(hand==0?-kHangHandSpan:kHangHandSpan),probe.inward);
-            if (!lips[hand].valid || lips[hand].body!=probe.ledge_body) return false;
-        }
+        if(!probe_lip_pair(probe.ledge_point,probe.inward,probe.ledge_body,lips)) return false;
         for (unsigned hand=0;hand<2;++hand) {
             if (!physical_hands_->attach(hand,lips[hand].body,lips[hand].ledge)) {
                 clear_traversal();
@@ -6511,7 +6596,10 @@ private:
             clear_traversal();
             return;
         }
-        if (up_input<=kClimbInputDeadzone) return;
+        // A deliberate top-out/Action authorizes the bounded muscle action.
+        // Releasing the stick does not cancel that input transaction; pushing
+        // away pauses it while the real hand constraints keep taking load.
+        if (up_input < -kClimbInputDeadzone) return;
         const auto actual=bodies.GetPosition(player_id_);
         const auto ledge=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
         const auto landing=from_support_local(bodies,traversal_target_body_,traversal_local_target_);
@@ -6549,7 +6637,7 @@ private:
 
     void let_go_climb(JPH::BodyInterface &bodies) noexcept {
         const JPH::Vec3 support_velocity = climb_support_velocity(bodies);
-        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity || entity_is_causal_cargo_support(traversal_entity_id_))
+        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity || entity_is_causal_section_support(traversal_entity_id_))
             causal_airborne_=true;
         // The rotating/deforming support velocity remains the reference for
         // airborne steering. It must not replace the body's actual velocity.
@@ -6561,7 +6649,7 @@ private:
 
     // Springing back off the structure, away from it and up.
     void jump_off_climb(JPH::BodyInterface &bodies) noexcept {
-        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity || entity_is_causal_cargo_support(traversal_entity_id_)) {
+        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity || entity_is_causal_section_support(traversal_entity_id_)) {
             if(cargo_push_seconds_<0.0F) cargo_push_seconds_=0.20F;
             return;
         }
@@ -6710,8 +6798,7 @@ private:
         traversal_duration_ = kLoweringSeconds;
         traversal_stall_ticks_ = 0;
         traversal_desired_ = origin;
-        if(entity_is_causal_cargo_support(lip.entity_id)) {
-            traversal_state_=TraversalState::Hanging;
+        if(entity_is_causal_section_support(lip.entity_id)) {
             bodies.SetGravityFactor(player_id_,1.0F);
             if(!acquire_hang_hands(bodies)) {
                 clear_traversal();
@@ -6719,6 +6806,24 @@ private:
             }
         } else bodies.SetGravityFactor(player_id_, 0.0F);
         return true;
+    }
+
+    void update_physical_lowering(JPH::BodyInterface &bodies,float dt) noexcept {
+        const auto actual=bodies.GetPosition(player_id_);
+        const auto hold=from_support_local(bodies,traversal_body_,traversal_local_hold_);
+        const auto lip=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
+        const double horizontal=std::hypot(hold.GetX()-actual.GetX(),hold.GetZ()-actual.GetZ());
+        // Move the feet clear of the actual edge before asking for descent.
+        // Finite hands do the work; collision and gravity remain enabled.
+        auto goal=hold;
+        if(horizontal>0.08) goal.SetY(std::max(actual.GetY(),lip.GetY()+kPlayerHalfHeight+0.05F));
+        auto lead=JPH::Vec3(goal-actual);
+        if(lead.Length()>0.28F) lead*=0.28F/lead.Length();
+        auto command=JPH::Vec3(actual+lead-physical_hands_->commanded_position());
+        if(command.Length()>kClimbUpSpeed*dt) command*=kClimbUpSpeed*dt/command.Length();
+        physical_hands_->advance_targets(command,dt);
+        if(!grounded_ && JPH::Vec3(actual-hold).Length()<0.12F && actual.GetY()<lip.GetY())
+            traversal_state_=TraversalState::Hanging;
     }
 
     // Lowered: hanging from the lip, as if the hang had been caught there.
@@ -6937,6 +7042,7 @@ private:
         if (slingshot_) slingshot_->detach();
         slingshot_flight_ = false;
         causal_airborne_ = false;
+        physical_step_pending_ = false;
         // The capsule the checkpoint was committed in: a crouched commit's
         // centre is a crouched centre, and may sit under a low ceiling.
         crouched_ = checkpoint_crouched_;
@@ -7482,6 +7588,8 @@ private:
     bool cargo_transfer_active_ = false;
     float cargo_push_seconds_ = -1.0F;
     bool causal_airborne_ = false;
+    bool physical_step_pending_ = false;
+    float physical_step_start_feet_y_ = 0;
     TraversalState traversal_state_ = TraversalState::None;
     JPH::BodyID traversal_body_;
     JPH::BodyID traversal_target_body_;

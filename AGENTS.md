@@ -71,6 +71,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I approved creative climbing, timed swinging, and Rube Goldberg mechanisms.
 - Vary encounter extent and deliberately include coherent machines spanning 20–50 m or more alongside shorter challenges. Use tower rings as supports and receivers, without forcing each encounter into one ring interval.
   Why: I want large player-operated industrial motion, useful variety and efficient authoring rather than repetitive 10 m sections. GDD §16 owns the design guidance.
+- Preserve strategic traversal while converting existing sections: players read structures, judge reach/timing/load, take risks, climb, traverse and deliberately use or activate mechanisms to gain height. Preserve existing routes/layouts; geometry changes need a concrete physical necessity rather than a redesign pass.
+  Why: The owner clarified on2026-10-04 that causal conversion should keep ascent thoughtful and challenging, with few design changes.
 - Reuse physics primitives and authoring tools to build faster: joints, cables, contact, materials and hand coupling. Give sections distinct mechanisms, layouts, load paths, timing and traversal decisions; do not duplicate whole machines or encounters.
   Why: The owner reaffirmed on2026-10-04 that repetition is not fun to traverse; reusable foundations must support variety.
 - Make environmental additions playable and causally meaningful, and plan the next coherent pass after the current batch is finished and pushed.

@@ -1,0 +1,14 @@
+{
+  "source_commit": "21aca60db440e9757a4d8b52167a7bf56e650135",
+  "branch": "ChatGPT",
+  "run_id": 37249764305,
+  "conclusion": "success",
+  "artifact_id": 11321657451,
+  "zip_digest": "sha256:97e0eba3ceed699e6b83fdf787a3f077c928da1c435b65fed43bc8e13f83fa30",
+  "apk_sha256": "a984c2e0dbd905d681138c995ca4309ba3bd054b068cb87d6335f4a4db6cacf5",
+  "package": "com.cory.scraperx.chatgpt",
+  "signer_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+  "signer_evidence": "retained actual CI verification output, not local cryptographic verification",
+  "downloads_path": "/storage/emulated/0/Download/ScraperX-ChatGPT-21aca60.apk",
+  "device_execution": "not claimed"
+}

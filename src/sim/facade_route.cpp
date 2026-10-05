@@ -83,7 +83,8 @@ constexpr float kLadderTop = kArmTop + 1.00F;
 constexpr float kLadderHalfWidth = 0.28F;
 constexpr float kGrabHalfWidth = 0.45F;
 
-void build_c1(std::vector<Part> &route) {
+void build_c1(std::vector<Part> &route, std::vector<std::size_t> &starts) {
+    starts.push_back(route.size());
     // ---- the loading landing and its cabinet ---------------------------------
     route.push_back(span({kLandingX0, kDeck2Top - 0.10F, -124.05F}, {kLandingX1, kDeck2Top, kLandingZ1},
                          Material::Galvanised));
@@ -102,11 +103,13 @@ void build_c1(std::vector<Part> &route) {
     }
     route.push_back(span({kLandingX0 + 0.08F, kDeck2Top, kLandingZ1 - 0.06F},
                          {kLandingX1 - 0.08F, kDeck2Top + 0.10F, kLandingZ1}, Material::Hazard));
+    starts.push_back(route.size()); // cabinet, bolted to the loading landing
     route.push_back(span({kCabinetX0, kDeck2Top, kCabinetZ0}, {kCabinetX1, kCabinetTop, kCabinetZ1},
                          Material::Steel));
     route.push_back(span({kCabinetX0 - 0.02F, kCabinetTop - 0.08F, kCabinetZ0 - 0.02F},
                          {kCabinetX1 + 0.02F, kCabinetTop, kCabinetZ1 + 0.02F}, Material::Hazard));
 
+    starts.push_back(route.size());
     // ---- the duct, its intake and its straps ---------------------------------
     route.push_back(span({kDuctX0, kDuctBottom, kFaceOuterZ}, {kDuctX1, kDuctTop, kDuctZ1},
                          Material::Galvanised));
@@ -119,6 +122,7 @@ void build_c1(std::vector<Part> &route) {
                              Material::Steel));
     }
 
+    starts.push_back(route.size());
     // ---- the vent stack, on the duct and clamped to deck 3's edge beam -------
     route.push_back(span({kVentX - kVentHalf, kDuctTop, kVentZ - kVentHalf},
                          {kVentX + kVentHalf, kVentTeeY + kVentHalf, kVentZ + kVentHalf}, Material::Galvanised));
@@ -138,6 +142,7 @@ void build_c1(std::vector<Part> &route) {
     route.push_back(span({kVentX - kVentPlateHalfX, deck3_beam_bottom, kFaceOuterZ},
                          {kVentX + kVentPlateHalfX, kDeck3Top, kFaceOuterZ + kVentFascia}, Material::Steel));
 
+    starts.push_back(route.size());
     // ---- deck 3's monorail -------------------------------------------------------
     route.push_back(span({kDavitX - 0.15F, kDeck3Top, kMonorailZ0}, {kDavitX + 0.15F, kMonorailTop, kMonorailZ1},
                          Material::Yellow));
@@ -146,12 +151,14 @@ void build_c1(std::vector<Part> &route) {
     // Held down at its back end by a post to deck 4's underside.
     route.push_back(span({kDavitX - 0.125F, kMonorailTop, kMonorailZ0 + 0.10F},
                          {kDavitX + 0.125F, kDeck4Top - 0.50F, kMonorailZ0 + 0.35F}, Material::Rust));
+    starts.push_back(route.size());
     // Its trolley and hook block, parked under the beam near its end.
     route.push_back(span({kDavitX - 0.25F, kDeck3Top - 0.30F, -120.90F}, {kDavitX + 0.25F, kDeck3Top, -120.50F},
                          Material::Rust));
     route.push_back(span({kDavitX - 0.10F, kDeck3Top - 1.10F, -120.80F},
                          {kDavitX + 0.10F, kDeck3Top - 0.30F, -120.60F}, Material::Hazard));
 
+    starts.push_back(route.size());
     // ---- deck 4's davit: a box girder, deep over the drop -----------------------
     route.push_back(span({kDavitX - 0.175F, kArmBottom, kFaceOuterZ}, {kDavitX + 0.175F, kArmTop, kArmZ1},
                          Material::Yellow));
@@ -160,6 +167,7 @@ void build_c1(std::vector<Part> &route) {
     route.push_back(span({kDavitX - 0.125F, kArmTop, kArmZ0 + 0.10F},
                          {kDavitX + 0.125F, kDeck4Top + 10.50F, kArmZ0 + 0.35F}, Material::Rust));
 
+    starts.push_back(route.size());
     // ---- the ladder hung from the arm's end ---------------------------------------
     // Its stiles and rungs stop at the arm's top, hooked over it by low plates,
     // so a climber topping out passes over them; the grab handles above stand
@@ -185,8 +193,55 @@ void build_c1(std::vector<Part> &route) {
 } // namespace
 void build_facade_route(kit::Kit &kit) {
     std::vector<Part> route;
-    build_c1(route);
-    kit.add_body(kFacadeRouteEntityId, route, JPH::RVec3(0, -11, 0),
-                 JPH::Quat::sIdentity(), 0.0F, 0.8F);
+    std::vector<std::size_t> starts;
+    build_c1(route, starts);
+    starts.push_back(route.size());
+    std::vector<kit::BodyIndex> groups;
+    for (unsigned group=0; group+1<starts.size(); ++group) {
+        std::vector<Part> parts(route.begin()+starts[group], route.begin()+starts[group+1]);
+        float mass=0;
+        for (auto &part:parts) {
+            const auto d=2.0F*part.half;
+            // CHOSEN steel rho7850kg/m³; cabinet/duct sheet3mm,
+            // other closed steel members6mm. The collision envelope stays
+            // exact; constituent masses determine native COM and inertia.
+            const float wall=(group==1 || group==2)?0.003F:0.006F;
+            const float inner_x=std::max(0.0F,d.GetX()-2*wall);
+            const float inner_y=std::max(0.0F,d.GetY()-2*wall);
+            const float inner_z=std::max(0.0F,d.GetZ()-2*wall);
+            part.mass_kg=7850.0F*(d.GetX()*d.GetY()*d.GetZ()-inner_x*inner_y*inner_z);
+            // CHOSEN80kg switchgear payload in the original cabinet shell.
+            if(group==1 && &part==&parts.front()) part.mass_kg+=80.0F;
+            mass+=part.mass_kg;
+        }
+        groups.push_back(kit.add_body(group==0?kFacadeRouteEntityId:2559+group,
+            parts,JPH::RVec3(0,-11,0),JPH::Quat::sIdentity(),mass,0.8F));
+        kit.set_damping(groups.back(),0,0);
+    }
+    const auto world_mount=[&](unsigned group,JPH::RVec3 point) {
+        // Passive elastic attachment at the existing visible beam/strap.
+        // CHOSEN2MN/m,40kNs/m,2MNm/rad,40kNms/rad; fixed neutral frames.
+        kit.add_elastic_mount({},groups[group],point,2.0e6F,40000,2.0e6F,40000);
+    };
+    // All positions below are DERIVED original authored positions minus11m.
+    for(float x:{18.20F,21.80F}) world_mount(0,{x,10.0,-123.64});
+    kit.add_fixed_joint(groups[0],groups[1]); // actual cabinet mounting
+    for(float x:{18.20F,23.40F}) world_mount(2,{x,21.0,-123.685});
+    world_mount(3,{24.0,21.15,-123.64}); // stack clamp and receiver plate
+    kit.add_elastic_mount(groups[2],groups[3],{24.0,16.3,-123.45},
+        2.0e6F,40000,2.0e6F,40000);
+    world_mount(4,{12.5,22.0,-123.85});
+    world_mount(4,{12.5,32.5,-127.275});
+    // Existing parked trolley is a finite passive carriage on its actual
+    // monorail. No autonomous motion or machine redesign is introduced.
+    kit.add_sliding_track(groups[4],groups[5],JPH::Vec3::sAxisZ(),-6.45F,1.0F,120.0F);
+    world_mount(6,{12.5,33.0,-123.7});
+    world_mount(6,{12.5,43.5,-126.275});
+    // Fixed maintenance ladder remains fixed in purpose, with finite mounting
+    // compliance; it is not the separate AS-026 pendulum-ladder encounter.
+    for(float x:{12.22F,12.78F})
+        kit.add_elastic_mount(groups[6],groups[7],{x,33.3,-120.25},
+            2.0e6F,40000,200000.0F,10000.0F);
+
 }
 } // namespace scraperx::sim

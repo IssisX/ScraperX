@@ -255,18 +255,21 @@ func _run() -> void:
 	if expected is Array:
 		if not fixture:
 			# Preserve the entire original oracle for every unaffected body. The
-			# explicit cargo migration is derived from that oracle, never captured
+			# explicit cargo/facade migrations are derived from that oracle, never captured
 			# from the current renderer and blessed as its own expectation.
 			var actual_original: Array = []
 			var expected_original: Array = []
 			var actual_cargo: Array = []
+			var actual_facade: Array = []
 			for body in record:
 				if body[0] in ["KitBody1952", "KitBody2952", "KitBody2954"]:
 					actual_cargo.append(body)
+				elif body[0] in ["KitBody1600", "KitBody2560", "KitBody2561", "KitBody2562", "KitBody2563", "KitBody2564", "KitBody2565", "KitBody2566"]:
+					actual_facade.append(body)
 				else:
 					actual_original.append(body)
 			for body in expected:
-				if body[0] != "KitBody1952":
+				if body[0] not in ["KitBody1952", "KitBody1600"]:
 					expected_original.append(body)
 			var cargo_bytes := FileAccess.get_file_as_bytes("res://tests/fixtures/kit-causal-cargo-numeric.json.gz")
 			var expected_cargo: Variant = JSON.parse_string(cargo_bytes.decompress_dynamic(
@@ -274,6 +277,12 @@ func _run() -> void:
 			_check(expected_cargo is Array, "derived cargo migration oracle loads")
 			var cargo_difference := _first_difference(actual_cargo, expected_cargo, "cargo")
 			_check(cargo_difference.is_empty(), "explicit causal cargo mesh migration " + cargo_difference)
+			var facade_bytes := FileAccess.get_file_as_bytes("res://tests/fixtures/kit-causal-facade-numeric.json.gz")
+			var expected_facade: Variant = JSON.parse_string(facade_bytes.decompress_dynamic(
+				32 * 1024 * 1024, FileAccess.COMPRESSION_GZIP).get_string_from_utf8())
+			_check(expected_facade is Array, "derived facade partition oracle loads")
+			var facade_difference := _first_difference(actual_facade, expected_facade, "facade")
+			_check(facade_difference.is_empty(), "explicit causal facade ownership partition " + facade_difference)
 			record = actual_original
 			expected = expected_original
 		var difference := _first_difference(record, expected)
