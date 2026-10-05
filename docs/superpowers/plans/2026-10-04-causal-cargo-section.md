@@ -52,7 +52,7 @@
 **Files:** 03_EXECUTION/ASCENT/AS-024_CARGO_NET_ENTRY.md, current continuation documents, scoped evidence receipts and relevant generated native solids tables.
 
 - [x] Update authoritative section inventory, force laws, chosen/derived numbers and actual proof boundaries alongside the code.
-- [ ] Run the existing ordinary shipping-touch route on the rebuilt native library and affected display/solids checks only; update geometry expectations only for intentional native changes.
+- [x] Run the existing ordinary shipping-touch route on the rebuilt native library and affected display/solids checks only; update geometry expectations only for intentional native changes.
 - [ ] Publish the complete section onChatGPT, finish exact-source green Actions and verify/copy the resulting APK. Keep the goal active until all gameplay-object categories and complete traversal are proven.
 
 **2026-10-04 native checkpoint:** all three ordinary lanes X=19/20/21 reach supported Tower11 at+11m, zero deaths/no launcher work, with gravity1 for every climb/receiver-transfer tick. The physical-hand target passes, including actual soft recoil/momentum and extension-preserving regrip. Gantry/anchor/departure conversion and rebuilt shipping runtime/delivery remain unfinished. The requested net stance is0.55m (CHOSEN) versus0.35m capsule radius; finite hands acquire it without a pose write.
@@ -87,3 +87,5 @@ Latest evidence: the finite-frame three-lane route passed; adding Action during 
 **Integrated native checkpoint:** frame mass6562.78kg, clip/frame momentum residual0.00302Ns, top anchor displacement61.46mm following actual frame impulse. All three routes retain gravity1 and survive repeated receiving Action; command-bounded Jump and force-driven tread walking pass. Passive walk-off and final native launcher seam regression are being checked after the release guards were closed. Shipping renderer resource cache required importing the newly recorded footsteps; no audio source change was made.
 
 **Owner pace correction:** deliver this section, then reuse the force/contact/attachment owners in subsequent complete sections. Do not turn a section into an expanding verification or polish project. The original1,000+m ambition remains; this selected first section is one systematic conversion, not a redefinition of the overall structure.
+
+**Shipping/delivery checkpoint:** actual-renderer touch route passes from ordinary spawn to supported Tower11, zero deaths/no launcher work and native-loaded net deformation138.68mm. Normal KitView32909checks passes. Executable `21aca60db440e9757a4d8b52167a7bf56e650135` is pushed; run37249764305 is live. Remaining acceptance is that required exact-source green CI/APK receipt, not another local check/polish cycle.

@@ -1,0 +1,25 @@
+proot warning: can't sanitize binding "/proc/self/fd/1": No such file or directory
+proot warning: can't sanitize binding "/proc/self/fd/2": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x371 aspect=1.164 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=486 driver=Dummy
+SCRAPERX_UITEST_POSE cargo_net_entry tick=1597 position=(19.98975, 0.9, -113.9313) elapsed_ms=82475
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_entry bodies=31 cables=3 deformation_m=0.00000 renderer=X11
+SCRAPERX_UITEST_POSE cargo_net_climbing tick=2592 position=(19.98325, 5.508697, -117.1669) elapsed_ms=130997
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_climbing bodies=31 cables=3 deformation_m=0.13868 renderer=X11
+SCRAPERX_UITEST_POSE cargo_net_receiver tick=3474 position=(19.9953, 11.89145, -118.4896) elapsed_ms=177995
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_receiver bodies=31 cables=3 deformation_m=0.13868 renderer=X11
+SCRAPERX_UITEST_POSE cargo_net_first_ring tick=3741 position=(18.49575, 11.9, -125.9045) elapsed_ms=197307
+SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_first_ring bodies=31 cables=3 deformation_m=0.13868 renderer=X11
+SCRAPERX_UITEST PASS touch_cargo_net staging=ordinary_grade_spawn supported_height_m=11.00 deaths=0 slingshot_used=0

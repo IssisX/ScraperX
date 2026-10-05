@@ -1,6 +1,6 @@
 # AS-024 — flexible cargo-net ground entry
 
-**Lifecycle:** the preceding implementation was delivered in executable `ab470d3`, green Actions run `37240309543`. The new full causal section conversion is in progress; its new runtime/CI/APK acceptance is not complete.
+**Lifecycle:** the preceding implementation was delivered in executable `ab470d3`, green Actions run `37240309543`. The full causal section conversion is implemented and passes native/actual-renderer shipping route acceptance. Executable `21aca60db440e9757a4d8b52167a7bf56e650135` is pushed; [delivery run37249764305](https://github.com/IssisX/ScraperX/actions/runs/37249764305) is in progress. Exact-source green CI/APK delivery remains pending.
 **Owner selection:** convert the complete ordinary grade → net → receiver → first ring section to actual causal physics, keeping grade/concrete foundations and the megastructure backbone static. Launcher device acceptance remains separate.
 **Spatial owner:** [Atlas](../../01_PRODUCT_AUTHORITY/02_ASCENT_ATLAS.md).
 

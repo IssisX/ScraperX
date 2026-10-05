@@ -1,0 +1,24 @@
+{
+  "source_commit": "21aca60db440e9757a4d8b52167a7bf56e650135",
+  "branch": "ChatGPT",
+  "run_id": 37249764305,
+  "url": "https://github.com/IssisX/ScraperX/actions/runs/37249764305",
+  "observed_status": "in_progress",
+  "local_shipping_touch": {
+    "process_session": 46915,
+    "exit_code": 0,
+    "grade_spawn": true,
+    "debug_relocation": false,
+    "support_entity": 11,
+    "supported_height_m": 11,
+    "deaths": 0,
+    "slingshot_work_j": 0,
+    "rigid_bodies": 31,
+    "loaded_net_deformation_m": 0.13868
+  },
+  "remaining": [
+    "exact-source CI conclusion",
+    "verified exported APK and Downloads copy"
+  ],
+  "device_execution": "not claimed"
+}
