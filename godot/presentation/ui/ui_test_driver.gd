@@ -1591,8 +1591,12 @@ func _ground_foundation() -> bool:
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	if int(_native().get_moving_body_count()) != 27:
-		return _fail("default slingshot, stair, lift and teeter body inventory differs")
+	# AS-027 appends nine movers and three static bodies; adds no cables.
+	var moving_count := int(_native().get_moving_body_count())
+	var kit_count := int(_native().get_kit_body_count())
+	var cable_count := int(_native().get_kit_cable_count())
+	if moving_count != 27 + 9 or kit_count != 38 + 12 or cable_count != 3:
+		return _fail("default inventory differs: moving=%d kit=%d cables=%d" % [moving_count, kit_count, cable_count])
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
 	var retired := ["IntakeBay", "WaterScrew", "LegalForty", "Hook5",
@@ -1612,7 +1616,7 @@ func _ground_foundation() -> bool:
 	# Look through the old intake/screw area with normal walking and turning.
 	await _face(Vector2(-1.0, -1.0))
 	await _pose("cleared_tower")
-	_detail = "retired_bodies=0 moving_bodies=27 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1"
+	_detail = "retired_bodies=0 moving_bodies=%d kit_bodies=%d cables=%d retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" % [moving_count, kit_count, cable_count]
 	return true
 
 
