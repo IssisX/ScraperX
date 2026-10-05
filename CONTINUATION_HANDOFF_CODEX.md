@@ -181,3 +181,5 @@ Use separate runtime copies for concurrent workers. Do not overwrite scripts in 
 This bounded delivery is complete: executable `ab470d36bf4cc7faca68a0b64f556fbbc272ad9c`, green run `37240309543`, verified artifact `11318486370` and local Downloads APK. Continue the active causal-section conversion above. The owner superseded the saved ascent/content goal; do not resume it or repeat completed checks. Root directly owns difficult diagnosis, engineering decisions and repairs; agents support bounded evidence gathering and routine work. Keep verification proportional to the next authorized change.
 
 HANDOFF COMPLETE
+
+Resume first action: repair confirmed Drop cancellation gap during physical Lowering. apply_traversal_commands currently rejects release in Lowering (~simulation.cpp5223); allow active physical hands to detach through the existing momentum-preserving release owner, then check that path. Shipping touch proof and facade delivery remain pending.
