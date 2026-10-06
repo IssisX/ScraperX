@@ -13,13 +13,16 @@
 #include <Jolt/RegisterTypes.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <limits>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace {
 
@@ -3152,6 +3155,96 @@ void run_service_o() {
 // pulled, the ride, off onto the 662 deck; up C4 to the 684 deck; N's flap
 // open, the ride, off onto the 706 deck; up C5 to the 728 deck; O's chock
 // drawn, the ride, off onto the 750 deck.
+// Everything a run can leave different, as raw bits: the clock and the player
+// (the first kClockAndPlayerWords), then every kit body, every rope as drawn,
+// every bin's contents.
+constexpr std::size_t kClockAndPlayerWords = 12;
+
+std::vector<std::uint64_t> world_bits(const scraperx::sim::Simulation &simulation) {
+    std::vector<std::uint64_t> bits;
+    const auto put = [&bits](const double value) {
+        std::uint64_t word = 0;
+        std::memcpy(&word, &value, sizeof(word));
+        bits.push_back(word);
+    };
+    const auto put3 = [&put](const scraperx::sim::Vector3 &v) {
+        put(v.x);
+        put(v.y);
+        put(v.z);
+    };
+    const auto state = simulation.snapshot();
+    bits.push_back(state.tick_index);
+    put(state.simulation_time_seconds);
+    put3(state.player_position);
+    put3(state.player_linear_velocity);
+    bits.push_back(state.support_entity_id);
+    bits.push_back(state.carrying_entity_id);
+    bits.push_back(state.accepted_traversal_count);
+    bits.push_back(state.death_count);
+    for (std::uint32_t body = 0; body < simulation.kit_body_count(); ++body) {
+        bits.push_back(simulation.kit_body_enabled(body) ? 1U : 0U);
+        put3(simulation.kit_body_position(body));
+        const auto q = simulation.kit_body_rotation(body);
+        put(q.x);
+        put(q.y);
+        put(q.z);
+        put(q.w);
+        put3(simulation.kit_body_velocity(body));
+        put(simulation.kit_body_mass(body));
+    }
+    std::array<scraperx::sim::Vector3, 8> points{};
+    for (std::uint32_t cable = 0; cable < simulation.kit_cable_count(); ++cable) {
+        const std::uint32_t n =
+            simulation.kit_cable_points(cable, points.data(), static_cast<std::uint32_t>(points.size()));
+        bits.push_back(n);
+        for (std::uint32_t i = 0; i < n; ++i) {
+            put3(points[i]);
+        }
+    }
+    for (std::uint32_t bin = 0; bin < simulation.kit_bin_count(); ++bin) {
+        put(simulation.kit_bin(bin).contents_kg);
+    }
+    return bits;
+}
+
+// The owner's law for this world (plan §2.6 rule 10): the initial state
+// determines the final state. The same start and the same inputs, twice: up
+// C5 on player inputs (walk, vault, crawl, sprint, leap, hang, climb), then O
+// (carry, rope, wheel, pour, catches, ride) and off onto the 750 deck. The
+// second run follows the first in the same process, so anything the first
+// leaves behind (a static, a seed, an allocator's state) shows as a difference.
+void run_determinism() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    const auto run = []() {
+        Simulation simulation(InitialSpawn::Deck706);
+        require(simulation.advance_frame(1.0).accepted, "determinism: the settle interval must be accepted");
+        const auto start = world_bits(simulation);
+        double freed = -1.0;
+        require(climb_c5(simulation) && pull_o_handle(simulation, &freed) &&
+                    ride_service_o(simulation, true, freed).settled && step_off_o(simulation),
+                "determinism: each run must climb C5, ride O and step off onto the 750 deck");
+        (void)simulation.advance_frame(2.0);
+        const auto end = world_bits(simulation);
+        require(end.size() == start.size() && end.size() > kClockAndPlayerWords &&
+                    !std::equal(start.begin() + kClockAndPlayerWords, start.end(),
+                                end.begin() + kClockAndPlayerWords),
+                "determinism: the compared state must include the machines, which moved");
+        return end;
+    };
+    const auto first = run();
+    const auto second = run();
+    require(first.size() == second.size(), "determinism: two runs must end with the same bodies and ropes");
+    const auto differ = std::mismatch(first.begin(), first.end(), second.begin());
+    if (differ.first != first.end()) {
+        std::cerr << "determinism: first different word " << (differ.first - first.begin()) << " of "
+                  << first.size() << '\n';
+    }
+    require(differ.first == first.end(),
+            "determinism: the same start and the same inputs must end in the same state, bit for bit");
+    std::cout << "PASS scraperx_sim determinism: words=" << first.size() << " ticks=" << first.front() << '\n';
+}
+
 void run_service_band() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -4748,6 +4841,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-010-o") {
         run_service_o();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "determinism") {
+        run_determinism();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -6688,6 +6786,7 @@ int main() {
     run_service_o();
     run_service_band();
     run_service_route();
+    run_determinism();
     run_ascent();
 
     return EXIT_SUCCESS;

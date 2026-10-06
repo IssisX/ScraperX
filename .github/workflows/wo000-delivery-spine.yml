@@ -156,6 +156,7 @@ jobs:
             "PASS scraperx_sim AS-010 O" \
             "PASS scraperx_sim AS-010 band" \
             "PASS scraperx_sim AS-010 route" \
+            "PASS scraperx_sim determinism" \
             "PASS scraperx_sim ascent 154 to TP-640"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log

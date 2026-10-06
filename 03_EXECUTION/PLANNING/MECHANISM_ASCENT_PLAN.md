@@ -121,6 +121,22 @@ own gate.
    stage when they do not feel like working out its climb or its machine. It is the backup, not
    the route: each stage is designed around its machine or climb, and the backup is the plainer,
    slower way beside it. It is the one sanctioned bypass (rule 7 still holds for climbs).
+9. **Nothing repeats.** The owner (2026-09-30): *"there are way too many machines or mechanisms
+   that are the same. You walk up to a block hanging from a string, you grab and pull, and that
+   is seen over and over and over and over … I don't want repetitive anything. That is extremely
+   important and you need to make note of this."* Each new stage gives the player an action, a form and a look that no earlier
+   stage has, and its record names the action it introduces. The kit's parts (ropes, guides,
+   catches, pins) are reused freely; the encounter is not. The hanging handle that the player
+   grabs and steps back from is spent: it trips about twenty machines from S1 to O, and no new
+   stage uses it. Reworking the existing ones is open for the owner.
+10. **The initial state determines the final state.** The owner's law for this physics world
+    (2026-09-30): *"The initial state should determine the final state."* The same world state
+    and the same inputs give the same final state, bit for bit: no random numbers, no clock time
+    and no frame-rate dependence in the simulation (it steps at a fixed 90 Hz), and no outcome
+    decided by script, so a machine ends where its as-found physics takes it. The native
+    `determinism` check runs the same start and the same inputs in two simulations and compares
+    every body's state at the end. Not established: the same result across machines (the
+    Android ARM build against the x86 CI build).
 
 ## 3. The chain
 
