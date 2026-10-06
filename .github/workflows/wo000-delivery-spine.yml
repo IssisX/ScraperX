@@ -295,6 +295,16 @@ jobs:
           grep -F "SCRAPERX_SOLIDS boxes=" artifacts/world-solids-export.log
           diff -u src/sim/world_solids.inc artifacts/world_solids.regenerated.inc
 
+      - name: Footsteps follow the floor, not the world
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A rider carried by a lift or a turning beam takes no steps; walking
+          # on a carrier steps by the distance walked over it.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/footstep_contact_test.gd 2>&1 | tee artifacts/footstep-contact.log
+          test "$(grep -c '^FOOTSTEP_CONTACT PASS' artifacts/footstep-contact.log)" -eq 5
+
       - name: Cross-compile native graph for Android arm64
         shell: bash
         run: |

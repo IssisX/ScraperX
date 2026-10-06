@@ -1173,7 +1173,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if delta > 0.0:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
-			int(_native.get_death_count()), crouched)
+			int(_native.get_death_count()), crouched, _native.get_support_point_linear_velocity())
 	# The developer telemetry overlay costs a dozen string formats a frame;
 	# it is only paid for while the overlay is actually on screen.
 	if _telemetry_on:

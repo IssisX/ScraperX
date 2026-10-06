@@ -239,8 +239,12 @@ func ui_tap(back: bool = false) -> void:
 
 # Once per rendered frame, with the native state main.gd already read.
 func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
-		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool) -> void:
-	var horizontal := Vector2(velocity.x, velocity.z).length()
+		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool,
+		support_point_velocity: Vector3 = Vector3.ZERO) -> void:
+	# Strides are the feet moving over what they stand on: a rider carried by a
+	# lift, a cab or a turning beam is not walking.
+	var foot_velocity := velocity - support_point_velocity if grounded else velocity
+	var horizontal := Vector2(foot_velocity.x, foot_velocity.z).length()
 
 	if grounded and traversal == 0 and horizontal > STEP_MIN_SPEED:
 		_stride += horizontal * delta
