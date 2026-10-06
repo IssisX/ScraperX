@@ -137,6 +137,14 @@ own gate.
     `determinism` check runs the same start and the same inputs in two simulations and compares
     every body's state at the end. Not established: the same result across machines (the
     Android ARM build against the x86 CI build).
+11. **Not chutes and ladders.** The owner (2026-10-06): *"I didn't ask you to make me a game of
+    3D chutes and ladders … There's lifts that need a pull of something, and fucking ladders
+    throughout the whole damn game. So boring."* No new ladder on the route (a ladder may only
+    be the backup of rule 8), and no lift that starts when the player pulls something. A stage
+    is a physical experience the route has not had yet: thrown by stored energy, swung on a
+    hanging mass, carried by something falling, tipping or rolling, a run and leap the
+    player's momentum decides. The ladders and pull-started lifts already on the route from
+    grade to the +221 m ring are replaced one at a time.
 
 ## 3. The chain
 
