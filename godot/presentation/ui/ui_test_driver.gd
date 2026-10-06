@@ -71,6 +71,10 @@ const SCENARIOS := {
 	# AS-010's stage O, the gravel wheel, from the 728 deck to the 750 deck on
 	# touch.
 	"touch_o": 34,
+	# The ground slingshot from the game's start: into the pouch, the stick
+	# pulled back to draw, RELEASE, the chute over the tower and the stick
+	# steering down onto the 220 ring.
+	"touch_slingshot": 8,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -223,6 +227,8 @@ func _run() -> void:
 			ok = await _c5(InputRouter.Device.TOUCH)
 		"touch_o":
 			ok = await _o(InputRouter.Device.TOUCH)
+		"touch_slingshot":
+			ok = await _slingshot(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1620,6 +1626,86 @@ func _service(device: int) -> bool:
 
 func _service_state() -> Dictionary:
 	return _native().get_service_state()
+
+
+func _sling() -> Dictionary:
+	return _native().get_slingshot_state()
+
+
+# The ground slingshot, played as its native test plays it: round the
+# pouch's east block to its low front lip and step in; ENTER POUCH; the stick
+# pulled back until the pouch is drawn 10.2 m; RELEASE; over the tower and
+# coming down, the chute; the stick steering onto the 220 ring, where the
+# route from grade arrives.
+func _slingshot(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	if not (await _go(device, Vector2(6.0, -40.0), 0.3, 25.0) and \
+			await _go(device, Vector2(6.0, -57.6), 0.2, 25.0) and \
+			await _go(device, Vector2(-3.0, -57.6), 0.15, 12.0) and \
+			await _go(device, Vector2(-3.0, -55.0), 0.1, 6.0)):
+		return _fail("the walk into the slingshot's pouch stalled at %s" % str(_position()))
+	if not await _offered(&"slingshot", "ENTER POUCH"):
+		return _fail("in the pouch, Action read '%s %s', not ENTER POUCH" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	await _pose("sling_pouch")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_sling()["seated"]), 1.0):
+		return _fail("ENTER POUCH did not harness the rider")
+	if not await _offered(&"slingshot", "PULL BACK"):
+		return _fail("seated, Action read '%s', not PULL BACK" % _action_label())
+	# Draw: the stick held back until the pouch is 10.2 m behind its rest.
+	_move_dir(device, Vector2(0.0, -1.0))
+	var drawn: bool = await _wait_until(func() -> bool: return float(_sling()["draw_m"]) >= 10.2, 8.0)
+	_move_dir(device, Vector2.ZERO)
+	if not drawn:
+		return _fail("the stick held back drew the pouch only %.2f m" % float(_sling()["draw_m"]))
+	await _pose("sling_drawn")
+	var draw_m := float(_sling()["draw_m"])
+	var energy_kj := float(_sling()["energy_j"]) / 1000.0
+	if not await _offered(&"slingshot", "RELEASE"):
+		return _fail("drawn %.2f m, Action read '%s', not RELEASE" % [draw_m, _action_label()])
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_sling()["flight"]), 3.0):
+		return _fail("RELEASE did not throw the rider off the bands")
+	# Up the tower's face; coming down over it, the chute.
+	# A lambda cannot write a local: the apex is kept in a dictionary.
+	var flight := {"apex": 0.0}
+	var over: bool = await _wait_until(func() -> bool:
+		flight["apex"] = maxf(float(flight["apex"]), _position().y)
+		return _velocity().y < 0.0 and _position().z < -118.0 and _position().y > 226.0, 20.0)
+	var apex := float(flight["apex"])
+	if not over:
+		return _fail("the throw never came down over the tower (apex %.1f m, at %s)" % [apex, str(_position())])
+	await _pose("sling_flight")
+	_tap(0, _center(&"chute"))
+	if not await _wait_until(func() -> bool: return bool(_native().is_parachute_deployed()), 0.5):
+		return _fail("CHUTE did not open the canopy over the tower")
+	# Steer onto the ring, the stick pushed toward it relative to the view.
+	var target := Vector2(-3.0, -128.7)
+	var waited := 0.0
+	while waited < 20.0 and not bool(_native().is_player_grounded()):
+		var at := _position()
+		var to := target - Vector2(at.x, at.z)
+		var yaw := float(_main._yaw)
+		var forward := Vector2(-sin(yaw), -cos(yaw))
+		var right := Vector2(cos(yaw), -sin(yaw))
+		var v := Vector2(to.dot(right), to.dot(forward))
+		_move_dir(device, v.normalized() * clampf(v.length(), 0.0, 1.0) if v.length() > 0.05 else Vector2.ZERO)
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_move_dir(device, Vector2.ZERO)
+	await _seconds(0.5)
+	await _pose("sling_landed")
+	var at_end := _position()
+	if int(_native().get_death_count()) != 0:
+		return _fail("the rider died on the way (apex %.1f m)" % apex)
+	if not bool(_native().is_player_grounded()) or at_end.y < 221.0 or at_end.y > 221.3 or \
+			at_end.z < -130.73 or at_end.z > -126.73:
+		return _fail("the rider came down at %s, not on the 220 ring (apex %.1f m)" % [str(at_end), apex])
+	_detail = "ring220_y=%.2f draw_m=%.2f energy_kJ=%.0f apex=%.1f seconds=%.1f" % [at_end.y, draw_m, energy_kj,
+		apex, float(int(_native().get_tick_index()) - started) / 90.0]
+	return true
 
 
 func _service_m(device: int) -> bool:

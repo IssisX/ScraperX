@@ -3155,6 +3155,172 @@ void run_service_o() {
 // pulled, the ride, off onto the 662 deck; up C4 to the 684 deck; N's flap
 // open, the ride, off onto the 706 deck; up C5 to the 728 deck; O's chock
 // drawn, the ride, off onto the 750 deck.
+// The ground slingshot (sim/slingshot.hpp), played from the game's start: a
+// walk to the pouch, ENTER, the stick held back to draw, RELEASE, and the
+// chute opened over the tower with the stick steering onto a ring. Returns
+// the end state; `apex` the highest the body went.
+struct SlingshotShot final {
+    bool boarded = false;
+    bool held = false;
+    double draw = 0.0;
+    double energy = 0.0;
+    double work = 0.0;
+    double apex = 0.0;
+    double peak_speed = 0.0;
+    bool launched = false;
+    bool flew = false;
+    scraperx::sim::Snapshot end{};
+};
+
+SlingshotShot slingshot_shot(const double draw_seconds, const bool chute) {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    constexpr double kElevation = 1.4311699866353502;
+    constexpr double kRingX = -3.0;
+    constexpr double kRingZ = -128.7;
+    SlingshotShot shot;
+    Simulation s(InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(1.0);
+    // Round the pouch's east block to its low front lip, and step in.
+    if (!(walk_to(s, 6.0, -40.0, 20.0) && walk_to(s, 6.0, -57.6, 20.0) && walk_to(s, -3.0, -57.6, 10.0, 0.1) &&
+          walk_to(s, -3.0, -55.0, 6.0, 0.08))) {
+        return shot;
+    }
+    (void)s.advance_frame(0.6);
+    if (!s.slingshot_state().station_available) {
+        return shot;
+    }
+    (void)s.set_slingshot_input(0.0, 0.0, kElevation);
+    (void)s.request_slingshot_action();
+    (void)s.advance_frame(0.2);
+    shot.boarded = s.slingshot_state().seated;
+    (void)s.set_slingshot_input(1.0, 0.0, kElevation);
+    (void)s.advance_frame(draw_seconds);
+    (void)s.set_slingshot_input(0.0, 0.0, kElevation);
+    (void)s.advance_frame(0.1);
+    const auto drawn = s.slingshot_state();
+    shot.draw = drawn.draw_m;
+    shot.energy = drawn.energy_j;
+    shot.work = drawn.work_j;
+    (void)s.advance_frame(1.0);
+    shot.held = std::abs(s.slingshot_state().draw_m - shot.draw) < 0.03;
+    (void)s.request_slingshot_action();
+    bool opened = false;
+    for (int tick = 0; tick < 90 * 30; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = s.snapshot();
+        const auto &v = state.player_linear_velocity;
+        shot.apex = std::max(shot.apex, state.player_position.y);
+        shot.peak_speed = std::max(shot.peak_speed, std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z));
+        shot.launched = shot.launched || s.slingshot_state().launch_count > 0;
+        shot.flew = shot.flew || s.slingshot_state().flight;
+        if (chute && !opened && v.y < 0.0 && state.player_position.z < -118.0 && state.player_position.y > 226.0) {
+            (void)s.request_parachute();
+            opened = true;
+        }
+        if (opened) {
+            const double dx = kRingX - state.player_position.x;
+            const double dz = kRingZ - state.player_position.z;
+            const double l = std::hypot(dx, dz);
+            const double k = std::min(1.0, l);
+            (void)s.set_move_input(l > 0.05 ? dx / l * k : 0.0, l > 0.05 ? dz / l * k : 0.0);
+        }
+        if ((state.player_grounded && tick > 90) || state.death_count > 0) {
+            break;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.advance_frame(1.0);
+    shot.end = s.snapshot();
+    return shot;
+}
+
+void run_slingshot() {
+    // A drawn shot with the chute opened over the tower lands on the 220
+    // ring, where the route from grade arrives.
+    const SlingshotShot shot = slingshot_shot(2.8, true);
+    require(shot.boarded, "slingshot: walked from grade into the pouch, ENTER must harness the rider");
+    require(shot.draw > 9.0 && shot.energy > 200000.0,
+            "slingshot: 2.8 s of the stick held back must draw the pouch over 9 m and store over 200 kJ");
+    require(shot.energy <= shot.work,
+            "slingshot: the stretched rubber can hold no more than the draw put in");
+    require(shot.held, "slingshot: drawn and let go of, the ratchet must hold the pouch where it is");
+    require(shot.launched && shot.flew, "slingshot: RELEASE must throw the rider off the bands");
+    require(shot.apex > 240.0 && shot.apex < 275.0, "slingshot: a 2.8 s draw must throw the rider 240-275 m up");
+    require(shot.peak_speed < 90.0, "slingshot: the throw must stay under 90 m/s");
+    const auto &end = shot.end;
+    require(end.death_count == 0, "slingshot: chute and stick must bring the rider down alive");
+    require(end.player_grounded && end.player_position.y > 221.0 && end.player_position.y < 221.3 &&
+                end.player_position.z > -130.73 && end.player_position.z < -126.73,
+            "slingshot: the rider must stand on the 220 ring");
+    // Same start, same inputs, same landing, to the bit.
+    const SlingshotShot again = slingshot_shot(2.8, true);
+    require(std::memcmp(&again.end.player_position, &end.player_position, sizeof(end.player_position)) == 0 &&
+                again.end.tick_index == end.tick_index,
+            "slingshot: the same shot twice must land at the same place on the same tick");
+    // Less draw, a lower throw; no chute from it, a lethal fall.
+    const SlingshotShot short_shot = slingshot_shot(2.0, false);
+    require(short_shot.apex > 80.0 && short_shot.apex < shot.apex - 80.0,
+            "slingshot: a shorter draw must throw lower");
+    require(short_shot.end.death_count == 1,
+            "slingshot: a thrown rider who falls 100 m without the chute must die");
+    // Used again: a short shot into the yard under the chute, the spent pouch
+    // reeled back from the post beside it, and the pouch takes a rider again.
+    {
+        using scraperx::sim::InitialSpawn;
+        using scraperx::sim::Simulation;
+        constexpr double kElevation = 1.4311699866353502;
+        Simulation s(InitialSpawn::ExteriorGrade);
+        (void)s.advance_frame(1.0);
+        require(walk_to(s, 6.0, -40.0, 20.0) && walk_to(s, 6.0, -57.6, 20.0) && walk_to(s, -3.0, -57.6, 10.0, 0.1) &&
+                    walk_to(s, -3.0, -55.0, 6.0, 0.08),
+                "slingshot reuse: the walk into the pouch");
+        (void)s.advance_frame(0.6);
+        (void)s.set_slingshot_input(0.0, 0.0, kElevation);
+        (void)s.request_slingshot_action();
+        (void)s.advance_frame(0.2);
+        (void)s.set_slingshot_input(1.0, 0.0, kElevation);
+        (void)s.advance_frame(1.4);
+        (void)s.set_slingshot_input(0.0, 0.0, kElevation);
+        (void)s.advance_frame(0.3);
+        (void)s.request_slingshot_action();
+        bool opened = false;
+        require(wait_for(s, 30.0, [&s, &opened](const scraperx::sim::Snapshot &state) {
+                    if (!opened && !state.player_grounded && state.player_linear_velocity.y < 0.0 &&
+                        s.slingshot_state().flight) {
+                        (void)s.request_parachute();
+                        opened = true;
+                    }
+                    return opened && state.player_grounded;
+                }),
+                "slingshot reuse: a short shot must come down in the yard under the chute");
+        require(s.snapshot().death_count == 0 && s.slingshot_state().released,
+                "slingshot reuse: down alive, the pouch spent");
+        (void)s.advance_frame(6.0);
+        const auto post = s.slingshot_state().retrieval_control_position;
+        (void)walk_to(s, post.x, post.z, 40.0, 0.5);
+        (void)s.advance_frame(0.4);
+        require(s.slingshot_state().can_retrieve, "slingshot reuse: at the post, RETRIEVE POUCH must be offered");
+        (void)s.request_slingshot_action();
+        (void)s.advance_frame(0.2);
+        require(s.slingshot_state().recovering, "slingshot reuse: RETRIEVE must start the reel");
+        (void)s.set_slingshot_input(1.0, 0.0, kElevation);
+        require(wait_for(s, 30.0, [&s](const scraperx::sim::Snapshot &) { return !s.slingshot_state().recovering; }),
+                "slingshot reuse: the stick held back must reel the pouch home");
+        (void)s.set_slingshot_input(0.0, 0.0, kElevation);
+        const auto home = s.slingshot_state();
+        const auto rest = home.neutral_position;
+        require(!home.released && std::hypot(home.pouch_position.x - rest.x, home.pouch_position.z - rest.z) < 0.05,
+                "slingshot reuse: the reeled pouch must be back at rest, ready");
+        require(walk_to(s, -3.0, -57.6, 10.0, 0.1) && walk_to(s, -3.0, -55.0, 6.0, 0.08), "slingshot reuse: back to the pouch");
+        (void)s.advance_frame(0.6);
+        require(s.slingshot_state().station_available, "slingshot reuse: the reeled pouch must take a rider again");
+    }
+    std::cout << "PASS scraperx_sim slingshot: draw_m=" << shot.draw << " energy_kJ=" << shot.energy / 1000.0
+              << " work_kJ=" << shot.work / 1000.0 << " apex=" << shot.apex << " peak_mps=" << shot.peak_speed
+              << " landed_y=" << end.player_position.y << " short_apex=" << short_shot.apex << '\n';
+}
+
 // Everything a run can leave different, as raw bits: the clock and the player
 // (the first kClockAndPlayerWords), then every kit body, every rope as drawn,
 // every bin's contents.
@@ -4841,6 +5007,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-010-o") {
         run_service_o();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "slingshot") {
+        run_slingshot();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -6787,6 +6958,7 @@ int main() {
     run_service_band();
     run_service_route();
     run_determinism();
+    run_slingshot();
     run_ascent();
 
     return EXIT_SUCCESS;

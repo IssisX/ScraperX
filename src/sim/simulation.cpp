@@ -2,6 +2,7 @@
 
 #include "sim/bands.hpp"
 #include "sim/mechanism_kit.hpp"
+#include "sim/slingshot.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
 #error "WO-003 requires the pinned Jolt physics substrate"
@@ -1036,6 +1037,8 @@ public:
         scraperx::sim::bands::build_midstack_service(*kit_, service_);
         // Band 0, the Stack: the ascent from grade.
         scraperx::sim::bands::build_stack(*kit_, stack_);
+        // The ground slingshot, in the yard south of the tower.
+        slingshot_ = std::make_unique<Slingshot>(physics_system_, *kit_, player_id_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -1051,6 +1054,7 @@ public:
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
         }
+        slingshot_.reset();
         kit_.reset();
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
             if (constraint != nullptr) {
@@ -1090,6 +1094,13 @@ public:
         bool set_down_requested = false;
         bool rig_requested = false;
         bool parachute_toggle_requested = false;
+        // The ground slingshot: draw effort and aim, held; Action and Drop,
+        // one-shot.
+        double sling_draw = 0.0;
+        double sling_yaw = 0.0;
+        double sling_elevation = 1.4311699866353502;
+        bool sling_action = false;
+        bool sling_drop = false;
     };
 
     void step(const StepCommands &commands,
@@ -1113,19 +1124,49 @@ public:
         }
         facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
 
-        update_crouch(bodies, commands);
-        update_rig(bodies, commands);
-        update_carry(bodies, commands, delta_seconds);
-        apply_traversal_commands(bodies, commands);
-        if (traversal_state_ == TraversalState::Climbing) {
-            update_climb(bodies, commands, delta_seconds);
-        } else if (traversal_state_ == TraversalState::Hanging) {
-            update_shimmy(bodies, commands, delta_seconds);
+        // Harnessed into the slingshot's pouch, the body is the machine's:
+        // no crouch, carry, rig or traversal begins.
+        if (!slingshot_->controls_player()) {
+            update_crouch(bodies, commands);
+            update_rig(bodies, commands);
+            update_carry(bodies, commands, delta_seconds);
+            apply_traversal_commands(bodies, commands);
+            if (traversal_state_ == TraversalState::Climbing) {
+                update_climb(bodies, commands, delta_seconds);
+            } else if (traversal_state_ == TraversalState::Hanging) {
+                update_shimmy(bodies, commands, delta_seconds);
+            }
+        }
+
+        const bool sling_was_controlling = slingshot_->controls_player();
+        slingshot_->pre_step(delta_seconds, commands.sling_draw, commands.sling_yaw,
+                             commands.sling_elevation, commands.sling_action, commands.sling_drop,
+                             grounded_ && support_entity_id_ == Slingshot::kPouchEntity);
+        const bool sling_controlling = slingshot_->controls_player();
+        if (sling_was_controlling && !sling_controlling && slingshot_->state().released) {
+            slingshot_flight_ = true;
+        }
+        if (sling_controlling) {
+            release_carry();
+            clear_traversal();
+            parachute_deployed_ = false;
+        }
+        if (grounded_ && support_entity_id_ != Slingshot::kPouchEntity && !sling_controlling) {
+            slingshot_flight_ = false;
         }
 
         bool jump_started = false;
-        if (traversal_state_ == TraversalState::None) {
-            jump_started = apply_locomotion(bodies, commands, delta_seconds);
+        if (!sling_controlling && traversal_state_ == TraversalState::None) {
+            if (slingshot_flight_ && !grounded_) {
+                // Thrown: the stick steers with a bounded force (2 m/s/s at
+                // full stick) and does not brake the throw to a walking speed
+                // as air control would.
+                bodies.AddForce(player_id_,
+                                JPH::Vec3(static_cast<float>(commands.move_input_x * kPlayerMassKg * 2.0), 0.0F,
+                                          static_cast<float>(commands.move_input_z * kPlayerMassKg * 2.0)));
+            } else {
+                jump_started = apply_locomotion(bodies, commands, delta_seconds);
+            }
             if (!jump_started) {
                 try_begin_hang(bodies, commands);
             }
@@ -1152,6 +1193,7 @@ public:
         contact_listener_.begin_tick();
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
         kit_->post_step(delta_seconds);
+        slingshot_->post_step(delta_seconds);
 
         SupportSample support = contact_listener_.sample();
         if (jump_started || traversal_state_ != TraversalState::None) {
@@ -1198,6 +1240,48 @@ public:
 
     [[nodiscard]] bool traversal_committed() const noexcept {
         return traversal_state_ != TraversalState::None;
+    }
+
+    [[nodiscard]] const Slingshot &slingshot() const noexcept { return *slingshot_; }
+    [[nodiscard]] bool slingshot_flight() const noexcept { return slingshot_flight_; }
+
+    // The slingshot's predicted path from the pouch now, swept with the
+    // player's capsule and cut at the first thing it would hit.
+    [[nodiscard]] std::vector<Vector3> slingshot_prediction() const {
+        std::vector<Vector3> result;
+        if (!slingshot_->state().seated) {
+            return result;
+        }
+        JPH::IgnoreMultipleBodiesFilter filter;
+        filter.IgnoreBody(player_id_);
+        filter.IgnoreBody(kit_->body_id(slingshot_->pouch_body()));
+        filter.IgnoreBody(kit_->body_id(kit_->body_for_entity(Slingshot::kRailEntity)));
+        filter.IgnoreBody(kit_->body_id(kit_->body_for_entity(Slingshot::kLaunchRailEntity)));
+        filter.IgnoreBody(kit_->body_id(slingshot_->frame_body()));
+        const std::vector<JPH::RVec3> points = slingshot_->prediction();
+        if (points.empty()) {
+            return result;
+        }
+        const auto to_vector = [](const JPH::RVec3 p) {
+            return Vector3{static_cast<double>(p.GetX()), static_cast<double>(p.GetY()),
+                           static_cast<double>(p.GetZ())};
+        };
+        result.push_back(to_vector(points.front()));
+        for (std::size_t n = 1; n < points.size(); ++n) {
+            const JPH::RVec3 from = points[n - 1];
+            const JPH::Vec3 displacement(points[n] - from);
+            JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
+            const JPH::RShapeCast sweep(player_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
+                                        JPH::RMat44::sTranslation(from), displacement);
+            physics_system_.GetNarrowPhaseQuery().CastShape(sweep, JPH::ShapeCastSettings(), from,
+                                                            collector, {}, {}, filter);
+            if (collector.HadHit()) {
+                result.push_back(to_vector(from + displacement * collector.mHit.mFraction));
+                break;
+            }
+            result.push_back(to_vector(points[n]));
+        }
+        return result;
     }
 
     [[nodiscard]] const scraperx::sim::kit::Kit &kit() const noexcept {
@@ -3422,6 +3506,7 @@ private:
     void commit_machine_checkpoint() noexcept {
         checkpoint_.carrying_entity = carried_entity_;
         kit_->capture(checkpoint_.kit);
+        checkpoint_.slingshot = slingshot_->state();
     }
 
     // WO-008 automatic commit (GDD 9.1): every tick the player is grounded on
@@ -3443,6 +3528,9 @@ private:
     // publishing a snapshot that mixes a teleported position with a contact
     // sample that referred to the pre-restore position.
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+        // Out of the slingshot's harness before the body moves.
+        slingshot_->detach();
+        slingshot_flight_ = false;
         // The capsule the checkpoint was committed in: a crouched commit's
         // centre is a crouched centre, and may sit under a low ceiling.
         crouched_ = checkpoint_crouched_;
@@ -3458,6 +3546,7 @@ private:
             release_carry();
         }
         kit_->restore(checkpoint_.kit);
+        slingshot_->restore(checkpoint_.slingshot);
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
@@ -3665,6 +3754,10 @@ private:
     float grip_over_seconds_ = 0.0F;
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
+    std::unique_ptr<Slingshot> slingshot_;
+    // Thrown off the slingshot's bands and not yet down: the stick steers by
+    // a bounded force instead of air control.
+    bool slingshot_flight_ = false;
     scraperx::sim::bands::CounterweightWell well_{};
     scraperx::sim::bands::WetIsolation wet_{};
     scraperx::sim::bands::PlateShop shop_{};
@@ -3748,6 +3841,7 @@ private:
         // and catch.
         std::uint64_t carrying_entity = 0;
         scraperx::sim::kit::Kit::Checkpoint kit{};
+        Slingshot::State slingshot{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
@@ -3894,8 +3988,8 @@ KitPart Simulation::kit_body_part(const std::uint32_t body, const std::uint32_t 
         return {};
     }
     const kit::Part &source = parts[part];
-    return {to_sim_vector(source.half), to_sim_vector(source.offset),
-            to_sim_quaternion(source.rotation), static_cast<std::uint8_t>(source.material)};
+    return {to_sim_vector(source.half), to_sim_vector(source.offset), to_sim_quaternion(source.rotation),
+            static_cast<std::uint8_t>(source.material), static_cast<std::uint8_t>(source.shape)};
 }
 
 Vector3 Simulation::kit_body_position(const std::uint32_t body) const noexcept {
@@ -4177,8 +4271,15 @@ void Simulation::step_fixed() noexcept {
     commands.set_down_requested = set_down_requested_;
     commands.rig_requested = rig_requested_;
     commands.parachute_toggle_requested = parachute_toggle_requested_;
+    commands.sling_draw = sling_draw_;
+    commands.sling_yaw = sling_yaw_;
+    commands.sling_elevation = sling_elevation_;
+    commands.sling_action = sling_action_;
+    commands.sling_drop = sling_drop_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
+    sling_action_ = false;
+    sling_drop_ = false;
     jump_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;
@@ -4256,6 +4357,73 @@ Vector3 Simulation::render_player_position() const noexcept {
         previous_player_position_.z +
             (snapshot_.player_position.z - previous_player_position_.z) * alpha,
     };
+}
+
+bool Simulation::set_slingshot_input(const double draw, const double yaw, const double elevation) noexcept {
+    if (!std::isfinite(draw) || !std::isfinite(yaw) || !std::isfinite(elevation)) {
+        return false;
+    }
+    sling_draw_ = std::clamp(draw, 0.0, 1.0);
+    sling_yaw_ = std::clamp(yaw, -0.8, 0.8);
+    sling_elevation_ = std::clamp(elevation, 0.35, 1.48);
+    return true;
+}
+
+bool Simulation::request_slingshot_action() noexcept {
+    sling_action_ = true;
+    return true;
+}
+
+bool Simulation::request_slingshot_drop() noexcept {
+    const auto &state = physics_world_->slingshot().state();
+    if (!state.seated && !state.recovering) {
+        return false;
+    }
+    sling_drop_ = true;
+    return true;
+}
+
+SlingshotSnapshot Simulation::slingshot_state() const noexcept {
+    const auto to_vector = [](const JPH::RVec3 p) {
+        return Vector3{static_cast<double>(p.GetX()), static_cast<double>(p.GetY()),
+                       static_cast<double>(p.GetZ())};
+    };
+    const auto &state = physics_world_->slingshot().state();
+    SlingshotSnapshot result;
+    result.station_available = state.station_available;
+    result.seated = state.seated;
+    result.drawing = state.drawing;
+    result.released = state.released;
+    result.release_ready = state.release_ready;
+    result.can_retrieve = state.can_retrieve;
+    result.recovering = state.recovering;
+    result.guided_launch = state.guided_launch;
+    result.aim_ready = state.aim_ready;
+    result.aim_locked = state.aim_locked;
+    result.flight = physics_world_->slingshot_flight();
+    result.draw_m = state.draw_m;
+    result.max_draw_m = Slingshot::kMaximumDrawM;
+    result.energy_j = state.energy_j;
+    result.work_j = state.work_j;
+    result.yaw_rad = state.yaw_rad;
+    result.elevation_rad = state.elevation_rad;
+    result.target_yaw_rad = state.target_yaw_rad;
+    result.target_elevation_rad = state.target_elevation_rad;
+    result.band_rest_m = state.band_rest_m;
+    result.leather_deflection_m = state.leather_deflection_m;
+    result.anchor_left = to_vector(state.anchor_left);
+    result.anchor_right = to_vector(state.anchor_right);
+    result.pouch_position = to_vector(state.pouch_position);
+    result.neutral_position = to_vector(Slingshot::neutral_position());
+    result.retrieval_control_position = to_vector(Slingshot::retrieval_control_position());
+    result.launch_track_start = to_vector(state.launch_track_start);
+    result.launch_track_end = to_vector(state.launch_track_end);
+    result.launch_count = state.launch_count;
+    return result;
+}
+
+std::vector<Vector3> Simulation::slingshot_prediction() const {
+    return physics_world_->slingshot_prediction();
 }
 
 } // namespace scraperx::sim

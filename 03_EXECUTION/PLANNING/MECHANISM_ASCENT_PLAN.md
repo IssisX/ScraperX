@@ -172,7 +172,7 @@ Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has hei
 
 Above the 750 deck no route is built: only the neighbouring shaft's mass (`TowerMass` in the world solids, 140 m north) stands on to 1,600 m, and the rest of AS-010 and AS-011 to AS-015 are unauthored.
 
-Queued by the owner (2026-09-30), not yet placed in the chain: *"a working slingshot (like angry birds) on the ground that can launch the player far up the structure (for dynamic fun) with working stretching of large rubber bands"*. It needs a kit capability the engine lacks (elastic members, §14) and a landing that is caught, so it is derived as a stage of its own from the evaluator's numbers, not added to a band.
+The owner's slingshot (2026-09-30: *"a working slingshot (like angry birds) on the ground that can launch the player far up the structure (for dynamic fun) with working stretching of large rubber bands"*) is built as `AS-011` (03_EXECUTION/ASCENT/AS-011_GROUND_SLINGSHOT.md), ported from the `ChatGPT` branch's working machine: from the yard, a 10.2 m draw throws the rider to 254 m and the chute brings them onto the 220 ring, the top of the route from grade.
 
 Retired 2026-09-28: `ScraperX-Claude`'s own S2, the swinging stair (44 → 55 m, cycle 3,
 `a96b60b`), when the owner had `Gemini`'s world merged into this branch; its contract, evaluator
@@ -504,6 +504,6 @@ carrying. Missing: round bodies, joints between two moving bodies, springs, crus
 | Block and tackle | yes (rope ratio) | — | force times distance is conserved |
 | Rolling roller, drum, spool, pipes | no | round bodies, a drum-wrap model | a drum's rotational energy counts; keep the cable engaged, never a snapped chain |
 | Spring plunger, scissor jack | no | springs | a pantograph adds no energy; derive preload, force against extension, recharge |
-| Slingshot: large rubber bands drawn by the player, the player launched up the structure (queued by the owner, 2026-09-30) | no | elastic members (a rest length, a stiffness, drawn by carrying the pouch), a launch the player rides, a caught landing | the bands are the source and store what the player's draw put in: energy is force over draw, never a scripted speed; the launch must arrive under the lethal 20 m/s (or into a net or bed) at a catch on the structure, with a falsifier for a draw too short to reach it and one too long to survive |
+| Slingshot: large rubber bands drawn by the player, the player launched up the structure (the owner, 2026-09-30) | yes, `AS-011` | built: tension-only band forces from the pouch's own position, a ratcheted draw, an aimed launch rail, the rider harnessed; landing by the chute (no caught landing yet) | the bands are the source and store what the player's draw put in: energy is force over draw, never a scripted speed; the launch must arrive under the lethal 20 m/s (or into a net or bed) at a catch on the structure, with a falsifier for a draw too short to reach it and one too long to survive |
 | Newton's cradle | no, and not wanted | spheres | a rigid-body solver does not carry a compression wave; one pendulum does the same job |
 | High striker | yes | — | 100 kg up 100 m needs ≥ 98.1 kJ and 44.3 m/s at the launch; strike below the apex |

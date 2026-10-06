@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 #include <memory>
 
 namespace scraperx::sim {
@@ -105,6 +106,43 @@ struct KitPart final {
     Vector3 offset{};
     Quaternion rotation{};
     std::uint8_t material = 0;
+    // 0 box, 1 cylinder, 2 capsule (along the part's y; half.x the radius).
+    std::uint8_t shape = 0;
+};
+
+// The ground slingshot (sim/slingshot.hpp) as the presentation reads it:
+// what the rider can do there now, how far the pouch is drawn, where the
+// bands run, and the aim. World metres, radians; yaw 0 points toward -Z.
+struct SlingshotSnapshot final {
+    bool station_available = false;  // ENTER POUCH (or, after a shot, RETRIEVE) offered
+    bool seated = false;             // harnessed into the pouch
+    bool drawing = false;
+    bool released = false;
+    bool release_ready = false;      // drawn enough to clear the launch rail
+    bool can_retrieve = false;
+    bool recovering = false;
+    bool guided_launch = false;
+    bool aim_ready = true;
+    bool aim_locked = false;
+    bool flight = false;             // the rider in free flight off the bands
+    double draw_m = 0.0;
+    double max_draw_m = 0.0;
+    double energy_j = 0.0;           // in the stretched rubber
+    double work_j = 0.0;             // supplied by the draw
+    double yaw_rad = 0.0;
+    double elevation_rad = 0.0;
+    double target_yaw_rad = 0.0;
+    double target_elevation_rad = 0.0;
+    double band_rest_m = 0.0;
+    double leather_deflection_m = 0.0;
+    Vector3 anchor_left{};
+    Vector3 anchor_right{};
+    Vector3 pouch_position{};
+    Vector3 neutral_position{};
+    Vector3 retrieval_control_position{};
+    Vector3 launch_track_start{};
+    Vector3 launch_track_end{};
+    std::uint32_t launch_count = 0;
 };
 
 // A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it
@@ -683,6 +721,18 @@ public:
     [[nodiscard]] ServiceState service_state() const noexcept;
     [[nodiscard]] StackState stack_state() const noexcept;
 
+    // The ground slingshot. Held inputs, as set_move_input: draw effort 0..1
+    // (the stick pulled back), and the aim. One-shot commands: the Action
+    // (enter the pouch, release a drawn shot, or retrieve the spent pouch)
+    // and Drop (out of the pouch, or stop retrieving).
+    [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation) noexcept;
+    [[nodiscard]] bool request_slingshot_action() noexcept;
+    [[nodiscard]] bool request_slingshot_drop() noexcept;
+    [[nodiscard]] SlingshotSnapshot slingshot_state() const noexcept;
+    // The shot as it would fly from the pouch now, cut where it would first
+    // hit something; empty unless a rider is seated.
+    [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
+
 private:
     class PhysicsWorld;
 
@@ -704,6 +754,11 @@ private:
     bool set_down_requested_ = false;
     bool rig_requested_ = false;
     bool parachute_toggle_requested_ = false;
+    double sling_draw_ = 0.0;
+    double sling_yaw_ = 0.0;
+    double sling_elevation_ = 1.4311699866353502;
+    bool sling_action_ = false;
+    bool sling_drop_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
 };

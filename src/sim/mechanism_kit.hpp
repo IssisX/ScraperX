@@ -14,6 +14,7 @@
 
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/PulleyConstraint.h>
@@ -53,13 +54,21 @@ enum class Material : std::uint8_t {
     Yellow = 7,
 };
 
-// One box of a body, in the body's own frame. A body is the union of its
-// parts: the collision shape and the drawn shape are the same list.
+// One part of a body, in the body's own frame. A body is the union of its
+// parts: the collision shape and the drawn shape are the same list. A box's
+// half is its half extents; a cylinder or a capsule runs along its local y,
+// half.y its half length (a capsule's between its two sphere centres) and
+// half.x its radius. mass_kg > 0 gives the part its own share of the body's
+// mass, so a heavy block on a light beam moves the centre of mass; with no
+// part massed, the body's mass is spread by volume.
 struct Part final {
+    enum class Shape : std::uint8_t { Box = 0, Cylinder = 1, Capsule = 2 };
     JPH::Vec3 half = JPH::Vec3::sReplicate(0.5F);
     JPH::Vec3 offset = JPH::Vec3::sZero();
     JPH::Quat rotation = JPH::Quat::sIdentity();
     Material material = Material::Steel;
+    Shape shape = Shape::Box;
+    float mass_kg = 0.0F;
 };
 
 // What a pick-up of this body is, for the prompt: a load, a rope's shackle,
@@ -116,6 +125,17 @@ public:
     BodyIndex add_body(std::uint64_t entity, const std::vector<Part> &parts,
                        JPH::RVec3 position, JPH::Quat rotation, float mass_kg, float friction);
     void set_carry(BodyIndex body, CarryKind kind, JPH::Vec3 handle_local);
+    // Two bodies that pass through each other: parts of one machine built
+    // interleaved (a pouch inside its fork). Every other pair still collides.
+    // Indices up to kCollisionSubGroups - 1; the last is kept for a body that
+    // is not the kit's own (the player, while a machine holds it).
+    static constexpr std::uint32_t kCollisionSubGroups = 2048;
+    void disable_collision(BodyIndex a, BodyIndex b);
+    // The collision group every kit body carries; a body outside the kit that
+    // joins it with sub-group kCollisionSubGroups - 1 is filtered as the kit's.
+    [[nodiscard]] JPH::CollisionGroup collision_group(BodyIndex body) const;
+    // A body fast enough to pass through a thin part in one tick is swept.
+    void set_continuous_collision(BodyIndex body);
     // Velocity damping per second, for light bodies on lines that air and
     // the line's own stiffness would settle: a handle bumped on its line
     // stops swinging in a second or two.
@@ -700,6 +720,7 @@ private:
     JPH::PhysicsSystem &system_;
     JPH::ObjectLayer static_layer_;
     JPH::ObjectLayer moving_layer_;
+    JPH::Ref<JPH::GroupFilterTable> collision_table_;
     std::vector<Body> bodies_;
     std::vector<Anchor> anchors_;
     std::vector<Guide> guides_;

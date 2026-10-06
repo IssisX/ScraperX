@@ -159,6 +159,14 @@ public:
     [[nodiscard]] godot::Dictionary get_crane_state() const;
     [[nodiscard]] godot::Dictionary get_service_state() const;
 
+    // The ground slingshot: held draw effort (0..1) and aim, one-shot Action
+    // and Drop, its state keyed by field name, and the predicted shot.
+    [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation);
+    [[nodiscard]] bool request_slingshot_action();
+    [[nodiscard]] bool request_slingshot_drop();
+    [[nodiscard]] godot::Dictionary get_slingshot_state() const;
+    [[nodiscard]] godot::PackedVector3Array get_slingshot_prediction() const;
+
 protected:
     static void _bind_methods();
 

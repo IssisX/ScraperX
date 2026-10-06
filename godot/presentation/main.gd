@@ -23,6 +23,7 @@ const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
+const SlingshotView := preload("res://presentation/slingshot_view.gd")
 # Traversal head motion, added on top of the player's own pitch and never
 # written into it: a hanging climber looks up at the grip (the lip sits ~46
 # degrees above a level gaze, outside the frame), a mantle nods down onto the
@@ -42,6 +43,10 @@ const MAX_SIM_FRAME_DELTA := 0.1
 # Chute is offered once a fall is unmistakably a fall: a full-height jump
 # lands at ~5.5 m/s, so 6.5 m/s never pops the canopy button mid-hop.
 const CHUTE_OFFER_FALL_MPS := 6.5
+# Aiming the slingshot, the view rides this far below the launch line, so the
+# stretched bands, the fork and the whole predicted arc are in front of the
+# rider rather than straight overhead.
+const SLING_VIEW_BELOW_AIM := 0.45
 # A Jump pressed this long before touchdown fires on the grounded tick. Input
 # timing assistance only (GDD 7.2): it never jumps from anything the native
 # does not report as ground at the moment it fires.
@@ -111,7 +116,9 @@ const STACK_COLUMN_SIZE := 1.6
 const KIT_ENTITY_MIN := 1000
 const KIT_DYNAMIC_ENTITY_MIN := 2000
 const KIT_ENTITY_MAX := 3000
-const KIT_PART_FLOATS := 11
+const KIT_PART_FLOATS := 12
+const KIT_SHAPE_CYLINDER := 1
+const KIT_SHAPE_CAPSULE := 2
 const KIT_CABLE_SEGMENTS := 4
 const KIT_CARRY_SHACKLE := 1
 const KIT_CARRY_HANDLE := 2
@@ -206,6 +213,14 @@ var _arms: Node3D
 var _view_pitch_offset := 0.0
 
 var _kit_root: Node3D
+# The ground slingshot: its view, the predicted shot (refreshed a few times a
+# second while a rider sits drawn), and the aim the look is steering.
+var _slingshot_view: Node3D
+var _sling_prediction := PackedVector3Array()
+var _sling_preview_clock := 0.0
+var _sling_was_aiming := false
+var _sling_goal_yaw := 0.0
+var _sling_goal_elevation := 1.4311699866353502
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
 # The kit's machines, for the audio: every moving body of MACHINE_MIN_KG or
@@ -304,6 +319,13 @@ func _ready() -> void:
 		_pitch = 0.06
 
 	_build_kit()
+	_slingshot_view = SlingshotView.new()
+	add_child(_slingshot_view)
+	_slingshot_view.setup(self)
+	# The view draws the pouch as leather; the native's panels stay unseen.
+	var pouch_node := _kit_root.get_node_or_null("KitBody%d" % SlingshotView.POUCH_ENTITY)
+	if pouch_node != null:
+		pouch_node.visible = false
 
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006")
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
@@ -327,14 +349,37 @@ func _process(delta: float) -> void:
 			_fps_label.text = "%d FPS" % int(Engine.get_frames_per_second())
 
 	var intent: Dictionary = _router.frame(delta)
+	# In the slingshot's pouch, unreleased: the look aims the shot and the
+	# view follows the launch rail as it turns; the stick pulled back draws.
+	var sling: Dictionary = _native.get_slingshot_state()
+	var sling_seated := bool(sling["seated"])
+	var aiming := sling_seated and not bool(sling["released"])
+	var sling_recovering := bool(sling["recovering"])
+	if aiming and not _sling_was_aiming:
+		_sling_goal_yaw = float(sling["yaw_rad"])
+		_sling_goal_elevation = float(sling["elevation_rad"])
+	_sling_was_aiming = aiming
 	if not _ci_mode:
 		var look: Vector2 = intent["look"]
-		_yaw -= look.x
-		_pitch = clampf(_pitch - look.y, -1.25, 1.35)
+		if aiming:
+			if not bool(sling["aim_locked"]):
+				_sling_goal_yaw = clampf(_sling_goal_yaw + look.x, -0.8, 0.8)
+				_sling_goal_elevation = clampf(_sling_goal_elevation - look.y, 0.35, 1.48)
+			_yaw = -float(sling["yaw_rad"])
+			_pitch = float(sling["elevation_rad"]) - SLING_VIEW_BELOW_AIM
+		else:
+			_yaw -= look.x
+			_pitch = clampf(_pitch - look.y, -1.25, 1.35)
 	_update_view_pitch_offset(delta)
 
 	var position: Vector3 = _native.get_player_position()
 	var desired: Vector2 = intent["move"]
+	var draw_effort := maxf(0.0, -desired.y) if sling_seated or sling_recovering else 0.0
+	_native.set_slingshot_input(draw_effort,
+		_sling_goal_yaw if aiming else float(sling["yaw_rad"]),
+		_sling_goal_elevation if aiming else float(sling["elevation_rad"]))
+	if sling_seated or sling_recovering:
+		desired = Vector2.ZERO
 	var facing := Vector2(-sin(_yaw), -cos(_yaw))
 
 	if _ci_mode:
@@ -572,15 +617,20 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"drop":
 				# Let go of whatever the hands are on: a ledge, a climb's
 				# holds, or a load. On the ground with an edge behind, the
-				# native lowers the body over it into a hang.
-				if int(_ctx["carrying"]) != 0:
+				# native lowers the body over it into a hang. In the
+				# slingshot's pouch, out of it.
+				if bool(_ctx["sling_seated"]) or bool(_ctx["sling_recovering"]):
+					_native.request_slingshot_drop()
+				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
 				else:
 					_native.request_release()
 			&"chute":
 				_native.request_parachute()
 			&"back":
-				if _ctx["hanging"] or _ctx["climbing"]:
+				if bool(_ctx["sling_seated"]) or bool(_ctx["sling_recovering"]):
+					_native.request_slingshot_drop()
+				elif _ctx["hanging"] or _ctx["climbing"]:
 					_native.request_release()
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
@@ -618,6 +668,11 @@ func _perform_action() -> void:
 			_native.request_set_down()
 		&"hook", &"unhook":
 			_native.request_rig()
+		&"slingshot":
+			if bool(_ctx["sling_recovering"]):
+				_native.request_slingshot_drop()
+			else:
+				_native.request_slingshot_action()
 		_:
 			# Nothing reported in reach: ask anyway, exactly as the old E key
 			# did. The native decides there is no ledge (and counts it).
@@ -647,8 +702,23 @@ func _read_context() -> Dictionary:
 	# thing a pick-up would take.
 	var rig := int(_native.get_rig_action())
 	var rig_target := int(_native.get_rig_target_entity_id())
+	var sling: Dictionary = _native.get_slingshot_state()
+	var sling_seated := bool(sling["seated"])
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
-	if hanging or climbing:
+	if bool(sling["can_retrieve"]) or bool(sling["recovering"]):
+		action = {"id": &"slingshot", "icon": &"up",
+			"label": "STOP REELING" if bool(sling["recovering"]) else "RETRIEVE POUCH",
+			"detail": "HOLD BACK TO REEL IT IN" if bool(sling["recovering"]) else "REEL THE SPENT POUCH BACK"}
+	elif (sling_seated or bool(sling["station_available"])) and not bool(sling["released"]):
+		var drawn := "%.1f M  %d KJ" % [float(sling["draw_m"]), roundi(float(sling["energy_j"]) / 1000.0)]
+		if not sling_seated:
+			action = {"id": &"slingshot", "icon": &"up", "label": "ENTER POUCH", "detail": "SLINGSHOT"}
+		elif bool(sling["release_ready"]):
+			action = {"id": &"slingshot", "icon": &"up", "label": "RELEASE", "detail": drawn}
+		else:
+			action = {"id": &"slingshot", "icon": &"up", "label": "PULL BACK",
+				"detail": "STICK BACK TO DRAW  " + drawn}
+	elif hanging or climbing:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
 	elif not free:
 		pass
@@ -686,8 +756,13 @@ func _read_context() -> Dictionary:
 		"traversal": traversal,
 		"hanging": hanging,
 		"climbing": climbing,
-		# Drop at an edge behind lowers into a hang; on holds it lets go.
-		"drop_ok": hanging or climbing or (grounded and free and edge_drop and carrying == 0),
+		# Drop at an edge behind lowers into a hang; on holds it lets go; in
+		# the slingshot's pouch it climbs out.
+		"drop_ok": hanging or climbing or (grounded and free and edge_drop and carrying == 0) or \
+			sling_seated or bool(sling["recovering"]),
+		"sling_seated": sling_seated,
+		"sling_recovering": bool(sling["recovering"]),
+		"sling_flight": bool(sling["flight"]),
 		"edge_drop": edge_drop,
 		"sprinting": bool(_native.is_player_sprinting()),
 		"balancing": bool(_native.is_player_balancing()),
@@ -697,7 +772,10 @@ func _read_context() -> Dictionary:
 		# Airborne, is_ledge_available is the native hang probe: an edge in
 		# the grab band, which engages as soon as the player pushes into it.
 		"grab_hint": not grounded and free and ledge,
-		"chute_ok": not grounded and free and (chute or -velocity.y > CHUTE_OFFER_FALL_MPS),
+		# Thrown off the slingshot, the chute is offered from the top of the
+		# throw: that is where a rider steers for a landing.
+		"chute_ok": not grounded and free and (chute or -velocity.y > CHUTE_OFFER_FALL_MPS or
+			(bool(sling["flight"]) and velocity.y < 0.0)),
 		"danger": 0.0 if grounded else clampf(-velocity.y / maxf(lethal, 0.001), 0.0, 1.0),
 		"lethal": lethal,
 		"carrying": carrying,
@@ -1179,7 +1257,24 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _telemetry_on:
 		_write_telemetry(position, velocity, grounded)
 	_render_kit()
+	_render_slingshot(delta)
 	_sample_machines(delta)
+
+
+# The slingshot as the native has it now; the predicted shot is re-asked a
+# few times a second while a rider sits drawn, not every frame.
+func _render_slingshot(delta: float) -> void:
+	if _slingshot_view == null:
+		return
+	var sling: Dictionary = _native.get_slingshot_state()
+	_sling_preview_clock -= delta
+	if bool(sling["seated"]) and not bool(sling["released"]):
+		if _sling_preview_clock <= 0.0:
+			_sling_preview_clock = 0.2
+			_sling_prediction = _native.get_slingshot_prediction()
+	elif not _sling_prediction.is_empty():
+		_sling_prediction = PackedVector3Array()
+	_slingshot_view.update_view(sling, _sling_prediction)
 
 
 func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> void:
@@ -2274,8 +2369,27 @@ func _build_kit() -> void:
 		node.transform = _native.get_kit_body_transform(body)
 		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
 		for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
-			var mesh := BoxMesh.new()
-			mesh.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
+			var mesh: PrimitiveMesh
+			match int(parts[p + 11]):
+				KIT_SHAPE_CYLINDER:
+					var cylinder := CylinderMesh.new()
+					cylinder.top_radius = parts[p]
+					cylinder.bottom_radius = parts[p]
+					cylinder.height = parts[p + 1] * 2.0
+					cylinder.radial_segments = 16
+					mesh = cylinder
+				KIT_SHAPE_CAPSULE:
+					# A capsule's half.y runs between its sphere centres.
+					var capsule := CapsuleMesh.new()
+					capsule.radius = parts[p]
+					capsule.height = parts[p + 1] * 2.0 + parts[p] * 2.0
+					capsule.radial_segments = 16
+					capsule.rings = 4
+					mesh = capsule
+				_:
+					var box := BoxMesh.new()
+					box.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
+					mesh = box
 			mesh.material = palette[clampi(int(parts[p + 10]), 0, palette.size() - 1)]
 			var instance := MeshInstance3D.new()
 			instance.mesh = mesh

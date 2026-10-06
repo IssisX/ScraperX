@@ -314,7 +314,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	# body lowers it over into a hang.
 	var drop: TouchButton = _buttons[B_DROP]
 	drop.shown = ctx.get("drop_ok", hanging)
-	drop.label = "DROP DOWN" if not (hanging or climbing) else "DROP"
+	if ctx.get("sling_seated", false) or ctx.get("sling_recovering", false):
+		drop.label = "LEAVE"
+	else:
+		drop.label = "DROP DOWN" if not (hanging or climbing) else "DROP"
 	var chute: TouchButton = _buttons[B_CHUTE]
 	chute.shown = ctx["chute_ok"] and not hanging
 	chute.icon = &"chute"
