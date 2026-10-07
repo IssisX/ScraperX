@@ -625,31 +625,64 @@ func _build_display_page() -> void:
 	_end_page(PAGE_DISPLAY, first, "")
 
 
+# Disclosure sections keep the primary controls short without hiding settings
+# or the recorded-audio license notice behind another navigation surface.
+func _details_section(caption: String) -> VBoxContainer:
+	var toggle := Button.new()
+	toggle.text = "SHOW " + caption
+	toggle.toggle_mode = true
+	toggle.focus_mode = Control.FOCUS_ALL
+	toggle.custom_minimum_size.y = 64.0 * _u
+	_building.add_child(toggle)
+	var details := VBoxContainer.new()
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.add_theme_constant_override("separation", int(22.0 * _u))
+	details.visible = false
+	_building.add_child(details)
+	toggle.toggled.connect(func(expanded: bool) -> void:
+		details.visible = expanded
+		toggle.text = ("HIDE " if expanded else "SHOW ") + caption)
+	return details
+
+
 func _build_audio_page() -> void:
-	_begin_page(PAGE_AUDIO)
-	var first := _toggle_row("MUTE ALL", &"audio_muted")
-	_slider_row("MASTER", &"master_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
+	var page := _begin_page(PAGE_AUDIO)
+	var first := _slider_row("MASTER VOLUME", &"master_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
+	_toggle_row("MUTE ALL", &"audio_muted")
+	_building = _details_section("AUDIO MIX")
 	_slider_row("EFFECTS", &"effects_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("AMBIENCE", &"ambience_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("INTERFACE", &"interface_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
-	var note := "Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience."
+	_building = page
+	_building = _details_section("AUDIO CREDITS")
 	var credits := FileAccess.get_file_as_string("res://assets/audio/footsteps/NOTICE.txt")
-	_end_page(PAGE_AUDIO, first, note + "\n\n" + credits)
+	credits += "\n" + FileAccess.get_file_as_string("res://assets/audio/fall/NOTICE.md")
+	_end_page(PAGE_AUDIO, first, credits)
+	_building = page
 
 
 func _build_restart_page() -> void:
-	_begin_page(PAGE_RESTART)
+	var page := _begin_page(PAGE_RESTART)
 	var checkpoint := _action_row("LAST SAFE CHECKPOINT", "RESTART AT CHECKPOINT",
 		func() -> void: checkpoint_restart_requested.emit())
 	_lift_retry_button = _action_row("SAVED LIFT ATTEMPT", "RESTART LIFT ATTEMPT",
 		func() -> void: lift_attempt_restart_requested.emit())
 	_lift_retry_button.disabled = not _lift_retry_available
-	var lift_note := _label("Return to the checkpoint saved before you first operated the lift. This also restores the machines and remaining energy at that checkpoint. Available after your first lift command.", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	var lift_note := _label("Restores the checkpoint and machines saved before your first lift command.", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
 	lift_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_building.add_child(lift_note)
+	_action_row("GRADE", "RESTART AT GRADE", func() -> void:
+		settings.restart_ring = 0
+		_refreshers[&"restart_ring"].call()
+		_changed()
+		restart_requested.emit(settings.ring_position()))
 	_ring_choice_row()
 	_action_row("RING DESTINATION", "RESTART ON RING", func() -> void:
 		restart_requested.emit(settings.ring_position()))
+	_building = _details_section("ADVANCED RESTART")
+	var warning := _label("Height and XYZ may have no floor. Blocked destinations are rejected.", 21.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_building.add_child(warning)
 	_action_row("CURRENT LOCATION", "USE CURRENT XYZ", func() -> void:
 		settings.restart_x = _restart_current_position.x
 		settings.restart_y = _restart_current_position.y
@@ -667,11 +700,12 @@ func _build_restart_page() -> void:
 	_number_row("EXACT Z", &"restart_z", SettingsStore.RESTART_COORDINATE_RANGE, 0.1, " M")
 	_action_row("EXACT COORDINATES", "RESTART AT XYZ", func() -> void:
 		restart_requested.emit(settings.exact_restart_position()))
+	_building = page
 	_restart_status = _label("", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
 	_restart_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_building.add_child(_restart_status)
 	_end_page(PAGE_RESTART, checkpoint,
-		"Ring presets put you on existing tower decks. Arbitrary height or XYZ can have no floor: you can fall. Height is above grade; XYZ uses the capsule centre. Occupied positions are rejected. Press a restart button to apply the chosen destination.")
+		"Choose a checkpoint, grade or supported ring, then press its restart button.")
 
 
 # The expanded receiving frame has many rings. A directly selectable list

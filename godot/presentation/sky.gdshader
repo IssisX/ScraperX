@@ -73,7 +73,12 @@ void sky() {
 	if (LIGHT0_ENABLED && !AT_CUBEMAP_PASS) {
 		float angle = acos(clamp(dot(dir, to_light), -1.0, 1.0));
 		if (light_is_moon) {
-			col += vec3(0.78, 0.84, 0.95) * (1.0 - smoothstep(0.0085, 0.0105, angle)) * 1.4;
+			// An opaque moon covers the stars behind it; additive compositing
+			// made a bright star appear punched through the disc. Subtle surface
+			// variation keeps its face legible after night exposure.
+			float disc = 1.0 - smoothstep(0.0085, 0.0105, angle);
+			float surface = value_noise(dir.xz * 1400.0) * 0.18 + 0.82;
+			col = mix(col, vec3(0.78, 0.84, 0.95) * surface * 1.4, disc);
 			col += vec3(0.30, 0.36, 0.50) * exp(-angle * 18.0) * 0.25;
 		} else {
 			vec3 sun_col = mix(vec3(1.0, 0.62, 0.34), vec3(1.0, 0.96, 0.88), clamp(to_light.y * 3.0, 0.0, 1.0));

@@ -73,6 +73,10 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 		if int(_native.get_kit_body_entity_id(body)) == 1960:
 			_create_sign.call("SERVICE +121\nSWING TRANSFER", Vector3(11.6, 112.1, -180.42), 0.0, 0.22, Color("e7c67c"), node)
 			_create_sign.call("+121\nUP", Vector3(9, 121.8, -177.74), PI, 0.26, Color("e7c67c"), node)
+		if int(_native.get_kit_body_entity_id(body)) == 2560:
+			_create_sign.call("UP · JUMP TO DUCT\nCLIMB CABINET FIRST", Vector3(20.0, 23.5, -121.76), 0.0, 0.10, Color("e7c67c"), node)
+		if int(_native.get_kit_body_entity_id(body)) == 2562:
+			_create_sign.call("UP · VENT TO NEXT DECK\nCLIMB · HOLD FORWARD", Vector3(24.0, 28.2, -123.34), 0.0, 0.10, Color("e7c67c"), node)
 		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
 		# Parts on one rigid body share a pose. Batch their triangles by
 		# material once, instead of submitting every tread/rung separately.

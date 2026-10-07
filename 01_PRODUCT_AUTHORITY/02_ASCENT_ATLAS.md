@@ -1,3 +1,5 @@
+**2026-10-07 lower-ascent repair:** existing cabinet→duct→vent route is retained, with concise directional signs on its native body views. Mantles use finite native hand transfer and real supported settling. Decorative sagging service cables terminate in the existing shaft-edge beams with visible collars; these visual cables add no gameplay support authority. Ordinary touch grade→Tower33 passes; phone readability remains pending. See [repair ledger](../evidence/player-repairs-2026-10-07/README.md).
+
 # SCRAPERX — ASCENT ATLAS: GROUND RESET
 
 **Status:** Product content authority, revised by owner direction through 2026-10-02. AS-023 supersedes the former opening. Its fixed-fork/physical-gimbal revision passes fresh native and shipping-touch proof; local rendered touch, image inspection and mixed audio also pass; device acceptance remains open. Laws/GDD own product intent; this file owns spatial content. Sections 6, 7 and 10 retain existing slice labels and geometry. Current implementation/delivery evidence lives in `00_START_HERE.md` §2. Dimensions for unimplemented mechanisms are DESIGN TARGETS unless explicitly described as source.

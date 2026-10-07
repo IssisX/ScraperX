@@ -1,0 +1,18 @@
+mantle tick=0 y=11.8721 z=-121.227 vy=0.0311406 support=1600 state=4
+mantle tick=30 y=12.0371 z=-121.228 vy=1.29668 support=0 state=4
+mantle tick=60 y=12.3812 z=-121.226 vy=0.673374 support=0 state=4
+mantle tick=90 y=12.6708 z=-121.227 vy=1.00839 support=0 state=4
+mantle tick=120 y=12.9702 z=-121.227 vy=0.853398 support=0 state=4
+mantle tick=150 y=13.273 z=-121.227 vy=0.914609 support=0 state=4
+mantle tick=180 y=13.5707 z=-121.227 vy=0.895401 support=0 state=4
+mantle tick=210 y=13.6498 z=-121.422 vy=-0.550094 support=0 state=4
+mantle tick=240 y=13.6737 z=-121.695 vy=0.342011 support=0 state=4
+mantle tick=270 y=13.6214 z=-122.017 vy=-0.0953671 support=0 state=4
+mantle tick=300 y=13.6221 z=-122.267 vy=-0.746003 support=0 state=4
+mantle tick=330 y=13.5831 z=-122.323 vy=0.000333756 support=2560 state=0
+mantle tick=360 y=13.5831 z=-122.327 vy=1.77066e-05 support=2560 state=0
+mantle tick=390 y=13.5831 z=-122.323 vy=-1.21862e-05 support=2560 state=0
+mantle tick=420 y=13.583 z=-122.318 vy=-7.91499e-05 support=2560 state=0
+mantle tick=450 y=13.583 z=-122.314 vy=-1.43939e-05 support=2560 state=0
+mantle tick=480 y=13.583 z=-122.309 vy=-9.36269e-05 support=2560 state=0
+mantle arrival_s=3.38889 peak_vy=1.34424

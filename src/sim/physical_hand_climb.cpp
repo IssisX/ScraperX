@@ -106,6 +106,14 @@ void PhysicalHandClimb::detach(unsigned hand) {
 void PhysicalHandClimb::clear() {
     detach(0); detach(1);
     last_bound_ = 0.0;
+    transfer_profile_ = false;
+}
+void PhysicalHandClimb::set_transfer_profile() {
+    transfer_profile_ = true;
+    // CHOSEN 600 Ns/m per rigid hand: ~0.65 critical damping for85kg
+    // and two5000N/m springs. Force limits remain1500N per hand.
+    for(auto &hand:hands_) if(hand) for(int axis=0;axis<3;++axis)
+        hand->GetMotorSettings(static_cast<JPH::SixDOFConstraint::EAxis>(axis)).mSpringSettings.mDamping=600.0F;
 }
 bool PhysicalHandClimb::active() const noexcept { return attached(0) || attached(1); }
 bool PhysicalHandClimb::attached(unsigned hand) const noexcept {
@@ -118,7 +126,7 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
     if (count == 0 || !finite(desired_player_displacement) || !std::isfinite(dt) || dt <= 0) return;
     const double distance = length(desired_player_displacement);
     if (distance == 0.0) return;
-    const double budget = double(command_power_bound_w()) * dt;
+    const double budget = double(active_command_power_bound_w()) * dt;
     double scale = std::min(1.0, budget / (double(count) * force_bound_n() * distance));
     std::array<Vec3, 2> targets;
     double debit = 0.0;

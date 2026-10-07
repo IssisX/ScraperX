@@ -1,0 +1,14 @@
+mantle tick=0 y=11.8721 z=-121.227 vy=0.030984 support=1600 state=4
+mantle tick=30 y=12.265 z=-121.227 vy=2.27882 support=0 state=4
+mantle tick=60 y=13.0266 z=-121.227 vy=2.20257 support=0 state=4
+mantle tick=90 y=13.6559 z=-121.229 vy=0.738182 support=0 state=4
+mantle tick=120 y=13.6376 z=-121.757 vy=-0.126003 support=0 state=4
+mantle tick=150 y=13.6055 z=-122.284 vy=-0.587571 support=0 state=4
+mantle tick=180 y=13.5825 z=-122.304 vy=5.51864e-05 support=2560 state=0
+mantle tick=210 y=13.5825 z=-122.303 vy=-7.49336e-05 support=2560 state=0
+mantle tick=240 y=13.5824 z=-122.299 vy=-8.49362e-05 support=2560 state=0
+mantle tick=270 y=13.5824 z=-122.294 vy=-6.82051e-05 support=2560 state=0
+mantle tick=300 y=13.5824 z=-122.289 vy=-6.10008e-05 support=2560 state=0
+mantle tick=330 y=13.5823 z=-122.285 vy=-5.857e-05 support=2560 state=0
+mantle arrival_s=1.7 peak_vy=2.34142
+PASS responsive stable mantle pos 20,13.5823,-122.284 target 0 carrying 0 tip 0 pipes 0 support 2560 deaths 0

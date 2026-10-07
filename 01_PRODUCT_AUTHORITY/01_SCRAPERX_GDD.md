@@ -231,9 +231,13 @@ It is a standard recovery skill, not a guaranteed save.
 
 Deployment uses the player's actual position, velocity, clearance, and environment. It may permit survival, redirection, or controlled descent, but it may not teleport the player, provide powered ascent, automatically return the player to the intended route, or guarantee a safe landing.
 
+**Presentation repair, 2026-10-07:** native deployment displays an overhead cloth canopy connected to the visible risers; looking up reveals it. Cloth rendering does not own flight or deployment.
+
 ## 8.4 Fear reactions
 
 Large falls must sound human.
+
+**Recorded variety repair, 2026-10-07:** thirteen licensed CC0 human takes retain the five Fabrizio84 recordings and add Archeos, DigitalDominic and cocamycola89 performances. Alarm and panic pools exhaust shuffled bags before repetition, including bag boundaries; native fall severity/cancellation and the Master limiter remain authoritative. Acquisition, edit intervals and source/output hashes are in `assets/audio/fall/provenance.json`; source/license notice remains available in expandable AUDIO CREDITS. Target-device listening remains required.
 
 The player character may yell, scream, gasp, panic, swear, plead, laugh nervously, or otherwise react according to the severity and duration of the fall.
 
@@ -523,6 +527,8 @@ Movement, alignment, load behavior, machinery response, structural change, sound
 Presentation may amplify real events. It may not substitute fake events for missing simulation.
 
 The game may not claim that something bent, failed, held, moved, opened, broke, or became traversable when the authoritative state cannot support that claim.
+
+**Focused playability repair, 2026-10-07:** short ledge pull-ups use finite native hand forces with a bounded burst command profile and damped settling; ladder climbing retains its sustained profile. Real firm footing and contact-relative slip close the transfer. Cabinet/vent route markings explain the existing lower ascent. Decorative slack cables terminate at visible shaft-beam collars; they do not become gameplay supports. Night moonlight/fill and existing warm practicals support route readability. Audio shows volume/mute first with expandable mix/credits; restart shows supported destinations first with expandable advanced height/XYZ controls.
 
 ## 24.1 Commercial quality and satisfying physical feedback
 

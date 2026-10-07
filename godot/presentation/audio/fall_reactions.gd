@@ -6,10 +6,18 @@ const ALARM: Array[AudioStream] = [
 	preload("res://assets/audio/fall/wtf_1.ogg"),
 	preload("res://assets/audio/fall/wtf_2.ogg"),
 	preload("res://assets/audio/fall/wtf_3.ogg"),
+	preload("res://assets/audio/fall/fear_1.ogg"),
+	preload("res://assets/audio/fall/fear_3.ogg"),
+	preload("res://assets/audio/fall/fear_4.ogg"),
 ]
 const PANIC: Array[AudioStream] = [
 	preload("res://assets/audio/fall/fuck_1.ogg"),
 	preload("res://assets/audio/fall/fuck_2.ogg"),
+	preload("res://assets/audio/fall/fear_2.ogg"),
+	preload("res://assets/audio/fall/fear_5.ogg"),
+	preload("res://assets/audio/fall/fear_6.ogg"),
+	preload("res://assets/audio/fall/scream_dominic.ogg"),
+	preload("res://assets/audio/fall/fuck_you_all.ogg"),
 ]
 const COOLDOWN := 3.5
 var reactions := 0
@@ -26,6 +34,8 @@ var _remaining := 0.0
 var _last_deaths := -1
 var _last_alarm := -1
 var _last_panic := -1
+var _alarm_bag: Array[int] = []
+var _panic_bag: Array[int] = []
 
 
 func _ready() -> void:
@@ -88,16 +98,22 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		return
 	var descent := _apex - position.y
 	if _episode_cues == 0 and _cooldown <= 0.0 and velocity.y <= -12.0 and descent >= 4.0:
-		_last_alarm = _choose(ALARM, _last_alarm)
+		_last_alarm = _choose(ALARM, _alarm_bag, _last_alarm)
 	elif _episode_cues == 1 and _escalation_gap <= 0.0 and velocity.y <= -24.0 and descent >= 35.0:
-		_last_panic = _choose(PANIC, _last_panic)
+		_last_panic = _choose(PANIC, _panic_bag, _last_panic)
 
 
-func _choose(clips: Array[AudioStream], previous: int) -> int:
-	# Uniform among the other takes; no immediate repeat in either pool.
-	var index := randi_range(0, clips.size() - 2) if previous >= 0 else randi_range(0, clips.size() - 1)
-	if previous >= 0 and index >= previous:
-		index += 1
+func _choose(clips: Array[AudioStream], bag: Array[int], previous: int) -> int:
+	# Exhaust every take before refilling, without a repeat across bag boundaries.
+	if bag.is_empty():
+		for i in clips.size():
+			bag.append(i)
+		bag.shuffle()
+		if bag.size() > 1 and bag.back() == previous:
+			var swap := randi_range(0, bag.size() - 2)
+			bag[bag.size() - 1] = bag[swap]
+			bag[swap] = previous
+	var index: int = bag.pop_back()
 	var stream := clips[index]
 	last_clip = stream.resource_path.get_file()
 	reactions += 1

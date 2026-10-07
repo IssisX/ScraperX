@@ -24,6 +24,24 @@ func _run() -> void:
 	var mixing := AudioServer.get_driver_name() != "Dummy" or not Engine.get_write_movie_path().is_empty()
 	var voice := Reactions.new()
 	root.add_child(voice)
+	# Reject repeats within complete cycles and at cycle boundaries in both pools.
+	for clips in [Reactions.ALARM, Reactions.PANIC]:
+		var bag: Array[int] = []
+		var last := -1
+		for cycle in 8:
+			var seen: Array[int] = []
+			for take in clips.size():
+				var chosen: int = voice._choose(clips, bag, last)
+				check(chosen != last, "repeated take at bag boundary")
+				check(not seen.has(chosen), "repeated take before exhausting pool")
+				seen.append(chosen)
+				last = chosen
+			check(seen.size() == clips.size() and bag.is_empty(), "incomplete recording cycle")
+	voice.quiesce()
+	voice.queue_free()
+	await process_frame
+	voice = Reactions.new()
+	root.add_child(voice)
 	# Controlled readback sequences isolate cancellation, repetition and thresholds.
 	for i in 180:
 		var t := float(i) / 90.0
@@ -132,7 +150,7 @@ func _run() -> void:
 			recordings += 1
 			recording_peak = maxf(recording_peak, clip_peak)
 			print("SCRAPERX_FALL_CLIP clip=%s mix_peak=%.6f" % [clip.resource_path.get_file(), clip_peak])
-		check(recordings == 5, "decoded all five reaction recordings")
+		check(recordings == clips.size(), "decoded every reaction recording")
 		recording_voice.quiesce()
 		recording_voice.queue_free()
 	director.queue_free()

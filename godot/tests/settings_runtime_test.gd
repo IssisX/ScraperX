@@ -93,6 +93,27 @@ func _run() -> void:
 		"quality reaches camera horizon and sun shadow distance")
 	_check(menu.settings_overflow() <= 0.0, "graphics controls remain accessible")
 	await _capture("pause_graphics_current")
+	var saved_hour: float = main._sky_cycle.hour
+	main._sky_cycle.set_hour(0.0)
+	_check(main.get_node("Overcast").light_energy >= 0.85 and main.get_node("SkyFill").light_energy >= 0.35,
+		"night uses readable directional moonlight and unshadowed fill")
+	_check(main._sky_cycle._sky_material.get_shader_parameter(&"light_is_moon"), "night selects the moon disc")
+	main._sky_cycle.set_hour(12.0)
+	_check(is_equal_approx(main.get_node("Overcast").light_energy, 2.4)
+		and is_equal_approx(main.get_node("SkyFill").light_energy, 0.55), "day lighting energies stay unchanged")
+	main._sky_cycle.set_hour(saved_hour)
+	menu._show_page(&"audio")
+	var mix_toggle := _button(menu, "SHOW AUDIO MIX")
+	var credits_toggle := _button(menu, "SHOW AUDIO CREDITS")
+	_check(mix_toggle != null and credits_toggle != null, "audio mix and credits remain accessible")
+	var mix_details: Control = mix_toggle.get_parent().get_child(mix_toggle.get_index() + 1)
+	var credits_details: Control = credits_toggle.get_parent().get_child(credits_toggle.get_index() + 1)
+	_check(not mix_details.visible and not credits_details.visible, "audio starts with primary volume and mute controls")
+	mix_toggle.button_pressed = true
+	credits_toggle.button_pressed = true
+	_check(mix_details.is_visible_in_tree() and credits_details.is_visible_in_tree(), "audio details open through real controls")
+	var notice := FileAccess.get_file_as_string("res://assets/audio/footsteps/NOTICE.txt")
+	_check(not notice.is_empty() and credits_details.get_child(0).text == notice + "\n" + FileAccess.get_file_as_string("res://assets/audio/fall/NOTICE.md"), "audio credits preserve the complete source notice")
 	main._settings.audio_muted = true
 	main._apply_settings()
 	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")), "mute reaches real audio bus")
@@ -118,6 +139,11 @@ func _run() -> void:
 	main._settings.fps_cap = 0
 	main._apply_settings()
 	menu._show_page(&"restart")
+	var advanced_toggle := _button(menu, "SHOW ADVANCED RESTART")
+	_check(advanced_toggle != null, "advanced restart disclosure exists")
+	var advanced_details: Control = advanced_toggle.get_parent().get_child(advanced_toggle.get_index() + 1)
+	_check(not advanced_details.is_visible_in_tree(), "restart defaults to supported destinations")
+	_check(_button(menu, "RESTART AT GRADE").is_visible_in_tree(), "grade restart is directly accessible")
 	main._settings.restart_ring = 10
 	menu._refreshers[&"restart_ring"].call()
 	await _frames(2)
@@ -136,6 +162,11 @@ func _run() -> void:
 	var ring_select := ring_choices[0] as OptionButton
 	_check(ring_select.item_count == SettingsStore.RESTART_RING_HEIGHTS.size(), "every supported ring appears in the selector")
 	var deaths := int(native.get_death_count())
+	_button(menu, "RESTART AT GRADE").pressed.emit()
+	_check(not paused and not menu.visible and main._settings.restart_ring == 0,
+		"grade control resumes through the native supported preset")
+	_check(native.get_player_position().distance_to(main._settings.ring_position()) < 0.001,
+		"grade control reaches the authoritative grade destination")
 	for ring in range(SettingsStore.RESTART_RING_HEIGHTS.size()):
 		if not main._paused:
 			main._open_pause()
@@ -156,6 +187,8 @@ func _run() -> void:
 	main._open_pause()
 	menu._show_page(&"restart")
 	var standing: Vector3 = native.get_player_position()
+	advanced_toggle.button_pressed = true
+	_check(advanced_details.is_visible_in_tree(), "height and XYZ expand through the real control")
 	_button(menu, "USE CURRENT XYZ").pressed.emit()
 	_button(menu, "RESTART AT XYZ").pressed.emit()
 	_check(not paused and not menu.visible, "current standing XYZ restart is accepted")
@@ -196,6 +229,7 @@ func _run() -> void:
 		"checkpoint menu signal invokes native restoration")
 	_check(native.get_death_count() == deaths, "checkpoint menu restart does not add a death")
 	_check_lowering_drop(main)
+	_check_canopy(main)
 	print("SCRAPERX_SETTINGS_RUNTIME checks=%d failures=%d rings=%d decorative=%d structural=%d native=1" %
 		[_checks, _failures.size(), SettingsStore.RESTART_RING_HEIGHTS.size(), decoration_count, structural_count])
 	var launcher: Dictionary = native.get_slingshot_state()
@@ -238,3 +272,41 @@ func _check_lowering_drop(main: Node) -> void:
 		native.advance_frame(native.get_fixed_step_seconds())
 		_check(native.get_traversal_state() == (5 if press == 0 else 0),
 			"cargo touch Drop enters Lowering then releases it")
+
+
+func _check_canopy(main: Node) -> void:
+	var native: Object = main._native
+	_check(native.debug_restart_at(Vector3(6.0, 18.0, -58.0)), "canopy proof starts in real free fall")
+	native.set_move_input(0.0, 0.0)
+	native.advance_frame(native.get_fixed_step_seconds())
+	native.request_parachute()
+	native.advance_frame(native.get_fixed_step_seconds())
+	main._ctx = main._read_context()
+	var intent := {"pendant": {}, "move": Vector2.ZERO}
+	var camera: Transform3D = main._camera.global_transform
+	main._arms.update_arms(main._arms_state(intent), camera, 0.1)
+	_check(native.is_parachute_deployed() and main._arms.canopy_visible() and main._arms.risers_visible(),
+		"native deployment displays cloth and risers")
+	var cloth: MeshInstance3D = main._arms._canopy
+	_check(cloth.mesh.get_aabb().size.x > 5.0 and cloth.global_position.y > camera.origin.y + 2.5,
+		"canopy has an overhead cloth surface visible when looking up")
+	for i in main._arms._risers.size():
+		var line: MeshInstance3D = main._arms._risers[i]
+		var endpoint: Vector3 = line.global_transform * Vector3(0.0, 0.5, 0.0)
+		var local: Vector3 = cloth.global_transform.affine_inverse() * endpoint
+		var expected_y := 0.55 * (1.0 - pow(local.x / 2.6, 2.0))
+		_check(absf(local.z - 1.0) < 0.001 and absf(local.y - expected_y) < 0.001,
+			"riser %d terminates on the cloth attachment" % i)
+	var overhead: Vector3 = cloth.global_position
+	var look_up := Transform3D(Basis.looking_at(Vector3(0.0, 0.94, -0.342).normalized(), Vector3.UP), camera.origin)
+	main._camera.global_transform = look_up
+	main._arms.update_arms(main._arms_state(intent), look_up, 0.1)
+	_check(main._camera.is_position_in_frustum(cloth.global_position), "looking up brings native canopy into the camera frustum")
+	_check(is_equal_approx(cloth.global_position.y, overhead.y), "looking up keeps cloth overhead instead of pitching it with the eye")
+	main._camera.global_transform = camera
+	native.request_parachute()
+	native.advance_frame(native.get_fixed_step_seconds())
+	main._ctx = main._read_context()
+	main._arms.update_arms(main._arms_state(intent), camera, 0.1)
+	_check(not native.is_parachute_deployed() and not main._arms.canopy_visible() and not main._arms.risers_visible(),
+		"native retraction hides cloth and risers")

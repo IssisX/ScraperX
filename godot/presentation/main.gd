@@ -1540,7 +1540,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	# curve-shape input, not a gameplay bound, so the native constant is not
 	# exposed through the bridge just for this.
 	var bob_target := 0.0
-	if grounded:
+	if grounded and int(_native.get_traversal_state()) == 0:
 		bob_target = smoothstep(HEAD_BOB_SPEED_FLOOR_MPS, HEAD_BOB_SPEED_FULL_MPS, horizontal_speed)
 		_cam_bob_phase += horizontal_speed * HEAD_BOB_CYCLES_PER_METER * TAU * delta
 	if not _head_bob_on:
@@ -2779,12 +2779,12 @@ func _build_stack_interior_dressing(oxidised: Material, rust_deep: Material,
 	# Short slack loops hang just below selected cross members. Segmented curves
 	# give the heavy cable a soft belly instead of a ruler-straight appearance.
 	for level in [2, 5, 8]:
-		var y := float(level) * STACK_LEVEL_HEIGHT + 3.0
-		var start := Vector3(cx - inner_half + 1.7, y, cz - inner_half + 1.4)
-		var finish := Vector3(cx - inner_half + 7.3, y - 0.15, cz - inner_half + 1.4)
+		var y := float(level) * STACK_LEVEL_HEIGHT - 1.0
+		var start := Vector3(cx - inner_half + 1.7, y, cz - inner_half + 0.18)
+		var finish := Vector3(cx - inner_half + 7.3, y, cz - inner_half + 0.18)
 		_draw_sagging_service_cable(start, finish, 1.1, cable_dark, 8)
-		_draw_sagging_service_cable(start + Vector3(0.2, 0.0, 0.18),
-			finish + Vector3(0.2, 0.0, 0.18), 0.95, pipe_rust, 8)
+		_draw_sagging_service_cable(start + Vector3(0.2, 0.0, 0.02),
+			finish + Vector3(0.2, 0.0, 0.02), 0.95, pipe_rust, 8)
 
 	# A few amber cages and warning chevrons make the first storeys legible at
 	# human scale, while the far side of each bay stays open to the huge shaft.
@@ -2884,6 +2884,11 @@ func _build_stack_interior_dressing(oxidised: Material, rust_deep: Material,
 
 func _draw_sagging_service_cable(from: Vector3, to: Vector3, sag: float,
 		material: Material, segments: int) -> void:
+	# End collars intersect the visible/native shaft edge beam; the slack
+	# service cable is decorative, never an alternate gameplay support.
+	for endpoint in [from, to]:
+		_add_box("SaggingServiceCable", Vector3(0.18, 0.12, 0.12),
+			endpoint, material)
 	var previous := from
 	for segment in range(1, segments + 1):
 		var t := float(segment) / float(segments)
@@ -3724,7 +3729,7 @@ func _build_lighting() -> void:
 		lamp.name = "SodiumFlood"
 		lamp.position = mast + Vector3(0.6, 10.6, 0.0)
 		lamp.light_color = Color(1.0, 0.585, 0.225)
-		lamp.light_energy = 3.5
+		lamp.light_energy = 4.5
 		lamp.omni_range = 26.0
 		lamp.omni_attenuation = 1.6
 		_light_rig.add_child(lamp)
@@ -3734,7 +3739,7 @@ func _build_lighting() -> void:
 		base_flood.name = "TowerFootFlood"
 		base_flood.position = Vector3(base_x, 15.0, -132.0)
 		base_flood.light_color = Color(1.0, 0.7, 0.42)
-		base_flood.light_energy = 4.0
+		base_flood.light_energy = 5.0
 		base_flood.omni_range = 48.0
 		base_flood.omni_attenuation = 1.3
 		_light_rig.add_child(base_flood)

@@ -6616,14 +6616,27 @@ private:
         traversal_target_body_=probe.landing_body;
         traversal_local_ledge_=to_support_local(bodies,traversal_body_,probe.ledge_point);
         traversal_local_target_=to_support_local(bodies,traversal_target_body_,probe.landing_centre);
+        physical_hands_->set_transfer_profile();
         cargo_transfer_active_=true;
         // Attach/detach changes the load path without resetting rider velocity.
         return true;
     }
 
     void update_cargo_transfer(JPH::BodyInterface &bodies,double up_input,float dt) noexcept {
-        if (grounded_ && (support_sample_.body_id==traversal_target_body_ ||
-                          support_sample_.body_id==traversal_body_)) {
+        const auto actual=bodies.GetPosition(player_id_);
+        const auto landing=from_support_local(bodies,traversal_target_body_,traversal_local_target_);
+        const auto contact=JPH::RVec3(support_sample_.contact_point.x,support_sample_.contact_point.y,
+                                     support_sample_.contact_point.z);
+        const auto relative_velocity=bodies.GetLinearVelocity(player_id_)-
+            (support_sample_.body_id.IsInvalid()?JPH::Vec3::sZero():
+             bodies.GetPointVelocity(support_sample_.body_id,contact));
+        const double horizontal=std::hypot(landing.GetX()-actual.GetX(),landing.GetZ()-actual.GetZ());
+        // A rounded edge contact alone is not a stable top-out. Keep finite
+        // hands until the intended footprint is reached and slip is small.
+        if (grounded_ && footing_is_firm(bodies) && horizontal<0.10 &&
+            std::hypot(relative_velocity.GetX(),relative_velocity.GetZ())<0.20 &&
+            (support_sample_.body_id==traversal_target_body_ ||
+             support_sample_.body_id==traversal_body_)) {
             ++accepted_traversal_count_;
             clear_traversal();
             return;
@@ -6632,10 +6645,7 @@ private:
         // Releasing the stick does not cancel that input transaction; pushing
         // away pauses it while the real hand constraints keep taking load.
         if (up_input < -kClimbInputDeadzone) return;
-        const auto actual=bodies.GetPosition(player_id_);
         const auto ledge=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
-        const auto landing=from_support_local(bodies,traversal_target_body_,traversal_local_target_);
-        const double horizontal=std::hypot(landing.GetX()-actual.GetX(),landing.GetZ()-actual.GetZ());
         JPH::RVec3 goal=landing+JPH::Vec3(0,0.15F,0);
         // Geometric clearance opens the forward move; actual supported contact
         // closes the transfer. Neither a timer nor a prescribed capsule path
@@ -6644,9 +6654,12 @@ private:
             goal=JPH::RVec3(actual.GetX(),goal.GetY(),actual.GetZ());
         if (horizontal<=0.10) goal=landing+JPH::Vec3(0,0.02F,0);
         auto lead=JPH::Vec3(goal-actual);
-        if (lead.Length()>0.28F) lead*=0.28F/lead.Length();
+        if (lead.Length()>0.45F) lead*=0.45F/lead.Length();
         auto command=JPH::Vec3(actual+lead-physical_hands_->commanded_position());
-        if (command.Length()>kClimbUpSpeed*dt) command*=kClimbUpSpeed*dt/command.Length();
+        constexpr float transfer_speed=2.2F; // CHOSEN brief pull-up, not ladder climb.
+        // Leave float-representation margin below the conservative work bound.
+        const float stroke=0.999F*transfer_speed*dt;
+        if (command.Length()>stroke) command*=stroke/command.Length();
         physical_hands_->advance_targets(command,dt);
     }
 

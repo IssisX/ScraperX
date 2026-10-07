@@ -115,6 +115,7 @@ var _remote: Node3D
 var _remote_buttons := {}
 var _remote_led: MeshInstance3D
 var _risers: Array[MeshInstance3D] = []
+var _canopy: MeshInstance3D
 var _grip_forward := Vector3.FORWARD
 var _last_traversal := 0
 var _clock := 0.0
@@ -141,6 +142,32 @@ func build(sleeve: Material, band: Material, glove: Material, glove_dark: Materi
 		var line := _mesh(_cylinder(0.0035, 0.0035, 1.0), riser)
 		line.visible = false
 		_risers.append(line)
+
+	_build_canopy()
+
+
+# A lightweight arched cloth surface: presentation of native chute state,
+# without collision or an independent deployment/flight simulation.
+func _build_canopy() -> void:
+	var cloth := StandardMaterial3D.new()
+	cloth.vertex_color_use_as_albedo = true
+	cloth.cull_mode = BaseMaterial3D.CULL_DISABLED
+	cloth.roughness = 0.95
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for cell in 12:
+		var x0 := -2.6 + float(cell) * 5.2 / 12.0
+		var x1 := -2.6 + float(cell + 1) * 5.2 / 12.0
+		var y0 := 0.55 * (1.0 - pow(x0 / 2.6, 2.0))
+		var y1 := 0.55 * (1.0 - pow(x1 / 2.6, 2.0))
+		surface.set_color(Color(0.86, 0.33, 0.09) if cell % 3 != 1 else Color(0.88, 0.85, 0.72))
+		for vertex in [Vector3(x0, y0, -1.0), Vector3(x1, y1, -1.0), Vector3(x1, y1, 1.0),
+				Vector3(x0, y0, -1.0), Vector3(x1, y1, 1.0), Vector3(x0, y0, 1.0)]:
+			surface.add_vertex(vertex)
+	surface.generate_normals()
+	_canopy = _mesh(surface.commit(), cloth)
+	_canopy.name = "ParachuteCanopy"
+	_canopy.visible = false
 
 
 func _mesh(mesh: Mesh, material: Material) -> MeshInstance3D:
@@ -480,6 +507,12 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		_solve_arm(hand, shoulder, wrist, hand_basis, _pole(pose, hand.side, forward, torso_right))
 		_pose_fingers(hand)
 
+	_canopy.visible = chute
+	if chute:
+		# Yaw follows the rider; looking up pitches the eye independently so
+		# the cloth and its attachments can actually enter the view.
+		_canopy.global_transform = Transform3D(Basis(torso_right, Vector3.UP, -forward),
+			camera.origin + Vector3.UP * 2.65 + forward * 0.15)
 	_update_risers(chute and operating == &"" and traversal == 0)
 
 
@@ -662,8 +695,7 @@ func _pose_fingers(hand: Hand) -> void:
 	(hand.thumb[1] as Node3D).rotation = Vector3(-0.7 * hand.thumb_curl, 0.0, 0.0)
 
 
-# Canopy risers from each toggle up and out of frame; the canopy itself is
-# above the view, where a real one would be.
+# Risers terminate on the rendered cloth rather than disappearing above it.
 func _update_risers(show: bool) -> void:
 	for i in _risers.size():
 		var line := _risers[i]
@@ -671,11 +703,9 @@ func _update_risers(show: bool) -> void:
 		if not show:
 			continue
 		var fist := _hands[i].root.global_transform * Vector3(0.0, 0.07, 0.0)
-		var outward := _hands[i].root.global_position - _hands[1 - i].root.global_position
-		outward.y = 0.0
-		var top := fist + Vector3.UP * 2.6
-		if outward.length_squared() > 1.0e-6:
-			top += outward.normalized() * 0.35
+		var x := _hands[i].side * (2.6 * 2.0 / 3.0)
+		var y := 0.55 * (1.0 - pow(x / 2.6, 2.0))
+		var top := _canopy.global_transform * Vector3(x, y, 1.0)
 		var span := top - fist
 		var basis := _basis_from_y(span, Vector3.RIGHT)
 		line.global_transform = Transform3D(Basis(basis.x, basis.y * span.length(), basis.z),
@@ -725,3 +755,7 @@ func remote_visible() -> bool:
 
 func risers_visible() -> bool:
 	return _risers[0].visible and _risers[1].visible
+
+
+func canopy_visible() -> bool:
+	return _canopy.visible

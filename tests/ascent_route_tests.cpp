@@ -205,6 +205,29 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
 }
 
 int main(int argc,char **argv) {
+  if(argc>1 && std::string(argv[1])=="--mantle-feel") {
+    Simulation s(InitialSpawn::ExteriorGrade,WorldContent::Slingshot);
+    if(!s.debug_restart_at({20,11.9,-121.3})) return 70;
+    wait(s,.5); (void)s.set_facing(0,-1); wait(s,.2);
+    if(!s.snapshot().ledge_available) {report(s,"FAIL mantle offer");return 71;}
+    (void)s.request_traversal();
+    double arrival=-1,peak_speed=0;
+    for(unsigned tick=0;tick<540;++tick) {
+      (void)s.advance_frame(Simulation::kFixedStepSeconds);
+      const auto v=s.snapshot();
+      peak_speed=std::max(peak_speed,std::abs(v.player_linear_velocity.y));
+      if(tick%30==0) std::cout<<"mantle tick="<<tick<<" y="<<v.player_position.y<<" z="<<v.player_position.z
+        <<" vy="<<v.player_linear_velocity.y<<" support="<<v.support_entity_id<<" state="<<int(v.traversal_state)<<'\n';
+      if(arrival<0 && standing_above(v,13.5)) arrival=(tick+1)/90.;
+      if(v.player_gravity_factor!=1 || v.death_count) return 72;
+      if(arrival>0 && (tick+1)/90.>arrival+2.0) {
+        std::cout<<"mantle arrival_s="<<arrival<<" peak_vy="<<peak_speed<<'\n';
+        if(!standing_above(v,13.5) || v.support_entity_id!=2560 || arrival>1.8) return 73;
+        report(s,"PASS responsive stable mantle");return 0;
+      }
+    }
+    report(s,"FAIL mantle completion");return 74;
+  }
   if(argc>1 && std::string(argv[1])=="--facade-slice") {
     Simulation slice(InitialSpawn::ExteriorGrade,WorldContent::Slingshot);
     if(!slice.debug_restart_at({21.2,11.9,-125.0})) return 60;

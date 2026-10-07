@@ -14,9 +14,9 @@ const STEP_SECONDS := 0.5
 # Noon elevation: an alpine summer sun, high but never overhead.
 const NOON_ELEVATION_DEG := 58.0
 const SUN_ENERGY := 2.4
-const MOON_ENERGY := 0.55
+const MOON_ENERGY := 0.9
 const FILL_DAY_ENERGY := 0.55
-const FILL_NIGHT_ENERGY := 0.2
+const FILL_NIGHT_ENERGY := 0.4
 const DAY_EXPOSURE := 1.42  # main.tscn's own tonemap_exposure
 const NIGHT_EXPOSURE := 2.3
 
@@ -118,7 +118,7 @@ func _apply() -> void:
 	var day := smoothstep(-0.10, 0.22, sun_dir.y)
 	var dusk := (1.0 - smoothstep(0.05, 0.38, sun_dir.y)) * smoothstep(-0.12, 0.0, sun_dir.y)
 	if is_moon:
-		_sun.light_color = Color(0.62, 0.72, 0.92)
+		_sun.light_color = Color(0.74, 0.82, 1.0)
 		_sun.light_energy = MOON_ENERGY * rise
 	else:
 		var warm := Color(1.0, 0.60, 0.34)
@@ -127,7 +127,7 @@ func _apply() -> void:
 		_sun.light_energy = SUN_ENERGY * rise
 	_sun.shadow_enabled = _shadows_on and _sun.light_energy > 0.01
 	_fill.light_energy = lerpf(FILL_NIGHT_ENERGY, FILL_DAY_ENERGY, day)
-	_fill.light_color = Color(0.30, 0.36, 0.52).lerp(Color(0.58, 0.68, 0.82), day)
+	_fill.light_color = Color(0.48, 0.56, 0.72).lerp(Color(0.58, 0.68, 0.82), day)
 	_sky_material.set_shader_parameter(&"day_factor", day)
 	_sky_material.set_shader_parameter(&"dusk_factor", dusk)
 	_sky_material.set_shader_parameter(&"light_is_moon", is_moon)
