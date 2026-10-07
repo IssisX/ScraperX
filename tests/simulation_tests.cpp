@@ -4626,6 +4626,25 @@ void run_stack() {
     std::cout << "PASS scraperx_sim kerb: on_y=" << on_kerb.player_position.y
               << " stepped_z=" << off_kerb.player_position.z - on_kerb.player_position.z << "\n";
 
+    // A knee-to-waist edge is climbed. The owner, on the device: stuck where
+    // "I wasn't able to reach up and climb - buckets and shit". The wall ray
+    // ran only at the body's centre (0.9 m), so a rim from 0.35 to 0.9 m
+    // offered nothing: too high to step, invisible to the climb. The
+    // slingshot's 0.7 m timber block in the yard is one.
+    {
+        Simulation low(InitialSpawn::ExteriorGrade);
+        (void)low.advance_frame(0.5);
+        require(walk_to(low, 0.0, -49.0, 30.0) && walk_to(low, 0.0, -51.55, 4.0, 0.05),
+                "the walk to the slingshot's timber block must be accepted");
+        (void)low.set_facing(0.0, -1.0);
+        (void)low.advance_frame(0.4);
+        require(low.snapshot().ledge_available, "a 0.7 m edge ahead must offer CLIMB");
+        (void)low.request_traversal();
+        require(advance_until(low, [](const scraperx::sim::Snapshot &state) { return standing_above(state, 1.5); }, 2.0),
+                "CLIMB must put the body on top of a 0.7 m block");
+        std::cout << "PASS scraperx_sim low edge: top_y=" << low.snapshot().player_position.y << "\n";
+    }
+
     // Left alone, S1 waits as found: the plate proud of the floor on its line,
     // the lever on its stop, the valve shut, the bucket dry on its catch, the
     // cage at grade.

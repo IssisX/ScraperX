@@ -102,6 +102,7 @@ jobs:
             "PASS scraperx_sim world solids" \
             "PASS scraperx_sim crouch" \
             "PASS scraperx_sim kerb" \
+            "PASS scraperx_sim low edge" \
             "PASS scraperx_sim S1 step on and off" \
             "PASS scraperx_sim S1 ride" \
             "PASS scraperx_sim S1 stay aboard" \

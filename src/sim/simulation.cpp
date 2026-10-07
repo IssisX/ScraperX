@@ -138,6 +138,8 @@ constexpr float kTraversalReach = 0.95F;
 constexpr float kTopProbeInset = 0.12F;
 constexpr float kLandingInset = kPlayerRadius + 0.12F;
 constexpr float kTopProbeMargin = 0.35F;
+// How far above a probe's lowest rise the low wall ray runs.
+constexpr double kLowWallProbeAbove = 0.10;
 constexpr float kLedgeTopNormalThreshold = 0.7F;
 constexpr float kLandingSkin = 0.02F;
 constexpr float kLandingSupportProbeUp = 0.12F;
@@ -1755,14 +1757,22 @@ private:
             return probe;
         }
 
+        const float feet_y = origin.GetY() - kPlayerHalfHeight;
         JPH::RayCastResult wall_hit;
         JPH::RVec3 wall_point;
+        // At the body's centre first; a wall lower than that (a bucket's rim,
+        // a crate, a knee-high kerb: a rise of 0.35 to 0.9 m) is felt for
+        // just above the lowest rise this probe takes.
+        const double low_y = static_cast<double>(feet_y) + minimum_rise + kLowWallProbeAbove;
+        const JPH::RVec3 low_origin(origin.GetX(), low_y, origin.GetZ());
         if (!cast_wall(origin, facing * (kTraversalReach + kPlayerRadius), see_past_holds, wall_hit,
-                       wall_point)) {
+                       wall_point) &&
+            (low_y >= origin.GetY() ||
+             !cast_wall(low_origin, facing * (kTraversalReach + kPlayerRadius), see_past_holds, wall_hit,
+                        wall_point))) {
             return probe;
         }
 
-        const float feet_y = origin.GetY() - kPlayerHalfHeight;
         const JPH::RVec3 top_origin(wall_point.GetX() + facing.GetX() * kTopProbeInset,
                                     feet_y + maximum_rise + kTopProbeMargin,
                                     wall_point.GetZ() + facing.GetZ() * kTopProbeInset);
