@@ -291,6 +291,17 @@ func _run() -> void:
 			var expected_facade: Variant = JSON.parse_string(facade_bytes.decompress_dynamic(
 				32 * 1024 * 1024, FileAccess.COMPRESSION_GZIP).get_string_from_utf8())
 			_check(expected_facade is Array, "derived facade partition oracle loads")
+			# The two route-guidance labels are deliberate additions. Specify their
+			# complete records independently; retain every original geometry channel.
+			for body in expected_facade:
+				if body[0] == "KitBody2560":
+					body[1].push_front(["sign", "UP · JUMP TO DUCT\nCLIMB CABINET FIRST",
+						[1, 0, 0, 0, 1, 0, 0, 0, 1, 20.0, 23.5, -121.76], 64,
+						0.10 / 64.0, "e7c67cff", 12, true])
+				elif body[0] == "KitBody2562":
+					body[1].push_front(["sign", "UP · VENT TO NEXT DECK\nCLIMB · HOLD FORWARD",
+						[1, 0, 0, 0, 1, 0, 0, 0, 1, 24.0, 28.2, -123.34], 64,
+						0.10 / 64.0, "e7c67cff", 12, true])
 			var facade_difference := _first_difference(actual_facade, expected_facade, "facade")
 			_check(facade_difference.is_empty(), "explicit causal facade ownership partition " + facade_difference)
 			record = actual_original

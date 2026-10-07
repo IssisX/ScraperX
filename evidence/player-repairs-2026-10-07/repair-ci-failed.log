@@ -1,0 +1,81 @@
+moving-support-truth	Render-native kit and retired mechanism proofs	﻿2026-10-07T20:11:15.5446670Z ##[group]Run set -euo pipefail
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5447043Z ^[[36;1mset -euo pipefail^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5447403Z ^[[36;1m# These are actual Compatibility draws under Xvfb. Headless runs^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5447911Z ^[[36;1m# cannot prove that the native snapshot reaches visible geometry.^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5448353Z ^[[36;1mtimeout 180s xvfb-run -a -s "-screen 0 192x164x24" \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5448874Z ^[[36;1m  tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5449477Z ^[[36;1m  --script res://tests/kit_view_test.gd 2>&1 | tee artifacts/kit-view-normal.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5450006Z ^[[36;1mgrep -F "SCRAPERX_KIT_VIEW PASS" artifacts/kit-view-normal.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5450436Z ^[[36;1mtimeout 180s xvfb-run -a -s "-screen 0 192x164x24" \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5450926Z ^[[36;1m  tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5451505Z ^[[36;1m  --script res://tests/kit_view_test.gd -- --regression-fixtures \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5451951Z ^[[36;1m  2>&1 | tee artifacts/kit-view-fixtures.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5452535Z ^[[36;1mgrep -F "SCRAPERX_KIT_VIEW PASS" artifacts/kit-view-fixtures.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5452978Z ^[[36;1mtimeout 300s xvfb-run -a -s "-screen 0 432x371x24" \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5453969Z ^[[36;1m  tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5454576Z ^[[36;1m  --script res://tests/kit_route_render_test.gd -- --kit-route=touch_cargo_net \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5455045Z ^[[36;1m  2>&1 | tee artifacts/kit-route-render.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5455525Z ^[[36;1mgrep -F "SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_climbing" artifacts/kit-route-render.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5456116Z ^[[36;1mgrep -F "SCRAPERX_UITEST PASS touch_cargo_net" artifacts/kit-route-render.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5456593Z ^[[36;1mtimeout 180s xvfb-run -a -s "-screen 0 432x371x24" \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5457097Z ^[[36;1m  tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5457596Z ^[[36;1m  --script res://tests/kit_mechanism_render_test.gd \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5457971Z ^[[36;1m  2>&1 | tee artifacts/kit-mechanism-shackle.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5458461Z ^[[36;1mgrep -F "SCRAPERX_KIT_MECHANISM PASS mode=shackle" artifacts/kit-mechanism-shackle.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5459046Z ^[[36;1mif grep -E "SCRIPT ERROR|Parse Error|KIT_(VIEW|ROUTE_RENDER|MECHANISM) FAIL" \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5459580Z ^[[36;1m    artifacts/kit-view-normal.log artifacts/kit-view-fixtures.log \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5460153Z ^[[36;1m    artifacts/kit-route-render.log artifacts/kit-mechanism-shackle.log; then exit 1; fi^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5460721Z ^[[36;1m# One invocation covers resource validity and all36 recorded takes/^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5461162Z ^[[36;1m# phases through the actual controller and limiter.^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5461559Z ^[[36;1mtimeout 180s xvfb-run -a -s "-screen 0 192x164x24" \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5462092Z ^[[36;1m  tools/godot/godot --fixed-fps 30 --path godot --rendering-method gl_compatibility \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5462619Z ^[[36;1m  --write-movie "${RUNNER_TEMP}/recorded-footsteps.avi" \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5463046Z ^[[36;1m  --script res://tests/recorded_footsteps_test.gd \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5463847Z ^[[36;1m  2>&1 | tee artifacts/recorded-footsteps.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5464350Z ^[[36;1mgrep -F "RECORDED_FOOTSTEPS_MIX PASS cases=36" artifacts/recorded-footsteps.log^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5464896Z ^[[36;1mif grep -E "SCRIPT ERROR|Parse Error|RECORDED_FOOTSTEPS.*FAIL" \^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5465348Z ^[[36;1m    artifacts/recorded-footsteps.log; then exit 1; fi^[[0m
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5529504Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5529861Z env:
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5530070Z   GODOT_VERSION: 4.7-stable
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5530477Z   GODOT_BINARY_SHA256: 0b1a6c54c2c619c12e169fe9241edda4b81080b519451cec2984bf0d2c6cb73c
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5531340Z   GODOT_TEMPLATES_SHA256: 9714459dc071907c0f3d5f17d608faf69e7cda21331fc5d39c4503ffa4e99eec
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5531807Z   ANDROID_HOME: /usr/local/lib/android/sdk
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5532113Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5532403Z   ANDROID_NDK_VERSION: 29.0.14206865
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5532924Z   GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/work/ScraperX/ScraperX/ci/android/ScraperX-ChatGPT-debug.keystore
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5533798Z   GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5534143Z   GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5534590Z   CHATGPT_SIGNER_SHA256: 9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5535122Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5535602Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-1/x64
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.5535982Z ##[endgroup]
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.6136098Z Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.7855459Z WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.7856136Z      at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8476455Z OpenGL API 4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.2 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8482693Z libpulse.so.0: cannot open shared object file: No such file or directory
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8484205Z libpulse.so.0: cannot open shared object file: No such file or directory
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8494101Z ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8495128Z ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8496182Z ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8497271Z ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8498351Z ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8499358Z ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8500473Z ALSA lib conf.c:5731:(snd_config_expand) Evaluate error: No such file or directory
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8501313Z ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM default
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8502057Z ERROR: Condition "status < 0" is true. Returning: ERR_CANT_OPEN
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8502795Z    at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8504147Z WARNING: All audio drivers failed, falling back to the dummy driver.
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8504913Z      at: initialize (servers/audio/audio_server.cpp:258)
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:15.8505331Z 
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:16.5316215Z SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:16.5317521Z SCRAPERX_VIEWPORT size=192x164 aspect=1.171 fov=82.0 far=2000
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:17.1052916Z ERROR: SCRAPERX_KIT_VIEW FAIL explicit causal facade ownership partition facade/1/1 length actual=3 expected=2
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:17.1054878Z    at: push_error (core/variant/variant_utility.cpp:1023)
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:17.1055432Z    GDScript backtrace (most recent call first):
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:17.1055932Z        [0] _check (res://tests/kit_view_test.gd:22)
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:17.1056403Z        [1] _run (res://tests/kit_view_test.gd:295)
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:17.8580010Z SCRAPERX_AUDIO_BANK clips=28 msec=435 driver=Dummy
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:25.4671981Z SCRAPERX_KIT_VIEW FAIL checks=33764 rigid_bodies=50 renderer=X11
+moving-support-truth	Render-native kit and retired mechanism proofs	2026-10-07T20:11:25.8321897Z ##[error]Process completed with exit code 1.
