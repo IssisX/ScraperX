@@ -30,6 +30,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: “Keep me updated … concisely, throughout.”
 - Answer direct questions directly before resuming work.
   Why: “Just answer.”
+- When you talk to me, describe the thing by what it looks like and where it is. Do not use the short names from the code.
+  Why: Words like “plate,” “leaf,” “cab hole,” “hatch,” and “bay” were not words I knew. Talk about the building.
 - Report completed work, actual verification, and remaining limitations honestly.
   Why: I want to know when the work is finished so we can plan what follows.
 
@@ -58,8 +60,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I approved creative climbing, timed swinging, and Rube Goldberg mechanisms.
 - Do not keep an approved list of machine parts. A part is allowed when the player can see it move from ordinary play, the motion reads as the machine, and using it changes a real force, constraint, support, or route. Hidden clutches, tiny gears, pressure valves, and unwatchable fittings are out. See GDD §16.
   Why: A short catalog, and then a longer one, were both read as the only legal machinery.
-- Put the next machine or obstacle in a gap that is already in the structure. Do not build it off to the side of the tower. There is no complete canonical climb to 678 m; open gaps below that still need a machine or a placed obstacle.
-  Why: A leaf was built west of the 672 m deck and then treated as the frontier. The owner rejected that. The landing is empty air beside the mass, and the climb below it is not closed.
+- Put the next machine, or the next thing in the way, in an opening that is already part of the building. Do not build it out in the air beside the building. You cannot climb from the ground to about 680 m as one trip. Empty places below that still need a machine or something you have to deal with.
+  Why: A tall hinged sheet was built west of a small deck at 672 m and then treated as how far the climb goes. That landing is empty air beside the building, and the climb below it is not finished.
 - Make environmental additions playable and causally meaningful, and plan the next coherent pass after the current batch is finished and pushed.
   Why: I requested extraordinary interactive content beyond cosmetics and suggested `/plan` for that next pass.
 - Make materials behave consistently with their appearance.

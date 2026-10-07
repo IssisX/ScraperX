@@ -42,10 +42,9 @@ void grip_bar(std::vector<Part> &parts, const JPH::Vec3 low, const JPH::Vec3 hig
     parts.push_back(span(low, high, Material::Yellow));
 }
 
-// TP-640's top, from the crane frame. This skin sits on that plate and
-// then leaves it to the west. Leaving the plate is what this skin does.
-// It is not the pattern. The next machine fills a gap already in the
-// structure. It does not stand off to the side.
+// The 640 m floor. This climb sits on it and then goes west, off the
+// building. That is what this climb does. It is not the pattern. The next
+// machine goes in an opening that is already part of the building.
 constexpr float kPlate = 640.25F;
 
 // The manifold the vault crosses, facing north. The chest ray is 0.90 m
@@ -128,9 +127,9 @@ constexpr float kBraceX = -12.70F;
 constexpr float kBraceZ = -140.75F;
 constexpr float kBraceTop = 671.70F;
 
-// The receiver. Fixed. Its south edge is the mantle from the ladder.
-// The leaf at the west lip falls off the side of the tower. It is not
-// this climb, and it is not a gap in the structure. Do not continue it.
+// The small deck. Its south edge is the step up from the ladder.
+// The hinged sheet at the west edge falls into open air, beside the
+// building. It is not this climb. Do not keep building past it.
 constexpr float kDeckTop = 672.25F;
 constexpr float kDeckX0 = -14.35F;
 constexpr float kDeckX1 = -11.15F;
@@ -284,10 +283,10 @@ void build_return_and_deck(std::vector<Part> &parts) {
     }
 }
 
-// A plate on a hinge at the west lip, held by a pin in a clevis. Lift the
-// pin and the plate falls west onto a landing in empty air. That landing
-// is off the side of the tower, not a gap in the structure. Do not treat
-// it as the next step of the climb, and do not build the next piece past it.
+// A tall sheet on a hinge at the west edge, held by a pin. Lift the pin
+// and the sheet falls west onto a platform in open air. That platform is
+// beside the building. Do not treat it as the next step up, and do not
+// build the next piece past it.
 constexpr float kHingeX = -14.35F;
 constexpr float kHingeY = 672.40F;
 constexpr float kHingeZ = -139.60F;
