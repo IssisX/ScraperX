@@ -360,7 +360,7 @@ Machine success must follow the authoritative machine state and physical constra
 
 Large-scale causal stacking is a defining feature.
 
-The owner-directed readability rule: large rolling masses, gravity drops, levers, pendulums, falling slabs and direct contacts do the heavy work. Their causal handoffs must be visible from ordinary play positions. Small retainers may release stored energy, but a long sequence of tiny, mostly invisible pin/valve/rigging operations is not the desired core play. Prefer fewer larger useful actions over intricate machinery that only telemetry explains.
+The owner-directed readability rule, corrected 2026-10-07: outlaw the tiny and mostly invisible, not a short catalog of machine parts. Hidden clutches, tiny gears, pressure valves, and long sequences of pins or fittings the player cannot watch work are not core play. Cables, pulleys, carts, and elevators are allowed. So is any other large part whose motion and consequence can be seen and used from ordinary play, including counterweights, racks, sheaves, drums, pivots, large gears, screws, cams, cranes, booms, walking beams, linkages, catches, hinges, hoppers, tipping vessels, falling slabs, pendulums, rolling masses, travelers, and rotating platforms. Those names are examples, not a whitelist. A new large, legible, physically consequential part does not need to match an earlier machine. Repeating the same cable, pulley, cart, or elevator ride is the failure this rule prevents. Causal handoffs stay visible. Prefer a few large useful actions over machinery that only telemetry explains.
 
 **Owner correction, 2026-09-27: a continuous ordinary stair or ramp that bypasses the authored machines and parkour is rejected.** This supersedes any earlier fallback requirement. Progress comes from authored parkour and working mechanisms. Short local access surfaces and machine-created crossings may serve an encounter; they cannot form a continuous easy bypass. A passing automated route does not establish acceptable level design.
 
@@ -376,7 +376,7 @@ Causal complexity must remain legible enough that the player can form useful hyp
 
 ScraperX should prefer mechanisms with multiple plausible uses over one-purpose puzzle devices.
 
-**Owner clarification, 2026-09-30: creative physical challenges built from primitives.** Boxes, beams, cylinders, wedges, plates and simple joints are valid production building blocks. Make their dimensions, connections and operation legible. A simple working mechanism can provide a strong encounter; visual complexity and a large number of stages are not measures of quality.
+**Owner clarification, 2026-09-30, and the 2026-10-07 correction of its scope: creative physical challenges built from primitives.** Boxes, beams, cylinders, wedges, plates and simple joints are valid production building blocks. They are how a part is built, not the only parts a machine may contain. A legible screw, large gear, boom, drum, hopper, or traveler is as valid as a box on a hinge when the player can see it move and use what it does. Make dimensions, connections and operation legible. A simple working mechanism can provide a strong encounter; visual complexity and a large number of stages are not measures of quality.
 
 Author each encounter around a clear player problem:
 

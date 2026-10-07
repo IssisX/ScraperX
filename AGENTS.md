@@ -56,6 +56,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I meant visceral engagement, with vibration as one component.
 - Fill traversal gaps with varied, physically coherent challenges and visible causal mechanisms.
   Why: I approved creative climbing, timed swinging, and Rube Goldberg mechanisms.
+- Do not limit machines to a few repeating parts such as cables, pulleys, carts, or elevators. Outlaw tiny hidden mechanisms: unseen clutches, tiny gears, pressure valves, and fittings the player cannot watch work. Large visible parts may vary widely. GDD §16 lists examples, not a whitelist.
+  Why: The short catalog was being read as the only legal machinery, which made later machines repetitive.
 - Make environmental additions playable and causally meaningful, and plan the next coherent pass after the current batch is finished and pushed.
   Why: I requested extraordinary interactive content beyond cosmetics and suggested `/plan` for that next pass.
 - Make materials behave consistently with their appearance.

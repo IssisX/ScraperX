@@ -17,12 +17,15 @@ The climb is won by operating real machines under finite limits. A route opens b
 moved, not because a predicate flipped. Nothing teleports, nothing has unlimited force, nothing
 bypasses collision, and no mechanism may strand the player without a legal recovery path.
 
-**Owner correction, through 2026-09-30, binding on this branch.** The complete initial physical
+**Owner correction, through 2026-10-07, binding on this branch.** The complete initial physical
 state, the fixed laws and the ordered external inputs determine subsequent state. Player actions
 are those inputs, so different actions may produce different outcomes. An occupancy flag, an
 elapsed-time cue or a desired route result may not stand in for that evolution. Do not
 double-count the player's weight: standing contact already carries it. A continuous ordinary
-stair or ramp that bypasses the authored machines and parkour is rejected. Primitives are valid.
+stair or ramp that bypasses the authored machines and parkour is rejected. Primitives are valid
+building blocks, not a closed parts list. Machine parts are not limited to cables, pulleys, carts,
+and elevators, or to rolling masses, levers, pendulums, and slabs. Any large visible part whose
+motion can be watched and used is allowed. Tiny hidden mechanisms are not. See GDD §16.
 Repeating the same automatic ride at a new size is not variety. Godot owns input and
 presentation; native state owns the consequence. Actions on this checkout are not a Fold
 playtest.
