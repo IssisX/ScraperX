@@ -24,6 +24,7 @@ const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
+const SwingView := preload("res://presentation/swing_view.gd")
 # Traversal head motion, added on top of the player's own pitch and never
 # written into it: a hanging climber looks up at the grip (the lip sits ~46
 # degrees above a level gaze, outside the frame), a mantle nods down onto the
@@ -219,6 +220,7 @@ var _kit_root: Node3D
 # The ground slingshot: its view, the predicted shot (refreshed a few times a
 # second while a rider sits drawn), and the aim the look is steering.
 var _slingshot_view: Node3D
+var _swing_view: Node3D
 var _sling_prediction := PackedVector3Array()
 var _sling_preview_clock := 0.0
 var _sling_was_aiming := false
@@ -329,6 +331,9 @@ func _ready() -> void:
 	var pouch_node := _kit_root.get_node_or_null("KitBody%d" % SlingshotView.POUCH_ENTITY)
 	if pouch_node != null:
 		pouch_node.visible = false
+	_swing_view = SwingView.new()
+	add_child(_swing_view)
+	_swing_view.setup()
 
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006")
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
@@ -624,6 +629,8 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				# slingshot's pouch, out of it.
 				if bool(_ctx["sling_seated"]) or bool(_ctx["sling_recovering"]):
 					_native.request_slingshot_drop()
+				elif bool(_ctx["swing_seated"]):
+					_native.request_swing_drop()
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
 				else:
@@ -633,6 +640,8 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"back":
 				if bool(_ctx["sling_seated"]) or bool(_ctx["sling_recovering"]):
 					_native.request_slingshot_drop()
+				elif bool(_ctx["swing_seated"]):
+					_native.request_swing_drop()
 				elif _ctx["hanging"] or _ctx["climbing"]:
 					_native.request_release()
 				elif int(_ctx["carrying"]) != 0:
@@ -676,6 +685,8 @@ func _perform_action() -> void:
 				_native.request_slingshot_drop()
 			else:
 				_native.request_slingshot_action()
+		&"swing":
+			_native.request_swing_action()
 		_:
 			# Nothing reported in reach: ask anyway, exactly as the old E key
 			# did. The native decides there is no ledge (and counts it).
@@ -707,6 +718,8 @@ func _read_context() -> Dictionary:
 	var rig_target := int(_native.get_rig_target_entity_id())
 	var sling: Dictionary = _native.get_slingshot_state()
 	var sling_seated := bool(sling["seated"])
+	var swing: Dictionary = _native.get_swing_state()
+	var swing_seated := bool(swing["seated"])
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	if bool(sling["can_retrieve"]) or bool(sling["recovering"]):
 		action = {"id": &"slingshot", "icon": &"up",
@@ -721,6 +734,16 @@ func _read_context() -> Dictionary:
 		else:
 			action = {"id": &"slingshot", "icon": &"up", "label": "PULL BACK",
 				"detail": "STICK BACK TO DRAW  " + drawn}
+	elif swing_seated:
+		# Strapped into the swing: kick the trip while the ram is on its hook;
+		# held at the top by the rack, unbuckle and step off.
+		if bool(swing["ram_held"]):
+			action = {"id": &"swing", "icon": &"up", "label": "KICK THE TRIP", "detail": "LET THE RAM GO"}
+		elif bool(swing["held_at_top"]) and float(swing["seat_speed_mps"]) < 0.3:
+			action = {"id": &"swing", "icon": &"up", "label": "UNBUCKLE",
+				"detail": "STEP OFF  %.0f M" % float(swing["seat_floor_y"])}
+	elif bool(swing["station_available"]):
+		action = {"id": &"swing", "icon": &"up", "label": "STRAP IN", "detail": "THE SWING"}
 	elif hanging or climbing:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
 	elif not free:
@@ -762,8 +785,9 @@ func _read_context() -> Dictionary:
 		# Drop at an edge behind lowers into a hang; on holds it lets go; in
 		# the slingshot's pouch it climbs out.
 		"drop_ok": hanging or climbing or (grounded and free and edge_drop and carrying == 0) or \
-			sling_seated or bool(sling["recovering"]),
+			sling_seated or bool(sling["recovering"]) or (swing_seated and bool(swing["may_leave"])),
 		"sling_seated": sling_seated,
+		"swing_seated": swing_seated,
 		"sling_recovering": bool(sling["recovering"]),
 		"sling_flight": bool(sling["flight"]),
 		"edge_drop": edge_drop,
@@ -1261,6 +1285,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_write_telemetry(position, velocity, grounded)
 	_render_kit()
 	_render_slingshot(delta)
+	if _swing_view != null:
+		_swing_view.update_view(_native.get_swing_state())
 	_sample_machines(delta)
 
 

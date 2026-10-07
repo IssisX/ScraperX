@@ -145,6 +145,36 @@ struct SlingshotSnapshot final {
     std::uint32_t launch_count = 0;
 };
 
+// AS-012, the swing off the 220 ring: the rider's seat and the ram on their
+// arms, the buffer between them, the trip and the rack.
+struct SwingSnapshot final {
+    bool station_available = false;  // standing in the seat: STRAP IN offered
+    bool seated = false;             // harnessed into the seat
+    bool may_leave = true;           // the harness opens now (not mid-ride)
+    bool ram_held = true;            // the ram on its hook
+    bool tripped = false;            // the kick has let the ram go
+    bool held_at_top = false;        // the pawl in a tooth of the rack
+    int tooth = -1;
+    double seat_angle_rad = 0.0;     // north of plumb
+    double ram_angle_rad = 0.0;      // north of plumb (held back: negative)
+    double seat_speed_mps = 0.0;
+    double ram_speed_mps = 0.0;
+    double seat_floor_y = 0.0;
+    double apex_floor_y = 0.0;
+    double kick_travel_m = 0.0;
+    double buffer_compression_m = 0.0;
+    double buffer_force_n = 0.0;
+    double peak_buffer_force_n = 0.0;
+    double peak_seat_accel_mps2 = 0.0;
+    double buffer_loss_j = 0.0;
+    double energy_residual_j = 0.0;
+    double mechanical_j = 0.0;
+    Vector3 seat_pivot{};
+    Vector3 ram_pivot{};
+    Vector3 seat_pin{};
+    Vector3 ram_pin{};
+};
+
 // A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it
 // is, the rubble in it, and while it pours, the stream from its mouth down to
 // where the stream lands. Its rubble lies on its floor, the body's first part.
@@ -729,6 +759,11 @@ public:
     [[nodiscard]] bool request_slingshot_action() noexcept;
     [[nodiscard]] bool request_slingshot_drop() noexcept;
     [[nodiscard]] SlingshotSnapshot slingshot_state() const noexcept;
+    // AS-012, the swing: Action straps in, kicks the trip, and at the top
+    // unbuckles; Drop leaves the seat.
+    [[nodiscard]] bool request_swing_action() noexcept;
+    [[nodiscard]] bool request_swing_drop() noexcept;
+    [[nodiscard]] SwingSnapshot swing_state() const noexcept;
     // The shot as it would fly from the pouch now, cut where it would first
     // hit something; empty unless a rider is seated.
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
@@ -759,6 +794,8 @@ private:
     double sling_elevation_ = 1.4311699866353502;
     bool sling_action_ = false;
     bool sling_drop_ = false;
+    bool swing_action_ = false;
+    bool swing_drop_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
 };

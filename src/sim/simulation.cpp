@@ -3,6 +3,7 @@
 #include "sim/bands.hpp"
 #include "sim/mechanism_kit.hpp"
 #include "sim/slingshot.hpp"
+#include "sim/swing.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
 #error "WO-003 requires the pinned Jolt physics substrate"
@@ -1039,6 +1040,8 @@ public:
         scraperx::sim::bands::build_stack(*kit_, stack_);
         // The ground slingshot, in the yard south of the tower.
         slingshot_ = std::make_unique<Slingshot>(physics_system_, *kit_, player_id_);
+        // AS-012, the swing off the 220 ring's south face.
+        swing_ = std::make_unique<Swing>(physics_system_, *kit_, player_id_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -1054,6 +1057,7 @@ public:
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
         }
+        swing_.reset();
         slingshot_.reset();
         kit_.reset();
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
@@ -1101,6 +1105,9 @@ public:
         double sling_elevation = 1.4311699866353502;
         bool sling_action = false;
         bool sling_drop = false;
+        // The swing: Action and Drop, one-shot.
+        bool swing_action = false;
+        bool swing_drop = false;
     };
 
     void step(const StepCommands &commands,
@@ -1124,9 +1131,9 @@ public:
         }
         facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
 
-        // Harnessed into the slingshot's pouch, the body is the machine's:
-        // no crouch, carry, rig or traversal begins.
-        if (!slingshot_->controls_player()) {
+        // Harnessed into the slingshot's pouch or the swing's seat, the body
+        // is the machine's: no crouch, carry, rig or traversal begins.
+        if (!slingshot_->controls_player() && !swing_->controls_player()) {
             update_crouch(bodies, commands);
             update_rig(bodies, commands);
             update_carry(bodies, commands, delta_seconds);
@@ -1142,8 +1149,9 @@ public:
         slingshot_->pre_step(delta_seconds, commands.sling_draw, commands.sling_yaw,
                              commands.sling_elevation, commands.sling_action, commands.sling_drop,
                              grounded_ && support_entity_id_ == Slingshot::kPouchEntity);
-        const bool sling_controlling = slingshot_->controls_player();
-        if (sling_was_controlling && !sling_controlling && slingshot_->state().released) {
+        swing_->pre_step(delta_seconds, commands.swing_action, commands.swing_drop);
+        const bool sling_controlling = slingshot_->controls_player() || swing_->controls_player();
+        if (sling_was_controlling && !slingshot_->controls_player() && slingshot_->state().released) {
             slingshot_flight_ = true;
         }
         if (sling_controlling) {
@@ -1194,6 +1202,7 @@ public:
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
         kit_->post_step(delta_seconds);
         slingshot_->post_step(delta_seconds);
+        swing_->post_step(delta_seconds);
 
         SupportSample support = contact_listener_.sample();
         if (jump_started || traversal_state_ != TraversalState::None) {
@@ -1243,6 +1252,7 @@ public:
     }
 
     [[nodiscard]] const Slingshot &slingshot() const noexcept { return *slingshot_; }
+    [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
     [[nodiscard]] bool slingshot_flight() const noexcept { return slingshot_flight_; }
 
     // The slingshot's predicted path from the pouch now, swept with the
@@ -3507,6 +3517,7 @@ private:
         checkpoint_.carrying_entity = carried_entity_;
         kit_->capture(checkpoint_.kit);
         checkpoint_.slingshot = slingshot_->state();
+        checkpoint_.swing = swing_->state();
     }
 
     // WO-008 automatic commit (GDD 9.1): every tick the player is grounded on
@@ -3530,6 +3541,7 @@ private:
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
         // Out of the slingshot's harness before the body moves.
         slingshot_->detach();
+        swing_->detach();
         slingshot_flight_ = false;
         // The capsule the checkpoint was committed in: a crouched commit's
         // centre is a crouched centre, and may sit under a low ceiling.
@@ -3547,6 +3559,7 @@ private:
         }
         kit_->restore(checkpoint_.kit);
         slingshot_->restore(checkpoint_.slingshot);
+        swing_->restore(checkpoint_.swing);
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
@@ -3755,6 +3768,7 @@ private:
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     std::unique_ptr<Slingshot> slingshot_;
+    std::unique_ptr<Swing> swing_;
     // Thrown off the slingshot's bands and not yet down: the stick steers by
     // a bounded force instead of air control.
     bool slingshot_flight_ = false;
@@ -3842,6 +3856,7 @@ private:
         std::uint64_t carrying_entity = 0;
         scraperx::sim::kit::Kit::Checkpoint kit{};
         Slingshot::State slingshot{};
+        Swing::State swing{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
@@ -4276,10 +4291,14 @@ void Simulation::step_fixed() noexcept {
     commands.sling_elevation = sling_elevation_;
     commands.sling_action = sling_action_;
     commands.sling_drop = sling_drop_;
+    commands.swing_action = swing_action_;
+    commands.swing_drop = swing_drop_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     sling_action_ = false;
     sling_drop_ = false;
+    swing_action_ = false;
+    swing_drop_ = false;
     jump_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;
@@ -4424,6 +4443,56 @@ SlingshotSnapshot Simulation::slingshot_state() const noexcept {
 
 std::vector<Vector3> Simulation::slingshot_prediction() const {
     return physics_world_->slingshot_prediction();
+}
+
+bool Simulation::request_swing_action() noexcept {
+    swing_action_ = true;
+    return true;
+}
+
+bool Simulation::request_swing_drop() noexcept {
+    const auto &state = physics_world_->swing().state();
+    if (!state.seated || !state.may_leave) {
+        return false;
+    }
+    swing_drop_ = true;
+    return true;
+}
+
+SwingSnapshot Simulation::swing_state() const noexcept {
+    const auto to_vector = [](const JPH::RVec3 p) {
+        return Vector3{static_cast<double>(p.GetX()), static_cast<double>(p.GetY()),
+                       static_cast<double>(p.GetZ())};
+    };
+    const Swing &swing = physics_world_->swing();
+    const auto &state = swing.state();
+    SwingSnapshot result;
+    result.station_available = state.station_available;
+    result.seated = state.seated;
+    result.may_leave = state.may_leave;
+    result.ram_held = state.ram_held;
+    result.tripped = state.tripped;
+    result.held_at_top = state.tooth >= 0;
+    result.tooth = state.tooth;
+    result.seat_angle_rad = state.seat_angle_rad;
+    result.ram_angle_rad = state.ram_angle_rad;
+    result.seat_speed_mps = state.seat_speed_mps;
+    result.ram_speed_mps = state.ram_speed_mps;
+    result.seat_floor_y = state.seat_floor_y;
+    result.apex_floor_y = state.apex_floor_y;
+    result.kick_travel_m = state.kick_travel_m;
+    result.buffer_compression_m = state.buffer_compression_m;
+    result.buffer_force_n = state.buffer_force_n;
+    result.peak_buffer_force_n = state.peak_buffer_force_n;
+    result.peak_seat_accel_mps2 = state.peak_seat_accel_mps2;
+    result.buffer_loss_j = state.buffer_loss_j;
+    result.energy_residual_j = state.energy_residual_j;
+    result.mechanical_j = state.mechanical_j;
+    result.seat_pivot = to_vector(Swing::seat_pivot());
+    result.ram_pivot = to_vector(Swing::ram_pivot());
+    result.seat_pin = to_vector(swing.seat_pin());
+    result.ram_pin = to_vector(swing.ram_pin());
+    return result;
 }
 
 } // namespace scraperx::sim

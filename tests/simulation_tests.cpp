@@ -3373,6 +3373,191 @@ std::vector<std::uint64_t> world_bits(const scraperx::sim::Simulation &simulatio
     return bits;
 }
 
+// AS-012, the swing, on player inputs from the 220 ring: out the gangway into
+// the seat, STRAP IN and KICK THE TRIP; the ram comes down and strikes the
+// seat's buffer, the seat swings up to the 242 ring's edge and the rack holds
+// it; UNBUCKLE and step off north onto the ring.
+struct SwingRide final {
+    bool boarded = false;
+    bool idle_held = false;       // walked in, not strapped: the ram stays on its hook
+    bool strapped = false;
+    bool strapped_held = false;   // strapped, not kicked: nothing moves
+    bool tripped = false;
+    bool struck = false;
+    double hit_after_kick_s = 0.0;
+    double ram_speed_after_blow = 0.0;
+    double apex_floor = 0.0;
+    double held_floor = 0.0;
+    double held_drift = 0.0;
+    int tooth = -1;
+    double peak_g = 0.0;
+    double buffer_loss = 0.0;
+    double residual = 0.0;
+    bool on_242 = false;
+    scraperx::sim::Snapshot end{};
+};
+
+bool swing_board(scraperx::sim::Simulation &s) {
+    return walk_to(s, -13.35, -127.5, 20.0) && walk_to(s, -13.35, -98.8, 25.0) &&
+           walk_to(s, -15.0, -98.85, 6.0, 0.08);
+}
+
+SwingRide swing_ride(scraperx::sim::Simulation &s) {
+    SwingRide ride;
+    ride.boarded = swing_board(s);
+    (void)s.set_facing(0.0, -1.0);
+    (void)s.advance_frame(5.0);
+    ride.idle_held = s.swing_state().ram_held && std::abs(s.swing_state().seat_angle_rad) < 0.002;
+    (void)s.request_swing_action();
+    (void)s.advance_frame(0.3);
+    ride.strapped = s.swing_state().seated;
+    const double ram_before = s.swing_state().ram_angle_rad;
+    (void)s.advance_frame(5.0);
+    ride.strapped_held = s.swing_state().ram_held && s.swing_state().ram_angle_rad == ram_before &&
+                         std::abs(s.swing_state().seat_angle_rad) < 0.002;
+    (void)s.request_swing_action();
+    const auto kicked = s.snapshot().tick_index;
+    ride.tripped = wait_for(s, 0.5, [&s](const scraperx::sim::Snapshot &) { return s.swing_state().tripped; });
+    ride.struck = wait_for(s, 4.0, [&s](const scraperx::sim::Snapshot &) {
+        return s.swing_state().peak_buffer_force_n > 0.0;
+    });
+    ride.hit_after_kick_s = double(s.snapshot().tick_index - kicked) / 90.0;
+    (void)wait_for(s, 0.5, [](const scraperx::sim::Snapshot &) { return false; });
+    ride.ram_speed_after_blow = s.swing_state().ram_speed_mps;
+    (void)wait_for(s, 12.0, [&s](const scraperx::sim::Snapshot &) {
+        const auto state = s.swing_state();
+        return state.held_at_top && state.seat_speed_mps < 0.05 && state.seat_angle_rad > 1.2;
+    });
+    // Off the apex the seat drops back onto the last tooth it passed; from
+    // there, held.
+    (void)s.advance_frame(2.0);
+    const auto top = s.swing_state();
+    (void)s.advance_frame(5.0);
+    const auto later = s.swing_state();
+    ride.apex_floor = later.apex_floor_y;
+    ride.held_floor = later.seat_floor_y;
+    ride.held_drift = std::abs(later.seat_angle_rad - top.seat_angle_rad);
+    ride.tooth = later.tooth;
+    ride.peak_g = later.peak_seat_accel_mps2 / 9.81;
+    ride.buffer_loss = later.buffer_loss_j;
+    ride.residual = later.energy_residual_j;
+    (void)s.request_swing_action();
+    (void)s.advance_frame(0.3);
+    ride.on_242 = !s.swing_state().seated && walk_to(s, -15.0, -129.3, 6.0);
+    (void)s.advance_frame(1.0);
+    ride.end = s.snapshot();
+    return ride;
+}
+
+void run_swing() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    // Left alone, the ram stays on its hook and the seat hangs plumb.
+    {
+        Simulation s(InitialSpawn::Ring220North);
+        (void)s.advance_frame(30.0);
+        const auto idle = s.swing_state();
+        require(idle.ram_held && !idle.tripped && std::abs(idle.seat_angle_rad) < 0.001 &&
+                    std::abs(idle.ram_angle_rad + 1.44) < 0.001,
+                "swing: left alone 30 s, the ram must stay on its hook and the seat hang plumb");
+    }
+    Simulation s(InitialSpawn::Ring220North);
+    (void)s.advance_frame(1.0);
+    const SwingRide ride = swing_ride(s);
+    require(ride.boarded, "swing: the walk out the gangway into the seat");
+    require(ride.idle_held, "swing: standing in the seat unstrapped must not let the ram go");
+    require(ride.strapped, "swing: STRAP IN must harness the rider");
+    require(ride.strapped_held, "swing: strapped in and not kicked, nothing must move");
+    require(ride.tripped, "swing: KICK THE TRIP must let the ram go");
+    require(ride.struck && ride.hit_after_kick_s > 2.0 && ride.hit_after_kick_s < 3.5,
+            "swing: the ram must come down and strike the seat's buffer 2-3.5 s after the kick");
+    require(ride.ram_speed_after_blow < 3.0,
+            "swing: of one weight with the rider aboard, the ram must give the seat its swing and nearly stop");
+    require(ride.apex_floor > 242.5, "swing: the seat's floor must swing up past the 242 ring's top");
+    require(ride.tooth >= 0 && ride.held_floor > 242.25 && ride.held_floor < 243.1 && ride.held_drift < 0.0001,
+            "swing: the rack must hold the seat at the 242 ring's edge, its floor at the deck or a step above");
+    require(ride.peak_g < 20.0, "swing: the blow must stay under 20 g");
+    // Energy pays for height: what the ram's fall gave the seat side, less what
+    // the buffer, the rack's catch and the step lost. Nothing may come from
+    // nowhere.
+    const double gained = (150.0 + 85.0 + 100.0) * 9.81 * (ride.apex_floor - 220.30);
+    require(ride.buffer_loss > 0.01 * gained && ride.buffer_loss < 0.10 * gained,
+            "swing: the buffer must take a small share of the blow");
+    require(ride.residual < 0.005 * gained && ride.residual > -0.03 * gained,
+            "swing: the ledger must close (losses only, within 3% of the energy)");
+    const auto &end = ride.end;
+    require(ride.on_242 && end.death_count == 0 && end.player_grounded && end.support_entity_id == 51 &&
+                end.player_position.y > 242.9 && end.player_position.y < 243.4 &&
+                end.player_position.z > -131.64 && end.player_position.z < -127.64,
+            "swing: UNBUCKLE and the step north must put the rider on the 242 ring");
+    // The same start and inputs, the same end, to the bit.
+    {
+        Simulation again(InitialSpawn::Ring220North);
+        (void)again.advance_frame(1.0);
+        const SwingRide repeat = swing_ride(again);
+        const auto a = world_bits(s);
+        const auto b = world_bits(again);
+        require(a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin()),
+                "swing: the same ride twice must end in the same state, bit for bit");
+        (void)repeat;
+    }
+    // Mid-ride the harness stays shut: LEAVE is refused until the rack holds
+    // the seat at rest.
+    {
+        Simulation locked(InitialSpawn::Ring220North);
+        (void)locked.advance_frame(1.0);
+        require(swing_board(locked), "swing harness: the walk into the seat");
+        (void)locked.advance_frame(1.0);
+        (void)locked.request_swing_action();
+        (void)locked.advance_frame(0.3);
+        (void)locked.request_swing_action();
+        require(wait_for(locked, 8.0, [&locked](const scraperx::sim::Snapshot &) {
+                    return locked.swing_state().seat_angle_rad > 0.5;
+                }),
+                "swing harness: the seat must swing up");
+        require(!locked.request_swing_drop(), "swing harness: LEAVE must be refused mid-ride");
+        (void)locked.advance_frame(0.2);
+        require(locked.swing_state().seated, "swing harness: mid-ride the rider must stay in the harness");
+    }
+    // Stepped off the seat's open front at the gangway's end, the rider falls
+    // and dies; the restore brings back the rider in the seat, the ram on its
+    // hook, and the swing rides to the 242 ring.
+    {
+        Simulation fall(InitialSpawn::Ring220North);
+        (void)fall.advance_frame(1.0);
+        require(swing_board(fall), "swing restore: the walk into the seat");
+        (void)fall.advance_frame(1.0);
+        (void)walk_to(fall, -15.0, -101.5, 4.0);
+        require(wait_for(fall, 20.0, [](const scraperx::sim::Snapshot &state) { return state.death_count == 1; }),
+                "swing restore: off the seat's front, the rider must fall to their death");
+        (void)fall.advance_frame(1.0);
+        const auto restored = fall.swing_state();
+        require(restored.ram_held && !restored.tripped && std::abs(restored.seat_angle_rad) < 0.01 &&
+                    restored.station_available,
+                "swing restore: the restore must bring back the rider in the seat and the ram on its hook");
+        (void)fall.set_facing(0.0, -1.0);
+        (void)fall.advance_frame(1.0);
+        (void)fall.request_swing_action();
+        (void)fall.advance_frame(0.3);
+        (void)fall.request_swing_action();
+        require(wait_for(fall, 15.0, [&fall](const scraperx::sim::Snapshot &) {
+                    const auto state = fall.swing_state();
+                    return state.held_at_top && state.seat_speed_mps < 0.05 && state.seat_angle_rad > 1.2;
+                }),
+                "swing restore: restored, the swing must ride again to the rack");
+        (void)fall.request_swing_action();
+        (void)fall.advance_frame(0.3);
+        require(walk_to(fall, -15.0, -129.3, 6.0) && fall.snapshot().player_position.y > 242.9 &&
+                    fall.snapshot().death_count == 1,
+                "swing restore: and step off onto the 242 ring");
+    }
+    std::cout << "PASS scraperx_sim swing: hit_s=" << ride.hit_after_kick_s << " ram_after_mps="
+              << ride.ram_speed_after_blow << " apex_floor=" << ride.apex_floor << " held_floor=" << ride.held_floor
+              << " tooth=" << ride.tooth << " peak_g=" << ride.peak_g << " buffer_loss_kJ=" << ride.buffer_loss / 1000.0
+              << " residual_kJ=" << ride.residual / 1000.0 << " gained_kJ=" << gained / 1000.0
+              << " on_242_y=" << end.player_position.y << '\n';
+}
+
 // The owner's law for this world (plan §2.6 rule 10): the initial state
 // determines the final state. The same start and the same inputs, twice: up
 // C5 on player inputs (walk, vault, crawl, sprint, leap, hang, climb), then O
@@ -5012,6 +5197,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "slingshot") {
         run_slingshot();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "swing") {
+        run_swing();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -6959,6 +7149,7 @@ int main() {
     run_service_route();
     run_determinism();
     run_slingshot();
+    run_swing();
     run_ascent();
 
     return EXIT_SUCCESS;

@@ -75,6 +75,10 @@ const SCENARIOS := {
 	# pulled back to draw, RELEASE, the chute over the tower and the stick
 	# steering down onto the 220 ring.
 	"touch_slingshot": 8,
+	# AS-012, the swing, from the 220 ring where the slingshot and the route
+	# from grade arrive: out the gangway into the seat, STRAP IN, KICK THE
+	# TRIP, the ram's blow and the swing up to the 242 ring, UNBUCKLE and off.
+	"touch_swing": 16,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -229,6 +233,8 @@ func _run() -> void:
 			ok = await _o(InputRouter.Device.TOUCH)
 		"touch_slingshot":
 			ok = await _slingshot(InputRouter.Device.TOUCH)
+		"touch_swing":
+			ok = await _swing(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1705,6 +1711,71 @@ func _slingshot(device: int) -> bool:
 		return _fail("the rider came down at %s, not on the 220 ring (apex %.1f m)" % [str(at_end), apex])
 	_detail = "ring220_y=%.2f draw_m=%.2f energy_kJ=%.0f apex=%.1f seconds=%.1f" % [at_end.y, draw_m, energy_kj,
 		apex, float(int(_native().get_tick_index()) - started) / 90.0]
+	return true
+
+
+func _swing_state() -> Dictionary:
+	return _native().get_swing_state()
+
+
+# AS-012, the swing, played as its native test plays it: west along the 220
+# ring to the gangway, out to its end and west into the seat; STRAP IN; facing
+# the tower, KICK THE TRIP; the ram comes down and strikes, the seat goes up
+# its arc and the rack holds it at the 242 ring's edge; UNBUCKLE and step off
+# north onto the ring.
+func _swing(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	if not (await _go(device, Vector2(-13.35, -127.5), 0.2, 20.0) and \
+			await _go(device, Vector2(-13.35, -98.8), 0.15, 25.0) and \
+			await _go(device, Vector2(-15.0, -98.85), 0.1, 6.0)):
+		return _fail("the walk out the gangway into the swing's seat stalled at %s" % str(_position()))
+	if not await _offered(&"swing", "STRAP IN"):
+		return _fail("in the seat, Action read '%s %s', not STRAP IN" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_swing_state()["seated"]), 1.0):
+		return _fail("STRAP IN did not harness the rider")
+	await _face(Vector2(0.0, -1.0))
+	if not await _offered(&"swing", "KICK THE TRIP"):
+		return _fail("strapped in, Action read '%s', not KICK THE TRIP" % _action_label())
+	await _pose("swing_seat")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_swing_state()["tripped"]), 1.0):
+		return _fail("KICK THE TRIP did not let the ram go (kick bar %.3f m)" % float(_swing_state()["kick_travel_m"]))
+	if not await _wait_until(func() -> bool: return float(_swing_state()["ram_angle_rad"]) > -0.6, 5.0):
+		return _fail("the ram never came down (at %.2f rad)" % float(_swing_state()["ram_angle_rad"]))
+	await _pose("swing_ram")
+	if not await _wait_until(func() -> bool: return float(_swing_state()["peak_buffer_force_n"]) > 0.0, 3.0):
+		return _fail("the ram never struck the seat's buffer")
+	if not await _wait_until(func() -> bool:
+			var state := _swing_state()
+			return bool(state["held_at_top"]) and float(state["seat_speed_mps"]) < 0.3 and \
+				float(state["seat_angle_rad"]) > 1.2, 10.0):
+		return _fail("the seat never came to rest on the rack (at %.3f rad, floor %.2f m, tooth %d)" % [
+			float(_swing_state()["seat_angle_rad"]), float(_swing_state()["seat_floor_y"]), int(_swing_state()["tooth"])])
+	await _seconds(0.5)
+	await _pose("swing_top")
+	var state := _swing_state()
+	if not await _offered(&"swing", "UNBUCKLE"):
+		return _fail("held at the top, Action read '%s', not UNBUCKLE" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return not bool(_swing_state()["seated"]), 1.0):
+		return _fail("UNBUCKLE did not let the rider out of the harness")
+	if not await _go(device, Vector2(-15.0, -129.3), 0.15, 6.0):
+		return _fail("the step off the seat onto the 242 ring stalled at %s (on %d)" % [str(_position()),
+			int(_native().get_support_entity_id())])
+	await _seconds(0.5)
+	await _pose("swing_242")
+	var at_end := _position()
+	if int(_native().get_death_count()) != 0:
+		return _fail("the rider died on the swing")
+	if not bool(_native().is_player_grounded()) or at_end.y < 242.9 or at_end.y > 243.4 or \
+			at_end.z < -131.64 or at_end.z > -127.64:
+		return _fail("the rider stands at %s, not on the 242 ring" % str(at_end))
+	_detail = "ring242_y=%.2f apex_floor=%.2f held_floor=%.2f peak_g=%.1f seconds=%.1f" % [at_end.y,
+		float(state["apex_floor_y"]), float(state["seat_floor_y"]), float(state["peak_seat_accel_mps2"]) / 9.81,
+		float(int(_native().get_tick_index()) - started) / 90.0]
 	return true
 
 

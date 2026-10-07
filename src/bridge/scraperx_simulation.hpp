@@ -166,6 +166,10 @@ public:
     [[nodiscard]] bool request_slingshot_drop();
     [[nodiscard]] godot::Dictionary get_slingshot_state() const;
     [[nodiscard]] godot::PackedVector3Array get_slingshot_prediction() const;
+    // AS-012, the swing: one-shot Action (strap in, kick, unbuckle) and Drop.
+    [[nodiscard]] bool request_swing_action();
+    [[nodiscard]] bool request_swing_drop();
+    [[nodiscard]] godot::Dictionary get_swing_state() const;
 
 protected:
     static void _bind_methods();

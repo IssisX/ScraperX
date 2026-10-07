@@ -257,6 +257,9 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_state"), &ScraperXSimulation::get_slingshot_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_slingshot_prediction"),
                                 &ScraperXSimulation::get_slingshot_prediction);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_swing_action"), &ScraperXSimulation::request_swing_action);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_swing_drop"), &ScraperXSimulation::request_swing_drop);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -915,6 +918,45 @@ godot::PackedVector3Array ScraperXSimulation::get_slingshot_prediction() const {
     for (const sim::Vector3 &point : simulation_->slingshot_prediction()) {
         out.push_back(to_godot(point));
     }
+    return out;
+}
+
+bool ScraperXSimulation::request_swing_action() {
+    return simulation_->request_swing_action();
+}
+
+bool ScraperXSimulation::request_swing_drop() {
+    return simulation_->request_swing_drop();
+}
+
+godot::Dictionary ScraperXSimulation::get_swing_state() const {
+    const sim::SwingSnapshot state = simulation_->swing_state();
+    godot::Dictionary out;
+    out["station_available"] = state.station_available;
+    out["seated"] = state.seated;
+    out["may_leave"] = state.may_leave;
+    out["ram_held"] = state.ram_held;
+    out["tripped"] = state.tripped;
+    out["held_at_top"] = state.held_at_top;
+    out["tooth"] = static_cast<std::int64_t>(state.tooth);
+    out["seat_angle_rad"] = state.seat_angle_rad;
+    out["ram_angle_rad"] = state.ram_angle_rad;
+    out["seat_speed_mps"] = state.seat_speed_mps;
+    out["ram_speed_mps"] = state.ram_speed_mps;
+    out["seat_floor_y"] = state.seat_floor_y;
+    out["apex_floor_y"] = state.apex_floor_y;
+    out["kick_travel_m"] = state.kick_travel_m;
+    out["buffer_compression_m"] = state.buffer_compression_m;
+    out["buffer_force_n"] = state.buffer_force_n;
+    out["peak_buffer_force_n"] = state.peak_buffer_force_n;
+    out["peak_seat_accel_mps2"] = state.peak_seat_accel_mps2;
+    out["buffer_loss_j"] = state.buffer_loss_j;
+    out["energy_residual_j"] = state.energy_residual_j;
+    out["mechanical_j"] = state.mechanical_j;
+    out["seat_pivot"] = to_godot(state.seat_pivot);
+    out["ram_pivot"] = to_godot(state.ram_pivot);
+    out["seat_pin"] = to_godot(state.seat_pin);
+    out["ram_pin"] = to_godot(state.ram_pin);
     return out;
 }
 
