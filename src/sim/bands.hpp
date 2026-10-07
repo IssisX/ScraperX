@@ -274,9 +274,9 @@ struct Stack final {
 
 void build_stack(kit::Kit &kit, Stack &stack);
 
-// Climb on the north-west corner of the 640 m floor, up to the small deck
-// at 672.25 m. The hinged sheet past that deck falls west into open air.
-// That platform is not part of the building. Do not keep building past it.
+// The corner climb on the north-west of the 640 m floor, up to a small
+// deck at 672.25 m. The way on from the crane is the girder on the floor
+// itself, not this corner.
 void build_service_skin(kit::Kit &kit);
 
 } // namespace scraperx::sim::bands

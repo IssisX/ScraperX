@@ -127,9 +127,8 @@ constexpr float kBraceX = -12.70F;
 constexpr float kBraceZ = -140.75F;
 constexpr float kBraceTop = 671.70F;
 
-// The small deck. Its south edge is the step up from the ladder.
-// The hinged sheet at the west edge falls into open air, beside the
-// building. It is not this climb. Do not keep building past it.
+// The small deck this corner climb ends on. Its south edge is the step up
+// from the ladder. The way on from the 640 m floor is not this deck.
 constexpr float kDeckTop = 672.25F;
 constexpr float kDeckX0 = -14.35F;
 constexpr float kDeckX1 = -11.15F;
@@ -283,63 +282,6 @@ void build_return_and_deck(std::vector<Part> &parts) {
     }
 }
 
-// A tall sheet on a hinge at the west edge, held by a pin. Lift the pin
-// and the sheet falls west onto a platform in open air. That platform is
-// beside the building. Do not treat it as the next step up, and do not
-// build the next piece past it.
-constexpr float kHingeX = -14.35F;
-constexpr float kHingeY = 672.40F;
-constexpr float kHingeZ = -139.60F;
-constexpr float kLeafHalf = 5.50F;
-constexpr float kLean = 0.14F;
-constexpr float kFall = 0.80F;
-// Clevis, metres up the plate from the hinge, so the pin is on the deck.
-constexpr float kClevisS = 0.12F;
-
-void build_leaf(kit::Kit &kit) {
-    const JPH::RVec3 hinge(kHingeX, kHingeY, kHingeZ);
-    const JPH::Quat lean = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), kLean);
-    const JPH::Vec3 up = lean * JPH::Vec3::sAxisY();
-    // Local origin is the plate centre. The hinge is local (0, -half, 0).
-    // The two lugs leave a gap the pin occupies without touching either.
-    const JPH::Vec3 lug(0.36F, -kLeafHalf + kClevisS, 0.0F);
-    const kit::BodyIndex plate = kit.add_body(
-        Sim::kLeafPlateEntityId,
-        {box(JPH::Vec3(0.09F, kLeafHalf, 1.10F), JPH::Vec3::sZero(), Material::Galvanised),
-         box(JPH::Vec3(0.02F, kLeafHalf, 0.08F), JPH::Vec3(0.09F, 0.0F, 0.90F), Material::Hazard),
-         box(JPH::Vec3(0.22F, 0.035F, 0.03F), lug + JPH::Vec3(0.0F, 0.0F, 0.18F), Material::Steel),
-         box(JPH::Vec3(0.22F, 0.035F, 0.03F), lug + JPH::Vec3(0.0F, 0.0F, -0.18F), Material::Steel)},
-        hinge + JPH::RVec3(lean * JPH::Vec3(0.0F, kLeafHalf, 0.0F)), lean, 4200.0F, 0.95F);
-    (void)kit.add_lever(plate, hinge, JPH::Vec3::sAxisZ(), up, 0.0F, kFall);
-
-    const JPH::RVec3 pin_at = hinge + JPH::RVec3(lean * JPH::Vec3(0.36F, kClevisS, 0.0F));
-    const JPH::Vec3 pin_c(static_cast<float>(pin_at.GetX()), static_cast<float>(pin_at.GetY()),
-                          static_cast<float>(pin_at.GetZ()));
-    std::vector<Part> frame;
-    // Low plinth on the deck. The pin sits on it. 0.16 m of step, not a rail.
-    frame.push_back(box(JPH::Vec3(0.20F, 0.08F, 0.16F), JPH::Vec3(pin_c.GetX(), 672.36F, pin_c.GetZ()),
-                         Material::Steel));
-    // Hinge cheeks outside the plate (half-width 1.10 m), not through it.
-    frame.push_back(span({kHingeX - 0.10F, kHingeY - 0.45F, kHingeZ - 1.58F},
-                         {kHingeX + 0.10F, kHingeY + 0.14F, kHingeZ - 1.28F}, Material::Steel));
-    frame.push_back(span({kHingeX - 0.10F, kHingeY - 0.45F, kHingeZ + 1.28F},
-                         {kHingeX + 0.10F, kHingeY + 0.14F, kHingeZ + 1.58F}, Material::Steel));
-    // Landing the fallen tip clears. East edge stays west of the lower face
-    // at rest, top is a step down off the ramp, not a wall the plate hits.
-    frame.push_back(span({-26.50F, 678.42F, kHingeZ - 1.60F}, {-23.30F, 678.64F, kHingeZ + 1.60F},
-                         Material::Concrete));
-    frame.push_back(span({-26.85F, 668.00F, kHingeZ - 0.40F}, {-26.35F, 678.42F, kHingeZ + 0.40F},
-                         Material::Rust));
-    (void)kit.add_body(Sim::kLeafFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.9F);
-
-    const kit::BodyIndex pin = kit.add_body(
-        Sim::kLeafPinEntityId,
-        {box(JPH::Vec3(0.045F, 0.045F, 0.11F), JPH::Vec3::sZero(), Material::Hazard)}, pin_at,
-        JPH::Quat::sIdentity(), 8.0F, 1.0F);
-    kit.set_carry(pin, kit::CarryKind::Load, JPH::Vec3(0.0F, 0.05F, 0.0F));
-    (void)kit.add_pin_catch(plate, pin, 0.15F, 0.08F);
-}
-
 } // namespace
 
 void build_service_skin(kit::Kit &kit) {
@@ -356,7 +298,6 @@ void build_service_skin(kit::Kit &kit) {
     build_handler_and_louver(skin);
     build_return_and_deck(skin);
     (void)kit.add_body(Sim::kSkinWestEntityId, skin, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
-    build_leaf(kit);
 }
 
 } // namespace scraperx::sim::bands

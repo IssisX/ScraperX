@@ -531,6 +531,56 @@ void build_climbing_route(kit::Kit &kit) {
     (void)kit.add_body(Sim::kCraneRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
 }
 
+// On the 640 m floor, north of where the crane car lets you off. A girder
+// stands on a hinge, held by a pin. Carry the pin clear and the girder falls
+// north, still on this floor, and its top end rests on the next bit of floor.
+// That floor is held up by posts standing on this one. Nothing of it leaves
+// the building.
+constexpr float kGirderHingeX = 0.0F;
+constexpr float kGirderHingeY = 640.50F;
+constexpr float kGirderHingeZ = -155.00F;
+constexpr float kGirderHalf = 3.50F;
+constexpr float kGirderLean = 0.15F;
+constexpr float kGirderFall = 0.86F;
+
+void build_girder(kit::Kit &kit, std::vector<Part> &frame) {
+    const JPH::RVec3 hinge(kGirderHingeX, kGirderHingeY, kGirderHingeZ);
+    const JPH::Quat lean = JPH::Quat::sRotation(JPH::Vec3::sAxisX(), kGirderLean);
+    const JPH::Vec3 up = lean * JPH::Vec3::sAxisY();
+    // A clevis on the west face, a short way up from the hinge, so the pin
+    // sits just above this floor. The hands lift it out. The cheeks, the
+    // shelf and the end stops are part of the girder: the pin can slide a
+    // little in the slot, and it cannot fall out or be knocked out.
+    constexpr float kClevisUp = 0.36F;
+    const JPH::Vec3 clevis(-0.90F, kClevisUp - kGirderHalf, 0.05F);
+    const kit::BodyIndex girder = kit.add_body(
+        Sim::kGirderEntityId,
+        {box(JPH::Vec3(0.60F, kGirderHalf, 0.08F), JPH::Vec3::sZero(), Material::Galvanised),
+         box(JPH::Vec3(0.08F, kGirderHalf, 0.02F), JPH::Vec3(0.52F, 0.0F, 0.08F), Material::Hazard),
+         box(JPH::Vec3(0.085F, 0.10F, 0.06F), clevis + JPH::Vec3(0.195F, 0.0F, 0.0F), Material::Steel),
+         box(JPH::Vec3(0.03F, 0.08F, 0.05F), clevis + JPH::Vec3(0.12F, 0.0F, 0.0F), Material::Steel),
+         box(JPH::Vec3(0.03F, 0.08F, 0.05F), clevis + JPH::Vec3(-0.14F, 0.0F, 0.0F), Material::Steel),
+         box(JPH::Vec3(0.07F, 0.015F, 0.05F), clevis + JPH::Vec3(0.0F, -0.049F, 0.0F), Material::Steel),
+         box(JPH::Vec3(0.06F, 0.05F, 0.018F), clevis + JPH::Vec3(0.0F, 0.0F, -0.09F), Material::Steel),
+         box(JPH::Vec3(0.06F, 0.05F, 0.018F), clevis + JPH::Vec3(0.0F, 0.0F, 0.09F), Material::Steel)},
+        hinge + JPH::RVec3(lean * JPH::Vec3(0.0F, kGirderHalf, 0.0F)), lean, 2800.0F, 0.95F);
+    (void)kit.add_lever(girder, hinge, JPH::Vec3::sAxisX(), up, 0.0F, kGirderFall);
+
+    frame.push_back(span({-1.50F, 643.60F, -149.50F}, {1.50F, 643.82F, -147.20F}, Material::Concrete));
+    frame.push_back(span({-1.20F, 640.25F, -147.70F}, {-0.90F, 643.60F, -147.40F}, Material::Rust));
+    frame.push_back(span({0.90F, 640.25F, -147.70F}, {1.20F, 643.60F, -147.40F}, Material::Rust));
+    frame.push_back(span({-0.85F, 640.25F, -155.20F}, {-0.65F, 640.38F, -154.80F}, Material::Steel));
+    frame.push_back(span({0.65F, 640.25F, -155.20F}, {0.85F, 640.38F, -154.80F}, Material::Steel));
+
+    const JPH::RVec3 pin_at = hinge + JPH::RVec3(lean * JPH::Vec3(-0.90F, kClevisUp, 0.05F));
+    const kit::BodyIndex pin = kit.add_body(
+        Sim::kGirderPinEntityId,
+        {box(JPH::Vec3(0.055F, 0.022F, 0.022F), JPH::Vec3::sZero(), Material::Hazard)}, pin_at, lean, 8.0F,
+        1.0F);
+    kit.set_carry(pin, kit::CarryKind::Load, JPH::Vec3(0.0F, 0.03F, 0.0F));
+    (void)kit.add_pin_catch(girder, pin, 0.12F, 0.08F);
+}
+
 } // namespace
 
 void build_facade_crane(kit::Kit &kit, FacadeCrane &crane) {
@@ -539,6 +589,7 @@ void build_facade_crane(kit::Kit &kit, FacadeCrane &crane) {
     build_stage_j(kit, crane, frame);
     build_stage_k(kit, crane, frame);
     build_stage_l(kit, crane, frame);
+    build_girder(kit, frame);
     (void)kit.add_body(Sim::kCraneFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     build_climbing_route(kit);
 }

@@ -78,8 +78,8 @@ enum class InitialSpawn : std::uint8_t {
     Deck12North = 29,
     // B06 west service skin: on TP-640, south of the manifold, facing it.
     ServiceSkinWest = 30,
-    // On the 672.25 m service deck, east of the leaf's pin.
-    ServiceDeck = 31,
+    // On the 640 m floor, where you stand after stepping out of the last crane car.
+    AfterCrane = 31,
 };
 
 // A world started at one of these spawns is the proving ground: it carries
@@ -566,10 +566,9 @@ public:
     // landing is the plate, not the bar being cleared.
     static constexpr std::uint64_t kSkinManifoldEntityId = 1030;
     static constexpr std::uint64_t kSkinWestEntityId = 1031;
-    // The leaf above the service deck: cheeks and the landing it falls onto.
-    static constexpr std::uint64_t kLeafFrameEntityId = 1032;
-    static constexpr std::uint64_t kLeafPlateEntityId = 2300;
-    static constexpr std::uint64_t kLeafPinEntityId = 2301;
+    // The girder on the 640 m floor, and the pin that holds it up.
+    static constexpr std::uint64_t kGirderEntityId = 2300;
+    static constexpr std::uint64_t kGirderPinEntityId = 2301;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
