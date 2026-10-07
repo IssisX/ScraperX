@@ -700,6 +700,13 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Preserve Android updates across download channels
+        uses: IssisX/ScraperX/.github/actions/stable-apk@882517e021841deaa915c86bbb3e92bbf4fda185
+        with:
+          files: artifacts/**/*.apk
+          keystore: ${{ secrets.SCRAPERX_APK_KEYSTORE_B64 }}
+          password: ${{ secrets.SCRAPERX_APK_KEYSTORE_PASSWORD }}
+
       - name: Publish immutable checkpoint build and evidence
         uses: actions/upload-artifact@v4
         with:
