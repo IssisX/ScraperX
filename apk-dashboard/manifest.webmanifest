@@ -1,16 +1,22 @@
 {
-  "name": "ScraperX Builds",
+  "name": "ScraperX APKs",
   "short_name": "ScraperX APKs",
-  "start_url": "./index.html?v=rich-stable-v2",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0a0c10",
   "theme_color": "#0a0c10",
   "description": "Latest successful ScraperX APKs from each AI model branch.",
   "icons": [
     {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],

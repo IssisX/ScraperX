@@ -14,7 +14,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MODELS = {"ChatGPT": "ChatGPT", "Gemini": "Gemini", "Claude": "ScraperX-Claude", "Grok": "ScraperX-Grok"}
 MOCK_GH = '''#!/usr/bin/env python3
-import json, os, pathlib, sys
+import json, os, pathlib, sys, struct, zipfile
 p = pathlib.Path(os.environ["TEST_STATE"])
 s = json.loads(p.read_text())
 a = sys.argv[1:]
@@ -43,7 +43,13 @@ elif a[0] == "api":
 elif a[:2] == ["run", "download"]:
     d = pathlib.Path(a[a.index("--dir") + 1])
     d.mkdir(exist_ok=True, parents=True)
-    (d / "game.apk").write_bytes(b"fixture-APK" * 150000)
+    resource_map = struct.pack('<HHII', 0x180, 8, 12, 0x0101021B)
+    attribute = struct.pack('<IIIHBBI', 0, 0, 0xFFFFFFFF, 8, 0, 0x10, 1)
+    element = struct.pack('<HHIII', 0x102, 16, 56, 1, 0xFFFFFFFF) + struct.pack('<IIHHHHHH', 0xFFFFFFFF, 0, 20, 20, 1, 0, 0, 0) + attribute
+    manifest = struct.pack('<HHI', 3, 8, 8+len(resource_map)+len(element)) + resource_map + element
+    with zipfile.ZipFile(d / 'game.apk', 'w') as archive:
+        archive.writestr('AndroidManifest.xml', manifest)
+        archive.writestr('assets/game.pck', b'fixture-APK' * 150000)
     if s.get("ambiguous"):
         (d / "other.apk").write_bytes(b"fixture-other" * 150000)
 elif a[:2] in (["release", "edit"], ["release", "upload"], ["release", "create"]):
@@ -52,7 +58,7 @@ else:
     sys.exit("unexpected gh " + repr(a))
 '''
 MOCK_ANDROID = '''#!/usr/bin/env python3
-import json, os, pathlib, shutil, sys
+import json, os, pathlib, shutil, sys, zipfile, struct
 tool = pathlib.Path(sys.argv[0]).name
 a = sys.argv[1:]
 p = pathlib.Path(os.environ["TEST_STATE"])
@@ -67,7 +73,9 @@ elif tool == "apksigner" and a[0] == "verify":
     print("V3.0 Signer: certificate SHA-256 digest: " + os.environ["TEST_CERT"])
 elif tool == "aapt":
     label = pathlib.Path(a[-1]).stem.split("-", 1)[1]
-    print("package: name='com.cory.scraperx." + label.lower() + "' versionCode='1'")
+    manifest = zipfile.ZipFile(a[-1]).read('AndroidManifest.xml')
+    code = struct.unpack_from('<I', manifest, 8+12+36+16)[0]
+    print("package: name='com.cory.scraperx." + label.lower() + "' versionCode='"+str(code)+"'")
     print("application-label:'ScraperX-" + label + "'")
 else:
     sys.exit("unexpected Android tool call")
@@ -116,7 +124,7 @@ class PublisherTests(unittest.TestCase):
             builds[label] = dict(status="ok", branch=branch, source_sha=sha, source_artifact_id=i,
                                  signing_certificate_sha256=self.cert, package_id="com.cory.scraperx." + label.lower(),
                                  app_label="ScraperX-" + label, file=name, bytes=1234567, apk_sha256=digest,
-                                 source_is_current_head=True)
+                                 source_is_current_head=True, version_code="1", version_policy="monotonic-v1")
             assets.append(dict(name=name, state="uploaded", size=1234567, digest="sha256:" + digest))
             runs[branch] = [dict(id=i, head_sha=sha, html_url="https://github.com/fixture/run/" + str(i),
                                  updated_at="2026-10-01T12:00:00Z")]
@@ -130,7 +138,7 @@ class PublisherTests(unittest.TestCase):
         self.state_path.write_text(json.dumps(self.state))
         env = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ["PATH"],
                    TEST_STATE=str(self.state_path), TEST_CERT=self.cert,
-                   GITHUB_REPOSITORY="IssisX/ScraperX", RUNNER_TEMP=str(self.case),
+                   GITHUB_REPOSITORY="IssisX/ScraperX", GITHUB_WORKSPACE=str(ROOT), RUNNER_TEMP=str(self.case),
                    ANDROID_HOME=str(self.sdk), SCRAPERX_APK_KEYSTORE_B64=self.keystore,
                    SCRAPERX_APK_KEYSTORE_PASSWORD="fixture")
         r = subprocess.run(["bash", "-c", self.shell], cwd=self.case, env=env, capture_output=True, text=True)

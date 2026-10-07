@@ -1,0 +1,21 @@
+name: Stable ScraperX APK signing
+description: Give every downloadable model APK the dashboard signer and an increasing Android version.
+inputs:
+  files:
+    description: APK glob, relative to the source checkout.
+    required: true
+  keystore:
+    description: Existing SCRAPERX_APK_KEYSTORE_B64 secret.
+    required: true
+  password:
+    description: Existing SCRAPERX_APK_KEYSTORE_PASSWORD secret.
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SCRAPERX_APK_KEYSTORE_B64: ${{ inputs.keystore }}
+        SCRAPERX_APK_KEYSTORE_PASSWORD: ${{ inputs.password }}
+        SCRAPERX_APK_GLOB: ${{ inputs.files }}
+      run: python3 "${GITHUB_ACTION_PATH}/sign-apks.py"

@@ -3,11 +3,17 @@ name: ScraperX APK Dashboard Publisher
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "7,22,37,52 * * * *"
   workflow_run:
     workflows:
+      # GitHub registers this shared workflow under its default-branch name,
+      # even when a model branch gives that same file a different display name.
+      - "ScraperX-2 Checkpoint — WO-004..006 Fold Stage, Exterior Approach, Coupled Machine"
       - "ScraperX — full proof path (kernel + ascent)"
       - "ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)"
+      - "ScraperX — ground screw ascent"
+      - "ScraperX Consolidated — Kernel + Ascent"
+      - "ScraperX KI-008 - Full Causal Chain"
     types: [completed]
     branches:
       - ChatGPT
@@ -19,6 +25,7 @@ on:
     paths:
       - ".github/workflows/apk-dashboard.yml"
       - "apk-dashboard/**"
+      - ".github/actions/stable-apk/**"
 
 permissions:
   actions: read
@@ -44,6 +51,7 @@ jobs:
         run: |
           python3 apk-dashboard/test-signing-setup.py
           python3 apk-dashboard/test-publisher.py
+          python3 apk-dashboard/test-apk-version.py
       - name: Publish newest successful APK from every model branch
         shell: bash
         env:
@@ -189,6 +197,7 @@ jobs:
                   $b.branch == $branch and $b.source_sha == $sha and
                   $b.source_artifact_id == $artifact_id and
                   $b.signing_certificate_sha256 == $cert and
+                  $b.version_policy == "monotonic-v1" and
                   $b.package_id == $package and $b.app_label == $app_label and
                   $b.file == $file and
                   ([$release[0].assets[] | select(
@@ -233,10 +242,10 @@ jobs:
             # APK, and sign it with the one stable dashboard development key.
             local unsigned="${tmp}/unsigned.apk"
             local aligned="${tmp}/aligned.apk"
-            cp "$apk" "$unsigned"
-            zip -q -d "$unsigned" \
-              'META-INF/*.RSA' 'META-INF/*.DSA' 'META-INF/*.EC' \
-              'META-INF/*.SF' 'META-INF/MANIFEST.MF' >/dev/null 2>&1 || true
+            local previous_code
+            previous_code="$(jq -r --arg label "$label" '.builds[$label].version_code // "0"' out/manifest.json)"
+            python3 "${GITHUB_WORKSPACE:-.}/.github/actions/stable-apk/prepare-apk.py" "$apk" "$unsigned" \
+              --previous-code "$previous_code" > "${tmp}/version.json"
             "${ZIPALIGN}" -p -f 4 "$unsigned" "$aligned"
             "${APKSIGNER}" sign \
               --ks "${KEYSTORE}" \
@@ -266,6 +275,8 @@ jobs:
             apk_sha="$(sha256sum "$target" | awk '{print $1}')"
             apk_bytes="$(stat -c '%s' "$target")"
             version_code="$(sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" "$badging" | head -n 1)"
+            test "$version_code" = "$(jq -r '.version_code' "${tmp}/version.json")"
+            test "$version_code" -gt "$previous_code"
             current_sha="$(gh api "/repos/${REPO}/branches/${branch_q}" --jq '.commit.sha')"
 
             update_manifest "$label" "$(jq -n \
@@ -300,6 +311,7 @@ jobs:
                 package_id:$package_id,
                 app_label:$app_label,
                 version_code:$version_code,
+                version_policy:"monotonic-v1",
                 bytes:$bytes
               }')"
 
@@ -351,6 +363,10 @@ jobs:
               fi
             done
             echo
+            echo "<!-- scraperx-manifest"
+            jq -c . out/manifest.json
+            echo "-->"
+            echo
             echo "Machine-readable provenance: [manifest.json](https://github.com/${REPO}/releases/download/${TAG}/manifest.json)"
           } > out/release-notes.md
 
@@ -361,16 +377,14 @@ jobs:
               --title "ScraperX — Latest Model APKs" \
               --notes-file out/release-notes.md \
               --prerelease
-          else
-            gh release edit "$TAG" \
-              --repo "$REPO" \
-              --title "ScraperX — Latest Model APKs" \
-              --notes-file out/release-notes.md \
-              --prerelease
           fi
 
           gh release upload "$TAG" --repo "$REPO" --clobber "${publish_files[@]}"
           gh release upload "$TAG" --repo "$REPO" --clobber out/manifest.json
+          # Update visible provenance only after the APK uploads succeed.
+          gh release edit "$TAG" --repo "$REPO" \
+            --title "ScraperX — Latest Model APKs" \
+            --notes-file out/release-notes.md --prerelease
 
           echo "Published stable release assets:"
           gh release view "$TAG" --repo "$REPO" --json assets \

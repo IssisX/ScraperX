@@ -91,3 +91,11 @@ python3 apk-dashboard/test-signing-setup.py
 These tests use real OpenSSL and keytool certificate operations, the actual
 publisher preflight shell, and a fixture GitHub CLI. They verify local setup and
 certificate rejection, not live secret writes or publication.
+
+## October 7 delivery repair
+
+The installable dashboard is hosted at https://scraperx-apks.stix-ww4.chatgpt.site/ instead of a local file or localhost. Its manifest starts at its hosted index, PNG icons meet Chrome installation requirements, and a network-first service worker retains only the dashboard shell for offline launch. Release metadata stays outside that cache. Saved metadata is explicitly marked saved when a check fails; reopening the dashboard refreshes it. Every APK click uses a new download URL to avoid cached redirects to older release bytes.
+
+GitHub registers the shared build workflow under the name in main, which the publisher's trigger omitted. The trigger now includes that name and the branch display names. A quarter-hour schedule remains a fallback; unchanged checks still do not republish assets.
+
+The dashboard APKs retain the existing 911843... certificate. The shared stable-apk action gives direct build artifacts the same key before distribution, rejects changed keys, preserves game payloads, and sets an increasing Android version. The publisher verifies that version after signing and carries the monotonic policy in provenance. No old signing-key migration bypass is added.

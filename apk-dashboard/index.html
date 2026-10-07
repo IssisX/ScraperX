@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0a0c10">
   <meta name="color-scheme" content="dark">
+  <link rel="canonical" href="https://scraperx-apks.stix-ww4.chatgpt.site/">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="canonical" href="https://raw.githack.com/IssisX/ScraperX/main/apk-dashboard/index.html">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <title>ScraperX Builds</title>
+  <title>ScraperX APKs</title>
   <style>
     :root {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -59,6 +59,7 @@
     .toolbar {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 10px;
       margin-top: 16px;
     }
@@ -72,6 +73,8 @@
       font-weight: 750;
       cursor: pointer;
     }
+    [hidden] { display: none !important; }
+    .refresh:disabled { opacity: .65; cursor: wait; }
     #checked {
       color: var(--muted);
       font-size: 12px;
@@ -187,143 +190,20 @@
     <header>
       <div class="eyebrow">ScraperX · latest successful builds</div>
       <h1>Pick a model.<br>Install the APK.</h1>
-      <p class="intro">No digging through Actions, no artifact archaeology. Each button always points at that branch's newest successfully published APK.</p>
+      <p class="intro">No digging through Actions, no artifact archaeology. Download the newest successful build for each model. Install it over the same model's existing game to update.</p>
       <div class="toolbar">
         <button class="refresh" id="refresh" type="button">Refresh</button>
-        <span id="checked">Checking GitHub…</span>
+        <button class="refresh" id="install" type="button" hidden>Install dashboard</button>
+        <span id="checked" role="status" aria-live="polite">Checking GitHub…</span>
       </div>
     </header>
     <main id="cards"></main>
     <footer>
-      Updated automatically after successful model builds, with an hourly safety refresh.
-      Metadata is optional; the four stable release download links remain usable even if GitHub's API is temporarily unavailable.
+      New successful builds appear automatically. The dashboard checks again when you reopen it.
+      Install this dashboard from its website in Chrome; no file or local server is needed.
     </footer>
   </div>
 
-  <script>
-    const repo = 'IssisX/ScraperX';
-    const tag = 'apk-latest';
-    const models = [
-      { label: 'ChatGPT', branch: 'ChatGPT', file: 'ScraperX-ChatGPT.apk' },
-      { label: 'Gemini', branch: 'Gemini', file: 'ScraperX-Gemini.apk' },
-      { label: 'Claude', branch: 'ScraperX-Claude', file: 'ScraperX-Claude.apk' },
-      { label: 'Grok', branch: 'ScraperX-Grok', file: 'ScraperX-Grok.apk' }
-    ];
-
-    function esc(value) {
-      return String(value ?? '').replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-      }[c]));
-    }
-
-    function bytes(n) {
-      if (!Number.isFinite(n)) return '—';
-      return (n / 1048576).toFixed(1) + ' MB';
-    }
-
-    function ago(iso) {
-      if (!iso) return '—';
-      const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-      if (seconds < 90) return 'just now';
-      if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
-      if (seconds < 86400) return Math.floor(seconds / 3600) + ' hr ago';
-      return Math.floor(seconds / 86400) + ' d ago';
-    }
-
-    function stableDownload(file) {
-      return 'https://github.com/' + repo + '/releases/download/' + tag + '/' + encodeURIComponent(file);
-    }
-
-    function card(model) {
-      return '<section class="card" data-model="' + esc(model.label) + '" id="card-' + esc(model.label) + '">' +
-        '<div class="topline"><div class="model">' + esc(model.label) + '</div><div class="status ok">ready</div></div>' +
-        '<div class="meta">' +
-          '<div>Branch<b>' + esc(model.branch) + '</b></div>' +
-          '<div>APK<b class="size">—</b></div>' +
-          '<div>Build<b class="sha">—</b></div>' +
-          '<div>Built<b class="built">—</b></div>' +
-        '</div>' +
-        '<a class="download" href="' + stableDownload(model.file) + '">Download ' + esc(model.file) + '</a>' +
-        '<a class="details" target="_blank" rel="noopener">Open successful build ↗</a>' +
-      '</section>';
-    }
-
-    document.getElementById('cards').innerHTML = models.map(card).join('');
-
-    async function load() {
-      const button = document.getElementById('refresh');
-      button.disabled = true;
-      document.getElementById('checked').textContent = 'Checking GitHub…';
-
-      try {
-        const releaseResponse = await fetch(
-          'https://api.github.com/repos/' + repo + '/releases/tags/' + tag,
-          { headers: { 'Accept': 'application/vnd.github+json' }, cache: 'no-store' }
-        );
-        if (!releaseResponse.ok) throw new Error('metadata unavailable');
-
-        const release = await releaseResponse.json();
-        const assets = new Map((release.assets || []).map(a => [a.name, a]));
-
-        function publishedSourcePrefix(label) {
-          const row = String(release.body || '')
-            .split('\n')
-            .find(line => line.trimStart().startsWith('| ' + label + ' |'));
-          if (!row) return '';
-          const match = row.match(/[0-9a-f]{12,40}/i);
-          return match ? match[0].toLowerCase() : '';
-        }
-
-        models.forEach(model => {
-          const root = document.getElementById('card-' + model.label);
-          const status = root.querySelector('.status');
-          const download = root.querySelector('.download');
-          const details = root.querySelector('.details');
-          const asset = assets.get(model.file);
-          const source = publishedSourcePrefix(model.label);
-
-          if (asset) {
-            status.textContent = 'ready';
-            status.className = 'status ok';
-            root.querySelector('.size').textContent = bytes(asset.size);
-            root.querySelector('.sha').textContent = source.slice(0, 12) || '—';
-            root.querySelector('.built').textContent = ago(asset.updated_at || release.updated_at);
-            download.href = asset.browser_download_url || stableDownload(model.file);
-            download.removeAttribute('aria-disabled');
-
-            if (source) {
-              details.href = 'https://github.com/' + repo + '/commit/' + source;
-              details.textContent = 'Open published source ↗';
-            } else {
-              details.href = 'https://github.com/' + repo + '/releases/tag/' + tag;
-              details.textContent = 'Open release ↗';
-            }
-          } else {
-            status.textContent = 'unavailable';
-            status.className = 'status bad';
-            root.querySelector('.size').textContent = '—';
-            root.querySelector('.sha').textContent = '—';
-            root.querySelector('.built').textContent = '—';
-            download.removeAttribute('href');
-            download.setAttribute('aria-disabled', 'true');
-            details.href = 'https://github.com/' + repo + '/releases/tag/' + tag;
-            details.textContent = 'Open release ↗';
-          }
-        });
-
-        document.getElementById('checked').textContent =
-          'Checked ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
-      } catch (_) {
-        document.getElementById('checked').textContent =
-          'Metadata unavailable · downloads still ready';
-      } finally {
-        button.disabled = false;
-      }
-    }
-
-    document.getElementById('refresh').addEventListener('click', load);
-    load();
-    setInterval(load, 5 * 60 * 1000);
-  </script>
+  <script src="./app.js" defer></script>
 </body>
 </html>
