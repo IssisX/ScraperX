@@ -1786,9 +1786,9 @@ private:
         if (!cast_ray(top_origin, top_direction, top_hit)) {
             return probe;
         }
-        if (top_hit.mBodyID != wall_hit.mBodyID) {
-            return probe;
-        }
+        // The top may belong to another body than the face under it (a deck
+        // over its edge beam, a crate on its pallet): the hands take whatever
+        // edge is there.
         const JPH::RVec3 ledge_point =
             JPH::RRayCast(top_origin, top_direction).GetPointOnRay(top_hit.mFraction);
         if (surface_normal(top_hit.mBodyID, top_hit.mSubShapeID2, ledge_point).GetY() <
@@ -1814,9 +1814,6 @@ private:
                 0.0F, -(kLandingSupportProbeUp + kLandingSupportTolerance), 0.0F);
             JPH::RayCastResult landing_hit;
             if (!cast_ray(support_origin, support_direction, landing_hit)) {
-                return probe;
-            }
-            if (landing_hit.mBodyID != top_hit.mBodyID) {
                 return probe;
             }
             landing_body = landing_hit.mBodyID;
