@@ -347,6 +347,13 @@ jobs:
           Not proven here: APK installation, Android execution, Fold 6 observation on the real panel, sustained frame rate, thermals, touch ergonomics, the fall/parachute/checkpoint loop, load-bearing structural simulation, process/isolation networks, persistence, NPCs, missions, or a complete game loop.
           EOF
 
+      - name: Preserve Android updates across download channels
+        uses: IssisX/ScraperX/.github/actions/stable-apk@882517e021841deaa915c86bbb3e92bbf4fda185
+        with:
+          files: artifacts/**/*.apk
+          keystore: ${{ secrets.SCRAPERX_APK_KEYSTORE_B64 }}
+          password: ${{ secrets.SCRAPERX_APK_KEYSTORE_PASSWORD }}
+
       - name: Publish immutable checkpoint build and evidence
         uses: actions/upload-artifact@v4
         with:
@@ -444,10 +451,17 @@ jobs:
           .github/scripts/android_identity.sh verify \
             "playtest/${APK_NAME}" "${ANDROID_APPLICATION_ID}" "${ANDROID_LABEL}"
 
+      - name: Preserve Android updates across download channels
+        uses: IssisX/ScraperX/.github/actions/stable-apk@882517e021841deaa915c86bbb3e92bbf4fda185
+        with:
+          files: playtest/*.apk
+          keystore: ${{ secrets.SCRAPERX_APK_KEYSTORE_B64 }}
+          password: ${{ secrets.SCRAPERX_APK_KEYSTORE_PASSWORD }}
+
       - name: Publish the playtest APK
         uses: actions/upload-artifact@v4
         with:
           name: ScraperX-APK-${{ github.sha }}
-          path: playtest/*.apk
+          path: playtest/
           if-no-files-found: error
           retention-days: 30
