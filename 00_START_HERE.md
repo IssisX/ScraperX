@@ -22,10 +22,9 @@ state, the fixed laws and the ordered external inputs determine subsequent state
 are those inputs, so different actions may produce different outcomes. An occupancy flag, an
 elapsed-time cue or a desired route result may not stand in for that evolution. Do not
 double-count the player's weight: standing contact already carries it. A continuous ordinary
-stair or ramp that bypasses the authored machines and parkour is rejected. Primitives are valid
-building blocks, not a closed parts list. Machine parts are not limited to cables, pulleys, carts,
-and elevators, or to rolling masses, levers, pendulums, and slabs. Any large visible part whose
-motion can be watched and used is allowed. Tiny hidden mechanisms are not. See GDD §16.
+stair or ramp that bypasses the authored machines and parkour is rejected. Primitives are shapes
+to build with, not a parts catalog. There is no approved list of machine parts. A part is allowed
+when the player can see it move and use what it does. Tiny hidden mechanisms are not. See GDD §16.
 Repeating the same automatic ride at a new size is not variety. Godot owns input and
 presentation; native state owns the consequence. Actions on this checkout are not a Fold
 playtest.
