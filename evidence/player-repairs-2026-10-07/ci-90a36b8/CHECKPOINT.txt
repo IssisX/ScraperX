@@ -1,0 +1,10 @@
+author=ChatGPT
+branch=ChatGPT
+commit=90a36b8c0b996daf5edb22ba7eecbbb63b34ede7
+apk=ScraperX-ChatGPT.apk
+package=com.cory.scraperx.chatgpt
+label=ScraperX-ChatGPT
+source_signer_sha256=9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4
+signer_sha256=91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a
+version_code=213571747
+apk_sha256=5ac5136bd0ba18c54e9fd69ac1a2c2a44abc194a0c58da3812d73a525ac42882

@@ -1,0 +1,8 @@
+fall-voices.log: SCRAPERX_FALL_VOICE reactions=2 mix_peak=0.912014 recordings=13 recording_peak=0.912016 failures=0
+godot-audio-mix.log: SCRAPERX_UITEST PASS audio_mix bed_db=-22.5 steps_db=-13.1 peak_db=-0.8 steps=10
+kit-view-fixtures.log: SCRAPERX_KIT_VIEW PASS checks=1695 rigid_bodies=15 renderer=X11
+kit-view-normal.log: SCRAPERX_KIT_VIEW PASS checks=33764 rigid_bodies=50 renderer=X11
+native-tests.log: 100% tests passed, 0 tests failed out of 36
+recorded-footsteps.log: RECORDED_FOOTSTEPS_MIX PASS cases=36
+settings_runtime.log: SCRAPERX_SETTINGS_RUNTIME checks=3111 failures=0 rings=33 decorative=704 structural=2220 native=1
+touch-campaign-to-121.log: SCRAPERX_UITEST PASS touch_campaign_to_143 staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 service_lift=1 supported_height_m=143 support=11 deaths=0 slingshot_work_j=0 world=slingshot
