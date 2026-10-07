@@ -695,6 +695,9 @@ private:
     case scraperx::sim::InitialSpawn::ServiceSkinWest:
         // On TP-640, south of the service manifold, in the lane it crosses.
         return {-10.30, 641.15, -147.15};
+    case scraperx::sim::InitialSpawn::ServiceDeck:
+        // On the 672.25 m deck, clear of the leaf's pin at its west edge.
+        return {-12.70, 673.20, -139.60};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower

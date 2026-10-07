@@ -3273,7 +3273,98 @@ void run_service_skin() {
               << " worst_tick_m=" << g_path_watch.worst << "\n";
 }
 
+// The leaf above the 672 deck. The pin stays put until it is carried off,
+// then the plate falls and the same player walks up it.
+void run_leaf() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation leaf(InitialSpawn::ServiceDeck);
+    require(leaf.advance_frame(0.6).accepted, "leaf settle must be accepted");
+    const auto stood = leaf.snapshot();
+    require(stood.player_grounded && stood.player_position.y > 672.9 && stood.death_count == 0 &&
+                stood.support_entity_id == Simulation::kSkinWestEntityId,
+            "the player must start standing on the service deck");
+    const double plate_y0 = kit_y(leaf, Simulation::kLeafPlateEntityId);
+    require(plate_y0 > 676.0, "the plate must start standing, not already fallen");
+    require(walk_to(leaf, -13.20, -139.60, 6.0, 0.2), "the player must reach the leaf pin");
+    (void)leaf.set_facing(-1.0, 0.0);
+    require(leaf.advance_frame(0.3).accepted, "facing the pin must be accepted");
+    require(leaf.snapshot().carry_target_entity_id == Simulation::kLeafPinEntityId,
+            "the pin must be the thing in reach");
+    require(leaf.request_pick_up(), "picking up the pin must be accepted");
+    require(leaf.advance_frame(0.3).accepted, "the pick-up step must be accepted");
+    require(leaf.snapshot().carrying_entity_id == Simulation::kLeafPinEntityId,
+            "the pin must be in the hands");
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    require(walk_to(leaf, -12.20, -139.60, 6.0, 0.25), "the player must carry the pin clear");
+    require(leaf.request_set_down(), "setting the pin down must be accepted");
+    require(leaf.advance_frame(0.4).accepted, "the pin must leave the hands");
+    require(leaf.snapshot().carrying_entity_id == 0, "the hands must be empty before the climb");
+    observe_path(leaf, false);
+    bool fell = false;
+    for (int step = 0; step < 12 * 90; ++step) {
+        (void)leaf.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(leaf, true);
+        if (kit_y(leaf, Simulation::kLeafPlateEntityId) < 675.90) {
+            fell = true;
+            break;
+        }
+    }
+    require(fell, "the plate must fall onto its stop once the pin is out");
+    for (int step = 0; step < 2 * 90; ++step) {
+        (void)leaf.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(leaf, true);
+    }
+    require(leaf.snapshot().death_count == 0, "the fall must not kill the player still on the deck");
+    require(kit_y(leaf, Simulation::kLeafPlateEntityId) < 676.05, "the plate must stay down on its stop");
+    // A walk, not a run: full speed leaves the ramp in the air.
+    auto walk_slow = [&](const double x, const double z, const double seconds, const double tolerance) {
+        const auto ticks = static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            const auto state = leaf.snapshot();
+            if (std::hypot(x - state.player_position.x, z - state.player_position.z) <= tolerance &&
+                state.player_grounded) {
+                (void)leaf.set_move_input(0.0, 0.0);
+                return true;
+            }
+            steer_toward(leaf, x, z, 0.40);
+            (void)leaf.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(leaf, true);
+        }
+        (void)leaf.set_move_input(0.0, 0.0);
+        return false;
+    };
+    require(walk_slow(-16.5, -139.60, 16.0, 0.35), "the player must step onto the fallen plate");
+    require(walk_slow(-24.60, -139.60, 28.0, 0.35), "the player must walk up the plate onto the landing");
+    bool on_landing = false;
+    for (int step = 0; step < 3 * 90; ++step) {
+        (void)leaf.set_move_input(0.0, 0.0);
+        (void)leaf.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(leaf, true);
+        const auto state = leaf.snapshot();
+        if (state.death_count == 0 && state.player_grounded && state.player_position.y > 678.3 &&
+            state.support_entity_id == Simulation::kLeafFrameEntityId) {
+            on_landing = true;
+            break;
+        }
+    }
+    g_path_watch.armed = false;
+    require(g_path_watch.worst <= 0.15, "the leaf must not snap the body more than 0.15 m in one tick");
+    const auto landed = leaf.snapshot();
+    require(on_landing, "the player must be standing on the landing the plate fell onto");
+    std::cout << "PASS scraperx_sim leaf: plate_y0=" << plate_y0
+              << " plate_y=" << kit_y(leaf, Simulation::kLeafPlateEntityId)
+              << " landing_y=" << landed.player_position.y
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+}
+
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "leaf") {
+        run_leaf();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "skin") {
         run_service_skin();
@@ -5215,6 +5306,7 @@ int main() {
     run_crane_wreckage();
     run_ascent();
     run_service_skin();
+    run_leaf();
 
     return EXIT_SUCCESS;
 }

@@ -274,7 +274,8 @@ struct Stack final {
 
 void build_stack(kit::Kit &kit, Stack &stack);
 
-// B06 west service skin, TP-640 to the 672.25 m deck. Static only.
+// B06 west service skin, TP-640 to the 672.25 m deck, then the leaf that
+// falls west from that deck and becomes the walk up to the next landing.
 void build_service_skin(kit::Kit &kit);
 
 } // namespace scraperx::sim::bands
