@@ -157,7 +157,10 @@ const PHASE_PROVEN := 2
 # The tower face sits at z = -124. Walking to z = -66 puts its lower third
 # across the whole frame.
 const CI_APPROACH_TARGET_Z := -66.0
-const CI_APPROACH_FACING := Vector2(-0.22, -0.975)
+# From the grade spawn (6, -25) toward the tower, east of the ground
+# slingshot's timber block (x <= 1.35 between z -42.6 and -61.1): at z -61
+# the walk is at x 3.1.
+const CI_APPROACH_FACING := Vector2(-0.08, -0.9968)
 const CI_HOLD_TICKS := 20
 
 var _native: Object
