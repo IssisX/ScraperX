@@ -566,9 +566,11 @@ void build_girder(kit::Kit &kit, std::vector<Part> &frame) {
         hinge + JPH::RVec3(lean * JPH::Vec3(0.0F, kGirderHalf, 0.0F)), lean, 2800.0F, 0.95F);
     (void)kit.add_lever(girder, hinge, JPH::Vec3::sAxisX(), up, 0.0F, kGirderFall);
 
-    frame.push_back(span({-1.50F, 643.60F, -149.50F}, {1.50F, 643.82F, -147.20F}, Material::Concrete));
+    frame.push_back(span({-3.50F, 643.60F, -149.50F}, {3.60F, 643.82F, -147.20F}, Material::Concrete));
     frame.push_back(span({-1.20F, 640.25F, -147.70F}, {-0.90F, 643.60F, -147.40F}, Material::Rust));
     frame.push_back(span({0.90F, 640.25F, -147.70F}, {1.20F, 643.60F, -147.40F}, Material::Rust));
+    frame.push_back(span({2.90F, 640.25F, -147.70F}, {3.20F, 643.60F, -147.40F}, Material::Rust));
+    frame.push_back(span({-3.20F, 640.25F, -147.70F}, {-2.90F, 643.60F, -147.40F}, Material::Rust));
     frame.push_back(span({-0.85F, 640.25F, -155.20F}, {-0.65F, 640.38F, -154.80F}, Material::Steel));
     frame.push_back(span({0.65F, 640.25F, -155.20F}, {0.85F, 640.38F, -154.80F}, Material::Steel));
 
@@ -581,6 +583,69 @@ void build_girder(kit::Kit &kit, std::vector<Part> &frame) {
     (void)kit.add_pin_catch(girder, pin, 0.12F, 0.08F);
 }
 
+// East of where the girder lets you off, still on that floor. A ladder goes
+// up to the next floor. A sheet of steel hangs in front of the ladder. A
+// weight beside the floor, and the sheet, are both held by one pin. Lift the
+// pin and the weight drops, hauling the sheet east, off the ladder. A shove
+// does not move the sheet. The player climbs. Nothing of it leaves the
+// building, and the sheet does not carry the player.
+constexpr float kLadderX = 2.15F;
+constexpr float kLadderZ = -147.55F;
+constexpr float kUpperTop = 652.00F;
+constexpr float kUpperSouth = -147.10F;
+constexpr float kShutterSlide = 1.60F;
+
+void build_shutter(kit::Kit &kit, std::vector<Part> &frame) {
+    const float ladder_top = kUpperTop - 0.55F;
+    ladder(frame, kLadderX, kLadderZ, true, 643.82F, ladder_top);
+    frame.push_back(span({kLadderX - 0.70F, ladder_top - 0.85F, kUpperSouth - 0.05F},
+                         {kLadderX + 0.70F, kUpperTop, kUpperSouth + 0.06F}, Material::Steel));
+    frame.push_back(span({1.20F, kUpperTop - 0.24F, kUpperSouth}, {3.30F, kUpperTop, -145.40F}, Material::Concrete));
+    frame.push_back(span({1.35F, 640.25F, -146.35F}, {1.65F, kUpperTop - 0.24F, -146.05F}, Material::Rust));
+    frame.push_back(span({2.70F, 640.25F, -146.35F}, {3.00F, kUpperTop - 0.24F, -146.05F}, Material::Rust));
+
+    const float shutter_z = kLadderZ - 0.42F;
+    const float shutter_y = 645.20F;
+    const JPH::RVec3 shutter_at(kLadderX, shutter_y, shutter_z);
+    const kit::BodyIndex shutter = kit.add_body(
+        Sim::kShutterEntityId,
+        {box(JPH::Vec3(0.55F, 1.15F, 0.04F), JPH::Vec3::sZero(), Material::Galvanised),
+         box(JPH::Vec3(0.08F, 1.15F, 0.015F), JPH::Vec3(0.42F, 0.0F, 0.045F), Material::Hazard)},
+        shutter_at, JPH::Quat::sIdentity(), 220.0F, 0.6F);
+    const kit::GuideIndex shutter_guide =
+        kit.add_guide(shutter, JPH::Vec3::sAxisX(), 0.0F, kShutterSlide, 0.0F, 0.0F, 1.0F);
+    kit.set_guide_friction(shutter_guide, 250.0F);
+
+    const JPH::RVec3 weight_at(4.30F, 642.90F, -148.60F);
+    const kit::BodyIndex weight = kit.add_body(
+        Sim::kShutterWeightEntityId,
+        {box(JPH::Vec3(0.22F, 0.28F, 0.22F), JPH::Vec3::sZero(), Material::Concrete)}, weight_at,
+        JPH::Quat::sIdentity(), 450.0F, 0.6F);
+    (void)kit.add_guide(weight, -JPH::Vec3::sAxisY(), 0.0F, 2.20F, 1.2F, 25000.0F, 2.0F);
+
+    const JPH::Vec3 pull_local(0.55F, 0.0F, 0.0F);
+    const JPH::RVec3 sheave_plate(4.55F, shutter_y, shutter_z);
+    const JPH::Vec3 eye_local(0.0F, 0.28F, 0.0F);
+    const JPH::RVec3 sheave_weight(weight_at.GetX(), 645.40F, weight_at.GetZ());
+    const float span_plate = JPH::Vec3(sheave_plate - (shutter_at + JPH::RVec3(pull_local))).Length();
+    const float span_weight = JPH::Vec3(sheave_weight - (weight_at + JPH::RVec3(eye_local))).Length();
+    (void)kit.add_rope(shutter, pull_local, sheave_plate, weight, eye_local, sheave_weight, 1.0F,
+                       span_plate + span_weight + 0.02F, 0.0F);
+    frame.push_back(box(JPH::Vec3(0.08F, 0.08F, 0.08F), vec(sheave_plate), Material::Rust));
+    frame.push_back(box(JPH::Vec3(0.08F, 0.08F, 0.08F), vec(sheave_weight), Material::Rust));
+
+    // The pin on this floor, west of the girder. Lift it out and the weight
+    // is free to drop.
+    const JPH::RVec3 pin_at(-2.20F, 644.45F, -148.10F);
+    const kit::BodyIndex release = add_pin(kit, frame, Sim::kShutterPinEntityId, pin_at);
+    frame.push_back(span({-2.32F, 643.82F, -148.22F}, {-2.08F, 644.36F, -147.98F}, Material::Steel));
+    // The same pin holds the weight up and holds the sheet where it is. A
+    // shove does not move the sheet. Lifting the pin frees both, and the
+    // falling weight is what hauls the sheet aside.
+    (void)kit.add_pin_catch(weight, release, 0.15F, 0.05F);
+    (void)kit.add_pin_catch(shutter, release, 0.15F, 0.05F);
+}
+
 } // namespace
 
 void build_facade_crane(kit::Kit &kit, FacadeCrane &crane) {
@@ -590,6 +655,7 @@ void build_facade_crane(kit::Kit &kit, FacadeCrane &crane) {
     build_stage_k(kit, crane, frame);
     build_stage_l(kit, crane, frame);
     build_girder(kit, frame);
+    build_shutter(kit, frame);
     (void)kit.add_body(Sim::kCraneFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     build_climbing_route(kit);
 }

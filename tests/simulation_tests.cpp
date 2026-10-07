@@ -1786,6 +1786,7 @@ void require_leg(const scraperx::sim::Simulation &simulation, const bool ok, con
 
 // The girder on the 640 m floor. Defined with the other floor checks below.
 bool climb_girder(scraperx::sim::Simulation &floor);
+bool climb_shutter(scraperx::sim::Simulation &floor);
 
 // The goal's test (MECHANISM_ASCENT_PLAN.md, AS-006 to AS-009): one run on
 // player inputs from the 154 m deck to standing on TP-640,
@@ -1884,6 +1885,7 @@ void run_ascent() {
     require(top.death_count == deaths && standing_above(top, 640.2),
             "ascent: one run from the 154 m deck must end standing on the 640 m floor, never having died");
     require_leg(run, climb_girder(run), "up the girder onto the next floor");
+    require_leg(run, climb_shutter(run), "the sheet aside, then up the ladder");
     const auto landed = run.snapshot();
     std::cout << "PASS scraperx_sim ascent 154 to the next floor: seconds="
               << landed.simulation_time_seconds - start << " at_220=" << at_220 << " at_340=" << at_340
@@ -3369,6 +3371,107 @@ bool climb_girder(scraperx::sim::Simulation &floor) {
     return true;
 }
 
+// The sheet in front of the ladder. Lift the pin, the weight drops, the sheet
+// slides off the ladder, and the same player climbs.
+bool climb_shutter(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    const auto shutter_x = [&]() {
+        return floor.kit_body_position(floor.kit_body_index(Simulation::kShutterEntityId)).x;
+    };
+    const double x0 = shutter_x();
+    auto watch = [&](const double seconds) {
+        const int ticks = static_cast<int>(seconds * 90.0 + 0.5);
+        for (int step = 0; step < ticks; ++step) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+    };
+    // The sheet has to be in the way. Standing against it, facing the ladder,
+    // must not offer a hold. If it does, the pin does nothing the climb needs.
+    (void)walk_to(floor, 2.15, -148.00, 8.0, 0.12);
+    (void)floor.set_facing(0.0, 1.0);
+    watch(0.4);
+    if (floor.snapshot().grip_available) {
+        const auto blocked = floor.snapshot();
+        const auto w = floor.kit_body_position(floor.kit_body_index(Simulation::kShutterWeightEntityId));
+        const auto pin = floor.kit_body_position(floor.kit_body_index(Simulation::kShutterPinEntityId));
+        std::cout << "ladder still open " << blocked.player_position.x << " " << blocked.player_position.y
+                  << " " << blocked.player_position.z << " sheet=" << shutter_x() << " weight " << w.y
+                  << " pin " << pin.x << " " << pin.y << " " << pin.z << "\n";
+    }
+    require(!floor.snapshot().grip_available, "the sheet must block the ladder until the pin is lifted");
+    const bool at_pin = walk_to(floor, -1.15, -148.10, 8.0, 0.12);
+    (void)floor.set_facing(-1.0, 0.0);
+    watch(0.4);
+    bool took = at_pin && floor.snapshot().carry_target_entity_id == Simulation::kShutterPinEntityId &&
+                floor.request_pick_up();
+    watch(0.4);
+    took = took && floor.snapshot().carrying_entity_id == Simulation::kShutterPinEntityId;
+    bool slid = false;
+    if (took) {
+        for (int step = 0; step < 6 * 90 && !slid; ++step) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+            slid = shutter_x() > x0 + 1.30;
+        }
+    }
+    if (!slid) {
+        const auto p = floor.snapshot();
+        const auto w = floor.kit_body_position(floor.kit_body_index(Simulation::kShutterWeightEntityId));
+        const auto pin = floor.kit_body_position(floor.kit_body_index(Simulation::kShutterPinEntityId));
+        std::cout << "sheet stayed x0=" << x0 << " x=" << shutter_x() << " weight " << w.x << " " << w.y << " "
+                  << w.z << " pin " << pin.x << " " << pin.y << " " << pin.z << " player " << p.player_position.x
+                  << " " << p.player_position.y << " " << p.player_position.z << " target=" << p.carry_target_entity_id
+                  << " carrying=" << p.carrying_entity_id << "\n";
+    }
+    require(slid, "the sheet must slide off the ladder once the pin is lifted");
+    (void)floor.request_set_down();
+    watch(0.3);
+    for (int step = 0; step < 90; ++step) {
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+    }
+    if (!walk_to(floor, 2.15, -148.00, 8.0, 0.12)) {
+        const auto p = floor.snapshot();
+        std::cout << "no ladder " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " grounded=" << p.player_grounded << " deaths=" << p.death_count << "\n";
+    }
+    require(walk_to(floor, 2.15, -148.00, 2.0, 0.12), "the player must reach the ladder");
+    (void)floor.set_facing(0.0, 1.0);
+    watch(0.35);
+    if (!floor.snapshot().grip_available) {
+        const auto p = floor.snapshot();
+        std::cout << "no hold " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " sheet_x=" << shutter_x() << "\n";
+    }
+    require(floor.snapshot().grip_available, "the ladder must be a hold once the sheet is aside");
+    require(floor.request_traversal(), "taking the ladder must be accepted");
+    watch(0.2);
+    require(is_climbing(floor.snapshot()), "the player must be on the ladder");
+    require(hold_stick(floor, 0.0, 1.0, 0.0, 1.0, 30.0,
+                       [](const scraperx::sim::Snapshot &state) { return standing_above(state, 652.40); }),
+            "the player must climb onto the next floor");
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        const auto top = floor.snapshot();
+        std::cout << "snap " << g_path_watch.worst << " at " << g_path_watch.worst_at.x << " "
+                  << g_path_watch.worst_at.y << " " << g_path_watch.worst_at.z
+                  << " trav=" << g_path_watch.worst_traversal << " now " << top.player_position.x << " "
+                  << top.player_position.y << " " << top.player_position.z << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "the sheet and the ladder must not snap the body more than 0.15 m in one tick");
+    const auto top = floor.snapshot();
+    require(top.death_count == 0 && top.player_grounded && top.player_position.y > 652.50 &&
+                top.player_position.x > 1.1 && top.player_position.x < 3.4 && top.player_position.z > -147.3 &&
+                top.player_position.z < -145.3 && top.support_entity_id == Simulation::kCraneFrameEntityId,
+            "the player must be standing on the next floor, still inside the building");
+    std::cout << "PASS scraperx_sim shutter: floor_y=" << top.player_position.y
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
 void run_girder() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -3379,7 +3482,8 @@ void run_girder() {
                 stood.death_count == 0 && stood.support_entity_id == Simulation::kCraneFrameEntityId,
             "the player must start standing on the 640 m floor");
     require(kit_y(floor, Simulation::kGirderEntityId) > 643.4, "the girder must start standing, not already fallen");
-    (void)climb_girder(floor);
+    require(climb_girder(floor), "up the girder onto the next floor");
+    (void)climb_shutter(floor);
 }
 
 int main() {

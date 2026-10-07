@@ -148,11 +148,17 @@ jobs:
             "PASS scraperx_sim AS-009 wreckage K" \
             "PASS scraperx_sim AS-009 wreckage J" \
             "PASS scraperx_sim AS-009 wreckage L" \
-            "PASS scraperx_sim ascent 154 to TP-640" \
+            "PASS scraperx_sim ascent 154 to the next floor" \
+            "PASS scraperx_sim girder" \
+            "PASS scraperx_sim shutter" \
             "PASS scraperx_sim service skin"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
+          # The 154 m trip ends standing on the floor the ladder reaches
+          # (player centre about 652.9), not on the girder's landing.
+          awk -F'floor_y=' '/ascent 154 to the next floor/ {split($2,a," "); exit (a[1]+0 >= 652.70 && a[1]+0 <= 653.20) ? 0 : 1}' \
+            artifacts/native-falsifiers.log
           # AS-006 Stage A, the skip lift: no link, no lift (the cage never
           # moves while the rope is on the bollard, and the stage re-rigs);
           # linked, the rider rides 22 m to 176.25 under a brake-only
@@ -334,7 +340,7 @@ jobs:
           - WO-002 moving-support regressions remained green: translating and rotating Jolt supports with stable entity IDs, real support-point velocity, material inherited jump momentum, and contact-point velocity matching \`v_linear + omega x r\` within the work-order tolerance;
           - native host tests proved the WO-003 traversal suite against real Jolt geometry: a vault that crosses a real rail onto a validated far landing while retaining approach momentum, a mantle that ends grounded on ledge entity 6, a ledge hang that holds against gravity on entity 7, a hang on the kinematic moving ledge (entity 8) carried at the support's own velocity and mantled onto that moving support, refusal of the obstructed landing behind entity 9/10 with no player rise, and traversal frame-partition invariance;
           - Godot 4.7 loaded the same current-source GDExtension, mirrored native support poses, jumped from support entity 3, and observed inherited momentum;
-          - native host tests proved the mechanism bands' stages, bands, climbing routes and the one-run ascent from the 154 m deck to TP-640 on player inputs;
+          - native host tests proved the mechanism bands' stages, bands, climbing routes and the one-run ascent from the 154 m deck, through the cranes, up the girder, and up the ladder onto the next floor on player inputs;
           - the Godot runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856, 1.164) with stretch=expand, an 82 degree vertical field of view and a 2600 m far plane;
           - the same runtime spawned outdoors at grade and walked the tower approach;
           - one first-person approach screenshot was captured from that runtime;

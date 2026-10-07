@@ -569,6 +569,11 @@ public:
     // The girder on the 640 m floor, and the pin that holds it up.
     static constexpr std::uint64_t kGirderEntityId = 2300;
     static constexpr std::uint64_t kGirderPinEntityId = 2301;
+    // The plate across the ladder on that floor, the weight that hauls it
+    // aside, and the pin that holds the weight.
+    static constexpr std::uint64_t kShutterEntityId = 2302;
+    static constexpr std::uint64_t kShutterWeightEntityId = 2303;
+    static constexpr std::uint64_t kShutterPinEntityId = 2304;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
