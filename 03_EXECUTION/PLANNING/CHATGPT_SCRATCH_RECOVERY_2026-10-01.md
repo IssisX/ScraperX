@@ -27,7 +27,7 @@ ScraperX is a first-person 3D vertical traversal game inside and around a gigant
 
 Jolt/C++ owns consequential physics. Godot owns presentation, input, camera, HUD, rendering, audio presentation, and Android integration. Earned progress must arise from actual geometry, collision, force, constraint, momentum, torque, moving supports, and mechanical state. No progress teleportation, invisible blockers, fake route flags, or authored animation pretending machinery moved physically.
 
-The larger traversal vocabulary includes jump, vault, mantle, hang, shimmy, crouch, and moving-support traversal. Mechanisms should be varied and readable: counterweights, racks, pulleys, pivots, gears, cranes, linkages, catches, lifts, and hinged structures. Avoid repetitive machines, ordinary ramp/stair solutions, tiny unreadable mechanisms, and generic obstacle courses.
+The larger traversal vocabulary includes jump, vault, mantle, hang, shimmy, crouch, and moving-support traversal. Mechanisms should be varied and readable. The names recorded here on 2026-10-01 — counterweights, racks, pulleys, pivots, gears, cranes, linkages, catches, lifts, and hinged structures — are not an approved parts list. GDD §16 owns the test. Avoid repetitive machines, ordinary ramp/stair solutions, tiny unreadable mechanisms, and generic obstacle courses.
 
 The slingshot is one bounded opening encounter. The current +352 m receiving rings are interim geometry, not completion of the 1,000 m game or proof of a continuous whole-campaign route. After the launcher gate closes, inspect the actual next ascent geometry/mechanical gap and select one complete causal traversal slice. Preserve existing Laws/GDD/Atlas authority and proven historical routes.
 

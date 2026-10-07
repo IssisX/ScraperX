@@ -69,6 +69,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I meant visceral engagement, with vibration as one component.
 - Fill traversal gaps with varied, physically coherent challenges and visible causal mechanisms.
   Why: I approved creative climbing, timed swinging, and Rube Goldberg mechanisms.
+- Do not keep an approved list of machine parts. A part is allowed when the player can see it move from ordinary play, the motion reads as the machine, and using it changes a real force, constraint, support, or route. Hidden clutches, tiny gears, pressure valves, and unwatchable fittings are out. See GDD §16.
+  Why: Named catalogs of counterweights, racks, pulleys, gears, and lifts were being read as the only legal machinery.
 - Vary encounter extent and deliberately include coherent machines spanning 20–50 m or more alongside shorter challenges. Use tower rings as supports and receivers, without forcing each encounter into one ring interval.
   Why: I want large player-operated industrial motion, useful variety and efficient authoring rather than repetitive 10 m sections. GDD §16 owns the design guidance.
 - Preserve strategic traversal while converting existing sections: players read structures, judge reach/timing/load, take risks, climb, traverse and deliberately use or activate mechanisms to gain height. Preserve existing routes/layouts; geometry changes need a concrete physical necessity rather than a redesign pass.
