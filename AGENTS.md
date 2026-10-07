@@ -58,6 +58,8 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: I approved creative climbing, timed swinging, and Rube Goldberg mechanisms.
 - Do not keep an approved list of machine parts. A part is allowed when the player can see it move from ordinary play, the motion reads as the machine, and using it changes a real force, constraint, support, or route. Hidden clutches, tiny gears, pressure valves, and unwatchable fittings are out. See GDD §16.
   Why: A short catalog, and then a longer one, were both read as the only legal machinery.
+- Put the next machine or obstacle in a gap that is already in the structure. Do not build it off to the side of the tower. There is no complete canonical climb to 678 m; open gaps below that still need a machine or a placed obstacle.
+  Why: A leaf was built west of the 672 m deck and then treated as the frontier. The owner rejected that. The landing is empty air beside the mass, and the climb below it is not closed.
 - Make environmental additions playable and causally meaningful, and plan the next coherent pass after the current batch is finished and pushed.
   Why: I requested extraordinary interactive content beyond cosmetics and suggested `/plan` for that next pass.
 - Make materials behave consistently with their appearance.

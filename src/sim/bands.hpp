@@ -274,8 +274,9 @@ struct Stack final {
 
 void build_stack(kit::Kit &kit, Stack &stack);
 
-// B06 west service skin, TP-640 to the 672.25 m deck, then the leaf that
-// falls west from that deck and becomes the walk up to the next landing.
+// B06 west service skin: a separate climb on the north-west of TP-640, up to
+// the 672.25 m deck. The leaf past that deck falls west, off the side of the
+// tower. That landing is not a gap in the structure and not the continuation.
 void build_service_skin(kit::Kit &kit);
 
 } // namespace scraperx::sim::bands

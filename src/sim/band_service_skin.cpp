@@ -43,7 +43,9 @@ void grip_bar(std::vector<Part> &parts, const JPH::Vec3 low, const JPH::Vec3 hig
 }
 
 // TP-640's top, from the crane frame. This skin sits on that plate and
-// then leaves it to the west.
+// then leaves it to the west. Leaving the plate is what this skin does.
+// It is not the pattern. The next machine fills a gap already in the
+// structure. It does not stand off to the side.
 constexpr float kPlate = 640.25F;
 
 // The manifold the vault crosses, facing north. The chest ray is 0.90 m
@@ -127,7 +129,8 @@ constexpr float kBraceZ = -140.75F;
 constexpr float kBraceTop = 671.70F;
 
 // The receiver. Fixed. Its south edge is the mantle from the ladder.
-// The leaf at the west lip is the next machine, not part of this climb.
+// The leaf at the west lip falls off the side of the tower. It is not
+// this climb, and it is not a gap in the structure. Do not continue it.
 constexpr float kDeckTop = 672.25F;
 constexpr float kDeckX0 = -14.35F;
 constexpr float kDeckX1 = -11.15F;
@@ -281,10 +284,10 @@ void build_return_and_deck(std::vector<Part> &parts) {
     }
 }
 
-// The next gap above the service deck. A plate stands on a hinge at the
-// west lip, held by a pin in a clevis over the deck. Lift the pin and the
-// plate falls west until the hinge stops it as a ramp. The player walks up
-// that ramp onto the landing. No cable, no screw, no ride.
+// A plate on a hinge at the west lip, held by a pin in a clevis. Lift the
+// pin and the plate falls west onto a landing in empty air. That landing
+// is off the side of the tower, not a gap in the structure. Do not treat
+// it as the next step of the climb, and do not build the next piece past it.
 constexpr float kHingeX = -14.35F;
 constexpr float kHingeY = 672.40F;
 constexpr float kHingeZ = -139.60F;
