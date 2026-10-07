@@ -88,6 +88,8 @@ enum class InitialSpawn : std::uint8_t {
     // AS-010: on the 728 deck north-east of stage O's cab, where C5's
     // climber comes over the girder.
     Deck728 = 34,
+    // On the 242 ring's south side, where the swing (AS-012) sets its rider down.
+    Ring242South = 35,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };

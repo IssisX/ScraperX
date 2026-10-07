@@ -3558,6 +3558,171 @@ void run_swing() {
               << " on_242_y=" << end.player_position.y << '\n';
 }
 
+// C6, the west band: from the 242 ring to the 264 ring on player inputs, no
+// ladder and no standpipe. What the climb saw, for its falsifiers.
+struct C6Notes final {
+    bool leap_caught = false;     // the running leap off the kentledge ended in the hands
+    bool balanced_out = false;    // the girder out over the void held the body on its line
+    bool balanced_up = false;     // so did the girder rising to the north
+};
+
+bool report_c6(const scraperx::sim::Simulation &simulation, const char *leg) {
+    const auto state = simulation.snapshot();
+    std::cerr << "C6 stalled at " << leg << ": (" << state.player_position.x << ", " << state.player_position.y
+              << ", " << state.player_position.z << ") grounded=" << state.player_grounded
+              << " support=" << state.support_entity_id << '\n';
+    return false;
+}
+
+bool climb_c6(scraperx::sim::Simulation &simulation, C6Notes *notes = nullptr) {
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    C6Notes seen;
+    // 1. West along the 242 ring past the swing's jib posts, and north along
+    // the band to the kentledge, and onto it.
+    if (!(walk_to(simulation, -17.0, -130.8, 6.0) && walk_to(simulation, -20.9, -133.0, 6.0) &&
+          walk_to(simulation, -20.9, -141.2, 6.0, 0.06))) {
+        return report_c6(simulation, "to the kentledge");
+    }
+    if (!c4_mantle(simulation, 0.0, -1.0, 244.3, "C6 onto the kentledge")) {
+        return false;
+    }
+    // 2. A run north along its top and, from its striped end, the leap over
+    // the gap: the hands catch the platform's lip, and up.
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.2);
+    if (!hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 2.0,
+                    [](const Snapshot &state) { return state.player_position.z <= -144.4; })) {
+        return report_c6(simulation, "the run along the kentledge");
+    }
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 2.0,
+                    [](const Snapshot &state) { return state.traversal_state == TraversalState::Hanging; })) {
+        return report_c6(simulation, "the leap for the platform's lip");
+    }
+    seen.leap_caught = true;
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!wait_for(simulation, 2.5, [](const Snapshot &state) { return standing_above(state, 247.8); })) {
+        return report_c6(simulation, "up onto the platform");
+    }
+    (void)simulation.advance_frame(0.4);
+    // 4. Out west along the girder over the void to its landing.
+    if (!(walk_to(simulation, -21.6, -151.6, 4.0, 0.08) && walk_to(simulation, -23.5, -151.6, 4.0, 0.1))) {
+        return report_c6(simulation, "onto the girder out");
+    }
+    seen.balanced_out = simulation.snapshot().player_balancing;
+    if (!(walk_to(simulation, -29.6, -151.6, 8.0, 0.1) && walk_to(simulation, -30.1, -151.6, 3.0, 0.08))) {
+        return report_c6(simulation, "out along the girder");
+    }
+    // 5. Up onto the outrigger's end, and back east along it.
+    (void)walk_to(simulation, -29.3, -151.6, 2.0, 0.05);
+    if (!c4_hang_up(simulation, 1.0, 0.0, 251.1, "C6 up onto the outrigger")) {
+        return false;
+    }
+    if (!walk_to(simulation, -21.2, -151.6, 8.0, 0.1)) {
+        return report_c6(simulation, "east along the outrigger");
+    }
+    // 6. North up the rising girder to the platform at its head.
+    if (!walk_to(simulation, -21.2, -153.5, 4.0, 0.1)) {
+        return report_c6(simulation, "onto the rising girder");
+    }
+    seen.balanced_up = simulation.snapshot().player_balancing;
+    if (!walk_to(simulation, -21.2, -162.6, 10.0, 0.1)) {
+        return report_c6(simulation, "up the rising girder");
+    }
+    // 7. Up onto the crossbeam's end, and east along it into the tower.
+    if (!(walk_to(simulation, -19.75, -163.0, 4.0, 0.06) &&
+          c4_hang_up(simulation, 1.0, 0.0, 258.4, "C6 up onto the crossbeam"))) {
+        return false;
+    }
+    if (!(walk_to(simulation, -16.4, -163.0, 6.0, 0.1) && walk_to(simulation, -16.4, -162.8, 2.0, 0.05))) {
+        return report_c6(simulation, "along the crossbeam");
+    }
+    // 8. Up onto the block, and from its west edge onto the 264 ring.
+    if (!c4_hang_up(simulation, 0.0, -1.0, 261.4, "C6 up onto the block")) {
+        return false;
+    }
+    if (!(walk_to(simulation, -16.9, -164.5, 3.0, 0.05) &&
+          c4_hang_up(simulation, -1.0, 0.0, 264.7, "C6 up onto the 264 ring"))) {
+        return false;
+    }
+    if (!walk_to(simulation, -19.5, -164.5, 3.0, 0.1)) {
+        return report_c6(simulation, "onto the 264 ring");
+    }
+    if (notes != nullptr) {
+        *notes = seen;
+    }
+    return true;
+}
+
+// A jump at a face from where the body stands, pushing in for 2 s: did it
+// catch anything?
+bool c6_caught(scraperx::sim::Simulation &simulation, const double fx, const double fz) {
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    return hold_stick(simulation, 0.4 * fx, 0.4 * fz, fx, fz, 2.0,
+                      [](const Snapshot &state) { return state.traversal_state == TraversalState::Hanging; });
+}
+
+void run_c6() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation simulation(InitialSpawn::Ring242South);
+    require(simulation.advance_frame(1.0).accepted, "C6: the settle interval must be accepted");
+    const double start = simulation.snapshot().simulation_time_seconds;
+    C6Notes seen;
+    require(climb_c6(simulation, &seen), "C6: the climb from the 242 ring to the 264 ring on player inputs");
+    const auto top = simulation.snapshot();
+    require(top.death_count == 0 && top.player_grounded && top.support_entity_id == 51 &&
+                top.player_position.y > 264.9 && top.player_position.y < 265.4,
+            "C6: the climb must end standing on the 264 ring, alive");
+    require(seen.leap_caught && seen.balanced_out && seen.balanced_up,
+            "C6: the leap must end in the hands, and the girders out and up must be walked on the balance");
+    // Designed, not free: from the ring, a jump under the platform's fascia
+    // catches nothing; the kentledge is the way up.
+    {
+        Simulation ring(InitialSpawn::Ring242South);
+        (void)ring.advance_frame(1.0);
+        // East of the kentledge, between it and the band's inner edge.
+        require(walk_to(ring, -17.0, -130.8, 6.0) && walk_to(ring, -19.1, -133.0, 6.0) &&
+                    walk_to(ring, -19.1, -148.6, 8.0) && walk_to(ring, -20.9, -148.9, 4.0, 0.08),
+                "C6 falsifier: the walk round the kentledge to under the fascia");
+        require(!c6_caught(ring, 0.0, -1.0) && ring.snapshot().player_position.y < 243.5,
+                "C6 falsifier: from the ring, a jump under the platform's fascia must catch nothing");
+    }
+    // The run carries the leap: stood at the kentledge's edge, a jump pushing
+    // north the whole way falls short, under the fascia, onto the band alive.
+    {
+        Simulation stand(InitialSpawn::Ring242South);
+        (void)stand.advance_frame(1.0);
+        require(walk_to(stand, -17.0, -130.8, 6.0) && walk_to(stand, -20.9, -133.0, 6.0) &&
+                    walk_to(stand, -20.9, -141.2, 6.0, 0.06) &&
+                    c4_mantle(stand, 0.0, -1.0, 244.3, "falsifier kentledge") &&
+                    walk_to(stand, -20.9, -144.65, 3.0, 0.05),
+                "C6 falsifier: to the kentledge's edge");
+        (void)stand.set_facing(0.0, -1.0);
+        (void)stand.advance_frame(0.5);
+        (void)stand.request_jump();
+        require(!hold_stick(stand, 0.0, -1.0, 0.0, -1.0, 2.0,
+                            [](const scraperx::sim::Snapshot &state) {
+                                return state.traversal_state == scraperx::sim::TraversalState::Hanging;
+                            }),
+                "C6 falsifier: a standing leap from the kentledge's edge must not reach the platform's lip");
+        (void)stand.advance_frame(1.0);
+        require(stand.snapshot().death_count == 0 && stand.snapshot().player_grounded &&
+                    stand.snapshot().player_position.y < 243.5,
+                "C6 falsifier: the short leap lands on the 242 ring alive");
+    }
+    std::cout << "PASS scraperx_sim C6: seconds=" << top.simulation_time_seconds - start
+              << " top_y=" << top.player_position.y << " leap_caught=" << seen.leap_caught
+              << " balanced_out=" << seen.balanced_out
+              << " balanced_up=" << seen.balanced_up << '\n';
+}
+
 // The owner's law for this world (plan §2.6 rule 10): the initial state
 // determines the final state. The same start and the same inputs, twice: up
 // C5 on player inputs (walk, vault, crawl, sprint, leap, hang, climb), then O
@@ -5197,6 +5362,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "slingshot") {
         run_slingshot();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "C6") {
+        run_c6();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -7150,6 +7320,7 @@ int main() {
     run_determinism();
     run_slingshot();
     run_swing();
+    run_c6();
     run_ascent();
 
     return EXIT_SUCCESS;

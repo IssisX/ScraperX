@@ -4,6 +4,7 @@
 #include "sim/mechanism_kit.hpp"
 #include "sim/slingshot.hpp"
 #include "sim/swing.hpp"
+#include "sim/climb_c6.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
 #error "WO-003 requires the pinned Jolt physics substrate"
@@ -175,6 +176,9 @@ constexpr float kHangMinimumRiseAboveCentre = 0.45F;
 constexpr float kHangMaximumRiseAboveCentre = 1.35F;
 constexpr float kHangDropBelowLedge = 1.05F;
 constexpr float kHangWallGap = 0.06F;
+// From the hold, kHangWallGap off the wall, to where the climb-up stands the
+// body, kLandingInset past it: the ground a climb-up covers from the hold.
+constexpr double kHangHoldToLandingMeters = kPlayerRadius + kHangWallGap + kLandingInset;
 constexpr float kHangMaximumClimbSpeed = 0.2F;
 constexpr double kHangIntentDotThreshold = 0.3;
 // A caught ledge pulls the body in to its hold at this speed, never in one
@@ -689,6 +693,9 @@ private:
     case scraperx::sim::InitialSpawn::Deck706:
         // On the 706 deck by where C5's plant floor opens off its east edge.
         return {-3.5, 707.05, -147.5};
+    case scraperx::sim::InitialSpawn::Ring242South:
+        // On the 242 ring's south side, where the swing sets its rider down.
+        return {-15.0, 243.15, -129.3};
     case scraperx::sim::InitialSpawn::Deck728:
         // On the 728 deck by C5's last mantle, north-east of stage O's cab.
         return {9.0, 729.05, -144.0};
@@ -1042,6 +1049,8 @@ public:
         slingshot_ = std::make_unique<Slingshot>(physics_system_, *kit_, player_id_);
         // AS-012, the swing off the 220 ring's south face.
         swing_ = std::make_unique<Swing>(physics_system_, *kit_, player_id_);
+        // C6, the west band's climb from the 242 ring to the 264 ring.
+        ClimbC6::build(*kit_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -2687,7 +2696,13 @@ private:
         traversal_local_start_ = to_support_local(bodies, traversal_body_, origin);
         traversal_local_approach_ = traversal_local_start_;
         traversal_progress_ = 0.0;
-        traversal_duration_ = kMantleDurationSeconds;
+        // Begun while the hands still draw the body in from where they caught
+        // (a running leap's catch is made at full reach), the climb-up has
+        // that much further to go: it takes that much longer, so it moves no
+        // faster than one begun from the hold.
+        traversal_duration_ =
+            kMantleDurationSeconds *
+            (1.0 + static_cast<double>(traversal_entry_offset_.Length()) / kHangHoldToLandingMeters);
         traversal_approach_fraction_ = 0.0;
         traversal_approach_entry_slope_ = 0.0F;
         traversal_stall_ticks_ = 0;

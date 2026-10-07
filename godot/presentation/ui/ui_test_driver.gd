@@ -79,6 +79,9 @@ const SCENARIOS := {
 	# from grade arrive: out the gangway into the seat, STRAP IN, KICK THE
 	# TRIP, the ram's blow and the swing up to the 242 ring, UNBUCKLE and off.
 	"touch_swing": 16,
+	# C6, the west band, from the 242 ring where the swing sets its rider down
+	# to the 264 ring: no ladder, no standpipe.
+	"touch_c6": 35,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -103,6 +106,9 @@ const TRAVERSAL_CLIMBING := 4
 const TOWER_ENTITY := 11
 # AS-010's frame: the 662 deck and the 684 deck.
 const SERVICE_FRAME_ENTITY := 1012
+# The world's solids, the rings among them: what C6's climber stands on at the
+# 264 ring.
+const RING_264_ENTITY := 51
 # The walker's braking with nothing pressed, as the native has it: 22 m/s^2
 # on the ground, 14 in the air. Keys walking to a point let go by the weaker;
 # with a load in the hands, which caps it (5.3 for D's 50 kg spool), by less.
@@ -235,6 +241,8 @@ func _run() -> void:
 			ok = await _slingshot(InputRouter.Device.TOUCH)
 		"touch_swing":
 			ok = await _swing(InputRouter.Device.TOUCH)
+		"touch_c6":
+			ok = await _c6(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1776,6 +1784,103 @@ func _swing(device: int) -> bool:
 	_detail = "ring242_y=%.2f apex_floor=%.2f held_floor=%.2f peak_g=%.1f seconds=%.1f" % [at_end.y,
 		float(state["apex_floor_y"]), float(state["seat_floor_y"]), float(state["peak_seat_accel_mps2"]) / 9.81,
 		float(int(_native().get_tick_index()) - started) / 90.0]
+	return true
+
+
+# C6, the west band, the way its native climb takes it: from the 242 ring onto
+# the kentledge, a run along it and a leap from its striped end over the gap,
+# caught by the hands at the platform's lip, west along the girder over the
+# void on the balance, a hang up onto the outrigger's end and back east along
+# it, north up the rising girder on the balance, a hang up onto the
+# crossbeam's end and east along it into the tower, up onto the block, and
+# from it onto the 264 ring.
+func _c6(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var body := _watch_body()
+	if not (await _go(device, Vector2(-17.0, -130.8), 0.15, 8.0) and \
+			await _go(device, Vector2(-20.9, -133.0), 0.15, 8.0) and \
+			await _go(device, Vector2(-20.9, -141.2), 0.06, 6.0)):
+		return _fail("C6: the walk to the kentledge stalled at %s" % str(_position()))
+	if not await _c4_mantle(device, Vector2(0.0, -1.0), 244.3, "the kentledge"):
+		return false
+	# A run along its top and the leap from its striped end, pushing on until
+	# the hands have the platform's lip.
+	await _face(Vector2(0.0, -1.0))
+	await _seconds(0.2)
+	_move(device, 1.0)
+	if not await _wait_until(func() -> bool: return _position().z <= -144.4, 2.0):
+		_move(device, 0.0)
+		return _fail("C6: the run along the kentledge stalled at %s" % str(_position()))
+	await _pose("c6_takeoff")
+	_jump(device)
+	var caught: bool = await _wait_until(
+		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_HANGING, 2.0)
+	_move(device, 0.0)
+	if not caught:
+		return _fail("C6: the leap off the kentledge never caught the platform's lip (at %s)" % str(_position()))
+	await _pose("c6_caught")
+	if not await _climb_up(device):
+		return _fail("C6: CLIMB UP not offered hanging from the platform's lip")
+	if not await _wait_until(func() -> bool: return _standing_above(247.8), 2.5):
+		return _fail("C6: the climb up onto the platform did not land (at %s)" % str(_position()))
+	await _seconds(0.4)
+	# West along the girder over the void, on the balance, to its landing.
+	if not (await _go(device, Vector2(-21.6, -151.6), 0.08, 4.0) and \
+			await _go(device, Vector2(-23.5, -151.6), 0.1, 4.0)):
+		return _fail("C6: the step onto the girder out stalled at %s" % str(_position()))
+	if not bool(_ctx()["balancing"]):
+		return _fail("C6: not balancing on the girder out at %s" % str(_position()))
+	await _pose("c6_girder_out")
+	if not (await _go(device, Vector2(-29.6, -151.6), 0.1, 8.0) and \
+			await _go(device, Vector2(-30.1, -151.6), 0.08, 3.0)):
+		return _fail("C6: the walk out along the girder stalled at %s" % str(_position()))
+	# Up onto the outrigger's end, and back east along it.
+	await _go(device, Vector2(-29.3, -151.6), 0.05, 2.0)
+	if not await _c4_hang_up(device, Vector2(1.0, 0.0), 251.1, "the outrigger"):
+		return false
+	if not await _go(device, Vector2(-21.2, -151.6), 0.1, 8.0):
+		return _fail("C6: the walk east along the outrigger stalled at %s" % str(_position()))
+	# North up the rising girder, on the balance, to the platform at its head.
+	if not await _go(device, Vector2(-21.2, -153.5), 0.1, 4.0):
+		return _fail("C6: the step onto the rising girder stalled at %s" % str(_position()))
+	if not bool(_ctx()["balancing"]):
+		return _fail("C6: not balancing on the rising girder at %s" % str(_position()))
+	await _pose("c6_girder_up")
+	if not await _go(device, Vector2(-21.2, -162.6), 0.1, 10.0):
+		return _fail("C6: the walk up the rising girder stalled at %s" % str(_position()))
+	# Up onto the crossbeam's end, and east along it into the tower.
+	if not await _go(device, Vector2(-19.75, -163.0), 0.06, 4.0):
+		return _fail("C6: the step to the crossbeam's end stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(1.0, 0.0), 258.4, "the crossbeam"):
+		return false
+	if not (await _go(device, Vector2(-16.4, -163.0), 0.1, 6.0) and \
+			await _go(device, Vector2(-16.4, -162.8), 0.05, 2.0)):
+		return _fail("C6: the walk along the crossbeam stalled at %s" % str(_position()))
+	# Up onto the block, and from its west edge onto the 264 ring.
+	if not await _c4_hang_up(device, Vector2(0.0, -1.0), 261.4, "the block"):
+		return false
+	if not await _go(device, Vector2(-16.9, -164.5), 0.05, 3.0):
+		return _fail("C6: the walk to the block's west edge stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(-1.0, 0.0), 264.7, "the 264 ring"):
+		return false
+	if not await _go(device, Vector2(-19.5, -164.5), 0.1, 3.0):
+		return _fail("C6: the walk onto the 264 ring stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	await _pose("c6_264")
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	if int(_native().get_support_entity_id()) != RING_264_ENTITY or not _standing_above(264.9):
+		return _fail("C6: not standing on the 264 ring (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	_detail = "ring264_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
 	return true
 
 

@@ -21,6 +21,7 @@ add_library(scraperx_sim STATIC
     src/sim/slingshot.cpp
     src/sim/slingshot_model.cpp
     src/sim/swing.cpp
+    src/sim/climb_c6.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_wet_isolation.cpp
     src/sim/band_plate_shop.cpp

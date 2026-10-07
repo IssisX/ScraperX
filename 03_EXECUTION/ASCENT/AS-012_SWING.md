@@ -90,4 +90,4 @@ both hung on arms; the look is a jib and gangway out from the tower's face. No l
   back to the 220 ring has the slingshot (a 2.9 s draw lands on the 242 deck) or `AS-007`'s ladder
   (not canonical); dying restores the last commit, machines included.
 - No sound of its own yet for the ram, the blow or the rack.
-- Above the 242 ring the next stage is unbuilt.
+- Above the 242 ring: C6, a climb on the ring's west band to the 264 ring (plan §3).
