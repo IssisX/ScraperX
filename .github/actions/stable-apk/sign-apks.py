@@ -44,14 +44,26 @@ def main():
                     '-alias', 'scraperx-dashboard', '-storepass:env', 'SCRAPERX_APK_KEYSTORE_PASSWORD'])
         if hashlib.sha256(certificate).hexdigest() != CERTIFICATE:
             raise RuntimeError('Signing key differs from the dashboard; no APKs changed')
+        legacy_signer, lineage_options, verify_options = [], [], []
+        signing_lineage = [CERTIFICATE]
+        if label == 'ChatGPT':
+            lineage_spec = importlib.util.spec_from_file_location('create_lineage', Path(__file__).with_name('create-lineage.py'))
+            lineage = importlib.util.module_from_spec(lineage_spec)
+            lineage_spec.loader.exec_module(lineage)
+            lineage_file = root/'chatgpt.lineage'
+            legacy = lineage.create(tools/'apksigner', key, lineage_file)
+            legacy_signer = ['--ks', str(legacy), '--ks-key-alias', 'androiddebugkey', '--ks-pass', 'pass:android', '--key-pass', 'pass:android', '--next-signer']
+            lineage_options = ['--lineage', str(lineage_file), '--rotation-min-sdk-version', '28']
+            verify_options = ['--min-sdk-version', '28']
+            signing_lineage = [lineage.LEGACY_CERT, CERTIFICATE]
         for index, path in enumerate(files):
             unsigned, aligned, signed = [root/(str(index)+suffix) for suffix in ('-unsigned.apk', '-aligned.apk', '-signed.apk')]
             version = apk.prepare(path, unsigned, now=now)
             run(str(tools/'zipalign'), '-p', '-f', '4', str(unsigned), str(aligned))
-            run(str(tools/'apksigner'), 'sign', '--ks', str(key), '--ks-key-alias', 'scraperx-dashboard',
+            run(str(tools/'apksigner'), 'sign', *legacy_signer, '--ks', str(key), '--ks-key-alias', 'scraperx-dashboard',
                 '--ks-pass', 'env:SCRAPERX_APK_KEYSTORE_PASSWORD', '--key-pass', 'env:SCRAPERX_APK_KEYSTORE_PASSWORD',
-                '--out', str(signed), str(aligned))
-            verification = run(str(tools/'apksigner'), 'verify', '--print-certs', str(signed))
+                *lineage_options, '--out', str(signed), str(aligned))
+            verification = run(str(tools/'apksigner'), 'verify', '--print-certs', *verify_options, str(signed))
             certs = re.findall(r'certificate SHA-256 digest:\s*([0-9a-f]{64})', verification)
             if certs != [CERTIFICATE]:
                 raise RuntimeError('Unexpected final APK signer')
@@ -64,8 +76,20 @@ def main():
             path.write_bytes(signed.read_bytes())
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
             (path.parent/'SHA256SUMS.txt').write_text(digest+'  '+path.name+'\n')
+            (path.parent/'STABLE-SIGNING.txt').write_text(verification)
+            checkpoint = path.parent/'CHECKPOINT.txt'
+            if checkpoint.exists():
+                lines = checkpoint.read_text().splitlines()
+                original_signer = next((line.split('=', 1)[1] for line in lines if line.startswith('signer_sha256=')), None)
+                lines = [line for line in lines if not line.startswith(('signer_sha256=', 'version_code=', 'apk_sha256='))]
+                if original_signer:
+                    lines.append('source_signer_sha256='+original_signer)
+                lines.extend(['signer_sha256='+CERTIFICATE, 'version_code='+str(version['version_code']), 'apk_sha256='+digest])
+                checkpoint.write_text('\n'.join(lines)+'\n')
             (path.parent/'STABLE-APK.json').write_text(json.dumps(dict(version, source_sha=os.environ['GITHUB_SHA'],
-                signing_certificate_sha256=CERTIFICATE, package_id=package, apk_sha256=digest), indent=2)+'\n')
+                signing_certificate_sha256=CERTIFICATE, signing_lineage=signing_lineage,
+                rotation_min_sdk_version=28 if label == 'ChatGPT' else None,
+                package_id=package, apk_sha256=digest), indent=2)+'\n')
             print(f'{path}: stable signer verified; versionCode={version["version_code"]}')
 
 

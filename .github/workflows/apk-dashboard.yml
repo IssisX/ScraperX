@@ -198,6 +198,9 @@ jobs:
                   $b.source_artifact_id == $artifact_id and
                   $b.signing_certificate_sha256 == $cert and
                   $b.version_policy == "monotonic-v1" and
+                  ($label != "ChatGPT" or $b.signing_lineage == [
+                    "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4", $cert
+                  ]) and
                   $b.package_id == $package and $b.app_label == $app_label and
                   $b.file == $file and
                   ([$release[0].assets[] | select(
@@ -247,15 +250,27 @@ jobs:
             python3 "${GITHUB_WORKSPACE:-.}/.github/actions/stable-apk/prepare-apk.py" "$apk" "$unsigned" \
               --previous-code "$previous_code" > "${tmp}/version.json"
             "${ZIPALIGN}" -p -f 4 "$unsigned" "$aligned"
-            "${APKSIGNER}" sign \
+            local legacy_signer=() lineage_options=() verify_options=()
+            local signing_lineage
+            signing_lineage="$(jq -cn --arg cert "$configured_cert" '[$cert]')"
+            if [[ "$label" == "ChatGPT" ]]; then
+              local legacy_key="${GITHUB_WORKSPACE:-.}/.github/actions/stable-apk/legacy-chatgpt-debug.keystore"
+              python3 "${GITHUB_WORKSPACE:-.}/.github/actions/stable-apk/create-lineage.py" \
+                "$APKSIGNER" "$KEYSTORE" "${tmp}/chatgpt.lineage"
+              legacy_signer=(--ks "$legacy_key" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --next-signer)
+              lineage_options=(--lineage "${tmp}/chatgpt.lineage" --rotation-min-sdk-version 28)
+              verify_options=(--min-sdk-version 28)
+              signing_lineage="$(jq -cn --arg cert "$configured_cert" '["9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",$cert]')"
+            fi
+            "${APKSIGNER}" sign "${legacy_signer[@]}" \
               --ks "${KEYSTORE}" \
               --ks-key-alias "${SIGNING_ALIAS}" \
               --ks-pass env:SCRAPERX_APK_KEYSTORE_PASSWORD \
               --key-pass env:SCRAPERX_APK_KEYSTORE_PASSWORD \
-              --out "$target" "$aligned"
+              "${lineage_options[@]}" --out "$target" "$aligned"
 
             local verify_log="${tmp}/apksigner.txt"
-            "${APKSIGNER}" verify --verbose --print-certs "$target" | tee "$verify_log"
+            "${APKSIGNER}" verify --verbose --print-certs "${verify_options[@]}" "$target" | tee "$verify_log"
             local cert_sha
             cert_sha="$(sed -n 's/^.*certificate SHA-256 digest:[[:space:]]*//p' "$verify_log" | head -n 1 | tr '[:upper:]' '[:lower:]')"
             test -n "$cert_sha"
@@ -293,6 +308,7 @@ jobs:
               --arg package_id "$expected_package" \
               --arg app_label "$expected_label" \
               --arg version_code "$version_code" \
+              --argjson signing_lineage "$signing_lineage" \
               --argjson bytes "$apk_bytes" \
               --argjson current "$(test "$source_sha" = "$current_sha" && echo true || echo false)" \
               '{
@@ -312,6 +328,7 @@ jobs:
                 app_label:$app_label,
                 version_code:$version_code,
                 version_policy:"monotonic-v1",
+                signing_lineage:$signing_lineage,
                 bytes:$bytes
               }')"
 

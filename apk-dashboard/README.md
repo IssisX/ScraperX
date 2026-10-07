@@ -99,3 +99,23 @@ The installable dashboard is hosted at https://scraperx-apks.stix-ww4.chatgpt.si
 GitHub registers the shared build workflow under the name in main, which the publisher's trigger omitted. The trigger now includes that name and the branch display names. A quarter-hour schedule remains a fallback; unchanged checks still do not republish assets.
 
 The dashboard APKs retain the existing 911843... certificate. The shared stable-apk action gives direct build artifacts the same key before distribution, rejects changed keys, preserves game payloads, and sets an increasing Android version. The publisher verifies that version after signing and carries the monotonic policy in provenance. No old signing-key migration bypass is added.
+
+### ChatGPT signing history
+
+The already-public ChatGPT CI key (certificate 9a06889e...) is retained solely to
+create a proof of rotation to the existing protected 91184379... dashboard key.
+The ChatGPT APK carries that verified signing lineage, with installed-data
+capability, for Android 9+ including the owner's Fold. This accepts installations
+from either known distribution channel without discarding game data. The final
+signer stays 91184379...; older exported logs remain source evidence and final
+CHECKPOINT.txt/STABLE-APK.json/STABLE-SIGNING.txt report the distributed APK.
+Pre-Android-9 signature schemes use the original CI key as required by Android's
+rotation tooling; this bridge's in-place compatibility claim is Android 9+.
+The October 2 certificate 22d547... is not recoverable and is not part of this
+lineage. Its previously approved one-time migration remains historical.
+
+Live publisher run 37638056359 passed 24 checks and delivered ChatGPT 0beb314d73ed,
+Claude 9e17403dc121, Grok 2a7669cc662e, and the latest successful Gemini build.
+Run 37638638241 was triggered by an actual completed model workflow and skipped
+its failed source, verifying the formerly missing completion routing. These
+receipts establish publication and routing, not installation on a phone.

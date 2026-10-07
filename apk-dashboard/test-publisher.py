@@ -67,6 +67,8 @@ s.setdefault("android", []).append([tool] + a)
 p.write_text(json.dumps(s))
 if tool == "zipalign":
     shutil.copyfile(a[-2], a[-1])
+elif tool == "apksigner" and a[0] == "rotate":
+    pathlib.Path(a[a.index("--out") + 1]).write_bytes(b'fixture-lineage')
 elif tool == "apksigner" and a[0] == "sign":
     shutil.copyfile(a[-1], a[a.index("--out") + 1])
 elif tool == "apksigner" and a[0] == "verify":
@@ -124,7 +126,8 @@ class PublisherTests(unittest.TestCase):
             builds[label] = dict(status="ok", branch=branch, source_sha=sha, source_artifact_id=i,
                                  signing_certificate_sha256=self.cert, package_id="com.cory.scraperx." + label.lower(),
                                  app_label="ScraperX-" + label, file=name, bytes=1234567, apk_sha256=digest,
-                                 source_is_current_head=True, version_code="1", version_policy="monotonic-v1")
+                                 source_is_current_head=True, version_code="1", version_policy="monotonic-v1",
+                                 signing_lineage=(["9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",self.cert] if label=="ChatGPT" else [self.cert]))
             assets.append(dict(name=name, state="uploaded", size=1234567, digest="sha256:" + digest))
             runs[branch] = [dict(id=i, head_sha=sha, html_url="https://github.com/fixture/run/" + str(i),
                                  updated_at="2026-10-01T12:00:00Z")]
