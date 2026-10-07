@@ -28,14 +28,17 @@ using kit::Part;
 // yard and north to the tower, and west of the cage an empty bucket hangs at
 // the top of its own guide, held by a catch. One rope runs from the bucket's
 // bail over two head sheaves and down to the cage's eye. Empty, the bucket
-// (150 kg) is lighter than the cage (300 kg). A chain hangs inside the cage
-// from the valve's lever over it: a rider who takes hold of it pulls it down,
-// the lever opens the tank's valve and lets the catch go, and water runs into
-// the bucket until it outweighs the cage with the rider in it. Then the bucket
-// falls 21.8 m and the cage rides 21.8 m to a gangway onto deck 2 under a
-// brake-only governor. At the foot of its guide the bucket lands on a striker
-// that opens its drain: emptied, it is lighter than the cage again, and the
-// cage comes back down to the yard by itself.
+// (150 kg) is lighter than the cage (300 kg). In the middle of the cage's
+// floor a scale plate hangs on a line from the valve's lever, 0.1 m proud of
+// the floor: nothing to pull (plan rule 11). A rider who stands on it weighs
+// it down onto the floor, and the line turns the lever: it lets the catch go,
+// opens the tank's valve, and a pawl drops behind it and holds it open. Water
+// runs into the bucket until it outweighs the cage with the rider in it. Then
+// the bucket falls 21.8 m, knocking the pawl out as it leaves the head, and
+// the cage rides 21.8 m to a gangway onto deck 2 under a brake-only governor.
+// At the foot of its guide the bucket lands on a striker that opens its
+// drain: emptied, it is lighter than the cage again, and the cage comes back
+// down to the yard by itself.
 constexpr float kDeck2Top = 22.00F;
 
 constexpr float kCageX = 10.00F;
@@ -107,13 +110,24 @@ constexpr float kLeverTravel = 0.80F;
 constexpr float kCatchRelease = 0.15F;
 constexpr float kValveShut = 0.06F;
 constexpr float kValveOpen = 0.24F;
-constexpr float kChainTop = kCageFloorTop + 1.95F;   // the handle's top, at rest
-// The chain runs straight down from the arm's end past a guide point 1.3 m
-// under it, so every pull turns the lever, up to its dead point (0.50 rad,
-// 0.97 m of pull); above a rider's head at the top of the ride, and inside
-// the cage's open roof.
-constexpr float kChainGuideY = 24.90F;
-constexpr float kHandleHalfY = 0.04F;
+// The pawl drops behind the lever just past full open, and the bucket knocks
+// it out as it leaves the head, 0.15 m down.
+constexpr float kValveLatch = 0.25F;
+constexpr float kPawlKnockTravel = -0.15F;
+// The scale plate in the cage's floor, 1.2 m square, hangs 0.1 m proud of
+// the floor on a line that turns the lever by a crank 0.38 m out along its
+// arm: weighed down onto the floor, the plate draws 0.1 m of line, which
+// turns the lever 0.26 rad, past the pawl. Its 15 kg alone does not turn it
+// (the lever's counterweight holds 150 N·m); a rider's weight does.
+constexpr float kPlateHalf = 0.60F;
+constexpr float kPlateHalfY = 0.03F;
+constexpr float kPlateProud = 0.10F;
+constexpr float kPlateMassKg = 15.0F;
+constexpr float kPlateCrank = 0.38F;
+// The line leaves the crank downward over a sheave under the lever, runs
+// east under the head to a sheave over the plate's north-east corner, and
+// drops through the cage's open roof to an eye on the plate there.
+constexpr float kLineSheaveY = 25.40F;
 
 // The gangway from the cage's north side at the top onto deck 2.
 constexpr float kGangwayHalfX = 1.40F;
@@ -191,8 +205,10 @@ constexpr float kGangwaySouthZ = -122.30F;
 
 
 // A handle hanging with its top at `top` on a chain from above: a bar along
-// z, across the view of a rider facing the lever's arm, so both hands close on
-// it; hazard-striped, apart from the cage's yellow frame.
+// z, both hands close on it; hazard-striped. S2's and S3's trips still hang
+// from these (plan rule 11: each to be replaced in its turn).
+constexpr float kHandleHalfY = 0.04F;
+
 kit::BodyIndex add_chain_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::RVec3 top) {
     const kit::BodyIndex handle = kit.add_body(
         entity, {box(JPH::Vec3(0.04F, kHandleHalfY, 0.22F), JPH::Vec3::sZero(), Material::Hazard)},
@@ -200,6 +216,16 @@ kit::BodyIndex add_chain_handle(kit::Kit &kit, const std::uint64_t entity, const
     kit.set_carry(handle, kit::CarryKind::Handle, JPH::Vec3(0.0F, kHandleHalfY, 0.0F));
     kit.set_damping(handle, 1.5F, 1.5F);
     return handle;
+}
+
+// The scale plate about its centre: a yellow tread with an eye at its
+// north-east corner where the line is made fast.
+[[nodiscard]] std::vector<Part> plate_parts() {
+    return {
+        box(JPH::Vec3(kPlateHalf, kPlateHalfY, kPlateHalf), JPH::Vec3::sZero(), Material::Yellow),
+        box(JPH::Vec3(0.05F, 0.05F, 0.05F), JPH::Vec3(kPlateHalf - 0.08F, kPlateHalfY + 0.05F, -(kPlateHalf - 0.08F)),
+            Material::Hazard),
+    };
 }
 
 void build_s1_headframe(std::vector<Part> &frame, const JPH::RVec3 cage_sheave,
@@ -470,8 +496,9 @@ void build_s1(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
     build_s1_headframe(frame, cage_sheave, bucket_sheave);
     build_yard_traversal(frame);
 
-    // ---- the valve's lever, its chain, the valve and the catch -----------------
-    // About -z with the arm east, so the chain pulling its end down is positive.
+    // ---- the valve's lever, the scale plate, the valve, the catch, the pawl -----
+    // About -z with the arm east, so the line pulling its crank down is
+    // positive.
     stack.s1_lever_body = kit.add_body(
         Sim::kStackS1LeverEntityId,
         {box(kLeverArmHalf, JPH::Vec3(0.5F * kLeverArm, 0.0F, 0.0F), Material::Hazard),
@@ -479,13 +506,34 @@ void build_s1(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
         kLeverPivot, JPH::Quat::sIdentity(), kLeverMassKg, 0.5F);
     stack.s1_lever = kit.add_lever(stack.s1_lever_body, kLeverPivot, -JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(),
                                    0.0F, kLeverTravel);
-    const JPH::RVec3 lever_end = kLeverPivot + JPH::RVec3(kLeverArm, 0.0, 0.0);
-    const JPH::RVec3 chain_top(lever_end.GetX(), kChainTop, lever_end.GetZ());
-    stack.s1_chain = add_chain_handle(kit, Sim::kStackS1ChainEntityId, chain_top);
-    const JPH::RVec3 chain_sheave(lever_end.GetX(), kChainGuideY, lever_end.GetZ());
-    (void)kit.add_trip_line(stack.s1_lever_body, JPH::Vec3(kLeverArm, 0.0F, 0.0F), stack.s1_chain,
-                            JPH::Vec3(0.0F, kHandleHalfY, 0.0F), chain_sheave, chain_sheave);
+    // The plate, proud of the cage's floor on its own vertical guide; it rides
+    // up and down with the cage, on the floor or under a rider's feet.
+    const JPH::RVec3 plate_at(kCageX, kCageFloorTop + kPlateProud + kPlateHalfY, kCageZ);
+    stack.s1_plate = kit.add_body(Sim::kStackS1PlateEntityId, plate_parts(), plate_at, JPH::Quat::sIdentity(),
+                                  kPlateMassKg, 0.9F);
+    stack.s1_plate_guide = kit.add_guide(stack.s1_plate, JPH::Vec3::sAxisY(), -kPlateProud, kCageTravel + 0.2F,
+                                         0.0F, 0.0F, 0.0F);
+    const JPH::Vec3 plate_eye(kPlateHalf - 0.08F, kPlateHalfY + 0.10F, -(kPlateHalf - 0.08F));
+    const JPH::RVec3 crank = kLeverPivot + JPH::RVec3(kPlateCrank, 0.0, 0.0);
+    const JPH::RVec3 crank_sheave(crank.GetX(), kLineSheaveY, crank.GetZ());
+    const JPH::RVec3 plate_sheave = plate_at + JPH::RVec3(plate_eye.GetX(), 0.0, plate_eye.GetZ());
+    (void)kit.add_trip_line(stack.s1_lever_body, JPH::Vec3(kPlateCrank, 0.0F, 0.0F), stack.s1_plate, plate_eye,
+                            crank_sheave, JPH::RVec3(plate_sheave.GetX(), kLineSheaveY, plate_sheave.GetZ()));
     stack.s1_catch = kit.add_catch(stack.s1_bucket, stack.s1_lever, kCatchRelease, 0.05F, true);
+    stack.s1_pawl = kit.add_latch(stack.s1_lever, kValveLatch, stack.s1_bucket_guide, kPawlKnockTravel);
+    // The pawl, on a strap from the head beside the lever's arm, clear of its
+    // swing, and its trip rod down to a foot just over the bucket's bail at
+    // the head: the bucket falling away from under it knocks the pawl out.
+    {
+        const JPH::Vec3 pivot(kLeverPivot);
+        frame.push_back(span({pivot.GetX() + 0.50F, pivot.GetY() - 0.30F, pivot.GetZ() + 0.09F},
+                             {pivot.GetX() + 0.62F, pivot.GetY() + 0.02F, pivot.GetZ() + 0.15F}, Material::Hazard));
+        frame.push_back(span({pivot.GetX() + 0.53F, pivot.GetY() + 0.02F, pivot.GetZ() + 0.11F},
+                             {pivot.GetX() + 0.59F, kHeadY - 0.20F, pivot.GetZ() + 0.13F}, Material::Steel));
+        frame.push_back(strut(JPH::Vec3(pivot.GetX() + 0.56F, pivot.GetY() - 0.30F, pivot.GetZ() + 0.12F),
+                              JPH::Vec3(kBucketX + 0.05F, kBucketFloorY + kBailY + 0.10F, kBucketZ + 0.30F), 0.02F,
+                              Material::Steel));
+    }
     stack.s1_tank = kit.add_pool(kTankMin, kTankMax, kTankWaterKg);
     stack.s1_fill = kit.add_pipe(stack.s1_tank, kTankMin.GetY(), kit::PoolIndex{}, 0.0F, kSpout,
                                  kFillArea, stack.s1_lever, kValveShut, kValveOpen);

@@ -291,10 +291,12 @@ struct Stack final {
     kit::BodyIndex s1_cage;
     kit::BodyIndex s1_bucket;
     kit::BodyIndex s1_lever_body;
-    kit::BodyIndex s1_chain;
+    kit::BodyIndex s1_plate;
     kit::BodyIndex s1_striker_body;
     kit::GuideIndex s1_cage_guide;
     kit::GuideIndex s1_bucket_guide;
+    kit::GuideIndex s1_plate_guide;
+    kit::LatchIndex s1_pawl;
     kit::RopeIndex s1_rope;
     kit::LeverIndex s1_lever;
     kit::LeverIndex s1_striker;

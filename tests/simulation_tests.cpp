@@ -3948,47 +3948,37 @@ constexpr double kS1FloorTopUp = 22.05;
 constexpr double kDeck2Top = 22.0;
 constexpr double kDeck4Top = 44.0;
 
-// Where S1's valve chain hangs at rest, inside the cage at grade: its
-// handle's centre.
-constexpr double kS1ChainX = 9.50;
-constexpr double kS1ChainY = 2.16;
-constexpr double kS1ChainZ = -120.10;
+// S1's scale plate, in the middle of the cage's floor.
+constexpr double kS1PlateX = 10.00;
+constexpr double kS1PlateZ = -120.80;
 // Water that balances the cage and an 85 kg rider against the empty bucket.
 constexpr double kS1BalanceKg = kS1CageMassKg + 85.0 - kS1BucketMassKg;
 
 // From wherever the player stands in the yard, in through S1's open south
-// side to stand beside the valve chain hanging inside the cage: face it and
-// take hold. Hanging above the hands, it comes down to them, and that pulls
-// the valve's lever down. True once the chain is in the hands.
-bool take_s1_chain(scraperx::sim::Simulation &simulation) {
-    using scraperx::sim::Simulation;
-    if (!(walk_to(simulation, 10.0, -117.3, 30.0) && walk_to(simulation, 10.0, kS1ChainZ, 6.0, 0.08))) {
+// side and onto the scale plate in the middle of the cage's floor. Nothing is
+// pressed: the rider's weight takes the plate down onto the floor, and its
+// line turns the valve's lever until the pawl drops behind it. True once the
+// pawl holds the valve open.
+bool board_s1(scraperx::sim::Simulation &simulation) {
+    if (!(walk_to(simulation, 10.0, -117.3, 30.0) && walk_to(simulation, kS1PlateX, kS1PlateZ, 6.0, 0.08))) {
         return false;
     }
-    (void)simulation.set_facing(-1.0, 0.0);
-    (void)simulation.advance_frame(0.5);
-    const auto facing = simulation.snapshot();
-    if (facing.carry_target_entity_id != Simulation::kStackS1ChainEntityId || facing.carry_target_kind != 2) {
-        return false;
-    }
-    (void)simulation.request_pick_up();
-    (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
-    return simulation.snapshot().carrying_entity_id == Simulation::kStackS1ChainEntityId;
+    return advance_until(
+        simulation, [&](const scraperx::sim::Snapshot &) { return simulation.stack_state().s1_valve_pawled; }, 1.0);
 }
 
-// Whether S1's chain hangs where a rider at grade can take it again.
-bool s1_chain_at_rest(const scraperx::sim::Simulation &simulation) {
-    using scraperx::sim::Simulation;
-    const auto at = simulation.kit_body_position(simulation.kit_body_index(Simulation::kStackS1ChainEntityId));
-    return std::abs(at.x - kS1ChainX) <= 0.10 && std::abs(at.y - kS1ChainY) <= 0.06 &&
-           std::abs(at.z - kS1ChainZ) <= 0.10 && simulation.snapshot().carrying_entity_id == 0;
+// Whether S1 waits as a rider finds it: the plate hanging proud of the floor,
+// the pawl out and the valve shut.
+bool s1_plate_at_rest(const scraperx::sim::Simulation &simulation) {
+    const auto stack = simulation.stack_state();
+    return std::abs(stack.s1_plate_travel) <= 0.01 && !stack.s1_valve_pawled && stack.s1_valve_angle < 0.03;
 }
 
-// What one ride of S1 saw, from taking hold of the chain at grade to the top.
+// What one ride of S1 saw, from stepping onto the plate at grade to the top.
 struct S1Ride final {
     bool reached_top = false;
     bool rode_on_cage = true;
-    double seconds = 0.0;          // from taking hold to the top
+    double seconds = 0.0;          // from the pawl dropping to the top
     double lift_water_kg = 0.0;    // in the bucket as the cage left the yard
     double shut_travel = -1.0;     // the cage's travel when the valve shut
     double shut_water_kg = 0.0;
@@ -3999,10 +3989,10 @@ struct S1Ride final {
     double worst_margin_j = std::numeric_limits<double>::infinity();
 };
 
-// Holding the chain, with no other input, until the cage stops at the top of
-// its travel (or `seconds` pass); then let go. Every tick, the energy the
-// bucket and the water in it have released falling is compared with what the
-// cage and the rider have gained rising.
+// Standing on the plate, with no input, until the cage stops at the top of
+// its travel (or `seconds` pass). Every tick, the energy the bucket and the
+// water in it have released falling is compared with what the cage and the
+// rider have gained rising.
 S1Ride ride_s1(scraperx::sim::Simulation &simulation, const double seconds) {
     using scraperx::sim::Simulation;
     S1Ride ride;
@@ -4032,8 +4022,10 @@ S1Ride ride_s1(scraperx::sim::Simulation &simulation, const double seconds) {
             ride.shut_tank_kg = stack.s1_tank_water_kg;
         }
         if (rise > 0.05 && rise < kS1Travel - 0.05) {
+            // On the plate, which rides on the cage's floor, or the floor itself.
             ride.rode_on_cage = ride.rode_on_cage && state.player_grounded &&
-                                state.support_entity_id == Simulation::kStackS1CageEntityId;
+                                (state.support_entity_id == Simulation::kStackS1CageEntityId ||
+                                 state.support_entity_id == Simulation::kStackS1PlateEntityId);
         }
         const double gained =
             kS1CageMassKg * kGravity * rise + kRiderMassKg * kGravity * (state.player_position.y - rider_y0);
@@ -4047,9 +4039,6 @@ S1Ride ride_s1(scraperx::sim::Simulation &simulation, const double seconds) {
             ride.top_water_kg = stack.s1_bucket_water_kg;
             ride.top_tank_kg = stack.s1_tank_water_kg;
         }
-    }
-    if (simulation.snapshot().carrying_entity_id != 0) {
-        (void)simulation.request_set_down();
     }
     (void)simulation.advance_frame(0.5);
     return ride;
@@ -4637,83 +4626,75 @@ void run_stack() {
     std::cout << "PASS scraperx_sim kerb: on_y=" << on_kerb.player_position.y
               << " stepped_z=" << off_kerb.player_position.z - on_kerb.player_position.z << "\n";
 
-    // (a) A tug is not a ride: taken and let go at once, the chain opens the
-    // valve for a moment and lets the catch go, but the water that runs in is
-    // far short of what outweighs the cage and its rider, so nothing moves,
-    // and let go, the catch seats the bucket again. The water stays in the
-    // bucket: tugs add up, and held again the chain finishes the job.
-    // Left alone, S1 waits as found: the lever on its stop under the chain's
-    // weight, the valve shut, the bucket dry on its catch, the cage at grade.
+    // Left alone, S1 waits as found: the plate proud of the floor on its line,
+    // the lever on its stop, the valve shut, the bucket dry on its catch, the
+    // cage at grade.
     Simulation idle(InitialSpawn::ExteriorGrade);
     require(idle.advance_frame(30.0).accepted, "S1 idle interval must be accepted");
     const auto idle_state = idle.stack_state();
     require(idle_state.s1_valve_angle < 0.005 && idle_state.s1_bucket_water_kg < 0.01 &&
                 idle_state.s1_catch_latched && std::abs(idle_state.s1_cage_travel) <= 0.01 &&
-                s1_chain_at_rest(idle),
+                s1_plate_at_rest(idle),
             "left alone for 30 s, S1 must wait as found");
 
-    Simulation tug(InitialSpawn::ExteriorGrade);
-    require(tug.advance_frame(0.5).accepted, "S1 settle interval must be accepted");
-    const double tug_tank0 = tug.stack_state().s1_tank_water_kg;
-    require(take_s1_chain(tug), "the player must walk from the yard into S1's cage and take hold of its chain");
-    // The hands draw the chain's handle down to them at kCarryPullInSpeed
-    // (0.7 m, about a quarter second); held, it turns the lever past full
-    // open and lets the catch go.
-    require(advance_until(tug,
-                          [&](const scraperx::sim::Snapshot &) {
-                              const auto held = tug.stack_state();
-                              return held.s1_valve_angle >= 0.24 && !held.s1_catch_latched;
-                          },
-                          0.6),
-            "held, S1's chain must turn its lever past full open and let the catch go");
-    (void)tug.request_set_down();
-    double tug_cage_worst = 0.0;
-    double tug_bucket_worst = 0.0;
-    for (std::uint32_t tick = 0; tick < 90 * 4; ++tick) {
-        (void)tug.advance_frame(Simulation::kFixedStepSeconds);
-        const auto state = tug.stack_state();
-        tug_cage_worst = std::max(tug_cage_worst, std::abs(state.s1_cage_travel));
-        tug_bucket_worst = std::max(tug_bucket_worst, std::abs(state.s1_bucket_travel));
+    // (a) The plate is what starts it, and it does not wait. Stood in the cage
+    // off the plate, a rider weighs nothing on the line: nothing moves.
+    Simulation off_plate(InitialSpawn::ExteriorGrade);
+    require(off_plate.advance_frame(0.5).accepted, "S1 off-plate settle interval must be accepted");
+    // In at a creep, so as to stop on the strip of floor south of the plate.
+    require(walk_to(off_plate, 10.0, -117.3, 30.0) && walk_to(off_plate, 10.0, -118.6, 6.0, 0.08) &&
+                hold_stick(off_plate, 0.0, -0.3, 0.0, -1.0, 4.0,
+                           [](const scraperx::sim::Snapshot &state) { return state.player_position.z <= -119.55; }),
+            "the player must stand in S1's cage, south of its plate");
+    (void)off_plate.advance_frame(5.0);
+    const auto off_state = off_plate.stack_state();
+    require(off_plate.snapshot().support_entity_id == Simulation::kStackS1CageEntityId &&
+                off_state.s1_valve_angle < 0.01 && !off_state.s1_valve_pawled &&
+                off_state.s1_bucket_water_kg < 0.01 && std::abs(off_state.s1_cage_travel) <= 0.01,
+            "stood in S1's cage off its plate, nothing may move");
+    // Stepped on and straight off again, the pawl has dropped: the water runs
+    // on, outweighs the empty cage and sends it up; drained at the foot, the
+    // bucket brings it back down by itself, and the next rider finds S1 as it
+    // was.
+    Simulation brief(InitialSpawn::ExteriorGrade);
+    require(brief.advance_frame(0.5).accepted, "S1 step-on settle interval must be accepted");
+    require(board_s1(brief), "the player must walk from the yard into S1's cage and onto its plate");
+    require(walk_to(brief, 10.0, -116.5, 6.0), "the player must step straight back off S1's cage");
+    bool sent_up = false;
+    bool came_back = false;
+    double back_s = 0.0;
+    const double brief_t0 = brief.snapshot().simulation_time_seconds;
+    for (std::uint32_t tick = 0; tick < 90 * 120 && !came_back; ++tick) {
+        (void)brief.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = brief.stack_state();
+        sent_up = sent_up || state.s1_cage_travel >= kS1Travel - 0.01;
+        came_back = sent_up && std::abs(state.s1_cage_travel) <= 0.02 && state.s1_catch_latched &&
+                    s1_plate_at_rest(brief);
+        back_s = brief.snapshot().simulation_time_seconds - brief_t0;
     }
-    const auto after_tug = tug.stack_state();
-    require(after_tug.s1_bucket_water_kg > 10.0 && after_tug.s1_bucket_water_kg < kS1BalanceKg - 20.0,
-            "a tug on S1's chain must let some water in, short of what lifts the cage");
-    require(std::abs(tug_tank0 - after_tug.s1_tank_water_kg - after_tug.s1_bucket_water_kg) < 2.0,
-            "the bucket's water must have come out of S1's tank");
-    require(tug_cage_worst <= 0.05 && tug_bucket_worst <= 0.05,
-            "after a tug, S1's cage and bucket must not move");
-    require(after_tug.s1_catch_latched && after_tug.s1_valve_angle < 0.03,
-            "let go, S1's lever must come back up, shut the valve and seat the catch");
-    // Its damped swing brings it back within 0.1 m a few seconds after.
-    require(advance_until(tug, [&](const scraperx::sim::Snapshot &) { return s1_chain_at_rest(tug); }, 4.0),
-            "let go, S1's chain must hang back where it was");
-    const double tug_water = after_tug.s1_bucket_water_kg;
-    require(take_s1_chain(tug), "S1's chain must be taken again after a tug");
-    const auto tug_ride = ride_s1(tug, 20.0);
-    require(tug_ride.reached_top && tug_ride.lift_water_kg > tug_water,
-            "held again after a tug, S1's chain must fill the bucket the rest of the way and lift the rider");
-    std::cout << "PASS scraperx_sim S1 tug: water_kg=" << tug_water << " cage_worst=" << tug_cage_worst
-              << " bucket_worst=" << tug_bucket_worst << " then_lift_kg=" << tug_ride.lift_water_kg << "\n";
+    require(sent_up, "stepped on and off S1's plate, the pawl must hold the valve and the water send the empty cage up");
+    require(came_back, "S1's empty cage must come back down by itself and wait as found");
+    std::cout << "PASS scraperx_sim S1 step on and off: empty_round_trip_s=" << back_s << "\n";
 
-    // (b) The ride, from the game's spawn on player inputs: into the cage, take
-    // hold of the chain and hold it. Water runs into the bucket until it
-    // outweighs the cage and the rider (235 kg); the bucket falls 21.8 m and the
-    // cage carries the rider 21.8 m under a governor that can only brake. Its
-    // first half metre lets the chain go slack and the valve shut. At no tick
-    // has the payload gained more energy than the bucket and its water
+    // (b) The ride, from the game's spawn on player inputs: into the cage and
+    // onto its plate. Water runs into the bucket until it outweighs the cage
+    // and the rider (235 kg); the bucket falls 21.8 m, knocking the pawl out as
+    // it leaves the head, and the cage carries the rider 21.8 m under a
+    // governor that can only brake. The valve shuts within the first metre. At
+    // no tick has the payload gained more energy than the bucket and its water
     // released.
     Simulation ride(InitialSpawn::ExteriorGrade);
     require(ride.advance_frame(0.5).accepted, "S1 ride settle interval must be accepted");
     const double tank0 = ride.stack_state().s1_tank_water_kg;
-    require(take_s1_chain(ride), "the rider must walk from the yard into S1's cage and take hold of its chain");
+    require(board_s1(ride), "the rider must walk from the yard into S1's cage and onto its plate");
     const auto rode = ride_s1(ride, 20.0);
     const auto top_state = ride.stack_state();
     const double floor_y = kit_y(ride, Simulation::kStackS1CageEntityId) + 0.10;
-    require(rode.reached_top, "holding S1's chain must carry the rider to the top of the cage's travel");
+    require(rode.reached_top, "standing on S1's plate must carry the rider to the top of the cage's travel");
     require(rode.lift_water_kg >= kS1BalanceKg - 5.0 && rode.lift_water_kg <= kS1BalanceKg + 60.0,
             "S1's cage must leave the yard only once the bucket's water outweighs the cage and rider");
     require(rode.shut_travel > 0.0 && rode.shut_travel < 1.0,
-            "rising, the rider must let S1's chain go slack and its valve shut within the first metre");
+            "rising, the bucket must knock S1's pawl out and the valve shut within the first metre");
     require(std::abs(tank0 - rode.shut_tank_kg - rode.shut_water_kg) < 2.0,
             "every kilogram in S1's bucket must have come out of its tank");
     require(rode.shut_tank_kg - rode.top_tank_kg < 1.0 && rode.top_water_kg - rode.shut_water_kg < 1.0,
@@ -4738,7 +4719,7 @@ void run_stack() {
     // Recovery: at the foot of its guide the bucket sits on the striker and
     // drains; lighter than the cage again, it rises, the cage comes back down
     // and the catch seats the bucket at the top. S1 is as it was found, its
-    // chain hanging in the cage where the next rider takes it.
+    // plate proud of the floor for the next rider.
     bool returned = false;
     double descent_water = -1.0;
     for (std::uint32_t tick = 0; tick < 90 * 60 && !returned; ++tick) {
@@ -4755,21 +4736,21 @@ void run_stack() {
     require(returned, "drained, S1's bucket must rise and bring the cage back down to the yard");
     require(descent_water > 0.0 && descent_water < kS1CageMassKg - kS1BucketMassKg,
             "S1's empty cage must start down only once the bucket is lighter than it");
-    require(s1_chain_at_rest(ride), "S1's chain must hang back in the cage at grade, in a rider's reach");
+    require(s1_plate_at_rest(ride), "S1's plate must hang proud of the cage's floor again, the pawl out");
     std::cout << "PASS scraperx_sim S1 ride: ride_s=" << rode.seconds << " lift_water_kg=" << rode.lift_water_kg
               << " valve_shut_at_m=" << rode.shut_travel << " top_water_kg=" << rode.top_water_kg
               << " floor_y=" << floor_y << " peak_speed=" << top_state.s1_cage_peak_speed
               << " energy_margin_J=" << rode.worst_margin_j << " deck2_y=" << on_deck.player_position.y
               << " descent_water_kg=" << descent_water << " return_water_kg=" << back.s1_bucket_water_kg << "\n";
 
-    // (c) The rider who stays aboard: let go at the top and stand still, the
-    // bucket drains until it is lighter than the cage and rider, and the cage
-    // brings them back down to the yard. There the chain hangs in reach again
-    // and the machine carries them up a second time: nobody is stranded, and
-    // the tank holds water for many rides.
+    // (c) The rider who stays aboard: standing still on the plate at the top,
+    // the bucket drains until it is lighter than the cage and rider, and the
+    // cage brings them back down to the yard. There, still on the plate, their
+    // weight turns the lever again and the machine carries them up a second
+    // time: nobody is stranded, and the tank holds water for many rides.
     Simulation stay(InitialSpawn::ExteriorGrade);
     require(stay.advance_frame(0.5).accepted, "S1 stay-aboard settle interval must be accepted");
-    require(take_s1_chain(stay) && ride_s1(stay, 20.0).reached_top, "S1 must carry the rider up");
+    require(board_s1(stay) && ride_s1(stay, 20.0).reached_top, "S1 must carry the rider up");
     bool brought_down = false;
     bool aboard = true;
     double stay_descent_water = -1.0;
@@ -4781,17 +4762,19 @@ void run_stack() {
         }
         if (state.s1_cage_travel > 0.05 && state.s1_cage_travel < kS1Travel - 0.05) {
             const auto snap = stay.snapshot();
-            aboard = aboard && snap.player_grounded && snap.support_entity_id == Simulation::kStackS1CageEntityId;
+            aboard = aboard && snap.player_grounded &&
+                     (snap.support_entity_id == Simulation::kStackS1CageEntityId ||
+                      snap.support_entity_id == Simulation::kStackS1PlateEntityId);
         }
-        brought_down = std::abs(state.s1_cage_travel) <= 0.02 && state.s1_catch_latched;
+        brought_down = std::abs(state.s1_cage_travel) <= 0.02;
     }
-    (void)stay.advance_frame(2.0);
     require(brought_down && aboard, "a rider who stays aboard must be brought back down to the yard on S1's cage");
     require(stay_descent_water > 0.0 && stay_descent_water < kS1BalanceKg,
             "S1's cage must start down with its rider only once the bucket is lighter than both");
-    require(s1_chain_at_rest(stay), "back at grade, S1's chain must hang in reach again");
     const double stay_tank = stay.stack_state().s1_tank_water_kg;
-    require(take_s1_chain(stay) && ride_s1(stay, 20.0).reached_top, "S1 must carry the rider up a second time");
+    require(advance_until(stay, [&](const scraperx::sim::Snapshot &) { return stay.stack_state().s1_valve_pawled; }, 2.0) &&
+                ride_s1(stay, 20.0).reached_top,
+            "still on S1's plate at the foot, the rider must be carried up a second time");
     const double per_ride = stay_tank - stay.stack_state().s1_tank_water_kg;
     require(per_ride > 0.0 && stay.stack_state().s1_tank_water_kg > 10.0 * per_ride,
             "S1's tank must hold water for many more rides");
@@ -4830,7 +4813,7 @@ void run_stack() {
     const double band_start = band.snapshot().simulation_time_seconds;
     g_path_watch = PathWatch{};
     g_path_watch.armed = true;
-    require(take_s1_chain(band), "the Stack: into S1's cage and take hold of its chain");
+    require(board_s1(band), "the Stack: into S1's cage and onto its plate");
     require(ride_s1(band, 20.0).reached_top, "the Stack: S1 carries the rider to deck 2");
     require(walk_to(band, 10.0, -123.2, 6.0) && walk_to(band, 10.0, -126.0, 6.0),
             "the Stack: off S1 onto deck 2");
@@ -5217,35 +5200,36 @@ void run_wet_handling() {
     using scraperx::sim::Simulation;
     using scraperx::sim::Snapshot;
 
-    // S1's chain handle hangs 0.7 m over the hands: taken, the hands draw it
+    // S2's trip handle hangs 0.7 m over the hands: taken, the hands draw it
     // down at 3 m/s while it swings on its chain, never faster than the
     // hands' own limit on screen, 0.1 m a frame (6 m/s). Snapped to the
-    // hands, it moved 0.23 m in the first tick.
-    Simulation chain(InitialSpawn::ExteriorGrade);
-    require(chain.advance_frame(0.5).accepted, "S1 chain settle interval must be accepted");
-    require(walk_to(chain, 10.0, -117.3, 30.0) && walk_to(chain, 10.0, kS1ChainZ, 6.0, 0.08),
-            "the player must walk into S1's cage");
-    (void)chain.set_facing(-1.0, 0.0);
+    // hands, a handle moved 0.23 m in the first tick (S1's chain, since
+    // replaced by its scale plate).
+    Simulation chain(InitialSpawn::Deck4South);
+    require(chain.advance_frame(1.0).accepted, "S2 handle settle interval must be accepted");
+    require(walk_to(chain, 10.0, -130.5, 15.0) && walk_to(chain, 10.0, -137.6, 15.0, 0.08),
+            "the player must walk into S2's cage");
+    (void)chain.set_facing(0.0, -1.0);
     (void)chain.advance_frame(0.5);
-    require(chain.snapshot().carry_target_entity_id == Simulation::kStackS1ChainEntityId,
-            "S1's chain must be in reach");
-    const auto handle = chain.kit_body_index(Simulation::kStackS1ChainEntityId);
+    require(chain.snapshot().carry_target_entity_id == Simulation::kStackS2HandleEntityId,
+            "S2's handle must be in reach");
+    const auto handle = chain.kit_body_index(Simulation::kStackS2HandleEntityId);
     auto handle_last = chain.kit_body_position(handle);
     const double handle_y0 = handle_last.y;
     (void)chain.request_pick_up();
     double worst_handle_tick = 0.0;
     for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz / 2; ++tick) {
         require(chain.advance_frame(Simulation::kFixedStepSeconds).accepted,
-                "S1 chain pull-in tick must be accepted");
+                "S2 handle pull-in tick must be accepted");
         const auto now = chain.kit_body_position(handle);
         worst_handle_tick =
             std::max(worst_handle_tick, std::hypot(std::hypot(now.x - handle_last.x, now.y - handle_last.y),
                                                    now.z - handle_last.z));
         handle_last = now;
     }
-    require(chain.snapshot().carrying_entity_id == Simulation::kStackS1ChainEntityId &&
+    require(chain.snapshot().carrying_entity_id == Simulation::kStackS2HandleEntityId &&
                 handle_y0 - handle_last.y > 0.4,
-            "taken, S1's chain handle must come down to the hands");
+            "taken, S2's handle must come down to the hands");
     require(worst_handle_tick <= 6.0 * Simulation::kFixedStepSeconds,
             "a taken handle must be drawn in to the hands, not snapped to them");
 

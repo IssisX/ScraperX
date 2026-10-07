@@ -4260,6 +4260,8 @@ StackState Simulation::stack_state() const noexcept {
     out.s1_tank_water_kg = kit.pool_water(stack.s1_tank);
     out.s1_valve_angle = kit.lever_angle(stack.s1_lever);
     out.s1_catch_latched = kit.catch_latched(stack.s1_catch);
+    out.s1_valve_pawled = kit.latch_set(stack.s1_pawl);
+    out.s1_plate_travel = kit.guide_travel(stack.s1_plate_guide);
     out.s1_rope_tension = kit.rope_tension(stack.s1_rope);
     out.s2_cage_travel = kit.guide_travel(stack.s2_cage_guide);
     out.s2_cage_peak_speed = kit.guide_peak_speed(stack.s2_cage_guide);

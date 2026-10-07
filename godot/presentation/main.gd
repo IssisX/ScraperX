@@ -135,8 +135,10 @@ const RUBBLE_DENSITY := 1600.0
 const RUBBLE_PILE_HEIGHT := 0.05
 const RIG_HOOK := 1
 const RIG_UNHOOK := 2
-# S1's valve chain (Simulation::kStackS1ChainEntityId).
-const STACK_S1_CHAIN := 2203
+# S1's cage and the scale plate in its floor (Simulation::kStackS1CageEntityId,
+# kStackS1PlateEntityId).
+const STACK_S1_CAGE := 2200
+const STACK_S1_PLATE := 2203
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -687,6 +689,9 @@ func _perform_action() -> void:
 				_native.request_slingshot_action()
 		&"swing":
 			_native.request_swing_action()
+		&"s1":
+			# S1 is worked by standing on its plate; Action only reads it out.
+			pass
 		_:
 			# Nothing reported in reach: ask anyway, exactly as the old E key
 			# did. The native decides there is no ledge (and counts it).
@@ -720,6 +725,7 @@ func _read_context() -> Dictionary:
 	var sling_seated := bool(sling["seated"])
 	var swing: Dictionary = _native.get_swing_state()
 	var swing_seated := bool(swing["seated"])
+	var support := int(_native.get_support_entity_id())
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	if bool(sling["can_retrieve"]) or bool(sling["recovering"]):
 		action = {"id": &"slingshot", "icon": &"up",
@@ -744,6 +750,15 @@ func _read_context() -> Dictionary:
 				"detail": "STEP OFF  %.0f M" % float(swing["seat_floor_y"])}
 	elif bool(swing["station_available"]):
 		action = {"id": &"swing", "icon": &"up", "label": "STRAP IN", "detail": "THE SWING"}
+	elif grounded and free and carrying == 0 and (support == STACK_S1_CAGE or support == STACK_S1_PLATE) and \
+			float(_native.get_stack_s1_cage_travel()) < 0.05:
+		# In S1's cage at grade there is nothing to press: the rider's weight
+		# on the plate works the valve. Action only reads out what it does.
+		if float(_native.get_stack_s1_valve_angle()) > 0.06:
+			action = {"id": &"s1", "icon": &"up", "label": "FILLING",
+				"detail": "BUCKET %d KG" % roundi(float(_native.get_stack_s1_bucket_water_kg()))}
+		else:
+			action = {"id": &"s1", "icon": &"up", "label": "STAND ON", "detail": "THE SCALE PLATE"}
 	elif hanging or climbing:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
 	elif not free:
@@ -753,12 +768,7 @@ func _read_context() -> Dictionary:
 			"detail": "ONTO " + _kit_anchor_name(rig_target)}
 	elif carrying != 0:
 		# Both hands are on it: letting go is the only thing Action can do.
-		# Holding S1's valve chain, what the hold is doing: the water in the
-		# bucket, which lifts the cage once it outweighs cage and rider.
-		var held := _carry_name(carrying)
-		if carrying == STACK_S1_CHAIN:
-			held = "BUCKET %d KG" % roundi(float(_native.get_stack_s1_bucket_water_kg()))
-		action = {"id": &"set_down", "label": "LET GO", "icon": &"set_down", "detail": held}
+		action = {"id": &"set_down", "label": "LET GO", "icon": &"set_down", "detail": _carry_name(carrying)}
 	elif grounded and carry_target != 0:
 		# Ahead of CLIMB: whatever a load rests on may itself be a mantle
 		# ledge, and whoever faces the load means the load.
@@ -887,8 +897,6 @@ func _carry_name(entity: int) -> String:
 			return "DROP PIN"
 		2127:
 			return "CLUTCH HANDLE"
-		STACK_S1_CHAIN:
-			return "VALVE CHAIN"
 	return "ROPE END" if _is_kit(entity) else ""
 
 

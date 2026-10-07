@@ -2623,14 +2623,15 @@ func _checkpoint_continuation(device: int) -> bool:
 
 
 # The Stack from the game's own start at grade to the 220 m ring, on the
-# device under test. Across the yard into S1's cage, GRAB the valve chain
-# hanging in it and hold on: the water runs into the bucket until it outweighs
-# the cage and the rider, and the cage carries them 21.8 m to deck 2. LET GO,
-# off over the gangway, and up C1 to deck 4. Then S2's walking-beam cage to
-# deck 6, the C2 climb to deck 8, S3's counterweight carriage to deck 12, the
-# C3 climb to deck 14 (154 m), and the well's stages A, B and C to the 220 m
-# ring. Every verb is the one the HUD offers at that moment, pressed on the
-# device; every leg is proven by the native state it changed.
+# device under test. Across the yard into S1's cage and onto the scale plate
+# in its floor, nothing pressed: the rider's weight works the valve, the
+# water runs into the bucket until it outweighs the cage and the rider, and
+# the cage carries them 21.8 m to deck 2. Off over the gangway, and up C1 to
+# deck 4. Then S2's walking-beam cage to deck 6, the C2 climb to deck 8, S3's
+# counterweight carriage to deck 12, the C3 climb to deck 14 (154 m), and the
+# well's stages A, B and C to the 220 m ring. Every verb is the one the HUD
+# offers at that moment, pressed on the device; every leg is proven by the
+# native state it changed.
 func _stack(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var body := _watch_body()
@@ -2638,39 +2639,26 @@ func _stack(device: int) -> bool:
 	# S1, the water-balance hoist.
 	if not await _go(device, Vector2(10.0, -117.3), 0.3, 40.0):
 		return _fail("the walk across the yard to S1 stalled at %s" % str(_position()))
-	if not await _go(device, Vector2(10.0, -120.1), 0.1, 6.0):
-		return _fail("the step into S1's cage stalled at %s" % str(_position()))
-	await _face(Vector2(-1.0, 0.0))
-	# Look up at the chain hanging over the head, as a player does.
-	await _tilt(0.35)
-	if not await _offered(&"pick_up", "GRAB", "VALVE CHAIN"):
-		return _fail("Action read '%s %s' beside S1's chain, not GRAB VALVE CHAIN" % [
-			_action_label(), String(_ctx()["action"]["detail"])])
-	await _pose("stack_chain")
-	var wrists := _watch_wrists()
-	_act(device)
-	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2203, 0.5):
-		return _fail("GRAB did not put S1's valve chain in the hands")
-	# Down with the chain to the hands on it.
-	await _tilt(0.0)
+	if not await _go(device, Vector2(10.0, -120.8), 0.1, 6.0):
+		return _fail("the step into S1's cage and onto its plate stalled at %s" % str(_position()))
 	var opened: bool = await _wait_until(func() -> bool:
-		return float(_native().get_stack_s1_valve_angle()) > 0.24 and \
-			not bool(_native().is_stack_s1_catch_latched()), 1.0)
+		return bool(_native().is_stack_s1_valve_pawled()) and \
+			not bool(_native().is_stack_s1_catch_latched()), 1.5)
 	if not opened:
-		return _fail("holding the chain did not open S1's valve and catch (lever %.2f rad)" %
-			float(_native().get_stack_s1_valve_angle()))
+		return _fail("standing on S1's plate did not pawl its valve open (lever %.2f rad, on %d)" % [
+			float(_native().get_stack_s1_valve_angle()), int(_native().get_support_entity_id())])
 	var counting: bool = await _wait_until(func() -> bool:
-		return _action_label() == "LET GO" and \
+		return _action_label() == "FILLING" and \
 			String(_ctx()["action"]["detail"]).begins_with("BUCKET") and \
 			float(_native().get_stack_s1_bucket_water_kg()) > 120.0, 2.0)
 	if not counting:
-		return _fail("holding the chain, the HUD read '%s %s', not the bucket filling" % [
+		return _fail("on S1's plate, the HUD read '%s %s', not the bucket filling" % [
 			_action_label(), String(_ctx()["action"]["detail"])])
 	await _pose("stack_filling")
 	var lifted: bool = await _wait_until(
 		func() -> bool: return float(_native().get_stack_s1_cage_travel()) > 3.0, 8.0)
 	if not lifted:
-		return _fail("held, S1's cage never left the yard (bucket %.0f kg)" %
+		return _fail("on its plate, S1's cage never left the yard (bucket %.0f kg)" %
 			float(_native().get_stack_s1_bucket_water_kg()))
 	await _pose("stack_ride")
 	var arrived: bool = await _wait_until(
@@ -2678,13 +2666,6 @@ func _stack(device: int) -> bool:
 	if not arrived:
 		return _fail("S1's cage never reached deck 2 (travel %.2f m)" %
 			float(_native().get_stack_s1_cage_travel()))
-	if not await _let_go_if_held(device):
-		return _fail("LET GO did not take S1's chain out of the hands")
-	var worst_wrist := _stop_watch(wrists)
-	# 0.10 m in a 60 Hz frame is 6 m/s across the view: faster than any reach.
-	if worst_wrist > 0.10:
-		return _fail("a hand on S1's chain jumped %.3f m in one frame (%s)" % [worst_wrist,
-			str(wrists.get("at", ""))])
 	await _face(Vector2(0.0, -1.0))
 	if not (await _walk_to(device, Vector2(10.0, -123.2), 0.2) and \
 			await _walk_to(device, Vector2(10.0, -126.5), 0.2)):
@@ -2882,10 +2863,10 @@ func _stack(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
-	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f wet_d_y=%.2f wet_e_y=%.2f tp340_y=%.2f shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f crane_j_y=%.2f crane_k_y=%.2f tp640_y=%.2f deck662_y=%.2f%s seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+	_detail = "deck2_y=%.2f deck4_y=%.2f deck6_y=%.2f deck8_y=%.2f deck12_y=%.2f deck14_y=%.2f ring176_y=%.2f ring198_y=%.2f ring220_y=%.2f wet_d_y=%.2f wet_e_y=%.2f tp340_y=%.2f shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f crane_j_y=%.2f crane_k_y=%.2f tp640_y=%.2f deck662_y=%.2f%s seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		at_deck2, at_deck4, at_deck6, at_deck8, at_deck12, at_deck14, at_ring176, at_ring198, at_ring220,
 		at_wet_d, at_wet_e, at_tp340, at_shop_g, at_shop_h, at_ring484, at_crane_j, at_crane_k, at_tp640, at_deck662,
-		reached, float(int(_native().get_tick_index()) - started) / 90.0, worst_wrist, worst_step, float(body["lift"])]
+		reached, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
 	return true
 
 

@@ -104,6 +104,7 @@ using LeverIndex = Index<struct LeverTag>;
 using CatchIndex = Index<struct CatchTag>;
 using LineIndex = Index<struct LineTag>;
 using SlipIndex = Index<struct SlipTag>;
+using LatchIndex = Index<struct LatchTag>;
 using BinIndex = Index<struct BinTag>;
 using PoolIndex = Index<struct PoolTag>;
 using PipeIndex = Index<struct PipeTag>;
@@ -213,6 +214,14 @@ public:
     // lever is below release_angle; past it, the hook opens and the rope runs
     // out for good, as if parted.
     SlipIndex add_slip(RopeIndex rope, LeverIndex lever, float release_angle);
+
+    // A pawl on a lever (declared, S1): once the lever has turned past
+    // latch_angle the pawl drops behind it and holds it there against its
+    // return. A trip on a guided body knocks the pawl out once that body's
+    // travel is below knock_travel, and the lever is free on its own stops
+    // again; the pawl cannot drop while the trip is down.
+    LatchIndex add_latch(LeverIndex lever, float latch_angle, GuideIndex knock_guide,
+                         float knock_travel);
 
     // A bin holds rubble (declared granular model, AS-006 Stage C): its
     // contents in kg, added to its body's mass when the body is dynamic
@@ -378,6 +387,7 @@ public:
         std::vector<float> bin_contents;
         std::vector<bool> rope_parted;
         std::vector<bool> catch_latched;
+        std::vector<bool> latch_set;
         std::vector<Pile> piles;
         std::vector<float> pool_water;
         std::vector<float> cell_air;
@@ -471,6 +481,7 @@ public:
     [[nodiscard]] float cell_pressure(CellIndex cell) const noexcept;
 
     [[nodiscard]] bool catch_latched(CatchIndex catch_index) const noexcept;
+    [[nodiscard]] bool latch_set(LatchIndex latch) const noexcept;
     [[nodiscard]] float lever_angle(LeverIndex lever) const noexcept;
     [[nodiscard]] float guide_travel(GuideIndex guide) const noexcept;
     // True while the guide has no rail gap or its joint lies in its seat.
@@ -662,6 +673,15 @@ private:
         LeverIndex lever;
         float release_angle = 0.0F;
     };
+    struct Latch final {
+        LeverIndex lever;
+        float latch_angle = 0.0F;
+        GuideIndex knock_guide;
+        float knock_travel = 0.0F;
+        float free_min = 0.0F;   // the lever's own stops
+        float free_max = 0.0F;
+        bool set = false;
+    };
     struct Catch final {
         BodyIndex body;
         LeverIndex lever;
@@ -692,6 +712,7 @@ private:
     void set_enabled(BodyIndex body, bool enabled);
     void latch(Catch &catch_record);
     void unlatch(Catch &catch_record);
+    void set_latch(Latch &latch, bool set);
     void govern(Guide &guide) noexcept;
     void engage_dogs(Guide &guide);
     [[nodiscard]] bool gap_closed(const Guide &guide) const;
@@ -729,6 +750,7 @@ private:
     std::vector<Catch> catches_;
     std::vector<Line> lines_;
     std::vector<Slip> slips_;
+    std::vector<Latch> latches_;
     std::vector<Bin> bins_;
     std::vector<Pile> piles_;
     std::vector<Pool> pools_;

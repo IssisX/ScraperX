@@ -232,6 +232,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_stack_s1_valve_angle);
     godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s1_catch_latched"),
                                 &ScraperXSimulation::is_stack_s1_catch_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s1_valve_pawled"),
+                                &ScraperXSimulation::is_stack_s1_valve_pawled);
     godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_cage_travel"),
                                 &ScraperXSimulation::get_stack_s2_cage_travel);
     godot::ClassDB::bind_method(godot::D_METHOD("get_stack_s2_beam_angle"),
@@ -739,6 +741,10 @@ double ScraperXSimulation::get_stack_s1_valve_angle() const {
 
 bool ScraperXSimulation::is_stack_s1_catch_latched() const {
     return simulation_->stack_state().s1_catch_latched;
+}
+
+bool ScraperXSimulation::is_stack_s1_valve_pawled() const {
+    return simulation_->stack_state().s1_valve_pawled;
 }
 
 double ScraperXSimulation::get_stack_s2_cage_travel() const {

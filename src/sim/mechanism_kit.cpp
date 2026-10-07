@@ -377,6 +377,25 @@ SlipIndex Kit::add_slip(const RopeIndex rope, const LeverIndex lever, const floa
     return SlipIndex{static_cast<std::uint32_t>(slips_.size() - 1U)};
 }
 
+LatchIndex Kit::add_latch(const LeverIndex lever, const float latch_angle, const GuideIndex knock_guide,
+                          const float knock_travel) {
+    Latch record;
+    record.lever = lever;
+    record.latch_angle = latch_angle;
+    record.knock_guide = knock_guide;
+    record.knock_travel = knock_travel;
+    const JPH::HingeConstraint &hinge = *levers_[lever.value].hinge;
+    record.free_min = hinge.GetLimitsMin();
+    record.free_max = hinge.GetLimitsMax();
+    latches_.push_back(record);
+    return LatchIndex{static_cast<std::uint32_t>(latches_.size() - 1U)};
+}
+
+void Kit::set_latch(Latch &latch, const bool set) {
+    latch.set = set;
+    levers_[latch.lever.value].hinge->SetLimits(set ? latch.latch_angle : latch.free_min, latch.free_max);
+}
+
 BinIndex Kit::add_bin(const BodyIndex body, const float contents_kg, const float capacity_kg,
                        const JPH::Vec3 mouth_local, const LeverIndex gate,
                        const float gate_open_angle, const float gate_reach,
@@ -690,6 +709,14 @@ void Kit::pre_step(const float delta_seconds) {
         if (to_seat.Length() <= catch_record.seat_tolerance && velocity.Length() < kRelatchSpeed &&
             !leaving) {
             latch(catch_record);
+        }
+    }
+    for (Latch &latch : latches_) {
+        const bool knocked = guide_travel(latch.knock_guide) < latch.knock_travel;
+        if (latch.set && knocked) {
+            set_latch(latch, false);
+        } else if (!latch.set && !knocked && lever_angle(latch.lever) >= latch.latch_angle) {
+            set_latch(latch, true);
         }
     }
 }
@@ -1410,6 +1437,10 @@ void Kit::capture(Checkpoint &out) const {
     for (std::size_t index = 0; index < catches_.size(); ++index) {
         out.catch_latched[index] = catches_[index].pin != nullptr;
     }
+    out.latch_set.resize(latches_.size());
+    for (std::size_t index = 0; index < latches_.size(); ++index) {
+        out.latch_set[index] = latches_[index].set;
+    }
     out.piles = piles_;
     out.pool_water.resize(pools_.size());
     for (std::size_t index = 0; index < pools_.size(); ++index) {
@@ -1500,6 +1531,9 @@ void Kit::restore(const Checkpoint &in) {
         if (in.catch_latched[index]) {
             latch(catches_[index]);
         }
+    }
+    for (std::size_t index = 0; index < latches_.size() && index < in.latch_set.size(); ++index) {
+        set_latch(latches_[index], in.latch_set[index]);
     }
 }
 
@@ -1791,6 +1825,11 @@ bool Kit::clutch_in(const RopeIndex rope) const noexcept {
 bool Kit::catch_latched(const CatchIndex catch_index) const noexcept {
     const Catch *record = find(catches_, catch_index);
     return record != nullptr && record->pin != nullptr;
+}
+
+bool Kit::latch_set(const LatchIndex latch) const noexcept {
+    const Latch *record = find(latches_, latch);
+    return record != nullptr && record->set;
 }
 
 float Kit::lever_angle(const LeverIndex lever) const noexcept {

@@ -144,6 +144,7 @@ public:
     [[nodiscard]] double get_stack_s1_bucket_water_kg() const;
     [[nodiscard]] double get_stack_s1_valve_angle() const;
     [[nodiscard]] bool is_stack_s1_catch_latched() const;
+    [[nodiscard]] bool is_stack_s1_valve_pawled() const;
     // S2, the Stack's walking-beam hoist, read back.
     [[nodiscard]] double get_stack_s2_cage_travel() const;
     [[nodiscard]] double get_stack_s2_beam_angle() const;

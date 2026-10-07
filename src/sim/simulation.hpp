@@ -315,6 +315,8 @@ struct StackState final {
     double s1_tank_water_kg = 0.0;
     double s1_valve_angle = 0.0;
     bool s1_catch_latched = false;
+    bool s1_valve_pawled = false;   // the pawl holds the valve open
+    double s1_plate_travel = 0.0;   // the scale plate, from where it hangs proud of the floor
     double s1_rope_tension = 0.0;
 
     // S2, the walking beam hoist with fixed ballast cart.
@@ -643,7 +645,7 @@ public:
     static constexpr std::uint64_t kStackS1CageEntityId = 2200;
     static constexpr std::uint64_t kStackS1BucketEntityId = 2201;
     static constexpr std::uint64_t kStackS1LeverEntityId = 2202;
-    static constexpr std::uint64_t kStackS1ChainEntityId = 2203;
+    static constexpr std::uint64_t kStackS1PlateEntityId = 2203;
     static constexpr std::uint64_t kStackS1StrikerEntityId = 2204;
     // S2, the walking beam hoist with fixed ballast cart.
     static constexpr std::uint64_t kStackS2CageEntityId = 2210;
