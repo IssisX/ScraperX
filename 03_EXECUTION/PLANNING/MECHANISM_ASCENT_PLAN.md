@@ -158,7 +158,9 @@ own gate.
     drawings are built as designed, motors included, where the route has no way up; working
     machines are not redesigned. The aim (the owner, 2026-10-08): fill the band and level gaps
     *"so the player can canonically climb from grade/ground all the way up the tower"*, one
-    unbroken route from grade to the summit.
+    unbroken route from grade to the summit. The summit is at **800 m** (the owner, 2026-10-08:
+    *"I think the tower's summit will be 800 m, not 1,600m"*): the route's gaps are the 264 ring's
+    dead end and the 750 deck to an 800 m summit deck, where the tower now ends.
 
 ## 3. The chain
 

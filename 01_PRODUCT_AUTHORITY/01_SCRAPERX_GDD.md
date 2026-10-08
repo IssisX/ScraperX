@@ -603,7 +603,7 @@ These are specified in `02_ASCENT_ATLAS.md` and must not be re-invented by a wor
 - opening location and jammed-intake problem;
 - vertical datum, band cuts, braid identities, Transfer Plates;
 - named modules and kernel IDs used by WO-001–008;
-- physical summit predicate on the 1600 m deck.
+- physical summit predicate on the 800 m deck (the owner, 2026-10-08; was 1600 m).
 
 Downstream work must use those atlas facts rather than author a second tower.
 

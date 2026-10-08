@@ -83,8 +83,8 @@ The tower is one place. Bands are authorship and streaming cuts, not level loads
 |---|---|---|
 | Origin | `(0, 0, 0)` | Top of apron slab at tower geometric center |
 | +Z | up | Native SI meters |
-| Summit walking surface | `z = 1600.00 m` | Campaign completion plane |
-| Crown machine volume | `1600–1635 m` | Legal summit machinery above the walking surface; standing on 1600 is enough |
+| Summit walking surface | `z = 800.00 m` (the owner, 2026-10-08; was 1600.00 m) | Campaign completion plane |
+| Crown machine volume | `800–835 m` | Legal summit machinery above the walking surface; standing on 800 is enough |
 
 Plan axes: +X east, +Y north. Content import converts once at the descriptor boundary.
 
@@ -448,7 +448,9 @@ Workers will ride `MOD-SERVICE-LIFT` if it actually runs. If the player wrecked 
 
 ### B11 — Summit Machine (1480–1600 m)
 
-**Physical job.** Final physical access. Campaign completes when the player’s support state is stable on `z ≥ 1600` at the summit deck.
+**Superseded 2026-10-08:** the owner set the summit at 800 m, not 1,600 m; the route's last stages are the band from the 750 deck to an 800 m summit deck (MECHANISM_ASCENT_PLAN.md, rule 12). The band table above still describes the old 1,600 m tower.
+
+**Physical job.** Final physical access. Campaign completes when the player’s support state is stable on `z ≥ 800` at the summit deck.
 
 **Modules**
 
