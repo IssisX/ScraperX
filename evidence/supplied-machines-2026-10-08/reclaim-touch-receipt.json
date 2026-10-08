@@ -1,0 +1,42 @@
+{
+  "repo": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo",
+  "revision": "4364b8e825a7d4c04018755ca12a49dc9add353b",
+  "private_runtime": "/data/data/com.termux/files/usr/tmp/scraperx-reclaim-touch-frozen-23k7ku54/godot",
+  "key_sha256": {
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "eb493edf134041b2905e919a3fba922ecbbc6cd818d692c10489b5f092cd3019",
+    "addons/scraperx_native/scraperx_native.gdextension": "50ab0bccfaf7455de0d8812dcd228645db346ae72f689707560376d21af1dd93",
+    "presentation/main.gd": "1f93c38385c77a989647df20cf5371d091bffc99b6ee6a377abcff45beac3dc0",
+    "presentation/ui/pause_menu.gd": "ed6001c81e3f2645dea25308f3901ea2cfe1e67bf261a6c1f6103476106853e7",
+    "presentation/ui/ui_test_driver.gd": "12b20c08b5da7e194feae991f00ad443a14f94172c4c77097a4f595c6885ae59"
+  },
+  "scenario": "touch_gravity_reclaim",
+  "normal_world": true,
+  "exit_code": 0,
+  "wall_seconds": 367.8174283504486,
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "/usr/bin/env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-reclaim-touch-frozen-23k7ku54/state/cache",
+    "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-reclaim-touch-frozen-23k7ku54/state/config",
+    "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-reclaim-touch-frozen-23k7ku54/state/data",
+    "/usr/bin/timeout",
+    "600",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-reclaim-touch-frozen-23k7ku54/godot",
+    "--",
+    "--uitest=touch_gravity_reclaim",
+    "--touch"
+  ],
+  "log_sha256": "921dc5f900c6f9e8efe80d9c33f4411d579c9504cbeec02f09c55d77e156b916",
+  "godot_binary_sha256": "8e53c8740db03581bdd3fd7835f15046a25126baf9d78458fc6a7d4d1c312f45",
+  "proof_scope": "headless normal-world ordinary viewport touch controls; physical first ascent/stop/resume/330 Tower exit/discharge/empty return/actual menu retry/second feed+boarding+supported314.02 ascent; no renderer or audition proof"
+}

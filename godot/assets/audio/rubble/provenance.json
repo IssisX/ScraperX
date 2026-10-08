@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "asset": "Concrete Break Denoised",
+  "asset_id": 843338,
+  "author": "loganzsound",
+  "publisher": "Freesound",
+  "source_url": "https://freesound.org/people/loganzsound/sounds/843338/",
+  "license": "CC0-1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "source_license_verified": true,
+  "acquired_at_utc": "2026-10-08T18:23:47Z",
+  "recording_description": "A concrete brick dropped from four feet onto asphalt; AT897 shotgun microphone; denoised in iZotope RX 11.",
+  "source_page_original_format": {
+    "format": "WAV",
+    "bits_per_sample": 24,
+    "channels": 1,
+    "sample_rate_hz": 44100,
+    "displayed_duration_seconds": 2.517,
+    "downloaded": false
+  },
+  "files": [
+    {
+      "file": "843338_16682330-hq.mp3",
+      "role": "unchanged_high_quality_mp3_preview",
+      "download_url": "https://cdn.freesound.org/previews/843/843338_16682330-hq.mp3",
+      "bytes": 32750,
+      "sha256": "187ff18b2d4a671e62745a38a733c0a99da22ecbfc27a0a5491b5b53f8bed65c",
+      "sample_rate_hz": 44100,
+      "channels": 1,
+      "decoded_samples_per_channel": 111028,
+      "decoded_duration_seconds": 2.517641723356009,
+      "modifications": []
+    },
+    {
+      "file": "concrete_break_denoised_843338_preview.wav",
+      "role": "wav_derivative_of_mp3_preview",
+      "derived_from": "843338_16682330-hq.mp3",
+      "bytes": 222134,
+      "sha256": "f34b32029efc6833c3a9abdd041f8a1ff4e5fac3b3f1b2d2592d0912688a5329",
+      "codec": "pcm_s16le",
+      "channels": 1,
+      "sample_rate_hz": 44100,
+      "bits_per_sample": 16,
+      "samples_per_channel": 111028,
+      "duration_seconds": 2.517641723356009,
+      "conversion": {
+        "tool": "FFmpeg",
+        "version": "8.0.1-3ubuntu2",
+        "environment": "existing Ubuntu proot container",
+        "command": "ffmpeg -nostdin -hide_banner -loglevel error -n -i 843338_16682330-hq.mp3 -map 0:a:0 -map_metadata -1 -c:a pcm_s16le -ac 1 -ar 44100 concrete_break_denoised_843338_preview.wav",
+        "gain_adjustment": false,
+        "normalization": false,
+        "trimming": false,
+        "sample_rate_change": false,
+        "channel_count_change": false
+      },
+      "validation": {
+        "ffprobe_codec": "pcm_s16le",
+        "wave_frames": 111028,
+        "pcm_peak_absolute_sample": 30739,
+        "audition_performed": false
+      }
+    }
+  ]
+}

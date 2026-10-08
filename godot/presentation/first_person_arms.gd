@@ -60,6 +60,9 @@ const POSE_CARRY := 8
 # Step 2: a fist round each of a climb's two holds, and arms out on a beam.
 const POSE_CLIMB := 9
 const POSE_BALANCE := 10
+const POSE_BRACE := 11
+const POSE_ROLL := 12
+const POSE_STUMBLE := 13
 
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -390,6 +393,9 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	var speed := Vector2(velocity.x, velocity.z).length()
 	var operating: StringName = state["operating"]
 	var chute: bool = state["chute"]
+	var landing: Dictionary = state.get("landing", {})
+	var recovering := bool(landing.get("landing_recovering", false))
+	var landing_response := int(landing.get("landing_response", 0))
 
 	var remote_frame := Transform3D()
 	if operating != &"":
@@ -442,6 +448,12 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			pose = POSE_CHUTE
 		elif not grounded:
 			pose = POSE_REACH if bool(state["affordance"]) else POSE_AIR
+		elif recovering and landing_response == 1:
+			pose = POSE_BRACE
+		elif recovering and landing_response == 2:
+			pose = POSE_ROLL
+		elif recovering and landing_response == 3:
+			pose = POSE_STUMBLE
 		elif bool(state.get("balancing", false)):
 			pose = POSE_BALANCE
 		elif speed > 0.8:
@@ -598,6 +610,40 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			var wrist := centre + torso_right * ((half + 0.035) * side) + Vector3.UP * 0.04
 			var basis := _hand_basis(Vector3.DOWN * 0.6 + forward * 0.5, torso_right * side)
 			return [wrist, basis, true, 22.0, 0.75, 0.5]
+		POSE_BRACE, POSE_ROLL, POSE_STUMBLE:
+			# Native contact policy and recovery progress select these responses.
+			# Palms stay unanchored: the upright/compact capsule model supplies
+			# real motion, not articulated palm/shoulder ground contacts.
+			var landing: Dictionary = state.get("landing", {})
+			var phase := clampf(float(landing.get("landing_recovery_progress", 1.0)), 0.0, 1.0)
+			var weight := (1.0 - smoothstep(0.55, 1.0, phase)) \
+				* clampf((1.0 - float(landing.get("landing_balance", 1.0))) * 2.0, 0.25, 1.0)
+			var slip: Vector3 = landing.get("landing_slip_velocity", Vector3.ZERO)
+			var lateral := clampf(slip.dot(torso_right) / 5.5, -1.0, 1.0)
+			var recovery_rest := camera.origin + right * (0.23 * side) - up * 0.44 - back * 0.22
+			var wrist := camera.origin + right * (0.30 * side) - up * 0.28 - back * 0.44
+			var fingers := up * 0.9 - back * 0.15
+			var curl := 0.10
+			if pose == POSE_ROLL:
+				# Elbows fold in and one shoulder leads the tuck, then both hands
+				# reopen as the native rolling recovery finishes. No visual clock.
+				var fold := sin(PI * phase)
+				wrist = camera.origin + right * (0.18 * side + 0.035 * fold) \
+					- up * (0.26 + 0.04 * side * fold) - back * (0.22 + 0.03 * side * fold)
+				fingers = up * 0.35 - back * 0.55 - right * (0.35 * side)
+				curl = 0.75
+			elif pose == POSE_STUMBLE:
+				# Side slip offsets the reach; forward/backward slip gives one
+				# counter-reaching arm the lead even in a straight-line stumble.
+				var lead := clampf(lateral + slip.dot(forward) / 5.5 * 0.35, -1.0, 1.0)
+				wrist = camera.origin + right * (0.34 * side - 0.08 * lateral) \
+					- up * (0.29 + 0.08 * side * lead) \
+					- back * (0.36 + 0.04 * maxf(0.0, side * lead))
+				fingers = up * 0.7 - back * 0.4 + right * (0.25 * side)
+				curl = 0.18
+			var basis := _hand_basis(fingers, back)
+			return [recovery_rest.lerp(wrist, weight), basis, false, 18.0,
+				lerpf(0.35, curl, weight), lerpf(0.3, curl * 0.85, weight)]
 		POSE_AIR:
 			# Arms thrown up for balance: palms turned in and down, fingers
 			# loose -- not a reach, which only an edge in range earns.
@@ -646,6 +692,10 @@ func _pole(pose: int, side: float, forward: Vector3, right: Vector3) -> Vector3:
 			return right * side * 0.35 - forward * 0.6 + Vector3.DOWN * 1.0
 		POSE_BALANCE:
 			return right * side * 0.3 + Vector3.DOWN * 1.0 - forward * 0.3
+		POSE_BRACE, POSE_STUMBLE:
+			return right * side * 0.8 + Vector3.DOWN * 0.6 - forward * 0.3
+		POSE_ROLL:
+			return right * side * 0.25 + Vector3.DOWN * 1.0 - forward * 0.2
 		POSE_REMOTE, POSE_CHUTE:
 			return right * side * 0.9 + Vector3.DOWN * 1.0
 	return right * side * 0.5 + Vector3.DOWN * 1.0 - forward * 0.4

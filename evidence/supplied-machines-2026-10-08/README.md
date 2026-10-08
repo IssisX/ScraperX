@@ -1,0 +1,30 @@
+# Supplied-machine and parkour integration evidence
+
+Baseline: `IssisX/ScraperX`, exact `ChatGPT`, `4364b8e825a7d4c04018755ca12a49dc9add353b`. The full ten-phase owner scope remains in [ACTIVE_GOAL_PHASED_SCOPE.md](../../03_EXECUTION/ACTIVE_GOAL_PHASED_SCOPE.md); this receipt is a completed-wave checkpoint, not goal completion. Existing eight repairs and newer baseline work remain preserved.
+
+## Implemented gameplay
+
+Six viable archive owners form distinct native ascent connections from143 to308m: gravity balance, Crown gondola/swing handoff, traction tram, barrel helix, cascade mast and Pitman lift. Their actual geometry/ports, loads, finite shared source, physical constraints/contact paths, controls, exits and checkpoint states are integrated. Separate native and ordinary touch proofs are recorded beside this file; they do not establish one uninterrupted grade-to308 campaign or human timing feel.
+
+The priority photo-derived refractory reclaim bay connects308→330m. Actual finite material enters passive suspended scoops and supplies wheel torque; no wheel motor drives ascent. Reachable feeding, real cabin boarding/balance, brake/release, upper exit/discharge, empty gravity return, named explicit checkpoint retry and another loaded ascent are implemented. The319m maintenance crossing and real lower rungs provide visible recovery geometry; the final recovery subcase status is below. Supply, wheel, suspended cabin, controls and spent-material tray remain visible physical state.
+
+Native hulls and per-body material presentation use the same cooked facets. Eight asymmetric chunk families use2450kg/m³; four selected bricks are two complementary hulls joined by Kit-rated welds. Aggregate mass/COM/inertia match the source solid. Actual completed-substep solver loads trigger release without velocity replacement, with restored collision and enabled-only effective-mass clusters. Chosen6000N/750Nm brittle ratings are gameplay tuning, not calibrated crack propagation or fracture-energy closure. Failure occurs at the host tick boundary (at most one90Hz tick latency). One brick fractures during initial physical settling; three more fracture after entry during feeding.
+
+Licensed CC0 brick maps provide six high-resolution mortar-free face crops in two compact768×512 atlases. Paired halves share a native material identity/body-local frame. Existing audio emits the licensed recorded impact from actual closing-contact receipts; bounded lit powder responds to native contact/fracture events. At most96 negligible-mass CPU particles use gravity, drag, finite life and distance/comfort suppression. Powder does not collide or load machines; consequential pieces remain native.
+
+Ordinary airborne neutral input now preserves lateral momentum; two-handed standing Tower mantle retains gravity and reaches supported footing in1.47778s. Actual positive hand-spring storage changes and absorption are accounted separately. Existing compact post-impact recovery is partial landing work, not a physical anatomical roll, complete bracing model or complete energy closure.
+
+## Evidence actually observed
+
+- `reclaim-fracture-native-hull.log`: pinned-Jolt native hull/rated-weld tests PASS, including mass/COM/inertia, transient/final-substep overloads, below-rating survival, unchanged release velocities, real released pair contact, effective-mass changes and both checkpoint topologies/events.
+- `reclaim-fracture-native-route.log`: current750Nm source PASS for ordinary approach/feed/loaded330m ascent/brake/exit/discharge/empty return/explicit retry/second full ascent. Entry break serial1→4; final new overload receipt23,584N/785Nm.
+- `reclaim-fracture-touch.log` and receipt: final changed-library ordinary touch PASS, exit0, first330m/Tower11 exit, discharge/empty return, actual Pause→Restart→RETRYFROMFEEDING, second314.00m/support2201, deaths0. Native library SHA-256 `bc50029d07f11dcb40aece522b9ad5a9e359ec314c6f94dd5c6753132f393f82`.
+- `reclaim-final-render.log`: actual X11/softpipe renderer PASS, exit0,48,077 checks/198 rigid bodies. Old rigid oracle preserved; all109 appended reclaim bodies render exactly once. World/close-up PNGs depict actual native geometry.
+- `reclaim-native-death-feedback.log`: actual feed changes material inventory and generates new fracture/contact receipts, active dust, then a native lethal drop/death and automatic rewind. One final presentation snapshot clears active/pending dust, consumes audio contact history and preserves death audio receipt. The temporary diagnostic emitted PASS but required termination during lingering teardown; clean process exit is not claimed for that probe. Final ordinary shipping touch exits0. Dummy audio driver means audible playback was not heard.
+- `reclaim-late-miss-observed.log`: deliberate late lateral jump physically lands on native1945 at319m with no added death. The test initially expected standing center height but observed319.598m because real heavy-landing recovery tucks the capsule to0.6m. The test now checks soles from actual crouch state; remaining walk-out/retry and the corrected complete subcase await normal CI. Geometry was not changed to satisfy it.
+
+## Delivery and remaining work
+
+One exact-source Actions/APK candidate follows this completed-wave boundary. CI now explicitly builds all three newly registered native executables before its existing unfiltered CTest run. APK/source/package/signer lineage/checksum still need the candidate's retained normal delivery receipt. No current-wave phone playtest is claimed.
+
+Phone questions: ordinary control readability, Crown swing timing, wheel loading/boarding/exit/recovery feel, close-range surface/dust quality, night/readability, actual recorded impact playback, vibration and sustained90Hz/render performance. Full-route continuity, remaining force/momentum seams, actual rolls/stumbles/balance, broader world/visual experience and remaining supplied designs remain in the full active goal. Cart/slab330→352 is a sourced planning candidate, not implemented. The summit purpose remains open.

@@ -118,6 +118,31 @@ int main() {
     require(rocker_sim.restart_checkpoint() && !rocker_sim.snapshot().landing_recovering,
             "checkpoint restart retained recovery source/state");
 
+    require(heavy.landing_response == 1 && light.landing_response == 0,
+            "impact-conditioned brace failed to distinguish real landings");
+    Simulation roll_sim;
+    require(roll_sim.debug_restart_at({40,16.9,-50}),"roll fall staging rejected");
+    (void)roll_sim.set_crouch_input(true);
+    (void)roll_sim.set_facing(1,0);(void)roll_sim.set_move_input(1,0);
+    const auto before_roll=roll_sim.snapshot().landing_count;
+    for(int i=0;i<450&&roll_sim.snapshot().landing_count==before_roll;++i)tick(roll_sim);
+    const auto roll=roll_sim.snapshot();
+    require(roll.landing_response==2&&roll.death_count==0,"prepared forward fall failed to choose compact recovery");
+    (void)roll_sim.set_move_input(0,0);tick(roll_sim,6);
+    require(roll_sim.snapshot().player_crouched&&roll_sim.snapshot().player_linear_velocity.x>roll.player_linear_velocity.x*.95,
+            "roll lost compact posture or replaced incoming momentum");
+    require(roll_sim.request_jump(),"roll recovery follow-up jump rejected");tick(roll_sim);
+    require(!roll_sim.snapshot().player_grounded&&roll_sim.snapshot().player_linear_velocity.y>5,
+            "roll consumed the player's escape jump");
+    std::cout<<"roll normal="<<roll.landing_normal_speed_mps<<" tangent="<<roll.landing_tangent_speed_mps<<" compact=1 retained_momentum=1\n";
+
+    Simulation unprepared;
+    require(unprepared.debug_restart_at({40,16.9,-50}),"unprepared forward fall staging rejected");
+    (void)unprepared.set_facing(1,0);(void)unprepared.set_move_input(1,0);
+    for(int i=0;i<450&&unprepared.snapshot().landing_count==0;++i)tick(unprepared);
+    require(unprepared.snapshot().landing_count>0&&unprepared.snapshot().landing_response==1&&
+            unprepared.snapshot().death_count==0,"unprepared forward fall must brace rather than select roll");
+
     Simulation legacy(InitialSpawn::SurvivableDrop, WorldContent::RegressionFixtures);
     tick(legacy, 90 * 3);
     require(legacy.snapshot().landing_count == 0 && legacy.snapshot().death_count == 0,

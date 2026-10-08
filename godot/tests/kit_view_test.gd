@@ -9,6 +9,10 @@ var _main: Node3D
 var _failures: Array[String] = []
 var _checks := 0
 var _regression_fixtures := false
+# One ArrayMesh upload quantizes unit normals: the captured ARM64 renderer
+# changes valid authored normals by up to0.000115 in this scene. Keep vertex
+# parity at0.1mm; allow0.0002 only for the normalized direction channel.
+const HULL_NORMAL_TOLERANCE := 0.0002
 
 
 func _initialize() -> void:
@@ -97,6 +101,120 @@ func _rigid_record(kit: Node3D) -> Array:
 					label.double_sided])
 		result.append([String(body.name), children])
 	return result
+
+
+func _check_hull_converter(kit: Node3D) -> void:
+	# An asymmetric tetrahedron makes a box proxy, mirrored winding or
+	# smoothed facet normals fail independently of the shipping world's hulls.
+	var triangles := PackedFloat32Array([
+		0, 0, 0, 0, 3, 0, 2, 0, 0,
+		0, 0, 0, 2, 0, 0, 0, 0, 4,
+		0, 0, 0, 0, 0, 4, 0, 3, 0,
+		2, 0, 0, 0, 3, 0, 0, 0, 4])
+	var material := StandardMaterial3D.new()
+	var mesh: ArrayMesh = kit._kit_hull(triangles, material, -1, -1)
+	_check(mesh != null and mesh.get_surface_count() == 1, "hull converter creates one real triangle surface")
+	if mesh == null or mesh.get_surface_count() != 1:
+		return
+	_check(mesh.surface_get_material(0) == material, "hull converter retains shared material")
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	_check(vertices.size() == 12 and normals.size() == 12, "hull converter preserves every cooked facet vertex")
+	if vertices.size() != 12 or normals.size() != 12:
+		return
+	var centre := Vector3(0.5, 0.75, 1.0)
+	for p in range(0, vertices.size(), 3):
+		var a := vertices[p]
+		var b := vertices[p + 1]
+		var c := vertices[p + 2]
+		var outward := (a - c).cross(b - c).normalized() * -1.0
+		_check(normals[p].dot(outward) > 0.9999 and normals[p] == normals[p + 1] \
+			and normals[p] == normals[p + 2], "hull facets have flat normals opposed to Godot clockwise winding")
+		_check(normals[p].dot((a + b + c) / 3.0 - centre) > 0.0, "hull facet normals point outside asymmetric solid")
+	_check(mesh.get_aabb().position == Vector3.ZERO and mesh.get_aabb().size == Vector3(2, 3, 4),
+		"hull converter retains authoring-space bounds")
+
+
+func _hull_vertex_cell(point: Vector3) -> Vector3i:
+	return Vector3i(floori(point.x * 1000.0), floori(point.y * 1000.0), floori(point.z * 1000.0))
+
+
+func _check_native_hulls(kit: Node3D, native: Object) -> void:
+	# Compare actual batched render triangles with the native cooked hulls,
+	# including part rotation/offset. Existing worlds need not contain hulls.
+	for body in int(native.get_kit_body_count()):
+		var parts: PackedFloat32Array = native.get_kit_body_parts(body)
+		var hull_parts: Array[int] = []
+		for p in range(0, parts.size() - 12, 13):
+			if int(parts[p + 11]) == 3:
+				hull_parts.append(p)
+		if hull_parts.is_empty():
+			continue
+		_check(native.has_method("get_kit_body_part_mesh"), "native cooked hull mesh getter exists")
+		if not native.has_method("get_kit_body_part_mesh"):
+			continue
+		var node := kit.get_node_or_null("KitBody%d" % int(native.get_kit_body_entity_id(body))) as Node3D
+		_check(node != null, "native hull body has render owner")
+		if node == null:
+			continue
+		var rendered: Dictionary = {}
+		for child in node.get_children():
+			if not child is MeshInstance3D:
+				continue
+			var instance := child as MeshInstance3D
+			if instance.mesh == null:
+				continue
+			for surface in instance.mesh.get_surface_count():
+				var arrays: Array = instance.mesh.surface_get_arrays(surface)
+				var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+				var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+				var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+				var count := indices.size() if not indices.is_empty() else vertices.size()
+				for t in range(0, count - 2, 3):
+					var triangle: Array = []
+					for corner in 3:
+						var i: int = indices[t + corner] if not indices.is_empty() else t + corner
+						triangle.append(instance.transform * vertices[i])
+						triangle.append((instance.transform.basis * normals[i]).normalized() if i < normals.size() else Vector3.ZERO)
+					var cell := _hull_vertex_cell(triangle[0])
+					if not rendered.has(cell):
+						rendered[cell] = []
+					rendered[cell].append(triangle)
+		for p in hull_parts:
+			var triangles: PackedFloat32Array = native.get_kit_body_part_mesh(body, p / 13)
+			var valid := not triangles.is_empty() and triangles.size() % 9 == 0
+			for value in triangles:
+				valid = valid and is_finite(value)
+			_check(valid, "native cooked hull has complete finite triangles body=%d part=%d" % [body, p / 13])
+			if not valid:
+				continue
+			var local := Transform3D(Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
+				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
+			for t in range(0, triangles.size(), 9):
+				var a := Vector3(triangles[t], triangles[t + 1], triangles[t + 2])
+				var b := Vector3(triangles[t + 3], triangles[t + 4], triangles[t + 5])
+				var c := Vector3(triangles[t + 6], triangles[t + 7], triangles[t + 8])
+				var cross := (b - a).cross(c - a)
+				_check(cross.is_finite() and cross.length_squared() > 0.000000000000000001,
+					"native cooked hull facet is nondegenerate body=%d part=%d triangle=%d" % [body, p / 13, t / 9])
+				if not cross.is_finite() or cross.length_squared() <= 0.000000000000000001:
+					continue
+				var normal := (local.basis * cross.normalized()).normalized()
+				var expected: Array[Vector3] = [local * a, local * c, local * b]
+				var cell := _hull_vertex_cell(expected[0])
+				var found := false
+				# Neighbouring cells tolerate ARM/x86 rounding at bin boundaries.
+				for x in range(-1, 2):
+					for y in range(-1, 2):
+						for z in range(-1, 2):
+							for candidate in rendered.get(cell + Vector3i(x, y, z), []):
+								var matches := true
+								for corner in 3:
+									matches = matches and expected[corner].distance_to(candidate[corner * 2]) < 0.0001 \
+										and normal.distance_to(candidate[corner * 2 + 1]) < HULL_NORMAL_TOLERANCE
+								found = found or matches
+				_check(found, "render matches cooked hull facet/pose/winding/normal body=%d part=%d triangle=%d" % [body, p / 13, t / 9])
 
 
 func _sample(kit: Node3D, native: Object) -> void:
@@ -262,12 +380,29 @@ func _run() -> void:
 			var actual_cargo: Array = []
 			var actual_facade: Array = []
 			var added_lift: Array[String] = []
+			var added_supplied: Array[String] = []
+			var added_reclaim: Array[String] = []
+			var expected_reclaim: Array[String] = []
+			# The new wheel is an explicit append-only migration. Preserve the
+			# old oracle and require every reserved body exactly once; do not
+			# regenerate a baseline from the changed shipping scene.
+			for entity in range(1940, 1946):
+				expected_reclaim.append("KitBody%d" % entity)
+			for entity in range(2200, 2303):
+				expected_reclaim.append("KitBody%d" % entity)
+			const SUPPLIED_BODIES := ["KitBody1920", "KitBody1921", "KitBody1922", "KitBody1930", "KitBody1931", "KitBody1980", "KitBody1981", "KitBody1982", "KitBody1983", "KitBody1984", "KitBody1985", "KitBody1986", "KitBody1987", "KitBody1988", "KitBody1989", "KitBody1990", "KitBody1991", "KitBody1992", "KitBody1993", "KitBody1994", "KitBody1995", "KitBody1996", "KitBody2920", "KitBody2921", "KitBody2922", "KitBody2930", "KitBody2980", "KitBody2981", "KitBody2982", "KitBody2983", "KitBody2984", "KitBody2985", "KitBody2986", "KitBody2987", "KitBody2988", "KitBody2989", "KitBody2990", "KitBody2991", "KitBody2992"]
 			const LIFT_BODIES := ["KitBody1970", "KitBody1971", "KitBody1972", "KitBody2970", "KitBody2971", "KitBody2972", "KitBody2973", "KitBody2974", "KitBody2975", "KitBody2976", "KitBody2977", "KitBody2978"]
 			for body in record:
 				# Appended AS-027 bodies have no pre-extraction counterpart.
 				# Keep every prior body in its original oracle; native pose/visibility
 				# checks below also cover each new moving assembly.
-				if body[0] in LIFT_BODIES:
+				if body[0] in expected_reclaim:
+					added_reclaim.append(body[0])
+					_check(not body[1].is_empty(), "reclaim assembly has native-derived draw geometry " + body[0])
+				elif body[0] in SUPPLIED_BODIES:
+					added_supplied.append(body[0])
+					_check(not body[1].is_empty(), "supplied assembly has collision-derived draw geometry " + body[0])
+				elif body[0] in LIFT_BODIES:
 					added_lift.append(body[0])
 					_check(not body[1].is_empty(), "lift assembly has drawable geometry " + body[0])
 				elif body[0] in ["KitBody1952", "KitBody2952", "KitBody2954"]:
@@ -278,6 +413,11 @@ func _run() -> void:
 					actual_original.append(body)
 			added_lift.sort()
 			_check(added_lift == LIFT_BODIES, "all twelve added lift assemblies render exactly once")
+			added_supplied.sort()
+			_check(added_supplied == SUPPLIED_BODIES, "all added supplied assemblies render exactly once")
+			added_reclaim.sort()
+			expected_reclaim.sort()
+			_check(added_reclaim == expected_reclaim, "all109 gravity-reclaim bodies render exactly once")
 			for body in expected:
 				if body[0] not in ["KitBody1952", "KitBody1600"]:
 					expected_original.append(body)
@@ -311,6 +451,8 @@ func _run() -> void:
 	var script: Script = kit.get_script()
 	_check(script != null and script.resource_path == "res://presentation/kit_view.gd",
 		"KitPresentation owns extracted rendering")
+	_check_hull_converter(kit)
+	_check_native_hulls(kit, _main._native)
 	for frame in 12:
 		await process_frame
 		# Main has updated native and rendered this snapshot by this point.

@@ -1,0 +1,12 @@
+PASS PARKOUR missed-release/recovery-footing/real-ladder/retry ordinary_inputs_only=1
+SWING t=0 x=-36.2557 y=200.101 vx=-4.13252 vy=-0.937505 work=18802.7
+SWING t=5 x=-35.0438 y=200.027 vx=-3.09477 vy=-1.32578 work=20680.5
+SWING t=10 x=-33.888 y=200.628 vx=-1.531 vy=-0.999581 work=22681.4
+SWING t=15 x=-33.3277 y=201.025 vx=0.310211 vy=0.317905 work=24731.4
+SWING t=20 x=-33.6031 y=200.799 vx=2.58053 vy=1.77604 work=26792.5
+SWING t=25 x=-35.0001 y=199.971 vx=5.1294 vy=2.1622 work=28775.8
+SWING t=30 x=-37.7583 y=199.421 vx=6.84925 vy=-0.114102 work=30803.6
+SWING t=35 x=-41.032 y=200.271 vx=5.26863 vy=-2.89499 work=32825.8
+SWING t=40 x=-43.1421 y=202.026 vx=1.71504 vy=-2.11525 work=34775.8
+SWING RELEASE result pos=-29.0913,198.59,-160.45 support=1985 traversal=0
+PASS PARKOUR ordinary jump/catch/player-pump/rising-release/receiver/Tower198 peak_x=-32.1119 pump_ticks=3778 ordinary_inputs_only=1

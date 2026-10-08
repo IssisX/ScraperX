@@ -4,13 +4,19 @@
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
 #include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 namespace scraperx::sim::kit {
 
@@ -33,8 +39,78 @@ constexpr float kGovernorDeadband = 0.01F;
 constexpr float kGovernorCreep = 0.08F;
 // A catch relatches only for a body this slow.
 
-[[nodiscard]] JPH::Ref<JPH::Shape> make_shape(const std::vector<Part> &parts) {
-    const auto box = [](const Part &part) -> JPH::Ref<JPH::Shape> {
+[[nodiscard]] bool finite_point(const JPH::Vec3 point) noexcept {
+    return std::isfinite(point.GetX()) && std::isfinite(point.GetY()) &&
+           std::isfinite(point.GetZ());
+}
+
+[[noreturn]] void invalid_hull(const std::size_t part, const std::string &reason) {
+    throw std::invalid_argument("kit convex hull part " + std::to_string(part) + ": " + reason);
+}
+
+[[nodiscard]] JPH::Ref<JPH::Shape> make_shape(
+    const std::vector<Part> &parts, std::vector<std::vector<JPH::Vec3>> &part_meshes) {
+    part_meshes.resize(parts.size());
+    const auto make_part = [&](const std::size_t index) -> JPH::Ref<JPH::Shape> {
+        const Part &part = parts[index];
+        if (part.shape == Part::Shape::ConvexHull) {
+            if (part.points.size() < 4 ||
+                part.points.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+                invalid_hull(index, "requires at least four finite points within Jolt's input range");
+            }
+            for (const JPH::Vec3 point : part.points) {
+                if (!finite_point(point)) invalid_hull(index, "contains a nonfinite point");
+            }
+            if (!std::isfinite(part.mass_kg) || part.mass_kg < 0.0F) {
+                invalid_hull(index, "mass must be finite and nonnegative");
+            }
+            // Facets/bevels belong to the authored geometry. A rounded native
+            // margin would disagree with the faceted mesh at edges and corners.
+            JPH::ConvexHullShapeSettings settings(part.points.data(),
+                                                  static_cast<int>(part.points.size()), 0.0F);
+            const auto result = settings.Create();
+            if (result.HasError()) invalid_hull(index, result.GetError().c_str());
+            JPH::Ref<JPH::Shape> shape = result.Get();
+            auto &hull = *static_cast<JPH::ConvexHullShape *>(shape.GetPtr());
+            const float volume = hull.GetVolume();
+            // Jolt also supports flat hulls. This kit declares solid material,
+            // so a successful zero-volume cook must still reject authoring.
+            if (!std::isfinite(volume) || volume <= 0.0F ||
+                !finite_point(hull.GetCenterOfMass())) {
+                invalid_hull(index, "must cook to a finite solid with positive volume");
+            }
+            if (part.mass_kg > 0.0F) {
+                const float density = part.mass_kg / volume;
+                if (!std::isfinite(density) || density <= 0.0F) {
+                    invalid_hull(index, "mass/volume yields an invalid native density");
+                }
+                // Modify this same cook before building a compound. Native
+                // mass/inertia integration then weights each part correctly.
+                hull.SetDensity(density);
+            }
+            auto &mesh = part_meshes[index];
+            std::size_t vertices = 0;
+            for (JPH::uint face = 0; face < hull.GetNumFaces(); ++face) {
+                vertices += 3U * (hull.GetNumVerticesInFace(face) - 2U);
+            }
+            mesh.reserve(vertices);
+            std::array<JPH::uint, JPH::ConvexHullShape::cMaxPointsInHull> face_vertices;
+            const auto center = hull.GetCenterOfMass();
+            for (JPH::uint face = 0; face < hull.GetNumFaces(); ++face) {
+                // Pinned Jolt 5.6 GetFaceVertices returns CCW indices, and
+                // GetPoint is relative to the hull COM. Add COM exactly once
+                // to recover Part authoring coordinates; preserve outward CCW.
+                const auto count = hull.GetFaceVertices(
+                    face, static_cast<JPH::uint>(face_vertices.size()), face_vertices.data());
+                const auto first = hull.GetPoint(face_vertices[0]) + center;
+                for (JPH::uint vertex = 1; vertex + 1 < count; ++vertex) {
+                    mesh.push_back(first);
+                    mesh.push_back(hull.GetPoint(face_vertices[vertex]) + center);
+                    mesh.push_back(hull.GetPoint(face_vertices[vertex + 1]) + center);
+                }
+            }
+            return shape;
+        }
         const float smallest =
             std::min({part.half.GetX(), part.half.GetY(), part.half.GetZ()});
         const float margin = part.convex_radius >= 0.0F ? part.convex_radius :
@@ -56,6 +132,9 @@ constexpr float kGovernorCreep = 0.08F;
             }
             return settings.Create().Get();
         }
+        if (part.shape != Part::Shape::Box) {
+            throw std::invalid_argument("kit part " + std::to_string(index) + ": unknown shape");
+        }
         JPH::BoxShapeSettings settings(part.half, margin);
         if (part.mass_kg > 0.0F) {
             settings.mDensity = part.mass_kg /
@@ -65,11 +144,12 @@ constexpr float kGovernorCreep = 0.08F;
     };
     if (parts.size() == 1 && parts.front().offset.IsNearZero() &&
         parts.front().rotation.IsClose(JPH::Quat::sIdentity())) {
-        return box(parts.front());
+        return make_part(0);
     }
     JPH::StaticCompoundShapeSettings settings;
-    for (const Part &part : parts) {
-        settings.AddShape(part.offset, part.rotation, box(part));
+    for (std::size_t index = 0; index < parts.size(); ++index) {
+        const Part &part = parts[index];
+        settings.AddShape(part.offset, part.rotation, make_part(index));
     }
     const JPH::ShapeSettings::ShapeResult result = settings.Create();
     return result.Get();
@@ -120,8 +200,15 @@ Kit::~Kit() {
 BodyIndex Kit::add_body(const std::uint64_t entity, const std::vector<Part> &parts,
                         const JPH::RVec3 position, const JPH::Quat rotation, const float mass_kg,
                         const float friction) {
+    const bool has_hull = std::any_of(parts.begin(), parts.end(), [](const Part &part) {
+        return part.shape == Part::Shape::ConvexHull;
+    });
+    if (has_hull && (!std::isfinite(mass_kg) || mass_kg < 0.0F)) {
+        throw std::invalid_argument("kit convex hull parts: body mass must be finite and nonnegative");
+    }
     const bool dynamic = mass_kg > 0.0F;
-    JPH::BodyCreationSettings settings(make_shape(parts), position, rotation,
+    Body record;
+    JPH::BodyCreationSettings settings(make_shape(parts, record.part_meshes), position, rotation,
                                        dynamic ? JPH::EMotionType::Dynamic
                                                : JPH::EMotionType::Static,
                                        dynamic ? moving_layer_ : static_layer_);
@@ -133,19 +220,36 @@ BodyIndex Kit::add_body(const std::uint64_t entity, const std::vector<Part> &par
     if (dynamic) {
         settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
         settings.mMassPropertiesOverride.mMass = mass_kg;
+        if (has_hull) {
+            const auto mass = settings.GetMassProperties();
+            bool finite = std::isfinite(mass.mMass) && mass.mMass > 0.0F;
+            for (int row = 0; row < 3; ++row) {
+                for (int column = 0; column < 3; ++column) {
+                    finite = finite && std::isfinite(mass.mInertia(row, column));
+                }
+            }
+            JPH::Mat44 inertia_rotation;
+            JPH::Vec3 moments;
+            // Match Jolt's decomposition gate before it can substitute a unit
+            // sphere inertia for an invalid/near-zero authored solid.
+            if (!finite || !mass.DecomposePrincipalMomentsOfInertia(inertia_rotation, moments) ||
+                !finite_point(moments) || moments.IsNearZero() ||
+                std::min({moments.GetX(), moments.GetY(), moments.GetZ()}) <= 0.0F) {
+                throw std::invalid_argument("kit convex hull parts: invalid native body mass/inertia");
+            }
+        }
     }
     auto &bodies = system_.GetBodyInterface();
     JPH::Body *body = bodies.CreateBody(settings);
     bodies.AddBody(body->GetID(),
                    dynamic ? JPH::EActivation::Activate : JPH::EActivation::DontActivate);
-    Body record;
     record.id = body->GetID();
     record.entity = entity;
     record.dynamic = dynamic;
     record.mass = mass_kg;
     record.parts = parts;
     record.parked = position;
-    bodies_.push_back(record);
+    bodies_.push_back(std::move(record));
     return BodyIndex{static_cast<std::uint32_t>(bodies_.size() - 1U)};
 }
 
@@ -171,7 +275,7 @@ float Kit::point_inverse_mass(BodyIndex index,JPH::RVec3 point,JPH::Vec3 directi
     while(changed) {
         changed=false;
         for(const auto &joint:fixed_joints_) {
-            if(joint->GetSubType()!=JPH::EConstraintSubType::Fixed) continue;
+            if(!joint->GetEnabled() || joint->GetSubType()!=JPH::EConstraintSubType::Fixed) continue;
             const auto first=joint->GetBody1(),second=joint->GetBody2();
             const bool has_first=std::find(cluster.begin(),cluster.end(),first)!=cluster.end();
             const bool has_second=std::find(cluster.begin(),cluster.end(),second)!=cluster.end();
@@ -205,13 +309,24 @@ void Kit::set_continuous_collision(const BodyIndex body) {
 }
 
 void Kit::disable_collision(const BodyIndex first, const BodyIndex second) {
+    require_unowned_weld_pair(first, second);
     collision_groups_->DisableCollision(first.value, second.value);
+}
+
+void Kit::require_unowned_weld_pair(const BodyIndex first, const BodyIndex second) const {
+    for (const Weld &weld : welds_) {
+        if ((weld.first == first && weld.second == second) ||
+            (weld.first == second && weld.second == first)) {
+            throw std::invalid_argument("kit rated weld: collision pair already owned by a weld");
+        }
+    }
 }
 
 LeverIndex Kit::add_hinge(const BodyIndex first, const BodyIndex second,
                           const JPH::RVec3 pivot, const JPH::Vec3 axis,
                           const float friction_torque, const std::uint32_t velocity_steps,
                           const std::uint32_t position_steps) {
+    if (first.valid()) require_unowned_weld_pair(first, second);
     JPH::HingeConstraintSettings settings;
     settings.mPoint1 = settings.mPoint2 = pivot;
     settings.mHingeAxis1 = settings.mHingeAxis2 = axis;
@@ -229,6 +344,7 @@ LeverIndex Kit::add_hinge(const BodyIndex first, const BodyIndex second,
 }
 
 void Kit::add_fixed_joint(const BodyIndex first, const BodyIndex second) {
+    require_unowned_weld_pair(first, second);
     JPH::FixedConstraintSettings settings;
     settings.mAutoDetectPoint = true;
     settings.mNumVelocityStepsOverride = 40;
@@ -239,9 +355,36 @@ void Kit::add_fixed_joint(const BodyIndex first, const BodyIndex second) {
     fixed_joints_.push_back(joint);
 }
 
+WeldIndex Kit::add_breakable_weld(const BodyIndex first, const BodyIndex second,
+                                 const float force_rating_n, const float torque_rating_nm) {
+    const Body *a = find(bodies_, first), *b = find(bodies_, second);
+    if (a == nullptr || b == nullptr || first == second || !a->enabled || !b->enabled ||
+        (!a->dynamic && !b->dynamic) || !std::isfinite(force_rating_n) ||
+        !std::isfinite(torque_rating_nm) || force_rating_n <= 0 || torque_rating_nm <= 0) {
+        throw std::invalid_argument("kit rated weld: distinct live endpoints and finite positive ratings required");
+    }
+    require_unowned_weld_pair(first, second);
+    if (!collision_groups_->IsCollisionEnabled(first.value, second.value)) {
+        throw std::invalid_argument("kit rated weld: collision pair already filtered by another owner");
+    }
+    JPH::FixedConstraintSettings settings;
+    settings.mAutoDetectPoint = true;
+    settings.mNumVelocityStepsOverride = 40;
+    settings.mNumPositionStepsOverride = 8;
+    JPH::Ref<JPH::FixedConstraint> joint = static_cast<JPH::FixedConstraint *>(
+        settings.Create(jolt_body(first), jolt_body(second)));
+    system_.AddConstraint(joint);
+    collision_groups_->DisableCollision(first.value, second.value);
+    // The existing heterogeneous list alone owns constraint teardown.
+    fixed_joints_.emplace_back(joint.GetPtr());
+    welds_.push_back({first, second, joint, force_rating_n, torque_rating_nm, {}});
+    return WeldIndex{static_cast<std::uint32_t>(welds_.size() - 1)};
+}
+
 void Kit::add_elastic_mount(BodyIndex foundation,BodyIndex structure,JPH::RVec3 point,
                             float translation_stiffness,float translation_damping,
                             float rotation_stiffness,float rotation_damping) {
+    if (foundation.valid()) require_unowned_weld_pair(foundation, structure);
     JPH::SixDOFConstraintSettings settings;
     settings.mPosition1=settings.mPosition2=point;
     settings.mNumVelocityStepsOverride=40;
@@ -337,6 +480,7 @@ GuideIndex Kit::add_guide(const BodyIndex body, const JPH::Vec3 axis, const floa
 void Kit::add_sliding_track(const BodyIndex carrier, const BodyIndex carriage,
                             const JPH::Vec3 world_axis, const float min_travel,
                             const float max_travel, const float friction_force) {
+    require_unowned_weld_pair(carrier, carriage);
     const JPH::Vec3 axis = world_axis.Normalized();
     JPH::SliderConstraintSettings settings;
     settings.mSpace = JPH::EConstraintSpace::WorldSpace;
@@ -471,6 +615,70 @@ void Kit::govern(Guide &guide) noexcept {
         guide.slider->SetMotorState(JPH::EMotorState::Velocity);
     } else {
         guide.slider->SetMotorState(JPH::EMotorState::Off);
+    }
+}
+
+void Kit::observe_weld_step() {
+    if (!weld_step_pending_) return;
+    weld_step_pending_ = false;
+    for (Weld &weld : welds_) {
+        if (!weld.joint->GetEnabled() || weld.state.broken) continue;
+        auto &state = weld.state;
+        // An inactive constraint retains old lambdas; those are not a solve
+        // receipt. Kit dynamic bodies normally have sleeping disabled.
+        const bool solved = weld.joint->IsActive() &&
+                            bodies_[weld.first.value].enabled && bodies_[weld.second.value].enabled;
+        state.force_n = solved ? weld.joint->GetTotalLambdaPosition().Length() / weld_step_dt_ : 0;
+        state.torque_nm = solved ? weld.joint->GetTotalLambdaRotation().Length() / weld_step_dt_ : 0;
+        ++state.sample_count;
+        state.peak_force_n = std::max(state.peak_force_n, state.force_n);
+        state.peak_torque_nm = std::max(state.peak_torque_nm, state.torque_nm);
+        if (state.force_n > weld.force_rating_n || state.torque_nm > weld.torque_rating_nm) {
+            ++state.overload_steps;
+            state.break_queued = true;
+        }
+    }
+}
+
+void Kit::begin_weld_step(const float collision_dt) {
+    if (!std::isfinite(collision_dt) || collision_dt <= 0) {
+        throw std::invalid_argument("kit rated weld: collision substep duration must be finite and positive");
+    }
+    observe_weld_step();
+    weld_step_dt_ = collision_dt;
+    weld_step_pending_ = true;
+}
+
+void Kit::finish_weld_steps() {
+    observe_weld_step();
+    weld_step_dt_ = 0;
+    auto &bodies = system_.GetBodyInterface();
+    for (std::size_t index = 0; index < welds_.size(); ++index) {
+        Weld &weld = welds_[index];
+        auto &state = weld.state;
+        if (!state.break_queued || state.broken) continue;
+        // Keep the two halves welded throughout Update. At this safe host
+        // boundary release the constraint and collision exclusion together;
+        // no half can move independently during a still-filtered substep.
+        const auto first_point = jolt_body(weld.first).GetCenterOfMassTransform() *
+                                 weld.joint->GetConstraintToBody1Matrix().GetTranslation();
+        const auto second_point = jolt_body(weld.second).GetCenterOfMassTransform() *
+                                  weld.joint->GetConstraintToBody2Matrix().GetTranslation();
+        state.break_position = first_point + 0.5F * JPH::Vec3(second_point - first_point);
+        weld.joint->SetEnabled(false);
+        weld.joint->ResetWarmStart();
+        collision_groups_->EnableCollision(weld.first.value, weld.second.value);
+        state.enabled = false;
+        state.broken = state.collision_enabled = true;
+        state.break_queued = false;
+        if (bodies_[weld.first.value].enabled && bodies_[weld.first.value].dynamic)
+            bodies.ActivateBody(body_id(weld.first));
+        if (bodies_[weld.second.value].enabled && bodies_[weld.second.value].dynamic)
+            bodies.ActivateBody(body_id(weld.second));
+        state.break_serial = ++weld_break_serial_;
+        weld_break_sample_ = {weld_break_serial_, true, WeldIndex{static_cast<std::uint32_t>(index)},
+            body_entity(weld.first), body_entity(weld.second), state.break_position,
+            state.peak_force_n, state.peak_torque_nm};
     }
 }
 
@@ -780,6 +988,11 @@ std::uint64_t Kit::rope_shackle_entity(const RopeIndex rope) const noexcept {
 // ---- checkpoint -------------------------------------------------------------
 
 void Kit::capture(Checkpoint &out) const {
+    out.welds.clear();
+    for (std::uint32_t index = 0; index < welds_.size(); ++index)
+        out.welds.push_back(weld_state(WeldIndex{index}));
+    out.weld_break_serial = weld_break_serial_;
+    out.weld_break_sample = weld_break_sample_;
     out.guide_peak_speed.clear();
     for (const Guide &guide : guides_) out.guide_peak_speed.push_back(guide.peak_speed);
     out.bodies.resize(bodies_.size());
@@ -811,7 +1024,7 @@ void Kit::capture(Checkpoint &out) const {
 }
 
 void Kit::restore(const Checkpoint &in) {
-    if (in.bodies.size() != bodies_.size()) {
+    if (in.bodies.size() != bodies_.size() || in.welds.size() != welds_.size()) {
         return;
     }
     for (std::size_t i = 0; i < guides_.size(); ++i) {
@@ -856,6 +1069,24 @@ void Kit::restore(const Checkpoint &in) {
             latch(catches_[index]);
         }
     }
+    weld_step_pending_ = false;
+    weld_step_dt_ = 0;
+    for (std::size_t index = 0; index < welds_.size(); ++index) {
+        Weld &weld = welds_[index];
+        weld.state = in.welds[index];
+        weld.joint->ResetWarmStart();
+        weld.joint->SetEnabled(weld.state.enabled);
+        if (weld.state.collision_enabled)
+            collision_groups_->EnableCollision(weld.first.value, weld.second.value);
+        else
+            collision_groups_->DisableCollision(weld.first.value, weld.second.value);
+    }
+    // Physical break history rewinds with the checkpoint. Publication keeps
+    // a lifetime high-water serial and is cleared: restore is not a fracture.
+    weld_break_serial_ = std::max(weld_break_serial_, in.weld_break_serial);
+    weld_break_sample_ = in.weld_break_sample;
+    weld_break_sample_.serial = weld_break_serial_;
+    weld_break_sample_.valid = false;
 }
 
 // ---- read back --------------------------------------------------------------
@@ -863,6 +1094,29 @@ void Kit::restore(const Checkpoint &in) {
 std::uint64_t Kit::body_entity(const BodyIndex body) const noexcept {
     const Body *record = find(bodies_, body);
     return record != nullptr ? record->entity : 0;
+}
+
+std::uint64_t Kit::body_weld_material_key(const BodyIndex body) const noexcept {
+    const auto entity = body_entity(body);
+    std::uint64_t key = entity;
+    for (const Weld &weld : welds_) {
+        if (weld.first == body || weld.second == body)
+            key = std::min(key, std::min(body_entity(weld.first), body_entity(weld.second)));
+    }
+    return key;
+}
+
+Kit::WeldState Kit::weld_state(const WeldIndex weld) const noexcept {
+    const Weld *record = find(welds_, weld);
+    WeldState state;
+    state.enabled = false;
+    if (record != nullptr) {
+        state = record->state;
+        state.enabled = record->joint->GetEnabled();
+        state.collision_enabled = collision_groups_->IsCollisionEnabled(record->first.value,
+                                                                        record->second.value);
+    }
+    return state;
 }
 
 bool Kit::body_dynamic(const BodyIndex body) const noexcept {
@@ -879,6 +1133,14 @@ const std::vector<Part> &Kit::body_parts(const BodyIndex body) const noexcept {
     static const std::vector<Part> kNoParts;
     const Body *record = find(bodies_, body);
     return record != nullptr ? record->parts : kNoParts;
+}
+
+const std::vector<JPH::Vec3> &Kit::body_part_mesh(const BodyIndex body,
+                                               const std::uint32_t part) const noexcept {
+    static const std::vector<JPH::Vec3> kNoMesh;
+    const Body *record = find(bodies_, body);
+    return record != nullptr && part < record->part_meshes.size()
+               ? record->part_meshes[part] : kNoMesh;
 }
 
 JPH::RVec3 Kit::body_position(const BodyIndex body) const noexcept {

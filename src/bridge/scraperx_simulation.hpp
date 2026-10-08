@@ -38,6 +38,10 @@ public:
     [[nodiscard]] bool restart_checkpoint();
     [[nodiscard]] bool configure_pipe_bridge_fixture();
     [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation);
+    [[nodiscard]] bool set_supplied_machine_input(double value);
+    [[nodiscard]] godot::Dictionary get_supplied_machine_state() const;
+    [[nodiscard]] bool can_restart_gravity_reclaim_attempt() const;
+    [[nodiscard]] bool restart_gravity_reclaim_attempt();
     [[nodiscard]] bool set_service_lift_input(double value);
     [[nodiscard]] bool restart_service_lift_attempt();
     [[nodiscard]] godot::Dictionary get_service_lift_state() const;
@@ -231,9 +235,11 @@ public:
     [[nodiscard]] godot::PackedInt32Array get_cargo_net_indices() const;
     [[nodiscard]] std::int64_t get_kit_body_count() const;
     [[nodiscard]] std::int64_t get_kit_body_entity_id(std::int64_t body) const;
+    [[nodiscard]] std::int64_t get_kit_body_material_key(std::int64_t body) const;
     [[nodiscard]] bool is_kit_body_dynamic(std::int64_t body) const;
     [[nodiscard]] bool is_kit_body_enabled(std::int64_t body) const;
     [[nodiscard]] godot::PackedFloat32Array get_kit_body_parts(std::int64_t body) const;
+    [[nodiscard]] godot::PackedFloat32Array get_kit_body_part_mesh(std::int64_t body, std::int64_t part) const;
     [[nodiscard]] godot::Transform3D get_kit_body_transform(std::int64_t body) const;
     [[nodiscard]] godot::Vector3 get_kit_body_linear_velocity(std::int64_t body) const;
     [[nodiscard]] godot::Transform3D get_kit_body_render_transform(std::int64_t body) const;

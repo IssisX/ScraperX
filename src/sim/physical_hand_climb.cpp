@@ -106,7 +106,16 @@ void PhysicalHandClimb::detach(unsigned hand) {
 void PhysicalHandClimb::clear() {
     detach(0); detach(1);
     last_bound_ = 0.0;
+    last_actuator_positive_work_ = 0.0;
     transfer_profile_ = false;
+    swing_profile_ = false;
+}
+void PhysicalHandClimb::set_swing_profile() {
+    swing_profile_ = true;
+    // The existing finite reciprocal hands carry the real body. Lower command
+    // power bounds deliberate body lean; the hanger hinge remains passive.
+    for (auto &hand : hands_) if (hand) for (int axis=0; axis<3; ++axis)
+        hand->GetMotorSettings(static_cast<JPH::SixDOFConstraint::EAxis>(axis)).mSpringSettings.mDamping=120.0F;
 }
 void PhysicalHandClimb::set_transfer_profile() {
     transfer_profile_ = true;
@@ -122,14 +131,40 @@ bool PhysicalHandClimb::attached(unsigned hand) const noexcept {
 void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, float dt) {
     using namespace JPH;
     last_bound_ = 0.0;
+    last_actuator_positive_work_ = 0.0;
     const unsigned count = unsigned(attached(0)) + unsigned(attached(1));
     if (count == 0 || !finite(desired_player_displacement) || !std::isfinite(dt) || dt <= 0) return;
     const double distance = length(desired_player_displacement);
     if (distance == 0.0) return;
     const double budget = double(active_command_power_bound_w()) * dt;
-    double scale = std::min(1.0, budget / (double(count) * force_bound_n() * distance));
+    // Swing lean is bounded by real spring work and a chosen0.6m/s body
+    // stroke, rather than charging1500N even when the hand load is small.
+    // Existing climb/transfer keep their conservative command-distance bound.
+    double scale = swing_profile_ ? std::min(1.0, .6 * dt / distance) :
+        std::min(1.0, budget / (double(count) * force_bound_n() * distance));
+    std::array<Vec3, 2> extensions;
+    for (unsigned i=0;i<hands_.size();++i) if(attached(i)) extensions[i]=spring_extension(i);
+    const auto work_for_delta = [&](unsigned i, Vec3 delta) {
+        // Both rigid p2-p1-target and soft target-player gain the commanded
+        // player displacement. Use double products to resolve small work.
+        const auto e=extensions[i];
+        return 5000.0*(double(e.GetX())*delta.GetX()+double(e.GetY())*delta.GetY()+
+                       double(e.GetZ())*delta.GetZ()+.5*double(delta.LengthSq()));
+    };
+    const auto positive_work = [&](double fraction) {
+        const Vec3 delta=desired_player_displacement*float(fraction);
+        double supplied=0;
+        for(unsigned i=0;i<hands_.size();++i) if(attached(i)) supplied+=std::max(0.0,work_for_delta(i,delta));
+        return supplied;
+    };
+    if(positive_work(scale)>budget) {
+        double low=0,high=scale;
+        for(int n=0;n<24;++n) {const double middle=.5*(low+high);
+            if(positive_work(middle)<=budget) low=middle; else high=middle;}
+        scale=low*.999999;
+    }
     std::array<Vec3, 2> targets;
-    double debit = 0.0;
+    double debit = 0.0, supplied=0.0, absorbed=0.0;
     // Charge actual representable target changes, including float rounding.
     // One downward correction handles the budget boundary; otherwise reject the
     // command instead of silently admitting an unbounded/nonfinite target.
@@ -137,18 +172,23 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
         const Vec3 delta(float(double(desired_player_displacement.GetX()) * scale),
                          float(double(desired_player_displacement.GetY()) * scale),
                          float(double(desired_player_displacement.GetZ()) * scale));
-        debit = 0.0;
+        debit = supplied = absorbed = 0.0;
         for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
             const auto previous = soft_[i].attached ? soft_[i].rest_offset : hands_[i]->GetTargetPositionCS();
             // Jolt's separation is p2-p1. Positive player motion reduces it.
             targets[i] = soft_[i].attached ? previous + delta : previous - delta;
             if (!finite(targets[i])) return;
             debit += force_bound_n() * length(targets[i] - previous);
+            const auto actual_delta=soft_[i].attached ? targets[i]-previous : previous-targets[i];
+            const double work=work_for_delta(i,actual_delta);
+            supplied+=std::max(0.0,work);
+            absorbed+=std::max(0.0,-work);
         }
-        if (debit <= budget) break;
-        scale *= 0.999999 * budget / debit;
+        const double limiting_debit=std::max(supplied,swing_profile_?0.0:debit);
+        if (limiting_debit <= budget) break;
+        scale *= 0.999999 * budget / limiting_debit;
     }
-    if (debit > budget) return;
+    if (supplied > budget || (!swing_profile_ && debit > budget)) return;
     for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
         if (soft_[i].attached) { soft_[i].rest_offset=targets[i]; continue; }
         hands_[i]->SetTargetPositionCS(targets[i]);
@@ -158,6 +198,24 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
     system_.GetBodyInterface().ActivateBody(player_);
     last_bound_ = debit;
     command_bound_ += debit;
+    last_actuator_positive_work_=supplied;
+    actuator_positive_work_+=supplied;
+    actuator_absorbed_work_+=absorbed;
+}
+JPH::Vec3 PhysicalHandClimb::spring_extension(unsigned hand) const {
+    using namespace JPH;
+    if(soft_[hand].attached) {
+        const auto target=net_->world_point(soft_[hand].material)+RVec3(soft_[hand].rest_offset);
+        return Vec3(target-system_.GetBodyInterface().GetPosition(player_));
+    }
+    const auto &constraint=hands_[hand];
+    const BodyID ids[]{player_,constraint->GetBody2()->GetID()};
+    BodyLockMultiRead lock(system_.GetBodyLockInterface(),ids,2);
+    const auto *player=lock.GetBody(0), *hold=lock.GetBody(1);
+    if(!player || !hold) return Vec3::sZero();
+    const auto p1=player->GetCenterOfMassTransform()*constraint->GetConstraintToBody1Matrix().GetTranslation();
+    const auto p2=hold->GetCenterOfMassTransform()*constraint->GetConstraintToBody2Matrix().GetTranslation();
+    return Vec3(p2-p1)-constraint->GetTargetPositionCS();
 }
 JPH::RVec3 PhysicalHandClimb::commanded_position() const {
     using namespace JPH;

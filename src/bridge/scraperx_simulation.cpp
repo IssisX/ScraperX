@@ -1,5 +1,6 @@
 #include "bridge/scraperx_simulation.hpp"
 #include "sim/slingshot.hpp"
+#include "sim/supplied_ascent.hpp"
 
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -36,6 +37,10 @@ ScraperXSimulation::ScraperXSimulation()
     : simulation_(std::make_unique<sim::Simulation>()) {}
 
 void ScraperXSimulation::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("set_supplied_machine_input", "value"), &ScraperXSimulation::set_supplied_machine_input);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_supplied_machine_state"), &ScraperXSimulation::get_supplied_machine_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("can_restart_gravity_reclaim_attempt"), &ScraperXSimulation::can_restart_gravity_reclaim_attempt);
+    godot::ClassDB::bind_method(godot::D_METHOD("restart_gravity_reclaim_attempt"), &ScraperXSimulation::restart_gravity_reclaim_attempt);
     godot::ClassDB::bind_method(godot::D_METHOD("set_service_lift_input", "value"), &ScraperXSimulation::set_service_lift_input);
     godot::ClassDB::bind_method(godot::D_METHOD("get_service_lift_state"), &ScraperXSimulation::get_service_lift_state);
     godot::ClassDB::bind_method(godot::D_METHOD("restart_service_lift_attempt"), &ScraperXSimulation::restart_service_lift_attempt);
@@ -382,12 +387,16 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_kit_body_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_entity_id", "body"),
                                 &ScraperXSimulation::get_kit_body_entity_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_material_key", "body"),
+                                &ScraperXSimulation::get_kit_body_material_key);
     godot::ClassDB::bind_method(godot::D_METHOD("is_kit_body_dynamic", "body"),
                                 &ScraperXSimulation::is_kit_body_dynamic);
     godot::ClassDB::bind_method(godot::D_METHOD("is_kit_body_enabled", "body"),
                                 &ScraperXSimulation::is_kit_body_enabled);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_parts", "body"),
                                 &ScraperXSimulation::get_kit_body_parts);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_part_mesh", "body", "part"),
+                                &ScraperXSimulation::get_kit_body_part_mesh);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_linear_velocity", "body"),
                                 &ScraperXSimulation::get_kit_body_linear_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_transform", "body"),
@@ -521,6 +530,27 @@ bool ScraperXSimulation::configure_pipe_bridge_fixture() {
 bool ScraperXSimulation::set_slingshot_input(double draw, double yaw, double elevation) {
     return simulation_->set_slingshot_input(draw, yaw, elevation);
 }
+bool ScraperXSimulation::set_supplied_machine_input(double value){return simulation_->set_supplied_machine_input(value);}
+bool ScraperXSimulation::can_restart_gravity_reclaim_attempt() const {
+    return simulation_->can_restart_gravity_reclaim_attempt();
+}
+bool ScraperXSimulation::restart_gravity_reclaim_attempt() {
+    return simulation_->restart_gravity_reclaim_attempt();
+}
+godot::Dictionary ScraperXSimulation::get_supplied_machine_state()const {
+ const auto&s=simulation_->snapshot();godot::Dictionary out;
+ out["station"]=static_cast<std::int64_t>(s.supplied_machine_station);
+ out["reachable_station"]=static_cast<std::int64_t>(s.supplied_machine_reachable_station);
+ out["surface_y"]=s.supplied_machine_surface_y;out["energy_j"]=s.supplied_machine_energy_j;
+ out["capacity_j"]=s.supplied_machine_capacity_j;out["power_w"]=s.supplied_machine_power_w;
+ out["braking"]=s.supplied_machine_braking;out["energy_cutoff"]=s.supplied_machine_energy_cutoff;
+ out["wheel_motor_enabled"]=s.supplied_machine_wheel_motor_enabled;
+ out["rubble_impact_count"]=static_cast<std::int64_t>(s.reclaim_impact_count);out["rubble_impact_speed_mps"]=s.reclaim_impact_speed_mps;out["rubble_impact_position"]=to_godot(s.reclaim_impact_position);
+ out["rubble_break_serial"]=static_cast<std::int64_t>(s.reclaim_break_serial);out["rubble_break_valid"]=s.reclaim_break_valid;
+ out["rubble_break_position"]=to_godot(s.reclaim_break_position);out["rubble_break_force_n"]=s.reclaim_break_force_n;out["rubble_break_torque_nm"]=s.reclaim_break_torque_nm;
+ out["hopper_mass_kg"]=s.supplied_machine_hopper_mass_kg;out["wheel_angle_rad"]=s.supplied_machine_wheel_angle_rad;out["bearing_heat_j"]=s.supplied_machine_bearing_heat_j;
+ out["index"]=s.supplied_machine_index;out["name"]=scraperx::sim::SuppliedAscent::name(s.supplied_machine_index);return out;
+}
 bool ScraperXSimulation::set_service_lift_input(double value) {
     return simulation_->set_service_lift_input(value);
 }
@@ -632,6 +662,13 @@ godot::Dictionary ScraperXSimulation::get_slingshot_render_state() const {
 godot::Dictionary ScraperXSimulation::get_landing_state() const {
     const auto &s = simulation_->snapshot();
     godot::Dictionary out;
+    out["player_swinging"] = s.player_swinging;
+    out["left_hand_force_n"] = to_godot(s.traversal_left_hand_force);
+    out["right_hand_force_n"] = to_godot(s.traversal_right_hand_force);
+    out["hand_actuator_positive_work_j"] = s.traversal_actuator_positive_work_j;
+    out["hand_actuator_absorbed_work_j"] = s.traversal_actuator_absorbed_work_j;
+    out["landing_response"] = s.landing_response;
+    out["landing_recovery_progress"] = s.landing_recovery_progress;
     out["landing_count"] = s.landing_count;
     out["landing_support_entity_id"] = s.landing_support_entity_id;
     out["landing_approach_energy_j"] = s.landing_approach_energy_j;
@@ -1249,6 +1286,10 @@ std::int64_t ScraperXSimulation::get_kit_body_entity_id(const std::int64_t body)
     return static_cast<std::int64_t>(simulation_->kit_body_entity(kit_index(body)));
 }
 
+std::int64_t ScraperXSimulation::get_kit_body_material_key(const std::int64_t body) const {
+    return static_cast<std::int64_t>(simulation_->kit_body_material_key(kit_index(body)));
+}
+
 bool ScraperXSimulation::is_kit_body_dynamic(const std::int64_t body) const {
     return simulation_->kit_body_dynamic(kit_index(body));
 }
@@ -1270,6 +1311,22 @@ godot::PackedFloat32Array ScraperXSimulation::get_kit_body_parts(const std::int6
               static_cast<double>(source.shape), source.inner_radius}) {
             out.push_back(static_cast<float>(value));
         }
+    }
+    return out;
+}
+
+godot::PackedFloat32Array ScraperXSimulation::get_kit_body_part_mesh(
+    const std::int64_t body, const std::int64_t part) const {
+    godot::PackedFloat32Array out;
+    if (body < 0 || part < 0 || body > UINT32_MAX || part > UINT32_MAX) return out;
+    const auto vertices = simulation_->kit_body_part_mesh(static_cast<std::uint32_t>(body),
+                                                         static_cast<std::uint32_t>(part));
+    out.resize(static_cast<std::int64_t>(vertices.size() * 3));
+    auto *data = out.ptrw();
+    for (const auto &vertex : vertices) {
+        *data++ = static_cast<float>(vertex.x);
+        *data++ = static_cast<float>(vertex.y);
+        *data++ = static_cast<float>(vertex.z);
     }
     return out;
 }

@@ -180,6 +180,30 @@ void command_sign_and_budget() {
     check(hands.last_command_work_bound_j() == 0, "unattached command consumed work budget");
     std::cout << "command ascent=" << w.position(w.player).GetY() - y << " cumulative_bound=" << hands.command_work_bound_j() << '\n';
 }
+void measured_swing_actuation() {
+    World w;
+    PhysicalHandClimb hands(w.system,w.player);
+    w.acquire(hands);w.tick(hands,360);hands.set_swing_profile();
+    const double sag=4.3-w.position(w.player).GetY();
+    const auto target=hands.commanded_position();
+    hands.advance_targets(Vec3(0,.15F,0),h);
+    const double stroke=hands.commanded_position().GetY()-target.GetY();
+    const double expected=5000.0*(2*sag*stroke+stroke*stroke);
+    check(stroke>0 && stroke<=.6*h+.000001,"swing lean exceeded finite body stroke");
+    check(std::abs(hands.last_actuator_positive_work_j()-expected)<.002,
+          "spring actuation receipt differs from actual loaded extension/work");
+    check(hands.last_actuator_positive_work_j()<=500*h+.00001,
+          "swing actual positive spring work exceeded500W budget");
+    const double supplied=hands.actuator_positive_work_j();
+    hands.advance_targets(Vec3::sZero(),h);
+    check(hands.actuator_positive_work_j()==supplied && hands.last_actuator_positive_work_j()==0,
+          "neutral swing command generated actuator work");
+    hands.advance_targets(Vec3(0,-float(stroke),0),h);
+    check(hands.actuator_absorbed_work_j()>0 && hands.actuator_positive_work_j()==supplied,
+          "negative rest-target work was rewarded as positive pumping");
+    std::cout<<"swing spring_work="<<supplied<<" stroke="<<stroke
+             <<" absorbed="<<hands.actuator_absorbed_work_j()<<" neutral_work=0\n";
+}
 void dynamic_recoil() {
     World w(true, Vec3(2, 0, 0));
     PhysicalHandClimb hands(w.system, w.player);
@@ -379,6 +403,7 @@ int main() {
     unsigned failures = 0;
     for (const auto &test : std::vector<std::pair<const char *, void (*)()>> {
         { "static_load_and_release", static_load_and_release }, { "command_sign_and_budget", command_sign_and_budget },
+        { "measured_swing_actuation", measured_swing_actuation },
         { "dynamic_recoil", dynamic_recoil }, { "finite_landing_catch", finite_landing_catch },
         { "kinematic_tracking_and_regrip", kinematic_tracking_and_regrip },
         { "soft_material_reaction", soft_material_reaction },
@@ -389,6 +414,6 @@ int main() {
         catch (const std::exception &e) { ++failures; std::cerr << "FAIL " << test.first << ": " << e.what() << '\n'; }
     }
     JPH::UnregisterTypes(); delete JPH::Factory::sInstance; JPH::Factory::sInstance = nullptr;
-    std::cout << "physical hand checks: " << 9 - failures << "/9\n";
+    std::cout << "physical hand checks: " << 10 - failures << "/10\n";
     return failures ? 1 : 0;
 }

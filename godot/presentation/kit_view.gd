@@ -5,6 +5,7 @@ extends Node3D
 # its direct children and native interpolation retain their existing paths.
 const KIT_PART_FLOATS := 13
 const KIT_CABLE_SEGMENTS := 4
+const RefractoryMaterial := preload("res://presentation/materials/refractory_material.gd")
 
 var _native: Object
 var _create_sign: Callable
@@ -65,6 +66,59 @@ func _kit_tube(outer: float, inner: float, half_length: float, material: Materia
 	return surface.commit()
 
 
+func _kit_hull(triangles: PackedFloat32Array, material: Material, body: int, part: int) -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	surface.set_material(material)
+	if not _append_kit_hull(surface, triangles, Transform3D.IDENTITY, body, part):
+		return null
+	return surface.commit()
+
+
+func _append_kit_hull(surface: SurfaceTool, triangles: PackedFloat32Array,
+		local: Transform3D, body: int, part: int) -> bool:
+	# The bridge exports cooked Jolt faces in part-local authoring space,
+	# without the part offset/rotation. Validate the whole hull before adding
+	# anything to a shared surface; invalid hulls never become partial solids.
+	if triangles.is_empty() or triangles.size() % 9 != 0:
+		push_error("KitView invalid cooked hull body=%d part=%d floats=%d" % [body, part, triangles.size()])
+		return false
+	for value in triangles:
+		if not is_finite(value):
+			push_error("KitView nonfinite cooked hull body=%d part=%d" % [body, part])
+			return false
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	for p in range(0, triangles.size(), 9):
+		var a := Vector3(triangles[p], triangles[p + 1], triangles[p + 2])
+		var b := Vector3(triangles[p + 3], triangles[p + 4], triangles[p + 5])
+		var c := Vector3(triangles[p + 6], triangles[p + 7], triangles[p + 8])
+		var cross := (b - a).cross(c - a)
+		if not cross.is_finite() or not is_finite(cross.length_squared()) \
+				or cross.length_squared() <= 0.000000000000000001:
+			push_error("KitView degenerate cooked hull body=%d part=%d triangle=%d" % [body, part, p / 9])
+			return false
+		# Jolt's outward CCW face order becomes Godot's clockwise front face.
+		# Transform the native outward normal once, before the sole mesh commit
+		# packs it. An intermediate committed mesh would quantize it twice.
+		var normal := (local.basis * cross.normalized()).normalized()
+		if not normal.is_finite() or normal.length_squared() <= 0.000000000000000001:
+			push_error("KitView invalid cooked hull normal transform body=%d part=%d triangle=%d" % [body, part, p / 9])
+			return false
+		normals.append(normal)
+		for vertex in [a, c, b]:
+			var transformed: Vector3 = local * vertex
+			if not transformed.is_finite():
+				push_error("KitView nonfinite cooked hull transform body=%d part=%d triangle=%d" % [body, part, p / 9])
+				return false
+			vertices.append(transformed)
+	for face in normals.size():
+		surface.set_normal(normals[face])
+		for corner in 3:
+			surface.add_vertex(vertices[face * 3 + corner])
+	return true
+
+
 func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 	for body in int(_native.get_kit_body_count()):
 		var node := Node3D.new()
@@ -86,6 +140,9 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			var mesh: Mesh
 			var material_index := clampi(int(parts[p + 10]), 0, palette.size() - 1)
 			var material: Material = palette[material_index]
+			var local := Transform3D(
+				Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
+				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
 			if int(parts[p + 11]) == 1:
 				if parts[p + 12] > 0.0:
 					mesh = _kit_tube(parts[p], parts[p + 12], parts[p + 1], material)
@@ -104,14 +161,28 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 				capsule.rings = 8
 				capsule.material = material
 				mesh = capsule
+			elif int(parts[p + 11]) == 3:
+				if not _native.has_method("get_kit_body_part_mesh"):
+					push_error("KitView cooked hull bridge unavailable body=%d part=%d" % [body, p / KIT_PART_FLOATS])
+					continue
+				var triangles: PackedFloat32Array = _native.get_kit_body_part_mesh(body, p / KIT_PART_FLOATS)
+				# Hulls carry unindexed vertices and flat normals. Append directly
+				# to their final material batch, keeping indexed boxes separate.
+				var channels := (1 << Mesh.ARRAY_VERTEX) | (1 << Mesh.ARRAY_NORMAL)
+				var key := "%d/%d" % [material_index, channels]
+				var surface: SurfaceTool = surfaces.get(key)
+				if surface == null:
+					surface = SurfaceTool.new()
+					surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+					surface.set_material(material)
+				if _append_kit_hull(surface, triangles, local, body, p / KIT_PART_FLOATS):
+					surfaces[key] = surface
+				continue
 			else:
 				var box := BoxMesh.new()
 				box.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
 				box.material = material
 				mesh = box
-			var local := Transform3D(
-				Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
-				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
 			for surface_index in mesh.get_surface_count():
 				# Indexed boxes and the unindexed tube bore need separate
 				# surfaces; mixing them would omit the unindexed triangles.
@@ -127,11 +198,61 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 					surface.set_material(material)
 					surfaces[key] = surface
 				surfaces[key].append_from(mesh, surface_index, local)
-		for surface in surfaces.values():
+		for key in surfaces:
+			var surface: SurfaceTool = surfaces[key]
 			var instance := MeshInstance3D.new()
 			instance.mesh = surface.commit()
+			if int(String(key).get_slice("/", 0)) == RefractoryMaterial.NATIVE_MATERIAL_INDEX:
+				RefractoryMaterial.apply_to(instance, int(_native.get_kit_body_material_key(body)))
 			node.add_child(instance)
 		var entity := int(_native.get_kit_body_entity_id(body))
+		# Signs stay on the native landing/deck bodies, including the moving
+		# pendant. They label the real stations without owning machine state.
+		if entity == 1981:
+			_balance_sign(node, "GRAVITY BALANCE · +143\nOPERATE · HOLD UP TO RISE", Vector3(0.0, 1.8, 0.0))
+		elif entity == 1982:
+			_balance_sign(node, "EXIT · +165\nHOLD DOWN TO RESET", Vector3(0.0, 1.8, 0.0))
+		elif entity == 2980:
+			_balance_sign(node, "GRAVITY BALANCE\nUP: RISE · DOWN: RESET\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
+		elif entity == 1984:
+			_balance_sign(node, "CROWN GONDOLA · +165\nOPERATE · HOLD UP TO RISE", Vector3(0.0, 1.8, 0.0))
+		elif entity == 1985:
+			_balance_sign(node, "EXIT · +198\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
+			_balance_sign(node, "CROWN RECALL\nHOLD DOWN TO RETURN", Vector3(-14.337928, 1.8, -0.55))
+		elif entity == 2983:
+			_balance_sign(node, "CROWN GONDOLA\nHOLD UP / DOWN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
+		elif entity == 1987:
+			_balance_sign(node, "TRACTION TRAM · +198\nOPERATE · HOLD UP TO CLIMB", Vector3(0.0, 1.8, 0.0))
+		elif entity == 1988:
+			_balance_sign(node, "EXIT · +231\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
+		elif entity == 2984:
+			_balance_sign(node, "TRACTION TRAM\nUP: CLIMB · DOWN: RETURN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
+		elif entity == 1992:
+			_balance_sign(node, "BARREL HELIX · +231\nOPERATE · ROLLER RIDES CAM", Vector3(0.0, 1.8, 0.0))
+		elif entity == 1993:
+			_balance_sign(node, "EXIT · +253\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
+		elif entity == 2988:
+			_balance_sign(node, "BARREL HELIX\nHOLD UP / DOWN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
+		elif entity == 1995:
+			_balance_sign(node, "CASCADE MAST · +253\nOPERATE · 1:2:3 CABLE CASCADE", Vector3(0.0, 1.8, 0.0))
+		elif entity == 1996:
+			_balance_sign(node, "EXIT · +286\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
+		elif entity == 2992:
+			_balance_sign(node, "CASCADE MAST\nHOLD UP / DOWN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
+		elif entity == 1921:
+			_balance_sign(node, "PITMAN LIFT · +286\nOPERATE · CRANK DRIVES ROD", Vector3(0.0, 1.8, 0.0))
+		elif entity == 1922:
+			_balance_sign(node, "EXIT · +308\nHOLD DOWN TO RETURN", Vector3(0.0, 1.8, 0.0))
+		elif entity == 2921:
+			_balance_sign(node, "PITMAN LIFT\nHOLD UP / DOWN\nRELEASE TO BRAKE", Vector3(0.0, 1.8, -1.2))
+		if entity == 1941:
+			_balance_sign(node, "REFRACTORY RECLAIM · +308\nFEED WHILE HELD · BOARD TO RELEASE", Vector3(0.0, 1.8, 0.0))
+		elif entity == 1942:
+			_balance_sign(node, "RECLAIM EXIT · +330\nEMPTY THE SCOOPS BEFORE RETURN", Vector3(0.0, 1.8, 0.0))
+		elif entity == 1945:
+			_balance_sign(node, "MAINTENANCE CROSSING · +319\nDUMP TO RETURN · LOWER FEED BELOW", Vector3(3.5, -0.5, 5.75))
+		elif entity == 2201:
+			_balance_sign(node, "RECLAIM CABIN\nUP: RELEASE BRAKE · DOWN: DUMP\nRELEASE TO HOLD", Vector3(0.0, -0.7, 0.0))
 		if entity == 2952:
 			var sign := Label3D.new()
 			sign.name = "CargoNetSign"
@@ -175,6 +296,25 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			segments.append(instance)
 		_kit_cables.append(segments)
 	_render_kit()
+
+
+func _balance_sign(parent: Node3D, text: String, at: Vector3) -> void:
+	var plate := MeshInstance3D.new()
+	plate.name = "GravityBalanceControlSign"
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(3.8, 0.84, 0.035)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color("252a2d")
+	material.roughness = 0.85
+	mesh.material = material
+	plate.mesh = mesh
+	plate.position = at
+	parent.add_child(plate)
+	for face in [-1.0, 1.0]:
+		var label: Label3D = _create_sign.call(text, at + Vector3(0.0, 0.0, face * 0.025),
+			0.0 if face > 0.0 else PI, 0.16, Color("fff0c4"), parent)
+		label.name = "GravityBalanceInstructions"
+		label.outline_size = 8
 
 
 # Native CargoNet exposes four corners per knot and two triangles per woven

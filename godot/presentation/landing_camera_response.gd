@@ -57,6 +57,21 @@ func update(state: Dictionary, delta: float, enabled: bool,
 		target.z = clampf(forward_slip / 5.5, -1.0, 1.0) * imbalance * 0.025
 		rotation_target.x = -0.02 * severity * imbalance
 		rotation_target.y = -clampf(side_slip / 5.5, -1.0, 1.0) * imbalance * 0.045
+		# Bounded lens response follows the native recovery phase. The real
+		# capsule already crouches/moves; these offsets do not grant a roll.
+		var phase := clampf(float(state.get("landing_recovery_progress", 1.0)), 0.0, 1.0)
+		var response_mode := int(state.get("landing_response", 0))
+		var settle := 1.0 - smoothstep(0.55, 1.0, phase)
+		if response_mode == 1:
+			target.y -= 0.045 * severity * settle
+			rotation_target.x -= 0.06 * severity * settle
+		elif response_mode == 2:
+			var fold := sin(PI * phase)
+			target.y -= 0.07 * fold
+			rotation_target.x -= 0.14 * fold
+			rotation_target.y -= 0.04 * fold
+		elif response_mode == 3:
+			rotation_target.y -= clampf(side_slip / 5.5, -1.0, 1.0) * 0.035 * settle
 	var dt := maxf(delta, 0.0)
 	# Closed-form critically damped evolution is stable even on a slow
 	# rendering frame and has the same result when a frame is subdivided.

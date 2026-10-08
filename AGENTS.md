@@ -1,8 +1,12 @@
+**Authoritative full phased scope:** [the owner’s complete ten-phase goal](03_EXECUTION/ACTIVE_GOAL_PHASED_SCOPE.md), saved verbatim from `goal.txt`. All phase requirements remain active; the earlier scope/frontier records below are retained context and evidence, not a replacement for the complete goal.
+
 # ScraperX agent instructions
 
 Read this file before edits, then read `00_START_HERE.md` and `CONTINUE_HERE_CHATGPT_CODEX.md` completely and follow their current authoritative references. Historical checkpoints are evidence, not current instructions. Preserve uncommitted and newer work; verify the exact checkout, branch, revision, and applicable instructions before edits.
 
 This is a native C++/Jolt and Godot project. Web-app scaffold or preview instructions from another workspace apply only to an actual web-app task, not this project.
+
+**Active frontier — 2026-10-08:** the [full active requirements](03_EXECUTION/ACTIVE_GOAL_SUPPLIED_MACHINES_AND_PARKOUR.md) govern the original supplied-machine/parkour goal, including world places/functions, choices, connected persistent consequences, tension/relief, human traces and exploration. The [integration plan and evidence](docs/superpowers/plans/2026-10-08-supplied-machine-integrations.md) tracks evidence/progress. Complete coherent encounter depth, then move onward; summit purpose is open. Prioritize the gravity-fed photo wheel as a whole quality-material encounter after the current boundary. Six machines have native evidence through 308 m; revised Crown touch and Pitman touch remain pending. Gravity-on/two-hand Tower mantle reaches footing in 1.47778 s after measured hand-work changes;10/10 native hand checks pass, with full damping/solver energy closure unproven. Latest native swing/recovery/retry passes about 31 s automated phase input. Preserve eight delivered repairs/concurrent work; no new Actions APK build or delivery is claimed.
 
 <!-- LEARNED-BY-LEARN:START -->
 ## Learned by /learn (updated 2026-10-02)
@@ -53,6 +57,7 @@ Read these standing preferences at the start of work. They come from the user's 
   Why: The owner explicitly required root-led problem solving on 2026-10-04, superseding the earlier delegation guidance for difficult work.
 - Keep Super_Agent occupied when useful authorized work is ready, supplying the actual evidence and a bounded question. Queue the next useful task as its current assignment finishes; avoid duplicate investigations or invented busywork.
   Why: I explicitly want this inexpensive agent taking useful work off the lead throughout development.
+- The owner-approved Super_Agent bridge now invokes `codex exec` with the saved ChatGPT login, retaining its adviser instructions/model and prompt-only role. The prior hosted Agents API transport was replaced on 2026-10-08; an actual MCP request returned advice successfully. Include real evidence, keep credentials out of prompts, and treat advice as advisory rather than runtime proof.
 - Apply the installed Godot package throughout development, selecting its relevant input, movement, camera, animation, world, material, lighting, audio, mobile, profiling, QA and export guidance for the section being built.
   Why: I explicitly asked to use our Godot engine skills. Skills supply instructions; loading them does not require spawning more agents.
 

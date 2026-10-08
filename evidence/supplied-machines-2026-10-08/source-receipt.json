@@ -1,0 +1,76 @@
+{
+  "sources": [
+    {
+      "filename": "ScraperX-Vertical-Machines.zip",
+      "bytes": 3420375,
+      "sha256": "4d3ff89ffc6c9c83f1a5b5edd00660f78853461ac10f6062ee07a84f259bb8fc"
+    },
+    {
+      "filename": "ScraperX-Vertical-Machines-Expansion-01.zip",
+      "bytes": 2960030,
+      "sha256": "9878f2f484e4108c2cff8d001c5b013496cbf4290c0d03d9ce3b4f43d39cf2b8"
+    },
+    {
+      "filename": "ferris-wheel-machine.jpg",
+      "bytes": 399306,
+      "sha256": "d050f3a22cdfb33e353f57b6474c2f16e3ba34c9e8cb638b30e89616f5356290"
+    },
+    {
+      "filename": "cart-drag-machine.jpg",
+      "bytes": 291475,
+      "sha256": "2389fb7aac9918535edc0e56492cd615a3b899137756411a153ffedc091b6521"
+    }
+  ],
+  "imports": [
+    {
+      "archive_file": "include/vertical_machine.hpp",
+      "original_sha256": "dd8c668f13a4e691c566050871dba7279d732075d27c3458cff0273caeb4c937",
+      "production_file": "src/sim/supplied/vertical_machine.hpp",
+      "adaptations": "production143\u2192165 placement,22m stroke, supported controls/anchorage and bounded native drive binding; only implemented factory linked"
+    },
+    {
+      "archive_file": "src/vertical_machine.cpp",
+      "original_sha256": "c7cce93964fa479a16d44e455f97401ce43ec558881fc42e24abf1c08666444b",
+      "production_file": "src/sim/supplied/vertical_machine.cpp",
+      "adaptations": "production143\u2192165 placement,22m stroke, supported controls/anchorage and bounded native drive binding; only implemented factory linked"
+    },
+    {
+      "archive_file": "src/gravity_balance.cpp",
+      "original_sha256": "58e638f5a96889caa95a91bb9c68a7c3d618a7c0dd466bd8e927287bce64fa04",
+      "production_file": "src/sim/supplied/gravity_balance.cpp",
+      "adaptations": "production143\u2192165 placement,22m stroke, supported controls/anchorage and bounded native drive binding; only implemented factory linked"
+    },
+    {
+      "archive_file": "src/crown_gondola.cpp",
+      "original_sha256": "8226d50899df36920495ff04dde75c355d5f1b0fcc4eeb6957e616b3a594662e",
+      "production_file": "src/sim/supplied/crown_gondola.cpp",
+      "adaptations": "165\u2192198 outward sweep; radius16.5m; real open-bore bearing and hanger pins; preserved passive cabin, mass and400kNm rating; supported controls, bolted receivers, finite bank; revised198m exit: real start lip X[-47.5,-37.4],7.3m gap and narrow receiver X[-30.1,-25.675856],Z[-160.6,-159.0]; passive hanging-arm crossing/recovery; real far-side recall panel near(-26.737928,198.78995,-159.25), retaining cabin-side panel"
+    },
+    {
+      "archive_file": "src/traction_tram.cpp",
+      "original_sha256": "28f601f6214044cb746241b91a4e609ea8510086ba73454809197a9ef9ee3120",
+      "production_file": "src/sim/supplied/traction_tram.cpp",
+      "adaptations": "198\u2192231 south diagonal;33m rise/57.534m travel/79m rail; separated narrow real rail heads, receiver brackets and controls; original wheel contact/planar bearing and24kNm motors; shared finite bank"
+    },
+    {
+      "archive_file": "src/barrel_helix.cpp",
+      "original_sha256": "bfcbbba7626c43e4cf89c5a93a6ddaef120cb771867e2c2bb5235f0e82723360",
+      "production_file": "src/sim/supplied/barrel_helix.cpp",
+      "adaptations": "231\u2192253 west bay;22m pitch/travel/feedback; original100kNm/3500kg shaft/1100kg deck/90kg roller retained; passive deck guide, sole roller/cam contact; finite source/brake/acceleration; real open upper bearing, anchored pads and controls"
+    },
+    {
+      "archive": "ScraperX-Vertical-Machines-Expansion-01.zip",
+      "archive_file": "src/cascade_mast.cpp",
+      "original_sha256": "ab4297c94b77d335ef29dba4c6cc292a6a404a04bd331c3183b5752e8617dc0c",
+      "production_file": "src/sim/supplied/cascade_mast.cpp",
+      "adaptations": "253\u2192286 separate west bay;11/22/33m travel with original1:2:3 rope lengths/ratios and110kN rating; frameheader42 clears full movingarches; real anchor/sheave/brackets and controls; finite source/brake/acceleration"
+    },
+    {
+      "archive": "ScraperX-Vertical-Machines-Expansion-01.zip",
+      "archive_file": "src/pitman_lift.cpp",
+      "original_sha256": "6d3c35946455cee786a24aa128aa367020eb6a2a93add0b9494537c837d5b21d",
+      "production_file": "src/sim/supplied/pitman_lift.cpp",
+      "adaptations": "286\u2192308 west bay;22m rise from actual archive crank/connecting-rod and passive carriage guide; real open collars and L-shaped ties clear entry floor while preserving pin anchors; supported controls/receivers and finite native source/brake"
+    }
+  ]
+}

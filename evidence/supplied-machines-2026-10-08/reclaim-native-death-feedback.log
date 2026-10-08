@@ -1,0 +1,28 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Compatibility Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+ALSA lib confmisc.c:855:(parse_card) [error.core] cannot find card '0'
+ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_card_inum returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) [error.core] error evaluating strings
+ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) [error.core] error evaluating name
+ALSA lib conf.c:5211:(_snd_config_evaluate) [error.core] function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5734:(snd_config_expand) [error.core] Evaluate error: No such file or directory
+ALSA lib pcm.c:2722:(snd_pcm_open_noupdate) [error.pcm] Unknown PCM default
+ERROR: Condition "status < 0" is true. Returning: ERR_CANT_OPEN
+   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)
+WARNING: All audio drivers failed, falling back to the dummy driver.
+     at: initialize (servers/audio/audio_server.cpp:258)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x1856 aspect=1.164 fov=82.0 far=2000
+REWIND_STAGE accepted=true initial={ "station": 0, "reachable_station": 2, "surface_y": 308.0, "energy_j": 2000000.0, "capacity_j": 2000000.0, "power_w": 0.0, "braking": true, "energy_cutoff": false, "wheel_motor_enabled": false, "rubble_impact_count": 0, "rubble_impact_speed_mps": 0.0, "rubble_impact_position": (0.0, 0.0, 0.0), "rubble_break_serial": 0, "rubble_break_valid": false, "rubble_break_position": (0.0, 0.0, 0.0), "rubble_break_force_n": 0.0, "rubble_break_torque_nm": 0.0, "hopper_mass_kg": 0.0, "wheel_angle_rad": 0.0, "bearing_heat_j": 0.0, "index": 6, "name": "REFRACTORY RECLAIM" }
+REWIND_BASELINE seeded=1 impact_count=23 hopper_mass=2052.69601249695
+REWIND_FEED ticks=900 initial_mass=2052.69601249695 final_mass=255.160446166992 impact_count=308 impact_speed=3.18285417556763 break_serial=4 break_valid=true break_force=17252.818359375 break_torque=1118.82446289062 state={ "station": 2, "reachable_station": 2, "surface_y": 308.001556396484, "energy_j": 1991609.98008491, "capacity_j": 2000000.0, "power_w": 284.334462772342, "braking": true, "energy_cutoff": false, "wheel_motor_enabled": false, "rubble_impact_count": 308, "rubble_impact_speed_mps": 3.18285417556763, "rubble_impact_position": (-52.68242, 330.0017, -166.35), "rubble_break_serial": 4, "rubble_break_valid": true, "rubble_break_position": (-51.15963, 330.5887, -164.7509), "rubble_break_force_n": 17252.818359375, "rubble_break_torque_nm": 1118.82446289062, "hopper_mass_kg": 255.160446166992, "wheel_angle_rad": 0.00027765438426, "bearing_heat_j": 69.413596065715, "index": 6, "name": "REFRACTORY RECLAIM" }
+REWIND_FEEDBACK_BEFORE deaths=0 dust_active=1 dust_pending=false dust_serial=4 audio_last_deaths=0 audio_pending_speed=0.0 audio_last_rubble=308
+REWIND_LETHAL_STAGE accepted=true
+REWIND_NATIVE_DEATH ticks=204 deaths=1 impacts=317 break_serial=4
+REWIND_FINAL deaths=1 audio_last_deaths=1 dust_active=0 dust_pending=false dust_serial=4 audio_pending_speed=0.0 audio_last_rubble=317
+REWIND_RECEIPT_PROBE PASS
+SCRAPERX_AUDIO_BANK clips=28 msec=2809 driver=Dummy

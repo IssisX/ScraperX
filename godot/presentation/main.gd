@@ -21,6 +21,7 @@ const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
 const KitView := preload("res://presentation/kit_view.gd")
+const ReclaimDust := preload("res://presentation/reclaim_dust.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
@@ -299,6 +300,8 @@ var _swing_last_velocity := Vector3.ZERO
 var _grip_relative_left := Vector3.ZERO
 var _grip_relative_right := Vector3.ZERO
 var _grip_feedback_cooldown := 0.0
+var _catch_strain_cooldown := 0.0
+var _last_hand_load := 0.0
 var _crouch_eye := 0.0
 # DISPLAY settings; the defaults are the tuned values above.
 var _fov_base := FOV_BASE
@@ -336,7 +339,8 @@ var _since_jump_sent := INF
 # body can crouch or stand.
 var _crouch_toggled := false
 var _fb_traversal := 0
-var _fb_grounded := true
+var _fb_swinging := false
+var _fb_landing_count := -1
 var _fb_fall_speed := 0.0
 var _fb_deaths := 0
 var _fb_chute := false
@@ -384,6 +388,8 @@ var _hook5_door_pivot: Node3D
 var _hook5_bar_node: Node3D
 var _hook5_block_node: Node3D
 var _kit_view: KitView
+var _reclaim_dust: ReclaimDust
+var _reclaim_feedback_deaths := -1
 var _sump_grate_safe_material: Material
 var _sump_grate_hazard_material: Material
 var _stack_gears: Array[Node3D] = []
@@ -456,7 +462,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_service_lift", "touch_north_grip_diagnostic", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_gravity_reclaim", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_north_grip_diagnostic", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -518,7 +524,8 @@ func _ready() -> void:
 	_render_snapshot()
 	_ctx = _read_context()
 	_fb_traversal = int(_ctx["traversal"])
-	_fb_grounded = bool(_ctx["grounded"])
+	_fb_swinging = bool(_ctx["swinging"])
+	_fb_landing_count = int(_native.get_landing_state()["landing_count"])
 	_fb_deaths = int(_ctx["deaths"])
 	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
 
@@ -602,6 +609,9 @@ func _process(delta: float) -> void:
 	_native.set_needle_hoist_input(jib_input.y)
 	# Operation is a UI mode; native station reach and brake state own motion.
 	_native.set_service_lift_input(jib_input.y if _operating == &"service_lift" else 0.0)
+	var balance: Dictionary = _native.get_supplied_machine_state()
+	_native.set_supplied_machine_input(jib_input.y if _operating == &"supplied_machine" \
+		and int(balance["station"]) != 0 else 0.0)
 
 	var time_scale := float(_slingshot_view.get_simulation_scale()) if _slingshot_view != null else 1.0
 	var steps_advanced := int(_native.advance_frame(minf(delta, MAX_SIM_FRAME_DELTA) * time_scale))
@@ -729,6 +739,7 @@ func _build_interface() -> void:
 	_pause_menu.restart_requested.connect(_restart_at)
 	_pause_menu.checkpoint_restart_requested.connect(_restart_checkpoint)
 	_pause_menu.lift_attempt_restart_requested.connect(_restart_lift_attempt)
+	_pause_menu.reclaim_attempt_restart_requested.connect(_restart_reclaim_attempt)
 	# Android's system back opens the pause menu instead of ending the climb.
 	get_tree().quit_on_go_back = false
 	_router.device = (InputRouter.Device.TOUCH if OS.has_feature("mobile") or _force_touch
@@ -833,11 +844,15 @@ func _open_pause(from_system: bool = false) -> void:
 	_audio.cancel_launch_cinematic()
 	_router.gameplay_active = false
 	_router.clear_held()
+	_native.set_supplied_machine_input(0.0)
 	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var checkpoint: Vector3 = _ctx["checkpoint"]
 	var position: Vector3 = _ctx["position"]
-	_pause_menu.set_restart_context(position, bool(_native.get_service_lift_state()["retry_available"]))
+	var in_reclaim_bay := position.y > 303.0 and position.y < 334.0 \
+		and Vector2(position.x + 38.0, position.z + 158.0).length() < 25.0
+	_pause_menu.set_restart_context(position, bool(_native.get_service_lift_state()["retry_available"]),
+		in_reclaim_bay and bool(_native.can_restart_gravity_reclaim_attempt()))
 	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
 		position.y, checkpoint.y, int(_ctx["deaths"])])
 	get_tree().paused = true
@@ -863,20 +878,34 @@ func _restart_lift_attempt() -> void:
 		_after_restart()
 
 
+func _restart_reclaim_attempt() -> void:
+	var accepted := bool(_native.restart_gravity_reclaim_attempt())
+	_pause_menu.set_restart_result(accepted, "" if accepted else "Reach the reclaim bay's feeding control first.")
+	if accepted:
+		_after_restart()
+
+
 func _after_restart() -> void:
 	_landing_camera.reset()
+	if _reclaim_dust != null:
+		_reclaim_dust.reset()
 	if _slingshot_view != null:
 		_slingshot_view.cancel_cinematic(true)
 	_audio.cancel_launch_cinematic()
 	_sling_was_seated = false
 	_sling_preview_clock = 0.0
 	_sling_prediction = PackedVector3Array()
-	_operating = &""
+	_end_operation()
 	_crouch_toggled = false
 	_jump_buffer = 0.0
 	_ctx = _read_context()
-	_fb_grounded = bool(_ctx["grounded"])
+	var landing: Dictionary = _native.get_landing_state()
+	_fb_landing_count = int(landing["landing_count"])
 	_fb_deaths = int(_ctx["deaths"])
+	_audio.reset_landing_feedback(_fb_landing_count, _fb_deaths)
+	_fb_swinging = bool(_ctx["swinging"])
+	_catch_strain_cooldown = 0.0
+	_last_hand_load = 0.0
 	_render_snapshot()
 	_resume()
 
@@ -938,7 +967,7 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
 				elif _operating != &"":
-					_operating = &""
+					_end_operation()
 				elif _ctx["drop_ok"]:
 					_native.request_release()
 			&"alt":
@@ -985,7 +1014,7 @@ func _perform_action() -> void:
 		&"operate":
 			_operating = _ctx["station"]
 		&"done":
-			_operating = &""
+			_end_operation()
 		&"valve":
 			_native.request_valve_toggle()
 		&"screw_toggle":
@@ -1008,6 +1037,13 @@ func _perform_action() -> void:
 			_native.request_traversal()
 
 
+func _end_operation() -> void:
+	if _operating == &"supplied_machine":
+		_native.set_supplied_machine_input(0.0)
+		_router.clear_held()
+	_operating = &""
+
+
 func _request_sling(attach: bool) -> void:
 	if attach:
 		_native.request_intake_sling_attach()
@@ -1027,16 +1063,20 @@ func _read_context() -> Dictionary:
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
 	var traversal := int(_native.get_traversal_state())
+	var landing: Dictionary = _native.get_landing_state()
 	var chute := bool(_native.is_parachute_deployed())
 	var ledge := bool(_native.is_ledge_available())
 	var lethal := float(_native.get_lethal_impact_speed_mps())
 	var station := &""
 	var service_lift: Dictionary = _native.get_service_lift_state()
+	var balance: Dictionary = _native.get_supplied_machine_state()
 	var water_lift_valve_station := bool(_native.is_water_lift_valve_station_active())
 	var water_lift_release_station := bool(_native.is_water_lift_release_station_active())
 	var water_lift_reset_station := bool(_native.is_water_lift_reset_station_active())
 	if int(service_lift["station"]) != 0 or (_operating == &"service_lift" and int(service_lift["reachable_station"]) != 0):
 		station = &"service_lift"
+	elif int(balance["station"]) != 0 or (_operating == &"supplied_machine" and int(balance["reachable_station"]) != 0):
+		station = &"supplied_machine"
 	elif water_lift_valve_station or water_lift_release_station or water_lift_reset_station:
 		station = &"water_lift"
 	elif bool(_native.is_water_screw_station_active()):
@@ -1057,11 +1097,12 @@ func _read_context() -> Dictionary:
 	var edge_drop := bool(_native.is_edge_drop_available())
 	# Reach preserves the pendant through brief unweighting; only native
 	# supported footing authorizes drive effort on each physics tick.
-	var lift_reachable := _operating == &"service_lift" and int(service_lift["reachable_station"]) != 0 \
+	var lift_reachable := ((_operating == &"service_lift" and int(service_lift["reachable_station"]) != 0) \
+		or (_operating == &"supplied_machine" and int(balance["reachable_station"]) != 0)) \
 		and free and int(_native.get_carrying_entity_id()) == 0
 	if _operating != &"" and (_operating != station or (not grounded and not lift_reachable) or not free \
-			or (_operating == &"service_lift" and not lift_reachable)):
-		_operating = &""
+			or (_operating in [&"service_lift", &"supplied_machine"] and not lift_reachable)):
+		_end_operation()
 	var climb_ok := grounded and free and ledge
 	# AS-003: what is on the carry point, and what a pick-up would take --
 	# both the native's own reading, never guessed here.
@@ -1123,6 +1164,8 @@ func _read_context() -> Dictionary:
 			"icon": &"operate", "detail": "UPPER TANK %.2f / 2.00 M3" % float(_native.get_water_screw_tank_volume_m3())}
 	elif grounded and station == &"service_lift":
 		action = {"id": &"operate", "label": "OPERATE", "icon": &"operate", "detail": "SERVICE LIFT"}
+	elif grounded and station == &"supplied_machine":
+		action = {"id": &"operate", "label": "OPERATE", "icon": &"operate", "detail": String(balance["name"])}
 	elif climb_ok:
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
 			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
@@ -1142,6 +1185,7 @@ func _read_context() -> Dictionary:
 		"crouched": bool(_native.is_player_crouched()),
 		"traversal": traversal,
 		"hanging": hanging,
+		"swinging": bool(landing.get("player_swinging", false)),
 		"climbing": climbing,
 		"lowering": lowering,
 		# Drop at an edge behind lowers into a hang; on holds it lets go.
@@ -1233,6 +1277,33 @@ func _kit_anchor_name(entity: int) -> String:
 # Row tone: 0 plain, 1 safe/engaged, 2 hazard.
 func _station_panel() -> Dictionary:
 	match _operating:
+		&"supplied_machine":
+			var balance: Dictionary = _native.get_supplied_machine_state()
+			var cutoff := bool(balance["energy_cutoff"])
+			if int(balance["index"]) == 6:
+				var feeding := int(balance["station"]) == 2
+				return {
+					"title": "REFRACTORY RECLAIM",
+					"subtitle": "UP: FEED / RELEASE: CLOSE" if feeding else "UP: RELEASE BRAKE / RELEASE: HOLD",
+					"rows": [
+						["HOPPER", "%.0f KG LEFT" % float(balance["hopper_mass_kg"]), 0],
+						["CABIN", "%+.1f M" % float(balance["surface_y"]), 0],
+						["BRAKE", "HELD" if bool(balance["braking"]) else "RELEASED", 0],
+						["GATE / DOORS", "POWER EMPTY" if cutoff else "%.0f KJ" % (float(balance["energy_j"]) / 1000.0), 2 if cutoff else 0],
+					],
+					"verbs": [[&"hoist", "FEED / DUMP" if feeding else "RELEASE / DUMP"], [&"leave", "DONE"]],
+				}
+			return {
+				"title": String(balance["name"]),
+				"subtitle": "HOLD UP / DOWN / RELEASE TO BRAKE",
+				"rows": [
+					["DECK", "%+.1f M" % float(balance["surface_y"]), 0],
+					["ENERGY", "%.0f / %.0f KJ" % [float(balance["energy_j"]) / 1000.0, float(balance["capacity_j"]) / 1000.0], 2 if cutoff else 0],
+					["BRAKE", "APPLIED" if bool(balance["braking"]) else "RELEASED", 0],
+					["POWER", "ENERGY CUTOFF" if cutoff else "%.1f KW" % (float(balance["power_w"]) / 1000.0), 2 if cutoff else 0],
+				],
+				"verbs": [[&"hoist", "UP / DOWN"], [&"leave", "DONE"]],
+			}
 		&"service_lift":
 			var lift: Dictionary = _native.get_service_lift_state()
 			var cutoff := bool(lift["energy_cutoff"])
@@ -1330,6 +1401,12 @@ func _haptic(kind: StringName, strength: float = 1.0) -> void:
 # fall warning, a restore, a higher checkpoint. Each reads native state only.
 func _update_feedback(delta: float) -> void:
 	var traversal: int = _ctx["traversal"]
+	var entered_grip := traversal != _fb_traversal \
+		and traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING]
+	var swinging := bool(_ctx["swinging"])
+	if swinging and not _fb_swinging:
+		_hud.toast("SWING", "LEAN WITH STICK · JUMP LETS GO", UiStyle.SAFE, 2.8)
+	_fb_swinging = swinging
 	if traversal != _fb_traversal:
 		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_CLIMBING:
 			_haptic(&"grab")
@@ -1353,19 +1430,39 @@ func _update_feedback(delta: float) -> void:
 	var grounded: bool = _ctx["grounded"]
 	var velocity: Vector3 = _ctx["velocity"]
 	var lethal: float = _ctx["lethal"]
+	var deaths: int = _ctx["deaths"]
+	var landing: Dictionary = _native.get_landing_state()
+	_catch_strain_cooldown = maxf(0.0, _catch_strain_cooldown - delta)
+	var left_force: Vector3 = landing.get("left_hand_force_n", Vector3.ZERO)
+	var right_force: Vector3 = landing.get("right_hand_force_n", Vector3.ZERO)
+	var hand_load := (left_force + right_force).length() \
+		if traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING] else 0.0
+	# A finite catch's force rise earns one short pulse. Steady body weight
+	# stays quiet, and the initial grip already has its stronger grab cue.
+	if not entered_grip and deaths == _fb_deaths and _catch_strain_cooldown <= 0.0 \
+			and hand_load > 1200.0 and _last_hand_load <= 1200.0:
+		_haptic(&"strain", clampf(hand_load / 2400.0, 0.5, 1.0))
+		_catch_strain_cooldown = 0.3
+	_last_hand_load = hand_load
+	var landing_count := int(landing["landing_count"])
+	var normal_speed := maxf(float(landing["landing_normal_speed_mps"]), 0.0)
+	# The receipt survives a missed airborne/contact render frame and measures
+	# approach relative to the actual support, including inclined moving decks.
+	# Restores consume the receipt silently; death has its own feedback below.
+	if _fb_landing_count >= 0 and landing_count > _fb_landing_count \
+			and deaths == _fb_deaths and normal_speed > 5.0:
+		_haptic(&"land", clampf(normal_speed / maxf(lethal, 0.001), 0.25, 1.0))
+	_fb_landing_count = landing_count
 	# The native velocity read on the last airborne frame. Not the native's
 	# last_impact_speed: after a restore the player re-settles within a tick
 	# and that value is overwritten with the settle before any HUD sees it.
+	# Retained only for the lethal-impact toast, not landing intensity.
 	var fall_speed_before := _fb_fall_speed
-	if grounded and not _fb_grounded and fall_speed_before > 5.0:
-		_haptic(&"land", clampf(fall_speed_before / maxf(lethal, 0.001), 0.25, 1.0))
-	_fb_grounded = grounded
 	_fb_fall_speed = 0.0 if grounded else maxf(0.0, -velocity.y)
 
-	var deaths: int = _ctx["deaths"]
 	if deaths > _fb_deaths:
 		_fb_deaths = deaths
-		_operating = &""
+		_end_operation()
 		var restored: Vector3 = _ctx["checkpoint"]
 		_hud.toast("LETHAL IMPACT", "FELL AT %.1f M/S  /  RESTORED TO CHECKPOINT %+.1f M" % [
 			fall_speed_before, restored.y], UiStyle.HAZARD, 3.4)
@@ -1456,6 +1553,9 @@ func _build_arms() -> void:
 
 # Everything the arms may know, all of it native or already-presented state.
 func _arms_state(intent: Dictionary) -> Dictionary:
+	var velocity: Vector3 = _ctx["velocity"]
+	if bool(_ctx["grounded"]):
+		velocity -= _native.get_support_point_linear_velocity()
 	return {
 		"traversal": int(_ctx["traversal"]),
 		"progress": float(_native.get_traversal_progress()),
@@ -1469,7 +1569,8 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"affordance": bool(_native.is_ledge_available()),
 		"affordance_point": _native.get_ledge_point(),
 		"position": _ctx["position"],
-		"velocity": _ctx["velocity"],
+		"velocity": velocity,
+		"landing": _native.get_landing_state(),
 		"grounded": bool(_ctx["grounded"]),
 		"chute": bool(_ctx["chute"]),
 		"operating": _operating,
@@ -1535,7 +1636,12 @@ func _layout_hud() -> void:
 # position is never filtered here: native simulation supplies the render pose.
 func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, crouched: bool,
 		delta: float) -> void:
-	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
+	# A stationary rider is carried by the support without walking. Match the
+	# footstep cadence's native point velocity, which also includes rotation.
+	var locomotion_velocity: Vector3 = velocity
+	if grounded:
+		locomotion_velocity -= _native.get_support_point_linear_velocity()
+	var horizontal_speed := Vector2(locomotion_velocity.x, locomotion_velocity.z).length()
 	# 5.5 mirrors kPlayerMaximumRelativeSpeed (src/sim/simulation.cpp) -- a
 	# curve-shape input, not a gameplay bound, so the native constant is not
 	# exposed through the bridge just for this.
@@ -1559,7 +1665,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if not _head_bob_on:
 		_cam_bank = 0.0
 	else:
-		var lateral_speed := velocity.dot(right_vector)
+		var lateral_speed := locomotion_velocity.dot(right_vector)
 		var bank_target := -CAMERA_BANK_MAX_RADIANS * clampf(lateral_speed / 5.5, -1.0, 1.0)
 		_cam_bank = lerpf(_cam_bank, bank_target,
 			1.0 - exp(-CAMERA_BANK_RESPONSE_PER_SECOND * delta))
@@ -1615,9 +1721,22 @@ func _render_snapshot(delta: float = 0.0) -> void:
 			if int(_native.get_traversal_support_entity_id()) == 2960 and (_swing_last_velocity - swing_velocity).length() > 0.30:
 				_haptic(&"strain", clampf((_swing_last_velocity - swing_velocity).length(), 0.3, 1.0))
 			_swing_last_velocity = swing_velocity
+		var reclaim_state: Dictionary = _native.get_supplied_machine_state()
+		var deaths := int(_native.get_death_count())
+		if deaths != _reclaim_feedback_deaths:
+			_audio.reset_reclaim_feedback()
+			if _reclaim_dust != null:
+				_reclaim_dust.reset()
+			_reclaim_feedback_deaths = deaths
+		_audio.update_reclaim_impacts(reclaim_state, delta)
+		if _reclaim_dust != null:
+			reclaim_state["player_position"] = position
+			_reclaim_dust.set_reduced_motion(not _settings.launch_cinematics)
+			_reclaim_dust.update_from_native(reclaim_state, delta)
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
-			int(_native.get_death_count()), crouched, _native.get_support_point_linear_velocity())
+			int(_native.get_death_count()), crouched, _native.get_support_point_linear_velocity(),
+			_native.get_landing_state())
 		if _regression_scene:
 			_audio.update_machines(delta, float(_native.get_orifice_mass_flow_kg_per_s()),
 				_native.get_hoist_scoop_position(), _native.get_ballast_position(),
@@ -4348,7 +4467,7 @@ func _setup_kit_view() -> void:
 	_kit_view.name = "KitPresentation"
 	add_child(_kit_view)
 	# Indexed by the native's Material enum: steel, rust, timber, concrete,
-	# hazard, galvanised, rubble, yellow.
+	# hazard, galvanised, rubble, yellow, refractory brick.
 	var palette: Array[Material] = [
 		_material(Color("2a2723"), 0.7, 0.55, Color.BLACK, 1.0, _bump_steel),
 		_material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_steel),
@@ -4358,6 +4477,7 @@ func _setup_kit_view() -> void:
 		_material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_steel),
 		_material(Color("5b544b"), 0.0, 0.98, Color.BLACK, 1.0, _bump_concrete),
 		_material(Color("c19a2a"), 0.2, 0.62),
+		preload("res://presentation/materials/refractory_material.gd").build(),
 	]
 	if not _regression_scene:
 		# Broad painted/cast surfaces remain readable at normal play distance.
@@ -4368,6 +4488,11 @@ func _setup_kit_view() -> void:
 	cargo_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var cable_material := _material(Color("1b1916") if _regression_scene else Color("b2a383"), 0.6, 0.5)
 	_kit_view.setup(_native, palette, cable_material, cargo_material, _add_sign_text)
+	if not _regression_scene:
+		_reclaim_dust = ReclaimDust.new()
+		_reclaim_dust.name = "ReclaimDust"
+		add_child(_reclaim_dust)
+		_reclaim_dust.setup()
 
 
 # Tool mode: write the world's solid dressing for the native build and quit.

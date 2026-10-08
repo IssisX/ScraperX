@@ -102,6 +102,59 @@ void rendered_pose_fills_between_fixed_ticks() {
 double horizontal_speed(const scraperx::sim::Snapshot &s) {
     return std::hypot(s.player_linear_velocity.x, s.player_linear_velocity.z);
 }
+
+void neutral_airborne_input_preserves_horizontal_momentum() {
+    using namespace scraperx::sim;
+
+    Simulation run(InitialSpawn::ExteriorGrade, WorldContent::GroundFoundation);
+    require(run.set_move_input(0.0, 0.0), "neutral-air settle input accepted");
+    require(run.advance_frame(1.0).accepted && run.snapshot().player_grounded,
+            "ordinary ground settles before the neutral-air run");
+
+    for (int tick = 0; tick < 45; ++tick) {
+        require(run.set_move_input(1.0, 0.0), "eastward run input accepted");
+        require(run.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "eastward ground tick accepted");
+    }
+    const auto approach = run.snapshot();
+    const double approach_speed = horizontal_speed(approach);
+    require(approach.player_grounded && approach_speed > 5.0 && approach_speed <= 5.55,
+            "ordinary ground run reaches the existing 5.5 m/s walking speed");
+
+    require(run.request_jump(), "physical jump request accepted");
+    require(run.set_move_input(1.0, 0.0), "direction remains held through takeoff");
+    require(run.advance_frame(Simulation::kFixedStepSeconds).accepted,
+            "directional physical takeoff tick accepted");
+    const auto takeoff = run.snapshot();
+    require(!takeoff.player_grounded && takeoff.support_entity_id == 0 &&
+                takeoff.traversal_state == TraversalState::None &&
+                takeoff.traversal_hand_constraint_count == 0 &&
+                takeoff.player_linear_velocity.y > 5.0,
+            "ordinary jump is airborne without support or traversal");
+    const double takeoff_speed = horizontal_speed(takeoff);
+
+    require(run.set_move_input(0.0, 0.0), "neutral airborne input accepted");
+    for (int tick = 0; tick < 18; ++tick) {
+        require(run.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "neutral airborne tick accepted");
+        const auto state = run.snapshot();
+        require(!state.player_grounded && state.support_entity_id == 0 &&
+                    state.traversal_state == TraversalState::None &&
+                    state.traversal_hand_constraint_count == 0,
+                "neutral-air sample remains airborne without contact or traversal");
+    }
+
+    const auto after_neutral = run.snapshot();
+    const double neutral_speed = horizontal_speed(after_neutral);
+    std::cout << "INFO neutral-air momentum approach=" << approach_speed
+              << " takeoff=" << takeoff_speed << " after_18_ticks=" << neutral_speed
+              << " delta=" << neutral_speed - takeoff_speed << " y="
+              << after_neutral.player_position.y << " vy="
+              << after_neutral.player_linear_velocity.y << '\n';
+    require(neutral_speed >= takeoff_speed - 0.25,
+            "neutral airborne input preserves horizontal momentum without contact or forces");
+}
+
 void sprint_keeps_jump_momentum() {
     using scraperx::sim::Simulation;
     using scraperx::sim::InitialSpawn;
@@ -203,6 +256,7 @@ void sprint_keeps_jump_momentum() {
 
 int main() {
     vault_carries_entry_and_exit_speed();
+    neutral_airborne_input_preserves_horizontal_momentum();
     sprint_keeps_jump_momentum();
     rendered_pose_fills_between_fixed_ticks();
     std::cout << "PASS scraperx_sim parkour flow\n";

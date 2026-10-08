@@ -12,6 +12,7 @@ extends Node
 const SoundBank := preload("res://presentation/audio/sound_bank.gd")
 const FallReactions := preload("res://presentation/audio/fall_reactions.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
+const RUBBLE_IMPACT := preload("res://assets/audio/rubble/concrete_break_denoised_843338_preview.wav")
 
 const BUS_EFFECTS := &"Effects"
 const BUS_AMBIENCE := &"Ambience"
@@ -45,6 +46,8 @@ const BALLAST_STRIKE_MPS := 1.5
 const BALLAST_STRIKE_FULL_MPS := 9.0
 const TIPPER_CREAK_RAD_S := 0.35
 const CREAK_COOLDOWN := 0.6
+const RUBBLE_IMPACT_COOLDOWN := 0.1
+const RUBBLE_IMPACT_FULL_MPS := 8.0
 # Birds: only near the ground, only by day, now and then.
 const BIRD_CEILING_M := 30.0
 const BIRD_GAP_SECONDS := Vector2(2.5, 8.0)
@@ -88,7 +91,7 @@ var _water_lift_drive: AudioStreamPlayer3D
 var _water_lift_water: AudioStreamPlayer3D
 var _stride := 0.0
 var _was_grounded := true
-var _last_vy := 0.0
+var _last_landing_count := -1
 var _last_traversal := 0
 var _last_chute := false
 var _last_deaths := -1
@@ -121,6 +124,11 @@ var _ladder_gain := 0.0
 var _cinematic_active := false
 var _cinematic_air_duck_db := 0.0
 var sling_cinematic_cues := 0
+var rubble_impact_cues := 0
+var _last_rubble_impact_count := -1
+var _rubble_impact_cooldown := 0.0
+var _pending_rubble_speed := 0.0
+var _pending_rubble_position := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -248,10 +256,27 @@ func ui_tap(back: bool = false) -> void:
 	voice.play()
 
 
+# Explicit restart establishes a quiet receipt baseline; no old contact is
+# replayed when gameplay resumes. Death restores are handled by update().
+func reset_landing_feedback(landing_count: int, deaths: int) -> void:
+	_last_landing_count = landing_count
+	_last_deaths = deaths
+	reset_reclaim_feedback()
+
+
+# A native rewind consumes old powder/contact receipts without changing the
+# death receipt that update() still needs for its lethal-impact response.
+func reset_reclaim_feedback() -> void:
+	_last_rubble_impact_count = -1
+	_rubble_impact_cooldown = 0.0
+	_pending_rubble_speed = 0.0
+	_pending_rubble_position = Vector3.ZERO
+
+
 # Once per rendered frame, with the native state main.gd already read.
 func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool,
-		support_point_velocity: Vector3 = Vector3.ZERO) -> void:
+		support_point_velocity: Vector3 = Vector3.ZERO, landing_state: Dictionary = {}) -> void:
 	fall_reactions.update(delta, position, velocity, grounded, traversal, chute, deaths)
 	# A planted rider moves with the support without taking a step. Native
 	# point velocity includes rotation as well as the support's translation.
@@ -270,13 +295,15 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	elif not grounded:
 		_stride = STRIDE_METERS * 0.5  # the first step after landing comes quickly
 
-	if grounded and not _was_grounded:
-		var impact := -_last_vy
-		if impact >= LAND_MIN_IMPACT and deaths == _last_deaths:
-			landings += 1
-			var hard := impact >= LAND_HARD_IMPACT
-			_play(&"land_hard" if hard else &"land_soft",
-				linear_to_db(clampf(impact / 12.0, 0.3, 1.0)), randf_range(0.95, 1.05))
+	var landing_count := int(landing_state.get("landing_count", -1))
+	var impact := maxf(float(landing_state.get("landing_normal_speed_mps", 0.0)), 0.0)
+	if _last_landing_count >= 0 and landing_count > _last_landing_count \
+			and impact >= LAND_MIN_IMPACT and deaths == _last_deaths:
+		landings += 1
+		var hard := impact >= LAND_HARD_IMPACT
+		_play(&"land_hard" if hard else &"land_soft",
+			linear_to_db(clampf(impact / 12.0, 0.3, 1.0)), randf_range(0.95, 1.05))
+	_last_landing_count = landing_count
 	if not grounded and _was_grounded and velocity.y > JUMP_MIN_RISE and traversal == 0:
 		jumps += 1
 		_play(&"jump", -4.0, randf_range(0.95, 1.08))
@@ -299,7 +326,6 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		_play(&"impact_lethal", 0.0, 1.0)
 
 	_was_grounded = grounded
-	_last_vy = velocity.y
 	_last_traversal = traversal
 	_last_chute = chute
 	_last_deaths = deaths
@@ -398,6 +424,37 @@ func update_pipe_bridge(state: Dictionary, deaths: int) -> void:
 		_pipe_motion.pitch_scale = lerpf(0.65, 1.0, gain)
 
 
+# Native receipts count real closing contacts, coalesced to the strongest
+# contact per physics tick. Further audio coalescing retains the strongest
+# received contact within 0.1s; intensity uses closing speed, not an impulse.
+func update_reclaim_impacts(state: Dictionary, delta: float) -> void:
+	var elapsed := maxf(delta, 0.0) if is_finite(delta) else 0.0
+	_rubble_impact_cooldown = maxf(0.0, _rubble_impact_cooldown - elapsed)
+	var count := int(state.get("rubble_impact_count", -1))
+	if count < 0 or _last_rubble_impact_count < 0 or count < _last_rubble_impact_count:
+		# Establish a quiet baseline on startup, missing state or native reset.
+		_last_rubble_impact_count = count
+		_rubble_impact_cooldown = 0.0
+		_pending_rubble_speed = 0.0
+		return
+	if count > _last_rubble_impact_count:
+		var speed := float(state.get("rubble_impact_speed_mps", 0.0))
+		var at: Vector3 = state.get("rubble_impact_position", Vector3.INF)
+		if is_finite(speed) and at.is_finite() and speed > _pending_rubble_speed:
+			_pending_rubble_speed = speed
+			_pending_rubble_position = at
+	_last_rubble_impact_count = count
+	if _pending_rubble_speed <= 0.0 or _rubble_impact_cooldown > 0.0:
+		return
+	var gain := clampf(_pending_rubble_speed / RUBBLE_IMPACT_FULL_MPS, 0.04, 1.0)
+	rubble_impact_cues += 1
+	# This recorded stream is already loaded; it does not wait for synthesis.
+	_play_stream_at(RUBBLE_IMPACT, _pending_rubble_position, linear_to_db(gain) - 5.0,
+		randf_range(0.96, 1.04))
+	_pending_rubble_speed = 0.0
+	_rubble_impact_cooldown = RUBBLE_IMPACT_COOLDOWN
+
+
 func update_slingshot(state: Dictionary, velocity: Vector3) -> void:
 	var launches := int(state.get("launch_count", 0))
 	if launches > _sling_launches:
@@ -485,11 +542,18 @@ func _play_at(name: StringName, at: Vector3, volume_db: float, pitch: float,
 		bus: StringName = BUS_EFFECTS) -> void:
 	if not _bank_ready or _silent:
 		return
+	_play_stream_at(_bank.pick(name), at, volume_db, pitch, bus)
+
+
+func _play_stream_at(stream: AudioStream, at: Vector3, volume_db: float, pitch: float,
+		bus: StringName = BUS_EFFECTS) -> void:
+	if _silent or stream == null or _voices_3d.is_empty():
+		return
 	var voice := _voices_3d[_next_voice_3d]
 	_next_voice_3d = (_next_voice_3d + 1) % _voices_3d.size()
 	voice.bus = bus
 	voice.position = at
-	voice.stream = _bank.pick(name)
+	voice.stream = stream
 	voice.volume_db = volume_db
 	voice.pitch_scale = pitch
 	voice.play()

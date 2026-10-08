@@ -19,6 +19,7 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
     src/sim/physical_hand_climb.cpp
+    src/sim/parkour_route.cpp
     src/sim/steam_plant.cpp
     src/sim/water_screw.cpp
     src/sim/mechanism_kit.cpp
@@ -27,6 +28,15 @@ add_library(scraperx_sim STATIC
     src/sim/cargo_net.cpp
     src/sim/suspended_ladder.cpp
     src/sim/service_lift.cpp
+    src/sim/gravity_wheel_geometry.cpp
+    src/sim/supplied_ascent.cpp
+    src/sim/supplied/vertical_machine.cpp
+    src/sim/supplied/gravity_balance.cpp
+    src/sim/supplied/crown_gondola.cpp
+    src/sim/supplied/traction_tram.cpp
+    src/sim/supplied/barrel_helix.cpp
+    src/sim/supplied/cascade_mast.cpp
+    src/sim/supplied/pitman_lift.cpp
     src/sim/slingshot.cpp
     src/sim/slingshot_model.cpp
     src/sim/pipe_bridge.cpp
@@ -80,6 +90,10 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     target_link_libraries(scraperx_physical_hand_climb_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.physical_hand_climb COMMAND scraperx_physical_hand_climb_tests)
 
+    add_executable(scraperx_mechanism_hull_tests tests/mechanism_hull_tests.cpp)
+    target_link_libraries(scraperx_mechanism_hull_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.mechanism_hull COMMAND scraperx_mechanism_hull_tests)
+
     add_executable(scraperx_physical_traversal_tests tests/physical_traversal_tests.cpp)
     target_link_libraries(scraperx_physical_traversal_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.physical_traversal COMMAND scraperx_physical_traversal_tests)
@@ -87,6 +101,14 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_service_lift_physics_tests tests/service_lift_physics_tests.cpp)
     target_link_libraries(scraperx_service_lift_physics_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.service_lift_physics COMMAND scraperx_service_lift_physics_tests)
+
+    add_executable(scraperx_gravity_reclaim_route_tests tests/gravity_reclaim_route_tests.cpp)
+    target_link_libraries(scraperx_gravity_reclaim_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.gravity_reclaim_route COMMAND scraperx_gravity_reclaim_route_tests)
+
+    add_executable(scraperx_supplied_machine_route_tests tests/supplied_machine_route_tests.cpp)
+    target_link_libraries(scraperx_supplied_machine_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.supplied_machine_route COMMAND scraperx_supplied_machine_route_tests)
 
     add_executable(scraperx_service_lift_route_tests tests/service_lift_route_tests.cpp)
     target_link_libraries(scraperx_service_lift_route_tests PRIVATE scraperx_sim)

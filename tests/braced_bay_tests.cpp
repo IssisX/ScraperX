@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <utility>
 
 using scraperx::sim::InitialSpawn;
@@ -114,6 +115,31 @@ void cross_gap(Simulation &s, const double takeoff_x, const double lane_z) {
             "jump crosses the unsupported gap onto the far landing");
 }
 
+void complete_tower_mantle(Simulation &s) {
+    (void)s.request_traversal();
+    advance(s, Simulation::kFixedStepSeconds);
+    const auto started = s.snapshot();
+    std::cout << "TOWER_MANTLE_START gravity=" << started.player_gravity_factor
+              << " hands=" << started.traversal_hand_constraint_count
+              << " state=" << int(started.traversal_state) << '\n';
+    require(started.player_gravity_factor == 1.0 && started.traversal_hand_constraint_count == 2,
+            "tower mantle must retain gravity and engage real hands");
+    const auto work_before = started.traversal_command_work_bound_j;
+    int ticks = 1;
+    for (; ticks < 153; ++ticks) {
+        advance(s, Simulation::kFixedStepSeconds);
+        const auto v = s.snapshot();
+        require(v.player_gravity_factor == 1.0, "tower pull-up disabled gravity");
+        if (v.player_grounded && v.support_entity_id == Simulation::kTowerEntityId &&
+            v.traversal_hand_constraint_count == 0 && v.player_position.y > 88.7) break;
+    }
+    require(ticks < 153 && s.snapshot().death_count == 0,
+            "force-earned tower mantle must complete within repaired1.7s baseline");
+    require(s.snapshot().traversal_command_work_bound_j > work_before,
+            "tower pull-up supplied no bounded hand work");
+    std::cout << "TOWER_MANTLE_TRANSFER seconds=" << ticks / 90.0 << " supported=1 gravity=1\n";
+}
+
 void finish_route(Simulation &s) {
     require(walk_to(s, 34.0, -144.0), "align with second brace from its flat landing");
     advance(s, 0.4);
@@ -149,8 +175,7 @@ void finish_route(Simulation &s) {
     report(s, "MANTLE_READY");
     require(balancing > 180 && s.snapshot().ledge_available,
             "return balance reaches a real mantle affordance");
-    (void)s.request_traversal();
-    advance(s, 1.0);
+    complete_tower_mantle(s);
     require(walk_to(s, 24.8, -132.0), "mantle exits onto existing tower deck");
     advance(s, 0.4);
     report(s, "RING_88");
@@ -227,7 +252,16 @@ void upper_checkpoint_restores(Simulation &s) {
 }
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc == 2 && std::string(argv[1]) == "mantle") {
+        Simulation s;
+        require(s.debug_restart_at({26.68, 87.92, -132}), "supported production mantle staging");
+        advance(s, .5);
+        (void)s.set_facing(-1, 0);
+        complete_tower_mantle(s);
+        std::cout << "PASS production Tower mantle physical hand transfer\n";
+        return 0;
+    }
     // Removing the first brace or its receiving landing must fail here:
     // the player cannot manufacture five metres of rise from movement input.
     Simulation route(InitialSpawn::BracedBayEntry, scraperx::sim::WorldContent::PipeBridge);

@@ -15,6 +15,8 @@
 #include "sim/physical_hand_climb.hpp"
 #include "sim/suspended_ladder.hpp"
 #include "sim/service_lift.hpp"
+#include "sim/supplied_ascent.hpp"
+#include "sim/parkour_route.hpp"
 #include "sim/water_screw.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
@@ -1268,7 +1270,7 @@ struct SupportSample final {
 };
 
 [[nodiscard]] bool entity_is_causal_section_support(std::uint64_t entity) noexcept {
-    return scraperx::sim::ServiceLift::owns_support(entity) || entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
+    return scraperx::sim::is_parkour_route_entity(entity) || scraperx::sim::SuppliedAscent::owns_support(entity) || scraperx::sim::ServiceLift::owns_support(entity) || entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
         scraperx::sim::is_facade_route_entity(entity);
 }
 
@@ -1301,8 +1303,12 @@ struct SupportSample final {
            entity_id == Sim::kIntakeSwingFlightEntityId;
 }
 
+struct ReclaimImpactSample {float speed=0;JPH::RVec3 position=JPH::RVec3::sZero();};
+
 class PlayerContactListener final : public JPH::ContactListener {
 public:
+    void set_reclaim_fragments(std::pair<std::uint64_t,std::uint64_t> range)noexcept {reclaim_first_=range.first;reclaim_last_=range.second;}
+    ReclaimImpactSample reclaim_impact()const noexcept {lock();const auto result=reclaim_sample_;unlock();return result;}
     void set_landing_feedback(bool enabled) noexcept { landing_feedback_ = enabled; }
     void set_slingshot(scraperx::sim::Slingshot *launcher) noexcept {
         slingshot_ = launcher;
@@ -1311,6 +1317,7 @@ public:
         lock();
         sample_ = {};
         impact_sample_ = {};
+        reclaim_sample_={};
         unlock();
     }
 
@@ -1397,6 +1404,7 @@ public:
                         JPH::ContactSettings &) override {
         observe_slingshot(first, second);
         observe_support(first, second, manifold);
+        observe_reclaim(first,second,manifold);
     }
 
     void OnContactPersisted(const JPH::Body &first,
@@ -1408,6 +1416,16 @@ public:
     }
 
 private:
+    void observe_reclaim(const JPH::Body&first,const JPH::Body&second,const JPH::ContactManifold&manifold)noexcept {
+        const auto is_fragment=[this](std::uint64_t e){return reclaim_first_!=0&&e>=reclaim_first_&&e<=reclaim_last_;};
+        if((!is_fragment(first.GetUserData())&&!is_fragment(second.GetUserData()))||manifold.mRelativeContactPointsOn1.empty())return;
+        const auto p1=manifold.GetWorldSpaceContactPointOn1(0),p2=manifold.GetWorldSpaceContactPointOn2(0);
+        // Accepted native contact, actual pre-solve relative closing speed.
+        // Audio uses speed; this is deliberately not a solver impulse claim.
+        const float speed=(first.GetPointVelocity(p1)-second.GetPointVelocity(p2)).Dot(manifold.mWorldSpaceNormal);
+        if(speed<1.F)return;
+        lock();if(speed>reclaim_sample_.speed)reclaim_sample_={speed,p1};unlock();
+    }
     void observe_slingshot(const JPH::Body &first, const JPH::Body &second) noexcept {
         if (slingshot_ && (first.GetUserData() == scraperx::sim::Slingshot::kPouchEntity ||
                           second.GetUserData() == scraperx::sim::Slingshot::kPouchEntity))
@@ -1522,6 +1540,8 @@ private:
     bool landing_feedback_ = false;
     SupportSample sample_{};
     SupportSample impact_sample_{};
+    ReclaimImpactSample reclaim_sample_{};
+    std::uint64_t reclaim_first_=0,reclaim_last_=0;
     std::atomic<std::uint64_t> carried_entity_{0};
     scraperx::sim::Slingshot *slingshot_ = nullptr;
 };
@@ -1802,6 +1822,8 @@ struct LeafBox final {
 namespace scraperx::sim {
 
 class Simulation::PhysicsWorld final : private JPH::PhysicsStepListener {
+    struct MachineCheckpoint;
+
 public:
     explicit PhysicsWorld(const InitialSpawn initial_spawn, const WorldContent content)
         : temp_allocator_(8U * 1024U * 1024U),
@@ -1998,6 +2020,10 @@ public:
                 cargo_net_ = std::make_unique<CargoNet>(physics_system_, object_layers::kMoving,kit_->body_id(frame));
                 build_suspended_ladder(*kit_);
                 service_lift_ = std::make_unique<ServiceLift>(physics_system_, *kit_);
+                supplied_ascent_ = std::make_unique<SuppliedAscent>(physics_system_, *kit_);
+                build_parkour_route(*kit_);
+                supplied_ascent_->append_gravity_wheel(physics_system_,*kit_);
+                contact_listener_.set_reclaim_fragments(supplied_ascent_->reclaim_material_range());
             }
         }
 
@@ -2040,6 +2066,8 @@ public:
         swing_stair_.reset();
         pipe_bridge_.reset();
         slingshot_.reset();
+        supplied_ascent_.reset();
+        contact_listener_.set_reclaim_fragments({0,0});
         service_lift_.reset();
         kit_.reset();
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
@@ -2092,6 +2120,7 @@ public:
         double jib_hoist_input = 0.0;
         double needle_hoist_input = 0.0;
         double service_lift_input = 0.0;
+        double supplied_machine_input = 0.0;
         bool valve_toggle_requested = false;
         bool water_screw_toggle_requested = false;
         bool water_lift_valve_toggle_requested = false;
@@ -2108,10 +2137,12 @@ public:
     void OnStep(const JPH::PhysicsStepListenerContext &context) override {
         // One listener owns every rider write. Jolt may run separate listeners
         // concurrently; serial dispatch keeps hand forces and launcher reads ordered.
+        kit_->begin_weld_step(context.mDeltaTime);
         if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
         physical_hands_->pre_step(context.mDeltaTime, true);
         slingshot_->collision_step(context);
         if (service_lift_) service_lift_->collision_step(context.mDeltaTime);
+        if (supplied_ascent_) supplied_ascent_->collision_step(context.mDeltaTime);
     }
 
     void step(const StepCommands &commands,
@@ -2230,6 +2261,21 @@ public:
             fall_peak_speed_mps_ = std::max(fall_peak_speed_mps_, pre_contact_fall_speed_mps_);
         }
         if (!slingshot_) physical_hands_->pre_step(delta_seconds);
+        if (supplied_ascent_) {
+            const auto selection=supplied_machine_station(bodies);
+            if (!gravity_reclaim_retry_available_ && !jump_started &&
+                selection.machine == 6 && selection.station == SuppliedAscent::Station::Lower &&
+                support_entity_id_ == 1941 && footing_is_firm(bodies)) {
+                // Capture the actual safe entry before the first feed/actuator
+                // step. Ordinary firm-footing commits still preserve spent
+                // material; only this explicit menu retry restores the entry.
+                capture_machine_checkpoint(bodies, gravity_reclaim_retry_checkpoint_);
+                gravity_reclaim_retry_position_ = bodies.GetPosition(player_id_);
+                gravity_reclaim_retry_crouched_ = crouched_;
+                gravity_reclaim_retry_available_ = true;
+            }
+            supplied_ascent_->pre_step(selection.machine,static_cast<float>(commands.supplied_machine_input),selection.station);
+        }
         kit_->pre_step(delta_seconds);
         if (pipe_bridge_) pipe_bridge_->pre_step(delta_seconds);
         if (swing_stair_) swing_stair_->pre_step(delta_seconds);
@@ -2247,7 +2293,9 @@ public:
             service_lift_->pre_step(reachable ? static_cast<float>(commands.service_lift_input) : 0.0F);
         }
         contact_listener_.begin_tick();
+        if (!slingshot_) kit_->begin_weld_step(delta_seconds);
         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
+        kit_->finish_weld_steps();
         physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
         if (!landing_applied_force_.IsNearZero()) {
             const auto support_point_now = bodies.GetCenterOfMassTransform(landing_force_support_id_) *
@@ -2257,10 +2305,20 @@ public:
             landing_recovery_work_j_ += std::max(0.0F, landing_applied_force_.Dot(displacement));
         }
         if (service_lift_) service_lift_->post_step();
+        if (supplied_ascent_) supplied_ascent_->post_step();
         kit_->post_step(delta_seconds);
         if (slingshot_) slingshot_->post_step(delta_seconds);
         if (cargo_net_) cargo_net_->refresh();
 
+        const auto reclaim=contact_listener_.reclaim_impact();
+        if(reclaim.speed>0){++state_.reclaim_impact_count;state_.reclaim_impact_speed_mps=reclaim.speed;
+            state_.reclaim_impact_position={reclaim.position.GetX(),reclaim.position.GetY(),reclaim.position.GetZ()};}
+        const auto fracture = kit_->weld_break_sample();
+        state_.reclaim_break_serial = fracture.serial;
+        state_.reclaim_break_valid = fracture.valid;
+        state_.reclaim_break_position = {fracture.position.GetX(), fracture.position.GetY(), fracture.position.GetZ()};
+        state_.reclaim_break_force_n = fracture.force_n;
+        state_.reclaim_break_torque_nm = fracture.torque_nm;
         SupportSample support = contact_listener_.sample();
         if (jump_started || (traversal_state_ != TraversalState::None && !physical_hands_->active())) {
             support = {};
@@ -2284,7 +2342,7 @@ public:
             (traversal_state_ == TraversalState::None || physical_hands_->active()) &&
             !jump_started) {
             const auto impact = slingshot_ ? contact_listener_.impact_sample() : support;
-            if (slingshot_ && !sling_controlling) record_landing(bodies, impact);
+            if (slingshot_ && !sling_controlling) record_landing(bodies, impact, commands.crouch_held);
             last_impact_speed_mps_ = slingshot_ ? impact.approach_normal_speed : pre_contact_fall_speed_mps_;
             if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
                 restore_from_checkpoint(bodies);
@@ -2420,6 +2478,18 @@ public:
         checkpoint_ = service_lift_retry_checkpoint_;
         checkpoint_position_ = service_lift_retry_position_;
         checkpoint_crouched_ = service_lift_retry_crouched_;
+        return true;
+    }
+
+    [[nodiscard]] bool can_restart_gravity_reclaim_attempt() const noexcept {
+        return gravity_reclaim_retry_available_;
+    }
+
+    bool select_gravity_reclaim_retry() noexcept {
+        if (!gravity_reclaim_retry_available_) return false;
+        checkpoint_ = gravity_reclaim_retry_checkpoint_;
+        checkpoint_position_ = gravity_reclaim_retry_position_;
+        checkpoint_crouched_ = gravity_reclaim_retry_crouched_;
         return true;
     }
 
@@ -5191,8 +5261,10 @@ private:
         if (traversal_state_ != TraversalState::None) {
             return;
         }
-        const bool wants_up =
-            !commands.crouch_held || commands.jump_requested || commands.traversal_requested;
+        const bool recovery_tuck = grounded_ && landing_recovery_seconds_ > 0 &&
+            (landing_response_ == 1 || landing_response_ == 2);
+        const bool wants_up = (!commands.crouch_held && !recovery_tuck) ||
+            commands.jump_requested || commands.traversal_requested;
         if (crouched_) {
             if (wants_up) {
                 (void)try_stand(bodies);
@@ -5241,6 +5313,8 @@ private:
 
         if (traversal_state_ == TraversalState::Climbing) {
             if (commands.release_requested) {
+                let_go_climb(bodies);
+            } else if (physical_hands_->swinging() && (commands.jump_requested || commands.traversal_requested)) {
                 let_go_climb(bodies);
             } else if (commands.jump_requested) {
                 jump_off_climb(bodies);
@@ -5336,9 +5410,11 @@ private:
         landing_recovery_seconds_ = landing_recovery_duration_ = landing_initial_balance_loss_ = 0;
         landing_applied_force_ = JPH::Vec3::sZero();
         landing_slip_velocity_ = JPH::Vec3::sZero();
+        landing_response_ = 0;
     }
 
-    void record_landing(const JPH::BodyInterface &bodies, const SupportSample &support) noexcept {
+    void record_landing(const JPH::BodyInterface &bodies, const SupportSample &support,
+                        const bool prepared) noexcept {
         ++landing_count_;
         landing_support_entity_id_ = support.entity_id;
         landing_normal_speed_mps_ = support.approach_normal_speed;
@@ -5363,6 +5439,31 @@ private:
         landing_recovery_seconds_ = landing_recovery_duration_;
         landing_initial_balance_loss_ = std::clamp((landing_approach_energy_j_ +
             .25 * landing_tangent_energy_j_) / 7000.0, 0.0, .90);
+        landing_response_ = 0;
+        // Deliberately prepared compact recovery, a reduced-order posture.
+        // Collision and finite reciprocal traction own forward travel. This
+        // does not yet demonstrate multi-contact rolling or spread the normal
+        // impact in time, and it grants no impact immunity.
+        const auto tangent_velocity = relative-normal*relative.Dot(normal);
+        const auto along = tangent_velocity.NormalizedOr(JPH::Vec3::sZero());
+        const bool forward = !along.IsNearZero() && along.Dot(facing_) > .7F;
+        bool roll_floor = prepared && forward && landing_normal_speed_mps_>=12 &&
+            landing_normal_speed_mps_<=kLethalImpactSpeedMps && landing_tangent_speed_mps_>=2.5;
+        const auto centre = bodies.GetPosition(player_id_);
+        const float roll_runout = tangent_velocity.Length()*float(landing_recovery_duration_)+
+            tangent_velocity.LengthSq()/(2*.85F*9.81F);
+        const auto standing_centre=centre+JPH::Vec3(0,crouched_?kCrouchDrop:0,0);
+        const auto compact_centre=standing_centre-JPH::Vec3(0,kCrouchDrop,0);
+        for (float ahead=.5F;roll_floor && ahead<=roll_runout+.5F;ahead+=.5F) {
+            if (!step_is_supported(standing_centre+along*ahead) ||
+                !shape_pose_is_clear(player_crouch_shape_.GetPtr(),compact_centre+along*ahead+
+                    JPH::Vec3(0,kStandClearanceSkin,0))) {roll_floor=false;break;}
+        }
+        if (landing_normal_speed_mps_ >= 12 && landing_normal_speed_mps_ <= kLethalImpactSpeedMps &&
+            landing_tangent_speed_mps_ >= 2.5 && roll_floor) landing_response_ = 2;
+        else if (landing_normal_speed_mps_ >= 8) landing_response_ = 1;
+        else if (landing_tangent_speed_mps_ >= 4 && landing_initial_balance_loss_ > .18 && !forward)
+            landing_response_ = 3;
     }
 
     void apply_landing_recovery(JPH::BodyInterface &bodies, const StepCommands &commands,
@@ -5381,10 +5482,20 @@ private:
             std::clamp(landing_recovery_seconds_ / landing_recovery_duration_, 0.0, 1.0) : 0;
         const double balance = 1.0 - landing_initial_balance_loss_ * progress;
         const double speed = kPlayerMaximumRelativeSpeed * (crouched_ ? kCrouchSpeedScale : 1.0) * (.45 + .55 * balance);
-        sprinting_ = commands.sprint_held && !crouched_ && carry_constraint_ == nullptr;
+        sprinting_ = sprint_is_eligible(commands);
         const double desired_speed = speed * (sprinting_ ? kSprintSpeedScale : 1.0);
         JPH::Vec3 desired(float(commands.move_input_x * desired_speed), 0, float(commands.move_input_z * desired_speed));
         desired -= normal * desired.Dot(normal);
+        if (landing_response_ == 2 && landing_recovery_seconds_ > 0) {
+            // Carry existing run momentum through compact recovery. Reverse
+            // input brakes and lateral input steers through real traction.
+            const auto direction=slip.NormalizedOr(JPH::Vec3::sZero());
+            const float intent=float(commands.move_input_x)*direction.GetX()+float(commands.move_input_z)*direction.GetZ();
+            if (intent >= 0) {
+                const auto lateral=desired-direction*desired.Dot(direction);
+                desired=slip*(1.0F-std::min(1.0F,dt/.65F))+lateral;
+            }
+        }
         auto correction = (desired - slip) * (kPlayerMassKg / .18F);
         const float traction_cap = (entity_is_causal_section_support(support_sample_.entity_id) ? .8F : .85F) * kPlayerMassKg * -physics_system_.GetGravity().GetY() *
                                    std::max(.3F, normal.GetY());
@@ -5422,6 +5533,14 @@ private:
         if (slingshot_ && !correction.IsNearZero()) slingshot_->note_external_influence();
     }
 
+    [[nodiscard]] bool sprint_is_eligible(const StepCommands &commands) const noexcept {
+        const double input = std::hypot(commands.move_input_x, commands.move_input_z);
+        return commands.sprint_held && !crouched_ && carry_constraint_ == nullptr &&
+            input >= kSprintMinimumInput &&
+            commands.move_input_x * facing_.GetX() + commands.move_input_z * facing_.GetZ() >=
+                kSprintMaximumAngleCos * input;
+    }
+
     [[nodiscard]] bool apply_locomotion(JPH::BodyInterface &bodies,
                                         const StepCommands &commands,
                                         const float delta_seconds) noexcept {
@@ -5432,11 +5551,21 @@ private:
         double move_z = commands.move_input_z * speed_scale;
         sprinting_ = false;
         balancing_ = false;
-        if(!grounded_ && causal_airborne_) {
-            // Same bounded air-steering force abstraction as launcher flight;
-            // zero input leaves actual departure momentum untouched.
-            bodies.AddForce(player_id_,JPH::Vec3(float(commands.move_input_x*kPlayerMassKg*2.0),
-                0,float(commands.move_input_z*kPlayerMassKg*2.0)));
+        if (!grounded_) {
+            // Every departure uses bounded force steering. Releasing the stick
+            // supplies no horizontal braking force; earned jump/support momentum
+            // remains until deliberate input or an actual contact changes it.
+            if (std::hypot(commands.move_input_x, commands.move_input_z) > 0.001) {
+                JPH::Vec3 target = player_velocity;
+                approach_relative_horizontal_velocity(target, reference_velocity,
+                    move_x, move_z, kAirAcceleration, delta_seconds, air_full_speed_);
+                JPH::Vec3 force = (target - player_velocity) * (kPlayerMassKg / delta_seconds);
+                const JPH::Vec3 relative = player_velocity - reference_velocity;
+                const float power = force.Dot(relative) +
+                    .5F * force.LengthSq() / kPlayerMassKg * delta_seconds;
+                if (power > 3000.0F) force *= 3000.0F / power;
+                bodies.AddForce(player_id_, force);
+            }
             return false;
         }
         if(grounded_) causal_airborne_=false;
@@ -5490,6 +5619,10 @@ private:
                     }
                     causal_airborne_=true;
                 }
+                airborne_inherited_velocity_=support_velocity;
+                const auto departure=before_velocity-support_velocity;
+                air_full_speed_=std::max(kPlayerMaximumRelativeSpeed,
+                    JPH::Vec3(departure.GetX(),0,departure.GetZ()).Length());
                 bodies.AddImpulse(player_id_, impulse);
                 landing_jump_work_j_ += std::max(0.0F,
                     impulse.Dot(before_velocity - support_velocity) + .5F * impulse.LengthSq() * inverse_mass);
@@ -5518,7 +5651,6 @@ private:
             reference_velocity = current_support_point_velocity(bodies);
             airborne_inherited_velocity_ = reference_velocity;
             const Beam beam = beam_underfoot(bodies);
-            const double input = std::hypot(commands.move_input_x, commands.move_input_z);
             if (beam.valid) {
                 // On a beam: along it at a walk, held on its line unless the
                 // stick means to step off.
@@ -5535,10 +5667,7 @@ private:
                     move_x = beam.along.GetX() * walk + beam.across.GetX() * centre;
                     move_z = beam.along.GetZ() * walk + beam.across.GetZ() * centre;
                 }
-            } else if (commands.sprint_held && !crouched_ && carry_constraint_ == nullptr &&
-                       input >= kSprintMinimumInput &&
-                       (commands.move_input_x * facing_.GetX() +
-                        commands.move_input_z * facing_.GetZ()) >= kSprintMaximumAngleCos * input) {
+            } else if (sprint_is_eligible(commands)) {
                 sprinting_ = true;
             }
             const float full_speed = sprinting_
@@ -5556,14 +5685,6 @@ private:
             const JPH::Vec3 relative = player_velocity - reference_velocity;
             air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed,
                                        JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ()).Length());
-        } else {
-            approach_relative_horizontal_velocity(player_velocity,
-                                                  reference_velocity,
-                                                  move_x,
-                                                  move_z,
-                                                  kAirAcceleration,
-                                                  delta_seconds,
-                                                  air_full_speed_);
         }
 
         // Crouched here means there was no room to stand, so no room to jump.
@@ -5731,10 +5852,7 @@ private:
     }
 
     void try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
-        if (grounded_ || crouched_ || carry_constraint_ != nullptr || regrab_lockout_ticks_ > 0) {
-            return;
-        }
-        if (bodies.GetLinearVelocity(player_id_).GetY() > kHangMaximumClimbSpeed) {
+        if (grounded_ || crouched_ || carry_constraint_ != nullptr) {
             return;
         }
         if (facing_.IsNearZero()) {
@@ -5747,6 +5865,20 @@ private:
         }
 
         const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+        const Grip reached = find_grip(origin,
+            origin + JPH::Vec3(0,kClimbHandMid,0) + facing_*kClimbHandReach, facing_,
+            regrab_lockout_ticks_>0 ? last_released_grip_ : JPH::BodyID());
+        const auto locked = [&](JPH::BodyID body) {
+            return regrab_lockout_ticks_ > 0 && body == last_released_grip_;
+        };
+        // A reachable real bar can be caught during a rising jump. Existing
+        // finite hands absorb the catch; acquiring it never resets velocity.
+        if (reached.valid && !locked(reached.body) && (is_parkour_swing_entity(reached.entity_id) ||
+            bodies.GetLinearVelocity(player_id_).GetY() > kHangMaximumClimbSpeed)) {
+            begin_climb(bodies, reached);
+            return;
+        }
+        if (bodies.GetLinearVelocity(player_id_).GetY() > kHangMaximumClimbSpeed) return;
         const LedgeProbe probe = probe_ledge(origin,
                                              facing_,
                                              kPlayerHalfHeight + kHangMinimumRiseAboveCentre,
@@ -5756,13 +5888,14 @@ private:
             // No ledge: a hold reached for in the air is caught and climbed.
             const Grip grip = find_grip(
                 origin, origin + JPH::Vec3(0.0F, kClimbHandMid, 0.0F) + facing_ * kClimbHandReach,
-                facing_);
-            if (grip.valid) {
+                facing_, regrab_lockout_ticks_>0 ? last_released_grip_ : JPH::BodyID());
+            if (grip.valid && !locked(grip.body)) {
                 begin_climb(bodies, grip);
             }
             return;
         }
 
+        if (locked(probe.ledge_body)) return;
         const JPH::RVec3 hold(
             probe.wall_point.GetX() - probe.inward.GetX() * (kPlayerRadius + kHangWallGap),
             probe.ledge_point.GetY() - kHangDropBelowLedge,
@@ -5815,7 +5948,12 @@ private:
         if (!mantle_probe.valid) {
             return false;
         }
-        if(entity_is_causal_section_support(mantle_probe.ledge_entity_id))
+        // Production Tower lips use the same finite hand/foot transfer as the
+        // repaired1.7s mantle. Preserve legacy fixture/vault owners separately.
+        // A reachable lip must engage both hands; there is no gravity-off
+        // fallback when the real attachment or receiving clearance fails.
+        if(entity_is_causal_section_support(mantle_probe.ledge_entity_id) ||
+           (!regression_fixtures_ && mantle_probe.ledge_entity_id==Simulation::kTowerEntityId))
             return begin_cargo_transfer(bodies,mantle_probe,origin);
         begin_mantle(bodies, mantle_probe, origin);
         return true;
@@ -6166,8 +6304,12 @@ private:
         // current velocity already includes motion acquired while attached.
         airborne_inherited_velocity_ = support_velocity;
         bodies.SetGravityFactor(player_id_, 1.0F);
+        last_released_grip_ = traversal_body_;
         regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
         clear_traversal();
+        const auto departure=bodies.GetLinearVelocity(player_id_)-support_velocity;
+        air_full_speed_=std::max(kPlayerMaximumRelativeSpeed,
+            JPH::Vec3(departure.GetX(),0,departure.GetZ()).Length());
     }
 
 
@@ -6198,7 +6340,7 @@ private:
     // at least kGripMinBodyMassKg, searched in a kGripSearchHalf box round
     // `aim` squared to `facing`. The point is on the member's axis.
     [[nodiscard]] Grip find_grip(const JPH::RVec3 centre, const JPH::RVec3 aim,
-                                 const JPH::Vec3 facing) const noexcept {
+                                 const JPH::Vec3 facing, JPH::BodyID excluded = {}) const noexcept {
         Grip best;
         if (facing.IsNearZero()) {
             return best;
@@ -6213,7 +6355,7 @@ private:
             grip_region_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
             JPH::RMat44::sRotationTranslation(rotation, aim), settings, aim, hits, {}, {}, filter);
         float best_distance = std::numeric_limits<float>::max();
-        if (cargo_net_ && cargo_net_->grip(centre, aim, facing, best.point)) {
+        if (cargo_net_ && cargo_net_->body()!=excluded && cargo_net_->grip(centre, aim, facing, best.point)) {
             best.valid = true; best.body = cargo_net_->body(); best.entity_id = CargoNet::kEntity;
             best_distance = JPH::Vec3(best.point - aim).Length();
         }
@@ -6224,11 +6366,13 @@ private:
                 continue;
             }
             const JPH::Body &body = lock.GetBody();
+            if (body.GetID()==excluded) continue;
             // Mounted facade members remain usable holds even when their real
             // sheet/tube mass is below the loose-handle exclusion threshold.
             // Their native joints, not extra ballast, carry the player's load.
             if (body.IsSensor() ||
                 (body.IsDynamic() && !is_facade_route_entity(body.GetUserData()) &&
+                 !is_parkour_swing_entity(body.GetUserData()) &&
                  body.GetMotionProperties()->GetInverseMass() * kGripMinBodyMassKg > 1.0F)) {
                 continue;
             }
@@ -6289,7 +6433,7 @@ private:
         const bool changed = !hands_[hand].valid || hands_[hand].body != grip.body ||
                              hands_[hand].local != local;
         if (changed && !(physical_hands_->attached(hand) &&
-            ((cargo_net_ && grip.body == cargo_net_->body()) || is_facade_route_entity(grip.entity_id))
+            ((cargo_net_ && grip.body == cargo_net_->body()) || is_facade_route_entity(grip.entity_id) || is_parkour_route_entity(grip.entity_id))
             ? physical_hands_->regrip(hand, grip.body, grip.point)
             : physical_hands_->attach(hand, grip.body, grip.point))) {
             return;
@@ -6383,6 +6527,12 @@ private:
             ++rejected_traversal_count_;
             return;
         }
+        if (is_parkour_swing_entity(grip.entity_id)) {
+            physical_hands_->set_swing_profile();
+            const auto centre_grip = .5F*(hand_point(bodies,0)+hand_point(bodies,1));
+            swing_rest_offset_ = JPH::Vec3(bodies.GetPosition(player_id_)-centre_grip);
+            swing_rest_offset_.SetY(-.9F);
+        }
         ++climb_count_;
     }
 
@@ -6397,6 +6547,27 @@ private:
     // sideways moves across -- each only onto holds the hands can reach.
     void update_climb(JPH::BodyInterface &bodies, const StepCommands &commands,
                       const float delta_seconds) noexcept {
+        if (physical_hands_->swinging()) {
+            const auto grip = .5F*(hand_point(bodies,0)+hand_point(bodies,1));
+            // Human arm/torso reach, measured from the real grip to the body.
+            // An overspeed miss must release rather than stretch invisible arms.
+            if (JPH::Vec3(grip-bodies.GetPosition(player_id_)).Length()>1.75F) {
+                let_go_climb(bodies);
+                return;
+            }
+            const JPH::Vec3 radius(grip-kParkourSwingPivot);
+            const JPH::Vec3 tangent = JPH::Vec3(-radius.GetY(),radius.GetX(),0).NormalizedOr(JPH::Vec3::sAxisX());
+            // CHOSEN +/-0.15m body lean,0.6m/s stroke and500W measured
+            // positive spring-rest-target work. No constant hinge torque.
+            // Gravity, real player mass and the passive hinge create the swing.
+            // The player chooses the phase; no automatic pumping or angle grant.
+            const auto goal = grip+swing_rest_offset_+tangent*float(.15*commands.move_input_x);
+            auto lead = JPH::Vec3(goal-physical_hands_->commanded_position());
+            if (lead.Length()>.12F) lead*=.12F/lead.Length();
+            physical_hands_->advance_targets(lead,delta_seconds);
+            if (grounded_ && support_entity_id_==kParkourRecoveryEntity) let_go_climb(bodies);
+            return;
+        }
         const JPH::Vec3 normal = traversal_normal_;
         const JPH::Vec3 right = traversal_right();
         const double up_input =
@@ -6688,8 +6859,12 @@ private:
         // airborne steering. It must not replace the body's actual velocity.
         airborne_inherited_velocity_ = support_velocity;
         bodies.SetGravityFactor(player_id_, 1.0F);
+        last_released_grip_ = traversal_body_;
         regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
         clear_traversal();
+        const auto departure=bodies.GetLinearVelocity(player_id_)-support_velocity;
+        air_full_speed_=std::max(kPlayerMaximumRelativeSpeed,
+            JPH::Vec3(departure.GetX(),0,departure.GetZ()).Length());
     }
 
     // Springing back off the structure, away from it and up.
@@ -6705,8 +6880,12 @@ private:
                                                  JPH::Vec3(0.0F, kClimbJumpUpSpeed, 0.0F));
         airborne_inherited_velocity_ = support_velocity;
         bodies.SetGravityFactor(player_id_, 1.0F);
+        last_released_grip_ = traversal_body_;
         regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
         clear_traversal();
+        const auto departure=bodies.GetLinearVelocity(player_id_)-support_velocity;
+        air_full_speed_=std::max(kPlayerMaximumRelativeSpeed,
+            JPH::Vec3(departure.GetX(),0,departure.GetZ()).Length());
     }
 
     // The lip of a ledge near `near` (a point on or near its top edge),
@@ -7025,44 +7204,50 @@ private:
 
     // Machine half of a checkpoint (TDD 14.1: "machine/control state").
     // Kinematic bodies are deliberately excluded -- see BodyCheckpoint comment.
-    void commit_machine_checkpoint(const JPH::BodyInterface &bodies) noexcept {
+    void capture_machine_checkpoint(const JPH::BodyInterface &bodies,
+                                    MachineCheckpoint &checkpoint) const noexcept {
         if (!regression_fixtures_) {
-            checkpoint_.carrying_entity = carried_entity_;
-            kit_->capture(checkpoint_.kit);
-            if (pipe_bridge_) checkpoint_.pipe_bridge = pipe_bridge_->state();
-            if (slingshot_) checkpoint_.slingshot = slingshot_->state();
-            if (swing_stair_) checkpoint_.swing_stair = swing_stair_->state();
-            if (upper_ascent_) checkpoint_.upper_ascent = upper_ascent_->state();
-            if (cargo_net_) checkpoint_.cargo_net = cargo_net_->capture();
-            if (service_lift_) checkpoint_.service_lift = service_lift_->state();
+            checkpoint.carrying_entity = carried_entity_;
+            kit_->capture(checkpoint.kit);
+            if (pipe_bridge_) checkpoint.pipe_bridge = pipe_bridge_->state();
+            if (slingshot_) checkpoint.slingshot = slingshot_->state();
+            if (swing_stair_) checkpoint.swing_stair = swing_stair_->state();
+            if (upper_ascent_) checkpoint.upper_ascent = upper_ascent_->state();
+            if (cargo_net_) checkpoint.cargo_net = cargo_net_->capture();
+            if (service_lift_) checkpoint.service_lift = service_lift_->state();
+            if (supplied_ascent_) checkpoint.supplied_ascent = supplied_ascent_->capture();
             return;
         }
-        checkpoint_.ballast = capture_body(bodies, ballast_id_);
-        checkpoint_.tipper = capture_body(bodies, tipper_id_);
-        checkpoint_.valve_lever = capture_body(bodies, valve_lever_id_);
-        checkpoint_.treadle = capture_body(bodies, treadle_id_);
-        checkpoint_.lift_platform = capture_body(bodies, lift_platform_id_);
-        checkpoint_.counterweight = capture_body(bodies, counterweight_id_);
-        checkpoint_.jib_boom = capture_body(bodies, jib_boom_id_);
-        checkpoint_.jib_hook = capture_body(bodies, jib_hook_id_);
-        checkpoint_.crate = capture_body(bodies, crate_id_);
-        checkpoint_.needle_beam = capture_body(bodies, needle_beam_id_);
-        checkpoint_.needle_seated = needle_seated_;
-        checkpoint_.sump_volume_kg = sump_volume_kg_;
-        checkpoint_.sump_isolated = sump_isolated_;
-        checkpoint_.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
-        checkpoint_.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
-        checkpoint_.water_screw = water_screw_.state();
-        checkpoint_.water_lift_bucket_water_m3 = water_lift_bucket_water_m3_;
-        checkpoint_.water_lift_valve_open = water_lift_valve_open_;
-        checkpoint_.intake_swing_flight = capture_body(bodies, intake_swing_flight_id_);
-        checkpoint_.intake_cw_cradle = capture_body(bodies, intake_cw_cradle_id_);
-        checkpoint_.hook5_door = capture_body(bodies, hook5_door_id_);
-        checkpoint_.hook5_bar = capture_body(bodies, hook5_bar_id_);
-        checkpoint_.hook5_block = capture_body(bodies, hook5_block_id_);
-        checkpoint_.carrying_entity = carried_entity_;
-        checkpoint_.intake_pack_slung = intake_pack_slung_;
-        kit_->capture(checkpoint_.kit);
+        checkpoint.ballast = capture_body(bodies, ballast_id_);
+        checkpoint.tipper = capture_body(bodies, tipper_id_);
+        checkpoint.valve_lever = capture_body(bodies, valve_lever_id_);
+        checkpoint.treadle = capture_body(bodies, treadle_id_);
+        checkpoint.lift_platform = capture_body(bodies, lift_platform_id_);
+        checkpoint.counterweight = capture_body(bodies, counterweight_id_);
+        checkpoint.jib_boom = capture_body(bodies, jib_boom_id_);
+        checkpoint.jib_hook = capture_body(bodies, jib_hook_id_);
+        checkpoint.crate = capture_body(bodies, crate_id_);
+        checkpoint.needle_beam = capture_body(bodies, needle_beam_id_);
+        checkpoint.needle_seated = needle_seated_;
+        checkpoint.sump_volume_kg = sump_volume_kg_;
+        checkpoint.sump_isolated = sump_isolated_;
+        checkpoint.vessel_mass_kg = steam_plant_.state().vessel_mass_kg;
+        checkpoint.cylinder_mass_kg = steam_plant_.state().cylinder_mass_kg;
+        checkpoint.water_screw = water_screw_.state();
+        checkpoint.water_lift_bucket_water_m3 = water_lift_bucket_water_m3_;
+        checkpoint.water_lift_valve_open = water_lift_valve_open_;
+        checkpoint.intake_swing_flight = capture_body(bodies, intake_swing_flight_id_);
+        checkpoint.intake_cw_cradle = capture_body(bodies, intake_cw_cradle_id_);
+        checkpoint.hook5_door = capture_body(bodies, hook5_door_id_);
+        checkpoint.hook5_bar = capture_body(bodies, hook5_bar_id_);
+        checkpoint.hook5_block = capture_body(bodies, hook5_block_id_);
+        checkpoint.carrying_entity = carried_entity_;
+        checkpoint.intake_pack_slung = intake_pack_slung_;
+        kit_->capture(checkpoint.kit);
+    }
+
+    void commit_machine_checkpoint(const JPH::BodyInterface &bodies) noexcept {
+        capture_machine_checkpoint(bodies, checkpoint_);
     }
 
     // WO-008 automatic commit (GDD 9.1): every tick the player is grounded on
@@ -7126,12 +7311,17 @@ private:
             release_carry();
         }
         kit_->restore(checkpoint_.kit);
+        // Restoring topology is not a new fracture. Preserve the event high
+        // water immediately, including callers reading before the next tick.
+        state_.reclaim_break_serial = kit_->weld_break_serial();
+        state_.reclaim_break_valid = false;
         if (pipe_bridge_) pipe_bridge_->restore(checkpoint_.pipe_bridge);
         if (slingshot_) slingshot_->restore(checkpoint_.slingshot);
         if (swing_stair_) swing_stair_->restore(checkpoint_.swing_stair);
         if (upper_ascent_) upper_ascent_->restore(checkpoint_.upper_ascent);
         if (cargo_net_) cargo_net_->restore(checkpoint_.cargo_net);
         if (service_lift_) service_lift_->restore(checkpoint_.service_lift);
+        if (supplied_ascent_) supplied_ascent_->restore(checkpoint_.supplied_ascent);
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
@@ -7174,6 +7364,24 @@ private:
         ++death_count_;
     }
 
+    [[nodiscard]] SuppliedAscent::Selection supplied_machine_station(const JPH::BodyInterface &bodies,const bool require_footing=true)const noexcept{
+        using Station=SuppliedAscent::Station;SuppliedAscent::Selection nearest;
+        if(!supplied_ascent_||(require_footing&&!grounded_)||traversal_state_!=TraversalState::None||carried_entity_!=0)return nearest;
+        const auto player=bodies.GetPosition(player_id_);const auto eye=player+JPH::Vec3(0,.55F,0);double limit=1.65*1.65;
+        for(unsigned i=0;i<supplied_ascent_->count();++i)for(auto station:{Station::Deck,Station::Lower,Station::Upper})for(unsigned panel=0;panel<supplied_ascent_->station_count(station,i);++panel){
+            const auto entity=supplied_ascent_->station_entity(station,i,panel);
+            const bool supported=station==Station::Deck? support_entity_id_==entity:(support_entity_id_==11||support_entity_id_==entity);
+            if(require_footing&&!supported)continue;
+            const auto target=supplied_ascent_->station_position(station,i,panel);const double distance=(target-player).LengthSq();
+            if(distance>limit)continue;
+            const auto ray=JPH::Vec3(target-eye);JPH::RayCastResult hit;
+            if(!cast_ray(eye,ray,hit))continue;
+            if(bodies.GetUserData(hit.mBodyID)!=entity||(1.F-hit.mFraction)*ray.Length()>.28F)continue;
+            nearest={static_cast<int>(i),station};limit=distance;
+        }
+        return nearest;
+    }
+
     [[nodiscard]] ServiceLift::Station service_lift_station(const JPH::BodyInterface &bodies, const bool require_footing = true) const noexcept {
         using Station = ServiceLift::Station;
         if (!service_lift_ || (require_footing && !grounded_) || traversal_state_ != TraversalState::None || carried_entity_ != 0)
@@ -7202,6 +7410,17 @@ private:
     }
 
     void read_machine_state(const JPH::BodyInterface &bodies) noexcept {
+        if(supplied_ascent_){
+            const auto station=supplied_machine_station(bodies),reachable=supplied_machine_station(bodies,false);
+            const unsigned index=station.machine>=0?static_cast<unsigned>(station.machine):reachable.machine>=0?static_cast<unsigned>(reachable.machine):supplied_ascent_->active();
+            const auto value=supplied_ascent_->state(index);state_.supplied_machine_index=static_cast<std::uint8_t>(index);
+            state_.supplied_machine_station=static_cast<std::uint8_t>(station.station);state_.supplied_machine_reachable_station=static_cast<std::uint8_t>(reachable.station);
+            state_.supplied_machine_surface_y=supplied_ascent_->walking_surface_y(index);
+            state_.supplied_machine_energy_j=value.energy_j;state_.supplied_machine_capacity_j=SuppliedAscent::kCapacityJ;
+            state_.supplied_machine_hopper_mass_kg=value.hopper_mass_kg;state_.supplied_machine_wheel_angle_rad=value.wheel_angle_rad;state_.supplied_machine_bearing_heat_j=value.bearing_heat_j;
+            state_.supplied_machine_power_w=value.power_w;state_.supplied_machine_braking=value.braking;state_.supplied_machine_energy_cutoff=value.energy_cutoff;
+            state_.supplied_machine_wheel_motor_enabled=value.wheel_motor_enabled;
+        }
         if (service_lift_) {
             const auto lift = service_lift_->state();
             state_.service_lift_station = static_cast<std::uint8_t>(service_lift_station(bodies));
@@ -7461,8 +7680,11 @@ private:
             to_vector3(physical_hands_->hand_force(1)) : Vector3{};
         state_.traversal_command_work_bound_j = physical_hands_ ?
             physical_hands_->command_work_bound_j() : 0;
+        state_.traversal_actuator_positive_work_j = physical_hands_ ? physical_hands_->actuator_positive_work_j() : 0;
+        state_.traversal_actuator_absorbed_work_j = physical_hands_ ? physical_hands_->actuator_absorbed_work_j() : 0;
         if (cargo_net_ && traversal_body_ == cargo_net_->body() && physical_hands_->active())
             state_.traversal_target_point = to_vector3(physical_hands_->commanded_position());
+        state_.player_swinging = physical_hands_ && physical_hands_->swinging();
         state_.player_sprinting = sprinting_;
         state_.player_balancing = balancing_;
         state_.grip_available = grip_affordance_.valid;
@@ -7494,6 +7716,9 @@ private:
             : FallState::Grounded;
         state_.fall_peak_speed_mps = fall_peak_speed_mps_;
         state_.last_impact_speed_mps = last_impact_speed_mps_;
+        state_.landing_response = landing_response_;
+        state_.landing_recovery_progress = landing_recovery_duration_ > 0 ?
+            1.0-std::clamp(landing_recovery_seconds_/landing_recovery_duration_,0.0,1.0) : 1.0;
         state_.landing_count = landing_count_;
         state_.landing_support_entity_id = landing_support_entity_id_;
         state_.landing_approach_energy_j = landing_approach_energy_j_;
@@ -7589,6 +7814,7 @@ private:
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     std::unique_ptr<ServiceLift> service_lift_;
+    std::unique_ptr<SuppliedAscent> supplied_ascent_;
     std::unique_ptr<PipeBridge> pipe_bridge_;
     std::unique_ptr<Slingshot> slingshot_;
     bool slingshot_flight_ = false;
@@ -7678,6 +7904,7 @@ private:
     bool causal_airborne_ = false;
     bool physical_step_pending_ = false;
     float physical_step_start_feet_y_ = 0;
+    JPH::Vec3 swing_rest_offset_ = JPH::Vec3::sZero();
     TraversalState traversal_state_ = TraversalState::None;
     JPH::BodyID traversal_body_;
     JPH::BodyID traversal_target_body_;
@@ -7696,6 +7923,7 @@ private:
     double traversal_approach_fraction_ = 0.0;
     float traversal_approach_entry_slope_ = 0.0F;
     std::uint32_t traversal_stall_ticks_ = 0;
+    JPH::BodyID last_released_grip_;
     std::uint32_t regrab_lockout_ticks_ = 0;
     std::uint64_t accepted_traversal_count_ = 0;
     std::uint64_t rejected_traversal_count_ = 0;
@@ -7761,6 +7989,7 @@ private:
         UpperAscent::State upper_ascent{};
         std::string cargo_net;
         ServiceLift::State service_lift{};
+        SuppliedAscent::Checkpoint supplied_ascent{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
@@ -7769,6 +7998,10 @@ private:
     JPH::RVec3 service_lift_retry_position_{JPH::RVec3::sZero()};
     bool service_lift_retry_crouched_ = false;
     bool service_lift_retry_available_ = false;
+    MachineCheckpoint gravity_reclaim_retry_checkpoint_{};
+    JPH::RVec3 gravity_reclaim_retry_position_{JPH::RVec3::sZero()};
+    bool gravity_reclaim_retry_crouched_ = false;
+    bool gravity_reclaim_retry_available_ = false;
     std::uint64_t checkpoint_commit_count_ = 0;
     std::uint64_t death_count_ = 0;
     bool parachute_deployed_ = false;
@@ -7778,6 +8011,7 @@ private:
     std::uint64_t landing_count_ = 0, landing_support_entity_id_ = 0;
     double landing_approach_energy_j_ = 0, landing_tangent_energy_j_ = 0;
     double landing_normal_speed_mps_ = 0, landing_tangent_speed_mps_ = 0;
+    unsigned landing_response_ = 0; //0 ordinary,1 brace,2 roll,3 stumble
     double landing_observed_normal_impulse_ns_ = 0, landing_recovery_seconds_ = 0;
     double landing_recovery_duration_ = 0, landing_initial_balance_loss_ = 0;
     double landing_recovery_work_j_ = 0;
@@ -7890,7 +8124,7 @@ bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     jump_requested_ = traversal_requested_ = release_requested_ = false;
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
     crouch_input_ = sprint_input_ = false;
-    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = 0.0;
+    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
     intake_slew_input_ = intake_hoist_input_ = 0.0;
     valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
     water_lift_release_requested_ = water_lift_reset_requested_ = false;
@@ -7911,13 +8145,22 @@ bool Simulation::restart_service_lift_attempt() noexcept {
     return restart_checkpoint();
 }
 
+bool Simulation::can_restart_gravity_reclaim_attempt() const noexcept {
+    return physics_world_->can_restart_gravity_reclaim_attempt();
+}
+
+bool Simulation::restart_gravity_reclaim_attempt() noexcept {
+    if (!physics_world_->select_gravity_reclaim_retry()) return false;
+    return restart_checkpoint();
+}
+
 bool Simulation::restart_checkpoint() noexcept {
     if (!physics_world_->restart_checkpoint()) return false;
     move_input_x_ = move_input_z_ = 0.0;
     jump_requested_ = traversal_requested_ = release_requested_ = false;
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
     crouch_input_ = sprint_input_ = false;
-    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = 0.0;
+    jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
     intake_slew_input_ = intake_hoist_input_ = 0.0;
     valve_toggle_requested_ = water_screw_toggle_requested_ = water_lift_valve_toggle_requested_ = false;
     water_lift_release_requested_ = water_lift_reset_requested_ = false;
@@ -8060,6 +8303,10 @@ std::uint64_t Simulation::kit_body_entity(const std::uint32_t body) const noexce
     return physics_world_->kit().body_entity(kit::BodyIndex{body});
 }
 
+std::uint64_t Simulation::kit_body_material_key(const std::uint32_t body) const noexcept {
+    return physics_world_->kit().body_weld_material_key(kit::BodyIndex{body});
+}
+
 bool Simulation::kit_body_dynamic(const std::uint32_t body) const noexcept {
     return physics_world_->kit().body_dynamic(kit::BodyIndex{body});
 }
@@ -8082,6 +8329,15 @@ KitPart Simulation::kit_body_part(const std::uint32_t body, const std::uint32_t 
     return {to_sim_vector(source.half), to_sim_vector(source.offset),
             to_sim_quaternion(source.rotation), static_cast<std::uint8_t>(source.material),
             static_cast<std::uint8_t>(source.shape), source.inner_radius};
+}
+
+std::vector<Vector3> Simulation::kit_body_part_mesh(const std::uint32_t body,
+                                                  const std::uint32_t part) const {
+    const auto &vertices = physics_world_->kit().body_part_mesh(kit::BodyIndex{body}, part);
+    std::vector<Vector3> out;
+    out.reserve(vertices.size());
+    for (const auto &vertex : vertices) out.push_back(to_sim_vector(vertex));
+    return out;
 }
 
 double Simulation::pipe_bridge_tip_height() const noexcept {
@@ -8169,6 +8425,12 @@ bool Simulation::set_needle_hoist_input(const double value) noexcept {
         return false;
     }
     needle_hoist_input_ = std::clamp(value, -1.0, 1.0);
+    return true;
+}
+
+bool Simulation::set_supplied_machine_input(const double value) noexcept {
+    if (!std::isfinite(value)) return false;
+    supplied_machine_input_ = std::clamp(value, -1.0, 1.0);
     return true;
 }
 
@@ -8272,6 +8534,7 @@ void Simulation::step_fixed() noexcept {
     commands.jib_hoist_input = jib_hoist_input_;
     commands.needle_hoist_input = needle_hoist_input_;
     commands.service_lift_input = service_lift_input_;
+    commands.supplied_machine_input = supplied_machine_input_;
     commands.valve_toggle_requested = valve_toggle_requested_;
     commands.water_screw_toggle_requested = water_screw_toggle_requested_;
     commands.water_lift_valve_toggle_requested = water_lift_valve_toggle_requested_;

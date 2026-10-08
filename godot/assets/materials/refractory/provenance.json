@@ -1,0 +1,203 @@
+{
+  "schema_version": 2,
+  "asset": "Worn Brick Floor",
+  "asset_id": "worn_brick_floor",
+  "author": "Amal Kumar",
+  "publisher": "Poly Haven",
+  "source_url": "https://polyhaven.com/a/worn_brick_floor",
+  "license": "CC0-1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "publisher_license_url": "https://polyhaven.com/license",
+  "source_license_verified": true,
+  "acquired_at_utc": "2026-10-08T20:45:32Z",
+  "source_files": [
+    {
+      "file": "worn_brick_floor_diff_4k.jpg",
+      "role": "diffuse",
+      "download_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/worn_brick_floor/worn_brick_floor_diff_4k.jpg",
+      "bytes": 13065333,
+      "sha256": "b2627d03e4aab57ab6aa1a3037d1acab8127802e53579c5936b825372c103ee1",
+      "format": "JPEG",
+      "width_px": 4096,
+      "height_px": 4096,
+      "bits_per_channel": 8,
+      "modifications": [],
+      "retained_in_repository": false
+    },
+    {
+      "file": "worn_brick_floor_nor_gl_4k.jpg",
+      "role": "normal_opengl",
+      "download_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/worn_brick_floor/worn_brick_floor_nor_gl_4k.jpg",
+      "bytes": 15374467,
+      "sha256": "a3bcdc118f7f84a4bba770ca69ee1fc28ca791fe60f17cdf8b31a49cd1924d1f",
+      "format": "JPEG",
+      "width_px": 4096,
+      "height_px": 4096,
+      "bits_per_channel": 8,
+      "modifications": [],
+      "retained_in_repository": false
+    },
+    {
+      "file": "worn_brick_floor_rough_4k.jpg",
+      "role": "roughness",
+      "download_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/worn_brick_floor/worn_brick_floor_rough_4k.jpg",
+      "bytes": 6500642,
+      "sha256": "c3ad01a17e0e6d695704942b56d47a01df211a82af5b9519bba806f3ef51d853",
+      "format": "JPEG",
+      "width_px": 4096,
+      "height_px": 4096,
+      "bits_per_channel": 8,
+      "modifications": [],
+      "retained_in_repository": false
+    }
+  ],
+  "atlas_size_px": [
+    768,
+    512
+  ],
+  "crops": [
+    {
+      "source_rect_px": [
+        108,
+        16,
+        136,
+        160
+      ],
+      "cell_origin_px": [
+        0,
+        0
+      ],
+      "atlas_rect_px": [
+        60,
+        48,
+        136,
+        160
+      ]
+    },
+    {
+      "source_rect_px": [
+        1436,
+        1260,
+        188,
+        96
+      ],
+      "cell_origin_px": [
+        256,
+        0
+      ],
+      "atlas_rect_px": [
+        290,
+        80,
+        188,
+        96
+      ]
+    },
+    {
+      "source_rect_px": [
+        2364,
+        1724,
+        180,
+        124
+      ],
+      "cell_origin_px": [
+        512,
+        0
+      ],
+      "atlas_rect_px": [
+        550,
+        66,
+        180,
+        124
+      ]
+    },
+    {
+      "source_rect_px": [
+        2188,
+        3464,
+        188,
+        108
+      ],
+      "cell_origin_px": [
+        0,
+        256
+      ],
+      "atlas_rect_px": [
+        34,
+        330,
+        188,
+        108
+      ]
+    },
+    {
+      "source_rect_px": [
+        776,
+        1456,
+        192,
+        144
+      ],
+      "cell_origin_px": [
+        256,
+        256
+      ],
+      "atlas_rect_px": [
+        288,
+        312,
+        192,
+        144
+      ]
+    },
+    {
+      "source_rect_px": [
+        1720,
+        3760,
+        128,
+        96
+      ],
+      "cell_origin_px": [
+        512,
+        256
+      ],
+      "atlas_rect_px": [
+        576,
+        336,
+        128,
+        96
+      ]
+    }
+  ],
+  "derivation": {
+    "script": "build_atlas.py",
+    "pillow_version": "12.3.0",
+    "interior_processing": "Native-resolution pixel crops, no resampling or colour/normal edits. Diffuse RGB plus roughness R packed in alpha; OpenGL normal RGB preserved.",
+    "gutters": "Each crop is centred in its own 256x256 cell. Fill the rest of the cell with its nearest edge/corner texels; at least 32px margin.",
+    "shader_sampling": "Rectangles span first/last texel centres. Body-local aspect-correct mirrored projection; atlas mip LOD clamped to 0..4."
+  },
+  "files": [
+    {
+      "file": "brick_colour_roughness.png",
+      "role": "diffuse_rgb_roughness_alpha",
+      "bytes": 283611,
+      "sha256": "1281cc66d3a3f5c8d68b09948f8831f4497875d1dc59fada3b60faf896f31833",
+      "format": "PNG",
+      "width_px": 768,
+      "height_px": 512,
+      "bits_per_channel": 8,
+      "modifications": [
+        "Derived by build_atlas.py using the recorded source rectangles and edge extrusion."
+      ]
+    },
+    {
+      "file": "brick_normal_gl.png",
+      "role": "normal_opengl_rgb",
+      "bytes": 213347,
+      "sha256": "9be6088ee31060e90761a44ce4dcee5d9df0b59cc4f6943bc53c720ade47467c",
+      "format": "PNG",
+      "width_px": 768,
+      "height_px": 512,
+      "bits_per_channel": 8,
+      "modifications": [
+        "Derived by build_atlas.py using the recorded source rectangles and edge extrusion."
+      ]
+    }
+  ]
+}

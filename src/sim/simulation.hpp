@@ -186,6 +186,9 @@ struct Snapshot final {
     Vector3 traversal_left_hand_force{};
     Vector3 traversal_right_hand_force{};
     double traversal_command_work_bound_j = 0.0;
+    double traversal_actuator_positive_work_j = 0.0;
+    double traversal_actuator_absorbed_work_j = 0.0;
+    bool player_swinging = false;
     bool player_sprinting = false;
     // Walking a support narrower than 0.5 m and at least 1.5 m long.
     bool player_balancing = false;
@@ -222,6 +225,8 @@ struct Snapshot final {
     double landing_normal_speed_mps = 0.0;
     double landing_tangent_speed_mps = 0.0;
     double landing_observed_normal_impulse_ns = 0.0;
+    std::uint32_t landing_response = 0; //0 ordinary,1 brace,2 roll,3 stumble
+    double landing_recovery_progress = 1.0;
     double landing_balance = 1.0;
     double landing_recovery_seconds = 0.0;
     double landing_recovery_work_j = 0.0;
@@ -277,6 +282,19 @@ struct Snapshot final {
     // within seat tolerance and settled, it is pinned into both pockets and
     // becomes real, walkable structural support. Unseated, the gap has none.
     bool needle_station_active = false;
+    std::uint8_t supplied_machine_index = 0;
+    std::uint8_t supplied_machine_station = 0, supplied_machine_reachable_station = 0;
+    double supplied_machine_surface_y = 0, supplied_machine_energy_j = 0, supplied_machine_capacity_j = 0, supplied_machine_power_w = 0;
+    std::uint64_t reclaim_impact_count=0;
+    double reclaim_impact_speed_mps=0;
+    Vector3 reclaim_impact_position{};
+    std::uint64_t reclaim_break_serial = 0;
+    bool reclaim_break_valid = false;
+    Vector3 reclaim_break_position{};
+    double reclaim_break_force_n = 0, reclaim_break_torque_nm = 0;
+    double supplied_machine_hopper_mass_kg=0,supplied_machine_wheel_angle_rad=0,supplied_machine_bearing_heat_j=0;
+    bool supplied_machine_braking = true, supplied_machine_energy_cutoff = false;
+    bool supplied_machine_wheel_motor_enabled = false;
     std::uint8_t service_lift_station = 0;
     std::uint8_t service_lift_reachable_station = 0;
     bool service_lift_retry_available = false;
@@ -582,6 +600,10 @@ public:
     [[nodiscard]] bool debug_restart_at(Vector3 capsule_centre) noexcept;
     [[nodiscard]] bool restart_checkpoint() noexcept;
     [[nodiscard]] bool restart_service_lift_attempt() noexcept;
+    // Available after real firm-footing entry at the reclaim lower receiver.
+    // Explicitly restores the complete pre-feed world, including finite stock.
+    [[nodiscard]] bool can_restart_gravity_reclaim_attempt() const noexcept;
+    [[nodiscard]] bool restart_gravity_reclaim_attempt() noexcept;
     [[nodiscard]] bool set_slingshot_input(double draw, double yaw, double elevation) noexcept;
     [[nodiscard]] bool request_slingshot_action() noexcept;
     [[nodiscard]] bool request_slingshot_drop() noexcept;
@@ -636,6 +658,7 @@ public:
     // zero brakes against gravity up to the rated force. Takes effect only
     // while the player is at the needle station.
     [[nodiscard]] bool set_needle_hoist_input(double value) noexcept;
+    [[nodiscard]] bool set_supplied_machine_input(double value) noexcept;
     [[nodiscard]] bool set_service_lift_input(double value) noexcept;
 
     // WO-013 KX-SUMP valve command. A one-shot toggle, like request_parachute
@@ -695,10 +718,13 @@ public:
     [[nodiscard]] std::uint32_t pipe_bridge_retained_pipes() const noexcept;
     [[nodiscard]] double pipe_bridge_crush_front() const noexcept;
     [[nodiscard]] std::uint64_t kit_body_entity(std::uint32_t body) const noexcept;
+    [[nodiscard]] std::uint64_t kit_body_material_key(std::uint32_t body) const noexcept;
     [[nodiscard]] bool kit_body_dynamic(std::uint32_t body) const noexcept;
     [[nodiscard]] bool kit_body_enabled(std::uint32_t body) const noexcept;
     [[nodiscard]] std::uint32_t kit_body_part_count(std::uint32_t body) const noexcept;
     [[nodiscard]] KitPart kit_body_part(std::uint32_t body, std::uint32_t part) const noexcept;
+    // Cached native hull triangles in the part's authored local frame.
+    [[nodiscard]] std::vector<Vector3> kit_body_part_mesh(std::uint32_t body, std::uint32_t part) const;
     [[nodiscard]] Vector3 kit_body_position(std::uint32_t body) const noexcept;
     [[nodiscard]] Quaternion kit_body_rotation(std::uint32_t body) const noexcept;
     [[nodiscard]] Vector3 render_kit_body_position(std::uint32_t body) const noexcept;
@@ -754,6 +780,7 @@ private:
     double jib_hoist_input_ = 0.0;
     double needle_hoist_input_ = 0.0;
     double service_lift_input_ = 0.0;
+    double supplied_machine_input_ = 0.0;
     double intake_slew_input_ = 0.0;
     double intake_hoist_input_ = 0.0;
     bool valve_toggle_requested_ = false;

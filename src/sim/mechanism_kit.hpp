@@ -2,7 +2,7 @@
 
 // The mechanism kit (03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md §4): the
 // parts every lift stage of the mechanism ascent is built from. Bodies are
-// declared here with the boxes they are made of, so the presentation draws
+// declared here with the parts they are made of, so the presentation draws
 // exactly what collides. Ropes are real tension-only PulleyConstraints whose
 // loose end is a shackle body the player carries and hooks onto an anchor.
 // Guides are SliderConstraints whose governor is a velocity motor that may
@@ -51,9 +51,10 @@ enum class Material : std::uint8_t {
     Galvanised = 5,
     Rubble = 6,
     Yellow = 7,
+    Refractory = 8,
 };
 
-// One box of a body, in the body's own frame. A body is the union of its
+// One solid part of a body, in the body's own frame. A body is the union of its
 // parts: the collision shape and the drawn shape are the same list.
 struct Part final {
     JPH::Vec3 half = JPH::Vec3::sReplicate(0.5F);
@@ -64,11 +65,18 @@ struct Part final {
     // half length. The bore is visual: it is smaller than the player capsule.
     // Capsule: half.x is radius, half.y is half the straight section;
     // its total end-to-end length is 2*(half.y+half.x), along local Y.
-    enum class Shape : std::uint8_t { Box = 0, Cylinder = 1, Capsule = 2 };
+    enum class Shape : std::uint8_t { Box = 0, Cylinder = 1, Capsule = 2, ConvexHull = 3 };
     Shape shape = Shape::Box;
     float mass_kg = 0.0F; // zero retains the legacy uniform-density shape
     float inner_radius = 0.0F;
     float convex_radius = -1.0F; // negative retains the kit's default margin
+    // ConvexHull points are in the Part's authored local frame, before
+    // offset/rotation. Jolt cooks the actual solid and removes interior points.
+    // Author bevels/facets explicitly: hulls use zero native convex radius so
+    // their cached rendered triangles and collision surface match exactly.
+    // half/inner_radius/convex_radius retain their legacy primitive semantics;
+    // they do not alter a hull. A nonfinite or zero-volume hull is rejected.
+    std::vector<JPH::Vec3> points{};
 };
 
 // What a pick-up of this body is, for the prompt: a load, a rope's shackle,
@@ -103,6 +111,7 @@ using RopeIndex = Index<struct RopeTag>;
 using LeverIndex = Index<struct LeverTag>;
 using CatchIndex = Index<struct CatchTag>;
 using LineIndex = Index<struct LineTag>;
+using WeldIndex = Index<struct WeldTag>;
 
 class Kit final {
 public:
@@ -114,6 +123,7 @@ public:
 
     // ---- building -------------------------------------------------------
     // mass_kg == 0 makes a static body.
+    // Invalid hull authoring throws std::invalid_argument before body creation.
     BodyIndex add_body(std::uint64_t entity, const std::vector<Part> &parts,
                        JPH::RVec3 position, JPH::Quat rotation, float mass_kg, float friction);
     void set_carry(BodyIndex body, CarryKind kind, JPH::Vec3 handle_local);
@@ -164,6 +174,12 @@ public:
                          JPH::Vec3 axis, float friction_torque,
                          std::uint32_t velocity_steps = 40, std::uint32_t position_steps = 8);
     void add_fixed_joint(BodyIndex first, BodyIndex second);
+    // Reduced-order brittle load failure, not calibrated fracture energy.
+    // Endpoints must be distinct, enabled Kit bodies with an unfiltered pair;
+    // finite positive force/torque ratings are chosen gameplay thresholds.
+    // Invalid authoring (including another pair-filter owner) throws.
+    WeldIndex add_breakable_weld(BodyIndex first, BodyIndex second,
+                                float force_rating_n, float torque_rating_nm);
     // Passive elastic anchorage: fixed neutral frames, no moving motor target.
     // Invalid foundation is an attachment to the permitted static backbone.
     void add_elastic_mount(BodyIndex foundation, BodyIndex structure, JPH::RVec3 point,
@@ -192,6 +208,13 @@ public:
     // ---- stepping -------------------------------------------------------
     void pre_step(float delta_seconds);
     void post_step(float delta_seconds);
+    // OnStep is before each collision substep: first observe the preceding
+    // pending solve using its own dt, then mark this new solve. Overload only
+    // queues failure while Update holds locks. Finish outside Update observes
+    // the final solve exactly once, disables queued welds and enables contact
+    // together. Failure latency is bounded by one host tick (90 Hz in game).
+    void begin_weld_step(float collision_dt);
+    void finish_weld_steps();
 
     // ---- player verbs ---------------------------------------------------
     struct CarryCandidate final {
@@ -233,6 +256,31 @@ public:
         JPH::Vec3 angular = JPH::Vec3::sZero();
         bool enabled = true;
     };
+    struct WeldState final {
+        bool enabled = true;
+        bool broken = false;
+        bool collision_enabled = false;
+        bool break_queued = false;
+        std::uint64_t sample_count = 0;
+        std::uint64_t overload_steps = 0;
+        // Last completed enabled solve and historical peaks, lambda / dt.
+        float force_n = 0.0F;
+        float torque_nm = 0.0F;
+        float peak_force_n = 0.0F;
+        float peak_torque_nm = 0.0F;
+        JPH::RVec3 break_position = JPH::RVec3::sZero();
+        std::uint64_t break_serial = 0;
+    };
+    struct WeldBreakSample final {
+        std::uint64_t serial = 0;
+        bool valid = false;
+        WeldIndex weld;
+        std::uint64_t first_entity = 0;
+        std::uint64_t second_entity = 0;
+        JPH::RVec3 position = JPH::RVec3::sZero();
+        float force_n = 0.0F;
+        float torque_nm = 0.0F;
+    };
     struct Checkpoint final {
         std::vector<BodyState> bodies;
         std::vector<AnchorIndex> rope_anchor;   // invalid: on its shackle
@@ -240,6 +288,9 @@ public:
         std::vector<bool> catch_latched;
         std::vector<bool> catch_armed;
         std::vector<float> guide_peak_speed;
+        std::vector<WeldState> welds;
+        std::uint64_t weld_break_serial = 0;
+        WeldBreakSample weld_break_sample;
     };
     void capture(Checkpoint &out) const;
     void restore(const Checkpoint &in);
@@ -253,6 +304,11 @@ public:
     [[nodiscard]] bool body_enabled(BodyIndex body) const noexcept;
     // Empty for an index the kit does not hold.
     [[nodiscard]] const std::vector<Part> &body_parts(BodyIndex body) const noexcept;
+    // Flat outward-CCW triangle triples from the same cooked native hull,
+    // cached once at build time in authored Part coordinates. Part offset and
+    // rotation are not applied. Empty for invalid indices or primitive parts.
+    [[nodiscard]] const std::vector<JPH::Vec3> &body_part_mesh(BodyIndex body,
+                                                            std::uint32_t part) const noexcept;
     [[nodiscard]] JPH::RVec3 body_position(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::RVec3 body_center_of_mass_position(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Quat body_rotation(BodyIndex body) const noexcept;
@@ -261,6 +317,15 @@ public:
     [[nodiscard]] double body_kinetic_energy(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::BodyID body_id(BodyIndex body) const noexcept;
     [[nodiscard]] BodyIndex body_for_entity(std::uint64_t entity) const noexcept;
+    // Paired halves share the original brick's presentation seed. Physical
+    // identity, collision and mass still belong to each distinct native body.
+    [[nodiscard]] std::uint64_t body_weld_material_key(BodyIndex body) const noexcept;
+    [[nodiscard]] std::uint32_t weld_count() const noexcept {
+        return static_cast<std::uint32_t>(welds_.size());
+    }
+    [[nodiscard]] WeldState weld_state(WeldIndex weld) const noexcept;
+    [[nodiscard]] std::uint64_t weld_break_serial() const noexcept { return weld_break_serial_; }
+    [[nodiscard]] WeldBreakSample weld_break_sample() const noexcept { return weld_break_sample_; }
 
     [[nodiscard]] std::uint32_t rope_count() const noexcept {
         return static_cast<std::uint32_t>(ropes_.size());
@@ -292,6 +357,7 @@ private:
         bool enabled = true;
         float mass = 0.0F;
         std::vector<Part> parts;
+        std::vector<std::vector<JPH::Vec3>> part_meshes;
         CarryKind carry = CarryKind::None;
         JPH::Vec3 handle = JPH::Vec3::sZero();
         JPH::RVec3 parked = JPH::RVec3::sZero();
@@ -355,6 +421,14 @@ private:
         JPH::RVec3 seat = JPH::RVec3::sZero();
         JPH::Ref<JPH::FixedConstraint> pin;
     };
+    struct Weld final {
+        BodyIndex first;
+        BodyIndex second;
+        JPH::Ref<JPH::FixedConstraint> joint;
+        float force_rating_n = 0.0F;
+        float torque_rating_nm = 0.0F;
+        WeldState state;
+    };
 
     template <typename Record, typename Tag>
     [[nodiscard]] static const Record *find(const std::vector<Record> &table,
@@ -373,6 +447,8 @@ private:
     void latch(Catch &catch_record);
     void unlatch(Catch &catch_record);
     void govern(Guide &guide) noexcept;
+    void require_unowned_weld_pair(BodyIndex first, BodyIndex second) const;
+    void observe_weld_step();
 
     JPH::PhysicsSystem &system_;
     JPH::ObjectLayer static_layer_;
@@ -385,6 +461,11 @@ private:
     std::vector<Catch> catches_;
     std::vector<Line> lines_;
     std::vector<JPH::Ref<JPH::TwoBodyConstraint>> fixed_joints_;
+    std::vector<Weld> welds_;
+    float weld_step_dt_ = 0.0F;
+    bool weld_step_pending_ = false;
+    std::uint64_t weld_break_serial_ = 0;
+    WeldBreakSample weld_break_sample_;
     JPH::Ref<JPH::GroupFilterTable> collision_groups_;
 };
 

@@ -1,0 +1,9 @@
+PASS lowering_release cargo=1 immediate=1 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=0.109
+PASS lowering_release cargo=1 immediate=0 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=0.109085
+PASS lowering_release cargo=0 immediate=0 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=3.24249e-08
+PASS passive_departure surface=rigid_shipping_vent before_vy=1.01507 after_vy=0.906072 expected_vy=0.906072 error=3.24249e-08 grounded=0
+PASS passive_departure surface=deforming_cargo_net before_vy=0.289735 after_vy=0.180735 expected_vy=0.180735 error=1.22786e-08 grounded=0
+PASS cargo_jump finite_stroke_debit=599.399 departure_vy=0.565372
+PASS ordinary_tread_traction force_work_delta=0.403336 dvx=0.0872
+PASS receiver_walk_off momentum_error=0
+PASS passive_departure surface=rotating_as026 before_vy=1.10197 after_vy=0.992968 expected_vy=0.992969 error=1.46389e-07 grounded=0

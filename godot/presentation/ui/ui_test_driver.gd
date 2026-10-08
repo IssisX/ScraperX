@@ -20,7 +20,21 @@ const SCENARIOS := {
 	"touch_cargo_net": 8,
 	"touch_campaign_to_121": 8,
 	"touch_campaign_to_143": 8,
+	"touch_campaign_to_165": 8,
+	"touch_campaign_to_198": 8,
+	"touch_campaign_to_231": 8,
+	"touch_campaign_to_253": 8,
+	"touch_campaign_to_286": 8,
+	"touch_campaign_to_308": 8,
 	"touch_service_lift": 8,
+	"touch_balance_lift": 8,
+	"touch_crown_gondola": 8,
+	"touch_crown_swing": 8,
+	"touch_traction_tram": 8,
+	"touch_barrel_helix": 8,
+	"touch_cascade_mast": 8,
+	"touch_pitman_lift": 8,
+	"touch_gravity_reclaim": 8,
 	"touch_causal_facade": 8,
 	"touch_north_grip_diagnostic": 8,
 	"touch_suspended_ladder": 8,
@@ -82,7 +96,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_service_lift", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -121,8 +135,36 @@ func _run() -> void:
 			ok = await _touch_campaign_to_121()
 		"touch_campaign_to_143":
 			ok = await _touch_campaign_to_143()
+		"touch_campaign_to_165":
+			ok = await _touch_campaign_to_165()
+		"touch_campaign_to_198":
+			ok = await _touch_campaign_to_198()
+		"touch_campaign_to_231":
+			ok = await _touch_campaign_to_231()
+		"touch_campaign_to_253":
+			ok = await _touch_campaign_to_253()
+		"touch_campaign_to_286":
+			ok = await _touch_campaign_to_286()
+		"touch_campaign_to_308":
+			ok = await _touch_campaign_to_308()
 		"touch_service_lift":
 			ok = await _touch_service_lift(true)
+		"touch_balance_lift":
+			ok = await _touch_balance_lift(true)
+		"touch_crown_gondola":
+			ok = await _touch_crown_gondola(true)
+		"touch_crown_swing":
+			ok = await _touch_crown_swing()
+		"touch_traction_tram":
+			ok = await _touch_traction_tram(true)
+		"touch_barrel_helix":
+			ok = await _touch_barrel_helix(true)
+		"touch_cascade_mast":
+			ok = await _touch_cascade_mast(true)
+		"touch_pitman_lift":
+			ok = await _touch_pitman_lift(true)
+		"touch_gravity_reclaim":
+			ok = await _touch_gravity_reclaim()
 		"touch_north_grip_diagnostic":
 			ok = await _touch_north_grip_diagnostic()
 		"keyboard_slingshot":
@@ -671,7 +713,7 @@ func _pipe_bridge(device: int) -> bool:
 # AS-017: grade to +33 m, through the real touch controls and native world.
 func _touch_facade() -> bool:
 	var device := InputRouter.Device.TOUCH
-	if _scenario in ["touch_campaign_to_121", "touch_campaign_to_143", "touch_service_lift", "touch_causal_facade"]:
+	if _scenario in ["touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_causal_facade"]:
 		if not await _touch_cargo_net():
 			return false
 		print("SCRAPERX_CAMPAIGN cargo_net_exit at=%s support=%d" % [_position(), _native().get_support_entity_id()])
@@ -1379,6 +1421,1079 @@ func _touch_service_lift(stage_at_121: bool) -> bool:
 		return _fail("143m arrival is not supported by Tower11")
 	_detail = "staging=supported_121m shipping_touch=1 hold_release=1 finite_energy=1 supported_height_m=143 support=11 deaths=%d" % int(_native().get_death_count())
 	return true
+
+
+func _touch_campaign_to_165() -> bool:
+	if not await _touch_campaign_to_143():
+		return false
+	print("SCRAPERX_CAMPAIGN supported_height_m=143 support=11 deaths=0 staging=ordinary_grade_spawn")
+	if not await _touch_balance_lift(false) or not _campaign_world_intact():
+		return false
+	_detail = "staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 service_lift=1 gravity_balance=1 hold_release=1 supported_height_m=165 support=11 deaths=0 slingshot_work_j=0 world=slingshot"
+	return true
+
+
+func _touch_balance_lift(stage_at_143: bool) -> bool:
+	var device := InputRouter.Device.TOUCH
+	# Only the focused slice uses explicit supported staging. From here onward
+	# both scenarios walk, jump and operate through ordinary viewport touch.
+	if stage_at_143:
+		if not _native().debug_restart_at(Vector3(-24.7, 143.9, -162)):
+			return _fail("gravity balance +143m staging rejected")
+		await _seconds(0.5)
+	if not _campaign_world_intact() or not _standing_above(143.7) \
+			or int(_native().get_support_entity_id()) != 11:
+		return _fail("gravity balance approach requires supported +143m Tower11")
+	for point in [Vector2(-24.7, -142), Vector2(-27.5, -142.65)]:
+		if not await _walk_to(device, point, 0.12, 10.0):
+			return _fail("gravity balance lower landing approach at=%s" % _position())
+	if int(_native().get_supplied_machine_state()["station"]) != 2:
+		return _fail("gravity balance lower call station is not reachable")
+	# The landing and moving deck have a real 0.3m gap. Jump from the
+	# supported landing; the native body/contact owner decides the transfer.
+	if not await _walk_to(device, Vector2(-28.45, -142.6), 0.08, 5.0):
+		return _fail("gravity balance boarding takeoff at=%s" % _position())
+	await _face(Vector2(-1, 0))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(-32.8, -142.5), 0.10, 8.0):
+		return _fail("gravity balance physical boarding at=%s" % _position())
+	if not await _wait_until(func() -> bool:
+		return bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 2980, 2.0):
+		return _fail("gravity balance boarding is not supported by deck2980")
+	await _face(Vector2(0, -1))
+	if int(_native().get_supplied_machine_state()["station"]) != 1 \
+			or not await _offered(&"operate", "OPERATE", "GRAVITY BALANCE"):
+		return _fail("gravity balance deck control unavailable at=%s" % _position())
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("gravity balance touch pendant did not open")
+	var before: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_up"), true)
+	var moved := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= float(before["surface_y"]) + 0.8, 12.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(0.5)
+	var stopped: Dictionary = _native().get_supplied_machine_state()
+	if not moved or not bool(stopped["braking"]) or int(_native().get_support_entity_id()) != 2980:
+		return _fail("gravity balance UP/release did not move and brake the ridden deck")
+	var stopped_height := float(stopped["surface_y"])
+	await _seconds(0.5)
+	if absf(float(_native().get_supplied_machine_state()["surface_y"]) - stopped_height) > 0.02:
+		return _fail("gravity balance released brake does not hold height")
+	_touch(1, _center(&"pendant_up"), true)
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 164.98, 65.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(0.5)
+	var arrival: Dictionary = _native().get_supplied_machine_state()
+	if not reached or not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 2980:
+		return _fail("gravity balance touch ride failed at=%s station=%s" % [_position(), arrival])
+	if not bool(arrival["braking"]) or float(arrival["energy_j"]) < 0.0 \
+			or float(arrival["energy_j"]) > float(arrival["capacity_j"]) \
+			or float(arrival["energy_j"]) > float(before["energy_j"]):
+		return _fail("gravity balance arrival violates finite energy/brake state")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("gravity balance DONE did not release operation")
+	# Jump the same native gap onto the upper receiver, then walk into Tower11.
+	if not await _walk_to(device, Vector2(-29.8, -142.65), 0.08, 7.0):
+		return _fail("gravity balance upper exit takeoff at=%s" % _position())
+	await _face(Vector2(1, 0))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(-27.5, -142.65), 0.10, 7.0):
+		return _fail("gravity balance upper receiver transfer at=%s" % _position())
+	if stage_at_143:
+		if not await _touch_balance_upper_recall():
+			return false
+	if not await _walk_to(device, Vector2(-24.7, -142), 0.12, 7.0):
+		return _fail("gravity balance +165m Tower exit at=%s" % _position())
+	if not _standing_above(165.7) or absf(_position().y - 165.9) > 0.15 \
+			or int(_native().get_support_entity_id()) != 11 or not _campaign_world_intact():
+		return _fail("gravity balance +165m arrival is not supported by Tower11 at=%s" % _position())
+	_detail = "staging=%s shipping_touch=1 gravity_balance=1 hold_release=1 finite_energy=1 upper_recall=%d supported_height_m=165 support=11 deaths=0" % [
+		"supported_143m" if stage_at_143 else "ordinary_grade_spawn", int(stage_at_143)]
+	return true
+
+
+func _touch_balance_upper_recall() -> bool:
+	if not await _wait_until(func() -> bool:
+		return bool(_ctx()["grounded"]) and int(_native().get_supplied_machine_state()["station"]) == 3, 2.0) \
+			or not await _offered(&"operate", "OPERATE", "GRAVITY BALANCE"):
+		return _fail("gravity balance upper call station unavailable at=%s" % _position())
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_down"):
+		return _fail("gravity balance upper call pendant did not open")
+	var before: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_down"), true)
+	var lowered := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) <= 163.8, 12.0)
+	_touch(1, _center(&"pendant_down"), false)
+	await _seconds(0.5)
+	if not lowered or not bool(_native().get_supplied_machine_state()["braking"]) \
+			or int(_native().get_support_entity_id()) not in [11, 1982] \
+			or not bool(_ctx()["grounded"]):
+		return _fail("gravity balance upper station return did not brake from fixed footing")
+	_touch(1, _center(&"pendant_up"), true)
+	var recalled := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 164.98, 12.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(0.5)
+	var after: Dictionary = _native().get_supplied_machine_state()
+	if not recalled or not bool(after["braking"]) or float(after["energy_j"]) < 0.0 \
+			or float(after["energy_j"]) >= float(before["energy_j"]):
+		return _fail("gravity balance upper recall did not spend finite reset energy")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("gravity balance upper call DONE did not release operation")
+	return true
+
+
+func _touch_campaign_to_198() -> bool:
+	if not await _touch_campaign_to_165():
+		return false
+	print("SCRAPERX_CAMPAIGN supported_height_m=165 support=11 deaths=0 staging=ordinary_grade_spawn")
+	if not await _touch_crown_gondola(false) or not _campaign_world_intact():
+		return false
+	_detail = "staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 service_lift=1 gravity_balance=1 crown_gondola=1 supported_height_m=198 support=11 deaths=0 slingshot_work_j=0 world=slingshot"
+	return true
+
+
+func _touch_crown_gondola(stage_at_165: bool) -> bool:
+	var device := InputRouter.Device.TOUCH
+	if stage_at_165:
+		if not _native().debug_restart_at(Vector3(-24.7, 165.9, -159.8)):
+			return _fail("crown gondola +165m staging rejected")
+		await _seconds(0.5)
+	if not _campaign_world_intact() or not _standing_above(165.7) \
+			or int(_native().get_support_entity_id()) != 11:
+		return _fail("crown gondola approach requires supported +165m Tower11")
+	for point in [Vector2(-24.7, -160.45), Vector2(-40.5, -160.45)]:
+		if not await _walk_to(device, point, 0.12, 12.0):
+			return _fail("crown gondola lower landing approach at=%s" % _position())
+	var lower: Dictionary = _native().get_supplied_machine_state()
+	if String(lower["name"]) != "CROWN GONDOLA" or int(lower["station"]) != 2:
+		return _fail("crown gondola lower station is not reachable")
+	if not await _walk_to(device, Vector2(-44, -159), 0.08, 6.0):
+		return _fail("crown gondola boarding takeoff at=%s" % _position())
+	await _face(Vector2(0, 1))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(-44, -156.1), 0.10, 8.0, true):
+		return _fail("crown gondola physical boarding at=%s" % _position())
+	var cabin := int(_native().get_kit_body_index(2983))
+	if cabin < 0:
+		return _fail("crown gondola cabin2983 body unavailable")
+	if not await _wait_crown_boarded(cabin):
+		_crown_ride_diagnostic(cabin, "boarding_floor_unstable")
+		return _fail("crown gondola boarding lacks stable cabin floor contact at=%s" % _position())
+	if String(_native().get_supplied_machine_state()["name"]) != "CROWN GONDOLA" \
+			or int(_native().get_supplied_machine_state()["station"]) != 1 \
+			or not await _offered(&"operate", "OPERATE", "CROWN GONDOLA"):
+		return _fail("crown gondola cabin control unavailable at=%s" % _position())
+	_crown_ride_diagnostic(cabin, "before_operate")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("crown gondola touch pendant did not open")
+	var before: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_up"), true)
+	var ride_tick := int(_native().get_tick_index())
+	var sample_tick := ride_tick - 15
+	var ride_seconds := 0.0
+	while ride_seconds < 2.0:
+		var tick := int(_native().get_tick_index())
+		if tick - sample_tick >= 15:
+			_crown_ride_diagnostic(cabin, "up")
+			sample_tick = tick
+		var state: Dictionary = _native().get_supplied_machine_state()
+		if _main._operating != &"supplied_machine" or (not _native().is_player_grounded() \
+				and int(_native().get_support_entity_id()) != 2983 \
+				and _position().y < float(state["surface_y"]) - 0.5):
+			_crown_ride_diagnostic(cabin, "lost_operation_or_below_cabin")
+			_touch(1, _center(&"pendant_up"), false)
+			return _fail("crown gondola lost cabin operation/footing during initial UP")
+		await get_tree().process_frame
+		ride_seconds = float(int(_native().get_tick_index()) - ride_tick) \
+			* float(_native().get_fixed_step_seconds())
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 197.97, maxf(0.1, 90.0 - ride_seconds))
+	_touch(1, _center(&"pendant_up"), false)
+	if not reached:
+		return _fail("crown gondola touch ride failed at=%s station=%s" % [
+			_position(), _native().get_supplied_machine_state()])
+	# The wheel brake does not freeze its passive cabin hinge. Wait for
+	# sustained native contact, low cabin speed and an upright walking floor.
+	if not await _wait_crown_settled(cabin):
+		return _fail("crown gondola upper cabin did not settle at=%s" % _position())
+	var arrival: Dictionary = _native().get_supplied_machine_state()
+	if String(arrival["name"]) != "CROWN GONDOLA" or not bool(arrival["braking"]) \
+			or float(arrival["energy_j"]) < 0.0 or float(arrival["energy_j"]) > float(arrival["capacity_j"]) \
+			or float(arrival["energy_j"]) >= float(before["energy_j"]):
+		return _fail("crown gondola arrival violates finite energy/brake state")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("crown gondola DONE did not release operation")
+	var pose: Transform3D = _native().get_kit_body_transform(cabin)
+	if not await _walk_to(device, Vector2(pose.origin.x, pose.origin.z - 1.5), 0.08, 7.0):
+		return _fail("crown gondola upper exit takeoff at=%s" % _position())
+	await _face(Vector2(0, -1))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(_position().x, -159.8), 0.10, 7.0):
+		return _fail("crown gondola upper receiver transfer at=%s" % _position())
+	if not await _wait_until(func() -> bool:
+		return bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 1985, 3.0):
+		return _fail("crown gondola upper transfer missed the actual start platform1985")
+	if stage_at_165 and not await _touch_crown_swing_recovery():
+		return false
+	if not await _touch_crown_swing_exit():
+		return false
+	if stage_at_165 and not await _touch_crown_upper_recall():
+		return false
+	for point in [Vector2(-24.7, -160.45), Vector2(-24.7, -159.8)]:
+		if not await _walk_to(device, point, 0.12, 12.0):
+			return _fail("crown gondola +198m Tower exit at=%s" % _position())
+	if not await _wait_until(func() -> bool:
+		return _standing_above(198.7) and absf(_position().y - 198.9) <= 0.15 \
+			and int(_native().get_support_entity_id()) == 11, 3.0) or not _campaign_world_intact():
+		return _fail("crown gondola +198m arrival is not supported by Tower11 at=%s" % _position())
+	_detail = "staging=%s shipping_touch=1 crown_gondola=1 passive_cabin_settled=1 hanging_swing=1 earned_release=1 finite_energy=1 missed_release_recovery=%d upper_recall=%d supported_height_m=198 support=11 deaths=0" % [
+		"supported_165m" if stage_at_165 else "ordinary_grade_spawn", int(stage_at_165), int(stage_at_165)]
+	return true
+
+
+func _touch_crown_swing() -> bool:
+	if not _native().debug_restart_at(Vector3(-41.0759, 198.9, -160.45)):
+		return _fail("crown swing +198m start platform staging rejected")
+	await _seconds(0.5)
+	if not _campaign_world_intact() or not _standing_above(198.7) \
+			or int(_native().get_support_entity_id()) != 1985:
+		return _fail("crown swing staging lacks supported start platform1985")
+	if not await _touch_crown_swing_recovery() or not await _touch_crown_swing_exit():
+		return false
+	for point in [Vector2(-24.7, -160.45), Vector2(-24.7, -159.8)]:
+		if not await _walk_to(InputRouter.Device.TOUCH, point, 0.12, 12.0):
+			return _fail("crown swing Tower exit at=%s" % _position())
+	if not await _wait_until(func() -> bool:
+		return _standing_above(198.7) and absf(_position().y - 198.9) <= 0.15 \
+			and int(_native().get_support_entity_id()) == 11, 3.0) or not _campaign_world_intact():
+		return _fail("crown swing arrival is not supported by Tower11 at=%s" % _position())
+	_detail = "staging=supported_198m_start_platform shipping_touch=1 missed_release_recovery=1 hanging_swing=1 earned_release=1 supported_height_m=198 support=11 deaths=0"
+	return true
+
+
+func _crown_swing_catch_diagnostic(phase: String) -> void:
+	var bar := int(_native().get_kit_body_index(2930))
+	var bar_pose: Variant = _native().get_kit_body_transform(bar) if bar >= 0 else "unavailable"
+	var landing: Dictionary = _native().get_landing_state()
+	var move: Vector2 = _main._touch.move_vector
+	var facing := Vector2(-sin(_main._yaw), -cos(_main._yaw))
+	var right := Vector2(cos(_main._yaw), -sin(_main._yaw))
+	print("SCRAPERX_CROWN_CATCH phase=%s tick=%d player=%s velocity=%s grounded=%s crouched=%s support=%d traversal=%d traversal_support=%d left_hand=%s right_hand=%s hands=%s player_swinging=%s facing_from_yaw=%s touch_move=%s world_move_from_touch=%s bar_transform=%s" % [
+		phase, _native().get_tick_index(), _position(), _velocity(), _native().is_player_grounded(),
+		_native().is_player_crouched(), _native().get_support_entity_id(), _native().get_traversal_state(),
+		_native().get_traversal_support_entity_id(), _native().get_traversal_left_hand(),
+		_native().get_traversal_right_hand(), landing.get("traversal_hand_constraint_count", "not_exposed"),
+		landing["player_swinging"], facing, move, right * move.x + facing * move.y, bar_pose])
+
+
+func _touch_crown_swing_catch() -> bool:
+	var device := InputRouter.Device.TOUCH
+	for point in [Vector2(-41.0759, -160.45), Vector2(-38.1, -160.45)]:
+		if not await _walk_to(device, point, 0.08, 7.0, true):
+			return _fail("crown hanging arm takeoff approach at=%s" % _position())
+	await _face(Vector2(1, 0))
+	var takeoff_slip: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
+	if not _native().is_player_grounded() or int(_native().get_support_entity_id()) != 1985 \
+			or Vector2(takeoff_slip.x, takeoff_slip.z).length() >= 0.15:
+		_crown_swing_catch_diagnostic("takeoff_unsettled")
+		return _fail("crown hanging arm Jump requires settled start platform1985 at=%s" % _position())
+	var catch_tick := int(_native().get_tick_index())
+	var sample_tick := catch_tick
+	_move(device, 1.0)
+	_crown_swing_catch_diagnostic("start")
+	_tap(1, _center(&"jump"))
+	while int(_native().get_tick_index()) - catch_tick < 100 \
+			and not bool(_native().get_landing_state()["player_swinging"]):
+		var tick := int(_native().get_tick_index())
+		if tick - sample_tick >= 15:
+			_crown_swing_catch_diagnostic("approach")
+			sample_tick = tick
+		await get_tree().process_frame
+	_crown_swing_catch_diagnostic("finish")
+	_move(device, 0.0)
+	if not _crown_swing_attached():
+		return _fail("crown ordinary jump did not catch arm2930 at=%s" % _position())
+	await _seconds(2.0)
+	if not _crown_swing_attached():
+		return _fail("crown hanging arm lost its native neutral hold")
+	return true
+
+
+func _touch_crown_swing_exit() -> bool:
+	if not await _touch_crown_swing_catch():
+		return false
+	var device := InputRouter.Device.TOUCH
+	var pump_tick := int(_native().get_tick_index())
+	var released := false
+	while float(int(_native().get_tick_index()) - pump_tick) * float(_native().get_fixed_step_seconds()) < 180.0:
+		if not _crown_swing_attached() or int(_native().get_death_count()) != 0:
+			_move(device, 0.0)
+			return _fail("crown deliberate lean lost its native hanging support at=%s" % _position())
+		var velocity := _velocity()
+		if _position().x > -32.4 and velocity.x > 2.5 and velocity.y > 1.5:
+			_move(device, 0.0)
+			_tap(1, _center(&"jump"))
+			released = true
+			break
+		# Phase choice from observed hand position and motion; this proves the
+		# physical route, without establishing human usability.
+		# Native hands bound lean to +/-0.15m and stroke to 0.6m/s. The 500W
+		# budget meters positive 1/2*k*extension^2 target work; positive/absorbed
+		# receipts are distinct from Fmax-distance and full energy closure.
+		var hand: Vector3 = _native().get_traversal_left_hand()
+		_move(device, 1.0 if velocity.x - 1.2 * (hand.x + 36.95) > 0.0 else -1.0)
+		await get_tree().process_frame
+	_move(device, 0.0)
+	if not released:
+		return _fail("crown deliberate lean never earned the rising release window")
+	if not await _wait_until(func() -> bool:
+		return not bool(_native().get_landing_state()["player_swinging"]), 0.5):
+		return _fail("crown Jump did not release the hanging arm")
+	# Coast with neutral input. A real landing brace can lower the capsule to
+	# 198.59m; grounded contact on the narrow receiver establishes this arrival.
+	if not await _wait_until(func() -> bool:
+		return bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 1985 \
+			and _position().x > -30.05 and _position().y > 198.3, 3.0):
+		return _fail("crown passive release missed the narrow receiver at=%s" % _position())
+	return _campaign_world_intact()
+
+
+func _touch_crown_swing_recovery() -> bool:
+	if not await _touch_crown_swing_catch():
+		return false
+	var device := InputRouter.Device.TOUCH
+	var miss_tick := int(_native().get_tick_index())
+	var miss_available := false
+	while float(int(_native().get_tick_index()) - miss_tick) * float(_native().get_fixed_step_seconds()) < 10.0:
+		if not _crown_swing_attached():
+			return _fail("crown recovery miss lost its hanging support before release")
+		var velocity := _velocity()
+		if _position().x > -36.4 and velocity.x > 0.0 and velocity.x < 2.5:
+			miss_available = true
+			break
+		await get_tree().process_frame
+	if not miss_available:
+		return _fail("crown recovery miss never reached its low-speed release window")
+	# Release over the gap with insufficient forward speed to reach the receiver.
+	_move(device, 0.0)
+	_tap(1, _center(&"jump"))
+	if not await _wait_until(func() -> bool:
+		return not bool(_native().get_landing_state()["player_swinging"]) \
+			and bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 1931, 5.0):
+		return _fail("crown missed release did not reach the real recovery tray at=%s" % _position())
+	if not await _walk_to(device, Vector2(-37.0, -159.8), 0.08, 7.0):
+		return _fail("crown recovery ladder approach at=%s" % _position())
+	await _face(Vector2(-1, 0))
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("crown recovery ladder CLIMB was not offered")
+	_act(device)
+	await _frames(2)
+	if int(_native().get_traversal_state()) != _main.TRAVERSAL_CLIMBING \
+			or int(_native().get_traversal_support_entity_id()) != 1931:
+		return _fail("crown recovery ladder did not acquire native climbing hands")
+	_move(device, 1.0)
+	var recovered := await _wait_until(func() -> bool:
+		return _standing_above(198.7) and int(_native().get_support_entity_id()) == 1985 \
+			and not bool(_native().get_landing_state()["player_swinging"]), 35.0)
+	_move(device, 0.0)
+	if not recovered or not _campaign_world_intact():
+		return _fail("crown physical recovery climb did not reach the start platform at=%s" % _position())
+	await _seconds(1.0)
+	if not await _walk_to(device, Vector2(-41.0759, -160.45), 0.08, 7.0):
+		return _fail("crown recovered retry approach at=%s" % _position())
+	return true
+
+
+func _crown_swing_attached() -> bool:
+	return bool(_native().get_landing_state()["player_swinging"]) \
+		and int(_native().get_traversal_state()) == _main.TRAVERSAL_CLIMBING \
+		and int(_native().get_traversal_support_entity_id()) == 2930
+
+
+func _touch_crown_upper_recall() -> bool:
+	if not await _walk_to(InputRouter.Device.TOUCH, Vector2(-26.7379, -160.1), 0.08, 7.0):
+		return _fail("crown far-side upper call approach at=%s" % _position())
+	var before: Dictionary = _native().get_supplied_machine_state()
+	if int(before["index"]) != 1 or int(before["station"]) != 3 \
+			or not await _offered(&"operate", "OPERATE", "CROWN GONDOLA"):
+		return _fail("crown far-side upper call station is not reachable")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_down"):
+		return _fail("crown upper call touch pendant did not open")
+	_touch(1, _center(&"pendant_down"), true)
+	var lowered := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) < 197.9, 12.0)
+	_touch(1, _center(&"pendant_down"), false)
+	await _seconds(0.5)
+	var after: Dictionary = _native().get_supplied_machine_state()
+	if not lowered or int(after["index"]) != 1 or not bool(after["braking"]) \
+			or float(after["energy_j"]) < 0.0 or float(after["energy_j"]) >= float(before["energy_j"]) \
+			or int(_native().get_support_entity_id()) != 1985 or not bool(_ctx()["grounded"]):
+		return _fail("crown far-side recall did not move and brake from fixed receiver footing")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("crown upper call DONE did not release operation")
+	return true
+
+
+func _wait_crown_boarded(cabin: int) -> bool:
+	var start_tick := int(_native().get_tick_index())
+	var stable_tick := -1
+	var step := float(_native().get_fixed_step_seconds())
+	while float(int(_native().get_tick_index()) - start_tick) * step < 3.0:
+		var tick := int(_native().get_tick_index())
+		var pose: Transform3D = _native().get_kit_body_transform(cabin)
+		var slip: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
+		# The control panel belongs to cabin2983 too. Its top can provide
+		# transient support; require the actual floor height and settled feet.
+		var ready := bool(_native().is_player_grounded()) \
+			and int(_native().get_support_entity_id()) == 2983 \
+			and absf(_position().y - (pose.origin.y + 1.15)) <= 0.15 \
+			and Vector2(slip.x, slip.z).length() < 0.15
+		if ready:
+			if stable_tick < 0:
+				stable_tick = tick
+			if float(tick - stable_tick) * step >= 0.3:
+				return true
+		else:
+			stable_tick = -1
+		await get_tree().process_frame
+	return false
+
+
+func _crown_ride_diagnostic(cabin: int, phase: String) -> void:
+	var pose: Transform3D = _native().get_kit_body_transform(cabin)
+	var landing: Dictionary = _native().get_landing_state()
+	var support_velocity: Vector3 = _native().get_support_point_linear_velocity()
+	var move: Vector2 = _main._touch.move_vector
+	var forward := Vector2(-sin(_main._yaw), -cos(_main._yaw))
+	var right := Vector2(cos(_main._yaw), -sin(_main._yaw))
+	print("SCRAPERX_CROWN_RIDE phase=%s tick=%d player=%s velocity=%s grounded=%s crouched=%s support=%d support_velocity=%s slip=%s traversal=%d traversal_support=%d left_hand=%s right_hand=%s gravity=%s hands=%s landing=%s cabin_origin=%s cabin_rotation=%s cabin_velocity=%s touch_move=%s world_move=%s pendant=%s operating=%s machine=%s" % [
+		phase, _native().get_tick_index(), _position(), _velocity(), _native().is_player_grounded(),
+		_native().is_player_crouched(), _native().get_support_entity_id(), support_velocity,
+		_velocity() - support_velocity, _native().get_traversal_state(),
+		_native().get_traversal_support_entity_id(), _native().get_traversal_left_hand(),
+		_native().get_traversal_right_hand(), landing.get("player_gravity_factor", "not_exposed"),
+		landing.get("traversal_hand_constraint_count", "not_exposed"), landing, pose.origin,
+		pose.basis.get_euler(), _native().get_kit_body_linear_velocity(cabin), move,
+		right * move.x + forward * move.y, _main._touch.pendant_axes, _main._operating,
+		_native().get_supplied_machine_state()])
+
+
+func _wait_crown_settled(cabin: int) -> bool:
+	var waited := 0.0
+	var settled := 0.0
+	while waited < 20.0:
+		var pose: Transform3D = _native().get_kit_body_transform(cabin)
+		var state: Dictionary = _native().get_supplied_machine_state()
+		var ready := bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 2983 \
+			and bool(state["braking"]) and float(state["surface_y"]) >= 197.97 \
+			and (_native().get_kit_body_linear_velocity(cabin) as Vector3).length() < 0.15 \
+			and pose.basis.y.dot(Vector3.UP) > 0.995
+		settled = settled + get_process_delta_time() if ready else 0.0
+		if settled >= 0.5:
+			return true
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	return false
+
+
+func _touch_campaign_to_231() -> bool:
+	if not await _touch_campaign_to_198():
+		return false
+	print("SCRAPERX_CAMPAIGN supported_height_m=198 support=11 deaths=0 staging=ordinary_grade_spawn")
+	if not await _touch_traction_tram(false) or not _campaign_world_intact():
+		return false
+	_detail = "staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 service_lift=1 gravity_balance=1 crown_gondola=1 traction_tram=1 supported_height_m=231 support=11 deaths=0 slingshot_work_j=0 world=slingshot"
+	return true
+
+
+func _touch_traction_tram(stage_at_198: bool) -> bool:
+	var device := InputRouter.Device.TOUCH
+	# The focused slice stages only its initial Tower footing. The campaign
+	# continues from Crown; both use ordinary touch for the entire tram route.
+	if stage_at_198:
+		if not _native().debug_restart_at(Vector3(-24.7, 198.9, -159.8)):
+			return _fail("traction tram +198m staging rejected")
+		await _seconds(0.5)
+	if not _campaign_world_intact() or not _standing_above(198.7) \
+			or int(_native().get_support_entity_id()) != 11:
+		return _fail("traction tram approach requires supported +198m Tower11")
+	# Step around the landing panel post before approaching its deck side.
+	for point in [Vector2(-22.5, -159.8), Vector2(-22.5, -125), Vector2(-23.15, -125),
+			Vector2(-23.15, -122.75), Vector2(-22.5, -122.75)]:
+		if not await _walk_to(device, point, 0.10, 15.0):
+			return _fail("traction tram lower landing approach at=%s" % _position())
+	var lower: Dictionary = _native().get_supplied_machine_state()
+	if String(lower["name"]) != "TRACTION TRAM" or int(lower["station"]) != 2:
+		return _fail("traction tram lower call station is not reachable at=%s state=%s support=%s" % [_position(), lower, _native().get_support_entity_id()])
+	for point in [Vector2(-23.15, -119.1), Vector2(-22.5, -119.1)]:
+		if not await _walk_to(device, point, 0.10, 8.0):
+			return _fail("traction tram physical boarding at=%s" % _position())
+	if not await _wait_until(func() -> bool:
+		return bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 2984, 2.0):
+		return _fail("traction tram boarding is not supported by deck2984")
+	await _face(Vector2(0, -1))
+	var deck := int(_native().get_kit_body_index(2984))
+	if deck < 0 or String(_native().get_supplied_machine_state()["name"]) != "TRACTION TRAM" \
+			or int(_native().get_supplied_machine_state()["station"]) != 1 \
+			or not await _offered(&"operate", "OPERATE", "TRACTION TRAM"):
+		return _fail("traction tram deck control unavailable at=%s" % _position())
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("traction tram touch pendant did not open")
+	var before: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_up"), true)
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 230.98, 90.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(0.5)
+	var arrival: Dictionary = _native().get_supplied_machine_state()
+	if not reached or not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 2984:
+		return _fail("traction tram touch ride failed at=%s station=%s" % [_position(), arrival])
+	if String(arrival["name"]) != "TRACTION TRAM" or not bool(arrival["braking"]) \
+			or float(arrival["energy_j"]) < 0.0 or float(arrival["energy_j"]) > float(arrival["capacity_j"]) \
+			or float(arrival["energy_j"]) >= float(before["energy_j"]):
+		return _fail("traction tram arrival violates finite energy/brake state")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("traction tram DONE did not release operation")
+	var pose: Transform3D = _native().get_kit_body_transform(deck)
+	for point in [Vector2(pose.origin.x - 0.65, -119.1), Vector2(pose.origin.x - 0.65, -122.75)]:
+		if not await _walk_to(device, point, 0.10, 8.0):
+			return _fail("traction tram upper receiver transfer at=%s" % _position())
+	if not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 1988:
+		return _fail("traction tram upper transfer missed the actual receiver1988")
+	for point in [Vector2(pose.origin.x - 0.65, -127), Vector2(pose.origin.x, -127)]:
+		if not await _walk_to(device, point, 0.10, 8.0):
+			return _fail("traction tram +231m Tower exit at=%s" % _position())
+	if not _standing_above(231.7) or absf(_position().y - 231.9) > 0.15 \
+			or int(_native().get_support_entity_id()) != 11 or not _campaign_world_intact():
+		return _fail("traction tram +231m arrival is not supported by Tower11 at=%s" % _position())
+	_detail = "staging=%s shipping_touch=1 traction_tram=1 finite_energy=1 supported_height_m=231 support=11 deaths=0" % [
+		"supported_198m" if stage_at_198 else "ordinary_grade_spawn"]
+	return true
+
+
+func _touch_campaign_to_253() -> bool:
+	if not await _touch_campaign_to_231():
+		return false
+	print("SCRAPERX_CAMPAIGN supported_height_m=231 support=11 deaths=0 staging=ordinary_grade_spawn")
+	if not await _touch_barrel_helix(false) or not _campaign_world_intact():
+		return false
+	_detail = "staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 service_lift=1 gravity_balance=1 crown_gondola=1 traction_tram=1 barrel_helix=1 supported_height_m=253 support=11 deaths=0 slingshot_work_j=0 world=slingshot"
+	return true
+
+
+func _touch_barrel_helix(stage_at_231: bool) -> bool:
+	var device := InputRouter.Device.TOUCH
+	if stage_at_231:
+		if not _native().debug_restart_at(Vector3(24.63, 231.9, -127)):
+			return _fail("barrel helix +231m staging rejected")
+		await _seconds(0.5)
+	if not _campaign_world_intact() or not _standing_above(231.7) \
+			or int(_native().get_support_entity_id()) != 11:
+		return _fail("barrel helix approach requires supported +231m Tower11")
+	for point in [Vector2(23, -127), Vector2(-22.5, -127), Vector2(-22.5, -142),
+			Vector2(-24.7, -142.65), Vector2(-27.5, -142.65)]:
+		if not await _walk_to(device, point, 0.10, 15.0):
+			return _fail("barrel helix lower landing approach at=%s" % _position())
+	var lower: Dictionary = _native().get_supplied_machine_state()
+	if String(lower["name"]) != "BARREL HELIX" or int(lower["station"]) != 2:
+		return _fail("barrel helix lower call station is not reachable")
+	if not await _walk_to(device, Vector2(-31.3, -142.5), 0.10, 8.0):
+		return _fail("barrel helix physical boarding at=%s" % _position())
+	if not await _wait_until(func() -> bool:
+		return bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 2988, 2.0):
+		return _fail("barrel helix boarding is not supported by deck2988")
+	await _face(Vector2(0, -1))
+	if String(_native().get_supplied_machine_state()["name"]) != "BARREL HELIX" \
+			or int(_native().get_supplied_machine_state()["station"]) != 1 \
+			or not await _offered(&"operate", "OPERATE", "BARREL HELIX"):
+		return _fail("barrel helix deck control unavailable at=%s" % _position())
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("barrel helix touch pendant did not open")
+	var before: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_up"), true)
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 252.98, 65.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(0.5)
+	var arrival: Dictionary = _native().get_supplied_machine_state()
+	if not reached or not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 2988:
+		return _fail("barrel helix touch ride failed at=%s station=%s" % [_position(), arrival])
+	if String(arrival["name"]) != "BARREL HELIX" or not bool(arrival["braking"]) \
+			or float(arrival["energy_j"]) < 0.0 or float(arrival["energy_j"]) > float(arrival["capacity_j"]) \
+			or float(arrival["energy_j"]) >= float(before["energy_j"]):
+		return _fail("barrel helix arrival violates finite energy/brake state")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("barrel helix DONE did not release operation")
+	for point in [Vector2(-27.5, -142.65), Vector2(-24.7, -142.65)]:
+		if not await _walk_to(device, point, 0.10, 8.0):
+			return _fail("barrel helix +253m receiver/Tower exit at=%s" % _position())
+	if not _standing_above(253.7) or absf(_position().y - 253.9) > 0.15 \
+			or int(_native().get_support_entity_id()) != 11 or not _campaign_world_intact():
+		return _fail("barrel helix +253m arrival is not supported by Tower11 at=%s" % _position())
+	_detail = "staging=%s shipping_touch=1 barrel_helix=1 finite_energy=1 supported_height_m=253 support=11 deaths=0" % [
+		"supported_231m" if stage_at_231 else "ordinary_grade_spawn"]
+	return true
+
+
+func _touch_campaign_to_286() -> bool:
+	if not await _touch_campaign_to_253():
+		return false
+	print("SCRAPERX_CAMPAIGN supported_height_m=253 support=11 deaths=0 staging=ordinary_grade_spawn")
+	if not await _touch_cascade_mast(false) or not _campaign_world_intact():
+		return false
+	_detail = "staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 service_lift=1 gravity_balance=1 crown_gondola=1 traction_tram=1 barrel_helix=1 cascade_mast=1 supported_height_m=286 support=11 deaths=0 slingshot_work_j=0 world=slingshot"
+	return true
+
+
+func _touch_cascade_mast(stage_at_253: bool) -> bool:
+	var device := InputRouter.Device.TOUCH
+	if stage_at_253:
+		if not _native().debug_restart_at(Vector3(-24.7, 253.9, -142.65)):
+			return _fail("cascade mast +253m staging rejected")
+		await _seconds(0.5)
+	if not _campaign_world_intact() or not _standing_above(253.7) \
+			or int(_native().get_support_entity_id()) != 11:
+		return _fail("cascade mast approach requires supported +253m Tower11")
+	for point in [Vector2(-24.7, -161.10), Vector2(-27.5, -161.10)]:
+		if not await _walk_to(device, point, 0.10, 10.0):
+			return _fail("cascade mast lower landing approach at=%s" % _position())
+	var lower: Dictionary = _native().get_supplied_machine_state()
+	if String(lower["name"]) != "CASCADE MAST" or int(lower["station"]) != 2:
+		return _fail("cascade mast lower call station is not reachable")
+	if not await _walk_to(device, Vector2(-32.8, -160.95), 0.10, 8.0):
+		return _fail("cascade mast physical boarding at=%s" % _position())
+	if not await _wait_until(func() -> bool:
+		return bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 2992, 2.0):
+		return _fail("cascade mast boarding is not supported by deck2992")
+	await _face(Vector2(0, -1))
+	if String(_native().get_supplied_machine_state()["name"]) != "CASCADE MAST" \
+			or int(_native().get_supplied_machine_state()["station"]) != 1 \
+			or not await _offered(&"operate", "OPERATE", "CASCADE MAST"):
+		return _fail("cascade mast deck control unavailable at=%s" % _position())
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("cascade mast touch pendant did not open")
+	var before: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_up"), true)
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 285.98, 65.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(0.5)
+	var arrival: Dictionary = _native().get_supplied_machine_state()
+	if not reached or not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 2992:
+		return _fail("cascade mast touch ride failed at=%s station=%s" % [_position(), arrival])
+	if String(arrival["name"]) != "CASCADE MAST" or not bool(arrival["braking"]) \
+			or float(arrival["energy_j"]) < 0.0 or float(arrival["energy_j"]) > float(arrival["capacity_j"]) \
+			or float(arrival["energy_j"]) >= float(before["energy_j"]):
+		return _fail("cascade mast arrival violates finite energy/brake state")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("cascade mast DONE did not release operation")
+	for point in [Vector2(-27.5, -161.10), Vector2(-24.7, -161.10)]:
+		if not await _walk_to(device, point, 0.10, 8.0):
+			return _fail("cascade mast +286m receiver/Tower exit at=%s" % _position())
+	if not _standing_above(286.7) or absf(_position().y - 286.9) > 0.15 \
+			or int(_native().get_support_entity_id()) != 11 or not _campaign_world_intact():
+		return _fail("cascade mast +286m arrival is not supported by Tower11 at=%s" % _position())
+	_detail = "staging=%s shipping_touch=1 cascade_mast=1 finite_energy=1 supported_height_m=286 support=11 deaths=0" % [
+		"supported_253m" if stage_at_253 else "ordinary_grade_spawn"]
+	return true
+
+
+func _touch_campaign_to_308() -> bool:
+	if not await _touch_campaign_to_286():
+		return false
+	print("SCRAPERX_CAMPAIGN supported_height_m=286 support=11 deaths=0 staging=ordinary_grade_spawn")
+	if not await _touch_pitman_lift(false) or not _campaign_world_intact():
+		return false
+	_detail = "staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 service_lift=1 gravity_balance=1 crown_gondola=1 traction_tram=1 barrel_helix=1 cascade_mast=1 pitman_lift=1 supported_height_m=308 support=11 deaths=0 slingshot_work_j=0 world=slingshot"
+	return true
+
+
+func _touch_pitman_lift(stage_at_286: bool) -> bool:
+	var device := InputRouter.Device.TOUCH
+	if stage_at_286:
+		if not _native().debug_restart_at(Vector3(-24.7, 286.9, -161.10)):
+			return _fail("pitman lift +286m staging rejected")
+		await _seconds(0.5)
+	if not _campaign_world_intact() or not _standing_above(286.7) \
+			or int(_native().get_support_entity_id()) != 11:
+		return _fail("pitman lift approach requires supported +286m Tower11")
+	for point in [Vector2(-24.7, -142.65), Vector2(-32.25, -142.65)]:
+		if not await _walk_to(device, point, 0.10, 10.0):
+			return _fail("pitman lift lower landing approach at=%s" % _position())
+	var lower: Dictionary = _native().get_supplied_machine_state()
+	if String(lower["name"]) != "PITMAN LIFT" or int(lower["station"]) != 2:
+		return _fail("pitman lift lower call station is not reachable")
+	if not await _walk_to(device, Vector2(-42.5, -142.5), 0.10, 10.0):
+		return _fail("pitman lift physical boarding at=%s" % _position())
+	if not await _wait_until(func() -> bool:
+		return bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 2921, 2.0):
+		return _fail("pitman lift boarding is not supported by deck2921")
+	await _face(Vector2(0, -1))
+	if String(_native().get_supplied_machine_state()["name"]) != "PITMAN LIFT" \
+			or int(_native().get_supplied_machine_state()["station"]) != 1 \
+			or not await _offered(&"operate", "OPERATE", "PITMAN LIFT"):
+		return _fail("pitman lift deck control unavailable at=%s" % _position())
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("pitman lift touch pendant did not open")
+	var before: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_up"), true)
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 307.98, 65.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(0.5)
+	var arrival: Dictionary = _native().get_supplied_machine_state()
+	if not reached or not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 2921:
+		return _fail("pitman lift touch ride failed at=%s station=%s" % [_position(), arrival])
+	if String(arrival["name"]) != "PITMAN LIFT" or not bool(arrival["braking"]) \
+			or float(arrival["energy_j"]) < 0.0 or float(arrival["energy_j"]) > float(arrival["capacity_j"]) \
+			or float(arrival["energy_j"]) >= float(before["energy_j"]):
+		return _fail("pitman lift arrival violates finite energy/brake state")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("pitman lift DONE did not release operation")
+	for point in [Vector2(-32.25, -142.65), Vector2(-24.7, -142.65)]:
+		if not await _walk_to(device, point, 0.10, 10.0):
+			return _fail("pitman lift +308m receiver/Tower exit at=%s" % _position())
+	if not _standing_above(308.7) or absf(_position().y - 308.9) > 0.15 \
+			or int(_native().get_support_entity_id()) != 11 or not _campaign_world_intact():
+		return _fail("pitman lift +308m arrival is not supported by Tower11 at=%s" % _position())
+	_detail = "staging=%s shipping_touch=1 pitman_lift=1 finite_energy=1 supported_height_m=308 support=11 deaths=0" % [
+		"supported_286m" if stage_at_286 else "ordinary_grade_spawn"]
+	return true
+
+
+func _touch_gravity_reclaim() -> bool:
+	var device := InputRouter.Device.TOUCH
+	if not _native().debug_restart_at(Vector3(-24.7, 308.9, -142.65)):
+		return _fail("gravity reclaim +308m staging rejected")
+	await _seconds(0.5)
+	if not _campaign_world_intact() or not _standing_above(308.7) \
+			or int(_native().get_support_entity_id()) != 11:
+		return _fail("gravity reclaim approach requires supported +308m Tower11")
+	# Approach alongside the physical landing post, within ordinary reach.
+	for point in [Vector2(-24.7, -158.75), Vector2(-33.4, -158.75), Vector2(-33.4, -158.25)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true):
+			return _fail("gravity reclaim feed approach at=%s" % _position())
+	var before: Dictionary = _native().get_supplied_machine_state()
+	if not _reclaim_station(2) or not await _offered(&"operate", "OPERATE", "REFRACTORY RECLAIM"):
+		return _fail("gravity reclaim lower feed control unavailable")
+	if float(before["hopper_mass_kg"]) <= 0.0:
+		return _fail("gravity reclaim has no finite starting hopper material")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("gravity reclaim feed pendant did not open")
+	_touch(1, _center(&"pendant_up"), true)
+	await _seconds(18.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(4.0)
+	var loaded: Dictionary = _native().get_supplied_machine_state()
+	if not _reclaim_station(2) or not bool(loaded["braking"]) or not _reclaim_bank(loaded) \
+			or float(loaded["hopper_mass_kg"]) < 0.0 \
+			or float(loaded["hopper_mass_kg"]) >= float(before["hopper_mass_kg"]) \
+			or float(loaded["energy_j"]) >= float(before["energy_j"]):
+		return _fail("gravity reclaim touch feed did not draw from finite material/power")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("gravity reclaim feed DONE did not release operation")
+	var cabin := int(_native().get_kit_body_index(2201))
+	if cabin < 0:
+		return _fail("gravity reclaim cabin2201 body unavailable")
+	var boarding_pose: Transform3D = _native().get_kit_body_transform(cabin)
+	var boarding_x := boarding_pose.origin.x - 0.65
+	if not await _walk_to(device, Vector2(boarding_x, -158.5), 0.10, 8.0, true):
+		return _fail("gravity reclaim boarding tongue approach at=%s" % _position())
+	await _face(Vector2(0, -1))
+	if not _native().is_player_grounded() or int(_native().get_support_entity_id()) != 1941:
+		return _fail("gravity reclaim boarding Jump lacks lower receiver footing")
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(boarding_x, -160.10), 0.10, 8.0, true):
+		return _fail("gravity reclaim physical cabin boarding at=%s" % _position())
+	# Off-centre rider weight tilts the passive hanger. Walk behind the post
+	# to its actual transformed floor centre before asking the brake to release.
+	boarding_pose = _native().get_kit_body_transform(cabin)
+	var floor_centre := boarding_pose * Vector3(0, -2.5, -0.3)
+	if not await _walk_to(device, Vector2(floor_centre.x, floor_centre.z), 0.10, 8.0, true):
+		return _fail("gravity reclaim actual cabin floor centre approach at=%s" % _position())
+	if not await _wait_reclaim_cabin(cabin, 307.97, 8.0):
+		return _fail("gravity reclaim boarding lacks stable actual cabin2201 floor")
+	if not _reclaim_station(1) or not await _offered(&"operate", "OPERATE", "REFRACTORY RECLAIM"):
+		return _fail("gravity reclaim cabin brake control unavailable")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("gravity reclaim cabin pendant did not open")
+	_touch(1, _center(&"pendant_up"), true)
+	var moved := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 314.0, 60.0)
+	var rising: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_up"), false)
+	if not _reclaim_station(1) or bool(rising["braking"]) or bool(rising["wheel_motor_enabled"]):
+		return _fail("gravity reclaim cabin UP did not release a passive, unpowered wheel")
+	if not moved or not await _wait_reclaim_cabin(cabin, 313.9, 12.0):
+		return _fail("gravity reclaim gravity ride did not stop on supported cabin")
+	var paused: Dictionary = _native().get_supplied_machine_state()
+	var paused_height := float(paused["surface_y"])
+	await _seconds(0.5)
+	if absf(float(_native().get_supplied_machine_state()["surface_y"]) - paused_height) > 0.10 \
+			or not _reclaim_bank(paused):
+		return _fail("gravity reclaim released brake did not retain its physical stop")
+	_touch(1, _center(&"pendant_up"), true)
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 329.97, 90.0)
+	var resumed: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_up"), false)
+	if bool(resumed["braking"]) or bool(resumed["wheel_motor_enabled"]):
+		return _fail("gravity reclaim resumed ascent violated passive brake-release semantics")
+	if not reached or not await _wait_reclaim_cabin(cabin, 329.9, 15.0):
+		return _fail("gravity reclaim loaded ascent did not settle at +330m")
+	var arrival: Dictionary = _native().get_supplied_machine_state()
+	if not _reclaim_station(1) or not _reclaim_bank(arrival) \
+			or float(arrival["energy_j"]) > float(loaded["energy_j"]) + 0.01 \
+			or float(arrival["hopper_mass_kg"]) > float(loaded["hopper_mass_kg"]) + 0.01 \
+			or absf(float(arrival["wheel_angle_rad"]) - float(loaded["wheel_angle_rad"])) < 0.1:
+		return _fail("gravity reclaim ascent violates finite material/bank or actual wheel motion")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("gravity reclaim cabin DONE did not release operation")
+	var pose: Transform3D = _native().get_kit_body_transform(cabin)
+	var exit_floor := pose * Vector3(-0.65, -2.5, 0)
+	var exit_x := exit_floor.x
+	for point in [Vector2(exit_x, exit_floor.z), Vector2(exit_x, -159.65)]:
+		if not await _walk_to(device, point, 0.10, 7.0, true):
+			return _fail("gravity reclaim upper cabin takeoff at=%s" % _position())
+	await _face(Vector2(0, 1))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(exit_x, -158.5), 0.10, 8.0, true) \
+			or int(_native().get_support_entity_id()) != 1942:
+		return _fail("gravity reclaim upper transfer missed actual receiver1942")
+	for point in [Vector2(exit_x, -158.75), Vector2(-24.7, -158.75), Vector2(-24.7, -158.25)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true):
+			return _fail("gravity reclaim +330m Tower exit at=%s" % _position())
+	if not _reclaim_tower_arrived():
+		return _fail("gravity reclaim +330m arrival lacks actual Tower11 footing")
+	# The far-side panel opens the real scoop doors and releases the wheel
+	# brake. Empty return remains gravity-driven while the player stays ashore.
+	for point in [Vector2(-24.7, -158.75), Vector2(-33.4, -158.75), Vector2(-33.4, -158.25)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true):
+			return _fail("gravity reclaim upper discharge approach at=%s" % _position())
+	if not _reclaim_station(3) or not await _offered(&"operate", "OPERATE", "REFRACTORY RECLAIM"):
+		return _fail("gravity reclaim upper discharge control unavailable")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_down"):
+		return _fail("gravity reclaim discharge pendant did not open")
+	_touch(1, _center(&"pendant_down"), true)
+	var returned := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) <= 308.05, 120.0)
+	_touch(1, _center(&"pendant_down"), false)
+	await _seconds(0.5)
+	var after: Dictionary = _native().get_supplied_machine_state()
+	if not returned or not _reclaim_station(3) or not bool(after["braking"]) \
+			or not _reclaim_bank(after) or float(after["energy_j"]) >= float(arrival["energy_j"]) \
+			or float(after["hopper_mass_kg"]) > float(loaded["hopper_mass_kg"]) + 0.01 \
+			or not _native().is_player_grounded() or int(_native().get_support_entity_id()) != 1942:
+		return _fail("gravity reclaim discharge/empty return did not preserve upper footing and finite supply")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("gravity reclaim discharge DONE did not release operation")
+	for point in [Vector2(-33.4, -158.75), Vector2(-24.7, -158.75), Vector2(-24.7, -158.25)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true):
+			return _fail("gravity reclaim final Tower footing at=%s" % _position())
+	if not _reclaim_tower_arrived() or not _campaign_world_intact():
+		return _fail("gravity reclaim final +330m proof lacks Tower11/death-free world")
+	if not await _touch_reclaim_retry(before):
+		return false
+	_detail = "staging=supported_308m shipping_touch=1 finite_hopper=1 gravity_reclaim=1 stop_resume=1 upper_discharge=1 empty_gravity_return=1 finite_energy=1 first_supported_height_m=330 first_support=11 retry_from_feeding=1 second_supported_height_m=%.2f second_support=2201 deaths=0" % float(_native().get_supplied_machine_state()["surface_y"])
+	return true
+
+
+func _touch_reclaim_retry(initial: Dictionary) -> bool:
+	var device := InputRouter.Device.TOUCH
+	var deaths := int(_native().get_death_count())
+	_tap(0, _center(&"pause"))
+	await _frames(2)
+	if not get_tree().paused:
+		return _fail("gravity reclaim retry PAUSE did not open")
+	_click(_main._pause_menu.side_button_center(&"restart"))
+	await _frames(2)
+	var retry: Button = _main._pause_menu._reclaim_retry_button
+	if _main._pause_menu.current_page() != &"restart" or not is_instance_valid(retry) \
+			or not retry.is_visible_in_tree() or retry.disabled or retry.text != "RETRY FROM FEEDING":
+		return _fail("gravity reclaim retry button unavailable on actual RESTART page")
+	# The same emulated GUI twin used by the ordinary touch pause-page tests.
+	_click(retry.get_global_rect().get_center())
+	await _frames(3)
+	if get_tree().paused:
+		return _fail("gravity reclaim retry did not restore and resume the world")
+	await _seconds(0.5)
+	var restored: Dictionary = _native().get_supplied_machine_state()
+	if not _native().is_player_grounded() or int(_native().get_support_entity_id()) != 1941 \
+			or absf(_position().y - 308.9) > 0.15 or int(_native().get_death_count()) != deaths \
+			or not _reclaim_station(2) or not _reclaim_bank(restored) \
+			or float(restored["hopper_mass_kg"]) <= 0.0 \
+			or float(restored["hopper_mass_kg"]) <= float(initial["hopper_mass_kg"]) - 100.0 \
+			or float(restored["hopper_mass_kg"]) > float(initial["hopper_mass_kg"]) + 0.01 \
+			or absf(float(restored["surface_y"]) - 308.0) >= 0.05:
+		return _fail("gravity reclaim retry lacks actual safe1941 footing/finite restored stock at=%s state=%s" % [_position(), restored])
+	if not await _walk_to(device, Vector2(-33.4, -158.25), 0.10, 8.0, true) \
+			or not _reclaim_station(2) or not await _offered(&"operate", "OPERATE", "REFRACTORY RECLAIM"):
+		return _fail("gravity reclaim retry ordinary feeding approach failed")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("gravity reclaim retry feed pendant did not open")
+	_touch(1, _center(&"pendant_up"), true)
+	await _seconds(18.0)
+	_touch(1, _center(&"pendant_up"), false)
+	await _seconds(4.0)
+	var loaded: Dictionary = _native().get_supplied_machine_state()
+	if not _reclaim_station(2) or not bool(loaded["braking"]) or not _reclaim_bank(loaded) \
+			or float(loaded["hopper_mass_kg"]) < 0.0 \
+			or float(loaded["hopper_mass_kg"]) >= float(restored["hopper_mass_kg"]) \
+			or float(loaded["energy_j"]) >= float(restored["energy_j"]):
+		return _fail("gravity reclaim retry did not feed actual restored finite material/power")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("gravity reclaim retry feed DONE did not release operation")
+	var cabin := int(_native().get_kit_body_index(2201))
+	if cabin < 0:
+		return _fail("gravity reclaim retry cabin2201 unavailable")
+	var pose: Transform3D = _native().get_kit_body_transform(cabin)
+	var boarding_x := pose.origin.x - 0.65
+	if not await _walk_to(device, Vector2(boarding_x, -158.5), 0.10, 8.0, true):
+		return _fail("gravity reclaim retry boarding tongue approach failed")
+	await _face(Vector2(0, -1))
+	if not _native().is_player_grounded() or int(_native().get_support_entity_id()) != 1941:
+		return _fail("gravity reclaim retry Jump lacks lower receiver footing")
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(boarding_x, -160.10), 0.10, 8.0, true):
+		return _fail("gravity reclaim retry physical cabin reboarding at=%s" % _position())
+	pose = _native().get_kit_body_transform(cabin)
+	var floor_centre := pose * Vector3(0, -2.5, -0.3)
+	if not await _walk_to(device, Vector2(floor_centre.x, floor_centre.z), 0.10, 8.0, true) \
+			or not await _wait_reclaim_cabin(cabin, 307.97, 8.0):
+		return _fail("gravity reclaim retry ordinary reboarding lacks stable cabin2201 floor")
+	if not _reclaim_station(1) or not await _offered(&"operate", "OPERATE", "REFRACTORY RECLAIM"):
+		return _fail("gravity reclaim retry cabin brake control unavailable")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up"):
+		return _fail("gravity reclaim retry cabin pendant did not open")
+	_touch(1, _center(&"pendant_up"), true)
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 311.0 \
+			or not _native().is_player_grounded() or int(_native().get_support_entity_id()) != 2201, 60.0)
+	var rising: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_up"), false)
+	if not reached or float(rising["surface_y"]) < 311.0 or not _reclaim_station(1) \
+			or not _native().is_player_grounded() or int(_native().get_support_entity_id()) != 2201 \
+			or bool(rising["braking"]) or bool(rising["wheel_motor_enabled"]) \
+			or not await _wait_reclaim_cabin(cabin, 311.0, 12.0):
+		return _fail("gravity reclaim retry finite load did not earn supported passive +311m ascent")
+	var arrival: Dictionary = _native().get_supplied_machine_state()
+	if not _reclaim_bank(arrival) or float(arrival["energy_j"]) > float(loaded["energy_j"]) + 0.01 \
+			or float(arrival["hopper_mass_kg"]) > float(loaded["hopper_mass_kg"]) + 0.01 \
+			or int(_native().get_death_count()) != deaths or not _campaign_world_intact():
+		return _fail("gravity reclaim retry ascent violated finite supply/death-free world")
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"":
+		return _fail("gravity reclaim retry cabin DONE did not release operation")
+	return true
+
+
+func _reclaim_station(station: int) -> bool:
+	var state: Dictionary = _native().get_supplied_machine_state()
+	return int(state["index"]) == 6 and int(state["station"]) == station \
+		and String(state["name"]) == "REFRACTORY RECLAIM"
+
+
+func _reclaim_bank(state: Dictionary) -> bool:
+	return is_finite(float(state["energy_j"])) and float(state["energy_j"]) >= 0.0 \
+		and float(state["energy_j"]) <= float(state["capacity_j"]) and not bool(state["energy_cutoff"])
+
+
+func _reclaim_tower_arrived() -> bool:
+	return _standing_above(330.7) and absf(_position().y - 330.9) <= 0.15 \
+		and int(_native().get_support_entity_id()) == 11
+
+
+func _wait_reclaim_cabin(cabin: int, minimum_surface: float, timeout: float) -> bool:
+	var waited := 0.0
+	var stable_ticks := 0
+	var previous_tick := int(_native().get_tick_index())
+	var previous_angle := float(_native().get_supplied_machine_state()["wheel_angle_rad"])
+	var previous_floor := float(_native().get_supplied_machine_state()["surface_y"])
+	var angular_speed := INF
+	var floor_speed := INF
+	var step := float(_native().get_fixed_step_seconds())
+	while waited < timeout:
+		var pose: Transform3D = _native().get_kit_body_transform(cabin)
+		var state: Dictionary = _native().get_supplied_machine_state()
+		var tick := int(_native().get_tick_index())
+		var elapsed_ticks := tick - previous_tick
+		if elapsed_ticks > 0:
+			angular_speed = absf(angle_difference(previous_angle, float(state["wheel_angle_rad"]))) \
+				/ (float(elapsed_ticks) * step)
+			floor_speed = absf(float(state["surface_y"]) - previous_floor) / (float(elapsed_ticks) * step)
+			previous_tick = tick
+			previous_angle = float(state["wheel_angle_rad"])
+			previous_floor = float(state["surface_y"])
+		var floor_at := pose * Vector3(0, -2.5, 0)
+		var slip: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
+		var ready: bool = _native().is_player_grounded() and int(_native().get_support_entity_id()) == 2201 \
+			and bool(state["braking"]) and float(state["surface_y"]) >= minimum_surface \
+			and absf(_position().y - (floor_at.y + 0.9)) <= 0.15 \
+			and Vector2(slip.x, slip.z).length() < 0.15 and pose.basis.y.dot(Vector3.UP) > 0.995 \
+			and (_native().get_kit_body_linear_velocity(cabin) as Vector3).length() < 0.15 \
+			and angular_speed < 0.0045 and floor_speed < 0.018
+		# A finite brake first decelerates the wheel. Require 30 actual native
+		# ticks of low wheel/floor speed and floor contact; suspension can keep
+		# moving after the wheel stops.
+		stable_ticks = stable_ticks + elapsed_ticks if ready else 0
+		if stable_ticks >= 30:
+			return true
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	return false
 
 
 func _swing_catch_sample(body: int, previous: Dictionary) -> void:
@@ -2533,16 +3648,16 @@ func _move_dir(device: int, v: Vector2) -> void:
 # Walks to a horizontal point without turning the view, the way a player
 # steps into place: the stick (or keys) pushed toward it relative to the
 # view, easing off near it -- a key pulses -- and stopping inside `tolerance`.
-func _walk_to(device: int, target: Vector2, tolerance: float, timeout: float = 6.0) -> bool:
+func _walk_to(device: int, target: Vector2, tolerance: float, timeout: float = 6.0, require_supported_arrival: bool = false) -> bool:
 	var waited := 0.0
 	var frame := 0
-	var physical := false
+	var physical := require_supported_arrival
 	var accumulated := Vector2.ZERO
 	while waited < timeout:
 		var at := _position()
 		var to := target - Vector2(at.x, at.z)
 		var owner := int(_native().get_support_entity_id())
-		physical = physical or owner in [1600, 2952, 2954] or (owner >= 2560 and owner <= 2566) or (owner >= 1970 and owner <= 1972) or (owner >= 2970 and owner <= 2978)
+		physical = physical or owner in [1600, 2921, 2952, 2954, 2980, 2981, 2983, 2984, 2988, 2992] or (owner >= 2560 and owner <= 2566) or (owner >= 1970 and owner <= 1972) or (owner >= 2970 and owner <= 2978)
 		var slip: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
 		var settled := bool(_ctx()["grounded"]) and Vector2(slip.x, slip.z).length() < 0.15
 		if to.length() <= tolerance and (not physical or settled):
@@ -2568,7 +3683,9 @@ func _walk_to(device: int, target: Vector2, tolerance: float, timeout: float = 6
 				accumulated = (accumulated + to * get_process_delta_time() * 0.4).limit_length(0.35)
 			var correction := to / 2.75 + accumulated - Vector2(slip.x, slip.z) * 0.12
 			direction = Vector2(correction.dot(right), correction.dot(forward)).normalized()
-			amount = 0.0 if to.length() <= tolerance else minf(1.0, correction.length())
+			# A required supported arrival keeps countersteering while airborne
+			# or slipping, even after crossing the horizontal target tolerance.
+			amount = 0.0 if to.length() <= tolerance and not require_supported_arrival else minf(1.0, correction.length())
 			if device != InputRouter.Device.KEYBOARD_MOUSE and amount > 0.0:
 				var deadzone := TouchControls.STICK_DEADZONE if device == InputRouter.Device.TOUCH else InputRouter.STICK_DEADZONE
 				amount = deadzone + (1.0 - deadzone) * amount

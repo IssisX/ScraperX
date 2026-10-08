@@ -1,0 +1,8 @@
+landing normal=2.80675 energy=334.809 observed_impulse=238.574 balance=0.95217 recovery=0.206304 deaths=0
+landing normal=8.85624 energy=3333.4 observed_impulse=752.78 balance=0.5238 recovery=0.478531 deaths=0
+landing normal=14.0338 energy=8370.26 observed_impulse=1192.87 balance=0.1 recovery=0.711521 deaths=0
+landing normal=22.1544 energy=20859.7 observed_impulse=1883.12 balance=1 recovery=0 deaths=1
+cabinet approach at=20,11.8758,-121.434 recovery=0 step_ups=0
+rocker support=2800 at=30.9985,67.0974,-138.45
+roll normal=17.7398 tangent=5.5 compact=1 retained_momentum=1
+PASS physical landing energy, finite recovery, dynamic supports and restart
