@@ -204,7 +204,7 @@ wind-frame structure / SKIN, B08 isolate high riser / drum clutch) were never au
 | `AS-012` | the swing: the 220 ring to the 242 ring (then C6, a climb to the 264 ring) | 220 → 264 m | **BUILT** | derived here | native `swing`, `C6`; `touch_swing`, green in run `37616086844`; `touch_c6` |
 | `AS-013` | jack + seat crown beam | B09 | UNAUTHORED | — | none |
 | `AS-014` | isolate + lock fans; bell as support | B10 | UNAUTHORED | — | none |
-| `AS-015` | stand on 1600.00 m | B11 | UNAUTHORED | — | none |
+| `AS-015` | stand on 800.00 m (was 1600.00 m) | B11 | UNAUTHORED | — | none |
 
 `AS-005` still quotes `ScraperX-Grok` constants — a handoff at `(10.40, 24.00, 38.40)`,
 68 treads at `x = 10.40`, entity id `319`, a well at `(-1.76, —, 25.30)`. None of that exists here.
