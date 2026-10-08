@@ -1058,10 +1058,17 @@ func _stack_s3(device: int) -> bool:
 	if not (await _go(device, Vector2(-8.0, -170.0), 0.15, 20.0) and \
 			await _go(device, Vector2(-8.0, -164.0), 0.1, 10.0)):
 		return _fail("the walk to S3 cage stalled at %s" % str(_position()))
-	if not await _stand_for_grab(device, Vector2(-8.0, -157.95), 0.05, 8.0):
-		return _fail("the walk to S3 handle stalled at %s grounded=%s speed=%.2f" % [
-			str(_position()), str(bool(_native().is_player_grounded())),
-			Vector2(_velocity().x, _velocity().z).length()])
+	# A stick eases off and the old walk is enough. A key does not. The last
+	# pulse slides the body during the walk's own pause, and that pause used
+	# to count as arrival. The bar is at z -158. Standing near z -157.6 keeps
+	# it in front and inside the 1.20 m reach.
+	if device == InputRouter.Device.KEYBOARD_MOUSE:
+		if not await _stand_for_grab(device, Vector2(-8.0, -157.60), 0.15, 10.0):
+			return _fail("the walk to S3 handle stalled at %s grounded=%s speed=%.2f" % [
+				str(_position()), str(bool(_native().is_player_grounded())),
+				Vector2(_velocity().x, _velocity().z).length()])
+	elif not await _go(device, Vector2(-8.0, -157.6), 0.08, 10.0):
+		return _fail("the walk to S3 cage stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
 	if not await _offered(&"pick_up", "GRAB"):
 		return _fail("Action read '%s' facing S3 handle, not GRAB (at %s grounded=%s target=%d trav=%d)" % [
@@ -1095,9 +1102,17 @@ func _stack_s3(device: int) -> bool:
 
 
 func _stack_c3(device: int) -> bool:
-	if not (await _go(device, Vector2(-10.5, -171.0), 0.1, 10.0) and \
-			await _go(device, Vector2(-10.5, -145.0), 0.1, 20.0)):
-		return _fail("walk along atrium girder stalled")
+	if not await _go(device, Vector2(-10.5, -171.0), 0.1, 10.0):
+		return _fail("walk onto atrium girder stalled at %s y=%.2f grounded=%s speed=%.2f support=%d" % [
+			str(_position()), _position().y, str(bool(_native().is_player_grounded())),
+			Vector2(_velocity().x, _velocity().z).length(), int(_native().get_support_entity_id())])
+	# A strafe on this girder puts the capsule in the handrail. Forward only,
+	# the same rule as the monorail beam.
+	if not await _walk_beam(device, Vector2(-10.5, -145.0), 0.12, 20.0):
+		return _fail("walk along atrium girder stalled at %s y=%.2f grounded=%s speed=%.2f support=%d trav=%d" % [
+			str(_position()), _position().y, str(bool(_native().is_player_grounded())),
+			Vector2(_velocity().x, _velocity().z).length(), int(_native().get_support_entity_id()),
+			int(_native().get_traversal_state())])
 	await _face(Vector2(0.0, 1.0))
 	if not await _offered(&"climb", "CLIMB"):
 		return _fail("Action read '%s' facing atrium duct, not CLIMB" % _action_label())
@@ -1702,13 +1717,13 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 	while waited < budget:
 		var at := _position()
 		var to := target - Vector2(at.x, at.z)
+		var yaw := float(_main._yaw)
+		var forward := Vector2(-sin(yaw), -cos(yaw))
+		var right := Vector2(cos(yaw), -sin(yaw))
 		if to.length() <= tolerance:
 			_move_dir(device, Vector2.ZERO)
 			await _seconds(0.2)
 			return true
-		var yaw := float(_main._yaw)
-		var forward := Vector2(-sin(yaw), -cos(yaw))
-		var right := Vector2(cos(yaw), -sin(yaw))
 		var v := Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.8, 0.25, 1.0)
 		if device == InputRouter.Device.KEYBOARD_MOUSE:
 			var lateral := to.dot(right)
@@ -1737,33 +1752,54 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 	return false
 
 
-# Like a walk, then a real stop: still inside the pocket, grounded, and slow.
-# A key's last pulse can carry the body out of reach during the old 0.2 s
-# pause, and that pause used to count as arrival anyway.
+# Keyboard only. Stops inside the pocket and stays there, slow and grounded.
+# _walk_to cannot do this: it reports arrival and then waits 0.2 s, and a
+# full-throw key is still sliding through that wait.
 func _stand_for_grab(device: int, target: Vector2, tolerance: float, budget: float) -> bool:
 	var waited := 0.0
+	var frame := 0
 	while waited < budget:
-		if not await _walk_to(device, target, tolerance, maxf(0.4, budget - waited)):
-			return false
-		var settled := false
-		var still := 0.0
-		while still < 0.45:
-			var at := _position()
-			var away := (target - Vector2(at.x, at.z)).length()
-			var planar := Vector2(_velocity().x, _velocity().z).length()
-			if away <= tolerance and bool(_native().is_player_grounded()) and planar < 0.15 and \
-					int(_native().get_traversal_state()) == TRAVERSAL_NONE:
-				settled = true
-				break
-			if away > tolerance:
-				break
+		var at := _position()
+		var to := target - Vector2(at.x, at.z)
+		var planar := Vector2(_velocity().x, _velocity().z).length()
+		if to.length() <= tolerance and bool(_native().is_player_grounded()) and planar < 0.12 and \
+				int(_native().get_traversal_state()) == TRAVERSAL_NONE:
 			_move_dir(device, Vector2.ZERO)
-			await get_tree().process_frame
-			var dt := get_process_delta_time()
-			still += dt
-			waited += dt
-		if settled:
-			return true
+			var held := 0.0
+			var stayed := true
+			while held < 0.35:
+				await get_tree().process_frame
+				var dt := get_process_delta_time()
+				held += dt
+				waited += dt
+				var now := _position()
+				var away := (target - Vector2(now.x, now.z)).length()
+				var speed := Vector2(_velocity().x, _velocity().z).length()
+				if away > tolerance or speed > 0.20 or not bool(_native().is_player_grounded()) or \
+						int(_native().get_traversal_state()) != TRAVERSAL_NONE:
+					stayed = false
+					break
+			if stayed:
+				return true
+			continue
+		var yaw := float(_main._yaw)
+		var forward := Vector2(-sin(yaw), -cos(yaw))
+		var right := Vector2(cos(yaw), -sin(yaw))
+		var lateral := to.dot(right)
+		var along := to.dot(forward)
+		var v := Vector2.ZERO
+		var side_miss := absf(lateral) > 0.08
+		if side_miss and absf(lateral) >= absf(along):
+			v = Vector2(signf(lateral), 0.0)
+		elif absf(along) > 0.02:
+			v = Vector2(0.0, signf(along))
+			if to.length() < 1.2:
+				frame += 1
+				if frame % 5 >= 2:
+					v = Vector2.ZERO
+		_move_dir(device, v)
+		await get_tree().process_frame
+		waited += get_process_delta_time()
 	_move_dir(device, Vector2.ZERO)
 	return false
 
