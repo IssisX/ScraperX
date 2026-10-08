@@ -160,7 +160,9 @@ own gate.
     *"so the player can canonically climb from grade/ground all the way up the tower"*, one
     unbroken route from grade to the summit. The summit is at **800 m** (the owner, 2026-10-08:
     *"I think the tower's summit will be 800 m, not 1,600m"*): the route's gaps are the 264 ring's
-    dead end and the 750 deck to an 800 m summit deck, where the tower now ends.
+    dead end and the 750 deck to 800 m. What stands at the very top is the owner's to decide
+    (2026-10-08: *"I haven't figured out what will be at the very top yet"*): the machines climb to
+    800 m and the top is left open; the tower is not cut down until the owner decides.
 
 ## 3. The chain
 
