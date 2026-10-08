@@ -93,6 +93,8 @@ enum class InitialSpawn : std::uint8_t {
     Ring242South = 35,
     // On the 264 ring's west band, where C6's climber tops out.
     Ring264West = 36,
+    // On the 750 deck, where stage O's rider steps off.
+    Deck750 = 37,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };

@@ -53,6 +53,20 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     // top (340.25 m).
     kit_.add_body(kHelixPlateWalkway, {box(Vec3(5.45F, 0.15F, 1.5F), Material::Galvanised)},
                   RVec3(-20.05, 338.74, -149.0), Quat::sIdentity(), 0.0F, 0.8F);
+
+    // The crown gondola, turned so its front faces west onto the 750 deck:
+    // its crown turns in the plane x 20.1 about (765.85, z -152) and carries
+    // the cabin south and up over its top; its receivers at x 12 to 15, the
+    // lower one against the deck's east parapet, flush with the deck (750.1 m).
+    place("sx.crown_gondola.v1", {RVec3(18.3, 747.85, -152.0), -0.5F * JPH_PI},
+          {kCrownStaticFirst, 3}, {kCrownDynamicFirst, 2});
+    // The luffing derrick, turned so its boom points south along x 16 from its
+    // mast at z -193, north of the tower: its lower receiver (z -158 to -155)
+    // against the crown's upper one at 778.09 m; its cradle starts at z -161
+    // and is luffed up and north to its upper receiver at 802.64 m (z -184).
+    // The crown's cabin never goes north of z -155, so the two never meet.
+    place("sx.luffing_derrick.v1", {RVec3(13.5, 771.39, -193.0), -0.5F * JPH_PI},
+          {kDerrickStaticFirst, 3}, {kDerrickDynamicFirst, 3});
 }
 
 Route::~Route() = default;

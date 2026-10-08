@@ -87,6 +87,10 @@ const SCENARIOS := {
 	# the west face, the pitman lift 23.6 m, the barrel helix 24 m, the walkway
 	# back east and a mantle onto TP-340.
 	"touch_machines": 36,
+	# From the 750 deck where stage O sets its rider down: a vault over the
+	# east parapet, the crown gondola's cabin through a half turn of its 28 m
+	# crown to 778 m, and the luffing derrick's cradle up and in to 802.6 m.
+	"touch_high": 37,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -250,6 +254,8 @@ func _run() -> void:
 			ok = await _c6(InputRouter.Device.TOUCH)
 		"touch_machines":
 			ok = await _machines(InputRouter.Device.TOUCH)
+		"touch_high":
+			ok = await _high(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1892,8 +1898,12 @@ func _c6(device: int) -> bool:
 
 
 # One of the owner's vertical machines: from its lower receiver at `entry`
-# onto its deck at `deck`, RAISE, up to its upper receiver, and off onto it.
-func _ride_machine(device: int, index: int, name: String, entry: Vector2, deck: Vector2) -> bool:
+# onto its deck at `deck`, RAISE, up to its upper receiver, and off onto it at
+# `exit` (the entry's spot, unless given).
+func _ride_machine(device: int, index: int, name: String, entry: Vector2, deck: Vector2,
+		exit := Vector2.INF) -> bool:
+	if exit == Vector2.INF:
+		exit = entry
 	if not (await _go(device, entry, 0.15, 8.0) and await _go(device, deck, 0.15, 6.0)):
 		return _fail("%s: the walk onto the deck stalled at %s" % [name, str(_position())])
 	if not await _offered(&"lift", "RAISE", name):
@@ -1905,7 +1915,7 @@ func _ride_machine(device: int, index: int, name: String, entry: Vector2, deck: 
 				bool(_ctx()["grounded"]), 90.0):
 		return _fail("%s: the deck never reached its upper receiver (at %s)" % [name, str(_position())])
 	await _pose("machine_%d_top" % index)
-	if not await _go(device, entry, 0.15, 6.0):
+	if not await _go(device, exit, 0.15, 8.0):
 		return _fail("%s: the step off onto the upper receiver stalled at %s" % [name, str(_position())])
 	await _seconds(0.5)
 	if int(_native().get_lift_state()["role"]) != 3:
@@ -1950,6 +1960,46 @@ func _machines(device: int) -> bool:
 	_detail = "mast_y=%.2f pitman_y=%.2f helix_y=%.2f tp340_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		mast_y, pitman_y, helix_y, _position().y, float(int(_native().get_tick_index()) - started) / 90.0,
 		worst_step, float(body["lift"])]
+	return true
+
+
+func _high(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var body := _watch_body()
+	if not (await _go(device, Vector2(10.8, -152.0), 0.15, 10.0) and \
+			await _go(device, Vector2(11.3, -152.0), 0.06, 3.0)):
+		return _fail("high: the walk to the east parapet stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("high: Action read '%s' facing the parapet, not CLIMB" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 3, 0.3):
+		return _fail("high: Action did not vault the parapet (state %d)" % int(_native().get_traversal_state()))
+	if not await _wait_until(func() -> bool: return _standing_above(750.6) and _position().x > 12.4, 2.0):
+		return _fail("high: the vault over the parapet did not land (at %s)" % str(_position()))
+	await _pose("high_vault")
+	if not await _ride_machine(device, 3, "CROWN GONDOLA", Vector2(13.5, -152.0), Vector2(17.3, -152.0),
+			Vector2(13.5, -151.5)):
+		return false
+	var crown_y := _position().y
+	if not await _ride_machine(device, 4, "LUFFING DERRICK", Vector2(13.5, -156.5), Vector2(12.3, -161.3),
+			Vector2(13.5, -184.3)):
+		return false
+	await _pose("high_top")
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
+	if not _standing_above(803.3):
+		return _fail("high: not standing on the derrick's upper receiver (y %.2f)" % _position().y)
+	_detail = "crown_y=%.2f top_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		crown_y, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step,
+		float(body["lift"])]
 	return true
 
 

@@ -165,6 +165,9 @@ constexpr float kVaultCrossDistance = 1.30F;
 constexpr float kVaultApexClearance = 0.10F;
 constexpr float kVaultMaximumDrop = 1.40F;
 constexpr double kVaultDurationSeconds = 0.38;
+// How near the obstacle's face a vault's path may bring the body before it
+// has risen clear of the top.
+constexpr float kVaultFaceGap = 0.02F;
 // Double-tap Jump: a second Jump this soon after a takeoff asks for the vault
 // the takeoff could have been. It is granted only on exactly the ground
 // vault's terms -- a real obstacle top 0.35-1.15 m over the takeoff floor and
@@ -702,6 +705,9 @@ private:
     case scraperx::sim::InitialSpawn::Ring264West:
         // On the 264 ring's west band, where C6's climber tops out.
         return {-19.5, 265.15, -164.5};
+    case scraperx::sim::InitialSpawn::Deck750:
+        // On the 750 deck, east of stage O's cab.
+        return {8.0, 751.0, -145.0};
     case scraperx::sim::InitialSpawn::Deck728:
         // On the 728 deck by C5's last mantle, north-east of stage O's cab.
         return {9.0, 729.05, -144.0};
@@ -1430,6 +1436,14 @@ private:
         case Simulation::kTowerEntityId:
             return tower_id_;
         default:
+            // A kit body: the rider stands on what it does (plan rule 4), so
+            // a deck carried sideways carries them with it.
+            if (scraperx::sim::kit::is_kit_entity(entity_id)) {
+                const auto body = kit_->body_for_entity(entity_id);
+                if (body.valid()) {
+                    return kit_->body_id(body);
+                }
+            }
             return {};
         }
     }
@@ -2761,6 +2775,42 @@ private:
                               probe.ledge_point.GetY() + kPlayerHalfHeight + kVaultApexClearance,
                               origin.GetZ());
 
+        // Started close to the obstacle, the eased path would carry the body
+        // into its face before it had risen clear of the top: it pushed on the
+        // face, then caught its path up in a lurch (0.24 m in a tick, off a
+        // parapet 0.1 m away). Then the vault first rises clear while it
+        // closes on the face, and crosses after, at a standing vault's pace.
+        traversal_vault_wall_fraction_ = 1.0F;
+        traversal_vault_clear_progress_ = 0.0F;
+        const double travel_length = std::sqrt(travel_squared);
+        const float rise = static_cast<float>(apex.GetY() - origin.GetY());
+        const float clear = static_cast<float>(probe.ledge_point.GetY() + kPlayerHalfHeight - origin.GetY());
+        if (travel_length > 1.0e-3 && rise > 1.0e-3F && clear > 0.0F) {
+            const double face_along = ((probe.wall_point.GetX() - origin.GetX()) * travel_x +
+                                       (probe.wall_point.GetZ() - origin.GetZ()) * travel_z) /
+                                      travel_length;
+            const float face_fraction = std::clamp(
+                static_cast<float>((face_along - kPlayerRadius - kVaultFaceGap) / travel_length), 0.0F, 1.0F);
+            // The rise is smoothstep(2 p) of the way to the apex: invert it at
+            // the height where the body's soles clear the top.
+            const float wanted = std::min(clear / rise, 1.0F);
+            float low = 0.0F;
+            float high = 1.0F;
+            for (int i = 0; i < 24; ++i) {
+                const float mid = 0.5F * (low + high);
+                if (smoothstep(0.0F, 1.0F, mid) < wanted) {
+                    low = mid;
+                } else {
+                    high = mid;
+                }
+            }
+            const float clear_progress = 0.5F * high;
+            if (ease_with_carried_speed(clear_progress, traversal_vault_horizontal_slope_) > face_fraction) {
+                traversal_vault_wall_fraction_ = face_fraction;
+                traversal_vault_clear_progress_ = clear_progress;
+            }
+        }
+
         traversal_state_ = TraversalState::Vaulting;
         traversal_body_ = probe.ledge_body;
         traversal_entity_id_ = probe.ledge_entity_id;
@@ -2770,7 +2820,8 @@ private:
         traversal_local_apex_ = to_support_local(bodies, traversal_body_, apex);
         traversal_local_target_ = to_support_local(bodies, traversal_target_body_, landing_centre);
         traversal_progress_ = 0.0;
-        traversal_duration_ = kVaultDurationSeconds;
+        // Rising clear first adds its time: the crossing keeps a vault's.
+        traversal_duration_ = kVaultDurationSeconds / (1.0 - traversal_vault_clear_progress_);
         traversal_stall_ticks_ = 0;
         traversal_desired_ = origin;
         traversal_exit_relative_velocity_ = relative;
@@ -2796,8 +2847,20 @@ private:
 
         if (traversal_state_ == TraversalState::Vaulting) {
             const JPH::RVec3 apex = from_support_local(bodies, traversal_body_, traversal_local_apex_);
-            const float horizontal = ease_with_carried_speed(
-                progress, traversal_vault_horizontal_slope_);
+            float horizontal;
+            const float clear_at = traversal_vault_clear_progress_;
+            if (clear_at > 0.0F) {
+                // Up to the face while rising clear, then over and down.
+                const float face = traversal_vault_wall_fraction_;
+                const float carried =
+                    face > 1.0e-4F ? traversal_vault_horizontal_slope_ * clear_at / (face * (1.0F - clear_at)) : 0.0F;
+                horizontal = progress < clear_at
+                                 ? face * ease_with_carried_speed(progress / clear_at, carried)
+                                 : face + (1.0F - face) * smoothstep(0.0F, 1.0F,
+                                                                     (progress - clear_at) / (1.0F - clear_at));
+            } else {
+                horizontal = ease_with_carried_speed(progress, traversal_vault_horizontal_slope_);
+            }
             float height;
             if (progress < 0.5F) {
                 height = start.GetY() +
@@ -3496,6 +3559,8 @@ private:
         traversal_stall_ticks_ = 0;
         traversal_exit_relative_velocity_ = JPH::Vec3::sZero();
         traversal_vault_horizontal_slope_ = 0.0F;
+        traversal_vault_wall_fraction_ = 1.0F;
+        traversal_vault_clear_progress_ = 0.0F;
     }
 
     void update_affordance(const JPH::BodyInterface &bodies) noexcept {
@@ -3850,6 +3915,11 @@ private:
     JPH::Vec3 traversal_local_target_{JPH::Vec3::sZero()};
     JPH::Vec3 traversal_exit_relative_velocity_{JPH::Vec3::sZero()};
     float traversal_vault_horizontal_slope_ = 0.0F;
+    // A vault begun close to its obstacle (begin_vault): the share of its
+    // crossing that reaches the face, and the progress at which the body has
+    // risen clear of the top; 0 when the eased path needs neither.
+    float traversal_vault_wall_fraction_ = 1.0F;
+    float traversal_vault_clear_progress_ = 0.0F;
     JPH::RVec3 traversal_desired_{JPH::RVec3::sZero()};
     // What is left of a caught ledge's pull-in (see kHangPullInSpeed).
     JPH::Vec3 traversal_entry_offset_{JPH::Vec3::sZero()};

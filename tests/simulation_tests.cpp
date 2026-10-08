@@ -3948,6 +3948,97 @@ void run_helix() {
               << " support=" << end.support_entity_id << '\n';
 }
 
+// From the 750 deck to about 800 m: the crown gondola and the luffing derrick.
+// The crown: a 400 kNm motor turns a 28 m, 7 t crown through 178 degrees,
+// carrying a cabin hung from its rim south, up and over to its top. The
+// derrick: a 50 kN slider and its 1.2 t ballast's weight draw in the cable
+// that luffs a 32 m boom from 8 to 65 degrees, lifting its hung cradle 24.5 m
+// up and 18 m in. Both carry their rider sideways as well as up. The cradle's
+// hanger plate stands through its floor's middle, so the rider stands west of it.
+struct HighRide final {
+    bool vaulted = false;
+    bool crown_up = false;
+    double crown_s = 0.0;
+    bool on_crown_exit = false;
+    bool derrick_up = false;
+    double derrick_s = 0.0;
+    scraperx::sim::Snapshot end{};
+};
+
+bool ride_to_top(scraperx::sim::Simulation &s, const std::size_t index, double *ride_s) {
+    (void)s.advance_frame(0.5);
+    if (s.lift_state().role != 1 || static_cast<std::size_t>(s.lift_state().machine) != index) {
+        return false;
+    }
+    (void)s.request_lift_action();
+    const double start = s.snapshot().simulation_time_seconds;
+    const bool up = wait_for(s, 120.0, [&s, index](const scraperx::sim::Snapshot &state) {
+        const auto lift = s.lift_state();
+        return std::abs(lift.travels[index] - 1.0) < 0.01 && !lift.moving && state.player_grounded;
+    });
+    *ride_s = s.snapshot().simulation_time_seconds - start;
+    return up;
+}
+
+HighRide high_ride(scraperx::sim::Simulation &s) {
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    HighRide ride;
+    // Over the 750 deck's east parapet, in a vault, onto the crown's receiver.
+    if (!(walk_to(s, 10.8, -152.0, 8.0) && walk_to(s, 11.3, -152.0, 3.0, 0.06))) {
+        return ride;
+    }
+    (void)s.set_facing(1.0, 0.0);
+    (void)s.advance_frame(0.3);
+    (void)s.request_traversal();
+    ride.vaulted = hold_stick(s, 0.0, 0.0, 1.0, 0.0, 2.0, [](const Snapshot &state) {
+        return state.traversal_state == TraversalState::None && state.player_grounded &&
+               state.player_position.x > 12.4;
+    });
+    if (!(ride.vaulted && walk_to(s, 13.5, -152.0, 4.0) && s.advance_frame(0.5).accepted &&
+          s.lift_state().machine == 3 && s.lift_state().role == 2 && walk_to(s, 17.3, -152.0, 6.0))) {
+        return ride;
+    }
+    ride.crown_up = ride_to_top(s, 3, &ride.crown_s);
+    ride.on_crown_exit = ride.crown_up && walk_to(s, 13.5, -151.5, 6.0) && s.advance_frame(0.5).accepted &&
+                         s.lift_state().role == 3;
+    if (!(ride.on_crown_exit && walk_to(s, 13.5, -156.5, 6.0) && s.advance_frame(0.5).accepted &&
+          s.lift_state().machine == 4 && s.lift_state().role == 2 && walk_to(s, 12.3, -157.5, 4.0) &&
+          walk_to(s, 12.3, -161.3, 6.0))) {
+        ride.end = s.snapshot();
+        return ride;
+    }
+    ride.derrick_up = ride_to_top(s, 4, &ride.derrick_s) && walk_to(s, 13.5, -184.3, 8.0) &&
+                      s.advance_frame(0.5).accepted && s.lift_state().role == 3;
+    ride.end = s.snapshot();
+    return ride;
+}
+
+void run_high() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation s(InitialSpawn::Deck750);
+    (void)s.advance_frame(1.0);
+    const HighRide ride = high_ride(s);
+    const auto &e = ride.end;
+    if (!ride.derrick_up) {
+        std::cerr << "high: vaulted=" << ride.vaulted << " crown_up=" << ride.crown_up << " crown_s=" << ride.crown_s
+                  << " on_crown_exit=" << ride.on_crown_exit << " at (" << e.player_position.x << ","
+                  << e.player_position.y << "," << e.player_position.z << ") travels=" << s.lift_state().travels[3]
+                  << "," << s.lift_state().travels[4] << " role=" << s.lift_state().role << " deaths=" << e.death_count
+                  << '\n';
+    }
+    require(ride.vaulted, "high: a vault over the 750 deck's east parapet onto the crown's receiver");
+    require(ride.crown_up && ride.on_crown_exit, "high: the crown gondola's cabin to its upper receiver at 778.09 m");
+    require(ride.derrick_up, "high: the derrick's cradle to its upper receiver at 802.64 m");
+    require(e.death_count == 0 && e.player_grounded &&
+                e.support_entity_id == scraperx::sim::vertical::Route::kDerrickStaticFirst + 2 &&
+                e.player_position.y > 803.3 && e.player_position.y < 803.8,
+            "high: standing on the derrick's upper receiver, about 800 m up, alive");
+    std::cout << "PASS scraperx_sim high: crown_s=" << ride.crown_s << " derrick_s=" << ride.derrick_s
+              << " top_y=" << e.player_position.y << '\n';
+}
+
 // The owner's law for this world (plan §2.6 rule 10): the initial state
 // determines the final state. The same start and the same inputs, twice: up
 // C5 on player inputs (walk, vault, crawl, sprint, leap, hang, climb), then O
@@ -5610,6 +5701,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "helix") {
         run_helix();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "high") {
+        run_high();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -7567,6 +7663,7 @@ int main() {
     run_mast();
     run_pitman();
     run_helix();
+    run_high();
     run_ascent();
 
     return EXIT_SUCCESS;

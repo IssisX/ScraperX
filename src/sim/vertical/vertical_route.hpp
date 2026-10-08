@@ -64,6 +64,16 @@ public:
     static constexpr std::uint64_t kHelixStaticFirst = 1969;   // frame, entry, exit
     static constexpr std::uint64_t kHelixDynamicFirst = 2926;  // barrel, deck, roller
     static constexpr std::uint64_t kHelixPlateWalkway = 1972;
+    // From the 750 deck: the crown gondola east of it, its lower receiver
+    // against the deck's east parapet at 750.1 m (a vault over the parapet),
+    // its cabin carried through a half turn of a 28 m crown to 778.09 m.
+    static constexpr std::uint64_t kCrownStaticFirst = 1973;   // frame, entry, exit
+    static constexpr std::uint64_t kCrownDynamicFirst = 2929;  // crown, cabin
+    // Then the luffing derrick, its mast 41 m north of the crown, its boom
+    // pointing south: lower receiver against the crown's upper one at
+    // 778.09 m, its cradle luffed up and in to 802.64 m.
+    static constexpr std::uint64_t kDerrickStaticFirst = 1976;   // frame, entry, exit
+    static constexpr std::uint64_t kDerrickDynamicFirst = 2931;  // boom, cradle, ballast
 
 private:
     struct Placed {
