@@ -577,6 +577,10 @@ public:
     // The ramp above the ladder floor, and the pin that holds it up the rail.
     static constexpr std::uint64_t kRampEntityId = 2305;
     static constexpr std::uint64_t kRampPinEntityId = 2306;
+    // The gate in front of the ladder above the ramp, and the pin that holds
+    // it shut. Lift the pin, then pull the gate off the ladder.
+    static constexpr std::uint64_t kGateEntityId = 2307;
+    static constexpr std::uint64_t kGateLatchEntityId = 2308;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

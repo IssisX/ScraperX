@@ -3509,6 +3509,139 @@ bool climb_ramp(scraperx::sim::Simulation &floor) {
     return true;
 }
 
+// The gate in front of the ladder on the ramp's floor. A pin holds it shut.
+// Lift the pin, pull the gate off the ladder, and the same player climbs.
+bool climb_gate(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    auto watch = [&](const double seconds) {
+        const int ticks = static_cast<int>(seconds * 90.0 + 0.5);
+        for (int step = 0; step < ticks; ++step) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+    };
+    require(walk_to(floor, 10.20, -146.55, 6.0, 0.16), "the player must reach the gate");
+    (void)floor.set_facing(0.0, 1.0);
+    watch(0.4);
+    require(!floor.snapshot().grip_available, "the gate must block the ladder until it is pulled aside");
+    require(walk_to(floor, 10.40, -146.90, 6.0, 0.16), "the player must reach the gate pin");
+    (void)floor.set_facing(1.0, 0.0);
+    watch(0.4);
+    require(floor.snapshot().carry_target_entity_id == Simulation::kGateLatchEntityId,
+            "the pin must be the thing in reach");
+    require(floor.request_pick_up(), "picking up the pin must be accepted");
+    watch(0.35);
+    require(floor.snapshot().carrying_entity_id == Simulation::kGateLatchEntityId, "the pin must be in the hands");
+    require(walk_to(floor, 9.20, -146.90, 6.0, 0.18), "the player must carry the pin clear");
+    require(floor.request_set_down(), "setting the pin down must be accepted");
+    watch(0.5);
+    const double gate_z0 = floor.kit_body_position(floor.kit_body_index(Simulation::kGateEntityId)).z;
+    require(walk_to(floor, 10.40, -146.45, 6.0, 0.08), "the player must reach the gate handle");
+    (void)floor.set_facing(0.0, 1.0);
+    for (int step = 0; step < 45; ++step) {
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+    }
+    require(floor.snapshot().carry_target_entity_id == Simulation::kGateEntityId,
+            "the gate must be the thing in reach");
+    require(floor.request_pick_up(), "taking the gate must be accepted");
+    for (int step = 0; step < 27; ++step) {
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+    }
+    require(floor.snapshot().carrying_entity_id == Simulation::kGateEntityId, "the gate must be in the hands");
+    bool swung = false;
+    for (int step = 0; step < 4 * 90 && !swung; ++step) {
+        (void)floor.set_move_input(0.0, -0.42);
+        (void)floor.set_facing(0.0, 1.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        swung = floor.kit_body_position(floor.kit_body_index(Simulation::kGateEntityId)).z < gate_z0 - 0.35;
+    }
+    (void)floor.set_move_input(0.0, 0.0);
+    if (floor.snapshot().carrying_entity_id != 0) {
+        (void)floor.request_set_down();
+    }
+    for (int step = 0; step < 27; ++step) {
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+    }
+    if (!swung) {
+        const auto gate = floor.kit_body_position(floor.kit_body_index(Simulation::kGateEntityId));
+        const auto p = floor.snapshot().player_position;
+        std::cout << "gate stayed z0=" << gate_z0 << " z=" << gate.z << " x=" << gate.x << " player " << p.x << " "
+                  << p.y << " " << p.z << " target=" << floor.snapshot().carry_target_entity_id << "\n";
+    }
+    require(swung, "the gate must swing off the ladder once the latch is open");
+    watch(0.4);
+    if (floor.snapshot().player_position.y < 655.5) {
+        const auto p = floor.snapshot().player_position;
+        const auto gate = floor.kit_body_position(floor.kit_body_index(Simulation::kGateEntityId));
+        std::cout << "fell pulling the gate player " << p.x << " " << p.y << " " << p.z << " gate " << gate.x << " "
+                  << gate.y << " " << gate.z << " deaths=" << floor.snapshot().death_count << "\n";
+    }
+    require(floor.snapshot().player_position.y > 655.5, "pulling the gate must not knock the player off the floor");
+    require(walk_to(floor, 10.20, -146.15, 6.0, 0.16), "the player must get back to the ladder");
+    (void)floor.set_facing(0.0, 1.0);
+    watch(0.4);
+    if (!floor.snapshot().grip_available) {
+        const auto p = floor.snapshot();
+        const auto gate = floor.kit_body_position(floor.kit_body_index(Simulation::kGateEntityId));
+        std::cout << "no ladder hold " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " gate " << gate.x << " " << gate.y << " " << gate.z << "\n";
+    }
+    require(floor.snapshot().grip_available, "the ladder must be a hold once the gate is aside");
+    require(floor.request_traversal(), "taking the ladder must be accepted");
+    watch(0.2);
+    require(is_climbing(floor.snapshot()), "the player must be on the ladder");
+    const bool climbed = hold_stick(floor, 0.0, 1.0, 0.0, 1.0, 40.0, [](const scraperx::sim::Snapshot &state) {
+        return standing_above(state, 672.40);
+    });
+    if (!climbed) {
+        const auto p = floor.snapshot();
+        std::cout << "stopped on the ladder " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded
+                  << " trav=" << static_cast<int>(p.traversal_state) << " deaths=" << p.death_count << "\n";
+    }
+    require(climbed, "the player must climb onto the next floor");
+    bool up = false;
+    for (int step = 0; step < 3 * 90; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto state = floor.snapshot();
+        if (state.death_count == 0 && state.player_grounded && state.player_position.y > 672.40 &&
+            state.player_position.x > 9.2 && state.player_position.x < 11.4 && state.player_position.z > -146.3 &&
+            state.player_position.z < -143.0 && state.support_entity_id == Simulation::kCraneFrameEntityId) {
+            up = true;
+            break;
+        }
+    }
+    if (!up) {
+        const auto p = floor.snapshot();
+        std::cout << "off the high ladder at " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " deaths=" << p.death_count << "\n";
+    }
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        const auto top = floor.snapshot();
+        std::cout << "snap " << g_path_watch.worst << " at " << g_path_watch.worst_at.x << " "
+                  << g_path_watch.worst_at.y << " " << g_path_watch.worst_at.z
+                  << " trav=" << g_path_watch.worst_traversal << " now " << top.player_position.x << " "
+                  << top.player_position.y << " " << top.player_position.z << " grounded=" << top.player_grounded
+                  << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "the gate and the ladder must not snap the body more than 0.15 m in one tick");
+    require(up, "the player must be standing on the next floor, still inside the building");
+    const auto landed = floor.snapshot();
+    std::cout << "PASS scraperx_sim gate: floor_y=" << landed.player_position.y
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
 // Same body, from standing on the 220 m ring, up through the rest of the
 // machines that are already in the building, to the floor the ladder reaches.
 bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seconds,
@@ -3563,6 +3696,7 @@ bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seco
     require_leg(run, climb_girder(run), "up the girder onto the next floor");
     require_leg(run, climb_shutter(run), "the sheet aside, then up the ladder");
     require_leg(run, climb_ramp(run), "the pin out, then up the ramp");
+    require_leg(run, climb_gate(run), "the gate aside, then up the ladder");
     const auto landed = run.snapshot();
     std::cout << "PASS scraperx_sim " << pass_name << ": seconds=" << landed.simulation_time_seconds - start_seconds
               << " at_340=" << at_340 << " at_484=" << at_484 << " floor_y=" << landed.player_position.y << '\n';
@@ -3582,6 +3716,7 @@ void run_girder() {
     require(climb_girder(floor), "up the girder onto the next floor");
     require(climb_shutter(floor), "the sheet aside, then up the ladder");
     require(climb_ramp(floor), "the pin out, then up the ramp");
+    require(climb_gate(floor), "the gate aside, then up the ladder");
 }
 
 int main() {

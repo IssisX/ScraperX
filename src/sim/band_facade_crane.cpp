@@ -678,11 +678,57 @@ kit::BodyIndex build_ramp(kit::Kit &kit, std::vector<Part> &frame) {
     (void)kit.add_pin_catch(ramp, pin, 0.15F, 0.08F);
     (void)rail;
 
-    frame.push_back(span({9.20F, 655.28F, -147.35F}, {11.50F, 655.52F, -145.05F}, Material::Concrete));
+    frame.push_back(span({9.20F, 655.28F, -150.20F}, {11.50F, 655.52F, -145.05F}, Material::Concrete));
     frame.push_back(span({9.70F, 640.25F, -147.15F}, {10.00F, 655.28F, -146.85F}, Material::Rust));
     frame.push_back(span({10.80F, 640.25F, -145.55F}, {11.10F, 655.28F, -145.25F}, Material::Rust));
     frame.push_back(span({10.80F, 640.25F, -147.15F}, {11.10F, 655.28F, -146.85F}, Material::Rust));
+    frame.push_back(span({10.15F, 640.25F, -149.85F}, {10.45F, 655.28F, -149.55F}, Material::Rust));
     return ramp;
+}
+
+// Above the ramp's floor. A gate stands in front of a ladder. A pin holds it
+// shut. Lift the pin, pull the gate off the ladder, and climb. The gate does
+// not carry you.
+kit::BodyIndex build_gate(kit::Kit &kit, std::vector<Part> &frame) {
+    const float hinge_x = 9.55F;
+    const float door_half_x = 0.62F;
+    const float door_mid_y = 656.90F;
+    const float door_z = -146.05F;
+    const kit::BodyIndex gate = kit.add_body(
+        Sim::kGateEntityId,
+        {box(JPH::Vec3(door_half_x, 1.15F, 0.035F), JPH::Vec3::sZero(), Material::Hazard),
+         box(JPH::Vec3(0.04F, 0.08F, 0.04F), JPH::Vec3(door_half_x - 0.18F, 0.0F, -0.07F), Material::Yellow)},
+        JPH::RVec3(hinge_x + door_half_x, door_mid_y, door_z), JPH::Quat::sIdentity(), 80.0F, 0.6F);
+    kit.set_carry(gate, kit::CarryKind::Handle, JPH::Vec3(door_half_x - 0.18F, 0.0F, -0.07F));
+    kit.set_damping(gate, 0.4F, 1.2F);
+    const JPH::RVec3 hinge(hinge_x, door_mid_y, door_z);
+    (void)kit.add_lever(gate, hinge, JPH::Vec3::sAxisY(), JPH::Vec3::sAxisX(), 0.0F, 1.45F);
+    // A pin on this floor holds the gate shut. Lift it, then pull the gate.
+    // Walking into the gate does nothing while the pin is in.
+    const JPH::RVec3 pin_at(11.00, 656.10, -146.90);
+    const kit::BodyIndex pin = add_pin(kit, frame, Sim::kGateLatchEntityId, pin_at);
+    (void)kit.add_pin_catch(gate, pin, 0.16F, 0.08F);
+
+    // Same arrangement as the shutter ladder. The floor starts 0.45 m past
+    // the ladder, and a plate hangs down from that edge so a climber can
+    // find the lip. The floor does not cover the person on the ladder.
+    constexpr float kGateLadderX = 10.20F;
+    constexpr float kGateLadderZ = -145.50F;
+    constexpr float kGateFloorTop = 672.00F;
+    constexpr float kGateFloorSouth = kGateLadderZ + 0.45F;
+    const float ladder_top = kGateFloorTop - 0.55F;
+    ladder(frame, kGateLadderX, kGateLadderZ, true, 655.52F, ladder_top);
+    frame.push_back(span({kGateLadderX - 0.70F, ladder_top - 0.85F, kGateFloorSouth - 0.05F},
+                         {kGateLadderX + 0.70F, kGateFloorTop, kGateFloorSouth + 0.06F}, Material::Steel));
+    frame.push_back(span({kGateLadderX - 0.95F, kGateFloorTop - 0.24F, kGateFloorSouth},
+                         {kGateLadderX + 1.15F, kGateFloorTop, kGateFloorSouth + 1.70F}, Material::Concrete));
+    frame.push_back(span({kGateLadderX - 0.80F, 640.25F, kGateFloorSouth + 0.75F},
+                         {kGateLadderX - 0.50F, kGateFloorTop - 0.24F, kGateFloorSouth + 1.05F},
+                         Material::Rust));
+    frame.push_back(span({kGateLadderX + 0.55F, 640.25F, kGateFloorSouth + 0.75F},
+                         {kGateLadderX + 0.85F, kGateFloorTop - 0.24F, kGateFloorSouth + 1.05F},
+                         Material::Rust));
+    return gate;
 }
 
 } // namespace
@@ -696,9 +742,11 @@ void build_facade_crane(kit::Kit &kit, FacadeCrane &crane) {
     build_girder(kit, frame);
     build_shutter(kit, frame);
     const kit::BodyIndex ramp = build_ramp(kit, frame);
+    const kit::BodyIndex gate = build_gate(kit, frame);
     const kit::BodyIndex frame_body =
         kit.add_body(Sim::kCraneFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     kit.disable_collision(ramp, frame_body);
+    kit.disable_collision(gate, frame_body);
     build_climbing_route(kit);
 }
 
