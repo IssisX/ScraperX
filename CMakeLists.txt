@@ -28,6 +28,16 @@ add_library(scraperx_sim STATIC
     src/sim/band_facade_crane.cpp
     src/sim/band_midstack_service.cpp
     src/sim/band_stack.cpp
+    src/sim/vertical/vertical_machine.cpp
+    src/sim/vertical/vertical_route.cpp
+    src/sim/vertical/gravity_balance.cpp
+    src/sim/vertical/traction_tram.cpp
+    src/sim/vertical/rack_climber.cpp
+    src/sim/vertical/crown_gondola.cpp
+    src/sim/vertical/barrel_helix.cpp
+    src/sim/vertical/cascade_mast.cpp
+    src/sim/vertical/luffing_derrick.cpp
+    src/sim/vertical/pitman_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)

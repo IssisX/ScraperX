@@ -4,6 +4,7 @@
 #include "sim/mechanism_kit.hpp"
 #include "sim/slingshot.hpp"
 #include "sim/swing.hpp"
+#include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
@@ -698,6 +699,9 @@ private:
     case scraperx::sim::InitialSpawn::Ring242South:
         // On the 242 ring's south side, where the swing sets its rider down.
         return {-15.0, 243.15, -129.3};
+    case scraperx::sim::InitialSpawn::Ring264West:
+        // On the 264 ring's west band, where C6's climber tops out.
+        return {-19.5, 265.15, -164.5};
     case scraperx::sim::InitialSpawn::Deck728:
         // On the 728 deck by C5's last mantle, north-east of stage O's cab.
         return {9.0, 729.05, -144.0};
@@ -1053,6 +1057,9 @@ public:
         swing_ = std::make_unique<Swing>(physics_system_, *kit_, player_id_);
         // C6, the west band's climb from the 242 ring to the 264 ring.
         ClimbC6::build(*kit_);
+        // The owner's vertical machines, on their own motors, where the route
+        // has no way up: from the 264 ring, the cascade mast.
+        vertical_ = std::make_unique<scraperx::sim::vertical::Route>(*kit_, physics_system_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -1068,6 +1075,7 @@ public:
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
         }
+        vertical_.reset();
         swing_.reset();
         slingshot_.reset();
         kit_.reset();
@@ -1119,6 +1127,8 @@ public:
         // The swing: Action and Drop, one-shot.
         bool swing_action = false;
         bool swing_drop = false;
+        // A vertical machine's control: Action, one-shot.
+        bool lift_action = false;
     };
 
     void step(const StepCommands &commands,
@@ -1208,6 +1218,7 @@ public:
             load_hold(bodies);
         }
 
+        vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0);
         kit_->pre_step(delta_seconds);
         contact_listener_.begin_tick();
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
@@ -1264,6 +1275,8 @@ public:
 
     [[nodiscard]] const Slingshot &slingshot() const noexcept { return *slingshot_; }
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
+    [[nodiscard]] const scraperx::sim::vertical::Route &vertical() const noexcept { return *vertical_; }
+    [[nodiscard]] std::uint64_t standing_entity() const noexcept { return grounded_ ? support_entity_id_ : 0; }
     [[nodiscard]] bool slingshot_flight() const noexcept { return slingshot_flight_; }
 
     // The slingshot's predicted path from the pouch now, swept with the
@@ -3540,6 +3553,7 @@ private:
         kit_->capture(checkpoint_.kit);
         checkpoint_.slingshot = slingshot_->state();
         checkpoint_.swing = swing_->state();
+        checkpoint_.vertical = vertical_->state();
     }
 
     // WO-008 automatic commit (GDD 9.1): every tick the player is grounded on
@@ -3582,6 +3596,7 @@ private:
         kit_->restore(checkpoint_.kit);
         slingshot_->restore(checkpoint_.slingshot);
         swing_->restore(checkpoint_.swing);
+        vertical_->restore(checkpoint_.vertical);
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
@@ -3791,6 +3806,7 @@ private:
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     std::unique_ptr<Slingshot> slingshot_;
     std::unique_ptr<Swing> swing_;
+    std::unique_ptr<scraperx::sim::vertical::Route> vertical_;
     // Thrown off the slingshot's bands and not yet down: the stick steers by
     // a bounded force instead of air control.
     bool slingshot_flight_ = false;
@@ -3879,6 +3895,7 @@ private:
         scraperx::sim::kit::Kit::Checkpoint kit{};
         Slingshot::State slingshot{};
         Swing::State swing{};
+        scraperx::sim::vertical::Route::State vertical{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
@@ -4317,12 +4334,14 @@ void Simulation::step_fixed() noexcept {
     commands.sling_drop = sling_drop_;
     commands.swing_action = swing_action_;
     commands.swing_drop = swing_drop_;
+    commands.lift_action = lift_action_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     sling_action_ = false;
     sling_drop_ = false;
     swing_action_ = false;
     swing_drop_ = false;
+    lift_action_ = false;
     jump_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;
@@ -4516,6 +4535,34 @@ SwingSnapshot Simulation::swing_state() const noexcept {
     result.ram_pivot = to_vector(Swing::ram_pivot());
     result.seat_pin = to_vector(swing.seat_pin());
     result.ram_pin = to_vector(swing.ram_pin());
+    return result;
+}
+
+bool Simulation::request_lift_action() noexcept {
+    if (lift_state().machine < 0) {
+        return false;
+    }
+    lift_action_ = true;
+    return true;
+}
+
+LiftSnapshot Simulation::lift_state() const noexcept {
+    using scraperx::sim::vertical::Route;
+    const Route &route = physics_world_->vertical();
+    const Route::Here here = route.at(physics_world_->standing_entity());
+    LiftSnapshot result;
+    result.machine = here.machine;
+    result.role = here.role == Route::Role::Deck    ? 1
+                  : here.role == Route::Role::Entry ? 2
+                  : here.role == Route::Role::Exit  ? 3
+                                                    : 0;
+    result.travel = here.travel;
+    result.target = here.target;
+    result.moving = here.moving;
+    result.machine_count = static_cast<int>(route.size());
+    for (std::size_t i = 0; i < route.size() && i < result.travels.size(); ++i) {
+        result.travels[i] = route.travel(i);
+    }
     return result;
 }
 

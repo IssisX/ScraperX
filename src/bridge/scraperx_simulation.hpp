@@ -171,6 +171,9 @@ public:
     [[nodiscard]] bool request_swing_action();
     [[nodiscard]] bool request_swing_drop();
     [[nodiscard]] godot::Dictionary get_swing_state() const;
+    // The owner's vertical machines: one-shot Action (send the deck, or call it).
+    [[nodiscard]] bool request_lift_action();
+    [[nodiscard]] godot::Dictionary get_lift_state() const;
 
 protected:
     static void _bind_methods();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <vector>
 #include <memory>
@@ -90,6 +91,8 @@ enum class InitialSpawn : std::uint8_t {
     Deck728 = 34,
     // On the 242 ring's south side, where the swing (AS-012) sets its rider down.
     Ring242South = 35,
+    // On the 264 ring's west band, where C6's climber tops out.
+    Ring264West = 36,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };
@@ -175,6 +178,18 @@ struct SwingSnapshot final {
     Vector3 ram_pivot{};
     Vector3 seat_pin{};
     Vector3 ram_pin{};
+};
+
+// The owner's vertical machines (src/sim/vertical): the one the player stands
+// on, if any, and where every deck is between its receivers.
+struct LiftSnapshot final {
+    int machine = -1;         // the machine underfoot, -1 when on none
+    int role = 0;             // 1 its deck, 2 its lower receiver, 3 its upper one
+    double travel = 0.0;      // that deck: 0 at the lower receiver, 1 at the upper
+    double target = 0.0;      // where it was last sent
+    bool moving = false;
+    int machine_count = 0;
+    std::array<double, 16> travels{};
 };
 
 // A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it
@@ -768,6 +783,10 @@ public:
     [[nodiscard]] bool request_swing_action() noexcept;
     [[nodiscard]] bool request_swing_drop() noexcept;
     [[nodiscard]] SwingSnapshot swing_state() const noexcept;
+    // A vertical machine: from its deck Action sends it to the other end;
+    // from a receiver, Action calls it there. Refused off every machine.
+    [[nodiscard]] bool request_lift_action() noexcept;
+    [[nodiscard]] LiftSnapshot lift_state() const noexcept;
     // The shot as it would fly from the pouch now, cut where it would first
     // hit something; empty unless a rider is seated.
     [[nodiscard]] std::vector<Vector3> slingshot_prediction() const;
@@ -800,6 +819,7 @@ private:
     bool sling_drop_ = false;
     bool swing_action_ = false;
     bool swing_drop_ = false;
+    bool lift_action_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
 };

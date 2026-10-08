@@ -262,6 +262,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_action"), &ScraperXSimulation::request_swing_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_drop"), &ScraperXSimulation::request_swing_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_lift_action"), &ScraperXSimulation::request_lift_action);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_lift_state"), &ScraperXSimulation::get_lift_state);
 }
 
 bool ScraperXSimulation::configure_initial_spawn(const std::int64_t initial_spawn) {
@@ -963,6 +965,27 @@ godot::Dictionary ScraperXSimulation::get_swing_state() const {
     out["ram_pivot"] = to_godot(state.ram_pivot);
     out["seat_pin"] = to_godot(state.seat_pin);
     out["ram_pin"] = to_godot(state.ram_pin);
+    return out;
+}
+
+bool ScraperXSimulation::request_lift_action() {
+    return simulation_->request_lift_action();
+}
+
+godot::Dictionary ScraperXSimulation::get_lift_state() const {
+    const sim::LiftSnapshot state = simulation_->lift_state();
+    godot::Dictionary out;
+    out["machine"] = static_cast<std::int64_t>(state.machine);
+    out["role"] = static_cast<std::int64_t>(state.role);
+    out["travel"] = state.travel;
+    out["target"] = state.target;
+    out["moving"] = state.moving;
+    out["machine_count"] = static_cast<std::int64_t>(state.machine_count);
+    godot::PackedFloat64Array travels;
+    for (int i = 0; i < state.machine_count && i < static_cast<int>(state.travels.size()); ++i) {
+        travels.push_back(state.travels[static_cast<std::size_t>(i)]);
+    }
+    out["travels"] = travels;
     return out;
 }
 

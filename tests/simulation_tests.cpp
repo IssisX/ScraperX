@@ -1,4 +1,5 @@
 #include "sim/simulation.hpp"
+#include "sim/vertical/vertical_route.hpp"
 
 #include <Jolt/Jolt.h>
 
@@ -3723,6 +3724,136 @@ void run_c6() {
               << " balanced_up=" << seen.balanced_up << '\n';
 }
 
+// The owner's vertical machines (MECHANISM_ASCENT_PLAN.md rule 12), from the
+// 264 ring: the cascade mast. Its 110 kN slider raises the outer stage 9 m;
+// one rope makes the inner stage rise twice that and a second makes the deck
+// rise three times, 27 m, to its upper receiver at 291.25 m.
+struct MastRide final {
+    bool on_entry = false;
+    bool on_deck = false;
+    bool arrived = false;
+    double ride_s = 0.0;
+    double peak_speed = 0.0;
+    double deck_y = 0.0;
+    bool on_exit = false;
+    scraperx::sim::Snapshot end{};
+};
+
+constexpr double kMastX = -10.65;      // the deck's centre
+constexpr double kMastEntryX = -16.0;  // on the lower and upper receivers
+constexpr double kMastZ = -150.0;
+
+bool mast_settled_at(const scraperx::sim::Simulation &s, const double travel) {
+    const auto lift = s.lift_state();
+    return std::abs(lift.travels[0] - travel) < 0.005 && !lift.moving;
+}
+
+MastRide mast_ride(scraperx::sim::Simulation &s) {
+    MastRide ride;
+    ride.on_entry = walk_to(s, -19.5, kMastZ, 12.0) && walk_to(s, kMastEntryX, kMastZ, 6.0) &&
+                    s.advance_frame(0.5).accepted && s.lift_state().machine == 0 && s.lift_state().role == 2;
+    ride.on_deck = ride.on_entry && walk_to(s, kMastX, kMastZ, 6.0) && s.advance_frame(0.5).accepted &&
+                   s.lift_state().role == 1;
+    if (!ride.on_deck) {
+        return ride;
+    }
+    (void)s.advance_frame(0.5);
+    (void)s.request_lift_action();
+    const double start = s.snapshot().simulation_time_seconds;
+    ride.arrived = wait_for(s, 90.0, [&s, &ride](const scraperx::sim::Snapshot &state) {
+        ride.peak_speed = std::max(ride.peak_speed, std::abs(state.player_linear_velocity.y));
+        return mast_settled_at(s, 1.0) && state.player_grounded;
+    });
+    ride.ride_s = s.snapshot().simulation_time_seconds - start;
+    ride.deck_y = s.snapshot().player_position.y;
+    ride.on_exit = ride.arrived && walk_to(s, kMastEntryX, kMastZ, 6.0) && s.advance_frame(0.5).accepted &&
+                   s.lift_state().role == 3;
+    ride.end = s.snapshot();
+    return ride;
+}
+
+void run_mast() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    // Left alone, the deck stays at its lower receiver.
+    {
+        Simulation idle(InitialSpawn::Ring264West);
+        (void)idle.advance_frame(20.0);
+        require(idle.lift_state().machine_count >= 1 && mast_settled_at(idle, 0.0),
+                "mast: left alone 20 s, the deck must stay at its lower receiver");
+    }
+    Simulation s(InitialSpawn::Ring264West);
+    (void)s.advance_frame(1.0);
+    const MastRide ride = mast_ride(s);
+    require(ride.on_entry, "mast: the walk along the 264 ring's west band onto the lower receiver");
+    require(ride.on_deck, "mast: from the receiver across the gap onto the deck");
+    require(ride.arrived && ride.ride_s > 15.0 && ride.ride_s < 60.0,
+            "mast: Action on the deck must raise it 27 m to its upper receiver");
+    require(ride.peak_speed < 2.0, "mast: the rider must ride the deck up at its drive's pace");
+    require(ride.on_exit && ride.end.death_count == 0 && ride.end.player_grounded &&
+                ride.end.support_entity_id == scraperx::sim::vertical::Route::kCascadeStaticFirst + 2 &&
+                ride.end.player_position.y > 292.0 && ride.end.player_position.y < 292.4,
+            "mast: and step off onto the upper receiver at 291.25 m, alive");
+    // The upper receiver calls the deck; on it, Action takes it back down.
+    {
+        require(walk_to(s, kMastX, kMastZ, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 1,
+                "mast return: back onto the deck");
+        (void)s.request_lift_action();
+        require(wait_for(s, 90.0, [&s](const scraperx::sim::Snapshot &state) {
+                    return mast_settled_at(s, 0.0) && state.player_grounded;
+                }),
+                "mast return: Action on the deck at the top must take it back down");
+        require(walk_to(s, kMastEntryX, kMastZ, 6.0) && s.advance_frame(0.5).accepted &&
+                    s.snapshot().player_position.y < 265.4 &&
+                    s.lift_state().role == 2,
+                "mast return: and step off onto the lower receiver");
+        (void)walk_to(s, -19.5, kMastZ, 6.0);
+        require(s.lift_state().machine < 0 && !s.request_lift_action(),
+                "mast: off every machine, Action must be refused");
+    }
+    // The same start and inputs, the same end, to the bit.
+    {
+        Simulation a(InitialSpawn::Ring264West);
+        Simulation b(InitialSpawn::Ring264West);
+        (void)a.advance_frame(1.0);
+        (void)b.advance_frame(1.0);
+        (void)mast_ride(a);
+        (void)mast_ride(b);
+        const auto wa = world_bits(a);
+        const auto wb = world_bits(b);
+        require(wa.size() == wb.size() && std::equal(wa.begin(), wa.end(), wb.begin()),
+                "mast: the same ride twice must end in the same state, bit for bit");
+    }
+    // Off the deck's open east side mid-ride, the rider falls into the well
+    // and dies; the restore brings back the rider on the deck where it was,
+    // and the deck goes on up to its upper receiver.
+    {
+        Simulation fall(InitialSpawn::Ring264West);
+        (void)fall.advance_frame(1.0);
+        require(walk_to(fall, -19.5, kMastZ, 12.0) && walk_to(fall, kMastX, kMastZ, 8.0),
+                "mast restore: onto the deck");
+        (void)fall.advance_frame(0.5);
+        (void)fall.request_lift_action();
+        require(wait_for(fall, 30.0, [&fall](const scraperx::sim::Snapshot &) {
+                    return fall.lift_state().travels[0] > 0.4;
+                }),
+                "mast restore: the deck must rise");
+        (void)walk_to(fall, -4.0, kMastZ, 4.0);
+        require(wait_for(fall, 20.0, [](const scraperx::sim::Snapshot &state) { return state.death_count == 1; }),
+                "mast restore: off the deck's open side, the rider must fall to their death");
+        // Restored where the rider last stood, at the deck's edge: step back in.
+        (void)fall.advance_frame(0.1);
+        require(fall.lift_state().role == 1 && walk_to(fall, kMastX, kMastZ, 4.0),
+                "mast restore: the restore must bring the rider back on the deck, and they step back in");
+        require(wait_for(fall, 90.0, [&fall](const scraperx::sim::Snapshot &state) {
+                    return mast_settled_at(fall, 1.0) && state.player_grounded && state.player_position.y > 292.0;
+                }),
+                "mast restore: restored on the deck, the rider must ride on to the top");
+    }
+    std::cout << "PASS scraperx_sim mast: ride_s=" << ride.ride_s << " peak_mps=" << ride.peak_speed
+              << " deck_y=" << ride.deck_y << " exit_y=" << ride.end.player_position.y << '\n';
+}
+
 // The owner's law for this world (plan §2.6 rule 10): the initial state
 // determines the final state. The same start and the same inputs, twice: up
 // C5 on player inputs (walk, vault, crawl, sprint, leap, hang, climb), then O
@@ -5370,6 +5501,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "C6") {
         run_c6();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "mast") {
+        run_mast();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -7324,6 +7460,7 @@ int main() {
     run_slingshot();
     run_swing();
     run_c6();
+    run_mast();
     run_ascent();
 
     return EXIT_SUCCESS;

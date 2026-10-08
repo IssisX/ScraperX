@@ -161,6 +161,7 @@ jobs:
             "PASS scraperx_sim slingshot" \
             "PASS scraperx_sim swing" \
             "PASS scraperx_sim C6" \
+            "PASS scraperx_sim mast" \
             "PASS scraperx_sim ascent 154 to TP-640"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
@@ -252,6 +253,8 @@ jobs:
           # ring (touch_slingshot); from that ring the swing, the ram's blow
           # and the seat's arc onto the 242 ring (touch_swing); and from the
           # 242 ring C6's climb, no ladder, to the 264 ring (touch_c6).
+          # From the 264 ring the cascade mast, on its motor, 27 m up to its
+          # upper receiver (touch_mast).
           # --fixed-fps makes simulated time exact however fast the runner is.
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
@@ -260,7 +263,7 @@ jobs:
               touch_checkpoint touch_stack_upper pad_stack_upper keyboard_stack_upper \
               touch_stack pad_stack keyboard_stack touch_wet pad_wet keyboard_wet \
               touch_shop pad_shop keyboard_shop touch_crane pad_crane keyboard_crane \
-              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 fall_voice; do
+              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_mast fall_voice; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

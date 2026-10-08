@@ -131,6 +131,12 @@ const KIT_POOL_FLOATS := 7
 const KIT_SPOUT_FLOATS := 7
 const KIT_PILE_FLOATS := 4
 const KIT_MAX_PILES := 16
+# The owner's vertical machines (src/sim/vertical/vertical_route.cpp), in
+# route order, and what the player stands on of one (LiftSnapshot.role).
+const LIFT_NAMES := ["CASCADE MAST"]
+const LIFT_ROLE_DECK := 1
+const LIFT_ROLE_ENTRY := 2
+const LIFT_ROLE_EXIT := 3
 const RUBBLE_DENSITY := 1600.0
 const RUBBLE_PILE_HEIGHT := 0.05
 const RIG_HOOK := 1
@@ -689,6 +695,8 @@ func _perform_action() -> void:
 				_native.request_slingshot_action()
 		&"swing":
 			_native.request_swing_action()
+		&"lift":
+			_native.request_lift_action()
 		&"s1":
 			# S1 is worked by standing on its plate; Action only reads it out.
 			pass
@@ -725,6 +733,8 @@ func _read_context() -> Dictionary:
 	var sling_seated := bool(sling["seated"])
 	var swing: Dictionary = _native.get_swing_state()
 	var swing_seated := bool(swing["seated"])
+	var lift: Dictionary = _native.get_lift_state()
+	var lift_machine := int(lift["machine"])
 	var support := int(_native.get_support_entity_id())
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	if bool(sling["can_retrieve"]) or bool(sling["recovering"]):
@@ -750,6 +760,19 @@ func _read_context() -> Dictionary:
 				"detail": "STEP OFF  %.0f M" % float(swing["seat_floor_y"])}
 	elif bool(swing["station_available"]):
 		action = {"id": &"swing", "icon": &"up", "label": "STRAP IN", "detail": "THE SWING"}
+	elif grounded and free and carrying == 0 and lift_machine >= 0:
+		# One of the owner's vertical machines, on its own motor: from its deck
+		# Action sends the deck to the other end; from a receiver it calls it.
+		var lift_name: String = LIFT_NAMES[lift_machine] if lift_machine < LIFT_NAMES.size() else "LIFT"
+		var role := int(lift["role"])
+		var lift_travel := float(lift["travel"])
+		if role == LIFT_ROLE_DECK:
+			if float(lift["target"]) < 0.5:
+				action = {"id": &"lift", "icon": &"up", "label": "RAISE", "detail": lift_name}
+			else:
+				action = {"id": &"lift", "icon": &"up", "label": "LOWER", "detail": lift_name}
+		elif (role == LIFT_ROLE_ENTRY and lift_travel > 0.01) or (role == LIFT_ROLE_EXIT and lift_travel < 0.99):
+			action = {"id": &"lift", "icon": &"up", "label": "CALL", "detail": lift_name}
 	elif grounded and free and carrying == 0 and (support == STACK_S1_CAGE or support == STACK_S1_PLATE) and \
 			float(_native.get_stack_s1_cage_travel()) < 0.05:
 		# In S1's cage at grade there is nothing to press: the rider's weight
