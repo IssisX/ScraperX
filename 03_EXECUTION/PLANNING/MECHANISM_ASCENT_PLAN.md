@@ -156,7 +156,9 @@ own gate.
     `…-Expansion-01`: gravity balance, traction tram, rack climber, crown gondola, barrel helix,
     cascade mast, luffing derrick, pitman lift) and the owner's stone wheel and slab-and-incline
     drawings are built as designed, motors included, where the route has no way up; working
-    machines are not redesigned.
+    machines are not redesigned. The aim (the owner, 2026-10-08): fill the band and level gaps
+    *"so the player can canonically climb from grade/ground all the way up the tower"*, one
+    unbroken route from grade to the summit.
 
 ## 3. The chain
 
