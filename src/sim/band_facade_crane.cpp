@@ -737,6 +737,7 @@ kit::BodyIndex build_gate(kit::Kit &kit, std::vector<Part> &frame) {
 // drags the cart up the rails. The cart is not a cage.
 void build_slat_tower(std::vector<Part> &frame);
 void build_duct(kit::Kit &kit, std::vector<Part> &frame);
+void build_casing(std::vector<Part> &frame);
 kit::BodyIndex build_cart_haul(kit::Kit &kit, std::vector<Part> &frame) {
     constexpr float kS = 0.70710678F;
     constexpr float kSlope = 2.3561945F; // local +X points up the 45° rail, west and up
@@ -935,6 +936,51 @@ void build_duct(kit::Kit &kit, std::vector<Part> &frame) {
     // you can see and not a point in the air.
     frame.push_back(span({6.02F, 713.30F, -146.72F}, {6.48F, 714.55F, -146.58F}, Material::Steel));
     frame.push_back(span({6.02F, 713.30F, -145.42F}, {6.48F, 714.55F, -145.28F}, Material::Steel));
+    build_casing(frame);
+}
+
+// South of the duct's deck. A fan casing stands against the east side of
+// the well. The climb is the outside of it: up the north ladder, south
+// along a gallery, up the south ladder, back north, up again. No pin,
+// no cage, and no stair that skips the housing.
+void build_casing(std::vector<Part> &frame) {
+    constexpr float kWallEast = 7.55F;
+    constexpr float kLadderX = 8.70F;
+    constexpr float kL1Z = -150.20F;
+    constexpr float kL2Z = -155.50F;
+    constexpr float kL3Z = -152.40F;
+
+    // The housing itself, founded on the cooling-tower level so it is not
+    // hanging off the duct deck.
+    frame.push_back(span({4.80F, 708.00F, -158.20F}, {kWallEast, 768.00F, -148.60F}, Material::Galvanised));
+    frame.push_back(span({5.10F, 640.25F, -157.90F}, {5.40F, 708.00F, -157.60F}, Material::Rust));
+    frame.push_back(span({7.00F, 640.25F, -157.50F}, {7.30F, 708.00F, -157.20F}, Material::Rust));
+
+    // Off the duct deck, south, onto the foot of the first ladder.
+    frame.push_back(span({7.00F, 713.86F, -150.50F}, {11.00F, 714.10F, -147.20F}, Material::Concrete));
+    frame.push_back(span({8.15F, 713.86F, -152.10F}, {11.00F, 714.10F, -150.50F}, Material::Concrete));
+    ladder(frame, kLadderX, kL1Z, true, 714.35F, 728.55F);
+    frame.push_back(span({kLadderX - 0.70F, 727.70F, -149.98F}, {kLadderX + 0.70F, 729.10F, -149.82F},
+                         Material::Steel));
+    frame.push_back(span({8.15F, 728.86F, -149.90F}, {11.20F, 729.10F, -148.20F}, Material::Concrete));
+    frame.push_back(span({7.50F, 728.70F, -149.90F}, {8.20F, 729.10F, -148.20F}, Material::Steel));
+
+    // East of the ladders, so the walk south does not stand on a rung.
+    frame.push_back(span({9.20F, 728.86F, -155.15F}, {11.20F, 729.10F, -148.20F}, Material::Concrete));
+    frame.push_back(span({8.15F, 728.86F, -155.15F}, {11.20F, 729.10F, -154.20F}, Material::Concrete));
+    ladder(frame, kLadderX, kL2Z, true, 729.35F, 743.55F);
+    frame.push_back(span({kLadderX - 0.70F, 742.70F, -155.98F}, {kLadderX + 0.70F, 744.10F, -155.82F},
+                         Material::Steel));
+    frame.push_back(span({8.15F, 743.86F, -157.80F}, {11.20F, 744.10F, -155.85F}, Material::Concrete));
+    frame.push_back(span({7.50F, 743.70F, -157.80F}, {8.20F, 744.10F, -155.85F}, Material::Steel));
+
+    frame.push_back(span({9.20F, 743.86F, -157.80F}, {11.20F, 744.10F, -152.70F}, Material::Concrete));
+    frame.push_back(span({8.15F, 743.86F, -153.50F}, {11.20F, 744.10F, -152.70F}, Material::Concrete));
+    ladder(frame, kLadderX, kL3Z, true, 744.35F, 758.55F);
+    frame.push_back(span({kLadderX - 0.70F, 757.70F, -152.13F}, {kLadderX + 0.70F, 759.10F, -151.97F},
+                         Material::Steel));
+    frame.push_back(span({8.15F, 758.86F, -152.05F}, {11.20F, 759.10F, -150.30F}, Material::Concrete));
+    frame.push_back(span({7.50F, 758.70F, -152.05F}, {8.20F, 759.10F, -150.30F}, Material::Steel));
 }
 
 } // namespace

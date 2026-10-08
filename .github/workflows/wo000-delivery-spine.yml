@@ -156,13 +156,14 @@ jobs:
             "PASS scraperx_sim cart" \
             "PASS scraperx_sim slats" \
             "PASS scraperx_sim duct" \
+            "PASS scraperx_sim casing" \
             "PASS scraperx_sim service skin"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
-          # The 154 m trip ends standing on the deck the duct climbs to
-          # (player centre about 715.0), above the cooling-tower floor.
-          awk -F'floor_y=' '/ascent 154 to the next floor/ {split($2,a," "); exit (a[1]+0 >= 714.70 && a[1]+0 <= 715.30) ? 0 : 1}' \
+          # The 154 m trip ends standing on the casing gallery (player centre
+          # about 760.0), above the duct deck.
+          awk -F'floor_y=' '/ascent 154 to the next floor/ {split($2,a," "); exit (a[1]+0 >= 759.70 && a[1]+0 <= 760.30) ? 0 : 1}' \
             artifacts/native-falsifiers.log
           # AS-006 Stage A, the skip lift: no link, no lift (the cage never
           # moves while the rope is on the bollard, and the stage re-rigs);

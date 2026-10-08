@@ -3944,6 +3944,74 @@ bool climb_duct(scraperx::sim::Simulation &floor) {
     return true;
 }
 
+// The fan casing south of the duct deck. Up the outside, south along the
+// gallery, up again, back north, up onto the top gallery. No pin.
+bool climb_casing(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    auto say = [&](const char *what) {
+        const auto p = floor.snapshot();
+        std::cout << what << " " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " grip=" << p.grip_available << " trav=" << static_cast<int>(p.traversal_state)
+                  << " deaths=" << p.death_count << "\n";
+    };
+    if (!(walk_to(floor, 10.10, -149.10, 8.0, 0.20) && walk_to(floor, 10.10, -151.30, 6.0, 0.20))) {
+        say("casing bridge");
+        return false;
+    }
+    if (!climb_wet_hold(floor, 8.70, -150.85, 0.0, 1.0, false, 729.4)) {
+        say("casing first ladder");
+        return false;
+    }
+    if (!(walk_to(floor, 10.10, -148.70, 6.0, 0.20) && walk_to(floor, 10.10, -154.60, 8.0, 0.20) &&
+          walk_to(floor, 8.70, -154.70, 6.0, 0.15))) {
+        say("casing south gallery");
+        return false;
+    }
+    if (!climb_wet_hold(floor, 8.70, -154.85, 0.0, -1.0, false, 744.4)) {
+        say("casing second ladder");
+        return false;
+    }
+    if (!(walk_to(floor, 10.10, -156.60, 6.0, 0.20) && walk_to(floor, 10.10, -153.10, 8.0, 0.20) &&
+          walk_to(floor, 8.70, -153.10, 6.0, 0.15))) {
+        say("casing north gallery");
+        return false;
+    }
+    if (!climb_wet_hold(floor, 8.70, -153.05, 0.0, 1.0, false, 759.4)) {
+        say("casing third ladder");
+        return false;
+    }
+    bool up = false;
+    for (int step = 0; step < 3 * 90; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto state = floor.snapshot();
+        if (state.death_count == 0 && state.player_grounded && state.player_position.y > 759.6 &&
+            state.player_position.x > 8.2 && state.player_position.x < 10.6 &&
+            state.player_position.z > -151.9 && state.player_position.z < -150.4 &&
+            state.support_entity_id == Simulation::kCraneFrameEntityId) {
+            up = true;
+            break;
+        }
+    }
+    if (!up) {
+        say("casing deck");
+    }
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        std::cout << "casing snap " << g_path_watch.worst << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "the casing must not snap the body more than 0.15 m in one tick");
+    require(up, "the player must be standing on the casing gallery, still inside the building");
+    const auto landed = floor.snapshot();
+    std::cout << "PASS scraperx_sim casing: floor_y=" << landed.player_position.y
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
 // Same body, from standing on the 220 m ring, up through the rest of the
 // machines that are already in the building, to the floor the ladder reaches.
 bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seconds,
@@ -4002,6 +4070,7 @@ bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seco
     require_leg(run, climb_cart(run), "onto the cart, then up the rail");
     require_leg(run, climb_slats(run), "up the cooling-tower slats");
     require_leg(run, climb_duct(run), "the duct down, then up it");
+    require_leg(run, climb_casing(run), "up the outside of the casing");
     const auto landed = run.snapshot();
     std::cout << "PASS scraperx_sim " << pass_name << ": seconds=" << landed.simulation_time_seconds - start_seconds
               << " at_340=" << at_340 << " at_484=" << at_484 << " floor_y=" << landed.player_position.y << '\n';
@@ -4025,6 +4094,7 @@ void run_girder() {
     require(climb_cart(floor), "onto the cart, then up the rail");
     require(climb_slats(floor), "up the cooling-tower slats");
     require(climb_duct(floor), "the duct down, then up it");
+    require(climb_casing(floor), "up the outside of the casing");
 }
 
 int main() {
