@@ -68,8 +68,21 @@ int main() {
     require(miss.debug_restart_at({10,114.9,-181}),"supported miss-path staging",miss);
     stop(miss);
     (void)miss.set_facing(0,-1);(void)miss.set_move_input(-1,.35);(void)miss.request_jump();
-    wait(miss,55);stop(miss,160);
+    wait(miss,55);
+    // Neutral airborne input preserves the committed jump's momentum.
+    // Recover by deliberately countersteering, using the ordinary controller.
+    for(int i=0;i<160;++i) {
+        const auto state=miss.snapshot();
+        const auto v=state.player_linear_velocity;
+        if(!state.player_grounded)
+            (void)miss.set_move_input(std::clamp(-v.x*.4,-1.,1.),std::clamp(-v.z*.4,-1.,1.));
+        else (void)miss.set_move_input(0,0);
+        tick(miss);
+    }
+    (void)miss.set_move_input(0,0);
     require(miss.snapshot().player_grounded && std::abs(miss.snapshot().player_position.y-110.9)<.12 && miss.snapshot().death_count==0,"wrong-way jump misses grip and recovers on catch deck",miss);
+    require(miss.snapshot().support_entity_id==1960 && miss.snapshot().grip_entity_id==0,
+            "miss recovery uses actual catch-deck footing without an unintended grip",miss);
     require(miss.restart_checkpoint(),"checkpoint restores supported state",miss);stop(miss);
     require(miss.snapshot().player_grounded,"restored footing is physical",miss);
     std::cout<<"PASS AS-026 missed jump recovery and checkpoint restore\n";

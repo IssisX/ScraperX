@@ -615,11 +615,18 @@ int main() {
             require(foundation.entity_body_count(entity) == 0,
                     "default world must not construct a retired fixture or campaign body");
         }
-        // AS-027 adds nine movers and three static bodies; existing cables remain unchanged.
-        require(foundation.moving_body_count() == 27 + 9,
+        // AS-027 owns nine movers and three static bodies. Later encounters
+        // append real bodies/cables without replacing this existing machine.
+        for (std::uint64_t entity = 2970; entity <= 2978; ++entity)
+            require(foundation.entity_body_count(entity) == 1,
+                    "default world must retain every service-lift mover exactly once");
+        for (std::uint64_t entity = 1970; entity <= 1972; ++entity)
+            require(foundation.entity_body_count(entity) == 1,
+                    "default world must retain every service-lift support exactly once");
+        require(foundation.moving_body_count() >= 27 + 9,
                 "default world must retain existing movers and include the nine service-lift movers");
-        require(foundation.kit_body_count() == 38 + 12 && foundation.kit_cable_count() == 3,
-                "default world must retain existing kit bodies and three cables, plus twelve service-lift bodies");
+        require(foundation.kit_body_count() >= 38 + 12 && foundation.kit_cable_count() >= 3,
+                "default world must retain existing kit bodies and cables, plus twelve service-lift bodies");
         require(foundation.entity_body_count(Simulation::kTowerEntityId) > 1 &&
                     foundation.entity_body_count(Simulation::kWorldSolidEntityId) > 0,
                 "the tower frame and environment must remain real collision geometry");
@@ -643,7 +650,9 @@ int main() {
         (void)foundation.advance_frame(2.0);
         require(foundation.snapshot().player_grounded && foundation.snapshot().death_count == 0,
                 "the default jump must land safely on grade");
-        std::cout << "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=36 kit_bodies=50 locomotion=1 crouch=1 jump=1\n";
+        std::cout << "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies="
+                  << foundation.moving_body_count() << " kit_bodies=" << foundation.kit_body_count()
+                  << " locomotion=1 crouch=1 jump=1\n";
     }
 
     {
@@ -668,11 +677,20 @@ int main() {
                   << " jump_requests=0\n";
 
         Simulation drop(InitialSpawn::HighDrop);
+        const auto original_movers = drop.moving_body_count();
+        const auto original_kit_bodies = drop.kit_body_count();
         (void)drop.advance_frame(8.0);
         require(drop.snapshot().death_count == 1 && drop.snapshot().player_grounded,
                 "default fatal fall must restore safely without any legacy body queries");
-        require(drop.moving_body_count() == 27 + 9 && drop.kit_body_count() == 38 + 12,
-                "checkpoint restore must retain the service lift without recreating retired machinery");
+        require(drop.moving_body_count() == original_movers && drop.kit_body_count() == original_kit_bodies,
+                "checkpoint restore must retain the complete current machinery inventory");
+        for (std::uint64_t entity = 2970; entity <= 2978; ++entity)
+            require(drop.entity_body_count(entity) == 1,
+                    "checkpoint restore must retain every service-lift mover exactly once");
+        for (std::uint64_t entity = 3; entity <= 59; ++entity)
+            if (entity != Simulation::kTowerEntityId && entity != Simulation::kWorldSolidEntityId)
+                require(drop.entity_body_count(entity) == 0,
+                        "checkpoint restore must not recreate retired machinery");
         std::cout << "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0\n";
     }
 
@@ -2339,7 +2357,23 @@ int main() {
     // centre from the flight walks off its north edge diagonally, into the
     // gap, before reaching far enough east to be over the landing at all.
     walk_toward(ascent, kLegalFortyMidLandingX - 0.85, kLegalFortyHingeZ, 10.0);
-    walk_toward(ascent, kLegalFortyMidLandingX, kLegalFortyMidLandingZ, 10.0);
+    // Full-stick dithering at this narrow arrival can leave the body in a
+    // small airborne bounce on the arbitrary final tick. Deliberately brake
+    // to physical footing instead of relying on implicit airborne stopping.
+    for (int i = 0; i < 10 * 90; ++i) {
+        const auto state = ascent.snapshot();
+        const double dx = kLegalFortyMidLandingX - state.player_position.x;
+        const double dz = kLegalFortyMidLandingZ - state.player_position.z;
+        if (state.player_grounded && std::hypot(dx, dz) < 0.06 &&
+            horizontal_magnitude(state.player_linear_velocity) < 0.10) break;
+        (void)ascent.set_move_input(
+            std::clamp(dx * 1.8 - state.player_linear_velocity.x * 0.28, -1.0, 1.0),
+            std::clamp(dz * 1.8 - state.player_linear_velocity.z * 0.28, -1.0, 1.0));
+        if (std::hypot(dx, dz) > 0.0001) (void)ascent.set_facing(dx, dz);
+        (void)ascent.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    (void)ascent.set_move_input(0.0, 0.0);
+    (void)ascent.advance_frame(30 * Simulation::kFixedStepSeconds);
     const auto mid_landing_state = ascent.snapshot();
     require(mid_landing_state.player_grounded &&
                 mid_landing_state.player_position.y >= kLegalFortyMidLandingSurfaceY + 0.70,
@@ -3636,9 +3670,15 @@ int main() {
     for (int tick = 0; tick < 3 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
         const auto s = water_lift.snapshot();
         if (!braked && !s.player_grounded && s.player_position.z < -113.0) {
-            require(water_lift.set_move_input(0.0, 0.0),
-                    "air control must accept a braking input");
             braked = true;
+        }
+        if (braked) {
+            // Neutral preserves airborne momentum. Brake deliberately through
+            // the ordinary bounded controller until actual grating contact.
+            require(water_lift.set_move_input(
+                        s.player_grounded ? 0.0 : std::clamp(-s.player_linear_velocity.x * 0.4, -1.0, 1.0),
+                        s.player_grounded ? 0.0 : std::clamp(-s.player_linear_velocity.z * 0.4, -1.0, 1.0)),
+                    "air control must accept deliberate countersteering");
         }
         require(water_lift.advance_frame(Simulation::kFixedStepSeconds).accepted,
                 "dock transfer jump tick must advance");

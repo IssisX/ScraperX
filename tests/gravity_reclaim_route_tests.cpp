@@ -114,6 +114,11 @@ int main(){
          "late exit miss lands on the real319m recovery crossing",s);
  require(s.snapshot().landing_normal_speed_mps>8,
          "recovery crossing retains a consequential actual landing",s);
+ // The real recall panel at(-40.5,-158.25) obstructs a straight walk.
+ // Use the open strip beside it, then return to the crossing centre.
+ walk(s,-41.6,-158.75);
+ walk(s,-39.6,-158.75);
+ walk(s,-39.6,-158.25);
  walk(s,-24.7,-158.25);
  require(s.snapshot().player_grounded&&s.snapshot().support_entity_id!=2201,
          "miss recovery reaches supported onward Tower footing",s);

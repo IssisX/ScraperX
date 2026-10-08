@@ -35,6 +35,25 @@ int main(){
  const auto loaded=drive_sample(s);
  std::cout<<"AS027_LOAD unloaded_force="<<empty.force<<" loaded_force="<<loaded.force<<" unloaded_draw="<<empty.work<<" loaded_draw="<<loaded.work<<'\n';
  require(loaded.force>empty.force+500&&loaded.work>empty.work+200,"actual rider increases actuator demand",s);
+ const auto moving=s.snapshot();
+ require(moving.player_grounded&&moving.support_entity_id==2973&&
+         moving.support_point_linear_velocity.y>.5,"moving restart starts on real rising footing",s);
+ require(s.restart_checkpoint(),"moving deck checkpoint restore accepted",s);
+ const auto restored=s.snapshot();const auto deck_velocity=s.kit_body_velocity(s.kit_body_index(2973));
+ std::cout<<"AS027_RESTORE player_vy="<<restored.player_linear_velocity.y<<
+            " deck_vy="<<deck_velocity.y<<" fresh_grounded="<<restored.player_grounded<<'\n';
+ require(!restored.player_grounded&&std::abs(deck_velocity.y)>.5&&
+         std::abs(restored.player_linear_velocity.y-deck_velocity.y)<.02,
+         "restart preserves restored deck transport without publishing stale footing",s);
+ tick(s,30);
+ require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==2973,
+         "neutral restored rider earns fresh deck contact",s);
+ // Restart engaged the brake. Resume real motion so the existing release
+ // check still measures braking a driven load, rather than an idle hold.
+ (void)s.set_service_lift_input(1);tick(s,180);
+ require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==2973&&
+         s.snapshot().support_point_linear_velocity.y>.5&&!s.snapshot().service_lift_braking,
+         "ordinary release starts from genuine resumed rising drive",s);
  (void)s.set_service_lift_input(0);const double stop_y=s.snapshot().service_lift_surface_y;double max_drop=0;
  for(int i=0;i<180;++i){tick(s);max_drop=std::max(max_drop,stop_y-s.snapshot().service_lift_surface_y);}
  require(max_drop<.02&&s.snapshot().service_lift_braking,"release applies finite brake within20mm",s);

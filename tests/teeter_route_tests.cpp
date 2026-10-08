@@ -29,17 +29,22 @@ double ballast_position(const Simulation &simulation) {
 bool walk_to(Simulation &simulation, const double x, const double z,
              const double seconds = 12.0, const double pace = 1.0) {
     for (int tick = 0; tick < static_cast<int>(seconds * 90.0); ++tick) {
-        const auto p = simulation.snapshot().player_position;
+        const auto state = simulation.snapshot();
+        const auto p = state.player_position;
+        const auto v = state.player_linear_velocity;
         const double dx = x - p.x;
         const double dz = z - p.z;
         const double d = std::hypot(dx, dz);
-        if (d < 0.12) {
+        // Reaching the target in flight is not supported arrival. Deliberate
+        // braking must remove approach momentum before releasing the stick.
+        if (d < 0.12 && std::hypot(v.x, v.z) < 0.15 && state.player_grounded) {
             (void)simulation.set_move_input(0, 0);
             return true;
         }
-        const double scale = std::min(1.0, d / 0.6) / d;
-        (void)simulation.set_move_input(dx * scale * pace, dz * scale * pace);
-        (void)simulation.set_facing(dx / d, dz / d);
+        (void)simulation.set_move_input(
+            std::clamp(dx * 1.8 * pace - v.x * 0.28, -1.0, 1.0),
+            std::clamp(dz * 1.8 * pace - v.z * 0.28, -1.0, 1.0));
+        if (d > 0.0001) (void)simulation.set_facing(dx / d, dz / d);
         (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
     }
     (void)simulation.set_move_input(0, 0);
@@ -75,12 +80,18 @@ int main() {
     // moment only when the player has moved it along the visible rail.
     Simulation no_ballast(InitialSpawn::TeeterEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(no_ballast, 0.5);
-    if (!walk_to(no_ballast, 27.2, -139.0) ||
-        !walk_to(no_ballast, 32.8, -139.0)) return 22;
+    if (!walk_to(no_ballast, 27.2, -139.0)) return 22;
+    const auto unadjusted_ballast = ballast_position(no_ballast);
+    // Inspect on the clear side of the visible carriage; walking through
+    // its contact envelope would physically operate it during this control.
+    if (!walk_to(no_ballast, 27.8, -138.58) ||
+        !walk_to(no_ballast, 29.8, -138.58) ||
+        !walk_to(no_ballast, 32.8, -138.58)) return 22;
     advance(no_ballast, 3.0);
     report(no_ballast, "RIDER_ALONE");
     if (no_ballast.snapshot().support_entity_id != 2800 ||
-        angle(no_ballast) < 0.02) {
+        angle(no_ballast) < 0.02 ||
+        std::abs(ballast_position(no_ballast) - unadjusted_ballast) > 0.05) {
         std::cerr << "FAIL rider alone tipped the unadjusted beam\n";
         return 23;
     }
@@ -203,6 +214,31 @@ int main() {
         break;
     }
     if (!jumped_from_motion) return 16;
+    Simulation restored_motion(InitialSpawn::TeeterFarDrop, scraperx::sim::WorldContent::PipeBridge);
+    bool restored_from_motion = false;
+    for (int tick = 0; tick < 180; ++tick) {
+        (void)restored_motion.advance_frame(Simulation::kFixedStepSeconds);
+        const auto contact = restored_motion.snapshot();
+        if (!contact.player_grounded || contact.support_entity_id != 2800 ||
+            std::abs(contact.support_point_linear_velocity.y) < 0.5 ||
+            std::abs(contact.checkpoint_position.y - contact.player_position.y) > 0.02) continue;
+        if (!restored_motion.restart_checkpoint()) return 28;
+        const auto restored = restored_motion.snapshot();
+        const auto com_velocity = restored_motion.kit_body_velocity(restored_motion.kit_body_index(2800));
+        std::cout << "ROTATING_RESTORE player_vy=" << restored.player_linear_velocity.y
+                  << " contact_vy=" << contact.support_point_linear_velocity.y
+                  << " com_vy=" << com_velocity.y << "\n";
+        if (restored.player_grounded ||
+            std::abs(restored.player_linear_velocity.y - contact.support_point_linear_velocity.y) > 0.5 ||
+            std::abs(restored.player_linear_velocity.y - com_velocity.y) < 0.5) return 29;
+        advance(restored_motion, 0.5);
+        if (!restored_motion.snapshot().player_grounded ||
+            restored_motion.snapshot().support_entity_id != 2800 ||
+            restored_motion.snapshot().death_count != 0) return 30;
+        restored_from_motion = true;
+        break;
+    }
+    if (!restored_from_motion) return 31;
     Simulation replay(InitialSpawn::TeeterEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(replay, 0.5);
     if (!walk_to(replay, 27.2, -139.0)) return 12;

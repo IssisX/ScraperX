@@ -1,0 +1,2 @@
+CHECKPOINT before_player_vy=0.94229 before_support_vy=0.91592 restored_player_vy=0 restored_deck_vy=0.942289 fresh_grounded=0
+FAIL AS027 restart is at rest relative to the genuinely restored support pos=-30.797,125.434,-162 support=0 station=0 energy=4.21136e+06

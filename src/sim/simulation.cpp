@@ -7206,6 +7206,25 @@ private:
     // Kinematic bodies are deliberately excluded -- see BodyCheckpoint comment.
     void capture_machine_checkpoint(const JPH::BodyInterface &bodies,
                                     MachineCheckpoint &checkpoint) const noexcept {
+        checkpoint.support_body = JPH::BodyID();
+        checkpoint.support_entity = 0;
+        checkpoint.support_local_contact = JPH::Vec3::sZero();
+        if (grounded_ && !support_sample_.body_id.IsInvalid()) {
+            const auto support = kit_->body_for_entity(support_sample_.entity_id);
+            // Kit restores these exact dynamic bodies, including their pose
+            // and momentum. Nonrewound kinematic fixtures provide no saved
+            // transport, and a nearby body is never a substitute for contact.
+            if (support.valid() && kit_->body_dynamic(support) && kit_->body_enabled(support) &&
+                kit_->body_id(support) == support_sample_.body_id) {
+                checkpoint.support_body = support_sample_.body_id;
+                checkpoint.support_entity = support_sample_.entity_id;
+                const JPH::RVec3 point(support_sample_.contact_point.x,
+                                      support_sample_.contact_point.y,
+                                      support_sample_.contact_point.z);
+                checkpoint.support_local_contact =
+                    bodies.GetCenterOfMassTransform(checkpoint.support_body).Inversed() * point;
+            }
+        }
         if (!regression_fixtures_) {
             checkpoint.carrying_entity = carried_entity_;
             kit_->capture(checkpoint.kit);
@@ -7322,13 +7341,27 @@ private:
         if (cargo_net_) cargo_net_->restore(checkpoint_.cargo_net);
         if (service_lift_) service_lift_->restore(checkpoint_.service_lift);
         if (supplied_ascent_) supplied_ascent_->restore(checkpoint_.supplied_ascent);
+        JPH::Vec3 restored_transport = JPH::Vec3::sZero();
+        const auto saved_support = kit_->body_for_entity(checkpoint_.support_entity);
+        if (saved_support.valid() && saved_support.value < checkpoint_.kit.bodies.size() &&
+            checkpoint_.kit.bodies[saved_support.value].enabled &&
+            kit_->body_dynamic(saved_support) && kit_->body_enabled(saved_support) &&
+            kit_->body_id(saved_support) == checkpoint_.support_body) {
+            const JPH::RVec3 point = bodies.GetCenterOfMassTransform(checkpoint_.support_body) *
+                                    checkpoint_.support_local_contact;
+            restored_transport = bodies.GetPointVelocity(checkpoint_.support_body, point);
+        }
+        // Restart at rest relative to the restored support, rather than
+        // replaying player walking or discarding the machine's transport.
+        // Contacts remain cleared below and must be earned on the next tick.
+        bodies.SetLinearAndAngularVelocity(player_id_, restored_transport, JPH::Vec3::sZero());
         restore_carry_topology(checkpoint_.carrying_entity);
-        // The body comes back at rest, so what it holds does too. Restored
-        // with the walking speed it was committed at, the load swung out of
-        // the still hands and dragged the body back off the edge it had just
-        // been restored onto (observed at MOD-HALL-DECK's north edge).
+        // The translation-only holder and its load share the transport. Do
+        // not replay walking speed or independently corotate the held load.
+        // Replaying committed walking speed previously swung the load out
+        // of the still hands and pulled the player off MOD-HALL-DECK's edge.
         if (carry_constraint_ != nullptr) {
-            bodies.SetLinearAndAngularVelocity(carried_id_, JPH::Vec3::sZero(),
+            bodies.SetLinearAndAngularVelocity(carried_id_, restored_transport,
                                                JPH::Vec3::sZero());
         }
         // No topology reconciliation call needed here, unlike the needle:
@@ -7353,7 +7386,7 @@ private:
         jump_vault_ticks_left_ = 0;
         support_entity_id_ = 0;
         support_sample_ = {};
-        airborne_inherited_velocity_ = JPH::Vec3::sZero();
+        airborne_inherited_velocity_ = restored_transport;
         air_full_speed_ = kPlayerMaximumRelativeSpeed;
         sprinting_ = false;
         balancing_ = false;
@@ -7983,6 +8016,11 @@ private:
         std::uint64_t carrying_entity = 0;
         // AS-006: every kit body, rope end, parted rope and catch.
         scraperx::sim::kit::Kit::Checkpoint kit{};
+        // Genuine contact on a Kit body included in this rollback. The
+        // generation-bearing BodyID prevents a replaced support being used.
+        JPH::BodyID support_body{};
+        std::uint64_t support_entity = 0;
+        JPH::Vec3 support_local_contact = JPH::Vec3::sZero();
         PipeBridge::State pipe_bridge{};
         Slingshot::State slingshot{};
         SwingStair::State swing_stair{};

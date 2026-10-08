@@ -1,0 +1,29 @@
+PASS AS-026 missed jump recovery and checkpoint restore
+PASS AS-026 launch shelf supported
+CATCH y=114.963 x=6.16825 qz=-0.0575202
+TRACE t=0 qz=-0.0501201 x=6.29468 vy=0.188843 support=2960 y=113.569
+TRACE t=45 qz=-0.0264918 x=6.7037 vy=4.47522 support=2960 y=114.97
+TRACE t=90 qz=0.00377952 x=7.20904 vy=1.30757 support=2960 y=115.279
+TRACE t=135 qz=0.0283088 x=7.60523 vy=0.00188061 support=2960 y=115.629
+TRACE t=180 qz=0.0383433 x=7.75088 vy=-0.632129 support=2960 y=115.855
+TRACE t=225 qz=0.0289128 x=7.60966 vy=-0.188281 support=2960 y=115.836
+TRACE t=270 qz=0.00513161 x=7.22645 vy=0.0955453 support=2960 y=115.77
+TRACE t=315 qz=-0.0252675 x=6.73666 vy=0.680445 support=2960 y=116.214
+TRACE t=360 qz=-0.0499306 x=6.33401 vy=0.933729 support=2960 y=116.635
+TRACE t=405 qz=-0.056463 x=6.2267 vy=0.332249 support=2960 y=116.894
+TRACE t=450 qz=-0.0421611 x=6.40204 vy=0.140017 support=2960 y=117.324
+TRACE t=495 qz=-0.0162501 x=6.70554 vy=1.36848 support=2960 y=117.651
+TRACE t=540 qz=0.0113681 x=7.02033 vy=1.36898 support=2960 y=118.053
+TRACE t=585 qz=0.0304366 x=7.22973 vy=1.16091 support=2960 y=118.336
+TRACE t=630 qz=0.0328013 x=7.25805 vy=1.10831 support=2960 y=118.722
+TRACE t=675 qz=0.0174776 x=7.11224 vy=0.831208 support=2960 y=119.102
+TRACE t=720 qz=-0.00954509 x=6.8744 vy=0.120277 support=2960 y=119.397
+TRACE t=765 qz=-0.0379936 x=6.64915 vy=0.928445 support=2960 y=119.796
+HAND_SAMPLES retained=1522 transfers=14 max_chord=2.07405e-06
+PASS hand support-frame interpolation retained=1522 regrips=14 maximum_chord_error_m=2.07405e-06 rendered_chord_distance_m=8.05711e-06
+FLIGHT x=6.51182 y=119.813 z=-180.715
+FLIGHT x=7.37952 y=120.529 z=-180.006
+FLIGHT x=8.70037 y=120.154 z=-179.365
+RECEIVER 9.90926,119.9,-178.778
+FINAL_GRIP state=4 xyz=8.878,119.9,-178.443
+PASS AS-026 suspended_ladder support=11 walking_surface_m=121 deaths=0 swing_quaternion_span=0.088976

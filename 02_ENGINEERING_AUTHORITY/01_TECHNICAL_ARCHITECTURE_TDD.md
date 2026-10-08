@@ -510,6 +510,16 @@ A commit captures all state required for equivalent continuation, including:
 
 Transient solver caches/contact manifolds need not be serialized if equivalent valid state can be reconstructed deterministically enough without them.
 
+Native gameplay restarts resume the player at rest relative to a genuinely
+restored dynamic Kit support. The machine checkpoint records its generation-safe
+body identity and actual body-local contact anchor; after rollback, the existing
+native point-velocity calculation supplies transport, including rotation. Walking
+velocity is not replayed. A held translation-only load shares player transport
+with zero angular velocity. Static, missing/replaced, disabled or nonrewound
+kinematic supports provide no saved transport. Ground/contact state is cleared
+and must be reconstructed through fresh physics contact; this restoration is not
+a new jump, foothold or gameplay actuator.
+
 ### 14.2 Format
 
 Persistence uses a versioned schema with:
