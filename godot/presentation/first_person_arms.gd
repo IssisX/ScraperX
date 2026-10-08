@@ -110,6 +110,10 @@ var _remote: Node3D
 var _remote_buttons := {}
 var _remote_led: MeshInstance3D
 var _risers: Array[MeshInstance3D] = []
+var _canopy_cells: Array[MeshInstance3D] = []
+var _suspension: Array[MeshInstance3D] = []
+var _canopy_span := 0.0
+var _canopy_clearance := 0.0
 var _grip_forward := Vector3.FORWARD
 var _last_traversal := 0
 var _clock := 0.0
@@ -133,9 +137,20 @@ func build(sleeve: Material, band: Material, glove: Material, glove_dark: Materi
 		_hands.append(hand)
 	_build_remote(remote_body, remote_face, remote_button, stop_red, led)
 	for i in 2:
-		var line := _mesh(_cylinder(0.0035, 0.0035, 1.0), riser)
+		var line := _mesh(_cylinder(0.006, 0.006, 1.0), riser)
 		line.visible = false
 		_risers.append(line)
+	# The cloth is the parachute. The lines only connect the hands to it.
+	var pale := _cloth(Color(0.84, 0.82, 0.74))
+	var marked := _cloth(Color(0.55, 0.22, 0.07))
+	for i in 9:
+		var cell := _mesh(_box(Vector3(0.73, 0.12, 2.85)), marked if i % 2 == 0 else pale)
+		cell.visible = false
+		_canopy_cells.append(cell)
+	for i in 5:
+		var line := _mesh(_cylinder(0.005, 0.005, 1.0), riser)
+		line.visible = false
+		_suspension.append(line)
 
 
 func _mesh(mesh: Mesh, material: Material) -> MeshInstance3D:
@@ -466,7 +481,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		_solve_arm(hand, shoulder, wrist, hand_basis, _pole(pose, hand.side, forward, torso_right))
 		_pose_fingers(hand)
 
-	_update_risers(chute and operating == &"" and traversal == 0)
+	_update_risers(chute and operating == &"" and traversal == 0, camera.origin, forward)
 
 
 # [wrist, basis, anchored, smoothing rate, curl, thumb curl] in world space.
@@ -643,24 +658,74 @@ func _pose_fingers(hand: Hand) -> void:
 	(hand.thumb[1] as Node3D).rotation = Vector3(-0.7 * hand.thumb_curl, 0.0, 0.0)
 
 
-# Canopy risers from each toggle up and out of frame; the canopy itself is
-# above the view, where a real one would be.
-func _update_risers(show: bool) -> void:
-	for i in _risers.size():
-		var line := _risers[i]
-		line.visible = show
+# A ram-air wing in the look-up arc. The eye can rise about 72 degrees, so the
+# nose sits forward and low enough to enter that view. Lines end on the cloth.
+func _update_risers(show: bool, eye: Vector3, forward: Vector3) -> void:
+	var ahead := forward
+	ahead.y = 0.0
+	if ahead.length_squared() < 1.0e-6:
+		ahead = Vector3.FORWARD
+	ahead = ahead.normalized()
+	var right := ahead.cross(Vector3.UP)
+	if right.length_squared() < 1.0e-6:
+		right = Vector3.RIGHT
+	right = right.normalized()
+	var breathe := sin(_clock * 1.7) * 0.03
+	# Low and forward on purpose. The eye stops around 72 degrees up, and a
+	# wing parked overhead never enters that view: looking up showed only lines.
+	var nose := eye + ahead * 2.40 + Vector3.UP * (2.35 + breathe)
+	var tail := eye + ahead * 0.15 + Vector3.UP * (3.70 + breathe)
+	var chord := tail - nose
+	var span := 6.4
+	var normal := chord.cross(right).normalized()
+	for i in _canopy_cells.size():
+		var cell := _canopy_cells[i]
+		cell.visible = show
 		if not show:
 			continue
-		var fist := _hands[i].root.global_transform * Vector3(0.0, 0.07, 0.0)
-		var outward := _hands[i].root.global_position - _hands[1 - i].root.global_position
-		outward.y = 0.0
-		var top := fist + Vector3.UP * 2.6
-		if outward.length_squared() > 1.0e-6:
-			top += outward.normalized() * 0.35
-		var span := top - fist
-		var basis := _basis_from_y(span, Vector3.RIGHT)
-		line.global_transform = Transform3D(Basis(basis.x, basis.y * span.length(), basis.z),
-			(fist + top) * 0.5)
+		var u := (float(i) + 0.5) / float(_canopy_cells.size()) - 0.5
+		var mid: Vector3 = nose.lerp(tail, 0.5) + right * (u * span)
+		cell.global_transform = Transform3D(Basis(right, normal, chord.normalized()), mid)
+	_canopy_span = span if show else 0.0
+	_canopy_clearance = nose.y - eye.y if show else 0.0
+	if not show:
+		for line in _risers:
+			line.visible = false
+		for line in _suspension:
+			line.visible = false
+		return
+	var left_tail := tail - right * (span * 0.48) - Vector3.UP * 0.55
+	var right_tail := tail + right * (span * 0.48) - Vector3.UP * 0.55
+	var left_nose := nose - right * (span * 0.42) - Vector3.UP * 0.45
+	var right_nose := nose + right * (span * 0.42) - Vector3.UP * 0.45
+	var right_fist := _hands[0].root.global_transform * Vector3(0.0, 0.07, 0.0)
+	var left_fist := _hands[1].root.global_transform * Vector3(0.0, 0.07, 0.0)
+	_place_line(_risers[0], right_fist, right_tail)
+	_place_line(_risers[1], left_fist, left_tail)
+	_place_line(_suspension[0], right_fist, right_nose)
+	_place_line(_suspension[1], left_fist, left_nose)
+	_place_line(_suspension[2], right_fist, nose + right * 0.4)
+	_place_line(_suspension[3], left_fist, nose - right * 0.4)
+	_place_line(_suspension[4], right_fist, right_nose.lerp(right_tail, 0.5))
+
+
+func _place_line(line: MeshInstance3D, fro: Vector3, to: Vector3) -> void:
+	var span := to - fro
+	if span.length_squared() < 1.0e-8:
+		line.visible = false
+		return
+	var basis := _basis_from_y(span, Vector3.RIGHT)
+	line.global_transform = Transform3D(Basis(basis.x, basis.y * span.length(), basis.z),
+		(fro + to) * 0.5)
+	line.visible = true
+
+
+func _cloth(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.9
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return material
 
 
 # --- test hooks for the scripted --uitest proof --------------------------------
@@ -706,3 +771,8 @@ func remote_visible() -> bool:
 
 func risers_visible() -> bool:
 	return _risers[0].visible and _risers[1].visible
+
+
+func canopy_visible() -> bool:
+	return _canopy_cells.size() == 9 and _canopy_cells[0].visible and _canopy_span >= 4.0 \
+		and _canopy_clearance > 1.0

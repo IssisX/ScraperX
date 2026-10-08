@@ -484,8 +484,9 @@ func _touch_chute() -> bool:
 	if not reached_2:
 		return _fail("CHUTE did not deploy the canopy")
 	await _seconds(0.6)
-	if not _main._arms.risers_visible() or _main._arms.hand_poses() != [6, 6]:
-		return _fail("hands are not on the canopy toggles (poses %s)" % str(_main._arms.hand_poses()))
+	if not _main._arms.risers_visible() or not _main._arms.canopy_visible() \
+			or _main._arms.hand_poses() != [6, 6]:
+		return _fail("the chute is lines with no canopy, or the hands left the toggles (poses %s)" % str(_main._arms.hand_poses()))
 	await _pose("canopy")
 	var reached_3: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 15.0)
 	if not reached_3:
