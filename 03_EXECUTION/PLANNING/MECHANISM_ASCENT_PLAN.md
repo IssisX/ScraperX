@@ -149,7 +149,8 @@ own gate.
     is a physical experience the route has not had yet: thrown by stored energy, swung on a
     hanging mass, carried by something falling, tipping or rolling, a run and leap the
     player's momentum decides. The ladders and pull-started lifts already on the route from
-    grade to the +221 m ring are replaced one at a time.
+    grade to the +221 m ring stay as they are (the owner, 2026-10-08: *"Leave S2, S3 and the
+    ladders alone, just build machines"*); S1's weight start (cycle 1c) was the only one changed.
 12. **Fill the gaps with machines.** The owner (2026-10-08): *"I want you to fill empty gaps with
     machines."* The supplied vertical-machine packs (`ScraperX-Vertical-Machines`,
     `…-Expansion-01`: gravity balance, traction tram, rack climber, crown gondola, barrel helix,
