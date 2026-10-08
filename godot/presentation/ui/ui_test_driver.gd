@@ -82,10 +82,11 @@ const SCENARIOS := {
 	# C6, the west band, from the 242 ring where the swing sets its rider down
 	# to the 264 ring: no ladder, no standpipe.
 	"touch_c6": 35,
-	# The cascade mast (the owner's vertical machines), from the 264 ring's west
-	# band where C6 tops out: onto its deck, RAISE, 27 m up on its motor, and
-	# off onto its upper receiver at 291.25 m.
-	"touch_mast": 36,
+	# The owner's vertical machines, from the 264 ring's west band where C6
+	# tops out, on their own motors: the cascade mast 27 m up, the walkway out
+	# the west face, the pitman lift 23.6 m, the barrel helix 24 m, the walkway
+	# back east and a mantle onto TP-340.
+	"touch_machines": 36,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -113,8 +114,6 @@ const SERVICE_FRAME_ENTITY := 1012
 # The world's solids, the rings among them: what C6's climber stands on at the
 # 264 ring.
 const RING_264_ENTITY := 51
-# The cascade mast's upper receiver (vertical_route.hpp: statics 1962-1964).
-const MAST_EXIT_ENTITY := 1964
 # The walker's braking with nothing pressed, as the native has it: 22 m/s^2
 # on the ground, 14 in the air. Keys walking to a point let go by the weaker;
 # with a load in the hands, which caps it (5.3 for D's 50 kg spool), by less.
@@ -249,8 +248,8 @@ func _run() -> void:
 			ok = await _swing(InputRouter.Device.TOUCH)
 		"touch_c6":
 			ok = await _c6(InputRouter.Device.TOUCH)
-		"touch_mast":
-			ok = await _mast(InputRouter.Device.TOUCH)
+		"touch_machines":
+			ok = await _machines(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -1892,27 +1891,52 @@ func _c6(device: int) -> bool:
 	return true
 
 
-func _mast(device: int) -> bool:
-	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
-	var started := int(_native().get_tick_index())
-	var body := _watch_body()
-	if not (await _go(device, Vector2(-19.5, -150.0), 0.15, 12.0) and \
-			await _go(device, Vector2(-16.0, -150.0), 0.15, 6.0) and \
-			await _go(device, Vector2(-10.65, -150.0), 0.15, 6.0)):
-		return _fail("mast: the walk onto the deck stalled at %s" % str(_position()))
-	await _pose("mast_deck")
-	if not await _offered(&"lift", "RAISE", "CASCADE MAST"):
-		return _fail("mast: RAISE not offered on the deck (offered %s)" % _action_label())
+# One of the owner's vertical machines: from its lower receiver at `entry`
+# onto its deck at `deck`, RAISE, up to its upper receiver, and off onto it.
+func _ride_machine(device: int, index: int, name: String, entry: Vector2, deck: Vector2) -> bool:
+	if not (await _go(device, entry, 0.15, 8.0) and await _go(device, deck, 0.15, 6.0)):
+		return _fail("%s: the walk onto the deck stalled at %s" % [name, str(_position())])
+	if not await _offered(&"lift", "RAISE", name):
+		return _fail("%s: RAISE not offered on the deck (offered %s)" % [name, _action_label()])
 	_act(device)
 	if not await _wait_until(func() -> bool:
 			var lift: Dictionary = _native().get_lift_state()
-			return float(lift["travels"][0]) > 0.995 and not bool(lift["moving"]) and \
-				bool(_ctx()["grounded"]), 60.0):
-		return _fail("mast: the deck never reached its upper receiver (at %s)" % str(_position()))
-	await _pose("mast_top")
-	if not await _go(device, Vector2(-16.0, -150.0), 0.15, 6.0):
-		return _fail("mast: the step off onto the upper receiver stalled at %s" % str(_position()))
+			return absf(float(lift["travels"][index]) - 1.0) < 0.01 and not bool(lift["moving"]) and \
+				bool(_ctx()["grounded"]), 90.0):
+		return _fail("%s: the deck never reached its upper receiver (at %s)" % [name, str(_position())])
+	await _pose("machine_%d_top" % index)
+	if not await _go(device, entry, 0.15, 6.0):
+		return _fail("%s: the step off onto the upper receiver stalled at %s" % [name, str(_position())])
 	await _seconds(0.5)
+	if int(_native().get_lift_state()["role"]) != 3:
+		return _fail("%s: not standing on the upper receiver (y %.2f)" % [name, _position().y])
+	return true
+
+
+func _machines(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var body := _watch_body()
+	if not await _go(device, Vector2(-19.5, -150.0), 0.15, 12.0):
+		return _fail("machines: the walk along the 264 ring stalled at %s" % str(_position()))
+	if not await _ride_machine(device, 0, "CASCADE MAST", Vector2(-16.0, -150.0), Vector2(-10.65, -150.0)):
+		return false
+	var mast_y := _position().y
+	if not await _go(device, Vector2(-19.5, -149.25), 0.15, 6.0):
+		return _fail("machines: the walkway out the west face stalled at %s" % str(_position()))
+	if not await _ride_machine(device, 1, "PITMAN LIFT", Vector2(-23.5, -149.0), Vector2(-23.5, -154.3)):
+		return false
+	var pitman_y := _position().y
+	if not await _ride_machine(device, 2, "BARREL HELIX", Vector2(-27.0, -149.0), Vector2(-30.8, -149.0)):
+		return false
+	var helix_y := _position().y
+	if not await _go(device, Vector2(-15.2, -149.0), 0.1, 10.0):
+		return _fail("machines: the walkway east to TP-340 stalled at %s" % str(_position()))
+	if not await _c4_mantle(device, Vector2(1.0, 0.0), 340.6, "TP-340"):
+		return false
+	await _go(device, Vector2(-12.0, -149.0), 0.15, 4.0)
+	await _seconds(1.0)
+	await _pose("machines_tp340")
 	var worst_step := _stop_watch(body)
 	if worst_step > 0.25:
 		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
@@ -1921,11 +1945,11 @@ func _mast(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
-	if int(_native().get_support_entity_id()) != MAST_EXIT_ENTITY or not _standing_above(292.0):
-		return _fail("mast: not standing on the upper receiver (y %.2f, on %d)" % [_position().y,
-			int(_native().get_support_entity_id())])
-	_detail = "exit_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
-		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
+	if not _standing_above(341.0):
+		return _fail("machines: not standing on TP-340 (y %.2f)" % _position().y)
+	_detail = "mast_y=%.2f pitman_y=%.2f helix_y=%.2f tp340_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		mast_y, pitman_y, helix_y, _position().y, float(int(_native().get_tick_index()) - started) / 90.0,
+		worst_step, float(body["lift"])]
 	return true
 
 

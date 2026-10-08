@@ -28,6 +28,31 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     // receiver is 27 m higher, at 291.25 m.
     place("sx.cascade_mast.v1", {RVec3(-10.65, 260.95, -150.0), JPH_PI},
           {kCascadeStaticFirst, 3}, {kCascadeDynamicFirst, 3});
+
+    // The pitman lift: turned so its crank's plane runs north-south at
+    // x -21.0, its deck and receivers west of it (x -25.5 to -21.5). The
+    // receivers sit at z -150.5 to -147.5, the deck north of them; the frame's
+    // columns at z -168.3 and -140.3 stand clear of the north-west corner
+    // column. Lower receiver 3.3 m over the origin: 291.25 m.
+    place("sx.pitman_lift.v1", {RVec3(-23.5, 287.95, -154.3), -0.5F * JPH_PI},
+          {kPitmanStaticFirst, 3}, {kPitmanDynamicFirst, 3});
+    // A steel walkway west from the mast's upper receiver (x -17.45) out
+    // through the open west face to the pitman's lower receiver (x -21.5),
+    // flush with both at 291.25 m.
+    kit_.add_body(kMastPitmanWalkway, {box(Vec3(2.025F, 0.15F, 1.25F), Material::Galvanised)},
+                  RVec3(-19.475, 291.1, -149.25), Quat::sIdentity(), 0.0F, 0.8F);
+
+    // The barrel helix, unturned: its barrel's axis at x -40.8, z -149, its
+    // deck and receivers east of it, the lower receiver (x -28.5 to -25.5)
+    // against the pitman's upper one. Lower receiver 4.55 m over the origin:
+    // 314.89 m; upper receiver 338.89 m.
+    place("sx.barrel_helix.v1", {RVec3(-40.8, 310.34, -149.0), 0.0F},
+          {kHelixStaticFirst, 3}, {kHelixDynamicFirst, 3});
+    // From its upper receiver east over the pitman's frame and through the
+    // open west face to TP-340's west edge (x -14.6), 1.36 m under the plate's
+    // top (340.25 m).
+    kit_.add_body(kHelixPlateWalkway, {box(Vec3(5.45F, 0.15F, 1.5F), Material::Galvanised)},
+                  RVec3(-20.05, 338.74, -149.0), Quat::sIdentity(), 0.0F, 0.8F);
 }
 
 Route::~Route() = default;

@@ -51,6 +51,19 @@ public:
     // band: its lower receiver and deck level with the band (264.25 m).
     static constexpr std::uint64_t kCascadeStaticFirst = 1962;   // frame, entry, exit
     static constexpr std::uint64_t kCascadeDynamicFirst = 2920;  // two stages, deck
+    // The pitman lift outside the west face, its crank in a plane 0.9 m clear
+    // of the 308 band's outer edge: lower receiver at 291.25 m, joined to the
+    // mast's upper receiver by a walkway across the face; upper at 314.89 m.
+    static constexpr std::uint64_t kPitmanStaticFirst = 1965;   // frame, entry, exit
+    static constexpr std::uint64_t kPitmanDynamicFirst = 2923;  // crank, deck, rod
+    static constexpr std::uint64_t kMastPitmanWalkway = 1968;
+    // The barrel helix west of the pitman's upper receiver: its lower receiver
+    // abuts that one at 314.89 m; its upper, 24 m higher at 338.89 m, opens on
+    // a walkway east across the west face to TP-340's edge, 1.36 m below the
+    // plate's top: a mantle onto it.
+    static constexpr std::uint64_t kHelixStaticFirst = 1969;   // frame, entry, exit
+    static constexpr std::uint64_t kHelixDynamicFirst = 2926;  // barrel, deck, roller
+    static constexpr std::uint64_t kHelixPlateWalkway = 1972;
 
 private:
     struct Placed {

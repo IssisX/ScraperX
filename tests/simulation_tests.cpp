@@ -3854,6 +3854,100 @@ void run_mast() {
               << " deck_y=" << ride.deck_y << " exit_y=" << ride.end.player_position.y << '\n';
 }
 
+// The second of the owner's vertical machines: the pitman lift outside the
+// west face. A 600 kNm motor turns its 24 m crank through 160 degrees; the
+// crank pin drives an 18 m rod whose foot pulls the deck up its guide, 23.6 m,
+// slowing near both ends as the crank's geometry gears it down.
+constexpr double kPitmanX = -23.5;
+constexpr double kPitmanDeckZ = -154.3;
+constexpr double kPitmanReceiverZ = -149.0;
+
+bool pitman_ride(scraperx::sim::Simulation &s, double *ride_s) {
+    if (!(walk_to(s, -19.5, -149.25, 6.0) && walk_to(s, kPitmanX, kPitmanReceiverZ, 6.0) &&
+          s.advance_frame(0.5).accepted && s.lift_state().machine == 1 && s.lift_state().role == 2 &&
+          walk_to(s, kPitmanX, kPitmanDeckZ, 6.0) && s.advance_frame(0.5).accepted &&
+          s.lift_state().role == 1)) {
+        return false;
+    }
+    (void)s.request_lift_action();
+    const double start = s.snapshot().simulation_time_seconds;
+    const bool up = wait_for(s, 90.0, [&s](const scraperx::sim::Snapshot &state) {
+        const auto lift = s.lift_state();
+        return std::abs(lift.travels[1] - 1.0) < 0.005 && !lift.moving && state.player_grounded;
+    });
+    *ride_s = s.snapshot().simulation_time_seconds - start;
+    return up && walk_to(s, kPitmanX, kPitmanReceiverZ, 6.0) && s.advance_frame(0.5).accepted &&
+           s.lift_state().role == 3;
+}
+
+void run_pitman() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation s(InitialSpawn::Ring264West);
+    (void)s.advance_frame(1.0);
+    require(mast_ride(s).on_exit, "pitman: the cascade mast to its upper receiver");
+    require(std::abs(s.lift_state().travels[1]) < 0.005,
+            "pitman: left alone through the mast's ride, its deck must stay at its lower receiver");
+    double ride_s = 0.0;
+    require(pitman_ride(s, &ride_s), "pitman: across the walkway, onto its deck, RAISE, and off at the top");
+    const auto end = s.snapshot();
+    require(end.death_count == 0 && end.player_grounded &&
+                end.support_entity_id == scraperx::sim::vertical::Route::kPitmanStaticFirst + 2 &&
+                end.player_position.y > 315.6 && end.player_position.y < 316.0 && ride_s > 15.0 && ride_s < 60.0,
+            "pitman: standing on its upper receiver at 314.89 m, alive");
+    std::cout << "PASS scraperx_sim pitman: ride_s=" << ride_s << " exit_y=" << end.player_position.y << '\n';
+}
+
+// The third: the barrel helix west of the pitman. A 100 kNm motor turns a
+// 12 m barrel whose spiral flight, 24 m to the turn, pushes a free roller on
+// the deck's arm up its guide; the deck rises 24 m. From its upper receiver a
+// walkway runs east to TP-340's edge, and a mantle puts the rider on the plate.
+bool helix_ride(scraperx::sim::Simulation &s, double *ride_s) {
+    if (!(walk_to(s, -27.0, -149.0, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().machine == 2 &&
+          s.lift_state().role == 2 && walk_to(s, -30.8, -149.0, 6.0) && s.advance_frame(0.5).accepted &&
+          s.lift_state().role == 1)) {
+        return false;
+    }
+    (void)s.request_lift_action();
+    const double start = s.snapshot().simulation_time_seconds;
+    const bool up = wait_for(s, 120.0, [&s](const scraperx::sim::Snapshot &state) {
+        const auto lift = s.lift_state();
+        return std::abs(lift.travels[2] - 1.0) < 0.01 && !lift.moving && state.player_grounded;
+    });
+    *ride_s = s.snapshot().simulation_time_seconds - start;
+    return up && walk_to(s, -27.0, -149.0, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3;
+}
+
+void run_helix() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation s(InitialSpawn::Ring264West);
+    (void)s.advance_frame(1.0);
+    double pitman_s = 0.0;
+    require(mast_ride(s).on_exit && pitman_ride(s, &pitman_s), "helix: the mast and the pitman to 314.89 m");
+    double ride_s = 0.0;
+    const bool rode = helix_ride(s, &ride_s);
+    if (!rode) {
+        const auto st = s.snapshot();
+        std::cerr << "helix: at (" << st.player_position.x << "," << st.player_position.y << ","
+                  << st.player_position.z << ") travel=" << s.lift_state().travels[2] << " role="
+                  << s.lift_state().role << " deaths=" << st.death_count << '\n';
+    }
+    require(rode, "helix: onto its deck, RAISE, 24 m up, and off at its upper receiver");
+    require(s.snapshot().player_position.y > 339.6 && s.snapshot().player_position.y < 340.0,
+            "helix: standing on its upper receiver at 338.89 m");
+    require(walk_to(s, -15.2, -149.0, 8.0) && c4_mantle(s, 1.0, 0.0, 340.6, "TP-340"),
+            "helix: along the walkway east and a mantle onto TP-340");
+    (void)walk_to(s, -12.0, -149.0, 4.0);
+    (void)s.advance_frame(1.0);
+    const auto end = s.snapshot();
+    require(end.death_count == 0 && end.player_grounded && end.player_position.y > 341.0 &&
+                end.player_position.y < 341.5,
+            "helix: standing on TP-340, alive");
+    std::cout << "PASS scraperx_sim helix: ride_s=" << ride_s << " tp340_y=" << end.player_position.y
+              << " support=" << end.support_entity_id << '\n';
+}
+
 // The owner's law for this world (plan §2.6 rule 10): the initial state
 // determines the final state. The same start and the same inputs, twice: up
 // C5 on player inputs (walk, vault, crawl, sprint, leap, hang, climb), then O
@@ -5506,6 +5600,16 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "mast") {
         run_mast();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "pitman") {
+        run_pitman();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "helix") {
+        run_helix();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -7461,6 +7565,8 @@ int main() {
     run_swing();
     run_c6();
     run_mast();
+    run_pitman();
+    run_helix();
     run_ascent();
 
     return EXIT_SUCCESS;
