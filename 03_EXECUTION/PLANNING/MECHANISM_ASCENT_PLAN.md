@@ -10,9 +10,14 @@ authoring contract is adopted below (§2), its opening mechanism is audited with
 and its catalogue is mapped onto what this engine can build (§14). Revised 2026-09-28 when the
 owner had the `Gemini` branch's world merged into this branch: its stages from deck 4 to deck 14
 and its link into the well to +221 m are §6–§12.
-**Method:** mechanism-chain-forge (backward from the effect; contract; causal proof) with the
-causal-mechanism-compiler's `MACRO-TRAVERSAL-STRICT` profile and its deterministic evaluator
-(`stage1dof.py`) for every drive, terminal and band claim.
+**Method:** mechanism-chain-forge (backward from the effect; contract; causal proof), with the
+deterministic evaluator (`stage1dof.py`) for drive, terminal and band claims where it applies.
+**No list of allowed parts** (the owner, 2026-10-08). The `MACRO-TRAVERSAL-STRICT` profile this
+plan once adopted banned gears, cams, ratchets, pawls, clutches, fluid drives, buoyancy and motors
+from a machine's load path; that ban is lifted. Any machine that works in the world may be built:
+the test is the physics, not a parts list. What stays: motion is caused (the solver moves every
+body; nothing is keyframed or scripted), every force is finite, a powered machine's motor has a
+rating it can stall against, and every machine is proven with the real player.
 **Supersedes:** this plan's 2026-09-25 chain table, whose stages above C1 were listed as if they
 were designed. They were not; they are options now (§3). The owner's 20 lift archetypes
 (`Mechanism-Ideas-and-archetypes.md`) remain a source of ideas, not of designs.
@@ -145,6 +150,12 @@ own gate.
     hanging mass, carried by something falling, tipping or rolling, a run and leap the
     player's momentum decides. The ladders and pull-started lifts already on the route from
     grade to the +221 m ring are replaced one at a time.
+12. **Fill the gaps with machines.** The owner (2026-10-08): *"I want you to fill empty gaps with
+    machines."* The supplied vertical-machine packs (`ScraperX-Vertical-Machines`,
+    `…-Expansion-01`: gravity balance, traction tram, rack climber, crown gondola, barrel helix,
+    cascade mast, luffing derrick, pitman lift) and the owner's stone wheel and slab-and-incline
+    drawings are built as designed, motors included, where the route has no way up; working
+    machines are not redesigned.
 
 ## 3. The chain
 
