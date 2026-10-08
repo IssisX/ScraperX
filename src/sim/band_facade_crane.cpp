@@ -646,6 +646,45 @@ void build_shutter(kit::Kit &kit, std::vector<Part> &frame) {
     (void)kit.add_pin_catch(shutter, release, 0.15F, 0.05F);
 }
 
+// Above the ladder floor, still over the 640 m plate. A ramp sits too high
+// and too far east to step onto. It is on a rail that runs down toward this
+// floor. A pin on this floor holds it. Lift the pin and the ramp slides down
+// onto this floor, and up onto the next one. Nothing of it leaves the building.
+constexpr float kRampCos = 0.8660254F;
+constexpr float kRampSin = 0.5F;
+constexpr float kRampAngle = 0.5235988F;
+constexpr float kRampHalf = 3.40F;
+constexpr float kRampTravel = 2.10F;
+
+kit::BodyIndex build_ramp(kit::Kit &kit, std::vector<Part> &frame) {
+    const JPH::Vec3 uphill(kRampCos, kRampSin, 0.0F);
+    const JPH::Vec3 low(3.42F, 652.14F, -146.20F);
+    const JPH::Vec3 connected = low + uphill * kRampHalf;
+    const JPH::Vec3 stowed = connected + uphill * kRampTravel;
+    const JPH::Quat tilt = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), kRampAngle);
+    const kit::BodyIndex ramp = kit.add_body(
+        Sim::kRampEntityId,
+        {box(JPH::Vec3(kRampHalf, 0.05F, 0.70F), JPH::Vec3::sZero(), Material::Concrete),
+         box(JPH::Vec3(kRampHalf, 0.035F, 0.03F), JPH::Vec3(0.0F, 0.22F, 0.66F), Material::Yellow),
+         box(JPH::Vec3(kRampHalf, 0.035F, 0.03F), JPH::Vec3(0.0F, 0.22F, -0.66F), Material::Yellow)},
+        JPH::RVec3(stowed.GetX(), stowed.GetY(), stowed.GetZ()), tilt, 700.0F, 0.9F);
+    const kit::GuideIndex rail =
+        kit.add_guide(ramp, JPH::Vec3(-kRampCos, -kRampSin, 0.0F), 0.0F, kRampTravel, 1.1F, 12000.0F, 1.4F);
+    kit.set_guide_friction(rail, 350.0F);
+    // The pin is on this floor, clear of the ladder. It holds the ramp up
+    // the rail. Lift it out and the ramp slides down.
+    const JPH::RVec3 pin_at(1.50, 652.55, -146.40);
+    const kit::BodyIndex pin = add_pin(kit, frame, Sim::kRampPinEntityId, pin_at);
+    (void)kit.add_pin_catch(ramp, pin, 0.15F, 0.08F);
+    (void)rail;
+
+    frame.push_back(span({9.20F, 655.28F, -147.35F}, {11.50F, 655.52F, -145.05F}, Material::Concrete));
+    frame.push_back(span({9.70F, 640.25F, -147.15F}, {10.00F, 655.28F, -146.85F}, Material::Rust));
+    frame.push_back(span({10.80F, 640.25F, -145.55F}, {11.10F, 655.28F, -145.25F}, Material::Rust));
+    frame.push_back(span({10.80F, 640.25F, -147.15F}, {11.10F, 655.28F, -146.85F}, Material::Rust));
+    return ramp;
+}
+
 } // namespace
 
 void build_facade_crane(kit::Kit &kit, FacadeCrane &crane) {
@@ -656,7 +695,10 @@ void build_facade_crane(kit::Kit &kit, FacadeCrane &crane) {
     build_stage_l(kit, crane, frame);
     build_girder(kit, frame);
     build_shutter(kit, frame);
-    (void)kit.add_body(Sim::kCraneFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
+    const kit::BodyIndex ramp = build_ramp(kit, frame);
+    const kit::BodyIndex frame_body =
+        kit.add_body(Sim::kCraneFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
+    kit.disable_collision(ramp, frame_body);
     build_climbing_route(kit);
 }
 

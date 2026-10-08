@@ -1787,6 +1787,8 @@ void require_leg(const scraperx::sim::Simulation &simulation, const bool ok, con
 // The girder on the 640 m floor. Defined with the other floor checks below.
 bool climb_girder(scraperx::sim::Simulation &floor);
 bool climb_shutter(scraperx::sim::Simulation &floor);
+bool climb_above_ring220(scraperx::sim::Simulation &run, double start_seconds, std::uint64_t deaths_at_start,
+                         const char *pass_name);
 
 // The goal's test (MECHANISM_ASCENT_PLAN.md, AS-006 to AS-009): one run on
 // player inputs from the 154 m deck to standing on TP-640,
@@ -1828,68 +1830,8 @@ void run_ascent() {
                 "C to the 220 ring");
     (void)run.advance_frame(2.0);
     require_leg(run, walk_to(run, -3.0, -129.0, 4.0), "off C onto the 220 ring");
-    const double at_220 = run.snapshot().simulation_time_seconds - start;
-
-    // B03, Wet Isolation: D, E, F to TP-340.
-    require_leg(run, walk_to(run, 2.5, -129.6, 8.0) && walk_to(run, 4.0, -129.2, 6.0) && seat_wet_spool(run) &&
-                         throw_wet_fill(run),
-                "along the 220 ring, D's spool seated and its fill thrown");
-    require_leg(run,
-                wait_for(run, 120.0,
-                         [&](const Snapshot &) { return run.wet_state().d_platform_travel >= 35.95; }),
-                "D to 256.25");
-    require_leg(run,
-                walk_to(run, 13.2, -134.5, 6.0) && walk_to(run, 13.2, -135.8, 6.0) && shut_wet_door(run) &&
-                    pull_wet_trip(run),
-                "into E's cab, its door shut and the chiller tripped");
-    require_leg(run,
-                wait_for(run, 90.0, [&](const Snapshot &) { return run.wet_state().e_cab_travel >= 41.95; }),
-                "E to 298.25");
-    require_leg(run,
-                walk_to(run, 13.4, -137.2, 4.0) && walk_to(run, 13.4, -139.9, 6.0) && couple_wet_hose(run) &&
-                    pull_wet_stop_valve(run),
-                "onto F, its hose coupled and its valve thrown");
-    require_leg(run,
-                wait_for(run, 90.0,
-                         [&](const Snapshot &) { return run.wet_state().f_platform_travel >= 41.95; }),
-                "F to TP-340");
-    require_leg(run, walk_to(run, 13.0, -137.2, 6.0), "off F onto TP-340");
-    const double at_340 = run.snapshot().simulation_time_seconds - start;
-
-    // B04, the Plate Shop: G, H, I and the ladder to the 484 ring.
-    require_leg(run, walk_to_shop_cleat(run) && rig_shop_g(run) && pull_shop_g(run), "G rigged and its pin pulled");
-    require_leg(run,
-                wait_for(run, 60.0,
-                         [&](const Snapshot &) { return run.shop_state().g_platform_travel >= 33.7; }),
-                "G to the 374 ring");
-    (void)run.advance_frame(1.0);
-    require_leg(run, walk_to(run, -14.5, -149.3, 8.0) && pull_shop_girder_pin(run) && board_shop_h(run) &&
-                         pull_shop_chock(run),
-                "the girder's tail pin out, over the gangway onto H, its chock pulled");
-    require_leg(run,
-                wait_for(run, 90.0,
-                         [&](const Snapshot &) { return run.shop_state().h_platform_travel >= 43.9; }),
-                "H to the 418 ring");
-    (void)run.advance_frame(1.0);
-    require_leg(run, rig_shop_i(run) && pull_shop_domino(run), "onto I's cage, hooked on, the domino's pin pulled");
-    require_leg(run,
-                wait_for(run, 90.0, [&](const Snapshot &) { return run.shop_state().i_cage_travel >= 43.9; }),
-                "I to 462.25");
-    (void)run.advance_frame(1.0);
-    require_leg(run, climb_wet_hold(run, -7.6, -145.6, -1.0, 0.0, false, 484.5), "up the ladder onto the 484 ring");
-    const double at_484 = run.snapshot().simulation_time_seconds - start;
-
-    // B05, the Facade Crane Stack: J, K, L into TP-640.
-    require_leg(run, climb_crane_band(run), "J, K and L to standing on TP-640");
-    const auto top = run.snapshot();
-    require(top.death_count == deaths && standing_above(top, 640.2),
-            "ascent: one run from the 154 m deck must end standing on the 640 m floor, never having died");
-    require_leg(run, climb_girder(run), "up the girder onto the next floor");
-    require_leg(run, climb_shutter(run), "the sheet aside, then up the ladder");
-    const auto landed = run.snapshot();
-    std::cout << "PASS scraperx_sim ascent 154 to the next floor: seconds="
-              << landed.simulation_time_seconds - start << " at_220=" << at_220 << " at_340=" << at_340
-              << " at_484=" << at_484 << " floor_y=" << landed.player_position.y << '\n';
+    require(climb_above_ring220(run, start, deaths, "ascent 154 to the next floor"),
+            "from the 220 ring up through the sheet and the ladder");
 }
 
 // ---- Band 0, the Stack: S1, the water-balance hoist -------------------------
@@ -3044,6 +2986,8 @@ void run_stack() {
               << " ring176_y=" << band_ring176.player_position.y
               << " ring220_y=" << band_ring220.player_position.y
               << " rearmed=1\n";
+    require(climb_above_ring220(band, band_start, 0, "grade to the floor above the ladder"),
+            "the same climb from the ground must continue past the 220 m ring");
 }
 
 // ---- B06 west service skin (TP-640 -> 672.25) --------------------------------
@@ -3472,6 +3416,159 @@ bool climb_shutter(scraperx::sim::Simulation &floor) {
     return true;
 }
 
+// The ramp above the ladder floor. It must stay put until its pin is lifted.
+// Then it slides down, and the same player walks it.
+bool climb_ramp(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    const auto ramp_x = [&]() {
+        return floor.kit_body_position(floor.kit_body_index(Simulation::kRampEntityId)).x;
+    };
+    const double x0 = ramp_x();
+    auto watch = [&](const double seconds) {
+        const int ticks = static_cast<int>(seconds * 90.0 + 0.5);
+        for (int step = 0; step < ticks; ++step) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+    };
+    watch(1.2);
+    require(std::abs(ramp_x() - x0) < 0.08, "the ramp must stay put until the pin is lifted");
+    require(walk_to(floor, 2.15, -146.40, 8.0, 0.16), "the player must reach the ramp pin");
+    (void)floor.set_facing(-1.0, 0.0);
+    watch(0.4);
+    require(floor.snapshot().carry_target_entity_id == Simulation::kRampPinEntityId,
+            "the pin must be the thing in reach");
+    require(floor.request_pick_up(), "picking up the pin must be accepted");
+    watch(0.35);
+    require(floor.snapshot().carrying_entity_id == Simulation::kRampPinEntityId, "the pin must be in the hands");
+    require(walk_to(floor, 2.40, -146.40, 6.0, 0.20), "the player must carry the pin clear");
+    require(floor.request_set_down(), "setting the pin down must be accepted");
+    watch(0.4);
+    bool slid = false;
+    for (int step = 0; step < 10 * 90 && !slid; ++step) {
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        slid = ramp_x() < x0 - 1.40;
+    }
+    if (!slid) {
+        const auto ramp = floor.kit_body_position(floor.kit_body_index(Simulation::kRampEntityId));
+        const auto pin = floor.kit_body_position(floor.kit_body_index(Simulation::kRampPinEntityId));
+        const auto p = floor.snapshot().player_position;
+        std::cout << "ramp stayed x0=" << x0 << " x=" << ramp.x << " y=" << ramp.y << " pin " << pin.x << " " << pin.y
+                  << " " << pin.z << " player " << p.x << " " << p.y << " " << p.z << "\n";
+    }
+    require(slid, "the ramp must slide down once the pin is lifted");
+    watch(1.2);
+    auto walk_slow = [&](const double x, const double z, const double seconds, const double tolerance) {
+        const auto ticks = static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            const auto state = floor.snapshot();
+            if (std::hypot(x - state.player_position.x, z - state.player_position.z) <= tolerance &&
+                state.player_grounded) {
+                (void)floor.set_move_input(0.0, 0.0);
+                return true;
+            }
+            steer_toward(floor, x, z, 0.38);
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+        (void)floor.set_move_input(0.0, 0.0);
+        return false;
+    };
+    require(walk_slow(4.6, -146.20, 14.0, 0.40), "the player must step onto the ramp");
+    require(walk_slow(8.4, -146.20, 18.0, 0.40), "the player must walk up the ramp");
+    require(walk_slow(10.4, -146.20, 12.0, 0.45), "the player must step off onto the next floor");
+    bool up = false;
+    for (int step = 0; step < 3 * 90; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto state = floor.snapshot();
+        if (state.death_count == 0 && state.player_grounded && state.player_position.y > 655.3 &&
+            state.player_position.x > 9.3 && state.player_position.x < 11.4 &&
+            state.player_position.z > -147.2 && state.player_position.z < -145.2 &&
+            state.support_entity_id == Simulation::kCraneFrameEntityId) {
+            up = true;
+            break;
+        }
+    }
+    if (!up) {
+        const auto p = floor.snapshot();
+        std::cout << "off the ramp at " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " deaths=" << p.death_count << "\n";
+    }
+    g_path_watch.armed = false;
+    require(g_path_watch.worst <= 0.15, "the ramp must not snap the body more than 0.15 m in one tick");
+    require(up, "the player must be standing on the next floor, still inside the building");
+    const auto landed = floor.snapshot();
+    std::cout << "PASS scraperx_sim ramp: floor_y=" << landed.player_position.y
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
+// Same body, from standing on the 220 m ring, up through the rest of the
+// machines that are already in the building, to the floor the ladder reaches.
+bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seconds,
+                         const std::uint64_t deaths_at_start, const char *pass_name) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    require_leg(run, walk_to(run, 2.5, -129.6, 8.0) && walk_to(run, 4.0, -129.2, 6.0) && seat_wet_spool(run) &&
+                         throw_wet_fill(run),
+                "along the 220 ring, the spool seated and the fill thrown");
+    require_leg(run,
+                wait_for(run, 120.0, [&](const Snapshot &) { return run.wet_state().d_platform_travel >= 35.95; }),
+                "the first wet platform to 256 m");
+    require_leg(run,
+                walk_to(run, 13.2, -134.5, 6.0) && walk_to(run, 13.2, -135.8, 6.0) && shut_wet_door(run) &&
+                    pull_wet_trip(run),
+                "into the cab, the door shut and the chiller tripped");
+    require_leg(run, wait_for(run, 90.0, [&](const Snapshot &) { return run.wet_state().e_cab_travel >= 41.95; }),
+                "the cab to 298 m");
+    require_leg(run,
+                walk_to(run, 13.4, -137.2, 4.0) && walk_to(run, 13.4, -139.9, 6.0) && couple_wet_hose(run) &&
+                    pull_wet_stop_valve(run),
+                "onto the next platform, the hose coupled and the valve thrown");
+    require_leg(run,
+                wait_for(run, 90.0, [&](const Snapshot &) { return run.wet_state().f_platform_travel >= 41.95; }),
+                "that platform to the 340 m floor");
+    require_leg(run, walk_to(run, 13.0, -137.2, 6.0), "off that platform onto the 340 m floor");
+    const double at_340 = run.snapshot().simulation_time_seconds - start_seconds;
+
+    require_leg(run, walk_to_shop_cleat(run) && rig_shop_g(run) && pull_shop_g(run),
+                "the shop lift rigged and its pin pulled");
+    require_leg(run, wait_for(run, 60.0, [&](const Snapshot &) { return run.shop_state().g_platform_travel >= 33.7; }),
+                "the shop lift to the 374 m ring");
+    (void)run.advance_frame(1.0);
+    require_leg(run, walk_to(run, -14.5, -149.3, 8.0) && pull_shop_girder_pin(run) && board_shop_h(run) &&
+                         pull_shop_chock(run),
+                "the shop beam's pin out, across the gangway, and its chock pulled");
+    require_leg(run,
+                wait_for(run, 90.0, [&](const Snapshot &) { return run.shop_state().h_platform_travel >= 43.9; }),
+                "that ride to the 418 m ring");
+    (void)run.advance_frame(1.0);
+    require_leg(run, rig_shop_i(run) && pull_shop_domino(run), "onto the cage, hooked on, the pin pulled");
+    require_leg(run, wait_for(run, 90.0, [&](const Snapshot &) { return run.shop_state().i_cage_travel >= 43.9; }),
+                "the cage to 462 m");
+    (void)run.advance_frame(1.0);
+    require_leg(run, climb_wet_hold(run, -7.6, -145.6, -1.0, 0.0, false, 484.5), "up the ladder onto the 484 m ring");
+    const double at_484 = run.snapshot().simulation_time_seconds - start_seconds;
+
+    require_leg(run, climb_crane_band(run), "the three cranes, then standing on the 640 m floor");
+    const auto top = run.snapshot();
+    require(top.death_count == deaths_at_start && standing_above(top, 640.2),
+            "the same climb must be standing on the 640 m floor, and must not have died");
+    require_leg(run, climb_girder(run), "up the girder onto the next floor");
+    require_leg(run, climb_shutter(run), "the sheet aside, then up the ladder");
+    require_leg(run, climb_ramp(run), "the pin out, then up the ramp");
+    const auto landed = run.snapshot();
+    std::cout << "PASS scraperx_sim " << pass_name << ": seconds=" << landed.simulation_time_seconds - start_seconds
+              << " at_340=" << at_340 << " at_484=" << at_484 << " floor_y=" << landed.player_position.y << '\n';
+    return true;
+}
+
 void run_girder() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -3483,7 +3580,8 @@ void run_girder() {
             "the player must start standing on the 640 m floor");
     require(kit_y(floor, Simulation::kGirderEntityId) > 643.4, "the girder must start standing, not already fallen");
     require(climb_girder(floor), "up the girder onto the next floor");
-    (void)climb_shutter(floor);
+    require(climb_shutter(floor), "the sheet aside, then up the ladder");
+    require(climb_ramp(floor), "the pin out, then up the ramp");
 }
 
 int main() {

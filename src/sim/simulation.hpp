@@ -574,6 +574,9 @@ public:
     static constexpr std::uint64_t kShutterEntityId = 2302;
     static constexpr std::uint64_t kShutterWeightEntityId = 2303;
     static constexpr std::uint64_t kShutterPinEntityId = 2304;
+    // The ramp above the ladder floor, and the pin that holds it up the rail.
+    static constexpr std::uint64_t kRampEntityId = 2305;
+    static constexpr std::uint64_t kRampPinEntityId = 2306;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

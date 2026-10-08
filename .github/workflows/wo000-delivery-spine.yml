@@ -156,8 +156,8 @@ jobs:
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
           # The 154 m trip ends standing on the floor the ladder reaches
-          # (player centre about 652.9), not on the girder's landing.
-          awk -F'floor_y=' '/ascent 154 to the next floor/ {split($2,a," "); exit (a[1]+0 >= 652.70 && a[1]+0 <= 653.20) ? 0 : 1}' \
+          # (player centre about 656.4), on the floor the ramp slides up to.
+          awk -F'floor_y=' '/ascent 154 to the next floor/ {split($2,a," "); exit (a[1]+0 >= 656.20 && a[1]+0 <= 656.70) ? 0 : 1}' \
             artifacts/native-falsifiers.log
           # AS-006 Stage A, the skip lift: no link, no lift (the cage never
           # moves while the rope is on the bollard, and the stage re-rigs);
