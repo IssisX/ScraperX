@@ -2850,19 +2850,41 @@ private:
             float horizontal;
             const float clear_at = traversal_vault_clear_progress_;
             if (clear_at > 0.0F) {
-                // Up to the face while rising clear, then over and down.
+                // Up to the face while rising clear, from the speed carried in
+                // to a stop at the face; then over and down, leaving with the
+                // carried speed as any vault does.
                 const float face = traversal_vault_wall_fraction_;
-                const float carried =
-                    face > 1.0e-4F ? traversal_vault_horizontal_slope_ * clear_at / (face * (1.0F - clear_at)) : 0.0F;
-                horizontal = progress < clear_at
-                                 ? face * ease_with_carried_speed(progress / clear_at, carried)
-                                 : face + (1.0F - face) * smoothstep(0.0F, 1.0F,
-                                                                     (progress - clear_at) / (1.0F - clear_at));
+                const float slope = traversal_vault_horizontal_slope_;
+                if (progress < clear_at) {
+                    const float t = progress / clear_at;
+                    const float in = face > 1.0e-4F
+                                         ? std::clamp(slope * clear_at / (face * (1.0F - clear_at)), 0.0F, 3.0F)
+                                         : 0.0F;
+                    horizontal = face * (in * t * (1.0F - t) * (1.0F - t) + t * t * (3.0F - 2.0F * t));
+                } else {
+                    const float out = face < 1.0F ? slope / (1.0F - face) : 0.0F;
+                    const float t = (progress - clear_at) / (1.0F - clear_at);
+                    const float u = std::clamp(t, 0.0F, 1.0F);
+                    horizontal = face + (1.0F - face) * (u * u * (3.0F - 2.0F * u) +
+                                                         std::clamp(out, 0.0F, 3.0F) * u * u * (u - 1.0F));
+                }
             } else {
                 horizontal = ease_with_carried_speed(progress, traversal_vault_horizontal_slope_);
             }
             float height;
-            if (progress < 0.5F) {
+            if (clear_at > 0.0F) {
+                // Up to the apex while closing on the face; held over the
+                // first half of the crossing, down over the second.
+                const float q = (progress - clear_at) / (1.0F - clear_at);
+                if (progress < clear_at) {
+                    height = start.GetY() +
+                             (apex.GetY() - start.GetY()) * smoothstep(0.0F, 1.0F, progress / clear_at);
+                } else if (q < 0.5F) {
+                    height = apex.GetY();
+                } else {
+                    height = apex.GetY() + (target.GetY() - apex.GetY()) * smoothstep(0.0F, 1.0F, (q - 0.5F) * 2.0F);
+                }
+            } else if (progress < 0.5F) {
                 height = start.GetY() +
                          (apex.GetY() - start.GetY()) * smoothstep(0.0F, 1.0F, progress * 2.0F);
             } else {
