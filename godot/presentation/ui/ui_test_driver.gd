@@ -1050,13 +1050,23 @@ func _stack_c2(device: int) -> bool:
 
 
 func _stack_s3(device: int) -> bool:
+	# The bar hangs about a metre above the cage floor. Reach is 1.20 m from
+	# the body's centre, so someone standing 0.40 m north of the bar is one
+	# full-throw key from walking out of it. Keys do not ease off the way a
+	# stick does, and the old walk reported arrival without checking the
+	# body was still in that pocket.
 	if not (await _go(device, Vector2(-8.0, -170.0), 0.15, 20.0) and \
-			await _go(device, Vector2(-8.0, -164.0), 0.1, 10.0) and \
-			await _go(device, Vector2(-8.0, -157.6), 0.08, 10.0)):
+			await _go(device, Vector2(-8.0, -164.0), 0.1, 10.0)):
 		return _fail("the walk to S3 cage stalled at %s" % str(_position()))
+	if not await _stand_for_grab(device, Vector2(-8.0, -157.95), 0.05, 8.0):
+		return _fail("the walk to S3 handle stalled at %s grounded=%s speed=%.2f" % [
+			str(_position()), str(bool(_native().is_player_grounded())),
+			Vector2(_velocity().x, _velocity().z).length()])
 	await _face(Vector2(0.0, -1.0))
 	if not await _offered(&"pick_up", "GRAB"):
-		return _fail("Action read '%s' facing S3 handle, not GRAB" % _action_label())
+		return _fail("Action read '%s' facing S3 handle, not GRAB (at %s grounded=%s target=%d trav=%d)" % [
+			_action_label(), str(_position()), str(bool(_native().is_player_grounded())),
+			int(_native().get_carry_target_entity_id()), int(_native().get_traversal_state())])
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2223, 0.5):
 		return _fail("GRAB did not take S3 handle")
@@ -1723,6 +1733,37 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 		_move_dir(device, v)
 		await get_tree().process_frame
 		waited += get_process_delta_time()
+	_move_dir(device, Vector2.ZERO)
+	return false
+
+
+# Like a walk, then a real stop: still inside the pocket, grounded, and slow.
+# A key's last pulse can carry the body out of reach during the old 0.2 s
+# pause, and that pause used to count as arrival anyway.
+func _stand_for_grab(device: int, target: Vector2, tolerance: float, budget: float) -> bool:
+	var waited := 0.0
+	while waited < budget:
+		if not await _walk_to(device, target, tolerance, maxf(0.4, budget - waited)):
+			return false
+		var settled := false
+		var still := 0.0
+		while still < 0.45:
+			var at := _position()
+			var away := (target - Vector2(at.x, at.z)).length()
+			var planar := Vector2(_velocity().x, _velocity().z).length()
+			if away <= tolerance and bool(_native().is_player_grounded()) and planar < 0.15 and \
+					int(_native().get_traversal_state()) == TRAVERSAL_NONE:
+				settled = true
+				break
+			if away > tolerance:
+				break
+			_move_dir(device, Vector2.ZERO)
+			await get_tree().process_frame
+			var dt := get_process_delta_time()
+			still += dt
+			waited += dt
+		if settled:
+			return true
 	_move_dir(device, Vector2.ZERO)
 	return false
 
