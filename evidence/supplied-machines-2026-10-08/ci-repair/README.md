@@ -22,3 +22,11 @@ Ordinary loaded lift boarding/drive reproduced a separate source defect: saved m
 ## Evidence boundary
 
 Native focused logs above ran against the root-owned changed source with pinned Jolt on the ARM64 host. The full athletic run is explicitly partial; the corrected last brace fixture has minimized-path evidence. The normal successor Actions candidate must freshly build and establish the entire updated native/Godot/export gate. Earlier ordinary-touch and rendered wheel receipts precede this checkpoint correction. No new Godot-rendered result, APK, physical-phone behavior, full campaign or complete mechanical energy closure is claimed here.
+
+## Successor21e6ac98 and bounded carry approach
+
+[Actions37853596769](https://github.com/IssisX/ScraperX/actions/runs/37853596769) builds native and passes38/39 tests. The sole failure is `the carry must reach the 9 t pack's east face`; later Godot/export stages do not run, so no new APK is claimed. Earlier repaired gates pass.
+
+The old approach faces a freely rotating0.6m block into the pack. Its target offset2m equals the nominal1.1m pack half-width +0.6m hand offset +0.3m block half-width; rotation and real contact can prevent arrival. `carry-marginal-approach.log` captures a several-second plateau nearX9.61 against targetX9.3733. It eventually reaches after359ticks on ARM64; this is marginal-clearance evidence, not reproduction of the x86 CI timeout. Changing only ordinary facing sideways reaches the same target after123ticks and passes original held/free checks (`carry-sideways-probe.log`).
+
+The committed correction preserves target,0.15m tolerance,10s budget and all450held-refusal ticks, and additionally requires grounded arrival. `carry-cage-skin-route.log` runs the exact changed cage sequence: actual bar/door, pickup/carry/drop/repick, held-block traversal refusal, same-face free supported mantle, next block pickup, rung refusal/free rung and SKIN24 exit; exit0. No production physics or collision filter changes. Independent source/diff review found no blocking issue. The next normal exact-source Actions candidate remains required for full native/rendered/Android delivery.

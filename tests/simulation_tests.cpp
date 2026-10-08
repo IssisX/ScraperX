@@ -3076,7 +3076,27 @@ int main() {
     require(walk_to(cage, 13.5, kHook5MinZ - 4.0, 10.0),
             "the carry must come round to the 9 t pack's side");
     const auto held_pack = cage.snapshot().intake_overweight_pack_position;
-    require(walk_to(cage, held_pack.x + 2.0, held_pack.z, 10.0),
+    // Approach sideways with the real load along the face. Facing the
+    // waypoint pushes the freely rotating 0.6 m block into the pack: this
+    // target has only the nominal block/hand clearance, so its orientation
+    // can physically prevent the old position-only walk from arriving.
+    // Keep the same target and budget; the following falsifier still turns
+    // toward the pack and presses against it with both hands occupied.
+    bool carry_reached_pack = false;
+    for (std::uint32_t tick = 0; tick < 90 * 10; ++tick) {
+        const auto state = cage.snapshot();
+        if (state.player_grounded &&
+            std::hypot(held_pack.x + 2.0 - state.player_position.x,
+                       held_pack.z - state.player_position.z) <= 0.15) {
+            carry_reached_pack = true;
+            break;
+        }
+        steer_toward(cage, held_pack.x + 2.0, held_pack.z);
+        (void)cage.set_facing(0.0, 1.0);
+        (void)cage.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    (void)cage.set_move_input(0.0, 0.0);
+    require(carry_reached_pack,
             "the carry must reach the 9 t pack's east face");
     const auto accepted_before_held = cage.snapshot().accepted_traversal_count;
     bool offered_while_held = false;

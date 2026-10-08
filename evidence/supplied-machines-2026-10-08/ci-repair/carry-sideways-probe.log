@@ -1,0 +1,9 @@
+INFO AS-003 carry walk: loaded_v_at_0.25s=4.87287 free_v_at_0.25s=5.5 loaded_top=5.57776 free_top=5.5
+before-east tick=5518 at=13.622,0.880749,-91.9596 vel=-3.67871,1.76485e-09,-1.19382 block=13.5987,1.26261,-91.3632 ground=1 support=1 held=56
+target 9.3733,-98.0004
+east tick=5519 at=13.5795,0.880623,-91.9759 vel=-3.64575,-3.92391e-09,-1.39654 block=13.563,1.263,-91.3777 ground=1 support=1 held=56
+east tick=5564 at=11.9568,0.879605,-94.0066 vel=-3.03315,-2.3243e-09,-4.65712 block=11.8034,1.12292,-93.5751 ground=1 support=1 held=56
+east tick=5609 at=10.4711,0.879711,-96.3273 vel=-2.97106,2.44073e-09,-4.56436 block=10.6029,1.05812,-95.5991 ground=1 support=1 held=56
+arrived tick=5641 at=9.42773,0.87987,-97.8866 vel=-2.4371,-4.10419e-09,-3.34468 block=9.20068,1.16795,-97.375 ground=1 support=1 held=56
+held-pressed-face tick=6091 at=9.02452,0.881154,-98.0753 vel=-1.10996e-09,4.34418e-10,5.08567e-09 block=8.67512,1.23304,-98.0454 ground=1 support=1 held=56
+free-mantle tick=6382 at=7.98458,2.5915,-98.1312 vel=-0.608458,-0.436001,0.130152 block=8.92401,0.249161,-97.127 ground=1 support=41 held=0

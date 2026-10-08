@@ -1,0 +1,2 @@
+INFO AS-003 carry walk: loaded_v_at_0.25s=4.87287 free_v_at_0.25s=5.5 loaded_top=5.57776 free_top=5.5
+PASS scraperx_sim AS-003 cage: mashed_door=0.0352769 travelled_door=1.20181 carry_worst_gap=0.846018 repicked_y=0.991828 skin_mantles=15
