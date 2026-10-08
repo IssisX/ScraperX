@@ -37,6 +37,7 @@ void Machine::pre_step(float dt) {
             d.slider->SetTargetVelocity(std::clamp(2.f*(d.extent*command_.travel-d.slider->GetCurrentPosition()),-d.speed,d.speed));
         }
     }
+    for (auto &step: stepping) step(dt, command_);
 }
 ControlState Machine::capture_control() const {
     ControlState state;state.command=command_;
@@ -116,6 +117,8 @@ std::unique_ptr<Machine> create(const std::string &id,BuildContext c) {
     if(id=="sx.cascade_mast.v1") return cascade_mast(c);
     if(id=="sx.luffing_derrick.v1") return luffing_derrick(c);
     if(id=="sx.pitman_lift.v1") return pitman_lift(c);
+    if(id=="sx.slab_incline.v1") return slab_incline(c);
+    if(id=="sx.stone_wheel.v1") return stone_wheel(c);
     throw std::invalid_argument("unknown vertical module: "+id);
 }
 }

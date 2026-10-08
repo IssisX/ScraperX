@@ -3,6 +3,7 @@
 // Expansion-01), imported as designed: eight factories that build their
 // bodies in the Kit and their motors, sliders, hinges and pins in Jolt.
 #include "sim/mechanism_kit.hpp"
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -61,6 +62,9 @@ public:
     std::vector<Drive> drives;
     std::vector<Ref<Constraint>> transmissions;
     std::vector<kit::RopeIndex> ropes;
+    // Further actuators a machine works each step, after its drives (the
+    // stone wheel's hopper gate): finite forces, in the write phase.
+    std::vector<std::function<void(float, const Command &)>> stepping;
     BuildContext context;
     RVec3 point(Vec3 local) const;
     Vec3 direction(Vec3 local) const;
@@ -87,5 +91,8 @@ std::unique_ptr<Machine> barrel_helix(BuildContext);
 std::unique_ptr<Machine> cascade_mast(BuildContext);
 std::unique_ptr<Machine> luffing_derrick(BuildContext);
 std::unique_ptr<Machine> pitman_lift(BuildContext);
+// The owner's drawings (2026-10-08), built to this API.
+std::unique_ptr<Machine> slab_incline(BuildContext);
+std::unique_ptr<Machine> stone_wheel(BuildContext);
 std::unique_ptr<Machine> create(const std::string &id, BuildContext context);
 } // namespace scraperx::sim::vertical

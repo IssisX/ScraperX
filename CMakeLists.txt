@@ -38,6 +38,8 @@ add_library(scraperx_sim STATIC
     src/sim/vertical/cascade_mast.cpp
     src/sim/vertical/luffing_derrick.cpp
     src/sim/vertical/pitman_lift.cpp
+    src/sim/vertical/slab_incline.cpp
+    src/sim/vertical/stone_wheel.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
