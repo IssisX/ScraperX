@@ -164,6 +164,17 @@ own gate.
     (2026-10-08: *"I haven't figured out what will be at the very top yet"*): the machines climb to
     800 m and the top is left open; the tower is not cut down until the owner decides.
 
+13. **It must be played now.** The owner (2026-10-08): the game should look, feel and play like it
+    *"MUST BE PLAYED NOW"*, so an interested person cannot refuse to try it, *"as it is too
+    enticing and gorgeous to pass up because it was created with such comprehensive & delicate
+    care"*. Cheap is not a goal: a thing is worth doing for its value. Open work toward it
+    (the owner, 2026-10-08): shortcuts that reward breaking the intended route, because the
+    physics allows them; the height felt (wind that grows and pushes, the body bracing, the city
+    dropping away, the structure creaking under load); pressure from the world on one or two
+    bands (scaffolding collapsing below, water rising, fire spreading), not a chaser; a reason to
+    reach the top, visible from the ground once the owner decides what stands there; and a care
+    pass on the look, feel and first minutes, then every stage. No ghost racer.
+
 ## 3. The chain
 
 Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has heights and verbs.
