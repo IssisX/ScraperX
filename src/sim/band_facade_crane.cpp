@@ -731,6 +731,153 @@ kit::BodyIndex build_gate(kit::Kit &kit, std::vector<Part> &frame) {
     return gate;
 }
 
+// Above the ladder floor. A cart with wheels sits on rails that climb west
+// at 45°. A concrete weight hangs at the head of the rails. A pin on this
+// floor holds the weight. Lift the pin and the weight drops, and the rope
+// drags the cart up the rails. The cart is not a cage.
+void build_slat_tower(std::vector<Part> &frame);
+kit::BodyIndex build_cart_haul(kit::Kit &kit, std::vector<Part> &frame) {
+    constexpr float kS = 0.70710678F;
+    constexpr float kSlope = 2.3561945F; // local +X points up the 45° rail, west and up
+    constexpr float kRun = 16.0F;
+    const JPH::Vec3 uphill(-kS, kS, 0.0F);
+    const JPH::Vec3 origin(7.20F, 672.22F, -150.0F);
+    const JPH::Quat slope = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), kSlope);
+    const JPH::Vec3 into = slope * JPH::Vec3::sAxisY();
+    const auto wheel = [](const float x, const float z) {
+        Part part;
+        part.half = JPH::Vec3(0.16F, 0.05F, 0.16F);
+        part.offset = JPH::Vec3(x, 1.35F, z);
+        part.rotation = JPH::Quat::sRotation(JPH::Vec3::sAxisX(), 1.5707963F);
+        part.material = Material::Rust;
+        part.shape = Part::Shape::Cylinder;
+        return part;
+    };
+    const kit::BodyIndex cart = kit.add_body(
+        Sim::kCartHaulEntityId,
+        {box(JPH::Vec3(1.15F, 0.05F, 0.42F), JPH::Vec3(0.0F, 1.55F, 0.0F), Material::Steel),
+         upright(slope, JPH::Vec3(0.95F, 0.05F, 0.62F), JPH::Vec3(0.0F, -0.05F, 0.0F), Material::Timber),
+         upright(slope, JPH::Vec3(0.95F, 0.10F, 0.035F), JPH::Vec3(0.0F, 0.10F, 0.58F), Material::Yellow),
+         upright(slope, JPH::Vec3(0.95F, 0.10F, 0.035F), JPH::Vec3(0.0F, 0.10F, -0.58F), Material::Yellow),
+         upright(slope, JPH::Vec3(0.05F, 0.42F, 0.58F), JPH::Vec3(0.88F, 0.38F, 0.0F), Material::Steel),
+         wheel(-0.72F, -0.36F), wheel(-0.72F, 0.36F), wheel(0.72F, -0.36F), wheel(0.72F, 0.36F)},
+        JPH::RVec3(origin.GetX(), origin.GetY(), origin.GetZ()), slope, 800.0F, 0.95F);
+    const kit::GuideIndex rail =
+        kit.add_guide(cart, uphill, 0.0F, kRun, 1.5F, 40000.0F, 1.2F);
+    kit.set_guide_friction(rail, 180.0F);
+    (void)rail;
+
+    // The hitch sits on the line through the cart's centre, along the rail.
+    // A hitch off to one side twists the cart against the rail and the rope
+    // spends its pull fighting that twist instead of hauling.
+    const JPH::Vec3 com_world = vec(kit.body_center_of_mass(cart));
+    const JPH::Vec3 com_local = slope.Conjugated() * (com_world - origin);
+    const JPH::Vec3 hitch_local = com_local + JPH::Vec3(1.15F, 0.0F, 0.0F);
+
+    const JPH::Vec3 rail_mid = origin + uphill * (0.5F * kRun) + into * 1.15F;
+    for (const float side : {-0.42F, 0.42F}) {
+        Part steel;
+        steel.half = JPH::Vec3(0.5F * kRun + 1.2F, 0.04F, 0.04F);
+        steel.offset = rail_mid + JPH::Vec3(0.0F, 0.0F, side);
+        steel.rotation = slope;
+        steel.material = Material::Rust;
+        frame.push_back(steel);
+    }
+    for (float t = 0.4F; t < kRun + 0.8F; t += 1.4F) {
+        Part sleeper;
+        sleeper.half = JPH::Vec3(0.08F, 0.035F, 0.62F);
+        sleeper.offset = origin + uphill * t + into * 1.22F;
+        sleeper.rotation = slope;
+        sleeper.material = Material::Timber;
+        frame.push_back(sleeper);
+    }
+
+    // From the ladder's floor, west and south, onto the rail. Kept off the
+    // ladder itself so it does not sit on the climber's head.
+    frame.push_back(span({8.2F, 671.76F, -145.35F}, {9.70F, 672.00F, -144.15F}, Material::Concrete));
+    frame.push_back(span({4.2F, 671.76F, -151.30F}, {8.60F, 672.00F, -145.05F}, Material::Concrete));
+
+    const JPH::Vec3 hitch0 = origin + slope * hitch_local;
+    // Past the landing, so the head beam is not a wall across the walk off.
+    const JPH::Vec3 sheave = hitch0 + uphill * (kRun + 6.5F);
+    const JPH::Vec3 sheave_w(sheave.GetX(), sheave.GetY(), -153.20F);
+    frame.push_back(box(JPH::Vec3(0.12F, 0.12F, 0.12F), sheave, Material::Yellow));
+    frame.push_back(box(JPH::Vec3(0.12F, 0.12F, 0.12F), sheave_w, Material::Yellow));
+    frame.push_back(span({sheave.GetX() - 0.08F, sheave.GetY() - 0.08F, -153.35F},
+                         {sheave.GetX() + 0.08F, sheave.GetY() + 0.35F, -149.85F}, Material::Steel));
+
+    const JPH::Vec3 weight_at(sheave_w.GetX(), sheave_w.GetY() - 8.0F, sheave_w.GetZ());
+    const kit::BodyIndex weight = kit.add_body(
+        Sim::kCartHaulWeightEntityId,
+        {box(JPH::Vec3(0.55F, 0.50F, 0.42F), JPH::Vec3::sZero(), Material::Concrete),
+         box(JPH::Vec3(0.10F, 0.10F, 0.10F), JPH::Vec3(0.0F, 0.50F, 0.0F), Material::Hazard)},
+        // 2200 kg of concrete. A person standing against the seat loads the
+        // cart harder than their weight alone, and 740 kg only creeps. This
+        // block is about 0.92 m³, which is that mass, and it reaches the
+        // brake at the top of the rail with the rider still aboard.
+        JPH::RVec3(weight_at.GetX(), weight_at.GetY(), weight_at.GetZ()), JPH::Quat::sIdentity(), 2200.0F, 0.6F);
+    (void)kit.add_guide(weight, -JPH::Vec3::sAxisY(), 0.0F, kRun + 0.4F, 1.6F, 30000.0F, 1.3F);
+    for (const float sx : {-0.85F, 0.85F}) {
+        for (const float sz : {-0.85F, 0.85F}) {
+            frame.push_back(span({weight_at.GetX() + sx - 0.06F, weight_at.GetY() - kRun - 1.5F,
+                                  weight_at.GetZ() + sz - 0.06F},
+                                 {weight_at.GetX() + sx + 0.06F, sheave_w.GetY() + 0.4F,
+                                  weight_at.GetZ() + sz + 0.06F},
+                            Material::Rust));
+        }
+    }
+
+    const JPH::Vec3 weight_com = vec(kit.body_center_of_mass(weight));
+    const JPH::Vec3 eye(0.0F, weight_com.GetY() - weight_at.GetY() + 0.55F, 0.0F);
+    const float span_cart = (hitch0 - sheave).Length();
+    const float span_weight = (weight_at + eye - sheave_w).Length();
+    (void)kit.add_rope(cart, hitch_local, JPH::RVec3(sheave.GetX(), sheave.GetY(), sheave.GetZ()), weight, eye,
+                       JPH::RVec3(sheave_w.GetX(), sheave_w.GetY(), sheave_w.GetZ()), 1.0F,
+                       span_cart + span_weight + 0.04F, 0.0F);
+
+    // The pin is on this floor, beside the cart, not on the weight. Lifting
+    // it is what lets the weight drop.
+    const JPH::RVec3 pin_at(7.90, 673.05, -149.80);
+    const kit::BodyIndex pin = add_pin(kit, frame, Sim::kCartHaulPinEntityId, pin_at);
+    (void)kit.add_pin_catch(weight, pin, 0.16F, 0.08F);
+
+    const JPH::Vec3 landed = origin + uphill * kRun;
+    frame.push_back(span({landed.GetX() - 4.4F, landed.GetY() - 0.28F, -151.40F},
+                         {landed.GetX() - 0.55F, landed.GetY() - 0.04F, -148.50F}, Material::Concrete));
+    frame.push_back(span({landed.GetX() - 3.6F, 640.25F, -151.15F},
+                         {landed.GetX() - 3.3F, landed.GetY() - 0.28F, -150.85F}, Material::Rust));
+    frame.push_back(span({landed.GetX() - 3.6F, 640.25F, -149.15F},
+                         {landed.GetX() - 3.3F, landed.GetY() - 0.28F, -148.85F}, Material::Rust));
+    (void)landed;
+    build_slat_tower(frame);
+    return cart;
+}
+
+// North of the cart's landing. A cooling-tower shell, and on its south face
+// a column of louvers. The louvers are the climb. Nothing here is a cage,
+// and nothing here is held by a pin.
+void build_slat_tower(std::vector<Part> &frame) {
+    constexpr float kX = -6.20F;
+    constexpr float kZ = -147.55F;
+    constexpr float kFloorTop = 708.00F;
+    constexpr float kFloorSouth = kZ + 0.45F;
+    const float ladder_top = kFloorTop - 0.55F;
+    ladder(frame, kX, kZ, true, 683.70F, ladder_top);
+    frame.push_back(span({kX - 0.70F, ladder_top - 0.85F, kFloorSouth - 0.05F},
+                         {kX + 0.70F, kFloorTop, kFloorSouth + 0.06F}, Material::Steel));
+    frame.push_back(span({kX - 1.40F, kFloorTop - 0.24F, kFloorSouth},
+                         {kX + 1.60F, kFloorTop, kFloorSouth + 2.40F}, Material::Galvanised));
+    frame.push_back(span({kX - 1.55F, 683.50F, kZ - 0.15F},
+                         {kX - 1.15F, kFloorTop, kFloorSouth + 2.30F}, Material::Galvanised));
+    frame.push_back(span({kX + 1.15F, 683.50F, kZ - 0.15F},
+                         {kX + 1.55F, kFloorTop, kFloorSouth + 2.30F}, Material::Galvanised));
+    frame.push_back(span({-8.40F, 683.25F, -148.50F}, {-4.60F, 683.494F, -147.90F}, Material::Concrete));
+    frame.push_back(span({kX - 1.35F, 640.25F, kFloorSouth + 1.00F},
+                         {kX - 1.05F, kFloorTop - 0.24F, kFloorSouth + 1.30F}, Material::Rust));
+    frame.push_back(span({kX + 1.20F, 640.25F, kFloorSouth + 1.00F},
+                         {kX + 1.50F, kFloorTop - 0.24F, kFloorSouth + 1.30F}, Material::Rust));
+}
+
 } // namespace
 
 void build_facade_crane(kit::Kit &kit, FacadeCrane &crane) {
@@ -743,10 +890,13 @@ void build_facade_crane(kit::Kit &kit, FacadeCrane &crane) {
     build_shutter(kit, frame);
     const kit::BodyIndex ramp = build_ramp(kit, frame);
     const kit::BodyIndex gate = build_gate(kit, frame);
+    const kit::BodyIndex cart = build_cart_haul(kit, frame);
     const kit::BodyIndex frame_body =
         kit.add_body(Sim::kCraneFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     kit.disable_collision(ramp, frame_body);
     kit.disable_collision(gate, frame_body);
+    kit.disable_collision(cart, frame_body);
+    kit.disable_collision(kit.body_for_entity(Sim::kCartHaulWeightEntityId), frame_body);
     build_climbing_route(kit);
 }
 

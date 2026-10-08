@@ -3642,6 +3642,147 @@ bool climb_gate(scraperx::sim::Simulation &floor) {
     return true;
 }
 
+// The cart on the 45° rail above the ladder floor. It stays put until its
+// pin is lifted. The same player is on it when the weight drops, and the
+// rope drags the cart up the rail.
+bool climb_cart(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    const auto cart_x = [&]() {
+        return floor.kit_body_position(floor.kit_body_index(Simulation::kCartHaulEntityId)).x;
+    };
+    const double x0 = cart_x();
+    auto watch = [&](const double seconds) {
+        const int ticks = static_cast<int>(seconds * 90.0 + 0.5);
+        for (int step = 0; step < ticks; ++step) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+    };
+    watch(1.0);
+    require(std::abs(cart_x() - x0) < 0.08, "the cart must stay put until the pin is lifted");
+    require(walk_to(floor, 9.05, -144.55, 8.0, 0.20), "the player must leave the ladder floor");
+    require(walk_to(floor, 7.55, -149.20, 8.0, 0.25), "the player must reach the cart");
+    require(walk_to(floor, 7.30, -150.00, 6.0, 0.30), "the player must step onto the cart");
+    (void)floor.set_facing(1.0, 0.2);
+    watch(0.4);
+    if (floor.snapshot().carry_target_entity_id != Simulation::kCartHaulPinEntityId) {
+        const auto p = floor.snapshot();
+        std::cout << "no cart pin " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " target=" << p.carry_target_entity_id
+                  << " grounded=" << p.player_grounded << " y0cart=" << x0 << "\n";
+    }
+    require(floor.snapshot().carry_target_entity_id == Simulation::kCartHaulPinEntityId,
+            "the pin must be the thing in reach from the cart");
+    require(floor.request_pick_up(), "picking up the pin must be accepted");
+    watch(0.3);
+    require(floor.snapshot().carrying_entity_id == Simulation::kCartHaulPinEntityId, "the pin must be in the hands");
+    bool rode = false;
+    double peak_y = floor.snapshot().player_position.y;
+    for (int step = 0; step < 20 * 90 && !rode; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        peak_y = std::max(peak_y, floor.snapshot().player_position.y);
+        rode = cart_x() < x0 - 9.0;
+    }
+    if (!rode || peak_y < 680.0) {
+        const auto cart = floor.kit_body_position(floor.kit_body_index(Simulation::kCartHaulEntityId));
+        const auto weight = floor.kit_body_position(floor.kit_body_index(Simulation::kCartHaulWeightEntityId));
+        const auto p = floor.snapshot();
+        std::cout << "cart ride x0=" << x0 << " x=" << cart.x << " y=" << cart.y << " weight_y=" << weight.y
+                  << " player " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " peak_y=" << peak_y << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " deaths=" << p.death_count << "\n";
+    }
+    require(rode && peak_y > 680.0, "the cart must be dragged up the rail once the pin is lifted");
+    watch(1.5);
+    require(floor.request_set_down(), "setting the pin down must be accepted");
+    watch(0.4);
+    auto walk_slow = [&](const double x, const double z, const double seconds, const double tolerance) {
+        const auto ticks = static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            const auto state = floor.snapshot();
+            if (std::hypot(x - state.player_position.x, z - state.player_position.z) <= tolerance &&
+                state.player_grounded) {
+                (void)floor.set_move_input(0.0, 0.0);
+                return true;
+            }
+            steer_toward(floor, x, z, 0.35);
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+        (void)floor.set_move_input(0.0, 0.0);
+        return false;
+    };
+    const bool off = walk_slow(-6.4, -150.0, 10.0, 0.45);
+    if (!off) {
+        const auto p = floor.snapshot();
+        std::cout << "still on the cart " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << "\n";
+    }
+    require(off, "the player must step off the cart onto the upper floor");
+    bool up = false;
+    for (int step = 0; step < 3 * 90; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto state = floor.snapshot();
+        if (state.death_count == 0 && state.player_grounded && state.player_position.y > 683.2 &&
+            state.player_position.x < -4.5 && state.player_position.x > -9.0 &&
+            state.player_position.z > -151.6 && state.player_position.z < -148.3 &&
+            state.support_entity_id == Simulation::kCraneFrameEntityId) {
+            up = true;
+            break;
+        }
+    }
+    if (!up) {
+        const auto p = floor.snapshot();
+        std::cout << "off the cart at " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " deaths=" << p.death_count << "\n";
+    }
+    g_path_watch.armed = false;
+    require(g_path_watch.worst <= 0.15, "the cart must not snap the body more than 0.15 m in one tick");
+    require(up, "the player must be standing on the floor the cart climbs to, still inside the building");
+    const auto landed = floor.snapshot();
+    std::cout << "PASS scraperx_sim cart: floor_y=" << landed.player_position.y
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
+// The cooling-tower louvers north of the cart's landing. Same body, up the
+// slats, onto the shell's top. No pin and no ride.
+bool climb_slats(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    const bool up = climb_wet_hold(floor, -6.20, -148.15, 0.0, 1.0, false, 708.2);
+    if (!up) {
+        const auto p = floor.snapshot();
+        std::cout << "off the slats at " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " grip=" << p.grip_available << " trav=" << static_cast<int>(p.traversal_state)
+                  << " deaths=" << p.death_count << "\n";
+    }
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        std::cout << "slat snap " << g_path_watch.worst << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "the slats must not snap the body more than 0.15 m in one tick");
+    require(up, "the player must be standing on the cooling tower, still inside the building");
+    const auto landed = floor.snapshot();
+    require(landed.player_position.x > -9.0 && landed.player_position.x < -4.0 &&
+                landed.player_position.z > -147.3 && landed.player_position.z < -144.5 &&
+                landed.support_entity_id == Simulation::kCraneFrameEntityId && landed.death_count == 0,
+            "the cooling tower floor must be the one under the player");
+    std::cout << "PASS scraperx_sim slats: floor_y=" << landed.player_position.y
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
 // Same body, from standing on the 220 m ring, up through the rest of the
 // machines that are already in the building, to the floor the ladder reaches.
 bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seconds,
@@ -3697,6 +3838,8 @@ bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seco
     require_leg(run, climb_shutter(run), "the sheet aside, then up the ladder");
     require_leg(run, climb_ramp(run), "the pin out, then up the ramp");
     require_leg(run, climb_gate(run), "the gate aside, then up the ladder");
+    require_leg(run, climb_cart(run), "onto the cart, then up the rail");
+    require_leg(run, climb_slats(run), "up the cooling-tower slats");
     const auto landed = run.snapshot();
     std::cout << "PASS scraperx_sim " << pass_name << ": seconds=" << landed.simulation_time_seconds - start_seconds
               << " at_340=" << at_340 << " at_484=" << at_484 << " floor_y=" << landed.player_position.y << '\n';
@@ -3717,6 +3860,8 @@ void run_girder() {
     require(climb_shutter(floor), "the sheet aside, then up the ladder");
     require(climb_ramp(floor), "the pin out, then up the ramp");
     require(climb_gate(floor), "the gate aside, then up the ladder");
+    require(climb_cart(floor), "onto the cart, then up the rail");
+    require(climb_slats(floor), "up the cooling-tower slats");
 }
 
 int main() {

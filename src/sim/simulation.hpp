@@ -581,6 +581,11 @@ public:
     // it shut. Lift the pin, then pull the gate off the ladder.
     static constexpr std::uint64_t kGateEntityId = 2307;
     static constexpr std::uint64_t kGateLatchEntityId = 2308;
+    // A wheeled cart on a 45° rail above that floor. A weight at the head of
+    // the rail drags it up. The pin is what lets the weight drop.
+    static constexpr std::uint64_t kCartHaulEntityId = 2310;
+    static constexpr std::uint64_t kCartHaulWeightEntityId = 2311;
+    static constexpr std::uint64_t kCartHaulPinEntityId = 2312;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
