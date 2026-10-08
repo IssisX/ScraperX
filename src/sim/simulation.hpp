@@ -586,6 +586,11 @@ public:
     static constexpr std::uint64_t kCartHaulEntityId = 2310;
     static constexpr std::uint64_t kCartHaulWeightEntityId = 2311;
     static constexpr std::uint64_t kCartHaulPinEntityId = 2312;
+    // A duct hinged above the cooling-tower floor. A lever on that floor
+    // holds it folded up. Haul the lever over and the duct swings down
+    // onto the floor, and the walk up it is the way on. Not a pin.
+    static constexpr std::uint64_t kDuctEntityId = 2313;
+    static constexpr std::uint64_t kDuctLeverEntityId = 2314;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

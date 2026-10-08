@@ -736,6 +736,7 @@ kit::BodyIndex build_gate(kit::Kit &kit, std::vector<Part> &frame) {
 // floor holds the weight. Lift the pin and the weight drops, and the rope
 // drags the cart up the rails. The cart is not a cage.
 void build_slat_tower(std::vector<Part> &frame);
+void build_duct(kit::Kit &kit, std::vector<Part> &frame);
 kit::BodyIndex build_cart_haul(kit::Kit &kit, std::vector<Part> &frame) {
     constexpr float kS = 0.70710678F;
     constexpr float kSlope = 2.3561945F; // local +X points up the 45° rail, west and up
@@ -850,6 +851,7 @@ kit::BodyIndex build_cart_haul(kit::Kit &kit, std::vector<Part> &frame) {
                          {landed.GetX() - 3.3F, landed.GetY() - 0.28F, -148.85F}, Material::Rust));
     (void)landed;
     build_slat_tower(frame);
+    build_duct(kit, frame);
     return cart;
 }
 
@@ -876,6 +878,63 @@ void build_slat_tower(std::vector<Part> &frame) {
                          {kX - 1.05F, kFloorTop - 0.24F, kFloorSouth + 1.30F}, Material::Rust));
     frame.push_back(span({kX + 1.20F, 640.25F, kFloorSouth + 1.00F},
                          {kX + 1.50F, kFloorTop - 0.24F, kFloorSouth + 1.30F}, Material::Rust));
+}
+
+// East of the cooling-tower floor. A duct stands folded up on a hinge at
+// its high end. A lever on the floor holds it there. The lever is light:
+// the catch takes the duct's weight, and hauling the bar over is all it
+// takes. The duct then swings down until its low end sits on this floor,
+// thirty degrees, and the walk up it reaches the next deck. Nothing about
+// it is a pin, and nothing about it is a cage.
+void build_duct(kit::Kit &kit, std::vector<Part> &frame) {
+    constexpr float kHingeX = 6.212F;
+    constexpr float kHingeY = 714.052F;
+    constexpr float kZ = -146.00F;
+    constexpr float kHalf = 6.00F;
+    constexpr float kStow = -1.3962634F; // -80°, free end up, clear of the floor
+    // Hinge angle from that pose down to about 37°. The floor stops it
+    // nearer 30°. The extra is so the hinge is not what the walk stands on.
+    constexpr float kDrop = 2.05F;
+    const JPH::Quat stow = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), kStow);
+    const JPH::Vec3 hinge(kHingeX, kHingeY, kZ);
+    const JPH::Vec3 origin = hinge + stow * JPH::Vec3(-kHalf, 0.0F, 0.0F);
+    const kit::BodyIndex duct = kit.add_body(
+        Sim::kDuctEntityId,
+        {box(JPH::Vec3(kHalf, 0.06F, 0.48F), JPH::Vec3::sZero(), Material::Galvanised),
+         box(JPH::Vec3(kHalf, 0.035F, 0.03F), JPH::Vec3(0.0F, 0.09F, 0.50F), Material::Yellow),
+         box(JPH::Vec3(kHalf, 0.035F, 0.03F), JPH::Vec3(0.0F, 0.09F, -0.50F), Material::Yellow)},
+        JPH::RVec3(origin.GetX(), origin.GetY(), origin.GetZ()), stow, 900.0F, 0.9F);
+    kit.set_damping(duct, 0.35F, 2.2F);
+    kit.set_continuous_collision(duct);
+    const JPH::Vec3 stowed_up = stow * JPH::Vec3::sAxisY();
+    (void)kit.add_lever(duct, JPH::RVec3(hinge.GetX(), hinge.GetY(), hinge.GetZ()), JPH::Vec3::sAxisZ(),
+                        stowed_up, 0.0F, kDrop);
+
+    // The lever stands on the north-west of the cooling-tower floor, off the
+    // ladder's line. Its own weight holds it on the stop. The catch takes
+    // the duct's weight, so the bar only has to be hauled over.
+    const JPH::RVec3 pivot(-7.35, 708.40, -145.35);
+    kit::LeverIndex lever = {};
+    const kit::BodyIndex lever_body =
+        add_standing_lever(kit, frame, Sim::kDuctLeverEntityId, pivot, 708.00F, lever);
+    // The bar's weight sits west of the pivot, so its centre is not the pivot.
+    // The grab is the top of the bar, measured from that centre.
+    kit.set_carry(lever_body, kit::CarryKind::Handle, JPH::Vec3(0.0F, 0.35F, 0.0F));
+    (void)kit.add_catch(duct, lever, kLeverRelease, 0.05F, false);
+
+    // Apron east of the cooling-tower floor, where the low end sits.
+    frame.push_back(span({-4.70F, 707.76F, -147.20F}, {-3.30F, 708.00F, -144.80F}, Material::Concrete));
+    frame.push_back(span({-4.15F, 640.25F, -146.20F}, {-3.85F, 707.76F, -145.90F}, Material::Rust));
+
+    // The deck the high end meets. A short gap, same height as the duct's
+    // walk, so the step off is a step and not a drop.
+    frame.push_back(span({6.40F, 713.86F, -147.20F}, {8.90F, 714.10F, -144.80F}, Material::Concrete));
+    frame.push_back(span({7.20F, 640.25F, -146.85F}, {7.50F, 713.86F, -146.55F}, Material::Rust));
+    frame.push_back(span({8.15F, 640.25F, -145.45F}, {8.45F, 713.86F, -145.15F}, Material::Rust));
+    // Cheeks at the hinge, either side of the duct, so the pivot is a thing
+    // you can see and not a point in the air.
+    frame.push_back(span({6.02F, 713.30F, -146.72F}, {6.48F, 714.55F, -146.58F}, Material::Steel));
+    frame.push_back(span({6.02F, 713.30F, -145.42F}, {6.48F, 714.55F, -145.28F}, Material::Steel));
 }
 
 } // namespace

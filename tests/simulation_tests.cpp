@@ -3783,6 +3783,167 @@ bool climb_slats(scraperx::sim::Simulation &floor) {
     return true;
 }
 
+// The duct folded up east of the cooling-tower floor. The handle on this
+// floor turns a light lever. The duct then drops onto the floor, and the
+// same player walks up it. No pin.
+bool climb_duct(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    const auto duct_y = [&]() {
+        return floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kDuctEntityId)).y;
+    };
+    auto watch = [&](const double seconds) {
+        const int ticks = static_cast<int>(seconds * 90.0 + 0.5);
+        for (int step = 0; step < ticks; ++step) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+    };
+    const double y0 = duct_y();
+    if (y0 < 718.0) {
+        const auto duct = floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kDuctEntityId));
+        std::cout << "duct already down y=" << duct.y << " x=" << duct.x << " z=" << duct.z << "\n";
+    }
+    require(y0 > 718.0, "the duct must still be folded up on the cooling tower");
+    require(walk_to(floor, -6.55, -145.35, 8.0, 0.12), "the player must reach the duct's lever");
+    (void)floor.set_facing(-1.0, 0.0);
+    watch(0.45);
+    if (floor.snapshot().carry_target_entity_id != Simulation::kDuctLeverEntityId) {
+        const auto p = floor.snapshot();
+        const auto lever = floor.kit_body_position(floor.kit_body_index(Simulation::kDuctLeverEntityId));
+        std::cout << "no duct lever player " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " lever " << lever.x << " " << lever.y << " " << lever.z
+                  << " target=" << p.carry_target_entity_id << " grounded=" << p.player_grounded << "\n";
+    }
+    require(floor.snapshot().carry_target_entity_id == Simulation::kDuctLeverEntityId,
+            "the duct lever must be the thing in reach");
+    require(floor.request_pick_up(), "taking the duct lever must be accepted");
+    watch(0.3);
+    require(floor.snapshot().carrying_entity_id == Simulation::kDuctLeverEntityId,
+            "the duct lever must be in the hands");
+    bool dropped = false;
+    for (int step = 0; step < 5 * 90 && !dropped; ++step) {
+        const auto here = floor.snapshot().player_position;
+        if (here.x > -5.70) {
+            (void)floor.set_move_input(0.0, 0.0);
+        } else {
+            (void)floor.set_move_input(0.22, 0.0);
+        }
+        (void)floor.set_facing(-1.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        // The catch lets go as soon as the bar is over. Stop there. Waiting
+        // for the duct to finish its swing walks the player off the floor.
+        dropped = duct_y() < 718.0;
+    }
+    (void)floor.set_move_input(0.0, 0.0);
+    if (floor.snapshot().carrying_entity_id != 0) {
+        (void)floor.request_set_down();
+    }
+    watch(0.4);
+    if (!dropped || floor.snapshot().player_position.y < 707.4) {
+        const auto duct = floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kDuctEntityId));
+        const auto lever = floor.kit_body_position(floor.kit_body_index(Simulation::kDuctLeverEntityId));
+        const auto q = floor.kit_body_rotation(floor.kit_body_index(Simulation::kDuctLeverEntityId));
+        const auto p = floor.snapshot();
+        std::cout << "duct pull y0=" << y0 << " y=" << duct.y << " x=" << duct.x << " lever " << lever.x << " "
+                  << lever.y << " " << lever.z << " quat " << q.w << " " << q.x << " " << q.y << " " << q.z
+                  << " player " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " carrying=" << p.carrying_entity_id << " grounded=" << p.player_grounded
+                  << " deaths=" << p.death_count << "\n";
+    }
+    require(floor.snapshot().death_count == 0, "pulling the duct lever must not kill the player");
+    require(floor.snapshot().player_position.y > 707.4, "pulling the duct lever must not knock the player off");
+    require(dropped, "the duct must swing down once the lever is pulled");
+    bool settled = false;
+    for (int step = 0; step < 8 * 90 && !settled; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto vel = floor.kit_body_velocity(floor.kit_body_index(Simulation::kDuctEntityId));
+        settled = duct_y() < 712.6 && duct_y() > 709.0 && std::hypot(vel.x, vel.y) < 0.25;
+    }
+    if (!settled) {
+        const auto duct = floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kDuctEntityId));
+        const auto vel = floor.kit_body_velocity(floor.kit_body_index(Simulation::kDuctEntityId));
+        std::cout << "duct did not settle y=" << duct.y << " x=" << duct.x << " z=" << duct.z << " v=" << vel.x << " "
+                  << vel.y << " " << vel.z << "\n";
+    }
+    require(settled, "the duct must come to rest on the floor");
+    auto walk_slow = [&](const double x, const double z, const double seconds, const double tolerance) {
+        const auto ticks = static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            const auto state = floor.snapshot();
+            if (std::hypot(x - state.player_position.x, z - state.player_position.z) <= tolerance &&
+                state.player_grounded && state.player_position.y > 707.4) {
+                (void)floor.set_move_input(0.0, 0.0);
+                return true;
+            }
+            steer_toward(floor, x, z, 0.38);
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+        (void)floor.set_move_input(0.0, 0.0);
+        return false;
+    };
+    const bool on = walk_slow(-3.6, -146.00, 10.0, 0.40);
+    if (!on) {
+        const auto p = floor.snapshot();
+        std::cout << "not on the duct " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << "\n";
+    }
+    require(on, "the player must step onto the lowered duct");
+    const bool mid = walk_slow(2.2, -146.00, 16.0, 0.45);
+    if (!mid) {
+        const auto p = floor.snapshot();
+        std::cout << "stuck on the duct " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " yduct=" << duct_y() << "\n";
+    }
+    require(mid, "the player must walk up the duct");
+    const bool off = walk_slow(7.50, -146.00, 12.0, 0.45);
+    if (!off) {
+        const auto p = floor.snapshot();
+        std::cout << "not on the duct deck " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << "\n";
+    }
+    require(off, "the player must step off the duct onto the next floor");
+    bool up = false;
+    for (int step = 0; step < 3 * 90; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto state = floor.snapshot();
+        if (state.death_count == 0 && state.player_grounded && state.player_position.y > 714.6 &&
+            state.player_position.x > 6.7 && state.player_position.x < 8.7 &&
+            state.player_position.z > -147.1 && state.player_position.z < -144.9 &&
+            state.support_entity_id == Simulation::kCraneFrameEntityId) {
+            up = true;
+            break;
+        }
+    }
+    if (!up) {
+        const auto p = floor.snapshot();
+        std::cout << "off the duct at " << p.player_position.x << " " << p.player_position.y << " "
+                  << p.player_position.z << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " deaths=" << p.death_count << " yduct=" << duct_y() << "\n";
+    }
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        std::cout << "duct snap " << g_path_watch.worst << " at " << g_path_watch.worst_at.x << " "
+                  << g_path_watch.worst_at.y << " " << g_path_watch.worst_at.z << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "the duct must not snap the body more than 0.15 m in one tick");
+    require(up, "the player must be standing on the floor the duct climbs to, still inside the building");
+    const auto landed = floor.snapshot();
+    std::cout << "PASS scraperx_sim duct: floor_y=" << landed.player_position.y
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
 // Same body, from standing on the 220 m ring, up through the rest of the
 // machines that are already in the building, to the floor the ladder reaches.
 bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seconds,
@@ -3840,6 +4001,7 @@ bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seco
     require_leg(run, climb_gate(run), "the gate aside, then up the ladder");
     require_leg(run, climb_cart(run), "onto the cart, then up the rail");
     require_leg(run, climb_slats(run), "up the cooling-tower slats");
+    require_leg(run, climb_duct(run), "the duct down, then up it");
     const auto landed = run.snapshot();
     std::cout << "PASS scraperx_sim " << pass_name << ": seconds=" << landed.simulation_time_seconds - start_seconds
               << " at_340=" << at_340 << " at_484=" << at_484 << " floor_y=" << landed.player_position.y << '\n';
@@ -3862,6 +4024,7 @@ void run_girder() {
     require(climb_gate(floor), "the gate aside, then up the ladder");
     require(climb_cart(floor), "onto the cart, then up the rail");
     require(climb_slats(floor), "up the cooling-tower slats");
+    require(climb_duct(floor), "the duct down, then up it");
 }
 
 int main() {
