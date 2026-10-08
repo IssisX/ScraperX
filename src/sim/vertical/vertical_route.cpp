@@ -67,6 +67,25 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     // The crown's cabin never goes north of z -155, so the two never meet.
     place("sx.luffing_derrick.v1", {RVec3(13.5, 771.39, -193.0), -0.5F * JPH_PI},
           {kDerrickStaticFirst, 3}, {kDerrickDynamicFirst, 3});
+
+    // The owner's slab incline, turned so the incline rises north toward the
+    // south face at x -10 and its slab's tower stands east of it (x -5.5):
+    // the trolley's deck at the foot 3.4 m over the yard (z -103), at the head
+    // 33.4 m (z -120.4), its receivers west of it at x -14.9 to -11.9.
+    place("sx.slab_incline.v1", {RVec3(-10.0, 0.1, -103.08), 0.5F * JPH_PI},
+          {kInclineStaticFirst, 3}, {kInclineDynamicFirst, 2});
+    // A ramp from the yard (z -90) up to the boarding platform's south edge,
+    // and a plate from the head's receiver over the face's edge beam to deck 3
+    // (33.0 m), 0.4 m below it.
+    {
+        const RVec3 low(-13.4, 0.0, -90.0), high(-13.4, 3.4, -101.58);
+        const Vec3 run(high - low);
+        Part ramp = box(Vec3(1.5F, 0.15F, 0.5F * run.Length()), Material::Timber);
+        ramp.rotation = Quat::sRotation(Vec3::sAxisX(), std::atan2(run.GetY(), -run.GetZ()));
+        kit_.add_body(kInclineRamp, {ramp}, low + 0.5 * run - RVec3(0.0, 0.15, 0.0), Quat::sIdentity(), 0.0F, 0.8F);
+        kit_.add_body(kInclineHeadPlate, {box(Vec3(1.5F, 0.15F, 0.85F), Material::Galvanised)},
+                      RVec3(-13.4, 33.25, -122.75), Quat::sIdentity(), 0.0F, 0.8F);
+    }
 }
 
 Route::~Route() = default;

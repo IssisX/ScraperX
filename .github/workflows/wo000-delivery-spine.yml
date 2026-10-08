@@ -165,6 +165,7 @@ jobs:
             "PASS scraperx_sim pitman" \
             "PASS scraperx_sim helix" \
             "PASS scraperx_sim high" \
+            "PASS scraperx_sim incline" \
             "PASS scraperx_sim ascent 154 to TP-640"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
@@ -259,7 +260,8 @@ jobs:
           # From the 264 ring the owner's vertical machines on their motors,
           # the cascade mast, the pitman lift and the barrel helix, and a
           # mantle onto TP-340 (touch_machines); and from the 750 deck the
-          # crown gondola and the luffing derrick to 802.6 m (touch_high).
+          # crown gondola and the luffing derrick to 802.6 m (touch_high);
+          # from the game's start the slab incline to deck 3 (touch_incline).
           # --fixed-fps makes simulated time exact however fast the runner is.
           : > artifacts/godot-uitest.log
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
@@ -268,7 +270,7 @@ jobs:
               touch_checkpoint touch_stack_upper pad_stack_upper keyboard_stack_upper \
               touch_stack pad_stack keyboard_stack touch_wet pad_wet keyboard_wet \
               touch_shop pad_shop keyboard_shop touch_crane pad_crane keyboard_crane \
-              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_machines touch_high fall_voice; do
+              touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_machines touch_high touch_incline fall_voice; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log

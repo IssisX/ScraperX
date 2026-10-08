@@ -91,6 +91,10 @@ const SCENARIOS := {
 	# east parapet, the crown gondola's cabin through a half turn of its 28 m
 	# crown to 778 m, and the luffing derrick's cradle up and in to 802.6 m.
 	"touch_high": 37,
+	# The owner's slab incline from the game's start: across the yard east of
+	# the slingshot, up the ramp onto its platform, onto the trolley, RAISE,
+	# 30 m up the 60-degree incline, and off onto deck 3.
+	"touch_incline": 8,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -256,6 +260,8 @@ func _run() -> void:
 			ok = await _machines(InputRouter.Device.TOUCH)
 		"touch_high":
 			ok = await _high(InputRouter.Device.TOUCH)
+		"touch_incline":
+			ok = await _incline(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -2000,6 +2006,36 @@ func _high(device: int) -> bool:
 	_detail = "crown_y=%.2f top_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		crown_y, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step,
 		float(body["lift"])]
+	return true
+
+
+func _incline(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var body := _watch_body()
+	if not (await _go(device, Vector2(6.0, -70.0), 0.2, 20.0) and \
+			await _go(device, Vector2(-13.4, -86.0), 0.2, 20.0)):
+		return _fail("incline: the walk across the yard stalled at %s" % str(_position()))
+	await _pose("incline_foot")
+	if not await _ride_machine(device, 5, "SLAB INCLINE", Vector2(-13.4, -103.0), Vector2(-10.0, -103.08),
+			Vector2(-13.4, -120.4)):
+		return false
+	if not await _go(device, Vector2(-13.4, -126.0), 0.15, 8.0):
+		return _fail("incline: the step onto deck 3 stalled at %s" % str(_position()))
+	await _seconds(1.0)
+	await _pose("incline_deck3")
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
+	if not _standing_above(33.7):
+		return _fail("incline: not standing on deck 3 (y %.2f)" % _position().y)
+	_detail = "deck3_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
 	return true
 
 

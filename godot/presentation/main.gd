@@ -133,7 +133,7 @@ const KIT_PILE_FLOATS := 4
 const KIT_MAX_PILES := 16
 # The owner's vertical machines (src/sim/vertical/vertical_route.cpp), in
 # route order, and what the player stands on of one (LiftSnapshot.role).
-const LIFT_NAMES := ["CASCADE MAST", "PITMAN LIFT", "BARREL HELIX", "CROWN GONDOLA", "LUFFING DERRICK"]
+const LIFT_NAMES := ["CASCADE MAST", "PITMAN LIFT", "BARREL HELIX", "CROWN GONDOLA", "LUFFING DERRICK", "SLAB INCLINE"]
 const LIFT_ROLE_DECK := 1
 const LIFT_ROLE_ENTRY := 2
 const LIFT_ROLE_EXIT := 3

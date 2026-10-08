@@ -4039,6 +4039,62 @@ void run_high() {
               << " top_y=" << e.player_position.y << '\n';
 }
 
+// The owner's slab incline, from the game's start: across the yard, up the
+// ramp onto its boarding platform, onto the trolley, RAISE: a 2.5 t slab
+// falls in its tower and its rope hauls the trolley 30 m up the 60-degree
+// incline (the trolley's motor only brakes it); off at the head and down
+// onto deck 3.
+void run_incline() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation s(InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(1.0);
+    // East of the slingshot, then west across the yard to the ramp's foot.
+    const bool boarded = walk_to(s, 6.0, -70.0, 20.0) && walk_to(s, -13.4, -86.0, 20.0) &&
+                         walk_to(s, -13.4, -103.0, 12.0) &&
+                         s.advance_frame(0.5).accepted && s.lift_state().machine == 5 && s.lift_state().role == 2 &&
+                         walk_to(s, -10.0, -103.08, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 1;
+    if (!boarded) {
+        const auto st = s.snapshot();
+        std::cerr << "incline board: at (" << st.player_position.x << "," << st.player_position.y << ","
+                  << st.player_position.z << ") machine=" << s.lift_state().machine << " role=" << s.lift_state().role
+                  << " incline_travel=" << s.lift_state().travels[5] << '\n';
+    }
+    require(boarded, "incline: across the yard, up the ramp, onto the trolley");
+    {
+        Simulation idle(InitialSpawn::ExteriorGrade);
+        (void)idle.advance_frame(20.0);
+        require(std::abs(idle.lift_state().travels[5]) < 0.005,
+                "incline: left alone, the slab stays up and the trolley at the foot");
+    }
+    (void)s.request_lift_action();
+    const double start = s.snapshot().simulation_time_seconds;
+    double peak = 0.0;
+    const bool up = wait_for(s, 90.0, [&s, &peak](const scraperx::sim::Snapshot &state) {
+        peak = std::max(peak, std::hypot(state.player_linear_velocity.y, state.player_linear_velocity.z));
+        const auto lift = s.lift_state();
+        return std::abs(lift.travels[5] - 1.0) < 0.005 && !lift.moving && state.player_grounded;
+    });
+    const double ride_s = s.snapshot().simulation_time_seconds - start;
+    if (!up) {
+        const auto st = s.snapshot();
+        std::cerr << "incline ride: at (" << st.player_position.x << "," << st.player_position.y << ","
+                  << st.player_position.z << ") travel=" << s.lift_state().travels[5] << " deaths=" << st.death_count
+                  << '\n';
+    }
+    require(up && ride_s < 60.0, "incline: RAISE must haul the trolley 30 m up the incline");
+    require(peak < 2.0, "incline: the trolley's brake must hold it to its pace");
+    require(walk_to(s, -13.4, -120.4, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3,
+            "incline: off onto the head's receiver");
+    require(walk_to(s, -13.4, -126.0, 8.0) && s.advance_frame(1.0).accepted,
+            "incline: over the plate and down onto deck 3");
+    const auto end = s.snapshot();
+    require(end.death_count == 0 && end.player_grounded && end.player_position.y > 33.7 && end.player_position.y < 34.2,
+            "incline: standing on deck 3, alive");
+    std::cout << "PASS scraperx_sim incline: ride_s=" << ride_s << " peak_mps=" << peak
+              << " deck3_y=" << end.player_position.y << '\n';
+}
+
 // The owner's law for this world (plan §2.6 rule 10): the initial state
 // determines the final state. The same start and the same inputs, twice: up
 // C5 on player inputs (walk, vault, crawl, sprint, leap, hang, climb), then O
@@ -5706,6 +5762,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "high") {
         run_high();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "incline") {
+        run_incline();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -7664,6 +7725,7 @@ int main() {
     run_pitman();
     run_helix();
     run_high();
+    run_incline();
     run_ascent();
 
     return EXIT_SUCCESS;

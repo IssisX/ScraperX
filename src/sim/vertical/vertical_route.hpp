@@ -74,6 +74,13 @@ public:
     // 778.09 m, its cradle luffed up and in to 802.64 m.
     static constexpr std::uint64_t kDerrickStaticFirst = 1976;   // frame, entry, exit
     static constexpr std::uint64_t kDerrickDynamicFirst = 2931;  // boom, cradle, ballast
+    // The owner's slab incline on the south face west of S1, from the yard
+    // to deck 3: a ramp up to its boarding platform (3.4 m), the trolley 30 m
+    // up the 60-degree incline, and a plate from its head onto deck 3.
+    static constexpr std::uint64_t kInclineStaticFirst = 1979;   // frame, entry, exit
+    static constexpr std::uint64_t kInclineDynamicFirst = 2934;  // trolley, slab
+    static constexpr std::uint64_t kInclineRamp = 1982;
+    static constexpr std::uint64_t kInclineHeadPlate = 1983;
 
 private:
     struct Placed {
