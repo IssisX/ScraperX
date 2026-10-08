@@ -99,6 +99,10 @@ const SCENARIOS := {
 	# the bottom, RAISE, carried over the top of the 26 m wheel by the poured
 	# stone's weight, and down the ramp onto deck 4.
 	"touch_wheel": 25,
+	# The traction tram from deck 6: out along the east bridge, off its end,
+	# down the gangway onto the carrier, RAISE, 26 m up and 44 m west on its
+	# driven wheels, and down onto deck 8.
+	"touch_tram": 27,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -268,6 +272,8 @@ func _run() -> void:
 			ok = await _incline(InputRouter.Device.TOUCH)
 		"touch_wheel":
 			ok = await _wheel(InputRouter.Device.TOUCH)
+		"touch_tram":
+			ok = await _tram(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -2068,6 +2074,42 @@ func _wheel(device: int) -> bool:
 	if not _standing_above(44.7):
 		return _fail("wheel: not standing on deck 4 (y %.2f)" % _position().y)
 	_detail = "deck4_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
+	return true
+
+
+func _tram(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var body := _watch_body()
+	if not (await _go(device, Vector2(18.5, -128.0), 0.15, 12.0) and \
+			await _go(device, Vector2(18.5, -153.0), 0.15, 12.0) and \
+			await _go(device, Vector2(25.5, -153.0), 0.15, 6.0) and \
+			await _go(device, Vector2(79.5, -153.0), 0.15, 25.0) and \
+			await _go(device, Vector2(81.2, -153.0), 0.15, 4.0) and \
+			await _go(device, Vector2(81.1, -157.5), 0.15, 6.0)):
+		return _fail("tram: the walk out the east bridge stalled at %s (support %d, traversal %d, crouched %s)" % [
+			str(_position()), int(_native().get_support_entity_id()), int(_native().get_traversal_state()),
+			str(_native().is_player_crouched())])
+	await _pose("tram_gangway")
+	if not await _ride_machine(device, 7, "TRACTION TRAM", Vector2(80.6, -161.0), Vector2(74.0, -161.0),
+			Vector2(29.9, -161.0)):
+		return false
+	if not await _go(device, Vector2(23.5, -161.0), 0.15, 6.0):
+		return _fail("tram: the walk onto deck 8 stalled at %s" % str(_position()))
+	await _seconds(1.5)
+	await _pose("tram_deck8")
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
+	if not _standing_above(88.7):
+		return _fail("tram: not standing on deck 8 (y %.2f)" % _position().y)
+	_detail = "deck8_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
 	return true
 

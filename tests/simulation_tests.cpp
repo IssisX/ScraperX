@@ -4148,6 +4148,57 @@ void run_wheel() {
               << " deck4_y=" << end.player_position.y << '\n';
 }
 
+// The traction tram from deck 6: east onto the east bridge, off its open
+// end onto a landing, down the gangway onto the tram's lower receiver and
+// its carrier, RAISE: two motors drive its 4 m wheels up the
+// 35-degree track by their grip on it, 26 m up and 44 m west; off its upper
+// receiver, along a plate to deck 8's east edge and down onto deck 8.
+void run_tram() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    Simulation s(InitialSpawn::Deck6South);
+    (void)s.advance_frame(1.0);
+    // Along deck 6's east band west of C2's switchgear and duct, out east
+    // along the bridge, off its open end onto the landing and down the gangway.
+    bool ok = walk_to(s, 18.5, -128.0, 12.0) && walk_to(s, 18.5, -153.0, 12.0) && walk_to(s, 79.5, -153.0, 25.0) &&
+              walk_to(s, 81.2, -153.0, 4.0) && walk_to(s, 81.1, -157.5, 6.0);
+    const bool reached_gangway = ok;
+    ok = ok && walk_to(s, 80.6, -161.0, 8.0) && s.advance_frame(0.5).accepted && s.lift_state().machine == 7 &&
+         s.lift_state().role == 2 && walk_to(s, 74.0, -161.0, 6.0) && s.advance_frame(0.5).accepted &&
+         s.lift_state().role == 1;
+    if (!ok) {
+        const auto st = s.snapshot();
+        std::cerr << "tram board: reached_gangway=" << reached_gangway << " at (" << st.player_position.x << "," << st.player_position.y
+                  << "," << st.player_position.z << ") machine=" << s.lift_state().machine
+                  << " role=" << s.lift_state().role << '\n';
+    }
+    require(ok, "tram: along the bridge, off its end, down the gangway onto the carrier");
+    (void)s.request_lift_action();
+    const double start = s.snapshot().simulation_time_seconds;
+    const bool up = wait_for(s, 150.0, [&s](const Snapshot &state) {
+        const auto lift = s.lift_state();
+        return std::abs(lift.travels[7] - 1.0) < 0.01 && !lift.moving && state.player_grounded;
+    });
+    const double ride_s = s.snapshot().simulation_time_seconds - start;
+    if (!up) {
+        const auto st = s.snapshot();
+        std::cerr << "tram ride: at (" << st.player_position.x << "," << st.player_position.y << ","
+                  << st.player_position.z << ") travel=" << s.lift_state().travels[7] << " deaths=" << st.death_count
+                  << '\n';
+    }
+    require(up, "tram: RAISE must drive the carrier 26 m up its track, the rider on it");
+    require(walk_to(s, 29.9, -161.0, 12.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3,
+            "tram: off onto its upper receiver");
+    (void)walk_to(s, 23.5, -161.0, 6.0);
+    (void)s.advance_frame(1.5);
+    const auto end = s.snapshot();
+    require(end.death_count == 0 && end.player_grounded && end.player_position.y > 88.7 && end.player_position.y < 89.2,
+            "tram: down onto deck 8, alive");
+    std::cout << "PASS scraperx_sim tram: ride_s=" << ride_s << " deck8_y=" << end.player_position.y << '\n';
+}
+
 // The owner's law for this world (plan §2.6 rule 10): the initial state
 // determines the final state. The same start and the same inputs, twice: up
 // C5 on player inputs (walk, vault, crawl, sprint, leap, hang, climb), then O
@@ -5825,6 +5876,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "wheel") {
         run_wheel();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "tram") {
+        run_tram();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -7785,6 +7841,7 @@ int main() {
     run_high();
     run_incline();
     run_wheel();
+    run_tram();
     run_ascent();
 
     return EXIT_SUCCESS;

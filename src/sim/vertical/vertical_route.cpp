@@ -101,6 +101,20 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     };
     ramp(kWheelLowRamp, RVec3(16.0, 20.5, -114.8), RVec3(16.0, 22.0, -123.9));
     ramp(kWheelHighRamp, RVec3(16.0, 46.5, -114.8), RVec3(16.0, 44.0, -123.9));
+
+    // The traction tram, turned half about so its track rises west from
+    // beside the east bridge's end toward deck 8, along z -161, clear of the
+    // east machine hall and the bridge's web: its lower receiver at x 79.1 to
+    // 82.1 (64.0 m), its upper at x 28.4 to 31.4 (90.0 m).
+    place("sx.traction_tram.v1", {RVec3(77.3, 53.15, -161.0), JPH_PI}, {kTramStaticFirst, 5}, {kTramDynamicFirst, 3});
+    // Off the bridge's east end, past its rails, onto a landing over its
+    // pylon, and a gangway north down to the lower receiver's south edge.
+    kit_.add_body(kTramLanding, {box(Vec3(1.3F, 0.15F, 2.2F), Material::Galvanised)},
+                  RVec3(81.3, 64.55, -153.0), Quat::sIdentity(), 0.0F, 0.8F);
+    ramp(kTramGangway, RVec3(81.1, 64.7, -155.2), RVec3(81.1, 64.0, -158.6));
+    // From the upper receiver a plate on west to deck 8's east edge beam.
+    kit_.add_body(kTramTopPlate, {box(Vec3(1.0F, 0.15F, 2.4F), Material::Galvanised)},
+                  RVec3(27.4, 89.85, -161.0), Quat::sIdentity(), 0.0F, 0.8F);
 }
 
 Route::~Route() = default;

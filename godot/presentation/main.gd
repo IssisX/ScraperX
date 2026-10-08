@@ -133,7 +133,7 @@ const KIT_PILE_FLOATS := 4
 const KIT_MAX_PILES := 16
 # The owner's vertical machines (src/sim/vertical/vertical_route.cpp), in
 # route order, and what the player stands on of one (LiftSnapshot.role).
-const LIFT_NAMES := ["CASCADE MAST", "PITMAN LIFT", "BARREL HELIX", "CROWN GONDOLA", "LUFFING DERRICK", "SLAB INCLINE", "STONE WHEEL"]
+const LIFT_NAMES := ["CASCADE MAST", "PITMAN LIFT", "BARREL HELIX", "CROWN GONDOLA", "LUFFING DERRICK", "SLAB INCLINE", "STONE WHEEL", "TRACTION TRAM"]
 const LIFT_ROLE_DECK := 1
 const LIFT_ROLE_ENTRY := 2
 const LIFT_ROLE_EXIT := 3
@@ -1726,13 +1726,18 @@ func _build_stack_bridges(galvanised: Material, faded: Material, rust_deep: Mate
 			for post in range(int(length / 4.0)):
 				_add_box("BridgePost", Vector3(0.12, 1.2, 0.12),
 					from + Vector3(sx * (2.0 + float(post) * 4.0), 0.6, rail_z), galvanised)
-		# Under-truss, so the span looks like it could carry itself.
+		# Under-truss, so the span looks like it could carry itself: level under
+		# the level deck. (Its line once fell 3 m along the span with from-to,
+		# so near the tower the webs stood 1.2 m up through the deck.)
+		var under := Vector3(0.0, (from.y + to.y) * 0.5 - 0.2 - from.y, 0.0)
+		var deck_from := from + under
+		var deck_to := Vector3(to.x, deck_from.y, to.z)
 		for web in range(int(length / 6.0)):
 			var a := float(web) / (length / 6.0)
 			var b := (float(web) + 1.0) / (length / 6.0)
-			_add_strut("BridgeWeb", from.lerp(to, a) - Vector3(0.0, 0.2, 0.0),
-				from.lerp(to, b) - Vector3(0.0, 2.6, 0.0), 0.3, rust_deep)
-		_add_strut("BridgeChord", from - Vector3(0.0, 2.6, 0.0), to - Vector3(0.0, 2.6, 0.0),
+			_add_strut("BridgeWeb", deck_from.lerp(deck_to, a),
+				deck_from.lerp(deck_to, b) - Vector3(0.0, 2.4, 0.0), 0.3, rust_deep)
+		_add_strut("BridgeChord", deck_from - Vector3(0.0, 2.4, 0.0), deck_to - Vector3(0.0, 2.4, 0.0),
 			0.42, rust_deep)
 		# A pylon out at the far end, implying the span lands somewhere.
 		_add_box("BridgePylon", Vector3(3.0, y * 0.94, 3.0),

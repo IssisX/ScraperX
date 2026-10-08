@@ -88,6 +88,16 @@ public:
     static constexpr std::uint64_t kWheelDynamicFirst = 2936;   // wheel, striker, gate, 9 buckets
     static constexpr std::uint64_t kWheelLowRamp = 1988;
     static constexpr std::uint64_t kWheelHighRamp = 1989;
+    // The traction tram beside the east bridge (64.7 m), its track rising
+    // west: off the bridge's open east end onto a landing, down a gangway to
+    // its lower receiver (64.0 m); its carrier driven 26 m up and 44 m west to
+    // its upper receiver (90.0 m), and a plate on west to deck 8's east edge,
+    // 2 m over the deck.
+    static constexpr std::uint64_t kTramStaticFirst = 1990;    // track, entry, exit, two stops
+    static constexpr std::uint64_t kTramDynamicFirst = 2948;   // carrier, two wheels
+    static constexpr std::uint64_t kTramGangway = 1995;
+    static constexpr std::uint64_t kTramLanding = 1996;
+    static constexpr std::uint64_t kTramTopPlate = 1997;
 
 private:
     struct Placed {
