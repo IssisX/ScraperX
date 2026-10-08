@@ -4095,6 +4095,59 @@ void run_incline() {
               << " deck3_y=" << end.player_position.y << '\n';
 }
 
+// The owner's stone wheel, from deck 2: down the ramp to its lower receiver,
+// into the bucket at the bottom, RAISE: the hopper's gate opens, stone pours
+// into the bucket past the top, and the loaded side turns the 26 m wheel,
+// carrying the rider's bucket round and up to the top (its motor only brakes
+// and holds); off, and down the ramp onto deck 4.
+void run_wheel() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation s(InitialSpawn::Deck2South);
+    (void)s.advance_frame(1.0);
+    const bool boarded = walk_to(s, 16.0, -125.0, 10.0) && walk_to(s, 16.0, -113.3, 12.0) &&
+                         s.advance_frame(0.5).accepted && s.lift_state().machine == 6 && s.lift_state().role == 2 &&
+                         walk_to(s, 16.0, -110.0, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 1;
+    if (!boarded) {
+        const auto st = s.snapshot();
+        std::cerr << "wheel board: at (" << st.player_position.x << "," << st.player_position.y << ","
+                  << st.player_position.z << ") machine=" << s.lift_state().machine << " role=" << s.lift_state().role
+                  << " travel=" << s.lift_state().travels[6] << '\n';
+    }
+    require(boarded, "wheel: down the ramp from deck 2 and into the bucket at the bottom");
+    (void)s.request_lift_action();
+    const double start = s.snapshot().simulation_time_seconds;
+    double peak = 0.0;
+    double last_report = start;
+    const bool up = wait_for(s, 150.0, [&](const scraperx::sim::Snapshot &state) {
+        peak = std::max(peak, std::hypot(state.player_linear_velocity.x, state.player_linear_velocity.y));
+        if (std::getenv("SX_TRACE_WHEEL") && state.simulation_time_seconds - last_report >= 5.0) {
+            last_report = state.simulation_time_seconds;
+            std::cerr << "wheel t=" << state.simulation_time_seconds - start << " travel=" << s.lift_state().travels[6]
+                      << " y=" << state.player_position.y << " grounded=" << state.player_grounded << '\n';
+        }
+        const auto lift = s.lift_state();
+        return lift.travels[6] > 0.995 && !lift.moving && state.player_grounded;
+    });
+    const double ride_s = s.snapshot().simulation_time_seconds - start;
+    if (!up) {
+        const auto st = s.snapshot();
+        std::cerr << "wheel ride: at (" << st.player_position.x << "," << st.player_position.y << ","
+                  << st.player_position.z << ") travel=" << s.lift_state().travels[6] << " deaths=" << st.death_count
+                  << '\n';
+    }
+    require(up, "wheel: the stone must turn the wheel and carry the rider's bucket to the top");
+    require(peak < 2.5, "wheel: the brake must hold the turn to its pace");
+    require(walk_to(s, 16.0, -113.3, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3,
+            "wheel: off onto the upper receiver");
+    require(walk_to(s, 16.0, -125.5, 12.0) && s.advance_frame(1.0).accepted, "wheel: down the ramp onto deck 4");
+    const auto end = s.snapshot();
+    require(end.death_count == 0 && end.player_grounded && end.player_position.y > 44.7 && end.player_position.y < 45.2,
+            "wheel: standing on deck 4, alive");
+    std::cout << "PASS scraperx_sim wheel: ride_s=" << ride_s << " peak_mps=" << peak
+              << " deck4_y=" << end.player_position.y << '\n';
+}
+
 // The owner's law for this world (plan §2.6 rule 10): the initial state
 // determines the final state. The same start and the same inputs, twice: up
 // C5 on player inputs (walk, vault, crawl, sprint, leap, hang, climb), then O
@@ -5767,6 +5820,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "incline") {
         run_incline();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "wheel") {
+        run_wheel();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -7726,6 +7784,7 @@ int main() {
     run_helix();
     run_high();
     run_incline();
+    run_wheel();
     run_ascent();
 
     return EXIT_SUCCESS;

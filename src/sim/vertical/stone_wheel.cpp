@@ -23,6 +23,9 @@ std::unique_ptr<Machine> stone_wheel(BuildContext c) {
     constexpr float kFloorTop = 3.3f;     // the rider's bucket floor at the bottom
     // Half a turn, bottom to top, less a hair: a hinge limit must lie inside +-pi.
     constexpr float kTurn = JPH_PI - .02f;
+    // As placed (in the yard south of S1, deck 2 to deck 4) the yard is 17.2 m
+    // under the origin: the frame, the hopper's post and the chute's stand on it.
+    constexpr float kGroundY = -17.2f;
     const float centre_y = kFloorTop + kDrop + kRadius;   // 18.8 m
     const Vec3 centre(0, centre_y, 0);
     const float step = 2.0f * JPH_PI / kBuckets;
@@ -41,15 +44,15 @@ std::unique_ptr<Machine> stone_wheel(BuildContext c) {
     const float back_z = kRimZ + 1.6f;
     for (const float side : {-1.0f, 1.0f}) {
         const float foot_x = side * 9.0f;
-        const Vec3 foot(foot_x, 0, back_z), head(0, centre_y, back_z);
+        const Vec3 foot(foot_x, kGroundY, back_z), head(0, centre_y, back_z);
         const Vec3 leg = head - foot;
         auto p = box(Vec3(.35f, .5f * leg.Length(), .35f), Material::Timber, .5f * (foot + head));
         p.rotation = Quat::sRotation(Vec3::sAxisZ(), std::atan2(-leg.GetX(), leg.GetY()));
         frame.push_back(p);
     }
     frame.push_back(box(Vec3(.6f, .6f, .9f), Material::Steel, Vec3(0, centre_y, back_z - .5f)));   // bearing
-    frame.push_back(box(Vec3(.3f, .5f * (mouth.GetY() + 2.0f), .3f), Material::Timber,
-                        Vec3(mouth.GetX(), .5f * (mouth.GetY() + 2.0f), back_z + .6f)));             // hopper post
+    frame.push_back(box(Vec3(.3f, .5f * (mouth.GetY() + 2.0f - kGroundY), .3f), Material::Timber,
+                        Vec3(mouth.GetX(), .5f * (mouth.GetY() + 2.0f + kGroundY), back_z + .6f)));  // hopper post
     frame.push_back(box(Vec3(.25f, .25f, .5f * (back_z + .6f)), Material::Timber,
                         Vec3(mouth.GetX(), mouth.GetY() + 1.9f, .5f * (back_z + .6f))));             // gantry arm
     {
@@ -59,7 +62,8 @@ std::unique_ptr<Machine> stone_wheel(BuildContext c) {
         auto chute = box(Vec3(.5f * run.Length(), .1f, .9f), Material::Timber, .5f * (low + high));
         chute.rotation = Quat::sRotation(Vec3::sAxisZ(), std::atan2(run.GetY(), run.GetX()));
         frame.push_back(chute);
-        frame.push_back(box(Vec3(.25f, .5f * low.GetY(), .25f), Material::Timber, Vec3(low.GetX(), .5f * low.GetY(), 0)));
+        frame.push_back(box(Vec3(.25f, .5f * (low.GetY() - kGroundY), .25f), Material::Timber,
+                            Vec3(low.GetX(), .5f * (low.GetY() + kGroundY), 0)));
     }
     auto structure = m->body("frame", frame, Vec3::sZero(), 0);
 

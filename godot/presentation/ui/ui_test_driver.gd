@@ -95,6 +95,10 @@ const SCENARIOS := {
 	# the slingshot, up the ramp onto its platform, onto the trolley, RAISE,
 	# 30 m up the 60-degree incline, and off onto deck 3.
 	"touch_incline": 8,
+	# The owner's stone wheel from deck 2: down the ramp, into the bucket at
+	# the bottom, RAISE, carried over the top of the 26 m wheel by the poured
+	# stone's weight, and down the ramp onto deck 4.
+	"touch_wheel": 25,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
@@ -262,6 +266,8 @@ func _run() -> void:
 			ok = await _high(InputRouter.Device.TOUCH)
 		"touch_incline":
 			ok = await _incline(InputRouter.Device.TOUCH)
+		"touch_wheel":
+			ok = await _wheel(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
@@ -2035,6 +2041,33 @@ func _incline(device: int) -> bool:
 	if not _standing_above(33.7):
 		return _fail("incline: not standing on deck 3 (y %.2f)" % _position().y)
 	_detail = "deck3_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
+	return true
+
+
+func _wheel(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var body := _watch_body()
+	if not await _go(device, Vector2(16.0, -125.0), 0.15, 10.0):
+		return _fail("wheel: the walk along deck 2 stalled at %s" % str(_position()))
+	if not await _ride_machine(device, 6, "STONE WHEEL", Vector2(16.0, -113.3), Vector2(16.0, -110.0)):
+		return false
+	if not await _go(device, Vector2(16.0, -125.5), 0.15, 12.0):
+		return _fail("wheel: the ramp down onto deck 4 stalled at %s" % str(_position()))
+	await _seconds(1.0)
+	await _pose("wheel_deck4")
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
+	if not _standing_above(44.7):
+		return _fail("wheel: not standing on deck 4 (y %.2f)" % _position().y)
+	_detail = "deck4_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
 	return true
 

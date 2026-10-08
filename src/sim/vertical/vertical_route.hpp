@@ -81,6 +81,13 @@ public:
     static constexpr std::uint64_t kInclineDynamicFirst = 2934;  // trolley, slab
     static constexpr std::uint64_t kInclineRamp = 1982;
     static constexpr std::uint64_t kInclineHeadPlate = 1983;
+    // The owner's stone wheel in the yard south of S1, deck 2 to deck 4: a
+    // ramp down from deck 2's edge to its lower receiver (20.5 m), the rider's
+    // bucket carried over the top to 46.5 m, a ramp down onto deck 4 (44 m).
+    static constexpr std::uint64_t kWheelStaticFirst = 1984;    // frame, entry, exit, hopper
+    static constexpr std::uint64_t kWheelDynamicFirst = 2936;   // wheel, striker, gate, 9 buckets
+    static constexpr std::uint64_t kWheelLowRamp = 1988;
+    static constexpr std::uint64_t kWheelHighRamp = 1989;
 
 private:
     struct Placed {

@@ -86,6 +86,21 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
         kit_.add_body(kInclineHeadPlate, {box(Vec3(1.5F, 0.15F, 0.85F), Material::Galvanised)},
                       RVec3(-13.4, 33.25, -122.75), Quat::sIdentity(), 0.0F, 0.8F);
     }
+
+    // The owner's stone wheel, unturned: its plane east-west at z -110, its
+    // axle 36 m up at x 16, its receivers on its north (front) side at
+    // z -114.8 to -111.8; the rider's bucket at 20.5 m at the bottom.
+    place("sx.stone_wheel.v1", {RVec3(16.0, 17.2, -110.0), 0.0F}, {kWheelStaticFirst, 4}, {kWheelDynamicFirst, 12});
+    // Ramps north from the receivers to the face: down from deck 2's edge
+    // (22.0 m) to the lower one, and from the upper one down to deck 4 (44.0 m).
+    const auto ramp = [this](std::uint64_t entity, RVec3 south, RVec3 north) {
+        const Vec3 run(north - south);
+        Part plank = box(Vec3(1.5F, 0.15F, 0.5F * run.Length()), Material::Timber);
+        plank.rotation = Quat::sRotation(Vec3::sAxisX(), std::atan2(run.GetY(), -run.GetZ()));
+        kit_.add_body(entity, {plank}, south + 0.5 * run - RVec3(0.0, 0.15, 0.0), Quat::sIdentity(), 0.0F, 0.8F);
+    };
+    ramp(kWheelLowRamp, RVec3(16.0, 20.5, -114.8), RVec3(16.0, 22.0, -123.9));
+    ramp(kWheelHighRamp, RVec3(16.0, 46.5, -114.8), RVec3(16.0, 44.0, -123.9));
 }
 
 Route::~Route() = default;
