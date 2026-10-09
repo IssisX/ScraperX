@@ -1,0 +1,44 @@
+Start testing: Oct 08 19:28 CDT
+----------------------------------------------------------
+36/39 Testing: scraperx_sim.braced_bay
+36/39 Test: scraperx_sim.braced_bay
+Command: "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_braced_bay_tests"
+Directory: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+"scraperx_sim.braced_bay" start time: Oct 08 19:28 CDT
+Output:
+----------------------------------------------------------
+BRACE_FOOT position=28.0403,77.9,-130.986 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.8984,-143.958 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=30.0284,82.8984,-143.998 velocity=4.16925,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.6292,82.8934,-144 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+STANDING_BLOCKED position=34,84.8839,-138.711 velocity=9.15527e-05,0,0 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+CROUCHED_PASS position=34,85.4677,-136.767 velocity=9.15527e-05,0.0679117,0.149406 grounded=1 support=1900 balance=1 crouch=1 deaths=0
+UPPER_JUNCTION position=34,87.8985,-131.542 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+MANTLE_READY position=26.65,87.8992,-132 velocity=0,0,-0.000640869 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+TOWER_MANTLE_START gravity=1 hands=2 state=4
+TOWER_MANTLE_TRANSFER seconds=1.48889 supported=1 gravity=1
+RING_88 position=24.8475,88.9,-132 velocity=0,0,0 grounded=1 support=11 balance=0 crouch=0 deaths=0
+UPPER_CHECKPOINT_RETRY position=25.865,88.9,-127.957 velocity=0,0,0 grounded=1 support=11 balance=0 crouch=0 deaths=1
+BRACE_FOOT position=28.0403,77.9,-130.986 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.8984,-143.958 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=29.8097,82.8984,-144.19 velocity=3.706,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.6131,82.8934,-144.2 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+BRACE_FOOT position=28.0403,77.9,-130.986 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.8984,-143.958 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=30.3314,82.8984,-143.805 velocity=4.69951,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.6448,82.8934,-143.8 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+BRACE_FOOT position=28.0403,77.9,-130.986 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.8984,-143.958 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_WITHOUT_JUMP position=32.4606,80.527,-143.998 velocity=0.00624599,2.03912,-0.00315446 grounded=0 support=0 balance=0 crouch=0 deaths=0
+GAP_RECOVERY position=32.4666,77.88,-144.001 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+DELIBERATE_SIDE_EXIT position=31.747,77.9,-136.604 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+PASS scraperx_sim AS-021 braced bay parkour to +88, gap, crouch and recovery
+<end of output>
+Test time =  16.75 sec
+----------------------------------------------------------
+Test Passed.
+"scraperx_sim.braced_bay" end time: Oct 08 19:28 CDT
+"scraperx_sim.braced_bay" time elapsed: 00:00:16
+----------------------------------------------------------
+
+End testing: Oct 08 19:28 CDT

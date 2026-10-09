@@ -2295,6 +2295,15 @@ public:
         }
         contact_listener_.begin_tick();
         if (!slingshot_) kit_->begin_weld_step(delta_seconds);
+        if (!landing_applied_force_.IsNearZero()) {
+            // Ordinary step handling may prescribe a pose before solving.
+            // Exclude that legacy displacement from the force-work receipt.
+            landing_force_start_ = bodies.GetCenterOfMassPosition(player_id_);
+            landing_force_support_start_ = JPH::RVec3(support_sample_.contact_point.x,
+                support_sample_.contact_point.y, support_sample_.contact_point.z);
+            landing_force_support_local_point_ = bodies.GetCenterOfMassTransform(landing_force_support_id_).Inversed() *
+                landing_force_support_start_;
+        }
         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
         kit_->finish_weld_steps();
         physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
@@ -5467,6 +5476,58 @@ private:
             landing_response_ = 3;
     }
 
+    void apply_ground_contact_force(JPH::BodyInterface &bodies, JPH::Vec3 correction,
+                                    const float dt) noexcept {
+        const auto support_id = support_sample_.body_id;
+        if (support_id.IsInvalid() || dt <= 0) return;
+        const JPH::RVec3 point(support_sample_.contact_point.x, support_sample_.contact_point.y,
+                              support_sample_.contact_point.z);
+        const JPH::Vec3 normal(float(support_sample_.normal.x), float(support_sample_.normal.y),
+                              float(support_sample_.normal.z));
+        const auto relative = bodies.GetLinearVelocity(player_id_) - bodies.GetPointVelocity(support_id, point);
+        const auto slip = relative - normal * relative.Dot(normal);
+        landing_slip_velocity_ = slip;
+        correction -= normal * correction.Dot(normal);
+        const float traction_cap = (entity_is_causal_section_support(support_sample_.entity_id) ? .8F : .85F) * kPlayerMassKg * -physics_system_.GetGravity().GetY() *
+                                   std::max(.3F, normal.GetY());
+        if (correction.Length() > traction_cap) correction *= traction_cap / correction.Length();
+        bool dynamic_support = false;
+        float effective_inverse_mass = 1.0F / kPlayerMassKg;
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), support_id);
+            dynamic_support = lock.Succeeded() && lock.GetBody().IsDynamic();
+            if (dynamic_support && !correction.IsNearZero()) {
+                const auto &body = lock.GetBody();
+                const auto lever = JPH::Vec3(point - body.GetCenterOfMassPosition());
+                const auto torque_axis = lever.Cross(correction.Normalized());
+                effective_inverse_mass += body.GetMotionProperties()->GetInverseMass() +
+                    torque_axis.Dot(body.GetInverseInertia().Multiply3x3(torque_axis));
+            }
+        }
+        // Include both bodies' translation and support rotation in the
+        // finite 3 kW positive-work prediction. Braking is dissipative work.
+        // Positive actuator work cannot borrow credit from braking through zero.
+        // This predicts the constant-force pair with frozen contact inertia;
+        // solver/contact work remains separately outside this command bound.
+        const double impulse = double(correction.Length()) * dt;
+        if (impulse > 0) {
+            const double u = correction.Normalized().Dot(slip);
+            const double inverse = effective_inverse_mass;
+            const double budget = 3000.0 * dt;
+            const double cap = u < 0 ? -u / inverse + std::sqrt(2.0 * budget / inverse) :
+                budget / (.5 * u + .5 * std::hypot(u, std::sqrt(2.0 * inverse * budget)));
+            if (cap < impulse) {
+                // Leave a small rounding margin before the native float force.
+                correction *= float(std::max(0.0, cap / impulse) * .999999);
+            }
+        }
+        bodies.AddForce(player_id_, correction);
+        if (dynamic_support) bodies.AddForce(support_id, -correction, point);
+        landing_applied_force_ = correction;
+        landing_force_support_id_ = support_id;
+        if (slingshot_ && !correction.IsNearZero()) slingshot_->note_external_influence();
+    }
+
     void apply_landing_recovery(JPH::BodyInterface &bodies, const StepCommands &commands,
                                 const float dt) noexcept {
         const auto support_id = support_sample_.body_id;
@@ -5498,40 +5559,12 @@ private:
             }
         }
         auto correction = (desired - slip) * (kPlayerMassKg / .18F);
-        const float traction_cap = (entity_is_causal_section_support(support_sample_.entity_id) ? .8F : .85F) * kPlayerMassKg * -physics_system_.GetGravity().GetY() *
-                                   std::max(.3F, normal.GetY());
-        if (correction.Length() > traction_cap) correction *= traction_cap / correction.Length();
-        bool dynamic_support = false;
-        float effective_inverse_mass = 1.0F / kPlayerMassKg;
-        {
-            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), support_id);
-            dynamic_support = lock.Succeeded() && lock.GetBody().IsDynamic();
-            if (dynamic_support && !correction.IsNearZero()) {
-                const auto &body = lock.GetBody();
-                const auto lever = JPH::Vec3(point - body.GetCenterOfMassPosition());
-                const auto torque_axis = lever.Cross(correction.Normalized());
-                effective_inverse_mass += body.GetMotionProperties()->GetInverseMass() +
-                    torque_axis.Dot(body.GetInverseInertia().Multiply3x3(torque_axis));
-            }
-        }
-        // Include both bodies' translation and support rotation in the
-        // finite 3 kW positive-work prediction. Braking is dissipative work.
-        const float positive_power = correction.Dot(slip) +
-            .5F * correction.LengthSq() * effective_inverse_mass * dt;
-        if (positive_power > 3000.0F) correction *= 3000.0F / positive_power;
-        bodies.AddForce(player_id_, correction);
-        if (dynamic_support) bodies.AddForce(support_id, -correction, point);
-        landing_applied_force_ = correction;
-        landing_force_start_ = bodies.GetCenterOfMassPosition(player_id_);
-        landing_force_support_id_ = support_id;
-        landing_force_support_start_ = point;
-        landing_force_support_local_point_ = bodies.GetCenterOfMassTransform(support_id).Inversed() * point;
+        apply_ground_contact_force(bodies, correction, dt);
         // Recovery belongs to the recorded impact. A blocked walking request
         // is not a new impact and must not renew this finite interval: doing
         // so bypasses ordinary step-up forever while pressing into a riser.
         airborne_inherited_velocity_ = support_velocity;
         balancing_ = true;
-        if (slingshot_ && !correction.IsNearZero()) slingshot_->note_external_influence();
     }
 
     [[nodiscard]] bool sprint_is_eligible(const StepCommands &commands) const noexcept {
@@ -5546,6 +5579,8 @@ private:
                                         const StepCommands &commands,
                                         const float delta_seconds) noexcept {
         JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
+        JPH::Vec3 requested_velocity = player_velocity;
+        JPH::Vec3 ground_force_request = JPH::Vec3::sZero();
         JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
         const double speed_scale = crouched_ ? kCrouchSpeedScale : 1.0;
         double move_x = commands.move_input_x * speed_scale;
@@ -5674,13 +5709,15 @@ private:
             const float full_speed = sprinting_
                                          ? static_cast<float>(kPlayerMaximumRelativeSpeed * kSprintSpeedScale)
                                          : kPlayerMaximumRelativeSpeed;
-            approach_relative_horizontal_velocity(player_velocity,
+            approach_relative_horizontal_velocity(requested_velocity,
                                                   reference_velocity,
                                                   move_x,
                                                   move_z,
                                                   kGroundAcceleration,
                                                   delta_seconds,
                                                   full_speed);
+            ground_force_request = (requested_velocity - player_velocity) *
+                (kPlayerMassKg / delta_seconds);
             // The air keeps what the ground gave: a running jump, or a run
             // off an edge, carries its speed.
             const JPH::Vec3 relative = player_velocity - reference_velocity;
@@ -5695,10 +5732,17 @@ private:
             jump_takeoff_feet_y_ =
                 static_cast<float>(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
             jump_vault_ticks_left_ = kJumpVaultWindowTicks;
+            // Retain this legacy vertical takeoff path without committing
+            // the undelivered horizontal request. Its conversion is separate.
+            bodies.SetLinearVelocity(player_id_, player_velocity);
         }
-        bodies.SetLinearVelocity(player_id_, player_velocity);
+        // Budget against actual velocity after vertical takeoff: a tangent
+        // force on an incline can perform work on that upward motion too.
+        if (grounded_ && support_entity_id_ != 0) {
+            apply_ground_contact_force(bodies, ground_force_request, delta_seconds);
+        }
         if (!jump_started && grounded_ && support_entity_id_ != 0) {
-            try_step_up(bodies, player_velocity - reference_velocity, delta_seconds);
+            try_step_up(bodies, requested_velocity - reference_velocity, delta_seconds);
         }
         return jump_started;
     }

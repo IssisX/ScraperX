@@ -23,6 +23,7 @@ var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
 var _kit_cables: Array = []
 var _cart_paint_material: StandardMaterial3D
+var _cart_materials: Dictionary = {}
 var _water_lift_bucket_water: MeshInstance3D
 
 
@@ -120,8 +121,75 @@ func _append_kit_hull(surface: SurfaceTool, triangles: PackedFloat32Array,
 	return true
 
 
+func _build_cart_materials(palette: Array[Material]) -> void:
+	# Shared cart finishes inherit the existing steel/wood/concrete texture
+	# resources. The surrounding machines keep their supplied palette.
+	var finishes := {
+		"frame": [0, Color("465158"), 1.0, 0.76],
+		"running": [5, Color("a6adae"), 1.0, 0.36],
+		"receiver": [5, Color("788385"), 1.0, 0.68],
+		"timber": [2, Color("998368"), 0.0, 0.90],
+		"slab": [3, Color("a69f91"), 0.0, 0.95],
+	}
+	for key in finishes:
+		var finish: Array = finishes[key]
+		var material := palette[int(finish[0])].duplicate() as StandardMaterial3D
+		material.albedo_color = finish[1]
+		material.metallic = finish[2]
+		material.roughness = finish[3]
+		_cart_materials[key] = material
+	var timber: StandardMaterial3D = _cart_materials["timber"]
+	var shared_grain := timber.normal_texture as NoiseTexture2D
+	if shared_grain != null:
+		# One mipmapped 256px colour texture reuses the existing deterministic
+		# wood noise. Longitudinal grain follows the actual X-length planks;
+		# their native joints and rope well supply the larger surface detail.
+		var grain := NoiseTexture2D.new()
+		grain.width = 256
+		grain.height = 256
+		grain.seamless = true
+		grain.generate_mipmaps = true
+		grain.noise = shared_grain.noise
+		var tones := Gradient.new()
+		tones.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+		tones.colors = PackedColorArray([Color("665440"), Color("998368"), Color("b6a48a")])
+		grain.color_ramp = tones
+		timber.albedo_texture = grain
+		timber.albedo_color = Color.WHITE
+		timber.normal_scale = 0.55
+		timber.uv1_scale = Vector3(0.12, 0.65, 2.4)
+		timber.uv1_triplanar_sharpness = 4.0
+	var slab: StandardMaterial3D = _cart_materials["slab"]
+	slab.normal_scale = 0.65
+	slab.uv1_scale = Vector3(1.2, 1.2, 1.2)
+
+
+func _cart_part_material(entity: int, part: int, index: int, original: Material) -> Material:
+	if not (entity >= 1954 and entity <= 1959 or entity >= 2320 and entity <= 2327):
+		return original
+	if entity == 2320 and index == 2:
+		return _cart_materials["timber"]
+	if entity == 2325 and index == 3:
+		return _cart_materials["slab"]
+	# The factory's first two track parts are the actual running rails.
+	# Rollers have bare steel contact circumferences, rather than yellow tyres.
+	if entity == 1954 and part < 2 or entity >= 2321 and entity <= 2324 \
+			or entity == 1959 and part < 2 or entity == 2325 and index == 0:
+		return _cart_materials["running"]
+	if index == 5:
+		return _cart_materials["receiver"]
+	if index == 0:
+		return _cart_materials["frame"]
+	# Pendant heads, witness paint and the rusty carried block retain their
+	# native material identities and remain distinct from working steel.
+	return original
+
+
 func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 	for body in int(_native.get_kit_body_count()):
+		var entity := int(_native.get_kit_body_entity_id(body))
+		if entity == 1954 and _cart_materials.is_empty():
+			_build_cart_materials(palette)
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
 		node.transform = _native.get_kit_body_transform(body)
@@ -140,7 +208,11 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 		for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
 			var mesh: Mesh
 			var material_index := clampi(int(parts[p + 10]), 0, palette.size() - 1)
-			var material: Material = palette[material_index]
+			var material := _cart_part_material(entity, p / KIT_PART_FLOATS,
+				material_index, palette[material_index])
+			# Rails and structural steel can share a native material class while
+			# needing different finishes. Keep each finish in its own rigid batch.
+			var finish_key := "" if material == palette[material_index] else "/%d" % material.get_instance_id()
 			var local := Transform3D(
 				Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
@@ -170,7 +242,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 				# Hulls carry unindexed vertices and flat normals. Append directly
 				# to their final material batch, keeping indexed boxes separate.
 				var channels := (1 << Mesh.ARRAY_VERTEX) | (1 << Mesh.ARRAY_NORMAL)
-				var key := "%d/%d" % [material_index, channels]
+				var key := "%d/%d" % [material_index, channels] + finish_key
 				var surface: SurfaceTool = surfaces.get(key)
 				if surface == null:
 					surface = SurfaceTool.new()
@@ -192,7 +264,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 				for channel in arrays.size():
 					if arrays[channel] != null:
 						channels |= 1 << channel
-				var key := "%d/%d" % [material_index, channels]
+				var key := "%d/%d" % [material_index, channels] + finish_key
 				if not surfaces.has(key):
 					var surface := SurfaceTool.new()
 					surface.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -206,7 +278,6 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			if int(String(key).get_slice("/", 0)) == RefractoryMaterial.NATIVE_MATERIAL_INDEX:
 				RefractoryMaterial.apply_to(instance, int(_native.get_kit_body_material_key(body)))
 			node.add_child(instance)
-		var entity := int(_native.get_kit_body_entity_id(body))
 		# Signs stay on the native landing/deck bodies, including the moving
 		# pendant. They label the real stations without owning machine state.
 		if entity == 1981:

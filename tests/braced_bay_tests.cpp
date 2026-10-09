@@ -43,13 +43,18 @@ bool walk_to(Simulation &s, const double x, const double z, const double seconds
         const double dx = x - p.player_position.x;
         const double dz = z - p.player_position.z;
         const double distance = std::hypot(dx, dz);
-        if (distance < 0.10) {
+        if (distance < 0.10 &&
+            std::hypot(p.player_linear_velocity.x, p.player_linear_velocity.z) < 0.15) {
             (void)s.set_move_input(0, 0);
             return true;
         }
-        const double scale = std::min(1.0, distance / 0.5) / distance;
-        (void)s.set_move_input(dx * scale, dz * scale);
-        (void)s.set_facing(dx / distance, dz / distance);
+        // Anticipate finite braking before accepting a narrow-entry stance.
+        // A distance-only arrival at almost5m/s overshoots the real girder.
+        const double input_x = dx * 1.8 - p.player_linear_velocity.x * 0.28;
+        const double input_z = dz * 1.8 - p.player_linear_velocity.z * 0.28;
+        const double scale = std::max(1.0, std::hypot(input_x, input_z));
+        (void)s.set_move_input(input_x / scale, input_z / scale);
+        if (distance > 0.0001) (void)s.set_facing(dx / distance, dz / distance);
         advance(s, Simulation::kFixedStepSeconds);
         if (balance_ticks && s.snapshot().player_balancing) ++*balance_ticks;
         if (s.snapshot().death_count != deaths_before) return false;

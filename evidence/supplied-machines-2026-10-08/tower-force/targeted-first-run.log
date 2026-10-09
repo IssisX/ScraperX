@@ -1,0 +1,17 @@
+Test project /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+    Start 16: scraperx_sim.parkour_flow
+1/2 Test #16: scraperx_sim.parkour_flow ........   Passed    6.55 sec
+    Start 36: scraperx_sim.braced_bay
+2/2 Test #36: scraperx_sim.braced_bay ..........***Failed    0.40 sec
+BRACE_FOOT position=29.214,77.9,-130.584 velocity=0.645404,0,0.221012 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=27.8744,77.851,-145.173 velocity=-0.166498,-0.810007,-1.61297 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FAIL AS-021 inclined girder leads to supported +82 m landing
+
+
+50% tests passed, 1 tests failed out of 2
+
+Total Test time (real) =   6.98 sec
+
+The following tests FAILED:
+	 36 - scraperx_sim.braced_bay (Failed)
+Errors while running CTest

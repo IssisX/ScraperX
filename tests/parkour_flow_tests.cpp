@@ -103,6 +103,101 @@ double horizontal_speed(const scraperx::sim::Snapshot &s) {
     return std::hypot(s.player_linear_velocity.x, s.player_linear_velocity.z);
 }
 
+void ordinary_tower_walk_uses_finite_contact_work() {
+    using namespace scraperx::sim;
+
+    // One supported stage reproduces the ordinary Tower velocity bypass.
+    // Expire impact recovery before measuring actual contact locomotion.
+    Simulation run;
+    require(run.debug_restart_at({-24.7, 330.9, -158.25}),
+            "ordinary Tower force staging accepted");
+    require(run.set_move_input(0.0, 0.0) && run.set_facing(1.0, 0.0) &&
+                run.set_sprint_input(false) && run.set_crouch_input(false),
+            "ordinary Tower neutral walking policy accepted");
+    for (int tick = 0; tick < 180; ++tick) {
+        require(run.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "ordinary Tower settle tick accepted");
+    }
+    const auto settled = run.snapshot();
+    require(settled.player_grounded && settled.support_entity_id == Simulation::kTowerEntityId &&
+                std::abs(settled.player_position.y - 330.9) < 0.1 &&
+                !settled.landing_recovering && settled.landing_recovery_seconds == 0.0 &&
+                horizontal_speed(settled) < 0.01 && settled.death_count == 0,
+            "ordinary Tower starts at real static footing after impact recovery expires");
+
+    const double maximum_delta_v = 0.85 * 9.81 * Simulation::kFixedStepSeconds;
+    const auto sample = [&](const double input_x) {
+        const auto before = run.snapshot();
+        require(run.set_move_input(input_x, 0.0), "ordinary Tower movement input accepted");
+        require(run.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "ordinary Tower movement tick accepted");
+        const auto after = run.snapshot();
+        require(after.player_grounded && after.support_entity_id == Simulation::kTowerEntityId &&
+                    after.traversal_state == TraversalState::None &&
+                    after.traversal_hand_constraint_count == 0 &&
+                    !after.player_crouched && !after.player_sprinting &&
+                    !after.landing_recovering && after.landing_recovery_seconds == 0.0 &&
+                    after.landing_count == settled.landing_count &&
+                    after.step_up_count == settled.step_up_count && after.death_count == 0,
+                "ordinary Tower sample keeps actual footing without impact, traversal, step or rescue");
+        const double delta_v = std::hypot(
+            after.player_linear_velocity.x - before.player_linear_velocity.x,
+            after.player_linear_velocity.z - before.player_linear_velocity.z);
+        require(std::isfinite(delta_v) && delta_v <= maximum_delta_v + 0.001,
+                "ordinary Tower acceleration, braking and reversal obey finite0.85g contact authority");
+        const double work = after.landing_recovery_work_j - before.landing_recovery_work_j;
+        require(std::isfinite(after.landing_recovery_work_j) && std::isfinite(work) &&
+                    work >= -0.000001 && work <= 3000.1 * Simulation::kFixedStepSeconds,
+                "ordinary Tower contact-work receipt stays finite, nonnegative and within3kW");
+        const double kinetic_gain = 0.5 * 85.0 *
+            (horizontal_speed(after) * horizontal_speed(after) -
+             horizontal_speed(before) * horizontal_speed(before));
+        if (kinetic_gain > 0.02) {
+            require(work >= kinetic_gain - 0.02,
+                    "ordinary Tower acceleration is earned by measured contact work");
+        }
+        return after;
+    };
+
+    for (int tick = 0; tick < 20; ++tick) (void)sample(1.0);
+    const auto east = run.snapshot();
+    require(east.player_linear_velocity.x > 0.5 &&
+                east.player_position.x > settled.player_position.x + 0.01 &&
+                east.landing_recovery_work_j > settled.landing_recovery_work_j + 0.05,
+            "ordinary eastward walking accelerates and advances through nonzero contact work");
+
+    for (int tick = 0; tick < 30; ++tick) {
+        const auto before = run.snapshot();
+        const auto after = sample(0.0);
+        require(horizontal_speed(after) <= horizontal_speed(before) + 0.001 &&
+                    after.player_linear_velocity.x >= -0.01,
+                "ordinary neutral braking dissipates motion without reversing it");
+    }
+    const auto stopped = run.snapshot();
+    require(horizontal_speed(stopped) < 0.1,
+            "ordinary neutral input settles through bounded braking");
+
+    for (int tick = 0; tick < 20; ++tick) (void)sample(1.0);
+    const auto before_reverse = run.snapshot();
+    require(before_reverse.player_linear_velocity.x > 0.5,
+            "ordinary reversal starts with actual eastward momentum");
+    require(run.set_facing(-1.0, 0.0), "ordinary westward facing accepted");
+    const auto first_reverse = sample(-1.0);
+    require(first_reverse.player_linear_velocity.x > 0.0,
+            "opposite input brakes earned momentum before reversing it");
+    for (int tick = 1; tick < 40; ++tick) (void)sample(-1.0);
+    const auto reversed = run.snapshot();
+    require(reversed.player_linear_velocity.x < -0.5 &&
+                reversed.landing_recovery_work_j > before_reverse.landing_recovery_work_j + 0.05,
+            "ordinary reversal earns westward motion through nonzero contact work");
+    std::cout << "INFO ordinary Tower force east_vx=" << east.player_linear_velocity.x
+              << " east_work=" << east.landing_recovery_work_j - settled.landing_recovery_work_j
+              << " neutral_speed=" << horizontal_speed(stopped)
+              << " reversed_vx=" << reversed.player_linear_velocity.x
+              << " total_work=" << reversed.landing_recovery_work_j - settled.landing_recovery_work_j
+              << '\n';
+}
+
 void neutral_airborne_input_preserves_horizontal_momentum() {
     using namespace scraperx::sim;
 
@@ -111,7 +206,9 @@ void neutral_airborne_input_preserves_horizontal_momentum() {
     require(run.advance_frame(1.0).accepted && run.snapshot().player_grounded,
             "ordinary ground settles before the neutral-air run");
 
-    for (int tick = 0; tick < 45; ++tick) {
+    // Reach the same walking speed through finite traction before measuring
+    // passive flight; preparation time is not the momentum acceptance gate.
+    for (int tick = 0; tick < 90; ++tick) {
         require(run.set_move_input(1.0, 0.0), "eastward run input accepted");
         require(run.advance_frame(Simulation::kFixedStepSeconds).accepted,
                 "eastward ground tick accepted");
@@ -255,6 +352,7 @@ void sprint_keeps_jump_momentum() {
 } // namespace
 
 int main() {
+    ordinary_tower_walk_uses_finite_contact_work();
     vault_carries_entry_and_exit_speed();
     neutral_airborne_input_preserves_horizontal_momentum();
     sprint_keeps_jump_momentum();

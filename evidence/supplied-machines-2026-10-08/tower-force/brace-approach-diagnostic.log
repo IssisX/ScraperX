@@ -1,0 +1,12 @@
+WALK_TRACE target=28,-131 tick=0 pos=25.1,77.9,-132 vel=0,0,0 distance=3.06757 beam=0 support=11
+WALK_TRACE target=28,-131 tick=60 pos=26.8572,77.9,-131.391 vel=5.04113,0,1.73272 distance=1.20799 beam=0 support=1900
+WALK_TRACE target=28,-131 tick=79 pos=27.9271,77.9,-131.025 vel=4.5898,0,1.57173 distance=0.0770366 beam=0 support=1900
+BRACE_FOOT position=29.214,77.9,-130.584 velocity=0.645404,0,0.221012 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+WALK_TRACE target=28,-144 tick=0 pos=29.214,77.9,-130.584 vel=0.645404,0,0.221012 distance=13.4706 beam=0 support=1900
+WALK_TRACE target=28,-144 tick=60 pos=29.2574,77.9,-132.276 vel=-0.506327,0,-5.12477 distance=11.7909 beam=0 support=1900
+WALK_TRACE target=28,-144 tick=120 pos=28.8678,77.9,-135.915 vel=-0.586972,0,-5.46859 distance=8.13157 beam=0 support=1900
+WALK_TRACE target=28,-144 tick=180 pos=28.4765,77.9,-139.561 vel=-0.586995,0,-5.46859 distance=4.465 beam=0 support=1900
+WALK_TRACE target=28,-144 tick=240 pos=28.0854,77.9,-143.204 vel=-0.5865,0,-5.46864 distance=0.800662 beam=0 support=1900
+WALK_TRACE target=28,-144 tick=252 pos=28.0099,77.9,-143.907 vel=-0.52147,0,-4.86251 distance=0.0931366 beam=0 support=1900
+FIRST_LANDING position=27.8744,77.851,-145.173 velocity=-0.166498,-0.810007,-1.61297 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FAIL AS-021 inclined girder leads to supported +82 m landing

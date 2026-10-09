@@ -1,0 +1,29 @@
+{
+  "source_parent": "0e31e2229f26bbed773b575ac5a44783e36d0af6",
+  "worktree": "uncommitted Tower horizontal-force correction and cart materials",
+  "native_library_sha256": "428351b42a290f74d39fdbfbe944c83f6f91867e0f5b2a7ade99af9552683985",
+  "strict_native_build_exit": 0,
+  "parkour_flow_exit": 0,
+  "braced_bay_initial_exit": 1,
+  "braced_bay_after_input_preparation_correction_exit": 0,
+  "observed_parkour_stdout": {
+    "east_vx": 1.853,
+    "east_work_j": 147.753,
+    "neutral_speed": 0,
+    "reversed_vx": -1.853,
+    "total_work_j": 443.26,
+    "sprint_peak": 8,
+    "sprint_air_slowest": 8,
+    "sprint_jump_m": 8.97771,
+    "walk_jump_m": 6.168,
+    "crouched_peak": 2.475,
+    "across_peak": 5.5
+  },
+  "observed_stdout_note": "Values captured from the actual first CTest LastTest.log before its subsequent single-brace rerun replaced that file; CTest terminal receipts are retained. No synthesized runtime log.",
+  "limits": [
+    "Approximate existing .8/.85 gravity-based traction cap, not measured support normal load or material friction",
+    "Frozen-contact-inertia positive-work prediction, not complete solver energy closure",
+    "Legacy vertical ordinary jump and unconverted step pose paths remain",
+    "No Android or physical-phone observation of this slice"
+  ]
+}
