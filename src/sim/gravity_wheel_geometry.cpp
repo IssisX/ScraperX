@@ -257,8 +257,40 @@ GravityWheelGeometry build_gravity_reclaim_wheel(PhysicsSystem &world, kit::Kit 
     const BodyIndex frame = machine.body("frame", std::move(foundation), Vec3::sZero(), 0.0F);
     const BodyIndex lower = machine.body("lower", receiver_parts(),
         local(-32.75F, 308.0F, -158.15F), 0.0F);
-    const BodyIndex upper = machine.body("upper", receiver_parts(),
-        local(-32.75F, 330.0F, -158.15F), 0.0F);
+    auto upper_parts = receiver_parts();
+    // A raised service tray joins the receiver to the existing Tower330 ring.
+    // Its real folded sheets and floor-mounted feet create a readable choice:
+    // commit to an ordinary jump across the tray or walk around its inland end.
+    // No extra floor fills the exposed western side and no authored lift helps
+    // the player clear it. All parts share the existing static receiver owner.
+    const Vec3 upper_origin = local(-32.75F, 330.0F, -158.15F);
+    const auto at_upper = [&](const float x, const float y, const float z) {
+        return local(x, y, z) - upper_origin;
+    };
+    upper_parts.push_back(plate(Vec3(1.375F, .006F, .15F),
+        at_upper(-24.275F, 330.644F, -157.55F), Quat::sIdentity(), Material::Galvanised));
+    for (const float z : {-157.694F, -157.406F}) {
+        upper_parts.push_back(plate(Vec3(1.375F, .103F, .006F),
+            at_upper(-24.275F, 330.747F, z), Quat::sIdentity(), Material::Galvanised));
+        upper_parts.push_back(plate(Vec3(1.375F, .010F, .010F),
+            at_upper(-24.275F, 330.840F, z), Quat::sIdentity(), Material::Hazard));
+    }
+    for (const float x : {-25.45F, -24.275F, -23.10F}) {
+        upper_parts.push_back(plate(Vec3(.10F, .009F, .14F),
+            at_upper(x, 330.009F, -157.55F), Quat::sIdentity(), Material::Steel));
+        hollow_member(upper_parts, .620F, .060F, .060F, .004F,
+            at_upper(x, 330.328F, -157.55F), upright);
+    }
+    // Two retained service conduits explain the raised run. Their solid steel
+    // cylinders rest inside the trough and use the same native/render shape.
+    for (const float z : {-157.60F, -157.50F}) {
+        Part conduit = plate(Vec3(.025F, 1.25F, .025F),
+            at_upper(-24.275F, 330.675F, z), upright, Material::Steel);
+        conduit.shape = Part::Shape::Cylinder;
+        conduit.mass_kg = JPH_PI * .025F * .025F * 2.5F * kSteelDensity;
+        upper_parts.push_back(std::move(conduit));
+    }
+    const BodyIndex upper = machine.body("upper", std::move(upper_parts), upper_origin, 0.0F);
 
     std::vector<Part> wheel_parts;
     for (unsigned segment = 0; segment < 24; ++segment) {

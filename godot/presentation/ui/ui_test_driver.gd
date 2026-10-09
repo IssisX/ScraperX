@@ -3151,6 +3151,8 @@ func _touch_gravity_reclaim() -> bool:
 			return _fail("gravity reclaim +330m Tower exit at=%s" % _position())
 	if not _reclaim_tower_arrived():
 		return _fail("gravity reclaim +330m arrival lacks actual Tower11 footing")
+	if not await _touch_reclaim_tray_choice():
+		return false
 	# The far-side panel opens the real scoop doors and releases the wheel
 	# brake. Empty return remains gravity-driven while the player stays ashore.
 	for point in [Vector2(-24.7, -158.75), Vector2(-33.4, -158.75), Vector2(-33.4, -158.25)]:
@@ -3184,8 +3186,78 @@ func _touch_gravity_reclaim() -> bool:
 		return _fail("gravity reclaim final +330m proof lacks Tower11/death-free world")
 	if not await _touch_reclaim_retry(before):
 		return false
-	_detail = "staging=supported_308m shipping_touch=1 finite_hopper=1 gravity_reclaim=1 stop_resume=1 upper_discharge=1 empty_gravity_return=1 finite_energy=1 first_supported_height_m=330 first_support=11 retry_from_feeding=1 second_supported_height_m=%.2f second_support=2201 deaths=0" % float(_native().get_supplied_machine_state()["surface_y"])
+	_detail = "staging=supported_308m shipping_touch=1 finite_hopper=1 gravity_reclaim=1 stop_resume=1 grounded_tray_detour=1 ordinary_tray_jump=1 tray_gravity=1 tray_free_hands=1 upper_discharge=1 empty_gravity_return=1 finite_energy=1 first_supported_height_m=330 first_support=11 retry_from_feeding=1 second_supported_height_m=%.2f second_support=2201 deaths=0" % float(_native().get_supplied_machine_state()["surface_y"])
 	return true
+
+
+func _touch_reclaim_tray_choice() -> bool:
+	var device := InputRouter.Device.TOUCH
+	var watch := {"running": true, "grounded_only": true, "invalid": false,
+		"airborne": false, "peak": _position().y}
+	_reclaim_sample_tray(watch)
+	# Walk around the actual receiver tray on the existing inland Tower ring,
+	# then return to supported takeoff footing for the shorter ordinary Jump.
+	for point in [Vector2(-22.4, -158.25), Vector2(-22.4, -156.9), Vector2(-24.7, -156.9),
+			Vector2(-22.4, -156.9), Vector2(-22.4, -159.25), Vector2(-24.7, -159.25)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true) or bool(watch["invalid"]):
+			watch["running"] = false
+			return _fail("gravity reclaim grounded tray detour target=%s at=%s" % [point, _position()])
+	await _face(Vector2(0, 1))
+	# Invert the touch deadzone to deliver native 0.6 forward effort. Keep
+	# that same input through the flight; no contextual hand transfer is used.
+	_move(device, TouchControls.STICK_DEADZONE + (1.0 - TouchControls.STICK_DEADZONE) * 0.6)
+	var start_tick := int(_native().get_tick_index())
+	var ran_up := await _wait_until(func() -> bool:
+		return int(_native().get_tick_index()) - start_tick >= 10, 0.5)
+	var launch := _position()
+	var launch_work := float(_native().get_landing_state()["landing_jump_work_j"])
+	if not ran_up or bool(watch["invalid"]) or not _reclaim_tower_arrived() \
+			or _velocity().z <= 0.0 or not _main._touch.is_button_shown(&"jump") \
+			or _main._touch.button_label(&"jump") != "JUMP":
+		_move(device, 0.0)
+		watch["running"] = false
+		return _fail("gravity reclaim tray Jump lacks ordinary running Tower footing at=%s" % launch)
+	watch["grounded_only"] = false
+	_touch(1, _center(&"jump"), true)
+	var took_off := await _wait_until(func() -> bool: return bool(watch["airborne"]), 0.5)
+	_touch(1, _center(&"jump"), false)
+	var crossed := await _wait_until(func() -> bool:
+		return bool(watch["invalid"]) or (bool(watch["airborne"]) \
+			and _native().is_player_grounded() and _position().z > -157.05), 3.0)
+	_move(device, 0.0)
+	var jump_work := float(_native().get_landing_state()["landing_jump_work_j"]) - launch_work
+	if not took_off or not crossed or bool(watch["invalid"]) or float(watch["peak"]) <= 331.9 \
+			or jump_work <= 0.0 \
+			or not await _walk_to(device, Vector2(-24.7, -156.9), 0.10, 8.0, true) \
+			or not _reclaim_tower_arrived() or bool(watch["invalid"]):
+		watch["running"] = false
+		return _fail("gravity reclaim ordinary tray Jump failed at=%s flight=%s work_j=%.3f" % [_position(), watch, jump_work])
+	watch["grounded_only"] = true
+	for point in [Vector2(-22.4, -156.9), Vector2(-22.4, -158.5), Vector2(-24.7, -158.25)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true) or bool(watch["invalid"]):
+			watch["running"] = false
+			return _fail("gravity reclaim tray return detour target=%s at=%s" % [point, _position()])
+	watch["running"] = false
+	if not _reclaim_tower_arrived() or _main._router.device != InputRouter.Device.TOUCH:
+		return _fail("gravity reclaim tray choice lacks restored ordinary touch Tower footing")
+	print("SCRAPERX_RECLAIM tray grounded_detour=1 ordinary_jump=1 gravity=1 free_hands=1 support=11 peak_y=%.3f jump_work_j=%.3f" % [watch["peak"], jump_work])
+	return true
+
+
+func _reclaim_sample_tray(watch: Dictionary) -> void:
+	while bool(watch["running"]):
+		var state: Dictionary = _native().get_landing_state()
+		var grounded := bool(_native().is_player_grounded())
+		var support := int(_native().get_support_entity_id())
+		watch["invalid"] = bool(watch["invalid"]) or float(state.get("player_gravity_factor", -1.0)) != 1.0 \
+			or int(state.get("traversal_hand_constraint_count", -1)) != 0 \
+			or int(_native().get_traversal_state()) != 0 or int(_native().get_death_count()) != 0 \
+			or bool(_native().is_parachute_deployed()) or bool(_native().is_player_sprinting()) \
+			or not _position().is_finite() or not _velocity().is_finite() \
+			or (bool(watch["grounded_only"]) and (not grounded or support != 11))
+		watch["airborne"] = bool(watch["airborne"]) or (not grounded and support == 0 and _velocity().y > 0.5)
+		watch["peak"] = maxf(float(watch["peak"]), _position().y)
+		await get_tree().process_frame
 
 
 func _touch_reclaim_retry(initial: Dictionary) -> bool:

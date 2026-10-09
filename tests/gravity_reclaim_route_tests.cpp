@@ -10,15 +10,64 @@ scraperx::sim::Vector3 cabin_floor(const Simulation&s){
  const auto p=s.kit_body_position(s.kit_body_index(2201));const auto q=s.kit_body_rotation(s.kit_body_index(2201));
  return {p.x+5*(q.w*q.z-q.x*q.y),p.y-2.5*(1-2*(q.x*q.x+q.z*q.z)),p.z-5*(q.y*q.z+q.w*q.x)};
 }
-void walk(Simulation&s,double x,double z){
+void walk(Simulation&s,double x,double z,bool grounded_only=false){
  const auto start=s.snapshot().player_position;const int budget=700+int(std::ceil(std::hypot(x-start.x,z-start.z)/5.5))*90;
  for(int i=0;i<budget;++i){const auto v=s.snapshot();const double dx=x-v.player_position.x,dz=z-v.player_position.z;
   (void)s.set_move_input(std::clamp(dx*1.8-v.player_linear_velocity.x*.28,-1.,1.),std::clamp(dz*1.8-v.player_linear_velocity.z*.28,-1.,1.));tick(s);
+  if(grounded_only)require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==11,"inland alternative retains actual Tower footing",s);
   if(std::hypot(dx,dz)<.06&&std::hypot(v.player_linear_velocity.x,v.player_linear_velocity.z)<.1&&v.player_grounded)break;
  }
  (void)s.set_move_input(0,0);tick(s,30);require(std::hypot(s.snapshot().player_position.x-x,s.snapshot().player_position.z-z)<.18,"ordinary movement reaches target",s);
 }
-int main(){
+void service_tray_choice(Simulation&s){
+ require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==11,"service tray approach has real Tower330 footing",s);
+ const auto deaths=s.snapshot().death_count;
+ // A grounded approach must meet real steel, rather than walk through the
+ // visible tray or receive an automatic elevation grant.
+ (void)s.set_move_input(0,.6);tick(s,65);(void)s.set_move_input(0,0);tick(s,30);
+ require(s.snapshot().player_position.z < -157.85&&s.snapshot().player_grounded&&
+  std::abs(s.snapshot().player_position.y-330.9)<.12,"tray physically obstructs direct ground travel",s);
+ // An early takeoff arrives too low at the tray. It must hit actual geometry
+ // and return to the approach footing without an automatic grip or rescue.
+ walk(s,-24.7,-161.5);(void)s.set_move_input(0,.6);tick(s,10);
+ (void)s.request_jump();tick(s);bool missed_airborne=false;
+ for(int i=0;i<160;++i){tick(s);const auto v=s.snapshot();
+  require(v.player_gravity_factor==1.0&&v.traversal_hand_constraint_count==0,"mistimed jump retains physical flight and intentional free hands",s);
+  missed_airborne=missed_airborne||!v.player_grounded;
+ }
+ (void)s.set_move_input(0,0);tick(s,30);
+ require(missed_airborne&&s.snapshot().player_position.z < -157.85&&
+  s.snapshot().player_grounded&&s.snapshot().support_entity_id==11&&s.snapshot().death_count==deaths,
+  "early jump fails against real tray and recovers on approach footing",s);
+ walk(s,-24.7,-158.5);
+ // The longer inland path is a genuine alternative on the pre-existing ring.
+ walk(s,-24.7,-158.5);walk(s,-22.4,-158.5,true);walk(s,-22.4,-156.9,true);
+ walk(s,-24.7,-156.9,true);
+ require(s.snapshot().player_position.z>-157.1,"inland detour reaches the far side",s);
+ walk(s,-22.4,-156.9,true);walk(s,-22.4,-159.25,true);walk(s,-24.7,-159.25,true);
+ // Take off before contextual hand-transfer range: this is the normal
+ // supported jump. Inspect gravity throughout the entire flight.
+ (void)s.set_move_input(0,.6);tick(s,10);(void)s.request_jump();tick(s);
+ bool airborne=false,cleared=false;double peak_y=s.snapshot().player_position.y;
+ for(int i=0;i<150;++i){tick(s);const auto v=s.snapshot();
+  require(v.player_gravity_factor==1.0&&v.traversal_hand_constraint_count==0,"tray jump retains gravity and ordinary ballistic movement",s);
+  airborne=airborne||!v.player_grounded;peak_y=std::max(peak_y,v.player_position.y);
+  cleared=cleared||v.player_position.z>-157.05;
+  if(airborne&&v.player_grounded&&cleared)break;
+ }
+ (void)s.set_move_input(0,0);tick(s,45);
+ require(airborne&&cleared&&peak_y>331.9&&s.snapshot().player_grounded&&
+  s.snapshot().support_entity_id==11&&s.snapshot().death_count==deaths,
+  "ordinary jump clears service tray into stable onward Tower footing",s);
+ std::cout<<"RECLAIM service_tray physical_block=1 early_jump_miss=1 grounded_detour=1 ordinary_jump=1 gravity=1 peak_y="<<peak_y<<" deaths="<<deaths<<'\n';
+ walk(s,-24.7,s.snapshot().player_position.z);walk(s,-22.4,s.snapshot().player_position.z,true);
+ walk(s,-22.4,-158.5,true);walk(s,-24.7,-158.25,true);
+}
+int main(int argc,char**argv){
+ if(argc==2&&std::string(argv[1])=="--exit-choice"){
+  Simulation focused;require(focused.debug_restart_at({-24.7,330.9,-158.25}),"focused supported exit staging only",focused);tick(focused,90);
+  service_tray_choice(focused);std::cout<<"PASS RECLAIM focused service tray choice\n";return 0;
+ }
  Simulation s;require(s.debug_restart_at({-24.7,308.9,-142.65}),"initial staging only",s);tick(s,90);
  walk(s,-24.7,-158.15);walk(s,-33.4,-158.25);
  require(s.snapshot().supplied_machine_index==6&&s.snapshot().supplied_machine_station==2,"308 approach reaches physical feed control",s);
@@ -74,6 +123,7 @@ int main(){
   "wheel stays passive while any gate closure uses the finite actuator bank",s);
  const double x=cabin_floor(s).x-.65;walk(s,x,-160.0);(void)s.request_jump();tick(s);walk(s,x,-158.25);walk(s,-24.7,-158.25);
  require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==11&&std::abs(s.snapshot().player_position.y-330.9)<.12&&s.snapshot().death_count==0,"stable onward Tower330 arrival",s);
+ service_tray_choice(s);
  walk(s,-33.4,-158.25);require(s.snapshot().supplied_machine_station==3,"actual upper discharge control",s);
  const double discharge_energy=s.snapshot().supplied_machine_energy_j;
  (void)s.set_supplied_machine_input(-1);int returning=0;

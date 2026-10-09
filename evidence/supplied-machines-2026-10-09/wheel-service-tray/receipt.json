@@ -1,0 +1,14 @@
+{
+  "base_head": "30a60c75478f78e2fb396e25e922698b9829870f",
+  "source_state": "Uncommitted main-goal wheel-exit slice, original Luna integration safely committed separately. Hashes captured after completed native run; geometry/test unchanged since that run, touch helper added separately and not runtime-proven.",
+  "source_sha256": {
+    "src/sim/gravity_wheel_geometry.cpp": "7cf2aa012621d7e6c3219d8c55b305e2998349b7420571a593cb236f2b6feb6f",
+    "tests/gravity_reclaim_route_tests.cpp": "5eca6b651985f0953f12fe1da224182078f4bfccb02aabda528f36ad13e00227",
+    "godot/presentation/ui/ui_test_driver.gd": "b7ddf5013da75a3c91101a006db8abf1a2dadf84da0be94ed4d4e2d2529000a1"
+  },
+  "native_executable_sha256": "c3085acf2da7c135e20abe2d60bb4db5300eacf32f95676976455bab14c43a18",
+  "focused_exit_choice": "PASS: direct physical obstruction, mistimed jump recovery, fully grounded inland detour, ordinary jump gravity1/freehands, peak centre332.434, deaths0. Actual stdout observed; full-route log repeats changed-path receipt.",
+  "full_route": "FAIL exit1: changed obstacle passes after actual wheel ascent; subsequent original late-miss319 recovery height oracle fails at reported soles318.98, support1945, impact15.6092m/s/deaths0. Exact settling/height cause unresolved; no full connected-route PASS claimed.",
+  "touch": "Helper integrated into existing viewport-touch wheel route; no parse/runtime run yet.",
+  "push": "Tool rejected authorized git push because approval required while effective AskForApproval Never. No successor Actions/APK."
+}
