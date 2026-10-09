@@ -1,0 +1,19 @@
+RECLAIM entry_fractures=1
+RECLAIM open_gate=-52.0348,338.627,-165.05
+MATERIAL 2219 -52.8837,337.703,-166.049
+MATERIAL 2227 -51.5254,330.121,-165.345
+MATERIAL 2235 -52.5525,329.542,-164.643
+MATERIAL 2243 -51.9971,337.893,-166.018
+MATERIAL 2251 -52.7102,329.662,-164.475
+MATERIAL 2259 -52.6333,329.523,-165.937
+MATERIAL 2267 -52.8552,329.845,-164.58
+MATERIAL 2275 -51.8141,329.907,-164.471
+MATERIAL 2283 -52.8856,337.702,-165.368
+MATERIAL 2291 -51.5505,330.103,-164.518
+RECLAIM feed before=2052.7 remaining=417.753 deck=308 contacts=301
+RECLAIM actual_fractures=4 last_load_n=43941.8 last_torque_nm=1887.42
+RECLAIM gate=-52.0348,337.88,-165.05
+RECLAIM service_tray physical_block=1 early_jump_miss=1 grounded_detour=1 ordinary_jump=1 gravity=1 peak_y=332.434 deaths=0
+RECLAIM return cabin_q=4.47199e-06,-4.01508e-07,-0.0199626,0.999801 velocity=-1.98991,-1.07705,2.18599e-07
+RECLAIM recovery soles_y=318.979956031 compact=1 impact_mps=15.6091966629 rest_band_m=0.0200152890757
+FAIL RECLAIM late exit miss lands on the real319m recovery crossing pos=-41.585,319.58,-158.246 support=1945 station=3 machine=6 deck=330 angle=2.15173 hopper=256.587 energy=1.98628e+06

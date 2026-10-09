@@ -52,11 +52,12 @@ void service_tray_choice(Simulation&s){
  for(int i=0;i<150;++i){tick(s);const auto v=s.snapshot();
   require(v.player_gravity_factor==1.0&&v.traversal_hand_constraint_count==0,"tray jump retains gravity and ordinary ballistic movement",s);
   airborne=airborne||!v.player_grounded;peak_y=std::max(peak_y,v.player_position.y);
+  require(v.player_grounded||!v.checkpoint_footing_valid,"airborne flight cannot retain checkpoint footing proof",s);
   cleared=cleared||v.player_position.z>-157.05;
   if(airborne&&v.player_grounded&&cleared)break;
  }
  (void)s.set_move_input(0,0);tick(s,45);
- require(airborne&&cleared&&peak_y>331.9&&s.snapshot().player_grounded&&
+ require(airborne&&cleared&&peak_y>331.9&&s.snapshot().player_grounded&&s.snapshot().checkpoint_footing_valid&&
   s.snapshot().support_entity_id==11&&s.snapshot().death_count==deaths,
   "ordinary jump clears service tray into stable onward Tower footing",s);
  std::cout<<"RECLAIM service_tray physical_block=1 early_jump_miss=1 grounded_detour=1 ordinary_jump=1 gravity=1 peak_y="<<peak_y<<" deaths="<<deaths<<'\n';
@@ -65,7 +66,8 @@ void service_tray_choice(Simulation&s){
 }
 int main(int argc,char**argv){
  if(argc==2&&std::string(argv[1])=="--exit-choice"){
-  Simulation focused;require(focused.debug_restart_at({-24.7,330.9,-158.25}),"focused supported exit staging only",focused);tick(focused,90);
+  Simulation focused;require(focused.debug_restart_at({-24.7,330.9,-158.25}),"focused supported exit staging only",focused);
+  require(!focused.snapshot().checkpoint_footing_valid,"relocation requires a new physical footing proof",focused);tick(focused,90);
   service_tray_choice(focused);std::cout<<"PASS RECLAIM focused service tray choice\n";return 0;
  }
  Simulation s;require(s.debug_restart_at({-24.7,308.9,-142.65}),"initial staging only",s);tick(s,90);
@@ -167,7 +169,10 @@ int main(int argc,char**argv){
  const auto soles_y=recovery.player_position.y-(recovery.player_crouched?.6:.9);
  std::cout<<"RECLAIM recovery soles_y="<<soles_y<<" compact="<<recovery.player_crouched<<
      " impact_mps="<<recovery.landing_normal_speed_mps<<'\n';
- require(recovery.support_entity_id==1945&&std::abs(soles_y-319)<.02&&
+ // The native rest-height/normal/support-patch proof uses the actual shape
+ // and installed solver slop. Decimal capsule soles alone are not that proof.
+ require(recovery.player_grounded&&recovery.checkpoint_footing_valid&&
+         recovery.support_entity_id==1945&&std::abs(recovery.support_contact_point.y-319)<.001&&
          recovery.death_count==deaths,
          "late exit miss lands on the real319m recovery crossing",s);
  require(s.snapshot().landing_normal_speed_mps>8,

@@ -1,0 +1,26 @@
+{
+  "result": "PASS focused maintained normal-world tray touch helper",
+  "exit_code": 0,
+  "source_revision": "acce9c9887963669017785dee6723b6799045dfd",
+  "branch": "ChatGPT",
+  "command": "proot-distro login ubuntu --shared-tmp -- /bin/bash -c 'GODOT_SILENCE_ROOT_WARNING=1 timeout 120s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/wheel-exit-touch/godot -- --uitest=touch_gravity_reclaim'",
+  "source_driver_sha256": "b7ddf5013da75a3c91101a006db8abf1a2dadf84da0be94ed4d4e2d2529000a1",
+  "private_driver_sha256": "cd5aaba049d09645cd1c0849d4d8998f078f280a6ef7306e2468e7aef66a8981",
+  "maintained_helper_and_sampler_sha256": "18aa4797c318d656ed690336f4d853f7271742ef932e1247e9f59651ce426517",
+  "bridge_sha256": "0581e0d0eff6344a253390e857ab44a18b1aaf14baddd246b8b7104adf1214b4",
+  "main_sha256": "b6cd37fa8042456e5ca509d8f0d60d0859bd15238e6d2ee7a10994cf6c9de3ef",
+  "project_sha256": "eed51bca0e249426bb4a0b7a9e195ebcd5cc5d2e1cc124c80866b8d6541c1dc3",
+  "log_sha256": "0377db3695e1a8234eeae64b8d65b7cb8f9e035d2066bdb17f20abedaa4f8e45",
+  "helper_and_sampler_exactly_match_maintained_source": true,
+  "source_unchanged_during_run": true,
+  "private_inputs_unchanged_during_run": true,
+  "parse_load_errors": [],
+  "native_receipt": "SCRAPERX_RECLAIM tray grounded_detour=1 ordinary_jump=1 gravity=1 free_hands=1 support=11 peak_y=332.434 jump_work_j=1285.625",
+  "touch_receipt": "SCRAPERX_UITEST PASS touch_gravity_reclaim scope=focused330_tray_only sole_supported_staging=1 shipping_touch=1 maintained_helper=1 grounded_detour=1 ordinary_jump=1 gravity=1 free_hands=1 support=11 deaths=0 continuous_wheel_ascent=not_claimed",
+  "patches": [
+    "driver-staging.patch",
+    "extension-arm64.patch"
+  ],
+  "scope": "ONE focused normal-world viewport-touch path with sole initial supported330 staging(-24.7,330.9,-158.25), followed by unchanged maintained helper. Grounded inland alternative, ordinary Jump/freehands/gravity1 across real tray, far-side Tower11 and grounded inland return to original approach tolerance. No native/shared build or maintained edits by worker.",
+  "limits": "Does not establish continuous wheel ascent, full upper discharge/retry sequence, mistimed-jump recovery via touch, rendered appearance, phone feel, CI or APK delivery."
+}

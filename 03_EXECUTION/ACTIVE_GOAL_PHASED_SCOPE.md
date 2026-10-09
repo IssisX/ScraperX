@@ -178,3 +178,8 @@ This extends Phases5–8 and remains part of the active goal. The owner wants vi
 - Preserve mobile performance, settings, successful routes and native physics ownership. No random dramatic failure, free debris energy, camera excess, exhaustive polish campaign or claim of unseen phone appearance.
 
 Status — updated2026-10-09 from retained evidence: reclaim brick hull/PBR surfaces and recorded contact audio, four selectively breaking native bricks and event-driven dust (96-particle cap) are implemented, with native/touch/render evidence and the delivered0e31 executable lineage. See [reclaim fracture touch receipt](../evidence/supplied-machines-2026-10-08/reclaim-fracture-touch-receipt.json) and [delivery receipt](../evidence/supplied-machines-2026-10-08/ci-0e31/receipt.json). Physical fragment loading is distinct from reduced-order visual powder. Phone appearance/performance remains unobserved. Wider visual-quality direction remains unfinished across later encounters; this status does not remove any requirement.
+
+
+## Supplemental native engineering directive — 2026-10-09
+
+The owner’s [complete advanced C++/Jolt directive](ADVANCED_NATIVE_PHYSICS_ENGINEERING_DIRECTIVE.md) is preserved separately, with a [twelve-example pinned-source decision catalog](../docs/physics/advanced-engineering-catalog.md). It strengthens implementation at relevant ownership boundaries; every original requirement above remains in scope. The catalog is not authority for twelve parallel feature projects and earns no gameplay completion credit. Preserve commercial quality, actual native authority, momentum, finite work and focused defect-rejecting evidence while continuing the existing encounters.

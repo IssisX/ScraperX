@@ -667,6 +667,7 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     const auto &s = simulation_->snapshot();
     godot::Dictionary out;
     out["player_swinging"] = s.player_swinging;
+    out["checkpoint_footing_valid"] = s.checkpoint_footing_valid;
     out["player_gravity_factor"] = s.player_gravity_factor;
     out["traversal_hand_constraint_count"] = s.traversal_hand_constraint_count;
     out["traversal_command_work_bound_j"] = s.traversal_command_work_bound_j;

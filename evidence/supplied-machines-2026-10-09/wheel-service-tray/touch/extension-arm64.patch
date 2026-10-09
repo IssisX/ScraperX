@@ -1,0 +1,14 @@
+--- repo/godot/addons/scraperx_native/scraperx_native.gdextension
++++ wheel-exit-touch/godot/addons/scraperx_native/scraperx_native.gdextension
+@@ -6,8 +6,8 @@
+ 
+ [libraries]
+ 
+-linux.editor.x86_64 = "res://addons/scraperx_native/bin/linux/libscraperx_native.so"
+-linux.debug.x86_64 = "res://addons/scraperx_native/bin/linux/libscraperx_native.so"
+-linux.release.x86_64 = "res://addons/scraperx_native/bin/linux/libscraperx_native.so"
++linux.editor.arm64 = "res://addons/scraperx_native/bin/linux/libscraperx_native.so"
++linux.debug.arm64 = "res://addons/scraperx_native/bin/linux/libscraperx_native.so"
++linux.release.arm64 = "res://addons/scraperx_native/bin/linux/libscraperx_native.so"
+ android.debug.arm64 = "res://addons/scraperx_native/bin/android/arm64/libscraperx_native.so"
+ android.release.arm64 = "res://addons/scraperx_native/bin/android/arm64/libscraperx_native.so"

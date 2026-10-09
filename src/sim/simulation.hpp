@@ -151,6 +151,9 @@ struct Snapshot final {
     Vector3 player_position{};
     Vector3 player_linear_velocity{};
     bool player_grounded = false;
+    // Last completed tick's unassisted checkpoint footing proof. Invalidated
+    // on relocation; grounded alone does not establish a resting support patch.
+    bool checkpoint_footing_valid = false;
     // Crouched: the short capsule (see Simulation::set_crouch_input).
     bool player_crouched = false;
     std::uint64_t support_entity_id = 0;

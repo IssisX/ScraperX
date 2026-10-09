@@ -1,0 +1,28 @@
+{
+  "baseline_head": "acce9c9887963669017785dee6723b6799045dfd",
+  "source_sha256": {
+    "src/sim/simulation.hpp": "1d5a4944039790284c2cf61e5b8d33f0364846ab814473a26509052670d2e469",
+    "src/sim/simulation.cpp": "9b39e45b39b0137d062757d0a6f7ccdfab05302637ddeafba0f8bbcfac980014",
+    "src/bridge/scraperx_simulation.cpp": "e25a68d574f1aaa3be42e79b2ed7471dda121295ffd1227f82557641deaa333f",
+    "src/sim/gravity_wheel_geometry.cpp": "7cf2aa012621d7e6c3219d8c55b305e2998349b7420571a593cb236f2b6feb6f",
+    "tests/gravity_reclaim_route_tests.cpp": "7738a432d7aedd83d7a5cfb4cc9d4046e7b00da5977db4e0cb532fae7debdb09",
+    "godot/presentation/ui/ui_test_driver.gd": "b7ddf5013da75a3c91101a006db8abf1a2dadf84da0be94ed4d4e2d2529000a1"
+  },
+  "native_executable_sha256": "50758c07dd0481b28f35a2a132ed1968b3c083d9b97af88536786dea196ee536",
+  "native_bridge_sha256": "9f2611747b59aa51009daca09a7b6fdecb6d2f50d093d8dfc361ec2caff20748",
+  "build_command": "proot-distro login ubuntu -- cmake --build /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build --target scraperx_gravity_reclaim_route_tests scraperx_native -j2",
+  "build_exit_code": 0,
+  "native_command": "proot-distro login ubuntu -- sh -c /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_gravity_reclaim_route_tests",
+  "native_exit_code": 0,
+  "native_result": "PASS: actual finite feeding, loaded ascent, direct tray obstruction, early-jump miss, grounded detour, ordinary jump gravity1/freehands, supported onward exit, discharge/empty return/checkpoint retry/second ascent, consequential late miss on actual319m recovery1945 and ordinary Tower walk-out. Airborne ticks reject stale checkpoint-footing validity.",
+  "recovery_acceptance": "Existing native checkpoint eligibility: unassisted grounded contact plus actual rest-height/normal/five-ray plane patch proof; support1945 and contact plane319m within1mm, deaths unchanged, impact>8m/s, ordinary walk-out. Collision settings and existing native twice-solver-slop footing tolerance unchanged.",
+  "touch_result": "Separate unchanged helper pass at acce9c9; see touch/receipt.json. No whole-wheel touch/phone/rendered appearance claim.",
+  "performance": "Predicate cached from preexisting checkpoint test, no added per-tick raycasts. No CPU/device performance measurement claimed.",
+  "ci_baseline": {
+    "run": 37969393230,
+    "head": "acce9c9887963669017785dee6723b6799045dfd",
+    "conclusion": "failure",
+    "failed_step": "Build native host graph and run the full native suite",
+    "successor_apk": false
+  }
+}

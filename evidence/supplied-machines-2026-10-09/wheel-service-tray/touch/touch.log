@@ -1,0 +1,7 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=582 driver=Dummy
+SCRAPERX_RECLAIM tray grounded_detour=1 ordinary_jump=1 gravity=1 free_hands=1 support=11 peak_y=332.434 jump_work_j=1285.625
+SCRAPERX_UITEST PASS touch_gravity_reclaim scope=focused330_tray_only sole_supported_staging=1 shipping_touch=1 maintained_helper=1 grounded_detour=1 ordinary_jump=1 gravity=1 free_hands=1 support=11 deaths=0 continuous_wheel_ascent=not_claimed

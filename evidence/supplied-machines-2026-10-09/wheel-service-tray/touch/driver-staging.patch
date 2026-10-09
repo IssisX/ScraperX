@@ -1,0 +1,21 @@
+--- repo/godot/presentation/ui/ui_test_driver.gd
++++ wheel-exit-touch/godot/presentation/ui/ui_test_driver.gd
+@@ -168,7 +168,17 @@
+ 		"touch_pitman_lift":
+ 			ok = await _touch_pitman_lift(true)
+ 		"touch_gravity_reclaim":
+-			ok = await _touch_gravity_reclaim()
++			# Private focused proof: this is the sole supported staging point.
++			if not _campaign_world_intact() or not _native().debug_restart_at(Vector3(-24.7, 330.9, -158.25)):
++				ok = _fail("focused tray supported330 staging rejected")
++			else:
++				await _seconds(1.0)
++				if not _reclaim_tower_arrived():
++					ok = _fail("focused tray staging lacks real Tower11 footing")
++				else:
++					ok = await _touch_reclaim_tray_choice()
++					if ok:
++						_detail = "scope=focused330_tray_only sole_supported_staging=1 shipping_touch=1 maintained_helper=1 grounded_detour=1 ordinary_jump=1 gravity=1 free_hands=1 support=11 deaths=0 continuous_wheel_ascent=not_claimed"
+ 		"touch_slab_haul_cart":
+ 			ok = await _touch_slab_haul_cart()
+ 		"touch_taper_inspection_route":

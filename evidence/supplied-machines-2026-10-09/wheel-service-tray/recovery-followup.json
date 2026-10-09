@@ -1,0 +1,8 @@
+{
+  "result": "Unresolved recovery height oracle; unsuccessful representation-band test change reverted, native physics untouched.",
+  "observed_actual_soles_y_m": 318.979956031,
+  "half_ulp_model_band_m": 0.0200152890757,
+  "observed_depth_m": 0.020043969000028028,
+  "cause_limit": "Actual depth exceeds the one-rounding-operation model. Do not infer complete solver-error bound or relax acceptance from the candidate arithmetic. Compact contact is on1945, no death, impact15.6091966629m/s. Touch crossing passes separately.",
+  "next": "Inspect exact support/contact settling at saved boundary and authoritative native footing rules; maintain focused scope and incorporate owner incoming technical prompt at safe ownership boundary."
+}

@@ -2401,8 +2401,9 @@ public:
                 died_this_tick = true;
             }
         }
-        if (!died_this_tick && grounded_ && traversal_state_ == TraversalState::None &&
-            footing_is_firm(bodies)) {
+        state_.checkpoint_footing_valid = !died_this_tick && grounded_ &&
+            traversal_state_ == TraversalState::None && footing_is_firm(bodies);
+        if (state_.checkpoint_footing_valid) {
             commit_checkpoint(bodies);
         }
         if (grounded_) {
@@ -2508,6 +2509,7 @@ public:
         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
         rider_specific_acceleration_ = JPH::Vec3::sZero();
         grounded_ = false;
+        state_.checkpoint_footing_valid = false;
         air_control_force_ = JPH::Vec3::sZero();
         support_entity_id_ = 0;
         support_sample_ = {};
@@ -7645,6 +7647,7 @@ private:
 
         grounded_ = false;
         jump_vault_ticks_left_ = ordinary_jump_ticks_left_ = 0;
+        state_.checkpoint_footing_valid = false;
         support_entity_id_ = 0;
         support_sample_ = {};
         airborne_inherited_velocity_ = restored_transport;

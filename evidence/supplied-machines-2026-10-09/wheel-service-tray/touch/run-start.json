@@ -1,0 +1,10 @@
+{
+  "utc": "2026-10-09T17:54:38.952385+00:00",
+  "bridge_source": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/runtime-godot/addons/scraperx_native/bin/linux/libscraperx_native.so",
+  "files_sha256": {
+    "godot/presentation/ui/ui_test_driver.gd": "cd5aaba049d09645cd1c0849d4d8998f078f280a6ef7306e2468e7aef66a8981",
+    "godot/presentation/main.gd": "b6cd37fa8042456e5ca509d8f0d60d0859bd15238e6d2ee7a10994cf6c9de3ef",
+    "godot/project.godot": "eed51bca0e249426bb4a0b7a9e195ebcd5cc5d2e1cc124c80866b8d6541c1dc3",
+    "godot/addons/scraperx_native/bin/linux/libscraperx_native.so": "0581e0d0eff6344a253390e857ab44a18b1aaf14baddd246b8b7104adf1214b4"
+  }
+}
