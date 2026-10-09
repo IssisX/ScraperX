@@ -123,6 +123,8 @@ const RIG_HOOK := 1
 const RIG_UNHOOK := 2
 # S1's valve chain (Simulation::kStackS1ChainEntityId).
 const STACK_S1_CHAIN := 2203
+# The bar north of the fan-casing gallery (Simulation::kPitmanEntityId).
+const PITMAN_BAR := 2315
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -589,8 +591,11 @@ func _dispatch(verbs: Array, delta: float) -> void:
 		match verb:
 			&"jump":
 				# A jump stands a crouched body first (natively), and ends the toggle.
+				# On the pitman the stick pumps and Drop lets go. Jump still
+				# mantles an ordinary hang.
 				_crouch_toggled = false
-				if _ctx["jump_ok"] or _ctx["hanging"] or _ctx["climbing"]:
+				var on_pitman := bool(_ctx["hanging"]) and int(_native.get_traversal_support_entity_id()) == PITMAN_BAR
+				if (_ctx["jump_ok"] or _ctx["hanging"] or _ctx["climbing"]) and not on_pitman:
 					_native.request_jump()
 					_since_jump_sent = 0.0
 				else:
@@ -652,6 +657,8 @@ func _perform_action() -> void:
 				_native.request_slingshot_action()
 		&"climb_up", &"climb":
 			_native.request_traversal()
+		&"pitman":
+			pass
 		&"pick_up":
 			_native.request_pick_up()
 		&"set_down":
@@ -700,6 +707,9 @@ func _read_context() -> Dictionary:
 			"label": ("RELEASE" if bool(sling.get("release_ready", false)) else "DRAW MORE") if sling_seated else "ENTER POUCH",
 			"icon": &"operate",
 			"detail": "PULL BACK TO STRETCH" if sling_seated else "WOODEN SLINGSHOT"}
+	elif hanging and int(_native.get_traversal_support_entity_id()) == PITMAN_BAR:
+		# The stick pumps the bar. Drop is the let-go. Action must not mantle.
+		action = {"id": &"pitman", "label": "SWING", "icon": &"climb", "detail": "LET GO TO DROP"}
 	elif hanging or climbing:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
 	elif not free:
@@ -1191,7 +1201,9 @@ func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> v
 		int(_native.get_checkpoint_commit_count()), int(_native.get_death_count())]
 	_fall_value.modulate = Color("8fd9b8") if fall_state == FALL_PARACHUTING else Color("d8e0dc")
 
-	if traversal == TRAVERSAL_HANGING:
+	if traversal == TRAVERSAL_HANGING and int(_native.get_traversal_support_entity_id()) == PITMAN_BAR:
+		_status.text = "HANGING FROM THE BAR"
+	elif traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
 	elif traversal == TRAVERSAL_MANTLING:
 		_status.text = "MANTLING REAL GEOMETRY"

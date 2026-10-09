@@ -130,6 +130,10 @@ public:
     // is reserved for the player while harnessed to the yard slingshot, so a
     // leather pouch does not behave like a wooden ledge under the rider.
     void disable_collision(BodyIndex first, BodyIndex second);
+    // The player's hands are on this body. A contact solve against it is not
+    // the hang, and it throws the capsule sideways. Subgroup 2046 stays free
+    // of 2047, which the slingshot uses while the rider is in the pouch.
+    void exclude_player_from(JPH::BodyID player, std::uint64_t entity);
     AnchorIndex add_anchor(BodyIndex body, JPH::Vec3 local, float reach);
 
     // A straight guide along a world axis through the body's present
@@ -416,6 +420,8 @@ public:
 
     [[nodiscard]] bool catch_latched(CatchIndex catch_index) const noexcept;
     [[nodiscard]] float lever_angle(LeverIndex lever) const noexcept;
+    // World pivot of the hinge on this entity, if it has one.
+    [[nodiscard]] bool hinge_pivot(std::uint64_t entity, JPH::RVec3 &pivot) const noexcept;
     [[nodiscard]] float guide_travel(GuideIndex guide) const noexcept;
     // True while the guide has no rail gap or its joint lies in its seat.
     [[nodiscard]] bool rail_whole(GuideIndex guide) const noexcept;

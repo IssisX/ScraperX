@@ -191,6 +191,18 @@ void Kit::disable_collision(const BodyIndex first, const BodyIndex second) {
     collision_groups_->DisableCollision(first.value, second.value);
 }
 
+void Kit::exclude_player_from(const JPH::BodyID player, const std::uint64_t entity) {
+    const BodyIndex body = body_for_entity(entity);
+    if (collision_groups_ == nullptr || body.value >= bodies_.size() ||
+        bodies_[body.value].entity != entity || body.value >= 2046U) {
+        return;
+    }
+    constexpr JPH::CollisionGroup::SubGroupID kPlayer = 2046;
+    system_.GetBodyInterface().SetCollisionGroup(
+        player, JPH::CollisionGroup(collision_groups_, 0xA5016, kPlayer));
+    collision_groups_->DisableCollision(kPlayer, static_cast<JPH::CollisionGroup::SubGroupID>(body.value));
+}
+
 AnchorIndex Kit::add_anchor(const BodyIndex body, const JPH::Vec3 local, const float reach) {
     anchors_.push_back({body, local, reach});
     return AnchorIndex{static_cast<std::uint32_t>(anchors_.size() - 1U)};
@@ -1603,6 +1615,19 @@ bool Kit::catch_latched(const CatchIndex catch_index) const noexcept {
 float Kit::lever_angle(const LeverIndex lever) const noexcept {
     const Lever *record = find(levers_, lever);
     return record != nullptr && record->hinge != nullptr ? record->hinge->GetCurrentAngle() : 0.0F;
+}
+
+bool Kit::hinge_pivot(const std::uint64_t entity, JPH::RVec3 &pivot) const noexcept {
+    for (const Lever &lever : levers_) {
+        if (!lever.body.valid() || lever.body.value >= bodies_.size()) {
+            continue;
+        }
+        if (bodies_[lever.body.value].entity == entity) {
+            pivot = lever.pivot;
+            return true;
+        }
+    }
+    return false;
 }
 
 float Kit::guide_travel(const GuideIndex guide) const noexcept {

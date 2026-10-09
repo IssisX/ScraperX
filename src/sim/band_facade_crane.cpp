@@ -738,6 +738,7 @@ kit::BodyIndex build_gate(kit::Kit &kit, std::vector<Part> &frame) {
 void build_slat_tower(std::vector<Part> &frame);
 void build_duct(kit::Kit &kit, std::vector<Part> &frame);
 void build_casing(std::vector<Part> &frame);
+void build_pitman(kit::Kit &kit, std::vector<Part> &frame);
 kit::BodyIndex build_cart_haul(kit::Kit &kit, std::vector<Part> &frame) {
     constexpr float kS = 0.70710678F;
     constexpr float kSlope = 2.3561945F; // local +X points up the 45° rail, west and up
@@ -937,6 +938,7 @@ void build_duct(kit::Kit &kit, std::vector<Part> &frame) {
     frame.push_back(span({6.02F, 713.30F, -146.72F}, {6.48F, 714.55F, -146.58F}, Material::Steel));
     frame.push_back(span({6.02F, 713.30F, -145.42F}, {6.48F, 714.55F, -145.28F}, Material::Steel));
     build_casing(frame);
+    build_pitman(kit, frame);
 }
 
 // South of the duct's deck. A fan casing stands against the east side of
@@ -981,6 +983,55 @@ void build_casing(std::vector<Part> &frame) {
                          Material::Steel));
     frame.push_back(span({8.15F, 758.86F, -152.05F}, {11.20F, 759.10F, -150.30F}, Material::Concrete));
     frame.push_back(span({7.50F, 758.70F, -152.05F}, {8.20F, 759.10F, -150.30F}, Material::Steel));
+}
+
+// North of that gallery. A pitman hangs from a bearing between two posts.
+// The rod is too thick to grab. The bar at the bottom is the hold. Pull
+// with the swing and the bar carries you over the gap onto the next deck.
+// Let go early and you drop onto the shelf under the gap, then climb the
+// ladder on the west side back onto the gallery. The bearing is heavy and
+// close to the pivot, so a person's pull can move the bar.
+void build_pitman(kit::Kit &kit, std::vector<Part> &frame) {
+    constexpr float kPivotX = 9.40F;
+    constexpr float kPivotY = 763.55F;
+    constexpr float kPivotZ = -150.10F;
+    constexpr float kRodHalf = 1.50F;
+    const JPH::RVec3 pivot(kPivotX, kPivotY, kPivotZ);
+    const kit::BodyIndex pitman = kit.add_body(
+        Sim::kPitmanEntityId,
+        {box(JPH::Vec3(0.50F, 0.32F, 0.32F), JPH::Vec3::sZero(), Material::Steel),
+         box(JPH::Vec3(0.12F, 1.00F, 0.08F), JPH::Vec3(0.0F, -1.20F, 0.0F), Material::Rust),
+         box(JPH::Vec3(0.55F, 0.045F, 0.045F), JPH::Vec3(0.0F, -2.0F * kRodHalf, 0.0F), Material::Yellow)},
+        pivot, JPH::Quat::sIdentity(), 420.0F, 0.15F);
+    kit.set_damping(pitman, 0.08F, 0.22F);
+    kit.set_continuous_collision(pitman);
+    (void)kit.add_lever(pitman, pivot, JPH::Vec3::sAxisX(), JPH::Vec3::sAxisY(), -1.05F, 1.05F);
+
+    // Posts and a cap, clear of the bearing, so the pivot is part of the
+    // casing and not a point in the air.
+    frame.push_back(span({8.55F, 759.10F, -150.22F}, {8.75F, 764.40F, -149.98F}, Material::Steel));
+    frame.push_back(span({10.55F, 759.10F, -150.22F}, {10.75F, 764.40F, -149.98F}, Material::Steel));
+    frame.push_back(span({8.05F, 764.12F, -150.24F}, {10.75F, 764.42F, -149.96F}, Material::Steel));
+    frame.push_back(span({7.55F, 763.90F, -150.28F}, {8.10F, 764.30F, -149.92F}, Material::Rust));
+
+    // The deck the swing reaches. Its south edge is past the low part of
+    // the arc, so letting go too soon falls through the gap.
+    frame.push_back(span({8.05F, 758.76F, -148.55F}, {10.85F, 759.00F, -145.50F}, Material::Concrete));
+    frame.push_back(span({8.20F, 714.10F, -146.35F}, {8.50F, 758.76F, -146.05F}, Material::Rust));
+    frame.push_back(span({10.40F, 714.10F, -146.35F}, {10.70F, 758.76F, -146.05F}, Material::Rust));
+    frame.push_back(span({10.40F, 714.10F, -147.70F}, {10.70F, 758.76F, -147.40F}, Material::Rust));
+    frame.push_back(span({7.55F, 758.70F, -148.70F}, {8.15F, 759.00F, -148.40F}, Material::Steel));
+
+    // The shelf under the gap. A miss lands here, not twelve metres down.
+    frame.push_back(span({7.70F, 756.46F, -150.20F}, {11.00F, 756.70F, -145.40F}, Material::Concrete));
+    frame.push_back(span({8.35F, 714.10F, -147.05F}, {8.65F, 756.46F, -146.75F}, Material::Rust));
+    frame.push_back(span({10.40F, 714.10F, -147.05F}, {10.70F, 756.46F, -146.75F}, Material::Rust));
+
+    // West of the swing, on the gallery's north edge. The plate is the lip
+    // the climb mantles onto, the same shape as the casing ladders, and it
+    // stays on that edge so it does not stand in the walk along the shelf.
+    ladder(frame, 8.10F, -149.95F, true, 756.95F, 758.55F);
+    frame.push_back(span({7.40F, 757.70F, -150.38F}, {8.80F, 759.10F, -150.22F}, Material::Steel));
 }
 
 } // namespace

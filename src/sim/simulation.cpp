@@ -241,6 +241,13 @@ constexpr float kSwingPump = 2.6F;
 constexpr float kSwingSpring = 3.2F;
 constexpr float kSwingDamp = 1.8F;
 constexpr float kReleaseSpeedCap = 7.0F;
+// A pull on the pitman's bar, newtons. Full when that pull goes with the
+// bar's motion, a fifth of it when the pull is against the motion. The
+// rider's weight is applied once, by load_hold, not again here.
+constexpr float kPitmanPumpForce = 1500.0F;
+constexpr float kPitmanPumpOpposed = 0.20F;
+constexpr float kPitmanCoastSpeed = 0.15F;
+constexpr std::uint32_t kPitmanRegrabTicks = 80;
 // A hard landing under the lethal line keeps the horizontal speed the fall
 // arrived with. Contact was eating it.
 constexpr float kRollKeepImpact = 6.0F;
@@ -708,6 +715,9 @@ private:
     case scraperx::sim::InitialSpawn::AfterCrane:
         // On the 640 m floor, where the last crane car lets you off.
         return {-3.0, 641.20, -156.50};
+    case scraperx::sim::InitialSpawn::CasingGallery:
+        // On the fan-casing gallery, just south of the pitman's bar.
+        return {9.40, 760.00, -150.55};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower
@@ -1024,6 +1034,7 @@ public:
         scraperx::sim::bands::build_service_skin(*kit_);
         // Band 0, the Stack: the ascent from grade.
         scraperx::sim::bands::build_stack(*kit_, stack_);
+        kit_->exclude_player_from(player_id_, Simulation::kPitmanEntityId);
         // The ChatGPT wooden slingshot, seated in the approach yard between
         // grade (z = -25) and the stack. It is a machine on this route, not a
         // replacement for it. Proving-ground spawns keep their old fixtures.
@@ -1045,6 +1056,10 @@ public:
         if (carry_constraint_ != nullptr) {
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
+        }
+        if (pitman_grip_ != nullptr) {
+            physics_system_.RemoveConstraint(pitman_grip_);
+            pitman_grip_ = nullptr;
         }
         contact_listener_.set_slingshot(nullptr);
         slingshot_.reset();
@@ -1124,8 +1139,10 @@ public:
             if (traversal_state_ == TraversalState::Climbing) {
                 update_climb(bodies, commands, delta_seconds);
             } else if (traversal_state_ == TraversalState::Hanging) {
-                update_shimmy(bodies, commands, delta_seconds);
-                update_swing(commands, delta_seconds);
+                if (pitman_grip_ == nullptr) {
+                    update_shimmy(bodies, commands, delta_seconds);
+                }
+                update_swing(bodies, commands, delta_seconds);
             }
         }
 
@@ -2103,6 +2120,12 @@ private:
         if (traversal_state_ == TraversalState::Hanging) {
             if (commands.release_requested) {
                 release_hang(bodies);
+            } else if (pitman_grip_ != nullptr) {
+                // Jump and Action mantle a ledge. On this bar they do not:
+                // the stick pumps it, and letting go is the release.
+                if (commands.jump_requested || commands.traversal_requested) {
+                    ++rejected_traversal_count_;
+                }
             } else if (commands.jump_requested || commands.traversal_requested) {
                 begin_mantle_from_hang(bodies);
             }
@@ -2672,6 +2695,13 @@ private:
     void drive_traversal(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
         const JPH::RVec3 current = bodies.GetPosition(player_id_);
 
+        // The pitman hold is a point constraint. The bar moves the body.
+        // A kinematic chase on top of that would fight the hinge.
+        if (pitman_grip_ != nullptr) {
+            traversal_desired_ = current;
+            return;
+        }
+
         if (traversal_state_ == TraversalState::Hanging ||
             traversal_state_ == TraversalState::Climbing) {
             traversal_desired_ = from_support_local(bodies, traversal_body_, traversal_local_hold_);
@@ -2772,6 +2802,10 @@ private:
     }
 
     void release_hang(JPH::BodyInterface &bodies) noexcept {
+        if (pitman_grip_ != nullptr) {
+            release_pitman_hang(bodies);
+            return;
+        }
         const JPH::RVec3 ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
         const JPH::Vec3 support_velocity =
             traversal_body_.IsInvalid() ? JPH::Vec3::sZero()
@@ -2779,6 +2813,97 @@ private:
         release_with_speed(bodies, support_velocity);
     }
 
+    // Let go of the bar and keep the speed the swing already gave the body.
+    void release_pitman_hang(JPH::BodyInterface &bodies) noexcept {
+        JPH::Vec3 velocity = bodies.GetLinearVelocity(player_id_);
+        const float speed = velocity.Length();
+        if (speed > kReleaseSpeedCap) {
+            velocity *= kReleaseSpeedCap / speed;
+        }
+        if (pitman_grip_ != nullptr) {
+            physics_system_.RemoveConstraint(pitman_grip_);
+            pitman_grip_ = nullptr;
+        }
+        bodies.SetLinearVelocity(player_id_, velocity);
+        airborne_inherited_velocity_ = JPH::Vec3(velocity.GetX(), 0.0F, velocity.GetZ());
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        regrab_lockout_ticks_ = kPitmanRegrabTicks;
+        clear_traversal();
+        air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed,
+                                   JPH::Vec3(velocity.GetX(), 0.0F, velocity.GetZ()).Length());
+    }
+
+    // Hands on the bar, where the body already is. The constraint's two
+    // points start on the same spot, so the grab does not yank the body.
+    // Gravity is off and load_hold puts the weight on the bar once: the
+    // deck is not also asked to carry it. The body's mass stays in the
+    // constraint, so the bar feels who is hanging on it.
+    void begin_pitman_hang(JPH::BodyInterface &bodies, const Grip &grip) noexcept {
+        JPH::RVec3 pivot;
+        if (kit_ == nullptr || !kit_->hinge_pivot(grip.entity_id, pivot)) {
+            ++rejected_traversal_count_;
+            return;
+        }
+        JPH::PointConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mPoint1 = grip.point;
+        settings.mPoint2 = grip.point;
+        pitman_grip_ = static_cast<JPH::PointConstraint *>(
+            create_constraint(settings, player_id_, grip.body, false));
+        if (pitman_grip_ == nullptr) {
+            ++rejected_traversal_count_;
+            return;
+        }
+        const JPH::RVec3 hold = bodies.GetPosition(player_id_);
+        pitman_pivot_ = pivot;
+        traversal_state_ = TraversalState::Hanging;
+        traversal_body_ = grip.body;
+        traversal_entity_id_ = grip.entity_id;
+        traversal_target_body_ = grip.body;
+        traversal_normal_ = facing_;
+        traversal_local_hold_ = to_support_local(bodies, traversal_body_, hold);
+        traversal_local_ledge_ = to_support_local(bodies, traversal_body_, grip.point);
+        traversal_local_target_ = traversal_local_ledge_;
+        traversal_progress_ = 0.0;
+        traversal_stall_ticks_ = 0;
+        swing_angle_ = 0.0F;
+        swing_rate_ = 0.0F;
+        traversal_desired_ = hold;
+        bodies.SetGravityFactor(player_id_, 0.0F);
+        bodies.ActivateBody(grip.body);
+    }
+
+    // A pull along the bar's swing. Full when it goes with the bar, a
+    // fraction when it fights the bar, so holding one direction still
+    // feeds the swing instead of stalling it.
+    void pump_pitman(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
+        if (pitman_grip_ == nullptr || traversal_body_.IsInvalid()) {
+            return;
+        }
+        const JPH::RVec3 grip = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+        const JPH::Vec3 radius(grip - pitman_pivot_);
+        const JPH::Vec3 tangent = JPH::Vec3::sAxisX().Cross(radius);
+        if (tangent.Length() < 0.25F) {
+            return;
+        }
+        const JPH::Vec3 north = (-tangent).Normalized();
+        const float drive = static_cast<float>(commands.move_input_x) * north.GetX() +
+                            static_cast<float>(commands.move_input_z) * north.GetZ();
+        if (std::abs(drive) < static_cast<float>(kClimbInputDeadzone)) {
+            return;
+        }
+        const JPH::Vec3 direction = drive > 0.0F ? north : -north;
+        const JPH::Vec3 velocity = bodies.GetPointVelocity(traversal_body_, grip);
+        float scale = 1.0F;
+        if (velocity.Length() > kPitmanCoastSpeed && direction.Dot(velocity) < 0.0F) {
+            scale = kPitmanPumpOpposed;
+        }
+        const JPH::Vec3 force = direction * (kPitmanPumpForce * std::abs(drive) * scale);
+        // The pull is on the bar. The grip constraint is what hauls the body
+        // along with it, and that reaction is already in the constraint.
+        // A second, opposite push on the body cancels the pull.
+        bodies.AddForce(traversal_body_, force, grip);
+    }
 
     // ---- Step 2 movement (MECHANISM_ASCENT_PLAN.md §8) --------------------
 
@@ -2916,6 +3041,10 @@ private:
 
     // Take hold of `grip` where the body is, facing it.
     void begin_climb(JPH::BodyInterface &bodies, const Grip &grip) noexcept {
+        if (grip.entity_id == scraperx::sim::Simulation::kPitmanEntityId) {
+            begin_pitman_hang(bodies, grip);
+            return;
+        }
         const JPH::RVec3 hold = bodies.GetPosition(player_id_);
         traversal_state_ = TraversalState::Climbing;
         traversal_body_ = grip.body;
@@ -3158,7 +3287,13 @@ private:
     }
 
     // Hanging, pulling back from the wall pumps a swing. Letting go keeps it.
-    void update_swing(const StepCommands &commands, const float delta_seconds) noexcept {
+    // On the pitman the bar itself is the swing: a finite pull at the hands.
+    void update_swing(JPH::BodyInterface &bodies, const StepCommands &commands,
+                      const float delta_seconds) noexcept {
+        if (pitman_grip_ != nullptr) {
+            pump_pitman(bodies, commands);
+            return;
+        }
         if (traversal_normal_.IsNearZero()) {
             return;
         }
@@ -3403,6 +3538,10 @@ private:
     }
 
     void clear_traversal() noexcept {
+        if (pitman_grip_ != nullptr) {
+            physics_system_.RemoveConstraint(pitman_grip_);
+            pitman_grip_ = nullptr;
+        }
         traversal_state_ = TraversalState::None;
         traversal_normal_ = JPH::Vec3::sZero();
         hands_[0].valid = false;
@@ -3528,6 +3667,12 @@ private:
             release_carry();
         }
         kit_->restore(checkpoint_.kit);
+        if (pitman_grip_ != nullptr) {
+            physics_system_.RemoveConstraint(pitman_grip_);
+            pitman_grip_ = nullptr;
+            bodies.SetGravityFactor(player_id_, 1.0F);
+            traversal_state_ = TraversalState::None;
+        }
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
         // with the walking speed it was committed at, the load swung out of
@@ -3730,6 +3875,10 @@ private:
     JPH::Ref<JPH::PointConstraint> carry_constraint_;
     JPH::BodyID carried_id_;
     std::uint64_t carried_entity_ = 0;
+    // Hands on the pitman's bar. Not tracked for teardown: the hang removes
+    // it, and so does the destructor.
+    JPH::Ref<JPH::PointConstraint> pitman_grip_;
+    JPH::RVec3 pitman_pivot_{JPH::RVec3::sZero()};
     std::uint64_t carry_target_entity_ = 0;
     float grip_over_seconds_ = 0.0F;
     // AS-006: the mechanism kit and the bands built from it.

@@ -123,6 +123,8 @@ struct PathWatch final {
     double last_z = 0.0;
     double worst = 0.0;
     scraperx::sim::Vector3 worst_at{};
+    double worst_from_x = 0.0;
+    double worst_from_z = 0.0;
     int worst_traversal = 0;
 };
 PathWatch g_path_watch;
@@ -138,6 +140,8 @@ void observe_path(const scraperx::sim::Simulation &simulation, const bool measur
         if (step > g_path_watch.worst) {
             g_path_watch.worst = step;
             g_path_watch.worst_at = state.player_position;
+            g_path_watch.worst_from_x = g_path_watch.last_x;
+            g_path_watch.worst_from_z = g_path_watch.last_z;
             g_path_watch.worst_traversal = static_cast<int>(state.traversal_state);
         }
     }
@@ -4012,6 +4016,221 @@ bool climb_casing(scraperx::sim::Simulation &floor) {
     return true;
 }
 
+double pitman_hinge_angle(const scraperx::sim::Simulation &simulation) {
+    const auto index = simulation.kit_body_index(scraperx::sim::Simulation::kPitmanEntityId);
+    const auto rotation = simulation.kit_body_rotation(index);
+    return 2.0 * std::atan2(rotation.x, rotation.w);
+}
+
+// North of the casing gallery. Catch the bar, pull with its swing, let go
+// onto the next deck. A let-go over the gap lands on the shelf, and the
+// ladder west of the swing brings you back for another try.
+bool climb_pitman(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::TraversalState;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    auto say = [&](const char *what) {
+        const auto p = floor.snapshot();
+        std::cout << what << " " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " v=" << p.player_linear_velocity.x << "," << p.player_linear_velocity.y << ","
+                  << p.player_linear_velocity.z << " grounded=" << p.player_grounded
+                  << " support=" << p.support_entity_id << " grip=" << p.grip_available
+                  << " trav=" << static_cast<int>(p.traversal_state)
+                  << " hold=" << p.traversal_support_entity_id << " deaths=" << p.death_count
+                  << " hinge=" << pitman_hinge_angle(floor) << "\n";
+    };
+    auto watch = [&](const double seconds) {
+        using scraperx::sim::Simulation;
+        const auto ticks =
+            static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+    };
+    if (!walk_to(floor, 9.40, -150.55, 8.0, 0.12)) {
+        say("pitman approach");
+        return false;
+    }
+    (void)floor.set_facing(0.0, 1.0);
+    (void)floor.set_move_input(0.0, 0.0);
+    watch(0.3);
+    if (!floor.snapshot().grip_available) {
+        say("pitman no bar in reach");
+        return false;
+    }
+    const auto before = floor.snapshot();
+    (void)floor.request_traversal();
+    watch(scraperx::sim::Simulation::kFixedStepSeconds);
+    const auto caught = floor.snapshot();
+    if (caught.traversal_state != TraversalState::Hanging ||
+        caught.traversal_support_entity_id != Simulation::kPitmanEntityId) {
+        say("pitman catch");
+        return false;
+    }
+    if (std::hypot(caught.player_position.x - before.player_position.x,
+                   caught.player_position.z - before.player_position.z) > 0.15) {
+        say("pitman catch yanked");
+        return false;
+    }
+
+    // Over the gap, still short of the next deck: let go, land on the shelf.
+    if (!hold_stick(floor, 0.0, 1.0, 0.0, 1.0, 8.0, [](const scraperx::sim::Snapshot &state) {
+            return state.player_position.z > -150.25 && state.player_position.z < -150.05;
+        })) {
+        say("pitman to the gap");
+        return false;
+    }
+    (void)floor.request_release();
+    watch(scraperx::sim::Simulation::kFixedStepSeconds);
+    if (floor.snapshot().traversal_state != TraversalState::None) {
+        say("pitman release");
+        return false;
+    }
+    if (!wait_for(floor, 4.0, [](const scraperx::sim::Snapshot &state) {
+            return state.player_grounded && state.traversal_state == TraversalState::None &&
+                   state.death_count == 0 && state.player_position.y > 757.2 && state.player_position.y < 758.2 &&
+                   state.player_position.z < -148.40 && state.player_position.z > -150.20;
+        })) {
+        say("pitman shelf");
+        return false;
+    }
+    const auto missed = floor.snapshot();
+    const double speed_at_miss = std::hypot(missed.player_linear_velocity.x, missed.player_linear_velocity.z);
+
+    // The bar swings back on its own. A free swing has to die down to a hang
+    // before the ladder brings you back to it. One sample at the bottom is
+    // not that: the peak over two seconds has to be small.
+    bool settled = false;
+    double window_peak = 0.0;
+    for (int tick = 0; tick < 22 * 90 && !settled; ++tick) {
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        window_peak = std::max(window_peak, std::abs(pitman_hinge_angle(floor)));
+        if ((tick + 1) % 180 == 0) {
+            settled = window_peak < 0.10;
+            window_peak = 0.0;
+        }
+    }
+    if (!settled) {
+        say("pitman settle");
+        return false;
+    }
+    if (!walk_to(floor, 8.10, -149.30, 8.0, 0.20)) {
+        say("pitman ladder foot");
+        return false;
+    }
+    if (!climb_wet_hold(floor, 8.10, -149.30, 0.0, -1.0, false, 759.4)) {
+        say("pitman back up");
+        return false;
+    }
+    if (!walk_to(floor, 9.40, -150.55, 8.0, 0.12)) {
+        say("pitman second approach");
+        return false;
+    }
+    (void)floor.set_facing(0.0, 1.0);
+    (void)floor.set_move_input(0.0, 0.0);
+    watch(0.3);
+    if (!floor.snapshot().grip_available) {
+        say("pitman second grab missing");
+        return false;
+    }
+    const auto before_second = floor.snapshot();
+    (void)floor.request_traversal();
+    watch(scraperx::sim::Simulation::kFixedStepSeconds);
+    const auto second = floor.snapshot();
+    if (second.traversal_state != TraversalState::Hanging ||
+        second.traversal_support_entity_id != Simulation::kPitmanEntityId) {
+        say("pitman second catch");
+        return false;
+    }
+    if (std::hypot(second.player_position.x - before_second.player_position.x,
+                   second.player_position.z - before_second.player_position.z) > 0.15) {
+        say("pitman second catch yanked");
+        return false;
+    }
+    // Jump still mantles a real ledge. On this bar it must not.
+    (void)floor.request_jump();
+    watch(scraperx::sim::Simulation::kFixedStepSeconds);
+    if (floor.snapshot().traversal_state != TraversalState::Hanging) {
+        say("pitman jump stole the hang");
+        return false;
+    }
+    double pump_max_z = -1.0e9;
+    double pump_min_z = 1.0e9;
+    double pump_max_hinge = 0.0;
+    double pump_at_z = 0.0;
+    {
+        using scraperx::sim::Simulation;
+        const auto ticks = static_cast<std::uint32_t>(16.0 * Simulation::kTickRateHz);
+        bool reached = false;
+        for (std::uint32_t tick = 0; tick < ticks && !reached; ++tick) {
+            (void)floor.set_move_input(0.0, 1.0);
+            (void)floor.set_facing(0.0, 1.0);
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+            const auto state = floor.snapshot();
+            const double hinge = pitman_hinge_angle(floor);
+            if (state.player_position.z > pump_max_z) {
+                pump_max_z = state.player_position.z;
+                pump_at_z = hinge;
+            }
+            pump_min_z = std::min(pump_min_z, state.player_position.z);
+            pump_max_hinge = std::max(pump_max_hinge, std::abs(hinge));
+            reached = state.traversal_state == TraversalState::Hanging &&
+                      state.player_position.z > -148.60 && state.player_linear_velocity.z < 1.2 &&
+                      state.player_linear_velocity.z > -0.5;
+        }
+        (void)floor.set_move_input(0.0, 0.0);
+        if (!reached) {
+            std::cout << "pump envelope max_z=" << pump_max_z << " at_hinge=" << pump_at_z
+                      << " min_z=" << pump_min_z << " max_abs_hinge=" << pump_max_hinge << "\n";
+            say("pitman pump");
+            return false;
+        }
+    }
+    const auto flying = floor.snapshot();
+    (void)floor.request_release();
+    watch(scraperx::sim::Simulation::kFixedStepSeconds);
+    if (floor.snapshot().traversal_state != TraversalState::None) {
+        say("pitman let go");
+        return false;
+    }
+    if (!wait_for(floor, 4.0, [](const scraperx::sim::Snapshot &state) {
+            return state.player_grounded && state.death_count == 0 && state.player_position.y > 759.4 &&
+                   state.player_position.z > -148.70 && state.player_position.z < -146.00 &&
+                   state.support_entity_id == Simulation::kCraneFrameEntityId;
+        })) {
+        say("pitman deck");
+        return false;
+    }
+    if (!walk_to(floor, 9.40, -146.10, 6.0, 0.25)) {
+        say("pitman walk off");
+        return false;
+    }
+    const auto landed = floor.snapshot();
+    if (!(landed.player_grounded && landed.death_count == 0 && landed.player_position.y > 759.4 &&
+          landed.player_position.z > -146.50 && landed.support_entity_id == Simulation::kCraneFrameEntityId)) {
+        say("pitman onward");
+        return false;
+    }
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        std::cout << "pitman snap " << g_path_watch.worst << " at " << g_path_watch.worst_at.x << " "
+                  << g_path_watch.worst_at.y << " " << g_path_watch.worst_at.z << " from "
+                  << g_path_watch.worst_from_x << " " << g_path_watch.worst_from_z
+                  << " trav=" << g_path_watch.worst_traversal << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "the pitman must not snap the body more than 0.15 m in one tick");
+    std::cout << "PASS scraperx_sim pitman: floor_y=" << landed.player_position.y
+              << " release_z=" << flying.player_position.z << " release_v=" << flying.player_linear_velocity.z
+              << " miss_y=" << missed.player_position.y << " miss_speed=" << speed_at_miss
+              << " worst_tick_m=" << g_path_watch.worst << "\n";
+    (void)speed_at_miss;
+    return true;
+}
+
 // Same body, from standing on the 220 m ring, up through the rest of the
 // machines that are already in the building, to the floor the ladder reaches.
 bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seconds,
@@ -4071,6 +4290,7 @@ bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seco
     require_leg(run, climb_slats(run), "up the cooling-tower slats");
     require_leg(run, climb_duct(run), "the duct down, then up it");
     require_leg(run, climb_casing(run), "up the outside of the casing");
+    require_leg(run, climb_pitman(run), "the pitman over the gap north of the gallery");
     const auto landed = run.snapshot();
     std::cout << "PASS scraperx_sim " << pass_name << ": seconds=" << landed.simulation_time_seconds - start_seconds
               << " at_340=" << at_340 << " at_484=" << at_484 << " floor_y=" << landed.player_position.y << '\n';
@@ -4095,12 +4315,22 @@ void run_girder() {
     require(climb_slats(floor), "up the cooling-tower slats");
     require(climb_duct(floor), "the duct down, then up it");
     require(climb_casing(floor), "up the outside of the casing");
+    require(climb_pitman(floor), "the pitman over the gap north of the gallery");
 }
 
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "ascent") {
         run_ascent();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "pitman") {
+        using scraperx::sim::InitialSpawn;
+        using scraperx::sim::Simulation;
+        Simulation floor(InitialSpawn::CasingGallery);
+        require(floor.advance_frame(0.4).accepted, "pitman settle must be accepted");
+        require(climb_pitman(floor), "the pitman over the gap north of the gallery");
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");

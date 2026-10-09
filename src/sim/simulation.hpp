@@ -80,6 +80,8 @@ enum class InitialSpawn : std::uint8_t {
     ServiceSkinWest = 30,
     // On the 640 m floor, where you stand after stepping out of the last crane car.
     AfterCrane = 31,
+    // On the fan-casing gallery, under the pitman's bar, facing the gap north.
+    CasingGallery = 32,
 };
 
 // A world started at one of these spawns is the proving ground: it carries
@@ -591,6 +593,10 @@ public:
     // onto the floor, and the walk up it is the way on. Not a pin.
     static constexpr std::uint64_t kDuctEntityId = 2313;
     static constexpr std::uint64_t kDuctLeverEntityId = 2314;
+    // The pitman north of the fan-casing gallery. A heavy bearing, a rod,
+    // and a bar the hands can close on. The rider's weight and a pull at
+    // the bar are what swing it.
+    static constexpr std::uint64_t kPitmanEntityId = 2315;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
