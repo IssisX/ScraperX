@@ -215,6 +215,10 @@ constexpr double kVaultDurationSeconds = 0.38;
 constexpr std::uint32_t kJumpVaultWindowTicks =
     static_cast<std::uint32_t>(0.30 * static_cast<double>(scraperx::sim::Simulation::kTickRateHz));
 
+// Intent lasts eleven native ticks (~122 ms). Contact sampled at a tick's
+// end is eligible on the following tick; this window supplies no support.
+constexpr std::uint32_t kOrdinaryJumpIntentTicks = 11;
+
 // Hang band expressed against the capsule centre: hands reach a ledge between
 // chest height and just above the head.
 constexpr float kHangMinimumRiseAboveCentre = 0.45F;
@@ -2024,6 +2028,7 @@ public:
                 build_parkour_route(*kit_);
                 supplied_ascent_->append_gravity_wheel(physics_system_,*kit_);
                 supplied_ascent_->append_gravity_cart(physics_system_,*kit_);
+                build_taper_inspection_route(*kit_);
                 contact_listener_.set_reclaim_fragments(supplied_ascent_->reclaim_material_range());
             }
         }
@@ -2109,6 +2114,7 @@ public:
         double facing_x = 0.0;
         double facing_z = 0.0;
         bool jump_requested = false;
+        bool cancel_jump_requested = false;
         bool traversal_requested = false;
         bool release_requested = false;
         bool crouch_held = false;
@@ -2152,6 +2158,16 @@ public:
         // WO-008: captured before anything this tick can change grounded_, so
         // it means exactly "was the player standing on something one tick ago."
         const bool was_grounded_before_tick = grounded_;
+        const auto foot_transfers_before_tick = state_.foot_transfer_count;
+        const auto traversal_before_commands = traversal_state_;
+        const bool jump_cancelled = commands.cancel_jump_requested ||
+            commands.release_requested || commands.set_down_requested || commands.sling_drop;
+        if (jump_cancelled || traversal_before_commands != TraversalState::None ||
+            (slingshot_ && slingshot_->controls_player())) {
+            ordinary_jump_ticks_left_ = 0;
+        } else if (commands.jump_requested) {
+            ordinary_jump_ticks_left_ = kOrdinaryJumpIntentTicks;
+        }
         if (slingshot_) landing_recovery_seconds_ = std::max(0.0, landing_recovery_seconds_ - delta_seconds);
         landing_applied_force_ = JPH::Vec3::sZero();
 
@@ -2187,7 +2203,13 @@ public:
         facing_ = normalized_horizontal(commands.facing_x, commands.facing_z);
 
         if (!slingshot_ || !slingshot_->controls_player()) {
-            update_crouch(bodies, commands);
+            auto posture_commands = commands;
+            // A buffered ordinary Jump may request a legitimate stand attempt;
+            // only the fresh edge reaches contextual hand/vault arbitration.
+            posture_commands.jump_requested = commands.jump_requested ||
+                (ordinary_jump_ticks_left_ > 0 && grounded_ &&
+                 !support_sample_.body_id.IsInvalid());
+            update_crouch(bodies, posture_commands);
             update_rig(bodies, commands);
             update_carry(bodies, commands, delta_seconds);
             apply_traversal_commands(bodies, commands);
@@ -2197,6 +2219,10 @@ public:
                 update_shimmy(bodies, commands, delta_seconds);
             }
         }
+
+        if (state_.foot_transfer_count > foot_transfers_before_tick)
+            state_.foot_transfer_tick = static_cast<std::uint64_t>(
+                std::llround(next_time_seconds / Simulation::kFixedStepSeconds));
 
         const bool sling_was_controlling = slingshot_ && slingshot_->controls_player();
         if (slingshot_) slingshot_->pre_step(delta_seconds, commands.sling_draw,
@@ -2211,6 +2237,9 @@ public:
             parachute_deployed_ = false;
         }
         if (grounded_ && support_entity_id_ != Slingshot::kPouchEntity && !sling_controlling) slingshot_flight_ = false;
+        if (sling_was_controlling || sling_controlling || jump_cancelled ||
+            traversal_before_commands != TraversalState::None ||
+            traversal_state_ != TraversalState::None) ordinary_jump_ticks_left_ = 0;
         bool jump_started = false;
         if (!sling_controlling && traversal_state_ == TraversalState::None) {
             if (slingshot_flight_ && !grounded_) {
@@ -2221,7 +2250,12 @@ public:
                 if (commands.move_input_x != 0.0 || commands.move_input_z != 0.0)
                     slingshot_->note_external_influence();
             } else {
-                jump_started = apply_locomotion(bodies, commands, delta_seconds);
+                auto locomotion_commands = commands;
+                locomotion_commands.jump_requested = ordinary_jump_ticks_left_ > 0 &&
+                    grounded_ && !support_sample_.body_id.IsInvalid() && !crouched_;
+                const bool ordinary_jump_requested = locomotion_commands.jump_requested;
+                jump_started = apply_locomotion(bodies, locomotion_commands, delta_seconds);
+                if (ordinary_jump_requested && jump_started) ordinary_jump_ticks_left_ = 0;
             }
             if (!jump_started) {
                 try_begin_hang(bodies, commands);
@@ -2239,6 +2273,9 @@ public:
                     std::max(fall_peak_speed_mps_, pre_contact_fall_speed_mps_);
             }
         }
+
+        if (traversal_state_ != TraversalState::None) ordinary_jump_ticks_left_ = 0;
+        else if (ordinary_jump_ticks_left_ > 0) --ordinary_jump_ticks_left_;
 
         if (traversal_state_ == TraversalState::Lowering && physical_hands_->active())
             update_physical_lowering(bodies,delta_seconds);
@@ -2472,7 +2509,7 @@ public:
         parachute_deployed_ = false;
         fall_peak_speed_mps_ = pre_contact_fall_speed_mps_ = last_impact_speed_mps_ = 0.0F;
         clear_landing_recovery();
-        jump_vault_ticks_left_ = regrab_lockout_ticks_ = 0;
+        jump_vault_ticks_left_ = regrab_lockout_ticks_ = ordinary_jump_ticks_left_ = 0;
         // An explicit debug relocation creates its own retry point. Ordinary
         // walking still commits only on verified firm footing.
         checkpoint_position_ = destination;
@@ -5575,12 +5612,69 @@ private:
                 kSprintMaximumAngleCos * input;
     }
 
+    // Reduced-order ordinary push-off: finite impulse and positive work, with
+    // an actual reaction receiver. CHOSEN 3 kJ burst capacity preserves the
+    // static 5.5 m/s baseline while including movable receiver recoil. This is
+    // not an anatomical stance-force profile or complete solver energy ledger.
+    [[nodiscard]] bool push_off_ordinary_support(JPH::BodyInterface &bodies) noexcept {
+        const auto support_id = support_sample_.body_id;
+        if (!grounded_ || support_id.IsInvalid()) return false;
+        const auto contact = JPH::RVec3(support_sample_.contact_point.x,
+            support_sample_.contact_point.y, support_sample_.contact_point.z);
+        const auto support_velocity = bodies.GetPointVelocity(support_id, contact);
+        const auto before = bodies.GetLinearVelocity(player_id_);
+        bool dynamic = false;
+        double inverse_mass = 1.0 / kPlayerMassKg;
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), support_id);
+            if (!lock.Succeeded()) return false;
+            const auto &support = lock.GetBody();
+            dynamic = support.IsDynamic();
+            if (dynamic) {
+                const auto kit_body = kit_->body_for_entity(support.GetUserData());
+                const auto lever = JPH::Vec3(contact - support.GetCenterOfMassPosition());
+                const auto axis = lever.Cross(JPH::Vec3::sAxisY());
+                inverse_mass += kit_body.valid() ? kit_->point_inverse_mass(kit_body, contact,
+                    JPH::Vec3::sAxisY()) : support.GetMotionProperties()->GetInverseMass() +
+                    axis.Dot(support.GetInverseInertia().Multiply3x3(axis));
+            }
+        }
+        const double relative_y = before.GetY() - support_velocity.GetY();
+        double requested = kPlayerMassKg * std::max(0.0, double(kJumpSpeed) - relative_y);
+        constexpr double budget_j = 3000.0;
+        // Debit only positive actuator work. Downward braking cannot fund the
+        // subsequent upward push, even when the signed energy change is small.
+        const double cap = relative_y >= 0 ?
+            2 * budget_j / (relative_y + std::sqrt(relative_y * relative_y +
+                2 * inverse_mass * budget_j)) :
+            -relative_y / inverse_mass + std::sqrt(2 * budget_j / inverse_mass);
+        if (requested > cap) requested = cap * 0.999999;
+        const JPH::Vec3 impulse(0, float(requested), 0);
+        const double delivered = impulse.GetY();
+        const double positive_part = relative_y >= 0 ? delivered :
+            std::max(0.0, delivered + relative_y / inverse_mass);
+        landing_jump_work_j_ += relative_y >= 0 ?
+            relative_y * delivered + 0.5 * inverse_mass * delivered * delivered :
+            0.5 * inverse_mass * positive_part * positive_part;
+        bodies.AddImpulse(player_id_, impulse);
+        if (dynamic) bodies.AddImpulse(support_id, -impulse, contact);
+        airborne_inherited_velocity_ = support_velocity;
+        const auto relative = before - support_velocity;
+        air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed,
+            JPH::Vec3(relative.GetX(), 0, relative.GetZ()).Length());
+        jump_takeoff_feet_y_ = float(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
+        jump_vault_ticks_left_ = kJumpVaultWindowTicks;
+        clear_landing_recovery();
+        return true;
+    }
+
     [[nodiscard]] bool apply_locomotion(JPH::BodyInterface &bodies,
                                         const StepCommands &commands,
                                         const float delta_seconds) noexcept {
         JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
         JPH::Vec3 requested_velocity = player_velocity;
         JPH::Vec3 ground_force_request = JPH::Vec3::sZero();
+        JPH::Vec3 step_probe_velocity = JPH::Vec3::sZero();
         JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
         const double speed_scale = crouched_ ? kCrouchSpeedScale : 1.0;
         double move_x = commands.move_input_x * speed_scale;
@@ -5621,6 +5715,7 @@ private:
         if ((slingshot_ || causal_support || causal_step) && grounded_ &&
             (landing_recovery_seconds_ > 0 || causal_support || causal_step) && support_entity_id_ != 0) {
             if (commands.jump_requested && !crouched_) {
+                if (!causal_support) return push_off_ordinary_support(bodies);
                 const auto support_velocity = current_support_point_velocity(bodies);
                 const auto before_velocity = bodies.GetLinearVelocity(player_id_);
                 auto impulse = JPH::Vec3(0, kPlayerMassKg * std::max(0.0F,
@@ -5718,6 +5813,12 @@ private:
                                                   full_speed);
             ground_force_request = (requested_velocity - player_velocity) *
                 (kPlayerMassKg / delta_seconds);
+            // Probe the shaped walking intent even when contact blocks actual
+            // acceleration. This changes geometric recognition, never velocity.
+            step_probe_velocity = requested_velocity - reference_velocity;
+            if (std::hypot(commands.move_input_x, commands.move_input_z) > 0.001)
+                step_probe_velocity = JPH::Vec3(float(move_x * full_speed), 0,
+                                               float(move_z * full_speed));
             // The air keeps what the ground gave: a running jump, or a run
             // off an edge, carries its speed.
             const JPH::Vec3 relative = player_velocity - reference_velocity;
@@ -5727,30 +5828,24 @@ private:
 
         // Crouched here means there was no room to stand, so no room to jump.
         const bool jump_started = commands.jump_requested && grounded_ && !crouched_;
-        if (jump_started) {
-            player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
-            jump_takeoff_feet_y_ =
-                static_cast<float>(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
-            jump_vault_ticks_left_ = kJumpVaultWindowTicks;
-            // Retain this legacy vertical takeoff path without committing
-            // the undelivered horizontal request. Its conversion is separate.
-            bodies.SetLinearVelocity(player_id_, player_velocity);
-        }
-        // Budget against actual velocity after vertical takeoff: a tangent
-        // force on an incline can perform work on that upward motion too.
-        if (grounded_ && support_entity_id_ != 0) {
-            apply_ground_contact_force(bodies, ground_force_request, delta_seconds);
-        }
+        if (jump_started && !push_off_ordinary_support(bodies)) return false;
+        bool step_started = false;
         if (!jump_started && grounded_ && support_entity_id_ != 0) {
-            try_step_up(bodies, requested_velocity - reference_velocity, delta_seconds);
+            step_started = try_step_up(bodies, step_probe_velocity, delta_seconds,
+                std::hypot(commands.move_input_x, commands.move_input_z) > 0.001);
         }
-        return jump_started;
+        // Budget against actual velocity after any jump/physical-step impulse:
+        // a tangent force on an incline can work on that upward motion too.
+        if (grounded_ && support_entity_id_ != 0)
+            apply_ground_contact_force(bodies, ground_force_request, delta_seconds);
+        return jump_started || step_started;
     }
 
     // The capsule swept from `from` by `displacement`: true on a hit, with
     // the hit fraction and the surface normal (pointing out of what was hit).
     [[nodiscard]] bool cast_capsule(const JPH::RVec3 from, const JPH::Vec3 displacement,
-                                    float &fraction, JPH::Vec3 &normal, JPH::BodyID *hit_body=nullptr) const {
+                                    float &fraction, JPH::Vec3 &normal, JPH::BodyID *hit_body=nullptr,
+                                    JPH::SubShapeID *hit_shape=nullptr) const {
         JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
         const JPH::RShapeCast sweep(active_player_shape(), JPH::Vec3::sReplicate(1.0F),
                                     JPH::RMat44::sTranslation(from), displacement);
@@ -5762,6 +5857,7 @@ private:
         }
         fraction = collector.mHit.mFraction;
         if(hit_body) *hit_body=collector.mHit.mBodyID2;
+        if(hit_shape) *hit_shape=collector.mHit.mSubShapeID2;
         normal = -collector.mHit.mPenetrationAxis.NormalizedOr(JPH::Vec3::sZero());
         return true;
     }
@@ -5772,7 +5868,7 @@ private:
     // members request bounded reciprocal leg work from actual foot contact;
     // their rise is resolved by gravity and collision, never a pose write.
     bool try_step_up(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
-                     const float delta_seconds) {
+                     const float delta_seconds, const bool deliberate_step = false) {
         const JPH::Vec3 horizontal(relative_velocity.GetX(), 0.0F, relative_velocity.GetZ());
         const float speed = horizontal.Length();
         if (speed < kStepMinimumSpeed) {
@@ -5783,12 +5879,37 @@ private:
         float fraction = 1.0F;
         JPH::Vec3 normal = JPH::Vec3::sZero();
         JPH::BodyID obstacle;
-        if (!cast_capsule(at, ahead, fraction, normal,&obstacle) ||
-            normal.GetY() >= kSupportNormalThreshold) {
-            return false;  // Nothing in the way, or only a slope the feet can walk.
+        JPH::SubShapeID obstacle_shape;
+        if (!cast_capsule(at, ahead, fraction, normal, &obstacle, &obstacle_shape))
+            return false;
+        bool teeter_member_crossing = false;
+        const auto obstacle_entity = bodies.GetUserData(obstacle);
+        if (deliberate_step && grounded_ && !support_sample_.body_id.IsInvalid() &&
+            (obstacle_entity == 2800 || obstacle_entity == 1800)) {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), obstacle);
+            LeafBox member;
+            // Identify the actual thin rail or fixed entry-tongue leaf, not
+            // either whole compound. Only transverse intent qualifies: a
+            // rounded low lip can block the capsule despite its slope normal.
+            if (lock.Succeeded() && leaf_box(lock.GetBody(), obstacle_shape, member) &&
+                2 * member.half.GetY() <= kStepMaximumHeight) {
+                const bool beam_rail = obstacle_entity == 2800 &&
+                    2 * member.half.GetX() >= kBalanceMinLength &&
+                    2 * member.half.GetZ() <= kGripMaxSection &&
+                    std::abs(horizontal.Dot(member.axes[2])) > 0.25F * speed;
+                const bool entry_tongue = obstacle_entity == 1800 &&
+                    2 * member.half.GetZ() >= kBalanceMinLength &&
+                    2 * member.half.GetX() <= kGripMaxSection &&
+                    std::abs(horizontal.Dot(member.axes[0])) > 0.25F * speed;
+                teeter_member_crossing = (beam_rail || entry_tongue) &&
+                    horizontal.Dot(normal) < 0;
+            }
         }
+        if (normal.GetY() >= kSupportNormalThreshold && !teeter_member_crossing)
+            return false;
+        if (teeter_member_crossing && physical_step_pending_) return false;
         const bool physical=entity_is_causal_section_support(support_entity_id_) ||
-            entity_is_causal_section_support(bodies.GetUserData(obstacle));
+            entity_is_causal_section_support(bodies.GetUserData(obstacle)) || teeter_member_crossing;
         const JPH::RVec3 raised = at + JPH::Vec3(0.0F, kStepMaximumHeight, 0.0F);
         if (!capsule_pose_is_clear(raised) || cast_capsule(raised, ahead, fraction, normal)) {
             return false;  // No headroom, or the obstacle is taller than a step.
@@ -5993,12 +6114,14 @@ private:
         if (!mantle_probe.valid) {
             return false;
         }
-        // Production Tower lips use the same finite hand/foot transfer as the
-        // repaired1.7s mantle. Preserve legacy fixture/vault owners separately.
+        // Production Tower lips and the teeter ballast roof use the same
+        // finite hand transfer as the repaired1.7s mantle. Preserve other
+        // legacy fixture/vault owners until their replacements are proven.
         // A reachable lip must engage both hands; there is no gravity-off
         // fallback when the real attachment or receiving clearance fails.
         if(entity_is_causal_section_support(mantle_probe.ledge_entity_id) ||
-           (!regression_fixtures_ && mantle_probe.ledge_entity_id==Simulation::kTowerEntityId))
+           (!regression_fixtures_ && (mantle_probe.ledge_entity_id==Simulation::kTowerEntityId ||
+                                     mantle_probe.ledge_entity_id==2801)))
             return begin_cargo_transfer(bodies,mantle_probe,origin);
         begin_mantle(bodies, mantle_probe, origin);
         return true;
@@ -6834,11 +6957,14 @@ private:
         traversal_local_target_=to_support_local(bodies,traversal_target_body_,probe.landing_centre);
         physical_hands_->set_transfer_profile();
         cargo_transfer_active_=true;
+        cargo_transfer_peak_hand_load_n_=0;
         // Attach/detach changes the load path without resetting rider velocity.
         return true;
     }
 
     void update_cargo_transfer(JPH::BodyInterface &bodies,double up_input,float dt) noexcept {
+        cargo_transfer_peak_hand_load_n_=std::max(cargo_transfer_peak_hand_load_n_,
+            double((physical_hands_->hand_force(0)+physical_hands_->hand_force(1)).Length()));
         const auto actual=bodies.GetPosition(player_id_);
         const auto landing=from_support_local(bodies,traversal_target_body_,traversal_local_target_);
         const auto contact=JPH::RVec3(support_sample_.contact_point.x,support_sample_.contact_point.y,
@@ -6854,6 +6980,9 @@ private:
             (support_sample_.body_id==traversal_target_body_ ||
              support_sample_.body_id==traversal_body_)) {
             ++accepted_traversal_count_;
+            ++state_.foot_transfer_count;
+            state_.foot_transfer_support_entity_id = support_sample_.entity_id;
+            state_.foot_transfer_peak_hand_load_n = cargo_transfer_peak_hand_load_n_;
             clear_traversal();
             return;
         }
@@ -7428,7 +7557,7 @@ private:
         }
 
         grounded_ = false;
-        jump_vault_ticks_left_ = 0;
+        jump_vault_ticks_left_ = ordinary_jump_ticks_left_ = 0;
         support_entity_id_ = 0;
         support_sample_ = {};
         airborne_inherited_velocity_ = restored_transport;
@@ -7977,6 +8106,7 @@ private:
     std::uint64_t step_up_count_ = 0;
     std::uint64_t jump_vault_count_ = 0;
     std::uint32_t jump_vault_ticks_left_ = 0;
+    std::uint32_t ordinary_jump_ticks_left_ = 0;
     float jump_takeoff_feet_y_ = 0.0F;
     bool crouched_ = false;
     std::uint32_t world_solid_bodies_ = 0;
@@ -7984,6 +8114,7 @@ private:
     std::uint32_t world_solid_rejected_ = 0;
 
     bool cargo_transfer_active_ = false;
+    double cargo_transfer_peak_hand_load_n_ = 0;
     float cargo_push_seconds_ = -1.0F;
     bool causal_airborne_ = false;
     bool physical_step_pending_ = false;
@@ -8139,6 +8270,7 @@ bool Simulation::request_slingshot_action() noexcept {
 }
 
 bool Simulation::request_slingshot_drop() noexcept {
+    jump_cancel_requested_ = true;
     if (!slingshot_state().seated && !slingshot_state().recovering) return false;
     sling_drop_ = true;
     return true;
@@ -8210,7 +8342,7 @@ std::vector<Vector3> Simulation::slingshot_prediction() const {
 bool Simulation::debug_restart_at(const Vector3 centre) noexcept {
     if (!physics_world_->debug_restart_at(centre)) return false;
     move_input_x_ = move_input_z_ = 0.0;
-    jump_requested_ = traversal_requested_ = release_requested_ = false;
+    jump_requested_ = jump_cancel_requested_ = traversal_requested_ = release_requested_ = false;
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
     crouch_input_ = sprint_input_ = false;
     jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
@@ -8246,7 +8378,7 @@ bool Simulation::restart_gravity_reclaim_attempt() noexcept {
 bool Simulation::restart_checkpoint() noexcept {
     if (!physics_world_->restart_checkpoint()) return false;
     move_input_x_ = move_input_z_ = 0.0;
-    jump_requested_ = traversal_requested_ = release_requested_ = false;
+    jump_requested_ = jump_cancel_requested_ = traversal_requested_ = release_requested_ = false;
     parachute_toggle_requested_ = pick_up_requested_ = set_down_requested_ = rig_requested_ = false;
     crouch_input_ = sprint_input_ = false;
     jib_slew_input_ = jib_hoist_input_ = needle_hoist_input_ = service_lift_input_ = supplied_machine_input_ = 0.0;
@@ -8319,6 +8451,7 @@ void Simulation::set_boiler_feed_enabled(const bool enabled) noexcept {
 }
 
 bool Simulation::request_release() noexcept {
+    jump_cancel_requested_ = true;
     const bool holding = snapshot_.traversal_state == TraversalState::Hanging ||
                          snapshot_.traversal_state == TraversalState::Climbing ||
                          snapshot_.traversal_state == TraversalState::Lowering;
@@ -8352,6 +8485,7 @@ bool Simulation::request_pick_up() noexcept {
 }
 
 bool Simulation::request_set_down() noexcept {
+    jump_cancel_requested_ = true;
     set_down_requested_ = true;
     return true;
 }
@@ -8611,6 +8745,7 @@ void Simulation::step_fixed() noexcept {
     commands.facing_x = facing_x_;
     commands.facing_z = facing_z_;
     commands.jump_requested = jump_requested_;
+    commands.cancel_jump_requested = jump_cancel_requested_;
     commands.traversal_requested = traversal_requested_;
     commands.release_requested = release_requested_;
     commands.crouch_held = crouch_input_;
@@ -8641,7 +8776,7 @@ void Simulation::step_fixed() noexcept {
     commands.sling_drop = sling_drop_;
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     sling_action_ = sling_drop_ = false;
-    jump_requested_ = false;
+    jump_requested_ = jump_cancel_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;
     parachute_toggle_requested_ = false;

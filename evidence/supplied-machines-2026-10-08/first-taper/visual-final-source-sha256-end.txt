@@ -1,0 +1,4 @@
+9433086cf48e651b75a8c7cf915519fa59fe0f9dd9463b48a1ec0d867016e4a9  /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/cart-godot-y76mhk14/godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+291d759e4a3707264e1a355d8ca0007993a63b78bbdb9186e40a2c28d552394a  /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/cart-godot-y76mhk14/godot/presentation/kit_view.gd
+bca6dd61ffd3254e13f1c89e1a21d6a3a9c3af071e6d7059565e3146aefd78ca  /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/cart-godot-y76mhk14/godot/presentation/main.gd
+b4f41299b6bdb3ea14908067fff334bbae336530af3f42dac97b2484733ba853  /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/cart-godot-y76mhk14/godot/tests/kit_view_test.gd

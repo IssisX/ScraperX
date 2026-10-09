@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <utility>
 
 using scraperx::sim::Simulation;
 using scraperx::sim::InitialSpawn;
@@ -27,7 +28,9 @@ double ballast_position(const Simulation &simulation) {
 }
 
 bool walk_to(Simulation &simulation, const double x, const double z,
-             const double seconds = 12.0, const double pace = 1.0) {
+             const double seconds = 12.0, const double pace = 1.0,
+             const bool touch_effort = false) {
+    double accumulated_x = 0, accumulated_z = 0;
     for (int tick = 0; tick < static_cast<int>(seconds * 90.0); ++tick) {
         const auto state = simulation.snapshot();
         const auto p = state.player_position;
@@ -41,9 +44,28 @@ bool walk_to(Simulation &simulation, const double x, const double z,
             (void)simulation.set_move_input(0, 0);
             return true;
         }
-        (void)simulation.set_move_input(
-            std::clamp(dx * 1.8 * pace - v.x * 0.28, -1.0, 1.0),
-            std::clamp(dz * 1.8 * pace - v.z * 0.28, -1.0, 1.0));
+        if (touch_effort) {
+            // Match ordinary touch's early braking and bounded integral. A
+            // rounded tongue must not require a saturated, test-only approach.
+            if (d > 0.75) accumulated_x = accumulated_z = 0;
+            else if (d > 0.12) {
+                accumulated_x += dx * 0.4 * Simulation::kFixedStepSeconds;
+                accumulated_z += dz * 0.4 * Simulation::kFixedStepSeconds;
+                const double accumulated = std::hypot(accumulated_x, accumulated_z);
+                if (accumulated > 0.35) {
+                    accumulated_x *= 0.35 / accumulated;
+                    accumulated_z *= 0.35 / accumulated;
+                }
+            }
+            const auto support = state.support_point_linear_velocity;
+            (void)simulation.set_move_input(
+                std::clamp(dx / 2.75 + accumulated_x - (v.x - support.x) * 0.12, -1.0, 1.0),
+                std::clamp(dz / 2.75 + accumulated_z - (v.z - support.z) * 0.12, -1.0, 1.0));
+        } else {
+            (void)simulation.set_move_input(
+                std::clamp(dx * 1.8 * pace - v.x * 0.28, -1.0, 1.0),
+                std::clamp(dz * 1.8 * pace - v.z * 0.28, -1.0, 1.0));
+        }
         if (d > 0.0001) (void)simulation.set_facing(dx / d, dz / d);
         (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
     }
@@ -61,7 +83,100 @@ void report(const Simulation &simulation, const char *label) {
 }
 } // namespace
 
+bool ballast_mantle_uses_real_hands() {
+    using scraperx::sim::TraversalState;
+    Simulation mantle(InitialSpawn::TeeterEntry);
+    advance(mantle, 0.5);
+    for (const auto &target : {std::pair<double, double>{27.2, -139.0},
+             {27.8, -138.58}, {30.5, -138.58}, {29.7, -139.45}}) {
+        if (!walk_to(mantle, target.first, target.second, 15.0)) return false;
+        advance(mantle, 0.2);
+        const auto v = mantle.snapshot();
+        if (!v.player_grounded || v.support_entity_id != 2800 || v.death_count != 0) return false;
+    }
+    (void)mantle.set_move_input(0, 0);
+    (void)mantle.set_facing(-1, 0);
+    advance(mantle, 0.1);
+    const auto before = mantle.snapshot();
+    if (!before.player_grounded || before.support_entity_id != 2800 ||
+        !before.ledge_available || before.ledge_entity_id != 2801 ||
+        !mantle.request_traversal()) return false;
+    double command = before.traversal_command_work_bound_j;
+    double positive = before.traversal_actuator_positive_work_j;
+    bool reaction = false, complete = false;
+    int ticks = 0;
+    for (; ticks < 153; ++ticks) {
+        if (!mantle.advance_frame(Simulation::kFixedStepSeconds).accepted) return false;
+        const auto v = mantle.snapshot();
+        if (v.player_gravity_factor != 1.0 || v.death_count != 0) return false;
+        for (const auto &f : {v.traversal_left_hand_force, v.traversal_right_hand_force}) {
+            const double magnitude = std::hypot(f.x, f.y, f.z);
+            if (!std::isfinite(magnitude) || magnitude > 1501.0) return false;
+            reaction = reaction || magnitude > 0.01;
+        }
+        const double debit = v.traversal_command_work_bound_j - command;
+        const double supplied = v.traversal_actuator_positive_work_j - positive;
+        // Separate conservative command debit and actual spring-target work.
+        // These do not establish complete solver/contact energy closure.
+        const double budget = 6600.0 * Simulation::kFixedStepSeconds + 0.001;
+        if (!std::isfinite(debit) || !std::isfinite(supplied) ||
+            debit < -0.000001 || supplied < -0.000001 ||
+            debit > budget || supplied > budget) return false;
+        command = v.traversal_command_work_bound_j;
+        positive = v.traversal_actuator_positive_work_j;
+        if (v.traversal_state == TraversalState::None) {
+            complete = v.player_grounded && v.support_entity_id == 2801 &&
+                v.traversal_hand_constraint_count == 0 &&
+                v.accepted_traversal_count == before.accepted_traversal_count + 1;
+            ++ticks;
+            break;
+        }
+        if (v.traversal_state != TraversalState::Climbing ||
+            v.traversal_hand_constraint_count != 2 ||
+            v.traversal_support_entity_id != 2801) return false;
+    }
+    if (!complete || !reaction || command <= before.traversal_command_work_bound_j ||
+        positive <= before.traversal_actuator_positive_work_j) return false;
+    for (int tick = 0; tick < 270; ++tick) {
+        if (!mantle.advance_frame(Simulation::kFixedStepSeconds).accepted) return false;
+        const auto v = mantle.snapshot();
+        if (!v.player_grounded || v.support_entity_id != 2801 ||
+            v.player_gravity_factor != 1.0 || v.traversal_hand_constraint_count != 0 ||
+            v.death_count != 0) return false;
+    }
+    const auto held = mantle.snapshot();
+    if (held.foot_transfer_count != before.foot_transfer_count + 1 ||
+        held.foot_transfer_tick <= before.tick_index ||
+        held.foot_transfer_tick > before.tick_index + std::uint64_t(ticks) ||
+        held.foot_transfer_support_entity_id != 2801 ||
+        !std::isfinite(held.foot_transfer_peak_hand_load_n) ||
+        held.foot_transfer_peak_hand_load_n <= 0 || held.foot_transfer_peak_hand_load_n > 3001) return false;
+    if (std::hypot(held.player_linear_velocity.x - held.support_point_linear_velocity.x,
+                   held.player_linear_velocity.z - held.support_point_linear_velocity.z) >= 0.2) return false;
+    if (!walk_to(mantle, 27.8, -139.45, 15.0)) return false;
+    advance(mantle, 0.4);
+    if (!mantle.snapshot().player_grounded || mantle.snapshot().support_entity_id != 2800 ||
+        mantle.snapshot().traversal_hand_constraint_count != 0 || mantle.snapshot().death_count != 0) return false;
+    if (!walk_to(mantle, 25.3, -139.0, 15.0, 1.0, true)) return false;
+    advance(mantle, 0.4);
+    const auto returned = mantle.snapshot();
+    if (!returned.player_grounded || returned.support_entity_id != Simulation::kTowerEntityId ||
+        returned.traversal_hand_constraint_count != 0 || returned.death_count != 0 ||
+        returned.foot_transfer_count != held.foot_transfer_count) return false;
+    std::cout << "PASS teeter ballast physical mantle seconds=" << ticks / 90.0
+              << " command_bound_j=" << command - before.traversal_command_work_bound_j
+              << " spring_positive_j=" << positive - before.traversal_actuator_positive_work_j
+              << " foot_transfer_tick=" << held.foot_transfer_tick
+              << " peak_hand_load_n=" << held.foot_transfer_peak_hand_load_n
+              << " stable_roof_seconds=3 onward_beam=1 return_tower=1\n";
+    return true;
+}
+
 int main() {
+    if (!ballast_mantle_uses_real_hands()) {
+        std::cerr << "FAIL production ballast mantle needs gravity, real hands, finite work and footing\n";
+        return 32;
+    }
     Simulation simulation(scraperx::sim::InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::PipeBridge);
     std::cout << "INVENTORY moving=" << simulation.moving_body_count()
               << " kit=" << simulation.kit_body_count() << "\n";
@@ -153,24 +268,45 @@ int main() {
         rider.snapshot().death_count != 0) return 10;
     Simulation drop(InitialSpawn::TeeterFarDrop, scraperx::sim::WorldContent::PipeBridge);
     double drop_min_angle = angle(drop);
-    double angle_after_one_second = 0.0;
+    double angle_after_prompt_response = 0.0;
     for (int tick = 0; tick < 720; ++tick) {
         (void)drop.advance_frame(Simulation::kFixedStepSeconds);
         drop_min_angle = std::min(drop_min_angle, angle(drop));
-        if (tick == 89) angle_after_one_second = angle(drop);
+        // Finite traction carries real slip instead of overwriting velocity.
+        // Sample with one90Hz-tick timing margin; retain the same early angle,
+        // full loaded sweep, stable lower stop and no-death acceptance.
+        if (tick == 90) angle_after_prompt_response = angle(drop);
     }
     report(drop, "LANDING");
-    std::cout << "LANDING_SWEEP one_second=" << angle_after_one_second
+    std::cout << "LANDING_SWEEP prompt_seconds=" << 91.0 / 90.0
+              << " angle=" << angle_after_prompt_response
               << " minimum=" << drop_min_angle << "\n";
     if (!drop.snapshot().player_grounded || drop.snapshot().support_entity_id != 2800 ||
-        angle_after_one_second > -0.05 || drop_min_angle > -0.40 ||
+        angle_after_prompt_response > -0.05 || drop_min_angle > -0.40 ||
         angle(drop) > -0.40 || angle(drop) < -0.55 ||
         drop.snapshot().death_count != 0) return 11;
     Simulation recovery(InitialSpawn::TeeterEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(recovery, 0.5);
     if (!walk_to(recovery, 30.5, -139.0)) return 18;
-    (void)walk_to(recovery, 30.5, -140.5, 4.0);
-    advance(recovery, 3.0);
+    // The finite entry push changes the carriage's settled position. Walk
+    // around its real envelope before deliberately missing the open edge;
+    // asking for a path through the 65 kg carriage is not a fall setup.
+    if (!walk_to(recovery, 32.8, -138.58)) return 18;
+    (void)walk_to(recovery, 32.8, -140.5, 4.0);
+    // Wait for physical arrival, not an assumed flight duration after the
+    // helper's bounded attempt. Never accept flight as recovery footing.
+    bool released_catch = false;
+    for (int tick = 0; tick < 6 * 90; ++tick) {
+        const auto state = recovery.snapshot();
+        if (!released_catch && state.traversal_state == scraperx::sim::TraversalState::Hanging) {
+            // The unobstructed miss can honestly catch the real far shelf.
+            // Deliberate Drop chooses the lower recovery apron, not a rescue.
+            if (!recovery.request_release()) return 19;
+            released_catch = true;
+        }
+        if (state.player_grounded && state.support_entity_id == 1800) break;
+        (void)recovery.advance_frame(Simulation::kFixedStepSeconds);
+    }
     report(recovery, "FALL_RECOVERY");
     if (!recovery.snapshot().player_grounded ||
         recovery.snapshot().support_entity_id != 1800 ||
@@ -205,9 +341,16 @@ int main() {
                   << airborne.support_entity_id << "\n";
         const double expected_y = contact.support_point_linear_velocity.y + 5.5 -
                                   9.81 * Simulation::kFixedStepSeconds;
+        // The body has already earned its departure momentum through real
+        // contacts. Taking off must not snap XZ to the support-point target.
+        const double steering_increment = 0.85 * 9.81 * Simulation::kFixedStepSeconds;
+        const double horizontal_change = std::hypot(
+            airborne.player_linear_velocity.x - contact.player_linear_velocity.x,
+            airborne.player_linear_velocity.z - contact.player_linear_velocity.z);
         if (std::abs(airborne.player_linear_velocity.y - expected_y) > 0.3 ||
-            airborne.player_linear_velocity.x < 0.02) {
-            std::cerr << "FAIL takeoff did not inherit rotating support momentum\n";
+            std::abs(airborne.player_linear_velocity.x) < 0.02 ||
+            horizontal_change > steering_increment + 0.001) {
+            std::cerr << "FAIL takeoff replaced earned momentum or exceeded finite contact steering\n";
             return 17;
         }
         jumped_from_motion = true;

@@ -1,0 +1,103 @@
+{
+  "source_commit": "0e31e2229f26bbed773b575ac5a44783e36d0af6",
+  "branch": "ChatGPT",
+  "run_id": 37864437741,
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/37864437741",
+  "job_id": 113607684715,
+  "conclusion": "success",
+  "artifact_id": 11588888895,
+  "artifact_name": "ScraperX-build-0e31e2229f26bbed773b575ac5a44783e36d0af6",
+  "artifact_bytes": 56867006,
+  "artifact_expires_at": "2027-01-07T00:22:26Z",
+  "archive_path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/delivery-0e31/ScraperX-build-0e31e2229f26bbed773b575ac5a44783e36d0af6.zip",
+  "zip_digest": "sha256:b1d20d05e3b5cecdf3b8e4f61e57b8baeec571f11881deb9e97f0cbd9ee9f2db",
+  "github_zip_digest_match": true,
+  "download_count": 1,
+  "apk_path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/delivery-0e31/artifact/apk/ScraperX-ChatGPT.apk",
+  "apk_bytes": 34621867,
+  "apk_sha256": "0587e3d6935591320fcdb8a98c89ab4c238e3f9086ef3448a6dbcb174657bcd9",
+  "checksum_manifests": [
+    {
+      "manifest": "apk/SHA256SUMS.txt",
+      "file": "apk/ScraperX-ChatGPT.apk",
+      "sha256": "0587e3d6935591320fcdb8a98c89ab4c238e3f9086ef3448a6dbcb174657bcd9",
+      "matched": true
+    }
+  ],
+  "checkpoint_and_stable_apk_hash_match": true,
+  "checkpoint_and_stable_source_match": true,
+  "package": "com.cory.scraperx.chatgpt",
+  "label": "ScraperX-ChatGPT",
+  "version_code": 213671807,
+  "previous_delivered_version_code": 213571747,
+  "version_monotonic": true,
+  "min_sdk_version": 24,
+  "rotation_min_sdk_version": 28,
+  "signer_sha256": "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a",
+  "signing_lineage": [
+    "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+    "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a"
+  ],
+  "signing_schemes": {
+    "0x7109871a": [
+      "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4"
+    ],
+    "0xf05368c0": [
+      "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a"
+    ]
+  },
+  "local_signature_verification": {
+    "tool": "apksigner 0.9",
+    "minimum_sdk": 28,
+    "exit_code": 0,
+    "v3_verified": true,
+    "evidence": "local-apksigner-min28.txt"
+  },
+  "lineage_evidence": "direct APK v3 proof-of-rotation certificates; cryptographic APK verification; matching STABLE metadata",
+  "native_library": {
+    "path": "lib/arm64-v8a/libscraperx_native.so",
+    "elf_bits": 64,
+    "elf_machine": 183,
+    "architecture": "AArch64",
+    "bytes": 4807656,
+    "sha256": "7a9f5e1302d4df838e99e711d5f27afb9f22199cb4e5e81ae0edb7b6eb9aafe5"
+  },
+  "native_suite": {
+    "passed": 40,
+    "tests": 40,
+    "failures": 0,
+    "skipped": 0
+  },
+  "normal_inventory": {
+    "moving_bodies": 164,
+    "kit_bodies": 212,
+    "cables": 7
+  },
+  "normal_render": {
+    "checks": 48820,
+    "rigid_bodies": 212
+  },
+  "regression_fixture_render": {
+    "checks": 1707,
+    "rigid_bodies": 15
+  },
+  "route_receipts": {
+    "godot-foundation.log": "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=164 kit_bodies=212 cables=7 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1",
+    "kit-view-normal.log": "SCRAPERX_KIT_VIEW PASS checks=48820 rigid_bodies=212 renderer=X11",
+    "kit-view-fixtures.log": "SCRAPERX_KIT_VIEW PASS checks=1707 rigid_bodies=15 renderer=X11",
+    "touch-campaign-to-121.log": "SCRAPERX_UITEST PASS touch_campaign_to_143 staging=ordinary_grade_spawn cargo_net=1 upper_route=1 loaded_swing=1 service_lift=1 supported_height_m=143 support=11 deaths=0 slingshot_work_j=0 world=slingshot",
+    "touch-slab-haul-cart.log": "SCRAPERX_UITEST PASS touch_slab_haul_cart staging=supported_330m shipping_touch=1 slab_haul_cart=1 inspection341=1 reboard=1 north_lane_jump=1 paid_return=1 finite_energy=1 supported_height_m=352 support=11 deaths=0 failure_recovery=upper_miss341_paid_recall_reboard_retry"
+  },
+  "initial_export_metadata": {
+    "apk_badging_version_code": 1,
+    "apk_signing_certificate_sha256": "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+    "meaning": "before stable version/signing rotation; final APK identity is verified independently"
+  },
+  "scope_limit": "Artifact is exact cart source 0e31; excludes later force/material source 2bf026d5 and subsequent working changes.",
+  "downloads_copy": "/storage/emulated/0/Download/ScraperX-ChatGPT-0e31e22.apk",
+  "device_execution": "not claimed",
+  "installation": "not performed",
+  "release_publication": "not performed",
+  "mismatches": [],
+  "downloads_copy_sha256_verified": true
+}

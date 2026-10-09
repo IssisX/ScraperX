@@ -188,6 +188,12 @@ struct Snapshot final {
     double traversal_command_work_bound_j = 0.0;
     double traversal_actuator_positive_work_j = 0.0;
     double traversal_actuator_absorbed_work_j = 0.0;
+    // Successful physical hand-to-foot transfer. Serial persists across render
+    // sampling; force is measured grip load, not a fabricated landing impulse.
+    std::uint64_t foot_transfer_count = 0;
+    std::uint64_t foot_transfer_tick = 0;
+    std::uint64_t foot_transfer_support_entity_id = 0;
+    double foot_transfer_peak_hand_load_n = 0.0;
     bool player_swinging = false;
     bool player_sprinting = false;
     // Walking a support narrower than 0.5 m and at least 1.5 m long.
@@ -772,6 +778,7 @@ private:
     double facing_x_ = 0.0;
     double facing_z_ = 0.0;
     bool jump_requested_ = false;
+    bool jump_cancel_requested_ = false;
     bool traversal_requested_ = false;
     bool release_requested_ = false;
     bool crouch_input_ = false;

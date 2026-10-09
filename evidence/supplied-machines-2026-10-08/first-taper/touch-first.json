@@ -1,0 +1,37 @@
+{
+  "project_source": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/cart-godot-y76mhk14/godot",
+  "private_project": "/data/data/com.termux/files/usr/tmp/scraperx-taper-touch-tj2f0zpg/godot",
+  "repo_head": "2bf026d5997b8e1ea0677b8a2cd7d6355a9d1fd4",
+  "repo_branch": "ChatGPT",
+  "working_tree_source": true,
+  "scenario": "touch_taper_inspection_route",
+  "staged_files_sha256": {
+    "presentation/ui/ui_test_driver.gd": "becc54a3b4c7be4d6d9f12c9c1353939af9e28c14092280c8fc62ee7788760e2",
+    "presentation/main.gd": "bca6dd61ffd3254e13f1c89e1a21d6a3a9c3af071e6d7059565e3146aefd78ca",
+    "tests/kit_view_test.gd": "b4f41299b6bdb3ea14908067fff334bbae336530af3f42dac97b2484733ba853",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "9433086cf48e651b75a8c7cf915519fa59fe0f9dd9463b48a1ec0d867016e4a9"
+  },
+  "native_source_sha256": {
+    "src/sim/parkour_route.cpp": "71e692ae2faa74844c2bde9baca1e64c8a826876738c25c7ac96120b330c25e7",
+    "src/sim/parkour_route.hpp": "c4dff5e54005aac2a561e681c66f721e23162b5c09e81e39079f64a64e14c3ae",
+    "src/sim/simulation.cpp": "35a59caac39cd522045d7154f8a6dacbdeb160e71543c4729d564a9dc3079996",
+    "tests/taper_inspection_route_tests.cpp": "e991553a128f4c51fdf720ed7e3bddd7afb29e68376a6ef891e4d7c87caef6dd"
+  },
+  "godot": "4.7-stable_linux.arm64",
+  "fixed_fps": 60,
+  "resolution": "432x432",
+  "audio_driver": "Dummy",
+  "exit_code": 31,
+  "result": "FAIL",
+  "failure_classification": "unresolved input_fixture_or_geometry",
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-taper-touch-tj2f0zpg/output/touch-taper-inspection-route.log",
+  "log_sha256": "002c19dd6afaa98f81d63eba7a8faf5bc1f1c0e7adf39ca697574128d8f4b9c8",
+  "actual_route_evidence": [
+    "SCRAPERX_TAPER landing_a at=(-23.99999, 363.8992, -164.0531) support=1932",
+    "SCRAPERX_TAPER gap_b at=(-20.0962, 363.9, -163.9999) peak=365.433 jump_work_j=1285.622",
+    "SCRAPERX_TAPER middle_apron at=(-22.45094, 361.4, -163.9999) support=1933",
+    "SCRAPERX_UITEST FAIL touch_taper_inspection_route reason=taper service toe approach target=(-19.55, -157.7) at=(-20.03353, 361.4197, -157.8047)"
+  ],
+  "parse_errors": false,
+  "executions": 1
+}

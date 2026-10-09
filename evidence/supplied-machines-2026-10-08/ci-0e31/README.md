@@ -1,0 +1,13 @@
+# Exact-source cart APK evidence
+
+[Normal Actions run37864437741](https://github.com/IssisX/ScraperX/actions/runs/37864437741) succeeded for `ChatGPT` source `0e31e2229f26bbed773b575ac5a44783e36d0af6`. GitHub artifact `ScraperX-build-0e31e2229f26bbed773b575ac5a44783e36d0af6` (ID11588888895) was downloaded once into the assigned private delivery folder. The ZIP SHA-256 matches GitHub’s published digest; the final APK hash matches every shipped checksum manifest, CHECKPOINT and STABLE metadata.
+
+Final APK: `com.cory.scraperx.chatgpt`, label `ScraperX-ChatGPT`, version `213671807` (greater than preceding delivered `213571747`). Its binary manifest and resource label were decoded locally; `lib/arm64-v8a/libscraperx_native.so` is AArch64 ELF64. Local apksigner verifies the v3 signature for SDK28+. Direct APK signing-block inspection confirms the original certificate `9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4` in v2 and final certificate `91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a` in v3, with the same ordered proof-of-rotation lineage and SDK28 boundary recorded by STABLE.
+
+The shipped root `apk-badging.txt` and `apk-signing.txt` describe the initial export (version1/original signer), before stable version/signing rotation. They are retained as initial evidence. Final identity comes from the actual APK and `STABLE-APK.json`/`STABLE-SIGNING.txt`. The older local apksigner’s SDK24–27 run also exits0 and emits an unknown-scheme-ID warning; the SDK28+ verification exits0 without that warning.
+
+Actual normal CI evidence: 40/40 native tests, zero failures/skips; 164 movers/212 Kit bodies/7 cables; normal rendered Kit48,820 checks/212 bodies and regression fixture1,707 checks/15 bodies; ordinary grade→143m and cart330→352m both retain support11 with zero deaths. The cart receipt includes inspection341, reboard, paid return and missed-exit recovery/retry. These are automated host/CI observations.
+
+APK SHA-256: `0587e3d6935591320fcdb8a98c89ab4c238e3f9086ef3448a6dbcb174657bcd9`. ZIP digest: `sha256:b1d20d05e3b5cecdf3b8e4f61e57b8baeec571f11881deb9e97f0cbd9ee9f2db`. The [receipt](receipt.json) records local paths, exact source, final identity, checksums, certificates and concise actual route outputs. The full downloaded artifact remains in `/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/delivery-0e31/artifact`.
+
+This receipt covers cart source0e31 only, excluding later force/material commit2bf026d5 and subsequent working changes. No final Downloads copy, installation, device execution or release publication was performed by this evidence task. Root owns final delivery. No mismatches were identified.

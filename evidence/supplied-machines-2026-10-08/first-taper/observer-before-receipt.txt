@@ -1,0 +1,12 @@
+One rendered shipping scene observer capture. Exit 0.
+Godot 4.7; Ubuntu proot/Xvfb; Mesa softpipe OpenGL compatibility.
+432x432; FOV 82; HIGH quality / render_scale 1 / 2x MSAA.
+Camera (-31,365,-134) looks at (-22,363,-152).
+Native cart-exit debug stage (-25.4203,352.9,-141.599) accepted.
+Main process frozen, CanvasLayer UI hidden privately; native geometry and shipped material resources unchanged.
+Capture after six process/frame_post_draw waits; one output PNG.
+Native bodies=214; bridge SHA9433086cf48e651b75a8c7cf915519fa59fe0f9dd9463b48a1ec0d867016e4a9.
+Start/end bridge, main, KitView hashes identical (cmp exit0).
+Private observer script/log/hash receipts only; no production or shared stage edits.
+Environmental messages: VSync unsupported, ALSA unavailable, dummy audio fallback.
+Capture is visual evidence only; no traversal, moving-support, mobile-performance or hidden-material-detail claim.

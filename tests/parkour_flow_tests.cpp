@@ -103,6 +103,191 @@ double horizontal_speed(const scraperx::sim::Snapshot &s) {
     return std::hypot(s.player_linear_velocity.x, s.player_linear_velocity.z);
 }
 
+void ordinary_jump_intent_uses_native_contact_and_clock() {
+    using namespace scraperx::sim;
+
+    const auto tick = [](Simulation &run) {
+        const auto result = run.advance_frame(Simulation::kFixedStepSeconds);
+        require(result.accepted && result.steps_advanced == 1,
+                "Jump intent advances on exactly one native tick");
+        const auto state = run.snapshot();
+        require(state.death_count == 0 && state.traversal_state == TraversalState::None &&
+                    state.traversal_hand_constraint_count == 0 && state.jump_vault_count == 0,
+                "ordinary Jump intent never uses traversal, a vault or checkpoint rescue");
+        return state;
+    };
+    const auto settle = [&](Simulation &run) {
+        require(run.set_move_input(0.0, 0.0) && run.set_facing(1.0, 0.0),
+                "ordinary grade neutral Jump inputs accepted");
+        for (int i = 0; i < 180; ++i) (void)tick(run);
+        const auto state = run.snapshot();
+        require(state.player_grounded && state.support_entity_id == Simulation::kStaticDeckEntityId &&
+                    std::abs(state.player_linear_velocity.y) < 0.01 && horizontal_speed(state) < 0.01,
+                "default normal-world Jump starts from real stable grade contact");
+        return state;
+    };
+
+    {
+        Simulation with_action;
+        const auto action_floor = settle(with_action);
+        require(with_action.request_jump() && with_action.request_traversal(),
+                "same-batch grade Jump and Action requests accepted");
+        bool ordinary_takeoff = false;
+        for (int i = 0; i < 18; ++i) {
+            const auto state = tick(with_action);
+            require(state.rejected_traversal_count == action_floor.rejected_traversal_count + 1,
+                    "flat-grade Action is genuinely rejected without a traversal affordance");
+            ordinary_takeoff = ordinary_takeoff || (!state.player_grounded &&
+                state.support_entity_id == 0 && state.player_linear_velocity.y > 0.5);
+        }
+        require(ordinary_takeoff,
+                "a rejected same-batch Action cannot swallow a valid ordinary Jump");
+    }
+
+    // An input near the first hop's apex has no foot contact throughout the
+    // buffer window. It must neither create an air jump nor survive to landing.
+    Simulation expired;
+    const auto expiry_floor = settle(expired);
+    require(expired.request_jump(), "ordinary expiry preparation Jump accepted");
+    bool apex_reached = false;
+    for (int i = 0; i < 180; ++i) {
+        const auto state = tick(expired);
+        if (!state.player_grounded && state.player_position.y > expiry_floor.player_position.y + 0.6 &&
+            std::abs(state.player_linear_velocity.y) < 1.0) {
+            apex_reached = true;
+            break;
+        }
+    }
+    require(apex_reached, "ordinary preparation hop reaches a real airborne apex");
+    const auto expiry_press = expired.snapshot();
+    require(expired.request_jump(), "airborne expiry Jump intent accepted");
+    std::uint64_t expiry_contact_tick = 0;
+    for (int i = 0; i < 180; ++i) {
+        const auto before = expired.snapshot();
+        const auto after = tick(expired);
+        if (after.landing_count == expiry_press.landing_count && !after.player_grounded) {
+            require(after.player_linear_velocity.y <= before.player_linear_velocity.y + 0.01,
+                    "buffered Jump cannot add upward velocity without actual foot contact");
+        }
+        if (after.player_grounded && expiry_contact_tick == 0) {
+            expiry_contact_tick = after.tick_index;
+            require(expiry_contact_tick > expiry_press.tick_index + 20,
+                    "expiry case remains contact-free well beyond the0.12s buffer window");
+        }
+        if (expiry_contact_tick != 0) {
+            require(after.player_grounded && after.support_entity_id == expiry_floor.support_entity_id &&
+                        after.landing_count == expiry_press.landing_count + 1 &&
+                        std::abs(after.player_position.y - expiry_floor.player_position.y) < 0.05 &&
+                        std::abs(after.player_linear_velocity.y) < 0.1,
+                    "expired airborne Jump cannot fire later when real ground finally arrives");
+        }
+    }
+    require(expiry_contact_tick != 0, "expiry preparation hop returns to real grade footing");
+    std::cout << "INFO Jump expiry press_tick=" << expiry_press.tick_index
+              << " contact_after_ticks=" << expiry_contact_tick - expiry_press.tick_index << '\n';
+
+    // The only second press is made while descending shortly before real
+    // touchdown. Compare a nine-tick caller frame with individual90Hz ticks
+    // across that exact contact interval, not merely after settling again.
+    Simulation ticked;
+    Simulation grouped;
+    Simulation dropped;
+    const auto floor = settle(ticked);
+    (void)settle(grouped);
+    const auto drop_floor = settle(dropped);
+    require(ticked.request_jump() && grouped.request_jump() && dropped.request_jump(),
+            "ordinary buffer preparation Jumps accepted");
+    bool prelanding_reached = false;
+    for (int i = 0; i < 180; ++i) {
+        const auto state = tick(ticked);
+        (void)tick(grouped);
+        (void)tick(dropped);
+        const double height = state.player_position.y - floor.player_position.y;
+        if (!state.player_grounded && state.support_entity_id == 0 &&
+            state.player_linear_velocity.y < -2.0 && height > 0.05 && height < 0.25) {
+            prelanding_reached = true;
+            break;
+        }
+    }
+    require(prelanding_reached, "ordinary hop reaches an unsupported descending prelanding stance");
+    const auto press = ticked.snapshot();
+    require(ticked.request_jump() && grouped.request_jump(),
+            "one short prelanding Jump intent per caller accepted");
+    const auto drop_press = dropped.snapshot();
+    require(!drop_press.player_grounded && drop_press.support_entity_id == 0 &&
+                drop_press.player_linear_velocity.y < -2.0,
+            "same-batch Drop case starts genuinely unsupported before landing");
+    require(dropped.request_jump(), "same-batch prelanding Jump before Drop accepted");
+    require(!dropped.request_release(),
+            "unsupported Drop retains its native refusal while cancelling Jump intent");
+    const auto distance = [](const Vector3 a, const Vector3 b) {
+        return std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) +
+                         (a.z - b.z) * (a.z - b.z));
+    };
+    std::uint64_t contact_tick = 0;
+    bool buffered_takeoff = false;
+    for (int frame = 0; frame < 20; ++frame) {
+        for (int i = 0; i < 9; ++i) {
+            const auto before = ticked.snapshot();
+            const auto after = tick(ticked);
+            const auto drop_state = tick(dropped);
+            if (drop_state.landing_count > drop_press.landing_count) {
+                require(drop_state.player_grounded &&
+                            drop_state.support_entity_id == drop_floor.support_entity_id &&
+                            drop_state.landing_count == drop_press.landing_count + 1 &&
+                            std::abs(drop_state.player_position.y - drop_floor.player_position.y) < 0.05 &&
+                            std::abs(drop_state.player_linear_velocity.y) < 0.1,
+                        "refused airborne Drop cancels the same-batch Jump without a later hop");
+            }
+            if (after.landing_count == press.landing_count && !after.player_grounded) {
+                require(after.player_linear_velocity.y <= before.player_linear_velocity.y + 0.01,
+                        "short prelanding Jump waits for contact instead of taking off freely in air");
+            }
+            if (after.landing_count > press.landing_count && contact_tick == 0) {
+                contact_tick = after.tick_index;
+                require(after.player_grounded && after.support_entity_id == floor.support_entity_id &&
+                            contact_tick <= press.tick_index + 10,
+                        "buffer case proves a genuine native landing inside the short intent window");
+            }
+            if (contact_tick != 0 && !after.player_grounded && after.support_entity_id == 0 &&
+                after.player_linear_velocity.y > 0.5 &&
+                after.player_position.y > floor.player_position.y + 0.05) {
+                buffered_takeoff = true;
+            }
+        }
+        const auto result = grouped.advance_frame(9.0 * Simulation::kFixedStepSeconds);
+        require(result.accepted && result.steps_advanced == 9,
+                "grouped Jump caller advances exactly nine native ticks");
+        const auto one = ticked.snapshot();
+        const auto many = grouped.snapshot();
+        require(one.tick_index == many.tick_index && one.player_grounded == many.player_grounded &&
+                    one.support_entity_id == many.support_entity_id &&
+                    one.traversal_state == many.traversal_state &&
+                    one.landing_count == many.landing_count && one.death_count == many.death_count &&
+                    one.jump_vault_count == many.jump_vault_count &&
+                    distance(one.player_position, many.player_position) < 0.00001 &&
+                    distance(one.player_linear_velocity, many.player_linear_velocity) < 0.00001,
+                "prelanding Jump outcome is identical for grouped frames and individual90Hz ticks");
+        if (frame == 1) {
+            std::cout << "INFO Jump buffer press_tick=" << press.tick_index
+                      << " contact_tick=" << contact_tick << " after18_vy="
+                      << one.player_linear_velocity.y << " grounded=" << one.player_grounded << '\n';
+        }
+    }
+    require(contact_tick != 0 && buffered_takeoff,
+            "one short prelanding Jump must survive until real contact and produce an ordinary takeoff");
+    const auto final = ticked.snapshot();
+    require(final.player_grounded && final.support_entity_id == floor.support_entity_id &&
+                final.landing_count == press.landing_count + 2 &&
+                std::abs(final.player_position.y - floor.player_position.y) < 0.05 &&
+                std::abs(final.player_linear_velocity.y) < 0.1,
+            "one buffered press produces exactly one hop, then returns to real footing without repeats");
+    const auto drop_final = dropped.snapshot();
+    require(drop_final.player_grounded && drop_final.support_entity_id == drop_floor.support_entity_id &&
+                drop_final.landing_count == drop_press.landing_count + 1,
+            "cancelled prelanding Jump returns to real footing with only its original landing");
+}
+
 void ordinary_tower_walk_uses_finite_contact_work() {
     using namespace scraperx::sim;
 
@@ -352,6 +537,7 @@ void sprint_keeps_jump_momentum() {
 } // namespace
 
 int main() {
+    ordinary_jump_intent_uses_native_contact_and_clock();
     ordinary_tower_walk_uses_finite_contact_work();
     vault_carries_entry_and_exit_speed();
     neutral_airborne_input_preserves_horizontal_momentum();

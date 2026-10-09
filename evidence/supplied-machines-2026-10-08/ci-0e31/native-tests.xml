@@ -1,0 +1,1083 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Linux-c++"
+	tests="40"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname="runnervmmprz5"
+	time="490"
+	timestamp="2026-10-09T00:28:22"
+	>
+	<testcase name="scraperx_sim.physical_hand_climb" classname="scraperx_sim.physical_hand_climb" time="0.20367" status="run">
+		<properties/>
+		<system-out>one-hand at4s sag=0.278944 reaction=866.025 vy=-0.0288133
+static sag=0.0833883 reaction=833.846 one_sag=0.166768 peak_force=866.025
+PASS static_load_and_release
+command ascent=0.199789 cumulative_bound=666.667
+PASS command_sign_and_budget
+swing spring_work=5.55555 stroke=0.00641537 absorbed=5.55546 neutral_work=0
+PASS measured_swing_actuation
+recoil player_vx=1.57428 support_vx=1.44746 peak_force=366.954
+PASS dynamic_recoil
+catch minimum_y=2.60494 peak_force=1500
+PASS finite_landing_catch
+kinematic regrip tracking_vx=0.600085
+PASS kinematic_tracking_and_regrip
+soft reciprocal impulse residual=2.9661e-06
+PASS soft_material_reaction
+net-frame mass=6562.78 anchor_dx=0.0614624 momentum_residual=0.00233399
+PASS net_frame_reaction
+facade ladder_deflection_m=0.077397 carriage_travel_m=1.00387
+PASS facade_structural_response
+PASS invalid_holds_and_cleanup
+physical hand checks: 10/10
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.mechanism_hull" classname="scraperx_sim.mechanism_hull" time="0.00357046" status="run">
+		<properties/>
+		<system-out>PASS mechanism hull geometry, mass/inertia, contacts and rated weld checkpoint/failure
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.physical_traversal" classname="scraperx_sim.physical_traversal" time="21.85" status="run">
+		<properties/>
+		<system-out>PASS lowering_release cargo=1 immediate=1 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=0.109004
+PASS lowering_release cargo=1 immediate=0 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=0.109086
+PASS lowering_release cargo=0 immediate=0 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=3.24249e-08
+PASS passive_departure surface=rigid_shipping_vent before_vy=1.01506 after_vy=0.906062 expected_vy=0.906061 error=3.24249e-08 grounded=0
+PASS passive_departure surface=deforming_cargo_net before_vy=0.330432 after_vy=0.221432 expected_vy=0.221432 error=2.6226e-09 grounded=0
+PASS cargo_jump finite_stroke_debit=599.4 departure_vy=1.42791
+PASS ordinary_tread_traction force_work_delta=0.403336 dvx=0.0872
+PASS receiver_walk_off momentum_error=0
+PASS passive_departure surface=rotating_as026 before_vy=1.23669 after_vy=1.12769 expected_vy=1.12769 error=2.05994e-07 grounded=0
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.service_lift_physics" classname="scraperx_sim.service_lift_physics" time="3.16633" status="run">
+		<properties/>
+		<system-out>AS027_CUTOFF supplied=1000 remaining=87.1267 drop=0.000526428 peak_w=20900.1 overdraft=0
+AS027_CUTOFF supplied=250000 remaining=532.706 drop=0 peak_w=189999 overdraft=0
+AS027_OBSTRUCTION y=122 force=-1.1e+06 peak_w=185431 energy=4.58879e+06 overdraft=0
+AS027_CYCLE mass=18970.2 effective_mass=12258.1 force=1.1e+06 brake=1.3e+06 rating=250000 capacity=4.75e+06 remaining=1.23658e+06 return_error=-0.016716
+PASS AS027 finite source, native cutoff, obstruction and exhausted checkpoint
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.gravity_reclaim_route" classname="scraperx_sim.gravity_reclaim_route" time="54.1926" status="run">
+		<properties/>
+		<system-out>RECLAIM entry_fractures=1
+RECLAIM open_gate=-52.0348,338.628,-165.05
+MATERIAL 2219 -51.9473,329.996,-164.938
+MATERIAL 2227 -51.5355,329.783,-165.928
+MATERIAL 2235 -53.2561,330.461,-164.482
+MATERIAL 2243 -52.6924,330.356,-164.946
+MATERIAL 2251 -51.5175,329.799,-164.706
+MATERIAL 2259 -67.9238,0.102274,-158.145
+MATERIAL 2267 -52.5747,330.167,-165.086
+MATERIAL 2275 -51.5993,329.559,-164.716
+MATERIAL 2283 -52.7691,330.396,-164.483
+MATERIAL 2291 -51.8686,329.705,-165.769
+RECLAIM feed before=2052.7 remaining=256.859 deck=308 contacts=341
+RECLAIM actual_fractures=4 last_load_n=6422.62 last_torque_nm=401.943
+RECLAIM gate=-52.0348,337.88,-165.05
+RECLAIM return cabin_q=4.66328e-06,1.98705e-06,-0.0201522,0.999797 velocity=-1.98725,-1.07741,-1.37836e-06
+RECLAIM recovery soles_y=319 compact=1 impact_mps=14.705
+PASS RECLAIM approach/finite-feed/loaded-gravity-ascent/brake/330exit/actual-discharge/empty-return/explicit-checkpoint-retry/second-loaded-ascent/late-miss319-recovery/Tower-exit initial_staging_only=1
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.gravity_cart_integration" classname="scraperx_sim.gravity_cart_integration" time="57.2259" status="run">
+		<properties/>
+		<system-out>boarded330 tick=1180 pos=-41.7982,330.92,-141.59 support=2320 grounded=1 station=1 deck=330.02 energy=200000 work=0 power=0 force=0 deaths=0
+intermediate_exit_reboard tick=4214 pos=-35.4493,341.9,-141.586 support=2320 grounded=1 station=1 deck=341 energy=200000 work=0 power=0 force=0 deaths=0
+upper_seat tick=6292 pos=-29.1439,352.906,-141.562 support=2320 grounded=1 station=1 deck=352.006 energy=200000 work=0 power=0 force=0 deaths=0
+walking_miss_recovery tick=6669 pos=-27.9831,341.9,-141.605 support=1956 grounded=1 station=0 deck=352.006 energy=200000 work=0 power=0 force=0 deaths=0
+paid_recall_reboard_retry352 tick=11830 pos=-29.1334,352.905,-141.563 support=2320 grounded=1 station=1 deck=352.005 energy=169901 work=23880.4 power=0 force=0 deaths=0
+onward_upper_control tick=12204 pos=-25.0494,352.9,-140.147 support=1957 grounded=1 station=3 deck=352.002 energy=169901 work=23880.4 power=0 force=0 deaths=0
+returned330 tick=16470 pos=-25.0489,352.9,-140.145 support=1957 grounded=1 station=3 deck=330.031 energy=110392 work=71308.6 power=0 force=0 deaths=0
+PASS GRAVITY_CART ordinary approach/board/341exit-reboard/gravity352/walking-miss341-recovery/paid-recall/retry/onward-jump/full-paid-reset initial_staging_only=1
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.supplied_machine_route" classname="scraperx_sim.supplied_machine_route" time="146.789" status="run">
+		<properties/>
+		<system-out>PASS BALANCE approach/board/hold/checkpoint/ascent/165exit/paidreset/recall/departure peak_power=80 saved_energy=1.99984e+06 support_vy=-1.22725 takeoff_vy=3.94618 initial_staging_only=1
+SWING t=0 x=-36.4473 y=199.651 vx=-1.97545 vy=-0.257652 spring_actuator_work=110.739
+SWING t=5 x=-35.8147 y=199.785 vx=-1.82959 vy=-0.54427 spring_actuator_work=383.44
+SWING t=10 x=-35.0946 y=200.035 vx=-1.38634 vy=-0.565424 spring_actuator_work=673.257
+SWING t=15 x=-34.4341 y=200.351 vx=-0.527991 vy=-0.336115 spring_actuator_work=1006.66
+SWING t=20 x=-33.9944 y=200.615 vx=0.581046 vy=0.434385 spring_actuator_work=1391.05
+SWING t=25 x=-33.9409 y=200.625 vx=2.12952 vy=1.40903 spring_actuator_work=1803.36
+SWING t=30 x=-34.5965 y=200.231 vx=4.19503 vy=2.16059 spring_actuator_work=2264.65
+SWING t=35 x=-36.3696 y=199.595 vx=6.37307 vy=1.2943 spring_actuator_work=2773.8
+SWING t=40 x=-39.3617 y=199.638 vx=6.81553 vy=-1.66979 spring_actuator_work=3313.1
+SWING t=45 x=-42.4224 y=201.255 vx=3.76522 vy=-3.50259 spring_actuator_work=3938.31
+SWING RELEASE result pos=-28.7993,198.59,-160.45 support=1985 traversal=0
+PASS PARKOUR ordinary jump/catch/player-pump/rising-release/receiver/Tower198 peak_x=-32.1935 pump_ticks=4197 ordinary_inputs_only=1
+PASS CROWN ordinary approach/board/paid33mride/198exit/upperrecall peak_power=32606.9 draw_j=534620 initial_staging_only=1
+PASS TRAM ordinary approach/traction/stop-resume/paid33mride/231exit/upperrecall peak_power=20988.5 draw_j=784958 initial_staging_only=1
+PASS HELIX ordinary approach/contact-cam/stop-resume/paid22mride/253exit/upperrecall peak_power=21254.9 draw_j=345560 initial_staging_only=1
+PASS CASCADE ordinary approach/1:2:3-cables/stop-resume/paid33mride/286exit/upperrecall peak_power=49249.5 draw_j=799526 initial_staging_only=1
+PASS PITMAN ordinary approach/crank-rod/stop-resume/paid22mride/308exit/upperrecall peak_power=49394.6 draw_j=618126 initial_staging_only=1
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.service_lift_route" classname="scraperx_sim.service_lift_route" time="34.3533" status="run">
+		<properties/>
+		<system-out>AS027_LOAD unloaded_force=648242 loaded_force=652769 unloaded_draw=534929 loaded_draw=538678
+AS027_RESTORE player_vy=0.942288 deck_vy=0.942287 fresh_grounded=0
+AS027_DEPART support_vy=-0.237856 takeoff_vy=5.12963 brake_drop=0
+PASS AS027 native approach/boarding/weight/release/checkpoint/ride/exit/limits/reverse/departure; initial fixture staging only
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.suspended_ladder_route" classname="scraperx_sim.suspended_ladder_route" time="10.767" status="run">
+		<properties/>
+		<system-out>PASS AS-026 missed jump recovery and checkpoint restore
+PASS AS-026 launch shelf supported
+CATCH y=114.963 x=6.16825 qz=-0.0575202
+TRACE t=0 qz=-0.0501226 x=6.29464 vy=0.188817 support=2960 y=113.569
+TRACE t=45 qz=-0.026497 x=6.70361 vy=4.47533 support=2960 y=114.97
+TRACE t=90 qz=0.00377344 x=7.20893 vy=1.30744 support=2960 y=115.279
+TRACE t=135 qz=0.0283041 x=7.60515 vy=0.0015782 support=2960 y=115.629
+TRACE t=180 qz=0.0383419 x=7.75086 vy=-0.631993 support=2960 y=115.855
+TRACE t=225 qz=0.0289158 x=7.60971 vy=-0.188272 support=2960 y=115.836
+TRACE t=270 qz=0.00513791 x=7.22656 vy=0.0954518 support=2960 y=115.77
+TRACE t=315 qz=-0.0252601 x=6.73678 vy=0.680609 support=2960 y=116.214
+TRACE t=360 qz=-0.0499247 x=6.3341 vy=0.933933 support=2960 y=116.635
+TRACE t=405 qz=-0.0564666 x=6.22663 vy=0.332366 support=2960 y=116.894
+TRACE t=450 qz=-0.0421741 x=6.40187 vy=0.139974 support=2960 y=117.324
+TRACE t=495 qz=-0.0162671 x=6.70533 vy=1.3684 support=2960 y=117.651
+TRACE t=540 qz=0.0113537 x=7.02014 vy=1.36906 support=2960 y=118.053
+TRACE t=585 qz=0.0304303 x=7.22963 vy=1.16096 support=2960 y=118.336
+TRACE t=630 qz=0.0328056 x=7.25806 vy=1.10826 support=2960 y=118.722
+TRACE t=675 qz=0.017491 x=7.11233 vy=0.831204 support=2960 y=119.102
+TRACE t=720 qz=-0.00952788 x=6.87453 vy=0.120166 support=2960 y=119.397
+TRACE t=765 qz=-0.0379793 x=6.64926 vy=0.928396 support=2960 y=119.797
+HAND_SAMPLES retained=1522 transfers=14 max_chord=2.07461e-06
+PASS hand support-frame interpolation retained=1522 regrips=14 maximum_chord_error_m=2.07461e-06 rendered_chord_distance_m=9.53606e-06
+FLIGHT x=6.5118 y=119.813 z=-180.715
+FLIGHT x=7.3795 y=120.529 z=-180.006
+FLIGHT x=8.70035 y=120.154 z=-179.365
+RECEIVER 9.90924,119.9,-178.778
+FINAL_GRIP state=4 xyz=8.87798,119.9,-178.443
+PASS AS-026 suspended_ladder support=11 walking_surface_m=121 deaths=0 swing_quaternion_span=0.0889774
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.cargo_net_ground_route" classname="scraperx_sim.cargo_net_ground_route" time="39.7616" status="run">
+		<properties/>
+		<system-out>CARGO_LOAD lane=19 mean_hand_force_n=804.12 material_peak_dz=0.238113 grip_peak_dz=0.210548 grounded=0 hands=2 command_work_delta=0
+CARGO_TOP lane=19 position=19.0067,11.895,-118.406 grounded=1 climb_ticks=1268 deaths=0
+PASS AS-024 grade_to_first_ring lane=19 supported_height_m=11 deaths=0
+CARGO_LOAD lane=20 mean_hand_force_n=784.227 material_peak_dz=0.568008 grip_peak_dz=0.530853 grounded=0 hands=2 command_work_delta=0
+CARGO_TOP lane=20 position=20.0191,11.8951,-118.402 grounded=1 climb_ticks=1314 deaths=0
+PASS AS-024 grade_to_first_ring lane=20 supported_height_m=11 deaths=0
+CARGO_LOAD lane=21 mean_hand_force_n=783.675 material_peak_dz=0.512466 grip_peak_dz=0.505585 grounded=0 hands=2 command_work_delta=0
+CARGO_TOP lane=21 position=21.0406,11.895,-118.404 grounded=1 climb_ticks=1336 deaths=0
+PASS AS-024 grade_to_first_ring lane=21 supported_height_m=11 deaths=0
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.leather_pouch" classname="scraperx_sim.leather_pouch" time="0.5305" status="run">
+		<properties/>
+		<system-out>LEATHER loaded_sag_m=0.0353384 residual_j=-0.694372 work_j=0
+PASS leather pouch native rider load compliance
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.slingshot_model" classname="scraperx_sim.slingshot_model" time="0.0589408" status="run">
+		<properties/>
+		<system-out>CHARGE draw=12.000000m work=478040.370366J spring=420305.305855J time=3.688889s draw_loss=370.220068J h/4_loss_delta=0.123164J h/4_time_delta=0.005556s
+SHOT draw=6.000000m speed=28.256599m/s apex=50.986289m release=0.409565s loss=1345.195673J residual=-2.480287J remaining_U=0.000000J front_y=0.000000m h/4_apex_delta=0.000033m
+SHOT draw=9.000000m speed=57.253628m/s apex=175.330254m release=0.248221s loss=3618.704492J residual=0.459204J remaining_U=0.000000J front_y=104.017927m h/4_apex_delta=0.003795m
+SHOT draw=12.000000m speed=86.237131m/s apex=383.608584m release=0.194283s loss=4152.226812J residual=-4.647980J remaining_U=32969.363523J front_y=362.150796m h/4_apex_delta=0.003827m
+AIM elevation=78.000000deg work=551506.360350J charge=3.911111s vx=0.000000m/s vy=91.699018m/s vz=-19.491228m/s apex=441.150340m front_y=302.062295m h/4_front_delta=0.003923m
+AIM elevation=80.000000deg work=514487.210822J charge=3.800000s vx=0.000000m/s vy=88.655604m/s vz=-15.632375m/s apex=412.852372m front_y=334.766444m h/4_front_delta=0.004807m
+AIM elevation=82.000000deg work=478040.370366J charge=3.688889s vx=0.000000m/s vy=85.397877m/s vz=-12.001889m/s apex=383.608584m front_y=362.150796m h/4_front_delta=0.002235m
+AIM elevation=84.000000deg work=442258.891989J charge=3.588889s vx=0.000000m/s vy=81.943209m/s vz=-8.612578m/s apex=353.779634m front_y=349.670938m h/4_front_delta=0.018948m
+PASS slingshot constitutive force, bounded work, ratchet, aim, replay, and h/4 convergence
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.slingshot_machine" classname="scraperx_sim.slingshot_machine" time="0.673651" status="run">
+		<properties/>
+		<system-out>charged aim yaw=0.279991 elevation=1.10286 draw=11.9797 work_delta=376.31
+charged aimed release position=27.4897,139.68,-117.754
+minimum aim=0.349932 ready=1 draw=0 work=439.794
+aim elevation=1.48 draw=0 U=1.57862e-08
+LEATHER reboard_rest_y=0.709136 q=-0.0353314
+recovery seconds=3.5 power=9849.17 pouch=0.341009,-55.004 U=0.640207
+draw=6.0166 spring_J=52235.7 player_J=60996.3 apex_m=51.1293 exit_mps=27.5241 predicted_apex_m=51.1459 residual_J=873.859 source_W=152710
+draw=9.01579 spring_J=179396 player_J=204860 apex_m=172.975 exit_mps=56.5046 predicted_apex_m=173.022 residual_J=2244.96 source_W=195842
+draw=12 spring_J=420388 player_J=478232 apex_m=378.796 exit_mps=85.314 predicted_apex_m=378.973 residual_J=7319.45 source_W=197975
+draw=12 spring_J=420309 player_J=478188 apex_m=378.849 exit_mps=85.4299 predicted_apex_m=378.971 residual_J=4281.25 source_W=198060
+draw=11.9991 spring_J=420211 player_J=478135 apex_m=378.9 exit_mps=85.4901 predicted_apex_m=378.973 residual_J=2487.1 source_W=198205
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.launcher_and_restart" classname="scraperx_sim.launcher_and_restart" time="41.7505" status="run">
+		<properties/>
+		<system-out>RIDER specific_g=9.81 freefall_specific=-1.81198e-05 seat_local_y=-0.205338
+gravity render fixture maximum_tick_m=1.10046
+seat available=1 p=1.08003 pouch=0.35
+shot draw=4.08226 energy=16016.9 apex=15.8761 landed_y=0 deaths=0 end=6,0.6,-55.4559 ascent_300m_x=0 launches=1
+RIDER launch_peak_specific_mps2=302.791
+seat available=1 p=1.08003 pouch=0.35
+shot draw=12 energy=420310 apex=378.796 landed_y=0 deaths=1 end=6,1.08003,-55 ascent_300m_x=6 launches=1
+RIDER launch_peak_specific_mps2=1068.7
+seat available=1 p=1.08003 pouch=0.35
+shot draw=12 energy=420310 apex=378.796 landed_y=0 deaths=1 end=6,1.08003,-55 ascent_300m_x=6 launches=1
+RIDER launch_peak_specific_mps2=1068.7
+seat available=1 p=1.08003 pouch=0.35
+shot draw=12 energy=420310 apex=361.127 landed_y=352 deaths=0 end=6,352.9,-128.743 ascent_300m_x=6 launches=1
+RIDER launch_peak_specific_mps2=1068.7
+seat available=1 p=1.08003 pouch=0.35
+shot draw=12 energy=420310 apex=361.127 landed_y=0 deaths=1 end=6,1.08003,-55 ascent_300m_x=17.0622 launches=1
+RIDER launch_peak_specific_mps2=1068.39
+PASS launcher, real draw/release, deterministic native flight and restart boundary
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.landing_response" classname="scraperx_sim.landing_response" time="6.30636" status="run">
+		<properties/>
+		<system-out>landing normal=2.80675 energy=334.809 observed_impulse=238.574 balance=0.95217 recovery=0.206304 deaths=0
+landing normal=8.85624 energy=3333.4 observed_impulse=752.78 balance=0.5238 recovery=0.478531 deaths=0
+landing normal=14.0338 energy=8370.26 observed_impulse=1192.87 balance=0.1 recovery=0.711521 deaths=0
+landing normal=22.1544 energy=20859.7 observed_impulse=1883.12 balance=1 recovery=0 deaths=1
+cabinet approach at=20,11.8753,-121.434 recovery=0 step_ups=0
+rocker support=2800 at=30.9985,67.0974,-138.45
+roll normal=17.7398 tangent=5.5 compact=1 retained_momentum=1
+PASS physical landing energy, finite recovery, dynamic supports and restart
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.athletic_traversal" classname="scraperx_sim.athletic_traversal" time="39.8082" status="run">
+		<properties/>
+		<system-out>PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=164 kit_bodies=212 locomotion=1 crouch=1 jump=1
+PASS scraperx_sim rejected fallback absent: tower_bodies=385 former_flight_y=0.9 jump_requests=0
+PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0
+PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1
+PASS scraperx_sim moving-support truth: translating_support=3 translating_vx=1.08993 jump_vx=1.07124 rotating_support=4 rotating_point_v=(-0.547975,-1.07542) omega_y=0.800002 hz=90
+PASS scraperx_sim athletic traversal: vault_x=6.08 double_tap_vault_x=6.20222 vault_speed=5.5 mantle_support=6 mantle_rise_setback=0.53 mantle_y=2.46879 hang_support=7 moving_hang_support=8 moving_hang_vz=0.638632 moving_ledge_vz=0.865345 release_vz=1.05492 rejected=1 accepted=1
+PASS scraperx_sim player is the plant's missing component: rest_valve=0 held_treadle=0.135899 held_valve=0.776894 held_lift=7.7m idle_lift=1.2m store_spent_MJ=3.10307
+PASS scraperx_sim first full causal chain: gate_closed_at_rest=1 lift_at_gate=7.41205m rise=1.13796m reached_catwalk=1 commits=1548
+PASS scraperx_sim coupled machine: valve=0.726922 piston=14691N lift=8.80227m second_lift=8.81579m starved_energy=676384J player_valve=0 tower_m=1600
+PASS scraperx_sim fall/parachute/checkpoint: lethal_impact=34.6619 chuted_impact=8.8914 late_chute_deaths=1 grounded_deploy_blocked=1 commits=91 machine_restored=1 deaths=1
+PASS scraperx_sim first freight: station=1 raised_y=4.76117 braked_delta=-0.00368834 slewed_rad=2.00024 crate_carried=1 rides_crate=1 capacity_held=1
+PASS scraperx_sim first structural coupling: crossable_unseated=0 seated=1 support_over_gap=1 reached_far_pier=1 unseat_removed_support=1
+PASS scraperx_sim first process coupling: gated_off_station=1 wet_crossable=0 drained_safe=1 support_on_grate=1 reached_far_deck=1 dump_unsafe_again=1
+PASS scraperx_sim B00 intake rise: pinned_impassable=1 pinned_deepest_z=-110.514 forced_impassable=1 overweight_y=0.899998 lifted_y=4.54563 dog_rad=1.20208 handoff_y=25.0872 skin_mantles=15 skin_freight_untouched=1
+INFO AS-002 deployed hold: least_travel=0.907521 pack_drift=0.00219011
+INFO AS-002 walkway lane: lowest_y=33.086
+PASS scraperx_sim AS-002 Legal Forty: unrouted_deepest_y=25.0872 flag_hinge=0 cradle_drop=1.49556 deployed_travel=0.861587 mid_landing_y=33.0872 forty_y=41.0872 checkpoint_commits=19897 checkpoint_y=41.0872 retracted_travel=0.196462 skin_forty_mantles=20 skin_forty_y=41.0709 jib_capped_hook_y=11.241
+PASS scraperx_sim world solids: bodies=1780 mirrors=29 rejected=0 buttress_foot_closest=3.34785 tower_bodies=169 former_flight_y=0.9 rim_reach=888.218
+PASS scraperx_sim crouch: standing_deepest_z=-12.3626 crouch_drop=0.3 crouched_top_speed=2.475 under_z=-13.082 stood_y=0.9
+PASS scraperx_sim AS-003 apron: grade_peak_y=2.41139 pack_peak_y=4.21328 pack_closest=0.29364
+INFO AS-003 carry walk: loaded_v_at_0.25s=4.16759 free_v_at_0.25s=5.5 loaded_top=5.523 free_top=5.5
+PASS scraperx_sim AS-003 cage: mashed_door=0.0352769 travelled_door=1.20179 carry_worst_gap=0.850912 repicked_y=0.98778 skin_mantles=15
+PASS scraperx_sim AS-003 Hook5 Rack: ride_s=10.4111 roof_y=5.36879 hatch_impact=9.27566 forty_y=41.0681 restored_y=41.0697 restored_carry=56
+PASS scraperx_sim ground water screw: tank_m3=2 basin_m3=0.4 peak_rpm=22 peak_torque_nm=1500 peak_flow_m3_s=0.0220068 shaft_work_J=200869 leakage_m3=0.19069 conserved_err=3.61933e-13 full_stop=1 reverse_return=1
+INFO ground water lift fill: expected_m3=0.4 valve=1 tank_m3=0.398889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+PASS scraperx_sim ground water lift: cage_travel=8.00027 peak_speed=2.20045 rope_N=42827.5 bucket_kg=2198.89 dock_y=9.15 conserved_err=5.01821e-14 dry_fail=1 partial_fail=1 rope_fail=1 overload_fail=1 moving_support=1 reset=1 dock_to_stair12=1
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+PASS scraperx_sim continuous ground screw ascent: dock_y=9.15 cage_travel=8 conserved_err=8.52651e-14 moving_support=1 no_seed=1
+PASS scraperx_sim AS-006 A no link: cage_worst=0 skip_drop=0.0324707 bollard_tension=62627.2 relatched=1 rerigged=1
+PASS scraperx_sim AS-006 A ride: ride_s=9.65556 floor_y=176.25 peak_speed=2.50203 rode_on_cage=1 skip_released_J=172656 payload_gained_J=93881.9 energy_margin_J=3.9443 restored_y=177.199 restored_support=2005
+PASS scraperx_sim AS-006 B no link: cage_worst=0 lattice_drop=0.0324707 bollard_tension=195710 relatched=1
+INFO AS-006 B governor: ride_peak=3.0467 lifetime_peak=3.0467 ride_s=8.28889 floor_y=198.25
+PASS scraperx_sim AS-006 B ride: ride_s=8.28889 floor_y=198.25 peak_speed=3.0467 lifetime_peak_speed=3.0467 rode_on_cage=1 energy_margin_J=119.258 lattice_top_y=198.25
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.parkour_flow" classname="scraperx_sim.parkour_flow" time="0.119139" status="run">
+		<properties/>
+		<system-out>INFO vault entry approach=5.5 first=5.60249
+INFO vault exit before=5.64285 after=5.5
+INFO neutral-air momentum approach=5.5 takeoff=5.5 after_18_ticks=5.5 delta=0 y=1.82459 vy=3.429
+PASS scraperx_sim step2 sprint: peak=8 air_slowest=8 sprint_jump_m=8.97771 walk_jump_m=6.17226 crouched_peak=2.475 across_peak=5.5
+PASS scraperx_sim parkour flow
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.ascent_route" classname="scraperx_sim.ascent_route" time="1.76061" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 7.99197 pipes 20 support 1 deaths 0
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 8.01472 pipes 20 support 1 deaths 0
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 8.00045 pipes 20 support 1 deaths 0
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 8.00212 pipes 20 support 1524 deaths 0
+CROSS pos 6.08995,1.94713,-91.0552 target 0 carrying 0 tip 8.00281 pipes 20 support 2500 deaths 0
+CROSS pos 5.99946,8.37664,-107.178 target 0 carrying 0 tip 8.00784 pipes 20 support 2500 deaths 0
+CROSS pos 9.31744,8.02414,-106.942 target 0 carrying 0 tip 8.01049 pipes 20 support 1525 deaths 0
+CROSS pos 9.04369,8.9,-110.825 target 0 carrying 0 tip 8.00719 pipes 20 support 1526 deaths 0
+CROSS pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+ARRIVED pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+DUCT_EDGE_READY pos 20,17.1967,-123.161 target 0 carrying 0 tip 8.02974 pipes 20 support 2561 deaths 0
+DUCT_LOWERED pos 19.9999,15.3537,-122.496 target 0 carrying 0 tip 8.00612 pipes 20 support 0 deaths 0
+FACADE_33M pos 11.2968,33.8987,-125.28 target 0 carrying 0 tip 8.02769 pipes 20 support 11 deaths 0
+FACADE_RESTORED pos 25.8714,33.9,-125.3 target 0 carrying 0 tip 8.03582 pipes 20 support 11 deaths 1
+PASS grade -&gt; pipe -&gt; facade: supported +33m, checkpoint restored
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.mantle_feel" classname="scraperx_sim.mantle_feel" time="1.64129" status="run">
+		<properties/>
+		<system-out>mantle tick=0 y=11.8721 z=-121.227 vy=0.0318796 support=1600 state=4
+mantle tick=30 y=12.2509 z=-121.227 vy=2.08011 support=0 state=4
+mantle tick=60 y=12.9224 z=-121.226 vy=1.95495 support=0 state=4
+mantle tick=90 y=13.565 z=-121.226 vy=1.46615 support=0 state=4
+mantle tick=120 y=13.6496 z=-121.578 vy=-0.223343 support=0 state=4
+mantle tick=150 y=13.6454 z=-122.246 vy=-0.317318 support=0 state=4
+mantle tick=180 y=13.5825 z=-122.303 vy=0.000151498 support=2560 state=0
+mantle tick=210 y=13.5825 z=-122.304 vy=-8.52682e-05 support=2560 state=0
+mantle tick=240 y=13.5825 z=-122.3 vy=-0.000275632 support=2560 state=0
+mantle tick=270 y=13.5825 z=-122.295 vy=-9.39034e-05 support=2560 state=0
+mantle tick=300 y=13.5824 z=-122.291 vy=-0.000265265 support=2560 state=0
+mantle tick=330 y=13.5824 z=-122.286 vy=-8.71595e-05 support=2560 state=0
+mantle arrival_s=1.77778 peak_vy=2.09127
+PASS responsive stable mantle pos 20,13.5824,-122.285 target 0 carrying 0 tip 0 pipes 0 support 2560 deaths 0
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.swing_stair_route_0" classname="scraperx_sim.swing_stair_route_0" time="2.28264" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 7.99197 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 8.01472 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 8.00045 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 8.00212 pipes 20 support 1524 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 6.08995,1.94713,-91.0552 target 0 carrying 0 tip 8.00281 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 5.99946,8.37664,-107.178 target 0 carrying 0 tip 8.00784 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.31744,8.02414,-106.942 target 0 carrying 0 tip 8.01049 pipes 20 support 1525 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.04369,8.9,-110.825 target 0 carrying 0 tip 8.00719 pipes 20 support 1526 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+ARRIVED pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_EDGE_READY pos 20,17.1967,-123.161 target 0 carrying 0 tip 8.02974 pipes 20 support 2561 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_LOWERED pos 19.9999,15.3537,-122.496 target 0 carrying 0 tip 8.00612 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+FACADE_33M pos 11.2968,33.8987,-125.28 target 0 carrying 0 tip 8.02769 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_CHAIN_READY pos -17.4889,33.9,-121.387 target 2602 carrying 0 tip 8.02889 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_HELD pos -17.4889,33.9,-121.387 target 0 carrying 2602 tip 8.05214 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_PULLED pos -17.4889,33.9,-122.453 target 0 carrying 0 tip 8.02585 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721587 lever_angle=0.452417 handle_y=34.864 front=-1.52588e-06
+STAIR_RELEASED pos -17.4889,33.9,-122.527 target 0 carrying 0 tip 8.06333 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.0382103 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_FOOT pos -16.4783,33.9,-122.131 target 0 carrying 0 tip 8.05914 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.0410074 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_X pos -15.2794,33.8896,-122.097 target 0 carrying 0 tip 8.0368 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.0416209 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_X pos -14.0831,34.9432,-122.101 target 0 carrying 0 tip 8.04292 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.040804 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_X pos -12.0931,36.7377,-122.1 target 0 carrying 0 tip 8.05545 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.0355352 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_X pos -10.071,38.7645,-122.1 target 0 carrying 0 tip 8.06286 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.0394479 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_X pos -8.09705,40.4146,-122.1 target 0 carrying 0 tip 8.05453 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.0378087 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_X pos -5.0933,43.2576,-122.1 target 0 carrying 0 tip 8.05377 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.037866 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_X pos -2.79934,45.3823,-122.1 target 0 carrying 0 tip 8.05154 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.0361958 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_TOP pos -2.79934,45.3823,-122.1 target 0 carrying 0 tip 8.05154 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.0361958 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+PAD_FRONT 0.521902
+TOP_SETTLED pos -2.21761,45.3997,-122.1 target 0 carrying 0 tip 8.03877 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.038404 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_EXIT_READY pos -2.19515,45.4015,-122.303 target 0 carrying 0 tip 8.05957 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.0384764 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+STAIR_44M pos -2.20287,44.9,-127.396 target 0 carrying 0 tip 8.04841 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.0377062 lever_angle=0.450014 handle_y=34.3392 front=0.521902
+PASS grade -&gt; pipe -&gt; facade -&gt; stair: supported +44m mode=0
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.swing_stair_route_1" classname="scraperx_sim.swing_stair_route_1" time="1.82535" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 7.99197 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 8.01472 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 8.00045 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 8.00212 pipes 20 support 1524 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 6.08995,1.94713,-91.0552 target 0 carrying 0 tip 8.00281 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 5.99946,8.37664,-107.178 target 0 carrying 0 tip 8.00784 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.31744,8.02414,-106.942 target 0 carrying 0 tip 8.01049 pipes 20 support 1525 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.04369,8.9,-110.825 target 0 carrying 0 tip 8.00719 pipes 20 support 1526 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+ARRIVED pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_EDGE_READY pos 20,17.1967,-123.161 target 0 carrying 0 tip 8.02974 pipes 20 support 2561 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_LOWERED pos 19.9999,15.3537,-122.496 target 0 carrying 0 tip 8.00612 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+FACADE_33M pos 11.2968,33.8987,-125.28 target 0 carrying 0 tip 8.02769 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_CHAIN_READY pos -17.4889,33.9,-121.387 target 2602 carrying 0 tip 8.02889 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_HELD pos -17.4889,33.9,-121.387 target 0 carrying 2602 tip 8.05214 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_PULLED pos -17.4889,33.9,-122.453 target 0 carrying 0 tip 8.02585 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721587 lever_angle=0.452417 handle_y=34.864 front=-1.52588e-06
+STAIR_RELEASED pos -17.4889,33.9,-122.511 target 0 carrying 0 tip 8.02573 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721293 lever_angle=0.451702 handle_y=34.809 front=-1.52588e-06
+STAIR_FOOT pos -16.4672,33.9,-122.136 target 0 carrying 0 tip 8.02642 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.717234 lever_angle=0.450164 handle_y=34.34 front=-1.52588e-06
+STAIR_X pos -15.2973,34.4168,-122.1 target 0 carrying 0 tip 8.03341 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.58196 lever_angle=0.450013 handle_y=34.3412 front=-1.52588e-06
+STAIR_X pos -14.0883,36.9252,-122.1 target 0 carrying 0 tip 8.03274 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.461867 lever_angle=0.450013 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -12.0883,38.9929,-122.1 target 0 carrying 0 tip 8.03988 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.29943 lever_angle=0.450014 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -10.0976,40.0531,-122.1 target 0 carrying 0 tip 8.05229 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.167619 lever_angle=0.450014 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -8.06228,40.7796,-122.1 target 0 carrying 0 tip 8.02915 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.0567609 lever_angle=0.450019 handle_y=34.3392 front=0.178297
+STAIR_X pos -5.09973,42.5119,-122.1 target 0 carrying 0 tip 8.05744 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=-0.00767797 lever_angle=0.450014 handle_y=34.3392 front=1.04005
+STAIR_X pos -2.77701,44.5983,-122.1 target 0 carrying 0 tip 8.04662 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.000149392 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+STAIR_TOP pos -2.77701,44.5983,-122.1 target 0 carrying 0 tip 8.04662 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.000149392 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+PAD_FRONT 1.06688
+TOP_SETTLED pos -2.59184,44.8303,-122.1 target 0 carrying 0 tip 8.05468 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.00625658 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+STAIR_EXIT_READY pos -1.91834,44.9646,-122.399 target 0 carrying 0 tip 8.05579 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.0049257 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+STAIR_44M pos -1.94704,44.9,-127.036 target 0 carrying 0 tip 8.05792 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=-0.00091517 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+PASS grade -&gt; pipe -&gt; facade -&gt; stair: supported +44m mode=1
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.swing_stair_route_2" classname="scraperx_sim.swing_stair_route_2" time="1.95793" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 7.99197 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 8.01472 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 8.00045 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 8.00212 pipes 20 support 1524 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 6.08995,1.94713,-91.0552 target 0 carrying 0 tip 8.00281 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 5.99946,8.37664,-107.178 target 0 carrying 0 tip 8.00784 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.31744,8.02414,-106.942 target 0 carrying 0 tip 8.01049 pipes 20 support 1525 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.04369,8.9,-110.825 target 0 carrying 0 tip 8.00719 pipes 20 support 1526 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+ARRIVED pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_EDGE_READY pos 20,17.1967,-123.161 target 0 carrying 0 tip 8.02974 pipes 20 support 2561 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_LOWERED pos 19.9999,15.3537,-122.496 target 0 carrying 0 tip 8.00612 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+FACADE_33M pos 11.2968,33.8987,-125.28 target 0 carrying 0 tip 8.02769 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_CHAIN_READY pos -17.4889,33.9,-121.387 target 2602 carrying 0 tip 8.02889 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_HELD pos -17.4889,33.9,-121.387 target 0 carrying 2602 tip 8.05214 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_PULLED pos -17.4889,33.9,-122.453 target 0 carrying 0 tip 8.02585 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721587 lever_angle=0.452417 handle_y=34.864 front=-1.52588e-06
+STAIR_RELEASED pos -17.4889,33.9,-122.511 target 0 carrying 0 tip 8.02573 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721293 lever_angle=0.451702 handle_y=34.809 front=-1.52588e-06
+STAIR_FOOT pos -16.4672,33.9,-122.136 target 0 carrying 0 tip 8.02642 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.717234 lever_angle=0.450164 handle_y=34.34 front=-1.52588e-06
+STAIR_X pos -15.2973,34.4168,-122.1 target 0 carrying 0 tip 8.03341 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.58196 lever_angle=0.450013 handle_y=34.3412 front=-1.52588e-06
+STAIR_X pos -14.0883,36.9252,-122.1 target 0 carrying 0 tip 8.03274 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.461867 lever_angle=0.450013 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -12.0883,38.9929,-122.1 target 0 carrying 0 tip 8.03988 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.29943 lever_angle=0.450014 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -10.0976,40.0531,-122.1 target 0 carrying 0 tip 8.05229 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.167619 lever_angle=0.450014 handle_y=34.3392 front=-1.52588e-06
+ABANDONED pos -8.68649,40.2205,-118.282 target 0 carrying 0 tip 8.02997 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.0135328 lever_angle=0.450014 handle_y=34.3392 front=0.752844
+STAIR_FALL_RESTORED pos -15.5789,33.9,-122.076 target 0 carrying 0 tip 8.05244 pipes 20 support 1601 deaths 1
+STAIR_STATE body_angle=0.713545 lever_angle=0.450088 handle_y=34.4119 front=-1.52588e-06
+CHECKPOINT_FRONT -1.52588e-06 ABANDONED_FRONT 0.752844 RESTORED_FRONT -1.52588e-06
+STAIR_X pos -8.07291,41.9624,-122.1 target 0 carrying 0 tip 8.03184 pipes 20 support 0 deaths 1
+STAIR_STATE body_angle=0.138311 lever_angle=0.450014 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -5.07358,42.2819,-122.1 target 0 carrying 0 tip 8.04271 pipes 20 support 0 deaths 1
+STAIR_STATE body_angle=-0.0146278 lever_angle=0.450014 handle_y=34.3392 front=1.13077
+STAIR_X pos -2.79967,44.2877,-122.1 target 0 carrying 0 tip 8.03935 pipes 20 support 0 deaths 1
+STAIR_STATE body_angle=-0.0107076 lever_angle=0.450014 handle_y=34.3392 front=1.21783
+STAIR_TOP pos -2.79967,44.2877,-122.1 target 0 carrying 0 tip 8.03935 pipes 20 support 0 deaths 1
+STAIR_STATE body_angle=-0.0107076 lever_angle=0.450014 handle_y=34.3392 front=1.21783
+PAD_FRONT 1.21783
+TOP_SETTLED pos -2.75564,44.4248,-122.1 target 0 carrying 0 tip 8.05809 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=-0.00557137 lever_angle=0.450014 handle_y=34.3392 front=1.21783
+STAIR_EXIT_READY pos -1.79378,44.6345,-122.407 target 0 carrying 0 tip 8.04273 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=-0.0202837 lever_angle=0.450014 handle_y=34.3392 front=1.21783
+STAIR_44M pos -1.83382,44.8846,-126.769 target 0 carrying 0 tip 8.04361 pipes 20 support 11 deaths 1
+STAIR_STATE body_angle=0.0118279 lever_angle=0.450014 handle_y=34.3392 front=1.21783
+PASS grade -&gt; pipe -&gt; facade -&gt; stair: supported +44m mode=2
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.swing_stair_route_3" classname="scraperx_sim.swing_stair_route_3" time="1.89306" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 7.99197 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 8.01472 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 8.00045 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 8.00212 pipes 20 support 1524 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 6.08995,1.94713,-91.0552 target 0 carrying 0 tip 8.00281 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 5.99946,8.37664,-107.178 target 0 carrying 0 tip 8.00784 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.31744,8.02414,-106.942 target 0 carrying 0 tip 8.01049 pipes 20 support 1525 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.04369,8.9,-110.825 target 0 carrying 0 tip 8.00719 pipes 20 support 1526 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+ARRIVED pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_EDGE_READY pos 20,17.1967,-123.161 target 0 carrying 0 tip 8.02974 pipes 20 support 2561 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_LOWERED pos 19.9999,15.3537,-122.496 target 0 carrying 0 tip 8.00612 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+FACADE_33M pos 11.2968,33.8987,-125.28 target 0 carrying 0 tip 8.02769 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+PASS stair stays latched without a player pull
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.swing_stair_route_4" classname="scraperx_sim.swing_stair_route_4" time="2.01572" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 7.99197 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 8.01472 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 8.00045 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 8.00212 pipes 20 support 1524 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 6.08995,1.94713,-91.0552 target 0 carrying 0 tip 8.00281 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 5.99946,8.37664,-107.178 target 0 carrying 0 tip 8.00784 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.31744,8.02414,-106.942 target 0 carrying 0 tip 8.01049 pipes 20 support 1525 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.04369,8.9,-110.825 target 0 carrying 0 tip 8.00719 pipes 20 support 1526 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+ARRIVED pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_EDGE_READY pos 20,17.1967,-123.161 target 0 carrying 0 tip 8.02974 pipes 20 support 2561 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_LOWERED pos 19.9999,15.3537,-122.496 target 0 carrying 0 tip 8.00612 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+FACADE_33M pos 11.2968,33.8987,-125.28 target 0 carrying 0 tip 8.02769 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_CHAIN_READY pos -17.4889,33.9,-121.387 target 2602 carrying 0 tip 8.02889 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_HELD pos -17.4889,33.9,-121.387 target 0 carrying 2602 tip 8.05214 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+PASS stair stays latched after grab and release without pull
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.swing_stair_route_5" classname="scraperx_sim.swing_stair_route_5" time="2.35552" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 7.99197 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 8.01472 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 8.00045 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 8.00212 pipes 20 support 1524 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 6.08995,1.94713,-91.0552 target 0 carrying 0 tip 8.00281 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 5.99946,8.37664,-107.178 target 0 carrying 0 tip 8.00784 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.31744,8.02414,-106.942 target 0 carrying 0 tip 8.01049 pipes 20 support 1525 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.04369,8.9,-110.825 target 0 carrying 0 tip 8.00719 pipes 20 support 1526 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+ARRIVED pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_EDGE_READY pos 20,17.1967,-123.161 target 0 carrying 0 tip 8.02974 pipes 20 support 2561 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_LOWERED pos 19.9999,15.3537,-122.496 target 0 carrying 0 tip 8.00612 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+FACADE_33M pos 11.2968,33.8987,-125.28 target 0 carrying 0 tip 8.02769 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_CHAIN_READY pos -17.4889,33.9,-121.387 target 2602 carrying 0 tip 8.02889 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_HELD pos -17.4889,33.9,-121.387 target 0 carrying 2602 tip 8.05214 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_PULLED pos -17.4889,33.9,-122.453 target 0 carrying 0 tip 8.02585 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721587 lever_angle=0.452417 handle_y=34.864 front=-1.52588e-06
+STAIR_RELEASED pos -17.4889,33.9,-122.511 target 0 carrying 0 tip 8.02573 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721293 lever_angle=0.451702 handle_y=34.809 front=-1.52588e-06
+STAIR_FOOT pos -16.4672,33.9,-122.136 target 0 carrying 0 tip 8.02642 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.717234 lever_angle=0.450164 handle_y=34.34 front=-1.52588e-06
+STAIR_X pos -15.2973,34.4168,-122.1 target 0 carrying 0 tip 8.03341 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.58196 lever_angle=0.450013 handle_y=34.3412 front=-1.52588e-06
+STAIR_X pos -14.0883,36.9252,-122.1 target 0 carrying 0 tip 8.03274 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.461867 lever_angle=0.450013 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -12.0883,38.9929,-122.1 target 0 carrying 0 tip 8.03988 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.29943 lever_angle=0.450014 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -10.0976,40.0531,-122.1 target 0 carrying 0 tip 8.05229 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.167619 lever_angle=0.450014 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -8.06228,40.7796,-122.1 target 0 carrying 0 tip 8.02915 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.0567609 lever_angle=0.450019 handle_y=34.3392 front=0.178297
+STAIR_X pos -5.09973,42.5119,-122.1 target 0 carrying 0 tip 8.05744 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=-0.00767797 lever_angle=0.450014 handle_y=34.3392 front=1.04005
+STAIR_X pos -2.77701,44.5983,-122.1 target 0 carrying 0 tip 8.04662 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.000149392 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+STAIR_TOP pos -2.77701,44.5983,-122.1 target 0 carrying 0 tip 8.04662 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.000149392 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+PAD_FRONT 1.06688
+TOP_SETTLED pos -2.59184,44.8303,-122.1 target 0 carrying 0 tip 8.05468 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.00625658 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+STAIR_EXIT_READY pos -1.91834,44.9646,-122.399 target 0 carrying 0 tip 8.05579 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.0049257 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+STAIR_44M pos -1.94704,44.9,-127.036 target 0 carrying 0 tip 8.05792 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=-0.00091517 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+LIFT_BOARD pos 4.01934,44.9,-117.045 target 0 carrying 0 tip 8.03719 pipes 20 support 2700 deaths 0
+STAIR_STATE body_angle=-0.00201027 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+LIFT_HANDLE_READY pos 3.98705,44.9,-116.803 target 2703 carrying 0 tip 8.03319 pipes 20 support 2700 deaths 0
+STAIR_STATE body_angle=-0.0049829 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+LIFT_AFTER_PULL platform=43.8 weight=55.7 lever=0.048907 player=44.9
+LIFT_RIDE peak_speed=2.79007 at_y=53.23 peak_acceleration=10.7776 at_y=43.7999 peak_tenth_second_acceleration=2.73322
+LIFT_SETTLED pos 3.98699,55.86,-117.649 target 0 carrying 0 tip 8.04372 pipes 20 support 2700 deaths 0
+STAIR_STATE body_angle=-0.00383605 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+LIFT_STABILITY platform=54.76 speed=-0 weight=44.7399
+DECK_55M pos 3.9267,55.8993,-125.588 target 0 carrying 0 tip 8.06839 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=-0.00383605 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+UPPER_VENT_READY grip=1 ledge=0 x=5.50617 z=-122.99
+UPPER_VENT_AFTER_REQUEST state=4 y=61.2
+DECK_66M pos 5.38706,66.9,-125.552 target 0 carrying 0 tip 8.07226 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=-0.00383605 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+PASS normal-input grade to supported +66m via lift and exterior parkour
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.swing_stair_route_6" classname="scraperx_sim.swing_stair_route_6" time="0.344371" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+PASS upper lift remains latched without a player pull
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.swing_stair_route_7" classname="scraperx_sim.swing_stair_route_7" time="2.34588" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 7.99197 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 8.01472 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 8.00045 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 8.00212 pipes 20 support 1524 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 6.08995,1.94713,-91.0552 target 0 carrying 0 tip 8.00281 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 5.99946,8.37664,-107.178 target 0 carrying 0 tip 8.00784 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.31744,8.02414,-106.942 target 0 carrying 0 tip 8.01049 pipes 20 support 1525 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.04369,8.9,-110.825 target 0 carrying 0 tip 8.00719 pipes 20 support 1526 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+ARRIVED pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_EDGE_READY pos 20,17.1967,-123.161 target 0 carrying 0 tip 8.02974 pipes 20 support 2561 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_LOWERED pos 19.9999,15.3537,-122.496 target 0 carrying 0 tip 8.00612 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+FACADE_33M pos 11.2968,33.8987,-125.28 target 0 carrying 0 tip 8.02769 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_CHAIN_READY pos -17.4889,33.9,-121.387 target 2602 carrying 0 tip 8.02889 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_HELD pos -17.4889,33.9,-121.387 target 0 carrying 2602 tip 8.05214 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_PULLED pos -17.4889,33.9,-122.453 target 0 carrying 0 tip 8.02585 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721587 lever_angle=0.452417 handle_y=34.864 front=-1.52588e-06
+STAIR_RELEASED pos -17.4889,33.9,-122.511 target 0 carrying 0 tip 8.02573 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721293 lever_angle=0.451702 handle_y=34.809 front=-1.52588e-06
+STAIR_FOOT pos -16.4672,33.9,-122.136 target 0 carrying 0 tip 8.02642 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.717234 lever_angle=0.450164 handle_y=34.34 front=-1.52588e-06
+STAIR_X pos -15.2973,34.4168,-122.1 target 0 carrying 0 tip 8.03341 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.58196 lever_angle=0.450013 handle_y=34.3412 front=-1.52588e-06
+STAIR_X pos -14.0883,36.9252,-122.1 target 0 carrying 0 tip 8.03274 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.461867 lever_angle=0.450013 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -12.0883,38.9929,-122.1 target 0 carrying 0 tip 8.03988 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.29943 lever_angle=0.450014 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -10.0976,40.0531,-122.1 target 0 carrying 0 tip 8.05229 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.167619 lever_angle=0.450014 handle_y=34.3392 front=-1.52588e-06
+STAIR_X pos -8.06228,40.7796,-122.1 target 0 carrying 0 tip 8.02915 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.0567609 lever_angle=0.450019 handle_y=34.3392 front=0.178297
+STAIR_X pos -5.09973,42.5119,-122.1 target 0 carrying 0 tip 8.05744 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=-0.00767797 lever_angle=0.450014 handle_y=34.3392 front=1.04005
+STAIR_X pos -2.77701,44.5983,-122.1 target 0 carrying 0 tip 8.04662 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.000149392 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+STAIR_TOP pos -2.77701,44.5983,-122.1 target 0 carrying 0 tip 8.04662 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.000149392 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+PAD_FRONT 1.06688
+TOP_SETTLED pos -2.59184,44.8303,-122.1 target 0 carrying 0 tip 8.05468 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.00625658 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+STAIR_EXIT_READY pos -1.91834,44.9646,-122.399 target 0 carrying 0 tip 8.05579 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.0049257 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+STAIR_44M pos -1.94704,44.9,-127.036 target 0 carrying 0 tip 8.05792 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=-0.00091517 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+LIFT_BOARD pos 4.01934,44.9,-117.045 target 0 carrying 0 tip 8.03719 pipes 20 support 2700 deaths 0
+STAIR_STATE body_angle=-0.00201027 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+LIFT_HANDLE_READY pos 3.98705,44.9,-116.803 target 2703 carrying 0 tip 8.03319 pipes 20 support 2700 deaths 0
+STAIR_STATE body_angle=-0.0049829 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+LIFT_AFTER_PULL platform=43.8 weight=55.7 lever=0.048907 player=44.9
+LIFT_RIDE peak_speed=2.79007 at_y=53.23 peak_acceleration=10.7776 at_y=43.7999 peak_tenth_second_acceleration=2.73322
+LIFT_SETTLED pos 3.98699,55.86,-117.649 target 0 carrying 0 tip 8.04372 pipes 20 support 2700 deaths 0
+STAIR_STATE body_angle=-0.00383605 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+LIFT_STABILITY platform=54.76 speed=-0 weight=44.7399
+UPPER_ABANDONED pos 3.98699,52.992,-110.542 target 0 carrying 0 tip 8.0589 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=-0.00383605 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+UPPER_RESTORED pos 3.98699,55.86,-117.649 target 0 carrying 0 tip 8.0422 pipes 20 support 2700 deaths 1
+STAIR_STATE body_angle=-0.00383605 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+DECK_55M pos 3.9267,55.8993,-125.588 target 0 carrying 0 tip 8.06759 pipes 20 support 11 deaths 1
+STAIR_STATE body_angle=-0.00383605 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+UPPER_VENT_READY grip=1 ledge=0 x=5.50617 z=-122.99
+UPPER_VENT_AFTER_REQUEST state=4 y=61.2
+DECK_66M pos 5.38706,66.9,-125.552 target 0 carrying 0 tip 8.07018 pipes 20 support 11 deaths 1
+STAIR_STATE body_angle=-0.00383605 lever_angle=0.450014 handle_y=34.3392 front=1.06688
+PASS normal-input grade to supported +66m via lift and exterior parkour
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.pipe_bridge_route" classname="scraperx_sim.pipe_bridge_route" time="0.825362" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 7.99197 pipes 20 support 1 deaths 0
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 8.01472 pipes 20 support 1 deaths 0
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 8.00045 pipes 20 support 1 deaths 0
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 8.00212 pipes 20 support 1524 deaths 0
+CROSS pos 6.08995,1.94713,-91.0552 target 0 carrying 0 tip 8.00281 pipes 20 support 2500 deaths 0
+CROSS pos 5.99946,8.37664,-107.178 target 0 carrying 0 tip 8.00784 pipes 20 support 2500 deaths 0
+CROSS pos 9.31744,8.02414,-106.942 target 0 carrying 0 tip 8.01049 pipes 20 support 1525 deaths 0
+CROSS pos 9.04369,8.9,-110.825 target 0 carrying 0 tip 8.00719 pipes 20 support 1526 deaths 0
+CROSS pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+ARRIVED pos 9.06048,11.9,-125.627 target 0 carrying 0 tip 8.02063 pipes 20 support 11 deaths 0
+PASS scraperx_sim AS-016 route mode=0 pipes=20 arrival_y=11.9
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.pipe_bridge_no_input" classname="scraperx_sim.pipe_bridge_no_input" time="0.401716" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+NO_INPUT pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.pipe_bridge_rack_only" classname="scraperx_sim.pipe_bridge_rack_only" time="0.625762" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+RACK_ONLY pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.pipe_bridge_empty_release" classname="scraperx_sim.pipe_bridge_empty_release" time="0.451517" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+BRIDGE_READY pos -0.506713,0.893589,-85.6073 target 2505 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+BRIDGE_PICK pos -0.506713,0.893589,-85.6073 target 0 carrying 2505 tip 0.579488 pipes 0 support 1 deaths 0
+BRIDGE_LIFTED pos -1.64023,0.893594,-85.6073 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+EMPTY_RELEASE pos -1.64023,0.893594,-85.6073 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.pipe_bridge_regrab" classname="scraperx_sim.pipe_bridge_regrab" time="0.849554" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+PARTIAL_PULL_REGRAB pos 12.6727,0.893591,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2273,0.89359,-78.9844 target 2530 carrying 0 tip 0.600758 pipes 20 support 1 deaths 0
+BRIDGE_READY pos -0.506098,0.89359,-85.6052 target 2505 carrying 0 tip 0.600758 pipes 20 support 1 deaths 0
+BRIDGE_PICK pos -0.506098,0.89359,-85.6052 target 0 carrying 2505 tip 0.600758 pipes 20 support 1 deaths 0
+BRIDGE_LIFTED pos -1.61752,0.894006,-85.6052 target 0 carrying 0 tip 8.00039 pipes 20 support 1 deaths 0
+CROSS pos -0.577351,0.894006,-86.0088 target 0 carrying 0 tip 8.02345 pipes 20 support 1 deaths 0
+CROSS pos 2.18552,0.9,-85.9643 target 0 carrying 0 tip 8.00997 pipes 20 support 1 deaths 0
+CROSS pos 1.93648,1.99263,-91.1677 target 0 carrying 0 tip 8.01204 pipes 20 support 1524 deaths 0
+CROSS pos 6.08989,1.9475,-91.0553 target 0 carrying 0 tip 8.00788 pipes 20 support 2500 deaths 0
+CROSS pos 5.99945,8.38758,-107.176 target 0 carrying 0 tip 8.01866 pipes 20 support 2500 deaths 0
+CROSS pos 9.31552,8.02455,-106.943 target 0 carrying 0 tip 8.02103 pipes 20 support 1525 deaths 0
+CROSS pos 9.04373,8.9,-110.826 target 0 carrying 0 tip 8.01082 pipes 20 support 1526 deaths 0
+CROSS pos 9.06048,11.9,-125.628 target 0 carrying 0 tip 8.02519 pipes 20 support 11 deaths 0
+ARRIVED pos 9.06048,11.9,-125.628 target 0 carrying 0 tip 8.02519 pipes 20 support 11 deaths 0
+PASS scraperx_sim AS-016 route mode=4 pipes=20 arrival_y=11.9
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.pipe_bridge_passenger" classname="scraperx_sim.pipe_bridge_passenger" time="0.759099" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6928,0.893589,-79.0375 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6927,0.893589,-79.0375 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.2262,0.893591,-78.9852 target 2530 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+BRIDGE_READY pos -0.506097,0.893591,-85.6052 target 2505 carrying 0 tip 0.600872 pipes 20 support 1 deaths 0
+BRIDGE_PICK pos -0.506097,0.893591,-85.6052 target 0 carrying 2505 tip 0.600872 pipes 20 support 1 deaths 0
+BRIDGE_LIFTED pos -1.6175,0.894007,-85.6052 target 0 carrying 0 tip 0.633137 pipes 20 support 1 deaths 0
+CROSS pos -0.577369,0.894007,-86.0088 target 0 carrying 0 tip 0.747148 pipes 20 support 1 deaths 0
+CROSS pos 2.18551,0.9,-85.9643 target 0 carrying 0 tip 1.06921 pipes 20 support 1 deaths 0
+CROSS pos 1.93648,1.99264,-91.1677 target 0 carrying 0 tip 2.1655 pipes 20 support 1524 deaths 0
+CROSS pos 6.22988,1.67498,-91.0481 target 0 carrying 0 tip 3.90212 pipes 20 support 2500 deaths 0
+PASSIVE_RIDER pos 6.22985,1.74907,-90.5743 target 0 carrying 0 tip 7.9849 pipes 20 support 2500 deaths 0
+CROSS pos 5.99864,8.33705,-107.178 target 0 carrying 0 tip 7.97131 pipes 20 support 2500 deaths 0
+CROSS pos 9.24257,8.03737,-106.975 target 0 carrying 0 tip 7.97222 pipes 20 support 1525 deaths 0
+CROSS pos 9.05746,8.9,-110.685 target 0 carrying 0 tip 7.97861 pipes 20 support 1526 deaths 0
+CROSS pos 9.06009,11.9,-125.687 target 0 carrying 0 tip 7.98978 pipes 20 support 11 deaths 0
+ARRIVED pos 9.06009,11.9,-125.687 target 0 carrying 0 tip 7.98978 pipes 20 support 11 deaths 0
+PASS scraperx_sim AS-016 route mode=5 pipes=20 arrival_y=11.9
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.pipe_bridge_refinement" classname="scraperx_sim.pipe_bridge_refinement" time="3.2958" status="run">
+		<properties/>
+		<system-out>hz=90 pipes=20 tip=8.022704124 front=0.4549518641 crush_work=40945.66777 input_work=83.5209043 other_loss=120463.4737 peak_ke=55013.72768 pan_pitch=0.01290855464 floor_gap=0.1206209159 post_min=7.978519917 post_max=8.023353577
+hz=360 pipes=20 tip=8.002361298 front=0.4525621798 crush_work=40730.59618 input_work=83.52018893 other_loss=120338.2701 peak_ke=60395.75944 pan_pitch=0.001748277107 floor_gap=0.1235482937 post_min=7.989170074 post_max=8.014570236
+PASS production pipe bridge refinement 90/360 Hz
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.teeter_route" classname="scraperx_sim.teeter_route" time="1.29475" status="run">
+		<properties/>
+		<system-out>INVENTORY moving=53 kit=96
+RIDER_ALONE angle=0.102955 player=32.7386,67.2798,-138.58 support=2800 grounded=1 deaths=0
+ENTRY angle=0.102974 player=25.3,66.9,-139 support=11 grounded=1 deaths=0
+OPPOSITE angle=0.102955 player=27.1358,66.7016,-139 support=2800 grounded=1 deaths=0
+BALLAST_READY position=0.695922
+NEAR angle=0.10263 player=29.7308,67.0195,-139.45 support=2800 grounded=1 deaths=0
+BALLAST_MOVED position=4.23035
+FAR angle=-0.470392 player=32.631,64.7987,-138.615 support=2800 grounded=1 deaths=0
+UNLOADED angle=0.0908849 player=34.3661,64.45,-138.992 support=1800 grounded=1 deaths=0
+GRIP_READY angle=0.0908849 player=34.6834,64.45,-139.403 support=1800 grounded=1 deaths=0
+GRIP_TAKEN angle=0.0908849 player=34.6834,64.45,-139.403 support=1800 grounded=1 deaths=0
+CLIMB_STEP angle=0.0908849 player=34.6834,65.7024,-139.403 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.0908849 player=34.6834,66.9539,-139.403 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.0908849 player=34.6834,68.2653,-139.403 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.0908849 player=34.6834,69.5405,-139.403 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.0908849 player=34.6834,70.8379,-139.403 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.0908849 player=34.6834,72.1371,-139.403 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.0908849 player=34.6834,73.4256,-139.403 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.0908849 player=34.6834,74.7427,-139.403 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.0908849 player=34.6834,76.0269,-139.403 support=0 grounded=0 deaths=0
+UPPER_EXIT angle=0.0908849 player=34.6834,77.9,-140.65 support=1800 grounded=1 deaths=0
+RING_77 angle=0.0908849 player=25.1337,77.9,-140.799 support=11 grounded=1 deaths=0
+LANDING angle=-0.468199 player=32.4507,64.9005,-138.811 support=2800 grounded=1 deaths=0
+LANDING_SWEEP one_second=-0.0571756 minimum=-0.468199
+FALL_RECOVERY angle=0.095857 player=30.5071,55.88,-140.499 support=1800 grounded=1 deaths=0
+RECOVERY_RING_55 angle=0.095857 player=25.1549,55.9,-140.9 support=11 grounded=1 deaths=0
+MOVING_SUPPORT velocity=0.309737,-2.38998 player_velocity=0.187288,-2.6511
+DEPARTURE velocity=0.243589,3.09827 support=0
+ROTATING_RESTORE player_vy=-1.43699 contact_vy=-1.56707 com_vy=0.296467
+REPLAY_FAR angle=-0.470392 player=32.631,64.7987,-138.615 support=2800 grounded=1 deaths=0
+PASS scraperx_sim AS-020 loaded teeter, recovery and +77 route
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.teeter_physics" classname="scraperx_sim.teeter_physics" time="0.328988" status="run">
+		<properties/>
+		<system-out>TEETER_BINDING hz=90 loaded_fixture=0 friction=0 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.8123326302 contact_angle=0.08690005541 sample_speed=0.7880479385 sample_time=1.065165631 impact=0.8123326302 predicted=0.8154989424 rest=0.09086756408 rest_speed=6.347831705e-10 stop_overlap_m=1.424064276e-05 released_J=1196.785651 bearing_J=0 residual_J=9.394633381 signed_residual_J=-9.394633381,0 contact_time=1.111111111
+TEETER_BINDING hz=360 loaded_fixture=0 friction=0 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.8111943007 contact_angle=0.08139548451 sample_speed=0.7904779277 sample_time=1.069171345 impact=0.8111943007 predicted=0.8120237546 rest=0.09086252749 rest_speed=2.237037916e-10 stop_overlap_m=5.882170844e-06 released_J=1186.607359 bearing_J=0 residual_J=2.520990141 signed_residual_J=-2.520990141,0 contact_time=1.108333333
+TEETER_BINDING hz=90 loaded_fixture=0 friction=60 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.80189991 contact_angle=0.08608769625 sample_speed=0.7785945716 sample_time=1.076720212 impact=0.80189991 predicted=0.8049845427 rest=0.09087038785 rest_speed=1.78927416e-13 stop_overlap_m=1.892682902e-05 released_J=1195.289041 bearing_J=29.16526213 residual_J=9.053805542 signed_residual_J=-9.053805542,0 contact_time=1.122222222
+TEETER_BINDING hz=360 loaded_fixture=0 friction=60 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.8022035956 contact_angle=0.08285039663 sample_speed=0.7809909322 sample_time=1.08077031 impact=0.8022035956 predicted=0.802984051 rest=0.09087792039 rest_speed=5.892024607e-13 stop_overlap_m=3.142745269e-05 released_J=1189.306065 bearing_J=28.97102416 residual_J=2.351203175 signed_residual_J=-2.351203175,0 contact_time=1.122222222
+TEETER_LEDGER hz=90 loaded_fixture=0 friction=60 floor_J=9.394633381 tolerance_J=28.18390014 pass=1
+TEETER_LEDGER hz=360 loaded_fixture=0 friction=60 floor_J=2.520990141 tolerance_J=23.7861213 pass=1
+TEETER_REFINEMENT loaded_fixture=0 friction=60 pass=1
+TEETER_BINDING hz=90 loaded_fixture=0 friction=90 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.7992976308 contact_angle=0.08999729156 sample_speed=0.7738377791 sample_time=1.082659471 impact=0.7992976308 predicted=0.8023053747 rest=0.09087194502 rest_speed=1.192504754e-13 stop_overlap_m=2.151103247e-05 released_J=1202.474213 bearing_J=44.09975678 residual_J=8.832727392 signed_residual_J=-8.832727392,0 contact_time=1.133333333
+TEETER_BINDING hz=360 loaded_fixture=0 friction=90 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.7968762517 contact_angle=0.08235479891 sample_speed=0.7761818423 sample_time=1.086686084 impact=0.7968762517 predicted=0.7976517443 rest=0.09088302404 rest_speed=7.223158839e-14 stop_overlap_m=3.989721706e-05 released_J=1188.387468 bearing_J=43.41193244 residual_J=2.327810996 signed_residual_J=-2.327810996,0 contact_time=1.127777778
+TEETER_LEDGER hz=90 loaded_fixture=0 friction=90 floor_J=9.394633381 tolerance_J=28.18390014 pass=1
+TEETER_LEDGER hz=360 loaded_fixture=0 friction=90 floor_J=2.520990141 tolerance_J=23.76774936 pass=1
+TEETER_REFINEMENT loaded_fixture=0 friction=90 pass=1
+TEETER_BINDING hz=90 loaded_fixture=0 friction=120 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.7911919951 contact_angle=0.08495013416 sample_speed=0.7690550731 sample_time=1.088693968 impact=0.7911919951 predicted=0.7941680279 rest=0.09088412672 rest_speed=9.084807559e-12 stop_overlap_m=4.172718123e-05 released_J=1193.190111 bearing_J=58.19401681 residual_J=8.642001133 signed_residual_J=-8.642001133,0 contact_time=1.133333333
+TEETER_BINDING hz=360 loaded_fixture=0 friction=120 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.7914786339 contact_angle=0.08177343756 sample_speed=0.7713514404 sample_time=1.092714935 impact=0.7914786339 predicted=0.7922415239 rest=0.09086221457 rest_speed=9.126476701e-13 stop_overlap_m=5.362857617e-06 released_J=1187.309007 bearing_J=57.81281322 residual_J=2.284397765 signed_residual_J=-2.284397765,0 contact_time=1.133333333
+TEETER_LEDGER hz=90 loaded_fixture=0 friction=120 floor_J=9.394633381 tolerance_J=28.18390014 pass=1
+TEETER_LEDGER hz=360 loaded_fixture=0 friction=120 floor_J=2.520990141 tolerance_J=23.74618014 pass=1
+TEETER_REFINEMENT loaded_fixture=0 friction=120 pass=1
+TEETER_BINDING hz=90 loaded_fixture=1 friction=0 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.490277648 contact_angle=-0.4677282572 sample_speed=0.4803252113 sample_time=1.771770746 impact=0.490277648 predicted=0.490629305 rest=-0.4677118361 rest_speed=2.913438855e-15 stop_overlap_m=0.001652260407 released_J=640.3580161 bearing_J=0 residual_J=2.829789563 signed_residual_J=-2.829789563,0 contact_time=1.911111111
+TEETER_BINDING hz=360 loaded_fixture=1 friction=0 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.4904969931 contact_angle=-0.4670412838 sample_speed=0.4807708141 sample_time=1.775956717 impact=0.4904969931 predicted=0.490559395 rest=-0.4673397541 rest_speed=0.0005406966084 stop_overlap_m=-1.195420323e-05 released_J=640.1755394 bearing_J=0 residual_J=0.8004770951 signed_residual_J=-0.8004770951,0.07457484229 contact_time=1.913888889
+TEETER_BINDING hz=90 loaded_fixture=1 friction=60 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.4774152637 contact_angle=-0.4714407921 sample_speed=0.4685167102 sample_time=1.804752613 impact=0.4774152637 predicted=0.4776917839 rest=-0.4714336097 rest_speed=1.043863499e-15 stop_overlap_m=0.01829968793 released_J=641.3182218 bearing_J=34.28644761 residual_J=2.678543243 signed_residual_J=-2.678543243,0 contact_time=1.955555556
+TEETER_BINDING hz=360 loaded_fixture=1 friction=60 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.4773892164 contact_angle=-0.4681019187 sample_speed=0.4689178565 sample_time=1.808966197 impact=0.4773892164 predicted=0.4774315345 rest=-0.4681020081 rest_speed=3.999182945e-16 stop_overlap_m=0.003397406941 released_J=640.4566404 bearing_J=34.08611521 residual_J=0.7452056183 signed_residual_J=-0.7452056183,0.06598084284 contact_time=1.952777778
+TEETER_LEDGER hz=90 loaded_fixture=1 friction=60 floor_J=2.829789563 tolerance_J=12.82636444 pass=1
+TEETER_LEDGER hz=360 loaded_fixture=1 friction=60 floor_J=0.8004770951 tolerance_J=12.80913281 pass=1
+TEETER_REFINEMENT loaded_fixture=1 friction=60 pass=1
+TEETER_BINDING hz=90 loaded_fixture=1 friction=90 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.4703893363 contact_angle=-0.4675873816 sample_speed=0.4625091835 sample_time=1.821982712 impact=0.4703893363 predicted=0.4706384219 rest=-0.4675698876 rest_speed=1.05889484e-15 stop_overlap_m=0.001017363927 released_J=640.3207182 bearing_J=51.08286448 residual_J=2.572688153 signed_residual_J=-2.572688153,0 contact_time=1.966666667
+TEETER_BINDING hz=360 loaded_fixture=1 friction=90 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.4705583453 contact_angle=-0.4669357538 sample_speed=0.4628776735 sample_time=1.826158559 impact=0.4705583453 predicted=0.4705926142 rest=-0.4673405886 rest_speed=0.0001205817243 stop_overlap_m=-8.221905319e-06 released_J=640.1473753 bearing_J=51.02421798 residual_J=0.7356593196 signed_residual_J=-0.7356593196,0.06155078779 contact_time=1.969444444
+TEETER_LEDGER hz=90 loaded_fixture=1 friction=90 floor_J=2.829789563 tolerance_J=12.80641436 pass=1
+TEETER_LEDGER hz=360 loaded_fixture=1 friction=90 floor_J=0.8004770951 tolerance_J=12.80294751 pass=1
+TEETER_REFINEMENT loaded_fixture=1 friction=90 pass=1
+TEETER_BINDING hz=90 loaded_fixture=1 friction=120 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.4636366665 contact_angle=-0.4687379599 sample_speed=0.4564014287 sample_time=1.839682536 impact=0.4636366665 predicted=0.4638551321 rest=-0.4687250853 rest_speed=5.889492504e-15 stop_overlap_m=0.006184325799 released_J=640.6234976 bearing_J=68.24855536 residual_J=2.51690975 signed_residual_J=-2.51690975,0 contact_time=1.988888889
+TEETER_BINDING hz=360 loaded_fixture=1 friction=120 mass=700.0000075 com=-0.7028571367,-0.4594285786 inertia=2357.436479 damping_zero=1 peak=0.4637096524 contact_angle=-0.4668018818 sample_speed=0.4567494868 sample_time=1.843869948 impact=0.4637096524 predicted=0.4637418351 rest=-0.4673420191 rest_speed=2.695453226e-17 stop_overlap_m=-1.823680105e-06 released_J=640.1115963 bearing_J=68.01622599 residual_J=0.7012513828 signed_residual_J=-0.7012513828,0.07473107721 contact_time=1.988888889
+TEETER_LEDGER hz=90 loaded_fixture=1 friction=120 floor_J=2.829789563 tolerance_J=12.81246995 pass=1
+TEETER_LEDGER hz=360 loaded_fixture=1 friction=120 floor_J=0.8004770951 tolerance_J=12.80223193 pass=1
+TEETER_REFINEMENT loaded_fixture=1 friction=120 pass=1
+PASS teeter production assembly binding, declared bearing loss and 90/360 Hz refinement
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.braced_bay" classname="scraperx_sim.braced_bay" time="1.42999" status="run">
+		<properties/>
+		<system-out>BRACE_FOOT position=28.1845,77.9,-130.936 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.9,-144.198 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=30.001,82.9,-143.974 velocity=5.5,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.6285,82.895,-144 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+STANDING_BLOCKED position=34,84.8839,-138.711 velocity=8.0272e-05,2.51986e-09,6.7755e-09 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+CROUCHED_PASS position=34,85.4538,-136.797 velocity=8.01086e-05,0.210893,0.463965 grounded=1 support=1900 balance=1 crouch=1 deaths=0
+UPPER_JUNCTION position=34,87.8989,-131.443 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+MANTLE_READY position=26.65,87.9,-132 velocity=0,0,-0.000640869 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+TOWER_MANTLE_START gravity=1 hands=2 state=4
+TOWER_MANTLE_TRANSFER seconds=1.48889 supported=1 gravity=1
+RING_88 position=24.8042,88.9,-132 velocity=0,0,0 grounded=1 support=11 balance=0 crouch=0 deaths=0
+UPPER_CHECKPOINT_RETRY position=25.8536,88.9,-127.783 velocity=0,0,0 grounded=1 support=11 balance=0 crouch=0 deaths=1
+BRACE_FOOT position=28.1845,77.9,-130.936 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.9,-144.198 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=29.8528,82.9,-144.2 velocity=5.5,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.6221,82.895,-144.2 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+BRACE_FOOT position=28.1845,77.9,-130.936 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.9,-144.198 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=30.3604,82.9,-143.751 velocity=5.5,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.645,82.895,-143.799 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+BRACE_FOOT position=28.1845,77.9,-130.936 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.9,-144.198 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_WITHOUT_JUMP position=32.4552,81.1492,-144.008 velocity=-0.557138,2.61066,-0.0135857 grounded=0 support=0 balance=0 crouch=0 deaths=0
+GAP_RECOVERY position=31.8195,77.88,-144.024 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+DELIBERATE_SIDE_EXIT position=32.3186,77.8958,-136.853 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+PASS scraperx_sim AS-021 braced bay parkour to +88, gap, crouch and recovery
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.north_service_frame" classname="scraperx_sim.north_service_frame" time="1.35112" status="run">
+		<properties/>
+		<system-out>FIRST_REST 16,94.9188,-180.462
+SECOND_REST 10.0355,98.4188,-178.638
+PRE_CATCH pos=14.38,105.469,-180.596 vel=0,-2.893,0 grounded=0 support=0 deaths=1 impact=0
+FIRST_HANG pos=14.38,105.437,-180.596 vel=0,-2.84144,0 grounded=0 support=0 deaths=1 impact=0
+HANG_START 14.38,105.437,-180.596
+RELEASE_RESULT pos=14.38,104.38,-180.596 vel=0,0,0 grounded=1 support=1901 deaths=1 impact=5.34845
+PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=90
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.north_service_frame_60hz" classname="scraperx_sim.north_service_frame_60hz" time="1.34645" status="run">
+		<properties/>
+		<system-out>FIRST_REST 16,94.9188,-180.462
+SECOND_REST 10.0323,98.4188,-178.638
+PRE_CATCH pos=14.38,105.469,-180.598 vel=0,-2.893,0 grounded=0 support=0 deaths=1 impact=0
+FIRST_HANG pos=14.38,105.437,-180.598 vel=0,-2.84144,0 grounded=0 support=0 deaths=1 impact=0
+HANG_START 14.38,105.437,-180.598
+RELEASE_RESULT pos=14.38,104.38,-180.598 vel=0,0,0 grounded=1 support=1901 deaths=1 impact=5.34845
+PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=60
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.north_service_frame_360hz" classname="scraperx_sim.north_service_frame_360hz" time="1.34268" status="run">
+		<properties/>
+		<system-out>FIRST_REST 16,94.9188,-180.462
+SECOND_REST 10.0355,98.4188,-178.638
+PRE_CATCH pos=14.38,105.469,-180.596 vel=0,-2.893,0 grounded=0 support=0 deaths=1 impact=0
+FIRST_HANG pos=14.38,105.437,-180.596 vel=0,-2.84144,0 grounded=0 support=0 deaths=1 impact=0
+HANG_START 14.38,105.437,-180.596
+RELEASE_RESULT pos=14.38,104.38,-180.596 vel=0,0,0 grounded=1 support=1901 deaths=1 impact=5.34845
+PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=360
+</system-out>
+	</testcase>
+</testsuite>

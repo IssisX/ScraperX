@@ -1,0 +1,23 @@
+{
+  "branch": "ChatGPT",
+  "base_revision": "2bf026d5997b8e1ea0677b8a2cd7d6355a9d1fd4",
+  "source_hashes": {
+    "godot/presentation/main.gd": "db2f765dfd76a5ca9ed31f165758e0a14491c59f3d0edb0305948e92a8eca286",
+    "godot/presentation/audio/audio_director.gd": "7c4e5896d55569369170de64d74ce0bf0c7145df3eab3ccec833beb9e3211a98",
+    "godot/presentation/landing_camera_response.gd": "9784e69333ef421b94429c8e87b1ca0ff100cd68b1ac63ed3ab9fb022209fd28",
+    "godot/tests/landing_camera_test.gd": "d7f76272990e60fa847c3a8174e1ae9db66bad285d9c0a4a9464e610bd2a8005"
+  },
+  "check_command": "Godot_v4.7-stable_linux.arm64 --headless --path <private-stage>/godot --script res://tests/landing_camera_test.gd -- --landing-camera-unit-only",
+  "exit": 0,
+  "result": "SCRAPERX_LANDING_CAMERA_UNIT PASS checks=16",
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/cart-godot-y76mhk14/foot-transfer-feedback-unit.log",
+  "log_sha256": "d64ce434708ea872c37dbddce2a8871246cdf28b6aa1d330f361bf809ce9dadf",
+  "scope": "scripted consumer receipts; native completion emission, real rendered motion, listening and device vibration remain pending",
+  "bridge_rebuilt": false,
+  "route_replayed": false,
+  "limits": {
+    "haptic": "existing footplant18ms/0.25 base, strength.25..1 from measured peak/2400N",
+    "audio": "existing receiving-surface pooled Effects step, -13.5..-9dB after strength clamp",
+    "lens": "separate critically damped offset, height<=.01m/pitch<=.0025rad"
+  }
+}

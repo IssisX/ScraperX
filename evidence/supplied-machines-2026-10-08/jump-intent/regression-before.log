@@ -1,0 +1,3 @@
+INFO Jump expiry press_tick=222 contact_after_ticks=59
+INFO Jump buffer press_tick=277 contact_tick=281 after18_vy=0 grounded=1
+FAIL parkour flow: one short prelanding Jump must survive until real contact and produce an ordinary takeoff

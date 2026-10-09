@@ -36,6 +36,7 @@ const SCENARIOS := {
 	"touch_pitman_lift": 8,
 	"touch_gravity_reclaim": 8,
 	"touch_slab_haul_cart": 8,
+	"touch_taper_inspection_route": 8,
 	"touch_causal_facade": 8,
 	"touch_north_grip_diagnostic": 8,
 	"touch_suspended_ladder": 8,
@@ -50,6 +51,7 @@ const SCENARIOS := {
 	"touch_stair": 8,
 	"touch_upper": 8,
 	"touch_teeter": 8,
+	"touch_ballast_mantle_feedback": 8,
 	"touch_braced_bay": 8,
 	"touch_north_frame": 8,
 	"touch_jump": 8,
@@ -97,7 +99,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_taper_inspection_route", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_ballast_mantle_feedback"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -168,6 +170,8 @@ func _run() -> void:
 			ok = await _touch_gravity_reclaim()
 		"touch_slab_haul_cart":
 			ok = await _touch_slab_haul_cart()
+		"touch_taper_inspection_route":
+			ok = await _touch_taper_inspection_route()
 		"touch_north_grip_diagnostic":
 			ok = await _touch_north_grip_diagnostic()
 		"keyboard_slingshot":
@@ -192,6 +196,8 @@ func _run() -> void:
 			ok = await _touch_upper()
 		"touch_teeter":
 			ok = await _touch_teeter()
+		"touch_ballast_mantle_feedback":
+			ok = await _touch_ballast_mantle_feedback()
 		"touch_braced_bay":
 			ok = await _touch_braced_bay()
 		"touch_north_frame":
@@ -964,6 +970,130 @@ func _touch_upper() -> bool:
 		return _fail("unsupported +66 m arrival %s" % _position())
 	_detail = "grade_to_66m=1 counterweight_lift=1 parkour=1 normal_touch=1 deaths=0 arrival_y=%.3f" % _position().y
 	return true
+
+# Focused normal-world mantle: supported entry staging is the only relocation.
+# Movement and Action then use the same viewport touch path as ordinary play.
+func _touch_ballast_mantle_feedback() -> bool:
+	var device := InputRouter.Device.TOUCH
+	if not _campaign_world_intact() or not _native().debug_restart_at(Vector3(25.3, 66.9, -139.0)):
+		return _fail("ballast mantle supported entry staging rejected")
+	await _seconds(0.5)
+	if not _ballast_mantle_footing(11):
+		return _fail("ballast mantle entry " + _ballast_mantle_state())
+	for point in [Vector2(27.2, -139.0), Vector2(27.8, -138.58),
+			Vector2(30.5, -138.58), Vector2(29.7, -139.45)]:
+		if not await _walk_to(device, point, 0.12, 15.0, true) or not _ballast_mantle_footing(2800):
+			return _fail("ballast mantle approach target=%s %s" % [point, _ballast_mantle_state()])
+	_move(device, 0.0)
+	await _face(Vector2(-1.0, 0.0))
+	await _seconds(0.1)
+	if not await _offered(&"climb", "CLIMB") or int(_native().get_ledge_entity_id()) != 2801:
+		return _fail("ballast roof mantle not offered " + _ballast_mantle_state())
+	var before: Dictionary = _native().get_landing_state()
+	for field in ["foot_transfer_count", "foot_transfer_tick", "foot_transfer_support_entity_id",
+			"foot_transfer_peak_hand_load_n", "player_gravity_factor", "traversal_hand_constraint_count",
+			"traversal_command_work_bound_j"]:
+		if not before.has(field):
+			return _fail("ballast mantle native readback missing " + field)
+	var count := int(before["foot_transfer_count"])
+	var start_tick := int(_native().get_tick_index())
+	var accepted := int(_native().get_accepted_traversal_count())
+	var plants := int(_main._audio.foot_plants)
+	var command := float(before["traversal_command_work_bound_j"])
+	var positive := float(before["hand_actuator_positive_work_j"])
+	var last_tick := start_tick
+	var loaded := false
+	var both_hands := false
+	var completed := false
+	var peak_load := 0.0
+	_act(device)
+	var waited := 0.0
+	while waited < 2.5:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+		var state: Dictionary = _native().get_landing_state()
+		var tick := int(_native().get_tick_index())
+		var left: Vector3 = state["left_hand_force_n"]
+		var right: Vector3 = state["right_hand_force_n"]
+		var new_command := float(state["traversal_command_work_bound_j"])
+		var new_positive := float(state["hand_actuator_positive_work_j"])
+		var budget := 6600.0 * float(tick - last_tick) / 90.0 + 0.001
+		if int(_native().get_death_count()) != 0 or float(state["player_gravity_factor"]) != 1.0 \
+				or not left.is_finite() or not right.is_finite() or left.length() > 1501.0 or right.length() > 1501.0 \
+				or not is_finite(new_command) or not is_finite(new_positive) \
+				or new_command - command < -0.000001 or new_positive - positive < -0.000001 \
+				or new_command - command > budget or new_positive - positive > budget:
+			return _fail("ballast mantle force/work/gravity " + _ballast_mantle_state())
+		command = new_command
+		positive = new_positive
+		last_tick = tick
+		peak_load = maxf(peak_load, (left + right).length())
+		loaded = loaded or left.length() > 0.01 or right.length() > 0.01
+		if int(state["foot_transfer_count"]) == count + 1:
+			completed = _ballast_mantle_footing(2801)
+			break
+		if int(_native().get_traversal_state()) != _main.TRAVERSAL_CLIMBING \
+				or int(_native().get_traversal_support_entity_id()) != 2801 \
+				or int(state["traversal_hand_constraint_count"]) != 2:
+			return _fail("ballast mantle lost native two-hand transfer " + _ballast_mantle_state())
+		both_hands = true
+	var receipt: Dictionary = _native().get_landing_state()
+	var receipt_tick := int(receipt["foot_transfer_tick"])
+	var receipt_peak := float(receipt["foot_transfer_peak_hand_load_n"])
+	if not completed or not loaded or not both_hands \
+			or int(_native().get_accepted_traversal_count()) != accepted + 1 \
+			or command <= float(before["traversal_command_work_bound_j"]) \
+			or positive <= float(before["hand_actuator_positive_work_j"]) \
+			or receipt_tick <= start_tick or receipt_tick > last_tick or receipt_tick - start_tick > 153 \
+			or int(receipt["foot_transfer_support_entity_id"]) != 2801 \
+			or not is_finite(receipt_peak) or receipt_peak <= 0.0 or receipt_peak > 3001.0:
+		return _fail("ballast mantle completion " + _ballast_mantle_state())
+	await _frames(2)
+	if int(_main._audio.foot_plants) != plants + 1 or int(_main._fb_foot_transfer_count) != count + 1 \
+			or int(_main._fb_foot_transfer_tick) != receipt_tick:
+		return _fail("ballast mantle receipt consumers plants=%d expected=%d %s" % [
+			_main._audio.foot_plants, plants + 1, _ballast_mantle_state()])
+	waited = 0.0
+	while waited < 3.0:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+		if not _ballast_mantle_footing(2801, false) or int(_native().get_landing_state()["foot_transfer_count"]) != count + 1 \
+				or int(_main._audio.foot_plants) != plants + 1:
+			return _fail("ballast mantle stable roof/replay " + _ballast_mantle_state())
+	if not _ballast_mantle_footing(2801):
+		return _fail("ballast mantle roof end slip " + _ballast_mantle_state())
+	var roof_support_velocity: Vector3 = _native().get_support_point_linear_velocity()
+	var roof_relative_velocity: Vector3 = _velocity() - roof_support_velocity
+	for point in [Vector2(27.8, -139.45), Vector2(25.3, -139.0)]:
+		var support := 2800 if point.x > 27.0 else 11
+		if not await _walk_to(device, point, 0.12, 15.0, true) or not _ballast_mantle_footing(support):
+			return _fail("ballast mantle return target=%s %s" % [point, _ballast_mantle_state()])
+	if not _campaign_world_intact() or int(_native().get_landing_state()["foot_transfer_count"]) != count + 1 \
+			or int(_main._audio.foot_plants) != plants + 1 or int(_main._fb_foot_transfer_count) != count + 1:
+		return _fail("ballast mantle return receipt/death " + _ballast_mantle_state())
+	_detail = "staging=supported_teeter_entry shipping_touch=1 real_hands=2 gravity=1 command_bound_j=%.3f positive_work_j=%.3f sampled_peak_n=%.3f receipt_peak_n=%.3f foot_transfer_tick=%d foot_plants=1 stable_roof_seconds=3 roof_support_velocity=%s roof_relative_velocity=%s return_beam=1 return_tower=1 deaths=0" % [
+		command - float(before["traversal_command_work_bound_j"]), positive - float(before["hand_actuator_positive_work_j"]),
+		peak_load, receipt_peak, receipt_tick, roof_support_velocity, roof_relative_velocity]
+	return true
+
+
+func _ballast_mantle_footing(support: int, require_low_slip: bool = true) -> bool:
+	var state: Dictionary = _native().get_landing_state()
+	var slip: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
+	return bool(_native().is_player_grounded()) and int(_native().get_support_entity_id()) == support \
+		and int(_native().get_traversal_state()) == 0 and int(_native().get_death_count()) == 0 \
+		and int(state.get("traversal_hand_constraint_count", -1)) == 0 \
+		and float(state.get("player_gravity_factor", -1.0)) == 1.0 \
+		and (not require_low_slip or Vector2(slip.x, slip.z).length() < 0.2)
+
+
+func _ballast_mantle_state() -> String:
+	return "tick=%d at=%s velocity=%s support_velocity=%s relative_velocity=%s grounded=%s support=%d traversal=%d traversal_support=%d accepted=%d receipt=%s" % [
+		_native().get_tick_index(), _position(), _velocity(), _native().get_support_point_linear_velocity(),
+		_velocity() - _native().get_support_point_linear_velocity(), _native().is_player_grounded(),
+		_native().get_support_entity_id(), _native().get_traversal_state(),
+		_native().get_traversal_support_entity_id(), _native().get_accepted_traversal_count(), _native().get_landing_state()]
+
 
 func _touch_teeter() -> bool:
 	if not await _touch_upper():
@@ -2446,6 +2576,162 @@ func _wait_cart_footing(deck: int, surface: float, timeout: float) -> bool:
 	return false
 
 
+func _touch_taper_inspection_route() -> bool:
+	var device := InputRouter.Device.TOUCH
+	# The sole staging operation is the measured, supported cart Tower exit.
+	# Everything after it uses viewport touch movement, Jump and crouch.
+	if not _campaign_world_intact() or not _native().debug_restart_at(Vector3(-25.4203, 352.9, -141.599)):
+		return _fail("taper supported cart-exit staging rejected")
+	_move(device, 0.0)
+	await _seconds(2.0)
+	if not await _taper_stable(11, 352.9) or int(_native().get_entity_body_count(1932)) != 1 \
+			or int(_native().get_entity_body_count(1933)) != 1:
+		return _fail("taper requires normal-world cart footing and actual inspection/recovery bodies")
+	var lower_work := float(_native().get_landing_state()["landing_recovery_work_j"])
+	for point in [Vector2(-24.12, -138.6), Vector2(-24.0, -139.5)]:
+		if not await _walk_to(device, point, 0.08, 12.0, true) or not _taper_ordinary():
+			return _fail("taper lower toe approach target=%s at=%s" % [point, _position()])
+	if not bool(_native().is_player_grounded()) or _position().y >= 353.3:
+		return _fail("taper lower girder toe has no actual352 footing at=%s" % _position())
+	if not await _walk_to(device, Vector2(-24.0, -164.0), 0.08, 45.0, true) \
+			or not await _taper_stable(1932, 363.9) \
+			or float(_native().get_landing_state()["landing_recovery_work_j"]) <= lower_work:
+		return _fail("taper lower girder did not earn supported landingA363 at=%s" % _position())
+	print("SCRAPERX_TAPER landing_a at=%s support=%d" % [_position(), _native().get_support_entity_id()])
+	if not await _walk_to(device, Vector2(-25.9, -164.0), 0.08, 10.0, true):
+		return _fail("taper A run-up unavailable")
+	await _face(Vector2(1, 0))
+	_move(device, 1.0)
+	var run_up := await _wait_until(func() -> bool: return _position().x >= -23.95, 2.0)
+	var launch := _position()
+	var launch_work := float(_native().get_landing_state()["landing_jump_work_j"])
+	if not run_up or not bool(_native().is_player_grounded()) or int(_native().get_support_entity_id()) != 1932 \
+			or launch.x < -24.02 or launch.x >= -23.7 or _velocity().x <= 2.0 \
+			or not _main._touch.is_button_shown(&"jump"):
+		_move(device, 0.0)
+		return _fail("taper gap Jump lacks supported running stance at=%s velocity=%s" % [launch, _velocity()])
+	var gap := {"running": true, "rise": false, "middle": false, "fall": false, "invalid": false, "peak": launch.y}
+	_taper_sample_flight(gap)
+	_tap(1, _center(&"jump"))
+	var crossed := await _walk_to(device, Vector2(-20.15, -164.0), 0.08, 8.0, true)
+	gap["running"] = false
+	var jump_work := float(_native().get_landing_state()["landing_jump_work_j"]) - launch_work
+	if not crossed or not bool(gap["rise"]) or not bool(gap["middle"]) or bool(gap["invalid"]) \
+			or float(gap["peak"]) <= launch.y + 0.8 or jump_work <= 0.0 or jump_work > 1285.725 \
+			or not await _taper_stable(1932, 363.9):
+		return _fail("taper real2m Jump did not reach stable landingB at=%s flight=%s work_j=%.3f" % [_position(), gap, jump_work])
+	print("SCRAPERX_TAPER gap_b at=%s peak=%.3f jump_work_j=%.3f" % [_position(), gap["peak"], jump_work])
+	# Walk back into the open gap without Jump. This connected middle miss
+	# must be caught by the real apron, then use the longer crouched bypass.
+	var before_miss := _position()
+	var before_landing: Dictionary = _native().get_landing_state()
+	var miss := {"running": true, "rise": false, "middle": false, "fall": false, "invalid": false, "peak": before_miss.y}
+	_taper_sample_flight(miss)
+	var caught := await _walk_to(device, Vector2(-22.4, -164.0), 0.08, 12.0, true)
+	miss["running"] = false
+	var landing: Dictionary = _native().get_landing_state()
+	if not caught or not bool(miss["fall"]) or bool(miss["invalid"]) \
+			or int(landing["landing_count"]) <= int(before_landing["landing_count"]) \
+			or int(landing["landing_support_entity_id"]) != 1933 \
+			or float(landing["landing_jump_work_j"]) != float(before_landing["landing_jump_work_j"]) \
+			or _position().y >= before_miss.y - 2.0 or not await _taper_stable(1933, 361.4):
+		return _fail("taper walking miss lacks actual360.5 apron recovery at=%s flight=%s landing=%s" % [_position(), miss, landing])
+	print("SCRAPERX_TAPER middle_apron at=%s support=%d" % [_position(), _native().get_support_entity_id()])
+	for point in [Vector2(-22.4, -157.7), Vector2(-19.55, -157.7), Vector2(-19.55, -157.55)]:
+		if not await _walk_to(device, point, 0.08, 15.0, true) or not _taper_ordinary():
+			return _fail("taper service toe approach target=%s at=%s" % [point, _position()])
+	var stood_through := await _walk_to(device, Vector2(-19.55, -160.2), 0.08, 3.0, true)
+	if stood_through or not _taper_ordinary() or not bool(_native().is_player_grounded()) \
+			or bool(_native().is_player_crouched()) or _position().z <= -159.5 or _position().z >= -157.6:
+		return _fail("taper real bearing header did not block standing at=%s" % _position())
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_crouched()), 0.4):
+		return _fail("taper touch crouch input did not reach native posture")
+	# Hold deliberate forward effort through the loaded incline. Proportional
+	# easing far from the target supplies too little uphill crouched effort;
+	# the player can hold the ordinary stick, then brake beyond the header.
+	await _face(Vector2(0, -1))
+	_move(device, 1.0)
+	var cleared_header := await _wait_until(func() -> bool: return _position().z < -160.3, 6.0)
+	_move(device, 0.0)
+	if not cleared_header or not await _walk_to(device, Vector2(-19.55, -160.2), 0.08, 12.0, true) \
+			or not bool(_native().is_player_crouched()) or not bool(_native().is_player_grounded()) \
+			or int(_native().get_support_entity_id()) != 1932 or not _taper_ordinary():
+		return _fail("taper touch crouch failed actual inclined header passage at=%s" % _position())
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool: return not bool(_native().is_player_crouched()), 0.4) \
+			or _position().z >= -159.8:
+		return _fail("taper touch Stand lacks clearance beyond real header at=%s" % _position())
+	if not await _walk_to(device, Vector2(-19.55, -164.0), 0.08, 15.0, true) \
+			or not await _taper_stable(1932, 363.9):
+		return _fail("taper service bypass did not rejoin supported landingB at=%s" % _position())
+	print("SCRAPERX_TAPER service_rejoin at=%s support=%d" % [_position(), _native().get_support_entity_id()])
+	if not await _walk_to(device, Vector2(-20.35, -164.0), 0.08, 10.0, true) \
+			or not await _walk_to(device, Vector2(-20.35, -139.05), 0.08, 45.0, true) \
+			or not await _taper_stable(1932, 374.9):
+		return _fail("taper upper girder did not reach actual turning platform374 at=%s" % _position())
+	for point in [Vector2(-20.35, -139.5), Vector2(-22.5, -139.5)]:
+		if not await _walk_to(device, point, 0.08, 15.0, true):
+			return _fail("taper final return beam approach target=%s at=%s" % [point, _position()])
+	if not await _taper_stable(51, 375.15):
+		return _fail("taper return did not step onto existing WorldSolid51 floor374.25 at=%s" % _position())
+	var exit := _position()
+	if not await _walk_to(device, Vector2(-22.5, -143.0), 0.08, 15.0, true) \
+			or not await _taper_stable(51, 375.15) or _position().distance_to(exit) <= 3.0 \
+			or _main._router.device != InputRouter.Device.TOUCH or not _campaign_world_intact():
+		return _fail("taper existing upper floor lacks stable ordinary onward walking at=%s" % _position())
+	await _pose("taper_existing_floor374_25")
+	_detail = "staging=supported_cart_exit352 shipping_touch=1 lower_girder=1 ordinary2m_gap_jump=1 middle_miss_apron360_5=1 standing_header_blocked=1 crouched_service_bypass=1 upper_girder=1 existing_floor374_25=1 onward_m=%.3f support=51 deaths=0 gravity=1 upper_miss=native_only jump_work_j=%.3f" % [_position().distance_to(exit), jump_work]
+	return true
+
+
+func _taper_ordinary() -> bool:
+	var state: Dictionary = _native().get_landing_state()
+	return int(_native().get_death_count()) == 0 and int(_native().get_traversal_state()) == 0 \
+		and int(_native().get_accepted_traversal_count()) == 0 and not bool(_native().is_parachute_deployed()) \
+		and not bool(_native().is_player_sprinting()) and _position().is_finite() and _velocity().is_finite() \
+		and float(state.get("player_gravity_factor", -1.0)) == 1.0 \
+		and int(state.get("traversal_hand_constraint_count", -1)) == 0 \
+		and is_finite(float(state["landing_recovery_work_j"])) and is_finite(float(state["landing_jump_work_j"]))
+
+
+func _taper_stable(support: int, standing_y: float) -> bool:
+	_move(InputRouter.Device.TOUCH, 0.0)
+	var footing := func() -> bool:
+		return _taper_ordinary() and bool(_native().is_player_grounded()) \
+			and int(_native().get_support_entity_id()) == support and not bool(_native().is_player_crouched()) \
+			and absf(_position().y - standing_y) < 0.12 and absf(_velocity().y) < 0.12 \
+			and Vector2(_velocity().x, _velocity().z).length() < 0.18
+	if not await _wait_until(footing, 3.0):
+		return false
+	var start := int(_native().get_tick_index())
+	while int(_native().get_tick_index()) - start < 90:
+		await get_tree().process_frame
+		if not footing.call():
+			return false
+	return true
+
+
+# Runs beside the actual touch walk helper, reading native flight each frame.
+func _taper_sample_flight(watch: Dictionary) -> void:
+	var previous_airborne := false
+	var previous_vy := _velocity().y
+	while bool(watch["running"]):
+		var at := _position()
+		var velocity := _velocity()
+		var airborne := not bool(_native().is_player_grounded()) and int(_native().get_support_entity_id()) == 0
+		watch["invalid"] = bool(watch["invalid"]) or not _taper_ordinary()
+		watch["peak"] = maxf(float(watch["peak"]), at.y)
+		watch["rise"] = bool(watch["rise"]) or (airborne and velocity.y > 0.5)
+		watch["fall"] = bool(watch["fall"]) or (airborne and velocity.y < -3.0)
+		if airborne and previous_airborne and at.x > -23.0 and at.x < -21.8 and at.y > 364.1:
+			watch["middle"] = true
+			watch["invalid"] = bool(watch["invalid"]) or velocity.y > previous_vy + 0.01
+		previous_airborne = airborne
+		previous_vy = velocity.y
+		await get_tree().process_frame
+
+
 func _touch_gravity_reclaim() -> bool:
 	var device := InputRouter.Device.TOUCH
 	if not _native().debug_restart_at(Vector3(-24.7, 308.9, -142.65)):
@@ -2958,11 +3244,12 @@ func _ground_foundation() -> bool:
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
 	# Normal-world inventory: original/service lift, six supplied machines,
-	# reclaim wheel/material, then slab-haul cart. Fixture counts are separate.
+	# reclaim wheel/material, slab-haul cart and two static taper bodies.
+	# Fixture counts are separate.
 	var moving_count := int(_native().get_moving_body_count())
 	var kit_count := int(_native().get_kit_body_count())
 	var cable_count := int(_native().get_kit_cable_count())
-	if moving_count != 27 + 9 + 17 + 103 + 8 or kit_count != 38 + 12 + 39 + 109 + 14 or cable_count != 3 + 3 + 1:
+	if moving_count != 27 + 9 + 17 + 103 + 8 or kit_count != 38 + 12 + 39 + 109 + 14 + 2 or cable_count != 3 + 3 + 1:
 		return _fail("default inventory differs: moving=%d kit=%d cables=%d" % [moving_count, kit_count, cable_count])
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
@@ -3929,6 +4216,13 @@ func _walk_to(device: int, target: Vector2, tolerance: float, timeout: float = 6
 			# stall on its rounded contact. Bound accumulated effort near the
 			# target, and brake actual support-relative velocity. All motion
 			# still comes through the device; arrival checks remain unchanged.
+			# Discard accumulated effort after crossing a target axis. Retaining
+			# it steered past the service toe even while countersteering was
+			# required. This is device-input control, never a physics override.
+			if accumulated.x * to.x < 0.0:
+				accumulated.x = 0.0
+			if accumulated.y * to.y < 0.0:
+				accumulated.y = 0.0
 			if to.length() > 0.75:
 				accumulated = Vector2.ZERO
 			elif to.length() > tolerance:

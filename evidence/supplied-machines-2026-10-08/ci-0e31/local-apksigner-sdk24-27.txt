@@ -1,0 +1,18 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: C=US, O=ScraperX, CN=ScraperX Development APK Dashboard
+Signer #1 certificate SHA-256 digest: 91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a
+Signer #1 certificate SHA-1 digest: 3200064ee762b39edfb2cfa0c8139f7074a9e205
+Signer #1 certificate MD5 digest: 50dc9f12d84e95184243808ebbf0fba2
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 3072
+Signer #1 public key SHA-256 digest: d01c0e00ffa4d068f525ee4b4746c9b4da0b39afe9c692bd2bf4dffbdf3c6341
+Signer #1 public key SHA-1 digest: 11ca0568dc920e2dc32938fcd5457c33458fa8c0
+Signer #1 public key MD5 digest: 8e7df44d8cd32f379eea90c9737487d8
+WARNING: APK Signature Scheme v2 signer #1: APK Signature Scheme v2 signer: 0 references unknown APK signature scheme ID: 3

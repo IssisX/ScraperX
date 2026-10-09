@@ -1,0 +1,11 @@
+CART_EXIT352 tick=270 P=-25.4203,352.9,-141.599 V=0,0,0 support=11 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=0 deaths=0 landings=1 impact=0.02725 work=0 jump_work=0
+LOWER_GIRDER_TOE tick=524 P=-24.0029,352.915,-139.453 V=0.0457361,0.0474692,-0.101411 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=1 impact=0.02725 work=1447.09 jump_work=0
+LANDING_A363 tick=1321 P=-24,363.9,-164.039 V=-1.1873e-06,0,-0.000372052 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=6 impact=2.66288 work=11022.7 jump_work=81.7783
+MIDDLE_MISS_REAL_APRON360_5 tick=1651 P=-22.3982,361.4,-163.998 V=1.81662e-07,0,-1.47712e-08 support=1933 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=7 impact=6.99429 work=11488.5 jump_work=81.7783
+SERVICE_HEADER_STANDING_BLOCKED tick=2301 P=-19.5511,361.851,-158.417 V=0.006314,1.90913e-08,-4.24933e-08 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=9 impact=0.214857 work=14285.3 jump_work=168.408
+SERVICE_HEADER_CROUCHED_PASS tick=2680 P=-19.55,362.325,-160.12 V=-0.000196008,0.00916741,-0.0201683 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=1 balance=1 deaths=0 landings=9 impact=0.214857 work=14999.6 jump_work=168.408
+SERVICE_REJOIN_LANDING_B tick=3034 P=-19.55,363.9,-164.039 V=-3.28998e-06,0,-0.000382333 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=11 impact=2.54017 work=16676 jump_work=265.873
+UPPER_TURN374 tick=3876 P=-20.35,374.9,-139.011 V=6.44568e-06,0,0.000379846 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=15 impact=2.43688 work=26391.4 jump_work=355.373
+EXISTING_FLOOR374_25 tick=4155 P=-22.4986,375.15,-139.5 V=0,0,0 support=51 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=0 deaths=0 landings=17 impact=1.95031 work=26830.9 jump_work=585.235
+ONWARD_UPPER_FLOOR tick=4434 P=-22.4999,375.15,-143.006 V=0,0,0 support=51 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=0 deaths=0 landings=17 impact=1.95031 work=28231.9 jump_work=585.235
+PASS TAPER_INSPECTION middle_miss_apron_crouched_service_rejoin

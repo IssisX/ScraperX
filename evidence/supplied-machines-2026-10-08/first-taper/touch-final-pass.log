@@ -1,0 +1,14 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x432 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=633 driver=Dummy
+SCRAPERX_TAPER landing_a at=(-23.9999, 363.8993, -164.058) support=1932
+SCRAPERX_TAPER gap_b at=(-20.08704, 363.9, -163.999) peak=365.433 jump_work_j=1285.622
+SCRAPERX_TAPER middle_apron at=(-22.46083, 361.4, -163.999) support=1933
+SCRAPERX_TAPER service_rejoin at=(-19.54996, 363.8992, -164.0587) support=1932
+SCRAPERX_UITEST_POSE taper_existing_floor374_25 tick=6580 position=(-22.49993, 375.15, -143.017) elapsed_ms=89454
+SCRAPERX_UITEST PASS touch_taper_inspection_route staging=supported_cart_exit352 shipping_touch=1 lower_girder=1 ordinary2m_gap_jump=1 middle_miss_apron360_5=1 standing_header_blocked=1 crouched_service_bypass=1 upper_girder=1 existing_floor374_25=1 onward_m=3.517 support=51 deaths=0 gravity=1 upper_miss=native_only jump_work_j=1285.622

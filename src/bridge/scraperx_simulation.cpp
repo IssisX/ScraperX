@@ -667,10 +667,17 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     const auto &s = simulation_->snapshot();
     godot::Dictionary out;
     out["player_swinging"] = s.player_swinging;
+    out["player_gravity_factor"] = s.player_gravity_factor;
+    out["traversal_hand_constraint_count"] = s.traversal_hand_constraint_count;
+    out["traversal_command_work_bound_j"] = s.traversal_command_work_bound_j;
     out["left_hand_force_n"] = to_godot(s.traversal_left_hand_force);
     out["right_hand_force_n"] = to_godot(s.traversal_right_hand_force);
     out["hand_actuator_positive_work_j"] = s.traversal_actuator_positive_work_j;
     out["hand_actuator_absorbed_work_j"] = s.traversal_actuator_absorbed_work_j;
+    out["foot_transfer_count"] = s.foot_transfer_count;
+    out["foot_transfer_tick"] = s.foot_transfer_tick;
+    out["foot_transfer_support_entity_id"] = s.foot_transfer_support_entity_id;
+    out["foot_transfer_peak_hand_load_n"] = s.foot_transfer_peak_hand_load_n;
     out["landing_response"] = s.landing_response;
     out["landing_recovery_progress"] = s.landing_recovery_progress;
     out["landing_count"] = s.landing_count;

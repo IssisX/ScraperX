@@ -1,5 +1,6 @@
 #include "sim/parkour_route.hpp"
 
+#include <cmath>
 #include <vector>
 
 namespace scraperx::sim {
@@ -10,6 +11,17 @@ using kit::Part;
 Part span(JPH::Vec3 low, JPH::Vec3 high, Material material) {
     return {(high - low) * 0.5F, (high + low) * 0.5F,
             JPH::Quat::sIdentity(), material};
+}
+
+// As in braced_bay.cpp, the north-to-south endpoints are the walking top.
+// The rotated 0.46m wide, 0.50m deep box has the same collision/render face.
+Part girder(const JPH::Vec3 north, const JPH::Vec3 south) {
+    const JPH::Vec3 along = south - north;
+    const JPH::Quat rotation = JPH::Quat::sRotation(
+        JPH::Vec3::sAxisX(), -std::atan2(along.GetY(), along.GetZ()));
+    return {{.23F, .25F, .5F * along.Length()},
+            .5F * (north + south) - rotation * JPH::Vec3(0, .25F, 0),
+            rotation, Material::Steel};
 }
 } // namespace
 
@@ -104,6 +116,115 @@ void build_parkour_route(kit::Kit &kit) {
     // only the hanging arm is dynamic. No reset or progress state lives here.
     (void)kit.add_body(kParkourRecoveryEntity, recovery,
         RVec3::sZero(), Quat::sIdentity(), 0.0F, .8F);
+}
+
+void build_taper_inspection_route(kit::Kit &kit) {
+    using namespace JPH;
+    std::vector<Part> structure;
+    const auto frame_span = [&](Vec3 low, Vec3 high, Material material) {
+        structure.push_back(span(low, high, material));
+    };
+    const auto post = [&](float x, float z, float top) {
+        frame_span({x - .18F, 352.0F, z - .18F},
+                   {x + .18F, top, z + .18F}, Material::Steel);
+    };
+
+    // Brace-connection inspection lanes in the first taper. The +363m
+    // landings are authored here; there is no Tower floor at that height.
+    structure.push_back(girder({-24.0F, 363.0F, -163.0F},
+                               {-24.0F, 352.0F, -139.5F}));
+    frame_span({-26.9F, 362.72F, -165.25F},
+               {-23.4F, 363.0F, -162.75F}, Material::Galvanised);
+    frame_span({-21.4F, 362.72F, -165.25F},
+               {-19.0F, 363.0F, -162.75F}, Material::Galvanised);
+    // The exact 2m A-to-B gap remains open at landing height. The lower
+    // service apron is a separate choice, not a standable gap crossmember.
+    structure.push_back(girder({-20.35F, 363.0F, -163.0F},
+                               {-20.35F, 374.0F, -139.5F}));
+    structure.push_back(girder({-19.55F, 363.0F, -163.0F},
+                               {-19.55F, 360.5F, -157.5F}));
+    frame_span({-21.0F, 373.5F, -139.75F},
+               {-19.6F, 374.0F, -138.6F}, Material::Steel);
+    // One 0.25m step joins the real +374.25m WorldSolid51 edge at X=-21.09.
+    // The existing Tower floor remains the exit's sole authority.
+    frame_span({-21.09F, 373.5F, -139.73F},
+               {-19.6F, 374.0F, -139.27F}, Material::Rust);
+
+    // A real bearing header obstructs standing on the service girder;
+    // its minimum chosen headroom is 1.477m for the native crouched body.
+    frame_span({-20.525F, 362.75F, -159.2F},
+               {-18.575F, 363.10F, -158.4F}, Material::Rust);
+    for (const float x : {-20.35F, -18.75F}) {
+        frame_span({x - .175F, 352.0F, -158.975F},
+                   {x + .175F, 362.75F, -158.625F}, Material::Steel);
+    }
+    // Left bearing closes the header-to-main-girder reaction path.
+    frame_span({-20.50F, 363.10F, -158.95F},
+               {-20.20F, 364.45F, -158.65F}, Material::Rust);
+
+    // Separate A/B crossheads and ring-seated posts carry each landing;
+    // none crosses the jump gap. Their posts also carry the apron below.
+    for (const float x : {-25.35F, -23.65F, -21.15F, -19.25F}) {
+        for (const float z : {-164.2F, -163.8F}) post(x, z, 362.72F);
+    }
+    frame_span({-26.9F, 362.36F, -164.38F},
+               {-23.4F, 362.72F, -163.62F}, Material::Steel);
+    frame_span({-21.4F, 362.36F, -164.38F},
+               {-19.0F, 362.72F, -163.62F}, Material::Steel);
+    post(-24.0F, -151.25F, 357.05F);
+    post(-20.35F, -151.25F, 368.0F);
+    post(-19.45F, -138.9F, 373.5F);
+    frame_span({-20.75F, 373.14F, -139.08F},
+               {-19.27F, 373.5F, -138.72F}, Material::Steel);
+
+    // Flush yellow edge splices identify the two jump faces. They are solid
+    // pieces within the slabs, so markings add no invisible walking reach.
+    frame_span({-23.58F, 362.84F, -165.25F},
+               {-23.4F, 363.0F, -162.75F}, Material::Yellow);
+    frame_span({-21.4F, 362.84F, -165.25F},
+               {-21.22F, 363.0F, -162.75F}, Material::Yellow);
+    (void)kit.add_body(kTaperInspectionEntity, structure,
+        RVec3::sZero(), Quat::sIdentity(), 0.0F, .85F);
+
+    std::vector<Part> recovery;
+    const auto recovery_span = [&](Vec3 low, Vec3 high, Material material) {
+        recovery.push_back(span(low, high, material));
+    };
+    const auto recovery_post = [&](float x, float z, float top) {
+        recovery_span({x - .18F, 352.0F, z - .18F},
+                      {x + .18F, top, z + .18F}, Material::Steel);
+    };
+    // Missed gap: the +360.5m apron meets the lower girder at Z=-157.6591
+    // or the service girder's toe at (-19.55,-157.5). Both use real contact.
+    recovery_span({-27.2F, 360.22F, -165.7F},
+                  {-18.8F, 360.5F, -157.4F}, Material::Galvanised);
+    recovery_span({-27.2F, 359.86F, -164.38F},
+                  {-18.8F, 360.22F, -163.62F}, Material::Steel);
+    recovery_span({-24.5F, 366.22F, -150.0F},
+                  {-17.4F, 366.5F, -137.9F}, Material::Galvanised);
+    // The catch deck stops at Z=-150: minimum chosen girder headroom is
+    // 2.033m. The narrower tongue leads back to the same upper girder.
+    recovery_span({-23.8F, 366.22F, -155.9F},
+                  {-22.5F, 366.5F, -150.0F}, Material::Galvanised);
+    recovery_span({-23.8F, 366.22F, -155.63F},
+                  {-20.12F, 366.5F, -155.17F}, Material::Steel);
+    // Keep the catch columns clear of the lower girder's loaded capsule.
+    for (const float x : {-23.2F, -18.0F}) {
+        for (const float z : {-149.6F, -138.8F}) {
+            recovery_post(x, z, 366.22F);
+        }
+    }
+    recovery_post(-23.15F, -155.6F, 366.22F);
+    for (const float z : {-149.6F, -138.8F}) {
+        recovery_span({-24.5F, 365.86F, z - .18F},
+                      {-17.4F, 366.22F, z + .18F}, Material::Steel);
+    }
+    recovery_span({-23.33F, 365.86F, -155.9F},
+                  {-22.97F, 366.22F, -149.6F}, Material::Steel);
+    // The static Tower ring is the declared fixed foundation. These bodies
+    // add no motion, route state, trigger, checkpoint or traversal override.
+    (void)kit.add_body(kTaperRecoveryEntity, recovery,
+        RVec3::sZero(), Quat::sIdentity(), 0.0F, .85F);
 }
 
 } // namespace scraperx::sim

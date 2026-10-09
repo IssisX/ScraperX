@@ -1,0 +1,12 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x432 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=591 driver=Dummy
+SCRAPERX_TAPER landing_a at=(-23.99999, 363.8992, -164.0531) support=1932
+SCRAPERX_TAPER gap_b at=(-20.0962, 363.9, -163.9999) peak=365.433 jump_work_j=1285.622
+SCRAPERX_TAPER middle_apron at=(-22.45094, 361.4, -163.9999) support=1933
+SCRAPERX_UITEST FAIL touch_taper_inspection_route reason=taper service toe approach target=(-19.55, -157.7) at=(-20.03353, 361.4197, -157.8047)

@@ -24,6 +24,7 @@ var _kit_dynamic: Array[bool] = []
 var _kit_cables: Array = []
 var _cart_paint_material: StandardMaterial3D
 var _cart_materials: Dictionary = {}
+var _inspection_materials: Dictionary = {}
 var _water_lift_bucket_water: MeshInstance3D
 
 
@@ -185,11 +186,134 @@ func _cart_part_material(entity: int, part: int, index: int, original: Material)
 	return original
 
 
+func _inspection_tread_height(uv: Vector2) -> float:
+	# A one-metre tile of alternating pressed diagonal ribs, with .25m pitch.
+	# Rounded ends and shoulders give a shallow normal, not geometric relief.
+	var cell := uv * 4.0
+	var u := fposmod(cell.x, 1.0) - 0.5
+	var v := fposmod(cell.y, 1.0) - 0.5
+	var diagonal := 1.0 if (floori(cell.x) + floori(cell.y)) % 2 == 0 else -1.0
+	var along := (u + diagonal * v) * 0.70710678
+	var across := (u - diagonal * v) * 0.70710678
+	return 0.0014 * (1.0 - smoothstep(0.035, 0.065, absf(across))) \
+		* (1.0 - smoothstep(0.20, 0.30, absf(along)))
+
+
+func _inspection_tread_normal() -> ImageTexture:
+	# One deterministic 128px RGBA8 normal texture shared by both fixed bodies.
+	# Mipmaps suppress distant tread shimmer; no relief mesh or height shader.
+	const SIZE := 128
+	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
+	var texel := 1.0 / float(SIZE)
+	for y in SIZE:
+		for x in SIZE:
+			var uv := Vector2(float(x) + 0.5, float(y) + 0.5) * texel
+			var dx := (_inspection_tread_height(uv + Vector2(texel, 0)) \
+				- _inspection_tread_height(uv - Vector2(texel, 0))) / (2.0 * texel)
+			var dy := (_inspection_tread_height(uv + Vector2(0, texel)) \
+				- _inspection_tread_height(uv - Vector2(0, texel))) / (2.0 * texel)
+			var normal := Vector3(-dx, -dy, 1.0).normalized()
+			image.set_pixel(x, y, Color(normal.x * 0.5 + 0.5,
+				normal.y * 0.5 + 0.5, normal.z * 0.5 + 0.5, 1.0))
+	image.generate_mipmaps()
+	return ImageTexture.create_from_image(image)
+
+
+func _build_inspection_materials(palette: Array[Material]) -> void:
+	# Keep the shared steel micro-surface resource, with restrained wear rather
+	# than another noise texture. Cool girders, warm bearings and light footing
+	# separate actual structural functions in this exposed maintenance place.
+	var finishes := {
+		# Weathered coating/oxide supplies diffuse response in Tower shadows;
+		# bare galvanised footing retains its metallic finish below.
+		0: [Color("58656a"), 0.35, 0.80, 0.24],
+		1: [Color("805c43"), 0.12, 0.92, 0.34],
+		5: [Color("9aaba9"), 1.0, 0.64, 0.55],
+	}
+	for index in finishes:
+		var finish: Array = finishes[index]
+		var material := palette[int(index)].duplicate() as StandardMaterial3D
+		material.albedo_color = finish[0]
+		material.metallic = finish[1]
+		material.roughness = finish[2]
+		material.normal_scale = finish[3]
+		material.uv1_scale = Vector3.ONE
+		material.uv1_triplanar_sharpness = 4.0
+		_inspection_materials[index] = material
+	var footing: StandardMaterial3D = _inspection_materials[5]
+	footing.normal_enabled = true
+	footing.normal_texture = _inspection_tread_normal()
+	footing.uv1_triplanar = true
+	footing.uv1_world_triplanar = true
+	footing.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+
+
+func _inspection_part_material(entity: int, index: int, original: Material) -> Material:
+	if entity != 1932 and entity != 1933:
+		return original
+	# Native yellow edge-splice warnings retain their existing material. Each
+	# native metal class maps to one finish, preserving the existing batches.
+	return _inspection_materials.get(index, original)
+
+
+func _inspection_practicals(node: Node3D) -> void:
+	# Two flush lamp faces sit on existing native post colliders. Their cage
+	# pattern is painted into one shared 32px texture, with no housing/ledge.
+	var image := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	for y in 32:
+		for x in 32:
+			var cage := x < 3 or x > 28 or y < 3 or y > 28 \
+				or x in [10, 11, 20, 21] or y in [15, 16]
+			image.set_pixel(x, y, Color.BLACK if cage else Color("ffdda0"))
+	image.generate_mipmaps()
+	var lens := ImageTexture.create_from_image(image)
+	var glow := StandardMaterial3D.new()
+	glow.albedo_texture = lens
+	glow.roughness = 0.68
+	glow.emission_enabled = true
+	glow.emission = Color.WHITE
+	glow.emission_texture = lens
+	glow.emission_energy_multiplier = 1.2
+	glow.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	# South face of the real bearing stub: X[-20.50,-20.20],
+	# Y[363.10,364.45], Z[-158.95,-158.65]. The upper lamp occupies the
+	# west face of the .36m junction post (-19.45,-138.9), top373.5.
+	# Each face stays within those bounds, offset just .0005m outward.
+	for mount in [[Vector3(-20.35, 363.8, -158.6495), 0.0],
+			[Vector3(-19.6305, 373.1, -138.9), -PI / 2.0]]:
+		var at: Vector3 = mount[0]
+		var face := MeshInstance3D.new()
+		face.name = "InspectionLampFace"
+		var quad := QuadMesh.new()
+		quad.size = Vector2(0.24, 0.32)
+		quad.material = glow
+		face.mesh = quad
+		face.position = at
+		face.rotation.y = float(mount[1])
+		face.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		face.visibility_range_end = 40.0
+		node.add_child(face)
+		var light := OmniLight3D.new()
+		light.name = "InspectionPractical"
+		light.position = at
+		light.light_color = Color("ffcf8e")
+		light.light_energy = 1.0
+		light.omni_range = 7.0
+		light.omni_attenuation = 2.0
+		light.shadow_enabled = false
+		light.distance_fade_enabled = true
+		light.distance_fade_begin = 25.0
+		light.distance_fade_length = 10.0
+		node.add_child(light)
+
+
 func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 	for body in int(_native.get_kit_body_count()):
 		var entity := int(_native.get_kit_body_entity_id(body))
 		if entity == 1954 and _cart_materials.is_empty():
 			_build_cart_materials(palette)
+		if (entity == 1932 or entity == 1933) and _inspection_materials.is_empty():
+			_build_inspection_materials(palette)
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
 		node.transform = _native.get_kit_body_transform(body)
@@ -210,6 +334,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			var material_index := clampi(int(parts[p + 10]), 0, palette.size() - 1)
 			var material := _cart_part_material(entity, p / KIT_PART_FLOATS,
 				material_index, palette[material_index])
+			material = _inspection_part_material(entity, material_index, material)
 			# Rails and structural steel can share a native material class while
 			# needing different finishes. Keep each finish in its own rigid batch.
 			var finish_key := "" if material == palette[material_index] else "/%d" % material.get_instance_id()
@@ -278,6 +403,8 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			if int(String(key).get_slice("/", 0)) == RefractoryMaterial.NATIVE_MATERIAL_INDEX:
 				RefractoryMaterial.apply_to(instance, int(_native.get_kit_body_material_key(body)))
 			node.add_child(instance)
+		if entity == 1932:
+			_inspection_practicals(node)
 		# Signs stay on the native landing/deck bodies, including the moving
 		# pendant. They label the real stations without owning machine state.
 		if entity == 1981:

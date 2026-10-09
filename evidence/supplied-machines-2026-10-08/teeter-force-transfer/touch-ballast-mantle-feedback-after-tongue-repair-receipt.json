@@ -1,0 +1,30 @@
+{
+  "library_sha256": "601fa1328257f29a330e8bad75b6a022fd4764b7f45c21c904100cfb4a28e5e2",
+  "source_hashes": {
+    "godot/presentation/main.gd": "05ed17bccbb8cbdd881195478f7f07888a26e3a7f7fc07341867fad12c869a4a",
+    "godot/presentation/audio/audio_director.gd": "7c4e5896d55569369170de64d74ce0bf0c7145df3eab3ccec833beb9e3211a98",
+    "godot/presentation/landing_camera_response.gd": "9784e69333ef421b94429c8e87b1ca0ff100cd68b1ac63ed3ab9fb022209fd28",
+    "godot/presentation/ui/ui_test_driver.gd": "4db264474aae674c6b5df879f00461a1844e9332b53fa86b3ca09b6bc4f3ea23"
+  },
+  "scenario": "touch_ballast_mantle_feedback",
+  "scope": "same ordinary viewport touch route, unchanged input/gates, native entry tongue owner repair; no rebuild/render/device proof",
+  "run_count": 1,
+  "exit": 0,
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/cart-godot-y76mhk14/touch-ballast-mantle-feedback-after-tongue-repair.log",
+  "log_sha256": "3b2c3e0e84b66c82e93e794373c0c576a45cfb3286b6755657185cbf1cbe0658",
+  "result": "SCRAPERX_UITEST PASS touch_ballast_mantle_feedback staging=supported_teeter_entry shipping_touch=1 real_hands=2 gravity=1 command_bound_j=6539.437 positive_work_j=5195.947 sampled_peak_n=1721.942 receipt_peak_n=1723.649 foot_transfer_tick=1473 foot_plants=1 stable_roof_seconds=3 roof_support_velocity=(-0.010808, -0.030773, 0.000013) roof_relative_velocity=(0.000269, 0.02935, -0.000005) return_beam=1 return_tower=1 deaths=0",
+  "viewport": "432x432",
+  "audio_driver": "Dummy",
+  "command": "Godot4.7 --headless --fixed-fps60 --path private-stage/godot -- --uitest=touch_ballast_mantle_feedback",
+  "connected_route": [
+    "supported TeeterEntry staging",
+    "ordinary viewport touch fourpoint supported approach",
+    "actual native twohand ballast mantle with full gravity and finite work/force",
+    "native completed foottransfer support2801/tick1473/peak1723.649N consumedonce by AudioDirector and main",
+    "continuous3s roofgrounding/gravity1/hands0/countunchanged and final horizontal slip<.2",
+    "ordinary touch return beam2800 then Tower11 zero deaths"
+  ],
+  "native_build": false,
+  "rendered_route": false,
+  "device_observation": false
+}

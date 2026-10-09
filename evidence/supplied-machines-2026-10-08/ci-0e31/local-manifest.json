@@ -1,0 +1,76 @@
+{
+  "manifest": {
+    "versionCode": {
+      "type": 16,
+      "data": 213671807
+    },
+    "versionName": "0.1.0",
+    "installLocation": {
+      "type": 16,
+      "data": 0
+    },
+    "compileSdkVersion": {
+      "type": 16,
+      "data": 36
+    },
+    "compileSdkVersionCodename": "16",
+    "package": "com.cory.scraperx.chatgpt",
+    "platformBuildVersionCode": {
+      "type": 16,
+      "data": 36
+    },
+    "platformBuildVersionName": {
+      "type": 16,
+      "data": 16
+    }
+  },
+  "uses-sdk": {
+    "minSdkVersion": {
+      "type": 16,
+      "data": 24
+    },
+    "targetSdkVersion": {
+      "type": 16,
+      "data": 36
+    }
+  },
+  "application": {
+    "label": {
+      "type": 1,
+      "data": 2131427336
+    },
+    "icon": {
+      "type": 1,
+      "data": 2131361792
+    },
+    "debuggable": {
+      "type": 18,
+      "data": 4294967295
+    },
+    "allowBackup": {
+      "type": 18,
+      "data": 0
+    },
+    "isGame": {
+      "type": 18,
+      "data": 1
+    },
+    "extractNativeLibs": {
+      "type": 18,
+      "data": 4294967295
+    },
+    "appCategory": {
+      "type": 16,
+      "data": 0
+    },
+    "appComponentFactory": "androidx.core.app.CoreComponentFactory",
+    "hasFragileUserData": {
+      "type": 18,
+      "data": 0
+    },
+    "requestLegacyExternalStorage": {
+      "type": 18,
+      "data": 0
+    }
+  }
+}

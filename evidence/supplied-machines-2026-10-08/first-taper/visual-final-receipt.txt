@@ -1,0 +1,12 @@
+Post-repair observer capture and one normal KitView rendered check.
+Both invocations exit0; Godot4.7 Mesa26.0.8 softpipe GL compatibility via Ubuntu proot/Xvfb.
+Observer 432x432/FOV82/HIGH/render_scale1/2xMSAA; camera(-31,365,-134) looksat(-22,363,-152).
+Same supported native cart-exit staging(-25.4203,352.9,-141.599), main frozen, UIhidden privately, capture after6 process/frame_post_draw waits.
+Actual observer inspection: formerly shadow-black taper girder/post surfaces now readable slate-grey/blue. Gap/service overlap and busy perspective remain; distinct warm lightpool and tread detail not established at this observer angle.
+Single normal KitView test: 192x164, fixedfps60, 12 renderframes, SCRAPERX_KIT_VIEW PASS checks=48857 rigid_bodies=214 renderer=X11.
+Bridge SHA9433086cf48e651b75a8c7cf915519fa59fe0f9dd9463b48a1ec0d867016e4a9.
+KitView SHA291d759e4a3707264e1a355d8ca0007993a63b78bbdb9186e40a2c28d552394a.
+Start/end sourcehashes match (cmp exit0).
+No production/sharedstage edits. No build or extra campaign.
+Environmental messages: VSync unsupported, ALSA unavailable -> Dummy audio; no script/parse/resource failures observed.
+Observer staging is not traversal evidence; software rendering is not phone-performance evidence.

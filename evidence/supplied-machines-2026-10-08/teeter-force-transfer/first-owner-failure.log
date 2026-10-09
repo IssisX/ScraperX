@@ -1,0 +1,20 @@
+Test project /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build
+    Start 34: scraperx_sim.teeter_route
+1/1 Test #34: scraperx_sim.teeter_route ........***Failed   27.65 sec
+PASS teeter ballast physical mantle seconds=1.45556 command_bound_j=6539.39 spring_positive_j=5224.49 stable_roof_seconds=3 onward_beam=1 return_tower=1
+INVENTORY moving=53 kit=96
+RIDER_ALONE angle=0.102897 player=32.8089,67.2869,-138.58 support=2800 grounded=1 deaths=0
+ENTRY angle=0.102972 player=25.3,66.9,-139 support=11 grounded=1 deaths=0
+OPPOSITE angle=0.102955 player=27.1447,66.701,-139 support=2800 grounded=1 deaths=0
+BALLAST_READY position=0.69592
+NEAR angle=0.102952 player=29.7477,67.0216,-139.45 support=2800 grounded=1 deaths=0
+BALLAST_MOVED position=4.30001
+
+
+0% tests passed, 1 tests failed out of 1
+
+Total Test time (real) =  27.69 sec
+
+The following tests FAILED:
+	 34 - scraperx_sim.teeter_route (Failed)
+Errors while running CTest

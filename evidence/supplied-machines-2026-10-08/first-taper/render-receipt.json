@@ -1,0 +1,44 @@
+{
+  "check": "normal-world KitView actual-renderer test, single run",
+  "status": "pass",
+  "repo": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo",
+  "branch": "ChatGPT",
+  "head": "2bf026d5997b8e1ea0677b8a2cd7d6355a9d1fd4",
+  "uncommitted_changes": true,
+  "stage": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/cart-godot-y76mhk14/godot",
+  "bridge_sha256": "9433086cf48e651b75a8c7cf915519fa59fe0f9dd9463b48a1ec0d867016e4a9",
+  "command": "proot-distro login ubuntu --shared-tmp -- /usr/bin/env LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=softpipe GODOT_SILENCE_ROOT_WARNING=1 /usr/bin/timeout 600s /usr/bin/xvfb-run -a -s '-screen 0 192x164x24' /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --path /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/cart-godot-y76mhk14/godot --rendering-method gl_compatibility --fixed-fps 60 --script res://tests/kit_view_test.gd > /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/taper-kit-render-proof-5dMk5u/kit-render.log 2>&1",
+  "renderer": "Mesa softpipe, OpenGL 3.3, GL Compatibility",
+  "viewport": [
+    192,
+    164
+  ],
+  "fixed_fps": 60,
+  "script": "res://tests/kit_view_test.gd",
+  "frames": 12,
+  "limitations": [
+    "No Android device or appearance/performance acceptance; this numeric/native render test does not establish taper camera-view quality."
+  ],
+  "exit_code": 0,
+  "source_hashes_stable": true,
+  "result": {
+    "checks": 48857,
+    "rigid_bodies": 214,
+    "renderer": "X11",
+    "kit_failures": 0,
+    "script_parse_resource_shader_failures": 0
+  },
+  "log_sha256": "fcc3e40c5733540dcc8782f0511fa2780aaa2b7ae6217ee677399e0dccef6783",
+  "environmental_messages": [
+    "ALSA output unavailable; runtime falls back to Dummy audio.",
+    "V-Sync switching unavailable on software driver.",
+    "proot expected absolute path --shm-helper messages did not prevent successful test completion."
+  ],
+  "stage_source_hashes": {
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "9433086cf48e651b75a8c7cf915519fa59fe0f9dd9463b48a1ec0d867016e4a9",
+    "presentation/kit_view.gd": "52c4892e768793b2ccf0f98bb7295faec6a527289a25fcd4d3c0be227efdd32f",
+    "tests/kit_view_test.gd": "b4f41299b6bdb3ea14908067fff334bbae336530af3f42dac97b2484733ba853",
+    "presentation/main.gd": "bca6dd61ffd3254e13f1c89e1a21d6a3a9c3af071e6d7059565e3146aefd78ca",
+    "presentation/landing_camera_response.gd": "9784e69333ef421b94429c8e87b1ca0ff100cd68b1ac63ed3ab9fb022209fd28"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "signing_scheme_certificate_sha256": {
+    "0x7109871a": [
+      "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4"
+    ],
+    "0xf05368c0": [
+      "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a"
+    ]
+  },
+  "proof_of_rotation_certificate_sha256": [
+    "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",
+    "91184379cf4aad862b2436f403230f3ba163a8a9cdc5dc7c32dffef2a517402a"
+  ],
+  "v3_signed_sdk_bounds": [
+    [
+      28,
+      2147483647
+    ]
+  ]
+}

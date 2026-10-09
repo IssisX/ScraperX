@@ -46,14 +46,6 @@ const MAX_SIM_FRAME_DELTA := 0.1
 # Chute is offered once a fall is unmistakably a fall: a full-height jump
 # lands at ~5.5 m/s, so 6.5 m/s never pops the canopy button mid-hop.
 const CHUTE_OFFER_FALL_MPS := 6.5
-# A Jump pressed this long before touchdown fires on the grounded tick. Input
-# timing assistance only (GDD 7.2): it never jumps from anything the native
-# does not report as ground at the moment it fires.
-const JUMP_BUFFER_SECONDS := 0.12
-# A second Jump this soon after one was sent goes straight to the native,
-# which vaults if the takeoff could have (its own window is 0.30 s of ticks;
-# this is a frame's slack wider so the native, not frame timing, decides).
-const DOUBLE_TAP_SECONDS := 0.35
 const CHECKPOINT_TOAST_RISE_METERS := 3.0
 const SLING_CHECK_SECONDS := 0.3
 
@@ -332,8 +324,6 @@ var _ctx := {}
 # Pendant "operate" mode is presentation state only: which controls are on
 # screen. The native gates every pendant axis by station radius regardless.
 var _operating := &""
-var _jump_buffer := 0.0
-var _since_jump_sent := INF
 # The crouch toggle (C, right-stick click, the touch button). Held Ctrl
 # crouches too, for as long as it is held; the native decides whether the
 # body can crouch or stand.
@@ -341,6 +331,8 @@ var _crouch_toggled := false
 var _fb_traversal := 0
 var _fb_swinging := false
 var _fb_landing_count := -1
+var _fb_foot_transfer_count := -1
+var _fb_foot_transfer_tick := -1
 var _fb_fall_speed := 0.0
 var _fb_deaths := 0
 var _fb_chute := false
@@ -462,7 +454,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_north_grip_diagnostic", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_ballast_mantle_feedback", "touch_taper_inspection_route", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_north_grip_diagnostic", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -525,7 +517,9 @@ func _ready() -> void:
 	_ctx = _read_context()
 	_fb_traversal = int(_ctx["traversal"])
 	_fb_swinging = bool(_ctx["swinging"])
-	_fb_landing_count = int(_native.get_landing_state()["landing_count"])
+	var landing: Dictionary = _native.get_landing_state()
+	_fb_landing_count = int(landing["landing_count"])
+	_reset_foot_transfer_feedback(landing)
 	_fb_deaths = int(_ctx["deaths"])
 	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
 
@@ -897,12 +891,12 @@ func _after_restart() -> void:
 	_sling_prediction = PackedVector3Array()
 	_end_operation()
 	_crouch_toggled = false
-	_jump_buffer = 0.0
 	_ctx = _read_context()
 	var landing: Dictionary = _native.get_landing_state()
 	_fb_landing_count = int(landing["landing_count"])
+	_reset_foot_transfer_feedback(landing)
 	_fb_deaths = int(_ctx["deaths"])
-	_audio.reset_landing_feedback(_fb_landing_count, _fb_deaths)
+	_audio.reset_landing_feedback(_fb_landing_count, _fb_deaths, landing)
 	_fb_swinging = bool(_ctx["swinging"])
 	_catch_strain_cooldown = 0.0
 	_last_hand_load = 0.0
@@ -925,22 +919,16 @@ func _resume() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
-# One verb, one native request. Context (last frame's native read) only
-# chooses WHICH request a contextual verb means; whether it takes effect is
-# always the native's decision.
-func _dispatch(verbs: Array, delta: float) -> void:
+# One fresh verb, one native request. The native 90 Hz owner decides Jump's
+# contextual intent, buffer and vault timing. Last-frame context only selects
+# which request the other contextual verbs mean; native authority accepts it.
+func _dispatch(verbs: Array, _delta: float) -> void:
 	for verb in verbs:
 		match verb:
 			&"jump":
 				# A jump stands a crouched body first (natively), and ends the toggle.
 				_crouch_toggled = false
-				if _ctx["jump_ok"] or _ctx["hanging"] or _ctx["climbing"]:
-					_native.request_jump()
-					_since_jump_sent = 0.0
-				else:
-					if _since_jump_sent <= DOUBLE_TAP_SECONDS:
-						_native.request_jump()
-					_jump_buffer = JUMP_BUFFER_SECONDS
+				_native.request_jump()
 			&"action":
 				_crouch_toggled = false
 				_perform_action()
@@ -988,14 +976,6 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"telemetry":
 				_settings.telemetry = not _settings.telemetry
 				_set_telemetry_visible(_settings.telemetry or _ci_mode)
-	_since_jump_sent += delta
-	if _jump_buffer > 0.0:
-		if _ctx["jump_ok"]:
-			_native.request_jump()
-			_since_jump_sent = 0.0
-			_jump_buffer = 0.0
-		else:
-			_jump_buffer = maxf(0.0, _jump_buffer - delta)
 
 
 # Contextual Action is a gateway (Governing Law 27): it climbs what the
@@ -1386,6 +1366,7 @@ const HAPTICS := {
 	&"grab": [30, 0.6],
 	&"release": [18, 0.4],
 	&"strain": [20, 0.35],
+	&"footplant": [18, 0.25],
 	&"land": [34, 0.85],
 	&"chute": [45, 0.7],
 	&"warn": [80, 0.9],
@@ -1408,6 +1389,26 @@ func _haptic(kind: StringName, strength: float = 1.0) -> void:
 				var heavy := kind in [&"land", &"death", &"warn"]
 				Input.start_joy_vibration(_router.active_pad, amplitude * 0.8,
 					amplitude if heavy else amplitude * 0.25, float(duration_ms) / 1000.0)
+
+
+func _reset_foot_transfer_feedback(state: Dictionary) -> void:
+	_fb_foot_transfer_count = int(state.get("foot_transfer_count", -1))
+	_fb_foot_transfer_tick = int(state.get("foot_transfer_tick", -1))
+
+
+func _consume_foot_transfer(state: Dictionary, deaths: int) -> float:
+	var count := int(state.get("foot_transfer_count", -1))
+	var tick := int(state.get("foot_transfer_tick", -1))
+	var support := int(state.get("foot_transfer_support_entity_id", 0))
+	var load := float(state.get("foot_transfer_peak_hand_load_n", 0.0))
+	var new_transfer := _fb_foot_transfer_count >= 0 and count > _fb_foot_transfer_count \
+		and tick > _fb_foot_transfer_tick and tick > 0 and support > 0 \
+		and deaths == _fb_deaths and is_finite(load) and load >= 0.0
+	# Startup, rewind, disabled vibration and restarts consume receipts quietly.
+	# A skipped render sample emits the latest receipt once, never a catch-up burst.
+	_fb_foot_transfer_count = count
+	_fb_foot_transfer_tick = tick
+	return clampf(load / 2400.0, 0.25, 1.0) if new_transfer else 0.0
 
 
 # State transitions become feedback: a grab, a landing, a canopy, a lethal
@@ -1445,6 +1446,9 @@ func _update_feedback(delta: float) -> void:
 	var lethal: float = _ctx["lethal"]
 	var deaths: int = _ctx["deaths"]
 	var landing: Dictionary = _native.get_landing_state()
+	var foot_strength := _consume_foot_transfer(landing, deaths)
+	if foot_strength > 0.0:
+		_haptic(&"footplant", foot_strength)
 	_catch_strain_cooldown = maxf(0.0, _catch_strain_cooldown - delta)
 	var left_force: Vector3 = landing.get("left_hand_force_n", Vector3.ZERO)
 	var right_force: Vector3 = landing.get("right_hand_force_n", Vector3.ZERO)
@@ -1674,7 +1678,8 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	var right_vector := Vector3(cos(_yaw), 0.0, -sin(_yaw))
 	var forward_vector := Vector3(-sin(_yaw), 0.0, -cos(_yaw))
 	var landing: Dictionary = _native.get_landing_state() if _native.has_method("get_landing_state") else {}
-	_landing_camera.update(landing, delta, _head_bob_on, right_vector, forward_vector)
+	_landing_camera.update(landing, delta, _head_bob_on, right_vector, forward_vector,
+		int(_native.get_death_count()))
 	if not _head_bob_on:
 		_cam_bank = 0.0
 	else:
@@ -1691,7 +1696,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		var soles_y := position.y - (CROUCH_HALF_HEIGHT if crouched else STAND_HALF_HEIGHT)
 		eye.y = soles_y + lerpf(STAND_HALF_HEIGHT + EYE_OFFSET.y, CROUCH_EYE_OVER_SOLES,
 			smoothstep(0.0, 1.0, _crouch_eye))
-	_camera.position = eye + Vector3.UP * (vertical_bob + _landing_camera.translation.y) \
+	_camera.position = eye + Vector3.UP * (vertical_bob + _landing_camera.translation.y + _landing_camera.foot_settle.x) \
 		+ right_vector * (lateral_bob + _landing_camera.translation.x) \
 		+ forward_vector * _landing_camera.translation.z
 	var swing_target := 0.0
@@ -1700,7 +1705,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		var frame: Transform3D = _native.get_kit_body_render_transform(ladder)
 		swing_target = clampf(frame.basis.get_euler().z * 0.30, -0.052, 0.052)
 	_swing_bank = lerpf(_swing_bank, swing_target, 1.0 - exp(-8.0 * delta)) if _head_bob_on else 0.0
-	_camera.rotation = Vector3(_pitch + _view_pitch_offset + _landing_camera.rotation.x,
+	_camera.rotation = Vector3(_pitch + _view_pitch_offset + _landing_camera.rotation.x + _landing_camera.foot_settle.y,
 		_yaw, _cam_bank + _swing_bank + _landing_camera.rotation.y)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed)

@@ -1,6 +1,17 @@
 extends SceneTree
 
 const Response := preload("res://presentation/landing_camera_response.gd")
+const MainPresentation := preload("res://presentation/main.gd")
+const Director := preload("res://presentation/audio/audio_director.gd")
+const Settings := preload("res://presentation/ui/settings_store.gd")
+
+class FootAudio extends Director:
+	var played: Array[StringName] = []
+	var levels: Array[float] = []
+	func _play(sound: StringName, level: float, _pitch: float) -> void:
+		played.append(sound)
+		levels.append(level)
+
 var _checks := 0
 var _main: Node3D
 
@@ -57,6 +68,151 @@ func _response_checks() -> bool:
 		"restart seeds current event count without replaying a historical impact")
 
 
+func _foot_transfer_checks() -> bool:
+	# Scripted receipts exercise presentation only; no native completion or
+	# device sound/vibration is claimed by these consumer checks.
+	var state := {"landing_count": 0, "landing_balance": 1.0,
+		"foot_transfer_count": 0, "foot_transfer_tick": 0,
+		"foot_transfer_support_entity_id": 0, "foot_transfer_peak_hand_load_n": 0.0}
+	var lens := Response.new()
+	var presentation := MainPresentation.new()
+	var audio := FootAudio.new()
+	audio._last_deaths = 0
+	var master := AudioServer.get_bus_index(&"Master")
+	var effects := AudioServer.get_bus_index(&"Effects")
+	var added_effects := effects < 0
+	if added_effects:
+		AudioServer.add_bus()
+		effects = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(effects, &"Effects")
+	var master_muted := AudioServer.is_bus_mute(master)
+	var effects_muted := AudioServer.is_bus_mute(effects)
+	AudioServer.set_bus_mute(master, false)
+	AudioServer.set_bus_mute(effects, false)
+	lens.update(state, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 0)
+	if not _check(presentation._consume_foot_transfer(state, 0) == 0.0
+			and lens.foot_settle == Vector2.ZERO and audio.played.is_empty(),
+			"foot transfer startup establishes a quiet baseline"):
+		return false
+	state.foot_transfer_count = 1
+	state.foot_transfer_tick = 90
+	state.foot_transfer_support_entity_id = 2801
+	state.foot_transfer_peak_hand_load_n = 600.0
+	var native_receipt := state.duplicate(true)
+	var low_strength: float = presentation._consume_foot_transfer(state, 0)
+	lens.update(state, 0.06, true, Vector3.RIGHT, Vector3.FORWARD)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 0)
+	var low_dip := lens.foot_settle.x
+	var low_level := audio.levels[0] if not audio.levels.is_empty() else -INF
+	if not _check(low_strength > 0.0 and low_dip < 0.0
+			and lens.translation == Vector3.ZERO and lens.rotation == Vector2.ZERO
+			and audio.played == [&"step_metal"] and state == native_receipt,
+			"completion receipt selects the receiving surface cue without fabricating landing impact"):
+		return false
+	var lens_before := lens.foot_settle
+	var velocity_before := lens._foot_velocity
+	lens.update(state, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 0)
+	if not _check(presentation._consume_foot_transfer(state, 0) == 0.0
+			and audio.played.size() == 1 and lens.foot_settle == lens_before
+			and lens._foot_velocity == velocity_before,
+			"repeated render samples do not replay a native foot transfer"):
+		return false
+	state.foot_transfer_count = 4
+	state.foot_transfer_tick = 360
+	state.foot_transfer_peak_hand_load_n = 2400.0
+	var high_lens := Response.new()
+	high_lens.update({"landing_count": 0, "foot_transfer_count": 0, "foot_transfer_tick": 0},
+		0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	high_lens.update(state, 0.06, true, Vector3.RIGHT, Vector3.FORWARD)
+	var high_strength: float = presentation._consume_foot_transfer(state, 0)
+	lens.update(state, 0.06, true, Vector3.RIGHT, Vector3.FORWARD)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 0)
+	if not _check(high_strength > low_strength and high_lens.foot_settle.x < low_dip
+			and audio.played.size() == 2 and audio.levels[1] > low_level
+			and absf(lens.foot_settle.x) <= 0.01 and absf(lens.foot_settle.y) <= 0.0025,
+			"skipped native receipts coalesce once and measured load scales restrained feedback"):
+		return false
+	# A count change alone, without a new authoritative completion tick, is quiet.
+	state.foot_transfer_count = 5
+	lens_before = lens.foot_settle
+	velocity_before = lens._foot_velocity
+	lens.update(state, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 0)
+	if not _check(presentation._consume_foot_transfer(state, 0) == 0.0
+			and audio.played.size() == 2 and lens.foot_settle == lens_before
+			and lens._foot_velocity == velocity_before,
+			"same native tick cannot emit a second foot-transfer cue"):
+		return false
+	# Disable all three channels, consume an event, then enable them again.
+	presentation._settings = Settings.new()
+	presentation._settings.vibration = false
+	AudioServer.set_bus_mute(effects, true)
+	state.foot_transfer_count = 6
+	state.foot_transfer_tick = 540
+	var quiet_strength: float = presentation._consume_foot_transfer(state, 0)
+	presentation._haptic(&"footplant", quiet_strength) # OFF must return before device routing.
+	lens.update(state, 0.06, false, Vector3.RIGHT, Vector3.FORWARD)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 0)
+	presentation._settings.vibration = true
+	AudioServer.set_bus_mute(effects, false)
+	lens.update(state, 0.06, true, Vector3.RIGHT, Vector3.FORWARD)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 0)
+	if not _check(presentation._consume_foot_transfer(state, 0) == 0.0
+			and audio.played.size() == 2 and lens.foot_settle == Vector2.ZERO,
+			"settings OFF consume events without later camera/audio/haptic replay"):
+		return false
+	# Restarts seed the current receipt; a native rewind seeds a new epoch.
+	presentation._reset_foot_transfer_feedback(state)
+	audio.reset_landing_feedback(0, 0, state)
+	lens.reset()
+	lens.update(state, 0.06, true, Vector3.RIGHT, Vector3.FORWARD)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 0)
+	if not _check(presentation._consume_foot_transfer(state, 0) == 0.0
+			and audio.played.size() == 2 and lens.foot_settle == Vector2.ZERO,
+			"explicit restart consumes the current completed transfer quietly"):
+		return false
+	state.foot_transfer_count = 0
+	state.foot_transfer_tick = 0
+	lens.update(state, 0.0, true, Vector3.RIGHT, Vector3.FORWARD)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 0)
+	if not _check(presentation._consume_foot_transfer(state, 0) == 0.0,
+			"native receipt rewind establishes a quiet new baseline"):
+		return false
+	state.foot_transfer_count = 1
+	state.foot_transfer_tick = 90
+	lens.update(state, 0.06, true, Vector3.RIGHT, Vector3.FORWARD, 1)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 1)
+	if not _check(presentation._consume_foot_transfer(state, 1) == 0.0
+			and audio.played.size() == 2 and lens.foot_settle == Vector2.ZERO,
+			"death restore cannot turn an old transfer into a success cue"):
+		return false
+	# A fresh valid transfer after recovery still works and settles to zero.
+	presentation._fb_deaths = 1
+	audio._last_deaths = 1
+	state.foot_transfer_count = 2
+	state.foot_transfer_tick = 180
+	lens.update(state, 0.06, true, Vector3.RIGHT, Vector3.FORWARD, 1)
+	audio._update_foot_transfer(state, Vector3(0, 67, 0), 1)
+	if not _check(presentation._consume_foot_transfer(state, 1) > 0.0
+			and audio.played.size() == 3 and lens.foot_settle.x < 0.0,
+			"a new native completion after rewind/death remains eligible"):
+		return false
+	for i in 120:
+		lens.update(state, 1.0 / 60.0, true, Vector3.RIGHT, Vector3.FORWARD, 1)
+	if not _check(lens.foot_settle == Vector2.ZERO,
+			"receiving-foot lens settle returns exactly to the true eye"):
+		return false
+	AudioServer.set_bus_mute(master, master_muted)
+	AudioServer.set_bus_mute(effects, effects_muted)
+	if added_effects:
+		AudioServer.remove_bus(effects)
+	presentation.free()
+	audio.free()
+	return true
+
+
 func _drop(height: float, move_x: float) -> Dictionary:
 	var native: Object = _main._native
 	if not _check(bool(native.debug_restart_at(Vector3(6.0, height, -25.0))), "clear grade-drop staging"):
@@ -97,7 +253,7 @@ func _drop(height: float, move_x: float) -> Dictionary:
 
 
 func _run() -> void:
-	if not _response_checks():
+	if not _response_checks() or not _foot_transfer_checks():
 		return
 	if "--landing-camera-unit-only" in OS.get_cmdline_user_args():
 		print("SCRAPERX_LANDING_CAMERA_UNIT PASS checks=%d" % _checks)

@@ -1,0 +1,11 @@
+CART_EXIT352 tick=270 P=-25.4203,352.9,-141.599 V=0,0,0 support=11 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=0 deaths=0 landings=1 impact=0.02725 work=0 jump_work=0
+LOWER_GIRDER_TOE tick=524 P=-24.0029,352.915,-139.453 V=0.0457361,0.0474692,-0.101411 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=1 impact=0.02725 work=1447.09 jump_work=0
+LANDING_A363 tick=1321 P=-24,363.9,-164.039 V=-1.1873e-06,0,-0.000372052 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=6 impact=2.66288 work=11022.7 jump_work=81.7783
+GAP_TAKEOFF tick=1478 P=-23.9492,363.9,-163.999 V=5.04513,0,0.00019434 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=6 impact=2.66288 work=12710.3 jump_work=81.7783
+LANDING_B363 tick=1693 P=-20.146,363.9,-163.999 V=0.000375109,0,-8.11374e-06 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=7 impact=5.48175 work=12710.3 jump_work=1367.4
+UPPER_MISS_REAL_CATCH366_5 tick=2614 P=-18.5103,367.4,-143.995 V=1.74516e-07,0,5.05765e-08 support=1933 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=9 impact=10.2698 work=20546.4 jump_work=1367.4
+UPPER_RECOVERY_REAL_REJOIN tick=3324 P=-20.3399,367.459,-155.474 V=0.113096,-0.0131395,-0.0280708 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=12 impact=0.551199 work=24173.3 jump_work=1530.09
+UPPER_TURN374 tick=3928 P=-20.3501,374.9,-139.011 V=4.74975e-06,0,0.000365273 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=15 impact=2.4384 work=30956.9 jump_work=1617.45
+EXISTING_FLOOR374_25 tick=4208 P=-22.4989,375.15,-139.5 V=0,0,0 support=51 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=0 deaths=0 landings=17 impact=1.95087 work=31398.2 jump_work=1847.31
+ONWARD_UPPER_FLOOR tick=4487 P=-22.5,375.15,-143.006 V=0,0,0 support=51 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=0 deaths=0 landings=17 impact=1.95087 work=32802.4 jump_work=1847.31
+PASS TAPER_INSPECTION upper_miss_catch_tongue_rejoin

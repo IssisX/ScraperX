@@ -1,0 +1,32 @@
+PASS teeter ballast physical mantle seconds=1.45556 command_bound_j=6539.26 spring_positive_j=5224.08 foot_transfer_tick=627 peak_hand_load_n=1723.14 stable_roof_seconds=3 onward_beam=1 return_tower=1
+INVENTORY moving=53 kit=96
+RIDER_ALONE angle=0.102942 player=32.8122,67.2874,-138.58 support=2800 grounded=1 deaths=0
+ENTRY angle=0.102972 player=25.3,66.9,-139 support=11 grounded=1 deaths=0
+OPPOSITE angle=0.102955 player=27.1449,66.6957,-139 support=2800 grounded=1 deaths=0
+BALLAST_READY position=0.69592
+NEAR angle=0.102876 player=29.7498,67.0218,-139.45 support=2800 grounded=1 deaths=0
+BALLAST_MOVED position=4.30001
+FAR angle=-0.468667 player=32.6105,64.8171,-138.596 support=2800 grounded=1 deaths=0
+UNLOADED angle=0.09089 player=34.3578,64.45,-138.994 support=1800 grounded=1 deaths=0
+GRIP_READY angle=0.09089 player=34.6905,64.45,-139.413 support=1800 grounded=1 deaths=0
+GRIP_TAKEN angle=0.09089 player=34.6905,64.45,-139.413 support=1800 grounded=1 deaths=0
+CLIMB_STEP angle=0.09089 player=34.6905,65.7024,-139.413 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.09089 player=34.6905,66.9539,-139.413 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.09089 player=34.6905,68.2653,-139.413 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.09089 player=34.6905,69.5405,-139.413 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.09089 player=34.6905,70.8379,-139.413 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.09089 player=34.6905,72.1371,-139.413 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.09089 player=34.6905,73.4256,-139.413 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.09089 player=34.6905,74.7427,-139.413 support=0 grounded=0 deaths=0
+CLIMB_STEP angle=0.09089 player=34.6905,76.0269,-139.413 support=0 grounded=0 deaths=0
+UPPER_EXIT angle=0.09089 player=34.6905,77.9,-140.65 support=1800 grounded=1 deaths=0
+RING_77 angle=0.09089 player=25.0632,77.9,-140.799 support=11 grounded=1 deaths=0
+LANDING angle=-0.458649 player=32.2667,65.036,-138.735 support=2800 grounded=1 deaths=0
+LANDING_SWEEP prompt_seconds=1.01111 angle=-0.0542346 minimum=-0.467351
+FALL_RECOVERY angle=0.0908664 player=32.7734,55.8231,-140.795 support=1800 grounded=1 deaths=0
+RECOVERY_RING_55 angle=0.0908664 player=25.1421,55.9,-140.9 support=11 grounded=1 deaths=0
+MOVING_SUPPORT velocity=0.092059,-2.37589 player_velocity=-0.0416954,-2.25344
+DEPARTURE velocity=-0.0261109,3.13723 support=0
+ROTATING_RESTORE player_vy=-1.88332 contact_vy=-2.08043 com_vy=0.331017
+REPLAY_FAR angle=-0.468667 player=32.6105,64.8171,-138.596 support=2800 grounded=1 deaths=0
+PASS scraperx_sim AS-020 loaded teeter, recovery and +77 route

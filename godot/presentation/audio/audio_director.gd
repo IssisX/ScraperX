@@ -57,6 +57,7 @@ const BIRD_GAP_SECONDS := Vector2(2.5, 8.0)
 var steps := 0
 var jumps := 0
 var landings := 0
+var foot_plants := 0
 var grabs := 0
 var rustles := 0
 var clangs := 0
@@ -92,6 +93,8 @@ var _water_lift_water: AudioStreamPlayer3D
 var _stride := 0.0
 var _was_grounded := true
 var _last_landing_count := -1
+var _last_foot_transfer_count := -1
+var _last_foot_transfer_tick := -1
 var _last_traversal := 0
 var _last_chute := false
 var _last_deaths := -1
@@ -258,8 +261,10 @@ func ui_tap(back: bool = false) -> void:
 
 # Explicit restart establishes a quiet receipt baseline; no old contact is
 # replayed when gameplay resumes. Death restores are handled by update().
-func reset_landing_feedback(landing_count: int, deaths: int) -> void:
+func reset_landing_feedback(landing_count: int, deaths: int, foot_state: Dictionary = {}) -> void:
 	_last_landing_count = landing_count
+	_last_foot_transfer_count = int(foot_state.get("foot_transfer_count", -1))
+	_last_foot_transfer_tick = int(foot_state.get("foot_transfer_tick", -1))
 	_last_deaths = deaths
 	reset_reclaim_feedback()
 
@@ -304,6 +309,7 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		_play(&"land_hard" if hard else &"land_soft",
 			linear_to_db(clampf(impact / 12.0, 0.3, 1.0)), randf_range(0.95, 1.05))
 	_last_landing_count = landing_count
+	_update_foot_transfer(landing_state, position, deaths)
 	if not grounded and _was_grounded and velocity.y > JUMP_MIN_RISE and traversal == 0:
 		jumps += 1
 		_play(&"jump", -4.0, randf_range(0.95, 1.08))
@@ -601,6 +607,29 @@ func cancel_launch_cinematic() -> void:
 	_cinematic_air_duck_db = 0.0
 	if _bullet_time != null:
 		_bullet_time.stop()
+
+
+func _update_foot_transfer(state: Dictionary, position: Vector3, deaths: int) -> void:
+	var count := int(state.get("foot_transfer_count", -1))
+	var tick := int(state.get("foot_transfer_tick", -1))
+	var support := int(state.get("foot_transfer_support_entity_id", 0))
+	var load := float(state.get("foot_transfer_peak_hand_load_n", 0.0))
+	var new_transfer := _last_foot_transfer_count >= 0 and count > _last_foot_transfer_count \
+		and tick > _last_foot_transfer_tick and tick > 0 and support > 0 \
+		and deaths == _last_deaths and is_finite(load) and load >= 0.0
+	_last_foot_transfer_count = count
+	_last_foot_transfer_tick = tick
+	if not new_transfer:
+		return
+	foot_plants += 1
+	# The receipt's force scales a quiet foot plant, not a fabricated impact.
+	# Muted receipts do not start a voice that could ring after unmuting.
+	for bus in [&"Master", BUS_EFFECTS]:
+		var index := AudioServer.get_bus_index(bus)
+		if index < 0 or AudioServer.is_bus_mute(index):
+			return
+	var weight := clampf(load / 2400.0, 0.25, 1.0)
+	_play(_surface(support, position.y), lerpf(-15.0, -9.0, weight), 1.0)
 
 
 func climb_regrip(at: Vector3) -> void:

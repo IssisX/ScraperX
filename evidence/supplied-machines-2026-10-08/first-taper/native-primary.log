@@ -1,0 +1,9 @@
+CART_EXIT352 tick=270 P=-25.4203,352.9,-141.599 V=0,0,0 support=11 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=0 deaths=0 landings=1 impact=0.02725 work=0 jump_work=0
+LOWER_GIRDER_TOE tick=524 P=-24.0067,352.906,-139.436 V=0.0376318,0.0422105,-0.090177 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=1 impact=0.02725 work=1437.72 jump_work=0
+LANDING_A363 tick=1319 P=-23.9999,363.9,-164.003 V=-9.12804e-07,0,-0.000382652 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=6 impact=2.58769 work=11007.4 jump_work=82.1423
+GAP_TAKEOFF tick=1475 P=-23.9317,363.9,-164 V=5.05208,0,3.5047e-05 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=6 impact=2.58769 work=12697.9 jump_work=82.1423
+LANDING_B363 tick=1691 P=-20.1494,363.9,-164 V=0.000377873,0,7.58998e-07 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=7 impact=5.48175 work=12698.1 jump_work=1367.76
+UPPER_TURN374 tick=2497 P=-20.3499,374.9,-139.047 V=-8.39119e-07,0,0.000376869 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=11 impact=1.9396 work=22311.9 jump_work=1367.76
+EXISTING_FLOOR374_25 tick=2767 P=-22.4599,375.15,-139.5 V=0,0,0 support=51 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=0 deaths=0 landings=13 impact=1.94873 work=22734.6 jump_work=1597.23
+ONWARD_UPPER_FLOOR tick=3042 P=-22.5004,375.15,-143.038 V=0,0,0 support=51 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=0 deaths=0 landings=13 impact=1.94873 work=24133.7 jump_work=1597.23
+PASS TAPER_INSPECTION primary352_to_existing374.25 ordinary_inputs=1
