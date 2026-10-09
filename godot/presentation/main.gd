@@ -17,6 +17,7 @@ const InputRouter := preload("res://presentation/ui/input_router.gd")
 const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 const Hud := preload("res://presentation/ui/hud.gd")
 const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
+const TitleScreen := preload("res://presentation/ui/title_screen.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
@@ -192,6 +193,11 @@ var _save_path := SAVE_PATH
 var _saved_commits := -1
 var _saved_deaths := -1
 var _saved_at_ms := 0
+var _continued_from_save := false
+# The title shows once per launch: a NEW CLIMB reloads the scene without it.
+static var _title_seen := false
+var _title: Control
+var _title_open := false
 var _capture_path := ""
 var _capture_scheduled := false
 var _ci_mode := false
@@ -343,7 +349,9 @@ func _ready() -> void:
 	# menu), before the native clock moves.
 	_save_enabled = _uitest_scenario.is_empty() and not _ci_mode
 	var continued := _save_enabled and load_saved_climb()
-	if not continued and _uitest_scenario.is_empty() and _settings.start_at > 0:
+	_continued_from_save = continued
+	# The START list is a development tool: release builds always start at grade.
+	if not continued and _uitest_scenario.is_empty() and _settings.start_at > 0 and OS.is_debug_build():
 		var spawn := int(_settings.START_SPAWNS[_settings.start_at])
 		if spawn >= 0:
 			_native.configure_initial_spawn(spawn)
@@ -383,6 +391,8 @@ func _ready() -> void:
 	_fb_grounded = bool(_ctx["grounded"])
 	_fb_deaths = int(_ctx["deaths"])
 	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
+	if not _title_seen and ((_uitest_scenario.is_empty() and not _ci_mode) or _uitest_scenario == "touch_title"):
+		_show_title()
 
 
 func _process(delta: float) -> void:
@@ -540,6 +550,19 @@ func _build_interface() -> void:
 		get_tree().paused = false
 		get_tree().reload_current_scene())
 	_pause_menu.settings_changed.connect(_apply_settings)
+	_title = TitleScreen.new()
+	_title.name = "TitleScreen"
+	_title.visible = false
+	pause_layer.add_child(_title)
+	_title.continue_requested.connect(_close_title)
+	_title.new_climb_requested.connect(func() -> void:
+		if _continued_from_save:
+			discard_saved_climb()
+			get_tree().paused = false
+			get_tree().reload_current_scene()
+		else:
+			_close_title())
+	_title.quit_requested.connect(func() -> void: get_tree().quit(0))
 	# Android's system back opens the pause menu instead of ending the climb.
 	get_tree().quit_on_go_back = false
 	_router.device = (InputRouter.Device.TOUCH if OS.has_feature("mobile") or _force_touch
@@ -603,7 +626,9 @@ func _notification(what: int) -> void:
 		NOTIFICATION_WM_CLOSE_REQUEST:
 			_save_climb(true)
 		NOTIFICATION_WM_GO_BACK_REQUEST:
-			if _paused:
+			if _title_open:
+				get_tree().quit(0)
+			elif _paused:
 				_pause_menu.back()
 			else:
 				_open_pause(true)
@@ -681,7 +706,7 @@ func discard_saved_climb() -> void:
 # simulation is frozen, not slowed. System-initiated pauses (focus loss, app
 # backgrounded, pad unplugged) never fire in proof runs.
 func _open_pause(from_system: bool = false) -> void:
-	if _paused or _ci_mode or _native == null:
+	if _paused or _title_open or _ci_mode or _native == null:
 		return
 	if from_system and not _uitest_scenario.is_empty():
 		return
@@ -696,6 +721,32 @@ func _open_pause(from_system: bool = false) -> void:
 		position.y, checkpoint.y, int(_ctx["deaths"])])
 	get_tree().paused = true
 	_audio.ui_tap()
+
+
+# The title over the live tower, the simulation frozen behind it.
+func _show_title() -> void:
+	_title_seen = true
+	_title_open = true
+	_router.gameplay_active = false
+	_router.clear_held()
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_title.saved_altitude = (_native.get_checkpoint_position() as Vector3).y if _continued_from_save else NAN
+	_title.camera = _camera
+	_title.base_yaw = _yaw
+	_title.open()
+	get_tree().paused = true
+
+
+func _close_title() -> void:
+	if not _title_open:
+		return
+	_title.close()
+	_title_open = false
+	_audio.ui_tap(true)
+	get_tree().paused = false
+	_router.clear_held()
+	_router.gameplay_active = true
 
 
 func _resume() -> void:

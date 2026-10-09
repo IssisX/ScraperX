@@ -69,8 +69,12 @@ Each item is one complete, verifiable unit, proven through the touch path on the
      NEW CLIMB (two presses) discards the save. Proof: native `save` (two fresh loads advance
      bit-identically; the original run stays within 1 mm, the solver's contact cache not being
      saved; cut and foreign bytes refused) and `touch_save`.
-   - A title screen over the live tower, with CONTINUE and NEW CLIMB.
-   - The dev START list gated to development builds.
+   - A title screen over the live tower, with CONTINUE and NEW CLIMB. *Done 2026-10-09
+     (`title_screen.gd`, `touch_title`):* shown once per launch, the simulation frozen behind it,
+     the view drifting up the tower; CONTINUE shows the saved altitude; NEW CLIMB over a save asks
+     once more. The title reads the working name SCRAPERX until the store name (D1) is settled.
+   - The dev START list gated to development builds. *Done:* `OS.is_debug_build()` gates both the
+     pause entry and the spawn it applies.
    - A confirmation before restart. *Done:* NEW CLIMB asks once more before it acts.
 6. **The top** (M). A native predicate on the route's top, the altimeter scaled to it, and an
    arrival beat. What stands there is **OWNER** (D5).

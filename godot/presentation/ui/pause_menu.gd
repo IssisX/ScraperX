@@ -174,7 +174,7 @@ func _build(viewport_size: Vector2) -> void:
 	_refreshers.clear()
 	_built_for = viewport_size
 	_u = UiStyle.unit(self)
-	theme = _make_theme()
+	theme = menu_theme(_u)
 	var safe := UiStyle.safe_rect(self)
 
 	var dim := ColorRect.new()
@@ -213,7 +213,11 @@ func _build(viewport_size: Vector2) -> void:
 	gap.custom_minimum_size = Vector2(0.0, 36.0 * _u)
 	column.add_child(gap)
 
-	var entries := [[&"resume", "RESUME"], [&"start_at", _start_text()], [&"restart", NEW_CLIMB_TEXT],
+	# The START list is a development tool, shown in development builds only.
+	var entries := [[&"resume", "RESUME"]]
+	if OS.is_debug_build():
+		entries.append([&"start_at", _start_text()])
+	entries += [[&"restart", NEW_CLIMB_TEXT],
 		[PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
 		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"]]
 	if not OS.has_feature("mobile"):
@@ -225,10 +229,11 @@ func _build(viewport_size: Vector2) -> void:
 	(_side_buttons[&"resume"] as Button).pressed.connect(func() -> void: resume_requested.emit())
 	# Start point: cycles where a restart puts the player; NEW CLIMB
 	# starts a fresh world at it.
-	(_side_buttons[&"start_at"] as Button).pressed.connect(func() -> void:
-		settings.start_at = (settings.start_at + 1) % settings.START_NAMES.size()
-		settings.save_to_disk()
-		(_side_buttons[&"start_at"] as Button).text = _start_text())
+	if _side_buttons.has(&"start_at"):
+		(_side_buttons[&"start_at"] as Button).pressed.connect(func() -> void:
+			settings.start_at = (settings.start_at + 1) % settings.START_NAMES.size()
+			settings.save_to_disk()
+			(_side_buttons[&"start_at"] as Button).text = _start_text())
 	# NEW CLIMB discards the saved climb, so it asks once before it acts.
 	(_side_buttons[&"restart"] as Button).pressed.connect(func() -> void:
 		var button: Button = _side_buttons[&"restart"]
@@ -273,32 +278,33 @@ func _build(viewport_size: Vector2) -> void:
 	_build_audio_page()
 
 
-func _make_theme() -> Theme:
+# The menus' theme at layout unit u (the title screen shares it).
+static func menu_theme(u: float) -> Theme:
 	var built := Theme.new()
 	built.default_font = UiStyle.font_label()
-	built.default_font_size = int(roundf(30.0 * _u))
+	built.default_font_size = int(roundf(30.0 * u))
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.0, 0.0, 0.0, 0.0)
 	normal.border_color = UiStyle.with_alpha(UiStyle.PAPER_FAINT, 0.6)
-	normal.border_width_left = int(roundf(4.0 * _u))
-	normal.content_margin_left = 28.0 * _u
-	normal.content_margin_right = 20.0 * _u
-	normal.content_margin_top = 16.0 * _u
-	normal.content_margin_bottom = 16.0 * _u
+	normal.border_width_left = int(roundf(4.0 * u))
+	normal.content_margin_left = 28.0 * u
+	normal.content_margin_right = 20.0 * u
+	normal.content_margin_top = 16.0 * u
+	normal.content_margin_bottom = 16.0 * u
 	var hot := normal.duplicate() as StyleBoxFlat
 	hot.bg_color = UiStyle.with_alpha(UiStyle.AMBER, 0.16)
 	hot.border_color = UiStyle.AMBER
-	hot.border_width_left = int(roundf(10.0 * _u))
+	hot.border_width_left = int(roundf(10.0 * u))
 	var down := hot.duplicate() as StyleBoxFlat
 	down.bg_color = UiStyle.with_alpha(UiStyle.AMBER, 0.55)
 	# Focus draws over the current state: an amber keyline, nothing opaque.
 	var focus := StyleBoxFlat.new()
 	focus.draw_center = false
 	focus.border_color = UiStyle.AMBER
-	focus.border_width_left = int(roundf(10.0 * _u))
-	focus.border_width_top = int(roundf(2.0 * _u))
-	focus.border_width_bottom = int(roundf(2.0 * _u))
-	focus.border_width_right = int(roundf(2.0 * _u))
+	focus.border_width_left = int(roundf(10.0 * u))
+	focus.border_width_top = int(roundf(2.0 * u))
+	focus.border_width_bottom = int(roundf(2.0 * u))
+	focus.border_width_right = int(roundf(2.0 * u))
 	for kind in ["Button", "CheckButton"]:
 		built.set_stylebox("normal", kind, normal)
 		built.set_stylebox("hover", kind, hot)
@@ -314,24 +320,24 @@ func _make_theme() -> Theme:
 	built.set_color("font_color", "Label", UiStyle.PAPER)
 	var track := StyleBoxFlat.new()
 	track.bg_color = UiStyle.with_alpha(UiStyle.PAPER, 0.18)
-	track.content_margin_top = 5.0 * _u
-	track.content_margin_bottom = 5.0 * _u
+	track.content_margin_top = 5.0 * u
+	track.content_margin_bottom = 5.0 * u
 	var filled := StyleBoxFlat.new()
 	filled.bg_color = UiStyle.AMBER
-	filled.content_margin_top = 5.0 * _u
-	filled.content_margin_bottom = 5.0 * _u
+	filled.content_margin_top = 5.0 * u
+	filled.content_margin_bottom = 5.0 * u
 	built.set_stylebox("slider", "HSlider", track)
 	built.set_stylebox("grabber_area", "HSlider", filled)
 	built.set_stylebox("grabber_area_highlight", "HSlider", filled)
 	built.set_stylebox("focus", "HSlider", focus)
-	var grabber := _disc_texture(int(roundf(40.0 * _u)), UiStyle.PAPER, UiStyle.AMBER)
+	var grabber := disc_texture(int(roundf(40.0 * u)), UiStyle.PAPER, UiStyle.AMBER)
 	built.set_icon("grabber", "HSlider", grabber)
-	built.set_icon("grabber_highlight", "HSlider", _disc_texture(int(roundf(44.0 * _u)),
+	built.set_icon("grabber_highlight", "HSlider", disc_texture(int(roundf(44.0 * u)),
 		UiStyle.AMBER, UiStyle.PAPER))
 	return built
 
 
-func _disc_texture(diameter: int, fill: Color, rim: Color) -> ImageTexture:
+static func disc_texture(diameter: int, fill: Color, rim: Color) -> ImageTexture:
 	var image := Image.create_empty(diameter, diameter, false, Image.FORMAT_RGBA8)
 	var r := float(diameter) * 0.5
 	for y in diameter:

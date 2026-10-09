@@ -112,6 +112,9 @@ const SCENARIOS := {
 	# CROUCH tapped in the air, and the native rolls on: the momentum kept,
 	# little balance lost, the view turned once over.
 	"touch_roll": 8,
+	# The title over the live tower at launch: the simulation frozen behind
+	# it, no CONTINUE without a save, NEW CLIMB tapped starts the climb.
+	"touch_title": 8,
 	# Phase 4 on touch: a sprint at deck 4's south edge, the stick let go
 	# 2 m short of it: the native teeters (its XCoM past the edge), and the
 	# soles' traction cannot stop the body before it goes over.
@@ -291,6 +294,8 @@ func _run() -> void:
 			ok = await _save(InputRouter.Device.TOUCH)
 		"touch_roll":
 			ok = await _roll()
+		"touch_title":
+			ok = await _title()
 		"touch_teeter":
 			ok = await _teeter()
 		"touch_stack_upper":
@@ -2905,6 +2910,34 @@ func _checkpoint_continuation(device: int) -> bool:
 		return false
 	_detail = "restored_y=%.2f continued_deck6_y=%.2f deaths=%d" % [
 		cp_pos.y, _position().y, int(_native().get_death_count())]
+	return true
+
+
+func _title() -> bool:
+	if not await _wait_until(func() -> bool: return bool(_main._title_open), 1.0):
+		return _fail("title: not shown at launch")
+	var title: Control = _main._title
+	if not title.visible or title.has_continue():
+		return _fail("title: visible %s, CONTINUE offered %s with no save" % [str(title.visible), str(title.has_continue())])
+	var tick := int(_native().get_tick_index())
+	await _seconds(0.6)
+	if int(_native().get_tick_index()) != tick:
+		return _fail("title: the simulation ran behind the title (%d -> %d ticks)" % [tick, int(_native().get_tick_index())])
+	await _pose("title")
+	if title.button_text(&"new") != "NEW CLIMB":
+		return _fail("title: the first entry reads '%s'" % title.button_text(&"new"))
+	_click(title.button_center(&"new"))
+	if not await _wait_until(func() -> bool: return not bool(_main._title_open), 0.5):
+		return _fail("title: NEW CLIMB did not start the climb")
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var at := _position()
+	_stick_push(Vector2(0.0, -1.0))
+	await _seconds(0.8)
+	_touch(0, _main._touch.stick_home(), false)
+	var moved := Vector2(_position().x - at.x, _position().z - at.z).length()
+	if moved < 1.0:
+		return _fail("title: the climb did not take input after NEW CLIMB (moved %.2f m)" % moved)
+	_detail = "frozen_ticks=%d moved_m=%.2f" % [tick, moved]
 	return true
 
 
