@@ -788,6 +788,13 @@ public:
     // A vertical machine: from its deck Action sends it to the other end;
     // from a receiver, Action calls it there. Refused off every machine.
     [[nodiscard]] bool request_lift_action() noexcept;
+    // A saved climb: the committed checkpoint (where the player last stood
+    // firm, every machine with it) and the tick, as bytes for this build.
+    // load_game restores the world from one as a death would, without
+    // counting one; it refuses bytes from another build or world, changing
+    // nothing.
+    [[nodiscard]] std::vector<std::uint8_t> save_game() const;
+    [[nodiscard]] bool load_game(const std::uint8_t *data, std::size_t size);
     [[nodiscard]] LiftSnapshot lift_state() const noexcept;
     // The shot as it would fly from the pouch now, cut where it would first
     // hit something; empty unless a rider is seated.

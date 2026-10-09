@@ -20,9 +20,9 @@ has not been checked against its scope here.
 | 7 The gravity-fed wheel | ~70% | Worked with the body (2026-10-09): the feed plank opens the hopper and holds the wheel, stone alone drives it, and the brake only resists. Proven: too little stone doesn't lift the rider, and a missed boarding can be retried (native `wheel`, `touch_wheel`). Open: the stone's look and sound (high-quality material, spill and pile), reload of the finite hopper, the phone. |
 | 8 Remaining supplied designs | ~60% | Eight of ten designs are placed and played on touch. The rack climber and gravity balance are not placed. The press-RAISE repetition is under phase 6. |
 | 9 Verification and delivery | ~60% | The suite is proportional and CI builds a signed APK. No device run has been recorded. |
-| 10 Paid-release readiness | ~10% | The unbroken route (no slingshot) is done. Save, title, ending, release build, store identity, licences and device measurement are open (`RELEASE_PLAN.md`). |
+| 10 Paid-release readiness | ~15% | The unbroken route (no slingshot) is done. Save and continue is done (native `save`, `touch_save`). Title, ending, release build, store identity, licences and device measurement are open (`RELEASE_PLAN.md`). |
 
 **Frontier (2026-10-09): Phase 7, the gravity-fed wheel as a complete encounter.** Phase 4 is less
 complete, but the owner ranks the wheel as the important machine priority. Making it an encounter also
-removes its press-RAISE control, the phase-6 defect. After the wheel: phase 4's landing recovery and
-rolls, and then phase 10's save and continue.
+removes its press-RAISE control, the phase-6 defect. Save and continue (phase 10) followed. Next: phase 4's landing recovery
+and rolls, and phase 10's title and the top.

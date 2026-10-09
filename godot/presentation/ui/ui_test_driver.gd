@@ -105,6 +105,9 @@ const SCENARIOS := {
 	"touch_tram": 27,
 	# Checkpoint continuation and lethal rollback proof from Deck 4 (+44 m).
 	"touch_checkpoint": 26,
+	# Continue: the climb saved to storage while playing, loaded back, a cut
+	# save refused and set aside, NEW CLIMB's discard.
+	"touch_save": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
 	"touch_stack_upper": 26,
 	"pad_stack_upper": 26,
@@ -276,6 +279,8 @@ func _run() -> void:
 			ok = await _tram(InputRouter.Device.TOUCH)
 		"touch_checkpoint":
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
+		"touch_save":
+			ok = await _save(InputRouter.Device.TOUCH)
 		"touch_stack_upper":
 			ok = await _stack_upper(InputRouter.Device.TOUCH)
 		"pad_stack_upper":
@@ -2888,6 +2893,64 @@ func _checkpoint_continuation(device: int) -> bool:
 		return false
 	_detail = "restored_y=%.2f continued_deck6_y=%.2f deaths=%d" % [
 		cp_pos.y, _position().y, int(_native().get_death_count())]
+	return true
+
+
+# Continue, through main.gd's own save path (redirected to a test file): the
+# save is written while playing with nothing pressed for it, loading it puts
+# the player back on the saved checkpoint, a cut-short save is refused and set
+# aside as .bad, and NEW CLIMB's discard removes the save.
+func _save(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var path := "user://uitest_climb.save"
+	for leftover in [path, path + ".tmp", path + ".bad"]:
+		if FileAccess.file_exists(leftover):
+			DirAccess.remove_absolute(leftover)
+	_main._save_path = path
+	_main._save_enabled = true
+	var at0 := _position()
+	if at0.y < 44.0:
+		return _fail("save scenario did not start at Deck 4 (y %.2f)" % at0.y)
+	await _seconds(2.5)
+	if not FileAccess.file_exists(path):
+		return _fail("no save written while playing")
+	_main._save_climb(true)
+	var saved: Vector3 = _native().get_checkpoint_position()
+	var bytes := FileAccess.get_file_as_bytes(path)
+	var deaths := int(_native().get_death_count())
+	_main._save_enabled = false
+	await _walk_to(device, Vector2(at0.x - 4.0, at0.z), 0.2, 4.0)
+	_move(device, 0.0)
+	if Vector2(_position().x - saved.x, _position().z - saved.z).length() < 2.0:
+		return _fail("did not walk away from the saved checkpoint")
+	if not _main.load_saved_climb():
+		return _fail("the save was not loaded")
+	var loaded := _position()
+	if loaded.distance_to(saved) > 0.05 or int(_native().get_death_count()) != deaths:
+		return _fail("loaded at (%.2f, %.2f, %.2f), deaths %d; saved (%.2f, %.2f, %.2f), deaths %d" % [
+			loaded.x, loaded.y, loaded.z, int(_native().get_death_count()), saved.x, saved.y, saved.z, deaths])
+	await _seconds(0.5)
+	if not bool(_native().is_player_grounded()) or _position().y < 44.0:
+		return _fail("not standing on deck 4 after the load (y %.2f)" % _position().y)
+	var cut := FileAccess.open(path, FileAccess.WRITE)
+	cut.store_buffer(bytes.slice(0, bytes.size() >> 1))
+	cut.close()
+	var before_cut := _position()
+	if _main.load_saved_climb():
+		return _fail("a cut-short save was accepted")
+	if FileAccess.file_exists(path) or not FileAccess.file_exists(path + ".bad"):
+		return _fail("the cut-short save was not set aside as .bad")
+	if _position().distance_to(before_cut) > 0.05:
+		return _fail("a refused save moved the player")
+	_main._save_enabled = true
+	_main._save_climb(true)
+	if not FileAccess.file_exists(path):
+		return _fail("no save written after the refusal")
+	_main.discard_saved_climb()
+	if FileAccess.file_exists(path):
+		return _fail("NEW CLIMB's discard left the save")
+	DirAccess.remove_absolute(path + ".bad")
+	_detail = "bytes=%d saved_y=%.2f" % [bytes.size(), saved.y]
 	return true
 
 

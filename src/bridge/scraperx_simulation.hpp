@@ -173,6 +173,9 @@ public:
     [[nodiscard]] godot::Dictionary get_swing_state() const;
     // The owner's vertical machines: one-shot Action (send the deck, or call it).
     [[nodiscard]] bool request_lift_action();
+    // A saved climb (Simulation::save_game / load_game), as bytes.
+    [[nodiscard]] godot::PackedByteArray get_save_game() const;
+    [[nodiscard]] bool load_save_game(const godot::PackedByteArray &bytes);
     [[nodiscard]] godot::Dictionary get_lift_state() const;
 
 protected:

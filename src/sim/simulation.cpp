@@ -1,5 +1,8 @@
 #include "sim/simulation.hpp"
 
+#include <cstring>
+#include <type_traits>
+
 #include "sim/bands.hpp"
 #include "sim/mechanism_kit.hpp"
 #include "sim/slingshot.hpp"
@@ -893,6 +896,117 @@ struct LeafBox final {
 } // namespace
 
 namespace scraperx::sim {
+
+namespace {
+
+// A saved climb (release plan B5): the committed checkpoint the death restore
+// uses, written as the bytes of this build's state types. A save carries its
+// format key; a save from a build whose layout differs is refused, not misread.
+class SaveWriter final {
+public:
+    template <typename T>
+    void pod(const T &value) {
+        static_assert(std::is_trivially_copyable_v<T>, "saved as bytes");
+        const auto *bytes = reinterpret_cast<const std::uint8_t *>(&value);
+        out.insert(out.end(), bytes, bytes + sizeof(T));
+    }
+    template <typename T>
+    void list(const std::vector<T> &values) {
+        pod(static_cast<std::uint32_t>(values.size()));
+        for (const T &value : values) {
+            pod(value);
+        }
+    }
+    void bits(const std::vector<bool> &values) {
+        pod(static_cast<std::uint32_t>(values.size()));
+        for (const bool value : values) {
+            pod(static_cast<std::uint8_t>(value ? 1 : 0));
+        }
+    }
+    std::vector<std::uint8_t> out;
+};
+
+class SaveReader final {
+public:
+    SaveReader(const std::uint8_t *data, std::size_t size) : data_(data), size_(size) {}
+    template <typename T>
+    bool pod(T &value) {
+        static_assert(std::is_trivially_copyable_v<T>, "saved as bytes");
+        if (size_ - at_ < sizeof(T)) {
+            return false;
+        }
+        std::memcpy(&value, data_ + at_, sizeof(T));
+        at_ += sizeof(T);
+        return true;
+    }
+    // A list must be exactly as long as this build's: a save from another
+    // world (more bodies, fewer bins) is refused.
+    template <typename T>
+    bool list(std::vector<T> &values, std::size_t expected) {
+        std::uint32_t count = 0;
+        if (!pod(count) || count != expected) {
+            return false;
+        }
+        values.resize(count);
+        for (T &value : values) {
+            if (!pod(value)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    // A list that grows in play (the piles), up to `most` long.
+    template <typename T>
+    bool list_up_to(std::vector<T> &values, std::size_t most) {
+        std::uint32_t count = 0;
+        if (!pod(count) || count > most) {
+            return false;
+        }
+        values.resize(count);
+        for (T &value : values) {
+            if (!pod(value)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    bool bits(std::vector<bool> &values, std::size_t expected) {
+        std::uint32_t count = 0;
+        if (!pod(count) || count != expected) {
+            return false;
+        }
+        values.assign(count, false);
+        for (std::uint32_t i = 0; i < count; ++i) {
+            std::uint8_t value = 0;
+            if (!pod(value) || value > 1) {
+                return false;
+            }
+            values[i] = value == 1;
+        }
+        return true;
+    }
+    [[nodiscard]] bool done() const noexcept { return at_ == size_; }
+
+private:
+    const std::uint8_t *data_;
+    std::size_t size_;
+    std::size_t at_ = 0;
+};
+
+// "SXCLIMB1" and the sizes of every saved type: a build whose types differ
+// writes a different key.
+std::uint64_t save_format_key() noexcept {
+    std::uint64_t key = 0x5358434C494D4231ULL;
+    const std::size_t sizes[] = {sizeof(kit::Kit::BodyState), sizeof(kit::AnchorIndex), sizeof(kit::Kit::Pile),
+                                 sizeof(Slingshot::State), sizeof(Swing::State),
+                                 sizeof(vertical::Command), sizeof(JPH::RVec3)};
+    for (const std::size_t size : sizes) {
+        key = key * 1099511628211ULL ^ static_cast<std::uint64_t>(size);
+    }
+    return key;
+}
+
+} // namespace
 
 class Simulation::PhysicsWorld final {
 public:
@@ -3708,6 +3822,86 @@ private:
         ++death_count_;
     }
 
+public:
+    bool load_save(SaveReader &r) { return read_save(r, physics_system_.GetBodyInterface()); }
+
+    // The committed checkpoint as bytes (see SaveWriter).
+    void write_save(SaveWriter &w) const {
+        w.pod(checkpoint_position_);
+        w.pod(static_cast<std::uint8_t>(checkpoint_crouched_ ? 1 : 0));
+        w.pod(checkpoint_commit_count_);
+        w.pod(death_count_);
+        w.pod(checkpoint_.carrying_entity);
+        const auto &k = checkpoint_.kit;
+        w.list(k.bodies);
+        w.list(k.rope_anchor);
+        w.list(k.dog_floor);
+        w.list(k.bin_contents);
+        w.bits(k.rope_parted);
+        w.bits(k.catch_latched);
+        w.bits(k.latch_set);
+        w.list(k.piles);
+        w.list(k.pool_water);
+        w.list(k.cell_air);
+        w.list(k.reel_paid);
+        w.pod(k.drained);
+        w.pod(checkpoint_.slingshot);
+        w.pod(checkpoint_.swing);
+        const auto &v = checkpoint_.vertical;
+        w.pod(static_cast<std::uint32_t>(v.controls.size()));
+        for (const auto &control : v.controls) {
+            w.pod(control.command);
+            w.list(control.target_speeds);
+        }
+        w.list(v.targets);
+    }
+
+    // Reads a saved checkpoint, then restores the world from it as a death
+    // would (without counting one). Refused, and nothing changed, unless
+    // every list matches this world's own.
+    bool read_save(SaveReader &r, JPH::BodyInterface &bodies) {
+        MachineCheckpoint current{};
+        kit_->capture(current.kit);
+        current.vertical = vertical_->state();
+        MachineCheckpoint loaded{};
+        JPH::RVec3 position{};
+        std::uint8_t crouched = 0;
+        std::uint64_t commits = 0, deaths = 0;
+        auto &k = loaded.kit;
+        const auto &c = current.kit;
+        bool ok = r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
+                  r.pod(loaded.carrying_entity) && r.list(k.bodies, c.bodies.size()) &&
+                  r.list(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
+                  r.list(k.bin_contents, c.bin_contents.size()) && r.bits(k.rope_parted, c.rope_parted.size()) &&
+                  r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
+                  r.list_up_to(k.piles, 256) && r.list(k.pool_water, c.pool_water.size()) &&
+                  r.list(k.cell_air, c.cell_air.size()) && r.list(k.reel_paid, c.reel_paid.size()) &&
+                  r.pod(k.drained) && r.pod(loaded.slingshot) && r.pod(loaded.swing);
+        std::uint32_t controls = 0;
+        ok = ok && r.pod(controls) && controls == current.vertical.controls.size();
+        if (ok) {
+            loaded.vertical.controls.resize(controls);
+            for (std::size_t i = 0; ok && i < controls; ++i) {
+                ok = r.pod(loaded.vertical.controls[i].command) &&
+                     r.list(loaded.vertical.controls[i].target_speeds,
+                            current.vertical.controls[i].target_speeds.size());
+            }
+        }
+        ok = ok && r.list(loaded.vertical.targets, current.vertical.targets.size()) && r.done();
+        if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
+            !std::isfinite(position.GetZ())) {
+            return false;
+        }
+        checkpoint_position_ = position;
+        checkpoint_crouched_ = crouched == 1;
+        checkpoint_ = std::move(loaded);
+        restore_from_checkpoint(bodies);
+        checkpoint_commit_count_ = commits;
+        death_count_ = deaths;
+        read_state();
+        return true;
+    }
+
     void read_machine_state() noexcept {
         state_.carrying_entity_id = carried_entity_;
         state_.carry_target_entity_id = carry_target_entity_;
@@ -4628,6 +4822,36 @@ SwingSnapshot Simulation::swing_state() const noexcept {
     result.seat_pin = to_vector(swing.seat_pin());
     result.ram_pin = to_vector(swing.ram_pin());
     return result;
+}
+
+std::vector<std::uint8_t> Simulation::save_game() const {
+    SaveWriter w;
+    w.pod(save_format_key());
+    w.pod(tick_index_);
+    physics_world_->write_save(w);
+    return std::move(w.out);
+}
+
+bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
+    if (data == nullptr) {
+        return false;
+    }
+    SaveReader r(data, size);
+    std::uint64_t key = 0, tick = 0;
+    if (!r.pod(key) || key != save_format_key() || !r.pod(tick)) {
+        return false;
+    }
+    if (!physics_world_->load_save(r)) {
+        return false;
+    }
+    tick_index_ = tick;
+    remainder_seconds_ = 0.0;
+    snapshot_ = physics_world_->state();
+    snapshot_.tick_index = tick_index_;
+    snapshot_.simulation_time_seconds = static_cast<double>(tick_index_) * kFixedStepSeconds;
+    snapshot_.fixed_step_seconds = kFixedStepSeconds;
+    previous_player_position_ = snapshot_.player_position;
+    return true;
 }
 
 bool Simulation::request_lift_action() noexcept {

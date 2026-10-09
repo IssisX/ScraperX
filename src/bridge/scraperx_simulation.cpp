@@ -1,5 +1,7 @@
 #include "bridge/scraperx_simulation.hpp"
 
+#include <cstring>
+
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
@@ -263,6 +265,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_drop"), &ScraperXSimulation::request_swing_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
     godot::ClassDB::bind_method(godot::D_METHOD("request_lift_action"), &ScraperXSimulation::request_lift_action);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_save_game"), &ScraperXSimulation::get_save_game);
+    godot::ClassDB::bind_method(godot::D_METHOD("load_save_game", "bytes"), &ScraperXSimulation::load_save_game);
     godot::ClassDB::bind_method(godot::D_METHOD("get_lift_state"), &ScraperXSimulation::get_lift_state);
 }
 
@@ -970,6 +974,20 @@ godot::Dictionary ScraperXSimulation::get_swing_state() const {
 
 bool ScraperXSimulation::request_lift_action() {
     return simulation_->request_lift_action();
+}
+
+godot::PackedByteArray ScraperXSimulation::get_save_game() const {
+    const std::vector<std::uint8_t> bytes = simulation_->save_game();
+    godot::PackedByteArray out;
+    out.resize(static_cast<std::int64_t>(bytes.size()));
+    if (!bytes.empty()) {
+        std::memcpy(out.ptrw(), bytes.data(), bytes.size());
+    }
+    return out;
+}
+
+bool ScraperXSimulation::load_save_game(const godot::PackedByteArray &bytes) {
+    return simulation_->load_game(bytes.ptr(), static_cast<std::size_t>(bytes.size()));
 }
 
 godot::Dictionary ScraperXSimulation::get_lift_state() const {

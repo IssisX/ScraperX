@@ -4210,6 +4210,93 @@ void run_wheel() {
               << " deck4_y=" << end.player_position.y << '\n';
 }
 
+// A saved climb (release plan B5): after a real ride on the stone wheel (the
+// wheel turned, stone poured and spilled), the save restores that world in a
+// fresh simulation; restored from the same bytes, the original and the fresh
+// one play on bit for bit; bytes cut short or from another build are refused
+// and change nothing.
+void run_save() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    const auto world_hash = [](const Simulation &sim) {
+        std::uint64_t h = 1469598103934665603ULL;
+        const auto mix = [&h](double v) {
+            std::uint64_t bits = 0;
+            std::memcpy(&bits, &v, sizeof(bits));
+            h = (h ^ bits) * 1099511628211ULL;
+        };
+        const auto st = sim.snapshot();
+        mix(st.player_position.x);
+        mix(st.player_position.y);
+        mix(st.player_position.z);
+        for (std::uint32_t i = 0; i < sim.kit_body_count(); ++i) {
+            const auto p = sim.kit_body_position(i);
+            mix(p.x);
+            mix(p.y);
+            mix(p.z);
+        }
+        return h;
+    };
+    Simulation a(InitialSpawn::Deck2South);
+    (void)a.advance_frame(1.0);
+    const bool rode = walk_to(a, 14.19, -125.0, 10.0) && walk_to(a, 14.19, -113.3, 12.0) &&
+                      walk_to(a, 20.2, -113.3, 8.0) && a.advance_frame(8.0).accepted &&
+                      walk_to(a, 14.19, -113.3, 8.0) && walk_to(a, 14.19, -110.4, 6.0) &&
+                      wait_for(a, 120.0, [](const scraperx::sim::Snapshot &state) {
+                          return state.player_position.y > 47.0 && state.player_grounded &&
+                                 std::hypot(state.player_linear_velocity.x, state.player_linear_velocity.y) < 0.05;
+                      }) &&
+                      walk_to(a, 17.81, -113.3, 6.0) && a.advance_frame(1.0).accepted;
+    require(rode, "save: ride the stone wheel to its upper receiver");
+    const std::vector<std::uint8_t> bytes = a.save_game();
+    const auto saved_at = a.snapshot().player_position;
+
+    Simulation b(InitialSpawn::Deck2South);
+    (void)b.advance_frame(0.5);
+    const auto fresh = b.snapshot().player_position;
+    std::vector<std::uint8_t> cut(bytes.begin(), bytes.end() - 3);
+    std::vector<std::uint8_t> foreign = bytes;
+    foreign[0] ^= 0x55;
+    require(!b.load_game(cut.data(), cut.size()) && !b.load_game(foreign.data(), foreign.size()) &&
+                b.snapshot().player_position.y == fresh.y,
+            "save: bytes cut short or from another build are refused and change nothing");
+    require(b.load_game(bytes.data(), bytes.size()), "save: a fresh simulation loads the saved climb");
+    const auto st = b.snapshot();
+    require(std::abs(st.player_position.y - saved_at.y) < 0.3 &&
+                std::hypot(st.player_position.x - saved_at.x, st.player_position.z - saved_at.z) < 0.3 &&
+                st.death_count == a.snapshot().death_count,
+            "save: the loaded climb stands where it was saved, its deaths uncounted");
+    const auto wheel_bucket = [](const Simulation &sim) {
+        return sim.kit_body_position(sim.kit_body_index(2936 + 4)).y;
+    };
+    require(wheel_bucket(b) > 48.5, "save: the loaded wheel stands as it was left, the first bucket at the top");
+
+    // Two fresh simulations given the same save play on bit for bit (the
+    // initial state determines the final state). The original, restored from
+    // its own save, plays on within 1 mm of them: it keeps the solver's
+    // contact history, which a save does not carry.
+    Simulation c(InitialSpawn::Deck2South);
+    (void)c.advance_frame(0.5);
+    require(c.load_game(bytes.data(), bytes.size()) && a.load_game(bytes.data(), bytes.size()),
+            "save: a second fresh simulation, and the original, load the same save");
+    for (Simulation *sim : {&a, &b, &c}) {
+        (void)walk_to(*sim, 17.81, -125.5, 12.0);
+        (void)sim->advance_frame(3.0);
+    }
+    require(world_hash(b) == world_hash(c) && b.snapshot().tick_index == c.snapshot().tick_index,
+            "save: two fresh simulations given the same save play on bit for bit");
+    double worst = 0.0;
+    for (std::uint32_t i = 0; i < a.kit_body_count(); ++i) {
+        const auto pa = a.kit_body_position(i), pb = b.kit_body_position(i);
+        worst = std::max(worst, std::hypot(pa.x - pb.x, pa.y - pb.y, pa.z - pb.z));
+    }
+    const auto pa = a.snapshot().player_position, pb = b.snapshot().player_position;
+    worst = std::max(worst, std::hypot(pa.x - pb.x, pa.y - pb.y, pa.z - pb.z));
+    require(worst < 1e-3, "save: the original, restored from its own save, plays on with the fresh ones");
+    std::cout << "PASS scraperx_sim save: bytes=" << bytes.size() << " saved_y=" << saved_at.y << " original_drift_m=" << worst
+              << " deck4_y=" << b.snapshot().player_position.y << '\n';
+}
+
 // The traction tram from deck 6: east onto the east bridge, off its open
 // end onto a landing, down the gangway onto the tram's lower receiver and
 // its carrier, RAISE: two motors drive its 4 m wheels up the
@@ -5938,6 +6025,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "wheel") {
         run_wheel();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "save") {
+        run_save();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -7903,6 +7995,7 @@ int main() {
     run_high();
     run_incline();
     run_wheel();
+    run_save();
     run_tram();
     run_ascent();
 

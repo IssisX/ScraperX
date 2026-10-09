@@ -15,7 +15,7 @@ Items marked **OWNER** wait on a decision in §3.
   220 ring, swing, C6, mast, pitman, helix, TP-340) is proven only in four separate pieces. Death
   mid-ride is proven only on the cascade mast.
 - **The player can't keep progress.** Only settings persist (`settings_store.gd`). An Android
-  background kill loses the climb.
+  background kill loses the climb. *(Fixed 2026-10-09: item 5's save and continue.)*
 - **The opening and the ending.**
   - The game opens on Godot's stock splash and icon, with no title.
   - Nothing happens at the top.
@@ -62,11 +62,16 @@ Each item is one complete, verifiable unit, proven through the touch path on the
 **B. A product someone can buy**
 
 5. **Continue and title** (L).
-   - Save the exact last checkpoint, machines included. Proof: save, load and advance N ticks is
-     bit-identical to the uninterrupted run.
+   - Save the exact last checkpoint, machines included. *Done 2026-10-09:* the game writes
+     `user://climb.save` when a new checkpoint is committed (at most every 2 s), when the app leaves
+     the foreground and on quit, through a temporary file renamed over the save. It continues from
+     it on launch. A save this build can't read is set aside as `.bad` and the climb starts fresh.
+     NEW CLIMB (two presses) discards the save. Proof: native `save` (two fresh loads advance
+     bit-identically; the original run stays within 1 mm, the solver's contact cache not being
+     saved; cut and foreign bytes refused) and `touch_save`.
    - A title screen over the live tower, with CONTINUE and NEW CLIMB.
    - The dev START list gated to development builds.
-   - A confirmation before restart.
+   - A confirmation before restart. *Done:* NEW CLIMB asks once more before it acts.
 6. **The top** (M). A native predicate on the route's top, the altimeter scaled to it, and an
    arrival beat. What stands there is **OWNER** (D5).
 7. **Release pipeline** (L).

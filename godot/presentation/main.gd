@@ -182,6 +182,16 @@ const CI_APPROACH_FACING := Vector2(-0.08, -0.9968)
 const CI_HOLD_TICKS := 20
 
 var _native: Object
+# Continue: the committed checkpoint, machines included, on the device's own
+# storage. Written when a new checkpoint is committed (at most every 2 s) and
+# when the app leaves the foreground; loaded on launch; NEW CLIMB discards it.
+const SAVE_PATH := "user://climb.save"
+const SAVE_MIN_INTERVAL_MS := 2000
+var _save_enabled := false
+var _save_path := SAVE_PATH
+var _saved_commits := -1
+var _saved_deaths := -1
+var _saved_at_ms := 0
 var _capture_path := ""
 var _capture_scheduled := false
 var _ci_mode := false
@@ -327,8 +337,11 @@ func _ready() -> void:
 		_fail_native("SCRAPERX_EXTENSION_INSTANTIATION_FAILED", 20)
 		return
 
-	# The playtest start point (pause menu), before the native clock moves.
-	if _uitest_scenario.is_empty() and _settings.start_at > 0:
+	# A saved climb continues; otherwise the playtest start point (pause
+	# menu), before the native clock moves.
+	_save_enabled = _uitest_scenario.is_empty() and not _ci_mode
+	var continued := _save_enabled and load_saved_climb()
+	if not continued and _uitest_scenario.is_empty() and _settings.start_at > 0:
 		var spawn := int(_settings.START_SPAWNS[_settings.start_at])
 		if spawn >= 0:
 			_native.configure_initial_spawn(spawn)
@@ -437,6 +450,7 @@ func _process(delta: float) -> void:
 
 	_render_snapshot(delta)
 	_ctx = _read_context()
+	_save_climb()
 	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
 	_update_feedback(delta)
 	_touch.update_context(_ctx, delta)
@@ -516,8 +530,11 @@ func _build_interface() -> void:
 	_router.pad_disconnected.connect(_open_pause.bind(true))
 	_touch.pressed_feedback.connect(_haptic.bind(&"press", 1.0))
 	_pause_menu.resume_requested.connect(_resume)
-	_pause_menu.quit_requested.connect(func() -> void: get_tree().quit(0))
+	_pause_menu.quit_requested.connect(func() -> void:
+		_save_climb(true)
+		get_tree().quit(0))
 	_pause_menu.restart_requested.connect(func() -> void:
+		discard_saved_climb()
 		get_tree().paused = false
 		get_tree().reload_current_scene())
 	_pause_menu.settings_changed.connect(_apply_settings)
@@ -579,12 +596,83 @@ func _set_telemetry_visible(on: bool) -> void:
 func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+			_save_climb(true)
 			_open_pause(true)
+		NOTIFICATION_WM_CLOSE_REQUEST:
+			_save_climb(true)
 		NOTIFICATION_WM_GO_BACK_REQUEST:
 			if _paused:
 				_pause_menu.back()
 			else:
 				_open_pause(true)
+
+
+# Writes the committed checkpoint when it has changed since the last write:
+# at most every SAVE_MIN_INTERVAL_MS while playing, at once when forced (the
+# app leaving the foreground, quit). Written whole to a temporary file and
+# renamed over the save, so a kill mid-write leaves the previous save intact.
+func _save_climb(force := false) -> void:
+	if not _save_enabled or _native == null:
+		return
+	var commits := int(_native.get_checkpoint_commit_count())
+	var deaths := int(_native.get_death_count())
+	if commits == _saved_commits and deaths == _saved_deaths:
+		return
+	var now := Time.get_ticks_msec()
+	if not force and _saved_commits >= 0 and now - _saved_at_ms < SAVE_MIN_INTERVAL_MS:
+		return
+	if write_saved_climb():
+		_saved_commits = commits
+		_saved_deaths = deaths
+		_saved_at_ms = now
+
+
+func write_saved_climb() -> bool:
+	var bytes: PackedByteArray = _native.get_save_game()
+	var temporary := _save_path + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE)
+	if file == null:
+		push_warning("SCRAPERX_SAVE_OPEN_FAILED path=%s error=%d" % [temporary, FileAccess.get_open_error()])
+		return false
+	file.store_buffer(bytes)
+	var error := file.get_error()
+	file.close()
+	if error != OK:
+		push_warning("SCRAPERX_SAVE_WRITE_FAILED path=%s error=%d" % [temporary, error])
+		return false
+	error = DirAccess.rename_absolute(temporary, _save_path)
+	if error != OK:
+		push_warning("SCRAPERX_SAVE_RENAME_FAILED path=%s error=%d" % [_save_path, error])
+		return false
+	return true
+
+
+# Loads the save into the native world. A save this build can't read (cut
+# short, or from a build whose layout differs) is set aside as .bad, not
+# deleted, and the climb starts fresh.
+func load_saved_climb() -> bool:
+	if not FileAccess.file_exists(_save_path):
+		return false
+	var bytes := FileAccess.get_file_as_bytes(_save_path)
+	if not bytes.is_empty() and bool(_native.load_save_game(bytes)):
+		_saved_commits = int(_native.get_checkpoint_commit_count())
+		_saved_deaths = int(_native.get_death_count())
+		_saved_at_ms = Time.get_ticks_msec()
+		var checkpoint: Vector3 = _native.get_checkpoint_position()
+		print("SCRAPERX_CONTINUE path=%s bytes=%d checkpoint_y=%.2f tick=%d" % [
+			_save_path, bytes.size(), checkpoint.y, int(_native.get_tick_index())])
+		_hud.toast("CONTINUE", "%+.1f M" % checkpoint.y, UiStyle.SAFE)
+		return true
+	push_warning("SCRAPERX_SAVE_REJECTED path=%s bytes=%d" % [_save_path, bytes.size()])
+	DirAccess.rename_absolute(_save_path, _save_path + ".bad")
+	_hud.toast("SAVE UNREADABLE", "STARTING A NEW CLIMB", UiStyle.HAZARD)
+	return false
+
+
+func discard_saved_climb() -> void:
+	_save_enabled = false
+	if FileAccess.file_exists(_save_path):
+		DirAccess.remove_absolute(_save_path)
 
 
 # Pausing stops this node's _process, so no advance_frame call is made: the

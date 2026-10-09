@@ -11,6 +11,9 @@ signal quit_requested
 signal restart_requested
 signal settings_changed
 
+const NEW_CLIMB_TEXT := "NEW CLIMB"
+const NEW_CLIMB_CONFIRM_TEXT := "CONFIRM: START OVER"
+
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 
@@ -63,6 +66,7 @@ func open(current_family: int, current_summary: String) -> void:
 	if viewport_size != _built_for:
 		_build(viewport_size)
 	_summary_label.text = summary
+	(_side_buttons[&"restart"] as Button).text = NEW_CLIMB_TEXT
 	_controls_family = _canonical(family)
 	_show_page(PAGE_NONE)
 	visible = true
@@ -209,7 +213,7 @@ func _build(viewport_size: Vector2) -> void:
 	gap.custom_minimum_size = Vector2(0.0, 36.0 * _u)
 	column.add_child(gap)
 
-	var entries := [[&"resume", "RESUME"], [&"start_at", _start_text()], [&"restart", "RESTART THERE"],
+	var entries := [[&"resume", "RESUME"], [&"start_at", _start_text()], [&"restart", NEW_CLIMB_TEXT],
 		[PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
 		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"]]
 	if not OS.has_feature("mobile"):
@@ -219,13 +223,19 @@ func _build(viewport_size: Vector2) -> void:
 		column.add_child(button)
 		_side_buttons[entry[0]] = button
 	(_side_buttons[&"resume"] as Button).pressed.connect(func() -> void: resume_requested.emit())
-	# Start point: cycles where a restart puts the player; RESTART THERE
+	# Start point: cycles where a restart puts the player; NEW CLIMB
 	# starts a fresh world at it.
 	(_side_buttons[&"start_at"] as Button).pressed.connect(func() -> void:
 		settings.start_at = (settings.start_at + 1) % settings.START_NAMES.size()
 		settings.save_to_disk()
 		(_side_buttons[&"start_at"] as Button).text = _start_text())
-	(_side_buttons[&"restart"] as Button).pressed.connect(func() -> void: restart_requested.emit())
+	# NEW CLIMB discards the saved climb, so it asks once before it acts.
+	(_side_buttons[&"restart"] as Button).pressed.connect(func() -> void:
+		var button: Button = _side_buttons[&"restart"]
+		if button.text == NEW_CLIMB_CONFIRM_TEXT:
+			restart_requested.emit()
+		else:
+			button.text = NEW_CLIMB_CONFIRM_TEXT)
 	(_side_buttons[PAGE_CONTROLS] as Button).pressed.connect(_show_page.bind(PAGE_CONTROLS))
 	for page in SETTING_PAGES:
 		(_side_buttons[page] as Button).pressed.connect(_show_page.bind(page))
