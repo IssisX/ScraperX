@@ -1,0 +1,89 @@
+{
+  "label": "miss-retry",
+  "result": "PASS",
+  "exit_code": 0,
+  "terminal": [
+    "SCRAPERX_UITEST PASS touch_pipe_service mode=miss-retry ordinary_viewport_touch=1 sole_entry440_staging=1 actual_pipe_jump=true actual_sheltered_clearance=true actual462_25_receiver=1 stable_onward=1 gravity=1 deaths=0 assisted_traversals=0 miss_retry=true"
+  ],
+  "errors": [],
+  "phases": [
+    "entry440",
+    "north440_band",
+    "north440_toe_approach",
+    "lower_brace_toe440",
+    "lower_brace_ascent451",
+    "entry451_inward_jump",
+    "entry451_inward_jump_braking",
+    "quick_pipe_runup",
+    "ordinary_walk_pipe_collision_probe",
+    "ordinary_backtrack_to_quick_runup",
+    "fresh_supported_pipe_jump",
+    "pipe_ballistic_crossing",
+    "quick_receiving_braking",
+    "miss_approach_past_shelter_end",
+    "miss_toe_alignment",
+    "earned_toe_miss_start",
+    "actual_toe_walkoff",
+    "actual440_recovery_braking",
+    "north440_band",
+    "north440_toe_approach",
+    "lower_brace_toe440",
+    "lower_brace_ascent451",
+    "entry451_inward_jump",
+    "entry451_inward_jump_braking",
+    "shelter_choice_approach",
+    "shelter_entry_alignment",
+    "actual_crouched_shelter_entry",
+    "long_crouched_clearance_passage",
+    "shelter_real_exit",
+    "451_onward_to_upper_toe",
+    "upper_brace_toe451",
+    "upper_brace_ascent462",
+    "actual462_floor_jump",
+    "actual462_floor_jump_braking",
+    "onward462_west_roof"
+  ],
+  "last_native_samples": [
+    "PIPE_SERVICE_TOUCH phase=onward462_west_roof event=tick tick=8737 position=(-20.14487, 463.15, -132.3195) velocity=(0.365572, 0.0, -5.487838) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=5350.684443 hand_work=0.000000 firm=true yaw=-12.632886 touch_move=(0.000001, 1.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "PIPE_SERVICE_TOUCH phase=onward462_west_roof event=tick tick=8827 position=(-19.77933, 463.15, -137.8074) velocity=(0.365639, 0.0, -5.487833) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=5350.684443 hand_work=0.000000 firm=true yaw=-12.632886 touch_move=(0.000013, 1.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "PIPE_SERVICE_TOUCH phase=onward462_west_roof event=tick tick=8917 position=(-19.48034, 463.15, -142.2952) velocity=(0.094653, 0.0, -1.420244) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=5350.684443 hand_work=0.000000 firm=true yaw=-12.632886 touch_move=(-0.000007, -0.901235) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "PIPE_SERVICE_TOUCH phase=onward462_west_roof event=arrived tick=8995 position=(-19.49913, 463.15, -142.0132) velocity=(-0.008075, 0.0, 0.119565) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=5350.684443 hand_work=0.000000 firm=true yaw=-12.632886 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "PIPE_SERVICE_TOUCH phase=onward462_west_roof event=tick tick=9007 position=(-19.49919, 463.15, -142.0124) velocity=(0.0, 0.0, 0.0) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=5350.684443 hand_work=0.000000 firm=true yaw=-12.632886 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "PIPE_SERVICE_TOUCH phase=onward462_west_roof event=stable tick=9085 position=(-19.49919, 463.15, -142.0124) velocity=(0.0, 0.0, 0.0) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=5350.684443 hand_work=0.000000 firm=true yaw=-12.632886 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "PIPE_SERVICE_TOUCH phase=onward462_west_roof event=final462_receipt tick=9085 position=(-19.49919, 463.15, -142.0124) velocity=(0.0, 0.0, 0.0) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=5350.684443 hand_work=0.000000 firm=true yaw=-12.632886 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "SCRAPERX_UITEST PASS touch_pipe_service mode=miss-retry ordinary_viewport_touch=1 sole_entry440_staging=1 actual_pipe_jump=true actual_sheltered_clearance=true actual462_25_receiver=1 stable_onward=1 gravity=1 deaths=0 assisted_traversals=0 miss_retry=true"
+  ],
+  "walk_probe_receipts": [
+    "PIPE_WALK_TOUCH furthest_x=-15.850000 grounded=true support=1939 accepted_traversals=0"
+  ],
+  "recovery_receipts": [
+    "PIPE_SERVICE_TOUCH phase=actual_toe_walkoff event=actual_toe_support_loss tick=3808 position=(1.111636, 451.8717, -130.5001) velocity=(3.77846, -0.76922, -0.000361) grounded=false support=0 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247507 hand_work=0.000000 firm=false yaw=-1.572564 touch_move=(-0.001768, 0.999998) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "PIPE_SERVICE_TOUCH phase=actual_toe_walkoff event=delayed_ordinary_air_braking tick=3832 position=(2.303908, 451.3141, -130.5001) velocity=(4.619045, -3.385225, -0.000185) grounded=false support=0 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247507 hand_work=0.000000 firm=false yaw=-1.572564 touch_move=(0.001852, -0.999998) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "PIPE_SERVICE_TOUCH phase=actual_toe_walkoff event=actual440_recovery_impact tick=3935 position=(1.705963, 441.15, -130.5001) velocity=(-0.444041, 0.0, 0.000357) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247507 hand_work=0.000000 firm=true yaw=-1.572564 touch_move=(0.000182, -0.066402) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0"
+  ],
+  "drop_receipts": [],
+  "log_sha256": "e084dfe17310501a5cdcfc767ef6191d8fff53dc84e522d97c4fdbabd062b829",
+  "runtime_sha256": {
+    "main.tscn": "1a6910fdf586a7d3b0fcea52a1a84787c9ba627e6bd7fe452cd28ff769b52be2",
+    "presentation/main.gd": "bf130bb9c735a2327a27315a72eb1969e1ae0651a07e4f571546329875b4c9a4",
+    "presentation/ui/ui_test_driver.gd": "e00ee9458c0ff592169d73e4b6079bec86a5173370f7014dc75a943e263a14cd",
+    "presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a",
+    "presentation/ui/hud.gd": "adf03d87584279715ec98c611930101cb08c61f66c76560eacd5726113d86aba",
+    "presentation/kit_view.gd": "c67bb98ec3f535a3c9c8ae47c88626ab9fb50e0b4fdd51e78b0f6e5dde8ec1bf",
+    "project.godot": "2ca6051dd55c80d8137b4b9fb4416d3f767e774c4803950c4072cc82489699b9",
+    "addons/scraperx_native/scraperx_native.gdextension": "50ab0bccfaf7455de0d8812dcd228645db346ae72f689707560376d21af1dd93",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "f00513db1b85470bba3a959da4d42349549a6b6cf2687917422ecee545e17163"
+  },
+  "harness_current_sha256": {
+    "pipe_driver.gd": "1d15feedcee24afbba2964440a0b16343a02af77ea3e51b273809f3debcad3d3",
+    "prepare_runtime.py": "9b831335f681debc5ea5813c2a8f721b65cab796ffeb3e8eac34f1cb018924b9",
+    "run_touch.sh": "f6b9b0bdd4361c4ec39558605794d2b16edeecd53e369f973d2056ca4df05131",
+    "summarize_receipt.py": "df96dcfad5fd124234b45e276199aa785ec1cec789949e994fd7b0e3476769ee"
+  },
+  "scope": "One initial440roof stage followed by ordinary viewport touch through production input and native authority. No phone feel/performance, rendered visual/audio, CI or APK claim.",
+  "helper_as_used": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/pipe-service-touch/pipe_driver-miss-retry-as-used.gd",
+    "sha256": "1d15feedcee24afbba2964440a0b16343a02af77ea3e51b273809f3debcad3d3"
+  }
+}

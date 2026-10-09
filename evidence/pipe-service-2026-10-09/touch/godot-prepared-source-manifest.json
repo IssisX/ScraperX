@@ -1,0 +1,19 @@
+{
+  "repository_head": "571cd7c4bfe1088b923f3e612b3b8170c41971a7",
+  "target": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/pipe-service-touch/godot",
+  "imported_project": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/inspection-touch/godot",
+  "supplied_bridge": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/runtime-godot/addons/scraperx_native/bin/linux/libscraperx_native.so",
+  "sha256": {
+    "main.tscn": "1a6910fdf586a7d3b0fcea52a1a84787c9ba627e6bd7fe452cd28ff769b52be2",
+    "presentation/main.gd": "bf130bb9c735a2327a27315a72eb1969e1ae0651a07e4f571546329875b4c9a4",
+    "presentation/ui/ui_test_driver.gd": "e00ee9458c0ff592169d73e4b6079bec86a5173370f7014dc75a943e263a14cd",
+    "presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a",
+    "presentation/ui/hud.gd": "adf03d87584279715ec98c611930101cb08c61f66c76560eacd5726113d86aba",
+    "presentation/kit_view.gd": "c67bb98ec3f535a3c9c8ae47c88626ab9fb50e0b4fdd51e78b0f6e5dde8ec1bf",
+    "project.godot": "2ca6051dd55c80d8137b4b9fb4416d3f767e774c4803950c4072cc82489699b9",
+    "addons/scraperx_native/scraperx_native.gdextension": "50ab0bccfaf7455de0d8812dcd228645db346ae72f689707560376d21af1dd93",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "f00513db1b85470bba3a959da4d42349549a6b6cf2687917422ecee545e17163"
+  },
+  "runtime_status": "prepared; not executed"
+}

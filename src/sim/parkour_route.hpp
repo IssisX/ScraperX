@@ -4,6 +4,7 @@
 #include "sim/west_brace_bay_route.hpp"
 #include "sim/inspection_junction_route.hpp"
 #include "sim/north_transfer_route.hpp"
+#include "sim/pipe_service_route.hpp"
 
 namespace scraperx::sim {
 
@@ -35,7 +36,7 @@ inline constexpr float kParkourSwingMassKg = 40.0F;
            entity == kParkourRecoveryEntity || entity == kTaperInspectionEntity ||
            entity == kTaperRecoveryEntity || is_west_brace_bay_entity(entity) ||
            entity == kInspectionFrameEntity || entity == kInspectionRecoveryEntity ||
-           entity == kNorthTransferEntity;
+           entity == kNorthTransferEntity || entity == kPipeServiceEntity;
 }
 
 // Normal-world Crown exit: passive hanging arm and fixed recovery footing.

@@ -1,0 +1,11 @@
+# Pipe-service crossover — bounded goal
+
+Baseline571cd7c, exact IssisX/ScraperX / ChatGPT. North transfer418.25→440.25 is completed and committed locally. The original work window ends2026-10-10 00:14:17UTC; completing goals does not extend it.
+
+Connect actual440.25roof to existing462.25floor across the missing451m service connection. Author a shorter exposed supported-Jump lane and a longer sheltered crouch passage. Existing native forces, contacts, hands, input vocabulary and collision determine success. No new machinery/controller framework, gravity suppression or prescribed vault movement.
+
+Acceptance: reachable440approach and lowerbrace arrival; physically viable distinct choices and clearances; supported Jump/real crouch passage; stable connection into upperbrace and actual462roof; feasible ordinary-input miss/retry on440roof; connected native and viewport-touch observations; scoped visual readability and native-render agreement. Preserve earlier encounters and user work. Publication/Actions/phone status remain separate.
+
+Ownership: native_catalog_mechanisms writes only newpipe_service_route.hpp/cpp; native_catalog_release writes only newpipe_service_route_tests.cpp/private touch harness; junction_physics_review is read-only; root owns decisions, integration, rendering, shared builds, docs and delivery. Remote Super_Agent may advise from supplied evidence only.
+
+Status: gameplay complete. Native quick and connected miss/retry7769ticks pass, including both choices; ordinary viewport-touch quick4751ticks and connected retry9085ticks pass. Retained north-transfer primary6005ticks passes. Three scoped staged views agree with actual33native parts; root inspected them. Exact source/evidence is in evidence/pipe-service-2026-10-09. Publication/Actions/APK and human phone observations remain separate. Pending movement, deformable-foot push-off, remaining machines, world and visual requirements remain in the full roadmap; this small goal does not remove them. Publish completed checkpoint571cd7c and this integration together at the normal source publication/Actions boundary. The bounded plank recovery driver differs between ARM/x86 observations and needs exact-source CI closure; no green APK is asserted before that run.

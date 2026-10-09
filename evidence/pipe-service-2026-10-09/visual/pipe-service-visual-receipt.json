@@ -1,0 +1,57 @@
+{
+  "captures": [
+    {
+      "camera": "[X: (-0.0, 0.0, 1.0), Y: (0.079916, 0.996802, 0.0), Z: (-0.996802, 0.079916, -0.0), O: (-20.5, 452.52, -130.0)]",
+      "crouched": false,
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_service_entry451_pov.png",
+      "label": "staged_service_entry451_pov",
+      "native_parts": 33,
+      "native_render_agreement": true,
+      "player": "(-20.5, 451.9, -130.0)",
+      "render_surfaces": 4,
+      "render_triangles": 2664,
+      "shadow_quality": 1,
+      "support": 1939,
+      "viewport": "(648.0, 557.0)"
+    },
+    {
+      "camera": "[X: (-0.0, 0.0, 1.0), Y: (0.19867, 0.980066, 0.0), Z: (-0.980066, 0.19867, -0.0), O: (-17.0, 452.52, -129.375)]",
+      "crouched": false,
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_pipe_approach451_pov.png",
+      "label": "staged_pipe_approach451_pov",
+      "native_parts": 33,
+      "native_render_agreement": true,
+      "player": "(-17.0, 451.9, -129.375)",
+      "render_surfaces": 4,
+      "render_triangles": 2664,
+      "shadow_quality": 1,
+      "support": 1939,
+      "viewport": "(648.0, 557.0)"
+    },
+    {
+      "camera": "[X: (0.198669, 0.0, 0.980067), Y: (0.05877, 0.998201, -0.011913), Z: (-0.978303, 0.059965, 0.198312), O: (-17.6, 451.95, -130.65)]",
+      "crouched": true,
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_service_window451_pov.png",
+      "label": "staged_service_window451_pov",
+      "native_parts": 33,
+      "native_render_agreement": true,
+      "player": "(-17.6, 451.6, -130.65)",
+      "render_surfaces": 4,
+      "render_triangles": 2664,
+      "shadow_quality": 1,
+      "support": 1939,
+      "viewport": "(648.0, 557.0)"
+    }
+  ],
+  "failures": [],
+  "scope": "explicit staged visual inspection; normal production main/native world; capture-only low quality preset; no earned route/phone/performance proof"
+}

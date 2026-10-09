@@ -1,0 +1,21 @@
+{
+  "native_sha256": "f00513db1b85470bba3a959da4d42349549a6b6cf2687917422ecee545e17163",
+  "kit_view_sha256": "c67bb98ec3f535a3c9c8ae47c88626ab9fb50e0b4fdd51e78b0f6e5dde8ec1bf",
+  "probe_script_sha256": "4f11c7b8496bd5ded265b762d18f01c5bc62af70eec07338b083d6c2d2645036",
+  "production_main_sha256": "fe9ebfdef8ae0ed61d03d2f0590d2ff30350c6ad27073f2531c120ca1194d09d",
+  "private_main_sha256": "fe9ebfdef8ae0ed61d03d2f0590d2ff30350c6ad27073f2531c120ca1194d09d",
+  "scope": "Explicit fullworld appearance staging; finalview ordinary native crouch at actual clear entrance with native camera smoothing; no earnedroute/phone/performance proof",
+  "viewport": [
+    648,
+    557
+  ],
+  "quality_preset": 0,
+  "render_scale": 1.0,
+  "command": "proot-distro login ubuntu --shared-tmp -- /usr/bin/env LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=softpipe GODOT_SILENCE_ROOT_WARNING=1 /usr/bin/timeout 90s /usr/bin/xvfb-run -a -s '-screen 0 648x557x24' /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --path /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-transfer-visual --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 60 --resolution 648x557 --script pipe_service_staged_visual.gd",
+  "private_native_sha256": "f00513db1b85470bba3a959da4d42349549a6b6cf2687917422ecee545e17163",
+  "native_route_cpp_sha256": "6885bded4a188ed584675ade8f432486556ad2951a3e9296cb487468052946d9",
+  "native_route_header_sha256": "a451a2f5ec6d3066b26d19af928d740fe85ca802fade307c6fe023bf50a79aa8",
+  "exit_code": 0,
+  "result": "PASS; three saved images; failures[]",
+  "actual_renderer": "Godot4.7 compatibility OpenGL3.3 Mesa26.0.8 softpipe under Xvfb"
+}

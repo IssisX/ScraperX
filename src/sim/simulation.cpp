@@ -2043,6 +2043,7 @@ public:
                 // New north transfer appends after existing owners, preserving
                 // their native body order and checkpoint bindings.
                 build_north_transfer_route(*kit_);
+                build_pipe_service_route(*kit_);
                 contact_listener_.set_reclaim_fragments(supplied_ascent_->reclaim_material_range());
             }
         }
