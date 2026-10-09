@@ -12,6 +12,7 @@ public:
     const State &state() const noexcept { return state_; }
     void restore(const State &state) noexcept { state_=state; }
     double floor_height() const;
+    static constexpr std::uint64_t kStairEntity = 2600;
     static constexpr double kBedTop=44.9, kStroke=1.75;
 private:
     JPH::PhysicsSystem &system_;

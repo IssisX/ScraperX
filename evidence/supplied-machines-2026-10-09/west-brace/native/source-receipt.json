@@ -1,0 +1,22 @@
+{
+  "base_head": "e3c6168a720b94d3fa42c4e67df682747e3c8642",
+  "source_state": "uncommitted selected integration; original Luna worktrees preserved",
+  "time_utc": "2026-10-09T16:10:21.986550+00:00",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "aa02982ab66c7cb788c831cb5eb2df5aee1697a56c1467cc64d1a610ddd948e7",
+    "src/sim/simulation.hpp": "7bcd133dec261d0aca3db6f39226366ccdd592410c0b1c4171f036d54bd60cf5",
+    "src/sim/west_brace_bay_route.cpp": "f4a55e378a588bfac493cc62c28ca6088259934d8eea33573df19915fcfbabbc",
+    "src/sim/west_brace_bay_route.hpp": "59625fa1602ded25b7bb9912b4a175d718c1d1f4f16548039777a5a47f001828",
+    "src/sim/swing_stair.cpp": "6e02eb996c343196b633f604c861889952ce8859542c77fc206cd40794193a46",
+    "src/sim/swing_stair.hpp": "48464b4b2b108618a54e26694bc20f35d85ec1b81fa6f3c5e4489ff46b42e37c",
+    "tests/west_brace_bay_route_tests.cpp": "019f1bf655987c048a1f83ce00fdf8de0550f519a25ae9c77283aeabf9245434",
+    "tests/physical_traversal_tests.cpp": "719f16726783366aaa709eba4521fe818fa49014e67bc103734f82c0294020db",
+    "tests/suspended_ladder_tests.cpp": "89b979ac25b94b5175c5c3785f49cb7be4a0d140d87f51f1028b6972cc0c17a0",
+    "tests/simulation_tests.cpp": "fff12090b4743677d95e47047f64da5c723ac118a93cf48edce810b93bdb7315",
+    "tests/swing_stair_route_tests.cpp": "7bfb63567865e2c2d8e0b5c208b9de18d4a5814d85ac356276297e65714597cb",
+    "tests/pipe_bridge_tests.cpp": "e0d364a3abde40f6d2f27a4a9e4dac72dfbb2c7f1abc5952e9a4492bed356c7b"
+  },
+  "bridge_sha256": "f829609a625b8e42d869f4a77265c494e3e6425bf5da02306fbfe472fafb9e07",
+  "runtime": "Ubuntu ARM64 GCC15 / pinned Jolt / native90Hz",
+  "claim": "source capture for currently running changed-path native checks; outcomes pending"
+}

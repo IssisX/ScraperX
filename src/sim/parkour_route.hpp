@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sim/mechanism_kit.hpp"
+#include "sim/west_brace_bay_route.hpp"
 
 namespace scraperx::sim {
 
@@ -20,7 +21,7 @@ inline constexpr float kParkourSwingMassKg = 40.0F;
 [[nodiscard]] constexpr bool is_parkour_route_entity(std::uint64_t entity) noexcept {
     return entity == kParkourFrameEntity || is_parkour_swing_entity(entity) ||
            entity == kParkourRecoveryEntity || entity == kTaperInspectionEntity ||
-           entity == kTaperRecoveryEntity;
+           entity == kTaperRecoveryEntity || is_west_brace_bay_entity(entity);
 }
 
 // Normal-world Crown exit: passive hanging arm and fixed recovery footing.

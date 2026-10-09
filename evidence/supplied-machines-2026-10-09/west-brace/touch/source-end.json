@@ -1,0 +1,9 @@
+{
+  "src/sim/west_brace_bay_route.cpp": "f4a55e378a588bfac493cc62c28ca6088259934d8eea33573df19915fcfbabbc",
+  "src/sim/west_brace_bay_route.hpp": "59625fa1602ded25b7bb9912b4a175d718c1d1f4f16548039777a5a47f001828",
+  "src/sim/simulation.cpp": "aa02982ab66c7cb788c831cb5eb2df5aee1697a56c1467cc64d1a610ddd948e7",
+  "src/sim/parkour_route.hpp": "63a72c1a45adb69ed84b17c066c7e4cbaa4ada6e09d84ac1a236f0d9ebc8f4c6",
+  "godot/presentation/main.gd": "b6cd37fa8042456e5ca509d8f0d60d0859bd15238e6d2ee7a10994cf6c9de3ef",
+  "godot/presentation/ui/ui_test_driver.gd": "3e5f4d9755545ed8f6b640813ae835d3506d3ee25e20df61290a167738b7c96b",
+  "godot/presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0"
+}

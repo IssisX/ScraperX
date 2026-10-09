@@ -1,0 +1,129 @@
+{
+  "base_head": "e3c6168a720b94d3fa42c4e67df682747e3c8642",
+  "branch": "ChatGPT",
+  "source_state": "Selected local integration source checkpoint following base_head. Original Luna worktrees preserved. Local receipts retain their own captured boundaries; source publication is not green APK delivery.",
+  "native": {
+    "case": "scraperx_sim.west_brace_bay_route",
+    "result": "PASS",
+    "duration_seconds": 18.9575,
+    "suite_tests": 6,
+    "suite_failures": 2,
+    "passing_cases": [
+      "scraperx_sim.physical_traversal",
+      "scraperx_sim.suspended_ladder_route",
+      "scraperx_sim.swing_stair_route_0",
+      "scraperx_sim.west_brace_bay_route"
+    ],
+    "failing_cases": [
+      "scraperx_sim.athletic_traversal",
+      "scraperx_sim.pipe_bridge_passenger"
+    ],
+    "source_receipt": "native/source-receipt.json",
+    "source_receipt_provenance": "Copied unchanged root capture; its original pending-outcomes claim predates completion. Root confirms native production and west-route owner hashes unchanged through actual passes. Later simulation/pipe test-helper edits are outside these completed checks.",
+    "executable_sha256": null,
+    "executable_hash_limit": "Not captured; no current or subsequently relinked binary hash inferred.",
+    "log_provenance": "native/west-brace.log is the exact west-brace system-out extracted from native/final-changed-paths.xml.",
+    "prior_focused_evidence": "native/repaired-native.xml separately records ascent, gravity-reclaim and cargo-net PASS before the final airborne Action readback change; it also retains five failures."
+  },
+  "touch": {
+    "result": "PASS",
+    "exit_code": 0,
+    "receipt": "touch/receipt.json",
+    "bridge_sha256": "f829609a625b8e42d869f4a77265c494e3e6425bf5da02306fbfe472fafb9e07",
+    "driver_sha256": "3e5f4d9755545ed8f6b640813ae835d3506d3ee25e20df61290a167738b7c96b",
+    "main_sha256": "b6cd37fa8042456e5ca509d8f0d60d0859bd15238e6d2ee7a10994cf6c9de3ef",
+    "final_source_sha256": {
+      "src/sim/west_brace_bay_route.cpp": "f4a55e378a588bfac493cc62c28ca6088259934d8eea33573df19915fcfbabbc",
+      "src/sim/west_brace_bay_route.hpp": "59625fa1602ded25b7bb9912b4a175d718c1d1f4f16548039777a5a47f001828",
+      "src/sim/simulation.cpp": "aa02982ab66c7cb788c831cb5eb2df5aee1697a56c1467cc64d1a610ddd948e7",
+      "src/sim/parkour_route.hpp": "63a72c1a45adb69ed84b17c066c7e4cbaa4ada6e09d84ac1a236f0d9ebc8f4c6",
+      "godot/presentation/main.gd": "b6cd37fa8042456e5ca509d8f0d60d0859bd15238e6d2ee7a10994cf6c9de3ef",
+      "godot/presentation/ui/ui_test_driver.gd": "3e5f4d9755545ed8f6b640813ae835d3506d3ee25e20df61290a167738b7c96b",
+      "godot/presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0"
+    },
+    "observed_receipts": {
+      "first_transfer_tick": 973,
+      "second_transfer_tick": 1952,
+      "second_peak_hand_load_n": 1623.45556640625,
+      "final_transfer_tick": 2995,
+      "final_transfer_count": 3,
+      "final_support": 51,
+      "final_peak_hand_load_n": 2049.10668945312,
+      "roof_after_hold_tick": 3269,
+      "roof_position": [
+        -23.66858,
+        397.15,
+        -139.0135
+      ],
+      "gravity_factor": 1,
+      "deaths": 0
+    },
+    "onward_meters": 3.23,
+    "upper_hold_native_ticks": 270,
+    "limits": "Not continuous campaign, missed-catch viewport-touch recovery, phone feel, rendered appearance, audio/haptics, CI/APK or publication proof. Native force/work owner proof remains separate. Runtime readback work is not complete energy closure."
+  },
+  "scope": "Completed local secondary 374.25\u2192396.25 connection; full canonical machine/parkour/world/visual goal remains primary. No full-suite, continuous-campaign, phone, rendered-appearance, CI/APK or successor-publication PASS.",
+  "files_sha256": {
+    "native/final-changed-paths.xml": "137cff73cb65a59412fec2a1ef3047d2af1f1d5cdeef782828cf26f819868357",
+    "native/repaired-native.xml": "3a21a66cfaec1fe24b3ef718f0c5733623f5dcc85b3b65bb166e067b005bba02",
+    "native/source-receipt.json": "04ba2c5c161ac3c99dc94f91404bcc8e41127febb26419e284cf88bb8a6592cb",
+    "native/west-brace.log": "c168fff3c349db8ee2f2595886a83373a492f78a512f7adf3d886bc870265080",
+    "touch/receipt.json": "fe54e3c82b05e988cbd452c01b2576eab879fd053bca6e139d7ae4aeded46dae",
+    "touch/runtime-hashes-end.json": "927b7acb68df42be05ef28ecac745e4a4058904adee3e76ec6aaf1bd31d28b83",
+    "touch/runtime-hashes-start.json": "927b7acb68df42be05ef28ecac745e4a4058904adee3e76ec6aaf1bd31d28b83",
+    "touch/source-end.json": "eaf31d8731ba588e92fce9023c49dd908da84097398649ba8ccfe4495270bb95",
+    "touch/touch.log": "dfa32a8c9a442f59be31db4eb2f9b560d61dde5c9461ca4a44b2ce71afa682a8",
+    "native/jib-hold-source-receipt.json": "5fba70397a2fd69c11a268222c381a6e887e06067eea621df230d84a898ae479",
+    "native/jib-hold-result-receipt.json": "73fe7c5b826d09cef8fab0af989cf64941eaf8e279e79e287dedbb523d980385",
+    "native/jib-hold.log": "fd9b84fc938ee72799c7f89d22a8bf4d82302969c0c505f31f0fa87dd8802391",
+    "native/jib-restore-source-receipt.json": "752a0982dff91d0086b0d0dfc35e60a764905463df73ed9c1a6c5951c4d4e40d",
+    "native/jib-restore-result-receipt.json": "265f0d27e381c06097e41e6012f8b948498fdc055e4e6bf0d897e5c077f3f64c",
+    "native/jib-restore.log": "f9c66095989cd0db716c9566e9badc6ac92e52ae41f6861314915ed149ecb909",
+    "native/intake-approach-source-receipt.json": "b46d0a6947fec2024809e5230f4b798bb30dc07c168e63ad8e4d4d2833b868dd",
+    "native/intake-approach-result-receipt.json": "ff72665cc56ef02cbadec543c5c356f953534a9efdd888ea3fb4892f1f42d099",
+    "native/intake-approach.log": "99e8b85b5abe3664e5be9f94841f725ecaac0e1ec464a47b59e9c28b7fb0fb14",
+    "native/as002-observed.log": "8c13e78371a96af661950728f14ba397e5aea710c46e3ede96c2c8dd3633380d",
+    "native/as002-old-transit.log": "233e6cfa86e2ecf3e5d544cc3b3d607639a151f1bf05b890fd48fefe4bea4fba",
+    "native/as002-source-receipt.json": "5a6852ec68929227f50666dcb3b0e67da38ed30f57e358ece97bb58ced20f219",
+    "native/as002-old-transit-source-receipt.json": "27eb826f2c51ca5c0fb7ff3b75e5b06a59f1cc0ad15689348767a69140794f49"
+  },
+  "delivery_followup": {
+    "pipe_passenger": {
+      "result": "PASS root-observed tool execution",
+      "tool_session": 39930,
+      "exit_code": 0,
+      "board_position": [
+        4.92497,
+        1.87408,
+        -91.5806
+      ],
+      "board_tip_height": 5.14311,
+      "neutral_rider_seconds": 10,
+      "rider_position": [
+        5.16957,
+        2.08412,
+        -91.4109
+      ],
+      "rider_support": 2500,
+      "final_support": 11,
+      "final_y": 11.9,
+      "deaths": 0,
+      "executable_sha256_captured_after_pass": "a53e4a15d3e3d889ee3cf01d4b182d57b13aea865708ebd9d7e45ed87bb60ac5",
+      "limits": "Root-observed summary, not saved raw stdout or exact-final-source execution proof."
+    },
+    "jib_hold": {
+      "result": "Original position/rating/instantaneous rest gates PASS; stronger sustained-rest diagnostic FAIL",
+      "result_receipt": "native/jib-hold-result-receipt.json",
+      "limits": "No continuous45tick world-and-axial speed<.05 window; no perfect rest or complete energy closure."
+    },
+    "jib_checkpoint_restore": {
+      "result": "PASS ordinary Jump, unchanged airborne checkpoint, A-to-B-to-A restart and two-second hold",
+      "result_receipt": "native/jib-restore-result-receipt.json"
+    },
+    "intake_arrival": {
+      "result": "FAIL old full-stick helper / PASS ordinary finite-braking helper, identical world/timings",
+      "result_receipt": "native/intake-approach-result-receipt.json"
+    },
+    "whole_athletic": "Latest maintained run FAIL125.45s: repaired+24m entry passes; deployed flight must reach mid-landing y>=32.89 fails. Both original and PD higher transit private controls also fail before hinge; actual cause unresolved. Owner stopped further CI investigation to restore main-goal priority."
+  }
+}

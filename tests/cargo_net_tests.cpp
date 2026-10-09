@@ -110,8 +110,12 @@ void route(double lane) {
                 const auto a=left?before.traversal_left_hand:before.traversal_right_hand;
                 const auto b=left?after.traversal_left_hand:after.traversal_right_hand;
                 const auto rendered=s.render_traversal_hand(left);
-                const auto gap=std::hypot(std::hypot(b.x-a.x,b.y-a.y),b.z-a.z);
-                if(gap<.01) {
+                const auto generation_before=left?before.traversal_left_hand_generation:before.traversal_right_hand_generation;
+                const auto generation_after=left?after.traversal_left_hand_generation:after.traversal_right_hand_generation;
+                if(before.traversal_hand_constraint_count==2 && after.traversal_hand_constraint_count==2 &&
+                   before.traversal_state==after.traversal_state &&
+                   before.traversal_support_entity_id==after.traversal_support_entity_id &&
+                   generation_before==generation_after) {
                     require(std::hypot(std::hypot(rendered.x-(a.x+b.x)*.5,rendered.y-(a.y+b.y)*.5),rendered.z-(a.z+b.z)*.5)<.00002,
                             "retained net material anchor uses the mesh half-tick history");
                     ++retained_samples;

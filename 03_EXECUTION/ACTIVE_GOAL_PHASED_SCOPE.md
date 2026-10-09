@@ -2,6 +2,10 @@
 
 Everything below belongs to this goal. These requirements remain in scope until implemented and demonstrated, or explicitly changed by the owner. Phase summaries, progress percentages, builds, and passing isolated tests must not silently remove unfinished requirements.
 
+**Owner priority clarification — 2026-10-09:** The full machine, parkour, encounter/world and visual goal is primary. Integrating Luna's west-brace obstacles is a bounded secondary task, not a replacement goal. Challenging parkour needs dedicated authoring: strategic obstacle placement, route reading, commitments, timing, meaningful alternatives and feasible recoveries. Future encounter work must advance that experience alongside physical machines rather than treating parkour as incidental connecting paths. Keep the expanded Godot skill pack selective and subordinate to native physics ownership and focused delivery.
+
+**Owner scope correction — 2026-10-09:** The owner explicitly removed the Derrick encounter from this goal. Its archived screening is historical evidence, not a deferred encounter or a pending replacement obligation. All other phased requirements below remain in scope.
+
 ### Phase 0 — Preserve the project and establish the execution frontier
 
 - Work only in `IssisX/ScraperX`, on the exact write branch `ChatGPT`.

@@ -62,7 +62,8 @@ bool advance_until(scraperx::sim::Simulation &simulation,
 double walk_toward(scraperx::sim::Simulation &simulation,
                    const double target_x,
                    const double target_z,
-                   const double seconds) {
+                   const double seconds,
+                   const bool settled_arrival = false) {
     const double step = scraperx::sim::Simulation::kFixedStepSeconds;
     const auto ticks = static_cast<std::uint32_t>(seconds / step);
     double deepest_z = simulation.snapshot().player_position.z;
@@ -75,7 +76,17 @@ double walk_toward(scraperx::sim::Simulation &simulation,
             dx /= length;
             dz /= length;
         }
-        (void)simulation.set_move_input(dx, dz);
+        if (settled_arrival) {
+            const double input_x = (target_x - state.player_position.x) * 1.8 -
+                (state.player_linear_velocity.x - state.support_point_linear_velocity.x) * .28;
+            const double input_z = (target_z - state.player_position.z) * 1.8 -
+                (state.player_linear_velocity.z - state.support_point_linear_velocity.z) * .28;
+            const double scale = std::max(1.0, std::hypot(input_x, input_z));
+            (void)simulation.set_move_input(input_x / scale, input_z / scale);
+        } else {
+            // Impassability proofs retain sustained full-stick pressure.
+            (void)simulation.set_move_input(dx, dz);
+        }
         (void)simulation.set_facing(dx, dz);
         (void)simulation.advance_frame(step);
         deepest_z = std::min(deepest_z, simulation.snapshot().player_position.z);
@@ -178,17 +189,27 @@ void steer_toward(scraperx::sim::Simulation &simulation, const double x, const d
 
 // Walks to a horizontal target and stops on it; true once within tolerance.
 bool walk_to(scraperx::sim::Simulation &simulation, const double x, const double z,
-             const double budget_seconds, const double tolerance = 0.15) {
+             const double budget_seconds, const double tolerance = 0.15,
+             const bool settled_arrival = false) {
     using scraperx::sim::Simulation;
     const auto ticks = static_cast<std::uint32_t>(
         budget_seconds * static_cast<double>(Simulation::kTickRateHz));
     for (std::uint32_t tick = 0; tick < ticks; ++tick) {
         const auto state = simulation.snapshot();
-        if (std::hypot(x - state.player_position.x, z - state.player_position.z) <= tolerance) {
+        const double dx=x-state.player_position.x,dz=z-state.player_position.z;
+        if (std::hypot(dx,dz) <= tolerance &&
+            (!settled_arrival || (state.player_grounded &&
+             std::hypot(state.player_linear_velocity.x,state.player_linear_velocity.z)<.15))) {
             (void)simulation.set_move_input(0.0, 0.0);
             return true;
         }
-        steer_toward(simulation, x, z);
+        if (settled_arrival) {
+            const double ix=dx*1.8-state.player_linear_velocity.x*.28;
+            const double iz=dz*1.8-state.player_linear_velocity.z*.28;
+            const double scale=std::max(1.0,std::hypot(ix,iz));
+            (void)simulation.set_move_input(ix/scale,iz/scale);
+            if (std::hypot(dx,dz)>.001) (void)simulation.set_facing(dx,dz);
+        } else steer_toward(simulation, x, z);
         (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
     }
     (void)simulation.set_move_input(0.0, 0.0);
@@ -944,7 +965,7 @@ int main() {
                               scraperx::sim::WorldContent::RegressionFixtures);
     require(oblique_mantle.advance_frame(0.5).accepted,
             "oblique mantle settling interval must be accepted");
-    require(walk_to(oblique_mantle, 8.45, -4.60, 2.0, 0.12),
+    require(walk_to(oblique_mantle, 8.45, -4.60, 2.0, 0.12, true),
             "the player must reach the close oblique mantle approach");
     require(oblique_mantle.set_move_input(0.0, 0.0),
             "oblique mantle stop input must be accepted");
@@ -1508,10 +1529,9 @@ int main() {
     // the newly reached position is what the checkpoint system persists.
     Simulation chain(InitialSpawn::LiftPlatform, scraperx::sim::WorldContent::RegressionFixtures);
     require(chain.set_facing(0.0, -1.0), "chain facing toward the catwalk must be accepted");
-    require(chain.set_move_input(0.0, -1.0), "chain move-to-edge input must be accepted");
-    require(advance_until(chain,
-                          [](const Snapshot &state) { return state.player_position.z <= -101.25; },
-                          3.0),
+    // The platform extends to -102.3; deliberately stop inside its edge,
+    // with the real -103 catwalk within reach rather than relying on coast.
+    require(walk_to(chain, chain.snapshot().player_position.x, -101.85, 3.0, .04, true),
             "the player must be able to walk from the platform's centre toward its near edge");
     require(chain.set_move_input(0.0, 0.0), "chain hold-at-edge input must be accepted");
     require(chain.advance_frame(1.0).accepted, "chain settle-at-edge interval must be accepted");
@@ -1600,7 +1620,22 @@ int main() {
                 treadle_spawn.valve_open_fraction == 0.0,
             "the treadle must rest against its stop with the valve shut -- a control that is not "
             "being stood on grants nothing (Governing Law 24)");
-    require(treadle.advance_frame(8.0).accepted, "treadle-held interval must be accepted");
+    // The real cable/plate oscillates under an 85 kg rider. Measure its
+    // standing capability over time, not an arbitrary valve phase at 8 s.
+    std::uint32_t held_capability_ticks = 0;
+    double held_valve_peak = 0;
+    for (std::uint32_t i=0; i<8*Simulation::kTickRateHz; ++i) {
+        require(treadle.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "treadle-held interval must be accepted");
+        const auto state=treadle.snapshot();
+        held_valve_peak=std::max(held_valve_peak,state.valve_open_fraction);
+        if(i>=4*Simulation::kTickRateHz) {
+            require(state.player_grounded && state.support_entity_id==Simulation::kTreadleEntityId &&
+                    state.lift_platform_position.y>6.7 && state.lift_platform_position.y<8.3,
+                    "held control maintains actual footing and the standing lift window");
+            if(state.valve_open_fraction>.5 && state.piston_force_n>0) ++held_capability_ticks;
+        }
+    }
     const auto treadle_held = treadle.snapshot();
     require(treadle_held.player_grounded &&
                 treadle_held.support_entity_id == Simulation::kTreadleEntityId,
@@ -1608,9 +1643,9 @@ int main() {
     require(treadle_held.treadle_angle_radians > 0.05,
             "an 85 kg body must visibly swing the treadle against its counterweight -- this is "
             "the control that is built to a human scale, unlike the 900 kg tipper");
-    require(treadle_held.valve_open_fraction > 0.5,
+    require(held_valve_peak > 0.5 && held_capability_ticks >= 2*Simulation::kTickRateHz,
             "standing on the treadle must haul the cable and open the real valve");
-    require(treadle_held.piston_force_n > 0.0,
+    require(held_capability_ticks >= 2*Simulation::kTickRateHz,
             "the player-opened valve must actually drive the real piston");
     require(treadle_held.lift_platform_position.y > 6.7 &&
                 treadle_held.lift_platform_position.y < 8.3,
@@ -1778,6 +1813,52 @@ int main() {
     require(std::abs(stand_after.jib_capacity_stand_load_position.y - stand_start_y) < 0.01,
             "a load past the rated winch force must never rise -- 'unlimited winch force' stays "
             "forbidden whether or not the player is watching");
+
+    // A hold target is part of machine state: rewinding the bodies must not
+    // leave a later powered target pulling the restored hook back upward.
+    Simulation hold_restore(InitialSpawn::KernelJibStation,
+                            scraperx::sim::WorldContent::RegressionFixtures);
+    require(hold_restore.advance_frame(.5).accepted &&
+                hold_restore.set_jib_hoist_input(1.0) &&
+                hold_restore.advance_frame(2.0).accepted &&
+                hold_restore.set_jib_hoist_input(0.0) &&
+                hold_restore.advance_frame(1.8).accepted,
+            "prepare a supported midtravel powered-hold checkpoint");
+    const auto saved_hold = hold_restore.snapshot();
+    require(saved_hold.player_grounded, "hold checkpoint must have real footing");
+    const auto airborne_hold_ticks = [&](unsigned count) {
+        for (unsigned tick = 0; tick < count; ++tick) {
+            require(hold_restore.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                    "airborne hold tick must advance");
+            const auto state = hold_restore.snapshot();
+            require(!state.player_grounded &&
+                        state.checkpoint_commit_count == saved_hold.checkpoint_commit_count,
+                    "ordinary jump must freeze the earlier machine checkpoint");
+            require(std::abs(state.jib_hoist_motor_force_n) <= 20001.0,
+                    "powered hold and movement retain the same finite winch rating");
+        }
+    };
+    require(hold_restore.request_jump(), "hold restore departure uses an ordinary jump");
+    airborne_hold_ticks(11);
+    require(hold_restore.set_jib_hoist_input(1.0), "move the hook after checkpoint departure");
+    airborne_hold_ticks(54);
+    require(hold_restore.set_jib_hoist_input(0.0), "latch a distinct later hold target");
+    airborne_hold_ticks(9);
+    require(hold_restore.snapshot().jib_hoist_position_meters >
+                saved_hold.jib_hoist_position_meters + .35,
+            "the later hold must be distinct from the saved extension");
+    require(hold_restore.restart_checkpoint(), "ordinary checkpoint restart must succeed");
+    require(std::abs(hold_restore.snapshot().jib_hoist_position_meters -
+                     saved_hold.jib_hoist_position_meters) < .0001,
+            "checkpoint restart must restore the earlier hook extension");
+    for (unsigned tick = 0; tick < 2 * Simulation::kTickRateHz; ++tick) {
+        require(hold_restore.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                "restored neutral hold tick must advance");
+        const auto state = hold_restore.snapshot();
+        require(std::abs(state.jib_hoist_position_meters - saved_hold.jib_hoist_position_meters) < .1 &&
+                    std::abs(state.jib_hoist_motor_force_n) <= 20001.0,
+                "restored powered hold must retain the saved target and finite rating");
+    }
 
     std::cout << "PASS scraperx_sim first freight: station=" << int(jib_idle.jib_station_active)
               << " raised_y=" << jib_raised.jib_hook_position.y
@@ -2091,15 +2172,15 @@ int main() {
     require(freight.set_intake_hoist_input(0.0), "intake hoist stop must be accepted");
 
     // 5. Now walk the route the freight opened, all the way to +24 m.
-    walk_toward(freight, kThroatX, -107.5, 12.0);
-    walk_toward(freight, kThroatX, -113.0, 8.0);
+    walk_toward(freight, kThroatX, -107.5, 12.0, true);
+    walk_toward(freight, kThroatX, -113.0, 8.0, true);
     for (int flight = 0; flight < 6; ++flight) {
         const double side = (flight % 2 == 0) ? 1.0 : -1.0;
         const double lane = -118.0 + side * 2.0;
-        walk_toward(freight, -side * kStairLandingX, lane, 8.0);
-        walk_toward(freight, side * kStairLandingX, lane, 14.0);
+        walk_toward(freight, -side * kStairLandingX, lane, 8.0, true);
+        walk_toward(freight, side * kStairLandingX, lane, 14.0, true);
     }
-    walk_toward(freight, -6.0, -112.0, 12.0);
+    walk_toward(freight, -6.0, -112.0, 12.0, true);
     const auto arrived = freight.snapshot();
     require(arrived.support_entity_id == Simulation::kIntakeHandoffEntityId,
             "the player must finish standing on the +24 m handoff deck itself");
@@ -2307,13 +2388,13 @@ int main() {
     // Walk the route the deploy just opened: deck -> up the flight's own
     // incline to the hinge end -> across to the mid-landing -> up the
     // (now-inclined) upper flight -> through the well onto the hall deck.
-    walk_toward(ascent, kThroatX, -107.5, 12.0);
-    walk_toward(ascent, kThroatX, -113.0, 8.0);
+    walk_toward(ascent, kThroatX, -107.5, 12.0, true);
+    walk_toward(ascent, kThroatX, -113.0, 8.0, true);
     for (int flight = 0; flight < 6; ++flight) {
         const double side = (flight % 2 == 0) ? 1.0 : -1.0;
         const double lane = -118.0 + side * 2.0;
-        walk_toward(ascent, -side * kStairLandingX, lane, 8.0);
-        walk_toward(ascent, side * kStairLandingX, lane, 14.0);
+        walk_toward(ascent, -side * kStairLandingX, lane, 8.0, true);
+        walk_toward(ascent, side * kStairLandingX, lane, 14.0, true);
     }
     // Lands west of the flight's own reach (it spans x in [-6, 7.856] once
     // deployed) and clear of its z in [-113.4, -111.6] -- clear of it on
@@ -2337,7 +2418,7 @@ int main() {
     // climbing at all. x = -4.0 is unambiguous: the flight's own surface is
     // already 1.15 m above the deck there, well outside any such margin,
     // while still short of the deck's own east edge (-2.0).
-    walk_toward(ascent, -6.0, -112.5, 25.0);
+    walk_toward(ascent, -6.0, -112.5, 25.0, true);
     for (int i = 0; i < 20 * 90; ++i) {
         const auto state = ascent.snapshot();
         double dx = kLegalFortyHingeX - state.player_position.x;
@@ -2356,7 +2437,7 @@ int main() {
     // found by direct observation that aiming straight at the landing's own
     // centre from the flight walks off its north edge diagonally, into the
     // gap, before reaching far enough east to be over the landing at all.
-    walk_toward(ascent, kLegalFortyMidLandingX - 0.85, kLegalFortyHingeZ, 10.0);
+    walk_toward(ascent, kLegalFortyMidLandingX - 0.85, kLegalFortyHingeZ, 10.0, true);
     // Full-stick dithering at this narrow arrival can leave the body in a
     // small airborne bounce on the arbitrary final tick. Deliberately brake
     // to physical footing instead of relying on implicit airborne stopping.
@@ -2385,7 +2466,7 @@ int main() {
     // landing's centre (z = -114.80) reaches the landing's west edge
     // before it reaches the flight's own band, and falls through the gap
     // between them -- found by direct observation.
-    walk_toward(ascent, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0);
+    walk_toward(ascent, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0, true);
     // Walks onto the hall deck itself and stops steering the instant it
     // does, rather than continuing to drive into the well's own edge --
     // found by direct observation that a capsule still being steered past
@@ -2599,14 +2680,14 @@ int main() {
     // From here to the landing's own centre, x only decreases from 9.8 to
     // 9.350 -- never west of the flight's own foot -- while z climbs clear
     // of its band, so this straight line never passes under it.
-    walk_toward(skin_forty, kLegalFortyMidLandingX, kLegalFortyMidLandingZ, 15.0);
+    walk_toward(skin_forty, kLegalFortyMidLandingX, kLegalFortyMidLandingZ, 15.0, true);
     // Same two-step crossing the ascent route above needed at this identical
     // boundary: the landing's z in [-121.0, -110.6] does not fully overlap
     // the upper flight's own, narrower z in [-117.9, -116.1], so align to
     // the flight's own z-band first, while still on the wide landing, then
     // cross west along that band -- a direct diagonal from the landing's
     // own centre falls through the gap between them instead.
-    walk_toward(skin_forty, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0);
+    walk_toward(skin_forty, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0, true);
     bool skin_forty_reached_hall_deck = false;
     for (int i = 0; i < 40 * 90 && !skin_forty_reached_hall_deck; ++i) {
         const auto state = skin_forty.snapshot();
@@ -3267,8 +3348,8 @@ int main() {
         require(walk_to(hook, point[0], point[1], 25.0),
                 "the block must be carried round the belt to the throat");
     }
-    walk_toward(hook, kThroatX, -107.5, 12.0);
-    walk_toward(hook, kThroatX, -113.0, 8.0);
+    walk_toward(hook, kThroatX, -107.5, 12.0, true);
+    walk_toward(hook, kThroatX, -113.0, 8.0, true);
     // Onto the first flight along its lane, from beyond its foot: a load
     // carried at the belly strikes the rising slab's 1.1 m side edge that an
     // empty-handed body slides along to reach the foot the way AS-001 walks.
@@ -3277,8 +3358,8 @@ int main() {
     for (int flight = 0; flight < 6; ++flight) {
         const double side = (flight % 2 == 0) ? 1.0 : -1.0;
         const double lane = -118.0 + side * 2.0;
-        walk_toward(hook, -side * kStairLandingX, lane, 8.0);
-        walk_toward(hook, side * kStairLandingX, lane, 14.0);
+        walk_toward(hook, -side * kStairLandingX, lane, 8.0, true);
+        walk_toward(hook, side * kStairLandingX, lane, 14.0, true);
     }
     // Arrive and stop: a full stick dithering about AS-002's own waypoint,
     // 0.3 m inside the deck's north edge, walked a loaded body off it.
@@ -3286,7 +3367,7 @@ int main() {
     require(hook.snapshot().support_entity_id == Simulation::kIntakeHandoffEntityId &&
                 hook.snapshot().carrying_entity_id == Simulation::kHook5BlockEntityId,
             "MOD-STAIR-A must carry the body and the block to the +24 m handoff deck");
-    walk_toward(hook, -6.0, -112.5, 25.0);
+    walk_toward(hook, -6.0, -112.5, 25.0, true);
     for (int i = 0; i < 20 * 90; ++i) {
         const auto state = hook.snapshot();
         double dx = kLegalFortyHingeX - state.player_position.x;
@@ -3300,9 +3381,9 @@ int main() {
         (void)hook.set_facing(dx, dz);
         (void)hook.advance_frame(Simulation::kFixedStepSeconds);
     }
-    walk_toward(hook, kLegalFortyMidLandingX - 0.85, kLegalFortyHingeZ, 10.0);
-    walk_toward(hook, kLegalFortyMidLandingX, kLegalFortyMidLandingZ, 10.0);
-    walk_toward(hook, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0);
+    walk_toward(hook, kLegalFortyMidLandingX - 0.85, kLegalFortyHingeZ, 10.0, true);
+    walk_toward(hook, kLegalFortyMidLandingX, kLegalFortyMidLandingZ, 10.0, true);
+    walk_toward(hook, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0, true);
     bool hook_on_hall = false;
     for (int i = 0; i < 40 * 90 && !hook_on_hall; ++i) {
         const auto state = hook.snapshot();

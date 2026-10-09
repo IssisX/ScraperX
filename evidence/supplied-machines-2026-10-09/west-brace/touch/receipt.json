@@ -1,0 +1,41 @@
+{
+  "result": "PASS maintained normal-world touch_west_brace_bay",
+  "exit_code": 0,
+  "base": "e3c6168a720b94d3fa42c4e67df682747e3c8642",
+  "branch": "ChatGPT",
+  "command": "proot-distro login ubuntu --shared-tmp -- /bin/bash -c 'export GODOT_SILENCE_ROOT_WARNING=1; timeout 360s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/west-brace-touch2/godot -- --uitest=touch_west_brace_bay'",
+  "bridge_sha256": "f829609a625b8e42d869f4a77265c494e3e6425bf5da02306fbfe472fafb9e07",
+  "driver_sha256": "3e5f4d9755545ed8f6b640813ae835d3506d3ee25e20df61290a167738b7c96b",
+  "main_sha256": "b6cd37fa8042456e5ca509d8f0d60d0859bd15238e6d2ee7a10994cf6c9de3ef",
+  "log_sha256": "dfa32a8c9a442f59be31db4eb2f9b560d61dde5c9461ca4a44b2ce71afa682a8",
+  "private_sources_unchanged_during_final_run": true,
+  "production_driver_matches_runtime": true,
+  "native_source_hashes_unchanged_since_staging": {
+    "src/sim/west_brace_bay_route.cpp": true,
+    "src/sim/west_brace_bay_route.hpp": true,
+    "src/sim/simulation.cpp": true,
+    "src/sim/parkour_route.hpp": true
+  },
+  "scope": "ONE normal-world route scenario through actual viewport touch after sole maintained supported lower staging (-24.70,375.15,-139.5); all subsequent movement ordinary inputs; no later pose/velocity/grip writes, native/world changes or builds by this worker",
+  "observed_route": "374.25 floor ->381.9 rest ->Jump/native airborne CATCH/Action ->90 native tick lateral command+20 neutral real hand hold ->389.4 physical rest ->supported velocity-aware touch approach ->396.25 WorldSolid51 native hand-to-foot transfer ->270 tick firmhold ->3.23m ordinary onward",
+  "observed_receipts": {
+    "first_transfer_tick": 973,
+    "second_transfer_tick": 1952,
+    "second_peak_hand_load_n": 1623.45556640625,
+    "final_transfer_tick": 2995,
+    "final_transfer_count": 3,
+    "final_support": 51,
+    "final_peak_hand_load_n": 2049.10668945312,
+    "roof_after_hold_tick": 3269,
+    "roof_position": [
+      -23.66858,
+      397.15,
+      -139.0135
+    ],
+    "gravity_factor": 1,
+    "deaths": 0
+  },
+  "driver_repairs": "Explicit Vector3 locals; native-matching diagonal touch ratios; actual takeoff receipt before neutral; bounded90tick bar command/20tickneutral with real anchor movement and2hands/gravity/death checks; physical foot receipt releases stick before unchanged strict settled-footing checks; existing supported velocity-aware touch helper brakes across second narrow shelf; precise failure diagnostics. Main unchanged by this worker.",
+  "failure_history": "Initial stale texture imports environmental/private; initial driver Variant inference compile defect fixed. Earlier bridge kept airborne grip readback grounded-only (root repaired native). Fresh bridge route inputs exposed unbounded coordinate chase and holding climb input after transfer; failures preserved in this folder and prior west-brace-touch. No repeated broad campaign.",
+  "limits": "Not continuous campaign, missed-catch viewport-touch recovery, phone feel, rendered appearance, audio/haptics, CI/APK or publication proof. Native force/work owner proof remains separate. Runtime readback work is not complete energy closure."
+}

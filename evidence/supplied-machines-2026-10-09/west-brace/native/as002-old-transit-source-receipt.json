@@ -1,0 +1,12 @@
+{
+  "base_head": "e3c6168a720b94d3fa42c4e67df682747e3c8642",
+  "library_sha256": "8f02aa6fe88c82d49f34fe986f0d64faf2a312e4c72ca008c6b210a215601a3f",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "2a837f5e738ed3ee162c7613f98867c1fbbbae09100de94561373e71eb31c672",
+    "src/sim/simulation.hpp": "e672b6b32dddf7bbeba8517d17a81d5f142cd17a49c91e56e1ff29efae9920e9",
+    "tests/simulation_tests.cpp": "97a8884b4620e792982a82d95093a9fc2995b20003c3ff1b29b83feb173e4735"
+  },
+  "probe_sha256": "b4521c08d9a810667c8e0aa2335cfe16003d00999baf104ea34c11c7d4a1a7b6",
+  "scope": "ONLY original higher foot25s + midpretarget10s calls restored full-stick=false;original inline20s full-stick retained;all first+24 PD approaches retained;full same actual AS002 setup/timing/native/geometry/originaloracle;no Jump",
+  "status": "Prepared old-higher-transit discriminator."
+}

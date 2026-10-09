@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Linux-c++"
+	tests="6"
+	failures="2"
+	disabled="0"
+	skipped="0"
+	hostname="localhost"
+	time="194"
+	timestamp="2026-10-09T11:08:58"
+	>
+	<testcase name="scraperx_sim.physical_traversal" classname="scraperx_sim.physical_traversal" time="95.9454" status="run">
+		<properties/>
+		<system-out>PASS lowering_release cargo=1 immediate=1 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=0.109003
+PASS lowering_release cargo=1 immediate=0 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=0.109102
+PASS lowering_release cargo=0 immediate=0 accepted=1 before_state=5 after_state=0 hands=0 rejected_delta=0 gravity_velocity_error=3.24249e-08
+PASS passive_departure surface=rigid_shipping_vent before_vy=1.01502 after_vy=0.906017 expected_vy=0.906017 error=3.24249e-08 grounded=0
+PASS passive_departure surface=deforming_cargo_net before_vy=0.339746 after_vy=0.230746 expected_vy=0.230746 error=1.75238e-08 grounded=0
+PASS cargo_jump finite_stroke_debit=599.4 departure_vy=0.512043
+PASS ordinary_tread_traction force_work_delta=0.403336 dvx=0.0872
+PASS receiver_walk_off momentum_error=0
+PASS passive_departure surface=rotating_as026 before_vy=1.17334 after_vy=1.06434 expected_vy=1.06434 error=2.05994e-07 grounded=0
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.suspended_ladder_route" classname="scraperx_sim.suspended_ladder_route" time="29.7188" status="run">
+		<properties/>
+		<system-out>PASS AS-026 missed jump recovery and checkpoint restore
+PASS AS-026 launch shelf supported
+CATCH y=114.308 x=6.06797 qz=-0.0575122
+TRACE t=0 qz=-0.0484 x=6.25192 vy=-0.800594 support=2960 y=112.386
+TRACE t=45 qz=-0.0210508 x=6.74285 vy=4.48294 support=2960 y=113.314
+TRACE t=90 qz=0.0103192 x=7.29992 vy=-0.834343 support=2960 y=114.744
+TRACE t=135 qz=0.0347394 x=7.73396 vy=1.81377 support=2960 y=115.285
+TRACE t=180 qz=0.034355 x=7.74108 vy=0.547179 support=2960 y=115.529
+TRACE t=225 qz=0.0144941 x=7.38657 vy=0.493104 support=2960 y=115.512
+TRACE t=270 qz=-0.0154732 x=6.85324 vy=0.522421 support=2960 y=116.083
+TRACE t=315 qz=-0.0434121 x=6.35913 vy=1.09665 support=2960 y=116.446
+TRACE t=360 qz=-0.0573088 x=6.14118 vy=1.11556 support=2960 y=116.704
+TRACE t=405 qz=-0.0467589 x=6.29039 vy=0.896363 support=2960 y=117.12
+TRACE t=450 qz=-0.0222162 x=6.59545 vy=0.117135 support=2960 y=117.482
+TRACE t=495 qz=0.0068609 x=6.92946 vy=0.679975 support=2960 y=117.864
+TRACE t=540 qz=0.0292887 x=7.18851 vy=0.22078 support=296...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.athletic_traversal" classname="scraperx_sim.athletic_traversal" time="39.8667" status="fail">
+		<failure message="Failed"/>
+		<properties/>
+		<system-out>PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=164 kit_bodies=215 locomotion=1 crouch=1 jump=1
+PASS scraperx_sim rejected fallback absent: tower_bodies=385 former_flight_y=0.9 jump_requests=0
+PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0
+PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1
+PASS scraperx_sim moving-support truth: translating_support=3 translating_vx=1.08993 jump_vx=1.07124 rotating_support=4 rotating_point_v=(-0.509095,-1.09394) omega_y=0.800001 hz=90
+PASS scraperx_sim athletic traversal: vault_x=6.08 double_tap_vault_x=6.20222 vault_speed=5.5 mantle_support=6 mantle_rise_setback=0.53 mantle_y=2.46879 hang_support=7 moving_hang_support=8 moving_hang_vz=0.638632 moving_ledge_vz=0.865345 release_vz=1.05492 rejected=1 accepted=1
+FAIL: the autonomous plant cycle must eventually lift the platform into real mantle range of the catwalk -- the structural consequence must change what is reachable
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.swing_stair_route_0" classname="scraperx_sim.swing_stair_route_0" time="7.71658" status="run">
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_READY pos 12.6968,0.893589,-78.9925 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_PICK pos 12.6968,0.893589,-78.9925 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_LOADED pos 12.229,0.893634,-79.0001 target 2530 carrying 0 tip 0.60123 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_READY pos -0.548948,0.893634,-85.6 target 2505 carrying 0 tip 0.60123 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_PICK pos -0.548948,0.893634,-85.6 target 0 carrying 2505 tip 0.60123 pipes 20 support 1 deaths 0
+STAIR_STATE body_an...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.pipe_bridge_passenger" classname="scraperx_sim.pipe_bridge_passenger" time="2.07905" status="fail">
+		<failure message="Failed"/>
+		<properties/>
+		<system-out>SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_READY pos 12.6968,0.893589,-78.9925 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_PICK pos 12.6968,0.893589,-78.9925 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+RACK_LOADED pos 12.229,0.893634,-79.0001 target 2530 carrying 0 tip 0.60123 pipes 20 support 1 deaths 0
+BRIDGE_READY pos -0.548948,0.893634,-85.6 target 2505 carrying 0 tip 0.60123 pipes 20 support 1 deaths 0
+BRIDGE_PICK pos -0.548948,0.893634,-85.6 target 0 carrying 2505 tip 0.60123 pipes 20 support 1 deaths 0
+BRIDGE_LIFTED pos -1.56536,0.893685,-85.6 target 0 carrying 0 tip 0.608488 pipes 20 support 1 deaths 0
+CROSS pos -0.665011,0.893685,-85.9805 target 0 carrying 0 tip 0.793134 pipes 20 support 1 deaths 0
+CROSS pos 1.88357,0.9,-85.9689 target 0 carrying 0 tip 1.27364 pipes 20 support 1 deaths 0
+CROSS pos 1.93854,1.9473,-91.0538 target 0 carrying 0 tip 2.73715 pipes 20 support 1524 deaths 0
+CROSS pos 6.02508,1.94902,-91.0672 target 0 carrying 0 tip 7.96988 pipes 20 support 2500 deaths 0
+PASSIVE_RIDER pos 6.02504,1.94963,-91.067 target 0 carrying 0 tip 7.97934 pipes 20 support 2500 deaths 0
+</system-out>
+	</testcase>
+	<testcase name="scraperx_sim.west_brace_bay_route" classname="scraperx_sim.west_brace_bay_route" time="18.9575" status="run">
+		<properties/>
+		<system-out>PASS WEST_BRACE_BAY lower374.25/diagonal-climb381.9/jump-Action-bar/lateral-miss-recovery-retry/reverse-ascent389.4/final-mantle396.25/onward ordinary_inputs_only=1
+</system-out>
+	</testcase>
+</testsuite>

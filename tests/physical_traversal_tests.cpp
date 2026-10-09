@@ -14,16 +14,20 @@ bool tick(Simulation &s) {
 
 bool walk(Simulation &s, double x, double z) {
     for (int i = 0; i < 1500; ++i) {
-        const auto p = s.snapshot().player_position;
+        const auto state = s.snapshot();
+        const auto p = state.player_position;
+        const auto v = state.player_linear_velocity;
         const double dx = x - p.x, dz = z - p.z, d = std::hypot(dx, dz);
-        if (d < .04) {
+        if (d < .04 && state.player_grounded && std::hypot(v.x, v.z) < .15) {
             (void)s.set_move_input(0, 0);
             for (int j = 0; j < 30; ++j) if (!tick(s)) return false;
             return s.snapshot().player_grounded;
         }
-        const double amount = std::min(1.0, d / .5) / d;
-        (void)s.set_move_input(dx * amount, dz * amount);
-        (void)s.set_facing(dx, dz);
+        const double ix = dx * 1.8 - v.x * .28;
+        const double iz = dz * 1.8 - v.z * .28;
+        const double scale = std::max(1.0, std::hypot(ix, iz));
+        (void)s.set_move_input(ix / scale, iz / scale);
+        if (d > .001) (void)s.set_facing(dx, dz);
         if (!tick(s)) return false;
     }
     return false;
@@ -259,7 +263,9 @@ bool rotating_departure() {
     // Actual AS-026 entry shelf; development staging is not campaign proof.
     if (!s.debug_restart_at({10, 110.9, -174})) return false;
     for (int i = 0; i < 30; ++i) if (!tick(s)) return false;
-    if (!walk(s, 10, -179.4)) return false;
+    // Settled feet must place the lower rung inside actual hand reach;
+    // the old -179.4 approach relied on residual coast toward the ladder.
+    if (!walk(s, 10, -179.55)) return false;
     (void)s.set_facing(0, -1);
     (void)s.request_traversal();
     if (!tick(s) || s.snapshot().traversal_state != TraversalState::Climbing) return false;

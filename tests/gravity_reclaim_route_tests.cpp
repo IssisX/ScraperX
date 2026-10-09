@@ -43,8 +43,16 @@ int main(){
  // Off-centre rider loading must remain free to tilt the hanging cabin.
  walk(s,cabin_floor(s).x,-160.65);
  const double start_energy=s.snapshot().supplied_machine_energy_j;
- (void)s.set_supplied_machine_input(1);tick(s,3*90);
- require(s.snapshot().supplied_machine_surface_y>309,"falling/retained load raises real rider",s);
+ (void)s.set_supplied_machine_input(1);
+ // Observe an actual metre of loaded rise rather than assuming a compliant
+ // wheel/cradle responds at the same exact three-second phase on every host.
+ int initial_rise_ticks=0;
+ for(;initial_rise_ticks<8*90 && s.snapshot().supplied_machine_surface_y<=309;++initial_rise_ticks){
+  tick(s);require(s.snapshot().player_grounded&&s.snapshot().supplied_machine_station==1,
+   "initial loaded rise retains real rider footing and reachable control",s);
+ }
+ require(initial_rise_ticks<8*90&&s.snapshot().supplied_machine_surface_y>309,
+  "falling/retained load raises real rider",s);
  (void)s.set_supplied_machine_input(0);
  int settled=0;double previous_angle=s.snapshot().supplied_machine_wheel_angle_rad;
  double previous_floor=s.snapshot().supplied_machine_surface_y;

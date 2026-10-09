@@ -1,4 +1,5 @@
 #include "sim/simulation.hpp"
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -9,15 +10,20 @@
 using namespace scraperx::sim;
 bool walk(Simulation &s, double x, double z, double seconds = 20) {
   for (int i = 0; i < int(seconds * 90); ++i) {
-    auto p = s.snapshot().player_position;
+    const auto state = s.snapshot();
+    const auto p = state.player_position;
     double dx = x - p.x, dz = z - p.z, d = std::hypot(dx, dz);
-    if (d < .07) {
+    if (d < .07 && state.player_grounded &&
+        std::hypot(state.player_linear_velocity.x, state.player_linear_velocity.z) < .15) {
       (void)s.set_move_input(0, 0);
       return true;
     }
-    double a = std::min(1., d / .6);
-    (void)s.set_move_input(dx / d * a, dz / d * a);
-    (void)s.set_facing(dx / d, dz / d);
+    // Arrive through finite ordinary braking before taking a mechanism grip.
+    const double input_x = dx * 1.8 - state.player_linear_velocity.x * .28;
+    const double input_z = dz * 1.8 - state.player_linear_velocity.z * .28;
+    const double scale = std::max(1., std::hypot(input_x, input_z));
+    (void)s.set_move_input(input_x / scale, input_z / scale);
+    if (d > 1.e-8) (void)s.set_facing(dx / d, dz / d);
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
   }
   (void)s.set_move_input(0, 0);
@@ -46,16 +52,19 @@ bool walk_to(Simulation &s, double x, double z, double seconds, double tolerance
     const auto owner=state.support_entity_id;
     physical=physical || owner==1600 || (owner>=2560 && owner<=2566) || owner==2952 || owner==2954;
     const double dx=x-p.x,dz=z-p.z,distance=std::hypot(dx,dz);
-    const double slip=std::hypot(state.player_linear_velocity.x-state.support_point_linear_velocity.x,
-                                state.player_linear_velocity.z-state.support_point_linear_velocity.z);
-    if(distance<tolerance && (!physical || (state.player_grounded && slip<.15))) {
+    const double relative_x=state.player_linear_velocity.x-state.support_point_linear_velocity.x;
+    const double relative_z=state.player_linear_velocity.z-state.support_point_linear_velocity.z;
+    const double slip=std::hypot(relative_x,relative_z);
+    if(distance<tolerance && state.player_grounded && slip<.15) {
       (void)s.set_move_input(0,0);return true;
     }
-    // The actual force-driven plant needs braking before the waypoint and
-    // a settled arrival. This is ordinary input, never a body-state override.
-    const double strength=distance<tolerance?0:std::min(1.,distance/(physical?2.75:.6));
-    const double inverse_distance=distance>1e-8?1/distance:0;
-    (void)s.set_move_input(dx*inverse_distance*strength,dz*inverse_distance*strength);
+    // Keep the existing approach scale, but brake actual support-relative
+    // motion before accepting every waypoint, including Tower footing.
+    const double approach_scale=physical?2.75:.6;
+    const double input_x=dx/approach_scale-relative_x*.28;
+    const double input_z=dz/approach_scale-relative_z*.28;
+    const double scale=std::max(1.,std::hypot(input_x,input_z));
+    (void)s.set_move_input(input_x/scale,input_z/scale);
     if(distance>1e-8) (void)s.set_facing(dx,dz);
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
   }

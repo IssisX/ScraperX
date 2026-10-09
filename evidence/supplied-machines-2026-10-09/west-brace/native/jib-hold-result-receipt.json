@@ -1,0 +1,43 @@
+{
+  "candidate": "Jib-only 500000 N/m + 50000 Ns/m powered Position hold;20kN limit;once-latched measured extension;checkpoint motor state/target restore",
+  "base_head": "e3c6168a720b94d3fa42c4e67df682747e3c8642",
+  "library_sha256": "8f02aa6fe88c82d49f34fe986f0d64faf2a312e4c72ca008c6b210a215601a3f",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "2a837f5e738ed3ee162c7613f98867c1fbbbae09100de94561373e71eb31c672",
+    "src/sim/simulation.hpp": "e672b6b32dddf7bbeba8517d17a81d5f142cd17a49c91e56e1ff29efae9920e9"
+  },
+  "probe_sha256": "336f5fdef066177efa9b7c3b996d6bd92dcb87469b640bf8be227eb3e094d931",
+  "scope": "UNCHANGED original private command sequence;continuous45native-tick world AND slider speed<.05;station/rise/finite/20kN force gates every postexit tick",
+  "status": "ONE unchanged original-sequence candidate probe FAILS sustained rest; no conditional opposite-direction case run.",
+  "result": {
+    "exit_code": 1,
+    "raised_hook_y": 4.7611784935,
+    "after_neutral2s_hook_y": 4.71207427979,
+    "neutral2s_drop_m": 0.04910421370999973,
+    "original_brakehold_limit_m": 0.1,
+    "original_brakehold_pass": true,
+    "lowered_hook_y": 3.21396541595,
+    "exit_station_tick": 1243,
+    "all_450_postexit_ticks_station_inactive": true,
+    "postexit_max_world_rise_m": 0.032527923584,
+    "postexit_max_slider_rise_m": 0.0197316408157,
+    "postexit_max_abs_motor_force_n": 20000.0006104,
+    "actual_force_limit_n": 20001,
+    "old_plus1s_world_hook_vy_mps": -0.0169503055513,
+    "plus1s_slider_velocity_mps": -0.0602339021862,
+    "plus5s_world_hook_vy_mps": 0.0959791392088,
+    "plus5s_slider_velocity_mps": -0.0144993504509,
+    "world_only_longest_speed_below_0_05_window_ticks": 41,
+    "world_and_slider_speed_below_0_05_total_ticks": 57,
+    "world_and_slider_45_tick_window_found": false,
+    "old_instantaneous_plus1s_world_rest_gate_pass": true,
+    "second_case_run": false,
+    "maintained_source_changed": false,
+    "shared_build_performed": false
+  },
+  "files_sha256": {
+    "original.cpp": "336f5fdef066177efa9b7c3b996d6bd92dcb87469b640bf8be227eb3e094d931",
+    "original": "3aff6cf8e3d2bc35d9305fa65e281bed17318c73ef462e6c4d905b9c2506c7cd",
+    "original.log": "fd9b84fc938ee72799c7f89d22a8bf4d82302969c0c505f31f0fa87dd8802391"
+  }
+}

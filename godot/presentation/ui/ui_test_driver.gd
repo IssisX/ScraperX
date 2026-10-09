@@ -53,6 +53,7 @@ const SCENARIOS := {
 	"touch_teeter": 8,
 	"touch_ballast_mantle_feedback": 8,
 	"touch_braced_bay": 8,
+	"touch_west_brace_bay": 8,
 	"touch_north_frame": 8,
 	"touch_jump": 8,
 	"touch_move_look": 8,
@@ -99,7 +100,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_taper_inspection_route", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_ballast_mantle_feedback"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_taper_inspection_route", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_ballast_mantle_feedback", "touch_west_brace_bay"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -200,6 +201,8 @@ func _run() -> void:
 			ok = await _touch_ballast_mantle_feedback()
 		"touch_braced_bay":
 			ok = await _touch_braced_bay()
+		"touch_west_brace_bay":
+			ok = await _touch_west_brace_bay()
 		"touch_north_frame":
 			ok = await _touch_north_service_frame()
 		"touch_jump":
@@ -1287,6 +1290,310 @@ func _touch_braced_bay() -> bool:
 		return _fail("braced bay +88 m ring unsupported %s" % _position())
 	_detail = "grade_to_88m=1 gap_jump=1 crouched_portal=1 mantle=1 support=11 deaths=0 arrival_y=%.3f" % _position().y
 	return true
+
+
+func _touch_west_brace_bay() -> bool:
+	const ROUTE_ENTITY := 1934
+	var device := InputRouter.Device.TOUCH
+	if not _campaign_world_intact():
+		return false
+	if int(_native().get_entity_body_count(ROUTE_ENTITY)) < 1:
+		return _fail("west brace bay entity1934 is absent from the normal world")
+	# This is the scenario's only debug staging point. Everything after it uses
+	# the ordinary viewport touch buttons and stick against native geometry.
+	if not bool(_native().debug_restart_at(Vector3(-24.70, 375.15, -139.5))):
+		return _fail("supported west brace bay lower-deck staging was rejected")
+	if not await _touch_face(Vector2(1.0, 0.0)):
+		return _fail("ordinary look-thumb touch could not face the authored +X approach")
+	if not await _wait_until(func() -> bool:
+		return bool(_native().is_player_grounded()) and int(_native().get_support_entity_id()) == 51 \
+			and absf(_position().y - 375.15) < 0.15, 2.0):
+		return _fail("lower approach did not settle on WorldSolid51 floor374.25 at=%s support=%d" % [
+			_position(), _native().get_support_entity_id()])
+	if not await _wait_until(func() -> bool:
+		return bool(_native().is_grip_available()) and bool(_ctx()["grounded"]), 2.0):
+		return _fail("first diagonal hold is not physically reachable from the lower deck at=%s" % _position())
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("grounded first hold did not offer the ordinary touch CLIMB action")
+	_act(device)
+	if not await _wait_until(func() -> bool:
+		return int(_native().get_traversal_state()) == _main.TRAVERSAL_CLIMBING \
+			and int(_native().get_traversal_support_entity_id()) == ROUTE_ENTITY \
+			and int(_native().get_landing_state()["traversal_hand_constraint_count"]) == 2, 1.0):
+		return _fail("touch CLIMB did not engage both physical hands on entity1934")
+	# Facing +X, forward + screen-right moves toward +X/+Z along the first rail.
+	_move_dir(device, Vector2(0.55, 1.0))
+	var first_shelf := await _wait_until(func() -> bool:
+		return _west_brace_shelf(381.9, -24.25, -22.70, -138.55, -136.85), 15.0)
+	_move_dir(device, Vector2.ZERO)
+	if not first_shelf:
+		return _fail("first diagonal did not top out on the inboard shelf381.9 at=%s support=%d traversal=%d" % [
+			_position(), _native().get_support_entity_id(), _native().get_traversal_state()])
+	await _seconds(0.2)
+	if not _west_brace_shelf(381.9, -24.25, -22.70, -138.55, -136.85):
+		return _fail("inboard first-shelf footing was not stable after releasing the touch stick")
+	if not await _touch_face(Vector2(-1.0, 0.0)):
+		return _fail("ordinary look-thumb touch could not turn toward the transverse bar")
+
+	# The shelf is inboard of the first rail. Face -X, jump toward the real bar,
+	# and wait for its native catch affordance before using ordinary Action.
+	_move_dir(device, Vector2(0.0, 1.0))
+	_tap(1, _center(&"jump"))
+	# A process-frame signal alone can resume before Main consumes the queued
+	# Jump. Keep its ordinary direction until native physics confirms takeoff.
+	if not await _wait_until(func() -> bool:
+		return not bool(_native().is_player_grounded()) and _velocity().y > 0.2, 0.75):
+		_move_dir(device, Vector2.ZERO)
+		return _fail("ordinary touch Jump did not produce real upward takeoff at=%s velocity=%s" % [
+			_position(), _velocity()])
+	_move_dir(device, Vector2.ZERO)
+	var apex := {"position": _position(), "velocity": _velocity(), "grip": false,
+		"ledge": false, "action": _ctx()["action"]}
+	var catch_ready := await _wait_until(func() -> bool:
+		if _position().y > (apex["position"] as Vector3).y:
+			apex["position"] = _position()
+			apex["velocity"] = _velocity()
+			apex["grip"] = bool(_native().is_grip_available())
+			apex["ledge"] = bool(_native().is_ledge_available())
+			apex["action"] = _ctx()["action"]
+		return not bool(_ctx()["grounded"]) and _ctx()["action"]["id"] == &"catch" \
+			and _position().y >= 383.0 and absf(_velocity().y) <= 1.0, 3.0)
+	if not catch_ready:
+		_move_dir(device, Vector2.ZERO)
+		return _fail("airborne transverse-bar CATCH was not offered near the jump apex at=%s velocity=%s ledge=%s action=%s apex=%s" % [
+			_position(), _velocity(), _native().is_ledge_available(), _ctx()["action"], apex])
+	if not await _offered(&"catch", "CATCH", "HOLD ON"):
+		_move_dir(device, Vector2.ZERO)
+		return _fail("native reachable bar affordance did not enable the touch CATCH button")
+	# Forward now points toward -X and the bar. Action only requests traversal;
+	# native contact, reach and load rules decide whether the catch succeeds.
+	_move_dir(device, Vector2(0.0, 1.0))
+	_act(device)
+	var bar_caught := await _wait_until(func() -> bool:
+		return int(_native().get_traversal_state()) == _main.TRAVERSAL_CLIMBING \
+			and int(_native().get_traversal_support_entity_id()) == ROUTE_ENTITY \
+			and int(_native().get_landing_state()["traversal_hand_constraint_count"]) == 2, 0.8)
+	_move_dir(device, Vector2.ZERO)
+	if not bar_caught:
+		return _fail("ordinary Jump plus apex Action failed to catch the transverse bar with real hands; traversal=%d support=%d at=%s" % [
+			_native().get_traversal_state(), _native().get_traversal_support_entity_id(), _position()])
+	await _pose("west_brace_bar_catch")
+
+	# Facing -X, screen-left is world +Z. Use the native route's bounded
+	# 90-tick traverse and 20-tick neutral hold; real anchors prove the crossing.
+	var before_left: Vector3 = _native().get_traversal_left_hand()
+	var before_right: Vector3 = _native().get_traversal_right_hand()
+	var before_hand_z := 0.5 * (before_left.z + before_right.z)
+	var traverse_start_tick := int(_native().get_tick_index())
+	_move_dir(device, Vector2(-1.0, 0.0))
+	while int(_native().get_tick_index()) - traverse_start_tick < 90:
+		await get_tree().process_frame
+		if not _west_brace_hands():
+			_move_dir(device, Vector2.ZERO)
+			_west_brace_diagnostic("bar_traverse_lost_hands")
+			return _fail("ordinary bounded bar traverse lost physical hand support")
+	_move_dir(device, Vector2.ZERO)
+	var neutral_start_tick := int(_native().get_tick_index())
+	while int(_native().get_tick_index()) - neutral_start_tick < 20:
+		await get_tree().process_frame
+		if not _west_brace_hands():
+			_west_brace_diagnostic("bar_neutral_lost_hands")
+			return _fail("neutral bar hold lost physical hand support")
+	var after_left: Vector3 = _native().get_traversal_left_hand()
+	var after_right: Vector3 = _native().get_traversal_right_hand()
+	var anchor_movement := 0.5 * (after_left.z + after_right.z) - before_hand_z
+	_west_brace_diagnostic("bar_traverse_complete")
+	if anchor_movement < 0.12 or anchor_movement > 2.2:
+		return _fail("ordinary screen-left crossing did not move real bar anchors within the native traverse bounds; delta_z=%.6f" % anchor_movement)
+
+	# Facing -X, forward + screen-right now follows the diagonal toward world
+	# -X/-Z and tops out on its outboard recovery shelf.
+	var second_transfer_before := int(_native().get_landing_state()["foot_transfer_count"])
+	_move_dir(device, Vector2(0.50, 1.0))
+	var second_shelf := false
+	var second_elapsed := 0.0
+	while second_elapsed < 15.0:
+		await get_tree().process_frame
+		second_elapsed += get_process_delta_time()
+		var second_state: Dictionary = _native().get_landing_state()
+		var second_position := _position()
+		if int(second_state["foot_transfer_count"]) == second_transfer_before + 1 \
+				and int(second_state["foot_transfer_support_entity_id"]) == ROUTE_ENTITY \
+				and float(second_state["foot_transfer_peak_hand_load_n"]) > 0.0 \
+				and bool(_native().is_player_grounded()) and int(_native().get_support_entity_id()) == ROUTE_ENTITY \
+				and int(_native().get_traversal_state()) == 0 and int(second_state["traversal_hand_constraint_count"]) == 0 \
+				and float(second_state["player_gravity_factor"]) == 1.0 and absf(second_position.y - 390.3) < 0.10 \
+				and second_position.x >= -25.35 and second_position.x <= -24.60 \
+				and second_position.z >= -138.90 and second_position.z <= -137.10:
+			# Completed hand support is now real footing. Release climb input
+			# before demanding settled velocity, so it cannot walk off the rest.
+			_move_dir(device, Vector2.ZERO)
+			_west_brace_diagnostic("second_foot_receipt")
+			second_shelf = await _wait_until(func() -> bool:
+				return _west_brace_shelf(389.4, -25.35, -24.60, -138.90, -137.10), 2.0)
+			break
+		# Permit the real receiving contact to settle, but stop on an actual
+		# release rather than continuing input through a long unsupported fall.
+		var settling := bool(_native().is_player_grounded()) \
+			and int(_native().get_support_entity_id()) == ROUTE_ENTITY \
+			and int(_native().get_traversal_state()) == 0 and absf(_position().y - 390.3) < 0.10
+		if (not _west_brace_hands() and not settling) or int(_native().get_death_count()) != 0 \
+				or float(_native().get_landing_state()["player_gravity_factor"]) != 1.0:
+			_move_dir(device, Vector2.ZERO)
+			_west_brace_diagnostic("reverse_ascent_lost_support")
+			return _fail("reverse ascent lost real hands before the physical389.4 shelf")
+	_move_dir(device, Vector2.ZERO)
+	if not second_shelf:
+		return _fail("reverse diagonal did not top out on the outboard shelf389.4 at=%s support=%d traversal=%d" % [
+			_position(), _native().get_support_entity_id(), _native().get_traversal_state()])
+	await _seconds(0.2)
+	if not _west_brace_shelf(389.4, -25.35, -24.60, -138.90, -137.10):
+		return _fail("outboard second-shelf footing was not stable after releasing the touch stick")
+	# The final line now starts at z=-137.70, so move across the shelf toward
+	# that reachable hold while still facing -X (screen-left is world +Z).
+	# Brake through ordinary touch input before stopping on this narrow rest.
+	var final_grip_approach := await _walk_to(device, Vector2(_position().x, -138.0), 0.06, 5.0, true)
+	if not final_grip_approach:
+		_west_brace_diagnostic("final_grip_approach_failed")
+		return _fail("ordinary supported touch braking did not reach the final-grip approach at z=-138.0; at=%s" % _position())
+	await _seconds(0.2)
+	if not _west_brace_shelf(389.4, -25.35, -24.60, -138.25, -137.75):
+		return _fail("final-grip approach did not settle on stable support1934 footing near z=-138.0 at=%s" % _position())
+	if not await _touch_face(Vector2(1.0, 0.0)):
+		return _fail("ordinary look-thumb touch could not face the final diagonal")
+	if not await _wait_until(func() -> bool:
+		return bool(_native().is_grip_available()) and bool(_ctx()["grounded"]), 2.0):
+		return _fail("final diagonal handhold was not natively reachable from the outboard shelf at=%s" % _position())
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("reachable final diagonal did not expose the ordinary touch CLIMB action")
+	_act(device)
+	if not await _wait_until(func() -> bool:
+		return int(_native().get_traversal_state()) == _main.TRAVERSAL_CLIMBING \
+			and int(_native().get_traversal_support_entity_id()) == ROUTE_ENTITY \
+			and int(_native().get_landing_state()["traversal_hand_constraint_count"]) == 2, 1.0):
+		return _fail("touch Action did not engage the final diagonal's reachable real handholds")
+
+	var accepted_before_final := int(_native().get_accepted_traversal_count())
+	var transfer_before_final: Dictionary = _native().get_landing_state()
+	var transfer_count_before_final := int(transfer_before_final["foot_transfer_count"])
+	var final_start_tick := int(_native().get_tick_index())
+	var arrived := false
+	var elapsed := 0.0
+	_move_dir(device, Vector2(-0.45, 1.0))
+	while elapsed < 15.0:
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+		var transfer_state: Dictionary = _native().get_landing_state()
+		var traversal := int(_native().get_traversal_state())
+		if float(transfer_state["player_gravity_factor"]) != 1.0 \
+				or traversal in [_main.TRAVERSAL_MANTLING, _main.TRAVERSAL_VAULTING] \
+				or (traversal == _main.TRAVERSAL_CLIMBING \
+					and int(transfer_state["traversal_hand_constraint_count"]) != 2):
+			_move_dir(device, Vector2.ZERO)
+			return _fail("final transfer lost gravity-on physical hands at=%s traversal=%d native=%s" % [
+				_position(), traversal, transfer_state])
+		if int(transfer_state["foot_transfer_count"]) == transfer_count_before_final + 1 \
+				and int(transfer_state["foot_transfer_support_entity_id"]) == 51 \
+				and bool(_native().is_player_grounded()) and int(_native().get_support_entity_id()) == 51 \
+				and traversal == 0 and int(transfer_state["traversal_hand_constraint_count"]) == 0 \
+				and absf(_position().y - 397.15) < 0.15:
+			_move_dir(device, Vector2.ZERO)
+			_west_brace_diagnostic("upper_foot_receipt")
+			arrived = await _wait_until(func() -> bool:
+				return _west_brace_stable(51, 397.15), 2.0)
+			break
+	_move_dir(device, Vector2.ZERO)
+	var final_transfer: Dictionary = _native().get_landing_state()
+	var final_peak_load := float(final_transfer["foot_transfer_peak_hand_load_n"])
+	if not arrived \
+			or int(final_transfer["foot_transfer_count"]) != transfer_count_before_final + 1 \
+			or int(final_transfer["foot_transfer_support_entity_id"]) != 51 \
+			or int(final_transfer["foot_transfer_tick"]) <= final_start_tick \
+			or not is_finite(final_peak_load) or final_peak_load <= 0.0 \
+			or int(_native().get_accepted_traversal_count()) <= accepted_before_final:
+		return _fail("final hand-to-foot transfer did not complete onto WorldSolid51 floor396.25 at=%s support=%d traversal=%d native=%s" % [
+			_position(), _native().get_support_entity_id(), _native().get_traversal_state(), final_transfer])
+	var upper_hold_start := int(_native().get_tick_index())
+	while int(_native().get_tick_index()) - upper_hold_start < 270:
+		await get_tree().process_frame
+		if not _west_brace_stable(51, 397.15) or int(_native().get_death_count()) != 0:
+			return _fail("upper WorldSolid51 footing lost during three-second neutral hold at=%s velocity=%s support=%d" % [
+				_position(), _velocity(), _native().get_support_entity_id()])
+	await _pose("west_brace_existing_floor396_25")
+	var exit := _position()
+	if not await _walk_to(device, Vector2(-22.5, -142.0), 0.14, 8.0, true) \
+			or not _west_brace_stable(51, 397.15) or _position().distance_to(exit) < 1.0 \
+			or not _campaign_world_intact():
+		return _fail("upper WorldSolid51 floor lacks stable ordinary onward walking at=%s support=%d" % [
+			_position(), _native().get_support_entity_id()])
+	_detail = "lower374_25=1 first_diagonal_shelf381_9=1 jump_apex_action_catch=1 transverse_under_cap=1 reverse_shelf389_4=1 final_hand_transfer396_25=1 foot_transfer=1 upper_hold_ticks=270 gravity=1 onward_walk_m=%.2f touch=1 support=51 deaths=0" % _position().distance_to(exit)
+	return true
+
+
+func _west_brace_hands() -> bool:
+	var state: Dictionary = _native().get_landing_state()
+	return int(_native().get_traversal_state()) == _main.TRAVERSAL_CLIMBING \
+		and int(_native().get_traversal_support_entity_id()) == 1934 \
+		and int(state["traversal_hand_constraint_count"]) == 2 \
+		and float(state["player_gravity_factor"]) == 1.0 and int(_native().get_death_count()) == 0 \
+		and _position().is_finite() and _velocity().is_finite()
+
+
+func _west_brace_diagnostic(phase: String) -> void:
+	print("SCRAPERX_WEST_BRACE phase=%s tick=%d position=%s velocity=%s support=%d traversal=%d traversal_support=%d left_hand=%s right_hand=%s yaw=%.6f touch_move=%s deaths=%d landing=%s" % [
+		phase, _native().get_tick_index(), _position(), _velocity(), _native().get_support_entity_id(),
+		_native().get_traversal_state(), _native().get_traversal_support_entity_id(),
+		_native().get_traversal_left_hand(), _native().get_traversal_right_hand(), _main._yaw,
+		_main._touch.move_vector, _native().get_death_count(), _native().get_landing_state()])
+
+
+func _west_brace_shelf(top_y: float, min_x: float, max_x: float,
+		min_z: float, max_z: float) -> bool:
+	var relative: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
+	var state: Dictionary = _native().get_landing_state()
+	var half_height := 0.6 if bool(_native().is_player_crouched()) else 0.9
+	var position := _position()
+	return bool(_native().is_player_grounded()) and int(_native().get_support_entity_id()) == 1934 \
+		and int(_native().get_traversal_state()) == 0 and absf(position.y - (top_y + half_height)) < 0.10 \
+		and int(state["traversal_hand_constraint_count"]) == 0 and float(state["player_gravity_factor"]) == 1.0 \
+		and position.x >= min_x and position.x <= max_x and position.z >= min_z and position.z <= max_z \
+		and absf(relative.y) < 0.2 and Vector2(relative.x, relative.z).length() < 0.3
+
+
+func _west_brace_stable(support: int, standing_y: float) -> bool:
+	var relative: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
+	var state: Dictionary = _native().get_landing_state()
+	return bool(_native().is_player_grounded()) and int(_native().get_support_entity_id()) == support \
+		and int(_native().get_traversal_state()) == 0 and absf(_position().y - standing_y) < 0.15 \
+		and int(state["traversal_hand_constraint_count"]) == 0 and float(state["player_gravity_factor"]) == 1.0 \
+		and absf(relative.y) < 0.15 and Vector2(relative.x, relative.z).length() < 0.18
+
+
+# Uses the ordinary second-thumb look area to face the route; unlike `_face`,
+# this exercises the same viewport touch events as the player's camera input.
+func _touch_face(direction: Vector2) -> bool:
+	var goal := atan2(-direction.x, -direction.y)
+	var radians_per_pixel := InputRouter.LOOK_RADIANS_PER_UNIT * float(_main._router.look_sensitivity)
+	if absf(radians_per_pixel) < 0.0001:
+		return false
+	var look_at := Vector2(_viewport_size().x * 0.78, _viewport_size().y * 0.45)
+	var look_position := look_at
+	var attempts := 0
+	while attempts < 64:
+		var remaining := wrapf(float(_main._yaw) - goal, -PI, PI)
+		if absf(remaining) <= 0.02:
+			return true
+		var delta_x := clampf(remaining / radians_per_pixel, -48.0, 48.0)
+		_touch(1, look_position, true)
+		await _frames(1)
+		look_position += Vector2(delta_x, 0.0)
+		_drag(1, look_position, Vector2(delta_x, 0.0))
+		await _frames(1)
+		_touch(1, look_position, false)
+		await _frames(1)
+		look_position = look_at
+		attempts += 1
+	return absf(wrapf(float(_main._yaw) - goal, -PI, PI)) <= 0.02
 
 
 func _north_climb(device: int, target_centre_y: float, label: String) -> bool:

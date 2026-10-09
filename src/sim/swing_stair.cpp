@@ -24,7 +24,7 @@ SwingStair::SwingStair(JPH::PhysicsSystem &system,kit::Kit &kit):system_(system)
     std::vector<Part> frame;
     build_s2_statics(frame);
     (void)kit_.add_body(1601,frame,RVec3::sZero(),Quat::sIdentity(),0,.8F);
-    stair_=kit_.add_body(2600,s2_stair_parts(),kS2Hinge,
+    stair_=kit_.add_body(kStairEntity,s2_stair_parts(),kS2Hinge,
         Quat::sRotation(Vec3::sAxisZ(),kS2Lift),17500,.8F);
     kit_.set_damping(stair_,0,0);
     (void)kit_.add_hinge({},stair_,kS2Hinge,Vec3::sAxisZ(),1500);

@@ -407,6 +407,10 @@ constexpr float kJibHoistMaxRateMetersPerSec = 1.0F;
 // Atlas section 0.3: masses/loads below this line are design targets, not
 // proof requirements, until a benchmark scene exists -- this WO is that scene.
 constexpr float kJibMaxLiftForceN = 20000.0F;
+// Powered hold compliance: the 1240 kg hook/load settles about 24 mm below
+// its captured target. Damping is approximately critical for that load.
+constexpr float kJibHoldStiffnessNPerMeter = 500000.0F;
+constexpr float kJibHoldDampingNsPerMeter = 50000.0F;
 
 constexpr float kCrateMassKg = 1200.0F; // weight ~11.8 kN, well inside rating.
 constexpr float kCrateHalfExtent = 0.75F;
@@ -2028,6 +2032,7 @@ public:
                 supplied_ascent_->append_gravity_wheel(physics_system_,*kit_);
                 supplied_ascent_->append_gravity_cart(physics_system_,*kit_);
                 build_taper_inspection_route(*kit_);
+                build_west_brace_bay_route(*kit_);
                 contact_listener_.set_reclaim_fragments(supplied_ascent_->reclaim_material_range());
             }
         }
@@ -3007,6 +3012,9 @@ private:
         const float hoist_travel = (kJibMastHeight - 0.35F) - hook_start_y;
         add_motorized_slider(jib_boom_id_, jib_hook_id_, 0.0F, hoist_travel, kJibMaxLiftForceN,
                              &jib_hoist_slider_);
+        jib_hoist_slider_->GetMotorSettings().mSpringSettings = JPH::SpringSettings(
+            JPH::ESpringMode::StiffnessAndDamping,
+            kJibHoldStiffnessNPerMeter, kJibHoldDampingNsPerMeter);
 
         // Capacity-proving stand: fixed, no slew, permanently overweight,
         // always commanded to raise. Proves the rated force is real without
@@ -4243,10 +4251,9 @@ private:
     }
 
     // WO-011 KX-JIB. Commands take effect only within the pendant station
-    // radius (WO-005: "Action to enter station"); away from it, both motors
-    // are forced to hold at zero velocity regardless of queued input, so
-    // walking off the station always safely brakes the jib rather than
-    // leaving it drifting on a stale command.
+    // radius (WO-005: "Action to enter station"). Away from it, queued input
+    // is discarded: slew requests zero velocity and the hoist engages its
+    // rated powered position hold at the actual departure extension.
     void update_jib(const JPH::BodyInterface &bodies,
                     const double slew_input,
                     const double hoist_input) noexcept {
@@ -4271,7 +4278,19 @@ private:
             }
         }
         if (jib_hoist_slider_ != nullptr) {
-            jib_hoist_slider_->SetTargetVelocity(hoist * kJibHoistMaxRateMetersPerSec);
+            if (hoist != 0.0F) {
+                jib_hoist_slider_->SetMotorState(JPH::EMotorState::Velocity);
+                jib_hoist_slider_->SetTargetVelocity(hoist * kJibHoistMaxRateMetersPerSec);
+            } else {
+                // Brake at the measured extension, rather than merely request
+                // zero speed while the suspended load disturbs the winch.
+                // Jolt's damped position motor applies real reciprocal forces
+                // through the SAME 20 kN rating; it never assigns a body pose.
+                if (jib_hoist_slider_->GetMotorState() != JPH::EMotorState::Position)
+                    jib_hoist_slider_->SetTargetPosition(jib_hoist_slider_->GetCurrentPosition());
+                jib_hoist_slider_->SetMotorState(JPH::EMotorState::Position);
+                jib_hoist_slider_->SetTargetVelocity(0.0F);
+            }
         }
     }
 
@@ -5418,7 +5437,9 @@ private:
         // Action: a vault or mantle where one is offered, else a hold faced
         // at hand height is climbed.
         if (commands.traversal_requested && !try_begin_ground_traversal(bodies)) {
-            const Grip grip = grounded_ ? grip_in_front(bodies) : Grip{};
+            // Action expresses deliberate reach in free flight too. The same
+            // actual geometry and finite hands decide whether a catch holds.
+            const Grip grip = grip_in_front(bodies);
             if (grip.valid) {
                 begin_climb(bodies, grip);
             } else {
@@ -5526,6 +5547,14 @@ private:
         const auto slip = relative - normal * relative.Dot(normal);
         landing_slip_velocity_ = slip;
         correction -= normal * correction.Dot(normal);
+        // The capsule deliberately has zero solver friction (including walls).
+        // Supporting feet must oppose gravity along an incline as well as
+        // brake existing slip. Otherwise neutral intent has a downhill bias.
+        // This is a reciprocal contact force, subject to the SAME finite
+        // traction/work caps; it cannot hold an overloaded slope or missing
+        // contact and does not prescribe velocity on accelerating supports.
+        const auto gravity = physics_system_.GetGravity();
+        correction -= (gravity - normal * gravity.Dot(normal)) * kPlayerMassKg;
         const float traction_cap = (entity_is_causal_section_support(support_sample_.entity_id) ? .8F : .85F) * kPlayerMassKg * -physics_system_.GetGravity().GetY() *
                                    std::max(.3F, normal.GetY());
         if (correction.Length() > traction_cap) correction *= traction_cap / correction.Length();
@@ -5940,7 +5969,9 @@ private:
             return false;
         if (teeter_member_crossing && physical_step_pending_) return false;
         const bool physical=entity_is_causal_section_support(support_entity_id_) ||
-            entity_is_causal_section_support(bodies.GetUserData(obstacle)) || teeter_member_crossing;
+            entity_is_causal_section_support(bodies.GetUserData(obstacle)) || teeter_member_crossing ||
+            support_entity_id_ == SwingStair::kStairEntity ||
+            bodies.GetUserData(obstacle) == SwingStair::kStairEntity;
         const JPH::RVec3 raised = at + JPH::Vec3(0.0F, kStepMaximumHeight, 0.0F);
         if (!capsule_pose_is_clear(raised) || cast_capsule(raised, ahead, fraction, normal)) {
             return false;  // No headroom, or the obstacle is taller than a step.
@@ -6740,7 +6771,8 @@ private:
     [[nodiscard]] Grip grip_in_front(const JPH::BodyInterface &bodies) const noexcept {
         const JPH::RVec3 centre = bodies.GetPosition(player_id_);
         const JPH::RVec3 aim = centre + JPH::Vec3(0.0F, kClimbHandMid, 0.0F) + facing_ * kClimbHandReach;
-        return find_grip(centre, aim, facing_);
+        return find_grip(centre, aim, facing_,
+            !grounded_ && regrab_lockout_ticks_ > 0 ? last_released_grip_ : JPH::BodyID());
     }
 
     // Climbing, the stick toward the structure climbs, away climbs down,
@@ -6969,7 +7001,8 @@ private:
     bool begin_cargo_transfer(JPH::BodyInterface &bodies,const LedgeProbe &probe,
                               JPH::RVec3 origin) noexcept {
         const auto shoulder=origin+JPH::Vec3(0,kClimbHandMid,0);
-        if (JPH::Vec3(probe.ledge_point-shoulder).Length()>1.05F) return false;
+        const float shoulder_to_lip = JPH::Vec3(probe.ledge_point-shoulder).Length();
+        if (shoulder_to_lip>1.05F) return false;
         Lip lips[2];
         if(!probe_lip_pair(probe.ledge_point,probe.inward,probe.ledge_body,lips)) return false;
         for (unsigned hand=0;hand<2;++hand) {
@@ -7012,6 +7045,7 @@ private:
             (support_sample_.body_id.IsInvalid()?JPH::Vec3::sZero():
              bodies.GetPointVelocity(support_sample_.body_id,contact));
         const double horizontal=std::hypot(landing.GetX()-actual.GetX(),landing.GetZ()-actual.GetZ());
+        const auto ledge=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
         // A rounded edge contact alone is not a stable top-out. Keep finite
         // hands until the intended footprint is reached and slip is small.
         if (grounded_ && footing_is_firm(bodies) && horizontal<0.10 &&
@@ -7029,7 +7063,6 @@ private:
         // Releasing the stick does not cancel that input transaction; pushing
         // away pauses it while the real hand constraints keep taking load.
         if (up_input < -kClimbInputDeadzone) return;
-        const auto ledge=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
         JPH::RVec3 goal=landing+JPH::Vec3(0,0.15F,0);
         // Geometric clearance opens the forward move; actual supported contact
         // closes the transfer. Neither a timer nor a prescribed capsule path
@@ -7380,9 +7413,9 @@ private:
         (void)carry_candidate(bodies, carry_target_entity_);
         find_rig_action(bodies);
         if (traversal_state_ == TraversalState::None && !crouched_ &&
-            carry_constraint_ == nullptr && !facing_.IsNearZero() && grounded_) {
+            carry_constraint_ == nullptr && !facing_.IsNearZero()) {
             grip_affordance_ = grip_in_front(bodies);
-            edge_affordance_ = probe_edge_drop(bodies);
+            if (grounded_) edge_affordance_ = probe_edge_drop(bodies);
         }
         // The probes measure rises from standing feet and test standing
         // landing poses; a crouched body is offered none (a request stands
@@ -7462,6 +7495,11 @@ private:
         checkpoint.counterweight = capture_body(bodies, counterweight_id_);
         checkpoint.jib_boom = capture_body(bodies, jib_boom_id_);
         checkpoint.jib_hook = capture_body(bodies, jib_hook_id_);
+        if (jib_hoist_slider_ != nullptr) {
+            checkpoint.jib_hoist_motor_state = jib_hoist_slider_->GetMotorState();
+            checkpoint.jib_hoist_target_position = jib_hoist_slider_->GetTargetPosition();
+            checkpoint.jib_hoist_target_velocity = jib_hoist_slider_->GetTargetVelocity();
+        }
         checkpoint.crate = capture_body(bodies, crate_id_);
         checkpoint.needle_beam = capture_body(bodies, needle_beam_id_);
         checkpoint.needle_seated = needle_seated_;
@@ -7530,6 +7568,12 @@ private:
             restore_body(bodies, jib_boom_id_, checkpoint_.jib_boom);
             restore_body(bodies, jib_hook_id_, checkpoint_.jib_hook);
             restore_body(bodies, crate_id_, checkpoint_.crate);
+            if (jib_hoist_slider_ != nullptr) {
+                jib_hoist_slider_->SetTargetPosition(checkpoint_.jib_hoist_target_position);
+                jib_hoist_slider_->SetTargetVelocity(checkpoint_.jib_hoist_target_velocity);
+                jib_hoist_slider_->SetMotorState(checkpoint_.jib_hoist_motor_state);
+                jib_hoist_slider_->ResetWarmStart();
+            }
             restore_body(bodies, needle_beam_id_, checkpoint_.needle_beam);
             restore_needle_topology(checkpoint_.needle_seated);
             restore_body(bodies, intake_swing_flight_id_, checkpoint_.intake_swing_flight);
@@ -7745,6 +7789,27 @@ private:
         state_.jib_hook_position = to_vector3(bodies.GetPosition(jib_hook_id_));
         state_.jib_hook_linear_velocity =
             {hook_velocity.GetX(), hook_velocity.GetY(), hook_velocity.GetZ()};
+        state_.jib_hoist_position_meters = 0.0;
+        state_.jib_hoist_velocity_mps = 0.0;
+        state_.jib_hoist_motor_force_n = 0.0;
+        if (jib_hoist_slider_ != nullptr) {
+            state_.jib_hoist_position_meters = jib_hoist_slider_->GetCurrentPosition();
+            state_.jib_hoist_motor_force_n = jib_hoist_slider_->GetTotalLambdaMotor() /
+                Simulation::kFixedStepSeconds;
+            const auto frame1 = jib_hoist_slider_->GetConstraintToBody1Matrix();
+            const auto frame2 = jib_hoist_slider_->GetConstraintToBody2Matrix();
+            const auto anchor1 = bodies.GetCenterOfMassTransform(jib_boom_id_) *
+                JPH::RVec3(frame1.GetTranslation());
+            const auto anchor2 = bodies.GetCenterOfMassTransform(jib_hook_id_) *
+                JPH::RVec3(frame2.GetTranslation());
+            const auto axis = bodies.GetRotation(jib_boom_id_) * frame1.GetAxisX();
+            // Differentiate u.dot(axis), including the axis's angular motion.
+            state_.jib_hoist_velocity_mps =
+                (bodies.GetPointVelocity(jib_hook_id_, anchor2) -
+                 bodies.GetPointVelocity(jib_boom_id_, anchor1)).Dot(axis) +
+                JPH::Vec3(anchor2 - anchor1).Dot(
+                    bodies.GetAngularVelocity(jib_boom_id_).Cross(axis));
+        }
         const JPH::Vec3 crate_velocity = bodies.GetLinearVelocity(crate_id_);
         state_.jib_crate_position = to_vector3(bodies.GetPosition(crate_id_));
         state_.jib_crate_linear_velocity =
@@ -7908,14 +7973,22 @@ private:
         // and what a grounded body is offered.
         state_.traversal_left_hand = {};
         state_.traversal_right_hand = {};
+        state_.traversal_left_hand_generation = 0;
+        state_.traversal_right_hand_generation = 0;
         state_.traversal_normal = {};
         if (traversal_state_ != TraversalState::None) {
             state_.traversal_normal = {traversal_normal_.GetX(), 0.0, traversal_normal_.GetZ()};
         }
         if (traversal_state_ == TraversalState::Climbing ||
             traversal_state_ == TraversalState::Hanging) {
-            if (hands_[0].valid) state_.traversal_left_hand = to_vector3(hand_point(bodies, 0));
-            if (hands_[1].valid) state_.traversal_right_hand = to_vector3(hand_point(bodies, 1));
+            if (hands_[0].valid) {
+                state_.traversal_left_hand = to_vector3(hand_point(bodies, 0));
+                state_.traversal_left_hand_generation = hands_[0].generation;
+            }
+            if (hands_[1].valid) {
+                state_.traversal_right_hand = to_vector3(hand_point(bodies, 1));
+                state_.traversal_right_hand_generation = hands_[1].generation;
+            }
         } else if ((traversal_state_ == TraversalState::Hanging ||
                     traversal_state_ == TraversalState::Lowering) &&
                    !traversal_normal_.IsNearZero()) {
@@ -8221,6 +8294,9 @@ private:
         BodyCheckpoint counterweight{};
         BodyCheckpoint jib_boom{};
         BodyCheckpoint jib_hook{};
+        JPH::EMotorState jib_hoist_motor_state = JPH::EMotorState::Velocity;
+        float jib_hoist_target_position = 0.0F;
+        float jib_hoist_target_velocity = 0.0F;
         BodyCheckpoint crate{};
         BodyCheckpoint needle_beam{};
         bool needle_seated = false;

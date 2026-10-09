@@ -1,0 +1,12 @@
+{
+  "base_head": "e3c6168a720b94d3fa42c4e67df682747e3c8642",
+  "library_sha256": "8f02aa6fe88c82d49f34fe986f0d64faf2a312e4c72ca008c6b210a215601a3f",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "2a837f5e738ed3ee162c7613f98867c1fbbbae09100de94561373e71eb31c672",
+    "src/sim/simulation.hpp": "e672b6b32dddf7bbeba8517d17a81d5f142cd17a49c91e56e1ff29efae9920e9",
+    "tests/simulation_tests.cpp": "97a8884b4620e792982a82d95093a9fc2995b20003c3ff1b29b83feb173e4735"
+  },
+  "probe_sha256": "188a5b7d81a9a85625c1d7936a182b01335ecf0b10b6d36232b324645d0d3078",
+  "scope": "Only AS002 actual hoist/slew/release/cradle+deployed hold+original approach and mid-landing; compare only remaining inline20s full-stick hinge arrival against ordinary support-relativePD; unchanged public commands/timing/geometry/native/oracle, no Jump in either variant",
+  "status": "Prepared; runtime pending."
+}

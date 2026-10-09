@@ -1,0 +1,18 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+proot warning: can't sanitize binding "/proc/self/fd/1": No such file or directory
+proot warning: can't sanitize binding "/proc/self/fd/2": No such file or directory
+SAVED_A tick=387 grounded=1 support=1 commits=365 P=197.5,0.893588900566,-2 V=0,0,0 q=1.6572098732 qdot=-0.00211762194522 motorN=12139.854126 station=1 deaths=0
+AIR_ESTABLISHED_BEFORE_RAISE tick=398 grounded=0 support=0 commits=365 P=197.5,1.4858777523,-2 V=0,4.30099773407,0 q=1.65709066391 qdot=7.59479225962e-05 motorN=12114.8945618 station=1 deaths=0
+AIR_RAISE tick=407 grounded=0 support=0 commits=365 P=197.5,1.86147737503,-2 V=0,3.31999754906,0 q=1.69689393044 qdot=0.61374682188 motorN=20000.0006104 station=1 deaths=0
+AIR_RAISE tick=416 grounded=0 support=0 commits=365 P=197.5,2.1389772892,-2 V=0,2.33899784088,0 q=1.78753602505 qdot=1.12618947029 motorN=17175.8097839 station=1 deaths=0
+AIR_RAISE tick=425 grounded=0 support=0 commits=365 P=197.5,2.31837701797,-2 V=0,1.35799813271,0 q=1.89995896816 qdot=1.06347620487 motorN=5882.83058167 station=1 deaths=0
+AIR_RAISE tick=434 grounded=0 support=0 commits=365 P=197.5,2.39967679977,-2 V=0,0.376998126507,0 q=1.99194693565 qdot=0.790339648724 motorN=13703.1344604 station=1 deaths=0
+AIR_RAISE tick=443 grounded=0 support=0 commits=365 P=197.5,2.3828766346,-2 V=0,-0.604001879692,0 q=2.09107017517 qdot=1.06543028355 motorN=15144.8304749 station=1 deaths=0
+AIR_RAISE tick=452 grounded=0 support=0 commits=365 P=197.5,2.26797652245,-2 V=0,-1.58500182629,0 q=2.19573736191 qdot=1.04386913776 motorN=9164.97756958 station=1 deaths=0
+LATCHED_B tick=461 grounded=0 support=0 commits=365 P=197.5,2.0549762249,-2 V=0,-2.56600165367,0 q=2.20783805847 qdot=-0.554821670055 motorN=-4398.53919983 station=1 deaths=0
+RESTORED_A tick=461 grounded=0 support=0 commits=365 P=197.5,0.893588900566,-2 V=0,0,0 q=1.6572098732 qdot=-0.00211762194522 motorN=0 station=1 deaths=0
+RESTORED_HOLD tick=506 grounded=1 support=1 commits=410 P=197.5,0.893588900566,-2 V=0,0,0 q=1.65307033062 qdot=-0.00227203569375 motorN=14528.9479065 station=1 deaths=0
+RESTORED_HOLD tick=551 grounded=1 support=1 commits=455 P=197.5,0.893588900566,-2 V=0,0,0 q=1.6570827961 qdot=0.0132688414305 motorN=11727.7432251 station=1 deaths=0
+RESTORED_HOLD tick=596 grounded=1 support=1 commits=500 P=197.5,0.893588900566,-2 V=0,0,0 q=1.65717411041 qdot=-0.00515824742615 motorN=12145.3266907 station=1 deaths=0
+RESTORED_HOLD tick=641 grounded=1 support=1 commits=545 P=197.5,0.893588900566,-2 V=0,0,0 q=1.65670502186 qdot=0.00820529647171 motorN=12147.5857544 station=1 deaths=0
+PASS ordinary-jump frozen-checkpoint Jib restore A=1.6572098732 B=2.20783805847 max_hold_error=0.0125533342361 max_abs_motor_N=20000.0006104 frozen_commits=365 airborne_ticks=74 deaths=0

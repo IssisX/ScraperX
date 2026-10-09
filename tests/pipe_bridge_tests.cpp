@@ -1,4 +1,5 @@
 #include "sim/simulation.hpp"
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -7,17 +8,25 @@
 #include <utility>
 // AS-016: public walking, facing and hand input only; no body pose setters.
 using namespace scraperx::sim;
-bool walk(Simulation &s, double x, double z, double seconds = 20) {
+bool walk(Simulation &s, double x, double z, double seconds = 20,
+          bool settle = true) {
   for (int i = 0; i < int(seconds * 90); ++i) {
-    auto p = s.snapshot().player_position;
+    const auto state = s.snapshot();
+    const auto p = state.player_position;
+    const double vx = state.player_linear_velocity.x - state.support_point_linear_velocity.x;
+    const double vz = state.player_linear_velocity.z - state.support_point_linear_velocity.z;
     double dx = x - p.x, dz = z - p.z, d = std::hypot(dx, dz);
-    if (d < .07) {
-      (void)s.set_move_input(0, 0);
+    if (d < (settle ? .07 : .4) && state.player_grounded &&
+        (!settle || std::hypot(vx, vz) < .15)) {
+      if (settle) (void)s.set_move_input(0, 0);
       return true;
     }
-    double a = std::min(1., d / .6);
-    (void)s.set_move_input(dx / d * a, dz / d * a);
-    (void)s.set_facing(dx / d, dz / d);
+    // Arrive through finite ordinary braking before taking a mechanism grip.
+    const double input_x = dx * 1.8 - vx * .28;
+    const double input_z = dz * 1.8 - vz * .28;
+    const double scale = std::max(1., std::hypot(input_x, input_z));
+    (void)s.set_move_input(input_x / scale, input_z / scale);
+    if (d > 1.e-8) (void)s.set_facing(dx / d, dz / d);
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
   }
   (void)s.set_move_input(0, 0);
@@ -135,27 +144,47 @@ int main(int argc, char **argv) {
       (s.pipe_bridge_tip_height() < 7.53 || s.pipe_bridge_tip_height() > 8.2))
     return 6;
   const double tz = -90 - 20 * std::cos(std::asin(7.4 / 20));
+  if (mode == 5) {
+    // Transit the real side ramp continuously. These are waypoints, not
+    // mechanism controls that need a stopped stance; stopping at every one
+    // spends the entire ascent before the moving-rider observation begins.
+    (void)s.set_sprint_input(true);
+    if (!walk(s, -.6, -86, 5, false) ||
+        !walk(s, 1.94, -86, 5, false) || !walk(s, 1.94, -91.1, 5, false)) {
+      report(s, "BOARD_RUN_APPROACH_FAIL"); return 7;
+    }
+    (void)s.set_facing(1, 0);
+    // Brake before the short drop off the ramp: sprint momentum would carry
+    // a real rider across the three-metre deck and over its far edge.
+    (void)s.set_sprint_input(false);
+    (void)s.set_move_input(.35, 0);
+    int board_ticks=0;
+    while(board_ticks++ < 270 && !(s.snapshot().player_grounded &&
+          s.snapshot().support_entity_id==2500 && s.snapshot().traversal_state==TraversalState::None))
+      (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    const auto boarded=s.snapshot();
+    (void)s.set_sprint_input(false);
+    (void)s.set_move_input(0, 0);
+    report(s,"BOARD_MOVING");
+    if(board_ticks>=270 || boarded.support_entity_id!=2500 ||
+       s.kit_body_velocity(s.kit_body_index(2500)).y<.01) return 32;
+    wait(s,10);
+    report(s,"PASSIVE_RIDER");
+    if(s.snapshot().support_entity_id!=2500 ||
+       s.snapshot().player_position.y < boarded.player_position.y+.05 ||
+       std::hypot(s.snapshot().landing_slip_velocity.x,s.snapshot().landing_slip_velocity.z)>.02) return 33;
+  }
   for (auto point : {Vector3{-.6, 0, -86}, Vector3{1.94, 0, -86},
                      Vector3{1.94, 0, -91.1}, Vector3{6, 0, -91.1},
                      Vector3{6, 0, tz + 1.5}, Vector3{9.06, 0, tz + 1.5},
                      Vector3{9.06, 0, tz - 2}, Vector3{9.06, 0, -125.2}}) {
+    if(mode==5 && point.z>=-91.1) continue; // Already physically aboard.
     if (!walk(s, point.x, point.z)) {
       report(s, "CROSS_FAIL");
       return 7;
     }
-    wait(s, .2);
-    report(s, "CROSS");
-    if (mode == 5 && point.x == 6 && point.z == -91.1) {
-      const auto boarded = s.snapshot();
-      if (boarded.support_entity_id != 2500 ||
-          s.kit_body_velocity(s.kit_body_index(2500)).y < .01)
-        return 32;
-      wait(s, 10);
-      report(s, "PASSIVE_RIDER");
-      if (s.snapshot().support_entity_id != 2500 ||
-          s.snapshot().player_position.y < boarded.player_position.y + .05)
-        return 33;
-    }
+    wait(s,.2);
+    report(s,"CROSS");
   }
   report(s, "ARRIVED");
   if (s.snapshot().player_position.y < 11.6 || s.snapshot().death_count != 0)

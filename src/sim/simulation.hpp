@@ -178,6 +178,10 @@ struct Snapshot final {
     // direction it faces the structure; zero outside a traversal.
     Vector3 traversal_left_hand{};
     Vector3 traversal_right_hand{};
+    // Read-only grip identity. Moving material can retain a hold while its
+    // world point moves; generation changes only when that hand regrips.
+    std::uint64_t traversal_left_hand_generation = 0;
+    std::uint64_t traversal_right_hand_generation = 0;
     Vector3 traversal_normal{};
     // Actual native contact/control readback. The command debit is a conservative
     // bound; it does not claim measured muscle work or energy conservation.
@@ -280,6 +284,11 @@ struct Snapshot final {
     double jib_boom_angle_radians = 0.0;
     Vector3 jib_hook_position{};
     Vector3 jib_hook_linear_velocity{};
+    // Actual slider coordinate and its derivative, relative to the rotating
+    // boom anchors. World hook motion also includes loaded boom vibration.
+    double jib_hoist_position_meters = 0.0;
+    double jib_hoist_velocity_mps = 0.0;
+    double jib_hoist_motor_force_n = 0.0;
     Vector3 jib_crate_position{};
     Vector3 jib_crate_linear_velocity{};
     // A separate, fixed capacity-proving stand: the same rated winch force as

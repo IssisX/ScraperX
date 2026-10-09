@@ -1,0 +1,64 @@
+{
+  "base_head": "e3c6168a720b94d3fa42c4e67df682747e3c8642",
+  "library_sha256": "8f02aa6fe88c82d49f34fe986f0d64faf2a312e4c72ca008c6b210a215601a3f",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "2a837f5e738ed3ee162c7613f98867c1fbbbae09100de94561373e71eb31c672",
+    "src/sim/simulation.hpp": "e672b6b32dddf7bbeba8517d17a81d5f142cd17a49c91e56e1ff29efae9920e9",
+    "tests/simulation_tests.cpp": "f72fd7e617746127700f3f929db09f761dc03db949a3c98a211286d5f5ec4092"
+  },
+  "probe_sha256": "a6dd0e75b244b9435cbb4190b08560ec219e60b755a9e26f4cbcbfd29ade8fa0",
+  "scope": "Only AS001 freight IntakePendant raise/open plus exact fixed waypoint durations; old unit-stick versus support-relative PD1.8error-.28velocity; same fixture and commands; no maintained edits/shared build",
+  "status": "ONE bounded private comparison completed: old fixed full-stick controller FAIL; support-relative ordinary PD PASS.",
+  "result": {
+    "exit_code": 0,
+    "old_route_oracles": {
+      "handoff_support": false,
+      "grounded_and_height": false,
+      "final_position": [
+        -4.39277935028,
+        24.3562812805,
+        -118.685417175
+      ],
+      "final_support": 44,
+      "final_grounded": true,
+      "deaths": 0,
+      "first_approach_distance_m": 1.22404614417,
+      "last_flight_top_position": [
+        -6.90851736069,
+        25.0757980347,
+        -120.003486633
+      ],
+      "last_flight_top_world_vx_mps": 2.36415696144
+    },
+    "pd_route_oracles": {
+      "handoff_support": true,
+      "grounded_and_height": true,
+      "final_position": [
+        -6.00082540512,
+        25.0872020721,
+        -112.00289917
+      ],
+      "final_support": 45,
+      "final_grounded": true,
+      "deaths": 0,
+      "final_distance_m": 0.00301437884969,
+      "last_flight_top_position": [
+        -7.49752378464,
+        25.0872020721,
+        -120.000450134
+      ],
+      "last_flight_top_world_vx_mps": -0.0454458147287
+    },
+    "common_open_tick": 473,
+    "common_final_tick": 15233,
+    "same_fixture_command_waypoint_timing": true,
+    "production_physics_changed": false,
+    "maintained_test_changed": false,
+    "supported_repair_boundary": "AS001 ordinary approach input only; preserve full-stick impassability attempts and all existing support/height/route acceptance."
+  },
+  "files_sha256": {
+    "probe.cpp": "a6dd0e75b244b9435cbb4190b08560ec219e60b755a9e26f4cbcbfd29ade8fa0",
+    "probe": "49ee5f2888b9b0029713b83281e4142f697e91c60d36bcfa719e67cdccf8ea63",
+    "observed.log": "99e8b85b5abe3664e5be9f94841f725ecaac0e1ec464a47b59e9c28b7fb0fb14"
+  }
+}

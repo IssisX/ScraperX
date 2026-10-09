@@ -1,0 +1,12 @@
+{
+  "base_head": "e3c6168a720b94d3fa42c4e67df682747e3c8642",
+  "library_sha256": "8f02aa6fe88c82d49f34fe986f0d64faf2a312e4c72ca008c6b210a215601a3f",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "2a837f5e738ed3ee162c7613f98867c1fbbbae09100de94561373e71eb31c672",
+    "src/sim/simulation.hpp": "e672b6b32dddf7bbeba8517d17a81d5f142cd17a49c91e56e1ff29efae9920e9",
+    "tests/simulation_tests.cpp": "f72fd7e617746127700f3f929db09f761dc03db949a3c98a211286d5f5ec4092"
+  },
+  "probe_sha256": "a6dd0e75b244b9435cbb4190b08560ec219e60b755a9e26f4cbcbfd29ade8fa0",
+  "scope": "Only AS001 freight IntakePendant raise/open plus exact fixed waypoint durations; old unit-stick versus support-relative PD1.8error-.28velocity; same fixture and commands; no maintained edits/shared build",
+  "status": "Prepared; runtime pending."
+}

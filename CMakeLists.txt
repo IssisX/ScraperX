@@ -20,6 +20,7 @@ add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
     src/sim/physical_hand_climb.cpp
     src/sim/parkour_route.cpp
+    src/sim/west_brace_bay_route.cpp
     src/sim/steam_plant.cpp
     src/sim/water_screw.cpp
     src/sim/mechanism_kit.cpp
@@ -176,6 +177,9 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_taper_inspection_route_tests tests/taper_inspection_route_tests.cpp)
     target_link_libraries(scraperx_taper_inspection_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.taper_inspection_route COMMAND scraperx_taper_inspection_route_tests)
+    add_executable(scraperx_west_brace_bay_route_tests tests/west_brace_bay_route_tests.cpp)
+    target_link_libraries(scraperx_west_brace_bay_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.west_brace_bay_route COMMAND scraperx_west_brace_bay_route_tests)
     add_executable(scraperx_teeter_route_tests tests/teeter_route_tests.cpp)
     target_link_libraries(scraperx_teeter_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.teeter_route COMMAND scraperx_teeter_route_tests)

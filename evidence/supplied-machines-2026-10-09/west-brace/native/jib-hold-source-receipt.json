@@ -1,0 +1,12 @@
+{
+  "candidate": "Jib-only 500000 N/m + 50000 Ns/m powered Position hold;20kN limit;once-latched measured extension;checkpoint motor state/target restore",
+  "base_head": "e3c6168a720b94d3fa42c4e67df682747e3c8642",
+  "library_sha256": "8f02aa6fe88c82d49f34fe986f0d64faf2a312e4c72ca008c6b210a215601a3f",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "2a837f5e738ed3ee162c7613f98867c1fbbbae09100de94561373e71eb31c672",
+    "src/sim/simulation.hpp": "e672b6b32dddf7bbeba8517d17a81d5f142cd17a49c91e56e1ff29efae9920e9"
+  },
+  "probe_sha256": "336f5fdef066177efa9b7c3b996d6bd92dcb87469b640bf8be227eb3e094d931",
+  "scope": "UNCHANGED original private command sequence;continuous45native-tick world AND slider speed<.05;station/rise/finite/20kN force gates every postexit tick",
+  "status": "Prepared; runtime pending."
+}
