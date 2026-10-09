@@ -4215,6 +4215,124 @@ void run_wheel() {
 // fresh simulation; restored from the same bytes, the original and the fresh
 // one play on bit for bit; bytes cut short or from another build are refused
 // and change nothing.
+// Phase 4: landing recovery and the roll, from the 12 m drop over the yard.
+// One drop each way: straight down, forward and unprepared, forward with
+// crouch held (a roll), forward with crouch held into an obstructed lane (a
+// refused roll), across the facing (a stumble); then a jump landing (the legs
+// absorb it), and the lethal drop with crouch held (still lethal).
+void run_landing() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    struct Drop {
+        double move_x, move_z, face_x, face_z;
+        bool crouch;
+    };
+    struct Landed {
+        Snapshot at;          // the landing tick
+        Snapshot later;       // kRollSeconds on, input released at landing
+        double travel_0_6 = 0.0;
+    };
+    const auto drop = [](const InitialSpawn spawn, const Drop d) {
+        Simulation sim(spawn);
+        require(sim.set_facing(d.face_x, d.face_z), "facing must be accepted");
+        require(sim.set_move_input(d.move_x, d.move_z), "move must be accepted");
+        require(sim.set_crouch_input(d.crouch), "crouch must be accepted");
+        require(advance_until(sim, [](const Snapshot &s) { return s.landing_count >= 1 || s.death_count >= 1; }, 6.0),
+                "the drop must land");
+        Landed out;
+        out.at = sim.snapshot();
+        require(sim.set_move_input(0.0, 0.0), "release must be accepted");
+        const auto start = out.at.player_position;
+        for (int i = 0; i < 54; ++i) {
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+        }
+        out.later = sim.snapshot();
+        out.travel_0_6 = std::hypot(out.later.player_position.x - start.x, out.later.player_position.z - start.z);
+        return out;
+    };
+    const auto show = [](const char *name, const Landed &l) {
+        std::cout << "  " << name << ": response=" << int(l.at.landing_response)
+                  << " vn=" << l.at.landing_normal_speed_mps << " vt=" << l.at.landing_tangent_speed_mps
+                  << " loss=" << l.at.landing_balance_loss << " balance=" << l.at.recovery_balance
+                  << " travel_0_6=" << l.travel_0_6 << " roll_travel=" << l.later.roll_travel_m
+                  << " deaths=" << l.later.death_count << " refused=" << l.later.roll_refused_count
+                  << " blocked=" << l.later.roll_blocked_count << " at=(" << l.at.player_position.x << ","
+                  << l.at.player_position.z << ")\n";
+    };
+    const auto straight = drop(InitialSpawn::SurvivableDrop, {0, 0, 0, 1, false});
+    const auto plain = drop(InitialSpawn::SurvivableDrop, {0, 1, 0, 1, false});
+    const auto roll = drop(InitialSpawn::SurvivableDrop, {0, 1, 0, 1, true});
+    const auto refused = drop(InitialSpawn::SurvivableDrop, {1, 0, 1, 0, true});
+    const auto stumble = drop(InitialSpawn::SurvivableDrop, {0, 1, 1, 0, false});
+    const auto lethal = drop(InitialSpawn::HighDrop, {0, 1, 0, 1, true});
+    if (std::getenv("SCRAPERX_LANDING_DETAIL") != nullptr) {
+        show("straight", straight);
+        show("plain", plain);
+        show("roll", roll);
+        show("refused", refused);
+        show("stumble", stumble);
+        show("lethal", lethal);
+    }
+
+    require(straight.at.landing_response == 2 && straight.at.death_count == 0,
+            "an unprepared 12 m drop must be a heavy, survivable landing");
+    require(straight.at.recovery_balance < 0.6, "a heavy landing must cost balance");
+    require(plain.at.landing_response == 2 && roll.at.landing_response == 3,
+            "the same forward drop must roll only with crouch held");
+    require(roll.at.recovery_balance > plain.at.recovery_balance + 0.3,
+            "a roll must leave far less balance debt than a planted landing");
+    require(roll.later.roll_travel_m > 2.0 && roll.travel_0_6 > 2.0 * plain.travel_0_6,
+            "a roll must carry the run's momentum forward, a planted landing must not");
+    require(roll.later.roll_progress == 0.0, "the roll must end within its time");
+    require(refused.at.landing_response == 2 && refused.later.roll_refused_count == 1,
+            "a roll into an obstructed lane must be refused, not driven through it");
+    require(stumble.at.landing_response == 4 && stumble.later.stumble_count == 1,
+            "a fast landing across the facing must stumble");
+    require(lethal.at.death_count == 1, "crouch and a run must not survive a lethal fall");
+
+    // Control through recovery: forward input from the landing tick of the
+    // straight drop reaches less speed in 0.25 s than on settled ground, and
+    // the full speed once recovered.
+    const auto speed_after = [](Simulation &sim, const int ticks) {
+        require(sim.set_move_input(0.0, 1.0), "move must be accepted");
+        for (int i = 0; i < ticks; ++i) {
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+        }
+        const auto v = sim.snapshot().player_linear_velocity;
+        require(sim.set_move_input(0.0, 0.0), "release must be accepted");
+        return std::hypot(v.x, v.z);
+    };
+    Simulation heavy(InitialSpawn::SurvivableDrop);
+    require(advance_until(heavy, [](const Snapshot &s) { return s.landing_count >= 1; }, 6.0), "must land");
+    const double recovering = speed_after(heavy, 22);
+    require(advance_until(heavy, [](const Snapshot &s) { return s.recovery_balance >= 1.0; }, 3.0),
+            "balance must come back");
+    for (int i = 0; i < 90; ++i) {
+        require(heavy.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+    }
+    const double settled = speed_after(heavy, 22);
+    require(recovering > 0.5 && recovering < 0.8 * settled,
+            "a heavy landing must reduce traction, not remove control");
+
+    // A standing jump's landing is the legs' own: no debt.
+    Simulation hop(InitialSpawn::SurvivableDrop);
+    require(advance_until(hop, [](const Snapshot &s) { return s.landing_count >= 1; }, 6.0), "must land");
+    require(advance_until(hop, [](const Snapshot &s) { return s.recovery_balance >= 1.0; }, 3.0), "recovers");
+    for (int i = 0; i < 45; ++i) {
+        require(hop.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+    }
+    require(hop.request_jump(), "jump must be accepted");
+    require(advance_until(hop, [](const Snapshot &s) { return s.landing_count >= 2; }, 3.0), "the hop must land");
+    require(hop.snapshot().landing_response == 1 && hop.snapshot().recovery_balance == 1.0,
+            "an ordinary jump landing must be absorbed with no debt");
+
+    std::cout << "PASS scraperx_sim landing: heavy_balance=" << straight.at.recovery_balance
+              << " roll_balance=" << roll.at.recovery_balance << " roll_travel_m=" << roll.later.roll_travel_m
+              << " planted_travel_m=" << plain.travel_0_6 << " recovering_mps=" << recovering
+              << " settled_mps=" << settled << '\n';
+}
+
 void run_save() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -6025,6 +6143,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "wheel") {
         run_wheel();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "landing") {
+        run_landing();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -7996,6 +8119,7 @@ int main() {
     run_incline();
     run_wheel();
     run_save();
+    run_landing();
     run_tram();
     run_ascent();
 

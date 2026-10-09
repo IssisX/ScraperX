@@ -99,6 +99,40 @@ constexpr float kGroundAcceleration = 22.0F;
 // number the numbers themselves flagged.
 constexpr float kAirAcceleration = 14.0F;
 constexpr float kJumpSpeed = 5.5F;
+
+// Phase 4: landing recovery, a reduced-order body. The capsule is rigid, so
+// Jolt stops its fall in one contact; what the legs and trunk did with that
+// energy is modelled here, explicitly, as a balance debt the feet pay back
+// through reduced traction (finite ground force), never as a lockout.
+// - Absorbed for free: the legs take a landing up to kLandingFreeSpeed (a
+//   1.8 m drop) with no lasting cost. Crouch held at contact (prepared) bends
+//   them deeper: kLandingPreparedFreeSpeed, a 3.3 m drop.
+// - Above that the debt grows with the normal energy past the free part, to
+//   kLandingMaxLoss at the lethal speed, plus a quarter of the tangential
+//   energy when the slide is across the facing (a stumble). The lethal rule
+//   (kLethalImpactSpeedMps) is untouched and decided first.
+// - Balance b runs from 1 - loss back to 1 over the recovery time; ground
+//   acceleration (traction) scales by .25 + .75 b and the reachable speed by
+//   .45 + .55 b. Input still steers and brakes at every b.
+// - A roll needs crouch held at contact, a forward relative speed of at least
+//   kRollMinimumSpeed within 45 degrees of the facing, and a clear, supported
+//   lane for the crouched capsule as far as the roll will carry. It keeps
+//   the forward momentum (braked by kRollDeceleration, rolling friction
+//   rather than a planted stop), holds the 1.2 m capsule for kRollSeconds,
+//   and leaves a quarter of the debt. Something in the lane ends it as a
+//   heavy landing at the full debt. CHOSEN values; limitations: no
+//   multi-contact body, and the normal impulse is the solver's own.
+constexpr float kLandingFreeSpeed = 6.0F;
+constexpr float kLandingPreparedFreeSpeed = 8.0F;
+constexpr double kLandingMaxLoss = 0.9;
+constexpr double kLandingPreparedLossScale = 0.6;
+constexpr double kRollLossScale = 0.25;
+constexpr float kRollMinimumSpeed = 2.5F;
+constexpr float kRollMinimumNormalSpeed = 5.0F;
+constexpr float kRollDeceleration = 3.0F;
+constexpr float kRollSteerAcceleration = 4.0F;
+constexpr double kRollSeconds = 0.6;
+constexpr float kStumbleMinimumSpeed = 3.0F;
 constexpr double kTranslatingSupportAmplitudeMeters = 2.0;
 constexpr double kTranslatingSupportAngularFrequency = 1.0;
 constexpr double kRotatingSupportAngularSpeed = 0.8;
@@ -1326,7 +1360,8 @@ public:
                 // exactly the velocity the body carries into this tick's
                 // contact resolution -- what "impact speed" has to mean for
                 // late deceleration (a well-timed parachute) to matter.
-                const float vertical_speed = bodies.GetLinearVelocity(player_id_).GetY();
+                pre_contact_velocity_ = bodies.GetLinearVelocity(player_id_);
+                const float vertical_speed = pre_contact_velocity_.GetY();
                 pre_contact_fall_speed_mps_ = std::max(0.0F, -vertical_speed);
                 fall_peak_speed_mps_ =
                     std::max(fall_peak_speed_mps_, pre_contact_fall_speed_mps_);
@@ -1366,7 +1401,12 @@ public:
             if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
                 restore_from_checkpoint(bodies);
                 died_this_tick = true;
+            } else {
+                record_landing(bodies, commands.crouch_held);
             }
+        }
+        if (!died_this_tick) {
+            advance_recovery(bodies, delta_seconds);
         }
         if (!died_this_tick && grounded_ && traversal_state_ == TraversalState::None &&
             footing_is_firm(bodies)) {
@@ -2365,8 +2405,8 @@ private:
         if (traversal_state_ != TraversalState::None) {
             return;
         }
-        const bool wants_up =
-            !commands.crouch_held || commands.jump_requested || commands.traversal_requested;
+        const bool wants_up = !rolling() &&
+            (!commands.crouch_held || commands.jump_requested || commands.traversal_requested);
         if (crouched_) {
             if (wants_up) {
                 (void)try_stand(bodies);
@@ -2498,6 +2538,163 @@ private:
         return true;
     }
 
+    // ---- Phase 4: landing recovery and the roll (see kLandingFreeSpeed) ----
+
+    [[nodiscard]] bool rolling() const noexcept {
+        return landing_response_ == LandingResponse::Roll && roll_seconds_left_ > 0.0;
+    }
+
+    // 1 when recovered; 1 - loss just after the landing.
+    [[nodiscard]] double recovery_balance() const noexcept {
+        if (recovery_duration_ <= 0.0) {
+            return 1.0;
+        }
+        return 1.0 - landing_loss_ * std::clamp(recovery_seconds_left_ / recovery_duration_, 0.0, 1.0);
+    }
+
+    void clear_recovery() noexcept {
+        landing_response_ = LandingResponse::None;
+        landing_loss_ = 0.0;
+        recovery_seconds_left_ = recovery_duration_ = 0.0;
+        roll_seconds_left_ = 0.0;
+    }
+
+    // A clear, supported lane for the crouched capsule from the landing
+    // centre along `direction` for `length`: swept, and stood on every 0.5 m.
+    [[nodiscard]] bool roll_lane_is_clear(const JPH::RVec3 standing_centre, const JPH::Vec3 direction,
+                                          const float length) const noexcept {
+        const JPH::RVec3 crouched = standing_centre - JPH::Vec3(0.0F, kCrouchDrop - kStandClearanceSkin, 0.0F);
+        JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
+        const JPH::RShapeCast sweep(player_crouch_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
+                                    JPH::RMat44::sTranslation(crouched), direction * length);
+        const JPH::IgnoreSingleBodyFilter body_filter(player_id_);
+        physics_system_.GetNarrowPhaseQuery().CastShape(sweep, JPH::ShapeCastSettings(), crouched, collector,
+                                                        {}, {}, body_filter);
+        if (collector.HadHit()) {
+            return false;
+        }
+        for (float ahead = 0.5F; ahead <= length + 0.01F; ahead += 0.5F) {
+            JPH::RayCastResult hit;
+            const JPH::RVec3 at = standing_centre + direction * ahead;
+            if (!cast_ray(at, JPH::Vec3(0.0F, -(kPlayerHalfHeight + 0.3F), 0.0F), hit)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void record_landing(JPH::BodyInterface &bodies, const bool prepared) noexcept {
+        const JPH::Vec3 support_velocity(static_cast<float>(support_sample_.point_velocity.x),
+                                         static_cast<float>(support_sample_.point_velocity.y),
+                                         static_cast<float>(support_sample_.point_velocity.z));
+        const JPH::Vec3 relative = pre_contact_velocity_ - support_velocity;
+        const float normal_speed = std::max(0.0F, -relative.GetY());
+        const JPH::Vec3 tangent(relative.GetX(), 0.0F, relative.GetZ());
+        const float tangent_speed = tangent.Length();
+        const JPH::Vec3 along = tangent_speed > 1.0e-4F ? tangent / tangent_speed : JPH::Vec3::sZero();
+        const bool forward = tangent_speed > 1.0e-4F && along.Dot(facing_) >= 0.7F;
+        ++landing_count_;
+        landing_normal_speed_mps_ = normal_speed;
+        landing_tangent_speed_mps_ = tangent_speed;
+        clear_recovery();
+
+        const float free_speed = prepared ? kLandingPreparedFreeSpeed : kLandingFreeSpeed;
+        const double mass = kPlayerMassKg;
+        const double normal_excess =
+            0.5 * mass * std::max(0.0, double(normal_speed) * normal_speed - double(free_speed) * free_speed);
+        const double lethal_span = 0.5 * mass *
+            (double(kLethalImpactSpeedMps) * kLethalImpactSpeedMps - double(kLandingFreeSpeed) * kLandingFreeSpeed);
+        const bool stumble = !forward && tangent_speed >= kStumbleMinimumSpeed;
+        const double tangent_energy = stumble ? 0.25 * 0.5 * mass * double(tangent_speed) * tangent_speed : 0.0;
+        double loss = std::clamp(kLandingMaxLoss * (normal_excess + tangent_energy) / lethal_span, 0.0,
+                                 kLandingMaxLoss);
+        if (prepared) {
+            loss *= kLandingPreparedLossScale;
+        }
+        const double full_loss = loss;
+        landing_response_ = loss <= 0.0 ? LandingResponse::Absorbed
+                            : stumble   ? LandingResponse::Stumble
+                                        : LandingResponse::Heavy;
+        if (prepared && forward && tangent_speed >= kRollMinimumSpeed && normal_speed >= kRollMinimumNormalSpeed) {
+            const float runout = std::max(0.5F, tangent_speed * float(kRollSeconds) -
+                                                    0.5F * kRollDeceleration * float(kRollSeconds * kRollSeconds));
+            if (roll_lane_is_clear(bodies.GetPosition(player_id_), along, runout)) {
+                landing_response_ = LandingResponse::Roll;
+                loss *= kRollLossScale;
+                roll_seconds_left_ = kRollSeconds;
+                roll_direction_ = along;
+                roll_entry_speed_ = tangent_speed;
+                roll_blocked_loss_ = full_loss / kLandingPreparedLossScale;
+                roll_start_ = bodies.GetPosition(player_id_);
+                roll_travel_m_ = 0.0;
+                ++roll_count_;
+                // The feet keep the speed the body arrived with along the
+                // lane; the solver's contact may already have shaved it.
+                const JPH::Vec3 now = bodies.GetLinearVelocity(player_id_) - support_velocity;
+                const float carried = now.Dot(along);
+                if (carried < tangent_speed) {
+                    bodies.SetLinearVelocity(player_id_, bodies.GetLinearVelocity(player_id_) +
+                                                             along * (tangent_speed - carried));
+                }
+            } else {
+                ++roll_refused_count_;
+            }
+        }
+        if (landing_response_ == LandingResponse::Stumble) {
+            ++stumble_count_;
+        }
+        landing_loss_ = loss;
+        if (loss <= 0.0) {
+            return;
+        }
+        recovery_duration_ = std::clamp(0.15 + 0.06 * std::max(0.0, double(normal_speed) - free_speed) +
+                                            (stumble ? 0.05 * tangent_speed : 0.0),
+                                        0.15, 2.0);
+        recovery_seconds_left_ = recovery_duration_;
+    }
+
+    // Along the lane the roll only brakes, at rolling friction; across it the
+    // stick steers with a small force. A blocked lane (the speed along it
+    // collapsing) ends the roll as a heavy landing at the full debt.
+    void roll_locomotion(JPH::Vec3 &velocity, const JPH::Vec3 reference, const StepCommands &commands,
+                         const float dt) noexcept {
+        const JPH::Vec3 relative = velocity - reference;
+        const JPH::Vec3 across = JPH::Vec3(-roll_direction_.GetZ(), 0.0F, roll_direction_.GetX());
+        const float along_speed = std::max(0.0F, relative.Dot(roll_direction_) - kRollDeceleration * dt);
+        const float elapsed = float(kRollSeconds - roll_seconds_left_);
+        const float expected = std::max(0.0F, roll_entry_speed_ - kRollDeceleration * elapsed);
+        if (elapsed > 0.1F && along_speed < 0.5F * expected) {
+            ++roll_blocked_count_;
+            landing_response_ = LandingResponse::Heavy;
+            landing_loss_ = roll_blocked_loss_;
+            recovery_seconds_left_ = recovery_duration_;
+            roll_seconds_left_ = 0.0;
+        }
+        const float wanted_across = float(commands.move_input_x * across.GetX() + commands.move_input_z * across.GetZ()) *
+                                    kRollMinimumSpeed;
+        const float across_speed = relative.Dot(across);
+        const float across_change = std::clamp(wanted_across - across_speed, -kRollSteerAcceleration * dt,
+                                               kRollSteerAcceleration * dt);
+        const JPH::Vec3 horizontal = roll_direction_ * along_speed + across * (across_speed + across_change);
+        velocity.SetX(reference.GetX() + horizontal.GetX());
+        velocity.SetZ(reference.GetZ() + horizontal.GetZ());
+    }
+
+    void advance_recovery(JPH::BodyInterface &bodies, const float dt) noexcept {
+        if (roll_seconds_left_ > 0.0) {
+            const JPH::Vec3 moved(bodies.GetPosition(player_id_) - roll_start_);
+            roll_travel_m_ = JPH::Vec3(moved.GetX(), 0.0F, moved.GetZ()).Length();
+            roll_seconds_left_ = std::max(0.0, roll_seconds_left_ - dt);
+            // Off the end of the lane: an ordinary fall takes over.
+            if (!grounded_) {
+                roll_seconds_left_ = 0.0;
+            }
+        }
+        if (recovery_seconds_left_ > 0.0 && grounded_) {
+            recovery_seconds_left_ = std::max(0.0, recovery_seconds_left_ - dt);
+        }
+    }
+
     [[nodiscard]] bool apply_locomotion(JPH::BodyInterface &bodies,
                                         const StepCommands &commands,
                                         const float delta_seconds) noexcept {
@@ -2536,16 +2733,26 @@ private:
                         commands.move_input_z * facing_.GetZ()) >= kSprintMaximumAngleCos * input) {
                 sprinting_ = true;
             }
-            const float full_speed = sprinting_
-                                         ? static_cast<float>(kPlayerMaximumRelativeSpeed * kSprintSpeedScale)
-                                         : kPlayerMaximumRelativeSpeed * carry_speed_scale();
-            approach_relative_horizontal_velocity(player_velocity,
-                                                  reference_velocity,
-                                                  move_x,
-                                                  move_z,
-                                                  carry_ground_acceleration(),
-                                                  delta_seconds,
-                                                  full_speed);
+            const double balance = recovery_balance();
+            if (balance < 0.8) {
+                sprinting_ = false;
+            }
+            const float full_speed = (sprinting_
+                                          ? static_cast<float>(kPlayerMaximumRelativeSpeed * kSprintSpeedScale)
+                                          : kPlayerMaximumRelativeSpeed * carry_speed_scale()) *
+                                     static_cast<float>(0.45 + 0.55 * balance);
+            if (rolling()) {
+                roll_locomotion(player_velocity, reference_velocity, commands, delta_seconds);
+            } else {
+                approach_relative_horizontal_velocity(player_velocity,
+                                                      reference_velocity,
+                                                      move_x,
+                                                      move_z,
+                                                      carry_ground_acceleration() *
+                                                          static_cast<float>(0.25 + 0.75 * balance),
+                                                      delta_seconds,
+                                                      full_speed);
+            }
             // The air keeps what the ground gave: a running jump, or a run
             // off an edge, carries its speed.
             const JPH::Vec3 relative = player_velocity - reference_velocity;
@@ -3809,6 +4016,7 @@ private:
         }
 
         grounded_ = false;
+        clear_recovery();
         jump_vault_ticks_left_ = 0;
         support_entity_id_ = 0;
         support_sample_ = {};
@@ -4045,6 +4253,18 @@ public:
             : FallState::Grounded;
         state_.fall_peak_speed_mps = fall_peak_speed_mps_;
         state_.last_impact_speed_mps = last_impact_speed_mps_;
+        state_.landing_response = static_cast<std::uint8_t>(landing_response_);
+        state_.landing_normal_speed_mps = landing_normal_speed_mps_;
+        state_.landing_tangent_speed_mps = landing_tangent_speed_mps_;
+        state_.landing_balance_loss = landing_loss_;
+        state_.recovery_balance = recovery_balance();
+        state_.roll_progress = rolling() ? 1.0 - roll_seconds_left_ / kRollSeconds : 0.0;
+        state_.roll_travel_m = roll_travel_m_;
+        state_.landing_count = landing_count_;
+        state_.roll_count = roll_count_;
+        state_.roll_refused_count = roll_refused_count_;
+        state_.roll_blocked_count = roll_blocked_count_;
+        state_.stumble_count = stumble_count_;
         state_.parachute_deployed = parachute_deployed_;
         state_.checkpoint_position = to_vector3(checkpoint_position_);
         state_.checkpoint_commit_count = checkpoint_commit_count_;
@@ -4192,6 +4412,27 @@ public:
     float fall_peak_speed_mps_ = 0.0F;
     float pre_contact_fall_speed_mps_ = 0.0F;
     float last_impact_speed_mps_ = 0.0F;
+    JPH::Vec3 pre_contact_velocity_{JPH::Vec3::sZero()};
+
+    // Phase 4 (see kLandingFreeSpeed).
+    enum class LandingResponse : std::uint8_t { None = 0, Absorbed = 1, Heavy = 2, Roll = 3, Stumble = 4 };
+    LandingResponse landing_response_ = LandingResponse::None;
+    double landing_loss_ = 0.0;
+    double recovery_duration_ = 0.0;
+    double recovery_seconds_left_ = 0.0;
+    double roll_seconds_left_ = 0.0;
+    JPH::Vec3 roll_direction_{JPH::Vec3::sZero()};
+    float roll_entry_speed_ = 0.0F;
+    double roll_blocked_loss_ = 0.0;
+    JPH::RVec3 roll_start_{JPH::RVec3::sZero()};
+    double roll_travel_m_ = 0.0;
+    float landing_normal_speed_mps_ = 0.0F;
+    float landing_tangent_speed_mps_ = 0.0F;
+    std::uint64_t landing_count_ = 0;
+    std::uint64_t roll_count_ = 0;
+    std::uint64_t roll_refused_count_ = 0;
+    std::uint64_t roll_blocked_count_ = 0;
+    std::uint64_t stumble_count_ = 0;
 
     Snapshot state_{};
 };

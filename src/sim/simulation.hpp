@@ -447,6 +447,25 @@ struct Snapshot final {
     FallState fall_state = FallState::Grounded;
     double fall_peak_speed_mps = 0.0;
     double last_impact_speed_mps = 0.0;
+    // Phase 4: the last landing and the recovery from it. landing_response:
+    // 0 none yet, 1 absorbed by the legs, 2 heavy, 3 roll, 4 stumble (a slide
+    // across the facing). recovery_balance runs from 1 - landing_balance_loss
+    // back to 1; traction and reachable speed scale with it. roll_progress is
+    // 0..1 through a roll, 0 otherwise; roll_travel_m the last roll's travel.
+    std::uint8_t landing_response = 0;
+    double landing_normal_speed_mps = 0.0;
+    double landing_tangent_speed_mps = 0.0;
+    double landing_balance_loss = 0.0;
+    double recovery_balance = 1.0;
+    double roll_progress = 0.0;
+    double roll_travel_m = 0.0;
+    std::uint64_t landing_count = 0;
+    std::uint64_t roll_count = 0;
+    // Rolls asked for (crouch held, fast, forward) with no clear lane.
+    std::uint64_t roll_refused_count = 0;
+    // Rolls ended by something in the lane.
+    std::uint64_t roll_blocked_count = 0;
+    std::uint64_t stumble_count = 0;
     bool parachute_deployed = false;
     Vector3 checkpoint_position{};
     std::uint64_t checkpoint_commit_count = 0;

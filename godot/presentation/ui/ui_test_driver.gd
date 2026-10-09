@@ -108,6 +108,10 @@ const SCENARIOS := {
 	# Continue: the climb saved to storage while playing, loaded back, a cut
 	# save refused and set aside, NEW CLIMB's discard.
 	"touch_save": 26,
+	# Phase 4 on touch: off the slab incline's 3.4 m foot platform at a run,
+	# CROUCH tapped in the air, and the native rolls on: the momentum kept,
+	# little balance lost, the view turned once over.
+	"touch_roll": 8,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
 	"touch_stack_upper": 26,
 	"pad_stack_upper": 26,
@@ -281,6 +285,8 @@ func _run() -> void:
 			ok = await _checkpoint_continuation(InputRouter.Device.TOUCH)
 		"touch_save":
 			ok = await _save(InputRouter.Device.TOUCH)
+		"touch_roll":
+			ok = await _roll()
 		"touch_stack_upper":
 			ok = await _stack_upper(InputRouter.Device.TOUCH)
 		"pad_stack_upper":
@@ -2893,6 +2899,55 @@ func _checkpoint_continuation(device: int) -> bool:
 		return false
 	_detail = "restored_y=%.2f continued_deck6_y=%.2f deaths=%d" % [
 		cp_pos.y, _position().y, int(_native().get_death_count())]
+	return true
+
+
+func _roll() -> bool:
+	var device := InputRouter.Device.TOUCH
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not (await _go(device, Vector2(6.0, -70.0), 0.2, 20.0) and \
+			await _go(device, Vector2(-13.4, -86.0), 0.2, 20.0) and \
+			await _go(device, Vector2(-13.4, -103.0), 0.15, 8.0)):
+		return _fail("roll: the walk onto the platform stalled at %s" % str(_position()))
+	var top := _position().y
+	await _face(Vector2(-1.0, 0.0))
+	var before := int(_native().get_landing_state()["count"])
+	_stick_push(Vector2(0.0, -1.0))
+	if not await _wait_until(func() -> bool: return not bool(_ctx()["grounded"]), 3.0):
+		_touch(0, _main._touch.stick_home(), false)
+		return _fail("roll: never left the platform (at %s)" % str(_position()))
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool:
+			return int(_native().get_landing_state()["count"]) > before, 3.0):
+		_touch(0, _main._touch.stick_home(), false)
+		return _fail("roll: never landed (at %s)" % str(_position()))
+	var landing: Dictionary = _native().get_landing_state()
+	_touch(0, _main._touch.stick_home(), false)
+	if int(landing["response"]) != 3:
+		return _fail("roll: the landing was response %d, not a roll (%s)" % [int(landing["response"]), str(landing)])
+	var pitch_min := 0.0
+	var turned := false
+	var t := 0.0
+	while t < 0.7:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+		pitch_min = minf(pitch_min, _main._camera.rotation.x - _main._pitch)
+		if not turned and float(_native().get_landing_state()["roll_progress"]) > 0.35:
+			turned = true
+			await _pose("roll_mid")
+	turned = pitch_min < -2.5
+	landing = _native().get_landing_state()
+	if float(landing["roll_travel"]) < 1.5:
+		return _fail("roll: travelled %.2f m" % float(landing["roll_travel"]))
+	if not turned:
+		return _fail("roll: the view did not turn over (min pitch offset %.2f)" % pitch_min)
+	if int(_native().get_death_count()) != 0:
+		return _fail("roll: died")
+	_tap(1, _center(&"crouch"))
+	await _seconds(0.5)
+	_detail = "drop_m=%.2f normal_mps=%.2f forward_mps=%.2f balance_after=%.2f roll_travel_m=%.2f" % [
+		top - _position().y, float(landing["normal_speed"]), float(landing["tangent_speed"]),
+		1.0 - float(landing["loss"]), float(landing["roll_travel"])]
 	return true
 
 

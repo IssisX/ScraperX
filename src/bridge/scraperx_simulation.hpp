@@ -155,6 +155,8 @@ public:
     [[nodiscard]] bool is_stack_s3_brake_latched() const;
     // AS-007, AS-008 and AS-009, read back whole: the native's own state,
     // keyed by its field names.
+    // Phase 4: the last landing and the recovery from it (Snapshot fields).
+    [[nodiscard]] godot::Dictionary get_landing_state() const;
     [[nodiscard]] godot::Dictionary get_wet_state() const;
     [[nodiscard]] godot::Dictionary get_shop_state() const;
     [[nodiscard]] godot::Dictionary get_crane_state() const;

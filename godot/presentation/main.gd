@@ -929,6 +929,7 @@ func _read_context() -> Dictionary:
 		"edge_drop": edge_drop,
 		"sprinting": bool(_native.is_player_sprinting()),
 		"balancing": bool(_native.is_player_balancing()),
+		"landing": _native.get_landing_state(),
 		"chute": chute,
 		"jump_ok": grounded and free,
 		"climb_ok": climb_ok,
@@ -1384,7 +1385,18 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		-_step_eye_lag * (1.0 - exp(-STEP_EYE_RESPONSE_PER_SECOND * delta))))
 	eye.y += _step_eye_lag
 	_camera.position = eye + Vector3(0.0, dip + vertical_bob, 0.0) + right_vector * lateral_bob
-	_camera.rotation = Vector3(_pitch + _view_pitch_offset, _yaw, _cam_bank)
+	# Phase 4, read from the native's recovery: a roll turns the view once
+	# over, forward, through the native roll's own progress; a stumble's
+	# lost balance leans it. Both are zero when recovered.
+	var landing: Dictionary = _ctx.get("landing", {})
+	var roll_turn := 0.0
+	var roll_progress := float(landing.get("roll_progress", 0.0))
+	if roll_progress > 0.0:
+		roll_turn = -TAU * smoothstep(0.0, 1.0, roll_progress)
+	var stagger := 0.0
+	if int(landing.get("response", 0)) == 4:
+		stagger = 0.12 * (1.0 - float(landing.get("balance", 1.0)))
+	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn, _yaw, _cam_bank + stagger)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed) + parkour_fov
 	var fov_fall := 0.0

@@ -248,6 +248,7 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_stack_s3_brake_angle);
     godot::ClassDB::bind_method(godot::D_METHOD("is_stack_s3_brake_latched"),
                                 &ScraperXSimulation::is_stack_s3_brake_latched);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_landing_state"), &ScraperXSimulation::get_landing_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wet_state"), &ScraperXSimulation::get_wet_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_shop_state"), &ScraperXSimulation::get_shop_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_crane_state"), &ScraperXSimulation::get_crane_state);
@@ -775,6 +776,23 @@ double ScraperXSimulation::get_stack_s3_brake_angle() const {
 
 bool ScraperXSimulation::is_stack_s3_brake_latched() const {
     return simulation_->stack_state().s3_brake_latched;
+}
+
+godot::Dictionary ScraperXSimulation::get_landing_state() const {
+    const sim::Snapshot &s = simulation_->snapshot();
+    godot::Dictionary out;
+    out["response"] = static_cast<std::int64_t>(s.landing_response);
+    out["normal_speed"] = s.landing_normal_speed_mps;
+    out["tangent_speed"] = s.landing_tangent_speed_mps;
+    out["loss"] = s.landing_balance_loss;
+    out["balance"] = s.recovery_balance;
+    out["roll_progress"] = s.roll_progress;
+    out["roll_travel"] = s.roll_travel_m;
+    out["count"] = static_cast<std::int64_t>(s.landing_count);
+    out["rolls"] = static_cast<std::int64_t>(s.roll_count);
+    out["rolls_refused"] = static_cast<std::int64_t>(s.roll_refused_count);
+    out["stumbles"] = static_cast<std::int64_t>(s.stumble_count);
+    return out;
 }
 
 godot::Dictionary ScraperXSimulation::get_wet_state() const {
