@@ -382,6 +382,7 @@ func _run() -> void:
 			var added_lift: Array[String] = []
 			var added_supplied: Array[String] = []
 			var added_reclaim: Array[String] = []
+			var added_cart: Array[String] = []
 			var expected_reclaim: Array[String] = []
 			# The new wheel is an explicit append-only migration. Preserve the
 			# old oracle and require every reserved body exactly once; do not
@@ -392,11 +393,26 @@ func _run() -> void:
 				expected_reclaim.append("KitBody%d" % entity)
 			const SUPPLIED_BODIES := ["KitBody1920", "KitBody1921", "KitBody1922", "KitBody1930", "KitBody1931", "KitBody1980", "KitBody1981", "KitBody1982", "KitBody1983", "KitBody1984", "KitBody1985", "KitBody1986", "KitBody1987", "KitBody1988", "KitBody1989", "KitBody1990", "KitBody1991", "KitBody1992", "KitBody1993", "KitBody1994", "KitBody1995", "KitBody1996", "KitBody2920", "KitBody2921", "KitBody2922", "KitBody2930", "KitBody2980", "KitBody2981", "KitBody2982", "KitBody2983", "KitBody2984", "KitBody2985", "KitBody2986", "KitBody2987", "KitBody2988", "KitBody2989", "KitBody2990", "KitBody2991", "KitBody2992"]
 			const LIFT_BODIES := ["KitBody1970", "KitBody1971", "KitBody1972", "KitBody2970", "KitBody2971", "KitBody2972", "KitBody2973", "KitBody2974", "KitBody2975", "KitBody2976", "KitBody2977", "KitBody2978"]
+			const CART_BODIES := ["KitBody1954", "KitBody1955", "KitBody1956", "KitBody1957", "KitBody1958", "KitBody1959", "KitBody2320", "KitBody2321", "KitBody2322", "KitBody2323", "KitBody2324", "KitBody2325", "KitBody2326", "KitBody2327"]
 			for body in record:
 				# Appended AS-027 bodies have no pre-extraction counterpart.
 				# Keep every prior body in its original oracle; native pose/visibility
 				# checks below also cover each new moving assembly.
-				if body[0] in expected_reclaim:
+				if body[0] in CART_BODIES:
+					added_cart.append(body[0])
+					_check(not body[1].is_empty(), "cart assembly has native-derived draw geometry " + body[0])
+					var entity := int(String(body[0]).trim_prefix("KitBody"))
+					var native_body := int(_main._native.get_kit_body_index(entity))
+					_check(native_body >= 0, "cart body exists in native Kit " + body[0])
+					if native_body >= 0:
+						_check(bool(_main._native.is_kit_body_dynamic(native_body)) == (entity >= 2320),
+							"cart static/dynamic ownership " + body[0])
+						_check(not _main._native.get_kit_body_parts(native_body).is_empty(),
+							"cart body has real native parts " + body[0])
+						var node := kit.get_node(body[0]) as Node3D
+						_check(node.transform.is_equal_approx(_main._native.get_kit_body_render_transform(native_body)),
+							"cart initial native render pose " + body[0])
+				elif body[0] in expected_reclaim:
 					added_reclaim.append(body[0])
 					_check(not body[1].is_empty(), "reclaim assembly has native-derived draw geometry " + body[0])
 				elif body[0] in SUPPLIED_BODIES:
@@ -418,6 +434,8 @@ func _run() -> void:
 			added_reclaim.sort()
 			expected_reclaim.sort()
 			_check(added_reclaim == expected_reclaim, "all109 gravity-reclaim bodies render exactly once")
+			added_cart.sort()
+			_check(added_cart == CART_BODIES, "all fourteen slab-haul cart bodies render exactly once")
 			for body in expected:
 				if body[0] not in ["KitBody1952", "KitBody1600"]:
 					expected_original.append(body)

@@ -462,7 +462,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_gravity_reclaim", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_north_grip_diagnostic", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_north_grip_diagnostic", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -1257,6 +1257,8 @@ func _carry_name(entity: int) -> String:
 			return "ROPE SHACKLE"
 		2004:
 			return "TRIP HANDLE"
+		2327:
+			return "MAINTENANCE BLOCK"
 	return "ROPE END" if _is_kit(entity) else ""
 
 
@@ -1280,6 +1282,17 @@ func _station_panel() -> Dictionary:
 		&"supplied_machine":
 			var balance: Dictionary = _native.get_supplied_machine_state()
 			var cutoff := bool(balance["energy_cutoff"])
+			if int(balance["index"]) == 7:
+				return {
+					"title": "SLAB HAUL / INSPECTION BAY" if int(balance["station"]) == 4 else "SLAB HAUL CART",
+					"subtitle": "UP: RELEASE / DOWN: RETURN / LET GO: BRAKE",
+					"rows": [
+						["CART", "%+.1f M" % float(balance["surface_y"]), 0],
+						["BRAKE", "HELD" if bool(balance["braking"]) else "RELEASED", 0],
+						["RETURN RESERVE", "EMPTY" if cutoff else "%.0f%%" % (100.0 * float(balance["energy_j"]) / maxf(1.0, float(balance["capacity_j"]))), 2 if cutoff else 0],
+					],
+					"verbs": [[&"hoist", "RELEASE / RETURN"], [&"leave", "DONE"]],
+				}
 			if int(balance["index"]) == 6:
 				var feeding := int(balance["station"]) == 2
 				return {

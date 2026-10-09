@@ -1,0 +1,26 @@
+CASE separate private native failed-tow hold/release; 85kg translation-only surrogate +25kg native block
+SOURCE ChatGPT 8f449a28a2474b96413b541ed14135f11aea65b7; uncommitted factory; current shortblade7.1875kg
+COMMAND sh /data/data/com.termux/files/usr/tmp/scraperx-cart-native-geometry/build-dynamics.sh
+BUILD strict g++15.2.0 compileexit0; existing libs read only; same one private target
+COMMAND proot-distro login ubuntu -- /data/data/com.termux/files/usr/tmp/scraperx-cart-native-geometry/cart_probe
+STEP 90Hz, four native substeps; no hidden catch, rescue constraint, pose help or mask
+MASS chassis275kg rollers4x35kg bare415kg block25kg slab570kg retainer5.1875+2=7.1875kg
+UPPER t47.300503 q25.394613 floor352.002350 angle-.024307 bumper1
+ASCENT max_speed.600014 max_pitch_deg.211601 max_tension1808.348145N
+CONTACT ascent all4 true rail contacts and surrogate/block deck contacts everytick; missing0 each
+GUIDE actual XYlambda0 pitchlambda0
+FAULT actual Kit tow disconnected AFTER upper seat; slab MotorOff friction9000N
+HOLD t49.300701 q25.227360 floor351.867157 speed0 angle-.025442 pawl1 tension0
+ROLLBACK delta_q-.167253m; actual hinge bearing760.948669N; no proximity FixedConstraint
+HOIST actual slab positive-only[0,9000]N Velocity target+.6m/s with tow disconnected
+HOIST_END t91.351036 slabq-.012421; cartq25.227360 floor351.867157 pawl1 tension0 bearing760.951416N
+HOLD_DURATION 2s initial tow-loss observation plus42.050335s actual slab hoist
+RECONNECT hoisted tow genuinely slack; tension0; this deliberately differs from normal intact-tow reset
+RELEASE positive-only hinge Velocity target+.6rad/s torque[0,120]Nm for5s
+RELEASE_END t96.360924 q25.227364 floor351.867157 angle-.025438 pawl1 tension0 bearing795.041687N
+RELEASE peak120Nm approximate_positive_work.009477J; no actual opening
+RESULT DECISIVE loaded_retainer_120Nm_cannot_open; runtimeexit9; stderr empty
+LIMIT failed-tow loaded release does not prove ordinary intact-tow reset failure; required higher torque versus angular collider unmeasured
+LIMIT fixed bumper/rim manifolds also recorded; no attribution of all support force solely to pawl; no return run after failure
+LIMIT approximate work uses final-substep impulses; no full energy closure or actualplayer/touch/Rootcontroller proof
+LOCAL broken-tow-final.csv is a private diagnostic, not portable receipt dependency

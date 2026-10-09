@@ -285,6 +285,10 @@ struct Snapshot final {
     std::uint8_t supplied_machine_index = 0;
     std::uint8_t supplied_machine_station = 0, supplied_machine_reachable_station = 0;
     double supplied_machine_surface_y = 0, supplied_machine_energy_j = 0, supplied_machine_capacity_j = 0, supplied_machine_power_w = 0;
+    double supplied_machine_positive_work_j = 0, supplied_machine_heat_j = 0;
+    double supplied_machine_force_n = 0, supplied_machine_energy_overdraft_j = 0;
+    double supplied_machine_cart_brake_heat_j = 0, supplied_machine_cart_brake_residual_j = 0;
+    double supplied_machine_cart_actuator_rounding_residual_j = 0;
     std::uint64_t reclaim_impact_count=0;
     double reclaim_impact_speed_mps=0;
     Vector3 reclaim_impact_position{};

@@ -1,0 +1,8 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x432 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=643 driver=Dummy
+SCRAPERX_CART_MISS before at=(-29.13938, 352.918, -141.6584) support=2320 grounded=true deck=352.018676757812
+SCRAPERX_CART_MISS departure=true at=(-27.23984, 352.8784, -141.3945) support=0 grounded=false
+SCRAPERX_UITEST PASS touch_slab_haul_cart staging=supported_330m shipping_touch=1 slab_haul_cart=1 inspection341=1 reboard=1 north_lane_jump=1 paid_return=1 finite_energy=1 supported_height_m=352 support=11 deaths=0 failure_recovery=upper_miss341_paid_recall_reboard_retry

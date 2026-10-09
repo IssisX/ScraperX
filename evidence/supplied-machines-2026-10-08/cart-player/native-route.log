@@ -1,0 +1,24 @@
+lower-control tick=568 pos=-25.0054,330.9,-140.154 ground=1 support=11 machine=7 station=2 deck=330.02 energy=200000 work=0 power=0 force=0 deaths=0
+ordinary-board tick=1180 pos=-41.788,330.92,-141.581 ground=1 support=2320 machine=7 station=1 deck=330.02 energy=200000 work=0 power=0 force=0 deaths=0
+inspection-stop tick=3256 pos=-35.4971,341.909,-141.562 ground=1 support=2320 machine=7 station=1 deck=341.01 energy=200000 work=0 power=0 force=0 deaths=0
+inspection-ashore tick=3404 pos=-35.44,341.9,-140.267 ground=1 support=1956 machine=7 station=0 deck=341.006 energy=200000 work=0 power=0 force=0 deaths=0
+inspection-control tick=3724 pos=-26.1002,341.9,-140.15 ground=1 support=1956 machine=7 station=4 deck=341.006 energy=200000 work=0 power=0 force=0 deaths=0
+inspection-reboard tick=4215 pos=-35.4495,341.9,-141.588 ground=1 support=2320 machine=7 station=1 deck=341 energy=200000 work=0 power=0 force=0 deaths=0
+gravity-ascent tick=4216 pos=-35.4495,341.9,-141.587 ground=1 support=2320 machine=7 station=1 deck=341 energy=200000 work=0 power=0 force=0 deaths=0
+gravity-ascent tick=5116 pos=-32.6997,346.794,-141.562 ground=1 support=2320 machine=7 station=1 deck=345.895 energy=200000 work=0 power=0 force=0 deaths=0
+gravity-ascent tick=6016 pos=-29.8083,351.839,-141.562 ground=1 support=2320 machine=7 station=1 deck=350.939 energy=200000 work=0 power=0 force=0 deaths=0
+upper-seat tick=6293 pos=-29.1428,352.906,-141.562 ground=1 support=2320 machine=7 station=1 deck=352.007 energy=200000 work=0 power=0 force=0 deaths=0
+upper-miss341-recovery tick=6670 pos=-27.9831,341.9,-141.605 ground=1 support=1956 machine=7 station=0 deck=352.007 energy=200000 work=0 power=0 force=0 deaths=0
+recovery-control tick=6915 pos=-26.0623,341.9,-140.15 ground=1 support=1956 machine=7 station=4 deck=352.007 energy=200000 work=0 power=0 force=0 deaths=0
+recalled341 tick=9261 pos=-26.0623,341.9,-140.15 ground=1 support=1956 machine=7 station=4 deck=340.996 energy=169918 work=23865.9 power=0 force=0 deaths=0
+recovery-reboard tick=9753 pos=-35.4379,341.891,-141.57 ground=1 support=2320 machine=7 station=1 deck=340.991 energy=169918 work=23865.9 power=0 force=0 deaths=0
+retry352 tick=11831 pos=-29.1332,352.906,-141.563 ground=1 support=2320 machine=7 station=1 deck=352.006 energy=169918 work=23865.9 power=0 force=0 deaths=0
+Tower352-exit tick=12095 pos=-25.4203,352.9,-141.599 ground=1 support=11 machine=7 station=0 deck=352.002 energy=169918 work=23865.9 power=0 force=0 deaths=0
+upper-control tick=12206 pos=-25.0495,352.9,-140.147 ground=1 support=1957 machine=7 station=3 deck=352.002 energy=169918 work=23865.9 power=0 force=0 deaths=0
+paid-return tick=12207 pos=-25.0495,352.9,-140.147 ground=1 support=1957 machine=7 station=3 deck=352.002 energy=169917 work=23866 power=86.7763 force=0 deaths=0
+paid-return tick=13107 pos=-25.049,352.9,-140.145 ground=1 support=1957 machine=7 station=3 deck=348.741 energy=160624 work=31084.7 power=1379.03 force=1854.26 deaths=0
+paid-return tick=14007 pos=-25.049,352.9,-140.145 ground=1 support=1957 machine=7 station=3 deck=343.603 energy=146838 work=42122.7 power=1378.39 force=1853.34 deaths=0
+paid-return tick=14907 pos=-25.049,352.9,-140.145 ground=1 support=1957 machine=7 station=3 deck=338.465 energy=133052 work=53160.7 power=1378.94 force=1854.12 deaths=0
+paid-return tick=15807 pos=-25.049,352.9,-140.145 ground=1 support=1957 machine=7 station=3 deck=333.328 energy=119267 work=64198.7 power=1378.54 force=1853.56 deaths=0
+returned tick=16472 pos=-25.049,352.9,-140.145 ground=1 support=1957 machine=7 station=3 deck=330.031 energy=110459 work=71250.8 power=0 force=0 deaths=0
+PASS actual native player cart approach/boarding/341exit-reboard/gravity352/missed-exit341-recovery/paid-recall/retry/ordinary onward jump/paid return

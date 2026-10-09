@@ -88,7 +88,7 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_mechanism_hull_tests scraperx_gravity_reclaim_route_tests scraperx_supplied_machine_route_tests scraperx_service_lift_physics_tests scraperx_service_lift_route_tests scraperx_physical_hand_climb_tests scraperx_physical_traversal_tests scraperx_leather_pouch_tests scraperx_suspended_ladder_tests scraperx_cargo_net_tests scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_gravity_cart_integration_tests scraperx_mechanism_hull_tests scraperx_gravity_reclaim_route_tests scraperx_supplied_machine_route_tests scraperx_service_lift_physics_tests scraperx_service_lift_route_tests scraperx_physical_hand_climb_tests scraperx_physical_traversal_tests scraperx_leather_pouch_tests scraperx_suspended_ladder_tests scraperx_cargo_net_tests scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
           if ! ctest --test-dir build/host --output-on-failure --test-output-size-passed 2147483647 \
               --output-junit "${GITHUB_WORKSPACE}/artifacts/native-tests.xml" | tee artifacts/native-tests.log; then
             # The public run page exposes annotations even when its raw logs
@@ -367,11 +367,21 @@ jobs:
           grep -F "SCRAPERX_UITEST PASS touch_campaign_to_143 staging=ordinary_grade_spawn" artifacts/touch-campaign-to-121.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-campaign-to-121.log; then exit 1; fi
 
+      - name: Prove loaded slab-haul ascent, missed-exit recovery and paid reset
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 900s tools/godot/godot --headless --fixed-fps 60 --path godot \
+            -- --uitest=touch_slab_haul_cart 2>&1 | tee artifacts/touch-slab-haul-cart.log
+          grep -F "SCRAPERX_UITEST PASS touch_slab_haul_cart" artifacts/touch-slab-haul-cart.log
+          grep -F "failure_recovery=upper_miss341_paid_recall_reboard_retry" artifacts/touch-slab-haul-cart.log
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-slab-haul-cart.log; then exit 1; fi
+
       - name: Prove default inventory and rejected fallback absence
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=36 kit_bodies=50 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=164 kit_bodies=212 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=385" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
@@ -382,7 +392,7 @@ jobs:
             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
             -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
             2>&1 | tee artifacts/godot-foundation.log
-          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=36 kit_bodies=50 cables=3 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
+          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=164 kit_bodies=212 cables=7 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
 
       - name: Historical pipe bridge fixture - ordinary input and native material state

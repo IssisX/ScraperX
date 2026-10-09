@@ -1,0 +1,11 @@
+Source8f449a28a2474b96413b541ed14135f11aea65b7 Actions37856529213
+Native39/39 and early Godot gates PASS; step10 FAIL before first north climb
+SCRAPERX_UITEST_POSE braced_bay_low_member tick=20802 position=(33.99978, 84.88374, -138.711) elapsed_ms=92501
+SCRAPERX_UITEST_POSE braced_bay_upper_junction tick=21273 position=(33.99998, 87.9, -131.369) elapsed_ms=94631
+SCRAPERX_UITEST_POSE braced_bay_arrival tick=22002 position=(24.92362, 88.9, -131.9996) elapsed_ms=97808
+SCRAPERX_UITEST_POSE north_frame_entry tick=23061 position=(16.00084, 88.9, -179.4486) elapsed_ms=102465
+SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=first north climb grip not offered at=(16.00084, 88.9, -179.4486) support=1901 grounded=true crouched=false traversal=0 grip=false grip_point=(0.0, 0.0, 0.0) ledge=false carrying=0 action={ "id": &"", "label": "", "icon": &"climb", "detail": "" } view_yaw_rad=-0.000000
+Native constants: handreach=.40m, queryhalfdepth=.35m, rungfrontZ=-180.21
+Failed searchfrontZ=-179.4486-.40-.35=-180.1986, gap=.0114m
+Input correction: samefinaltarget(16,-179.55), tolerance.14→.04, timeout20s unchanged
+No native reach/geometry/acceptance relaxation

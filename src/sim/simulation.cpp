@@ -2023,6 +2023,7 @@ public:
                 supplied_ascent_ = std::make_unique<SuppliedAscent>(physics_system_, *kit_);
                 build_parkour_route(*kit_);
                 supplied_ascent_->append_gravity_wheel(physics_system_,*kit_);
+                supplied_ascent_->append_gravity_cart(physics_system_,*kit_);
                 contact_listener_.set_reclaim_fragments(supplied_ascent_->reclaim_material_range());
             }
         }
@@ -7401,9 +7402,10 @@ private:
         using Station=SuppliedAscent::Station;SuppliedAscent::Selection nearest;
         if(!supplied_ascent_||(require_footing&&!grounded_)||traversal_state_!=TraversalState::None||carried_entity_!=0)return nearest;
         const auto player=bodies.GetPosition(player_id_);const auto eye=player+JPH::Vec3(0,.55F,0);double limit=1.65*1.65;
-        for(unsigned i=0;i<supplied_ascent_->count();++i)for(auto station:{Station::Deck,Station::Lower,Station::Upper})for(unsigned panel=0;panel<supplied_ascent_->station_count(station,i);++panel){
+        for(unsigned i=0;i<supplied_ascent_->count();++i)for(auto station:{Station::Deck,Station::Lower,Station::Upper,Station::Intermediate})for(unsigned panel=0;panel<supplied_ascent_->station_count(station,i);++panel){
             const auto entity=supplied_ascent_->station_entity(station,i,panel);
-            const bool supported=station==Station::Deck? support_entity_id_==entity:(support_entity_id_==11||support_entity_id_==entity);
+            const bool supported=station==Station::Deck||station==Station::Intermediate?
+                support_entity_id_==entity:(support_entity_id_==11||support_entity_id_==entity);
             if(require_footing&&!supported)continue;
             const auto target=supplied_ascent_->station_position(station,i,panel);const double distance=(target-player).LengthSq();
             if(distance>limit)continue;
@@ -7449,7 +7451,12 @@ private:
             const auto value=supplied_ascent_->state(index);state_.supplied_machine_index=static_cast<std::uint8_t>(index);
             state_.supplied_machine_station=static_cast<std::uint8_t>(station.station);state_.supplied_machine_reachable_station=static_cast<std::uint8_t>(reachable.station);
             state_.supplied_machine_surface_y=supplied_ascent_->walking_surface_y(index);
-            state_.supplied_machine_energy_j=value.energy_j;state_.supplied_machine_capacity_j=SuppliedAscent::kCapacityJ;
+            state_.supplied_machine_energy_j=value.energy_j;state_.supplied_machine_capacity_j=supplied_ascent_->capacity_j(index);
+            state_.supplied_machine_positive_work_j=value.positive_work_j;state_.supplied_machine_heat_j=value.heat_j;
+            state_.supplied_machine_force_n=value.force_n;state_.supplied_machine_energy_overdraft_j=value.energy_overdraft_j;
+            state_.supplied_machine_cart_brake_heat_j=value.cart_passive_brake_heat_j;
+            state_.supplied_machine_cart_brake_residual_j=value.cart_passive_brake_positive_residual_j;
+            state_.supplied_machine_cart_actuator_rounding_residual_j=value.cart_actuator_rounding_residual_j;
             state_.supplied_machine_hopper_mass_kg=value.hopper_mass_kg;state_.supplied_machine_wheel_angle_rad=value.wheel_angle_rad;state_.supplied_machine_bearing_heat_j=value.bearing_heat_j;
             state_.supplied_machine_power_w=value.power_w;state_.supplied_machine_braking=value.braking;state_.supplied_machine_energy_cutoff=value.energy_cutoff;
             state_.supplied_machine_wheel_motor_enabled=value.wheel_motor_enabled;

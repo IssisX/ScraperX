@@ -1,0 +1,27 @@
+CASE initial actual native cook/settle evidence; historical tensors, not final axle-extended geometry
+SOURCE initial ChatGPT21e6ac98f763539e221986b558a4635a4c48aa12; private nominal prototype then uncommitted initial factory
+JOLT e77f175595e64cb44218cc9d9d56fc365ad0e36a; Ubuntu g++15.2.0; immutable supplied libs
+COMMAND sh .../scraperx-cart-native-geometry/build.sh; proot-distro login ubuntu -- .../cart_probe
+BUILD/RUNTIME nominal g++17 compile0, runtime0; first uninitialized private jobs failure repaired with jobs(1024)
+NOMINAL_GEOMETRY local P0; t(.5,.8660254,0); n(-.8660254,.5,0); deckcentre(-.30,2.75,0)
+NOMINAL_MASS chassis275kg rollers4x35kg bare415kg; timber121.4976kg, no rope notch in this nominal prototype
+NOMINAL_CHASSIS_COM relativeP(-.361074,1.451708,0)
+NOMINAL_CHASSIS_I kgm2 rows[671.556030,-123.015282,0][-123.015282,239.362549,0][0,0,810.006775]
+NOMINAL_BARE_COM relativeP(-.321069,1.009204,0)
+NOMINAL_BARE_I kgm2 rows[1497.944458,-457.766113,0][-457.766113,504.235901,0][0,0,1782.819214]
+NOMINAL_CONTACT bare and85kg centre/-.8m/+.8m stance: each4railcontacts180/180 finalsecond; rider180/180
+SURROGATE actual85kg capsule, translationXYZ only, friction.85; not actual player
+GUIDE XYlambda0 pitchlambda0; rail-removal.35s actual fall.610480m; 10Nms Z impulse yields.112830deg
+COMMAND sh .../scraperx-cart-native-geometry/build-factory.sh; proot-distro login ubuntu -- .../cart_probe
+BUILD/RUNTIME initial factory strictcompile0/runtime0; 4s90Hz/foursubsteps
+INITIAL_FACTORY bodies14 chassis275kg bare415kg slab570kg block25kg; floor120.54kg actual rope-notch timber
+INITIAL_FACTORY_CHASSIS_COM relative_lower_deck(-.0788536,-1.26083,-.00238037)
+INITIAL_FACTORY_CHASSIS_I kgm2 rows[676.948,-111.947,-.205][-111.947,240.329,1.78333][-.205,1.78333,814.856]
+INITIAL_FACTORY_BARE_COM relative_lower_deck(-.0328506,-1.71597,-.00157735)
+INITIAL_FACTORY_BARE_I kgm2 rows[1512.58,-444.06,-.235111][-444.06,505.622,2.08127][-.235111,2.08127,1797.33]
+INITIAL_FACTORY_CONTACT finalsecond4railcontacts90/90,block90/90,chassis-fixed0,guideXY/pitch0
+INERTIA actual perbody solver inertia plus parallel-axis sum; rollers remain independent hinges, not a rigid welded assembly
+CURRENT_DELTA rearaxle6→8.307692kg; actual lowballast74.7576→72.4499kg; chassis275 and bare415 unchanged
+CURRENT_RETAINER blade5.1875kg+journal2kg=7.1875kg; separate from bare cart; initial full blade was12kg total
+LIMIT quoted COM/tensors precede current rearaxle/ballast change; final tensor NOT remeasured; current masses verified in final dynamics
+LIMIT geometry/cook evidence only; no actualplayer/touch, Root finite impulse controller or full energy closure

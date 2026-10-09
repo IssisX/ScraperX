@@ -543,6 +543,10 @@ godot::Dictionary ScraperXSimulation::get_supplied_machine_state()const {
  out["reachable_station"]=static_cast<std::int64_t>(s.supplied_machine_reachable_station);
  out["surface_y"]=s.supplied_machine_surface_y;out["energy_j"]=s.supplied_machine_energy_j;
  out["capacity_j"]=s.supplied_machine_capacity_j;out["power_w"]=s.supplied_machine_power_w;
+ out["positive_work_j"]=s.supplied_machine_positive_work_j;out["heat_j"]=s.supplied_machine_heat_j;
+ out["force_n"]=s.supplied_machine_force_n;out["energy_overdraft_j"]=s.supplied_machine_energy_overdraft_j;
+ out["cart_brake_heat_j"]=s.supplied_machine_cart_brake_heat_j;out["cart_brake_positive_residual_j"]=s.supplied_machine_cart_brake_residual_j;
+ out["cart_actuator_rounding_residual_j"]=s.supplied_machine_cart_actuator_rounding_residual_j;
  out["braking"]=s.supplied_machine_braking;out["energy_cutoff"]=s.supplied_machine_energy_cutoff;
  out["wheel_motor_enabled"]=s.supplied_machine_wheel_motor_enabled;
  out["rubble_impact_count"]=static_cast<std::int64_t>(s.reclaim_impact_count);out["rubble_impact_speed_mps"]=s.reclaim_impact_speed_mps;out["rubble_impact_position"]=to_godot(s.reclaim_impact_position);

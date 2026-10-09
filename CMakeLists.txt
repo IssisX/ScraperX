@@ -29,6 +29,7 @@ add_library(scraperx_sim STATIC
     src/sim/suspended_ladder.cpp
     src/sim/service_lift.cpp
     src/sim/gravity_wheel_geometry.cpp
+    src/sim/gravity_cart_geometry.cpp
     src/sim/supplied_ascent.cpp
     src/sim/supplied/vertical_machine.cpp
     src/sim/supplied/gravity_balance.cpp
@@ -105,6 +106,10 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_gravity_reclaim_route_tests tests/gravity_reclaim_route_tests.cpp)
     target_link_libraries(scraperx_gravity_reclaim_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.gravity_reclaim_route COMMAND scraperx_gravity_reclaim_route_tests)
+
+    add_executable(scraperx_gravity_cart_integration_tests tests/gravity_cart_integration_tests.cpp)
+    target_link_libraries(scraperx_gravity_cart_integration_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.gravity_cart_integration COMMAND scraperx_gravity_cart_integration_tests)
 
     add_executable(scraperx_supplied_machine_route_tests tests/supplied_machine_route_tests.cpp)
     target_link_libraries(scraperx_supplied_machine_route_tests PRIVATE scraperx_sim)

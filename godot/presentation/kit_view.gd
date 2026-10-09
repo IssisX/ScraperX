@@ -22,6 +22,7 @@ const CARGO_NET_HALF_DEPTH := 0.035
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
 var _kit_cables: Array = []
+var _cart_paint_material: StandardMaterial3D
 var _water_lift_bucket_water: MeshInstance3D
 
 
@@ -253,6 +254,38 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			_balance_sign(node, "MAINTENANCE CROSSING · +319\nDUMP TO RETURN · LOWER FEED BELOW", Vector3(3.5, -0.5, 5.75))
 		elif entity == 2201:
 			_balance_sign(node, "RECLAIM CABIN\nUP: RELEASE BRAKE · DOWN: DUMP\nRELEASE TO HOLD", Vector3(0.0, -0.7, 0.0))
+		# Factory static parts share (-41.5,327.25,-142); the cart control
+		# moves with its deck. Each sign is local to its actual native owner.
+		if entity == 1955:
+			_balance_sign(node, "SLAB HAUL · +330\nFALLING SLAB LIFTS CART\nDOWN: PAID RETURN", Vector3(15.6, 3.85, 2.5))
+		elif entity == 1956:
+			_balance_sign(node, "INSPECTION · +341\nJUMP ASHORE · DOWN TO RECOVER\nREBOARD TO CONTINUE", Vector3(15.6, 14.85, 2.5))
+		elif entity == 1957:
+			_balance_sign(node, "EXIT · +352\nJUMP NORTH LANE TO TOWER\nDOWN: RAISE SLAB / RETURN CART", Vector3(16.4, 25.85, 2.5))
+		elif entity == 2320:
+			_balance_sign(node, "SLAB HAUL CART\nUP: RELEASE · NEUTRAL: BRAKE\n341 INSPECTION · 352 JUMP", Vector3(-1.15, 3.85, -0.45))
+		# Paint identifies a maintenance transfer, not a scripted cargo objective.
+		# Every mark lies on an existing native surface and follows that owner.
+		if entity == 1957:
+			_cart_storage_marks(node, Vector3(15.7, 24.751, 2.35))
+			var stores := Label3D.new()
+			stores.text = "MAINTENANCE STORES"
+			stores.position = Vector3(15.7, 24.752, 2.65)
+			stores.rotation.x = -PI / 2.0
+			stores.font_size = 32
+			stores.pixel_size = 0.0025
+			stores.modulate = Color("d7b54f")
+			node.add_child(stores)
+		elif entity == 2327:
+			_cart_paint(node, Vector3(0.25, 0.001, 0.045), Vector3(0, 0.1306, 0))
+		elif entity == 2326:
+			_cart_paint(node, Vector3(0.08, 0.30, 0.001),
+				Vector3(0.1797, -0.10375, 0.1806), Vector3(0, 0, PI / 3.0))
+		elif entity == 1958:
+			# Slab-centre witness bands for cart330/341/352; no implied powered ascent.
+			for slab_y in [351.721281, 339.019575, 326.317869]:
+				_cart_paint(node, Vector3(0.001, 0.045, 0.17),
+					Vector3(-2.0985, slab_y - 327.25, 0.7))
 		if entity == 2952:
 			var sign := Label3D.new()
 			sign.name = "CargoNetSign"
@@ -296,6 +329,32 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			segments.append(instance)
 		_kit_cables.append(segments)
 	_render_kit()
+
+
+func _cart_paint(parent: Node3D, size: Vector3, at: Vector3,
+		rotation: Vector3 = Vector3.ZERO) -> void:
+	if _cart_paint_material == null:
+		_cart_paint_material = StandardMaterial3D.new()
+		_cart_paint_material.albedo_color = Color("bca04c")
+		_cart_paint_material.roughness = 0.94
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh.material = _cart_paint_material
+	var marking := MeshInstance3D.new()
+	marking.name = "MaintenancePaint"
+	marking.mesh = mesh
+	marking.position = at
+	marking.rotation = rotation
+	marking.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(marking)
+
+
+func _cart_storage_marks(parent: Node3D, centre: Vector3) -> void:
+	# A .36m painted footprint suits the real .26m block without claiming
+	# a new structural surface, delivery reward or hidden cargo constraint.
+	for side in [-1.0, 1.0]:
+		_cart_paint(parent, Vector3(0.36, 0.001, 0.012), centre + Vector3(0, 0, side * 0.18))
+		_cart_paint(parent, Vector3(0.012, 0.001, 0.36), centre + Vector3(side * 0.18, 0, 0))
 
 
 func _balance_sign(parent: Node3D, text: String, at: Vector3) -> void:
@@ -417,6 +476,9 @@ func _update_cargo_net() -> void:
 		_cargo_net_strands.set_instance_transform(i, pose)
 		bounds = bounds.merge(pose * _cargo_net_strands.mesh.get_aabb())
 	# One shared geometry batch per primitive; bounds include live deformation.
+	# AABB stores size and reconstructs the endpoint; roundoff can otherwise
+	# place a transformed knot one float ULP beyond the exact merged bounds.
+	bounds = bounds.grow(0.0001)
 	_cargo_net_knots.custom_aabb = bounds
 	_cargo_net_strands.custom_aabb = bounds
 

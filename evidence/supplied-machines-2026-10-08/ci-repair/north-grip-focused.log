@@ -1,0 +1,9 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=432x432 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1397 driver=Dummy
+SCRAPERX_NORTH_GRIP_DIAGNOSTIC before at=(16.00084, 88.9, -179.4486) support=1901 grounded=true crouched=false traversal=0 grip=false grip_point=(0.0, 0.0, 0.0) action={ "id": &"", "label": "", "icon": &"climb", "detail": "" } view_yaw_rad=-0.000000
+SCRAPERX_NORTH_GRIP_DIAGNOSTIC after at=(16.00017, 88.9, -179.53) support=1901 grounded=true grip=true grip_point=(16.00017, 89.25, -180.25) action={ "id": &"climb", "label": "CLIMB", "icon": &"climb", "detail": "HOLD" }
+SCRAPERX_UITEST PASS touch_north_grip_diagnostic staging=supported_recorded_88m_stance continuous_ascent=0 native_grip_before=0 native_grip_after=1 closer_viewport_touch=1 supported_first_topout=1

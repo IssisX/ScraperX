@@ -1,0 +1,26 @@
+CASE private native factory, intact tow throughout; 85kg translation-only surrogate +25kg native block
+SOURCE ChatGPT 8f449a28a2474b96413b541ed14135f11aea65b7; uncommitted factory; Jolt e77f175595e64cb44218cc9d9d56fc365ad0e36a
+COMMAND sh /data/data/com.termux/files/usr/tmp/scraperx-cart-native-geometry/build-dynamics.sh
+BUILD g++15.2.0 -Wall -Wextra -Wpedantic -Werror; exit0; existing libs read only
+COMMAND proot-distro login ubuntu -- /data/data/com.termux/files/usr/tmp/scraperx-cart-native-geometry/cart_probe
+STEP 90Hz, four native substeps; CSV10Hz; no pose/velocity setter or geometry tuning
+MASS chassis275kg rollers4x35kg bare415kg block25kg slab570kg retainer7.1875kg
+UPPER t47.300503 q25.394613 floor352.002350 speed.029999 angle-.024307 bumper1
+ASCENT max_speed.600014 max_pitch_deg.211601 max_tension1808.348145N
+BRAKED_UPPER t47.800552 q25.394648 floor352.002380 slabq-25.394745 tension1113.673096N angle-.024307
+BRAKE native slab MotorOff friction9000N; tow never disconnected; pawl/rearaxle contact0 at seat
+RELEASE native hinge Velocity target+.6rad/s torque limits[0,120]Nm; no hoist before opening
+OPEN t50.189678 angle1.404393 q25.394648 floor352.002380 tension1113.673218N bearing70.229057N
+RELEASE duration2.389126s peak10.559885Nm approximate_positive_work13.641223J
+CONTACT opening clears actual1959part2 resting stop; no rearaxle/blade or bearing/frame block
+RESET native slab Velocity target+.6m/s force limits[0,9000]N; tow intact; hinge held open
+AXLE_CLEAR t51.823174 q24.397900 angle1.411685; hinge MotorOff thereafter, actual gravity closure
+HOIST_END t92.184166 q.011815 slabq-.011841 floor330.020142 speed-.605224 angle-.024552
+HOIST peak9000N approximate_positive_work29077.422679J
+PARKED t93.183922 q-.000288 slabq+.000061 floor330.010254 speed0 tension0 angle-.024552
+CONTACT all4 true rail contacts and surrogate/block deck contacts every90Hz tick; missing0 each
+GUIDE actual XYlambda0 pitchlambda0; no guide support along XY/pitch
+WHOLE_CASE max_speed1.103292m/s max_pitch_deg.416165; .6target is not hard transient speed cap
+RESULT DECISIVE intact_tow_finite_release_reset_completed; runtimeexit0; stderr empty
+LIMIT approximate work uses final-substep impulses; no full energy closure, real player/touch or Root finite impulse controller proof
+LOCAL detailed intact-reset.csv/intact-reset-contacts.csv are private diagnostics, not portable receipt dependencies

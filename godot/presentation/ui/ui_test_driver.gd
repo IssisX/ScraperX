@@ -35,6 +35,7 @@ const SCENARIOS := {
 	"touch_cascade_mast": 8,
 	"touch_pitman_lift": 8,
 	"touch_gravity_reclaim": 8,
+	"touch_slab_haul_cart": 8,
 	"touch_causal_facade": 8,
 	"touch_north_grip_diagnostic": 8,
 	"touch_suspended_ladder": 8,
@@ -96,7 +97,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -165,6 +166,8 @@ func _run() -> void:
 			ok = await _touch_pitman_lift(true)
 		"touch_gravity_reclaim":
 			ok = await _touch_gravity_reclaim()
+		"touch_slab_haul_cart":
+			ok = await _touch_slab_haul_cart()
 		"touch_north_grip_diagnostic":
 			ok = await _touch_north_grip_diagnostic()
 		"keyboard_slingshot":
@@ -1178,7 +1181,7 @@ func _touch_north_grip_diagnostic() -> bool:
 	# reach probe is not evidence of continuous ascent or an authored route.
 	if not _campaign_world_intact():
 		return false
-	if not _native().debug_restart_at(Vector3(15.9994, 99.9, -179.4491)):
+	if not _native().debug_restart_at(Vector3(16.00084, 88.9, -179.4486)):
 		return _fail("north grip diagnostic supported staging rejected")
 	await _face(Vector2(0, -1))
 	await _seconds(0.5)
@@ -1196,7 +1199,9 @@ func _touch_north_grip_diagnostic() -> bool:
 		_native().is_grip_available(), _native().get_grip_point(), _ctx()["action"]])
 	if not _native().is_grip_available() or not await _offered(&"climb", "CLIMB", "HOLD"):
 		return _fail("closer supported stance does not expose native grip; reach hypothesis rejected")
-	_detail = "staging=supported_recorded_99m_stance continuous_ascent=0 native_grip_before=0 native_grip_after=1 closer_viewport_touch=1"
+	if not await _north_climb(InputRouter.Device.TOUCH, 94.7, "closer first north climb"):
+		return false
+	_detail = "staging=supported_recorded_88m_stance continuous_ascent=0 native_grip_before=0 native_grip_after=1 closer_viewport_touch=1 supported_first_topout=1"
 	return true
 
 
@@ -1206,9 +1211,13 @@ func _touch_north_service_frame() -> bool:
 	var device := InputRouter.Device.TOUCH
 	if int(_native().get_entity_body_count(1901)) != 1:
 		return _fail("north service frame absent from normal play")
-	for point in [Vector2(24.8, -174.5), Vector2(16.0, -174.5), Vector2(16.0, -179.55)]:
+	for point in [Vector2(24.8, -174.5), Vector2(16.0, -174.5)]:
 		if not await _walk_to(device, point, 0.14, 20.0):
 			return _fail("north frame +88 m entry %s" % _position())
+	# Stop within the actual rung search instead of accepting a stance
+	# outside native reach. The approach target and grip checks are unchanged.
+	if not await _walk_to(device, Vector2(16.0, -179.55), 0.04, 20.0):
+		return _fail("north frame +88 m grip stance %s" % _position())
 	await _face(Vector2(0, -1))
 	_main._pitch = 0.24
 	await _pose("north_frame_entry")
@@ -2195,6 +2204,248 @@ func _touch_pitman_lift(stage_at_286: bool) -> bool:
 	return true
 
 
+# Focused normal-world route: only the initial supported Tower330 staging
+# relocates the player. Every transfer uses the shipping viewport controls.
+# An actual failed jump/recovery branch remains pending a feasible observed
+# failure; the inspection stop below proves voluntary escape and reboarding.
+func _touch_slab_haul_cart() -> bool:
+	var device := InputRouter.Device.TOUCH
+	if not _native().debug_restart_at(Vector3(-24.7, 330.9, -158.25)):
+		return _fail("slab haul +330m staging rejected")
+	await _seconds(0.5)
+	if not _campaign_world_intact() or not _reclaim_tower_arrived():
+		return _fail("slab haul approach requires supported +330m Tower11")
+	for point in [Vector2(-24.7, -140.15), Vector2(-25.05, -140.15)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true):
+			return _fail("slab haul lower control approach at=%s" % _position())
+	if not _cart_station(2) or not await _offered(&"operate", "OPERATE", "SLAB HAUL CART"):
+		return _fail("slab haul actual lower station2 unavailable")
+	var deck := int(_native().get_kit_body_index(2320))
+	var slab := int(_native().get_kit_body_index(2325))
+	if deck < 0 or slab < 0:
+		return _fail("slab haul native deck2320/slab2325 missing")
+	for point in [Vector2(-26.5, -140.25), Vector2(-41.8, -140.25)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true):
+			return _fail("slab haul loading floor approach at=%s" % _position())
+	if int(_native().get_support_entity_id()) != 1955:
+		return _fail("slab haul loading Jump lacks actual receiver1955")
+	await _face(Vector2(0, -1))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(-41.8, -141.6), 0.10, 8.0, true) \
+			or not await _wait_cart_footing(deck, 330.0, 8.0):
+		return _fail("slab haul south Jump missed stable cart2320 at=%s" % _position())
+	if not await _cart_operate(1):
+		return false
+	var loaded: Dictionary = _native().get_supplied_machine_state()
+	var slab_loaded: Transform3D = _native().get_kit_body_transform(slab)
+	_touch(1, _center(&"pendant_up"), true)
+	var reached := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 340.985, 90.0)
+	_touch(1, _center(&"pendant_up"), false)
+	if not reached or not await _wait_cart_footing(deck, 341.0, 12.0):
+		return _fail("slab haul neutral341 lacks stable cart2320 footing")
+	var inspection: Dictionary = _native().get_supplied_machine_state()
+	var slab_inspection: Transform3D = _native().get_kit_body_transform(slab)
+	if not _cart_station(1) or not bool(inspection["braking"]) or not _cart_bank(inspection) \
+			or slab_inspection.origin.y >= slab_loaded.origin.y - 5.0 \
+			or float(inspection["energy_j"]) > float(loaded["energy_j"]) + 0.01:
+		return _fail("slab haul inspection lacks falling slab/neutral brake/finite energy")
+	if not await _cart_done():
+		return false
+	var pose: Transform3D = _native().get_kit_body_transform(deck)
+	var floor_point := pose * Vector3(-0.30, 2.75, 0)
+	if not await _walk_to(device, Vector2(floor_point.x, -141.6), 0.10, 8.0, true):
+		return _fail("slab haul inspection takeoff unavailable")
+	await _face(Vector2(0, 1))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(floor_point.x, -140.25), 0.10, 8.0, true) \
+			or int(_native().get_support_entity_id()) != 1956:
+		return _fail("slab haul341 side Jump missed actual inspection tongue1956")
+	if not await _walk_to(device, Vector2(-26.1, -140.15), 0.10, 12.0, true):
+		return _fail("slab haul inspection fixed post approach at=%s" % _position())
+	if not _cart_station(4) or not await _offered(&"operate", "OPERATE", "SLAB HAUL CART") \
+			or not _standing_above(341.7) or int(_native().get_support_entity_id()) != 1956:
+		return _fail("slab haul actual inspection station4 unavailable")
+	for point in [Vector2(-26.5, -140.25), Vector2(floor_point.x, -140.25)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true):
+			return _fail("slab haul inspection reboarding approach at=%s" % _position())
+	await _face(Vector2(0, -1))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(floor_point.x, -141.6), 0.10, 8.0, true) \
+			or not await _wait_cart_footing(deck, 341.0, 8.0):
+		return _fail("slab haul341 reboard Jump missed actual cart2320")
+	if not await _cart_operate(1):
+		return false
+	_touch(1, _center(&"pendant_up"), true)
+	reached = await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 351.985, 90.0)
+	_touch(1, _center(&"pendant_up"), false)
+	if not reached or not await _wait_cart_footing(deck, 352.0, 12.0):
+		return _fail("slab haul upper seat lacks stable352 cart2320")
+	if not await _cart_done():
+		return false
+	# A missed commitment has a real inspection apron eleven metres below.
+	# Walk off without Jump, then steer in flight; no relocation or catch grant.
+	print("SCRAPERX_CART_MISS before at=%s support=%d grounded=%s deck=%s" % [
+		_position(), _native().get_support_entity_id(), _native().is_player_grounded(),
+		_native().get_supplied_machine_state()["surface_y"]])
+	await _face(Vector2(1, 0))
+	_move(device, 1.0)
+	var left_deck := await _wait_until(func() -> bool:
+		return not bool(_native().is_player_grounded()), 5.0)
+	_move(device, 0.0)
+	print("SCRAPERX_CART_MISS departure=%s at=%s support=%d grounded=%s" % [
+		left_deck, _position(), _native().get_support_entity_id(), _native().is_player_grounded()])
+	if not left_deck:
+		return _fail("slab haul miss did not leave cart at=%s support=%d" % [_position(), _native().get_support_entity_id()])
+	# Aim below the centre of the real gap, not back onto the cart above.
+	# The same supported-arrival gate then requires the recovery floor.
+	var recovered := await _walk_to(device, Vector2(-26.9, -141.6), 0.10, 10.0, true)
+	if not recovered or int(_native().get_support_entity_id()) != 1956:
+		return _fail("slab haul missed exit lacks341 apron arrived=%s at=%s support=%d grounded=%s deaths=%d" % [
+			recovered, _position(), _native().get_support_entity_id(), _native().is_player_grounded(), _native().get_death_count()])
+	# The real heavy landing temporarily compacts the capsule. Require its
+	# native recovery and clearance to restore standing before the next action.
+	var recovered_stance := await _wait_until(func() -> bool:
+		return _standing_above(341.7) and int(_native().get_support_entity_id()) == 1956, 3.0)
+	if not recovered_stance:
+		return _fail("slab haul341 landing did not recover standing at=%s landing=%s" % [
+			_position(), _native().get_landing_state()])
+	for point in [Vector2(-28.0, -140.15), Vector2(-26.1, -140.15)]:
+		if not await _walk_to(device, point, 0.10, 8.0, true):
+			return _fail("slab haul recovery post approach failed at=%s" % _position())
+	if not await _cart_operate(4):
+		return false
+	var before_recall: Dictionary = _native().get_supplied_machine_state()
+	_touch(1, _center(&"pendant_down"), true)
+	var recalled := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) <= 341.015, 90.0)
+	_touch(1, _center(&"pendant_down"), false)
+	await _seconds(0.5)
+	var after_recall: Dictionary = _native().get_supplied_machine_state()
+	if not recalled or absf(float(after_recall["surface_y"]) - 341.0) > 0.10 \
+			or not _cart_station(4) or not _cart_bank(after_recall) \
+			or float(after_recall["energy_j"]) >= float(before_recall["energy_j"]) \
+			or int(_native().get_support_entity_id()) != 1956:
+		return _fail("slab haul paid341 recall lacks real returned deck/source work/ashore footing")
+	if not await _cart_done():
+		return false
+	if not await _walk_to(device, Vector2(-35.45, -140.25), 0.10, 12.0, true):
+		return _fail("slab haul recovery reboarding approach failed")
+	await _face(Vector2(0, -1))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(-35.45, -141.6), 0.10, 8.0, true) \
+			or not await _wait_cart_footing(deck, 341.0, 8.0) or not await _cart_operate(1):
+		return _fail("slab haul recovery reboard missed actual cart")
+	_touch(1, _center(&"pendant_up"), true)
+	var retried := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) >= 351.985, 90.0)
+	_touch(1, _center(&"pendant_up"), false)
+	if not retried or not await _wait_cart_footing(deck, 352.0, 12.0) or not await _cart_done():
+		return _fail("slab haul recovery retry lacks actual352 footing")
+	if not await _walk_to(device, Vector2(-28.10, -141.6), 0.10, 8.0, true) \
+			or int(_native().get_support_entity_id()) != 2320:
+		return _fail("slab haul352 north lane takeoff lacks actual cart footing")
+	await _face(Vector2(1, 0))
+	_tap(1, _center(&"jump"))
+	if not await _walk_to(device, Vector2(-25.35, -141.6), 0.10, 8.0, true) \
+			or not _cart_tower_arrived():
+		return _fail("slab haul352 real north lane Jump missed Tower11 at=%s" % _position())
+	await _seconds(0.5)
+	if not _cart_tower_arrived():
+		return _fail("slab haul352 Tower11 footing did not remain stable")
+	if not await _walk_to(device, Vector2(-25.05, -140.15), 0.10, 8.0, true) \
+			or not await _cart_operate(3):
+		return _fail("slab haul upper DOWN control approach failed")
+	var before_return: Dictionary = _native().get_supplied_machine_state()
+	var slab_before_return: Transform3D = _native().get_kit_body_transform(slab)
+	var ashore := _position()
+	var ashore_support := int(_native().get_support_entity_id())
+	if ashore_support not in [11, 1957] or not _standing_above(352.7):
+		return _fail("slab haul upper return has no actual ashore footing")
+	_touch(1, _center(&"pendant_down"), true)
+	var returned := await _wait_until(func() -> bool:
+		return float(_native().get_supplied_machine_state()["surface_y"]) <= 330.05, 120.0)
+	_touch(1, _center(&"pendant_down"), false)
+	await _seconds(0.5)
+	var after: Dictionary = _native().get_supplied_machine_state()
+	var deck_after: Transform3D = _native().get_kit_body_transform(deck)
+	var slab_after: Transform3D = _native().get_kit_body_transform(slab)
+	var floor_after := deck_after * Vector3(-0.30, 2.75, 0)
+	if not returned or not _cart_station(3) or not bool(after["braking"]) or not _cart_bank(after) \
+			or absf(floor_after.y - 330.0) > 0.10 or absf(floor_after.x + 41.8) > 0.15 \
+			or slab_after.origin.y <= slab_before_return.origin.y + 20.0 \
+			or float(after["positive_work_j"]) <= float(before_return["positive_work_j"]) \
+			or float(after["energy_j"]) >= float(before_return["energy_j"]) \
+			or not _standing_above(352.7) or int(_native().get_support_entity_id()) != ashore_support \
+			or _position().distance_to(ashore) > 0.15:
+		return _fail("slab haul paid return lacks real raised slab/cart330/unchanged ashore footing state=%s" % after)
+	if not await _cart_done():
+		return false
+	if not await _walk_to(device, Vector2(-25.35, -141.6), 0.10, 8.0, true) \
+			or not _cart_tower_arrived() or not _campaign_world_intact():
+		return _fail("slab haul final352 proof lacks stable death-free Tower11")
+	_detail = "staging=supported_330m shipping_touch=1 slab_haul_cart=1 inspection341=1 reboard=1 north_lane_jump=1 paid_return=1 finite_energy=1 supported_height_m=352 support=11 deaths=0 failure_recovery=upper_miss341_paid_recall_reboard_retry"
+	return true
+
+
+func _cart_station(station: int) -> bool:
+	var state: Dictionary = _native().get_supplied_machine_state()
+	return int(state["index"]) == 7 and int(state["station"]) == station \
+		and String(state["name"]) == "SLAB HAUL CART"
+
+
+func _cart_bank(state: Dictionary) -> bool:
+	return is_finite(float(state["energy_j"])) and is_finite(float(state["positive_work_j"])) \
+		and float(state["energy_j"]) >= 0.0 and float(state["energy_j"]) <= float(state["capacity_j"]) \
+		and float(state["positive_work_j"]) >= 0.0 and float(state["energy_overdraft_j"]) == 0.0 \
+		and not bool(state["energy_cutoff"])
+
+
+func _cart_tower_arrived() -> bool:
+	return _standing_above(352.7) and absf(_position().y - 352.9) <= 0.15 \
+		and int(_native().get_support_entity_id()) == 11
+
+
+func _cart_operate(station: int) -> bool:
+	if not _cart_station(station) or not await _offered(&"operate", "OPERATE", "SLAB HAUL CART"):
+		return _fail("slab haul actual station%d OPERATE unavailable at=%s" % [station, _position()])
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	if _main._operating != &"supplied_machine" or not _main._touch.is_button_shown(&"pendant_up") \
+			or not _main._touch.is_button_shown(&"pendant_down"):
+		return _fail("slab haul Action did not open ordinary pendant")
+	return true
+
+
+func _cart_done() -> bool:
+	_tap(0, _center(&"action"))
+	await _frames(3)
+	return _main._operating == &"" or _fail("slab haul DONE did not release operation")
+
+
+func _wait_cart_footing(deck: int, surface: float, timeout: float) -> bool:
+	var stable_ticks := 0
+	var previous_tick := int(_native().get_tick_index())
+	var waited := 0.0
+	while waited < timeout:
+		var pose: Transform3D = _native().get_kit_body_transform(deck)
+		var floor_point := pose * Vector3(-0.30, 2.75, 0)
+		var tick := int(_native().get_tick_index())
+		var settled: bool = _standing_above(surface + 0.7) and int(_native().get_support_entity_id()) == 2320 \
+			and absf(floor_point.y - surface) <= 0.10 \
+			and absf(_position().y - surface - 0.9) <= 0.15 \
+			and _native().get_kit_body_linear_velocity(deck).length() < 0.10 \
+			and (_velocity() - _native().get_support_point_linear_velocity()).length() < 0.15
+		stable_ticks = stable_ticks + maxi(0, tick - previous_tick) if settled else 0
+		previous_tick = tick
+		if stable_ticks >= 18:
+			return true
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	return false
+
+
 func _touch_gravity_reclaim() -> bool:
 	var device := InputRouter.Device.TOUCH
 	if not _native().debug_restart_at(Vector3(-24.7, 308.9, -142.65)):
@@ -2706,11 +2957,12 @@ func _ground_foundation() -> bool:
 	for entity in range(3, 60):
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
-	# AS-027 appends nine movers and three static bodies; adds no cables.
+	# Normal-world inventory: original/service lift, six supplied machines,
+	# reclaim wheel/material, then slab-haul cart. Fixture counts are separate.
 	var moving_count := int(_native().get_moving_body_count())
 	var kit_count := int(_native().get_kit_body_count())
 	var cable_count := int(_native().get_kit_cable_count())
-	if moving_count != 27 + 9 or kit_count != 38 + 12 or cable_count != 3:
+	if moving_count != 27 + 9 + 17 + 103 + 8 or kit_count != 38 + 12 + 39 + 109 + 14 or cable_count != 3 + 3 + 1:
 		return _fail("default inventory differs: moving=%d kit=%d cables=%d" % [moving_count, kit_count, cable_count])
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
