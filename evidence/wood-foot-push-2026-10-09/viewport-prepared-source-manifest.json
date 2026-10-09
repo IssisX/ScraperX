@@ -1,0 +1,19 @@
+{
+  "repository_head": "cb19b6ea09b05fc082e7e1612be52f7aa0534a80",
+  "target": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/wood-foot-push-touch/final-v2-godot",
+  "imported_project": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/inspection-touch/godot",
+  "supplied_bridge": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/runtime-godot/addons/scraperx_native/bin/linux/libscraperx_native.so",
+  "sha256": {
+    "main.tscn": "1a6910fdf586a7d3b0fcea52a1a84787c9ba627e6bd7fe452cd28ff769b52be2",
+    "presentation/main.gd": "6011e086ceea433edf28fa82bd4d886f9143c7523dbb40be77e2098c80e8b76c",
+    "presentation/ui/ui_test_driver.gd": "7182aef09cf1022ea85fa4f65a7edf71a20162d08caa370c093c1e504bddc4bd",
+    "presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a",
+    "presentation/ui/hud.gd": "adf03d87584279715ec98c611930101cb08c61f66c76560eacd5726113d86aba",
+    "presentation/kit_view.gd": "c67bb98ec3f535a3c9c8ae47c88626ab9fb50e0b4fdd51e78b0f6e5dde8ec1bf",
+    "project.godot": "2ca6051dd55c80d8137b4b9fb4416d3f767e774c4803950c4072cc82489699b9",
+    "addons/scraperx_native/scraperx_native.gdextension": "50ab0bccfaf7455de0d8812dcd228645db346ae72f689707560376d21af1dd93",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c"
+  },
+  "runtime_status": "prepared; not executed"
+}

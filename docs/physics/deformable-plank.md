@@ -1,6 +1,6 @@
 # Native deformable timber plank
 
-The normal Slingshot world now contains a segmented, elastic timber member with native player loading, grip and strength failure. Recorded checks cover elastic calibration, walking, standing, a short impulse Jump, landing, unloading, grip/release, interior fracture and recovery onto the existing tray. Scoped Godot rendering also follows the actual native segments. These are development receipts, not a commercial-release or phone-performance certification.
+The normal Slingshot world now contains a segmented, elastic timber member with native player loading, grip and strength failure. Recorded checks cover elastic calibration, walking, standing, a finite-stroke foot push and Jump, landing, unloading, grip/release, interior fracture and recovery onto the existing tray. Scoped Godot rendering also follows the actual native segments. These are development receipts, not a commercial-release or phone-performance certification.
 
 ## Ownership and material assumptions
 
@@ -56,7 +56,7 @@ Maximum partial elastic energy excess was 0.000013259 J. That diagnostic include
 
 `player-strength-final.log` records walking/standing/Jump/landing/unloading/onward-steel PASS with strength enabled: 31.295776 mm extra sag under the native 85 kg player, within the 20–45 mm acceptance band; all eleven grounded seam crossings; 30.914307 mm board-motion change; unload return within 0.030518 mm of the gravity-only baseline; native gravity and zero deaths. The separate grip sequence passes actual two-hand segment-edge capture, finite forces, native player loading, passive release, real recovery-tray contact and unload return.
 
-Jump evidence is limited: the current finite impulse/work calculation produces about 0.1978 m/s upward departure on this free 0.722 kg segment, giving a very short hop. Its point inertia and work cap do not establish a 5.5 m/s timber takeoff. A finite-duration foot-push improvement remains pending; the passing departure/landing check does not establish satisfactory jump feel.
+The original point impulse produced only 0.1978 m/s upward speed. [The native compression-only foot push](physical-foot-push.md) now requests 0.15 m over at most 0.25 s through the actual segment contact point, with 3,500 N force and finite command-work bounds. Normal native and viewport-touch input produce approximately 0.962/0.964 m/s peak vertical speed and 0.147/0.148 m COM rise, actual intact landing and onward steel footing. Full-stroke prototype overload is retained as failure evidence; material strength is unchanged. The new retained-player run passes all eleven seams, grip/release, unloading (0.061035 mm maximum Y return error) and real impact-fracture recovery. These receipts do not guarantee ordinary 5.5 m/s takeoff or establish phone feel.
 
 `player-impact-final.log` stages an actual 85 kg player for a roughly 3 m fall above the timber. Native impact breaks mask 112 (three interior seams), with peak ratio 1.341147542. Ordinary air steering reaches the existing 403.5 m tray with valid checkpoint footing, persistent damage and zero deaths. Body 2891 finishes at centre Y = 403.518982 m, versus neutral 406.981 m, demonstrating the released right bearing and real fragment fall. This is a staged local impact/recovery proof, not a connected route approach or a verified restart after damage.
 

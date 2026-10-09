@@ -1,0 +1,7 @@
+FOOT_PUSH_IMPULSE scenario=centered_reciprocal_impulse impulse_ns=0.069734693 reaction_residual_ns=0.000000001 angular_error_radps=0.000000000 command_bound_j=11.666655540 kinetic_j=0.003396283 nominal_storage_j=0.187612999
+FOOT_PUSH_IMPULSE scenario=offset_material_anchor_torque impulse_ns=0.041240245 reaction_residual_ns=0.000000003 angular_error_radps=0.000000179 command_bound_j=11.666655540 kinetic_j=0.002198890 nominal_storage_j=0.184471688
+FOOT_PUSH_IMPULSE scenario=offset_material_anchor_torque impulse_ns=0.041240245 reaction_residual_ns=0.000000001 angular_error_radps=0.000000209 command_bound_j=11.666655540 kinetic_j=0.002198889 nominal_storage_j=0.184464448
+FOOT_PUSH_CAP cap_ns=9.722222328 actual_lambda_ns=9.722222328 measured_player_impulse_ns=9.722296715 external_initial_kinetic_j=106249.997921987 actual_final_kinetic_j=105886.083191249 command_bound_j=11.666655540
+FOOT_PUSH_STOP stop=8 active=0 elapsed_s=0.250000006 actual_distance_m=1.207105875 initial_distance_m=0.899999976 stroke_m=0.299999714 command_bound_j=1049.998998642
+FOOT_PUSH_ENERGY command_bound_j=1049.998998642 peak_kinetic_j=113.120942284 nominal_storage_j=0.000000000 stroke_m=0.299999714 elapsed_s=0.250000006 peak_force_n=1459.051147461 stop=8 full_energy_closure=unverified
+PASS PHYSICAL_FOOT_PUSH isolated=1 player_contact_integration=unverified

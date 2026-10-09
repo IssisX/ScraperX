@@ -19,6 +19,7 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
     src/sim/physical_hand_climb.cpp
+    src/sim/physical_foot_push.cpp
     src/sim/parkour_route.cpp
     src/sim/west_brace_bay_route.cpp
     src/sim/inspection_junction_route.cpp
@@ -55,7 +56,7 @@ add_library(scraperx_sim STATIC
     src/sim/band_ground_water_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
-set_source_files_properties(src/sim/deformable_plank.cpp PROPERTIES COMPILE_OPTIONS
+set_source_files_properties(src/sim/deformable_plank.cpp src/sim/physical_foot_push.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(scraperx_sim PRIVATE
@@ -97,6 +98,15 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_physical_hand_climb_tests tests/physical_hand_climb_tests.cpp)
     target_link_libraries(scraperx_physical_hand_climb_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.physical_hand_climb COMMAND scraperx_physical_hand_climb_tests)
+
+    if(SCRAPERX_WITH_JOLT)
+        add_executable(scraperx_physical_foot_push_tests tests/physical_foot_push_tests.cpp)
+        target_link_libraries(scraperx_physical_foot_push_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.physical_foot_push COMMAND scraperx_physical_foot_push_tests)
+        add_executable(scraperx_wood_foot_push_player_tests tests/wood_foot_push_player_tests.cpp)
+        target_link_libraries(scraperx_wood_foot_push_player_tests PRIVATE scraperx_sim)
+        add_test(NAME scraperx_sim.wood_foot_push_player COMMAND scraperx_wood_foot_push_player_tests)
+    endif()
 
     add_executable(scraperx_mechanism_hull_tests tests/mechanism_hull_tests.cpp)
     target_link_libraries(scraperx_mechanism_hull_tests PRIVATE scraperx_sim)

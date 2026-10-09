@@ -13,6 +13,7 @@
 #include "sim/cargo_net_route.hpp"
 #include "sim/cargo_net.hpp"
 #include "sim/physical_hand_climb.hpp"
+#include "sim/physical_foot_push.hpp"
 #include "sim/suspended_ladder.hpp"
 #include "sim/service_lift.hpp"
 #include "sim/supplied_ascent.hpp"
@@ -2049,6 +2050,7 @@ public:
         }
 
         physical_hands_ = std::make_unique<PhysicalHandClimb>(physics_system_, player_id_, cargo_net_.get());
+        physical_foot_push_ = std::make_unique<PhysicalFootPush>(physics_system_, player_id_);
         if (slingshot_) physics_system_.AddStepListener(this);
         contact_listener_.set_slingshot(slingshot_.get());
         physics_system_.OptimizeBroadPhase();
@@ -2061,6 +2063,7 @@ public:
 
     ~PhysicsWorld() {
         if (slingshot_) physics_system_.RemoveStepListener(this);
+        physical_foot_push_.reset();
         physical_hands_.reset();
         physics_system_.SetContactListener(nullptr);
         // Dynamically-owned pins (track_for_teardown=false) are never in
@@ -2164,6 +2167,9 @@ public:
         if (deformable_plank_) deformable_plank_->begin_collision_step(context.mDeltaTime);
         if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
         physical_hands_->pre_step(context.mDeltaTime, true);
+        physical_foot_push_->pre_step(context.mDeltaTime,
+            deformable_plank_ && !crouched_ &&
+            deformable_plank_->fragment_supported(physical_foot_push_->readback().support));
         slingshot_->collision_step(context);
         if (service_lift_) service_lift_->collision_step(context.mDeltaTime);
         if (supplied_ascent_) supplied_ascent_->collision_step(context.mDeltaTime);
@@ -2177,10 +2183,13 @@ public:
         const bool was_grounded_before_tick = grounded_;
         const auto foot_transfers_before_tick = state_.foot_transfer_count;
         const auto traversal_before_commands = traversal_state_;
+        foot_push_started_this_tick_ = false;
         const bool jump_cancelled = commands.cancel_jump_requested ||
             commands.release_requested || commands.set_down_requested || commands.sling_drop;
+        if (jump_cancelled || commands.crouch_held || traversal_before_commands != TraversalState::None)
+            physical_foot_push_->clear();
         if (jump_cancelled || traversal_before_commands != TraversalState::None ||
-            (slingshot_ && slingshot_->controls_player())) {
+            (slingshot_ && slingshot_->controls_player()) || physical_foot_push_->active()) {
             ordinary_jump_ticks_left_ = 0;
         } else if (commands.jump_requested) {
             ordinary_jump_ticks_left_ = kOrdinaryJumpIntentTicks;
@@ -2258,6 +2267,8 @@ public:
         if (sling_was_controlling || sling_controlling || jump_cancelled ||
             traversal_before_commands != TraversalState::None ||
             traversal_state_ != TraversalState::None) ordinary_jump_ticks_left_ = 0;
+        if (traversal_state_ != TraversalState::None || carry_constraint_ != nullptr)
+            physical_foot_push_->clear();
         bool jump_started = false;
         if (!sling_controlling && traversal_state_ == TraversalState::None) {
             if (slingshot_flight_ && !grounded_) {
@@ -2359,9 +2370,19 @@ public:
             landing_force_support_local_point_ = bodies.GetCenterOfMassTransform(landing_force_support_id_).Inversed() *
                 landing_force_support_start_;
         }
+        // Late contextual catches can start after ordinary locomotion. Remove
+        // the leg before either hand/launcher authority solves this tick.
+        if (traversal_state_ != TraversalState::None || physical_hands_->active() ||
+            carry_constraint_ != nullptr || sling_controlling)
+            physical_foot_push_->clear();
         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
         kit_->finish_weld_steps();
         if (deformable_plank_) deformable_plank_->finish_collision_steps();
+        physical_foot_push_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
+        if (physical_foot_push_->active() && deformable_plank_ &&
+            (deformable_plank_->capture().broken_mask != foot_push_start_broken_mask_ ||
+             !deformable_plank_->fragment_supported(physical_foot_push_->readback().support)))
+            physical_foot_push_->clear(PhysicalFootPush::StopReason::MaterialFaceLost);
         physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
         if (!landing_applied_force_.IsNearZero()) {
             const auto support_point_now = bodies.GetCenterOfMassTransform(landing_force_support_id_) *
@@ -2386,7 +2407,8 @@ public:
         state_.reclaim_break_force_n = fracture.force_n;
         state_.reclaim_break_torque_nm = fracture.torque_nm;
         SupportSample support = contact_listener_.sample();
-        if (jump_started || (traversal_state_ != TraversalState::None && !physical_hands_->active())) {
+        if ((jump_started && !foot_push_started_this_tick_) ||
+            (traversal_state_ != TraversalState::None && !physical_hands_->active())) {
             support = {};
         }
         support_sample_ = support;
@@ -2417,7 +2439,7 @@ public:
         }
         state_.checkpoint_footing_valid = !died_this_tick && grounded_ &&
             traversal_state_ == TraversalState::None && footing_is_firm(bodies);
-        if (state_.checkpoint_footing_valid) {
+        if (state_.checkpoint_footing_valid && !physical_foot_push_->active()) {
             commit_checkpoint(bodies);
         }
         if (grounded_) {
@@ -5801,6 +5823,42 @@ private:
             (landing_recovery_seconds_ > 0 || causal_support || causal_step) && support_entity_id_ != 0) {
             if (commands.jump_requested && !crouched_) {
                 if (!causal_support) return push_off_ordinary_support(bodies);
+                if (deformable_plank_ &&
+                    deformable_plank_->logical_member_for_body(support_sample_.body_id)) {
+                    // Intent is consumed once. Only an actual supported wood
+                    // contact starts this finite leg; no free-cell impulse
+                    // fallback or automatic reattachment on a failed start.
+                    ordinary_jump_ticks_left_ = 0;
+                    if (!deformable_plank_->fragment_supported(support_sample_.body_id) ||
+                        carry_constraint_ != nullptr || physical_foot_push_->active()) return false;
+                    float friction = 0;
+                    {
+                        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), support_sample_.body_id);
+                        if (!lock.Succeeded()) return false;
+                        friction = lock.GetBody().GetFriction();
+                    }
+                    const auto point = support_sample_.contact_point;
+                    const auto normal = support_sample_.normal;
+                    // A full 0.30m effort returns ~316J to this narrow board,
+                    // exceeding its ~171J first-bending elastic capacity.
+                    // Request a shorter physical stroke, retaining material
+                    // strength and all actuator ceilings; no takeoff speed is granted.
+                    if (!physical_foot_push_->begin(support_sample_.body_id,
+                        JPH::RVec3(point.x, point.y, point.z),
+                        JPH::Vec3(float(normal.x), float(normal.y), float(normal.z)), friction, .15F)) return false;
+                    foot_push_start_broken_mask_ = deformable_plank_->capture().broken_mask;
+                    ++foot_push_start_count_;
+                    foot_push_started_this_tick_ = true;
+                    airborne_inherited_velocity_ = current_support_point_velocity(bodies);
+                    const auto departure = bodies.GetLinearVelocity(player_id_) - airborne_inherited_velocity_;
+                    air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed,
+                        JPH::Vec3(departure.GetX(), 0, departure.GetZ()).Length());
+                    causal_airborne_ = true;
+                    jump_takeoff_feet_y_ = float(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
+                    jump_vault_ticks_left_ = kJumpVaultWindowTicks;
+                    clear_landing_recovery();
+                    return true;
+                }
                 const auto support_velocity = current_support_point_velocity(bodies);
                 const auto before_velocity = bodies.GetLinearVelocity(player_id_);
                 auto impulse = JPH::Vec3(0, kPlayerMassKg * std::max(0.0F,
@@ -5958,6 +6016,9 @@ private:
     // their rise is resolved by gravity and collision, never a pose write.
     bool try_step_up(JPH::BodyInterface &bodies, const JPH::Vec3 relative_velocity,
                      const float delta_seconds, const bool deliberate_step = false) {
+        // The still-contacting finite leg already owns this push-off. A
+        // separate step impulse must not stack its own vertical work on it.
+        if (physical_foot_push_->active()) return false;
         const JPH::Vec3 horizontal(relative_velocity.GetX(), 0.0F, relative_velocity.GetZ());
         const float speed = horizontal.Length();
         if (speed < kStepMinimumSpeed) {
@@ -7442,6 +7503,7 @@ private:
         cargo_transfer_active_=false;
         cargo_push_seconds_=-1.0F;
         if (physical_hands_) physical_hands_->clear();
+        if (physical_foot_push_) physical_foot_push_->clear();
         traversal_state_ = TraversalState::None;
         traversal_normal_ = JPH::Vec3::sZero();
         hands_[0].valid = false;
@@ -8073,6 +8135,23 @@ private:
             state_.plank_fracture_count = plank.fracture_serial;
             state_.plank_discarded_strain_energy_j = plank.discarded_strain_energy_j;
         }
+        if (physical_foot_push_) {
+            const auto &foot = physical_foot_push_->readback();
+            state_.foot_push_active = foot.active;
+            state_.foot_push_start_count = foot_push_start_count_;
+            state_.foot_push_support_entity_id = foot.support.IsInvalid() ? 0 : bodies.GetUserData(foot.support);
+            state_.foot_push_stop_reason = static_cast<std::uint8_t>(foot.stop_reason);
+            state_.foot_push_command_work_bound_j = foot.command_work_bound_j;
+            state_.foot_push_stroke_m = foot.commanded_stroke_m;
+            state_.foot_push_stroke_limit_m = foot.stroke_limit_m;
+            state_.foot_push_peak_load_n = foot.peak_load_n;
+            state_.foot_push_last_load_n = foot.last_load_n;
+            state_.foot_push_last_impulse_ns = foot.last_impulse_ns;
+            state_.foot_push_elapsed_seconds = foot.elapsed_seconds;
+            state_.foot_push_actual_distance_m = foot.actual_distance_m;
+            state_.foot_push_initial_distance_m = foot.initial_distance_m;
+            state_.foot_push_player_force = to_vector3(foot.player_force);
+        }
         if (cargo_net_ && traversal_body_ == cargo_net_->body() && physical_hands_->active())
             state_.traversal_target_point = to_vector3(physical_hands_->commanded_position());
         state_.player_swinging = physical_hands_ && physical_hands_->swinging();
@@ -8218,6 +8297,10 @@ private:
     std::unique_ptr<UpperAscent> upper_ascent_;
     std::unique_ptr<CargoNet> cargo_net_;
     std::unique_ptr<PhysicalHandClimb> physical_hands_;
+    std::unique_ptr<PhysicalFootPush> physical_foot_push_;
+    bool foot_push_started_this_tick_ = false;
+    std::uint16_t foot_push_start_broken_mask_ = 0;
+    std::uint64_t foot_push_start_count_ = 0;
     std::unique_ptr<TeeterRise> teeter_rise_;
     scraperx::sim::bands::CounterweightWell well_{};
     mutable std::vector<scraperx::sim::kit::Kit::CarryCandidate> kit_carryables_;

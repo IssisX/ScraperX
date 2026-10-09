@@ -217,7 +217,9 @@ normal-world standing, walking all11 seams, Jump reaction/landing, two-hand grip
 release and elastic unload pass. Native strength fracture, fragment collisions/connectivity,
 finite bearing release and impact recovery pass; a filtered Godot harness renders all12
 native segment transforms correctly. See [scoped evidence](../evidence/inspection-junction-plank-2026-10-09/README.md).
-PENDING: the existing instantaneous light-segment Jump yields only a short hop; normal-height
-finite foot push-off remains unfinished. Full-game touch/phone feel, visuals, fracture sound,
-performance and exact-source APK delivery remain unverified. This remains part of phases3/6/8;
+UPDATED: mounted wood now uses a finite compression-only native foot push; ordinary native and
+viewport-touch Jump/landing/steel exit pass, alongside Drop/restart/static and moving-support
+regressions. It deliberately does not guarantee ordinary 5.5 m/s takeoff on weak wood.
+See [foot-push receipts](../evidence/wood-foot-push-2026-10-09/README.md). Physical-phone feel,
+wider visuals, fracture sound, performance and exact-source APK delivery remain unverified. This remains part of phases3/6/8;
 it does not replace or complete any wider goal requirements.

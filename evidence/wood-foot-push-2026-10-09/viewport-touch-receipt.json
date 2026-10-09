@@ -1,0 +1,50 @@
+{
+  "label": "final-v2",
+  "result": "PASS",
+  "exit_code": 0,
+  "terminal": [
+    "SCRAPERX_UITEST PASS touch_wood_foot_push ordinary_viewport_touch=1 sole_steel_staging=1 actual_finite_stroke=1 actual_wood_landing=1 stable_steel_exit=1 gravity=1 deaths=0",
+    "SCRAPERX_UITEST PASS touch_wood_foot_push "
+  ],
+  "errors": [],
+  "phases": [
+    "entry_steel407",
+    "actual_steel_to_timber",
+    "ordinary_wood_jump",
+    "actual_wood_landing_settle",
+    "ordinary_onward_steel"
+  ],
+  "last_native_samples": [
+    "WOOD_FOOT_PUSH_TOUCH phase=ordinary_onward_steel event=begin tick=1142 position=(-6.817617, 407.8504, -128.2) velocity=(0.000692, -0.213634, 0.0) grounded=true support=2886 gravity=1.0 deaths=0 foot_active=false foot_support=2886 starts=1 stop=9 work_j=524.999499320984 stroke_m=0.14999985694885 elapsed_s=0.2500000060536 peak_n=1387.82360839844 impulse_ns=0.0 fracture=0",
+    "WOOD_FOOT_PUSH_TOUCH phase=ordinary_onward_steel event=tick tick=1225 position=(-5.028334, 407.9, -128.2) velocity=(1.064829, 0.0, -0.0) grounded=true support=1935 gravity=1.0 deaths=0 foot_active=false foot_support=2886 starts=1 stop=9 work_j=524.999499320984 stroke_m=0.14999985694885 elapsed_s=0.2500000060536 peak_n=1387.82360839844 impulse_ns=0.0 fracture=0",
+    "WOOD_FOOT_PUSH_TOUCH phase=ordinary_onward_steel event=arrived tick=1252 position=(-4.891899, 407.9, -128.2) velocity=(0.135477, 0.0, -0.0) grounded=true support=1935 gravity=1.0 deaths=0 foot_active=false foot_support=2886 starts=1 stop=9 work_j=524.999499320984 stroke_m=0.14999985694885 elapsed_s=0.2500000060536 peak_n=1387.82360839844 impulse_ns=0.0 fracture=0",
+    "WOOD_FOOT_PUSH_TOUCH phase=ordinary_onward_steel event=tick tick=1315 position=(-4.868879, 407.9, -128.2) velocity=(0.002447, 0.0, -0.0) grounded=true support=1935 gravity=1.0 deaths=0 foot_active=false foot_support=2886 starts=1 stop=9 work_j=524.999499320984 stroke_m=0.14999985694885 elapsed_s=0.2500000060536 peak_n=1387.82360839844 impulse_ns=0.0 fracture=0",
+    "WOOD_FOOT_PUSH_TOUCH phase=ordinary_onward_steel event=tick tick=1405 position=(-4.868465, 407.9, -128.2) velocity=(0.000008, 0.0, -0.0) grounded=true support=1935 gravity=1.0 deaths=0 foot_active=false foot_support=2886 starts=1 stop=9 work_j=524.999499320984 stroke_m=0.14999985694885 elapsed_s=0.2500000060536 peak_n=1387.82360839844 impulse_ns=0.0 fracture=0",
+    "WOOD_FOOT_PUSH_TOUCH phase=ordinary_onward_steel event=final_real_steel_exit tick=1432 position=(-4.868465, 407.9, -128.2) velocity=(0.000001, 0.0, -0.0) grounded=true support=1935 gravity=1.0 deaths=0 foot_active=false foot_support=2886 starts=1 stop=9 work_j=524.999499320984 stroke_m=0.14999985694885 elapsed_s=0.2500000060536 peak_n=1387.82360839844 impulse_ns=0.0 fracture=0",
+    "SCRAPERX_UITEST PASS touch_wood_foot_push ordinary_viewport_touch=1 sole_steel_staging=1 actual_finite_stroke=1 actual_wood_landing=1 stable_steel_exit=1 gravity=1 deaths=0",
+    "SCRAPERX_UITEST PASS touch_wood_foot_push "
+  ],
+  "walk_probe_receipts": [],
+  "recovery_receipts": [],
+  "drop_receipts": [],
+  "log_sha256": "26340b911a375d6dfd6358afafa662b8df63adef1f61432553a3cec051a6f8c8",
+  "runtime_sha256": {
+    "main.tscn": "1a6910fdf586a7d3b0fcea52a1a84787c9ba627e6bd7fe452cd28ff769b52be2",
+    "presentation/main.gd": "6011e086ceea433edf28fa82bd4d886f9143c7523dbb40be77e2098c80e8b76c",
+    "presentation/ui/ui_test_driver.gd": "7182aef09cf1022ea85fa4f65a7edf71a20162d08caa370c093c1e504bddc4bd",
+    "presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a",
+    "presentation/ui/hud.gd": "adf03d87584279715ec98c611930101cb08c61f66c76560eacd5726113d86aba",
+    "presentation/kit_view.gd": "c67bb98ec3f535a3c9c8ae47c88626ab9fb50e0b4fdd51e78b0f6e5dde8ec1bf",
+    "project.godot": "2ca6051dd55c80d8137b4b9fb4416d3f767e774c4803950c4072cc82489699b9",
+    "addons/scraperx_native/scraperx_native.gdextension": "50ab0bccfaf7455de0d8812dcd228645db346ae72f689707560376d21af1dd93",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c"
+  },
+  "harness_current_sha256": {
+    "wood_driver.gd": "37620a811782ec4aa1e7f95c80edb11dd8f27689c178dba84576b0d1c5bcc0a7",
+    "prepare_runtime.py": "dd6ec8c310afd096d32df6dcb05ed1a455797ce679d8cd0eb25442500132c7ba",
+    "run_touch.sh": "ff007a73273db4430a7dd768c8d0e2f2ef953bf234e305a03fc84981d4296522",
+    "summarize_receipt.py": "91822f1be2f70b83793ba12da01c1f329e2ce619119ebf12b72a5f7415afad31"
+  },
+  "scope": "One initial407steel stage followed by ordinary viewport touch through production input and native authority. No phone feel/performance, rendered visual/audio, CI or APK claim."
+}

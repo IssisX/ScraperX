@@ -1,0 +1,21 @@
+{
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "parent": "cb19b6ea09b05fc082e7e1612be52f7aa0534a80",
+  "source_sha256": {
+    "src/sim/physical_foot_push.hpp": "d455b0c164c7f699e399386045cd6755940ef92ecc97cd6652cf84778a1a7b5b",
+    "src/sim/physical_foot_push.cpp": "4ac2f4e5cbdff256196cd18f1729290fa90272a3e256b7c0bb376836fc2129f1",
+    "src/sim/simulation.cpp": "dd0c2264a1ebbfae18173001af9a839ea7872cbc45de4c8cde464b564d6f5e8a",
+    "src/sim/simulation.hpp": "f4a14cc28955fd3ff0f8c368400ffff0e637ca4db06f50613297a0abf08a53f9",
+    "src/bridge/scraperx_simulation.cpp": "28560faabab63db706d7979986b3d1886b090b0d3bcf8cdcc4f469826d36ac8f",
+    "tests/physical_foot_push_tests.cpp": "521ec291706b7a2d6c2fa56cd799789ac9801b4bb1b3ee97c89b3b34375bb96e",
+    "tests/wood_foot_push_player_tests.cpp": "d38112821c9b45dcc9bcc72fe6def4eaa3387a1c16a580dbadcae007ad257e4f",
+    "tests/deformable_plank_player_tests.cpp": "880d51943d47f04ffd4b9e96c6c4df9d7bb2746f8f060e84a6f54fcaf18eb954",
+    "tests/supplied_machine_route_tests.cpp": "c4725646b55055f2d7738184cc52f425c558a16f7dd19fc95766f7298c16ab5a",
+    "CMakeLists.txt": "befd6b0adf2959485adad530037c452f9b3ca779ecfe983b49bb598e32ae368d",
+    ".github/workflows/wo000-delivery-spine.yml": "a77f836cabdc9b99dddb28ac8d0827f2db669b2c0d770a22d6ab1707aaf80eb1"
+  },
+  "bridge_sha256": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+  "runtime": "ARM64 native Release and desktop Godot viewport touch; not physical Android device",
+  "complete_energy_closure": false
+}

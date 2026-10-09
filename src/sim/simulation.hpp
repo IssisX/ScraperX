@@ -199,6 +199,22 @@ struct Snapshot final {
     double plank_peak_strength_ratio = 0;
     std::uint64_t plank_fracture_count = 0;
     double plank_discarded_strain_energy_j = 0;
+    // Transient reduced-order foot actuator. Command work is a conservative
+    // input bound, separate from measured delivered energy and ground contact.
+    bool foot_push_active = false;
+    std::uint64_t foot_push_start_count = 0;
+    std::uint64_t foot_push_support_entity_id = 0;
+    std::uint8_t foot_push_stop_reason = 0;
+    double foot_push_command_work_bound_j = 0;
+    double foot_push_stroke_m = 0;
+    double foot_push_stroke_limit_m = 0;
+    double foot_push_peak_load_n = 0;
+    double foot_push_last_load_n = 0;
+    double foot_push_last_impulse_ns = 0;
+    double foot_push_elapsed_seconds = 0;
+    double foot_push_actual_distance_m = 0;
+    double foot_push_initial_distance_m = 0;
+    Vector3 foot_push_player_force{};
     // Successful physical hand-to-foot transfer. Serial persists across render
     // sampling; force is measured grip load, not a fabricated landing impulse.
     std::uint64_t foot_transfer_count = 0;

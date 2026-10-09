@@ -63,6 +63,11 @@ void sample(const Simulation &s, const char *event) {
               << ",board_centre_y=" << centre_y(s) << ",gravity=" << v.player_gravity_factor
               << ",deaths=" << v.death_count << ",landings=" << v.landing_count
               << ",jump_work_j=" << v.landing_jump_work_j
+              << ",foot_active=" << v.foot_push_active
+              << ",foot_support=" << v.foot_push_support_entity_id
+              << ",foot_command_j=" << v.foot_push_command_work_bound_j
+              << ",foot_stroke_m=" << v.foot_push_stroke_m
+              << ",foot_peak_n=" << v.foot_push_peak_load_n
               << ",peak_strength_ratio=" << v.plank_peak_strength_ratio
               << ",broken_mask=" << v.plank_broken_joint_mask << '\n';
     if (allow_physical_climb) std::cout << "PLANK_HANDS,grip=" << v.grip_available
@@ -196,6 +201,28 @@ void stable_steel(Simulation &s, int ticks) {
     require(s.snapshot().checkpoint_footing_valid, "steel exit has honest firm native footing", s);
 }
 
+void settle_timber_landing(Simulation &s) {
+    begin(s, "real_timber_landing_settle");
+    require(s.set_move_input(0, 0), "neutral input lets actual timber landing settle", s);
+    int quiet = 0;
+    for (int i = 0; i < 360; ++i) {
+        tick(s);
+        const auto v = s.snapshot();
+        require(v.plank_broken_joint_mask == 0, "wood remains intact during physical landing settle", s);
+        const double relative_x = v.player_linear_velocity.x - v.support_point_linear_velocity.x;
+        const double relative_y = v.player_linear_velocity.y - v.support_point_linear_velocity.y;
+        const double relative_z = v.player_linear_velocity.z - v.support_point_linear_velocity.z;
+        if (segment_support(v) && std::abs(relative_y) < .1 && std::hypot(relative_x, relative_z) < .1)
+            ++quiet;
+        else quiet = 0;
+        if (quiet == 30) {
+            sample(s, "actual_settled_timber_landing");
+            return;
+        }
+    }
+    require(false, "actual intact timber landing settles30ticks before onward walking", s);
+}
+
 void run() {
     // This is the actual normal-world encounter, with native85kg player,
     // gravity and contact. It is not an isolated spring/module benchmark.
@@ -238,12 +265,21 @@ void run() {
     const double before_board = centre_y(s);
     require(segment_support(before_jump) && s.set_facing(1, 0) && s.set_move_input(0, 0) && s.request_jump(),
             "ordinary Jump starts on actual loaded timber", s);
-    bool airborne = false, landed = false;
+    bool airborne = false, landed = false, finite_push_observed = false;
     double board_motion = 0;
     for (int i = 0; i < 540; ++i) {
         steer(s, kCentreX);
         tick(s);
         const auto v = s.snapshot();
+        if (v.foot_push_active) {
+            finite_push_observed = true;
+            require(v.foot_push_support_entity_id >= kFirstSegment &&
+                        v.foot_push_support_entity_id < kFirstSegment + kCount &&
+                        v.foot_push_stroke_m <= .300001 && v.foot_push_peak_load_n <= 3500.01 &&
+                        v.foot_push_elapsed_seconds <= .25 + Simulation::kFixedStepSeconds &&
+                        v.foot_push_command_work_bound_j <= 1285.62501,
+                    "ordinary wood Jump uses a bounded real material foot push", s);
+        }
         board_motion = std::max(board_motion, std::abs(centre_y(s) - before_board));
         if (!airborne && !v.player_grounded && v.support_entity_id == 0) {
             airborne = true;
@@ -255,11 +291,14 @@ void run() {
             break;
         }
     }
-    require(airborne && landed && s.snapshot().landing_jump_work_j > before_jump.landing_jump_work_j &&
-                board_motion > .002,
+    require(airborne && landed && finite_push_observed &&
+                s.snapshot().foot_push_start_count == before_jump.foot_push_start_count + 1 &&
+                s.snapshot().foot_push_command_work_bound_j > 0 && board_motion > .002,
             "finite native Jump changes plank motion and lands back on actual timber", s);
     std::cout << "PLANK_PLAYER_JUMP,board_motion_m=" << board_motion
-              << ",jump_work_delta_j=" << s.snapshot().landing_jump_work_j - before_jump.landing_jump_work_j << '\n';
+              << ",foot_command_work_bound_j=" << s.snapshot().foot_push_command_work_bound_j
+              << ",instant_jump_work_delta_j=" << s.snapshot().landing_jump_work_j - before_jump.landing_jump_work_j << '\n';
+    settle_timber_landing(s);
     walk(s, kCentreX, "actual_timber_landing_braking", true);
     poses(s, "actual_timber_landing");
     walk(s, -4.9, "walk_remaining_seams_to_right_steel", false);
@@ -392,6 +431,9 @@ void run_impact() {
         }
         tick(s);
         const auto now = s.snapshot();
+        require(!now.foot_push_active && now.foot_push_start_count == 0 &&
+                    now.foot_push_last_impulse_ns == 0,
+                "gravity-loaded fracture and fragment recovery do not create a phantom foot push", s);
         if (!broken && now.plank_broken_joint_mask != 0) {
             broken = true;
             require(now.plank_fracture_count > 0 && now.plank_peak_strength_ratio >= 1,

@@ -235,4 +235,4 @@ void parkour(){Simulation s;require(s.debug_restart_at({-41.0759,198.9,-160.45})
  std::cout<<"PASS PARKOUR missed-release/recovery-footing/real-ladder/retry ordinary_inputs_only=1\n";
  cross_swing(s);
 }
-int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}
+int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="balance")balance();else if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}
