@@ -5803,15 +5803,17 @@ private:
                             rotation_axis.Dot(support.GetInverseInertia().Multiply3x3(rotation_axis));
                     }
                 }
+                const double relative_y = before_velocity.GetY() - support_velocity.GetY();
                 if(causal_support) {
-                    // Finite push-off work includes receiver recoil and rotation.
+                    // Finite positive push-off work includes receiver recoil
+                    // and rotation. Braking downward motion cannot fund the
+                    // later upward push; retain this branch's existing budget.
                     constexpr double budget=.5*double(kPlayerMassKg)*kJumpSpeed*kJumpSpeed;
-                    const double linear=impulse.Dot(before_velocity-support_velocity);
-                    const double quadratic=.5*double(impulse.LengthSq())*inverse_mass;
-                    if(linear+quadratic>budget) {
-                        const double scale=2*budget/(linear+std::sqrt(linear*linear+4*quadratic*budget));
-                        impulse*=float(scale*.999999);
-                    }
+                    const double cap = relative_y >= 0 ?
+                        2 * budget / (relative_y + std::sqrt(relative_y * relative_y +
+                            2 * inverse_mass * budget)) :
+                        -relative_y / inverse_mass + std::sqrt(2 * budget / inverse_mass);
+                    if (impulse.GetY() > cap) impulse.SetY(float(cap * .999999));
                     causal_airborne_=true;
                 }
                 airborne_inherited_velocity_=support_velocity;
@@ -5819,8 +5821,12 @@ private:
                 air_full_speed_=std::max(kPlayerMaximumRelativeSpeed,
                     JPH::Vec3(departure.GetX(),0,departure.GetZ()).Length());
                 bodies.AddImpulse(player_id_, impulse);
-                landing_jump_work_j_ += std::max(0.0F,
-                    impulse.Dot(before_velocity - support_velocity) + .5F * impulse.LengthSq() * inverse_mass);
+                const double delivered = impulse.GetY();
+                const double positive_part = relative_y >= 0 ? delivered :
+                    std::max(0.0, delivered + relative_y / inverse_mass);
+                landing_jump_work_j_ += relative_y >= 0 ?
+                    relative_y * delivered + .5 * inverse_mass * delivered * delivered :
+                    .5 * inverse_mass * positive_part * positive_part;
                 if (dynamic_support) bodies.AddImpulse(support_id, -impulse,
                     JPH::RVec3(support_sample_.contact_point.x, support_sample_.contact_point.y, support_sample_.contact_point.z));
                 jump_takeoff_feet_y_ = float(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;

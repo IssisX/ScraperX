@@ -287,6 +287,49 @@ void middle_miss_service_recovery() {
     finish_upper(s);
 }
 
+void downhill_jump_positive_work() {
+    Simulation s;
+    // Supported staging on the real static lower girder, not a velocity write.
+    require(s.debug_restart_at({-24, 358.6, -151.25}),
+            "downhill jump starts above the real taper girder", s);
+    tick(s, 180);
+    require(s.snapshot().player_grounded &&
+                s.snapshot().support_entity_id == kTaperInspectionEntity,
+            "downhill jump has actual girder footing", s);
+    require(s.set_move_input(0, 1) && s.set_facing(0, 1),
+            "ordinary stick requests downhill movement", s);
+    tick(s, 60);
+    const auto before = s.snapshot();
+    require(before.player_grounded && before.support_entity_id == kTaperInspectionEntity &&
+                before.player_linear_velocity.y < -.5 &&
+                std::hypot(before.support_point_linear_velocity.x,
+                    before.support_point_linear_velocity.z) < .000001 &&
+                std::abs(before.support_point_linear_velocity.y) < .000001,
+            "real downhill contact retains descending velocity on static support", s);
+    require(s.set_move_input(0, 0) && s.request_jump(),
+            "single supported Jump with neutral air steering", s);
+    tick(s);
+    const auto after = s.snapshot();
+    require(!after.player_grounded && after.player_linear_velocity.y > 5.3 &&
+                std::hypot(after.player_linear_velocity.x - before.player_linear_velocity.x,
+                    after.player_linear_velocity.z - before.player_linear_velocity.z) < .002,
+            "downhill Jump preserves horizontal momentum and earns ordinary free flight", s);
+    // Only gravity follows the isolated push on this static support. Positive
+    // work after reversal is the upward kinetic energy, not its signed change
+    // from the previous downward energy. The 0.05J band covers float stepping.
+    const double takeoff_y = after.player_linear_velocity.y +
+        double(9.81F * float(Simulation::kFixedStepSeconds));
+    const double positive_work = .5 * 85.0 * takeoff_y * takeoff_y;
+    const double receipt = after.landing_jump_work_j - before.landing_jump_work_j;
+    require(std::abs(takeoff_y - 5.5) < .002 &&
+                std::abs(receipt - positive_work) < .05 &&
+                receipt > 0 && receipt <= .5 * 85.0 * 5.5 * 5.5 + .05,
+            "downward braking cannot subsidize the upward push-off receipt", s);
+    std::cout << "PASS TAPER_INSPECTION downhill_jump before_vy="
+              << before.player_linear_velocity.y << " takeoff_vy=" << takeoff_y
+              << " positive_work_j=" << positive_work << " receipt_j=" << receipt << '\n';
+}
+
 void upper_miss_catch_recovery() {
     Simulation s;
     stage_cart_exit(s);
@@ -313,6 +356,15 @@ void upper_miss_catch_recovery() {
 
 int main(int argc, char **argv) {
     const std::string mode = argc == 2 ? argv[1] : "all";
+    if (mode == "all" || mode == "jump-work") downhill_jump_positive_work();
+    if (mode == "jump-work") {
+        Simulation s;
+        require(s.debug_restart_at({-25.9, 363.9, -164}),
+                "related gap regression stages only on actual landingA", s);
+        tick(s, 180);
+        gap_jump(s); // Existing run-up, unsupported flight and receiving-footing gate.
+        std::cout << "PASS TAPER_INSPECTION related_actual_gap_jump\n";
+    }
     if (mode == "all" || mode == "primary") {
         Simulation s;
         stage_cart_exit(s);
@@ -329,7 +381,7 @@ int main(int argc, char **argv) {
         upper_miss_catch_recovery();
         std::cout << "PASS TAPER_INSPECTION upper_miss_catch_tongue_rejoin\n";
     }
-    if (mode != "all" && mode != "primary" && mode != "middle" && mode != "upper") {
+    if (mode != "all" && mode != "primary" && mode != "middle" && mode != "upper" && mode != "jump-work") {
         std::cerr << "FAIL TAPER_INSPECTION unknown mode\n";
         return EXIT_FAILURE;
     }

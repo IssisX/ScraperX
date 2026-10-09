@@ -1,0 +1,30 @@
+{
+  "revision": "3f295ca85bd5d9913cae94b689c50d20dc29e2c9",
+  "normal_provenance": "source-derived planar upper face of1932 lower taper girder; Snapshot lacks manifold normal",
+  "source_plane_normal": [
+    0,
+    0.9056902265584386,
+    0.4239401060486308
+  ],
+  "source_plane_endpoints": [
+    [
+      -24,
+      363,
+      -163
+    ],
+    [
+      -24,
+      352,
+      -139.5
+    ]
+  ],
+  "observed_support": 1932,
+  "static_effective_inverse_mass": 0.011764705882352941,
+  "sha256": {
+    "causal-jump-before.cpp": "3031de36da67ed896082109ab46d0f67b590aacf5f0685972a417c6a3d4edb6f",
+    "causal-jump-before": "73a53895ebf818e4f7a5488a9878defc1a910b9b4d6705f7016d1919432d641a",
+    "causal-jump-before.log": "50eeadbb8fab77cdcb5c64edcf6e6259c07d2d5eaa09da8a472c91753a9f9154",
+    "libscraperx_sim.a": "4cc4965c56678a0751325ce8b79dc902660b4f7074f4e03d920a2a551fe0aaec",
+    "libJolt.a": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b"
+  }
+}

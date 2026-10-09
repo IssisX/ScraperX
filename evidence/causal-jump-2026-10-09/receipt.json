@@ -1,0 +1,25 @@
+{
+  "baseline_head": "3f295ca85bd5d9913cae94b689c50d20dc29e2c9",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "471b9c73d91772e71891b1ed87949086c2fd9fe2be49e210909887a32a145201",
+    "tests/taper_inspection_route_tests.cpp": "733fb2928cc9e67774a65a0847e7d64d68dff541302c17773424346e22cdcce6"
+  },
+  "build_command": "proot-distro login ubuntu -- cmake --build /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build --target scraperx_taper_inspection_route_tests scraperx_native -j2",
+  "build_exit_code": 0,
+  "final_test_relink": "proot-distro login ubuntu -- cmake --build /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build --target scraperx_taper_inspection_route_tests -j2",
+  "test_command": "proot-distro login ubuntu -- /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_taper_inspection_route_tests jump-work",
+  "before_exit_code": 1,
+  "before_result": "New downward-braking receipt criterion fails original runtime owner at1110.6J. Frozen private normal-world probe independently captures175.0237J undercount; see baseline receipt.",
+  "after_exit_code": 0,
+  "after_result": "Downhill causal jump receipt agrees with positive upward kinetic energy within0.05J, existing5.5m/s takeoff/horizontal momentum preserved; existing actual2m gap helper passes unsupported flight/landingB and finite work.",
+  "native_executable_sha256": "98ee69421f2d252c9210007bcc7f9887f68e26ec44f1ec3281d5aced2b532e0a",
+  "native_bridge_sha256": "85e9e1719c2992544a40b2832f57d8c82eee8ca7d43b7680ea683942e268d40c",
+  "audit": "Independent read-only scraperx_physics_auditor found no blocking defect in sign-dependent cap/receipt and reciprocal support path.",
+  "limits": "Static-downhill receipt defect demonstrated. Dynamic receiver recoil/cap binding not separately runtime-probed. No new Godot/phone/performance observation; input/bridge schema/geometry unchanged. Positive command receipt is not a complete solver/gravity/collision energy ledger.",
+  "previous_ci": {
+    "run": 37972296060,
+    "head": "3f295ca85bd5d9913cae94b689c50d20dc29e2c9",
+    "conclusion": "failure",
+    "new_apk": false
+  }
+}

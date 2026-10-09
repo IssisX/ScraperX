@@ -1,0 +1,25 @@
+{
+  "revision": "3f295ca85bd5d9913cae94b689c50d20dc29e2c9",
+  "branch": "ChatGPT",
+  "scenario": "InitialSpawn::VaultApproach, WorldContent::RegressionFixtures; Action after rail offered",
+  "vault_ticks": 34,
+  "gravity_factors": [
+    "0"
+  ],
+  "hand_counts": [
+    "0"
+  ],
+  "peak_center_y_m": 1.94989216328,
+  "peak_vx_mps": 12.9287977219,
+  "min_vy_mps": -23.3533058167,
+  "max_vy_mps": 8.33029747009,
+  "sha256": {
+    "libscraperx_sim.a": "4cc4965c56678a0751325ce8b79dc902660b4f7074f4e03d920a2a551fe0aaec",
+    "libJolt.a": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+    "probe.cpp": "26f473189a963b44074a489bd1d798876c4cf2e2c5b76f60d3e465443f2e607f",
+    "vault-baseline": "5e76ffdba66a46d87af1749afbc1a6e0c757601cc4ad96135eaf4c486d76fa77",
+    "include/sim/simulation.hpp": "1d5a4944039790284c2cf61e5b8d33f0364846ab814473a26509052670d2e469",
+    "include/sim/steam_plant.hpp": "d4e00e6fdea537988af6717f5d6c3e9e04e90842f00ada5b4df25bf6b734d7a3",
+    "baseline.csv": "af50486bad6c84a8f0e99f15f2358408fe087f733ac5b1607bbd6700a942a090"
+  }
+}

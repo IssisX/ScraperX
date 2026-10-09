@@ -1,0 +1,4 @@
+PASS TAPER_INSPECTION downhill_jump before_vy=-2.02933 takeoff_vy=5.5 positive_work_j=1285.63 receipt_j=1285.62
+GAP_TAKEOFF tick=244 P=-23.9457,363.9,-164 V=5.02553,0,0 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=1 impact=0.02725 work=1077.76 jump_work=0
+LANDING_B363 tick=459 P=-20.146,363.9,-164 V=0.000375017,0,0 support=1932 grounded=1 traversal=0 hands=0 gravity=1 crouch=0 balance=1 deaths=0 landings=2 impact=5.48175 work=1077.76 jump_work=1285.62
+PASS TAPER_INSPECTION related_actual_gap_jump
