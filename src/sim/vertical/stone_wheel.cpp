@@ -86,9 +86,15 @@ std::unique_ptr<Machine> stone_wheel(BuildContext c) {
                          .3f, Material::Timber));                                                     // hopper post
     frame.push_back(span(Vec3(mouth.GetX(), mouth.GetY() + 1.9f, back_z + .6f), Vec3(mouth.GetX(), mouth.GetY() + 1.9f, 0),
                          .25f, Material::Timber));                                                    // hopper arm
-    frame.push_back(span(Vec3(sheave_tip.GetX() + .5f, kGroundY, -3.3f), Vec3(sheave_tip.GetX() + .5f, sheave_high.GetY() + .4f, -3.3f),
+    // The tip's mast stands beside the plank's tip, off its line, so the
+    // player out on the plank looks past it; an arm carries the sheave over
+    // the tip.
+    const float mast_z = -4.4f;
+    frame.push_back(span(Vec3(sheave_tip.GetX(), kGroundY, mast_z), Vec3(sheave_tip.GetX(), sheave_high.GetY() + .4f, mast_z),
                          .3f, Material::Timber));                                                     // the tip's mast
-    frame.push_back(span(Vec3(sheave_tip.GetX() + .5f, sheave_high.GetY() + .4f, -3.3f),
+    frame.push_back(span(Vec3(sheave_tip.GetX(), sheave_high.GetY() + .4f, mast_z),
+                         Vec3(sheave_tip.GetX(), sheave_high.GetY() + .4f, -3.3f), .2f, Material::Timber));   // sheave arm
+    frame.push_back(span(Vec3(sheave_tip.GetX(), sheave_high.GetY() + .4f, mast_z),
                          Vec3(mouth.GetX(), sheave_high.GetY() + .4f, back_z + .6f), .2f, Material::Timber));   // gantry
     frame.push_back(wheel(.45f, .1f, sheave_tip + Vec3(0, .1f, 0)));
     frame.push_back(wheel(.45f, .1f, sheave_high + Vec3(0, .1f, 0)));

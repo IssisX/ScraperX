@@ -2079,7 +2079,14 @@ func _wheel(device: int) -> bool:
 	if not await _go(device, Vector2(20.2, -113.3), 0.1, 8.0):
 		return _fail("wheel: the walk out the feed plank stalled at %s" % str(_position()))
 	await _pose("wheel_plank")
-	await _seconds(8.0)
+	await _seconds(4.0)
+	# Look back up at the hopper pouring into the top bucket.
+	await _face(Vector2(-1.0, 0.0))
+	var level_pitch: float = _main._pitch
+	_main._pitch = 1.1
+	await _pose("wheel_pour")
+	_main._pitch = level_pitch
+	await _seconds(4.0)
 	# Back in off the plank, which lets the wheel go, and into the bucket.
 	if not (await _go(device, Vector2(14.19, -113.3), 0.1, 8.0) and \
 			await _go(device, Vector2(14.19, -110.4), 0.1, 6.0)):
