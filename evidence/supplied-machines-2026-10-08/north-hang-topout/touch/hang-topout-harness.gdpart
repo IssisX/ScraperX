@@ -1,0 +1,151 @@
+var _hang_active := false
+var _hang_failure := ""
+var _hang_tick := 0
+var _hang_command := 0.0
+var _hang_positive := 0.0
+var _hang_previous_position := Vector3.ZERO
+var _hang_previous_velocity := Vector3.ZERO
+var _hang_previous_traversal := 0
+var _hang_transfer := false
+var _hang_samples := 0
+var _hang_peak := 0.0
+var _hang_caught := false
+var _hang_loaded_transfer := false
+
+func _hang_state() -> String:
+	return "tick=%d at=%s velocity=%s support=%d grounded=%s traversal=%d handsupport=%d deaths=%d touch_move=%s target=%s native=%s" % [
+		_native().get_tick_index(), _position(), _velocity(), _native().get_support_entity_id(),
+		_native().is_player_grounded(), _native().get_traversal_state(), _native().get_traversal_support_entity_id(),
+		_native().get_death_count(), _main._touch.move_vector, _native().get_traversal_target_point(), _native().get_landing_state()]
+
+func _process(_delta: float) -> void:
+	if not _hang_active:
+		return
+	var state: Dictionary = _native().get_landing_state()
+	var tick := int(_native().get_tick_index())
+	var left: Vector3 = state["left_hand_force_n"]
+	var right: Vector3 = state["right_hand_force_n"]
+	var command := float(state["traversal_command_work_bound_j"])
+	var positive := float(state["hand_actuator_positive_work_j"])
+	var native_ticks := tick-_hang_tick
+	var budget := (6600.0 if _hang_transfer else 3000.0)*float(native_ticks)/90.0+0.001
+	var traversal := int(_native().get_traversal_state())
+	var invalid := int(_native().get_death_count())!=0 or float(state["player_gravity_factor"])!=1.0 \
+		or not _position().is_finite() or not _velocity().is_finite() or not left.is_finite() or not right.is_finite() \
+		or left.length()>1501.0 or right.length()>1501.0 \
+		or traversal in [_main.TRAVERSAL_MANTLING,_main.TRAVERSAL_VAULTING] \
+		or bool(_native().is_parachute_deployed()) or not is_finite(command) or not is_finite(positive) \
+		or command-_hang_command < -0.000001 or positive-_hang_positive < -0.000001 \
+		or command-_hang_command>budget or positive-_hang_positive>budget
+	if traversal in [_main.TRAVERSAL_HANGING,_main.TRAVERSAL_CLIMBING]:
+		invalid=invalid or int(state["traversal_hand_constraint_count"])!=2 or int(_native().get_traversal_support_entity_id())!=1901
+		if _hang_transfer:
+			_hang_loaded_transfer=_hang_loaded_transfer or left.length()>0.01 or right.length()>0.01
+	if traversal==_main.TRAVERSAL_HANGING and _hang_previous_traversal!=_main.TRAVERSAL_HANGING:
+		_hang_caught=true
+		var delta_v := _velocity().distance_to(_hang_previous_velocity)
+		var displacement := _position().distance_to(_hang_previous_position)
+		invalid=invalid or delta_v>0.7*float(native_ticks) or displacement>0.1*float(native_ticks)
+		print("SCRAPERX_NORTH_HANG_TOUCH first_catch delta_v=%.6f displacement=%.6f native_ticks=%d " % [delta_v,displacement,native_ticks]+_hang_state())
+	_hang_peak=maxf(_hang_peak,maxf(left.length(),right.length()))
+	_hang_tick=tick
+	_hang_command=command
+	_hang_positive=positive
+	_hang_previous_position=_position()
+	_hang_previous_velocity=_velocity()
+	_hang_previous_traversal=traversal
+	_hang_samples+=1
+	if invalid:
+		_hang_failure="native gravity/hand/work/catch invariant "+_hang_state()
+		_hang_active=false
+		print("SCRAPERX_NORTH_HANG_TOUCH FAIL "+_hang_failure)
+		get_tree().quit(31)
+
+func _hang_roof() -> bool:
+	return _native().is_player_grounded() and not _native().is_player_crouched() \
+		and int(_native().get_support_entity_id())==1901 and int(_native().get_traversal_state())==0 \
+		and absf(_position().y-106.9)<0.12 and Vector2(_velocity().x,_velocity().z).length()<0.18 \
+		and absf(_velocity().y)<0.12 and int(_native().get_landing_state()["traversal_hand_constraint_count"])==0 \
+		and int(_native().get_death_count())==0
+
+func _hang_roof_hold(ticks: int) -> bool:
+	_move(InputRouter.Device.TOUCH,0.0)
+	if not await _wait_until(_hang_roof,3.0):
+		return _fail("earned shelf did not settle "+_hang_state())
+	var start := int(_native().get_tick_index())
+	while int(_native().get_tick_index())-start<ticks:
+		await get_tree().process_frame
+		if not _hang_roof() or not _hang_failure.is_empty():
+			return _fail("earned real106.9m shelf lost during firm hold "+_hang_state())
+	return true
+
+func _touch_north_grip_diagnostic() -> bool:
+	# One actual supported rest stage only; subsequent actions are viewport
+	# touch through shipping input routing. No later relocation/grip writes.
+	if not _campaign_world_intact() or int(_native().get_entity_body_count(1901))!=1 \
+			or not _native().debug_restart_at(Vector3(15.1,104.4,-180.6)):
+		return _fail("actual104.4m supported North rest stage rejected")
+	await _face(Vector2(-1,0))
+	await _seconds(0.5)
+	if not _native().is_player_grounded() or int(_native().get_support_entity_id())!=1901 \
+			or absf(_position().y-104.4)>0.12 or _velocity().length()>0.15:
+		return _fail("actual rest lacks settled physical104.4m footing "+_hang_state())
+	var state: Dictionary = _native().get_landing_state()
+	_hang_tick=int(_native().get_tick_index())
+	_hang_command=float(state["traversal_command_work_bound_j"])
+	_hang_positive=float(state["hand_actuator_positive_work_j"])
+	_hang_previous_position=_position()
+	_hang_previous_velocity=_velocity()
+	_hang_previous_traversal=int(_native().get_traversal_state())
+	_hang_active=true
+	print("SCRAPERX_NORTH_HANG_TOUCH takeoff "+_hang_state())
+	_tap(1,_center(&"jump"))
+	_move(InputRouter.Device.TOUCH,0.5)
+	var caught := await _wait_until(func() -> bool: return bool(_ctx()["hanging"]),2.0)
+	_move(InputRouter.Device.TOUCH,0.0)
+	if not caught or not _hang_caught:
+		return _fail("ordinary Jump did not catch actual raised lip "+_hang_state())
+	print("SCRAPERX_NORTH_HANG_TOUCH blocked_before "+_hang_state())
+	_tap(1,_center(&"jump"))
+	await _seconds(0.5)
+	if not bool(_ctx()["hanging"]) or not _hang_failure.is_empty():
+		return _fail("canopy failed to preserve Hanging on premature Jump "+_hang_state())
+	print("SCRAPERX_NORTH_HANG_TOUCH blocked_after "+_hang_state())
+	# Facing west, localright+1 is worldnorth-Z, matching maintained route.
+	_move_dir(InputRouter.Device.TOUCH,Vector2(1.0,0))
+	var crossed := await _wait_until(func() -> bool: return _position().z < -181.85,5.0)
+	_move_dir(InputRouter.Device.TOUCH,Vector2.ZERO)
+	if not crossed or not bool(_ctx()["hanging"]):
+		return _fail("ordinary shimmy cannot reach actual clear pocket "+_hang_state())
+	print("SCRAPERX_NORTH_HANG_TOUCH clear_pocket "+_hang_state())
+	state=_native().get_landing_state()
+	var count := int(state["foot_transfer_count"])
+	var start := int(_native().get_tick_index())
+	var before_command := float(state["traversal_command_work_bound_j"])
+	var before_positive := float(state["hand_actuator_positive_work_j"])
+	_hang_transfer=true
+	_tap(1,_center(&"jump"))
+	if not await _wait_until(func() -> bool: return _standing_above(106.7),4.0):
+		return _fail("earned clear-pocket Jump failed gravity-on topout "+_hang_state())
+	if not await _hang_roof_hold(270):
+		return false
+	state=_native().get_landing_state()
+	var transfer_seconds := float(int(state["foot_transfer_tick"])-start)/90.0
+	print("SCRAPERX_NORTH_HANG_TOUCH transfer_receipt request_tick=%d foot_tick=%d transfer_s=%.6f " % [start,int(state["foot_transfer_tick"]),transfer_seconds]+_hang_state())
+	if transfer_seconds>1.7+0.000000001 or int(state["foot_transfer_count"])!=count+1 or int(state["foot_transfer_support_entity_id"])!=1901 \
+			or int(state["foot_transfer_tick"])<=start or float(state["foot_transfer_peak_hand_load_n"])<=0 \
+			or not _hang_loaded_transfer or float(state["traversal_command_work_bound_j"])<=before_command \
+			or float(state["hand_actuator_positive_work_j"])<=before_positive:
+		return _fail("earned shelf lacks real hand-to-foot receipt/work "+_hang_state())
+	var roof := _position()
+	print("SCRAPERX_NORTH_HANG_TOUCH firm_shelf "+_hang_state())
+	await _face(Vector2(0,-1))
+	if not await _walk_to(InputRouter.Device.TOUCH,Vector2(13,-182.75),0.14,6.0,true):
+		return _fail("ordinary onward final-ladder approach failed "+_hang_state())
+	if not await _hang_roof_hold(90) or not _native().is_grip_available() \
+			or not await _offered(&"climb","CLIMB","HOLD"):
+		return _fail("onward shelf lacks real final ladder affordance "+_hang_state())
+	print("SCRAPERX_NORTH_HANG_TOUCH onward final_grip_point=%s " % _native().get_grip_point()+_hang_state())
+	_hang_active=false
+	_detail="normal_world=1 supported104.4m_initialstage=1 catch_realhands=1 blocked_premature_jump=1 actual_shimmy=1 earned_hangtopout=1 transfer_s=%.6f gravity=1 legacy_mantle=0 foot_transfer=1 shelf106.9_hold_ticks=270 onward_m=%.6f onward_hold_ticks=90 final_ladder_grip=1 deaths=0 samples=%d peak_hand_n=%.6f transfer_command_j=%.6f transfer_positive_j=%.6f" % [transfer_seconds,_position().distance_to(roof),_hang_samples,_hang_peak,float(state["traversal_command_work_bound_j"])-before_command,float(state["hand_actuator_positive_work_j"])-before_positive]
+	return true

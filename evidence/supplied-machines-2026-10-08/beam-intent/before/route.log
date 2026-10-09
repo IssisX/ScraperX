@@ -1,0 +1,29 @@
+BRACE_FOOT position=28.0403,77.9,-130.986 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.8984,-143.958 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=30.0316,82.8984,-143.999 velocity=4.16925,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.6291,82.8934,-144 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+WALK_TO_FAILED position=34,84.8839,-138.711 velocity=9.15527e-05,0,0 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+TARGET 34,-136.7 seconds=3
+STANDING_BLOCKED position=34,84.8839,-138.711 velocity=9.15527e-05,0,0 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+CROUCHED_PASS position=34,85.4677,-136.767 velocity=9.15527e-05,0.0679117,0.149406 grounded=1 support=1900 balance=1 crouch=1 deaths=0
+UPPER_JUNCTION position=34,87.8985,-131.546 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+MANTLE_READY position=26.65,87.8989,-132 velocity=0,0,-0.000640869 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+TOWER_MANTLE_START gravity=1 hands=2 state=4
+TOWER_MANTLE_TRANSFER seconds=1.48889 supported=1 gravity=1
+RING_88 position=24.8474,88.9,-132 velocity=0,0,0 grounded=1 support=11 balance=0 crouch=0 deaths=0
+UPPER_CHECKPOINT_RETRY position=25.865,88.9,-127.957 velocity=0,0,0 grounded=1 support=11 balance=0 crouch=0 deaths=1
+BRACE_FOOT position=28.0403,77.9,-130.986 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.8984,-143.958 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=29.8094,82.8984,-144.192 velocity=3.70601,-3.76912e-09,7.42348e-06 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.613,82.8934,-144.2 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+BRACE_FOOT position=28.0403,77.9,-130.986 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.8984,-143.958 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=30.3314,82.8984,-143.806 velocity=4.69951,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.6448,82.8934,-143.8 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+BRACE_FOOT position=28.0403,77.9,-130.986 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28,82.8984,-143.958 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+WALK_TO_FAILED position=32.4606,80.527,-143.998 velocity=0.0062725,2.03912,-0.00315616 grounded=0 support=0 balance=0 crouch=0 deaths=0
+TARGET 33.7,-144 seconds=2
+GAP_WITHOUT_JUMP position=32.4606,80.527,-143.998 velocity=0.0062725,2.03912,-0.00315616 grounded=0 support=0 balance=0 crouch=0 deaths=0
+GAP_RECOVERY position=32.4666,77.88,-144.001 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FAIL AS-021 gentle lateral input moves in the requested direction on real footing

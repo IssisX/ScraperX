@@ -1,0 +1,2695 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: Cannot infer the type of "ready" variable because the value doesn't have a set type.
+          at: GDScript::reload (res://presentation/ui/ui_test_driver.gd:2580)
+          GDScript backtrace (most recent call first):
+              [0] _ready (res://presentation/main.gd:498)
+ERROR: Failed to load script "res://presentation/ui/ui_test_driver.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+   GDScript backtrace (most recent call first):
+       [0] _ready (res://presentation/main.gd:498)
+SCRIPT ERROR: Invalid call. Nonexistent function 'new' in base 'GDScript'.
+          at: _ready (res://presentation/main.gd:498)
+          GDScript backtrace (most recent call first):
+              [0] _ready (res://presentation/main.gd:498)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRAPERX_AUDIO_BANK clips=28 msec=1152 driver=Dummy
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)
+SCRIPT ERROR: Invalid call. Nonexistent function 'render_view' in base 'Nil'.
+          at: _render_snapshot (res://presentation/main.gd:1744)
+          GDScript backtrace (most recent call first):
+              [0] _render_snapshot (res://presentation/main.gd:1744)
+              [1] _process (res://presentation/main.gd:619)

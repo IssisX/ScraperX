@@ -1,0 +1,131 @@
+{
+  "scope": "Owned native/before/source evidence closure only. Touch subfolder is another agent's exclusive surface and is excluded from this manifest.",
+  "saved_utc": "2026-10-09T04:07:33.534845+00:00",
+  "source_base": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "branch": "ChatGPT",
+  "current_working_source_sha256_at_collection": {
+    "src/sim/simulation.cpp": "30645f344736ae8ea39c0c1a71ceba9761e69aea5acfa89db35189f2201e111a",
+    "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "src/sim/braced_bay.cpp": "3bfc8b3dddc6361fc929bd1dd6faef44da05772f0d1cc02aa2b9a96ee21605a7",
+    "src/sim/physical_hand_climb.cpp": "098a0d36dbd0cf3cd6eb3e4898051b1b59a5797d3fc37761ba7ed29534d47409",
+    "src/sim/physical_hand_climb.hpp": "ab22499a484a348c7c4946c92ad5820bd56143f72300e8b356888b30c8b39834",
+    "tests/braced_bay_tests.cpp": "2d64e7d5ae0e6783232b75bbe3650d129df99a3cf59eda1658f8e56f29890b9a"
+  },
+  "current_existing_native_artifact_sha256_at_collection": {
+    "native_owner_executable": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_braced_bay_tests",
+      "sha256": "7c3545083b373a870d915e82cc311c58613941c54d922ea1579d65896b5e2571",
+      "bytes": 45932056
+    },
+    "native_library": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/libscraperx_sim.a",
+      "sha256": "a353690f371ebb8e91b4cdefb98a5126a632cf0501704c6f82bf7c4f11d55623",
+      "bytes": 2069136
+    },
+    "after_offset_probe": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/beam-correction/probe",
+      "sha256": "e0150e71f21078a44173d614b7e5bcf351e3bb42e8ef2ad7ffdb4010e62ac92c",
+      "bytes": 45931448
+    }
+  },
+  "current_artifact_provenance": "Root reports afterprobe and final native owner completed PASS against the current source/library. These hashes are recorded during collection, not embedded in the original logs; no native rebuild/run was performed by this evidence owner.",
+  "frozen_before": {
+    "library_sha256": "7c38bc5b5f490631d28073f754880d05d49a37fdcec1781854346c77111e970b",
+    "source_sha256": {
+      "src/sim/simulation.cpp": "110211e3f3fa2c5696c63dd9df305c211066770f5675f9530f938fa7af532e58",
+      "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+      "src/sim/braced_bay.cpp": "3bfc8b3dddc6361fc929bd1dd6faef44da05772f0d1cc02aa2b9a96ee21605a7"
+    },
+    "source_base": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+    "boundary": "Frozen pre-beam library after earlier air/North work, not immutable6a executable identity. Full owner-source/header/binary copies remain private and are omitted here."
+  },
+  "before_offset": {
+    "result": "Gentle+X.25 moves west0.0684185m, neutral recenters further0.0303688m; real support1900, balance/footing, deaths0.",
+    "cause": "Across input below.8 is discarded and replaced by offset-centering including neutral. This source branch was preserved from immutable6a."
+  },
+  "after_offset": {
+    "result": "DELIBERATE_CORRECTION_AND_NEUTRAL_BRAKING_PASSED",
+    "gentle_x_delta_m": 0.03572845459,
+    "neutral_x_delta_m": 0.0005073547363,
+    "final_vx": 0,
+    "support": 1900,
+    "balancing_grounded": true,
+    "deaths": 0,
+    "ticks_each_phase": 27,
+    "ordinary_input_x": 0.25
+  },
+  "route_discrimination": {
+    "before_return_girder_passed": true,
+    "before_mantle_seconds": 1.48889,
+    "initial_after_return_failed": true,
+    "classification": "Introduced test-driver incompatibility at Tower wall after removal of automatic Zcentering.",
+    "corrected_standoff_x": 26.68,
+    "arrival_distance_bound_m": 0.1,
+    "settled_speed_bound_mps": 0.15,
+    "mantle_seconds_bound": 1.7,
+    "final_observed_mantle_seconds": 1.52222,
+    "final_owner_marker": "PASS scraperx_sim AS-021 braced bay parkour to +88, gap, crouch and recovery"
+  },
+  "limits": [
+    "This is request shaping, real contact and force braking on recognized narrow beams; it is partial balance correction, not a full XCoM/contact-manifold or anatomical stumble/roll implementation.",
+    "Offset probes use one initial physical girder pose followed by real native gravity/contact; no poststage pose/velocity writes. Native owner route uses ordinary inputs from its existing BracedBayEntry fixture.",
+    "Measured85*delta_vx/dt is net lateral force including solver/contact effects; isolated ground command force is not exposed and is not claimed.",
+    "Final owner log preserves gap variants, standing header refusal/crouch passage, real physical mantle/receiving footing, missed-gap recovery, stable checkpoint return, gentle correction/neutral stop/reversal and unchanged full-stick side exit.",
+    "Touch proof is in progress and belongs to another agent. This native ledger does not claim viewport-touch closure, Android/Actions delivery, device feel or physical vibration.",
+    "No new checks/builds/commits/pushes, maintained source edits or touch-subfolder writes occurred during evidence collection."
+  ],
+  "files": {
+    "README.md": {
+      "sha256": "efedb42121e41565dca67cb49f5a0eeb9598b6ea6fd842d01d871286562ab935",
+      "bytes": 2520
+    },
+    "before/offset-probe.cpp": {
+      "sha256": "ce1282b057f0016483cf0ea9d273f7821db14ac4cd72e1498ec1f942b9a61344",
+      "bytes": 3646
+    },
+    "before/offset-receipt.json": {
+      "sha256": "a44e9a4db9a8a018769d46b68604872340e369fc7dec8bad9055cda8f1111653",
+      "bytes": 4047
+    },
+    "before/offset.log": {
+      "sha256": "2381d89b396c601ce75e8d8f06aae5c891b80e50c3800703923ee53be387b236",
+      "bytes": 17372
+    },
+    "before/route-probe.cpp": {
+      "sha256": "1a9e7c0a671a30eca281d5658b7b2207252a0356bd29c0f954470d245414fe79",
+      "bytes": 15005
+    },
+    "before/route-receipt.json": {
+      "sha256": "e5be46c3d2a99de2eb97bdc7d9956cabce4e57fd63d94004267264dae3e69647",
+      "bytes": 2651
+    },
+    "before/route.log": {
+      "sha256": "13d2605e472b8e46ad3c3ba37d2a512c2095aaac00e3ae3ec10513a26147509c",
+      "bytes": 3038
+    },
+    "native/after-probe.cpp": {
+      "sha256": "a80ad50791364f7ea7e5b055c61f5ed66d1247ca9e2f6f0673ebcaf71e661dec",
+      "bytes": 3657
+    },
+    "native/after.log": {
+      "sha256": "c657fdf759d81ad11f37cc34ab2b8c995e2f5a12b854eeb6b6c5ff9ba1bd0fce",
+      "bytes": 15595
+    },
+    "native/initial-after-route.log": {
+      "sha256": "64ceeadf4b97290d9967bf11563d84ea3be6dc6a2c18170faffc5516ff6f1f6d",
+      "bytes": 1221
+    },
+    "native/native-owner-final.log": {
+      "sha256": "7a269b839151a7a54d18f481c40737e8b0d5eb107265afd7375f117510ff41ab",
+      "bytes": 3019
+    },
+    "source/beam-request.diff": {
+      "sha256": "4ad2a6456b6535ea993db6a574c13b7ca48abbf15f1c442caa4d0578a1209bf6",
+      "bytes": 2233
+    },
+    "source/owner-test.diff": {
+      "sha256": "d8bdd6e9df9a921787923912ce0ec73006f9db2efe50a32a09f8c886e1d90b1d",
+      "bytes": 2568
+    }
+  }
+}

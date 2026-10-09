@@ -1,0 +1,85 @@
+{
+  "scope": "Private immutable6a original north approach/first-climb only. Original test/helpers/native inputs unchanged; logging added; stop before later route. No debug stages/pose/velocity writes or shared builds.",
+  "source_commit": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "source_test_path": "tests/north_service_frame_tests.cpp",
+  "source_test_sha256": "1dba0b3efca31abe0e010b30e4dd920720d038bd4f3af6dd008b28f2a128e0c7",
+  "private_probe_sha256": "a719c483dc9bc8a6b6379df7fb106234daa99232f478f7567d1a4199b2121dcb",
+  "library_sha256": "a5670b58a385e0f937749b23cc288db681641629782abb8116546f7dd8b070c6",
+  "header_sha256": "96e933fe335d1dc1a84be54edae59f78e5b7a92475caafaefc15a45706beeb75",
+  "caller_hz": 90,
+  "captured_utc": "2026-10-09T03:48:54.236966+00:00",
+  "exit_code": 1,
+  "result": "FIRST_CLIMB_FAILED_IDENTICALLY_TO_CURRENT_FULL_NATIVE_GATE",
+  "failure_classification": "Pre-existing at immutable6a62ab4 original test and library; identical first-climb91.7606/-179.828/support0 failure precedes new north physical top-out.",
+  "private_executable_sha256": "6578bf823a92cc55155bc4e4787a01eadd6cdd316efee0d886145eeeda12ac0f",
+  "before_log_sha256": "13168dd2a36070fc74b4860bf5e0a1e6425b083f4bed99546676785fb2674c76",
+  "original_walk_return": "WALK_RETURN tick=156 time=1.733333333 P=16,88.90000153,-179.4449463 V=0,0,-4.758800507 support=1901 grounded=1 state=0 traversal_owner=0 grip_offered=0 grip_owner=0 grip=0,0,0 target=0,0,0 hands=0 LH=0,0,0 RH=0,0,0 LF=0,0,0 RF=0,0,0 gravity=1 deaths=0",
+  "actual_neutral_settle": "AFTER_NEUTRAL tick=192 time=2.133333333 P=16,88.90000153,-179.8744965 V=0,0,0 support=1901 grounded=1 state=0 traversal_owner=0 grip_offered=1 grip_owner=1901 grip=16,89.25,-180.25 target=0,0,0 hands=0 LH=0,0,0 RH=0,0,0 LF=0,0,0 RF=0,0,0 gravity=1 deaths=0",
+  "final_actual_state": "FIRST_RESULT tick=1299 time=14.43333333 P=16,91.7605896,-179.8283539 V=0,0.0002909004688,0.0004652813077 support=0 grounded=0 state=4 traversal_owner=1901 grip_offered=0 grip_owner=0 grip=0,0,0 target=0,0,0 hands=2 LH=15.80000019,92.25003052,-180.25 RH=16.20000076,92.55003357,-180.25 LF=-0,866.0253906,-157.0462494 RF=-0,471.5425415,-157.8854828 gravity=1 deaths=0",
+  "first_failure": "FAIL first climb did not top out on +94 m rest 16,91.7606,-179.828 state=4 support=0",
+  "arrival_position": [
+    16.0,
+    88.90000153,
+    -179.4449463
+  ],
+  "arrival_velocity": [
+    0.0,
+    0.0,
+    -4.758800507
+  ],
+  "settled_position": [
+    16.0,
+    88.90000153,
+    -179.8744965
+  ],
+  "settled_velocity": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "final_position": [
+    16.0,
+    91.7605896,
+    -179.8283539
+  ],
+  "final_velocity": [
+    0.0,
+    0.0002909004688,
+    0.0004652813077
+  ],
+  "final_left_hand": [
+    15.80000019,
+    92.25003052,
+    -180.25
+  ],
+  "final_right_hand": [
+    16.20000076,
+    92.55003357,
+    -180.25
+  ],
+  "final_left_hand_force": [
+    -0.0,
+    866.0253906,
+    -157.0462494
+  ],
+  "final_right_hand_force": [
+    -0.0,
+    471.5425415,
+    -157.8854828
+  ],
+  "final_target": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "approach_target": [
+    16,
+    -179.55
+  ],
+  "distance_only_arrival_speed_mps": 4.758800507,
+  "neutral_overshoot_beyond_target_m": 0.32449649999998087,
+  "supported_causal_chain": "Original walk_to accepts distance<0.12 without speed/settled-footing criterion, while actual vz=-4.758800507m/s. Its0.4s neutral brake then stops0.3244965m beyond the intended approach. This farther-in pose accepts real ladder hands but stalls at the same first-climb height/Z as the new full gate. The immediate supported cause is an inherited approach fixture seam, not the new top-out conversion.",
+  "remaining_physical_hypothesis": "Static rung/body contact versus climbing hand/grip-progress arrest at the overshot pose is not separately measured by this bounded baseline. Root owns the collision/control discriminator and engineering decision.",
+  "smallest_next_discriminator": "Root compare the same original ordinary route with velocity-aware braking/arrival to the same16,-179.55 target; retain existing distance tolerance, support and climb acceptance. No geometry/tolerance relaxation or new baseline route campaign needed.",
+  "constraints": "Original helper/inputs/checks preserved through firstresult; only read-only logging and earlytermination before later route. No initial debug pose or velocity writes. One private compile/run; no shared build or maintained code edits."
+}

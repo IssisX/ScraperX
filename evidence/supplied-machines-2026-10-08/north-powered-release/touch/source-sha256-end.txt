@@ -1,0 +1,5 @@
+0f0333e9f70cc551e09dfc814ffcdfc85bf4f484b9cd76110c5a7725aeffd6c9  bridge: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-powered-touch-vasvfusz/godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+b5a0c28cf7dc6c493efe2801cc469b48d5b87a063691df44f717e32e56ca65db  main: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-powered-touch-vasvfusz/godot/presentation/main.gd
+e596eea87ff6eca253898fe19ff515cfb691cd4b81943f24085f0bdd04264c13  driver: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-powered-touch-vasvfusz/godot/presentation/ui/ui_test_driver.gd
+12bc2b50d0925f3467e55f706f447e790e7ce3b52f29c1b49195cc396f11e396  maintained_driver: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/presentation/ui/ui_test_driver.gd
+82751e91913ba7fd8caba6560a591395772a3ad5dc4a2c77571c7eb9033fe9fe  harness: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-powered-touch-vasvfusz/powered-release-harness.gdpart

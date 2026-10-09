@@ -1,0 +1,4 @@
+5432f105cb3401f86f6f66f744be6a63c3521e990edebd30b52b03d99815c0c4  bridge: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/beam-touch-private-asxazufv/godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+b5a0c28cf7dc6c493efe2801cc469b48d5b87a063691df44f717e32e56ca65db  main: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/beam-touch-private-asxazufv/godot/presentation/main.gd
+cf6070abf08793810c84fa9de8273453252fee6e8852b2860fe19f8dadfe2002  driver: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/beam-touch-private-asxazufv/godot/presentation/ui/ui_test_driver.gd
+e44401f368421d0a36ccfb1be5fa00cc91b63da336477bfe6d1cc1d68f782d36  harness: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/beam-touch-private-asxazufv/focused-harness.gdpart

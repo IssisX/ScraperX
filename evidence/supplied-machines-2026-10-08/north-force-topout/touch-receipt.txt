@@ -1,0 +1,20 @@
+Bounded private normal-shipping viewport-touch first-ladder proof: PASS, exit0.
+Godot4.7 ARM64 Ubuntu proot, headless, Dummy audio, fixedfps60,432x432 viewport.
+Run: --path private/godot -- --uitest=touch_north_grip_diagnostic.
+One supported initialstage(16.00084,88.9,-179.4486); no later placement, velocity assignment, native input injection, fixture construction, geometry or authority changes.
+Private harness replaces only existing diagnostic scenario; controls reuse shipping viewport touch/Main dispatcher/driver helpers.
+Actual settled gripstance(15.99991,88.9,-179.5606), V0, support1901.
+Target firstobservedtick692 at(15.99991,93.06059,-179.5606); actualnative target(15.99991,94.92,-180.46).
+Previoussampletick691 is a conservative bound before target appeared. Foottransfertick841; upperduration(841-691)/90=1.666667s<=1.7.
+Native footreceiptcount1/support1901/peak1701.759888N combined; actual handconstraints2 through climbing, then0 atfooting.
+1016 viewport samples: gravity1, no legacyMantling/Vaulting, no deaths/chute, perhand<=1501N, finite monotonic hand-work receipts with per-native-tick maximum6600W growth.
+Firstroof94.9 held270 native ticks; onward2.119m; destination(13.98527,94.89921,-181.1901), V0, support1901,90-tick additionalhold.
+Final commandbound26041.258J, positiveactuatorwork13698.813J. Separate receipts, not an energyclosure claim.
+Bridge71be61eb77b16c2ad6198401c75583850e2433043f1bd67241eac5aac6688e5c.
+Mainb5a0c28cf7dc6c493efe2801cc469b48d5b87a063691df44f717e32e56ca65db.
+Private harnessbf20c518378d6647c6ae79c7a5178fcbfaf3fa9b450045052240447265d9db98.
+Touchlogd58bf571e1ab6411c71bcdc82464df18182d4961a1925c50589f0d6177b10455.
+Start/end native/Main/harness hashesmatch (cmp exit0); successfulrun has no script/resource/native failures.
+Earlier attempts failed before gameplay because suppliedruntime Godotsource was stale: untypedready, missingreclaim_dust, oldcameraarity; refreshingprivate complete maintainedsource also needed originalARM64 extensionmapping and assetimport. Those startup/environment failures retained separately.
+No maintainedsource/sharedstage/build edits; no render/replaycampaign. Source checkout6a62ab4 plus concurrent root-ownednative changes; this proves the immutablebridge above, not unmodifiedHEAD.
+Staging is not continuous-grade-ascent evidence; firstladder/roof/onward only. Fullroute and physicaldevice feel remain outside this proof.

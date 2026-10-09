@@ -1,5 +1,6 @@
 #include "sim/simulation.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -27,15 +28,133 @@ bool walk_to(Simulation &s, const double x, const double z, const double seconds
         const double dx = x - p.player_position.x;
         const double dz = z - p.player_position.z;
         const double distance = std::hypot(dx, dz);
-        if (distance < 0.12) { (void)s.set_move_input(0, 0); return true; }
-        const double strength = std::min(1.0, distance / 0.6);
-        (void)s.set_move_input(dx / distance * strength, dz / distance * strength);
-        (void)s.set_facing(dx, dz);
+        if (distance < 0.12 &&
+            std::hypot(p.player_linear_velocity.x, p.player_linear_velocity.z) < .15) {
+            (void)s.set_move_input(0, 0);
+            return true;
+        }
+        // Stop through ordinary input before accepting a narrow grip stance.
+        // A distance-only arrival at4.76m/s overshoots into the real rungs
+        // under finite braking; it is not a successfully reached approach.
+        const double input_x = dx * 1.8 - p.player_linear_velocity.x * .28;
+        const double input_z = dz * 1.8 - p.player_linear_velocity.z * .28;
+        const double scale = std::max(1.0, std::hypot(input_x, input_z));
+        (void)s.set_move_input(input_x / scale, input_z / scale);
+        if (distance > .0001) (void)s.set_facing(dx, dz);
         advance(s, Simulation::kFixedStepSeconds);
         if (s.snapshot().death_count != initial_deaths) return false;
     }
     (void)s.set_move_input(0, 0);
     return false;
+}
+
+bool powered_jump_recovers_and_retries() {
+    using scraperx::sim::TraversalState;
+    Simulation s;
+    const auto fail = [](const char *message) {
+        std::cerr << "FAIL north powered Jump " << message << '\n';
+        return false;
+    };
+    // This normal-world case owns its 90Hz ticks, independent of the full
+    // route's 60/360Hz caller remainder. Only the initial supported pose is set.
+    const auto ticks = [&](int count) {
+        for (int i = 0; i < count; ++i)
+            if (!s.advance_frame(Simulation::kFixedStepSeconds).accepted) return false;
+        return true;
+    };
+    if (!s.debug_restart_at({16, 88.9, -179.55}) || !s.set_facing(0, -1) || !ticks(45))
+        return fail("supported normal-world setup rejected");
+    if (!s.snapshot().player_grounded || s.snapshot().support_entity_id != 1901 ||
+        !s.snapshot().grip_available || s.snapshot().grip_entity_id != 1901)
+        return fail("initial pose lacks real frame footing and grip");
+    if (!s.request_traversal() || !ticks(1) || !s.set_move_input(0, -1))
+        return fail("ordinary climb input rejected");
+    for (int i = 0; i < 500 && s.snapshot().player_position.y < 90; ++i)
+        if (!ticks(1)) return fail("climb tick rejected");
+    if (!s.set_move_input(0, 0) || !ticks(30)) return fail("neutral hand stance rejected");
+    const auto start = s.snapshot();
+    if (start.traversal_state != TraversalState::Climbing ||
+        start.traversal_support_entity_id != 1901 || start.traversal_hand_constraint_count != 2 ||
+        start.player_grounded || start.support_entity_id != 0 || start.player_gravity_factor != 1 ||
+        start.player_position.y < 90 || start.player_position.y > 91 || start.death_count != 0)
+        return fail("Jump must start unsupported with two actual gravity-on hands");
+    if (!s.request_jump()) return fail("ordinary Jump request rejected");
+    int stroke_ticks = 0;
+    bool released = false;
+    for (; stroke_ticks < 30; ++stroke_ticks) {
+        const auto before = s.snapshot();
+        if (!ticks(1)) return fail("push tick rejected");
+        const auto after = s.snapshot();
+        const double debit = after.traversal_command_work_bound_j - before.traversal_command_work_bound_j;
+        const double supplied = after.traversal_actuator_positive_work_j - before.traversal_actuator_positive_work_j;
+        const auto length = [](scraperx::sim::Vector3 v) { return std::hypot(v.x, v.y, v.z); };
+        const double left_force = length(after.traversal_left_hand_force);
+        const double right_force = length(after.traversal_right_hand_force);
+        // Conservative command debit and actual positive spring-target work
+        // are separate receipts; neither may borrow dissipated work.
+        if (!std::isfinite(debit) || !std::isfinite(supplied) || debit < -1e-6 || supplied < -1e-6 ||
+            debit > 3000 * Simulation::kFixedStepSeconds + .01 ||
+            supplied > 3000 * Simulation::kFixedStepSeconds + .01 ||
+            !std::isfinite(left_force) || !std::isfinite(right_force) ||
+            left_force > 1501 || right_force > 1501 ||
+            after.player_gravity_factor != 1 || after.death_count != 0)
+            return fail("push bypassed finite hand force/work or gravity");
+        const auto dv = scraperx::sim::Vector3{
+            after.player_linear_velocity.x - before.player_linear_velocity.x,
+            after.player_linear_velocity.y - before.player_linear_velocity.y,
+            after.player_linear_velocity.z - before.player_linear_velocity.z};
+        if (!std::isfinite(length(dv))) return fail("push produced non-finite velocity");
+        if (stroke_ticks == 0 && (after.traversal_hand_constraint_count != 2 ||
+            after.player_grounded || length(dv) > (2 * 1501 / 85.0 + 9.81) * Simulation::kFixedStepSeconds + .01))
+            return fail("fresh Jump discarded hands or granted departure velocity");
+        if (after.traversal_hand_constraint_count == 0 && after.traversal_state == TraversalState::None) {
+            if (stroke_ticks < 1 || before.traversal_hand_constraint_count != 2 ||
+                before.player_grounded || after.player_grounded ||
+                std::abs(dv.x) > .01 || std::abs(dv.z) > .01 ||
+                std::abs(dv.y + 9.81 * Simulation::kFixedStepSeconds) > .02)
+                return fail("free-air release replaced earned velocity");
+            released = true;
+            break;
+        }
+    }
+    const auto departure = s.snapshot();
+    if (!released || departure.traversal_command_work_bound_j <= start.traversal_command_work_bound_j + .01 ||
+        departure.traversal_actuator_positive_work_j <= start.traversal_actuator_positive_work_j + .01)
+        return fail("bounded stroke did not pay for its passive departure");
+    for (int i = 0; i < 270 && !s.snapshot().player_grounded; ++i)
+        if (!ticks(1) || s.snapshot().death_count != 0) return fail("release restored a fall");
+    if (!s.snapshot().player_grounded || s.snapshot().support_entity_id != 1901 ||
+        std::abs(s.snapshot().player_position.y - 88.9) > .12 || s.snapshot().death_count != 0)
+        return fail("released player missed the actual recovery platform");
+    bool arrived = false;
+    for (int i = 0; i < 8 * 90; ++i) {
+        const auto p = s.snapshot();
+        const double dx = 16 - p.player_position.x, dz = -179.55 - p.player_position.z;
+        if (std::hypot(dx, dz) < .12 &&
+            std::hypot(p.player_linear_velocity.x, p.player_linear_velocity.z) < .15) {
+            arrived = true;
+            break;
+        }
+        const double x = dx * 1.8 - p.player_linear_velocity.x * .28;
+        const double z = dz * 1.8 - p.player_linear_velocity.z * .28;
+        const double scale = std::max(1.0, std::hypot(x, z));
+        if (!s.set_move_input(x / scale, z / scale) || !ticks(1) || s.snapshot().death_count != 0)
+            return fail("ordinary recovery approach rejected");
+    }
+    if (!arrived || !s.set_move_input(0, 0) || !s.set_facing(0, -1) || !ticks(36) ||
+        !s.snapshot().player_grounded || s.snapshot().support_entity_id != 1901 ||
+        !s.snapshot().grip_available || s.snapshot().grip_entity_id != 1901 ||
+        !s.request_traversal() || !ticks(1) ||
+        s.snapshot().traversal_state != TraversalState::Climbing ||
+        s.snapshot().traversal_support_entity_id != 1901 ||
+        s.snapshot().traversal_hand_constraint_count != 2 || s.snapshot().player_gravity_factor != 1 ||
+        s.snapshot().death_count != 0)
+        return fail("ordinary retry did not catch two real frame hands");
+    std::cout << "PASS north frame paid Jump/recovery/retry stroke_ticks=" << stroke_ticks + 1
+              << " command_j=" << departure.traversal_command_work_bound_j - start.traversal_command_work_bound_j
+              << " spring_positive_j=" << departure.traversal_actuator_positive_work_j - start.traversal_actuator_positive_work_j
+              << " ordinary_inputs_only=1\n";
+    return true;
 }
 }
 
@@ -48,6 +167,7 @@ int main(int argc, char **argv) {
         }
         caller_frame_seconds = 1.0 / static_cast<double>(caller_hz);
     }
+    if (!powered_jump_recovers_and_retries()) return EXIT_FAILURE;
     Simulation s(InitialSpawn::NorthFrameEntry, scraperx::sim::WorldContent::PipeBridge);
     advance(s, 0.5);
     const auto entry = s.snapshot();
@@ -81,12 +201,24 @@ int main(int argc, char **argv) {
     }
     (void)s.set_move_input(0, -1);
     bool first_rest = false;
+    std::uint64_t first_transfer_tick = 0;
+    double first_transfer_seconds = 0;
     for (int tick = 0; tick < 12 * 90; ++tick) {
         advance(s, Simulation::kFixedStepSeconds);
         const auto p = s.snapshot();
+        if (p.player_gravity_factor != 1.0 || p.death_count != entry.death_count) {
+            std::cerr << "FAIL north-frame hand-to-foot transfer fabricated gravity or restored a fall\n";
+            return EXIT_FAILURE;
+        }
+        if (!first_transfer_tick && p.traversal_target_point.y > 94.0)
+            first_transfer_tick = p.tick_index;
         if (p.player_grounded && p.support_entity_id == 1901 &&
-            std::abs(p.player_position.y - 94.9) < 0.12) {
+            std::abs(p.player_position.y - 94.9) < 0.12 &&
+            p.traversal_hand_constraint_count == 0 &&
+            p.traversal_state == scraperx::sim::TraversalState::None) {
             first_rest = true;
+            first_transfer_seconds =
+                (p.tick_index - first_transfer_tick + 1) * Simulation::kFixedStepSeconds;
             break;
         }
     }
@@ -99,8 +231,20 @@ int main(int argc, char **argv) {
                   << " support=" << p.support_entity_id << '\n';
         return EXIT_FAILURE;
     }
+    if (s.snapshot().foot_transfer_count != entry.foot_transfer_count + 1 ||
+        s.snapshot().foot_transfer_support_entity_id != 1901 ||
+        s.snapshot().foot_transfer_peak_hand_load_n <= 0) {
+        std::cerr << "FAIL north-frame first rest lacks physical hand-to-foot receipt\n";
+        return EXIT_FAILURE;
+    }
+    if (!first_transfer_tick || first_transfer_seconds > 1.7 + 1e-9) {
+        std::cerr << "FAIL physical first top-out exceeded responsive1.7s bound: "
+                  << first_transfer_seconds << '\n';
+        return EXIT_FAILURE;
+    }
     std::cout << "FIRST_REST " << s.snapshot().player_position.x << ','
-              << s.snapshot().player_position.y << ',' << s.snapshot().player_position.z << '\n';
+              << s.snapshot().player_position.y << ',' << s.snapshot().player_position.z
+              << " physical_topout_s=" << first_transfer_seconds << '\n';
     if (!walk_to(s, 16.0, -181.2) || !walk_to(s, 10.0, -181.2)) {
         std::cerr << "FAIL +94 m lateral transfer has no walkable structure\n";
         return EXIT_FAILURE;
@@ -360,8 +504,42 @@ int main(int argc, char **argv) {
                   << s.snapshot().player_position.z << '\n';
         return EXIT_FAILURE;
     }
+    const auto hang_transfer_start = s.snapshot();
     (void)s.request_jump();
-    advance(s, 1.0);
+    bool hang_transfer_finished = false;
+    for (int tick = 0; tick < 153; ++tick) {
+        advance(s, Simulation::kFixedStepSeconds);
+        const auto p = s.snapshot();
+        if (p.player_gravity_factor != 1 || p.death_count != hang_transfer_start.death_count ||
+            p.traversal_state == scraperx::sim::TraversalState::Mantling) {
+            std::cerr << "FAIL hanging top-out bypasses real gravity-on hands\n";
+            return EXIT_FAILURE;
+        }
+        if (p.player_grounded && p.traversal_state == scraperx::sim::TraversalState::None &&
+            p.traversal_hand_constraint_count == 0 && p.support_entity_id == 1901 &&
+            std::abs(p.player_position.y - 106.9) < .12) {
+            hang_transfer_finished = true;
+            break;
+        }
+    }
+    const auto hang_transfer_end = s.snapshot();
+    if (!hang_transfer_finished ||
+        hang_transfer_end.foot_transfer_count != hang_transfer_start.foot_transfer_count + 1 ||
+        hang_transfer_end.foot_transfer_support_entity_id != 1901 ||
+        hang_transfer_end.foot_transfer_peak_hand_load_n <= 0 ||
+        hang_transfer_end.traversal_actuator_positive_work_j <= hang_transfer_start.traversal_actuator_positive_work_j) {
+        std::cerr << "FAIL physical hanging transfer lacks responsive real footing/work; elapsed="
+                  << hang_transfer_end.simulation_time_seconds - hang_transfer_start.simulation_time_seconds
+                  << " P=" << hang_transfer_end.player_position.x << ',' << hang_transfer_end.player_position.y << ',' << hang_transfer_end.player_position.z
+                  << " V=" << hang_transfer_end.player_linear_velocity.x << ',' << hang_transfer_end.player_linear_velocity.y << ',' << hang_transfer_end.player_linear_velocity.z
+                  << " target=" << hang_transfer_end.traversal_target_point.x << ',' << hang_transfer_end.traversal_target_point.y << ',' << hang_transfer_end.traversal_target_point.z
+                  << " state=" << int(hang_transfer_end.traversal_state) << " hands=" << hang_transfer_end.traversal_hand_constraint_count
+                  << " foot=" << hang_transfer_end.foot_transfer_count << '\n';
+        return EXIT_FAILURE;
+    }
+    std::cout << "NORTH_HANG_TRANSFER seconds="
+              << hang_transfer_end.simulation_time_seconds - hang_transfer_start.simulation_time_seconds
+              << " peak_hand_n=" << hang_transfer_end.foot_transfer_peak_hand_load_n << '\n';
     if (!s.snapshot().player_grounded || s.snapshot().support_entity_id != 1901 ||
         std::abs(s.snapshot().player_position.y - 106.9) > 0.12) {
         std::cerr << "FAIL shimmy pocket does not permit top-out at "

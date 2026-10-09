@@ -383,6 +383,80 @@ void ordinary_tower_walk_uses_finite_contact_work() {
               << '\n';
 }
 
+void airborne_work_uses_world_momentum() {
+    using namespace scraperx::sim;
+    Simulation run(InitialSpawn::TranslatingSupport, WorldContent::RegressionFixtures);
+    require(run.set_move_input(0, 0) && run.set_facing(1, 0) &&
+                run.advance_frame(1.0).accepted,
+            "air-work approach settles with ordinary neutral input");
+    const auto supported = run.snapshot();
+    require(supported.player_grounded &&
+                supported.support_entity_id == Simulation::kTranslatingSupportEntityId &&
+                supported.support_point_linear_velocity.x > .5,
+            "air-work departure uses an actual east-moving physical support");
+    require(run.request_jump() && run.advance_frame(Simulation::kFixedStepSeconds).accepted &&
+                !run.snapshot().player_grounded,
+            "ordinary Jump physically leaves the translating support");
+    const auto takeoff = run.snapshot();
+    require(takeoff.player_linear_velocity.x > .5,
+            "finite air budget preserves inherited departure momentum");
+    double peak_positive_work = 0;
+    bool crossed_zero = false;
+    const auto steer = [&](double input, int ticks) {
+        require(run.set_move_input(input, 0), "ordinary airborne steering input accepted");
+        for (int i = 0; i < ticks; ++i) {
+            const auto before = run.snapshot();
+            require(run.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                    "air-work tick accepted");
+            const auto after = run.snapshot();
+            require(!before.player_grounded && !after.player_grounded &&
+                        after.traversal_state == TraversalState::None &&
+                        !after.parachute_deployed && after.death_count == 0,
+                    "air-work proof has no contact, hands, canopy or checkpoint exchange");
+            const double supplied = after.air_control_command_positive_work_j -
+                                    before.air_control_command_positive_work_j;
+            const double absorbed = after.air_control_command_absorbed_work_j -
+                                    before.air_control_command_absorbed_work_j;
+            const double impulse = std::hypot(after.air_control_force_n.x,
+                after.air_control_force_n.z) * Simulation::kFixedStepSeconds;
+            const double energy_change = 42.5 *
+                (horizontal_speed(after) * horizontal_speed(after) -
+                 horizontal_speed(before) * horizontal_speed(before));
+            require(supplied >= -1e-8 && absorbed >= -1e-8 &&
+                        supplied <= 3000 * Simulation::kFixedStepSeconds + .001,
+                    "each air command has finite world-positive work without braking credit");
+            require(impulse <= 85 * 14 * Simulation::kFixedStepSeconds + .001,
+                    "world-work limiter preserves the existing14m/s² request ceiling");
+            require(std::abs(energy_change - (supplied - absorbed)) < .02,
+                    "isolated actual native horizontal energy agrees with command exchange");
+            peak_positive_work = std::max(peak_positive_work, supplied);
+            crossed_zero = crossed_zero ||
+                (before.player_linear_velocity.x > 0 && after.player_linear_velocity.x <= 0);
+        }
+    };
+    steer(1, 32);
+    const auto east = run.snapshot();
+    require(east.player_linear_velocity.x > takeoff.player_linear_velocity.x + 2 &&
+                peak_positive_work > 30,
+            "moving-support steering remains responsive and exercises the actual power limit");
+    steer(-1, 40);
+    const auto reversed = run.snapshot();
+    require(crossed_zero && reversed.air_control_command_absorbed_work_j > 10,
+            "deliberate reversal dissipates momentum before adding opposite motion");
+    steer(0, 5);
+    const auto neutral = run.snapshot();
+    require(neutral.air_control_command_positive_work_j == reversed.air_control_command_positive_work_j &&
+                neutral.air_control_command_absorbed_work_j == reversed.air_control_command_absorbed_work_j &&
+                std::hypot(neutral.air_control_force_n.x, neutral.air_control_force_n.z) == 0 &&
+                std::abs(neutral.player_linear_velocity.x - reversed.player_linear_velocity.x) < .001,
+            "neutral air requests no effort and retains genuine world momentum");
+    std::cout << "PASS scraperx_sim air world work: inherited_vx=" << takeoff.player_linear_velocity.x
+              << " peak_tick_positive_j=" << peak_positive_work
+              << " supplied_j=" << neutral.air_control_command_positive_work_j
+              << " absorbed_j=" << neutral.air_control_command_absorbed_work_j
+              << " neutral_vx=" << neutral.player_linear_velocity.x << '\n';
+}
+
 void neutral_airborne_input_preserves_horizontal_momentum() {
     using namespace scraperx::sim;
 
@@ -539,6 +613,7 @@ void sprint_keeps_jump_momentum() {
 int main() {
     ordinary_jump_intent_uses_native_contact_and_clock();
     ordinary_tower_walk_uses_finite_contact_work();
+    airborne_work_uses_world_momentum();
     vault_carries_entry_and_exit_speed();
     neutral_airborne_input_preserves_horizontal_momentum();
     sprint_keeps_jump_momentum();

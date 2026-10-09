@@ -1,0 +1,24 @@
+**The candidate could support a freight delivery that creates a return route. Placement remains unresolved.** Full-UP would be the legitimate delivery position.
+
+Author one movable gangway as the freight: approximately **5.7 m long and 0.9 m wide**, with mass established by a loaded capacity check. Stow it along the cradle’s 6 m longitudinal dimension. This cargo and its handling are proposed additions; the supplied source contains neither.
+
+The useful destination is a ramp from the fixed exit near **(-28, 398.79831, -136.2)** to the upper receiver near **(-23, 396.25, -136.2)**. That gives a 5 m horizontal run, approximately 5.61 m bearing-to-bearing length and 27° slope. It creates a physical return connection: the existing 2.548 m drop exceeds the approximately 1.54 m ballistic rise available from a 5.5 m/s jump, assuming ordinary Earth gravity.
+
+The encounter would work as follows:
+
+- **Approach and loading:** Reach the lower entry from 374.25. Provide a structurally connected loading apron for handling and catching loading slips. The player positions the gangway longitudinally and secures it with actual restraints. Moving its centre of mass toward either end changes cradle pitch about the world-X hanger axis; it cannot produce lateral tilt toward the tower.
+- **Loaded operation:** Use the existing ballast drive. The player chooses cargo position, restraint and standing position, then manages departure and alignment. Cargo movement, restraint reactions and player weight must enter Jolt directly. The source’s 120 Nm hanger friction and passive hinge provide the mechanism; they do not establish the loaded response.
+- **Exit and deployment:** Full-UP permits freight transfer to the fixed exit. A structural bearing socket and a restraint that holds pitch during alignment are necessary additions: the gangway needs support while being turned across the tower gap. After anchoring its root, releasing that restraint lets gravity lower its far end onto the upper floor. The socket, restraint and receiver carry real forces; no deployment animation grants the final pose.
+- **Recovery and aftermath:** Before deployment, return the cradle to the loading apron to reposition cargo. After deployment, the gangway remains as access from the upper floor back to the elevated exit and cradle. Taking the existing walk-off remains valid, but leaves this return connection unfinished.
+
+This makes positioning and load distribution consequential without requiring interception. It also gives freight delivery a persistent benefit beyond reaching the next floor.
+
+The decisive missing evidence is:
+
+1. **Structural fit:** Surveyed tower attachment points for the mast, entry, exit, loading apron and gangway socket. The source declares fixed bodies but supplies no tower connection.
+2. **Loaded dynamics:** Actual mass properties, pitch, clearances, rope tension and drive work with the gangway at useful loading positions. The 3,000 kg overload diagnostic proves none of these.
+3. **Handling feasibility:** A demonstrated native, finite-force method for moving, restraining and turning this load. If deployment requires implausible player lifting or hidden pose changes, reject this proposal.
+4. **Traversal and recovery:** Collision-supported traversal of the deployed slope, loaded transfer across the changing cradle gap, and an abort/retry within the available work budget.
+5. **Persistence:** Importer-owned spent-work and freight/attachment state restored coherently with the mechanism. The generic wrapper must neither refill energy nor duplicate delivered cargo.
+
+Until those checks establish feasible handling and structural attachment, this is a concrete candidate—not a resolved placement.

@@ -1,0 +1,34 @@
+--- before-d051a85d:src/sim/simulation.cpp
++++ working-source:src/sim/simulation.cpp
+@@ -6274,7 +6274,8 @@
+             return;
+         }
+         const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+-        if(entity_is_causal_section_support(traversal_entity_id_)) {
++        if(entity_is_causal_section_support(traversal_entity_id_) ||
++           (traversal_entity_id_==1901 && physical_hands_->active())) {
+             LedgeProbe probe;
+             probe.ledge_body=traversal_body_;
+             probe.ledge_entity_id=traversal_entity_id_;
+@@ -6981,6 +6982,7 @@
+             hands_[hand].valid=true;
+             ++hands_[hand].generation;
+         }
++        const bool from_hang = traversal_state_ == TraversalState::Hanging;
+         traversal_state_=TraversalState::Climbing;
+         traversal_normal_=probe.inward;
+         traversal_body_=probe.ledge_body;
+@@ -6989,9 +6991,10 @@
+         traversal_target_body_=probe.landing_body;
+         traversal_local_ledge_=to_support_local(bodies,traversal_body_,probe.ledge_point);
+         traversal_local_target_=to_support_local(bodies,traversal_target_body_,probe.landing_centre);
+-        // CHOSEN480Ns/m per hand for the taller North-frame pull: less
+-        // dissipative delay while preserving1500N/hand and6600W burst bounds.
+-        physical_hands_->set_transfer_profile(traversal_entity_id_==1901 ? 480.0F : 600.0F);
++        // CHOSEN480Ns/m for North ladder top-outs;400 for its longer hang
++        // pull-up. Less dissipative delay, same1500N/hand and6600W bounds.
++        const float damping = traversal_entity_id_ == 1901 ? (from_hang ? 400.0F : 480.0F) : 600.0F;
++        physical_hands_->set_transfer_profile(damping);
+         cargo_transfer_active_=true;
+         cargo_transfer_peak_hand_load_n_=0;
+         // Attach/detach changes the load path without resetting rider velocity.

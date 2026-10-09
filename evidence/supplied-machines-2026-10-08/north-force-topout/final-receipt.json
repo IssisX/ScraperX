@@ -1,0 +1,118 @@
+{
+  "scope": "First1901 physical top-out native and private viewport-touch closure, plus retained full native owner gate; no new checks during evidence collection.",
+  "collected_utc": "2026-10-09T04:01:12.240371+00:00",
+  "repo_branch": "ChatGPT",
+  "repo_base_head": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "working_source_boundary": "Root-owned uncommitted native conversion/air repair and maintained approach braking; final artifacts do not represent unmodified baseHEAD.",
+  "native": {
+    "log": "native-route-braking.log",
+    "log_sha256": "46e94816130728d1337e34cc509cc29dbd57d791309cd14b6e4c1f94aee083b4",
+    "observed_result": "PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=90",
+    "world_content": "PipeBridge (retained maintained owner test world)",
+    "native_fixed_hz": 90,
+    "caller_hz": 90,
+    "first_topout_seconds_printed": 1.68889,
+    "first_transfer_gravity_factor": 1,
+    "first_transfer_deaths": 0,
+    "full_owner_later_retained_death_count": 1,
+    "retained_later_failure": "Fatal lip/retry sequence is part of the complete owner gate; no zero-death full-route claim.",
+    "test_source_path": "tests/north_service_frame_tests.cpp",
+    "test_source_sha256_at_collection": "9768a149bbbd3f3fb2b69ca6b3660b8f4aa47739fcd5b63c7aea92073186e330",
+    "test_binary": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_north_service_frame_tests",
+      "sha256": "e8d9f20acae2bac7e4013ccf42ffa068957f6104f2e9e9bdc0856f7e3a37ebf3",
+      "bytes": 45932272,
+      "mtime_ns": 1791517835554227470,
+      "not_copied": true
+    },
+    "invocation_provenance": "Already completed root invocation; log records caller_hz90. No invocation repeated by evidence collector.",
+    "response_bound_seconds": 1.7
+  },
+  "viewport_touch": {
+    "log": "touch-first.log",
+    "log_sha256": "d58bf571e1ab6411c71bcdc82464df18182d4961a1925c50589f0d6177b10455",
+    "exit_code": 0,
+    "godot_version": "4.7.stable.official.5b4e0cb0f",
+    "mode": "headless viewport input, Dummy audio, fixedfps60,432x432",
+    "world_content": "normal shipping world: launcher available, retired bridge2500 absent",
+    "run_flags": "--headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path private/godot -- --uitest=touch_north_grip_diagnostic",
+    "initial_supported_stage": [
+      16.00084,
+      88.9,
+      -179.4486
+    ],
+    "ordinary_viewport_touch_inputs_after_stage": true,
+    "settled_grip_stance": [
+      15.99991,
+      88.9,
+      -179.5606
+    ],
+    "settled_grip_velocity": [
+      0,
+      0,
+      0
+    ],
+    "target_first_observed_tick": 692,
+    "previous_sample_before_target_tick": 691,
+    "native_target": [
+      15.99991,
+      94.92,
+      -180.46
+    ],
+    "foot_transfer_tick": 841,
+    "conservative_duration_formula": "(841-691)/90",
+    "transfer_upper_seconds": 1.6666666666666667,
+    "response_bound_seconds": 1.7,
+    "foot_transfer_count": 1,
+    "foot_transfer_support_entity_id": 1901,
+    "native_receipt_combined_peak_hand_load_n": 1701.75988769531,
+    "per_render_samples": 1016,
+    "gravity_factor": 1,
+    "hand_constraints_during_climb": 2,
+    "hand_constraints_at_roof": 0,
+    "per_hand_force_check_upper_n": 1501,
+    "maximum_command_power_budget_w": 6600,
+    "first_firm_roof_native_ticks": 270,
+    "onward_metres_printed": 2.119,
+    "onward_firm_native_ticks": 90,
+    "final_position": [
+      13.98527,
+      94.89921,
+      -181.1901
+    ],
+    "final_velocity": [
+      0,
+      0,
+      0
+    ],
+    "final_support_entity_id": 1901,
+    "deaths": 0,
+    "legacy_mantling_or_vaulting_accepted": false,
+    "final_command_work_bound_j": 26041.2575862121,
+    "final_positive_actuator_work_j": 13698.8134090056,
+    "work_interpretation": "Separate finite receipts, not a complete energy closure ledger.",
+    "bridge_sha256": "71be61eb77b16c2ad6198401c75583850e2433043f1bd67241eac5aac6688e5c",
+    "main_sha256": "b5a0c28cf7dc6c493efe2801cc469b48d5b87a063691df44f717e32e56ca65db",
+    "private_full_driver_sha256": "bf20c518378d6647c6ae79c7a5178fcbfaf3fa9b450045052240447265d9db98",
+    "harness_fragment": "touch-harness.gdpart",
+    "harness_fragment_sha256": "0206d7aa065f965b48ccb8c879e6f777e9ba789cb9f552c9e0f6bcd81982355c",
+    "harness_application": "Replace only func _touch_north_grip_diagnostic() through next func _touch_north_service_frame() in maintained12bc2b50d0925f3467e55f706f447e790e7ce3b52f29c1b49195cc396f11e396 UI driver with the saved fragment. It also declares a private per-frame monitor.",
+    "start_end_native_main_driver_hashes_match": true,
+    "successful_run_script_resource_native_errors": false
+  },
+  "startup_environment": {
+    "classification": "Stale private stage/source/import/ARM64 mapping mismatch; attempts stopped before gameplay.",
+    "logs": [
+      "touch-stage-startup/stale-driver.log",
+      "touch-stage-startup/partial-source.log",
+      "touch-stage-startup/extension-import.log"
+    ],
+    "resolution": "Refreshed complete maintained Godot source into private copy, retained immutablebridge71be and restored privateARM64 extension mapping, then imported assets. No gameplay/input/acceptance change."
+  },
+  "limits": [
+    "Native full owner retains later fatal/retry death1; first transfer and complete bounded touch proof have deaths0.",
+    "Viewport sampling is first-ladder/roof/onward proof, not continuous ascent from grade or complete native per-tick force accounting.",
+    "No full owner source/binary copies; earlier intermediate artifacts retain their own saved hashes and missing provenance is not reconstructed from final binaries.",
+    "No Android/device execution, tactile feel, Actions/APK delivery, new build/test, or maintained-source change by this evidence collector."
+  ]
+}

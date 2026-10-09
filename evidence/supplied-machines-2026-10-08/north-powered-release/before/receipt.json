@@ -1,0 +1,13 @@
+{
+  "boundary": "Before North-specific powered-release correction; after beam correction and North physical top-out",
+  "setup": "Single supported normal-world initial pose; ordinaryAction/directionalclimb/neutral/Jump thereafter; wrong-facing firstsetup failed beforegrip and is retained separately",
+  "hashes": {
+    "source": "30645f344736ae8ea39c0c1a71ceba9761e69aea5acfa89db35189f2201e111a",
+    "snapshot": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "library": "a353690f371ebb8e91b4cdefb98a5126a632cf0501704c6f82bf7c4f11d55623",
+    "executable": "e3b2e20f3a5b1b596caaf7241a7a0ccfe057dbc0185825688f656931c9e2189c",
+    "probe": "c4df3dfb7cb51b410b64819fbbba515d480e37328e0c6bb99b49c3ffff15f337",
+    "log": "a2eefc9208ab9f8411edc18c6fb0877138f53db2f02025237cddc9929e36da81"
+  },
+  "observed": "tick240 VY\u2212.407941,Z0,hands2,gravity1; Jump tick241 VY3.8909998,Z2.5,hands0; commandwork unchanged4921.051025J; tick390 actualplatform1901/88.9/no death"
+}

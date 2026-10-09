@@ -1,0 +1,26 @@
+START y=88.9 support=1901 grip=1901
+STEP 0 y=88.9 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=0.500214
+STEP 30 y=89.0212 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=316.447
+STEP 60 y=89.2821 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=692.745
+STEP 90 y=89.4531 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=1034.8
+STEP 120 y=89.6878 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=1320.68
+STEP 150 y=89.9484 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=1651.28
+STEP 180 y=90.1978 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=2036.11
+STEP 210 y=90.3848 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=2367.06
+STEP 240 y=90.5943 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=2656.08
+STEP 270 y=90.8529 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=2980.02
+STEP 300 y=91.1099 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=3352.79
+STEP 330 y=91.3062 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=3706.76
+STEP 360 y=91.5061 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=3995.12
+STEP 390 y=91.7558 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=4308.84
+STEP 420 y=92.0267 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=4678.67
+STEP 450 y=92.2273 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=5042.8
+STEP 480 y=92.4218 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=5335.82
+STEP 510 y=92.6582 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=5639.83
+STEP 540 y=92.9338 z=-179.55 state=4 hands=2 gravity=1 target_y=0 handwork=5997.66
+STEP 570 y=93.0892 z=-179.55 state=4 hands=2 gravity=1 target_y=94.92 handwork=6364.55
+STEP 600 y=93.6179 z=-179.55 state=4 hands=2 gravity=1 target_y=94.92 handwork=8387.11
+STEP 630 y=94.3273 z=-179.55 state=4 hands=2 gravity=1 target_y=94.92 handwork=10465.2
+STEP 660 y=94.9766 z=-179.551 state=4 hands=2 gravity=1 target_y=94.92 handwork=11793
+STEP 690 y=94.9695 z=-180.095 state=4 hands=2 gravity=1 target_y=94.92 handwork=13426.2
+RESULT gravity_off=0 transfer_seconds=1.71111 y=94.9 support=1901 foot_transfers=1 work=13752.5 deaths=0

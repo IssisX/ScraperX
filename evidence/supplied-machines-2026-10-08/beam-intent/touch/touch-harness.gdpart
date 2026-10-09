@@ -1,0 +1,164 @@
+
+
+func _beam_touch_state() -> String:
+	return "tick=%d at=%s velocity=%s support=%d grounded=%s balancing=%s crouched=%s traversal=%d deaths=%d touch_move=%s native=%s" % [
+		_native().get_tick_index(), _position(), _velocity(), _native().get_support_entity_id(),
+		_native().is_player_grounded(), _native().is_player_balancing(), _native().is_player_crouched(),
+		_native().get_traversal_state(), _native().get_death_count(), _main._touch.move_vector,
+		_native().get_landing_state()]
+
+func _beam_touch_ticks(ticks: int) -> void:
+	var start := int(_native().get_tick_index())
+	while int(_native().get_tick_index()) - start < ticks:
+		await get_tree().process_frame
+
+func _beam_touch_footing() -> bool:
+	return _native().is_player_grounded() and _native().is_player_balancing() \
+		and int(_native().get_support_entity_id()) == 1900 and int(_native().get_death_count()) == 0
+
+func _beam_touch_correction() -> bool:
+	if not _beam_touch_footing():
+		return _fail("probe did not start on balanced real girder " + _beam_touch_state())
+	var before := _position()
+	print("SCRAPERX_BEAM_TOUCH before " + _beam_touch_state())
+	# View faces north: positive stick-right is actual world +X. Compensate
+	# only the shipping touch deadzone to request native .2 lateral effort.
+	var throw := TouchControls.STICK_DEADZONE + (1.0 - TouchControls.STICK_DEADZONE) * 0.2
+	_move_dir(InputRouter.Device.TOUCH, Vector2(throw, 0))
+	await _beam_touch_ticks(6)
+	var corrected := _position()
+	print("SCRAPERX_BEAM_TOUCH gentle " + _beam_touch_state())
+	if corrected.x <= before.x + 0.005 or _velocity().x <= 0.05 or not _beam_touch_footing() \
+			or absf(_main._touch.move_vector.x - 0.2) > 0.002:
+		return _fail("gentle requested-direction correction " + _beam_touch_state())
+	_move_dir(InputRouter.Device.TOUCH, Vector2.ZERO)
+	await _beam_touch_ticks(9)
+	var stopped := _position()
+	print("SCRAPERX_BEAM_TOUCH neutral " + _beam_touch_state())
+	if stopped.x < corrected.x - 0.001 or absf(_velocity().x) >= 0.01 or not _beam_touch_footing():
+		return _fail("neutral physical braking/recentering " + _beam_touch_state())
+	_move_dir(InputRouter.Device.TOUCH, Vector2(-throw, 0))
+	await _beam_touch_ticks(18)
+	print("SCRAPERX_BEAM_TOUCH opposite " + _beam_touch_state())
+	if _position().x >= stopped.x - 0.01 or not _beam_touch_footing() \
+			or absf(_main._touch.move_vector.x + 0.2) > 0.002:
+		return _fail("opposite supported correction " + _beam_touch_state())
+	_move_dir(InputRouter.Device.TOUCH, Vector2.ZERO)
+	if not await _walk_to(InputRouter.Device.TOUCH, Vector2(28.0, -137.0), 0.04, 5.0, true):
+		return _fail("ordinary correction restores departure stance " + _beam_touch_state())
+	print("SCRAPERX_BEAM_TOUCH corrected_stance " + _beam_touch_state())
+	return true
+
+func _touch_braced_bay() -> bool:
+	# Bounded connected route proof starts on actual supported BracedBayEntry.
+	# The preceding grade/teeter prerequisite is deliberately excluded.
+	if not _native().debug_restart_at(Vector3(25.1, 77.9, -132.0)):
+		return _fail("braced-bay supported initial stage rejected")
+	await _seconds(0.5)
+	print("SCRAPERX_BEAM_TOUCH initial_stage " + _beam_touch_state())
+	if not _native().is_player_grounded() or absf(_position().y - 77.9) > 0.12:
+		return _fail("initial stage failed real77m footing " + _beam_touch_state())
+	var device := InputRouter.Device.TOUCH
+	if int(_native().get_entity_body_count(1900)) != 1:
+		return _fail("braced bay absent from normal play")
+	if not await _walk_to(device, Vector2(28.0, -131.0), 0.14, 12.0):
+		return _fail("braced bay flat entry %s" % _position())
+	await _seconds(0.5)
+	await _face(Vector2(0, -1))
+	_main._pitch = 0.11
+	await _pose("braced_bay_entry")
+	if not await _walk_to(device, Vector2(28.0, -137.0), 0.04, 12.0, true):
+		return _fail("ordinary first-girder probe approach " + _beam_touch_state())
+	await _seconds(0.3)
+	if not await _beam_touch_correction():
+		return false
+	if not await _walk_to(device, Vector2(28.0, -144.0), 0.14, 16.0):
+		return _fail("first inclined girder %s" % _position())
+	await _seconds(0.4)
+	if not _standing_above(82.6) or int(_native().get_support_entity_id()) != 1900:
+		return _fail("first braced bay landing unsupported %s" % _position())
+	if not await _walk_to(device, Vector2(29.0, -144.0), 0.14, 4.0):
+		return _fail("gap run-up %s" % _position())
+	await _seconds(0.4)
+	await _face(Vector2(1, 0))
+	_main._pitch = -0.08
+	await _pose("braced_bay_transfer")
+	_move_dir(device, Vector2(0, 1))
+	var at_takeoff := await _wait_until(
+		func() -> bool: return _position().x >= 30.0 or not bool(_ctx()["grounded"]), 1.0)
+	if not at_takeoff or not bool(_ctx()["grounded"]):
+		_move_dir(device, Vector2.ZERO)
+		return _fail("gap takeoff lost its supported run-up %s" % _position())
+	_tap(1, _center(&"jump"))
+	var airborne := false
+	var landed := false
+	var elapsed := 0.0
+	while elapsed < 3.0:
+		var at := _position()
+		var to := Vector2(33.7 - at.x, -144.0 - at.z)
+		var world_command := (to / 1.4).limit_length(1.0)
+		var yaw := float(_main._yaw)
+		var forward := Vector2(-sin(yaw), -cos(yaw))
+		var right := Vector2(cos(yaw), -sin(yaw))
+		_move_dir(device, Vector2(world_command.dot(right), world_command.dot(forward)))
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+		airborne = airborne or not bool(_ctx()["grounded"])
+		if airborne and bool(_ctx()["grounded"]) and _position().x > 33.2 and absf(_position().y - 82.9) < 0.12:
+			landed = true
+			break
+	_move_dir(device, Vector2.ZERO)
+	await _seconds(0.4)
+	if not landed or int(_native().get_support_entity_id()) != 1900:
+		return _fail("gap jump missed far landing %s" % _position())
+	if not await _walk_to(device, Vector2(34.0, -144.0), 0.14, 4.0):
+		return _fail("second girder alignment %s" % _position())
+	await _seconds(0.4)
+	await _face(Vector2(0, 1))
+	if not await _walk_to(device, Vector2(34.0, -139.4), 0.14, 8.0):
+		return _fail("second girder approach %s" % _position())
+	var walked_through := await _walk_to(device, Vector2(34.0, -136.7), 0.14, 3.0)
+	if walked_through or _position().z > -137.8:
+		return _fail("standing capsule passed through low member %s" % _position())
+	await _face(Vector2(0, 1))
+	_main._pitch = 0.16
+	await _pose("braced_bay_low_member")
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_crouched()), 0.3):
+		return _fail("crouch input failed at braced bay")
+	if not await _walk_to(device, Vector2(34.0, -136.7), 0.14, 8.0):
+		return _fail("crouched passage blocked %s" % _position())
+	_tap(1, _center(&"crouch"))
+	if not await _wait_until(func() -> bool: return not bool(_native().is_player_crouched()), 0.3):
+		return _fail("standing clearance missing beyond low member")
+	if not await _walk_to(device, Vector2(34.0, -131.5), 0.14, 10.0):
+		return _fail("upper braced bay junction %s" % _position())
+	await _seconds(0.4)
+	if not _standing_above(87.6) or int(_native().get_support_entity_id()) != 1900:
+		return _fail("upper braced bay junction unsupported %s" % _position())
+	await _face(Vector2(-1, 0))
+	_main._pitch = -0.12
+	await _pose("braced_bay_upper_junction")
+	if not await _walk_to(device, Vector2(34.0, -132.0), 0.14, 4.0):
+		return _fail("return girder turn %s" % _position())
+	await _seconds(0.3)
+	if not await _walk_to(device, Vector2(26.55, -132.0), 0.14, 13.0):
+		return _fail("return girder balance %s" % _position())
+	await _face(Vector2(-1, 0))
+	await _seconds(0.3)
+	if not await _offered(&"climb", "CLIMB"):
+		return _fail("tower +88 m mantle unavailable %s" % _position())
+	_act(device)
+	await _seconds(1.0)
+	if not await _walk_to(device, Vector2(24.8, -132.0), 0.14, 5.0):
+		return _fail("braced bay ring exit %s" % _position())
+	await _seconds(0.4)
+	await _face(Vector2(1, 0))
+	_main._pitch = -0.12
+	await _pose("braced_bay_arrival")
+	if not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 11 or \
+			absf(_position().y - 88.9) > 0.1 or int(_native().get_death_count()) != 0:
+		return _fail("braced bay +88 m ring unsupported %s" % _position())
+	_detail = "staged_77m_to_88m=1 gentle_neutral_opposite=1 gap_jump=1 crouched_portal=1 mantle=1 support=11 deaths=0 arrival_y=%.3f" % _position().y
+	return true
+

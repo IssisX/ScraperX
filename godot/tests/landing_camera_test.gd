@@ -213,6 +213,92 @@ func _foot_transfer_checks() -> bool:
 	return true
 
 
+func _landing_feedback_checks() -> bool:
+	# Consumer receipts prove selection/coalescing, not native stumble physics
+	# or physical device vibration. The native response remains the authority.
+	var presentation := MainPresentation.new()
+	var state := {"landing_count": 0, "landing_normal_speed_mps": 4.8,
+		"landing_tangent_energy_j": 1250.0, "landing_response": 3,
+		"landing_recovering": true, "landing_support_entity_id": 11}
+	if not _check(presentation._consume_landing_feedback(state, 0, 0, 20.0).is_empty(),
+			"landing feedback startup establishes a quiet baseline"):
+		return false
+	state.landing_count = 1
+	var receipt := state.duplicate(true)
+	var low: Dictionary = presentation._consume_landing_feedback(state, 0, 90, 20.0)
+	if not _check(low.get("kind") == &"stumble" and float(low.get("strength", 0)) > 0.0
+			and state == receipt, "active native sideways recovery earns a read-only low-normal cue"):
+		return false
+	if not _check(presentation._consume_landing_feedback(state, 0, 90, 20.0).is_empty(),
+			"repeated landing samples never repeat the stumble pulse"):
+		return false
+	state.landing_count = 4
+	state.landing_tangent_energy_j = 3000.0
+	var high: Dictionary = presentation._consume_landing_feedback(state, 0, 360, 20.0)
+	if not _check(high.get("kind") == &"stumble" and float(high.get("strength", 0)) > float(low["strength"])
+			and float(high["strength"]) <= 0.85, "skipped receipts coalesce once with bounded measured-energy strength"):
+		return false
+	state.landing_count = 5
+	if not _check(presentation._consume_landing_feedback(state, 0, 360, 20.0).is_empty(),
+			"a single native tick cannot emit two landing pulses"):
+		return false
+	state.landing_count = 6
+	state.landing_normal_speed_mps = 6.0
+	var impact: Dictionary = presentation._consume_landing_feedback(state, 0, 450, 20.0)
+	if not _check(impact.get("kind") == &"land" and is_equal_approx(float(impact.get("strength", 0)), 0.3),
+			"existing normal-impact cue keeps its strength and priority without a second pulse"):
+		return false
+	state.landing_normal_speed_mps = 4.8
+	state.landing_recovering = false
+	state.landing_count = 7
+	if not _check(presentation._consume_landing_feedback(state, 0, 540, 20.0).is_empty(),
+			"a historical response without active native recovery stays quiet"):
+		return false
+	state.landing_recovering = true
+	state.landing_response = 0
+	state.landing_count = 8
+	if not _check(presentation._consume_landing_feedback(state, 0, 630, 20.0).is_empty(),
+			"ordinary native recovery never earns the sideways-stumble cue"):
+		return false
+	state.landing_response = 3
+	state.landing_tangent_energy_j = NAN
+	state.landing_count = 9
+	if not _check(presentation._consume_landing_feedback(state, 0, 720, 20.0).is_empty(),
+			"invalid energy cannot drive tactile strength"):
+		return false
+	state.landing_tangent_energy_j = 3000.0
+	state.landing_count = 10
+	presentation._settings = Settings.new()
+	presentation._settings.vibration = false
+	presentation._settings.head_bob = false
+	presentation._settings.launch_cinematics = false
+	var quiet: Dictionary = presentation._consume_landing_feedback(state, 0, 810, 20.0)
+	presentation._haptic(quiet["kind"], float(quiet["strength"]))
+	presentation._settings.vibration = true
+	if not _check(presentation._consume_landing_feedback(state, 0, 810, 20.0).is_empty(),
+			"vibration OFF consumes the receipt without replay while motion comfort is disabled"):
+		return false
+	presentation._reset_landing_feedback(state, 810)
+	if not _check(presentation._consume_landing_feedback(state, 0, 810, 20.0).is_empty(),
+			"restart seeds current landing count and tick quietly"):
+		return false
+	state.landing_count = 0
+	if not _check(presentation._consume_landing_feedback(state, 0, 0, 20.0).is_empty(),
+			"native rewind establishes a quiet landing epoch"):
+		return false
+	state.landing_count = 1
+	if not _check(presentation._consume_landing_feedback(state, 1, 90, 20.0).is_empty(),
+			"death restore suppresses the landing-success cue"):
+		return false
+	presentation._fb_deaths = 1
+	state.landing_count = 2
+	if not _check(presentation._consume_landing_feedback(state, 1, 180, 20.0).get("kind") == &"stumble",
+			"fresh native recovery after death remains eligible"):
+		return false
+	presentation.free()
+	return true
+
+
 func _drop(height: float, move_x: float) -> Dictionary:
 	var native: Object = _main._native
 	if not _check(bool(native.debug_restart_at(Vector3(6.0, height, -25.0))), "clear grade-drop staging"):
@@ -253,7 +339,7 @@ func _drop(height: float, move_x: float) -> Dictionary:
 
 
 func _run() -> void:
-	if not _response_checks() or not _foot_transfer_checks():
+	if not _response_checks() or not _foot_transfer_checks() or not _landing_feedback_checks():
 		return
 	if "--landing-camera-unit-only" in OS.get_cmdline_user_args():
 		print("SCRAPERX_LANDING_CAMERA_UNIT PASS checks=%d" % _checks)

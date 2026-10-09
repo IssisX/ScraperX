@@ -1,0 +1,5 @@
+8b0915f8b3562b414310204e5f4fe47871aac0c7bdc5aa07b30cf0f4f3661f15  bridge: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-hang-touch-6m6f1y5g/godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+b5a0c28cf7dc6c493efe2801cc469b48d5b87a063691df44f717e32e56ca65db  main: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-hang-touch-6m6f1y5g/godot/presentation/main.gd
+9cc678dc40476ef5ad4b426c462259881c22f4c18748c6e99cff236657c0ad14  driver: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-hang-touch-6m6f1y5g/godot/presentation/ui/ui_test_driver.gd
+12bc2b50d0925f3467e55f706f447e790e7ce3b52f29c1b49195cc396f11e396  maintained_driver: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/presentation/ui/ui_test_driver.gd
+7bb4992fd920da663269b749577ede928c3774e6762eec63833f8dc744807886  harness: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-hang-touch-6m6f1y5g/hang-topout-harness.gdpart

@@ -1,0 +1,14 @@
+--- 6a62ab4e1c6be2ecadd995f607d7dd4d81895e46:src/sim/simulation.cpp [jump_off_climb excerpt]
++++ working-source:src/sim/simulation.cpp [jump_off_climb excerpt]
+@@ -1,6 +1,10 @@
+     // Springing back off the structure, away from it and up.
+     void jump_off_climb(JPH::BodyInterface &bodies) noexcept {
+-        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity || entity_is_causal_section_support(traversal_entity_id_)) {
++        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity ||
++           entity_is_causal_section_support(traversal_entity_id_) ||
++           (traversal_entity_id_==1901 && physical_hands_->active())) {
++            // North-frame rungs use the same finite hand stroke and passive
++            // departure as physical cargo climbs, rather than a velocity grant.
+             if(cargo_push_seconds_<0.0F) cargo_push_seconds_=0.20F;
+             return;
+         }

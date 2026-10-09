@@ -1,0 +1,174 @@
+diff --git a/src/sim/simulation.cpp b/src/sim/simulation.cpp
+index 2860856..9231d66 100644
+--- a/src/sim/simulation.cpp
++++ b/src/sim/simulation.cpp
+@@ -288,14 +288,13 @@ constexpr float kClimbFootReach = 0.10F;
+ // Shimmy along a hung ledge.
+ constexpr float kShimmySpeed = 0.6F;
+ // Balance: walking a support narrower than kBalanceMaxWidth and at least
+-// kBalanceMinLength long. Sideways input under kBalanceStepOffInput is held on
+-// the support's line; over it, the body steps off.
++// kBalanceMinLength long. Sideways input below kBalanceStepOffInput requests
++// fine correction; at/above it, the body may deliberately step off.
+ constexpr float kBalanceMaxWidth = 0.50F;
+ constexpr float kBalanceMinLength = 1.50F;
+ constexpr double kBalanceSpeedScale = 2.0 / 5.5;
+ constexpr double kBalanceStepOffInput = 0.8;
+-constexpr float kBalanceCentering = 3.0F;
+-constexpr float kBalanceCenteringMaxMps = 0.4F;
++constexpr float kBalanceCorrectionMaxMps = 0.4F;
+ // A beam must stand over a fall: the ground is probed this far out from
+ // each side, from this far above its top, down to a step below it.
+ constexpr float kBalanceSideProbe = 0.10F;
+@@ -2172,6 +2171,7 @@ public:
+         landing_applied_force_ = JPH::Vec3::sZero();
+ 
+         auto &bodies = physics_system_.GetBodyInterface();
++        air_control_force_ = JPH::Vec3::sZero();
+         const auto rider_velocity_before = bodies.GetLinearVelocity(player_id_);
+         if (regression_fixtures_) {
+             update_support_motion(bodies, delta_seconds, next_time_seconds);
+@@ -2503,6 +2503,7 @@ public:
+         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
+         rider_specific_acceleration_ = JPH::Vec3::sZero();
+         grounded_ = false;
++        air_control_force_ = JPH::Vec3::sZero();
+         support_entity_id_ = 0;
+         support_sample_ = {};
+         airborne_inherited_velocity_ = JPH::Vec3::sZero();
+@@ -5690,10 +5691,42 @@ private:
+                 approach_relative_horizontal_velocity(target, reference_velocity,
+                     move_x, move_z, kAirAcceleration, delta_seconds, air_full_speed_);
+                 JPH::Vec3 force = (target - player_velocity) * (kPlayerMassKg / delta_seconds);
+-                const JPH::Vec3 relative = player_velocity - reference_velocity;
+-                const float power = force.Dot(relative) +
+-                    .5F * force.LengthSq() / kPlayerMassKg * delta_seconds;
+-                if (power > 3000.0F) force *= 3000.0F / power;
++                // Steering retains the departure reference, but there is no
++                // longer a contacted receiver sharing this force. Its work
++                // must use actual world velocity, not discounted support speed.
++                const double inverse_mass = 1.0 / kPlayerMassKg;
++                const double budget = 3000.0 * delta_seconds;
++                const auto magnitude = [](JPH::Vec3 value) {
++                    return std::hypot(double(value.GetX()), double(value.GetY()), double(value.GetZ()));
++                };
++                const auto world_projection = [&](JPH::Vec3 value) {
++                    return (double(value.GetX()) * player_velocity.GetX() +
++                            double(value.GetY()) * player_velocity.GetY() +
++                            double(value.GetZ()) * player_velocity.GetZ()) / magnitude(value);
++                };
++                const double requested_impulse = magnitude(force) * delta_seconds;
++                if (requested_impulse > 0) {
++                    const double u = world_projection(force);
++                    const double cap = u < 0 ? -u / inverse_mass +
++                        std::sqrt(2.0 * budget / inverse_mass) :
++                        2.0 * budget / (u + std::hypot(u,
++                            std::sqrt(2.0 * inverse_mass * budget)));
++                    if (cap < requested_impulse)
++                        force *= float(std::max(0.0, cap / requested_impulse) * .999999);
++                    const double impulse = magnitude(force) * delta_seconds;
++                    const double delivered_u = impulse > 0 ? world_projection(force) : 0;
++                    const double braking = delivered_u < 0 ?
++                        std::min(impulse, -delivered_u / inverse_mass) : 0;
++                    const double positive = impulse - braking;
++                    // Frozen isolated-force command receipts, not a ledger of
++                    // solver, gravity, parachute or collision energy exchange.
++                    air_control_command_positive_work_j_ += delivered_u < 0 ?
++                        .5 * inverse_mass * positive * positive :
++                        delivered_u * impulse + .5 * inverse_mass * impulse * impulse;
++                    air_control_command_absorbed_work_j_ +=
++                        -delivered_u * braking - .5 * inverse_mass * braking * braking;
++                }
++                air_control_force_ = force;
+                 bodies.AddForce(player_id_, force);
+             }
+             return false;
+@@ -5783,20 +5816,18 @@ private:
+             airborne_inherited_velocity_ = reference_velocity;
+             const Beam beam = beam_underfoot(bodies);
+             if (beam.valid) {
+-                // On a beam: along it at a walk, held on its line unless the
+-                // stick means to step off.
++                // On a beam: walk along it and deliberately make fine lateral
++                // corrections. Neutral input brakes; it never seeks the centre.
+                 balancing_ = true;
+                 const double along = move_x * beam.along.GetX() + move_z * beam.along.GetZ();
+                 const double across = move_x * beam.across.GetX() + move_z * beam.across.GetZ();
+                 if (std::abs(across) < kBalanceStepOffInput) {
+                     const double walk = std::clamp(along, -kBalanceSpeedScale, kBalanceSpeedScale);
+-                    const double centre =
+-                        std::clamp(-static_cast<double>(beam.offset * kBalanceCentering),
+-                                   -static_cast<double>(kBalanceCenteringMaxMps),
+-                                   static_cast<double>(kBalanceCenteringMaxMps)) /
++                    const double correction =
++                        (across / kBalanceStepOffInput) * kBalanceCorrectionMaxMps /
+                         kPlayerMaximumRelativeSpeed;
+-                    move_x = beam.along.GetX() * walk + beam.across.GetX() * centre;
+-                    move_z = beam.along.GetZ() * walk + beam.across.GetZ() * centre;
++                    move_x = beam.along.GetX() * walk + beam.across.GetX() * correction;
++                    move_z = beam.along.GetZ() * walk + beam.across.GetZ() * correction;
+                 }
+             } else if (sprint_is_eligible(commands)) {
+                 sprinting_ = true;
+@@ -6919,6 +6950,9 @@ private:
+         if ((cargo_net_ && traversal_body_ == cargo_net_->body()) ||
+             entity_is_causal_section_support(traversal_entity_id_) ||
+             entity_is_causal_section_support(probe.ledge_entity_id) ||
++            // North-frame ladder top-outs retain their actual hands until
++            // receiving footing; other legacy mantle/vault owners stay scoped.
++            (traversal_entity_id_ == 1901 && probe.ledge_entity_id == 1901) ||
+             (!probe.landing_body.IsInvalid() &&
+              entity_is_causal_section_support(bodies.GetUserData(probe.landing_body)))) {
+             return begin_cargo_transfer(bodies,probe,origin);
+@@ -6955,7 +6989,9 @@ private:
+         traversal_target_body_=probe.landing_body;
+         traversal_local_ledge_=to_support_local(bodies,traversal_body_,probe.ledge_point);
+         traversal_local_target_=to_support_local(bodies,traversal_target_body_,probe.landing_centre);
+-        physical_hands_->set_transfer_profile();
++        // CHOSEN480Ns/m per hand for the taller North-frame pull: less
++        // dissipative delay while preserving1500N/hand and6600W burst bounds.
++        physical_hands_->set_transfer_profile(traversal_entity_id_==1901 ? 480.0F : 600.0F);
+         cargo_transfer_active_=true;
+         cargo_transfer_peak_hand_load_n_=0;
+         // Attach/detach changes the load path without resetting rider velocity.
+@@ -7043,7 +7079,11 @@ private:
+ 
+     // Springing back off the structure, away from it and up.
+     void jump_off_climb(JPH::BodyInterface &bodies) noexcept {
+-        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity || entity_is_causal_section_support(traversal_entity_id_)) {
++        if(cargo_transfer_active_ || traversal_entity_id_==CargoNet::kEntity ||
++           entity_is_causal_section_support(traversal_entity_id_) ||
++           (traversal_entity_id_==1901 && physical_hands_->active())) {
++            // North-frame rungs use the same finite hand stroke and passive
++            // departure as physical cargo climbs, rather than a velocity grant.
+             if(cargo_push_seconds_<0.0F) cargo_push_seconds_=0.20F;
+             return;
+         }
+@@ -7568,6 +7608,7 @@ private:
+         pre_contact_fall_speed_mps_ = 0.0F;
+         clear_landing_recovery();
+         parachute_deployed_ = false;
++        air_control_force_ = JPH::Vec3::sZero();
+         ++death_count_;
+     }
+ 
+@@ -7942,6 +7983,9 @@ private:
+         state_.landing_recovery_seconds = landing_recovery_seconds_;
+         state_.landing_recovery_work_j = landing_recovery_work_j_;
+         state_.landing_jump_work_j = landing_jump_work_j_;
++        state_.air_control_command_positive_work_j = air_control_command_positive_work_j_;
++        state_.air_control_command_absorbed_work_j = air_control_command_absorbed_work_j_;
++        state_.air_control_force_n = to_vector3(air_control_force_);
+         state_.landing_recovering = slingshot_ && grounded_ && landing_recovery_seconds_ > 0;
+         const double recovery_ratio = landing_recovery_duration_ > 0 ?
+             std::clamp(landing_recovery_seconds_ / landing_recovery_duration_, 0.0, 1.0) : 0;
+@@ -8236,6 +8280,9 @@ private:
+     double landing_recovery_duration_ = 0, landing_initial_balance_loss_ = 0;
+     double landing_recovery_work_j_ = 0;
+     double landing_jump_work_j_ = 0;
++    double air_control_command_positive_work_j_ = 0;
++    double air_control_command_absorbed_work_j_ = 0;
++    JPH::Vec3 air_control_force_ = JPH::Vec3::sZero();
+     JPH::Vec3 landing_slip_velocity_ = JPH::Vec3::sZero();
+     JPH::Vec3 landing_applied_force_ = JPH::Vec3::sZero();
+     JPH::RVec3 landing_force_start_ = JPH::RVec3::sZero();

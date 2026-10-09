@@ -1,0 +1,110 @@
+{
+  "scope": "Owned README/manifest/before/native/source only; independently owned touch subtree excluded and unchanged.",
+  "saved_utc": "2026-10-09T04:25:08.758241+00:00",
+  "branch": "ChatGPT",
+  "checkout_head": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "frozen_before": {
+    "boundary": "Before North-specific powered-release correction; after beam correction and North physical top-out",
+    "setup": "Single supported normal-world initial pose; ordinaryAction/directionalclimb/neutral/Jump thereafter; wrong-facing firstsetup failed beforegrip and is retained separately",
+    "hashes": {
+      "source": "30645f344736ae8ea39c0c1a71ceba9761e69aea5acfa89db35189f2201e111a",
+      "snapshot": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+      "library": "a353690f371ebb8e91b4cdefb98a5126a632cf0501704c6f82bf7c4f11d55623",
+      "executable": "e3b2e20f3a5b1b596caaf7241a7a0ccfe057dbc0185825688f656931c9e2189c",
+      "probe": "c4df3dfb7cb51b410b64819fbbba515d480e37328e0c6bb99b49c3ffff15f337",
+      "log": "a2eefc9208ab9f8411edc18c6fb0877138f53db2f02025237cddc9929e36da81"
+    },
+    "observed": "tick240 VY\u2212.407941,Z0,hands2,gravity1; Jump tick241 VY3.8909998,Z2.5,hands0; commandwork unchanged4921.051025J; tick390 actualplatform1901/88.9/no death"
+  },
+  "current_source_sha256_at_collection": {
+    "src/sim/simulation.cpp": "d051a85df7cb1687589d3ca522beb2c2042ea6dc221236e147ed5611dddd538e",
+    "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "src/sim/physical_hand_climb.cpp": "098a0d36dbd0cf3cd6eb3e4898051b1b59a5797d3fc37761ba7ed29534d47409",
+    "src/sim/physical_hand_climb.hpp": "ab22499a484a348c7c4946c92ad5820bd56143f72300e8b356888b30c8b39834",
+    "tests/north_service_frame_tests.cpp": "c8f97eacc7ac0e5e28a4a3897734061c110dde46be43e459431170b925df2942",
+    "src/bridge/scraperx_simulation.cpp": "56e0d21b4cc2c5e43ec4d7892864b3f80f546a49ba70c93b65fc108c2c255a37"
+  },
+  "current_existing_artifact_sha256_at_collection": {
+    "native_owner_executable": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_north_service_frame_tests",
+      "sha256": "9601e415196dfc180feba73cf0bada5504ca9148ecfd613bc6083da8ec7bd7fb",
+      "bytes": 45865992
+    },
+    "native_library": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/libscraperx_sim.a",
+      "sha256": "4d05523bb232aeed5ff09a6e4fead3bd0325642f919eef0f54f3fec3f64868ca",
+      "bytes": 2068474
+    },
+    "private_before_executable": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-powered-release/probe-before",
+      "sha256": "e3b2e20f3a5b1b596caaf7241a7a0ccfe057dbc0185825688f656931c9e2189c",
+      "bytes": 45931208
+    },
+    "private_after_executable": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-powered-release/probe-after",
+      "sha256": "84a5252d2bd4ff674ae0c9458b97b21718c1963795729ec21c307b9bb29e89b1",
+      "bytes": 45931096
+    }
+  },
+  "source_diff_provenance": {
+    "north-powered-release.diff": "Scoped jump_off_climb function excerpt against immutable6a62ab4; this same legacy branch is shown by the matching pre-correction receipt. Other earlier air/North/beam changes are excluded.",
+    "powered-jump-regression.diff": "Isolated insertion reconstructed from current working test by removing only the new helper, its single main call and explicit algorithm include; existing PD/physical topout changes are preserved."
+  },
+  "limits": [
+    "After/native hashes are collected identities, not embedded in runtime logs; root supplied completed run provenance.",
+    "Native logs do not contain explicit exit-code lines; no exit code is invented.",
+    "Conservative command debit and positive spring-target work are distinct; no complete energy-closure or all-legacy-climbs claim.",
+    "No new execution/build, source write, Android/Actions delivery or physical-device verification.",
+    "Touch subtree belongs to another agent and is linked only."
+  ],
+  "files": {
+    "README.md": {
+      "sha256": "2a6eb66fe2436008625d8c648003be0a4717443d8f7d108530de32c021a8077a",
+      "bytes": 3526
+    },
+    "before/before.log": {
+      "sha256": "a2eefc9208ab9f8411edc18c6fb0877138f53db2f02025237cddc9929e36da81",
+      "bytes": 3626
+    },
+    "before/probe.cpp": {
+      "sha256": "c4df3dfb7cb51b410b64819fbbba515d480e37328e0c6bb99b49c3ffff15f337",
+      "bytes": 1432
+    },
+    "before/receipt.json": {
+      "sha256": "4c8683552937eab23f5bd2fb7ddea821c7f672a9baa7830d1b0bc9f824db779a",
+      "bytes": 991
+    },
+    "before/setup-wrong-facing.log": {
+      "sha256": "45b345b24041ebadd4bbd1b9d83ef5c6c31bce26432fe50c509127eab1fb78fc",
+      "bytes": 240
+    },
+    "native/after.log": {
+      "sha256": "e3896ec5b92863b7525d96fcb3d1ef1a0bdad8809578ead34198f35894ad3fdf",
+      "bytes": 3869
+    },
+    "native/native-owner.log": {
+      "sha256": "19f10740dbaa2eb508097c472289de87a74dd7451e98198b322a8e0686ca7d2c",
+      "bytes": 666
+    },
+    "native/owner-build.log": {
+      "sha256": "2295a320bd68c63cb2eb340747914dfab9eaa3071f49ca959e601f560b5e5258",
+      "bytes": 268
+    },
+    "native/probe.cpp": {
+      "sha256": "c4df3dfb7cb51b410b64819fbbba515d480e37328e0c6bb99b49c3ffff15f337",
+      "bytes": 1432
+    },
+    "native/receipt.json": {
+      "sha256": "33276888a50c786912c1b150aff71029f2c872bb10580cc1d22ffdd78722aaf0",
+      "bytes": 3593
+    },
+    "source/north-powered-release.diff": {
+      "sha256": "88d416ed69f85235e8f4c8c1a6c31245c8d8482bcd9ec44cfa3af7de600303b8",
+      "bytes": 928
+    },
+    "source/powered-jump-regression.diff": {
+      "sha256": "12e4adcbb9bf296f5fdbc2afc8305b4ee42fe30e3611f7212ab0f704368177f9",
+      "bytes": 7765
+    }
+  }
+}

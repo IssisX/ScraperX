@@ -1,0 +1,15 @@
+{
+  "session": "01a11ef5-3b35-7713-9de5-c3a7990ee1e6",
+  "transport": "super-agent shell, Codex ChatGPT login",
+  "model": "gpt-6.1-sol",
+  "reasoning": "high",
+  "observed_children": 0,
+  "exit_code": 0,
+  "scope": "Prompt-only next-encounter advice; no local inspection/execution/implementation byremote",
+  "hashes": {
+    "prompt.txt": "c9c216db727ae5f02cf2811c390ee43873f3d001e61b2bb3bbf17a14867c81ed",
+    "answer.txt": "809d15026f763d48771db3584276d9876d3bc5c47660344b75995118646eb79d",
+    "meta.txt": "e96299b7486d5c1153b7bde64ac0ac78bf4fbab605fe45f7ad9cf50dc331a83a"
+  },
+  "source_verified": "Archived cradle6m longitudinalspan and120Nm hangerfriction match; currentknownreceivergeometry supports the nominal5m/2.548m/27deg ramp calculation. Actualstructuralfit/loading/handling/deployment/recovery/persistence unproved."
+}

@@ -693,6 +693,9 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["landing_slip_velocity"] = to_godot(s.landing_slip_velocity);
     out["landing_recovery_work_j"] = s.landing_recovery_work_j;
     out["landing_jump_work_j"] = s.landing_jump_work_j;
+    out["air_control_command_positive_work_j"] = s.air_control_command_positive_work_j;
+    out["air_control_command_absorbed_work_j"] = s.air_control_command_absorbed_work_j;
+    out["air_control_force_n"] = to_godot(s.air_control_force_n);
     return out;
 }
 

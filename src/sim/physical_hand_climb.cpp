@@ -117,12 +117,13 @@ void PhysicalHandClimb::set_swing_profile() {
     for (auto &hand : hands_) if (hand) for (int axis=0; axis<3; ++axis)
         hand->GetMotorSettings(static_cast<JPH::SixDOFConstraint::EAxis>(axis)).mSpringSettings.mDamping=120.0F;
 }
-void PhysicalHandClimb::set_transfer_profile() {
+void PhysicalHandClimb::set_transfer_profile(float rigid_hand_damping) {
+    if (!std::isfinite(rigid_hand_damping) || rigid_hand_damping <= 0) return;
     transfer_profile_ = true;
-    // CHOSEN 600 Ns/m per rigid hand: ~0.65 critical damping for85kg
+    // Default CHOSEN600Ns/m per rigid hand: ~0.65 critical damping for85kg
     // and two5000N/m springs. Force limits remain1500N per hand.
     for(auto &hand:hands_) if(hand) for(int axis=0;axis<3;++axis)
-        hand->GetMotorSettings(static_cast<JPH::SixDOFConstraint::EAxis>(axis)).mSpringSettings.mDamping=600.0F;
+        hand->GetMotorSettings(static_cast<JPH::SixDOFConstraint::EAxis>(axis)).mSpringSettings.mDamping=rigid_hand_damping;
 }
 bool PhysicalHandClimb::active() const noexcept { return attached(0) || attached(1); }
 bool PhysicalHandClimb::attached(unsigned hand) const noexcept {

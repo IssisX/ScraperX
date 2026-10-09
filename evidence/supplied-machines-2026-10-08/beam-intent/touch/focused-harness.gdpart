@@ -1,0 +1,99 @@
+func _touch_braced_bay() -> bool:
+	# Only initial staging is permitted. Native gravity/contact establish
+	# the actual inclined girder; this is not connected-route evidence.
+	if int(_native().get_entity_body_count(1900)) != 1 or not _native().debug_restart_at(Vector3(28.12, 80.27272727, -137.0)):
+		return _fail("focused supported beam stage rejected")
+	await _face(Vector2(0, -1))
+	await _seconds(0.5)
+	if not _beam_touch_footing():
+		return _fail("focused stage failed actual balanced girder contact " + _beam_touch_state())
+	var before := _position()
+	print("SCRAPERX_BEAM_FOCUSED before " + _beam_touch_state())
+	var throw := TouchControls.STICK_DEADZONE + (1.0 - TouchControls.STICK_DEADZONE) * 0.25
+	_move_dir(InputRouter.Device.TOUCH, Vector2(throw, 0))
+	if not await _beam_touch_hold(27):
+		return false
+	var corrected := _position()
+	print("SCRAPERX_BEAM_FOCUSED gentle " + _beam_touch_state())
+	if corrected.x <= before.x + 0.005 or _velocity().x <= 0.05 or absf(_main._touch.move_vector.x - 0.25) > 0.002:
+		return _fail("focused +.25 touch did not earn requested correction " + _beam_touch_state())
+	_move_dir(InputRouter.Device.TOUCH, Vector2.ZERO)
+	if not await _beam_touch_hold(27):
+		return false
+	var stopped := _position()
+	print("SCRAPERX_BEAM_FOCUSED neutral " + _beam_touch_state())
+	if stopped.x < corrected.x - 0.001 or absf(_velocity().x) >= 0.01:
+		return _fail("focused neutral autonomously recentered or failed braking " + _beam_touch_state())
+	_move_dir(InputRouter.Device.TOUCH, Vector2(-throw, 0))
+	if not await _beam_touch_hold(27):
+		return false
+	var opposite := _position()
+	print("SCRAPERX_BEAM_FOCUSED opposite " + _beam_touch_state())
+	if opposite.x >= stopped.x - 0.01 or absf(_main._touch.move_vector.x + 0.25) > 0.002:
+		return _fail("focused opposite touch did not earn correction " + _beam_touch_state())
+	_move_dir(InputRouter.Device.TOUCH, Vector2.ZERO)
+	if not await _beam_touch_hold(27):
+		return false
+	print("SCRAPERX_BEAM_FOCUSED final " + _beam_touch_state())
+	_detail = "focused_actual_beam=1 connected_route=UNPROVEN normal_campaign=UNPROVEN input_plus=.25 neutral=0 input_minus=-.25 tick_hold=27 support=1900 gravity=1 deaths=0 gentle_dx=%.9f neutral_dx=%.9f opposite_dx=%.9f" % [corrected.x - before.x, stopped.x - corrected.x, opposite.x - stopped.x]
+	return true
+
+func _beam_touch_state() -> String:
+	return "tick=%d at=%s velocity=%s support=%d grounded=%s balancing=%s crouched=%s traversal=%d deaths=%d touch_move=%s native=%s" % [
+		_native().get_tick_index(), _position(), _velocity(), _native().get_support_entity_id(),
+		_native().is_player_grounded(), _native().is_player_balancing(), _native().is_player_crouched(),
+		_native().get_traversal_state(), _native().get_death_count(), _main._touch.move_vector,
+		_native().get_landing_state()]
+
+func _beam_touch_ticks(ticks: int) -> void:
+	var start := int(_native().get_tick_index())
+	while int(_native().get_tick_index()) - start < ticks:
+		await get_tree().process_frame
+
+func _beam_touch_footing() -> bool:
+	return _native().is_player_grounded() and _native().is_player_balancing() \
+		and int(_native().get_support_entity_id()) == 1900 and int(_native().get_death_count()) == 0 \
+		and float(_native().get_landing_state()["player_gravity_factor"]) == 1.0 \
+		and _position().is_finite() and _velocity().is_finite()
+
+func _beam_touch_correction() -> bool:
+	if not _beam_touch_footing():
+		return _fail("probe did not start on balanced real girder " + _beam_touch_state())
+	var before := _position()
+	print("SCRAPERX_BEAM_TOUCH before " + _beam_touch_state())
+	# View faces north: positive stick-right is actual world +X. Compensate
+	# only the shipping touch deadzone to request native .2 lateral effort.
+	var throw := TouchControls.STICK_DEADZONE + (1.0 - TouchControls.STICK_DEADZONE) * 0.2
+	_move_dir(InputRouter.Device.TOUCH, Vector2(throw, 0))
+	await _beam_touch_ticks(6)
+	var corrected := _position()
+	print("SCRAPERX_BEAM_TOUCH gentle " + _beam_touch_state())
+	if corrected.x <= before.x + 0.005 or _velocity().x <= 0.05 or not _beam_touch_footing() \
+			or absf(_main._touch.move_vector.x - 0.2) > 0.002:
+		return _fail("gentle requested-direction correction " + _beam_touch_state())
+	_move_dir(InputRouter.Device.TOUCH, Vector2.ZERO)
+	await _beam_touch_ticks(9)
+	var stopped := _position()
+	print("SCRAPERX_BEAM_TOUCH neutral " + _beam_touch_state())
+	if stopped.x < corrected.x - 0.001 or absf(_velocity().x) >= 0.01 or not _beam_touch_footing():
+		return _fail("neutral physical braking/recentering " + _beam_touch_state())
+	_move_dir(InputRouter.Device.TOUCH, Vector2(-throw, 0))
+	await _beam_touch_ticks(18)
+	print("SCRAPERX_BEAM_TOUCH opposite " + _beam_touch_state())
+	if _position().x >= stopped.x - 0.01 or not _beam_touch_footing() \
+			or absf(_main._touch.move_vector.x + 0.2) > 0.002:
+		return _fail("opposite supported correction " + _beam_touch_state())
+	_move_dir(InputRouter.Device.TOUCH, Vector2.ZERO)
+	if not await _walk_to(InputRouter.Device.TOUCH, Vector2(28.0, -137.0), 0.04, 5.0, true):
+		return _fail("ordinary correction restores departure stance " + _beam_touch_state())
+	print("SCRAPERX_BEAM_TOUCH corrected_stance " + _beam_touch_state())
+	return true
+
+
+func _beam_touch_hold(ticks: int) -> bool:
+	var start := int(_native().get_tick_index())
+	while int(_native().get_tick_index()) - start < ticks:
+		await get_tree().process_frame
+		if not _beam_touch_footing():
+			return _fail("focused real footing/gravity/death invariant " + _beam_touch_state())
+	return true

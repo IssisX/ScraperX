@@ -1,0 +1,7 @@
+#include "sim/simulation.hpp"
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+using namespace scraperx::sim;
+void row(const char *tag,const Snapshot &s){std::cout<<tag<<" tick="<<s.tick_index<<" P="<<s.player_position.x<<","<<s.player_position.y<<","<<s.player_position.z<<" V="<<s.player_linear_velocity.x<<","<<s.player_linear_velocity.y<<","<<s.player_linear_velocity.z<<" support="<<s.support_entity_id<<" ground="<<s.player_grounded<<" state="<<int(s.traversal_state)<<" hands="<<s.traversal_hand_constraint_count<<" gravity="<<s.player_gravity_factor<<" work="<<s.traversal_command_work_bound_j<<" deaths="<<s.death_count<<"\n";}
+int main(){std::cout<<std::setprecision(10);Simulation s; if(!s.debug_restart_at({16,88.9,-179.55}))return 2; s.set_facing(0,-1);for(int i=0;i<45;++i)s.advance_frame(Simulation::kFixedStepSeconds);row("APPROACH",s.snapshot());s.request_traversal();s.advance_frame(Simulation::kFixedStepSeconds);s.set_move_input(0,-1);for(int i=0;i<500&&s.snapshot().player_position.y<90.0;++i)s.advance_frame(Simulation::kFixedStepSeconds);s.set_move_input(0,0);for(int i=0;i<30;++i)s.advance_frame(Simulation::kFixedStepSeconds);row("BEFORE_JUMP",s.snapshot());if(s.snapshot().traversal_hand_constraint_count!=2||s.snapshot().player_position.y>91)return 3; s.request_jump();for(int i=0;i<150;++i){s.advance_frame(Simulation::kFixedStepSeconds);if(i<23||i==149)row("AFTER_JUMP",s.snapshot());}return 0;}

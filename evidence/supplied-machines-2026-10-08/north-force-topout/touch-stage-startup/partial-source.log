@@ -1,0 +1,12 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: Preload file "res://presentation/reclaim_dust.gd" does not exist.
+          at: GDScript::reload (res://presentation/main.gd:24)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "ReclaimDust" constant because the value doesn't have a set type.
+          at: GDScript::reload (res://presentation/main.gd:24)
+SCRIPT ERROR: Parse Error: "ReclaimDust" is a constant but does not contain a type.
+          at: GDScript::reload (res://presentation/main.gd:384)
+SCRIPT ERROR: Parse Error: Too many arguments for "update()" call. Expected at most 5 but received 6.
+          at: GDScript::reload (res://presentation/main.gd:1713)
+ERROR: Failed to load script "res://presentation/main.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)

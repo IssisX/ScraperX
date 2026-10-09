@@ -1,0 +1,6 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_AIR_BRIDGE PASS fields=3 grade_jump=1 ordinary_air_input=1 samples=24 finite_monotone=1 peak_force_n=1190.000366 positive_work_j=529.935600 absorbed_work_j=0.000000 neutral_force_zero=1 tick=116 player=(6.53556, 2.0756, -25.0) velocity=(3.531158, 2.666008, 0.0) support=0

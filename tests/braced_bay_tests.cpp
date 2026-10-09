@@ -174,7 +174,9 @@ void finish_route(Simulation &s) {
     require(walk_to(s, 34.0, -132.0), "turn onto return girder");
     advance(s, 0.3);
     int balancing = 0;
-    require(walk_to(s, 26.55, -132.0, 12.0, &balancing), "return girder reaches tower edge");
+    // Outer edge beam reachesX26.3; the0.35m capsule cannot stand at26.55.
+    // Aim at a reachable standoff, retaining the same arrival/footing oracle.
+    require(walk_to(s, 26.68, -132.0, 12.0, &balancing), "return girder reaches tower edge");
     (void)s.set_facing(-1, 0);
     advance(s, 0.3);
     report(s, "MANTLE_READY");
@@ -218,6 +220,29 @@ void balance_allows_departure() {
     require(walk_to(side, 28, -137), "side-exit on inclined girder");
     advance(side, 0.3);
     require(side.snapshot().player_balancing, "side-exit starts in balance");
+    const auto before_correction = side.snapshot();
+    (void)side.set_move_input(.2, 0);
+    advance(side, 6.0 / 90.0);
+    const auto corrected = side.snapshot();
+    require(corrected.player_position.x > before_correction.player_position.x + .005 &&
+            corrected.player_linear_velocity.x > .05 && corrected.player_grounded &&
+            corrected.player_balancing && corrected.support_entity_id == 1900,
+            "gentle lateral input moves in the requested direction on real footing");
+    (void)side.set_move_input(0, 0);
+    advance(side, .1);
+    const auto stopped = side.snapshot();
+    require(stopped.player_position.x >= corrected.player_position.x - .001 &&
+            std::abs(stopped.player_linear_velocity.x) < .01 && stopped.player_grounded &&
+            stopped.support_entity_id == 1900,
+            "neutral input physically brakes without autonomous inward recentering");
+    (void)side.set_move_input(-.2, 0);
+    advance(side, .2);
+    require(side.snapshot().player_position.x < stopped.player_position.x - .01 &&
+            side.snapshot().player_grounded && side.snapshot().player_balancing &&
+            side.snapshot().support_entity_id == 1900 && side.snapshot().death_count == 0,
+            "opposite gentle input earns a supported balance correction");
+    report(side, "DELIBERATE_BALANCE_CORRECTION");
+    require(walk_to(side, 28, -137), "correction returns to departure stance by ordinary input");
     (void)side.set_facing(1, 0);
     (void)side.set_move_input(1, 0);
     advance(side, 0.55);

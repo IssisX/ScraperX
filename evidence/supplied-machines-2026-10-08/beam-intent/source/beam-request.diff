@@ -1,0 +1,36 @@
+--- frozen-before/beam-request
++++ current/beam-request
+@@ -1,19 +1,17 @@
+             const Beam beam = beam_underfoot(bodies);
+             if (beam.valid) {
+-                // On a beam: along it at a walk, held on its line unless the
+-                // stick means to step off.
++                // On a beam: walk along it and deliberately make fine lateral
++                // corrections. Neutral input brakes; it never seeks the centre.
+                 balancing_ = true;
+                 const double along = move_x * beam.along.GetX() + move_z * beam.along.GetZ();
+                 const double across = move_x * beam.across.GetX() + move_z * beam.across.GetZ();
+                 if (std::abs(across) < kBalanceStepOffInput) {
+                     const double walk = std::clamp(along, -kBalanceSpeedScale, kBalanceSpeedScale);
+-                    const double centre =
+-                        std::clamp(-static_cast<double>(beam.offset * kBalanceCentering),
+-                                   -static_cast<double>(kBalanceCenteringMaxMps),
+-                                   static_cast<double>(kBalanceCenteringMaxMps)) /
++                    const double correction =
++                        (across / kBalanceStepOffInput) * kBalanceCorrectionMaxMps /
+                         kPlayerMaximumRelativeSpeed;
+-                    move_x = beam.along.GetX() * walk + beam.across.GetX() * centre;
+-                    move_z = beam.along.GetZ() * walk + beam.across.GetZ() * centre;
++                    move_x = beam.along.GetX() * walk + beam.across.GetX() * correction;
++                    move_z = beam.along.GetZ() * walk + beam.across.GetZ() * correction;
+                 }
+             } else if (sprint_is_eligible(commands)) {
+                 sprinting_ = true;
+before: constexpr double kBalanceSpeedScale = 2.0 / 5.5;
+current: constexpr double kBalanceSpeedScale = 2.0 / 5.5;
+before: constexpr double kBalanceStepOffInput = 0.8;
+current: constexpr double kBalanceStepOffInput = 0.8;
+before: constexpr float kBalanceCentering = 3.0F;
+before: constexpr float kBalanceCenteringMaxMps = 0.4F;
+before: constexpr float kBalanceCenteringMaxMps = 0.4F;
+current: constexpr float kBalanceCorrectionMaxMps = 0.4F;

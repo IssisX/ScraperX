@@ -1,0 +1,46 @@
+--- before-c8f97eac:tests/north_service_frame_tests.cpp
++++ working-source:tests/north_service_frame_tests.cpp
+@@ -504,8 +504,42 @@
+                   << s.snapshot().player_position.z << '\n';
+         return EXIT_FAILURE;
+     }
++    const auto hang_transfer_start = s.snapshot();
+     (void)s.request_jump();
+-    advance(s, 1.0);
++    bool hang_transfer_finished = false;
++    for (int tick = 0; tick < 153; ++tick) {
++        advance(s, Simulation::kFixedStepSeconds);
++        const auto p = s.snapshot();
++        if (p.player_gravity_factor != 1 || p.death_count != hang_transfer_start.death_count ||
++            p.traversal_state == scraperx::sim::TraversalState::Mantling) {
++            std::cerr << "FAIL hanging top-out bypasses real gravity-on hands\n";
++            return EXIT_FAILURE;
++        }
++        if (p.player_grounded && p.traversal_state == scraperx::sim::TraversalState::None &&
++            p.traversal_hand_constraint_count == 0 && p.support_entity_id == 1901 &&
++            std::abs(p.player_position.y - 106.9) < .12) {
++            hang_transfer_finished = true;
++            break;
++        }
++    }
++    const auto hang_transfer_end = s.snapshot();
++    if (!hang_transfer_finished ||
++        hang_transfer_end.foot_transfer_count != hang_transfer_start.foot_transfer_count + 1 ||
++        hang_transfer_end.foot_transfer_support_entity_id != 1901 ||
++        hang_transfer_end.foot_transfer_peak_hand_load_n <= 0 ||
++        hang_transfer_end.traversal_actuator_positive_work_j <= hang_transfer_start.traversal_actuator_positive_work_j) {
++        std::cerr << "FAIL physical hanging transfer lacks responsive real footing/work; elapsed="
++                  << hang_transfer_end.simulation_time_seconds - hang_transfer_start.simulation_time_seconds
++                  << " P=" << hang_transfer_end.player_position.x << ',' << hang_transfer_end.player_position.y << ',' << hang_transfer_end.player_position.z
++                  << " V=" << hang_transfer_end.player_linear_velocity.x << ',' << hang_transfer_end.player_linear_velocity.y << ',' << hang_transfer_end.player_linear_velocity.z
++                  << " target=" << hang_transfer_end.traversal_target_point.x << ',' << hang_transfer_end.traversal_target_point.y << ',' << hang_transfer_end.traversal_target_point.z
++                  << " state=" << int(hang_transfer_end.traversal_state) << " hands=" << hang_transfer_end.traversal_hand_constraint_count
++                  << " foot=" << hang_transfer_end.foot_transfer_count << '\n';
++        return EXIT_FAILURE;
++    }
++    std::cout << "NORTH_HANG_TRANSFER seconds="
++              << hang_transfer_end.simulation_time_seconds - hang_transfer_start.simulation_time_seconds
++              << " peak_hand_n=" << hang_transfer_end.foot_transfer_peak_hand_load_n << '\n';
+     if (!s.snapshot().player_grounded || s.snapshot().support_entity_id != 1901 ||
+         std::abs(s.snapshot().player_position.y - 106.9) > 0.12) {
+         std::cerr << "FAIL shimmy pocket does not permit top-out at "

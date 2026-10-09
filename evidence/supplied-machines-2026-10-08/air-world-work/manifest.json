@@ -1,0 +1,145 @@
+{
+  "scope": "Saved completed local before/after native and Godot bridge evidence; no checks run while collecting this ledger.",
+  "saved_utc": "2026-10-09T03:35:08.084474+00:00",
+  "branch": "ChatGPT",
+  "current_base_commit": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "current_working_tree_source_sha256": {
+    "src/sim/simulation.cpp": "fcb42e8f20dd84c8d5db07ead639eef473576ba96a1ed9f129b856c28275d1cd",
+    "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "src/bridge/scraperx_simulation.cpp": "56e0d21b4cc2c5e43ec4d7892864b3f80f546a49ba70c93b65fc108c2c255a37",
+    "tests/parkour_flow_tests.cpp": "3a9b5cd7e383858681b656ba7c4085a0390398636b1f239233e216c6979534b6"
+  },
+  "current_source_patch": "source/current-owner.diff",
+  "current_regression_patch": "source/current-test.diff",
+  "before": {
+    "source_commit": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+    "frozen_source_sha256": {
+      "src/sim/simulation.cpp": "35a59caac39cd522045d7154f8a6dacbdeb160e71543c4729d564a9dc3079996",
+      "src/sim/simulation.hpp": "96e933fe335d1dc1a84be54edae59f78e5b7a92475caafaefc15a45706beeb75",
+      "src/bridge/scraperx_simulation.cpp": "dda5d4bc5f0e62b4483bd7de030e375df3b02f41b539b0f2601baf3b891d9ec9"
+    },
+    "library_sha256": "a5670b58a385e0f937749b23cc288db681641629782abb8116546f7dd8b070c6",
+    "original_library_path": "/data/data/com.termux/files/usr/tmp/scraperx-air-work-before-maub6haw/libscraperx_sim.a",
+    "probe_executable_sha256": "9cd5a099ddaaec1c4ccc850974e8ed9c0809b6408df94c2bd6a24d6eb07cf4f2",
+    "original_executable_path": "/data/data/com.termux/files/usr/tmp/scraperx-air-work-before-maub6haw/probe",
+    "result": "REPRODUCED_WORLD_POSITIVE_POWER_OVER_3KW",
+    "classification": "pre-existing_at_HEAD6a62ab4; source-supported wrong reference frame for player-only airforce positive work",
+    "worst_tick": 108,
+    "actual_horizontal_work_j": 47.2276,
+    "budget_j_per_90hz_tick": 33.333333333333336,
+    "diagnostic_exit_zero_means": "Reproduced violation, not physics acceptance.",
+    "source_provenance": {
+      "identity": "Tracked immutable Git objects at the exact source commit; duplicate owner-source copies were removed from this ledger.",
+      "extraction_commands": {
+        "src/bridge/scraperx_simulation.cpp": "git show 6a62ab4e1c6be2ecadd995f607d7dd4d81895e46:src/bridge/scraperx_simulation.cpp",
+        "src/sim/simulation.cpp": "git show 6a62ab4e1c6be2ecadd995f607d7dd4d81895e46:src/sim/simulation.cpp",
+        "src/sim/simulation.hpp": "git show 6a62ab4e1c6be2ecadd995f607d7dd4d81895e46:src/sim/simulation.hpp"
+      },
+      "extraction_context": "Run in the ScraperX repository. Each exact command extracts that immutable tracked file to stdout; capture it in a private destination if needed.",
+      "source_sha256": {
+        "src/sim/simulation.cpp": "35a59caac39cd522045d7154f8a6dacbdeb160e71543c4729d564a9dc3079996",
+        "src/sim/simulation.hpp": "96e933fe335d1dc1a84be54edae59f78e5b7a92475caafaefc15a45706beeb75",
+        "src/bridge/scraperx_simulation.cpp": "dda5d4bc5f0e62b4483bd7de030e375df3b02f41b539b0f2601baf3b891d9ec9"
+      }
+    }
+  },
+  "native_after": {
+    "parkour_log": "native/air-world-final-parkour.log",
+    "crown_log": "native/air-world-crown-parkour.log",
+    "completed_result": "PASS markers in both saved logs; parent reports both completed PASS.",
+    "peak_tick_positive_work_j_printed": 33.3333,
+    "positive_work_j_printed": 1050.19,
+    "absorbed_work_j_printed": 1026.22,
+    "hash_limit": "Exact final native executable hashes were not captured before subsequent north-frame relinks and remain unavailable. Current rebuilt executables are not assigned to these logs.",
+    "exact_executable_sha256": null,
+    "library_sha256": "11c0b6c5cffb0b80371fcd5ab581e7a1fe6bd8bf90cf428226041fc8cb54efe4",
+    "source_sha256_recorded_before_north_build": {
+      "src/sim/simulation.cpp": "6cfd18d3605aae90a54e0e54cd5f59cfd53037e4b4dcfcf9e977cb297527e0cb",
+      "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027"
+    },
+    "source_library_receipt": "native/pre-north-source-receipt.json",
+    "lineage": "Root confirms this recorded library/source matched the completed air parkour and Crown runs before north-frame relinks. The receipt was captured later, before that north build; it is not an executable hash recorded at execution."
+  },
+  "godot_bridge": {
+    "receipt": "bridge/receipt.json",
+    "log": "bridge/bridge.log",
+    "script": "bridge/air_bridge_probe.gd",
+    "bridge_sha256": "5c11e07cec22ba5fa0c5ca1063429acdc70c363cd144a0bd92569fd736e6b270",
+    "original_bridge_path": "/data/data/com.termux/files/usr/tmp/scraperx-air-bridge-uphy8dw1/godot/addons/scraperx_native/bin/linux/libscraperx_native.so",
+    "source_sha256_recorded_at_staging": {
+      "src/sim/simulation.cpp": "6cfd18d3605aae90a54e0e54cd5f59cfd53037e4b4dcfcf9e977cb297527e0cb",
+      "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+      "src/bridge/scraperx_simulation.cpp": "56e0d21b4cc2c5e43ec4d7892864b3f80f546a49ba70c93b65fc108c2c255a37"
+    },
+    "exit_code": 0,
+    "result": "PASS"
+  },
+  "limits": [
+    "In-progress current north-frame top-out work and transient air-force reset clears/clarifications are later than the saved native and bridge binaries. Root confirms the common air accounting body is unchanged apart from reset clears. These binaries prove the owned air seam, not all current source or the unfinished north-frame work.",
+    "Common ordinary and causal air steering retains the inherited support-relative velocity reference and existing14m/s\u00b2 request; world velocity owns work for the force delivered only to the player.",
+    "Positive and absorbed cumulative receipts are frozen isolated world-force command predictions from the delivered float force. They are not measured solver/contact work or full-system energy closure.",
+    "Launcher-flight steering is an existing separate2m/s\u00b2 force channel and is excluded from the common air-control receipts.",
+    "Before uses a real translating-support regression fixture with ordinary inputs and no debug pose/velocity writes. Godot uses ordinary normal-world grade/Jump/side steering APIs, not viewport touch evidence.",
+    "No current exact-source Android/Actions/device delivery exists for this repair. Publication was rejected under approval policy never; no dispatch, push, workaround, install or release was attempted by this evidence owner."
+  ],
+  "files": {
+    "README.md": {
+      "sha256": "00ca61edbb000345be900c59fe4e06579008943dd55df27451a9d69e24adf880",
+      "bytes": 3310
+    },
+    "before/before.log": {
+      "sha256": "125ff7ded0a5117fa0b29b1a1cecc2da82d32ca6ac70706e3daacd065cca4101",
+      "bytes": 4933
+    },
+    "before/probe.cpp": {
+      "sha256": "c2b78f04ca3b284492a30b3fbc6e68993157034bf532840b7f63812a85ae8b02",
+      "bytes": 2566
+    },
+    "before/receipt.json": {
+      "sha256": "6de99dc5649c9cd51f571fb8485f47a6a4dc2af0d50528dd48dc971de17abfa7",
+      "bytes": 1925
+    },
+    "bridge/air_bridge_probe.gd": {
+      "sha256": "41bc23a03237c4795b9380150cc75e49ae7af97a267f5d73821c412a69598d1d",
+      "bytes": 4012
+    },
+    "bridge/bridge.log": {
+      "sha256": "7e200282453e2deb1706558af1f54b816be7ad28c3bbb7968a78e8967da9a773",
+      "bytes": 601
+    },
+    "bridge/receipt.json": {
+      "sha256": "a8d10fd824b5423e4e8b35376d3b5f4e02af946fcdcf2601297bff352ffa1dc9",
+      "bytes": 2609
+    },
+    "native/air-world-crown-parkour.log": {
+      "sha256": "bc757ec486d9df858fafa27f35ec68e4c5a670637a81ed98f3716ffa2b76b4f2",
+      "bytes": 882
+    },
+    "native/air-world-final-parkour.log": {
+      "sha256": "f31b26a0d95d897fbbad61ae97c7d925219572387bef58c018f912d7519a5359",
+      "bytes": 730
+    },
+    "native/pre-north-source-receipt.json": {
+      "sha256": "dfcb89fe63850ebf0423e2e1e5321b507fb706e9f369b6b23c95fc5246f3cece",
+      "bytes": 941
+    },
+    "source/current-owner.diff": {
+      "sha256": "e1d472e3091da18f7ae33216f706b1283a6efbcb1ba922582514508ebbb434df",
+      "bytes": 7803
+    },
+    "source/current-test.diff": {
+      "sha256": "1390d24fae7d59b7f90f2b6187bf8c5875f049ca7c3511a620be7a9150c2f58c",
+      "bytes": 5581
+    }
+  },
+  "advisory_review": {
+    "provider": "Super_Agent",
+    "session_id": "01a11eab-43ff-7261-a7a9-377e314daf44",
+    "kind": "Advisory math review; not a runtime check.",
+    "parent_recorded_findings": [
+      "The sign-crossing impulse/positive-work formula is correct.",
+      "Player-only airborne force uses actual world velocity for work; steering may retain its inherited support-relative reference.",
+      "Absorbed work is recorded separately and does not refill the positive-work budget."
+    ]
+  }
+}

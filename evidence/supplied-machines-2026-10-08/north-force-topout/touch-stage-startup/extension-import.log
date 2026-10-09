@@ -1,0 +1,27 @@
+ERROR: No GDExtension library found for current OS and architecture (linux.arm64) in configuration file: res://addons/scraperx_native/scraperx_native.gdextension
+   at: parse_gdextension_file (core/extension/gdextension_library_loader.cpp:369)
+ERROR: GDExtension dynamic library not found: 'res://addons/scraperx_native/scraperx_native.gdextension'.
+   at: open_library (core/extension/gdextension.cpp:810)
+ERROR: Error loading extension: 'res://addons/scraperx_native/scraperx_native.gdextension'.
+   at: load_extensions (core/extension/gdextension_manager.cpp:333)
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: Preload file "res://assets/materials/refractory/brick_colour_roughness.png" has no resource loaders (unrecognized file extension).
+          at: GDScript::reload (res://presentation/materials/refractory_material.gd:6)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "COLOUR_ROUGHNESS" constant because the value doesn't have a set type.
+          at: GDScript::reload (res://presentation/materials/refractory_material.gd:6)
+SCRIPT ERROR: Parse Error: Preload file "res://assets/materials/refractory/brick_normal_gl.png" has no resource loaders (unrecognized file extension).
+          at: GDScript::reload (res://presentation/materials/refractory_material.gd:7)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "NORMAL_GL" constant because the value doesn't have a set type.
+          at: GDScript::reload (res://presentation/materials/refractory_material.gd:7)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://presentation/kit_view.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://presentation/main.gd:0)
+ERROR: Failed to load script "res://presentation/main.gd" with error "Compilation failed".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+ERROR: SCRAPERX_EXTENSION_LOAD_FAILED
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail_native (res://presentation/main.gd:4569)
+       [1] _ready (res://presentation/main.gd:483)

@@ -1,0 +1,9 @@
+PASS north frame paid Jump/recovery/retry stroke_ticks=19 command_j=599.4 spring_positive_j=306.363 ordinary_inputs_only=1
+FIRST_REST 16,94.9044,-180.515 physical_topout_s=1.68889
+SECOND_REST 9.99994,98.4069,-178.588
+PRE_CATCH pos=14.38,105.469,-180.597 vel=0,-2.893,0 grounded=0 support=0 deaths=1 impact=0.620011
+FIRST_HANG pos=14.38,105.437,-180.597 vel=0,-2.84144,0 grounded=0 support=0 deaths=1 impact=0.620011
+HANG_START 14.38,105.437,-180.597
+RELEASE_RESULT pos=14.38,104.38,-180.597 vel=0,0,0 grounded=1 support=1901 deaths=1 impact=5.34845
+NORTH_HANG_TRANSFER seconds=1.7 peak_hand_n=1756.77
+PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=360

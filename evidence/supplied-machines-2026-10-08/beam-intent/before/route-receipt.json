@@ -1,0 +1,27 @@
+{
+  "scope": "One private exact root route-probe against frozen pre-beam-change library/header copies. Identical waypoint/input/acceptance; no maintained edits or shared build.",
+  "captured_utc": "2026-10-09T04:02:57.554585+00:00",
+  "root_probe_original_path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/beam-correction/route-probe.cpp",
+  "probe_sha256": "1a9e7c0a671a30eca281d5658b7b2207252a0356bd29c0f954470d245414fe79",
+  "library_sha256": "7c38bc5b5f490631d28073f754880d05d49a37fdcec1781854346c77111e970b",
+  "frozen_library_provenance": "/data/data/com.termux/files/usr/tmp/scraperx-beam-before-rxldp_ck/receipt.json",
+  "library_frozen_owner_source_sha256": {
+    "src/sim/simulation.cpp": "110211e3f3fa2c5696c63dd9df305c211066770f5675f9530f938fa7af532e58",
+    "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "src/sim/braced_bay.cpp": "3bfc8b3dddc6361fc929bd1dd6faef44da05772f0d1cc02aa2b9a96ee21605a7"
+  },
+  "header_sha256": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+  "source_base": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "before_boundary": "Frozen copy made after root reported damping build ready and before beam correction. It already contains prior air/North work; it is not silently treated as immutable6a production.",
+  "root_probe_differences": "None; copied bytes exactly. Its logging and new balance checks are preserved; the reported current failure is earlier at the return-girder target.",
+  "exit_code": 1,
+  "actual_return_approach": "MANTLE_READY position=26.65,87.8989,-132 velocity=0,0,-0.000640869 grounded=1 support=1900 balance=1 crouch=0 deaths=0",
+  "return_girder_at_original_target_passed": true,
+  "actual_mantle_seconds": 1.48889,
+  "actual_ring88_passed": true,
+  "actual_first_failure": "FAIL AS-021 gentle lateral input moves in the requested direction on real footing",
+  "result": "Original return waypoint/route pass; expected later new gentle-input regression fails on frozen old beam arbitration.",
+  "before_log_sha256": "13d2605e472b8e46ad3c3ba37d2a512c2095aaac00e3ae3ec10513a26147509c",
+  "executable_sha256": "28aba33feef49097e51f40b434356c502495b8aff7e2f9572077ed3a3008ed15",
+  "classification": "The current initial return-girder failure is introduced test-driver incompatibility after removing automatic Z centering, not reproduced in the frozen old library. The original target26.55 lies about0.10m beyond real Tower-wall standoff; distance<.10 relies on nearly exact Zcentering. Root corrects only the target to26.68, preserving tolerance, settling, physical footing and1.7s mantle."
+}

@@ -1,0 +1,135 @@
+diff --git a/src/bridge/scraperx_simulation.cpp b/src/bridge/scraperx_simulation.cpp
+index e7bbdfb..85cc4de 100644
+--- a/src/bridge/scraperx_simulation.cpp
++++ b/src/bridge/scraperx_simulation.cpp
+@@ -693,6 +693,9 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
+     out["landing_slip_velocity"] = to_godot(s.landing_slip_velocity);
+     out["landing_recovery_work_j"] = s.landing_recovery_work_j;
+     out["landing_jump_work_j"] = s.landing_jump_work_j;
++    out["air_control_command_positive_work_j"] = s.air_control_command_positive_work_j;
++    out["air_control_command_absorbed_work_j"] = s.air_control_command_absorbed_work_j;
++    out["air_control_force_n"] = to_godot(s.air_control_force_n);
+     return out;
+ }
+ 
+diff --git a/src/sim/simulation.cpp b/src/sim/simulation.cpp
+index 2860856..7c3410b 100644
+--- a/src/sim/simulation.cpp
++++ b/src/sim/simulation.cpp
+@@ -2172,6 +2172,7 @@ public:
+         landing_applied_force_ = JPH::Vec3::sZero();
+ 
+         auto &bodies = physics_system_.GetBodyInterface();
++        air_control_force_ = JPH::Vec3::sZero();
+         const auto rider_velocity_before = bodies.GetLinearVelocity(player_id_);
+         if (regression_fixtures_) {
+             update_support_motion(bodies, delta_seconds, next_time_seconds);
+@@ -2503,6 +2504,7 @@ public:
+         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
+         rider_specific_acceleration_ = JPH::Vec3::sZero();
+         grounded_ = false;
++        air_control_force_ = JPH::Vec3::sZero();
+         support_entity_id_ = 0;
+         support_sample_ = {};
+         airborne_inherited_velocity_ = JPH::Vec3::sZero();
+@@ -5690,10 +5692,42 @@ private:
+                 approach_relative_horizontal_velocity(target, reference_velocity,
+                     move_x, move_z, kAirAcceleration, delta_seconds, air_full_speed_);
+                 JPH::Vec3 force = (target - player_velocity) * (kPlayerMassKg / delta_seconds);
+-                const JPH::Vec3 relative = player_velocity - reference_velocity;
+-                const float power = force.Dot(relative) +
+-                    .5F * force.LengthSq() / kPlayerMassKg * delta_seconds;
+-                if (power > 3000.0F) force *= 3000.0F / power;
++                // Steering retains the departure reference, but there is no
++                // longer a contacted receiver sharing this force. Its work
++                // must use actual world velocity, not discounted support speed.
++                const double inverse_mass = 1.0 / kPlayerMassKg;
++                const double budget = 3000.0 * delta_seconds;
++                const auto magnitude = [](JPH::Vec3 value) {
++                    return std::hypot(double(value.GetX()), double(value.GetY()), double(value.GetZ()));
++                };
++                const auto world_projection = [&](JPH::Vec3 value) {
++                    return (double(value.GetX()) * player_velocity.GetX() +
++                            double(value.GetY()) * player_velocity.GetY() +
++                            double(value.GetZ()) * player_velocity.GetZ()) / magnitude(value);
++                };
++                const double requested_impulse = magnitude(force) * delta_seconds;
++                if (requested_impulse > 0) {
++                    const double u = world_projection(force);
++                    const double cap = u < 0 ? -u / inverse_mass +
++                        std::sqrt(2.0 * budget / inverse_mass) :
++                        2.0 * budget / (u + std::hypot(u,
++                            std::sqrt(2.0 * inverse_mass * budget)));
++                    if (cap < requested_impulse)
++                        force *= float(std::max(0.0, cap / requested_impulse) * .999999);
++                    const double impulse = magnitude(force) * delta_seconds;
++                    const double delivered_u = impulse > 0 ? world_projection(force) : 0;
++                    const double braking = delivered_u < 0 ?
++                        std::min(impulse, -delivered_u / inverse_mass) : 0;
++                    const double positive = impulse - braking;
++                    // Frozen isolated-force command receipts, not a ledger of
++                    // solver, gravity, parachute or collision energy exchange.
++                    air_control_command_positive_work_j_ += delivered_u < 0 ?
++                        .5 * inverse_mass * positive * positive :
++                        delivered_u * impulse + .5 * inverse_mass * impulse * impulse;
++                    air_control_command_absorbed_work_j_ +=
++                        -delivered_u * braking - .5 * inverse_mass * braking * braking;
++                }
++                air_control_force_ = force;
+                 bodies.AddForce(player_id_, force);
+             }
+             return false;
+@@ -6919,6 +6953,9 @@ private:
+         if ((cargo_net_ && traversal_body_ == cargo_net_->body()) ||
+             entity_is_causal_section_support(traversal_entity_id_) ||
+             entity_is_causal_section_support(probe.ledge_entity_id) ||
++            // North-frame ladder top-outs retain their actual hands until
++            // receiving footing; other legacy mantle/vault owners stay scoped.
++            (traversal_entity_id_ == 1901 && probe.ledge_entity_id == 1901) ||
+             (!probe.landing_body.IsInvalid() &&
+              entity_is_causal_section_support(bodies.GetUserData(probe.landing_body)))) {
+             return begin_cargo_transfer(bodies,probe,origin);
+@@ -7568,6 +7605,7 @@ private:
+         pre_contact_fall_speed_mps_ = 0.0F;
+         clear_landing_recovery();
+         parachute_deployed_ = false;
++        air_control_force_ = JPH::Vec3::sZero();
+         ++death_count_;
+     }
+ 
+@@ -7942,6 +7980,9 @@ private:
+         state_.landing_recovery_seconds = landing_recovery_seconds_;
+         state_.landing_recovery_work_j = landing_recovery_work_j_;
+         state_.landing_jump_work_j = landing_jump_work_j_;
++        state_.air_control_command_positive_work_j = air_control_command_positive_work_j_;
++        state_.air_control_command_absorbed_work_j = air_control_command_absorbed_work_j_;
++        state_.air_control_force_n = to_vector3(air_control_force_);
+         state_.landing_recovering = slingshot_ && grounded_ && landing_recovery_seconds_ > 0;
+         const double recovery_ratio = landing_recovery_duration_ > 0 ?
+             std::clamp(landing_recovery_seconds_ / landing_recovery_duration_, 0.0, 1.0) : 0;
+@@ -8236,6 +8277,9 @@ private:
+     double landing_recovery_duration_ = 0, landing_initial_balance_loss_ = 0;
+     double landing_recovery_work_j_ = 0;
+     double landing_jump_work_j_ = 0;
++    double air_control_command_positive_work_j_ = 0;
++    double air_control_command_absorbed_work_j_ = 0;
++    JPH::Vec3 air_control_force_ = JPH::Vec3::sZero();
+     JPH::Vec3 landing_slip_velocity_ = JPH::Vec3::sZero();
+     JPH::Vec3 landing_applied_force_ = JPH::Vec3::sZero();
+     JPH::RVec3 landing_force_start_ = JPH::RVec3::sZero();
+diff --git a/src/sim/simulation.hpp b/src/sim/simulation.hpp
+index 585eccf..a1c96ee 100644
+--- a/src/sim/simulation.hpp
++++ b/src/sim/simulation.hpp
+@@ -237,6 +237,11 @@ struct Snapshot final {
+     double landing_recovery_seconds = 0.0;
+     double landing_recovery_work_j = 0.0;
+     double landing_jump_work_j = 0.0; // separate finite push-off impulse channel
++    // Frozen isolated world-force command prediction; separate positive and
++    // absorbed work. Not measured solver/contact work or full energy closure.
++    double air_control_command_positive_work_j = 0.0;
++    double air_control_command_absorbed_work_j = 0.0;
++    Vector3 air_control_force_n{};
+     bool landing_recovering = false;
+     Vector3 landing_slip_velocity{};
+     bool parachute_deployed = false;

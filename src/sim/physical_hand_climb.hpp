@@ -23,7 +23,7 @@ public:
     [[nodiscard]] bool active() const noexcept;
     [[nodiscard]] bool attached(unsigned hand) const noexcept;
     // Brief ledge pull-up: higher bounded command power, damped rigid hands.
-    void set_transfer_profile();
+    void set_transfer_profile(float rigid_hand_damping = 600.0F);
     // Passive mounted hanger: bounded human lean commands, not a hinge drive.
     void set_swing_profile();
     [[nodiscard]] bool swinging() const noexcept { return swing_profile_; }

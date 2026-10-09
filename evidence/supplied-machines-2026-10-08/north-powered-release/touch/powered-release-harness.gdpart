@@ -1,0 +1,147 @@
+var _powered_active := false
+var _powered_tick := 0
+var _powered_command := 0.0
+var _powered_positive := 0.0
+var _powered_jump_tick := -1
+var _powered_last_attached_tick := -1
+var _powered_release_tick := -1
+var _powered_jump_command := 0.0
+var _powered_jump_positive := 0.0
+var _powered_release_command := 0.0
+var _powered_release_positive := 0.0
+var _powered_release_velocity := Vector3.ZERO
+var _powered_jump_loaded := false
+var _powered_failure := ""
+var _powered_samples := 0
+var _powered_peak_hand := 0.0
+
+func _powered_state() -> String:
+	return "tick=%d at=%s velocity=%s support=%d grounded=%s traversal=%d handsupport=%d deaths=%d touch_move=%s native=%s" % [
+		_native().get_tick_index(), _position(), _velocity(), _native().get_support_entity_id(),
+		_native().is_player_grounded(), _native().get_traversal_state(), _native().get_traversal_support_entity_id(),
+		_native().get_death_count(), _main._touch.move_vector, _native().get_landing_state()]
+
+func _process(_delta: float) -> void:
+	if not _powered_active:
+		return
+	var state: Dictionary = _native().get_landing_state()
+	var tick := int(_native().get_tick_index())
+	var left: Vector3 = state["left_hand_force_n"]
+	var right: Vector3 = state["right_hand_force_n"]
+	var command := float(state["traversal_command_work_bound_j"])
+	var positive := float(state["hand_actuator_positive_work_j"])
+	var budget := 3000.0 * float(tick - _powered_tick) / 90.0 + 0.001
+	var traversal := int(_native().get_traversal_state())
+	var invalid := int(_native().get_death_count()) != 0 or float(state["player_gravity_factor"]) != 1.0 \
+		or not _position().is_finite() or not _velocity().is_finite() or not left.is_finite() or not right.is_finite() \
+		or left.length() > 1501.0 or right.length() > 1501.0 \
+		or traversal in [_main.TRAVERSAL_MANTLING, _main.TRAVERSAL_VAULTING] \
+		or bool(_native().is_parachute_deployed()) or not is_finite(command) or not is_finite(positive) \
+		or command - _powered_command < -0.000001 or positive - _powered_positive < -0.000001 \
+		or command - _powered_command > budget or positive - _powered_positive > budget
+	if traversal == _main.TRAVERSAL_CLIMBING:
+		invalid = invalid or int(state["traversal_hand_constraint_count"]) != 2 \
+			or int(_native().get_traversal_support_entity_id()) != 1901
+		if _powered_jump_tick >= 0 and _powered_release_tick < 0:
+			_powered_last_attached_tick = tick
+			_powered_jump_loaded = _powered_jump_loaded or left.length() > 0.01 or right.length() > 0.01
+	elif _powered_jump_tick >= 0 and _powered_release_tick < 0:
+		_powered_release_tick = tick
+		_powered_release_command = command
+		_powered_release_positive = positive
+		_powered_release_velocity = _velocity()
+		print("SCRAPERX_NORTH_POWERED_TOUCH release_first_observed " + _powered_state())
+	_powered_peak_hand = maxf(_powered_peak_hand, maxf(left.length(), right.length()))
+	_powered_command = command
+	_powered_positive = positive
+	_powered_tick = tick
+	_powered_samples += 1
+	if invalid:
+		_powered_failure = "native gravity/hand/regular-work invariant " + _powered_state()
+		_powered_active = false
+		print("SCRAPERX_NORTH_POWERED_TOUCH FAIL " + _powered_failure)
+		get_tree().quit(31)
+
+func _powered_hold(ticks: int) -> bool:
+	var start := int(_native().get_tick_index())
+	while int(_native().get_tick_index()) - start < ticks:
+		await get_tree().process_frame
+		if not _powered_failure.is_empty():
+			return false
+	return true
+
+func _powered_roof() -> bool:
+	return _native().is_player_grounded() and not _native().is_player_crouched() \
+		and int(_native().get_support_entity_id()) in [11,1901] and int(_native().get_traversal_state()) == 0 \
+		and absf(_position().y - 88.9) < 0.12 and int(_native().get_death_count()) == 0 \
+		and int(_native().get_landing_state()["traversal_hand_constraint_count"]) == 0
+
+func _touch_north_grip_diagnostic() -> bool:
+	if not _campaign_world_intact() or int(_native().get_entity_body_count(1901)) != 1 \
+			or not _native().debug_restart_at(Vector3(16.00084,88.9,-179.4486)):
+		return _fail("normal North powered-release supported initial stage rejected")
+	await _face(Vector2(0,-1))
+	await _seconds(0.5)
+	if not _native().is_player_grounded() or absf(_position().y-88.9)>0.12:
+		return _fail("supported88m stage did not establish actual footing " + _powered_state())
+	if not await _walk_to(InputRouter.Device.TOUCH,Vector2(16,-179.55),0.04,2.0):
+		return _fail("ordinary touch first-ladder stance " + _powered_state())
+	await _seconds(0.5)
+	if not _native().is_grip_available() or not await _offered(&"climb","CLIMB","HOLD"):
+		return _fail("actual North hand grip unavailable " + _powered_state())
+	var state: Dictionary = _native().get_landing_state()
+	_powered_tick = int(_native().get_tick_index())
+	_powered_command = float(state["traversal_command_work_bound_j"])
+	_powered_positive = float(state["hand_actuator_positive_work_j"])
+	_powered_active = true
+	_act(InputRouter.Device.TOUCH)
+	if not await _wait_until(func() -> bool: return bool(_ctx()["climbing"]),1.0):
+		return _fail("actual touch Action failed to attach hands " + _powered_state())
+	_move(InputRouter.Device.TOUCH,1.0)
+	if not await _wait_until(func() -> bool: return _position().y>=90.0,8.0):
+		return _fail("ordinary directional climb failed90m " + _powered_state())
+	_move(InputRouter.Device.TOUCH,0.0)
+	if not await _powered_hold(30) or not bool(_ctx()["climbing"]):
+		return _fail("neutral30tick actual hands lost " + _powered_state())
+	print("SCRAPERX_NORTH_POWERED_TOUCH before_jump " + _powered_state())
+	state = _native().get_landing_state()
+	_powered_jump_tick = int(_native().get_tick_index())
+	_powered_last_attached_tick = _powered_jump_tick
+	_powered_jump_command = float(state["traversal_command_work_bound_j"])
+	_powered_jump_positive = float(state["hand_actuator_positive_work_j"])
+	_tap(1,_center(&"jump"))
+	if not await _wait_until(func() -> bool: return _powered_release_tick>=0,1.0):
+		return _fail("actual Jump did not finish attached powered release " + _powered_state())
+	var lower_s := float(_powered_last_attached_tick-_powered_jump_tick)/90.0
+	var upper_s := float(_powered_release_tick-_powered_jump_tick)/90.0
+	var stroke_command := _powered_release_command-_powered_jump_command
+	var stroke_positive := _powered_release_positive-_powered_jump_positive
+	if lower_s<0.15 or upper_s>0.27 or not _powered_jump_loaded or stroke_command<=0.0 or stroke_positive<=0.0 \
+			or int(_native().get_landing_state()["traversal_hand_constraint_count"]) != 0:
+		return _fail("release lacks finite attached paid stroke lower_s=%.6f upper_s=%.6f command_j=%.6f positive_j=%.6f %s" % [lower_s,upper_s,stroke_command,stroke_positive,_powered_state()])
+	if not await _wait_until(_powered_roof,4.0):
+		return _fail("released body did not recover actual88.9 platform " + _powered_state())
+	var roof_start := int(_native().get_tick_index())
+	while int(_native().get_tick_index())-roof_start<90:
+		await get_tree().process_frame
+		if not _powered_roof() or not _powered_failure.is_empty():
+			return _fail("actual recovery platform lost during90tick hold " + _powered_state())
+	print("SCRAPERX_NORTH_POWERED_TOUCH recovery_platform " + _powered_state())
+	if not await _walk_to(InputRouter.Device.TOUCH,Vector2(16,-179.55),0.04,6.0,true):
+		return _fail("ordinary touch recatch approach failed " + _powered_state())
+	await _seconds(0.3)
+	if not _native().is_grip_available() or not await _offered(&"climb","CLIMB","HOLD"):
+		return _fail("physical recatch grip not offered after ordinary approach " + _powered_state())
+	_act(InputRouter.Device.TOUCH)
+	if not await _wait_until(func() -> bool: return bool(_ctx()["climbing"]),1.0):
+		return _fail("ordinary touch Action could not recatch " + _powered_state())
+	_move(InputRouter.Device.TOUCH,1.0)
+	if not await _wait_until(func() -> bool: return _position().y>=89.7,4.0):
+		return _fail("physical recatch cannot resume directional ascent " + _powered_state())
+	_move(InputRouter.Device.TOUCH,0.0)
+	if not await _powered_hold(30) or not bool(_ctx()["climbing"]):
+		return _fail("recaught hands did not retain30tick neutral " + _powered_state())
+	print("SCRAPERX_NORTH_POWERED_TOUCH recaught " + _powered_state())
+	_powered_active = false
+	_detail = "normal_world=1 initial_supported88m_stage=1 later_pose_velocity_writes=0 directional_climb90m=1 neutral_ticks=30 actual_jump=1 attached_stroke_lower_s=%.6f attached_stroke_upper_s=%.6f regular_power_w=3000 per_hand_bound_n=1500 stroke_command_j=%.6f stroke_positive_j=%.6f release_velocity=%s actual88m_recovery_hold_ticks=90 ordinary_recaught=1 deaths=0 samples=%d peak_hand_n=%.6f" % [lower_s,upper_s,stroke_command,stroke_positive,_powered_release_velocity,_powered_samples,_powered_peak_hand]
+	return true

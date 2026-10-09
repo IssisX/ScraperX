@@ -1,0 +1,10 @@
+{
+  "base_head": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "limits": "Before North-frame top-out conversion; local air-work repair already included. Initial supporteddebug placement only; all climb/actions ordinary native inputs.",
+  "hashes": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.cpp": "6cfd18d3605aae90a54e0e54cd5f59cfd53037e4b4dcfcf9e977cb297527e0cb",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/libscraperx_sim.a": "11c0b6c5cffb0b80371fcd5ab581e7a1fe6bd8bf90cf428226041fc8cb54efe4",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-force-topout/probe.cpp": "27a2f130e9a32d2f686f35c85ce47dfd9ee95b68e2b4b53f6630c0c738daf360"
+  }
+}

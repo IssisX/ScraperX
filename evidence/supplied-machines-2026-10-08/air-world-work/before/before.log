@@ -1,0 +1,33 @@
+FLOOR tick=90 P=0.451349,1.39407,8 V=1.08993,0,0 support=3 grounded=1 inherited=1.08993
+JUMP tick=91 P=0.463251,1.45397,8 V=1.07124,5.391,0 support=0 grounded=0
+AIR tick=92 vx_before=1.07124 vx_after=1.2268 y=1.51266 horizontal_work=15.1926 world_power=1367.33 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=93 vx_before=1.2268 vx_after=1.38235 y=1.57013 horizontal_work=17.2494 world_power=1552.45 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=94 vx_before=1.38235 vx_after=1.53791 y=1.6264 horizontal_work=19.3062 world_power=1737.56 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=95 vx_before=1.53791 vx_after=1.69346 y=1.68146 horizontal_work=21.363 world_power=1922.67 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=96 vx_before=1.69346 vx_after=1.84902 y=1.7353 horizontal_work=23.4197 world_power=2107.78 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=97 vx_before=1.84902 vx_after=2.00458 y=1.78793 horizontal_work=25.4765 world_power=2292.89 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=98 vx_before=2.00458 vx_after=2.16013 y=1.83936 horizontal_work=27.5334 world_power=2478 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=99 vx_before=2.16013 vx_after=2.31569 y=1.88957 horizontal_work=29.5902 world_power=2663.11 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=100 vx_before=2.31569 vx_after=2.47124 y=1.93857 horizontal_work=31.647 world_power=2848.23 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=101 vx_before=2.47124 vx_after=2.6268 y=1.98636 horizontal_work=33.7037 world_power=3033.34 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=102 vx_before=2.6268 vx_after=2.78235 y=2.03293 horizontal_work=35.7605 world_power=3218.45 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=103 vx_before=2.78235 vx_after=2.93791 y=2.0783 horizontal_work=37.8173 world_power=3403.56 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=104 vx_before=2.93791 vx_after=3.09347 y=2.12246 horizontal_work=39.8741 world_power=3588.67 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=105 vx_before=3.09347 vx_after=3.24902 y=2.1654 horizontal_work=41.9309 world_power=3773.78 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=106 vx_before=3.24902 vx_after=3.40458 y=2.20713 horizontal_work=43.9876 world_power=3958.89 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=107 vx_before=3.40458 vx_after=3.56013 y=2.24765 horizontal_work=46.0444 world_power=4144 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=108 vx_before=3.56013 vx_after=3.71292 y=2.28697 horizontal_work=47.2276 world_power=4250.48 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=109 vx_before=3.71292 vx_after=3.85712 y=2.32507 horizontal_work=46.3943 world_power=4175.49 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=110 vx_before=3.85712 vx_after=3.99407 y=2.36195 horizontal_work=45.6944 world_power=4112.5 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=111 vx_before=3.99407 vx_after=4.12476 y=2.39763 horizontal_work=45.0956 world_power=4058.61 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=112 vx_before=4.12476 vx_after=4.25 y=2.4321 horizontal_work=44.5756 world_power=4011.8 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=113 vx_before=4.25 vx_after=4.37042 y=2.46535 horizontal_work=44.1185 world_power=3970.67 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=114 vx_before=4.37042 vx_after=4.48655 y=2.4974 horizontal_work=43.7128 world_power=3934.15 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=115 vx_before=4.48655 vx_after=4.59881 y=2.52823 horizontal_work=43.3492 world_power=3901.43 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=116 vx_before=4.59881 vx_after=4.70758 y=2.55785 horizontal_work=43.0212 world_power=3871.91 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=117 vx_before=4.70758 vx_after=4.81317 y=2.58627 horizontal_work=42.7233 world_power=3845.1 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=118 vx_before=4.81317 vx_after=4.91584 y=2.61347 horizontal_work=42.451 world_power=3820.59 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=119 vx_before=4.91584 vx_after=5.01582 y=2.63945 horizontal_work=42.2008 world_power=3798.07 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=120 vx_before=5.01582 vx_after=5.11331 y=2.66423 horizontal_work=41.9702 world_power=3777.32 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+AIR tick=121 vx_before=5.11331 vx_after=5.2085 y=2.6878 horizontal_work=41.7564 world_power=3758.08 recovery_receipt=0 jump_receipt=0 support=0 grounded=0
+BEFORE result=WORLD_POWER_BOUND_VIOLATED worst_world_power=4250.48 steering_acceleration_request=14

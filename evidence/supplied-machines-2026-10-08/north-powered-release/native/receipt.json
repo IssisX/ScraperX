@@ -1,0 +1,67 @@
+{
+  "saved_utc": "2026-10-09T04:25:08.758241+00:00",
+  "branch": "ChatGPT",
+  "checkout_head": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "source_boundary": "Uncommitted working source after the scoped North1901 paid-release correction. Hashes captured during evidence collection; this is not an immutable pushed commit or Android delivery.",
+  "source_sha256_at_collection": {
+    "src/sim/simulation.cpp": "d051a85df7cb1687589d3ca522beb2c2042ea6dc221236e147ed5611dddd538e",
+    "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "src/sim/physical_hand_climb.cpp": "098a0d36dbd0cf3cd6eb3e4898051b1b59a5797d3fc37761ba7ed29534d47409",
+    "src/sim/physical_hand_climb.hpp": "ab22499a484a348c7c4946c92ad5820bd56143f72300e8b356888b30c8b39834",
+    "tests/north_service_frame_tests.cpp": "c8f97eacc7ac0e5e28a4a3897734061c110dde46be43e459431170b925df2942",
+    "src/bridge/scraperx_simulation.cpp": "56e0d21b4cc2c5e43ec4d7892864b3f80f546a49ba70c93b65fc108c2c255a37"
+  },
+  "existing_artifact_sha256_at_collection": {
+    "native_owner_executable": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_north_service_frame_tests",
+      "sha256": "9601e415196dfc180feba73cf0bada5504ca9148ecfd613bc6083da8ec7bd7fb",
+      "bytes": 45865992
+    },
+    "native_library": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/libscraperx_sim.a",
+      "sha256": "4d05523bb232aeed5ff09a6e4fead3bd0325642f919eef0f54f3fec3f64868ca",
+      "bytes": 2068474
+    },
+    "private_before_executable": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-powered-release/probe-before",
+      "sha256": "e3b2e20f3a5b1b596caaf7241a7a0ccfe057dbc0185825688f656931c9e2189c",
+      "bytes": 45931208
+    },
+    "private_after_executable": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-powered-release/probe-after",
+      "sha256": "84a5252d2bd4ff674ae0c9458b97b21718c1963795729ec21c307b9bb29e89b1",
+      "bytes": 45931096
+    }
+  },
+  "artifact_provenance": "Root reports the private before/after probes and maintained native owner were run using these respective artifacts. Before receipt captures its identity; after/native hashes are collection-time identities, not embedded in the completed logs. This evidence owner did not build or execute anything.",
+  "private_probe_source_sha256": "c4df3dfb7cb51b410b64819fbbba515d480e37328e0c6bb99b49c3ffff15f337",
+  "observed_after": {
+    "first_jump_tick": 241,
+    "hands": 2,
+    "gravity_factor": 1,
+    "command_increment_j": 33.299999,
+    "release_tick": 259,
+    "release_velocity_mps": [
+      0,
+      0.8076130748,
+      0.6588866115
+    ],
+    "command_stroke_j": 599.399957,
+    "recovery_support": 1901,
+    "recovery_y_m": 88.90000153,
+    "deaths": 0
+  },
+  "maintained_case": {
+    "marker": "PASS north frame paid Jump/recovery/retry",
+    "stroke_ticks": 19,
+    "command_stroke_j": 599.4,
+    "positive_spring_target_work_j": 306.363,
+    "ordinary_inputs_only": true
+  },
+  "retained_full_route": {
+    "marker": "PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=90",
+    "first_physical_topout_seconds": 1.68889,
+    "deliberate_later_lip_retry_deaths": 1
+  },
+  "exit_code_capture": "No explicit exit code line is present in the saved before/after/native logs; completed PASS markers and root-reported results are preserved without inventing exit codes."
+}

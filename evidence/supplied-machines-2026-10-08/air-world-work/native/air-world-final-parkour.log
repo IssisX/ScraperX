@@ -1,0 +1,9 @@
+INFO Jump expiry press_tick=222 contact_after_ticks=59
+INFO Jump buffer press_tick=277 contact_tick=281 after18_vy=3.97401 grounded=0
+INFO ordinary Tower force east_vx=1.853 east_work=147.753 neutral_speed=0 reversed_vx=-1.853 total_work=443.26
+PASS scraperx_sim air world work: inherited_vx=1.07124 peak_tick_positive_j=33.3333 supplied_j=1050.19 absorbed_j=1026.22 neutral_vx=-1.30834
+INFO vault entry approach=5.5 first=5.61058
+INFO vault exit before=5.6541 after=5.5
+INFO neutral-air momentum approach=5.5 takeoff=5.5 after_18_ticks=5.5 delta=0 y=1.82459 vy=3.429
+PASS scraperx_sim step2 sprint: peak=8 air_slowest=8 sprint_jump_m=8.97771 walk_jump_m=6.16802 crouched_peak=2.475 across_peak=5.5
+PASS scraperx_sim parkour flow

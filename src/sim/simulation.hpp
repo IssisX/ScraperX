@@ -237,6 +237,11 @@ struct Snapshot final {
     double landing_recovery_seconds = 0.0;
     double landing_recovery_work_j = 0.0;
     double landing_jump_work_j = 0.0; // separate finite push-off impulse channel
+    // Frozen isolated world-force command prediction; separate positive and
+    // absorbed work. Not measured solver/contact work or full energy closure.
+    double air_control_command_positive_work_j = 0.0;
+    double air_control_command_absorbed_work_j = 0.0;
+    Vector3 air_control_force_n{};
     bool landing_recovering = false;
     Vector3 landing_slip_velocity{};
     bool parachute_deployed = false;

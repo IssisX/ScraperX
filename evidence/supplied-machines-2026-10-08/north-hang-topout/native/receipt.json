@@ -1,0 +1,99 @@
+{
+  "saved_utc": "2026-10-09T04:38:43.343679+00:00",
+  "branch": "ChatGPT",
+  "checkout_head": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "boundary": "Uncommitted working source after scoped North1901 Hanging-to-foot force conversion and chosen400 damping; root reports no further C++/test edits before checkpoint. Collection hashes are not a pushed commit/Android identity.",
+  "source_sha256_at_collection": {
+    "src/sim/simulation.cpp": "e2694b6002a0c3d25b8edd9d2e3a5a4b5a977f5bc4ae181e4b1924edbc91db6c",
+    "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "src/sim/physical_hand_climb.cpp": "098a0d36dbd0cf3cd6eb3e4898051b1b59a5797d3fc37761ba7ed29534d47409",
+    "src/sim/physical_hand_climb.hpp": "ab22499a484a348c7c4946c92ad5820bd56143f72300e8b356888b30c8b39834",
+    "src/sim/north_service_frame.cpp": "10d04ea1ee1b048ff80add510a7a6de3d7b5e564ec2e95df929466d4cb096977",
+    "src/sim/north_service_frame.hpp": "954dac43f3da91c18094756156c19d3d17d4dd36f428d3ebb4c48b0b014fdde9",
+    "tests/north_service_frame_tests.cpp": "1d9f6e7ad078be4c76208847a55beabd64f5edbfca2c0b9c496f0459ad6c111d",
+    "src/bridge/scraperx_simulation.cpp": "56e0d21b4cc2c5e43ec4d7892864b3f80f546a49ba70c93b65fc108c2c255a37"
+  },
+  "existing_artifact_sha256_at_collection": {
+    "native_owner_executable": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_north_service_frame_tests",
+      "sha256": "8f964ede0f6bb664587c5f7b5313924f32fe9e1ff67975d361224e3b099592f4",
+      "bytes": 45932136
+    },
+    "native_library": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/libscraperx_sim.a",
+      "sha256": "bd9be20d333b6d78cecce9a6f2460ef4bb5a9af936f2cc36a89bc811d008fb7b",
+      "bytes": 2068618
+    },
+    "runtime_bridge": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/runtime-godot/addons/scraperx_native/bin/linux/libscraperx_native.so",
+      "sha256": "8b0915f8b3562b414310204e5f4fe47871aac0c7bdc5aa07b30cf0f4f3661f15",
+      "bytes": 47584048
+    },
+    "private_before_executable": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-hang-topout/probe-before",
+      "sha256": "1a1783fcbffaf5d5eb9a7d44747ab97606f60cd09f9b50217e6b5041155d9839",
+      "bytes": 45932000
+    }
+  },
+  "runtime_provenance": "Root completed these native logs and reports60/360 caller exits0. This evidence owner only read/copied finished outputs and hashed existing artifacts; no build/run. Artifact/source hashes are collection-time identities, not embedded in saved native logs.",
+  "native_caller_results": {
+    "90": {
+      "marker": "PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=90",
+      "hang_seconds": 1.7,
+      "peak_hand_vector_sum_n": 1756.77
+    },
+    "60": {
+      "marker": "PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=60",
+      "hang_seconds": 1.7,
+      "peak_hand_vector_sum_n": 1756.73,
+      "exit_code": 0,
+      "exit_code_provenance": "Root terminal report; no explicit code line in saved log."
+    },
+    "360": {
+      "marker": "PASS north frame native +88 to +110 m with real supports, lip retry and two stable receiver checkpoints caller_hz=360",
+      "hang_seconds": 1.7,
+      "peak_hand_vector_sum_n": 1756.77,
+      "exit_code": 0,
+      "exit_code_provenance": "Root terminal report; no explicit code line in saved log."
+    }
+  },
+  "route_deaths": "One retained deliberate later fatal/retry sequence in each full native route; no added death during the checked hang transfer.",
+  "chosen_profile": {
+    "north_from_hanging_damping_ns_per_m": 400,
+    "other_north_ladder_topout_damping_ns_per_m": 480,
+    "other_transfer_damping_ns_per_m": 600,
+    "force_bound_per_hand_n": 1500,
+    "command_and_positive_spring_target_work_budget_w": 6600,
+    "hang_acceptance_seconds": 1.7
+  },
+  "profile_480_failed": {
+    "elapsed_seconds": 1.7,
+    "position_m": [
+      13.5317,
+      106.953,
+      -181.872
+    ],
+    "velocity_mps": [
+      -0.764998,
+      -0.491069,
+      0.00315576
+    ],
+    "target_m": [
+      13.56,
+      106.92,
+      -181.872
+    ],
+    "state": "Climbing",
+    "hands": 2,
+    "foot_transfer_count": 3,
+    "result": "Not accepted as responsive real footing/work; diagnostic/source clearance places the body north of the canopy, not blocked under it.",
+    "source_and_binary_hash_at_run": "Unavailable; no identity inferred from the final400 artifacts."
+  },
+  "normal_touch": "Root reports PASS: requesttick403\u2192foot555 gives1.688889s; actual canopy refusal and ordinary shimmy;1901/106.9m shelf270ticks/V0;0.984m onward plus90ticks;zero deaths;max878.75N per hand and6600W bounded. Separate touch owner retains its direct log/receipts in touch/. This manifest does not hash or modify that subtree.",
+  "limits": [
+    "Scoped active1901 hands only, not every legacy mantle/vault. Existing capsule clearance/canopy refusal and passiveDrop roles remain.",
+    "Conservative command debit and positive spring-target work remain separate receipts; no complete solver/body/support energy-closure claim.",
+    "Saved native logs have PASS markers but no embedded artifact hashes/explicit exit-code lines; source/artifact identity and root terminal report are distinguished.",
+    "No current Actions/APK, physical phone, haptic/feel or continuous normal-world campaign claim."
+  ]
+}

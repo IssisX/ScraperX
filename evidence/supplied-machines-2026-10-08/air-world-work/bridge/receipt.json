@@ -1,0 +1,29 @@
+{
+  "scope": "tiny actual Godot4.7 native bridge dictionary proof; ordinary native grade/Jump/side steering APIs; no event injection, debug stages, pose or velocity writes; not fullphysics campaign",
+  "project_source": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/runtime-godot",
+  "private_project": "/data/data/com.termux/files/usr/tmp/scraperx-air-bridge-uphy8dw1/godot",
+  "repo_head": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "working_tree_source": true,
+  "bridge_sha256": "5c11e07cec22ba5fa0c5ca1063429acdc70c363cd144a0bd92569fd736e6b270",
+  "private_script_sha256": "41bc23a03237c4795b9380150cc75e49ae7af97a267f5d73821c412a69598d1d",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "6cfd18d3605aae90a54e0e54cd5f59cfd53037e4b4dcfcf9e977cb297527e0cb",
+    "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "src/bridge/scraperx_simulation.cpp": "56e0d21b4cc2c5e43ec4d7892864b3f80f546a49ba70c93b65fc108c2c255a37"
+  },
+  "native_tick_hz": 90,
+  "airborne_samples": 24,
+  "godot": "4.7-stable_linux.arm64",
+  "private_bridge_path": "/data/data/com.termux/files/usr/tmp/scraperx-air-bridge-uphy8dw1/godot/addons/scraperx_native/bin/linux/libscraperx_native.so",
+  "log_sha256": "7e200282453e2deb1706558af1f54b816be7ad28c3bbb7968a78e8967da9a773",
+  "exit_code": 0,
+  "result": "PASS",
+  "actual_evidence": "SCRAPERX_AIR_BRIDGE PASS fields=3 grade_jump=1 ordinary_air_input=1 samples=24 finite_monotone=1 peak_force_n=1190.000366 positive_work_j=529.935600 absorbed_work_j=0.000000 neutral_force_zero=1 tick=116 player=(6.53556, 2.0756, -25.0) velocity=(3.531158, 2.666008, 0.0) support=0",
+  "reviewed_final_source_sha256": {
+    "src/sim/simulation.cpp": "fcb42e8f20dd84c8d5db07ead639eef473576ba96a1ed9f129b856c28275d1cd",
+    "src/sim/simulation.hpp": "420ebd6884edf4bbbff4f05f18ec9a43c391d0b2ae945db29dc664e933aed027",
+    "src/bridge/scraperx_simulation.cpp": "56e0d21b4cc2c5e43ec4d7892864b3f80f546a49ba70c93b65fc108c2c255a37"
+  },
+  "source_boundary": "Copied bridge stayed immutable during this check. Original source hashes above were recorded at staging; subsequent root-owned source review adds transient air-force clears at debug restart and checkpoint recovery. This run proves bridge field binding/ordinary command readbacks, not those later reset clears or full physics energy closure.",
+  "review_result": "No remaining identified defect in common ordinary/causal air cap, sign-crossing, final-float receipt, or reset logic. Existing launcher-flight steering is a separate force channel outside these receipts."
+}

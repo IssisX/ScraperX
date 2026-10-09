@@ -1,0 +1,65 @@
+{
+  "scope": "Completed Godot landing camera/foot-transfer/landing-feedback consumer unit evidence. Saved log only; no runtime rerun/build during collection.",
+  "saved_utc": "2026-10-09T04:01:25.931699+00:00",
+  "source_base_head": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "source_branch": "ChatGPT",
+  "source_private_stage": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/stumble-feedback-2JuETc/godot",
+  "private_stage_source_sha256": {
+    "godot/presentation/main.gd": "b5a0c28cf7dc6c493efe2801cc469b48d5b87a063691df44f717e32e56ca65db",
+    "godot/tests/landing_camera_test.gd": "5539da51641033a9d957d20cd1f369ee4c169e26d0ac18c262582f89cf1fe245",
+    "godot/presentation/landing_camera_response.gd": "9784e69333ef421b94429c8e87b1ca0ff100cd68b1ac63ed3ab9fb022209fd28",
+    "godot/presentation/audio/audio_director.gd": "7c4e5896d55569369170de64d74ce0bf0c7145df3eab3ccec833beb9e3211a98",
+    "godot/presentation/ui/settings_store.gd": "b098865e487ad619cdbe63da1caaf4c9f0a8ad4e049dc1a2a46f34f76190d93e"
+  },
+  "current_source_sha256_at_collection": {
+    "godot/presentation/main.gd": "b5a0c28cf7dc6c493efe2801cc469b48d5b87a063691df44f717e32e56ca65db",
+    "godot/tests/landing_camera_test.gd": "5539da51641033a9d957d20cd1f369ee4c169e26d0ac18c262582f89cf1fe245",
+    "godot/presentation/landing_camera_response.gd": "9784e69333ef421b94429c8e87b1ca0ff100cd68b1ac63ed3ab9fb022209fd28",
+    "godot/presentation/audio/audio_director.gd": "7c4e5896d55569369170de64d74ce0bf0c7145df3eab3ccec833beb9e3211a98",
+    "godot/presentation/ui/settings_store.gd": "b098865e487ad619cdbe63da1caaf4c9f0a8ad4e049dc1a2a46f34f76190d93e"
+  },
+  "stage_matches_current": {
+    "godot/presentation/main.gd": true,
+    "godot/tests/landing_camera_test.gd": true,
+    "godot/presentation/landing_camera_response.gd": true,
+    "godot/presentation/audio/audio_director.gd": true,
+    "godot/presentation/ui/settings_store.gd": true
+  },
+  "observed_engine": "Godot4.7.stable.official.5b4e0cb0f",
+  "observed_result": "SCRAPERX_LANDING_CAMERA_UNIT PASS checks=30",
+  "observed_assertions": 30,
+  "assertion_partition_from_test_source": {
+    "landing_camera_response": 5,
+    "foot_transfer_consumers": 11,
+    "landing_feedback_consumer": 14
+  },
+  "unit_mode": "landing_camera_test.gd exits after these consumer suites under --landing-camera-unit-only, before loading main.tscn or the real native landing/drop integration path.",
+  "scripted_receipt_inputs": true,
+  "exit_code_in_saved_log": null,
+  "result_limit": "Saved log supplies the PASS marker; it does not include a process exit status. Parent reports this completed check passed.",
+  "consumer_contract": [
+    "Reads native landing receipt fields without mutation. A fresh supported active response3 sideways recovery can earn a low-normal stumble cue from finite positive tangent energy.",
+    "Normal impact speed>5m/s keeps the existing land cue and strength priority; it emits no second stumble cue.",
+    "Count/tick consumption coalesces skipped receipts once, rejects repeated/same-tick pulses, and consumes quiet/disabled samples instead of replaying them later.",
+    "Startup and restart seed count/tick quietly; native rewind establishes a new quiet epoch; death restore suppresses success, while a later fresh receipt after death is eligible.",
+    "Vibration OFF returns before device routing while receipt bookkeeping still advances; head motion/cinematics OFF do not cause stale event replay."
+  ],
+  "settings_and_routing_source_contract": "_haptic retains CI/vibration/known-kind guards; TOUCH requires mobile and GAMEPAD an active pad. Stumble28ms/.5 base specification is bounded by its measured-energy strength. Enabled physical device routing is not exercised by this unit mode.",
+  "limits": [
+    "These30 consumer assertions do not establish native stumble/contact/roll physics, whole-scene camera integration, audio listening or physical vibration.",
+    "No physical Android handheld or gamepad vibration, comfort/intensity/feel, Actions/APK delivery or device execution was observed.",
+    "The unit-only path precedes actual native drop integration. Synthetic receipt dictionaries are test inputs, not manufactured gameplay completion.",
+    "All exact staged/current source hashes are recorded separately; the base commit does not by itself identify this uncommitted working-source change.",
+    "Only this new evidence directory was written; no maintained source, rerun, build, push, commit or other owner artifact was changed."
+  ],
+  "files": {
+    "README.md": {
+      "sha256": "f28a05e4ddd80d57377e14696cb2aac850c078faff2b0d08c4b0cf65b3b28081",
+      "bytes": 1881
+    },
+    "landing-consumer.log": {
+      "sha256": "d8ec10d0e423fb457d7eaed78081aca5775a36e05e6e2a39343a212f1ed60b96",
+      "bytes": 115
+    }
+  }
+}

@@ -1,0 +1,12 @@
+BRACE_FOOT position=28.0403,77.9,-130.986 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+FIRST_LANDING position=28.0007,82.8984,-143.954 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_TAKEOFF position=30.0303,82.8984,-143.999 velocity=4.16925,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+GAP_LANDING position=33.6292,82.8934,-144 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+WALK_TO_FAILED position=33.9954,84.8839,-138.711 velocity=0.00118017,7.45058e-09,2.6077e-08 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+TARGET 34,-136.7 seconds=3
+STANDING_BLOCKED position=33.9954,84.8839,-138.711 velocity=0.00118017,7.45058e-09,2.6077e-08 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+CROUCHED_PASS position=33.9972,85.4677,-136.767 velocity=0.001052,0.0679299,0.149446 grounded=1 support=1900 balance=1 crouch=1 deaths=0
+UPPER_JUNCTION position=33.9995,87.8985,-131.539 velocity=0,0,0 grounded=1 support=1900 balance=0 crouch=0 deaths=0
+WALK_TO_FAILED position=26.65,87.8991,-131.999 velocity=0,0,-0.000578228 grounded=1 support=1900 balance=1 crouch=0 deaths=0
+TARGET 26.55,-132 seconds=12
+FAIL AS-021 return girder reaches tower edge

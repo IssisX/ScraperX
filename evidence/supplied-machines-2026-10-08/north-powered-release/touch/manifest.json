@@ -1,0 +1,24 @@
+{
+  "observed_result": "PASS",
+  "exit_code": 0,
+  "scope": "normal shipping world supported88m staged North1901 powered hand-release/actual88.9 footing/ordinary recatch; not continuous campaign",
+  "branch": "ChatGPT",
+  "checkout_head": "6a62ab4e1c6be2ecadd995f607d7dd4d81895e46",
+  "private_stage": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-powered-touch-vasvfusz",
+  "source_sha256": {
+    "bridge": "0f0333e9f70cc551e09dfc814ffcdfc85bf4f484b9cd76110c5a7725aeffd6c9",
+    "main": "b5a0c28cf7dc6c493efe2801cc469b48d5b87a063691df44f717e32e56ca65db",
+    "driver": "e596eea87ff6eca253898fe19ff515cfb691cd4b81943f24085f0bdd04264c13",
+    "maintained_driver": "12bc2b50d0925f3467e55f706f447e790e7ce3b52f29c1b49195cc396f11e396",
+    "harness": "82751e91913ba7fd8caba6560a591395772a3ad5dc4a2c77571c7eb9033fe9fe"
+  },
+  "files": {
+    "touch-powered-release.log": "540e1004d63faa6ef415b4ec550beb71f31a23f7b38f530e356fdd830b399534",
+    "powered-release-harness.gdpart": "82751e91913ba7fd8caba6560a591395772a3ad5dc4a2c77571c7eb9033fe9fe",
+    "receipt.txt": "ed7cfc66dd41c64aa78cac00d865ecc803b578d37b6f19d5a4a48c4576dfff23",
+    "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "source-sha256-start.txt": "316497c7395d8aa7f53dbcc6e0e8ab5908067989f199119b5fdebea29a6a2520",
+    "source-sha256-end.txt": "316497c7395d8aa7f53dbcc6e0e8ab5908067989f199119b5fdebea29a6a2520",
+    "README.md": "455d46f24dec6b65e1c9ec3d2f6d8c44565e505a9597c514f3992f8312ee02ef"
+  }
+}

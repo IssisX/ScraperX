@@ -331,6 +331,7 @@ var _crouch_toggled := false
 var _fb_traversal := 0
 var _fb_swinging := false
 var _fb_landing_count := -1
+var _fb_landing_tick := -1
 var _fb_foot_transfer_count := -1
 var _fb_foot_transfer_tick := -1
 var _fb_fall_speed := 0.0
@@ -518,7 +519,7 @@ func _ready() -> void:
 	_fb_traversal = int(_ctx["traversal"])
 	_fb_swinging = bool(_ctx["swinging"])
 	var landing: Dictionary = _native.get_landing_state()
-	_fb_landing_count = int(landing["landing_count"])
+	_reset_landing_feedback(landing, int(_native.get_tick_index()))
 	_reset_foot_transfer_feedback(landing)
 	_fb_deaths = int(_ctx["deaths"])
 	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
@@ -893,7 +894,7 @@ func _after_restart() -> void:
 	_crouch_toggled = false
 	_ctx = _read_context()
 	var landing: Dictionary = _native.get_landing_state()
-	_fb_landing_count = int(landing["landing_count"])
+	_reset_landing_feedback(landing, int(_native.get_tick_index()))
 	_reset_foot_transfer_feedback(landing)
 	_fb_deaths = int(_ctx["deaths"])
 	_audio.reset_landing_feedback(_fb_landing_count, _fb_deaths, landing)
@@ -1368,6 +1369,7 @@ const HAPTICS := {
 	&"strain": [20, 0.35],
 	&"footplant": [18, 0.25],
 	&"land": [34, 0.85],
+	&"stumble": [28, 0.5],
 	&"chute": [45, 0.7],
 	&"warn": [80, 0.9],
 	&"death": [150, 1.0],
@@ -1386,7 +1388,7 @@ func _haptic(kind: StringName, strength: float = 1.0) -> void:
 				Input.vibrate_handheld(duration_ms, amplitude)
 		InputRouter.Device.GAMEPAD:
 			if _router.active_pad >= 0:
-				var heavy := kind in [&"land", &"death", &"warn"]
+				var heavy := kind in [&"land", &"stumble", &"death", &"warn"]
 				Input.start_joy_vibration(_router.active_pad, amplitude * 0.8,
 					amplitude if heavy else amplitude * 0.25, float(duration_ms) / 1000.0)
 
@@ -1409,6 +1411,38 @@ func _consume_foot_transfer(state: Dictionary, deaths: int) -> float:
 	_fb_foot_transfer_count = count
 	_fb_foot_transfer_tick = tick
 	return clampf(load / 2400.0, 0.25, 1.0) if new_transfer else 0.0
+
+
+func _reset_landing_feedback(state: Dictionary, tick: int) -> void:
+	_fb_landing_count = int(state.get("landing_count", -1))
+	_fb_landing_tick = tick
+
+
+func _consume_landing_feedback(state: Dictionary, deaths: int, tick: int,
+		lethal_speed: float) -> Dictionary:
+	var count := int(state.get("landing_count", -1))
+	var new_landing := _fb_landing_count >= 0 and count > _fb_landing_count \
+		and tick > _fb_landing_tick and tick > 0 and deaths == _fb_deaths
+	# Consume quiet, rewind and skipped samples too: only the latest native
+	# receipt can earn one cue, and enabling vibration never replays it.
+	_reset_landing_feedback(state, tick)
+	if not new_landing:
+		return {}
+	var normal_speed := float(state.get("landing_normal_speed_mps", 0.0))
+	if not is_finite(normal_speed):
+		return {}
+	normal_speed = maxf(normal_speed, 0.0)
+	if normal_speed > 5.0:
+		return {"kind": &"land", "strength": clampf(normal_speed / maxf(lethal_speed, 0.001), 0.25, 1.0)}
+	var tangent_energy := float(state.get("landing_tangent_energy_j", 0.0))
+	# Native sideways recovery can be substantial despite a gentle normal
+	# approach. It earns a small body pulse, never a second impact cue.
+	if int(state.get("landing_response", 0)) == 3 \
+			and bool(state.get("landing_recovering", false)) \
+			and int(state.get("landing_support_entity_id", 0)) > 0 \
+			and is_finite(tangent_energy) and tangent_energy > 0.0:
+		return {"kind": &"stumble", "strength": clampf(sqrt(tangent_energy / 3442.5), 0.25, 0.85)}
+	return {}
 
 
 # State transitions become feedback: a grab, a landing, a canopy, a lethal
@@ -1461,15 +1495,12 @@ func _update_feedback(delta: float) -> void:
 		_haptic(&"strain", clampf(hand_load / 2400.0, 0.5, 1.0))
 		_catch_strain_cooldown = 0.3
 	_last_hand_load = hand_load
-	var landing_count := int(landing["landing_count"])
-	var normal_speed := maxf(float(landing["landing_normal_speed_mps"]), 0.0)
 	# The receipt survives a missed airborne/contact render frame and measures
 	# approach relative to the actual support, including inclined moving decks.
 	# Restores consume the receipt silently; death has its own feedback below.
-	if _fb_landing_count >= 0 and landing_count > _fb_landing_count \
-			and deaths == _fb_deaths and normal_speed > 5.0:
-		_haptic(&"land", clampf(normal_speed / maxf(lethal, 0.001), 0.25, 1.0))
-	_fb_landing_count = landing_count
+	var landing_cue := _consume_landing_feedback(landing, deaths, int(_native.get_tick_index()), lethal)
+	if not landing_cue.is_empty():
+		_haptic(landing_cue["kind"], float(landing_cue["strength"]))
 	# The native velocity read on the last airborne frame. Not the native's
 	# last_impact_speed: after a restore the player re-settles within a tick
 	# and that value is overwritten with the settle before any HUD sees it.
