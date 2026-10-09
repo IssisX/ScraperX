@@ -164,10 +164,11 @@ own gate.
     (2026-10-08: *"I haven't figured out what will be at the very top yet"*): the machines climb to
     800 m and the top is left open; the tower is not cut down until the owner decides.
 
-13. **It must be played now.** The owner (2026-10-08): the game should look, feel and play like it
-    *"MUST BE PLAYED NOW"*, so an interested person cannot refuse to try it, *"as it is too
-    enticing and gorgeous to pass up because it was created with such comprehensive & delicate
-    care"*. Cheap is not a goal: a thing is worth doing for its value. Open work toward it
+13. **Irresistible at first sight.** The owner (2026-10-08) described the bar as a scene: a kid
+    holds the game in a store, sees it, and thinks *"I must play this now!"*. The game should
+    look, feel and play so that anyone who glimpses it reacts that way, *"as it is too enticing and
+    gorgeous to pass up because it was created with such comprehensive & delicate care"*. It is
+    not a literal instruction or a deadline; it is the reaction to earn. Cheap is not a goal: a thing is worth doing for its value. Open work toward it
     (the owner, 2026-10-08): shortcuts that reward breaking the intended route, because the
     physics allows them; the height felt (wind that grows and pushes, the body bracing, the city
     dropping away, the structure creaking under load); pressure from the world on one or two

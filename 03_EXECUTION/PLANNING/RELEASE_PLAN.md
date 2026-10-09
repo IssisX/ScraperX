@@ -81,7 +81,7 @@ Each item is one complete, verifiable unit, proven through the touch path on the
 9. **Performance from those numbers** (L). First-launch quality tiers, a 45 FPS cap, batched
    static dressing, visibility ranges, and the dead SSAO setting removed.
 
-**C. "Must be played now"**
+**C. Irresistible at first sight (the "I must play this now!" reaction)**
 
 10. **Height felt (#90)** (L).
     - Layered wind from 0 to 802 m.
