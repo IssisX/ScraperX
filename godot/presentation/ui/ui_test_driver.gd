@@ -740,6 +740,15 @@ func _touch_pause() -> bool:
 	if _main._pause_menu.current_page() != &"audio":
 		return _fail("tapping AUDIO did not open the audio page")
 	await _pose("pause_audio")
+	_click(_main._pause_menu.side_button_center(&"licences"))
+	await _frames(2)
+	if _main._pause_menu.current_page() != &"licences":
+		return _fail("tapping LICENCES did not open the licences page")
+	var notices: String = (_main._pause_menu._pages[&"licences"] as RichTextLabel).get_parsed_text()
+	for owed in ["Jorrit Rouwe", "Godot Engine contributors", "Chatterbox", "LICENCE: "]:
+		if not notices.contains(owed):
+			return _fail("the licences page does not carry '%s'" % owed)
+	await _pose("pause_licences")
 	_click(_main._pause_menu.side_button_center(&"resume"))
 	await _frames(3)
 	if get_tree().paused:

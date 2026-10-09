@@ -23,6 +23,8 @@ const PAGE_SETTINGS := &"settings"
 const PAGE_GRAPHICS := &"graphics"
 const PAGE_DISPLAY := &"display"
 const PAGE_AUDIO := &"audio"
+const PAGE_LICENCES := &"licences"
+const Licences := preload("res://presentation/ui/licences.gd")
 const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY, PAGE_AUDIO]
 
 var settings: SettingsStore
@@ -219,7 +221,8 @@ func _build(viewport_size: Vector2) -> void:
 		entries.append([&"start_at", _start_text()])
 	entries += [[&"restart", NEW_CLIMB_TEXT],
 		[PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
-		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"]]
+		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"],
+		[PAGE_LICENCES, "LICENCES"]]
 	if not OS.has_feature("mobile"):
 		entries.append([&"quit", "QUIT TO DESKTOP"])
 	for entry in entries:
@@ -242,6 +245,7 @@ func _build(viewport_size: Vector2) -> void:
 		else:
 			button.text = NEW_CLIMB_CONFIRM_TEXT)
 	(_side_buttons[PAGE_CONTROLS] as Button).pressed.connect(_show_page.bind(PAGE_CONTROLS))
+	(_side_buttons[PAGE_LICENCES] as Button).pressed.connect(_show_page.bind(PAGE_LICENCES))
 	for page in SETTING_PAGES:
 		(_side_buttons[page] as Button).pressed.connect(_show_page.bind(page))
 	if _side_buttons.has(&"quit"):
@@ -272,6 +276,7 @@ func _build(viewport_size: Vector2) -> void:
 	_content.size = Vector2(safe.end.x - _content.position.x - 72.0 * _u,
 		safe.end.y - _content.position.y - 64.0 * _u)
 	_build_controls_page()
+	_build_licences_page()
 	_build_settings_page()
 	_build_graphics_page()
 	_build_display_page()
@@ -366,6 +371,28 @@ func _side_button(text: String) -> Button:
 	button.add_theme_font_override("font", UiStyle.font_heavy())
 	button.add_theme_font_size_override("font_size", int(roundf(40.0 * _u)))
 	return button
+
+
+# The notices the game carries (licences.gd), in one scrolling text: dragged
+# on touch, wheeled with a mouse, and scrolled with the stick or arrows once
+# focused. The text is set the first time the page is shown.
+func _build_licences_page() -> void:
+	var text := RichTextLabel.new()
+	text.bbcode_enabled = false
+	text.scroll_active = true
+	text.selection_enabled = false
+	text.focus_mode = Control.FOCUS_ALL
+	text.add_theme_font_override("normal_font", UiStyle.font_label())
+	text.add_theme_font_size_override("normal_font_size", int(roundf(22.0 * _u)))
+	text.add_theme_color_override("default_color", UiStyle.PAPER_DIM)
+	_content.add_child(text)
+	text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	text.visible = false
+	text.visibility_changed.connect(func() -> void:
+		if text.visible and text.get_parsed_text().is_empty():
+			text.text = Licences.text())
+	_pages[PAGE_LICENCES] = text
+	_page_first[PAGE_LICENCES] = text
 
 
 func _build_controls_page() -> void:

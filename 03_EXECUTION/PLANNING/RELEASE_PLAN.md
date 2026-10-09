@@ -87,7 +87,10 @@ Each item is one complete, verifiable unit, proven through the touch path on the
      test driver excluded.
    - An upload key in a protected environment, plus Play App Signing.
    - Native symbols kept for crash reports.
-   - A Licences and Credits screen.
+   - A Licences and Credits screen. *Licences done 2026-10-09 (`licences.gd`, `touch_pause`):* the
+     pause menu's LICENCES page carries Godot's licence and every component and licence the engine
+     reports at runtime, Jolt's and godot-cpp's MIT texts verbatim at the pinned commits, and the
+     fall voice's provenance. Credits (who made the game) wait on the owner.
    - The icon and splash.
 8. **Device baseline** (M, needs the owner's Fold).
    - The release build gets an in-game performance log the owner can share from the phone.
