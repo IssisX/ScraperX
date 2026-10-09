@@ -175,6 +175,10 @@ own gate.
     reach the top, visible from the ground once the owner decides what stands there; and a care
     pass on the look, feel and first minutes, then every stage. No ghost racer.
 
+14. **It is a paid product.** The owner (2026-10-08): *"This game will be public-facing and real
+    money will be exchanged for it. It must look, feel, and play like it."* The work toward a paid
+    release, and the decisions it waits on, are in `RELEASE_PLAN.md` beside this file.
+
 ## 3. The chain
 
 Band 0, **The Stack** (grade → 154 m). Only what is proven or designed has heights and verbs.
