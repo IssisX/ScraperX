@@ -3,8 +3,7 @@
 On 2026-10-09 the owner set the ten-phase goal, plus Phase 10, paid-release readiness. Its full
 specification is `03_EXECUTION/ACTIVE_GOAL_PHASED_SCOPE.md` on branch `ChatGPT`. The owner chose to
 pursue the same goal on this branch: *"Same goal, ScraperX-Claude"*. Read that file from `origin/ChatGPT`.
-This branch never writes to `ChatGPT`. Its plans of record stay `PLANNING/MECHANISM_ASCENT_PLAN.md`
-and `PLANNING/RELEASE_PLAN.md`.
+This branch's plans of record stay `PLANNING/MECHANISM_ASCENT_PLAN.md` and `PLANNING/RELEASE_PLAN.md`.
 
 The percentages are rough estimates. Each one says what it rests on. A phase marked *not assessed*
 has not been checked against its scope here.
