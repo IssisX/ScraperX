@@ -1985,6 +1985,30 @@ func _high(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var started := int(_native().get_tick_index())
 	var body := _watch_body()
+	if not await _high_legs(device):
+		return false
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
+	if not _standing_above(803.3):
+		return _fail("high: not standing on the derrick's upper receiver (y %.2f)" % _position().y)
+	_detail = "crown_y=%.2f top_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_high_crown_y, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step,
+		float(body["lift"])]
+	return true
+
+
+var _high_crown_y := 0.0
+
+# From the 750 deck: the vault over its east parapet, the crown gondola and the
+# luffing derrick to its upper receiver (802.64 m). Played alone by touch_high
+# from a 750 deck spawn, and by touch_stack on from the gravel wheel's arrival.
+func _high_legs(device: int) -> bool:
 	if not (await _go(device, Vector2(10.8, -152.0), 0.15, 10.0) and \
 			await _go(device, Vector2(11.3, -152.0), 0.06, 3.0)):
 		return _fail("high: the walk to the east parapet stalled at %s" % str(_position()))
@@ -2000,24 +2024,11 @@ func _high(device: int) -> bool:
 	if not await _ride_machine(device, 3, "CROWN GONDOLA", Vector2(13.5, -152.0), Vector2(17.3, -152.0),
 			Vector2(13.5, -151.5)):
 		return false
-	var crown_y := _position().y
+	_high_crown_y = _position().y
 	if not await _ride_machine(device, 4, "LUFFING DERRICK", Vector2(13.5, -156.5), Vector2(12.3, -161.3),
 			Vector2(13.5, -184.3)):
 		return false
 	await _pose("high_top")
-	var worst_step := _stop_watch(body)
-	if worst_step > 0.25:
-		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
-	if float(body["lift"]) > 0.10:
-		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
-			float(body["lift"]), str(body.get("lift_at", ""))])
-	if int(_native().get_death_count()) != 0:
-		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
-	if not _standing_above(803.3):
-		return _fail("high: not standing on the derrick's upper receiver (y %.2f)" % _position().y)
-	_detail = "crown_y=%.2f top_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
-		crown_y, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step,
-		float(body["lift"])]
 	return true
 
 
@@ -3081,6 +3092,13 @@ func _stack(device: int) -> bool:
 		if not await _service_o(device):
 			return false
 		reached += " deck750_y=%.2f" % _position().y
+		# Over the 750 deck's east parapet, the crown gondola and the luffing
+		# derrick to the top of the route (802.64 m): grade to the top in one run.
+		if not await _high_legs(device):
+			return false
+		if not _standing_above(803.3):
+			return _fail("stack: not standing on the derrick's upper receiver (y %.2f)" % _position().y)
+		reached += " crown_y=%.2f top_y=%.2f" % [_high_crown_y, _position().y]
 
 	# A frame here is one or two native ticks: 0.25 m is over 11 m/s sideways,
 	# faster than a sprint; only a snap moves the view that far.

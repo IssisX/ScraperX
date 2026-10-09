@@ -42,7 +42,9 @@ Each item is one complete, verifiable unit, proven through the touch path on the
 
 **A. Truth first (no owner decision needed)**
 
-1. **The whole climb in one run** (L). `touch_summit` plays from grade to 802.64 m with no spawn
+1. **The whole climb in one run** (L). *Main route done 2026-10-09:* `touch_stack` now plays from grade to
+   803.5 m in one run on touch (796 s of play, no deaths). An unbroken route never uses the slingshot,
+   which skips most of the tower and is there for fun. Still open: `touch_summit` plays from grade to 802.64 m with no spawn
    in between, plus a matching native chain. It becomes a CI gate. A second run takes the canonical
    branch through TP-340 and on into AS-008.
 2. **Nothing strands** (M).
