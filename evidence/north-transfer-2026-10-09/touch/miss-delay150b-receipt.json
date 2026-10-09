@@ -1,0 +1,100 @@
+{
+  "label": "miss-delay150b",
+  "result": "PASS",
+  "exit_code": 0,
+  "terminal": [
+    "SCRAPERX_UITEST PASS touch_north_transfer ordinary_viewport_touch=1 sole_entry418_staging=1 actual_handrail=1 real_hand_to_foot=1 balance=1 pocket=1 offset_gap=1 actual440_25_receiver=1 onward_walk=1 gravity=1 deaths=0 first_catch_delay_150ms=1 miss_retry=1"
+  ],
+  "errors": [],
+  "phases": [
+    "entry418",
+    "north418_band",
+    "north418_toe_approach",
+    "lower_brace_toe418",
+    "lower_brace_ascent429",
+    "entry429_inward_jump",
+    "entry429_inward_jump_braking",
+    "rail_jump_runup",
+    "jump_action_catch1938",
+    "finite_rail_regrip",
+    "rail_drop_to_real_endrest",
+    "endrest_braking",
+    "earned_beam_miss_start",
+    "deliberate_beam_walkoff",
+    "recovery_braking",
+    "recovery_north418_reset_approach",
+    "north418_band",
+    "north418_toe_approach",
+    "lower_brace_toe418",
+    "lower_brace_ascent429",
+    "entry429_inward_jump",
+    "entry429_inward_jump_braking",
+    "rail_jump_runup",
+    "jump_action_catch1938",
+    "finite_rail_regrip",
+    "rail_drop_to_real_endrest",
+    "endrest_braking",
+    "narrow_balance",
+    "pocket_approach",
+    "sheltered_crouch_pocket",
+    "pocket_exit",
+    "offset_gap_runup",
+    "supported_run_jump",
+    "offset_gap_free_flight",
+    "offset_receiver_braking",
+    "429_onward_to_upper_toe",
+    "upper_brace_toe429",
+    "upper_brace_ascent440",
+    "actual440_floor_jump",
+    "actual440_floor_jump_braking",
+    "onward440_west_roof"
+  ],
+  "last_native_samples": [
+    "NORTH_TRANSFER_TOUCH phase=onward440_west_roof event=tick tick=10586 position=(-20.00005, 441.15, -136.9289) velocity=(0.000055, 0.0, -5.5) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=8062.075790 hand_work=1505.927542 firm=true yaw=-12.566262 touch_move=(0.000119, 1.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=onward440_west_roof event=tick tick=10676 position=(-20.00005, 441.15, -142.002) velocity=(0.000197, 0.0, -2.84831) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=8062.075790 hand_work=1505.927542 firm=true yaw=-12.566262 touch_move=(-0.000039, -0.740726) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=onward440_west_roof event=tick tick=10766 position=(-20.00005, 441.15, -142.0167) velocity=(0.000252, 0.0, 0.20531) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=8062.075790 hand_work=1505.927542 firm=true yaw=-12.566262 touch_move=(0.000042, -0.037329) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=onward440_west_roof event=arrived tick=10775 position=(-20.00005, 441.15, -141.9965) velocity=(0.000255, 0.0, 0.103842) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=8062.075790 hand_work=1505.927542 firm=true yaw=-12.566262 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=onward440_west_roof event=tick tick=10856 position=(-20.00005, 441.15, -141.996) velocity=(0.0, 0.0, 0.0) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=8062.075790 hand_work=1505.927542 firm=true yaw=-12.566262 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=onward440_west_roof event=stable tick=10865 position=(-20.00005, 441.15, -141.996) velocity=(0.0, 0.0, 0.0) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=8062.075790 hand_work=1505.927542 firm=true yaw=-12.566262 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=onward440_west_roof event=final440_receipt tick=10865 position=(-20.00005, 441.15, -141.996) velocity=(0.0, 0.0, 0.0) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=8062.075790 hand_work=1505.927542 firm=true yaw=-12.566262 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "SCRAPERX_UITEST PASS touch_north_transfer ordinary_viewport_touch=1 sole_entry418_staging=1 actual_handrail=1 real_hand_to_foot=1 balance=1 pocket=1 offset_gap=1 actual440_25_receiver=1 onward_walk=1 gravity=1 deaths=0 first_catch_delay_150ms=1 miss_retry=1"
+  ],
+  "catch_delay_receipts": [
+    "NORTH_CATCH_DELAY catch=1 first_tick=2795 action_tick=2809 viewport_frames=9 native_seconds=0.155556 grip_still_available=true point=(-18.8474, 431.1, -127.7)"
+  ],
+  "recovery_receipts": [
+    "NORTH_TRANSFER_TOUCH phase=deliberate_beam_walkoff event=actual_beam_support_loss tick=3748 position=(-12.02737, 429.7687, -128.8925) velocity=(-0.002435, -1.722092, -2.496756) grounded=false support=0 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247507 hand_work=706.870225 firm=false yaw=0.000000 touch_move=(0.0, 1.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=deliberate_beam_walkoff event=delayed_air_countersteer tick=3772 position=(-12.02785, 428.9571, -129.7722) velocity=(-0.001683, -4.338094, -3.424031) grounded=false support=0 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247507 hand_work=706.870225 firm=false yaw=0.000000 touch_move=(0.027963, -0.999609) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=deliberate_beam_walkoff event=actual418_recovery_impact tick=3866 position=(-12.00404, 419.1421, -129.3599) velocity=(0.029136, 0.0, 0.256118) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247507 hand_work=706.870225 firm=true yaw=0.000000 touch_move=(-0.000883, -0.036172) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0"
+  ],
+  "drop_receipts": [
+    "NORTH_TRANSFER_TOUCH phase=rail_drop_to_real_endrest event=before_drop tick=3268 position=(-15.84042, 430.5281, -128.1964) velocity=(0.593386, 0.001291, 0.0) grounded=false support=0 traversal=4 traversal_support=1938 hands=2 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247507 hand_work=706.870225 firm=false yaw=-3.141593 touch_move=(0.0, 0.0) action={ \"id\": &\"climb_up\", \"label\": \"CLIMB UP\", \"icon\": &\"climb\", \"detail\": \"\" } left=(-15.8732, 431.1, -127.7) right=(-15.7, 431.1, -127.7) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=rail_drop_to_real_endrest event=drop_first_native_tick tick=3269 position=(-15.83383, 430.5274, -128.1964) velocity=(0.593386, -0.107709, 0.0) grounded=false support=0 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247507 hand_work=706.870225 firm=false yaw=-3.141593 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=rail_drop_to_real_endrest event=before_drop tick=7261 position=(-15.84212, 430.6661, -128.1965) velocity=(0.593426, -0.005005, 0.0) grounded=false support=0 traversal=4 traversal_support=1938 hands=2 swing=false grip=false gravity=1.000 deaths=0 jump_work=5142.495015 hand_work=1505.927542 firm=false yaw=-3.141593 touch_move=(0.0, 0.0) action={ \"id\": &\"climb_up\", \"label\": \"CLIMB UP\", \"icon\": &\"climb\", \"detail\": \"\" } left=(-15.7, 431.1, -127.7) right=(-15.7, 431.1, -127.7) transfer=0 transfer_support=0",
+    "NORTH_TRANSFER_TOUCH phase=rail_drop_to_real_endrest event=drop_first_native_tick tick=7262 position=(-15.83553, 430.6653, -128.1965) velocity=(0.593426, -0.114005, 0.0) grounded=false support=0 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=5142.495015 hand_work=1505.927542 firm=false yaw=-3.141593 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" } left=(0.0, 0.0, 0.0) right=(0.0, 0.0, 0.0) transfer=0 transfer_support=0"
+  ],
+  "log_sha256": "e43498270749175735089cf4a94c9c6a2a94dc0bcc4616b83c539d86573f8aea",
+  "runtime_sha256": {
+    "main.tscn": "1a6910fdf586a7d3b0fcea52a1a84787c9ba627e6bd7fe452cd28ff769b52be2",
+    "presentation/main.gd": "f70288313ad03f88b52f186b57b1f6e197b96d4478473f0cbe069e8954f478c8",
+    "presentation/ui/ui_test_driver.gd": "d3ecf432641536ae4f43a3be30c91ad451e15559b35daf3ea4708282feef0301",
+    "presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a",
+    "presentation/ui/hud.gd": "adf03d87584279715ec98c611930101cb08c61f66c76560eacd5726113d86aba",
+    "presentation/kit_view.gd": "71cba49d985491bda98eb2d7fc5beaa1156d61383207f4440351f1b140e4df12",
+    "project.godot": "2ca6051dd55c80d8137b4b9fb4416d3f767e774c4803950c4072cc82489699b9",
+    "addons/scraperx_native/scraperx_native.gdextension": "50ab0bccfaf7455de0d8812dcd228645db346ae72f689707560376d21af1dd93",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "03be12b273ee06a322b2dfa20cc08dc017f31298b379284a1a490cb85248a6a8"
+  },
+  "harness_current_sha256": {
+    "north_driver.gd": "3076b6a414f1794814135f51b2301d69204468f912a5b69ea17c3fbf065709fc",
+    "prepare_runtime.py": "64f12cfe4287534a654c8ac1452fc39cf75212129cb4f88563886d3e0a0dbe46",
+    "run_touch.sh": "cef29420d45405417d2c23bb1689be47e9a1af29f208cdd427b5ff0dfa07aad1",
+    "summarize_receipt.py": "759bd7ef540ce01adf4efe8fb48ce30588a18161718762a6c81612d36168ac55"
+  },
+  "scope": "One initial418roof stage followed by ordinary viewport touch through production input and native authority. No phone feel/performance, rendered visual/audio, CI or APK claim.",
+  "helper_as_used": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/north-transfer-touch/north_driver-miss-delay150b-as-used.gd",
+    "sha256": "3076b6a414f1794814135f51b2301d69204468f912a5b69ea17c3fbf065709fc"
+  }
+}

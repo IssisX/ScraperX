@@ -1,0 +1,16 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=648x557 aspect=1.163 fov=82.0 far=2000
+INSPECTION_FULLWORLD_CAPTURE_READY actualmain normalworld size=(648.0, 557.0)
+SCRAPERX_AUDIO_BANK clips=28 msec=673 driver=Dummy
+INSPECTION_FULLWORLD_CAPTURE staged_left407_pov support1935 native_render_agreement=true
+INSPECTION_FULLWORLD_CAPTURE staged_receiver407_pov support1935 native_render_agreement=true
+INSPECTION_FULLWORLD_CAPTURE staged_tray403_5_pov support1936 native_render_agreement=true
+INSPECTION_FULLWORLD_VISUAL PASS

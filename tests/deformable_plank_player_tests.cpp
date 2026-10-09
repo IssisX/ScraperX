@@ -370,12 +370,25 @@ void run_impact() {
     require(s.debug_restart_at({kCentreX, 410.9, kWalkZ}), "bounded3m fall staging accepted", s);
     require(s.set_move_input(0, 0), "neutral falling input accepted", s);
     begin(s, "native_player_fall_overload");
-    bool broken = false, recovered = false;
+    bool broken = false, recovered = false, clear_steel = false;
     for (int i = 0; i < 720; ++i) {
         const auto v = s.snapshot();
         if (broken) {
-            const double iz = std::clamp(1.8*(-127.2-v.player_position.z)-.28*v.player_linear_velocity.z, -.4, .4);
-            require(s.set_move_input(0, iz), "ordinary steering toward clear recovery tray", s);
+            const double iz = 1.8 * (-127.2 - v.player_position.z) - .28 * v.player_linear_velocity.z;
+            if (!clear_steel) {
+                // First escape sideways from actual fragments, preserving
+                // the observed ordinary Z-only input and its full .4 effort.
+                require(s.set_move_input(0, std::clamp(iz, -.4, .4)),
+                    "ordinary side steering toward clear recovery tray", s);
+            } else {
+                // Only after actual steel contact away from the wood, brake
+                // fragment-imparted X momentum and walk into the tray patch.
+                // A grounded edge perch is not yet honest resting footing.
+                const double ix = 1.8 * (kCentreX - v.player_position.x) - .28 * v.player_linear_velocity.x;
+                const double scale = std::max(1.0, std::hypot(ix, iz) / .4);
+                require(s.set_move_input(ix / scale, iz / scale),
+                    "bounded ordinary two-axis braking on actual recovery steel", s);
+            }
         }
         tick(s);
         const auto now = s.snapshot();
@@ -386,9 +399,20 @@ void run_impact() {
             sample(s, "actual_player_rupture");
             poses(s, "actual_player_rupture");
         }
-        if (broken && now.player_grounded && now.support_entity_id == 1936 &&
+        if (!clear_steel && broken && now.player_grounded && now.support_entity_id == 1936 &&
+            std::abs(now.player_position.z + 127.2) < .1) {
+            clear_steel = true;
+            sample(s, "actual_clear_steel_before_braking");
+        }
+        if (broken && clear_steel && now.player_grounded && now.support_entity_id == 1936 &&
+            now.checkpoint_footing_valid && horizontal_speed(now) < .1 &&
+            std::abs(now.player_position.x - kCentreX) < .1 &&
             std::abs(now.player_position.y-404.4) < .15 && std::abs(now.player_position.z+127.2)<.1) {
             recovered = true;
+            sample(s, "actual_firm_braked_tray");
+            std::cout << "PLANK_IMPACT_RECOVERY,firm=" << now.checkpoint_footing_valid
+                      << ",horizontal_speed_mps=" << horizontal_speed(now)
+                      << ",target_x=" << kCentreX << ",target_z=-127.2\n";
             break;
         }
     }

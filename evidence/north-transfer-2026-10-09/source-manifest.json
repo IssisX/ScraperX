@@ -1,0 +1,20 @@
+{
+  "baseline_head": "de5ed04362cfc693852fc334cb049eeeedaec952",
+  "branch": "ChatGPT",
+  "bridge_sha256": "03be12b273ee06a322b2dfa20cc08dc017f31298b379284a1a490cb85248a6a8",
+  "source_sha256": {
+    "src/sim/simulation.cpp": "f7f92d2bb5501fc05d467019739be6839b1455fb7c037a0cb9302ed58151ab45",
+    "src/sim/parkour_route.hpp": "2f92d546c8523c75db56f4496185b2ab852cc99a8926d43e16d194bc74d44dc8",
+    "src/sim/north_transfer_route.cpp": "f7be1f3dd927092ce31fae960b5534a1cd237864801c24173a00fad64c2cb8bb",
+    "src/sim/north_transfer_route.hpp": "8f3ec05e22b19de959580492db1b3916682473b9791917325af68f22ca24974b",
+    "tests/north_transfer_route_tests.cpp": "3d489dafe45d736d46592dd70cb8dc86b2398806de478f711acd24cee06ee950",
+    "godot/presentation/kit_view.gd": "71cba49d985491bda98eb2d7fc5beaa1156d61383207f4440351f1b140e4df12",
+    "godot/presentation/main.gd": "fe9ebfdef8ae0ed61d03d2f0590d2ff30350c6ad27073f2531c120ca1194d09d",
+    "godot/presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "godot/presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a",
+    "godot/presentation/ui/hud.gd": "adf03d87584279715ec98c611930101cb08c61f66c76560eacd5726113d86aba",
+    "CMakeLists.txt": "1457eb29c13c7059d56e2c2edd357ec2e0cb1e9b395e9995ba298a4e4062bb6a",
+    ".github/workflows/wo000-delivery-spine.yml": "9f83d36091160ce38c4cb6d445116cf6d5fa0aeea9f4cff0d658f398e515a1fc"
+  },
+  "scope": "Native primary and connected failure/retry, ordinary viewport-touch primary and delayed-catch failure/retry, explicitly staged rendered views. No APK/device/performance claim."
+}

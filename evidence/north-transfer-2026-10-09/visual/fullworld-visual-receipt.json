@@ -1,0 +1,54 @@
+{
+  "captures": [
+    {
+      "camera": "[X: (-0.0, 0.0, 1.0), Y: (0.059964, 0.998201, 0.0), Z: (-0.998201, 0.059964, -0.0), O: (-20.5, 430.52, -128.2)]",
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_entry429_pov.png",
+      "label": "staged_entry429_pov",
+      "native_parts": 57,
+      "native_render_agreement": true,
+      "player": "(-20.5, 429.9, -128.2)",
+      "render_surfaces": 6,
+      "render_triangles": 8244,
+      "shadow_quality": 1,
+      "support": 1938,
+      "viewport": "(648.0, 557.0)"
+    },
+    {
+      "camera": "[X: (-0.0, 0.0, 1.0), Y: (0.314567, 0.949235, 0.0), Z: (-0.949235, 0.314567, -0.0), O: (-15.0, 430.52, -128.4)]",
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_footrest429_pov.png",
+      "label": "staged_footrest429_pov",
+      "native_parts": 57,
+      "native_render_agreement": true,
+      "player": "(-15.0, 429.9, -128.4)",
+      "render_surfaces": 6,
+      "render_triangles": 8244,
+      "shadow_quality": 1,
+      "support": 1938,
+      "viewport": "(648.0, 557.0)"
+    },
+    {
+      "camera": "[X: (-0.0, 0.0, 1.0), Y: (0.198669, 0.980067, 0.0), Z: (-0.980067, 0.198669, -0.0), O: (-4.4, 430.52, -129.15)]",
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_receiver429_pov.png",
+      "label": "staged_receiver429_pov",
+      "native_parts": 57,
+      "native_render_agreement": true,
+      "player": "(-4.4, 429.9, -129.15)",
+      "render_surfaces": 6,
+      "render_triangles": 8244,
+      "shadow_quality": 1,
+      "support": 1938,
+      "viewport": "(648.0, 557.0)"
+    }
+  ],
+  "failures": [],
+  "scope": "explicit staged visual inspection; normal production main/native world; capture-only low quality preset; no earned route/phone/performance proof"
+}

@@ -2040,6 +2040,9 @@ public:
                 deformable_plank_ = std::make_unique<DeformablePlank>(physics_system_, *kit_,
                     JPH::RVec3(-8.0F, 406.981F, -128.2F), DeformablePlank::Support::GuidedPinRoller);
                 deformable_plank_->enable_strength_failure();
+                // New north transfer appends after existing owners, preserving
+                // their native body order and checkpoint bindings.
+                build_north_transfer_route(*kit_);
                 contact_listener_.set_reclaim_fragments(supplied_ascent_->reclaim_material_range());
             }
         }

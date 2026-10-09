@@ -22,6 +22,7 @@ add_library(scraperx_sim STATIC
     src/sim/parkour_route.cpp
     src/sim/west_brace_bay_route.cpp
     src/sim/inspection_junction_route.cpp
+    src/sim/north_transfer_route.cpp
     src/sim/deformable_plank.cpp
     src/sim/steam_plant.cpp
     src/sim/water_screw.cpp
@@ -186,6 +187,11 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_test(NAME scraperx_sim.west_brace_bay_route COMMAND scraperx_west_brace_bay_route_tests)
     add_executable(scraperx_inspection_junction_route_tests tests/inspection_junction_route_tests.cpp)
     target_link_libraries(scraperx_inspection_junction_route_tests PRIVATE scraperx_sim)
+    add_executable(scraperx_north_transfer_route_tests tests/north_transfer_route_tests.cpp)
+    target_link_libraries(scraperx_north_transfer_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.north_transfer_route COMMAND scraperx_north_transfer_route_tests)
+    add_test(NAME scraperx_sim.north_transfer_recovery
+        COMMAND scraperx_north_transfer_route_tests miss-retry)
     add_test(NAME scraperx_sim.inspection_junction_route COMMAND scraperx_inspection_junction_route_tests)
     add_test(NAME scraperx_sim.inspection_junction_recovery
         COMMAND scraperx_inspection_junction_route_tests miss-onward)

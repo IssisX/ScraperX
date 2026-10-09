@@ -273,6 +273,8 @@ func _build_junction_materials(palette: Array[Material]) -> void:
 		"grip": [0, Color("b1bcb6"), 0.0, 0.62, 0.18],
 		"bearing": [5, Color("829390"), 1.0, 0.48, 0.22],
 		"warning": [7, Color("cba347"), 0.0, 0.76, 0.0],
+		"transfer_frame": [0, Color("526572"), 0.08, 0.87, 0.30],
+		"transfer_footing": [5, Color("c3c0ad"), 0.12, 0.72, 0.42],
 	}
 	for key in finishes:
 		var finish: Array = finishes[key]
@@ -284,7 +286,7 @@ func _build_junction_materials(palette: Array[Material]) -> void:
 		material.uv1_scale = Vector3.ONE
 		material.uv1_triplanar_sharpness = 4.0
 		_junction_materials[key] = material
-	for key in ["footing", "recovery"]:
+	for key in ["footing", "recovery", "transfer_footing"]:
 		var material: StandardMaterial3D = _junction_materials[key]
 		material.normal_enabled = true
 		material.normal_texture = (_inspection_materials[5] as StandardMaterial3D).normal_texture
@@ -306,6 +308,23 @@ func _junction_part_material(entity: int, index: int, half: Vector3,
 			return _junction_materials["warning"]
 	elif entity == 1937:
 		return _junction_materials["grip" if index == 0 else "bearing"]
+	elif entity == 1938:
+		# The header transfer reuses the surface system, with its own worn
+		# blue-grey frame and warm walking steel. All faces remain native parts.
+		if index == 5:
+			if half.x < 0.08 and half.y < 0.08:
+				return _junction_materials["grip"]
+			return _junction_materials["transfer_footing"]
+		if index == 1:
+			return _junction_materials["oxide"]
+		if index == 7:
+			return _junction_materials["warning"]
+		if index == 0:
+			if half.x < 0.08 and half.y < 0.08:
+				return _junction_materials["grip"]
+			if half.x > 1.5 and half.y < 0.17 and half.z > 0.6:
+				return _junction_materials["warning"]
+			return _junction_materials["transfer_frame"]
 	elif entity == 1935 or entity == 1936:
 		if index == 5:
 			return _junction_materials["recovery" if entity == 1936 else "footing"]
@@ -355,6 +374,11 @@ func _junction_markings(node: Node3D, entity: int) -> void:
 	elif entity == 2935:
 		_junction_stencil(node, "J-407", Vector3(0, -0.7, 0.2015),
 			0.002, Vector3.ZERO, Color("3d3526"))
+	elif entity == 1938:
+		_junction_stencil(node, "SERVICE HEADER\nN-429", Vector3(-21.1, 429.0015, -128.0),
+			0.0055, Vector3(-PI / 2.0, 0, 0), Color("303d43"))
+		_junction_stencil(node, "NORTH FRAME\n440", Vector3(-0.1, 429.0015, -128.0),
+			0.0045, Vector3(-PI / 2.0, 0, 0), Color("303d43"))
 
 
 func _is_plank_segment(entity: int) -> bool:
@@ -458,7 +482,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			_build_cart_materials(palette)
 		if (entity == 1932 or entity == 1933 or entity == 1935 or entity == 1936) and _inspection_materials.is_empty():
 			_build_inspection_materials(palette)
-		if entity in [1935, 1936, 1937, 2935] and _junction_materials.is_empty():
+		if entity in [1935, 1936, 1937, 1938, 2935] and _junction_materials.is_empty():
 			if _inspection_materials.is_empty():
 				_build_inspection_materials(palette)
 			_build_junction_materials(palette)
@@ -558,7 +582,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			node.add_child(instance)
 		if entity == 1932:
 			_inspection_practicals(node)
-		if entity in [1935, 1936, 2935]:
+		if entity in [1935, 1936, 1938, 2935]:
 			_junction_markings(node, entity)
 		# Signs stay on the native landing/deck bodies, including the moving
 		# pendant. They label the real stations without owning machine state.

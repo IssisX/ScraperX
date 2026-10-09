@@ -3,6 +3,7 @@
 #include "sim/mechanism_kit.hpp"
 #include "sim/west_brace_bay_route.hpp"
 #include "sim/inspection_junction_route.hpp"
+#include "sim/north_transfer_route.hpp"
 
 namespace scraperx::sim {
 
@@ -33,7 +34,8 @@ inline constexpr float kParkourSwingMassKg = 40.0F;
     return entity == kParkourFrameEntity || is_parkour_swing_entity(entity) ||
            entity == kParkourRecoveryEntity || entity == kTaperInspectionEntity ||
            entity == kTaperRecoveryEntity || is_west_brace_bay_entity(entity) ||
-           entity == kInspectionFrameEntity || entity == kInspectionRecoveryEntity;
+           entity == kInspectionFrameEntity || entity == kInspectionRecoveryEntity ||
+           entity == kNorthTransferEntity;
 }
 
 // Normal-world Crown exit: passive hanging arm and fixed recovery footing.

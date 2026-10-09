@@ -1,0 +1,23 @@
+{
+  "native_sha256": "03be12b273ee06a322b2dfa20cc08dc017f31298b379284a1a490cb85248a6a8",
+  "production_main_sha256": "fe9ebfdef8ae0ed61d03d2f0590d2ff30350c6ad27073f2531c120ca1194d09d",
+  "kit_view_sha256": "71cba49d985491bda98eb2d7fc5beaa1156d61383207f4440351f1b140e4df12",
+  "probe_script_sha256": "0fb035f4c9f9a8034b5a1fa38e489384ac505d51b6c36f8d22abdedf23315fe4",
+  "scope": "Explicit visual staging in normal native production main; no earned route or phone performance claim",
+  "viewport": [
+    648,
+    557
+  ],
+  "render_scale": 1.0,
+  "quality_preset": 0,
+  "geometry": "Level rail431.1; header431.65\u2013431.95; rear endplatesZ[-127.78,-127.45]",
+  "baseline_archive": "baseline-sloped-rail",
+  "private_main_sha256": "fe9ebfdef8ae0ed61d03d2f0590d2ff30350c6ad27073f2531c120ca1194d09d",
+  "private_main_matches_production": true,
+  "private_native_sha256": "03be12b273ee06a322b2dfa20cc08dc017f31298b379284a1a490cb85248a6a8",
+  "render_exit_code": 0,
+  "render_result": "PASS; three screenshots; failures[]",
+  "actual_renderer": "Godot4.7 OpenGL3.3 compatibility Mesa26.0.8 softpipe under Xvfb",
+  "parser_evidence": "Unchanged presentation/helper hashes; first-pass fresh Godot editor/parser exit0 archived baseline-sloped-rail/north-transfer-parse.log. Final actual runtime successfully loaded same scripts. No repeated editor import.",
+  "native_simulation_after_staging": "40 actual90Hz zero-input ticks per pose, frozen main processing, two actual rendered frames"
+}
