@@ -183,3 +183,39 @@ Status — updated2026-10-09 from retained evidence: reclaim brick hull/PBR surf
 ## Supplemental native engineering directive — 2026-10-09
 
 The owner’s [complete advanced C++/Jolt directive](ADVANCED_NATIVE_PHYSICS_ENGINEERING_DIRECTIVE.md) is preserved separately, with a [twelve-example pinned-source decision catalog](../docs/physics/advanced-engineering-catalog.md). It strengthens implementation at relevant ownership boundaries; every original requirement above remains in scope. The catalog is not authority for twelve parallel feature projects and earns no gameplay completion credit. Preserve commercial quality, actual native authority, momentum, finite work and focused defect-rejecting evidence while continuing the existing encounters.
+
+
+### Owner addition — First native deformable wooden plank (2026-10-09)
+
+Implement one real player-loadable plank within the existing encounter work.
+Reference: L=2.4m, width=.19m, thickness=.038m, E=9e9Pa, density=500kg/m³;
+12 rigid .20m segments and 11 internal SixDOF joints; local X length, Y thickness, Z width.
+Initially lock transverse translation. Use elastic axial translation, bending and torsion.
+Bending k=EI/.20; axial k=EA*11/2.4=297825000N/m allocates the entire axial compliance
+among internal joints, with none added at supports. Weak-axis interior stiffness39096.3Nm/rad,
+fixed-end stiffness78192.6Nm/rad. A fixed endpoint locks translation while retaining that
+elastic boundary bending spring; do not weld the whole first segment. Use a true pin and
+longitudinally free roller in the simply supported benchmark.
+
+First verify isolated SixDOF axis signs, target frames and physical stiffness/damping against
+the pinned APIs. Do not soften E to hide numerical error. With gravity disabled and small
+deflections:1000N centre load continuum36.832mm/discrete37.344mm;100N cantilever physical
+tip load continuum58.931mm/discrete59.136mm. Report Jolt-versus-discrete and discrete-versus-
+continuum errors separately. Keep native authority and the90Hz gameplay tick.
+
+Map every segment BodyID to the one logical member without conflating its actual receiver.
+Standing, walking, landing, jumping and gripping must deform the member; unloading must
+restore it. Existing contacts supply player loading once. Jump/grip reactions use the actual
+segment/contact point. Render native segment transforms with no second Godot physics body.
+Exercise segment seams before claiming playability. Only after elasticity and coupling pass,
+add strength-based fracture and update connectivity, collisions, grips and footing coherently.
+
+Status: IMPLEMENTED WITH REMAINING LIMITS — native signed-axis/calibration checks pass;
+normal-world standing, walking all11 seams, Jump reaction/landing, two-hand grip, passive
+release and elastic unload pass. Native strength fracture, fragment collisions/connectivity,
+finite bearing release and impact recovery pass; a filtered Godot harness renders all12
+native segment transforms correctly. See [scoped evidence](../evidence/inspection-junction-plank-2026-10-09/README.md).
+PENDING: the existing instantaneous light-segment Jump yields only a short hop; normal-height
+finite foot push-off remains unfinished. Full-game touch/phone feel, visuals, fracture sound,
+performance and exact-source APK delivery remain unverified. This remains part of phases3/6/8;
+it does not replace or complete any wider goal requirements.

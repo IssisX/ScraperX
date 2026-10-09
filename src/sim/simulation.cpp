@@ -17,6 +17,7 @@
 #include "sim/service_lift.hpp"
 #include "sim/supplied_ascent.hpp"
 #include "sim/parkour_route.hpp"
+#include "sim/deformable_plank.hpp"
 #include "sim/water_screw.hpp"
 
 #ifndef SCRAPERX_HAS_JOLT
@@ -1278,7 +1279,9 @@ struct SupportSample final {
 
 [[nodiscard]] bool entity_is_causal_section_support(std::uint64_t entity) noexcept {
     return scraperx::sim::is_parkour_route_entity(entity) || scraperx::sim::SuppliedAscent::owns_support(entity) || scraperx::sim::ServiceLift::owns_support(entity) || entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
-        scraperx::sim::is_facade_route_entity(entity);
+        scraperx::sim::is_facade_route_entity(entity) ||
+        scraperx::sim::is_deformable_plank_segment_entity(entity) ||
+        entity == scraperx::sim::kDeformablePlankSeatEntity;
 }
 
 // Supports that actually move. These outrank static ground when the player is
@@ -2033,6 +2036,10 @@ public:
                 supplied_ascent_->append_gravity_cart(physics_system_,*kit_);
                 build_taper_inspection_route(*kit_);
                 build_west_brace_bay_route(*kit_);
+                build_inspection_junction_route(*kit_);
+                deformable_plank_ = std::make_unique<DeformablePlank>(physics_system_, *kit_,
+                    JPH::RVec3(-8.0F, 406.981F, -128.2F), DeformablePlank::Support::GuidedPinRoller);
+                deformable_plank_->enable_strength_failure();
                 contact_listener_.set_reclaim_fragments(supplied_ascent_->reclaim_material_range());
             }
         }
@@ -2079,6 +2086,7 @@ public:
         supplied_ascent_.reset();
         contact_listener_.set_reclaim_fragments({0,0});
         service_lift_.reset();
+        deformable_plank_.reset();
         kit_.reset();
         for (JPH::Ref<JPH::TwoBodyConstraint> &constraint : machine_constraints_) {
             if (constraint != nullptr) {
@@ -2149,6 +2157,7 @@ public:
         // One listener owns every rider write. Jolt may run separate listeners
         // concurrently; serial dispatch keeps hand forces and launcher reads ordered.
         kit_->begin_weld_step(context.mDeltaTime);
+        if (deformable_plank_) deformable_plank_->begin_collision_step(context.mDeltaTime);
         if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
         physical_hands_->pre_step(context.mDeltaTime, true);
         slingshot_->collision_step(context);
@@ -2348,6 +2357,7 @@ public:
         }
         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
         kit_->finish_weld_steps();
+        if (deformable_plank_) deformable_plank_->finish_collision_steps();
         physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
         if (!landing_applied_force_.IsNearZero()) {
             const auto support_point_now = bodies.GetCenterOfMassTransform(landing_force_support_id_) *
@@ -4819,6 +4829,9 @@ private:
     // after restore. Require the actual capsule/plane rest height and a
     // cross of nearby points on that plane. The carried body is not footing.
     [[nodiscard]] bool footing_is_firm(const JPH::BodyInterface &bodies) const noexcept {
+        if (deformable_plank_ &&
+            deformable_plank_->logical_member_for_body(support_sample_.body_id) &&
+            !deformable_plank_->fragment_supported(support_sample_.body_id)) return false;
         const float half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
         const float reach = half_height + kCheckpointFootingSlack;
         const JPH::RVec3 centre = bodies.GetPosition(player_id_);
@@ -4833,6 +4846,8 @@ private:
         const JPH::RVec3 point = ray.GetPointOnRay(hit.mFraction);
         const JPH::Vec3 normal = surface_normal(hit.mBodyID, hit.mSubShapeID2, point);
         if (normal.GetY() < kSupportNormalThreshold) return false;
+        if (deformable_plank_ && deformable_plank_->logical_member_for_body(hit.mBodyID) &&
+            !deformable_plank_->fragment_supported(hit.mBodyID)) return false;
         // For a vertical capsule tangent to a plane, the vertical ray depth
         // is cylinder_half_height + radius / normal.y. Permit twice Jolt's
         // declared penetration slop, not an unrelated checkpoint tolerance.
@@ -4850,6 +4865,8 @@ private:
                 return false;
             }
             const JPH::RVec3 nearby_point = probe.GetPointOnRay(nearby.mFraction);
+            if (deformable_plank_ && deformable_plank_->logical_member_for_body(nearby.mBodyID) &&
+                !deformable_plank_->fragment_supported(nearby.mBodyID)) return false;
             if (surface_normal(nearby.mBodyID, nearby.mSubShapeID2, nearby_point).GetY() <
                     kSupportNormalThreshold ||
                 std::abs(JPH::Vec3(nearby_point - point).Dot(normal)) > tolerance) {
@@ -6606,12 +6623,16 @@ private:
             }
             const JPH::Body &body = lock.GetBody();
             if (body.GetID()==excluded) continue;
+            const bool owned_plank = deformable_plank_ &&
+                deformable_plank_->logical_member_for_body(body.GetID()) == kDeformablePlankMemberEntity &&
+                deformable_plank_->fragment_supported(body.GetID());
             // Mounted facade members remain usable holds even when their real
             // sheet/tube mass is below the loose-handle exclusion threshold.
             // Their native joints, not extra ballast, carry the player's load.
             if (body.IsSensor() ||
                 (body.IsDynamic() && !is_facade_route_entity(body.GetUserData()) &&
                  !is_parkour_swing_entity(body.GetUserData()) &&
+                 !owned_plank &&
                  body.GetMotionProperties()->GetInverseMass() * kGripMinBodyMassKg > 1.0F)) {
                 continue;
             }
@@ -6620,14 +6641,30 @@ private:
                 continue;
             }
             std::uint32_t long_axis = 0;
-            if (!box_is_hold(box, long_axis)) {
+            if (!owned_plank && !box_is_hold(box, long_axis)) {
                 continue;
             }
+            // Only the actual mounted timber cells get an edge grip. Loose
+            // small boxes retain the existing handle/mass exclusions. The
+            // point is on the transformed top edge, not the cell's centre.
+            if (owned_plank && (std::abs(box.half[0] - .1F) > .001F ||
+                std::abs(box.half[1] - .019F) > .001F ||
+                std::abs(box.half[2] - .095F) > .001F)) continue;
             const JPH::Vec3 along = box.axes[long_axis];
             const float half_length = box.half[long_axis];
             const float t =
                 std::clamp(JPH::Vec3(aim - box.centre).Dot(along), -half_length, half_length);
-            const JPH::RVec3 point = box.centre + along * t;
+            JPH::RVec3 point = box.centre + along * t;
+            if (owned_plank) {
+                const float side = JPH::Vec3(centre - box.centre).Dot(box.axes[2]) >= 0 ? 1.F : -1.F;
+                point += box.axes[1] * box.half[1] + box.axes[2] * (side * box.half[2]);
+                // CollideShape found the box; the chosen edge must also be
+                // inside the same oriented hand search, without extra reach.
+                const auto search = rotation.Conjugated() * JPH::Vec3(point - aim);
+                if (std::abs(search.GetX()) > kGripSearchHalf.GetX() ||
+                    std::abs(search.GetY()) > kGripSearchHalf.GetY() ||
+                    std::abs(search.GetZ()) > kGripSearchHalf.GetZ()) continue;
+            }
             // In front of the body: not beside it, not behind it.
             if (JPH::Vec3(point - centre).Dot(facing) < 0.5F * kPlayerRadius) {
                 continue;
@@ -6672,7 +6709,8 @@ private:
         const bool changed = !hands_[hand].valid || hands_[hand].body != grip.body ||
                              hands_[hand].local != local;
         if (changed && !(physical_hands_->attached(hand) &&
-            ((cargo_net_ && grip.body == cargo_net_->body()) || is_facade_route_entity(grip.entity_id) || is_parkour_route_entity(grip.entity_id))
+            ((cargo_net_ && grip.body == cargo_net_->body()) || is_facade_route_entity(grip.entity_id) || is_parkour_route_entity(grip.entity_id) ||
+             (deformable_plank_ && deformable_plank_->logical_member_for_body(grip.body) == kDeformablePlankMemberEntity))
             ? physical_hands_->regrip(hand, grip.body, grip.point)
             : physical_hands_->attach(hand, grip.body, grip.point))) {
             return;
@@ -6795,7 +6833,7 @@ private:
                 let_go_climb(bodies);
                 return;
             }
-            const JPH::Vec3 radius(grip-kParkourSwingPivot);
+            const JPH::Vec3 radius(grip-parkour_swing_pivot(traversal_entity_id_));
             const JPH::Vec3 tangent = JPH::Vec3(-radius.GetY(),radius.GetX(),0).NormalizedOr(JPH::Vec3::sAxisX());
             // CHOSEN +/-0.15m body lean,0.6m/s stroke and500W measured
             // positive spring-rest-target work. No constant hinge torque.
@@ -6805,7 +6843,8 @@ private:
             auto lead = JPH::Vec3(goal-physical_hands_->commanded_position());
             if (lead.Length()>.12F) lead*=.12F/lead.Length();
             physical_hands_->advance_targets(lead,delta_seconds);
-            if (grounded_ && support_entity_id_==kParkourRecoveryEntity) let_go_climb(bodies);
+            if (grounded_ && support_entity_id_==parkour_swing_recovery(traversal_entity_id_))
+                let_go_climb(bodies);
             return;
         }
         const JPH::Vec3 normal = traversal_normal_;
@@ -7486,6 +7525,7 @@ private:
         if (!regression_fixtures_) {
             checkpoint.carrying_entity = carried_entity_;
             kit_->capture(checkpoint.kit);
+            if (deformable_plank_) checkpoint.deformable_plank = deformable_plank_->capture();
             if (pipe_bridge_) checkpoint.pipe_bridge = pipe_bridge_->state();
             if (slingshot_) checkpoint.slingshot = slingshot_->state();
             if (swing_stair_) checkpoint.swing_stair = swing_stair_->state();
@@ -7599,6 +7639,7 @@ private:
             release_carry();
         }
         kit_->restore(checkpoint_.kit);
+        if (deformable_plank_) deformable_plank_->restore(checkpoint_.deformable_plank);
         // Restoring topology is not a new fracture. Preserve the event high
         // water immediately, including callers reading before the next tick.
         state_.reclaim_break_serial = kit_->weld_break_serial();
@@ -8021,6 +8062,13 @@ private:
             physical_hands_->command_work_bound_j() : 0;
         state_.traversal_actuator_positive_work_j = physical_hands_ ? physical_hands_->actuator_positive_work_j() : 0;
         state_.traversal_actuator_absorbed_work_j = physical_hands_ ? physical_hands_->actuator_absorbed_work_j() : 0;
+        if (deformable_plank_) {
+            const auto plank = deformable_plank_->capture();
+            state_.plank_broken_joint_mask = plank.broken_mask;
+            state_.plank_peak_strength_ratio = plank.peak_strength_ratio;
+            state_.plank_fracture_count = plank.fracture_serial;
+            state_.plank_discarded_strain_energy_j = plank.discarded_strain_energy_j;
+        }
         if (cargo_net_ && traversal_body_ == cargo_net_->body() && physical_hands_->active())
             state_.traversal_target_point = to_vector3(physical_hands_->commanded_position());
         state_.player_swinging = physical_hands_ && physical_hands_->swinging();
@@ -8155,6 +8203,7 @@ private:
     std::uint32_t grip_over_steps_ = 0;
     // AS-006: the mechanism kit and the bands built from it.
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
+    std::unique_ptr<DeformablePlank> deformable_plank_;
     std::unique_ptr<ServiceLift> service_lift_;
     std::unique_ptr<SuppliedAscent> supplied_ascent_;
     std::unique_ptr<PipeBridge> pipe_bridge_;
@@ -8342,6 +8391,7 @@ private:
         std::string cargo_net;
         ServiceLift::State service_lift{};
         SuppliedAscent::Checkpoint supplied_ascent{};
+        DeformablePlank::State deformable_plank{};
     };
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;

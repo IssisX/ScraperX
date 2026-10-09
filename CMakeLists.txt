@@ -21,6 +21,8 @@ add_library(scraperx_sim STATIC
     src/sim/physical_hand_climb.cpp
     src/sim/parkour_route.cpp
     src/sim/west_brace_bay_route.cpp
+    src/sim/inspection_junction_route.cpp
+    src/sim/deformable_plank.cpp
     src/sim/steam_plant.cpp
     src/sim/water_screw.cpp
     src/sim/mechanism_kit.cpp
@@ -51,6 +53,8 @@ add_library(scraperx_sim STATIC
     src/sim/band_ground_water_lift.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
+set_source_files_properties(src/sim/deformable_plank.cpp PROPERTIES COMPILE_OPTIONS
+    "$<$<CXX_COMPILER_ID:GNU,Clang>:-fno-rtti>;$<$<CXX_COMPILER_ID:MSVC>:/GR->")
 set_target_properties(scraperx_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(scraperx_sim PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
@@ -180,6 +184,15 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_west_brace_bay_route_tests tests/west_brace_bay_route_tests.cpp)
     target_link_libraries(scraperx_west_brace_bay_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.west_brace_bay_route COMMAND scraperx_west_brace_bay_route_tests)
+    add_executable(scraperx_inspection_junction_route_tests tests/inspection_junction_route_tests.cpp)
+    target_link_libraries(scraperx_inspection_junction_route_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.inspection_junction_route COMMAND scraperx_inspection_junction_route_tests)
+    add_executable(scraperx_deformable_plank_tests tests/deformable_plank_tests.cpp)
+    target_link_libraries(scraperx_deformable_plank_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.deformable_plank COMMAND scraperx_deformable_plank_tests)
+    add_executable(scraperx_deformable_plank_player_tests tests/deformable_plank_player_tests.cpp)
+    target_link_libraries(scraperx_deformable_plank_player_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.deformable_plank_player COMMAND scraperx_deformable_plank_player_tests)
     add_executable(scraperx_teeter_route_tests tests/teeter_route_tests.cpp)
     target_link_libraries(scraperx_teeter_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.teeter_route COMMAND scraperx_teeter_route_tests)

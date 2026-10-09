@@ -195,6 +195,10 @@ struct Snapshot final {
     double traversal_command_work_bound_j = 0.0;
     double traversal_actuator_positive_work_j = 0.0;
     double traversal_actuator_absorbed_work_j = 0.0;
+    std::uint16_t plank_broken_joint_mask = 0;
+    double plank_peak_strength_ratio = 0;
+    std::uint64_t plank_fracture_count = 0;
+    double plank_discarded_strain_energy_j = 0;
     // Successful physical hand-to-foot transfer. Serial persists across render
     // sampling; force is measured grip load, not a fabricated landing impulse.
     std::uint64_t foot_transfer_count = 0;

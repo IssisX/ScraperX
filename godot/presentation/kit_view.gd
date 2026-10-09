@@ -6,6 +6,7 @@ extends Node3D
 const KIT_PART_FLOATS := 13
 const KIT_CABLE_SEGMENTS := 4
 const RefractoryMaterial := preload("res://presentation/materials/refractory_material.gd")
+const PlankWoodShader := preload("res://presentation/slingshot_wood.gdshader")
 
 var _native: Object
 var _create_sign: Callable
@@ -25,6 +26,7 @@ var _kit_cables: Array = []
 var _cart_paint_material: StandardMaterial3D
 var _cart_materials: Dictionary = {}
 var _inspection_materials: Dictionary = {}
+var _plank_wood_material: ShaderMaterial
 var _water_lift_bucket_water: MeshInstance3D
 
 
@@ -249,11 +251,50 @@ func _build_inspection_materials(palette: Array[Material]) -> void:
 
 
 func _inspection_part_material(entity: int, index: int, original: Material) -> Material:
-	if entity != 1932 and entity != 1933:
+	if entity != 1932 and entity != 1933 and entity != 1935 and entity != 1936:
 		return original
 	# Native yellow edge-splice warnings retain their existing material. Each
 	# native metal class maps to one finish, preserving the existing batches.
 	return _inspection_materials.get(index, original)
+
+
+func _is_plank_segment(entity: int) -> bool:
+	return entity >= 2880 and entity <= 2891
+
+
+func _plank_part_material(entity: int, index: int, original: Material) -> Material:
+	if not _is_plank_segment(entity) or index != 2:
+		return original
+	if _plank_wood_material == null:
+		_plank_wood_material = ShaderMaterial.new()
+		_plank_wood_material.shader = PlankWoodShader
+		_plank_wood_material.set_shader_parameter("part_grain_uv", true)
+	return _plank_wood_material
+
+
+func _plank_grain_mesh(source: Mesh, entity: int) -> ArrayMesh:
+	# Each native segment keeps its own exact vertices, normals, indices and
+	# moving pose. Only material coordinates span the original 2.4m board.
+	# The existing wood shader's longitudinal axis is Z, so encode native X
+	# length there and retain width/thickness in the other two coordinates.
+	var station := (float(entity - 2880) + 0.5) * 0.2
+	var mesh := ArrayMesh.new()
+	for surface_index in source.get_surface_count():
+		var arrays := source.surface_get_arrays(surface_index)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var uv := PackedVector2Array()
+		var uv2 := PackedVector2Array()
+		uv.resize(vertices.size())
+		uv2.resize(vertices.size())
+		for vertex_index in vertices.size():
+			var vertex := vertices[vertex_index]
+			uv[vertex_index] = Vector2(vertex.z, vertex.x + station)
+			uv2[vertex_index] = Vector2(vertex.y, 0.0)
+		arrays[Mesh.ARRAY_TEX_UV] = uv
+		arrays[Mesh.ARRAY_TEX_UV2] = uv2
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		mesh.surface_set_material(surface_index, source.surface_get_material(surface_index))
+	return mesh
 
 
 func _inspection_practicals(node: Node3D) -> void:
@@ -312,7 +353,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 		var entity := int(_native.get_kit_body_entity_id(body))
 		if entity == 1954 and _cart_materials.is_empty():
 			_build_cart_materials(palette)
-		if (entity == 1932 or entity == 1933) and _inspection_materials.is_empty():
+		if (entity == 1932 or entity == 1933 or entity == 1935 or entity == 1936) and _inspection_materials.is_empty():
 			_build_inspection_materials(palette)
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
@@ -335,6 +376,7 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			var material := _cart_part_material(entity, p / KIT_PART_FLOATS,
 				material_index, palette[material_index])
 			material = _inspection_part_material(entity, material_index, material)
+			material = _plank_part_material(entity, material_index, material)
 			# Rails and structural steel can share a native material class while
 			# needing different finishes. Keep each finish in its own rigid batch.
 			var finish_key := "" if material == palette[material_index] else "/%d" % material.get_instance_id()
@@ -381,6 +423,8 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 				box.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
 				box.material = material
 				mesh = box
+				if _is_plank_segment(entity) and material_index == 2:
+					mesh = _plank_grain_mesh(mesh, entity)
 			for surface_index in mesh.get_surface_count():
 				# Indexed boxes and the unindexed tube bore need separate
 				# surfaces; mixing them would omit the unindexed triangles.

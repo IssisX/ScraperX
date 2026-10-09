@@ -2,6 +2,7 @@
 
 #include "sim/mechanism_kit.hpp"
 #include "sim/west_brace_bay_route.hpp"
+#include "sim/inspection_junction_route.hpp"
 
 namespace scraperx::sim {
 
@@ -15,13 +16,24 @@ inline constexpr float kParkourSwingLength = 7.0F;
 inline constexpr float kParkourSwingMassKg = 40.0F;
 
 [[nodiscard]] constexpr bool is_parkour_swing_entity(std::uint64_t entity) noexcept {
-    return entity == kParkourSwingEntity;
+    return entity == kParkourSwingEntity || entity == kInspectionSwingEntity;
+}
+
+// Each passive hanger uses its real bearing, rather than the Crown bearing
+// as an implicit origin for all pumping tangents.
+[[nodiscard]] inline JPH::RVec3 parkour_swing_pivot(std::uint64_t entity) noexcept {
+    return entity == kInspectionSwingEntity ? kInspectionSwingPivot : kParkourSwingPivot;
+}
+
+[[nodiscard]] constexpr std::uint64_t parkour_swing_recovery(std::uint64_t entity) noexcept {
+    return entity == kInspectionSwingEntity ? kInspectionRecoveryEntity : kParkourRecoveryEntity;
 }
 
 [[nodiscard]] constexpr bool is_parkour_route_entity(std::uint64_t entity) noexcept {
     return entity == kParkourFrameEntity || is_parkour_swing_entity(entity) ||
            entity == kParkourRecoveryEntity || entity == kTaperInspectionEntity ||
-           entity == kTaperRecoveryEntity || is_west_brace_bay_entity(entity);
+           entity == kTaperRecoveryEntity || is_west_brace_bay_entity(entity) ||
+           entity == kInspectionFrameEntity || entity == kInspectionRecoveryEntity;
 }
 
 // Normal-world Crown exit: passive hanging arm and fixed recovery footing.

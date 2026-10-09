@@ -675,6 +675,10 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["right_hand_force_n"] = to_godot(s.traversal_right_hand_force);
     out["hand_actuator_positive_work_j"] = s.traversal_actuator_positive_work_j;
     out["hand_actuator_absorbed_work_j"] = s.traversal_actuator_absorbed_work_j;
+    out["plank_broken_joint_mask"] = s.plank_broken_joint_mask;
+    out["plank_peak_strength_ratio"] = s.plank_peak_strength_ratio;
+    out["plank_fracture_count"] = s.plank_fracture_count;
+    out["plank_discarded_strain_energy_j"] = s.plank_discarded_strain_energy_j;
     out["foot_transfer_count"] = s.foot_transfer_count;
     out["foot_transfer_tick"] = s.foot_transfer_tick;
     out["foot_transfer_support_entity_id"] = s.foot_transfer_support_entity_id;

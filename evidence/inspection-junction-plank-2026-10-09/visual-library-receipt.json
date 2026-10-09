@@ -1,0 +1,11 @@
+{
+  "source_library": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/runtime-godot/addons/scraperx_native/bin/linux/libscraperx_native.so",
+  "sha256": "7796d8e777e828bc5fcbc83fcf5ae859a4a5bda42f094d45047e3e1c5f79eca1",
+  "build_confirmation": "plank-probe/final-build.log: [100%] Built target scraperx_native (parent confirmed PASS)",
+  "scripts": {
+    "presentation/kit_view.gd": "381801244030ed40b6fdddfe169a422917e0cd3ecd5d766d08d61094d8c11a5c",
+    "presentation/slingshot_wood.gdshader": "4598952b87ef1464ea9d3ea709aeebb7245698bdb959dbb541915ac04c820cca",
+    "plank_visual_probe.gd": "1c2782d7718165aa1d251292f592050848357103578735802d1573943d4997ab"
+  },
+  "scope": "explicit latest bridge staging; no runtime claim"
+}

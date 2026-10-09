@@ -313,6 +313,15 @@ void Kit::disable_collision(const BodyIndex first, const BodyIndex second) {
     collision_groups_->DisableCollision(first.value, second.value);
 }
 
+void Kit::set_pair_collision(const BodyIndex first, const BodyIndex second, const bool enabled) {
+    if (!first.valid() || !second.valid() || first == second ||
+        first.value >= bodies_.size() || second.value >= bodies_.size())
+        throw std::invalid_argument("kit collision pair: distinct existing bodies required");
+    require_unowned_weld_pair(first, second);
+    if (enabled) collision_groups_->EnableCollision(first.value, second.value);
+    else collision_groups_->DisableCollision(first.value, second.value);
+}
+
 void Kit::require_unowned_weld_pair(const BodyIndex first, const BodyIndex second) const {
     for (const Weld &weld : welds_) {
         if ((weld.first == first && weld.second == second) ||

@@ -1,0 +1,27 @@
+{
+  "source_parent": "32277306177aad94c122ec698a64165ce278d06c",
+  "branch": "ChatGPT",
+  "condition": "uncommitted implementation atop parent; file hashes establish observed source",
+  "source_sha256": {
+    "src/sim/deformable_plank.cpp": "f637389c8fc0febad3878589c82fb1809fe660146156be5b90a5b93a44d567ca",
+    "src/sim/deformable_plank.hpp": "70d700fe6ca0aad7ad0c2d23f9e4e8280061da3a7eea41e09a7ba85d0b786b8e",
+    "src/sim/inspection_junction_route.cpp": "116cc2ab7fca7ec213a7d8ad0cdd788918dc1745b77cefb88b3acbfe956f332a",
+    "src/sim/inspection_junction_route.hpp": "f28b96f1b70c683806b1c23ce2b5561ff79046f098e9982f7b8cca07b45f2711",
+    "src/sim/simulation.cpp": "09a334ed22dbe628195231c8ff3429c9d8b31bf555eb24d5f3a034068532c991",
+    "src/sim/simulation.hpp": "785536cb8ef250aea3089ea6dbd18a6838c09e73189b77a98e5b0bddbaef1198",
+    "src/sim/mechanism_kit.cpp": "d186e3c2b2994b0359e9c374846cba3a2af4da577d75709a75535a59e759360a",
+    "src/sim/mechanism_kit.hpp": "0b17276b415da8b498099d54ad1f8a62e103f6967b5fa0e3fca583b81b5c7e64",
+    "src/bridge/scraperx_simulation.cpp": "49ff331f26581ab968bb6c3269918c085ffa3552e4b75558586e889aac54f1cd",
+    "godot/presentation/kit_view.gd": "381801244030ed40b6fdddfe169a422917e0cd3ecd5d766d08d61094d8c11a5c",
+    "tests/deformable_plank_tests.cpp": "f4b968a18571496b675e0af8fc5d79b254229ba2b7325dfa843fb6c13a8fe411",
+    "tests/deformable_plank_player_tests.cpp": "65fec40f4c9d2b12d8d48d9e70a04bf7873d6f330c6bd4fc28b5b45b98895afc",
+    "tests/inspection_junction_route_tests.cpp": "24b0d0d77703febfb47146afc1bc6bf69ad3f65a5eb76183c56ffa926df9d7f6"
+  },
+  "limits": [
+    "Filtered14body Godot harness; no full-game phone observation.",
+    "Before-plank recovery/Crown logs retain explicitly earlier boundaries.",
+    "Native player Jump on .722kg elastic receiver is a short hop, not5.5m/s takeoff.",
+    "Strength is an authored interior-section brittle surrogate, not measured timber strength.",
+    "Isolated timings are not Android performance proof."
+  ]
+}

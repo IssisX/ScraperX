@@ -139,6 +139,9 @@ public:
                                            JPH::Vec3 direction) const;
     void set_continuous_collision(BodyIndex body);
     void disable_collision(BodyIndex first, BodyIndex second);
+    // External native joint owners may update only their unowned mating pair,
+    // outside PhysicsSystem::Update. Rated weld pairs retain their own owner.
+    void set_pair_collision(BodyIndex first, BodyIndex second, bool enabled);
     AnchorIndex add_anchor(BodyIndex body, JPH::Vec3 local, float reach);
 
     // A straight guide along a world axis through the body's present
