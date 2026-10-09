@@ -4103,48 +4103,110 @@ void run_incline() {
 void run_wheel() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    // Entities: the wheel's dynamic band starts at 2936 (wheel, striker,
+    // gate, plank, then eight buckets); its statics at 1984 (frame, entry,
+    // exit, hopper).
+    constexpr std::uint64_t kPlank = 2936 + 3, kRiderBucket = 2936 + 4, kTopBucket = 2936 + 8;
+    constexpr std::uint64_t kEntry = 1984 + 1, kExit = 1984 + 2;
+    const auto plank_tilt = [](const Simulation &sim) {
+        const auto q = sim.kit_body_rotation(sim.kit_body_index(kPlank));
+        return 2.0 * std::asin(std::min(1.0, std::hypot(q.x, q.y, q.z)));
+    };
+    const auto mass_of = [](const Simulation &sim, std::uint64_t entity) {
+        return sim.kit_body_mass(sim.kit_body_index(entity));
+    };
+    const auto bucket_y = [](const Simulation &sim) {
+        return sim.kit_body_position(sim.kit_body_index(kRiderBucket)).y;
+    };
+    // Down from deck 2 onto the lower receiver, out on the plank for `seconds`,
+    // back in, and into the bucket at the receiver.
+    const auto feed_and_board = [&](Simulation &sim, double seconds) {
+        return walk_to(sim, 14.19, -125.0, 10.0) && walk_to(sim, 14.19, -113.3, 12.0) &&
+               sim.advance_frame(0.5).accepted && sim.snapshot().support_entity_id == kEntry &&
+               walk_to(sim, 20.2, -113.3, 8.0) && sim.advance_frame(seconds).accepted &&
+               walk_to(sim, 14.19, -113.3, 8.0) && walk_to(sim, 14.19, -110.4, 6.0) &&
+               sim.advance_frame(0.5).accepted && sim.snapshot().support_entity_id == kRiderBucket;
+    };
+
+    // Too little stone: a second out on the plank pours about 40 kg, less than
+    // the rider; the wheel does not move with the rider aboard.
+    {
+        Simulation s(InitialSpawn::Deck2South);
+        (void)s.advance_frame(1.0);
+        require(!s.request_lift_action(), "wheel: no RAISE; Action does nothing here");
+        require(feed_and_board(s, 1.0), "wheel (light): fed briefly, boarded");
+        const double y0 = bucket_y(s);
+        (void)s.advance_frame(15.0);
+        require(std::abs(bucket_y(s) - y0) < 0.3 && s.snapshot().support_entity_id == kRiderBucket,
+                "wheel (light): too little stone must not lift the rider");
+    }
+
+    // A missed boarding: fed and released with nobody in the bucket, the wheel
+    // carries the empty bucket up and brings the opposite one, emptied at the
+    // striker, down to the receiver. Feeding again and boarding that one rides.
+    {
+        Simulation s(InitialSpawn::Deck2South);
+        (void)s.advance_frame(1.0);
+        const bool missed = walk_to(s, 14.19, -125.0, 10.0) && walk_to(s, 14.19, -113.3, 12.0) &&
+                            walk_to(s, 20.2, -113.3, 8.0) && s.advance_frame(8.0).accepted &&
+                            walk_to(s, 14.19, -113.3, 8.0) && s.advance_frame(60.0).accepted &&
+                            bucket_y(s) > 48.5;
+        require(missed, "wheel (miss): released unboarded, the empty bucket rides up to the top");
+        constexpr std::uint64_t kOpposite = 2936 + 8;
+        require(s.kit_body_position(s.kit_body_index(kOpposite)).y < 23.5 && mass_of(s, kOpposite) < 260.0,
+                "wheel (miss): the opposite bucket, emptied, stands at the receiver");
+        const bool out_again = walk_to(s, 20.2, -113.3, 8.0) && s.advance_frame(8.0).accepted;
+        require(mass_of(s, kRiderBucket) > 450.0, "wheel (miss): fed again, stone fills the bucket now at the top");
+        const bool back_in = out_again && walk_to(s, 14.19, -113.3, 8.0) && walk_to(s, 14.19, -110.4, 6.0) &&
+                             s.advance_frame(0.5).accepted;
+        const bool retried = back_in && s.snapshot().support_entity_id == kOpposite &&
+                             wait_for(s, 120.0, [](const Snapshot &state) {
+                                 return state.player_position.y > 47.0 && state.player_grounded &&
+                                        std::hypot(state.player_linear_velocity.x, state.player_linear_velocity.y) < 0.05;
+                             });
+        require(retried && s.snapshot().death_count == 0, "wheel (miss): fed again, the next bucket carries the rider up");
+    }
+
     Simulation s(InitialSpawn::Deck2South);
     (void)s.advance_frame(1.0);
-    const bool boarded = walk_to(s, 16.0, -125.0, 10.0) && walk_to(s, 16.0, -113.3, 12.0) &&
-                         s.advance_frame(0.5).accepted && s.lift_state().machine == 6 && s.lift_state().role == 2 &&
-                         walk_to(s, 16.0, -110.0, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 1;
-    if (!boarded) {
-        const auto st = s.snapshot();
-        std::cerr << "wheel board: at (" << st.player_position.x << "," << st.player_position.y << ","
-                  << st.player_position.z << ") machine=" << s.lift_state().machine << " role=" << s.lift_state().role
-                  << " travel=" << s.lift_state().travels[6] << '\n';
-    }
-    require(boarded, "wheel: down the ramp from deck 2 and into the bucket at the bottom");
-    (void)s.request_lift_action();
+    require(walk_to(s, 14.19, -125.0, 10.0) && walk_to(s, 14.19, -113.3, 12.0) &&
+                s.advance_frame(0.5).accepted && s.snapshot().support_entity_id == kEntry,
+            "wheel: down the ramp from deck 2 onto the lower receiver");
+    const double top_before = mass_of(s, kTopBucket);
+    const double y_before = bucket_y(s);
+    require(walk_to(s, 20.2, -113.3, 8.0), "wheel: out along the feed plank");
+    (void)s.advance_frame(8.0);
+    const double tilt = plank_tilt(s);
+    const double poured = mass_of(s, kTopBucket) - top_before;
+    require(tilt > 0.1, "wheel: the player's weight tips the feed plank onto its stop");
+    require(poured > 200.0, "wheel: the tipped plank opens the hopper and stone fills the top bucket");
+    require(std::abs(bucket_y(s) - y_before) < 0.05, "wheel: the tipped plank holds the loaded wheel");
+    require(walk_to(s, 14.19, -113.3, 8.0) && walk_to(s, 14.19, -110.4, 6.0) && s.advance_frame(0.5).accepted &&
+                s.snapshot().support_entity_id == kRiderBucket,
+            "wheel: back in off the plank and into the bucket at the receiver");
     const double start = s.snapshot().simulation_time_seconds;
     double peak = 0.0;
-    double last_report = start;
-    const bool up = wait_for(s, 150.0, [&](const scraperx::sim::Snapshot &state) {
+    const bool up = wait_for(s, 150.0, [&](const Snapshot &state) {
         peak = std::max(peak, std::hypot(state.player_linear_velocity.x, state.player_linear_velocity.y));
-        if (std::getenv("SX_TRACE_WHEEL") && state.simulation_time_seconds - last_report >= 5.0) {
-            last_report = state.simulation_time_seconds;
-            std::cerr << "wheel t=" << state.simulation_time_seconds - start << " travel=" << s.lift_state().travels[6]
-                      << " y=" << state.player_position.y << " grounded=" << state.player_grounded << '\n';
-        }
-        const auto lift = s.lift_state();
-        return lift.travels[6] > 0.995 && !lift.moving && state.player_grounded;
+        return state.player_position.y > 47.0 && state.player_grounded &&
+               std::hypot(state.player_linear_velocity.x, state.player_linear_velocity.y) < 0.05;
     });
     const double ride_s = s.snapshot().simulation_time_seconds - start;
     if (!up) {
         const auto st = s.snapshot();
         std::cerr << "wheel ride: at (" << st.player_position.x << "," << st.player_position.y << ","
-                  << st.player_position.z << ") travel=" << s.lift_state().travels[6] << " deaths=" << st.death_count
-                  << '\n';
+                  << st.player_position.z << ") poured=" << poured << " deaths=" << st.death_count << '\n';
     }
-    require(up, "wheel: the stone must turn the wheel and carry the rider's bucket to the top");
+    require(up, "wheel: the stone must carry the rider's bucket over the top and stop it there");
     require(peak < 2.5, "wheel: the brake must hold the turn to its pace");
-    require(walk_to(s, 16.0, -113.3, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3,
+    require(walk_to(s, 17.81, -113.3, 6.0) && s.advance_frame(0.5).accepted && s.snapshot().support_entity_id == kExit,
             "wheel: off onto the upper receiver");
-    require(walk_to(s, 16.0, -125.5, 12.0) && s.advance_frame(1.0).accepted, "wheel: down the ramp onto deck 4");
+    require(walk_to(s, 17.81, -125.5, 12.0) && s.advance_frame(1.0).accepted, "wheel: down the ramp onto deck 4");
     const auto end = s.snapshot();
     require(end.death_count == 0 && end.player_grounded && end.player_position.y > 44.7 && end.player_position.y < 45.2,
             "wheel: standing on deck 4, alive");
-    std::cout << "PASS scraperx_sim wheel: ride_s=" << ride_s << " peak_mps=" << peak
+    std::cout << "PASS scraperx_sim wheel: poured_kg=" << poured << " ride_s=" << ride_s << " peak_mps=" << peak
               << " deck4_y=" << end.player_position.y << '\n';
 }
 

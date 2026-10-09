@@ -2066,11 +2066,32 @@ func _wheel(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var started := int(_native().get_tick_index())
 	var body := _watch_body()
-	if not await _go(device, Vector2(16.0, -125.0), 0.15, 10.0):
-		return _fail("wheel: the walk along deck 2 stalled at %s" % str(_position()))
-	if not await _ride_machine(device, 6, "STONE WHEEL", Vector2(16.0, -113.3), Vector2(16.0, -110.0)):
-		return false
-	if not await _go(device, Vector2(16.0, -125.5), 0.15, 12.0):
+	# Down the ramp onto the lower receiver. Nothing to press: Action offers
+	# nothing here.
+	if not (await _go(device, Vector2(14.19, -125.0), 0.15, 10.0) and \
+			await _go(device, Vector2(14.19, -113.3), 0.15, 12.0)):
+		return _fail("wheel: the walk down to the lower receiver stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	if _action_label() == "RAISE" or _action_label() == "CALL":
+		return _fail("wheel: Action offered %s; the wheel is worked by the plank" % _action_label())
+	# Out along the feed plank over the drop: it tips under the player, the rope
+	# opens the hopper, stone pours into the top bucket, and the wheel is held.
+	if not await _go(device, Vector2(20.2, -113.3), 0.1, 8.0):
+		return _fail("wheel: the walk out the feed plank stalled at %s" % str(_position()))
+	await _pose("wheel_plank")
+	await _seconds(8.0)
+	# Back in off the plank, which lets the wheel go, and into the bucket.
+	if not (await _go(device, Vector2(14.19, -113.3), 0.1, 8.0) and \
+			await _go(device, Vector2(14.19, -110.4), 0.1, 6.0)):
+		return _fail("wheel: back in and into the bucket stalled at %s" % str(_position()))
+	if not await _wait_until(func() -> bool:
+			return _standing_above(46.0) and bool(_ctx()["grounded"]) and \
+				Vector2(_native().get_player_linear_velocity().x, _native().get_player_linear_velocity().y).length() < 0.05, 120.0):
+		return _fail("wheel: the stone never carried the bucket over the top (at %s)" % str(_position()))
+	await _pose("wheel_top")
+	if not await _go(device, Vector2(17.81, -113.3), 0.15, 8.0):
+		return _fail("wheel: the step off onto the upper receiver stalled at %s" % str(_position()))
+	if not await _go(device, Vector2(17.81, -125.5), 0.15, 12.0):
 		return _fail("wheel: the ramp down onto deck 4 stalled at %s" % str(_position()))
 	await _seconds(1.0)
 	await _pose("wheel_deck4")

@@ -82,8 +82,10 @@ public:
     static constexpr std::uint64_t kInclineRamp = 1982;
     static constexpr std::uint64_t kInclineHeadPlate = 1983;
     // The owner's stone wheel in the yard south of S1, deck 2 to deck 4: a
-    // ramp down from deck 2's edge to its lower receiver (20.5 m), the rider's
-    // bucket carried over the top to 46.5 m, a ramp down onto deck 4 (44 m).
+    // ramp down from deck 2's edge to its lower receiver (20.63 m); walk out
+    // on the feed plank to fill the top bucket and hold the wheel, walk back
+    // and board the bucket at the receiver; the stone carries it over the top
+    // to 46.37 m, and a ramp runs down onto deck 4 (44 m).
     static constexpr std::uint64_t kWheelStaticFirst = 1984;    // frame, entry, exit, hopper
     static constexpr std::uint64_t kWheelDynamicFirst = 2936;   // wheel, striker, gate, 9 buckets
     static constexpr std::uint64_t kWheelLowRamp = 1988;
@@ -112,6 +114,7 @@ private:
     PhysicsSystem &world_;
     std::vector<Placed> placed_;
     std::vector<float> targets_;
+    int wheel_ = -1;   // the stone wheel: worked by its feed plank, not Action
 };
 
 } // namespace scraperx::sim::vertical

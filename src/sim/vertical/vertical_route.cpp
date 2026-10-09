@@ -89,8 +89,11 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
 
     // The owner's stone wheel, unturned: its plane east-west at z -110, its
     // axle 36 m up at x 16, its receivers on its north (front) side at
-    // z -114.8 to -111.8; the rider's bucket at 20.5 m at the bottom.
+    // z -114.8 to -111.8; at rest a bucket stands at the lower receiver
+    // (20.63 m, x 14.19) and its opposite at the upper one (46.37 m, x 17.81).
+    // Its feed plank runs east from the lower receiver; it has no RAISE.
     place("sx.stone_wheel.v1", {RVec3(16.0, 17.2, -110.0), 0.0F}, {kWheelStaticFirst, 4}, {kWheelDynamicFirst, 12});
+    wheel_ = static_cast<int>(placed_.size()) - 1;
     // Ramps north from the receivers to the face: down from deck 2's edge
     // (22.0 m) to the lower one, and from the upper one down to deck 4 (44.0 m).
     const auto ramp = [this](std::uint64_t entity, RVec3 south, RVec3 north) {
@@ -99,8 +102,8 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
         plank.rotation = Quat::sRotation(Vec3::sAxisX(), std::atan2(run.GetY(), -run.GetZ()));
         kit_.add_body(entity, {plank}, south + 0.5 * run - RVec3(0.0, 0.15, 0.0), Quat::sIdentity(), 0.0F, 0.8F);
     };
-    ramp(kWheelLowRamp, RVec3(16.0, 20.5, -114.8), RVec3(16.0, 22.0, -123.9));
-    ramp(kWheelHighRamp, RVec3(16.0, 46.5, -114.8), RVec3(16.0, 44.0, -123.9));
+    ramp(kWheelLowRamp, RVec3(14.19, 20.63, -114.8), RVec3(14.19, 22.0, -123.9));
+    ramp(kWheelHighRamp, RVec3(17.81, 46.37, -114.8), RVec3(17.81, 44.0, -123.9));
 
     // The traction tram, turned half about so its track rises west from
     // beside the east bridge's end toward deck 8, along z -161, clear of the
@@ -149,6 +152,9 @@ Route::Here Route::at(std::uint64_t support) const {
         return here;
     }
     for (std::size_t i = 0; i < placed_.size(); ++i) {
+        if (static_cast<int>(i) == wheel_) {
+            continue;   // worked with the body, not Action
+        }
         const Placed &p = placed_[i];
         Role role = Role::None;
         if (kit_.body_entity(p.deck) == support) {
@@ -183,6 +189,24 @@ void Route::pre_step(float dt, bool action, std::uint64_t support) {
             }
             placed_[static_cast<std::size_t>(here.machine)].machine->command({target, true});
         }
+    }
+    if (wheel_ >= 0) {
+        // The stone wheel's feed plank: tipped, it holds the wheel (armed);
+        // dropped again after that, it lets the wheel go half a turn. The
+        // count of half turns and the armed flag (.5) live in targets_.
+        Placed &w = placed_[static_cast<std::size_t>(wheel_)];
+        float &state = targets_[static_cast<std::size_t>(wheel_)];
+        float half_turns = std::floor(state);
+        bool armed = state - half_turns > .25F;
+        const float plank = kit_.lever_angle(w.machine->levers.front());
+        if (plank > .06F) {
+            armed = true;
+        } else if (armed && plank < .02F) {
+            armed = false;
+            half_turns += 1.0F;
+        }
+        state = half_turns + (armed ? .5F : 0.0F);
+        w.machine->command({std::fmod(half_turns, 2.0F), true});
     }
     for (auto &p : placed_) {
         p.machine->pre_step(dt);

@@ -139,6 +139,15 @@ const LIFT_ROLE_ENTRY := 2
 const LIFT_ROLE_EXIT := 3
 const RUBBLE_DENSITY := 1600.0
 const RUBBLE_PILE_HEIGHT := 0.05
+# Stones: a course on a bin's fill every RUBBLE_STONE_PITCH metres, a pile's
+# spread of RUBBLE_PILE_STONES_PER_M2 out to its radius, and RUBBLE_FALL_STONES
+# tumbling down a stream at RUBBLE_FALL_SPEED.
+const RUBBLE_STONE_PITCH := 0.24
+const RUBBLE_TOP_STONES := 160
+const RUBBLE_PILE_STONES := 400
+const RUBBLE_PILE_STONES_PER_M2 := 11.0
+const RUBBLE_FALL_STONES := 18
+const RUBBLE_FALL_SPEED := 6.0
 const RIG_HOOK := 1
 const RIG_UNHOOK := 2
 # S1's cage and the scale plate in its floor (Simulation::kStackS1CageEntityId,
@@ -248,6 +257,12 @@ var _kit_bin_layers: Array = []
 var _kit_bin_floors: Array = []
 var _kit_bin_streams: Array[MeshInstance3D] = []
 var _kit_piles: Array[MeshInstance3D] = []
+# Rubble drawn as stones (goal phase 7): the top course of each bin's fill,
+# the stones tumbling down each stream, and the stones spread where each pile
+# landed. Presentation only: the native's declared granular model is unchanged.
+var _kit_bin_tops: Array = []            # MultiMeshInstance3D or null, per bin
+var _kit_bin_falls: Array[MultiMeshInstance3D] = []
+var _kit_pile_stones: Array[MultiMeshInstance3D] = []
 # AS-007 water: a body of water per pool, a stream per spout.
 var _kit_pools: Array[MeshInstance3D] = []
 var _kit_spouts: Array[MeshInstance3D] = []
@@ -2484,8 +2499,15 @@ func _build_kit() -> void:
 			segments.append(instance)
 		_kit_cables.append(segments)
 	var stream_mesh := BoxMesh.new()
-	stream_mesh.size = Vector3(0.3, 0.3, 1.0)
+	stream_mesh.size = Vector3(0.12, 0.12, 1.0)
 	stream_mesh.material = palette[6]
+	var stone := StandardMaterial3D.new()
+	stone.vertex_color_use_as_albedo = true
+	stone.roughness = 0.93
+	stone.metallic = 0.0
+	var rocks: Array[ArrayMesh] = [_rock_mesh(1), _rock_mesh(2), _rock_mesh(3)]
+	for rock in rocks:
+		rock.surface_set_material(0, stone)
 	var water := StandardMaterial3D.new()
 	water.albedo_color = Color(0.16, 0.30, 0.33, 0.74)
 	water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -2517,6 +2539,18 @@ func _build_kit() -> void:
 			_kit_bodies[body].add_child(layer)
 		_kit_bin_layers.append(layer)
 		_kit_bin_floors.append(floor_box)
+		var top: MultiMeshInstance3D = null
+		if layer != null and not is_water:
+			top = _stone_course(rocks[index % rocks.size()], floor_box, index)
+			top.name = "KitRubbleTop%d" % index
+			top.visible = false
+			_kit_bodies[body].add_child(top)
+		_kit_bin_tops.append(top)
+		var fall := _stone_multimesh(rocks[(index + 1) % rocks.size()], RUBBLE_FALL_STONES)
+		fall.name = "KitStreamStones%d" % index
+		fall.visible = false
+		_kit_root.add_child(fall)
+		_kit_bin_falls.append(fall)
 		var stream := MeshInstance3D.new()
 		stream.name = "KitStream%d" % index
 		stream.mesh = water_stream if is_water else stream_mesh
@@ -2537,6 +2571,11 @@ func _build_kit() -> void:
 		pile.visible = false
 		_kit_root.add_child(pile)
 		_kit_piles.append(pile)
+		var spread := _stone_spread(rocks[index % rocks.size()], index)
+		spread.name = "KitPileStones%d" % index
+		spread.visible = false
+		_kit_root.add_child(spread)
+		_kit_pile_stones.append(spread)
 	var pools: PackedFloat32Array = _native.get_kit_pools()
 	for p in range(0, pools.size() - KIT_POOL_FLOATS + 1, KIT_POOL_FLOATS):
 		var body_mesh := BoxMesh.new()
@@ -2650,12 +2689,26 @@ func _render_rubble() -> void:
 				layer.transform = Transform3D(
 					rotation * Basis.from_scale(Vector3(half_x * 2.0, depth, half_z * 2.0)),
 					on_floor)
+			var top: MultiMeshInstance3D = _kit_bin_tops[index]
+			if top != null:
+				top.visible = layer.visible
+				if top.visible:
+					var floor_rotation := Basis(Quaternion(floor_box[6], floor_box[7], floor_box[8],
+						floor_box[9]))
+					top.transform = Transform3D(floor_rotation, Vector3(floor_box[3], floor_box[4], floor_box[5]) \
+						+ floor_rotation * Vector3(0.0, floor_box[1] + depth, 0.0))
 		var stream: MeshInstance3D = _kit_bin_streams[index]
+		var fall: MultiMeshInstance3D = _kit_bin_falls[index]
 		if bins[b + 3] > 0.5:
-			_lay_segment(stream, Vector3(bins[b + 4], bins[b + 5], bins[b + 6]),
-				Vector3(bins[b + 7], bins[b + 8], bins[b + 9]))
+			var from := Vector3(bins[b + 4], bins[b + 5], bins[b + 6])
+			var to := Vector3(bins[b + 7], bins[b + 8], bins[b + 9])
+			_lay_segment(stream, from, to)
+			fall.visible = bins[b + 10] < 0.5
+			if fall.visible:
+				_tumble_stones(fall, from, to, index)
 		else:
 			stream.visible = false
+			fall.visible = false
 	var piles: PackedFloat32Array = _native.get_kit_piles()
 	for index in _kit_piles.size():
 		var pile: MeshInstance3D = _kit_piles[index]
@@ -2669,6 +2722,13 @@ func _render_rubble() -> void:
 			pile.transform = Transform3D(
 				Basis.from_scale(Vector3(radius, RUBBLE_PILE_HEIGHT, radius)),
 				Vector3(piles[p], piles[p + 1] + RUBBLE_PILE_HEIGHT * 0.5, piles[p + 2]))
+		var spread: MultiMeshInstance3D = _kit_pile_stones[index]
+		spread.visible = pile.visible
+		if spread.visible:
+			var reach := sqrt(piles[p + 3] / RUBBLE_DENSITY / (0.65 * PI * RUBBLE_PILE_HEIGHT))
+			spread.multimesh.visible_instance_count = mini(RUBBLE_PILE_STONES,
+				int(RUBBLE_PILE_STONES_PER_M2 * PI * reach * reach))
+			spread.transform = Transform3D(Basis.IDENTITY, Vector3(piles[p], piles[p + 1], piles[p + 2]))
 	_render_water()
 
 
@@ -2696,6 +2756,122 @@ func _render_water() -> void:
 				Vector3(spouts[p + 4], spouts[p + 5], spouts[p + 6]))
 		else:
 			spout.visible = false
+
+
+# A presentation hash in 0..1, the same every run.
+static func _hash01(i: int, j: int) -> float:
+	return fposmod(sin(float(i) * 12.9898 + float(j) * 78.233) * 43758.5453, 1.0)
+
+
+# An irregular stone about 0.2 m across: an icosahedron split once, each
+# vertex pushed in or out, flattened a little; faceted.
+static func _rock_mesh(variant: int) -> ArrayMesh:
+	var t := (1.0 + sqrt(5.0)) * 0.5
+	var corners: Array[Vector3] = [Vector3(-1, t, 0), Vector3(1, t, 0), Vector3(-1, -t, 0), Vector3(1, -t, 0),
+		Vector3(0, -1, t), Vector3(0, 1, t), Vector3(0, -1, -t), Vector3(0, 1, -t),
+		Vector3(t, 0, -1), Vector3(t, 0, 1), Vector3(-t, 0, -1), Vector3(-t, 0, 1)]
+	var faces := [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4],
+		[11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+		[4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]]
+	var shape := func(v: Vector3) -> Vector3:
+		var n := v.normalized()
+		var key := int(round(n.x * 97.0)) * 7919 + int(round(n.y * 97.0)) * 104729 + int(round(n.z * 97.0))
+		var r := 0.1 * (0.78 + 0.44 * _hash01(key, variant))
+		return Vector3(n.x * r, n.y * r * 0.72, n.z * r * 0.9)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for f in faces:
+		var a: Vector3 = corners[f[0]]
+		var b: Vector3 = corners[f[1]]
+		var c: Vector3 = corners[f[2]]
+		var ab := (a + b) * 0.5
+		var bc := (b + c) * 0.5
+		var ca := (c + a) * 0.5
+		for tri in [[a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]]:
+			for v in tri:
+				st.add_vertex(shape.call(v))
+	st.generate_normals()
+	return st.commit()
+
+
+static func _stone_multimesh(rock: ArrayMesh, count: int) -> MultiMeshInstance3D:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = rock
+	mm.instance_count = count
+	var instance := MultiMeshInstance3D.new()
+	instance.multimesh = mm
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return instance
+
+
+# A stone's tint: the rubble's grey-brown, each a little different.
+static func _stone_tint(i: int, j: int) -> Color:
+	var k := _hash01(i, j + 31)
+	return Color(0.42, 0.39, 0.35).lerp(Color(0.58, 0.54, 0.47), k).darkened(0.25 * _hash01(i, j + 57))
+
+
+static func _stone_basis(i: int, j: int, size: float) -> Basis:
+	return Basis.from_euler(Vector3(_hash01(i, j + 1) * TAU, _hash01(i, j + 2) * TAU, _hash01(i, j + 3) * TAU)) \
+		.scaled(Vector3.ONE * size * (0.7 + 0.6 * _hash01(i, j + 4)))
+
+
+# The top course of a bin's fill: stones on a grid over its floor, in the
+# floor's frame, sitting on the fill's surface (y 0).
+func _stone_course(rock: ArrayMesh, floor_box: PackedFloat32Array, key: int) -> MultiMeshInstance3D:
+	var half_x := maxf(floor_box[0] - 0.12, 0.05)
+	var half_z := maxf(floor_box[2] - 0.12, 0.05)
+	var nx := maxi(1, int(2.0 * half_x / RUBBLE_STONE_PITCH))
+	var nz := maxi(1, int(2.0 * half_z / RUBBLE_STONE_PITCH))
+	var count := mini(RUBBLE_TOP_STONES, nx * nz)
+	var instance := _stone_multimesh(rock, count)
+	for k in count:
+		var gx := k % nx
+		var gz := int(k / nx)
+		var x := -half_x + (float(gx) + 0.5 + 0.5 * (_hash01(key * 131 + k, 5) - 0.5)) * 2.0 * half_x / float(nx)
+		var z := -half_z + (float(gz) + 0.5 + 0.5 * (_hash01(key * 131 + k, 6) - 0.5)) * 2.0 * half_z / float(nz)
+		instance.multimesh.set_instance_transform(k, Transform3D(_stone_basis(key * 131 + k, 0, 1.2),
+			Vector3(x, 0.02 * _hash01(key * 131 + k, 7), z)))
+		instance.multimesh.set_instance_color(k, _stone_tint(key * 131 + k, 0))
+	return instance
+
+
+# A pile's spread: stones scattered out from its centre, nearest first, so
+# showing the first n fills a disc that grows with the pile.
+func _stone_spread(rock: ArrayMesh, key: int) -> MultiMeshInstance3D:
+	var instance := _stone_multimesh(rock, RUBBLE_PILE_STONES)
+	var max_reach := sqrt(float(RUBBLE_PILE_STONES) / (RUBBLE_PILE_STONES_PER_M2 * PI))
+	for k in RUBBLE_PILE_STONES:
+		var r := max_reach * sqrt((float(k) + _hash01(key * 977 + k, 8)) / float(RUBBLE_PILE_STONES))
+		var a := TAU * _hash01(key * 977 + k, 9)
+		instance.multimesh.set_instance_transform(k, Transform3D(_stone_basis(key * 977 + k, 0, 1.1),
+			Vector3(r * cos(a), 0.05 + 0.04 * _hash01(key * 977 + k, 10), r * sin(a))))
+		instance.multimesh.set_instance_color(k, _stone_tint(key * 977 + k, 1))
+	instance.multimesh.visible_instance_count = 0
+	return instance
+
+
+# Stones tumbling down a pouring stream, spread along it and turning as they fall.
+func _tumble_stones(fall: MultiMeshInstance3D, from: Vector3, to: Vector3, key: int) -> void:
+	var length := from.distance_to(to)
+	if length < 0.05:
+		fall.visible = false
+		return
+	var now := float(Time.get_ticks_msec()) * 0.001
+	var along := (to - from) / length
+	var side := (Vector3.RIGHT if absf(along.x) < 0.9 else Vector3.FORWARD).cross(along).normalized()
+	var other := along.cross(side)
+	fall.transform = Transform3D.IDENTITY
+	for k in RUBBLE_FALL_STONES:
+		var phase := fposmod(float(k) / float(RUBBLE_FALL_STONES) + now * RUBBLE_FALL_SPEED / length, 1.0)
+		var spread := 0.08 + 0.1 * phase
+		var offset := side * (spread * (_hash01(key * 53 + k, 11) - 0.5) * 2.0) + \
+			other * (spread * (_hash01(key * 53 + k, 12) - 0.5) * 2.0)
+		var spin := Basis(Vector3(_hash01(key, k), 1.0, _hash01(k, key)).normalized(), now * (3.0 + 4.0 * _hash01(key + k, 13)))
+		fall.multimesh.set_instance_transform(k, Transform3D(spin * _stone_basis(key * 53 + k, 0, 1.0),
+			from + along * (length * phase) + offset))
+		fall.multimesh.set_instance_color(k, _stone_tint(key * 53 + k, 2))
 
 
 func _lay_segment(instance: MeshInstance3D, from: Vector3, to: Vector3) -> void:

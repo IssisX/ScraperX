@@ -62,6 +62,8 @@ public:
     std::vector<Drive> drives;
     std::vector<Ref<Constraint>> transmissions;
     std::vector<kit::RopeIndex> ropes;
+    // Levers the player works with their body (the stone wheel's feed plank).
+    std::vector<kit::LeverIndex> levers;
     // Further actuators a machine works each step, after its drives (the
     // stone wheel's hopper gate): finite forces, in the write phase.
     std::vector<std::function<void(float, const Command &)>> stepping;
