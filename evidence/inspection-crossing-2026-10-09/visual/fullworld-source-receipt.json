@@ -1,0 +1,8 @@
+{
+  "native_sha256": "7796d8e777e828bc5fcbc83fcf5ae859a4a5bda42f094d45047e3e1c5f79eca1",
+  "production_main_sha256": "fe9ebfdef8ae0ed61d03d2f0590d2ff30350c6ad27073f2531c120ca1194d09d",
+  "kit_view_sha256": "10b817d20bf999e09b1314aafb388a4252610b8f03b503ea8a782ed5eefb1fb8",
+  "scope": "capture-only production main fullnormalworld at explicit supported stages; private648x557viewport; no earnedroute or phoneproof",
+  "render_scale": 1.0,
+  "quality_preset": 0
+}

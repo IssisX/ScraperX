@@ -187,6 +187,10 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_inspection_junction_route_tests tests/inspection_junction_route_tests.cpp)
     target_link_libraries(scraperx_inspection_junction_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.inspection_junction_route COMMAND scraperx_inspection_junction_route_tests)
+    add_test(NAME scraperx_sim.inspection_junction_recovery
+        COMMAND scraperx_inspection_junction_route_tests miss-onward)
+    add_test(NAME scraperx_sim.inspection_junction_damage
+        COMMAND scraperx_inspection_junction_route_tests damage-onward)
     add_executable(scraperx_deformable_plank_tests tests/deformable_plank_tests.cpp)
     target_link_libraries(scraperx_deformable_plank_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.deformable_plank COMMAND scraperx_deformable_plank_tests)

@@ -16,6 +16,9 @@ constexpr std::uint64_t kRecovery = 1936;
 constexpr std::uint64_t kHanger = 2935;
 constexpr std::uint64_t kWorld = Simulation::kWorldSolidEntityId;
 const char *phase = "entry396";
+// Test expectation populated only after observing an actual native rupture.
+// It never writes damage or topology into the simulation.
+std::uint16_t required_damage_mask = 0;
 
 double horizontal_speed(const Snapshot &v) {
     return std::hypot(v.player_linear_velocity.x, v.player_linear_velocity.z);
@@ -58,6 +61,8 @@ void tick(Simulation &s, int count = 1) {
                 "finite native motion", s);
         require(v.player_gravity_factor == 1.0 && v.death_count == 0 && !v.parachute_deployed,
                 "ordinary gravity and same life without parachute", s);
+        require((v.plank_broken_joint_mask & required_damage_mask) == required_damage_mask,
+                "observed native damage persists through recovery and onward travel", s);
         if (v.tick_index % 90 == 0) sample(s, "tick");
     }
 }
@@ -205,18 +210,31 @@ void cross_hanger(Simulation &s) {
     stable(s, kFrame, 407.9);
 }
 
-void run_recovery() {
-    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::Slingshot);
-    require(s.entity_body_count(kFrame) == 1 && s.entity_body_count(kRecovery) == 1,
-            "real407 gap and403.5 catch tray exist in normal world", s);
-    begin_phase(s, "recovery_left407_start");
-    // This scenario has its own single supported start. It proves local
-    // failure/recovery only, independently of the primary396-to418 route.
-    require(s.debug_restart_at({-16.65, 407.9, -128.2}), "actual left407 staging accepted", s);
-    require(s.set_move_input(0, 0) && s.set_crouch_input(false) && s.set_sprint_input(false),
-            "ordinary standing recovery input accepted", s);
-    tick(s, 45);
+void recover_from_tray(Simulation &s) {
+    require(footing(s.snapshot(), kRecovery, 404.4), "recovery starts on actual tray contact", s);
+    // Native heavy-landing compression and finite braking precede standing
+    // footing. Do not treat the first contact tick as a recovered stance.
+    walk(s, -12.4, -129.3, "tray_landing_recovery");
+    tick(s, 180);
+    stable(s, kRecovery, 404.4);
+    walk(s, -20.0, -129.65, "tray_to_return_brace");
+    walk(s, -12.4, -129.65, "actual_return_brace_ascent");
+    require(s.snapshot().player_grounded && s.snapshot().support_entity_id == kRecovery &&
+                s.snapshot().player_position.y > 407.35 &&
+                s.snapshot().traversal_state == TraversalState::None,
+            "ordinary footing on the return brace earns recovery height", s);
+    walk(s, -10.8, -129.65, "return_brace_to407_receiver");
+    require(footing(s.snapshot(), kFrame, 407.9),
+            "walked recovery reaches actual407 receiving contact", s);
+    walk(s, -10.8, -128.2, "recovered_right407_braking");
     stable(s, kFrame, 407.9);
+}
+
+// The miss begins on earned left-transom footing. The real lower brace
+// returns to the right transom; this is an onward recovery, not a hanger retry.
+void recover_after_gap_miss(Simulation &s) {
+    require(footing(s.snapshot(), kFrame, 407.9),
+            "deliberate miss starts on actual left407 contact", s);
     const auto before = s.snapshot();
     begin_phase(s, "deliberate_gap_walkoff");
     require(s.set_facing(1, 0) && s.set_move_input(1, 0), "ordinary walk-off input accepted", s);
@@ -239,28 +257,114 @@ void run_recovery() {
                 s.snapshot().last_impact_speed_mps > 4.0,
             "actual unsupported fall makes a nontrivial tray impact on the same life", s);
     sample(s, "tray_impact");
-    // Native heavy-landing compression and finite braking precede standing
-    // footing. Do not treat the first contact tick as a recovered stance.
-    walk(s, -12.4, -129.3, "tray_landing_recovery");
-    tick(s, 180);
-    stable(s, kRecovery, 404.4);
-    walk(s, -20.0, -129.65, "tray_to_return_brace");
-    walk(s, -12.4, -129.65, "actual_return_brace_ascent");
-    require(s.snapshot().player_grounded && s.snapshot().support_entity_id == kRecovery &&
-                s.snapshot().player_position.y > 407.35 &&
-                s.snapshot().traversal_state == TraversalState::None,
-            "ordinary footing on the return brace earns recovery height", s);
-    walk(s, -10.8, -129.65, "return_brace_to407_receiver");
-    require(footing(s.snapshot(), kFrame, 407.9),
-            "walked recovery reaches actual407 receiving contact", s);
-    walk(s, -10.8, -128.2, "recovered_right407_braking");
+    recover_from_tray(s);
+}
+
+void damage_by_upper_brace_drop(Simulation &s) {
+    walk(s, -6.8, -126.275, "upper_brace_damage_approach", 4500);
+    const auto start = s.snapshot();
+    require(start.player_grounded && start.support_entity_id == kWorld &&
+                start.player_position.y > 410.8 && start.plank_broken_joint_mask == 0 &&
+                start.traversal_state == TraversalState::None && start.traversal_hand_constraint_count == 0,
+            "ordinary ascent reaches real upper brace above intact timber", s);
+    begin_phase(s, "ordinary_upper_brace_walkoff_to_timber");
+    bool unsupported = false, fractured = false, tray_contact = false;
+    for (int i = 0; i < 540; ++i) {
+        // A broken piece can honestly carry the capsule after landing on
+        // the tray. Deliberately step beside it onto steel; do not manufacture
+        // a checkpoint or mistake fragment contact for recovered footing.
+        steer(s, -6.8, fractured ? -129.3 : -128.2);
+        tick(s);
+        const auto v = s.snapshot();
+        require(v.traversal_state == TraversalState::None && v.traversal_hand_constraint_count == 0,
+                "brace drop uses gravity and ordinary stick without hand-assisted elevation", s);
+        unsupported = unsupported || (!v.player_grounded && v.support_entity_id == 0);
+        if (!fractured && v.plank_broken_joint_mask != 0) {
+            require(unsupported && v.plank_peak_strength_ratio >= 1,
+                    "actual unsupported impact exceeds native timber strength", s);
+            fractured = true;
+            required_damage_mask = v.plank_broken_joint_mask;
+            sample(s, "actual_fracture_from_brace_drop");
+            std::cout << "INSPECTION_DAMAGE,brace_drop,mask=" << required_damage_mask
+                      << ",peak_strength_ratio=" << v.plank_peak_strength_ratio << '\n';
+        }
+        if (fractured && footing(v, kRecovery, 404.4)) {
+            tray_contact = true;
+            break;
+        }
+    }
+    require(unsupported && fractured && tray_contact &&
+                s.snapshot().landing_count > start.landing_count,
+            "reachable gravity impact fractures timber and reaches actual recovery tray", s);
+    sample(s, "tray_contact_with_persistent_damage");
+    recover_from_tray(s);
+}
+
+void jump_damaged_span_from_steel(Simulation &s) {
+    require(required_damage_mask != 0, "steel gap jump follows observed native fracture", s);
+    walk(s, -10.2, -128.2, "damaged_span_steel_runup_start");
     stable(s, kFrame, 407.9);
+    begin_phase(s, "damaged_span_steel_running_jump");
+    const auto start = s.snapshot();
+    require(s.set_facing(1, 0) && s.set_move_input(1, 0), "ordinary steel run-up accepted", s);
+    bool jump_sent = false;
+    for (int i = 0; i < 180; ++i) {
+        const auto v = s.snapshot();
+        if (v.player_position.x >= -8.75) {
+            require(footing(v, kFrame, 407.9) && v.player_position.x < -8.4 &&
+                        v.player_linear_velocity.x > 2.5,
+                    "gap takeoff has real steel support and earned running momentum", s);
+            require(s.request_jump(), "ordinary Jump on actual steel accepted", s);
+            jump_sent = true;
+            sample(s, "actual_steel_takeoff_request");
+            break;
+        }
+        tick(s);
+    }
+    require(jump_sent, "ordinary run-up reaches steel-supported takeoff", s);
+    bool airborne = false, landed = false;
+    for (int i = 0; i < 360; ++i) {
+        steer(s, -5.1, -128.2);
+        tick(s);
+        const auto v = s.snapshot();
+        require(v.traversal_state == TraversalState::None && v.traversal_hand_constraint_count == 0,
+                "damaged-span jump remains ordinary free flight", s);
+        airborne = airborne || (!v.player_grounded && v.support_entity_id == 0);
+        if (airborne && v.player_grounded)
+            require(footing(v, kFrame, 407.9) && v.player_position.x > -5.57,
+                    "damaged-span flight cannot use intermediate timber footing", s);
+        if (airborne && footing(v, kFrame, 407.9) && v.player_position.x > -5.57) {
+            landed = true;
+            break;
+        }
+    }
+    require(airborne && landed && s.snapshot().landing_jump_work_j > start.landing_jump_work_j,
+            "finite steel-supported Jump crosses damaged span onto actual right steel", s);
+    walk(s, -4.8, -128.2, "damaged_span_receiver_braking");
+    stable(s, kFrame, 407.9);
+    std::cout << "INSPECTION_DAMAGE,steel_jump_landed,mask=" << s.snapshot().plank_broken_joint_mask
+              << ",jump_work_delta_j=" << s.snapshot().landing_jump_work_j - start.landing_jump_work_j << '\n';
+}
+
+void run_recovery() {
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::Slingshot);
+    require(s.entity_body_count(kFrame) == 1 && s.entity_body_count(kRecovery) == 1,
+            "real407 gap and403.5 catch tray exist in normal world", s);
+    begin_phase(s, "recovery_left407_start");
+    // This scenario has its own single supported start. It proves local
+    // failure/recovery only, independently of the primary396-to418 route.
+    require(s.debug_restart_at({-16.65, 407.9, -128.2}), "actual left407 staging accepted", s);
+    require(s.set_move_input(0, 0) && s.set_crouch_input(false) && s.set_sprint_input(false),
+            "ordinary standing recovery input accepted", s);
+    tick(s, 45);
+    stable(s, kFrame, 407.9);
+    recover_after_gap_miss(s);
     std::cout << "PASS INSPECTION_JUNCTION recovery407_gap_to403.5_to407 "
                  "ordinary_inputs_only=1 actual_tray_impact=1 actual_return_brace_contact=1 "
                  "gravity=1 deaths=0 initial_staging_only=1 full_route=0 gap_retry=0\n";
 }
 
-void run_route(bool approach_only) {
+void run_route(bool approach_only, bool miss_recovery = false, bool damage_route = false) {
     Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::Slingshot);
     require(s.entity_body_count(kFrame) == 1 && s.entity_body_count(kHanger) == 1,
             "junction and physical hanger exist in normal world", s);
@@ -282,18 +386,43 @@ void run_route(bool approach_only) {
         std::cout << "PASS INSPECTION_JUNCTION approach396_to_left407 initial_staging_only=1 full_route=0\n";
         return;
     }
-    cross_hanger(s);
+    if (miss_recovery) {
+        walk(s, -16.65, -128.2, "left_transom_miss_approach");
+        stable(s, kFrame, 407.9);
+        recover_after_gap_miss(s);
+    } else {
+        cross_hanger(s);
+    }
     walk(s, 0, -128.2, "right407_to_upper_toe");
     walk(s, 0, -126.275, "upper_brace_toe407");
+    if (damage_route) {
+        damage_by_upper_brace_drop(s);
+        jump_damaged_span_from_steel(s);
+        walk(s, 0, -128.2, "damaged_route_onward_upper_toe");
+        walk(s, 0, -126.275, "damaged_route_upper_brace_toe407");
+    }
     walk(s, -21.5, -126.275, "upper_brace_ascent", 4500);
     require(s.snapshot().player_grounded && s.snapshot().support_entity_id == kWorld &&
                 s.snapshot().player_position.y > 417.7, "actual upper diagonal earns height", s);
     inward_jump(s, -21.5, -128.9, kWorld, 419.15, "actual418_floor_jump");
     walk(s, -21.0, -142.0, "onward418_west_roof");
     stable(s, kWorld, 419.15);
-    std::cout << "PASS INSPECTION_JUNCTION primary396_to_actual418.25 ordinary_inputs_only=1 "
-                 "lower_brace=1 hanger2935=1 upper_brace=1 actual_receiving_contact=1 "
-                 "onward_walking=1 gravity=1 deaths=0 initial_staging_only=1\n";
+    if (damage_route) {
+        std::cout << "PASS INSPECTION_JUNCTION connected_damage396_to_actual418.25 ordinary_inputs_only=1 "
+                     "lower_brace=1 hanger2935=1 actual_brace_walkoff=1 actual_native_fracture=1 "
+                     "actual_tray_recovery=1 persistent_damage=1 actual_steel_supported_gap_jump=1 "
+                     "upper_brace=1 actual_receiving_contact=1 stable_onward_walking=1 "
+                     "gravity=1 deaths=0 initial_staging_only=1 full_route=1\n";
+    } else if (miss_recovery) {
+        std::cout << "PASS INSPECTION_JUNCTION connected_miss396_to_actual418.25 ordinary_inputs_only=1 "
+                     "lower_brace=1 actual_gap_miss=1 actual_tray_impact=1 actual_return_brace_contact=1 "
+                     "right407_recovery=1 upper_brace=1 actual_receiving_contact=1 onward_walking=1 "
+                     "gravity=1 deaths=0 initial_staging_only=1 full_route=1 gap_retry=0 fracture=unverified\n";
+    } else {
+        std::cout << "PASS INSPECTION_JUNCTION primary396_to_actual418.25 ordinary_inputs_only=1 "
+                     "lower_brace=1 hanger2935=1 upper_brace=1 actual_receiving_contact=1 "
+                     "onward_walking=1 gravity=1 deaths=0 initial_staging_only=1\n";
+    }
 }
 } // namespace
 
@@ -303,11 +432,12 @@ int main(int argc, char **argv) {
                  "traversal_support,grip_available,grip_entity,swinging,hands,gravity,deaths,landings,"
                  "impact_mps,jump_work_j,hand_positive_work_j,firm_footing\n";
     const std::string mode = argc > 1 ? argv[1] : "primary";
-    if (mode != "primary" && mode != "approach" && mode != "recovery") {
+    if (mode != "primary" && mode != "approach" && mode != "recovery" && mode != "miss-onward" &&
+        mode != "damage-onward") {
         std::cerr << "FAIL INSPECTION_JUNCTION unknown mode\n";
         return EXIT_FAILURE;
     }
     if (mode == "recovery") run_recovery();
-    else run_route(mode == "approach");
+    else run_route(mode == "approach", mode == "miss-onward", mode == "damage-onward");
     return EXIT_SUCCESS;
 }

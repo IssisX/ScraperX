@@ -1,0 +1,19 @@
+{
+  "parent": "ba40e21e170b167328be1d9ebf023ca75da9c681",
+  "branch": "ChatGPT",
+  "scope": "Final source hashes. Touch receipt uses pre-final grip-material finish; only that visual finish changed afterward and was separately parsed/rendered. Private scenario mapping and platform/cache adaptations are explicit in the touch manifest. Native physics sources unchanged from parent.",
+  "sha256": {
+    "src/sim/simulation.cpp": "09a334ed22dbe628195231c8ff3429c9d8b31bf555eb24d5f3a034068532c991",
+    "src/sim/physical_hand_climb.cpp": "098a0d36dbd0cf3cd6eb3e4898051b1b59a5797d3fc37761ba7ed29534d47409",
+    "src/sim/deformable_plank.cpp": "f637389c8fc0febad3878589c82fb1809fe660146156be5b90a5b93a44d567ca",
+    "src/sim/inspection_junction_route.cpp": "116cc2ab7fca7ec213a7d8ad0cdd788918dc1745b77cefb88b3acbfe956f332a",
+    "tests/inspection_junction_route_tests.cpp": "2a470468434c3751f22aba417e8bcf22b6271ef6f5308190cafdb65cb23e712d",
+    "godot/presentation/main.gd": "fe9ebfdef8ae0ed61d03d2f0590d2ff30350c6ad27073f2531c120ca1194d09d",
+    "godot/presentation/ui/hud.gd": "adf03d87584279715ec98c611930101cb08c61f66c76560eacd5726113d86aba",
+    "godot/presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "godot/presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a",
+    "godot/presentation/kit_view.gd": "10b817d20bf999e09b1314aafb388a4252610b8f03b503ea8a782ed5eefb1fb8",
+    "CMakeLists.txt": "edc88e8ae96ba880c1e751d6ebf0daf4a78e012171450e6817318322bba0ea5a",
+    ".github/workflows/wo000-delivery-spine.yml": "34e65cb27ea189c217da227e913e9572ce85ed760c16795441ead759a10b335c"
+  }
+}

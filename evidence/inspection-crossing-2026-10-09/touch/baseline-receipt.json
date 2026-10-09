@@ -1,0 +1,46 @@
+{
+  "label": "baseline",
+  "result": "FAIL",
+  "exit_code": 31,
+  "terminal": [
+    "SCRAPERX_UITEST FAIL touch_inspection_junction reason=receiving contact did not retain neutral native footing"
+  ],
+  "errors": [],
+  "phases": [
+    "entry396",
+    "north396_band",
+    "north396_toe_approach",
+    "lower_brace_toe396",
+    "lower_brace_ascent",
+    "left407_inward_jump",
+    "left407_inward_jump_braking",
+    "hanger_runup",
+    "jump_catch2935",
+    "pump_and_release2935",
+    "407_receiver",
+    "407_receiver_braking"
+  ],
+  "last_native_samples": [
+    "INSPECTION_TOUCH phase=pump_and_release2935 event=released tick=4010 position=(-12.61533, 408.5033, -128.1906) velocity=(2.849703, 2.453984, -0.0) grounded=false support=0 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247508 hand_work=1580.951035 firm=false yaw=-1.562763 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=407_receiver event=begin tick=4010 position=(-12.61533, 408.5033, -128.1906) velocity=(2.849703, 2.453984, -0.0) grounded=false support=0 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247508 hand_work=1580.951035 firm=false yaw=-1.562763 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=407_receiver_braking event=begin tick=4070 position=(-10.69631, 407.9, -128.1988) velocity=(0.701309, 0.0, -0.004205) grounded=true support=1935 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2571.247508 hand_work=1580.951035 firm=true yaw=-1.562763 touch_move=(-0.004066, -0.410876) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=407_receiver_braking event=tick tick=4171 position=(-10.7418, 407.455, -126.9623) velocity=(1.012619, 1.567482, 0.771018) grounded=false support=0 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2594.243397 hand_work=1580.951035 firm=false yaw=1.559613 touch_move=(0.987806, 0.155688) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=407_receiver_braking event=tick tick=4261 position=(-10.75421, 404.4, -127.9549) velocity=(-0.252637, 0.0, -1.37459) grounded=true support=1936 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2594.243397 hand_work=1580.951035 firm=true yaw=1.559613 touch_move=(0.258115, 0.050315) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=407_receiver_braking event=arrived tick=4306 position=(-10.8128, 404.4, -128.2738) velocity=(-0.023497, 0.0, -0.127183) grounded=true support=1936 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2594.243397 hand_work=1580.951035 firm=true yaw=1.559613 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=407_receiver_braking event=lost_receiving_contact tick=4307 position=(-10.81305, 404.4, -128.2751) velocity=(-0.022047, 0.0, -0.119332) grounded=true support=1936 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=2594.243397 hand_work=1580.951035 firm=true yaw=1.559613 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "SCRAPERX_UITEST FAIL touch_inspection_junction reason=receiving contact did not retain neutral native footing"
+  ],
+  "caught_button_labels": [
+    "INSPECTION_TOUCH_BUTTONS jump=JUMP OFF drop=DROP action=CLIMB UP"
+  ],
+  "log_sha256": "09227aaf900447d712d9428764b30783dc3a1732cf2fdd9744b05dd8e295593b",
+  "runtime_sha256": {
+    "presentation/main.gd": "3faf5bf9ef0a906ea18c077f38d80e887213350b27c2d27d65747111f618d9cd",
+    "presentation/ui/ui_test_driver.gd": "9951a48141eab1176fea5726671d2fc4a77ae844c486265fb918a1f0d1d551ce",
+    "presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "presentation/ui/touch_controls.gd": "02a6861c7950a089c604bbd2a7dca90059a899c84bef2f2baccbd3be7aa47dff",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "7796d8e777e828bc5fcbc83fcf5ae859a4a5bda42f094d45047e3e1c5f79eca1"
+  },
+  "baseline_source_receipt": "source-start.json",
+  "scope": "One staged normal-world entry396 followed only by real viewport touch; native pose/support/gravity readback. No phone, human usability, visual, audio, CI or APK claim."
+}

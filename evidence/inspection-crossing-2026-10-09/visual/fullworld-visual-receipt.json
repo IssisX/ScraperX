@@ -1,0 +1,45 @@
+{
+  "captures": [
+    {
+      "camera": "[X: (-0.0, 0.0, 1.0), Y: (0.119712, 0.992809, 0.0), Z: (-0.992809, 0.119712, -0.0), O: (-16.65, 408.52, -128.2)]",
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_left407_pov.png",
+      "label": "staged_left407_pov",
+      "native_render_agreement": true,
+      "player": "(-16.65, 407.9, -128.2)",
+      "shadow_quality": 1,
+      "support": 1935,
+      "viewport": "(648.0, 557.0)"
+    },
+    {
+      "camera": "[X: (-0.0, 0.0, 1.0), Y: (0.522687, 0.852525, 0.0), Z: (-0.852525, 0.522687, -0.0), O: (-8.7, 408.52, -128.2)]",
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_receiver407_pov.png",
+      "label": "staged_receiver407_pov",
+      "native_render_agreement": true,
+      "player": "(-8.7, 407.9, -128.2)",
+      "shadow_quality": 1,
+      "support": 1935,
+      "viewport": "(648.0, 557.0)"
+    },
+    {
+      "camera": "[X: (-0.0, 0.0, -1.0), Y: (0.049979, 0.99875, -0.0), Z: (0.99875, -0.049979, -0.0), O: (-12.4, 405.02, -129.3)]",
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_tray403_5_pov.png",
+      "label": "staged_tray403_5_pov",
+      "native_render_agreement": true,
+      "player": "(-12.4, 404.4, -129.3)",
+      "shadow_quality": 1,
+      "support": 1936,
+      "viewport": "(648.0, 557.0)"
+    }
+  ],
+  "failures": [],
+  "scope": "explicit staged visual inspection; normal production main/native world; capture-only low quality preset; no earned route/phone/performance proof"
+}

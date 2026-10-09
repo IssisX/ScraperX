@@ -1,0 +1,37 @@
+{
+  "scope": "Hashes of private runtime files as used by final connected headless viewport-touch run, exit0. Physics bridge matches final plank receipt; baseline source ba40e21. Late source changes do not rewrite this attestation.",
+  "baseline_revision": "ba40e21e170b167328be1d9ebf023ca75da9c681",
+  "tested_runtime_sha256": {
+    "presentation/main.gd": "77c82ecc31759d4314b5cd427c6ddd8f3b252694c65b9b3a1d63c789a52cec09",
+    "presentation/ui/hud.gd": "adf03d87584279715ec98c611930101cb08c61f66c76560eacd5726113d86aba",
+    "presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a",
+    "presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "presentation/kit_view.gd": "a40d15f14251c25aafdaf0e3aab0ef03d1ce08e44710b1976715024d4bb49849",
+    "presentation/ui/ui_test_driver.gd": "d6677b3c9049c767519022493e0fa95651fa9d4a45d12ef62317d8c237b8e75b",
+    "project.godot": "2ca6051dd55c80d8137b4b9fb4416d3f767e774c4803950c4072cc82489699b9",
+    "addons/scraperx_native/scraperx_native.gdextension": "50ab0bccfaf7455de0d8812dcd228645db346ae72f689707560376d21af1dd93",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "7796d8e777e828bc5fcbc83fcf5ae859a4a5bda42f094d45047e3e1c5f79eca1"
+  },
+  "input_script_sha256": {
+    "inspection_driver.gd": "77421c6bfd7b6415f4293eab89db47641e2129c463b999e516254359ea3a81cf",
+    "run_touch.sh": "4e694fb852d251c0289056e96cd54b6481bdcf2faa8e097fe0484944caa1b083",
+    "summarize_receipt.py": "109ab03fbdfdeeecd31c00fc9a3406cba48dd8f1cd724236b02696b9a8873f54",
+    "command.txt": "6179023c0b5c71212399894e3446e88e767019472a645e5b02046108e4874028",
+    "render-command.txt": "be8dd5fb765a10e31144b71c44655ff74928fb9a3d70a4f0368cc0bc484eb319"
+  },
+  "exact_production_match_at_attestation": {
+    "presentation/ui/hud.gd": true,
+    "presentation/ui/touch_controls.gd": true,
+    "presentation/ui/input_router.gd": true,
+    "presentation/kit_view.gd": false
+  },
+  "main_difference": "Only private uitest scenario name touch_west_brace_bay remapped to touch_inspection_junction. Main native input dispatch is unchanged from captured production source.",
+  "private_project_difference": "Viewport/window overrides648x557 for bounded software-render diagnostic; final headless touch uses this same private project.",
+  "native_runtime_mapping": "Linux ARM64 mapping in private gdextension; production repository mapping targets x86_64 host.",
+  "result": "PASS",
+  "exit_code": 0,
+  "receipt": "connected-final-receipt.json",
+  "log": "connected-final.log",
+  "main_captured_production_sha256": "fe9ebfdef8ae0ed61d03d2f0590d2ff30350c6ad27073f2531c120ca1194d09d",
+  "main_exact_after_private_scenario_unmap": true
+}

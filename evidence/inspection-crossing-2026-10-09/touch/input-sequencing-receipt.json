@@ -1,0 +1,52 @@
+{
+  "label": "input-sequencing",
+  "result": "PASS",
+  "exit_code": 0,
+  "terminal": [
+    "SCRAPERX_UITEST PASS touch_inspection_junction ordinary_viewport_touch=1 sole_entry396_staging=1 lower_brace=1 hanger2935=1 native_timber=1 upper_brace=1 actual418_25_receiver=1 onward_walk=1 gravity=1 deaths=0 miss_recovery_retry=not_exercised"
+  ],
+  "errors": [],
+  "phases": [
+    "entry396",
+    "north396_band",
+    "north396_toe_approach",
+    "lower_brace_toe396",
+    "lower_brace_ascent",
+    "left407_inward_jump",
+    "left407_inward_jump_braking",
+    "hanger_runup",
+    "jump_catch2935",
+    "pump_and_release2935",
+    "407_receiver",
+    "407_receiver_braking",
+    "right407_timber_to_upper_toe",
+    "upper_brace_toe407",
+    "upper_brace_ascent",
+    "actual418_floor_jump",
+    "actual418_floor_jump_braking",
+    "onward418_west_roof"
+  ],
+  "last_native_samples": [
+    "INSPECTION_TOUCH phase=onward418_west_roof event=tick tick=6110 position=(-21.42018, 419.1514, -130.9712) velocity=(0.209394, -0.128842, -5.496012) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=4065.053951 hand_work=1580.951035 firm=true yaw=-6.321266 touch_move=(0.000001, 1.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=onward418_west_roof event=tick tick=6200 position=(-21.21076, 419.15, -136.4699) velocity=(0.209456, 0.0, -5.49601) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=4065.053951 hand_work=1580.951035 firm=true yaw=-6.321266 touch_move=(0.000012, 1.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=onward418_west_roof event=tick tick=6290 position=(-21.01084, 419.15, -141.7161) velocity=(0.132053, 0.0, -3.459179) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=4065.053951 hand_work=1580.951035 firm=true yaw=-6.321266 touch_move=(-0.000024, -0.389465) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=onward418_west_roof event=tick tick=6380 position=(-20.99871, 419.15, -142.0339) velocity=(-0.00933, 0.0, 0.244311) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=4065.053951 hand_work=1580.951035 firm=true yaw=-6.321266 touch_move=(-0.000004, -0.044452) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=onward418_west_roof event=arrived tick=6395 position=(-20.99994, 419.15, -142.0016) velocity=(-0.004393, 0.0, 0.117357) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=4065.053951 hand_work=1580.951035 firm=true yaw=-6.321266 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=onward418_west_roof event=tick tick=6470 position=(-20.99997, 419.15, -142.0009) velocity=(0.0, 0.0, 0.0) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=4065.053951 hand_work=1580.951035 firm=true yaw=-6.321266 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "INSPECTION_TOUCH phase=onward418_west_roof event=stable tick=6485 position=(-20.99997, 419.15, -142.0009) velocity=(0.0, 0.0, 0.0) grounded=true support=51 traversal=0 traversal_support=0 hands=0 swing=false grip=false gravity=1.000 deaths=0 jump_work=4065.053951 hand_work=1580.951035 firm=true yaw=-6.321266 touch_move=(0.0, 0.0) action={ \"id\": &\"\", \"label\": \"\", \"icon\": &\"climb\", \"detail\": \"\" }",
+    "SCRAPERX_UITEST PASS touch_inspection_junction ordinary_viewport_touch=1 sole_entry396_staging=1 lower_brace=1 hanger2935=1 native_timber=1 upper_brace=1 actual418_25_receiver=1 onward_walk=1 gravity=1 deaths=0 miss_recovery_retry=not_exercised"
+  ],
+  "caught_button_labels": [
+    "INSPECTION_TOUCH_BUTTONS jump=JUMP OFF drop=DROP action=CLIMB UP"
+  ],
+  "log_sha256": "81cf00db5e06565065743178d11ee0d62e4248e60cbc8939953af2e836bad6e1",
+  "runtime_sha256": {
+    "presentation/main.gd": "3faf5bf9ef0a906ea18c077f38d80e887213350b27c2d27d65747111f618d9cd",
+    "presentation/ui/ui_test_driver.gd": "6126e106db6e127a942a6a9f19536be01a6347011435dd01d16ab0956ce9adff",
+    "presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "presentation/ui/touch_controls.gd": "02a6861c7950a089c604bbd2a7dca90059a899c84bef2f2baccbd3be7aa47dff",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "7796d8e777e828bc5fcbc83fcf5ae859a4a5bda42f094d45047e3e1c5f79eca1"
+  },
+  "baseline_source_receipt": "source-start.json",
+  "scope": "One staged normal-world entry396 followed only by real viewport touch; native pose/support/gravity readback. No phone, human usability, visual, audio, CI or APK claim."
+}

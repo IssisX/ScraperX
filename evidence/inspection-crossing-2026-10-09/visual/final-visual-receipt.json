@@ -1,0 +1,90 @@
+{
+  "source_baseline_head": "ba40e21e170b167328be1d9ebf023ca75da9c681",
+  "production_file": "godot/presentation/kit_view.gd",
+  "production_sha256": "10b817d20bf999e09b1314aafb388a4252610b8f03b503ea8a782ed5eefb1fb8",
+  "native_sha256": "7796d8e777e828bc5fcbc83fcf5ae859a4a5bda42f094d45047e3e1c5f79eca1",
+  "production_main_sha256": "fe9ebfdef8ae0ed61d03d2f0590d2ff30350c6ad27073f2531c120ca1194d09d",
+  "production_main_matches_repo": true,
+  "only_production_file_owned_by_visual_worker": "godot/presentation/kit_view.gd",
+  "parser_final_exit": 0,
+  "fullworld_final_exit": 0,
+  "fullworld_failures": [],
+  "fullworld_captures": [
+    {
+      "camera": "[X: (-0.0, 0.0, 1.0), Y: (0.119712, 0.992809, 0.0), Z: (-0.992809, 0.119712, -0.0), O: (-16.65, 408.52, -128.2)]",
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_left407_pov.png",
+      "label": "staged_left407_pov",
+      "native_render_agreement": true,
+      "player": "(-16.65, 407.9, -128.2)",
+      "shadow_quality": 1,
+      "support": 1935,
+      "viewport": "(648.0, 557.0)"
+    },
+    {
+      "camera": "[X: (-0.0, 0.0, 1.0), Y: (0.522687, 0.852525, 0.0), Z: (-0.852525, 0.522687, -0.0), O: (-8.7, 408.52, -128.2)]",
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_receiver407_pov.png",
+      "label": "staged_receiver407_pov",
+      "native_render_agreement": true,
+      "player": "(-8.7, 407.9, -128.2)",
+      "shadow_quality": 1,
+      "support": 1935,
+      "viewport": "(648.0, 557.0)"
+    },
+    {
+      "camera": "[X: (-0.0, 0.0, -1.0), Y: (0.049979, 0.99875, -0.0), Z: (0.99875, -0.049979, -0.0), O: (-12.4, 405.02, -129.3)]",
+      "explicit_visual_staging": true,
+      "fov": 82.0,
+      "grounded": true,
+      "image": "res://staged_tray403_5_pov.png",
+      "label": "staged_tray403_5_pov",
+      "native_render_agreement": true,
+      "player": "(-12.4, 404.4, -129.3)",
+      "shadow_quality": 1,
+      "support": 1936,
+      "viewport": "(648.0, 557.0)"
+    }
+  ],
+  "settings": {
+    "viewport": [
+      648,
+      557
+    ],
+    "render_scale": 1.0,
+    "quality_preset": 0,
+    "shadow_quality_observed": 1,
+    "fov_observed": 82
+  },
+  "geometry_comparison": {
+    "source_sha256": "a40d15f14251c25aafdaf0e3aab0ef03d1ce08e44710b1976715024d4bb49849",
+    "bodies": 16,
+    "triangle_normal_tuples": 7644,
+    "failures": [],
+    "subsequent_source_change": "Grip albedo, metallic, roughness and explanatory comments only; no subsequent mesh or transform edits"
+  },
+  "final_unchanged_function_source_checks": [
+    "_build_inspection_materials",
+    "_inspection_part_material",
+    "_inspection_practicals",
+    "_plank_grain_mesh",
+    "_kit_hull",
+    "_kit_tube",
+    "_append_kit_hull",
+    "_render_kit"
+  ],
+  "images_sha256": {
+    "full-world/staged_left407_pov.png": "a7901a05f31c2a6d1fa7a9efdcd763762e51a86c6e1dc2b71a0a6c5ba6cf610f",
+    "full-world/staged_receiver407_pov.png": "82cbd0c910dde2049c89ad396a3d3796c6b87f6a60c4dbea15dc617ee915ebb4",
+    "full-world/staged_tray403_5_pov.png": "84a1cd5ad83d5fe5536d8f6c3d63bb538ef8842a91acde3751f31780f4843599",
+    "full-world/before-grip-oxide/staged_left407_pov.png": "799afd231b7685bb7996813ba1dbb1123a51c0cd3c12349ad1b841ebd8be080e",
+    "full-world/before-grip-oxide/staged_receiver407_pov.png": "996ab22d3b5845eac8e9b1dfb4761ec4fab1e396f0daa8501025bed17391ead7",
+    "full-world/before-grip-oxide/staged_tray403_5_pov.png": "84a1cd5ad83d5fe5536d8f6c3d63bb538ef8842a91acde3751f31780f4843599"
+  },
+  "proof_scope": "Actual normal-world production main; explicit visual staging, forty native ticks to settle real expected footing, frozen main processing for two draws. Three stills prove local desktop render/readability observations. No earned route, release usability, phone quality/performance, Android build or delivery claim.",
+  "environment_notices": "Existing proot --shm-helper and unsupported VSync notices; no parse/script error and final receipt failures empty."
+}

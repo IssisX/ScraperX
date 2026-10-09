@@ -26,6 +26,7 @@ var _kit_cables: Array = []
 var _cart_paint_material: StandardMaterial3D
 var _cart_materials: Dictionary = {}
 var _inspection_materials: Dictionary = {}
+var _junction_materials: Dictionary = {}
 var _plank_wood_material: ShaderMaterial
 var _water_lift_bucket_water: MeshInstance3D
 
@@ -258,6 +259,104 @@ func _inspection_part_material(entity: int, index: int, original: Material) -> M
 	return _inspection_materials.get(index, original)
 
 
+func _build_junction_materials(palette: Array[Material]) -> void:
+	# This bay has its own finish hierarchy. Keep the earlier 363/373m
+	# inspection bodies' materials intact, and reuse their mipmapped tread.
+	var finishes := {
+		"frame": [0, Color("3f555c"), 0.12, 0.86, 0.30],
+		"oxide": [1, Color("89664b"), 0.0, 0.93, 0.32],
+		"footing": [5, Color("b2beb9"), 1.0, 0.68, 0.48],
+		"recovery": [5, Color("7e948f"), 1.0, 0.80, 0.36],
+		"return": [0, Color("9caeaa"), 0.12, 0.81, 0.26],
+		# Surface oxide/wear supplies diffuse response in the actual Tower
+		# lighting, where pure metal without a reflected scene reads black.
+		"grip": [0, Color("b1bcb6"), 0.0, 0.62, 0.18],
+		"bearing": [5, Color("829390"), 1.0, 0.48, 0.22],
+		"warning": [7, Color("cba347"), 0.0, 0.76, 0.0],
+	}
+	for key in finishes:
+		var finish: Array = finishes[key]
+		var material := palette[int(finish[0])].duplicate() as StandardMaterial3D
+		material.albedo_color = finish[1]
+		material.metallic = finish[2]
+		material.roughness = finish[3]
+		material.normal_scale = finish[4]
+		material.uv1_scale = Vector3.ONE
+		material.uv1_triplanar_sharpness = 4.0
+		_junction_materials[key] = material
+	for key in ["footing", "recovery"]:
+		var material: StandardMaterial3D = _junction_materials[key]
+		material.normal_enabled = true
+		material.normal_texture = (_inspection_materials[5] as StandardMaterial3D).normal_texture
+		material.uv1_triplanar = true
+		material.uv1_world_triplanar = true
+		material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+
+
+func _junction_part_material(entity: int, index: int, half: Vector3,
+		local: Transform3D, original: Material) -> Material:
+	if entity == 2935:
+		# The worn grip belongs to the real moving bar, the warm painted
+		# arm to its passive hanger. Neither finish implies a powered motor.
+		if index == 0:
+			return _junction_materials["grip"]
+		if index == 5:
+			return _junction_materials["bearing"]
+		if index == 7:
+			return _junction_materials["warning"]
+	elif entity == 1937:
+		return _junction_materials["grip" if index == 0 else "bearing"]
+	elif entity == 1935 or entity == 1936:
+		if index == 5:
+			return _junction_materials["recovery" if entity == 1936 else "footing"]
+		if index == 1:
+			return _junction_materials["oxide"]
+		if index == 7:
+			return _junction_materials["warning"]
+		if index == 0:
+			# Actual return-brace top and arrival bolt heads stay legible.
+			# Classify native dimensions/orientation instead of part ordering.
+			if entity == 1936 and half.x > 3.0 and local.basis.x.y > 0.3:
+				return _junction_materials["return"]
+			if entity == 1935 and half.y < 0.025 and half.x < 0.07:
+				return _junction_materials["grip"]
+			return _junction_materials["frame"]
+	return original
+
+
+func _junction_stencil(node: Node3D, text: String, at: Vector3,
+		pixel_size: float, rotation: Vector3, colour: Color) -> void:
+	# Flat maintenance paint on an existing native face: no sign backing,
+	# extra support, interaction, direction arrow or release timing cue.
+	var stencil := Label3D.new()
+	stencil.name = "InspectionStencil"
+	stencil.text = text
+	stencil.position = at
+	stencil.rotation = rotation
+	stencil.font_size = 40
+	stencil.pixel_size = pixel_size
+	stencil.modulate = colour
+	stencil.outline_size = 0
+	stencil.shaded = true
+	stencil.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	stencil.visibility_range_end = 28.0
+	node.add_child(stencil)
+
+
+func _junction_markings(node: Node3D, entity: int) -> void:
+	if entity == 1935:
+		_junction_stencil(node, "INSPECTION\n407", Vector3(-22.0, 407.0015, -127.7),
+			0.007, Vector3(-PI / 2.0, 0, 0), Color("253c40"))
+		_junction_stencil(node, "NORTH FRAME\n418", Vector3(0.2, 407.0015, -127.0),
+			0.0045, Vector3(-PI / 2.0, 0, 0), Color("253c40"))
+	elif entity == 1936:
+		_junction_stencil(node, "INSPECTION RETURN\n403.5", Vector3(-16.5, 403.5015, -128.25),
+			0.006, Vector3(-PI / 2.0, 0, 0), Color("263e3e"))
+	elif entity == 2935:
+		_junction_stencil(node, "J-407", Vector3(0, -0.7, 0.2015),
+			0.002, Vector3.ZERO, Color("3d3526"))
+
+
 func _is_plank_segment(entity: int) -> bool:
 	return entity >= 2880 and entity <= 2891
 
@@ -269,6 +368,10 @@ func _plank_part_material(entity: int, index: int, original: Material) -> Materi
 		_plank_wood_material = ShaderMaterial.new()
 		_plank_wood_material.shader = PlankWoodShader
 		_plank_wood_material.set_shader_parameter("part_grain_uv", true)
+		# Weathered, unvarnished service timber. Coordinates remain continuous
+		# across the twelve actual native cells, including separated fragments.
+		_plank_wood_material.set_shader_parameter("timber_light", Color("b9a077"))
+		_plank_wood_material.set_shader_parameter("timber_dark", Color("65503a"))
 	return _plank_wood_material
 
 
@@ -355,6 +458,10 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			_build_cart_materials(palette)
 		if (entity == 1932 or entity == 1933 or entity == 1935 or entity == 1936) and _inspection_materials.is_empty():
 			_build_inspection_materials(palette)
+		if entity in [1935, 1936, 1937, 2935] and _junction_materials.is_empty():
+			if _inspection_materials.is_empty():
+				_build_inspection_materials(palette)
+			_build_junction_materials(palette)
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
 		node.transform = _native.get_kit_body_transform(body)
@@ -377,12 +484,14 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 				material_index, palette[material_index])
 			material = _inspection_part_material(entity, material_index, material)
 			material = _plank_part_material(entity, material_index, material)
-			# Rails and structural steel can share a native material class while
-			# needing different finishes. Keep each finish in its own rigid batch.
-			var finish_key := "" if material == palette[material_index] else "/%d" % material.get_instance_id()
 			var local := Transform3D(
 				Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
+			material = _junction_part_material(entity, material_index,
+				Vector3(parts[p], parts[p + 1], parts[p + 2]), local, material)
+			# Rails and structural steel can share a native material class while
+			# needing different finishes. Keep each finish in its own rigid batch.
+			var finish_key := "" if material == palette[material_index] else "/%d" % material.get_instance_id()
 			if int(parts[p + 11]) == 1:
 				if parts[p + 12] > 0.0:
 					mesh = _kit_tube(parts[p], parts[p + 12], parts[p + 1], material)
@@ -449,6 +558,8 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			node.add_child(instance)
 		if entity == 1932:
 			_inspection_practicals(node)
+		if entity in [1935, 1936, 2935]:
+			_junction_markings(node, entity)
 		# Signs stay on the native landing/deck bodies, including the moving
 		# pendant. They label the real stations without owning machine state.
 		if entity == 1981:
