@@ -4035,6 +4035,8 @@ void run_high() {
                 e.support_entity_id == scraperx::sim::vertical::Route::kDerrickStaticFirst + 2 &&
                 e.player_position.y > 803.3 && e.player_position.y < 803.8,
             "high: standing on the derrick's upper receiver, about 800 m up, alive");
+    require(e.summit_reached && e.summit_deaths == 0 && e.summit_seconds > 0.0,
+            "high: the derrick's upper receiver must read as the route's top");
     std::cout << "PASS scraperx_sim high: crown_s=" << ride.crown_s << " derrick_s=" << ride.derrick_s
               << " top_y=" << e.player_position.y << '\n';
 }

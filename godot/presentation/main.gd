@@ -197,6 +197,7 @@ var _continued_from_save := false
 # The title shows once per launch: a NEW CLIMB reloads the scene without it.
 static var _title_seen := false
 var _title: Control
+var _summit_announced := false
 var _title_open := false
 var _capture_path := ""
 var _capture_scheduled := false
@@ -723,6 +724,25 @@ func _open_pause(from_system: bool = false) -> void:
 	_audio.ui_tap()
 
 
+# The arrival at the top of the route, once per launch, from the native's own
+# latch: the height, the climb's time and its falls. What stands up there is
+# the owner's to decide; this only marks that the climb got there.
+func _announce_summit() -> void:
+	if _summit_announced:
+		return
+	var landing: Dictionary = _ctx.get("landing", {})
+	if not bool(landing.get("summit_reached", false)):
+		return
+	_summit_announced = true
+	var seconds := float(landing["summit_seconds"])
+	var deaths := int(landing["summit_deaths"])
+	_hud.toast("THE TOP", "%.1f M  /  %d:%02d  /  %d %s" % [float(landing["route_top"]), int(seconds) / 60,
+		int(seconds) % 60, deaths, "FALL" if deaths == 1 else "FALLS"], UiStyle.AMBER, 8.0)
+	_hud.flash(UiStyle.AMBER)
+	_haptic(&"press", 1.0)
+	print("SCRAPERX_SUMMIT seconds=%.1f deaths=%d" % [seconds, deaths])
+
+
 # The title over the live tower, the simulation frozen behind it.
 func _show_title() -> void:
 	_title_seen = true
@@ -863,6 +883,7 @@ func _perform_action() -> void:
 
 
 func _read_context() -> Dictionary:
+	var landing_state: Dictionary = _native.get_landing_state()
 	var position: Vector3 = _native.get_player_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
 	var grounded := bool(_native.is_player_grounded())
@@ -982,7 +1003,7 @@ func _read_context() -> Dictionary:
 		"edge_drop": edge_drop,
 		"sprinting": bool(_native.is_player_sprinting()),
 		"balancing": bool(_native.is_player_balancing()),
-		"landing": _native.get_landing_state(),
+		"landing": landing_state,
 		"chute": chute,
 		"jump_ok": grounded and free,
 		"climb_ok": climb_ok,
@@ -1000,6 +1021,9 @@ func _read_context() -> Dictionary:
 		"checkpoint": _native.get_checkpoint_position(),
 		"deaths": int(_native.get_death_count()),
 		"tower_height": float(_native.get_tower_height_meters()),
+		# The altimeter's scale: the top of the route as built, not the
+		# tower's full mass.
+		"route_top": float(landing_state["route_top"]),
 	}
 
 
@@ -1166,6 +1190,7 @@ func _haptic(kind: StringName, strength: float = 1.0) -> void:
 # State transitions become feedback: a grab, a landing, a canopy, a lethal
 # fall warning, a restore, a higher checkpoint. Each reads native state only.
 func _update_feedback(delta: float) -> void:
+	_announce_summit()
 	var traversal: int = _ctx["traversal"]
 	if traversal != _fb_traversal:
 		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_CLIMBING:

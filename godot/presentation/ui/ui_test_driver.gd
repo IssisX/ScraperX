@@ -2019,6 +2019,10 @@ func _high(device: int) -> bool:
 		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
 	if not _standing_above(803.3):
 		return _fail("high: not standing on the derrick's upper receiver (y %.2f)" % _position().y)
+	if not bool(_native().get_landing_state()["summit_reached"]) or not bool(_main._summit_announced):
+		return _fail("high: the top of the route was not marked (native %s, announced %s)" % [
+			str(_native().get_landing_state()["summit_reached"]), str(_main._summit_announced)])
+	await _pose("summit")
 	_detail = "crown_y=%.2f top_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		_high_crown_y, _position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step,
 		float(body["lift"])]

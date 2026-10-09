@@ -20,6 +20,7 @@ Items marked **OWNER** wait on a decision in §3.
   - The game opens on Godot's stock splash and icon, with no title.
   - Nothing happens at the top.
   - The altimeter is scaled to 1,600 m, so the top reads as halfway (`simulation.hpp:681`).
+    *(Fixed 2026-10-09: scaled to the route's top, item 6.)*
 - **Every build is a debug build.** There is no app bundle (AAB), no release key and no
   crash symbols. The APK ships no licence notices.
 - **Nothing has been measured on a device.** That covers frame time, heat, battery and load time.
@@ -77,7 +78,10 @@ Each item is one complete, verifiable unit, proven through the touch path on the
      pause entry and the spawn it applies.
    - A confirmation before restart. *Done:* NEW CLIMB asks once more before it acts.
 6. **The top** (M). A native predicate on the route's top, the altimeter scaled to it, and an
-   arrival beat. What stands there is **OWNER** (D5).
+   arrival beat. What stands there is **OWNER** (D5). *Done 2026-10-09, short of D5:* the native
+   latches `summit_reached` (with the time and falls) when the player stands, firm, on the
+   derrick's upper receiver (802.64 m, `kRouteTopMeters`); the altimeter's rail runs from grade to
+   it; the arrival shows THE TOP with the height, time and falls (native `high`, `touch_high`).
 7. **Release pipeline** (L).
    - A release preset under the final id (**OWNER** D1), built as an AAB in release mode with the
      test driver excluded.

@@ -469,6 +469,11 @@ struct Snapshot final {
     // The XCoM past the edge of the footing, the stick not driving that way:
     // the feet brake only as hard as soles can (see kTeeterComHeight).
     bool player_teetering = false;
+    // The top of the route (kRouteTopEntityId) stood on, firm, outside a
+    // traversal: latched with the simulation time and the deaths then.
+    bool summit_reached = false;
+    double summit_seconds = 0.0;
+    std::uint64_t summit_deaths = 0;
     std::uint64_t teeter_count = 0;
     bool parachute_deployed = false;
     Vector3 checkpoint_position{};
@@ -702,6 +707,11 @@ public:
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
     static constexpr double kTowerHeightMeters = 1600.0;
+    // The top of the route as built: the floor of the luffing derrick's upper
+    // receiver, the last thing the climb stands on. What stands up there is
+    // the owner's to decide; reaching it is the native's (summit_reached).
+    static constexpr double kRouteTopMeters = 802.64;
+    static constexpr std::uint64_t kRouteTopEntityId = 1978;
 
     explicit Simulation(InitialSpawn initial_spawn = InitialSpawn::ExteriorGrade);
     ~Simulation();

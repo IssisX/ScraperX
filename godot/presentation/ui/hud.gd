@@ -274,7 +274,7 @@ func _draw_altimeter() -> void:
 	var outline := int(roundf(6.0 * u))
 	var position: Vector3 = _ctx["position"]
 	var checkpoint: Vector3 = _ctx["checkpoint"]
-	var tower: float = _ctx["tower_height"]
+	var tower: float = _ctx["route_top"]
 	# A soft backing so the readout holds over snow, sky and sodium glare.
 	UiStyle.plate(self, Rect2(Vector2(right - 330.0 * u, top - 8.0 * u), Vector2(356.0 * u, 166.0 * u)),
 		UiStyle.with_alpha(UiStyle.INK, 0.42 * alpha), Color(0.0, 0.0, 0.0, 0.0), 0.0, 18.0 * u)
@@ -291,8 +291,8 @@ func _draw_altimeter() -> void:
 	UiStyle.text(self, UiStyle.font_label(), "CHECKPOINT %+.1f M" % checkpoint.y,
 		Vector2(right, top + 142.0 * u), int(roundf(21.0 * u)),
 		UiStyle.with_alpha(UiStyle.SAFE, 0.92 * alpha), HORIZONTAL_ALIGNMENT_RIGHT, outline)
-	# The whole climb on one rail: honest scale, so 24 m reads as the first
-	# step of 1 600, not as progress the tower has not granted.
+	# The whole climb on one rail: honest scale, from grade to the top of the
+	# route as built, so the rail's top is where the climb ends.
 	if tower <= 0.0:
 		return
 	var rail_x := right - 6.0 * u

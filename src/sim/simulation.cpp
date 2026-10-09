@@ -1433,6 +1433,13 @@ public:
         if (!died_this_tick && grounded_ && traversal_state_ == TraversalState::None &&
             footing_is_firm(bodies)) {
             commit_checkpoint(bodies);
+            static_assert(Simulation::kRouteTopEntityId == scraperx::sim::vertical::Route::kDerrickStaticFirst + 2,
+                          "the route's top is the derrick's upper receiver");
+            if (!summit_reached_ && support_entity_id_ == Simulation::kRouteTopEntityId) {
+                summit_reached_ = true;
+                summit_seconds_ = next_time_seconds;
+                summit_deaths_ = death_count_;
+            }
         }
         if (grounded_) {
             fall_peak_speed_mps_ = 0.0F;
@@ -4343,6 +4350,9 @@ public:
         state_.roll_blocked_count = roll_blocked_count_;
         state_.stumble_count = stumble_count_;
         state_.player_teetering = teetering_;
+        state_.summit_reached = summit_reached_;
+        state_.summit_seconds = summit_seconds_;
+        state_.summit_deaths = summit_deaths_;
         state_.teeter_count = teeter_count_;
         state_.parachute_deployed = parachute_deployed_;
         state_.checkpoint_position = to_vector3(checkpoint_position_);
@@ -4513,6 +4523,9 @@ public:
     std::uint64_t roll_blocked_count_ = 0;
     std::uint64_t stumble_count_ = 0;
     bool teetering_ = false;
+    bool summit_reached_ = false;
+    double summit_seconds_ = 0.0;
+    std::uint64_t summit_deaths_ = 0;
     std::uint64_t teeter_count_ = 0;
 
     Snapshot state_{};
