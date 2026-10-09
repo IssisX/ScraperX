@@ -242,6 +242,8 @@ var _fb_warned := false
 var _fb_best_checkpoint_y := 0.0
 var _arms: Node3D
 var _view_pitch_offset := 0.0
+var _teeter_weight := 0.0
+var _teeter_phase := 0.0
 
 var _kit_root: Node3D
 # The ground slingshot: its view, the predicted shot (refreshed a few times a
@@ -1396,6 +1398,16 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	var stagger := 0.0
 	if int(landing.get("response", 0)) == 4:
 		stagger = 0.12 * (1.0 - float(landing.get("balance", 1.0)))
+	# Teetering at an edge: the native's XCoM is past it; the view sways and
+	# leans out over the drop until the feet stop the body or it goes over.
+	_teeter_weight = move_toward(_teeter_weight, 1.0 if bool(landing.get("teetering", false)) else 0.0,
+		delta / 0.15)
+	if _teeter_weight > 0.0:
+		_teeter_phase += delta * 11.0
+		stagger += _teeter_weight * 0.06 * sin(_teeter_phase)
+		roll_turn -= _teeter_weight * 0.12
+	else:
+		_teeter_phase = 0.0
 	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn, _yaw, _cam_bank + stagger)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed) + parkour_fov

@@ -112,6 +112,10 @@ const SCENARIOS := {
 	# CROUCH tapped in the air, and the native rolls on: the momentum kept,
 	# little balance lost, the view turned once over.
 	"touch_roll": 8,
+	# Phase 4 on touch: a sprint at deck 4's south edge, the stick let go
+	# 2 m short of it: the native teeters (its XCoM past the edge), and the
+	# soles' traction cannot stop the body before it goes over.
+	"touch_teeter": 26,
 	# Upper Stack continuation from Deck 4 checkpoint through S2, C2, S3, C3 to Deck 14 (+154 m).
 	"touch_stack_upper": 26,
 	"pad_stack_upper": 26,
@@ -287,6 +291,8 @@ func _run() -> void:
 			ok = await _save(InputRouter.Device.TOUCH)
 		"touch_roll":
 			ok = await _roll()
+		"touch_teeter":
+			ok = await _teeter()
 		"touch_stack_upper":
 			ok = await _stack_upper(InputRouter.Device.TOUCH)
 		"pad_stack_upper":
@@ -2902,6 +2908,36 @@ func _checkpoint_continuation(device: int) -> bool:
 	return true
 
 
+func _teeter() -> bool:
+	var device := InputRouter.Device.TOUCH
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	# The deck's south edge, as the native suite measures it (run_teeter).
+	var edge_z := -123.87
+	if not await _go(device, Vector2(11.0, edge_z - 7.0), 0.2, 8.0):
+		return _fail("teeter: the walk back stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not _stick_sprint():
+		_touch(0, _main._touch.stick_home(), false)
+		return _fail("teeter: the stick pushed past its ring did not latch sprint")
+	if not await _wait_until(func() -> bool: return _position().z > edge_z - 2.0, 4.0):
+		_touch(0, _main._touch.stick_home(), false)
+		return _fail("teeter: the sprint never reached the release point (at %s)" % str(_position()))
+	var speed := Vector2(_velocity().x, _velocity().z).length()
+	_touch(0, _main._touch.stick_home(), false)
+	var teetered: bool = await _wait_until(func() -> bool:
+			return bool(_native().get_landing_state()["teetering"]), 0.5)
+	if teetered:
+		await _pose("teeter_edge")
+	await _seconds(2.5)
+	if not teetered:
+		return _fail("teeter: the native never teetered (speed %.2f)" % speed)
+	if _position().y > 44.0:
+		return _fail("teeter: a sprint let go 2 m from the edge stopped on the deck (z %.2f)" % _position().z)
+	_detail = "sprint_mps=%.2f teeters=%d fell_to_y=%.2f" % [speed,
+		int(_native().get_landing_state()["teeters"]), _position().y]
+	return true
+
+
 func _roll() -> bool:
 	var device := InputRouter.Device.TOUCH
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
@@ -3465,6 +3501,11 @@ func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.
 			var brake := KEY_CARRY_BRAKE_MPS2 if int(_native().get_carrying_entity_id()) != 0 else KEY_BRAKE_MPS2
 			var stopping := closing * (get_process_delta_time() + closing / (2.0 * brake))
 			v = Vector2.ZERO if to.length() <= tolerance or stopping >= to.length() - 0.5 * tolerance else v.normalized()
+			# Teetering (the native's XCoM past an edge): pull back, as a
+			# player does; let go, the feet brake less.
+			if v == Vector2.ZERO and closing > 0.0 and bool(_native().get_landing_state()["teetering"]):
+				var back := -speed.normalized()
+				v = Vector2(back.dot(right), back.dot(forward))
 		_move_dir(device, v)
 		await get_tree().process_frame
 		waited += get_process_delta_time()

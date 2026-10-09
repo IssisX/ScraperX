@@ -271,7 +271,7 @@ jobs:
           for scenario in touch_jump touch_move_look touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
               touch_hang_climb touch_chute touch_lethal_feedback touch_pause pad_core keyboard_core \
               touch_rig pad_rig keyboard_rig touch_boom pad_boom keyboard_boom touch_debris pad_debris keyboard_debris \
-              touch_checkpoint touch_save touch_roll touch_stack_upper pad_stack_upper keyboard_stack_upper \
+              touch_checkpoint touch_save touch_roll touch_teeter touch_stack_upper pad_stack_upper keyboard_stack_upper \
               touch_stack pad_stack keyboard_stack touch_wet pad_wet keyboard_wet \
               touch_shop pad_shop keyboard_shop touch_crane pad_crane keyboard_crane \
               touch_service pad_service keyboard_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_machines touch_high touch_incline touch_wheel touch_tram fall_voice; do

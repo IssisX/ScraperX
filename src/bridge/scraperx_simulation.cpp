@@ -792,6 +792,8 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["rolls"] = static_cast<std::int64_t>(s.roll_count);
     out["rolls_refused"] = static_cast<std::int64_t>(s.roll_refused_count);
     out["stumbles"] = static_cast<std::int64_t>(s.stumble_count);
+    out["teetering"] = s.player_teetering;
+    out["teeters"] = static_cast<std::int64_t>(s.teeter_count);
     return out;
 }
 

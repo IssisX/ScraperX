@@ -4215,6 +4215,81 @@ void run_wheel() {
 // fresh simulation; restored from the same bytes, the original and the fresh
 // one play on bit for bit; bytes cut short or from another build are refused
 // and change nothing.
+// Phase 4: balance at deck 4's south edge (44 m up, so going over is fatal).
+// A run at the edge, the stick let go or pulled back at a set distance from
+// the edge: the XCoM past it limits the brake to the soles' traction, so
+// close in the body goes over, further out it stops, and between the two,
+// pulling back saves it where letting go does not. Running off on purpose is
+// not braked at all.
+void run_teeter() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    // Where the deck ends: walk off it and note the last supported z.
+    double edge_z = 0.0;
+    {
+        Simulation sim(InitialSpawn::Deck4South);
+        require(sim.set_facing(0.0, 1.0) && sim.set_move_input(0.0, 1.0), "inputs must be accepted");
+        double last = sim.snapshot().player_position.z;
+        require(advance_until(sim, [&](const Snapshot &s) {
+                    if (s.player_grounded) last = s.player_position.z;
+                    return s.death_count >= 1;
+                }, 20.0),
+                "walking south off deck 4 must fall");
+        if (std::getenv("SCRAPERX_TEETER_DETAIL") != nullptr) std::cout << "  edge probe last_z=" << last << '\n';
+        edge_z = last;
+    }
+    struct Outcome {
+        bool fell;
+        double stop_z;
+        std::uint64_t teeters;
+    };
+    // Back 6 m from the edge, run at it, and at `release` metres short of the
+    // edge set the stick to `stick_z`.
+    const auto attempt = [&](const double release, const double stick_z, const bool sprint) {
+        Simulation sim(InitialSpawn::Deck4South);
+        require(sim.set_facing(0.0, -1.0) && sim.set_move_input(0.0, -1.0), "inputs must be accepted");
+        require(advance_until(sim, [&](const Snapshot &s) { return s.player_position.z < edge_z - 7.0; }, 6.0),
+                "the walk back must get there");
+        require(sim.set_facing(0.0, 1.0) && sim.set_move_input(0.0, 1.0) && sim.set_sprint_input(sprint),
+                "inputs must be accepted");
+        require(advance_until(sim, [&](const Snapshot &s) { return s.player_position.z > edge_z - release; }, 6.0),
+                "the run must reach the release point");
+        require(sim.set_move_input(0.0, stick_z) && sim.set_sprint_input(false), "inputs must be accepted");
+        Outcome out{false, 0.0, 0};
+        for (int i = 0; i < 270; ++i) {
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+            // Pulling back only until the body has stopped.
+            if (stick_z < 0.0 && sim.snapshot().player_linear_velocity.z <= 0.0) {
+                require(sim.set_move_input(0.0, 0.0), "inputs must be accepted");
+            }
+        }
+        out.fell = sim.snapshot().player_position.y < 44.0 || sim.snapshot().death_count > 0;
+        out.stop_z = sim.snapshot().player_position.z;
+        out.teeters = sim.snapshot().teeter_count;
+        if (std::getenv("SCRAPERX_TEETER_DETAIL") != nullptr) {
+            std::cout << "  release=" << release << " stick=" << stick_z << " sprint=" << sprint
+                      << " fell=" << out.fell << " stop_z=" << out.stop_z << " teeters=" << out.teeters << '\n';
+        }
+        return out;
+    };
+    // At a sprint (8 m/s) the XCoM runs 2.56 m ahead; the soles need 3.9 m
+    // to stop it even pulling back. The ground's own 22 m/s/s would stop it
+    // in 1.45 m: so 2 m out only the teeter sends the body over.
+    const auto sprint_let_go = attempt(2.0, 0.0, true);
+    const auto sprint_pull = attempt(2.0, -1.0, true);
+    const auto sprint_far = attempt(3.0, 0.0, true);
+    const auto run_let_go = attempt(2.0, 0.0, false);
+    const auto sprint_off = attempt(2.0, 1.0, true);
+    require(sprint_let_go.fell && sprint_pull.fell && sprint_let_go.teeters >= 1,
+            "sprinting within the XCoM's reach of the edge must teeter and go over");
+    require(!sprint_far.fell && sprint_far.teeters == 0, "sprinting, let go further out, the body must stop");
+    require(!run_let_go.fell && run_let_go.teeters == 0, "at a run, let go 2 m out, the body must stop");
+    require(sprint_off.fell && sprint_off.teeters == 0, "running off on purpose must not be braked as a teeter");
+    std::cout << "PASS scraperx_sim teeter: edge_z=" << edge_z << " sprint_far_stop_z=" << sprint_far.stop_z
+              << " run_stop_z=" << run_let_go.stop_z << '\n';
+}
+
 // Phase 4: landing recovery and the roll, from the 12 m drop over the yard.
 // One drop each way: straight down, forward and unprepared, forward with
 // crouch held (a roll), forward with crouch held into an obstructed lane (a
@@ -6143,6 +6218,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "wheel") {
         run_wheel();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "teeter") {
+        run_teeter();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -8120,6 +8200,7 @@ int main() {
     run_wheel();
     run_save();
     run_landing();
+    run_teeter();
     run_tram();
     run_ascent();
 

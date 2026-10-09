@@ -466,6 +466,10 @@ struct Snapshot final {
     // Rolls ended by something in the lane.
     std::uint64_t roll_blocked_count = 0;
     std::uint64_t stumble_count = 0;
+    // The XCoM past the edge of the footing, the stick not driving that way:
+    // the feet brake only as hard as soles can (see kTeeterComHeight).
+    bool player_teetering = false;
+    std::uint64_t teeter_count = 0;
     bool parachute_deployed = false;
     Vector3 checkpoint_position{};
     std::uint64_t checkpoint_commit_count = 0;

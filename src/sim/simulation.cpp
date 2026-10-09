@@ -133,6 +133,28 @@ constexpr float kRollDeceleration = 3.0F;
 constexpr float kRollSteerAcceleration = 4.0F;
 constexpr double kRollSeconds = 0.6;
 constexpr float kStumbleMinimumSpeed = 3.0F;
+
+// Phase 4: balance at an edge, by the reduced-order extrapolated centre of
+// mass, XCoM = COM + v / sqrt(g / h), with v the horizontal velocity relative
+// to the support and h the COM's height over the soles (CHOSEN 1.0 m
+// standing, 0.7 m crouched). While the XCoM is past the edge of what the feet
+// stand on (no support under it) and the stick is let go or pulled back (any
+// push along the motion is the player stepping it in, and a run-off stays a
+// run-off), the feet can brake that motion only as hard
+// as a planted human can: kTeeterBrakeAcceleration (0.85 g, the traction the
+// soles have) when the stick pulls back, 60 % of it with the stick let go.
+// The ground's normal 22 m/s/s does not apply there. Whether the body stops
+// short of the edge follows from its speed and the distance left; over it,
+// an ordinary fall takes over. Below kTeeterMinimumSpeed the ordinary brake
+// applies: CHOSEN above the 5.5 m/s run, so a stick let go at a run stops
+// where players expect it to (every route relies on it), and teetering is
+// the cost of sprinting at an edge.
+constexpr float kTeeterComHeight = 1.0F;
+constexpr float kTeeterCrouchedComHeight = 0.7F;
+constexpr float kTeeterBrakeAcceleration = 8.3F;
+constexpr float kTeeterPassiveScale = 0.6F;
+constexpr double kTeeterDeliberateInput = 0.3;
+constexpr float kTeeterMinimumSpeed = 6.0F;
 constexpr double kTranslatingSupportAmplitudeMeters = 2.0;
 constexpr double kTranslatingSupportAngularFrequency = 1.0;
 constexpr double kRotatingSupportAngularSpeed = 0.8;
@@ -2540,6 +2562,17 @@ private:
 
     // ---- Phase 4: landing recovery and the roll (see kLandingFreeSpeed) ----
 
+    [[nodiscard]] float active_half_height() const noexcept {
+        return crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+    }
+
+    // Something the soles could stand on under this point: within 0.3 m
+    // either side of their height.
+    [[nodiscard]] bool feet_supported_at(const JPH::RVec3 at, const float soles) const noexcept {
+        JPH::RayCastResult hit;
+        return cast_ray(JPH::RVec3(at.GetX(), soles + 0.3F, at.GetZ()), JPH::Vec3(0.0F, -0.6F, 0.0F), hit);
+    }
+
     [[nodiscard]] bool rolling() const noexcept {
         return landing_response_ == LandingResponse::Roll && roll_seconds_left_ > 0.0;
     }
@@ -2733,6 +2766,41 @@ private:
                         commands.move_input_z * facing_.GetZ()) >= kSprintMaximumAngleCos * input) {
                 sprinting_ = true;
             }
+            // Balance at an edge (see kTeeterComHeight).
+            const float traction = carry_ground_acceleration() * static_cast<float>(0.25 + 0.75 * recovery_balance());
+            // While teetering, the most the feet may take off the speed toward
+            // the edge in one second; steering across it keeps full traction.
+            float teeter_brake = 0.0F;
+            JPH::Vec3 teeter_direction = JPH::Vec3::sZero();
+            const bool was_teetering = teetering_;
+            teetering_ = false;
+            if (!beam.valid && !rolling()) {
+                const JPH::Vec3 relative = player_velocity - reference_velocity;
+                const JPH::Vec3 horizontal(relative.GetX(), 0.0F, relative.GetZ());
+                const float speed = horizontal.Length();
+                // Entered at a sprint, a teeter lasts until the body stops or
+                // its XCoM is back over the footing.
+                if (speed >= kTeeterMinimumSpeed || (was_teetering && speed > 0.3F)) {
+                    const float gravity = -physics_system_.GetGravity().GetY();
+                    const float height = crouched_ ? kTeeterCrouchedComHeight : kTeeterComHeight;
+                    const JPH::Vec3 xcom_offset = horizontal / std::sqrt(gravity / height);
+                    const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+                    const float soles = static_cast<float>(centre.GetY()) - active_half_height();
+                    const JPH::Vec3 direction = horizontal / speed;
+                    const double drive = commands.move_input_x * direction.GetX() + commands.move_input_z * direction.GetZ();
+                    if (drive <= 0.0 && feet_supported_at(centre, soles) &&
+                        !feet_supported_at(centre + xcom_offset, soles)) {
+                        teetering_ = true;
+                        teeter_direction = direction;
+                        teeter_brake = drive <= -kTeeterDeliberateInput
+                                           ? kTeeterBrakeAcceleration
+                                           : kTeeterBrakeAcceleration * kTeeterPassiveScale;
+                        if (!was_teetering) {
+                            ++teeter_count_;
+                        }
+                    }
+                }
+            }
             const double balance = recovery_balance();
             if (balance < 0.8) {
                 sprinting_ = false;
@@ -2744,14 +2812,22 @@ private:
             if (rolling()) {
                 roll_locomotion(player_velocity, reference_velocity, commands, delta_seconds);
             } else {
+                const JPH::Vec3 before = player_velocity - reference_velocity;
                 approach_relative_horizontal_velocity(player_velocity,
                                                       reference_velocity,
                                                       move_x,
                                                       move_z,
-                                                      carry_ground_acceleration() *
-                                                          static_cast<float>(0.25 + 0.75 * balance),
+                                                      traction,
                                                       delta_seconds,
                                                       full_speed);
+                if (teetering_) {
+                    const JPH::Vec3 change = player_velocity - reference_velocity - before;
+                    const float along = change.Dot(teeter_direction);
+                    const float limit = -teeter_brake * delta_seconds;
+                    if (along < limit) {
+                        player_velocity += teeter_direction * (limit - along);
+                    }
+                }
             }
             // The air keeps what the ground gave: a running jump, or a run
             // off an edge, carries its speed.
@@ -2759,6 +2835,7 @@ private:
             air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed,
                                        JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ()).Length());
         } else {
+            teetering_ = false;
             approach_relative_horizontal_velocity(player_velocity,
                                                   reference_velocity,
                                                   move_x,
@@ -4265,6 +4342,8 @@ public:
         state_.roll_refused_count = roll_refused_count_;
         state_.roll_blocked_count = roll_blocked_count_;
         state_.stumble_count = stumble_count_;
+        state_.player_teetering = teetering_;
+        state_.teeter_count = teeter_count_;
         state_.parachute_deployed = parachute_deployed_;
         state_.checkpoint_position = to_vector3(checkpoint_position_);
         state_.checkpoint_commit_count = checkpoint_commit_count_;
@@ -4433,6 +4512,8 @@ public:
     std::uint64_t roll_refused_count_ = 0;
     std::uint64_t roll_blocked_count_ = 0;
     std::uint64_t stumble_count_ = 0;
+    bool teetering_ = false;
+    std::uint64_t teeter_count_ = 0;
 
     Snapshot state_{};
 };
