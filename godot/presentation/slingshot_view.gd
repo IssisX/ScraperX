@@ -216,15 +216,26 @@ func _style_native_kit() -> void:
 			continue
 		var timber_mesh := _native_timber_mesh(entity)
 		_wood.set_shader_parameter("part_grain_uv", timber_mesh != null)
+		var placed := false
 		for child in timber_body.get_children():
 			if child is MeshInstance3D:
 				for surface in child.mesh.get_surface_count():
 					var material: Material = child.mesh.surface_get_material(surface)
-					# Native timber becomes oak; rails and coach bolts stay metal.
+					# Native timber becomes one oak mesh. The old code put that
+					# whole mesh on every piece, so each arm was a second fork.
 					if material is StandardMaterial3D and material.albedo_color.is_equal_approx(Color("4a3420")):
 						if timber_mesh != null:
-							child.mesh = timber_mesh
-						child.material_override = _wood
+							child.visible = false
+							if not placed:
+								var whole := MeshInstance3D.new()
+								whole.name = "Timber"
+								whole.mesh = timber_mesh
+								whole.material_override = _wood
+								timber_body.add_child(whole)
+								placed = true
+						else:
+							child.material_override = _wood
+						break
 	var pouch := kit.get_node_or_null("KitBody%d" % POUCH_ENTITY)
 	if pouch != null:
 		for child in pouch.get_children():

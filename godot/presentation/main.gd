@@ -727,9 +727,12 @@ func _read_context() -> Dictionary:
 	elif climb_ok:
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb",
 			"detail": "%+.1f M" % float(_native.get_ledge_rise_meters())}
-	elif grounded and free and grip:
-		# A hold at hand height: a rung, a pipe, a scaffold bar.
+	elif free and grip:
+		# A hold at hand height, on the ground or in the air: a rung, a pipe,
+		# a flange, a scaffold bar.
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb", "detail": "HOLD"}
+	elif not grounded and free and ledge:
+		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb", "detail": "CATCH"}
 	return {
 		"position": position,
 		"velocity": velocity,
