@@ -731,9 +731,13 @@ func _touch_facade() -> bool:
 		print("SCRAPERX_CAMPAIGN cargo_net_exit at=%s support=%d" % [_position(), _native().get_support_entity_id()])
 	elif not await _pipe_bridge(device):
 		return false
+	# Brake on actual footing before turning around the receiver's side rail.
+	# A position-only Tower arrival carries native momentum past that rail.
 	for point in [Vector2(21.2, -124.4), Vector2(21.2, -121.3), Vector2(20, -121.3)]:
-		if not await _walk_to(device, point, 0.08, 20.0):
-			return _fail("facade approach %s" % _position())
+		if not await _walk_to(device, point, 0.08, 20.0, true):
+			return _fail("facade approach target=%s at=%s velocity=%s grounded=%s support=%d traversal=%d" % [
+				point, _position(), _velocity(), _native().is_player_grounded(),
+				_native().get_support_entity_id(), _native().get_traversal_state()])
 	await _face(Vector2(0, -1))
 	await _seconds(0.4)
 	await _pose("facade_approach")
@@ -905,11 +909,28 @@ func _touch_upper() -> bool:
 	await _seconds(0.3)
 	if int(_native().get_carrying_entity_id()) != 2703:
 		return _fail("upper handle was not held")
-	_move(device, -0.45)
-	await _seconds(0.35)
-	_move(device, 0.0)
-	if int(_native().get_carrying_entity_id()) == 2703:
+	var lever := int(_native().get_kit_body_index(2702))
+	if lever < 0:
 		_act(device)
+		return _fail("upper lift lever2702 absent")
+	# Let finite loaded motion reach the real trip before releasing the handle.
+	_move(device, -0.45)
+	var pull_finished := await _wait_until(func() -> bool:
+		if int(_native().get_carrying_entity_id()) != 2703:
+			return true
+		var pose: Transform3D = _native().get_kit_body_transform(lever)
+		var q := pose.basis.get_rotation_quaternion()
+		return 2.0 * atan2(q.z, q.w) >= 0.18, 3.0)
+	_move(device, 0.0)
+	var held := int(_native().get_carrying_entity_id())
+	var lever_pose: Transform3D = _native().get_kit_body_transform(lever)
+	var lever_q := lever_pose.basis.get_rotation_quaternion()
+	var trip_angle := 2.0 * atan2(lever_q.z, lever_q.w)
+	if held == 2703:
+		_act(device)
+	if not pull_finished or held != 2703 or trip_angle < 0.18:
+		return _fail("upper lift pull did not trip lever2702 within3s while holding2703 angle=%.6f carrying=%d at=%s" % [
+			trip_angle, held, _position()])
 	if not await _wait_until(func() -> bool: return _standing_above(54.5) and \
 			int(_native().get_support_entity_id()) == 2700, 20.0):
 		return _fail("counterweight never raised the rider %s" % _position())
@@ -924,9 +945,35 @@ func _touch_upper() -> bool:
 	if not _standing_above(55.5) or int(_native().get_support_entity_id()) != 11:
 		return _fail("unsupported upper lift exit %s" % _position())
 	await _pose("deck_55m")
-	for point in [Vector2(4.0, -122.0), Vector2(2.4, -122.0)]:
-		if not await _walk_to(device, point, 0.12, 8.0):
-			return _fail("upper cabinet approach %s" % _position())
+	# Cross the receiver lip with ordinary forward input before turning.
+	# Brake on its flat yellow step; this approach does not settle on the incline.
+	if not await _walk_to(device, Vector2(4.0, -122.0), 0.12, 8.0) \
+			or not _standing_above(55.4) or int(_native().get_support_entity_id()) != 1700:
+		return _fail("upper receiver crossing lacks actual55m footing at=%s" % _position())
+	var step := Vector2(2.6, -122.0)
+	if not await _walk_to(device, step, 0.12, 8.0, true):
+		# Walking catches the raised step's rounded front lip. Jump only from
+		# its real receiver contact, then brake onto the actual flat top.
+		var lip := _position()
+		if absf(lip.x - step.x) > 0.15 or lip.z < -121.55 or lip.z > -120.85:
+			return _fail("upper step approach missed the real front lip at=%s" % lip)
+		await _face(Vector2(0, -1))
+		if not await _wait_until(func() -> bool:
+			return _standing_above(55.4) and int(_native().get_support_entity_id()) == 1700, 1.0):
+			return _fail("upper step Jump lacks actual receiver1700 footing at=%s" % _position())
+		_touch(1, _center(&"jump"), true)
+		var took_off := await _wait_until(func() -> bool:
+			return not _native().is_player_grounded() and _velocity().y > 0.2, 0.5)
+		_touch(1, _center(&"jump"), false)
+		if not took_off or not await _walk_to(device, step, 0.12, 8.0, true):
+			return _fail("upper step ordinary Jump did not land and settle at=%s" % _position())
+	if not await _walk_to(device, Vector2(2.4, -122.0), 0.12, 8.0, true):
+		return _fail("upper cabinet approach did not settle at=%s velocity=%s" % [_position(), _velocity()])
+	var step_contact: Vector3 = _native().get_support_contact_point()
+	if not _standing_above(55.85) or int(_native().get_support_entity_id()) != 1700 \
+			or step_contact.y < 55.03 or step_contact.x < 2.2 or step_contact.x > 3.0 \
+			or step_contact.z < -122.5 or step_contact.z > -121.5:
+		return _fail("upper cabinet approach lacks actual yellow-step footing at=%s contact=%s" % [_position(), step_contact])
 	await _face(Vector2(-1, 0))
 	await _seconds(0.4)
 	if not await _offered(&"climb", "CLIMB"):
@@ -948,11 +995,18 @@ func _touch_upper() -> bool:
 	_tap(1, _center(&"jump"))
 	if not await _wait_until(func() -> bool: return _standing_above(60.5), 2.5):
 		return _fail("upper duct top-out %s" % _position())
-	if not await _walk_to(device, Vector2(5.4, -123.0), 0.08, 10.0):
-		return _fail("upper vent approach %s" % _position())
+	# Brake before the duct's real outer edge instead of accepting a moving
+	# horizontal arrival that can carry the body off support1701.
+	if not await _walk_to(device, Vector2(5.4, -123.0), 0.08, 10.0, true) \
+			or not _standing_above(60.9) or int(_native().get_support_entity_id()) != 1701 \
+			or _native().get_support_contact_point().y < 60.28:
+		return _fail("upper vent approach lacks settled duct1701 top at=%s velocity=%s grounded=%s support=%d contact=%s" % [
+			_position(), _velocity(), _native().is_player_grounded(), _native().get_support_entity_id(), _native().get_support_contact_point()])
 	await _face(Vector2(0, -1))
+	await _pose("upper_vent_ready")
 	if not await _offered(&"climb", "CLIMB", "HOLD"):
-		return _fail("upper vent grip not offered at %s" % _position())
+		return _fail("upper vent grip not offered at=%s velocity=%s grounded=%s support=%d" % [
+			_position(), _velocity(), _native().is_player_grounded(), _native().get_support_entity_id()])
 	_act(device)
 	if not await _wait_until(func() -> bool: return bool(_ctx()["climbing"]), 1.0):
 		return _fail("upper vent did not take a hold")
@@ -963,7 +1017,7 @@ func _touch_upper() -> bool:
 	_move(device, 0.0)
 	if not climbed:
 		return _fail("upper vent top-out %s" % _position())
-	if not await _walk_to(device, Vector2(5.4, -125.4), 0.12, 6.0):
+	if not await _walk_to(device, Vector2(5.4, -125.4), 0.12, 6.0, true):
 		return _fail("upper deck exit %s" % _position())
 	await _seconds(0.5)
 	await _face(Vector2(0, 1))
@@ -2652,6 +2706,16 @@ func _touch_slab_haul_cart() -> bool:
 	await _seconds(0.5)
 	if not _campaign_world_intact() or not _reclaim_tower_arrived():
 		return _fail("slab haul approach requires supported +330m Tower11")
+	# Preserve the raised wheel-exit tray: the longer inland approach stays
+	# grounded on the existing Tower ring before reaching the cart control.
+	var tray_watch := {"running": true, "grounded_only": true, "invalid": false,
+		"airborne": false, "peak": _position().y}
+	_reclaim_sample_tray(tray_watch)
+	for point in [Vector2(-22.4, -158.25), Vector2(-22.4, -156.9), Vector2(-24.7, -156.9)]:
+		if not await _walk_to(device, point, 0.10, 12.0, true) or bool(tray_watch["invalid"]):
+			tray_watch["running"] = false
+			return _fail("slab haul grounded tray detour target=%s at=%s" % [point, _position()])
+	tray_watch["running"] = false
 	for point in [Vector2(-24.7, -140.15), Vector2(-25.05, -140.15)]:
 		if not await _walk_to(device, point, 0.10, 12.0, true):
 			return _fail("slab haul lower control approach at=%s" % _position())
@@ -2698,7 +2762,8 @@ func _touch_slab_haul_cart() -> bool:
 	if not await _walk_to(device, Vector2(floor_point.x, -140.25), 0.10, 8.0, true) \
 			or int(_native().get_support_entity_id()) != 1956:
 		return _fail("slab haul341 side Jump missed actual inspection tongue1956")
-	if not await _walk_to(device, Vector2(-26.1, -140.15), 0.10, 12.0, true):
+	# Keep the fixed-control stance wholly on1956, away from the Tower seam.
+	if not await _walk_to(device, Vector2(-26.5, -140.15), 0.10, 12.0, true):
 		return _fail("slab haul inspection fixed post approach at=%s" % _position())
 	if not _cart_station(4) or not await _offered(&"operate", "OPERATE", "SLAB HAUL CART") \
 			or not _standing_above(341.7) or int(_native().get_support_entity_id()) != 1956:
@@ -2748,7 +2813,7 @@ func _touch_slab_haul_cart() -> bool:
 	if not recovered_stance:
 		return _fail("slab haul341 landing did not recover standing at=%s landing=%s" % [
 			_position(), _native().get_landing_state()])
-	for point in [Vector2(-28.0, -140.15), Vector2(-26.1, -140.15)]:
+	for point in [Vector2(-28.0, -140.15), Vector2(-26.5, -140.15)]:
 		if not await _walk_to(device, point, 0.10, 8.0, true):
 			return _fail("slab haul recovery post approach failed at=%s" % _position())
 	if not await _cart_operate(4):

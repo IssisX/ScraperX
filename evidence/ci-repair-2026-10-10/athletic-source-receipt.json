@@ -1,0 +1,85 @@
+{
+  "branch": "ChatGPT",
+  "baseline_HEAD": "f0685592be409bea468df874ac68705bd024f8c7",
+  "maintained_file": "tests/simulation_tests.cpp",
+  "source_sha256": "e2c59b184963653cc8eab73fc0cbbfeacf1386b359117f1ebbe64023c0d5cc4d",
+  "baseline_source_sha256": "97a8884b4620e792982a82d95093a9fc2995b20003c3ff1b29b83feb173e4735",
+  "executable_sha256": "efe7e47d6e7becc7a1f49be508dd551302543d157bca94421c18224d338687ce",
+  "native_archive_sha256": "a816cc5fa7d197aa9f5071a0e33cbf3396bf130271bc1a23c9eee64ca14d7094",
+  "native_archive_matches_assigned_baseline": true,
+  "native_simulation_cpp_sha256": "dd0c2264a1ebbfae18173001af9a839ea7872cbc45de4c8cde464b564d6f5e8a",
+  "Jolt_commit": "e77f175595e64cb44218cc9d9d56fc365ad0e36a",
+  "Jolt_archive_sha256": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+  "CXX": "Ubuntu GCC15.2.0/C++17",
+  "native_hz": 90,
+  "build_command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--",
+    "cmake",
+    "--build",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build",
+    "--target",
+    "scraperx_sim_tests",
+    "-j2"
+  ],
+  "build_exit_code": 0,
+  "assertion_preservation": {
+    "original_require_calls": 754,
+    "current_require_calls": 754,
+    "byte_identical_calls": 750,
+    "changed_calls": [
+      {
+        "index": 570,
+        "baseline": "require(walk_to(cage, 13.5, kHook5MinZ - 4.0, 12.0) && walk_to(cage, 13.5, kSkinFootZ, 12.0) &&\n                walk_to(cage, kSkinX, kSkinFootZ, 20.0),\n            \"the block must be carried round the belt's north end to the SKIN foot\")",
+        "current": "require(walk_to(cage, 13.5, kHook5MinZ - 4.0, 12.0) && walk_to(cage, 13.5, kSkinFootZ, 12.0) &&\n                walk_to(cage, kSkinX, kSkinFootZ, 20.0, 0.15, true),\n            \"the block must be carried round the belt's north end to the SKIN foot\")"
+      },
+      {
+        "index": 595,
+        "baseline": "require(take_block(hook) && carry_out_of_cage(hook),\n            \"the hook ascent must take the block and carry it out of the cage\")",
+        "current": "require(take_block(hook) && carry_out_of_cage(hook, true),\n            \"the hook ascent must take the block and carry it out of the cage\")"
+      },
+      {
+        "index": 598,
+        "baseline": "require(walk_to(hook, -9.0, -109.0, 12.0), \"the carry must reach the handoff deck\")",
+        "current": "require(walk_to(hook, -9.0, -109.0, 12.0, 0.15, true), \"the carry must reach the handoff deck\")"
+      },
+      {
+        "index": 682,
+        "baseline": "require(walk_to(water_lift, -9.45, -108.20, 5.0, 0.18),\n            \"player must step from caught cage onto the fixed +8 m dock\")",
+        "current": "require(walk_to(water_lift, -9.45, -108.20, 5.0, 0.18, true),\n            \"player must step from caught cage onto the fixed +8 m dock\")"
+      }
+    ],
+    "all_assertion_messages_unchanged": true,
+    "input_argument_changes_only": true,
+    "loop_headers_unchanged": true,
+    "walking_budgets_unchanged": true
+  },
+  "production_changes": false,
+  "commit_push_publish_performed": false,
+  "source_diff_sha256": "5e1b0bf050a61182f043d4984b03fa08a085715a5f8b69a686498b344e3b2c10",
+  "build_log": "build-dock.log",
+  "runtime_log": "athletic-dock.log",
+  "runtime_status": "PASS",
+  "runtime_exit_code": 0,
+  "runtime_pass_receipts": 27,
+  "runtime_log_sha256": "bdc3f7c117f18adf0be6c19f64129b35f77ca06c07e4e7a910931be87c4d3d57",
+  "runtime_command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "/usr/bin/stdbuf",
+    "-oL",
+    "/usr/bin/timeout",
+    "900s",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_sim_tests"
+  ],
+  "ctest_case": "scraperx_sim.athletic_traversal",
+  "direct_command_matches_ctest": true,
+  "full_54_gate_campaign_run": false,
+  "GitHub_Actions_APK_phone_verified": false,
+  "independent_review": "No concrete defect; all754 requiremessages preserved,82 loopheaders unchanged,236 frame-advancecalltexts unchanged;4 require input-option changes only."
+}

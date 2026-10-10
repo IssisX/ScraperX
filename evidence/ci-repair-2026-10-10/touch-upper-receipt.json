@@ -1,0 +1,75 @@
+{
+  "repo": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo",
+  "branch": "ChatGPT",
+  "head": "f0685592be409bea468df874ac68705bd024f8c7",
+  "command": "proot-distro login ubuntu --shared-tmp -- /bin/bash -c 'GODOT_SILENCE_ROOT_WARNING=1 timeout 900s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path /data/data/com.termux/files/usr/tmp/scraperx-touch-upper-be3jo5pm/runtime-proof/godot -- --uitest=touch_upper'",
+  "exit_code": 0,
+  "terminal_result": [
+    "SCRAPERX_UITEST PASS touch_upper grade_to_66m=1 counterweight_lift=1 parkour=1 normal_touch=1 deaths=0 arrival_y=66.900"
+  ],
+  "maintained_and_private_driver_sha256": "d1c2c36a9ff56817de2ced0dd05e21d696e8bfa29beb6e5ede7f29cf11bd50a4",
+  "private_hashes": {
+    "presentation/ui/ui_test_driver.gd": "d1c2c36a9ff56817de2ced0dd05e21d696e8bfa29beb6e5ede7f29cf11bd50a4",
+    "project.godot": "eed51bca0e249426bb4a0b7a9e195ebcd5cc5d2e1cc124c80866b8d6541c1dc3",
+    "presentation/main.gd": "f959472ace1e74be69b2fb030d12d53bf320236935a4b7e10c1ec23a70e91c1e",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c"
+  },
+  "private_hashes_unchanged_during_run": true,
+  "native_source_hashes_unchanged": true,
+  "only_upper_changed_since_vent_assignment": true,
+  "script_parse_load_errors": [],
+  "observed_cause": {
+    "geometry": "Realduct1701 topY60.3,X[-1.2,5.8],Z[-123.7,-122.9]; unchangedventtarget5.4,-123 onrealstandingtop.",
+    "diagnostic_source_sha256": "b100bc71d5639508d52e68a4c7d11b76a55a679d11141a63bbc96cb5ffcf1b50",
+    "diagnostic_exit_code": 31,
+    "departure": "(1.423687,61.21637,-123.37),velocity(0,-.218,0),groundedtrue/support1701,contactY60.3",
+    "false_arrival": "arrived=true at(6.077849,61.1497,-122.9368),velocity(3.000717,-.917016,.280326),groundedfalse/support0",
+    "offered_failure": "(10.64562,48.30515,-122.5104),velocity(3.000717,-15.85004,.280326),groundedfalse/support0",
+    "classification": "pre-existingposition-onlytouchapproach ignorednativeinertia;ordinaryinputmappingcorrect"
+  },
+  "repair": "Existing supported/braking_walk_to atunchangedventpoint and connectedTowerexit; actual61mduct1701 topfootingguardbeforegrip. No sharedcontrollerthreshold/nativeedits.",
+  "passed_boundaries": [
+    "gradefixturepipebridge",
+    "facadeapproach/catch/climb33m",
+    "swingstair44m",
+    "actualgrip2703/trip2702>=.18",
+    "counterweightlift55m",
+    "receiver1700 crossing",
+    "ordinaryJumpontoactualyellowstep",
+    "strictstableflattopfooting/cabinetmantle57m",
+    "cabinetJump/ductcatch/topout60.5m",
+    "settledduct1701ventstance",
+    "realventgrip/climb66.5m",
+    "stable66.9mTower11arrival/deaths0"
+  ],
+  "poses": [
+    "SCRAPERX_UITEST_POSE rack_ready tick=1047 position=(12.53233, 0.893589, -79.93198) elapsed_ms=9067",
+    "SCRAPERX_UITEST_POSE loaded_pan tick=1518 position=(11.75766, 0.893647, -79.94602) elapsed_ms=11849",
+    "SCRAPERX_UITEST_POSE bridge_raised tick=3144 position=(-1.088029, 0.893689, -85.6004) elapsed_ms=21867",
+    "SCRAPERX_UITEST_POSE tower_arrival tick=4860 position=(9.059826, 11.9, -125.841) elapsed_ms=32843",
+    "SCRAPERX_UITEST_POSE facade_approach tick=5764 position=(19.94373, 11.87731, -121.3028) elapsed_ms=38241",
+    "SCRAPERX_UITEST_POSE duct_hang tick=6120 position=(19.99651, 15.16121, -122.4797) elapsed_ms=40442",
+    "SCRAPERX_UITEST_POSE vent_climb tick=6778 position=(24.03048, 17.97784, -122.9991) elapsed_ms=44497",
+    "SCRAPERX_UITEST_POSE ladder_leap tick=8038 position=(12.49995, 23.19677, -119.7038) elapsed_ms=52293",
+    "SCRAPERX_UITEST_POSE facade_arrival tick=9622 position=(11.26974, 33.9, -125.2853) elapsed_ms=62635",
+    "SCRAPERX_UITEST_POSE stair_handle_ready tick=10336 position=(-17.22518, 33.9, -121.0276) elapsed_ms=67149",
+    "SCRAPERX_UITEST_POSE stair_released tick=10462 position=(-17.22518, 33.9, -121.9154) elapsed_ms=67907",
+    "SCRAPERX_UITEST_POSE stair_climb tick=11457 position=(-10.07095, 38.59161, -122.1) elapsed_ms=74548",
+    "SCRAPERX_UITEST_POSE stair_exit_ready tick=12069 position=(-2.251053, 45.38143, -122.3786) elapsed_ms=77780",
+    "SCRAPERX_UITEST_POSE stair_arrival tick=12241 position=(-2.26355, 44.87999, -127.3831) elapsed_ms=79119",
+    "SCRAPERX_UITEST_POSE upper_handle_ready tick=12624 position=(3.929986, 44.9, -116.5034) elapsed_ms=81287",
+    "SCRAPERX_UITEST_POSE upper_lift_rising tick=13288 position=(3.929967, 54.50867, -117.7749) elapsed_ms=84884",
+    "SCRAPERX_UITEST_POSE upper_lift_seated tick=13560 position=(3.929962, 55.86002, -117.7749) elapsed_ms=89360",
+    "SCRAPERX_UITEST_POSE deck_55m tick=13978 position=(3.758655, 55.9, -125.8307) elapsed_ms=91414",
+    "SCRAPERX_UITEST_POSE upper_duct_hang tick=15630 position=(1.423687, 59.13149, -122.55) elapsed_ms=112498",
+    "SCRAPERX_UITEST_POSE upper_vent_ready tick=15934 position=(5.410997, 61.2, -122.999) elapsed_ms=116118",
+    "SCRAPERX_UITEST_POSE upper_vent_climb tick=16026 position=(5.410997, 61.76458, -122.999) elapsed_ms=116901",
+    "SCRAPERX_UITEST_POSE upper_arrival tick=16806 position=(5.399895, 66.9, -125.4122) elapsed_ms=127770"
+  ],
+  "limits": [
+    "Fullretainedtouch_upper pipe_bridge_fixture grade-to66routepassed;fixtureworldidentitykept.",
+    "No staging/posewritesaddedtosuccessfulfullpath.",
+    "No currentnormalslingshotworld,renderedphone,fullsuite,ActionsorAPKclaim.",
+    "Rootownsintegration/docs/commit/push/fullgreenAPK; UIownershipfree."
+  ]
+}

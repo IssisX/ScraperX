@@ -1,0 +1,12 @@
+{
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/cart-build/gravity_cart_integration_tests"
+  ],
+  "exit_code": 0,
+  "elapsed_wall_seconds": 181.33894029585645
+}

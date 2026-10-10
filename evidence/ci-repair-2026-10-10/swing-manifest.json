@@ -1,0 +1,54 @@
+{
+  "baseline": "f0685592be409bea468df874ac68705bd024f8c7",
+  "source_sha256": "1b86a24bd89e3d7f86722bbe49bd1984f736e4086afc556e9cdeda9d5ad07f6e",
+  "native_archive_sha256": "a816cc5fa7d197aa9f5071a0e33cbf3396bf130271bc1a23c9eee64ca14d7094",
+  "jolt_archive_sha256": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+  "compile_command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "/usr/bin/c++",
+    "-DJPH_DEBUG_RENDERER",
+    "-DJPH_OBJECT_STREAM",
+    "-DJPH_PROFILE_ENABLED",
+    "-DNDEBUG",
+    "-DSCRAPERX_HAS_JOLT=1",
+    "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-source/src",
+    "-isystem",
+    "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+    "-O3",
+    "-DNDEBUG",
+    "-std=c++17",
+    "-pthread",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/swing-final/swing_stair_route_tests.cpp",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/libscraperx_sim.a",
+    "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+    "-lpthread",
+    "-o",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/swing-final/swing_stair_route_tests"
+  ],
+  "modes": [
+    2,
+    5,
+    7
+  ],
+  "executable_sha256": "0ac66478f0be76a3184fd9fa7171a482ed0c95e7da48bddd04de9f8b6e115673",
+  "run_script": "run_modes.sh",
+  "compile_exit_code": 0,
+  "results": {
+    "2": {
+      "exit_code": 0,
+      "log_sha256": "dc187677fb0880ae2a766e4d79127c9212b982fee44ec7ad498fd73c80ada210"
+    },
+    "5": {
+      "exit_code": 0,
+      "log_sha256": "dbc60b35e24654d776ec6932217cdcba2e5e886bd0f3a46141c2f2d424861631"
+    },
+    "7": {
+      "exit_code": 0,
+      "log_sha256": "93ec2f6390ce8462e5923be7af95da7e99878967ca7bfcbaa6e1ebe92c42d15c"
+    }
+  }
+}

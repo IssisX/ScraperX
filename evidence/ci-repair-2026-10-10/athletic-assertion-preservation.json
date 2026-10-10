@@ -1,0 +1,31 @@
+{
+  "original_require_calls": 754,
+  "current_require_calls": 754,
+  "byte_identical_calls": 750,
+  "changed_calls": [
+    {
+      "index": 570,
+      "baseline": "require(walk_to(cage, 13.5, kHook5MinZ - 4.0, 12.0) && walk_to(cage, 13.5, kSkinFootZ, 12.0) &&\n                walk_to(cage, kSkinX, kSkinFootZ, 20.0),\n            \"the block must be carried round the belt's north end to the SKIN foot\")",
+      "current": "require(walk_to(cage, 13.5, kHook5MinZ - 4.0, 12.0) && walk_to(cage, 13.5, kSkinFootZ, 12.0) &&\n                walk_to(cage, kSkinX, kSkinFootZ, 20.0, 0.15, true),\n            \"the block must be carried round the belt's north end to the SKIN foot\")"
+    },
+    {
+      "index": 595,
+      "baseline": "require(take_block(hook) && carry_out_of_cage(hook),\n            \"the hook ascent must take the block and carry it out of the cage\")",
+      "current": "require(take_block(hook) && carry_out_of_cage(hook, true),\n            \"the hook ascent must take the block and carry it out of the cage\")"
+    },
+    {
+      "index": 598,
+      "baseline": "require(walk_to(hook, -9.0, -109.0, 12.0), \"the carry must reach the handoff deck\")",
+      "current": "require(walk_to(hook, -9.0, -109.0, 12.0, 0.15, true), \"the carry must reach the handoff deck\")"
+    },
+    {
+      "index": 682,
+      "baseline": "require(walk_to(water_lift, -9.45, -108.20, 5.0, 0.18),\n            \"player must step from caught cage onto the fixed +8 m dock\")",
+      "current": "require(walk_to(water_lift, -9.45, -108.20, 5.0, 0.18, true),\n            \"player must step from caught cage onto the fixed +8 m dock\")"
+    }
+  ],
+  "all_assertion_messages_unchanged": true,
+  "input_argument_changes_only": true,
+  "loop_headers_unchanged": true,
+  "walking_budgets_unchanged": true
+}

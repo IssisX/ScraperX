@@ -1,0 +1,13 @@
+{
+  "repository": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo",
+  "branch": "ChatGPT",
+  "baseline_head": "f0685592be409bea468df874ac68705bd024f8c7",
+  "files_sha256": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/gravity_cart_integration_tests.cpp": "2a61db75d57e16c8fa13a6dad2671ae69b72fe9f465e7b4e9b0c4fec741a7550",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/presentation/ui/ui_test_driver.gd": "5d9147840c1888a8f1365baf1d88e5d712b2a4bd5132c9a917db331198f562d0",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/libscraperx_sim.a": "a816cc5fa7d197aa9f5071a0e33cbf3396bf130271bc1a23c9eee64ca14d7094",
+    "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/cart-build/gravity_cart_integration_tests": "d7f8693bbe674d5372631f1c9f04328035c7f9e8aee585c51885a8b41aeae94d"
+  },
+  "scope": "Cart native/touch drivers use grounded inland tray detour and actual receiver1956 fixed-control stance; every downstream station/footing/energy/retry gate retained. Native library unchanged and attested by root."
+}

@@ -63,7 +63,8 @@ double walk_toward(scraperx::sim::Simulation &simulation,
                    const double target_x,
                    const double target_z,
                    const double seconds,
-                   const bool settled_arrival = false) {
+                   const bool settled_arrival = false,
+                   const bool north_facing = false) {
     const double step = scraperx::sim::Simulation::kFixedStepSeconds;
     const auto ticks = static_cast<std::uint32_t>(seconds / step);
     double deepest_z = simulation.snapshot().player_position.z;
@@ -87,7 +88,9 @@ double walk_toward(scraperx::sim::Simulation &simulation,
             // Impassability proofs retain sustained full-stick pressure.
             (void)simulation.set_move_input(dx, dz);
         }
-        (void)simulation.set_facing(dx, dz);
+        // A fixed northward facing keeps a carried load beside an east/west
+        // ramp climb; movement still follows the same horizontal target.
+        (void)simulation.set_facing(north_facing ? 0.0 : dx, north_facing ? -1.0 : dz);
         (void)simulation.advance_frame(step);
         deepest_z = std::min(deepest_z, simulation.snapshot().player_position.z);
     }
@@ -410,7 +413,13 @@ bool take_block(scraperx::sim::Simulation &simulation) {
 }
 
 // Out through the travelled doorway to the apron south of the cage.
-bool carry_out_of_cage(scraperx::sim::Simulation &simulation) {
+bool carry_out_of_cage(scraperx::sim::Simulation &simulation,
+                       const bool jump_over_bar = false) {
+    // In the belt-entry route the dropped bar settles across this lane.
+    // One ordinary Jump clears its low edge within the same walking budget.
+    if (jump_over_bar) {
+        (void)simulation.request_jump();
+    }
     return walk_to(simulation, kHook5DoorwayX, kHook5MinZ + 1.2, 4.0) &&
            walk_to(simulation, kHook5DoorwayX, kHook5MinZ - 2.0, 4.0);
 }
@@ -2408,19 +2417,19 @@ int main() {
     const auto on_deck = ascent.snapshot();
     require(on_deck.support_entity_id == Simulation::kIntakeHandoffEntityId,
             "the ascent must reach the +24 m handoff deck exactly as the freight braid does");
-    // Aims past the flight's own foot rather than straight at it: the foot
-    // sits only 0.06-0.25 m above the deck (by design, a walked step, not a
-    // mantled one), and that is close enough that which of the two a
-    // capsule ends up registering as support is not always the same run to
-    // run -- found by direct observation that landing on the deck's own
-    // side of that razor-thin step, even briefly, lets a capsule walk the
-    // deck's flat surface all the way to its east edge and off it, never
-    // climbing at all. x = -4.0 is unambiguous: the flight's own surface is
-    // already 1.15 m above the deck there, well outside any such margin,
-    // while still short of the deck's own east edge (-2.0).
+    // Board the deployed foot on its centreline. SKIN rung 17 overhangs
+    // this approach: a standing capsule wedges against its underside at
+    // x=-5.73 while the feet remain on the flight. Duck under the rung,
+    // then stand only once its east face (-5.8) is behind the capsule.
     walk_toward(ascent, -6.0, -112.5, 25.0, true);
+    (void)ascent.set_crouch_input(true);
+    bool ascent_crouch_released = false;
     for (int i = 0; i < 20 * 90; ++i) {
         const auto state = ascent.snapshot();
+        if (!ascent_crouch_released && state.player_position.x > -5.35) {
+            (void)ascent.set_crouch_input(false);
+            ascent_crouch_released = true;
+        }
         double dx = kLegalFortyHingeX - state.player_position.x;
         double dz = kLegalFortyHingeZ - state.player_position.z;
         const double len = std::hypot(dx, dz);
@@ -2467,6 +2476,10 @@ int main() {
     // before it reaches the flight's own band, and falls through the gap
     // between them -- found by direct observation.
     walk_toward(ascent, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0, true);
+    // The rotated foot's rounded corner blocks the standing capsule on
+    // the flat landing (contact normal y=0.531, below the support limit).
+    // An ordinary Jump clears that lip; the flight then carries the feet.
+    (void)ascent.request_jump();
     // Walks onto the hall deck itself and stops steering the instant it
     // does, rather than continuing to drive into the well's own edge --
     // found by direct observation that a capsule still being steered past
@@ -2657,12 +2670,22 @@ int main() {
             double dx = waypoint[0] - state.player_position.x;
             double dz = waypoint[1] - state.player_position.z;
             const double len = std::hypot(dx, dz);
-            reached = len < 0.3;
+            // Brake before changing direction: full southward speed at
+            // the third waypoint runs off the -121 m edge while finite
+            // traction is still slowing the body for the northward turn.
+            const double vx = state.player_linear_velocity.x -
+                              state.support_point_linear_velocity.x;
+            const double vz = state.player_linear_velocity.z -
+                              state.support_point_linear_velocity.z;
+            reached = len < 0.3 && state.player_grounded && std::hypot(vx, vz) < 0.10;
+            const double input_x = dx * 1.8 - vx * 0.28;
+            const double input_z = dz * 1.8 - vz * 0.28;
+            const double scale = std::max(1.0, std::hypot(input_x, input_z));
             if (len > 1.0e-6) {
                 dx /= len;
                 dz /= len;
             }
-            (void)skin_forty.set_move_input(dx, dz);
+            (void)skin_forty.set_move_input(input_x / scale, input_z / scale);
             (void)skin_forty.set_facing(dx, dz);
             (void)skin_forty.advance_frame(Simulation::kFixedStepSeconds);
             const auto after = skin_forty.snapshot();
@@ -2688,6 +2711,8 @@ int main() {
     // cross west along that band -- a direct diagonal from the landing's
     // own centre falls through the gap between them instead.
     walk_toward(skin_forty, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0, true);
+    // Same rotated foot and real landing as the deployed-flight route.
+    (void)skin_forty.request_jump();
     bool skin_forty_reached_hall_deck = false;
     for (int i = 0; i < 40 * 90 && !skin_forty_reached_hall_deck; ++i) {
         const auto state = skin_forty.snapshot();
@@ -2876,7 +2901,14 @@ int main() {
         if (len < 0.05) {
             break;
         }
-        (void)crouch.set_move_input(dx / len, dz / len);
+        // Stop under the beam rather than carrying full crouch speed
+        // past it during the neutral interval's finite braking stroke.
+        const double input_x = dx * 1.8 -
+            (state.player_linear_velocity.x - state.support_point_linear_velocity.x) * 0.28;
+        const double input_z = dz * 1.8 -
+            (state.player_linear_velocity.z - state.support_point_linear_velocity.z) * 0.28;
+        const double scale = std::max(1.0, std::hypot(input_x, input_z));
+        (void)crouch.set_move_input(input_x / scale, input_z / scale);
         (void)crouch.set_facing(dx / len, dz / len);
         (void)crouch.advance_frame(Simulation::kFixedStepSeconds);
         crouched_top_speed = std::max(crouched_top_speed,
@@ -3227,8 +3259,11 @@ int main() {
     require(walk_to(cage, held_pack.x + 2.6, held_pack.z, 6.0),
             "walking off the pack's east edge must reach the apron");
     require(pick_block_from_ground(cage), "the block must be picked up again beside the pack");
+    // A position-only arrival still carries almost 5 m/s westward; the
+    // subsequent northward press then slides past the rung's west face.
+    // Arrive with real slow footing before testing the occupied hands.
     require(walk_to(cage, 13.5, kHook5MinZ - 4.0, 12.0) && walk_to(cage, 13.5, kSkinFootZ, 12.0) &&
-                walk_to(cage, kSkinX, kSkinFootZ, 20.0),
+                walk_to(cage, kSkinX, kSkinFootZ, 20.0, 0.15, true),
             "the block must be carried round the belt's north end to the SKIN foot");
     require(cage.snapshot().carrying_entity_id == Simulation::kHook5BlockEntityId,
             "the block must arrive at the SKIN foot still held");
@@ -3337,7 +3372,7 @@ int main() {
                           [](const auto &state) { return state.hook5_door_angle_radians >= 1.20; },
                           6.0),
             "the hook ascent's door must travel once the bar is clear");
-    require(take_block(hook) && carry_out_of_cage(hook),
+    require(take_block(hook) && carry_out_of_cage(hook, true),
             "the hook ascent must take the block and carry it out of the cage");
 
     // Round the belt's north end -- its deck never reaches past z = -81 --
@@ -3363,13 +3398,27 @@ int main() {
     }
     // Arrive and stop: a full stick dithering about AS-002's own waypoint,
     // 0.3 m inside the deck's north edge, walked a loaded body off it.
-    require(walk_to(hook, -9.0, -109.0, 12.0), "the carry must reach the handoff deck");
+    require(walk_to(hook, -9.0, -109.0, 12.0, 0.15, true), "the carry must reach the handoff deck");
     require(hook.snapshot().support_entity_id == Simulation::kIntakeHandoffEntityId &&
                 hook.snapshot().carrying_entity_id == Simulation::kHook5BlockEntityId,
             "MOD-STAIR-A must carry the body and the block to the +24 m handoff deck");
-    walk_toward(hook, -6.0, -112.5, 25.0, true);
+    walk_toward(hook, -6.0, -112.5, 25.0, true, true);
+    // The loaded body stops at the rounded foot before reaching the ramp.
+    // Jump onto it, then duck under rung 17 after actual takeoff. Carry
+    // sideways so the block does not lead the feet into the rising slab.
+    (void)hook.request_jump();
+    bool hook_crouch_started = false;
+    bool hook_crouch_released = false;
     for (int i = 0; i < 20 * 90; ++i) {
         const auto state = hook.snapshot();
+        if (!hook_crouch_started && !state.player_grounded) {
+            (void)hook.set_crouch_input(true);
+            hook_crouch_started = true;
+        }
+        if (!hook_crouch_released && state.player_position.x > -5.35) {
+            (void)hook.set_crouch_input(false);
+            hook_crouch_released = true;
+        }
         double dx = kLegalFortyHingeX - state.player_position.x;
         double dz = kLegalFortyHingeZ - state.player_position.z;
         const double len = std::hypot(dx, dz);
@@ -3378,12 +3427,14 @@ int main() {
             dz /= len;
         }
         (void)hook.set_move_input(dx, dz);
-        (void)hook.set_facing(dx, dz);
+        (void)hook.set_facing(0.0, -1.0);
         (void)hook.advance_frame(Simulation::kFixedStepSeconds);
     }
-    walk_toward(hook, kLegalFortyMidLandingX - 0.85, kLegalFortyHingeZ, 10.0, true);
-    walk_toward(hook, kLegalFortyMidLandingX, kLegalFortyMidLandingZ, 10.0, true);
-    walk_toward(hook, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0, true);
+    walk_toward(hook, kLegalFortyMidLandingX - 0.85, kLegalFortyHingeZ, 10.0, true, true);
+    walk_toward(hook, kLegalFortyMidLandingX, kLegalFortyMidLandingZ, 10.0, true, true);
+    walk_toward(hook, kLegalFortyMidLandingX, kLegalFortyUpperFlightZ, 10.0, true, true);
+    // Clear the identical upper foot with ordinary Jump while still carrying.
+    (void)hook.request_jump();
     bool hook_on_hall = false;
     for (int i = 0; i < 40 * 90 && !hook_on_hall; ++i) {
         const auto state = hook.snapshot();
@@ -3395,7 +3446,7 @@ int main() {
             dz /= len;
         }
         (void)hook.set_move_input(dx, dz);
-        (void)hook.set_facing(dx, dz);
+        (void)hook.set_facing(0.0, -1.0);
         (void)hook.advance_frame(Simulation::kFixedStepSeconds);
         hook_on_hall = hook.snapshot().support_entity_id == Simulation::kIntakeHallDeckEntityId;
     }
@@ -3717,7 +3768,7 @@ int main() {
     require(std::abs(water_total_drained - water_total_start) < 1.0e-8,
             "tank -> bucket -> basin cycle must conserve the same water inventory");
 
-    require(walk_to(water_lift, -9.45, -108.20, 5.0, 0.18),
+    require(walk_to(water_lift, -9.45, -108.20, 5.0, 0.18, true),
             "player must step from caught cage onto the fixed +8 m dock");
     require(water_lift.advance_frame(0.5).accepted, "upper dock stance must settle");
     const auto on_dock = water_lift.snapshot();

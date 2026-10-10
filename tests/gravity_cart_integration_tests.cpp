@@ -76,10 +76,13 @@ void steer(Simulation &s, double x, double z) {
     if (std::hypot(dx, dz) > .02) (void)s.set_facing(dx, dz);
 }
 
-void walk(Simulation &s, double x, double z, int budget = 1800) {
+void walk(Simulation &s, double x, double z, int budget = 1800,
+          bool tower_grounded_only = false) {
     bool reached = false;
     for (int i = 0; i < budget; ++i) {
         const auto v = s.snapshot();
+        if (tower_grounded_only)
+            supported(s, kTower, "inland tray detour retains actual Tower footing");
         if (v.player_grounded &&
             std::hypot(x - v.player_position.x, z - v.player_position.z) < .06 &&
             std::hypot(v.player_linear_velocity.x, v.player_linear_velocity.z) < .1) {
@@ -88,9 +91,13 @@ void walk(Simulation &s, double x, double z, int budget = 1800) {
         }
         steer(s, x, z);
         tick(s);
+        if (tower_grounded_only)
+            supported(s, kTower, "inland tray detour retains actual Tower footing");
     }
     (void)s.set_move_input(0, 0);
     tick(s, 30);
+    if (tower_grounded_only)
+        supported(s, kTower, "inland tray detour settles on actual Tower footing");
     require(reached, "ordinary walk reaches supported target", s);
 }
 
@@ -149,6 +156,11 @@ int main() {
     tick(s, 90);
     supported(s, kTower, "Tower330 entry has real footing");
 
+    // The wheel exit's raised service tray blocks the old straight approach.
+    // Walk around its visible inland end on the existing Tower ring.
+    walk(s, -22.4, -158.25, 1800, true);
+    walk(s, -22.4, -156.9, 1800, true);
+    walk(s, -24.7, -156.9, 1800, true);
     walk(s, -24.7, -140.15);
     walk(s, -25.05, -140.15);
     station(s, 2, "ordinary approach reaches lower control");
@@ -164,7 +176,8 @@ int main() {
     require(std::abs(s.snapshot().supplied_machine_surface_y - 341) < .10,
             "neutral input brakes at intermediate341", s);
     jump_to(s, -35.45, -140.25, kIntermediateReceiver);
-    walk(s, -26.1, -140.15);
+    // Stand wholly on receiver1956, clear of its coincident Tower floor seam.
+    walk(s, -26.5, -140.15);
     station(s, 4, "341 receiver has reachable intermediate control");
     walk(s, -35.45, -140.25);
     jump_to(s, -35.45, -141.6, kCart);
@@ -203,7 +216,7 @@ int main() {
     report("walking_miss_recovery", s);
 
     walk(s, -28.0, -140.15);
-    walk(s, -26.1, -140.15);
+    walk(s, -26.5, -140.15);
     station(s, 4, "recovered player reaches fixed recall control");
     const double recall_bank = s.snapshot().supplied_machine_energy_j;
     const double recall_work = s.snapshot().supplied_machine_positive_work_j;

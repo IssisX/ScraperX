@@ -48,13 +48,36 @@ void report(Simulation &s, const char *label) {
       <<" front="<<44.9-.875-pad.y<<std::endl;
   }
 }
-void wait(Simulation &s, double secs) {
-  for (int i = 0; i < int(secs * 90); ++i)
+// Capture material state on the actual firm-footing commit tick. Contact on
+// the moving stair is distinct from eligibility to replace that checkpoint.
+struct FirmCheckpointRecord {
+  std::uint64_t observed_count = 0;
+  std::uint64_t committed_count = 0;
+  std::uint64_t support = 0;
+  double receiver_front = 0;
+  bool available = false;
+
+  void observe(Simulation &s) {
+    const auto state = s.snapshot();
+    if (state.checkpoint_commit_count == observed_count) return;
+    observed_count = state.checkpoint_commit_count;
+    available = state.player_grounded && state.checkpoint_footing_valid;
+    if (!available) return;
+    committed_count = observed_count;
+    support = state.support_entity_id;
+    receiver_front = 44.9 - .875 - s.kit_body_position(s.kit_body_index(2603)).y;
+  }
+};
+void wait(Simulation &s, double secs, FirmCheckpointRecord *checkpoint = nullptr) {
+  for (int i = 0; i < int(secs * 90); ++i) {
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    if (checkpoint) checkpoint->observe(s);
+  }
 }
 
 // All progress is through public player inputs, with no spawned upper checkpoint.
-bool walk_to(Simulation &s, double x, double z, double seconds, double tolerance=.15) {
+bool walk_to(Simulation &s, double x, double z, double seconds, double tolerance=.15,
+             FirmCheckpointRecord *checkpoint = nullptr) {
   bool physical=false;
   for (int i=0; i<int(seconds*90); ++i) {
     const auto state=s.snapshot();
@@ -77,13 +100,16 @@ bool walk_to(Simulation &s, double x, double z, double seconds, double tolerance
     (void)s.set_move_input(input_x/scale,input_z/scale);
     if(distance>1e-8) (void)s.set_facing(dx,dz);
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    if (checkpoint) checkpoint->observe(s);
   }
   (void)s.set_move_input(0,0);return false;
 }
-template<class Predicate> bool wait_for(Simulation &s, double seconds, Predicate reached) {
+template<class Predicate> bool wait_for(Simulation &s, double seconds, Predicate reached,
+                                        FirmCheckpointRecord *checkpoint = nullptr) {
   for(int i=0;i<int(seconds*90);++i) {
     if(reached(s.snapshot())) return true;
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    if (checkpoint) checkpoint->observe(s);
   }
   return reached(s.snapshot());
 }
@@ -334,11 +360,15 @@ int main(int argc, char **argv) {
     std::cout << "PASS stair stays latched without a player pull\n";
     return 0;
   }
-  if(!walk_to(s,-17.5,-125.5,20) || !walk_to(s,-17.5,-121.5,8,.08)) {report(s,"STAIR_APPROACH_FAIL");return 46;}
-  (void)s.set_facing(0,1);wait(s,.5);
+  FirmCheckpointRecord committed;
+  committed.observed_count = s.snapshot().checkpoint_commit_count;
+  auto *checkpoint_record = mode == 2 ? &committed : nullptr;
+  if(!walk_to(s,-17.5,-125.5,20,.15,checkpoint_record) ||
+     !walk_to(s,-17.5,-121.5,8,.08,checkpoint_record)) {report(s,"STAIR_APPROACH_FAIL");return 46;}
+  (void)s.set_facing(0,1);wait(s,.5,checkpoint_record);
   report(s,"STAIR_CHAIN_READY");
   if(s.snapshot().carry_target_entity_id!=2602) return 47;
-  (void)s.request_pick_up();wait(s,.3);report(s,"STAIR_HANDLE_HELD");
+  (void)s.request_pick_up();wait(s,.3,checkpoint_record);report(s,"STAIR_HANDLE_HELD");
   if(s.snapshot().carrying_entity_id!=2602) return 48;
   if (mode == 4) {
     (void)s.request_set_down();
@@ -350,29 +380,34 @@ int main(int argc, char **argv) {
     std::cout << "PASS stair stays latched after grab and release without pull\n";
     return 0;
   }
-  (void)s.set_move_input(0,-.35);wait(s,.6);(void)s.set_move_input(0,0);
+  (void)s.set_move_input(0,-.35);wait(s,.6,checkpoint_record);(void)s.set_move_input(0,0);
   report(s,"STAIR_HANDLE_PULLED");
-  (void)s.request_set_down();wait(s,.05);
+  (void)s.request_set_down();wait(s,.05,checkpoint_record);
   if(mode==0) wait(s,20);
   report(s,"STAIR_RELEASED");
   const auto pad=s.kit_body_index(2603);
   auto front=[&](){return 44.9-.875-s.kit_body_position(pad).y;};
-  if(!walk_to(s,-16.4,-122.1,8,.1)) {report(s,"STAIR_FOOT_FAIL");return 49;} report(s,"STAIR_FOOT"); for(double x : {-15.2,-14.0,-12.0,-10.0,-8.0,-5.0,-2.7}) { if(!walk_to(s,x,-122.1,25,.1)) {report(s,"STAIR_CLIMB_FAIL");return 49;} report(s,"STAIR_X");
-    if(mode==2 && x==-10.0) {
-      // The moving tread can leave the walker airborne for a few frames at
-      // this horizontal waypoint. Commit a checkpoint only after real contact.
+  if(!walk_to(s,-16.4,-122.1,8,.1,checkpoint_record)) {report(s,"STAIR_FOOT_FAIL");return 49;} report(s,"STAIR_FOOT"); for(double x : {-15.2,-14.0,-12.0,-10.0,-8.0,-5.0,-2.7}) { if(!walk_to(s,x,-122.1,25,.1,checkpoint_record)) {report(s,"STAIR_CLIMB_FAIL");return 49;} report(s,"STAIR_X");
+    if(mode==2 && x==-14.0) {
+      // Abandon while the receiver still has real travel remaining. Require
+      // moving-tread contact, without treating it as a firm checkpoint commit.
       if (!wait_for(s, 2.0, [](const Snapshot &v) {
             return v.player_grounded && v.support_entity_id == 2600;
-          })) {
+          }, checkpoint_record)) {
         report(s,"STAIR_CHECKPOINT_CONTACT_FAIL");
         std::cerr<<"FAIL mode2 never regained moving-stair contact\n"; return 55;
       }
       const auto checkpoint=s.snapshot();
-      const double checkpoint_front=front();
+      if (!committed.available ||
+          committed.committed_count != checkpoint.checkpoint_commit_count) {
+        std::cerr<<"FAIL mode2 has no observed firm-footing checkpoint record\n"; return 55;
+      }
+      const double departure_front=front();
+      const double checkpoint_front=committed.receiver_front;
       (void)s.set_facing(0,1); (void)s.request_jump(); (void)s.set_move_input(0,1);
       wait(s,1.0); (void)s.set_move_input(0,0);
       const double abandoned_front=front(); report(s,"ABANDONED");
-      if(abandoned_front<checkpoint_front+.05) {
+      if(abandoned_front<departure_front+.05) {
         std::cerr<<"FAIL mode2 receiver did not move after abandoning stair\n"; return 56;
       }
       if(!wait_for(s,10,[](const Snapshot &v){return v.death_count==1 && v.player_grounded;})) {
@@ -380,11 +415,15 @@ int main(int argc, char **argv) {
       }
       report(s,"STAIR_FALL_RESTORED");
       std::cout<<"CHECKPOINT_FRONT "<<checkpoint_front<<" ABANDONED_FRONT "<<abandoned_front<<" RESTORED_FRONT "<<front()<<std::endl;
+      std::cout<<"STAIR_CHECKPOINT committed_count="<<committed.committed_count
+        <<" firm_support="<<committed.support<<" committed_front="<<checkpoint_front
+        <<" departure_front="<<departure_front<<" abandoned_front="<<abandoned_front
+        <<" restored_front="<<front()<<std::endl;
       const auto restored=s.snapshot();
       const double restore_dx=restored.player_position.x-checkpoint.checkpoint_position.x;
       const double restore_dy=restored.player_position.y-checkpoint.checkpoint_position.y;
       const double restore_dz=restored.player_position.z-checkpoint.checkpoint_position.z;
-      if(front()>checkpoint_front+.05 || restored.death_count!=1 ||
+      if(std::abs(front()-checkpoint_front)>.05 || restored.death_count!=1 ||
          std::sqrt(restore_dx*restore_dx+restore_dy*restore_dy+restore_dz*restore_dz)>.15) {
         std::cerr<<"FAIL mode2 restored receiver or checkpoint diverged\n"; return 50;
       }
@@ -418,8 +457,28 @@ int main(int argc, char **argv) {
     if (s.snapshot().carry_target_entity_id != 2703) return 62;
     (void)s.request_pick_up(); wait(s, .3);
     if (s.snapshot().carrying_entity_id != 2703) return 63;
-    (void)s.set_move_input(0, -.45); wait(s, .35);
-    (void)s.set_move_input(0, 0); (void)s.request_set_down();
+    // Hold the ordinary pull until the actual lever crosses its trip angle;
+    // a fixed-duration gesture can release before finite loaded motion arrives.
+    (void)s.set_move_input(0, -.45);
+    bool tripped = false;
+    double trip_angle = 0;
+    int pull_ticks = 0;
+    for (; pull_ticks < 270; ++pull_ticks) {
+      (void)s.advance_frame(Simulation::kFixedStepSeconds);
+      if (s.snapshot().carrying_entity_id != 2703) break;
+      const auto q = s.kit_body_rotation(s.kit_body_index(2702));
+      trip_angle = 2.0 * std::atan2(q.z, q.w);
+      if (trip_angle >= .18) { tripped = true; ++pull_ticks; break; }
+    }
+    (void)s.set_move_input(0, 0);
+    std::cout << "LIFT_PULL ticks=" << pull_ticks << " actual_angle=" << trip_angle
+              << " carrying=" << s.snapshot().carrying_entity_id << std::endl;
+    if (!tripped) {
+      report(s, "LIFT_PULL_FAIL");
+      std::cerr << "FAIL upper lift pull did not trip while holding its real handle\n";
+      return 64;
+    }
+    (void)s.request_set_down();
     std::cout << "LIFT_AFTER_PULL platform=" << s.kit_body_position(s.kit_body_index(2700)).y
               << " weight=" << s.kit_body_position(s.kit_body_index(2701)).y
               << " lever=" << s.kit_body_rotation(s.kit_body_index(2702)).z

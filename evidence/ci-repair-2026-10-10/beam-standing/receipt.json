@@ -1,0 +1,28 @@
+{
+  "revision": "f0685592be409bea468df874ac68705bd024f8c7",
+  "write_surface": "private scratch probes only; maintained native source untouched",
+  "hashes": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.cpp": "dd0c2264a1ebbfae18173001af9a839ea7872cbc45de4c8cde464b564d6f5e8a",
+    "/data/data/com.termux/files/usr/tmp/beam-standing-diagnosis/probe.cpp": "073329d65bf9ee12429776f229f8bdc8414bd1b82906163033f7fc0b324dba88",
+    "/data/data/com.termux/files/usr/tmp/beam-standing-diagnosis/run.log": "f69d7efa151260bc7f945270110c8c54ad95d5663c4577c4ab6c47a1223a8a9e",
+    "/data/data/com.termux/files/usr/tmp/beam-standing-diagnosis/edge_probe.cpp": "8c29092fc1590e7b4c746d33d0ee4fc0c01a63cb99a6703c7e2c98e77e4cdf7b",
+    "/data/data/com.termux/files/usr/tmp/beam-standing-diagnosis/edge.log": "cdab9ed22e3379a0c1293dd33614e2defb9c9cc72484f6854f4dc23b39bb84be",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/libscraperx_sim.a": "a816cc5fa7d197aa9f5071a0e33cbf3396bf130271bc1a23c9eee64ca14d7094"
+  },
+  "observations": [
+    "Wide landing and ordinary approach to inclined braced beam centre/+0.17m lateral offset exactly stationary for60simulatedseconds under explicitzero move input.",
+    "Inclined0.46mbeam at+0.215m lateraloffset and level0.46mreturn beam centre/+0.215m roundededge stable for30simulatedseconds.",
+    "Initial run mislabeled level cases staged on77mwide recovery deck; excluded as narrow-beam evidence. Corrected edge_probe stages actual87mreturn beam.",
+    "No genuine uncontrolled slip/fall reproduced in focused current-source samples."
+  ],
+  "old_delivered_source": "0e31e2229f26bbed773b575ac5a44783e36d0af6",
+  "source_inferences": [
+    "OldAPKsource neutral balance unconditionally requested centre-directed velocity up to0.4m/s; e3c6168 replaces with deliberate lateral corrections and neutral braking.",
+    "OldAPKsource zero-friction contact recovery omitted gravity tangent compensation;30a60c7 adds it in native finite reciprocal contact owner."
+  ],
+  "unavailable": [
+    "Actual phoneAPK/run/location and deviceinputcommand trace",
+    "OldAPKruntime comparison; old source reviewed only",
+    "Moving beam disturbance and other arbitrary worldbeams not broadly swept"
+  ]
+}

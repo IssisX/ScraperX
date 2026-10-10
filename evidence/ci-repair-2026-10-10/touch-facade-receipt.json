@@ -1,0 +1,20 @@
+{
+  "result": "Fa\u00e7ade correction passes unchanged33m assertions in same full touch_upper; downstream upper approach fails",
+  "source_revision": "f0685592be409bea468df874ac68705bd024f8c7",
+  "driver_sha256": "46b690d6ef745ca22a0f47803a5822468117f63b9d7cbe6227f8e91694235f5a",
+  "bridge_sha256": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+  "command": "proot-distro login ubuntu --shared-tmp -- /bin/bash -c 'GODOT_SILENCE_ROOT_WARNING=1 timeout 900s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path /data/data/com.termux/files/usr/tmp/scraperx-touch-upper-be3jo5pm/runtime-proof/godot -- --uitest=touch_upper'",
+  "exit_code": 31,
+  "log_sha256": "4a3a063b512f1de6ccf03c459b748cd8ccb04a9f83988c0918114f6b563a0dae",
+  "repair": "Only _touch_facade initial3waypoints use existing require_supported_arrival=true with original targets/tolerances20s timeout; adds native target/footing failure diagnostics. Frozen cart/upper/other helpers byte-preserved.",
+  "supported_cause": "Initial waypoint returned atX21.877,Z-124.3196 withVx2.425508,Vz.28802. Next corner slid outside real receiver1600 side rail, lost ground and caught with2hands atX22.54987,Z-123.413; target(21.2,-121.3) then stalled. Actual touch vector correctly targets left/+Z. Read-only native support/contact/body/part tracing retained in facade-probe.log/patch.",
+  "observed_receipts": [
+    "SCRAPERX_UITEST_POSE facade_arrival tick=9622 position=(11.26974, 33.9, -125.2853) elapsed_ms=75473",
+    "SCRAPERX_UITEST_POSE stair_arrival tick=12241 position=(-2.26355, 44.87999, -127.3831) elapsed_ms=103206",
+    "SCRAPERX_UITEST_POSE upper_lift_rising tick=13288 position=(3.929967, 54.50867, -117.7749) elapsed_ms=110288",
+    "SCRAPERX_UITEST_POSE upper_lift_seated tick=13560 position=(3.929962, 55.86002, -117.7749) elapsed_ms=111622",
+    "SCRAPERX_UITEST_POSE deck_55m tick=13978 position=(3.758655, 55.9, -125.8307) elapsed_ms=113973",
+    "SCRAPERX_UITEST FAIL touch_upper reason=upper cabinet mantle not offered at (2.79244, 44.87999, -122.177)"
+  ],
+  "limits": "Complete66m touch_upper remains unverified pending downstream upper cabinet descent. Normal shipped-world/device/render/CI/APK proof not established."
+}

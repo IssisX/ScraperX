@@ -1,0 +1,9 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+boarded330 tick=1671 pos=-41.7901,330.92,-141.605 support=2320 grounded=1 station=1 deck=330.02 energy=200000 work=0 power=0 force=0 deaths=0
+intermediate_exit_reboard tick=4701 pos=-35.4707,341.9,-141.593 support=2320 grounded=1 station=1 deck=341 energy=200000 work=0 power=0 force=0 deaths=0
+upper_seat tick=6779 pos=-29.1628,352.907,-141.594 support=2320 grounded=1 station=1 deck=352.007 energy=200000 work=0 power=0 force=0 deaths=0
+walking_miss_recovery tick=7105 pos=-28.0121,341.9,-141.608 support=1956 grounded=1 station=0 deck=352.007 energy=200000 work=0 power=0 force=0 deaths=0
+paid_recall_reboard_retry352 tick=12257 pos=-29.1398,352.907,-141.6 support=2320 grounded=1 station=1 deck=352.007 energy=169918 work=23865.9 power=0 force=0 deaths=0
+onward_upper_control tick=12641 pos=-25.0494,352.9,-140.146 support=1957 grounded=1 station=3 deck=352.003 energy=169918 work=23865.9 power=0 force=0 deaths=0
+returned330 tick=16907 pos=-25.0491,352.9,-140.144 support=1957 grounded=1 station=3 deck=330.032 energy=110408 work=71294.4 power=0 force=0 deaths=0
+PASS GRAVITY_CART ordinary approach/board/341exit-reboard/gravity352/walking-miss341-recovery/paid-recall/retry/onward-jump/full-paid-reset initial_staging_only=1
