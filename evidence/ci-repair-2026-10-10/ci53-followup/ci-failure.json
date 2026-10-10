@@ -1,0 +1,64 @@
+{
+  "observed_date": "2026-10-10",
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "source_sha": "d1af237bba8abd1123d7724b08088a8b1cece3fe",
+  "run_id": 38063033252,
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/38063033252",
+  "job_id": 114244989985,
+  "job_url": "https://github.com/IssisX/ScraperX/actions/runs/38063033252/job/114244989985",
+  "job_name": "moving-support-truth",
+  "conclusion": "failure",
+  "failed_step_number": 6,
+  "failed_step_name": "Build native host graph and run the full native suite",
+  "native_tests": {
+    "total": 54,
+    "passed": 53,
+    "failed": 1,
+    "failed_test": "scraperx_sim.athletic_traversal",
+    "ctest_number": 18,
+    "duration_seconds": 51.49
+  },
+  "failure": {
+    "source_file": "tests/simulation_tests.cpp",
+    "source_lines": [
+      3432,
+      3433,
+      3434
+    ],
+    "message": "MOD-STAIR-A must carry the body and the block to the +24 m handoff deck",
+    "preceding_walk_to_succeeded": true,
+    "assertion": "support_entity_id == Simulation::kIntakeHandoffEntityId && carrying_entity_id == Simulation::kHook5BlockEntityId",
+    "actual_operands": "unobserved in failed CI log",
+    "cause_status": "unresolved; no supported correction/pass yet claimed"
+  },
+  "prior_repairs_actual_x86": {
+    "cage": "PASS scraperx_sim AS-003 cage: mashed_door=0.0352769 travelled_door=1.20218 carry_worst_gap=0.831464 repicked_y=0.98052 skin_mantles=15",
+    "swing_stair_route_2": "Passed3.50sec in same exact-source run"
+  },
+  "later_stages": {
+    "godot": "not run",
+    "android_export": "not run",
+    "apk": "none for this source"
+  },
+  "full_stage_log": {
+    "private_path": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/ci-d1af237-failed.log",
+    "sha256": "f1fbbc3263060c66da79a9f511a3f40c0f2018c3d0d96c1f714a7bce1454e94c",
+    "copied_to_repository": false
+  },
+  "ownership": {
+    "tests/simulation_tests.cpp": "Super_Agent: endpoint diagnostics and supported correction",
+    "CMakeLists.txt": "root: pending athletic-first registration, preserve54 gates",
+    ".github/workflows/wo000-delivery-spine.yml": "root: pending stop-on-first-failure integration, all54 once on success"
+  },
+  "next_source_sha": null,
+  "new_repair_pass_claimed": false,
+  "delivery_requirement": "Full green exact-source Actions plus matching verified APK package/version>213671847/signing/provenance; provide download link, no Android Download copy. No phone install/execution claim.",
+  "canonical_scope": {
+    "path": "03_EXECUTION/ACTIVE_GOAL_PHASED_SCOPE.md",
+    "lines": 227,
+    "changed": false,
+    "overall_estimate_percent": 61,
+    "new_gameplay_completion_credit": false
+  }
+}

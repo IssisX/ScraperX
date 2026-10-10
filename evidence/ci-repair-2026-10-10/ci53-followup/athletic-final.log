@@ -1,0 +1,52 @@
+PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=177 kit_bodies=233 locomotion=1 crouch=1 jump=1
+PASS scraperx_sim rejected fallback absent: tower_bodies=385 former_flight_y=0.9 jump_requests=0
+PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0
+PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1
+PASS scraperx_sim moving-support truth: translating_support=3 translating_vx=1.08993 jump_vx=1.07124 rotating_support=4 rotating_point_v=(-0.509095,-1.09394) omega_y=0.800001 hz=90
+PASS scraperx_sim athletic traversal: vault_x=6.08 double_tap_vault_x=6.20222 vault_speed=5.5 mantle_support=6 mantle_rise_setback=0.53 mantle_y=2.46879 hang_support=7 moving_hang_support=8 moving_hang_vz=0.638632 moving_ledge_vz=0.865345 release_vz=1.05492 rejected=1 accepted=1
+PASS scraperx_sim player is the plant's missing component: rest_valve=0 held_treadle=0.0849507 held_valve=0.40308 held_lift=7.7m idle_lift=1.2m store_spent_MJ=3.08184
+PASS scraperx_sim first full causal chain: gate_closed_at_rest=1 lift_at_gate=7.41205m rise=1.13796m reached_catwalk=1 commits=1548
+PASS scraperx_sim coupled machine: valve=0.726924 piston=14691N lift=8.80227m second_lift=8.81645m starved_energy=678952J player_valve=0 tower_m=1600
+PASS scraperx_sim fall/parachute/checkpoint: lethal_impact=34.6619 chuted_impact=8.8914 late_chute_deaths=1 grounded_deploy_blocked=1 commits=91 machine_restored=1 deaths=1
+PASS scraperx_sim first freight: station=1 raised_y=4.76118 braked_delta=-0.0491042 slewed_rad=2.00013 crate_carried=1 rides_crate=1 capacity_held=1
+PASS scraperx_sim first structural coupling: crossable_unseated=0 seated=1 support_over_gap=1 reached_far_pier=1 unseat_removed_support=1
+PASS scraperx_sim first process coupling: gated_off_station=1 wet_crossable=0 drained_safe=1 support_on_grate=1 reached_far_deck=1 dump_unsafe_again=1
+PASS scraperx_sim B00 intake rise: pinned_impassable=1 pinned_deepest_z=-110.508 forced_impassable=1 overweight_y=0.899998 lifted_y=4.54681 dog_rad=1.20318 handoff_y=25.0872 skin_mantles=15 skin_freight_untouched=1
+INFO AS-002 deployed hold: least_travel=0.907572 pack_drift=0.000419725
+INFO AS-002 walkway lane: lowest_y=33.085
+PASS scraperx_sim AS-002 Legal Forty: unrouted_deepest_y=25.0872 flag_hinge=-0 cradle_drop=1.49766 deployed_travel=0.862406 mid_landing_y=33.0872 forty_y=41.0649 checkpoint_commits=21742 checkpoint_y=41.0768 retracted_travel=0.197692 skin_forty_mantles=20 skin_forty_y=41.0649 jib_capped_hook_y=11.2409
+PASS scraperx_sim world solids: bodies=1780 mirrors=29 rejected=0 buttress_foot_closest=3.3484 tower_bodies=169 former_flight_y=0.9 rim_reach=888.21
+PASS scraperx_sim crouch: standing_deepest_z=-12.387 crouch_drop=0.3 crouched_top_speed=2.475 under_z=-12.9515 stood_y=0.9
+PASS scraperx_sim AS-003 apron: grade_peak_y=2.41139 pack_peak_y=3.89544 pack_closest=0.296829
+INFO AS-003 carry walk: loaded_v_at_0.25s=1.95315 free_v_at_0.25s=2.13095 loaded_top=5.39589 free_top=5.5
+PASS scraperx_sim AS-003 cage: mashed_door=0.0352769 travelled_door=1.20234 carry_worst_gap=0.82977 repicked_y=0.984171 skin_mantles=15
+INFO AS-003 loaded stair: phase=foot flight_command=0 tick=7126 time=79.1778 target=-8.3,-116 pos=-8.34065,1.07388,-115.884 velocity=0.349757,-5.28698e-09,-3.6378 grounded=1 support=44 contact=-8.34348,0.187203,-115.844 held=56 block=-8.47543,1.22554,-116.309 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=turn flight_command=0 tick=7846 time=87.1778 target=-7.5,-116 pos=-7.49393,1.06608,-116.036 velocity=-0.0490079,1.32098e-10,0.118103 grounded=1 support=44 contact=-7.49406,0.187203,-116.036 held=56 block=-6.90967,1.19101,-115.84 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=climb flight_command=0 tick=9106 time=101.178 target=7.5,-116 pos=7.46905,5.06627,-116.007 velocity=0.0973224,-5.45667e-09,0.0611716 grounded=1 support=44 contact=7.46919,4.1872,-116.007 held=56 block=7.61358,5.18721,-116.59 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=turn flight_command=1 tick=9826 time=109.178 target=7.5,-120 pos=7.50886,5.07466,-120.03 velocity=-0.0749121,-3.89212e-10,0.12079 grounded=1 support=44 contact=7.5096,4.1872,-120.03 held=56 block=6.87906,5.26655,-120.317 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=climb flight_command=1 tick=11086 time=123.178 target=-7.5,-120 pos=-7.47238,9.08173,-119.996 velocity=-0.0737324,5.10328e-09,0.0116563 grounded=1 support=44 contact=-7.47213,8.1872,-119.997 held=56 block=-7.73667,9.18488,-119.413 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=turn flight_command=2 tick=11806 time=131.178 target=-7.5,-116 pos=-7.51298,9.0809,-115.974 velocity=0.0124409,2.39653e-10,-0.121897 grounded=1 support=44 contact=-7.51291,8.1872,-115.974 held=56 block=-6.90543,9.21024,-115.999 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=climb flight_command=2 tick=13066 time=145.178 target=7.5,-116 pos=7.47377,13.0774,-115.995 velocity=0.0802299,3.60153e-10,0.0122543 grounded=1 support=44 contact=7.47369,12.1872,-115.996 held=56 block=7.69693,13.185,-115.388 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=turn flight_command=3 tick=13786 time=153.178 target=7.5,-120 pos=7.48756,13.078,-120.023 velocity=0.0297783,-4.68297e-09,0.0525847 grounded=1 support=44 contact=7.4868,12.1872,-120.022 held=56 block=8.04033,13.1797,-120.159 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=climb flight_command=3 tick=15046 time=167.178 target=-7.5,-120 pos=-7.47024,17.0757,-119.999 velocity=-0.10499,5.30492e-09,0.0379334 grounded=1 support=44 contact=-7.47042,16.1872,-120 held=56 block=-7.80714,17.2321,-119.383 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=turn flight_command=4 tick=15766 time=175.178 target=-7.5,-116 pos=-7.51511,17.0847,-115.97 velocity=0.0515735,-2.09163e-09,-0.149983 grounded=1 support=44 contact=-7.51601,16.1872,-115.97 held=56 block=-6.79234,17.2343,-115.976 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=climb flight_command=4 tick=17026 time=189.178 target=7.5,-116 pos=7.47329,21.0713,-116.005 velocity=0.106945,4.35582e-09,-0.0205539 grounded=1 support=44 contact=7.47326,20.1872,-116.004 held=56 block=7.85849,21.2013,-116.582 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=turn flight_command=5 tick=17746 time=197.178 target=7.5,-120 pos=7.51023,21.0823,-120.023 velocity=-0.0261186,-2.38093e-09,0.0751742 grounded=1 support=44 contact=7.51121,20.1872,-120.022 held=56 block=6.84028,21.1996,-120.169 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=climb flight_command=5 tick=19006 time=211.178 target=-7.5,-120 pos=-7.47269,25.073,-120.003 velocity=-0.0626569,1.15903e-09,-0.00193976 grounded=1 support=44 contact=-7.47302,24.1872,-120.002 held=56 block=-7.64879,25.1894,-120.636 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=0 block_held=1
+INFO AS-003 loaded stair: phase=handoff flight_command=6 tick=19429 time=215.878 target=-9,-109 pos=-8.99289,25.0818,-108.958 velocity=0.00679529,-2.80729e-09,-0.139314 grounded=1 support=45 contact=-8.9937,24.1872,-108.958 held=56 block=-8.43385,25.2058,-109.392 deaths=0 traversal=0 traversal_target=0,0,0 on_handoff=1 block_held=1
+INFO AS-003 loaded stair: waypoint_reached=1
+PASS scraperx_sim AS-003 Hook5 Rack: ride_s=10.4889 roof_y=5.36879 hatch_impact=9.24292 forty_y=41.0709 restored_y=41.068 restored_carry=56
+PASS scraperx_sim ground water screw: tank_m3=2 basin_m3=0.4 peak_rpm=22 peak_torque_nm=1500 peak_flow_m3_s=0.0220068 shaft_work_J=200869 leakage_m3=0.19069 conserved_err=3.61933e-13 full_stop=1 reverse_return=1
+INFO ground water lift fill: expected_m3=0.4 valve=1 tank_m3=0.398889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+PASS scraperx_sim ground water lift: cage_travel=8.00027 peak_speed=2.20044 rope_N=42827.5 bucket_kg=2198.89 dock_y=9.15 conserved_err=5.01821e-14 dry_fail=1 partial_fail=1 rope_fail=1 overload_fail=1 moving_support=1 reset=1 dock_to_stair12=1
+INFO ground water lift fill: expected_m3=2 valve=1 tank_m3=1.99889 bucket_m3=0.00111111 bucket_travel=0 caught=1 station=1 deaths=0
+PASS scraperx_sim continuous ground screw ascent: dock_y=9.15 cage_travel=8 conserved_err=8.52651e-14 moving_support=1 no_seed=1
+PASS scraperx_sim AS-006 A no link: cage_worst=0 skip_drop=0.0324707 bollard_tension=62627.2 relatched=1 rerigged=1
+PASS scraperx_sim AS-006 A ride: ride_s=9.65556 floor_y=176.25 peak_speed=2.50201 rode_on_cage=1 skip_released_J=172656 payload_gained_J=93881.9 energy_margin_J=3.9443 restored_y=177.199 restored_support=2005
+PASS scraperx_sim AS-006 B no link: cage_worst=0 lattice_drop=0.0324707 bollard_tension=195710 relatched=1
+INFO AS-006 B governor: ride_peak=3.00319 lifetime_peak=3.00319 ride_s=8.28889 floor_y=198.25
+PASS scraperx_sim AS-006 B ride: ride_s=8.28889 floor_y=198.25 peak_speed=3.00319 lifetime_peak_speed=3.00319 rode_on_cage=1 energy_margin_J=134.983 lattice_top_y=198.25

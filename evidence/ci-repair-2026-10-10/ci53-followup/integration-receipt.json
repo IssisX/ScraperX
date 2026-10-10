@@ -1,0 +1,11 @@
+{
+  "baseline_sha": "d1af237bba8abd1123d7724b08088a8b1cece3fe",
+  "diagnostics_only": true,
+  "source_sha256": "0f166e9ad10d03556d2182462f644903f3f62f5891a8d8cf12bd9bc0d1a62336",
+  "CMake_noncomment_line_multiset_preserved": true,
+  "athletic_registered_first_in_live_source": true,
+  "coverage": "Same54 live CI gates; no addition/removal/duplicate; success still requires full suite. Existing private host-build has older52-test host-source configuration; its show-only enumeration is not proof of live ordering. Live CI will configure current CMake.",
+  "focused_verification": "One Super affected build/fullARM athletic run PASS; no root rerun. Native/Jolt archives unchanged.",
+  "workflow": "One CTest invocation now stop-on-first-failure; existing JUnit/log/gates retained.",
+  "unresolved": "Actual x86 +24m failing support/carried operand unobserved; obtain phase diagnostics next CI."
+}

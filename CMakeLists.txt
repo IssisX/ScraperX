@@ -95,6 +95,17 @@ if(SCRAPERX_WITH_JOLT)
 endif()
 
 if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
+    # Exercise the current integration blocker first; every gate still runs once.
+    add_executable(scraperx_sim_tests tests/simulation_tests.cpp)
+    target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
+    target_compile_options(scraperx_sim_tests PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wextra>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
+    )
+    add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
+
     add_executable(scraperx_physical_hand_climb_tests tests/physical_hand_climb_tests.cpp)
     target_link_libraries(scraperx_physical_hand_climb_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.physical_hand_climb COMMAND scraperx_physical_hand_climb_tests)
@@ -158,15 +169,6 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_landing_tests tests/landing_tests.cpp)
     target_link_libraries(scraperx_landing_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.landing_response COMMAND scraperx_landing_tests)
-    add_executable(scraperx_sim_tests tests/simulation_tests.cpp)
-    target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
-    target_compile_options(scraperx_sim_tests PRIVATE
-        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
-        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wextra>
-        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
-        $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
-    )
-    add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
     add_executable(scraperx_parkour_flow_tests tests/parkour_flow_tests.cpp)
     target_link_libraries(scraperx_parkour_flow_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.parkour_flow COMMAND scraperx_parkour_flow_tests)

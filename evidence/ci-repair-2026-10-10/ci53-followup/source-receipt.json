@@ -1,0 +1,33 @@
+{
+  "baseline_HEAD": "d1af237bba8abd1123d7724b08088a8b1cece3fe",
+  "branch": "ChatGPT",
+  "owned_file": "tests/simulation_tests.cpp",
+  "source_sha256": "0f166e9ad10d03556d2182462f644903f3f62f5891a8d8cf12bd9bc0d1a62336",
+  "executable_sha256": "8096959beb09513f7b100c154d10c7b7b3d091a74fac3e1f8c47ebc1c821d479",
+  "native_archive_sha256": "a816cc5fa7d197aa9f5071a0e33cbf3396bf130271bc1a23c9eee64ca14d7094",
+  "Jolt_archive_sha256": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+  "platform": "Ubuntu ARM64 GCC15.2/C++17; native 90Hz",
+  "build_command": "proot-distro login ubuntu -- cmake --build /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build --target scraperx_sim_tests -j2",
+  "build_exit": 0,
+  "runtime_command": "proot-distro login ubuntu -- /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_sim_tests",
+  "full_suite_runs": 0,
+  "final_athletic_runs": 1,
+  "focused_probe_runs": 1,
+  "focused_probe_exit": 0,
+  "production_changes": false,
+  "commit_push_publish": false,
+  "classification": "Pre-existing actual x86 CI failure, unresolved cause; diagnostics only. Focused ARM route passes and cannot reproduce exact x86 state.",
+  "limitations": [
+    "No local x86 toolchain/emulator. Supplied CI run38063033252 lacks the failing operand.",
+    "Snapshot groups six stair flights under entity44: contact point/elevation is real footing evidence; flight_command is driver phase, not fabricated native flight identity.",
+    "Root owns next actual x86 run, source integration and full green/APK delivery."
+  ],
+  "runtime_exit": 0,
+  "runtime_pass_receipts": 27,
+  "runtime_fail_receipts": 0,
+  "runtime_log_sha256": "148b19fed10fdcba1f2b292e5755e5081a6f82b6a438cb9337752742f2e2e533",
+  "source_unchanged_during_run": true,
+  "production_archive_unchanged": true,
+  "shared_build_released": true,
+  "prior_ARM_PASS_receipts_byte_identical": true
+}

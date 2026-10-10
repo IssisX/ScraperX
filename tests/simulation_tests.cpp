@@ -3407,6 +3407,35 @@ int main() {
 
     // Round the belt's north end -- its deck never reaches past z = -81 --
     // and down the apron's west side to the throat, then AS-002's route.
+    // The fixed walking intervals and horizontal arrival do not identify
+    // which physical landing carries the loaded body. Preserve snapshots
+    // before the assertions so a platform-specific miss distinguishes lost
+    // footing from a released carry constraint. The stair entity groups all
+    // six flights; its actual contact height is the footing evidence.
+    const auto report_loaded_stair = [&](const char *phase, const int flight,
+                                         const double target_x, const double target_z) {
+        const auto state = hook.snapshot();
+        std::cerr << "INFO AS-003 loaded stair: phase=" << phase << " flight_command=" << flight
+                  << " tick=" << state.tick_index << " time=" << state.simulation_time_seconds
+                  << " target=" << target_x << ',' << target_z
+                  << " pos=" << state.player_position.x << ',' << state.player_position.y
+                  << ',' << state.player_position.z
+                  << " velocity=" << state.player_linear_velocity.x << ','
+                  << state.player_linear_velocity.y << ',' << state.player_linear_velocity.z
+                  << " grounded=" << state.player_grounded << " support=" << state.support_entity_id
+                  << " contact=" << state.support_contact_point.x << ','
+                  << state.support_contact_point.y << ',' << state.support_contact_point.z
+                  << " held=" << state.carrying_entity_id
+                  << " block=" << state.hook5_block_position.x << ','
+                  << state.hook5_block_position.y << ',' << state.hook5_block_position.z
+                  << " deaths=" << state.death_count
+                  << " traversal=" << static_cast<int>(state.traversal_state)
+                  << " traversal_target=" << state.traversal_target_point.x << ','
+                  << state.traversal_target_point.y << ',' << state.traversal_target_point.z
+                  << " on_handoff=" << (state.support_entity_id == Simulation::kIntakeHandoffEntityId)
+                  << " block_held=" << (state.carrying_entity_id == Simulation::kHook5BlockEntityId)
+                  << '\n';
+    };
     const double to_throat[][2] = {{13.5, kHook5MinZ - 2.0}, {13.5, -79.5}, {2.0, -79.5},
                                    {-1.2, -85.0}, {-1.2, -106.0}};
     for (const auto &point : to_throat) {
@@ -3420,15 +3449,21 @@ int main() {
     // empty-handed body slides along to reach the foot the way AS-001 walks.
     require(walk_to(hook, -8.3, -113.2, 12.0) && walk_to(hook, -8.3, -116.0, 6.0),
             "the carry must come round to the foot of MOD-STAIR-A's first flight");
+    report_loaded_stair("foot", 0, -8.3, -116.0);
     for (int flight = 0; flight < 6; ++flight) {
         const double side = (flight % 2 == 0) ? 1.0 : -1.0;
         const double lane = -118.0 + side * 2.0;
         walk_toward(hook, -side * kStairLandingX, lane, 8.0, true);
+        report_loaded_stair("turn", flight, -side * kStairLandingX, lane);
         walk_toward(hook, side * kStairLandingX, lane, 14.0, true);
+        report_loaded_stair("climb", flight, side * kStairLandingX, lane);
     }
     // Arrive and stop: a full stick dithering about AS-002's own waypoint,
     // 0.3 m inside the deck's north edge, walked a loaded body off it.
-    require(walk_to(hook, -9.0, -109.0, 12.0, 0.15, true), "the carry must reach the handoff deck");
+    const bool carry_reached_handoff = walk_to(hook, -9.0, -109.0, 12.0, 0.15, true);
+    report_loaded_stair("handoff", 6, -9.0, -109.0);
+    std::cerr << "INFO AS-003 loaded stair: waypoint_reached=" << carry_reached_handoff << '\n';
+    require(carry_reached_handoff, "the carry must reach the handoff deck");
     require(hook.snapshot().support_entity_id == Simulation::kIntakeHandoffEntityId &&
                 hook.snapshot().carrying_entity_id == Simulation::kHook5BlockEntityId,
             "MOD-STAIR-A must carry the body and the block to the +24 m handoff deck");

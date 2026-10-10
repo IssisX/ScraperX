@@ -1,0 +1,16 @@
+{
+  "baseline_HEAD": "d1af237bba8abd1123d7724b08088a8b1cece3fe",
+  "before_require_count": 754,
+  "after_require_count": 754,
+  "all_assertion_messages_unchanged": true,
+  "byte_identical_require_calls": 753,
+  "changed_calls": [
+    {
+      "index": 598,
+      "before": "require(walk_to(hook, -9.0, -109.0, 12.0, 0.15, true), \"the carry must reach the handoff deck\")",
+      "after": "require(carry_reached_handoff, \"the carry must reach the handoff deck\")"
+    }
+  ],
+  "all_walking_call_arguments_unchanged": true,
+  "source_sha256": "0f166e9ad10d03556d2182462f644903f3f62f5891a8d8cf12bd9bc0d1a62336"
+}
