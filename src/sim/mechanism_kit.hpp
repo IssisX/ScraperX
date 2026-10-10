@@ -182,6 +182,12 @@ public:
     LeverIndex add_lever(BodyIndex body, JPH::RVec3 pivot, JPH::Vec3 axis, JPH::Vec3 normal,
                          float min_angle, float max_angle);
 
+    // A hinge between two kit bodies. A car hung from a wheel uses one: the
+    // wheel turns on its own axle, and the car's weight keeps its floor down.
+    // Neither body is fixed to the world. No catch reads this angle.
+    void add_hanger(BodyIndex support, BodyIndex hung, JPH::RVec3 pivot, JPH::Vec3 axis,
+                    JPH::Vec3 normal, float min_angle, float max_angle);
+
     // A catch holding body fast to the world while its pin is seated. The
     // pin leaves its hole when lever turns past release_angle. relatch:
     // a spring catch that seats itself again when the body comes back to
@@ -649,6 +655,7 @@ private:
     std::vector<Guide> guides_;
     std::vector<Rope> ropes_;
     std::vector<Lever> levers_;
+    std::vector<JPH::Ref<JPH::HingeConstraint>> hangers_;
     std::vector<Catch> catches_;
     std::vector<Line> lines_;
     std::vector<Slip> slips_;

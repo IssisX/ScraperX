@@ -125,6 +125,9 @@ const RIG_UNHOOK := 2
 const STACK_S1_CHAIN := 2203
 # The bar north of the fan-casing gallery (Simulation::kPitmanEntityId).
 const PITMAN_BAR := 2315
+# The hanging car on the wheel north of that landing (Simulation::kWheelCarEntityId).
+const WHEEL_CAR := 2317
+const WHEEL_LEVER := 2318
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -845,6 +848,8 @@ func _carry_name(entity: int) -> String:
 			return "DROP PIN"
 		2127:
 			return "CLUTCH HANDLE"
+		WHEEL_LEVER:
+			return "WHEEL LEVER"
 		STACK_S1_CHAIN:
 			return "VALVE CHAIN"
 	return "ROPE END" if _is_kit(entity) else ""
@@ -1203,6 +1208,8 @@ func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> v
 
 	if traversal == TRAVERSAL_HANGING and int(_native.get_traversal_support_entity_id()) == PITMAN_BAR:
 		_status.text = "HANGING FROM THE BAR"
+	elif grounded and support == WHEEL_CAR:
+		_status.text = "IN THE WHEEL CAR"
 	elif traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
 	elif traversal == TRAVERSAL_MANTLING:

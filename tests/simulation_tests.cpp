@@ -4231,6 +4231,322 @@ bool climb_pitman(scraperx::sim::Simulation &floor) {
     return true;
 }
 
+double wheel_hinge_angle(const scraperx::sim::Simulation &simulation) {
+    const auto index = simulation.kit_body_index(scraperx::sim::Simulation::kWheelEntityId);
+    const auto rotation = simulation.kit_body_rotation(index);
+    return 2.0 * std::atan2(rotation.x, rotation.w);
+}
+
+// North of the pitman's landing. Step into the hanging car, haul the lever
+// on its west side, and ride the bucket down onto the next deck. The lever
+// is thrown from the car, so the walk that releases the catch stays on the
+// floor.
+bool climb_wheel(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    auto say = [&](const char *what) {
+        const auto p = floor.snapshot();
+        const auto car = floor.kit_body_rotation(floor.kit_body_index(Simulation::kWheelCarEntityId));
+        std::cout << what << " " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " v=" << p.player_linear_velocity.x << "," << p.player_linear_velocity.y << ","
+                  << p.player_linear_velocity.z << " grounded=" << p.player_grounded
+                  << " support=" << p.support_entity_id << " carry=" << p.carrying_entity_id
+                  << " target=" << p.carry_target_entity_id << " trav=" << static_cast<int>(p.traversal_state)
+                  << " deaths=" << p.death_count << " wheel=" << wheel_hinge_angle(floor) << " car_q=" << car.x
+                  << "," << car.y << "," << car.z << "," << car.w << "\n";
+    };
+    auto watch = [&](const double seconds) {
+        const auto ticks =
+            static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+    };
+    if (!walk_to(floor, 9.40, -145.55, 6.0, 0.18)) {
+        say("wheel onto the car");
+        return false;
+    }
+    // The car is pinned, so the step onto it is a real 0.30 m rise. A full
+    // walk clears that rise in the air and the check sees a body that has
+    // not landed. Creep until the feet are on the floor.
+    bool boarded_ok = false;
+    for (int step = 0; step < 6 * 90 && !boarded_ok; ++step) {
+        (void)floor.set_move_input(0.0, 0.22);
+        (void)floor.set_facing(0.0, 1.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto step_state = floor.snapshot();
+        boarded_ok = step_state.player_grounded && step_state.player_position.y > 759.5 &&
+                     step_state.support_entity_id == Simulation::kWheelCarEntityId &&
+                     step_state.player_position.z > -144.85;
+    }
+    (void)floor.set_move_input(0.0, 0.0);
+    if (!boarded_ok) {
+        say("wheel not on the car");
+        return false;
+    }
+    // Under the hanger, then west along that line to the lever. South of
+    // the hanger the floor pitches and the feet lose it.
+    if (!walk_to(floor, 9.40, -144.20, 4.0, 0.08)) {
+        say("wheel to the middle");
+        return false;
+    }
+    (void)floor.set_move_input(0.0, 0.0);
+    watch(1.0);
+    const auto settled = floor.snapshot();
+    if (!settled.player_grounded || settled.player_position.y < 759.5 ||
+        settled.support_entity_id != Simulation::kWheelCarEntityId) {
+        say("wheel left the middle");
+        return false;
+    }
+    if (!walk_to(floor, 8.74, -144.20, 5.0, 0.08)) {
+        say("wheel to the lever");
+        return false;
+    }
+    const auto at_lever = floor.snapshot();
+    if (!at_lever.player_grounded || at_lever.player_position.y < 759.5 ||
+        at_lever.support_entity_id != Simulation::kWheelCarEntityId) {
+        say("wheel left the car");
+        return false;
+    }
+    (void)floor.set_facing(-1.0, 0.0);
+    (void)floor.set_move_input(0.0, 0.0);
+    watch(0.45);
+    if (floor.snapshot().carry_target_entity_id != Simulation::kWheelLeverEntityId) {
+        say("wheel lever not in reach");
+        return false;
+    }
+    (void)floor.request_pick_up();
+    watch(0.3);
+    if (floor.snapshot().carrying_entity_id != Simulation::kWheelLeverEntityId) {
+        say("wheel lever not in the hands");
+        return false;
+    }
+    bool released = false;
+    for (int step = 0; step < 6 * 90 && !released; ++step) {
+        const auto here = floor.snapshot().player_position;
+        if (here.x < 9.15) {
+            (void)floor.set_move_input(0.35, 0.0);
+        } else {
+            (void)floor.set_move_input(0.0, 0.0);
+        }
+        (void)floor.set_facing(-1.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        released = wheel_hinge_angle(floor) < -0.08;
+    }
+    (void)floor.set_move_input(0.0, 0.0);
+    if (floor.snapshot().carrying_entity_id != 0) {
+        (void)floor.request_set_down();
+    }
+    watch(0.2);
+    if (!released) {
+        say("wheel did not let go");
+        return false;
+    }
+    bool riding = false;
+    for (int step = 0; step < 20 * 90 && !riding; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto state = floor.snapshot();
+        riding = state.player_grounded && state.death_count == 0 &&
+                 state.support_entity_id == Simulation::kWheelCarEntityId && state.player_position.y > 764.2 &&
+                 state.player_position.y < 766.2 && state.player_position.z > -141.8 &&
+                 state.player_position.z < -140.1 && wheel_hinge_angle(floor) < -1.65;
+    }
+    if (!riding) {
+        say("wheel ride");
+        return false;
+    }
+    const auto at_stop = floor.snapshot();
+    if (!walk_to(floor, 9.40, -138.70, 8.0, 0.30)) {
+        say("wheel step off");
+        return false;
+    }
+    const auto landed = floor.snapshot();
+    if (!(landed.player_grounded && landed.death_count == 0 && landed.player_position.y > 764.4 &&
+          landed.player_position.z > -139.90 && landed.player_position.z < -138.25 &&
+          landed.support_entity_id == Simulation::kCraneFrameEntityId)) {
+        say("wheel deck");
+        return false;
+    }
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        std::cout << "wheel snap " << g_path_watch.worst << " at " << g_path_watch.worst_at.x << " "
+                  << g_path_watch.worst_at.y << " " << g_path_watch.worst_at.z << " from "
+                  << g_path_watch.worst_from_x << " " << g_path_watch.worst_from_z
+                  << " trav=" << g_path_watch.worst_traversal << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "the wheel must not snap the body more than 0.15 m in one tick");
+    std::cout << "PASS scraperx_sim wheel: floor_y=" << landed.player_position.y
+              << " ride_y=" << at_stop.player_position.y << " ride_z=" << at_stop.player_position.z
+              << " wheel=" << wheel_hinge_angle(floor) << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
+// The ladder west of the high deck, while the wheel is still held. Up, then
+// back down onto the lane, so the same body can still take the car.
+bool climb_wheel_ladder(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    auto say = [&](const char *what) {
+        const auto p = floor.snapshot();
+        std::cout << what << " " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " grip=" << p.grip_available << " trav=" << static_cast<int>(p.traversal_state)
+                  << " deaths=" << p.death_count << "\n";
+    };
+    if (!climb_wet_hold(floor, 7.05, -138.50, 1.0, 0.0, false, 764.5)) {
+        say("wheel ladder up");
+        return false;
+    }
+    if (!walk_to(floor, 8.45, -139.55, 6.0, 0.20)) {
+        say("wheel ladder deck");
+        return false;
+    }
+    for (int step = 0; step < 90; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+    }
+    bool left = false;
+    for (int step = 0; step < 4 * 90 && !left; ++step) {
+        (void)floor.set_move_input(-0.22, 0.0);
+        (void)floor.set_facing(-1.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto state = floor.snapshot();
+        left = !state.player_grounded && state.player_position.y < 763.5;
+    }
+    (void)floor.set_move_input(0.0, 0.0);
+    if (!left) {
+        say("wheel ladder leave");
+        return false;
+    }
+    if (!wait_for(floor, 5.0, [](const scraperx::sim::Snapshot &state) {
+            return state.player_grounded && state.death_count == 0 && state.player_position.y > 759.2 &&
+                   state.player_position.y < 760.6 && state.player_position.x < 8.6 &&
+                   state.player_position.x > 6.7;
+        })) {
+        say("wheel ladder down");
+        return false;
+    }
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        std::cout << "wheel ladder snap " << g_path_watch.worst << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "the wheel ladder must not snap the body more than 0.15 m in one tick");
+    const auto down = floor.snapshot();
+    std::cout << "PASS scraperx_sim wheel ladder: floor_y=" << down.player_position.y << "\n";
+    if (!walk_to(floor, 7.05, -139.70, 6.0, 0.25)) {
+        say("wheel lane after the drop");
+        return false;
+    }
+    if (!walk_to(floor, 7.05, -145.80, 8.0, 0.22)) {
+        say("wheel back south");
+        return false;
+    }
+    if (!walk_to(floor, 9.40, -146.10, 6.0, 0.20)) {
+        say("wheel back to the landing");
+        return false;
+    }
+    return true;
+}
+
+// Thrown from the pad, not the car. The wheel still turns. The ladder is
+// how you reach the deck you did not ride to.
+bool miss_wheel(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    auto say = [&](const char *what) {
+        const auto p = floor.snapshot();
+        std::cout << what << " " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " carry=" << p.carrying_entity_id << " target=" << p.carry_target_entity_id
+                  << " deaths=" << p.death_count << " wheel=" << wheel_hinge_angle(floor) << "\n";
+    };
+    auto watch = [&](const double seconds) {
+        const auto ticks =
+            static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+    };
+    if (!walk_to(floor, 8.30, -145.80, 6.0, 0.16)) {
+        say("wheel miss pad");
+        return false;
+    }
+    if (!walk_to(floor, 7.40, -145.70, 5.0, 0.16)) {
+        say("wheel miss pad");
+        return false;
+    }
+    if (!walk_to(floor, 7.40, -144.20, 6.0, 0.12)) {
+        say("wheel miss pad");
+        return false;
+    }
+    (void)floor.set_facing(1.0, 0.0);
+    (void)floor.set_move_input(0.0, 0.0);
+    watch(0.45);
+    if (floor.snapshot().carry_target_entity_id != Simulation::kWheelLeverEntityId) {
+        say("wheel miss lever");
+        return false;
+    }
+    (void)floor.request_pick_up();
+    watch(0.25);
+    if (floor.snapshot().carrying_entity_id != Simulation::kWheelLeverEntityId) {
+        say("wheel miss hands");
+        return false;
+    }
+    bool gone = false;
+    for (int step = 0; step < 5 * 90 && !gone; ++step) {
+        const auto here = floor.snapshot().player_position;
+        if (here.x < 7.80) {
+            (void)floor.set_move_input(0.35, 0.0);
+        } else {
+            (void)floor.set_move_input(0.0, 0.0);
+        }
+        (void)floor.set_facing(1.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        gone = wheel_hinge_angle(floor) < -0.40;
+    }
+    (void)floor.set_move_input(0.0, 0.0);
+    if (floor.snapshot().carrying_entity_id != 0) {
+        (void)floor.request_set_down();
+    }
+    watch(0.4);
+    const auto stayed = floor.snapshot();
+    if (!(gone && stayed.death_count == 0 && stayed.player_grounded && stayed.player_position.y < 761.0 &&
+          stayed.player_position.y > 759.2)) {
+        say("wheel miss still on the landing");
+        return false;
+    }
+    if (!climb_wet_hold(floor, 7.05, -138.50, 1.0, 0.0, false, 764.5)) {
+        say("wheel miss ladder");
+        return false;
+    }
+    const auto up = floor.snapshot();
+    if (!(up.death_count == 0 && up.player_grounded && up.player_position.y > 764.5 &&
+          up.support_entity_id == Simulation::kCraneFrameEntityId)) {
+        say("wheel miss deck");
+        return false;
+    }
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        std::cout << "wheel miss snap " << g_path_watch.worst << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "missing the wheel must not snap the body more than 0.15 m in one tick");
+    std::cout << "PASS scraperx_sim wheel miss: floor_y=" << up.player_position.y
+              << " stayed_y=" << stayed.player_position.y << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
 // Same body, from standing on the 220 m ring, up through the rest of the
 // machines that are already in the building, to the floor the ladder reaches.
 bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seconds,
@@ -4291,6 +4607,7 @@ bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seco
     require_leg(run, climb_duct(run), "the duct down, then up it");
     require_leg(run, climb_casing(run), "up the outside of the casing");
     require_leg(run, climb_pitman(run), "the pitman over the gap north of the gallery");
+    require_leg(run, climb_wheel(run), "onto the wheel, then up to the next deck");
     const auto landed = run.snapshot();
     std::cout << "PASS scraperx_sim " << pass_name << ": seconds=" << landed.simulation_time_seconds - start_seconds
               << " at_340=" << at_340 << " at_484=" << at_484 << " floor_y=" << landed.player_position.y << '\n';
@@ -4316,6 +4633,7 @@ void run_girder() {
     require(climb_duct(floor), "the duct down, then up it");
     require(climb_casing(floor), "up the outside of the casing");
     require(climb_pitman(floor), "the pitman over the gap north of the gallery");
+    require(climb_wheel(floor), "onto the wheel, then up to the next deck");
 }
 
 int main() {
@@ -4331,6 +4649,19 @@ int main() {
         Simulation floor(InitialSpawn::CasingGallery);
         require(floor.advance_frame(0.4).accepted, "pitman settle must be accepted");
         require(climb_pitman(floor), "the pitman over the gap north of the gallery");
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "wheel") {
+        using scraperx::sim::InitialSpawn;
+        using scraperx::sim::Simulation;
+        Simulation floor(InitialSpawn::PitmanDeck);
+        require(floor.advance_frame(0.4).accepted, "wheel settle must be accepted");
+        require(climb_wheel_ladder(floor), "up the wheel's ladder and back down, while it is still held");
+        require(climb_wheel(floor), "onto the wheel, then up to the next deck");
+        Simulation missed(InitialSpawn::PitmanDeck);
+        require(missed.advance_frame(0.4).accepted, "wheel miss settle must be accepted");
+        require(miss_wheel(missed), "thrown from the pad, then up the ladder");
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");

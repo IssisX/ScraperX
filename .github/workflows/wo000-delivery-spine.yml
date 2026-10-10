@@ -158,14 +158,15 @@ jobs:
             "PASS scraperx_sim duct" \
             "PASS scraperx_sim casing" \
             "PASS scraperx_sim pitman" \
+            "PASS scraperx_sim wheel:" \
             "PASS scraperx_sim service skin"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
-          # The 154 m trip now ends on the deck the pitman reaches. A local
-          # run from the 640 m floor lands there at player centre 759.88,
-          # which is still inside this band.
-          awk -F'floor_y=' '/ascent 154 to the next floor/ {split($2,a," "); exit (a[1]+0 >= 759.70 && a[1]+0 <= 760.30) ? 0 : 1}' \
+          # The 154 m trip now ends on the deck the wheel reaches. The wheel
+          # test and the run from the 640 m floor both land at player centre
+          # 765.09. The grade ascent was not re-run for this number.
+          awk -F'floor_y=' '/ascent 154 to the next floor/ {split($2,a," "); exit (a[1]+0 >= 764.80 && a[1]+0 <= 765.40) ? 0 : 1}' \
             artifacts/native-falsifiers.log
           # AS-006 Stage A, the skip lift: no link, no lift (the cage never
           # moves while the rope is on the bollard, and the stage re-rigs);

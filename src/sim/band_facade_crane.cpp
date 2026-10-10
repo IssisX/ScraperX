@@ -739,6 +739,7 @@ void build_slat_tower(std::vector<Part> &frame);
 void build_duct(kit::Kit &kit, std::vector<Part> &frame);
 void build_casing(std::vector<Part> &frame);
 void build_pitman(kit::Kit &kit, std::vector<Part> &frame);
+void build_wheel(kit::Kit &kit, std::vector<Part> &frame);
 kit::BodyIndex build_cart_haul(kit::Kit &kit, std::vector<Part> &frame) {
     constexpr float kS = 0.70710678F;
     constexpr float kSlope = 2.3561945F; // local +X points up the 45° rail, west and up
@@ -1015,8 +1016,9 @@ void build_pitman(kit::Kit &kit, std::vector<Part> &frame) {
     frame.push_back(span({7.55F, 763.90F, -150.28F}, {8.10F, 764.30F, -149.92F}, Material::Rust));
 
     // The deck the swing reaches. Its south edge is past the low part of
-    // the arc, so letting go too soon falls through the gap.
-    frame.push_back(span({8.05F, 758.76F, -148.55F}, {10.85F, 759.00F, -145.50F}, Material::Concrete));
+    // the arc, so letting go too soon falls through the gap. The north
+    // edge meets the wheel's boarding gap.
+    frame.push_back(span({8.05F, 758.76F, -148.55F}, {10.85F, 759.00F, -145.30F}, Material::Concrete));
     frame.push_back(span({8.20F, 714.10F, -146.35F}, {8.50F, 758.76F, -146.05F}, Material::Rust));
     frame.push_back(span({10.40F, 714.10F, -146.35F}, {10.70F, 758.76F, -146.05F}, Material::Rust));
     frame.push_back(span({10.40F, 714.10F, -147.70F}, {10.70F, 758.76F, -147.40F}, Material::Rust));
@@ -1032,6 +1034,92 @@ void build_pitman(kit::Kit &kit, std::vector<Part> &frame) {
     // stays on that edge so it does not stand in the walk along the shelf.
     ladder(frame, 8.10F, -149.95F, true, 756.95F, 758.55F);
     frame.push_back(span({7.40F, 757.70F, -150.38F}, {8.80F, 759.10F, -150.22F}, Material::Steel));
+    build_wheel(kit, frame);
+}
+
+// North of the pitman's landing. A bucket of gravel sits just south of the
+// top of a wheel. A lever on the west side holds the wheel. Haul it over
+// and the bucket falls, turning the wheel. The car hangs from the bottom,
+// so its floor stays under you while you rise, and you step off north onto
+// the next deck. The same lever can be thrown from the pad beside the car:
+// the wheel still goes, and the ladder on the west side is the way up.
+void build_wheel(kit::Kit &kit, std::vector<Part> &frame) {
+    constexpr float kAxleX = 9.40F;
+    constexpr float kAxleY = 764.56F;
+    constexpr float kAxleZ = -144.20F;
+    constexpr float kRadius = 3.55F;
+    const JPH::RVec3 axle(kAxleX, kAxleY, kAxleZ);
+    const JPH::RVec3 hanger(kAxleX, kAxleY - kRadius, kAxleZ);
+    const kit::BodyIndex wheel = kit.add_body(
+        Sim::kWheelEntityId,
+        {box(JPH::Vec3(0.16F, 0.16F, 0.16F), JPH::Vec3::sZero(), Material::Steel),
+         box(JPH::Vec3(0.48F, 0.42F, 0.50F), JPH::Vec3(0.0F, 2.50F, -0.85F), Material::Rubble),
+         box(JPH::Vec3(0.08F, 1.50F, 0.12F), JPH::Vec3(0.0F, -1.50F, 0.0F), Material::Rust),
+         box(JPH::Vec3(0.07F, 0.90F, 0.10F), JPH::Vec3(0.0F, 0.95F, -0.28F), Material::Rust)},
+        axle, JPH::Quat::sIdentity(), 480.0F, 0.2F);
+    kit.set_damping(wheel, 0.12F, 6.0F);
+    kit.set_continuous_collision(wheel);
+    (void)kit.add_lever(wheel, axle, JPH::Vec3::sAxisX(), JPH::Vec3::sAxisY(), -2.05F, 0.08F);
+
+    // The car's origin is the hanger. Its floor is 2.01 m below that, level
+    // with the landing. The mass sits in the floor, so the car hangs. The
+    // same lever that holds the wheel also pins the car: a free floor this
+    // far under the hinge travels sideways as soon as it tips, and a step
+    // onto the south edge throws you off. Once the lever is thrown the pin
+    // is gone and the floor hangs. Damping keeps that hang from ringing.
+    const kit::BodyIndex car = kit.add_body(
+        Sim::kWheelCarEntityId,
+        {box(JPH::Vec3(1.15F, 0.045F, 0.78F), JPH::Vec3(0.0F, -2.055F, 0.0F), Material::Galvanised)},
+        hanger, JPH::Quat::sIdentity(), 72.0F, 0.7F);
+    kit.set_damping(car, 0.40F, 8.0F);
+    kit.set_continuous_collision(car);
+    kit.disable_collision(wheel, car);
+    kit.add_hanger(wheel, car, hanger, JPH::Vec3::sAxisX(), JPH::Vec3::sAxisY(), -0.65F, 2.75F);
+
+    const JPH::RVec3 lever_pivot(8.12, 759.58, -144.20);
+    kit::LeverIndex lever = {};
+    const kit::BodyIndex lever_body =
+        add_standing_lever(kit, frame, Sim::kWheelLeverEntityId, lever_pivot, 759.00F, lever);
+    kit.set_carry(lever_body, kit::CarryKind::Handle, JPH::Vec3(0.0F, 0.35F, 0.0F));
+    // Shorter than the shared lever release. From the pad the body meets the
+    // bar before the hands can travel half a radian, so the pin lets go on
+    // the travel that still fits.
+    constexpr float kWheelRelease = 0.22F;
+    (void)kit.add_catch(wheel, lever, kWheelRelease, 0.05F, false);
+    (void)kit.add_catch(car, lever, kWheelRelease, 0.05F, false);
+
+    // Cheeks beside the axle, starting above head height so the walk to the
+    // lever at the hanger's line is open.
+    frame.push_back(span({7.48F, 761.40F, -144.32F}, {7.70F, 765.40F, -144.08F}, Material::Steel));
+    frame.push_back(span({10.74F, 761.40F, -144.32F}, {10.98F, 765.40F, -144.08F}, Material::Steel));
+
+    // A lower lip on the landing's north edge. The step up onto the car is
+    // short, and the lip stays below the car so a swing clears it.
+    frame.push_back(span({8.50F, 758.40F, -145.30F}, {10.30F, 758.70F, -145.12F}, Material::Concrete));
+
+    // The pad the lever stands on, west of the car, on the hanger's line.
+    // Throwing it from here leaves you on the landing.
+    frame.push_back(span({7.00F, 758.76F, -145.15F}, {8.22F, 759.00F, -143.75F}, Material::Concrete));
+
+    // West of the wheel, off the landing and up to the ladder. The lane
+    // stays west of the car, which does not move in x.
+    frame.push_back(span({6.90F, 758.76F, -146.20F}, {8.50F, 759.00F, -145.40F}, Material::Concrete));
+    frame.push_back(span({6.90F, 758.76F, -145.40F}, {8.05F, 759.00F, -138.20F}, Material::Concrete));
+    // Under the high deck's west edge, so stepping off that edge lands here.
+    frame.push_back(span({7.10F, 758.76F, -140.30F}, {8.45F, 759.00F, -139.20F}, Material::Concrete));
+    frame.push_back(span({7.20F, 714.10F, -144.90F}, {7.50F, 758.76F, -144.60F}, Material::Rust));
+    frame.push_back(span({7.20F, 714.10F, -141.20F}, {7.50F, 758.76F, -140.90F}, Material::Rust));
+    frame.push_back(span({7.20F, 714.10F, -138.70F}, {7.50F, 758.76F, -138.40F}, Material::Rust));
+
+    // Where the car is when the bucket has taken it north. A step, not a drop.
+    frame.push_back(span({8.20F, 763.95F, -139.95F}, {10.90F, 764.19F, -138.20F}, Material::Concrete));
+    frame.push_back(span({8.55F, 714.10F, -138.85F}, {8.85F, 763.95F, -138.55F}, Material::Rust));
+    frame.push_back(span({10.35F, 714.10F, -138.85F}, {10.65F, 763.95F, -138.55F}, Material::Rust));
+
+    // West face of that deck. Climb it while the wheel is still held, or
+    // after a throw that left you on the landing.
+    ladder(frame, 7.55F, -138.50F, false, 759.40F, 763.60F);
+    frame.push_back(span({7.85F, 762.70F, -139.20F}, {8.20F, 764.19F, -137.80F}, Material::Steel));
 }
 
 } // namespace

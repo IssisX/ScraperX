@@ -82,6 +82,8 @@ enum class InitialSpawn : std::uint8_t {
     AfterCrane = 31,
     // On the fan-casing gallery, under the pitman's bar, facing the gap north.
     CasingGallery = 32,
+    // On the pitman's landing, facing the wheel north of that deck.
+    PitmanDeck = 33,
 };
 
 // A world started at one of these spawns is the proving ground: it carries
@@ -597,6 +599,12 @@ public:
     // and a bar the hands can close on. The rider's weight and a pull at
     // the bar are what swing it.
     static constexpr std::uint64_t kPitmanEntityId = 2315;
+    // The wheel north of the pitman's landing. A bucket of gravel sits just
+    // south of the top. A catch holds the wheel. The car hangs from the
+    // bottom and stays floor-down while the bucket falls.
+    static constexpr std::uint64_t kWheelEntityId = 2316;
+    static constexpr std::uint64_t kWheelCarEntityId = 2317;
+    static constexpr std::uint64_t kWheelLeverEntityId = 2318;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.

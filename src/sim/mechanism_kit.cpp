@@ -117,6 +117,11 @@ Kit::~Kit() {
             system_.RemoveConstraint(lever.hinge);
         }
     }
+    for (JPH::Ref<JPH::HingeConstraint> &hanger : hangers_) {
+        if (hanger != nullptr) {
+            system_.RemoveConstraint(hanger);
+        }
+    }
     for (Guide &guide : guides_) {
         if (guide.slider != nullptr) {
             system_.RemoveConstraint(guide.slider);
@@ -307,6 +312,22 @@ LeverIndex Kit::add_lever(const BodyIndex body, const JPH::RVec3 pivot, const JP
     system_.AddConstraint(hinge);
     levers_.push_back({body, hinge, pivot});
     return LeverIndex{static_cast<std::uint32_t>(levers_.size() - 1U)};
+}
+
+void Kit::add_hanger(const BodyIndex support, const BodyIndex hung, const JPH::RVec3 pivot,
+                     const JPH::Vec3 axis, const JPH::Vec3 normal, const float min_angle,
+                     const float max_angle) {
+    JPH::HingeConstraintSettings settings;
+    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    settings.mPoint1 = settings.mPoint2 = pivot;
+    settings.mHingeAxis1 = settings.mHingeAxis2 = axis.Normalized();
+    settings.mNormalAxis1 = settings.mNormalAxis2 = normal.Normalized();
+    settings.mLimitsMin = min_angle;
+    settings.mLimitsMax = max_angle;
+    JPH::Ref<JPH::HingeConstraint> hinge = static_cast<JPH::HingeConstraint *>(
+        settings.Create(jolt_body(support), jolt_body(hung)));
+    system_.AddConstraint(hinge);
+    hangers_.push_back(hinge);
 }
 
 CatchIndex Kit::add_catch(const BodyIndex body, const LeverIndex lever, const float release_angle,

@@ -718,6 +718,9 @@ private:
     case scraperx::sim::InitialSpawn::CasingGallery:
         // On the fan-casing gallery, just south of the pitman's bar.
         return {9.40, 760.00, -150.55};
+    case scraperx::sim::InitialSpawn::PitmanDeck:
+        // On the pitman's landing, where that swing lets you off.
+        return {9.40, 759.90, -146.10};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower
@@ -1552,7 +1555,17 @@ private:
 
     [[nodiscard]] JPH::Vec3 current_support_point_velocity(
         const JPH::BodyInterface &bodies) const noexcept {
-        const JPH::BodyID support_id = body_id_for_entity(support_entity_id_);
+        JPH::BodyID support_id = body_id_for_entity(support_entity_id_);
+        // Kit machines are not in that table. A body standing on one still
+        // has to take the speed of the point under its feet, or the floor
+        // leaves and the body stays.
+        if (support_id.IsInvalid() && kit_ != nullptr &&
+            scraperx::sim::kit::is_dynamic_entity(support_entity_id_)) {
+            const scraperx::sim::kit::BodyIndex body = kit_->body_for_entity(support_entity_id_);
+            if (body.valid()) {
+                support_id = kit_->body_id(body);
+            }
+        }
         if (support_id.IsInvalid()) {
             return JPH::Vec3::sZero();
         }
