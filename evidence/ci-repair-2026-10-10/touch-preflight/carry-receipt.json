@@ -1,0 +1,30 @@
+{
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/carry-diagnostic/userdata",
+    "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/carry-diagnostic/config",
+    "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/carry-diagnostic/cache",
+    "timeout",
+    "180s",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/carry-diagnostic/godot",
+    "--",
+    "--uitest=touch_carry"
+  ],
+  "exit_code": 31,
+  "elapsed_wall_seconds": 12.36693739099428,
+  "log_sha256": "6a796b8e30d17a5266530c53b54c5525b3738b934c4864d9ab4bb9092ad21ea2",
+  "driver_sha256_after": "3f7b661ea095ac66ed80075c6f8602137a050162d5f15bcfbc064b112df1e17a"
+}

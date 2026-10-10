@@ -1,0 +1,7 @@
+Based on ChatGPT 9280e2eef2fe208bf775917143b4b897060e9f24, shelf-preserved driver 04556dd2efc4c19cba2c11b2f1730adb95ecf885f7c6b64b13109c8305a7a184. Only repo ui_test_driver.gd _touch_move_look changed; prior shelf correction and root dirty docs preserved.
+
+Baseline exit31 shows correct full forward touch, native sprint, grounded support1 and continuous acceleration: old0.8s deadline tick249 speed6.658152; continued input tick280 speed8.0. Release clears native flag by tick322; old0.6s deadline tick369 speed2.718946; zero speed tick400. This supports stale velocity-assignment timing, not an input/contact/block failure.
+
+Final exact checkout driver exit0: prompt flag2ticks, fullspeed7.947 at98ticks, prompt release1tick, stop0.442 at81ticks. Walking3.79m, look0.600rad, walking settle0.50m/s and21footfalls pass. State waits1.5s acceleration/1.2s braking preserve sprintboolean plus >=7.9 and <=0.6 thresholds; prompt input deadlines0.1s are distinct. Operand diagnostics and tick receipts added.
+
+Godot4.7 ARM, fixedfps60, Dummy, same imported private project/pinned bridge8c5f73. receipt.json contains commands, hashes and limits; sprint-only.patch isolates the new function diff against preserved shelf delta. Native src/sim and src/bridge remain identical to supplied bridge baseline f068559. No native rebuild, repeated shelf/full54/otherfixtures, repository docs edits, children, launchers, commit/push or publication. Root owns review/fullgreen exact-source Actions/APK.

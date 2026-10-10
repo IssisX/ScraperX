@@ -1,0 +1,28 @@
+{
+  "scenario": "touch_slab_haul_cart",
+  "command": [
+    "timeout",
+    "1200",
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project",
+    "--",
+    "--uitest=touch_slab_haul_cart"
+  ],
+  "exit_code": 0,
+  "wall_elapsed_s": 291.266,
+  "host_timeout_s": 1200,
+  "in_game_budgets_changed": false
+}

@@ -1,0 +1,29 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=3339 driver=Dummy
+SCRAPERX_UITEST_POSE cargo_net_entry tick=1627 position=(20.09265, 0.9, -114.6289) elapsed_ms=119142
+SCRAPERX_UITEST_POSE cargo_net_climbing tick=2434 position=(20.12694, 5.51724, -117.1302) elapsed_ms=171092
+SCRAPERX_UITEST_POSE cargo_net_receiver tick=3144 position=(20.12381, 11.89524, -118.4245) elapsed_ms=205970
+SCRAPERX_UITEST_POSE cargo_net_first_ring tick=3672 position=(18.49988, 11.9, -125.9006) elapsed_ms=230560
+SCRAPERX_CAMPAIGN cargo_net_exit at=(18.49988, 11.9, -125.9006) support=11
+SCRAPERX_UITEST_POSE facade_approach tick=4344 position=(19.94145, 11.87546, -121.3037) elapsed_ms=256136
+SCRAPERX_UITEST_POSE duct_hang tick=4698 position=(19.99812, 15.17195, -122.4723) elapsed_ms=271293
+SCRAPERX_UITEST_POSE vent_climb tick=5353 position=(24.03305, 17.98277, -122.9985) elapsed_ms=298155
+SCRAPERX_UITEST_POSE ladder_leap tick=6616 position=(12.50006, 23.19674, -119.7303) elapsed_ms=331633
+SCRAPERX_UITEST_POSE facade_arrival tick=8194 position=(11.27446, 33.9, -125.2842) elapsed_ms=371608
+SCRAPERX_UITEST_POSE stair_handle_ready tick=8908 position=(-17.21909, 33.9, -121.0332) elapsed_ms=391054
+SCRAPERX_UITEST_POSE stair_released tick=9034 position=(-17.21903, 33.9, -121.6916) elapsed_ms=394812
+SCRAPERX_UITEST_POSE stair_climb tick=10218 position=(-9.9227, 38.89259, -122.0999) elapsed_ms=425364
+SCRAPERX_UITEST_POSE stair_exit_ready tick=11005 position=(-2.219123, 45.44302, -122.3835) elapsed_ms=444425
+SCRAPERX_UITEST_POSE stair_arrival tick=11178 position=(-2.175222, 44.9, -127.6139) elapsed_ms=448736
+SCRAPERX_UITEST_POSE upper_handle_ready tick=11559 position=(3.934335, 44.9, -116.5219) elapsed_ms=459140
+SCRAPERX_UITEST_POSE upper_lift_rising tick=12223 position=(3.934335, 54.50275, -117.7935) elapsed_ms=475895
+SCRAPERX_UITEST_POSE upper_lift_seated tick=12495 position=(3.934331, 55.86002, -117.7935) elapsed_ms=484701
+SCRAPERX_UITEST_POSE deck_55m tick=12907 position=(3.764777, 55.9, -125.8368) elapsed_ms=498209
+SCRAPERX_UITEST_POSE upper_duct_hang tick=14583 position=(1.421457, 59.15414, -122.55) elapsed_ms=553288
+SCRAPERX_UITEST_POSE upper_vent_ready tick=14887 position=(5.413736, 61.2, -122.9987) elapsed_ms=568061
+SCRAPERX_UITEST_POSE upper_vent_climb tick=14979 position=(5.413736, 61.77796, -122.9987) elapsed_ms=573207
+The futex facility returned an unexpected error code.
+The futex facility returned an unexpected error code.

@@ -1,0 +1,46 @@
+{
+  "head": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "ui_sha256": "04556dd2efc4c19cba2c11b2f1730adb95ecf885f7c6b64b13109c8305a7a184",
+  "bridge_sha256": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/connected-touch-campaign-zb2kb9b8/project",
+    "--",
+    "--uitest=touch_campaign_to_143"
+  ],
+  "command_sha256": "85518b46950d0b16ec8d6f626b02b451c07cbb19089d13524ac6556dbbaf9f93",
+  "tracked_godot_sync": true,
+  "private_selector_preserved": true,
+  "exit_code": 124,
+  "wall_seconds": 600.0287037300877,
+  "classification": "environmental wall-time limit; connected verification incomplete",
+  "campaign_pass": false,
+  "supported_121_observed": false,
+  "supported_143_observed": false,
+  "last_observed_tick": 14979,
+  "last_observed_position": [
+    5.413736,
+    61.77796,
+    -122.9987
+  ],
+  "last_observed_wall_ms": 573207,
+  "gameplay_fail_lines": [],
+  "log_sha256": "91c6f491e211e80e3de0fa09e1a29ddb1bd099a64aa250196402a036186dab6a",
+  "runtime_shutdown_lines": [
+    "The futex facility returned an unexpected error code.",
+    "The futex facility returned an unexpected error code."
+  ]
+}

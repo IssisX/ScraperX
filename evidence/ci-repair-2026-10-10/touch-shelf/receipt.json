@@ -1,0 +1,76 @@
+{
+  "head": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "source_sha256": "d1c2c36a9ff56817de2ced0dd05e21d696e8bfa29beb6e5ede7f29cf11bd50a4",
+  "bridge_sha256": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+  "bridge_original": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/cart-godot/addons/scraperx_native/bin/linux/libscraperx_native.so",
+  "project": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project",
+  "candidate_sha256": "04556dd2efc4c19cba2c11b2f1730adb95ecf885f7c6b64b13109c8305a7a184",
+  "diff_sha256": "a757b8d21ff8825d322f77a86a47519a75bbee6cac9b736e531515bcd4faa53e",
+  "private_exact_candidate_matches": true,
+  "baseline_exit_code": 31,
+  "baseline_8s_tick": 932,
+  "baseline_13s_tick": 1384,
+  "baseline_plateau_position": [
+    10,
+    112.722,
+    -179.8471
+  ],
+  "settled_diagnostic_exit_code": 0,
+  "settled_approach_tick": 347,
+  "settled_approach_position": [
+    10,
+    110.9,
+    -179.6113
+  ],
+  "settled_action_observed_tick": 367,
+  "settled_shelf_tick": 703,
+  "settled_shelf_position": [
+    10,
+    114.9192,
+    -180.8811
+  ],
+  "settled_shelf_grounded": true,
+  "settled_shelf_support": 1960,
+  "settled_shelf_traversal": 0,
+  "settled_shelf_hand_constraints": 0,
+  "settled_shelf_climb_ticks": 336,
+  "settled_shelf_climb_seconds": 3.7333333333333334,
+  "settled_moving_catch_tick": 881,
+  "settled_loaded_motion_span_rad": 0.111219,
+  "settled_tower_exit_tick": 1925,
+  "settled_tower_exit_position": [
+    9.086982,
+    121.9,
+    -173.4215
+  ],
+  "runtime_version": "4.7.stable.official.5b4e0cb0f",
+  "runtime_command": "proot-distro login ubuntu --shared-tmp -- env GODOT_SILENCE_ROOT_WARNING=1 /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --fixed-fps 60 --audio-driver Dummy --path /data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project -- --uitest=touch_suspended_ladder",
+  "input_path": "Viewport InputEventScreenTouch/ScreenDrag -> TouchControls -> InputRouter -> main.gd existing native setters",
+  "private_instrumentation": "Native getter sampling only; baseline keeps forward input for five extra diagnostic seconds after original 8s result; original failure preserved",
+  "native_source_diff_since_supplied_library_baseline": "",
+  "logs_sha256": {
+    "baseline.log": "325f641d2f8018c02a5930ef6eee6fdf1a44f72100acef6483923de5488d362c",
+    "settled.log": "62fad63239778b22f1d454ddb6c341540ee4d2a87c0e1d958f97e1c4b31567c6",
+    "import.log": "f26dc801437c3395af93e320114747ea61876e436972da73c2b06b161caf970a",
+    "final.log": "473fd1db7ac0141e91e4d251de66c3fe9ef31d3f8488263391a24182bd95c48f"
+  },
+  "final_exit_code": 0,
+  "final_runtime_wall_elapsed_ms": 72467,
+  "final_tower_exit_tick": 1925,
+  "final_tower_exit_y": 121.9,
+  "final_support": 11,
+  "final_deaths": 0,
+  "final_native_feedback": 1,
+  "final_script_runtime_errors": [],
+  "final_private_source_equals_checkout": true,
+  "all_unrelated_code_unchanged": true,
+  "moving_catch_release_exit_code_unchanged": true,
+  "git_diff_check_exit_code": 0,
+  "native_rebuilt": false,
+  "full_native_suite_rerun": false,
+  "new_CI_or_APK_started": false,
+  "limitations": [
+    "Pinned supplied ARM bridge replay only; exact-source x86 Actions, Android APK and phone behavior remain root-owned and unverified here.",
+    "Failure isolated to ordinary-input approach stance; no contact subshape was captured, so the exact obstructing primitive is not claimed."
+  ]
+}

@@ -1,0 +1,13 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=2262 driver=Dummy
+SCRAPERX_UITEST_POSE pause_menu tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11156
+SCRAPERX_UITEST_POSE pause_controls tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11229
+SCRAPERX_UITEST_POSE pause_settings tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11288
+SCRAPERX_UITEST_POSE pause_graphics tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11392
+SCRAPERX_UITEST_POSE pause_display tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11461
+SCRAPERX_UITEST_POSE pause_audio tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11500
+SCRAPERX_UITEST PASS touch_pause frozen_tick=25 advanced_to=39

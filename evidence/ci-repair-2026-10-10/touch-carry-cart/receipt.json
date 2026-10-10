@@ -1,0 +1,222 @@
+{
+  "head": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "branch": "ChatGPT",
+  "baseline_sha256": "c3dcc22ef627d47a8b93bc317933c216a9d1e6e5f731dfba016fc3e8812ca852",
+  "candidate_sha256": "a24ba0aba3f5088bd0406c80381641c4b74a7f5bb9cd8126e0cc19578c84d455",
+  "private_source_equals_checkout": true,
+  "bridge_sha256": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+  "project": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project",
+  "runtime_command_prefix": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project",
+    "--"
+  ],
+  "native_source_diff_from_supplied_bridge_baseline": "",
+  "git_diff_check_exit_code": 0,
+  "unrelated_functions_preserved": true,
+  "final_head": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "final_source_sha256": "a24ba0aba3f5088bd0406c80381641c4b74a7f5bb9cd8126e0cc19578c84d455",
+  "exact_delta_sha256": "d14227b650e3bd131075a650854e92c2b8617213acc5649c3c4d966fa1083345",
+  "private_final_equals_checkout": true,
+  "final_source_equals_executed_candidate": true,
+  "carry_execution": {
+    "scenario": "touch_carry",
+    "command": [
+      "timeout",
+      "180",
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "env",
+      "GODOT_SILENCE_ROOT_WARNING=1",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--fixed-fps",
+      "60",
+      "--audio-driver",
+      "Dummy",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project",
+      "--",
+      "--uitest=touch_carry"
+    ],
+    "exit_code": 31,
+    "wall_elapsed_s": 13.453
+  },
+  "carry_result": {
+    "result": "FAIL",
+    "classification": "Introduced unreachable approach waypoint in the proposed carry driver repair; original wrong-nearest-body defect remains unclosed.",
+    "attempts": 1,
+    "exit_code": 31,
+    "tick": 655,
+    "position": [
+      10.6,
+      0.88,
+      -84.65
+    ],
+    "velocity": [
+      0,
+      0,
+      0
+    ],
+    "grounded": true,
+    "support": 1,
+    "traversal": 0,
+    "held": 0,
+    "target": 55,
+    "kind": 0,
+    "touch_move": [
+      0,
+      0
+    ],
+    "deaths": 0,
+    "target56_observed": false,
+    "held56_observed": false,
+    "action_tapped_at_rack": false,
+    "hand_poses8_8_and_carryout_apron_checked": false,
+    "next_discriminating_step": "Use one attainable settled approach near x=10.58,z=-84.65 then face east and observe actual native target before Action; preserve target56 and original carryout acceptance. No second attempt performed.",
+    "geometry_evidence": "Native rack pedestal begins x=10.95 (simulation.cpp build_hook5_rack), capsule radius0.35: its west clearance is x=10.60. Live stationary x=10.60 agrees; contact subshape was not captured.",
+    "log_sha256": "0270bed08c392e1496ada9005734bc0d688f4d02238b4b0a7071f10a9b2cc930"
+  },
+  "cart_execution": {
+    "scenario": "touch_slab_haul_cart",
+    "command": [
+      "timeout",
+      "1200",
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "env",
+      "GODOT_SILENCE_ROOT_WARNING=1",
+      "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+      "--headless",
+      "--fixed-fps",
+      "60",
+      "--audio-driver",
+      "Dummy",
+      "--path",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project",
+      "--",
+      "--uitest=touch_slab_haul_cart"
+    ],
+    "exit_code": 0,
+    "wall_elapsed_s": 291.266,
+    "host_timeout_s": 1200,
+    "in_game_budgets_changed": false
+  },
+  "cart_result": {
+    "status": "PASS",
+    "apron_tick": 7985,
+    "apron_position": [
+      -28.00437,
+      341.6,
+      -141.5992
+    ],
+    "apron_velocity": [
+      0.00217,
+      0,
+      -0.002515
+    ],
+    "apron_support": 1956,
+    "apron_grounded": true,
+    "apron_traversal": 0,
+    "apron_target": 0,
+    "apron_deaths": 0,
+    "landing_approach_energy_j": 6687.66335147029,
+    "landing_normal_speed_mps": 12.5441932678223,
+    "landing_recovery_progress_at_apron": 0.34442868023067,
+    "standing_recovered_tick": 8024,
+    "standing_recovered_position": [
+      -28.00403,
+      341.9,
+      -141.5992
+    ],
+    "standing_recovered_support": 1956,
+    "standing_recovered_deaths": 0,
+    "landing_recovery_ticks_after_settled_arrival": 39,
+    "contact_subshape_captured": false,
+    "in_game_budgets_changed": false,
+    "result": "PASS",
+    "final_tick": 18379,
+    "final_position": [
+      -25.35327,
+      352.9,
+      -141.6158
+    ],
+    "final_velocity": [
+      0,
+      0,
+      0
+    ],
+    "final_support": 11,
+    "final_grounded": true,
+    "final_traversal": 0,
+    "final_target": 0,
+    "final_deaths": 0,
+    "energy_before_recall_j": 200000.0,
+    "energy_after_recall_j": 169871.633726177,
+    "positive_work_after_recall_j": 23902.6890666375,
+    "energy_before_return_j": 169871.633726177,
+    "energy_final_j": 110367.327234636,
+    "positive_work_final_j": 71324.0717279936,
+    "capacity_j": 200000.0,
+    "overdraft_j": 0.0,
+    "cutoff": false,
+    "full_original_route_criteria_passed": true,
+    "classification": "Pre-existing automation rail-interception defect corrected through ordinary input corridor; exact contact leaf not captured."
+  },
+  "acceptance_preservation": {
+    "carry_hand_poses_8_8_check_preserved": true,
+    "carry_held56_before_and_outside_preserved": true,
+    "carryout_and_apron_behavior_unchanged": true,
+    "cart_recovery_support1956": true,
+    "cart_landing_recovery_height341_7": true,
+    "cart_paid_recall_energy": true,
+    "cart_paid_return_work": true,
+    "cart_paid_return_energy": true,
+    "cart_retry": true,
+    "cart_full_reset330": true,
+    "cart_final_Tower11": true,
+    "cart_original_in_game_waits_and_timeouts_retained": true
+  },
+  "script_runtime_errors": {
+    "touch_carry.log": [],
+    "touch_slab_haul_cart.log": []
+  },
+  "native_source_diff_at_completion": "",
+  "modified_repo_surface": "godot/presentation/ui/ui_test_driver.gd only; concurrent docs/evidence preserved",
+  "native_builds_performed": 0,
+  "children_or_launchers_used": 0,
+  "commits_pushes_publishes_performed": 0,
+  "new_runtime_attempts": {
+    "touch_carry": 1,
+    "touch_slab_haul_cart": 1
+  },
+  "reused_evidence": "Root-supplied native54 and21 untouched fixtures PASS; accepted shelf+sprint source c3dcc22 preserved, none rerun.",
+  "limits": [
+    "Carry remains red: introduced unreachable x10.68 approach; actual target56 and held56 not observed in this final attempt. No speculative iteration performed.",
+    "ARM pinned bridge4.7 headless replay only; full exact-source Actions/APK/Android/phone acceptance remain root-owned and unverified here.",
+    "No contact subshape was captured. Native geometry is read-only evidence."
+  ],
+  "log_sha256": {
+    "touch_carry.log": "0270bed08c392e1496ada9005734bc0d688f4d02238b4b0a7071f10a9b2cc930",
+    "touch_slab_haul_cart.log": "1cc61edbce51dac08754ae923770fe4eb0228434285b187b61ffcc3699299b36"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "source_manifest": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/source-manifest.json",
+  "source_manifest_sha256": "83f10ba7e85595b91864e1d4e548b669c085a7deb47315c89fffb28def874d7f",
+  "results": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/results.json",
+  "results_sha256": "1ea8dd6ce3cd78e4bc5d787ce4afb709328b9971f2febf27059b2061c94a88d8",
+  "frozen_driver_sha256": "d1c2c36a9ff56817de2ced0dd05e21d696e8bfa29beb6e5ede7f29cf11bd50a4",
+  "frozen_bridge_sha256": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+  "current_repo_head": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "current_status": " M 03_EXECUTION/ACTIVE_GOAL_PROGRESS.json\n M CONTINUATION_HANDOFF_CODEX.md\n M CONTINUE_HERE_CHATGPT_CODEX.md\n M godot/presentation/ui/ui_test_driver.gd\n?? evidence/ci-repair-2026-10-10/touch-preflight/\n?? evidence/ci-repair-2026-10-10/touch-shelf/\n?? evidence/ci-repair-2026-10-10/touch-sprint/\n",
+  "native_source_hashes_still_match_current_repo": true,
+  "selected_functions_still_match_current_repo": {
+    "_touch_ballast_mantle_feedback": true,
+    "_touch_slab_haul_cart": true,
+    "_touch_taper_inspection_route": true,
+    "_touch_west_brace_bay": true
+  },
+  "private_vs_concurrent_maintained_function_differences": [
+    "_touch_move_look",
+    "_touch_suspended_ladder"
+  ],
+  "limitations": [
+    "ARM64 local Godot4.7 viewport-touch runtime; not current x86 CI, Android APK or phone-installed evidence",
+    "campaign143 not run; suspended-ladder correction remains separate",
+    "No maintained edits or build; private ARM64 library selectors differ from tracked x86_64 selectors",
+    "Cart failed strict341-apron requirement; no repair or gameplay retry performed"
+  ]
+}

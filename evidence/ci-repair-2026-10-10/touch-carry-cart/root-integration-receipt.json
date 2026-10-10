@@ -1,0 +1,66 @@
+{
+  "source_parent": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "final_ui_sha256": "3e59df6f7a6574d73f15a67ff43fb9163640ad35517b6fcace594379b62d67c8",
+  "modified_functions": [
+    "_touch_carry",
+    "_touch_move_look",
+    "_touch_slab_haul_cart",
+    "_touch_suspended_ladder"
+  ],
+  "native_source_changes": false,
+  "cart_function_unchanged_since_full_pass": true,
+  "affected_function_hashes": {
+    "_touch_carry": "7718adb70fa58b192f294f5c7a8adb1d53308ec06ee2329acf64317d59f2ac92",
+    "_touch_move_look": "6a611b05755090bc0df4d4794d10d1fa6e960462b70699569446c314fa267081",
+    "_touch_slab_haul_cart": "6f6fb8a8c509034919c1fb9b968115c96c5fd9ef4063c0b8b584c228910a7210",
+    "_touch_suspended_ladder": "4eb0511d294ad974458f069171d29bcf2dc23af3cafdbbb65063aa506b1c131a"
+  },
+  "carry_root_final": {
+    "exit_code": 0,
+    "private_source_equals_checkout": true,
+    "input_path": "ordinary viewport touch through unchanged InputRouter/nativecommands",
+    "stance_waypoint": [
+      10.57,
+      -84.65
+    ],
+    "actual_offer": {
+      "tick": 435,
+      "player": [
+        10.55998,
+        0.88,
+        -84.65
+      ],
+      "grounded": true,
+      "support": 1,
+      "held": 0,
+      "target": 56
+    },
+    "actual_hold": {
+      "tick": 436,
+      "held": 56
+    },
+    "actual_finish": {
+      "tick": 1042,
+      "held": 0,
+      "deaths": 0,
+      "block": [
+        10.11734,
+        0.249941,
+        -93.93839
+      ]
+    },
+    "log_sha256": "510cd4db7d39034fd8c205cb0728b78a4ad2d0be5b7765f778bdfce632788d2e",
+    "command": "proot-distro login ubuntu --shared-tmp -- env GODOT_SILENCE_ROOT_WARNING=1 /usr/bin/timeout180s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --fixed-fps60 --audio-driverDummy --path /data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project -- --uitest=touch_carry"
+  },
+  "classification": {
+    "baseline_carry": "pre-existing driver selected nearerbar55; Actiondelivery worked",
+    "first_candidate_carry": "introduced unreachable x10.68 approach; stoppedx10.60 atpedestal clearance; retainedfailurelog",
+    "final_carry": "ordinarysupportedstance10.57 clearspedestal/placesbarbehindEast; actualtarget56/held56 verified",
+    "cart": "pre-existing driver aimedonto highphysicaltrack1954; same native-passing gapcorridor-28 reachesreal341apron1956"
+  },
+  "limits": [
+    "Local Godot4.7 ARMviewport execution; fullx86 Actions/APK/phone pending",
+    "No precise contact subshape captured",
+    "Connectedgrade-to143 local attempt ended at600hostseconds/61.78m; not a fullpass"
+  ]
+}

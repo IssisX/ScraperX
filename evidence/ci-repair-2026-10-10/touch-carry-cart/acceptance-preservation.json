@@ -1,0 +1,14 @@
+{
+  "carry_hand_poses_8_8_check_preserved": true,
+  "carry_held56_before_and_outside_preserved": true,
+  "carryout_and_apron_behavior_unchanged": true,
+  "cart_recovery_support1956": true,
+  "cart_landing_recovery_height341_7": true,
+  "cart_paid_recall_energy": true,
+  "cart_paid_return_work": true,
+  "cart_paid_return_energy": true,
+  "cart_retry": true,
+  "cart_full_reset330": true,
+  "cart_final_Tower11": true,
+  "cart_original_in_game_waits_and_timeouts_retained": true
+}

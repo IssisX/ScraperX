@@ -1,0 +1,11 @@
+{
+  "run": 38067752890,
+  "job": 114258762803,
+  "source": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "native": "54/54 success on actualx86",
+  "failed_step": "Prove manual slingshot, character, settings and touch input",
+  "scenario": "touch_suspended_ladder",
+  "error": "launch shelf not reached (10.0,112.722,-179.8471)",
+  "android": "Skipped; no matchingAPK",
+  "log_sha256": "df5792af8f13f568af71a3a51fdc3a4e548b854148d573ecb2c65dbad735f738"
+}

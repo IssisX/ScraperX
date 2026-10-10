@@ -1,0 +1,11 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1780 driver=Dummy
+SCRAPERX_UITEST_POSE running tick=78 position=(6.0, 0.893589, -26.52648) elapsed_ms=7650
+SCRAPERX_UITEST_SPRINT recognized tick=177 sprint=true speed_mps=0.682 grounded=true support=1 move=(0.0, 1.0) latch=true position=(7.918085, 0.893589, -30.26748)
+SCRAPERX_UITEST_SPRINT full tick=273 sprint=true speed_mps=7.947 grounded=true support=1 move=(0.0, 1.0) latch=true position=(10.80369, 0.893589, -34.48535)
+SCRAPERX_UITEST_SPRINT released tick=274 sprint=false speed_mps=7.854 grounded=true support=1 move=(0.0, 0.0) latch=false position=(10.85297, 0.893589, -34.55738)
+SCRAPERX_UITEST_SPRINT settled tick=354 sprint=false speed_mps=0.442 grounded=true support=1 move=(0.0, 0.0) latch=false position=(12.91179, 0.893589, -37.56675)
+SCRAPERX_UITEST PASS touch_move_look forward_m=3.79 turned_rad=0.600 settle_mps=0.50 steps=21 sprint_input_ticks=2 sprint_accel_ticks=98 sprint_release_ticks=1 sprint_stop_ticks=81

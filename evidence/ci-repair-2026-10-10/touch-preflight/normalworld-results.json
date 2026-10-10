@@ -1,0 +1,65 @@
+{
+  "source_manifest": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/source-manifest.json",
+  "results": [
+    {
+      "scenario": "touch_ballast_mantle_feedback",
+      "timeout_seconds": 240,
+      "command": "proot-distro login ubuntu --shared-tmp -- /bin/bash -c 'env GODOT_SILENCE_ROOT_WARNING=1 timeout 240s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path /data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/godot -- --uitest=touch_ballast_mantle_feedback'",
+      "exit_code": 0,
+      "wall_seconds": 68.594,
+      "passed": true,
+      "terminal": [
+        "SCRAPERX_UITEST PASS touch_ballast_mantle_feedback staging=supported_teeter_entry shipping_touch=1 real_hands=2 gravity=1 command_bound_j=6539.394 positive_work_j=5223.512 sampled_peak_n=1721.547 receipt_peak_n=1723.239 foot_transfer_tick=922 foot_plants=1 stable_roof_seconds=3 roof_support_velocity=(-0.010904, -0.030354, 0.000012) roof_relative_velocity=(0.010904, 0.030354, -0.000012) return_beam=1 return_tower=1 deaths=0"
+      ],
+      "errors": [],
+      "required_recovery_present": true,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/touch_ballast_mantle_feedback.log",
+      "log_sha256": "635aca76dcad62f47eb45b0e489d3b85dfad2105df245921bf65948513223847"
+    },
+    {
+      "scenario": "touch_slab_haul_cart",
+      "timeout_seconds": 900,
+      "command": "proot-distro login ubuntu --shared-tmp -- /bin/bash -c 'env GODOT_SILENCE_ROOT_WARNING=1 timeout 900s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path /data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/godot -- --uitest=touch_slab_haul_cart'",
+      "exit_code": 31,
+      "wall_seconds": 372.621,
+      "passed": false,
+      "terminal": [
+        "SCRAPERX_UITEST FAIL touch_slab_haul_cart reason=slab haul missed exit lacks341 apron arrived=true at=(-26.89983, 350.0447, -141.7217) support=1954 grounded=true deaths=0"
+      ],
+      "errors": [],
+      "required_recovery_present": false,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/touch_slab_haul_cart.log",
+      "log_sha256": "6c52e997d3ef3f6065fc4f53176d4d0bece5e4884bc82193749a8f6fe047b8f5"
+    },
+    {
+      "scenario": "touch_taper_inspection_route",
+      "timeout_seconds": 360,
+      "command": "proot-distro login ubuntu --shared-tmp -- /bin/bash -c 'env GODOT_SILENCE_ROOT_WARNING=1 timeout 360s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path /data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/godot -- --uitest=touch_taper_inspection_route'",
+      "exit_code": 0,
+      "wall_seconds": 159.544,
+      "passed": true,
+      "terminal": [
+        "SCRAPERX_UITEST PASS touch_taper_inspection_route staging=supported_cart_exit352 shipping_touch=1 lower_girder=1 ordinary2m_gap_jump=1 middle_miss_apron360_5=1 standing_header_blocked=1 crouched_service_bypass=1 upper_girder=1 existing_floor374_25=1 onward_m=3.518 support=51 deaths=0 gravity=1 upper_miss=native_only jump_work_j=1285.623"
+      ],
+      "errors": [],
+      "required_recovery_present": true,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/touch_taper_inspection_route.log",
+      "log_sha256": "81c50242dd73e81f69cffad8c92e6143132e4b8568accced8e748ef8a0e5db58"
+    },
+    {
+      "scenario": "touch_west_brace_bay",
+      "timeout_seconds": 360,
+      "command": "proot-distro login ubuntu --shared-tmp -- /bin/bash -c 'env GODOT_SILENCE_ROOT_WARNING=1 timeout 360s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path /data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/godot -- --uitest=touch_west_brace_bay'",
+      "exit_code": 0,
+      "wall_seconds": 147.702,
+      "passed": true,
+      "terminal": [
+        "SCRAPERX_UITEST PASS touch_west_brace_bay lower374_25=1 first_diagonal_shelf381_9=1 jump_apex_action_catch=1 transverse_under_cap=1 reverse_shelf389_4=1 final_hand_transfer396_25=1 foot_transfer=1 upper_hold_ticks=270 gravity=1 onward_walk_m=3.23 touch=1 support=51 deaths=0"
+      ],
+      "errors": [],
+      "required_recovery_present": true,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/downstream-preflight-pida0s4a/touch_west_brace_bay.log",
+      "log_sha256": "bb3d93d4d2c6e456f6ae8f88e1988864373cbdc3c8ec6c25cdc0a681873dfe11"
+    }
+  ]
+}

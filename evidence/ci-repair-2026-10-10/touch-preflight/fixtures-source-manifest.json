@@ -1,0 +1,9 @@
+{
+  "head": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "project": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+  "godot_tree": "7d4fef726efd4028619a09b5a249967f17d25253",
+  "bridge_sha256": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+  "runtime_sha256": "8e53c8740db03581bdd3fd7835f15046a25126baf9d78458fc6a7d4d1c312f45",
+  "driver_sha256": "d1c2c36a9ff56817de2ced0dd05e21d696e8bfa29beb6e5ede7f29cf11bd50a4",
+  "host_only_override": "gdextension linux x86_64 selectors changed to arm64; runtime library copied unchanged; imported cache copied from cart-godot"
+}

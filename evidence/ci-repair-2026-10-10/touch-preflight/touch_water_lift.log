@@ -1,0 +1,7 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_UITEST_POSE water_lift_fill_control tick=6 position=(-14.45, 0.9, -106.2) elapsed_ms=7007
+SCRAPERX_UITEST PASS touch_water_lift valve_open=1 bucket_m3=0.000 cage_m=0.000

@@ -1,0 +1,8 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=regression_fixtures work_order=WO-006
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=577 driver=Dummy
+SCRAPERX_UITEST_POSE door_open tick=294 position=(10.42187, 0.88, -84.65) elapsed_ms=9108
+SCRAPERX_UITEST FAIL touch_carry reason=hook block settled approach failed tick=655 at=(10.6, 0.88, -84.65) velocity=(0.0, 0.0, 0.0) grounded=true support=1 traversal=0 held=0 target=55 kind=0 move=(0.0, 0.0) deaths=0

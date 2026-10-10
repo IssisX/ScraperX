@@ -1,0 +1,35 @@
+{
+  "result": "FAIL",
+  "classification": "Introduced unreachable approach waypoint in the proposed carry driver repair; original wrong-nearest-body defect remains unclosed.",
+  "attempts": 1,
+  "exit_code": 31,
+  "tick": 655,
+  "position": [
+    10.6,
+    0.88,
+    -84.65
+  ],
+  "velocity": [
+    0,
+    0,
+    0
+  ],
+  "grounded": true,
+  "support": 1,
+  "traversal": 0,
+  "held": 0,
+  "target": 55,
+  "kind": 0,
+  "touch_move": [
+    0,
+    0
+  ],
+  "deaths": 0,
+  "target56_observed": false,
+  "held56_observed": false,
+  "action_tapped_at_rack": false,
+  "hand_poses8_8_and_carryout_apron_checked": false,
+  "next_discriminating_step": "Use one attainable settled approach near x=10.58,z=-84.65 then face east and observe actual native target before Action; preserve target56 and original carryout acceptance. No second attempt performed.",
+  "geometry_evidence": "Native rack pedestal begins x=10.95 (simulation.cpp build_hook5_rack), capsule radius0.35: its west clearance is x=10.60. Live stationary x=10.60 agrees; contact subshape was not captured.",
+  "log_sha256": "0270bed08c392e1496ada9005734bc0d688f4d02238b4b0a7071f10a9b2cc930"
+}

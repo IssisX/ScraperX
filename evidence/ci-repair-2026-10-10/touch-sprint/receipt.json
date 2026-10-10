@@ -1,0 +1,88 @@
+{
+  "head": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "source_sha256": "04556dd2efc4c19cba2c11b2f1730adb95ecf885f7c6b64b13109c8305a7a184",
+  "project": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project",
+  "bridge_sha256": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+  "final_source_sha256": "c3dcc22ef627d47a8b93bc317933c216a9d1e6e5f731dfba016fc3e8812ca852",
+  "sprint_only_diff_sha256": "6d1a32278b33f970a3c74d8e62aa7f5add9401c48c1cc6aa54592ea3d877138c",
+  "baseline_exit_code": 31,
+  "final_exit_code": 0,
+  "baseline": {
+    "start_tick": 175,
+    "start_speed_mps": 0.4969,
+    "recognition_tick": 186,
+    "old_accel_deadline_tick": 249,
+    "old_accel_deadline_speed_mps": 6.658152,
+    "old_accel_deadline_sprinting": true,
+    "full_8mps_tick": 280,
+    "release_tick": 312,
+    "release_recognition_tick": 322,
+    "old_stop_deadline_tick": 369,
+    "old_stop_deadline_speed_mps": 2.718946,
+    "old_stop_deadline_sprinting": false,
+    "zero_speed_tick": 400,
+    "grounded_all_samples": true,
+    "support_all_samples": 1,
+    "touch_sprint_move": [
+      0,
+      1
+    ],
+    "world_sprint_command_from_production_mapping": [
+      0.564642,
+      -0.825336
+    ],
+    "touch_release_move": [
+      0,
+      0
+    ]
+  },
+  "final": {
+    "start_tick": 175,
+    "recognition_tick": 177,
+    "full_tick": 273,
+    "full_speed_mps": 7.947,
+    "released_tick": 274,
+    "settled_tick": 354,
+    "settled_speed_mps": 0.442,
+    "recognition_ticks": 2,
+    "acceleration_ticks": 98,
+    "release_ticks": 1,
+    "braking_ticks": 81,
+    "recognition_seconds": 0.022222222222222223,
+    "acceleration_seconds": 1.0888888888888888,
+    "release_seconds": 0.011111111111111112,
+    "braking_seconds": 0.9,
+    "grounded_all_samples": true,
+    "support_all_samples": 1,
+    "forward_m": 3.79,
+    "look_rad": 0.6,
+    "walking_settle_mps": 0.5,
+    "footsteps": 21
+  },
+  "bounds_seconds": {
+    "input_recognition": 0.1,
+    "acceleration_after_recognition": 1.5,
+    "release_recognition": 0.1,
+    "braking_after_release_recognition": 1.2
+  },
+  "runtime_version": "4.7.stable.official.5b4e0cb0f",
+  "runtime_command": "proot-distro login ubuntu --shared-tmp -- env GODOT_SILENCE_ROOT_WARNING=1 /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --fixed-fps 60 --audio-driver Dummy --path /data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/super-touch-shelf/project -- --uitest=touch_move_look",
+  "baseline_instrumentation": "Getter diagnostics and short continuation of identical touch input after recording original deadlines; original failure retained. World command reported through unchanged production yaw mapping, not a native command getter.",
+  "private_final_equals_checkout": true,
+  "only_touch_move_look_changed_since_shelf_delta": true,
+  "shelf_delta_preserved": true,
+  "script_runtime_errors": [],
+  "git_diff_check_exit_code": 0,
+  "native_source_diff_since_supplied_bridge_baseline": "",
+  "checks": "One private instrumented baseline, one exact final touch_move_look execution; no broader fixtures/native/shelf campaign.",
+  "classification": "Pre-existing stale automation deadlines exposed by finite native traction/work controller; no input or blocked-path fault observed.",
+  "limitations": [
+    "ARM headless pinned bridge execution only; full exact-source x86 Actions, Android APK and phone observations remain root-owned.",
+    "No native command getter exists in this bridge; native flag, support, velocity, position and mapped production touch command discriminate successful input delivery."
+  ],
+  "logs_sha256": {
+    "baseline.log": "0e3a63f73c22a16b26b09d03b5ca44032a20a0adddaafc0d17ed0fae5f91e270",
+    "baseline-summary.log": "f373dfff3c2164c7598a42a95bb268b8392380ed5e9636c0d0bc84b1ccafa273",
+    "final.log": "bb83b4bdfd3da7d24f98f9b15d8f2d27f63a69e31123daf9149601fcfd4f4320"
+  }
+}

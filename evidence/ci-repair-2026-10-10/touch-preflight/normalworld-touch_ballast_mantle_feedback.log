@@ -1,0 +1,6 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=924 driver=Dummy
+SCRAPERX_UITEST PASS touch_ballast_mantle_feedback staging=supported_teeter_entry shipping_touch=1 real_hands=2 gravity=1 command_bound_j=6539.394 positive_work_j=5223.512 sampled_peak_n=1721.547 receipt_peak_n=1723.239 foot_transfer_tick=922 foot_plants=1 stable_roof_seconds=3 roof_support_velocity=(-0.010904, -0.030354, 0.000012) roof_relative_velocity=(0.010904, 0.030354, -0.000012) return_beam=1 return_tower=1 deaths=0

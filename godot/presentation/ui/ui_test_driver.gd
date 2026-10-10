@@ -2701,6 +2701,11 @@ func _touch_pitman_lift(stage_at_286: bool) -> bool:
 # failure; the inspection stop below proves voluntary escape and reboarding.
 func _touch_slab_haul_cart() -> bool:
 	var device := InputRouter.Device.TOUCH
+	var miss_state := func() -> String:
+		return "tick=%d at=%s velocity=%s support=%d grounded=%s traversal=%d target=%d deaths=%d" % [
+			int(_native().get_tick_index()), _position(), _velocity(), int(_native().get_support_entity_id()),
+			bool(_native().is_player_grounded()), int(_native().get_traversal_state()),
+			int(_native().get_carry_target_entity_id()), int(_native().get_death_count())]
 	if not _native().debug_restart_at(Vector3(-24.7, 330.9, -158.25)):
 		return _fail("slab haul +330m staging rejected")
 	await _seconds(0.5)
@@ -2800,19 +2805,21 @@ func _touch_slab_haul_cart() -> bool:
 		left_deck, _position(), _native().get_support_entity_id(), _native().is_player_grounded()])
 	if not left_deck:
 		return _fail("slab haul miss did not leave cart at=%s support=%d" % [_position(), _native().get_support_entity_id()])
-	# Aim below the centre of the real gap, not back onto the cart above.
-	# The same supported-arrival gate then requires the recovery floor.
-	var recovered := await _walk_to(device, Vector2(-26.9, -141.6), 0.10, 10.0, true)
+	# The old x=-26.9 aim landed on the real upper track1954 at y=350.04.
+	# Match the native walking-miss route's x=-28 corridor to clear that
+	# track and reach the actual341 apron; upper-frame footing cannot pass.
+	var recovered := await _walk_to(device, Vector2(-28.0, -141.6), 0.10, 10.0, true)
 	if not recovered or int(_native().get_support_entity_id()) != 1956:
-		return _fail("slab haul missed exit lacks341 apron arrived=%s at=%s support=%d grounded=%s deaths=%d" % [
-			recovered, _position(), _native().get_support_entity_id(), _native().is_player_grounded(), _native().get_death_count()])
+		return _fail("slab haul missed exit lacks341 apron arrived=%s %s" % [recovered, miss_state.call()])
+	print("SCRAPERX_CART_MISS apron %s landing=%s" % [miss_state.call(), _native().get_landing_state()])
 	# The real heavy landing temporarily compacts the capsule. Require its
 	# native recovery and clearance to restore standing before the next action.
 	var recovered_stance := await _wait_until(func() -> bool:
 		return _standing_above(341.7) and int(_native().get_support_entity_id()) == 1956, 3.0)
 	if not recovered_stance:
-		return _fail("slab haul341 landing did not recover standing at=%s landing=%s" % [
-			_position(), _native().get_landing_state()])
+		return _fail("slab haul341 landing did not recover standing %s landing=%s" % [
+			miss_state.call(), _native().get_landing_state()])
+	print("SCRAPERX_CART_MISS recovered %s" % miss_state.call())
 	for point in [Vector2(-28.0, -140.15), Vector2(-26.5, -140.15)]:
 		if not await _walk_to(device, point, 0.10, 8.0, true):
 			return _fail("slab haul recovery post approach failed at=%s" % _position())
@@ -2830,6 +2837,9 @@ func _touch_slab_haul_cart() -> bool:
 			or float(after_recall["energy_j"]) >= float(before_recall["energy_j"]) \
 			or int(_native().get_support_entity_id()) != 1956:
 		return _fail("slab haul paid341 recall lacks real returned deck/source work/ashore footing")
+	print("SCRAPERX_CART_MISS paid_recall %s energy_before_j=%s energy_after_j=%s work_before_j=%s work_after_j=%s" % [
+		miss_state.call(), before_recall["energy_j"], after_recall["energy_j"],
+		before_recall["positive_work_j"], after_recall["positive_work_j"]])
 	if not await _cart_done():
 		return false
 	if not await _walk_to(device, Vector2(-35.45, -140.25), 0.10, 12.0, true):
@@ -2887,6 +2897,10 @@ func _touch_slab_haul_cart() -> bool:
 	if not await _walk_to(device, Vector2(-25.35, -141.6), 0.10, 8.0, true) \
 			or not _cart_tower_arrived() or not _campaign_world_intact():
 		return _fail("slab haul final352 proof lacks stable death-free Tower11")
+	print("SCRAPERX_CART_MISS complete %s energy_before_return_j=%s energy_j=%s work_before_return_j=%s work_j=%s capacity_j=%s overdraft_j=%s cutoff=%s" % [
+		miss_state.call(), before_return["energy_j"], after["energy_j"],
+		before_return["positive_work_j"], after["positive_work_j"], after["capacity_j"],
+		after["energy_overdraft_j"], after["energy_cutoff"]])
 	_detail = "staging=supported_330m shipping_touch=1 slab_haul_cart=1 inspection341=1 reboard=1 north_lane_jump=1 paid_return=1 finite_energy=1 supported_height_m=352 support=11 deaths=0 failure_recovery=upper_miss341_paid_recall_reboard_retry"
 	return true
 
@@ -3523,7 +3537,10 @@ func _touch_suspended_ladder(stage_at_110: bool = true) -> bool:
 		if not await _walk_to(device, Vector2(10, -174.5), 0.12, 5.0):
 			return _fail("north frame to suspended ladder ring transfer %s" % _position())
 	await _seconds(0.5)
-	if not await _walk_to(device, Vector2(10, -179.60), 0.12, 5.0):
+	# Brake through ordinary touch input before taking the fixed rungs. A
+	# distance-only arrival coasted to z=-179.86; that acquired stance stalled
+	# below the shelf at y=112.722 even with continued upward input.
+	if not await _walk_to(device, Vector2(10, -179.60), 0.12, 5.0, true):
 		return _fail("fixed ladder approach %s" % _position())
 	await _face(Vector2(0, -1))
 	await _pose("swing_approach")
@@ -3532,7 +3549,8 @@ func _touch_suspended_ladder(stage_at_110: bool = true) -> bool:
 	_act(device)
 	await _seconds(0.2)
 	_move(device, 1.0)
-	var reached := await _wait_until(func() -> bool: return _standing_above(114.7), 8.0)
+	var reached := await _wait_until(func() -> bool:
+		return _standing_above(114.7) and int(_native().get_support_entity_id()) == 1960, 8.0)
 	_move(device, 0.0)
 	if not reached:
 		return _fail("launch shelf not reached %s" % _position())
@@ -3541,7 +3559,7 @@ func _touch_suspended_ladder(stage_at_110: bool = true) -> bool:
 	# rung plane before its x coordinate entered the unchanged hand query.
 	if not await _walk_to(device, Vector2(9.15, -180.10), 0.04, 4.0):
 		return _fail("launch edge not reached")
-	if not _standing_above(114.7):
+	if not _standing_above(114.7) or int(_native().get_support_entity_id()) != 1960:
 		return _fail("launch edge lost supported footing %s" % _position())
 	await _face(Vector2(-1, -0.25))
 	_main._pitch = -0.55
@@ -3774,17 +3792,42 @@ func _touch_move_look() -> bool:
 	# Push beyond the touch ring to sprint; releasing it must clear the latch.
 	var home: Vector2 = _main._touch.stick_home()
 	var overshoot := TouchControls.STICK_THROW * float(_main._touch._u) * 1.35
+	var sprint_state := func() -> String:
+		return "tick=%d sprint=%s speed_mps=%.3f grounded=%s support=%d move=%s latch=%s position=%s" % [
+			int(_native().get_tick_index()), bool(_native().is_player_sprinting()),
+			Vector2(_velocity().x, _velocity().z).length(), bool(_native().is_player_grounded()),
+			int(_native().get_support_entity_id()), _main._touch.move_vector,
+			_main._touch.sprint_latched, _position()]
+	var sprint_start_tick := int(_native().get_tick_index())
 	_touch(0, home, true)
 	_drag(0, home + Vector2(0, -overshoot), Vector2(0, -overshoot))
-	await _seconds(0.8)
-	if not bool(_native().is_player_sprinting()) or Vector2(_velocity().x, _velocity().z).length() < 7.9:
-		return _fail("touch overshoot did not produce native sprint")
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_sprinting()), 0.1):
+		return _fail("touch overshoot sprint input was not recognized promptly %s" % sprint_state.call())
+	var sprint_recognized_tick := int(_native().get_tick_index())
+	print("SCRAPERX_UITEST_SPRINT recognized %s" % sprint_state.call())
+	# On flat ground, finite traction permits at most 0.85*g acceleration;
+	# the 3 kW work cap further slows the ramp above about 4.2 m/s. Reaching
+	# 7.9 m/s takes about 1.2 s from rest, so bound the state wait at 1.5 s.
+	if not await _wait_until(func() -> bool:
+		return bool(_native().is_player_sprinting()) and Vector2(_velocity().x, _velocity().z).length() >= 7.9, 1.5):
+		return _fail("touch overshoot did not produce native sprint %s" % sprint_state.call())
+	var sprint_full_tick := int(_native().get_tick_index())
+	print("SCRAPERX_UITEST_SPRINT full %s" % sprint_state.call())
 	_touch(0, home, false)
-	await _seconds(0.6)
-	if bool(_native().is_player_sprinting()) or Vector2(_velocity().x, _velocity().z).length() > 0.6:
-		return _fail("released sprint left movement latched")
-	_detail = "forward_m=%.2f turned_rad=%.3f settle_mps=%.2f steps=%d" % [along, turned, speed,
-		_main._audio.steps]
+	if not await _wait_until(func() -> bool: return not bool(_native().is_player_sprinting()), 0.1):
+		return _fail("released sprint input was not cleared promptly %s" % sprint_state.call())
+	var sprint_released_tick := int(_native().get_tick_index())
+	print("SCRAPERX_UITEST_SPRINT released %s" % sprint_state.call())
+	# Braking from 8 m/s at 0.85*g needs about 0.96 s; release must clear
+	# the input promptly while finite native traction settles within 1.2 s.
+	if not await _wait_until(func() -> bool:
+		return not bool(_native().is_player_sprinting()) and Vector2(_velocity().x, _velocity().z).length() <= 0.6, 1.2):
+		return _fail("released sprint left movement latched %s" % sprint_state.call())
+	print("SCRAPERX_UITEST_SPRINT settled %s" % sprint_state.call())
+	_detail = "forward_m=%.2f turned_rad=%.3f settle_mps=%.2f steps=%d sprint_input_ticks=%d sprint_accel_ticks=%d sprint_release_ticks=%d sprint_stop_ticks=%d" % [
+		along, turned, speed, _main._audio.steps, sprint_recognized_tick - sprint_start_tick,
+		sprint_full_tick - sprint_start_tick, sprint_released_tick - sprint_full_tick,
+		int(_native().get_tick_index()) - sprint_full_tick]
 	return true
 
 
@@ -3974,6 +4017,12 @@ func _touch_crouch() -> bool:
 # rack, PICK UP takes the hook block with both hands shown on it; and it is
 # carried out through the doorway and set down on the apron.
 func _touch_carry() -> bool:
+	var carry_state := func() -> String:
+		return "tick=%d at=%s velocity=%s grounded=%s support=%d traversal=%d held=%d target=%d kind=%d move=%s deaths=%d" % [
+			int(_native().get_tick_index()), _position(), _velocity(), bool(_native().is_player_grounded()),
+			int(_native().get_support_entity_id()), int(_native().get_traversal_state()),
+			int(_native().get_carrying_entity_id()), int(_native().get_carry_target_entity_id()),
+			int(_native().get_carry_target_kind()), _main._touch.move_vector, int(_native().get_death_count())]
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	_main._yaw = 0.0  # south, at the bar
 	_stick_push(Vector2(0.0, -1.0))
@@ -4006,19 +4055,27 @@ func _touch_carry() -> bool:
 		return _fail("the door never travelled once the bar was set down (%.2f rad)" %
 			float(_native().get_hook5_door_angle_radians()))
 	await _pose("door_open")
-	_main._yaw = PI  # north, toward the rack's corner
-	_stick_push(Vector2(0.0, -1.0))
-	await _wait_until(func() -> bool: return _position().z >= -84.9, 2.0)
-	_touch(0, _main._touch.stick_home(), false)
+	# The north-Z guard was already true at x=10.42: facing east there offered
+	# the nearer dropped bar55. Step east until its centre is behind us. The
+	# pedestal's west face x=10.95 and capsule radius0.35 bound this stance
+	# at x=10.60. Settle clear of the pedestal, past the dropped bar's centre,
+	# then face east and require the actual block offer before touching Action.
+	if not await _walk_to(InputRouter.Device.TOUCH, Vector2(10.57, -84.65), 0.01, 4.0, true):
+		return _fail("hook block settled approach failed %s" % carry_state.call())
 	_main._yaw = -PI * 0.5  # east, at the block
 	await _seconds(0.4)
-	if _main._touch.button_label(&"action") != "PICK UP":
-		return _fail("Action read '%s' at the rack, not PICK UP" % _main._touch.button_label(&"action"))
+	if not bool(_native().is_player_grounded()) or int(_native().get_traversal_state()) != 0 \
+			or int(_native().get_carrying_entity_id()) != 0 or int(_native().get_carry_target_entity_id()) != 56 \
+			or _main._touch.button_label(&"action") != "PICK UP":
+		return _fail("rack did not offer actual freehands target56 PICK UP label=%s %s" % [
+			_main._touch.button_label(&"action"), carry_state.call()])
+	print("SCRAPERX_UITEST_CARRY rack_before_action %s" % carry_state.call())
 	_tap(1, _center(&"action"))
 	var holding_block: bool = await _wait_until(
 		func() -> bool: return int(_native().get_carrying_entity_id()) == 56, 0.3)
 	if not holding_block:
-		return _fail("PICK UP did not put the hook block on the native carry point")
+		return _fail("PICK UP did not put the hook block on the native carry point %s" % carry_state.call())
+	print("SCRAPERX_UITEST_CARRY holding_block %s" % carry_state.call())
 	await _seconds(0.5)
 	if _main._arms.hand_poses() != [8, 8]:
 		return _fail("hands not on the block (poses %s)" % str(_main._arms.hand_poses()))
@@ -4053,6 +4110,8 @@ func _touch_carry() -> bool:
 	await _pose("cage_exterior")
 	_detail = "door_rad=%.2f block=(%.2f,%.2f,%.2f)" % [
 		float(_native().get_hook5_door_angle_radians()), block.x, block.y, block.z]
+	print("SCRAPERX_UITEST_CARRY complete %s hands=%s block=%s" % [
+		carry_state.call(), _main._arms.hand_poses(), block])
 	return block.y < 0.4 and block.z < -88.0
 
 

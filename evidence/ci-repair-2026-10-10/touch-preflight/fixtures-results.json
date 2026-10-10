@@ -1,0 +1,914 @@
+{
+  "head": "9280e2eef2fe208bf775917143b4b897060e9f24",
+  "count": 23,
+  "completed": 23,
+  "passed": 21,
+  "results": [
+    {
+      "scenario": "touch_jump",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 6.763,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_jump.log",
+      "log_sha256": "fdeb3fb1f6d6f30fb77f047fa4e9b2a19674a2bbc75a8c3caf5a0733b5c15244",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_jump vy_peak=5.39"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE jump tick=25 position=(6.0, 0.953489, -25.0) elapsed_ms=5394"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_jump"
+      ]
+    },
+    {
+      "scenario": "touch_move_look",
+      "passed": false,
+      "exit_code": 31,
+      "wall_seconds": 9.171,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_move_look.log",
+      "log_sha256": "14109dae4007c818486ae1e4a99e14be96f2d1f74903d30a8a65e20f9ec73daf",
+      "proof": [],
+      "errors": [
+        "SCRAPERX_UITEST FAIL touch_move_look reason=touch overshoot did not produce native sprint"
+      ],
+      "poses": [
+        "SCRAPERX_UITEST_POSE running tick=78 position=(6.0, 0.893589, -26.52648) elapsed_ms=5334"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_move_look"
+      ]
+    },
+    {
+      "scenario": "touch_gyro_aim",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 7.371,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_gyro_aim.log",
+      "log_sha256": "2173e1f056eb94e85af1c16fcd79e1138405023e47d48419be4b2b133683d352",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_gyro_aim turned_rad=0.500 raised_rad=0.200 walk_alignment=1.0000"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE gyro_turned tick=117 position=(6.0, 0.893589, -25.0) elapsed_ms=5862"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_gyro_aim"
+      ]
+    },
+    {
+      "scenario": "touch_climb",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 7.07,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_climb.log",
+      "log_sha256": "947404a9ac7e4b1690fd4c0d4d2b1aa26ead635543b0db8da12ce90d24e79663",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_climb state=2 rise_m=1.58"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE climb_prompt tick=24 position=(7.9, 0.893589, -6.0) elapsed_ms=4631",
+        "SCRAPERX_UITEST_POSE ground_mantle tick=39 position=(8.461857, 0.934303, -6.0) elapsed_ms=4957"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_climb"
+      ]
+    },
+    {
+      "scenario": "touch_vault",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 9.192,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_vault.log",
+      "log_sha256": "839be226319c181fbf9a073556257ef5dbddae9c4b003d47a6dc7d702d898016",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_vault x_after=6.08"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE vault tick=93 position=(3.628453, 0.933562, -6.0) elapsed_ms=7243"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_vault"
+      ]
+    },
+    {
+      "scenario": "touch_double_tap_vault",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 8.906,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_double_tap_vault.log",
+      "log_sha256": "a8a1fa7068d3f5cfb884e5f4007ae890fe84d650c221540650ab26acef198bfd",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_double_tap_vault x_after=6.08"
+      ],
+      "errors": [],
+      "poses": [],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_double_tap_vault"
+      ]
+    },
+    {
+      "scenario": "touch_crouch",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 13.472,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_crouch.log",
+      "log_sha256": "fb0a3941059c7bb733fa87763206a952add3e23a71312f2c35d82e8fd6d4c681",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_crouch blocked_z=-12.38 passed_z=-14.25 eye_crouched=0.95 eye_standing=1.52"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE beam_blocks tick=205 position=(-1.94175, 0.88, -12.3765) elapsed_ms=9156",
+        "SCRAPERX_UITEST_POSE crouched tick=313 position=(-2.69632, 0.58, -14.24737) elapsed_ms=11398"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_crouch"
+      ]
+    },
+    {
+      "scenario": "touch_hang_drop",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 8.75,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_hang_drop.log",
+      "log_sha256": "f694815fe6dfc82b537a26f6a1c89f4659e5cef2bd08deb15bf474aa8acc1901",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_hang_drop vy_after_release=-0.08 grip_error_m=0.0000 head_grip_error_m=0.0000"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE hanging tick=84 position=(8.101305, 2.147998, 4.0) elapsed_ms=6903"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_hang_drop"
+      ]
+    },
+    {
+      "scenario": "touch_hang_climb",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 16.669,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_hang_climb.log",
+      "log_sha256": "b13a08383941b28e51ab65b5b6d03d27d299115b8872d1eadf6d6e86815b7536",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_hang_climb top_y=4.52 grip_error_m=0.0000 head_grip_error_m=0.0000"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE hanging tick=84 position=(8.101305, 2.147998, 4.0) elapsed_ms=12420",
+        "SCRAPERX_UITEST_POSE mantle_mid tick=94 position=(8.101305, 3.355073, 4.0) elapsed_ms=12806"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_hang_climb"
+      ]
+    },
+    {
+      "scenario": "touch_chute",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 36.511,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_chute.log",
+      "log_sha256": "fde62aa96db39dda8f41f1066e56974302f2df450a792bb6ee75a5ec324ab235",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_chute offered_at_mps=6.54 impact_mps=8.89"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE canopy tick=120 position=(0.0, 54.58873, -8.0) elapsed_ms=14376"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_chute"
+      ]
+    },
+    {
+      "scenario": "touch_lethal_feedback",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 17.426,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_lethal_feedback.log",
+      "log_sha256": "b8c99b2715df99bec0ba3a128cf258b301e1a20e36328a30675224efa93c8328",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_lethal_feedback toast='FELL AT 34.7 M/S  /  RESTORED TO CHECKPOINT +0.9 M' lethal_mps=20.0"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE fall_danger tick=147 position=(0.0, 48.82552, -8.0) elapsed_ms=10586",
+        "SCRAPERX_UITEST_POSE lethal_toast tick=351 position=(0.0, 0.9, 0.0) elapsed_ms=14685"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_lethal_feedback"
+      ]
+    },
+    {
+      "scenario": "touch_sump",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 8.757,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_sump.log",
+      "log_sha256": "ab198097c53296c79d9d8aa0a9ca4c90f9b42fa3e9b9f061fe3d4639b8bff37e",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_sump isolated false->true"
+      ],
+      "errors": [],
+      "poses": [],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_sump"
+      ]
+    },
+    {
+      "scenario": "touch_pendant",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 13.222,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_pendant.log",
+      "log_sha256": "1d90aacb3d86e1bd015be873fbc9b7fad142ebd1453fc001d979b060c7baf490",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_pendant boom_delta_rad=-0.081 hook_delta_m=0.721"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE pendant tick=45 position=(3.0, 2.28, -100.0) elapsed_ms=6939"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_pendant"
+      ]
+    },
+    {
+      "scenario": "touch_carry",
+      "passed": false,
+      "exit_code": 31,
+      "wall_seconds": 15.079,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_carry.log",
+      "log_sha256": "5a046678b7ac13781552430f43ac37f17dff6f7ae27f07b89b8c4f9c8a20a12f",
+      "proof": [],
+      "errors": [
+        "SCRAPERX_UITEST FAIL touch_carry reason=PICK UP did not put the hook block on the native carry point"
+      ],
+      "poses": [
+        "SCRAPERX_UITEST_POSE door_open tick=294 position=(10.42187, 0.88, -84.65) elapsed_ms=11957"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_carry"
+      ]
+    },
+    {
+      "scenario": "touch_water_screw",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 9.178,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_water_screw.log",
+      "log_sha256": "53f1e276e2e463155169fb2b0833892cf7f9788c1d2d7c7c96b93a2407c10dca",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_water_screw rpm=2.2 torque_nm=1500 tank_m3=0.000"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE water_screw_running tick=9 position=(-14.0, 0.9, -97.3) elapsed_ms=7586"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_water_screw"
+      ]
+    },
+    {
+      "scenario": "touch_water_lift",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 9.92,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_water_lift.log",
+      "log_sha256": "6dbbc7c0cd63ba4a9ba9997195c7bd43ef3eddab671b2a4c734b71f5ce4c93bf",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_water_lift valve_open=1 bucket_m3=0.000 cage_m=0.000"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE water_lift_fill_control tick=6 position=(-14.45, 0.9, -106.2) elapsed_ms=7007"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_water_lift"
+      ]
+    },
+    {
+      "scenario": "touch_pause",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 15.758,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_pause.log",
+      "log_sha256": "734bd76614f95f815ae0ee0e11ad74090771e1e357e77903939e05ee022b6fe3",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_pause frozen_tick=25 advanced_to=39"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE pause_menu tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11156",
+        "SCRAPERX_UITEST_POSE pause_controls tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11229",
+        "SCRAPERX_UITEST_POSE pause_settings tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11288",
+        "SCRAPERX_UITEST_POSE pause_graphics tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11392",
+        "SCRAPERX_UITEST_POSE pause_display tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11461",
+        "SCRAPERX_UITEST_POSE pause_audio tick=25 position=(6.0, 0.893589, -25.0) elapsed_ms=11500"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_pause"
+      ]
+    },
+    {
+      "scenario": "pad_core",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 16.244,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/pad_core.log",
+      "log_sha256": "67935af98da47cefb8558d8c926b900491758371e14bbba9446f12d2b99dfbf9",
+      "proof": [
+        "SCRAPERX_UITEST PASS pad_core forward_m=3.71 turned_rad=1.848"
+      ],
+      "errors": [],
+      "poses": [],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=pad_core"
+      ]
+    },
+    {
+      "scenario": "pad_pendant",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 11.973,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/pad_pendant.log",
+      "log_sha256": "6451ab13ca4a88547dfebb390797d7d0f50237d14afb127fa1f5ce4d63de81fd",
+      "proof": [
+        "SCRAPERX_UITEST PASS pad_pendant boom_delta_rad=-0.069 hook_delta_m=0.921"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE pad_pendant tick=55 position=(197.5, 0.893589, -2.0) elapsed_ms=7318"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=pad_pendant"
+      ]
+    },
+    {
+      "scenario": "keyboard_core",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 13.179,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/keyboard_core.log",
+      "log_sha256": "6714e9c15bf9e7713265d879dbbc5f40555a32b928a9da9d0fb42c6f6ede249d",
+      "proof": [
+        "SCRAPERX_UITEST PASS keyboard_core forward_m=3.71 rejected=0->1"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE keyboard_pause tick=300 position=(6.0, 0.888587, -31.76319) elapsed_ms=11712"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=keyboard_core"
+      ]
+    },
+    {
+      "scenario": "touch_rig",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 37.19,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/touch_rig.log",
+      "log_sha256": "8c333c43f55176c65d2ed0830692846aaf76a04044325042d317baa26ae6f380",
+      "proof": [
+        "SCRAPERX_UITEST PASS touch_rig top_y=177.13 worst_wrist_step_m=0.074"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE rig_shackle tick=316 position=(-11.32067, 155.1328, -131.3117) elapsed_ms=12822",
+        "SCRAPERX_UITEST_POSE rig_handle tick=462 position=(-11.01696, 155.1328, -130.2326) elapsed_ms=15745",
+        "SCRAPERX_UITEST_POSE rig_top tick=1417 position=(-11.01689, 177.132, -131.8082) elapsed_ms=35920"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=touch_rig"
+      ]
+    },
+    {
+      "scenario": "pad_rig",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 31.58,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/pad_rig.log",
+      "log_sha256": "f6c0aad1564167b245ef6512a511a3f502925bc8d86292119914ac0faa29ea20",
+      "proof": [
+        "SCRAPERX_UITEST PASS pad_rig top_y=177.13 worst_wrist_step_m=0.074"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE rig_shackle tick=321 position=(-11.33597, 155.1318, -131.3592) elapsed_ms=11484",
+        "SCRAPERX_UITEST_POSE rig_handle tick=468 position=(-11.03021, 155.1318, -130.2802) elapsed_ms=13936",
+        "SCRAPERX_UITEST_POSE rig_top tick=1423 position=(-11.03015, 177.131, -131.8011) elapsed_ms=30444"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=pad_rig"
+      ]
+    },
+    {
+      "scenario": "keyboard_rig",
+      "passed": true,
+      "exit_code": 0,
+      "wall_seconds": 41.431,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/keyboard_rig.log",
+      "log_sha256": "620857e57b69bbe0a7129263e54d37561aa9550d58fc976d74b883fde15de1b4",
+      "proof": [
+        "SCRAPERX_UITEST PASS keyboard_rig top_y=177.13 worst_wrist_step_m=0.075"
+      ],
+      "errors": [],
+      "poses": [
+        "SCRAPERX_UITEST_POSE rig_shackle tick=688 position=(-11.43283, 155.1293, -131.5849) elapsed_ms=18340",
+        "SCRAPERX_UITEST_POSE rig_handle tick=850 position=(-11.01572, 155.1299, -130.4297) elapsed_ms=21663",
+        "SCRAPERX_UITEST_POSE rig_top tick=1804 position=(-11.01565, 177.1298, -132.2617) elapsed_ms=40219"
+      ],
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "env",
+        "GODOT_SILENCE_ROOT_WARNING=1",
+        "XDG_DATA_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/userdata",
+        "XDG_CONFIG_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/config",
+        "XDG_CACHE_HOME=/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/cache",
+        "timeout",
+        "180s",
+        "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+        "--headless",
+        "--fixed-fps",
+        "60",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/fixture-input-preflight-jr27c_47/godot",
+        "--",
+        "--uitest=keyboard_rig"
+      ]
+    }
+  ]
+}

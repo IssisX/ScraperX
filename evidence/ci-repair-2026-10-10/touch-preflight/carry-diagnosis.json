@@ -1,0 +1,13 @@
+{
+  "classification": "Observed frozen9280 wrong-target approach; no production regression attribution established",
+  "result": "Action selected and held entity55 (bar), while assertion expected56 (block). Input queue was consumed, grounding remained and carry did not release during observation.",
+  "before_action": "CARRY_PROBE phase=rack_before_action tick=331 p=(10.42165, 0.88, -84.65) v=(-0.000408, -0.0, 0.0) grounded=true support=1 contact=(10.42232, 0.0, -84.64999) traversal=0 target=55 kind=0 held=0 block=(11.35044, 0.849972, -84.75015) bar=(10.51196, 0.722646, -85.08219) touch_move=(0.0, 0.0) derived_world_move=(0.0, 0.0) yaw=-1.5707963267949 queued_verbs=[]",
+  "after_tap_immediate": "CARRY_PROBE phase=rack_after_tap_immediate tick=331 p=(10.42165, 0.88, -84.65) v=(-0.000408, -0.0, 0.0) grounded=true support=1 contact=(10.42232, 0.0, -84.64999) traversal=0 target=55 kind=0 held=0 block=(11.35044, 0.849972, -84.75015) bar=(10.51196, 0.722646, -85.08219) touch_move=(0.0, 0.0) derived_world_move=(0.0, 0.0) yaw=-1.5707963267949 queued_verbs=[&\"action\"]",
+  "first_observed_after_action": "CARRY_PROBE phase=rack_frame_0 tick=333 p=(10.34752, 0.833218, -84.68608) v=(-0.006955, 0.0, 0.001901) grounded=true support=1 contact=(10.36507, 0.0, -84.69684) traversal=0 target=0 kind=0 held=55 block=(11.35042, 0.849985, -84.75015) bar=(10.67762, 0.913636, -85.00142) touch_move=(0.0, 0.0) derived_world_move=(0.0, 0.0) yaw=-1.5707963267949 queued_verbs=[]",
+  "wait_end": "CARRY_PROBE phase=rack_pickup_wait_end tick=358 p=(10.28249, 0.878731, -84.68511) v=(-0.019448, 0.0, -0.015849) grounded=true support=1 contact=(10.28387, 0.0, -84.68385) traversal=0 target=0 kind=0 held=55 block=(11.35042, 0.849985, -84.75015) bar=(10.83566, 1.165559, -85.05555) touch_move=(0.0, 0.0) derived_world_move=(0.0, 0.0) yaw=-1.5707963267949 queued_verbs=[]",
+  "all_observed_after_action_held55": true,
+  "next_necessary_correction": "Use an ordinary rack approach toward the east-side block until current native carry target is56, grounded and hands free, then use the same Action. Preserve finite approach/pickup budgets and held56 assertion. Generic PICK UP and already-true north-Z guard do not identify56.",
+  "native_owner": "src/sim/simulation.cpp:5154 carry_candidate selects nearest resting carryable in front within reach",
+  "frozen_driver_guard": "godot/presentation/ui/ui_test_driver.gd:4015-4021",
+  "limits": "One instrumented private carry replay; no repair/rerun, native edits, x86/Actions/APK/rendered/phone proof."
+}
