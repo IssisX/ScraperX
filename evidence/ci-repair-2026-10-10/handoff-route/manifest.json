@@ -1,0 +1,156 @@
+{
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "base_head": "6b8dc272af29576ba847e9761f91b155f83db11e",
+  "only_assigned_write": "tests/simulation_tests.cpp",
+  "diff_lines": {
+    "added": 91,
+    "removed": 3
+  },
+  "candidate_sha256": "05831bbfbbeb23df297d8b0e6a28e3d71e215ac4787c4afc53e7681d2ece3038",
+  "diff_sha256": "e8dfb0f28c15b86a7105922b72d791eb174b467771f6524056985fa5cc61be88",
+  "unchanged_acceptance": {
+    "require_occurrences_before": 754,
+    "require_occurrences_after": 754,
+    "all_require_calls_and_messages_byte_identical": true,
+    "global_walk_to_byte_identical": true,
+    "original_six_flight_diagnostics_preserved": true,
+    "final_support_45_and_held_56_assertion_preserved": true
+  },
+  "checks": {
+    "ordinary_direct_probe_build": {
+      "exit_code": 0,
+      "platform": "ARM64 GCC15.2 / C++17",
+      "log": "probe-build.log"
+    },
+    "ordinary_direct_probe": {
+      "exit_code": 0,
+      "log": "ordinary-direct-probe.log",
+      "setup": "only original uninterrupted loaded Hook5 approach/ascent; then ordinary PD walk 0.2m west to (-7.7,-120) before the original direct final transfer",
+      "start_tick": 19065,
+      "first_support_loss_previous_tick": 19149,
+      "first_support_loss_after_tick": 19150,
+      "held": 56,
+      "traversal": 0,
+      "event_note": "The raw contact_drop=1 field is cleared support contact (0,0,0) after loss of grounding, not a physical receiver height drop. The body rose slightly. No lower-deck false arrival was reproduced.",
+      "final_tick": 19478,
+      "transfer_ticks": 413,
+      "final_grounded": true,
+      "final_support": 45,
+      "final_contact_y": 24.1872,
+      "final_held": 56
+    },
+    "affected_target_build": {
+      "command": "proot-distro login ubuntu -- cmake --build /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build --target scraperx_sim_tests -j2",
+      "exit_code": 0,
+      "log": "affected-build.log",
+      "frozen_libraries_unchanged": true
+    },
+    "full_athletic_execution": {
+      "command": "proot-distro login ubuntu -- /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/host-build/scraperx_sim_tests",
+      "exit_code": 0,
+      "pass_receipts": 27,
+      "fail_receipts": 0,
+      "log": "affected-athletic.log",
+      "source_sha256": "05831bbfbbeb23df297d8b0e6a28e3d71e215ac4787c4afc53e7681d2ece3038"
+    },
+    "assigned_diff_check": {
+      "command": "git diff --check -- tests/simulation_tests.cpp",
+      "exit_code": 0
+    }
+  },
+  "handoff_observations": {
+    "start_tick": 19006,
+    "first_support_loss": {
+      "previous_tick": 19096,
+      "after_tick": 19097,
+      "previous_support": 45,
+      "previous_contact_y": 24.1872,
+      "previous_pos": [
+        -7.70112,
+        25.1119,
+        -117.357
+      ],
+      "previous_velocity": [
+        -0.408419,
+        0.690303,
+        4.84334
+      ],
+      "after_pos": [
+        -7.70552,
+        25.1181,
+        -117.304
+      ],
+      "after_velocity": [
+        -0.408295,
+        0.57382,
+        4.90939
+      ],
+      "after_grounded": false,
+      "after_support": 0,
+      "after_contact": [
+        0,
+        0,
+        0
+      ],
+      "held": 56,
+      "traversal": 0,
+      "target": [
+        -8,
+        -113.5
+      ],
+      "input": [
+        -0.0756166,
+        0.997137
+      ]
+    },
+    "intermediate_receiver": {
+      "tick": 19348,
+      "phase_ticks": 342,
+      "pos": [
+        -8.02494,
+        25.0797,
+        -113.469
+      ],
+      "grounded": true,
+      "support": 45,
+      "contact_y": 24.1872,
+      "held": 56,
+      "deaths": 0,
+      "traversal": 0
+    },
+    "final": {
+      "tick": 19642,
+      "phase_ticks": 294,
+      "pos": [
+        -9.03294,
+        25.0718,
+        -108.974
+      ],
+      "grounded": true,
+      "support": 45,
+      "contact_y": 24.1872,
+      "held": 56,
+      "deaths": 0,
+      "traversal": 0
+    },
+    "total_transfer_ticks": 636,
+    "total_transfer_seconds": 7.066666666666666,
+    "budget_ticks": 1080,
+    "budget_seconds": 12,
+    "unused_ticks": 444,
+    "budget_proof": "One for loop inspects states at ticks 0..1080 and breaks before advance at tick==1080; each other iteration advances one fixed tick. Intermediate target switch occurs inside an existing iteration. No phase reset or extra settle advance.",
+    "later_carry_forty_y": 41.0757,
+    "checkpoint_restore_y": 41.0671,
+    "checkpoint_restore_carry": 56
+  },
+  "limits": [
+    "ARM64 evidence only; exact x86 lower-deck departure remains unobserved",
+    "The small ordinary variation reproduced brief support loss inside overlap, not CI lower-deck arrival",
+    "No native geometry/physics/energy accounting changed",
+    "Only one affected full executable was run; no other53 native gates, Godot, Android, APK, or phone checks",
+    "Cached host-source CMake52 registrations are not live54 CI ordering proof",
+    "Concurrent root document/evidence edits preserved; no commit/push/publish/recursive workers"
+  ],
+  "next_required_observation": "Root review/integration, then exact-source full x86 Actions including athletic and verified APK delivery. If transfer fails, inspect new first-event previous/after snapshots and height/carry rejection."
+}

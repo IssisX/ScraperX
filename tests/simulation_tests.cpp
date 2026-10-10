@@ -3458,9 +3458,97 @@ int main() {
         walk_toward(hook, side * kStairLandingX, lane, 14.0, true);
         report_loaded_stair("climb", flight, side * kStairLandingX, lane);
     }
-    // Arrive and stop: a full stick dithering about AS-002's own waypoint,
-    // 0.3 m inside the deck's north edge, walked a loaded body off it.
-    const bool carry_reached_handoff = walk_to(hook, -9.0, -109.0, 12.0, 0.15, true);
+    // Cross the flush overlap along its centre, then turn only after the
+    // loaded feet actually settle on the receiver. (-8,-113.5) is 0.7 m past
+    // the stair landing's end, on handoff-only footing. Horizontal arrival on
+    // any lower deck is a failure. Both legs share the original 12 s budget;
+    // steering/facing remain ordinary inputs with walk_to's settled PD law.
+    const auto walk_loaded_handoff = [&]() {
+        constexpr std::uint32_t budget_ticks = 12 * Simulation::kTickRateHz;
+        const auto start_tick = hook.snapshot().tick_index;
+        bool receiver_reached = false;
+        bool reported_support_loss = false;
+        bool reported_contact_drop = false;
+        bool reported_traversal_change = false;
+        const auto report_transfer_state = [](const char *boundary, const Snapshot &state) {
+            std::cerr << "INFO AS-003 loaded transfer: boundary=" << boundary
+                      << " tick=" << state.tick_index << " time=" << state.simulation_time_seconds
+                      << " pos=" << state.player_position.x << ',' << state.player_position.y
+                      << ',' << state.player_position.z
+                      << " velocity=" << state.player_linear_velocity.x << ','
+                      << state.player_linear_velocity.y << ',' << state.player_linear_velocity.z
+                      << " grounded=" << state.player_grounded << " support=" << state.support_entity_id
+                      << " contact=" << state.support_contact_point.x << ','
+                      << state.support_contact_point.y << ',' << state.support_contact_point.z
+                      << " held=" << state.carrying_entity_id
+                      << " traversal=" << static_cast<int>(state.traversal_state) << '\n';
+        };
+        for (std::uint32_t tick = 0; tick <= budget_ticks; ++tick) {
+            const auto state = hook.snapshot();
+            const bool held = state.carrying_entity_id == Simulation::kHook5BlockEntityId;
+            const bool high_contact = state.player_grounded &&
+                std::abs(state.support_contact_point.y - kHandoffSurfaceY) <= 0.10;
+            if (!held || state.player_position.y < kHandoffSurfaceY + 0.70 ||
+                (state.player_grounded && !high_contact)) {
+                report_transfer_state("rejected_height_or_carry", state);
+                break;
+            }
+            double target_x = receiver_reached ? -9.0 : -8.0;
+            double target_z = receiver_reached ? -109.0 : -113.5;
+            const bool settled = std::hypot(target_x - state.player_position.x,
+                                             target_z - state.player_position.z) <= 0.15 &&
+                std::hypot(state.player_linear_velocity.x, state.player_linear_velocity.z) < 0.15;
+            if (settled && high_contact &&
+                state.support_entity_id == Simulation::kIntakeHandoffEntityId) {
+                if (receiver_reached) {
+                    (void)hook.set_move_input(0.0, 0.0);
+                    std::cerr << "INFO AS-003 loaded transfer: arrived=1 elapsed_ticks="
+                              << state.tick_index - start_tick << " budget_ticks=" << budget_ticks << '\n';
+                    return true;
+                }
+                receiver_reached = true;
+                report_loaded_stair("handoff_receiver", 6, target_x, target_z);
+                target_x = -9.0;
+                target_z = -109.0;
+            }
+            if (tick == budget_ticks) break;
+            const double dx = target_x - state.player_position.x;
+            const double dz = target_z - state.player_position.z;
+            const double ix = dx * 1.8 - state.player_linear_velocity.x * .28;
+            const double iz = dz * 1.8 - state.player_linear_velocity.z * .28;
+            const double scale = std::max(1.0, std::hypot(ix, iz));
+            (void)hook.set_move_input(ix / scale, iz / scale);
+            if (std::hypot(dx, dz) > .001) (void)hook.set_facing(dx, dz);
+            const bool accepted = hook.advance_frame(Simulation::kFixedStepSeconds).accepted;
+            const auto after = hook.snapshot();
+            const bool support_loss = !reported_support_loss && state.player_grounded &&
+                (!after.player_grounded || (after.support_entity_id != Simulation::kIntakeStairEntityId &&
+                 after.support_entity_id != Simulation::kIntakeHandoffEntityId));
+            const bool contact_drop = !reported_contact_drop && after.player_grounded &&
+                after.support_contact_point.y < kHandoffSurfaceY - 0.10;
+            const bool traversal_change = !reported_traversal_change &&
+                state.traversal_state != after.traversal_state;
+            if (support_loss || contact_drop || traversal_change) {
+                std::cerr << "INFO AS-003 loaded transfer: first_support_loss=" << support_loss
+                          << " first_contact_drop=" << contact_drop
+                          << " first_traversal_change=" << traversal_change
+                          << " target=" << target_x << ',' << target_z
+                          << " input=" << ix / scale << ',' << iz / scale << '\n';
+                report_transfer_state("previous", state);
+                report_transfer_state("after", after);
+            }
+            reported_support_loss = reported_support_loss || support_loss;
+            reported_contact_drop = reported_contact_drop || contact_drop;
+            reported_traversal_change = reported_traversal_change || traversal_change;
+            if (!accepted) break;
+        }
+        (void)hook.set_move_input(0.0, 0.0);
+        std::cerr << "INFO AS-003 loaded transfer: arrived=0 receiver_reached=" << receiver_reached
+                  << " elapsed_ticks=" << hook.snapshot().tick_index - start_tick
+                  << " budget_ticks=" << budget_ticks << '\n';
+        return false;
+    };
+    const bool carry_reached_handoff = walk_loaded_handoff();
     report_loaded_stair("handoff", 6, -9.0, -109.0);
     std::cerr << "INFO AS-003 loaded stair: waypoint_reached=" << carry_reached_handoff << '\n';
     require(carry_reached_handoff, "the carry must reach the handoff deck");

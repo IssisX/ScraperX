@@ -1,0 +1,149 @@
+{
+  "observed_date": "2026-10-10",
+  "repository": "IssisX/ScraperX",
+  "branch": "ChatGPT",
+  "source_sha": "6b8dc272af29576ba847e9761f91b155f83db11e",
+  "run_id": 38066022945,
+  "run_url": "https://github.com/IssisX/ScraperX/actions/runs/38066022945",
+  "job_id": 114253718878,
+  "job_url": "https://github.com/IssisX/ScraperX/actions/runs/38066022945/job/114253718878",
+  "conclusion": "failure",
+  "native_execution": {
+    "registered_tests": 54,
+    "executed": 1,
+    "passed": 0,
+    "failed": 1,
+    "not_run_after_first_failure": 53,
+    "failed_test": "scraperx_sim.athletic_traversal",
+    "ctest_number": 1,
+    "duration_seconds": 38.57,
+    "stop_on_first_failure": true,
+    "same54_required_once_on_full_success": true
+  },
+  "prior_complete_native_run": {
+    "source_sha": "d1af237bba8abd1123d7724b08088a8b1cece3fe",
+    "run_id": 38063033252,
+    "passed": 53,
+    "total": 54,
+    "cage_actual_x86": "pass",
+    "swing_stair_route_2_actual_x86": "pass",
+    "evidence": "../ci53-followup/ci-failure.json"
+  },
+  "failure": {
+    "file": "tests/simulation_tests.cpp",
+    "message": "MOD-STAIR-A must carry the body and the block to the +24 m handoff deck",
+    "assertion": "support_entity_id == Simulation::kIntakeHandoffEntityId && carrying_entity_id == Simulation::kHook5BlockEntityId",
+    "observations": {
+      "final_climb5": {
+        "tick": 19048,
+        "time_seconds": 211.644,
+        "player_position": [
+          -7.4739,
+          25.0708,
+          -120.004
+        ],
+        "grounded": true,
+        "support": 44,
+        "contact": [
+          -7.47406,
+          24.1872,
+          -120.004
+        ],
+        "held": 56,
+        "deaths": 0
+      },
+      "after_handoff_walk": {
+        "tick": 19688,
+        "time_seconds": 218.756,
+        "target": [
+          -9,
+          -109
+        ],
+        "waypoint_reached": true,
+        "player_position": [
+          -8.98782,
+          9.14783,
+          -109.035
+        ],
+        "grounded": true,
+        "support": 1002,
+        "contact": [
+          -8.98777,
+          8.25,
+          -109.035
+        ],
+        "held": 56,
+        "deaths": 0
+      }
+    },
+    "supported_discriminator": "Lost high footing during handoff walk, held cargo intact. Horizontal waypoint success did not imply arrival on high receiver.",
+    "exact_first_departure": "unobserved",
+    "cause_limit": "No geometry gap or corner-cut cause established."
+  },
+  "inspected_native_geometry": {
+    "top_stair_x": [
+      -9,
+      -7
+    ],
+    "top_stair_z": [
+      -121.8,
+      -114.2
+    ],
+    "receiver_x": [
+      -10,
+      -2
+    ],
+    "receiver_z": [
+      -117.5,
+      -107.7
+    ],
+    "same_top_y": 24.1872,
+    "overlap_dimensions_x_z": [
+      2,
+      3.3
+    ],
+    "implication": "Ideal straight line is geometrically continuous; does not prove actual traced contact/trajectory."
+  },
+  "correction": {
+    "owner": "Super_Agent",
+    "file": "tests/simulation_tests.cpp",
+    "status": "in progress, unverified",
+    "proposed_waypoints": [
+      [
+        -8,
+        -113.5
+      ],
+      [
+        -9,
+        -109
+      ]
+    ],
+    "total_original_budget_seconds": 12,
+    "requirements": [
+      "contact-aware centre entry",
+      "actual receiver support",
+      "actual held-block proof",
+      "first-support-loss diagnostics"
+    ],
+    "pass_claimed": false
+  },
+  "integration_owner": "root",
+  "next_source_sha": null,
+  "later_stages": {
+    "godot": "not run",
+    "android": "not run",
+    "apk": "none"
+  },
+  "full_stage_log": {
+    "private_path": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/ci-6b8dc27-failed.log",
+    "sha256": "b6a0f54e561e2fe540fef6e13d3798dbfbdc5c6571416b7d8626eb6833cca75a",
+    "copied_to_repository": false
+  },
+  "delivery": "Full green exact-source Actions then verify matching APK package/version>213671847/signing/provenance and provide link; no Android Download copy/install or phone claim.",
+  "canonical_scope": {
+    "lines": 227,
+    "overall_estimate_percent": 61,
+    "weights_unchanged": true,
+    "new_gameplay_completion_credit": false
+  }
+}
