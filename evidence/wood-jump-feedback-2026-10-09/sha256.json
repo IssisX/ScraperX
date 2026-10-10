@@ -1,0 +1,20 @@
+{
+  "jump_probe.gd": "a06c6997fc41fa1b1db7d898f72c6400726792b1498f6372f4ee5e939bddc9e0",
+  "guard_probe.gd": "040fa8194d74bbddbb172c5a4218d72d0bd6e7a090dd8bebaff291ea9f4f28e3",
+  "prepare_runtime.py": "011ffb9ddd63f431c3c8cd81e5c7158439a5c4aea4a792c997e6dd4fe6cbb11c",
+  "run_jump.sh": "0ad51b6caed4771bce516501be75d82efe86fa73512046495ebeae6f9fe67ea2",
+  "archive_jump.py": "b2d4569a396702d1a2c671d877523a783718c49652ef246e1fa1a1b6ae9e662b",
+  "jump.log": "2098d962edc066b67a1f05e2b72b71d8066d2e73f10d68728d7557bfacbae780",
+  "guard.log": "db4191ca97d0fe894f3b175bf55d6f52923f0ea227b4780903325d4db054c218",
+  "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+  "native-source-manifest.json": "eecf23b77cba0a76e87f93a55895a7d0703a3d6fb00cbb6e05418a4f87e47996",
+  "final-guard-source-manifest.json": "c3a478610c61344305cdc33f062904221362244b11a06f80ecf5eb7d52a139b4",
+  "native-audio-source-as-used.gd": "f0d645ebc407a9b92011dfff9cc42e43a4b8d2a8e6c0fef243949779bc5f8b8d",
+  "jump-receipt.json": "26d35f5894edc08b81a516d803bad71d24dea4cd3cdbc8d20343c19188c3bd75",
+  "guard-receipt.json": "246c6c8bbdbb8c9173f3cdb3326288b233ed005fdeb06bef819a6bc9497e1048",
+  "final-audio-source-as-used.gd": "302e5bc2f62addf58e7c80bf2a4ab74082ab3ec24e5bd920f4c7b2e00f640dec",
+  "command-native.txt": "c85cabbd83d256b30bd3fe03764c6b96163b151d5bce774212648536c44ed91f",
+  "command-guard.txt": "d9a4c5792491ba5e29b35897cd53410019c10982b99541ac4658048c5febb935",
+  "guard-tool-exit-receipt.json": "1695f913640ebfc5ae037368c2d5cbd54acabf5ffa4ece649162645d7d0e835d",
+  "README.md": "536fd401287b7e5d7cea7a287cca8f888f77e95646690bfbf1a87acbff7f714b"
+}

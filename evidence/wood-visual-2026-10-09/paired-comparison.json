@@ -1,0 +1,99 @@
+{
+  "status": "PASS",
+  "comparison_count": 48,
+  "comparisons": [
+    {
+      "pose": "wood_close_unloaded",
+      "native_tick": 360,
+      "actual_broken_mask": 0,
+      "identical_base_geometry_and_native_pose_entities": [
+        2880,
+        2881,
+        2882,
+        2883,
+        2884,
+        2885,
+        2886,
+        2887,
+        2888,
+        2889,
+        2890,
+        2891
+      ],
+      "native_shader_mask_matches": true,
+      "open_interface": {}
+    },
+    {
+      "pose": "wood_supported_end_close",
+      "native_tick": 360,
+      "actual_broken_mask": 0,
+      "identical_base_geometry_and_native_pose_entities": [
+        2880,
+        2881,
+        2882,
+        2883,
+        2884,
+        2885,
+        2886,
+        2887,
+        2888,
+        2889,
+        2890,
+        2891
+      ],
+      "native_shader_mask_matches": true,
+      "open_interface": {}
+    },
+    {
+      "pose": "wood_steel_approach",
+      "native_tick": 360,
+      "actual_broken_mask": 0,
+      "identical_base_geometry_and_native_pose_entities": [
+        2880,
+        2881,
+        2882,
+        2883,
+        2884,
+        2885,
+        2886,
+        2887,
+        2888,
+        2889,
+        2890,
+        2891
+      ],
+      "native_shader_mask_matches": true,
+      "open_interface": {}
+    },
+    {
+      "pose": "wood_actual_open_interface_close",
+      "native_tick": 434,
+      "actual_broken_mask": 112,
+      "identical_base_geometry_and_native_pose_entities": [
+        2880,
+        2881,
+        2882,
+        2883,
+        2884,
+        2885,
+        2886,
+        2887,
+        2888,
+        2889,
+        2890,
+        2891
+      ],
+      "native_shader_mask_matches": true,
+      "open_interface": {
+        "endpoint_gap_m": 0.0410156697034836,
+        "first_entity": 2884,
+        "mask": 112,
+        "seam": 4,
+        "second_entity": 2885
+      }
+    }
+  ],
+  "geometry_channels": "mesh vertices, base normals, triangle indices; UV/UV2 intentionally excluded",
+  "poses": "actual native physical/render origins and physical basis-Y equal between paired runs; kit_view transforms also separately checked against native render transforms",
+  "limits": "Measured same bridge/scenario only; no determinism guarantee, phone budget, final art, full Tower view or earned route claim"
+}

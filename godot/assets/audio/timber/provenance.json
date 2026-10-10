@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "asset": "Wood panel board cracking snapping",
+  "asset_id": 400638,
+  "author": "LampEight",
+  "publisher": "Freesound",
+  "source_url": "https://freesound.org/people/LampEight/sounds/400638/",
+  "license": "CC0-1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "source_license_verified": true,
+  "license_verification": {
+    "method": "Fetched primary Freesound sound page and verified its Creative Commons 0 link to CC0 1.0.",
+    "page_sha256": "d556f265ad9396485ea3371e1a1a6f16f5362008981db0b47b8f289a38b46015",
+    "checked_at_utc": "2026-10-09T23:46:09Z"
+  },
+  "acquired_at_utc": "2026-10-09T23:46:39.632304+00:00",
+  "recording_description": "The author reports recording the destruction of old wooden fencing outdoors.",
+  "source_page_original_format": {
+    "format": "WAV",
+    "bits_per_sample": 32,
+    "channels": 2,
+    "sample_rate_hz": 48000,
+    "displayed_duration_seconds": 32.612,
+    "downloaded": false
+  },
+  "files": [
+    {
+      "file": "400638_706234-hq.mp3",
+      "role": "unchanged_high_quality_mp3_preview",
+      "download_url": "https://cdn.freesound.org/previews/400/400638_706234-hq.mp3",
+      "bytes": 894528,
+      "sha256": "0fdb2100e888521f1afcb2392d501384505823ee85601a979eb8b00be1aa5b4b",
+      "sample_rate_hz": 48000,
+      "channels": 2,
+      "decoded_samples_per_channel": 1565391,
+      "decoded_duration_seconds": 32.6123125,
+      "modifications": []
+    },
+    {
+      "file": "timber_snap_400638_preview.wav",
+      "role": "wav_excerpt_derivative_of_mp3_preview",
+      "derived_from": "400638_706234-hq.mp3",
+      "bytes": 105678,
+      "sha256": "766f2f61c1a8cfd3b15d880e81bd29a6b62dd9e2ebca32ffd47ef5bbe3367f57",
+      "codec": "pcm_s16le",
+      "channels": 1,
+      "sample_rate_hz": 48000,
+      "bits_per_sample": 16,
+      "samples_per_channel": 52800,
+      "duration_seconds": 1.1,
+      "conversion": {
+        "tool": "FFmpeg",
+        "version": "8.0.1-3ubuntu2",
+        "environment": "existing Ubuntu proot container",
+        "command": "proot-distro login ubuntu --shared-tmp -- /usr/bin/ffmpeg -nostdin -hide_banner -loglevel error -y -i /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/assets/audio/timber/400638_706234-hq.mp3 -map 0:a:0 -map_metadata -1 -af 'atrim=start=5.10:end=6.20,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.001,afade=t=out:st=1.08:d=0.02' -c:a pcm_s16le -ac 1 -ar 48000 /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/godot/assets/audio/timber/timber_snap_400638_preview.wav",
+        "final_generation_overwrite_flag": "-y used only to replace the rejected silent draft of this newly created derivative",
+        "trim_start_seconds": 5.1,
+        "trim_end_seconds": 6.2,
+        "fade_in_seconds": 0.001,
+        "fade_out_seconds": 0.02,
+        "fade_out_start_seconds": 1.08,
+        "gain_adjustment": false,
+        "normalization": false,
+        "sample_rate_change": false,
+        "channel_count_change": "stereo to mono using FFmpeg default downmix",
+        "metadata_removed": true,
+        "reproduction_command": "proot-distro login ubuntu --shared-tmp -- /usr/bin/ffmpeg -nostdin -hide_banner -loglevel error -n -i 400638_706234-hq.mp3 -map 0:a:0 -map_metadata -1 -af \"atrim=start=5.10:end=6.20,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.001,afade=t=out:st=1.08:d=0.02\" -c:a pcm_s16le -ac 1 -ar 48000 timber_snap_400638_preview.wav"
+      },
+      "validation": {
+        "wave_frames": 52800,
+        "pcm_peak_absolute_sample": 12480,
+        "pcm_full_scale": 32768,
+        "pcm_rms_dbfs": -42.51315729182195,
+        "nonzero_samples": 48548,
+        "full_scale_samples": 0,
+        "audition_performed": false,
+        "limitation": "Audio input/audition is unavailable in this agent environment; measured signal and recording provenance do not prove subjective quality or final in-game audibility."
+      }
+    }
+  ],
+  "rejected_attempts": [
+    {
+      "classification": "environmental",
+      "operation": "Termux FFmpeg startup",
+      "failure": "libplacebo.so could not resolve the installed libc++ floating-point from_chars symbol",
+      "resolution": "Used the already installed Ubuntu FFmpeg; no dependencies installed."
+    },
+    {
+      "classification": "introduced conversion defect, repaired",
+      "operation": "Initial output-seek/fade conversion",
+      "failure": "Fade timestamps preceded the selected output interval and produced a silent draft; PCM validation rejected it.",
+      "resolution": "Explicit atrim then asetpts before fades; final PCM is nonzero and no full-scale samples exist."
+    }
+  ],
+  "acquisition_timestamp_basis": "Filesystem modification time when the downloaded unchanged preview was first written."
+}

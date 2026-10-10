@@ -1,0 +1,268 @@
+{
+  "failures": [],
+  "poses": [
+    {
+      "fracture_mask": 112,
+      "grounded": true,
+      "open_interface": {
+        "endpoint_gap_m": 0.0410156697034836,
+        "first_entity": 2884,
+        "mask": 112,
+        "seam": 4,
+        "second_entity": 2885
+      },
+      "peak_strength_ratio": 1.34104251861572,
+      "player": "(-6.80117, 407.6055, -128.2)",
+      "pose": "wood_actual_open_interface_close",
+      "screenshot": "res://wood_actual_open_interface_close.png",
+      "segments": [
+        {
+          "basis_y": [
+            0.297201961278915,
+            0.954814612865448,
+            -0.0000000548774075070924
+          ],
+          "entity": 2880,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -7.90451860427856,
+            406.951232910156,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -7.90250968933105,
+            406.958709716797,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            0.297004163265228,
+            0.954876184463501,
+            -0.0000000757959952579768
+          ],
+          "entity": 2881,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -7.71343660354614,
+            406.891845703125,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -7.70744752883911,
+            406.914184570312,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            0.297098994255066,
+            0.954846680164337,
+            -0.0000000957094030695771
+          ],
+          "entity": 2882,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -7.52238178253174,
+            406.832366943359,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -7.51237154006958,
+            406.869689941406,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            0.29679599404335,
+            0.954940915107727,
+            -0.000000111647203482335
+          ],
+          "entity": 2883,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -7.33135032653809,
+            406.772979736328,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -7.31724786758423,
+            406.825469970703,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            0.297169774770737,
+            0.954824686050415,
+            -0.000000118691616535216
+          ],
+          "entity": 2884,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -7.14029693603516,
+            406.713531494141,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -7.12200593948364,
+            406.781433105469,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            -0.150940448045731,
+            0.988542795181274,
+            -0.000270329794147983
+          ],
+          "entity": 2885,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -6.92519378662109,
+            406.663543701172,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -6.91482925415039,
+            406.756286621094,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            -0.576797425746918,
+            0.816887140274048,
+            -0.000398588890675455
+          ],
+          "entity": 2886,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -6.7387900352478,
+            406.661010742188,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -6.70558786392212,
+            406.753845214844,
+            -128.199981689453
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            -0.322581619024277,
+            0.946541666984558,
+            0.00000150459027281613
+          ],
+          "entity": 2887,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -6.49268054962158,
+            406.690551757812,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -6.50395488739014,
+            406.772338867188,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            -0.322403252124786,
+            0.946602404117584,
+            -0.000000119640546358823
+          ],
+          "entity": 2888,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -6.30326080322266,
+            406.755096435547,
+            -128.199981689453
+          ],
+          "render_origin": [
+            -6.30918884277344,
+            406.818572998047,
+            -128.199981689453
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            -0.322431415319443,
+            0.946592807769775,
+            -0.00000026976164235748
+          ],
+          "entity": 2889,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -6.11385154724121,
+            406.819610595703,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -6.11452007293701,
+            406.864959716797,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            -0.322471410036087,
+            0.946579217910767,
+            0.00000133535536406271
+          ],
+          "entity": 2890,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -5.92443466186523,
+            406.884155273438,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -5.91988563537598,
+            406.911376953125,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        },
+        {
+          "basis_y": [
+            -0.322740137577057,
+            0.946487605571747,
+            0.000000542641771517083
+          ],
+          "entity": 2891,
+          "geometry_sha256": "4fe43887309a442e5318e3833280d9365fcd0ebfb46f134f8c5db633f519a3bc",
+          "physical_origin": [
+            -5.73502826690674,
+            406.948699951172,
+            -128.199996948242
+          ],
+          "render_origin": [
+            -5.72526931762695,
+            406.957794189453,
+            -128.199996948242
+          ],
+          "shader_broken_mask": null
+        }
+      ],
+      "support": 2886,
+      "tick": 434
+    }
+  ],
+  "renderer": "X11",
+  "scope": "filtered648x432 Compatibility material inspection; actual normal-world geometry/transform and gravity-impact fracture; explicit diagnostic stages/camera; no earned route, phone or final-art claim",
+  "selected_bodies": 14,
+  "source": "normal native world + actual kit_view, presentation selection only"
+}

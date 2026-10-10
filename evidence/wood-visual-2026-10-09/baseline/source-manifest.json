@@ -1,0 +1,9 @@
+{
+  "stage": "frozen material baseline",
+  "source": "current repo kit_view and slingshot_wood, root final-v2 tested bridge",
+  "sha256": {
+    "presentation/kit_view.gd": "c67bb98ec3f535a3c9c8ae47c88626ab9fb50e0b4fdd51e78b0f6e5dde8ec1bf",
+    "presentation/slingshot_wood.gdshader": "4598952b87ef1464ea9d3ea709aeebb7245698bdb959dbb541915ac04c820cca",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "driver": "Dummy",
+  "failures": [],
+  "records": [
+    {
+      "foot_active": true,
+      "foot_start": 1,
+      "grounded": false,
+      "jumps": 1,
+      "phase": "actual_finite_wood_jump",
+      "stop": 0,
+      "tick": 874,
+      "velocity_y": 0.301514744758606,
+      "work_j": 256.666421890259
+    },
+    {
+      "foot_active": false,
+      "foot_start": 3,
+      "grounded": false,
+      "jumps": 2,
+      "phase": "unchanged_actual_steel_jump",
+      "stop": 1,
+      "tick": 1496,
+      "velocity_y": 5.39099550247192,
+      "work_j": 23.3333110809326
+    }
+  ],
+  "scope": "one real normal-world initial steel stage; ordinary native wood Jump/Drop/checkpoint restart/steel Jump inputs; production AudioDirector.update; no viewport, full UI, audible-output or haptic-device claim",
+  "status": "PASS",
+  "wood_peak_vy_mps": 0.961394906044006,
+  "wood_spam_inputs": 22
+}

@@ -8,6 +8,8 @@ Everything below belongs to this goal. These requirements remain in scope until 
 
 **Owner execution correction — 2026-10-09:** This complete scope is now the preserved wider roadmap. The live goal tool uses small bounded objectives, which the owner authorized completing and replacing automatically within the shared work window ending2026-10-10 00:14:17UTC. Inspection396→418 is completed/published atde5ed04; the distinct north-header418→440 encounter now has connected native/touch primary and failure/retry proof. These milestones do not erase pending machinery, movement, world-experience or visual requirements below. Separate encounter records own their implementation/evidence status; historical broad percentages do not measure a new small goal.
 
+**Bounded timber milestone — 2026-10-10:** The mounted timber now has a real finite-stroke compression-only foot push, actual native/touch Jump and intact landing/exit, continuous grain and native broken end faces, plus recorded fracture and real wood-Jump feedback. [Foot-push](WOOD_FOOT_PUSH_GOAL.md) and [presentation](TIMBER_PRESENTATION_GOAL.md) records own evidence and limitations. These completed slices do not establish anatomical rolling, full energy closure, phone quality, performance or the entire roadmap. Wider requirements below remain unchanged.
+
 ### Phase 0 — Preserve the project and establish the execution frontier
 
 - Work only in `IssisX/ScraperX`, on the exact write branch `ChatGPT`.

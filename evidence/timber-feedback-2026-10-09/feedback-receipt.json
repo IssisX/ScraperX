@@ -1,0 +1,36 @@
+{
+  "driver": "Dummy",
+  "failures": [],
+  "native_audio_receipts": 2,
+  "records": [
+    {
+      "at": [
+        -6.80907297134399,
+        406.865447998047,
+        -128.199996948242
+      ],
+      "effects_muted": false,
+      "mask": 112,
+      "new_bits": 112,
+      "serial": 3,
+      "strength": 0.85,
+      "tick": 432
+    },
+    {
+      "at": [
+        -6.80907297134399,
+        406.865447998047,
+        -128.199996948242
+      ],
+      "effects_muted": true,
+      "mask": 112,
+      "new_bits": 112,
+      "serial": 3,
+      "strength": 0.85,
+      "tick": 432
+    }
+  ],
+  "scope": "actual native gravity fracture + production Main consumer and AudioDirector cue/mute receipts; no full-world UI, audible speaker, haptic device or phone mix claim",
+  "status": "PASS",
+  "total_audio_receipts_including3source_pool_checks": 5
+}

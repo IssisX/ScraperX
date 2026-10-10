@@ -1,0 +1,7 @@
+{
+  "failures": [],
+  "invalid_stop_cases": 8,
+  "ordinary_overlap_jump_cues": 1,
+  "scope": "synthetic source-level duplicate/cancel/invalid-stop checks only; no native physical or audible output claim",
+  "status": "PASS"
+}

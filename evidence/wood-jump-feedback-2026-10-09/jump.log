@@ -1,0 +1,6 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+WOOD_JUMP_AUDIO cue={ "phase": "actual_finite_wood_jump", "tick": 874, "grounded": false, "velocity_y": 0.30151474475861, "foot_start": 1, "foot_active": true, "stop": 0, "work_j": 256.666421890259, "jumps": 1 }
+WOOD_JUMP_AUDIO cue={ "phase": "unchanged_actual_steel_jump", "tick": 1496, "grounded": false, "velocity_y": 5.39099550247192, "foot_start": 3, "foot_active": false, "stop": 1, "work_j": 23.3333110809326, "jumps": 2 }
+SCRAPERX_AUDIO_BANK clips=28 msec=1153 driver=Dummy
+WOOD_JUMP_AUDIO PASS

@@ -1,0 +1,10 @@
+{
+  "stage": "final",
+  "sha256": {
+    "presentation/kit_view.gd": "394ee5658a7bfe3d77d18d4933993db396531a8807de61ba6ac895cd36c31201",
+    "presentation/slingshot_wood.gdshader": "4598952b87ef1464ea9d3ea709aeebb7245698bdb959dbb541915ac04c820cca",
+    "wood_visual_probe.gd": "e30f7c033d75ac97b1a04b0304fc3c2e1023e81d48399d6cad01a3e90ef9156a",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+    "presentation/plank_wood.gdshader": "e9a547cf0888a5c4f6090e94ef20e7de94fce47aa99f48daf82bb79e5c094bc9"
+  }
+}

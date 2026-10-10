@@ -1,0 +1,23 @@
+{
+  "feedback_probe.gd": "0ae562d7d40b6084581676af08b530184c6a228205f20ed746f3188c13861d31",
+  "run_feedback.sh": "1d66f85b7619ff01278ced3f8bce3a62ff2229cb4af7748257a87e1cd8b0dfb7",
+  "prepare_runtime.py": "b9120477596dd9b1b8bcabd488a0deb39cf5b814251200e9c9a1208fcadf641c",
+  "archive_feedback.py": "b117525299e0b8da638993b2db9ea048d1b482011f84e1d56ab692e567d4fe63",
+  "source-manifest.json": "523a38ff9565743d865081496b5300ca957810df3e27a20d801ddcb29b52f614",
+  "feedback.log": "4b1dfedb7e54c7e43984c4b6ce400cf276a07ed8016094ec887cc851de0c4a44",
+  "exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+  "import.log": "534ce0eb045589ac30fdc1c3c289765d729812e6b5909e347effb3ef49c93961",
+  "preparation-first-failure.log": "6694139d160657348e098d05fbca096dc15b906cf3eed399b5bea52e26bf2303",
+  "feedback-receipt.json": "740df97de05e4ecc62446f5612771f05fbe68bea1ab47dc8db4836e0824e0281",
+  "command.txt": "06ef8523745ad108651c555eb517f027168c0d3f0ba5ead53a7c4527ecad4be5",
+  "README.md": "8cda6dc1f311761ba0918bb44c8e18f68eb7fc04650015a06c1965861d7c2c29",
+  "import-command.txt": "d0d7dea13351e1d0824cf330ca10f85e0eb324234ad6eac7f3105bdc5db23e1e",
+  "pre-lifecycle-fix/feedback.log": "7c80ca6529d0f20f0a4e30735a70cc123c1dd3218b4d6a34fd87ceea04b825d7",
+  "pre-lifecycle-fix/source-manifest.json": "ac39bcf9ff0d3ee0136037ac534608a6f59ec122972226c077122dacbb87d2eb",
+  "pre-lifecycle-fix/feedback-receipt.json": "6af4bbb863468f9121df9adbb2b9e99abea389aef5ae9d849148f2aa57236548",
+  "pre-lifecycle-fix/exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+  "pre-lifecycle-fix/feedback_probe.gd": "20f93420c2a0d2bf1067b053f3411cf894d7a1a57088dc85d3b56b1e5555b2bb",
+  "source-as-used/project.godot": "6f63404cead1aa688bda9ec8f2756a63fed1de2b1e3abfe5ded71e4ec8073c2c",
+  "source-as-used/presentation/main.gd": "f959472ace1e74be69b2fb030d12d53bf320236935a4b7e10c1ec23a70e91c1e",
+  "source-as-used/presentation/audio/audio_director.gd": "b7566c13882ed36fee9426c3078642f8c341c1db1fce94fd161a5b8a59ca5dd8"
+}

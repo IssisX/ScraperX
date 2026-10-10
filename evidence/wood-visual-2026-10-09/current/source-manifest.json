@@ -1,0 +1,10 @@
+{
+  "stage": "new wood material; otherwise identical baseline harness/bridge",
+  "sha256": {
+    "presentation/kit_view.gd": "394ee5658a7bfe3d77d18d4933993db396531a8807de61ba6ac895cd36c31201",
+    "presentation/plank_wood.gdshader": "b9755bf0616c9f84adac6c3274bbcb6d551b4a9036376f69ac4d57d5536100e9",
+    "presentation/slingshot_wood.gdshader": "4598952b87ef1464ea9d3ea709aeebb7245698bdb959dbb541915ac04c820cca",
+    "wood_visual_probe.gd": "11bfabcd0f55e52b4c22fd4301b2f1b6d1d236158523f873e4e448245e741995",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c"
+  }
+}

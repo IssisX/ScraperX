@@ -1,0 +1,6 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_TIMBER_FEEDBACK mode=normal cues=1 broken_mask=112 quiet_elastic_restart_repeat_unmute=true
+SCRAPERX_TIMBER_FEEDBACK mode=muted cues=1 broken_mask=112 quiet_elastic_restart_repeat_unmute=true
+SCRAPERX_AUDIO_BANK clips=28 msec=1145 driver=Dummy
+SCRAPERX_TIMBER_FEEDBACK PASS

@@ -1,0 +1,13 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+error: expected absolute path: "--shm-helper"
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 3.3 (Core Profile) Mesa 26.0.8-1ubuntu0.3 - Compatibility - Using Device: Mesa - softpipe
+
+SCRAPERX_PLANK_VISUAL pose=wood_close_unloaded support=1935 grounded=true segments=12
+SCRAPERX_PLANK_VISUAL pose=wood_supported_end_close support=1935 grounded=true segments=12
+SCRAPERX_PLANK_VISUAL pose=wood_steel_approach support=1935 grounded=true segments=12
+SCRAPERX_PLANK_VISUAL pose=wood_actual_open_interface_close support=2886 grounded=true segments=12
+SCRAPERX_PLANK_VISUAL PASS checks=actual_segments_native_transform_material

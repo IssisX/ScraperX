@@ -1,0 +1,11 @@
+# Make the existing timber's physical state readable
+
+Bounded continuation after native foot-push implementation; preserve its physics and the entire wider roadmap. Original deadline remains 2026-10-10 00:14:17 UTC.
+
+Completed visual slice: plank-only continuous grain, weathered original ends and fresh endgrain on native broken interfaces. Exact geometry/poses and shared slingshot behavior are preserved. Paired Godot Compatibility evidence passes48 actual native segment samples, including an open real fracture. See [visual receipts](../evidence/wood-visual-2026-10-09/README.md).
+
+Feedback implementation: one licensed recorded timber snap and nearby brief haptic response, driven only by new native fracture serial/mask receipts. The existing main feedback and AudioDirector consumers own it; no new dispatcher, camera shake, physics, assistance or input lock. Consume startup, unchanged damage, rollback, restart/death and muted receipts quietly; coalesce native cascades. Current transformed interface endpoints approximate source position. Estimated discarded spring storage tunes a restrained authored cue; it is not acoustic or complete fracture-energy calibration.
+
+Source review and focused fracture runtime acceptance are complete. [Feedback receipts](../evidence/timber-feedback-2026-10-09/README.md) distinguish actual native fracture/quiet restart from synthetic lifecycle checks and silent audio-pool inspection. Physical-phone playback/vibration, full-scene mix and final visual quality remain unverified. Export preset includes the new CC0 notice/provenance. Publish this compatible slice with the foot-push commit in one batch and one normal Actions build; preserve inherited CI failures honestly rather than launching an unrelated repair campaign.
+
+The old 2.5 m/s Jump-audio threshold could not recognize the repaired, physically smaller timber hop. AudioDirector now consumes a fresh native wood-push receipt only after positive work/load and actual upward airborne motion. It cues once, coalesces an ordinary Jump, and consumes canceled, restored or muted receipts quietly. Ordinary Jump criteria and native physics are preserved. [Wood-Jump receipts](../evidence/wood-jump-feedback-2026-10-09/README.md) record the actual-native path and the final-source overlap check separately from fracture evidence.

@@ -1,0 +1,1 @@
+sh /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/wood-jump-feedback/run_jump.sh
