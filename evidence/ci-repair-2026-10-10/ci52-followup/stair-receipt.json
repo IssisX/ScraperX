@@ -1,0 +1,214 @@
+{
+  "baseline_revision": "89e21f14ff6f63dc24efbdbea91170dd1d924075",
+  "branch": "ChatGPT",
+  "maintained_file": "tests/swing_stair_route_tests.cpp",
+  "baseline_maintained_source_sha256": "1b86a24bd89e3d7f86722bbe49bd1984f736e4086afc556e9cdeda9d5ad07f6e",
+  "final_maintained_source_sha256": "17e766fe5f5b26a66ea94c5ae9a54367d97f3dd000a410a86a710cc42fe35c43",
+  "final_private_source_sha256": "17e766fe5f5b26a66ea94c5ae9a54367d97f3dd000a410a86a710cc42fe35c43",
+  "final_binary_sha256": "005fcc3c6b46e91f1e72f2919ae976743319628e6cbce44880e844cff5a958be",
+  "baseline_private_source_sha256": "152117803f7ad9e2d0366e63acb64fe1a2e7073afc1afebb5ec3ba5f42332cae",
+  "baseline_instrumentation": "Only read-only actual striker pose reports before/after existing abandonment; baseline ordinary inputs/acceptance unchanged.",
+  "native_archive_sha256": "a816cc5fa7d197aa9f5071a0e33cbf3396bf130271bc1a23c9eee64ca14d7094",
+  "jolt_archive_sha256": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+  "compiler": "c++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
+  "target": "aarch64-linux-gnu",
+  "compile_commands": {
+    "baseline": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-pthread",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/baseline.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/libJolt.a",
+      "-lpthread",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/baseline"
+    ],
+    "final": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/usr/bin/c++",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+      "-O3",
+      "-std=c++17",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-pthread",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/final.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/libJolt.a",
+      "-lpthread",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/final"
+    ]
+  },
+  "run_commands": {
+    "baseline": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/usr/bin/timeout",
+      "120s",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/baseline",
+      "2"
+    ],
+    "final": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/usr/bin/timeout",
+      "120s",
+      "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/final",
+      "2"
+    ]
+  },
+  "compile_exit_codes": {
+    "baseline": 0,
+    "final": 0
+  },
+  "run_exit_codes": {
+    "baseline": 0,
+    "final": 0
+  },
+  "logs": {
+    "baseline": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/baseline-mode2.log",
+    "final": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/final-mode2.log"
+  },
+  "log_sha256": {
+    "baseline": "f4620a2036e900a2570ae1ea68683269484a56e3f5c46aba7fb64a16e32fcff8",
+    "final": "2efc8c6b32e9fd131718398296b226ae836b363cf9614117da8b855a09e23a89"
+  },
+  "ci_evidence": {
+    "run": 38060174319,
+    "compiler_target": "GNU13.3 x86_64",
+    "source": "89e21f14ff6f63dc24efbdbea91170dd1d924075",
+    "original_log": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/ci-89e21-failed.log",
+    "excerpt": "/data/data/com.termux/files/usr/tmp/scraperx-ci-green-oct10/stair-ci52/ci-mode2-excerpt.log",
+    "angles": [
+      0.284442,
+      0.145376
+    ],
+    "receiver_front_before_after": [
+      -1.52588e-06,
+      -1.52588e-06
+    ],
+    "hinge_based_striker_approximations": [
+      [
+        -5.331225,
+        47.174895,
+        -122.1
+      ],
+      [
+        -3.418085,
+        45.694884,
+        -122.1
+      ]
+    ],
+    "approximation_limit": "Derived from logged angles and authored hinge/striker, not direct x86 body-position observation."
+  },
+  "cause": "Fixed x=-14 reached before actual striker engaged bed on x86. Native pre_step requires X[-3.1,-1.1], |Z+122.1|<=.1 and bed penetration; recorded phase is west of and above bed. ARM reached the same coordinate with real receiver yielding already.",
+  "changed_behavior": "Mode2 neutral ride waits for measured yielding front >=.05, positive increment, actual support2600 and front<1.65; finite 15-second rejection bound. All Jump/after-abandon >=.05 motion/firm restore +/- .05/position <=.15/death/onward assertions unchanged.",
+  "neutral_observation_max_seconds": 15,
+  "final_observations": {
+    "pre_gate": {
+      "player_position": [
+        -14.0069,
+        35.1107,
+        -122.1
+      ],
+      "support": 2600,
+      "body_angle": 0.062691,
+      "front": 0.109087
+    },
+    "engaged": {
+      "player_position": [
+        -13.943,
+        35.0595,
+        -122.1
+      ],
+      "support": 2600,
+      "body_angle": 0.0325906,
+      "front": 0.505469
+    },
+    "abandoned": {
+      "player_position": [
+        -13.8347,
+        35.5463,
+        -117.813
+      ],
+      "support": 0,
+      "body_angle": 0.0494672,
+      "front": 0.582667,
+      "deaths": 0
+    },
+    "restored": {
+      "player_position": [
+        -15.5395,
+        33.9,
+        -122.101
+      ],
+      "support": 1601,
+      "body_angle": 0.68376,
+      "front": -1.52588e-06,
+      "deaths": 1
+    },
+    "checkpoint": {
+      "committed_count": 11083,
+      "firm_support": 1601,
+      "committed_front": -1.52588e-06
+    },
+    "onward": {
+      "player_position": [
+        -2.08146,
+        44.9,
+        -125.459
+      ],
+      "support": 11,
+      "deaths": 1
+    },
+    "after_abandon_motion_m": 0.077198
+  },
+  "checks": {
+    "git diff --check -- tests/swing_stair_route_tests.cpp": "exit0",
+    "mode1": "not run; all maintained behavior changes are inside mode2 block"
+  },
+  "limits": [
+    "ARM local pass is not x86 proof; next exact-source Actions required.",
+    "Native production and shared host build unchanged by this worker.",
+    "No full suite, mode1, Godot, APK, phone, commits or push executed."
+  ]
+}

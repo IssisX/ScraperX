@@ -1,0 +1,62 @@
+{
+  "standing": {
+    "min_ny": 0.995162368,
+    "max_traction_ratio": 0.116142772,
+    "final_normal": [
+      -1.22266874e-06,
+      0.995162368,
+      0.0982438773
+    ],
+    "final_force_n": [
+      0.00101459026,
+      8.04819012,
+      -81.524353
+    ],
+    "final_traction_cap_n": 705.34375,
+    "final_gravity_tangent_force_n": [
+      -0.0010145902550062456,
+      -8.048204558874042,
+      81.52435509442182
+    ],
+    "final_net_tangent_residual_n": [
+      4.993754324986166e-12,
+      -1.4438874043065653e-05,
+      2.0944218164231643e-06
+    ],
+    "final_foot_over_visible_top": true,
+    "steady_force_cap_ratio": 0.11614287879841656
+  },
+  "jump": {
+    "min_ny": 0.969729722,
+    "max_traction_ratio": 0.29623872,
+    "final_normal": [
+      1.22266442e-06,
+      0.969729722,
+      0.244180754
+    ],
+    "final_force_n": [
+      -0.00098865747,
+      49.7177086,
+      -197.446793
+    ],
+    "final_traction_cap_n": 687.31781,
+    "final_gravity_tangent_force_n": [
+      0.0009886576113360974,
+      -49.717694429075046,
+      197.446786734734
+    ],
+    "final_net_tangent_residual_n": [
+      1.4133609733957275e-10,
+      1.4170924956147246e-05,
+      -6.265266023319782e-06
+    ],
+    "final_foot_over_visible_top": false,
+    "steady_force_cap_ratio": 0.2962386990554728
+  },
+  "source": {
+    "head": "ca4732b967f263942dc1f73e1c43309f2f4a597c",
+    "shared_archive_sha256": "a816cc5fa7d197aa9f5071a0e33cbf3396bf130271bc1a23c9eee64ca14d7094",
+    "native_source": "dd0c2264a1ebbfae18173001af9a839ea7872cbc45de4c8cde464b564d6f5e8a",
+    "instrumentation_only": "Private simulation.cpp copy compiled-O1 and linked before unchanged archive; public control/geometry not changed. No maintained edits."
+  }
+}

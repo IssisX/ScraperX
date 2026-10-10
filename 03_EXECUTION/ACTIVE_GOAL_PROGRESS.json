@@ -32,13 +32,16 @@
     "baseline": "f0685592be409bea468df874ac68705bd024f8c7",
     "branch": "ChatGPT",
     "date": "2026-10-10",
-    "priority": "Full green exact-source Actions and verified matching APK copied to Android Download before new gameplay.",
-    "last_full_run": 38007285774,
-    "last_full_result": "Failed:49/54 native checks; downstream Godot/Android skipped.",
+    "priority": "Full green exact-source Actions and verified matching APK download link before new gameplay. Owner waived Android Download copy on2026-10-10; willfetchit.",
+    "last_full_run": 38060174319,
+    "last_full_result": "Failed52/54native: athletic defaultcageexit and swingstairmode2 prematureabandonment; Godot/Androidblocked. ActualGNU13.3x86CI differs from passingARMlocaldrivers.",
     "retained_gameplay": "North418-to440, pipe440-to462, finite native timber foot push and actual fracture presentation are implemented at their recorded native/touch/render boundaries. Earlier statements that timber foot push remains unfinished are historical and superseded by wood-foot-push-2026-10-09 evidence.",
-    "local_repairs": "Cart native16907ticks; swing modes2/5/7; full CTest athletic executable27PASS receipts; full retained viewport-touch grade-to66m route16806ticks pass at frozen hashes. All754 native require messages retained; ordinary-input-only repairs. No production physics changed in this batch.",
-    "pending": "Commit/push this integrated batch, full exact-source Actions and matching APK verification/copy. Current-version beam/rail drift remains OPEN; native ordinary-release/landing and actual touch neutral-input diagnosis underway. Phone observation unverified.",
+    "local_repairs": "Priorcart/swing5/7/touchupper receipts preserved. Newcage pose-aware Jump clears fourstates (walking-only red on+10/+25cmsetdowns); fullathletic27PASS/all754messages preserved. Mode2 observedreceiver-yield/realstairfooting/remainingstroke gate passes>=.05postabandonmotion/strictfirmrestore/onward. Nativephysicsarchiveunchanged; x86closurepending.",
+    "pending": "Commit/pushbothsupporteddriverrepairs/savedpermissioninstructions/evidence asonebatch; fullgreenexactsourceActions; verifyAPKpackage/version>213671847/signing/provenance andgiveartifactdownloadlink. No AndroidDownloadcopy orinstallation. Fullroadmap/devicequestions preserved.",
     "estimate_reassessment": "Overall61% retained: current driver repairs do not add new gameplay completion. All canonical requirements remain in scope. Future small goals must state exact encounter, observable change and finish condition.",
-    "reported_beam_drift": "Owner reports many skinny beams AND rails on the most updated version. CURRENT-source settled explicit-zero samples remain stationary; actual narrow-rail landing produces finite lateral stopping travel then stable18seconds. This does not reproduce or resolve continuing drift. Input release is being traced. Older APK comparison is historical evidence only, never a cause attribution for this report. No standing lock, velocity clamp, or beam-bug completion credit."
+    "reported_beam_drift": "Owner uses newestavailablepublicAPK. Savedreleaseasset/downloads mapping verifies source0e31/publicversion213671847, predating existingneutralcentring removal/gravitycomp incurrent source. No current-source sustaineddrift reproduced in boundedbeam/railcontact or realviewportneutralrelease probes; no new physics patch justified. Newbuildincludes existingcorrections; phoneconfirmation remainsopen. Do not ask user whichbeam/APK or dismiss latestversion report.",
+    "published_source": "89e21f14ff6f63dc24efbdbea91170dd1d924075",
+    "current_run": 38060174319,
+    "current_run_status": "CI38060174319 failed52/54. Bothremainingdrivers repaired/localARMpassed andreviewed; nextbatchedexactsourceCIpending."
   }
 }

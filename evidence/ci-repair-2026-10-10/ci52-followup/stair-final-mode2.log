@@ -1,0 +1,80 @@
+SPAWN pos 6,0.893589,-25 target 0 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_READY pos 12.6968,0.893589,-78.9925 target 2530 carrying 0 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_PICK pos 12.6968,0.893589,-78.9925 target 0 carrying 2530 tip 0.579488 pipes 0 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+RACK_LOADED pos 12.229,0.893634,-79.0001 target 2530 carrying 0 tip 0.60123 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_READY pos -0.548948,0.893634,-85.6 target 2505 carrying 0 tip 0.60123 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_PICK pos -0.548948,0.893634,-85.6 target 0 carrying 2505 tip 0.60123 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+BRIDGE_LIFTED pos -1.63078,0.893685,-85.6 target 0 carrying 0 tip 8.00738 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos -0.641282,0.893685,-85.9839 target 0 carrying 0 tip 7.98966 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 1.98602,0.902554,-85.9835 target 0 carrying 0 tip 7.98673 pipes 20 support 1 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 1.94014,1.9492,-91.0586 target 0 carrying 0 tip 8.00008 pipes 20 support 1524 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 6.0382,1.95499,-91.0767 target 0 carrying 0 tip 7.99385 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 5.99997,8.34323,-107.077 target 0 carrying 0 tip 8.01458 pipes 20 support 2500 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.08636,8.06592,-107.047 target 0 carrying 0 tip 8.00508 pipes 20 support 1525 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.05982,8.9,-110.625 target 0 carrying 0 tip 7.99347 pipes 20 support 1526 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+CROSS pos 9.05999,11.9,-125.156 target 0 carrying 0 tip 8.01972 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+ARRIVED pos 9.05999,11.9,-125.156 target 0 carrying 0 tip 8.01972 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_EDGE_READY pos 20.0016,17.1968,-123.176 target 0 carrying 0 tip 8.02833 pipes 20 support 2561 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+DUCT_LOWERED pos 20.0016,15.3543,-122.495 target 0 carrying 0 tip 8.00853 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+FACADE_33M pos 11.2978,33.9,-125.281 target 0 carrying 0 tip 8.04282 pipes 20 support 11 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_CHAIN_READY pos -17.5,33.9,-121.455 target 2602 carrying 0 tip 8.04372 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_HELD pos -17.5,33.9,-121.455 target 0 carrying 2602 tip 8.0453 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.722566 lever_angle=0 handle_y=34.91 front=-1.52588e-06
+STAIR_HANDLE_PULLED pos -17.5,33.9,-122.341 target 0 carrying 0 tip 8.05121 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.72206 lever_angle=0.452623 handle_y=34.9173 front=-1.52588e-06
+STAIR_RELEASED pos -17.5,33.9,-122.416 target 0 carrying 0 tip 8.06069 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.721843 lever_angle=0.451887 handle_y=34.8894 front=-1.52588e-06
+STAIR_FOOT pos -16.4376,33.9,-122.128 target 0 carrying 0 tip 8.04155 pipes 20 support 1601 deaths 0
+STAIR_STATE body_angle=0.702355 lever_angle=0.450016 handle_y=34.3595 front=-1.52588e-06
+STAIR_X pos -15.2191,34.3894,-122.1 target 0 carrying 0 tip 8.04311 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.492905 lever_angle=0.450013 handle_y=34.3394 front=-1.52588e-06
+STAIR_X pos -14.0069,35.1107,-122.1 target 0 carrying 0 tip 8.04621 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.062691 lever_angle=0.450014 handle_y=34.3392 front=0.109087
+STAIR_RECEIVER_ENGAGED pos -13.943,35.0595,-122.1 target 0 carrying 0 tip 8.06316 pipes 20 support 2600 deaths 0
+STAIR_STATE body_angle=0.0325906 lever_angle=0.450014 handle_y=34.3392 front=0.505469
+ABANDONED pos -13.8347,35.5463,-117.813 target 0 carrying 0 tip 8.04533 pipes 20 support 0 deaths 0
+STAIR_STATE body_angle=0.0494672 lever_angle=0.450014 handle_y=34.3392 front=0.582667
+STAIR_FALL_RESTORED pos -15.5395,33.9,-122.101 target 0 carrying 0 tip 8.06232 pipes 20 support 1601 deaths 1
+STAIR_STATE body_angle=0.68376 lever_angle=0.450015 handle_y=34.3699 front=-1.52588e-06
+CHECKPOINT_FRONT -1.52588e-06 ABANDONED_FRONT 0.582667 RESTORED_FRONT -1.52588e-06
+STAIR_CHECKPOINT committed_count=11083 firm_support=1601 committed_front=-1.52588e-06 departure_front=0.505469 abandoned_front=0.582667 restored_front=-1.52588e-06
+STAIR_X pos -12.0147,36.8958,-122.1 target 0 carrying 0 tip 8.04555 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=0.044409 lever_angle=0.450014 handle_y=34.3392 front=0.64099
+STAIR_X pos -10.0524,38.5743,-122.1 target 0 carrying 0 tip 8.05007 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=0.0353657 lever_angle=0.450014 handle_y=34.3392 front=0.64099
+STAIR_X pos -8.03081,40.5795,-122.1 target 0 carrying 0 tip 8.07517 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=0.0403506 lever_angle=0.450014 handle_y=34.3392 front=0.64099
+STAIR_X pos -5.05544,43.1011,-122.1 target 0 carrying 0 tip 8.0703 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=0.0276846 lever_angle=0.450014 handle_y=34.3392 front=0.64099
+STAIR_X pos -2.77876,45.2442,-122.1 target 0 carrying 0 tip 8.06707 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=0.0315079 lever_angle=0.450014 handle_y=34.3392 front=0.64099
+STAIR_TOP pos -2.77876,45.2442,-122.1 target 0 carrying 0 tip 8.06707 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=0.0315079 lever_angle=0.450014 handle_y=34.3392 front=0.64099
+PAD_FRONT 0.64099
+TOP_SETTLED pos -2.74797,45.2044,-122.1 target 0 carrying 0 tip 8.07555 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=0.0285125 lever_angle=0.450014 handle_y=34.3392 front=0.64099
+STAIR_EXIT_READY pos -2.12132,45.2836,-122.391 target 0 carrying 0 tip 8.05153 pipes 20 support 2600 deaths 1
+STAIR_STATE body_angle=0.0293886 lever_angle=0.450014 handle_y=34.3392 front=0.64099
+STAIR_44M pos -2.08146,44.9,-125.459 target 0 carrying 0 tip 8.07894 pipes 20 support 11 deaths 1
+STAIR_STATE body_angle=0.036745 lever_angle=0.450014 handle_y=34.3392 front=0.64099
+PASS grade -> pipe -> facade -> stair: supported +44m mode=2

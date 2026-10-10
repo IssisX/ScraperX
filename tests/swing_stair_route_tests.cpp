@@ -389,14 +389,22 @@ int main(int argc, char **argv) {
   auto front=[&](){return 44.9-.875-s.kit_body_position(pad).y;};
   if(!walk_to(s,-16.4,-122.1,8,.1,checkpoint_record)) {report(s,"STAIR_FOOT_FAIL");return 49;} report(s,"STAIR_FOOT"); for(double x : {-15.2,-14.0,-12.0,-10.0,-8.0,-5.0,-2.7}) { if(!walk_to(s,x,-122.1,25,.1,checkpoint_record)) {report(s,"STAIR_CLIMB_FAIL");return 49;} report(s,"STAIR_X");
     if(mode==2 && x==-14.0) {
-      // Abandon while the receiver still has real travel remaining. Require
-      // moving-tread contact, without treating it as a firm checkpoint commit.
-      if (!wait_for(s, 2.0, [](const Snapshot &v) {
-            return v.player_grounded && v.support_entity_id == 2600;
+      // A horizontal waypoint does not establish striker/bed engagement.
+      // Ride with neutral input until the real receiver is yielding, with
+      // stroke remaining and actual tread contact for the departure Jump.
+      // Moving-stair contact does not replace the firm-footing checkpoint.
+      double previous_front=front();
+      if (!wait_for(s, 15.0, [&](const Snapshot &v) {
+            const double current_front=front();
+            const bool advancing=current_front>previous_front+1.e-6;
+            previous_front=current_front;
+            return v.player_grounded && v.support_entity_id == 2600 &&
+                current_front>=.05 && current_front<1.75-.1 && advancing;
           }, checkpoint_record)) {
-        report(s,"STAIR_CHECKPOINT_CONTACT_FAIL");
-        std::cerr<<"FAIL mode2 never regained moving-stair contact\n"; return 55;
+        report(s,"STAIR_RECEIVER_ENGAGEMENT_FAIL");
+        std::cerr<<"FAIL mode2 never observed yielding receiver with moving-stair contact and travel remaining\n"; return 55;
       }
+      report(s,"STAIR_RECEIVER_ENGAGED");
       const auto checkpoint=s.snapshot();
       if (!committed.available ||
           committed.committed_count != checkpoint.checkpoint_commit_count) {

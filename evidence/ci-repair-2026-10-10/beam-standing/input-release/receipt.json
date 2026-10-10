@@ -1,0 +1,94 @@
+{
+  "command": "proot-distro login ubuntu --shared-tmp -- /bin/bash -c 'GODOT_SILENCE_ROOT_WARNING=1 timeout 120s /data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 --headless --audio-driver Dummy --fixed-fps 60 --resolution 432x432 --path /data/data/com.termux/files/usr/tmp/scraperx-touch-upper-be3jo5pm/runtime-proof/godot -- --uitest=touch_upper'",
+  "exit_code": 0,
+  "head": "f0685592be409bea468df874ac68705bd024f8c7",
+  "maintained_source_hashes": {
+    "godot/presentation/main.gd": "f959472ace1e74be69b2fb030d12d53bf320236935a4b7e10c1ec23a70e91c1e",
+    "godot/presentation/ui/ui_test_driver.gd": "d1c2c36a9ff56817de2ced0dd05e21d696e8bfa29beb6e5ede7f29cf11bd50a4",
+    "godot/presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "godot/presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a"
+  },
+  "private_executed_hashes": {
+    "presentation/main.gd": "395e94f4e970a158256f0f2f1030b807189eb1cc56e732037425fdd3fd1e622c",
+    "presentation/ui/ui_test_driver.gd": "5be6374260263707bf5c4d08422dea84b6332d2844e7601be61d0ef86ad21cdd",
+    "presentation/ui/input_router.gd": "39f78d39c3b010a4a4109d4e559c6dfddafedee9438555504981596c1ac76cc0",
+    "presentation/ui/touch_controls.gd": "278b4b886b64d59bd91e6a9535635fd0325717d83c20f2258dba53d38503c71a",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c"
+  },
+  "source_hashes_unchanged": true,
+  "native_hashes_unchanged": true,
+  "private_instrumentation": "Private driver replaces touch_upper dispatchbody with short joystick release/cancel test (no fullroute); private main prints actual router.frame movement and native.set_move_input arguments immediatelybefore existing acceptedcall.",
+  "native_observation_boundary": "Actual native callsite arguments and no rejectedcall; no exposed native command snapshot used.",
+  "setup": [
+    "NEUTRAL_SETUP connected_pads=[] active_pad=-1 axes=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] ci_mode=false"
+  ],
+  "release_results": [
+    "NEUTRAL_RELEASE kind=release pressed=false canceled=false immediate_touch=(0.0, 0.0) stick_index=-1",
+    "NEUTRAL_RELEASE kind=cancel_released pressed=false canceled=true immediate_touch=(0.0, 0.0) stick_index=-1",
+    "NEUTRAL_RELEASE kind=cancel_pressed pressed=false canceled=true immediate_touch=(0.0, 0.0) stick_index=-1"
+  ],
+  "phase_results": {
+    "baseline_neutral": {
+      "command_frames": 5,
+      "first_tick": 4,
+      "last_tick": 10,
+      "tick_span": 6,
+      "nonzero_commands": 0
+    },
+    "release_move": {
+      "command_frames": 12,
+      "first_tick": 12,
+      "last_tick": 28,
+      "tick_span": 16,
+      "nonzero_commands": 12
+    },
+    "release_neutral": {
+      "command_frames": 80,
+      "first_tick": 30,
+      "last_tick": 148,
+      "tick_span": 118,
+      "nonzero_commands": 0
+    },
+    "cancel_released_move": {
+      "command_frames": 12,
+      "first_tick": 150,
+      "last_tick": 166,
+      "tick_span": 16,
+      "nonzero_commands": 12
+    },
+    "cancel_released_neutral": {
+      "command_frames": 80,
+      "first_tick": 168,
+      "last_tick": 286,
+      "tick_span": 118,
+      "nonzero_commands": 0
+    },
+    "cancel_pressed_move": {
+      "command_frames": 12,
+      "first_tick": 288,
+      "last_tick": 304,
+      "tick_span": 16,
+      "nonzero_commands": 12
+    },
+    "cancel_pressed_neutral": {
+      "command_frames": 80,
+      "first_tick": 306,
+      "last_tick": 424,
+      "tick_span": 118,
+      "nonzero_commands": 0
+    }
+  },
+  "terminal_result": [
+    "SCRAPERX_UITEST PASS touch_upper private_viewport_touch_release_cancel=1 native_command_trace=1 no_extra_staging=1"
+  ],
+  "result": "Ordinaryviewportfingerreleaseandcanceledrelease cleartouch/router/nativearguments toexactzero immediatelyand remainzero over80commandframespercase. No sticky-touch defectreproduced.",
+  "cancellation_shape": "Godotcanceled=true normalizespressed=false; cancel_pressed attemptsame actualeventshapeas cancel_released, notreproduciblepressed-and-canceledcombination.",
+  "gamepad": "Input.get_connected_joypads=[] active_pad=-1 axeszero inalltraces. No padstateinjected; cachedgamepadsummationnot exercised.",
+  "historical_failure": "Initialprivateloggerunsupported%gformat; logger-format-failure.log preserved, discardedas evidence. Corrected%f logger runhasnoerrors.",
+  "limits": [
+    "Actualheadlessviewporttouchinretainedfixtureworld; nophoneobservationoroldAPK inference.",
+    "No skinnybeam/railcontact/driftphysicsacceptance claim; nativeworkerownscontacts.",
+    "Read-only maintaineddiagnosis; no maintainededits/build/fulltouch_upperrerun.",
+    "Privateoriginalmain/driverrestoredafterfrozenreceipt."
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "tested_source_sha256": "79bdf9469e2ffddc54be5eaf8c53061edeb1be32f29076a8a773d90d64228570",
+  "integrated_source_sha256": "b08965dea052b4af4b414caf31c63ab0e45da898e3515f81b6b7c2681ff736ea",
+  "only_change": "Two comment lines clarify that the bar-side test is not a header-clearance proof. All executable source bytes otherwise unchanged; no rerun required.",
+  "prior_final_pass_receipts": 27,
+  "platform": "ARM64/GCC15; x86CIstillpending"
+}

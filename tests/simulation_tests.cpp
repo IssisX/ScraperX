@@ -413,15 +413,45 @@ bool take_block(scraperx::sim::Simulation &simulation) {
 }
 
 // Out through the travelled doorway to the apron south of the cage.
-bool carry_out_of_cage(scraperx::sim::Simulation &simulation,
-                       const bool jump_over_bar = false) {
-    // In the belt-entry route the dropped bar settles across this lane.
-    // One ordinary Jump clears its low edge within the same walking budget.
-    if (jump_over_bar) {
-        (void)simulation.request_jump();
+bool carry_out_of_cage(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    // Either entry can leave the real dropped bar across the rack-to-door
+    // lane. Read its current long axis, rather than assuming a particular
+    // set-down pose or choosing Jump from the entry route's identity.
+    bool jumped_over_bar = false;
+    for (int tick = 0; tick < 4 * 90; ++tick) {
+        const auto state = simulation.snapshot();
+        if (state.carrying_entity_id != Simulation::kHook5BlockEntityId) {
+            return false;
+        }
+        if (std::hypot(kHook5DoorwayX - state.player_position.x,
+                       kHook5MinZ + 1.2 - state.player_position.z) <= 0.15) {
+            (void)simulation.set_move_input(0.0, 0.0);
+            return walk_to(simulation, kHook5DoorwayX, kHook5MinZ - 2.0, 4.0);
+        }
+        steer_toward(simulation, kHook5DoorwayX, kHook5MinZ + 1.2);
+        const auto bar = state.hook5_bar_position;
+        const auto q = state.hook5_bar_rotation;
+        const double axis_x = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+        const double axis_z = 2.0 * (q.x * q.z - q.w * q.y);
+        const double dx = state.player_position.x - bar.x;
+        const double dz = state.player_position.z - bar.z;
+        const double along = std::clamp(
+            (dx * axis_x + dz * axis_z) /
+                std::max(axis_x * axis_x + axis_z * axis_z, 1.0e-6),
+            -1.025, 1.025); // native bar half-length
+        const double bar_gap = std::hypot(dx - along * axis_x, dz - along * axis_z);
+        // 0.35 m capsule radius + bar section + takeoff approach margin.
+        // Jump before pushing the bar into the doorway; only from real
+        // grounding, once, and on the bar's north side. Native collision
+        // still owns doorway-header clearance.
+        if (!jumped_over_bar && state.player_grounded && dz > 0.0 && bar_gap < 0.75) {
+            (void)simulation.request_jump();
+            jumped_over_bar = true;
+        }
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
     }
-    return walk_to(simulation, kHook5DoorwayX, kHook5MinZ + 1.2, 4.0) &&
-           walk_to(simulation, kHook5DoorwayX, kHook5MinZ - 2.0, 4.0);
+    return false;
 }
 
 // Walks slowly up to the hook block lying on the ground, faces it, and picks
@@ -3372,7 +3402,7 @@ int main() {
                           [](const auto &state) { return state.hook5_door_angle_radians >= 1.20; },
                           6.0),
             "the hook ascent's door must travel once the bar is clear");
-    require(take_block(hook) && carry_out_of_cage(hook, true),
+    require(take_block(hook) && carry_out_of_cage(hook),
             "the hook ascent must take the block and carry it out of the cage");
 
     // Round the belt's north end -- its deck never reaches past z = -81 --
