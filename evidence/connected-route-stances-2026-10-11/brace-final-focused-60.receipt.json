@@ -1,0 +1,31 @@
+{
+  "repository_head": "846d26ce7fcb00171c56a730c6f644ebe0a56c9c",
+  "maintained_driver_sha256": "807ceaab1366f876a745b5c42bc5dd290a9e2563473b392d43da18c2bcf41acb",
+  "variant_driver_sha256": "744fc7dc594701d93be07436b095a6550795d09d880dddfb602ba856a5f42403",
+  "scope": "focused staged braced bay only; not full143 evidence",
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_campaign_to_143"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 54.484,
+  "log_sha256": "8e117dfd342ddfc67acf472dde7f36e0f4e4f0dd33199fc426aa8d368e766835",
+  "terminal": [
+    "SCRAPERX_UITEST PASS touch_campaign_to_143 grade_to_88m=1 gap_jump=1 crouched_portal=1 mantle=1 support=11 deaths=0 arrival_y=88.900"
+  ]
+}

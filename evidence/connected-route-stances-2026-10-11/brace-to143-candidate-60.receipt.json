@@ -1,0 +1,40 @@
+{
+  "repository_head_at_start": "846d26ce7fcb00171c56a730c6f644ebe0a56c9c",
+  "maintained_driver_sha256": "807ceaab1366f876a745b5c42bc5dd290a9e2563473b392d43da18c2bcf41acb",
+  "variant_driver_sha256": "d1f9aa2770fc810dfc6bdcba597a59a98c9f27815374c0841a615e1b68cd8d58",
+  "scope": "staged +77 to143 continuation; not uninterrupted grade proof",
+  "variant_change": "Only braced opening teeter replaced with normal-world guard, observed preview restart and .5 second wait",
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_campaign_to_143"
+  ],
+  "exit_code": 31,
+  "elapsed_seconds": 94.256,
+  "log_sha256": "f44209ac2a5c401a914f86726eff7f1b2156928310c610525841a5ebf5150fa6",
+  "terminal": [
+    "SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=first north climb top-out unsupported (16.2029, 91.76855, -179.8163)"
+  ],
+  "last_pose_lines": [
+    "SCRAPERX_UITEST_POSE braced_bay_entry tick=335 position=(28.01881, 77.9, -131.007) elapsed_ms=11454",
+    "SCRAPERX_UITEST_POSE braced_bay_transfer tick=1058 position=(29.14165, 82.9, -143.9154) elapsed_ms=20837",
+    "SCRAPERX_UITEST_POSE braced_bay_low_member tick=1844 position=(33.98551, 84.8839, -138.7112) elapsed_ms=31521",
+    "SCRAPERX_UITEST_POSE braced_bay_upper_junction tick=2350 position=(34.00204, 87.89971, -131.2729) elapsed_ms=38274",
+    "SCRAPERX_UITEST_POSE braced_bay_arrival tick=3103 position=(24.81366, 88.9, -132.0002) elapsed_ms=48689",
+    "SCRAPERX_UITEST_POSE north_frame_entry tick=4237 position=(16.2029, 88.9, -179.8569) elapsed_ms=66160"
+  ]
+}

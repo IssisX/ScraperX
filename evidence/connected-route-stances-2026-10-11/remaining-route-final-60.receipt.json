@@ -1,0 +1,41 @@
+{
+  "source_head_at_start": "846d26ce7fcb00171c56a730c6f644ebe0a56c9c",
+  "maintained_driver_sha256": "120452893416de107bf0dfb2d8097d271f3eab50486f17ad70bc75b29f5aadfa",
+  "variant_driver_sha256": "96061b0774b7116a6a515c689b64a8701d7a499ad386f6300c126d68bf1dc638",
+  "scope": "staged +77 to143 remaining route; not uninterrupted grade proof",
+  "change": "Only braced opening teeter replaced with guard/preview restart/.5 wait",
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_campaign_to_143"
+  ],
+  "exit_code": 31,
+  "elapsed_seconds": 105.517,
+  "log_sha256": "f1453f987f60e24d2800d83c39e4d0aa3fa6204e22c33fef72a051bb68261905",
+  "terminal": [
+    "SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=second north climb top-out unsupported (10.42114, 95.28094, -179.3012)"
+  ],
+  "last_pose_lines": [
+    "SCRAPERX_UITEST_POSE braced_bay_entry tick=335 position=(28.01881, 77.9, -131.007) elapsed_ms=12020",
+    "SCRAPERX_UITEST_POSE braced_bay_transfer tick=1058 position=(29.14165, 82.9, -143.9154) elapsed_ms=21556",
+    "SCRAPERX_UITEST_POSE braced_bay_low_member tick=1844 position=(33.98551, 84.8839, -138.7112) elapsed_ms=31744",
+    "SCRAPERX_UITEST_POSE braced_bay_upper_junction tick=2350 position=(34.00204, 87.89971, -131.2729) elapsed_ms=38384",
+    "SCRAPERX_UITEST_POSE braced_bay_arrival tick=3103 position=(24.81366, 88.9, -132.0002) elapsed_ms=48043",
+    "SCRAPERX_UITEST_POSE north_frame_entry tick=4391 position=(16.00541, 88.9, -179.567) elapsed_ms=65755",
+    "SCRAPERX_UITEST_POSE north_frame_first_rest tick=5141 position=(16.00541, 94.9, -180.541) elapsed_ms=75690"
+  ]
+}

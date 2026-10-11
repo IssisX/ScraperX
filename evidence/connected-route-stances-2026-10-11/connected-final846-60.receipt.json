@@ -1,0 +1,39 @@
+{
+  "source_sha": "846d26ce7fcb00171c56a730c6f644ebe0a56c9c",
+  "driver_sha256": "5ea7e15e1ad77079e5ebd0010f160c476be2896906b5899e1840ecc4990b042f",
+  "maintained_driver_sha256": "5ea7e15e1ad77079e5ebd0010f160c476be2896906b5899e1840ecc4990b042f",
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_campaign_to_143"
+  ],
+  "exit_code": 31,
+  "elapsed_seconds": 349.765,
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/connected-final846-60.log",
+  "log_sha256": "407ba2f4773bf43d5eb0806bf5ad4a29c5a398bbe7e5406531eb38d6298c7930",
+  "terminal_failure": [
+    "SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=first braced bay landing unsupported (27.92074, 77.89047, -145.0367)"
+  ],
+  "last_pose_lines": [
+    "SCRAPERX_UITEST_POSE teeter_climb tick=18706 position=(34.74922, 68.26325, -139.3732) elapsed_ms=298491",
+    "SCRAPERX_UITEST_POSE teeter_arrival tick=20199 position=(24.05616, 77.9, -140.8099) elapsed_ms=331552",
+    "SCRAPERX_UITEST_POSE braced_bay_preview tick=20427 position=(25.21246, 77.9, -129.9431) elapsed_ms=336815",
+    "SCRAPERX_UITEST_POSE braced_bay_entry tick=20590 position=(28.95489, 77.9, -131.5717) elapsed_ms=340404"
+  ],
+  "native_last_state_available": "Failure position in log; no detailed native support-state dump emitted",
+  "replay_count": 1
+}

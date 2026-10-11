@@ -1,0 +1,24 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=509 driver=Dummy
+BRACE_TRACE target=(28.0, -131.0) at=(25.3536, 77.9, -129.9965) velocity=(1.472733, 0.0, -0.558427) grounded=true support=11
+BRACE_TRACE target=(28.0, -131.0) at=(25.80625, 77.9, -130.1682) velocity=(3.0321, 0.0, -1.149692) grounded=true support=11
+BRACE_TRACE target=(28.0, -131.0) at=(26.55831, 77.9, -130.4555) velocity=(4.470575, 0.0, -1.703224) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(27.54319, 77.9, -130.8278) velocity=(4.759335, 0.0, -1.794531) grounded=true support=1900
+SCRAPERX_UITEST_POSE braced_bay_entry tick=194 position=(28.9882, 77.9, -131.3726) elapsed_ms=6227
+BRACE_TRACE target=(28.0, -144.0) at=(28.97643, 77.9, -131.5231) velocity=(-0.122886, 0.0, -1.57025) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.93866, 77.9, -132.0057) velocity=(-0.253001, 0.0, -3.232861) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.87497, 77.9, -132.8195) velocity=(-0.379454, 0.0, -4.848704) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.79136, 77.9, -133.8878) velocity=(-0.429107, 0.0, -5.483235) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.70553, 77.9, -134.9842) velocity=(-0.429092, 0.0, -5.483235) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.6197, 77.9, -136.0806) velocity=(-0.429072, 0.0, -5.483238) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.53387, 77.9, -137.1771) velocity=(-0.429046, 0.0, -5.483238) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.44804, 77.9, -138.2735) velocity=(-0.42901, 0.0, -5.483242) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.36221, 77.9, -139.3699) velocity=(-0.428958, 0.0, -5.483246) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.27638, 77.9, -140.4666) velocity=(-0.428897, 0.0, -5.483251) grounded=true support=1800
+BRACE_TRACE target=(28.0, -144.0) at=(28.19057, 77.9, -141.563) velocity=(-0.428813, 0.0, -5.483258) grounded=true support=1800
+BRACE_TRACE target=(28.0, -144.0) at=(28.10482, 77.9, -142.6596) velocity=(-0.42882, 0.0, -5.483258) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.02203, 77.9, -143.7183) velocity=(-0.367799, 0.0, -4.703153) grounded=true support=1900
+SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=first braced bay landing unsupported (27.91775, 77.88453, -145.0602)

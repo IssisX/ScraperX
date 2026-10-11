@@ -1,0 +1,48 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=482 driver=Dummy
+BRACE_TRACE target=(28.0, -131.0) at=(25.3536, 77.9, -129.9965) velocity=(1.472732, 0.0, -0.558428) grounded=true support=11
+BRACE_TRACE target=(28.0, -131.0) at=(25.8001, 77.9, -130.1658) velocity=(2.704029, 0.0, -1.025307) grounded=true support=11
+BRACE_TRACE target=(28.0, -131.0) at=(26.27529, 77.9, -130.3463) velocity=(2.136786, 0.0, -0.813618) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(26.64863, 77.9, -130.4879) velocity=(1.68065, 0.0, -0.636907) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(26.94131, 77.9, -130.5988) velocity=(1.318481, 0.0, -0.499626) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(27.17063, 77.9, -130.6857) velocity=(1.032907, 0.0, -0.39145) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(27.35213, 77.9, -130.7545) velocity=(0.860875, 0.0, -0.326242) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(27.51726, 77.9, -130.8171) velocity=(0.809062, 0.0, -0.306635) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(27.66943, 77.9, -130.8746) velocity=(0.731684, 0.0, -0.2774) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(27.80424, 77.9, -130.9256) velocity=(0.636393, 0.0, -0.241464) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(27.91836, 77.9, -130.9689) velocity=(0.519042, 0.0, -0.196988) grounded=true support=1900
+BRACE_TRACE target=(28.0, -131.0) at=(28.00866, 77.9, -131.0031) velocity=(0.40674, 0.0, -0.154443) grounded=true support=1900
+SCRAPERX_UITEST_POSE braced_bay_entry tick=335 position=(28.01881, 77.9, -131.007) elapsed_ms=7570
+BRACE_TRACE target=(28.0, -144.0) at=(28.01859, 77.9, -131.1579) velocity=(-0.00228, 0.0, -1.575049) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01789, 77.9, -131.642) velocity=(-0.004694, 0.0, -3.242741) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01675, 78.08878, -132.3395) velocity=(-0.006432, 1.643828, -3.616421) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01548, 78.42751, -133.0847) velocity=(-0.004448, 1.447481, -3.184459) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01513, 78.63873, -133.5494) velocity=(-0.000722, 0.909091, -2.000001) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.015, 78.82051, -133.9493) velocity=(-0.000743, 0.909089, -1.999996) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01486, 79.00228, -134.3492) velocity=(-0.000767, 0.906815, -2.001034) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01472, 79.18406, -134.7491) velocity=(-0.000793, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01458, 79.36583, -135.149) velocity=(-0.000821, 0.906815, -2.001035) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01445, 79.54761, -135.5489) velocity=(-0.000851, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01431, 79.72938, -135.9488) velocity=(-0.000885, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01417, 79.91116, -136.3487) velocity=(-0.000922, 0.909024, -1.999853) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01403, 80.09293, -136.7486) velocity=(-0.000963, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.0139, 80.2747, -137.1485) velocity=(-0.001009, 0.909024, -1.999853) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01367, 80.45647, -137.5484) velocity=(-0.001055, 0.908701, -1.999143) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.0134, 80.63825, -137.9483) velocity=(-0.001102, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01312, 80.82002, -138.3482) velocity=(-0.001155, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01285, 81.00179, -138.7481) velocity=(-0.001216, 0.906815, -2.001034) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01258, 81.18357, -139.148) velocity=(-0.001287, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.0123, 81.36534, -139.5479) velocity=(-0.001371, 0.906803, -2.001009) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01203, 81.54712, -139.9478) velocity=(-0.001472, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01175, 81.72889, -140.3477) velocity=(-0.001594, 0.909079, -1.999974) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01144, 81.91067, -140.7477) velocity=(-0.001743, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01103, 82.09244, -141.1476) velocity=(-0.001912, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01062, 82.27422, -141.5475) velocity=(-0.002136, 0.909024, -1.999853) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.01019, 82.45599, -141.9474) velocity=(-0.002443, 0.908701, -1.999143) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.00964, 82.63776, -142.3473) velocity=(-0.002857, 0.909091, -2.0) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.00787, 82.91832, -142.8661) velocity=(-0.017245, 0.344506, -3.325214) grounded=true support=1900
+BRACE_TRACE target=(28.0, -144.0) at=(28.00291, 82.9, -143.6648) velocity=(-0.027337, 0.0, -3.959662) grounded=true support=1900
+SCRAPERX_UITEST PASS touch_campaign_to_143 diagnostic_first_braced_landing_only staging=77m

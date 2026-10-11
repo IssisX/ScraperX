@@ -1,0 +1,39 @@
+{
+  "base_revision": "846d26ce7fcb00171c56a730c6f644ebe0a56c9c",
+  "braced_repair_driver_sha256": "807ceaab1366f876a745b5c42bc5dd290a9e2563473b392d43da18c2bcf41acb",
+  "native_bridge_reuse": "../connected-ring-approach-2026-10-11/receipt.json; unchanged74 nativefiles",
+  "braced_entry_cause": "flat approach distance-only acceptance overshot x28 narrowgirder; original stagedmaxy77.9 missedincline; true supportedarrival alone climbed82.9",
+  "braced_full_focused_result": "PASS actual originalgap/crouch/mantle/88.9Tower11/deaths0 after maintainednewentrygate",
+  "continuation_result": "staged77-to143 exposed firstnorthclimb top-out unsupported16.2029,91.76855,-179.8163; no143PASS",
+  "mcp_braced_writer_session": "01a12c09-5925-7f20-8bcb-55147a2152b7",
+  "braced_review": "approach_review Sol/high,no blocker,no runtime",
+  "limits": "Only connected-final846 is uninterruptedordinarygrade. All bracedprobe/remainderlogs have explicit diagnosticstaging; printedordinary_grade label in continuation is not source proof. FullGREEN/APK and deviceplay pending.",
+  "sha256": {
+    "connected-final846-60.log": "407ba2f4773bf43d5eb0806bf5ad4a29c5a398bbe7e5406531eb38d6298c7930",
+    "connected-final846-60.receipt.json": "c15506ae54a6cc9bf6d5f01c36a88cdf2f18bdce4e53711efd63eb01f045d508",
+    "brace-baseline-normal60.log": "69c6f8f72d68714071c0d5d676d368034ce622f3bd507c59d1868f9706d18da3",
+    "brace-aligned-normal60.log": "78cdcf16400fa1c9ef63dbaf5044ffc94b99eca3613d18f0d8c4604a010e0e22",
+    "brace-final-focused-60.log": "8e117dfd342ddfc67acf472dde7f36e0f4e4f0dd33199fc426aa8d368e766835",
+    "brace-final-focused-60.receipt.json": "b7d7bf72bfd2ef1031cb4b138de6d0d79021d977e423e06d0ffd0b1bec33d702",
+    "brace-to143-candidate-60.log": "f44209ac2a5c401a914f86726eff7f1b2156928310c610525841a5ebf5150fa6",
+    "brace-to143-candidate-60.receipt.json": "121a845af99438b22e399f9cedd141ce9fa204f01d0ff75497ad03fdff697edc",
+    "north-first-baseline-60.log": "9401fa0e68ca1f4473b8a523b2a45419a9a4ac302ad0bf5538b3707bf459d8ed",
+    "north-first-baseline-60.receipt.json": "e7daba7ee11355d0c706b32707560e34574ac24320f64e24ac98b8206e79ff96",
+    "north-first-aligned-60.log": "053ceb803ca051842103e3a3dc7ff751f2b5119b285f64d70727efef5508113a",
+    "north-first-aligned-60.receipt.json": "6017df7c58ab79834aa574e77f40085a0381ebbdbd47d187d111a10698f6e644",
+    "remaining-route-final-60.log": "f1453f987f60e24d2800d83c39e4d0aa3fa6204e22c33fef72a051bb68261905",
+    "remaining-route-final-60.receipt.json": "ebb5c1496d3bc02331e2010fe085a940216af598e11cde2ac2ecd35b14044052"
+  },
+  "north_first_cause": "Unbraked finalstanceovershoot placesheadunderrealfirstrestfascia; baselineactual2handsandforwardinput stationarynear91.76744 for9s; oneboolsupportedarrival settlesunchangedstance,clearsfascia,original94.7/support1901gatepasses.",
+  "north_first_result": "Stagedfirstnorthdiagnosticredexit31/greenexit0; fullremaining143probe pending.",
+  "current_driver_sha256": "120452893416de107bf0dfb2d8097d271f3eab50486f17ad70bc75b29f5aadfa",
+  "mcp_north_writer_session": "01a12c19-825b-78d2-a236-22260a685147",
+  "terminal_ci846d": {
+    "run": 38159505644,
+    "conclusion": "failure",
+    "url": "https://github.com/IssisX/ScraperX/actions/runs/38159505644",
+    "scope": "bracedentryoldunrepairedsource; exactfailedreasoncapturedlocal"
+  },
+  "north_review": "approach_review Sol/high, no blocker; no runtime",
+  "final_remaining_result": "Staged77-to143 failed secondnorthclimb10.42114,95.28094,-179.3012,exit31,105.517s; firstnorthfullrest94.9 actualsupported passed. Ownerconditionalfinishingattempt ended; primaryworknowCrownmodule3movement. No fullGREEN/newAPK."
+}

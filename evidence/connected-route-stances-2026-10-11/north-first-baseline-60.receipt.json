@@ -1,0 +1,31 @@
+{
+  "source_head": "846d26ce7fcb00171c56a730c6f644ebe0a56c9c",
+  "maintained_driver_sha256": "807ceaab1366f876a745b5c42bc5dd290a9e2563473b392d43da18c2bcf41acb",
+  "driver_sha256": "befa82b5c954f6b93a09b344c3c9542ced3ba4a1d57aa5c126074dcbe3673514",
+  "scope": "staged first north only baseline diagnostic",
+  "exit_code": 31,
+  "elapsed_seconds": 51.223,
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_campaign_to_143"
+  ],
+  "log_sha256": "9401fa0e68ca1f4473b8a523b2a45419a9a4ac302ad0bf5538b3707bf459d8ed",
+  "terminal": [
+    "SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=first north climb top-out unsupported (16.21531, 91.76744, -179.8177)"
+  ]
+}

@@ -1267,9 +1267,21 @@ func _touch_braced_bay() -> bool:
 	var device := InputRouter.Device.TOUCH
 	if int(_native().get_entity_body_count(1900)) != 1:
 		return _fail("braced bay absent from normal play")
-	if not await _walk_to(device, Vector2(28.0, -131.0), 0.14, 12.0):
+	# Settle aligned before the narrow girder; finite braking can overshoot its entry.
+	if not await _walk_to(device, Vector2(28.0, -131.0), 0.14, 12.0, true):
 		return _fail("braced bay flat entry %s" % _position())
 	await _seconds(0.5)
+	var entry_at := _position()
+	var entry_grounded := bool(_native().is_player_grounded())
+	var entry_support := int(_native().get_support_entity_id())
+	var entry_slip: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
+	var entry_planar_slip := Vector2(entry_slip.x, entry_slip.z).length()
+	var entry_distance := (Vector2(28.0, -131.0) - Vector2(entry_at.x, entry_at.z)).length()
+	if not entry_grounded or entry_support != 1900 or absf(entry_at.y - 77.9) > 0.1 \
+			or entry_distance > 0.14 or entry_planar_slip >= 0.15:
+		return _fail("braced bay flat entry unsettled target=%s at=%s grounded=%s support=%d height_error=%.6f distance=%.6f slip=%.6f" % [
+			Vector2(28.0, -131.0), entry_at, entry_grounded, entry_support,
+			absf(entry_at.y - 77.9), entry_distance, entry_planar_slip])
 	await _face(Vector2(0, -1))
 	_main._pitch = 0.11
 	await _pose("braced_bay_entry")
@@ -1723,9 +1735,9 @@ func _touch_north_service_frame() -> bool:
 	for point in [Vector2(24.8, -174.5), Vector2(16.0, -174.5)]:
 		if not await _walk_to(device, point, 0.14, 20.0):
 			return _fail("north frame +88 m entry %s" % _position())
-	# Stop within the actual rung search instead of accepting a stance
-	# outside native reach. The approach target and grip checks are unchanged.
-	if not await _walk_to(device, Vector2(16.0, -179.55), 0.04, 20.0):
+	# Settle at the intended rung stance so approach momentum does not
+	# carry the player under the receiver fascia before the first climb.
+	if not await _walk_to(device, Vector2(16.0, -179.55), 0.04, 20.0, true):
 		return _fail("north frame +88 m grip stance %s" % _position())
 	await _face(Vector2(0, -1))
 	_main._pitch = 0.24

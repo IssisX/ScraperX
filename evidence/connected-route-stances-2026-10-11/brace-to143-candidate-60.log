@@ -1,0 +1,13 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1156 driver=Dummy
+SCRAPERX_UITEST_POSE braced_bay_entry tick=335 position=(28.01881, 77.9, -131.007) elapsed_ms=11454
+SCRAPERX_UITEST_POSE braced_bay_transfer tick=1058 position=(29.14165, 82.9, -143.9154) elapsed_ms=20837
+SCRAPERX_UITEST_POSE braced_bay_low_member tick=1844 position=(33.98551, 84.8839, -138.7112) elapsed_ms=31521
+SCRAPERX_UITEST_POSE braced_bay_upper_junction tick=2350 position=(34.00204, 87.89971, -131.2729) elapsed_ms=38274
+SCRAPERX_UITEST_POSE braced_bay_arrival tick=3103 position=(24.81366, 88.9, -132.0002) elapsed_ms=48689
+SCRAPERX_UITEST_POSE north_frame_entry tick=4237 position=(16.2029, 88.9, -179.8569) elapsed_ms=66160
+SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=first north climb top-out unsupported (16.2029, 91.76855, -179.8163)

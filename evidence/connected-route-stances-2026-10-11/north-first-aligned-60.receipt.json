@@ -1,0 +1,33 @@
+{
+  "source_head": "846d26ce7fcb00171c56a730c6f644ebe0a56c9c",
+  "maintained_driver_sha256": "807ceaab1366f876a745b5c42bc5dd290a9e2563473b392d43da18c2bcf41acb",
+  "baseline_driver_sha256": "befa82b5c954f6b93a09b344c3c9542ced3ba4a1d57aa5c126074dcbe3673514",
+  "driver_sha256": "7250cbfe8d8207e7ee7fc0a3fb3749fbdfa63977600b87f36bf4eab080df1bf1",
+  "scope": "staged first north only one-variable aligned candidate",
+  "candidate_change": "Only final first stance _walk_to adds true",
+  "exit_code": 0,
+  "elapsed_seconds": 35.187,
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_campaign_to_143"
+  ],
+  "log_sha256": "053ceb803ca051842103e3a3dc7ff751f2b5119b285f64d70727efef5508113a",
+  "terminal": [
+    "SCRAPERX_UITEST PASS touch_campaign_to_143 staging=observed_braced_arrival diagnostic_first_north_only=1 normal_world=1 supported_first_topout=1"
+  ]
+}

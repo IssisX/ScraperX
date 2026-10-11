@@ -1,0 +1,39 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=749 driver=Dummy
+SCRAPERX_UITEST_POSE cargo_net_entry tick=1627 position=(20.09265, 0.9, -114.6289) elapsed_ms=27520
+SCRAPERX_UITEST_POSE cargo_net_climbing tick=2434 position=(20.12694, 5.51724, -117.1302) elapsed_ms=37866
+SCRAPERX_UITEST_POSE cargo_net_receiver tick=3144 position=(20.12381, 11.89524, -118.4245) elapsed_ms=46959
+SCRAPERX_UITEST_POSE cargo_net_first_ring tick=3672 position=(18.49988, 11.9, -125.9006) elapsed_ms=53746
+SCRAPERX_CAMPAIGN cargo_net_exit at=(18.49988, 11.9, -125.9006) support=11
+SCRAPERX_UITEST_POSE facade_approach tick=4344 position=(19.94145, 11.87546, -121.3037) elapsed_ms=62431
+SCRAPERX_UITEST_POSE duct_hang tick=4698 position=(19.99812, 15.17195, -122.4723) elapsed_ms=66970
+SCRAPERX_UITEST_POSE vent_climb tick=5353 position=(24.03305, 17.98277, -122.9985) elapsed_ms=75377
+SCRAPERX_UITEST_POSE ladder_leap tick=6616 position=(12.50006, 23.19674, -119.7303) elapsed_ms=91482
+SCRAPERX_UITEST_POSE facade_arrival tick=8194 position=(11.27446, 33.9, -125.2842) elapsed_ms=111213
+SCRAPERX_UITEST_POSE stair_handle_ready tick=8908 position=(-17.21909, 33.9, -121.0332) elapsed_ms=120274
+SCRAPERX_UITEST_POSE stair_released tick=9034 position=(-17.21903, 33.9, -121.6916) elapsed_ms=121876
+SCRAPERX_UITEST_POSE stair_climb tick=10218 position=(-9.9227, 38.89259, -122.0999) elapsed_ms=136988
+SCRAPERX_UITEST_POSE stair_exit_ready tick=11005 position=(-2.219123, 45.44302, -122.3835) elapsed_ms=147178
+SCRAPERX_UITEST_POSE stair_arrival tick=11178 position=(-2.175222, 44.9, -127.6139) elapsed_ms=149446
+SCRAPERX_UITEST_POSE upper_handle_ready tick=11559 position=(3.934335, 44.9, -116.5219) elapsed_ms=154991
+SCRAPERX_UITEST_POSE upper_lift_rising tick=12223 position=(3.934335, 54.50275, -117.7935) elapsed_ms=164475
+SCRAPERX_UITEST_POSE upper_lift_seated tick=12495 position=(3.934331, 55.86002, -117.7935) elapsed_ms=168384
+SCRAPERX_UITEST_POSE deck_55m tick=12907 position=(3.764777, 55.9, -125.8368) elapsed_ms=175835
+SCRAPERX_UITEST_POSE upper_duct_hang tick=14583 position=(1.421457, 59.15414, -122.55) elapsed_ms=214524
+SCRAPERX_UITEST_POSE upper_vent_ready tick=14887 position=(5.413736, 61.2, -122.9987) elapsed_ms=220704
+SCRAPERX_UITEST_POSE upper_vent_climb tick=14979 position=(5.413736, 61.77796, -122.9987) elapsed_ms=222176
+SCRAPERX_UITEST_POSE upper_arrival tick=15759 position=(5.399835, 66.9, -125.4151) elapsed_ms=235789
+SCRAPERX_UITEST_POSE teeter_entry tick=16863 position=(25.30522, 66.9, -138.9998) elapsed_ms=257697
+SCRAPERX_UITEST_POSE teeter_ballast_near tick=16995 position=(27.83687, 66.77412, -139.386) elapsed_ms=260303
+SCRAPERX_UITEST_POSE teeter_ballast_far tick=17289 position=(32.03873, 66.86079, -139.45) elapsed_ms=267173
+SCRAPERX_UITEST_POSE teeter_loaded tick=17739 position=(32.87568, 64.69069, -138.6108) elapsed_ms=278160
+SCRAPERX_UITEST_POSE teeter_shelf tick=18084 position=(34.84992, 64.45, -139.1081) elapsed_ms=285721
+SCRAPERX_UITEST_POSE teeter_climb tick=18706 position=(34.74922, 68.26325, -139.3732) elapsed_ms=298491
+SCRAPERX_UITEST_POSE teeter_arrival tick=20199 position=(24.05616, 77.9, -140.8099) elapsed_ms=331552
+SCRAPERX_UITEST_POSE braced_bay_preview tick=20427 position=(25.21246, 77.9, -129.9431) elapsed_ms=336815
+SCRAPERX_UITEST_POSE braced_bay_entry tick=20590 position=(28.95489, 77.9, -131.5717) elapsed_ms=340404
+SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=first braced bay landing unsupported (27.92074, 77.89047, -145.0367)
