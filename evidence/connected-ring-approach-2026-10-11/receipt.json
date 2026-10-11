@@ -32,7 +32,20 @@
       "status": "RED captured same support loss and ending25.21197,55.89556,-138.9864"
     },
     "uninterrupted_repaired_fps60": {
-      "status": "RUNNING; no restart/fixture/instrumentation; exact maintained driver"
+      "exit": 31,
+      "status": "Original +66m entry and real teeter boarding pass; exposed downstream diagonal rail-crossing stall at32.02699,65.35674,-139.45. This is not connected143 success."
+    },
+    "far_side_staged_baseline": {
+      "exit": 31,
+      "status": "Grounded2800,velocity0,angle-.421918,ballast4.300010; diagonal crossing stalled beside carriage"
+    },
+    "far_side_lateral_discriminator": {
+      "exit": 0,
+      "status": "Pure lateral before forward clears rail; loaded ride/shelf1800/unload/climb/+77Tower11exit/deaths0 pass"
+    },
+    "final_upper_ring_to_teeter_exit": {
+      "exit": 0,
+      "status": "PASS final maintained ring+rail-clearance body from staged observed+66upper_arrival; ordinary inputs, loaded beam2800, shelf1800/unload, gripclimb, +77Tower11exit/deaths0; not uninterruptedgrade143 proof"
     }
   },
   "advisory_mcp_session": "01a12bda-1ec5-7ac2-b23d-a484feec5395",
@@ -43,7 +56,14 @@
     "probe-baseline30.log": "f4d37ac7be8f99d31600cc8150b2c6b40a9c4f036a49b4eb4329769256d6ddd0",
     "probe-candidate30.log": "37da9e56f2dbc563f0c3e1bb63588e97dab309a5584a7d930261c45d06da25b8",
     "probe-final30.log": "fa902bf23699c88eaf1ad323ce97194821121944be04153d880e742d0bc5cc71",
-    "connected-baseline.log": "0deb7cad86818a504a18882a3087fcdbff211457155556f85ed754c6c801e37c"
+    "connected-baseline.log": "0deb7cad86818a504a18882a3087fcdbff211457155556f85ed754c6c801e37c",
+    "connected-repaired.log": "06113e444c8f84380a5a9e2a30be71da19bf78edc7b5fa852a271fe7f0e49c3d",
+    "far-side-baseline.log": "6c661f9ba50e3ed120689c544bb48e387bc1b6b392ce4b7fbb07b56e04448b64",
+    "far-side-lateral.log": "2d88c518281158778fc73cdca0e9d3426699f09ad99fc5cec15c0ff09ede387b",
+    "lateral-final-focused.log": "0e776cc26aead2232d65e99925c42957abd8966f0649ac6f395d27314f32455c"
   },
-  "environmental_setup": "Initial private launch lacked newly imported audio resources; stopped that stalled process, ran Godot --import successfully, then executed all reported probes. This setup failure is separate from gameplay RED."
+  "environmental_setup": "Initial private launch lacked newly imported audio resources; stopped that stalled process, ran Godot --import successfully, then executed all reported probes. This setup failure is separate from gameplay RED.",
+  "next_repair": "Pure lateral ordinary-input rail clearance before advancing along beam; Super_Agent MCP write01a12beb-281e-7873-b85e-1eaadea9d952; no native physics/geometry change.",
+  "lateral_repair_driver_sha256": "5ea7e15e1ad77079e5ebd0010f160c476be2896906b5899e1840ecc4990b042f",
+  "lateral_independent_review": "approach_review Sol/high; no blocker; no runtime launched"
 }

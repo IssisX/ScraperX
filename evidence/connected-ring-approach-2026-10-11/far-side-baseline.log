@@ -1,0 +1,9 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=498 driver=Dummy
+SCRAPERX_UITEST_POSE teeter_entry tick=148 position=(25.3, 66.9, -139.0) elapsed_ms=5827
+SCRAPERX_UITEST_POSE teeter_ballast_near tick=280 position=(27.83427, 66.77386, -139.3853) elapsed_ms=7757
+SCRAPERX_UITEST_POSE teeter_ballast_far tick=562 position=(32.039, 66.86372, -139.45) elapsed_ms=12758
+SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=teeter far-side loading (32.02691, 65.35757, -139.45) velocity=(-0.0, 0.0, 0.0) support=2800 grounded=true angle=-0.421918 ballast_x=4.300010 beam_velocity=(0.0, -0.0, -0.0)

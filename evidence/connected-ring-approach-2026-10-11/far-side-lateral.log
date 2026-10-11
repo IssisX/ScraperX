@@ -1,0 +1,14 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=611 driver=Dummy
+SCRAPERX_UITEST_POSE teeter_entry tick=148 position=(25.3, 66.9, -139.0) elapsed_ms=5824
+SCRAPERX_UITEST_POSE teeter_ballast_near tick=280 position=(27.83427, 66.77386, -139.3853) elapsed_ms=7708
+SCRAPERX_UITEST_POSE teeter_ballast_far tick=562 position=(32.039, 66.86372, -139.45) elapsed_ms=11432
+SCRAPERX_UITEST_POSE teeter_loaded tick=1012 position=(32.87194, 64.69255, -138.6106) elapsed_ms=17338
+SCRAPERX_UITEST_POSE teeter_shelf tick=1357 position=(34.85607, 64.45, -139.1093) elapsed_ms=21841
+SCRAPERX_UITEST_POSE teeter_climb tick=1979 position=(34.7508, 68.26325, -139.3729) elapsed_ms=30926
+SCRAPERX_UITEST_POSE teeter_arrival tick=3472 position=(24.05744, 77.9, -140.8099) elapsed_ms=57774
+SCRAPERX_UITEST_POSE braced_bay_preview tick=3700 position=(25.21234, 77.9, -129.943) elapsed_ms=61691
+SCRAPERX_UITEST PASS touch_campaign_to_143 grade_to_77m=1 ballast_pushed=1 player_loaded_teeter=1 physical_reset=1 normal_touch=1 deaths=0 arrival_y=77.900

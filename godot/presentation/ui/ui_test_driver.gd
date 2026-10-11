@@ -1197,6 +1197,14 @@ func _touch_teeter() -> bool:
 			_teeter_ballast_x(beam, ballast) < 4.15:
 		return _fail("ballast did not reach the far stop %s position=%.3f" % [
 			_position(), _teeter_ballast_x(beam, ballast)])
+	# Clear the rail beside the ballast with a lateral leg before advancing.
+	var lateral_x := _position().x
+	var lateral_arrived := await _walk_to(device, Vector2(lateral_x, -138.58), 0.14, 12.0)
+	var lateral_grounded := bool(_native().is_player_grounded())
+	var lateral_support := int(_native().get_support_entity_id())
+	if not lateral_arrived or not lateral_grounded or lateral_support != 2800:
+		return _fail("teeter far-side lateral target=%s at=%s velocity=%s support=%d grounded=%s arrived=%s" % [
+			Vector2(lateral_x, -138.58), _position(), _velocity(), lateral_support, lateral_grounded, lateral_arrived])
 	if not await _walk_to(device, Vector2(32.8, -138.58), 0.14, 12.0):
 		return _fail("teeter far-side loading %s" % _position())
 	await _seconds(3.0)
