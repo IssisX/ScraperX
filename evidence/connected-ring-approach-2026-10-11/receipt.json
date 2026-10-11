@@ -1,0 +1,49 @@
+{
+  "revision_before_repair": "77b8bdb3c632b26351ae97d36c97f5648502bfb6",
+  "published_failed_source": "b9379248d658a99606997f4e59986ba9a39e9e86",
+  "ci_failure_run": 38072454907,
+  "changed_owner": "godot/presentation/ui/ui_test_driver.gd::_touch_teeter",
+  "maintained_driver_sha256": "d17367a820afb1bb30c617895a14dbe39c9c8cdbefa23d96cf27414477a45e89",
+  "native_source_reuse_manifest": "evidence/ci-repair-2026-10-10/touch-preflight/normalworld-source-manifest.json",
+  "native_source_files_verified": 74,
+  "native_source_mismatches": [],
+  "bridge_sha256": "8c5f73ee23e77f24ab09d3842e3a95da7d1942b5425b2931649475b47671d20c",
+  "private_architecture_selector": "linux arm64 only; production selector unchanged",
+  "diagnostic_staging": "normal world debug_restart_at observed upper_arrival(5.399832,66.9,-125.4151); route inputs and native simulation unchanged",
+  "results": {
+    "staged_baseline_fps60": {
+      "exit": 0,
+      "status": "PASS with unsafe residual momentum; not full connected proof"
+    },
+    "staged_baseline_fps30": {
+      "exit": 31,
+      "status": "RED ring exit to51/unsupported/lower55.9"
+    },
+    "staged_earlybraking_fps30": {
+      "exit": 0,
+      "status": "PASS same input path with settled support11"
+    },
+    "staged_final_fps30": {
+      "exit": 0,
+      "status": "PASS maintained repair checks; support11,y66.9,velocity0"
+    },
+    "uninterrupted_instrumented_baseline_fps60": {
+      "exit": 31,
+      "status": "RED captured same support loss and ending25.21197,55.89556,-138.9864"
+    },
+    "uninterrupted_repaired_fps60": {
+      "status": "RUNNING; no restart/fixture/instrumentation; exact maintained driver"
+    }
+  },
+  "advisory_mcp_session": "01a12bda-1ec5-7ac2-b23d-a484feec5395",
+  "implementation_mcp_session": "01a12bdc-a418-71b3-86a8-62196ead25c4",
+  "independent_review": "approach_review; no blocking findings; no runtime launched",
+  "log_sha256": {
+    "probe-baseline.log": "e88aa844bdb7ac4fda828a068ca8211be1b9c9efe2473f1ec8fd265ec266f1f3",
+    "probe-baseline30.log": "f4d37ac7be8f99d31600cc8150b2c6b40a9c4f036a49b4eb4329769256d6ddd0",
+    "probe-candidate30.log": "37da9e56f2dbc563f0c3e1bb63588e97dab309a5584a7d930261c45d06da25b8",
+    "probe-final30.log": "fa902bf23699c88eaf1ad323ce97194821121944be04153d880e742d0bc5cc71",
+    "connected-baseline.log": "0deb7cad86818a504a18882a3087fcdbff211457155556f85ed754c6c801e37c"
+  },
+  "environmental_setup": "Initial private launch lacked newly imported audio resources; stopped that stalled process, ran Godot --import successfully, then executed all reported probes. This setup failure is separate from gameplay RED."
+}

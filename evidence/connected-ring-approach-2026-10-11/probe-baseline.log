@@ -1,0 +1,11 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=478 driver=Dummy
+SCRAPERX_66_PROBE start at=(5.399832, 66.9, -125.4151) velocity=(0.0, 0.0, 0.0) grounded=true support=11
+SCRAPERX_66_PROBE arrival target=(24.8, -125.4) at=(25.45201, 66.9, -125.3996) velocity=(2.627851, 0.0, 0.002003) grounded=true support=11
+SCRAPERX_66_PROBE arrival target=(24.8, -139.0) at=(24.681, 66.9, -139.6215) velocity=(-0.494188, 0.0, -2.580962) grounded=true support=11
+SCRAPERX_66_PROBE arrival target=(25.3, -139.0) at=(25.38031, 66.9, -138.8276) velocity=(0.15396, 0.0, 0.599229) grounded=true support=11
+SCRAPERX_UITEST_POSE teeter_entry tick=827 position=(25.38584, 66.9, -138.8061) elapsed_ms=16516
+SCRAPERX_UITEST PASS touch_campaign_to_143 probe_normalworld_upper_ring_to_teeter_entry

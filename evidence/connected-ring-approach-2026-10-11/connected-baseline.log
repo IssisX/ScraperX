@@ -1,0 +1,40 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=502 driver=Dummy
+SCRAPERX_UITEST_POSE cargo_net_entry tick=1627 position=(20.09265, 0.9, -114.6289) elapsed_ms=24425
+SCRAPERX_UITEST_POSE cargo_net_climbing tick=2434 position=(20.12694, 5.51724, -117.1302) elapsed_ms=34821
+SCRAPERX_UITEST_POSE cargo_net_receiver tick=3144 position=(20.12381, 11.89524, -118.4245) elapsed_ms=44190
+SCRAPERX_UITEST_POSE cargo_net_first_ring tick=3672 position=(18.49988, 11.9, -125.9006) elapsed_ms=51578
+SCRAPERX_CAMPAIGN cargo_net_exit at=(18.49988, 11.9, -125.9006) support=11
+SCRAPERX_UITEST_POSE facade_approach tick=4344 position=(19.94145, 11.87546, -121.3037) elapsed_ms=62068
+SCRAPERX_UITEST_POSE duct_hang tick=4698 position=(19.99812, 15.17195, -122.4723) elapsed_ms=68179
+SCRAPERX_UITEST_POSE vent_climb tick=5353 position=(24.03305, 17.98277, -122.9985) elapsed_ms=80769
+SCRAPERX_UITEST_POSE ladder_leap tick=6616 position=(12.50006, 23.19674, -119.7303) elapsed_ms=109565
+SCRAPERX_UITEST_POSE facade_arrival tick=8194 position=(11.27446, 33.9, -125.2842) elapsed_ms=149047
+SCRAPERX_UITEST_POSE stair_handle_ready tick=8908 position=(-17.21909, 33.9, -121.0332) elapsed_ms=163487
+SCRAPERX_UITEST_POSE stair_released tick=9034 position=(-17.21903, 33.9, -121.6916) elapsed_ms=166544
+SCRAPERX_UITEST_POSE stair_climb tick=10218 position=(-9.9227, 38.89259, -122.0999) elapsed_ms=199245
+SCRAPERX_UITEST_POSE stair_exit_ready tick=11005 position=(-2.219123, 45.44302, -122.3835) elapsed_ms=218017
+SCRAPERX_UITEST_POSE stair_arrival tick=11178 position=(-2.175222, 44.9, -127.6139) elapsed_ms=222481
+SCRAPERX_UITEST_POSE upper_handle_ready tick=11559 position=(3.934335, 44.9, -116.5219) elapsed_ms=232638
+SCRAPERX_UITEST_POSE upper_lift_rising tick=12223 position=(3.934335, 54.50275, -117.7935) elapsed_ms=248070
+SCRAPERX_UITEST_POSE upper_lift_seated tick=12495 position=(3.934331, 55.86002, -117.7935) elapsed_ms=254194
+SCRAPERX_UITEST_POSE deck_55m tick=12907 position=(3.764777, 55.9, -125.8368) elapsed_ms=262984
+SCRAPERX_UITEST_POSE upper_duct_hang tick=14583 position=(1.421457, 59.15414, -122.55) elapsed_ms=301587
+SCRAPERX_UITEST_POSE upper_vent_ready tick=14887 position=(5.413736, 61.2, -122.9987) elapsed_ms=308820
+SCRAPERX_UITEST_POSE upper_vent_climb tick=14979 position=(5.413736, 61.77796, -122.9987) elapsed_ms=310982
+SCRAPERX_UITEST_POSE upper_arrival tick=15759 position=(5.399835, 66.9, -125.4151) elapsed_ms=329340
+SCRAPERX_66_PROBE support_transition previous={  } current={ "tick": 15759, "position": (5.399835, 66.9, -125.4151), "velocity": (0.0, 0.0, 0.0), "grounded": true, "support": 11, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE start at=(5.399835, 66.9, -125.4151) velocity=(0.0, 0.0, 0.0) grounded=true support=11
+SCRAPERX_66_PROBE arrival target=(24.8, -125.4) at=(25.48354, 66.9, -125.3996) velocity=(2.720502, 0.0, 0.002111) grounded=true support=11
+SCRAPERX_66_PROBE support_transition previous={ "tick": 16159, "position": (26.22167, 66.79363, -125.9116), "velocity": (1.266719, -1.155339, -2.567315), "grounded": true, "support": 11, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 16161, "position": (26.24897, 66.76597, -125.97), "velocity": (1.200112, -1.314639, -2.674139), "grounded": true, "support": 51, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE support_transition previous={ "tick": 16204, "position": (26.57191, 66.58746, -127.8881), "velocity": (0.530027, -0.712102, -4.909045), "grounded": true, "support": 51, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 16206, "position": (26.58349, 66.64026, -127.9976), "velocity": (0.500767, -0.823144, -4.947963), "grounded": false, "support": 0, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE support_transition previous={ "tick": 16210, "position": (26.59187, 66.59338, -128.2224), "velocity": (-0.087435, -1.259145, -5.15088), "grounded": false, "support": 0, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 16212, "position": (26.58816, 66.56368, -128.3377), "velocity": (0.13048, -1.180478, -5.202075), "grounded": true, "support": 51, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE support_transition previous={ "tick": 16212, "position": (26.58816, 66.56368, -128.3377), "velocity": (0.13048, -1.180478, -5.202075), "grounded": true, "support": 51, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 16213, "position": (26.59449, 66.55332, -128.3955), "velocity": (0.566944, -0.953498, -5.203525), "grounded": false, "support": 0, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE support_transition previous={ "tick": 16347, "position": (25.84443, 55.89556, -136.3184), "velocity": (-1.996071, -13.80049, -5.125006), "grounded": false, "support": 0, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 16348, "position": (25.82225, 55.89556, -136.3753), "velocity": (-1.996073, 0.0, -5.125006), "grounded": true, "support": 11, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE arrival target=(24.8, -139.0) at=(24.82841, 55.89556, -138.9271) velocity=(0.0, 0.0, 0.0) grounded=true support=11
+SCRAPERX_66_PROBE arrival target=(25.3, -139.0) at=(25.21197, 55.89556, -138.9864) velocity=(0.0, 0.0, 0.0) grounded=true support=11
+SCRAPERX_UITEST_POSE teeter_entry tick=16545 position=(25.21197, 55.89556, -138.9864) elapsed_ms=348784
+SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=teeter entry lost the +66 m ring (25.21197, 55.89556, -138.9864)

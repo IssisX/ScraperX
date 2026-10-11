@@ -1,0 +1,8 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=475 driver=Dummy
+SCRAPERX_66_PROBE final at=(25.31187, 66.9, -138.9997) velocity=(0.0, 0.0, 0.0) support=11 grounded=true
+SCRAPERX_UITEST_POSE teeter_entry tick=1169 position=(25.31187, 66.9, -138.9997) elapsed_ms=23733
+SCRAPERX_UITEST PASS touch_campaign_to_143 diagnostic_normalworld_ring_approach_fps30_repaired_checks

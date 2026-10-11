@@ -1,0 +1,17 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=716 driver=Dummy
+SCRAPERX_66_PROBE support_transition previous={  } current={ "tick": 56, "position": (5.399832, 66.9, -125.4151), "velocity": (0.0, 0.0, 0.0), "grounded": true, "support": 11, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE start at=(5.399832, 66.9, -125.4151) velocity=(0.0, 0.0, 0.0) grounded=true support=11
+SCRAPERX_66_PROBE arrival target=(24.8, -125.4) at=(25.5692, 66.9, -125.3994) velocity=(2.44255, 0.0, 0.001862) grounded=true support=11
+SCRAPERX_66_PROBE support_transition previous={ "tick": 458, "position": (26.21486, 66.79978, -125.8904), "velocity": (1.189428, -1.042014, -2.532958), "grounded": true, "support": 11, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 461, "position": (26.25309, 66.7611, -125.9778), "velocity": (1.108005, -1.267069, -2.69431), "grounded": true, "support": 51, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE support_transition previous={ "tick": 512, "position": (26.5746, 66.58374, -128.3687), "velocity": (0.455208, -0.630588, -5.126085), "grounded": true, "support": 51, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 515, "position": (26.58842, 66.63136, -128.5403), "velocity": (0.2809, -0.843721, -5.181139), "grounded": false, "support": 0, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE support_transition previous={ "tick": 593, "position": (26.53119, 63.28048, -133.1729), "velocity": (-1.565171, -7.961802, -5.272591), "grounded": false, "support": 0, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 596, "position": (26.50486, 63.02789, -133.3566), "velocity": (2.03227, -5.697672, -6.368621), "grounded": true, "support": 51, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE support_transition previous={ "tick": 596, "position": (26.50486, 63.02789, -133.3566), "velocity": (2.03227, -5.697672, -6.368621), "grounded": true, "support": 51, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 599, "position": (26.56786, 62.83335, -133.5685), "velocity": (1.691998, -5.980687, -6.35801), "grounded": false, "support": 0, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE support_transition previous={ "tick": 662, "position": (25.67864, 56.23388, -137.7744), "velocity": (-3.894939, -12.84772, -5.433127), "grounded": false, "support": 0, "support_velocity": (0.0, 0.0, 0.0) } current={ "tick": 665, "position": (25.54882, 55.9, -137.9555), "velocity": (-3.89494, 0.0, -5.433127), "grounded": true, "support": 11, "support_velocity": (0.0, 0.0, 0.0) }
+SCRAPERX_66_PROBE arrival target=(24.8, -139.0) at=(24.32008, 55.6, -139.6695) velocity=(-1.789666, 0.0, -2.496438) grounded=true support=11
+SCRAPERX_66_PROBE arrival target=(25.3, -139.0) at=(25.61571, 55.9, -138.6853) velocity=(1.065019, 0.0, 1.078137) grounded=true support=11
+SCRAPERX_UITEST_POSE teeter_entry tick=848 position=(25.7111, 55.9, -138.589) elapsed_ms=24365
+SCRAPERX_UITEST FAIL touch_campaign_to_143 reason=teeter entry lost the +66 m ring (25.7111, 55.9, -138.589)

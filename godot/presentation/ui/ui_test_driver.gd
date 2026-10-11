@@ -1160,9 +1160,19 @@ func _touch_teeter() -> bool:
 		return _fail("teeter absent from the normal route")
 	var beam := int(_native().get_kit_body_index(2800))
 	var ballast := int(_native().get_kit_body_index(2801))
+	# Brake through ordinary input before each turn; finite stopping distance
+	# can otherwise carry the player off the upper ring after arrival.
 	for point in [Vector2(24.8, -125.4), Vector2(24.8, -139.0), Vector2(25.3, -139.0)]:
-		if not await _walk_to(device, point, 0.14, 20.0):
-			return _fail("teeter ring approach %s" % _position())
+		var arrived := await _walk_to(device, point, 0.14, 20.0, true)
+		var at := _position()
+		var support := int(_native().get_support_entity_id())
+		var grounded := bool(_native().is_player_grounded())
+		var slip: Vector3 = _velocity() - _native().get_support_point_linear_velocity()
+		var planar_slip := Vector2(slip.x, slip.z).length()
+		if not arrived or not grounded or support != 11 or at.y <= 66.5 \
+				or planar_slip >= 0.15 or (point - Vector2(at.x, at.z)).length() > 0.14:
+			return _fail("teeter ring approach target=%s at=%s support=%d grounded=%s slip=%.6f arrived=%s" % [
+				point, at, support, grounded, planar_slip, arrived])
 	await _face_teeter_pivot(beam)
 	await _pose("teeter_entry")
 	if not _standing_above(66.5) or int(_native().get_support_entity_id()) != 11:
