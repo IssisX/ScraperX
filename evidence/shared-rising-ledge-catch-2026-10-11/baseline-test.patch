@@ -1,0 +1,49 @@
+--- a/tests/supplied_machine_route_tests.cpp
++++ b/tests/supplied_machine_route_tests.cpp
+@@ -689,8 +689,45 @@
+  require(s.debug_restart_at({-41.0759,198.9,-160.45}),"initial supported198m tuck encounter staging only",s);
+  tick(s,90);tuck_readback_absent(s);swing_miss_recovery(s,true);cross_swing_tucked(s);
+ }
++void parkour_rising_ledge(){
++ Simulation s(scraperx::sim::InitialSpawn::HangApproach,scraperx::sim::WorldContent::RegressionFixtures);
++ require(s.debug_restart_at({7.6,.95,4.0}),"initial rising-jump fixture staging only",s);tick(s,45);
++ require(s.snapshot().player_grounded&&s.snapshot().traversal_state==scraperx::sim::TraversalState::None&&
++  s.snapshot().traversal_hand_constraint_count==0,"one Jump starts on real ground without hands",s);
++ require(s.set_facing(1,0)&&s.set_crouch_input(false)&&s.set_move_input(1,0)&&s.request_jump(),
++  "ordinary forward and single Jump accepted",s);
++ bool takeoff=false,caught=false;int elapsed=0;
++ for(;elapsed<90;++elapsed){const auto before=s.snapshot();tick(s);const auto after=s.snapshot();
++  if(!after.player_grounded&&after.player_linear_velocity.y>1)takeoff=true;
++  if(elapsed%5==0)log_thin_edge("rising_jump_flight",s);
++  if(before.traversal_state==scraperx::sim::TraversalState::None&&
++     after.traversal_state==scraperx::sim::TraversalState::Hanging){
++   log_thin_edge("first_rising_catch",s);
++   std::cout<<"RISING CATCH preceding_vy="<<before.player_linear_velocity.y
++    <<" outgoing_vy="<<after.player_linear_velocity.y<<" elapsed_ticks="<<elapsed+1<<'\n';
++   require(takeoff&&after.traversal_support_entity_id==Simulation::kHangLedgeEntityId&&
++    after.traversal_hand_constraint_count==2&&!after.player_grounded&&after.player_gravity_factor==1,
++    "first catch follows real takeoff onto actual two-hand ledge7",s);
++   for(const auto hand:{after.traversal_left_hand,after.traversal_right_hand}){
++    const double rise=hand.y-before.player_position.y;
++    const double reach=std::sqrt(std::pow(hand.x-before.player_position.x,2)+
++     std::pow(rise,2)+std::pow(hand.z-before.player_position.z,2));
++    std::cout<<"RISING LIP rise_m="<<rise<<" reach_m="<<reach<<'\n';
++    require(rise>=.45-.00001&&rise<=1.35+.00001&&reach<=1.75+.00001,
++     "actual first-catch lips stay within unchanged human reach",s);}
++   const double work=after.traversal_actuator_positive_work_j-before.traversal_actuator_positive_work_j;
++   require(std::isfinite(work)&&work>=-.00001&&work<=500./90.+.00001&&
++    vector_length(after.traversal_left_hand_force)<=1501&&vector_length(after.traversal_right_hand_force)<=1501,
++    "rising catch has finite actual hand forces and paid target work",s);
++   require(before.player_linear_velocity.y>1&&after.player_linear_velocity.y>.5,
++    "first actual ledge catch preserves rising flight before apex",s);caught=true;break;
++  }
++ }
++ require(caught&&elapsed<90,"single ordinary rising Jump catches within bounded flight",s);
++ std::cout<<"PASS RISING LEDGE first_catch_rising=1 actual_two_hands=1 finite_human_reach=1 one_Jump=1 initial_staging_only=1\n";
++}
+ void parkour_ledge_hang(){
+  regular_hang_posture(scraperx::sim::InitialSpawn::HangApproach,Simulation::kHangLedgeEntityId);
+  regular_hang_posture(scraperx::sim::InitialSpawn::MovingLedgeApproach,Simulation::kMovingLedgeEntityId);
+ }
+-int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="balance")balance();else if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else if(std::string(argv[1])=="parkour_tuck")parkour_tuck();else if(std::string(argv[1])=="parkour_climb_posture")parkour_climb_posture();else if(std::string(argv[1])=="parkour_free_arc")parkour_free_arc();else if(std::string(argv[1])=="parkour_free_arc_small_lean")parkour_free_arc_small_lean();else if(std::string(argv[1])=="parkour_thin_edge")parkour_thin_edge();else if(std::string(argv[1])=="parkour_ledge_hang")parkour_ledge_hang();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}
++int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="balance")balance();else if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else if(std::string(argv[1])=="parkour_tuck")parkour_tuck();else if(std::string(argv[1])=="parkour_climb_posture")parkour_climb_posture();else if(std::string(argv[1])=="parkour_free_arc")parkour_free_arc();else if(std::string(argv[1])=="parkour_free_arc_small_lean")parkour_free_arc_small_lean();else if(std::string(argv[1])=="parkour_thin_edge")parkour_thin_edge();else if(std::string(argv[1])=="parkour_ledge_hang")parkour_ledge_hang();else if(std::string(argv[1])=="parkour_rising_ledge")parkour_rising_ledge();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}

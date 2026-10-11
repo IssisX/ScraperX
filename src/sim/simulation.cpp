@@ -6342,7 +6342,8 @@ private:
             begin_climb(bodies, reached);
             return;
         }
-        if (bodies.GetLinearVelocity(player_id_).GetY() > kHangMaximumClimbSpeed) return;
+        // Reach, clearance and finite hands determine rising ledge acquisition;
+        // acquiring a ledge never resets velocity.
         const LedgeProbe probe = probe_hang_ledge(origin, facing_);
         if (!probe.valid) {
             // No ledge: a hold reached for in the air is caught and climbed.

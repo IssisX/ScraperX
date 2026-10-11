@@ -3462,11 +3462,13 @@ int main() {
     // loaded feet actually settle on the receiver. (-8,-113.5) is 0.7 m past
     // the stair landing's end, on handoff-only footing. Horizontal arrival on
     // any lower deck is a failure. Both legs share the original 12 s budget;
-    // steering/facing remain ordinary inputs with walk_to's settled PD law.
+    // Movement retains walk_to's settled PD law. Hold facing per leg: changing
+    // heading during braking rotates the real carried load's hand anchor.
     const auto walk_loaded_handoff = [&]() {
         constexpr std::uint32_t budget_ticks = 12 * Simulation::kTickRateHz;
         const auto start_tick = hook.snapshot().tick_index;
         bool receiver_reached = false;
+        bool heading_set = false;
         bool reported_support_loss = false;
         bool reported_contact_drop = false;
         bool reported_traversal_change = false;
@@ -3507,6 +3509,7 @@ int main() {
                     return true;
                 }
                 receiver_reached = true;
+                heading_set = false;
                 report_loaded_stair("handoff_receiver", 6, target_x, target_z);
                 target_x = -9.0;
                 target_z = -109.0;
@@ -3518,7 +3521,10 @@ int main() {
             const double iz = dz * 1.8 - state.player_linear_velocity.z * .28;
             const double scale = std::max(1.0, std::hypot(ix, iz));
             (void)hook.set_move_input(ix / scale, iz / scale);
-            if (std::hypot(dx, dz) > .001) (void)hook.set_facing(dx, dz);
+            if (!heading_set && std::hypot(dx, dz) > .001) {
+                (void)hook.set_facing(dx, dz);
+                heading_set = true;
+            }
             const bool accepted = hook.advance_frame(Simulation::kFixedStepSeconds).accepted;
             const auto after = hook.snapshot();
             const bool support_loss = !reported_support_loss && state.player_grounded &&

@@ -1,0 +1,30 @@
+--- verified-focused-probe
++++ fixed-facing-probe
+@@ -4479,6 +4479,7 @@
+         constexpr std::uint32_t budget_ticks = 12 * Simulation::kTickRateHz;
+         const auto start_tick = hook.snapshot().tick_index;
+         bool receiver_reached = false;
++        bool heading_set = false;
+         bool reported_support_loss = false;
+         bool reported_contact_drop = false;
+         bool reported_traversal_change = false;
+@@ -4519,6 +4520,7 @@
+                     return true;
+                 }
+                 receiver_reached = true;
++                heading_set = false;
+                 report_loaded_stair("handoff_receiver", 6, target_x, target_z);
+                 target_x = -9.0;
+                 target_z = -109.0;
+@@ -4530,7 +4532,10 @@
+             const double iz = dz * 1.8 - state.player_linear_velocity.z * .28;
+             const double scale = std::max(1.0, std::hypot(ix, iz));
+             (void)hook.set_move_input(ix / scale, iz / scale);
+-            if (std::hypot(dx, dz) > .001) (void)hook.set_facing(dx, dz);
++            if (!heading_set && std::hypot(dx, dz) > .001) {
++                (void)hook.set_facing(dx, dz);
++                heading_set = true;
++            }
+             const bool accepted = hook.advance_frame(Simulation::kFixedStepSeconds).accepted;
+             const auto after = hook.snapshot();
+             const bool support_loss = !reported_support_loss && state.player_grounded &&

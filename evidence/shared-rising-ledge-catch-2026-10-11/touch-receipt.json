@@ -1,0 +1,48 @@
+{
+  "status": "completed",
+  "files": [
+    {
+      "source": "godot/presentation/main.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/main.gd",
+      "sha256": "7ea4bc4804a510920aafc23eae018f987a734da99350d2579f62aa8b6baad056"
+    },
+    {
+      "source": "godot/presentation/ui/touch_controls.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/ui/touch_controls.gd",
+      "sha256": "ef9a10a9ab9c6e25737055c9fa409d638968d594e737c91e0431f6e7851f8512"
+    },
+    {
+      "source": "godot/presentation/ui/ui_test_driver.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/ui/ui_test_driver.gd",
+      "sha256": "6efffe839784fc61f79425a7fc7f874436961b83eff236c92e5ac31b07b3da12"
+    }
+  ],
+  "native_bridge": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/addons/scraperx_native/bin/linux/libscraperx_native.so",
+    "sha256": "5f18c9daa29900a52554e206d2cee824ed3069a6a10e80f1312e79be49cd2fab",
+    "build_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/rising-catch-attempt1/receipt.json"
+  },
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_crown_swing"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 151.403,
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-rising-catch-touch.log",
+  "log_sha256": "b956a6421404882c18c463ea1158a1e37e7a9495318f393b52d2c53b693d9907"
+}

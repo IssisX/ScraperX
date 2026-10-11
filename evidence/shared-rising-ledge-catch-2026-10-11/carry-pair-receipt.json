@@ -1,0 +1,149 @@
+{
+  "source_sha256": "05831bbfbbeb23df297d8b0e6a28e3d71e215ac4787c4afc53e7681d2ece3038",
+  "probe_sha256": "79f81f3d637ff5f9a88d969f02a210404abee844203e0a7569ce731f4768ab66",
+  "headers": {
+    "src/bridge/register_types.hpp": "cf3012a9a29bbb129633d993611446a124cae51cb9209c7185a4e72e6f992c7b",
+    "src/bridge/scraperx_simulation.hpp": "d265553ef349a6784f13ddd395345a1829460c05cc510a70bb0b512b686da405",
+    "src/sim/bands.hpp": "ae9c9563c552c2ee1e38382d022b5583d3986f0dd423de888a40a79e22b2941e",
+    "src/sim/braced_bay.hpp": "4ff7b2deebf5fd79de4c7c5aefe3f84f5329e46b7b9b21cccdb54ed0c5a79c07",
+    "src/sim/cargo_net.hpp": "052b8c757a5319041da43b0930f7403c17dbd0f1d1f5f652fd18f234f31c924e",
+    "src/sim/cargo_net_route.hpp": "54ae241a8e1593406d21116f88c7ade4ffcc24adfe471878013095d9810a9a65",
+    "src/sim/facade_route.hpp": "146bc4f2f303bcde9a7443516cdedb40144ff0e8b43d64f6772fead82022ee93",
+    "src/sim/mechanism_kit.hpp": "0b17276b415da8b498099d54ad1f8a62e103f6967b5fa0e3fca583b81b5c7e64",
+    "src/sim/north_service_frame.hpp": "954dac43f3da91c18094756156c19d3d17d4dd36f428d3ebb4c48b0b014fdde9",
+    "src/sim/pipe_bridge.hpp": "6e90a011449a5f5f5bd9d802ceb1de94e0c77be217ef8484f2255e18cb42f1c1",
+    "src/sim/simulation.hpp": "6cd9f092644c271e1dffbe519f4d265d41c2519b6179485468b941601623331f",
+    "src/sim/slingshot.hpp": "3420468ae38aecd5e014f80881f60f2a7487b39b0cff3ca3d220909d158a8b02",
+    "src/sim/slingshot_model.hpp": "ea7e4b699221ac6ea8091aa89e42e1f0c37bc704ddb951535c505498098558cf",
+    "src/sim/steam_plant.hpp": "d4e00e6fdea537988af6717f5d6c3e9e04e90842f00ada5b4df25bf6b734d7a3",
+    "src/sim/suspended_ladder.hpp": "d35b02ae40156719f17f0b65aea8ef706fbfec919bb76bf81b0cd4ad44ed6211",
+    "src/sim/swing_stair.hpp": "48464b4b2b108618a54e26694bc20f35d85ec1b81fa6f3c5e4489ff46b42e37c",
+    "src/sim/teeter_rise.hpp": "5232a3e8dce88984291d45bd9a29d1f7463e155b7309ae4a407e87ffde93f16e",
+    "src/sim/upper_ascent.hpp": "62da7871c98efff3fc18cf6313c068d549c57652dac8a13b43d0bbef3e914922",
+    "src/sim/water_screw.hpp": "af02fd9c2577fe143d58032bd454dd8b6e13a771f7bb340d947f2d5f14e9e930",
+    "src/sim/physical_hand_climb.hpp": "cbb0b176b8a8c092460fdac73fd33dc13bf3036049ef0ff01b4e586a5f346756",
+    "src/sim/service_lift.hpp": "396dfd919afa5dc3f8623c2f85858774fb2d30a5fd1539d6aa7bd364237a81be",
+    "src/sim/supplied_ascent.hpp": "3593f653ddf5464e4a443f499a699cf439e705e5d779552d0434d18fa64d1cda",
+    "src/sim/parkour_route.hpp": "0ad9899abc29dd497836a4546444a77f246be0cc2a7324ba1fa0b47bd2f9f0ff",
+    "src/sim/gravity_wheel_geometry.hpp": "4abac740115e55ffcae6a7708ec515fefd12f88c6eadc183304df7b0ad0a8bd0",
+    "src/sim/gravity_cart_geometry.hpp": "c9cb9cb1c00cde6c677bb7066a410ed9d22c941e68270462f035ec58b5a357f7",
+    "src/sim/west_brace_bay_route.hpp": "59625fa1602ded25b7bb9912b4a175d718c1d1f4f16548039777a5a47f001828",
+    "src/sim/inspection_junction_route.hpp": "f28b96f1b70c683806b1c23ce2b5561ff79046f098e9982f7b8cca07b45f2711",
+    "src/sim/deformable_plank.hpp": "70d700fe6ca0aad7ad0c2d23f9e4e8280061da3a7eea41e09a7ba85d0b786b8e",
+    "src/sim/north_transfer_route.hpp": "8f3ec05e22b19de959580492db1b3916682473b9791917325af68f22ca24974b",
+    "src/sim/pipe_service_route.hpp": "a451a2f5ec6d3066b26d19af928d740fe85ca802fade307c6fe023bf50a79aa8",
+    "src/sim/physical_foot_push.hpp": "d455b0c164c7f699e399386045cd6755940ef92ecc97cd6652cf84778a1a7b5b",
+    "src/sim/supplied/vertical_machine.hpp": "0d70ab5891bdccd0674c8895a1c95b19f6911edc63ab861920d1a802837c520a"
+  },
+  "archives": {
+    "thin": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/thin-edge-attempt1/libscraperx_sim.a",
+      "sha256": "aa19c19dd0110d6d153ed3b75465e942761ecc17deb0cd97db67bc9fb300de0d"
+    },
+    "rising": {
+      "path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/rising-catch-attempt1/libscraperx_sim.a",
+      "sha256": "e2ee438aae4bc76ef8a4477c8deecef1227aa08d1d196e24550b149382f02196"
+    }
+  },
+  "steps": [
+    {
+      "name": "compile-thin",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/hook5-focused-pair/probe.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/thin-edge-attempt1/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/hook5-focused-pair/probe-thin"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 32.07060509198345,
+      "log_sha256": "23c3f80221bbdd6a93fa904daeab80597e159206eb9173497c536c033c64b4b1"
+    },
+    {
+      "name": "run-thin",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/hook5-focused-pair/probe-thin"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 16.060964160133153,
+      "log_sha256": "b23d8c1ffc86cadc50a2d7cfa193c45a75dc253203906c86b0ef5dc6d02b57f6"
+    },
+    {
+      "name": "compile-rising",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/hook5-focused-pair/probe.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/rising-catch-attempt1/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/hook5-focused-pair/probe-rising"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 20.653852907940745,
+      "log_sha256": "23c3f80221bbdd6a93fa904daeab80597e159206eb9173497c536c033c64b4b1"
+    },
+    {
+      "name": "run-rising",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/hook5-focused-pair/probe-rising"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 17.76157629583031,
+      "log_sha256": "1dccaf9c668d012688c70ab75329e369d123b1948b93b0108ab9475afde1c049"
+    }
+  ],
+  "headers_unchanged": true
+}

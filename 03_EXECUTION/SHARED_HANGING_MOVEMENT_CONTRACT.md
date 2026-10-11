@@ -138,3 +138,23 @@ full exact-bridge headless touch encounter also pass. Discovery currently uses
 a narrow centreline sweep, rejects initial overlaps and caps expensive candidate
 validation at16. This bounded repair does not establish universal shape/mass
 catchability; rising-jump ledge acquisition remains the next bounded goal.
+
+
+## Ordinary rising-jump ledge acquisition (verified)
+
+A reachable ledge can acquire real hands while the player is still rising.
+Acquisition no longer waits for vertical speed to fall below0.2m/s: original
+reach/clearance/approach and ownership conditions remain, and existing finite
+hands absorb the catch without resetting body pose or velocity. Ordinary Jump
+on actual ground reaches ledge7 with first catch at35ticks and incoming/outgoing
+upward speed1.794/1.60065m/s; the old source delayed to50ticks/.159/.060.
+Actual paired lips remain within1.75m reach and native force/work limits.
+
+[Source-bound evidence](../evidence/shared-rising-ledge-catch-2026-10-11/README.md)
+includes the rejecting baseline, thin-edge/ledge checks, exact-bridge headless
+touch, an exposed carry-handoff regression and its maintained full-suite repair.
+The carry test driver holds one normal facing input per leg so braking does not
+continually turn the physical load. Its actual receiving support/contact/held
+load, settled position/speed and12s budget remain unchanged. Shipping carry
+physics still responds to deliberate heading changes. General mass/shape
+acquisition policy and phone feel remain open; no fullGREEN APK claim is made.

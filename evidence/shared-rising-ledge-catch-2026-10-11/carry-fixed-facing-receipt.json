@@ -1,0 +1,59 @@
+{
+  "baseline_probe_sha256": "79f81f3d637ff5f9a88d969f02a210404abee844203e0a7569ce731f4768ab66",
+  "variant_sha256": "7b91e08a06c5cb615782523b4a4db8aceacf821d35745c606cb6645d30328d9f",
+  "archive": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/rising-catch-attempt1/libscraperx_sim.a",
+    "sha256": "e2ee438aae4bc76ef8a4477c8deecef1227aa08d1d196e24550b149382f02196"
+  },
+  "steps": [
+    {
+      "name": "compile",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/hook5-fixed-facing-experiment/probe.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/rising-catch-attempt1/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/hook5-fixed-facing-experiment/probe"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 14.316753535997123,
+      "log_sha256": "45911ec65ec8214e13f770d7fa04edaafc9b0cee4b0a3e9fd0a2925bfc63cc3b"
+    },
+    {
+      "name": "run",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/hook5-fixed-facing-experiment/probe"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 10.639553641201928,
+      "log_sha256": "2c539c2dd02c73c4a86222e227c62edfff123f0ace5b1c387d95236354de1048"
+    }
+  ]
+}

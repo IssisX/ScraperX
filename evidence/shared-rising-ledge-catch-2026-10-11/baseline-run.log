@@ -1,0 +1,15 @@
+THIN EDGE phase=rising_jump_flight tick=46 position=7.60103,0.9599,4 velocity=0.09265,5.391,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=rising_jump_flight tick=51 position=7.6321,1.24123,4 velocity=0.870428,4.846,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=rising_jump_flight tick=56 position=7.70639,1.49229,4 velocity=1.64821,4.301,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=rising_jump_flight tick=61 position=7.82388,1.71307,4 velocity=2.42598,3.756,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=rising_jump_flight tick=66 position=7.98292,1.90357,4 velocity=3.13075,3.211,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=rising_jump_flight tick=71 position=8.15,2.06379,4 velocity=1.32823,2.666,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=rising_jump_flight tick=76 position=8.15,2.19373,4 velocity=0,2.121,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=rising_jump_flight tick=81 position=8.15,2.2934,4 velocity=0,1.576,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=rising_jump_flight tick=86 position=8.15,2.36279,4 velocity=0,1.031,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=rising_jump_flight tick=91 position=8.15,2.4019,4 velocity=0,0.485998,0 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=first_rising_catch tick=95 position=8.15,2.4115,4 velocity=-2.26973e-09,0.0596616,0 state=1 support=7 hands=2 grounded=0 gravity=1 radial=0
+RISING CATCH preceding_vy=0.158998 outgoing_vy=0.0596616 elapsed_ticks=50
+RISING LIP rise_m=1.18917 reach_m=1.29747
+RISING LIP rise_m=1.18917 reach_m=1.29747
+FAIL SUPPLIED_ROUTE first actual ledge catch preserves rising flight before apex pos=8.15,2.4115,4 support=0 station=0 deck=0 energy=0
