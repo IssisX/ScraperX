@@ -551,6 +551,60 @@ void parkour_free_arc(){Simulation control,posture;
  parkour_climb_posture();parkour_free_arc_small_lean();
  std::cout<<"PASS NEUTRAL FRAME fixed_length=1 radial_tuck=1 extension=1 real_Drop=1 forward_climb_resume=1 small_bar_lean=1\n";
 }
+void log_thin_edge(const char *phase,const Simulation &s){const auto v=s.snapshot();
+ std::cout<<"THIN EDGE phase="<<phase<<" tick="<<v.tick_index<<" position="
+  <<v.player_position.x<<','<<v.player_position.y<<','<<v.player_position.z<<" velocity="
+  <<v.player_linear_velocity.x<<','<<v.player_linear_velocity.y<<','<<v.player_linear_velocity.z
+  <<" state="<<int(v.traversal_state)<<" support="<<v.traversal_support_entity_id
+  <<" hands="<<v.traversal_hand_constraint_count<<" grounded="<<v.player_grounded
+  <<" gravity="<<v.player_gravity_factor<<" radial="<<v.hanging_free_arc_active<<'\n';
+}
+void thin_edge_refusal(const char *name,scraperx::sim::Vector3 initial,double facing_z){Simulation s;
+ require(s.debug_restart_at(initial)&&s.set_facing(0,facing_z)&&s.set_crouch_input(false)&&
+         s.set_move_input(0,.3*facing_z),"initial negative thin-edge approach",s);
+ for(int i=0;i<180;++i){tick(s);const auto v=s.snapshot();
+  require(!(v.traversal_support_entity_id==1800&&v.traversal_hand_constraint_count>0),
+          "invalid approach refuses target shelf hands",s);}
+ log_thin_edge(name,s);
+ require(s.snapshot().player_position.y<initial.y-.20&&s.snapshot().death_count==0,
+         "refused shelf approach has actual physical fall",s);
+ std::cout<<"PASS THIN EDGE refusal="<<name<<" target=1800 actual_fall=1\n";
+}
+void parkour_thin_edge(){
+ // Existing geometry only: top63.55, underside63.27, south edgeZ-137.65.
+ // These inputs cannot discover the target when facing away, already below
+ // the1.35m reach band, or too distant while falling through that band.
+ thin_edge_refusal("facing_away",{34.4,62.8,-137.0},1);
+ thin_edge_refusal("below_reach_band",{34.4,61.9,-137.0},-1);
+ thin_edge_refusal("too_far_forward",{34.4,62.8,-135.5},-1);
+ Simulation s;require(s.debug_restart_at({34.4,62.8,-137.0})&&s.set_facing(0,-1)&&
+   s.set_move_input(0,-.3)&&s.set_crouch_input(false),"initial airborne thin-edge approach only",s);
+ int elapsed=0;for(;elapsed<180;++elapsed){tick(s);const auto v=s.snapshot();
+  if(elapsed%30==0)log_thin_edge("approach",s);
+  if(v.traversal_state==scraperx::sim::TraversalState::Hanging&&v.traversal_support_entity_id==1800&&
+     v.traversal_hand_constraint_count==2&&v.player_gravity_factor==1)break;}
+ log_thin_edge("acquisition_end",s);
+ require(elapsed<180,"ordinary airborne approach acquires actual two-hand Hanging shelf1800",s);
+ require(s.set_move_input(0,0),"neutral after actual catch",s);double upward_load=0;
+ for(int i=0;i<30;++i){tuck_tick(s,false,0,1800,false);
+  const auto v=s.snapshot();require(v.traversal_state==scraperx::sim::TraversalState::Hanging&&
+   !v.player_grounded&&v.death_count==0,"thin shelf sustains actual airborne Hanging",s);
+  upward_load+=v.traversal_left_hand_force.y+v.traversal_right_hand_force.y;}
+ log_thin_edge("neutral_loaded",s);
+ // A flag-only attachment cannot carry this85kg body: require measured mean
+ // upward native force above100N during the short30tick real loading interval.
+ require(upward_load/30>100,"actual finite hands bear sustained thin-edge load",s);
+ const auto before=s.snapshot();require(s.request_release(),"ordinary thin-edge Drop accepted",s);tick(s);
+ const auto after=s.snapshot();log_thin_edge("after_Drop",s);
+ require(after.traversal_hand_constraint_count==0&&!after.hanging_free_arc_active&&after.player_gravity_factor==1&&
+  std::abs(after.player_linear_velocity.x-before.player_linear_velocity.x)<.05&&
+  std::abs(after.player_linear_velocity.z-before.player_linear_velocity.z)<.05&&
+  std::abs(after.player_linear_velocity.y-before.player_linear_velocity.y+9.81/90.)<.05,
+  "thin-edge Drop preserves actual departure velocity with gravity only",s);
+ tuck_readback_absent(s);
+ std::cout<<"PASS THIN EDGE ordinary_airborne_discovery=1 target=1800 neutral_radial=1 mean_upward_load_N="
+  <<upward_load/30<<" actual_Drop_momentum=1 initial_staging_only=1\n";
+}
 void cross_swing_tucked(Simulation &s){catch_swing(s);bool released=false,saw_tuck=false,saw_extension=false;
  int ticks=0;double peak=-std::numeric_limits<double>::infinity();
  for(;ticks<180*90;++ticks){const auto v=s.snapshot();
@@ -635,4 +689,8 @@ void parkour_tuck(){posture_unavailable_without_hands();tuck_posture();tuck_sche
  require(s.debug_restart_at({-41.0759,198.9,-160.45}),"initial supported198m tuck encounter staging only",s);
  tick(s,90);tuck_readback_absent(s);swing_miss_recovery(s,true);cross_swing_tucked(s);
 }
-int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="balance")balance();else if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else if(std::string(argv[1])=="parkour_tuck")parkour_tuck();else if(std::string(argv[1])=="parkour_climb_posture")parkour_climb_posture();else if(std::string(argv[1])=="parkour_free_arc")parkour_free_arc();else if(std::string(argv[1])=="parkour_free_arc_small_lean")parkour_free_arc_small_lean();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}
+void parkour_ledge_hang(){
+ regular_hang_posture(scraperx::sim::InitialSpawn::HangApproach,Simulation::kHangLedgeEntityId);
+ regular_hang_posture(scraperx::sim::InitialSpawn::MovingLedgeApproach,Simulation::kMovingLedgeEntityId);
+}
+int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="balance")balance();else if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else if(std::string(argv[1])=="parkour_tuck")parkour_tuck();else if(std::string(argv[1])=="parkour_climb_posture")parkour_climb_posture();else if(std::string(argv[1])=="parkour_free_arc")parkour_free_arc();else if(std::string(argv[1])=="parkour_free_arc_small_lean")parkour_free_arc_small_lean();else if(std::string(argv[1])=="parkour_thin_edge")parkour_thin_edge();else if(std::string(argv[1])=="parkour_ledge_hang")parkour_ledge_hang();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}

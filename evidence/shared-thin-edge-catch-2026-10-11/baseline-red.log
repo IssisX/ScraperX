@@ -1,0 +1,15 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+THIN EDGE phase=facing_away tick=180 position=34.4,55.9,-134.437 velocity=0,0,1.6106 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+PASS THIN EDGE refusal=facing_away target=1800 actual_fall=1
+THIN EDGE phase=below_reach_band tick=180 position=34.4,55.9,-139.613 velocity=0,0,-1.65 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+PASS THIN EDGE refusal=below_reach_band target=1800 actual_fall=1
+THIN EDGE phase=too_far_forward tick=180 position=34.4,55.9,-138.063 velocity=0,0,-1.6106 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+PASS THIN EDGE refusal=too_far_forward target=1800 actual_fall=1
+THIN EDGE phase=approach tick=1 position=34.4,62.7992,-137.001 velocity=0,-0.109,-0.155556 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=approach tick=31 position=34.4,62.2134,-137.473 velocity=0,-3.379,-1.65 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=approach tick=61 position=34.4,60.5375,-138.022 velocity=0,-6.64899,-1.65 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=approach tick=91 position=34.4,57.7716,-138.571 velocity=0,-9.919,-1.65 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+THIN EDGE phase=approach tick=121 position=34.4,55.6,-139.056 velocity=0,0,-0.942138 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+THIN EDGE phase=approach tick=151 position=34.4,55.6,-139.296 velocity=0,0,-0.63913 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+THIN EDGE phase=acquisition_end tick=180 position=34.4,55.9,-139.563 velocity=0,0,-1.6106 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+FAIL SUPPLIED_ROUTE ordinary airborne approach acquires actual two-hand Hanging shelf1800 pos=34.4,55.9,-139.563 support=1800 station=0 deck=143 energy=2e+06

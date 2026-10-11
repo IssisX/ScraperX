@@ -1753,6 +1753,7 @@ void restore_body(JPH::BodyInterface &bodies, const JPH::BodyID id,
 struct LedgeProbe final {
     bool valid = false;
     JPH::BodyID ledge_body;
+    JPH::SubShapeID ledge_sub_shape;
     std::uint64_t ledge_entity_id = 0;
     JPH::RVec3 wall_point{};
     JPH::Vec3 inward{JPH::Vec3::sZero()};
@@ -1777,6 +1778,7 @@ struct Grip final {
 struct Lip final {
     bool valid = false;
     JPH::BodyID body;
+    JPH::SubShapeID sub_shape;
     std::uint64_t entity_id = 0;
     JPH::RVec3 ledge{JPH::RVec3::sZero()};
     JPH::RVec3 hold{JPH::RVec3::sZero()};
@@ -4965,6 +4967,21 @@ private:
             return probe;
         }
 
+        return probe_ledge_from_wall(origin, facing, minimum_rise, maximum_rise,
+                                     require_supported_landing, require_clear_landing,
+                                     wall_hit, wall_point);
+    }
+
+    // Shared wall-to-top/receiver validation. Hanging supplies a swept wall
+    // seed, but rise is still measured from the original player centre.
+    [[nodiscard]] LedgeProbe probe_ledge_from_wall(
+        const JPH::RVec3 origin, const JPH::Vec3 facing,
+        const float minimum_rise, const float maximum_rise,
+        const bool require_supported_landing, const bool require_clear_landing,
+        const JPH::RayCastResult &wall_hit, const JPH::RVec3 wall_point,
+        const bool require_same_sub_shape = false) const noexcept {
+        LedgeProbe probe;
+
         const JPH::Vec3 wall_surface =
             surface_normal(wall_hit.mBodyID, wall_hit.mSubShapeID2, wall_point);
         JPH::Vec3 outward(wall_surface.GetX(), 0.0F, wall_surface.GetZ());
@@ -4992,7 +5009,8 @@ private:
         if (!cast_ray(top_origin, top_direction, top_hit)) {
             return probe;
         }
-        if (top_hit.mBodyID != wall_hit.mBodyID) {
+        if (top_hit.mBodyID != wall_hit.mBodyID ||
+            (require_same_sub_shape && top_hit.mSubShapeID2 != wall_hit.mSubShapeID2)) {
             return probe;
         }
         const JPH::RVec3 ledge_point =
@@ -5025,6 +5043,15 @@ private:
             if (landing_hit.mBodyID != top_hit.mBodyID) {
                 return probe;
             }
+            if (require_same_sub_shape) {
+                const auto support_point = JPH::RRayCast(support_origin, support_direction)
+                                               .GetPointOnRay(landing_hit.mFraction);
+                if (landing_hit.mSubShapeID2 != top_hit.mSubShapeID2 ||
+                    surface_normal(landing_hit.mBodyID, landing_hit.mSubShapeID2,
+                                   support_point).GetY() < kLedgeTopNormalThreshold ||
+                    std::abs(support_point.GetY() - ledge_point.GetY()) >
+                        kLandingSupportTolerance) return probe;
+            }
             landing_body = landing_hit.mBodyID;
         }
 
@@ -5035,6 +5062,7 @@ private:
         const auto &bodies = physics_system_.GetBodyInterface();
         probe.valid = true;
         probe.ledge_body = top_hit.mBodyID;
+        probe.ledge_sub_shape = top_hit.mSubShapeID2;
         probe.ledge_entity_id = bodies.GetUserData(top_hit.mBodyID);
         probe.wall_point = wall_point;
         probe.inward = inward;
@@ -6159,6 +6187,112 @@ private:
         return false;
     }
 
+    [[nodiscard]] static JPH::RVec3 hang_hold(const LedgeProbe &probe) noexcept {
+        return JPH::RVec3(
+            probe.wall_point.GetX() - probe.inward.GetX() * (kPlayerRadius + kHangWallGap),
+            probe.ledge_point.GetY() - kHangDropBelowLedge,
+            probe.wall_point.GetZ() - probe.inward.GetZ() * (kPlayerRadius + kHangWallGap));
+    }
+
+    [[nodiscard]] bool hang_ledge_is_reachable(const JPH::RVec3 origin,
+                                               const JPH::Vec3 facing,
+                                               const LedgeProbe &probe) const noexcept {
+        if (!capsule_pose_is_clear(hang_hold(probe))) return false;
+        Lip lips[2];
+        if (!probe_lip_pair(probe.ledge_point, probe.inward, probe.ledge_body, lips)) return false;
+        const JPH::Vec3 right(probe.inward.GetZ(), 0, -probe.inward.GetX());
+        for (const Lip &lip : lips) {
+            const JPH::Vec3 reach(lip.ledge - origin);
+            const float forward = reach.Dot(facing);
+            if (lip.sub_shape != probe.ledge_sub_shape ||
+                reach.GetY() < kHangMinimumRiseAboveCentre ||
+                reach.GetY() > kHangMaximumRiseAboveCentre ||
+                forward <= 0.0F || forward > kTraversalReach + kPlayerRadius ||
+                reach.Length() > 1.75F ||
+                std::abs(lip.ledge.GetY() - probe.ledge_point.GetY()) > 0.15F) return false;
+            // Unattached hands approach from their actual upright-body aim
+            // height. Local lip probes alone cannot see an intervening wall.
+            const float across = JPH::Vec3(lip.ledge - probe.ledge_point).Dot(right);
+            const auto from = origin + right * across + JPH::Vec3(0, kClimbHandMid, 0);
+            const JPH::Vec3 approach(lip.ledge - from);
+            if (approach.IsNearZero()) return false;
+            JPH::RayCastResult first;
+            // Extend only the query past the surface so an endpoint contact
+            // is reported; physical grip/reach stays at the actual lip.
+            if (!cast_ray(from, approach + approach.Normalized() * kLandingSkin, first) ||
+                first.mFraction <= 0.0F || first.mBodyID != lip.body ||
+                first.mSubShapeID2 != lip.sub_shape) return false;
+        }
+        return true;
+    }
+
+    // Only airborne hanging uses this continuous chest-to-overhead search.
+    // Sweep hits seed the existing validator; none grants a grip by itself.
+    [[nodiscard]] LedgeProbe probe_hang_ledge(const JPH::RVec3 origin,
+                                              const JPH::Vec3 facing) const noexcept {
+        if (facing.IsNearZero()) return {};
+        const JPH::Vec3 forward = facing.Normalized();
+        constexpr float kQueryHalfDepth = 0.01F;
+        constexpr float kForwardReach = kTraversalReach + kPlayerRadius;
+        const float half_band = 0.5F * (kHangMaximumRiseAboveCentre - kHangMinimumRiseAboveCentre);
+        const JPH::BoxShape band(JPH::Vec3(kQueryHalfDepth, half_band, kQueryHalfDepth), 0.0F);
+        const auto start = origin + forward * kQueryHalfDepth +
+            JPH::Vec3(0, kHangMinimumRiseAboveCentre + half_band, 0);
+        const auto rotation = JPH::Quat::sRotation(
+            JPH::Vec3::sAxisY(), std::atan2(forward.GetX(), forward.GetZ()));
+        // Include the box's finite depth in both ends of the reach bound.
+        const JPH::RShapeCast sweep(&band, JPH::Vec3::sReplicate(1.0F),
+            JPH::RMat44::sRotationTranslation(rotation, start),
+            forward * (kForwardReach - 2.0F * kQueryHalfDepth));
+        JPH::AllHitCollisionCollector<JPH::CastShapeCollector> seeds;
+        const JPH::IgnoreSingleBodyFilter player_filter(player_id_);
+        physics_system_.GetNarrowPhaseQuery().CastShape(
+            sweep, JPH::ShapeCastSettings(), start, seeds, {}, {}, player_filter);
+        seeds.Sort();
+        std::uint32_t checked = 0;
+        for (const JPH::ShapeCastResult &seed : seeds.mHits) {
+            // Initial overlaps/back faces never prove an exposed reachable
+            // side. Rejected seeds also cannot hide nearer ray obstructions.
+            if (seed.mFraction <= 0.0F || seed.mIsBackFaceHit ||
+                is_hold(seed.mBodyID2, seed.mSubShapeID2)) continue;
+            {
+                const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(),
+                                             seed.mBodyID2);
+                if (!lock.Succeeded() || !lock.GetBody().IsRigidBody() ||
+                    lock.GetBody().IsSensor()) continue;
+            }
+            const auto contact = start + JPH::RVec3(seed.mContactPointOn2);
+            const float projection = JPH::Vec3(contact - origin).Dot(forward);
+            const float height = contact.GetY() - origin.GetY();
+            if (projection <= 0.0F || projection > kForwardReach ||
+                height < kHangMinimumRiseAboveCentre || height > kHangMaximumRiseAboveCentre) continue;
+            // Bound expensive validation work even in a dense compound scene.
+            if (++checked > 16) break;
+            // A contact exactly on an edge has an ambiguous target normal.
+            // Tiny local refinements prove the actual side, within the band;
+            // discovery itself remains a continuous sweep, not a height grid.
+            for (const float offset : {0.0F, -kQueryHalfDepth, kQueryHalfDepth}) {
+                const float wall_height = height + offset;
+                if (wall_height < kHangMinimumRiseAboveCentre ||
+                    wall_height > kHangMaximumRiseAboveCentre) continue;
+                JPH::RayCastResult wall_hit;
+                JPH::RVec3 wall_point;
+                if (!cast_wall(origin + JPH::Vec3(0, wall_height, 0), forward * kForwardReach,
+                               false, wall_hit, wall_point) ||
+                    wall_hit.mFraction <= 0.0F || wall_hit.mBodyID != seed.mBodyID2 ||
+                    wall_hit.mSubShapeID2 != seed.mSubShapeID2 ||
+                    std::abs(surface_normal(wall_hit.mBodyID, wall_hit.mSubShapeID2,
+                                            wall_point).GetY()) >= kSupportNormalThreshold) continue;
+                const auto probe = probe_ledge_from_wall(origin, forward,
+                    kPlayerHalfHeight + kHangMinimumRiseAboveCentre,
+                    kPlayerHalfHeight + kHangMaximumRiseAboveCentre,
+                    true, false, wall_hit, wall_point, true);
+                if (probe.valid && hang_ledge_is_reachable(origin, forward, probe)) return probe;
+            }
+        }
+        return {};
+    }
+
     [[nodiscard]] bool acquire_hang_hands(JPH::BodyInterface &bodies) noexcept {
         hanging_posture_offset_m_ = 0.0F;
         const auto lip = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
@@ -6209,11 +6343,7 @@ private:
             return;
         }
         if (bodies.GetLinearVelocity(player_id_).GetY() > kHangMaximumClimbSpeed) return;
-        const LedgeProbe probe = probe_ledge(origin,
-                                             facing_,
-                                             kPlayerHalfHeight + kHangMinimumRiseAboveCentre,
-                                             kPlayerHalfHeight + kHangMaximumRiseAboveCentre,
-                                             true, false, false);
+        const LedgeProbe probe = probe_hang_ledge(origin, facing_);
         if (!probe.valid) {
             // No ledge: a hold reached for in the air is caught and climbed.
             const Grip grip = find_grip(
@@ -6226,13 +6356,7 @@ private:
         }
 
         if (locked(probe.ledge_body)) return;
-        const JPH::RVec3 hold(
-            probe.wall_point.GetX() - probe.inward.GetX() * (kPlayerRadius + kHangWallGap),
-            probe.ledge_point.GetY() - kHangDropBelowLedge,
-            probe.wall_point.GetZ() - probe.inward.GetZ() * (kPlayerRadius + kHangWallGap));
-        if (!capsule_pose_is_clear(hold)) {
-            return;
-        }
+        const JPH::RVec3 hold = hang_hold(probe);
 
         traversal_state_ = TraversalState::Hanging;
         traversal_body_ = probe.ledge_body;
@@ -7401,6 +7525,7 @@ private:
         }
         lip.valid = true;
         lip.body = face_hit.mBodyID;
+        lip.sub_shape = top_hit.mSubShapeID2;
         lip.entity_id = physics_system_.GetBodyInterfaceNoLock().GetUserData(face_hit.mBodyID);
         lip.ledge = top;
         const JPH::RVec3 off_face = face - normal * (kPlayerRadius + kHangWallGap);

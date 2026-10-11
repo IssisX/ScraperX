@@ -119,3 +119,22 @@ Physics-tuning skill is applied at the native fixed-step owner: preserve90Hz and
 existing collision substeps, reciprocal loads and interpolated presentation;
 change damping/integration only against measured rejecting cases. No new phone
 feel, frame-rate convergence or full system energy closure is claimed yet.
+
+
+## Reachable thin-edge discovery (native and affected touch verified)
+
+Airborne ledge discovery sweeps continuously through the existing0.45–1.35m
+COM-relative hand-height band. A swept contact only seeds validation: actual
+side/top/receiver and both lips must belong to the same physical part, each
+grip must be within1.75m reach, hand approaches must be unobstructed, and the
+existing hold capsule must be clear. Acquisition uses existing finite hands;
+actual pose, velocity, gravity and support reactions remain authoritative.
+Mantle/vault continue to use their original query and validation flags.
+
+[Source-bound thin-edge evidence](../evidence/shared-thin-edge-catch-2026-10-11/README.md)
+contains a real missed-shelf RED baseline and passing catch/load/Drop plus three
+refusal/fall cases. Existing static/moving ledges, the simulation suite and the
+full exact-bridge headless touch encounter also pass. Discovery currently uses
+a narrow centreline sweep, rejects initial overlaps and caps expensive candidate
+validation at16. This bounded repair does not establish universal shape/mass
+catchability; rising-jump ledge acquisition remains the next bounded goal.
