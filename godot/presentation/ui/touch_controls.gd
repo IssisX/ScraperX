@@ -377,10 +377,13 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	_retrieving = bool(ctx.get("slingshot_recovering", false))
 	_buttons[B_REEL].shown = _retrieving
 	var crouch: TouchButton = _buttons[B_CROUCH]
-	crouch.shown = not _operating and not _retrieving and not hanging and not climbing
-	crouch.icon = &"stand" if ctx["crouched"] else &"crouch"
-	crouch.label = "STAND" if ctx["crouched"] else "CROUCH"
-	crouch.tone = TONE_SAFE if ctx["crouched"] else TONE_NORMAL
+	var tuck_available: bool = ctx.get("swing_tuck_available", false)
+	var tuck_requested: bool = ctx.get("swing_tuck_requested", false)
+	crouch.shown = not _operating and not _retrieving and (tuck_available or (not hanging and not climbing))
+	var folded: bool = tuck_requested if tuck_available else bool(ctx["crouched"])
+	crouch.icon = &"stand" if folded else &"crouch"
+	crouch.label = ("EXTEND" if folded else "TUCK") if tuck_available else ("STAND" if folded else "CROUCH")
+	crouch.tone = TONE_SAFE if folded else TONE_NORMAL
 	var has_x := station == &"jib" or station == &"intake"
 	_buttons[B_UP].shown = _operating
 	_buttons[B_DOWN].shown = _operating

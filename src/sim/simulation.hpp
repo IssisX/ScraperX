@@ -195,6 +195,10 @@ struct Snapshot final {
     double traversal_command_work_bound_j = 0.0;
     double traversal_actuator_positive_work_j = 0.0;
     double traversal_actuator_absorbed_work_j = 0.0;
+    bool swing_tuck_available = false;
+    bool swing_tuck_requested = false;
+    double swing_body_below_grip_m = 0.0;
+    double swing_commanded_body_below_grip_m = 0.0;
     std::uint16_t plank_broken_joint_mask = 0;
     double plank_peak_strength_ratio = 0;
     std::uint64_t plank_fracture_count = 0;

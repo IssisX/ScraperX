@@ -1,4 +1,4 @@
-# Queued modular movement update
+# Modular movement integration
 
 Owner supplied `/storage/emulated/0/Download/ScraperX_Primate_Traversal_Research_Bundle.zip` on2026-10-10. Accessible69,720bytes,24entries; ZIP SHA256 `b04ff9315aabebf7da3e55b728fed239041f2d715ad3151d5bcf10267f19164f`. Read-only intake; no archive scripts executed or implementation imported.
 
@@ -6,7 +6,7 @@ It contains `ScraperX_Primate_Traversal_Engineering_Blueprint.md`, standalone C+
 
 ## Owner chooses the first module
 
-The owner's2026-10-10 correction is explicit: integrate parts/modules one at a time; provide a list and let the owner select first. Owner selected **module3: swinging and timed jumps**. Improve one existing swing encounter after the current fullGREEN exact-source APK delivery; no new movement implementation has started. The other modules remain pending.
+The owner's2026-10-10 correction is explicit: integrate parts/modules one at a time; provide a list and let the owner select first. Owner selected **module3: swinging and timed jumps**. Owner resumed work and subsequently made movement the primary job on2026-10-11. The fullGREEN/APK delivery remains unfinished. Build shared mechanics across appropriate hanging attachments, using one complete existing encounter as the first integration proof. The other modules remain pending.
 
 1. Better reachable grabs and catches on existing ledges/moving holds.
 2. Smoother climb/mantle continuity, including blocked pull-up returning to retained hang.
@@ -26,8 +26,12 @@ Reference swing.cpp55–71 automatically chooses phase and lacks complete power/
 
 Intake metadata: all23payload checksums match; SHA256SUMS has an invalid self-hash. No LICENSE entry exists. Do not describe standalone tests as locally executed; none were run for intake. No phone observations or new movement completion are claimed.
 
-## Paused continuation — 2026-10-11
+## Active module3 — 2026-10-11
 
-Module3 is approximately **10% prepared and 0% newly implemented**. This estimate covers read-only intake and mapping only; existing Crown swing capabilities predate this module and do not count as newly delivered work. Existing real hands provide bounded tangential lean and momentum-preserving native-tick release. A proposed first improvement is deliberate Crouch-driven tuck/extension through those same hand targets; Crouch currently returns during traversal. This proposal is not yet implemented or verified.
+Owner target: move through obstacles with the fluency of an expert parkour athlete—extraordinary climbing, precise footwork, confident catches and smooth momentum-bearing transitions, nearly monkey-like agility while retaining physical causality. Swinging is one part of that movement package. Every part that can be hung from must use the shared mechanics when actual attachment, reach, support and clearance permit; no encounter-ID restriction.
 
-The immediate delivery blocker is exact-source `b9379248d658a99606997f4e59986ba9a39e9e86`, [Actions38072454907](https://github.com/IssisX/ScraperX/actions/runs/38072454907), completed RED: `touch_campaign_to_143` lost the +66 m ring at `(25.21664,55.9,-138.9863)`; exit31. No matching APK was produced. On resume, repair the supported cause, deliver full GREEN and the verified APK link, then implement one bounded Crown swing slice. Keep the goal paused until the owner resumes. Other modules and the full canonical roadmap remain pending.
+First bounded goal: shared deliberate tuck/extension through existing finite native hands, with ordinary controls, actual grip-relative COM response, bounded targets/work and preserved releases/top-outs. Baseline behavioral RED: holding Crouch produces0m actual rise against the identical neutral control; required>0.10m. Super_Agent MCP implemented the native slice; root integrated touch controls and native-detach toggle cleanup. Native shared ledges/bar tests, ordinary incremental Climbing/regrips/extension/restored rate, existing hand/simulation checks and the full headless touch bar encounter now pass. [Evidence](../evidence/shared-hanging-posture-2026-10-11/README.md) keeps exact source hashes and boundaries. The first bounded posture goal is complete; module3 remains partial.
+
+The existing hanging bar (native2930; legacy code identifiers use Crown), ordinary static ledge7 and moving ledge8 are acceptance cases. Existing pumping/release predates this integration and earns no new completion credit. The implemented0.25m world-up body-rest-target change is reduced-order COM translation, not articulated limbs or full free-arc swinging from arbitrary grips. General passive swing geometry/catch eligibility is subsequent module3 work, not silently covered by a posture flag. Preserve normal ladder climbing and ledge mantle controls.
+
+The latest full delivery run38159505644 is RED. Local committed838b5dd preserves the focused approach repairs; a second north climb remains unresolved. Owner redirected away from further climb repair. No new GREEN APK or phone observations are claimed. Other modules and the full canonical roadmap remain pending.

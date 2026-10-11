@@ -129,19 +129,25 @@ bool PhysicalHandClimb::active() const noexcept { return attached(0) || attached
 bool PhysicalHandClimb::attached(unsigned hand) const noexcept {
     return hand < hands_.size() && (hands_[hand].GetPtr() != nullptr || soft_[hand].attached);
 }
-void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, float dt) {
+JPH::Vec3 PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, float dt,
+                                            std::optional<float> command_power_cap_w) {
     using namespace JPH;
     last_bound_ = 0.0;
     last_actuator_positive_work_ = 0.0;
     const unsigned count = unsigned(attached(0)) + unsigned(attached(1));
-    if (count == 0 || !finite(desired_player_displacement) || !std::isfinite(dt) || dt <= 0) return;
+    if (count == 0 || !finite(desired_player_displacement) || !std::isfinite(dt) || dt <= 0 ||
+        (command_power_cap_w && (!std::isfinite(*command_power_cap_w) || *command_power_cap_w <= 0)))
+        return Vec3::sZero();
     const double distance = length(desired_player_displacement);
-    if (distance == 0.0) return;
-    const double budget = double(active_command_power_bound_w()) * dt;
+    if (distance == 0.0) return Vec3::sZero();
+    const float power = command_power_cap_w ?
+        std::min(active_command_power_bound_w(), *command_power_cap_w) : active_command_power_bound_w();
+    const double budget = double(power) * dt;
+    const bool bounded_posture_stroke = swing_profile_ || command_power_cap_w.has_value();
     // Swing lean is bounded by real spring work and a chosen0.6m/s body
     // stroke, rather than charging1500N even when the hand load is small.
     // Existing climb/transfer keep their conservative command-distance bound.
-    double scale = swing_profile_ ? std::min(1.0, .6 * dt / distance) :
+    double scale = bounded_posture_stroke ? std::min(1.0, .6 * dt / distance) :
         std::min(1.0, budget / (double(count) * force_bound_n() * distance));
     std::array<Vec3, 2> extensions;
     for (unsigned i=0;i<hands_.size();++i) if(attached(i)) extensions[i]=spring_extension(i);
@@ -165,7 +171,7 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
         scale=low*.999999;
     }
     std::array<Vec3, 2> targets;
-    double debit = 0.0, supplied=0.0, absorbed=0.0;
+    double debit = 0.0, supplied=0.0, absorbed=0.0, max_stroke=0.0;
     // Charge actual representable target changes, including float rounding.
     // One downward correction handles the budget boundary; otherwise reject the
     // command instead of silently admitting an unbounded/nonfinite target.
@@ -173,24 +179,32 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
         const Vec3 delta(float(double(desired_player_displacement.GetX()) * scale),
                          float(double(desired_player_displacement.GetY()) * scale),
                          float(double(desired_player_displacement.GetZ()) * scale));
-        debit = supplied = absorbed = 0.0;
+        debit = supplied = absorbed = max_stroke = 0.0;
         for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
             const auto previous = soft_[i].attached ? soft_[i].rest_offset : hands_[i]->GetTargetPositionCS();
             // Jolt's separation is p2-p1. Positive player motion reduces it.
             targets[i] = soft_[i].attached ? previous + delta : previous - delta;
-            if (!finite(targets[i])) return;
+            if (!finite(targets[i])) return Vec3::sZero();
             debit += force_bound_n() * length(targets[i] - previous);
             const auto actual_delta=soft_[i].attached ? targets[i]-previous : previous-targets[i];
+            max_stroke=std::max(max_stroke,length(actual_delta));
             const double work=work_for_delta(i,actual_delta);
             supplied+=std::max(0.0,work);
             absorbed+=std::max(0.0,-work);
         }
-        const double limiting_debit=std::max(supplied,swing_profile_?0.0:debit);
-        if (limiting_debit <= budget) break;
-        scale *= 0.999999 * budget / limiting_debit;
+        const double limiting_debit=std::max(supplied,bounded_posture_stroke?0.0:debit);
+        const bool stroke_exceeded=command_power_cap_w && max_stroke > .6 * dt;
+        if (limiting_debit <= budget && !stroke_exceeded) break;
+        const double correction=std::min(limiting_debit > budget ? budget / limiting_debit : 1.0,
+            stroke_exceeded ? .6 * dt / max_stroke : 1.0);
+        scale *= 0.999999 * correction;
     }
-    if (supplied > budget || (!swing_profile_ && debit > budget)) return;
+    if (supplied > budget || (!bounded_posture_stroke && debit > budget) ||
+        (command_power_cap_w && max_stroke > .6 * dt)) return Vec3::sZero();
+    Vec3 delivered = Vec3::sZero();
     for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
+        delivered += soft_[i].attached ? targets[i] - soft_[i].rest_offset :
+                                         hands_[i]->GetTargetPositionCS() - targets[i];
         if (soft_[i].attached) { soft_[i].rest_offset=targets[i]; continue; }
         hands_[i]->SetTargetPositionCS(targets[i]);
         const Body *hold = hands_[i]->GetBody2();
@@ -202,6 +216,21 @@ void PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, f
     last_actuator_positive_work_=supplied;
     actuator_positive_work_+=supplied;
     actuator_absorbed_work_+=absorbed;
+    return delivered / float(count);
+}
+bool PhysicalHandClimb::compatible_hands() const noexcept {
+    return attached(0) && attached(1) && soft_[0].attached == soft_[1].attached;
+}
+JPH::RVec3 PhysicalHandClimb::grip_midpoint() const {
+    using namespace JPH;
+    if (!compatible_hands()) return RVec3::sZero();
+    if (soft_[0].attached)
+        return .5F * (net_->world_point(soft_[0].material) + net_->world_point(soft_[1].material));
+    const BodyID ids[] { hands_[0]->GetBody2()->GetID(), hands_[1]->GetBody2()->GetID() };
+    BodyLockMultiRead lock(system_.GetBodyLockInterface(), ids, 2);
+    if (!lock.GetBody(0) || !lock.GetBody(1)) return RVec3::sZero();
+    return .5F * (lock.GetBody(0)->GetCenterOfMassTransform() * hands_[0]->GetConstraintToBody2Matrix().GetTranslation() +
+                 lock.GetBody(1)->GetCenterOfMassTransform() * hands_[1]->GetConstraintToBody2Matrix().GetTranslation());
 }
 JPH::Vec3 PhysicalHandClimb::spring_extension(unsigned hand) const {
     using namespace JPH;

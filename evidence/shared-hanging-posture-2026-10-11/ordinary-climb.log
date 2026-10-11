@@ -1,0 +1,10 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+CLIMB TUCK actual_rise_m=0.250046 commanded_rise_m=0.25 held_target_span_m=0
+CLIMB STATE phase=tucked_before_ascent tick=600 actual_com=16,90.3227,-179.55 actual_midgrip=16,90.6,-180.25 commanded_com_y_from_readback=90.4061 actual_below=0.277321 commanded_below=0.193954 hand_y=90.45,90.75 generations=3,3 requested=1
+CLIMB STATE phase=after_held_ascent_regrip tick=690 actual_com=16,90.7708,-179.55 actual_midgrip=16,91.5,-180.25 commanded_com_y_from_readback=90.8648 actual_below=0.72924 commanded_below=0.635185 hand_y=91.65,91.35 generations=5,4 requested=1
+CLIMB STATE phase=settled_before_extension tick=870 actual_com=16,90.7818,-179.55 actual_midgrip=16,91.5,-180.25 commanded_com_y_from_readback=90.8648 actual_below=0.718201 commanded_below=0.635185 hand_y=91.65,91.35 generations=5,4 requested=1
+CLIMB STATE phase=after_extension tick=1230 actual_com=16,90.5315,-179.55 actual_midgrip=16,91.2,-180.25 commanded_com_y_from_readback=90.6148 actual_below=0.668541 commanded_below=0.585182 hand_y=91.05,91.35 generations=6,4 requested=0
+CLIMB EXTEND tucked_body_below_m=0.718774 extended_body_below_m=0.668541 actual_extension_m=-0.0502326 commanded_body_below_m=0.585182 requested=0 regrips=2,1
+CLIMB WORLD EXTEND actual_descent_m=0.250343 commanded_descent_m=0.25 midgrip_descent_m=0.300003
+CLIMB RESUME control_rise_m=1.32995 extended_rise_m=1.35494 control_rate_mps=0.664974 extended_rate_mps=0.677471 rate_ratio=1.01879 requested=0 extended_body_below_m=0.668541 extended_target_below_m=0.585182 regrips=2,1
+PASS TUCK ordinary_non_swing_climb=1 posture=1 regrips=1 extension=1 resumed_rate=1

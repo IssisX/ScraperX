@@ -142,6 +142,7 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_supplied_machine_route_tests tests/supplied_machine_route_tests.cpp)
     target_link_libraries(scraperx_supplied_machine_route_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.supplied_machine_route COMMAND scraperx_supplied_machine_route_tests)
+    add_test(NAME scraperx_sim.shared_hanging_posture COMMAND scraperx_supplied_machine_route_tests parkour_tuck)
 
     add_executable(scraperx_service_lift_route_tests tests/service_lift_route_tests.cpp)
     target_link_libraries(scraperx_service_lift_route_tests PRIVATE scraperx_sim)

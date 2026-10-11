@@ -2218,16 +2218,17 @@ func _touch_crown_swing() -> bool:
 func _crown_swing_catch_diagnostic(phase: String) -> void:
 	var bar := int(_native().get_kit_body_index(2930))
 	var bar_pose: Variant = _native().get_kit_body_transform(bar) if bar >= 0 else "unavailable"
+	var bar_grip: Variant = bar_pose * Vector3(0, -7, 0) if bar_pose is Transform3D else "unavailable"
 	var landing: Dictionary = _native().get_landing_state()
 	var move: Vector2 = _main._touch.move_vector
 	var facing := Vector2(-sin(_main._yaw), -cos(_main._yaw))
 	var right := Vector2(cos(_main._yaw), -sin(_main._yaw))
-	print("SCRAPERX_CROWN_CATCH phase=%s tick=%d player=%s velocity=%s grounded=%s crouched=%s support=%d traversal=%d traversal_support=%d left_hand=%s right_hand=%s hands=%s player_swinging=%s facing_from_yaw=%s touch_move=%s world_move_from_touch=%s bar_transform=%s" % [
+	print("SCRAPERX_CROWN_CATCH phase=%s tick=%d player=%s velocity=%s grounded=%s crouched=%s support=%d traversal=%d traversal_support=%d left_hand=%s right_hand=%s hands=%s player_swinging=%s facing_from_yaw=%s touch_move=%s world_move_from_touch=%s bar_transform=%s bar_grip=%s" % [
 		phase, _native().get_tick_index(), _position(), _velocity(), _native().is_player_grounded(),
 		_native().is_player_crouched(), _native().get_support_entity_id(), _native().get_traversal_state(),
 		_native().get_traversal_support_entity_id(), _native().get_traversal_left_hand(),
 		_native().get_traversal_right_hand(), landing.get("traversal_hand_constraint_count", "not_exposed"),
-		landing["player_swinging"], facing, move, right * move.x + facing * move.y, bar_pose])
+		landing["player_swinging"], facing, move, right * move.x + facing * move.y, bar_pose, bar_grip])
 
 
 func _touch_crown_swing_catch() -> bool:
@@ -2241,6 +2242,31 @@ func _touch_crown_swing_catch() -> bool:
 			or Vector2(takeoff_slip.x, takeoff_slip.z).length() >= 0.15:
 		_crown_swing_catch_diagnostic("takeoff_unsettled")
 		return _fail("crown hanging arm Jump requires settled start platform1985 at=%s" % _position())
+	# A retry leaves the real bar oscillating. Time the ordinary jump while its
+	# physical crossbar is ahead and moving away, rather than jumping into a
+	# behind-facing grip. A stationary first approach retains its proven stance.
+	var bar := int(_native().get_kit_body_index(2930))
+	var phase_start := int(_native().get_tick_index())
+	var previous_tick := phase_start
+	var previous_grip: Vector3 = _native().get_kit_body_transform(bar) * Vector3(0, -7, 0)
+	var catch_phase := false
+	while float(int(_native().get_tick_index()) - phase_start) * float(_native().get_fixed_step_seconds()) < 12.0:
+		await get_tree().process_frame
+		var tick := int(_native().get_tick_index())
+		if tick == previous_tick:
+			continue
+		var grip: Vector3 = _native().get_kit_body_transform(bar) * Vector3(0, -7, 0)
+		var grip_vx := (grip.x - previous_grip.x) / (float(tick - previous_tick) * float(_native().get_fixed_step_seconds()))
+		var ahead := grip.x - _position().x
+		previous_grip = grip
+		previous_tick = tick
+		if ahead >= 0.30 and ahead <= 1.25 and grip.y <= 200.60 \
+				and (grip_vx >= 0.15 or (absf(grip_vx) <= 0.01 and ahead >= 0.90)):
+			catch_phase = true
+			_crown_swing_catch_diagnostic("timed_takeoff")
+			break
+	if not catch_phase:
+		return _fail("hanging swing never presented a reachable forward catch phase")
 	var catch_tick := int(_native().get_tick_index())
 	var sample_tick := catch_tick
 	_move(device, 1.0)
@@ -2266,15 +2292,29 @@ func _touch_crown_swing_catch() -> bool:
 func _touch_crown_swing_exit() -> bool:
 	if not await _touch_crown_swing_catch():
 		return false
+	if not await _touch_hanging_posture():
+		return false
 	var device := InputRouter.Device.TOUCH
 	var pump_tick := int(_native().get_tick_index())
 	var released := false
+	var saw_tuck := false
+	var saw_extension := false
 	while float(int(_native().get_tick_index()) - pump_tick) * float(_native().get_fixed_step_seconds()) < 180.0:
 		if not _crown_swing_attached() or int(_native().get_death_count()) != 0:
 			_move(device, 0.0)
 			return _fail("crown deliberate lean lost its native hanging support at=%s" % _position())
 		var velocity := _velocity()
-		if _position().x > -32.4 and velocity.x > 2.5 and velocity.y > 1.5:
+		var posture: Dictionary = _native().get_landing_state()
+		var wants_tuck := velocity.x > 0.0 and _position().x > -37.7
+		if wants_tuck != bool(posture.get("swing_tuck_requested", false)):
+			_tap(2, _center(&"crouch"))
+			await get_tree().process_frame
+			posture = _native().get_landing_state()
+		saw_tuck = saw_tuck or bool(posture.get("swing_tuck_requested", false))
+		saw_extension = saw_extension or not bool(posture.get("swing_tuck_requested", false))
+		if _position().x > -32.4 and velocity.x > 2.5 and velocity.y > 1.5 \
+				and bool(posture.get("swing_tuck_requested", false)) \
+				and float(posture.get("swing_commanded_body_below_grip_m", 1.0)) < 0.8:
 			_move(device, 0.0)
 			_tap(1, _center(&"jump"))
 			released = true
@@ -2288,11 +2328,14 @@ func _touch_crown_swing_exit() -> bool:
 		_move(device, 1.0 if velocity.x - 1.2 * (hand.x + 36.95) > 0.0 else -1.0)
 		await get_tree().process_frame
 	_move(device, 0.0)
-	if not released:
-		return _fail("crown deliberate lean never earned the rising release window")
+	if not released or not saw_tuck or not saw_extension:
+		return _fail("hanging swing did not earn a tucked release using deliberate tuck and extension")
 	if not await _wait_until(func() -> bool:
 		return not bool(_native().get_landing_state()["player_swinging"]), 0.5):
 		return _fail("crown Jump did not release the hanging arm")
+	var detached: Dictionary = _native().get_landing_state()
+	if bool(detached.get("swing_tuck_available", true)) or bool(detached.get("swing_tuck_requested", true)):
+		return _fail("hanging posture readback survived release")
 	# Coast with neutral input. A real landing brace can lower the capsule to
 	# 198.59m; grounded contact on the narrow receiver establishes this arrival.
 	if not await _wait_until(func() -> bool:
@@ -2302,10 +2345,58 @@ func _touch_crown_swing_exit() -> bool:
 	return _campaign_world_intact()
 
 
+func _touch_hanging_posture() -> bool:
+	var before: Dictionary = _native().get_landing_state()
+	if not bool(before.get("swing_tuck_available", false)) \
+			or bool(before.get("swing_tuck_requested", true)) \
+			or not _main._touch.is_button_shown(&"crouch") \
+			or _main._touch.button_label(&"crouch") != "TUCK":
+		return _fail("actual hanging hands did not expose the posture control")
+	var target_before := float(before["swing_commanded_body_below_grip_m"])
+	var body_before := float(before["swing_body_below_grip_m"])
+	var work_before := float(before["hand_actuator_positive_work_j"])
+	_tap(2, _center(&"crouch"))
+	if not await _wait_until(func() -> bool:
+		var state: Dictionary = _native().get_landing_state()
+		return bool(state.get("swing_tuck_requested", false)) \
+			and float(state.get("swing_commanded_body_below_grip_m", target_before)) < target_before - 0.20 \
+			and float(state.get("swing_body_below_grip_m", body_before)) < body_before - 0.10, 4.0):
+		return _fail("touch TUCK did not move the actual body and bounded hand target")
+	var tucked: Dictionary = _native().get_landing_state()
+	var left: Vector3 = _native().get_traversal_left_hand()
+	var right: Vector3 = _native().get_traversal_right_hand()
+	var measured_below := 0.5 * (left.y + right.y) - _position().y
+	var left_force: Vector3 = tucked["left_hand_force_n"]
+	var right_force: Vector3 = tucked["right_hand_force_n"]
+	if absf(measured_below - float(tucked["swing_body_below_grip_m"])) > 0.001 \
+			or float(tucked["hand_actuator_positive_work_j"]) <= work_before \
+			or left_force.length() > 1501.0 or right_force.length() > 1501.0 \
+			or int(tucked["traversal_hand_constraint_count"]) != 2 \
+			or float(tucked["player_gravity_factor"]) != 1.0 or bool(_native().is_player_crouched()):
+		return _fail("touch TUCK lacks real finite hands, paid work, or actual COM readback")
+	var target_tucked := float(tucked["swing_commanded_body_below_grip_m"])
+	if _main._touch.button_label(&"crouch") != "EXTEND":
+		return _fail("native tuck request did not update the EXTEND control")
+	_tap(2, _center(&"crouch"))
+	if not await _wait_until(func() -> bool:
+		var state: Dictionary = _native().get_landing_state()
+		return not bool(state.get("swing_tuck_requested", true)) \
+			and float(state.get("swing_commanded_body_below_grip_m", target_tucked)) > target_tucked + 0.20, 4.0):
+		return _fail("touch EXTEND did not restore the native hand target")
+	print("SCRAPERX_HANGING_POSTURE touch_tuck_extend=1 actual_body_rise_m=%f commanded_rise_m=%f positive_target_work_j=%f" % [
+		body_before - float(tucked["swing_body_below_grip_m"]), target_before - target_tucked,
+		float(tucked["hand_actuator_positive_work_j"]) - work_before])
+	return true
+
+
 func _touch_crown_swing_recovery() -> bool:
 	if not await _touch_crown_swing_catch():
 		return false
 	var device := InputRouter.Device.TOUCH
+	_tap(2, _center(&"crouch"))
+	if not await _wait_until(func() -> bool:
+		return bool(_native().get_landing_state().get("swing_tuck_requested", false)), 0.2):
+		return _fail("recovery did not acquire the touch posture toggle")
 	var miss_tick := int(_native().get_tick_index())
 	var miss_available := false
 	while float(int(_native().get_tick_index()) - miss_tick) * float(_native().get_fixed_step_seconds()) < 10.0:
@@ -2320,11 +2411,20 @@ func _touch_crown_swing_recovery() -> bool:
 		return _fail("crown recovery miss never reached its low-speed release window")
 	# Release over the gap with insufficient forward speed to reach the receiver.
 	_move(device, 0.0)
-	_tap(1, _center(&"jump"))
+	# End real attachment ownership without going through presentation's Jump
+	# or Drop cleanup. The same owner transition occurs on native auto-detach.
+	_native().request_release()
+	if not await _wait_until(func() -> bool:
+		return not _crown_swing_attached() and not _main._crouch_toggled \
+			and not _main._crouch_toggle_from_hang, 0.5):
+		return _fail("native detach retained the presentation posture toggle")
 	if not await _wait_until(func() -> bool:
 		return not bool(_native().get_landing_state()["player_swinging"]) \
 			and bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 1931, 5.0):
 		return _fail("crown missed release did not reach the real recovery tray at=%s" % _position())
+	if bool(_native().is_player_crouched()):
+		return _fail("released posture became unsolicited ground crouch")
+	print("SCRAPERX_HANGING_POSTURE native_detach_toggle_clear=1 recovery_support=1931 ground_crouch=0")
 	if not await _walk_to(device, Vector2(-37.0, -159.8), 0.08, 7.0):
 		return _fail("crown recovery ladder approach at=%s" % _position())
 	await _face(Vector2(-1, 0))

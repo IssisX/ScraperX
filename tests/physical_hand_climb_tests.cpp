@@ -163,20 +163,20 @@ void command_sign_and_budget() {
     PhysicalHandClimb hands(w.system, w.player);
     w.acquire(hands); w.tick(hands, 360);
     const double y = w.position(w.player).GetY();
-    hands.advance_targets(Vec3(0, 0.2F, 0), 0.2F);
+    (void)hands.advance_targets(Vec3(0, 0.2F, 0), 0.2F);
     check(hands.last_command_work_bound_j() > 599.9 && hands.last_command_work_bound_j() <= 600.001, "two-hand command debit is not shared Fmax-distance budget");
     w.tick(hands, 270);
     check(w.position(w.player).GetY() - y > 0.195 && w.position(w.player).GetY() - y < 0.205, "positive climb command moved player in wrong direction");
     const double previous = hands.command_work_bound_j();
-    hands.advance_targets(Vec3(100, 30, -70), h);
+    (void)hands.advance_targets(Vec3(100, 30, -70), h);
     check(hands.last_command_work_bound_j() > 33.32 && hands.last_command_work_bound_j() <= 3000.0 * h + 0.0001, "command exceeded 3000W aggregate bound");
     check(std::abs(hands.command_work_bound_j() - previous - hands.last_command_work_bound_j()) < 0.0001, "cumulative command debit missing");
     const double ledger = hands.command_work_bound_j();
-    hands.advance_targets(Vec3(std::numeric_limits<float>::quiet_NaN(), 0, 0), h);
+    (void)hands.advance_targets(Vec3(std::numeric_limits<float>::quiet_NaN(), 0, 0), h);
     check(hands.last_command_work_bound_j() == 0 && hands.command_work_bound_j() == ledger, "invalid command entered ledger");
-    hands.detach(0); hands.advance_targets(Vec3(100, 30, -70), h);
+    hands.detach(0); (void)hands.advance_targets(Vec3(100, 30, -70), h);
     check(hands.last_command_work_bound_j() > 33.32 && hands.last_command_work_bound_j() <= 3000.0 * h + 0.0001, "one-hand budget unexpectedly doubled or halved");
-    hands.clear(); hands.advance_targets(Vec3(1, 1, 1), h);
+    hands.clear(); (void)hands.advance_targets(Vec3(1, 1, 1), h);
     check(hands.last_command_work_bound_j() == 0, "unattached command consumed work budget");
     std::cout << "command ascent=" << w.position(w.player).GetY() - y << " cumulative_bound=" << hands.command_work_bound_j() << '\n';
 }
@@ -186,7 +186,7 @@ void measured_swing_actuation() {
     w.acquire(hands);w.tick(hands,360);hands.set_swing_profile();
     const double sag=4.3-w.position(w.player).GetY();
     const auto target=hands.commanded_position();
-    hands.advance_targets(Vec3(0,.15F,0),h);
+    (void)hands.advance_targets(Vec3(0,.15F,0),h);
     const double stroke=hands.commanded_position().GetY()-target.GetY();
     const double expected=5000.0*(2*sag*stroke+stroke*stroke);
     check(stroke>0 && stroke<=.6*h+.000001,"swing lean exceeded finite body stroke");
@@ -195,10 +195,10 @@ void measured_swing_actuation() {
     check(hands.last_actuator_positive_work_j()<=500*h+.00001,
           "swing actual positive spring work exceeded500W budget");
     const double supplied=hands.actuator_positive_work_j();
-    hands.advance_targets(Vec3::sZero(),h);
+    (void)hands.advance_targets(Vec3::sZero(),h);
     check(hands.actuator_positive_work_j()==supplied && hands.last_actuator_positive_work_j()==0,
           "neutral swing command generated actuator work");
-    hands.advance_targets(Vec3(0,-float(stroke),0),h);
+    (void)hands.advance_targets(Vec3(0,-float(stroke),0),h);
     check(hands.actuator_absorbed_work_j()>0 && hands.actuator_positive_work_j()==supplied,
           "negative rest-target work was rewarded as positive pumping");
     std::cout<<"swing spring_work="<<supplied<<" stroke="<<stroke
@@ -294,7 +294,7 @@ void soft_material_reaction() {
     check(hands.regrip(0,net.body(),net.world_point(Vec3(5,10,0))),"soft regrip rejected");
     check(Vec3(hands.commanded_position()-neutral).Length()<0.00003F,"soft regrip reset spring extension");
     check((w.velocity(w.player)-velocity).LengthSq()==0,"soft regrip changed momentum");
-    hands.advance_targets(Vec3(0,100,0),h);
+    (void)hands.advance_targets(Vec3(0,100,0),h);
     check(hands.last_command_work_bound_j()>33.3 && hands.last_command_work_bound_j()<=3000.0*h+0.0001,"soft command bypassed shared work bound");
     hands.clear();
     check((w.velocity(w.player)-velocity).LengthSq()==0 && !hands.active(),"soft release changed momentum or left attachments");

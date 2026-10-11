@@ -328,6 +328,7 @@ var _operating := &""
 # crouches too, for as long as it is held; the native decides whether the
 # body can crouch or stand.
 var _crouch_toggled := false
+var _crouch_toggle_from_hang := false
 var _fb_traversal := 0
 var _fb_swinging := false
 var _fb_landing_count := -1
@@ -622,6 +623,14 @@ func _process(delta: float) -> void:
 
 	_render_snapshot(delta)
 	_ctx = _read_context()
+	# Attachment ownership can end natively without a presentation release verb.
+	# Clear only the posture toggle; held Ctrl and ordinary ground crouch retain
+	# their own intent. Temporary posture ineligibility with hands stays intact.
+	if _crouch_toggle_from_hang and (not bool(_ctx["climbing"]) and not bool(_ctx["hanging"]) \
+			or int(_native.get_landing_state().get("traversal_hand_constraint_count", 0)) == 0):
+		_crouch_toggled = false
+		_crouch_toggle_from_hang = false
+		_native.set_crouch_input(bool(intent["crouch_held"]))
 	_arms.update_arms(_arms_state(intent), _camera.global_transform, delta)
 	if _slingshot_view != null:
 		var sling: Dictionary = _native.get_slingshot_render_state()
@@ -898,6 +907,7 @@ func _after_restart() -> void:
 	_sling_prediction = PackedVector3Array()
 	_end_operation()
 	_crouch_toggled = false
+	_crouch_toggle_from_hang = false
 	_ctx = _read_context()
 	var landing: Dictionary = _native.get_landing_state()
 	_reset_landing_feedback(landing, int(_native.get_tick_index()))
@@ -936,17 +946,24 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 			&"jump":
 				# A jump stands a crouched body first (natively), and ends the toggle.
 				_crouch_toggled = false
+				_crouch_toggle_from_hang = false
 				_native.request_jump()
 			&"action":
 				_crouch_toggled = false
+				_crouch_toggle_from_hang = false
 				_perform_action()
 			&"crouch":
-				# Does what the button says: crouched, it asks to stand.
-				_crouch_toggled = not bool(_ctx["crouched"])
+				# Native attachment conditions select hanging posture or ground crouch.
+				_crouch_toggled = not bool(_ctx.get("swing_tuck_requested", false)) \
+					if bool(_ctx.get("swing_tuck_available", false)) else not bool(_ctx["crouched"])
+				_crouch_toggle_from_hang = _crouch_toggled and bool(_ctx.get("swing_tuck_available", false))
 			&"drop":
 				# Let go of whatever the hands are on: a ledge, a climb's
 				# holds, or a load. On the ground with an edge behind, the
 				# native lowers the body over it into a hang.
+				if _crouch_toggle_from_hang:
+					_crouch_toggled = false
+					_crouch_toggle_from_hang = false
 				if bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
 					_native.request_slingshot_drop()
 				elif int(_ctx["carrying"]) != 0:
@@ -956,6 +973,9 @@ func _dispatch(verbs: Array, _delta: float) -> void:
 			&"chute":
 				_native.request_parachute()
 			&"back":
+				if _crouch_toggle_from_hang:
+					_crouch_toggled = false
+					_crouch_toggle_from_hang = false
 				if bool(_ctx.get("slingshot_seated", false)) or bool(_ctx.get("slingshot_recovering", false)):
 					_native.request_slingshot_drop()
 				elif _ctx["hanging"] or _ctx["climbing"] or _ctx["lowering"]:
@@ -1182,6 +1202,8 @@ func _read_context() -> Dictionary:
 		"traversal": traversal,
 		"hanging": hanging,
 		"swinging": bool(landing.get("player_swinging", false)),
+		"swing_tuck_available": bool(landing.get("swing_tuck_available", false)),
+		"swing_tuck_requested": bool(landing.get("swing_tuck_requested", false)),
 		"climbing": climbing,
 		"lowering": lowering,
 		# Drop at an edge behind lowers into a hang; on holds it lets go.

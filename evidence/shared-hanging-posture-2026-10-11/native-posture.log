@@ -1,0 +1,11 @@
+PASS TUCK actual_body_rise_m=0.250205 commanded_rise_m=0.25 restored_body_m=0.98313 held_target_span_m=0 held_tracking_positive_work_j=0 passive_tucked_release=1
+TUCK SCHEDULE start=0 pulse_ticks=45 horizon_ticks=360 position=-36.0066,199.735,-160.45 velocity=1.29775,0.34843,-9.79105e-12 positive_target_work_j=354.505
+TUCK BAR start=0 tick=876 position=-36.95,207.5,-159.8 velocity=0.690562,0.175334,-2.47658e-11 rotation=-2.54103e-07,2.08105e-06,0.124264,0.992249
+TUCK SCHEDULE start=120 pulse_ticks=45 horizon_ticks=360 position=-36.0497,199.722,-160.45 velocity=1.43345,0.320133,1.2499e-12 positive_target_work_j=361.456
+TUCK BAR start=120 tick=876 position=-36.95,207.5,-159.8 velocity=0.756028,0.186828,3.1226e-11 rotation=-2.53861e-07,2.1191e-06,0.121122,0.992638
+TUCK PHASE player_state_delta=0.145749 bar_position_delta_m=3.8147e-06 bar_velocity_delta_mps=0.0664676 bar_angle_delta_rad=0.00633302
+PASS TUCK phase_schedule_state_delta=0.145749 actual_bar_delta=0.0664676 threshold=0.0001
+PASS TUCK regular_hang_entity=7 actual_rise_m=0.249999 commanded_rise_m=0.25 held_target_span_m=0 held_tracking_positive_work_j=0 extension=1 ordinary_Jump_mantle=1 Drop_momentum=1
+PASS TUCK regular_hang_entity=8 actual_rise_m=0.25 commanded_rise_m=0.25 held_target_span_m=0 held_tracking_positive_work_j=0 extension=1 ordinary_Jump_mantle=1 Drop_momentum=1
+PASS PARKOUR missed-release/recovery-footing/real-ladder/retry ordinary_inputs_only=1
+PASS TUCK encounter timed_tuck_extend=1 existing_manual_lean=1 tucked_momentum_release=1 receiver=1985 Tower=11 deaths=0 peak_x=-31.971 pump_ticks=2298

@@ -3,6 +3,7 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 #include <array>
+#include <optional>
 
 namespace scraperx::sim {
 // Owner-thread operations: attach/detach/commands run outside PhysicsSystem::Update.
@@ -27,7 +28,13 @@ public:
     // Passive mounted hanger: bounded human lean commands, not a hinge drive.
     void set_swing_profile();
     [[nodiscard]] bool swinging() const noexcept { return swing_profile_; }
-    void advance_targets(JPH::Vec3 desired_player_displacement, float dt);
+    // Optional shared-posture cap uses the same spring-work budget and 0.6m/s
+    // combined stroke as swing lean. Omission preserves climb/transfer limits.
+    // Returns the mean actual representable rest-target displacement.
+    JPH::Vec3 advance_targets(JPH::Vec3 desired_player_displacement, float dt,
+                             std::optional<float> command_power_cap_w = std::nullopt);
+    [[nodiscard]] bool compatible_hands() const noexcept;
+    [[nodiscard]] JPH::RVec3 grip_midpoint() const;
     // Neutral actuator position from current anchors/targets; not actual pose.
     [[nodiscard]] JPH::RVec3 commanded_position() const;
     // Jolt exposes the LAST collision-step impulse, not the outer update's sum.

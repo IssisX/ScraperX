@@ -1,0 +1,3 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+RED BASELINE control_body_below_m=0.985298 crouch_body_below_m=0.985298 actual_rise_m=0 required_rise_m=0.10 horizon_ticks=360 samples=45
+FAIL SUPPLIED_ROUTE Crouch must raise actual COM relative to actual grips >0.10m pos=-36.0287,199.73,-160.45 support=0 station=0 deck=165 energy=2e+06

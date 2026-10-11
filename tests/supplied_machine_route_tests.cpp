@@ -188,6 +188,304 @@ void passive_swing_release(Simulation &s){
          std::abs(after.player_linear_velocity.y-before.y+9.81/90.)<.05,
          "passive release preserves momentum with ordinary gravity only",s);
 }
+double vector_length(const scraperx::sim::Vector3 &v){return std::sqrt(v.x*v.x+v.y*v.y+v.z*v.z);}
+void tuck_readback_absent(const Simulation &s){const auto v=s.snapshot();
+ require(!v.swing_tuck_available&&!v.swing_tuck_requested&&v.swing_body_below_grip_m==0&&
+         v.swing_commanded_body_below_grip_m==0,"tuck readback clears outside attached hanging swing bar",s);
+}
+void tuck_tick(Simulation &s,bool requested,double lean=0,std::uint64_t support=2930,bool swinging=true,
+               double forward_z=0,bool posture_power_bound=true){
+ const auto before=s.snapshot();
+ require(s.set_crouch_input(requested)&&s.set_move_input(lean,forward_z),"ordinary posture and lean commands accepted",s);
+ tick(s);const auto v=s.snapshot();
+ require(v.player_swinging==swinging&&v.traversal_support_entity_id==support&&v.traversal_hand_constraint_count==2&&
+         v.player_gravity_factor==1&&v.swing_tuck_available&&v.swing_tuck_requested==requested,
+         "manual tuck retains compatible actual hands/gravity and exact request readback",s);
+ const double work=v.traversal_actuator_positive_work_j-before.traversal_actuator_positive_work_j;
+ require(std::isfinite(work)&&work>=-.00001&&(!posture_power_bound||work<=500.0/90.0+.00001),
+         "lean and tuck share aggregate500W positive spring-rest-target work",s);
+ require(vector_length(v.traversal_left_hand_force)<=1501&&vector_length(v.traversal_right_hand_force)<=1501,
+         "tuck uses bounded1500N physical hands",s);
+ require(std::isfinite(v.swing_body_below_grip_m)&&std::isfinite(v.swing_commanded_body_below_grip_m),
+         "actual and commanded posture are finite",s);
+ const double observed_below=.5*(v.traversal_left_hand.y+v.traversal_right_hand.y)-v.player_position.y;
+ require(std::abs(observed_below-v.swing_body_below_grip_m)<.0001,
+         "posture readback agrees with actual hand midpoint and physical COM",s);
+}
+void start_tuck_swing(Simulation &s){
+ require(s.debug_restart_at({-41.0759,198.9,-160.45}),"initial supported198m tuck staging only",s);
+ tick(s,90);tuck_readback_absent(s);catch_swing(s);
+ require(s.snapshot().swing_tuck_available&&!s.snapshot().swing_tuck_requested,
+         "hanging swing bar catch exposes posture without requesting it",s);
+}
+void tuck_posture(){Simulation neutral,tucked;start_tuck_swing(neutral);start_tuck_swing(tucked);
+ double extended_body=0,tucked_body=0,extended_target=0,tucked_target=0;
+ double held_min=std::numeric_limits<double>::infinity(),held_max=-held_min;
+ double held_work_start=0,held_work_end=0;
+ for(int i=0;i<360;++i){tuck_tick(neutral,false);tuck_tick(tucked,true);
+  const auto a=neutral.snapshot(),b=tucked.snapshot();
+  if(i>=270){held_min=std::min(held_min,b.swing_commanded_body_below_grip_m);
+   held_max=std::max(held_max,b.swing_commanded_body_below_grip_m);
+   if(i==270)held_work_start=b.traversal_actuator_positive_work_j;
+   held_work_end=b.traversal_actuator_positive_work_j;}
+  if(i>=315){extended_body+=a.swing_body_below_grip_m;tucked_body+=b.swing_body_below_grip_m;
+   extended_target+=a.swing_commanded_body_below_grip_m;tucked_target+=b.swing_commanded_body_below_grip_m;}
+ }
+ extended_body/=45;tucked_body/=45;extended_target/=45;tucked_target/=45;
+ require(extended_body-tucked_body>.10,"tuck moves actual COM upwards relative to real grip",tucked);
+ // Chosen before runtime:0.01m is4% of the0.25m commanded stroke. Actual COM
+ // response still independently must exceed0.10m; work and force bounds are exact.
+ require(std::abs((extended_target-tucked_target)-.25)<=.01,
+         "manual tuck changes bounded world-up command by0.25m",tucked);
+ require(held_max-held_min<=.01,"held tuck does not choose swing phases or switch its target",tucked);
+ // The ledger may still increase while the real bar moves: no zero-work claim.
+ double restored_body=0,restored_target=0;
+ for(int i=0;i<360;++i){tuck_tick(tucked,false);
+  if(i>=315){restored_body+=tucked.snapshot().swing_body_below_grip_m;
+   restored_target+=tucked.snapshot().swing_commanded_body_below_grip_m;}}
+ restored_body/=45;restored_target/=45;
+ require(restored_body-tucked_body>.10&&restored_target-tucked_target>.20,
+         "explicit extension restores actual COM and commanded body distance",tucked);
+ // Keep the posture command held across release; availability/readback must clear.
+ for(int i=0;i<90;++i)tuck_tick(tucked,true);
+ require(tucked.snapshot().swing_tuck_requested,"release test is actually tucked",tucked);
+ passive_swing_release(tucked);tuck_readback_absent(tucked);(void)tucked.set_crouch_input(false);
+ std::cout<<"PASS TUCK actual_body_rise_m="<<extended_body-tucked_body
+          <<" commanded_rise_m="<<extended_target-tucked_target<<" restored_body_m="<<restored_body
+          <<" held_target_span_m="<<held_max-held_min<<" held_tracking_positive_work_j="<<held_work_end-held_work_start
+          <<" passive_tucked_release=1\n";
+}
+struct TuckOutcome{scraperx::sim::Vector3 position,velocity,bar_position,bar_velocity;
+ scraperx::sim::Quaternion bar_rotation;std::uint64_t tick;};
+TuckOutcome fixed_tuck_schedule(int pulse_start){Simulation s;start_tuck_swing(s);
+ const auto bar=s.kit_body_index(2930);require(bar!=Simulation::kKitNone,"phase oracle has actual hanging bar body",s);
+ for(int i=0;i<360;++i)tuck_tick(s,i>=pulse_start&&i<pulse_start+45);
+ const auto v=s.snapshot();
+ std::cout<<"TUCK SCHEDULE start="<<pulse_start<<" pulse_ticks=45 horizon_ticks=360 position="
+          <<v.player_position.x<<','<<v.player_position.y<<','<<v.player_position.z<<" velocity="
+          <<v.player_linear_velocity.x<<','<<v.player_linear_velocity.y<<','<<v.player_linear_velocity.z
+          <<" positive_target_work_j="<<v.traversal_actuator_positive_work_j<<'\n';
+ const auto position=s.kit_body_position(bar),velocity=s.kit_body_velocity(bar);const auto rotation=s.kit_body_rotation(bar);
+ std::cout<<"TUCK BAR start="<<pulse_start<<" tick="<<v.tick_index<<" position="<<position.x<<','<<position.y<<','<<position.z
+          <<" velocity="<<velocity.x<<','<<velocity.y<<','<<velocity.z<<" rotation="
+          <<rotation.x<<','<<rotation.y<<','<<rotation.z<<','<<rotation.w<<'\n';
+ return {v.player_position,v.player_linear_velocity,position,velocity,rotation,v.tick_index};
+}
+void tuck_schedule_falsifier(){const auto a=fixed_tuck_schedule(0),b=fixed_tuck_schedule(120);
+ if(a.tick!=b.tick){std::cerr<<"FAIL TUCK schedule outcomes do not share a native tick\n";std::exit(1);}
+ const double delta=std::sqrt(std::pow(a.position.x-b.position.x,2)+std::pow(a.position.y-b.position.y,2)+
+   std::pow(a.position.z-b.position.z,2)+std::pow(a.velocity.x-b.velocity.x,2)+
+   std::pow(a.velocity.y-b.velocity.y,2)+std::pow(a.velocity.z-b.velocity.z,2));
+ const auto distance=[](const scraperx::sim::Vector3 &u,const scraperx::sim::Vector3 &v){
+  return std::sqrt(std::pow(u.x-v.x,2)+std::pow(u.y-v.y,2)+std::pow(u.z-v.z,2));};
+ const double bar_position_delta=distance(a.bar_position,b.bar_position),bar_velocity_delta=distance(a.bar_velocity,b.bar_velocity);
+ const auto &q=a.bar_rotation;const auto &r=b.bar_rotation;
+ const double norms=std::sqrt((q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w)*(r.x*r.x+r.y*r.y+r.z*r.z+r.w*r.w));
+ if(!std::isfinite(norms)||norms<=0){std::cerr<<"FAIL TUCK invalid actual bar rotation\n";std::exit(1);}
+ const double bar_angle_delta=2*std::acos(std::clamp(std::abs((q.x*r.x+q.y*r.y+q.z*r.z+q.w*r.w)/norms),0.,1.));
+ // The player may change posture without changing the bar. Reject that false
+ // positive separately using actual common-tick body pose/velocity, not playerY.
+ const double bar_delta=std::max({bar_position_delta,bar_velocity_delta,bar_angle_delta});
+ std::cout<<"TUCK PHASE player_state_delta="<<delta<<" bar_position_delta_m="<<bar_position_delta
+          <<" bar_velocity_delta_mps="<<bar_velocity_delta<<" bar_angle_delta_rad="<<bar_angle_delta<<'\n';
+ if(!std::isfinite(delta)||delta<=.0001){std::cerr<<"FAIL TUCK fixed phase schedules indistinguishable delta="<<delta<<'\n';std::exit(1);}
+ if(!std::isfinite(bar_delta)||bar_delta<=.0001){std::cerr<<"FAIL TUCK fixed phase schedules leave actual bar indistinguishable delta="<<bar_delta<<'\n';std::exit(1);}
+ std::cout<<"PASS TUCK phase_schedule_state_delta="<<delta<<" actual_bar_delta="<<bar_delta<<" threshold=0.0001\n";
+}
+void catch_regular_hang(Simulation &s,std::uint64_t support){
+ tuck_readback_absent(s);require(s.set_facing(1,0)&&s.set_move_input(1,0),"ordinary ledge approach commands",s);
+ int elapsed=0;for(;elapsed<180&&s.snapshot().traversal_state!=scraperx::sim::TraversalState::Hanging;++elapsed)tick(s);
+ require(elapsed<180&&s.snapshot().traversal_support_entity_id==support&&s.snapshot().traversal_hand_constraint_count==2,
+         "ordinary ledge approach catches compatible actual hands",s);
+ (void)s.set_move_input(0,0);tick(s,180);
+ require(s.snapshot().swing_tuck_available&&!s.snapshot().swing_tuck_requested,
+         "posture eligibility follows actual compatible ledge hands, not bar identity",s);
+}
+void regular_hang_posture(scraperx::sim::InitialSpawn spawn,std::uint64_t support){
+ Simulation control(spawn,scraperx::sim::WorldContent::RegressionFixtures),posture(spawn,scraperx::sim::WorldContent::RegressionFixtures);
+ catch_regular_hang(control,support);catch_regular_hang(posture,support);
+ double control_body=0,tucked_body=0,control_target=0,tucked_target=0;
+ double held_min=std::numeric_limits<double>::infinity(),held_max=-held_min;
+ double held_work_start=0,held_work_end=0;
+ for(int i=0;i<360;++i){tuck_tick(control,false,0,support,false);tuck_tick(posture,true,0,support,false);
+  const auto a=control.snapshot(),b=posture.snapshot();
+  if(i>=270){held_min=std::min(held_min,b.swing_commanded_body_below_grip_m);held_max=std::max(held_max,b.swing_commanded_body_below_grip_m);
+   if(i==270){held_work_start=b.traversal_actuator_positive_work_j;}
+   held_work_end=b.traversal_actuator_positive_work_j;}
+  if(i>=315){control_body+=a.swing_body_below_grip_m;tucked_body+=b.swing_body_below_grip_m;
+   control_target+=a.swing_commanded_body_below_grip_m;tucked_target+=b.swing_commanded_body_below_grip_m;}
+ }
+ control_body/=45;tucked_body/=45;control_target/=45;tucked_target/=45;
+ require(control_body-tucked_body>.10,"regular hang tuck changes actual hand-to-COM distance",posture);
+ require(std::abs(control_target-tucked_target-.25)<=.01&&held_max-held_min<=.01,
+         "regular held posture reaches one bounded target without upward ratcheting",posture);
+ double restored_body=0;
+ for(int i=0;i<360;++i){tuck_tick(posture,false,0,support,false);if(i>=315)restored_body+=posture.snapshot().swing_body_below_grip_m;}
+ restored_body/=45;require(restored_body-tucked_body>.10,"regular explicit extension restores actual body distance",posture);
+ // Jump retains the existing ledge mantle action while tucked, rather than
+ // introducing a posture-specific release or transferring ownership silently.
+ for(int i=0;i<90;++i)tuck_tick(control,true,0,support,false);
+ require(control.request_jump(),"tucked ordinary ledge Jump accepted",control);tick(control);
+ require(control.snapshot().traversal_state==scraperx::sim::TraversalState::Mantling,
+         "ordinary ledge Jump still commits its validated mantle while tucked",control);
+ tuck_readback_absent(control);(void)control.set_crouch_input(false);
+ int mantle=0;for(;mantle<180&&!(control.snapshot().player_grounded&&control.snapshot().support_entity_id==support);++mantle)tick(control);
+ require(mantle<180&&control.snapshot().death_count==0,"tucked ordinary mantle reaches actual ledge footing",control);
+ // Drop releases without choosing a phase or adding an impulse. Compare actual
+ // velocities over exactly one native tick, including ordinary gravity.
+ for(int i=0;i<90;++i)tuck_tick(posture,true,0,support,false);
+ const auto before=posture.snapshot();require(posture.request_release(),"tucked ordinary Drop accepted",posture);tick(posture);
+ const auto after=posture.snapshot();
+ require(after.traversal_state==scraperx::sim::TraversalState::None&&after.traversal_hand_constraint_count==0&&
+   after.player_gravity_factor==1&&std::abs(after.player_linear_velocity.x-before.player_linear_velocity.x)<.05&&
+   std::abs(after.player_linear_velocity.z-before.player_linear_velocity.z)<.05&&
+   std::abs(after.player_linear_velocity.y-before.player_linear_velocity.y+9.81/90.)<.05,
+   "tucked ordinary Drop preserves actual momentum with gravity only",posture);
+ tuck_readback_absent(posture);(void)posture.set_crouch_input(false);
+ std::cout<<"PASS TUCK regular_hang_entity="<<support<<" actual_rise_m="<<control_body-tucked_body
+   <<" commanded_rise_m="<<control_target-tucked_target<<" held_target_span_m="<<held_max-held_min
+   <<" held_tracking_positive_work_j="<<held_work_end-held_work_start<<" extension=1 ordinary_Jump_mantle=1 Drop_momentum=1\n";
+}
+void posture_unavailable_without_hands(){Simulation ground;tick(ground,90);
+ require(ground.snapshot().player_grounded&&ground.snapshot().traversal_hand_constraint_count==0,"no-hand ground case is real supported footing",ground);
+ require(ground.set_crouch_input(true),"ordinary grounded Crouch accepted",ground);tick(ground);tuck_readback_absent(ground);
+ Simulation airborne(scraperx::sim::InitialSpawn::HighDrop,scraperx::sim::WorldContent::RegressionFixtures);
+ require(airborne.set_crouch_input(true),"ordinary airborne Crouch accepted",airborne);tick(airborne);
+ require(!airborne.snapshot().player_grounded&&airborne.snapshot().traversal_hand_constraint_count==0,
+         "unavailable case is actual airborne body without hands",airborne);tuck_readback_absent(airborne);
+}
+void start_ordinary_posture_climb(Simulation &s){
+ // These are the existing normal-world north-frame catch inputs. No synthetic
+ // ClimbApproach fixture or extra climbing geometry exists in this repository.
+ require(s.debug_restart_at({16,88.9,-179.55})&&s.set_facing(0,-1),"initial actual north frame stance",s);tick(s,45);
+ require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==1901&&s.snapshot().grip_available,
+         "ordinary climb starts from real supported reachable grip",s);
+ require(s.request_traversal(),"ordinary climb Action accepted",s);tick(s);
+ (void)s.set_move_input(0,-1);
+ int elapsed=0;for(;elapsed<500&&s.snapshot().player_position.y<90;++elapsed)tick(s);
+ (void)s.set_move_input(0,0);tick(s,30);const auto v=s.snapshot();
+ require(elapsed<500&&v.traversal_state==scraperx::sim::TraversalState::Climbing&&!v.player_swinging&&
+   !v.player_grounded&&v.traversal_support_entity_id==1901&&v.traversal_hand_constraint_count==2&&v.player_gravity_factor==1&&
+   v.swing_tuck_available&&!v.swing_tuck_requested&&v.death_count==0,
+   "ordinary non-swing climb has actual eligible airborne hands",s);
+}
+void log_ordinary_posture(const char *phase,const Simulation &s){const auto v=s.snapshot();
+ const double mid_x=.5*(v.traversal_left_hand.x+v.traversal_right_hand.x);
+ const double mid_y=.5*(v.traversal_left_hand.y+v.traversal_right_hand.y);
+ const double mid_z=.5*(v.traversal_left_hand.z+v.traversal_right_hand.z);
+ std::cout<<"CLIMB STATE phase="<<phase<<" tick="<<v.tick_index
+   <<" actual_com="<<v.player_position.x<<','<<v.player_position.y<<','<<v.player_position.z
+   <<" actual_midgrip="<<mid_x<<','<<mid_y<<','<<mid_z
+   <<" commanded_com_y_from_readback="<<mid_y-v.swing_commanded_body_below_grip_m
+   <<" actual_below="<<v.swing_body_below_grip_m<<" commanded_below="<<v.swing_commanded_body_below_grip_m
+   <<" hand_y="<<v.traversal_left_hand.y<<','<<v.traversal_right_hand.y
+   <<" generations="<<v.traversal_left_hand_generation<<','<<v.traversal_right_hand_generation
+   <<" requested="<<v.swing_tuck_requested<<'\n';
+}
+void parkour_climb_posture(){Simulation control,posture;
+ start_ordinary_posture_climb(control);start_ordinary_posture_climb(posture);
+ require(control.snapshot().tick_index==posture.snapshot().tick_index,"paired ordinary climbs share initial native tick",posture);
+ double normal_body=0,tucked_body=0,normal_target=0,tucked_target=0;
+ double held_min=std::numeric_limits<double>::infinity(),held_max=-held_min;
+ for(int i=0;i<360;++i){tuck_tick(control,false,0,1901,false);tuck_tick(posture,true,0,1901,false);
+  const auto a=control.snapshot(),b=posture.snapshot();
+  if(i>=270){held_min=std::min(held_min,b.swing_commanded_body_below_grip_m);held_max=std::max(held_max,b.swing_commanded_body_below_grip_m);}
+  if(i>=315){normal_body+=a.swing_body_below_grip_m;tucked_body+=b.swing_body_below_grip_m;
+   normal_target+=a.swing_commanded_body_below_grip_m;tucked_target+=b.swing_commanded_body_below_grip_m;}}
+ normal_body/=45;tucked_body/=45;normal_target/=45;tucked_target/=45;
+ std::cout<<"CLIMB TUCK actual_rise_m="<<normal_body-tucked_body<<" commanded_rise_m="<<normal_target-tucked_target
+   <<" held_target_span_m="<<held_max-held_min<<'\n';
+ require(normal_body-tucked_body>.10&&std::abs(normal_target-tucked_target-.25)<=.01&&held_max-held_min<=.01,
+         "ordinary climb has actual bounded posture with no upward ratchet",posture);
+ log_ordinary_posture("tucked_before_ascent",posture);
+ const auto generations=posture.snapshot();
+ // One second of ordinary ascending input stays below the first top-out and
+ // must regrip while preserving the explicit held posture command.
+ for(int i=0;i<90;++i){tuck_tick(control,false,0,1901,false,-1,false);tuck_tick(posture,true,0,1901,false,-1);}
+ const auto regripped=posture.snapshot();
+ log_ordinary_posture("after_held_ascent_regrip",posture);
+ require(regripped.traversal_left_hand_generation>generations.traversal_left_hand_generation||
+   regripped.traversal_right_hand_generation>generations.traversal_right_hand_generation,
+   "held posture survives actual ordinary climb regrips",posture);
+ double regripped_tuck=0,extended_body=0,extended_target=0;
+ held_min=std::numeric_limits<double>::infinity();held_max=-held_min;
+ for(int i=0;i<180;++i){tuck_tick(control,false,0,1901,false);tuck_tick(posture,true,0,1901,false);
+  if(i>=90){held_min=std::min(held_min,posture.snapshot().swing_commanded_body_below_grip_m);
+   held_max=std::max(held_max,posture.snapshot().swing_commanded_body_below_grip_m);}
+  if(i>=135)regripped_tuck+=posture.snapshot().swing_body_below_grip_m;}
+ log_ordinary_posture("settled_before_extension",posture);
+ const auto extension_start=posture.snapshot();
+ const double extension_mid_start=.5*(extension_start.traversal_left_hand.y+extension_start.traversal_right_hand.y);
+ const double extension_command_start=extension_mid_start-extension_start.swing_commanded_body_below_grip_m;
+ regripped_tuck/=45;require(held_max-held_min<=.01,"ordinary regripped held target does not ratchet",posture);
+ for(int i=0;i<360;++i){tuck_tick(control,false,0,1901,false);tuck_tick(posture,false,0,1901,false);
+  if(i>=315){extended_body+=posture.snapshot().swing_body_below_grip_m;
+   extended_target+=posture.snapshot().swing_commanded_body_below_grip_m;}}
+ extended_body/=45;extended_target/=45;
+ log_ordinary_posture("after_extension",posture);
+ std::cout<<"CLIMB EXTEND tucked_body_below_m="<<regripped_tuck<<" extended_body_below_m="<<extended_body
+   <<" actual_extension_m="<<extended_body-regripped_tuck<<" commanded_body_below_m="<<extended_target
+   <<" requested="<<posture.snapshot().swing_tuck_requested
+   <<" regrips="<<regripped.traversal_left_hand_generation-generations.traversal_left_hand_generation
+   <<','<<regripped.traversal_right_hand_generation-generations.traversal_right_hand_generation<<'\n';
+ const auto extension_end=posture.snapshot();
+ const double extension_mid_end=.5*(extension_end.traversal_left_hand.y+extension_end.traversal_right_hand.y);
+ const double extension_command_end=extension_mid_end-extension_end.swing_commanded_body_below_grip_m;
+ const double world_descent=extension_start.player_position.y-extension_end.player_position.y;
+ const double command_descent=extension_command_start-extension_command_end;
+ std::cout<<"CLIMB WORLD EXTEND actual_descent_m="<<world_descent<<" commanded_descent_m="<<command_descent
+   <<" midgrip_descent_m="<<extension_mid_start-extension_mid_end<<'\n';
+ // A stationary-frame hand can regrip lower while the body extends. Preserve
+ // the actual world reference; report the old grip-relative metric separately.
+ require(world_descent>.10&&std::abs(command_descent-.25)<=.01,
+         "ordinary climb extension restores actual world COM and commanded target",posture);
+ if(std::abs(extension_mid_start-extension_mid_end)>.01)
+  require(extension_end.traversal_left_hand_generation>extension_start.traversal_left_hand_generation||
+          extension_end.traversal_right_hand_generation>extension_start.traversal_right_hand_generation,
+          "extension grip-reference shift comes from an actual ordinary regrip",posture);
+ const auto normal_start=control.snapshot(),resumed_start=posture.snapshot();
+ // CHOSEN before runtime: allow10% rate difference to cover regrip transients,
+ // while rejecting a persistent0.6m/s posture cap on the existing0.9m/s input.
+ // The oracle uses actual paired neutral-input ascent, not a source-only rate.
+ for(int i=0;i<180;++i){tuck_tick(control,false,0,1901,false,-1,false);tuck_tick(posture,false,0,1901,false,-1,false);}
+ const auto a=control.snapshot(),b=posture.snapshot();
+ const double normal_rise=a.player_position.y-normal_start.player_position.y;
+ const double resumed_rise=b.player_position.y-resumed_start.player_position.y;
+ std::cout<<"CLIMB RESUME control_rise_m="<<normal_rise<<" extended_rise_m="<<resumed_rise
+   <<" control_rate_mps="<<normal_rise/2<<" extended_rate_mps="<<resumed_rise/2
+   <<" rate_ratio="<<resumed_rise/normal_rise<<" requested="<<b.swing_tuck_requested
+   <<" extended_body_below_m="<<extended_body<<" extended_target_below_m="<<extended_target
+   <<" regrips="<<regripped.traversal_left_hand_generation-generations.traversal_left_hand_generation
+   <<','<<regripped.traversal_right_hand_generation-generations.traversal_right_hand_generation<<'\n';
+ require(a.tick_index==b.tick_index&&normal_rise>.20&&resumed_rise>=.90*normal_rise,
+         "explicit extension restores meaningful ordinary climb rate relative to neutral control",posture);
+ std::cout<<"PASS TUCK ordinary_non_swing_climb=1 posture=1 regrips=1 extension=1 resumed_rate=1\n";
+}
+void cross_swing_tucked(Simulation &s){catch_swing(s);bool released=false,saw_tuck=false,saw_extension=false;
+ int ticks=0;double peak=-std::numeric_limits<double>::infinity();
+ for(;ticks<180*90;++ticks){const auto v=s.snapshot();
+  const double lean=v.player_linear_velocity.x-1.2*(v.traversal_left_hand.x+36.95)>0?1:-1;
+  // A test controller chooses these visible phases; production receives only inputs.
+  const bool tuck=v.player_linear_velocity.x>0&&v.player_position.x>-37.7;
+  tuck_tick(s,tuck,lean);saw_tuck|=tuck;saw_extension|=!tuck;const auto a=s.snapshot();
+  peak=std::max(peak,a.player_position.x);
+  if(a.player_position.x>-32.4&&a.player_linear_velocity.x>2.5&&a.player_linear_velocity.y>1.5&&
+     a.swing_tuck_requested&&a.swing_commanded_body_below_grip_m<.8){
+   require(saw_tuck&&saw_extension,"encounter deliberately uses both tuck and extension",s);
+   passive_swing_release(s);tuck_readback_absent(s);released=true;break;
+  }
+ }
+ require(released,"manual lean plus timed tucked rising release reaches receiver window",s);
+ (void)s.set_crouch_input(false);(void)s.set_move_input(0,0);tick(s,130);
+ const auto landed=s.snapshot();
+ require(landed.player_grounded&&landed.support_entity_id==1985&&landed.player_position.x>-30.05,
+         "timed posture and earned momentum land on real receiver1985",s);
+ walk(s,-24.7,-160.45);
+ require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==11&&s.snapshot().death_count==0,
+         "tuck encounter exits by ordinary walking to Tower11",s);
+ std::cout<<"PASS TUCK encounter timed_tuck_extend=1 existing_manual_lean=1 tucked_momentum_release=1 receiver=1985 Tower=11 deaths=0 peak_x="
+          <<peak<<" pump_ticks="<<ticks<<'\n';
+}
 void cross_swing(Simulation &s){
  catch_swing(s);
  double peak=-std::numeric_limits<double>::infinity();bool released=false;int ticks=0;
@@ -211,8 +509,9 @@ void cross_swing(Simulation &s){
  walk(s,-24.7,-160.45);require(s.snapshot().support_entity_id==11&&s.snapshot().death_count==0,"swing stable198m Tower exit",s);
  std::cout<<"PASS PARKOUR ordinary jump/catch/player-pump/rising-release/receiver/Tower198 peak_x="<<peak<<" pump_ticks="<<ticks<<" ordinary_inputs_only=1\n";
 }
-void parkour(){Simulation s;require(s.debug_restart_at({-41.0759,198.9,-160.45}),"initial supported198m staging only",s);tick(s,90);
+void swing_miss_recovery(Simulation &s,bool posture=false){
  catch_swing(s);
+ if(posture){for(int i=0;i<45;++i)tuck_tick(s,true);for(int i=0;i<45;++i)tuck_tick(s,false);}
  // Deliberately let go over the gap near the unpumped forward turnaround:
  // there is insufficient horizontal departure speed to reach the receiver.
  int miss=0;for(;miss<10*90;++miss) {const auto v=s.snapshot();
@@ -221,6 +520,7 @@ void parkour(){Simulation s;require(s.debug_restart_at({-41.0759,198.9,-160.45})
  }
  require(miss<10*90,"neutral swing reaches a real poorly timed release opportunity",s);
  passive_swing_release(s);
+ if(posture)tuck_readback_absent(s);
  for(int i=0;i<5*90&&!s.snapshot().player_grounded;++i)tick(s);
  require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==scraperx::sim::kParkourRecoveryEntity,
          "poorly timed release reaches real lower recovery footing",s);
@@ -233,6 +533,16 @@ void parkour(){Simulation s;require(s.debug_restart_at({-41.0759,198.9,-160.45})
  require(climb<35*90&&s.snapshot().death_count==0,"ladder physically recovers to start platform",s);
  (void)s.set_move_input(0,0);tick(s,90);walk(s,-41.0759,-160.45);
  std::cout<<"PASS PARKOUR missed-release/recovery-footing/real-ladder/retry ordinary_inputs_only=1\n";
+}
+void parkour(){Simulation s;require(s.debug_restart_at({-41.0759,198.9,-160.45}),"initial supported198m staging only",s);tick(s,90);
+ swing_miss_recovery(s);
  cross_swing(s);
 }
-int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="balance")balance();else if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}
+void parkour_tuck(){posture_unavailable_without_hands();tuck_posture();tuck_schedule_falsifier();
+ parkour_climb_posture();
+ regular_hang_posture(scraperx::sim::InitialSpawn::HangApproach,Simulation::kHangLedgeEntityId);
+ regular_hang_posture(scraperx::sim::InitialSpawn::MovingLedgeApproach,Simulation::kMovingLedgeEntityId);Simulation s;
+ require(s.debug_restart_at({-41.0759,198.9,-160.45}),"initial supported198m tuck encounter staging only",s);
+ tick(s,90);tuck_readback_absent(s);swing_miss_recovery(s,true);cross_swing_tucked(s);
+}
+int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="balance")balance();else if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else if(std::string(argv[1])=="parkour_tuck")parkour_tuck();else if(std::string(argv[1])=="parkour_climb_posture")parkour_climb_posture();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}
