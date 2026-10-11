@@ -128,6 +128,8 @@ const PITMAN_BAR := 2315
 # The hanging car on the wheel north of that landing (Simulation::kWheelCarEntityId).
 const WHEEL_CAR := 2317
 const WHEEL_LEVER := 2318
+const BRACE := 2319
+const BRACE_LEVER := 2320
 
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
@@ -850,6 +852,8 @@ func _carry_name(entity: int) -> String:
 			return "CLUTCH HANDLE"
 		WHEEL_LEVER:
 			return "WHEEL LEVER"
+		BRACE_LEVER:
+			return "BRACE LEVER"
 		STACK_S1_CHAIN:
 			return "VALVE CHAIN"
 	return "ROPE END" if _is_kit(entity) else ""
@@ -1210,6 +1214,8 @@ func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> v
 		_status.text = "HANGING FROM THE BAR"
 	elif grounded and support == WHEEL_CAR:
 		_status.text = "IN THE WHEEL CAR"
+	elif grounded and support == BRACE:
+		_status.text = "ON THE BRACE"
 	elif traversal == TRAVERSAL_HANGING:
 		_status.text = "HANGING ON NATIVE LEDGE"
 	elif traversal == TRAVERSAL_MANTLING:

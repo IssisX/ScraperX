@@ -1037,6 +1037,99 @@ void build_pitman(kit::Kit &kit, std::vector<Part> &frame) {
     build_wheel(kit, frame);
 }
 
+// West of the wheel's high deck. The bay is the climb: up onto a cabinet,
+// up again, out along a beam over the drop, then a ladder to a perch.
+// A knee brace stands on that perch, caught leaning out over the next
+// bay. Haul the lever and the brace falls until the far deck stops it,
+// and the walk up the brace is the way on. You are not in it while it
+// moves. Step off the perch to the west before it has fallen and you
+// land on the shelf under the bay, and the ladder there comes back up.
+void build_brace(kit::Kit &kit, std::vector<Part> &frame) {
+    // North of the wheel deck. The car arrives on the south of that deck,
+    // and the west edge is the ladder's drop, so the walk to the cabinet
+    // goes north first and stays north of the ladder.
+    frame.push_back(span({8.00F, 763.95F, -138.45F}, {10.90F, 764.19F, -137.70F}, Material::Concrete));
+    frame.push_back(span({4.60F, 763.95F, -138.12F}, {8.10F, 764.19F, -137.70F}, Material::Concrete));
+    frame.push_back(span({5.15F, 714.10F, -138.05F}, {5.45F, 763.95F, -137.75F}, Material::Rust));
+    frame.push_back(span({6.20F, 714.10F, -138.05F}, {6.50F, 763.95F, -137.75F}, Material::Rust));
+
+    // Two rises a step will not take. The plate is on the south of the
+    // cabinet, so the north of the cabinet top is where the first landing is.
+    frame.push_back(span({4.70F, 764.19F, -140.40F}, {6.55F, 765.69F, -137.75F}, Material::Galvanised));
+    frame.push_back(span({5.15F, 765.69F, -140.20F}, {5.95F, 767.15F, -139.00F}, Material::Steel));
+
+    // Level, narrow, and over nothing. The north end lies on the plate,
+    // clear of the cabinet's mantle landing.
+    frame.push_back(box(JPH::Vec3(0.13F, 0.06F, 1.875F), JPH::Vec3(5.50F, 767.09F, -141.025F), Material::Rust));
+    frame.push_back(span({4.95F, 766.91F, -143.40F}, {6.05F, 767.15F, -142.50F}, Material::Concrete));
+    frame.push_back(span({5.15F, 714.10F, -143.15F}, {5.45F, 766.91F, -142.85F}, Material::Rust));
+
+    // The beam arrives on this pad. The ladder is south of it, and the walk
+    // to the ladder goes round the west rail so the rungs are not a wall
+    // in the path.
+    frame.push_back(span({4.15F, 766.91F, -144.95F}, {5.05F, 767.15F, -142.70F}, Material::Concrete));
+    frame.push_back(span({4.15F, 766.91F, -144.95F}, {6.35F, 767.15F, -144.28F}, Material::Concrete));
+    frame.push_back(span({4.40F, 714.10F, -144.70F}, {4.70F, 766.91F, -144.40F}, Material::Rust));
+
+    ladder(frame, 5.50F, -144.10F, true, 767.35F, 777.70F);
+    // A face on the perch's south edge, north of the ladder. The climb
+    // tops out onto the perch. The face does not reach back over the body,
+    // so it is not a soffit that stops the head.
+    frame.push_back(span({4.85F, 776.40F, -143.40F}, {6.20F, 778.09F, -143.22F}, Material::Steel));
+    frame.push_back(span({4.40F, 777.85F, -143.40F}, {7.45F, 778.09F, -141.85F}, Material::Concrete));
+    // North of the caught brace, so a miss can walk around it and off the
+    // west edge. The brace itself stands in that edge.
+    frame.push_back(span({4.40F, 777.85F, -142.10F}, {6.40F, 778.09F, -140.40F}, Material::Concrete));
+    frame.push_back(span({4.70F, 714.10F, -142.55F}, {5.00F, 777.85F, -142.25F}, Material::Rust));
+    frame.push_back(span({6.20F, 714.10F, -142.55F}, {6.50F, 777.85F, -142.25F}, Material::Rust));
+
+    // Under the west edge. A miss off the perch lands here, not on the
+    // wheel, and not thirty metres down.
+    frame.push_back(span({0.60F, 773.40F, -144.15F}, {4.35F, 773.64F, -140.20F}, Material::Concrete));
+    frame.push_back(span({2.00F, 714.10F, -143.20F}, {2.30F, 773.40F, -142.90F}, Material::Rust));
+    // North of the brace, on the west edge of the perch's north side.
+    // The face is the edge itself, not a slab over the climber. The drop
+    // off that edge is further north, so the ladder is not what you land on.
+    ladder(frame, 3.85F, -141.70F, false, 773.90F, 777.70F);
+    frame.push_back(span({4.22F, 776.30F, -142.05F}, {4.40F, 778.09F, -141.40F}, Material::Steel));
+
+    constexpr float kHingeX = 4.35F;
+    constexpr float kHingeY = 778.28F;
+    constexpr float kHingeZ = -142.90F;
+    constexpr float kHalf = 4.50F;
+    constexpr float kLean = 0.20F;
+    // Past the angle where the high deck meets the free end, so the deck
+    // stops the fall and the foot comes down as a step off the perch.
+    constexpr float kFall = 1.40F;
+    const JPH::Quat lean = JPH::Quat::sRotation(JPH::Vec3::sAxisZ(), kLean);
+    const JPH::Vec3 hinge(kHingeX, kHingeY, kHingeZ);
+    const JPH::Vec3 origin = hinge + lean * JPH::Vec3(0.0F, kHalf, 0.0F);
+    const kit::BodyIndex brace = kit.add_body(
+        Sim::kBraceEntityId,
+        {box(JPH::Vec3(0.055F, kHalf, 0.36F), JPH::Vec3::sZero(), Material::Steel)},
+        JPH::RVec3(origin.GetX(), origin.GetY(), origin.GetZ()), lean, 560.0F, 0.92F);
+    kit.set_damping(brace, 0.20F, 0.55F);
+    kit.set_continuous_collision(brace);
+    const JPH::Vec3 leaned_up = lean * JPH::Vec3::sAxisY();
+    (void)kit.add_lever(brace, JPH::RVec3(hinge.GetX(), hinge.GetY(), hinge.GetZ()), JPH::Vec3::sAxisZ(),
+                        leaned_up, 0.0F, kFall);
+
+    const JPH::RVec3 lever_pivot(6.35, 778.55, -142.55);
+    kit::LeverIndex lever = {};
+    const kit::BodyIndex lever_body =
+        add_standing_lever(kit, frame, Sim::kBraceLeverEntityId, lever_pivot, 778.09F, lever);
+    kit.set_carry(lever_body, kit::CarryKind::Handle, JPH::Vec3(0.0F, 0.35F, 0.0F));
+    (void)kit.add_catch(brace, lever, 0.42F, 0.05F, false);
+
+    frame.push_back(span({4.15F, 778.09F, -143.58F}, {4.52F, 779.45F, -143.38F}, Material::Steel));
+    frame.push_back(span({4.15F, 778.09F, -142.42F}, {4.52F, 779.45F, -142.22F}, Material::Steel));
+
+    // Where the free end is when the deck has stopped the fall.
+    frame.push_back(span({-5.30F, 782.81F, -144.10F}, {-2.40F, 783.05F, -141.70F}, Material::Concrete));
+    frame.push_back(span({-4.70F, 714.10F, -143.40F}, {-4.40F, 782.81F, -143.10F}, Material::Rust));
+    frame.push_back(span({-3.20F, 714.10F, -143.40F}, {-2.90F, 782.81F, -143.10F}, Material::Rust));
+}
+
 // North of the pitman's landing. A bucket of gravel sits just south of the
 // top of a wheel. A lever on the west side holds the wheel. Haul it over
 // and the bucket falls, turning the wheel. The car hangs from the bottom,
@@ -1120,6 +1213,7 @@ void build_wheel(kit::Kit &kit, std::vector<Part> &frame) {
     // after a throw that left you on the landing.
     ladder(frame, 7.55F, -138.50F, false, 759.40F, 763.60F);
     frame.push_back(span({7.85F, 762.70F, -139.20F}, {8.20F, 764.19F, -137.80F}, Material::Steel));
+    build_brace(kit, frame);
 }
 
 } // namespace

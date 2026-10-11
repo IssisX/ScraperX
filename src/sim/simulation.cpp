@@ -721,6 +721,12 @@ private:
     case scraperx::sim::InitialSpawn::PitmanDeck:
         // On the pitman's landing, where that swing lets you off.
         return {9.40, 759.90, -146.10};
+    case scraperx::sim::InitialSpawn::WheelDeck:
+        // On the wheel's high deck, where the car lets you off.
+        return {9.40, 765.10, -138.70};
+    case scraperx::sim::InitialSpawn::BracePerch:
+        // On the perch west of that deck, east of the caught brace.
+        return {6.50, 779.00, -142.70};
     case scraperx::sim::InitialSpawn::ExteriorGrade:
         // At grade, outdoors, 120 m short of the tower face: far enough that the
         // mass reads as something you approach, close enough that its lower

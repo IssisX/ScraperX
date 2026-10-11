@@ -4614,6 +4614,287 @@ bool climb_above_ring220(scraperx::sim::Simulation &run, const double start_seco
     return true;
 }
 
+double brace_hinge_angle(const scraperx::sim::Simulation &simulation) {
+    const auto index = simulation.kit_body_index(scraperx::sim::Simulation::kBraceEntityId);
+    const auto rotation = simulation.kit_body_rotation(index);
+    return 2.0 * std::atan2(rotation.z, rotation.w);
+}
+
+// West of the wheel deck. Up the cabinet, along the beam, up the ladder,
+// haul the brace down, and walk it onto the next deck.
+bool climb_brace(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    auto say = [&](const char *what) {
+        const auto p = floor.snapshot();
+        const auto brace = floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kBraceEntityId));
+        std::cout << what << " " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " grounded=" << p.player_grounded << " support=" << p.support_entity_id
+                  << " trav=" << static_cast<int>(p.traversal_state) << " ledge=" << p.ledge_available
+                  << " grip=" << p.grip_available << " carry=" << p.carrying_entity_id
+                  << " target=" << p.carry_target_entity_id << " deaths=" << p.death_count
+                  << " brace=" << brace.x << "," << brace.y << "," << brace.z
+                  << " hinge=" << brace_hinge_angle(floor) << "\n";
+    };
+    auto watch = [&](const double seconds) {
+        const auto ticks =
+            static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+    };
+    if (!walk_to(floor, 9.20, -138.15, 5.0, 0.14)) {
+        say("brace north on the deck");
+        return false;
+    }
+    if (!walk_to(floor, 7.40, -137.95, 6.0, 0.14)) {
+        say("brace to the cabinet");
+        return false;
+    }
+    const auto at_cabinet = floor.snapshot();
+    if (!at_cabinet.player_grounded || at_cabinet.player_position.y < 764.4) {
+        say("brace not on the catwalk");
+        return false;
+    }
+    (void)floor.set_facing(-1.0, 0.0);
+    (void)floor.set_move_input(0.0, 0.0);
+    watch(0.4);
+    if (!floor.snapshot().ledge_available) {
+        say("brace cabinet not offered");
+        return false;
+    }
+    (void)floor.request_traversal();
+    if (!wait_for(floor, 2.5, [](const Snapshot &state) { return standing_above(state, 766.2); })) {
+        say("brace cabinet mantle");
+        return false;
+    }
+    if (!walk_to(floor, 6.40, -139.60, 6.0, 0.12)) {
+        say("brace to the plate");
+        return false;
+    }
+    (void)floor.set_facing(-1.0, 0.0);
+    (void)floor.set_move_input(0.0, 0.0);
+    watch(0.4);
+    if (!floor.snapshot().ledge_available) {
+        say("brace plate not offered");
+        return false;
+    }
+    (void)floor.request_traversal();
+    if (!wait_for(floor, 2.5, [](const Snapshot &state) { return standing_above(state, 767.7); })) {
+        say("brace plate mantle");
+        return false;
+    }
+    if (!walk_to(floor, 5.50, -142.20, 8.0, 0.18)) {
+        say("brace along the beam");
+        return false;
+    }
+    if (!walk_to(floor, 5.50, -142.80, 6.0, 0.16)) {
+        say("brace to the pad");
+        return false;
+    }
+    if (!walk_to(floor, 4.55, -142.80, 5.0, 0.16)) {
+        say("brace off the beam");
+        return false;
+    }
+    if (!walk_to(floor, 4.55, -144.55, 6.0, 0.16)) {
+        say("brace beside the ladder");
+        return false;
+    }
+    if (!walk_to(floor, 5.50, -144.55, 5.0, 0.14)) {
+        say("brace to the ladder");
+        return false;
+    }
+    const auto at_ladder = floor.snapshot();
+    if (!at_ladder.player_grounded || at_ladder.player_position.y < 767.4) {
+        say("brace left the pad");
+        return false;
+    }
+    if (!climb_wet_hold(floor, 5.50, -144.55, 0.0, 1.0, false, 778.4)) {
+        say("brace ladder");
+        return false;
+    }
+    if (floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kBraceEntityId)).x < 2.5) {
+        say("brace already down");
+        return false;
+    }
+    // South of the lever post, then east of it, then up to the bar. A
+    // straight line walks the capsule into the post and knocks the pin out.
+    if (!walk_to(floor, 5.50, -143.18, 4.0, 0.14)) {
+        say("brace back from the post");
+        return false;
+    }
+    if (!walk_to(floor, 6.85, -143.18, 5.0, 0.14)) {
+        say("brace east of the post");
+        return false;
+    }
+    if (!walk_to(floor, 6.85, -142.55, 4.0, 0.12)) {
+        say("brace to the lever");
+        return false;
+    }
+    const auto at_lever = floor.snapshot();
+    if (!at_lever.player_grounded || at_lever.player_position.y < 778.4) {
+        say("brace left the perch");
+        return false;
+    }
+    (void)floor.set_facing(-1.0, 0.0);
+    (void)floor.set_move_input(0.0, 0.0);
+    watch(0.45);
+    if (floor.snapshot().carry_target_entity_id != Simulation::kBraceLeverEntityId) {
+        say("brace lever not in reach");
+        return false;
+    }
+    (void)floor.request_pick_up();
+    watch(0.3);
+    if (floor.snapshot().carrying_entity_id != Simulation::kBraceLeverEntityId) {
+        say("brace lever not in the hands");
+        return false;
+    }
+    const auto brace_x0 =
+        floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kBraceEntityId)).x;
+    bool released = false;
+    for (int step = 0; step < 6 * 90 && !released; ++step) {
+        const auto here = floor.snapshot().player_position;
+        if (here.x < 7.30) {
+            (void)floor.set_move_input(0.28, 0.0);
+        } else {
+            (void)floor.set_move_input(0.0, 0.0);
+        }
+        (void)floor.set_facing(-1.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        released = brace_hinge_angle(floor) > 0.45 ||
+                   floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kBraceEntityId)).x <
+                       brace_x0 - 0.4;
+    }
+    (void)floor.set_move_input(0.0, 0.0);
+    if (floor.snapshot().carrying_entity_id != 0) {
+        (void)floor.request_set_down();
+    }
+    watch(0.3);
+    if (!released || floor.snapshot().player_position.y < 777.5) {
+        say("brace did not let go");
+        return false;
+    }
+    bool settled = false;
+    for (int step = 0; step < 12 * 90 && !settled; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto brace = floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kBraceEntityId));
+        const auto vel = floor.kit_body_velocity(floor.kit_body_index(Simulation::kBraceEntityId));
+        settled = brace.x < 1.2 && std::hypot(vel.x, vel.y) < 0.35;
+    }
+    if (!settled) {
+        say("brace did not settle");
+        return false;
+    }
+    auto walk_slow = [&](const double x, const double z, const double seconds, const double tolerance,
+                          const double min_y) {
+        const auto ticks = static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+        for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+            const auto state = floor.snapshot();
+            if (std::hypot(x - state.player_position.x, z - state.player_position.z) <= tolerance &&
+                state.player_grounded && state.player_position.y > min_y) {
+                (void)floor.set_move_input(0.0, 0.0);
+                return true;
+            }
+            steer_toward(floor, x, z, 0.34);
+            (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+            observe_path(floor, true);
+        }
+        (void)floor.set_move_input(0.0, 0.0);
+        return false;
+    };
+    if (!walk_slow(3.6, -142.90, 8.0, 0.40, 778.2)) {
+        say("brace not on the foot");
+        return false;
+    }
+    if (!walk_slow(-1.2, -142.90, 16.0, 0.50, 780.0)) {
+        say("brace walk");
+        return false;
+    }
+    if (!walk_slow(-4.0, -142.90, 10.0, 0.45, 783.4)) {
+        say("brace deck");
+        return false;
+    }
+    const auto landed = floor.snapshot();
+    if (!(landed.player_grounded && landed.death_count == 0 && landed.player_position.y > 783.4 &&
+          landed.player_position.x < -2.8 && landed.support_entity_id == Simulation::kCraneFrameEntityId)) {
+        say("brace high deck");
+        return false;
+    }
+    g_path_watch.armed = false;
+    if (g_path_watch.worst > 0.15) {
+        std::cout << "brace snap " << g_path_watch.worst << " at " << g_path_watch.worst_at.x << " "
+                  << g_path_watch.worst_at.y << " " << g_path_watch.worst_at.z << "\n";
+    }
+    require(g_path_watch.worst <= 0.15, "the brace bay must not snap the body more than 0.15 m in one tick");
+    std::cout << "PASS scraperx_sim brace: floor_y=" << landed.player_position.y
+              << " hinge=" << brace_hinge_angle(floor) << " worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
+// Off the west edge before the brace has fallen. The shelf catches you,
+// and the ladder on it comes back to the perch.
+bool miss_brace(scraperx::sim::Simulation &floor) {
+    using scraperx::sim::Simulation;
+    g_path_watch = PathWatch{};
+    g_path_watch.armed = true;
+    auto say = [&](const char *what) {
+        const auto p = floor.snapshot();
+        const auto brace = floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kBraceEntityId));
+        std::cout << what << " " << p.player_position.x << " " << p.player_position.y << " " << p.player_position.z
+                  << " grounded=" << p.player_grounded << " deaths=" << p.death_count << " brace_x=" << brace.x
+                  << "\n";
+    };
+    const auto held = floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kBraceEntityId));
+    if (held.x < 2.5) {
+        say("brace miss already down");
+        return false;
+    }
+    // The caught brace stands in the west edge. Go round it to the north,
+    // then off. The target sits just past the edge so the step off is slow.
+    if (!walk_to(floor, 5.40, -140.95, 5.0, 0.16)) {
+        say("brace miss around");
+        return false;
+    }
+    if (!walk_to(floor, 4.05, -140.95, 4.0, 0.20)) {
+        say("brace miss off the perch");
+        return false;
+    }
+    bool down = false;
+    for (int step = 0; step < 6 * 90 && !down; ++step) {
+        (void)floor.set_move_input(0.0, 0.0);
+        (void)floor.advance_frame(Simulation::kFixedStepSeconds);
+        observe_path(floor, true);
+        const auto state = floor.snapshot();
+        down = state.player_grounded && state.death_count == 0 && state.player_position.y > 774.1 &&
+               state.player_position.y < 775.2 && state.player_position.x < 4.2;
+    }
+    if (!down) {
+        say("brace miss did not land on the shelf");
+        return false;
+    }
+    if (!climb_wet_hold(floor, 3.20, -141.70, 1.0, 0.0, false, 778.4)) {
+        say("brace miss ladder");
+        return false;
+    }
+    const auto back = floor.snapshot();
+    if (!(back.death_count == 0 && back.player_grounded && back.player_position.y > 778.4 &&
+          floor.kit_body_center_of_mass(floor.kit_body_index(Simulation::kBraceEntityId)).x > 2.5)) {
+        say("brace miss not back on the perch");
+        return false;
+    }
+    g_path_watch.armed = false;
+    require(g_path_watch.worst <= 0.15, "missing the brace must not snap the body more than 0.15 m in one tick");
+    std::cout << "PASS scraperx_sim brace miss: floor_y=" << back.player_position.y
+              << " shelf_ok=1 worst_tick_m=" << g_path_watch.worst << "\n";
+    return true;
+}
+
 void run_girder() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -4634,6 +4915,7 @@ void run_girder() {
     require(climb_casing(floor), "up the outside of the casing");
     require(climb_pitman(floor), "the pitman over the gap north of the gallery");
     require(climb_wheel(floor), "onto the wheel, then up to the next deck");
+    require(climb_brace(floor), "up the brace bay onto the next deck");
 }
 
 int main() {
@@ -4662,6 +4944,18 @@ int main() {
         Simulation missed(InitialSpawn::PitmanDeck);
         require(missed.advance_frame(0.4).accepted, "wheel miss settle must be accepted");
         require(miss_wheel(missed), "thrown from the pad, then up the ladder");
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "brace") {
+        using scraperx::sim::InitialSpawn;
+        using scraperx::sim::Simulation;
+        Simulation floor(InitialSpawn::WheelDeck);
+        require(floor.advance_frame(0.4).accepted, "brace settle must be accepted");
+        require(climb_brace(floor), "up the brace bay onto the next deck");
+        Simulation missed(InitialSpawn::BracePerch);
+        require(missed.advance_frame(0.4).accepted, "brace miss settle must be accepted");
+        require(miss_brace(missed), "off the perch, then back up the shelf ladder");
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");

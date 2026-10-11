@@ -84,6 +84,11 @@ enum class InitialSpawn : std::uint8_t {
     CasingGallery = 32,
     // On the pitman's landing, facing the wheel north of that deck.
     PitmanDeck = 33,
+    // On the wheel's high deck, where that ride lets you off, facing the
+    // brace bay to the west.
+    WheelDeck = 34,
+    // On the perch the brace's lever stands on, before it has been thrown.
+    BracePerch = 35,
 };
 
 // A world started at one of these spawns is the proving ground: it carries
@@ -605,6 +610,11 @@ public:
     static constexpr std::uint64_t kWheelEntityId = 2316;
     static constexpr std::uint64_t kWheelCarEntityId = 2317;
     static constexpr std::uint64_t kWheelLeverEntityId = 2318;
+    // The brace bay west of the wheel deck. A knee brace stands caught,
+    // leaning over the next bay. Haul its lever and it falls into a walk
+    // up to the next deck. It is not a car and it is not a pin.
+    static constexpr std::uint64_t kBraceEntityId = 2319;
+    static constexpr std::uint64_t kBraceLeverEntityId = 2320;
 
     // Height of the tower mass, metres. The crown is far past anything the
     // player can resolve from grade; haze and stack plume shear it earlier.
