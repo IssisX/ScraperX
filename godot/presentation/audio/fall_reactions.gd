@@ -1,0 +1,126 @@
+extends Node
+# Recorded human reactions. They play only from the falling state the native
+# already reported. An ordinary jump never meets both the drop and the speed.
+# The clips are CC0 performances; sources are in assets/audio/fall/NOTICE.md.
+
+const ALARM: Array[AudioStream] = [
+	preload("res://assets/audio/fall/wtf_1.ogg"),
+	preload("res://assets/audio/fall/wtf_2.ogg"),
+	preload("res://assets/audio/fall/wtf_3.ogg"),
+	preload("res://assets/audio/fall/fear_1.ogg"),
+	preload("res://assets/audio/fall/fear_3.ogg"),
+	preload("res://assets/audio/fall/fear_4.ogg"),
+]
+const PANIC: Array[AudioStream] = [
+	preload("res://assets/audio/fall/fuck_1.ogg"),
+	preload("res://assets/audio/fall/fuck_2.ogg"),
+	preload("res://assets/audio/fall/fear_2.ogg"),
+	preload("res://assets/audio/fall/fear_5.ogg"),
+	preload("res://assets/audio/fall/fear_6.ogg"),
+	preload("res://assets/audio/fall/scream_dominic.ogg"),
+	preload("res://assets/audio/fall/fuck_you_all.ogg"),
+]
+const COOLDOWN := 3.5
+var reactions := 0
+var last_clip := ""
+var _voice: AudioStreamPlayer
+var _silent := false
+var _disabled := false
+var _airborne := false
+var _apex := 0.0
+var _episode_cues := 0
+var _cooldown := 0.0
+var _escalation_gap := 0.0
+var _remaining := 0.0
+var _last_deaths := -1
+var _last_alarm := -1
+var _last_panic := -1
+var _alarm_bag: Array[int] = []
+var _panic_bag: Array[int] = []
+
+
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_silent = AudioServer.get_driver_name() == "Dummy" and Engine.get_write_movie_path().is_empty()
+	_voice = AudioStreamPlayer.new()
+	_voice.bus = &"Effects"
+	_voice.volume_db = 3.0
+	add_child(_voice)
+
+
+func _process(_delta: float) -> void:
+	if get_tree().paused:
+		stop_voice()
+
+
+func stop_voice() -> void:
+	_remaining = 0.0
+	if is_instance_valid(_voice):
+		_voice.stop()
+
+
+func quiesce() -> void:
+	_disabled = true
+	stop_voice()
+
+
+func _exit_tree() -> void:
+	stop_voice()
+	if is_instance_valid(_voice):
+		_voice.stream = null
+
+
+func speaking() -> bool:
+	return _remaining > 0.0
+
+
+func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
+		traversal: int, chute: bool, deaths: int) -> void:
+	if _disabled or get_tree().paused:
+		stop_voice()
+		return
+	_cooldown = maxf(0.0, _cooldown - delta)
+	_escalation_gap = maxf(0.0, _escalation_gap - delta)
+	_remaining = maxf(0.0, _remaining - delta)
+	var restored := _last_deaths >= 0 and deaths != _last_deaths
+	_last_deaths = deaths
+	if grounded or traversal != 0 or chute or restored:
+		stop_voice()
+		_airborne = false
+		_episode_cues = 0
+		_apex = position.y
+		return
+	if not _airborne:
+		_airborne = true
+		_apex = position.y
+	_apex = maxf(_apex, position.y)
+	if speaking():
+		return
+	var descent := _apex - position.y
+	if _episode_cues == 0 and _cooldown <= 0.0 and velocity.y <= -12.0 and descent >= 4.0:
+		_last_alarm = _choose(ALARM, _alarm_bag, _last_alarm)
+	elif _episode_cues == 1 and _escalation_gap <= 0.0 and velocity.y <= -24.0 and descent >= 35.0:
+		_last_panic = _choose(PANIC, _panic_bag, _last_panic)
+
+
+func _choose(clips: Array[AudioStream], bag: Array[int], previous: int) -> int:
+	if bag.is_empty():
+		for i in clips.size():
+			bag.append(i)
+		bag.shuffle()
+		if bag.size() > 1 and bag.back() == previous:
+			var swap := randi_range(0, bag.size() - 2)
+			bag[bag.size() - 1] = bag[swap]
+			bag[swap] = previous
+	var index: int = bag.pop_back()
+	var stream := clips[index]
+	last_clip = stream.resource_path.get_file()
+	reactions += 1
+	_episode_cues += 1
+	_cooldown = COOLDOWN
+	_escalation_gap = 1.6
+	_remaining = stream.get_length()
+	if not _silent:
+		_voice.stream = stream
+		_voice.play()
+	return index

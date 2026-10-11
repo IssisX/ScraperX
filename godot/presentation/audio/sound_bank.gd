@@ -1,24 +1,45 @@
 extends RefCounted
-# Every sound the presentation plays, synthesised once at startup from
-# seeded noise, filters and decaying partials -- no audio files ship. The
-# seed is fixed, so the bank is identical on every run and every device.
+# Most cues are synthesised once at startup from seeded noise, filters and
+# decaying partials. The seed is fixed, so that part of the bank is identical
+# on every run. Footsteps are the exception: twelve licensed recordings
+# (CC0 and CC BY; see assets/audio/footsteps/NOTICE.txt). If one of those
+# files is missing, that surface falls back to the synthesised step.
 #
 # Voiced for a phone speaker first. Those reproduce little under ~300 Hz, so
-# every clip carries its identity in the 300 Hz - 6 kHz band -- the grit of a
-# boot, the ring of steel, the hiss of air -- and keeps its low thump only
-# as weight for headphones. (Measured: the first bank put its energy in
-# 50-90 Hz thumps and hum; above 300 Hz a walk peaked at -27.6 dBFS and the
-# ambience sat at -48.6 dBFS, which on a phone is next to silence.)
+# every synthesised clip carries its identity in the 300 Hz - 6 kHz band.
+# The recorded steps were already peak-normalised to -1.5 dBFS and are not
+# filtered again here.
 #
-# Not here, on purpose: the human fear voice that Governing Law 8 / GDD 8.4
-# require for large falls. Screams, gasps and panicked swearing cannot be
-# synthesised credibly; they need recorded performances.
+# Large falls use recorded human voices, played by fall_reactions.gd, not
+# by this bank. Those cannot be synthesised.
 
 const MIX_RATE := 22050
 const STEP_VARIANTS := 4
 
-var clips := {}   # StringName -> Array[AudioStreamWAV] (variants)
+const RECORDED_STEPS := {
+	&"step_concrete": [
+		preload("res://assets/audio/footsteps/concrete_01.wav"),
+		preload("res://assets/audio/footsteps/concrete_02.wav"),
+		preload("res://assets/audio/footsteps/concrete_03.wav"),
+		preload("res://assets/audio/footsteps/concrete_04.wav"),
+	],
+	&"step_metal": [
+		preload("res://assets/audio/footsteps/metal_01.wav"),
+		preload("res://assets/audio/footsteps/metal_02.wav"),
+		preload("res://assets/audio/footsteps/metal_03.wav"),
+		preload("res://assets/audio/footsteps/metal_04.wav"),
+	],
+	&"step_earth": [
+		preload("res://assets/audio/footsteps/earth_01.wav"),
+		preload("res://assets/audio/footsteps/earth_02.wav"),
+		preload("res://assets/audio/footsteps/earth_03.wav"),
+		preload("res://assets/audio/footsteps/earth_04.wav"),
+	],
+}
+
+var clips := {}   # StringName -> Array of streams (variants)
 var build_msec := 0
+var recorded_steps := false
 
 var _rng := RandomNumberGenerator.new()
 
@@ -26,9 +47,10 @@ var _rng := RandomNumberGenerator.new()
 func build() -> void:
 	var started := Time.get_ticks_msec()
 	_rng.seed = 0x5C4A9E
-	clips[&"step_concrete"] = _variants(STEP_VARIANTS, _step_concrete)
-	clips[&"step_metal"] = _variants(STEP_VARIANTS, _step_metal)
-	clips[&"step_earth"] = _variants(STEP_VARIANTS, _step_earth)
+	recorded_steps = _use_recorded_steps()
+	clips[&"step_concrete"] = _steps(&"step_concrete", _step_concrete)
+	clips[&"step_metal"] = _steps(&"step_metal", _step_metal)
+	clips[&"step_earth"] = _steps(&"step_earth", _step_earth)
 	clips[&"jump"] = _variants(2, _jump)
 	clips[&"land_soft"] = _variants(2, _land.bind(0.0))
 	clips[&"land_hard"] = _variants(2, _land.bind(1.0))
@@ -52,11 +74,25 @@ func build() -> void:
 	build_msec = Time.get_ticks_msec() - started
 
 
-func pick(name: StringName) -> AudioStreamWAV:
+func pick(name: StringName) -> AudioStream:
 	var list: Array = clips.get(name, [])
 	if list.is_empty():
 		return null
 	return list[_rng.randi_range(0, list.size() - 1)]
+
+
+func _use_recorded_steps() -> bool:
+	for name in RECORDED_STEPS:
+		for stream in RECORDED_STEPS[name]:
+			if stream == null:
+				return false
+	return true
+
+
+func _steps(name: StringName, maker: Callable) -> Array:
+	if recorded_steps:
+		return RECORDED_STEPS[name]
+	return _variants(STEP_VARIANTS, maker)
 
 
 # --- clips -------------------------------------------------------------------

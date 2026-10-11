@@ -9,6 +9,7 @@ extends Node
 # the mix can sit loud enough for a phone speaker without clipping.
 
 const SoundBank := preload("res://presentation/audio/sound_bank.gd")
+const FallReactions := preload("res://presentation/audio/fall_reactions.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 
 const BUS_EFFECTS := &"Effects"
@@ -60,6 +61,7 @@ var sky: Node = null
 
 var _bank := SoundBank.new()
 var _bank_ready := false
+var _falls: Node
 # No output device (CI, headless): the Dummy driver never mixes, so a started
 # playback is never torn down and leaks at exit (observed: ten AudioStreamWAV
 # / AudioStreamPlaybackWAV). Cues are still counted; nothing is started.
@@ -118,6 +120,8 @@ func _ready() -> void:
 	_drone = _looping_player(BUS_AMBIENCE)
 	for i in MACHINE_LOOPS:
 		_machine_loops.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, 110.0))
+	_falls = FallReactions.new()
+	add_child(_falls)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -141,6 +145,8 @@ func _exit_tree() -> void:
 # first, or the playbacks leak at exit.
 func quiesce() -> void:
 	_silent = true
+	if _falls != null:
+		_falls.quiesce()
 	for child in get_children():
 		if child is AudioStreamPlayer or child is AudioStreamPlayer3D:
 			child.stop()
@@ -195,8 +201,12 @@ func ui_tap(back: bool = false) -> void:
 
 # Once per rendered frame, with the native state main.gd already read.
 func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
-		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool) -> void:
-	var horizontal := Vector2(velocity.x, velocity.z).length()
+		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool,
+		support_velocity: Vector3 = Vector3.ZERO) -> void:
+	# A planted rider moves with the support. That is not a step. The native
+	# point velocity already includes the support's translation and its spin.
+	var foot := velocity - support_velocity if grounded else velocity
+	var horizontal := Vector2(foot.x, foot.z).length()
 
 	if grounded and traversal == 0 and horizontal > STEP_MIN_SPEED:
 		_stride += horizontal * delta
@@ -241,6 +251,8 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	_last_chute = chute
 	_last_deaths = deaths
 	_last_crouched = crouched
+	if _falls != null:
+		_falls.update(delta, position, velocity, grounded, traversal, chute, deaths)
 	_update_air(position, velocity, grounded, delta)
 	_update_birds(position, delta)
 
@@ -291,13 +303,15 @@ func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: fl
 	if not _bank_ready or _silent:
 		return
 	var altitude := clampf(position.y / 150.0, 0.0, 1.0)
-	var wind_db := lerpf(-12.0, -4.0, altitude)
-	_wind.volume_db = lerpf(_wind.volume_db, wind_db, 1.0 - exp(-2.0 * delta))
-	var drone_db := lerpf(-13.0, -24.0, altitude)
-	_drone.volume_db = lerpf(_drone.volume_db, drone_db, 1.0 - exp(-1.5 * delta))
+	var voice_duck := 12.0 if _falls != null and _falls.speaking() else 0.0
+	var wind_db := lerpf(-12.0, -4.0, altitude) - voice_duck
+	_wind.volume_db = lerpf(_wind.volume_db, wind_db, 1.0 - exp(-(18.0 if voice_duck > 0.0 else 2.0) * delta))
+	var drone_db := lerpf(-13.0, -24.0, altitude) - voice_duck
+	_drone.volume_db = lerpf(_drone.volume_db, drone_db, 1.0 - exp(-(18.0 if voice_duck > 0.0 else 1.5) * delta))
 	var fall := 0.0 if grounded else clampf((-velocity.y - 6.0) / 24.0, 0.0, 1.0)
 	var rush_db := lerpf(-60.0, -2.0, sqrt(fall)) if fall > 0.0 else -60.0
-	_rush.volume_db = lerpf(_rush.volume_db, rush_db, 1.0 - exp(-6.0 * delta))
+	rush_db -= voice_duck
+	_rush.volume_db = lerpf(_rush.volume_db, rush_db, 1.0 - exp(-(18.0 if voice_duck > 0.0 else 6.0) * delta))
 	_rush.pitch_scale = lerpf(0.9, 1.35, fall)
 
 

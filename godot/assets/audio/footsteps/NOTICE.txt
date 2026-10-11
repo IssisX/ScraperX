@@ -1,0 +1,20 @@
+RECORDED FOOTSTEPS — SOURCES AND LICENSES
+
+Concrete / hard surfaces: Fantozzi's Footsteps (Grass/Sand & Stone), by Fantozzi; recorded handmade hard-surface Foley, single-step pack submitted by qubodup.
+https://opengameart.org/content/fantozzis-footsteps-grasssand-stone
+Original recordings: https://freesound.org/people/Fantozzi/packs/10338/
+CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/
+
+Metal: Footsteps on different surfaces, mastered by congusbongus, derived from fboots on aluminum ladder 01 by Eelke.
+https://opengameart.org/content/footsteps-on-different-surfaces
+Original recording: https://freesound.org/people/Eelke/sounds/462598/
+Distributed source archive and its metal/license.txt specify CC BY 3.0: https://creativecommons.org/licenses/by/3.0/
+The current original Freesound page lists CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+Both source credits and license links are retained; this game uses the OpenGameArt archive licensed under CC BY 3.0.
+
+Earth / gravel: Pack: Gravel Footsteps by Ali_6868, from the same congusbongus collection.
+https://freesound.org/people/Ali_6868/packs/21608/
+The archive's gravel/license.txt specifies CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/
+Collection credit and CC BY 3.0 link are retained above.
+
+ScraperX changes: selected four distinct single-step takes per surface, decoded/resampled to mono 22,050 Hz 16-bit PCM WAV, and normalized each whole clip to -1.5 dBFS peak. No additional cropping, EQ or compression. Source/archive/output hashes and selected filenames are in provenance.json. No endorsement by the source authors is implied.

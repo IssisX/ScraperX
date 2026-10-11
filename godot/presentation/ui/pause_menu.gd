@@ -534,7 +534,7 @@ func _build_audio_page() -> void:
 	_slider_row("EFFECTS", &"effects_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("AMBIENCE", &"ambience_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("INTERFACE", &"interface_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
-	_end_page(PAGE_AUDIO, first, "Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience.")
+	_end_page(PAGE_AUDIO, first, "Footsteps are recorded (CC0 / CC BY, see the footstep notice). A long fall uses a recorded voice. Landings, grabs and machines are Effects; wind and hum are Ambience.")
 
 
 func _row(title: String) -> HBoxContainer:
