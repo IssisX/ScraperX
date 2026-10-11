@@ -25,3 +25,9 @@ Retain native dynamicJolt ownership,90Hz commands, real85kg loading, finite effo
 Reference swing.cpp55–71 automatically chooses phase and lacks complete power/work/physicalreaction accounting; adapt to explicit player timing rather than porting that controller. Landing.cpp85–94 returns a continuation velocity; that is not an implemented collision-honest roll. Mantle.cpp65 constructs query trajectory storage, not a finite-force physical transfer. The Jolt sketch is not proof of integration. Evaluate actual source before choosing a bounded implementation.
 
 Intake metadata: all23payload checksums match; SHA256SUMS has an invalid self-hash. No LICENSE entry exists. Do not describe standalone tests as locally executed; none were run for intake. No phone observations or new movement completion are claimed.
+
+## Paused continuation — 2026-10-11
+
+Module3 is approximately **10% prepared and 0% newly implemented**. This estimate covers read-only intake and mapping only; existing Crown swing capabilities predate this module and do not count as newly delivered work. Existing real hands provide bounded tangential lean and momentum-preserving native-tick release. A proposed first improvement is deliberate Crouch-driven tuck/extension through those same hand targets; Crouch currently returns during traversal. This proposal is not yet implemented or verified.
+
+The immediate delivery blocker is exact-source `b9379248d658a99606997f4e59986ba9a39e9e86`, [Actions38072454907](https://github.com/IssisX/ScraperX/actions/runs/38072454907), completed RED: `touch_campaign_to_143` lost the +66 m ring at `(25.21664,55.9,-138.9863)`; exit31. No matching APK was produced. On resume, repair the supported cause, deliver full GREEN and the verified APK link, then implement one bounded Crown swing slice. Keep the goal paused until the owner resumes. Other modules and the full canonical roadmap remain pending.
