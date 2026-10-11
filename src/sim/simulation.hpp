@@ -195,6 +195,9 @@ struct Snapshot final {
     double traversal_command_work_bound_j = 0.0;
     double traversal_actuator_positive_work_j = 0.0;
     double traversal_actuator_absorbed_work_j = 0.0;
+    bool hanging_free_arc_active = false;
+    double hanging_commanded_span_m = 0.0;
+    double hanging_actual_span_m = 0.0;
     bool swing_tuck_available = false;
     bool swing_tuck_requested = false;
     double swing_body_below_grip_m = 0.0;

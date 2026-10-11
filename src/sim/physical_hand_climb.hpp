@@ -28,6 +28,13 @@ public:
     // Passive mounted hanger: bounded human lean commands, not a hinge drive.
     void set_swing_profile();
     [[nodiscard]] bool swinging() const noexcept { return swing_profile_; }
+    // Dissipative controller handoff, preserving both bodies and local anchors.
+    bool set_radial_profile(bool enabled);
+    [[nodiscard]] bool radial_active() const noexcept { return radial_profile_; }
+    // Positive shortens. Actual representable mean stroke, 500W / 0.6m/s.
+    float advance_radial_targets(float shortening_m, float dt);
+    [[nodiscard]] float radial_commanded_span_m() const;
+    [[nodiscard]] float radial_actual_span_m() const;
     // Optional shared-posture cap uses the same spring-work budget and 0.6m/s
     // combined stroke as swing lean. Omission preserves climb/transfer limits.
     // Returns the mean actual representable rest-target displacement.
@@ -47,7 +54,7 @@ public:
     [[nodiscard]] float peak_hand_force_n() const noexcept { return peak_force_; }
     [[nodiscard]] static constexpr float force_bound_n() noexcept { return 1500.0F; }
     // Default sustained climbing budget; transfer has a separate finite burst.
-    [[nodiscard]] float active_command_power_bound_w() const noexcept { return transfer_profile_ ? 6600.0F : swing_profile_ ? 500.0F : command_power_bound_w(); }
+    [[nodiscard]] float active_command_power_bound_w() const noexcept { return radial_profile_ ? 500.0F : transfer_profile_ ? 6600.0F : swing_profile_ ? 500.0F : command_power_bound_w(); }
     [[nodiscard]] static constexpr float command_power_bound_w() noexcept { return 3000.0F; }
     // Conservative Fmax * commanded-target-distance debit, NOT motor work,
     // spring storage, positive muscle work, or an energy-conservation ledger.
@@ -74,6 +81,8 @@ private:
     std::array<SoftHand, 2> soft_;
     std::array<JPH::Ref<JPH::SixDOFConstraint>, 2> hands_;
     std::array<JPH::Vec3, 2> forces_ { JPH::Vec3::sZero(), JPH::Vec3::sZero() };
+    std::array<float, 2> radial_lengths_ { 0.0F, 0.0F };
+    bool radial_profile_ = false;
     bool transfer_profile_ = false;
     bool swing_profile_ = false;
     float peak_force_ = 0.0F;

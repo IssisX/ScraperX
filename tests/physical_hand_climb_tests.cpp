@@ -19,6 +19,7 @@
 #include <iostream>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 // Native coupling fixtures, not ordinary-input acquisition, traversal or device proof.
@@ -53,8 +54,40 @@ struct Contacts final : ContactListener {
 };
 struct ForceObserver final : PhysicsStepListener {
     PhysicalHandClimb &hands;
-    explicit ForceObserver(PhysicalHandClimb &c): hands(c) {}
-    void OnStep(const PhysicsStepListenerContext &c) override { hands.post_step(c.mDeltaTime); }
+    BodyID player,support;
+    bool radial_force_valid=true;
+    double max_pair_angular_error=0;
+    Vec3 pair_angular(const PhysicsStepListenerContext &c) const {
+        const auto &access=c.mPhysicsSystem->GetBodyLockInterfaceNoLock();
+        const auto *p=access.TryGetBody(player),*s=access.TryGetBody(support);
+        if(!p||!s||!s->IsDynamic())return Vec3::sZero();
+        const float pm=1/p->GetMotionProperties()->GetInverseMass(),sm=1/s->GetMotionProperties()->GetInverseMass();
+        const auto pc=p->GetCenterOfMassPosition(),sc=s->GetCenterOfMassPosition();
+        const RVec3 center=(pm*pc+sm*sc)/(pm+sm);
+        const Vec3 mean=(pm*p->GetLinearVelocity()+sm*s->GetLinearVelocity())/(pm+sm);
+        return Vec3(pc-center).Cross(pm*(p->GetLinearVelocity()-mean))+
+            Vec3(sc-center).Cross(sm*(s->GetLinearVelocity()-mean))+
+            s->GetInverseInertia().Inversed3x3()*s->GetAngularVelocity();
+    }
+    ForceObserver(PhysicalHandClimb &c,BodyID p,BodyID s): hands(c),player(p),support(s) {}
+    void OnStep(const PhysicsStepListenerContext &c) override {
+        const bool radial=hands.radial_active();
+        const auto before=radial?pair_angular(c):Vec3::sZero();
+        hands.pre_step(c.mDeltaTime, true);
+        if(radial) {
+            max_pair_angular_error=std::max(max_pair_angular_error,double((pair_angular(c)-before).Length()));
+            const auto &bodies=c.mPhysicsSystem->GetBodyInterfaceNoLock();
+            for(unsigned i=0;i<2;++i) {
+                const auto grip=bodies.GetWorldTransform(support)*Vec3(i?.2F:-.2F,-.1F,-.1F);
+                const Vec3 radius=Vec3(grip-bodies.GetCenterOfMassPosition(player));
+                const Vec3 force=hands.hand_force(i);
+                // Sample at force application, before support/body integration.
+                radial_force_valid&=finite(force)&&force.Length()<=1500.05F&&
+                    force.Cross(radius.Normalized()).Length()<=.0001F*force.Length()+.001F;
+            }
+        }
+        hands.post_step(c.mDeltaTime);
+    }
 };
 struct World {
     BP bp; BV bv; LP lp;
@@ -64,7 +97,8 @@ struct World {
     Contacts contacts;
     std::vector<BodyID> ids;
     BodyID player, support;
-    explicit World(bool dynamic_support = false, Vec3 velocity = Vec3::sZero(), bool kinematic_support = false) {
+    double max_native_pair_angular_error=0;
+    explicit World(bool dynamic_support = false, Vec3 velocity = Vec3::sZero(), bool kinematic_support = false, float support_mass = 25.0F, bool gyroscopic_support = false) {
         system.Init(64, 0, 128, 256, bp, bv, lp);
         system.SetGravity(Vec3(0, -9.81F, 0));
         system.SetContactListener(&contacts);
@@ -85,7 +119,8 @@ struct World {
                                (dynamic_support ? EMotionType::Dynamic : EMotionType::Static),
                                (dynamic_support || kinematic_support) ? 1 : 0);
         s.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
-        s.mMassPropertiesOverride.mMass = 25.0F;
+        s.mMassPropertiesOverride.mMass = support_mass;
+        s.mApplyGyroscopicForce = gyroscopic_support;
         s.mLinearDamping = s.mAngularDamping = 0; s.mAllowSleeping = false;
         support = add(s);
         // Grip lies on the visible support front/bottom edge, 0.4m clear of
@@ -103,7 +138,7 @@ struct World {
     Vec3 velocity(BodyID id) { return system.GetBodyInterface().GetLinearVelocity(id); }
     RVec3 position(BodyID id) { return system.GetBodyInterface().GetPosition(id); }
     void tick(PhysicalHandClimb &hands, unsigned frames) {
-        ForceObserver observer(hands);
+        ForceObserver observer(hands,player,support);
         system.AddStepListener(&observer);
         for (unsigned i = 0; i < frames; ++i) {
             check(system.Update(h, 4, &temporary, &jobs) == EPhysicsUpdateError::None, "native update error");
@@ -112,12 +147,184 @@ struct World {
                   finite(velocity(support)), "nonfinite constrained body state");
         }
         system.RemoveStepListener(&observer);
+        check(observer.radial_force_valid,"actual substep radial force has a tangential component or exceeds cap");
+        max_native_pair_angular_error=std::max(max_native_pair_angular_error,observer.max_pair_angular_error);
     }
     void acquire(PhysicalHandClimb &hands) {
         check(hands.attach(0, support, RVec3(-0.2, 5.0, 0.55)), "first physical hand was not acquired");
         check(hands.attach(1, support, RVec3(0.2, 5.0, 0.55)), "second physical hand was not acquired");
     }
 };
+// Radial owner fixtures use the same per-collision-step callback as production.
+// No body state is written after acquisition; neutral commands cannot supply work.
+void radial_force_bounds(World &w, PhysicalHandClimb &hands) {
+    for (unsigned i=0;i<2;++i) {
+        const Vec3 force=hands.hand_force(i);
+        check(finite(force)&&force.Length()<=1500.05F,"radial hand force exceeds1500N or is nonfinite");
+    }
+    check(w.contacts.count==0,"radial fixture has an external contact");
+}
+void passive_radial_arc() {
+    World w(false,Vec3(0,1.096F,-1.023F));PhysicalHandClimb hands(w.system,w.player);
+    w.acquire(hands);
+    const auto velocity=w.velocity(w.player),grip=hands.grip_midpoint();
+    check(hands.set_radial_profile(true)&&hands.radial_active(),"compatible fixed hands did not enter radial mode");
+    check((w.velocity(w.player)-velocity).LengthSq()==0&&Vec3(hands.grip_midpoint()-grip).LengthSq()==0,
+          "radial handoff rewrote velocity or anchors");
+    check(w.system.GetConstraints().empty(),"radial mode retained competing Cartesian constraints");
+    const float span=hands.radial_commanded_span_m();
+    check(std::abs(span-hands.radial_actual_span_m())<.00001F,"radial entry retained old spring preload");
+    const double paid=hands.actuator_positive_work_j();
+    double low=1e9,high=-1e9;
+    for(unsigned i=0;i<360;++i) {
+        check(hands.advance_radial_targets(0,h)==0,"neutral command changed radial length");
+        w.tick(hands,1);radial_force_bounds(w,hands);
+        check(std::abs(hands.radial_commanded_span_m()-span)<.000001F,"neutral rest length drifted");
+        check(hands.actuator_positive_work_j()==paid,"neutral arc generated positive target work");
+        if(i>=270){low=std::min(low,double(w.position(w.player).GetZ()));high=std::max(high,double(w.position(w.player).GetZ()));}
+    }
+    std::cout<<"FREE ARC late270_360_z_span_m="<<high-low<<" actual_span_m="<<hands.radial_actual_span_m()
+             <<" commanded_span_m="<<span<<" speed="<<w.velocity(w.player).Length()<<" neutral_positive_work=0\n";
+    // CHOSEN before baseline:0.05m rejects the measured old pin's0.00125115m.
+    check(high-low>.05,"fixed neutral hands suppress sustained late passive arc");
+}
+Vec3 total_linear_momentum(World &w,float mass) {
+    return 85.0F*w.velocity(w.player)+mass*w.velocity(w.support);
+}
+Vec3 relative_angular_momentum(World &w,float mass) {
+    const auto p=w.position(w.player),q=w.position(w.support);
+    const RVec3 center=(85.0*p+double(mass)*q)/(85.0+mass);
+    const Vec3 mean=total_linear_momentum(w,mass)/(85.0F+mass);
+    Vec3 result=Vec3(p-center).Cross(85.0F*(w.velocity(w.player)-mean))+
+        Vec3(q-center).Cross(mass*(w.velocity(w.support)-mean));
+    BodyLockRead lock(w.system.GetBodyLockInterface(),w.support);
+    const auto &body=lock.GetBody();
+    // The freely rotating support contributes spin as well as orbital momentum.
+    result+=body.GetInverseInertia().Inversed3x3()*body.GetAngularVelocity();
+    return result;
+}
+void radial_dynamic_reciprocity() {
+    for(float mass:{25.0F,1.0F}) {
+        World w(true,Vec3(1.5F,0,-1),false,mass,true);PhysicalHandClimb hands(w.system,w.player);
+        w.acquire(hands);check(hands.set_radial_profile(true),"dynamic hands rejected radial mode");
+        const auto momentum=total_linear_momentum(w,mass),angular=relative_angular_momentum(w,mass);
+        double max_linear_error=0,max_angular_error=0;
+        for(unsigned i=0;i<180;++i) {
+            w.tick(hands,1);radial_force_bounds(w,hands);
+            // Uniform gravity changes total linearY only. About the system COM
+            // its torque cancels; off-centre radial reaction must spin the support.
+            const Vec3 expected=momentum+Vec3(0,-(85+mass)*9.81F*h*float(i+1),0);
+            max_linear_error=std::max(max_linear_error,double((total_linear_momentum(w,mass)-expected).Length()));
+            max_angular_error=std::max(max_angular_error,double((relative_angular_momentum(w,mass)-angular).Length()));
+        }
+        std::cout<<"RADIAL RECOIL mass_kg="<<mass<<" momentum_error="<<max_linear_error
+                 <<" angular_error="<<max_angular_error<<" support_spin="
+                 <<w.system.GetBodyInterface().GetAngularVelocity(w.support).Length()<<'\n';
+        const auto final_angular=relative_angular_momentum(w,mass);
+        const auto spin=w.system.GetBodyInterface().GetAngularVelocity(w.support);
+        std::cout<<"RADIAL ANGULAR before="<<angular.GetX()<<','<<angular.GetY()<<','<<angular.GetZ()
+                 <<" after="<<final_angular.GetX()<<','<<final_angular.GetY()<<','<<final_angular.GetZ()
+                 <<" support_omega="<<spin.GetX()<<','<<spin.GetY()<<','<<spin.GetZ()
+                 <<" max_instant_native_pair_delta="<<w.max_native_pair_angular_error<<'\n';
+        { BodyLockRead lock(w.system.GetBodyLockInterface(),w.support);
+          const auto inverse=lock.GetBody().GetInverseInertia();
+          std::cout<<"RADIAL INERTIA inverse_world_columns=";
+          for(unsigned col=0;col<3;++col){const auto v=inverse.GetColumn3(col);std::cout<<v.GetX()<<','<<v.GetY()<<','<<v.GetZ()<<';';}
+          std::cout<<" actual_mass="<<1/lock.GetBody().GetMotionProperties()->GetInverseMass()<<'\n'; }
+        check(w.max_native_pair_angular_error<.001,"actual radial impulse pair violates angular momentum before integration");
+        check(max_linear_error<.1,"radial forces violate reciprocal linear momentum");
+        check(max_angular_error<.2,"off-centre radial pair violates angular momentum");
+        check(w.system.GetBodyInterface().GetAngularVelocity(w.support).Length()>.001F,
+              "off-centre reciprocal force failed to rotate dynamic support");
+    }
+}
+double radial_potential(double error) {
+    const double e=std::max(error,0.0);
+    return e<=.3?.5*5000*e*e:1500*e-225;
+}
+void radial_work_and_handoffs() {
+    World w;PhysicalHandClimb hands(w.system,w.player);w.acquire(hands);w.tick(hands,180);
+    unsigned completed=0;bool reach_exhausted=false;
+    for(unsigned cycle=0;cycle<12;++cycle) {
+        const auto before_velocity=w.velocity(w.player),before_grip=hands.grip_midpoint();
+        const double ledger=hands.actuator_positive_work_j();
+        const auto body=w.position(w.player);
+        const auto transform=w.system.GetBodyInterface().GetWorldTransform(w.support);
+        const float left_span=Vec3(transform*Vec3(-.2F,-.1F,-.1F)-body).Length();
+        const float right_span=Vec3(transform*Vec3(.2F,-.1F,-.1F)-body).Length();
+        std::cout<<"RADIAL HANDOFF ENTRY cycle="<<cycle<<" com="<<body.GetX()<<','<<body.GetY()<<','<<body.GetZ()
+                 <<" midpoint="<<before_grip.GetX()<<','<<before_grip.GetY()<<','<<before_grip.GetZ()
+                 <<" speed="<<before_velocity.Length()<<" hand_attached="<<hands.attached(0)<<','<<hands.attached(1)
+                 <<" compatible="<<hands.compatible_hands()<<" actual_spans="<<left_span<<','<<right_span
+                 <<" paid_work="<<ledger<<'\n';
+        if(left_span>1.75F||right_span>1.75F) {
+            const auto support_position=w.position(w.support),support_velocity=w.velocity(w.support);
+            check(completed>=3,"fixture loses eligible reach before meaningful repeated handoffs");
+            check(!hands.set_radial_profile(true)&&!hands.radial_active(),"out-of-reach radial entry accepted");
+            check(Vec3(w.position(w.player)-body).LengthSq()==0&&
+                  Vec3(w.position(w.support)-support_position).LengthSq()==0&&
+                  (w.velocity(w.player)-before_velocity).LengthSq()==0&&
+                  (w.velocity(w.support)-support_velocity).LengthSq()==0&&
+                  Vec3(hands.grip_midpoint()-before_grip).LengthSq()==0&&
+                  hands.actuator_positive_work_j()==ledger&&w.system.GetConstraints().size()==2,
+                  "rejected reach handoff mutated actual bodies/anchors/ledger/Cartesian ownership");
+            reach_exhausted=true;break;
+        }
+        check(hands.set_radial_profile(true),"within-reach repeated radial entry rejected");
+        check((w.velocity(w.player)-before_velocity).LengthSq()==0&&Vec3(hands.grip_midpoint()-before_grip).LengthSq()==0,
+              "radial entry changed instantaneous velocity or anchors");
+        check(std::abs(hands.radial_actual_span_m()-hands.radial_commanded_span_m())<.00001F,
+              "radial entry did not discard old preload at zero error");
+        check(hands.actuator_positive_work_j()==ledger,"handoff charged or refunded positive work");
+        const float entry_span=hands.radial_commanded_span_m();
+        double shortened=0;
+        for(unsigned i=0;i<45;++i) {
+            const float old_span=hands.radial_commanded_span_m(),actual=hands.radial_actual_span_m();
+            const double paid=hands.actuator_positive_work_j();
+            const float accepted=hands.advance_radial_targets(float(std::max(0.0,.25-shortened)),h);
+            const float new_span=hands.radial_commanded_span_m();
+            const double supplied=hands.actuator_positive_work_j()-paid;
+            check(accepted>=0&&accepted<=.6F*h+.000001F&&std::abs(old_span-new_span-accepted)<.00001F,
+                  "radial shortening violates combined stroke or actual return receipt");
+            const double expected=2*std::max(0.0,radial_potential(actual-new_span)-radial_potential(actual-old_span));
+            check(std::abs(supplied-expected)<.005,"radial work differs from capped-force spring potential");
+            check(supplied<=500*h+.00001&&supplied>=0,"radial shortening violates500W or refunds paid work");
+            shortened+=accepted;w.tick(hands,1);radial_force_bounds(w,hands);
+        }
+        check(shortened>.10&&std::abs(entry_span-hands.radial_commanded_span_m()-shortened)<.00001,
+              "radial actuator failed meaningful independently measured shortening");
+        const float held=hands.radial_commanded_span_m();const double paid=hands.actuator_positive_work_j();
+        for(unsigned i=0;i<45;++i){(void)hands.advance_radial_targets(0,h);w.tick(hands,1);radial_force_bounds(w,hands);}
+        check(hands.radial_commanded_span_m()==held&&hands.actuator_positive_work_j()==paid,
+              "held radial length ratchets or invents paid tracking work");
+        for(unsigned i=0;i<90;++i) {
+            const float old_span=hands.radial_commanded_span_m(),actual=hands.radial_actual_span_m();
+            const double before_paid=hands.actuator_positive_work_j();
+            const float accepted=hands.advance_radial_targets(old_span-entry_span,h);
+            const float new_span=hands.radial_commanded_span_m();
+            const double supplied=hands.actuator_positive_work_j()-before_paid;
+            const double expected=2*std::max(0.0,radial_potential(actual-new_span)-radial_potential(actual-old_span));
+            check(accepted<=.000001F&&std::abs(accepted)<=.6F*h+.000001F&&std::abs(old_span-new_span-accepted)<.00001F,
+                  "radial extension violates stroke or actual return receipt");
+            check(supplied>=0&&supplied<=500*h+.00001&&std::abs(supplied-expected)<.005,
+                  "radial extension violates potential work or refunds paid work");
+            w.tick(hands,1);radial_force_bounds(w,hands);
+        }
+        const double exit_paid=hands.actuator_positive_work_j();
+        const auto exit_velocity=w.velocity(w.player),exit_grip=hands.grip_midpoint();
+        check(hands.set_radial_profile(false)&&!hands.radial_active(),"radial exit rejected");
+        check((w.velocity(w.player)-exit_velocity).LengthSq()==0&&Vec3(hands.grip_midpoint()-exit_grip).LengthSq()==0,
+              "radial exit changed velocity or anchors");
+        check(Vec3(hands.commanded_position()-w.position(w.player)).Length()<.00001F,
+              "Cartesian handoff retained radial preload");
+        check(w.system.GetConstraints().size()==2&&hands.actuator_positive_work_j()==exit_paid,
+              "handoff leaked exclusive solver ownership or refunded work");
+        w.tick(hands,1);++completed;
+    }
+    check(completed>=3,"insufficient real repeated handoffs");
+    std::cout<<"RADIAL HANDOFF completed_cycles="<<completed<<" max_cycles=12 reach_exhausted="<<reach_exhausted
+             <<" positive_work_j="<<hands.actuator_positive_work_j()<<'\n';
+}
 void static_load_and_release() {
     World w;
     PhysicalHandClimb hands(w.system, w.player);
@@ -398,10 +605,18 @@ void invalid_holds_and_cleanup() {
     check(w.system.GetConstraints().empty(), "destructor leaked native constraints");
 }
 }
-int main() {
+int main(int argc,char **argv) {
     JPH::RegisterDefaultAllocator(); JPH::Factory::sInstance = new JPH::Factory; JPH::RegisterTypes();
     unsigned failures = 0;
-    for (const auto &test : std::vector<std::pair<const char *, void (*)()>> {
+    const bool radial_only=argc>1&&std::string(argv[1])=="free_arc";
+    const bool handoff_only=argc>1&&std::string(argv[1])=="free_arc_handoff";
+    const bool angular_only=argc>1&&std::string(argv[1])=="free_arc_angular";
+    const std::vector<std::pair<const char *, void (*)()>> tests=angular_only?
+        std::vector<std::pair<const char *,void (*)()>>{{"radial_dynamic_reciprocity",radial_dynamic_reciprocity}}:handoff_only?
+        std::vector<std::pair<const char *,void (*)()>>{{"radial_work_and_handoffs",radial_work_and_handoffs}}:radial_only?
+        std::vector<std::pair<const char *, void (*)()>> {{"passive_radial_arc",passive_radial_arc},
+          {"radial_dynamic_reciprocity",radial_dynamic_reciprocity},{"radial_work_and_handoffs",radial_work_and_handoffs}}:
+        std::vector<std::pair<const char *, void (*)()>> {
         { "static_load_and_release", static_load_and_release }, { "command_sign_and_budget", command_sign_and_budget },
         { "measured_swing_actuation", measured_swing_actuation },
         { "dynamic_recoil", dynamic_recoil }, { "finite_landing_catch", finite_landing_catch },
@@ -409,11 +624,14 @@ int main() {
         { "soft_material_reaction", soft_material_reaction },
         { "net_frame_reaction", net_frame_reaction },
         { "facade_structural_response", facade_structural_response },
-        { "invalid_holds_and_cleanup", invalid_holds_and_cleanup } }) {
+        { "invalid_holds_and_cleanup", invalid_holds_and_cleanup },
+        {"passive_radial_arc",passive_radial_arc},{"radial_dynamic_reciprocity",radial_dynamic_reciprocity},
+        {"radial_work_and_handoffs",radial_work_and_handoffs} };
+    for (const auto &test : tests) {
         try { test.second(); std::cout << "PASS " << test.first << '\n'; }
         catch (const std::exception &e) { ++failures; std::cerr << "FAIL " << test.first << ": " << e.what() << '\n'; }
     }
     JPH::UnregisterTypes(); delete JPH::Factory::sInstance; JPH::Factory::sInstance = nullptr;
-    std::cout << "physical hand checks: " << 10 - failures << "/10\n";
+    std::cout << "physical hand checks: " << tests.size() - failures << "/"<<tests.size()<<"\n";
     return failures ? 1 : 0;
 }

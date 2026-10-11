@@ -675,6 +675,9 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["right_hand_force_n"] = to_godot(s.traversal_right_hand_force);
     out["hand_actuator_positive_work_j"] = s.traversal_actuator_positive_work_j;
     out["hand_actuator_absorbed_work_j"] = s.traversal_actuator_absorbed_work_j;
+    out["hanging_free_arc_active"] = s.hanging_free_arc_active;
+    out["hanging_commanded_span_m"] = s.hanging_commanded_span_m;
+    out["hanging_actual_span_m"] = s.hanging_actual_span_m;
     out["swing_tuck_available"] = s.swing_tuck_available;
     out["swing_tuck_requested"] = s.swing_tuck_requested;
     out["swing_body_below_grip_m"] = s.swing_body_below_grip_m;

@@ -1,0 +1,18 @@
+CLIMB ACQUIRE heading=0,-1 elapsed=164 state=4 hands=2 hand_support=1901 grounded=0 gravity=1 eligible=1 radial=1 actual_below=0.825233 hand_y=90.45,90.75 normal=0,-1
+CLIMB ACQUIRE heading=0,-1 elapsed=164 state=4 hands=2 hand_support=1901 grounded=0 gravity=1 eligible=1 radial=1 actual_below=0.825233 hand_y=90.45,90.75 normal=0,-1
+PRODUCTION NEUTRAL FRAME entity=1901 late270_360_z_span_m=0 commanded_span_m=0.94676 actual_span_m=1.03926 initial_velocity=0.0291543,-1.36259,-1.09599 late_velocity=0.0680152,0.0078549,7.6696e-11
+PRODUCTION RADIAL TUCK actual_shortening_m=0.241798 command_shortening_m=0.25 held_length_span_m=0
+CLIMB ACQUIRE heading=0,-1 elapsed=164 state=4 hands=2 hand_support=1901 grounded=0 gravity=1 eligible=1 radial=1 actual_below=0.825233 hand_y=90.45,90.75 normal=0,-1
+CLIMB ACQUIRE heading=0,-1 elapsed=164 state=4 hands=2 hand_support=1901 grounded=0 gravity=1 eligible=1 radial=1 actual_below=0.825233 hand_y=90.45,90.75 normal=0,-1
+CLIMB TUCK metric=radial_span actual_rise_m=0.241688 commanded_rise_m=0.25 held_target_span_m=0
+CLIMB STATE phase=tucked_before_ascent tick=600 actual_com=16.0027,89.9385,-179.86 actual_midgrip=16,90.6,-180.25 commanded_com_y_from_readback=90.0233 actual_below=0.661522 commanded_below=0.576691 hand_y=90.45,90.75 generations=3,3 requested=1
+CLIMB STATE phase=after_held_ascent_regrip tick=690 actual_com=16.0034,90.317,-179.86 actual_midgrip=16.0009,90.9,-180.25 commanded_com_y_from_readback=90.4085 actual_below=0.583054 commanded_below=0.491539 hand_y=91.05,90.75 generations=4,3 requested=1
+CLIMB STATE phase=settled_before_extension tick=870 actual_com=16.017,90.1961,-179.86 actual_midgrip=16.0009,90.9,-180.25 commanded_com_y_from_readback=90.2784 actual_below=0.703964 commanded_below=0.62162 hand_y=91.05,90.75 generations=4,3 requested=1
+CLIMB STATE phase=after_extension tick=1230 actual_com=15.9934,89.9182,-179.86 actual_midgrip=16.0009,90.9,-180.25 commanded_com_y_from_readback=90.0023 actual_below=0.981834 commanded_below=0.897705 hand_y=91.05,90.75 generations=4,3 requested=0
+CLIMB EXTEND metric=radial_span tucked_body_below_m=0.836514 extended_body_below_m=1.07697 actual_extension_m=0.240456 commanded_body_below_m=0.984759 requested=0 regrips=1,0
+CLIMB WORLD EXTEND actual_descent_m=0.27787 commanded_descent_m=0.276085 midgrip_descent_m=0
+CLIMB RESUME control_rise_m=1.28204 extended_rise_m=1.40945 control_rate_mps=0.641018 extended_rate_mps=0.704727 rate_ratio=1.09939 requested=0 extended_body_below_m=1.07697 extended_target_below_m=0.984759 regrips=1,0
+PASS TUCK ordinary_non_swing_climb=1 posture=1 regrips=1 extension=1 resumed_rate=1
+BAR SMALL LEAN x=.1 radial_before=1 radial_after=0 positive_target_work_j=0.222218
+PASS FREE ARC small_bar_lean_handoff=1
+PASS NEUTRAL FRAME fixed_length=1 radial_tuck=1 extension=1 real_Drop=1 forward_climb_resume=1 small_bar_lean=1

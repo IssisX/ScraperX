@@ -28,6 +28,19 @@ bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 a
     using namespace JPH;
     if (hand >= hands_.size() || player_.IsInvalid() || support.IsInvalid() ||
         support == player_ || !finite(actual_grip)) return false;
+    if (radial_profile_) {
+        // Validate the replacement before the dissipative mode change. An
+        // invalid requested support must not discard a valid old radial pair.
+        const BodyID candidate_ids[]{player_,support};
+        {
+            BodyLockMultiRead lock(system_.GetBodyLockInterface(),candidate_ids,2);
+            const Body *player=lock.GetBody(0), *hold=lock.GetBody(1);
+            if (!player || !hold || !player->IsDynamic() || !player->IsInBroadPhase() ||
+                !hold->IsInBroadPhase() || player->IsSensor() || hold->IsSensor() ||
+                (!(net_ && support==net_->body()) && !hold->IsRigidBody())) return false;
+        }
+        if (!set_radial_profile(false)) return false;
+    }
     if (net_ && support == net_->body()) {
         const BodyLockRead lock(system_.GetBodyLockInterface(), player_);
         if (!lock.Succeeded() || !lock.GetBody().IsDynamic()) return false;
@@ -98,13 +111,21 @@ bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 a
 }
 void PhysicalHandClimb::detach(unsigned hand) {
     if (!attached(hand)) return;
+    if (radial_profile_ && !set_radial_profile(false)) { clear(); return; }
     soft_[hand].attached=false;
     if (hands_[hand]) system_.RemoveConstraint(hands_[hand].GetPtr());
     hands_[hand] = nullptr;
     forces_[hand] = JPH::Vec3::sZero();
 }
 void PhysicalHandClimb::clear() {
-    detach(0); detach(1);
+    for (unsigned i=0;i<hands_.size();++i) {
+        if (hands_[i] && !radial_profile_) system_.RemoveConstraint(hands_[i].GetPtr());
+        hands_[i]=nullptr;
+        soft_[i].attached=false;
+        forces_[i]=JPH::Vec3::sZero();
+    }
+    radial_profile_=false;
+    radial_lengths_.fill(0.0F);
     last_bound_ = 0.0;
     last_actuator_positive_work_ = 0.0;
     transfer_profile_ = false;
@@ -119,11 +140,162 @@ void PhysicalHandClimb::set_swing_profile() {
 }
 void PhysicalHandClimb::set_transfer_profile(float rigid_hand_damping) {
     if (!std::isfinite(rigid_hand_damping) || rigid_hand_damping <= 0) return;
+    if (radial_profile_ && !set_radial_profile(false)) return;
     transfer_profile_ = true;
     // Default CHOSEN600Ns/m per rigid hand: ~0.65 critical damping for85kg
     // and two5000N/m springs. Force limits remain1500N per hand.
     for(auto &hand:hands_) if(hand) for(int axis=0;axis<3;++axis)
         hand->GetMotorSettings(static_cast<JPH::SixDOFConstraint::EAxis>(axis)).mSpringSettings.mDamping=rigid_hand_damping;
+}
+bool PhysicalHandClimb::set_radial_profile(bool enabled) {
+    using namespace JPH;
+    if (enabled==radial_profile_) return true;
+    if (enabled && (!compatible_hands() || transfer_profile_)) return false;
+    const BodyID ids[]{player_, hands_[0] ? hands_[0]->GetBody2()->GetID() : player_,
+                       hands_[1] ? hands_[1]->GetBody2()->GetID() : player_};
+    std::array<Ref<SixDOFConstraint>,2> fresh;
+    std::array<float,2> spans{};
+    std::array<Vec3,2> soft_offsets{};
+    {
+        BodyLockMultiWrite lock(system_.GetBodyLockInterface(),ids,3);
+        Body *player=lock.GetBody(0);
+        if (!player || !player->IsDynamic() || !player->IsInBroadPhase()) return false;
+        for (unsigned i=0;i<hands_.size();++i) if (attached(i)) {
+            Body *hold=lock.GetBody(i+1);
+            if (!soft_[i].attached && (!hold || !hold->IsInBroadPhase())) return false;
+            const RVec3 grip=soft_[i].attached ? net_->world_point(soft_[i].material) :
+                hold->GetCenterOfMassTransform()*hands_[i]->GetConstraintToBody2Matrix().GetTranslation();
+            const Vec3 radius(player->GetCenterOfMassPosition()-grip);
+            if (!finite(radius) || (enabled && (radius.Length()<=1.0e-6F || radius.Length()>1.75F))) return false;
+            spans[i]=radius.Length();
+            soft_offsets[i]=Vec3(player->GetPosition()-grip);
+            if (!enabled && hands_[i]) {
+                // Copy the old limits/motor damping, but reconstruct at the
+                // unchanged actual local anchors. Fresh solver: no old lambda.
+                const auto saved=hands_[i]->GetConstraintSettings();
+                auto *settings=static_cast<SixDOFConstraintSettings *>(saved.GetPtr());
+                // Retain exact COM-local anchors from GetConstraintSettings;
+                // a world->local round trip would quantize them on every toggle.
+                // Both new world frames are identity at the actual p1/p2.
+                settings->mSpace=EConstraintSpace::LocalToBodyCOM;
+                settings->mAxisX1=player->GetRotation().Conjugated()*Vec3::sAxisX();
+                settings->mAxisY1=player->GetRotation().Conjugated()*Vec3::sAxisY();
+                settings->mAxisX2=hold->GetRotation().Conjugated()*Vec3::sAxisX();
+                settings->mAxisY2=hold->GetRotation().Conjugated()*Vec3::sAxisY();
+                fresh[i]=static_cast<SixDOFConstraint *>(settings->Create(*player,*hold));
+                for (int axis=0;axis<3;++axis)
+                    fresh[i]->SetMotorState(static_cast<SixDOFConstraint::EAxis>(axis),EMotorState::Position);
+                const auto p1=player->GetCenterOfMassTransform()*fresh[i]->GetConstraintToBody1Matrix().GetTranslation();
+                const auto p2=hold->GetCenterOfMassTransform()*fresh[i]->GetConstraintToBody2Matrix().GetTranslation();
+                fresh[i]->SetTargetPositionCS(Vec3(p2-p1));
+                fresh[i]->SetTargetVelocityCS(Vec3::sZero());
+            }
+        }
+    }
+    // Validation/construction precede every mutation: failed handoff leaves
+    // valid old attachments intact. Both directions discard stored preload;
+    // neither positions/velocities nor the muscle ledgers receive a refund.
+    for (unsigned i=0;i<hands_.size();++i) if (attached(i)) {
+        if (enabled && hands_[i]) system_.RemoveConstraint(hands_[i].GetPtr());
+        if (!enabled && hands_[i]) {
+            hands_[i]=fresh[i];
+            system_.AddConstraint(hands_[i].GetPtr());
+        }
+        if (!enabled && soft_[i].attached) soft_[i].rest_offset=soft_offsets[i];
+        forces_[i]=Vec3::sZero();
+    }
+    radial_profile_=enabled;
+    radial_lengths_=enabled ? spans : std::array<float,2>{};
+    last_bound_=last_actuator_positive_work_=0.0;
+    auto &bodies=system_.GetBodyInterface();
+    bodies.ActivateBody(player_);
+    for (unsigned i=0;i<hands_.size();++i) if (hands_[i] && hands_[i]->GetBody2()->IsDynamic())
+        bodies.ActivateBody(hands_[i]->GetBody2()->GetID());
+    return true;
+}
+float PhysicalHandClimb::radial_commanded_span_m() const {
+    return radial_profile_ ? .5F*(radial_lengths_[0]+radial_lengths_[1]) : 0.0F;
+}
+float PhysicalHandClimb::radial_actual_span_m() const {
+    using namespace JPH;
+    if (!radial_profile_ || !compatible_hands()) return 0.0F;
+    const BodyID ids[]{player_,hands_[0] ? hands_[0]->GetBody2()->GetID() : player_,
+                       hands_[1] ? hands_[1]->GetBody2()->GetID() : player_};
+    BodyLockMultiRead lock(system_.GetBodyLockInterface(),ids,3);
+    const Body *player=lock.GetBody(0);
+    if (!player) return 0.0F;
+    float sum=0.0F;
+    for (unsigned i=0;i<2;++i) {
+        const Body *hold=lock.GetBody(i+1);
+        if (!soft_[i].attached && !hold) return 0.0F;
+        const RVec3 grip=soft_[i].attached ? net_->world_point(soft_[i].material) :
+            hold->GetCenterOfMassTransform()*hands_[i]->GetConstraintToBody2Matrix().GetTranslation();
+        sum+=Vec3(player->GetCenterOfMassPosition()-grip).Length();
+    }
+    return .5F*sum;
+}
+float PhysicalHandClimb::advance_radial_targets(float shortening_m,float dt) {
+    using namespace JPH;
+    last_bound_=last_actuator_positive_work_=0.0;
+    if (!radial_profile_ || !compatible_hands() || !std::isfinite(shortening_m) ||
+        !std::isfinite(dt) || dt<=0 || shortening_m==0) return 0.0F;
+    const BodyID ids[]{player_,hands_[0] ? hands_[0]->GetBody2()->GetID() : player_,
+                       hands_[1] ? hands_[1]->GetBody2()->GetID() : player_};
+    std::array<float,2> radii{};
+    {
+        BodyLockMultiRead lock(system_.GetBodyLockInterface(),ids,3);
+        const Body *player=lock.GetBody(0);
+        if (!player) return 0.0F;
+        for (unsigned i=0;i<2;++i) {
+            const Body *hold=lock.GetBody(i+1);
+            if (!soft_[i].attached && !hold) return 0.0F;
+            const RVec3 grip=soft_[i].attached ? net_->world_point(soft_[i].material) :
+                hold->GetCenterOfMassTransform()*hands_[i]->GetConstraintToBody2Matrix().GetTranslation();
+            radii[i]=Vec3(player->GetCenterOfMassPosition()-grip).Length();
+            if (!std::isfinite(radii[i])) return 0.0F;
+        }
+    }
+    const auto potential=[](double e) {
+        e=std::max(e,0.0);
+        return e<=.3 ? 2500.0*e*e : 1500.0*e-225.0;
+    };
+    const double stroke_limit=.6*double(dt), budget=500.0*double(dt);
+    const double stroke=std::clamp(double(shortening_m),-stroke_limit,stroke_limit);
+    std::array<float,2> targets{};
+    double supplied=0,absorbed=0,debit=0,mean=0;
+    const auto evaluate=[&](double fraction) {
+        supplied=absorbed=debit=mean=0;
+        bool valid=true;
+        for (unsigned i=0;i<2;++i) {
+            targets[i]=float(std::max(1.0e-6,double(radial_lengths_[i])-stroke*fraction));
+            const double delta=double(radial_lengths_[i])-targets[i];
+            valid=valid && std::isfinite(targets[i]) && std::abs(delta)<=stroke_limit &&
+                std::abs(delta)<=std::abs(double(shortening_m));
+            const double work=potential(double(radii[i])-targets[i])-potential(double(radii[i])-radial_lengths_[i]);
+            supplied+=std::max(work,0.0); absorbed+=std::max(-work,0.0);
+            debit+=force_bound_n()*std::abs(delta); mean+=.5*delta;
+        }
+        return valid && supplied<=budget;
+    };
+    if (!evaluate(1.0)) {
+        // Search on actual float lengths, so quantized stroke/work cannot
+        // slip through a continuous-budget estimate. Absorption is separate.
+        double low=0,high=1;
+        for (int iteration=0;iteration<40;++iteration) {
+            const double middle=.5*(low+high);
+            if (evaluate(middle)) low=middle; else high=middle;
+        }
+        if (!evaluate(low)) return 0.0F;
+    }
+    radial_lengths_=targets;
+    last_bound_=debit; command_bound_+=debit;
+    last_actuator_positive_work_=supplied; actuator_positive_work_+=supplied;
+    actuator_absorbed_work_+=absorbed;
+    auto &bodies=system_.GetBodyInterface();
+    bodies.ActivateBody(player_);
+    for (const auto &hand:hands_) if (hand && hand->GetBody2()->IsDynamic())
+        bodies.ActivateBody(hand->GetBody2()->GetID());
+    return float(mean);
 }
 bool PhysicalHandClimb::active() const noexcept { return attached(0) || attached(1); }
 bool PhysicalHandClimb::attached(unsigned hand) const noexcept {
@@ -134,6 +306,7 @@ JPH::Vec3 PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displaceme
     using namespace JPH;
     last_bound_ = 0.0;
     last_actuator_positive_work_ = 0.0;
+    if (radial_profile_) return Vec3::sZero();
     const unsigned count = unsigned(attached(0)) + unsigned(attached(1));
     if (count == 0 || !finite(desired_player_displacement) || !std::isfinite(dt) || dt <= 0 ||
         (command_power_cap_w && (!std::isfinite(*command_power_cap_w) || *command_power_cap_w <= 0)))
@@ -257,6 +430,14 @@ JPH::RVec3 PhysicalHandClimb::commanded_position() const {
     RVec3 sum = RVec3::sZero();
     unsigned count = 0;
     for (unsigned i = 0; i < hands_.size(); ++i) if (attached(i)) {
+        if (radial_profile_) {
+            const Body *hold=lock.GetBody(i+1);
+            if (!soft_[i].attached && !hold) continue;
+            const RVec3 grip=soft_[i].attached ? net_->world_point(soft_[i].material) :
+                hold->GetCenterOfMassTransform()*hands_[i]->GetConstraintToBody2Matrix().GetTranslation();
+            const Vec3 n=Vec3(player->GetCenterOfMassPosition()-grip).NormalizedOr(Vec3::sAxisY());
+            sum+=grip+n*radial_lengths_[i]; ++count; continue;
+        }
         if (soft_[i].attached) {
             sum+=net_->world_point(soft_[i].material)+RVec3(soft_[i].rest_offset); ++count; continue;
         }
@@ -273,7 +454,64 @@ JPH::RVec3 PhysicalHandClimb::commanded_position() const {
 }
 void PhysicalHandClimb::pre_step(float dt, bool bodies_locked) {
     using namespace JPH;
-    if (!net_ || !std::isfinite(dt) || dt<=0) return;
+    if (!std::isfinite(dt) || dt<=0) return;
+    if (radial_profile_) {
+        // Standalone calls have no owner tick to wake the disconnected pair.
+        // Shipping calls wake outside Update; never acquire locks in OnStep.
+        if (!bodies_locked) {
+            auto &bodies=system_.GetBodyInterface();
+            bodies.ActivateBody(player_);
+            for (const auto &hand:hands_) if (hand && hand->GetBody2()->IsDynamic())
+                bodies.ActivateBody(hand->GetBody2()->GetID());
+        }
+        const BodyID ids[]{player_, hands_[0] ? hands_[0]->GetBody2()->GetID() : player_,
+                           hands_[1] ? hands_[1]->GetBody2()->GetID() : player_};
+        // The production callback already owns all body locks. Never reacquire
+        // a BodyLock there; standalone owner-thread calls acquire one batch.
+        const auto apply = [&](Body *player, Body *hold0, Body *hold1) {
+            if (!player || !player->IsDynamic()) return;
+            Body *holds[]{hold0,hold1};
+            for (unsigned i=0;i<hands_.size();++i) if (attached(i)) {
+                forces_[i]=Vec3::sZero();
+                Body *hold=holds[i];
+                if (!soft_[i].attached && !hold) continue;
+                const RVec3 grip=soft_[i].attached ? net_->world_point(soft_[i].material) :
+                    hold->GetCenterOfMassTransform()*hands_[i]->GetConstraintToBody2Matrix().GetTranslation();
+                const Vec3 radius(player->GetCenterOfMassPosition()-grip);
+                const float r=radius.Length();
+                if (!std::isfinite(r) || r<radial_lengths_[i] || r<=1.0e-6F) continue;
+                const Vec3 n=radius/r;
+                const float e=std::max(r-radial_lengths_[i],0.0F);
+                const Vec3 grip_velocity=soft_[i].attached ? net_->material_velocity(soft_[i].material) : hold->GetPointVelocity(grip);
+                float w=player->GetMotionProperties()->GetInverseMass();
+                if (soft_[i].attached) w+=net_->material_inverse_mass(soft_[i].material);
+                else if (hold->IsDynamic()) {
+                    const Vec3 angular=Vec3(grip-hold->GetCenterOfMassPosition()).Cross(n);
+                    w+=hold->GetMotionProperties()->GetInverseMass()+angular.Dot(hold->GetInverseInertia()*angular);
+                }
+                const float rdot=(player->GetLinearVelocity()-grip_velocity).Dot(n);
+                const float implicit_damping=180.0F+(e<.3F ? 5000.0F : 0.0F)*dt;
+                const float tension=std::clamp((std::min(5000.0F*e,force_bound_n())+implicit_damping*rdot)/
+                    (1.0F+implicit_damping*dt*w),0.0F,force_bound_n());
+                const Vec3 impulse=-n*(tension*dt);
+                player->AddImpulse(impulse); // COM: no manufactured player torque.
+                if (soft_[i].attached) net_->impulse(soft_[i].material,-impulse);
+                else if (hold->IsDynamic()) hold->AddImpulse(-impulse,grip);
+                forces_[i]=-n*tension;
+                peak_force_=std::max(peak_force_,tension);
+                // The next hand samples the velocities changed by this pair.
+            }
+        };
+        if (bodies_locked) {
+            const auto &access=system_.GetBodyLockInterfaceNoLock();
+            apply(access.TryGetBody(ids[0]),access.TryGetBody(ids[1]),access.TryGetBody(ids[2]));
+        } else {
+            BodyLockMultiWrite lock(system_.GetBodyLockInterface(),ids,3);
+            apply(lock.GetBody(0),lock.GetBody(1),lock.GetBody(2));
+        }
+        return;
+    }
+    if (!net_) return;
     auto &bodies=bodies_locked ? system_.GetBodyInterfaceNoLock() : system_.GetBodyInterface();
     for (unsigned i=0;i<soft_.size();++i) if (soft_[i].attached) {
         const auto &hand=soft_[i];
@@ -296,6 +534,7 @@ void PhysicalHandClimb::pre_step(float dt, bool bodies_locked) {
 }
 void PhysicalHandClimb::post_step(float collision_dt) {
     if (!std::isfinite(collision_dt) || collision_dt <= 0.0F) return;
+    if (radial_profile_) return;
     for (unsigned i = 0; i < hands_.size(); ++i) if (hands_[i]) {
         // Translation axes were world identity at acquisition and the upright
         // player's rotation is locked. Lambda acts on body2, opposite on player.

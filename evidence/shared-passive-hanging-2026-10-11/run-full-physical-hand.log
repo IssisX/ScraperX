@@ -1,0 +1,39 @@
+one-hand at4s sag=0.278939 reaction=866.025 vy=-0.0288089
+static sag=0.0833883 reaction=833.846 one_sag=0.166768 peak_force=866.025
+PASS static_load_and_release
+command ascent=0.199789 cumulative_bound=666.667
+PASS command_sign_and_budget
+swing spring_work=5.55555 stroke=0.00641537 absorbed=5.55546 neutral_work=0
+PASS measured_swing_actuation
+recoil player_vx=1.57428 support_vx=1.44746 peak_force=366.954
+PASS dynamic_recoil
+catch minimum_y=2.60494 peak_force=1500
+PASS finite_landing_catch
+kinematic regrip tracking_vx=0.600085
+PASS kinematic_tracking_and_regrip
+soft reciprocal impulse residual=2.98023e-06
+PASS soft_material_reaction
+net-frame mass=6562.78 anchor_dx=0.0614624 momentum_residual=0.00301868
+PASS net_frame_reaction
+facade ladder_deflection_m=0.077397 carriage_travel_m=1.00387
+PASS facade_structural_response
+PASS invalid_holds_and_cleanup
+FREE ARC late270_360_z_span_m=1.02868 actual_span_m=1.14154 commanded_span_m=1.04523 speed=2.12378 neutral_positive_work=0
+PASS passive_radial_arc
+RADIAL RECOIL mass_kg=25 momentum_error=0.0109865 angular_error=0.00298578 support_spin=1.36709
+RADIAL ANGULAR before=15.4545,-24.6307,23.1818 after=15.4574,-24.6303,23.1826 support_omega=0.40907,-1.14451,0.625847 max_instant_native_pair_delta=5.3004e-05
+RADIAL INERTIA inverse_world_columns=4.71562,-1.35562,-1.90425;-1.35562,0.893524,0.606815;-1.90425,0.606815,1.31394; actual_mass=25
+RADIAL RECOIL mass_kg=1 momentum_error=0.00695806 angular_error=0.000106625 support_spin=1.3326
+RADIAL ANGULAR before=0.790697,-1.26017,1.18605 after=0.790784,-1.26016,1.1861 support_omega=0.255277,-1.09405,0.716734 max_instant_native_pair_delta=2.2437e-06
+RADIAL INERTIA inverse_world_columns=123.776,-31.1513,-44.4177;-31.1513,20.1844,12.328;-44.4177,12.328,29.1166; actual_mass=1
+PASS radial_dynamic_reciprocity
+RADIAL HANDOFF ENTRY cycle=0 com=0,4.21615,-0.2 midpoint=0,5,0.55 speed=0.00742312 hand_attached=1,1 compatible=1 actual_spans=1.10314,1.10314 paid_work=0
+RADIAL HANDOFF ENTRY cycle=1 com=-0.000513412,4.03787,-0.169317 midpoint=0,5,0.55 speed=1.49061 hand_attached=1,1 compatible=1 actual_spans=1.21775,1.21792 paid_work=221.714
+RADIAL HANDOFF ENTRY cycle=2 com=-0.00076993,3.69195,0.242737 midpoint=0,5,0.55 speed=2.32618 hand_attached=1,1 compatible=1 actual_spans=1.35834,1.35857 paid_work=439.423
+RADIAL HANDOFF ENTRY cycle=3 com=-0.00078425,3.61795,0.970606 midpoint=0,5,0.55 speed=1.53486 hand_attached=1,1 compatible=1 actual_spans=1.4583,1.45852 paid_work=664.613
+RADIAL HANDOFF ENTRY cycle=4 com=-0.000863725,3.62306,1.23895 midpoint=0,5,0.55 speed=0.753107 hand_attached=1,1 compatible=1 actual_spans=1.5525,1.55272 paid_work=895.195
+RADIAL HANDOFF ENTRY cycle=5 com=-0.000757943,3.34641,0.59938 midpoint=0,5,0.55 speed=1.91115 hand_attached=1,1 compatible=1 actual_spans=1.66628,1.66646 paid_work=1121.4
+RADIAL HANDOFF ENTRY cycle=6 com=-0.000585713,3.39181,-0.115694 midpoint=0,5,0.55 speed=0.270839 hand_attached=1,1 compatible=1 actual_spans=1.75191,1.75204 paid_work=1351.53
+RADIAL HANDOFF completed_cycles=6 max_cycles=12 reach_exhausted=1 positive_work_j=1351.53
+PASS radial_work_and_handoffs
+physical hand checks: 13/13

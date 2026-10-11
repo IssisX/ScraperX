@@ -2352,39 +2352,48 @@ func _touch_hanging_posture() -> bool:
 			or not _main._touch.is_button_shown(&"crouch") \
 			or _main._touch.button_label(&"crouch") != "TUCK":
 		return _fail("actual hanging hands did not expose the posture control")
-	var target_before := float(before["swing_commanded_body_below_grip_m"])
-	var body_before := float(before["swing_body_below_grip_m"])
+	# A free arc changes world-Y projection without changing arm span. Measure
+	# the real native radial distances when active, retaining literal Y readback.
+	var radial := bool(before.get("hanging_free_arc_active", false))
+	if not radial:
+		return _fail("neutral hanging hands did not enter the shared passive arc")
+	var target_key := "hanging_commanded_span_m" if radial else "swing_commanded_body_below_grip_m"
+	var body_key := "hanging_actual_span_m" if radial else "swing_body_below_grip_m"
+	var target_before := float(before[target_key])
+	var body_before := float(before[body_key])
 	var work_before := float(before["hand_actuator_positive_work_j"])
 	_tap(2, _center(&"crouch"))
 	if not await _wait_until(func() -> bool:
 		var state: Dictionary = _native().get_landing_state()
 		return bool(state.get("swing_tuck_requested", false)) \
-			and float(state.get("swing_commanded_body_below_grip_m", target_before)) < target_before - 0.20 \
-			and float(state.get("swing_body_below_grip_m", body_before)) < body_before - 0.10, 4.0):
+			and float(state.get(target_key, target_before)) < target_before - 0.20 \
+			and float(state.get(body_key, body_before)) < body_before - 0.10, 4.0):
 		return _fail("touch TUCK did not move the actual body and bounded hand target")
 	var tucked: Dictionary = _native().get_landing_state()
 	var left: Vector3 = _native().get_traversal_left_hand()
 	var right: Vector3 = _native().get_traversal_right_hand()
 	var measured_below := 0.5 * (left.y + right.y) - _position().y
+	var measured_span := 0.5 * (left.distance_to(_position()) + right.distance_to(_position()))
 	var left_force: Vector3 = tucked["left_hand_force_n"]
 	var right_force: Vector3 = tucked["right_hand_force_n"]
 	if absf(measured_below - float(tucked["swing_body_below_grip_m"])) > 0.001 \
+			or (radial and absf(measured_span - float(tucked[body_key])) > 0.001) \
 			or float(tucked["hand_actuator_positive_work_j"]) <= work_before \
 			or left_force.length() > 1501.0 or right_force.length() > 1501.0 \
 			or int(tucked["traversal_hand_constraint_count"]) != 2 \
 			or float(tucked["player_gravity_factor"]) != 1.0 or bool(_native().is_player_crouched()):
 		return _fail("touch TUCK lacks real finite hands, paid work, or actual COM readback")
-	var target_tucked := float(tucked["swing_commanded_body_below_grip_m"])
+	var target_tucked := float(tucked[target_key])
 	if _main._touch.button_label(&"crouch") != "EXTEND":
 		return _fail("native tuck request did not update the EXTEND control")
 	_tap(2, _center(&"crouch"))
 	if not await _wait_until(func() -> bool:
 		var state: Dictionary = _native().get_landing_state()
 		return not bool(state.get("swing_tuck_requested", true)) \
-			and float(state.get("swing_commanded_body_below_grip_m", target_tucked)) > target_tucked + 0.20, 4.0):
+			and float(state.get(target_key, target_tucked)) > target_tucked + 0.20, 4.0):
 		return _fail("touch EXTEND did not restore the native hand target")
-	print("SCRAPERX_HANGING_POSTURE touch_tuck_extend=1 actual_body_rise_m=%f commanded_rise_m=%f positive_target_work_j=%f" % [
-		body_before - float(tucked["swing_body_below_grip_m"]), target_before - target_tucked,
+	print("SCRAPERX_HANGING_POSTURE touch_tuck_extend=1 free_arc=%s actual_posture_change_m=%f commanded_change_m=%f positive_target_work_j=%f" % [
+		radial, body_before - float(tucked[body_key]), target_before - target_tucked,
 		float(tucked["hand_actuator_positive_work_j"]) - work_before])
 	return true
 

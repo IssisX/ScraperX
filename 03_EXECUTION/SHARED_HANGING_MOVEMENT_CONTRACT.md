@@ -70,3 +70,52 @@ radius/posture work and preserve real climb/regrip arbitration. Existing catch m
 filters also need condition-based treatment; removing a posture whitelist does not
 prove universal catches. Full system energy closure, phone feel and a new fullGREEN
 exact-source APK remain unverified.
+
+
+## Shared passive arcs (native and headless touch verified)
+
+Neutral stick with appropriate actual two-hand airborne attachment selects passive
+radial hands through the same owner. Entry uses overhead reach geometry; active
+arcs retain attachment across changing world-Y projection while actual reach,
+footing and competing ownership remain authoritative. Explicit movement returns
+to the existing finite climb/shimmy/manual machine-lean actuator. Neutral uses
+the actual traversal-axis deadzones; mounted-bar lean retains every nonzero
+world-X command from its existing actuator. The two modes
+must never act together. Crouch shortens the captured radial rest spans through
+the existing0.25m allowance; EXTEND restores them. Neutral spans remain constant.
+
+The native tension-only spring has5000N/m stiffness,1500N/hand cap and actual
+relative grip-point damping. Each collision substep applies equal opposite
+impulses at player COM and actual support grip; moving rigid supports receive
+angular reaction, and soft grips use the real material adapter. A scalar implicit
+radial solve uses actual effective point inverse mass for stability with lighter
+supports. Saturated elastic potential is quadratic below0.30m extension and linear
+above it. Positive representable rest-span work is metered per hand within500W
+aggregate, with0.6m/s stroke; absorbed work supplies no credit.
+
+Mode handoffs preserve actual positions, velocities and attachment anchors while
+explicitly discarding old controller preload. Return creates fresh zero-error
+motor constraints; no stale lambda, work refund or renewed posture allowance.
+This chosen dissipative transition does not claim force continuity or articulated
+limb inertia. Native readback distinguishes radial actual/rest spans from literal
+world-Y projection. The current bounded native goal requires an unobstructed
+fixed-grip passive arc, moving support recoil, mode handoffs, paid shortening,
+momentum-bearing release and actual ordinary climbing resume. The next bounded
+goal requires the complete actual touch encounter. Both must pass before this
+integration receives completion credit.
+
+The contact-free native coupling fixtures pass their focused force/work/arc
+checks. Actual ordinary climbing, static/moving ledges, momentum-bearing release,
+the complete touch encounter and affected regressions also pass.
+[Source-bound evidence](../evidence/shared-passive-hanging-2026-10-11/README.md)
+records their separate proof boundaries. The dynamic support fixture enables gyroscopic integration so an
+anisotropic rotating box can independently test integrated angular conservation;
+the actual hand impulse pair also has its own instantaneous momentum oracle.
+This fixture setting changes no shipping body. A framed gameplay catch is a
+separate proof of acquisition, posture and ownership; its late lateral movement
+does not establish a contact-free passive arc.
+
+Physics-tuning skill is applied at the native fixed-step owner: preserve90Hz and
+existing collision substeps, reciprocal loads and interpolated presentation;
+change damping/integration only against measured rejecting cases. No new phone
+feel, frame-rate convergence or full system energy closure is claimed yet.
