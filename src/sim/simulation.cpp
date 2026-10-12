@@ -143,9 +143,13 @@ constexpr float kStumbleMinimumSpeed = 3.0F;
 // run-off), the feet can brake that motion only as hard
 // as a planted human can: kTeeterBrakeAcceleration (0.85 g, the traction the
 // soles have) when the stick pulls back, 60 % of it with the stick let go.
-// The ground's normal 22 m/s/s does not apply there. Whether the body stops
-// short of the edge follows from its speed and the distance left; over it,
-// an ordinary fall takes over. Below kTeeterMinimumSpeed the ordinary brake
+// The ground's normal 22 m/s/s does not apply there. The XCoM past the edge
+// means no planted brake saves the body: the stop needs v^2 / 2a, more than
+// the v / omega left whenever v > 2a / omega (5.3 m/s pulling back), and the
+// two shrink at the same rate. Pulling back buys time at the edge, not a
+// stop; the save is not to sprint at it. Over it, an ordinary fall takes
+// over. "The edge" is where the ground stops running on toward the XCoM (see
+// ground_runs_to): a slope or a stair run is ground. Below kTeeterMinimumSpeed the ordinary brake
 // applies: CHOSEN above the 5.5 m/s run, so a stick let go at a run stops
 // where players expect it to (every route relies on it), and teetering is
 // the cost of sprinting at an edge.
@@ -1361,6 +1365,11 @@ public:
         }
 
         bool jump_started = false;
+        // A teeter is ordinary locomotion's; whatever else holds the body
+        // (harness, hands, a throw) ends it.
+        if (sling_controlling || traversal_state_ != TraversalState::None || (slingshot_flight_ && !grounded_)) {
+            teetering_ = false;
+        }
         if (!sling_controlling && traversal_state_ == TraversalState::None) {
             if (slingshot_flight_ && !grounded_) {
                 // Thrown: the stick steers with a bounded force (2 m/s/s at
@@ -2580,6 +2589,28 @@ private:
         return cast_ray(JPH::RVec3(at.GetX(), soles + 0.3F, at.GetZ()), JPH::Vec3(0.0F, -0.6F, 0.0F), hit);
     }
 
+    // The ground runs on from the feet to `centre + offset`: walked in steps
+    // of at most 0.4 m, each finding a surface no more than 0.3 m above the
+    // last and no further below it than 0.3 m plus the step (a 45 degree
+    // descent). A slope, a stair run or a curb is ground; an edge is not.
+    [[nodiscard]] bool ground_runs_to(const JPH::RVec3 centre, const JPH::Vec3 offset, const float soles) const noexcept {
+        const float length = JPH::Vec3(offset.GetX(), 0.0F, offset.GetZ()).Length();
+        const int steps = std::max(1, static_cast<int>(std::ceil(length / 0.4F)));
+        const float step = length / static_cast<float>(steps);
+        float floor = soles;
+        for (int k = 1; k <= steps; ++k) {
+            const JPH::RVec3 at = centre + offset * (static_cast<float>(k) / static_cast<float>(steps));
+            const float top = floor + 0.3F;
+            const float reach = 0.6F + step;
+            JPH::RayCastResult hit;
+            if (!cast_ray(JPH::RVec3(at.GetX(), top, at.GetZ()), JPH::Vec3(0.0F, -reach, 0.0F), hit)) {
+                return false;
+            }
+            floor = top - hit.mFraction * reach;
+        }
+        return true;
+    }
+
     [[nodiscard]] bool rolling() const noexcept {
         return landing_response_ == LandingResponse::Roll && roll_seconds_left_ > 0.0;
     }
@@ -2636,6 +2667,10 @@ private:
         ++landing_count_;
         landing_normal_speed_mps_ = normal_speed;
         landing_tangent_speed_mps_ = tangent_speed;
+        // Debt still owed from an earlier landing is not forgiven by this
+        // one: the larger of the two is carried, on its own clock.
+        const double owed = 1.0 - recovery_balance();
+        const double owed_seconds = recovery_seconds_left_;
         clear_recovery();
 
         const float free_speed = prepared ? kLandingPreparedFreeSpeed : kLandingFreeSpeed;
@@ -2664,7 +2699,7 @@ private:
                 roll_seconds_left_ = kRollSeconds;
                 roll_direction_ = along;
                 roll_entry_speed_ = tangent_speed;
-                roll_blocked_loss_ = full_loss / kLandingPreparedLossScale;
+                roll_blocked_loss_ = std::max(full_loss / kLandingPreparedLossScale, owed);
                 roll_start_ = bodies.GetPosition(player_id_);
                 roll_travel_m_ = 0.0;
                 ++roll_count_;
@@ -2684,13 +2719,16 @@ private:
             ++stumble_count_;
         }
         landing_loss_ = loss;
-        if (loss <= 0.0) {
-            return;
+        if (loss > 0.0) {
+            recovery_duration_ = std::clamp(0.15 + 0.06 * std::max(0.0, double(normal_speed) - free_speed) +
+                                                (stumble ? 0.05 * tangent_speed : 0.0),
+                                            0.15, 2.0);
+            recovery_seconds_left_ = recovery_duration_;
         }
-        recovery_duration_ = std::clamp(0.15 + 0.06 * std::max(0.0, double(normal_speed) - free_speed) +
-                                            (stumble ? 0.05 * tangent_speed : 0.0),
-                                        0.15, 2.0);
-        recovery_seconds_left_ = recovery_duration_;
+        if (owed > loss && owed_seconds > 0.0) {
+            landing_loss_ = owed;
+            recovery_duration_ = recovery_seconds_left_ = owed_seconds;
+        }
     }
 
     // Along the lane the roll only brakes, at rolling friction; across it the
@@ -2796,7 +2834,7 @@ private:
                     const JPH::Vec3 direction = horizontal / speed;
                     const double drive = commands.move_input_x * direction.GetX() + commands.move_input_z * direction.GetZ();
                     if (drive <= 0.0 && feet_supported_at(centre, soles) &&
-                        !feet_supported_at(centre + xcom_offset, soles)) {
+                        !ground_runs_to(centre, xcom_offset, soles)) {
                         teetering_ = true;
                         teeter_direction = direction;
                         teeter_brake = drive <= -kTeeterDeliberateInput
@@ -4101,6 +4139,7 @@ private:
 
         grounded_ = false;
         clear_recovery();
+        teetering_ = false;
         jump_vault_ticks_left_ = 0;
         support_entity_id_ = 0;
         support_sample_ = {};

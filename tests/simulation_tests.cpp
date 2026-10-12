@@ -4224,6 +4224,7 @@ void run_wheel() {
 // pulling back saves it where letting go does not. Running off on purpose is
 // not braked at all.
 void run_teeter() {
+    constexpr double kTeeterEntryMps = 6.0;
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
     using scraperx::sim::Snapshot;
@@ -4245,10 +4246,14 @@ void run_teeter() {
         bool fell;
         double stop_z;
         std::uint64_t teeters;
+        int over_tick;               // first tick off the deck after the release
+        double slowest_teeter_mps;   // lowest horizontal speed seen while teetering
+        bool restore_clears = false;  // a load taken mid-teeter publishes no teeter
     };
     // Back 6 m from the edge, run at it, and at `release` metres short of the
     // edge set the stick to `stick_z`.
-    const auto attempt = [&](const double release, const double stick_z, const bool sprint) {
+    const auto attempt = [&](const double release, const double stick_z, const bool sprint,
+                             const bool check_restore = false) {
         Simulation sim(InitialSpawn::Deck4South);
         require(sim.set_facing(0.0, -1.0) && sim.set_move_input(0.0, -1.0), "inputs must be accepted");
         require(advance_until(sim, [&](const Snapshot &s) { return s.player_position.z < edge_z - 7.0; }, 6.0),
@@ -4258,9 +4263,25 @@ void run_teeter() {
         require(advance_until(sim, [&](const Snapshot &s) { return s.player_position.z > edge_z - release; }, 6.0),
                 "the run must reach the release point");
         require(sim.set_move_input(0.0, stick_z) && sim.set_sprint_input(false), "inputs must be accepted");
-        Outcome out{false, 0.0, 0};
+        Outcome out{false, 0.0, 0, -1, 1.0e9};
         for (int i = 0; i < 270; ++i) {
             require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+            const auto now = sim.snapshot();
+            if (out.over_tick < 0 && !now.player_grounded && now.player_position.z > edge_z) {
+                out.over_tick = i;
+            }
+            if (now.player_teetering) {
+                out.slowest_teeter_mps = std::min(out.slowest_teeter_mps,
+                                                  std::hypot(now.player_linear_velocity.x, now.player_linear_velocity.z));
+            }
+            if (now.player_teetering && check_restore) {
+                // Loaded mid-teeter, the body comes back at rest on its
+                // checkpoint, not balancing at an edge.
+                const auto bytes = sim.save_game();
+                require(sim.load_game(bytes.data(), bytes.size()), "a mid-teeter save must load");
+                out.restore_clears = !sim.snapshot().player_teetering;
+                return out;
+            }
             // Pulling back only until the body has stopped.
             if (stick_z < 0.0 && sim.snapshot().player_linear_velocity.z <= 0.0) {
                 require(sim.set_move_input(0.0, 0.0), "inputs must be accepted");
@@ -4271,7 +4292,8 @@ void run_teeter() {
         out.teeters = sim.snapshot().teeter_count;
         if (std::getenv("SCRAPERX_TEETER_DETAIL") != nullptr) {
             std::cout << "  release=" << release << " stick=" << stick_z << " sprint=" << sprint
-                      << " fell=" << out.fell << " stop_z=" << out.stop_z << " teeters=" << out.teeters << '\n';
+                      << " fell=" << out.fell << " stop_z=" << out.stop_z << " teeters=" << out.teeters
+                      << " over_tick=" << out.over_tick << " slowest_teeter=" << out.slowest_teeter_mps << '\n';
         }
         return out;
     };
@@ -4288,6 +4310,16 @@ void run_teeter() {
     require(!sprint_far.fell && sprint_far.teeters == 0, "sprinting, let go further out, the body must stop");
     require(!run_let_go.fell && run_let_go.teeters == 0, "at a run, let go 2 m out, the body must stop");
     require(sprint_off.fell && sprint_off.teeters == 0, "running off on purpose must not be braked as a teeter");
+    // Past the XCoM no braking saves the body (pulling back, the stop needs
+    // v^2/2a > v/omega above 5.3 m/s): what pulling back buys is time.
+    require(sprint_pull.over_tick > sprint_let_go.over_tick,
+            "pulling back in a teeter must hold the body at the edge longer than letting go");
+    // Entered at a sprint, the teeter lasts below its entry speed: the
+    // ground's 22 m/s/s does not come back halfway.
+    require(sprint_pull.slowest_teeter_mps < kTeeterEntryMps - 0.2,
+            "a teeter entered at a sprint must persist below the entry speed");
+    require(attempt(2.0, 0.0, true, true).restore_clears,
+            "a climb loaded from a mid-teeter save must not come back teetering");
     std::cout << "PASS scraperx_sim teeter: edge_z=" << edge_z << " sprint_far_stop_z=" << sprint_far.stop_z
               << " run_stop_z=" << run_let_go.stop_z << '\n';
 }
@@ -4366,6 +4398,9 @@ void run_landing() {
             "a roll into an obstructed lane must be refused, not driven through it");
     require(stumble.at.landing_response == 4 && stumble.later.stumble_count == 1,
             "a fast landing across the facing must stumble");
+    require(stumble.at.landing_balance_loss > plain.at.landing_balance_loss &&
+                stumble.later.recovery_balance < plain.later.recovery_balance,
+            "a stumble must cost more balance, for longer, than the same landing facing the run");
     require(lethal.at.death_count == 1, "crouch and a run must not survive a lethal fall");
 
     // Control through recovery: forward input from the landing tick of the
@@ -4391,6 +4426,34 @@ void run_landing() {
     const double settled = speed_after(heavy, 22);
     require(recovering > 0.5 && recovering < 0.8 * settled,
             "a heavy landing must reduce traction, not remove control");
+
+    // A roll keeps the body low for its length, whatever crouch does.
+    {
+        Simulation sim(InitialSpawn::SurvivableDrop);
+        require(sim.set_facing(0.0, 1.0) && sim.set_move_input(0.0, 1.0) && sim.set_crouch_input(true),
+                "inputs must be accepted");
+        require(advance_until(sim, [](const Snapshot &s) { return s.landing_count >= 1; }, 6.0), "must land");
+        require(sim.snapshot().landing_response == 3, "the crouched forward drop must roll");
+        require(sim.set_crouch_input(false), "release must be accepted");
+        for (int i = 0; i < 18; ++i) {
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+        }
+        require(sim.snapshot().roll_progress > 0.0 && sim.snapshot().player_crouched,
+                "letting go of crouch mid-roll must not stand the body up");
+    }
+
+    // Debt is not forgiven by the next landing: a hop off a heavy landing
+    // lands light (absorbed) and still owes what the heavy one left.
+    {
+        Simulation sim(InitialSpawn::SurvivableDrop);
+        require(advance_until(sim, [](const Snapshot &s) { return s.landing_count >= 1; }, 6.0), "must land");
+        const double owed = sim.snapshot().recovery_balance;
+        require(advance_until(sim, [](const Snapshot &s) { return s.player_grounded; }, 1.0), "must stand");
+        require(sim.request_jump(), "jump must be accepted");
+        require(advance_until(sim, [](const Snapshot &s) { return s.landing_count >= 2; }, 3.0), "the hop must land");
+        require(sim.snapshot().landing_response == 1 && sim.snapshot().recovery_balance < owed + 0.1,
+                "a light landing must not wipe the debt a heavy one left");
+    }
 
     // A standing jump's landing is the legs' own: no debt.
     Simulation hop(InitialSpawn::SurvivableDrop);
