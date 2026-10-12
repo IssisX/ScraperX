@@ -1,0 +1,23 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+PASS AS-026 missed jump recovery and checkpoint restore
+PASS AS-026 launch shelf supported
+CATCH y=116.321 x=6.69097 qz=0.00432951
+TRACE t=0 qz=-0.0240904 x=5.9017 vy=0.068747 support=2960 y=116.511
+TRACE t=45 qz=-0.0501763 x=5.47886 vy=0.411286 support=2960 y=116.754
+TRACE t=90 qz=-0.0558856 x=5.37829 vy=0.429115 support=2960 y=117.082
+TRACE t=135 qz=-0.0373952 x=5.61234 vy=0.611745 support=2960 y=117.44
+TRACE t=180 qz=-0.00397415 x=5.99764 vy=1.02648 support=2960 y=117.718
+TRACE t=225 qz=0.0314445 x=6.40097 vy=0.770602 support=2960 y=118.092
+TRACE t=270 qz=0.0551373 x=6.65642 vy=1.30125 support=2960 y=118.356
+TRACE t=315 qz=0.0512296 x=6.61676 vy=1.17432 support=2960 y=118.72
+TRACE t=360 qz=0.024653 x=6.38327 vy=0.685532 support=2960 y=118.963
+TRACE t=405 qz=-0.0123362 x=6.07145 vy=0.928055 support=2960 y=119.324
+TRACE t=450 qz=-0.045192 x=5.79733 vy=0.393827 support=2960 y=119.608
+HAND_SAMPLES retained=926 transfers=14 max_chord=4.23282e-06
+PASS hand support-frame interpolation retained=926 regrips=14 maximum_chord_error_m=4.23282e-06 rendered_chord_distance_m=9.15068e-06
+FLIGHT x=5.68296 y=119.915 z=-180.756
+FLIGHT x=6.66409 y=120.624 z=-180.061
+FLIGHT x=7.98405 y=120.242 z=-179.42
+RECEIVER 9.3239,119.9,-178.769
+FINAL_GRIP state=4 xyz=9.0346,119.9,-178.456
+PASS AS-026 suspended_ladder support=11 walking_surface_m=121 deaths=0 swing_quaternion_span=0.0805204

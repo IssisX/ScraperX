@@ -1,0 +1,59 @@
+{
+  "head": "8f24847967c1529eb47db737d4500f6f6a0e7ce7",
+  "test_sha256": "32623fe896f334f8d880cdb7a3e87d4a116b7265e52fe61bd7945965b4f23419",
+  "native_archive_sha256": "7e0dbaa2d1b69ef248505d507f2d22c664f1951d177bf3db8790a61b2d1d782a",
+  "steps": [
+    {
+      "name": "compile",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/suspended_ladder_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-completion-repair/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/suspended-ladder-ci-diagnosis/shipping-exact"
+      ],
+      "exit_code": 0,
+      "seconds": 8.293093382846564,
+      "log_sha256": "2468a15d060a42b57aae87196848fc768e443299cb99c87de1c94f3436a976c6"
+    },
+    {
+      "name": "full-test",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/suspended-ladder-ci-diagnosis/shipping-exact"
+      ],
+      "exit_code": 0,
+      "seconds": 29.28964519686997,
+      "log_sha256": "7c779529c5530c2056b7130077d6baa99959a27e4dd5391df584b6998cc082bc"
+    }
+  ],
+  "failure_run": 38299333563,
+  "cause": "Original glancing jump hits outer rail before intended rung; clearance-only probe lacks required catch intent. Correct ordinary approach and facing preserve all assertions.",
+  "production_simulation_sha256": "8424cedd10cd0322c274f9526e46b0df9c06367512835ff8bfadea5795e731c2"
+}

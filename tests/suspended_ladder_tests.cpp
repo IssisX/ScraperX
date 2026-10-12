@@ -61,7 +61,8 @@ void catch_ladder(Simulation &s) {
     walk(s,10,-179.55);
     climb(s,114.7);
     walk(s,9.3,-180.25);
-    (void)s.set_facing(0,-1); (void)s.set_move_input(-1,-0.35); (void)s.request_jump();
+    // Clear the outer rail and aim toward the rung while retaining deliberate catch intent.
+    (void)s.set_facing(-0.20,-1); (void)s.set_move_input(-1,-0.20); (void)s.request_jump();
     for(int i=0;i<135;++i) {
         tick(s);
         if(s.snapshot().traversal_state==TraversalState::Climbing && s.snapshot().traversal_support_entity_id==2960) return;
