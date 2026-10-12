@@ -1,0 +1,17 @@
+FALLBACK OCCLUSION live_center position=11.215,0.9,-88.4 grounded=1 door_angle=0.0352769 grip_available=1 grip_entity=55 grip_point=11.215,0.999995,-87.5999 bar_position=10.5249,0.999983,-87.6
+FALLBACK OCCLUSION nominal_geometry door_edge_x=11.19 jamb_start_x=11.25 hand_origins=11.415,1.35,-88.4;11.015,1.55,-88.4
+THIN EDGE phase=per_hand_fallback_after_Action tick=47 position=11.215,0.9,-88.4 velocity=0,0,0 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+FALLBACK OCCLUSION actual_hand_points=0,0,0;0,0,0
+PASS FALLBACK OCCLUSION live_center_seed55=1 per_hand_refusal=1 one_Action=1
+DYNAMIC GRIP CLOSED DOOR position=10.525,0.9,-88.4 door_angle=0.0352769 bar_position=10.5249,0.999983,-87.6 bar_rotation=0.000172738,-6.06317e-05,8.7173e-06,1 query_delta_yz=-0.350017,0.399995 grip_available=0 grip_entity=0
+THIN EDGE phase=closed_door_after_Action tick=56 position=10.525,0.9,-88.3434 velocity=0,0,0.9265 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+PASS DYNAMIC GRIP closed_door_occlusion=1 explicit_Action=1 target=55
+DYNAMIC GRIP LEVER initial_position=4,46.5,-114 rotation=0,0,0,1 mass_kg=40 parts=2
+DYNAMIC GRIP PART index=0 half=0.75,0.05,0.05 offset=-0.75,0,0
+DYNAMIC GRIP PART index=1 half=0.17,0.3,0.17 offset=0.35,0,0
+THIN EDGE phase=dynamic_lever_approach tick=1 position=3,45.7988,-113.302 velocity=-2.26434e-18,-0.103569,-0.146532 state=4 support=2702 hands=2 grounded=0 gravity=1 radial=0
+DYNAMIC GRIP affordance=0 entity=0
+THIN EDGE phase=dynamic_lever_acquisition_end tick=1 position=3,45.7988,-113.302 velocity=-2.26434e-18,-0.103569,-0.146532 state=4 support=2702 hands=2 grounded=0 gravity=1 radial=0
+DYNAMIC GRIP REACTION position_delta_m=0.000119501 velocity_delta_mps=0.447626 angle_delta_rad=0.397452 mean_upward_load_N=176.765
+THIN EDGE phase=dynamic_lever_Drop tick=32 position=3.0109,45.2615,-113.436 velocity=0.116311,-2.78937,-0.693976 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+PASS DYNAMIC GRIP ordinary_40kg_hold=1 actual_radial_load=1 reciprocal_support_response=1 real_Drop=1

@@ -257,12 +257,10 @@ constexpr double kSprintSpeedScale = 8.0 / 5.5;
 constexpr double kSprintMinimumInput = 0.7;
 constexpr double kSprintMaximumAngleCos = 0.7071;
 // A hold: a member a hand can close round -- its two thinner dimensions at
-// most kGripMaxSection, its length at least kGripMinLength -- on a static
-// body, or on a moving one heavy enough to carry a climber (a 3 kg handle is
-// not a hold).
+// most kGripMaxSection, its length at least kGripMinLength. The real body's
+// mass, contacts and joints respond to the finite reciprocal hand forces.
 constexpr float kGripMaxSection = 0.18F;
 constexpr float kGripMinLength = 0.25F;
-constexpr float kGripMinBodyMassKg = 400.0F;
 // Where a hand looks for a hold: a box this big (across, up, along the
 // facing) round the point it aims at.
 const JPH::Vec3 kGripSearchHalf(0.30F, 0.30F, 0.35F);
@@ -1769,6 +1767,7 @@ struct LedgeProbe final {
 struct Grip final {
     bool valid = false;
     JPH::BodyID body;
+    JPH::SubShapeID sub_shape;
     std::uint64_t entity_id = 0;
     JPH::RVec3 point{JPH::RVec3::sZero()};
 };
@@ -6793,11 +6792,49 @@ private:
         return JPH::Vec3(-traversal_normal_.GetZ(), 0.0F, traversal_normal_.GetX());
     }
 
+    [[nodiscard]] bool rigid_grip_approach_visible(const JPH::RVec3 centre,
+                                                   const JPH::RVec3 aim,
+                                                   const JPH::Vec3 facing,
+                                                   const Grip &grip) const noexcept {
+        if (!grip.valid || facing.IsNearZero()) return false;
+        // Grip visibility ignores only the player and non-solid sensors.
+        // Soft bodies and carried objects remain physical occluders.
+        class SolidApproachFilter final : public JPH::IgnoreSingleBodyFilter {
+        public:
+            explicit SolidApproachFilter(const JPH::BodyID player)
+                : JPH::IgnoreSingleBodyFilter(player) {}
+            bool ShouldCollideLocked(const JPH::Body &body) const override {
+                return !body.IsSensor();
+            }
+        };
+        const SolidApproachFilter approach_filter(player_id_);
+        const JPH::Quat rotation =
+            JPH::Quat::sRotation(JPH::Vec3::sAxisY(), std::atan2(facing.GetX(), facing.GetZ()));
+        // Keep the requested hand height/lateral offset, but anchor it to
+        // actual COM. A planned regrip centre cannot move the ray past a wall.
+        const JPH::Vec3 aim_offset = rotation.Conjugated() * JPH::Vec3(aim - centre);
+        const JPH::RVec3 approach_from =
+            physics_system_.GetBodyInterface().GetCenterOfMassPosition(player_id_) +
+            rotation * JPH::Vec3(aim_offset.GetX(), aim_offset.GetY(), 0.0F);
+        const JPH::Vec3 approach(grip.point - approach_from);
+        const float approach_length = approach.Length();
+        if (!std::isfinite(approach_length) || approach_length <= 0.0F) return false;
+        JPH::RayCastResult first;
+        // Extend only the query so a surface endpoint is reported. The
+        // chosen grip and existing reach/search bounds stay unchanged.
+        const JPH::RRayCast ray(approach_from,
+            approach + approach * (kLandingSkin / approach_length));
+        return physics_system_.GetNarrowPhaseQuery().CastRay(ray, first, {}, {}, approach_filter) &&
+            first.mFraction > 0.0F && first.mBodyID == grip.body &&
+            first.mSubShapeID2 == grip.sub_shape;
+    }
+
     // The hold nearest `aim` that a hand in front of `centre` can close
     // round: a box whose two thinner dimensions are at most kGripMaxSection
-    // and whose length is at least kGripMinLength, on a static body or one of
-    // at least kGripMinBodyMassKg, searched in a kGripSearchHalf box round
-    // `aim` squared to `facing`. The point is on the member's axis.
+    // and whose length is at least kGripMinLength, searched in a
+    // kGripSearchHalf box round `aim` squared to `facing`. A rigid hold must
+    // have an unobstructed approach to its actual leaf from the real player.
+    // The point is on the member's axis (or a supported timber cell's edge).
     [[nodiscard]] Grip find_grip(const JPH::RVec3 centre, const JPH::RVec3 aim,
                                  const JPH::Vec3 facing, JPH::BodyID excluded = {}) const noexcept {
         Grip best;
@@ -6829,14 +6866,7 @@ private:
             const bool owned_plank = deformable_plank_ &&
                 deformable_plank_->logical_member_for_body(body.GetID()) == kDeformablePlankMemberEntity &&
                 deformable_plank_->fragment_supported(body.GetID());
-            // Mounted facade members remain usable holds even when their real
-            // sheet/tube mass is below the loose-handle exclusion threshold.
-            // Their native joints, not extra ballast, carry the player's load.
-            if (body.IsSensor() ||
-                (body.IsDynamic() && !is_facade_route_entity(body.GetUserData()) &&
-                 !is_parkour_swing_entity(body.GetUserData()) &&
-                 !owned_plank &&
-                 body.GetMotionProperties()->GetInverseMass() * kGripMinBodyMassKg > 1.0F)) {
+            if (!body.IsRigidBody() || body.IsSensor()) {
                 continue;
             }
             LeafBox box;
@@ -6847,9 +6877,9 @@ private:
             if (!owned_plank && !box_is_hold(box, long_axis)) {
                 continue;
             }
-            // Only the actual mounted timber cells get an edge grip. Loose
-            // small boxes retain the existing handle/mass exclusions. The
-            // point is on the transformed top edge, not the cell's centre.
+            // Only the actual mounted timber cells get an edge grip. Other
+            // boxes retain the section/length requirements. The point is on
+            // the transformed top edge, not the cell's centre.
             if (owned_plank && (std::abs(box.half[0] - .1F) > .001F ||
                 std::abs(box.half[1] - .019F) > .001F ||
                 std::abs(box.half[2] - .095F) > .001F)) continue;
@@ -6872,13 +6902,17 @@ private:
             if (JPH::Vec3(point - centre).Dot(facing) < 0.5F * kPlayerRadius) {
                 continue;
             }
+            Grip candidate;
+            candidate.valid = true;
+            candidate.body = hit.mBodyID2;
+            candidate.sub_shape = hit.mSubShapeID2;
+            candidate.entity_id = body.GetUserData();
+            candidate.point = point;
+            if (!rigid_grip_approach_visible(centre, aim, facing, candidate)) continue;
             const float distance = JPH::Vec3(point - aim).Length();
             if (distance < best_distance) {
                 best_distance = distance;
-                best.valid = true;
-                best.body = hit.mBodyID2;
-                best.entity_id = body.GetUserData();
-                best.point = point;
+                best = candidate;
             }
         }
         return best;
@@ -6927,15 +6961,22 @@ private:
     }
 
     // Both hands onto the holds nearest their rest aims, left a little lower
-    // than right; a hand that finds none takes the hold the climb began on.
+    // than right; a hand that finds none may share the initial hold if its
+    // own approach is visible (material grips retain their owned adapter).
     void take_hand_holds(const JPH::BodyInterface &bodies, const JPH::RVec3 centre,
                          const Grip &fallback) noexcept {
         for (std::uint32_t hand = 0; hand < 2; ++hand) {
             const float side = hand == 0 ? -1.0F : 1.0F;
             const float height = hand == 0 ? kClimbHandMid : kClimbHandMid + 0.2F;
-            const Grip grip =
-                find_grip(centre, hand_aim(centre, height, kClimbHandSpan * side), traversal_normal_);
-            set_hand(bodies, hand, grip.valid && grip_matches_climb_backend(grip) ? grip : fallback);
+            const JPH::RVec3 aim = hand_aim(centre, height, kClimbHandSpan * side);
+            const Grip grip = find_grip(centre, aim, traversal_normal_);
+            if (grip.valid && grip_matches_climb_backend(grip)) {
+                set_hand(bodies, hand, grip);
+            } else if (fallback.valid && grip_matches_climb_backend(fallback) &&
+                       ((cargo_net_ && fallback.body == cargo_net_->body()) ||
+                        rigid_grip_approach_visible(centre, aim, traversal_normal_, fallback))) {
+                set_hand(bodies, hand, fallback);
+            }
         }
         regrip_cooldown_ticks_ = 0;
     }
@@ -7004,7 +7045,9 @@ private:
         traversal_desired_ = hold;
         bodies.SetGravityFactor(player_id_, 1.0F);
         take_hand_holds(bodies, hold, grip);
-        if (!physical_hands_->active()) {
+        // This controller reads both anchors. A blocked hand cannot be
+        // replaced by stale coordinates or an unvalidated second attachment.
+        if (!physical_hands_->compatible_hands()) {
             clear_traversal();
             ++rejected_traversal_count_;
             return;

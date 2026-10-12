@@ -1,0 +1,20 @@
+DYNAMIC GRIP CLOSED DOOR position=10.525,0.9,-88.4 door_angle=0.0352769 bar_position=10.5249,0.999983,-87.6 bar_rotation=0.000172738,-6.06317e-05,8.7173e-06,1 query_delta_yz=-0.350017,0.399995 grip_available=0 grip_entity=0
+THIN EDGE phase=closed_door_after_Action tick=56 position=10.525,0.9,-88.3434 velocity=0,0,0.9265 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+PASS DYNAMIC GRIP closed_door_occlusion=1 explicit_Action=1 target=55
+DYNAMIC GRIP LEVER initial_position=4,46.5,-114 rotation=0,0,0,1 mass_kg=40 parts=2
+DYNAMIC GRIP PART index=0 half=0.75,0.05,0.05 offset=-0.75,0,0
+DYNAMIC GRIP PART index=1 half=0.17,0.3,0.17 offset=0.35,0,0
+THIN EDGE phase=dynamic_lever_approach tick=1 position=3,45.7988,-113.302 velocity=0,-0.109,-0.155556 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+DYNAMIC GRIP affordance=0 entity=0
+THIN EDGE phase=dynamic_lever_approach tick=6 position=3,45.7746,-113.336 velocity=0,-0.654,-0.933333 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+DYNAMIC GRIP affordance=0 entity=0
+THIN EDGE phase=dynamic_lever_approach tick=11 position=3,45.7201,-113.414 velocity=0,-1.199,-1.71111 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+DYNAMIC GRIP affordance=0 entity=0
+THIN EDGE phase=dynamic_lever_approach tick=16 position=3,45.6353,-113.52 velocity=0,-1.744,-1.925 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+DYNAMIC GRIP affordance=0 entity=0
+THIN EDGE phase=dynamic_lever_approach tick=21 position=3,45.5202,-113.627 velocity=0,-2.289,-1.925 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+DYNAMIC GRIP affordance=0 entity=0
+THIN EDGE phase=dynamic_lever_approach tick=26 position=3,45.3749,-113.734 velocity=0,-2.834,-1.925 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+DYNAMIC GRIP affordance=0 entity=0
+THIN EDGE phase=dynamic_lever_acquisition_end tick=30 position=3,45.2368,-113.82 velocity=0,-3.27,-1.925 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+FAIL SUPPLIED_ROUTE ordinary airborne approach catches actual40kg lever2702 with two hands pos=3,45.2368,-113.82 support=0 station=0 deck=0 energy=0

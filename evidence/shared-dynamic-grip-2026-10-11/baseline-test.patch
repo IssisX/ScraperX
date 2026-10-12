@@ -1,0 +1,79 @@
+--- a/tests/supplied_machine_route_tests.cpp
++++ b/tests/supplied_machine_route_tests.cpp
+@@ -726,8 +726,75 @@
+  require(caught&&elapsed<90,"single ordinary rising Jump catches within bounded flight",s);
+  std::cout<<"PASS RISING LEDGE first_catch_rising=1 actual_two_hands=1 finite_human_reach=1 one_Jump=1 initial_staging_only=1\n";
+ }
++void closed_door_grip_refusal(){
++ Simulation s(scraperx::sim::InitialSpawn::IntakePendant,scraperx::sim::WorldContent::RegressionFixtures);
++ require(s.debug_restart_at({10.525,.90,-88.4}),"initial existing closed-door stance only",s);tick(s,45);
++ require(s.set_facing(0,1)&&s.set_crouch_input(false),"closed-door ordinary facing",s);tick(s);
++ const auto before=s.snapshot();const auto bar=before.hook5_bar_position;
++ const double query_dy=bar.y-(before.player_position.y+.45),query_dz=bar.z-(before.player_position.z+.40);
++ std::cout<<"DYNAMIC GRIP CLOSED DOOR position="<<before.player_position.x<<','<<before.player_position.y<<','<<before.player_position.z
++  <<" door_angle="<<before.hook5_door_angle_radians<<" bar_position="<<bar.x<<','<<bar.y<<','<<bar.z
++  <<" bar_rotation="<<before.hook5_bar_rotation.x<<','<<before.hook5_bar_rotation.y<<','<<before.hook5_bar_rotation.z<<','<<before.hook5_bar_rotation.w
++  <<" query_delta_yz="<<query_dy<<','<<query_dz<<" grip_available="<<before.grip_available<<" grip_entity="<<before.grip_entity_id<<'\n';
++ require(before.player_grounded&&std::abs(before.hook5_door_angle_radians)<.05&&
++  std::abs(bar.x-before.player_position.x)<=.30+1.025&&std::abs(query_dy)<=.30+.09+.01&&
++  std::abs(query_dz)<=.35+.09+.01,"closed door physically occludes bar inside actual search volume",s);
++ require(!(before.grip_available&&before.grip_entity_id==Simulation::kHook5BarEntityId),
++  "closed-door bar is not an accessible grip affordance",s);
++ require(s.set_move_input(0,.35)&&s.request_traversal(),"one ordinary Action explicitly queries closed-door hold",s);
++ for(int i=0;i<10;++i){tick(s);const auto v=s.snapshot();
++  require(std::abs(v.hook5_door_angle_radians)<.05&&
++   !(v.grip_available&&v.grip_entity_id==Simulation::kHook5BarEntityId)&&
++   !(v.traversal_support_entity_id==Simulation::kHook5BarEntityId&&v.traversal_hand_constraint_count>0),
++   "ordinary Action cannot acquire physically occluded bar55",s);}
++ log_thin_edge("closed_door_after_Action",s);
++ std::cout<<"PASS DYNAMIC GRIP closed_door_occlusion=1 explicit_Action=1 target=55\n";
++}
++void parkour_dynamic_grip(){closed_door_grip_refusal();
++ Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade,scraperx::sim::WorldContent::PipeBridge);
++ Simulation control(scraperx::sim::InitialSpawn::ExteriorGrade,scraperx::sim::WorldContent::PipeBridge);
++ for(auto *sim:{&s,&control})require(sim->debug_restart_at({3,45.8,-113.3})&&sim->set_facing(0,-1)&&
++  sim->set_crouch_input(false),"initial existing40kg lever approach only",*sim);
++ const auto lever=s.kit_body_index(2702),control_lever=control.kit_body_index(2702);
++ require(lever!=Simulation::kKitNone&&control_lever!=Simulation::kKitNone&&
++  std::abs(s.kit_body_mass(lever)-40)<.0001,"actual existing dynamic lever mass40kg",s);
++ const auto initial=s.kit_body_position(lever);const auto rotation=s.kit_body_rotation(lever);
++ std::cout<<"DYNAMIC GRIP LEVER initial_position="<<initial.x<<','<<initial.y<<','<<initial.z
++  <<" rotation="<<rotation.x<<','<<rotation.y<<','<<rotation.z<<','<<rotation.w
++  <<" mass_kg="<<s.kit_body_mass(lever)<<" parts="<<s.kit_body_part_count(lever)<<'\n';
++ for(unsigned j=0;j<s.kit_body_part_count(lever);++j){const auto part=s.kit_body_part(lever,j);
++  std::cout<<"DYNAMIC GRIP PART index="<<j<<" half="<<part.half.x<<','<<part.half.y<<','<<part.half.z
++   <<" offset="<<part.offset.x<<','<<part.offset.y<<','<<part.offset.z<<'\n';}
++ require(s.set_move_input(0,-.35)&&control.set_move_input(0,0),"ordinary airborne lever approach and matched neutral control",s);
++ bool caught=false;int elapsed=0;
++ for(;elapsed<30;++elapsed){tick(s);tick(control);const auto v=s.snapshot();
++  if(elapsed%5==0){log_thin_edge("dynamic_lever_approach",s);std::cout<<"DYNAMIC GRIP affordance="<<v.grip_available<<" entity="<<v.grip_entity_id<<'\n';}
++  if((v.traversal_state==scraperx::sim::TraversalState::Climbing||v.traversal_state==scraperx::sim::TraversalState::Hanging)&&
++   v.traversal_support_entity_id==2702&&v.traversal_hand_constraint_count==2&&v.player_gravity_factor==1&&!v.player_grounded){caught=true;break;}}
++ log_thin_edge("dynamic_lever_acquisition_end",s);
++ require(caught,"ordinary airborne approach catches actual40kg lever2702 with two hands",s);
++ require(s.set_move_input(0,0),"neutral actual dynamic hold",s);double upward=0;
++ for(int j=0;j<30;++j){tuck_tick(s,false,0,2702,false);tick(control);const auto v=s.snapshot();upward+=v.traversal_left_hand_force.y+v.traversal_right_hand_force.y;
++  for(const auto hand:{v.traversal_left_hand,v.traversal_right_hand})require(vector_length({hand.x-v.player_position.x,hand.y-v.player_position.y,hand.z-v.player_position.z})<=1.75001,
++   "actual dynamic grips remain within unchanged human reach",s);}
++ const auto a=s.kit_body_position(lever),b=control.kit_body_position(control_lever),av=s.kit_body_velocity(lever),bv=control.kit_body_velocity(control_lever);
++ const auto aq=s.kit_body_rotation(lever),bq=control.kit_body_rotation(control_lever);
++ const double position_delta=vector_length({a.x-b.x,a.y-b.y,a.z-b.z}),velocity_delta=vector_length({av.x-bv.x,av.y-bv.y,av.z-bv.z});
++ const double angle_delta=2*std::acos(std::clamp(std::abs(aq.x*bq.x+aq.y*bq.y+aq.z*bq.z+aq.w*bq.w),0.,1.));
++ std::cout<<"DYNAMIC GRIP REACTION position_delta_m="<<position_delta<<" velocity_delta_mps="<<velocity_delta
++  <<" angle_delta_rad="<<angle_delta<<" mean_upward_load_N="<<upward/30<<'\n';
++ require(upward/30>100&&std::max({position_delta,velocity_delta,angle_delta})>.0001,
++  "finite actual hands load and react on real40kg lever versus matched control",s);
++ const auto before=s.snapshot();require(s.request_release(),"ordinary dynamic hold Drop",s);tick(s);const auto after=s.snapshot();
++ log_thin_edge("dynamic_lever_Drop",s);
++ require(after.traversal_hand_constraint_count==0&&!after.hanging_free_arc_active&&after.player_gravity_factor==1&&
++  std::abs(after.player_linear_velocity.x-before.player_linear_velocity.x)<.05&&std::abs(after.player_linear_velocity.z-before.player_linear_velocity.z)<.05&&
++  std::abs(after.player_linear_velocity.y-before.player_linear_velocity.y+9.81/90.)<.05,
++  "dynamic grip Drop preserves actual departure momentum",s);tuck_readback_absent(s);
++ std::cout<<"PASS DYNAMIC GRIP ordinary_40kg_hold=1 actual_radial_load=1 reciprocal_support_response=1 real_Drop=1\n";
++}
+ void parkour_ledge_hang(){
+  regular_hang_posture(scraperx::sim::InitialSpawn::HangApproach,Simulation::kHangLedgeEntityId);
+  regular_hang_posture(scraperx::sim::InitialSpawn::MovingLedgeApproach,Simulation::kMovingLedgeEntityId);
+ }
+-int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="balance")balance();else if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else if(std::string(argv[1])=="parkour_tuck")parkour_tuck();else if(std::string(argv[1])=="parkour_climb_posture")parkour_climb_posture();else if(std::string(argv[1])=="parkour_free_arc")parkour_free_arc();else if(std::string(argv[1])=="parkour_free_arc_small_lean")parkour_free_arc_small_lean();else if(std::string(argv[1])=="parkour_thin_edge")parkour_thin_edge();else if(std::string(argv[1])=="parkour_ledge_hang")parkour_ledge_hang();else if(std::string(argv[1])=="parkour_rising_ledge")parkour_rising_ledge();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}
++int main(int argc,char**argv){if(argc>1){if(std::string(argv[1])=="balance")balance();else if(std::string(argv[1])=="tram")tram();else if(std::string(argv[1])=="helix")helix();else if(std::string(argv[1])=="cascade")cascade();else if(std::string(argv[1])=="pitman")pitman();else if(std::string(argv[1])=="parkour")parkour();else if(std::string(argv[1])=="parkour_tuck")parkour_tuck();else if(std::string(argv[1])=="parkour_climb_posture")parkour_climb_posture();else if(std::string(argv[1])=="parkour_free_arc")parkour_free_arc();else if(std::string(argv[1])=="parkour_free_arc_small_lean")parkour_free_arc_small_lean();else if(std::string(argv[1])=="parkour_thin_edge")parkour_thin_edge();else if(std::string(argv[1])=="parkour_ledge_hang")parkour_ledge_hang();else if(std::string(argv[1])=="parkour_rising_ledge")parkour_rising_ledge();else if(std::string(argv[1])=="parkour_dynamic_grip")parkour_dynamic_grip();else return 2;}else{balance();crown();tram();helix();cascade();pitman();}}

@@ -158,3 +158,22 @@ continually turn the physical load. Its actual receiving support/contact/held
 load, settled position/speed and12s budget remain unchanged. Shipping carry
 physics still responds to deliberate heading changes. General mass/shape
 acquisition policy and phone feel remain open; no fullGREEN APK claim is made.
+
+
+## Lightweight dynamic rigid grips (verified bounded integration)
+
+Rigid grip discovery uses actual hold geometry and unobstructed approach rather
+than a400kg mass threshold or encounter identity exceptions. Real mass, inertia,
+joints and contacts govern the support response. Each actual rigid hand,
+including a paired fallback, must have its own clear approach from the actual
+player COM plus hand offset to the target body's leaf shape. Sensors/player are
+ignored; real soft bodies and carried objects still occlude rigid approaches.
+The existing paired controller rejects incomplete initial hand pairs.
+
+[Source-bound evidence](../evidence/shared-dynamic-grip-2026-10-11/README.md)
+records old-source missed40kg hinged-arm acquisition, obstructed-fallback RED,
+actual paired loading/support response/Drop GREEN, maintained simulation and
+exact-bridge headless touch passes. Generalized one-hand control, material-net
+approach visibility and universal shape eligibility remain open. The existing
+plank passive hang fails identically on saved and new source; repairing that
+coupling is the next bounded goal, with no plank completion claim here.

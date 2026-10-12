@@ -1,0 +1,5 @@
+FALLBACK OCCLUSION live_center position=11.215,0.9,-88.4 grounded=1 door_angle=0.0352769 grip_available=1 grip_entity=55 grip_point=11.215,0.999995,-87.5999 bar_position=10.5249,0.999983,-87.6
+FALLBACK OCCLUSION nominal_geometry door_edge_x=11.19 jamb_start_x=11.25 hand_origins=11.415,1.35,-88.4;11.015,1.55,-88.4
+THIN EDGE phase=per_hand_fallback_after_Action tick=47 position=11.215,0.9,-88.4 velocity=1.46549e-09,3.62187e-09,-1.79386e-08 state=4 support=55 hands=2 grounded=1 gravity=1 radial=0
+FALLBACK OCCLUSION actual_hand_points=11.215,0.999995,-87.5999;11.215,0.999995,-87.5999
+FAIL SUPPLIED_ROUTE occluded per-hand approaches cannot blindly reuse visible center bar seed pos=11.215,0.9,-88.4 support=1 station=0 deck=0 energy=0
