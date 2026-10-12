@@ -4474,6 +4474,27 @@ void run_landing() {
                 "a light landing must not wipe the debt a heavy one left");
     }
 
+    // Phase 2: neutral air input keeps momentum. A running jump on the open
+    // yard, the stick let go on the takeoff tick: at the apex the body still
+    // carries its run (the old air control braked it to rest within 0.4 s).
+    {
+        Simulation sim(InitialSpawn::ExteriorGrade);
+        require(sim.advance_frame(0.5).accepted, "settle must be accepted");
+        require(sim.set_facing(0.0, -1.0) && sim.set_move_input(0.0, -1.0), "inputs must be accepted");
+        require(sim.advance_frame(1.0).accepted, "the run must be accepted");
+        const auto run = sim.snapshot();
+        require(run.player_grounded, "the run must be on the ground");
+        require(sim.request_jump(), "jump must be accepted");
+        require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "takeoff must advance");
+        require(sim.set_move_input(0.0, 0.0), "release must be accepted");
+        const double takeoff = std::hypot(sim.snapshot().player_linear_velocity.x, sim.snapshot().player_linear_velocity.z);
+        require(advance_until(sim, [](const Snapshot &s) { return s.player_linear_velocity.y <= 0.0; }, 1.0),
+                "the jump must reach its apex");
+        const double apex = std::hypot(sim.snapshot().player_linear_velocity.x, sim.snapshot().player_linear_velocity.z);
+        require(takeoff > 5.0 && apex > 0.95 * takeoff, "a jump with the stick let go must keep its run");
+        std::cout << "  air: takeoff_mps=" << takeoff << " apex_mps=" << apex << '\n';
+    }
+
     // A standing jump's landing is the legs' own: no debt.
     Simulation hop(InitialSpawn::SurvivableDrop);
     require(advance_until(hop, [](const Snapshot &s) { return s.landing_count >= 1; }, 6.0), "must land");
