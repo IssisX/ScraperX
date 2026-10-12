@@ -8,6 +8,11 @@ config_version=5
 config/name="ScraperX-Claude"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+; The launcher icon (presentation/brand, drawn by tools/generate_icon.gd) and
+; a plain boot splash in the game's ink: no engine logo before the title.
+config/icon="res://presentation/brand/icon.png"
+boot_splash/show_image=false
+boot_splash/bg_color=Color(0.055, 0.051, 0.047, 1)
 
 [display]
 

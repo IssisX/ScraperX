@@ -91,7 +91,11 @@ Each item is one complete, verifiable unit, proven through the touch path on the
      pause menu's LICENCES page carries Godot's licence and every component and licence the engine
      reports at runtime, Jolt's and godot-cpp's MIT texts verbatim at the pinned commits, and the
      fall voice's provenance. Credits (who made the game) wait on the owner.
-   - The icon and splash.
+   - The icon and splash. *Done 2026-10-09, as a placeholder the owner can replace:* the APK no longer
+     ships Godot's default (trademarked) launcher icon or the engine logo at boot. The icon is a
+     tapering lattice tower in the HUD's amber on ink, no text (so it does not depend on D1), drawn
+     deterministically by `godot/tools/generate_icon.gd` (excluded from the export); the boot splash
+     is plain ink.
 8. **Device baseline** (M, needs the owner's Fold).
    - The release build gets an in-game performance log the owner can share from the phone.
    - It covers the inner and cover screens, a 60-minute soak, folding mid-ride and a background
