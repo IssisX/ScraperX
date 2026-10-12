@@ -2971,13 +2971,21 @@ private:
         } else {
             teetering_ = false;
             clear_support_jolt();
-            approach_relative_horizontal_velocity(player_velocity,
-                                                  reference_velocity,
-                                                  move_x,
-                                                  move_z,
-                                                  kAirAcceleration,
-                                                  delta_seconds,
-                                                  air_full_speed_);
+            // In the air the stick pushes the body in its own direction with
+            // at most kAirAcceleration; let go, nothing acts but gravity and
+            // drag, so a committed arc keeps its momentum. The push may turn
+            // the velocity or brake it, but not add speed past what the body
+            // left the ground with (air_full_speed_) or already has.
+            const JPH::Vec3 relative = player_velocity - reference_velocity;
+            const JPH::Vec3 horizontal(relative.GetX(), 0.0F, relative.GetZ());
+            JPH::Vec3 next = horizontal + JPH::Vec3(static_cast<float>(move_x), 0.0F, static_cast<float>(move_z)) *
+                                              (kAirAcceleration * delta_seconds);
+            const float cap = std::max(air_full_speed_, horizontal.Length());
+            if (next.Length() > cap) {
+                next = next.Normalized() * cap;
+            }
+            player_velocity.SetX(reference_velocity.GetX() + next.GetX());
+            player_velocity.SetZ(reference_velocity.GetZ() + next.GetZ());
         }
 
         // Crouched here means there was no room to stand, so no room to jump.
