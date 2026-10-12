@@ -341,6 +341,240 @@ func _sample(kit: Node3D, native: Object) -> void:
 		"net presentation is read-only")
 
 
+# Native construction in simulation.cpp appends only these normal-world bodies:
+# west brace, inspection frame/seats/recovery/hanger, twelve physical timber
+# cells, north transfer and pipe service. 1962 is logical metadata, not a body.
+const UPPER_BODIES := ["KitBody1934", "KitBody1935", "KitBody1936", "KitBody1937", "KitBody1938", "KitBody1939", "KitBody2880", "KitBody2881", "KitBody2882", "KitBody2883", "KitBody2884", "KitBody2885", "KitBody2886", "KitBody2887", "KitBody2888", "KitBody2889", "KitBody2890", "KitBody2891", "KitBody2935"]
+
+
+func _check_upper_inventory(names: Array[String]) -> void:
+	var sorted := names.duplicate()
+	sorted.sort()
+	_check(sorted == UPPER_BODIES, "all nineteen appended upper bodies render exactly once")
+
+
+func _check_mesh_children(node: Node3D, context: String) -> void:
+	# Batched vertices already contain each native part's local transform.
+	# Numeric mesh records alone cannot reject a displaced or hidden draw node.
+	for child in node.get_children():
+		if child is MeshInstance3D:
+			_check(child.transform.is_equal_approx(Transform3D.IDENTITY),
+				context + " mesh child retains identity transform")
+			_check(child.visible and child.is_visible_in_tree(),
+				context + " mesh child visible in tree")
+
+
+func _upper_finish(entity: int, index: int, half: Vector3, local: Transform3D) -> Array:
+	# Independent presentation contract, keyed by the real native material
+	# and physical function. Never call KitView's finish/mesh builders here.
+	const PALETTE := {
+		0: ["687174ff", 0.35, 0.78, false], 1: ["86472dff", 0.12, 0.92, false],
+		2: ["4a3420ff", 0.02, 0.9, true], 3: ["4e4841ff", 0.0, 0.94, true],
+		4: ["a04d16ff", 0.18, 0.76, false], 5: ["879394ff", 0.45, 0.68, false],
+		6: ["5b544bff", 0.0, 0.98, true], 7: ["c19a2aff", 0.2, 0.62, false]}
+	const FINISHES := {
+		"frame": ["3f555cff", 0.12, 0.86, false], "oxide": ["89664bff", 0.0, 0.93, false],
+		"footing": ["b2beb9ff", 1.0, 0.68, true], "recovery": ["7e948fff", 1.0, 0.80, true],
+		"return": ["9caeaaff", 0.12, 0.81, false], "grip": ["b1bcb6ff", 0.0, 0.62, false],
+		"bearing": ["829390ff", 1.0, 0.48, false], "warning": ["cba347ff", 0.0, 0.76, false],
+		"transfer_frame": ["526572ff", 0.08, 0.87, false], "transfer_footing": ["c3c0adff", 0.12, 0.72, true],
+		"service_frame": ["69746cff", 0.08, 0.83, false], "service_pipe": ["a17b59ff", 0.0, 0.88, false],
+		"service_footing": ["afb6afff", 0.12, 0.72, true]}
+	var key := ""
+	if entity == 2935 or entity == 1937:
+		key = "grip" if index == 0 else ("warning" if index == 7 else "bearing")
+	elif entity == 1939:
+		key = {0: "service_frame", 1: "service_pipe", 5: "service_footing", 7: "warning"}.get(index, "")
+	elif entity == 1938:
+		key = {0: "transfer_frame", 1: "oxide", 5: "transfer_footing", 7: "warning"}.get(index, "")
+		if index in [0, 5] and half.x < 0.08 and half.y < 0.08:
+			key = "grip"
+		elif index == 0 and half.x > 1.5 and half.y < 0.17 and half.z > 0.6:
+			key = "warning"
+	elif entity in [1935, 1936]:
+		key = {0: "frame", 1: "oxide", 5: "footing" if entity == 1935 else "recovery", 7: "warning"}.get(index, "")
+		if index == 0 and entity == 1936 and half.x > 3.0 and local.basis.x.y > 0.3:
+			key = "return"
+		elif index == 0 and entity == 1935 and half.y < 0.025 and half.x < 0.07:
+			key = "grip"
+	var finish: Array = FINISHES[key] if not key.is_empty() else PALETTE.get(index, [])
+	if finish.is_empty():
+		return []
+	return [finish[0], finish[1], finish[2], 0, 0, finish[3]]
+
+
+func _upper_signs(entity: int) -> Array:
+	# Complete stencil records specified from authored locations/text, rather
+	# than accepting whatever labels the shipping renderer produces.
+	var signs: Array = []
+	match entity:
+		1935:
+			signs = [["INSPECTION\n407", Vector3(-22, 407.0015, -127.7), 0.007, "253c40ff"],
+				["NORTH FRAME\n418", Vector3(0.2, 407.0015, -127), 0.0045, "253c40ff"]]
+		1936:
+			signs = [["INSPECTION RETURN\n403.5", Vector3(-16.5, 403.5015, -128.25), 0.006, "263e3eff"]]
+		2935:
+			signs = [["J-407", Vector3(0, -0.7, 0.2015), 0.002, "3d3526ff"]]
+		1938:
+			signs = [["SERVICE HEADER\nN-429", Vector3(-21.1, 429.0015, -128), 0.0055, "303d43ff"],
+				["NORTH FRAME\n440", Vector3(-0.1, 429.0015, -128), 0.0045, "303d43ff"]]
+		1939:
+			signs = [["RETURN HEADER\nN-451", Vector3(-20.8, 451.0015, -130), 0.0055, "293b35ff"],
+				["FRAME SERVICE\n462", Vector3(-0.1, 451.0015, -129.3), 0.0045, "293b35ff"]]
+	var records: Array = []
+	for sign in signs:
+		var at: Vector3 = sign[1]
+		var axes := [1, 0, 0, 0, 1, 0, 0, 0, 1] if entity == 2935 else [1, 0, 0, 0, 0, -1, 0, 1, 0]
+		records.append(["sign", sign[0], axes + [at.x, at.y, at.z], 40, sign[2], sign[3], 0, true])
+	return records
+
+
+func _check_upper_body(kit: Node3D, body: Array) -> void:
+	var name: String = body[0]
+	var entity := int(name.trim_prefix("KitBody"))
+	var native: Object = _main._native
+	var index := int(native.get_kit_body_index(entity))
+	_check(index >= 0 and int(native.get_entity_body_count(entity)) == 1,
+		"upper body exists exactly once in native Kit " + name)
+	if index < 0:
+		return
+	var dynamic := entity == 2935 or entity in range(2880, 2892)
+	_check(bool(native.is_kit_body_dynamic(index)) == dynamic, "upper static/dynamic ownership " + name)
+	var node := kit.get_node_or_null(name) as Node3D
+	_check(node != null, "upper body has render owner " + name)
+	if node == null:
+		return
+	_check(node.visible and node.is_visible_in_tree(), "upper body visible " + name)
+	_check(node.transform.is_equal_approx(native.get_kit_body_render_transform(index)), "upper native render pose " + name)
+	_check_mesh_children(node, name)
+	var parts: PackedFloat32Array = native.get_kit_body_parts(index)
+	_check(not parts.is_empty() and parts.size() % 13 == 0, "upper complete native parts " + name)
+	# These specific constructors use boxes and solid cylinders only. Future
+	# shapes need an explicit migration; never silently fall back to a box.
+	var batches: Dictionary = {}
+	for p in range(0, parts.size() - 12, 13):
+		var half := Vector3(parts[p], parts[p + 1], parts[p + 2])
+		var local := Transform3D(Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
+			Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
+		var material_index := int(parts[p + 10])
+		var finish := _upper_finish(entity, material_index, half, local)
+		_check(not finish.is_empty(), "upper native material is authorized " + name)
+		var shape := int(parts[p + 11])
+		_check(shape in [0, 1] and parts[p + 12] == 0.0, "upper native primitive is authorized " + name)
+		if finish.is_empty() or shape not in [0, 1] or parts[p + 12] != 0.0:
+			continue
+		var primitive: PrimitiveMesh
+		if shape == 0:
+			var box := BoxMesh.new()
+			box.size = half * 2.0
+			primitive = box
+		else:
+			var cylinder := CylinderMesh.new()
+			cylinder.top_radius = half.x
+			cylinder.bottom_radius = half.x
+			cylinder.height = half.y * 2.0
+			primitive = cylinder
+		var mesh: Mesh = primitive
+		var timber := entity in range(2880, 2892)
+		if timber:
+			_check(material_index == 2 and shape == 0, "plank cells are real native timber boxes " + name)
+			var arrays := primitive.surface_get_arrays(0)
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+			var uv := PackedVector2Array()
+			var uv2 := PackedVector2Array()
+			var cell := entity - 2880
+			for v in vertices.size():
+				uv.append(Vector2(vertices[v].z, vertices[v].x + (float(cell) + 0.5) * 0.2))
+				var face := 0.0
+				if normals[v].x < -0.5:
+					face = -1.0 if cell == 0 else float(cell)
+				elif normals[v].x > 0.5:
+					face = -1.0 if cell == 11 else float(cell + 1)
+				uv2.append(Vector2(vertices[v].y, face))
+			arrays[Mesh.ARRAY_TEX_UV] = uv
+			arrays[Mesh.ARRAY_TEX_UV2] = uv2
+			var grain := ArrayMesh.new()
+			grain.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			mesh = grain
+		var key := str(material_index) + "/" + str(finish)
+		if not batches.has(key):
+			var surface := SurfaceTool.new()
+			surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+			batches[key] = [surface, [] if timber else finish]
+		(batches[key][0] as SurfaceTool).append_from(mesh, 0, local)
+	var expected: Array = []
+	for key in batches:
+		var mesh := (batches[key][0] as SurfaceTool).commit()
+		var channels: Array = []
+		for channel in mesh.surface_get_arrays(0):
+			channels.append(_channel_record(channel))
+		expected.append(["mesh", [[channels, batches[key][1]]]])
+	expected.append_array(_upper_signs(entity))
+	var difference := _first_difference(body[1], expected, name)
+	_check(difference.is_empty(), "upper native mesh/material/sign migration " + difference)
+	if entity in range(2880, 2892):
+		for child in node.get_children():
+			if child is MeshInstance3D:
+				var material := (child as MeshInstance3D).mesh.surface_get_material(0) as ShaderMaterial
+				_check(material != null and material.shader != null and material.shader.resource_path == "res://presentation/plank_wood.gdshader",
+					"plank retains native timber shader " + name)
+				if material != null:
+					_check(material.get_shader_parameter("timber_light") == Color("b9a077") and material.get_shader_parameter("timber_dark") == Color("65503a"),
+						"plank authored timber finish " + name)
+
+
+func _migrate_north_frame(frozen: Array) -> Array:
+	# Pinned source-before/source-after reconstruction must first account for
+	# EVERY frozen channel. Keep all materials/signs and the unaffected deck
+	# batch byte-for-byte; only the declared steel/rust/yellow channels change.
+	var authored = preload("res://tests/fixtures/kit-north-frame-migration.gd")
+	var before: Array = authored.channels(false)
+	var after: Array = authored.channels(true)
+	var migrated := frozen.duplicate(true)
+	_check(frozen[0] == "KitBody1901" and frozen[1].size() == 4,
+		"north migration has exactly four frozen material batches and no signs")
+	if frozen[1].size() != 4:
+		return migrated
+	for batch in 4:
+		var old_channels: Array = []
+		var new_channels: Array = []
+		for channel in before[batch]:
+			old_channels.append(_channel_record(channel))
+		for channel in after[batch]:
+			new_channels.append(_channel_record(channel))
+		var child: Array = frozen[1][batch]
+		_check(child[0] == "mesh" and child[1].size() == 1,
+			"north frozen single surface batch %d" % batch)
+		var difference := _first_difference(old_channels, child[1][0][0], "north-before/%d" % batch)
+		_check(difference.is_empty(), "north source-before matches immutable channels " + difference)
+		if batch == 0:
+			difference = _first_difference(new_channels, old_channels, "north-decks")
+			_check(difference.is_empty(), "north galvanized deck channels remain unchanged " + difference)
+		else:
+			migrated[1][batch][1][0][0] = new_channels
+	# Collision parity is additional evidence, independent of the appearance
+	# oracle above. Native parts never supply the expected appearance channels.
+	var native: Object = _main._native
+	var index := int(native.get_kit_body_index(1901))
+	_check(index >= 0 and int(native.get_entity_body_count(1901)) == 1,
+		"north frame exists exactly once in native Kit")
+	if index >= 0:
+		var expected_parts: Array = []
+		for part in authored.parts(true):
+			var half: Vector3 = part[0]
+			var at: Vector3 = part[1]
+			expected_parts.append_array([half.x, half.y, half.z, at.x, at.y, at.z, 0, 0, 0, 1, part[2], 0, 0])
+		var difference := _first_difference(Array(native.get_kit_body_parts(index)), expected_parts, "north-native")
+		_check(difference.is_empty(), "north source-after collision parity " + difference)
+		_check(not bool(native.is_kit_body_dynamic(index)), "north frame retains static ownership")
+		var node := _main.get_node("KitPresentation/KitBody1901") as Node3D
+		_check(node.visible and node.is_visible_in_tree(), "north frame visible")
+		_check(node.transform.is_equal_approx(native.get_kit_body_render_transform(index)), "north frame native render pose")
+		_check_mesh_children(node, "north frame")
+	return migrated
+
+
 func _run() -> void:
 	if DisplayServer.get_name() == "headless":
 		push_error("SCRAPERX_KIT_VIEW FAIL actual renderer required")
@@ -384,6 +618,7 @@ func _run() -> void:
 			var added_reclaim: Array[String] = []
 			var added_cart: Array[String] = []
 			var added_taper: Array[String] = []
+			var added_upper: Array[String] = []
 			var expected_reclaim: Array[String] = []
 			# The new wheel is an explicit append-only migration. Preserve the
 			# old oracle and require every reserved body exactly once; do not
@@ -400,7 +635,10 @@ func _run() -> void:
 				# Appended AS-027 bodies have no pre-extraction counterpart.
 				# Keep every prior body in its original oracle; native pose/visibility
 				# checks below also cover each new moving assembly.
-				if body[0] in CART_BODIES:
+				if body[0] in UPPER_BODIES:
+					added_upper.append(body[0])
+					_check_upper_body(kit, body)
+				elif body[0] in CART_BODIES:
 					added_cart.append(body[0])
 					_check(not body[1].is_empty(), "cart assembly has native-derived draw geometry " + body[0])
 					var entity := int(String(body[0]).trim_prefix("KitBody"))
@@ -447,6 +685,7 @@ func _run() -> void:
 					actual_facade.append(body)
 				else:
 					actual_original.append(body)
+			_check_upper_inventory(added_upper)
 			added_lift.sort()
 			_check(added_lift == LIFT_BODIES, "all twelve added lift assemblies render exactly once")
 			added_supplied.sort()
@@ -458,9 +697,14 @@ func _run() -> void:
 			_check(added_cart == CART_BODIES, "all fourteen slab-haul cart bodies render exactly once")
 			added_taper.sort()
 			_check(added_taper == TAPER_BODIES, "both static taper bodies render exactly once")
+			var north_oracles := 0
 			for body in expected:
-				if body[0] not in ["KitBody1952", "KitBody1600"]:
+				if body[0] == "KitBody1901":
+					north_oracles += 1
+					expected_original.append(_migrate_north_frame(body))
+				elif body[0] not in ["KitBody1952", "KitBody1600"]:
 					expected_original.append(body)
+			_check(north_oracles == 1, "exactly one immutable north frame oracle")
 			var cargo_bytes := FileAccess.get_file_as_bytes("res://tests/fixtures/kit-causal-cargo-numeric.json.gz")
 			var expected_cargo: Variant = JSON.parse_string(cargo_bytes.decompress_dynamic(
 				32 * 1024 * 1024, FileAccess.COMPRESSION_GZIP).get_string_from_utf8())

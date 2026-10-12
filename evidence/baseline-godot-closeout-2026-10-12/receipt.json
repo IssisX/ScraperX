@@ -1,0 +1,42 @@
+{
+  "source_before": "a2ee66707f56b7646211c236269b69db7077c57c",
+  "rejecting_run": 38317781070,
+  "diagnostic_zip_artifact": 11779262980,
+  "diagnostic_zip_sha256": "64e5dc94a13361b76fcb771faadaacbe766709dd19c9f715cf06bcaa122e0d2e",
+  "native_tests": {
+    "tests": 63,
+    "failures": 0,
+    "skipped": 0
+  },
+  "native_source_changed": false,
+  "ui_script_sha256": "db8733419689abee696fd19017911d1dc50ec65ea0aa865659d57fbab25abe0e",
+  "ui_receipt_sha256": "128a131262b5a51c15e88d7058c33a6c0ab9b85f993dc1a9b6cee7b0f5d92348",
+  "ui_receipt_path": "/data/data/com.termux/files/usr/tmp/baseline-ui-closeout/repair-receipt.json",
+  "unreached_input_count": 15,
+  "unreached_input_result": "all PASS exit0",
+  "unreached_snapshot": "a2ee667 plus ARM extension mapping only",
+  "full_green": false,
+  "apk_verified": false,
+  "rendered_verification": "Required in next exact-source CI; headless is not rendering proof.",
+  "kit_oracle_files": {
+    "godot/tests/kit_view_test.gd": "eb76dc32bfb6ee3bf5125d28a249c61b56d4bf590e06a57a1ea1015ddc7b1fbc",
+    "godot/tests/fixtures/kit-north-frame-migration.gd": "e046b5fc73339bd898be86c434b7c7dc403d50d4196be519d3e9660d4aadfef7",
+    "godot/presentation/ui/ui_test_driver.gd": "db8733419689abee696fd19017911d1dc50ec65ea0aa865659d57fbab25abe0e"
+  },
+  "kit_oracle_receipt_path": "/data/data/com.termux/files/usr/tmp/kit-baseline-repair-private/north-final-receipt.json",
+  "kit_oracle_receipt_sha256": "d4a7991d8deae100098aaef243745a0b31f89b27825ee16c8d441bedc53a2262",
+  "kit_numeric_normal": "PASS8255checks; private headless harness",
+  "kit_numeric_regression": "PASS15checks; private headless harness",
+  "kit_mutations_rejected": 25,
+  "frozen_numeric_fixtures": "All four byte-identical to HEAD, root independently verified",
+  "super_agent_sessions": [
+    "01a1327b-c063-7152-8b39-2fc4cd3019fb",
+    "01a13282-fe40-7092-8d64-863f2cef56ae"
+  ],
+  "kit_final_source_sha256": "36b6487ad28f2cba1322920e6a2de0f2f886eb5895600250ebfe629ab6d8ba80",
+  "root_draw_mutation_log_sha256": "6f9b2ef4b251452926a4f0b05beb52f42c96ee07491843f6347b1a45010c4d70",
+  "root_draw_mutation_log_path": "/data/data/com.termux/files/usr/tmp/kit-baseline-repair-private/root-draw-mutations.log",
+  "root_draw_mutations_rejected": 4,
+  "kit_numeric_normal_after_review": "PASS8382checks, 4 real-tree move/hide mutations rejected; private headless only",
+  "independent_medium_review": "No remaining material blocker after mesh-child transform/visibility gap repaired"
+}

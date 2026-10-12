@@ -664,8 +664,10 @@ func _pipe_bridge(device: int) -> bool:
 	if _main._regression_scene:
 		return _fail("continuous route selected retired regression fixtures")
 	await _seconds(0.5)
+	# Brake on actual grade before turning to the rack: position-only
+	# arrival drifts out of GRAB reach at the rendered 30 FPS cadence.
 	for point in [Vector2(13, -75), Vector2(12.7, -78.95)]:
-		if not await _walk_to(device, point, 0.07, 20.0):
+		if not await _walk_to(device, point, 0.07, 20.0, true):
 			return _fail("rack approach at %s" % _position())
 	await _face(Vector2(-1, 0))
 	await _pose("rack_ready")
@@ -710,17 +712,20 @@ func _pipe_bridge(device: int) -> bool:
 	await _pose("bridge_raised")
 	var tip_z := -90.0 - 20.0 * cos(asin(7.4 / 20.0))
 	var crossed_bridge := false
+	# Brake on the first receiving slab before turning north. Keyboard
+	# momentum otherwise carries the player off its east edge during the turn.
 	for point in [Vector2(-0.6, -86), Vector2(1.94, -86), Vector2(1.94, -91.1), Vector2(6, -91.1),
 			Vector2(6, tip_z + 1.5), Vector2(9.06, tip_z + 1.5), Vector2(9.06, tip_z - 2), Vector2(9.06, -125.2)]:
 		await _face(point - Vector2(_position().x, _position().z))
-		if not await _walk_to(device, point, 0.07, 20.0):
+		if not await _walk_to(device, point, 0.07, 20.0, point == Vector2(9.06, tip_z + 1.5)):
 			return _fail("crossing at %s" % _position())
 		if int(_native().get_support_entity_id()) == 2500:
 			crossed_bridge = true
 	if not crossed_bridge:
 		return _fail("route never used the actual moving deck")
 	if int(_native().get_support_entity_id()) not in [11, 51]:
-		return _fail("arrival is disconnected from the original tower")
+		return _fail("arrival is disconnected from the original tower at=%s velocity=%s grounded=%s support=%d" % [
+			_position(), _velocity(), _native().is_player_grounded(), _native().get_support_entity_id()])
 	await _face(Vector2(-0.1, 1))
 	await _pose("tower_arrival")
 	if _position().y < 11.6 or int(_native().get_death_count()) != 0:
@@ -4214,13 +4219,20 @@ func _ground_foundation() -> bool:
 		if entity not in [11, 51] and int(_native().get_entity_body_count(entity)) != 0:
 			return _fail("retired native body %d remains" % entity)
 	# Normal-world inventory: original/service lift, six supplied machines,
-	# reclaim wheel/material, slab-haul cart and two static taper bodies.
+	# reclaim wheel/material, slab-haul cart, two static taper bodies, west
+	# brace, inspection junction/plank, north transfer and pipe service.
 	# Fixture counts are separate.
 	var moving_count := int(_native().get_moving_body_count())
 	var kit_count := int(_native().get_kit_body_count())
 	var cable_count := int(_native().get_kit_cable_count())
-	if moving_count != 27 + 9 + 17 + 103 + 8 or kit_count != 38 + 12 + 39 + 109 + 14 + 2 or cable_count != 3 + 3 + 1:
+	if moving_count != 27 + 9 + 17 + 103 + 8 + 1 + 12 or kit_count != 38 + 12 + 39 + 109 + 14 + 2 + 1 + 4 + 12 + 1 + 1 or cable_count != 3 + 3 + 1:
 		return _fail("default inventory differs: moving=%d kit=%d cables=%d" % [moving_count, kit_count, cable_count])
+	# Reject compensating omissions/duplicates in the appended assemblies.
+	# Native route headers own these identifiers; 1962 is a logical plank
+	# member, while 1937 is its actual static seat.
+	for entity in [1934, 1935, 1936, 1937, 2935, 1938, 1939] + range(2880, 2892):
+		if int(_native().get_entity_body_count(entity)) != 1:
+			return _fail("appended native assembly body %d differs" % entity)
 	# Check actual scene nodes, independently of native enumeration. This also
 	# catches visual-only remnants that would not appear in the physics world.
 	var retired := ["IntakeBay", "WaterScrew", "LegalForty", "Hook5",
@@ -4699,6 +4711,11 @@ func _touch_hang(climb: bool) -> bool:
 			return _fail("mantle from hang never landed")
 		_detail = "top_y=%.2f grip_error_m=%.4f head_grip_error_m=%.4f" % [_position().y, grip_error, head_grip_error]
 		return _position().y > 4.4
+	# Passive hanging carries momentum. Release on the downward phase so
+	# the retained immediate falling assertion tests Drop without demanding
+	# an unphysical velocity reset from the native release owner.
+	if not await _wait_until(func() -> bool: return bool(_ctx()["hanging"]) and _velocity().y < -0.1, 2.0):
+		return _fail("hang did not reach a downward phase for DROP")
 	_tap(1, _center(&"drop"))
 	var reached_4: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 0, 0.2)
 	if not reached_4:
