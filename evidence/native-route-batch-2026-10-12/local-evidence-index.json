@@ -21,6 +21,15 @@
     "src/sim/north_transfer_route.cpp": "6d2011c3203a7447e89fa1777436e240464e49fca3c1f788fb3af10fb9eef725",
     "tests/ascent_route_tests.cpp": "06aa696afa0050493f9cb963cd3d359dbdeb48c1ba4ea0e83944d617e1c76f2b",
     "tests/swing_stair_route_tests.cpp": "22343b542c80230834cb69e035bca114a9fb47314a160998af2873ee5d69bfc9",
-    "tests/inspection_junction_route_tests.cpp": "91ca83c72fd44f95045922f989b2c00807175dba5cb70be229e4decbddb1e5ad"
+    "tests/inspection_junction_route_tests.cpp": "91ca83c72fd44f95045922f989b2c00807175dba5cb70be229e4decbddb1e5ad",
+    "godot/presentation/ui/ui_test_driver.gd": "fd116a96fd5bcf36fd30ccaf673a2bc61d3b4d320e6e24066ba7cf2f9ffde56a"
+  },
+  "west_touch": {
+    "local_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/west-touch-closeout/receipt.json",
+    "sha256": "16cfe89522bbe65f8e576c3778605c9d78671b8482e39764c1faca1c891a945f"
+  },
+  "godot_outcome_guard": {
+    "local_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-010da23-delivery-verification/godot-outcome-guard-receipt.json",
+    "sha256": "5e85558a864ea24acb9b0d7ac906e70c8283d2096389698c925ea83603da017c"
   }
 }

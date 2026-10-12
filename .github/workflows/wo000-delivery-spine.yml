@@ -315,6 +315,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-import.log; then exit 1; fi
 
       - name: Prove interpolated parkour camera and motion comfort
+        id: godot_proof_00
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -327,6 +329,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/parkour-camera.log; then exit 1; fi
 
       - name: Prove manual slingshot, character, settings and touch input
+        id: godot_proof_01
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -363,6 +367,8 @@ jobs:
           rm -f "${RUNNER_TEMP}/slingshot-audio.avi"
 
       - name: Prove uninterrupted cargo-net and service-lift ascent to 143 metres
+        id: godot_proof_02
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -373,6 +379,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-campaign-to-121.log; then exit 1; fi
 
       - name: Prove physical ballast mantle, footing feedback and ordinary touch return
+        id: godot_proof_03
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -382,6 +390,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-ballast-mantle-feedback.log; then exit 1; fi
 
       - name: Prove loaded slab-haul ascent, missed-exit recovery and paid reset
+        id: godot_proof_04
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -392,6 +402,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-slab-haul-cart.log; then exit 1; fi
 
       - name: Prove first-taper touch ascent and crouched missed-gap recovery
+        id: godot_proof_05
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -401,6 +413,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-taper-inspection-route.log; then exit 1; fi
 
       - name: Prove west-brace normal touch ascent to 396 metres
+        id: godot_proof_06
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -410,6 +424,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-west-brace-bay.log; then exit 1; fi
 
       - name: Prove default inventory and rejected fallback absence
+        id: godot_proof_07
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -428,6 +444,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
 
       - name: Historical pipe bridge fixture - ordinary input and native material state
+        id: godot_proof_08
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -440,6 +458,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/*pipe_bridge.log; then exit 1; fi
 
       - name: Historical opening fixture and retained upper route - rendered touch to 110 metres
+        id: godot_proof_09
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -487,6 +507,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/touch-north-frame.log; then exit 1; fi
 
       - name: Regression fixture - native machine authority and Fold-aspect capture
+        id: godot_proof_10
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -518,6 +540,8 @@ jobs:
             artifacts/godot-runtime.log
 
       - name: Regression fixtures - drive controller and mechanism input paths
+        id: godot_proof_11
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -537,6 +561,8 @@ jobs:
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest.log; then exit 1; fi
 
       - name: Render-native kit and retired mechanism proofs
+        id: godot_proof_12
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -590,6 +616,8 @@ jobs:
               artifacts/recorded-footsteps.log; then exit 1; fi
 
       - name: Measure the mix a player hears
+        id: godot_proof_13
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -614,6 +642,8 @@ jobs:
           rm -f "${RUNNER_TEMP}/fall-voices.avi"
 
       - name: World solids table matches the Godot builders
+        id: godot_proof_14
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -630,6 +660,39 @@ jobs:
             -- --regression-fixtures "--export-solids=${GITHUB_WORKSPACE}/artifacts/fixture_solids.regenerated.inc" \
             2>&1 | tee artifacts/fixture-solids-export.log
           diff -u tests/fixtures/world_solids.inc artifacts/fixture_solids.regenerated.inc
+
+      - name: Require every Godot proof before Android export
+        shell: bash
+        env:
+          GODOT_PROOF_OUTCOMES: >-
+            godot_proof_00=${{ steps.godot_proof_00.outcome }}
+            godot_proof_01=${{ steps.godot_proof_01.outcome }}
+            godot_proof_02=${{ steps.godot_proof_02.outcome }}
+            godot_proof_03=${{ steps.godot_proof_03.outcome }}
+            godot_proof_04=${{ steps.godot_proof_04.outcome }}
+            godot_proof_05=${{ steps.godot_proof_05.outcome }}
+            godot_proof_06=${{ steps.godot_proof_06.outcome }}
+            godot_proof_07=${{ steps.godot_proof_07.outcome }}
+            godot_proof_08=${{ steps.godot_proof_08.outcome }}
+            godot_proof_09=${{ steps.godot_proof_09.outcome }}
+            godot_proof_10=${{ steps.godot_proof_10.outcome }}
+            godot_proof_11=${{ steps.godot_proof_11.outcome }}
+            godot_proof_12=${{ steps.godot_proof_12.outcome }}
+            godot_proof_13=${{ steps.godot_proof_13.outcome }}
+            godot_proof_14=${{ steps.godot_proof_14.outcome }}
+        run: |
+          set -euo pipefail
+          failed=0
+          count=0
+          for proof in ${GODOT_PROOF_OUTCOMES}; do
+            count=$((count + 1))
+            if [ "${proof#*=}" != success ]; then
+              echo "::error title=Godot proof failed::${proof}"
+              failed=1
+            fi
+          done
+          test "${count}" -eq 15
+          test "${failed}" -eq 0
 
       - name: Cross-compile native graph for Android arm64
         shell: bash

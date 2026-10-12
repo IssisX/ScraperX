@@ -1483,15 +1483,29 @@ func _touch_west_brace_bay() -> bool:
 		return _fail("touch CLIMB did not engage both physical hands on entity1934")
 	# Facing +X, forward + screen-right moves toward +X/+Z along the first rail.
 	_move_dir(device, Vector2(0.55, 1.0))
-	var first_shelf := await _wait_until(func() -> bool:
-		return _west_brace_shelf(381.9, -24.25, -22.70, -138.55, -136.85), 15.0)
+	# Release ordinary climb input on actual receiving contact before asking
+	# for settled speed, so the continued stick cannot walk off the narrow shelf.
+	var first_contact := await _wait_until(func() -> bool:
+		var state: Dictionary = _native().get_landing_state()
+		return bool(_native().is_player_grounded()) and int(_native().get_support_entity_id()) == ROUTE_ENTITY \
+			and int(_native().get_traversal_state()) == 0 and int(state["traversal_hand_constraint_count"]) == 0 \
+			and int(state["foot_transfer_support_entity_id"]) == ROUTE_ENTITY \
+			and float(state["foot_transfer_peak_hand_load_n"]) > 0.0 and absf(_position().y - 382.8) < 0.10, 15.0)
 	_move_dir(device, Vector2.ZERO)
+	var first_shelf := first_contact and await _wait_until(func() -> bool:
+		return _west_brace_shelf(381.9, -24.25, -22.70, -138.55, -136.85), 2.0)
 	if not first_shelf:
 		return _fail("first diagonal did not top out on the inboard shelf381.9 at=%s support=%d traversal=%d" % [
 			_position(), _native().get_support_entity_id(), _native().get_traversal_state()])
 	await _seconds(0.2)
 	if not _west_brace_shelf(381.9, -24.25, -22.70, -138.55, -136.85):
 		return _fail("inboard first-shelf footing was not stable after releasing the touch stick")
+	# Approach the bar on the real shelf before the neutral airborne timing
+	# choice; the first diagonal top-out alone leaves its jump apex out of reach.
+	if not await _walk_to(device, Vector2(-23.70, _position().z), 0.06, 5.0, true):
+		return _fail("ordinary supported bar approach did not settle on the first shelf at=%s" % _position())
+	if not _west_brace_shelf(381.9, -24.25, -22.70, -138.55, -136.85):
+		return _fail("bar approach lost stable first-shelf footing at=%s" % _position())
 	if not await _touch_face(Vector2(-1.0, 0.0)):
 		return _fail("ordinary look-thumb touch could not turn toward the transverse bar")
 
