@@ -133,6 +133,17 @@ constexpr float kRollDeceleration = 3.0F;
 constexpr float kRollSteerAcceleration = 4.0F;
 constexpr double kRollSeconds = 0.6;
 constexpr float kStumbleMinimumSpeed = 3.0F;
+// Phase 4: a support jerked under the feet. The body keeps its velocity and
+// the soles re-match the support only at the ground's traction, so a jolt
+// dv leaves the COM moving at dv over the footing: an XCoM shift dv / omega
+// (omega = sqrt(g / kTeeterComHeight)). Past kSupportJoltMargin (CHOSEN,
+// about half a foot's length) no ankle can hold it and a step is taken: a
+// stumble, whose debt grows with the shift past the margin over
+// kSupportJoltSpan (CHOSEN; at margin + span the debt is the most a landing
+// can leave). Smooth motion (a turning platform, a lift's start) is re-matched
+// tick by tick and never adds up to a shift.
+constexpr float kSupportJoltMargin = 0.15F;
+constexpr float kSupportJoltSpan = 0.5F;
 
 // Phase 4: balance at an edge, by the reduced-order extrapolated centre of
 // mass, XCoM = COM + v / sqrt(g / h), with v the horizontal velocity relative
@@ -1381,6 +1392,7 @@ public:
         if (sling_controlling || traversal_state_ != TraversalState::None || (slingshot_flight_ && !grounded_)) {
             teetering_ = false;
             line_held_ = false;
+            clear_support_jolt();
         }
         if (!sling_controlling && traversal_state_ == TraversalState::None) {
             if (slingshot_flight_ && !grounded_) {
@@ -2770,6 +2782,47 @@ private:
         velocity.SetZ(reference.GetZ() + horizontal.GetZ());
     }
 
+    // See kSupportJoltMargin. Called each grounded tick with the support's
+    // velocity under the feet.
+    void track_support_jolt(const JPH::Vec3 support_velocity, const float dt) noexcept {
+        if (support_entity_id_ != 0 && support_entity_id_ == jolt_support_entity_) {
+            const JPH::Vec3 change = support_velocity - jolt_support_velocity_;
+            support_jolt_ += JPH::Vec3(change.GetX(), 0.0F, change.GetZ());
+        }
+        jolt_support_entity_ = support_entity_id_;
+        jolt_support_velocity_ = support_velocity;
+        const float size = support_jolt_.Length();
+        const float matched = std::max(0.0F, size - kGroundAcceleration * dt);
+        support_jolt_ = size > 1.0e-6F ? support_jolt_ * (matched / size) : JPH::Vec3::sZero();
+        const float gravity = -physics_system_.GetGravity().GetY();
+        const float shift = size / std::sqrt(gravity / kTeeterComHeight);
+        support_jolt_peak_m_ = std::max(support_jolt_peak_m_, shift);
+        if (shift < 0.5F * kSupportJoltMargin) {
+            jolt_stepped_ = false;
+        }
+        if (shift <= kSupportJoltMargin || jolt_stepped_ || rolling()) {
+            return;
+        }
+        jolt_stepped_ = true;
+        if (std::getenv("SCRAPERX_JOLT_DEBUG")) std::fprintf(stderr, "JOLT entity=%llu shift=%.3f t=%.2f\n", (unsigned long long)support_entity_id_, shift, state_.simulation_time_seconds);
+        ++stumble_count_;
+        ++support_stumble_count_;
+        const double loss = std::clamp(kLandingMaxLoss * (shift - kSupportJoltMargin) / kSupportJoltSpan, 0.0,
+                                       kLandingMaxLoss);
+        if (loss > 1.0 - recovery_balance()) {
+            landing_response_ = LandingResponse::Stumble;
+            landing_loss_ = loss;
+            recovery_duration_ = recovery_seconds_left_ = std::clamp(0.3 + loss, 0.3, 1.5);
+        }
+    }
+
+    void clear_support_jolt() noexcept {
+        jolt_support_entity_ = 0;
+        jolt_support_velocity_ = JPH::Vec3::sZero();
+        support_jolt_ = JPH::Vec3::sZero();
+        jolt_stepped_ = false;
+    }
+
     void advance_recovery(JPH::BodyInterface &bodies, const float dt) noexcept {
         if (roll_seconds_left_ > 0.0) {
             const JPH::Vec3 moved(bodies.GetPosition(player_id_) - roll_start_);
@@ -2803,6 +2856,7 @@ private:
         if (grounded_ && support_entity_id_ != 0) {
             reference_velocity = current_support_point_velocity(bodies);
             airborne_inherited_velocity_ = reference_velocity;
+            track_support_jolt(reference_velocity, delta_seconds);
             const Beam beam = beam_underfoot(bodies);
             const double input = std::hypot(commands.move_input_x, commands.move_input_z);
             bool on_line = false;
@@ -2917,6 +2971,7 @@ private:
                                        JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ()).Length());
         } else {
             teetering_ = false;
+            clear_support_jolt();
             approach_relative_horizontal_velocity(player_velocity,
                                                   reference_velocity,
                                                   move_x,
@@ -4188,6 +4243,7 @@ private:
 
         grounded_ = false;
         clear_recovery();
+        clear_support_jolt();
         teetering_ = false;
         jump_vault_ticks_left_ = 0;
         support_entity_id_ = 0;
@@ -4399,6 +4455,8 @@ public:
         state_.player_sprinting = sprinting_;
         state_.player_balancing = balancing_;
         state_.beam_xcom = beam_xcom_;
+        state_.support_jolt_peak_m = support_jolt_peak_m_;
+        state_.support_stumble_count = support_stumble_count_;
         state_.beam_lean = {beam_lean_.GetX(), 0.0, beam_lean_.GetZ()};
         state_.grip_available = grip_affordance_.valid;
         state_.grip_entity_id = grip_affordance_.valid ? grip_affordance_.entity_id : 0;
@@ -4578,6 +4636,13 @@ public:
     // The pendulum's velocity across the beam (relative to it), and whether
     // the last tick held the body on a beam's line.
     JPH::Vec3 line_velocity_{JPH::Vec3::sZero()};
+    // A jolt of the support not yet re-matched by the soles (kSupportJoltMargin).
+    JPH::Vec3 support_jolt_{JPH::Vec3::sZero()};
+    JPH::Vec3 jolt_support_velocity_{JPH::Vec3::sZero()};
+    std::uint64_t jolt_support_entity_ = 0;
+    bool jolt_stepped_ = false;
+    float support_jolt_peak_m_ = 0.0F;
+    std::uint64_t support_stumble_count_ = 0;
     bool line_held_ = false;
     // Top speed the air steers toward: the walk, or what the ground gave the
     // body as it left it (a running jump keeps its speed).

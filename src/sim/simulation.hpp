@@ -474,6 +474,11 @@ struct Snapshot final {
     double beam_xcom = 0.0;
     // The same, as a horizontal world vector toward the side it is on.
     Vector3 beam_lean{};
+    // A support jerked under the feet (kSupportJoltMargin): the largest XCoM
+    // shift a jolt has left, and the stumbles jolts have caused (also counted
+    // in stumble_count).
+    double support_jolt_peak_m = 0.0;
+    std::uint64_t support_stumble_count = 0;
     // The top of the route (kRouteTopEntityId) stood on, firm, outside a
     // traversal: latched with the simulation time and the deaths then.
     bool summit_reached = false;
