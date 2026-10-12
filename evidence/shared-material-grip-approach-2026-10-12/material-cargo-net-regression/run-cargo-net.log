@@ -1,0 +1,9 @@
+CARGO_LOAD lane=19 mean_hand_force_n=872.869 material_peak_dz=0.540504 grip_peak_dz=0.538185 grounded=0 hands=2 command_work_delta=0
+CARGO_TOP lane=19 position=19.2642,11.8951,-118.412 grounded=1 climb_ticks=1344 deaths=0
+PASS AS-024 grade_to_first_ring lane=19 supported_height_m=11 deaths=0
+CARGO_LOAD lane=20 mean_hand_force_n=836.822 material_peak_dz=0.698837 grip_peak_dz=0.720528 grounded=0 hands=2 command_work_delta=0
+CARGO_TOP lane=20 position=20.4094,11.8952,-118.413 grounded=1 climb_ticks=1373 deaths=0
+PASS AS-024 grade_to_first_ring lane=20 supported_height_m=11 deaths=0
+CARGO_LOAD lane=21 mean_hand_force_n=858.706 material_peak_dz=0.584267 grip_peak_dz=0.55088 grounded=0 hands=2 command_work_delta=0
+CARGO_TOP lane=21 position=21.2019,11.8951,-118.408 grounded=1 climb_ticks=1301 deaths=0
+PASS AS-024 grade_to_first_ring lane=21 supported_height_m=11 deaths=0

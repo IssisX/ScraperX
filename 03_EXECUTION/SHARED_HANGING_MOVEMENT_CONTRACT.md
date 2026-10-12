@@ -176,10 +176,9 @@ The existing paired controller rejects incomplete initial hand pairs.
 [Source-bound evidence](../evidence/shared-dynamic-grip-2026-10-11/README.md)
 records old-source missed40kg hinged-arm acquisition, obstructed-fallback RED,
 actual paired loading/support response/Drop GREEN, maintained simulation and
-exact-bridge headless touch passes. Generalized one-hand control, material-net
-approach visibility and universal shape eligibility remain open. The existing
-plank passive hang fails identically on saved and new source; repairing that
-coupling is the next bounded goal, with no plank completion claim here.
+exact-bridge headless touch passes. Generalized one-hand control and universal
+shape eligibility remain open. Subsequent verified passive coupling and bounded
+material approach behavior are recorded below.
 
 
 ## Joint-supported lightweight passive hands (verified)
@@ -200,3 +199,25 @@ rejected. Native impact bracing may compact the body after release; clear input
 must permit ordinary standing after bounded recovery on actual clear footing.
 Soft material coupling, full archive/shape restoration and phone feel remain
 separate unverified boundaries; no full system energy/APK completion is claimed.
+
+
+## Material-net approaches (verified bounded integration)
+
+The real player COM plus each requested hand offset anchors the shared solid
+approach ray for material candidates and fallback grips. Only player/sensors
+are ignored. Rigid grips retain exact body/leaf acceptance. Material grips
+require a positive first hit on the actual net within the existing0.02m landing
+skin of the selected material point. Initial material selection is gated before
+rigid ranking; incompatible partial initial pairs still clear. Reach, forces,
+material adapter and world geometry are unchanged.
+
+[Material approach evidence](../evidence/shared-material-grip-approach-2026-10-12/README.md)
+records two existing-fascia old-source RED/new-source GREEN cases, including
+a clear central candidate with one blocked hand. Clear front/back catches and
+strict Drop checks, existing physical traversal, three-lane loaded/deforming
+net routes and exact-bridge touch net encounter pass. The new four-case mode is
+registered with CTest. Averaged knot centres can differ from warped triangles;
+another fold within the terminal skin is not identified separately. Broad
+deformed-ribbon ownership/eligibility remains open. Next bounded goal verifies
+shared paid tuck/extension and neutral radial behavior on the actual material
+net. No new APK or phone observation is claimed.

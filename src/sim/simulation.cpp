@@ -6792,10 +6792,10 @@ private:
         return JPH::Vec3(-traversal_normal_.GetZ(), 0.0F, traversal_normal_.GetX());
     }
 
-    [[nodiscard]] bool rigid_grip_approach_visible(const JPH::RVec3 centre,
-                                                   const JPH::RVec3 aim,
-                                                   const JPH::Vec3 facing,
-                                                   const Grip &grip) const noexcept {
+    [[nodiscard]] bool grip_approach_visible(const JPH::RVec3 centre,
+                                             const JPH::RVec3 aim,
+                                             const JPH::Vec3 facing,
+                                             const Grip &grip) const noexcept {
         if (!grip.valid || facing.IsNearZero()) return false;
         // Grip visibility ignores only the player and non-solid sensors.
         // Soft bodies and carried objects remain physical occluders.
@@ -6824,17 +6824,23 @@ private:
         // chosen grip and existing reach/search bounds stay unchanged.
         const JPH::RRayCast ray(approach_from,
             approach + approach * (kLandingSkin / approach_length));
-        return physics_system_.GetNarrowPhaseQuery().CastRay(ray, first, {}, {}, approach_filter) &&
-            first.mFraction > 0.0F && first.mBodyID == grip.body &&
-            first.mSubShapeID2 == grip.sub_shape;
+        if (!physics_system_.GetNarrowPhaseQuery().CastRay(ray, first, {}, {}, approach_filter) ||
+            !(first.mFraction > 0.0F) || first.mBodyID != grip.body) return false;
+        if (cargo_net_ && grip.body == cargo_net_->body()) {
+            // Material segments have averaged grip points, not rigid leaves.
+            // Conservatively require the actual mesh hit within the existing skin.
+            return JPH::Vec3(ray.GetPointOnRay(first.mFraction) - grip.point).Length() <= kLandingSkin;
+        }
+        return first.mSubShapeID2 == grip.sub_shape;
     }
 
     // The hold nearest `aim` that a hand in front of `centre` can close
     // round: a box whose two thinner dimensions are at most kGripMaxSection
     // and whose length is at least kGripMinLength, searched in a
-    // kGripSearchHalf box round `aim` squared to `facing`. A rigid hold must
-    // have an unobstructed approach to its actual leaf from the real player.
-    // The point is on the member's axis (or a supported timber cell's edge).
+    // kGripSearchHalf box round `aim` squared to `facing`. Rigid and material
+    // holds need an unobstructed approach from the real player: exact rigid
+    // leaf or a nearby actual net mesh hit. Rigid points lie on the member's
+    // axis (or a supported timber cell's edge).
     [[nodiscard]] Grip find_grip(const JPH::RVec3 centre, const JPH::RVec3 aim,
                                  const JPH::Vec3 facing, JPH::BodyID excluded = {}) const noexcept {
         Grip best;
@@ -6851,9 +6857,16 @@ private:
             grip_region_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
             JPH::RMat44::sRotationTranslation(rotation, aim), settings, aim, hits, {}, {}, filter);
         float best_distance = std::numeric_limits<float>::max();
-        if (cargo_net_ && cargo_net_->body()!=excluded && cargo_net_->grip(centre, aim, facing, best.point)) {
-            best.valid = true; best.body = cargo_net_->body(); best.entity_id = CargoNet::kEntity;
-            best_distance = JPH::Vec3(best.point - aim).Length();
+        Grip material_candidate;
+        if (cargo_net_ && cargo_net_->body()!=excluded &&
+            cargo_net_->grip(centre, aim, facing, material_candidate.point)) {
+            material_candidate.valid = true;
+            material_candidate.body = cargo_net_->body();
+            material_candidate.entity_id = CargoNet::kEntity;
+            if (grip_approach_visible(centre, aim, facing, material_candidate)) {
+                best = material_candidate;
+                best_distance = JPH::Vec3(best.point - aim).Length();
+            }
         }
         for (const JPH::CollideShapeResult &hit : hits.mHits) {
             const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(),
@@ -6908,7 +6921,7 @@ private:
             candidate.sub_shape = hit.mSubShapeID2;
             candidate.entity_id = body.GetUserData();
             candidate.point = point;
-            if (!rigid_grip_approach_visible(centre, aim, facing, candidate)) continue;
+            if (!grip_approach_visible(centre, aim, facing, candidate)) continue;
             const float distance = JPH::Vec3(point - aim).Length();
             if (distance < best_distance) {
                 best_distance = distance;
@@ -6962,7 +6975,7 @@ private:
 
     // Both hands onto the holds nearest their rest aims, left a little lower
     // than right; a hand that finds none may share the initial hold if its
-    // own approach is visible (material grips retain their owned adapter).
+    // own approach is visible for either rigid or material grips.
     void take_hand_holds(const JPH::BodyInterface &bodies, const JPH::RVec3 centre,
                          const Grip &fallback) noexcept {
         for (std::uint32_t hand = 0; hand < 2; ++hand) {
@@ -6973,8 +6986,7 @@ private:
             if (grip.valid && grip_matches_climb_backend(grip)) {
                 set_hand(bodies, hand, grip);
             } else if (fallback.valid && grip_matches_climb_backend(fallback) &&
-                       ((cargo_net_ && fallback.body == cargo_net_->body()) ||
-                        rigid_grip_approach_visible(centre, aim, traversal_normal_, fallback))) {
+                       grip_approach_visible(centre, aim, traversal_normal_, fallback)) {
                 set_hand(bodies, hand, fallback);
             }
         }

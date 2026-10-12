@@ -1,0 +1,20 @@
+MATERIAL APPROACH case=occluded_back_fascia position=20,9.79924,-118.55 facing=0,1 grounded=0 grip=0 grip_entity=0 point=0,0,0 reach=0.895747 native_vertices=828
+MATERIAL WITNESS case=occluded_back_fascia actual_mesh_edge=1 point=19.9915,10.2607,-117.782 using_live_seed=0
+MATERIAL GEOMETRY case=occluded_back_fascia frame_position=0.000307083,-1.30662,-0.00804138 frame_rotation=0.00549372,1.26098e-06,3.28724e-06,0.999985 fascia_local=20,10.375,-118.07 nearest_native_vertex=19.9597,10.2288,-117.782 distance=0.0450294 centre_intersects_fascia=1 both_hand_seed_approaches_intersect=1 any_hand_seed_approach_intersects=1 individual_hand_seed_intersects=1,1
+MATERIAL ACTION case=occluded_back_fascia state=0 hand_count=0 hand_entity=0 gravity=1 hands=0,0,0;0,0,0
+PASS material_occluded_refusal actual_fascia=1 case=occluded_back_fascia
+MATERIAL APPROACH case=clear_front_fascia_behind position=20,9.79924,-117.35 facing=0,-1 grounded=0 grip=1 grip_entity=1953 point=19.9996,10.2493,-117.782 reach=0.62409 native_vertices=828
+MATERIAL WITNESS case=clear_front_fascia_behind actual_mesh_edge=1 point=19.9899,10.2591,-117.782 using_live_seed=1
+MATERIAL GEOMETRY case=clear_front_fascia_behind frame_position=0.000307083,-1.30662,-0.00804138 frame_rotation=0.00549372,1.26098e-06,3.28724e-06,0.999985 fascia_local=20,10.375,-118.07 nearest_native_vertex=19.9597,10.2288,-117.782 distance=0.044901 centre_intersects_fascia=0 both_hand_seed_approaches_intersect=0 any_hand_seed_approach_intersects=0 individual_hand_seed_intersects=0,0
+MATERIAL ACTION case=clear_front_fascia_behind state=4 hand_count=2 hand_entity=1953 gravity=1 hands=19.8,10.2687,-117.782;20.2,10.2687,-117.782
+PASS material_clear_catch_Drop case=clear_front_fascia_behind before_vy=-0.216124 after_vy=-0.325124 before_xz=4.13038e-06,0.00012575 after_xz=4.13038e-06,0.00012575 release_position=20,9.79413,-117.35 contact_support=0 before_native_vertex_gap=0.0486834 after_native_vertex_gap=0.0482135 after_air_force=0,0,0 vertical_error=1.75238e-08 horizontal_error=0
+MATERIAL APPROACH case=clear_back_below_fascia position=20,7.99924,-118.55 facing=0,1 grounded=0 grip=1 grip_entity=1953 point=19.9997,8.44839,-117.785 reach=0.886864 native_vertices=828
+MATERIAL WITNESS case=clear_back_below_fascia actual_mesh_edge=1 point=20.0133,8.43539,-117.786 using_live_seed=1
+MATERIAL GEOMETRY case=clear_back_below_fascia frame_position=0.000307083,-1.30662,-0.00804138 frame_rotation=0.00549372,1.26098e-06,3.28724e-06,0.999985 fascia_local=20,10.375,-118.07 nearest_native_vertex=19.9597,8.43539,-117.784 distance=0.0420478 centre_intersects_fascia=0 both_hand_seed_approaches_intersect=0 any_hand_seed_approach_intersects=0 individual_hand_seed_intersects=0,0
+MATERIAL ACTION case=clear_back_below_fascia state=4 hand_count=2 hand_entity=1953 gravity=1 hands=20.1999,8.39498,-117.785;19.9997,8.64795,-117.785
+PASS material_clear_catch_Drop case=clear_back_below_fascia before_vy=-0.215379 after_vy=-0.324379 before_xz=9.51093e-05,0.000125965 after_xz=9.51093e-05,0.000125965 release_position=20,7.99414,-118.55 contact_support=0 before_native_vertex_gap=0.379116 after_native_vertex_gap=0.378978 after_air_force=0,0,0 vertical_error=1.75238e-08 horizontal_error=0
+MATERIAL APPROACH case=visible_seed_occluded_upper_hand position=20,9.24924,-118.55 facing=0,1 grounded=0 grip=1 grip_entity=1953 point=19.9995,9.69884,-117.783 reach=0.889276 native_vertices=828
+MATERIAL WITNESS case=visible_seed_occluded_upper_hand actual_mesh_edge=1 point=20.026,9.69482,-117.783 using_live_seed=1
+MATERIAL GEOMETRY case=visible_seed_occluded_upper_hand frame_position=0.000307083,-1.30662,-0.00804138 frame_rotation=0.00549372,1.26098e-06,3.28724e-06,0.999985 fascia_local=20,10.375,-118.07 nearest_native_vertex=20.0395,9.76042,-117.783 distance=0.0734215 centre_intersects_fascia=0 both_hand_seed_approaches_intersect=0 any_hand_seed_approach_intersects=1 individual_hand_seed_intersects=0,1
+MATERIAL ACTION case=visible_seed_occluded_upper_hand state=0 hand_count=0 hand_entity=0 gravity=1 hands=0,0,0;0,0,0
+PASS material_occluded_refusal actual_fascia=1 case=visible_seed_occluded_upper_hand

@@ -1,0 +1,4 @@
+MATERIAL APPROACH case=visible_seed_occluded_upper_hand position=20,9.24924,-118.55 facing=0,1 grounded=0 grip=1 grip_entity=1953 point=19.9995,9.69884,-117.783 reach=0.889276 native_vertices=828
+MATERIAL GEOMETRY case=visible_seed_occluded_upper_hand frame_position=0.000307083,-1.30662,-0.00804138 frame_rotation=0.00549372,1.26098e-06,3.28724e-06,0.999985 fascia_local=20,10.375,-118.07 nearest_native_vertex=20.0395,9.76042,-117.783 distance=0.0734215 centre_intersects_fascia=0 both_hand_seed_approaches_intersect=0 any_hand_seed_approach_intersects=1 individual_hand_seed_intersects=0,1
+MATERIAL ACTION case=visible_seed_occluded_upper_hand state=4 hand_count=2 hand_entity=1953 gravity=1 hands=20.2,9.80019,-117.783;19.8,9.80021,-117.783
+FAIL material_occluded_refusal actual_fascia=1 case=visible_seed_occluded_upper_hand

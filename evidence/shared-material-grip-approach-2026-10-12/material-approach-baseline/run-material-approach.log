@@ -1,0 +1,12 @@
+MATERIAL APPROACH case=occluded_back_fascia position=20,9.79924,-118.55 facing=0,1 grounded=0 grip=1 grip_entity=1953 point=19.9996,10.2491,-117.782 reach=0.889685 native_vertices=828
+MATERIAL GEOMETRY case=occluded_back_fascia frame_position=0.000307083,-1.30662,-0.00804138 frame_rotation=0.00549372,1.26098e-06,3.28724e-06,0.999985 fascia_local=20,10.375,-118.07 nearest_native_vertex=19.9597,10.2288,-117.782 distance=0.0448064 centre_intersects_fascia=1 both_hand_seed_approaches_intersect=1 any_hand_seed_approach_intersects=1
+MATERIAL ACTION case=occluded_back_fascia state=4 hand_count=2 hand_entity=1953 gravity=1
+FAIL material_occluded_refusal actual_fascia=1 case=occluded_back_fascia
+MATERIAL APPROACH case=clear_front_fascia_behind position=20,9.79924,-117.45 facing=0,-1 grounded=0 grip=1 grip_entity=1953 point=19.9995,10.2492,-117.835 reach=0.592383 native_vertices=828
+MATERIAL GEOMETRY case=clear_front_fascia_behind frame_position=0.000307083,-1.30662,-0.00804138 frame_rotation=0.00549372,1.26098e-06,3.28724e-06,0.999985 fascia_local=20,10.375,-118.07 nearest_native_vertex=20.0392,10.2302,-117.837 distance=0.0440046 centre_intersects_fascia=0 both_hand_seed_approaches_intersect=0 any_hand_seed_approach_intersects=0
+MATERIAL ACTION case=clear_front_fascia_behind state=4 hand_count=2 hand_entity=1953 gravity=1
+FAIL material_clear_catch_Drop case=clear_front_fascia_behind before_vy=-0.215636 after_vy=-0.324636 vertical_error=1.75238e-08 horizontal_error=0.00218734
+MATERIAL APPROACH case=clear_back_below_fascia position=20,7.99924,-118.55 facing=0,1 grounded=0 grip=1 grip_entity=1953 point=19.9997,8.44839,-117.785 reach=0.886864 native_vertices=828
+MATERIAL GEOMETRY case=clear_back_below_fascia frame_position=0.000307083,-1.30662,-0.00804138 frame_rotation=0.00549372,1.26098e-06,3.28724e-06,0.999985 fascia_local=20,10.375,-118.07 nearest_native_vertex=19.9597,8.43539,-117.784 distance=0.0420478 centre_intersects_fascia=0 both_hand_seed_approaches_intersect=0 any_hand_seed_approach_intersects=0
+MATERIAL ACTION case=clear_back_below_fascia state=4 hand_count=2 hand_entity=1953 gravity=1
+PASS material_clear_catch_Drop case=clear_back_below_fascia before_vy=-0.215379 after_vy=-0.324379 vertical_error=1.75238e-08 horizontal_error=0
