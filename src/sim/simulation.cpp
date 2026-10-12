@@ -2797,6 +2797,7 @@ private:
         sprinting_ = false;
         balancing_ = false;
         beam_xcom_ = 0.0F;
+        beam_lean_ = JPH::Vec3::sZero();
         line_held_ = false;
 
         if (grounded_ && support_entity_id_ != 0) {
@@ -2898,6 +2899,7 @@ private:
                     line_velocity_ = beam.across * v_next;
                     line_held_ = true;
                     beam_xcom_ = xcom / reach;
+                    beam_lean_ = beam.across * beam_xcom_;
                 }
                 if (teetering_) {
                     const JPH::Vec3 change = player_velocity - reference_velocity - before;
@@ -4195,6 +4197,7 @@ private:
         sprinting_ = false;
         balancing_ = false;
         beam_xcom_ = 0.0F;
+        beam_lean_ = JPH::Vec3::sZero();
         line_held_ = false;
         fall_peak_speed_mps_ = 0.0F;
         pre_contact_fall_speed_mps_ = 0.0F;
@@ -4396,6 +4399,7 @@ public:
         state_.player_sprinting = sprinting_;
         state_.player_balancing = balancing_;
         state_.beam_xcom = beam_xcom_;
+        state_.beam_lean = {beam_lean_.GetX(), 0.0, beam_lean_.GetZ()};
         state_.grip_available = grip_affordance_.valid;
         state_.grip_entity_id = grip_affordance_.valid ? grip_affordance_.entity_id : 0;
         state_.grip_point = grip_affordance_.valid ? to_vector3(grip_affordance_.point) : Vector3{};
@@ -4570,6 +4574,7 @@ public:
     bool balancing_ = false;
     // The XCoM across a beam, as a fraction of the centre of pressure's reach.
     float beam_xcom_ = 0.0F;
+    JPH::Vec3 beam_lean_{JPH::Vec3::sZero()};
     // The pendulum's velocity across the beam (relative to it), and whether
     // the last tick held the body on a beam's line.
     JPH::Vec3 line_velocity_{JPH::Vec3::sZero()};

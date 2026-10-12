@@ -472,6 +472,8 @@ struct Snapshot final {
     // On a beam: the XCoM across it as a fraction of the centre of
     // pressure's reach (see kBalanceHipMargin); past +-1 it cannot come back.
     double beam_xcom = 0.0;
+    // The same, as a horizontal world vector toward the side it is on.
+    Vector3 beam_lean{};
     // The top of the route (kRouteTopEntityId) stood on, firm, outside a
     // traversal: latched with the simulation time and the deaths then.
     bool summit_reached = false;

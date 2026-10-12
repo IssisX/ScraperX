@@ -251,6 +251,7 @@ var _arms: Node3D
 var _view_pitch_offset := 0.0
 var _teeter_weight := 0.0
 var _teeter_phase := 0.0
+var _beam_bank := 0.0
 
 var _kit_root: Node3D
 # The ground slingshot: its view, the predicted shot (refreshed a few times a
@@ -1484,6 +1485,12 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 		roll_turn -= _teeter_weight * 0.12
 	else:
 		_teeter_phase = 0.0
+	# On a beam: the view banks toward the side the native's XCoM is on, in
+	# proportion to how much of the centre of pressure's reach it has used
+	# (1 at the edge of recovery), so the lean reads before it is lost.
+	var lean: Vector3 = landing.get("beam_lean", Vector3.ZERO)
+	_beam_bank = lerpf(_beam_bank, clampf(lean.dot(right_vector), -1.5, 1.5), 1.0 - exp(-12.0 * delta))
+	stagger -= 0.07 * _beam_bank
 	_camera.rotation = Vector3(_pitch + _view_pitch_offset + roll_turn, _yaw, _cam_bank + stagger)
 
 	var fov_ground := FOV_SPRINT_MAX_DEGREES * smoothstep(0.0, 5.5, horizontal_speed) + parkour_fov
