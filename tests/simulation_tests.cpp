@@ -196,6 +196,14 @@ bool walk_to(scraperx::sim::Simulation &simulation, const double x, const double
         steer_toward(simulation, x, z);
         (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
         observe_path(simulation, true);
+        if (std::getenv("SCRAPERX_WALK_TRACE") != nullptr) {
+            const auto t = simulation.snapshot();
+            std::cout << "    walk(" << x << "," << z << ") p=(" << t.player_position.x << "," << t.player_position.y
+                      << "," << t.player_position.z << ") bal=" << t.player_balancing << " xcom=" << t.beam_xcom
+                      << " g=" << t.player_grounded << " sup=" << t.support_entity_id << " c=(" << t.support_contact_point.x << ","
+                      << t.support_contact_point.y << "," << t.support_contact_point.z << ") v=(" << t.player_linear_velocity.x
+                      << "," << t.player_linear_velocity.z << ")\n";
+        }
     }
     (void)simulation.set_move_input(0.0, 0.0);
     return false;
@@ -1445,7 +1453,10 @@ void run_plate_route() {
             "route: across TP-340 and the ladder onto the 352 ring");
     for (double h = 352.0; h < 483.9; h += 22.0) {
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
-        const bool leg = walk_to(route, s + 0.25, -157.0, 12.0, 0.1) && walk_to(route, s - 1.67, -157.0, 8.0, 0.1) &&
+        // Stopped at the boards' end before turning onto them: the walk off
+        // the ladder carries its speed across their line.
+        const bool leg = walk_to(route, s + 0.25, -157.0, 12.0, 0.1) && route.advance_frame(0.4).accepted &&
+                         walk_to(route, s - 1.67, -157.0, 8.0, 0.1) &&
                          climb_wet_hold(route, s - 1.67, -158.0, 1.0, 0.0, false, h + 22.5);
         if (!leg) {
             std::cout << "route: stuck above " << h << " at y=" << route.snapshot().player_position.y << '\n';
@@ -1844,7 +1855,10 @@ void run_crane_route() {
             "route: along the 484 ring to its east band");
     for (double h = 484.0; h < 615.9; h += 22.0) {
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
-        const bool leg = walk_to(route, s + 0.25, -149.0, 12.0, 0.1) && walk_to(route, s - 1.67, -149.0, 8.0, 0.1) &&
+        // Stopped at the boards' end before turning onto them: the walk off
+        // the ladder carries its speed across their line.
+        const bool leg = walk_to(route, s + 0.25, -149.0, 12.0, 0.1) && route.advance_frame(0.4).accepted &&
+                         walk_to(route, s - 1.67, -149.0, 8.0, 0.1) &&
                          climb_wet_hold(route, s - 1.67, -150.0, 1.0, 0.0, false, h + 22.5);
         if (!leg) {
             std::cout << "route: stuck above " << h << " at y=" << route.snapshot().player_position.y << '\n';
@@ -8233,6 +8247,12 @@ int main() {
         for (int i = 0; i < 270; ++i) {
             require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
             peak_xcom = std::max(peak_xcom, std::abs(sim.snapshot().beam_xcom));
+            if (std::getenv("SCRAPERX_BALANCE_TRACE") != nullptr && i < 60) {
+                const auto t = sim.snapshot();
+                std::cout << "    t" << i << " x=" << t.player_position.x << " y=" << t.player_position.y
+                          << " vx=" << t.player_linear_velocity.x << " xcom=" << t.beam_xcom
+                          << " bal=" << t.player_balancing << " g=" << t.player_grounded << '\n';
+            }
         }
         const auto end = sim.snapshot();
         struct { bool off; double peak_xcom; double x; } out{end.death_count > deaths || end.player_position.y < 177.0,

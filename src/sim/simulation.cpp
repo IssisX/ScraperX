@@ -1380,6 +1380,7 @@ public:
         // (harness, hands, a throw) ends it.
         if (sling_controlling || traversal_state_ != TraversalState::None || (slingshot_flight_ && !grounded_)) {
             teetering_ = false;
+            line_held_ = false;
         }
         if (!sling_controlling && traversal_state_ == TraversalState::None) {
             if (slingshot_flight_ && !grounded_) {
@@ -2792,9 +2793,11 @@ private:
         const double speed_scale = crouched_ ? kCrouchSpeedScale : 1.0;
         double move_x = commands.move_input_x * speed_scale;
         double move_z = commands.move_input_z * speed_scale;
+        const bool had_line = line_held_;
         sprinting_ = false;
         balancing_ = false;
         beam_xcom_ = 0.0F;
+        line_held_ = false;
 
         if (grounded_ && support_entity_id_ != 0) {
             reference_velocity = current_support_point_velocity(bodies);
@@ -2882,13 +2885,18 @@ private:
                     const float omega = std::sqrt(gravity / (crouched_ ? kTeeterCrouchedComHeight : kTeeterComHeight));
                     const float reach = beam.half_width + kBalanceHipMargin;
                     const float x = beam.offset;
-                    const float v = before.Dot(beam.across);
+                    // The pendulum's own velocity across the line, carried from
+                    // the last tick: the soles' grip holds the capsule's rim
+                    // contact, whose normal tilts outward past the beam's side.
+                    const float v = had_line ? line_velocity_.Dot(beam.across) : before.Dot(beam.across);
                     const float xcom = x + v / omega;
                     const float target = line_lean * kBalanceLeanFraction * reach;
                     const float pressure = std::clamp(xcom + kBalanceCaptureGain * (xcom - target), -reach, reach);
                     const float v_next = v + omega * omega * (x - pressure) * delta_seconds;
                     const float now = (player_velocity - reference_velocity).Dot(beam.across);
                     player_velocity += beam.across * (v_next - now);
+                    line_velocity_ = beam.across * v_next;
+                    line_held_ = true;
                     beam_xcom_ = xcom / reach;
                 }
                 if (teetering_) {
@@ -4187,6 +4195,7 @@ private:
         sprinting_ = false;
         balancing_ = false;
         beam_xcom_ = 0.0F;
+        line_held_ = false;
         fall_peak_speed_mps_ = 0.0F;
         pre_contact_fall_speed_mps_ = 0.0F;
         parachute_deployed_ = false;
@@ -4561,6 +4570,10 @@ public:
     bool balancing_ = false;
     // The XCoM across a beam, as a fraction of the centre of pressure's reach.
     float beam_xcom_ = 0.0F;
+    // The pendulum's velocity across the beam (relative to it), and whether
+    // the last tick held the body on a beam's line.
+    JPH::Vec3 line_velocity_{JPH::Vec3::sZero()};
+    bool line_held_ = false;
     // Top speed the air steers toward: the walk, or what the ground gave the
     // body as it left it (a running jump keeps its speed).
     float air_full_speed_ = kPlayerMaximumRelativeSpeed;
