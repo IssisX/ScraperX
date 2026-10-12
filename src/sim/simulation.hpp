@@ -479,6 +479,8 @@ struct Snapshot final {
     // in stumble_count).
     double support_jolt_peak_m = 0.0;
     std::uint64_t support_stumble_count = 0;
+    // Jumps that pushed off a dynamic support (its equal and opposite impulse).
+    std::uint64_t jump_reaction_count = 0;
     // The top of the route (kRouteTopEntityId) stood on, firm, outside a
     // traversal: latched with the simulation time and the deaths then.
     bool summit_reached = false;

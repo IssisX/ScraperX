@@ -2999,7 +2999,19 @@ private:
         }
         if (jump_started) {
             flight_from_jump_ = true;
+            const float push = reference_velocity.GetY() + kJumpSpeed - player_velocity.GetY();
             player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
+            // The legs push off what they stand on: a dynamic support takes the
+            // equal and opposite impulse at the contact (a cage dips, a beam
+            // rocks), so the jump's work is shared with what it left.
+            const JPH::BodyID support_id = body_id_for_entity(support_entity_id_);
+            if (!support_id.IsInvalid() && push > 0.0F &&
+                bodies.GetMotionType(support_id) == JPH::EMotionType::Dynamic) {
+                bodies.AddImpulse(support_id, JPH::Vec3(0.0F, -push * static_cast<float>(kPlayerMassKg), 0.0F),
+                                  JPH::RVec3(support_sample_.contact_point.x, support_sample_.contact_point.y,
+                                             support_sample_.contact_point.z));
+                ++jump_reactions_;
+            }
             jump_takeoff_feet_y_ =
                 static_cast<float>(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
             jump_vault_ticks_left_ = kJumpVaultWindowTicks;
@@ -4473,6 +4485,7 @@ public:
         state_.beam_xcom = beam_xcom_;
         state_.support_jolt_peak_m = support_jolt_peak_m_;
         state_.support_stumble_count = support_stumble_count_;
+        state_.jump_reaction_count = jump_reactions_;
         state_.beam_lean = {beam_lean_.GetX(), 0.0, beam_lean_.GetZ()};
         state_.grip_available = grip_affordance_.valid;
         state_.grip_entity_id = grip_affordance_.valid ? grip_affordance_.entity_id : 0;
@@ -4662,6 +4675,8 @@ public:
     bool line_held_ = false;
     // Airborne since a jump's takeoff (a committed arc; see the air branch).
     bool flight_from_jump_ = false;
+    // Jumps whose push-off went into a dynamic support.
+    std::uint64_t jump_reactions_ = 0;
     // Top speed the air steers toward: the walk, or what the ground gave the
     // body as it left it (a running jump keeps its speed).
     float air_full_speed_ = kPlayerMaximumRelativeSpeed;

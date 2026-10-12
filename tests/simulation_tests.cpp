@@ -5887,6 +5887,37 @@ void run_stack() {
             "the rider must stand on deck 6's south band");
     const double s2_floor_y = kit_y(s2_sim, Simulation::kStackS2CageEntityId) + 0.10;
     require(std::abs(s2_floor_y - kS2FloorTopUp) <= 0.05, "S2 floor must stop at 66.05 m");
+    // Phase 2: a jump pushes off what it stands on. Two identical rides; at
+    // 3 s one rider jumps in the cage. On that tick the cage, carried up by
+    // its cart, takes the legs' equal and opposite impulse and dips relative
+    // to the ride without the jump.
+    {
+        const auto cage_vy_after = [&](const bool jump) {
+            Simulation sim(InitialSpawn::Deck4South);
+            require(sim.advance_frame(0.5).accepted, "S2 settle interval must be accepted");
+            require(take_s2_handle(sim), "the rider must take S2's lanyard");
+            for (int i = 0; i < 270; ++i) {
+                (void)sim.set_move_input(0.0, 0.0);
+                require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+            }
+            require(sim.snapshot().support_entity_id == Simulation::kStackS2CageEntityId,
+                    "the rider must be standing in the cage mid-ride");
+            const auto reactions = sim.snapshot().jump_reaction_count;
+            if (jump) {
+                require(sim.request_jump(), "jump must be accepted");
+            }
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+            const auto index = sim.kit_body_index(Simulation::kStackS2CageEntityId);
+            return std::pair<double, std::uint64_t>(sim.kit_body_velocity(index).y,
+                                                    sim.snapshot().jump_reaction_count - reactions);
+        };
+        const auto still = cage_vy_after(false);
+        const auto jumped = cage_vy_after(true);
+        std::cout << "  push-off: cage_vy still=" << still.first << " jumped=" << jumped.first << '\n';
+        require(jumped.second == 1 && still.second == 0 && jumped.first < still.first - 0.05,
+                "a jump in a moving cage must push the cage down by the legs' reaction");
+    }
+
     std::cout << "PASS scraperx_sim S2 ride: ride_s=" << s2_rode.seconds
               << " floor_y=" << s2_floor_y
               << " peak_speed=" << s2_top_state.s2_cage_peak_speed
