@@ -8207,6 +8207,51 @@ int main() {
     std::cout << "PASS scraperx_sim step2 balance: peak=" << beam_peak << " drift_m=" << beam_drift
               << " deck_balancing=" << int(deck_balancing) << " stepped_off=1\n";
 
+    // Phase 4: across the boards only the pendulum acts (kBalanceHipMargin).
+    // A sideways shove (the stick full across for a few ticks, then let go)
+    // that leaves the XCoM inside the centre of pressure's reach (0.15 m
+    // half-width + 0.12) is caught; one that carries it past cannot be, and
+    // the body goes off. The old centring (22 m/s/s toward the line) caught
+    // both: a 1.2 m/s shove stopped in 3 cm.
+    const auto shove = [](const int ticks) {
+        Simulation sim(InitialSpawn::Ring176East);
+        require(sim.advance_frame(1.0).accepted, "settle must be accepted");
+        require(walk_to(sim, 7.05, -128.4, 8.0, 0.1), "the player must reach the boards");
+        (void)sim.advance_frame(0.5);
+        require(walk_to(sim, 7.05, -128.4, 2.0, 0.06), "the player must stand at the boards' end");
+        (void)sim.advance_frame(0.5);
+        (void)hold_stick(sim, 0.0, -1.0, 0.0, -1.0, 0.6, [](const Snapshot &) { return false; });
+        (void)sim.advance_frame(0.5);
+        require(sim.snapshot().player_balancing, "the shove must start on the boards");
+        const auto deaths = sim.snapshot().death_count;
+        require(sim.set_move_input(1.0, 0.0), "move must be accepted");
+        for (int i = 0; i < ticks; ++i) {
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+        }
+        require(sim.set_move_input(0.0, 0.0), "release must be accepted");
+        double peak_xcom = 0.0;
+        for (int i = 0; i < 270; ++i) {
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+            peak_xcom = std::max(peak_xcom, std::abs(sim.snapshot().beam_xcom));
+        }
+        const auto end = sim.snapshot();
+        struct { bool off; double peak_xcom; double x; } out{end.death_count > deaths || end.player_position.y < 177.0,
+                                                              peak_xcom, end.player_position.x};
+        if (std::getenv("SCRAPERX_BALANCE_DETAIL") != nullptr) {
+            std::cout << "  shove ticks=" << ticks << " off=" << out.off << " peak_xcom=" << out.peak_xcom
+                      << " x=" << out.x << '\n';
+        }
+        return out;
+    };
+    const auto caught = shove(3);
+    const auto lost = shove(6);
+    require(!caught.off && caught.peak_xcom < 1.0 && std::abs(caught.x - 7.05) < 0.15,
+            "a shove that keeps the XCoM within reach must be caught back to the line");
+    require(lost.off && lost.peak_xcom > 1.0,
+            "a shove that carries the XCoM past the centre of pressure's reach must take the body off");
+    std::cout << "PASS scraperx_sim step2 beam pendulum: caught_peak_xcom=" << caught.peak_xcom
+              << " lost_peak_xcom=" << lost.peak_xcom << '\n';
+
     // AS-006's no-lift route: from the 154 m deck to standing on the 220 ring
     // by ladder, boards and standpipe, catwalk and scaffold, with every lift
     // in the band left where it was found.

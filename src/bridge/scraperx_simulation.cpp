@@ -793,6 +793,7 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
     out["rolls_refused"] = static_cast<std::int64_t>(s.roll_refused_count);
     out["stumbles"] = static_cast<std::int64_t>(s.stumble_count);
     out["teetering"] = s.player_teetering;
+    out["beam_xcom"] = s.beam_xcom;
     out["teeters"] = static_cast<std::int64_t>(s.teeter_count);
     out["summit_reached"] = s.summit_reached;
     out["summit_seconds"] = s.summit_seconds;

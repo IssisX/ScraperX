@@ -322,8 +322,19 @@ constexpr float kBalanceMaxWidth = 0.50F;
 constexpr float kBalanceMinLength = 1.50F;
 constexpr double kBalanceSpeedScale = 2.0 / 5.5;
 constexpr double kBalanceStepOffInput = 0.8;
-constexpr float kBalanceCentering = 3.0F;
-constexpr float kBalanceCenteringMaxMps = 0.4F;
+// Phase 4: across a beam the body is the inverted pendulum of the teeter
+// (omega = sqrt(g / h)): x'' = omega^2 (x - p), x the COM's offset from the
+// beam's line and p the centre of pressure, which the soles can put only on
+// the beam: |p| <= half its width plus kBalanceHipMargin (CHOSEN: what the
+// hips and arms add by swinging). p is set to bring the XCoM (x + v/omega)
+// back to the line, or to the lean the stick asks for (up to
+// kBalanceLeanFraction of that reach); gain kBalanceCaptureGain (CHOSEN,
+// critically damped near the line). An XCoM past the reach cannot be brought
+// back: the body goes off the beam. No force but the clamped centre of
+// pressure acts across it.
+constexpr float kBalanceHipMargin = 0.12F;
+constexpr float kBalanceCaptureGain = 1.0F;
+constexpr float kBalanceLeanFraction = 0.5F;
 // A beam must stand over a fall: the ground is probed this far out from
 // each side, from this far above its top, down to a step below it.
 constexpr float kBalanceSideProbe = 0.10F;
@@ -2783,12 +2794,15 @@ private:
         double move_z = commands.move_input_z * speed_scale;
         sprinting_ = false;
         balancing_ = false;
+        beam_xcom_ = 0.0F;
 
         if (grounded_ && support_entity_id_ != 0) {
             reference_velocity = current_support_point_velocity(bodies);
             airborne_inherited_velocity_ = reference_velocity;
             const Beam beam = beam_underfoot(bodies);
             const double input = std::hypot(commands.move_input_x, commands.move_input_z);
+            bool on_line = false;
+            float line_lean = 0.0F;
             if (beam.valid) {
                 // On a beam: along it at a walk, held on its line unless the
                 // stick means to step off.
@@ -2797,13 +2811,10 @@ private:
                 const double across = move_x * beam.across.GetX() + move_z * beam.across.GetZ();
                 if (std::abs(across) < kBalanceStepOffInput) {
                     const double walk = std::clamp(along, -kBalanceSpeedScale, kBalanceSpeedScale);
-                    const double centre =
-                        std::clamp(-static_cast<double>(beam.offset * kBalanceCentering),
-                                   -static_cast<double>(kBalanceCenteringMaxMps),
-                                   static_cast<double>(kBalanceCenteringMaxMps)) /
-                        kPlayerMaximumRelativeSpeed;
-                    move_x = beam.along.GetX() * walk + beam.across.GetX() * centre;
-                    move_z = beam.along.GetZ() * walk + beam.across.GetZ() * centre;
+                    move_x = beam.along.GetX() * walk;
+                    move_z = beam.along.GetZ() * walk;
+                    on_line = true;
+                    line_lean = static_cast<float>(across / kBalanceStepOffInput);
                 }
             } else if (commands.sprint_held && !crouched_ && carry_constraint_ == nullptr &&
                        input >= kSprintMinimumInput &&
@@ -2865,6 +2876,21 @@ private:
                                                       traction,
                                                       delta_seconds,
                                                       full_speed);
+                if (on_line) {
+                    // Across the beam only the pendulum (see kBalanceHipMargin).
+                    const float gravity = -physics_system_.GetGravity().GetY();
+                    const float omega = std::sqrt(gravity / (crouched_ ? kTeeterCrouchedComHeight : kTeeterComHeight));
+                    const float reach = beam.half_width + kBalanceHipMargin;
+                    const float x = beam.offset;
+                    const float v = before.Dot(beam.across);
+                    const float xcom = x + v / omega;
+                    const float target = line_lean * kBalanceLeanFraction * reach;
+                    const float pressure = std::clamp(xcom + kBalanceCaptureGain * (xcom - target), -reach, reach);
+                    const float v_next = v + omega * omega * (x - pressure) * delta_seconds;
+                    const float now = (player_velocity - reference_velocity).Dot(beam.across);
+                    player_velocity += beam.across * (v_next - now);
+                    beam_xcom_ = xcom / reach;
+                }
                 if (teetering_) {
                     const JPH::Vec3 change = player_velocity - reference_velocity - before;
                     const float along = change.Dot(teeter_direction);
@@ -3943,6 +3969,7 @@ private:
         JPH::Vec3 along{JPH::Vec3::sZero()};
         JPH::Vec3 across{JPH::Vec3::sZero()};
         float offset = 0.0F;
+        float half_width = 0.0F;
     };
 
     [[nodiscard]] Beam beam_underfoot(const JPH::BodyInterface &bodies) const noexcept {
@@ -3950,8 +3977,19 @@ private:
         const JPH::RVec3 centre = bodies.GetPosition(player_id_);
         const float half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
         JPH::RayCastResult hit;
-        if (!cast_ray(centre, JPH::Vec3(0.0F, -(half_height + kCheckpointFootingSlack), 0.0F), hit)) {
-            return beam;
+        JPH::RVec3 probe = centre;
+        float reach = half_height + kCheckpointFootingSlack;
+        if (!cast_ray(probe, JPH::Vec3(0.0F, -reach, 0.0F), hit)) {
+            // The centre already past the beam's side, the capsule's rim
+            // still on it: the beam is where the contact is.
+            if (!support_sample_.grounded) {
+                return beam;
+            }
+            probe = JPH::RVec3(support_sample_.contact_point.x, centre.GetY(), support_sample_.contact_point.z);
+            reach += kPlayerRadius;
+            if (!cast_ray(probe, JPH::Vec3(0.0F, -reach, 0.0F), hit)) {
+                return beam;
+            }
         }
         const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), hit.mBodyID);
         if (!lock.Succeeded()) {
@@ -3990,7 +4028,7 @@ private:
         // yard's kerb, a sill) is walked on and off like any floor: held on
         // its line, a body could not step down off a kerb.
         const JPH::RVec3 underfoot =
-            centre + JPH::Vec3(0.0F, -(half_height + kCheckpointFootingSlack) * hit.mFraction, 0.0F) -
+            centre + JPH::Vec3(0.0F, -reach * hit.mFraction, 0.0F) -
             across * offset;
         for (const float side : {-1.0F, 1.0F}) {
             const JPH::RVec3 beside = underfoot +
@@ -4008,6 +4046,7 @@ private:
         beam.along = unit_along;
         beam.across = across;
         beam.offset = offset;
+        beam.half_width = box.half[short_axis];
         return beam;
     }
 
@@ -4147,6 +4186,7 @@ private:
         air_full_speed_ = kPlayerMaximumRelativeSpeed;
         sprinting_ = false;
         balancing_ = false;
+        beam_xcom_ = 0.0F;
         fall_peak_speed_mps_ = 0.0F;
         pre_contact_fall_speed_mps_ = 0.0F;
         parachute_deployed_ = false;
@@ -4346,6 +4386,7 @@ public:
         }
         state_.player_sprinting = sprinting_;
         state_.player_balancing = balancing_;
+        state_.beam_xcom = beam_xcom_;
         state_.grip_available = grip_affordance_.valid;
         state_.grip_entity_id = grip_affordance_.valid ? grip_affordance_.entity_id : 0;
         state_.grip_point = grip_affordance_.valid ? to_vector3(grip_affordance_.point) : Vector3{};
@@ -4518,6 +4559,8 @@ public:
     Lip edge_affordance_{};
     bool sprinting_ = false;
     bool balancing_ = false;
+    // The XCoM across a beam, as a fraction of the centre of pressure's reach.
+    float beam_xcom_ = 0.0F;
     // Top speed the air steers toward: the walk, or what the ground gave the
     // body as it left it (a running jump keeps its speed).
     float air_full_speed_ = kPlayerMaximumRelativeSpeed;

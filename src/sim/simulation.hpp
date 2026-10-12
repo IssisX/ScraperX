@@ -469,6 +469,9 @@ struct Snapshot final {
     // The XCoM past the edge of the footing, the stick not driving that way:
     // the feet brake only as hard as soles can (see kTeeterComHeight).
     bool player_teetering = false;
+    // On a beam: the XCoM across it as a fraction of the centre of
+    // pressure's reach (see kBalanceHipMargin); past +-1 it cannot come back.
+    double beam_xcom = 0.0;
     // The top of the route (kRouteTopEntityId) stood on, firm, outside a
     // traversal: latched with the simulation time and the deaths then.
     bool summit_reached = false;
