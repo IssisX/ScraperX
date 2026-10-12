@@ -2793,8 +2793,20 @@ private:
     // than the level, static share of 1. The bodies' friction values were
     // set for the machines' contacts, not as grip, so they do not enter here
     // until surfaces are given one.
-    [[nodiscard]] float ground_grip(const JPH::Vec3 support_velocity, const float dt) noexcept {
-        const float slope = std::clamp(support_sample_.normal_y, 0.0F, 1.0F);
+    [[nodiscard]] float ground_grip(const JPH::BodyInterface &bodies, const JPH::Vec3 support_velocity,
+                                    const float dt) noexcept {
+        // The slope is the face under the soles, not the contact's normal,
+        // which tilts on a step's edge.
+        float slope = 1.0F;
+        const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+        const float reach = active_half_height() + kCheckpointFootingSlack;
+        JPH::RayCastResult hit;
+        if (cast_ray(centre, JPH::Vec3(0.0F, -reach, 0.0F), hit)) {
+            slope = std::clamp(
+                surface_normal(hit.mBodyID, hit.mSubShapeID2, centre + JPH::Vec3(0.0F, -reach * hit.mFraction, 0.0F))
+                    .GetY(),
+                0.0F, 1.0F);
+        }
         // The support's vertical acceleration, smoothed over kGripLoadSeconds.
         float rate = 0.0F;
         if (support_entity_id_ != 0 && support_entity_id_ == grip_support_entity_) {
@@ -2907,7 +2919,7 @@ private:
             }
             // Balance at an edge (see kTeeterComHeight).
             const float traction = carry_ground_acceleration() * static_cast<float>(0.25 + 0.75 * recovery_balance()) *
-                                   ground_grip(reference_velocity, delta_seconds);
+                                   ground_grip(bodies, reference_velocity, delta_seconds);
             // While teetering, the most the feet may take off the speed toward
             // the edge in one second; steering across it keeps full traction.
             float teeter_brake = 0.0F;
