@@ -1,0 +1,11 @@
+{
+  "source_hashes": {
+    "godot/presentation/main.gd": "b1a1f60797ac604daaecb51de8b79e77db2d8abcd90c444069f8a9a7c5e26bb9",
+    "godot/presentation/ui/touch_controls.gd": "382d7dae7d6e8d856bed4740f1403a2b0eff5a9994647d88402d3592f4954db8",
+    "godot/presentation/ui/hud.gd": "145f2249654f8350d9ee2cae3b90ad092d5e1181152071f17cc49fe19fedeb93",
+    "godot/presentation/ui/ui_test_driver.gd": "7e3e0e6c7bdfd2cdb8f348e91a3b9724340a84ad19f5b967c9e908c5b9a62e09"
+  },
+  "independent_review": "approach_review SolHigh productiondiff no blockers: count1/XORactualflags scoped Climbing/Hanging, contextualAction request_release, touch truth, postureHUD, paired andoperating precedencepreserved. Rootinspectedactualdiff andsourcebound runtime.",
+  "native_unchanged": true,
+  "proof_limit": "Headless controls/input/native response, not phonevisualquality or audiblehaptics."
+}

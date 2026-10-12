@@ -41,6 +41,7 @@ const SCENARIOS := {
 	"touch_north_grip_diagnostic": 8,
 	"touch_single_hand_catch": 8,
 	"touch_single_hand_catch_right": 8,
+	"touch_single_hand_catch_action": 8,
 	"touch_suspended_ladder": 8,
 	"keyboard_slingshot": 8,
 	"pad_slingshot": 8,
@@ -102,7 +103,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_taper_inspection_route", "touch_causal_facade", "touch_north_grip_diagnostic", "touch_single_hand_catch", "touch_single_hand_catch_right", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_ballast_mantle_feedback", "touch_west_brace_bay"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_taper_inspection_route", "touch_causal_facade", "touch_north_grip_diagnostic", "touch_single_hand_catch", "touch_single_hand_catch_right", "touch_single_hand_catch_action", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_ballast_mantle_feedback", "touch_west_brace_bay"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -181,6 +182,8 @@ func _run() -> void:
 			ok = await _touch_single_hand_catch()
 		"touch_single_hand_catch_right":
 			ok = await _touch_single_hand_catch(true)
+		"touch_single_hand_catch_action":
+			ok = await _touch_single_hand_catch(false, true)
 		"keyboard_slingshot":
 			ok = await _slingshot(InputRouter.Device.KEYBOARD_MOUSE)
 		"pad_slingshot":
@@ -2353,7 +2356,7 @@ func _touch_crown_swing_exit() -> bool:
 
 # One initial normal-world reach probe; every subsequent transition is real touch.
 # This proves the bounded catch/posture/release slice, not continuous ascent.
-func _touch_single_hand_catch(right_hand: bool = false) -> bool:
+func _touch_single_hand_catch(right_hand: bool = false, release_with_action: bool = false) -> bool:
 	if not _campaign_world_intact():
 		return false
 	if not await _wait_until(func() -> bool: return int(_native().get_tick_index()) >= 180, 3.0):
@@ -2392,6 +2395,9 @@ func _touch_single_hand_catch(right_hand: bool = false) -> bool:
 	if not _single_hand_attached(right_hand) or not _single_hand_arms_honest(right_hand) \
 			or not _single_hand_feedback_quiet(right_hand, held_generation, contact_count, contact_playbacks):
 		return _fail("single-hand neutral native hold or arm presentation is dishonest")
+	if not _single_hand_controls_honest("TUCK"):
+		return _fail("solo hold exposes unsupported controls: action=%s jump=%s drop=%s" % [
+			_ctx()["action"], _main._touch.button_label(&"jump"), _main._touch.button_label(&"drop")])
 	var before: Dictionary = _native().get_landing_state()
 	if not bool(before.get("swing_tuck_available", false)) \
 			or bool(before.get("swing_tuck_requested", true)) \
@@ -2420,6 +2426,7 @@ func _touch_single_hand_catch(right_hand: bool = false) -> bool:
 			or target_before - target_tucked > 0.251 \
 			or not is_finite(paid_work) or paid_work <= 0.0 or paid_work > 500.0 * tuck_seconds + 0.01 \
 			or _main._touch.button_label(&"crouch") != "EXTEND" \
+			or not _single_hand_controls_honest("EXTEND") \
 			or not _single_hand_arms_honest(right_hand) \
 			or not _single_hand_feedback_quiet(right_hand, held_generation, contact_count, contact_playbacks):
 		return _fail("single-hand TUCK lacks honest finite native hands, paid work or EXTEND")
@@ -2430,10 +2437,15 @@ func _touch_single_hand_catch(right_hand: bool = false) -> bool:
 			and float(state.get("hanging_commanded_span_m", target_tucked)) > target_tucked + 0.20, 4.0):
 		return _fail("single-hand touch EXTEND did not restore native target")
 	if not _single_hand_attached(right_hand) or _main._touch.button_label(&"crouch") != "TUCK" \
+			or not _single_hand_controls_honest("TUCK") \
 			or not _single_hand_feedback_quiet(right_hand, held_generation, contact_count, contact_playbacks):
 		return _fail("single-hand extension lost the hand or touch toggle label")
 	var release_y := _position().y
-	_tap(1, _center(&"jump"))
+	if release_with_action:
+		# Keyboard E reaches the contextual Action gateway on this real hold.
+		_act(InputRouter.Device.KEYBOARD_MOUSE)
+	else:
+		_tap(1, _center(&"drop" if right_hand else &"jump"))
 	if not await _wait_until(func() -> bool:
 		var state: Dictionary = _native().get_landing_state()
 		return int(_native().get_traversal_state()) == 0 \
@@ -2442,7 +2454,7 @@ func _touch_single_hand_catch(right_hand: bool = false) -> bool:
 			and not bool(state.get("right_hand_attached", true)) \
 			and not bool(state.get("swing_tuck_available", true)) \
 			and not bool(state.get("swing_tuck_requested", true)), 0.5):
-		return _fail("single-hand touch Jump did not clear actual hand and posture")
+		return _fail("single-hand touch release did not clear actual hand and posture")
 	if not await _wait_until(func() -> bool: return _position().y < release_y - 0.10, 0.75):
 		return _fail("single-hand release did not begin a real fall")
 	for hand in _main._arms._hands:
@@ -2453,7 +2465,8 @@ func _touch_single_hand_catch(right_hand: bool = false) -> bool:
 	if int(_main._audio.get_grip_feedback_stats()["climb_regrips"]) != contact_count \
 			or int(_main._audio.get_grip_feedback_stats()["grab_playbacks"]) != contact_playbacks:
 		return _fail("single-hand release invented a contact sound")
-	_detail = "normal_world=1 initial_stages=1 viewport_action_crouch_jump=1 actual_hands=%s initial_contact_cues=1 initial_grab_playbacks=1 passive_extra_cues=0 actual_span_shortening_m=%.4f target_shortening_m=%.4f paid_work_j=%.4f honest_arms=1 passive_release=1" % [
+	_detail = "normal_world=1 initial_stages=1 viewport_action_crouch_release=1 solo_controls_honest=1 release_control=%s actual_hands=%s initial_contact_cues=1 initial_grab_playbacks=1 passive_extra_cues=0 actual_span_shortening_m=%.4f target_shortening_m=%.4f paid_work_j=%.4f honest_arms=1 passive_release=1" % [
+		"keyboard_action" if release_with_action else ("touch_drop" if right_hand else "touch_jump"),
 		"right_only" if right_hand else "left_only", span_before - float(tucked["hanging_actual_span_m"]), target_before - target_tucked,
 		float(tucked["hand_actuator_positive_work_j"]) - work_before]
 	return _campaign_world_intact()
@@ -2509,6 +2522,35 @@ func _single_hand_arms_honest(right_hand: bool = false) -> bool:
 	return true
 
 
+# Read the real held context through both presentation paths. Switching the
+# HUD renderer synchronously does not alter input or native physical state.
+func _single_hand_controls_honest(posture_label: String) -> bool:
+	var ctx := _ctx()
+	if not bool(ctx.get("single_hand_hold", false)) or ctx["action"]["id"] != &"release" \
+			or ctx["action"]["label"] != "LET GO" \
+			or _main._touch.is_button_shown(&"action") \
+			or not _main._touch.is_button_shown(&"jump") \
+			or not _main._touch.is_button_shown(&"drop") \
+			or _main._touch.button_label(&"jump") != "LET GO" \
+			or _main._touch.button_label(&"drop") != "LET GO" \
+			or _main._touch.button_label(&"crouch") != posture_label:
+		return false
+	var hud = _main._hud
+	var was_touch: bool = hud.touch_active
+	hud.touch_active = false
+	var prompts: Array = hud._build_prompts(ctx)
+	hud.touch_active = was_touch
+	var release_prompt := false
+	var posture_prompt := false
+	for prompt in prompts:
+		var wording := String(prompt["text"]) + " " + String(prompt["detail"])
+		if "CLIMB UP" in wording or "JUMP OFF" in wording or "MOVE TO LEAN" in wording:
+			return false
+		release_prompt = release_prompt or (prompt["verb"] in [&"jump", &"drop"] and prompt["text"] == "LET GO")
+		posture_prompt = posture_prompt or (prompt["verb"] == &"crouch" and prompt["text"] == posture_label)
+	return release_prompt and posture_prompt
+
+
 func _single_hand_feedback_quiet(right_hand: bool, generation: int, count: int, playbacks: int) -> bool:
 	var key := "right_hand_generation" if right_hand else "left_hand_generation"
 	return int(_native().get_landing_state().get(key, 0)) == generation \
@@ -2516,12 +2558,25 @@ func _single_hand_feedback_quiet(right_hand: bool, generation: int, count: int, 
 		and int(_main._audio.get_grip_feedback_stats()["grab_playbacks"]) == playbacks
 
 
+func _hanging_posture_hud_matches(label: String) -> bool:
+	var hud = _main._hud
+	var was_touch: bool = hud.touch_active
+	hud.touch_active = false
+	var prompts: Array = hud._build_prompts(_ctx())
+	hud.touch_active = was_touch
+	for prompt in prompts:
+		if prompt["verb"] == &"crouch" and prompt["text"] == label:
+			return true
+	return false
+
+
 func _touch_hanging_posture() -> bool:
 	var before: Dictionary = _native().get_landing_state()
 	if not bool(before.get("swing_tuck_available", false)) \
 			or bool(before.get("swing_tuck_requested", true)) \
 			or not _main._touch.is_button_shown(&"crouch") \
-			or _main._touch.button_label(&"crouch") != "TUCK":
+			or _main._touch.button_label(&"crouch") != "TUCK" \
+			or not _hanging_posture_hud_matches("TUCK"):
 		return _fail("actual hanging hands did not expose the posture control")
 	# A free arc changes world-Y projection without changing arm span. Measure
 	# the real native radial distances when active, retaining literal Y readback.
@@ -2555,7 +2610,7 @@ func _touch_hanging_posture() -> bool:
 			or float(tucked["player_gravity_factor"]) != 1.0 or bool(_native().is_player_crouched()):
 		return _fail("touch TUCK lacks real finite hands, paid work, or actual COM readback")
 	var target_tucked := float(tucked[target_key])
-	if _main._touch.button_label(&"crouch") != "EXTEND":
+	if _main._touch.button_label(&"crouch") != "EXTEND" or not _hanging_posture_hud_matches("EXTEND"):
 		return _fail("native tuck request did not update the EXTEND control")
 	_tap(2, _center(&"crouch"))
 	if not await _wait_until(func() -> bool:
@@ -2563,6 +2618,8 @@ func _touch_hanging_posture() -> bool:
 		return not bool(state.get("swing_tuck_requested", true)) \
 			and float(state.get(target_key, target_tucked)) > target_tucked + 0.20, 4.0):
 		return _fail("touch EXTEND did not restore the native hand target")
+	if not _hanging_posture_hud_matches("TUCK"):
+		return _fail("actual hanging extension did not restore the HUD TUCK prompt")
 	print("SCRAPERX_HANGING_POSTURE touch_tuck_extend=1 free_arc=%s actual_posture_change_m=%f commanded_change_m=%f positive_target_work_j=%f" % [
 		radial, body_before - float(tucked[body_key]), target_before - target_tucked,
 		float(tucked["hand_actuator_positive_work_j"]) - work_before])

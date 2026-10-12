@@ -332,25 +332,26 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	var hanging: bool = ctx["hanging"]
 	var climbing: bool = ctx.get("climbing", false)
 	var swinging: bool = ctx.get("swinging", false)
+	var passive_release := swinging or bool(ctx.get("single_hand_hold", false))
 	var jump: TouchButton = _buttons[B_JUMP]
 	jump.shown = true
 	# Pressable while airborne on purpose: main.gd buffers a press made just
 	# before touchdown and fires it on the grounded tick. Dimmed, not dead.
 	jump.enabled = true
 	jump.dimmed = not (ctx["jump_ok"] or hanging or climbing)
-	# A passive swing releases its actual hands; it does not add a jump impulse.
-	jump.icon = &"drop" if swinging else (&"climb" if hanging else &"jump")
-	jump.label = "LET GO" if swinging else ("CLIMB UP" if hanging else ("JUMP OFF" if climbing else "JUMP"))
+	# A passive swing or solo hold releases its actual hands without a jump impulse.
+	jump.icon = &"drop" if passive_release else (&"climb" if hanging else &"jump")
+	jump.label = "LET GO" if passive_release else ("CLIMB UP" if hanging else ("JUMP OFF" if climbing else "JUMP"))
 	jump.tone = TONE_PRIMARY
 
 	var action: TouchButton = _buttons[B_ACTION]
 	var act: Dictionary = ctx["action"]
-	# Swing release already has the ordinary Jump and Drop slots. Avoid a
+	# Passive release already has the ordinary Jump and Drop slots. Avoid a
 	# third identical touch button; keyboard/pad Action dispatch is unchanged.
-	action.shown = not swinging
+	action.shown = not passive_release
 	# While hanging, Jump already reads CLIMB UP (the same native mantle);
 	# a second identical button beside it is noise, so Action rests.
-	action.enabled = act["id"] != &"" and not hanging and not swinging
+	action.enabled = act["id"] != &"" and not hanging and not passive_release
 	action.icon = act["icon"]
 	action.label = act["label"]
 	action.tone = TONE_PRIMARY if action.enabled else TONE_GHOST
@@ -359,7 +360,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	# body lowers it over into a hang.
 	var drop: TouchButton = _buttons[B_DROP]
 	drop.shown = ctx.get("drop_ok", hanging)
-	drop.label = "LET GO" if swinging else ("DROP" if hanging or climbing or ctx.get("lowering", false) else "DROP DOWN")
+	drop.label = "LET GO" if passive_release else ("DROP" if hanging or climbing or ctx.get("lowering", false) else "DROP DOWN")
 	var chute: TouchButton = _buttons[B_CHUTE]
 	chute.shown = ctx["chute_ok"] and not hanging
 	chute.icon = &"chute"

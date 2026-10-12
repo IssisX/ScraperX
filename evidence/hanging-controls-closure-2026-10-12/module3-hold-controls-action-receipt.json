@@ -1,0 +1,63 @@
+{
+  "status": "completed",
+  "files": [
+    {
+      "source": "godot/presentation/main.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/main.gd",
+      "sha256": "b1a1f60797ac604daaecb51de8b79e77db2d8abcd90c444069f8a9a7c5e26bb9"
+    },
+    {
+      "source": "godot/presentation/ui/touch_controls.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/ui/touch_controls.gd",
+      "sha256": "382d7dae7d6e8d856bed4740f1403a2b0eff5a9994647d88402d3592f4954db8"
+    },
+    {
+      "source": "godot/presentation/ui/ui_test_driver.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/ui/ui_test_driver.gd",
+      "sha256": "7e3e0e6c7bdfd2cdb8f348e91a3b9724340a84ad19f5b967c9e908c5b9a62e09"
+    },
+    {
+      "source": "godot/presentation/first_person_arms.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/first_person_arms.gd",
+      "sha256": "7e7b0435c3b678b42a5abd18f465f5de4a2b5c368ebfa2e501b3508c380eb826"
+    },
+    {
+      "source": "godot/presentation/audio/audio_director.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/audio/audio_director.gd",
+      "sha256": "03365ac25b94391197ff077ecf17915c9350d674c2d1362e2e5045c026c360bd"
+    },
+    {
+      "source": "godot/presentation/ui/hud.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/ui/hud.gd",
+      "sha256": "145f2249654f8350d9ee2cae3b90ad092d5e1181152071f17cc49fe19fedeb93"
+    }
+  ],
+  "native_bridge": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/addons/scraperx_native/bin/linux/libscraperx_native.so",
+    "sha256": "9a057dd73b15c5ad70ea77460042e908b9ea562252e4e4a78a075594981b7055",
+    "build_receipt": "module3-native/grip-feedback-bridge/receipt.json"
+  },
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_single_hand_catch_action"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 8.747,
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-hold-controls-action.log",
+  "log_sha256": "c3787beb9f802a1e86cb0c91eec12f12b06d201b189f59c08a94d6592d6efc2b"
+}

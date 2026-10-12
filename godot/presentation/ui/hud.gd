@@ -126,18 +126,31 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 	if ctx["operating"] != &"":
 		out.append(_prompt(&"done", "DONE"))
 		return out
+	var posture := "EXTEND" if bool(ctx.get("swing_tuck_requested", false)) else "TUCK"
+	if bool(ctx.get("single_hand_hold", false)):
+		out.append(_prompt(&"jump", "LET GO"))
+		out.append(_prompt(&"drop", "LET GO"))
+		if bool(ctx.get("swing_tuck_available", false)):
+			out.append(_prompt(&"crouch", posture))
+		return out
 	if bool(ctx.get("swinging", false)):
 		out.append(_prompt(&"jump", "LET GO", "MOVE TO LEAN"))
 		out.append(_prompt(&"drop", "LET GO"))
+		if bool(ctx.get("swing_tuck_available", false)):
+			out.append(_prompt(&"crouch", posture))
 		return out
 	if ctx["hanging"]:
 		out.append(_prompt(&"jump", "CLIMB UP"))
 		out.append(_prompt(&"drop", "DROP"))
+		if bool(ctx.get("swing_tuck_available", false)):
+			out.append(_prompt(&"crouch", posture))
 		return out
 	if ctx.get("climbing", false):
 		out.append(_prompt(&"action", "CLIMB UP", "AT THE TOP"))
 		out.append(_prompt(&"jump", "JUMP OFF"))
 		out.append(_prompt(&"drop", "LET GO"))
+		if bool(ctx.get("swing_tuck_available", false)):
+			out.append(_prompt(&"crouch", posture))
 		return out
 	if int(ctx["traversal"]) != 0:
 		return out

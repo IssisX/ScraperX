@@ -1,6 +1,6 @@
 # Deliberate second rigid hand — next bounded movement integration
 
-Preparation only,2026-10-12, after verified single-rigid-hand99c8358 and actual-contact feedback86c780c. No promotion implementation or positive acquisition proof is claimed. Shared applicability follows real attachment, rigid support, reach and first-hit clearance; no named-encounter whitelist. Automatic and material one-hand acquisition/full one-hand climbing remain separate.
+Status2026-10-12: DEFERRED byownerredirect towardvisibleplayer/worldquality afterclosingexistingcontrols. Do notautomaticallyresume thisqueue. Preparation only,2026-10-12, after verified single-rigid-hand99c8358 and actual-contact feedback86c780c. No promotion implementation or positive acquisition proof is claimed. Shared applicability follows real attachment, rigid support, reach and first-hit clearance; no named-encounter whitelist. Automatic and material one-hand acquisition/full one-hand climbing remain separate.
 
 ## Observable target and owners
 

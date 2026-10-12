@@ -465,7 +465,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_ballast_mantle_feedback", "touch_taper_inspection_route", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_north_grip_diagnostic", "touch_single_hand_catch", "touch_single_hand_catch_right", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_west_brace_bay"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_ballast_mantle_feedback", "touch_taper_inspection_route", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_north_grip_diagnostic", "touch_single_hand_catch", "touch_single_hand_catch_right", "touch_single_hand_catch_action", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_west_brace_bay"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -1027,6 +1027,8 @@ func _perform_action() -> void:
 				_native.request_slingshot_drop()
 			else:
 				_native.request_slingshot_action()
+		&"release":
+			_native.request_release()
 		&"climb_up", &"climb", &"catch":
 			_native.request_traversal()
 		&"operate":
@@ -1109,6 +1111,9 @@ func _read_context() -> Dictionary:
 		station = &"sump"
 	var hanging := traversal == TRAVERSAL_HANGING
 	var climbing := traversal == TRAVERSAL_CLIMBING
+	var single_hand_hold := (hanging or climbing) \
+		and int(landing.get("traversal_hand_constraint_count", 0)) == 1 \
+		and bool(landing.get("left_hand_attached", false)) != bool(landing.get("right_hand_attached", false))
 	var lowering := traversal == TRAVERSAL_LOWERING
 	var free := traversal == TRAVERSAL_NONE
 	var grip := bool(_native.is_grip_available())
@@ -1139,11 +1144,15 @@ func _read_context() -> Dictionary:
 		action = {"id": &"slingshot", "label": ("RELEASE" if bool(sling.get("release_ready", false)) else "DRAW MORE") if sling_seated else "ENTER POUCH", "icon": &"operate",
 			"detail": "PULL BACK TO STRETCH" if sling_seated else "WOODEN SLINGSHOT"}
 	elif hanging or climbing:
-		# The native swinging subtype releases these hands on Action;
-		# ordinary climbing still requests its contextual top-out.
-		var swinging := bool(landing.get("player_swinging", false))
-		action = {"id": &"climb_up", "label": "LET GO" if swinging else "CLIMB UP",
-			"icon": &"drop" if swinging else &"climb", "detail": ""}
+		if single_hand_hold:
+			# One actual hand supports a passive hold, with no solo top-out.
+			action = {"id": &"release", "label": "LET GO", "icon": &"drop", "detail": ""}
+		else:
+			# The native swinging subtype releases these hands on Action;
+			# ordinary climbing still requests its contextual top-out.
+			var swinging := bool(landing.get("player_swinging", false))
+			action = {"id": &"climb_up", "label": "LET GO" if swinging else "CLIMB UP",
+				"icon": &"drop" if swinging else &"climb", "detail": ""}
 	elif not free:
 		pass
 	elif carrying != 0 and rig == RIG_HOOK:
@@ -1211,6 +1220,7 @@ func _read_context() -> Dictionary:
 		"crouched": bool(_native.is_player_crouched()),
 		"traversal": traversal,
 		"hanging": hanging,
+		"single_hand_hold": single_hand_hold,
 		"swinging": bool(landing.get("player_swinging", false)),
 		"swing_tuck_available": bool(landing.get("swing_tuck_available", false)),
 		"swing_tuck_requested": bool(landing.get("swing_tuck_requested", false)),
