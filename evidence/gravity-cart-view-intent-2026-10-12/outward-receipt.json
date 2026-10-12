@@ -1,0 +1,59 @@
+{
+  "scope": "one fixed ordinaryfacinginput candidate duringdeliberatemiss; move/apron/deadline/assertions untouched; fullretainedtest",
+  "base_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/receipt.json",
+  "source_sha256": "a80bae41fdb0693264d8016276538b7ea8652cd2a356a66d5c3b5ed191aecb06",
+  "archive_sha256": "8d19e954ae980b70238096d9b982deff4121a3082a3d5094dbc3ff6e25dbf532",
+  "steps": [
+    {
+      "name": "compile",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/gravity_cart_outward_facing.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-receiver-final/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/gravity_cart_outward_facing"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 8.741,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/outward-compile.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "run",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/gravity_cart_outward_facing"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 231.798,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/outward-run.log",
+      "log_sha256": "64ceec245bebd5713706db4cb5e8a82dc8dd6b18e708302c9b44e217c8029ce8"
+    }
+  ]
+}

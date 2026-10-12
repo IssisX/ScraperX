@@ -201,6 +201,9 @@ int main() {
         if (!v.player_grounded) left = true;
         if (left) {
             steer(s, -28.0, -141.6);
+            // Keep the intentional outward view: steering back toward the
+            // apron must not turn this miss into an automatic cart catch.
+            (void)s.set_facing(1, 0);
             if (v.player_grounded && v.support_entity_id == kIntermediateReceiver) {
                 caught = true;
                 break;

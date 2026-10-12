@@ -1,0 +1,120 @@
+{
+  "source_head": "86fa732e1344f9ea66197c81cd02aaead1c04859",
+  "scope": "readonly shipping; firstfailedexactCItest boundedcausaldiagnosis",
+  "exact_unchanged_test_sha256": "2a61db75d57e16c8fa13a6dad2671ae69b72fe9f465e7b4e9b0c4fec741a7550",
+  "reproduction": {
+    "name": "run",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/gravity_cart_logging"
+    ],
+    "exit_code": 1,
+    "elapsed_seconds": 75.284,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/run.log",
+    "log_sha256": "885da554f95b6b5430c50eca657eb4f1b5b3dfc6e46754a01253b331914f41d4"
+  },
+  "candidate": {
+    "name": "run",
+    "command": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/gravity_cart_outward_facing"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 231.798,
+    "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/outward-run.log",
+    "log_sha256": "64ceec245bebd5713706db4cb5e8a82dc8dd6b18e708302c9b44e217c8029ce8"
+  },
+  "archive_sha256": "8d19e954ae980b70238096d9b982deff4121a3082a3d5094dbc3ff6e25dbf532",
+  "supported_cause": "Native integration deliberate-miss loop callssteer which rotatesfacingbacktowardcart whileairinput alsoapproachescart. Actualsharedcatch admission thereforetakes twohandClimbingownership of2320, holdingtheplayernear352 instead offallingto341. Godot touchwalk air steering retains explicitoutward+X view; targetcorridor itself isvalid.",
+  "observed_failure": {
+    "first_airborne_tick": 6842,
+    "first_logged_paired_catch_tick": 6885,
+    "traversal": "Climbing",
+    "traversal_support": 2320,
+    "native_hand_constraints": 2,
+    "generations": [
+      1,
+      1
+    ],
+    "radial": false,
+    "grounded": false,
+    "support": 0,
+    "approx_terminal_position": [
+      -26.8366527557,
+      352.030639648,
+      -141.482955933
+    ],
+    "steady_input": {
+      "move": [
+        -1,
+        -0.211209010384
+      ],
+      "facing_before_candidate_override": [
+        -1.16334724426,
+        -0.117044067383
+      ]
+    },
+    "actual_hand_grip_points": [
+      [
+        -27.5055122375,
+        351.94229126,
+        -141.300018311
+      ],
+      [
+        -27.5055122375,
+        351.94229126,
+        -141.300018311
+      ]
+    ],
+    "deaths": 0
+  },
+  "actual_apron_geometry": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/gravity-cart-ci-diagnosis/apron-bounds.json",
+  "one_fixed_candidate": {
+    "change": "Addordinary(void)s.set_facing(1,0) immediatelyaftersteer(s,-28.0,-141.6) insidewalkingmiss loop. Preserveexplicitoutboundview whileusingunchangedairmovement.",
+    "changed_shipping_owner": "tests/gravity_cart_integration_tests.cpp",
+    "unchanged": [
+      "Walking targets/corridor",
+      "900tickmissdeadline",
+      "Actual1956groundedrecovery/341.9height",
+      "No death/rescue condition",
+      "Machine200kJ/10kW/9kN limits",
+      "Paid recall/reboard/retry/onward/fullpaidreset assertions",
+      "Allnativephysics/grip/catchadmission"
+    ],
+    "full_retained_test_outcome": "PASS0",
+    "actual_apron_recovery": {
+      "tick": 7105,
+      "position": [
+        -28.0120544434,
+        341.899993896,
+        -141.607971191
+      ],
+      "support": 1956,
+      "grounded": true,
+      "hands": 0,
+      "deaths": 0
+    },
+    "paid_recall_retry": {
+      "tick": 12257,
+      "energy_j": 169917.773729,
+      "positive_work_j": 23865.9256199
+    },
+    "logger_note": "Candidate GRAVITY_CART_MISS_INPUT lines printsteer helperfacing BEFORE added+Xoverride. Finalordinarynative facingcall isrecorded inprivatecandidate source; do nottreatthosepreoverride numbers as finalcandidatedeliveredfacing."
+  },
+  "classification": {
+    "supported": "Preexistingtestinput assumption undercurrent sharedcatch behavior, exposedbyfullCI; notsupportedasintroducedbynorthgeometryrepair.",
+    "evidence": "Missinput loop unchanged since0e31e222 dated2026-10-08; originaldc347 andcurrent8d19 src/sim receipts differONLYnorth_service_frame.cpp. Cartgeometry/Simulation2fe/handbackend982 identical.",
+    "boundary": "Originaldc347 archive wasNOT runtime-replayed forgravitycart; provenance/sourcecomparison only, nohistoricalruntimePASS/FAILclaim."
+  },
+  "shipping_sources_changed_by_diagnostician": false,
+  "next_validation": "Root appliesminimaltestinputcomment/line, freshcompile exactshippingtest againstmatchedarchive, then next fullGREENCIcandidate. Local privatefulltestPASS isnot full63suite/Android proof.",
+  "reasoning_control": "AssignedSolHigh retained; no liveeffort/model/tier settingchangedorclaimed."
+}
