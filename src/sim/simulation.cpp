@@ -143,6 +143,9 @@ constexpr float kStumbleMinimumSpeed = 3.0F;
 // can leave). Smooth motion (a turning platform, a lift's start) is re-matched
 // tick by tick and never adds up to a shift.
 constexpr float kSupportJoltMargin = 0.15F;
+// Phase 2: the support's vertical acceleration is smoothed over this before
+// it lightens the load on the soles (see ground_grip).
+constexpr float kGripLoadSeconds = 0.1F;
 constexpr float kSupportJoltSpan = 0.5F;
 
 // Phase 4: balance at an edge, by the reduced-order extrapolated centre of
@@ -2783,6 +2786,28 @@ private:
         velocity.SetZ(reference.GetZ() + horizontal.GetZ());
     }
 
+    // Phase 2: the share of the ground's traction (kGroundAcceleration, a
+    // project parameter on level, static ground) the contact gives: the
+    // normal's vertical part (a slope tips the load off the soles) and the
+    // load (a support falling away under the feet lightens it). Never more
+    // than the level, static share of 1. The bodies' friction values were
+    // set for the machines' contacts, not as grip, so they do not enter here
+    // until surfaces are given one.
+    [[nodiscard]] float ground_grip(const JPH::Vec3 support_velocity, const float dt) noexcept {
+        const float slope = std::clamp(support_sample_.normal_y, 0.0F, 1.0F);
+        // The support's vertical acceleration, smoothed over kGripLoadSeconds.
+        float rate = 0.0F;
+        if (support_entity_id_ != 0 && support_entity_id_ == grip_support_entity_) {
+            rate = (support_velocity.GetY() - grip_support_vy_) / dt;
+        }
+        grip_support_entity_ = support_entity_id_;
+        grip_support_vy_ = support_velocity.GetY();
+        grip_support_ay_ += (rate - grip_support_ay_) * std::min(1.0F, dt / kGripLoadSeconds);
+        const float gravity = -physics_system_.GetGravity().GetY();
+        const float load = std::clamp(1.0F + grip_support_ay_ / gravity, 0.0F, 1.0F);
+        return slope * load;
+    }
+
     // See kSupportJoltMargin. Called each grounded tick with the support's
     // velocity under the feet.
     void track_support_jolt(const JPH::Vec3 support_velocity, const float dt) noexcept {
@@ -2881,7 +2906,8 @@ private:
                 sprinting_ = true;
             }
             // Balance at an edge (see kTeeterComHeight).
-            const float traction = carry_ground_acceleration() * static_cast<float>(0.25 + 0.75 * recovery_balance());
+            const float traction = carry_ground_acceleration() * static_cast<float>(0.25 + 0.75 * recovery_balance()) *
+                                   ground_grip(reference_velocity, delta_seconds);
             // While teetering, the most the feet may take off the speed toward
             // the edge in one second; steering across it keeps full traction.
             float teeter_brake = 0.0F;
@@ -4670,6 +4696,9 @@ public:
     JPH::Vec3 jolt_support_velocity_{JPH::Vec3::sZero()};
     std::uint64_t jolt_support_entity_ = 0;
     bool jolt_stepped_ = false;
+    std::uint64_t grip_support_entity_ = 0;
+    float grip_support_vy_ = 0.0F;
+    float grip_support_ay_ = 0.0F;
     float support_jolt_peak_m_ = 0.0F;
     std::uint64_t support_stumble_count_ = 0;
     bool line_held_ = false;
