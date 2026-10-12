@@ -1,0 +1,62 @@
+{
+  "classification": "private one-world feasibility diagnosis; no shipping source changes",
+  "source_sha256": "9c333e9033f2350cbbc194f2b1ef6cf87e016961e60c51b066d7dda5bf157eff",
+  "archive_sha256": "1b3129a5fec4999bd3e937d4662be9d3a2e9515f11b5fede7429895f74ecee74",
+  "header_sha256": "6cd9f092644c271e1dffbe519f4d265d41c2519b6179485468b941601623331f",
+  "jolt_sha256": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+  "baseline_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/material-visibility-attempt1/receipt.json",
+  "steps": [
+    {
+      "name": "compile",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/soft-net-posture-probe/source.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/material-visibility-attempt1/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/soft-net-posture-probe/probe"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 16.868459732970223,
+      "log_sha256": "2468a15d060a42b57aae87196848fc768e443299cb99c87de1c94f3436a976c6",
+      "binary_sha256": "abf1a979dbdf37b91644fa81fb5078e31c61932898d2ad1001aef32e1ce752ca"
+    },
+    {
+      "name": "run",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/soft-net-posture-probe/probe"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 72.96769679500721,
+      "log_sha256": "bcfd84cc42dba43273234971ff99b40668d6c12bba1097697516b19a7b1fa98a"
+    }
+  ],
+  "archive_unchanged": true,
+  "terminal_status": "completed"
+}

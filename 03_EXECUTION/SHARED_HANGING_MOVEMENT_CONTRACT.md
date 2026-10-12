@@ -218,6 +218,20 @@ strict Drop checks, existing physical traversal, three-lane loaded/deforming
 net routes and exact-bridge touch net encounter pass. The new four-case mode is
 registered with CTest. Averaged knot centres can differ from warped triangles;
 another fold within the terminal skin is not identified separately. Broad
-deformed-ribbon ownership/eligibility remains open. Next bounded goal verifies
-shared paid tuck/extension and neutral radial behavior on the actual material
-net. No new APK or phone observation is claimed.
+deformed-ribbon ownership/eligibility remains open. Shared paid material tuck/extension is verified below. No new APK or phone
+observation is claimed.
+
+
+## Paid posture on material hands (verified)
+
+The existing shared native radial/posture path applies to actual1953 material
+attachments. [Matched native and touch evidence](../evidence/shared-material-hanging-posture-2026-10-12/README.md)
+records ordinary grade/Action/ascent, two matched worlds,0.216753m real tuck
+shortening against neutral control,0.236754m extension, exact0.25m rest change,
+finite capped forces,500W paid work, retained material generations/deformation
+and ordinary Drop to grade2954. No neutral work or held-target ratchet. The
+real TUCK/EXTEND touch helper also passes on net hands, then ordinary ascent
+reaches receiver/first ring. Native material force law remains unchanged; this
+proves existing shared behavior, not a new force-law implementation. Real cloth
+contacts remain causal; arbitrary free-arc amplitudes/energy closure are not
+asserted. Generalized single-hand control remains the next bounded seam.

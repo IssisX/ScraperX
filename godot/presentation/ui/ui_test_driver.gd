@@ -3829,6 +3829,19 @@ func _touch_cargo_net() -> bool:
 	_move(device, 0.0)
 	await _seconds(0.3)
 	await _pose("cargo_net_climbing")
+	var posture_before: Dictionary = _native().get_landing_state()
+	if int(_native().get_traversal_support_entity_id()) != 1953 \
+			or int(posture_before["traversal_hand_constraint_count"]) != 2 \
+			or bool(_native().is_player_grounded()):
+		return _fail("cargo net shared posture requires actual airborne two-hand net hold")
+	if not await _touch_hanging_posture():
+		return false
+	var posture_after: Dictionary = _native().get_landing_state()
+	if int(_native().get_traversal_support_entity_id()) != 1953 \
+			or int(posture_after["traversal_hand_constraint_count"]) != 2 \
+			or bool(_native().is_player_grounded()):
+		return _fail("cargo net shared posture lost actual airborne two-hand net hold")
+	print("SCRAPERX_HANGING_POSTURE material_net/sharedtouch_tuck_extend=1 support=1953 hands=2 airborne=1")
 	_move(device, 1.0)
 	# Allow compliant grip/receiver settling after the lift. This remains a
 	# bounded test deadline; only actual supported contact proves arrival.
@@ -3848,7 +3861,7 @@ func _touch_cargo_net() -> bool:
 	if float(_native().get_slingshot_state()["work_j"]) != 0.0:
 		return _fail("cargo net route used launcher work")
 	await _pose("cargo_net_first_ring")
-	_detail = "staging=ordinary_grade_spawn supported_height_m=11.00 deaths=0 slingshot_used=0"
+	_detail = "staging=ordinary_grade_spawn supported_height_m=11.00 deaths=0 slingshot_used=0 shared_material_posture=1"
 	return true
 
 

@@ -161,6 +161,8 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_executable(scraperx_cargo_net_tests tests/cargo_net_tests.cpp)
     target_link_libraries(scraperx_cargo_net_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.cargo_net_ground_route COMMAND scraperx_cargo_net_tests)
+    add_test(NAME scraperx_sim.material_hanging_posture
+             COMMAND scraperx_cargo_net_tests material_posture)
     add_executable(scraperx_leather_pouch_tests tests/leather_pouch_tests.cpp)
     target_link_libraries(scraperx_leather_pouch_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.leather_pouch COMMAND scraperx_leather_pouch_tests)

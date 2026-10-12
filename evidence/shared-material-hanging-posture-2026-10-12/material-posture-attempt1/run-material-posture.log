@@ -1,0 +1,11 @@
+MATERIAL_POSTURE phase=0 treatment=1 tick=2403 actual_mean=1.01253 rest_mean=0.766147 held_rest_range=0 peak_force=968.818
+MATERIAL_POSTURE phase=0 treatment=0 tick=2403 actual_mean=1.01253 rest_mean=0.766147 held_rest_range=0 peak_force=968.818
+MATERIAL_POSTURE paid_total=0 phase=0
+MATERIAL_POSTURE phase=1 treatment=1 tick=2583 actual_mean=0.74739 rest_mean=0.516147 held_rest_range=0 peak_force=592.732
+MATERIAL_POSTURE phase=1 treatment=0 tick=2583 actual_mean=0.964143 rest_mean=0.766147 held_rest_range=0 peak_force=593.369
+MATERIAL_POSTURE paid_total=499.316 phase=1
+MATERIAL_POSTURE phase=2 treatment=1 tick=2763 actual_mean=0.984144 rest_mean=0.766147 held_rest_range=0 peak_force=727.649
+MATERIAL_POSTURE phase=2 treatment=0 tick=2763 actual_mean=0.95633 rest_mean=0.766147 held_rest_range=0 peak_force=477.904
+MATERIAL_POSTURE paid_total=499.316 phase=2
+MATERIAL_POSTURE Drop before_vy=0.314502 after_vy=0.202243 before_vz=0.369985 after_vz=0.402509 material_motion=0.558894
+PASS material_posture paired=1 material=1953 actual_tuck_delta=0.216753 actual_extension_delta=0.236754 grade=2954 deaths=0
