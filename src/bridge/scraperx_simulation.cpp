@@ -678,6 +678,8 @@ godot::Dictionary ScraperXSimulation::get_landing_state() const {
         (physical_hand_state && s.traversal_left_hand_generation > 0);
     out["right_hand_attached"] = s.traversal_hand_constraint_count == 2 ||
         (physical_hand_state && s.traversal_right_hand_generation > 0);
+    out["left_hand_generation"] = s.traversal_left_hand_generation;
+    out["right_hand_generation"] = s.traversal_right_hand_generation;
     out["traversal_command_work_bound_j"] = s.traversal_command_work_bound_j;
     out["left_hand_force_n"] = to_godot(s.traversal_left_hand_force);
     out["right_hand_force_n"] = to_godot(s.traversal_right_hand_force);

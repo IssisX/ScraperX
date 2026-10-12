@@ -1,0 +1,58 @@
+{
+  "status": "completed",
+  "files": [
+    {
+      "source": "godot/presentation/main.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/main.gd",
+      "sha256": "41b5fcc4efee8c8a170abd27c1f7c030a99dd42545579013b31681910c1f6e3e"
+    },
+    {
+      "source": "godot/presentation/ui/touch_controls.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/ui/touch_controls.gd",
+      "sha256": "ef9a10a9ab9c6e25737055c9fa409d638968d594e737c91e0431f6e7851f8512"
+    },
+    {
+      "source": "godot/presentation/ui/ui_test_driver.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/ui/ui_test_driver.gd",
+      "sha256": "86471a3cf3ccd18806fde6bc39bec0d3ae3afd43e79e291af7296e07328483e2"
+    },
+    {
+      "source": "godot/presentation/first_person_arms.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/first_person_arms.gd",
+      "sha256": "7e7b0435c3b678b42a5abd18f465f5de4a2b5c368ebfa2e501b3508c380eb826"
+    },
+    {
+      "source": "godot/presentation/audio/audio_director.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/audio/audio_director.gd",
+      "sha256": "68361841c03353f689dd321b3e823a99a0db8a202f5beb1e523dc0ef9551a58c"
+    }
+  ],
+  "native_bridge": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/addons/scraperx_native/bin/linux/libscraperx_native.so",
+    "sha256": "9a057dd73b15c5ad70ea77460042e908b9ea562252e4e4a78a075594981b7055",
+    "build_receipt": "module3-native/grip-feedback-bridge/receipt.json"
+  },
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_single_hand_catch"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 26.248,
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-grip-feedback-left.log",
+  "log_sha256": "25d8fdc2038182255d9b0c8e396fea5b3a3ce27602c7f5b99288b1fa9b8e0e58"
+}

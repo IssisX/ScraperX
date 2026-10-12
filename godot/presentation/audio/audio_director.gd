@@ -128,6 +128,8 @@ var _bullet_time: AudioStreamPlayer
 var _ladder_strain: AudioStreamPlayer3D
 var ladder_motion_frames := 0
 var climb_regrips := 0
+var last_climb_regrip_position := Vector3.ZERO
+var grab_playbacks := 0
 var _ladder_gain := 0.0
 var _cinematic_active := false
 var _cinematic_air_duck_db := 0.0
@@ -298,7 +300,8 @@ func reset_reclaim_feedback() -> void:
 # Once per rendered frame, with the native state main.gd already read.
 func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool,
-		support_point_velocity: Vector3 = Vector3.ZERO, landing_state: Dictionary = {}) -> void:
+		support_point_velocity: Vector3 = Vector3.ZERO, landing_state: Dictionary = {},
+		positional_grasp_pending: bool = false) -> void:
 	fall_reactions.update(delta, position, velocity, grounded, traversal, chute, deaths)
 	# A planted rider moves with the support without taking a step. Native
 	# point velocity includes rotation as well as the support's translation.
@@ -353,7 +356,11 @@ func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 	if traversal != _last_traversal:
 		if traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING]:
 			grabs += 1
-			_play(&"grab", -2.0, randf_range(0.95, 1.05))
+			# Main supplies the exact native-sample eligibility, retaining the
+			# generic sound whenever no positional contact will be emitted.
+			if not positional_grasp_pending:
+				grab_playbacks += 1
+				_play(&"grab", -2.0, randf_range(0.95, 1.05))
 		elif traversal == TRAVERSAL_MANTLING or traversal == TRAVERSAL_VAULTING:
 			_play(&"scrape", -4.0, randf_range(0.92, 1.08))
 	if crouched != _last_crouched:
@@ -731,9 +738,18 @@ func _update_foot_transfer(state: Dictionary, position: Vector3, deaths: int) ->
 	_play(_surface(support, position.y), lerpf(-15.0, -9.0, weight), 1.0)
 
 
-func climb_regrip(at: Vector3) -> void:
+func climb_regrip(at: Vector3, initial_grasp: bool = false) -> void:
 	climb_regrips += 1
-	_play_at(&"grab", at, -8.0, 1.10)
+	last_climb_regrip_position = at
+	grab_playbacks += 1
+	_play_at(&"grab", at, -2.0 if initial_grasp else -8.0,
+		randf_range(0.95, 1.05) if initial_grasp else 1.10)
+
+
+# Observational receipts also work under the headless Dummy audio driver.
+func get_grip_feedback_stats() -> Dictionary:
+	return {"grabs": grabs, "climb_regrips": climb_regrips, "grab_playbacks": grab_playbacks,
+		"last_climb_regrip_position": last_climb_regrip_position}
 
 
 # Passive bearing noise follows native COM speed. Loading makes the same

@@ -1,0 +1,34 @@
+--- HEAD/godot/presentation/audio/audio_director.gd
++++ observed/godot/presentation/audio/audio_director.gd
+@@ -128,6 +128,8 @@
+ var _ladder_strain: AudioStreamPlayer3D
+ var ladder_motion_frames := 0
+ var climb_regrips := 0
++var last_climb_regrip_position := Vector3.ZERO
++var grab_playbacks := 0
+ var _ladder_gain := 0.0
+ var _cinematic_active := false
+ var _cinematic_air_duck_db := 0.0
+@@ -353,6 +355,7 @@
+ 	if traversal != _last_traversal:
+ 		if traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING]:
+ 			grabs += 1
++			grab_playbacks += 1
+ 			_play(&"grab", -2.0, randf_range(0.95, 1.05))
+ 		elif traversal == TRAVERSAL_MANTLING or traversal == TRAVERSAL_VAULTING:
+ 			_play(&"scrape", -4.0, randf_range(0.92, 1.08))
+@@ -733,7 +736,14 @@
+ 
+ func climb_regrip(at: Vector3) -> void:
+ 	climb_regrips += 1
++	last_climb_regrip_position = at
++	grab_playbacks += 1
+ 	_play_at(&"grab", at, -8.0, 1.10)
++
++
++func get_grip_feedback_stats() -> Dictionary:
++	return {"grabs": grabs, "climb_regrips": climb_regrips, "grab_playbacks": grab_playbacks,
++		"last_climb_regrip_position": last_climb_regrip_position}
+ 
+ 
+ # Passive bearing noise follows native COM speed. Loading makes the same

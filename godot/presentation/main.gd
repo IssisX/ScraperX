@@ -289,8 +289,12 @@ var _cam_fov_offset := 0.0
 var _cam_bank := 0.0
 var _swing_bank := 0.0
 var _swing_last_velocity := Vector3.ZERO
-var _grip_relative_left := Vector3.ZERO
-var _grip_relative_right := Vector3.ZERO
+var _grip_generation_left := 0
+var _grip_generation_right := 0
+var _grip_attached_left := false
+var _grip_attached_right := false
+var _grip_feedback_tick := -1
+var _grip_feedback_deaths := -1
 var _grip_feedback_cooldown := 0.0
 var _catch_strain_cooldown := 0.0
 var _last_hand_load := 0.0
@@ -461,7 +465,7 @@ func _ready() -> void:
 		elif argument.begins_with("--export-solids="):
 			_export_solids_path = argument.trim_prefix("--export-solids=")
 
-	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_ballast_mantle_feedback", "touch_taper_inspection_route", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_north_grip_diagnostic", "touch_single_hand_catch", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_west_brace_bay"]:
+	if not _uitest_scenario.is_empty() and _uitest_scenario not in ["ground_foundation", "touch_causal_facade", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_ballast_mantle_feedback", "touch_taper_inspection_route", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_north_grip_diagnostic", "touch_single_hand_catch", "touch_single_hand_catch_right", "touch_suspended_ladder", "touch_cargo_net", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_west_brace_bay"]:
 		_regression_scene = true
 	if _ci_mode:
 		_regression_scene = true
@@ -916,6 +920,12 @@ func _after_restart() -> void:
 	_fb_deaths = int(_ctx["deaths"])
 	_audio.reset_landing_feedback(_fb_landing_count, _fb_deaths, landing)
 	_fb_swinging = bool(_ctx["swinging"])
+	_grip_generation_left = int(landing.get("left_hand_generation", 0))
+	_grip_generation_right = int(landing.get("right_hand_generation", 0))
+	_grip_attached_left = bool(landing.get("left_hand_attached", false))
+	_grip_attached_right = bool(landing.get("right_hand_attached", false))
+	_grip_feedback_tick = int(_native.get_tick_index())
+	_grip_feedback_deaths = _fb_deaths
 	_catch_strain_cooldown = 0.0
 	_last_hand_load = 0.0
 	_render_snapshot()
@@ -1542,6 +1552,25 @@ func _consume_landing_feedback(state: Dictionary, deaths: int, tick: int,
 	return {}
 
 
+# Shared selection lets the earlier audio update suppress its generic grab
+# only when this same native sample will earn a positional contact cue.
+func _grip_feedback_hand(state: Dictionary, traversal: int, tick: int, deaths: int,
+		delta: float) -> int:
+	if traversal not in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING] \
+			or tick <= _grip_feedback_tick or deaths != _grip_feedback_deaths \
+			or _grip_feedback_cooldown - delta > 0.0:
+		return 0
+	var left_generation := int(state.get("left_hand_generation", 0))
+	var right_generation := int(state.get("right_hand_generation", 0))
+	if bool(state.get("left_hand_attached", false)) and left_generation > 0 \
+			and (not _grip_attached_left or left_generation != _grip_generation_left):
+		return -1
+	if bool(state.get("right_hand_attached", false)) and right_generation > 0 \
+			and (not _grip_attached_right or right_generation != _grip_generation_right):
+		return 1
+	return 0
+
+
 # State transitions become feedback: a grab, a landing, a canopy, a lethal
 # fall warning, a restore, a higher checkpoint. Each reads native state only.
 func _update_feedback(delta: float) -> void:
@@ -1560,23 +1589,35 @@ func _update_feedback(delta: float) -> void:
 		elif _fb_traversal == TRAVERSAL_CLIMBING and traversal == TRAVERSAL_NONE and (_ctx["velocity"] as Vector3).y > 1.0:
 			_haptic(&"release")
 		_fb_traversal = traversal
-	# Regrip cues follow actual hand changes relative to the climber, not
-	# a repeating timer or the whole ladder moving beneath held hands.
+	# Native generations identify actual grasp/regrip events. Body swing,
+	# moving supports and deforming grips cannot create contact sounds.
+	var landing: Dictionary = _native.get_landing_state()
+	var deaths: int = _ctx["deaths"]
+	var grip_tick := int(_native.get_tick_index())
+	var left_generation := int(landing.get("left_hand_generation", 0))
+	var right_generation := int(landing.get("right_hand_generation", 0))
+	var left_attached := bool(landing.get("left_hand_attached", false))
+	var right_attached := bool(landing.get("right_hand_attached", false))
+	var contact_hand := _grip_feedback_hand(landing, traversal, grip_tick, deaths, delta)
 	_grip_feedback_cooldown = maxf(0.0, _grip_feedback_cooldown - delta)
-	var left: Vector3 = _native.get_traversal_left_hand() - (_ctx["position"] as Vector3)
-	var right: Vector3 = _native.get_traversal_right_hand() - (_ctx["position"] as Vector3)
-	if traversal == TRAVERSAL_CLIMBING and _grip_feedback_cooldown <= 0.0:
-		if maxf(left.distance_to(_grip_relative_left), right.distance_to(_grip_relative_right)) > 0.16:
-			_haptic(&"tick")
-			_audio.climb_regrip(_native.get_traversal_left_hand())
+	if contact_hand != 0:
+		var at: Vector3 = _native.get_traversal_left_hand() if contact_hand < 0 \
+			else _native.get_traversal_right_hand()
+		if at.is_finite():
+			if not entered_grip:
+				_haptic(&"tick")
+			_audio.climb_regrip(at, entered_grip)
 			_grip_feedback_cooldown = 0.18
-	_grip_relative_left = left
-	_grip_relative_right = right
+	# Consume quiet/cooldown/release/restore samples too; never replay them.
+	_grip_generation_left = left_generation
+	_grip_generation_right = right_generation
+	_grip_attached_left = left_attached
+	_grip_attached_right = right_attached
+	_grip_feedback_tick = grip_tick
+	_grip_feedback_deaths = deaths
 	var grounded: bool = _ctx["grounded"]
 	var velocity: Vector3 = _ctx["velocity"]
 	var lethal: float = _ctx["lethal"]
-	var deaths: int = _ctx["deaths"]
-	var landing: Dictionary = _native.get_landing_state()
 	var foot_strength := _consume_foot_transfer(landing, deaths)
 	if foot_strength > 0.0:
 		_haptic(&"footplant", foot_strength)
@@ -1890,7 +1931,9 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_audio.update(delta, position, velocity, grounded, int(_native.get_support_entity_id()),
 			int(_native.get_traversal_state()), bool(_native.is_parachute_deployed()),
 			int(_native.get_death_count()), crouched, _native.get_support_point_linear_velocity(),
-			_native.get_landing_state())
+			_native.get_landing_state(),
+			_grip_feedback_hand(_native.get_landing_state(), int(_native.get_traversal_state()),
+				int(_native.get_tick_index()), int(_native.get_death_count()), delta) != 0)
 		if _regression_scene:
 			_audio.update_machines(delta, float(_native.get_orifice_mass_flow_kg_per_s()),
 				_native.get_hoist_scoop_position(), _native.get_ballast_position(),

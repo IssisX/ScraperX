@@ -1,0 +1,15 @@
+{
+  "baseline_revision": "99c8358213fa82322c3fd845b0da78cef9d3b7aa",
+  "modifications": "main right scenario normalworld registration only; old audio observational counter/lastposition/stats only; final driver/native copied unchanged",
+  "hashes": {
+    "presentation/main.gd": "8a822d5828847667f479cbf48a3a6a623c28ccc5f9d25ccd7c85c7f0d670e1fc",
+    "presentation/audio/audio_director.gd": "a9cbff36432359a2b0afd476826ae2d7eec46ac416700f8db13f2cc282c262b5",
+    "presentation/ui/ui_test_driver.gd": "86471a3cf3ccd18806fde6bc39bec0d3ae3afd43e79e291af7296e07328483e2",
+    "addons/scraperx_native/bin/linux/libscraperx_native.so": "9a057dd73b15c5ad70ea77460042e908b9ea562252e4e4a78a075594981b7055"
+  },
+  "result": {
+    "exit_code": 31,
+    "expected_failure": "real right catch: grab_playbacks=2; positional cue at world origin instead of actual right point",
+    "log_sha256": "1b4da98888a866f56b3be9cd359638f1503631efea668b5c051b9311fa9f7690"
+  }
+}

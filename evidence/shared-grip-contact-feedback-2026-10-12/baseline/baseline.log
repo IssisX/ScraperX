@@ -1,0 +1,10 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Started the engine as `root`/superuser. This is a security risk, and subsystems like audio may not work correctly.
+Set the environment variable `GODOT_SILENCE_ROOT_WARNING` to 1 to silence this warning.
+     at: setup2 (main/main.cpp:3577)
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=615 driver=Dummy
+SCRAPERX_SINGLE_HAND approach tick=181 position=(23.15, 11.49924, -118.0) cue=(22.59993, 11.91261, -118.17) action={ "id": &"catch", "label": "CATCH", "icon": &"climb", "detail": "HOLD ON" }
+SCRAPERX_UITEST FAIL touch_single_hand_catch_right reason=single actual catch lacks one sound at its attached native hand: stats={ "grabs": 1, "climb_regrips": 1, "grab_playbacks": 2, "last_climb_regrip_position": (0.0, 0.0, 0.0) } point=(22.59992, 11.91296, -118.2026)

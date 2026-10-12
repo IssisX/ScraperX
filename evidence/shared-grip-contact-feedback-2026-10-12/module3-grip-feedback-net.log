@@ -1,0 +1,13 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1154 driver=Dummy
+SCRAPERX_UITEST_POSE cargo_net_entry tick=1627 position=(20.09265, 0.9, -114.6289) elapsed_ms=54347
+SCRAPERX_GRIP_FEEDBACK material_net active_generation_changes=17 actual_cues=17 right_only_change_cues=8
+SCRAPERX_UITEST_POSE cargo_net_climbing tick=2440 position=(20.12506, 5.458802, -117.1296) elapsed_ms=67724
+SCRAPERX_HANGING_POSTURE touch_tuck_extend=1 free_arc=true actual_posture_change_m=0.100593 commanded_change_m=0.244054 positive_target_work_j=487.847267
+SCRAPERX_HANGING_POSTURE material_net/sharedtouch_tuck_extend=1 support=1953 hands=2 airborne=1
+SCRAPERX_UITEST_POSE cargo_net_receiver tick=3322 position=(20.25413, 11.89527, -118.4264) elapsed_ms=81377
+SCRAPERX_UITEST_POSE cargo_net_first_ring tick=3852 position=(18.49988, 11.9, -125.9006) elapsed_ms=89683
+SCRAPERX_UITEST PASS touch_cargo_net staging=ordinary_grade_spawn supported_height_m=11.00 deaths=0 slingshot_used=0 shared_material_posture=1

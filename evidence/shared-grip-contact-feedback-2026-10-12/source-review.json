@@ -1,0 +1,11 @@
+{
+  "owner": "root integration plus independent approach_review SolHigh",
+  "source_hashes": {
+    "godot/presentation/main.gd": "41b5fcc4efee8c8a170abd27c1f7c030a99dd42545579013b31681910c1f6e3e",
+    "godot/presentation/audio/audio_director.gd": "03365ac25b94391197ff077ecf17915c9350d674c2d1362e2e5045c026c360bd",
+    "godot/presentation/ui/ui_test_driver.gd": "3d59e38a2ce71ca1409da7b360c758ba080bb2b75542e4947a83661872a69572",
+    "src/bridge/scraperx_simulation.cpp": "928a5c8b1672570ee500e200b883e7e8c8a251e5b53f101de94baed1967f79b1"
+  },
+  "independent_review": "No source blockers; shared same-sample selector, actual native hand generations, tick/life/cooldown consumption, correct right-slot cue, initial haptic coalescing. Found playback-count evidence gap, repaired with actualcallsite counter and exactsource finalleft/right runtime PASS. Root inspected counterdiff; no soundbehavior change.",
+  "runtime_limit": "Headless Dummy dispatch observations, no audiblephone/haptic-device proof; nativephysics unchanged"
+}
