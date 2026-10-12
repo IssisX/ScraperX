@@ -1,0 +1,7 @@
+FIXED LIGHT CATCH kind=static rest_span=0.749483 max_span=1.06857 max_hand_radius=1.06857 max_support_motion=0 player_vy=0.309509 support_vy=0 peak_hand_force=1500 neutral_positive_work=0
+FIXED LIGHT CATCH kind=world_fixed_0.722kg rest_span=0.749483 max_span=1.06857 max_hand_radius=1.06857 max_support_motion=5.96063e-08 player_vy=0.309502 support_vy=1.11594e-07 peak_hand_force=1500 neutral_positive_work=0
+FIXED LIGHT CATCH kind=free_0.722kg rest_span=0.749483 max_span=0.753814 max_hand_radius=0.753814 max_support_motion=57.0837 player_vy=-33.2699 support_vy=-32.9841 peak_hand_force=23.1307 neutral_positive_work=0
+FIXED LIGHT FREE CONTROL momentum_error=0.00878906
+FIXED LIGHT EQUIVALENCE absolute_max_span_difference=9.53674e-07
+PASS radial_fixed_light_catch
+physical hand checks: 1/1

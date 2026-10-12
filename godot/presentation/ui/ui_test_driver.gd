@@ -2431,8 +2431,22 @@ func _touch_crown_swing_recovery() -> bool:
 		return not bool(_native().get_landing_state()["player_swinging"]) \
 			and bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 1931, 5.0):
 		return _fail("crown missed release did not reach the real recovery tray at=%s" % _position())
-	if bool(_native().is_player_crouched()):
-		return _fail("released posture became unsolicited ground crouch")
+	# A real impact may briefly compact the body for native brace/roll recovery.
+	# Cleared input must permit ordinary standing once that recovery ends;
+	# first supported contact can precede the next posture update by one tick.
+	var recovery_start_tick := int(_native().get_tick_index())
+	while bool(_native().is_player_crouched()) or float(_native().get_landing_state().get("landing_recovery_seconds", 0.0)) > 0.0:
+		if not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 1931 \
+				or _crown_swing_attached() or _main._crouch_toggled or _main._crouch_toggle_from_hang \
+				or int(_native().get_landing_state().get("traversal_hand_constraint_count", -1)) != 0:
+			return _fail("released posture recovery lost footing or retained hanging input")
+		if float(int(_native().get_tick_index()) - recovery_start_tick) * float(_native().get_fixed_step_seconds()) > 2.5:
+			return _fail("released posture remained crouched after native impact recovery")
+		await get_tree().process_frame
+	if not bool(_ctx()["grounded"]) or int(_native().get_support_entity_id()) != 1931 \
+			or _crown_swing_attached() or _main._crouch_toggled or _main._crouch_toggle_from_hang \
+			or int(_native().get_landing_state().get("traversal_hand_constraint_count", -1)) != 0:
+		return _fail("released posture recovery ended without clear input and real footing")
 	print("SCRAPERX_HANGING_POSTURE native_detach_toggle_clear=1 recovery_support=1931 ground_crouch=0")
 	if not await _walk_to(device, Vector2(-37.0, -159.8), 0.08, 7.0):
 		return _fail("crown recovery ladder approach at=%s" % _position())

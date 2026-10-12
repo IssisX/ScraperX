@@ -1,0 +1,60 @@
+{
+  "original_test_sha256": "880d51943d47f04ffd4b9e96c6c4df9d7bb2746f8f060e84a6f54fcaf18eb954",
+  "diagnostic_sha256": "9531e37cbc81574670916320c2415062d2d1a723931fed484e2b762a4c5a18f6",
+  "archive_sha256": "be75508e88bbc43a1bd7ba84ca09bfc8791167ef331c7c2e9f307da2fe306a44",
+  "native_build_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/radial-row-attempt1/receipt.json",
+  "static_sag_assertion_explicitly_skipped_private_only": true,
+  "completion_credit": false,
+  "steps": [
+    {
+      "name": "compile",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-solver-loadcurve-diagnostic/source.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/radial-row-attempt1/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-solver-loadcurve-diagnostic/plank_tests"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 12.627181453863159,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "run-grip",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-solver-loadcurve-diagnostic/plank_tests",
+        "grip"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 36.64074602816254,
+      "log_sha256": "62ee6c235475fdc999e306a6f43506fdf423ba646461c22722a77083b262634a"
+    }
+  ]
+}

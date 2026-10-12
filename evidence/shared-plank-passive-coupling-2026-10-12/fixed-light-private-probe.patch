@@ -1,0 +1,89 @@
+--- existing-hand-world
++++ private-contact-free-support-comparison
+@@ -12,6 +12,7 @@
+ #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+ #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+ #include <Jolt/Physics/PhysicsStepListener.h>
++#include <Jolt/Physics/Constraints/FixedConstraint.h>
+ #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
+ #include <Jolt/RegisterTypes.h>
+ #include <algorithm>
+@@ -45,7 +46,7 @@
+     bool ShouldCollide(ObjectLayer a, BroadPhaseLayer b) const override { return a != 0 || b.GetValue() != 0; }
+ };
+ struct LP final : ObjectLayerPairFilter {
+-    bool ShouldCollide(ObjectLayer a, ObjectLayer b) const override { return a != 0 || b != 0; }
++    bool ShouldCollide(ObjectLayer, ObjectLayer) const override { return false; } // private contact-free coupling fixture
+ };
+ struct Contacts final : ContactListener {
+     unsigned count = 0;
+@@ -104,7 +105,7 @@
+         system.SetContactListener(&contacts);
+         check(system.GetPhysicsSettings().mNumVelocitySteps == 10 &&
+               system.GetPhysicsSettings().mNumPositionSteps == 2, "unexpected shipping global solver defaults");
+-        BodyCreationSettings p(new CapsuleShape(0.55F, 0.35F), RVec3(0, 4.3, -0.2),
++        BodyCreationSettings p(new CapsuleShape(0.55F, 0.35F), RVec3(0, 4.55, -0.015),
+                                Quat::sIdentity(), EMotionType::Dynamic, 1);
+         p.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
+         p.mMassPropertiesOverride.mMass = 85.0F;
+@@ -605,7 +606,7 @@
+     check(w.system.GetConstraints().empty(), "destructor leaked native constraints");
+ }
+ }
+-int main(int argc,char **argv) {
++int preserved_original_tests_not_run(int argc,char **argv) {
+     JPH::RegisterDefaultAllocator(); JPH::Factory::sInstance = new JPH::Factory; JPH::RegisterTypes();
+     unsigned failures = 0;
+     const bool radial_only=argc>1&&std::string(argv[1])=="free_arc";
+@@ -635,3 +636,51 @@
+     std::cout << "physical hand checks: " << tests.size() - failures << "/"<<tests.size()<<"\n";
+     return failures ? 1 : 0;
+ }
++
++
++struct CatchResult { double max_span, max_support_motion; };
++CatchResult falling_radial_fixture(bool dynamic,bool fixed,const char *label) {
++    World w(dynamic,Vec3(0,-3.87F,0),false,.722F);
++    Ref<Constraint> weld;
++    if(fixed) {
++        FixedConstraintSettings settings;settings.mAutoDetectPoint=true;
++        auto *support=w.system.GetBodyLockInterfaceNoLock().TryGetBody(w.support);
++        check(support!=nullptr,"actual light support missing");
++        weld=settings.Create(Body::sFixedToWorld,*support);w.system.AddConstraint(weld);
++    }
++    PhysicalHandClimb hands(w.system,w.player);w.acquire(hands);
++    const auto initial_support=w.position(w.support);const double initial_y=w.position(w.player).GetY();
++    const Vec3 incoming=w.velocity(w.player);check(hands.set_radial_profile(true),"actual radial entry rejected");
++    check((w.velocity(w.player)-incoming).LengthSq()==0,"entry changed incoming velocity");
++    const double span=hands.radial_commanded_span_m();check(span>.74&&span<.76,"same initial within-reach span");
++    const double paid=hands.actuator_positive_work_j();double max_span=span,max_support_motion=0,minimum_y=initial_y,min_vy=incoming.GetY(),max_force=0;
++    int reach_cross=-1;
++    for(unsigned tick=1;tick<=270;++tick) {
++        check(hands.advance_radial_targets(0,h)==0,"neutral changed rest length");w.tick(hands,1);
++        const double actual=hands.radial_actual_span_m();max_span=std::max(max_span,actual);
++        max_support_motion=std::max(max_support_motion,double(Vec3(w.position(w.support)-initial_support).Length()));
++        minimum_y=std::min(minimum_y,double(w.position(w.player).GetY()));min_vy=std::min(min_vy,double(w.velocity(w.player).GetY()));
++        for(unsigned hand=0;hand<2;++hand){const auto force=hands.hand_force(hand);check(finite(force)&&force.Length()<=1500.05F,"actual force bound");max_force=std::max(max_force,double(force.Length()));}
++        check(w.contacts.count==0,"contact-free fixture developed contact");
++        check(w.system.GetConstraints().size()==(fixed?1U:0U),"radial fixture has competing hand constraint");
++        check(std::abs(hands.radial_commanded_span_m()-span)<.000001&&hands.actuator_positive_work_j()==paid,"neutral rest/work drift");
++        if(actual>1.75&&reach_cross<0)reach_cross=int(tick);
++        if(tick<=5||tick==30||tick==60||tick==90||tick==180||tick==270)
++            std::cout<<"SUPPORT PROBE kind="<<label<<" tick="<<tick<<" actual_span="<<actual<<" rest_span="<<span
++              <<" player_y="<<w.position(w.player).GetY()<<" player_vy="<<w.velocity(w.player).GetY()
++              <<" support_motion="<<Vec3(w.position(w.support)-initial_support).Length()<<" support_vy="<<w.velocity(w.support).GetY()
++              <<" hand_force_y="<<hands.hand_force(0).GetY()+hands.hand_force(1).GetY()<<'\n';
++    }
++    std::cout<<"SUPPORT SUMMARY kind="<<label<<" support_mass="<<(dynamic?.722:0)<<" max_span="<<max_span
++      <<" reach_cross_tick="<<reach_cross<<" min_vy="<<min_vy<<" fall_m="<<initial_y-minimum_y
++      <<" max_support_motion="<<max_support_motion<<" peak_hand_force="<<max_force<<" positive_work="<<hands.actuator_positive_work_j()-paid<<" contacts="<<w.contacts.count<<'\n';
++    hands.clear();if(weld)w.system.RemoveConstraint(weld);return {max_span,max_support_motion};
++}
++int main(){RegisterDefaultAllocator();Factory::sInstance=new Factory;RegisterTypes();int result=0;
++ try { const auto a=falling_radial_fixture(false,false,"static");const auto b=falling_radial_fixture(true,true,"fixed_light");
++       (void)falling_radial_fixture(true,false,"free_light");
++       std::cout<<"SUPPORT DIFFERENCE fixed_minus_static_max_span="<<b.max_span-a.max_span<<'\n';
++       check(a.max_span<1.75&&b.max_span-a.max_span>.25&&b.max_support_motion<.01,
++             "fixed light support did not discriminate gross constrained-load-path divergence");
++ }catch(const std::exception &e){std::cerr<<"PROBE FAIL "<<e.what()<<'\n';result=1;}
++ UnregisterTypes();delete Factory::sInstance;Factory::sInstance=nullptr;return result;}

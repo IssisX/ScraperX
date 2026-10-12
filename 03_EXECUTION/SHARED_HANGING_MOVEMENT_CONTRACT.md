@@ -87,9 +87,11 @@ the existing0.25m allowance; EXTEND restores them. Neutral spans remain constant
 The native tension-only spring has5000N/m stiffness,1500N/hand cap and actual
 relative grip-point damping. Each collision substep applies equal opposite
 impulses at player COM and actual support grip; moving rigid supports receive
-angular reaction, and soft grips use the real material adapter. A scalar implicit
-radial solve uses actual effective point inverse mass for stability with lighter
-supports. Saturated elastic potential is quadratic below0.30m extension and linear
+angular reaction, and soft grips use the real material adapter. Rigid radial rows
+participate in Jolt's actual joint/contact island iterations, with accumulated
+impulse bounded at1500N times the actual collision-step duration, including
+warmstart. They apply no position projection. The existing soft material adapter
+retains its separate implicit impulse path. Saturated elastic potential is quadratic below0.30m extension and linear
 above it. Positive representable rest-span work is metered per hand within500W
 aggregate, with0.6m/s stroke; absorbed work supplies no credit.
 
@@ -110,7 +112,8 @@ the complete touch encounter and affected regressions also pass.
 [Source-bound evidence](../evidence/shared-passive-hanging-2026-10-11/README.md)
 records their separate proof boundaries. The dynamic support fixture enables gyroscopic integration so an
 anisotropic rotating box can independently test integrated angular conservation;
-the actual hand impulse pair also has its own instantaneous momentum oracle.
+actual completed-substep forces also have player/support impulse receipts against
+measured momentum change and gravity, separate from the integrated angular test.
 This fixture setting changes no shipping body. A framed gameplay catch is a
 separate proof of acquisition, posture and ownership; its late lateral movement
 does not establish a contact-free passive arc.
@@ -177,3 +180,23 @@ exact-bridge headless touch passes. Generalized one-hand control, material-net
 approach visibility and universal shape eligibility remain open. The existing
 plank passive hang fails identically on saved and new source; repairing that
 coupling is the next bounded goal, with no plank completion claim here.
+
+
+## Joint-supported lightweight passive hands (verified)
+
+Rigid radial hands now solve finite unilateral scalar rows alongside the actual
+support's joints and contacts. Free-body point mass remains physical; iteration
+resolves the load path. The existing hand40/8 overrides are inherited, with no
+global timestep/iteration change. Zero-error mode handoffs, actual local anchors,
+1500N per-hand accumulated impulse cap and paid rest-length ledger remain.
+
+[Coupling evidence](../evidence/shared-plank-passive-coupling-2026-10-12/README.md)
+records the rejecting world-fixed lightweight grip,14 hand checks, actual intact
+270-tick plank hang/Drop/recovery/unload, affected gameplay, full simulation and
+exact-bridge full headless touch. Independent beam compliance and actual moving
+load replace an invalid static endpoint assumption, retaining20–45mm normalized
+acceptance. A private duplicate-weight fault fractures the real board and is
+rejected. Native impact bracing may compact the body after release; clear input
+must permit ordinary standing after bounded recovery on actual clear footing.
+Soft material coupling, full archive/shape restoration and phone feel remain
+separate unverified boundaries; no full system energy/APK completion is claimed.

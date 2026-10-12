@@ -1,0 +1,33 @@
+{
+  "exit_code": 31,
+  "elapsed_seconds": 53.06173909408972,
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_crown_swing"
+  ],
+  "native_bridge": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/addons/scraperx_native/bin/linux/libscraperx_native.so",
+    "sha256": "79afec4711455b313ec681b2aa59b56dffd09afe82e56b8501786b22ed62c479",
+    "build_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-solver-final/receipt.json"
+  },
+  "diagnostic_driver_sha256": "02af7b5f1fa8b2e913ef32487038693d501cbd45798b4ffc399173654de0d11d",
+  "base_driver_sha256": "6efffe839784fc61f79425a7fc7f874436961b83eff236c92e5ac31b07b3da12",
+  "log_sha256": "cc071f5886de614f9d8c23963b343bec9ac4ceb9663deb1fc97ca2c16782a6ae",
+  "changes": "Private diagnostic logging only; gameplay commands/assertions unchanged",
+  "completion_credit": false
+}

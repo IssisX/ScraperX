@@ -1,0 +1,36 @@
+--- unchanged-original-plank-test
++++ snapshot-telemetry-only
+@@ -115,6 +115,33 @@
+         const auto result = s.advance_frame(Simulation::kFixedStepSeconds);
+         require(result.accepted && result.steps_advanced == 1, "one actual native tick accepted", s);
+         const auto v = s.snapshot();
++        if (allow_physical_climb && v.tick_index >= 570 && v.tick_index <= 625) {
++            const auto radius = [&](Vector3 h) {
++                return std::sqrt(std::pow(h.x-v.player_position.x,2)+
++                    std::pow(h.y-v.player_position.y,2)+std::pow(h.z-v.player_position.z,2));
++            };
++            std::cout << "PLANK_RADIAL_TRACE,tick=" << v.tick_index << ",state=" << int(v.traversal_state)
++                << ",hand_count=" << v.traversal_hand_constraint_count << ",radial=" << v.hanging_free_arc_active
++                << ",rest_span=" << v.hanging_commanded_span_m << ",actual_span=" << v.hanging_actual_span_m
++                << ",eligible=" << v.swing_tuck_available << ",requested=" << v.swing_tuck_requested
++                << ",world_below=" << v.swing_body_below_grip_m
++                << ",actor=" << v.player_position.x << ',' << v.player_position.y << ',' << v.player_position.z
++                << ",actor_velocity=" << v.player_linear_velocity.x << ',' << v.player_linear_velocity.y << ',' << v.player_linear_velocity.z
++                << ",support_entity=" << v.support_entity_id << ",traversal_entity=" << v.traversal_support_entity_id
++                << ",contact_support_velocity=" << v.support_point_linear_velocity.x << ',' << v.support_point_linear_velocity.y << ',' << v.support_point_linear_velocity.z
++                << ",left=" << v.traversal_left_hand.x << ',' << v.traversal_left_hand.y << ',' << v.traversal_left_hand.z
++                << ",right=" << v.traversal_right_hand.x << ',' << v.traversal_right_hand.y << ',' << v.traversal_right_hand.z
++                << ",generations=" << v.traversal_left_hand_generation << ',' << v.traversal_right_hand_generation
++                << ",left_force=" << v.traversal_left_hand_force.x << ',' << v.traversal_left_hand_force.y << ',' << v.traversal_left_hand_force.z
++                << ",right_force=" << v.traversal_right_hand_force.x << ',' << v.traversal_right_hand_force.y << ',' << v.traversal_right_hand_force.z
++                << ",positive_work=" << v.traversal_actuator_positive_work_j << ",absorbed_work=" << v.traversal_actuator_absorbed_work_j;
++            if (v.traversal_hand_constraint_count == 2) std::cout << ",actual_hand_radii=" << radius(v.traversal_left_hand) << ',' << radius(v.traversal_right_hand);
++            const auto body = s.kit_body_index(v.traversal_support_entity_id);
++            if (body != Simulation::kKitNone) { const auto velocity = s.kit_body_velocity(body);
++                std::cout << ",native_traversal_body_velocity=" << velocity.x << ',' << velocity.y << ',' << velocity.z;
++            } else std::cout << ",native_traversal_body_velocity=unavailable";
++            std::cout << '\n';
++        }
+         require(std::isfinite(v.player_position.x) && std::isfinite(v.player_position.y) &&
+                     std::isfinite(v.player_position.z) && std::isfinite(v.player_linear_velocity.x) &&
+                     std::isfinite(v.player_linear_velocity.y) && std::isfinite(v.player_linear_velocity.z),

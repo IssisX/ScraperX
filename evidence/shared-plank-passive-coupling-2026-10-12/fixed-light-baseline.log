@@ -1,0 +1,34 @@
+SUPPORT PROBE kind=static tick=1 actual_span=0.775727 rest_span=0.749483 player_y=4.50678 player_vy=-3.89839 support_motion=0 support_vy=0 hand_force_y=698.031
+SUPPORT PROBE kind=static tick=2 actual_span=0.802642 rest_span=0.749483 player_y=4.46344 player_vy=-3.89776 support_motion=0 support_vy=0 hand_force_y=924.3
+SUPPORT PROBE kind=static tick=3 actual_span=0.829793 rest_span=0.749483 player_y=4.42032 player_vy=-3.86694 support_motion=0 support_vy=0 hand_force_y=1157.27
+SUPPORT PROBE kind=static tick=4 actual_span=0.856764 rest_span=0.749483 player_y=4.37775 player_vy=-3.80552 support_motion=0 support_vy=0 hand_force_y=1391.48
+SUPPORT PROBE kind=static tick=5 actual_span=0.883158 rest_span=0.749483 player_y=4.33608 player_vy=-3.71374 support_motion=0 support_vy=0 hand_force_y=1621.77
+SUPPORT PROBE kind=static tick=30 actual_span=0.971702 rest_span=0.749483 player_y=4.06018 player_vy=1.63119 support_motion=0 support_vy=0 hand_force_y=1750.2
+SUPPORT PROBE kind=static tick=60 actual_span=0.86108 rest_span=0.749483 player_y=4.74062 player_vy=1.68832 support_motion=0 support_vy=0 hand_force_y=307.37
+SUPPORT PROBE kind=static tick=90 actual_span=0.682523 rest_span=0.749483 player_y=4.8142 player_vy=-1.37477 support_motion=0 support_vy=0 hand_force_y=0
+SUPPORT PROBE kind=static tick=180 actual_span=0.77192 rest_span=0.749483 player_y=4.71755 player_vy=-0.220686 support_motion=0 support_vy=0 hand_force_y=41.9106
+SUPPORT PROBE kind=static tick=270 actual_span=0.787401 rest_span=0.749483 player_y=4.64502 player_vy=0.311899 support_motion=0 support_vy=0 hand_force_y=126.828
+SUPPORT SUMMARY kind=static support_mass=0 max_span=1.06877 reach_cross_tick=-1 min_vy=-3.89839 fall_m=0.578912 max_support_motion=0 peak_hand_force=1500 positive_work=0 contacts=0
+SUPPORT PROBE kind=fixed_light tick=1 actual_span=0.776189 rest_span=0.749483 player_y=4.50648 player_vy=-3.94383 support_motion=0 support_vy=0 hand_force_y=308.359
+SUPPORT PROBE kind=fixed_light tick=2 actual_span=0.804457 rest_span=0.749483 player_y=4.46223 player_vy=-4.00339 support_motion=0 support_vy=0 hand_force_y=421.365
+SUPPORT PROBE kind=fixed_light tick=3 actual_span=0.834041 rest_span=0.749483 player_y=4.41743 player_vy=-4.04752 support_motion=0 support_vy=0 hand_force_y=541.925
+SUPPORT PROBE kind=fixed_light tick=4 actual_span=0.864693 rest_span=0.749483 player_y=4.37225 player_vy=-4.07549 support_motion=0 support_vy=0 hand_force_y=666.974
+SUPPORT PROBE kind=fixed_light tick=5 actual_span=0.896166 rest_span=0.749483 player_y=4.32687 player_vy=-4.08696 support_motion=0 support_vy=0 hand_force_y=793.651
+SUPPORT PROBE kind=fixed_light tick=30 actual_span=1.64606 rest_span=0.749483 player_y=3.37685 player_vy=-2.79526 support_motion=0 support_vy=0 hand_force_y=1095.01
+SUPPORT PROBE kind=fixed_light tick=60 actual_span=2.50515 rest_span=0.749483 player_y=2.54385 player_vy=-2.36712 support_motion=0 support_vy=0 hand_force_y=842.488
+SUPPORT PROBE kind=fixed_light tick=90 actual_span=3.39023 rest_span=0.749483 player_y=1.73956 player_vy=-2.49969 support_motion=0 support_vy=0 hand_force_y=775.996
+SUPPORT PROBE kind=fixed_light tick=180 actual_span=6.04569 rest_span=0.749483 player_y=-0.999151 player_vy=-2.73724 support_motion=0 support_vy=0 hand_force_y=886.521
+SUPPORT PROBE kind=fixed_light tick=270 actual_span=8.20736 rest_span=0.749483 player_y=-3.17831 player_vy=-1.47383 support_motion=0 support_vy=0 hand_force_y=962.425
+SUPPORT SUMMARY kind=fixed_light support_mass=0.722 max_span=8.20736 reach_cross_tick=34 min_vy=-4.08696 fall_m=7.72831 max_support_motion=0 peak_hand_force=913.213 positive_work=0 contacts=0
+SUPPORT PROBE kind=free_light tick=1 actual_span=0.753407 rest_span=0.749483 player_y=4.50637 player_vy=-3.96566 support_motion=0.0235182 support_vy=-1.67919 hand_force_y=26.6869
+SUPPORT PROBE kind=free_light tick=2 actual_span=0.753167 rest_span=0.749483 player_y=4.46156 player_vy=-4.0729 support_motion=0.0547803 support_vy=-1.99632 hand_force_y=11.2283
+SUPPORT PROBE kind=free_light tick=3 actual_span=0.752838 rest_span=0.749483 player_y=4.41556 player_vy=-4.18053 support_motion=0.0895297 support_vy=-2.26542 hand_force_y=9.92501
+SUPPORT PROBE kind=free_light tick=4 actual_span=0.752489 rest_span=0.749483 player_y=4.36836 player_vy=-4.28837 support_motion=0.127292 support_vy=-2.51156 hand_force_y=8.27106
+SUPPORT PROBE kind=free_light tick=5 actual_span=0.752132 rest_span=0.749483 player_y=4.31996 player_vy=-4.39642 support_motion=0.167626 support_vy=-2.73242 hand_force_y=6.71092
+SUPPORT PROBE kind=free_light tick=30 actual_span=0.750911 rest_span=0.749483 player_y=2.7191 player_vy=-7.09853 support_motion=1.80342 support_vy=-8.15041 hand_force_y=4.62072
+SUPPORT PROBE kind=free_light tick=60 actual_span=0.750373 rest_span=0.749483 player_y=-0.193466 player_vy=-10.3526 support_motion=5.4146 support_vy=-13.2918 hand_force_y=0.141615
+SUPPORT PROBE kind=free_light tick=90 actual_span=0.751527 rest_span=0.749483 player_y=-4.19507 player_vy=-13.636 support_motion=10.1039 support_vy=-14.9899 hand_force_y=-11.8996
+SUPPORT PROBE kind=free_light tick=180 actual_span=0.75086 rest_span=0.749483 player_y=-22.7746 player_vy=-23.4606 support_motion=27.0403 support_vy=-23.0998 hand_force_y=5.07458
+SUPPORT PROBE kind=free_light tick=270 actual_span=0.750438 rest_span=0.749483 player_y=-51.1367 player_vy=-33.2701 support_motion=57.0826 support_vy=-32.9642 hand_force_y=-5.24491
+SUPPORT SUMMARY kind=free_light support_mass=0.722 max_span=0.753407 reach_cross_tick=-1 min_vy=-33.2701 fall_m=55.6867 max_support_motion=57.0826 peak_hand_force=23.7529 positive_work=0 contacts=0
+SUPPORT DIFFERENCE fixed_minus_static_max_span=7.13859

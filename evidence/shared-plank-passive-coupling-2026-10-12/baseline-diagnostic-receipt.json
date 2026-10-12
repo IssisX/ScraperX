@@ -1,0 +1,58 @@
+{
+  "original_test_sha256": "880d51943d47f04ffd4b9e96c6c4df9d7bb2746f8f060e84a6f54fcaf18eb954",
+  "diagnostic_sha256": "2a91c4e393a372db8b3d25c06054a24d934bd43376500ec90ad3c0351d8fa9ac",
+  "archive_sha256": "34606043da75413c3dafa685b9ba85b8ffb1570169dfc6cb9ccc25a1688f01a5",
+  "native_source_sha256": "23e535f4d23800b3275204c930d932cfb7601492b08f2ea80b34a356f4d12fb9",
+  "steps": [
+    {
+      "name": "compile",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-radial-diagnostic/source.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/dynamic-grip-attempt3/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-radial-diagnostic/plank_tests"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 12.68914963095449,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "run-grip",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-radial-diagnostic/plank_tests",
+        "grip"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 11.146158901974559,
+      "log_sha256": "695116dfefea0c76e67c9307b401bb202ce38efad5fe9d2b407038aa2ddebd08"
+    }
+  ]
+}

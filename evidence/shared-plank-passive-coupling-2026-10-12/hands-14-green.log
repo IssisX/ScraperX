@@ -1,0 +1,46 @@
+one-hand at4s sag=0.278939 reaction=866.025 vy=-0.0288089
+static sag=0.0833883 reaction=833.846 one_sag=0.166768 peak_force=866.025
+PASS static_load_and_release
+command ascent=0.199789 cumulative_bound=666.667
+PASS command_sign_and_budget
+swing spring_work=5.55555 stroke=0.00641537 absorbed=5.55546 neutral_work=0
+PASS measured_swing_actuation
+recoil player_vx=1.57428 support_vx=1.44746 peak_force=366.954
+PASS dynamic_recoil
+catch minimum_y=2.60494 peak_force=1500
+PASS finite_landing_catch
+kinematic regrip tracking_vx=0.600085
+PASS kinematic_tracking_and_regrip
+soft reciprocal impulse residual=2.98023e-06
+PASS soft_material_reaction
+net-frame mass=6562.78 anchor_dx=0.0614624 momentum_residual=0.00301868
+PASS net_frame_reaction
+facade ladder_deflection_m=0.077397 carriage_travel_m=1.00387
+PASS facade_structural_response
+PASS invalid_holds_and_cleanup
+FREE ARC late270_360_z_span_m=1.02659 actual_span_m=1.14121 commanded_span_m=1.04523 speed=2.12697 neutral_positive_work=0
+PASS passive_radial_arc
+RADIAL RECOIL mass_kg=25 momentum_error=0.0107441 angular_error=0.00807747 support_spin=1.3679
+RADIAL ANGULAR before=15.4545,-24.6307,23.1818 after=15.4505,-24.6332,23.1811 support_omega=0.407192,-1.1468,0.624644 max_player_impulse_receipt_error=0.000198139 max_support_impulse_receipt_error=8.11396e-05
+RADIAL INERTIA inverse_world_columns=4.71657,-1.35906,-1.90105;-1.35906,0.89562,0.607195;-1.90105,0.607195,1.31088; actual_mass=25
+RADIAL RECOIL mass_kg=1 momentum_error=0.00720225 angular_error=0.000234159 support_spin=1.3333
+RADIAL ANGULAR before=0.790697,-1.26017,1.18605 after=0.790546,-1.26025,1.18604 support_omega=0.255079,-1.09612,0.714939 max_player_impulse_receipt_error=0.000138838 max_support_impulse_receipt_error=3.59438e-06
+RADIAL INERTIA inverse_world_columns=123.785,-31.2335,-44.3513;-31.2335,20.2295,12.3412;-44.3513,12.3412,29.0628; actual_mass=1
+PASS radial_dynamic_reciprocity
+RADIAL HANDOFF ENTRY cycle=0 com=0,4.21615,-0.2 midpoint=0,5,0.55 speed=0.00742312 hand_attached=1,1 compatible=1 actual_spans=1.10314,1.10314 paid_work=0
+RADIAL HANDOFF ENTRY cycle=1 com=3.90145e-10,4.0391,-0.169484 midpoint=0,5,0.55 speed=1.48675 hand_attached=1,1 compatible=1 actual_spans=1.21696,1.21696 paid_work=221.636
+RADIAL HANDOFF ENTRY cycle=2 com=-3.06152e-09,3.69457,0.239043 midpoint=0,5,0.55 speed=2.32208 hand_attached=1,1 compatible=1 actual_spans=1.35678,1.35678 paid_work=438.68
+RADIAL HANDOFF ENTRY cycle=3 com=-7.02767e-09,3.618,0.963232 midpoint=0,5,0.55 speed=1.54956 hand_attached=1,1 compatible=1 actual_spans=1.45626,1.45626 paid_work=663.531
+RADIAL HANDOFF ENTRY cycle=4 com=-1.59259e-09,3.62741,1.23962 midpoint=0,5,0.55 speed=0.725983 hand_attached=1,1 compatible=1 actual_spans=1.54906,1.54906 paid_work=894.142
+RADIAL HANDOFF ENTRY cycle=5 com=-2.70644e-10,3.35131,0.615873 midpoint=0,5,0.55 speed=1.91278 hand_attached=1,1 compatible=1 actual_spans=1.66208,1.66208 paid_work=1120.36
+RADIAL HANDOFF ENTRY cycle=6 com=2.36863e-09,3.3953,-0.109566 midpoint=0,5,0.55 speed=0.298269 hand_attached=1,1 compatible=1 actual_spans=1.74645,1.74645 paid_work=1350.43
+RADIAL HANDOFF ENTRY cycle=7 com=4.33386e-09,3.16241,0.392937 midpoint=0,5,0.55 speed=1.70369 hand_attached=1,1 compatible=1 actual_spans=1.8551,1.8551 paid_work=1578.51
+RADIAL HANDOFF completed_cycles=7 max_cycles=12 reach_exhausted=1 positive_work_j=1578.51
+PASS radial_work_and_handoffs
+FIXED LIGHT CATCH kind=static rest_span=0.749483 max_span=1.06857 max_hand_radius=1.06857 max_support_motion=0 player_vy=0.309509 support_vy=0 peak_hand_force=1500 neutral_positive_work=0
+FIXED LIGHT CATCH kind=world_fixed_0.722kg rest_span=0.749483 max_span=1.06857 max_hand_radius=1.06857 max_support_motion=5.96063e-08 player_vy=0.309502 support_vy=1.11594e-07 peak_hand_force=1500 neutral_positive_work=0
+FIXED LIGHT CATCH kind=free_0.722kg rest_span=0.749483 max_span=0.753814 max_hand_radius=0.753814 max_support_motion=57.0837 player_vy=-33.2699 support_vy=-32.9841 peak_hand_force=23.1307 neutral_positive_work=0
+FIXED LIGHT FREE CONTROL momentum_error=0.00878906
+FIXED LIGHT EQUIVALENCE absolute_max_span_difference=9.53674e-07
+PASS radial_fixed_light_catch
+physical hand checks: 14/14

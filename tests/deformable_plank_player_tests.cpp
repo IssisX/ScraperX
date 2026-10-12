@@ -327,6 +327,18 @@ void run() {
                  "gravity=1 deaths=0 grip=unverified\n";
 }
 
+// Independent small-deflection virtual-work reference for the existing
+// 2.4m timber beam: EI=E*b*t^3/12=7819.26N*m^2, hinge k=EI/0.2.
+// The observed quantity is the mean of the two central cell COM heights.
+double central_compliance(double load_x) {
+    constexpr double length=2.4,spacing=.2,young=9.0e9,width=.19,thickness=.038;
+    constexpr double hinge_stiffness=young*width*thickness*thickness*thickness/12/spacing;
+    const auto moment=[&](double a,double x){return x<=a?(length-a)*x/length:a*(length-x)/length;};
+    double result=0;
+    for(int j=1;j<=11;++j){const double x=spacing*j;
+        result+=moment(load_x,x)*.5*(moment(1.1,x)+moment(1.3,x))/hinge_stiffness;}
+    return result;
+}
 void run_grip() {
     body_indices.fill(Simulation::kKitNone);
     Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade, scraperx::sim::WorldContent::Slingshot);
@@ -357,20 +369,49 @@ void run_grip() {
     require(airborne && caught, "ordinary walkoff and Action catch actual timber", s);
     require(s.set_move_input(0, 0), "neutral hanging supplies no climb stroke", s);
     begin(s, "actual_hanging_player_load");
-    double maximum_hand_force = 0;
+    double maximum_hand_force = 0,sag_sum=0,equivalent_load_sum=0,vertical_load_sum=0;
+    const double left_seat_x=resting_positions[0].x-.1,centre_compliance=central_compliance(1.2);
+    require(std::isfinite(left_seat_x)&&std::isfinite(centre_compliance)&&centre_compliance>0,
+        "independent virtual-work beam reference is finite",s);
     for (int i = 0; i < 270; ++i) {
         tick(s);
         const auto v = s.snapshot();
         require(!v.player_grounded && v.traversal_hand_constraint_count == 2 &&
             v.traversal_state == TraversalState::Climbing, "two real hands carry airborne player", s);
         const auto magnitude = [](Vector3 f) { return std::sqrt(f.x*f.x+f.y*f.y+f.z*f.z); };
-        maximum_hand_force = std::max({maximum_hand_force, magnitude(v.traversal_left_hand_force),
-                                      magnitude(v.traversal_right_hand_force)});
+        const double left_magnitude=magnitude(v.traversal_left_hand_force),right_magnitude=magnitude(v.traversal_right_hand_force);
+        require(std::isfinite(left_magnitude)&&std::isfinite(right_magnitude),
+            "actual per-hand force magnitudes are finite before peak comparison",s);
+        maximum_hand_force = std::max({maximum_hand_force,left_magnitude,right_magnitude});
         require(maximum_hand_force <= 1501, "actual per-hand force remains bounded", s);
+        require(v.plank_broken_joint_mask==0,"intact beam required for measured-load compliance reference",s);
+        const double left_x=v.traversal_left_hand.x-left_seat_x,right_x=v.traversal_right_hand.x-left_seat_x;
+        require(std::isfinite(left_x)&&std::isfinite(right_x)&&left_x>=0&&left_x<=2.4&&right_x>=0&&right_x<=2.4&&
+            std::isfinite(v.traversal_left_hand_force.y)&&std::isfinite(v.traversal_right_hand_force.y),
+            "actual measured hand loads lie on the reference beam",s);
+        sag_sum+=baseline_centre_y()-centre_y(s);
+        vertical_load_sum+=v.traversal_left_hand_force.y+v.traversal_right_hand_force.y;
+        equivalent_load_sum+=(v.traversal_left_hand_force.y*central_compliance(left_x)+
+            v.traversal_right_hand_force.y*central_compliance(right_x))/centre_compliance;
     }
-    const double sag = baseline_centre_y() - centre_y(s);
-    std::cout << "PLANK_HANG_LOAD,extra_sag_m=" << sag << ",max_hand_force_n=" << maximum_hand_force << '\n';
-    require(sag > .02 && sag < .045, "actual hand-transferred load bends plank without duplicate weight", s);
+    const double sag = baseline_centre_y() - centre_y(s),mean_sag=sag_sum/270,mean_equivalent_load=equivalent_load_sum/270;
+    constexpr double reference_weight=85*9.81;
+    require(std::isfinite(mean_sag)&&std::isfinite(mean_equivalent_load)&&mean_equivalent_load>=.5*reference_weight,
+        "mean measured equivalent hand load is meaningful before normalization",s);
+    const double normalized_mean_sag=mean_sag*reference_weight/mean_equivalent_load;
+    const auto endpoint=s.snapshot();
+    const auto cell5_velocity=s.kit_body_velocity(body_indices[5]),cell6_velocity=s.kit_body_velocity(body_indices[6]);
+    // Public hand forces sample the last native substep; this is a dynamic
+    // load/deflection rejection, not contact-free force or energy closure.
+    std::cout << "PLANK_HANG_LOAD,extra_sag_m=" << sag << ",max_hand_force_n=" << maximum_hand_force
+        << ",endpoint_sum_hand_fy_n=" << endpoint.traversal_left_hand_force.y+endpoint.traversal_right_hand_force.y
+        << ",endpoint_player_vy=" << endpoint.player_linear_velocity.y
+        << ",endpoint_centre_vy=" << .5*(cell5_velocity.y+cell6_velocity.y)
+        << ",mean_sag_m=" << mean_sag << ",mean_vertical_hand_load_n=" << vertical_load_sum/270
+        << ",mean_equivalent_centre_load_n=" << mean_equivalent_load
+        << ",normalized_85kg_mean_sag_m=" << normalized_mean_sag << '\n';
+    require(std::isfinite(normalized_mean_sag)&&normalized_mean_sag>.02&&normalized_mean_sag<.045,
+        "measured hand-load normalized mean sag bends plank without duplicate weight",s);
     poses(s, "actual_hand_load");
     const auto before = s.snapshot();
     require(s.request_release(), "ordinary deliberate Drop requests release", s);

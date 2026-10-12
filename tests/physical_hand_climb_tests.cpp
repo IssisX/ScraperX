@@ -12,6 +12,7 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/PhysicsStepListener.h>
+#include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
 #include <Jolt/RegisterTypes.h>
 #include <algorithm>
@@ -45,7 +46,8 @@ struct BV final : ObjectVsBroadPhaseLayerFilter {
     bool ShouldCollide(ObjectLayer a, BroadPhaseLayer b) const override { return a != 0 || b.GetValue() != 0; }
 };
 struct LP final : ObjectLayerPairFilter {
-    bool ShouldCollide(ObjectLayer a, ObjectLayer b) const override { return a != 0 || b != 0; }
+    bool contact_free = false;
+    bool ShouldCollide(ObjectLayer a, ObjectLayer b) const override { return !contact_free && (a != 0 || b != 0); }
 };
 struct Contacts final : ContactListener {
     unsigned count = 0;
@@ -55,38 +57,62 @@ struct Contacts final : ContactListener {
 struct ForceObserver final : PhysicsStepListener {
     PhysicalHandClimb &hands;
     BodyID player,support;
-    bool radial_force_valid=true;
-    double max_pair_angular_error=0;
-    Vec3 pair_angular(const PhysicsStepListenerContext &c) const {
+    bool support_has_world_weld=false,radial_force_valid=true,receipt_valid=true,pending=false;
+    float last_dt=0,player_mass=0,support_mass=0;
+    Vec3 radii[2],player_velocity,support_velocity,player_gravity,support_gravity;
+    bool free_dynamic_support=false;
+    double max_player_impulse_error=0,max_support_impulse_error=0;
+    ForceObserver(PhysicalHandClimb &c,BodyID p,BodyID s,bool weld):
+        hands(c),player(p),support(s),support_has_world_weld(weld) {}
+    void finish(PhysicsSystem &system,bool bodies_locked=false) {
+        if(!pending)return;
+        hands.post_step(last_dt);
+        const BodyLockInterface &access=bodies_locked?
+            static_cast<const BodyLockInterface &>(system.GetBodyLockInterfaceNoLock()):
+            static_cast<const BodyLockInterface &>(system.GetBodyLockInterface());
+        BodyLockRead p(access,player),s(access,support);
+        if(!p.Succeeded()||!s.Succeeded()){receipt_valid=false;pending=false;return;}
+        Vec3 total=Vec3::sZero();
+        for(unsigned i=0;i<2;++i) {
+            const auto force=hands.hand_force(i);total+=force;
+            // Force belongs to the completed solve: compare with its cached
+            // start radius, not the body's subsequently integrated pose.
+            radial_force_valid&=finite(force)&&force.Length()<=1500.05F&&
+                force.Cross(radii[i].Normalized()).Length()<=.0001F*force.Length()+.001F;
+        }
+        const double player_error=(player_mass*(p.GetBody().GetLinearVelocity()-player_velocity)-
+            (total+player_mass*player_gravity)*last_dt).Length();
+        max_player_impulse_error=std::max(max_player_impulse_error,player_error);
+        receipt_valid&=std::isfinite(player_error)&&player_error<=.01;
+        if(free_dynamic_support) {
+            const double support_error=(support_mass*(s.GetBody().GetLinearVelocity()-support_velocity)-
+                (-total+support_mass*support_gravity)*last_dt).Length();
+            max_support_impulse_error=std::max(max_support_impulse_error,support_error);
+            receipt_valid&=std::isfinite(support_error)&&support_error<=.01;
+        }
+        pending=false;
+    }
+    void OnStep(const PhysicsStepListenerContext &c) override {
+        finish(*c.mPhysicsSystem,true);
+        hands.pre_step(c.mDeltaTime,true);
+        if(!hands.radial_active()){hands.post_step(c.mDeltaTime);return;}
         const auto &access=c.mPhysicsSystem->GetBodyLockInterfaceNoLock();
         const auto *p=access.TryGetBody(player),*s=access.TryGetBody(support);
-        if(!p||!s||!s->IsDynamic())return Vec3::sZero();
-        const float pm=1/p->GetMotionProperties()->GetInverseMass(),sm=1/s->GetMotionProperties()->GetInverseMass();
-        const auto pc=p->GetCenterOfMassPosition(),sc=s->GetCenterOfMassPosition();
-        const RVec3 center=(pm*pc+sm*sc)/(pm+sm);
-        const Vec3 mean=(pm*p->GetLinearVelocity()+sm*s->GetLinearVelocity())/(pm+sm);
-        return Vec3(pc-center).Cross(pm*(p->GetLinearVelocity()-mean))+
-            Vec3(sc-center).Cross(sm*(s->GetLinearVelocity()-mean))+
-            s->GetInverseInertia().Inversed3x3()*s->GetAngularVelocity();
-    }
-    ForceObserver(PhysicalHandClimb &c,BodyID p,BodyID s): hands(c),player(p),support(s) {}
-    void OnStep(const PhysicsStepListenerContext &c) override {
-        const bool radial=hands.radial_active();
-        const auto before=radial?pair_angular(c):Vec3::sZero();
-        hands.pre_step(c.mDeltaTime, true);
-        if(radial) {
-            max_pair_angular_error=std::max(max_pair_angular_error,double((pair_angular(c)-before).Length()));
-            const auto &bodies=c.mPhysicsSystem->GetBodyInterfaceNoLock();
-            for(unsigned i=0;i<2;++i) {
-                const auto grip=bodies.GetWorldTransform(support)*Vec3(i?.2F:-.2F,-.1F,-.1F);
-                const Vec3 radius=Vec3(grip-bodies.GetCenterOfMassPosition(player));
-                const Vec3 force=hands.hand_force(i);
-                // Sample at force application, before support/body integration.
-                radial_force_valid&=finite(force)&&force.Length()<=1500.05F&&
-                    force.Cross(radius.Normalized()).Length()<=.0001F*force.Length()+.001F;
-            }
+        if(!p||!s||!p->IsDynamic()){receipt_valid=false;return;}
+        player_mass=1/p->GetMotionProperties()->GetInverseMass();
+        player_velocity=p->GetLinearVelocity();
+        player_gravity=c.mPhysicsSystem->GetGravity()*p->GetMotionProperties()->GetGravityFactor();
+        free_dynamic_support=s->IsDynamic()&&!support_has_world_weld;
+        if(free_dynamic_support) {
+            support_mass=1/s->GetMotionProperties()->GetInverseMass();
+            support_velocity=s->GetLinearVelocity();
+            support_gravity=c.mPhysicsSystem->GetGravity()*s->GetMotionProperties()->GetGravityFactor();
         }
-        hands.post_step(c.mDeltaTime);
+        for(unsigned i=0;i<2;++i) {
+            const auto grip=s->GetWorldTransform()*Vec3(i?.2F:-.2F,-.1F,-.1F);
+            radii[i]=Vec3(grip-p->GetCenterOfMassPosition());
+        }
+        last_dt=c.mDeltaTime;pending=true;
     }
 };
 struct World {
@@ -97,14 +123,16 @@ struct World {
     Contacts contacts;
     std::vector<BodyID> ids;
     BodyID player, support;
-    double max_native_pair_angular_error=0;
-    explicit World(bool dynamic_support = false, Vec3 velocity = Vec3::sZero(), bool kinematic_support = false, float support_mass = 25.0F, bool gyroscopic_support = false) {
+    bool support_has_world_weld=false;
+    double max_player_impulse_error=0,max_support_impulse_error=0;
+    explicit World(bool dynamic_support = false, Vec3 velocity = Vec3::sZero(), bool kinematic_support = false, float support_mass = 25.0F, bool gyroscopic_support = false, RVec3 player_at = RVec3(0, 4.3, -0.2), bool contact_free = false) {
+        lp.contact_free = contact_free;
         system.Init(64, 0, 128, 256, bp, bv, lp);
         system.SetGravity(Vec3(0, -9.81F, 0));
         system.SetContactListener(&contacts);
         check(system.GetPhysicsSettings().mNumVelocitySteps == 10 &&
               system.GetPhysicsSettings().mNumPositionSteps == 2, "unexpected shipping global solver defaults");
-        BodyCreationSettings p(new CapsuleShape(0.55F, 0.35F), RVec3(0, 4.3, -0.2),
+        BodyCreationSettings p(new CapsuleShape(0.55F, 0.35F), player_at,
                                Quat::sIdentity(), EMotionType::Dynamic, 1);
         p.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
         p.mMassPropertiesOverride.mMass = 85.0F;
@@ -138,17 +166,21 @@ struct World {
     Vec3 velocity(BodyID id) { return system.GetBodyInterface().GetLinearVelocity(id); }
     RVec3 position(BodyID id) { return system.GetBodyInterface().GetPosition(id); }
     void tick(PhysicalHandClimb &hands, unsigned frames) {
-        ForceObserver observer(hands,player,support);
+        ForceObserver observer(hands,player,support,support_has_world_weld);
         system.AddStepListener(&observer);
         for (unsigned i = 0; i < frames; ++i) {
             check(system.Update(h, 4, &temporary, &jobs) == EPhysicsUpdateError::None, "native update error");
+            observer.finish(system);
             hands.post_step(h / 4);
             check(finite(position(player)) && finite(velocity(player)) && finite(position(support)) &&
                   finite(velocity(support)), "nonfinite constrained body state");
         }
+        observer.finish(system);
         system.RemoveStepListener(&observer);
         check(observer.radial_force_valid,"actual substep radial force has a tangential component or exceeds cap");
-        max_native_pair_angular_error=std::max(max_native_pair_angular_error,observer.max_pair_angular_error);
+        check(observer.receipt_valid,"actual radial force receipt fails substep momentum within0.01N*s");
+        max_player_impulse_error=std::max(max_player_impulse_error,observer.max_player_impulse_error);
+        max_support_impulse_error=std::max(max_support_impulse_error,observer.max_support_impulse_error);
     }
     void acquire(PhysicalHandClimb &hands) {
         check(hands.attach(0, support, RVec3(-0.2, 5.0, 0.55)), "first physical hand was not acquired");
@@ -157,7 +189,22 @@ struct World {
 };
 // Radial owner fixtures use the same per-collision-step callback as production.
 // No body state is written after acquisition; neutral commands cannot supply work.
+void radial_rows_only(World &w,unsigned fixture_welds=0) {
+    unsigned rows=0,welds=0;
+    for(const auto &constraint:w.system.GetConstraints()) {
+        check(constraint->GetSubType()!=EConstraintSubType::SixDOF,"radial mode retains competing Cartesian hand constraint");
+        if(constraint->GetSubType()==EConstraintSubType::User2) {
+            check(constraint->GetType()==EConstraintType::TwoBodyConstraint,"radial row lacks actual two-body coupling");
+            const auto *pair=static_cast<const TwoBodyConstraint *>(constraint.GetPtr());
+            check(pair->GetBody1()->GetID()==w.player&&pair->GetBody2()->GetID()==w.support,
+                  "radial row does not join the actual player and support");++rows;
+        }else if(constraint->GetSubType()==EConstraintSubType::Fixed)++welds;
+        else check(false,"unexpected competing constraint in radial fixture");
+    }
+    check(rows==2&&welds==fixture_welds,"radial fixture needs exactly two scalar rows and its declared welds");
+}
 void radial_force_bounds(World &w, PhysicalHandClimb &hands) {
+    radial_rows_only(w);
     for (unsigned i=0;i<2;++i) {
         const Vec3 force=hands.hand_force(i);
         check(finite(force)&&force.Length()<=1500.05F,"radial hand force exceeds1500N or is nonfinite");
@@ -171,7 +218,7 @@ void passive_radial_arc() {
     check(hands.set_radial_profile(true)&&hands.radial_active(),"compatible fixed hands did not enter radial mode");
     check((w.velocity(w.player)-velocity).LengthSq()==0&&Vec3(hands.grip_midpoint()-grip).LengthSq()==0,
           "radial handoff rewrote velocity or anchors");
-    check(w.system.GetConstraints().empty(),"radial mode retained competing Cartesian constraints");
+    radial_rows_only(w);
     const float span=hands.radial_commanded_span_m();
     check(std::abs(span-hands.radial_actual_span_m())<.00001F,"radial entry retained old spring preload");
     const double paid=hands.actuator_positive_work_j();
@@ -225,13 +272,13 @@ void radial_dynamic_reciprocity() {
         std::cout<<"RADIAL ANGULAR before="<<angular.GetX()<<','<<angular.GetY()<<','<<angular.GetZ()
                  <<" after="<<final_angular.GetX()<<','<<final_angular.GetY()<<','<<final_angular.GetZ()
                  <<" support_omega="<<spin.GetX()<<','<<spin.GetY()<<','<<spin.GetZ()
-                 <<" max_instant_native_pair_delta="<<w.max_native_pair_angular_error<<'\n';
+                 <<" max_player_impulse_receipt_error="<<w.max_player_impulse_error
+                 <<" max_support_impulse_receipt_error="<<w.max_support_impulse_error<<'\n';
         { BodyLockRead lock(w.system.GetBodyLockInterface(),w.support);
           const auto inverse=lock.GetBody().GetInverseInertia();
           std::cout<<"RADIAL INERTIA inverse_world_columns=";
           for(unsigned col=0;col<3;++col){const auto v=inverse.GetColumn3(col);std::cout<<v.GetX()<<','<<v.GetY()<<','<<v.GetZ()<<';';}
           std::cout<<" actual_mass="<<1/lock.GetBody().GetMotionProperties()->GetInverseMass()<<'\n'; }
-        check(w.max_native_pair_angular_error<.001,"actual radial impulse pair violates angular momentum before integration");
         check(max_linear_error<.1,"radial forces violate reciprocal linear momentum");
         check(max_angular_error<.2,"off-centre radial pair violates angular momentum");
         check(w.system.GetBodyInterface().GetAngularVelocity(w.support).Length()>.001F,
@@ -324,6 +371,71 @@ void radial_work_and_handoffs() {
     check(completed>=3,"insufficient real repeated handoffs");
     std::cout<<"RADIAL HANDOFF completed_cycles="<<completed<<" max_cycles=12 reach_exhausted="<<reach_exhausted
              <<" positive_work_j="<<hands.actuator_positive_work_j()<<'\n';
+}
+// A real world weld must carry the same radial catch as a static support.
+// This contact-free fixture isolates joint-coupled inertia; it does not add
+// ballast or replace the free support's actual0.722kg mass after creation.
+struct CatchResult { double max_span, max_radius, support_motion; };
+CatchResult radial_falling_support(bool dynamic,bool fixed,const char *label) {
+    World w(dynamic,Vec3(0,-3.87F,0),false,.722F,false,RVec3(0,4.55,-.015),true);
+    struct WorldWeld {
+        PhysicsSystem &system; Ref<Constraint> constraint;
+        ~WorldWeld(){if(constraint)system.RemoveConstraint(constraint);}
+    } weld{w.system,{}};
+    if(fixed) {
+        FixedConstraintSettings settings;settings.mAutoDetectPoint=true;
+        auto *body=w.system.GetBodyLockInterfaceNoLock().TryGetBody(w.support);
+        check(body!=nullptr,"fixed light support missing");
+        weld.constraint=settings.Create(Body::sFixedToWorld,*body);
+        w.system.AddConstraint(weld.constraint);w.support_has_world_weld=true;
+    }
+    PhysicalHandClimb hands(w.system,w.player);w.acquire(hands);
+    const auto initial_support=w.position(w.support);const auto initial_momentum=total_linear_momentum(w,.722F);
+    const Vec3 incoming=w.velocity(w.player);
+    check(hands.set_radial_profile(true)&&hands.radial_active(),"falling pair enters radial mode");
+    check((w.velocity(w.player)-incoming).LengthSq()==0,"radial entry changes incoming catch velocity");
+    const double rest=hands.radial_commanded_span_m(),paid=hands.actuator_positive_work_j();
+    check(rest>.74&&rest<.76,"controlled catch starts within unchanged reach");
+    double max_span=rest,max_radius=0,max_motion=0,peak_force=0;
+    for(unsigned tick=0;tick<270;++tick) {
+        check(hands.advance_radial_targets(0,h)==0,"neutral catch changes rest length");w.tick(hands,1);
+        max_span=std::max(max_span,double(hands.radial_actual_span_m()));
+        max_motion=std::max(max_motion,double(Vec3(w.position(w.support)-initial_support).Length()));
+        for(unsigned hand=0;hand<2;++hand) {
+            const auto grip=w.system.GetBodyInterface().GetWorldTransform(w.support)*Vec3(hand?.2F:-.2F,-.1F,-.1F);
+            max_radius=std::max(max_radius,double(Vec3(grip-w.system.GetBodyInterface().GetCenterOfMassPosition(w.player)).Length()));
+            const auto force=hands.hand_force(hand);peak_force=std::max(peak_force,double(force.Length()));
+            check(finite(force)&&force.Length()<=1500.05F,"radial catch exceeds actual1500N per-hand force");
+        }
+        check(w.contacts.count==0,"controlled radial catch develops a contact");
+        // The only extra constraint here is the fixture's support/world weld.
+        radial_rows_only(w,fixed?1U:0U);
+        check(std::abs(hands.radial_commanded_span_m()-rest)<.000001&&hands.actuator_positive_work_j()==paid,
+              "neutral catch changes rest length or positive paid ledger");
+    }
+    std::cout<<"FIXED LIGHT CATCH kind="<<label<<" rest_span="<<rest<<" max_span="<<max_span
+      <<" max_hand_radius="<<max_radius<<" max_support_motion="<<max_motion<<" player_vy="<<w.velocity(w.player).GetY()
+      <<" support_vy="<<w.velocity(w.support).GetY()<<" peak_hand_force="<<peak_force
+      <<" neutral_positive_work="<<hands.actuator_positive_work_j()-paid<<'\n';
+    if(dynamic&&!fixed) {
+        const Vec3 expected=initial_momentum+Vec3(0,-(85.0F+.722F)*9.81F*h*270,0);
+        const double error=(total_linear_momentum(w,.722F)-expected).Length();
+        std::cout<<"FIXED LIGHT FREE CONTROL momentum_error="<<error<<'\n';
+        check(max_motion>.1&&error<.05,"free light support has actual recoil and reciprocal linear momentum");
+    }
+    return {max_span,max_radius,max_motion};
+}
+void radial_fixed_light_catch() {
+    const auto a=radial_falling_support(false,false,"static");
+    const auto b=radial_falling_support(true,true,"world_fixed_0.722kg");
+    (void)radial_falling_support(true,false,"free_0.722kg");
+    std::cout<<"FIXED LIGHT EQUIVALENCE absolute_max_span_difference="<<std::abs(a.max_span-b.max_span)<<'\n';
+    // Chosen before candidate runtime:2.5cm rejects the measured7.14m
+    // divergence while allowing finite substep solver differences.
+    check(a.max_span<1.75&&b.max_span<1.75&&a.max_radius<1.75&&b.max_radius<1.75,
+          "static and world-fixed light support must arrest the same within-reach catch");
+    check(b.support_motion<.01&&std::abs(a.max_span-b.max_span)<.025,
+          "actual fixed-joint load path must match static catch within2.5cm");
 }
 void static_load_and_release() {
     World w;
@@ -608,10 +720,12 @@ void invalid_holds_and_cleanup() {
 int main(int argc,char **argv) {
     JPH::RegisterDefaultAllocator(); JPH::Factory::sInstance = new JPH::Factory; JPH::RegisterTypes();
     unsigned failures = 0;
+    const bool fixed_only=argc>1&&std::string(argv[1])=="free_arc_fixed_light";
     const bool radial_only=argc>1&&std::string(argv[1])=="free_arc";
     const bool handoff_only=argc>1&&std::string(argv[1])=="free_arc_handoff";
     const bool angular_only=argc>1&&std::string(argv[1])=="free_arc_angular";
-    const std::vector<std::pair<const char *, void (*)()>> tests=angular_only?
+    const std::vector<std::pair<const char *, void (*)()>> tests=fixed_only?
+        std::vector<std::pair<const char *,void (*)()>>{{"radial_fixed_light_catch",radial_fixed_light_catch}}:angular_only?
         std::vector<std::pair<const char *,void (*)()>>{{"radial_dynamic_reciprocity",radial_dynamic_reciprocity}}:handoff_only?
         std::vector<std::pair<const char *,void (*)()>>{{"radial_work_and_handoffs",radial_work_and_handoffs}}:radial_only?
         std::vector<std::pair<const char *, void (*)()>> {{"passive_radial_arc",passive_radial_arc},
@@ -626,7 +740,7 @@ int main(int argc,char **argv) {
         { "facade_structural_response", facade_structural_response },
         { "invalid_holds_and_cleanup", invalid_holds_and_cleanup },
         {"passive_radial_arc",passive_radial_arc},{"radial_dynamic_reciprocity",radial_dynamic_reciprocity},
-        {"radial_work_and_handoffs",radial_work_and_handoffs} };
+        {"radial_work_and_handoffs",radial_work_and_handoffs},{"radial_fixed_light_catch",radial_fixed_light_catch} };
     for (const auto &test : tests) {
         try { test.second(); std::cout << "PASS " << test.first << '\n'; }
         catch (const std::exception &e) { ++failures; std::cerr << "FAIL " << test.first << ": " << e.what() << '\n'; }

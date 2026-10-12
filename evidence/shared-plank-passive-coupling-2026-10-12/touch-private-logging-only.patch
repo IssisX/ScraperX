@@ -1,0 +1,11 @@
+--- original-ui-driver
++++ private-logging-only
+@@ -2432,6 +2432,8 @@
+ 			and bool(_ctx()["grounded"]) and int(_native().get_support_entity_id()) == 1931, 5.0):
+ 		return _fail("crown missed release did not reach the real recovery tray at=%s" % _position())
+ 	if bool(_native().is_player_crouched()):
++		var diag_state: Dictionary = _native().get_landing_state()
++		print("SCRAPERX_RELEASE_RECOVERY_DIAGNOSTIC " + JSON.stringify({"tick": _native().get_tick_index(), "position": str(_position()), "velocity": str(_velocity()), "native_crouched": _native().is_player_crouched(), "toggle": _main._crouch_toggled, "from_hang": _main._crouch_toggle_from_hang, "landing_response": diag_state.get("landing_response"), "recovery_seconds": diag_state.get("landing_recovery_seconds"), "recovery_progress": diag_state.get("landing_recovery_progress"), "hands": diag_state.get("traversal_hand_constraint_count"), "tuck_requested": diag_state.get("swing_tuck_requested"), "support": _native().get_support_entity_id()}))
+ 		return _fail("released posture became unsolicited ground crouch")
+ 	print("SCRAPERX_HANGING_POSTURE native_detach_toggle_clear=1 recovery_support=1931 ground_crouch=0")
+ 	if not await _walk_to(device, Vector2(-37.0, -159.8), 0.08, 7.0):

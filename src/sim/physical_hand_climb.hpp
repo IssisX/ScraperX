@@ -44,11 +44,13 @@ public:
     [[nodiscard]] JPH::RVec3 grip_midpoint() const;
     // Neutral actuator position from current anchors/targets; not actual pose.
     [[nodiscard]] JPH::RVec3 commanded_position() const;
-    // Jolt exposes the LAST collision-step impulse, not the outer update's sum.
-    // Pass that collision step's dt (shipping Update(h,4): h/4). May be sampled
-    // under the step-listener lock; it reads constraints, never acquires body locks.
-    // Soft/rigid material coupling runs in the single serialized collision callback.
+    // pre_step applies only the soft material adapter; rigid radial rows solve
+    // inside Jolt's ordinary joint/contact island. The production listener owns
+    // body locks already: it must pass bodies_locked=true, outside Update false.
     void pre_step(float dt, bool bodies_locked = false);
+    // Cartesian readback needs the LAST collision-step dt (Update(h,4): h/4).
+    // Radial readback uses the row's actual last solved dt and axis, never an
+    // outer-update impulse sum or pre-solver force estimate. No body locks.
     void post_step(float collision_dt);
     [[nodiscard]] JPH::Vec3 hand_force(unsigned hand) const noexcept;
     [[nodiscard]] float peak_hand_force_n() const noexcept { return peak_force_; }
@@ -61,7 +63,8 @@ public:
     [[nodiscard]] double command_work_bound_j() const noexcept { return command_bound_; }
     [[nodiscard]] double last_command_work_bound_j() const noexcept { return last_bound_; }
     // Work supplied/absorbed by changing the actual spring rest targets at
-    // fixed body poses: delta(1/2*k*extension^2). Separate from Fmax-distance
+    // fixed body poses: Cartesian delta(1/2*k*extension^2), radial delta of the
+    // unilateral quadratic-to-linear potential capped at1500N. Separate from Fmax-distance
     // and solver motor work. Implicit damping/solver residual are not inferred
     // from this receipt; this is not a claim of complete energy closure.
     [[nodiscard]] double actuator_positive_work_j() const noexcept { return actuator_positive_work_; }
@@ -70,6 +73,7 @@ public:
 private:
     bool replace(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip, bool preserve_extension);
     [[nodiscard]] JPH::Vec3 spring_extension(unsigned hand) const;
+    [[nodiscard]] float radial_rest_length(unsigned hand) const;
     JPH::PhysicsSystem &system_;
     JPH::BodyID player_;
     CargoNet *net_;
@@ -79,8 +83,16 @@ private:
         JPH::Vec3 rest_offset=JPH::Vec3::sZero();
     };
     std::array<SoftHand, 2> soft_;
+    // In radial mode these SixDOFs are dormant anchor/profile readback only.
+    // Exactly one backend is registered per rigid hand. Private User2 radial
+    // settings recreate the finite law; global archive registration is not owned
+    // here. Row StateRecorder snapshots include rest length/solved impulse, not
+    // this owner's attachment topology or actuator work ledger.
     std::array<JPH::Ref<JPH::SixDOFConstraint>, 2> hands_;
+    std::array<JPH::Ref<JPH::TwoBodyConstraint>, 2> radial_hands_;
     std::array<JPH::Vec3, 2> forces_ { JPH::Vec3::sZero(), JPH::Vec3::sZero() };
+    // Soft rest lengths / rigid commit mirrors. Rigid readback and subsequent
+    // charging use the actual row rest length, including after row state restore.
     std::array<float, 2> radial_lengths_ { 0.0F, 0.0F };
     bool radial_profile_ = false;
     bool transfer_profile_ = false;

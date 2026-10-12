@@ -1,0 +1,134 @@
+diff --git a/tests/physical_hand_climb_tests.cpp b/tests/physical_hand_climb_tests.cpp
+index a18d47b..f7d1ce7 100644
+--- a/tests/physical_hand_climb_tests.cpp
++++ b/tests/physical_hand_climb_tests.cpp
+@@ -12,6 +12,7 @@
+ #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+ #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+ #include <Jolt/Physics/PhysicsStepListener.h>
++#include <Jolt/Physics/Constraints/FixedConstraint.h>
+ #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
+ #include <Jolt/RegisterTypes.h>
+ #include <algorithm>
+@@ -45,7 +46,8 @@ struct BV final : ObjectVsBroadPhaseLayerFilter {
+     bool ShouldCollide(ObjectLayer a, BroadPhaseLayer b) const override { return a != 0 || b.GetValue() != 0; }
+ };
+ struct LP final : ObjectLayerPairFilter {
+-    bool ShouldCollide(ObjectLayer a, ObjectLayer b) const override { return a != 0 || b != 0; }
++    bool contact_free = false;
++    bool ShouldCollide(ObjectLayer a, ObjectLayer b) const override { return !contact_free && (a != 0 || b != 0); }
+ };
+ struct Contacts final : ContactListener {
+     unsigned count = 0;
+@@ -98,13 +100,14 @@ struct World {
+     std::vector<BodyID> ids;
+     BodyID player, support;
+     double max_native_pair_angular_error=0;
+-    explicit World(bool dynamic_support = false, Vec3 velocity = Vec3::sZero(), bool kinematic_support = false, float support_mass = 25.0F, bool gyroscopic_support = false) {
++    explicit World(bool dynamic_support = false, Vec3 velocity = Vec3::sZero(), bool kinematic_support = false, float support_mass = 25.0F, bool gyroscopic_support = false, RVec3 player_at = RVec3(0, 4.3, -0.2), bool contact_free = false) {
++        lp.contact_free = contact_free;
+         system.Init(64, 0, 128, 256, bp, bv, lp);
+         system.SetGravity(Vec3(0, -9.81F, 0));
+         system.SetContactListener(&contacts);
+         check(system.GetPhysicsSettings().mNumVelocitySteps == 10 &&
+               system.GetPhysicsSettings().mNumPositionSteps == 2, "unexpected shipping global solver defaults");
+-        BodyCreationSettings p(new CapsuleShape(0.55F, 0.35F), RVec3(0, 4.3, -0.2),
++        BodyCreationSettings p(new CapsuleShape(0.55F, 0.35F), player_at,
+                                Quat::sIdentity(), EMotionType::Dynamic, 1);
+         p.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
+         p.mMassPropertiesOverride.mMass = 85.0F;
+@@ -325,6 +328,71 @@ void radial_work_and_handoffs() {
+     std::cout<<"RADIAL HANDOFF completed_cycles="<<completed<<" max_cycles=12 reach_exhausted="<<reach_exhausted
+              <<" positive_work_j="<<hands.actuator_positive_work_j()<<'\n';
+ }
++// A real world weld must carry the same radial catch as a static support.
++// This contact-free fixture isolates joint-coupled inertia; it does not add
++// ballast or replace the free support's actual0.722kg mass after creation.
++struct CatchResult { double max_span, max_radius, support_motion; };
++CatchResult radial_falling_support(bool dynamic,bool fixed,const char *label) {
++    World w(dynamic,Vec3(0,-3.87F,0),false,.722F,false,RVec3(0,4.55,-.015),true);
++    struct WorldWeld {
++        PhysicsSystem &system; Ref<Constraint> constraint;
++        ~WorldWeld(){if(constraint)system.RemoveConstraint(constraint);}
++    } weld{w.system,{}};
++    if(fixed) {
++        FixedConstraintSettings settings;settings.mAutoDetectPoint=true;
++        auto *body=w.system.GetBodyLockInterfaceNoLock().TryGetBody(w.support);
++        check(body!=nullptr,"fixed light support missing");
++        weld.constraint=settings.Create(Body::sFixedToWorld,*body);
++        w.system.AddConstraint(weld.constraint);
++    }
++    PhysicalHandClimb hands(w.system,w.player);w.acquire(hands);
++    const auto initial_support=w.position(w.support);const auto initial_momentum=total_linear_momentum(w,.722F);
++    const Vec3 incoming=w.velocity(w.player);
++    check(hands.set_radial_profile(true)&&hands.radial_active(),"falling pair enters radial mode");
++    check((w.velocity(w.player)-incoming).LengthSq()==0,"radial entry changes incoming catch velocity");
++    const double rest=hands.radial_commanded_span_m(),paid=hands.actuator_positive_work_j();
++    check(rest>.74&&rest<.76,"controlled catch starts within unchanged reach");
++    double max_span=rest,max_radius=0,max_motion=0,peak_force=0;
++    for(unsigned tick=0;tick<270;++tick) {
++        check(hands.advance_radial_targets(0,h)==0,"neutral catch changes rest length");w.tick(hands,1);
++        max_span=std::max(max_span,double(hands.radial_actual_span_m()));
++        max_motion=std::max(max_motion,double(Vec3(w.position(w.support)-initial_support).Length()));
++        for(unsigned hand=0;hand<2;++hand) {
++            const auto grip=w.system.GetBodyInterface().GetWorldTransform(w.support)*Vec3(hand?.2F:-.2F,-.1F,-.1F);
++            max_radius=std::max(max_radius,double(Vec3(grip-w.system.GetBodyInterface().GetCenterOfMassPosition(w.player)).Length()));
++            const auto force=hands.hand_force(hand);peak_force=std::max(peak_force,double(force.Length()));
++            check(finite(force)&&force.Length()<=1500.05F,"radial catch exceeds actual1500N per-hand force");
++        }
++        check(w.contacts.count==0,"controlled radial catch develops a contact");
++        // The only extra constraint here is the fixture's support/world weld.
++        check(w.system.GetConstraints().size()==(fixed?1U:0U),"radial catch retains competing hand solver");
++        check(std::abs(hands.radial_commanded_span_m()-rest)<.000001&&hands.actuator_positive_work_j()==paid,
++              "neutral catch changes rest length or positive paid ledger");
++    }
++    std::cout<<"FIXED LIGHT CATCH kind="<<label<<" rest_span="<<rest<<" max_span="<<max_span
++      <<" max_hand_radius="<<max_radius<<" max_support_motion="<<max_motion<<" player_vy="<<w.velocity(w.player).GetY()
++      <<" support_vy="<<w.velocity(w.support).GetY()<<" peak_hand_force="<<peak_force
++      <<" neutral_positive_work="<<hands.actuator_positive_work_j()-paid<<'\n';
++    if(dynamic&&!fixed) {
++        const Vec3 expected=initial_momentum+Vec3(0,-(85.0F+.722F)*9.81F*h*270,0);
++        const double error=(total_linear_momentum(w,.722F)-expected).Length();
++        std::cout<<"FIXED LIGHT FREE CONTROL momentum_error="<<error<<'\n';
++        check(max_motion>.1&&error<.05,"free light support has actual recoil and reciprocal linear momentum");
++    }
++    return {max_span,max_radius,max_motion};
++}
++void radial_fixed_light_catch() {
++    const auto a=radial_falling_support(false,false,"static");
++    const auto b=radial_falling_support(true,true,"world_fixed_0.722kg");
++    (void)radial_falling_support(true,false,"free_0.722kg");
++    std::cout<<"FIXED LIGHT EQUIVALENCE absolute_max_span_difference="<<std::abs(a.max_span-b.max_span)<<'\n';
++    // Chosen before candidate runtime:2.5cm rejects the measured7.14m
++    // divergence while allowing finite substep solver differences.
++    check(a.max_span<1.75&&b.max_span<1.75&&a.max_radius<1.75&&b.max_radius<1.75,
++          "static and world-fixed light support must arrest the same within-reach catch");
++    check(b.support_motion<.01&&std::abs(a.max_span-b.max_span)<.025,
++          "actual fixed-joint load path must match static catch within2.5cm");
++}
+ void static_load_and_release() {
+     World w;
+     PhysicalHandClimb hands(w.system, w.player);
+@@ -608,10 +676,12 @@ void invalid_holds_and_cleanup() {
+ int main(int argc,char **argv) {
+     JPH::RegisterDefaultAllocator(); JPH::Factory::sInstance = new JPH::Factory; JPH::RegisterTypes();
+     unsigned failures = 0;
++    const bool fixed_only=argc>1&&std::string(argv[1])=="free_arc_fixed_light";
+     const bool radial_only=argc>1&&std::string(argv[1])=="free_arc";
+     const bool handoff_only=argc>1&&std::string(argv[1])=="free_arc_handoff";
+     const bool angular_only=argc>1&&std::string(argv[1])=="free_arc_angular";
+-    const std::vector<std::pair<const char *, void (*)()>> tests=angular_only?
++    const std::vector<std::pair<const char *, void (*)()>> tests=fixed_only?
++        std::vector<std::pair<const char *,void (*)()>>{{"radial_fixed_light_catch",radial_fixed_light_catch}}:angular_only?
+         std::vector<std::pair<const char *,void (*)()>>{{"radial_dynamic_reciprocity",radial_dynamic_reciprocity}}:handoff_only?
+         std::vector<std::pair<const char *,void (*)()>>{{"radial_work_and_handoffs",radial_work_and_handoffs}}:radial_only?
+         std::vector<std::pair<const char *, void (*)()>> {{"passive_radial_arc",passive_radial_arc},
+@@ -626,7 +696,7 @@ int main(int argc,char **argv) {
+         { "facade_structural_response", facade_structural_response },
+         { "invalid_holds_and_cleanup", invalid_holds_and_cleanup },
+         {"passive_radial_arc",passive_radial_arc},{"radial_dynamic_reciprocity",radial_dynamic_reciprocity},
+-        {"radial_work_and_handoffs",radial_work_and_handoffs} };
++        {"radial_work_and_handoffs",radial_work_and_handoffs},{"radial_fixed_light_catch",radial_fixed_light_catch} };
+     for (const auto &test : tests) {
+         try { test.second(); std::cout << "PASS " << test.first << '\n'; }
+         catch (const std::exception &e) { ++failures; std::cerr << "FAIL " << test.first << ": " << e.what() << '\n'; }

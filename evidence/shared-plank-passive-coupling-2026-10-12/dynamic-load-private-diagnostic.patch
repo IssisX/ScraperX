@@ -1,0 +1,51 @@
+--- unchanged-plank-grip-test
++++ private-loadcurve-static-assert-explicitly-skipped
+@@ -322,7 +322,7 @@
+     // selected IDs are not required. The eleven walked seams are required.
+     walk(s, -4.5, "onward_right_steel_walking", false);
+     stable_steel(s, 90);
+-    std::cout << "PASS DEFORMABLE_PLANK_PLAYER normal_world=1 seams=11 native85kg_load=1 "
++    std::cout << "DIAGNOSTIC_POST_STATIC_ASSERT DEFORMABLE_PLANK_PLAYER normal_world=1 seams=11 native85kg_load=1 "
+                  "ordinary_jump_landing=1 unload_return=1 onward_steel=1 initial_steel_staging_only=1 "
+                  "gravity=1 deaths=0 grip=unverified\n";
+ }
+@@ -366,11 +366,29 @@
+         const auto magnitude = [](Vector3 f) { return std::sqrt(f.x*f.x+f.y*f.y+f.z*f.z); };
+         maximum_hand_force = std::max({maximum_hand_force, magnitude(v.traversal_left_hand_force),
+                                       magnitude(v.traversal_right_hand_force)});
++        const auto left_velocity=s.kit_body_velocity(body_indices[5]),right_velocity=s.kit_body_velocity(body_indices[6]);
++        const auto radius=[&](Vector3 hand){return std::sqrt(std::pow(hand.x-v.player_position.x,2)+
++            std::pow(hand.y-v.player_position.y,2)+std::pow(hand.z-v.player_position.z,2));};
++        std::cout << "PLANK_LOAD_CURVE,tick=" << v.tick_index << ",extra_sag=" << baseline_centre_y()-centre_y(s)
++            << ",centre_y=" << centre_y(s) << ",centre_velocity=" << .5*(left_velocity.x+right_velocity.x)
++            << ',' << .5*(left_velocity.y+right_velocity.y) << ',' << .5*(left_velocity.z+right_velocity.z)
++            << ",sum_hand_fy=" << v.traversal_left_hand_force.y+v.traversal_right_hand_force.y
++            << ",left_force=" << v.traversal_left_hand_force.x << ',' << v.traversal_left_hand_force.y << ',' << v.traversal_left_hand_force.z
++            << ",right_force=" << v.traversal_right_hand_force.x << ',' << v.traversal_right_hand_force.y << ',' << v.traversal_right_hand_force.z
++            << ",left_magnitude=" << magnitude(v.traversal_left_hand_force) << ",right_magnitude=" << magnitude(v.traversal_right_hand_force)
++            << ",COM_vy=" << v.player_linear_velocity.y << ",radial=" << v.hanging_free_arc_active
++            << ",rest_span=" << v.hanging_commanded_span_m << ",actual_span=" << v.hanging_actual_span_m
++            << ",hand_radii=" << radius(v.traversal_left_hand) << ',' << radius(v.traversal_right_hand)
++            << ",generations=" << v.traversal_left_hand_generation << ',' << v.traversal_right_hand_generation
++            << ",cell_velocities=";
++        for(const auto index:body_indices){const auto velocity=s.kit_body_velocity(index);
++            std::cout << velocity.x << ',' << velocity.y << ',' << velocity.z << ';';}
++        std::cout << '\n';
+         require(maximum_hand_force <= 1501, "actual per-hand force remains bounded", s);
+     }
+     const double sag = baseline_centre_y() - centre_y(s);
+     std::cout << "PLANK_HANG_LOAD,extra_sag_m=" << sag << ",max_hand_force_n=" << maximum_hand_force << '\n';
+-    require(sag > .02 && sag < .045, "actual hand-transferred load bends plank without duplicate weight", s);
++    std::cout << "DIAGNOSTIC_SKIPPED_STATIC_SAG_ASSERT observed_sag=" << sag << " original_band=(.02,.045)\n";
+     poses(s, "actual_hand_load");
+     const auto before = s.snapshot();
+     require(s.request_release(), "ordinary deliberate Drop requests release", s);
+@@ -466,7 +484,7 @@
+         "real steel recovery is checkpointable and damage persists", s);
+     sample(s, "stable_recovered_with_damage");
+     poses(s, "native_fragments_after_player_impact");
+-    std::cout << "PASS DEFORMABLE_PLANK_PLAYER_FRACTURE actual_gravity_loaded85kg=1 actual_rupture=1 "
++    std::cout << "DIAGNOSTIC_POST_STATIC_ASSERT DEFORMABLE_PLANK_PLAYER_FRACTURE actual_gravity_loaded85kg=1 actual_rupture=1 "
+         "ordinary_air_steering=1 actual_recovery_tray=1 persistent_damage=1 no_assisted_elevation=1\n";
+ }
+ } // namespace

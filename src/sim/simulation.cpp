@@ -7129,8 +7129,8 @@ private:
             (void)physical_hands_->set_radial_profile(true);
         }
         if (physical_hands_->radial_active()) {
-            // Radial pairs have no Jolt constraint island joining their bodies.
-            // Wake the actual attachments on the owner tick, outside OnStep.
+            // Wake actual attachments on the owner tick, outside OnStep. Rigid
+            // radial rows join their native island; material grips use their adapter.
             bodies.ActivateBody(player_id_);
             for (const auto &hand:hands_) if (hand.valid) bodies.ActivateBody(hand.body);
         }

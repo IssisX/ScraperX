@@ -1,0 +1,2 @@
+PASS TUCK regular_hang_entity=7 actual_rise_m=0.212875 commanded_rise_m=0.25 held_target_span_m=0 held_tracking_positive_work_j=0 extension=1 ordinary_Jump_mantle=1 Drop_momentum=1
+PASS TUCK regular_hang_entity=8 actual_rise_m=0.215684 commanded_rise_m=0.25 held_target_span_m=0 held_tracking_positive_work_j=0 extension=1 ordinary_Jump_mantle=1 Drop_momentum=1

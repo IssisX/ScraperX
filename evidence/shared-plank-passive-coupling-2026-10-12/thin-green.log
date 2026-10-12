@@ -1,0 +1,11 @@
+THIN EDGE phase=facing_away tick=180 position=34.4,55.9,-134.437 velocity=0,0,1.6106 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+PASS THIN EDGE refusal=facing_away target=1800 actual_fall=1
+THIN EDGE phase=below_reach_band tick=180 position=34.4,55.9,-139.613 velocity=0,0,-1.65 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+PASS THIN EDGE refusal=below_reach_band target=1800 actual_fall=1
+THIN EDGE phase=too_far_forward tick=180 position=34.4,55.9,-138.063 velocity=0,0,-1.6106 state=0 support=0 hands=0 grounded=1 gravity=1 radial=0
+PASS THIN EDGE refusal=too_far_forward target=1800 actual_fall=1
+THIN EDGE phase=approach tick=1 position=34.4,62.7992,-137.001 velocity=0,-0.116359,-0.159185 state=1 support=1800 hands=2 grounded=0 gravity=1 radial=0
+THIN EDGE phase=acquisition_end tick=1 position=34.4,62.7992,-137.001 velocity=0,-0.116359,-0.159185 state=1 support=1800 hands=2 grounded=0 gravity=1 radial=0
+THIN EDGE phase=neutral_loaded tick=31 position=34.4,62.4648,-137.254 velocity=-1.20821e-10,-1.03231,-1.78874 state=1 support=1800 hands=2 grounded=0 gravity=1 radial=1
+THIN EDGE phase=after_Drop tick=32 position=34.4,62.4526,-137.274 velocity=-1.20821e-10,-1.14131,-1.78874 state=0 support=0 hands=0 grounded=0 gravity=1 radial=0
+PASS THIN EDGE ordinary_airborne_discovery=1 target=1800 neutral_radial=1 mean_upward_load_N=614.821 actual_Drop_momentum=1 initial_staging_only=1

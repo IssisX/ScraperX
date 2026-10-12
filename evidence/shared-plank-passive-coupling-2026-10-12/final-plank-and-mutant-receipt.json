@@ -1,0 +1,110 @@
+{
+  "final_test_sha256": "399a907f4c4553fd1bdb62d0d93941b6bea90991c0cd09d955f83e79e3e482ef",
+  "final_archive_sha256": "be75508e88bbc43a1bd7ba84ca09bfc8791167ef331c7c2e9f307da2fe306a44",
+  "MUTANT_archive_sha256": "ae738aa218f8f877c33cfbaccf4f5fc00b7418caf8aa1cd527cff2149a6232aa",
+  "MUTANT_delivery_eligible": false,
+  "steps": [
+    {
+      "name": "compile-normal",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/deformable_plank_player_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/radial-row-attempt1/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-intact-guard-final/normal-plank-tests"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 17.258230671053752,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "run-normal",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-intact-guard-final/normal-plank-tests",
+        "grip"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 44.974357170052826,
+      "log_sha256": "919859b1f71c8a60afadce3c5bafb724a29c450abe50b59abc25220cff73693b"
+    },
+    {
+      "name": "compile-MUTANT",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/deformable_plank_player_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/MUTANT_DUPLICATE_HANGING_WEIGHT/MUTANT_DUPLICATE_WEIGHT.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-intact-guard-final/MUTANT-plank-tests"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 7.822453798959032,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "run-MUTANT",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/plank-intact-guard-final/MUTANT-plank-tests",
+        "grip"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 14.398929056944326,
+      "log_sha256": "57f0526547b993d82195e1dc7159ebcaf09ebd8898ae1d6998ea1ccffea61fbf"
+    }
+  ],
+  "test_source_unchanged": true,
+  "final_archive_unchanged": true
+}

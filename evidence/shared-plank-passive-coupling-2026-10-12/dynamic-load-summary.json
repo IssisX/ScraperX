@@ -1,0 +1,13 @@
+{
+  "ticks": 270,
+  "first_tick": 587,
+  "last_tick": 856,
+  "extra_sag_min_m": -0.000228882,
+  "extra_sag_max_m": 0.091751099,
+  "extra_sag_endpoint_m": 0.045150757,
+  "endpoint_sum_hand_fy_n": 1252.558898926,
+  "endpoint_com_vy_mps": 1.680579543,
+  "endpoint_centre_velocity_mps": "0.012358251,0.242445342,0.002176393",
+  "diagnostic_static_assert_skipped": true,
+  "post_skip_original_assertions": "Drop momentum, actual1936 recovery, unload shape <.002 passed"
+}
