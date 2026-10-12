@@ -1,0 +1,116 @@
+{
+  "head": "e235d6f52f5acb7bf725c6acbd2be5d67f8638c5",
+  "source_sha": "8424cedd10cd0322c274f9526e46b0df9c06367512835ff8bfadea5795e731c2",
+  "test_sha": "8ce62a00db0a029055c847c8e7bffc53b1b2c6899657351689cf29de3d4fe9cd",
+  "baseline_archive_sha": "8d19e954ae980b70238096d9b982deff4121a3082a3d5094dbc3ff6e25dbf532",
+  "steps": [
+    {
+      "name": "compile",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-completion-repair/simulation.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-completion-repair/simulation.cpp.o"
+      ],
+      "exit_code": 0,
+      "seconds": 25.828420823905617,
+      "log_sha": "9045640da0b6baa9a1d31eaa330daf73fc91f4b562d2ae154db73a098534e623"
+    },
+    {
+      "name": "replace",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/ar",
+        "r",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-completion-repair/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-completion-repair/simulation.cpp.o"
+      ],
+      "exit_code": 0,
+      "seconds": 1.409492083126679,
+      "log_sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "link",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/supplied_machine_route_tests.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-completion-repair/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-completion-repair/supplied_machine_route_tests"
+      ],
+      "exit_code": 0,
+      "seconds": 14.278523118933663,
+      "log_sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "full-parkour-tuck",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-completion-repair/supplied_machine_route_tests",
+        "parkour_tuck"
+      ],
+      "exit_code": 0,
+      "seconds": 201.33383966307156,
+      "log_sha": "ca66defdc7875d94484b9b72878ba25183ffa5569493ebb96c350fa1869fca34"
+    }
+  ],
+  "archive_sha": "7e0dbaa2d1b69ef248505d507f2d22c664f1951d177bf3db8790a61b2d1d782a",
+  "jolt_pin": "e77f175595e64cb44218cc9d9d56fc365ad0e36a",
+  "shipping_write_files": [
+    "src/sim/simulation.cpp"
+  ],
+  "oracle": "Unchanged paired actual-ascent acceptance rejects baseline rate_ratio0.734327; repaired full parkour_tuck passes rate_ratio1.03277."
+}

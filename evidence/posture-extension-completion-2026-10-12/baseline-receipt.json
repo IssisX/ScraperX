@@ -1,0 +1,72 @@
+{
+  "head": "e235d6f52f5acb7bf725c6acbd2be5d67f8638c5",
+  "test_sha": "8ce62a00db0a029055c847c8e7bffc53b1b2c6899657351689cf29de3d4fe9cd",
+  "archive_sha": "8d19e954ae980b70238096d9b982deff4121a3082a3d5094dbc3ff6e25dbf532",
+  "steps": [
+    {
+      "name": "compile",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-ci-diagnosis/baseline.cpp",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-receiver-final/libscraperx_sim.a",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-ci-diagnosis/baseline"
+      ],
+      "exit_code": 0,
+      "seconds": 16.94944066996686,
+      "log_sha": "2468a15d060a42b57aae87196848fc768e443299cb99c87de1c94f3436a976c6"
+    },
+    {
+      "name": "run",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-ci-diagnosis/baseline",
+        "shared_hanging_posture"
+      ],
+      "exit_code": 2,
+      "seconds": 0.6129522919654846,
+      "log_sha": "2468a15d060a42b57aae87196848fc768e443299cb99c87de1c94f3436a976c6"
+    },
+    {
+      "name": "exact-registered-test",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/posture-ci-diagnosis/baseline",
+        "parkour_tuck"
+      ],
+      "exit_code": 1,
+      "seconds": 135.19803453190252,
+      "log_sha": "0500d15afd03dfd10e6e6231da9e8cf5672677896ea9c5c40c52dda359bdc544"
+    }
+  ]
+}

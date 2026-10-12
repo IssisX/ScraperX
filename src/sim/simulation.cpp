@@ -7209,8 +7209,17 @@ private:
         const bool requested = hanging_posture_eligible(bodies) && hanging_posture_input_;
         if (physical_hands_->radial_active()) {
             const float desired=requested ? .25F : 0.0F;
-            const float delivered=physical_hands_->advance_radial_targets(desired-hanging_posture_offset_m_,dt);
+            const float remaining=desired-hanging_posture_offset_m_;
+            const float delivered=physical_hands_->advance_radial_targets(remaining,dt);
             hanging_posture_offset_m_=std::clamp(hanging_posture_offset_m_+delivered,0.0F,.25F);
+            // The ledger can retain a rounding remainder smaller than the
+            // radial target's float resolution. Settle only a zero-delivery
+            // endpoint that cannot change the commanded span; no target,
+            // motion or actuator work is granted. Otherwise that remainder
+            // would keep the posture cap on a later ordinary climb forever.
+            const float span=physical_hands_->radial_commanded_span_m();
+            if (delivered==0.0F && span-remaining==span)
+                hanging_posture_offset_m_=desired;
             return;
         }
         // CHOSEN0.25m world-up rest-target change, not a capsule/limb edit.

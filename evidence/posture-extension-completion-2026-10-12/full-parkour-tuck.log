@@ -1,0 +1,22 @@
+PASS TUCK actual_body_rise_m=0.21643 commanded_rise_m=0.25 restored_body_m=1.05103 held_target_span_m=0 held_tracking_positive_work_j=0 passive_tucked_release=1
+TUCK SCHEDULE start=0 pulse_ticks=45 horizon_ticks=360 position=-36.281,199.484,-160.473 velocity=2.18079,0.203553,-0.308847 positive_target_work_j=230.789
+TUCK BAR start=0 tick=876 position=-36.95,207.5,-159.8 velocity=1.32661,0.12605,-2.40423e-10 rotation=9.1214e-08,-1.66714e-06,0.0478397,0.998855
+TUCK SCHEDULE start=120 pulse_ticks=45 horizon_ticks=360 position=-36.2725,199.502,-160.561 velocity=2.28817,0.237625,-0.179684 positive_target_work_j=249.998
+TUCK BAR start=120 tick=876 position=-36.95,207.5,-159.8 velocity=1.51612,0.116954,-1.25219e-10 rotation=8.84717e-08,-2.01946e-06,0.0390454,0.999237
+TUCK PHASE player_state_delta=0.193984 bar_position_delta_m=1.90735e-05 bar_velocity_delta_mps=0.189733 bar_angle_delta_rad=0.0176054
+PASS TUCK phase_schedule_state_delta=0.193984 actual_bar_delta=0.189733 threshold=0.0001
+CLIMB ACQUIRE heading=0,-1 elapsed=164 state=4 hands=2 hand_support=1901 grounded=0 gravity=1 eligible=1 radial=1 actual_below=0.78344 hand_y=90.45,90.75 normal=0,-1
+CLIMB ACQUIRE heading=0,-1 elapsed=164 state=4 hands=2 hand_support=1901 grounded=0 gravity=1 eligible=1 radial=1 actual_below=0.78344 hand_y=90.45,90.75 normal=0,-1
+CLIMB TUCK metric=radial_span actual_rise_m=0.224094 commanded_rise_m=0.25 held_target_span_m=0
+CLIMB STATE phase=tucked_before_ascent tick=600 actual_com=15.9617,90.1528,-179.58 actual_midgrip=16,90.6,-179.97 commanded_com_y_from_readback=90.2377 actual_below=0.447174 commanded_below=0.362297 hand_y=90.45,90.75 generations=3,3 requested=1
+CLIMB STATE phase=after_held_ascent_regrip tick=690 actual_com=15.9622,90.5317,-179.58 actual_midgrip=15.9615,91.2,-179.97 commanded_com_y_from_readback=90.6319 actual_below=0.668312 commanded_below=0.568138 hand_y=91.05,91.35 generations=4,4 requested=1
+CLIMB STATE phase=settled_before_extension tick=870 actual_com=15.9468,90.4204,-179.58 actual_midgrip=15.9615,91.2,-179.97 commanded_com_y_from_readback=90.5013 actual_below=0.779594 commanded_below=0.698669 hand_y=91.05,91.35 generations=4,4 requested=1
+CLIMB STATE phase=after_extension tick=1230 actual_com=15.9491,90.1452,-179.58 actual_midgrip=15.9615,91.2,-179.97 commanded_com_y_from_readback=90.2281 actual_below=1.05476 commanded_below=0.971909 hand_y=91.05,91.35 generations=4,4 requested=0
+CLIMB EXTEND metric=radial_span tucked_body_below_m=0.901707 extended_body_below_m=1.14344 actual_extension_m=0.241737 commanded_body_below_m=1.05365 requested=0 regrips=1,1
+CLIMB WORLD EXTEND actual_descent_m=0.275169 commanded_descent_m=0.273239 midgrip_descent_m=0
+CLIMB RESUME control_rise_m=1.34489 extended_rise_m=1.38895 control_rate_mps=0.672443 extended_rate_mps=0.694477 rate_ratio=1.03277 requested=0 extended_body_below_m=1.14344 extended_target_below_m=1.05365 regrips=1,1
+PASS TUCK ordinary_non_swing_climb=1 posture=1 regrips=1 extension=1 resumed_rate=1
+PASS TUCK regular_hang_entity=7 actual_rise_m=0.212875 commanded_rise_m=0.25 held_target_span_m=0 held_tracking_positive_work_j=0 extension=1 ordinary_Jump_mantle=1 Drop_momentum=1
+PASS TUCK regular_hang_entity=8 actual_rise_m=0.215684 commanded_rise_m=0.25 held_target_span_m=0 held_tracking_positive_work_j=0 extension=1 ordinary_Jump_mantle=1 Drop_momentum=1
+PASS PARKOUR missed-release/recovery-footing/real-ladder/retry ordinary_inputs_only=1
+PASS TUCK encounter timed_tuck_extend=1 existing_manual_lean=1 tucked_momentum_release=1 receiver=1985 Tower=11 deaths=0 peak_x=-32.192 pump_ticks=2789
