@@ -1392,6 +1392,7 @@ public:
         if (sling_controlling || traversal_state_ != TraversalState::None || (slingshot_flight_ && !grounded_)) {
             teetering_ = false;
             line_held_ = false;
+            flight_from_jump_ = false;
             clear_support_jolt();
         }
         if (!sling_controlling && traversal_state_ == TraversalState::None) {
@@ -2972,9 +2973,15 @@ private:
             teetering_ = false;
             clear_support_jolt();
             // In the air the stick steers toward what it asks for with at most
-            // kAirAcceleration (weaker than the ground's). Let go, nothing acts
-            // but gravity and drag: a committed arc keeps its momentum.
-            if (std::hypot(move_x, move_z) > 1.0e-3) {
+            // kAirAcceleration (weaker than the ground's). Let go in flight (a
+            // jump, or ground no longer within a step under the soles), nothing
+            // acts but gravity and drag: a committed arc keeps its momentum.
+            // A step's brief lift, the foot still on the ground below, is not
+            // flight.
+            const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+            const bool in_flight = flight_from_jump_ ||
+                                   !feet_supported_at(centre, static_cast<float>(centre.GetY()) - active_half_height());
+            if (std::hypot(move_x, move_z) > 1.0e-3 || !in_flight) {
                 approach_relative_horizontal_velocity(player_velocity,
                                                       reference_velocity,
                                                       move_x,
@@ -2987,7 +2994,11 @@ private:
 
         // Crouched here means there was no room to stand, so no room to jump.
         const bool jump_started = commands.jump_requested && grounded_ && !crouched_;
+        if (grounded_) {
+            flight_from_jump_ = false;
+        }
         if (jump_started) {
+            flight_from_jump_ = true;
             player_velocity.SetY(reference_velocity.GetY() + kJumpSpeed);
             jump_takeoff_feet_y_ =
                 static_cast<float>(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
@@ -4249,6 +4260,7 @@ private:
         clear_recovery();
         clear_support_jolt();
         teetering_ = false;
+        flight_from_jump_ = false;
         jump_vault_ticks_left_ = 0;
         support_entity_id_ = 0;
         support_sample_ = {};
@@ -4648,6 +4660,8 @@ public:
     float support_jolt_peak_m_ = 0.0F;
     std::uint64_t support_stumble_count_ = 0;
     bool line_held_ = false;
+    // Airborne since a jump's takeoff (a committed arc; see the air branch).
+    bool flight_from_jump_ = false;
     // Top speed the air steers toward: the walk, or what the ground gave the
     // body as it left it (a running jump keeps its speed).
     float air_full_speed_ = kPlayerMaximumRelativeSpeed;
