@@ -1,0 +1,97 @@
+Bounded READ-ONLY advisory, no implementation: ScraperX shared module3 future deliberate one-rigid-hand passivehang -> validated paired grasp. Root owns integration; preserve all work and existing native physics, one writer/file. BranchChatGPT HEAD99c8358. User wants shared causal parkour on EVERY appropriate hangable part; hooklater. Completed actual native15hand/default9/material/fullSim +exactbridge oneleft,pairedbar/net; actualoneRIGHTcatch/headless/honestarms alsoPASS. Currentfeedback savepending finalnet, nativeunchanged982534b5/header469fc48d/Sim2fe96a29. Singlecatch actualoneUser2 radialrow, reach1.75m, force1500N/hand, work500W, .25m paidstroke/.6radial bounds, neutralpassivegravity1, deliberateActiononly; AUTO retainsvalidpairs toavoid observedactiveclimbpreemption. ExistingAction whileone rejects: oldpublic540tick stableone rejects furtherAction. Future smallest goal should let deliberateAction add SECOND REAL validated rigidgrip then nextdirection resumes existingpairedclimb. NOT fullautomaticonehandclimb or materialpromotion.
+Independentmapping: Simulationapply_traversal_commands5453 blocks partial; missing-hand query hand_aim6952 heights.45/.65 across±.20, find_grip6860/sharedfirsthitvisibility6811(actualCOM,ignoresONLYplayer+sensors), reach7124/backendmatch6963. Nevercall take_hand_holds/begin_climb (mayreplace held/resetallowance). Backendreplace183 exitsradial BEFOREconstructing/validatingfullnewCartesian row; nottransactionalsinglepromotion. sync_radial_profile7162 sees SAMEAction and exitspairedradial. Proposed dedicate missingrigidhandtransaction: constructvalidateddormant anchor+freshzeroerrorradial row,retain existingregistered row/localanchor/rest/cache/ledger,addexactlyoneactualrow,publishmissingmetadata/gen ONLYaftercommit,consumesameAction; nextdirectionordinarypairedhandoff. Real2952 east/westguardrail originaloneblockedother. Naturalsettling changesmissingupper .65aboveCOM ray, mayclear but UNVERIFIED geometry, mustcapturewitness notclaimpositive orscanpose. No implementation/runtimepromotionclaim.
+Precise question: reject/repair this proposed minimal transaction contract, especially newhand freshrest target versus retainedcommon paid stroke/500Wallowance, passive radial pair combining distinct restlengths, samepressActionconsumption, and rollback. Give concrete minimal acceptance tests that can reject energy/anchorreset/blockednewgrip/nextinputfail. Only suppliedevidence. If need morecode stateunknown ratherthaninvent. Return concise causal design for nextboundedgoal, NOTgeneralroadmap.
+Actual excerpts:
+        if ((traversal_state_ == TraversalState::Climbing || traversal_state_ == TraversalState::Hanging) &&
+            physical_hands_->active() && !physical_hands_->compatible_hands()) {
+            // A solo rigid catch owns only its passive radial row. Action
+            // cannot authorize a two-hand top-out or a muscle jump from it.
+            if (commands.release_requested || commands.jump_requested) {
+                if (traversal_state_ == TraversalState::Hanging) release_hang(bodies);
+                else let_go_climb(bodies);
+            } else if (commands.traversal_requested) {
+                ++rejected_traversal_count_;
+            }
+            return;
+        }
+        if ((traversal_state_ == TraversalState::Hanging || traversal_state_ == TraversalState::Climbing) &&
+            (commands.jump_requested || commands.traversal_requested) && !leave_radial_profile(bodies)) return;
+        if (traversal_state_ == TraversalState::Hanging) {
+bool PhysicalHandClimb::replace(unsigned hand, JPH::BodyID support, JPH::RVec3 actual_grip,
+                                bool preserve_extension) {
+    using namespace JPH;
+    if (hand >= hands_.size() || player_.IsInvalid() || support.IsInvalid() ||
+        support == player_ || !finite(actual_grip)) return false;
+    if (radial_profile_) {
+        // Validate the replacement before the dissipative mode change. An
+        // invalid requested support must not discard a valid old radial pair.
+        const BodyID candidate_ids[]{player_,support};
+        {
+            BodyLockMultiRead lock(system_.GetBodyLockInterface(),candidate_ids,2);
+            const Body *player=lock.GetBody(0), *hold=lock.GetBody(1);
+            if (!player || !hold || !player->IsDynamic() || !player->IsInBroadPhase() ||
+                !hold->IsInBroadPhase() || player->IsSensor() || hold->IsSensor() ||
+                (!(net_ && support==net_->body()) && !hold->IsRigidBody())) return false;
+        }
+        if (!set_radial_profile(false)) return false;
+    }
+    if (net_ && support == net_->body()) {
+        const BodyLockRead lock(system_.GetBodyLockInterface(), player_);
+        if (!lock.Succeeded() || !lock.GetBody().IsDynamic()) return false;
+        const auto material=net_->material_point(actual_grip);
+        const auto actual=net_->world_point(material);
+        Vec3 offset(lock.GetBody().GetPosition()-actual);
+        if (preserve_extension && soft_[hand].attached)
+            offset=soft_[hand].rest_offset+Vec3(net_->world_point(soft_[hand].material)-actual);
+        detach(hand);
+        soft_[hand]={true,material,offset};
+        return true;
+    }
+    const BodyID previous_support = hands_[hand] ? hands_[hand]->GetBody2()->GetID() : support;
+    // A rigid replacement is only extension-preserving for another rigid grip.
+    preserve_extension=preserve_extension && hands_[hand].GetPtr()!=nullptr;
+    const BodyID ids[] { player_, support, previous_support };
+    Ref<SixDOFConstraint> constraint;
+    bool wake_support = false;
+    {
+        BodyLockMultiWrite lock(system_.GetBodyLockInterface(), ids, 3);
+        Body *player = lock.GetBody(0), *hold = lock.GetBody(1);
+        if (player == nullptr || hold == nullptr || !player->IsRigidBody() || !hold->IsRigidBody() ||
+    void sync_radial_profile(JPH::BodyInterface &bodies,const StepCommands &commands) noexcept {
+        if ((traversal_state_ == TraversalState::Climbing || traversal_state_ == TraversalState::Hanging) &&
+            physical_hands_->active() && !physical_hands_->compatible_hands()) {
+            if (!radial_ownership_eligible() || !actual_hands_in_reach(bodies) ||
+                !physical_hands_->radial_active()) {
+                if (traversal_state_ == TraversalState::Hanging) release_hang(bodies);
+                else let_go_climb(bodies);
+                return;
+            }
+            // Commands are arbitrated by apply_traversal_commands. A fresh
+            // Action already consumed by begin_climb must retain this row in
+            // both syncs; direction never hands a solo catch to a pair servo.
+            bodies.ActivateBody(player_id_);
+            for (unsigned hand=0;hand<2;++hand) if (physical_hands_->attached(hand))
+                bodies.ActivateBody(hands_[hand].body);
+            return;
+        }
+        const auto right=traversal_right();
+        const double climb_input=commands.move_input_x*traversal_normal_.GetX()+
+            commands.move_input_z*traversal_normal_.GetZ();
+        const double side_input=commands.move_input_x*right.GetX()+commands.move_input_z*right.GetZ();
+        // Use the same physical traversal axes as climb/shimmy. Independent
+        // world-axis deadzones swallow valid low-throw input at diagonal grips.
+        const bool neutral=std::isfinite(commands.move_input_x) && std::isfinite(commands.move_input_z) &&
+            std::abs(climb_input)<=kClimbInputDeadzone && std::abs(side_input)<=kClimbInputDeadzone &&
+            !(physical_hands_->swinging() && commands.move_input_x!=0.0);
+        const bool action=commands.jump_requested || commands.traversal_requested || commands.release_requested;
+        if (physical_hands_->radial_active()) {
+            if (radial_ownership_eligible() && !actual_hands_in_reach(bodies)) {
+                if (traversal_state_ == TraversalState::Hanging) release_hang(bodies);
+                else let_go_climb(bodies);
+                return;
+            }
+            if (!neutral || action || !radial_ownership_eligible()) (void)leave_radial_profile(bodies);
+        } else if (neutral && !action && hanging_posture_eligible(bodies)) {
+            (void)physical_hands_->set_radial_profile(true);
+        }
+

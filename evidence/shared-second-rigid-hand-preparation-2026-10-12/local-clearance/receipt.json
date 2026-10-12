@@ -1,0 +1,61 @@
+{
+  "scope": "one unchanged180settle Actioncatch180neutral history; local live2952 OBB query only, no promotion",
+  "source_sha256": "0b7e3febd0031ba7c69621eefbb9d38c0e6a7677c957fd21bdfd4fb34069268d",
+  "dependencies": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-attempt3/libscraperx_sim.a": "dc34717a8241fa30c61d74bc45e9829e3cab1f24ff89f70eaeba2cb250386fcd",
+    "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "6cd9f092644c271e1dffbe519f4d265d41c2519b6179485468b941601623331f"
+  },
+  "baseline_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-attempt3/receipt.json",
+  "commands": {
+    "compile": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-std=c++17",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-pthread",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/second-hand-clearance/source.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-attempt3/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/second-hand-clearance/probe"
+    ],
+    "run": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/second-hand-clearance/probe"
+    ]
+  },
+  "compile": {
+    "exit": 0,
+    "seconds": 12.319716973928735,
+    "log_sha256": "2468a15d060a42b57aae87196848fc768e443299cb99c87de1c94f3436a976c6"
+  },
+  "binary_sha256": "30d0bb3007b401a547c48b27adc81528d680bd1e0b367a7abdb4268e57aeeb71",
+  "run": {
+    "exit": 0,
+    "seconds": 11.556151350028813,
+    "log_sha256": "2061060081490cefabbdbdedd92c1680f4d8b1e5bccb8ed9a14cd97d7f92c6f8"
+  },
+  "archive_unchanged": true
+}

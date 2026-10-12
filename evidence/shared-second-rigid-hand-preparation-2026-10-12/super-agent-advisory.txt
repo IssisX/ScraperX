@@ -1,0 +1,42 @@
+The proposed transaction is sound **if it adds a passive constraint without resetting the existing grasp or granting fresh contraction allowance**. `replace()` cannot provide that guarantee: the excerpt exits radial mode before constructing the replacement.
+
+The minimal contract should be:
+
+- Require one valid rigid radial grasp and a deliberate Action. Release/jump retain their existing priority. Query only the missing hand through the existing aim, first-hit visibility, reach, and backend checks. Reject material/net candidates.
+- Prepare the missing grip’s local anchor and an **unregistered** radial row. Its initial target length must equal the current separation of its actual constraint endpoints. Initialize its solver cache without inherited impulse. Preserve the incumbent row, anchor, target, cache, and allowance ledger.
+- Revalidate at the simulation commit boundary. Register exactly one additional radial row, then publish the missing-hand metadata/generation before another consumer or physics step can observe the state.
+- On rejection, consume that request and retain the solo grasp. On success, consume it and retain the passive pair through the promotion step. The following directional command uses the existing paired handoff.
+
+**Fresh rest length and existing allowance**
+
+Different radial target lengths are acceptable; equal lengths are unnecessary. The new row should be geometrically consistent at attachment, without prestretch or a positional correction.
+
+That fresh target must not replenish the common paid stroke. For example, **if** the existing convention is \(L_i=B_i-q\), with shared paid contraction \(q\), attach at separation \(d\) using \(B_{\text{new}}=d+q_{\text{current}}\). Its initial target is then \(d\), while the remaining shared stroke stays unchanged. Do not copy the incumbent’s target onto the new row or reset \(q\).
+
+The common 500 W accounting must also remain unchanged. Adding a hand must not double the shared power allowance or create another same-tick spending opportunity. Any remaining contraction must satisfy both rows’ existing legal bounds without modifying the incumbent target. The supplied excerpts do not establish the actual rest-length representation, radial constraint type, or accounting implementation; those need inspection before choosing the concrete encoding.
+
+**Command consumption needs more than an early return**
+
+After promotion, `compatible_hands()` becomes true, so the shown `sync_radial_profile()` sees the same Action and exits radial mode. A simulation-owned consumed-request disposition must reach both sync calls and later traversal arbitration.
+
+If the pair must remain passive through the promotion step, that disposition must also defer the `!neutral` handoff for that step when Action and direction arrive together. Release/jump remain effective. A held Action must follow the existing request-edge semantics; the excerpts do not show those semantics.
+
+**Rollback**
+
+Make all fallible preparation precede registration where possible. Failure must leave incumbent state and published metadata unchanged. If anything can fail after registration, remove only the new row before physics resumes. Do not reconstruct the incumbent through `replace()`, `take_hand_holds()`, or `begin_climb()`. Body activation should follow successful commit.
+
+Concrete rejection tests:
+
+| Test | Required observation |
+|---|---|
+| Valid promotion, starting from each solo hand | Exactly two actual radial rows; incumbent identity, anchor, target and ledger unchanged; new row initially has zero geometric error. |
+| Promotion after partial paid stroke | Remaining common allowance unchanged; no contraction or paid-work debit from attachment itself; subsequent contraction cannot spend twice the existing budget. |
+| Passive pair with unequal targets | Neutral gravity settling preserves both targets; no Cartesian servo appears. Energy checks include moving-support work and a declared solver tolerance. |
+| Blocked or invalid candidate | Original east/west obstruction, out-of-reach grip, sensor, material grip, or invalid support leaves the solo row and metadata intact. |
+| Same Action through both syncs | Promotion stays radial for that step, including Action-plus-direction; no top-out, jump, or repeated acquisition from the consumed request. |
+| Next directional input | Existing paired handoff runs successfully without resetting the preserved allowance. |
+| Preparation/commit failure | Every fallible stage leaves no extra registered row, dangling attachment, generation change, or incumbent reset. |
+
+For the next bounded goal, first capture a **real positive missing-hand witness**: player COM, chosen existing aim ray, first hit, support, grip and reach distance. Natural settling may clear the upper ray, but that remains unverified. Then implement this transaction and request disposition, and exercise the tests above plus the existing paired-route checks. No supplied evidence proves promotion or its onward handoff currently works.
+
+[Session: 01a12e1c-ac8f-7200-9e49-3b3359dd4320 (Codex; ChatGPT login; model gpt-6.1-sol; reasoning high; at most 3 children; observed spawned children 0; mode advisory; sandbox read-only; observed completed commands 0; file-change events 0)]
