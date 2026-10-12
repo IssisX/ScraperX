@@ -1,0 +1,91 @@
+{
+  "scope": "readonly shipping; bounded private native diagnosis only",
+  "baseline": {
+    "archive_sha256": "dc34717a8241fa30c61d74bc45e9829e3cab1f24ff89f70eaeba2cb250386fcd",
+    "unchanged_test_sha256": "1d9f6e7ad078be4c76208847a55beabd64f5edbfca2c0b9c496f0459ad6c111d",
+    "terminal": "RED1 poweredJump setup",
+    "runtime_step": {
+      "name": "run_original_unchanged",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/original_unchanged"
+      ],
+      "exit_code": 1,
+      "elapsed_seconds": 6.119,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/run_original_unchanged.log",
+      "log_sha256": "10d9cdfe0f8d5c440063097953ed933b6d92ac03b4a1fd49b9ca77492cc3eaba"
+    }
+  },
+  "repaired_logger": {
+    "archive_sha256": "8817bc0c44c64ca9b2ea9493e3bd935b716f23385ef00d537b6a38f8875c0147",
+    "terminal": "RED1 same poweredJump setup",
+    "runtime_step": {
+      "name": "run_repaired_logging",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/repaired_logging"
+      ],
+      "exit_code": 1,
+      "elapsed_seconds": 6.923,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/run_repaired_logging.log",
+      "log_sha256": "11624cd5b281cdf5d5d281a60a98841dec082b9eb77e32cc21b07255caa24524"
+    }
+  },
+  "classification": "Preexisting currentnative setup failure, not introduced northgeometry",
+  "cause": "Test climbs just untilY90 then commands30neutral ticks; native paired passive radial ownership allows finitegravity sag from90.0061 to89.8166, violating unchangedrequired90..91 setupband. Allotherrequiredsetupconditions remain valid.",
+  "failed_state": {
+    "tick": 240,
+    "height": 89.8166,
+    "hands": 2,
+    "generations": [
+      3,
+      3
+    ],
+    "radial": true,
+    "grounded": false,
+    "support": 0,
+    "gravity": 1,
+    "deaths": 0
+  },
+  "one_fixed_setup_proof": {
+    "ordinary_climb_stop_target_m": 90.5,
+    "neutral_ticks": 30,
+    "unchanged_assertions": true,
+    "resulting_start_height": 90.3327,
+    "paid_jump_recovery_retry": "PASS",
+    "stroke_ticks": 19,
+    "command_work_j": 599.4,
+    "positive_spring_work_j": 278.088,
+    "first_rest": "PASS16,94.9048,-180.515 physicaltransfer1.7s",
+    "second_rest": "PASS9.99999,98.4067,-178.588",
+    "full_retained_test_terminal": "RED1 later raised transfer catch at14.38,104.395,-180.599 state0",
+    "later_failure_classification": "Unresolved; stopped at first unsupported subsequent failure per rootinstruction",
+    "runtime_step": {
+      "name": "run",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/repaired_setup90_5"
+      ],
+      "exit_code": 1,
+      "elapsed_seconds": 16.821,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/setup90_5-run.log",
+      "log_sha256": "b6ce167e23efaeb26defae37e0039d0650c576b71585efccd4e1f389173d2ed9"
+    }
+  },
+  "minimal_shipping_proposal": "Change onlytests/north_service_frame_tests.cpp poweredJump setup ordinary upclimb stop predicate y<90 to y<90.5. Everyassertion staysunchanged. Rootowns anyshippingedit andnewfresh test-source receipt. FullnativeRED raisedlip remains outstanding.",
+  "shipping_sources_changed": false,
+  "original_archive_provenance_note": "All src/sim hashes matchcurrentexceptexpectednorth_service_frame original10d04=>repair7d638; originalreceipt also includes historicalbridgesource4b0=>928a difference, which directnative executable doesnotlink.",
+  "reasoning_control": "SolHigh assignment retained; no live runtime model/effort/tier change claimed."
+}

@@ -1,0 +1,102 @@
+{
+  "scope": "bounded raisedcatch diagnosis; shippingreadonly; no physics/cap/tolerance edits",
+  "fullnative_capture": {
+    "receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/raised-receipt.json",
+    "run": {
+      "name": "run",
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/raised_transfer_logging"
+      ],
+      "exit_code": 1,
+      "elapsed_seconds": 16.244,
+      "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/raised-run.log",
+      "log_sha256": "91dd98dedf73361fb11c0866aa647ef8a29e7adbbac50339575a4fe285986e94"
+    }
+  },
+  "fixed_supported_staging": {
+    "receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/raised-staged-receipt.json",
+    "runs": [
+      {
+        "name": "original-run",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--shared-tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/raised_staged_original"
+        ],
+        "exit_code": 1,
+        "elapsed_seconds": 0.989,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/raised-staged-original-run.log",
+        "log_sha256": "79558621c377f14f33dd33bd92ca6a8211e7f015bbb5820c32d7b9af383f62e1"
+      },
+      {
+        "name": "repaired-run",
+        "command": [
+          "proot-distro",
+          "login",
+          "ubuntu",
+          "--shared-tmp",
+          "--",
+          "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/raised_staged_repaired"
+        ],
+        "exit_code": 1,
+        "elapsed_seconds": 0.939,
+        "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/raised-staged-repaired-run.log",
+        "log_sha256": "79558621c377f14f33dd33bd92ca6a8211e7f015bbb5820c32d7b9af383f62e1"
+      }
+    ],
+    "same_actual_miss_original_and_repaired": true,
+    "actual_takeoff": [
+      15.136095047,
+      104.400001526,
+      -180.599258423
+    ],
+    "terminal": [
+      14.3800001144,
+      104.394996643,
+      -180.599258423
+    ],
+    "actual_input": {
+      "facing": [
+        -1,
+        0
+      ],
+      "move": [
+        -0.5,
+        0
+      ],
+      "fresh_jump": true
+    },
+    "paid_jump_work_j": 1285.625
+  },
+  "classification": "Preexisting currentnative raisedcatch failure. Originaldc347 and repaired8817 reproduce exactstage; geometryladderrepair notsupportedcause.",
+  "supported_cause": "Native raisedreceiver geometry splits the visiblefascia andtop shelf across different rigidleaves. Exactleaf airbornehang validator cannot admit that thinfascia: visibleeastface14.03 minus0.12topinset13.91 isoutside fasciaX13.94..14.03 andonshelfX12.2..14.0. Topray therefore hitsdifferentleaf. A shelfseed isbehind fascia, so wallray leafdiffers seed. Similar mismatch appears when lip-pair approaches name shelf-top leaves behindfascia.",
+  "discriminating_native_facts": [
+    "Actual ordinaryjump begins tick6003 aftergrounded/support1901/v0 takeoff, positivefinitejumpwork1285.625J",
+    "41 capturedsamples enterunchangedhangheight/forwardreach and1.75m gripradius; no pairedcatch ever",
+    "No traversal rejection increments; catch admission nevercreateshandstate",
+    "Shortened actualsupportedtakeoff onoriginal and repairedarchives reachesexactfullnativefailureposition"
+  ],
+  "geometric_proof_boundary": "Actual native partbounds andflight snapshots plus sourcecontract reconstruction. No nativeinternal ray-hit or exactfirst rejection guard instrumentation claimed.",
+  "geometry_analysis": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-jump-diagnosis/raised-geometry-analysis.json",
+  "minimal_owner_correct_repair": {
+    "owner": "src/sim/north_service_frame.cpp",
+    "proposal": "Replace existingraisedthinfascia with physicallycontinuous inwardedge receiverbeam while retaining outwardX14.03,top106,canopy/decks/recoveryfloor. Give depth enoughfor existing0.12top and0.47receivinginset to lieon SAME actualleaf; innerX13.50 yields0.53m beam depth and0.06m nominalreceiver margin. Preservedrawing/collision/loadpath throughsameKitPart owner. Verify pairedcatch/release/retry/shimmy/topout.",
+    "unchanged": [
+      "Nativeleafadmission",
+      "Playerforces/mass/gravity",
+      "Reach/rise/tolerances",
+      "Routeacceptance",
+      "Exteriorlip/deck/canopyheights"
+    ]
+  },
+  "shipping_sources_changed_by_diagnostician": false,
+  "reasoning_control": "AssignedactualSolHigh retained; no live model/effort/tier change claimed."
+}

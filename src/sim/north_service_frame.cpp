@@ -1,5 +1,6 @@
 #include "sim/north_service_frame.hpp"
 
+#include <algorithm>
 #include <vector>
 
 namespace scraperx::sim {
@@ -10,6 +11,32 @@ using kit::Part;
 Part span(const JPH::Vec3 low, const JPH::Vec3 high, const Material material) {
     return {0.5F * (high - low), 0.5F * (high + low),
             JPH::Quat::sIdentity(), material};
+}
+
+void ladder(std::vector<Part> &parts, const float left, const float right,
+            const float bottom, const float top, const float first_rung,
+            const unsigned rung_count, const float z, const float fascia_z,
+            const float lower_mount, const float upper_mount) {
+    // Rung axes lie on the climber side of the fascia. Their rear surfaces
+    // overlap it by 0.02 m as welded joints, leaving the approach face exposed.
+    // Side rails and mounts stay outside the central +/-0.20 m hand corridor.
+    for (const float x : {left, right}) {
+        parts.push_back(span({x - 0.05F, bottom, z - 0.05F},
+                             {x + 0.05F, top, z + 0.05F}, Material::Yellow));
+        // A foot plate reaches the existing departure deck in either facing.
+        parts.push_back(span({x - 0.09F, bottom - 0.10F, z - 0.22F},
+                             {x + 0.09F, bottom + 0.10F, z + 0.22F}, Material::Steel));
+        for (const float y : {lower_mount, upper_mount}) {
+            parts.push_back(span({x - 0.09F, y - 0.10F, std::min(z - 0.05F, fascia_z)},
+                                 {x + 0.09F, y + 0.10F, std::max(z + 0.05F, fascia_z)}, Material::Steel));
+        }
+    }
+    // Integer indexing includes each authored endpoint without float-loop drift.
+    for (unsigned rung = 0; rung < rung_count; ++rung) {
+        const float y = first_rung + 0.30F * static_cast<float>(rung);
+        parts.push_back(span({left, y - 0.04F, z - 0.04F},
+                             {right, y + 0.04F, z + 0.04F}, Material::Steel));
+    }
 }
 }
 
@@ -30,15 +57,8 @@ void build_north_service_frame(kit::Kit &kit) {
 
     // A short climb leaves the platform for a broad first rest. The rung
     // dimensions match the existing native grip classifier.
-    for (const float x : {15.45F, 16.55F}) {
-        parts.push_back(span({x - 0.05F, 88.55F, -180.30F},
-                             {x + 0.05F, 93.80F, -180.20F}, Material::Yellow));
-    }
-    for (float y = 89.25F; y <= 93.75F; y += 0.30F) {
-        const float z = y > 93.6F ? -179.96F : -180.25F;
-        parts.push_back(span({15.45F, y - 0.04F, z - 0.04F},
-                             {16.55F, y + 0.04F, z + 0.04F}, Material::Steel));
-    }
+    ladder(parts, 15.45F, 16.55F, 88.0F, 93.80F, 89.25F, 16,
+           -179.97F, -180.14F, 92.8F, 93.6F);
     parts.push_back(span({14.3F, 93.72F, -183.0F},
                          {17.7F, 94.0F, -180.0F}, Material::Galvanised));
     // A continuous lip face meets the climb probe at hand height. The deck
@@ -63,15 +83,9 @@ void build_north_service_frame(kit::Kit &kit) {
         parts.push_back(span({x - 0.175F, 76.72F, -181.8F},
                              {x + 0.175F, 93.72F, -181.45F}, Material::Steel));
     }
-    for (const float x : {9.45F, 10.55F}) {
-        parts.push_back(span({x - 0.05F, 94.55F, -178.90F},
-                             {x + 0.05F, 97.30F, -178.80F}, Material::Yellow));
-    }
-    for (float y = 95.25F; y <= 97.05F; y += 0.30F) {
-        const float z = y > 96.9F ? -179.14F : -178.85F;
-        parts.push_back(span({9.45F, y - 0.04F, z - 0.04F},
-                             {10.55F, y + 0.04F, z + 0.04F}, Material::Steel));
-    }
+    // This ladder faces +Z; expose its axes on the fascia's north side.
+    ladder(parts, 9.45F, 10.55F, 94.0F, 97.30F, 95.25F, 7,
+           -179.13F, -178.95F, 96.3F, 97.1F);
     parts.push_back(span({8.5F, 97.22F, -179.1F},
                          {11.5F, 97.5F, -176.8F}, Material::Galvanised));
     parts.push_back(span({9.3F, 96.1F, -179.11F},
@@ -90,15 +104,8 @@ void build_north_service_frame(kit::Kit &kit) {
         parts.push_back(span({x - 0.175F, 88.0F, -179.15F},
                              {x + 0.175F, 98.72F, -178.8F}, Material::Steel));
     }
-    for (const float x : {15.45F, 16.55F}) {
-        parts.push_back(span({x - 0.05F, 99.55F, -180.30F},
-                             {x + 0.05F, 103.30F, -180.20F}, Material::Yellow));
-    }
-    for (float y = 100.25F; y <= 103.25F; y += 0.30F) {
-        const float z = y > 103.1F ? -179.96F : -180.25F;
-        parts.push_back(span({15.45F, y - 0.04F, z - 0.04F},
-                             {16.55F, y + 0.04F, z + 0.04F}, Material::Steel));
-    }
+    ladder(parts, 15.45F, 16.55F, 99.0F, 103.30F, 100.25F, 11,
+           -179.97F, -180.14F, 102.3F, 103.1F);
     parts.push_back(span({14.3F, 103.22F, -183.0F},
                          {17.7F, 103.5F, -180.0F}, Material::Galvanised));
     parts.push_back(span({15.3F, 102.1F, -180.30F},
@@ -113,7 +120,9 @@ void build_north_service_frame(kit::Kit &kit) {
     // moving hand-over-hand north reveals a clear one.
     parts.push_back(span({12.2F, 105.72F, -183.0F},
                          {14.0F, 106.0F, -180.0F}, Material::Galvanised));
-    parts.push_back(span({13.94F, 104.6F, -182.95F},
+    // The inward edge beam carries the shelf and provides one continuous
+    // wall/top/receiver solid for the existing 0.12 m and 0.47 m probe insets.
+    parts.push_back(span({13.50F, 104.6F, -182.95F},
                          {14.03F, 106.0F, -180.05F}, Material::Rust));
     parts.push_back(span({12.2F, 107.2F, -181.25F},
                          {14.2F, 107.6F, -180.0F}, Material::Steel));
@@ -126,15 +135,8 @@ void build_north_service_frame(kit::Kit &kit) {
 
     // A final compact ladder reaches the high rest, with a real fascia for
     // its top-out. The southbound catwalk leaves the ladder sweep at X=15.5.
-    for (const float x : {12.45F, 13.55F}) {
-        parts.push_back(span({x - 0.05F, 106.55F, -183.45F},
-                             {x + 0.05F, 108.30F, -183.35F}, Material::Yellow));
-    }
-    for (float y = 107.25F; y <= 108.15F; y += 0.30F) {
-        const float z = y > 108.0F ? -183.12F : -183.40F;
-        parts.push_back(span({12.45F, y - 0.04F, z - 0.04F},
-                             {13.55F, y + 0.04F, z + 0.04F}, Material::Steel));
-    }
+    ladder(parts, 12.45F, 13.55F, 106.0F, 108.30F, 107.25F, 4,
+           -183.07F, -183.24F, 107.3F, 108.1F);
     parts.push_back(span({11.4F, 108.22F, -185.0F},
                          {14.6F, 108.5F, -183.1F}, Material::Galvanised));
     parts.push_back(span({12.3F, 107.1F, -183.40F},

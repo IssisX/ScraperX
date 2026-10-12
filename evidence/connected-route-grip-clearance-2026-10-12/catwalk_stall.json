@@ -1,0 +1,99 @@
+{
+  "scope": "one private106.9 actualsupportedstage using unchangedshippingfinalnorthtail; notfullcampaignproof",
+  "baseline_driver_sha256": "4ef043ab38d33682570e486924b6a5739c2631299896102a3f8b04a92ad66e3c",
+  "native_bridge_sha256": "4636adac91af7721a7670ca49997896ac4879b2b276eb7a65faebc0c1c45777a",
+  "current_native_source_hashes": {
+    "src/sim/north_service_frame.cpp": "baa98cc09f55c2a61a3c3514e282f628554bf7f2daa5f572e62266b76d4bb1c5",
+    "src/sim/simulation.cpp": "2fe96a295f63f9b27842c67210ecab761a1d530c368af0e050763d89f331d3d2",
+    "src/sim/physical_hand_climb.cpp": "982534b5d68d20037fb98c4d7b29e548865cb276c0287b98f8ea251dc307f6f9"
+  },
+  "receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-touch-exit-diagnosis/receipt.json",
+  "runtime_log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-touch-exit-diagnosis/staged-exit.log",
+  "runtime_log_sha256": "3719f56feaa6deceab51517981c04b3210754d2e424fdf91b17a417eedf2aaa9",
+  "discriminating_tail": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-touch-exit-diagnosis/discriminating-tail.log",
+  "exit_code": 31,
+  "elapsed_seconds": 17.048,
+  "supported_cause": "Point-onlycatwalkarrival driveraccepts whilelargeresidualspeed remains;1901 excluded from_walk_to automaticphysicalowner list andfinalhighcatwalkcalls omitrequire_supported_arrival. ResidualsidewaysspeedcarriesplayeroffouterX16.2edge. Subsequenttargetalsoacceptedwhileairborne below intended109.4floor.",
+  "native_handoff_observation": {
+    "actual_foot_transfer_count": 1,
+    "actual_transfer_tick": 368,
+    "actual_transfer_support": 1901,
+    "final_climb_standing_height_m": 109.4,
+    "state": 0,
+    "hands": 0,
+    "deaths": 0
+  },
+  "first_leg": {
+    "target": [
+      15.5,
+      -183.8
+    ],
+    "accept_tick": 439,
+    "accept_position": [
+      15.41407,
+      109.4,
+      -183.8029
+    ],
+    "accept_velocity": [
+      4.204619,
+      0,
+      0.061519
+    ],
+    "physical": false,
+    "settled": false,
+    "require_supported": false,
+    "after_neutral_tick": 458,
+    "after_neutral_position": [
+      16.11347,
+      109.4,
+      -183.7927
+    ],
+    "after_neutral_velocity": [
+      2.44446,
+      0,
+      0.035765
+    ]
+  },
+  "first_observed_fall": {
+    "tick": 481,
+    "position": [
+      16.58605,
+      109.1431,
+      -183.5359
+    ],
+    "support": 0,
+    "grounded": false,
+    "velocity": [
+      1.07375,
+      -2.162173,
+      2.238112
+    ]
+  },
+  "second_leg": {
+    "target": [
+      15.5,
+      -177.55
+    ],
+    "accept_tick": 581,
+    "accept_height": 101.124,
+    "accept_support": 0,
+    "accept_grounded": false,
+    "accept_velocity_y": -11.59989,
+    "physical": false,
+    "settled": false
+  },
+  "minimal_ordinary_input_repair": {
+    "owner": "godot/presentation/ui/ui_test_driver.gd finalhighcatwalkloop in_touch_north_service_frame",
+    "exact_call_change": "_walk_to(device, point, 0.14, 9.0) => _walk_to(device, point, 0.14, 9.0, true)",
+    "why": "Existingcontroller sends earlybraking through realtouchinput andrequires actualgrounded low-sliparrival. Samepoints,tolerances,deadlines and110mfooting assertions stayintact. Nativephysics untouched.",
+    "verification": "Freshpairedprivate106.9 red/greenstage then uninterruptednormalcampaign usingexactsource."
+  },
+  "rejected_hypotheses": [
+    "Finalclimb prematurelyhandedoff: actualfoottransfer/109.4groundedstate establishedbeforeloss",
+    "110mreceiver absent: bodyalreadydropped~10m before affordancequery",
+    "Death/restart changedworld: deaths0throughfailure"
+  ],
+  "proof_boundary": "Privatefixedstage reproducesfallboundary and finalsameclassfailure, notcontinuousascentproof. Loggednativeinput/state/footing rejectposition-onlysuccess.",
+  "shipping_sources_changed_by_diagnostician": false,
+  "reasoning_control": "AssignedSolHigh retained; no livechange to model/effort/tier claimed."
+}

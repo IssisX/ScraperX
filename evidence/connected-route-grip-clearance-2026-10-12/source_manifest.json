@@ -1,0 +1,11 @@
+{
+  "source_base": "c258719b3a5b6727bbb0eb2cb426228d85047538",
+  "pending_commit_source_hashes": {
+    "src/sim/north_service_frame.cpp": "baa98cc09f55c2a61a3c3514e282f628554bf7f2daa5f572e62266b76d4bb1c5",
+    "tests/north_service_frame_tests.cpp": "45e3a301d890da1c6701dec46bebd7be1233b8d5b23354a0871e5fe78a6005b9",
+    "godot/presentation/ui/ui_test_driver.gd": "3593dc9e7fa61163245a1ef593f264154697ad8ba0d18bf054e7c5e3d2c2b7a9"
+  },
+  "full_actions_green": false,
+  "apk_delivery_verified": false,
+  "recording_stage": "preflight_before_actions_delivery"
+}

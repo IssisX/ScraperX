@@ -731,6 +731,71 @@ func _pipe_bridge(device: int) -> bool:
 	return true
 
 
+func _duct_hang_can_tuck(state: Dictionary) -> bool:
+	return bool(_ctx()["hanging"]) and not _native().is_player_grounded() \
+		and int(_native().get_traversal_support_entity_id()) == 2561 \
+		and int(state.get("traversal_hand_constraint_count", 0)) == 2 \
+		and bool(state.get("left_hand_attached", false)) \
+		and bool(state.get("right_hand_attached", false)) \
+		and int(state.get("left_hand_generation", 0)) > 0 \
+		and int(state.get("right_hand_generation", 0)) > 0 \
+		and bool(state.get("hanging_free_arc_active", false)) \
+		and bool(state.get("swing_tuck_available", false))
+
+
+func _touch_duct_transfer_reach() -> bool:
+	# Native begin_cargo_transfer measures the actual shoulder against the
+	# attached lip, with a 1.05 m limit. Passive hanging can sag beyond it.
+	var before: Dictionary = _native().get_landing_state()
+	var lip: Vector3 = _native().get_traversal_ledge_point()
+	var shoulder := _position() + Vector3(0, 0.45, 0)
+	if not _duct_hang_can_tuck(before) or not lip.is_finite() \
+			or lip == Vector3.ZERO or not shoulder.is_finite():
+		return _fail("duct transfer lacks actual paired airborne lip attachment")
+	if shoulder.distance_to(lip) <= 1.05:
+		return true
+	if bool(before.get("swing_tuck_requested", true)) \
+			or not _main._touch.is_button_shown(&"crouch") \
+			or _main._touch.button_label(&"crouch") != "TUCK":
+		return _fail("duct transfer reach needs the actual touch TUCK control")
+	var span_before := float(before["hanging_actual_span_m"])
+	var target_before := float(before["hanging_commanded_span_m"])
+	var work_before := float(before["hand_actuator_positive_work_j"])
+	var tuck_tick := int(_native().get_tick_index())
+	_tap(2, _center(&"crouch"))
+	if not await _wait_until(func() -> bool:
+		var state: Dictionary = _native().get_landing_state()
+		var actual_lip: Vector3 = _native().get_traversal_ledge_point()
+		var actual_shoulder := _position() + Vector3(0, 0.45, 0)
+		return _duct_hang_can_tuck(state) \
+			and int(state["left_hand_generation"]) == int(before["left_hand_generation"]) \
+			and int(state["right_hand_generation"]) == int(before["right_hand_generation"]) \
+			and bool(state.get("swing_tuck_requested", false)) \
+			and float(state["hanging_commanded_span_m"]) < target_before - 0.03 \
+			and float(state["hanging_actual_span_m"]) < span_before - 0.03 \
+			and actual_lip.is_finite() and actual_lip != Vector3.ZERO \
+			and actual_shoulder.is_finite() and actual_shoulder.distance_to(actual_lip) <= 1.05, 2.0):
+		return _fail("touch TUCK did not earn actual duct transfer reach at=%s lip=%s" % [
+			_position(), _native().get_traversal_ledge_point()])
+	var tucked: Dictionary = _native().get_landing_state()
+	var seconds := float(int(_native().get_tick_index()) - tuck_tick) * float(_native().get_fixed_step_seconds())
+	var paid_work := float(tucked["hand_actuator_positive_work_j"]) - work_before
+	var left_force: Vector3 = tucked["left_hand_force_n"]
+	var right_force: Vector3 = tucked["right_hand_force_n"]
+	if seconds <= 0.0 or not is_finite(paid_work) or paid_work <= 0.0 \
+			or paid_work > 500.0 * seconds + 0.01 \
+			or not left_force.is_finite() or not right_force.is_finite() \
+			or left_force.length() > 1501.0 or right_force.length() > 1501.0 \
+			or float(tucked["player_gravity_factor"]) != 1.0 or _native().is_player_crouched():
+		return _fail("duct TUCK reach lacks finite paid native body response")
+	# Do not Extend before Jump: keep the earned body reach.
+	# Existing Jump handling clears the posture intent.
+	print("SCRAPERX_DUCT_TRANSFER touch_tuck=1 actual_span_change_m=%.6f paid_work_j=%.6f shoulder_to_lip_m=%.6f" % [
+		span_before - float(tucked["hanging_actual_span_m"]), paid_work,
+		(_position() + Vector3(0, 0.45, 0)).distance_to(_native().get_traversal_ledge_point())])
+	return true
+
+
 # AS-017: grade to +33 m, through the real touch controls and native world.
 func _touch_facade() -> bool:
 	var device := InputRouter.Device.TOUCH
@@ -767,6 +832,8 @@ func _touch_facade() -> bool:
 		return _fail("duct hang %s" % _position())
 	await _seconds(0.3)
 	await _pose("duct_hang")
+	if not await _touch_duct_transfer_reach():
+		return false
 	_tap(1, _center(&"jump"))
 	if not await _wait_until(func() -> bool: return _standing_above(17.0), 4.0):
 		return _fail("duct top-out %s" % _position())
@@ -1819,7 +1886,7 @@ func _touch_north_service_frame() -> bool:
 	if not await _north_climb(device, 109.2, "final north climb"):
 		return false
 	for point in [Vector2(15.5, -183.8), Vector2(15.5, -177.55)]:
-		if not await _walk_to(device, point, 0.14, 9.0):
+		if not await _walk_to(device, point, 0.14, 9.0, true):
 			return _fail("high catwalk to tower %s" % _position())
 	await _face(Vector2(0, 1))
 	_main._pitch = -0.14

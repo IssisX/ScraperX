@@ -1,0 +1,38 @@
+{
+  "scope": "same exact failed supported88.9 firstnorth stance; not fullcampaign proof",
+  "source_head": "c258719b3a5b6727bbb0eb2cb426228d85047538",
+  "native_build_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-geometry-repair/receipt.json",
+  "shipping_presentation_hashes": {
+    "presentation/main.gd": "b1a1f60797ac604daaecb51de8b79e77db2d8abcd90c444069f8a9a7c5e26bb9",
+    "presentation/ui/touch_controls.gd": "382d7dae7d6e8d856bed4740f1403a2b0eff5a9994647d88402d3592f4954db8",
+    "presentation/ui/ui_test_driver.gd": "4ef043ab38d33682570e486924b6a5739c2631299896102a3f8b04a92ad66e3c",
+    "presentation/first_person_arms.gd": "7e7b0435c3b678b42a5abd18f465f5de4a2b5c368ebfa2e501b3508c380eb826",
+    "presentation/audio/audio_director.gd": "03365ac25b94391197ff077ecf17915c9350d674c2d1362e2e5045c026c360bd",
+    "presentation/ui/hud.gd": "145f2249654f8350d9ee2cae3b90ad092d5e1181152071f17cc49fe19fedeb93"
+  },
+  "private_driver_sha256": "21ea6f654bb5c023ca9aaf33404566c3530c5aa183d4b647d836e3597288f2a9",
+  "bridge_sha256": "747429451d7c904992d29966ff6281603bd75bde806bdc6d536b4a8c947599d2",
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/north-geometry-repair/staged-project",
+    "--",
+    "--uitest=touch_campaign_to_143"
+  ],
+  "status": "completed",
+  "exit_code": 0,
+  "elapsed_seconds": 26.391,
+  "log_sha256": "5b75a1f78be7779dadbad4137479231448bd64686153c4d32a407056847250fb"
+}

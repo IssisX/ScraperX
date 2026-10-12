@@ -1,0 +1,90 @@
+{
+  "source_head": "c258719b3a5b6727bbb0eb2cb426228d85047538",
+  "shipping_sources_changed_by_diagnostician": false,
+  "source_hashes": {
+    "godot/presentation/ui/ui_test_driver.gd": "f89fdb60688ee5c0ae39cb0184b1abe6f7aeef7c3fbc4ed88a27c06c65ee5fc2",
+    "src/sim/north_service_frame.cpp": "10d04ea1ee1b048ff80add510a7a6de3d7b5e564ec2e95df929466d4cb096977",
+    "src/sim/simulation.cpp": "2fe96a295f63f9b27842c67210ecab761a1d530c368af0e050763d89f331d3d2",
+    "src/sim/physical_hand_climb.cpp": "982534b5d68d20037fb98c4d7b29e548865cb276c0287b98f8ea251dc307f6f9",
+    "src/sim/physical_hand_climb.hpp": "469fc48d370b99ff75dbd1f98a03374288572cc5b5a1112c72bf093bb004a340"
+  },
+  "runtime_bridge_sha256": "9a057dd73b15c5ad70ea77460042e908b9ea562252e4e4a78a075594981b7055",
+  "receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/delivery-north-diagnosis/receipt.json",
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/delivery-north-diagnosis/staged-north.log",
+  "log_sha256": "8fa9c9ce6019c4ca44402d228a64a610515e6fa3854b76dbdc4953bb4d4af97b",
+  "scope": "one private actualsupported88.9 stance replay; staging not fullcampaign proof",
+  "exit_code": 31,
+  "elapsed_seconds": 26.437,
+  "observed_exact_shipping_stall": [
+    16.00541,
+    92.28777,
+    -179.567
+  ],
+  "native_observation": {
+    "hand_count": 2,
+    "actual_attached_flags": [
+      true,
+      true
+    ],
+    "generations": [
+      6,
+      6
+    ],
+    "forces_n": [
+      [
+        0,
+        659.9403,
+        0
+      ],
+      [
+        0,
+        173.9097,
+        0
+      ]
+    ],
+    "force_sum_y_n": 833.85,
+    "expected_gravity_load_85kg_n": 833.85,
+    "desired_touch_input": [
+      0,
+      1
+    ],
+    "delivered_world_input": [
+      0,
+      -1
+    ],
+    "facing": [
+      0,
+      -1
+    ],
+    "free_arc": false,
+    "swing_tuck_requested": false,
+    "hand_work_bound_j": 13262.8326416016,
+    "positive_actuator_work_j": 4982.87537164288,
+    "work_flat_during_stall": true,
+    "live_grip_available": false,
+    "live_ledge_available": false,
+    "native_left_hand": [
+      15.80541,
+      92.25003,
+      -180.25
+    ],
+    "native_right_hand": [
+      16.20541,
+      92.55003,
+      -180.25
+    ]
+  },
+  "supported_cause": "Solid continuous receiver fascia occludes remaining rung-axis grip approaches. Strict native per-leaf visibility blocks new carries/regrips before receiver is in existing mantle reach. Historical passing native source lacked that visibility contract. Correct approach honesty exposes an authored ladder/fascia inconsistency.",
+  "geometry_analysis": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/delivery-north-diagnosis/geometry-analysis.json",
+  "proof_boundary": "Actual native geometry/readback plus offline axis-aligned ray reconstruction and source-defined exact-leaf guard; no native ray-hit tracing or fullworld collision telemetry claimed.",
+  "additional_actual_geometry_defect": "Nominal forward93.75 top rung absent. Float loop produces last93.450043 rung; intended >93.6 forward-rung branch never runs. Similar endpoint-sensitive loops exist at second,upper,final ladders; verify each against native geometry when repairing shared owner.",
+  "supported_minimal_repair": "Repair north_service_frame.cpp geometry: expose graspable upper rungs on climber side of fascia with material/real mount/loadpath and sufficient hand clearance, preserve continuous receiving lip/deck, use integer-count rung generation with actual endpoints. Keep visibility exact-leaf, force/reach/collision rules and source route acceptance unchanged. Re-run same staged red-capable path then exact fullcampaign/GREENAPK.",
+  "hypotheses_rejected": [
+    "Solo hold/release semantics: two compatible actual hands remain",
+    "Passive free-arc or timing phase: radial inactive at stall and steady sustained upinput",
+    "Missing player input: real Main frame delivers full towardladder input",
+    "Force shortage: no actuator advance during stall; hands sum body weight rather than hitting limits",
+    "Need fullroute history: fixed supportedstage reproduces exact position"
+  ],
+  "reasoning_control": "Assigned actualSolHIGH retained; no live control available or tier change claimed."
+}

@@ -69,7 +69,8 @@ bool powered_jump_recovers_and_retries() {
         return fail("initial pose lacks real frame footing and grip");
     if (!s.request_traversal() || !ticks(1) || !s.set_move_input(0, -1))
         return fail("ordinary climb input rejected");
-    for (int i = 0; i < 500 && s.snapshot().player_position.y < 90; ++i)
+    // Earn room for passive sag during the unchanged neutral settling period.
+    for (int i = 0; i < 500 && s.snapshot().player_position.y < 90.5; ++i)
         if (!ticks(1)) return fail("climb tick rejected");
     if (!s.set_move_input(0, 0) || !ticks(30)) return fail("neutral hand stance rejected");
     const auto start = s.snapshot();
@@ -474,9 +475,18 @@ int main(int argc, char **argv) {
         }
         if (x < 15.1) {
             (void)s.request_release();
-            advance(s, 1.0);
-            if (!s.snapshot().player_grounded ||
-                std::abs(s.snapshot().player_position.y - 104.4) > 0.12) {
+            // A rising catch preserves upward momentum: actual recovery can
+            // land one native tick after the former blind one-second check.
+            for (int tick = 0; tick < 2 * 90; ++tick) {
+                const auto recovery = s.snapshot();
+                if (recovery.player_grounded && recovery.support_entity_id == 1901 &&
+                    std::abs(recovery.player_position.y - 104.4) <= 0.12 &&
+                    recovery.death_count == 1) break;
+                advance(s, Simulation::kFixedStepSeconds);
+            }
+            if (!s.snapshot().player_grounded || s.snapshot().support_entity_id != 1901 ||
+                std::abs(s.snapshot().player_position.y - 104.4) > 0.12 ||
+                s.snapshot().death_count != 1) {
                 std::cerr << "FAIL first varied catch cannot recover after release\n";
                 return EXIT_FAILURE;
             }

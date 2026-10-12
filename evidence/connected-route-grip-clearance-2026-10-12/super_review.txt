@@ -1,0 +1,13 @@
+No supported correctness blockers in the supplied driver/test delta.
+
+- **`ui_test_driver.gd`, `_touch_duct_transfer_reach()` and `_touch_facade()`:** The driver delivers the actual touch TUCK input before the existing Jump. It checks paired airborne attachment, unchanged hand generations, commanded and actual shortening, and actual shoulder-to-lip reach ≤1.05 m. Positive finite work, elapsed-time power bounds, finite hand forces, normal gravity, and absence of crouched posture provide meaningful assertions. The reported 0.030096 m shortening and 1.040557 m reach satisfy them. The existing standing-above acceptance remains unchanged. No shown code fabricates state or grants elevation.
+
+- **`north_service_frame_tests.cpp`, `powered_jump_recovers_and_retries()`:** Climbing to 90.5 m provides room for observed neutral sag through ordinary input. According to the supplied context, the existing 90–91 m start band and force/work/release/recovery assertions remain intact. This corrects setup without weakening acceptance.
+
+- **`north_service_frame_tests.cpp`, varied-catch release block:** The bounded 180-native-tick observation accommodates the reported landing at tick 91. It strengthens acceptance with receiver support 1901 and unchanged death count. All three supplied tails show recovery at 104.4 m on that support, followed by route/checkpoint PASS.
+
+Limits: the duct force checks sample the accepted endpoint; they do not establish peak force throughout TUCK. The supplied diff and outcomes also do not independently establish native energy accounting or Jump’s posture-clear implementation.
+
+The evidence supports the reported intermediate duct success and native north passes at caller rates 90/60/360. It does **not** establish final uninterrupted Godot campaign GREEN, exact-source Actions GREEN, or an independently verified matching APK. Those remain delivery gates; no supplied claim prematurely closes them.
+
+[Session: 01a13154-c63d-7b52-b841-6b74c1292596 (Codex; ChatGPT login; model gpt-6.1-sol; reasoning medium; at most 3 children; observed spawned children 0; mode advisory; sandbox read-only; observed completed commands 0; file-change events 0)]
