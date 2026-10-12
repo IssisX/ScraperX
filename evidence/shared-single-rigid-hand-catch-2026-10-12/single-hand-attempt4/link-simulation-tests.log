@@ -1,0 +1,4 @@
+/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/simulation_tests.cpp: In lambda function:
+/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/simulation_tests.cpp:3183:52: note: parameter passing for argument of type 'std::pair<double, double>' when C++17 is enabled changed to match C++14 in GCC 10.1
+ 3183 |         return std::make_pair(speed_at_quarter, top);
+      |                                                    ^

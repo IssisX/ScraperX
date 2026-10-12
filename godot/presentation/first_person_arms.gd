@@ -405,22 +405,29 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		_remote.global_transform = remote_frame
 		_update_remote_buttons(state["pendant"])
 
+	var single_hand := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING] \
+		and int(landing.get("traversal_hand_constraint_count", 0)) == 1
 	for hand in _hands:
-		var raised := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING]
+		var attached := not single_hand or bool(landing.get(
+			"left_hand_attached" if hand.side < 0.0 else "right_hand_attached", false))
+		var raised := attached and traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING]
 		var shoulder_local := SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
-		if traversal == TRAVERSAL_HANGING:
+		if traversal == TRAVERSAL_HANGING and attached:
 			# Hanging hand indices come from the native lip pair. Orient the
 			# shoulders from that pair too: normal-derived right can reverse
 			# their assignment and make both arms reach across the torso.
-			var grip_span: Vector3 = state["hand_right"] - state["hand_left"]
+			var grip_span: Vector3 = Vector3.ZERO if single_hand else state["hand_right"] - state["hand_left"]
 			var grip_right := grip_span.normalized() if grip_span.length_squared() > 1.0e-6 \
 				else _grip_forward.cross(Vector3.UP).normalized()
 			shoulder = (state["render_position"] as Vector3) + Vector3.UP * HANG_SHOULDER_HEIGHT \
 				+ grip_right * (HANG_SHOULDER_HALF_SPAN * hand.side) - _grip_forward * HANG_SHOULDER_BACK
 		var pose := POSE_REST
 		var reachable := true
-		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
+		if single_hand and not attached:
+			# An absent native attachment earns no grip target or raised shoulder.
+			pose = POSE_REST if grounded else POSE_AIR
+		elif traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
 			pose = POSE_GRIP
 		elif traversal == TRAVERSAL_CLIMBING:
 			pose = POSE_CLIMB

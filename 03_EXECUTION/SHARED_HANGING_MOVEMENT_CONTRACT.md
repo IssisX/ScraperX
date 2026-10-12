@@ -235,3 +235,27 @@ reaches receiver/first ring. Native material force law remains unchanged; this
 proves existing shared behavior, not a new force-law implementation. Real cloth
 contacts remain causal; arbitrary free-arc amplitudes/energy closure are not
 asserted. Generalized single-hand control remains the next bounded seam.
+
+
+## Deliberate one-rigid-hand catch (verified)
+
+Action/CATCH may acquire one actual rigid hand when the partner approach is
+blocked and actual airborne/overhead/reach/support conditions permit. Exactly
+one native capped User2 row loads the real structure. Actual attachment count
+owns radius means, paid stroke/work and readbacks; no phantom second hand.
+Compatible_hands and grip_midpoint still require a real compatible pair.
+Single material hands, directional one-hand climbing and promotion are later
+contracts. The passive solo hold supports finite paid tuck/extension and
+momentum-preserving Jump/Drop; Action/direction retain it.
+
+Movement-driven automatic reaches retain pair-only acquisition. An intermediate
+automatic solo catch preempted the rotating active climb; source-bound diagnosis
+and unchanged two-hand departure reject it. Input-policy repair restores that
+path without changing force/reach/velocity or test thresholds. New explicit solo
+acceptance and both backend indices pass, with all retained backend/material/
+traversal/simulation checks. Native attachment flags describe actual slots;
+Lowering count2 publishes both true, and a free rendered arm has no grip target.
+[Single-hand evidence](../evidence/shared-single-rigid-hand-catch-2026-10-12/README.md)
+retains exact source/RED/GREEN boundaries. Exact-bridge single-hand, paired hanging-bar miss/recovery/retry/timed release
+and paired material-net touch receiver/first-ring acceptance all pass. This
+bounded integration is complete; no phone/APK claim.

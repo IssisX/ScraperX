@@ -1,0 +1,7 @@
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+
+SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim scene=slingshot
+SCRAPERX_VIEWPORT size=2160x2160 aspect=1.000 fov=82.0 far=2000
+SCRAPERX_AUDIO_BANK clips=28 msec=1588 driver=Dummy
+SCRAPERX_SINGLE_HAND approach tick=181 position=(16.85, 11.49924, -118.0) cue=(17.39993, 11.91257, -118.17) action={ "id": &"catch", "label": "CATCH", "icon": &"climb", "detail": "HOLD ON" }
+SCRAPERX_UITEST PASS touch_single_hand_catch normal_world=1 initial_stages=1 viewport_action_crouch_jump=1 actual_hands=left_only actual_span_shortening_m=0.1033 target_shortening_m=0.2296 paid_work_j=344.4400 honest_arms=1 passive_release=1

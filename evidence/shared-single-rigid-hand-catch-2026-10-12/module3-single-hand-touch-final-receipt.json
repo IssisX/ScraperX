@@ -1,0 +1,53 @@
+{
+  "status": "completed",
+  "files": [
+    {
+      "source": "godot/presentation/main.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/main.gd",
+      "sha256": "ca576beed7e5151ef4b4d9fd50de10545c149184bc6fc72f041af28c604fa6fa"
+    },
+    {
+      "source": "godot/presentation/ui/touch_controls.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/ui/touch_controls.gd",
+      "sha256": "ef9a10a9ab9c6e25737055c9fa409d638968d594e737c91e0431f6e7851f8512"
+    },
+    {
+      "source": "godot/presentation/ui/ui_test_driver.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/ui/ui_test_driver.gd",
+      "sha256": "4971e0cdb0f2725d864dd5650b5fa16dfd9664e5c70ded381f074314b2d615a1"
+    },
+    {
+      "source": "godot/presentation/first_person_arms.gd",
+      "staged_path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/presentation/first_person_arms.gd",
+      "sha256": "7e7b0435c3b678b42a5abd18f465f5de4a2b5c368ebfa2e501b3508c380eb826"
+    }
+  ],
+  "native_bridge": {
+    "path": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project/addons/scraperx_native/bin/linux/libscraperx_native.so",
+    "sha256": "0f867390b157c6f48e54d18e3f27e8679f01612770ff0fb13324ea7df18f991b",
+    "build_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-attempt4/receipt.json"
+  },
+  "command": [
+    "proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "env",
+    "GODOT_SILENCE_ROOT_WARNING=1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64",
+    "--headless",
+    "--fixed-fps",
+    "60",
+    "--audio-driver",
+    "Dummy",
+    "--path",
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/project",
+    "--",
+    "--uitest=touch_single_hand_catch"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 12.564,
+  "log": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-single-hand-touch-final.log",
+  "log_sha256": "397e134ee6186386996098656f0c663617b334305627890ca270bc5b154d569f"
+}

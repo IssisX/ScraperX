@@ -1,0 +1,17 @@
+STATE,cue,tick=181,com=16.85,11.4992,-118,velocity=0,-0.109,0,grounded=0,foot=0,cue=1,cue_entity=2952,cue_point=17.3999,11.9126,-118.17,state=0,owner=0,hands=0,generations=0,0,gravity=1,deaths=0
+BODY,entity=2952,mass=6562.78,dynamic=1,origin=0.000307083,-1.30662,-0.00804138,quat=0.00549372,1.26098e-06,3.28724e-06,0.999985
+BODY,entity=1952,mass=0,dynamic=0,origin=0,0,0,quat=0,0,0,1
+BODY,entity=2954,mass=678.24,dynamic=1,origin=20,0.04,-116.7,quat=0,0,0,1
+APPROACH,0,proxy=16.85,11.9492,-118,aim=17.25,11.9492,-118,seed=17.3999,11.9126,-118.17,first_entity=2952,first_part=5,first_fraction=0.96646,first_is_hold=1
+QUERY_OVERLAP,0,entity=2952,part=2,hold=0
+QUERY_OVERLAP,0,entity=2952,part=5,hold=1,candidate=17.3999,11.9126,-118.17,first_part=5,visible_own_leaf=1
+QUERY_TOTAL,0,known_local_eligible=1
+APPROACH,1,proxy=16.85,11.9492,-118.2,aim=17.25,11.9492,-118.2,seed=17.3999,11.9126,-118.17,first_entity=2952,first_part=5,first_fraction=0.824646,first_is_hold=1
+QUERY_OVERLAP,1,entity=2952,part=2,hold=0
+QUERY_OVERLAP,1,entity=2952,part=5,hold=1,candidate=17.3999,11.9129,-118.2,first_part=5,visible_own_leaf=1
+QUERY_TOTAL,1,known_local_eligible=1
+APPROACH,2,proxy=16.85,12.1492,-117.8,aim=17.25,12.1492,-117.8,seed=17.3999,11.9126,-118.17,first_entity=2952,first_part=2,first_fraction=0.654095,first_is_hold=0
+QUERY_OVERLAP,2,entity=2952,part=2,hold=0
+QUERY_TOTAL,2,known_local_eligible=0
+STATE,catch,tick=182,com=16.85,11.4973,-118,velocity=0,-0.218,0,grounded=0,foot=0,cue=1,cue_entity=2952,cue_point=17.3999,11.9126,-118.17,state=0,owner=0,hands=0,generations=0,0,gravity=1,deaths=0
+FAIL single_rigid_hand visible single hand must survive blocked partner

@@ -1,0 +1,66 @@
+{
+  "scope": "private existing2952 baseline only",
+  "source_sha256": "a5a28b4be750e52e84609ec73042afab64efeac5922617ddc77ec3fb3cfdadf5",
+  "dependencies": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/material-visibility-attempt1/libscraperx_sim.a": "1b3129a5fec4999bd3e937d4662be9d3a2e9515f11b5fede7429895f74ecee74",
+    "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "6cd9f092644c271e1dffbe519f4d265d41c2519b6179485468b941601623331f"
+  },
+  "archive_source_simulation_cpp_sha256": "e97d3b25e5a10430ce9c704bc9c3b5fb8733f23049849a1af57632108093f635",
+  "commands": {
+    "compile": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-std=c++17",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-pthread",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-rigid-hand-catch-baseline/source.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/material-visibility-attempt1/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-rigid-hand-catch-baseline/probe"
+    ],
+    "run": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-rigid-hand-catch-baseline/probe"
+    ]
+  },
+  "archive_unchanged": true,
+  "initial_compile": {
+    "exit": 1,
+    "seconds": 10.778267444111407,
+    "log_sha256": "b9346c983c0f576585056a4cd4e3afd9d3e296c9d232fc090bbde5283bb5b990"
+  },
+  "compile": {
+    "exit": 0,
+    "seconds": 12.911632339004427,
+    "log_sha256": "2468a15d060a42b57aae87196848fc768e443299cb99c87de1c94f3436a976c6"
+  },
+  "binary_sha256": "855a8f361eb325a9ae939cad314a35e65c9bed0519660bc75872e03e78547d5a",
+  "run": {
+    "exit": 0,
+    "seconds": 6.111634163884446,
+    "log_sha256": "58e614df4079946f5b1946424fe9713635d11e6173c5ac2ed1ccfec0922e175b"
+  }
+}

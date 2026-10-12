@@ -1,0 +1,62 @@
+{
+  "scope": "logging-only unchanged rotating_departure and passive_departure inputs/assertions",
+  "source_sha256": "b8eb44b45a7ed8bcf6c2e701c3e5c4f950ac39687b9175cb844c2db761538196",
+  "dependencies": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-attempt2/libscraperx_sim.a": "08dbe97f02aed8ee963b9c824bef035b53822955d012933ccf084328960e6c7b",
+    "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a": "026916df9f91e8e3e2e54d5099624bed1dfd19eb41b27a94ac779696a807ac9b",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "6cd9f092644c271e1dffbe519f4d265d41c2519b6179485468b941601623331f",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.cpp": "fae76d53e890eeff4e2c0a22842b40749ca1cf7eec81a64a35bed70519174e48"
+  },
+  "baseline_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-attempt2/receipt.json",
+  "commands": {
+    "compile": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-DSCRAPERX_HAS_JOLT=1",
+      "-DJPH_DEBUG_RENDERER",
+      "-DJPH_OBJECT_STREAM",
+      "-DJPH_PROFILE_ENABLED",
+      "-std=c++17",
+      "-fPIC",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Werror",
+      "-pthread",
+      "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+      "-isystem",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-build/_deps/jolt-src",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-rotating-diagnostic/source.cpp",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-attempt2/libscraperx_sim.a",
+      "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/jolt-build/libJolt.a",
+      "-o",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-rotating-diagnostic/probe"
+    ],
+    "run": [
+      "proot-distro",
+      "login",
+      "ubuntu",
+      "--shared-tmp",
+      "--",
+      "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-hand-rotating-diagnostic/probe"
+    ]
+  },
+  "compile": {
+    "exit": 0,
+    "seconds": 9.917968849884346,
+    "log_sha256": "2468a15d060a42b57aae87196848fc768e443299cb99c87de1c94f3436a976c6"
+  },
+  "binary_sha256": "da92d700c81294abaac52ad326d0c85a1b4bcefece93a5be51decbe03b0fe5a5",
+  "run": {
+    "exit": 1,
+    "seconds": 9.03972155903466,
+    "log_sha256": "46f9794e7cb57425e6f1d514b1465e43280bd8cf0cd670e7703510224a412b90"
+  },
+  "archive_unchanged": true
+}

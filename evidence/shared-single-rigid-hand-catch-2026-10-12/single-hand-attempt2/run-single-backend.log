@@ -1,0 +1,10 @@
+SINGLE_BACKEND index=0 phase=0 actual_mean_radius=1.28662 rest=1.04523 positive_work=0
+SINGLE_BACKEND index=0 phase=1 actual_mean_radius=0.909329 rest=0.795227 positive_work=248.492
+SINGLE_BACKEND index=0 phase=2 actual_mean_radius=1.19112 rest=1.04523 positive_work=248.492
+SINGLE_BACKEND index=0 recoil=0.837606 player_receipt=9.10315e-05 support_receipt=2.71314e-05
+SINGLE_BACKEND index=1 phase=0 actual_mean_radius=1.28662 rest=1.04523 positive_work=0
+SINGLE_BACKEND index=1 phase=1 actual_mean_radius=0.909329 rest=0.795227 positive_work=248.492
+SINGLE_BACKEND index=1 phase=2 actual_mean_radius=1.19112 rest=1.04523 positive_work=248.492
+SINGLE_BACKEND index=1 recoil=0.837606 player_receipt=9.15395e-05 support_receipt=2.8764e-05
+PASS single_radial_hands
+physical hand checks: 1/1

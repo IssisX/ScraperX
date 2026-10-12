@@ -1,6 +1,9 @@
 #include "sim/simulation.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <vector>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -415,10 +418,131 @@ int material_approach_mode(){const auto blocked=material_approach(true);if(!bloc
     return blocked.passed&&front.passed&&back.passed&&fallback.passed?0:1;
 }
 
+namespace single_rigid {
+using namespace scraperx::sim;
+Vector3 add(Vector3 a,Vector3 b){return {a.x+b.x,a.y+b.y,a.z+b.z};}
+Vector3 sub(Vector3 a,Vector3 b){return {a.x-b.x,a.y-b.y,a.z-b.z};}
+Vector3 scale(Vector3 a,double n){return {a.x*n,a.y*n,a.z*n};}
+double dot(Vector3 a,Vector3 b){return a.x*b.x+a.y*b.y+a.z*b.z;}
+Vector3 cross(Vector3 a,Vector3 b){return {a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x};}
+double length(Vector3 a){return std::sqrt(dot(a,a));}
+Vector3 rotate(Quaternion q,Vector3 v){const auto t=scale(cross({q.x,q.y,q.z},v),2);return add(v,add(scale(t,q.w),cross({q.x,q.y,q.z},t)));}
+void vec(Vector3 v){std::cout<<v.x<<','<<v.y<<','<<v.z;}
+struct Box {unsigned entity,part;Vector3 centre;std::array<Vector3,3> axis;std::array<double,3> half;bool hold;unsigned along;};
+Box box(Simulation &s,unsigned entity,std::size_t b,std::size_t i){auto p=s.kit_body_part(b,i);auto q=s.kit_body_rotation(b);
+ Box a{entity,static_cast<unsigned>(i),add(s.kit_body_position(b),rotate(q,p.offset)),
+ {rotate(q,rotate(p.rotation,{1,0,0})),rotate(q,rotate(p.rotation,{0,1,0})),rotate(q,rotate(p.rotation,{0,0,1}))},
+ {p.half.x,p.half.y,p.half.z},false,0};
+ for(unsigned j=1;j<3;++j)if(a.half[j]>a.half[a.along])a.along=j;
+ a.hold=p.shape==0&&2*a.half[a.along]>=.25;
+ for(unsigned j=0;j<3;++j)if(j!=a.along&&2*a.half[j]>.180001)a.hold=false;
+ return a;}
+bool overlap(const Box &a,Vector3 centre,Vector3 half){
+ const std::array<Vector3,3> axes{{{1,0,0},{0,1,0},{0,0,1}}};
+ std::array<Vector3,15> test{};for(unsigned i=0;i<3;++i){test[i]=a.axis[i];test[3+i]=axes[i];for(unsigned j=0;j<3;++j)test[6+3*i+j]=cross(a.axis[i],axes[j]);}
+ for(auto n:test){if(dot(n,n)<1e-20)continue;double r=std::abs(n.x)*half.x+std::abs(n.y)*half.y+std::abs(n.z)*half.z;
+ for(unsigned i=0;i<3;++i){r+=std::abs(dot(n,a.axis[i]))*a.half[i];}if(std::abs(dot(sub(a.centre,centre),n))>r)return false;}
+ return true;}
+double intersection(const Box &a,Vector3 start,Vector3 finish){const auto d=sub(finish,start),o=sub(start,a.centre);double lo=0,hi=1;
+ for(unsigned j=0;j<3;++j){double x=dot(o,a.axis[j]),dx=dot(d,a.axis[j]);if(std::abs(dx)<1e-12){if(std::abs(x)>a.half[j])return 2;}
+ else{double l=(-a.half[j]-x)/dx,h=(a.half[j]-x)/dx;if(l>h)std::swap(l,h);lo=std::max(lo,l);hi=std::min(hi,h);if(lo>hi)return 2;}}
+ return hi>0&&lo<1?lo:2;}
+const Box *first(const std::vector<Box>& boxes,Vector3 start,Vector3 end,double &fraction){fraction=2;const Box *result=nullptr;
+ const auto d=sub(end,start);end=add(end,scale(d,.02/length(d)));
+ for(const auto &b:boxes){double f=intersection(b,start,end);if(f<fraction){fraction=f;result=&b;}}return result;}
+void tick(Simulation&s){auto r=s.advance_frame(Simulation::kFixedStepSeconds);if(!r.accepted||r.steps_advanced!=1){std::cerr<<"SETUP_FAIL tick\n";std::exit(2);}}
+void state(const char *name,const Snapshot&v){std::cout<<"STATE,"<<name<<",tick="<<v.tick_index<<",com=";vec(v.player_position);std::cout<<",velocity=";vec(v.player_linear_velocity);
+ std::cout<<",grounded="<<v.player_grounded<<",foot="<<v.support_entity_id<<",cue="<<v.grip_available<<",cue_entity="<<v.grip_entity_id<<",cue_point=";vec(v.grip_point);
+ std::cout<<",state="<<int(v.traversal_state)<<",owner="<<v.traversal_support_entity_id<<",hands="<<v.traversal_hand_constraint_count<<",generations="<<v.traversal_left_hand_generation<<','<<v.traversal_right_hand_generation<<",gravity="<<v.player_gravity_factor<<",deaths="<<v.death_count<<'\n';}
+void setup(Simulation &s){
+for(unsigned i=0;i<180;++i)tick(s);
+ if(!s.debug_restart_at({16.85,11.50,-118.0})||!s.set_facing(1,0)||!s.set_move_input(0,0)||!s.set_crouch_input(false)){std::cerr<<"SETUP_FAIL clear initial stage\n";std::exit(2);}tick(s);
+ const auto before=s.snapshot();state("cue",before);std::vector<Box> boxes;
+ for(unsigned entity:{2952U,1952U,2954U}){const auto index=s.kit_body_index(entity);if(index==Simulation::kKitNone){std::cerr<<"SETUP_FAIL known body\n";std::exit(2);}
+ std::cout<<"BODY,entity="<<entity<<",mass="<<s.kit_body_mass(index)<<",dynamic="<<s.kit_body_dynamic(index)<<",origin=";vec(s.kit_body_position(index));auto q=s.kit_body_rotation(index);std::cout<<",quat="<<q.x<<','<<q.y<<','<<q.z<<','<<q.w<<'\n';
+ for(std::size_t i=0;i<s.kit_body_part_count(index);++i)boxes.push_back(box(s,entity,index,i));}
+
+ if(!before.grip_available||before.grip_entity_id!=2952||before.player_grounded||before.death_count!=0){std::cerr<<"SETUP_FAIL actual airborne2952cue\n";std::exit(2);}
+ bool centre_ok=false,lower_ok=false,upper_blocked=false;unsigned upper_eligible=0;
+ for(unsigned hand=0;hand<3;++hand){const double height=hand==2?.65:.45;const double across=hand==0?0:(hand==1?-.2:.2);
+ const auto proxy=add(before.player_position,{0,height,across});const auto aim=add(proxy,{.4,0,0});double f=2;const auto hit=first(boxes,proxy,before.grip_point,f);
+ std::cout<<"APPROACH,"<<hand<<",proxy=";vec(proxy);std::cout<<",aim=";vec(aim);std::cout<<",seed=";vec(before.grip_point);std::cout<<",first_entity="<<(hit?hit->entity:0)<<",first_part="<<(hit?hit->part:999)<<",first_fraction="<<f<<",first_is_hold="<<(hit&&hit->hold)<<'\n';
+ if(hand==0)centre_ok=hit&&hit->entity==2952&&hit->hold;
+ if(hand==1)lower_ok=hit&&hit->entity==2952&&hit->hold;
+ if(hand==2)upper_blocked=hit&&hit->entity==2952&&!hit->hold;
+ unsigned eligible=0;for(const auto &b:boxes)if(overlap(b,aim,{.35,.30,.30})){std::cout<<"QUERY_OVERLAP,"<<hand<<",entity="<<b.entity<<",part="<<b.part<<",hold="<<b.hold;
+ if(b.hold){++eligible;const double t=std::clamp(dot(sub(aim,b.centre),b.axis[b.along]),-b.half[b.along],b.half[b.along]);const auto point=add(b.centre,scale(b.axis[b.along],t));double cf=2;const auto ch=first(boxes,proxy,point,cf);std::cout<<",candidate=";vec(point);std::cout<<",first_part="<<(ch?ch->part:999)<<",visible_own_leaf="<<(ch&&ch->entity==b.entity&&ch->part==b.part);}
+ std::cout<<'\n';}std::cout<<"QUERY_TOTAL,"<<hand<<",known_local_eligible="<<eligible<<'\n';if(hand==2)upper_eligible=eligible;}
+ if(!centre_ok||!lower_ok||!upper_blocked||upper_eligible!=0){std::cerr<<"SETUP_FAIL actual centre/lower visible upper blocked/no alternative witness\n";std::exit(2);}
+
+}
+
+void require(bool ok,const char *message){if(!ok){std::cerr<<"FAIL single_rigid_hand "<<message<<'\n';std::exit(1);}}
+void held(const Snapshot &v,const Snapshot &entry){
+    require(v.traversal_hand_constraint_count==1&&v.traversal_support_entity_id==2952&&!v.player_grounded&&
+            v.player_gravity_factor==1&&v.hanging_free_arc_active&&v.swing_tuck_available,"one actual rigid hand owns passive radial gravity-on catch");
+    require(v.traversal_left_hand_generation==entry.traversal_left_hand_generation&&v.traversal_left_hand_generation!=0&&
+            v.traversal_right_hand_generation==0&&length(v.traversal_right_hand)==0&&length(v.traversal_right_hand_force)==0,
+            "retained actual left hand and zero missing right point force generation");
+    const double radius=length(sub(v.traversal_left_hand,v.player_position));
+    require(std::isfinite(radius)&&radius<=1.75&&std::abs(v.hanging_actual_span_m-radius)<.0001&&
+            std::isfinite(v.hanging_commanded_span_m)&&std::isfinite(length(v.traversal_left_hand_force))&&
+            length(v.traversal_left_hand_force)<=1501,"actual single radius and finite one-hand force/readback");
+}
+void catch_one(Simulation &s){setup(s);require(s.request_traversal(),"ordinary Action queued");tick(s);state("catch",s.snapshot());
+    require(s.snapshot().traversal_hand_constraint_count==1,"visible single hand must survive blocked partner");}
+int run(){Simulation s;catch_one(s);const auto entry=s.snapshot();held(entry,entry);
+    double base=entry.hanging_commanded_span_m,tucked=0,extended=0,normal=0;
+    const double work=entry.traversal_actuator_positive_work_j;
+    for(int phase=0;phase<3;++phase){require(s.set_crouch_input(phase==1),"explicit posture input");
+        double low=1e9,high=-1e9,mean=0;auto previous=s.snapshot();double late_work=0;
+        for(int i=0;i<180;++i){tick(s);const auto v=s.snapshot();held(v,entry);
+            require(v.swing_tuck_requested==(phase==1),"actual single posture request");
+            const double paid=v.traversal_actuator_positive_work_j-previous.traversal_actuator_positive_work_j;
+            require(std::isfinite(paid)&&paid>=0&&paid<=500*Simulation::kFixedStepSeconds+.00001&&
+                    std::abs(v.hanging_commanded_span_m-previous.hanging_commanded_span_m)<=.6*Simulation::kFixedStepSeconds+.00001,
+                    "single paid work and real rest stroke bounded");
+            if(phase==0)require(v.traversal_actuator_positive_work_j==work&&v.hanging_commanded_span_m==base,"neutral single hold fixed rest zero work");
+            if(i==134)late_work=v.traversal_actuator_positive_work_j;
+            if(i>=135){mean+=v.hanging_actual_span_m/45;low=std::min(low,v.hanging_commanded_span_m);high=std::max(high,v.hanging_commanded_span_m);
+                require(v.traversal_actuator_positive_work_j==late_work,"held single posture has no idle positive work");}
+            previous=v;
+        }
+        require(high-low<.001&&std::abs(s.snapshot().hanging_commanded_span_m-(base-(phase==1?.25:0)))<.001,
+                "single quarter-metre shortening/restoration without held ratchet");
+        if(phase==0)normal=mean;else if(phase==1)tucked=mean;else extended=mean;
+        std::cout<<"SINGLE_RIGID phase="<<phase<<" mean_radius="<<mean<<" rest="<<s.snapshot().hanging_commanded_span_m
+                 <<" positive_work="<<s.snapshot().traversal_actuator_positive_work_j-work<<'\n';
+    }
+    require(normal-tucked>.10&&extended-tucked>.10&&s.snapshot().traversal_actuator_positive_work_j>work,
+            "one actual body responds to paid tuck and explicit extension");
+    const auto before_action=s.snapshot();require(s.request_traversal(),"single Action input queued");tick(s);held(s.snapshot(),entry);
+    require(s.snapshot().rejected_traversal_count>before_action.rejected_traversal_count,"single Action rejects paired mantle authority");
+    const double before_move_work=s.snapshot().traversal_actuator_positive_work_j;
+    require(s.set_move_input(1,0),"single directional input queued");tick(s);held(s.snapshot(),entry);
+    require(s.snapshot().traversal_actuator_positive_work_j==before_move_work,"single directional input cannot run paired climb servo");
+    require(s.set_move_input(0,0),"single neutral before Drop");const auto before=s.snapshot();require(s.request_release(),"ordinary single Drop");tick(s);
+    const auto after=s.snapshot();state("Drop",after);
+    require(after.traversal_hand_constraint_count==0&&!after.hanging_free_arc_active&&!after.swing_tuck_available&&!after.swing_tuck_requested&&
+            after.player_gravity_factor==1&&after.player_linear_velocity.y<before.player_linear_velocity.y+.5,
+            "single Drop clears controller; coarse airborne guard rejects floor launch (not exact contact momentum)");
+    std::cout<<"SINGLE_DROP before_velocity=";vec(before.player_linear_velocity);std::cout<<" after_velocity=";vec(after.player_linear_velocity);std::cout<<'\n';
+    bool fell=false;for(int i=0;i<15;++i){tick(s);require(s.snapshot().traversal_hand_constraint_count==0&&s.snapshot().player_gravity_factor==1,
+        "single Drop has no automatic hand promotion/regrab");fell|=s.snapshot().player_linear_velocity.y<-.1;}
+    require(fell,"single Drop actually falls");
+    Simulation jump;catch_one(jump);const auto before_jump=jump.snapshot();require(jump.request_jump(),"single Jump queued");tick(jump);state("Jump",jump.snapshot());
+    require(jump.snapshot().traversal_hand_constraint_count==0&&!jump.snapshot().hanging_free_arc_active&&jump.snapshot().player_gravity_factor==1&&
+            jump.snapshot().player_linear_velocity.y<before_jump.player_linear_velocity.y+.5,
+            "single Jump passive release has no floor launch (coarse airborne guard)");
+    std::cout<<"PASS single_rigid_hand actual_owner=2952 missing_right=0 tuck=paid Drop=1 Jump=passive\n";return 0;
+}
+}
+
 }
 
 int main(int argc,char **argv) {
-    if(argc>1){if(std::string(argv[1])=="material_approach")return material_approach_mode();
+    if(argc>1){if(std::string(argv[1])=="single_rigid_hand")return single_rigid::run();
+        if(std::string(argv[1])=="material_approach")return material_approach_mode();
         if(std::string(argv[1])=="material_front"){const auto result=material_approach(false);return result.setup&&result.passed?0:1;}
         if(std::string(argv[1])=="material_fallback"){const auto result=material_approach(false,false,true);return result.setup&&result.passed?0:1;}
         return 2;}

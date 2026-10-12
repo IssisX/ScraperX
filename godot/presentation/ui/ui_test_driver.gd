@@ -39,6 +39,7 @@ const SCENARIOS := {
 	"touch_taper_inspection_route": 8,
 	"touch_causal_facade": 8,
 	"touch_north_grip_diagnostic": 8,
+	"touch_single_hand_catch": 8,
 	"touch_suspended_ladder": 8,
 	"keyboard_slingshot": 8,
 	"pad_slingshot": 8,
@@ -100,7 +101,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if scenario in ["pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame"]:
 		if not bool(main._native.configure_pipe_bridge_fixture()):
 			return false
-	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_taper_inspection_route", "touch_causal_facade", "touch_north_grip_diagnostic", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_ballast_mantle_feedback", "touch_west_brace_bay"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
+	if scenario not in ["ground_foundation", "touch_suspended_ladder", "touch_cargo_net", "touch_campaign_to_121", "touch_campaign_to_143", "touch_campaign_to_165", "touch_campaign_to_198", "touch_campaign_to_231", "touch_campaign_to_253", "touch_campaign_to_286", "touch_campaign_to_308", "touch_service_lift", "touch_balance_lift", "touch_crown_gondola", "touch_crown_swing", "touch_traction_tram", "touch_barrel_helix", "touch_cascade_mast", "touch_pitman_lift", "touch_gravity_reclaim", "touch_slab_haul_cart", "touch_taper_inspection_route", "touch_causal_facade", "touch_north_grip_diagnostic", "touch_single_hand_catch", "keyboard_slingshot", "pad_slingshot", "touch_slingshot", "touch_slingshot_landing", "pipe_bridge", "touch_pipe_bridge", "keyboard_pipe_bridge", "touch_facade", "touch_stair", "touch_upper", "touch_teeter", "touch_braced_bay", "touch_north_frame", "touch_ballast_mantle_feedback", "touch_west_brace_bay"] and not bool(main._native.configure_regression_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
@@ -175,6 +176,8 @@ func _run() -> void:
 			ok = await _touch_taper_inspection_route()
 		"touch_north_grip_diagnostic":
 			ok = await _touch_north_grip_diagnostic()
+		"touch_single_hand_catch":
+			ok = await _touch_single_hand_catch()
 		"keyboard_slingshot":
 			ok = await _slingshot(InputRouter.Device.KEYBOARD_MOUSE)
 		"pad_slingshot":
@@ -2343,6 +2346,140 @@ func _touch_crown_swing_exit() -> bool:
 			and _position().x > -30.05 and _position().y > 198.3, 3.0):
 		return _fail("crown passive release missed the narrow receiver at=%s" % _position())
 	return _campaign_world_intact()
+
+
+# One initial normal-world reach probe; every subsequent transition is real touch.
+# This proves the bounded catch/posture/release slice, not continuous ascent.
+func _touch_single_hand_catch() -> bool:
+	if not _campaign_world_intact():
+		return false
+	if not await _wait_until(func() -> bool: return int(_native().get_tick_index()) >= 180, 3.0):
+		return _fail("single-hand normal world did not settle for 180 native ticks")
+	if not _native().debug_restart_at(Vector3(16.85, 11.5, -118.0)):
+		return _fail("single-hand initial reach staging rejected")
+	_main._yaw = -PI * 0.5
+	_main._pitch = 0.0
+	var staged_tick := int(_native().get_tick_index())
+	if not await _wait_until(func() -> bool: return int(_native().get_tick_index()) > staged_tick, 0.5):
+		return _fail("single-hand approach did not advance a native tick")
+	if not bool(_native().is_grip_available()) or not _main._touch.is_button_shown(&"action") \
+			or int(_native().get_entity_body_count(2952)) == 0 \
+			or _native().get_grip_point().distance_to(Vector3(17.39992523, 11.91257095, -118.16998291)) > 0.08:
+		return _fail("single-hand blocked-right guardrail approach has no actual touch Action grip")
+	print("SCRAPERX_SINGLE_HAND approach tick=%d position=%s cue=%s action=%s" % [
+		_native().get_tick_index(), _position(), _native().get_grip_point(), _ctx()["action"]])
+	_act(InputRouter.Device.TOUCH)
+	if not await _wait_until(func() -> bool: return _single_left_hand_attached(), 0.5):
+		return _fail("single-hand touch Action did not attach only the actual left hand")
+	await _seconds(0.35)
+	if not _single_left_hand_attached() or not _single_hand_arms_honest():
+		return _fail("single-hand neutral native hold or arm presentation is dishonest")
+	var before: Dictionary = _native().get_landing_state()
+	if not bool(before.get("swing_tuck_available", false)) \
+			or bool(before.get("swing_tuck_requested", true)) \
+			or not _main._touch.is_button_shown(&"crouch") \
+			or _main._touch.button_label(&"crouch") != "TUCK":
+		return _fail("single actual hand did not expose touch TUCK")
+	var target_before := float(before["hanging_commanded_span_m"])
+	var span_before := float(before["hanging_actual_span_m"])
+	var work_before := float(before["hand_actuator_positive_work_j"])
+	var tuck_tick := int(_native().get_tick_index())
+	_tap(2, _center(&"crouch"))
+	if not await _wait_until(func() -> bool:
+		var state: Dictionary = _native().get_landing_state()
+		return bool(state.get("swing_tuck_requested", false)) \
+			and float(state.get("hanging_commanded_span_m", target_before)) < target_before - 0.20 \
+			and float(state.get("hanging_actual_span_m", span_before)) < span_before - 0.10, 4.0):
+		return _fail("single-hand touch TUCK did not shorten actual span and paid target")
+	var tucked: Dictionary = _native().get_landing_state()
+	var target_tucked := float(tucked["hanging_commanded_span_m"])
+	var actual_span: float = _native().get_traversal_left_hand().distance_to(_position())
+	var tuck_seconds := float(int(_native().get_tick_index()) - tuck_tick) * float(_native().get_fixed_step_seconds())
+	var paid_work := float(tucked["hand_actuator_positive_work_j"]) - work_before
+	if not _single_left_hand_attached() or bool(_native().is_player_crouched()) \
+			or absf(actual_span - float(tucked["hanging_actual_span_m"])) > 0.001 \
+			or target_before - target_tucked > 0.251 \
+			or not is_finite(paid_work) or paid_work <= 0.0 or paid_work > 500.0 * tuck_seconds + 0.01 \
+			or _main._touch.button_label(&"crouch") != "EXTEND" \
+			or not _single_hand_arms_honest():
+		return _fail("single-hand TUCK lacks honest finite native hands, paid work or EXTEND")
+	_tap(2, _center(&"crouch"))
+	if not await _wait_until(func() -> bool:
+		var state: Dictionary = _native().get_landing_state()
+		return not bool(state.get("swing_tuck_requested", true)) \
+			and float(state.get("hanging_commanded_span_m", target_tucked)) > target_tucked + 0.20, 4.0):
+		return _fail("single-hand touch EXTEND did not restore native target")
+	if not _single_left_hand_attached() or _main._touch.button_label(&"crouch") != "TUCK":
+		return _fail("single-hand extension lost the hand or touch toggle label")
+	var release_y := _position().y
+	_tap(1, _center(&"jump"))
+	if not await _wait_until(func() -> bool:
+		var state: Dictionary = _native().get_landing_state()
+		return int(_native().get_traversal_state()) == 0 \
+			and int(state.get("traversal_hand_constraint_count", -1)) == 0 \
+			and not bool(state.get("left_hand_attached", true)) \
+			and not bool(state.get("right_hand_attached", true)) \
+			and not bool(state.get("swing_tuck_available", true)) \
+			and not bool(state.get("swing_tuck_requested", true)), 0.5):
+		return _fail("single-hand touch Jump did not clear actual hand and posture")
+	if not await _wait_until(func() -> bool: return _position().y < release_y - 0.10, 0.75):
+		return _fail("single-hand release did not begin a real fall")
+	for hand in _main._arms._hands:
+		if hand.anchored or hand.root.global_position.distance_to(_native().get_player_render_position()) > 1.8:
+			return _fail("single-hand released arm retained a fictitious grip")
+	if float(_native().get_landing_state().get("player_gravity_factor", -1.0)) != 1.0:
+		return _fail("single-hand release changed native gravity")
+	_detail = "normal_world=1 initial_stages=1 viewport_action_crouch_jump=1 actual_hands=left_only actual_span_shortening_m=%.4f target_shortening_m=%.4f paid_work_j=%.4f honest_arms=1 passive_release=1" % [
+		span_before - float(tucked["hanging_actual_span_m"]), target_before - target_tucked,
+		float(tucked["hand_actuator_positive_work_j"]) - work_before]
+	return _campaign_world_intact()
+
+
+func _single_left_hand_attached() -> bool:
+	var state: Dictionary = _native().get_landing_state()
+	var left_force: Vector3 = state.get("left_hand_force_n", Vector3(INF, INF, INF))
+	var right_force: Vector3 = state.get("right_hand_force_n", Vector3(INF, INF, INF))
+	return int(_native().get_traversal_state()) in [1, 4] \
+		and int(_native().get_traversal_support_entity_id()) == 2952 \
+		and int(state.get("traversal_hand_constraint_count", -1)) == 1 \
+		and bool(state.get("left_hand_attached", false)) \
+		and not bool(state.get("right_hand_attached", true)) \
+		and bool(state.get("hanging_free_arc_active", false)) \
+		and float(state.get("player_gravity_factor", -1.0)) == 1.0 \
+		and left_force.is_finite() and left_force.length() <= 1501.0 \
+		and right_force.is_finite() and right_force.length() < 0.001 \
+		and _native().get_traversal_right_hand() == Vector3.ZERO
+
+
+func _single_hand_arms_honest() -> bool:
+	var arms = _main._arms
+	var camera: Transform3D = get_viewport().get_camera_3d().global_transform
+	for hand in arms._hands:
+		if hand.side > 0.0:
+			var shoulder: Vector3 = 2.0 * hand.upper.global_position - hand.elbow.global_position
+			var ordinary: Vector3 = camera * Vector3(arms.SHOULDER_LOCAL.x, arms.SHOULDER_LOCAL.y, arms.SHOULDER_LOCAL.z)
+			if hand.anchored or hand.pose != arms.POSE_AIR \
+					or shoulder.distance_to(ordinary) > arms.MAX_LEAN + 0.002 \
+					or hand.root.global_position.distance_to(camera.origin) > 1.2:
+				return false
+		else:
+			var climbing := int(_native().get_traversal_state()) == 4
+			var hold: Vector3 = _native().get_traversal_left_hand_render_position()
+			var expected: Vector3 = hold - arms._grip_forward * (0.045 if climbing else arms.TOP_PROBE_INSET + 0.034) \
+				+ Vector3.DOWN * (0.035 if climbing else 0.074)
+			if not hand.anchored or hand.pose != (arms.POSE_CLIMB if climbing else arms.POSE_GRIP) \
+					or hand.anchor.distance_to(expected) > 0.002 \
+					or hand.world_wrist.distance_to(expected) > 0.04:
+				return false
+			# Check rendered IK against its actual reach clamp, not just the target.
+			var shoulder: Vector3 = 2.0 * hand.upper.global_position - hand.elbow.global_position
+			var to_wrist: Vector3 = hand.world_wrist - shoulder
+			var reach := clampf(to_wrist.length(), absf(arms.UPPER_ARM - arms.FOREARM) + 0.01,
+				arms.UPPER_ARM + arms.FOREARM - 0.004)
+			var rendered_expected := shoulder + to_wrist.normalized() * reach
+			if hand.root.global_position.distance_to(rendered_expected) > 0.002:
+				return false
+	return true
 
 
 func _touch_hanging_posture() -> bool:

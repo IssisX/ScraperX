@@ -1,0 +1,9 @@
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-rigid-hand-catch-baseline/source.cpp: In function 'bool {anonymous}::overlap(const Box&, scraperx::sim::Vector3, scraperx::sim::Vector3)':
+/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-rigid-hand-catch-baseline/source.cpp:33:2: error: this 'for' clause does not guard... [-Werror=misleading-indentation]
+   33 |  for(unsigned i=0;i<3;++i)r+=std::abs(dot(n,a.axis[i]))*a.half[i];if(std::abs(dot(sub(a.centre,centre),n))>r)return false;}
+      |  ^~~
+/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/single-rigid-hand-catch-baseline/source.cpp:33:67: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'for'
+   33 |  for(unsigned i=0;i<3;++i)r+=std::abs(dot(n,a.axis[i]))*a.half[i];if(std::abs(dot(sub(a.centre,centre),n))>r)return false;}
+      |                                                                   ^~
+cc1plus: all warnings being treated as errors

@@ -5450,6 +5450,18 @@ private:
             release_hang(bodies);
             return;
         }
+        if ((traversal_state_ == TraversalState::Climbing || traversal_state_ == TraversalState::Hanging) &&
+            physical_hands_->active() && !physical_hands_->compatible_hands()) {
+            // A solo rigid catch owns only its passive radial row. Action
+            // cannot authorize a two-hand top-out or a muscle jump from it.
+            if (commands.release_requested || commands.jump_requested) {
+                if (traversal_state_ == TraversalState::Hanging) release_hang(bodies);
+                else let_go_climb(bodies);
+            } else if (commands.traversal_requested) {
+                ++rejected_traversal_count_;
+            }
+            return;
+        }
         if ((traversal_state_ == TraversalState::Hanging || traversal_state_ == TraversalState::Climbing) &&
             (commands.jump_requested || commands.traversal_requested) && !leave_radial_profile(bodies)) return;
         if (traversal_state_ == TraversalState::Hanging) {
@@ -5524,7 +5536,7 @@ private:
             // actual geometry and finite hands decide whether a catch holds.
             const Grip grip = grip_in_front(bodies);
             if (grip.valid) {
-                begin_climb(bodies, grip);
+                begin_climb(bodies, grip, true);
             } else {
                 ++rejected_traversal_count_;
             }
@@ -6520,6 +6532,7 @@ private:
     }
 
     void begin_mantle_from_hang(JPH::BodyInterface &bodies) noexcept {
+        if (physical_hands_->active() && !physical_hands_->compatible_hands()) return;
         if (!leave_radial_profile(bodies)) return;
         // Catching a lip needs room for a hanging body. Climbing onto it is
         // separately guarded by the current full standing capsule clearance.
@@ -6754,10 +6767,13 @@ private:
 
     void release_hang(JPH::BodyInterface &bodies) noexcept {
         if(entity_is_causal_section_support(traversal_entity_id_)) causal_airborne_=true;
-        const JPH::RVec3 ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
-        const JPH::Vec3 support_velocity =
-            traversal_body_.IsInvalid() ? JPH::Vec3::sZero()
-                                        : support_point_velocity(bodies, traversal_body_, ledge);
+        JPH::Vec3 support_velocity=JPH::Vec3::sZero();
+        if (physical_hands_->active() && !physical_hands_->compatible_hands()) {
+            support_velocity=climb_support_velocity(bodies);
+        } else if (!traversal_body_.IsInvalid()) {
+            const auto ledge=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
+            support_velocity=support_point_velocity(bodies,traversal_body_,ledge);
+        }
         // Detachment changes the constraint, not the rider's momentum. The
         // current velocity already includes motion acquired while attached.
         airborne_inherited_velocity_ = support_velocity;
@@ -7020,7 +7036,8 @@ private:
     }
 
     // Take hold of `grip` where the body is, facing it.
-    void begin_climb(JPH::BodyInterface &bodies, const Grip &grip) noexcept {
+    void begin_climb(JPH::BodyInterface &bodies, const Grip &grip,
+                     const bool allow_single_hand = false) noexcept {
         hanging_posture_offset_m_ = 0.0F;
         JPH::RVec3 hold = bodies.GetPosition(player_id_);
         if (bodies.GetMotionType(grip.body) == JPH::EMotionType::Dynamic &&
@@ -7057,9 +7074,25 @@ private:
         traversal_desired_ = hold;
         bodies.SetGravityFactor(player_id_, 1.0F);
         take_hand_holds(bodies, hold, grip);
-        // This controller reads both anchors. A blocked hand cannot be
-        // replaced by stale coordinates or an unvalidated second attachment.
+        // Automatic directional reach requires both anchors for climbing.
+        // Only deliberate Action may acquire a partial passive radial catch.
         if (!physical_hands_->compatible_hands()) {
+            if (allow_single_hand && physical_hands_->radial_compatible_hands() && !grounded_ &&
+                actual_hands_in_reach(bodies)) {
+                const auto relative=JPH::Vec3(physical_hands_->radial_grip_centroid()-
+                    bodies.GetCenterOfMassPosition(player_id_));
+                if (relative.GetY()>.35F && physical_hands_->set_radial_profile(true)) {
+                    const unsigned hand=physical_hands_->attached(0) ? 0 : 1;
+                    // The offered principal cue can differ from the real
+                    // independently selected grip. Ownership follows that grip.
+                    traversal_body_=hands_[hand].body;
+                    traversal_entity_id_=bodies.GetUserData(traversal_body_);
+                    traversal_local_ledge_=hands_[hand].local;
+                    traversal_local_hold_=to_support_local(bodies,traversal_body_,bodies.GetPosition(player_id_));
+                    ++climb_count_;
+                    return;
+                }
+            }
             clear_traversal();
             ++rejected_traversal_count_;
             return;
@@ -7085,13 +7118,19 @@ private:
         return !grounded_ && (traversal_state_ == TraversalState::Climbing ||
             traversal_state_ == TraversalState::Hanging) && !cargo_transfer_active_ &&
             cargo_push_seconds_ < 0.0F && !(slingshot_ && slingshot_->controls_player()) &&
-            physical_hands_ && physical_hands_->compatible_hands();
+            physical_hands_ && physical_hands_->radial_compatible_hands();
     }
 
     [[nodiscard]] bool actual_hands_in_reach(const JPH::BodyInterface &bodies) const noexcept {
+        if (!physical_hands_ || !physical_hands_->radial_compatible_hands()) return false;
         const auto centre=bodies.GetCenterOfMassPosition(player_id_);
-        for (unsigned hand=0;hand<2;++hand) {
-            if (!hands_[hand].valid || !physical_hands_->attached(hand)) return false;
+        for (unsigned hand=0;hand<2;++hand) if (physical_hands_->attached(hand)) {
+            if (!hands_[hand].valid) return false;
+            {
+                const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(),hands_[hand].body);
+                if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase() || lock.GetBody().IsSensor() ||
+                    (!(cargo_net_ && hands_[hand].body==cargo_net_->body()) && !lock.GetBody().IsRigidBody())) return false;
+            }
             const float distance=JPH::Vec3(hand_point(bodies,hand)-centre).Length();
             if (!std::isfinite(distance) || distance>1.75F) return false;
         }
@@ -7100,14 +7139,15 @@ private:
 
     [[nodiscard]] bool hanging_posture_eligible(const JPH::BodyInterface &bodies) const noexcept {
         if (!radial_ownership_eligible() || !actual_hands_in_reach(bodies)) return false;
-        // Once acquired, the actual two-hand radius/reach/owner retain this
+        // Once acquired, the actual attached radius/reach/owner retain this
         // mode through the arc; world-up arm angle is only an entry condition.
         if (physical_hands_->radial_active()) return true;
-        const auto relative=JPH::Vec3(physical_hands_->grip_midpoint()-bodies.GetPosition(player_id_));
+        const auto relative=JPH::Vec3(physical_hands_->radial_grip_centroid()-bodies.GetPosition(player_id_));
         return relative.GetY()+hanging_posture_offset_m_>.35F && relative.Length()<=1.75F;
     }
 
     bool leave_radial_profile(const JPH::BodyInterface &bodies) noexcept {
+        if (physical_hands_->active() && !physical_hands_->compatible_hands()) return false;
         if (!physical_hands_->radial_active()) return true;
         if (!physical_hands_->set_radial_profile(false)) return false;
         if (traversal_state_ == TraversalState::Hanging) {
@@ -7120,6 +7160,22 @@ private:
     }
 
     void sync_radial_profile(JPH::BodyInterface &bodies,const StepCommands &commands) noexcept {
+        if ((traversal_state_ == TraversalState::Climbing || traversal_state_ == TraversalState::Hanging) &&
+            physical_hands_->active() && !physical_hands_->compatible_hands()) {
+            if (!radial_ownership_eligible() || !actual_hands_in_reach(bodies) ||
+                !physical_hands_->radial_active()) {
+                if (traversal_state_ == TraversalState::Hanging) release_hang(bodies);
+                else let_go_climb(bodies);
+                return;
+            }
+            // Commands are arbitrated by apply_traversal_commands. A fresh
+            // Action already consumed by begin_climb must retain this row in
+            // both syncs; direction never hands a solo catch to a pair servo.
+            bodies.ActivateBody(player_id_);
+            for (unsigned hand=0;hand<2;++hand) if (physical_hands_->attached(hand))
+                bodies.ActivateBody(hands_[hand].body);
+            return;
+        }
         const auto right=traversal_right();
         const double climb_input=commands.move_input_x*traversal_normal_.GetX()+
             commands.move_input_z*traversal_normal_.GetZ();
@@ -7183,6 +7239,12 @@ private:
     // sideways moves across -- each only onto holds the hands can reach.
     void update_climb(JPH::BodyInterface &bodies, const StepCommands &commands,
                       const float delta_seconds) noexcept {
+        if (!physical_hands_->compatible_hands()) {
+            if (physical_hands_->radial_active() && hanging_posture_eligible(bodies))
+                advance_hanging_posture(bodies,JPH::Vec3::sZero(),delta_seconds);
+            else let_go_climb(bodies);
+            return;
+        }
         if (physical_hands_->radial_active()) {
             advance_hanging_posture(bodies,JPH::Vec3::sZero(),delta_seconds);
             return; // No absolute hold correction or automatic regrip in the arc.
@@ -7380,6 +7442,7 @@ private:
     // the structure's normal: a climber on a pipe faced from an angle looks
     // round at the deck it means to climb onto.
     [[nodiscard]] bool try_top_out(JPH::BodyInterface &bodies) noexcept {
+        if (physical_hands_->active() && !physical_hands_->compatible_hands()) return false;
         if (!leave_radial_profile(bodies)) return false;
         // Action may reaffirm this physical handoff, never change its owner.
         if (cargo_transfer_active_ || cargo_push_seconds_>=0.0F) return true;
@@ -7415,6 +7478,7 @@ private:
 
     bool begin_cargo_transfer(JPH::BodyInterface &bodies,const LedgeProbe &probe,
                               JPH::RVec3 origin) noexcept {
+        if (physical_hands_->active() && !physical_hands_->compatible_hands()) return false;
         if (!leave_radial_profile(bodies)) return false;
         const auto shoulder=origin+JPH::Vec3(0,kClimbHandMid,0);
         const float shoulder_to_lip = JPH::Vec3(probe.ledge_point-shoulder).Length();
@@ -7504,6 +7568,17 @@ private:
     }
 
     [[nodiscard]] JPH::Vec3 climb_support_velocity(const JPH::BodyInterface &bodies) const noexcept {
+        if (physical_hands_->active() && !physical_hands_->compatible_hands()) {
+            // Cleanup must also succeed when the held backend has left the
+            // world. Read the retained rigid body only after a successful lock.
+            if (!physical_hands_->radial_compatible_hands()) return JPH::Vec3::sZero();
+            const unsigned hand=physical_hands_->attached(0) ? 0 : 1;
+            if (!hands_[hand].valid) return JPH::Vec3::sZero();
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(),hands_[hand].body);
+            if (!lock.Succeeded() || !lock.GetBody().IsInBroadPhase()) return JPH::Vec3::sZero();
+            const auto point=lock.GetBody().GetCenterOfMassTransform()*hands_[hand].local;
+            return lock.GetBody().GetPointVelocity(point);
+        }
         JPH::Vec3 velocity=JPH::Vec3::sZero();
         unsigned count=0;
         for(unsigned hand=0;hand<2;++hand) if(hands_[hand].valid) {
@@ -7597,6 +7672,7 @@ private:
     // does not stop a shimmy; only climbing up needs the landing clear.
     void update_shimmy(JPH::BodyInterface &bodies, const StepCommands &commands,
                        const float delta_seconds) noexcept {
+        if (physical_hands_->active() && !physical_hands_->compatible_hands()) return;
         if (physical_hands_->radial_active()) return;
         const JPH::Vec3 right = traversal_right();
         const double side_input =
@@ -8406,11 +8482,11 @@ private:
         }
         if (traversal_state_ == TraversalState::Climbing ||
             traversal_state_ == TraversalState::Hanging) {
-            if (hands_[0].valid) {
+            if (hands_[0].valid && physical_hands_->attached(0)) {
                 state_.traversal_left_hand = to_vector3(hand_point(bodies, 0));
                 state_.traversal_left_hand_generation = hands_[0].generation;
             }
-            if (hands_[1].valid) {
+            if (hands_[1].valid && physical_hands_->attached(1)) {
                 state_.traversal_right_hand = to_vector3(hand_point(bodies, 1));
                 state_.traversal_right_hand_generation = hands_[1].generation;
             }
@@ -8445,7 +8521,7 @@ private:
         state_.swing_body_below_grip_m = 0.0;
         state_.swing_commanded_body_below_grip_m = 0.0;
         if (state_.swing_tuck_available) {
-            const auto grip = physical_hands_->grip_midpoint();
+            const auto grip = physical_hands_->radial_grip_centroid();
             state_.swing_body_below_grip_m = grip.GetY() - bodies.GetPosition(player_id_).GetY();
             state_.swing_commanded_body_below_grip_m = grip.GetY() - physical_hands_->commanded_position().GetY();
         }

@@ -313,7 +313,7 @@ void PhysicalHandClimb::set_transfer_profile(float rigid_hand_damping) {
 bool PhysicalHandClimb::set_radial_profile(bool enabled) {
     using namespace JPH;
     if (enabled==radial_profile_) return true;
-    if (enabled && (!compatible_hands() || transfer_profile_)) return false;
+    if (enabled && (!radial_compatible_hands() || transfer_profile_)) return false;
     const BodyID ids[]{player_, hands_[0] ? hands_[0]->GetBody2()->GetID() : player_,
                        hands_[1] ? hands_[1]->GetBody2()->GetID() : player_};
     std::array<Ref<SixDOFConstraint>,2> fresh;
@@ -398,7 +398,10 @@ bool PhysicalHandClimb::set_radial_profile(bool enabled) {
     return true;
 }
 float PhysicalHandClimb::radial_commanded_span_m() const {
-    return radial_profile_ ? .5F*(radial_rest_length(0)+radial_rest_length(1)) : 0.0F;
+    if (!radial_profile_ || !radial_compatible_hands()) return 0.0F;
+    float sum=0.0F;
+    for (unsigned i=0;i<hands_.size();++i) if (attached(i)) sum+=radial_rest_length(i);
+    return sum/float(attached_count());
 }
 float PhysicalHandClimb::radial_rest_length(unsigned hand) const {
     return radial_hands_[hand] ?
@@ -406,26 +409,26 @@ float PhysicalHandClimb::radial_rest_length(unsigned hand) const {
 }
 float PhysicalHandClimb::radial_actual_span_m() const {
     using namespace JPH;
-    if (!radial_profile_ || !compatible_hands()) return 0.0F;
+    if (!radial_profile_ || !radial_compatible_hands()) return 0.0F;
     const BodyID ids[]{player_,hands_[0] ? hands_[0]->GetBody2()->GetID() : player_,
                        hands_[1] ? hands_[1]->GetBody2()->GetID() : player_};
     BodyLockMultiRead lock(system_.GetBodyLockInterface(),ids,3);
     const Body *player=lock.GetBody(0);
     if (!player) return 0.0F;
     float sum=0.0F;
-    for (unsigned i=0;i<2;++i) {
+    for (unsigned i=0;i<2;++i) if (attached(i)) {
         const Body *hold=lock.GetBody(i+1);
         if (!soft_[i].attached && !hold) return 0.0F;
         const RVec3 grip=soft_[i].attached ? net_->world_point(soft_[i].material) :
             hold->GetCenterOfMassTransform()*hands_[i]->GetConstraintToBody2Matrix().GetTranslation();
         sum+=Vec3(player->GetCenterOfMassPosition()-grip).Length();
     }
-    return .5F*sum;
+    return sum/float(attached_count());
 }
 float PhysicalHandClimb::advance_radial_targets(float shortening_m,float dt) {
     using namespace JPH;
     last_bound_=last_actuator_positive_work_=0.0;
-    if (!radial_profile_ || !compatible_hands() || !std::isfinite(shortening_m) ||
+    if (!radial_profile_ || !radial_compatible_hands() || !std::isfinite(shortening_m) ||
         !std::isfinite(dt) || dt<=0 || shortening_m==0) return 0.0F;
     const BodyID ids[]{player_,hands_[0] ? hands_[0]->GetBody2()->GetID() : player_,
                        hands_[1] ? hands_[1]->GetBody2()->GetID() : player_};
@@ -434,7 +437,7 @@ float PhysicalHandClimb::advance_radial_targets(float shortening_m,float dt) {
         BodyLockMultiRead lock(system_.GetBodyLockInterface(),ids,3);
         const Body *player=lock.GetBody(0);
         if (!player) return 0.0F;
-        for (unsigned i=0;i<2;++i) {
+        for (unsigned i=0;i<2;++i) if (attached(i)) {
             const Body *hold=lock.GetBody(i+1);
             if (!soft_[i].attached && !hold) return 0.0F;
             const RVec3 grip=soft_[i].attached ? net_->world_point(soft_[i].material) :
@@ -449,20 +452,22 @@ float PhysicalHandClimb::advance_radial_targets(float shortening_m,float dt) {
     };
     const double stroke_limit=.6*double(dt), budget=500.0*double(dt);
     const double stroke=std::clamp(double(shortening_m),-stroke_limit,stroke_limit);
-    const std::array<float,2> previous{radial_rest_length(0),radial_rest_length(1)};
+    std::array<float,2> previous{};
+    for (unsigned i=0;i<hands_.size();++i) if (attached(i)) previous[i]=radial_rest_length(i);
+    const unsigned count=attached_count();
     std::array<float,2> targets{};
     double supplied=0,absorbed=0,debit=0,mean=0;
     const auto evaluate=[&](double fraction) {
         supplied=absorbed=debit=mean=0;
         bool valid=true;
-        for (unsigned i=0;i<2;++i) {
+        for (unsigned i=0;i<2;++i) if (attached(i)) {
             targets[i]=float(std::max(1.0e-6,double(previous[i])-stroke*fraction));
             const double delta=double(previous[i])-targets[i];
             valid=valid && std::isfinite(targets[i]) && std::abs(delta)<=stroke_limit &&
                 std::abs(delta)<=std::abs(double(shortening_m));
             const double work=potential(double(radii[i])-targets[i])-potential(double(radii[i])-previous[i]);
             supplied+=std::max(work,0.0); absorbed+=std::max(-work,0.0);
-            debit+=force_bound_n()*std::abs(delta); mean+=.5*delta;
+            debit+=force_bound_n()*std::abs(delta); mean+=delta/double(count);
         }
         return valid && supplied<=budget;
     };
@@ -491,6 +496,9 @@ float PhysicalHandClimb::advance_radial_targets(float shortening_m,float dt) {
 bool PhysicalHandClimb::active() const noexcept { return attached(0) || attached(1); }
 bool PhysicalHandClimb::attached(unsigned hand) const noexcept {
     return hand < hands_.size() && (hands_[hand].GetPtr() != nullptr || soft_[hand].attached);
+}
+unsigned PhysicalHandClimb::attached_count() const noexcept {
+    return unsigned(attached(0))+unsigned(attached(1));
 }
 JPH::Vec3 PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displacement, float dt,
                                             std::optional<float> command_power_cap_w) {
@@ -584,6 +592,18 @@ JPH::Vec3 PhysicalHandClimb::advance_targets(JPH::Vec3 desired_player_displaceme
 }
 bool PhysicalHandClimb::compatible_hands() const noexcept {
     return attached(0) && attached(1) && soft_[0].attached == soft_[1].attached;
+}
+bool PhysicalHandClimb::radial_compatible_hands() const noexcept {
+    return compatible_hands() || (attached_count()==1 && !soft_[0].attached && !soft_[1].attached);
+}
+JPH::RVec3 PhysicalHandClimb::radial_grip_centroid() const {
+    using namespace JPH;
+    if (compatible_hands()) return grip_midpoint();
+    if (!radial_compatible_hands()) return RVec3::sZero();
+    const unsigned hand=attached(0) ? 0 : 1;
+    const BodyLockRead lock(system_.GetBodyLockInterface(),hands_[hand]->GetBody2()->GetID());
+    if (!lock.Succeeded()) return RVec3::sZero();
+    return lock.GetBody().GetCenterOfMassTransform()*hands_[hand]->GetConstraintToBody2Matrix().GetTranslation();
 }
 JPH::RVec3 PhysicalHandClimb::grip_midpoint() const {
     using namespace JPH;

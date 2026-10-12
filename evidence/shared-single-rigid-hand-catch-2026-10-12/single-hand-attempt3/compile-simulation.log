@@ -1,0 +1,4 @@
+/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.cpp: In lambda function:
+/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.cpp:3117:90: note: parameter passing for argument of type 'std::pair<float, float>' when C++17 is enabled changed to match C++14 in GCC 10.1
+ 3117 |             return std::pair<float, float>{(min_x + max_x) * 0.5F, (max_x - min_x) * 0.5F};
+      |                                                                                          ^

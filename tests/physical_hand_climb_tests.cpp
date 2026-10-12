@@ -211,6 +211,71 @@ void radial_force_bounds(World &w, PhysicalHandClimb &hands) {
     }
     check(w.contacts.count==0,"radial fixture has an external contact");
 }
+// Both indices must use their sole real radius, never half a phantom pair.
+void single_radial_hands() {
+    for(unsigned index=0;index<2;++index){
+        World w(false,Vec3::sZero(),false,25,true,RVec3(0,4.3,-.2),true);
+        PhysicalHandClimb hands(w.system,w.player);const RVec3 grip(index?.2:-.2,5,.55);
+        check(hands.attach(index,w.support,grip)&&hands.attached(index)&&!hands.attached(1-index),"single real rigid attachment");
+        const auto entry_velocity=w.velocity(w.player);
+        check(hands.set_radial_profile(true)&&hands.radial_active(),"single attached rigid hand must enter radial owner");
+        check((w.velocity(w.player)-entry_velocity).LengthSq()==0&&!hands.compatible_hands()&&hands.grip_midpoint().LengthSq()==0,
+              "single radial handoff preserves velocity and pair-only midpoint contract");
+        check(w.system.GetConstraints().size()==1&&w.system.GetConstraints()[0]->GetSubType()==EConstraintSubType::User2,
+              "single hand owns exactly one scalar row without Cartesian competitor");
+        const float rest=hands.radial_commanded_span_m();const double paid=hands.actuator_positive_work_j();
+        check(std::abs(rest-Vec3(grip-w.position(w.player)).Length())<.00001F,"single initial rest is actual full radius");
+        double means[3]{};
+        for(unsigned phase=0;phase<3;++phase){const float target=rest-(phase==1?.25F:0);double held_paid=0;
+            for(unsigned tick=0;tick<180;++tick){
+                const double before_paid=hands.actuator_positive_work_j();const float before_rest=hands.radial_commanded_span_m();
+                (void)hands.advance_radial_targets(before_rest-target,h);
+                const float after_rest=hands.radial_commanded_span_m();
+                const double work=hands.actuator_positive_work_j()-before_paid;
+                check(work>=0&&work<=500*h+.00001&&std::abs(after_rest-before_rest)<=.6F*h+.00001F,
+                      "single actual length stroke and positive work bounded without refund");
+                w.tick(hands,1);
+                check(hands.attached(index)&&!hands.attached(1-index)&&hands.radial_active()&&
+                      hands.hand_force(1-index).LengthSq()==0,"no phantom single-hand attachment or force");
+                check(finite(hands.hand_force(index))&&hands.hand_force(index).Length()<=1500.05F,
+                      "single actual force is finite and capped");
+                const float radius=Vec3(grip-w.position(w.player)).Length();
+                check(std::abs(hands.radial_actual_span_m()-radius)<.00001F&&radius<1.75F,
+                      "single actual span uses sole real radius within reach");
+                const Vec3 direction=Vec3(w.position(w.player)-grip).Normalized();
+                check(Vec3(hands.commanded_position()-(grip+direction*hands.radial_commanded_span_m())).Length()<.00001F,
+                      "single commanded COM uses actual sole anchor direction and full rest radius");
+                if(phase==0)check(hands.radial_commanded_span_m()==rest&&hands.actuator_positive_work_j()==paid,
+                                  "single neutral length and paid ledger stay fixed");
+                if(tick==134)held_paid=hands.actuator_positive_work_j();
+                if(tick>=135){means[phase]+=radius/45;
+                    check(std::abs(after_rest-target)<.001F&&hands.actuator_positive_work_j()==held_paid,
+                          "single held quarter-metre posture does not ratchet or add idle work");}
+            }
+            std::cout<<"SINGLE_BACKEND index="<<index<<" phase="<<phase<<" actual_mean_radius="<<means[phase]
+                     <<" rest="<<hands.radial_commanded_span_m()<<" positive_work="<<hands.actuator_positive_work_j()-paid<<'\n';
+        }
+        check(means[0]-means[1]>.10&&means[2]-means[1]>.10&&hands.actuator_positive_work_j()>paid,
+              "single paid posture actually shortens and extends physical body");
+        check(w.contacts.count==0&&w.max_player_impulse_error<=.01,"single actual row accounts for body impulse without contact");
+        const auto release_velocity=w.velocity(w.player);hands.clear();
+        check(!hands.active()&&!hands.radial_active()&&hands.hand_force(0).LengthSq()==0&&hands.hand_force(1).LengthSq()==0&&
+              w.system.GetConstraints().empty()&&(w.velocity(w.player)-release_velocity).LengthSq()==0,
+              "single cleanup clears real constraints without a release impulse");
+        World dynamic(true,Vec3(0,-1,0),false,25,true,RVec3(0,4.3,-.2),true);
+        PhysicalHandClimb reciprocal(dynamic.system,dynamic.player);
+        check(reciprocal.attach(index,dynamic.support,grip)&&reciprocal.set_radial_profile(true),"single dynamic reciprocal acquisition");
+        float recoil=0;
+        for(unsigned tick=0;tick<90;++tick){dynamic.tick(reciprocal,1);
+            check(reciprocal.hand_force(1-index).LengthSq()==0&&finite(reciprocal.hand_force(index))&&
+                  reciprocal.hand_force(index).Length()<=1500.05F,"dynamic single force is real bounded and exclusive");
+            recoil=std::max(recoil,(dynamic.velocity(dynamic.support)-Vec3(0,-9.81F*h*(tick+1),0)).Length());}
+        check(recoil>.001F&&dynamic.max_player_impulse_error<=.01&&dynamic.max_support_impulse_error<=.01&&dynamic.contacts.count==0,
+              "single real row gives reciprocal dynamic support reaction and measured momentum");
+        std::cout<<"SINGLE_BACKEND index="<<index<<" recoil="<<recoil<<" player_receipt="<<dynamic.max_player_impulse_error
+                 <<" support_receipt="<<dynamic.max_support_impulse_error<<'\n';
+    }
+}
 void passive_radial_arc() {
     World w(false,Vec3(0,1.096F,-1.023F));PhysicalHandClimb hands(w.system,w.player);
     w.acquire(hands);
@@ -720,11 +785,13 @@ void invalid_holds_and_cleanup() {
 int main(int argc,char **argv) {
     JPH::RegisterDefaultAllocator(); JPH::Factory::sInstance = new JPH::Factory; JPH::RegisterTypes();
     unsigned failures = 0;
+    const bool single_only=argc>1&&std::string(argv[1])=="single_hand";
     const bool fixed_only=argc>1&&std::string(argv[1])=="free_arc_fixed_light";
     const bool radial_only=argc>1&&std::string(argv[1])=="free_arc";
     const bool handoff_only=argc>1&&std::string(argv[1])=="free_arc_handoff";
     const bool angular_only=argc>1&&std::string(argv[1])=="free_arc_angular";
-    const std::vector<std::pair<const char *, void (*)()>> tests=fixed_only?
+    const std::vector<std::pair<const char *, void (*)()>> tests=single_only?
+        std::vector<std::pair<const char *,void (*)()>>{{"single_radial_hands",single_radial_hands}}:fixed_only?
         std::vector<std::pair<const char *,void (*)()>>{{"radial_fixed_light_catch",radial_fixed_light_catch}}:angular_only?
         std::vector<std::pair<const char *,void (*)()>>{{"radial_dynamic_reciprocity",radial_dynamic_reciprocity}}:handoff_only?
         std::vector<std::pair<const char *,void (*)()>>{{"radial_work_and_handoffs",radial_work_and_handoffs}}:radial_only?
@@ -740,7 +807,8 @@ int main(int argc,char **argv) {
         { "facade_structural_response", facade_structural_response },
         { "invalid_holds_and_cleanup", invalid_holds_and_cleanup },
         {"passive_radial_arc",passive_radial_arc},{"radial_dynamic_reciprocity",radial_dynamic_reciprocity},
-        {"radial_work_and_handoffs",radial_work_and_handoffs},{"radial_fixed_light_catch",radial_fixed_light_catch} };
+        {"radial_work_and_handoffs",radial_work_and_handoffs},{"radial_fixed_light_catch",radial_fixed_light_catch},
+        {"single_radial_hands",single_radial_hands} };
     for (const auto &test : tests) {
         try { test.second(); std::cout << "PASS " << test.first << '\n'; }
         catch (const std::exception &e) { ++failures; std::cerr << "FAIL " << test.first << ": " << e.what() << '\n'; }

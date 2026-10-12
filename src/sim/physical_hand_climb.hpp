@@ -23,6 +23,7 @@ public:
     void clear();
     [[nodiscard]] bool active() const noexcept;
     [[nodiscard]] bool attached(unsigned hand) const noexcept;
+    [[nodiscard]] unsigned attached_count() const noexcept;
     // Brief ledge pull-up: higher bounded command power, damped rigid hands.
     void set_transfer_profile(float rigid_hand_damping = 600.0F);
     // Passive mounted hanger: bounded human lean commands, not a hinge drive.
@@ -42,6 +43,10 @@ public:
                              std::optional<float> command_power_cap_w = std::nullopt);
     [[nodiscard]] bool compatible_hands() const noexcept;
     [[nodiscard]] JPH::RVec3 grip_midpoint() const;
+    // Passive radial ownership: a compatible pair or exactly one rigid hand.
+    // Full climbing/transfer still require compatible_hands(). No material solo.
+    [[nodiscard]] bool radial_compatible_hands() const noexcept;
+    [[nodiscard]] JPH::RVec3 radial_grip_centroid() const;
     // Neutral actuator position from current anchors/targets; not actual pose.
     [[nodiscard]] JPH::RVec3 commanded_position() const;
     // pre_step applies only the soft material adapter; rigid radial rows solve

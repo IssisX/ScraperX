@@ -128,6 +128,8 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_test(NAME scraperx_sim.physical_traversal COMMAND scraperx_physical_traversal_tests)
     add_test(NAME scraperx_sim.material_grip_approach
              COMMAND scraperx_physical_traversal_tests material_approach)
+    add_test(NAME scraperx_sim.single_rigid_hand_catch
+             COMMAND scraperx_physical_traversal_tests single_rigid_hand)
 
     add_executable(scraperx_service_lift_physics_tests tests/service_lift_physics_tests.cpp)
     target_link_libraries(scraperx_service_lift_physics_tests PRIVATE scraperx_sim)
