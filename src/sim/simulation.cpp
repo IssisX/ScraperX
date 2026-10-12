@@ -2804,7 +2804,6 @@ private:
             return;
         }
         jolt_stepped_ = true;
-        if (std::getenv("SCRAPERX_JOLT_DEBUG")) std::fprintf(stderr, "JOLT entity=%llu shift=%.3f t=%.2f\n", (unsigned long long)support_entity_id_, shift, state_.simulation_time_seconds);
         ++stumble_count_;
         ++support_stumble_count_;
         const double loss = std::clamp(kLandingMaxLoss * (shift - kSupportJoltMargin) / kSupportJoltSpan, 0.0,

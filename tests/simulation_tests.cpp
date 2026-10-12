@@ -4051,8 +4051,13 @@ void run_high() {
             "high: standing on the derrick's upper receiver, about 800 m up, alive");
     require(e.summit_reached && e.summit_deaths == 0 && e.summit_seconds > 0.0,
             "high: the derrick's upper receiver must read as the route's top");
+    // The crown gondola's cabin swings as the crown carries it over: the
+    // rider standing in it is jolted past the ankles' reach and steps.
+    require(e.support_stumble_count >= 1 && e.support_jolt_peak_m > 0.15,
+            "high: the gondola's swinging cabin must jolt its rider into a stumble");
     std::cout << "PASS scraperx_sim high: crown_s=" << ride.crown_s << " derrick_s=" << ride.derrick_s
-              << " top_y=" << e.player_position.y << '\n';
+              << " top_y=" << e.player_position.y << " jolt_peak_m=" << e.support_jolt_peak_m
+              << " jolt_stumbles=" << e.support_stumble_count << '\n';
 }
 
 // The owner's slab incline, from the game's start: across the yard, up the
@@ -6840,6 +6845,11 @@ int main() {
     require(start_state.player_position.z < -20.0 && start_state.player_position.y < 2.0,
             "the default spawn must be outdoors at grade, short of the tower");
 
+    // A support that moves smoothly is re-matched tick by tick: riding the
+    // translating and turning supports never adds up to a stumble.
+    require(translating.snapshot().support_stumble_count == 0 && rotating.snapshot().support_stumble_count == 0 &&
+                translating.snapshot().support_jolt_peak_m < 0.15 && rotating.snapshot().support_jolt_peak_m < 0.15,
+            "smoothly moving supports must not jolt the rider off balance");
     std::cout << "PASS scraperx_sim moving-support truth: translating_support="
               << translating_grounded.support_entity_id
               << " translating_vx=" << translating_support_velocity.x
