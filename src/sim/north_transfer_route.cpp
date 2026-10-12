@@ -116,8 +116,8 @@ void build_north_transfer_route(kit::Kit &kit) {
                          (header_start + header_end) * .5F,
                          Quat::sRotation(Vec3::sAxisZ(), angle), Material::Steel});
     // Plates meet the rear of the real grip, clear of the hanging capsule.
-    box({-19.20F, 431.05F, -127.78F}, {-18.97F, 431.67F, -127.45F});
-    box({-15.73F, 431.05F, -127.78F}, {-15.50F, 431.67F, -127.45F});
+    box({-19.20F, 431.05F, -127.665F}, {-18.97F, 431.67F, -127.45F});
+    box({-15.73F, 431.05F, -127.665F}, {-15.50F, 431.67F, -127.45F});
     upper_mount(-18.9F, -127.7F, 431.70F);
     upper_mount(-15.5F, -127.7F, 431.70F);
 

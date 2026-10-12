@@ -554,9 +554,21 @@ jobs:
           timeout 300s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \
             --script res://tests/kit_route_render_test.gd -- --kit-route=touch_cargo_net \
+            --net-hour=8 "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/net-day" \
             2>&1 | tee artifacts/kit-route-render.log
           grep -F "SCRAPERX_KIT_ROUTE_DRAW pose=cargo_net_climbing" artifacts/kit-route-render.log
           grep -F "SCRAPERX_UITEST PASS touch_cargo_net" artifacts/kit-route-render.log
+          timeout 300s xvfb-run -a -s "-screen 0 432x371x24" \
+            tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \
+            --script res://tests/kit_route_render_test.gd -- --kit-route=touch_cargo_net \
+            --net-hour=20 "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/net-night" \
+            2>&1 | tee artifacts/kit-route-render-night.log
+          grep -F "SCRAPERX_UITEST PASS touch_cargo_net" artifacts/kit-route-render-night.log
+          for hour in day night; do
+            for pose in cargo_net_entry cargo_net_climbing cargo_net_receiver cargo_net_first_ring; do
+              test -s "artifacts/screenshots/net-${hour}_${pose}.png"
+            done
+          done
           timeout 180s xvfb-run -a -s "-screen 0 432x371x24" \
             tools/godot/godot --fixed-fps 60 --path godot --rendering-method gl_compatibility \
             --script res://tests/kit_mechanism_render_test.gd \
@@ -564,7 +576,8 @@ jobs:
           grep -F "SCRAPERX_KIT_MECHANISM PASS mode=shackle" artifacts/kit-mechanism-shackle.log
           if grep -E "SCRIPT ERROR|Parse Error|KIT_(VIEW|ROUTE_RENDER|MECHANISM) FAIL" \
               artifacts/kit-view-normal.log artifacts/kit-view-fixtures.log \
-              artifacts/kit-route-render.log artifacts/kit-mechanism-shackle.log; then exit 1; fi
+              artifacts/kit-route-render.log artifacts/kit-route-render-night.log \
+              artifacts/kit-mechanism-shackle.log; then exit 1; fi
           # One invocation covers resource validity and all36 recorded takes/
           # phases through the actual controller and limiter.
           timeout 180s xvfb-run -a -s "-screen 0 192x164x24" \

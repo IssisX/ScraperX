@@ -1,0 +1,26 @@
+{
+  "combined": {
+    "local_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/combined-upper-integration/receipt.json",
+    "sha256": "b9cbe706b1801d53a1a6a00ad161efdb04e9406a05be84dfdd82e373dcb3acda"
+  },
+  "inspection": {
+    "local_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/inspection-catch-closeout/closeout-receipt.json",
+    "sha256": "a5939789f48b5a5e8fc8dbd165524eb6f30d33e5e93dcccc93c945baa9c4d70d"
+  },
+  "duct": {
+    "local_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/module3-native/native-duct-batch/batch-receipt.json",
+    "sha256": "c809facbbc1686a24192de66ffc43bff0f45e282f391506f9cee6d85218e0e92"
+  },
+  "net_runtime": {
+    "local_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-connected66-l1j5k0b8/net-before-runtime/receipt.json",
+    "sha256": "af0b7f6cd0b4c8f255c294eba42ec7972ea3b42956e9fc69b515a5cc4a4db5c9"
+  },
+  "native_archive_sha256": "7ad2420221c6492a45308195461c0b846fe4832f8cad3fb34b9c7a058a8ffe40",
+  "shipping_source_sha256": {
+    "src/sim/west_brace_bay_route.cpp": "77a5ddb7cca8a5d025b3fc3976d36867c24e7458ef8d4ae6726793d965eb4292",
+    "src/sim/north_transfer_route.cpp": "6d2011c3203a7447e89fa1777436e240464e49fca3c1f788fb3af10fb9eef725",
+    "tests/ascent_route_tests.cpp": "06aa696afa0050493f9cb963cd3d359dbdeb48c1ba4ea0e83944d617e1c76f2b",
+    "tests/swing_stair_route_tests.cpp": "22343b542c80230834cb69e035bca114a9fb47314a160998af2873ee5d69bfc9",
+    "tests/inspection_junction_route_tests.cpp": "91ca83c72fd44f95045922f989b2c00807175dba5cb70be229e4decbddb1e5ad"
+  }
+}

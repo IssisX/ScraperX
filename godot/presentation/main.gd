@@ -280,6 +280,7 @@ var _native: Object
 var _capture_path := ""
 var _capture_scheduled := false
 var _ci_mode := false
+var _settings_persistent := true
 var _yaw := 0.0
 var _pitch := -0.02
 var _landing_camera := LandingCameraResponse.new()
@@ -708,7 +709,7 @@ func _ci_observe() -> void:
 
 func _build_interface() -> void:
 	_settings = SettingsStore.new()
-	_settings.persistent = not _ci_mode and _uitest_scenario.is_empty()
+	_settings.persistent = _settings_persistent and not _ci_mode and _uitest_scenario.is_empty()
 	_settings.load_from_disk()
 	var hud_layer: CanvasLayer = $HUD
 	_hud = Hud.new()

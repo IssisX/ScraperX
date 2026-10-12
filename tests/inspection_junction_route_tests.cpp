@@ -153,7 +153,9 @@ void cross_hanger(Simulation &s) {
     walk(s, -16.65, -128.2, "left_transom_runup");
     require(footing(s.snapshot(), kFrame, 407.9), "run-up has actual407 platform contact", s);
     begin_phase(s, "jump_catch2935");
-    require(s.set_facing(1, 0) && s.set_move_input(.55, 0) && s.request_jump(),
+    // A slight outboard approach exposes the real bar beside the thick arm.
+    // Both hands must still find their own unobstructed native grip leaves.
+    require(s.set_facing(1, 0) && s.set_move_input(.55, -.12) && s.request_jump(),
             "ordinary rising Jump toward hanger accepted", s);
     bool action_sent = false, caught = false;
     for (int i = 0; i < 110; ++i) {

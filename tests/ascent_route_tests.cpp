@@ -124,6 +124,9 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
         return false;
     }
     (void)simulation.advance_frame(0.3);
+    // Establish actual finite-servo motion before measuring the existing
+    // steady shimmy speed window; the preceding passive hang is retained.
+    (void)hold_stick(simulation, 1, 0, 0, -1, .8, [](const Snapshot &) { return false; });
     const double hang_x = simulation.snapshot().player_position.x;
     (void)hold_stick(simulation, 1, 0, 0, -1, .5, [](const Snapshot &) { return false; });
     const auto shimmy = simulation.snapshot();
@@ -131,6 +134,8 @@ bool climb_facade(scraperx::sim::Simulation &simulation) {
         shimmy.player_position.x - hang_x < .27 || shimmy.player_position.x - hang_x > .33) {
         report(simulation, "duct shimmy"); return false;
     }
+    // Return over the same additional lead-in distance using real hand input.
+    (void)hold_stick(simulation, -1, 0, 0, -1, .8, [](const Snapshot &) { return false; });
     (void)hold_stick(simulation, -1, 0, 0, -1, .5, [](const Snapshot &) { return false; });
     (void)simulation.request_jump();
     if (!wait_for(simulation, 4.0, [](const Snapshot &state) { return standing_above(state, 17.0); })) {

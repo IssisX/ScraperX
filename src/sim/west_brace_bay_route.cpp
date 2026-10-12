@@ -157,11 +157,11 @@ void build_west_brace_bay_route(kit::Kit &kit) {
 
     // Real collision-backed attachment shoes close the hand-line load paths.
     // Keep them below the receiving footing, away from the pull-up corridor.
-    structure.push_back(span({-24.36F, 381.45F, -137.90F},
-                             {-24.08F, 381.70F, -137.45F}, Material::Steel));
+    structure.push_back(span({-24.265F, 380.85F, -137.90F},
+                             {-24.08F, 381.90F, -137.45F}, Material::Steel));
     structure.push_back(span({-24.55F, 389.05F, -138.58F},
                              {-24.25F, 389.20F, -138.14F}, Material::Steel));
-    structure.push_back(span({-24.36F, 395.78F, -139.18F},
+    structure.push_back(span({-24.265F, 395.78F, -139.18F},
                              {-24.08F, 396.02F, -138.82F}, Material::Steel));
 
     // Mount the transverse bar through folded end brackets at the frame posts,
