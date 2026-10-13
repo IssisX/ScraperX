@@ -738,6 +738,15 @@ func _update_foot_transfer(state: Dictionary, position: Vector3, deaths: int) ->
 	_play(_surface(support, position.y), lerpf(-15.0, -9.0, weight), 1.0)
 
 
+# A brief positional rope/frame response to an observed native catch episode.
+# Uses the existing creak bank; it grants no work or physical reaction.
+func catch_net_strain(at: Vector3, approach_speed_mps: float) -> void:
+	if not at.is_finite() or not is_finite(approach_speed_mps) or approach_speed_mps <= 5.0:
+		return
+	var strength := clampf(approach_speed_mps / 28.0, 0.25, 1.0)
+	_play_at(&"creak", at, lerpf(-14.0, -3.0, strength), lerpf(0.85, 0.65, strength))
+
+
 func climb_regrip(at: Vector3, initial_grasp: bool = false) -> void:
 	climb_regrips += 1
 	last_climb_regrip_position = at

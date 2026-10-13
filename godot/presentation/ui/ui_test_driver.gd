@@ -4225,12 +4225,12 @@ func _ground_foundation() -> bool:
 	var moving_count := int(_native().get_moving_body_count())
 	var kit_count := int(_native().get_kit_body_count())
 	var cable_count := int(_native().get_kit_cable_count())
-	if moving_count != 27 + 9 + 17 + 103 + 8 + 1 + 12 or kit_count != 38 + 12 + 39 + 109 + 14 + 2 + 1 + 4 + 12 + 1 + 1 or cable_count != 3 + 3 + 1:
+	if moving_count != 27 + 9 + 17 + 103 + 8 + 1 + 12 + 2 or kit_count != 38 + 12 + 39 + 109 + 14 + 2 + 1 + 4 + 12 + 1 + 1 + 2 or cable_count != 3 + 3 + 1:
 		return _fail("default inventory differs: moving=%d kit=%d cables=%d" % [moving_count, kit_count, cable_count])
 	# Reject compensating omissions/duplicates in the appended assemblies.
 	# Native route headers own these identifiers; 1962 is a logical plank
 	# member, while 1937 is its actual static seat.
-	for entity in [1934, 1935, 1936, 1937, 2935, 1938, 1939] + range(2880, 2892):
+	for entity in [1934, 1935, 1936, 1937, 2935, 1938, 1939, 1963, 1964, 2963] + range(2880, 2892):
 		if int(_native().get_entity_body_count(entity)) != 1:
 			return _fail("appended native assembly body %d differs" % entity)
 	# Check actual scene nodes, independently of native enumeration. This also

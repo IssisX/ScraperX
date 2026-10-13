@@ -1,0 +1,9 @@
+{
+  "exit_code": 0,
+  "seconds": 1.4918605731800199,
+  "source_unchanged": true,
+  "native_archive_sha256": "5696210dce4a01f3e54eec5ec821b40083f1ff315b06d148eafff0e3913dd611",
+  "jolt_sha256": "c0d4993849ffa638b25efcce3b0e5f62b385eebe21e7656f62b77f06011efcb1",
+  "scope": "link/build proof only; actual native exit still running",
+  "bridge_sha256": "b1b4dbe3129d082d80c68be0147811b430116616b663e2cc7848c823747528cc"
+}

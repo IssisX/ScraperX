@@ -1,0 +1,23 @@
+{
+  "outcome": "catch asleep during all measured ticks; earlier higher cost unresolved",
+  "source_fence_verified": true,
+  "net_active_ticks": 0,
+  "frame_active_ticks": 0,
+  "catch_internal_callback_calls": 0,
+  "samples": 360,
+  "warmup": 720,
+  "catch_observed_elapsed_ms_per_tick": 0.013214,
+  "cargo_observed_elapsed_ms_per_tick": 0.019014999999999997,
+  "timer_calibration_ns": 95.807,
+  "total_cpu_median_ms": 10.987508,
+  "total_wall_median_ms": 7.371928,
+  "older_candidate_cpu_median_ms": 40.225153,
+  "older_candidate_wall_median_ms": 26.398385,
+  "next_discriminator": "Root may rerun existing uninstrumented candidate720 in quiet to separate host-condition variability from instrumentation-induced settling or compile/layout differences; not run here.",
+  "limitations": [
+    "Instrumented object has unchanged mechanics but can alter scheduling/compiler layout.",
+    "No paired uninstrumented contemporary comparison.",
+    "Elapsed region sums are not process CPU contributions.",
+    "Host/proot only; no device90Hz claim."
+  ]
+}

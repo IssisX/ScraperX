@@ -6,10 +6,13 @@ extends Node3D
 const KIT_PART_FLOATS := 13
 const KIT_CABLE_SEGMENTS := 4
 const RefractoryMaterial := preload("res://presentation/materials/refractory_material.gd")
+const NativeCatchNetView := preload("res://presentation/native_catch_net_view.gd")
 const PlankWoodShader := preload("res://presentation/plank_wood.gdshader")
 
 var _native: Object
 var _create_sign: Callable
+var _catch_net_view: Node3D
+var _catch_frame_steel: StandardMaterial3D
 var _cargo_net_mesh: Node3D
 var _cargo_net_indices := PackedInt32Array()
 var _cargo_net_material: StandardMaterial3D
@@ -517,6 +520,93 @@ func _inspection_practicals(node: Node3D) -> void:
 		node.add_child(light)
 
 
+# Decoration lies flush on the native finite frame/treads and inherits its pose.
+# One tread-paint batch + one lamp-face batch; no new supporting geometry.
+func _catch_net_practicals(frame: Node3D, parts: PackedFloat32Array, paint: Material) -> void:
+	var marks := SurfaceTool.new()
+	marks.begin(Mesh.PRIMITIVE_TRIANGLES)
+	marks.set_material(paint)
+	var mark_count := 0
+	var posts: Array[Transform3D] = []
+	var post_extents: Array[Vector3] = []
+	for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
+		if int(parts[p + 11]) != 0:
+			continue
+		var half := Vector3(parts[p], parts[p + 1], parts[p + 2])
+		var local := Transform3D(Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
+			Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
+		if int(parts[p + 10]) == 5 and half.y <= 0.06:
+			# Widen the painted nosing to 100 mm for LOW-resolution readability.
+			# It stays flush on the descending edge of each actual tread.
+			var corners: Array[Vector3] = [
+				Vector3(-half.x, half.y + 0.0005, -half.z + 0.04),
+				Vector3(-half.x + 0.10, half.y + 0.0005, -half.z + 0.04),
+				Vector3(-half.x + 0.10, half.y + 0.0005, half.z - 0.04),
+				Vector3(-half.x, half.y + 0.0005, half.z - 0.04)]
+			for i in [0, 2, 1, 0, 3, 2]:
+				marks.set_normal(local.basis * Vector3.UP)
+				marks.add_vertex(local * corners[i])
+			mark_count += 1
+		elif int(parts[p + 10]) == 1 and half.y > 1.0 and half.x < 0.25 and half.z < 0.25:
+			posts.append(local)
+			post_extents.append(half)
+	if mark_count > 0:
+		var marking := MeshInstance3D.new()
+		marking.name = "CatchNetTreadEdges"
+		marking.mesh = marks.commit()
+		marking.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		frame.add_child(marking)
+	if posts.size() < 2:
+		return
+	# Select the two western real posts next to the staircase, from native parts.
+	var west := INF
+	for post in posts:
+		west = minf(west, post.origin.x)
+	var mounts: Array[Transform3D] = []
+	for i in posts.size():
+		if absf(posts[i].origin.x - west) > 0.01 or mounts.size() == 2:
+			continue
+		var half := post_extents[i]
+		var face := Transform3D(Basis(Vector3.UP, -PI / 2.0),
+			Vector3(-half.x - 0.0005, half.y - 0.3, 0))
+		mounts.append(posts[i] * face)
+	if mounts.is_empty():
+		return
+	var glow := StandardMaterial3D.new()
+	glow.albedo_color = Color("e4c59b")
+	glow.roughness = 0.68
+	glow.emission_enabled = true
+	glow.emission = Color("ffdda0")
+	glow.emission_energy_multiplier = 1.2
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.20, 0.28)
+	quad.material = glow
+	var faces := MultiMesh.new()
+	faces.transform_format = MultiMesh.TRANSFORM_3D
+	faces.mesh = quad
+	faces.instance_count = mounts.size()
+	var lamps := MultiMeshInstance3D.new()
+	lamps.name = "CatchNetLampFaces"
+	lamps.multimesh = faces
+	lamps.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	lamps.visibility_range_end = 35.0
+	frame.add_child(lamps)
+	for i in mounts.size():
+		faces.set_instance_transform(i, mounts[i])
+		var light := OmniLight3D.new()
+		light.name = "CatchNetPractical%d" % i
+		light.position = mounts[i].origin
+		light.light_color = Color("ffcf8e")
+		light.light_energy = 1.0
+		light.omni_range = 7.0
+		light.omni_attenuation = 2.0
+		light.shadow_enabled = false
+		light.distance_fade_enabled = true
+		light.distance_fade_begin = 25.0
+		light.distance_fade_length = 10.0
+		frame.add_child(light)
+
+
 func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 	for body in int(_native.get_kit_body_count()):
 		var entity := int(_native.get_kit_body_entity_id(body))
@@ -539,6 +629,14 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 		if int(_native.get_kit_body_entity_id(body)) == 2562:
 			_create_sign.call("UP · VENT TO NEXT DECK\nCLIMB · HOLD FORWARD", Vector3(24.0, 28.2, -123.34), 0.0, 0.10, Color("e7c67c"), node)
 		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
+		if entity == 2963 and _catch_frame_steel == null:
+			# Retain the shared steel bump/UV resource and one steel batch.
+			# A weathered grey finish distinguishes the finite load-bearing rim
+			# and clips from the warm rope without relying on glossy highlights.
+			_catch_frame_steel = palette[0].duplicate() as StandardMaterial3D
+			_catch_frame_steel.albedo_color = Color("687174")
+			_catch_frame_steel.metallic = 0.35
+			_catch_frame_steel.roughness = 0.78
 		# Parts on one rigid body share a pose. Batch their triangles by
 		# material once, instead of submitting every tread/rung separately.
 		# This retains the native shapes, local poses, UVs and tube bores.
@@ -550,6 +648,8 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 				material_index, palette[material_index])
 			material = _inspection_part_material(entity, material_index, material)
 			material = _plank_part_material(entity, material_index, material)
+			if entity == 2963 and material_index == 0:
+				material = _catch_frame_steel
 			var local := Transform3D(
 				Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
@@ -622,6 +722,8 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 			if int(String(key).get_slice("/", 0)) == RefractoryMaterial.NATIVE_MATERIAL_INDEX:
 				RefractoryMaterial.apply_to(instance, int(_native.get_kit_body_material_key(body)))
 			node.add_child(instance)
+		if entity == 2963:
+			_catch_net_practicals(node, parts, palette[7])
 		if entity == 1932:
 			_inspection_practicals(node)
 		if entity in [1935, 1936, 1938, 1939, 2935]:
@@ -734,6 +836,10 @@ func _build_kit(palette: Array[Material], cable_material: Material) -> void:
 	_cargo_net_indices = _native.get_cargo_net_indices()
 	if not _cargo_net_indices.is_empty():
 		_build_cargo_net()
+	_catch_net_view = NativeCatchNetView.new()
+	_catch_net_view.name = "NativeSoftCatchNet"
+	add_child(_catch_net_view)
+	_catch_net_view.setup(_native, _cargo_net_material)
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
 	cable.material = cable_material
@@ -906,6 +1012,8 @@ func _update_cargo_net() -> void:
 # A disabled native body is hidden without replacing its physical state.
 func _render_kit() -> void:
 	_update_cargo_net()
+	if _catch_net_view != null:
+		_catch_net_view.render_view()
 	if _native == null:
 		return
 	for body in _kit_bodies.size():

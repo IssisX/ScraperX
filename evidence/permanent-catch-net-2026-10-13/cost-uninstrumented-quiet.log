@@ -1,0 +1,5 @@
+init_cpu_ms=147.399951 init_wall_ms=152.883333
+warmup=720 cpu_ms=27469.685707 wall_ms=15868.476713
+cpu median_ms=11.814894 p95_ms=12.383124 max_ms=16.547924 mean_ms=11.921194
+wall median_ms=7.923073 p95_ms=9.306302 max_ms=12.649896 mean_ms=8.074559
+fixed_step_seconds=0.011111111111 samples=360 warmup=720 scope=neutral_grade_host_not_phone

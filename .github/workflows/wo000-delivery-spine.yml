@@ -88,26 +88,28 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_physical_foot_push_tests scraperx_wood_foot_push_player_tests scraperx_pipe_service_route_tests scraperx_north_transfer_route_tests scraperx_inspection_junction_route_tests scraperx_deformable_plank_tests scraperx_deformable_plank_player_tests scraperx_west_brace_bay_route_tests scraperx_taper_inspection_route_tests scraperx_gravity_cart_integration_tests scraperx_mechanism_hull_tests scraperx_gravity_reclaim_route_tests scraperx_supplied_machine_route_tests scraperx_service_lift_physics_tests scraperx_service_lift_route_tests scraperx_physical_hand_climb_tests scraperx_physical_traversal_tests scraperx_leather_pouch_tests scraperx_suspended_ladder_tests scraperx_cargo_net_tests scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
+          cmake --build build/host --target scraperx_catch_net_model_tests scraperx_catch_net_player_tests scraperx_physical_foot_push_tests scraperx_wood_foot_push_player_tests scraperx_pipe_service_route_tests scraperx_north_transfer_route_tests scraperx_inspection_junction_route_tests scraperx_deformable_plank_tests scraperx_deformable_plank_player_tests scraperx_west_brace_bay_route_tests scraperx_taper_inspection_route_tests scraperx_gravity_cart_integration_tests scraperx_mechanism_hull_tests scraperx_gravity_reclaim_route_tests scraperx_supplied_machine_route_tests scraperx_service_lift_physics_tests scraperx_service_lift_route_tests scraperx_physical_hand_climb_tests scraperx_physical_traversal_tests scraperx_leather_pouch_tests scraperx_suspended_ladder_tests scraperx_cargo_net_tests scraperx_sim_tests scraperx_slingshot_model_tests scraperx_slingshot_machine_tests scraperx_launcher_tests scraperx_landing_tests scraperx_ascent_route_tests scraperx_swing_stair_route_tests scraperx_parkour_flow_tests scraperx_pipe_bridge_tests scraperx_pipe_bridge_refinement scraperx_teeter_route_tests scraperx_teeter_physics_tests scraperx_braced_bay_tests scraperx_north_service_frame_tests scraperx_native --parallel 2
           # Exercise the whole required suite so one build captures every native failure.
-          if ! ctest --test-dir build/host --output-on-failure --test-output-size-passed 2147483647 \
+          if ! ctest --test-dir build/host --parallel 2 --output-on-failure --test-output-size-passed 2147483647 \
               --output-junit "${GITHUB_WORKSPACE}/artifacts/native-tests.xml" | tee artifacts/native-tests.log; then
             # The public run page exposes annotations even when its raw logs
-            # are unavailable. Keep the exact failing test and nearby output.
+            # are unavailable. Use named JUnit cases; parallel console output may interleave.
             python3 - <<'PY'
           from pathlib import Path
-          import re
-          lines = Path('artifacts/native-tests.log').read_text().splitlines()
-          failures = [i for i, line in enumerate(lines) if '***Failed' in line or '***Timeout' in line]
-          for index in failures[:4]:
-              end = next((i for i in range(index + 1, len(lines))
-                          if re.match(r'^\s*Start\s+\d+:', lines[i])), len(lines))
-              message = '\n'.join(lines[max(0, index - 1):index + 1] + lines[max(index + 1, end - 16):end])
+          import xml.etree.ElementTree as ET
+          try:
+              cases = list(ET.parse('artifacts/native-tests.xml').getroot().iter('testcase'))
+          except (OSError, ET.ParseError):
+              cases = []
+          failed = [case for case in cases if case.find('failure') is not None or case.find('error') is not None]
+          for case in failed[:4]:
+              details = [node.text or node.get('message', '') for node in case if node.tag in ('failure', 'error', 'system-out', 'system-err')]
+              message = case.get('name', 'unknown') + '\n' + '\n'.join('\n'.join(details).splitlines()[-16:])
               escaped = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
               print(f'::error title=Native test failure::{escaped}')
-          if not failures:
-              tail = '\n'.join(lines[-15:])
-              escaped = tail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          if not failed:
+              lines = Path('artifacts/native-tests.log').read_text().splitlines()
+              escaped = '\n'.join(lines[-15:]).replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
               print(f'::error title=Native test gate failure::{escaped}')
           PY
             exit 1
@@ -125,6 +127,17 @@ jobs:
               if name in cases:
                   raise SystemExit(f'Duplicate CTest result: {name}')
               cases[name] = case
+          if len(cases) != 67:
+              raise SystemExit(f'Expected 67 unique CTest results, got {len(cases)}')
+          for name, case in cases.items():
+              if case.attrib.get('status') != 'run' or any(
+                      case.find(tag) is not None for tag in ('failure', 'error', 'skipped')):
+                  raise SystemExit(f'Unsuccessful CTest result: {name}')
+          for suffix in ('catch_net_model', 'catch_net_force_phase',
+                         'catch_net_contact_friction', 'catch_net_player'):
+              name = 'scraperx_sim.' + suffix
+              if name not in cases:
+                  raise SystemExit(f'Missing required CTest result: {name}')
           logs = {
               'taper-inspection-native.log': ['taper_inspection_route'],
               'parkour-flow.log': ['parkour_flow'],
@@ -429,7 +442,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=177 kit_bodies=233 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim ground foundation: retired_bodies=0 moving_bodies=179 kit_bodies=235 locomotion=1 crouch=1 jump=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim rejected fallback absent: tower_bodies=385" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim oblique close pull-up: ledge=6 mantle=1" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim default checkpoint: death_restore=1 retired_respawn=0" artifacts/native-falsifiers.log
@@ -440,7 +453,7 @@ jobs:
             tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
             -- --uitest=ground_foundation "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/foundation" \
             2>&1 | tee artifacts/godot-foundation.log
-          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=177 kit_bodies=233 cables=7 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
+          grep -F "SCRAPERX_UITEST PASS ground_foundation retired_bodies=0 moving_bodies=179 kit_bodies=235 cables=7 retired_meshes=0 rejected_fallback_meshes=0 default_controls=1" artifacts/godot-foundation.log
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-foundation.log; then exit 1; fi
 
       - name: Historical pipe bridge fixture - ordinary input and native material state
@@ -661,6 +674,28 @@ jobs:
             2>&1 | tee artifacts/fixture-solids-export.log
           diff -u tests/fixtures/world_solids.inc artifacts/fixture_solids.regenerated.inc
 
+      - name: Prove physical catch, ordinary exit and day/night native presentation
+        id: godot_proof_15
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          for hour in 8 20; do
+            profile_args=()
+            if [[ "$hour" == 8 ]]; then profile_args+=(--profile-catch); fi
+            timeout 480s xvfb-run -a -s "-screen 0 432x371x24" \
+              tools/godot/godot --path godot --rendering-method gl_compatibility \
+              --script res://tests/catch_net_test.gd -- --render "--catch-hour=${hour}" "${profile_args[@]}" \
+              "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/catch-${hour}" \
+              2>&1 | tee "artifacts/catch-${hour}.log"
+            grep -F "SCRAPERX_CATCH_NET PASS" "artifacts/catch-${hour}.log"
+            if [[ "$hour" == 8 ]]; then grep -F "SCRAPERX_CATCH_NET_PROFILE" "artifacts/catch-${hour}.log"; fi
+            if grep -E "SCRIPT ERROR|Parse Error|SCRAPERX_CATCH_NET FAIL" "artifacts/catch-${hour}.log"; then exit 1; fi
+            for pose in catch_entry catch_loaded catch_rebound catch_exit; do
+              test -s "artifacts/screenshots/catch-${hour}_${pose}.png"
+            done
+          done
+
       - name: Require every Godot proof before Android export
         shell: bash
         env:
@@ -680,6 +715,7 @@ jobs:
             godot_proof_12=${{ steps.godot_proof_12.outcome }}
             godot_proof_13=${{ steps.godot_proof_13.outcome }}
             godot_proof_14=${{ steps.godot_proof_14.outcome }}
+            godot_proof_15=${{ steps.godot_proof_15.outcome }}
         run: |
           set -euo pipefail
           failed=0
@@ -691,7 +727,7 @@ jobs:
               failed=1
             fi
           done
-          test "${count}" -eq 15
+          test "${count}" -eq 16
           test "${failed}" -eq 0
 
       - name: Cross-compile native graph for Android arm64

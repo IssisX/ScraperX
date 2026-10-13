@@ -336,6 +336,9 @@ var _crouch_toggled := false
 var _crouch_toggle_from_hang := false
 var _fb_traversal := 0
 var _fb_swinging := false
+var _catch_net_feedback_serial := -1
+var _catch_net_feedback_deaths := -1
+var _catch_net_feedback_cooldown := 0.0
 var _fb_landing_count := -1
 var _fb_landing_tick := -1
 var _fb_foot_transfer_count := -1
@@ -1626,6 +1629,19 @@ func _update_feedback(delta: float) -> void:
 	_grip_attached_right = right_attached
 	_grip_feedback_tick = grip_tick
 	_grip_feedback_deaths = deaths
+	# Contact generations consume quiet/death/rewind samples too. A steady
+	# loaded mesh cannot retrigger the short rope response every render frame.
+	_catch_net_feedback_cooldown = maxf(0.0, _catch_net_feedback_cooldown - delta)
+	var catch_state: Dictionary = _native.get_catch_net_state()
+	var catch_serial := int(catch_state.get("contact_serial", 0))
+	if _catch_net_feedback_serial >= 0 and catch_serial > _catch_net_feedback_serial \
+			and deaths == _catch_net_feedback_deaths and _catch_net_feedback_cooldown <= 0.0:
+		var approach := float(catch_state.get("approach_speed_mps", 0.0))
+		if approach > 5.0 and is_finite(approach) and bool(catch_state.get("installed", false)):
+			_audio.catch_net_strain(_native.get_player_position() - Vector3.UP * STAND_HALF_HEIGHT, approach)
+			_catch_net_feedback_cooldown = 0.8
+	_catch_net_feedback_serial = catch_serial
+	_catch_net_feedback_deaths = deaths
 	var grounded: bool = _ctx["grounded"]
 	var velocity: Vector3 = _ctx["velocity"]
 	var lethal: float = _ctx["lethal"]

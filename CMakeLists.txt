@@ -32,6 +32,7 @@ add_library(scraperx_sim STATIC
     src/sim/facade_route.cpp
     src/sim/cargo_net_route.cpp
     src/sim/cargo_net.cpp
+    src/sim/catch_net_route.cpp
     src/sim/suspended_ladder.cpp
     src/sim/service_lift.cpp
     src/sim/gravity_wheel_geometry.cpp
@@ -81,14 +82,35 @@ if(SCRAPERX_WITH_JOLT)
     set(JPH_USE_MTL OFF CACHE BOOL "" FORCE)
     set(JPH_USE_CPU_COMPUTE OFF CACHE BOOL "" FORCE)
 
+    find_package(Git REQUIRED)
+    set(scraperx_jolt_patch_command
+        ${CMAKE_COMMAND}
+        "-DJOLT_SOURCE=<SOURCE_DIR>"
+        "-DJOLT_PATCH=${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/jolt-passive-soft-attachments.patch"
+        "-DJOLT_PATCH_MANIFEST=${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/jolt-passive-soft-attachments.hashes.cmake"
+        "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ApplyJoltPatch.cmake")
     FetchContent_Declare(
         jolt
         GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
         GIT_TAG ${SCRAPERX_JOLT_COMMIT}
         GIT_SHALLOW FALSE
         SOURCE_SUBDIR Build
+        PATCH_COMMAND ${scraperx_jolt_patch_command}
     )
     FetchContent_MakeAvailable(jolt)
+    # Source overrides bypass population/patch commands. Verify those and
+    # every reconfigure as well, before any native compilation can start.
+    execute_process(COMMAND ${CMAKE_COMMAND}
+        "-DJOLT_SOURCE=${jolt_SOURCE_DIR}"
+        "-DJOLT_PATCH=${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/jolt-passive-soft-attachments.patch"
+        "-DJOLT_PATCH_MANIFEST=${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/jolt-passive-soft-attachments.hashes.cmake"
+        "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ApplyJoltPatch.cmake"
+        RESULT_VARIABLE scraperx_jolt_patch_result)
+    if(NOT scraperx_jolt_patch_result EQUAL 0)
+        message(FATAL_ERROR "Pinned Jolt attachment patch verification failed")
+    endif()
     set_target_properties(Jolt PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(scraperx_sim PUBLIC Jolt)
     target_compile_definitions(scraperx_sim PUBLIC SCRAPERX_HAS_JOLT=1)
@@ -165,6 +187,15 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_test(NAME scraperx_sim.cargo_net_ground_route COMMAND scraperx_cargo_net_tests)
     add_test(NAME scraperx_sim.material_hanging_posture
              COMMAND scraperx_cargo_net_tests material_posture)
+    add_executable(scraperx_catch_net_model_tests tests/catch_net_model_tests.cpp)
+    target_link_libraries(scraperx_catch_net_model_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.catch_net_model COMMAND scraperx_catch_net_model_tests)
+    add_test(NAME scraperx_sim.catch_net_force_phase COMMAND scraperx_catch_net_model_tests force)
+    add_test(NAME scraperx_sim.catch_net_contact_friction COMMAND scraperx_catch_net_model_tests friction)
+    add_executable(scraperx_catch_net_player_tests tests/catch_net_player_tests.cpp)
+    target_link_libraries(scraperx_catch_net_player_tests PRIVATE scraperx_sim)
+    add_test(NAME scraperx_sim.catch_net_player COMMAND scraperx_catch_net_player_tests)
+
     add_executable(scraperx_leather_pouch_tests tests/leather_pouch_tests.cpp)
     target_link_libraries(scraperx_leather_pouch_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.leather_pouch COMMAND scraperx_leather_pouch_tests)

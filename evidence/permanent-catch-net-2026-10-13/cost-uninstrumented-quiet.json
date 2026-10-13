@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "/data/data/com.termux/files/usr/bin/proot-distro",
+    "login",
+    "ubuntu",
+    "--shared-tmp",
+    "--",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-current-cost/cost-20261013T064946213713Z/candidate",
+    "720"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 20.085280179977417,
+  "unchanged_binary_sha256": "e85c6010a2fbf68560605cf4ce837275bd2fa13b4f12e9ba876f33d5cca45663",
+  "stdout": "/data/data/com.termux/files/usr/tmp/scraperx-catch-cost-discriminator-20261013/uninstrumented-720.stdout.log",
+  "stderr": "/data/data/com.termux/files/usr/tmp/scraperx-catch-cost-discriminator-20261013/uninstrumented-720.stderr.log",
+  "instrumentation": false
+}

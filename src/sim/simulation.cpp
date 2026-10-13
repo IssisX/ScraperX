@@ -11,6 +11,7 @@
 #include "sim/north_service_frame.hpp"
 #include "sim/facade_route.hpp"
 #include "sim/cargo_net_route.hpp"
+#include "sim/catch_net_route.hpp"
 #include "sim/cargo_net.hpp"
 #include "sim/physical_hand_climb.hpp"
 #include "sim/physical_foot_push.hpp"
@@ -52,6 +53,8 @@
 #include <Jolt/Physics/Constraints/PulleyConstraint.h>
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/SoftBody/SoftBodyContactListener.h>
+#include <Jolt/Physics/SoftBody/SoftBodyManifold.h>
 #include <Jolt/RegisterTypes.h>
 
 #include <algorithm>
@@ -1274,10 +1277,11 @@ struct SupportSample final {
     float approach_normal_speed = 0.0F;
     float approach_tangent_speed = 0.0F;
     JPH::BodyID body_id;
+    JPH::Vec3 soft_material = JPH::Vec3::sZero();
 };
 
 [[nodiscard]] bool entity_is_causal_section_support(std::uint64_t entity) noexcept {
-    return scraperx::sim::is_parkour_route_entity(entity) || scraperx::sim::SuppliedAscent::owns_support(entity) || scraperx::sim::ServiceLift::owns_support(entity) || entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
+    return entity == scraperx::sim::kCatchNetEntity || entity == scraperx::sim::kCatchNetFrameEntity || scraperx::sim::is_parkour_route_entity(entity) || scraperx::sim::SuppliedAscent::owns_support(entity) || scraperx::sim::ServiceLift::owns_support(entity) || entity==scraperx::sim::kCargoGantryEntity || entity==2954 ||
         scraperx::sim::is_facade_route_entity(entity) ||
         scraperx::sim::is_deformable_plank_segment_entity(entity) ||
         entity == scraperx::sim::kDeformablePlankSeatEntity;
@@ -1327,6 +1331,14 @@ public:
         sample_ = {};
         impact_sample_ = {};
         reclaim_sample_={};
+        unlock();
+    }
+
+    void begin_collision_step() noexcept {
+        lock();
+        // Stance belongs to the current substep; impact_sample_ retains the
+        // strongest rigid strike across the entire tick for consequences.
+        sample_ = {};
         unlock();
     }
 
@@ -1553,6 +1565,38 @@ private:
     std::uint64_t reclaim_first_=0,reclaim_last_=0;
     std::atomic<std::uint64_t> carried_entity_{0};
     scraperx::sim::Slingshot *slingshot_ = nullptr;
+};
+
+// Callback only copies supplied soft manifold data. All player reads, material
+// sampling and support decisions happen on the simulation owner after Update.
+class PlayerSoftContactListener final : public JPH::SoftBodyContactListener {
+public:
+    struct Contact { JPH::BodyID soft, other; std::uint64_t entity; std::uint32_t vertex;
+        JPH::RVec3 point; JPH::Vec3 normal; };
+    void set_player(JPH::BodyID player) noexcept { player_ = player; }
+    void begin_tick() { std::lock_guard<std::mutex> guard(mutex_); contacts_.clear(); touched_ = false; }
+    void begin_collision_step() { std::lock_guard<std::mutex> guard(mutex_); contacts_.clear(); }
+    std::vector<Contact> contacts() const { std::lock_guard<std::mutex> guard(mutex_); return contacts_; }
+    bool catch_touched() const { std::lock_guard<std::mutex> guard(mutex_); return touched_; }
+    void OnSoftBodyContactAdded(const JPH::Body &soft, const JPH::SoftBodyManifold &manifold) override {
+        const auto transform = soft.GetCenterOfMassTransform();
+        std::lock_guard<std::mutex> guard(mutex_);
+        std::uint32_t index = 0;
+        for (const auto &vertex : manifold.GetVertices()) {
+            if (manifold.HasContact(vertex) && manifold.GetContactBodyID(vertex) == player_) {
+                contacts_.push_back({soft.GetID(), player_, soft.GetUserData(), index,
+                    transform * manifold.GetLocalContactPoint(vertex),
+                    transform.Multiply3x3(manifold.GetContactNormal(vertex))});
+                if (soft.GetUserData() == scraperx::sim::kCatchNetEntity) touched_ = true;
+            }
+            ++index;
+        }
+    }
+private:
+    mutable std::mutex mutex_;
+    JPH::BodyID player_;
+    std::vector<Contact> contacts_;
+    bool touched_ = false;
 };
 
 [[nodiscard]] JPH::RVec3 spawn_position(const scraperx::sim::InitialSpawn spawn) noexcept {
@@ -1835,6 +1879,13 @@ namespace scraperx::sim {
 
 class Simulation::PhysicsWorld final : private JPH::PhysicsStepListener {
     struct MachineCheckpoint;
+    // Published by the simulation owner before Update and read-only throughout
+    // native soft-contact jobs. The context lives until both nets are destroyed.
+    struct SoftFootPolicy final {
+        JPH::BodyID player;
+        float half_height = kPlayerHalfHeight;
+        bool passive = false;
+    };
 
 public:
     explicit PhysicsWorld(const InitialSpawn initial_spawn, const WorldContent content)
@@ -2000,6 +2051,7 @@ public:
         if (content == WorldContent::Slingshot)
             player_settings.mMotionQuality = JPH::EMotionQuality::LinearCast;
         player_id_ = bodies.CreateAndAddBody(player_settings, JPH::EActivation::Activate);
+        soft_foot_policy_.player = player_id_;
 
         // Built last, so every body before it keeps the id it had: the ascent
         // routes proven against them are contact-order sensitive.
@@ -2030,6 +2082,7 @@ public:
             if (content == WorldContent::Slingshot) {
                 const auto frame=build_cargo_net_route(*kit_);
                 cargo_net_ = std::make_unique<CargoNet>(physics_system_, object_layers::kMoving,kit_->body_id(frame));
+                cargo_net_->set_contact_friction_callback(&soft_foot_contact_friction, &soft_foot_policy_);
                 build_suspended_ladder(*kit_);
                 service_lift_ = std::make_unique<ServiceLift>(physics_system_, *kit_);
                 supplied_ascent_ = std::make_unique<SuppliedAscent>(physics_system_, *kit_);
@@ -2050,12 +2103,22 @@ public:
             }
         }
 
+        // Append after retained bodies, preserving every existing contact ID.
+        if (cargo_net_) {
+            const auto frame = build_catch_net_route(*kit_);
+            catch_net_ = std::make_unique<CargoNet>(physics_system_, object_layers::kMoving,
+                kit_->body_id(frame), catch_net_config());
+            catch_net_->set_contact_friction_callback(&soft_foot_contact_friction, &soft_foot_policy_);
+        }
+        soft_contact_listener_.set_player(player_id_);
+        physics_system_.SetSoftBodyContactListener(&soft_contact_listener_);
         physical_hands_ = std::make_unique<PhysicalHandClimb>(physics_system_, player_id_, cargo_net_.get());
         physical_foot_push_ = std::make_unique<PhysicalFootPush>(physics_system_, player_id_);
         if (slingshot_) physics_system_.AddStepListener(this);
         contact_listener_.set_slingshot(slingshot_.get());
         physics_system_.OptimizeBroadPhase();
 
+        clear_catch_history();
         checkpoint_position_ = JPH::RVec3(0.0, 0.9, 0.0);
         commit_machine_checkpoint(bodies);
 
@@ -2064,9 +2127,12 @@ public:
 
     ~PhysicsWorld() {
         if (slingshot_) physics_system_.RemoveStepListener(this);
+        if (cargo_net_) cargo_net_->set_contact_friction_callback(nullptr, nullptr);
+        if (catch_net_) catch_net_->set_contact_friction_callback(nullptr, nullptr);
         physical_foot_push_.reset();
         physical_hands_.reset();
         physics_system_.SetContactListener(nullptr);
+        physics_system_.SetSoftBodyContactListener(nullptr);
         // Dynamically-owned pins (track_for_teardown=false) are never in
         // machine_constraints_, so the loop below cannot reach them -- remove
         // whichever of them are currently seated before it runs.
@@ -2086,6 +2152,7 @@ public:
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
         }
+        catch_net_.reset();
         cargo_net_.reset();
         upper_ascent_.reset();
         swing_stair_.reset();
@@ -2166,7 +2233,10 @@ public:
         // concurrently; serial dispatch keeps hand forces and launcher reads ordered.
         kit_->begin_weld_step(context.mDeltaTime);
         if (deformable_plank_) deformable_plank_->begin_collision_step(context.mDeltaTime);
+        contact_listener_.begin_collision_step();
+        soft_contact_listener_.begin_collision_step();
         if (cargo_net_) cargo_net_->pre_step(context.mDeltaTime);
+        if (catch_net_) catch_net_->pre_step(context.mDeltaTime);
         physical_hands_->pre_step(context.mDeltaTime, true);
         physical_foot_push_->pre_step(context.mDeltaTime,
             deformable_plank_ && !crouched_ &&
@@ -2182,6 +2252,7 @@ public:
         // WO-008: captured before anything this tick can change grounded_, so
         // it means exactly "was the player standing on something one tick ago."
         const bool was_grounded_before_tick = grounded_;
+        const bool was_soft_grounded_before_tick = grounded_ && net_for_body(support_sample_.body_id);
         const auto foot_transfers_before_tick = state_.foot_transfer_count;
         const auto traversal_before_commands = traversal_state_;
         foot_push_started_this_tick_ = false;
@@ -2275,6 +2346,7 @@ public:
             traversal_state_ != TraversalState::None) ordinary_jump_ticks_left_ = 0;
         if (traversal_state_ != TraversalState::None || carry_constraint_ != nullptr)
             physical_foot_push_->clear();
+        publish_soft_foot_policy(commands);
         bool jump_started = false;
         if (!sling_controlling && traversal_state_ == TraversalState::None) {
             if (slingshot_flight_ && !grounded_) {
@@ -2370,6 +2442,7 @@ public:
             service_lift_->pre_step(reachable ? static_cast<float>(commands.service_lift_input) : 0.0F);
         }
         contact_listener_.begin_tick();
+        soft_contact_listener_.begin_tick();
         if (!slingshot_) kit_->begin_weld_step(delta_seconds);
         if (!landing_applied_force_.IsNearZero()) {
             // Ordinary step handling may prescribe a pose before solving.
@@ -2377,15 +2450,26 @@ public:
             landing_force_start_ = bodies.GetCenterOfMassPosition(player_id_);
             landing_force_support_start_ = JPH::RVec3(support_sample_.contact_point.x,
                 support_sample_.contact_point.y, support_sample_.contact_point.z);
-            landing_force_support_local_point_ = bodies.GetCenterOfMassTransform(landing_force_support_id_).Inversed() *
-                landing_force_support_start_;
+            if (const auto *net = net_for_body(landing_force_support_id_)) {
+                landing_force_support_local_point_ = support_sample_.soft_material;
+                landing_force_support_start_ = net->world_point(landing_force_support_local_point_);
+            } else landing_force_support_local_point_ = to_support_local(bodies, landing_force_support_id_,
+                landing_force_support_start_);
         }
         // Late contextual catches can start after ordinary locomotion. Remove
         // the leg before either hand/launcher authority solves this tick.
         if (traversal_state_ != TraversalState::None || physical_hands_->active() ||
             carry_constraint_ != nullptr || sling_controlling)
             physical_foot_push_->clear();
+        // Hands/foot actions can acquire authority after locomotion. Only
+        // tighten the published mode here: a consumed Jump must not re-enable
+        // passive friction in the same tick as its push-off impulse.
+        soft_foot_policy_.passive = soft_foot_policy_.passive && !jump_started &&
+            passive_soft_feet_requested(commands);
+        soft_foot_policy_.half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
         physics_system_.Update(delta_seconds, slingshot_ ? 4 : 1, &temp_allocator_, &job_system_);
+        if (cargo_net_) cargo_net_->refresh();
+        if (catch_net_) catch_net_->refresh();
         kit_->finish_weld_steps();
         if (deformable_plank_) deformable_plank_->finish_collision_steps();
         physical_foot_push_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
@@ -2395,8 +2479,8 @@ public:
             physical_foot_push_->clear(PhysicalFootPush::StopReason::MaterialFaceLost);
         physical_hands_->post_step(delta_seconds / (slingshot_ ? 4.0F : 1.0F));
         if (!landing_applied_force_.IsNearZero()) {
-            const auto support_point_now = bodies.GetCenterOfMassTransform(landing_force_support_id_) *
-                                           landing_force_support_local_point_;
+            const auto support_point_now = from_support_local(bodies, landing_force_support_id_,
+                landing_force_support_local_point_);
             const auto displacement = JPH::Vec3(bodies.GetCenterOfMassPosition(player_id_) - landing_force_start_) -
                                       JPH::Vec3(support_point_now - landing_force_support_start_);
             landing_recovery_work_j_ += std::max(0.0F, landing_applied_force_.Dot(displacement));
@@ -2405,7 +2489,6 @@ public:
         if (supplied_ascent_) supplied_ascent_->post_step();
         kit_->post_step(delta_seconds);
         if (slingshot_) slingshot_->post_step(delta_seconds);
-        if (cargo_net_) cargo_net_->refresh();
 
         const auto reclaim=contact_listener_.reclaim_impact();
         if(reclaim.speed>0){++state_.reclaim_impact_count;state_.reclaim_impact_speed_mps=reclaim.speed;
@@ -2417,6 +2500,10 @@ public:
         state_.reclaim_break_force_n = fracture.force_n;
         state_.reclaim_break_torque_nm = fracture.torque_nm;
         SupportSample support = contact_listener_.sample();
+        const auto soft_support = observe_soft_support(bodies);
+        // Actual current rigid footing wins at the rim; soft support only fills
+        // an absent rigid stance. Rigid impact processing below is independent.
+        if (!support.grounded && soft_support.grounded) support = soft_support;
         if ((jump_started && !foot_push_started_this_tick_) ||
             (traversal_state_ != TraversalState::None && !physical_hands_->active())) {
             support = {};
@@ -2436,20 +2523,32 @@ public:
         // always sets a support-relative landing velocity first -- so no
         // separate traversal exemption is needed.
         bool died_this_tick = false;
-        if (grounded_ && !was_grounded_before_tick &&
-            (traversal_state_ == TraversalState::None || physical_hands_->active()) &&
-            !jump_started) {
-            const auto impact = slingshot_ ? contact_listener_.impact_sample() : support;
-            if (slingshot_ && !sling_controlling) record_landing(bodies, impact, commands.crouch_held);
-            last_impact_speed_mps_ = slingshot_ ? impact.approach_normal_speed : pre_contact_fall_speed_mps_;
-            if (last_impact_speed_mps_ > kLethalImpactSpeedMps) {
-                restore_from_checkpoint(bodies);
-                died_this_tick = true;
-            }
+        const auto rigid_impact = contact_listener_.impact_sample();
+        const bool ordinary_landing = grounded_ && !was_grounded_before_tick &&
+            (traversal_state_ == TraversalState::None || physical_hands_->active()) && !jump_started;
+        // Resolve actual upward rigid strikes even when cloth already owns the
+        // stance. Support priority can never suppress a lethal rim/bottom hit.
+        const bool rigid_strike = slingshot_ && rigid_impact.grounded && !sling_controlling &&
+            (ordinary_landing || (was_soft_grounded_before_tick && rigid_impact.approach_normal_speed > .5F));
+        if (rigid_strike) {
+            record_landing(bodies, rigid_impact, commands.crouch_held);
+            last_impact_speed_mps_ = rigid_impact.approach_normal_speed;
+        } else if (ordinary_landing && !slingshot_) {
+            last_impact_speed_mps_ = pre_contact_fall_speed_mps_;
+        }
+        measure_catch_load(rider_velocity_before, delta_seconds, bodies, soft_support);
+        if (catch_net_) catch_net_->post_step(delta_seconds, soft_contact_listener_.catch_touched());
+        const bool lethal_rigid = slingshot_ ?
+            rigid_impact.grounded && rigid_impact.approach_normal_speed > kLethalImpactSpeedMps :
+            ordinary_landing && last_impact_speed_mps_ > kLethalImpactSpeedMps;
+        if (lethal_rigid || catch_net_state_.overloaded) {
+            restore_from_checkpoint(bodies);
+            died_this_tick = true;
         }
         state_.checkpoint_footing_valid = !died_this_tick && grounded_ &&
             traversal_state_ == TraversalState::None && footing_is_firm(bodies);
         if (state_.checkpoint_footing_valid && !physical_foot_push_->active()) {
+            catch_episode_active_ = false;
             commit_checkpoint(bodies);
         }
         if (grounded_) {
@@ -2494,6 +2593,8 @@ public:
     }
 
     [[nodiscard]] const CargoNet *cargo_net() const noexcept { return cargo_net_.get(); }
+    [[nodiscard]] const CargoNet *catch_net() const noexcept { return catch_net_.get(); }
+    [[nodiscard]] CatchNetSnapshot catch_net_state() const noexcept { return catch_net_state_; }
 
     [[nodiscard]] RenderHandAnchor render_hand_anchor(const std::uint32_t hand) const noexcept {
         RenderHandAnchor result;
@@ -2550,10 +2651,12 @@ public:
         release_carry();
         clear_traversal();
         crouched_ = false;
+        reset_soft_foot_policy();
         bodies.SetShape(player_id_, player_shape_.GetPtr(), false, JPH::EActivation::Activate);
         bodies.SetPositionAndRotation(player_id_, destination, JPH::Quat::sIdentity(), JPH::EActivation::Activate);
         bodies.SetLinearAndAngularVelocity(player_id_, JPH::Vec3::sZero(), JPH::Vec3::sZero());
         rider_specific_acceleration_ = JPH::Vec3::sZero();
+        clear_catch_history();
         grounded_ = false;
         state_.checkpoint_footing_valid = false;
         air_control_force_ = JPH::Vec3::sZero();
@@ -2738,6 +2841,8 @@ private:
     }
 
     [[nodiscard]] JPH::BodyID body_id_for_entity(const std::uint64_t entity_id) const noexcept {
+        if (cargo_net_ && entity_id == cargo_net_->config().entity) return cargo_net_->body();
+        if (catch_net_ && entity_id == catch_net_->config().entity) return catch_net_->body();
         switch (entity_id) {
         case Simulation::kStaticDeckEntityId:
             return deck_id_;
@@ -4733,13 +4838,190 @@ private:
         grate_safe_ = grate_safe;
     }
 
+    [[nodiscard]] CargoNet *net_for_body(JPH::BodyID id) const noexcept {
+        if (cargo_net_ && id == cargo_net_->body()) return cargo_net_.get();
+        if (catch_net_ && id == catch_net_->body()) return catch_net_.get();
+        return nullptr;
+    }
+    [[nodiscard]] JPH::Vec3 support_point_velocity(const JPH::BodyInterface &bodies,
+        JPH::BodyID id, JPH::RVec3 point) const noexcept {
+        if (const auto *net = net_for_body(id)) return net->material_velocity(support_material(*net, id, point));
+        return bodies.GetPointVelocity(id, point);
+    }
+    [[nodiscard]] JPH::Vec3 support_material(const CargoNet &net, JPH::BodyID id,
+        JPH::RVec3 point) const noexcept {
+        const JPH::RVec3 contact(support_sample_.contact_point.x, support_sample_.contact_point.y,
+            support_sample_.contact_point.z);
+        if (support_sample_.grounded && id == support_sample_.body_id &&
+            JPH::Vec3(point - contact).LengthSq() < .0001F) return support_sample_.soft_material;
+        return net.material_point(point);
+    }
+    [[nodiscard]] JPH::Vec3 support_traction_normal() const noexcept {
+        const auto cap = JPH::Vec3(float(support_sample_.normal.x), float(support_sample_.normal.y),
+            float(support_sample_.normal.z));
+        const auto *net = net_for_body(support_sample_.body_id);
+        if (!net || !support_sample_.grounded) return cap;
+        const auto material = support_sample_.soft_material;
+        constexpr float epsilon = .01F; // 5 mm at the ordinary .5 m mesh pitch
+        const float u0 = std::max(0.0F, material.GetX() - epsilon);
+        const float u1 = std::min(float(net->columns() - 1), material.GetX() + epsilon);
+        const float v0 = std::max(0.0F, material.GetY() - epsilon);
+        const float v1 = std::min(float(net->rows() - 1), material.GetY() + epsilon);
+        const auto du = JPH::Vec3(net->world_point(JPH::Vec3(u1, material.GetY(), material.GetZ())) -
+            net->world_point(JPH::Vec3(u0, material.GetY(), material.GetZ())));
+        const auto dv = JPH::Vec3(net->world_point(JPH::Vec3(material.GetX(), v1, material.GetZ())) -
+            net->world_point(JPH::Vec3(material.GetX(), v0, material.GetZ())));
+        auto normal = du.Cross(dv);
+        if (!std::isfinite(normal.LengthSq()) || normal.LengthSq() <= 1.0e-12F) return cap;
+        normal = normal.Normalized();
+        if (normal.Dot(cap) < 0) normal = -normal;
+        // Only traction uses this frame on the existing material receiver.
+        // Actual Jolt contact, cap normal, gap and departure still own stance.
+        // A vertical cloth keeps its existing contact basis and hand behavior.
+        return normal.GetY() > .25F ? normal : cap;
+    }
+    void clear_catch_history() noexcept {
+        soft_contact_listener_.begin_tick();
+        contact_listener_.begin_tick();
+        catch_net_state_ = {};
+        state_.soft_side_contact_entity = 0;
+        catch_contact_previous_ = false;
+        catch_episode_active_ = false;
+        if (catch_net_) {
+            catch_net_state_.installed = true;
+            catch_net_state_.columns = catch_net_->columns();
+            catch_net_state_.rows = catch_net_->rows();
+            refresh_catch_geometry();
+        }
+    }
+    void refresh_catch_geometry() noexcept {
+        if (!catch_net_ || catch_net_->vertices().empty()) return;
+        double minimum = std::numeric_limits<double>::max();
+        for (const auto &v : catch_net_->vertices()) minimum = std::min(minimum, double(v.GetY()));
+        catch_net_state_.minimum_y_m = minimum;
+        catch_net_state_.sag_m = std::max(0.0, double(catch_net_->config().origin.GetY()) - minimum);
+    }
+    [[nodiscard]] static bool contact_on_bottom_capsule_cap(const JPH::Vec3 delta,
+                                                           const float half) noexcept {
+        return delta.GetY() <= -(half - kPlayerRadius) && delta.GetY() >= -half - .20F &&
+            delta.GetX()*delta.GetX()+delta.GetZ()*delta.GetZ() <=
+                (kPlayerRadius+.15F)*(kPlayerRadius+.15F);
+    }
+    [[nodiscard]] bool passive_soft_feet_requested(const StepCommands &commands) const noexcept {
+        return std::hypot(commands.move_input_x, commands.move_input_z) <= .001 &&
+            !commands.jump_requested && !commands.traversal_requested &&
+            ordinary_jump_ticks_left_ == 0 && traversal_state_ == TraversalState::None &&
+            !physical_hands_->active() && !physical_foot_push_->active() &&
+            !foot_push_started_this_tick_ && !cargo_transfer_active_ && cargo_push_seconds_ < 0 &&
+            carry_constraint_ == nullptr && !(slingshot_ && slingshot_->controls_player());
+    }
+    void publish_soft_foot_policy(const StepCommands &commands) noexcept {
+        soft_foot_policy_.half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+        soft_foot_policy_.passive = passive_soft_feet_requested(commands);
+    }
+    void reset_soft_foot_policy() noexcept {
+        soft_foot_policy_.half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+        soft_foot_policy_.passive = false;
+    }
+    [[nodiscard]] static float soft_foot_contact_friction(void *context, const JPH::BodyID rigid,
+        const JPH::Vec3 rigid_local_contact, const JPH::Vec3 world_normal_toward_rigid,
+        const float original_friction) noexcept {
+        const auto &policy = *static_cast<const SoftFootPolicy *>(context);
+        // The capsule has locked rotation and a centred COM. Cached native
+        // contact coordinates therefore use the exact observed sole geometry.
+        // This grants friction only; support/Jump/checkpoint authority still
+        // requires the ordinary post-solve contact observation.
+        if (rigid == policy.player && policy.passive &&
+            world_normal_toward_rigid.GetY() >= kSupportNormalThreshold &&
+            contact_on_bottom_capsule_cap(rigid_local_contact, policy.half_height)) return .8F;
+        return original_friction;
+    }
+    [[nodiscard]] SupportSample observe_soft_support(const JPH::BodyInterface &bodies) const {
+        SupportSample best;
+        const auto centre = bodies.GetPosition(player_id_);
+        const float half = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+        const auto velocity = bodies.GetLinearVelocity(player_id_);
+        double best_distance = std::numeric_limits<double>::max();
+        for (const auto &contact : soft_contact_listener_.contacts()) {
+            auto *net = net_for_body(contact.soft);
+            if (!net || contact.normal.GetY() < kSupportNormalThreshold) continue;
+            const auto delta = JPH::Vec3(contact.point - centre);
+            // Contact is observed, current and on the bottom spherical cap.
+            // A side/underside plane cannot acquire standing or Jump authority.
+            if (!contact_on_bottom_capsule_cap(delta, half)) continue;
+            const auto material = net->material_point(contact.point);
+            const auto support_velocity = net->material_velocity(material);
+            const auto relative = velocity - support_velocity;
+            if (relative.Dot(contact.normal) > .75F) continue; // actual departure
+            const double distance = delta.LengthSq();
+            if (distance >= best_distance) continue;
+            best_distance = distance;
+            best.grounded = true; best.entity_id = contact.entity; best.body_id = contact.soft;
+            best.contact_point = {contact.point.GetX(),contact.point.GetY(),contact.point.GetZ()};
+            best.player_contact_point = best.contact_point;
+            best.soft_material = material;
+            best.point_velocity = {support_velocity.GetX(),support_velocity.GetY(),support_velocity.GetZ()};
+            best.normal_y = contact.normal.GetY();
+            best.normal = {contact.normal.GetX(),contact.normal.GetY(),contact.normal.GetZ()};
+            best.player_point_velocity = {velocity.GetX(),velocity.GetY(),velocity.GetZ()};
+        }
+        return best;
+    }
+    void measure_catch_load(JPH::Vec3 velocity_before, const float dt,
+        const JPH::BodyInterface &bodies, const SupportSample &soft_support) noexcept {
+        state_.soft_side_contact_entity = 0;
+        const auto centre = bodies.GetPosition(player_id_);
+        const float half = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+        for (const auto &contact : soft_contact_listener_.contacts()) {
+            if (net_for_body(contact.soft) && std::abs(contact.normal.GetY()) < .5F &&
+                std::abs(contact.point.GetY() - centre.GetY()) <= half - kPlayerRadius &&
+                (state_.soft_side_contact_entity == 0 || contact.entity < state_.soft_side_contact_entity))
+                state_.soft_side_contact_entity = contact.entity;
+        }
+        if (!catch_net_) return;
+        catch_net_state_.installed = true;
+        catch_net_state_.columns = catch_net_->columns(); catch_net_state_.rows = catch_net_->rows();
+        refresh_catch_geometry();
+        const bool current = soft_support.grounded && soft_support.entity_id == kCatchNetEntity;
+        catch_net_state_.current_contact = current;
+        catch_net_state_.side_contact = state_.soft_side_contact_entity == kCatchNetEntity;
+        if (current && !catch_contact_previous_) {
+            ++catch_net_state_.contact_serial;
+            // Cached tick incoming vertical speed: an approach estimate, not
+            // the unavailable per-vertex pre-solve relative velocity.
+            catch_net_state_.approach_speed_mps = std::max(0.0F, -velocity_before.GetY());
+        }
+        catch_contact_previous_ = current;
+        const bool touched = soft_contact_listener_.catch_touched();
+        const auto specific = (bodies.GetLinearVelocity(player_id_) - velocity_before) / dt - physics_system_.GetGravity();
+        catch_net_state_.total_specific_load_mps2 = touched ? specific.Length() : 0;
+        if (touched) {
+            if (!catch_episode_active_) {
+                catch_net_state_.peak_total_specific_load_mps2 = 0;
+                catch_net_state_.excess_load_dose_g_seconds = 0;
+                catch_net_state_.overloaded = false;
+                catch_episode_active_ = true;
+            }
+            const double load_g = specific.Length() / 9.81;
+            catch_net_state_.peak_total_specific_load_mps2 = std::max(
+                catch_net_state_.peak_total_specific_load_mps2, double(specific.Length()));
+            // CHOSEN reduced-order gameplay injury policy, not a clinical
+            // criterion or isolated net force. Integrate excess TOTAL load
+            // above 8g, units g*s, through one catch/rebound episode. Finite
+            // 35g peak / 6g*s dose calibrated against native player traces.
+            catch_net_state_.excess_load_dose_g_seconds += std::max(0.0, load_g - 8.0) * dt;
+            catch_net_state_.overloaded = catch_net_state_.overloaded || load_g > 35.0 ||
+                catch_net_state_.excess_load_dose_g_seconds > 6.0;
+        }
+    }
+
     [[nodiscard]] JPH::Vec3 current_support_point_velocity(
         const JPH::BodyInterface &bodies) const noexcept {
         const JPH::BodyID support_id = body_id_for_entity(support_entity_id_);
         if (support_id.IsInvalid()) {
             return JPH::Vec3::sZero();
         }
-        return bodies.GetPointVelocity(
+        return support_point_velocity(bodies,
             support_id,
             JPH::RVec3(support_sample_.contact_point.x,
                        support_sample_.contact_point.y,
@@ -4868,6 +5150,7 @@ private:
         if (deformable_plank_ &&
             deformable_plank_->logical_member_for_body(support_sample_.body_id) &&
             !deformable_plank_->fragment_supported(support_sample_.body_id)) return false;
+        if (net_for_body(support_sample_.body_id)) return false;
         const float half_height = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
         const float reach = half_height + kCheckpointFootingSlack;
         const JPH::RVec3 centre = bodies.GetPosition(player_id_);
@@ -4879,6 +5162,7 @@ private:
         if (!physics_system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter)) {
             return false;
         }
+        if (net_for_body(hit.mBodyID)) return false;
         const JPH::RVec3 point = ray.GetPointOnRay(hit.mFraction);
         const JPH::Vec3 normal = surface_normal(hit.mBodyID, hit.mSubShapeID2, point);
         if (normal.GetY() < kSupportNormalThreshold) return false;
@@ -5125,7 +5409,7 @@ private:
         if (body_id.IsInvalid()) {
             return JPH::Vec3(world_point);
         }
-        if (cargo_net_ && body_id == cargo_net_->body()) return cargo_net_->material_point(world_point);
+        if (const auto *net = net_for_body(body_id)) return net->material_point(world_point);
         return JPH::Vec3(bodies.GetCenterOfMassTransform(body_id).Inversed() * world_point);
     }
 
@@ -5135,7 +5419,7 @@ private:
         if (body_id.IsInvalid()) {
             return JPH::RVec3(local_point);
         }
-        if (cargo_net_ && body_id == cargo_net_->body()) return cargo_net_->world_point(local_point);
+        if (const auto *net = net_for_body(body_id)) return net->world_point(local_point);
         return bodies.GetCenterOfMassTransform(body_id) * JPH::RVec3(local_point);
     }
 
@@ -5596,7 +5880,7 @@ private:
         // it is not claimed as an isolated contact impulse or support loss.
         landing_observed_normal_impulse_ns_ = kPlayerMassKg * (after - before).Dot(normal);
         const JPH::RVec3 point(support.contact_point.x, support.contact_point.y, support.contact_point.z);
-        const auto relative = bodies.GetLinearVelocity(player_id_) - bodies.GetPointVelocity(support.body_id, point);
+        const auto relative = bodies.GetLinearVelocity(player_id_) - support_point_velocity(bodies, support.body_id, point);
         landing_slip_velocity_ = relative - normal * relative.Dot(normal);
         landing_recovery_duration_ = std::clamp(.08 + .045 * landing_normal_speed_mps_ +
             .06 * landing_slip_velocity_.Length(), .08, 2.0);
@@ -5634,16 +5918,23 @@ private:
                                     const float dt) noexcept {
         const auto support_id = support_sample_.body_id;
         if (support_id.IsInvalid() || dt <= 0) return;
+        if (soft_foot_policy_.passive && net_for_body(support_id)) {
+            // Native contact friction owns neutral soft feet. Do not also
+            // queue sampled servo braking, incline compensation or its reaction.
+            landing_applied_force_ = JPH::Vec3::sZero();
+            landing_force_support_id_ = JPH::BodyID();
+            return;
+        }
         const JPH::RVec3 point(support_sample_.contact_point.x, support_sample_.contact_point.y,
                               support_sample_.contact_point.z);
-        const JPH::Vec3 normal(float(support_sample_.normal.x), float(support_sample_.normal.y),
-                              float(support_sample_.normal.z));
-        const auto relative = bodies.GetLinearVelocity(player_id_) - bodies.GetPointVelocity(support_id, point);
+        const auto normal = support_traction_normal();
+        const auto relative = bodies.GetLinearVelocity(player_id_) - support_point_velocity(bodies, support_id, point);
         const auto slip = relative - normal * relative.Dot(normal);
         landing_slip_velocity_ = slip;
         correction -= normal * correction.Dot(normal);
-        // The capsule deliberately has zero solver friction (including walls).
-        // Supporting feet must oppose gravity along an incline as well as
+        // The capsule body coefficient stays zero (including walls). Passive
+        // soft feet returned above; powered feet and rigid supports use this
+        // reciprocal actuator to oppose gravity along an incline as well as
         // brake existing slip. Otherwise neutral intent has a downhill bias.
         // This is a reciprocal contact force, subject to the SAME finite
         // traction/work caps; it cannot hold an overloaded slope or missing
@@ -5655,7 +5946,9 @@ private:
         if (correction.Length() > traction_cap) correction *= traction_cap / correction.Length();
         bool dynamic_support = false;
         float effective_inverse_mass = 1.0F / kPlayerMassKg;
-        {
+        if (auto *net = net_for_body(support_id)) {
+            effective_inverse_mass += net->material_inverse_mass(support_material(*net, support_id, point));
+        } else {
             const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), support_id);
             dynamic_support = lock.Succeeded() && lock.GetBody().IsDynamic();
             if (dynamic_support && !correction.IsNearZero()) {
@@ -5684,7 +5977,8 @@ private:
             }
         }
         bodies.AddForce(player_id_, correction);
-        if (dynamic_support) bodies.AddForce(support_id, -correction, point);
+        if (auto *net = net_for_body(support_id)) net->force(support_material(*net, support_id, point), -correction, dt);
+        else if (dynamic_support) bodies.AddForce(support_id, -correction, point);
         landing_applied_force_ = correction;
         landing_force_support_id_ = support_id;
         if (slingshot_ && !correction.IsNearZero()) slingshot_->note_external_influence();
@@ -5696,9 +5990,8 @@ private:
         if (support_id.IsInvalid()) return;
         const JPH::RVec3 point(support_sample_.contact_point.x, support_sample_.contact_point.y,
                                support_sample_.contact_point.z);
-        const JPH::Vec3 normal(float(support_sample_.normal.x), float(support_sample_.normal.y),
-                               float(support_sample_.normal.z));
-        const auto support_velocity = bodies.GetPointVelocity(support_id, point);
+        const auto normal = support_traction_normal();
+        const auto support_velocity = support_point_velocity(bodies, support_id, point);
         const auto relative = bodies.GetLinearVelocity(player_id_) - support_velocity;
         const auto slip = relative - normal * relative.Dot(normal);
         landing_slip_velocity_ = slip;
@@ -5746,11 +6039,13 @@ private:
         if (!grounded_ || support_id.IsInvalid()) return false;
         const auto contact = JPH::RVec3(support_sample_.contact_point.x,
             support_sample_.contact_point.y, support_sample_.contact_point.z);
-        const auto support_velocity = bodies.GetPointVelocity(support_id, contact);
+        const auto support_velocity = support_point_velocity(bodies, support_id, contact);
         const auto before = bodies.GetLinearVelocity(player_id_);
         bool dynamic = false;
         double inverse_mass = 1.0 / kPlayerMassKg;
-        {
+        if (auto *net = net_for_body(support_id)) {
+            inverse_mass += net->material_inverse_mass(support_material(*net, support_id, contact));
+        } else {
             const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), support_id);
             if (!lock.Succeeded()) return false;
             const auto &support = lock.GetBody();
@@ -5782,7 +6077,8 @@ private:
             relative_y * delivered + 0.5 * inverse_mass * delivered * delivered :
             0.5 * inverse_mass * positive_part * positive_part;
         bodies.AddImpulse(player_id_, impulse);
-        if (dynamic) bodies.AddImpulse(support_id, -impulse, contact);
+        if (auto *net = net_for_body(support_id)) net->impulse(support_material(*net, support_id, contact), -impulse);
+        else if (dynamic) bodies.AddImpulse(support_id, -impulse, contact);
         airborne_inherited_velocity_ = support_velocity;
         const auto relative = before - support_velocity;
         air_full_speed_ = std::max(kPlayerMaximumRelativeSpeed,
@@ -5916,7 +6212,11 @@ private:
                 const auto support_id = support_sample_.body_id;
                 bool dynamic_support = false;
                 float inverse_mass = 1.0F / kPlayerMassKg;
-                {
+                const JPH::RVec3 contact(support_sample_.contact_point.x,
+                    support_sample_.contact_point.y, support_sample_.contact_point.z);
+                if (auto *net = net_for_body(support_id)) {
+                    inverse_mass += net->material_inverse_mass(support_material(*net, support_id, contact));
+                } else {
                     const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), support_id);
                     dynamic_support = lock.Succeeded() && lock.GetBody().IsDynamic();
                     if (dynamic_support) {
@@ -5956,8 +6256,8 @@ private:
                 landing_jump_work_j_ += relative_y >= 0 ?
                     relative_y * delivered + .5 * inverse_mass * delivered * delivered :
                     .5 * inverse_mass * positive_part * positive_part;
-                if (dynamic_support) bodies.AddImpulse(support_id, -impulse,
-                    JPH::RVec3(support_sample_.contact_point.x, support_sample_.contact_point.y, support_sample_.contact_point.z));
+                if (auto *net = net_for_body(support_id)) net->impulse(support_material(*net, support_id, contact), -impulse);
+                else if (dynamic_support) bodies.AddImpulse(support_id, -impulse, contact);
                 jump_takeoff_feet_y_ = float(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
                 jump_vault_ticks_left_ = kJumpVaultWindowTicks;
                 clear_landing_recovery();
@@ -6068,7 +6368,7 @@ private:
                      const float delta_seconds, const bool deliberate_step = false) {
         // The still-contacting finite leg already owns this push-off. A
         // separate step impulse must not stack its own vertical work on it.
-        if (physical_foot_push_->active()) return false;
+        if (physical_foot_push_->active() || net_for_body(support_sample_.body_id)) return false;
         const JPH::Vec3 horizontal(relative_velocity.GetX(), 0.0F, relative_velocity.GetZ());
         const float speed = horizontal.Length();
         if (speed < kStepMinimumSpeed) {
@@ -6134,7 +6434,7 @@ private:
             const auto contact=JPH::RVec3(support_sample_.contact_point.x,support_sample_.contact_point.y,
                                           support_sample_.contact_point.z);
             const auto support=support_sample_.body_id;
-            const auto relative=bodies.GetLinearVelocity(player_id_)-bodies.GetPointVelocity(support,contact);
+            const auto relative=bodies.GetLinearVelocity(player_id_)-support_point_velocity(bodies,support,contact);
             const float takeoff=std::sqrt(2.0F*-physics_system_.GetGravity().GetY()*(rise+0.08F));
             auto impulse=JPH::Vec3(0,kPlayerMassKg*std::max(0.0F,takeoff-relative.GetY()),0);
             float inverse=1.0F/kPlayerMassKg;
@@ -6722,14 +7022,6 @@ private:
         const JPH::RVec3 target =
             from_support_local(bodies, traversal_target_body_, traversal_local_target_);
         return support_point_velocity(bodies, traversal_target_body_, target);
-    }
-
-    [[nodiscard]] JPH::Vec3 support_point_velocity(
-        const JPH::BodyInterface &bodies, JPH::BodyID body, JPH::RVec3 point) const noexcept {
-        if (cargo_net_ && body == cargo_net_->body()) {
-            return cargo_net_->material_velocity(cargo_net_->material_point(point));
-        }
-        return bodies.GetPointVelocity(body, point);
     }
 
     void complete_traversal(JPH::BodyInterface &bodies) noexcept {
@@ -7533,7 +7825,7 @@ private:
                                      support_sample_.contact_point.z);
         const auto relative_velocity=bodies.GetLinearVelocity(player_id_)-
             (support_sample_.body_id.IsInvalid()?JPH::Vec3::sZero():
-             bodies.GetPointVelocity(support_sample_.body_id,contact));
+             support_point_velocity(bodies,support_sample_.body_id,contact));
         const double horizontal=std::hypot(landing.GetX()-actual.GetX(),landing.GetZ()-actual.GetZ());
         const auto ledge=from_support_local(bodies,traversal_body_,traversal_local_ledge_);
         // A rounded edge contact alone is not a stable top-out. Keep finite
@@ -7991,6 +8283,7 @@ private:
             if (swing_stair_) checkpoint.swing_stair = swing_stair_->state();
             if (upper_ascent_) checkpoint.upper_ascent = upper_ascent_->state();
             if (cargo_net_) checkpoint.cargo_net = cargo_net_->capture();
+            if (catch_net_) checkpoint.catch_net = catch_net_->capture();
             if (service_lift_) checkpoint.service_lift = service_lift_->state();
             if (supplied_ascent_) checkpoint.supplied_ascent = supplied_ascent_->capture();
             return;
@@ -8059,6 +8352,7 @@ private:
         // The capsule the checkpoint was committed in: a crouched commit's
         // centre is a crouched centre, and may sit under a low ceiling.
         crouched_ = checkpoint_crouched_;
+        reset_soft_foot_policy();
         bodies.SetShape(player_id_, active_player_shape(), false, JPH::EActivation::Activate);
         bodies.SetPositionAndRotation(player_id_, checkpoint_position_, JPH::Quat::sIdentity(),
                                       JPH::EActivation::Activate);
@@ -8109,6 +8403,8 @@ private:
         if (swing_stair_) swing_stair_->restore(checkpoint_.swing_stair);
         if (upper_ascent_) upper_ascent_->restore(checkpoint_.upper_ascent);
         if (cargo_net_) cargo_net_->restore(checkpoint_.cargo_net);
+        if (catch_net_) catch_net_->restore(checkpoint_.catch_net);
+        clear_catch_history();
         if (service_lift_) service_lift_->restore(checkpoint_.service_lift);
         if (supplied_ascent_) supplied_ascent_->restore(checkpoint_.supplied_ascent);
         JPH::Vec3 restored_transport = JPH::Vec3::sZero();
@@ -8613,8 +8909,7 @@ private:
             std::clamp(landing_recovery_seconds_ / landing_recovery_duration_, 0.0, 1.0) : 0;
         state_.landing_balance = 1.0 - landing_initial_balance_loss_ * recovery_ratio;
         if (slingshot_ && grounded_ && !support_sample_.body_id.IsInvalid()) {
-            const auto normal = JPH::Vec3(float(support_sample_.normal.x), float(support_sample_.normal.y),
-                                           float(support_sample_.normal.z));
+            const auto normal = support_traction_normal();
             const auto relative = bodies.GetLinearVelocity(player_id_) - current_support_point_velocity(bodies);
             landing_slip_velocity_ = relative - normal * relative.Dot(normal);
         }
@@ -8635,6 +8930,7 @@ private:
     JPH::PhysicsSystem physics_system_;
     const bool regression_fixtures_;
     PlayerContactListener contact_listener_;
+    PlayerSoftContactListener soft_contact_listener_;
     JPH::RefConst<JPH::Shape> player_shape_;
     JPH::RefConst<JPH::Shape> player_crouch_shape_;
     JPH::RefConst<JPH::Shape> grip_region_shape_;
@@ -8650,6 +8946,7 @@ private:
     JPH::BodyID blocked_ledge_canopy_id_;
     JPH::BodyID tower_id_;
     JPH::BodyID player_id_;
+    SoftFootPolicy soft_foot_policy_{};
 
     SteamPlant steam_plant_{};
     WaterScrew water_screw_{};
@@ -8702,6 +8999,10 @@ private:
     std::unique_ptr<SwingStair> swing_stair_;
     std::unique_ptr<UpperAscent> upper_ascent_;
     std::unique_ptr<CargoNet> cargo_net_;
+    std::unique_ptr<CargoNet> catch_net_;
+    CatchNetSnapshot catch_net_state_{};
+    bool catch_contact_previous_ = false;
+    bool catch_episode_active_ = false;
     std::unique_ptr<PhysicalHandClimb> physical_hands_;
     std::unique_ptr<PhysicalFootPush> physical_foot_push_;
     bool foot_push_started_this_tick_ = false;
@@ -8884,6 +9185,7 @@ private:
         SwingStair::State swing_stair{};
         UpperAscent::State upper_ascent{};
         std::string cargo_net;
+        std::string catch_net;
         ServiceLift::State service_lift{};
         SuppliedAscent::Checkpoint supplied_ascent{};
         DeformablePlank::State deformable_plank{};
@@ -9197,6 +9499,18 @@ std::vector<std::uint32_t> Simulation::cargo_net_indices() const {
     const auto *net=physics_world_->cargo_net();
     return net ? net->indices() : std::vector<std::uint32_t>{};
 }
+
+std::vector<Vector3> Simulation::catch_net_vertices(const double alpha) const {
+    std::vector<Vector3> out;
+    const auto *net = physics_world_->catch_net();
+    if (net) for (const auto &v : net->render_vertices(static_cast<float>(alpha))) out.push_back(to_vector3(v));
+    return out;
+}
+std::vector<std::uint32_t> Simulation::catch_net_indices() const {
+    const auto *net = physics_world_->catch_net();
+    return net ? net->indices() : std::vector<std::uint32_t>{};
+}
+CatchNetSnapshot Simulation::catch_net_state() const noexcept { return physics_world_->catch_net_state(); }
 
 std::uint32_t Simulation::kit_body_count() const noexcept {
     return physics_world_->kit().body_count();

@@ -1,0 +1,21 @@
+{
+  "exit_code": 0,
+  "pass_marker": true,
+  "elapsed_seconds": 65.68087830790319,
+  "before": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/catch_net_player_tests.cpp": "09f50b598cbfd6054b09e5b982f5dad496bb3811eecfb9c99ad0f2446d69cf20",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.cpp": "02d62fe94e7123755d9c02e6cbf47860ca85fd613c03c2fcc46e7e849ec410d7",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/native-build/libscraperx_sim.a": "5696210dce4a01f3e54eec5ec821b40083f1ff315b06d148eafff0e3913dd611",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/native-build/_deps/jolt-build/libJolt.a": "c0d4993849ffa638b25efcce3b0e5f62b385eebe21e7656f62b77f06011efcb1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/native-build/scraperx_catch_net_player_tests": "d42c8e7ebb1dccb0f1d9614ed2ea5aded2231112a25393f3dbb395e4dedcdbba"
+  },
+  "after": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/tests/catch_net_player_tests.cpp": "09f50b598cbfd6054b09e5b982f5dad496bb3811eecfb9c99ad0f2446d69cf20",
+    "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.cpp": "02d62fe94e7123755d9c02e6cbf47860ca85fd613c03c2fcc46e7e849ec410d7",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/native-build/libscraperx_sim.a": "5696210dce4a01f3e54eec5ec821b40083f1ff315b06d148eafff0e3913dd611",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/native-build/_deps/jolt-build/libJolt.a": "c0d4993849ffa638b25efcce3b0e5f62b385eebe21e7656f62b77f06011efcb1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/native-build/scraperx_catch_net_player_tests": "d42c8e7ebb1dccb0f1d9614ed2ea5aded2231112a25393f3dbb395e4dedcdbba"
+  },
+  "log_sha256": "b47990393ce21e113ef6c0c3d80bef39a18402ec4177fef71f4161d136f99058",
+  "scope": "Only physically sufficient40m spill fixture; production laws/assertions unchanged"
+}

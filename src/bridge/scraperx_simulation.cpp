@@ -383,6 +383,9 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_carry_target_kind);
     godot::ClassDB::bind_method(godot::D_METHOD("get_cargo_net_vertices"), &ScraperXSimulation::get_cargo_net_vertices);
     godot::ClassDB::bind_method(godot::D_METHOD("get_cargo_net_indices"), &ScraperXSimulation::get_cargo_net_indices);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_vertices"), &ScraperXSimulation::get_catch_net_vertices);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_indices"), &ScraperXSimulation::get_catch_net_indices);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_state"), &ScraperXSimulation::get_catch_net_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_count"),
                                 &ScraperXSimulation::get_kit_body_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_entity_id", "body"),
@@ -1325,6 +1328,35 @@ godot::PackedVector3Array ScraperXSimulation::get_cargo_net_vertices() const {
 godot::PackedInt32Array ScraperXSimulation::get_cargo_net_indices() const {
     godot::PackedInt32Array out;
     for(const auto i:simulation_->cargo_net_indices()) out.push_back(static_cast<std::int32_t>(i));
+    return out;
+}
+
+godot::PackedVector3Array ScraperXSimulation::get_catch_net_vertices() const {
+    godot::PackedVector3Array out;
+    for (const auto &v : simulation_->catch_net_vertices(simulation_->snapshot().interpolation_alpha))
+        out.push_back(godot::Vector3(v.x, v.y, v.z));
+    return out;
+}
+godot::PackedInt32Array ScraperXSimulation::get_catch_net_indices() const {
+    godot::PackedInt32Array out;
+    for (const auto i : simulation_->catch_net_indices()) out.push_back(static_cast<std::int32_t>(i));
+    return out;
+}
+godot::Dictionary ScraperXSimulation::get_catch_net_state() const {
+    const auto state = simulation_->catch_net_state();
+    godot::Dictionary out;
+    out["installed"] = state.installed;
+    out["current_contact"] = state.current_contact;
+    out["columns"] = static_cast<std::int64_t>(state.columns);
+    out["rows"] = static_cast<std::int64_t>(state.rows);
+    out["contact_serial"] = static_cast<std::int64_t>(state.contact_serial);
+    out["minimum_y_m"] = state.minimum_y_m;
+    out["sag_m"] = state.sag_m;
+    out["total_specific_load_mps2"] = state.total_specific_load_mps2;
+    out["peak_total_specific_load_mps2"] = state.peak_total_specific_load_mps2;
+    out["excess_load_dose_g_seconds"] = state.excess_load_dose_g_seconds;
+    out["approach_speed_mps"] = state.approach_speed_mps;
+    out["overloaded"] = state.overloaded;
     return out;
 }
 

@@ -1,0 +1,33 @@
+{
+  "scope": "authoring complete; runtime verification pending quiet-lane release and exact binding",
+  "head": "ace9b8c4822b872f3630279fbdbb7c641b04f901",
+  "branch": "ChatGPT",
+  "production_files_changed_in_this_assignment": [
+    "godot/presentation/kit_view.gd",
+    "godot/tests/catch_net_test.gd"
+  ],
+  "source_sha256": {
+    "godot/presentation/native_catch_net_view.gd": "f042d38d993ad5d41d79133dd2a72ec0de8fb2b9ffb8d2cd92b18bdf38f547b5",
+    "godot/presentation/kit_view.gd": "7edd8cf551bb7730a40802bc898ad1f4a1b186e984ef8b026aa2b89b9fc48bae",
+    "godot/presentation/main.gd": "fd7fe2d0c9cbfc2dc700d4b184b3364469ec0514a99763e81beb68344bc2625a",
+    "godot/tests/catch_net_test.gd": "7864f50c8bf97928cd1a9c32c140d264fa4bdf2830a1ce9a4eff44581138bb67"
+  },
+  "parent_count": 1,
+  "child_count": 0,
+  "effort": "caller verified fresh Sol/Medium parent, Standard; no live effort change/control; no child launch",
+  "quiet_lane_released": false,
+  "checks_run": [
+    "git diff --check (exit0)",
+    "authored diff inspected against assignment-start snapshots"
+  ],
+  "checks_not_run": [
+    "Godot parse/import/runtime",
+    "LOW day/night rendering/captures/profile",
+    "Android/phone"
+  ],
+  "bridge_observed_sha256": "c85a847046470fc8c2c5b272d6889d28d237f7d4420d14a3bec0ac2bd323ec37",
+  "expected_supplied_bridge_sha256": "b1b4dbe3129d082d80c68be0147811b430116616b663e2cc7848c823747528cc",
+  "bridge_binding_status": "observed private root file differs; root must identify intended exact current native/bridge binding before rendering",
+  "acceptance_preserved": "existing fall/rebound/settling/ordinary exit/onward/death/restart assertions untouched; adds exact16 paint marks/exact2 lamp faces and lights",
+  "next_action": "after quiet release stage these authored scripts with exact root-approved native/bridge; run existing CI catch harness hours8/20, real gl_compatibility, captures and day profile; inspect actual frames and rejecting logs"
+}

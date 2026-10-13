@@ -78,6 +78,10 @@ func _rigid_record(kit: Node3D) -> Array:
 			continue
 		var children: Array = []
 		for child in body.get_children():
+			# New frame paint is checked by the catch presentation test; retain
+			# independent native structural channels here.
+			if String(body.name) == "KitBody2963" and String(child.name) == "CatchNetTreadEdges":
+				continue
 			if child is MeshInstance3D:
 				var mesh := (child as MeshInstance3D).mesh
 				var surfaces: Array = []
@@ -438,7 +442,7 @@ func _check_upper_body(kit: Node3D, body: Array) -> void:
 		"upper body exists exactly once in native Kit " + name)
 	if index < 0:
 		return
-	var dynamic := entity == 2935 or entity in range(2880, 2892)
+	var dynamic := entity in [2935, 2963] or entity in range(2880, 2892)
 	_check(bool(native.is_kit_body_dynamic(index)) == dynamic, "upper static/dynamic ownership " + name)
 	var node := kit.get_node_or_null(name) as Node3D
 	_check(node != null, "upper body has render owner " + name)
@@ -619,6 +623,7 @@ func _run() -> void:
 			var added_cart: Array[String] = []
 			var added_taper: Array[String] = []
 			var added_upper: Array[String] = []
+			var added_catch: Array[String] = []
 			var expected_reclaim: Array[String] = []
 			# The new wheel is an explicit append-only migration. Preserve the
 			# old oracle and require every reserved body exactly once; do not
@@ -635,7 +640,10 @@ func _run() -> void:
 				# Appended AS-027 bodies have no pre-extraction counterpart.
 				# Keep every prior body in its original oracle; native pose/visibility
 				# checks below also cover each new moving assembly.
-				if body[0] in UPPER_BODIES:
+				if body[0] in ["KitBody1964", "KitBody2963"]:
+					added_catch.append(body[0])
+					_check_upper_body(kit, body)
+				elif body[0] in UPPER_BODIES:
 					added_upper.append(body[0])
 					_check_upper_body(kit, body)
 				elif body[0] in CART_BODIES:
@@ -686,6 +694,8 @@ func _run() -> void:
 				else:
 					actual_original.append(body)
 			_check_upper_inventory(added_upper)
+			added_catch.sort()
+			_check(added_catch == ["KitBody1964", "KitBody2963"], "both native catch foundations/frame render exactly once")
 			added_lift.sort()
 			_check(added_lift == LIFT_BODIES, "all twelve added lift assemblies render exactly once")
 			added_supplied.sort()

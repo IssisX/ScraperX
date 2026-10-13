@@ -1,0 +1,115 @@
+--- a/Jolt/Physics/SoftBody/SoftBodyMotionProperties.h
++++ b/Jolt/Physics/SoftBody/SoftBodyMotionProperties.h
+@@ -176,6 +176,35 @@
+ 	/// Update the velocities of all rigid bodies that we collided with. Not part of the public API.
+ 	void								UpdateRigidBodyVelocities(const SoftBodyUpdateContext &inContext, BodyInterface &inBodyInterface);
+ 
++	/// Optional external finite forces, integrated at every native soft-body substep.
++	/// Set only outside an update; the user data must outlive this motion object.
++	/// The iteration callback owns only this soft body's vertices and private state:
++	/// rigid bodies are read-only. Buffer reciprocal reactions until finalize, which
++	/// runs in the serialized rigid-velocity writeback phase, before native sleep.
++	/// Neither callbacks nor user data are serialized. Null callbacks preserve the
++	/// original integration path. Callbacks must not allocate or take body locks.
++	using ExternalForceIteration = void (*)(void *, float);
++	using ExternalForceFinalize = void (*)(void *, BodyInterface &);
++	void								SetExternalForceCallbacks(ExternalForceIteration inIteration, ExternalForceFinalize inFinalize, void *inUserData)
++	{
++		mExternalForceIteration = inIteration;
++		mExternalForceFinalize = inFinalize;
++		mExternalForceUserData = inUserData;
++	}
++
++	/// Optional per-vertex contact friction, from immutable current solver contact
++	/// and cached rigid state only. The point is rigid COM-local; the normal is
++	/// world-space toward the rigid body. Invalid returned coefficients fall back
++	/// to the original combined friction. Null preserves the original solver math.
++	/// Set only outside Update. Context must outlive this motion object. Callback
++	/// must not allocate, lock bodies or mutate physics. Neither field is serialized.
++	using ContactFrictionCallback = float (*)(void *, BodyID, Vec3, Vec3, float) noexcept;
++	void SetContactFrictionCallback(ContactFrictionCallback inCallback, void *inUserData)
++	{
++		mContactFrictionCallback = inCallback;
++		mContactFrictionUserData = inUserData;
++	}
++
+ 	/// Set a flag to indicate that the ContactListener::OnSoftBodyContactAdded should be called
+ 	inline void							RequestContactCallback()					{ mNeedContactCallback.store(true, memory_order_relaxed); }
+ 
+@@ -313,6 +342,11 @@
+ 	RMat44								mSkinStateTransform = RMat44::sIdentity();	///< The matrix that transforms mSkinState to world space
+ #endif // JPH_DEBUG_RENDERER
+ 
++	ContactFrictionCallback		mContactFrictionCallback = nullptr;
++	void *								mContactFrictionUserData = nullptr;
++	ExternalForceIteration			mExternalForceIteration = nullptr;
++	ExternalForceFinalize			mExternalForceFinalize = nullptr;
++	void *								mExternalForceUserData = nullptr;
+ 	RefConst<SoftBodySharedSettings>	mSettings;									///< Configuration of the particles and constraints
+ 	Array<Vertex>						mVertices;									///< Current state of all vertices in the simulation
+ 	Array<RodState>						mRodStates;									///< Current state of all rods in the simulation
+--- a/Jolt/Physics/SoftBody/SoftBodyMotionProperties.cpp
++++ b/Jolt/Physics/SoftBody/SoftBodyMotionProperties.cpp
+@@ -3,6 +3,7 @@
+ // SPDX-License-Identifier: MIT
+ 
+ #include <Jolt/Jolt.h>
++#include <cmath>
+ 
+ #include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
+ #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
+@@ -732,6 +733,16 @@
+ 					Vec3 contact_normal = v.mCollisionPlane.GetNormal();
+ 					v.mPosition += contact_normal * projected_distance;
+ 
++					float friction = cs.mFriction;
++					if (mContactFrictionCallback != nullptr)
++					{
++						Vec3 rigid_local_point = cs.mCenterOfMassTransform.InversedRotationTranslation() * v.mPosition;
++						Vec3 world_normal = -inContext.mCenterOfMassTransform.Multiply3x3(contact_normal);
++						float selected = mContactFrictionCallback(mContactFrictionUserData, cs.mBodyID, rigid_local_point, world_normal, cs.mFriction);
++						if (std::isfinite(selected) && selected >= 0.0f)
++							friction = selected;
++					}
++
+ 					// Apply friction as described in Detailed Rigid Body Simulation with Extended Position Based Dynamics - Matthias Muller et al.
+ 					// See section 3.6:
+ 					// Inverse mass: w1 = 1 / m1, w2 = 1 / m2 + (r2 x n)^T I^-1 (r2 x n) = 0 for a static object
+@@ -771,7 +782,7 @@
+ 							// Calculate delta relative velocity due to friction (modified equation 31)
+ 							Vec3 dv;
+ 							if (v_tangential_length > 0.0f)
+-								dv = v_tangential * min(cs.mFriction * projected_distance / (v_tangential_length * dt), 1.0f);
++								dv = v_tangential * min(friction * projected_distance / (v_tangential_length * dt), 1.0f);
+ 							else
+ 								dv = Vec3::sZero();
+ 
+@@ -806,7 +817,7 @@
+ 
+ 						// Apply friction (modified equation 31)
+ 						if (v_tangential_length > 0.0f)
+-							v.mVelocity -= v_tangential * min(cs.mFriction * projected_distance / (v_tangential_length * dt), 1.0f);
++							v.mVelocity -= v_tangential * min(friction * projected_distance / (v_tangential_length * dt), 1.0f);
+ 
+ 						// Apply restitution (equation 35)
+ 						v.mVelocity -= v_normal;
+@@ -929,6 +940,9 @@
+ 		if (cs.mUpdateVelocities)
+ 			inBodyInterface.AddLinearAndAngularVelocity(cs.mBodyID, inContext.mCenterOfMassTransform.Multiply3x3(cs.mLinearVelocity - cs.mOriginalLinearVelocity), inContext.mCenterOfMassTransform.Multiply3x3(cs.mAngularVelocity - cs.mOriginalAngularVelocity));
+ 
++	if (mExternalForceFinalize != nullptr)
++		mExternalForceFinalize(mExternalForceUserData, inBodyInterface);
++
+ 	// Clear colliding shapes/sensors to avoid hanging on to references to shapes
+ 	mCollidingShapes.clear();
+ 	mCollidingSensors.clear();
+@@ -962,6 +976,9 @@
+ void SoftBodyMotionProperties::StartNextIteration(const SoftBodyUpdateContext &ioContext)
+ {
+ 	ApplyPressure(ioContext);
++
++	if (mExternalForceIteration != nullptr)
++		mExternalForceIteration(mExternalForceUserData, ioContext.mSubStepDeltaTime);
+ 
+ 	IntegratePositions(ioContext);
+ }

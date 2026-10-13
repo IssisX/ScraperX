@@ -14,6 +14,26 @@ struct Vector3 final {
     double z = 0.0;
 };
 
+// Native readback. Specific load is TOTAL (delta velocity / dt - gravity),
+// including other contacts and actuators; Jolt exposes no solved soft impulse.
+struct CatchNetSnapshot final {
+    bool installed = false;
+    bool current_contact = false;
+    // Final substep contact readback at 90 Hz: |normal.y| < .5 and contact
+    // lies within the capsule's straight cylinder band. Observation only;
+    // this does not grant support, Jump or firm-footing authority.
+    bool side_contact = false;
+    std::uint32_t columns = 0, rows = 0;
+    std::uint64_t contact_serial = 0;
+    double minimum_y_m = 0;
+    double sag_m = 0;
+    double total_specific_load_mps2 = 0;
+    double peak_total_specific_load_mps2 = 0;
+    double excess_load_dose_g_seconds = 0;
+    double approach_speed_mps = 0;
+    bool overloaded = false;
+};
+
 struct Quaternion final {
     double x = 0.0;
     double y = 0.0;
@@ -157,6 +177,10 @@ struct Snapshot final {
     // Crouched: the short capsule (see Simulation::set_crouch_input).
     bool player_crouched = false;
     std::uint64_t support_entity_id = 0;
+    // Final substep at 90 Hz: lowest entity id among actual soft contacts with
+    // |normal.y| < .5 inside the capsule cylinder band; zero means none.
+    // Native observation only, with no standing/Jump/checkpoint authority.
+    std::uint64_t soft_side_contact_entity = 0;
     Vector3 support_contact_point{};
     Vector3 support_point_linear_velocity{};
     Vector3 translating_support_position{};
@@ -767,6 +791,9 @@ public:
     static constexpr std::uint32_t kKitNone = 0xFFFFFFFFU;
     [[nodiscard]] std::vector<Vector3> cargo_net_vertices(double alpha=1.0) const;
     [[nodiscard]] std::vector<std::uint32_t> cargo_net_indices() const;
+    [[nodiscard]] std::vector<Vector3> catch_net_vertices(double alpha=1.0) const;
+    [[nodiscard]] std::vector<std::uint32_t> catch_net_indices() const;
+    [[nodiscard]] CatchNetSnapshot catch_net_state() const noexcept;
     [[nodiscard]] std::uint32_t kit_body_count() const noexcept;
     [[nodiscard]] double pipe_bridge_tip_height() const noexcept;
     [[nodiscard]] std::uint32_t pipe_bridge_retained_pipes() const noexcept;

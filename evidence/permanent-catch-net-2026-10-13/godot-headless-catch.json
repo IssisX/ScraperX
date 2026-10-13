@@ -1,0 +1,16 @@
+{
+  "exit_code": 0,
+  "result": "PASS",
+  "checks": 10320,
+  "max_sag_m": 2.468653,
+  "peak_upward_mps": 17.563454,
+  "frame_exit": true,
+  "grade": true,
+  "ordinary_grade_walk_to_cargo_approach": true,
+  "rendered_poses": [],
+  "bridge_sha256": "b1b4dbe3129d082d80c68be0147811b430116616b663e2cc7848c823747528cc",
+  "log_sha256": "a4e7f2b67b52bd5b303c2945e16f75bbdffbb834389d7638b48863b36928069f",
+  "limitations": "Actual headless shipping-main/native bridge route; no rendered/phone proof. Source stage receipt retained separately.",
+  "stage_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/passive-foot-godot-stage-receipt.json",
+  "current_native_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/current-native-receipt.json"
+}
