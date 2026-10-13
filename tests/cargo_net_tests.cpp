@@ -271,7 +271,12 @@ void material_posture() {
     for(int i=0;i<360;++i){tick(treatment);const auto v=treatment.snapshot();
         require(v.traversal_hand_constraint_count==0&&v.player_gravity_factor==1&&v.death_count==0,"posture Drop remains released and alive");
         fell|=v.player_linear_velocity.y<-.1;
-        if(v.player_grounded){require(v.support_entity_id==2954,"posture actual grade tread receives Drop");landed=true;break;}}
+        if(v.player_grounded){
+            // The released capsule can briefly load the deformed lower cloth
+            // before landing. Keep waiting for actual rigid grade footing;
+            // neither cloth contact nor an unrelated support proves arrival.
+            if(v.support_entity_id==1953)continue;
+            require(v.support_entity_id==2954,"posture actual grade tread receives Drop");landed=true;break;}}
     require(fell&&landed,"posture ordinary Drop actually falls onto grade");
     std::cout<<"PASS material_posture paired=1 material=1953 actual_tuck_delta="<<windows[1][1].mean_span-windows[1][0].mean_span
              <<" actual_extension_delta="<<windows[2][0].mean_span-windows[1][0].mean_span<<" grade=2954 deaths=0\n";

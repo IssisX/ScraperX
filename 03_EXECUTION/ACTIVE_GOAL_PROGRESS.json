@@ -27,73 +27,7 @@
   ],
   "overall_estimate_percent": 61,
   "limits": "Verified shared rigid/material paidposture, passivecoupling, actual per-hand approach and deliberate single-rigid-hand passivecatch/realfeedback. Universalshapes, automatic/materialonehand, fullonehandclimb/promotion, articulatedlimbs, phonefeel and fullmovementcoverage remains pending; baseline fullGREEN/APK verified.",
-  "evidence_frontier": "Full baseline GREEN38324998786 exactace9b8c and matching signedAPK independently verified; permanent catchnet implementation active. Roughoverall61%/module42% retained: baseline maintenance adds no newgameplay credit.",
-  "latest_delivery_boundary": {
-    "baseline": "f0685592be409bea468df874ac68705bd024f8c7",
-    "branch": "ChatGPT",
-    "date": "2026-10-12",
-    "priority": "Full GREEN exact-source Actions and independently verified matching APK/download link before further art/features.",
-    "last_full_run": 38324998786,
-    "last_full_result": "GREEN exactace9b8c: native63, all15rawGodot groups, Androidexport and matching artifact verified",
-    "retained_gameplay": "North418-to440, pipe440-to462, finite native timber foot push and actual fracture presentation are implemented at their recorded native/touch/render boundaries. Earlier statements that timber foot push remains unfinished are historical and superseded by wood-foot-push-2026-10-09 evidence.",
-    "local_repairs": "Four ordinary touch driver repairs completed: real settled fixedladder approach with1960 shelf/edge proof; sprint promptrecognition and unchanged7.9/.6 speed criteria with finite acceleration/braking deadlines; block56 actualtarget approach clear ofrack; cartmiss x-28 corridor toactual341apron1956. Exact localARM affected paths pass, fullcartretry/reset and carryapron finish pass. Productionphysics/helper/nativeacceptance unchanged; native54 actualx86 PASS retained from9280.",
-    "pending": "Complete physical catch-net integration, rejecting runtime/render/cost and matching newGREENAPK",
-    "estimate_reassessment": "Overall61% retained: current driver repairs do not add new gameplay completion. All canonical requirements remain in scope. Future small goals must state exact encounter, observable change and finish condition.",
-    "reported_beam_drift": "Owner uses newestavailablepublicAPK. Savedreleaseasset/downloads mapping verifies source0e31/publicversion213671847, predating existingneutralcentring removal/gravitycomp incurrent source. No current-source sustaineddrift reproduced in boundedbeam/railcontact or realviewportneutralrelease probes; no new physics patch justified. Newbuildincludes existingcorrections; phoneconfirmation remainsopen. Do not ask user whichbeam/APK or dismiss latestversion report.",
-    "published_source": "ace9b8c4822b872f3630279fbdbb7c641b04f901",
-    "current_run": 38324998786,
-    "current_run_status": "completed/success; matching finalAPK verified",
-    "failure_evidence": "https://github.com/IssisX/ScraperX/actions/runs/38317781070",
-    "previous_native_failure_endpoint_evidence": {
-      "climb5": {
-        "support": 44,
-        "contact_y": 24.1872,
-        "player_y": 25.0708,
-        "held": 56
-      },
-      "handoff": {
-        "waypoint_reached": true,
-        "support": 1002,
-        "contact_y": 8.25,
-        "player_y": 9.14783,
-        "held": 56,
-        "deaths": 0
-      },
-      "discrimination": "High footing lost during handoff walk; cargo intact. Exact first support loss remains unobserved."
-    },
-    "local_committed_source": "ace9b8c4822b872f3630279fbdbb7c641b04f901",
-    "current_local_preflight": {
-      "head": "010da2319e8017cde9f94eb5bd77ecad72a17ad5",
-      "native_archive_sha256": "7ad2420221c6492a45308195461c0b846fe4832f8cad3fb34b9c7a058a8ffe40",
-      "bridge_sha256": "37f5733e3ebcb7e71302a5c20bdec11cb4057d21741cc0c2708ff875bd535e70",
-      "source_bound_native_files": 71,
-      "exposed_native_batch": "Full ascent/swing0-7/west/north-normal/north-miss/inspection-primary/damage/recovery PASS; original failures reproduced; assertions preserved.",
-      "net_runtime": "ordinary touch_cargo_net headless PASS11m receiver/first-ring/deaths0, 87.3079s",
-      "full143_runtime": "600s wall timeout exit124 after ordinary121m support/deaths0; no gameplay FAIL. +143m unresolved, CI exactpath remainsrequired.",
-      "super_agent_review": "01a13219-d69e-7c30-8269-00bf859314d9 ChatGPT MCP Sol/High advisory, zero children/commands/files; no material blocker. FallbackLow/childLow verified Standard/default.",
-      "delivery_verified": false,
-      "evidence": "evidence/native-route-batch-2026-10-12/README.md",
-      "ci_full143_runtime": "Exact010da23 uninterrupted143 CI step success; local timeout evidence remains distinct.",
-      "west_touch": "Exactcandidatefd116a96 fullPASS explicitCATCH/nativepair/receivers1934&51/270tickhold/onward3.23m/deaths0; shipping/staging bytes matched; native71/bridge unchanged."
-    },
-    "candidate_source": "ace9b8c4822b872f3630279fbdbb7c641b04f901",
-    "candidate_run": 38324998786,
-    "candidate_status": "completed/success",
-    "cart_miss_preflight": {
-      "candidate_pass": true,
-      "scope": "full retainednativecarttest privatecandidate withordinaryoutwardview andloggeronly",
-      "elapsed_seconds": 231.798,
-      "log_sha256": "64ceec245bebd5713706db4cb5e8a82dc8dd6b18e708302c9b44e217c8029ce8",
-      "production_native_changed": false
-    },
-    "verified_apk": {
-      "version_code": 214017513,
-      "sha256": "d8dd5b519d7a492b1bad57eaa9da7fd5488beafd7ebc8da7f5d69f9ad6537dee",
-      "artifact_id": 11783310983,
-      "download": "https://github.com/IssisX/ScraperX/actions/runs/38324998786/artifacts/11783310983",
-      "device_playtested": false
-    }
-  },
+  "evidence_frontier": "Local corrected contact/friction/force/36m catch/45m model/ordinary36m exit PASS. Publication and full exact-source GREEN/render/APK pending; previous candidates are historical.",
   "queued_movement_update": {
     "source": "ScraperX_Primate_Traversal_Research_Bundle.zip",
     "sha256": "b04ff9315aabebf7da3e55b728fed239041f2d715ad3151d5bcf10267f19164f",
@@ -111,23 +45,6 @@
     "live_checkpoint": "CONTINUE_HERE_CHATGPT_CODEX.md",
     "publication": "local only; no push/build",
     "scope_unchanged": true
-  },
-  "bounded_goal": {
-    "completed": "Fix +66m entry; shared paid posture; shared passive hanging native arc/reactions/paid lengths/release/ordinary climbing handoffs; full touch receiver/recovery/retry/onward and affected regressions. Thin-edge airborne catch discovery: actual1800 hands/load/Drop, three refusal/fall controls and affected ledge/simulation/headless touch checks. Ordinary rising-jump ledge catch: first actual catch before apex/finite hands, existing thin/ledge/touch checks and repaired maintained simulation suite. Lightweight dynamic rigid grip integration: actual40kg hinged-arm two-hand acquisition/load/support response/Drop, per-hand obstructed-fallback refusal, affected traversal/simulation/exact-bridge touch passes. Generic native radial support-joint coupling: static/fixed lightweight catch equivalence,14 hand checks, real intact270tick plank hang/Drop/recovery/unload, duplicate-load rejection, affected/nativefullsimulation and exactbridge fullheadless touch. Material-net actual per-hand visibility: existing fascia/blocked-upper fallback oldRED/newGREEN, clearfront/back strictDrop, defaultphysical/three-lane loadednetroute and exactbridge touchnet PASS, saved4d0f57b. Realmaterial paidposture verified/savedc9ca248: pairedordinaryworld realtuck.216753m/extension.236754m/exact.25rest/finitepaidwork/Dropgrade, exactbridgetouch TUCKEXTEND\u2192receiver/firstring. Existingnativeforceunchanged. Deliberate single-rigid-hand passivecatch verified/saved99c8358: actual-count User2 row/recoil/paidposture/Drop/Jump/honestarms; automatic active climb retains validatedpairs; full15hand/default9/material/fullSimulation/exactbridge leftcatch+pairedbar/net PASS. Actualnativehand-generationfeedback verified/saved86c780c: oldrealright RED31 TWOplaybacks/wrongorigin; finalleft/right exactlyONEplayback/no quietposture/release extras; finalnet17actualgenchanges/17cues/rightonly8/posture/receiver/firstring11PASS. Exactbridge9a057dd7, nativephysicsunchanged. Secondrigidhand contract preparation saved5e7adb7 and SuperMCP01a12e1c advisoryvalidated, actualbackendrest/q/common500W ownershipmapped; no implementationcredit. Fixed180neutral LOCALframeclearance diagnostic complete/saved6c6dc40: candidateclear213/150ticks, retainedgen1/noaddedwork; not fullnativevisibility/promotionproof. Player-facinghangingclosure savedc258719: actualoldRED31 unsupportedCLIMBUP/JUMPOFF; finalreallefttouchJump/righttouchDrop/keyboardActionreleases pluspairednetHUDTUCKETEND/receiver/firstringPASS. Nativeunchanged. Visible-nextdirectionassessment complete.",
-    "active": "Catch goal ACTIVE. Current native36m strict settle/ordinaryexit, matching Godot fullroute10320, retained cargo11m route and all native consequences/restoration PASS. Spill fixture36m corrected40m after physical diagnostic:20.635m/s fatal real grade strike, no threshold/assertion/physics change. Matched quiet cost running; actual renders/fullGREEN APK pending.",
-    "next": "Close current-sourcecatch acceptance/cost and exactGREENAPK; only then resetgoal to one nextvisible playerpayoff.",
-    "full_scope_owner": "03_EXECUTION/ACTIVE_GOAL_PHASED_SCOPE.md",
-    "work_until_utc": "2026-10-13T02:15:51Z",
-    "owner_extension": "Another4hours authorized at2026-10-11T23:24:01Z; advance and reset demonstrated bounded movement goals.",
-    "conditional_priority": "Latest approved permanent catch-net integration follows verified baseline delivery; deeper movement deferred.",
-    "pending": "Matched current cost, actual day/night LOW renders and exact full GREEN matching APK.",
-    "host_goal_tool": "Baseline goal completed; completecatchnet goal created2026-10-13T01:30:29Z",
-    "work_window": "Ownerauthorizednext3hours; trackedstart2026-10-12T23:15:51Z through2026-10-13T02:15:51Z.",
-    "work_window_status": "Authorized3h window ended02:15:51UTC; catch goal active. Native strict36m complete exit PASS; root owns Godot/integration/delivery and Low worker runs independent consequences.",
-    "rendered_baseline_status": "8exactace9b8c CI day/night cargoPNGs; rootinspected4; no catchvisual proof yet",
-    "goal_workflow": "Owner2026-10-12: meaningful reachable/challenging goals withobservableplayer-value acceptance. Setactual /goal beforework whenpossible; implementcompleteintegration, runonlynecessaryrejectingchecks, save; markcompleteONLYwhenacceptanceachieved thenautomaticallysetnextgoal. Preparation/isolatedchecks do notfinishfeaturegoal. No repeatedpermission needed forauthorizednextwork.",
-    "host_goal_status": "active",
-    "current_priority": "Completepermanentcatchnet; deepermovement deferred"
   },
   "owner_movement_intent": "Expert parkour fluency: extraordinary climbing, precise footwork, confident catches and smooth momentum-bearing transitions, nearly monkey-like agility with physical causality. Every hangable part uses appropriate shared mechanics. Hook launcher brainstorming only; implementation after movement.",
   "agent_reasoning_policy": {
@@ -151,19 +68,6 @@
     "runtime_limits": "Currentroot liveeffort/tier cannotbe set/verified by availableAPI; existinglocalfollowup hasnoeffort override; newworkers neededforchangedlevel. MCPswithoutcontrol cannotbe claimedchanged.",
     "verification": "/storage/emulated/0/Download/Agent_Reasoning_Settings_Verification.json"
   },
-  "resume_checkpoint_2026_10_13": {
-    "status": "owner-requested safe pause for new session",
-    "head": "ace9b8c4822b872f3630279fbdbb7c641b04f901",
-    "latest_green_run": 38324998786,
-    "feature_delivery": "pending; baseline APK excludes catch",
-    "cost_receipt": "/data/data/com.termux/files/usr/tmp/scraperx-catch-current-cost/cost-20261013T064946213713Z/results.json",
-    "next": "Isolate supported host cost increase and finish LOW day/night presentation, then exact-source GREEN/verified APK",
-    "new_work_this_resume": "completed cost receipt interpreted;67case CI guard fixed; savedlocal child ceiling5; no native changes",
-    "running_agents": "none launched remain active",
-    "local_child_ceiling_saved": 5,
-    "super_child_ceiling_saved": 5,
-    "overall_full_scope_estimate_percent": 61
-  },
   "deferred_catch_net_exit_roll": {
     "owner_requested": "2026-10-13",
     "status": "pending; do later after current delivery",
@@ -172,17 +76,58 @@
     "scope": "03_EXECUTION/PLANNING/VISIBLE_PLAYER_VALUE_NEXT_SLICE.md#owner-added-later-movement-task--sideways-catch-net-exit-roll",
     "limits": "Real travel/contact, finite work/reactions, collision and momentum; no decorative-only roll or guaranteed exit"
   },
-  "catch_delivery_2026_10_13": {
-    "status": "integrated candidate prepared for one exact-source full Actions boundary",
-    "native_sources_unchanged": true,
-    "native_sources_fenced": 73,
-    "quiet_uninstrumented_cpu_median_ms": 11.814894,
-    "quiet_uninstrumented_wall_median_ms": 7.923073,
-    "performance_limit": "Earlier40msnotreproduced; no sourcefix/loaded/phoneproof",
-    "presentation": "matteframe/wider treads authored;1actualLOWdayentryinspected, fullnight/profile pendingCI",
-    "guard": "67namednativecases and16Godotgroups required",
-    "overall_scope_estimate_percent": 61,
-    "remaining": "FullGREEN,8actualday/nightshots/dayprofile,finalAPKverify/link",
-    "roll": "deferredownerrequest;notimplemented"
+  "foundation_productivity": {
+    "owner_requested": "2026-10-13",
+    "status": "bounded correction and reuse guide completed locally; wider foundation development continues encounter by encounter",
+    "scope": "03_EXECUTION/ACTIVE_GOAL_PHASED_SCOPE.md#owner-addition--reusable-physics-foundation-and-compounding-productivity-2026-10-13",
+    "rule": "Fix recurring interaction defects at the existing native owner; record reusable guarantees, physical operating ranges and remaining limitations. Failed hypotheses require a focused discriminator, not coefficient search or a speculative framework. Preserve encounter engineering and return to building after proportional proof.",
+    "guide": "02_ENGINEERING_AUTHORITY/PHYSICS_REUSE_GUIDE.md",
+    "acceptance": "Actual baseline-failing contact regression, preserved closing/restitution response, affected connected native result recorded separately; no full catch or APK claim from primitive checks",
+    "evidence": "evidence/shared-soft-contact-2026-10-13/README.md",
+    "demonstrated": [
+      "14 native contact cases; old6 failures and prior-gate2 failures rejected",
+      "Existing friction and force checks pass",
+      "Existing36m neutral player catch passes, tick1970",
+      "Existing45m model rebound/recontact/settling passes",
+      "Corrected-source ordinary36m exit through actual frame/treads to stable grade PASS"
+    ],
+    "limits": "No complete suite, current-source render, new CI/APK or phone verification; kinematic frame and full energy closure remain outside this correction"
+  },
+  "historical_execution_records": "evidence/state-refresh-2026-10-13/ACTIVE_GOAL_PROGRESS.json",
+  "execution_state": {
+    "updated_utc": "2026-10-13T18:19:25.951334+00:00",
+    "goal": "Deliver permanent physical catch net with shared contact fix, actual stable exit and one fully GREEN exact-source APK",
+    "published_parent": "a72e3b623f1188b849201f1048906888994ead92",
+    "candidate_status": "local successor ready for publication; no new CI/APK",
+    "host_goal_ui": "paused when observed; direct owner authorization continues coding/delivery",
+    "current_evidence": "evidence/shared-soft-contact-2026-10-13/receipt.json",
+    "native_checks": [
+      "14contact cases",
+      "existing friction/force",
+      "36m neutral catch",
+      "45m model",
+      "ordinary36m exit to grade"
+    ],
+    "pending": [
+      "publication",
+      "normal full67native/16Godot Actions",
+      "8 LOW day/night capture inspection/day profile",
+      "exact stable APK/source/hash/signer/increasing version/artifact link"
+    ],
+    "current_source_cost": "not measured; historical quiet/loaded windows are not current-source proof",
+    "active_workers": [],
+    "next_action": "Publish supported repair once; monitor that one normal Actions run and inspect required artifacts",
+    "last_ci": {
+      "source": "a72e3b623f1188b849201f1048906888994ead92",
+      "run": 38424152695,
+      "status": "RED64/67native; no captures/APK"
+    },
+    "last_delivered": {
+      "source": "ace9b8c4822b872f3630279fbdbb7c641b04f901",
+      "run": 38324998786,
+      "artifact": 11783310983,
+      "version": 214017513,
+      "contains_catch": false
+    }
   }
 }

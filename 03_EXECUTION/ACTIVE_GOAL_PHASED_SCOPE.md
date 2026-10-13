@@ -225,3 +225,25 @@ regressions. It deliberately does not guarantee ordinary 5.5 m/s takeoff on weak
 See [foot-push receipts](../evidence/wood-foot-push-2026-10-09/README.md). Physical-phone feel,
 wider visuals, fracture sound, performance and exact-source APK delivery remain unverified. This remains part of phases3/6/8;
 it does not replace or complete any wider goal requirements.
+
+
+### Owner addition — reusable physics foundation and compounding productivity (2026-10-13)
+
+Treat reliable, reusable physical behavior as a major productivity requirement. As the native foundation matures, integrating another machine should require substantially less repair of fundamental interactions.
+
+The complete initial physical state, geometry, material properties, constraints and ordered player inputs must explain the resulting motion. Establish a reasonable prediction before implementation: what drives the mechanism, where forces and reactions travel, how energy is stored or dissipated, and what makes it succeed or fail.
+
+Distinguish two kinds of work:
+
+- **Encounter engineering:** choosing dimensions, masses, materials, mechanical ratios, clearances, controls, approach, challenging traversal, receiving footing and recovery. This remains necessary creative work.
+- **Compensating for an inadequate foundation:** repeatedly adjusting coefficients or adding special cases to overcome unreliable contacts, missing dissipation, incorrect reactions, lost momentum or solver artifacts. Investigate these at their shared owner.
+
+When the same physical difficulty recurs across encounters, identify the missing or incorrect shared behavior. Make the smallest supported correction in the existing native owner, then reuse it. Preserve completed gameplay; avoid an unrelated physics rewrite or speculative framework.
+
+Parameters must have understandable physical meanings and useful operating ranges. Avoid relying on a narrow combination of values that happens to pass one demonstration. A working mechanism should tolerate reasonable differences in load, approach, timing and player action.
+
+After an experiment fails to support its hypothesis, stop searching blindly through coefficients. Use one focused observation to distinguish the remaining causes, then correct the supported cause. Record what that correction makes reliable for future integrations.
+
+Keep verification proportional: prove the corrected interaction and relevant connected behavior, then return to building. Do not turn foundational improvement into an endless testing project.
+
+The intended result is compounding productivity: dependable primitives support increasingly varied machines and parkour encounters, while engineering effort shifts toward deliberate design, visual quality and player experience. Each completed integration should leave the next one easier to build.

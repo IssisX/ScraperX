@@ -19,6 +19,7 @@
 #include <stdexcept>
 using namespace JPH;
 using namespace scraperx::sim;
+bool soft_contact_regression();
 namespace {
 void check(bool c,const char *m){if(!c)throw std::runtime_error(m);}
 struct BP:BroadPhaseLayerInterface{uint GetNumBroadPhaseLayers()const override{return 2;}BroadPhaseLayer GetBroadPhaseLayer(ObjectLayer l)const override{return BroadPhaseLayer(l);}const char *GetBroadPhaseLayerName(BroadPhaseLayer)const override{return "catch";}};
@@ -165,6 +166,7 @@ void clip_reciprocity(){World w;auto &b=w.system.GetBodyInterface();const auto f
 // One actual native contact solve: selecting a coefficient must reproduce the
 // existing Coulomb solver, including reciprocal rigid impulse and dissipation.
 void contact_friction(){
+    check(soft_contact_regression(),"native soft contact is unilateral and preserves restitution history");
     struct Receipt { Vec3 rigid,cloth;float energy;unsigned calls; };
     struct Policy {
         BodyID expected;float selected=0;unsigned calls=0;bool geometry=true;

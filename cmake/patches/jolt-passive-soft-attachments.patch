@@ -75,7 +75,20 @@
  					// Apply friction as described in Detailed Rigid Body Simulation with Extended Position Based Dynamics - Matthias Muller et al.
  					// See section 3.6:
  					// Inverse mass: w1 = 1 / m1, w2 = 1 / m2 + (r2 x n)^T I^-1 (r2 x n) = 0 for a static object
-@@ -771,7 +782,7 @@
+@@ -766,18 +777,24 @@
+ 						Vec3 r2_cross_n = r2.Cross(contact_normal);
+ 						float w2 = cs.mInvMass + r2_cross_n.Dot(cs.mInvInertia * r2_cross_n);
+ 						float w1_plus_w2 = vertex_inv_mass + w2;
+-						if (w1_plus_w2 > 0.0f)
++
++						// The complete normal response includes restitution history. Only a
++						// repulsive response may apply a velocity impulse or contact friction.
++						float prev_v_normal = (prev_v - v2).Dot(contact_normal);
++						float normal_response = contact_normal.Dot(relative_velocity);
++						if (prev_v_normal < restitution_threshold)
++							normal_response += cs.mRestitution * prev_v_normal;
++						if (w1_plus_w2 > 0.0f && normal_response <= 0.0f)
+ 						{
  							// Calculate delta relative velocity due to friction (modified equation 31)
  							Vec3 dv;
  							if (v_tangential_length > 0.0f)
@@ -84,16 +97,43 @@
  							else
  								dv = Vec3::sZero();
  
-@@ -806,7 +817,7 @@
+ 							// Calculate delta relative velocity due to restitution (equation 35)
+ 							dv += v_normal;
+-							float prev_v_normal = (prev_v - v2).Dot(contact_normal);
+ 							if (prev_v_normal < restitution_threshold)
+ 								dv += cs.mRestitution * prev_v_normal * contact_normal;
  
- 						// Apply friction (modified equation 31)
- 						if (v_tangential_length > 0.0f)
+@@ -804,15 +821,22 @@
+ 						Vec3 v_tangential = v.mVelocity - v_normal;
+ 						float v_tangential_length = v_tangential.Length();
+ 
+-						// Apply friction (modified equation 31)
+-						if (v_tangential_length > 0.0f)
 -							v.mVelocity -= v_tangential * min(cs.mFriction * projected_distance / (v_tangential_length * dt), 1.0f);
-+							v.mVelocity -= v_tangential * min(friction * projected_distance / (v_tangential_length * dt), 1.0f);
- 
- 						// Apply restitution (equation 35)
- 						v.mVelocity -= v_normal;
-@@ -929,6 +940,9 @@
+-
+-						// Apply restitution (equation 35)
+-						v.mVelocity -= v_normal;
++						// Keep depenetration above, but reject tensile velocity responses.
+ 						float prev_v_normal = prev_v.Dot(contact_normal);
++						float normal_response = contact_normal.Dot(v.mVelocity);
+ 						if (prev_v_normal < restitution_threshold)
+-							v.mVelocity -= cs.mRestitution * prev_v_normal * contact_normal;
++							normal_response += cs.mRestitution * prev_v_normal;
++						if (normal_response <= 0.0f)
++						{
++							// Apply friction (modified equation 31)
++							if (v_tangential_length > 0.0f)
++								v.mVelocity -= v_tangential * min(friction * projected_distance / (v_tangential_length * dt), 1.0f);
++
++							// Apply restitution (equation 35)
++							v.mVelocity -= v_normal;
++							if (prev_v_normal < restitution_threshold)
++								v.mVelocity -= cs.mRestitution * prev_v_normal * contact_normal;
++						}
+ 					}
+ 				}
+ 			}
+@@ -929,6 +953,9 @@
  		if (cs.mUpdateVelocities)
  			inBodyInterface.AddLinearAndAngularVelocity(cs.mBodyID, inContext.mCenterOfMassTransform.Multiply3x3(cs.mLinearVelocity - cs.mOriginalLinearVelocity), inContext.mCenterOfMassTransform.Multiply3x3(cs.mAngularVelocity - cs.mOriginalAngularVelocity));
  
@@ -103,7 +143,7 @@
  	// Clear colliding shapes/sensors to avoid hanging on to references to shapes
  	mCollidingShapes.clear();
  	mCollidingSensors.clear();
-@@ -962,6 +976,9 @@
+@@ -962,6 +989,9 @@
  void SoftBodyMotionProperties::StartNextIteration(const SoftBodyUpdateContext &ioContext)
  {
  	ApplyPressure(ioContext);

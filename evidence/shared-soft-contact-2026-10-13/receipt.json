@@ -1,0 +1,114 @@
+{
+  "baseline_head": "a72e3b623f1188b849201f1048906888994ead92",
+  "source_state": "uncommitted correction atop preserved existing edits",
+  "verification_method": "GNU 15.2 ARM64 under Ubuntu proot; compile corrected Jolt TU and integrated test sources; link replacement TU before unchanged pinned Jolt archive; no shared archive mutations",
+  "source_sha256": {
+    "cmake/patches/jolt-passive-soft-attachments.patch": "411a935ddea46064a7968eb298da93151be6b03140df6cf75a2f2805f398dd6b",
+    "cmake/patches/jolt-passive-soft-attachments.hashes.cmake": "4442a0fe7908b9067d2e981ec7a4700f7b9f0ce3a4bf93265087633920a634ca",
+    "tests/soft_contact_regression.cpp": "4d65d62822ae8c372a52946672393a5e2877a780df33e5280d7ae8064ed846ff",
+    "tests/catch_net_model_tests.cpp": "689b8060bd314294475bfe753c4cffba75029e823652881909dcd49e6f1a7500",
+    "tests/catch_net_player_tests.cpp": "09f50b598cbfd6054b09e5b982f5dad496bb3811eecfb9c99ad0f2446d69cf20"
+  },
+  "contact_results": {
+    "baseline": {
+      "exit_code": 1,
+      "expected_exit": 1,
+      "pass_cases": 8,
+      "fail_cases": 6,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/baseline"
+      ]
+    },
+    "prior-gate": {
+      "exit_code": 1,
+      "expected_exit": 1,
+      "pass_cases": 12,
+      "fail_cases": 2,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/prior-gate"
+      ]
+    },
+    "fixed-contact": {
+      "exit_code": 0,
+      "expected_exit": 0,
+      "pass_cases": 14,
+      "fail_cases": 0,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/fixed-contact"
+      ]
+    },
+    "integrated-friction": {
+      "exit_code": 0,
+      "expected_exit": 0,
+      "pass_cases": 14,
+      "fail_cases": 0,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/model-fixed",
+        "friction"
+      ]
+    },
+    "integrated-force": {
+      "exit_code": 0,
+      "expected_exit": 0,
+      "pass_cases": 0,
+      "fail_cases": 0,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/model-fixed",
+        "force"
+      ]
+    }
+  },
+  "player36": {
+    "exit_code": 0,
+    "command": "proot-distro login ubuntu --shared-tmp -- /tmp/scraperx-foundation-connected/catch_player neutral",
+    "settled_tick": 1970,
+    "min_y_m": 1.53135,
+    "rebound_mps": 17.5637,
+    "deaths": 0
+  },
+  "limits": [
+    "No new CI/APK or phone test",
+    "Complete native model/player suites not run locally in this pass",
+    "Rotation, kinematic contact and full energy closure not established"
+  ],
+  "model45": {
+    "exit_code": 0,
+    "command": "proot-distro login ubuntu --shared-tmp -- /tmp/scraperx-restitution-contact-fix/model-fixed 45",
+    "rebound_vy_mps": 20.0606,
+    "first_apex_y_m": 25.2584,
+    "late_peak_speed_mps": 0.041318,
+    "late_y_range_m": 0.00327587,
+    "late_contact_ticks": 180,
+    "listener_calls": 7920
+  },
+  "player36_exit": {
+    "exit_code": 0,
+    "command": "proot-distro login ubuntu --shared-tmp -- /tmp/scraperx-foundation-connected/catch_player exit",
+    "outcome": "PASS catch controlled rigid exit/grade; real2963 frame and stable grade checkpoint; deaths0"
+  }
+}

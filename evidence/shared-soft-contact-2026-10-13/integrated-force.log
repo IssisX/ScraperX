@@ -1,0 +1,5 @@
+CATCH_FORCE phases=4 native_callbacks=48 individually_checked_callbacks=48 transpose/live_mass/momentum/wake/overlap/restore/legacy PASS
+PASS catch native model
+proot warning: can't sanitize binding "/proc/self/fd/0": No such file or directory
+proot warning: can't sanitize binding "/proc/self/fd/1": No such file or directory
+proot warning: can't sanitize binding "/proc/self/fd/2": No such file or directory

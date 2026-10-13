@@ -1,0 +1,109 @@
+{
+  "repository": "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo",
+  "head": "a72e3b623f1188b849201f1048906888994ead92",
+  "results": {
+    "baseline": {
+      "exit_code": 1,
+      "expected_exit": 1,
+      "pass_cases": 8,
+      "fail_cases": 6,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/baseline"
+      ]
+    },
+    "prior-gate": {
+      "exit_code": 1,
+      "expected_exit": 1,
+      "pass_cases": 12,
+      "fail_cases": 2,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/prior-gate"
+      ]
+    },
+    "fixed-contact": {
+      "exit_code": 0,
+      "expected_exit": 0,
+      "pass_cases": 14,
+      "fail_cases": 0,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/fixed-contact"
+      ]
+    },
+    "integrated-friction": {
+      "exit_code": 0,
+      "expected_exit": 0,
+      "pass_cases": 14,
+      "fail_cases": 0,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/model-fixed",
+        "friction"
+      ]
+    },
+    "integrated-force": {
+      "exit_code": 0,
+      "expected_exit": 0,
+      "pass_cases": 0,
+      "fail_cases": 0,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/tmp/scraperx-restitution-contact-fix/model-fixed",
+        "force"
+      ]
+    }
+  },
+  "baseline_pass_controls_identical": 8,
+  "pristine_manifest_verified": true,
+  "patch_fresh_apply_and_idempotence": true,
+  "patched_cpp_sha256": "160ac71000cec73a21c97a68dbfe1e10f2f6f858de99a687eaccbcd1bfa346e5",
+  "owned_files_sha256": {
+    "CMakeLists.txt": "cfc3d0924ccc1640f731dba4edf9e3227d45b90278d6ef4d56b51333a8dc7c96",
+    "tests/catch_net_model_tests.cpp": "689b8060bd314294475bfe753c4cffba75029e823652881909dcd49e6f1a7500",
+    "tests/soft_contact_regression.cpp": "4d65d62822ae8c372a52946672393a5e2877a780df33e5280d7ae8064ed846ff",
+    "cmake/patches/jolt-passive-soft-attachments.patch": "411a935ddea46064a7968eb298da93151be6b03140df6cf75a2f2805f398dd6b",
+    "cmake/patches/jolt-passive-soft-attachments.hashes.cmake": "4442a0fe7908b9067d2e981ec7a4700f7b9f0ce3a4bf93265087633920a634ca"
+  },
+  "private_artifact_sha256": {
+    "SoftBodyMotionProperties.o": "8952f832d01695cb9ec8a4c1a155ecae41a844894a9c669aa17a4e4a17b3a3c5",
+    "regression.o": "84600a66661cdf672b53a1771ef7b2a149411033b1dd9cf13d76900b52c43b8c",
+    "model.o": "37d9ec2b395be1d40e2c139fb95be7c9bbd710aee0166965b3b56572d80a362a",
+    "model-fixed": "d907291766e837e4fcb7070422d1e790c8144328af100e1fb6a52d75bf504d50",
+    "fixed-contact": "27ab8c7dc4aaf8394c3786e48e255b9b9ff48398d47e4825ed5356b0d4f6ebc8",
+    "baseline": "7730dcc6ed40f24b9e4e68227dce188f32751383a667bb013f8e75c185163e55",
+    "prior-gate": "82e35db16314c0866e600eedd30b5cf099e2b719b231cdeb1076dad2dab2ea1c"
+  },
+  "shared_cache_and_archives_unchanged": {
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-passive-foot-hook/jolt-src/Jolt/Physics/SoftBody/SoftBodyMotionProperties.h": "cc6c5c181d75418a2d5ffba919f8c80a1f8570229af92e64690d63d4a0b8c8a2",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-passive-foot-hook/jolt-src/Jolt/Physics/SoftBody/SoftBodyMotionProperties.cpp": "a3dc1548db3c48117e663aa85e52da77155b1cc6b34d7717758cb8f706c550a1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/native-build/_deps/jolt-build/libJolt.a": "c0d4993849ffa638b25efcce3b0e5f62b385eebe21e7656f62b77f06011efcb1",
+    "/data/data/com.termux/files/usr/tmp/scraperx-catch-root-integration/native-build/libscraperx_sim.a": "5696210dce4a01f3e54eec5ec821b40083f1ff315b06d148eafff0e3913dd611"
+  },
+  "limits": [
+    "Actual CustomUpdate owner regression, not full native suite/device proof",
+    "Moving kinematic contact frame is unchanged and untested",
+    "Default diff --check warns only on mandatory space-tab context in the embedded patch; native source/other owned files are clean"
+  ]
+}

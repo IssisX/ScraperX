@@ -187,7 +187,7 @@ if(BUILD_TESTING AND (NOT ANDROID OR SCRAPERX_TESTS_ON_ANDROID))
     add_test(NAME scraperx_sim.cargo_net_ground_route COMMAND scraperx_cargo_net_tests)
     add_test(NAME scraperx_sim.material_hanging_posture
              COMMAND scraperx_cargo_net_tests material_posture)
-    add_executable(scraperx_catch_net_model_tests tests/catch_net_model_tests.cpp)
+    add_executable(scraperx_catch_net_model_tests tests/catch_net_model_tests.cpp tests/soft_contact_regression.cpp)
     target_link_libraries(scraperx_catch_net_model_tests PRIVATE scraperx_sim)
     add_test(NAME scraperx_sim.catch_net_model COMMAND scraperx_catch_net_model_tests)
     add_test(NAME scraperx_sim.catch_net_force_phase COMMAND scraperx_catch_net_model_tests force)
