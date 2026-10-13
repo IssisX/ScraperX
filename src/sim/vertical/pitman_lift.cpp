@@ -68,8 +68,11 @@ std::unique_ptr<Machine> pitman_lift(BuildContext c) {
     // the full stroke and still stalls well short under the 3,000 kg case.
     crank_hinge->GetMotorSettings().SetTorqueLimit(600000);
 
+    // 3.8 m across its guide, not 4: placed on the route, the deck's outer
+    // face would otherwise run flush with the barrel helix's lower receiver,
+    // which overhangs the deck's shaft by 0.2 m at the top of the stroke.
     auto deck = m->body("deck", {
-        box(Vec3(3.5f, .3f, 2.0f), Material::Timber),
+        box(Vec3(3.5f, .3f, 1.9f), Material::Timber),
         box(Vec3(.3f, .3f, 1.25f), Material::Steel, Vec3(0, 0, -1.25f)),
         box(Vec3(.22f, 2.0f, .22f), Material::Steel, Vec3(0, 2.0f, kBackZ))
     }, Vec3(0, kDeckStartY, 0), 1200);
