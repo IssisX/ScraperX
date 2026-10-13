@@ -2263,8 +2263,7 @@ func _tram(device: int) -> bool:
 			str(_position()), int(_native().get_support_entity_id()), int(_native().get_traversal_state()),
 			str(_native().is_player_crouched())])
 	await _pose("tram_gangway")
-	if not await _ride_machine(device, 7, "TRACTION TRAM", Vector2(80.6, -161.0), Vector2(74.0, -161.0),
-			Vector2(29.9, -161.0)):
+	if not await _ride_tram(device):
 		return false
 	if not await _go(device, Vector2(23.5, -161.0), 0.15, 6.0):
 		return _fail("tram: the walk onto deck 8 stalled at %s" % str(_position()))
@@ -2280,9 +2279,39 @@ func _tram(device: int) -> bool:
 		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
 	if not _standing_above(88.7):
 		return _fail("tram: not standing on deck 8 (y %.2f)" % _position().y)
-	_detail = "deck8_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
-		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
+	_detail = "deck8_y=%.2f head_wait_s=%.1f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, _tram_head_wait, float(int(_native().get_tick_index()) - started) / 90.0, worst_step,
+		float(body["lift"])]
 	return true
+
+
+# The traction tram shuttles on its own. From its lower receiver: wait until
+# it stands at the foot reading BOARD with time to walk on, walk on, ride it
+# up, and step off in its wait at the head (STEP OFF), before it leaves.
+func _ride_tram(device: int) -> bool:
+	if not await _go(device, Vector2(80.6, -161.0), 0.15, 8.0):
+		return _fail("tram: the walk onto its lower receiver stalled at %s" % str(_position()))
+	if not await _wait_until(func() -> bool:
+			return _ctx()["action"]["id"] == &"tram" and _action_label() == "BOARD" and \
+				float(_native().get_lift_state()["tram_departs_s"]) >= 3.0, 120.0):
+		return _fail("tram: never offered BOARD with time to walk on (read '%s', lift %s)" % [_action_label(),
+			str(_native().get_lift_state())])
+	if not await _go(device, Vector2(74.0, -161.0), 0.15, 6.0) or int(_native().get_lift_state()["role"]) != 1:
+		return _fail("tram: the walk on board stalled at %s" % str(_position()))
+	if not await _wait_until(func() -> bool: return _action_label() == "STEP OFF" and bool(_ctx()["grounded"]), 90.0):
+		return _fail("tram: never read STEP OFF at the head (read '%s', lift %s)" % [_action_label(),
+			str(_native().get_lift_state())])
+	_tram_head_wait = float(_native().get_lift_state()["tram_departs_s"])
+	await _pose("machine_7_top")
+	if not await _go(device, Vector2(29.9, -161.0), 0.15, 8.0):
+		return _fail("tram: the step off onto the upper receiver stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	if int(_native().get_lift_state()["role"]) != 3:
+		return _fail("tram: not standing on the upper receiver (y %.2f)" % _position().y)
+	return true
+
+
+var _tram_head_wait := 0.0
 
 
 func _service_m(device: int) -> bool:

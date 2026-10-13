@@ -4791,15 +4791,17 @@ void run_save() {
 }
 
 // The traction tram from deck 6: east onto the east bridge, off its open
-// end onto a landing, down the gangway onto the tram's lower receiver and
-// its carrier, RAISE: two motors drive its 4 m wheels up the
-// 35-degree track by their grip on it, 26 m up and 44 m west; off its upper
-// receiver, along a plate to deck 8's east edge and down onto deck 8.
+// end onto a landing, down the gangway onto the tram's lower receiver. The
+// tram is a shuttle: two motors drive its 4 m wheels up the 35-degree track
+// by their grip on it, 26 m up and 44 m west; it waits at each end, then
+// leaves for the other. Nothing is pressed: the rider boards in its wait at
+// the foot. Stayed aboard through its wait at the head, it carries the rider
+// back down (the miss); ridden up again and stepped off in the wait, the
+// rider walks along a plate to deck 8's east edge and down onto deck 8.
 void run_tram() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
     using scraperx::sim::Snapshot;
-    using scraperx::sim::TraversalState;
     Simulation s(InitialSpawn::Deck6South);
     (void)s.advance_frame(1.0);
     // Along deck 6's east band west of C2's switchgear and duct, out east
@@ -4808,37 +4810,48 @@ void run_tram() {
               walk_to(s, 81.2, -153.0, 4.0) && walk_to(s, 81.1, -157.5, 6.0);
     const bool reached_gangway = ok;
     ok = ok && walk_to(s, 80.6, -161.0, 8.0) && s.advance_frame(0.5).accepted && s.lift_state().machine == 7 &&
-         s.lift_state().role == 2 && walk_to(s, 74.0, -161.0, 6.0) && s.advance_frame(0.5).accepted &&
-         s.lift_state().role == 1;
+         s.lift_state().role == 2;
     if (!ok) {
         const auto st = s.snapshot();
         std::cerr << "tram board: reached_gangway=" << reached_gangway << " at (" << st.player_position.x << "," << st.player_position.y
                   << "," << st.player_position.z << ") machine=" << s.lift_state().machine
                   << " role=" << s.lift_state().role << '\n';
     }
-    require(ok, "tram: along the bridge, off its end, down the gangway onto the carrier");
-    (void)s.request_lift_action();
-    const double start = s.snapshot().simulation_time_seconds;
-    const bool up = wait_for(s, 150.0, [&s](const Snapshot &state) {
+    require(ok, "tram: along the bridge, off its end, down the gangway onto its lower receiver");
+    // It has been shuttling since the world began: wait on the receiver for
+    // the carrier to stand at the foot with time left to walk on.
+    const auto standing_at = [&s](double end, double seconds_left) {
         const auto lift = s.lift_state();
-        return std::abs(lift.travels[7] - 1.0) < 0.01 && !lift.moving && state.player_grounded;
-    });
+        return std::abs(lift.travels[7] - end) < 0.01 && lift.tram_departs_s >= seconds_left;
+    };
+    require(wait_for(s, 120.0, [&](const Snapshot &) { return standing_at(0.0, 3.0); }),
+            "tram: the shuttle must come down and wait at the foot");
+    require(walk_to(s, 74.0, -161.0, 6.0) && s.advance_frame(0.3).accepted && s.lift_state().role == 1,
+            "tram: on board in its wait at the foot");
+    (void)s.request_lift_action();   // Action does nothing to the shuttle
+    const double start = s.snapshot().simulation_time_seconds;
+    require(wait_for(s, 90.0, [&](const Snapshot &state) { return standing_at(1.0, 0.0) && state.player_grounded; }),
+            "tram: the shuttle must carry the rider 26 m up its track");
     const double ride_s = s.snapshot().simulation_time_seconds - start;
-    if (!up) {
-        const auto st = s.snapshot();
-        std::cerr << "tram ride: at (" << st.player_position.x << "," << st.player_position.y << ","
-                  << st.player_position.z << ") travel=" << s.lift_state().travels[7] << " deaths=" << st.death_count
-                  << '\n';
-    }
-    require(up, "tram: RAISE must drive the carrier 26 m up its track, the rider on it");
+    const double head_wait_s = s.lift_state().tram_departs_s;
+    // The miss: stayed aboard, it leaves again and carries the rider down.
+    require(wait_for(s, 10.0, [&s](const Snapshot &) { return s.lift_state().travels[7] < 0.9; }) &&
+                s.lift_state().role == 1 && s.snapshot().death_count == 0,
+            "tram: stayed aboard through its wait at the head, it must carry the rider back down");
+    require(wait_for(s, 90.0, [&](const Snapshot &) { return standing_at(0.0, 0.0); }) && s.lift_state().role == 1,
+            "tram: back at the foot, the rider still aboard");
+    // The recovery: ride it up again and step off in its wait.
+    require(wait_for(s, 120.0, [&](const Snapshot &state) { return standing_at(1.0, 0.0) && state.player_grounded; }),
+            "tram: up again, the rider aboard");
     require(walk_to(s, 29.9, -161.0, 12.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3,
-            "tram: off onto its upper receiver");
+            "tram: off onto its upper receiver in its wait");
     (void)walk_to(s, 23.5, -161.0, 6.0);
     (void)s.advance_frame(1.5);
     const auto end = s.snapshot();
     require(end.death_count == 0 && end.player_grounded && end.player_position.y > 88.7 && end.player_position.y < 89.2,
             "tram: down onto deck 8, alive");
-    std::cout << "PASS scraperx_sim tram: ride_s=" << ride_s << " deck8_y=" << end.player_position.y << '\n';
+    std::cout << "PASS scraperx_sim tram: ride_s=" << ride_s << " head_wait_s=" << head_wait_s
+              << " deck8_y=" << end.player_position.y << '\n';
 }
 
 // The owner's law for this world (plan §2.6 rule 10): the initial state

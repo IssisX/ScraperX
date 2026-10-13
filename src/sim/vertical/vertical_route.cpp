@@ -110,6 +110,7 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     // beside the east bridge's end toward deck 8, along z -161, clear of the
     // east machine hall and the bridge's web: its lower receiver at x 79.1 to
     // 82.1 (64.0 m), its upper at x 28.4 to 31.4 (90.0 m).
+    tram_ = static_cast<int>(placed_.size());
     place("sx.traction_tram.v1", {RVec3(77.3, 53.15, -161.0), JPH_PI}, {kTramStaticFirst, 5}, {kTramDynamicFirst, 3});
     // Off the bridge's east end, past its rails, onto a landing over its
     // pylon, and a gangway north down to the lower receiver's south edge.
@@ -174,12 +175,23 @@ Route::Here Route::at(std::uint64_t support) const {
             here.machine = static_cast<int>(i);
             here.role = role;
             here.travel = travel(i);
-            here.target = targets_[i];
+            here.target = static_cast<int>(i) == tram_ ? std::fmod(targets_[i], 2.0F) : targets_[i];
             here.moving = deck_speed(i) > 0.05F;
             return here;
         }
     }
     return here;
+}
+
+float Route::tram_departs_s() const noexcept {
+    if (tram_ < 0) return -1.0F;
+    const float state = targets_[static_cast<std::size_t>(tram_)];
+    const float end = std::fmod(state, 2.0F);
+    const float waited = std::floor(state / 2.0F);
+    const int wait = end < .5F ? kTramFootWaitTicks : kTramHeadWaitTicks;
+    const float at = travel(static_cast<std::size_t>(tram_));
+    if (std::abs(at - end) > .01F || deck_speed(static_cast<std::size_t>(tram_)) > .05F) return -1.0F;
+    return std::max(0.0F, static_cast<float>(wait) - waited) / 90.0F;
 }
 
 Route::InclineState Route::incline_state() const noexcept {
@@ -232,7 +244,7 @@ void Route::pre_step(float dt, bool action, std::uint64_t support) {
     }
     if (action) {
         const Here here = at(support);
-        if (here.machine >= 0) {
+        if (here.machine >= 0 && here.machine != tram_) {
             float &target = targets_[static_cast<std::size_t>(here.machine)];
             switch (here.role) {
                 case Role::Deck: target = target < 0.5F ? 1.0F : 0.0F; break;
@@ -242,6 +254,25 @@ void Route::pre_step(float dt, bool action, std::uint64_t support) {
             }
             placed_[static_cast<std::size_t>(here.machine)].machine->command({target, true});
         }
+    }
+    if (tram_ >= 0) {
+        // The traction tram shuttles on its own: stood at an end for its
+        // wait, it is sent to the other. Action does nothing to it.
+        float &state = targets_[static_cast<std::size_t>(tram_)];
+        float end = std::fmod(state, 2.0F);
+        float waited = std::floor(state / 2.0F);
+        const std::size_t t = static_cast<std::size_t>(tram_);
+        if (std::abs(travel(t) - end) < .01F && deck_speed(t) < .05F) {
+            waited += 1.0F;
+            if (waited >= static_cast<float>(end < .5F ? kTramFootWaitTicks : kTramHeadWaitTicks)) {
+                end = 1.0F - end;
+                waited = 0.0F;
+            }
+        } else {
+            waited = 0.0F;
+        }
+        state = end + 2.0F * waited;
+        placed_[t].machine->command({end, true});
     }
     if (wheel_ >= 0) {
         // The stone wheel's feed plank: tipped, it holds the wheel (armed);

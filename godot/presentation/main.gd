@@ -140,6 +140,8 @@ const LIFT_ROLE_ENTRY := 2
 const LIFT_ROLE_EXIT := 3
 # The slab incline is worked from its deck by the rider's weight on its plates.
 const LIFT_SLAB_INCLINE := 5
+# The traction tram shuttles on its own: Action only reads out its wait.
+const LIFT_TRAM := 7
 const INCLINE_ARMED := 0
 const INCLINE_RELEASED := 1
 const RUBBLE_DENSITY := 1600.0
@@ -894,7 +896,7 @@ func _perform_action() -> void:
 				_native.request_trapeze_action()
 		&"lift":
 			_native.request_lift_action()
-		&"s1", &"incline":
+		&"s1", &"incline", &"tram":
 			# S1 and the slab incline are worked by standing on their plates;
 			# Action only reads them out.
 			pass
@@ -977,7 +979,21 @@ func _read_context() -> Dictionary:
 		var lift_name: String = LIFT_NAMES[lift_machine] if lift_machine < LIFT_NAMES.size() else "LIFT"
 		var role := int(lift["role"])
 		var lift_travel := float(lift["travel"])
-		if role == LIFT_ROLE_DECK and lift_machine == LIFT_SLAB_INCLINE:
+		if lift_machine == LIFT_TRAM:
+			# Nothing to press: it leaves each end when its wait is up.
+			var departs := float(lift["tram_departs_s"])
+			var here_end := 1.0 if role == LIFT_ROLE_EXIT else 0.0
+			if departs < 0.0:
+				action = {"id": &"tram", "icon": &"up", "label": "RIDING" if role == LIFT_ROLE_DECK else "WAIT",
+					"detail": "THE TRAM" if role == LIFT_ROLE_DECK else "THE TRAM IS ON ITS WAY"}
+			elif role == LIFT_ROLE_DECK:
+				action = {"id": &"tram", "icon": &"up", "label": "STEP OFF" if lift_travel > 0.5 else "STAY ON",
+					"detail": "LEAVES IN %d S" % ceili(departs)}
+			elif absf(lift_travel - here_end) < 0.02:
+				action = {"id": &"tram", "icon": &"up", "label": "BOARD", "detail": "LEAVES IN %d S" % ceili(departs)}
+			else:
+				action = {"id": &"tram", "icon": &"up", "label": "WAIT", "detail": "THE TRAM IS AT THE OTHER END"}
+		elif role == LIFT_ROLE_DECK and lift_machine == LIFT_SLAB_INCLINE:
 			# Nothing to press: the yellow plate pulls the slab's pin, the
 			# treadle presses the brake shoe. Action reads out which.
 			var incline_state := int(lift["incline_state"])

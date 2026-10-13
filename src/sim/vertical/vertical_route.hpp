@@ -42,6 +42,16 @@ public:
     [[nodiscard]] const Machine &machine(std::size_t i) const { return *placed_[i].machine; }
     [[nodiscard]] float travel(std::size_t i) const;
     [[nodiscard]] float deck_speed(std::size_t i) const;
+    // The traction tram (-1 when not placed): a shuttle on its own, not
+    // Action. It waits at each end, then leaves for the other; seconds until
+    // it leaves, or -1 while it runs.
+    [[nodiscard]] int tram() const noexcept { return tram_; }
+    [[nodiscard]] float tram_departs_s() const noexcept;
+    // Its waits (90 Hz ticks, CHOSEN): long enough at the foot to walk on
+    // from the gangway, at the head to step off; not so long that the
+    // receiver can be dawdled on.
+    static constexpr int kTramFootWaitTicks = 540;
+    static constexpr int kTramHeadWaitTicks = 360;
     // The slab incline (-1 when not placed), its state, and the friction its
     // brake treadle presses on the rail now.
     enum class InclineState { Armed = 0, Released = 1, Resetting = 2 };
@@ -137,6 +147,9 @@ private:
     // The slab incline: worked by its plates, not Action from its deck. Its
     // state lives in targets_ (checkpointed): see InclineState.
     int incline_ = -1;
+    // The tram: its state lives in targets_ as end + 2 * ticks waited there
+    // (checkpointed): the end it was last sent to and how long it has stood.
+    int tram_ = -1;
     float incline_brake_n_ = 0.0F;
 };
 

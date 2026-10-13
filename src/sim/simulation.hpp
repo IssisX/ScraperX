@@ -222,6 +222,9 @@ struct LiftSnapshot final {
     int incline_state = 0;
     double incline_brake_n = 0.0;
     double incline_speed_mps = 0.0;
+    // The traction tram: seconds until it leaves the end it stands at, -1
+    // while it runs.
+    double tram_departs_s = -1.0;
 };
 
 // A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it
