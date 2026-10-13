@@ -11,6 +11,17 @@
 // the yard to deck 3) the ground is 0.1 m under the origin: trestles and
 // posts stand on it, and the slab stops above it.
 namespace scraperx::sim::vertical {
+namespace {
+constexpr float kPlateHalf = .35f;
+constexpr float kPlateTopY = .27f;     // 2 cm proud of the deck
+constexpr float kPlateTravel = .06f;   // rad: the far edge drops 4 cm onto its stop
+constexpr float kPlateReturnNm = 80.0f;   // over the plate's own weight (10 kg), under the rider's
+// The return spring is preloaded (CHOSEN): a velocity motor driving the
+// plate up against its rest stop saturates there, so it always presses
+// kPlateReturnNm and the plate sits on the stop until a weight beats it.
+constexpr float kPlateLiftRadPerS = 1.0f;
+}  // namespace
+
 std::unique_ptr<Machine> slab_incline(BuildContext c) {
     constexpr float kRise = 30.0f;
     constexpr float kAngle = DegreesToRadians(60.0f);
@@ -39,7 +50,7 @@ std::unique_ptr<Machine> slab_incline(BuildContext c) {
     constexpr float kSlabHalfY = 1.5f;
     const Vec3 slab_start(slab_x, slab_sheave.GetY() - 2.0f - kSlabHalfY, kTowerZ);
 
-    auto m = std::make_unique<Machine>(c, "sx.slab_incline.v1", 3, 2);
+    auto m = std::make_unique<Machine>(c, "sx.slab_incline.v1", 3, 4);
 
     std::vector<Part> frame;
     // Two rails, either side of the chassis' keel.
@@ -108,15 +119,42 @@ std::unique_ptr<Machine> slab_incline(BuildContext c) {
     }
     auto deck = m->body("deck", trolley, deck_start, 900);
     auto slide = m->slider({}, deck, along, 0, travel);
-    // Ascending, only a braking force: the falling slab supplies the work.
-    // Sent back down, this motor is the powered reset that winds the slab up.
+    // The falling slab supplies the ascent's work; the rider's brake treadle
+    // (below) is all that holds it back. Sent back down, this motor is the
+    // powered reset that winds the slab up: it only pulls down.
     slide->GetMotorSettings().SetForceLimits(-80000, 0);
+
+    // Two plates let into the deck, each hinged along its downhill edge and
+    // lifted by a light return spring (kPlateReturnNm): the
+    // rider's weight presses one onto its stop. The yellow trip plate, in the
+    // far downhill corner, pulls the pin that holds the slab at the top. The
+    // brake treadle, nearer the uphill rail, presses the shoe on the rail
+    // through a compound linkage: up to Route::kInclineBrakeFullN of friction (CHOSEN: a
+    // 1:60 linkage on the rider's weight, mu 0.5), half again the slab's
+    // net pull, so held it stops the trolley and holds it on the incline.
+    const auto plate = [&](const char *name, float x0, float z0, Material material) {
+        const Vec3 at = deck_start + Vec3(x0 + kPlateHalf, kPlateTopY - .04f, z0 + kPlateHalf);
+        auto body = m->body(name, {box(Vec3(kPlateHalf, .04f, kPlateHalf), material)}, at, 10.0f);
+        auto hinge = m->axis_hinge(deck, body, deck_start + Vec3(x0, kPlateTopY - .04f, z0 + kPlateHalf),
+                                   -Vec3::sAxisZ(), 0.0f, kPlateTravel);
+        hinge->SetMotorState(EMotorState::Velocity);
+        hinge->SetTargetAngularVelocity(-kPlateLiftRadPerS);
+        hinge->GetMotorSettings().SetTorqueLimit(kPlateReturnNm);
+        m->no_collision(deck, body);
+        m->walkable(name, body, Vec3(0, .04f, 0));
+        m->pedals.push_back(hinge);
+        return body;
+    };
+    (void)plate("plate_trip", -1.2f, .6f, Material::Hazard);
+    (void)plate("plate_brake", .2f, .2f, Material::Steel);
 
     auto slab = m->body("slab", {
         box(Vec3(1.0f, kSlabHalfY, 1.0f), Material::Concrete),
         box(Vec3(1.1f, .12f, 1.1f), Material::Yellow, Vec3(0, kSlabHalfY, 0))
     }, slab_start, 2500);
-    m->slider({}, slab, Vec3::sAxisY(), -travel, 0);
+    // The slab's slider: a catch at the tower's head holds it at its top
+    // until the trip plate pulls the pin (the route works the catch).
+    m->holds.push_back(m->slider({}, slab, Vec3::sAxisY(), -travel, 0));
 
     const Vec3 slab_top(0, kSlabHalfY + .12f, 0);
     const float max_length = (attach_end - head_sheave).Length() + travel +

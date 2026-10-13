@@ -216,6 +216,12 @@ struct LiftSnapshot final {
     bool moving = false;
     int machine_count = 0;
     std::array<double, 16> travels{};
+    // The slab incline: 0 armed (slab caught at its top), 1 released, 2 being
+    // wound back down; the friction its brake treadle presses on the rail;
+    // its trolley's speed along the rail.
+    int incline_state = 0;
+    double incline_brake_n = 0.0;
+    double incline_speed_mps = 0.0;
 };
 
 // A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it

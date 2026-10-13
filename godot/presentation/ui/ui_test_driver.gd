@@ -2083,8 +2083,7 @@ func _incline(device: int) -> bool:
 			await _go(device, Vector2(-13.4, -86.0), 0.2, 20.0)):
 		return _fail("incline: the walk across the yard stalled at %s" % str(_position()))
 	await _pose("incline_foot")
-	if not await _ride_machine(device, 5, "SLAB INCLINE", Vector2(-13.4, -103.0), Vector2(-10.0, -103.08),
-			Vector2(-13.4, -120.4)):
+	if not await _ride_incline(device):
 		return false
 	if not await _go(device, Vector2(-13.4, -126.0), 0.15, 8.0):
 		return _fail("incline: the step onto deck 3 stalled at %s" % str(_position()))
@@ -2100,9 +2099,99 @@ func _incline(device: int) -> bool:
 		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
 	if not _standing_above(33.7):
 		return _fail("incline: not standing on deck 3 (y %.2f)" % _position().y)
-	_detail = "deck3_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
-		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
+	_detail = "deck3_y=%.2f peak_mps=%.2f arrival_mps=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, _incline_peak, _incline_arrival, float(int(_native().get_tick_index()) - started) / 90.0,
+		worst_step, float(body["lift"])]
 	return true
+
+
+# The slab incline's trolley carries two plates (entities after its deck):
+# the yellow trip plate and the brake treadle.
+const INCLINE_DECK_ENTITY := 2952
+const INCLINE_TRIP_ENTITY := INCLINE_DECK_ENTITY + 1
+const INCLINE_BRAKE_ENTITY := INCLINE_DECK_ENTITY + 2
+# Off the brake: this far west of the treadle, clear of it on the deck. The
+# speed the trolley gains in the time a step back onto it takes.
+const INCLINE_OFF_BRAKE_M := 0.8
+const INCLINE_STEP_GAIN_MPS := 1.4
+
+
+func _incline_plate(entity: int) -> Vector3:
+	return _native().get_kit_body_transform(_native().get_kit_body_index(entity)).origin
+
+
+# One frame of the stick toward a point that moves with the trolley.
+func _steer_on_deck(device: int, target: Vector2) -> void:
+	var at := _position()
+	var to := target - Vector2(at.x, at.z)
+	var yaw := float(_main._yaw)
+	var forward := Vector2(-sin(yaw), -cos(yaw))
+	var right := Vector2(cos(yaw), -sin(yaw))
+	var v := Vector2.ZERO
+	if to.length() > 0.05:
+		v = Vector2(to.dot(right), to.dot(forward)).normalized() * clampf(to.length() / 0.3, 0.25, 1.0)
+	_move_dir(device, v)
+
+
+# Up the slab incline as a player works it: onto the trolley, stand on the
+# yellow plate (the slab's pin comes out), then ride the brake treadle: on it
+# whenever the trolley runs faster than the head allows, off it otherwise.
+# At the head, off onto the receiver.
+func _ride_incline(device: int) -> bool:
+	if not (await _go(device, Vector2(-13.4, -103.0), 0.15, 12.0) and \
+			await _go(device, Vector2(-10.0, -103.08), 0.15, 6.0)):
+		return _fail("incline: the walk onto the trolley stalled at %s" % str(_position()))
+	if not await _offered(&"incline", "STAND ON", "THE YELLOW PLATE"):
+		return _fail("incline: the deck did not read STAND ON THE YELLOW PLATE (read '%s')" % _action_label())
+	var trip := _incline_plate(INCLINE_TRIP_ENTITY)
+	if not await _go(device, Vector2(trip.x, trip.z), 0.15, 4.0) or \
+			not await _wait_until(func() -> bool: return int(_native().get_lift_state()["incline_state"]) == 1, 2.0):
+		return _fail("incline: standing on the yellow plate did not pull the pin (lift %s)" % str(
+			_native().get_lift_state()))
+	var peak := 0.0
+	var arrival := 0.0
+	var braked := false
+	var waited := 0.0
+	while waited < 40.0:
+		var lift: Dictionary = _native().get_lift_state()
+		var travel := float(lift["travels"][LIFT_INCLINE_INDEX])
+		var speed := float(lift["incline_speed_mps"])
+		peak = maxf(peak, speed)
+		if travel > 0.995 and speed < 0.05:
+			break
+		arrival = speed
+		braked = braked or float(lift["incline_brake_n"]) > 20000.0
+		# What the head allows here (stopping on the brake at 1.2 m/s2), less
+		# what the trolley gains while the feet step back onto the treadle;
+		# nearly stopped, step off and let it creep.
+		var remaining := (1.0 - travel) * INCLINE_LENGTH_M
+		var allowed := minf(3.5, sqrt(2.0 * 1.2 * maxf(0.0, remaining - 0.5)) + 0.2)
+		var on_brake := speed > 0.3 and speed + INCLINE_STEP_GAIN_MPS > allowed
+		var brake := _incline_plate(INCLINE_BRAKE_ENTITY)
+		_steer_on_deck(device, Vector2(brake.x - (0.0 if on_brake else INCLINE_OFF_BRAKE_M), brake.z))
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_move_dir(device, Vector2.ZERO)
+	if float(_native().get_lift_state()["travels"][LIFT_INCLINE_INDEX]) < 0.995:
+		return _fail("incline: the trolley never reached the head (lift %s)" % str(_native().get_lift_state()))
+	if not braked or peak > 5.0 or arrival > 2.0:
+		return _fail("incline: ridden on the brake it must arrive slowly (braked %s, peak %.2f, arrival %.2f m/s)" % [
+			str(braked), peak, arrival])
+	_incline_peak = peak
+	_incline_arrival = arrival
+	await _pose("machine_5_top")
+	if not await _go(device, Vector2(-13.4, -120.4), 0.15, 8.0):
+		return _fail("incline: the step off onto the head's receiver stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	if int(_native().get_lift_state()["role"]) != 3:
+		return _fail("incline: not standing on the head's receiver (y %.2f)" % _position().y)
+	return true
+
+
+const LIFT_INCLINE_INDEX := 5
+const INCLINE_LENGTH_M := 34.641
+var _incline_peak := 0.0
+var _incline_arrival := 0.0
 
 
 func _wheel(device: int) -> bool:

@@ -72,8 +72,9 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     // south face at x -10 and its slab's tower stands east of it (x -5.5):
     // the trolley's deck at the foot 3.4 m over the yard (z -103), at the head
     // 33.4 m (z -120.4), its receivers west of it at x -14.9 to -11.9.
+    incline_ = static_cast<int>(placed_.size());
     place("sx.slab_incline.v1", {RVec3(-10.0, 0.1, -103.08), 0.5F * JPH_PI},
-          {kInclineStaticFirst, 3}, {kInclineDynamicFirst, 2});
+          {kInclineStaticFirst, 3}, {kInclineDynamicFirst, 4});
     // A ramp from the yard (z -90) up to the boarding platform's south edge,
     // and a plate from the head's receiver over the face's edge beam to deck 3
     // (33.0 m), 0.4 m below it.
@@ -131,6 +132,9 @@ void Route::place(const char *id, Placement placement, EntityRange statics, Enti
     placed.exit = port(m, "exit").body;
     placed.entry_y = static_cast<float>(m.port_position(port(m, "entry")).GetY());
     placed.exit_y = static_cast<float>(m.port_position(port(m, "exit")).GetY());
+    for (const auto &p : m.ports) {
+        if (p.name.rfind("plate", 0) == 0) placed.deck_parts.push_back(p.body);
+    }
     placed.machine->command({0.0F, true});
     placed_.push_back(std::move(placed));
     targets_.push_back(0.0F);
@@ -157,7 +161,9 @@ Route::Here Route::at(std::uint64_t support) const {
         }
         const Placed &p = placed_[i];
         Role role = Role::None;
-        if (kit_.body_entity(p.deck) == support) {
+        bool on_part = false;
+        for (const BodyIndex part : p.deck_parts) on_part = on_part || kit_.body_entity(part) == support;
+        if (kit_.body_entity(p.deck) == support || on_part) {
             role = Role::Deck;
         } else if (kit_.body_entity(p.entry) == support) {
             role = Role::Entry;
@@ -176,7 +182,54 @@ Route::Here Route::at(std::uint64_t support) const {
     return here;
 }
 
+Route::InclineState Route::incline_state() const noexcept {
+    if (incline_ < 0) return InclineState::Armed;
+    return static_cast<InclineState>(static_cast<int>(targets_[static_cast<std::size_t>(incline_)] + .5F));
+}
+
 void Route::pre_step(float dt, bool action, std::uint64_t support) {
+    if (action && incline_ >= 0) {
+        // The slab incline: from its deck the plates work it, not Action;
+        // from a receiver Action calls it there. Called down, its motor winds
+        // the slab back up; called up, a trip line from the head pulls the
+        // pin and the slab sends the empty trolley up.
+        const Here here = at(support);
+        if (here.machine == incline_) {
+            float &state = targets_[static_cast<std::size_t>(incline_)];
+            if (here.role == Role::Entry && here.travel > .01F) {
+                state = float(InclineState::Resetting);
+            } else if (here.role == Role::Exit && here.travel < .99F && incline_state() == InclineState::Armed) {
+                state = float(InclineState::Released);
+            }
+            action = false;
+        }
+    }
+    if (incline_ >= 0) {
+        Placed &p = placed_[static_cast<std::size_t>(incline_)];
+        Machine &m = *p.machine;
+        float &state = targets_[static_cast<std::size_t>(incline_)];
+        const float trip = m.pedals[0]->GetCurrentAngle();
+        const float brake = m.pedals[1]->GetCurrentAngle();
+        const float travel_now = travel(static_cast<std::size_t>(incline_));
+        if (incline_state() == InclineState::Armed && trip > kInclineTripAngle) {
+            state = float(InclineState::Released);
+        }
+        if (incline_state() == InclineState::Resetting && travel_now < .005F) {
+            state = float(InclineState::Armed);
+        }
+        // The catch: while armed the slab is held at its top. The brake: the
+        // treadle's travel presses the shoe, friction on the trolley's slider.
+        if (incline_state() == InclineState::Armed) {
+            m.holds[0]->SetLimits(-.001F, 0.0F);
+            m.command({0.0F, true});
+        } else {
+            m.holds[0]->SetLimits(-kInclineSlabTravel, 0.0F);
+            m.command(incline_state() == InclineState::Resetting ? Command{0.0F, true} : Command{1.0F, false});
+        }
+        incline_brake_n_ = kInclineBrakeFullN *
+                            std::clamp(brake / (kInclineBrakeTakeUp * m.pedals[1]->GetLimitsMax()), 0.0F, 1.0F);
+        m.drives[0].slider->SetMaxFrictionForce(incline_brake_n_);
+    }
     if (action) {
         const Here here = at(support);
         if (here.machine >= 0) {

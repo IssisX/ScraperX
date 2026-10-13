@@ -4062,50 +4062,93 @@ void run_high() {
 }
 
 // The owner's slab incline, from the game's start: across the yard, up the
-// ramp onto its boarding platform, onto the trolley, RAISE: a 2.5 t slab
-// falls in its tower and its rope hauls the trolley 30 m up the 60-degree
-// incline (the trolley's motor only brakes it); off at the head and down
-// onto deck 3.
+// ramp onto its boarding platform, onto the trolley. Nothing is pressed: the
+// rider's weight on the yellow trip plate pulls the pin that holds the 2.5 t
+// slab at the top of its tower, and the slab's fall hauls the trolley 30 m up
+// the 60-degree incline. The only thing holding it back is the rider's weight
+// on the brake treadle: held, the shoe stops the trolley and holds it on the
+// incline; let off, it runs. Ridden with the brake, it arrives at the head
+// slowly and the rider walks off onto deck 3; ridden without, it strikes the
+// head at speed and the rider is thrown.
+namespace {
+using scraperx::sim::Simulation;
+constexpr std::uint64_t kInclineDeck = scraperx::sim::vertical::Route::kInclineDynamicFirst;
+constexpr std::uint64_t kInclineTrip = kInclineDeck + 1;
+constexpr std::uint64_t kInclineBrake = kInclineDeck + 2;
+constexpr double kOffBrakeM = 1.0;
+
+scraperx::sim::Vector3 kit_entity_position(const Simulation &s, std::uint64_t entity) {
+    return s.kit_body_position(s.kit_body_index(entity));
+}
+
+// Steer toward a body that moves (a plate on the trolley), or a point
+// `offset_x` west of it on the deck, for `ticks`.
+void hold_on(Simulation &s, std::uint64_t entity, int ticks, double offset_x = 0.0) {
+    for (int i = 0; i < ticks; ++i) {
+        auto at = kit_entity_position(s, entity);
+        at.x -= offset_x;
+        const auto me = s.snapshot().player_position;
+        const double dx = at.x - me.x, dz = at.z - me.z, d = std::hypot(dx, dz);
+        const double gain = std::min(1.0, d / 0.3);
+        (void)s.set_move_input(d > 0.05 ? gain * dx / d : 0.0, d > 0.05 ? gain * dz / d : 0.0);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+}
+
+bool board_incline(Simulation &s) {
+    (void)s.advance_frame(1.0);
+    return walk_to(s, 6.0, -70.0, 20.0) && walk_to(s, -13.4, -86.0, 20.0) && walk_to(s, -13.4, -103.0, 12.0) &&
+           s.advance_frame(0.5).accepted && s.lift_state().machine == 5 && s.lift_state().role == 2 &&
+           walk_to(s, -10.0, -103.08, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 1;
+}
+}  // namespace
+
 void run_incline() {
     using scraperx::sim::InitialSpawn;
-    using scraperx::sim::Simulation;
-    Simulation s(InitialSpawn::ExteriorGrade);
-    (void)s.advance_frame(1.0);
-    // East of the slingshot, then west across the yard to the ramp's foot.
-    const bool boarded = walk_to(s, 6.0, -70.0, 20.0) && walk_to(s, -13.4, -86.0, 20.0) &&
-                         walk_to(s, -13.4, -103.0, 12.0) &&
-                         s.advance_frame(0.5).accepted && s.lift_state().machine == 5 && s.lift_state().role == 2 &&
-                         walk_to(s, -10.0, -103.08, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 1;
-    if (!boarded) {
-        const auto st = s.snapshot();
-        std::cerr << "incline board: at (" << st.player_position.x << "," << st.player_position.y << ","
-                  << st.player_position.z << ") machine=" << s.lift_state().machine << " role=" << s.lift_state().role
-                  << " incline_travel=" << s.lift_state().travels[5] << '\n';
-    }
-    require(boarded, "incline: across the yard, up the ramp, onto the trolley");
     {
         Simulation idle(InitialSpawn::ExteriorGrade);
         (void)idle.advance_frame(20.0);
-        require(std::abs(idle.lift_state().travels[5]) < 0.005,
-                "incline: left alone, the slab stays up and the trolley at the foot");
+        require(std::abs(idle.lift_state().travels[5]) < 0.005 && idle.lift_state().incline_state == 0 &&
+                    idle.lift_state().incline_brake_n < 100.0,
+                "incline: left alone, the slab stays caught and the trolley at the foot");
     }
-    (void)s.request_lift_action();
+    // Held on the brake from the moment the pin is out: the shoe holds it.
+    {
+        Simulation held(InitialSpawn::ExteriorGrade);
+        require(board_incline(held), "incline: across the yard, up the ramp, onto the trolley");
+        hold_on(held, kInclineTrip, 90);
+        require(held.lift_state().incline_state == 1, "incline: standing on the trip plate must pull the pin");
+        hold_on(held, kInclineBrake, 360);
+        const double stopped_at = held.lift_state().travels[5];
+        hold_on(held, kInclineBrake, 180);
+        const auto lift = held.lift_state();
+        require(lift.incline_brake_n > 20000.0 && lift.incline_speed_mps < 0.01 && lift.travels[5] < 0.5 &&
+                    std::abs(lift.travels[5] - stopped_at) < 0.001,
+                "incline: standing on the brake treadle must stop the trolley and hold it on the incline");
+    }
+    // Ridden: on the brake whenever faster than the head allows, off it
+    // otherwise; at the head, off onto its receiver and down onto deck 3.
+    Simulation s(InitialSpawn::ExteriorGrade);
+    require(board_incline(s), "incline: across the yard, up the ramp, onto the trolley");
+    hold_on(s, kInclineTrip, 60);
     const double start = s.snapshot().simulation_time_seconds;
-    double peak = 0.0;
-    const bool up = wait_for(s, 90.0, [&s, &peak](const scraperx::sim::Snapshot &state) {
-        peak = std::max(peak, std::hypot(state.player_linear_velocity.y, state.player_linear_velocity.z));
+    double peak = 0.0, arrival = 0.0;
+    const double length = scraperx::sim::vertical::Route::kInclineSlabTravel;
+    for (int i = 0; i < 90 * 60; ++i) {
         const auto lift = s.lift_state();
-        return std::abs(lift.travels[5] - 1.0) < 0.005 && !lift.moving && state.player_grounded;
-    });
-    const double ride_s = s.snapshot().simulation_time_seconds - start;
-    if (!up) {
-        const auto st = s.snapshot();
-        std::cerr << "incline ride: at (" << st.player_position.x << "," << st.player_position.y << ","
-                  << st.player_position.z << ") travel=" << s.lift_state().travels[5] << " deaths=" << st.death_count
-                  << '\n';
+        const double remaining = (1.0 - lift.travels[5]) * length;
+        const double allowed = std::min(2.5, std::sqrt(2.0 * 0.8 * std::max(0.0, remaining - 0.5)) + 0.2);
+        peak = std::max(peak, lift.incline_speed_mps);
+        if (lift.travels[5] > 0.995 && lift.incline_speed_mps < 0.05) break;
+        arrival = lift.incline_speed_mps;
+        // Off the brake: a metre west of the treadle, clear of it on the deck.
+        hold_on(s, kInclineBrake, 1, lift.incline_speed_mps > allowed ? 0.0 : kOffBrakeM);
     }
-    require(up && ride_s < 60.0, "incline: RAISE must haul the trolley 30 m up the incline");
-    require(peak < 2.0, "incline: the trolley's brake must hold it to its pace");
+    const double ride_s = s.snapshot().simulation_time_seconds - start;
+    require(s.lift_state().travels[5] > 0.995 && s.snapshot().death_count == 0,
+            "incline: worked by the trip plate and the brake, the slab must haul the trolley to the head");
+    require(peak < 5.0 && arrival < 1.5, "incline: ridden on the brake, the trolley must reach the head slowly");
     require(walk_to(s, -13.4, -120.4, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3,
             "incline: off onto the head's receiver");
     require(walk_to(s, -13.4, -126.0, 8.0) && s.advance_frame(1.0).accepted,
@@ -4113,7 +4156,19 @@ void run_incline() {
     const auto end = s.snapshot();
     require(end.death_count == 0 && end.player_grounded && end.player_position.y > 33.7 && end.player_position.y < 34.2,
             "incline: standing on deck 3, alive");
-    std::cout << "PASS scraperx_sim incline: ride_s=" << ride_s << " peak_mps=" << peak
+    // Unbraked: the slab drives the trolley into the head at speed.
+    Simulation wild(InitialSpawn::ExteriorGrade);
+    require(board_incline(wild), "incline: across the yard, up the ramp, onto the trolley");
+    hold_on(wild, kInclineTrip, 60);
+    double wild_peak = 0.0;
+    for (int i = 0; i < 90 * 20; ++i) {
+        wild_peak = std::max(wild_peak, wild.lift_state().incline_speed_mps);
+        hold_on(wild, kInclineBrake, 1, kOffBrakeM);
+    }
+    require(wild_peak > 10.0 && (wild.snapshot().death_count > 0 || wild.snapshot().support_stumble_count > 0),
+            "incline: ridden without the brake, the trolley must strike the head at speed and throw the rider");
+    std::cout << "PASS scraperx_sim incline: ride_s=" << ride_s << " peak_mps=" << peak << " arrival_mps=" << arrival
+              << " unbraked_peak_mps=" << wild_peak << " unbraked_deaths=" << wild.snapshot().death_count
               << " deck3_y=" << end.player_position.y << '\n';
 }
 

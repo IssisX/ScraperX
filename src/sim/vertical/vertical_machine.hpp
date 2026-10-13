@@ -67,6 +67,12 @@ public:
     // Further actuators a machine works each step, after its drives (the
     // stone wheel's hopper gate): finite forces, in the write phase.
     std::vector<std::function<void(float, const Command &)>> stepping;
+    // Plates the player stands on, hinged to a deck (the slab incline's trip
+    // and brake treadle): the route reads their angles.
+    std::vector<Ref<HingeConstraint>> pedals;
+    // Sliders a catch holds fast at their top (the slab incline's slab): the
+    // route collapses their limits while caught.
+    std::vector<Ref<SliderConstraint>> holds;
     BuildContext context;
     RVec3 point(Vec3 local) const;
     Vec3 direction(Vec3 local) const;

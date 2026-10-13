@@ -1062,6 +1062,9 @@ godot::Dictionary ScraperXSimulation::get_lift_state() const {
     out["target"] = state.target;
     out["moving"] = state.moving;
     out["machine_count"] = static_cast<std::int64_t>(state.machine_count);
+    out["incline_state"] = static_cast<std::int64_t>(state.incline_state);
+    out["incline_brake_n"] = state.incline_brake_n;
+    out["incline_speed_mps"] = state.incline_speed_mps;
     godot::PackedFloat64Array travels;
     for (int i = 0; i < state.machine_count && i < static_cast<int>(state.travels.size()); ++i) {
         travels.push_back(state.travels[static_cast<std::size_t>(i)]);

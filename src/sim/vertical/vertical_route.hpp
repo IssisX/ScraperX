@@ -42,6 +42,23 @@ public:
     [[nodiscard]] const Machine &machine(std::size_t i) const { return *placed_[i].machine; }
     [[nodiscard]] float travel(std::size_t i) const;
     [[nodiscard]] float deck_speed(std::size_t i) const;
+    // The slab incline (-1 when not placed), its state, and the friction its
+    // brake treadle presses on the rail now.
+    enum class InclineState { Armed = 0, Released = 1, Resetting = 2 };
+    [[nodiscard]] int incline() const noexcept { return incline_; }
+    [[nodiscard]] InclineState incline_state() const noexcept;
+    [[nodiscard]] float incline_brake_n() const noexcept { return incline_brake_n_; }
+    // The brake treadle's full friction (CHOSEN; see slab_incline.cpp) and
+    // the trip plate's angle past which the pin is out (rad).
+    static constexpr float kInclineBrakeFullN = 24000.0F;
+    static constexpr float kInclineTripAngle = .03F;
+    // The fraction of the treadle's travel at which the linkage presses the
+    // shoe fully: short of its stop, so a rider standing on it holds full
+    // friction.
+    static constexpr float kInclineBrakeTakeUp = .8F;
+    // The slab's fall in its tower: the trolley's travel along the incline
+    // (30 m at 60 degrees).
+    static constexpr float kInclineSlabTravel = 34.641F;
 
     // Restore the Kit first, then this.
     [[nodiscard]] State state() const;
@@ -78,7 +95,7 @@ public:
     // to deck 3: a ramp up to its boarding platform (3.4 m), the trolley 30 m
     // up the 60-degree incline, and a plate from its head onto deck 3.
     static constexpr std::uint64_t kInclineStaticFirst = 1979;   // frame, entry, exit
-    static constexpr std::uint64_t kInclineDynamicFirst = 2934;  // trolley, slab
+    static constexpr std::uint64_t kInclineDynamicFirst = 2952;  // trolley, trip plate, brake treadle, slab
     static constexpr std::uint64_t kInclineRamp = 1982;
     static constexpr std::uint64_t kInclineHeadPlate = 1983;
     // The owner's stone wheel in the yard south of S1, deck 2 to deck 4: a
@@ -105,6 +122,8 @@ private:
     struct Placed {
         std::unique_ptr<Machine> machine;
         BodyIndex deck, entry, exit;
+        // Bodies on the deck that count as standing on it (plates).
+        std::vector<BodyIndex> deck_parts;
         float entry_y = 0.0F, exit_y = 0.0F;
     };
 
@@ -115,6 +134,10 @@ private:
     std::vector<Placed> placed_;
     std::vector<float> targets_;
     int wheel_ = -1;   // the stone wheel: worked by its feed plank, not Action
+    // The slab incline: worked by its plates, not Action from its deck. Its
+    // state lives in targets_ (checkpointed): see InclineState.
+    int incline_ = -1;
+    float incline_brake_n_ = 0.0F;
 };
 
 } // namespace scraperx::sim::vertical

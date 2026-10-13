@@ -5500,6 +5500,9 @@ LiftSnapshot Simulation::lift_state() const noexcept {
     for (std::size_t i = 0; i < route.size() && i < result.travels.size(); ++i) {
         result.travels[i] = route.travel(i);
     }
+    result.incline_state = static_cast<int>(route.incline_state());
+    result.incline_brake_n = route.incline_brake_n();
+    result.incline_speed_mps = route.incline() >= 0 ? route.deck_speed(static_cast<std::size_t>(route.incline())) : 0.0;
     return result;
 }
 

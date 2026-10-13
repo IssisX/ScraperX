@@ -138,6 +138,10 @@ const LIFT_NAMES := ["CASCADE MAST", "PITMAN LIFT", "BARREL HELIX", "CROWN GONDO
 const LIFT_ROLE_DECK := 1
 const LIFT_ROLE_ENTRY := 2
 const LIFT_ROLE_EXIT := 3
+# The slab incline is worked from its deck by the rider's weight on its plates.
+const LIFT_SLAB_INCLINE := 5
+const INCLINE_ARMED := 0
+const INCLINE_RELEASED := 1
 const RUBBLE_DENSITY := 1600.0
 const RUBBLE_PILE_HEIGHT := 0.05
 # Stones: a course on a bin's fill every RUBBLE_STONE_PITCH metres, a pile's
@@ -890,8 +894,9 @@ func _perform_action() -> void:
 				_native.request_trapeze_action()
 		&"lift":
 			_native.request_lift_action()
-		&"s1":
-			# S1 is worked by standing on its plate; Action only reads it out.
+		&"s1", &"incline":
+			# S1 and the slab incline are worked by standing on their plates;
+			# Action only reads them out.
 			pass
 		_:
 			# Nothing reported in reach: ask anyway, exactly as the old E key
@@ -972,7 +977,17 @@ func _read_context() -> Dictionary:
 		var lift_name: String = LIFT_NAMES[lift_machine] if lift_machine < LIFT_NAMES.size() else "LIFT"
 		var role := int(lift["role"])
 		var lift_travel := float(lift["travel"])
-		if role == LIFT_ROLE_DECK:
+		if role == LIFT_ROLE_DECK and lift_machine == LIFT_SLAB_INCLINE:
+			# Nothing to press: the yellow plate pulls the slab's pin, the
+			# treadle presses the brake shoe. Action reads out which.
+			var incline_state := int(lift["incline_state"])
+			if incline_state == INCLINE_ARMED and lift_travel < 0.01:
+				action = {"id": &"incline", "icon": &"up", "label": "STAND ON", "detail": "THE YELLOW PLATE"}
+			elif incline_state == INCLINE_RELEASED and lift_travel < 0.99:
+				action = {"id": &"incline", "icon": &"down",
+					"label": "BRAKING" if float(lift["incline_brake_n"]) > 1000.0 else "BRAKE: THE TREADLE",
+					"detail": "%.1f M/S" % float(lift["incline_speed_mps"])}
+		elif role == LIFT_ROLE_DECK:
 			if float(lift["target"]) < 0.5:
 				action = {"id": &"lift", "icon": &"up", "label": "RAISE", "detail": lift_name}
 			else:
