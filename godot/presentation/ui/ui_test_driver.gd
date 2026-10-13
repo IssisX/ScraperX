@@ -112,6 +112,11 @@ const SCENARIOS := {
 	# CROUCH tapped in the air, and the native rolls on: the momentum kept,
 	# little balance lost, the view turned once over.
 	"touch_roll": 8,
+	# Phase 3 on touch: the yard's trapeze. Up its ramp, run off the launch
+	# stand, GRAB the hanging bar in the air, pump it with Crouch (pull up
+	# through the bottom, let down at the ends), LET GO near the far end and
+	# land on the landing stand.
+	"touch_trapeze": 8,
 	# The title over the live tower at launch: the simulation frozen behind
 	# it, no CONTINUE without a save, NEW CLIMB tapped starts the climb.
 	"touch_title": 8,
@@ -294,6 +299,8 @@ func _run() -> void:
 			ok = await _save(InputRouter.Device.TOUCH)
 		"touch_roll":
 			ok = await _roll()
+		"touch_trapeze":
+			ok = await _trapeze()
 		"touch_title":
 			ok = await _title()
 		"touch_teeter":
@@ -1962,7 +1969,8 @@ func _ride_machine(device: int, index: int, name: String, entry: Vector2, deck: 
 			var lift: Dictionary = _native().get_lift_state()
 			return absf(float(lift["travels"][index]) - 1.0) < 0.01 and not bool(lift["moving"]) and \
 				bool(_ctx()["grounded"]), 90.0):
-		return _fail("%s: the deck never reached its upper receiver (at %s)" % [name, str(_position())])
+		return _fail("%s: the deck never reached its upper receiver (at %s, lift %s, grounded %s)" % [name,
+			str(_position()), str(_native().get_lift_state()), str(_ctx()["grounded"])])
 	await _pose("machine_%d_top" % index)
 	if not await _go(device, exit, 0.15, 8.0):
 		return _fail("%s: the step off onto the upper receiver stalled at %s" % [name, str(_position())])
@@ -3030,6 +3038,65 @@ func _roll() -> bool:
 	_detail = "drop_m=%.2f normal_mps=%.2f forward_mps=%.2f balance_after=%.2f roll_travel_m=%.2f" % [
 		top - _position().y, float(landing["normal_speed"]), float(landing["tangent_speed"]),
 		1.0 - float(landing["loss"]), float(landing["roll_travel"])]
+	return true
+
+
+func _trapeze() -> bool:
+	var device := InputRouter.Device.TOUCH
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not (await _go(device, Vector2(14.0, -28.0), 0.2, 20.0) and \
+			await _go(device, Vector2(27.6, -28.0), 0.15, 12.0)):
+		return _fail("trapeze: the walk up onto the launch stand stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	_stick_push(Vector2(0.0, -1.0))
+	if not await _wait_until(func() -> bool: return _position().x > 30.5, 3.0):
+		_touch(0, _main._touch.stick_home(), false)
+		return _fail("trapeze: the run never reached the stand's edge (at %s)" % str(_position()))
+	_tap(1, _center(&"jump"))
+	await _frames(2)
+	_touch(0, _main._touch.stick_home(), false)
+	if not await _wait_until(func() -> bool: return str(_ctx()["action"]["label"]) == "GRAB THE BAR", 1.0):
+		return _fail("trapeze: GRAB THE BAR was never offered in the air (at %s)" % str(_position()))
+	_tap(1, _center(&"action"))
+	if not await _wait_until(func() -> bool: return bool(_native().get_trapeze_state()["harnessed"]), 1.0):
+		return _fail("trapeze: the hands never closed on the bar (at %s)" % str(_position()))
+	await _pose("trapeze_caught")
+	# Pump: Crouch pulls up as the bar passes plumb, and lets down at the ends.
+	var t := 0.0
+	var released := false
+	var peak := 0.0
+	while t < 40.0 and not released:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+		var trap: Dictionary = _native().get_trapeze_state()
+		if not bool(trap["harnessed"]):
+			return _fail("trapeze: the hands came off the bar (%s)" % str(trap))
+		var angle := float(trap["angle_rad"])
+		var w := float(trap["angular_speed"])
+		peak = maxf(peak, angle)
+		if absf(angle) < 0.12 and not bool(trap["pulled"]):
+			_tap(1, _center(&"crouch"))
+			await _frames(2)
+		elif absf(w) < 0.25 and bool(trap["pulled"]):
+			_tap(1, _center(&"crouch"))
+			await _frames(2)
+		if angle > 0.82 and w > 0.0:
+			if peak > 0.82:
+				await _pose("trapeze_high")
+			_tap(1, _center(&"action"))
+			released = true
+	if not released:
+		return _fail("trapeze: the swing never grew to 0.82 rad in 40 s (peak %.2f)" % peak)
+	if not await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 4.0):
+		return _fail("trapeze: never came down (at %s)" % str(_position()))
+	await _seconds(0.5)
+	var at := _position()
+	if int(_native().get_death_count()) != 0 or at.y < 5.8 or at.x < 39.5:
+		return _fail("trapeze: did not land on the landing stand (at %s, deaths %d)" % [str(at),
+			int(_native().get_death_count())])
+	var trap_end: Dictionary = _native().get_trapeze_state()
+	_detail = "landed=(%.2f,%.2f) pumps=%d arm_work_J=%.0f catch_mps=%.2f" % [at.x, at.y,
+		int(trap_end["pumps"]), float(trap_end["arm_work_j"]), float(trap_end["catch_speed_mps"])]
 	return true
 
 

@@ -7,6 +7,7 @@
 #include "sim/mechanism_kit.hpp"
 #include "sim/slingshot.hpp"
 #include "sim/swing.hpp"
+#include "sim/trapeze.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"
 
@@ -1262,6 +1263,9 @@ public:
         // The owner's vertical machines, on their own motors, where the route
         // has no way up: from the 264 ring, the cascade mast.
         vertical_ = std::make_unique<scraperx::sim::vertical::Route>(*kit_, physics_system_);
+        // Phase 3: the trapeze in the yard east of the start. Built last, so
+        // every body before it keeps its place in the kit.
+        trapeze_ = std::make_unique<Trapeze>(physics_system_, *kit_, player_id_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -1278,6 +1282,7 @@ public:
             carry_constraint_ = nullptr;
         }
         vertical_.reset();
+        trapeze_.reset();
         swing_.reset();
         slingshot_.reset();
         kit_.reset();
@@ -1329,6 +1334,10 @@ public:
         // The swing: Action and Drop, one-shot.
         bool swing_action = false;
         bool swing_drop = false;
+        // The trapeze: Action takes the bar (or the pole), Drop lets go;
+        // Crouch held pulls up.
+        bool trapeze_action = false;
+        bool trapeze_drop = false;
         // A vertical machine's control: Action, one-shot.
         bool lift_action = false;
     };
@@ -1356,7 +1365,7 @@ public:
 
         // Harnessed into the slingshot's pouch or the swing's seat, the body
         // is the machine's: no crouch, carry, rig or traversal begins.
-        if (!slingshot_->controls_player() && !swing_->controls_player()) {
+        if (!slingshot_->controls_player() && !swing_->controls_player() && !trapeze_->controls_player()) {
             update_crouch(bodies, commands);
             update_rig(bodies, commands);
             update_carry(bodies, commands, delta_seconds);
@@ -1373,7 +1382,10 @@ public:
                              commands.sling_elevation, commands.sling_action, commands.sling_drop,
                              grounded_ && support_entity_id_ == Slingshot::kPouchEntity);
         swing_->pre_step(delta_seconds, commands.swing_action, commands.swing_drop);
-        const bool sling_controlling = slingshot_->controls_player() || swing_->controls_player();
+        trapeze_->pre_step(delta_seconds, commands.trapeze_action, commands.trapeze_drop, commands.crouch_held,
+                           !grounded_ && traversal_state_ == TraversalState::None);
+        const bool sling_controlling =
+            slingshot_->controls_player() || swing_->controls_player() || trapeze_->controls_player();
         if (sling_was_controlling && !slingshot_->controls_player() && slingshot_->state().released) {
             slingshot_flight_ = true;
         }
@@ -1436,6 +1448,7 @@ public:
         kit_->post_step(delta_seconds);
         slingshot_->post_step(delta_seconds);
         swing_->post_step(delta_seconds);
+        trapeze_->post_step(delta_seconds);
 
         SupportSample support = contact_listener_.sample();
         if (jump_started || traversal_state_ != TraversalState::None) {
@@ -1498,6 +1511,7 @@ public:
 
     [[nodiscard]] const Slingshot &slingshot() const noexcept { return *slingshot_; }
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
+    [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
     [[nodiscard]] const scraperx::sim::vertical::Route &vertical() const noexcept { return *vertical_; }
     [[nodiscard]] std::uint64_t standing_entity() const noexcept { return grounded_ ? support_entity_id_ : 0; }
     [[nodiscard]] bool slingshot_flight() const noexcept { return slingshot_flight_; }
@@ -4261,6 +4275,7 @@ private:
         // Out of the slingshot's harness before the body moves.
         slingshot_->detach();
         swing_->detach();
+        trapeze_->detach();
         slingshot_flight_ = false;
         // The capsule the checkpoint was committed in: a crouched commit's
         // centre is a crouched centre, and may sit under a low ceiling.
@@ -4279,6 +4294,7 @@ private:
         kit_->restore(checkpoint_.kit);
         slingshot_->restore(checkpoint_.slingshot);
         swing_->restore(checkpoint_.swing);
+        trapeze_->restore();
         vertical_->restore(checkpoint_.vertical);
         restore_carry_topology(checkpoint_.carrying_entity);
         // The body comes back at rest, so what it holds does too. Restored
@@ -4598,6 +4614,7 @@ public:
     std::unique_ptr<scraperx::sim::kit::Kit> kit_;
     std::unique_ptr<Slingshot> slingshot_;
     std::unique_ptr<Swing> swing_;
+    std::unique_ptr<Trapeze> trapeze_;
     std::unique_ptr<scraperx::sim::vertical::Route> vertical_;
     // Thrown off the slingshot's bands and not yet down: the stick steers by
     // a bounded force instead of air control.
@@ -5175,6 +5192,8 @@ void Simulation::step_fixed() noexcept {
     commands.sling_drop = sling_drop_;
     commands.swing_action = swing_action_;
     commands.swing_drop = swing_drop_;
+    commands.trapeze_action = trapeze_action_;
+    commands.trapeze_drop = trapeze_drop_;
     commands.lift_action = lift_action_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
@@ -5182,6 +5201,8 @@ void Simulation::step_fixed() noexcept {
     sling_drop_ = false;
     swing_action_ = false;
     swing_drop_ = false;
+    trapeze_action_ = false;
+    trapeze_drop_ = false;
     lift_action_ = false;
     jump_requested_ = false;
     traversal_requested_ = false;
@@ -5341,6 +5362,51 @@ bool Simulation::request_swing_drop() noexcept {
     }
     swing_drop_ = true;
     return true;
+}
+
+bool Simulation::request_trapeze_action() noexcept {
+    const auto &state = physics_world_->trapeze().state();
+    if (!state.harnessed && !state.catch_available && !state.catch_near) {
+        return false;
+    }
+    trapeze_action_ = true;
+    return true;
+}
+
+bool Simulation::request_trapeze_drop() noexcept {
+    if (!physics_world_->trapeze().state().harnessed) {
+        return false;
+    }
+    trapeze_drop_ = true;
+    return true;
+}
+
+TrapezeSnapshot Simulation::trapeze_state() const noexcept {
+    const auto &state = physics_world_->trapeze().state();
+    TrapezeSnapshot result;
+    result.catch_available = state.catch_available;
+    result.catch_near = state.catch_near;
+    result.harnessed = state.harnessed;
+    result.pulled = state.pulled;
+    result.catch_speed_mps = state.catch_speed_mps;
+    result.catch_loss_j = state.catch_loss_j;
+    result.hand_force_n = state.hand_force_n;
+    result.peak_hand_force_n = state.peak_hand_force_n;
+    result.catches = state.catches;
+    result.slips = state.slips;
+    result.angle_rad = state.angle_rad;
+    result.angular_speed = state.angular_speed;
+    result.peak_angle_rad = state.peak_angle_rad;
+    result.pulled_in_m = state.pulled_in_m;
+    result.arm_work_j = state.arm_work_j;
+    result.arm_work_out_j = state.arm_work_out_j;
+    result.mechanical_j = state.mechanical_j;
+    result.energy_residual_j = state.energy_residual_j;
+    result.pumps = state.pumps;
+    const JPH::RVec3 bar = physics_world_->trapeze().bar_position();
+    result.bar = Vector3{static_cast<double>(bar.GetX()), static_cast<double>(bar.GetY()),
+                         static_cast<double>(bar.GetZ())};
+    return result;
 }
 
 SwingSnapshot Simulation::swing_state() const noexcept {

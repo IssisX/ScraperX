@@ -182,6 +182,30 @@ struct SwingSnapshot final {
     Vector3 ram_pin{};
 };
 
+// Phase 3: the trapeze in the yard (src/sim/trapeze.hpp).
+struct TrapezeSnapshot final {
+    bool catch_available = false;    // in the air, the bar in the hands' reach
+    bool catch_near = false;         // in the air, closing on the bar: GRAB offered (held 0.33 s)
+    bool harnessed = false;          // hands on the bar
+    bool pulled = false;             // the arms pulling up (Crouch held)
+    double catch_speed_mps = 0.0;    // the body's speed relative to the bar at the last catch
+    double catch_loss_j = 0.0;       // what that catch took out
+    double hand_force_n = 0.0;
+    double peak_hand_force_n = 0.0;
+    int catches = 0;
+    int slips = 0;
+    double angle_rad = 0.0;          // east of plumb
+    double angular_speed = 0.0;
+    double peak_angle_rad = 0.0;
+    double pulled_in_m = 0.0;
+    double arm_work_j = 0.0;         // the arms' net work since the bar was taken
+    double arm_work_out_j = 0.0;     // of which taken out
+    double mechanical_j = 0.0;
+    double energy_residual_j = 0.0;
+    int pumps = 0;
+    Vector3 bar{};
+};
+
 // The owner's vertical machines (src/sim/vertical): the one the player stands
 // on, if any, and where every deck is between its receivers.
 struct LiftSnapshot final {
@@ -830,6 +854,11 @@ public:
     [[nodiscard]] bool request_swing_action() noexcept;
     [[nodiscard]] bool request_swing_drop() noexcept;
     [[nodiscard]] SwingSnapshot swing_state() const noexcept;
+    // The trapeze: Action catches the bar in the air when it is in reach;
+    // Drop lets go; Crouch held pulls up on it.
+    [[nodiscard]] bool request_trapeze_action() noexcept;
+    [[nodiscard]] bool request_trapeze_drop() noexcept;
+    [[nodiscard]] TrapezeSnapshot trapeze_state() const noexcept;
     // A vertical machine: from its deck Action sends it to the other end;
     // from a receiver, Action calls it there. Refused off every machine.
     [[nodiscard]] bool request_lift_action() noexcept;
@@ -873,6 +902,8 @@ private:
     bool sling_drop_ = false;
     bool swing_action_ = false;
     bool swing_drop_ = false;
+    bool trapeze_action_ = false;
+    bool trapeze_drop_ = false;
     bool lift_action_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};

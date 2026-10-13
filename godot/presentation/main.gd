@@ -251,6 +251,9 @@ var _arms: Node3D
 var _view_pitch_offset := 0.0
 var _teeter_weight := 0.0
 var _teeter_phase := 0.0
+var _trapeze_was_hanging := false
+# The native's TraversalState for a hang (the arms' grip pose).
+const TRAVERSAL_HANGING_STATE := 1
 var _beam_bank := 0.0
 
 var _kit_root: Node3D
@@ -805,8 +808,12 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				_crouch_toggled = false
 				_perform_action()
 			&"crouch":
-				# Does what the button says: crouched, it asks to stand.
-				_crouch_toggled = not bool(_ctx["crouched"])
+				# Does what the button says: crouched, it asks to stand. On the
+				# trapeze it pulls up on the bar, or lets down.
+				if bool(_ctx["trapeze_hanging"]):
+					_crouch_toggled = not bool(_ctx["trapeze_pulled"])
+				else:
+					_crouch_toggled = not bool(_ctx["crouched"])
 			&"drop":
 				# Let go of whatever the hands are on: a ledge, a climb's
 				# holds, or a load. On the ground with an edge behind, the
@@ -816,6 +823,8 @@ func _dispatch(verbs: Array, delta: float) -> void:
 					_native.request_slingshot_drop()
 				elif bool(_ctx["swing_seated"]):
 					_native.request_swing_drop()
+				elif bool(_ctx["trapeze_hanging"]):
+					_native.request_trapeze_drop()
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
 				else:
@@ -827,6 +836,8 @@ func _dispatch(verbs: Array, delta: float) -> void:
 					_native.request_slingshot_drop()
 				elif bool(_ctx["swing_seated"]):
 					_native.request_swing_drop()
+				elif bool(_ctx["trapeze_hanging"]):
+					_native.request_trapeze_drop()
 				elif _ctx["hanging"] or _ctx["climbing"]:
 					_native.request_release()
 				elif int(_ctx["carrying"]) != 0:
@@ -872,6 +883,11 @@ func _perform_action() -> void:
 				_native.request_slingshot_action()
 		&"swing":
 			_native.request_swing_action()
+		&"trapeze":
+			if bool(_ctx["trapeze_hanging"]):
+				_native.request_trapeze_drop()
+			else:
+				_native.request_trapeze_action()
 		&"lift":
 			_native.request_lift_action()
 		&"s1":
@@ -911,6 +927,12 @@ func _read_context() -> Dictionary:
 	var sling_seated := bool(sling["seated"])
 	var swing: Dictionary = _native.get_swing_state()
 	var swing_seated := bool(swing["seated"])
+	var trapeze: Dictionary = _native.get_trapeze_state()
+	var trapeze_hanging := bool(trapeze["harnessed"])
+	# Off the trapeze, the arms' pull (the crouch toggle while hanging) ends.
+	if _trapeze_was_hanging and not trapeze_hanging:
+		_crouch_toggled = false
+	_trapeze_was_hanging = trapeze_hanging
 	var lift: Dictionary = _native.get_lift_state()
 	var lift_machine := int(lift["machine"])
 	var support := int(_native.get_support_entity_id())
@@ -928,6 +950,12 @@ func _read_context() -> Dictionary:
 		else:
 			action = {"id": &"slingshot", "icon": &"up", "label": "PULL BACK",
 				"detail": "STICK BACK TO DRAW  " + drawn}
+	elif trapeze_hanging:
+		# On the trapeze: Crouch pulls up on the bar, Action lets go.
+		action = {"id": &"trapeze", "icon": &"down", "label": "LET GO",
+			"detail": "CROUCH: PULL UP" if not bool(trapeze["pulled"]) else "CROUCH: LET DOWN"}
+	elif bool(trapeze["catch_available"]) or bool(trapeze["catch_near"]):
+		action = {"id": &"trapeze", "icon": &"up", "label": "GRAB THE BAR", "detail": "THE TRAPEZE"}
 	elif swing_seated:
 		# Strapped into the swing: kick the trip while the ram is on its hook;
 		# held at the top by the rack, unbuckle and step off.
@@ -996,9 +1024,12 @@ func _read_context() -> Dictionary:
 		# Drop at an edge behind lowers into a hang; on holds it lets go; in
 		# the slingshot's pouch it climbs out.
 		"drop_ok": hanging or climbing or (grounded and free and edge_drop and carrying == 0) or \
-			sling_seated or bool(sling["recovering"]) or (swing_seated and bool(swing["may_leave"])),
+			sling_seated or bool(sling["recovering"]) or (swing_seated and bool(swing["may_leave"])) or \
+			trapeze_hanging,
 		"sling_seated": sling_seated,
 		"swing_seated": swing_seated,
+		"trapeze_hanging": trapeze_hanging,
+		"trapeze_pulled": bool(trapeze["pulled"]),
 		"sling_recovering": bool(sling["recovering"]),
 		"sling_flight": bool(sling["flight"]),
 		"edge_drop": edge_drop,
@@ -1305,6 +1336,32 @@ func _build_arms() -> void:
 
 # Everything the arms may know, all of it native or already-presented state.
 func _arms_state(intent: Dictionary) -> Dictionary:
+	if bool(_ctx.get("trapeze_hanging", false)):
+		# On the trapeze the hands hang on its bar, either side of the body.
+		var bar: Vector3 = _native.get_trapeze_state()["bar"]
+		var right := Vector3(cos(_yaw), 0.0, -sin(_yaw))
+		var across := 0.25 if right.z >= 0.0 else -0.25
+		return {
+			"traversal": TRAVERSAL_HANGING_STATE,
+			"progress": 1.0,
+			"ledge_point": bar,
+			"hand_left": bar + Vector3(0.0, 0.0, -across),
+			"hand_right": bar + Vector3(0.0, 0.0, across),
+			"structure_normal": Vector3(1.0, 0.0, 0.0),
+			"sprinting": false,
+			"balancing": false,
+			"affordance": false,
+			"affordance_point": Vector3.ZERO,
+			"position": _ctx["position"],
+			"velocity": _ctx["velocity"],
+			"grounded": false,
+			"chute": false,
+			"carrying": 0,
+			"carry_center": Vector3.ZERO,
+			"carry_half": 0.18,
+			"move": intent["move"],
+			"bob_phase": _cam_bob_phase,
+		}
 	return {
 		"traversal": int(_ctx["traversal"]),
 		"progress": float(_native.get_traversal_progress()),

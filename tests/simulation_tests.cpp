@@ -1,5 +1,6 @@
 #include "sim/simulation.hpp"
 #include "sim/vertical/vertical_route.hpp"
+#include "sim/trapeze.hpp"
 
 #include <Jolt/Jolt.h>
 
@@ -4343,6 +4344,145 @@ void run_teeter() {
               << " run_stop_z=" << run_let_go.stop_z << '\n';
 }
 
+// Phase 3: the yard's trapeze. Up the ramp onto the launch stand, run off its
+// edge and catch the hanging bar in the air, and swing: held still, the swing
+// gains nothing and the ledger closes; pulled up through the bottom and let
+// down at the ends, it grows; the other way round, it dies; let go near the
+// far end of a grown swing, the body flies onto the landing stand, out of the
+// reach of the swing the run gave.
+void run_trapeze() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    struct Ride {
+        double peak = 0.0;          // the furthest east after the first half swing
+        double last_peak = 0.0;     // the latest swing's east end
+        double clear_work = 0.0;    // the arms' net work while the swing stays short of the landing stand
+        double start_peak = 0.0;    // the first half swing's
+        double residual = 0.0;      // the worst ledger residual
+        double arm_work = 0.0;
+        double landed_x = 0.0;
+        double landed_y = 0.0;
+        bool landed = false;
+        int pumps = 0;
+        double catch_speed = 0.0;
+        double catch_loss = 0.0;
+        double peak_hand = 0.0;
+        int slips = 0;
+    };
+    // pump: 0 held still, 1 in time, -1 against it. release_at: let go once
+    // going east past this angle (0: never).
+    const auto ride = [](const int pump, const double seconds, const double release_at) {
+        Simulation sim(InitialSpawn::ExteriorGrade);
+        require(sim.advance_frame(0.5).accepted, "settle must be accepted");
+        require(walk_to(sim, 14.0, -28.0, 12.0) && walk_to(sim, 27.6, -28.0, 12.0, 0.1),
+                "the walk up the ramp onto the launch stand must arrive");
+        (void)sim.advance_frame(0.3);
+        // The run east along the stand, the jump at its edge, and GRAB as
+        // soon as the bar is in the hands' reach.
+        require(sim.set_facing(1.0, 0.0) && sim.set_move_input(1.0, 0.0), "the run must be accepted");
+        require(advance_until(sim, [](const Snapshot &s) { return s.player_position.x > 30.5; }, 3.0),
+                "the run must reach the stand's edge");
+        require(sim.request_jump(), "the jump must be accepted");
+        require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+        require(sim.set_move_input(0.0, 0.0), "release must be accepted");
+        bool caught = false;
+        for (int i = 0; i < 90 && !caught; ++i) {
+            if (sim.trapeze_state().catch_available) (void)sim.request_trapeze_action();
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+            caught = sim.trapeze_state().harnessed;
+        }
+        require(caught, "a running jump off the stand must bring the bar into reach and the hands must close on it");
+        Ride out;
+        bool first_half = true;
+        const auto ticks = static_cast<int>(seconds * Simulation::kTickRateHz);
+        for (int i = 0; i < ticks; ++i) {
+            const auto t = sim.trapeze_state();
+            if (!t.harnessed) break;
+            const bool bottom = std::abs(t.angle_rad) < 0.12;
+            const bool ends = std::abs(t.angular_speed) < 0.25;
+            bool pull = t.pulled;
+            if (pump == 1) {
+                if (bottom) pull = true;
+                else if (ends) pull = false;
+            } else if (pump == -1) {
+                if (ends) pull = true;
+                else if (bottom) pull = false;
+            }
+            require(sim.set_crouch_input(pull), "crouch must be accepted");
+            if (release_at > 0.0 && t.angle_rad > release_at && t.angular_speed > 0.0) {
+                require(sim.request_trapeze_drop(), "letting go must be accepted");
+            }
+            require(sim.advance_frame(Simulation::kFixedStepSeconds).accepted, "tick must advance");
+            const auto after = sim.trapeze_state();
+            if (first_half && after.angular_speed < 0.0 && after.angle_rad > 0.0) {
+                first_half = false;
+                out.start_peak = after.peak_angle_rad;
+            }
+            out.peak = std::max(out.peak, after.angle_rad);
+            if (t.angular_speed > 0.0 && after.angular_speed <= 0.0 && after.angle_rad > 0.0) {
+                out.last_peak = after.angle_rad;   // the latest swing's east end
+            }
+            if (std::getenv("SCRAPERX_TRAPEZE_TRACE") != nullptr && i < 90 && i % 3 == 0) {
+                const auto p = sim.snapshot();
+                std::cout << "    t" << i << " angle=" << after.angle_rad << " w=" << after.angular_speed
+                          << " pos=(" << p.player_position.x << "," << p.player_position.y << ") v=("
+                          << p.player_linear_velocity.x << "," << p.player_linear_velocity.y << ") g="
+                          << p.player_grounded << " in=" << after.pulled_in_m << " h=" << after.harnessed << '\n';
+            }
+            // Past 0.7 rad the feet can brush the landing stand's edge: a
+            // contact the ledger does not count, so it is read short of it.
+            if (after.peak_angle_rad < 0.7) {
+                out.residual = std::max(out.residual, std::abs(after.energy_residual_j));
+                out.clear_work = after.arm_work_j;
+            }
+            out.arm_work = after.arm_work_j;
+            out.pumps = after.pumps;
+            out.catch_speed = after.catch_speed_mps;
+            out.catch_loss = after.catch_loss_j;
+            out.peak_hand = std::max(out.peak_hand, after.peak_hand_force_n);
+            out.slips = after.slips;
+        }
+        require(sim.set_crouch_input(false), "crouch must be accepted");
+        if (release_at > 0.0) {
+            require(advance_until(sim, [](const Snapshot &s) { return s.player_grounded || s.death_count > 0; }, 4.0),
+                    "the flight must come down");
+            (void)sim.advance_frame(0.5);
+            const auto end = sim.snapshot();
+            out.landed_x = end.player_position.x;
+            out.landed_y = end.player_position.y;
+            out.landed = end.player_grounded && end.death_count == 0 &&
+                         end.player_position.y > scraperx::sim::Trapeze::kLandingTopY + 0.5;
+        }
+        if (std::getenv("SCRAPERX_TRAPEZE_DETAIL") != nullptr) {
+            std::cout << "  trapeze pump=" << pump << " start_peak=" << out.start_peak << " peak=" << out.peak
+                      << " last_peak=" << out.last_peak
+                      << " residual_J=" << out.residual << " arm_work_J=" << out.arm_work << " pumps=" << out.pumps
+                      << " landed=" << out.landed << " at=(" << out.landed_x << "," << out.landed_y << ")"
+                      << " catch_mps=" << out.catch_speed << " catch_loss_J=" << out.catch_loss
+                      << " peak_hand_N=" << out.peak_hand << " slips=" << out.slips << "\n";
+        }
+        return out;
+    };
+    const auto still = ride(0, 20.0, 0.0);
+    const auto timed = ride(1, 40.0, 0.0);
+    const auto against = ride(-1, 30.0, 0.0);
+    const auto flown = ride(1, 60.0, 0.82);
+    require(still.peak <= still.start_peak + 0.01 && still.pumps == 0,
+            "held still, the swing must not grow past its first swing");
+    require(still.residual < 60.0 && against.residual < 0.1 * std::abs(against.arm_work) + 60.0,
+            "held still or pumped against the timing, the ledger must close");
+    require(timed.peak > 0.8 && timed.clear_work > 0.0 && timed.residual < 0.1 * std::abs(timed.clear_work) + 60.0,
+            "pulled up through the bottom and let down at the ends, the swing must grow, by the arms' work");
+    require(against.last_peak < still.last_peak - 0.1, "pumped against its timing, the swing must die");
+    require(flown.landed && flown.landed_x > scraperx::sim::Trapeze::kLandingWestX,
+            "let go near the far end of a grown swing, the body must land on the landing stand");
+    std::cout << "PASS scraperx_sim trapeze: still_peak=" << still.peak << " timed_peak=" << timed.peak
+              << " against_peak=" << against.peak << " arm_work_J=" << timed.arm_work
+              << " residual_J=" << timed.residual << " landed=(" << flown.landed_x << "," << flown.landed_y
+              << ")\n";
+}
+
 // Phase 4: landing recovery and the roll, from the 12 m drop over the yard.
 // One drop each way: straight down, forward and unprepared, forward with
 // crouch held (a roll), forward with crouch held into an obstructed lane (a
@@ -6359,6 +6499,11 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "teeter") {
         run_teeter();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "trapeze") {
+        run_trapeze();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -8393,6 +8538,7 @@ int main() {
     run_save();
     run_landing();
     run_teeter();
+    run_trapeze();
     run_tram();
     run_ascent();
 

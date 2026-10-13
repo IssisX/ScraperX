@@ -265,6 +265,9 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_action"), &ScraperXSimulation::request_swing_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_swing_drop"), &ScraperXSimulation::request_swing_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_swing_state"), &ScraperXSimulation::get_swing_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
     godot::ClassDB::bind_method(godot::D_METHOD("request_lift_action"), &ScraperXSimulation::request_lift_action);
     godot::ClassDB::bind_method(godot::D_METHOD("get_save_game"), &ScraperXSimulation::get_save_game);
     godot::ClassDB::bind_method(godot::D_METHOD("load_save_game", "bytes"), &ScraperXSimulation::load_save_game);
@@ -965,6 +968,40 @@ bool ScraperXSimulation::request_swing_action() {
 
 bool ScraperXSimulation::request_swing_drop() {
     return simulation_->request_swing_drop();
+}
+
+bool ScraperXSimulation::request_trapeze_action() {
+    return simulation_->request_trapeze_action();
+}
+
+bool ScraperXSimulation::request_trapeze_drop() {
+    return simulation_->request_trapeze_drop();
+}
+
+godot::Dictionary ScraperXSimulation::get_trapeze_state() const {
+    const sim::TrapezeSnapshot state = simulation_->trapeze_state();
+    godot::Dictionary out;
+    out["catch_available"] = state.catch_available;
+    out["catch_near"] = state.catch_near;
+    out["harnessed"] = state.harnessed;
+    out["pulled"] = state.pulled;
+    out["angle_rad"] = state.angle_rad;
+    out["angular_speed"] = state.angular_speed;
+    out["peak_angle_rad"] = state.peak_angle_rad;
+    out["pulled_in_m"] = state.pulled_in_m;
+    out["catch_speed_mps"] = state.catch_speed_mps;
+    out["catch_loss_j"] = state.catch_loss_j;
+    out["hand_force_n"] = state.hand_force_n;
+    out["peak_hand_force_n"] = state.peak_hand_force_n;
+    out["arm_work_j"] = state.arm_work_j;
+    out["arm_work_out_j"] = state.arm_work_out_j;
+    out["mechanical_j"] = state.mechanical_j;
+    out["energy_residual_j"] = state.energy_residual_j;
+    out["pumps"] = static_cast<std::int64_t>(state.pumps);
+    out["catches"] = static_cast<std::int64_t>(state.catches);
+    out["slips"] = static_cast<std::int64_t>(state.slips);
+    out["bar"] = to_godot(state.bar);
+    return out;
 }
 
 godot::Dictionary ScraperXSimulation::get_swing_state() const {
