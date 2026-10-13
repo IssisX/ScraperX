@@ -793,6 +793,7 @@ public:
     [[nodiscard]] std::vector<std::uint32_t> cargo_net_indices() const;
     [[nodiscard]] std::vector<Vector3> catch_net_vertices(double alpha=1.0) const;
     [[nodiscard]] std::vector<std::uint32_t> catch_net_indices() const;
+    [[nodiscard]] std::vector<Vector3> render_catch_net_tether_vertices() const;
     [[nodiscard]] CatchNetSnapshot catch_net_state() const noexcept;
     [[nodiscard]] std::uint32_t kit_body_count() const noexcept;
     [[nodiscard]] double pipe_bridge_tip_height() const noexcept;

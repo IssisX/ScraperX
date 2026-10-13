@@ -46,9 +46,13 @@ struct World {
         frame=build_catch_net_route(*kit);
         net=std::make_unique<CargoNet>(system,1,kit->body_id(frame),catch_net_config());frame_reference=system.GetBodyInterface().GetCenterOfMassPosition(kit->body_id(frame));
         const auto inverse=system.GetBodyInterface().GetCenterOfMassTransform(kit->body_id(frame)).Inversed();
-        for(int r=0;r<25;++r)for(int c=0;c<25;++c)if(r==0||r==24||c==0||c==24)for(int k=0;k<4;++k){
-            const auto i=std::uint32_t(4*(r*25+c)+k);clips.push_back({i,inverse*net->vertices()[i]});
-        }
+        const auto &cfg=net->config();
+        const int corners=cfg.surface==CargoNetSurface::OpenWeave?4:1;
+        for(int r=0;r<cfg.rows;++r)for(int c=0;c<cfg.columns;++c)
+            if(r==0||r==cfg.rows-1||c==0||c==cfg.columns-1)for(int k=0;k<corners;++k){
+                const auto i=std::uint32_t(corners*(r*cfg.columns+c)+k);
+                clips.push_back({i,inverse*net->vertices()[i]});
+            }
         for(float x:{-40.3F,-27.7F})for(float z:{-156.3F,-143.7F}){
             const RVec3 world(x,.30F,z);mounts.push_back({world,inverse*world});
         }
@@ -88,21 +92,27 @@ void defaults(){World w;
     {BodyLockRead lock(w.system.GetBodyLockInterface(),vertical.body());check(!lock.GetBody().GetAllowSleeping(),"legacy net native sleeping remains disabled");}
     check(vertical.vertices().size()==828&&vertical.indices().size()==3534,"legacy woven topology");
     check(vertical.columns()==9&&vertical.rows()==23&&vertical.attachment_count()==72,"legacy end rows");
-    check(w.net->vertices().size()==2500&&w.net->attachment_count()==384,"perimeter has unique corners");
+    check(w.net->vertices().size()==1681&&w.net->indices().size()==9600&&w.net->attachment_count()==160,"continuous physical catch has unique nodes and real faces");
     for(CargoNet *net:{&vertical,w.net.get()}) {
         const auto &cfg=net->config();float mass=0;
         {BodyLockRead lock(w.system.GetBodyLockInterface(),net->body());
          const auto *motion=static_cast<const SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
          for(const auto &v:motion->GetVertices())mass+=1/v.mInvMass;}
-        check(std::abs(mass-cfg.columns*cfg.rows*4*cfg.vertex_mass)<.01F,"all cloth vertices retain declared finite mass");
+        check(std::abs(mass-cfg.columns*cfg.rows*(cfg.surface==CargoNetSurface::OpenWeave?4:1)*cfg.vertex_mass)<.01F,"all cloth vertices retain declared finite mass");
         const Vec3 hole(cfg.dx*.5F,cfg.dy*.5F,0);
         const auto cross=[](Vec3 a,Vec3 b){return a.GetX()*b.GetY()-a.GetY()*b.GetX();};
         const auto &indices=net->indices();
+        bool covered=false;
         for(std::size_t i=0;i<indices.size();i+=3){Vec3 q[3];
             for(int k=0;k<3;++k)q[k]=cfg.rotation.Conjugated()*Vec3(net->vertices()[indices[i+k]]-cfg.origin);
             const float a=cross(q[1]-q[0],hole-q[0]),b=cross(q[2]-q[1],hole-q[1]),c=cross(q[0]-q[2],hole-q[2]);
-            check(!((a>=0&&b>=0&&c>=0)||(a<=0&&b<=0&&c<=0)),"woven cell centre has no collision proxy triangle");
+            const bool inside=(a>=0&&b>=0&&c>=0)||(a<=0&&b<=0&&c<=0);
+            covered|=inside;
+            if(cfg.surface==CargoNetSurface::OpenWeave)
+                check(!inside,"woven cell centre has no collision proxy triangle");
         }
+        if(cfg.surface==CargoNetSurface::ContinuousMembrane)
+            check(covered,"continuous catch renders its actual native triangle topology");
     }
     for(CargoNet *net:{&vertical,w.net.get()})for(Vec3 material:{Vec3(1.2F,2.7F,.12F),Vec3(3.9F,5.1F,-.08F)}) {
         const auto point=net->world_point(material),round=net->material_point(point);
@@ -133,7 +143,7 @@ void clip_reciprocity(){World w;auto &b=w.system.GetBodyInterface();const auto f
         return std::make_pair(linear,angular);};
     const auto energy=[&](){const BodyLockRead lock(w.system.GetBodyLockInterfaceNoLock(),w.net->body());
         const auto &body=lock.GetBody();const auto *motion=static_cast<const SoftBodyMotionProperties *>(body.GetMotionProperties());
-        double total=w.kit->body_kinetic_energy(w.frame);
+        double total=w.kit->body_kinetic_energy(w.frame)+w.net->tether_elastic_energy();
         for(const auto &v:motion->GetVertices())total+=.5*v.mVelocity.LengthSq()/v.mInvMass;
         for(const auto &edge:motion->GetSettings()->mEdgeConstraints){
             const double extension=(motion->GetVertex(edge.mVertex[1]).mPosition-motion->GetVertex(edge.mVertex[0]).mPosition).Length()-edge.mRestLength;
@@ -149,6 +159,7 @@ void clip_reciprocity(){World w;auto &b=w.system.GetBodyInterface();const auto f
     {const BodyLockWrite lock(w.system.GetBodyLockInterfaceNoLock(),w.net->body());
      auto *motion=static_cast<SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());motion->SetLinearDamping(0);
      motion->CustomUpdate(1.0F/360,lock.GetBody(),w.system);}
+    w.net->refresh();
     const auto after=cloth_momentum();const auto frame_linear=b.GetLinearVelocity(frame)*w.kit->body_mass(w.frame);
     Vec3 frame_angular;{const BodyLockRead lock(w.system.GetBodyLockInterface(),frame);
         const auto &body=lock.GetBody();const auto inverse=body.GetMotionProperties()->GetInverseInertiaForRotation(Mat44::sRotation(body.GetRotation()));
@@ -219,8 +230,8 @@ void contact_friction(){
     std::cout<<"CATCH_FRICTION calls="<<selected.calls<<" rigid_tangent_impulse="<<selected.rigid.GetX()
         <<" zero_energy_j="<<zero.energy<<" friction_energy_j="<<selected.energy<<'\n';
 }
-void phased_force(){World w;w.system.SetGravity(Vec3::sZero());
-    CargoNetConfig cfg;cfg.columns=cfg.rows=2;cfg.origin=RVec3(100,100,100);
+void phased_force(CargoNetSurface surface=CargoNetSurface::OpenWeave,bool upper=false){World w;w.system.SetGravity(Vec3::sZero());
+    CargoNetConfig cfg;cfg.surface=surface;cfg.columns=cfg.rows=2;cfg.origin=RVec3(100,100,100);
     cfg.rotation=Quat::sRotation(Vec3::sAxisX(),.7F);cfg.iterations=12;
     // Compact free cloth keeps XPBD position-difference roundoff below
     // 2e-4 m/s; the 90 Hz force integral is about 125 N s, tolerance .02 N s.
@@ -229,10 +240,12 @@ void phased_force(){World w;w.system.SetGravity(Vec3::sZero());
     cfg.stretch_compliance=cfg.shear_compliance=cfg.bend_compliance=1e20F;
     cfg.paired_sleep=true;cfg.internally_integrated_clips=true;
     CargoNet net(w.system,1,w.kit->body_id(w.frame),cfg);
-    const Vec3 material(.25F,.75F,0),f(3000,-6000,9000);const float duration=1.0F/90;
+    const bool membrane=surface==CargoNetSurface::ContinuousMembrane;
+    const unsigned count=membrane?4U:16U;
+    const Vec3 material(upper?.75F:.25F,upper?.25F:.75F,0),f(3000,-6000,9000);const float duration=1.0F/90;
     {const BodyLockWrite lock(w.system.GetBodyLockInterfaceNoLock(),net.body());
      auto *m=static_cast<SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
-     for(unsigned i=0;i<16;++i)m->GetVertex(i).mInvMass=1.0F/(1+i);}
+     for(unsigned i=0;i<count;++i)m->GetVertex(i).mInvMass=1.0F/(1+i);}
     const auto saved=net.capture();
     const auto advance=[&](float dt){const BodyLockWrite lock(w.system.GetBodyLockInterfaceNoLock(),net.body());
         auto *m=static_cast<SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
@@ -240,8 +253,9 @@ void phased_force(){World w;w.system.SetGravity(Vec3::sZero());
     const auto verify=[&](float elapsed){const BodyLockRead lock(w.system.GetBodyLockInterfaceNoLock(),net.body());
         const auto &body=lock.GetBody();const auto *m=static_cast<const SoftBodyMotionProperties *>(body.GetMotionProperties());
         Vec3 momentum=Vec3::sZero(),sample=Vec3::sZero();
-        const float weights[4]={.046875F,.015625F,.140625F,.046875F};float inverse=0;
-        for(unsigned i=0;i<16;++i){const auto &v=m->GetVertex(i);const float weight=weights[i/4];
+        const float weights[4]={.046875F,.015625F,.140625F,.046875F};
+        const float triangle_weights[4]={.25F,upper?.5F:0.0F,upper?0.0F:.5F,.25F};float inverse=0;
+        for(unsigned i=0;i<count;++i){const auto &v=m->GetVertex(i);const float weight=membrane?triangle_weights[i]:weights[i/4];
             const auto velocity=body.GetRotation()*v.mVelocity;
             const auto expected=f*(elapsed*weight*v.mInvMass);
             if((velocity-expected).Length()>=2e-4F)std::cout<<"FORCE_VERTEX i="<<i<<" elapsed="<<elapsed<<" actual="<<velocity.GetX()<<","<<velocity.GetY()<<","<<velocity.GetZ()<<" expected="<<expected.GetX()<<","<<expected.GetY()<<","<<expected.GetZ()<<'\n';
@@ -284,6 +298,58 @@ void phased_force(){World w;w.system.SetGravity(Vec3::sZero());
     legacy.force(material,f,duration);check(legacy.capture()==kicked,"legacy force is exactly original impulse arithmetic");
     std::cout<<"CATCH_FORCE phases=4 native_callbacks=48 individually_checked_callbacks=48 transpose/live_mass/momentum/wake/overlap/restore/legacy PASS\n";
 }
+void native_tether(){World w;w.system.SetGravity(Vec3::sZero());auto &b=w.system.GetBodyInterface();const auto frame=w.kit->body_id(w.frame);
+    b.SetPosition(frame,RVec3(99,98,100),EActivation::Activate);
+    CargoNetConfig cfg;cfg.surface=CargoNetSurface::ContinuousMembrane;cfg.columns=cfg.rows=2;cfg.origin=RVec3(100,100,100);
+    cfg.dx=cfg.dy=.01F;cfg.knot_half_width=.001F;cfg.iterations=1;cfg.internally_integrated_clips=true;
+    cfg.damping=cfg.clip_stiffness=cfg.clip_damping=0;cfg.stretch_compliance=cfg.shear_compliance=cfg.bend_compliance=1e20F;
+    cfg.tether_enabled=true;cfg.tether_material=Vec3(.25F,.75F,0);cfg.tether_stiffness=1000;cfg.tether_damping=40;
+    const RVec3 anchor=cfg.origin+RVec3(.0025,-.9925,0);
+    cfg.tether_anchor_body_local=Vec3(b.GetWorldTransform(frame).Inversed()*anchor);
+    const auto centre=b.GetCenterOfMassPosition(frame);
+    for(const bool taut:{false,true}){
+        b.SetLinearAndAngularVelocity(frame,Vec3::sZero(),Vec3::sZero());cfg.tether_rest_length_m=taut?.5F:2.0F;
+        CargoNet net(w.system,1,frame,cfg);
+        {const BodyLockWrite lock(w.system.GetBodyLockInterfaceNoLock(),net.body());
+         auto *m=static_cast<SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());
+         for(unsigned i=0;i<4;++i)m->GetVertex(i).mInvMass=1.0F/(1+i);}
+        const auto saved=net.capture();
+        const auto measure=[&](){const BodyLockRead lock(w.system.GetBodyLockInterfaceNoLock(),net.body());
+            const auto &body=lock.GetBody();const auto *m=static_cast<const SoftBodyMotionProperties *>(body.GetMotionProperties());
+            Vec3 linear=Vec3::sZero(),angular=Vec3::sZero();double energy=w.kit->body_kinetic_energy(w.frame)+net.tether_elastic_energy();
+            for(const auto &v:m->GetVertices()){
+                const auto momentum=body.GetRotation()*v.mVelocity/v.mInvMass;linear+=momentum;
+                angular+=Vec3(body.GetCenterOfMassTransform()*RVec3(v.mPosition)-centre).Cross(momentum);
+                energy+=.5*v.mVelocity.LengthSq()/v.mInvMass;}
+            for(const auto &edge:m->GetSettings()->mEdgeConstraints){const double extension=
+                (m->GetVertex(edge.mVertex[1]).mPosition-m->GetVertex(edge.mVertex[0]).mPosition).Length()-edge.mRestLength;
+                energy+=.5*extension*extension/edge.mCompliance;}
+            return std::make_pair(std::make_pair(linear,angular),energy);};
+        check((net.tether_anchor_endpoint()-anchor).Length()<2e-5,"tether anchor converts authored body origin to actual COM space");
+        const auto initial=measure();const double preload=net.tether_elastic_energy();
+        check(taut?preload>100:preload==0,"initial positive tether preload is included in measured total energy");
+        check(std::abs(initial.second-preload)<1e-8,"resting tether has no unaccounted kinetic or strain energy");
+        {const BodyLockWrite lock(w.system.GetBodyLockInterfaceNoLock(),net.body());
+         auto *m=static_cast<SoftBodyMotionProperties *>(lock.GetBody().GetMotionProperties());m->CustomUpdate(1.0F/360,lock.GetBody(),w.system);}
+        net.refresh();const auto after=measure();const auto frame_linear=b.GetLinearVelocity(frame)*w.kit->body_mass(w.frame);
+        Vec3 frame_angular;{const BodyLockRead lock(w.system.GetBodyLockInterface(),frame);const auto &body=lock.GetBody();
+            frame_angular=body.GetMotionProperties()->GetInverseInertiaForRotation(Mat44::sRotation(body.GetRotation())).Inversed3x3()*body.GetAngularVelocity();}
+        const float linear_error=(after.first.first+frame_linear-initial.first.first).Length();
+        const float angular_error=(after.first.second+frame_angular-initial.first.second).Length();
+        check(linear_error<5e-4F&&angular_error<5e-4F,"actual native tether preserves cloth plus frame linear and angular momentum");
+        check(std::isfinite(after.second)&&after.second<=initial.second+1e-4,"actual native kinetic plus geometric elastic energy cannot increase");
+        if(taut){check(std::isfinite(net.tether_tension())&&net.tether_tension()>0&&after.first.first.Length()>.1F&&frame_linear.Length()>.1F&&frame_angular.Length()>.1F,
+                       "taut native tether transfers finite tension and nonzero reciprocal point torque");
+            net.restore(saved);check(net.tether_tension()==0&&net.tether_dissipated_work()==0,"restore clears tether transient diagnostics");
+            auto invalid=cfg;invalid.tether_rest_length_m=0;bool rejected=false;
+            try{CargoNet bad(w.system,1,frame,invalid);}catch(const std::invalid_argument &){rejected=true;}
+            check(rejected,"invalid enabled tether rejects before native creation");
+        }else check(net.tether_tension()==0&&after.second<1e-8&&frame_linear.LengthSq()==0&&frame_angular.LengthSq()==0,
+                   "slack native tether adds no tension or kinetic energy");
+        std::cout<<"CATCH_TETHER taut="<<taut<<" preload_j="<<preload<<" initial_j="<<initial.second<<" final_j="<<after.second
+                 <<" linear_error="<<linear_error<<" angular_error="<<angular_error<<'\n';
+    }
+}
 void sleeping(){World w;settle(w);const auto state=vertex_state(w);const auto point=w.net->world_point(Vec3(12,12,0));const auto saved=w.net->capture();
     for(int i=0;i<90;++i){w.tick();check(asleep(w),"native paired sleep remains sustained");}
     const auto after=vertex_state(w);check(after.size()==state.size(),"sleep retains topology");
@@ -313,7 +379,7 @@ void sleeping(){World w;settle(w);const auto state=vertex_state(w);const auto po
         std::cout<<"CATCH_SLEEP motion_quality="<<int(quality)<<" wake="<<woke<<" contacts="<<impact.contacts.contacts<<'\n';
     }
 }
-void fall(float height){World w;for(int i=0;i<180;++i)w.tick();w.capsule(height);
+void fall(float height){World w;const double initial_tether_energy=w.net->tether_elastic_energy();for(int i=0;i<180;++i)w.tick();w.capsule(height);
     auto &b=w.system.GetBodyInterface();float min_vertex=100,min_player=100,min_caught_player=100,max_rebound=0,max_frame_speed=0,peak_ke=0,peak_strain=0,peak_clip_energy=0,peak_exposed_energy=0;
     bool descending=false,reversed=false,contacted=false,separated=false,recontacted=false;const int steps=height>=40?1800:4500;
     float late_peak_speed=0,late_min_y=100,late_max_y=-100;unsigned late_contacts=0;
@@ -350,7 +416,7 @@ void fall(float height){World w;for(int i=0;i<180;++i)w.tick();w.capsule(height)
         check(angle<.01F,"mount small-angle energy diagnostic remains valid");
         mount_energy+=4*.5F*5e6F*angle*angle;
         const float frame_gravity=w.kit->body_mass(w.frame)*9.81F*(b.GetCenterOfMassPosition(w.kit->body_id(w.frame)).GetY()-w.frame_reference.GetY());
-        const float exposed=ke+strain+clip_energy+mount_energy+cloth_gravity+frame_gravity+
+        const float exposed=ke+strain+clip_energy+mount_energy+cloth_gravity+frame_gravity+float(w.net->tether_elastic_energy())+
             85*(.5F*v.LengthSq()+9.81F*p.GetY())+w.kit->body_kinetic_energy(w.frame);
         if(exposed>peak_exposed_energy){peak_exposed_energy=exposed;
             peak_terms[0]=ke;peak_terms[1]=strain;peak_terms[2]=clip_energy;peak_terms[3]=mount_energy;
@@ -360,7 +426,7 @@ void fall(float height){World w;for(int i=0;i<180;++i)w.tick();w.capsule(height)
     }
     const auto final=b.GetCenterOfMassPosition(w.player),velocity=b.GetLinearVelocity(w.player);
     std::cout<<"CATCH_MODEL height="<<height<<" impact_speed="<<impact<<" mesh_min_y="<<min_vertex<<" caught_capsule_min_y="<<min_caught_player<<" capsule_min_y="<<min_player<<" rebound_vy="<<max_rebound<<" apex_y="<<apex<<" first_apex_y="<<first_apex<<" frame_speed="<<max_frame_speed<<" mesh_peak_ke_j="<<peak_ke<<" edge_peak_strain_j="<<peak_strain<<" clip_peak_strain_j="<<peak_clip_energy<<" exposed_peak_energy_j="<<peak_exposed_energy<<" final_y="<<final.GetY()<<" final_speed="<<velocity.Length()<<" contact_events="<<w.contacts.contacts<<" separation="<<separated<<" recontact="<<recontacted<<" late_peak_speed="<<late_peak_speed<<" late_y_range="<<(late_max_y-late_min_y)<<" late_contact_ticks="<<late_contacts<<" simulated_seconds="<<steps/90.0F<<" listener_calls="<<w.listener.calls<<'\n';
-    std::cout<<"CATCH_ENERGY simultaneous_peak net_ke="<<peak_terms[0]<<" edge="<<peak_terms[1]<<" clips="<<peak_terms[2]<<" mounts="<<peak_terms[3]<<" gravity="<<peak_terms[4]<<" player="<<peak_terms[5]<<" frame_ke="<<peak_terms[6]<<" late_actual_position_speed="<<late_actual_speed<<'\n';
+    std::cout<<"CATCH_ENERGY simultaneous_peak net_ke="<<peak_terms[0]<<" edge="<<peak_terms[1]<<" clips="<<peak_terms[2]<<" mounts="<<peak_terms[3]<<" gravity="<<peak_terms[4]<<" player="<<peak_terms[5]<<" frame_ke="<<peak_terms[6]<<" tether_stored_j="<<w.net->tether_elastic_energy()<<" tether_radial_loss_j="<<w.net->tether_dissipated_work()<<" late_actual_position_speed="<<late_actual_speed<<'\n';
     check(w.listener.calls==4*unsigned(180+steps),"actual four-substep90Hz cadence");
     check(min_vertex<3.7F,"actual sag under load");check(reversed&&max_rebound>1,"neutral elastic rebound");
     check(min_vertex>.12F&&min_caught_player>.95F,"mesh and contacted capsule retain grade clearance");
@@ -374,12 +440,12 @@ void fall(float height){World w;for(int i=0;i<180;++i)w.tick();w.capsule(height)
     check(max_frame_speed>.0001F&&max_frame_speed<2,"finite reactive mounted frame");
     // Conservative native energy falsifier: finite solver/discretization tolerance;
     // no solved contact-impulse or dissipation receipt is available here.
-    check(peak_exposed_energy<1.02F*(85*9.81F*height+150*9.81F*4),
+    check(peak_exposed_energy<1.02F*(85*9.81F*height+150*9.81F*4+initial_tether_energy),
           "native total stored energy cannot create gross unpaid work");
     check(late_peak_speed<.2F&&late_max_y-late_min_y<.05F,"passive settling persists across final two seconds");
 }
 }
 int main(int argc,char **argv){std::cout<<std::unitbuf;RegisterDefaultAllocator();Factory::sInstance=new Factory;RegisterTypes();
-    int result=0;try{if(argc>1&&std::string(argv[1])=="friction"){contact_friction();}else if(argc>1&&std::string(argv[1])=="force"){phased_force();}else{defaults();clip_reciprocity();if(argc>1&&std::string(argv[1])=="clips"){}else if(argc>1&&std::string(argv[1])=="sleep")sleeping();else if(argc>1)fall(std::stof(argv[1]));else{sleeping();fall(45);fall(10);}}std::cout<<"PASS catch native model\n";}
+    int result=0;try{if(argc>1&&std::string(argv[1])=="friction"){contact_friction();}else if(argc>1&&std::string(argv[1])=="force"){phased_force();phased_force(CargoNetSurface::ContinuousMembrane);phased_force(CargoNetSurface::ContinuousMembrane,true);native_tether();}else{defaults();clip_reciprocity();if(argc>1&&std::string(argv[1])=="clips"){}else if(argc>1&&std::string(argv[1])=="sleep")sleeping();else if(argc>1)fall(std::stof(argv[1]));else{sleeping();fall(45);fall(10);}}std::cout<<"PASS catch native model\n";}
     catch(const std::exception &e){std::cerr<<"FAIL catch native model: "<<e.what()<<'\n';result=1;}
     UnregisterTypes();delete Factory::sInstance;Factory::sInstance=nullptr;return result;}

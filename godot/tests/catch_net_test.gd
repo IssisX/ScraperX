@@ -24,6 +24,7 @@ var _draw_calls: Array[float] = []
 var _primitives: Array[float] = []
 var _previous_usec := 0
 var _rendered_poses: Array[String] = []
+var _canvas_uv := PackedVector2Array()
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -57,7 +58,7 @@ func _exit_trace(label: String, tick: int, before: Vector3, before_velocity: Vec
 func _draw() -> void:
 	_main._render_snapshot(STEP)
 	# Camera changes presentation only; this wide view sees the west stair,
-	# finite frame, holes and loaded cloth without moving the native player.
+	# finite frame and loaded cloth without moving the native player.
 	_main._camera.global_position = Vector3(-48, 9, -140)
 	_main._camera.look_at(Vector3(-34, 3.2, -150))
 	await RenderingServer.frame_post_draw
@@ -76,22 +77,92 @@ func _pose(label: String) -> bool:
 	await _draw()
 	var kit := _main.get_node("KitPresentation")
 	var net := kit.get_node_or_null("NativeSoftCatchNet")
-	if not _check(net != null and net.visible and net.get_child_count() == 2,
-			"catch has exactly two visible native-derived batches at " + label):
+	if not _check(net != null and net.is_visible_in_tree() and net.get_child_count() == 2,
+			"catch has visible native canvas and tether batches at " + label):
 		return false
+	var canvas := net.get_node_or_null("Canvas") as MeshInstance3D
+	if not _check(canvas != null and canvas.is_visible_in_tree() and canvas.mesh is ArrayMesh
+			and canvas.mesh.get_surface_count() == 1 and canvas.transform.is_equal_approx(Transform3D.IDENTITY),
+			"canvas renders one native surface without a presentation offset at " + label):
+		return false
+	var mesh := canvas.mesh as ArrayMesh
+	var arrays := mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = _native.get_catch_net_vertices()
-	var knots := net.get_node("Knots").multimesh as MultiMesh
-	var strands := net.get_node("Strands").multimesh as MultiMesh
-	if not _check(strands.instance_count == 1200, "all native catch ribbon links rendered"):
+	var indices: PackedInt32Array = _native.get_catch_net_indices()
+	var rendered: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var rendered_indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT]
+	if not _check(mesh.surface_get_primitive_type(0) == Mesh.PRIMITIVE_TRIANGLES
+			and rendered.size() == vertices.size() and rendered_indices == indices
+			and normals.size() == vertices.size() and uv.size() == vertices.size()
+			and tangents.size() == vertices.size() * 4,
+			"canvas arrays preserve every native indexed triangle at " + label):
 		return false
-	if not _check(knots.instance_count * 4 == vertices.size(), "render knot count follows native snapshot"):
-		return false
-	for i in knots.instance_count:
-		var p := i * 4
-		var expected := (vertices[p] + vertices[p + 1] + vertices[p + 2] + vertices[p + 3]) * 0.25
-		if not _check(knots.get_instance_transform(i).origin.distance_to(expected) < 0.0002,
-				"render knot centre follows interpolated native corners at " + label):
+	var expected_normals := PackedVector3Array()
+	expected_normals.resize(vertices.size())
+	for i in range(0, indices.size(), 3):
+		var a := indices[i]
+		var b := indices[i + 1]
+		var c := indices[i + 2]
+		if not _check(a >= 0 and a < vertices.size() and b >= 0 and b < vertices.size()
+				and c >= 0 and c < vertices.size(), "valid native triangle indices at " + label):
 			return false
+		var face_normal := (vertices[c] - vertices[a]).cross(vertices[b] - vertices[a])
+		if not _check(face_normal.is_finite() and face_normal.length_squared() > 0.000000000001,
+				"native canvas triangle remains finite and nondegenerate at " + label):
+			return false
+		expected_normals[a] += face_normal
+		expected_normals[b] += face_normal
+		expected_normals[c] += face_normal
+	var bounds := AABB(vertices[0], Vector3.ZERO)
+	for i in vertices.size():
+		bounds = bounds.expand(vertices[i])
+		var tangent := Vector3(tangents[i * 4], tangents[i * 4 + 1], tangents[i * 4 + 2])
+		if not _check(rendered[i].is_finite() and rendered[i].distance_to(vertices[i]) < 0.0002,
+				"canvas vertex follows interpolated native surface at " + label) \
+				or not _check(normals[i].is_finite() and absf(normals[i].length() - 1.0) < 0.0002
+				and normals[i].distance_to(expected_normals[i].normalized()) < 0.0002,
+				"canvas normal follows deformed native triangles at " + label) \
+				or not _check(uv[i].is_finite() and tangent.is_finite()
+				and absf(tangent.length() - 1.0) < 0.0002 and absf(tangent.dot(normals[i])) < 0.0002
+				and absf(tangents[i * 4 + 3]) == 1.0,
+				"canvas has finite material coordinates and orthonormal tangents at " + label):
+			return false
+	if _canvas_uv.is_empty():
+		_canvas_uv = uv.duplicate()
+	if not _check(uv == _canvas_uv, "canvas weave coordinates stay fixed through deformation at " + label) \
+			or not _check(canvas.custom_aabb.position.distance_to(bounds.position) < 0.0003
+			and canvas.custom_aabb.end.distance_to(bounds.end) < 0.0003
+			and mesh.get_aabb().position.distance_to(bounds.position) < 0.0003
+			and mesh.get_aabb().end.distance_to(bounds.end) < 0.0003,
+			"canvas culling bounds follow the actual deformed surface at " + label):
+		return false
+	var material := canvas.material_override as StandardMaterial3D
+	if not _check(material != null and material.cull_mode == BaseMaterial3D.CULL_DISABLED
+			and material.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED
+			and material.albedo_color.a == 1.0 and material.albedo_texture != null
+			and material.normal_enabled and material.normal_texture != null,
+			"canvas has an opaque woven material visible from either side at " + label):
+		return false
+	var endpoints: PackedVector3Array = _native.get_catch_net_tether_vertices()
+	var tether := net.get_node_or_null("Tether") as MeshInstance3D
+	if not _check(endpoints.size() == 2 and endpoints[0].is_finite() and endpoints[1].is_finite()
+			and endpoints[0].distance_squared_to(endpoints[1]) >= 0.000001
+			and tether != null and tether.is_visible_in_tree() and tether.mesh is CylinderMesh,
+			"visible shockcord uses two finite native attachment endpoints at " + label):
+		return false
+	var casing := tether.mesh as CylinderMesh
+	var from := tether.transform * Vector3(0.0, -0.5 * casing.height, 0.0)
+	var to := tether.transform * Vector3(0.0, 0.5 * casing.height, 0.0)
+	if not _check(from.distance_to(endpoints[0]) < 0.0002 and to.distance_to(endpoints[1]) < 0.0002
+			and absf(tether.transform.basis.x.length() * casing.top_radius - 0.01) < 0.00001
+			and absf(tether.transform.basis.z.length() * casing.bottom_radius - 0.01) < 0.00001
+			and absf(tether.transform.basis.x.dot(tether.transform.basis.y)) < 0.00001
+			and absf(tether.transform.basis.z.dot(tether.transform.basis.y)) < 0.00001,
+			"20 mm shockcord casing connects actual native endpoints without offsets at " + label):
+		return false
 	var frame_index := int(_native.get_kit_body_index(FRAME))
 	var frame := kit.get_node("KitBody2963") as Node3D
 	if not _check(frame.transform.is_equal_approx(_native.get_kit_body_render_transform(frame_index)),
@@ -176,14 +247,25 @@ func _stats(values: Array[float]) -> Dictionary:
 func _report_profile() -> void:
 	if not _profile:
 		return
+	var canvas := _main.get_node("KitPresentation/NativeSoftCatchNet/Canvas") as MeshInstance3D
+	var arrays := canvas.mesh.surface_get_arrays(0)
+	# The renderer rebuilds this complete array payload when its native snapshot
+	# changes. Driver packing/transfer and update frequency are not measured here.
+	var array_bytes: int = arrays[Mesh.ARRAY_VERTEX].size() * 3 * 4 \
+		+ arrays[Mesh.ARRAY_NORMAL].size() * 3 * 4 \
+		+ arrays[Mesh.ARRAY_TANGENT].size() * 4 \
+		+ arrays[Mesh.ARRAY_TEX_UV].size() * 2 * 4 \
+		+ arrays[Mesh.ARRAY_INDEX].size() * 4
 	var report := {"scope": "controlled native catch fall/rebound/escape harness; host, not phone",
 		"renderer": RenderingServer.get_current_rendering_method(), "display_server": DisplayServer.get_name(),
 		"adapter": RenderingServer.get_video_adapter_name(), "resolution": [root.size.x, root.size.y],
 		"preset": "LOW", "hour": _hour, "capture_enabled": not _capture.is_empty(),
 		"fps_cap": Engine.max_fps, "frame_wall_ms": _stats(_wall_ms), "draw_calls": _stats(_draw_calls),
 		"primitives": _stats(_primitives), "native_advance_cpu_usec": _cpu_usec, "native_ticks_sampled": _tick_samples,
-		"catch_transform_upload_bytes_per_update": (625 + 1200) * 12 * 4,
-		"upload_bytes_kind": "source-derived transform count, not measured GPU transfer"}
+		"catch_mesh_vertices": arrays[Mesh.ARRAY_VERTEX].size(),
+		"catch_mesh_triangles": arrays[Mesh.ARRAY_INDEX].size() / 3,
+		"catch_mesh_array_bytes_per_rebuild": array_bytes,
+		"upload_bytes_kind": "actual surface array payload, not measured GPU transfer"}
 	print("SCRAPERX_CATCH_NET_PROFILE " + JSON.stringify(report))
 
 func _run() -> void:
@@ -225,6 +307,7 @@ func _run() -> void:
 	_main._sky_cycle.set_hour(float(_hour))
 	_native = _main._native
 	if not _check(_native != null and _native.has_method("get_catch_net_state")
+			and _native.has_method("get_catch_net_tether_vertices")
 			and not _main._settings.persistent, "real shipping bridge and temporary LOW settings"):
 		quit(1)
 		return
@@ -233,13 +316,16 @@ func _run() -> void:
 		if not _check(state.has(key) and is_finite(float(state.get(key, INF))), "finite native SI telemetry " + key):
 			quit(1)
 			return
-	if not _check(bool(state.get("installed", false)) and int(state.get("columns", 0)) == 25
-			and int(state.get("rows", 0)) == 25, "distinct installed 25x25 catch"):
+	var columns := int(state.get("columns", 0))
+	var rows := int(state.get("rows", 0))
+	if not _check(bool(state.get("installed", false)) and columns >= 2 and rows >= 2,
+			"distinct installed catch membrane grid"):
 		quit(1)
 		return
 	_rest = _native.get_catch_net_vertices()
-	if not _check(_rest.size() == 2500 and _native.get_catch_net_indices().size() == 10950,
-			"actual open catch ribbon topology") or not _check(_native.get_cargo_net_vertices().size() == 828
+	if not _check(_rest.size() == columns * rows
+			and _native.get_catch_net_indices().size() == (columns - 1) * (rows - 1) * 6,
+			"actual continuous catch membrane topology") or not _check(_native.get_cargo_net_vertices().size() == 828
 			and _native.get_cargo_net_indices().size() == 3534, "original cargo topology retained"):
 		quit(1)
 		return

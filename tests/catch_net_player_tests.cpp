@@ -74,10 +74,10 @@ void exit_to_grade(Simulation &s) {
     }
     trace(s,1400);require(false,"ordinary controls reach rim, treads and grade");
 }
-void neutral(double height,bool exit) {
+void neutral(double height,bool exit,bool cell_offset=false) {
     Simulation s;
     require(s.catch_net_state().installed&&!s.catch_net_vertices().empty(),"shipping world installs actual catch mesh");
-    require(s.debug_restart_at({-34,height,-150}),"initial airborne physical fixture is clear");
+    require(s.debug_restart_at({cell_offset?-33.85:-34,height,cell_offset?-149.85:-150}),"initial airborne physical fixture is clear");
     const auto commits=s.snapshot().checkpoint_commit_count;
     bool contact=false,rebound=false,separated=false,recontact=false;int stable=0;
     double minimum=4,peak_up=0,peak_g=0,dose=0;
@@ -226,21 +226,36 @@ void underside() {
     bool loaded=false;
     for(int i=0;i<300;++i) {tick(s);if(s.catch_net_state().minimum_y_m<2.2){loaded=true;break;}}
     require(loaded,"overhead fixture uses a genuinely loaded falling mesh");
-    // Stop loading while the 1.92 m capsule head still has initial clearance.
-    // Initial physical fixture below the still-moving cloth. This relocation
-    // supplies no gameplay aid; the real soft vertices and their velocity stay.
-    require(s.debug_restart_at({-34,1.02,-150}),"capsule fits beneath the actual loaded mesh");
+    // The ground tether's real anchor replaces the old empty centre. Wait
+    // for the already-loaded cloth to rebound clear, then approach its
+    // underside by an ordinary finite Jump from that actual rigid footing.
+    bool clear=false;
+    for(int i=0;i<90;++i){
+        const auto mesh=s.catch_net_vertices();
+        if(mesh[mesh.size()/2].y>3.0){clear=true;break;}
+        tick(s);
+    }
+    require(clear,"loaded cloth rebounds clear of actual anchor approach");
+    require(s.debug_restart_at({-34,1.5,-150}),"capsule fits above actual anchor below loaded cloth");
+    for(int i=0;i<90&&s.snapshot().support_entity_id!=2963;++i)tick(s);
+    require(s.snapshot().player_grounded&&s.snapshot().support_entity_id==2963,
+            "underside approach begins on actual finite anchor frame");
+    const double initial_work=s.snapshot().landing_jump_work_j;
+    require(s.request_jump(),"ordinary anchor Jump is accepted");tick(s);
+    require(s.snapshot().landing_jump_work_j>initial_work&&!s.snapshot().player_grounded,
+            "underside approach is earned through finite rigid push-off");
     bool head_contact=false;
     for(int i=0;i<90;++i) {
         const auto before=s.snapshot();
         if(!before.player_grounded)(void)s.request_jump();
         tick(s);const auto a=s.snapshot();const auto n=s.catch_net_state();
         head_contact=head_contact||n.total_specific_load_mps2>0;
+        if(i%15==0)trace(s,i);
         require(a.support_entity_id!=1963&&!n.current_contact,"underside contact cannot stand on cloth");
         if(!before.player_grounded)require(a.landing_jump_work_j==before.landing_jump_work_j,
             "airborne underside contact cannot provide a reciprocal Jump receiver");
-        if(a.checkpoint_footing_valid)require(a.support_entity_id==Simulation::kStaticDeckEntityId,
-            "only actual grade may commit underneath cloth");
+        if(a.checkpoint_footing_valid)require(a.support_entity_id==Simulation::kStaticDeckEntityId||a.support_entity_id==2963,
+            "only actual rigid grade or anchor may commit underneath cloth");
         require(a.death_count==0,"bounded loaded underside fixture survives");
     }
     require(head_contact,"actual supplied soft/player contact is observed from underneath");
@@ -266,6 +281,7 @@ int main(int argc,char **argv) {
     else if(mode=="12"||mode=="exit12")neutral(12,mode=="exit12");
     else if(mode=="28")neutral(28,false);
     else if(mode=="36")neutral(36,false);
+    if(mode=="all"||mode=="cell")neutral(36,false,true);
     if(mode=="exit_probe")exit_probe();
     if(mode=="all"||mode=="frame")frame_jump();
     if(mode=="all"||mode=="miss")fatal_fixture("outside footprint miss",{-43,36,-153},false);

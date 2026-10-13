@@ -95,12 +95,12 @@
   },
   "historical_execution_records": "evidence/state-refresh-2026-10-13/ACTIVE_GOAL_PROGRESS.json",
   "execution_state": {
-    "updated_utc": "2026-10-13T18:19:25.951334+00:00",
-    "goal": "Deliver permanent physical catch net with shared contact fix, actual stable exit and one fully GREEN exact-source APK",
+    "updated_utc": "2026-10-13T20:03:32.455222+00:00",
+    "goal": "Deliver corrected physical catch-net GREEN/APK, then build and deliver one challenging462\u2013484m parkour connection with stable exit and real missed-jump recovery",
     "published_parent": "a72e3b623f1188b849201f1048906888994ead92",
-    "candidate_status": "local successor ready for publication; no new CI/APK",
-    "host_goal_ui": "paused when observed; direct owner authorization continues coding/delivery",
-    "current_evidence": "evidence/shared-soft-contact-2026-10-13/receipt.json",
+    "candidate_status": "Local41x41 canvas+finitegroundtether native45m/force/player and rebuilt-bridgeGodotday PASS; publication and fullnormalActions pending",
+    "host_goal_ui": "combined two-stage goal active; created after owner cleared prior goal",
+    "current_evidence": "evidence/canvas-contact-resolution-2026-10-13/FINAL_ACCEPTANCE.md",
     "native_checks": [
       "14contact cases",
       "existing friction/force",
@@ -109,18 +109,24 @@
       "ordinary36m exit to grade"
     ],
     "pending": [
-      "publication",
       "normal full67native/16Godot Actions",
       "8 LOW day/night capture inspection/day profile",
       "exact stable APK/source/hash/signer/increasing version/artifact link"
     ],
     "current_source_cost": "not measured; historical quiet/loaded windows are not current-source proof",
     "active_workers": [],
-    "next_action": "Publish supported repair once; monitor that one normal Actions run and inspect required artifacts",
+    "next_action": "Commit/push integratedcandidate after remote ancestry check, start one normalexactsourceActions; requirefullGREEN and matchingAPK beforeStage2",
     "last_ci": {
-      "source": "a72e3b623f1188b849201f1048906888994ead92",
-      "run": 38424152695,
-      "status": "RED64/67native; no captures/APK"
+      "source": "d37b793f5e6c12a0338b59552acda68350b3a338",
+      "run": 38445877254,
+      "status": "RED64/67native",
+      "failed": [
+        "material_hanging_posture",
+        "catch_net_model",
+        "catch_net_player"
+      ],
+      "captures_reached": false,
+      "apk_reached": false
     },
     "last_delivered": {
       "source": "ace9b8c4822b872f3630279fbdbb7c641b04f901",
@@ -128,6 +134,62 @@
       "artifact": 11783310983,
       "version": 214017513,
       "contains_catch": false
+    },
+    "published_candidate": "d37b793f5e6c12a0338b59552acda68350b3a338",
+    "stage2": {
+      "status": "prepared; blocked byStage1GREEN dependency, no gameplay integration",
+      "entry": "earned462.25m west roof",
+      "middle": "sparse473m north-brace inspection junction",
+      "exit": "existing484.25m roof",
+      "acceptance": [
+        "ordinary reachable approach and physical open-gap jump",
+        "stable actual484m receiving/onward footing",
+        "miss lands/retries from real462m support"
+      ],
+      "scope": "proposal dimensions require actual geometry/runtime validation; no observed prior route failure claimed",
+      "super_agent_review": "Advisory Sol/Medium complete,0children; identified receiver-obstructing upper-girder start and484.25 exit-height mismatch. Suggested43/45-riser stair geometry is a proposal, not accepted runtime behavior; root will prefer existing brace ascent when proven reachable, preserving distinct parkour challenge."
+    },
+    "reference_branch": {
+      "branch": "ScraperX-Claude",
+      "revision": "27cedcaa648c5d2a8ad19edb8a9e67af5313a1d1",
+      "checkout": "/data/data/com.termux/files/usr/tmp/scraperx-claude-reference-20261013",
+      "mode": "read-only reference; never target write authority or bulk merge",
+      "notes": "03_EXECUTION/PLANNING/CLAUDE_REUSE_NOTES_2026-10-13/",
+      "status": "Bothreaders completed; findings saved in assigned notes"
+    },
+    "native_checks_architecture": "ARM candidate45m/force/player/failure/underside/restartPASS; x86 normalfullsuite pending",
+    "active_local_run": null,
+    "replacement": {
+      "type": "actual continuous reinforcedcanvas catch, not openweave rope mesh",
+      "status": "ARM changednative/input/rendered paths PASS; normalx86/Godot/Android delivery pending",
+      "vertices": 1681,
+      "triangles": 3200,
+      "attachments": 160,
+      "total_mass_kg": 150,
+      "source_owners": "native and rendering workers finished; root owns integration",
+      "preserves": "defaultcargo1953 openweave, nativeJolt ownership,90Hz, existingfall/injury/exit criteria",
+      "reason": "owner authorized faster coherent alternative to unproductive solver investigation",
+      "tether": {
+        "anchor_body_local": [
+          -34,
+          0.4,
+          -150
+        ],
+        "material_grid": [
+          20,
+          20,
+          0
+        ],
+        "rest_length_m": 2.5,
+        "stiffness_N_per_m": 600,
+        "damping_Ns_per_m": 300,
+        "physics": "finite unilateral implicit radial material-to-frame reaction; actual native endpoints; slightpreload",
+        "evidence": "ARM45mPASS latepeak.139552m/s range.0233545m; nativeactualforce/slack/taut/P/L/energyPASS; actualdayrender running"
+      }
+    },
+    "host_goal_estimate": {
+      "percent": 45,
+      "scope": "current two-delivery goal only; rough estimate, fullcanonical scope unchanged"
     }
   }
 }

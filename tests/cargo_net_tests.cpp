@@ -267,16 +267,39 @@ void material_posture() {
     std::cout<<"MATERIAL_POSTURE Drop before_vy="<<before.player_linear_velocity.y<<" after_vy="<<released.player_linear_velocity.y
              <<" before_vz="<<before.player_linear_velocity.z<<" after_vz="<<released.player_linear_velocity.z
              <<" material_motion="<<material_motion<<'\n';
+    // Retain only the recent physical observations. A failed support assertion
+    // must identify the receiving body and contact, especially across hosts.
+    scraperx::sim::Snapshot drop_history[8]{};
+    int drop_samples=0;
+    const auto remember_drop=[&](const scraperx::sim::Snapshot &v){drop_history[drop_samples++%8]=v;};
+    const auto trace_drop=[&](const char *reason){
+        std::cerr<<"MATERIAL_POSTURE FIRST_FAILURE "<<reason<<" release_tick="<<released.tick_index<<'\n';
+        for(int j=std::max(0,drop_samples-8);j<drop_samples;++j){const auto &v=drop_history[j%8];
+            std::cerr<<"MATERIAL_POSTURE DROP_TRACE tick="<<v.tick_index<<" grounded="<<v.player_grounded
+                     <<" support="<<v.support_entity_id<<" side="<<v.soft_side_contact_entity
+                     <<" x="<<v.player_position.x<<" y="<<v.player_position.y<<" z="<<v.player_position.z
+                     <<" vx="<<v.player_linear_velocity.x<<" vy="<<v.player_linear_velocity.y<<" vz="<<v.player_linear_velocity.z
+                     <<" contact_x="<<v.support_contact_point.x<<" contact_y="<<v.support_contact_point.y
+                     <<" contact_z="<<v.support_contact_point.z<<" hands="<<v.traversal_hand_constraint_count
+                     <<" traversal="<<static_cast<int>(v.traversal_state)<<" gravity="<<v.player_gravity_factor
+                     <<" landing_support="<<v.landing_support_entity_id<<" deaths="<<v.death_count<<'\n';}
+    };
+    remember_drop(released);
     bool fell=false,landed=false;
     for(int i=0;i<360;++i){tick(treatment);const auto v=treatment.snapshot();
+        remember_drop(v);
+        if(v.traversal_hand_constraint_count!=0||v.player_gravity_factor!=1||v.death_count!=0)
+            trace_drop("posture Drop remains released and alive");
         require(v.traversal_hand_constraint_count==0&&v.player_gravity_factor==1&&v.death_count==0,"posture Drop remains released and alive");
         fell|=v.player_linear_velocity.y<-.1;
         if(v.player_grounded){
-            // The released capsule can briefly load the deformed lower cloth
-            // before landing. Keep waiting for actual rigid grade footing;
-            // neither cloth contact nor an unrelated support proves arrival.
-            if(v.support_entity_id==1953)continue;
+            // Release can touch the lower cloth or its real gantry tie rail
+            // while descending. Neither intermediate contact proves arrival;
+            // retain the deadline and require the actual grade tread below.
+            if(v.support_entity_id==1953||v.support_entity_id==2952)continue;
+            if(v.support_entity_id!=2954)trace_drop("posture actual grade tread receives Drop");
             require(v.support_entity_id==2954,"posture actual grade tread receives Drop");landed=true;break;}}
+    if(!fell||!landed)trace_drop("posture ordinary Drop actually falls onto grade");
     require(fell&&landed,"posture ordinary Drop actually falls onto grade");
     std::cout<<"PASS material_posture paired=1 material=1953 actual_tuck_delta="<<windows[1][1].mean_span-windows[1][0].mean_span
              <<" actual_extension_delta="<<windows[2][0].mean_span-windows[1][0].mean_span<<" grade=2954 deaths=0\n";

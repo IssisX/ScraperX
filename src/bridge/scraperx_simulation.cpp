@@ -385,6 +385,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_cargo_net_indices"), &ScraperXSimulation::get_cargo_net_indices);
     godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_vertices"), &ScraperXSimulation::get_catch_net_vertices);
     godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_indices"), &ScraperXSimulation::get_catch_net_indices);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_tether_vertices"), &ScraperXSimulation::get_catch_net_tether_vertices);
     godot::ClassDB::bind_method(godot::D_METHOD("get_catch_net_state"), &ScraperXSimulation::get_catch_net_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_count"),
                                 &ScraperXSimulation::get_kit_body_count);
@@ -1335,6 +1336,11 @@ godot::PackedVector3Array ScraperXSimulation::get_catch_net_vertices() const {
     godot::PackedVector3Array out;
     for (const auto &v : simulation_->catch_net_vertices(simulation_->snapshot().interpolation_alpha))
         out.push_back(godot::Vector3(v.x, v.y, v.z));
+    return out;
+}
+godot::PackedVector3Array ScraperXSimulation::get_catch_net_tether_vertices() const {
+    godot::PackedVector3Array out;
+    for(const auto &v:simulation_->render_catch_net_tether_vertices()) out.push_back(to_godot(v));
     return out;
 }
 godot::PackedInt32Array ScraperXSimulation::get_catch_net_indices() const {

@@ -5,6 +5,7 @@
 #include <vector>
 namespace scraperx::sim {
 enum class CargoNetClips { EndRows, Perimeter };
+enum class CargoNetSurface { OpenWeave, ContinuousMembrane };
 struct CargoNetConfig final {
     std::uint64_t entity = 1953;
     JPH::RVec3 origin = JPH::RVec3(18.0,0.45,-117.9);
@@ -20,9 +21,17 @@ struct CargoNetConfig final {
     float axial_damping_ratio = 0.0F;
     unsigned iterations = 8;
     CargoNetClips clips = CargoNetClips::EndRows;
+    CargoNetSurface surface = CargoNetSurface::OpenWeave;
     float clip_stiffness = 5000.0F, clip_damping = 25.0F;
     bool paired_sleep = false;
     bool internally_integrated_clips = false;
+    // Opt-in finite tension-only membrane tether. Material X/Y are grid
+    // coordinates, Z must be zero; anchor is the real frame's body-local point.
+    bool tether_enabled = false;
+    JPH::Vec3 tether_material = JPH::Vec3::sZero();
+    JPH::Vec3 tether_anchor_body_local = JPH::Vec3::sZero();
+    float tether_rest_length_m = 1.0F;
+    float tether_stiffness = 0.0F, tether_damping = 0.0F; // N/m, N s/m
 };
 // One actual Jolt soft body. Read-back is the same deforming mesh used for
 // collision, grip material coordinates, rider load and Godot presentation.
@@ -54,6 +63,16 @@ public:
     [[nodiscard]] JPH::Vec3 material_velocity(JPH::Vec3 material) const noexcept;
     [[nodiscard]] JPH::RVec3 world_point(JPH::Vec3 material) const noexcept;
     [[nodiscard]] float material_inverse_mass(JPH::Vec3 material) const noexcept;
+    // Owner-thread readback outside PhysicsSystem::Update. Endpoints and U
+    // derive from actual current vertices/frame; tension is the last native row.
+    [[nodiscard]] JPH::RVec3 tether_material_endpoint() const noexcept;
+    [[nodiscard]] JPH::RVec3 tether_anchor_endpoint() const noexcept;
+    [[nodiscard]] float tether_tension() const noexcept { return tether_tension_; }
+    [[nodiscard]] double tether_elastic_energy() const noexcept;
+    // Accumulated loss of the discrete radial velocity/extension predictor,
+    // including implicit integration loss, not full scene energy closure.
+    // Transient diagnostic: construction/restore starts a new measurement.
+    [[nodiscard]] double tether_dissipated_work() const noexcept { return tether_dissipated_work_; }
     void impulse(JPH::Vec3 material, JPH::Vec3 world_impulse);
     // Owner thread, outside Update: one ongoing finite material load. Internal
     // clips integrate it at native cloth cadence; legacy nets use impulse(F*dt).
@@ -71,7 +90,14 @@ private:
     [[nodiscard]] JPH::RVec3 node(int c, int r) const noexcept;
     [[nodiscard]] JPH::RVec3 surface(float c, float r) const noexcept;
     [[nodiscard]] JPH::RVec3 surface(float c, float r, const std::vector<JPH::RVec3> &vertices) const noexcept;
-    [[nodiscard]] std::uint32_t vertex(int c, int r, int corner) const noexcept { return std::uint32_t(4*(r*config_.columns+c)+corner); }
+    [[nodiscard]] int corners_per_node() const noexcept { return config_.surface==CargoNetSurface::OpenWeave?4:1; }
+    [[nodiscard]] std::uint32_t vertex(int c, int r, int corner) const noexcept { return std::uint32_t(corners_per_node()*(r*config_.columns+c)+corner); }
+    struct MaterialSample final {
+        std::array<std::uint32_t,16> vertices{};
+        std::array<float,16> weights{};
+        std::size_t count = 0;
+    };
+    [[nodiscard]] MaterialSample sample(float c, float r) const noexcept;
     CargoNetConfig config_;
     std::vector<std::uint32_t> attachment_vertices_;
     JPH::PhysicsSystem &system_;
@@ -93,6 +119,9 @@ private:
     JPH::Vec3 clip_frame_angular_ = JPH::Vec3::sZero();
     JPH::Vec3 clip_reaction_ = JPH::Vec3::sZero();
     JPH::Vec3 clip_torque_ = JPH::Vec3::sZero();
+    float tether_tension_ = 0.0F;
+    double tether_dissipated_work_ = 0.0;
+    JPH::RVec3 tether_anchor_com_local_ = JPH::RVec3::sZero();
     void internal_clip_step(float dt);
     void finish_clip_step(JPH::BodyInterface &bodies);
     void wake_pair();
@@ -100,6 +129,7 @@ private:
     // Transient owner force, deliberately outside serialized native state.
     std::array<std::uint32_t,16> force_vertices_{};
     std::array<float,16> force_weights_{};
+    std::size_t force_vertex_count_ = 0;
     JPH::Vec3 pending_world_force_ = JPH::Vec3::sZero();
     double force_remaining_seconds_ = 0.0;
 };

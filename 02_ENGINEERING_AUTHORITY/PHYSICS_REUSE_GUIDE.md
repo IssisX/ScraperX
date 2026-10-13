@@ -36,6 +36,8 @@ Headers carry lifecycle, lock and measurement contracts. Read the selected owner
 
 **Foundation defect:** contact pulls when it should only push; passive release deletes velocity; reactions are missing/duplicated; internal losses create energy; or the same interaction fails across otherwise valid encounters. Capture the smallest actual native failure and correct the existing shared owner. Add a regression that would reject that defect on the old implementation. Reuse the correction rather than adding encounter-specific compensation.
 
+Before extending a stubborn encounter investigation, compare two or three concrete physical alternatives: altered load path, distributed attachment, passive damper/tether, or counterweight. Predict each force/reaction/energy path and player consequence. Choose the simplest objective-preserving design; use a bounded independent mechanism review when uncertainty warrants it. A proven shared solver defect still belongs at its owner.
+
 After a hypothesis is rejected, write the result and remaining uncertainty. Choose one observation that distinguishes the remaining causes before another edit. Do not continue searching damping, gains, iterations or geometry merely to get a pass. Do not assume that fixing one measured primitive also fixes every encounter symptom.
 
 ## Economical execution for GPT-6.1 Sol and other contributors
@@ -52,3 +54,11 @@ After a hypothesis is rejected, write the result and remaining uncertainty. Choo
 Pinned Jolt 5.6 soft-contact response can apply a tensile normal impulse to an overlapping vertex already separating from a static or dynamic receiver. The correction belongs in `cmake/patches/jolt-passive-soft-attachments.patch`, protected by its source-hash manifest and the existing `scraperx_sim.catch_net_contact_friction` regression group.
 
 Reject the complete tensile normal response, including restitution history; do not simply reject every positive current normal speed, because a valid repulsive bounce may still be owed. Preserve geometric depenetration, legitimate closing response and reciprocal dynamic reactions. This correction does not by itself establish full energy closure, kinematic-contact correctness, catch-net settling, mobile performance or GREEN delivery. The live checkpoint and [scoped correction evidence](../evidence/shared-soft-contact-2026-10-13/README.md) own its current verification status.
+
+## Reusable membrane contact and passive tether
+
+`CargoNetSurface::ContinuousMembrane` uses actual indexed native faces and three unique barycentric masses for position, velocity, impulse, inverse mass and continuous force. Default cargo remains openweave. Jolt discrete soft/rigid contact samples vertices; visible filled triangles alone do not establish persistent collision coverage. Choose resolution from the smallest interacting contact geometry and require loaded/cell-offset evidence. The catch's.3m pitch follows the.35m capsule/.035m vertex and.55 support-normal bound; it is not a universal cloth setting.
+
+An opt-in `CargoNet` tether reuses the native iteration owner: actual material-point weights → finite unilateral spring/dashpot → reciprocal actual frame-anchor impulse/torque. Anchor config is body-origin-local, converted to actualCOM-local; force uses real point inertia. Parameters have unitsN/m, Ns/m andm. Slack carries no force. Native render endpoints drive the cord casing. Capture/restore clears transient tether diagnostics without inventing external motion.
+
+Ground tether is encounter engineering, not proof of a missing solver loss: dense36m caught/settled/exited before it, while45m decayed too slowly for its20s gate. Current600N/m,300Ns/m,2.5m rest candidate passed the unchanged45m gate and native off-centre unequalmass slack/taut force/torque/energy regression. Radial predictor loss includes implicit numerical loss and does not prove complete scene energy closure. Remaining actual input/render/Android evidence lives in the [checkpoint](../CONTINUE_HERE_CHATGPT_CODEX.md) and [scoped results](../evidence/canvas-contact-resolution-2026-10-13/README.md).

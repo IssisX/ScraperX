@@ -235,6 +235,7 @@ public:
     [[nodiscard]] godot::PackedInt32Array get_cargo_net_indices() const;
     [[nodiscard]] godot::PackedVector3Array get_catch_net_vertices() const;
     [[nodiscard]] godot::PackedInt32Array get_catch_net_indices() const;
+    [[nodiscard]] godot::PackedVector3Array get_catch_net_tether_vertices() const;
     [[nodiscard]] godot::Dictionary get_catch_net_state() const;
     [[nodiscard]] std::int64_t get_kit_body_count() const;
     [[nodiscard]] std::int64_t get_kit_body_entity_id(std::int64_t body) const;

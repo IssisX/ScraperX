@@ -1,0 +1,22 @@
+CATCH_CLIP frame_impulse=0.482498 frame_torque_impulse=2.91377 linear_error=0.000653388 angular_error=0.00166746
+CATCH_MATERIAL initial_energy_j=1.40083 final_energy_j=0.196709
+CATCH_SLEEP settle_ticks=435 both_asleep=1 max_speed_sq=0.00986058 cloth_kinetic_j=0.0378706
+CATCH_SLEEP material_rebound_vy=3.25328 frame_motion=2.20392e-05
+CATCH_SLEEP settle_ticks=193 both_asleep=1 max_speed_sq=0.0152259 cloth_kinetic_j=0.0568334
+CATCH_SLEEP settle_ticks=91 both_asleep=1 max_speed_sq=0.00689557 cloth_kinetic_j=0.0310991
+CATCH_SLEEP sustained_ticks=90 material_wake=1 frame_wake=1 restore_wake=1
+CATCH_SLEEP settle_ticks=435 both_asleep=1 max_speed_sq=0.00986058 cloth_kinetic_j=0.0378706
+CATCH_SLEEP motion_quality=0 wake=1 contacts=2
+CATCH_SLEEP settle_ticks=435 both_asleep=1 max_speed_sq=0.00986058 cloth_kinetic_j=0.0378706
+CATCH_SLEEP motion_quality=1 wake=1 contacts=2
+CATCH_TRACE tick=450 x=-34.0196 z=-150.026 y=24.4085 vy=1.49015 sag_min=1.62626 rebound=19.7961 apex=24.4085 strain=74.5292
+CATCH_TRACE tick=900 x=-34.0825 z=-150.241 y=8.24679 vy=-10.9092 sag_min=1.62626 rebound=19.7961 apex=24.5195 strain=84.6063
+CATCH_TRACE tick=1350 x=-34.1498 z=-149.845 y=4.96989 vy=2.91475 sag_min=1.62626 rebound=19.7961 apex=24.5195 strain=48.8786
+CATCH_TAIL tick=1530 y=4.08348 velocity_y=-2.71431 position_speed_y=-2.83876 cloth_ke_j=75.6784 strain_j=316.764
+CATCH_TAIL tick=1620 y=4.16618 velocity_y=-2.01487 position_speed_y=-2.05496 cloth_ke_j=84.7927 strain_j=158.698
+CATCH_TAIL tick=1710 y=4.11585 velocity_y=-1.73713 position_speed_y=-1.78772 cloth_ke_j=36.4963 strain_j=186.31
+CATCH_TAIL tick=1800 y=4.06075 velocity_y=-1.28557 position_speed_y=-1.35454 cloth_ke_j=31.9648 strain_j=239.731
+CATCH_TRACE tick=1800 x=-34.1485 z=-149.85 y=4.06075 vy=-1.28557 sag_min=1.62626 rebound=19.7961 apex=24.5195 strain=239.731
+CATCH_MODEL height=45 impact_speed=28.1222 mesh_min_y=1.62626 caught_capsule_min_y=2.56104 capsule_min_y=2.56104 rebound_vy=19.7961 apex_y=24.5195 first_apex_y=24.5195 frame_speed=0.0846374 mesh_peak_ke_j=9747.36 edge_peak_strain_j=19170.9 clip_peak_strain_j=11253.5 exposed_peak_energy_j=42945.6 final_y=4.06075 final_speed=1.28571 contact_events=2058 separation=1 recontact=1 late_peak_speed=1.99443 late_y_range=0.593677 late_contact_ticks=180 simulated_seconds=20 listener_calls=7920
+CATCH_ENERGY simultaneous_peak net_ke=1.81166 edge=61.0142 clips=62.4476 mounts=282.858 gravity=5017.64 player=37519.8 frame_ke=0.00473669 late_actual_position_speed=2.0354
+FAIL catch native model: passive settling persists across final two seconds

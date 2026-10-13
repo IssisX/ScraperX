@@ -1,0 +1,89 @@
+{
+  "scope": "changed bridge translation units only; link awaits stable native integration",
+  "steps": [
+    {
+      "name": "scraperx_simulation",
+      "exit_code": 0,
+      "seconds": 22.964271240867674,
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/bridge/scraperx_simulation.cpp": "7250ea64e82f053b3498bc30df8de475ab88a37b833d293321ae93dd64e98e3e",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/bridge/scraperx_simulation.hpp": "07a17f502f94dc41dfe162fdca78cad98dee6e786a8f5568cd4025cd7d8765af",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "d0fa067568a7e3f94e775857f51aaf56594491c27bea49d70242ec53bcb7ccd4"
+      },
+      "source_unchanged": true,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-catch-passive-foot-hook/jolt-src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-bridge-build/_deps/godot_cpp-src/include",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/godot_cpp-build/gen/include",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-bridge-build/_deps/godot_cpp-src/gdextension",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/bridge/scraperx_simulation.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-membrane-candidate/scraperx_simulation.cpp.o"
+      ],
+      "log_sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "register_types",
+      "exit_code": 0,
+      "seconds": 10.453730620909482,
+      "sources": {
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/bridge/register_types.cpp": "65e4f5d31131b17df921a41fc2ad2bf764cb55c8a5bf6185c35f6c6fef666627",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/bridge/scraperx_simulation.hpp": "07a17f502f94dc41dfe162fdca78cad98dee6e786a8f5568cd4025cd7d8765af",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/sim/simulation.hpp": "d0fa067568a7e3f94e775857f51aaf56594491c27bea49d70242ec53bcb7ccd4"
+      },
+      "source_unchanged": true,
+      "command": [
+        "proot-distro",
+        "login",
+        "ubuntu",
+        "--shared-tmp",
+        "--",
+        "/usr/bin/c++",
+        "-O3",
+        "-DNDEBUG",
+        "-DSCRAPERX_HAS_JOLT=1",
+        "-DJPH_DEBUG_RENDERER",
+        "-DJPH_OBJECT_STREAM",
+        "-DJPH_PROFILE_ENABLED",
+        "-std=c++17",
+        "-fPIC",
+        "-pthread",
+        "-I/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-catch-passive-foot-hook/jolt-src",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-bridge-build/_deps/godot_cpp-src/include",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-restore-linux-build/_deps/godot_cpp-build/gen/include",
+        "-isystem",
+        "/data/data/com.termux/files/usr/tmp/scraperx-bridge-build/_deps/godot_cpp-src/gdextension",
+        "-c",
+        "/data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo/src/bridge/register_types.cpp",
+        "-o",
+        "/data/data/com.termux/files/usr/tmp/scraperx-membrane-candidate/register_types.cpp.o"
+      ],
+      "log_sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

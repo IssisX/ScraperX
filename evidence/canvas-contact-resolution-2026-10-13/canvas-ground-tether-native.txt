@@ -1,0 +1,13 @@
+Native canvas tether implementation — 2026-10-13
+Source: IssisX/ScraperX, ChatGPT, base d37b793f5e6c12a0338b59552acda68350b3a338 with existing concurrent membrane changes preserved.
+Owned files: src/sim/cargo_net.hpp, src/sim/cargo_net.cpp, this record.
+
+Config: tether_enabled defaults false; tether_material is native grid X/Y with zero Z; tether_anchor_body_local is frame body-origin local; constructor converts it once to actual frame COM-local. tether_rest_length_m, tether_stiffness (N/m), tether_damping (N s/m). Enabled tethers require internally integrated clips, continuous membrane, finite in-grid coordinates, finite anchor, positive rest length/stiffness, nonnegative damping and existing finite dynamic frame. Default cargo behavior is unchanged.
+
+Each native cloth substep samples actual updated triangle vertices and velocities. Slack extension gives no impulse. Taut extension uses a finite unilateral implicit radial spring/dashpot impulse with sum(w^2 inverse_vertex_mass) plus the actual anchor's frame translation/rotation inverse mass. Transpose weights apply the cloth impulse; equal/opposite reaction and real anchor lever torque update cached frame velocity and buffered native writeback. No position overwrite, added rider load, or footing authority.
+
+Readbacks: tether_material_endpoint(), tether_anchor_endpoint(), tether_tension(), tether_elastic_energy(), tether_dissipated_work(). Endpoints and elastic energy derive actual current native state. Tension is the last native row's impulse/dt. Work is accumulated discrete radial predictor kinetic-plus-elastic loss, including implicit numerical loss; it is not a scene energy closure or merely c*v^2 command estimate. Restore resets transient tension/work and leaves the existing native capture byte format unchanged.
+
+Checks actually run: C++17 fsyntax-only against actual patched Jolt headers with JPH_DEBUG_RENDERER/JPH_OBJECT_STREAM/JPH_PROFILE_ENABLED, Wall/Wextra/Wpedantic/Werror: PASS after replacing unsupported Vec3 IsFinite with explicit component checks. Compiler clang21.1.8. Deterministic Python algebra check of 100000 radial BE parameter cases: no positive radial energy delta. Off-center three-vertex transpose sample: equal/opposite total force and angular impulse balance PASS. git diff --check PASS.
+
+Limits: algebra checks are not native runtime proof. Root owns actual tether regression, frame geometry/config, gameplay fall/settle/exit tests, renderer and integration. Actual nonlinear geometric motion, gravity, contacts and solver energy residual are outside the radial loss diagnostic. Last-row tension is transient; saved/replayed totals are intentionally not serialized.

@@ -9510,6 +9510,19 @@ std::vector<std::uint32_t> Simulation::catch_net_indices() const {
     const auto *net = physics_world_->catch_net();
     return net ? net->indices() : std::vector<std::uint32_t>{};
 }
+std::vector<Vector3> Simulation::render_catch_net_tether_vertices() const {
+    const auto *net=physics_world_->catch_net();
+    if(!net || !net->config().tether_enabled) return {};
+    const auto &config=net->config();
+    const auto material=net->render_world_point(config.tether_material,float(snapshot().interpolation_alpha));
+    const auto frame=kit_body_index(kCatchNetFrameEntity);
+    const auto position=render_kit_body_position(frame);
+    const auto rotation=render_kit_body_rotation(frame);
+    const JPH::Quat q(float(rotation.x),float(rotation.y),float(rotation.z),float(rotation.w));
+    const auto anchor=q*config.tether_anchor_body_local;
+    return {{material.GetX(),material.GetY(),material.GetZ()},
+            {position.x+anchor.GetX(),position.y+anchor.GetY(),position.z+anchor.GetZ()}};
+}
 CatchNetSnapshot Simulation::catch_net_state() const noexcept { return physics_world_->catch_net_state(); }
 
 std::uint32_t Simulation::kit_body_count() const noexcept {

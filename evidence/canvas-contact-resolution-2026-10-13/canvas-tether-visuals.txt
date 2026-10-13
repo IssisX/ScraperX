@@ -1,0 +1,11 @@
+Canvas tether presentation implementation — 2026-10-13
+Repository: /data/data/com.termux/files/usr/tmp/scraperx-launch-repair-09h3foao/repo
+Branch: ChatGPT; base HEAD d37b793f5e6c12a0338b59552acda68350b3a338; preserved pre-existing Canvas and acceptance edits.
+Owned files changed: godot/presentation/native_catch_net_view.gd; godot/tests/catch_net_test.gd.
+Added one Tether MeshInstance3D only beside actual Canvas when native getter supplies two finite distinct endpoints. Unit cylinder transformed between native endpoint pair, 20 mm diameter, orange opaque woven sheath. Straight reduced-order presentation of native massless tension-only spring/damper, no independently simulated cord, forces, colliders, anchors, or guessed intensity.
+Tether update runs in existing render_view cadence before Canvas unchanged-snapshot early return. Identical endpoint pairs skip transform writes; empty/invalid endpoints hide casing; restored endpoints redisplay. Topology replacement clears tether ownership/cached pair. Missing getter retains original isolated Canvas/open-weave behavior.
+Shipping acceptance now requires native tether getter and Canvas plus Tether children, tests finite native pair and transformed mesh end positions/radius/orthogonality. All gameplay acceptance criteria preserved; existing <=8 source draw budget unchanged.
+Verification private project: /data/data/com.termux/files/usr/tmp/canvas-tether-check-339lzz4i
+Godot binary: /tmp/scraperx-godot-arm64/Godot_v4.7-stable_linux.arm64 through proot-distro login ubuntu --shared-tmp.
+Actually run: both changed scripts --check-only, exit0 without script/parse errors. Tether isolated headless fixture:12checks/0failures/exit0; vertical/oblique/horizontal endpoints, fixed20mm diameter, unchanged pair, independently moving endpoints with unchanged Canvas, empty disable/restore, degenerate/nonfinite hide, removed surface owner hidden. Existing legacy_check.gd fixture: PASS exact Canvas arrays/normals/UVs/sag/restore/bounds/removal, open-weave fallback, shared-material preservation; exit0. git diff --check exit0.
+Limitations: isolated presentation fixture is not native gameplay or shipping renderer proof; integrated shipping catch acceptance/render capture needs rebuilt real bridge and is root-owned. No shared build, commit, or push performed.

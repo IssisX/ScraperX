@@ -247,3 +247,8 @@ After an experiment fails to support its hypothesis, stop searching blindly thro
 Keep verification proportional: prove the corrected interaction and relevant connected behavior, then return to building. Do not turn foundational improvement into an endless testing project.
 
 The intended result is compounding productivity: dependable primitives support increasingly varied machines and parkour encounters, while engineering effort shifts toward deliberate design, visual quality and player experience. Each completed integration should leave the next one easier to build.
+
+
+### Owner attachment reinforcement addition —2026-10-13
+
+Add a convincing reinforced square patch at the underside catch-tether attachment: distribute actual native load and give added material physically meaningful mass/stiffness/thickness. Preserve proven catch/clearance/settling/exit; complete current candidate delivery boundary first. This remains recorded follow-up, not implemented or waived.
