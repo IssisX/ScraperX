@@ -142,6 +142,9 @@ const LIFT_ROLE_EXIT := 3
 const LIFT_SLAB_INCLINE := 5
 # The traction tram shuttles on its own: Action only reads out its wait.
 const LIFT_TRAM := 7
+# The luffing derrick is worked by the load on its cradle: Action reads it
+# out, and from the lower receiver calls the cradle down.
+const LIFT_DERRICK := 4
 const INCLINE_ARMED := 0
 const INCLINE_RELEASED := 1
 const RUBBLE_DENSITY := 1600.0
@@ -896,7 +899,7 @@ func _perform_action() -> void:
 				_native.request_trapeze_action()
 		&"lift":
 			_native.request_lift_action()
-		&"s1", &"incline", &"tram":
+		&"s1", &"incline", &"tram", &"derrick":
 			# S1 and the slab incline are worked by standing on their plates;
 			# Action only reads them out.
 			pass
@@ -973,13 +976,23 @@ func _read_context() -> Dictionary:
 				"detail": "STEP OFF  %.0f M" % float(swing["seat_floor_y"])}
 	elif bool(swing["station_available"]):
 		action = {"id": &"swing", "icon": &"up", "label": "STRAP IN", "detail": "THE SWING"}
-	elif grounded and free and carrying == 0 and lift_machine >= 0:
+	elif grounded and free and carrying == 0 and lift_machine >= 0 and \
+			not (lift_machine == LIFT_DERRICK and carry_target != 0):
 		# One of the owner's vertical machines, on its own motor: from its deck
 		# Action sends the deck to the other end; from a receiver it calls it.
 		var lift_name: String = LIFT_NAMES[lift_machine] if lift_machine < LIFT_NAMES.size() else "LIFT"
 		var role := int(lift["role"])
 		var lift_travel := float(lift["travel"])
-		if lift_machine == LIFT_TRAM:
+		if lift_machine == LIFT_DERRICK:
+			var iron := int(lift["derrick_iron_aboard"])
+			if role == LIFT_ROLE_DECK and lift_travel < 0.01 and not bool(lift["moving"]):
+				action = {"id": &"derrick", "icon": &"up", "label": "TOO HEAVY",
+					"detail": "IRON ABOARD: %d" % iron}
+			elif role == LIFT_ROLE_DECK and lift_travel < 0.99:
+				action = {"id": &"derrick", "icon": &"up", "label": "RISING", "detail": "IRON ABOARD: %d" % iron}
+			elif role == LIFT_ROLE_ENTRY and lift_travel > 0.01 and not bool(lift["derrick_holding"]):
+				action = {"id": &"lift", "icon": &"up", "label": "CALL", "detail": lift_name}
+		elif lift_machine == LIFT_TRAM:
 			# Nothing to press: it leaves each end when its wait is up.
 			var departs := float(lift["tram_departs_s"])
 			var here_end := 1.0 if role == LIFT_ROLE_EXIT else 0.0
@@ -1130,6 +1143,8 @@ func _carry_name(entity: int) -> String:
 			return "DOOR"
 		2043:
 			return "DOOR LATCH"
+		2958, 2959, 2960, 2961, 2962, 2963:
+			return "IRON PIG"
 		2045:
 			return "CHILLER TRIP"
 		2052:

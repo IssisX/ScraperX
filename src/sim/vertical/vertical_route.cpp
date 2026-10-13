@@ -65,8 +65,9 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     // against the crown's upper one at 778.09 m; its cradle starts at z -161
     // and is luffed up and north to its upper receiver at 802.64 m (z -184).
     // The crown's cabin never goes north of z -155, so the two never meet.
+    derrick_ = static_cast<int>(placed_.size());
     place("sx.luffing_derrick.v1", {RVec3(13.5, 771.39, -193.0), -0.5F * JPH_PI},
-          {kDerrickStaticFirst, 3}, {kDerrickDynamicFirst, 3});
+          {kDerrickStaticFirst, 3}, {kDerrickDynamicFirst, 9});
 
     // The owner's slab incline, turned so the incline rises north toward the
     // south face at x -10 and its slab's tower stands east of it (x -5.5):
@@ -183,6 +184,26 @@ Route::Here Route::at(std::uint64_t support) const {
     return here;
 }
 
+int Route::derrick_iron_aboard() const {
+    if (derrick_ < 0) return 0;
+    const Placed &p = placed_[static_cast<std::size_t>(derrick_)];
+    const RVec3 deck = kit_.body_position(p.deck);
+    const Quat inverse = kit_.body_rotation(p.deck).Conjugated();
+    int aboard = 0;
+    for (const BodyIndex pig : p.machine->iron) {
+        const Vec3 local = inverse * Vec3(kit_.body_position(pig) - deck);
+        if (std::abs(local.GetX()) < 3.0F && std::abs(local.GetZ()) < 2.0F && local.GetY() > 0.0F &&
+            local.GetY() < 2.0F) {
+            ++aboard;
+        }
+    }
+    return aboard;
+}
+
+bool Route::derrick_holding() const noexcept {
+    return derrick_ >= 0 && targets_[static_cast<std::size_t>(derrick_)] > .5F;
+}
+
 float Route::tram_departs_s() const noexcept {
     if (tram_ < 0) return -1.0F;
     const float state = targets_[static_cast<std::size_t>(tram_)];
@@ -241,6 +262,21 @@ void Route::pre_step(float dt, bool action, std::uint64_t support) {
         incline_brake_n_ = kInclineBrakeFullN *
                             std::clamp(brake / (kInclineBrakeTakeUp * m.pedals[1]->GetLimitsMax()), 0.0F, 1.0F);
         m.drives[0].slider->SetMaxFrictionForce(incline_brake_n_);
+    }
+    if (derrick_ >= 0) {
+        // The luffing derrick: its load decides. Called from its lower
+        // receiver, its motor winds the counterweight up and holds the cradle
+        // down until a rider stands on it; then it is free again.
+        const Here here = at(support);
+        float &holding = targets_[static_cast<std::size_t>(derrick_)];
+        if (action && here.machine == derrick_) {
+            if (here.role == Role::Entry && here.travel > .01F) holding = 1.0F;
+            action = false;
+        }
+        if (holding > .5F && here.machine == derrick_ && here.role == Role::Deck && here.travel < .005F) {
+            holding = 0.0F;
+        }
+        placed_[static_cast<std::size_t>(derrick_)].machine->command({0.0F, holding > .5F});
     }
     if (action) {
         const Here here = at(support);

@@ -5504,6 +5504,8 @@ LiftSnapshot Simulation::lift_state() const noexcept {
     result.incline_brake_n = route.incline_brake_n();
     result.incline_speed_mps = route.incline() >= 0 ? route.deck_speed(static_cast<std::size_t>(route.incline())) : 0.0;
     result.tram_departs_s = route.tram_departs_s();
+    result.derrick_iron_aboard = route.derrick_iron_aboard();
+    result.derrick_holding = route.derrick_holding();
     return result;
 }
 

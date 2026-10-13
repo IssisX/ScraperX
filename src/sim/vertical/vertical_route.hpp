@@ -42,6 +42,12 @@ public:
     [[nodiscard]] const Machine &machine(std::size_t i) const { return *placed_[i].machine; }
     [[nodiscard]] float travel(std::size_t i) const;
     [[nodiscard]] float deck_speed(std::size_t i) const;
+    // The luffing derrick (-1 when not placed): worked by the load on its
+    // cradle, not Action. Its iron pigs aboard now, and whether its motor is
+    // holding the cradle down (called down, until a rider stands on it).
+    [[nodiscard]] int derrick() const noexcept { return derrick_; }
+    [[nodiscard]] int derrick_iron_aboard() const;
+    [[nodiscard]] bool derrick_holding() const noexcept;
     // The traction tram (-1 when not placed): a shuttle on its own, not
     // Action. It waits at each end, then leaves for the other; seconds until
     // it leaves, or -1 while it runs.
@@ -100,7 +106,7 @@ public:
     // pointing south: lower receiver against the crown's upper one at
     // 778.09 m, its cradle luffed up and in to 802.64 m.
     static constexpr std::uint64_t kDerrickStaticFirst = 1976;   // frame, entry, exit
-    static constexpr std::uint64_t kDerrickDynamicFirst = 2931;  // boom, cradle, ballast
+    static constexpr std::uint64_t kDerrickDynamicFirst = 2956;  // boom, cradle, six iron pigs, ballast
     // The owner's slab incline on the south face west of S1, from the yard
     // to deck 3: a ramp up to its boarding platform (3.4 m), the trolley 30 m
     // up the 60-degree incline, and a plate from its head onto deck 3.
@@ -150,6 +156,9 @@ private:
     // The tram: its state lives in targets_ as end + 2 * ticks waited there
     // (checkpointed): the end it was last sent to and how long it has stood.
     int tram_ = -1;
+    // The derrick: 0 free (its load decides), 1 held down by its motor;
+    // in targets_ (checkpointed).
+    int derrick_ = -1;
     float incline_brake_n_ = 0.0F;
 };
 

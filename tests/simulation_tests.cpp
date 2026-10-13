@@ -3966,10 +3966,11 @@ void run_helix() {
 // From the 750 deck to about 800 m: the crown gondola and the luffing derrick.
 // The crown: a 400 kNm motor turns a 28 m, 7 t crown through 178 degrees,
 // carrying a cabin hung from its rim south, up and over to its top. The
-// derrick: a 50 kN slider and its 1.2 t ballast's weight draw in the cable
+// derrick: a counterweight and the chain hanging from it draw in the cable
 // that luffs a 32 m boom from 8 to 65 degrees, lifting its hung cradle 24.5 m
-// up and 18 m in. Both carry their rider sideways as well as up. The cradle's
-// hanger plate stands through its floor's middle, so the rider stands west of it.
+// up and 18 m in, once the cradle is light enough (see derrick_ride). Both
+// carry their rider sideways as well as up. The cradle's hanger plate stands
+// through its floor's middle, so the rider stands west of it.
 struct HighRide final {
     bool vaulted = false;
     bool crown_up = false;
@@ -3993,6 +3994,100 @@ bool ride_to_top(scraperx::sim::Simulation &s, const std::size_t index, double *
     });
     *ride_s = s.snapshot().simulation_time_seconds - start;
     return up;
+}
+
+// The derrick from its lower receiver: onto the cradle, west of its hanger
+// plate. Six iron pigs lie on it; with them and a rider it outweighs its
+// counterweight and stays down. The rider throws four over its open west side,
+// one by one (picked up, carried to the edge, let go); with two left and the
+// rider it is lighter than the counterweight holds, and luffs up.
+constexpr std::uint64_t kDerrickCradle = scraperx::sim::vertical::Route::kDerrickDynamicFirst + 1;
+constexpr std::uint64_t kDerrickIronFirst = kDerrickCradle + 1;
+
+scraperx::sim::Vector3 derrick_body(const scraperx::sim::Simulation &s, std::uint64_t entity) {
+    return s.kit_body_position(s.kit_body_index(entity));
+}
+
+// Steer to a point `dx`, `dz` from the cradle's centre, following it.
+bool stand_on_cradle(scraperx::sim::Simulation &s, double dx, double dz, double seconds) {
+    const int ticks = static_cast<int>(seconds * 90.0);
+    for (int i = 0; i < ticks; ++i) {
+        const auto c = derrick_body(s, kDerrickCradle);
+        const auto me = s.snapshot().player_position;
+        const double ex = c.x + dx - me.x, ez = c.z + dz - me.z, d = std::hypot(ex, ez);
+        const double gain = std::min(1.0, d / 0.3);
+        (void)s.set_move_input(d > 0.05 ? gain * ex / d : 0.0, d > 0.05 ? gain * ez / d : 0.0);
+        (void)s.advance_frame(scraperx::sim::Simulation::kFixedStepSeconds);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    const auto c = derrick_body(s, kDerrickCradle);
+    const auto me = s.snapshot().player_position;
+    return std::hypot(c.x + dx - me.x, c.z + dz - me.z) < 0.25;
+}
+
+// Throws the pig `entity` over the cradle's open west side.
+bool dump_iron(scraperx::sim::Simulation &s, std::uint64_t entity) {
+    const auto c = derrick_body(s, kDerrickCradle);
+    const auto pig = derrick_body(s, entity);
+    // Stand just north of it on the cradle, face south, and pick it up.
+    if (!stand_on_cradle(s, pig.x - c.x, pig.z - c.z + 0.6, 2.5)) return false;
+    (void)s.set_facing(0.0, -1.0);
+    (void)s.advance_frame(0.2);
+    if (s.snapshot().carry_target_entity_id != entity || !s.request_pick_up()) return false;
+    (void)s.advance_frame(0.3);
+    if (s.snapshot().carrying_entity_id != entity) return false;
+    // To the west edge, face west, and let it go over the side.
+    if (!stand_on_cradle(s, -1.6, 1.0, 2.5)) return false;
+    (void)s.set_facing(-1.0, 0.0);
+    (void)s.advance_frame(0.6);
+    if (!s.request_set_down()) return false;
+    (void)s.advance_frame(1.5);
+    return s.snapshot().carrying_entity_id == 0;
+}
+
+struct DerrickRide final {
+    bool held_with_iron = false;
+    int dumped = 0;
+    bool up = false;
+    double ride_s = 0.0;
+    bool held_at_three = false;
+    int iron_left = 0;
+};
+
+DerrickRide derrick_ride(scraperx::sim::Simulation &s) {
+    DerrickRide ride;
+    if (!stand_on_cradle(s, -1.2, 0.0, 3.0)) return ride;
+    (void)s.advance_frame(5.0);
+    ride.held_with_iron = s.lift_state().travels[4] < 0.005 && s.lift_state().derrick_iron_aboard == 6;
+    // Nearest the rider first: the pigs lie in two rows of three running
+    // south from beside the rider's spot.
+    for (const std::uint64_t pig : {kDerrickIronFirst + 2, kDerrickIronFirst + 5, kDerrickIronFirst + 1,
+                                    kDerrickIronFirst + 4}) {
+        if (ride.dumped == 3) {
+            // Three left and the rider: what the counterweight holds.
+            (void)stand_on_cradle(s, -1.2, 0.0, 5.0);
+            ride.held_at_three = s.lift_state().travels[4] < 0.005 && s.lift_state().derrick_iron_aboard == 3;
+        }
+        if (!dump_iron(s, pig)) {
+            std::cerr << "derrick: dumping iron " << pig << " failed at travel " << s.lift_state().travels[4]
+                      << " target " << s.snapshot().carry_target_entity_id << " carrying "
+                      << s.snapshot().carrying_entity_id << '\n';
+            return ride;
+        }
+        ++ride.dumped;
+    }
+    ride.iron_left = s.lift_state().derrick_iron_aboard;
+    const double start = s.snapshot().simulation_time_seconds;
+    for (int i = 0; i < 90 * 90; ++i) {
+        (void)stand_on_cradle(s, -1.2, 0.0, 1.0 / 90.0);
+        const auto lift = s.lift_state();
+        if (std::abs(lift.travels[4] - 1.0) < 0.01 && !lift.moving && s.snapshot().player_grounded) {
+            ride.up = true;
+            break;
+        }
+    }
+    ride.ride_s = s.snapshot().simulation_time_seconds - start;
+    return ride;
 }
 
 HighRide high_ride(scraperx::sim::Simulation &s) {
@@ -4023,10 +4118,81 @@ HighRide high_ride(scraperx::sim::Simulation &s) {
         ride.end = s.snapshot();
         return ride;
     }
-    ride.derrick_up = ride_to_top(s, 4, &ride.derrick_s) && walk_to(s, 13.5, -184.3, 8.0) &&
-                      s.advance_frame(0.5).accepted && s.lift_state().role == 3;
+    const DerrickRide d = derrick_ride(s);
+    if (!(d.held_with_iron && d.held_at_three && d.dumped == 4 && d.iron_left == 2 && d.up)) {
+        std::cerr << "derrick: held=" << d.held_with_iron << " held_at_three=" << d.held_at_three
+                  << " dumped=" << d.dumped << " left=" << d.iron_left << " up=" << d.up << " ride_s=" << d.ride_s
+                  << " travel=" << s.lift_state().travels[4] << '\n';
+    }
+    ride.derrick_s = d.ride_s;
+    ride.derrick_up = d.held_with_iron && d.held_at_three && d.dumped == 4 && d.iron_left == 2 && d.up &&
+                      walk_to(s, 13.5, -184.3, 8.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3;
     ride.end = s.snapshot();
     return ride;
+}
+
+// The derrick's miss and its recovery, from the 750 deck over the crown. On
+// the cradle the rider throws two pigs over; four and the rider still hold it
+// down. Stepping off onto the lower receiver leaves the cradle lighter than
+// the counterweight holds, and it luffs away empty. CALL from the receiver:
+// its motor winds the counterweight up, brings the cradle down and holds it
+// there until the rider stands on it. Two more over the side, and it rises.
+void run_derrick() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation s(InitialSpawn::Deck750);
+    (void)s.advance_frame(1.0);
+    // high_ride's way to the derrick's lower receiver, stopping there.
+    require(walk_to(s, 10.8, -152.0, 8.0) && walk_to(s, 11.3, -152.0, 3.0, 0.06),
+            "derrick: to the 750 deck's east parapet");
+    (void)s.set_facing(1.0, 0.0);
+    (void)s.advance_frame(0.3);
+    (void)s.request_traversal();
+    require(hold_stick(s, 0.0, 0.0, 1.0, 0.0, 2.0, [](const scraperx::sim::Snapshot &state) {
+                return state.traversal_state == scraperx::sim::TraversalState::None && state.player_grounded &&
+                       state.player_position.x > 12.4;
+            }) && walk_to(s, 13.5, -152.0, 4.0) && walk_to(s, 17.3, -152.0, 6.0),
+            "derrick: over the parapet onto the crown's cabin");
+    double crown_s = 0.0;
+    require(ride_to_top(s, 3, &crown_s) && walk_to(s, 13.5, -151.5, 6.0) && walk_to(s, 13.5, -156.5, 6.0) &&
+                s.advance_frame(0.5).accepted && s.lift_state().machine == 4 && s.lift_state().role == 2,
+            "derrick: up the crown and onto the derrick's lower receiver");
+    require(walk_to(s, 12.3, -157.5, 4.0) && stand_on_cradle(s, -1.2, 0.0, 3.0) &&
+                dump_iron(s, kDerrickIronFirst + 2) && dump_iron(s, kDerrickIronFirst + 5),
+            "derrick: on the cradle, two pigs over the side");
+    (void)stand_on_cradle(s, -1.2, 0.0, 3.0);
+    require(s.lift_state().travels[4] < 0.005 && s.lift_state().derrick_iron_aboard == 4,
+            "derrick: four pigs and the rider must still hold the cradle down");
+    // The miss: off onto the receiver, and the cradle goes without the rider.
+    require(walk_to(s, 12.3, -156.5, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 2,
+            "derrick: off onto the lower receiver");
+    require(wait_for(s, 30.0, [&s](const scraperx::sim::Snapshot &) { return s.lift_state().travels[4] > 0.1; }),
+            "derrick: lightened and left empty, the cradle must luff away without its rider");
+    const double gone = s.lift_state().travels[4];
+    // The recovery: CALL from the receiver.
+    (void)s.request_lift_action();
+    require(wait_for(s, 90.0, [&s](const scraperx::sim::Snapshot &) {
+                return s.lift_state().travels[4] < 0.005 && s.lift_state().derrick_holding;
+            }),
+            "derrick: CALL from the lower receiver must wind the cradle back down");
+    (void)s.advance_frame(5.0);
+    require(s.lift_state().travels[4] < 0.005 && s.lift_state().derrick_holding,
+            "derrick: called down, its motor must hold the light cradle until a rider boards");
+    require(walk_to(s, 12.3, -157.5, 4.0) && stand_on_cradle(s, -1.2, 0.0, 2.0) && !s.lift_state().derrick_holding,
+            "derrick: a rider on the cradle frees it again");
+    require(dump_iron(s, kDerrickIronFirst + 1) && dump_iron(s, kDerrickIronFirst + 4),
+            "derrick: two more pigs over the side");
+    bool up = false;
+    for (int i = 0; i < 90 * 90 && !up; ++i) {
+        (void)stand_on_cradle(s, -1.2, 0.0, 1.0 / 90.0);
+        const auto lift = s.lift_state();
+        up = std::abs(lift.travels[4] - 1.0) < 0.01 && !lift.moving && s.snapshot().player_grounded;
+    }
+    require(up && walk_to(s, 13.5, -184.3, 8.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 3 &&
+                s.snapshot().death_count == 0,
+            "derrick: lightened with its rider aboard, up to its upper receiver, alive");
+    std::cout << "PASS scraperx_sim derrick: gone_empty_travel=" << gone << " top_y=" << s.snapshot().player_position.y
+              << '\n';
 }
 
 void run_high() {
@@ -6590,6 +6756,11 @@ int main() {
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "derrick") {
+        run_derrick();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "swing") {
         run_swing();
         return EXIT_SUCCESS;
@@ -8608,6 +8779,7 @@ int main() {
     run_teeter();
     run_trapeze();
     run_tram();
+    run_derrick();
     run_ascent();
 
     return EXIT_SUCCESS;

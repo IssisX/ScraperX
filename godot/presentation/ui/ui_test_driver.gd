@@ -2048,6 +2048,73 @@ func _high(device: int) -> bool:
 
 var _high_crown_y := 0.0
 
+# The derrick's cradle and its six iron pigs (entities after its boom).
+const DERRICK_CRADLE_ENTITY := 2957
+const DERRICK_IRON_FIRST := 2958
+
+
+func _kit_origin(entity: int) -> Vector3:
+	return _native().get_kit_body_transform(_native().get_kit_body_index(entity)).origin
+
+
+# The luffing derrick as a player works it: onto the cradle (TOO HEAVY with
+# its six iron pigs), four pigs picked up and let go over its open west side,
+# and with two left the counterweight luffs it up; at the top, off onto the
+# upper receiver.
+func _ride_derrick(device: int) -> bool:
+	if not (await _go(device, Vector2(13.5, -156.5), 0.15, 6.0) and \
+			await _go(device, Vector2(12.3, -157.5), 0.15, 4.0) and \
+			await _go(device, Vector2(12.3, -161.0), 0.15, 4.0)):
+		return _fail("derrick: the walk onto the cradle stalled at %s" % str(_position()))
+	if not await _offered(&"derrick", "TOO HEAVY", "IRON ABOARD: 6"):
+		return _fail("derrick: the cradle did not read TOO HEAVY with six pigs (read '%s %s')" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	for pig in [DERRICK_IRON_FIRST + 2, DERRICK_IRON_FIRST + 5, DERRICK_IRON_FIRST + 1, DERRICK_IRON_FIRST + 4]:
+		var at := _kit_origin(pig)
+		if not await _go(device, Vector2(at.x, at.z + 0.6), 0.1, 4.0):
+			return _fail("derrick: the walk to iron %d stalled at %s" % [pig, str(_position())])
+		await _face(Vector2(0.0, -1.0))
+		if not await _offered(&"pick_up", "PICK UP", "IRON PIG"):
+			return _fail("derrick: Action read '%s %s' facing iron %d, not PICK UP IRON PIG" % [_action_label(),
+				String(_ctx()["action"]["detail"]), pig])
+		_act(device)
+		if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == pig, 0.5):
+			return _fail("derrick: PICK UP did not lift iron %d" % pig)
+		var cradle := _kit_origin(DERRICK_CRADLE_ENTITY)
+		if not await _go(device, Vector2(cradle.x - 1.6, cradle.z + 1.0), 0.1, 4.0):
+			return _fail("derrick: carrying iron %d to the edge stalled at %s" % [pig, str(_position())])
+		await _face(Vector2(-1.0, 0.0))
+		await _seconds(0.6)
+		if not await _let_go_if_held(device):
+			return _fail("derrick: LET GO did not drop iron %d over the side" % pig)
+		await _seconds(1.0)
+	await _wait_until(func() -> bool: return int(_native().get_lift_state()["derrick_iron_aboard"]) == 2, 3.0)
+	_derrick_iron_left = int(_native().get_lift_state()["derrick_iron_aboard"])
+	if _derrick_iron_left != 2:
+		return _fail("derrick: %d pigs left aboard, not 2" % _derrick_iron_left)
+	var waited := 0.0
+	while waited < 90.0:
+		var lift: Dictionary = _native().get_lift_state()
+		if absf(float(lift["travels"][4]) - 1.0) < 0.01 and not bool(lift["moving"]) and bool(_ctx()["grounded"]):
+			break
+		var cradle := _kit_origin(DERRICK_CRADLE_ENTITY)
+		_steer_on_deck(device, Vector2(cradle.x - 1.2, cradle.z))
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_move_dir(device, Vector2.ZERO)
+	if absf(float(_native().get_lift_state()["travels"][4]) - 1.0) >= 0.01:
+		return _fail("derrick: the lightened cradle never reached the top (lift %s)" % str(_native().get_lift_state()))
+	await _pose("machine_4_top")
+	if not await _go(device, Vector2(13.5, -184.3), 0.15, 8.0):
+		return _fail("derrick: the step off onto the upper receiver stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	if int(_native().get_lift_state()["role"]) != 3:
+		return _fail("derrick: not standing on the upper receiver (y %.2f)" % _position().y)
+	return true
+
+
+var _derrick_iron_left := 0
+
 # From the 750 deck: the vault over its east parapet, the crown gondola and the
 # luffing derrick to its upper receiver (802.64 m). Played alone by touch_high
 # from a 750 deck spawn, and by touch_stack on from the gravel wheel's arrival.
@@ -2068,8 +2135,7 @@ func _high_legs(device: int) -> bool:
 			Vector2(13.5, -151.5)):
 		return false
 	_high_crown_y = _position().y
-	if not await _ride_machine(device, 4, "LUFFING DERRICK", Vector2(13.5, -156.5), Vector2(12.3, -161.3),
-			Vector2(13.5, -184.3)):
+	if not await _ride_derrick(device):
 		return false
 	await _pose("high_top")
 	return true

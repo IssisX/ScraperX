@@ -73,6 +73,8 @@ public:
     // Sliders a catch holds fast at their top (the slab incline's slab): the
     // route collapses their limits while caught.
     std::vector<Ref<SliderConstraint>> holds;
+    // Loose loads a rider can carry off (the derrick's iron pigs).
+    std::vector<BodyIndex> iron;
     BuildContext context;
     RVec3 point(Vec3 local) const;
     Vec3 direction(Vec3 local) const;

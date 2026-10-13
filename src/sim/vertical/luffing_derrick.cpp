@@ -7,6 +7,15 @@ std::unique_ptr<Machine> luffing_derrick(BuildContext c) {
     constexpr float kStart = DegreesToRadians(8.0f);
     constexpr float kEnd = DegreesToRadians(65.0f);
     constexpr float kBackZ = -2.5f;
+    // The counterweight (DERIVED from the moment balance; see below): the
+    // block, and a chain hanging kChainHangM at the start into a pit whose
+    // floor is kChainFloorY.
+    constexpr int kIronCount = 6;
+    constexpr float kIronKg = 40.0f;
+    constexpr float kBlockKg = 1091.0f;
+    constexpr float kChainKgPerM = 75.6f;
+    constexpr float kChainLengthM = 32.0f;
+    constexpr float kChainFloorY = 5.0f;
     const float delta = kEnd - kStart;
     const Vec3 pivot(0, 4.0f, kBackZ);
     const Vec3 initial_tip(pivot.GetX() + kLength * std::cos(kStart),
@@ -19,13 +28,15 @@ std::unique_ptr<Machine> luffing_derrick(BuildContext c) {
     const float first_leg_end = (final_tip - head_sheave).Length();
     const float ballast_travel = first_leg_start - first_leg_end;
 
-    auto m = std::make_unique<Machine>(c, "sx.luffing_derrick.v1", 3, 3);
+    auto m = std::make_unique<Machine>(c, "sx.luffing_derrick.v1", 3, 3 + kIronCount);
     auto frame = m->body("frame", {
         box(Vec3(.55f, 20.0f, .55f), Material::Concrete, Vec3(0, 20.0f, kBackZ)),
         box(Vec3(3.8f, .4f, .5f), Material::Steel, Vec3(-3.0f, 40.0f, kBackZ)),
         wheel(.9f, .35f, Vec3(0, 40.0f, kBackZ)),
         wheel(.9f, .35f, Vec3(-6.0f, 40.0f, kBackZ)),
-        box(Vec3(.35f, 18.0f, .35f), Material::Galvanised, Vec3(-6.0f, 20.0f, kBackZ))
+        box(Vec3(.35f, 18.0f, .35f), Material::Galvanised, Vec3(-6.0f, 20.0f, kBackZ)),
+        // The pit the counterweight's chain piles into.
+        box(Vec3(1.6f, .25f, 1.6f), Material::Rust, Vec3(-6.0f, kChainFloorY - .25f, kBackZ))
     }, Vec3::sZero(), 0);
     const float initial_deck_y = initial_tip.GetY() - 2.0f;
     const float final_deck_y = final_tip.GetY() - 2.0f;
@@ -60,17 +71,37 @@ std::unique_ptr<Machine> luffing_derrick(BuildContext c) {
     c.kit.set_damping(boom, 0, .03f);
     m->no_collision(boom, deck);
 
+    // Iron pigs lashed nowhere, lying on the cradle's deck: the rider can
+    // pick them up and carry them off (each kIronKg).
+    for (int i = 0; i < kIronCount; ++i) {
+        const Vec3 at(initial_tip.GetX() - 2.4f + .75f * static_cast<float>(i % 3),
+                      initial_deck_y + .25f + .09f, .6f + .8f * static_cast<float>(i / 3));
+        auto pig = m->body("iron_" + std::to_string(i), {box(Vec3(.26f, .09f, .09f), Material::Rust)}, at, kIronKg);
+        c.kit.set_carry(pig, kit::CarryKind::Load, Vec3(0, .09f, 0));
+        m->iron.push_back(pig);
+    }
+
+    // The counterweight: a block and a chain hanging from it into the pit
+    // at the mast's foot (the kit's declared chain model). The head sheave
+    // stands straight over the boom's pivot, so the counterweight that holds
+    // a cradle of mass M falls linearly with the block's descent: exactly
+    // what a uniform chain piling as it sinks takes off. Sized (DERIVED,
+    // MECHANISM_ASCENT_PLAN.md, the derrick) to hold 1,405 kg at the tip at
+    // every angle: the cradle, a rider and three pigs. Lighter than
+    // that it luffs up, the drive fading as the boom rises; heavier, it
+    // stays down. Its slider's motor only winds the counterweight back up
+    // (the cradle down) when called from the lower receiver.
     auto ballast = m->body("ballast", {
         box(Vec3(1.2f, 1.5f, 1.2f), Material::Concrete),
         box(Vec3(1.45f, .18f, 1.45f), Material::Yellow, Vec3(0, 1.5f, 0))
-    }, Vec3(-6.0f, 36.5f, kBackZ), 1200);
+    }, Vec3(-6.0f, 36.5f, kBackZ), kBlockKg);
     auto ballast_slide = m->slider({}, ballast, Vec3::sAxisY(), -ballast_travel, 0);
     // The slider is the authoritative guide. The visible guide rail is not a
     // second, competing contact constraint.
     m->no_collision(frame, ballast);
-    // 50 kN plus ballast gravity can luff the occupied cradle, while the
-    // declared 3,000 kg overload cannot break the boom away from its stop.
     ballast_slide->GetMotorSettings().SetForceLimit(50000);
+    c.kit.add_chain(ballast, Vec3(0, -1.5f, 0), static_cast<float>(m->point(Vec3(0, kChainFloorY, 0)).GetY()),
+                    kChainKgPerM, kChainLengthM);
 
     const float ballast_initial_leg = 2.0f;
     auto rope = c.kit.add_rope(

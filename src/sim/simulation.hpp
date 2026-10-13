@@ -225,6 +225,10 @@ struct LiftSnapshot final {
     // The traction tram: seconds until it leaves the end it stands at, -1
     // while it runs.
     double tram_departs_s = -1.0;
+    // The luffing derrick: iron pigs on its cradle now, and whether its
+    // motor holds the cradle down (called down, until a rider boards).
+    int derrick_iron_aboard = 0;
+    bool derrick_holding = false;
 };
 
 // A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it
