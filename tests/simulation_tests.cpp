@@ -2,6 +2,7 @@
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/trapeze.hpp"
 #include "sim/pipe_gallery.hpp"
+#include "sim/climb_c7.hpp"
 
 #include <Jolt/Jolt.h>
 
@@ -7149,6 +7150,160 @@ void run_workers() {
     }
 }
 
+// C7, the west face: from the 264 ring to the mast-pitman walkway at
+// 291.25 m on player inputs, the mast's alternative. Its two galleries are
+// swung hand over hand: gallery one from a running leap, gallery two, rising
+// 0.3 m a pipe, from a standing leap off the outrigger.
+bool report_c7(const scraperx::sim::Simulation &simulation, const char *leg) {
+    const auto state = simulation.snapshot();
+    std::cerr << "C7 stalled at " << leg << ": (" << state.player_position.x << ", " << state.player_position.y << ", "
+              << state.player_position.z << ") grounded=" << state.player_grounded
+              << " traversal=" << static_cast<int>(state.traversal_state) << " support=" << state.support_entity_id
+              << '\n';
+    return false;
+}
+
+// Held forward along -z: the hands swing pipe to pipe until they take a lip.
+bool c7_swing_to_lip(scraperx::sim::Simulation &simulation, int *reaches) {
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    if (!hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 1.0,
+                    [](const Snapshot &state) { return state.traversal_state == TraversalState::Swinging; })) {
+        return false;
+    }
+    const auto start = simulation.snapshot().swing_reach_count;
+    if (!hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 14.0,
+                    [](const Snapshot &state) { return state.traversal_state == TraversalState::Hanging; })) {
+        return false;
+    }
+    *reaches = static_cast<int>(simulation.snapshot().swing_reach_count - start);
+    return true;
+}
+
+bool climb_c7(scraperx::sim::Simulation &simulation, int *reaches_one, int *reaches_two) {
+    using scraperx::sim::ClimbC7;
+    using scraperx::sim::Snapshot;
+    // 1. South along the 264 ring's west band, under the galleries, to the
+    // kentledge, and onto it.
+    if (!(walk_to(simulation, -19.2, -155.0, 8.0) && walk_to(simulation, -17.6, -150.0, 4.0) &&
+          walk_to(simulation, -17.6, -133.4, 12.0) && walk_to(simulation, -19.2, -133.6, 4.0, 0.06))) {
+        return report_c7(simulation, "to the kentledge");
+    }
+    if (!c4_mantle(simulation, 0.0, -1.0, ClimbC7::kKentledgeTop + 0.45, "C7 onto the kentledge")) {
+        return false;
+    }
+    // 2. A run north along it and, from its striped end, the leap: the hands
+    // close on gallery one's first pipe, swing along it, take the lip.
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.2);
+    if (!hold_stick(simulation, 0.0, -1.0, 0.0, -1.0, 2.0, [](const Snapshot &state) {
+            return state.player_position.z <= ClimbC7::kKentledgeNorth + 0.5;
+        })) {
+        return report_c7(simulation, "the run along the kentledge");
+    }
+    (void)simulation.request_jump();
+    if (!c7_swing_to_lip(simulation, reaches_one)) {
+        return report_c7(simulation, "gallery one");
+    }
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!wait_for(simulation, 3.0, [](const Snapshot &state) {
+            return standing_above(state, ClimbC7::kPlatformOneTop + 0.4);
+        })) {
+        return report_c7(simulation, "up onto platform one");
+    }
+    // 3. Up onto the outrigger from platform one's north edge, and out west.
+    if (!(walk_to(simulation, ClimbC7::kLaneOneX, -147.4, 4.0, 0.06) &&
+          c4_hang_up(simulation, 0.0, -1.0, ClimbC7::kOutriggerTop + 0.4, "C7 up onto the outrigger"))) {
+        return false;
+    }
+    if (!(walk_to(simulation, -24.0, -149.1, 6.0) &&
+          walk_to(simulation, ClimbC7::kLaneTwoX, ClimbC7::kGalleryTwoFirstZ, 6.0, 0.06))) {
+        return report_c7(simulation, "out along the outrigger");
+    }
+    // 4. A standing leap to gallery two's first pipe overhead, and up it.
+    (void)simulation.set_facing(0.0, -1.0);
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!c7_swing_to_lip(simulation, reaches_two)) {
+        return report_c7(simulation, "gallery two");
+    }
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!wait_for(simulation, 3.0, [](const Snapshot &state) {
+            return standing_above(state, ClimbC7::kPlatformTwoTop + 0.4);
+        })) {
+        return report_c7(simulation, "up onto platform two");
+    }
+    // 5. Platform to platform: east onto three, north onto four, east onto
+    // the 286 ring's west band.
+    if (!(walk_to(simulation, -28.4, -158.4, 4.0, 0.06) &&
+          c4_hang_up(simulation, 1.0, 0.0, ClimbC7::kPlatformThreeTop + 0.4, "C7 up onto platform three"))) {
+        return false;
+    }
+    if (!(walk_to(simulation, -23.5, -159.7, 6.0, 0.06) &&
+          c4_hang_up(simulation, 0.0, -1.0, ClimbC7::kPlatformFourTop + 0.4, "C7 up onto platform four"))) {
+        return false;
+    }
+    if (!(walk_to(simulation, ClimbC7::kRing286Edge - 0.6, -161.9, 6.0, 0.06) &&
+          c4_hang_up(simulation, 1.0, 0.0, ClimbC7::kRing286Top + 0.4, "C7 up onto the 286 ring"))) {
+        return false;
+    }
+    // 6. South along the band to the block, onto it, and up onto the walkway.
+    if (!(walk_to(simulation, -17.5, -161.9, 4.0) && walk_to(simulation, -17.5, -143.6, 12.0) &&
+          walk_to(simulation, -19.0, -143.6, 4.0, 0.06))) {
+        return report_c7(simulation, "along the 286 ring to the block");
+    }
+    if (!c4_mantle(simulation, 0.0, -1.0, ClimbC7::kBlockTop + 0.45, "C7 onto the block")) {
+        return false;
+    }
+    if (!walk_to(simulation, -19.0, -147.4, 4.0, 0.06)) {
+        return report_c7(simulation, "up the block's step");
+    }
+    if (!c4_hang_up(simulation, 0.0, -1.0, ClimbC7::kWalkwayTop + 0.4, "C7 up onto the walkway")) {
+        return false;
+    }
+    return true;
+}
+
+void run_c7() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation s(InitialSpawn::Ring264West);
+    require(s.advance_frame(1.0).accepted, "C7: settle");
+    const double start = s.snapshot().simulation_time_seconds;
+    int one = 0;
+    int two = 0;
+    require(climb_c7(s, &one, &two), "C7: the climb from the 264 ring to the walkway on player inputs");
+    const auto top = s.snapshot();
+    require(top.death_count == 0 && top.player_grounded &&
+                top.support_entity_id == scraperx::sim::vertical::Route::kMastPitmanWalkway &&
+                top.player_position.y > 291.9,
+            "C7: the climb must end standing on the walkway, alive, without the mast");
+    require(one == scraperx::sim::ClimbC7::kGalleryOnePipes - 1 && two == scraperx::sim::ClimbC7::kGalleryTwoPipes - 1,
+            "C7: every pipe of both galleries must be swung, none skipped");
+    require(std::abs(s.lift_state().travels[0]) < 0.005, "C7: the mast never moved");
+    // The galleries are the way: from the band under platform one, a jump at
+    // its fascia catches nothing.
+    {
+        Simulation band(InitialSpawn::Ring264West);
+        (void)band.advance_frame(1.0);
+        require(walk_to(band, -19.2, -155.0, 8.0) && walk_to(band, -19.2, -144.2, 8.0, 0.08),
+                "C7 falsifier: to under platform one's lip");
+        (void)band.set_facing(0.0, -1.0);
+        (void)band.advance_frame(0.3);
+        (void)band.request_jump();
+        require(!hold_stick(band, 0.0, -0.4, 0.0, -1.0, 2.0,
+                            [](const scraperx::sim::Snapshot &n) {
+                                return n.traversal_state == scraperx::sim::TraversalState::Hanging;
+                            }) &&
+                    band.snapshot().player_position.y < 265.5,
+                "C7 falsifier: from the band, platform one is out of reach");
+    }
+    std::cout << "PASS scraperx_sim c7: seconds=" << top.simulation_time_seconds - start << " pipes=" << one << "+" << two
+              << " top_y=" << top.player_position.y << "\n";
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
         run_brachiation();
@@ -7158,6 +7313,7 @@ int main() {
         run_wall_run();
         run_hook();
         run_workers();
+        run_c7();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -9410,6 +9566,7 @@ int main() {
     run_wall_run();
     run_hook();
     run_workers();
+    run_c7();
     run_ascent();
 
     return EXIT_SUCCESS;

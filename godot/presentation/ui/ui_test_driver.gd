@@ -91,6 +91,10 @@ const SCENARIOS := {
 	# C6, the west band, from the 242 ring where the swing sets its rider down
 	# to the 264 ring: no ladder, no standpipe.
 	"touch_c6": 35,
+	# C7, from the 264 ring's west band where C6 tops out: the exposed way to
+	# the walkway at 291.25 m without the cascade mast -- two pipe galleries
+	# swung out over the drop, four hang-ups and the block.
+	"touch_c7": 36,
 	# The owner's vertical machines, from the 264 ring's west band where C6
 	# tops out, on their own motors: the cascade mast 27 m up, the walkway out
 	# the west face, the pitman lift 23.6 m, the barrel helix 24 m, the walkway
@@ -154,12 +158,29 @@ const SCENARIOS := {
 const TRAVERSAL_NONE := 0
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_CLIMBING := 4
+const TRAVERSAL_SWINGING := 6
 const TOWER_ENTITY := 11
 # AS-010's frame: the 662 deck and the 684 deck.
 const SERVICE_FRAME_ENTITY := 1012
 # The world's solids, the rings among them: what C6's climber stands on at the
 # 264 ring.
 const RING_264_ENTITY := 51
+# C7 (src/sim/climb_c7.hpp) and the walkway it tops out on.
+const MAST_PITMAN_WALKWAY_ENTITY := 1968
+const C7_KENTLEDGE_TOP := 265.85
+const C7_KENTLEDGE_NORTH := -139.0
+const C7_LANE_ONE_X := -19.2
+const C7_PLATFORM_ONE_TOP := 269.05
+const C7_OUTRIGGER_TOP := 272.3
+const C7_LANE_TWO_X := -29.3
+const C7_GALLERY_TWO_FIRST_Z := -149.3
+const C7_PLATFORM_TWO_TOP := 277.1
+const C7_PLATFORM_THREE_TOP := 280.35
+const C7_PLATFORM_FOUR_TOP := 283.6
+const C7_RING_286_EDGE := -20.55
+const C7_RING_286_TOP := 286.25
+const C7_BLOCK_TOP := 287.85
+const C7_WALKWAY_TOP := 291.25
 # The walker's braking with nothing pressed, as the native has it: 22 m/s^2
 # on the ground, 14 in the air. Keys walking to a point let go by the weaker;
 # with a load in the hands, which caps it (5.3 for D's 50 kg spool), by less.
@@ -313,6 +334,8 @@ func _run() -> void:
 			ok = await _swing(InputRouter.Device.TOUCH)
 		"touch_c6":
 			ok = await _c6(InputRouter.Device.TOUCH)
+		"touch_c7":
+			ok = await _c7(InputRouter.Device.TOUCH)
 		"touch_machines":
 			ok = await _machines(InputRouter.Device.TOUCH)
 		"touch_high":
@@ -2308,6 +2331,116 @@ func _c6(device: int) -> bool:
 			int(_native().get_support_entity_id())])
 	_detail = "ring264_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
 		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
+	return true
+
+
+# C7, the way its native climb takes it: from the 264 ring's west band onto
+# the kentledge, a run and a leap from its striped end onto gallery one,
+# swung pipe to pipe to platform one's lip; up onto the outrigger, out west,
+# a standing leap to gallery two and up it to platform two; hang-ups onto
+# platforms three and four and the 286 ring; along the band to the block, up
+# its step, and a last hang-up onto the walkway. The mast never moves.
+func _c7(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var started := int(_native().get_tick_index())
+	var body := _watch_body()
+	if not (await _go(device, Vector2(-19.2, -155.0), 0.15, 8.0) and \
+			await _go(device, Vector2(-17.6, -150.0), 0.15, 4.0) and \
+			await _go(device, Vector2(-17.6, -133.4), 0.15, 12.0) and \
+			await _go(device, Vector2(-19.2, -133.6), 0.06, 4.0)):
+		return _fail("C7: the walk to the kentledge stalled at %s" % str(_position()))
+	if not await _c4_mantle(device, Vector2(0.0, -1.0), C7_KENTLEDGE_TOP + 0.45, "the kentledge"):
+		return false
+	await _face(Vector2(0.0, -1.0))
+	await _seconds(0.2)
+	_move(device, 1.0)
+	if not await _wait_until(func() -> bool: return _position().z <= C7_KENTLEDGE_NORTH + 0.5, 2.0):
+		_move(device, 0.0)
+		return _fail("C7: the run along the kentledge stalled at %s" % str(_position()))
+	await _pose("c7_takeoff")
+	_jump(device)
+	if not await _c7_gallery(device, "gallery one"):
+		return false
+	if not await _climb_up(device):
+		return _fail("C7: CLIMB UP not offered on platform one's lip")
+	if not await _wait_until(func() -> bool: return _standing_above(C7_PLATFORM_ONE_TOP + 0.4), 3.0):
+		return _fail("C7: the climb up onto platform one did not land (at %s)" % str(_position()))
+	await _seconds(0.3)
+	if not await _go(device, Vector2(C7_LANE_ONE_X, -147.4), 0.06, 4.0):
+		return _fail("C7: the walk to platform one's north edge stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(0.0, -1.0), C7_OUTRIGGER_TOP + 0.4, "the outrigger"):
+		return false
+	if not (await _go(device, Vector2(-24.0, -149.1), 0.15, 6.0) and \
+			await _go(device, Vector2(C7_LANE_TWO_X, C7_GALLERY_TWO_FIRST_Z), 0.06, 6.0)):
+		return _fail("C7: the walk out along the outrigger stalled at %s" % str(_position()))
+	await _pose("c7_outrigger")
+	await _face(Vector2(0.0, -1.0))
+	await _seconds(0.3)
+	_jump(device)
+	if not await _c7_gallery(device, "gallery two"):
+		return false
+	if not await _climb_up(device):
+		return _fail("C7: CLIMB UP not offered on platform two's lip")
+	if not await _wait_until(func() -> bool: return _standing_above(C7_PLATFORM_TWO_TOP + 0.4), 3.0):
+		return _fail("C7: the climb up onto platform two did not land (at %s)" % str(_position()))
+	await _seconds(0.3)
+	if not await _go(device, Vector2(-28.4, -158.4), 0.06, 4.0):
+		return _fail("C7: the walk to platform two's east edge stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(1.0, 0.0), C7_PLATFORM_THREE_TOP + 0.4, "platform three"):
+		return false
+	if not await _go(device, Vector2(-23.5, -159.7), 0.06, 6.0):
+		return _fail("C7: the walk to platform three's north edge stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(0.0, -1.0), C7_PLATFORM_FOUR_TOP + 0.4, "platform four"):
+		return false
+	if not await _go(device, Vector2(C7_RING_286_EDGE - 0.6, -161.9), 0.06, 6.0):
+		return _fail("C7: the walk to platform four's east edge stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(1.0, 0.0), C7_RING_286_TOP + 0.4, "the 286 ring"):
+		return false
+	await _pose("c7_286")
+	if not (await _go(device, Vector2(-17.5, -161.9), 0.15, 4.0) and \
+			await _go(device, Vector2(-17.5, -143.6), 0.15, 12.0) and \
+			await _go(device, Vector2(-19.0, -143.6), 0.06, 4.0)):
+		return _fail("C7: the walk along the 286 ring to the block stalled at %s" % str(_position()))
+	if not await _c4_mantle(device, Vector2(0.0, -1.0), C7_BLOCK_TOP + 0.45, "the block"):
+		return false
+	if not await _go(device, Vector2(-19.0, -147.4), 0.06, 4.0):
+		return _fail("C7: the walk up the block's step stalled at %s" % str(_position()))
+	if not await _c4_hang_up(device, Vector2(0.0, -1.0), C7_WALKWAY_TOP + 0.4, "the walkway"):
+		return false
+	await _seconds(0.5)
+	await _pose("c7_walkway")
+	var worst_step := _stop_watch(body)
+	if worst_step > 0.25:
+		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
+	if float(body["lift"]) > 0.10:
+		return _fail("the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(body["lift"]), str(body.get("lift_at", ""))])
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	if int(_native().get_support_entity_id()) != MAST_PITMAN_WALKWAY_ENTITY or not _standing_above(291.9):
+		return _fail("C7: not standing on the walkway (y %.2f, on %d)" % [_position().y,
+			int(_native().get_support_entity_id())])
+	if absf(float(_native().get_lift_state()["travels"][0])) >= 0.005:
+		return _fail("C7: the cascade mast moved (travel %.3f)" % float(_native().get_lift_state()["travels"][0]))
+	_detail = "walkway_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		_position().y, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
+	return true
+
+
+# From a leap at a gallery's first pipe: forward held, the hands swing pipe to
+# pipe until they take the platform's lip.
+func _c7_gallery(device: int, what: String) -> bool:
+	_move(device, 1.0)
+	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_SWINGING, 1.0):
+		_move(device, 0.0)
+		return _fail("C7: the leap never caught %s's first pipe (at %s)" % [what, str(_position())])
+	await _pose("c7_" + what.replace(" ", "_"))
+	var lip: bool = await _wait_until(
+		func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_HANGING, 14.0)
+	_move(device, 0.0)
+	if not lip:
+		return _fail("C7: swung along %s, the hands never took the platform's lip (at %s)" % [what,
+			str(_position())])
 	return true
 
 

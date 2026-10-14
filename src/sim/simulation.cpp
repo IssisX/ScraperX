@@ -10,6 +10,7 @@
 #include "sim/pipe_gallery.hpp"
 #include "sim/trapeze.hpp"
 #include "sim/crew.hpp"
+#include "sim/climb_c7.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"
 
@@ -1435,6 +1436,9 @@ public:
         // The vertical route's late bodies (the pitman's deck counterweight),
         // after every other kit body so older saves' lists still line up.
         vertical_->build_late();
+        // C7, the west face's exposed climb from the 264 ring to the
+        // mast-pitman walkway: the alternative to riding the mast. Last too.
+        ClimbC7::build(*kit_);
         // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
         crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
 
