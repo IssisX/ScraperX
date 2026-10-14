@@ -337,6 +337,13 @@ func _ready() -> void:
 	if _export_solids_path != "":
 		_export_solids()
 		return
+	_batch_static_dressing($TowerPresentation)
+	for lamp in _light_rig.get_children():
+		if lamp is OmniLight3D:
+			(lamp as OmniLight3D).light_cull_mask = ~BATCH_FAR_LAYER
+			(lamp as OmniLight3D).distance_fade_enabled = true
+			(lamp as OmniLight3D).distance_fade_begin = LAMP_REACH
+			(lamp as OmniLight3D).distance_fade_length = BATCH_FADE
 	_sky_cycle = SkyCycleScript.new()
 	_sky_cycle.name = "SkyCycle"
 	add_child(_sky_cycle)
@@ -394,6 +401,14 @@ func _ready() -> void:
 	_swing_view = SwingView.new()
 	add_child(_swing_view)
 	_swing_view.setup()
+	# Both views are a few metres of rope and leather: not drawn from afar.
+	for view: Node in [_slingshot_view, _swing_view]:
+		var pending: Array[Node] = [view]
+		while not pending.is_empty():
+			var node: Node = pending.pop_back()
+			pending.append_array(node.get_children())
+			if node is GeometryInstance3D:
+				(node as GeometryInstance3D).visibility_range_end = VIEW_PROP_RANGE
 
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006")
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
@@ -2699,6 +2714,259 @@ func _material(color: Color, metallic: float, roughness: float,
 	return material
 
 
+# The static world, drawn in batches. Every box, strut and cylinder of
+# $TowerPresentation is built as its own node (the solids export reads them
+# one by one), and every kit body's part comes from the native one by one;
+# drawn that way the tower was ~9,700 draw calls looking down from the 750
+# deck (measured, perf_top). After the build, everything that never moves is
+# merged twice:
+# - near: one mesh per material per section (BATCH_CELL_* metres), drawn to
+#   BATCH_NEAR_RANGE; a lamp lights only the sections in its reach. Parts no
+#   bigger than BATCH_FINE_SIZE get their own batches, drawn only to
+#   BATCH_FINE_RANGE and casting no shadow;
+# - far: one mesh per large section (BATCH_FAR_CELL metres) without those
+#   small parts, each part's colour carried in its vertices under one plain
+#   material, drawn from BATCH_NEAR_RANGE out.
+# Parts that differ only in colour are drawn as one, their colours carried in
+# their vertices. A moving kit body's parts
+# become one mesh per material that moves with it. Transparent parts,
+# labels, particles and anything with a script stay as they are.
+const BATCH_CELL_XZ := 96.0
+const BATCH_CELL_Y := 48.0
+const BATCH_FAR_CELL := 192.0
+const BATCH_NEAR_RANGE := 260.0
+const BATCH_FINE_SIZE := 1.5
+const BATCH_FINE_RANGE := 160.0
+const BATCH_FADE := 20.0
+# The far batches' render layer, which no lamp lights; and how far a lamp
+# lights at all (it fades over BATCH_FADE beyond): this renderer draws an
+# object once more for every lamp that reaches it.
+const BATCH_FAR_LAYER := 2
+const LAMP_REACH := 100.0
+const VIEW_PROP_RANGE := 250.0
+const KIT_CABLE_RANGE := 200.0
+
+
+class Batcher:
+	# A batch under construction: one surface's arrays, the place it stands,
+	# and the material it is drawn with.
+	class Group:
+		var vertices := PackedVector3Array()
+		var normals := PackedVector3Array()
+		var tangents := PackedFloat32Array()
+		var uvs := PackedVector2Array()
+		var colours := PackedColorArray()
+		var indices := PackedInt32Array()
+		var origin := Vector3.ZERO
+		var material: Material
+		var fine := false
+
+	var near := {}
+	var far := {}
+	var finishes := {}    # finish signature -> the shared material drawing it
+	var far_material: StandardMaterial3D
+	var parts := 0
+
+	func add(mesh: Mesh, surface: int, at: Transform3D, material: Material, fine: bool) -> void:
+		var finish := _finish(material)
+		var bounds := at * mesh.get_aabb()
+		var centre := bounds.get_center()
+		var cell := Vector3(floorf(centre.x / BATCH_CELL_XZ), floorf(centre.y / BATCH_CELL_Y),
+			floorf(centre.z / BATCH_CELL_XZ))
+		# Each batch stands at its section's middle (its vertices relative to
+		# that), so its draw distance is measured to the section.
+		var group := _group(near, "%d/%d/%d/%s/%d" % [cell.x, cell.y, cell.z, finish[0], int(fine)],
+			(cell + Vector3(0.5, 0.5, 0.5)) * Vector3(BATCH_CELL_XZ, BATCH_CELL_Y, BATCH_CELL_XZ), finishes[finish[0]])
+		group.fine = fine
+		Batcher.append_arrays(group, mesh, surface, at, finish[1])
+		if not fine:
+			if far_material == null:
+				far_material = StandardMaterial3D.new()
+				far_material.vertex_color_use_as_albedo = true
+				far_material.vertex_color_is_srgb = true
+				far_material.roughness = 0.9
+			var far_cell := Vector3(floorf(centre.x / BATCH_FAR_CELL), floorf(centre.y / BATCH_FAR_CELL),
+				floorf(centre.z / BATCH_FAR_CELL))
+			var far_group := _group(far, "%d/%d/%d" % [far_cell.x, far_cell.y, far_cell.z],
+				(far_cell + Vector3(0.5, 0.5, 0.5)) * BATCH_FAR_CELL, far_material)
+			var standard := material as StandardMaterial3D
+			Batcher.append_arrays(far_group, mesh, surface, at,
+				standard.albedo_color if standard != null else Color(0.35, 0.33, 0.3))
+		parts += 1
+
+	# A material's finish: what it looks like but for its colour, which the
+	# batch carries in its vertices. [signature, vertex colour]. A material
+	# with a colour texture or a shader of its own is drawn as it is.
+	func _finish(material: Material) -> Array:
+		var standard := material as StandardMaterial3D
+		if standard == null or standard.albedo_texture != null:
+			var own := "id%d" % material.get_instance_id()
+			if not finishes.has(own):
+				finishes[own] = material
+			return [own, Color.WHITE]
+		var normal := standard.normal_texture.get_instance_id() if standard.normal_enabled \
+			and standard.normal_texture != null else 0
+		var signature := "%.3f|%.3f|%s|%.2f|%d|%d|%s" % [standard.metallic, standard.roughness,
+			standard.emission.to_html() if standard.emission_enabled else "-",
+			standard.normal_scale if standard.normal_enabled else 0.0, normal, standard.cull_mode,
+			str(standard.uv1_scale)]
+		if not finishes.has(signature):
+			var shared := standard.duplicate() as StandardMaterial3D
+			shared.albedo_color = Color.WHITE
+			shared.vertex_color_use_as_albedo = true
+			shared.vertex_color_is_srgb = true
+			finishes[signature] = shared
+		return [signature, standard.albedo_color]
+
+	static func _group(groups: Dictionary, key: String, origin: Vector3, material: Material) -> Group:
+		if not groups.has(key):
+			var group := Group.new()
+			group.origin = origin
+			group.material = material
+			groups[key] = group
+		return groups[key]
+
+	static func append_arrays(group: Group, mesh: Mesh, surface: int, at: Transform3D, colour: Color) -> void:
+		var arrays := mesh.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL] if arrays[Mesh.ARRAY_NORMAL] != null \
+			else PackedVector3Array()
+		var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT] if arrays[Mesh.ARRAY_TANGENT] != null \
+			else PackedFloat32Array()
+		var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV] if arrays[Mesh.ARRAY_TEX_UV] != null \
+			else PackedVector2Array()
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null \
+			else PackedInt32Array()
+		var local := Transform3D(Basis(), -group.origin) * at
+		var normal_basis := at.basis.inverse().transposed()
+		var base := group.vertices.size()
+		for i in vertices.size():
+			group.vertices.append(local * vertices[i])
+			group.normals.append((normal_basis * normals[i]).normalized() if i < normals.size() else Vector3.UP)
+			if 4 * i + 3 < tangents.size():
+				var t := (at.basis * Vector3(tangents[4 * i], tangents[4 * i + 1], tangents[4 * i + 2])).normalized()
+				group.tangents.append_array(PackedFloat32Array([t.x, t.y, t.z, tangents[4 * i + 3]]))
+			else:
+				group.tangents.append_array(PackedFloat32Array([1.0, 0.0, 0.0, 1.0]))
+			group.uvs.append(uvs[i] if i < uvs.size() else Vector2.ZERO)
+			group.colours.append(colour)
+		if indices.is_empty():
+			for i in vertices.size():
+				group.indices.append(base + i)
+		else:
+			for index in indices:
+				group.indices.append(base + index)
+
+	static func commit(group: Group) -> MeshInstance3D:
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = group.vertices
+		arrays[Mesh.ARRAY_NORMAL] = group.normals
+		arrays[Mesh.ARRAY_TANGENT] = group.tangents
+		arrays[Mesh.ARRAY_TEX_UV] = group.uvs
+		arrays[Mesh.ARRAY_COLOR] = group.colours
+		arrays[Mesh.ARRAY_INDEX] = group.indices
+		var mesh := ArrayMesh.new()
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		mesh.surface_set_material(0, group.material)
+		var instance := MeshInstance3D.new()
+		instance.name = "Batch"
+		instance.mesh = mesh
+		instance.position = group.origin
+		return instance
+
+	# A kit body's parts by material, with SurfaceTool (they move as one).
+	static func append(groups: Dictionary, key: String, mesh: Mesh, surface: int, at: Transform3D,
+			signature: String, fine: bool) -> void:
+		if not groups.has(key):
+			var tool := SurfaceTool.new()
+			tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+			groups[key] = [tool, signature, fine]
+		(groups[key][0] as SurfaceTool).append_from(mesh, surface, at)
+
+	static func instance(tool: SurfaceTool, material: Material) -> MeshInstance3D:
+		var instance := MeshInstance3D.new()
+		instance.name = "Batch"
+		instance.mesh = tool.commit()
+		instance.mesh.surface_set_material(0, material)
+		return instance
+
+	# Adds the batches under `root`; returns how many.
+	func emit(root: Node3D) -> int:
+		for key in near:
+			var group: Group = near[key]
+			var instance := Batcher.commit(group)
+			if group.fine:
+				instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				instance.visibility_range_end = BATCH_FINE_RANGE
+			else:
+				instance.visibility_range_end = BATCH_NEAR_RANGE
+			instance.visibility_range_end_margin = BATCH_FADE
+			instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+			root.add_child(instance)
+		for key in far:
+			var instance := Batcher.commit(far[key])
+			instance.name = "FarBatch"
+			# Out of every lamp's light: a far section spans many lamps, and
+			# each would draw it again.
+			instance.layers = BATCH_FAR_LAYER
+			# Past the furthest shadow cascade (ULTRA's 300 m reach is from the
+			# camera, these start at BATCH_NEAR_RANGE): casting would only add
+			# them to the cascades they overlap.
+			instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			instance.visibility_range_begin = BATCH_NEAR_RANGE
+			instance.visibility_range_begin_margin = BATCH_FADE
+			instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+			root.add_child(instance)
+		return near.size() + far.size()
+
+
+func _batch_static_dressing(root: Node3D) -> void:
+	var batcher := Batcher.new()
+	var merged: Array[MeshInstance3D] = []
+	var to_root := root.global_transform.affine_inverse()
+	var stack: Array[Node] = root.get_children()
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		stack.append_array(node.get_children())
+		var instance := node as MeshInstance3D
+		if instance == null or instance.mesh == null or not instance.visible or instance.get_script() != null:
+			continue
+		var mesh := instance.mesh
+		var local := to_root * instance.global_transform
+		var bounds := local * mesh.get_aabb()
+		var fine := bounds.size[bounds.get_longest_axis_index()] <= BATCH_FINE_SIZE
+		var surfaces := mesh.get_surface_count()
+		var mergeable := surfaces > 0
+		for surface in surfaces:
+			var material := _surface_material(instance, surface)
+			var base := material as BaseMaterial3D
+			if material == null or (base != null and base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED) \
+					or (mesh is ArrayMesh and (mesh as ArrayMesh).surface_get_primitive_type(surface) \
+						!= Mesh.PRIMITIVE_TRIANGLES):
+				mergeable = false
+		if not mergeable:
+			continue
+		for surface in surfaces:
+			batcher.add(mesh, surface, local, _surface_material(instance, surface), fine)
+		merged.append(instance)
+	var made := batcher.emit(root)
+	for instance in merged:
+		if instance.get_child_count() == 0:
+			instance.queue_free()
+		else:
+			instance.mesh = null
+	_batch_report += "dressing %d parts -> %d meshes; " % [merged.size(), made]
+
+
+func _surface_material(instance: MeshInstance3D, surface: int) -> Material:
+	return instance.material_override if instance.material_override != null \
+		else instance.get_active_material(surface)
+
+
+var _batch_report := ""
+
+
 func _add_box(node_name: String, size: Vector3, at: Vector3, material: Material,
 		roll: float = 0.0) -> MeshInstance3D:
 	return _add_box_to(node_name, size, at, material, $TowerPresentation, roll)
@@ -2741,11 +3009,17 @@ func _build_kit() -> void:
 		_material(Color("5b544b"), 0.0, 0.98, Color.BLACK, 1.0, _bump_concrete),
 		_material(Color("c19a2a"), 0.2, 0.62),
 	]
+	# Drawn in batches (see _batch_static_dressing): a moving body's parts as
+	# one mesh per material, moving with it; the static bodies' parts with
+	# the dressing's batcher.
+	var statics_batcher := Batcher.new()
 	for body in int(_native.get_kit_body_count()):
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
 		node.transform = _native.get_kit_body_transform(body)
 		var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
+		var dynamic := bool(_native.is_kit_body_dynamic(body))
+		var body_groups := {}
 		for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
 			var mesh: PrimitiveMesh
 			match int(parts[p + 11]):
@@ -2768,13 +3042,27 @@ func _build_kit() -> void:
 					var box := BoxMesh.new()
 					box.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
 					mesh = box
-			mesh.material = palette[clampi(int(parts[p + 10]), 0, palette.size() - 1)]
-			var instance := MeshInstance3D.new()
-			instance.mesh = mesh
-			instance.transform = Transform3D(
-				Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
+			var material: Material = palette[clampi(int(parts[p + 10]), 0, palette.size() - 1)]
+			var part := Transform3D(Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
 				Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
-			node.add_child(instance)
+			if dynamic:
+				var key := str(material.get_instance_id())
+				Batcher.append(body_groups, key, mesh, 0, part, "", false)
+				body_groups[key][1] = material
+			else:
+				var at: Transform3D = node.transform * part
+				var bounds := at * mesh.get_aabb()
+				statics_batcher.add(mesh, 0, at, material,
+					bounds.size[bounds.get_longest_axis_index()] <= BATCH_FINE_SIZE)
+		for key in body_groups:
+			var piece := Batcher.instance(body_groups[key][0], body_groups[key][1])
+			# A moving part is drawn as far as its size carries: a 1 m part to
+			# about 120 m, the 26 m wheel across the whole tower.
+			var extent := piece.get_aabb().size
+			piece.visibility_range_end = clampf(40.0 * maxf(extent.x, maxf(extent.y, extent.z)), 120.0, 1200.0)
+			piece.visibility_range_end_margin = BATCH_FADE
+			piece.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+			node.add_child(piece)
 		_kit_root.add_child(node)
 		_kit_bodies.append(node)
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
@@ -2783,6 +3071,10 @@ func _build_kit() -> void:
 			_machines.append({"body": body, "tip": _farthest_corner(parts), "last_tip": Vector3.INF,
 				"last_at": Vector3.INF, "speed": 0.0, "turning": false, "at": Vector3.ZERO,
 				"tip_at": Vector3.ZERO})
+	var statics := Node3D.new()
+	statics.name = "KitStatics"
+	_kit_root.add_child(statics)
+	_batch_report += "kit statics %d parts -> %d meshes; " % [statics_batcher.parts, statics_batcher.emit(statics)]
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
 	cable.material = _material(Color("1b1916"), 0.6, 0.5)
@@ -2793,6 +3085,8 @@ func _build_kit() -> void:
 			instance.name = "KitCable%d_%d" % [index, segment]
 			instance.mesh = cable
 			instance.visible = false
+			# A rope a few centimetres thick: not drawn from afar.
+			instance.visibility_range_end = KIT_CABLE_RANGE
 			_kit_root.add_child(instance)
 			segments.append(instance)
 		_kit_cables.append(segments)

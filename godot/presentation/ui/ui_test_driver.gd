@@ -91,6 +91,8 @@ const SCENARIOS := {
 	# east parapet, the crown gondola's cabin through a half turn of its 28 m
 	# crown to 778 m, and the luffing derrick's cradle up and in to 802.6 m.
 	"touch_high": 37,
+	"perf_top": 37,
+	"perf_grade": 8,
 	# The owner's slab incline from the game's start: across the yard east of
 	# the slingshot, up the ramp onto its platform, onto the trolley, RAISE,
 	# 30 m up the 60-degree incline, and off onto deck 3.
@@ -287,6 +289,8 @@ func _run() -> void:
 			ok = await _machines(InputRouter.Device.TOUCH)
 		"touch_high":
 			ok = await _high(InputRouter.Device.TOUCH)
+		"perf_top", "perf_grade":
+			ok = await _perf_probe()
 		"touch_incline":
 			ok = await _incline(InputRouter.Device.TOUCH)
 		"touch_wheel":
@@ -2061,6 +2065,38 @@ func _kit_origin(entity: int) -> Vector3:
 # its six iron pigs), four pigs picked up and let go over its open west side,
 # and with two left the counterweight luffs it up; at the top, off onto the
 # upper receiver.
+# The renderer's load at the extremes of the tower: from the 750 deck and
+# from grade, the view turned through five pitches and two headings. Looking
+# straight down from the top or up from the ground once drew ~9,700 objects a
+# frame (every dressing part its own draw); the world is now drawn in batches
+# (main.gd, _batch_static_dressing). Fails past PERF_DRAW_BUDGET at the
+# shadow quality a phone on LOW runs, so the regression cannot come back
+# unseen; the HIGH figures are reported alongside.
+const PERF_DRAW_BUDGET := 700
+
+
+func _perf_probe() -> bool:
+	await _seconds(2.0)
+	var worst := {}
+	for level in [3, 1]:
+		_main._sky_cycle.set_shadow_level(level)
+		var top := 0
+		for pitch in [-1.25, -0.6, 0.0, 0.6, 1.3]:
+			_main._pitch = pitch
+			for yaw in [0.0, PI]:
+				_main._yaw = yaw
+				await _seconds(0.5)
+				if level == 3 and yaw == 0.0 and pitch in [-1.25, 0.0, 0.6]:
+					await _pose("perf_p%d" % int(round(pitch * 100.0)))
+				top = maxi(top, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
+		worst[level] = top
+	_main._sky_cycle.set_shadow_level(_main._settings.shadow_quality)
+	_detail = "worst_draws_high=%d worst_draws_low=%d %s" % [worst[3], worst[1], _main._batch_report]
+	if worst[1] > PERF_DRAW_BUDGET:
+		return _fail("the renderer drew %d objects in a frame at LOW shadows (budget %d)" % [worst[1], PERF_DRAW_BUDGET])
+	return true
+
+
 func _ride_derrick(device: int) -> bool:
 	if not (await _go(device, Vector2(13.5, -156.5), 0.15, 6.0) and \
 			await _go(device, Vector2(12.3, -157.5), 0.15, 4.0) and \
