@@ -399,11 +399,13 @@ void Route::pitman_step(const bool haul, const std::uint64_t support) {
         guide->SetMotorState(EMotorState::Off);
         world_.GetBodyInterface().AddForce(kit_.body_id(p.deck), Vec3(0.0F, 2.0F * pitman_haul_n_, 0.0F));
     } else if (hands && here.role == Role::Entry) {
-        // The call line from the lower receiver: 1:1, down.
-        const float line = -rise;
+        // The call line from the lower receiver, reeved through the same
+        // tackle the other way: 2:1, down. The empty deck is light by half a
+        // rider, so a 1:1 pull would barely move it.
+        const float line = -2.0F * rise;
         pitman_haul_n_ = kHaulMaxN * std::clamp(1.0F - line / kHaulLineMps, 0.0F, 1.0F);
         guide->SetMotorState(EMotorState::Off);
-        world_.GetBodyInterface().AddForce(kit_.body_id(p.deck), Vec3(0.0F, -pitman_haul_n_, 0.0F));
+        world_.GetBodyInterface().AddForce(kit_.body_id(p.deck), Vec3(0.0F, -2.0F * pitman_haul_n_, 0.0F));
     } else if (hands && here.role == Role::Exit) {
         // From the upper receiver the hands free the brake; it governs.
         guide->SetMotorState(EMotorState::Velocity);

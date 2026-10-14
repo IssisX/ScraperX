@@ -3879,6 +3879,7 @@ void run_mast() {
 constexpr double kPitmanX = -23.5;
 constexpr double kPitmanDeckZ = -154.3;
 constexpr double kPitmanReceiverZ = -149.0;
+constexpr double kPitmanTravelM = 314.89 - 291.25;   // receiver to receiver
 
 bool pitman_ride(scraperx::sim::Simulation &s, double *ride_s) {
     if (!(walk_to(s, -19.5, -149.25, 6.0) && walk_to(s, kPitmanX, kPitmanReceiverZ, 6.0) &&
@@ -3940,6 +3941,76 @@ void run_pitman() {
                 "pitman: let go, the brake must hold the deck and its rider");
         std::cout << "  pitman haul: fastest_mps=" << fastest << " most_pull_n=" << pull << "\n";
     }
+    // The two calls, each with the deck stepped off a little way from a
+    // receiver (a rider cannot otherwise leave it short of one).
+    const auto aboard = [](Simulation &c) {
+        (void)c.advance_frame(1.0);
+        return mast_ride(c).on_exit && walk_to(c, -19.5, -149.25, 6.0) && walk_to(c, kPitmanX, kPitmanReceiverZ, 6.0) &&
+               walk_to(c, kPitmanX, kPitmanDeckZ, 6.0) && c.advance_frame(0.5).accepted && c.lift_state().role == 1;
+    };
+    const auto haul_to = [](Simulation &c, const double travel) {
+        (void)c.set_lift_haul(true);
+        for (int tick = 0; tick < 90 * 90 && c.lift_state().travels[1] < travel; ++tick) {
+            (void)c.advance_frame(scraperx::sim::Simulation::kFixedStepSeconds);
+        }
+        (void)c.set_lift_haul(false);
+        return c.advance_frame(0.5).accepted && c.lift_state().travels[1] >= travel;
+    };
+    double fastest_call = 0.0;
+    {
+        // From the lower receiver: the deck 0.3 m up and empty, the brake
+        // holds it; the call line, held, brings it down (2:1, through the
+        // tackle), never faster than half the line's speed through the hands.
+        Simulation c(InitialSpawn::Ring264West);
+        require(aboard(c) && haul_to(c, 0.3 / kPitmanTravelM), "pitman call: the deck hauled 0.3 m up");
+        require(walk_to(c, kPitmanX, kPitmanReceiverZ, 4.0) && c.advance_frame(0.5).accepted &&
+                    c.lift_state().role == 2 && c.snapshot().player_grounded,
+                "pitman call: stepped down off it onto the lower receiver");
+        const double left_at = c.lift_state().travels[1];
+        require(c.advance_frame(3.0).accepted && std::abs(c.lift_state().travels[1] - left_at) < 0.004,
+                "pitman call: empty and let alone, the brake must hold the deck");
+        (void)c.set_lift_haul(true);
+        bool down = false;
+        for (int tick = 0; tick < 90 * 15 && !down; ++tick) {
+            const double before = c.lift_state().travels[1];
+            (void)c.advance_frame(scraperx::sim::Simulation::kFixedStepSeconds);
+            fastest_call = std::max(fastest_call, (before - c.lift_state().travels[1]) * kPitmanTravelM /
+                                                      scraperx::sim::Simulation::kFixedStepSeconds);
+            down = c.lift_state().travels[1] < 0.002;
+        }
+        (void)c.set_lift_haul(false);
+        require(down, "pitman call: held at the lower receiver, the call line must bring the deck down");
+        require(fastest_call < 0.5 * scraperx::sim::vertical::Route::kHaulLineMps * 1.05,
+                "pitman call: the deck never outruns the call line");
+    }
+    double fastest_free = 0.0;
+    {
+        // From the upper receiver: the deck left 0.24 m short of it and
+        // empty; freeing the brake lets it rise, governed, to the top.
+        Simulation c(InitialSpawn::Ring264West);
+        require(aboard(c) && haul_to(c, 1.0 - 0.24 / kPitmanTravelM), "pitman free: the deck hauled to 0.24 m short");
+        require(walk_to(c, kPitmanX, kPitmanReceiverZ, 4.0) && c.advance_frame(0.5).accepted &&
+                    c.lift_state().role == 3 && c.snapshot().player_grounded,
+                "pitman free: stepped up off it onto the upper receiver");
+        const double left_at = c.lift_state().travels[1];
+        require(c.advance_frame(3.0).accepted && std::abs(c.lift_state().travels[1] - left_at) < 0.004,
+                "pitman free: empty and let alone, the brake must hold the deck");
+        (void)c.set_lift_haul(true);
+        double fastest = 0.0;
+        bool up = false;
+        for (int tick = 0; tick < 90 * 15 && !up; ++tick) {
+            const double before = c.lift_state().travels[1];
+            (void)c.advance_frame(scraperx::sim::Simulation::kFixedStepSeconds);
+            fastest = std::max(fastest, (c.lift_state().travels[1] - before) * kPitmanTravelM /
+                                            scraperx::sim::Simulation::kFixedStepSeconds);
+            up = c.lift_state().travels[1] > 0.998;
+        }
+        (void)c.set_lift_haul(false);
+        fastest_free = fastest;
+        require(up, "pitman free: freed from the upper receiver, the empty deck must rise to it");
+        require(fastest < scraperx::sim::vertical::Route::kPitmanGovernedMps * 1.1,
+                "pitman free: the brake governs the empty deck's rise");
+    }
     double ride_s = 0.0;
     require(pitman_ride(s, &ride_s), "pitman: across the walkway, onto its deck, HAUL, and off at the top");
     const auto end = s.snapshot();
@@ -3947,7 +4018,8 @@ void run_pitman() {
                 end.support_entity_id == scraperx::sim::vertical::Route::kPitmanStaticFirst + 2 &&
                 end.player_position.y > 315.6 && end.player_position.y < 316.0 && ride_s > 15.0 && ride_s < 75.0,
             "pitman: standing on its upper receiver at 314.89 m, alive");
-    std::cout << "PASS scraperx_sim pitman: ride_s=" << ride_s << " exit_y=" << end.player_position.y << '\n';
+    std::cout << "PASS scraperx_sim pitman: ride_s=" << ride_s << " exit_y=" << end.player_position.y
+              << " call_fastest_mps=" << fastest_call << " freed_fastest_mps=" << fastest_free << '\n';
 }
 
 // The third: the barrel helix west of the pitman. A 100 kNm motor turns a

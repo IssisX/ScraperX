@@ -185,8 +185,9 @@ now no motor turns it:
   line (a human force-speed limit, CHOSEN). The 2:1 is applied as an upward force on the deck; the
   rider's own unweighting is folded into it.
 - **Brake and calls.** Let go, a brake on the deck's guide (30 kN) holds it. From the lower
-  receiver the same hold hauls the deck down on the call line (1:1). From the upper receiver it
-  frees the brake, and the empty deck (light by half a rider) rises at a governed 0.6 m/s.
+  receiver the same hold hauls the deck down on the call line, reeved through the same tackle
+  (2:1). From the upper receiver it frees the brake, and the empty deck (light by half a rider)
+  rises at a governed 0.6 m/s.
 - **Placement and saves.** RAISE does nothing to it. The counterweight and its rope are built last
   in the kit, so older saves' lists still line up.
 - **Proof.**
@@ -195,7 +196,14 @@ now no motor turns it:
     receiver takes 53 s.
   - Touch `touch_machines`: hauled by holding ACTION, mast to pitman to helix to TP-340, with the
     right fist checked closed on the line while hauling.
-- **Not tested:** the call line from the lower receiver and freeing the brake from the upper.
+  - Native `pitman`, the calls: the deck is hauled 0.3 m up, or to 0.24 m short of the top, and
+    left empty. The brake holds it for 3 s. Held from the lower receiver, the call line brings it
+    down; freed from the upper receiver, it rises to the receiver. The first version pulled the
+    call line 1:1. That left about 130 N net against several tonnes of deck, counterweight and
+    crank, so a full-height call would have taken minutes. Reeved 2:1 it nets the same 833 N as
+    the haul up, so a full call should take about as long as the haul (derived, not run).
+- **Not tested:** a full-height call or brake release; a rider can only leave the deck at a
+  receiver, so the tests start from short of one.
 - **Feel.** The 53 s haul may be long for a phone.
 
 Next: the cascade mast, barrel helix and crown gondola, each by a different decision.
