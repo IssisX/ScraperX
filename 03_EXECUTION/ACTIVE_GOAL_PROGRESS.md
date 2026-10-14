@@ -47,6 +47,9 @@ swing it kips (≤160 N, in phase only). The stick let go stills the swing. Held
 hand takes the next hold ahead within 1.0 m of the shoulders: bars a metre apart need a swing.
 DROP or JUMP flies on with the swing's velocity. Proven on a six-bar fixture: native `brachiation`
 (five bars crossed in 1.92 s, no skip, no snap, a fling onto the landing block, a still hang reaches
-nothing until pumped) and touch `touch_monkey_bars`. Not yet placed anywhere on the game's route,
-and the bars are not drawn (proving fixtures aren't). Next: put brachiation runs in the tower where
-they make a route or a shortcut, then slides and speed vaults.
+nothing until pumped) and touch `touch_monkey_bars`. **In the game:** the pipe gallery in the yard
+south of the trapeze (`sim/pipe_gallery.cpp`). Ten pipes at 4.6 m from a 1.5 m start stand to a 4.7 m
+platform whose lip the swinging hand takes; swinging onto a ledge is now part of the move. Played
+natively (`pipe_gallery`) and by touch in the game's world (`touch_pipe_gallery`), with rendered
+captures. Not yet in the tower itself. Next: a bar or pipe run in the tower that makes a shortcut,
+then slides and speed vaults.
