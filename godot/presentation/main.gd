@@ -1496,6 +1496,8 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"carrying": int(_ctx["carrying"]),
 		"carry_center": _carry_center(int(_ctx["carrying"])),
 		"carry_half": _carry_half(int(_ctx["carrying"])),
+		# The hook out: the right fist closes on its line.
+		"hook_line": _native.get_hook_state()["position"] if int(_ctx.get("hook_state", 0)) != 0 else null,
 		"move": intent["move"],
 		"bob_phase": _cam_bob_phase,
 	}
@@ -3335,9 +3337,10 @@ func _render_hook() -> void:
 		_hook_line.visible = false
 		return
 	var at: Vector3 = hook["position"]
-	# From the right palm, a hand's breadth ahead of its wrist.
-	var view := _camera.global_transform.basis
-	var hand: Vector3 = _arms.wrist_positions()[0] - view.z * 0.08
+	# Out of the right fist, which is closed on the line (FirstPersonArms
+	# POSE_LINE): its wrist, a palm's length along the line.
+	var wrist: Vector3 = _arms.wrist_positions()[0]
+	var hand := wrist + (at - wrist).normalized() * FirstPersonArms.LINE_GRIP_REACH
 	_hook_head.global_position = at
 	_lay_segment(_hook_line, hand, at)
 

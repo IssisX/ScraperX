@@ -64,6 +64,10 @@ const POSE_CLIMB := 9
 const POSE_BALANCE := 10
 # Step 2: an overhand fist round a bar or pipe overhead.
 const POSE_BAR := 11
+# The right fist closed on the grappling hook's line, held out toward it.
+const POSE_LINE := 12
+# Wrist to where the line leaves the closed fist.
+const LINE_GRIP_REACH := 0.09
 
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -408,6 +412,8 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 				pose = POSE_AIR if traversal == TRAVERSAL_VAULTING else POSE_REST
 		elif traversal == TRAVERSAL_VAULTING:
 			pose = POSE_AIR
+		elif hand.side > 0.0 and state.get("hook_line") != null:
+			pose = POSE_LINE
 		elif operating != &"":
 			pose = POSE_REMOTE
 		elif int(state.get("carrying", 0)) != 0:
@@ -522,6 +528,15 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			# of the hand takes the push as the body rises past it.
 			var basis := _hand_basis(_grip_forward, Vector3.UP)
 			return [wrist, basis, true, 30.0, 0.1, 0.15]
+		POSE_LINE:
+			# Held out ahead and right of the chest, turned a little toward
+			# the hook, the fist pointing along the line it is closed on.
+			var hook: Vector3 = state["hook_line"]
+			var wrist := camera.origin + right * 0.2 - up * 0.2 - back * 0.36
+			var along := (hook - wrist).normalized()
+			wrist += along * 0.04
+			var basis := _hand_basis(along, up - along * along.dot(up))
+			return [wrist, basis, false, 18.0, 0.92, 0.7]
 		POSE_BAR:
 			# Overhand round the bar the native says this hand holds: the wrist
 			# just under it on the near side, knuckles up and over the top,

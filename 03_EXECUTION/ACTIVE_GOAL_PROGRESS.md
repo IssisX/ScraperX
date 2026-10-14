@@ -90,10 +90,11 @@ Proven on a proving wall (native `wall run`, touch `touch_wall_run`). Not placed
 - **Proof.** Native `hook`: it lifts the body off the deck and climbs no faster than the reel turns.
   It also checks no bite on sky or wall, the game-world pickup, and keeping the hook through a save.
   Touch `touch_hook` takes, aims, bites, reels and drops through the touch layer.
-- **Drawing.** The line runs from the right hand to the hook.
-- **Gaps.** The hand does not close on the line, and there is no gun model in the hand.
+- **Drawing.** While the hook is out, the right fist closes on the line, held out toward it. The line
+  leaves the top of the fist (`touch_hook` checks the pose; a rendered capture was inspected).
+- **Gap.** There is no gun model in the hand.
 
 Old saves load: the kit's body list in a save may be shorter than the current world's (the pipe
 gallery and the hook rack added bodies, built last), and the missing tail keeps its current state.
 No test yet loads a save written before them.
-Next: place the wall-run and brachiation in the tower; hands that grip what they hold.
+Next: place the wall-run and brachiation in the tower.

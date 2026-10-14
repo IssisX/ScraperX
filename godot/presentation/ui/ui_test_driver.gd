@@ -750,6 +750,9 @@ func _touch_hook() -> bool:
 	var bite: Vector3 = _native().get_hook_state()["position"]
 	if bite.distance_to(target) > 0.6:
 		return _fail("the hook bit at %s, not on the bar" % str(bite))
+	await _frames(2)
+	if int(_main._arms.hand_poses()[0]) != _main.FirstPersonArms.POSE_LINE:
+		return _fail("the right hand did not close on the line (pose %d)" % int(_main._arms.hand_poses()[0]))
 	if _main._touch.button_label(&"hook") != "REEL":
 		return _fail("HOOK read '%s' once bitten, expected REEL" % _main._touch.button_label(&"hook"))
 	var y0 := _position().y
