@@ -290,14 +290,15 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		_hint_clock += delta
 	var hanging: bool = ctx["hanging"]
 	var climbing: bool = ctx.get("climbing", false)
+	var swinging: bool = ctx.get("swinging", false)
 	var jump: TouchButton = _buttons[B_JUMP]
 	jump.shown = true
 	# Pressable while airborne on purpose: main.gd buffers a press made just
 	# before touchdown and fires it on the grounded tick. Dimmed, not dead.
 	jump.enabled = true
-	jump.dimmed = not (ctx["jump_ok"] or hanging or climbing)
+	jump.dimmed = not (ctx["jump_ok"] or hanging or climbing or swinging)
 	jump.icon = &"climb" if hanging else &"jump"
-	jump.label = "CLIMB UP" if hanging else ("JUMP OFF" if climbing else "JUMP")
+	jump.label = "CLIMB UP" if hanging else ("JUMP OFF" if climbing or swinging else "JUMP")
 	jump.tone = TONE_PRIMARY
 
 	var action: TouchButton = _buttons[B_ACTION]
@@ -317,7 +318,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	if ctx.get("sling_seated", false) or ctx.get("sling_recovering", false) or ctx.get("swing_seated", false):
 		drop.label = "LEAVE"
 	else:
-		drop.label = "DROP DOWN" if not (hanging or climbing) else "DROP"
+		drop.label = "DROP DOWN" if not (hanging or climbing or swinging) else "DROP"
 	var chute: TouchButton = _buttons[B_CHUTE]
 	chute.shown = ctx["chute_ok"] and not hanging
 	chute.icon = &"chute"

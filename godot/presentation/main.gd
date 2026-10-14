@@ -173,6 +173,8 @@ const TRAVERSAL_VAULTING := 3
 # lowering over an edge into a hang.
 const TRAVERSAL_CLIMBING := 4
 const TRAVERSAL_LOWERING := 5
+# Parkour step 2: hanging from a bar or pipe overhead, swinging hand over hand.
+const TRAVERSAL_SWINGING := 6
 
 # Mirrors scraperx::sim::FallState.
 const FALL_GROUNDED := 0
@@ -821,7 +823,7 @@ func _dispatch(verbs: Array, delta: float) -> void:
 			&"jump":
 				# A jump stands a crouched body first (natively), and ends the toggle.
 				_crouch_toggled = false
-				if _ctx["jump_ok"] or _ctx["hanging"] or _ctx["climbing"]:
+				if _ctx["jump_ok"] or _ctx["hanging"] or _ctx["climbing"] or _ctx["swinging"]:
 					_native.request_jump()
 					_since_jump_sent = 0.0
 				else:
@@ -862,7 +864,7 @@ func _dispatch(verbs: Array, delta: float) -> void:
 					_native.request_swing_drop()
 				elif bool(_ctx["trapeze_hanging"]):
 					_native.request_trapeze_drop()
-				elif _ctx["hanging"] or _ctx["climbing"]:
+				elif _ctx["hanging"] or _ctx["climbing"] or _ctx["swinging"]:
 					_native.request_release()
 				elif int(_ctx["carrying"]) != 0:
 					_native.request_set_down()
@@ -894,6 +896,8 @@ func _perform_action() -> void:
 	match action["id"]:
 		&"climb_up", &"climb":
 			_native.request_traversal()
+		&"let_go":
+			_native.request_release()
 		&"pick_up":
 			_native.request_pick_up()
 		&"set_down":
@@ -935,6 +939,7 @@ func _read_context() -> Dictionary:
 	var lethal := float(_native.get_lethal_impact_speed_mps())
 	var hanging := traversal == TRAVERSAL_HANGING
 	var climbing := traversal == TRAVERSAL_CLIMBING
+	var swinging := traversal == TRAVERSAL_SWINGING
 	var free := traversal == TRAVERSAL_NONE
 	var grip := bool(_native.is_grip_available())
 	var edge_drop := bool(_native.is_edge_drop_available())
@@ -1049,6 +1054,10 @@ func _read_context() -> Dictionary:
 			action = {"id": &"s1", "icon": &"up", "label": "STAND ON", "detail": "THE SCALE PLATE"}
 	elif hanging or climbing:
 		action = {"id": &"climb_up", "label": "CLIMB UP", "icon": &"climb", "detail": ""}
+	elif swinging:
+		# On a bar overhead: forward pumps the swing and reaches for the next
+		# bar; letting go flies on with the swing.
+		action = {"id": &"let_go", "label": "LET GO", "icon": &"down", "detail": "FORWARD: SWING ON"}
 	elif not free:
 		pass
 	elif carrying != 0 and rig == RIG_HOOK:
@@ -1080,9 +1089,10 @@ func _read_context() -> Dictionary:
 		"traversal": traversal,
 		"hanging": hanging,
 		"climbing": climbing,
+		"swinging": swinging,
 		# Drop at an edge behind lowers into a hang; on holds it lets go; in
 		# the slingshot's pouch it climbs out.
-		"drop_ok": hanging or climbing or (grounded and free and edge_drop and carrying == 0) or \
+		"drop_ok": hanging or climbing or swinging or (grounded and free and edge_drop and carrying == 0) or \
 			sling_seated or bool(sling["recovering"]) or (swing_seated and bool(swing["may_leave"])) or \
 			trapeze_hanging,
 		"sling_seated": sling_seated,
@@ -1286,7 +1296,7 @@ func _update_feedback(delta: float) -> void:
 	_announce_summit()
 	var traversal: int = _ctx["traversal"]
 	if traversal != _fb_traversal:
-		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_CLIMBING:
+		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_CLIMBING or traversal == TRAVERSAL_SWINGING:
 			_haptic(&"grab")
 		elif traversal == TRAVERSAL_VAULTING:
 			_haptic(&"vault")
@@ -1345,7 +1355,7 @@ func _update_feedback(delta: float) -> void:
 func _update_view_pitch_offset(delta: float) -> void:
 	var target := 0.0
 	match int(_ctx.get("traversal", TRAVERSAL_NONE)):
-		TRAVERSAL_HANGING, TRAVERSAL_LOWERING:
+		TRAVERSAL_HANGING, TRAVERSAL_LOWERING, TRAVERSAL_SWINGING:
 			target = VIEW_PITCH_HANGING
 		TRAVERSAL_CLIMBING:
 			target = VIEW_PITCH_CLIMBING
@@ -1703,6 +1713,8 @@ func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> v
 		_status.text = "VAULTING REAL GEOMETRY"
 	elif traversal == TRAVERSAL_CLIMBING:
 		_status.text = "CLIMBING"
+	elif traversal == TRAVERSAL_SWINGING:
+		_status.text = "SWINGING"
 	elif grounded and _is_kit(support) and support >= KIT_DYNAMIC_ENTITY_MIN:
 		_status.text = "RIDING A MACHINE"
 	elif grounded:
@@ -1731,6 +1743,8 @@ func _traversal_name(traversal: int) -> String:
 			return "MANTLE "
 		TRAVERSAL_VAULTING:
 			return "VAULT  "
+		TRAVERSAL_SWINGING:
+			return "SWING  "
 		_:
 			return "NONE   "
 

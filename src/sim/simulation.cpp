@@ -295,6 +295,29 @@ constexpr float kHangArmLength = kHangDropBelowLedge - kHangShoulderAboveCentre;
 // The arms' stop sits short of kHangArmLength by the spring's sag under the
 // body's own weight, g / (2 pi kArmSpringHz)^2 (DERIVED, ~0.062 m, the same for
 // any mass): hanging still, the body rests at its hold, not below it.
+// Parkour step 2, brachiation. A bar or pipe (a hold, see find_grip) caught in
+// the air over the head -- at least kSwingMinHandRise over the body's centre,
+// above any climb hold -- is hung from by the same arms as a ledge, from the
+// shoulders straight up. Pressing along the swing kips: at most
+// kSwingKipForceN (CHOSEN, 0.2 body weights: hips and legs thrown forward),
+// only while the body moves that way or hangs near still (kSwingKipFromRestMps),
+// so it pumps the swing in phase and never brakes it. With the stick let go
+// the body stills its swing as on a ledge (kHangSteadyForceN). Held forward, the free hand
+// reaches for the next hold ahead: one within kSwingReachM of the shoulders
+// (CHOSEN: an arm and the shoulder girdle at full stretch), at least
+// kSwingMinAdvanceM further on, no sooner than kSwingRegripTicks after the
+// last. Monkey bars a metre apart are out of reach from a dead hang (1.14 m)
+// and in reach at the front of a swing: the swing is what carries the body.
+constexpr float kSwingMinHandRise = 0.75F;
+constexpr float kSwingCatchAimRise = 1.10F;
+constexpr float kSwingCatchAimAhead = 0.15F;
+constexpr float kSwingKipForceN = 160.0F;
+constexpr float kSwingKipFromRestMps = 0.05F;
+constexpr float kSwingReachM = 1.0F;
+constexpr float kSwingReachAimAhead = 0.60F;
+constexpr float kSwingReachAimRise = 0.50F;
+constexpr float kSwingMinAdvanceM = 0.30F;
+constexpr std::uint32_t kSwingRegripTicks = 27;
 constexpr float kHangArmStop =
     kHangArmLength - 9.81F / ((2.0F * static_cast<float>(kPi) * scraperx::sim::Trapeze::kArmSpringHz) *
                               (2.0F * static_cast<float>(kPi) * scraperx::sim::Trapeze::kArmSpringHz));
@@ -766,6 +789,8 @@ private:
         return {7.9, 1.2, -6.0};
     case scraperx::sim::InitialSpawn::HangApproach:
         return {7.6, 4.2, 4.0};
+    case scraperx::sim::InitialSpawn::SwingApproach:
+        return {-1.0, 1.0, -20.0};
     case scraperx::sim::InitialSpawn::HangHighDrop:
         return {7.6, 10.2, 4.0};
     case scraperx::sim::InitialSpawn::MovingLedgeApproach:
@@ -1250,6 +1275,24 @@ public:
             }
         }
 
+        if (scraperx::sim::is_proving_spawn(initial_spawn)) {
+            const auto bar_part = [this, &bodies](const JPH::Vec3 half, const JPH::RVec3 at) {
+                machine_bodies_.push_back(add_box(bodies, half, at, JPH::EMotionType::Static,
+                                                  object_layers::kStatic, 0.7F,
+                                                  Simulation::kMonkeyBarsEntityId));
+            };
+            for (int bar = 0; bar < 6; ++bar) {
+                bar_part(JPH::Vec3(0.04F, 0.04F, 0.62F), JPH::RVec3(static_cast<double>(bar), 3.1, -20.0));
+            }
+            for (const double side : {-1.0, 1.0}) {
+                bar_part(JPH::Vec3(3.3F, 0.12F, 0.12F), JPH::RVec3(2.5, 3.26, -20.0 + side * 0.74));
+                for (const double end : {-0.9, 5.9}) {
+                    bar_part(JPH::Vec3(0.12F, 1.69F, 0.12F), JPH::RVec3(end, 1.69, -20.0 + side * 0.74));
+                }
+            }
+            bar_part(JPH::Vec3(1.0F, 0.25F, 0.5F), JPH::RVec3(6.9, 0.25, -20.0));
+        }
+
         build_stack(bodies);
         build_world_solids(bodies);
 
@@ -1408,6 +1451,8 @@ public:
                 update_climb(bodies, commands, delta_seconds);
             } else if (traversal_state_ == TraversalState::Hanging) {
                 update_shimmy(bodies, commands, delta_seconds);
+            } else if (traversal_state_ == TraversalState::Swinging) {
+                update_swing(bodies, commands);
             }
         }
 
@@ -2559,6 +2604,15 @@ private:
             return;
         }
 
+        if (traversal_state_ == TraversalState::Swinging) {
+            // Letting go, or jumping off: the hands open; the body flies on
+            // with the swing's velocity.
+            if (commands.release_requested || commands.jump_requested) {
+                release_hang(bodies);
+            }
+            return;
+        }
+
         if (traversal_state_ == TraversalState::Climbing) {
             if (commands.release_requested) {
                 let_go_climb(bodies);
@@ -3200,6 +3254,20 @@ private:
                 facing_);
             if (grip.valid) {
                 begin_climb(bodies, grip);
+                return;
+            }
+            // None in front: a bar or pipe over the head is swung from -- in
+            // flight (a jump, or no ground within a step under the soles),
+            // never on a step's brief lift.
+            if (!flight_from_jump_ &&
+                feet_supported_at(origin, static_cast<float>(origin.GetY()) - active_half_height())) {
+                return;
+            }
+            const Grip bar = find_grip(
+                origin, origin + JPH::Vec3(0.0F, kSwingCatchAimRise, 0.0F) + facing_ * kSwingCatchAimAhead,
+                facing_, -kPlayerRadius);
+            if (bar.valid && bar.point.GetY() - origin.GetY() >= kSwingMinHandRise) {
+                begin_swing(bodies, bar);
             }
             return;
         }
@@ -3563,6 +3631,11 @@ private:
             steady_hang(bodies);
             return;
         }
+        if (traversal_state_ == TraversalState::Swinging) {
+            draw_in_hang_arms(delta_seconds);   // nothing placed, nothing steadied
+            traversal_desired_ = current;
+            return;
+        }
         if (traversal_state_ == TraversalState::Climbing) {
             const float pull = kHangPullInSpeed * delta_seconds;
             const float gap = traversal_entry_offset_.Length();
@@ -3582,7 +3655,7 @@ private:
     }
 
     void resolve_traversal_outcome(JPH::BodyInterface &bodies) noexcept {
-        if (traversal_state_ == TraversalState::Hanging) {
+        if (traversal_state_ == TraversalState::Hanging || traversal_state_ == TraversalState::Swinging) {
             return;   // held by the arms, nothing placed to fall behind
         }
         const JPH::RVec3 actual = bodies.GetPosition(player_id_);
@@ -3652,6 +3725,9 @@ private:
     // Where the shoulders hang from, in the body's frame: at the wall's face
     // (kPlayerRadius + kHangWallGap toward it) and kHangShoulderAboveCentre up.
     [[nodiscard]] JPH::Vec3 hang_shoulder_offset() const noexcept {
+        if (traversal_state_ == TraversalState::Swinging) {
+            return JPH::Vec3(0.0F, kHangShoulderAboveCentre, 0.0F);   // straight under the bar
+        }
         return traversal_normal_ * (kPlayerRadius + kHangWallGap) +
                JPH::Vec3(0.0F, kHangShoulderAboveCentre, 0.0F);
     }
@@ -3732,7 +3808,8 @@ private:
 
     // After the step: the hands' load, and the slip past the grip.
     void check_hang_grip(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
-        if (hang_arms_ == nullptr || traversal_state_ != TraversalState::Hanging) {
+        if (hang_arms_ == nullptr ||
+            (traversal_state_ != TraversalState::Hanging && traversal_state_ != TraversalState::Swinging)) {
             return;
         }
         const float load = std::abs(hang_arms_->GetTotalLambdaPosition()) / delta_seconds;
@@ -3790,7 +3867,8 @@ private:
     // at least kGripMinBodyMassKg, searched in a kGripSearchHalf box round
     // `aim` squared to `facing`. The point is on the member's axis.
     [[nodiscard]] Grip find_grip(const JPH::RVec3 centre, const JPH::RVec3 aim,
-                                 const JPH::Vec3 facing) const noexcept {
+                                 const JPH::Vec3 facing,
+                                 const float min_ahead = 0.5F * kPlayerRadius) const noexcept {
         Grip best;
         if (facing.IsNearZero()) {
             return best;
@@ -3831,7 +3909,7 @@ private:
                 std::clamp(JPH::Vec3(aim - box.centre).Dot(along), -half_length, half_length);
             const JPH::RVec3 point = box.centre + along * t;
             // In front of the body: not beside it, not behind it.
-            if (JPH::Vec3(point - centre).Dot(facing) < 0.5F * kPlayerRadius) {
+            if (JPH::Vec3(point - centre).Dot(facing) < min_ahead) {
                 continue;
             }
             const float distance = JPH::Vec3(point - aim).Length();
@@ -3898,6 +3976,76 @@ private:
     }
 
     // Take hold of `grip` where the body is, facing it.
+    // Hands closed on a bar overhead: hung from it by the arms, the body
+    // keeping the momentum it caught it with.
+    void begin_swing(JPH::BodyInterface &bodies, const Grip &grip) noexcept {
+        const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+        traversal_state_ = TraversalState::Swinging;
+        traversal_entry_offset_ = JPH::Vec3::sZero();
+        traversal_body_ = grip.body;
+        traversal_entity_id_ = grip.entity_id;
+        traversal_target_body_ = {};
+        traversal_normal_ = facing_;
+        traversal_local_hold_ = to_support_local(bodies, traversal_body_, origin);
+        traversal_local_ledge_ = to_support_local(bodies, traversal_body_, grip.point);
+        traversal_progress_ = 0.0;
+        traversal_stall_ticks_ = 0;
+        traversal_desired_ = origin;
+        attach_hang_arms(bodies);
+        regrip_cooldown_ticks_ = kSwingRegripTicks;
+        ++swing_catch_count_;
+    }
+
+    // Swinging: the kip pumps the swing; held forward, the free hand takes
+    // the next hold ahead in reach.
+    void update_swing(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
+        if (hang_arms_ == nullptr || facing_.IsNearZero()) {
+            return;
+        }
+        const JPH::Vec3 input(static_cast<float>(commands.move_input_x), 0.0F,
+                              static_cast<float>(commands.move_input_z));
+        const JPH::Vec3 velocity =
+            bodies.GetLinearVelocity(player_id_) -
+            bodies.GetPointVelocity(traversal_body_,
+                                    from_support_local(bodies, traversal_body_, traversal_local_ledge_));
+        const float along_velocity = velocity.Dot(input);
+        if (input.LengthSq() < 1.0e-2F) {
+            steady_hang(bodies);   // the stick let go: the body stills its swing
+        } else if (along_velocity > -kSwingKipFromRestMps) {
+            const JPH::Vec3 force = input * (std::min(1.0F, input.Length()) * kSwingKipForceN / input.Length());
+            bodies.AddForce(player_id_, force);
+            if (bodies.GetMotionType(traversal_body_) == JPH::EMotionType::Dynamic) {
+                bodies.AddForce(traversal_body_, -force,
+                                from_support_local(bodies, traversal_body_, traversal_local_ledge_));
+            }
+        }
+        if (regrip_cooldown_ticks_ > 0) {
+            --regrip_cooldown_ticks_;
+            return;
+        }
+        if (input.Dot(facing_) < 0.5F) {
+            return;
+        }
+        const JPH::RVec3 hands = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+        const JPH::RVec3 shoulders = bodies.GetPosition(player_id_) + hang_shoulder_offset();
+        const Grip next = find_grip(
+            shoulders,
+            shoulders + facing_ * kSwingReachAimAhead + JPH::Vec3(0.0F, kSwingReachAimRise, 0.0F),
+            facing_, 0.0F);
+        if (!next.valid || JPH::Vec3(next.point - shoulders).Length() > kSwingReachM ||
+            JPH::Vec3(next.point - hands).Dot(facing_) < kSwingMinAdvanceM ||
+            next.point.GetY() < shoulders.GetY()) {
+            return;
+        }
+        traversal_body_ = next.body;
+        traversal_entity_id_ = next.entity_id;
+        traversal_normal_ = facing_;
+        traversal_local_ledge_ = to_support_local(bodies, traversal_body_, next.point);
+        attach_hang_arms(bodies);
+        regrip_cooldown_ticks_ = kSwingRegripTicks;
+        ++swing_reach_count_;
+    }
+
     void begin_climb(JPH::BodyInterface &bodies, const Grip &grip) noexcept {
         const JPH::RVec3 hold = bodies.GetPosition(player_id_);
         traversal_state_ = TraversalState::Climbing;
@@ -4668,7 +4816,8 @@ public:
             state_.traversal_left_hand = to_vector3(hand_point(bodies, 0));
             state_.traversal_right_hand = to_vector3(hand_point(bodies, 1));
         } else if ((traversal_state_ == TraversalState::Hanging ||
-                    traversal_state_ == TraversalState::Lowering) &&
+                    traversal_state_ == TraversalState::Lowering ||
+                    traversal_state_ == TraversalState::Swinging) &&
                    !traversal_normal_.IsNearZero()) {
             const JPH::RVec3 lip = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
             const JPH::Vec3 span = traversal_right() * kHangHandSpan;
@@ -4689,6 +4838,8 @@ public:
         state_.edge_drop_point =
             edge_affordance_.valid ? to_vector3(edge_affordance_.ledge) : Vector3{};
         state_.climb_count = climb_count_;
+        state_.swing_catch_count = swing_catch_count_;
+        state_.swing_reach_count = swing_reach_count_;
         state_.hang_slip_count = hang_slip_count_;
 
         state_.ledge_available = affordance_.valid;
@@ -4859,6 +5010,8 @@ public:
     HandHold hands_[2]{};
     std::uint32_t regrip_cooldown_ticks_ = 0;
     std::uint64_t climb_count_ = 0;
+    std::uint64_t swing_catch_count_ = 0;
+    std::uint64_t swing_reach_count_ = 0;
     Grip grip_affordance_{};
     Lip edge_affordance_{};
     bool sprinting_ = false;
@@ -4986,7 +5139,8 @@ bool Simulation::request_traversal() noexcept {
 
 bool Simulation::request_release() noexcept {
     const bool holding = snapshot_.traversal_state == TraversalState::Hanging ||
-                         snapshot_.traversal_state == TraversalState::Climbing;
+                         snapshot_.traversal_state == TraversalState::Climbing ||
+                         snapshot_.traversal_state == TraversalState::Swinging;
     const bool standing =
         snapshot_.traversal_state == TraversalState::None && snapshot_.player_grounded;
     if (!holding && !standing) {

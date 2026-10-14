@@ -98,6 +98,8 @@ enum class InitialSpawn : std::uint8_t {
     // Six metres above the hang ledge, off its face: a catch from here
     // tears the grip (a falsifier for the physical hang).
     HangHighDrop = 38,
+    // On the deck a metre short of the first monkey bar, facing along them.
+    SwingApproach = 39,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };
@@ -107,7 +109,7 @@ enum class InitialSpawn : std::uint8_t {
 [[nodiscard]] constexpr bool is_proving_spawn(const InitialSpawn spawn) noexcept {
     return static_cast<std::uint8_t>(spawn) <= static_cast<std::uint8_t>(InitialSpawn::BlockedLedgeApproach) ||
            spawn == InitialSpawn::HighDrop || spawn == InitialSpawn::SurvivableDrop ||
-           spawn == InitialSpawn::HangHighDrop;
+           spawn == InitialSpawn::HangHighDrop || spawn == InitialSpawn::SwingApproach;
 }
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -412,6 +414,9 @@ enum class TraversalState : std::uint8_t {
     // bar or lattice; and lowering over an edge into a hang.
     Climbing = 4,
     Lowering = 5,
+    // Parkour step 2: hanging by the hands from a bar or pipe overhead, the
+    // body free to swing under it and reach hand over hand to the next.
+    Swinging = 6,
 };
 
 // WO-008. Parachuting is a sub-state of Airborne, not a fourth motion primitive
@@ -471,6 +476,9 @@ struct Snapshot final {
     std::uint64_t climb_count = 0;
     // Hangs torn off by a load past the hands' grip (kLedgeGripMaxForceN).
     std::uint64_t hang_slip_count = 0;
+    // Bars and pipes caught overhead, and reaches from one to the next.
+    std::uint64_t swing_catch_count = 0;
+    std::uint64_t swing_reach_count = 0;
     // Static dressing loaded from world_solids.inc: bodies built, drawn
     // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
     // Edges under kStepMaximumHeight walked up (see try_step_up).
@@ -610,6 +618,9 @@ public:
     // Crouch fixture beside the WO-003 traversal fixtures: a beam and its two
     // posts, the beam's underside 1.45 m over the deck.
     static constexpr std::uint64_t kCrawlBeamEntityId = 52;
+    // Brachiation fixture: six bars a metre apart, 3.1 m up, between two
+    // beams on four posts, and a landing block past the last.
+    static constexpr std::uint64_t kMonkeyBarsEntityId = 53;
 
     // AS-006, the Counterweight Well. Mechanism-kit ids: band structure from
     // 1000, moving bodies from 2000 (sim/mechanism_kit.hpp).

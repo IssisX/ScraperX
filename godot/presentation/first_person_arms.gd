@@ -61,6 +61,7 @@ const TRAVERSAL_MANTLING := 2
 const TRAVERSAL_VAULTING := 3
 const TRAVERSAL_CLIMBING := 4
 const TRAVERSAL_LOWERING := 5
+const TRAVERSAL_SWINGING := 6
 
 const FINGER_LATERAL := [0.030, 0.010, -0.010, -0.028]
 const FINGER_LENGTHS := [
@@ -368,12 +369,13 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		_update_remote_buttons(state.get("pendant", Vector2.ZERO))
 
 	for hand in _hands:
-		var raised := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING]
+		var raised := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING,
+			TRAVERSAL_SWINGING]
 		var shoulder_local := SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
 		var pose := POSE_REST
 		var reachable := true
-		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
+		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING or traversal == TRAVERSAL_SWINGING:
 			pose = POSE_GRIP
 		elif traversal == TRAVERSAL_CLIMBING:
 			pose = POSE_CLIMB

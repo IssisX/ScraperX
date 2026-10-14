@@ -26,6 +26,7 @@ const SCENARIOS := {
 	"touch_crouch": 0,
 	"touch_hang_drop": 5,
 	"touch_hang_climb": 5,
+	"touch_swing": 39,
 	"touch_chute": 9,
 	"touch_lethal_feedback": 9,
 	"touch_pause": 8,
@@ -174,7 +175,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
-			"touch_hang_climb"]:
+			"touch_hang_climb", "touch_swing"]:
 		main._yaw = -PI * 0.5
 		main._pitch = 0.0
 	# HangApproach starts mid-air: the push toward the wall has to be held
@@ -219,6 +220,8 @@ func _run() -> void:
 			ok = await _touch_hang(false)
 		"touch_hang_climb":
 			ok = await _touch_hang(true)
+		"touch_swing":
+			ok = await _touch_swing()
 		"touch_chute":
 			ok = await _touch_chute()
 		"touch_lethal_feedback":
@@ -621,6 +624,50 @@ func _touch_hang(climb: bool) -> bool:
 	await _frames(2)
 	_detail = "vy_after_release=%.2f" % _velocity().y
 	return _velocity().y <= 0.0
+
+
+# Parkour step 2 on the proving ground's monkey bars (six bars a metre apart,
+# 3.1 m up, x = 0..5; a landing block past the last): run and JUMP catches the
+# first, the stick held forward swings hand over hand to the last, DROP at the
+# bottom of a forward swing flies on to the block.
+func _touch_swing() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	_stick_push(Vector2(0.0, -1.0))
+	await _frames(2)
+	_tap(1, _center(&"jump"))
+	var caught: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 6, 1.5)
+	if not caught:
+		return _fail("a running JUMP under the bars never caught the first bar")
+	if not _main._touch.is_button_shown(&"drop"):
+		return _fail("DROP was not offered while swinging")
+	if _main._touch.button_label(&"jump") != "JUMP OFF":
+		return _fail("JUMP read '%s' while swinging, expected JUMP OFF" % _main._touch.button_label(&"jump"))
+	await _seconds(0.2)
+	var grip_error: float = _main._arms.anchored_error()
+	if _main._arms.hand_poses() != [4, 4] or grip_error < 0.0 or grip_error > 0.02:
+		return _fail("hands not gripping the native bar (poses %s, error %.3f m)" % [
+			str(_main._arms.hand_poses()), grip_error])
+	await _pose("swinging")
+	var crossed: bool = await _wait_until(
+		func() -> bool: return _native().get_traversal_left_hand().x > 4.95, 4.0)
+	if not crossed:
+		return _fail("held forward, the swing never carried the hands to the last bar (hands at x %.2f)" % [
+			_native().get_traversal_left_hand().x])
+	var forward: bool = await _wait_until(
+		func() -> bool: return _velocity().x > 2.0 and _position().x > 4.95, 4.0)
+	if not forward:
+		return _fail("the last bar's swing never came forward fast")
+	var fling_vx := _velocity().x
+	_tap(2, _center(&"drop"))
+	var let_go: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 0, 0.2)
+	if not let_go:
+		return _fail("DROP did not let go of the bar")
+	var landed: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.0)
+	if not landed:
+		return _fail("the fling off the last bar never came down")
+	_detail = "fling_vx=%.2f landed_x=%.2f landed_y=%.2f grip_error_m=%.4f" % [
+		fling_vx, _position().x, _position().y, grip_error]
+	return _position().x > 5.9 and _position().y > 1.3
 
 
 func _touch_chute() -> bool:

@@ -6611,7 +6611,118 @@ void run_wet_handling() {
               << " spool_peak_mps=" << spool_peak_speed << "\n";
 }
 
+// Parkour step 2: brachiation on the proving ground's monkey bars (six bars a
+// metre apart, 3.1 m up, x = 0..5 at z = -20; a landing block past the last).
+// A running jump catches the first; held forward, the body swings hand over
+// hand to the last, one bar at a time and never moved faster than it swings;
+// let go at the bottom of a swing, it flies on to the block. From a still
+// hang with the stick let go nothing reaches; pumped, it reaches.
+void run_brachiation() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    const double dt = Simulation::kFixedStepSeconds;
+
+    Simulation s(InitialSpawn::SwingApproach);
+    require(s.set_facing(1.0, 0.0), "swing facing must be accepted");
+    require(s.advance_frame(0.4).accepted, "swing settle must advance");
+    require(s.set_move_input(1.0, 0.0), "swing run-up must be accepted");
+    require(s.request_jump(), "swing jump must be accepted");
+    require(advance_until(s,
+                          [](const Snapshot &state) {
+                              return state.traversal_state == TraversalState::Swinging;
+                          },
+                          1.0),
+            "a running jump under the monkey bars must catch the first bar");
+    require(s.snapshot().swing_catch_count == 1, "one catch");
+    require(std::abs(s.snapshot().traversal_left_hand.x) < 0.05, "the hands must be on the first bar");
+
+    Snapshot last = s.snapshot();
+    double worst_tick = 0.0;
+    std::uint64_t reaches = 0;
+    double crossed_s = -1.0;
+    for (int tick = 0; tick < 90 * 5 && crossed_s < 0.0; ++tick) {
+        require(s.advance_frame(dt).accepted, "swing tick must advance");
+        const Snapshot now = s.snapshot();
+        require(now.traversal_state == TraversalState::Swinging, "the swing must hold across the bars");
+        const auto v = last.player_linear_velocity;
+        const double speed = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+        const double moved = std::hypot(horizontal_distance(now.player_position, last.player_position),
+                                        now.player_position.y - last.player_position.y);
+        worst_tick = std::max(worst_tick, moved / ((speed + 0.5) * dt));
+        if (now.swing_reach_count != reaches) {
+            reaches = now.swing_reach_count;
+            require(std::abs(now.traversal_left_hand.x - static_cast<double>(reaches)) < 0.05,
+                    "each reach must take the next bar, never skip one");
+        }
+        if (reaches == 5) {
+            crossed_s = (tick + 1) * dt;
+        }
+        last = now;
+    }
+    require(crossed_s > 0.0, "held forward, the swing must carry the body hand over hand to the last bar");
+    require(worst_tick <= 1.0, "no reach may move the body faster than it swings");
+    require(s.snapshot().hang_slip_count == 0, "the bars must hold a swinging body");
+
+    // Let go at the bottom of a forward swing: the body flies on.
+    require(advance_until(s,
+                          [](const Snapshot &state) {
+                              return state.player_linear_velocity.x > 2.0 &&
+                                     state.player_position.x > 4.95;
+                          },
+                          4.0),
+            "the last bar's swing must come forward fast");
+    const Snapshot before = s.snapshot();
+    require(s.request_release(), "a swinging body must be allowed to let go");
+    require(s.advance_frame(dt).accepted, "swing release tick");
+    const Snapshot flying = s.snapshot();
+    require(flying.traversal_state == TraversalState::None, "letting go must end the swing");
+    require(std::abs(flying.player_linear_velocity.x - before.player_linear_velocity.x) < 0.3,
+            "a swing let go must keep its velocity");
+    require(advance_until(s, [](const Snapshot &state) { return state.player_grounded; }, 2.0),
+            "the fling must come down");
+    const Snapshot landed = s.snapshot();
+    require(landed.support_entity_id == Simulation::kMonkeyBarsEntityId && landed.player_position.x > 5.9,
+            "the fling from the last bar must land on the block past it");
+
+    // A still hang: the stick let go stills the swing and reaches nothing;
+    // pressed, the kip pumps a swing that carries the hand to the next bar.
+    Simulation d(InitialSpawn::SwingApproach);
+    require(d.set_facing(1.0, 0.0), "still-hang facing must be accepted");
+    require(d.advance_frame(0.4).accepted, "still-hang settle must advance");
+    require(d.set_move_input(1.0, 0.0), "still-hang run-up must be accepted");
+    require(d.request_jump(), "still-hang jump must be accepted");
+    require(advance_until(d,
+                          [](const Snapshot &state) {
+                              return state.traversal_state == TraversalState::Swinging;
+                          },
+                          1.0),
+            "the still-hang run must catch a bar");
+    require(d.set_move_input(0.0, 0.0), "letting the stick go must be accepted");
+    const std::uint64_t held_reaches = d.snapshot().swing_reach_count;
+    require(d.advance_frame(4.0).accepted, "still-hang interval must advance");
+    const Snapshot still = d.snapshot();
+    require(still.traversal_state == TraversalState::Swinging, "a still hang must hold");
+    require(std::hypot(still.player_linear_velocity.x, still.player_linear_velocity.z) < 0.05,
+            "with the stick let go the body must still its swing");
+    require(still.swing_reach_count == held_reaches, "a still hang must reach nothing");
+    require(d.set_move_input(1.0, 0.0), "pumping must be accepted");
+    require(advance_until(d,
+                          [&](const Snapshot &state) { return state.swing_reach_count > held_reaches; },
+                          3.0),
+            "pumped from a still hang, the swing must carry the hand to the next bar");
+
+    std::cout << "PASS scraperx_sim brachiation: crossed_s=" << crossed_s << " worst_tick=" << worst_tick
+              << " fling_vx=" << before.player_linear_velocity.x << " landed_x=" << landed.player_position.x
+              << "\n";
+}
+
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
+        run_brachiation();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-007") {
         run_wet_isolation();
@@ -8852,6 +8963,7 @@ int main() {
     run_trapeze();
     run_tram();
     run_derrick();
+    run_brachiation();
     run_ascent();
 
     return EXIT_SUCCESS;
