@@ -6882,12 +6882,82 @@ void run_speed_vault() {
               << " exit_mps=" << exit_speed << "\n";
 }
 
+// Parkour step 4: the wall-run, on the proving ground's run wall (12 m long,
+// 4 m tall, its face at z = -26.75, x = -12..0). A sprint along it, a jump
+// beside it, the stick held along and into it: the feet take steps on the
+// wall that slow the fall; the same jump in the open has none. Turned away
+// from the wall, no step is taken.
+void run_wall_run() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto airtime = [](const double into_wall, const double lane_z, std::uint64_t &steps, double &far_x) {
+        Simulation s(InitialSpawn::WallRunApproach);
+        require(s.advance_frame(0.3).accepted, "wall-run settle");
+        (void)lane_z;
+        require(s.set_facing(1.0, 0.0) && s.set_move_input(1.0, 0.0) && s.set_sprint_input(true), "wall-run sprint");
+        require(advance_until(s, [](const Snapshot &n) { return n.player_position.x > -12.5; }, 3.0), "wall-run approach");
+        require(s.request_jump(), "wall-run jump");
+        (void)s.advance_frame(Simulation::kFixedStepSeconds * 2);
+        require(s.set_move_input(1.0, -into_wall), "wall-run stick");
+        double air = 0.0;
+        for (int tick = 0; tick < 90 * 3; ++tick) {
+            require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "wall-run tick");
+            const Snapshot n = s.snapshot();
+            if (n.player_grounded) {
+                break;
+            }
+            air += Simulation::kFixedStepSeconds;
+            if (std::getenv("WALL_TRACE") != nullptr && tick % 6 == 0) {
+                std::cout << "W t=" << tick << " x=" << n.player_position.x << " y=" << n.player_position.y
+                          << " z=" << n.player_position.z << " vy=" << n.player_linear_velocity.y
+                          << " steps=" << n.wall_step_count << " run=" << n.player_wall_running << "\n";
+            }
+        }
+        steps = s.snapshot().wall_step_count;
+        far_x = s.snapshot().player_position.x;
+        return air;
+    };
+    std::uint64_t wall_steps = 0;
+    double wall_x = 0.0;
+    const double wall_air = airtime(0.4, -26.3, wall_steps, wall_x);
+    std::uint64_t away_steps = 0;
+    double away_x = 0.0;
+    const double away_air = airtime(-0.4, -26.3, away_steps, away_x);
+    require(wall_steps >= 2, "running along the wall, the feet must take steps on it");
+    require(away_steps == 0, "turned away from the wall, no step may be taken");
+    // Each step stops at most 0.8 x 1.2 m/s of fall, and only as much as there
+    // is: two or three steps keep the body up about a tenth of a second more.
+    require(wall_air > away_air + 0.1, "steps on the wall must keep the body up longer than the same jump turned away");
+
+    // Kicked off: a jump while on the wall throws the body out from it and up.
+    Simulation k(InitialSpawn::WallRunApproach);
+    require(k.advance_frame(0.3).accepted && k.set_facing(1.0, 0.0) && k.set_move_input(1.0, 0.0) &&
+                k.set_sprint_input(true),
+            "kick run");
+    require(advance_until(k, [](const Snapshot &n) { return n.player_position.x > -12.5; }, 3.0), "kick approach");
+    require(k.request_jump() && k.advance_frame(Simulation::kFixedStepSeconds * 2).accepted &&
+                k.set_move_input(1.0, -0.4),
+            "kick jump");
+    require(advance_until(k, [](const Snapshot &n) { return n.player_wall_running; }, 1.5), "kick: on the wall");
+    const Snapshot before_kick = k.snapshot();
+    require(k.request_jump() && k.advance_frame(Simulation::kFixedStepSeconds).accepted, "the kick");
+    const Snapshot after_kick = k.snapshot();
+    require(after_kick.player_linear_velocity.z - before_kick.player_linear_velocity.z > 2.0,
+            "a kick off the wall must throw the body out from it");
+    require(after_kick.player_linear_velocity.y > before_kick.player_linear_velocity.y + 1.5,
+            "a kick off the wall must lift the body by the wall's friction on the push");
+    std::cout << "PASS scraperx_sim wall run: steps=" << wall_steps << " air_s=" << wall_air << " away_air_s=" << away_air
+              << " far_x=" << wall_x << "\n";
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
         run_brachiation();
         run_pipe_gallery();
         run_slide();
         run_speed_vault();
+        run_wall_run();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -9137,6 +9207,7 @@ int main() {
     run_pipe_gallery();
     run_slide();
     run_speed_vault();
+    run_wall_run();
     run_ascent();
 
     return EXIT_SUCCESS;

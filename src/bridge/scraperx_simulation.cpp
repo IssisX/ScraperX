@@ -89,6 +89,10 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_player_linear_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_grounded"),
                                 &ScraperXSimulation::is_player_grounded);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_player_wall_running"),
+                                &ScraperXSimulation::is_player_wall_running);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_wall_step_count"),
+                                &ScraperXSimulation::get_wall_step_count);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_sliding"),
                                 &ScraperXSimulation::is_player_sliding);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_crouched"),
@@ -370,6 +374,14 @@ godot::Vector3 ScraperXSimulation::get_player_linear_velocity() const {
 
 bool ScraperXSimulation::is_player_grounded() const {
     return simulation_->snapshot().player_grounded;
+}
+
+bool ScraperXSimulation::is_player_wall_running() const {
+    return simulation_->snapshot().player_wall_running;
+}
+
+std::int64_t ScraperXSimulation::get_wall_step_count() const {
+    return static_cast<std::int64_t>(simulation_->snapshot().wall_step_count);
 }
 
 bool ScraperXSimulation::is_player_sliding() const {

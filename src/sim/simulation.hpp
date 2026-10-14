@@ -102,6 +102,8 @@ enum class InitialSpawn : std::uint8_t {
     SwingApproach = 39,
     // On the pipe gallery's start stand in the yard, facing along its pipes.
     PipeGallery = 40,
+    // On the deck west of the run wall, beside its line, facing along it.
+    WallRunApproach = 41,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };
@@ -111,7 +113,8 @@ enum class InitialSpawn : std::uint8_t {
 [[nodiscard]] constexpr bool is_proving_spawn(const InitialSpawn spawn) noexcept {
     return static_cast<std::uint8_t>(spawn) <= static_cast<std::uint8_t>(InitialSpawn::BlockedLedgeApproach) ||
            spawn == InitialSpawn::HighDrop || spawn == InitialSpawn::SurvivableDrop ||
-           spawn == InitialSpawn::HangHighDrop || spawn == InitialSpawn::SwingApproach;
+           spawn == InitialSpawn::HangHighDrop || spawn == InitialSpawn::SwingApproach ||
+           spawn == InitialSpawn::WallRunApproach;
 }
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -442,6 +445,10 @@ struct Snapshot final {
     // Parkour step 3: crouched at a run, the body slides on (see kSlideFriction).
     bool player_sliding = false;
     std::uint64_t slide_count = 0;
+    // Parkour step 4: steps taken on a wall in the air (see kWallStepPushMps),
+    // and whether one was taken in the last kWallRunHoldSeconds.
+    std::uint64_t wall_step_count = 0;
+    bool player_wall_running = false;
     std::uint64_t support_entity_id = 0;
     Vector3 support_contact_point{};
     Vector3 support_point_linear_velocity{};
@@ -626,6 +633,8 @@ public:
     // Brachiation fixture: six bars a metre apart, 3.1 m up, between two
     // beams on four posts, and a landing block past the last.
     static constexpr std::uint64_t kMonkeyBarsEntityId = 53;
+    // Wall-run fixture: a wall 12 m long and 4 m tall, its face at z = -26.75.
+    static constexpr std::uint64_t kRunWallEntityId = 54;
 
     // AS-006, the Counterweight Well. Mechanism-kit ids: band structure from
     // 1000, moving bodies from 2000 (sim/mechanism_kit.hpp).

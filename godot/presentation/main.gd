@@ -226,6 +226,7 @@ var _cam_bob_weight := 0.0
 var _cam_fov_offset := 0.0
 var _cam_bank := 0.0
 var _fb_sliding := false
+var _fb_wall_steps := 0
 var _crouch_eye := 0.0
 var _step_eye_lag := 0.0
 var _step_meters_seen := 0.0
@@ -1090,6 +1091,8 @@ func _read_context() -> Dictionary:
 		"grounded": grounded,
 		"crouched": bool(_native.is_player_crouched()),
 		"sliding": bool(_native.is_player_sliding()),
+		"wall_running": bool(_native.is_player_wall_running()),
+		"wall_steps": int(_native.get_wall_step_count()),
 		"traversal": traversal,
 		"hanging": hanging,
 		"climbing": climbing,
@@ -1313,6 +1316,10 @@ func _update_feedback(delta: float) -> void:
 	if sliding and not _fb_sliding:
 		_haptic(&"vault")
 	_fb_sliding = sliding
+	var wall_steps: int = _ctx.get("wall_steps", 0)
+	if wall_steps > _fb_wall_steps:
+		_haptic(&"tick")   # a foot on the wall
+	_fb_wall_steps = wall_steps
 	var grounded: bool = _ctx["grounded"]
 	var velocity: Vector3 = _ctx["velocity"]
 	var lethal: float = _ctx["lethal"]
@@ -1588,6 +1595,10 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			var mantle_heave := sin(PI * (traversal_prog - 0.45) / 0.55)
 			dip += 0.04 * mantle_heave
 		parkour_fov = 3.5 * sin(PI * clampf(traversal_prog, 0.0, 1.0))
+	elif bool(_ctx.get("wall_running", false)):
+		# Running on the wall: the body leans off it, the view with it.
+		_cam_bank += 0.09
+		parkour_fov = 3.0
 	elif bool(_ctx.get("sliding", false)):
 		# On the hip: the view leans back and a little to the trailing side,
 		# and widens with the speed the slide carries.
@@ -1739,6 +1750,8 @@ func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> v
 		_status.text = "SWINGING"
 	elif bool(_native.is_player_sliding()):
 		_status.text = "SLIDING"
+	elif bool(_native.is_player_wall_running()):
+		_status.text = "WALL RUN"
 	elif grounded and _is_kit(support) and support >= KIT_DYNAMIC_ENTITY_MIN:
 		_status.text = "RIDING A MACHINE"
 	elif grounded:

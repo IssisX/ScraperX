@@ -157,6 +157,27 @@ constexpr double kSpeedVaultMinimumSpeed = 6.0;
 constexpr double kSpeedVaultMinimumSeconds = 0.22;
 constexpr float kSpeedVaultLookaheadSeconds = 0.25F;
 constexpr float kSpeedVaultMaximumReach = 2.0F;
+// Parkour step 4: the wall-run, as steps. In flight from a jump, running along
+// a wall beside the body (at kWallRunMinimumSpeed or more within
+// kWallRunMaximumAngle of it, the stick not turned away from it), a foot plants
+// on the wall every kWallStepTicks while the body is coming down (rising, a
+// foot there takes nothing), at most kWallStepsMax times before the
+// feet touch ground again. Each plant pushes the body off the wall by
+// kWallStepPushMps (the legs' push, CHOSEN) and the wall's friction on the
+// sole, at most kWallFriction (CHOSEN: rubber on rough steel) of that push,
+// resists only its sliding down: a step can stop the fall, never lift the
+// body. The stick, held into the wall, brings it back for the next step by air
+// control. A jump while running kicks off the wall: kWallKickMps out, and the
+// friction's share up.
+constexpr float kWallRunMinimumSpeed = 4.5F;
+constexpr float kWallRunMaximumAngle = 0.7F;   // radians, about 40 degrees
+constexpr float kWallRunProbe = 0.3F;          // past the capsule's side
+constexpr std::uint32_t kWallStepTicks = 20;   // 0.22 s
+constexpr std::uint32_t kWallStepsMax = 3;
+constexpr float kWallStepPushMps = 1.2F;
+constexpr float kWallFriction = 0.8F;
+constexpr float kWallKickMps = 3.0F;
+constexpr double kWallRunHoldSeconds = 0.3;
 constexpr float kSlideMinimumSpeed = 5.0F;
 constexpr float kSlideFriction = 0.35F;
 constexpr float kSlideSteerAcceleration = 2.0F;
@@ -815,6 +836,8 @@ private:
         return {7.9, 1.2, -6.0};
     case scraperx::sim::InitialSpawn::HangApproach:
         return {7.6, 4.2, 4.0};
+    case scraperx::sim::InitialSpawn::WallRunApproach:
+        return {-19.0, 1.0, -26.3};
     case scraperx::sim::InitialSpawn::PipeGallery:
         // On the gallery's start stand, 2.5 m short of its take-off.
         return {23.5, 2.5, -34.0};
@@ -1320,6 +1343,9 @@ public:
                 }
             }
             bar_part(JPH::Vec3(1.0F, 0.25F, 0.5F), JPH::RVec3(6.9, 0.25, -20.0));
+            machine_bodies_.push_back(add_box(bodies, JPH::Vec3(6.0F, 2.0F, 0.25F), JPH::RVec3(-6.0, 2.0, -27.0),
+                                              JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                                              Simulation::kRunWallEntityId));
         }
 
         build_stack(bodies);
@@ -2614,6 +2640,70 @@ private:
         }
     }
 
+    [[nodiscard]] bool wall_running() const noexcept { return wall_run_seconds_left_ > 0.0; }
+
+    // In flight, a wall beside the body: a step on it when one is due (see
+    // kWallStepPushMps).
+    void update_wall_run(JPH::BodyInterface &bodies, const StepCommands &commands, JPH::Vec3 &velocity,
+                         const JPH::Vec3 reference) noexcept {
+        if (wall_run_seconds_left_ > 0.0) {
+            wall_run_seconds_left_ -= kFixedStepSeconds;
+        }
+        if (wall_step_cooldown_ > 0) {
+            --wall_step_cooldown_;
+            return;
+        }
+        if (!flight_from_jump_ || wall_steps_this_flight_ >= kWallStepsMax || crouched_ ||
+            carry_constraint_ != nullptr) {
+            return;
+        }
+        const JPH::Vec3 relative = velocity - reference;
+        const JPH::Vec3 horizontal(relative.GetX(), 0.0F, relative.GetZ());
+        const float speed = horizontal.Length();
+        // Rising, a foot on the wall has nothing to take: a step is planted
+        // once the body comes down fast enough to load it (half what one step
+        // can stop).
+        if (speed < kWallRunMinimumSpeed || relative.GetY() > -0.5F * kWallFriction * kWallStepPushMps) {
+            return;
+        }
+        const JPH::Vec3 run = horizontal / speed;
+        const JPH::RVec3 centre = bodies.GetPosition(player_id_);
+        for (const float side : {-1.0F, 1.0F}) {
+            const JPH::Vec3 out(-run.GetZ() * side, 0.0F, run.GetX() * side);
+            JPH::RayCastResult hit;
+            if (!cast_ray(centre, out * (kPlayerRadius + kWallRunProbe), hit)) {
+                continue;
+            }
+            const JPH::RVec3 point = JPH::RRayCast(centre, out * (kPlayerRadius + kWallRunProbe)).GetPointOnRay(hit.mFraction);
+            const JPH::Vec3 normal = surface_normal(hit.mBodyID, hit.mSubShapeID2, point);
+            if (std::abs(normal.GetY()) > 0.2F) {
+                continue;   // not a wall
+            }
+            const JPH::Vec3 wall_out = JPH::Vec3(normal.GetX(), 0.0F, normal.GetZ()).Normalized();
+            // Running along it, not into it or away from it.
+            if (std::abs(run.Dot(wall_out)) > std::sin(kWallRunMaximumAngle)) {
+                continue;
+            }
+            const float stick_out = static_cast<float>(commands.move_input_x * wall_out.GetX() +
+                                                       commands.move_input_z * wall_out.GetZ());
+            if (stick_out > 0.1F) {
+                continue;   // the stick turned away from the wall
+            }
+            // The step: pushed off, and the sole's slide down resisted.
+            velocity += wall_out * kWallStepPushMps;
+            const float falling = reference.GetY() - velocity.GetY();
+            if (falling > 0.0F) {
+                velocity.SetY(velocity.GetY() + std::min(falling, kWallFriction * kWallStepPushMps));
+            }
+            wall_normal_ = wall_out;
+            wall_step_cooldown_ = kWallStepTicks;
+            wall_run_seconds_left_ = kWallRunHoldSeconds;
+            ++wall_steps_this_flight_;
+            ++wall_step_count_;
+            return;
+        }
+    }
+
     // At the moment of crouching: fast enough, and running the way the body
     // faces, it slides (see kSlideMinimumSpeed).
     void begin_slide_if_running(JPH::BodyInterface &bodies) noexcept {
@@ -3199,12 +3289,25 @@ private:
                                                       delta_seconds,
                                                       air_full_speed_);
             }
+            update_wall_run(bodies, commands, player_velocity, reference_velocity);
         }
 
         // Crouched here means there was no room to stand, so no room to jump.
         const bool jump_started = commands.jump_requested && grounded_ && !crouched_;
         if (grounded_) {
             flight_from_jump_ = false;
+            wall_steps_this_flight_ = 0;
+            wall_step_cooldown_ = 0;
+        }
+        if (commands.jump_requested && !grounded_ && wall_running()) {
+            // Kicked off the wall: out along its normal, and up by what the
+            // wall's friction gives that push.
+            player_velocity += wall_normal_ * kWallKickMps;
+            player_velocity.SetY(std::max(player_velocity.GetY() - reference_velocity.GetY(), 0.0F) +
+                                 reference_velocity.GetY() + kWallFriction * kWallKickMps);
+            wall_steps_this_flight_ = kWallStepsMax;
+            wall_run_seconds_left_ = 0.0;
+            ++wall_kick_count_;
         }
         if (jump_started) {
             flight_from_jump_ = true;
@@ -4926,6 +5029,8 @@ public:
         state_.player_crouched = crouched_;
         state_.player_sliding = sliding_;
         state_.slide_count = slide_count_;
+        state_.wall_step_count = wall_step_count_;
+        state_.player_wall_running = wall_running();
         state_.support_entity_id = support_entity_id_;
         state_.support_contact_point = support_sample_.contact_point;
         state_.support_point_linear_velocity = support_sample_.point_velocity;
@@ -5230,6 +5335,13 @@ public:
     std::uint64_t slide_count_ = 0;
     // The vault's progress at which it starts down (0.5, or past the far edge).
     float traversal_vault_descend_at_ = 0.5F;
+    // The wall-run (see kWallStepPushMps).
+    std::uint32_t wall_steps_this_flight_ = 0;
+    std::uint32_t wall_step_cooldown_ = 0;
+    double wall_run_seconds_left_ = 0.0;
+    JPH::Vec3 wall_normal_ = JPH::Vec3::sZero();
+    std::uint64_t wall_step_count_ = 0;
+    std::uint64_t wall_kick_count_ = 0;
     // A speed vault ends past the far edge in free flight, not on a placed descent.
     bool traversal_speed_vault_ = false;
     JPH::Vec3 roll_direction_{JPH::Vec3::sZero()};

@@ -24,6 +24,7 @@ const SCENARIOS := {
 	"touch_vault": 3,
 	"touch_double_tap_vault": 3,
 	"touch_speed_vault": 3,
+	"touch_wall_run": 41,
 	"touch_crouch": 0,
 	"touch_slide": 0,
 	"touch_hang_drop": 5,
@@ -177,7 +178,8 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if not bool(main._native.configure_initial_spawn(int(SCENARIOS[scenario]))):
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
-	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_hang_drop",
+	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_wall_run",
+			"touch_hang_drop",
 			"touch_hang_climb", "touch_monkey_bars", "touch_pipe_gallery"]:
 		main._yaw = -PI * 0.5
 		main._pitch = 0.0
@@ -219,6 +221,8 @@ func _run() -> void:
 			ok = await _touch_double_tap_vault()
 		"touch_speed_vault":
 			ok = await _touch_speed_vault()
+		"touch_wall_run":
+			ok = await _touch_wall_run()
 		"touch_crouch":
 			ok = await _touch_crouch()
 		"touch_slide":
@@ -532,6 +536,28 @@ func _touch_speed_vault() -> bool:
 	var exit_speed := _velocity().x
 	_detail = "entry_mps=%.2f offered_at_x=%.2f exit_mps=%.2f" % [entry, offered_x, exit_speed]
 	return entry > 7.0 and exit_speed > 7.0
+
+
+# Parkour step 4 on the proving run wall (its face at z = -26.75, x = -12..0):
+# a sprint along it, JUMP beside it, the stick held forward: the feet take
+# steps on the wall as the body comes down.
+func _touch_wall_run() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not _stick_sprint():
+		return _fail("the stick pushed past its ring did not latch sprint")
+	var at_wall: bool = await _wait_until(func() -> bool: return _position().x > -12.5, 3.0)
+	if not at_wall:
+		return _fail("the sprint never reached the wall (x %.2f)" % _position().x)
+	_tap(1, _center(&"jump"))
+	var stepped: bool = await _wait_until(func() -> bool: return int(_native().get_wall_step_count()) >= 2, 1.5)
+	if not stepped:
+		return _fail("no steps on the wall (%d)" % int(_native().get_wall_step_count()))
+	await _pose("wall_run")
+	var down: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.0)
+	if not down:
+		return _fail("the wall run never came down")
+	_detail = "steps=%d landed_x=%.2f" % [int(_native().get_wall_step_count()), _position().x]
+	return true
 
 
 # The same rail, vaulted with JUMP twice and ACTION never touched.
