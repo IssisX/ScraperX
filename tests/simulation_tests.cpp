@@ -7131,8 +7131,9 @@ int main() {
 
     // Reached for at arm's length -- falling past the same ledge's band 0.9 m
     // out from its wall, forward pressed only then -- the ledge is caught
-    // 0.49 m and 0.5 m off its hold, and pulls the body in at 3 m/s, never
-    // in one tick (the catch tick included: its drive runs before the step).
+    // well off its hold. The arms hold the body (phase 3): it swings in
+    // under the hands with the speed it caught them at, and is never moved
+    // faster than that -- no snap to the hold.
     Simulation reach(InitialSpawn::HangApproach);
     require(reach.set_facing(1.0, 0.0), "arm's-length hang facing must be accepted");
     require(advance_until(reach,
@@ -7145,10 +7146,15 @@ int main() {
     auto reach_last = reach.snapshot();
     const double reach_from_x = reach_last.player_position.x;
     double worst_hang_tick = 0.0;
+    double catch_speed = -1.0;
     for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz / 2; ++tick) {
         require(reach.advance_frame(Simulation::kFixedStepSeconds).accepted,
                 "arm's-length hang tick must be accepted");
         const auto now = reach.snapshot();
+        if (now.traversal_state == TraversalState::Hanging && catch_speed < 0.0) {
+            const auto v = reach_last.player_linear_velocity;
+            catch_speed = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+        }
         if (now.traversal_state == TraversalState::Hanging) {
             worst_hang_tick = std::max(
                 worst_hang_tick, std::hypot(horizontal_distance(now.player_position, reach_last.player_position),
@@ -7160,8 +7166,8 @@ int main() {
             "a ledge reached for at arm's length must be caught");
     require(reach_last.player_position.x - reach_from_x > 0.3,
             "the arm's-length catch must start well out from its hold");
-    require(worst_hang_tick <= 3.0 * Simulation::kFixedStepSeconds + 0.002,
-            "a ledge caught at arm's length must pull the body in to its hold, not snap it there");
+    require(worst_hang_tick <= (catch_speed + 0.5) * Simulation::kFixedStepSeconds,
+            "a ledge caught at arm's length must swing the body in under its hold, not snap it there");
 
     Simulation moving(InitialSpawn::MovingLedgeApproach);
     require(moving.set_facing(1.0, 0.0), "moving-ledge facing must be accepted");
@@ -7184,13 +7190,19 @@ int main() {
     require(std::abs(carried.player_linear_velocity.z - carried.moving_ledge_linear_velocity.z) < 0.35,
             "a hang on a moving support must be carried at the support's own velocity");
 
-    const double hang_offset_before = carried.player_position.z - carried.moving_ledge_position.z;
+    // The hands stay where they closed on the moving ledge; the body hangs
+    // from them and leans a little as the ledge speeds up and slows.
+    const double hang_offset_before = carried.traversal_left_hand.z - carried.moving_ledge_position.z;
+    const double body_offset_before = carried.player_position.z - carried.moving_ledge_position.z;
     require(moving.advance_frame(0.5).accepted, "second moving-hang interval must be accepted");
     const auto carried_later = moving.snapshot();
     const double hang_offset_after =
-        carried_later.player_position.z - carried_later.moving_ledge_position.z;
-    require(std::abs(hang_offset_after - hang_offset_before) < 0.05,
+        carried_later.traversal_left_hand.z - carried_later.moving_ledge_position.z;
+    const double body_offset_after = carried_later.player_position.z - carried_later.moving_ledge_position.z;
+    require(std::abs(hang_offset_after - hang_offset_before) < 0.01,
             "the hang hold must stay fixed in the moving support's own frame");
+    require(std::abs(body_offset_after - body_offset_before) < 0.2,
+            "the body hanging from a moving ledge must stay under its hands");
     require(std::abs(carried_later.player_position.z - carried.player_position.z) > 0.15,
             "the carried hang must move through the world with its support");
 
@@ -7235,6 +7247,60 @@ int main() {
             "a released hang must fall under gravity again");
     require(!released.request_release(),
             "release must be refused when the player is not hanging");
+
+    // The hang is the arms' physics, not a pose (a falsifier): the ledge
+    // caught after a short fall holds without a slip; the same ledge caught
+    // after a 6 m fall loads the hands past their grip and tears them off,
+    // the body still falling; a hang let go mid-swing keeps its swing.
+    require(hang.snapshot().hang_slip_count == 0, "a hang caught from a short fall must not slip");
+
+    Simulation torn(InitialSpawn::HangHighDrop);
+    require(torn.set_facing(1.0, 0.0), "high-drop facing must be accepted");
+    require(advance_until(torn,
+                          [](const Snapshot &state) { return state.player_position.y < 5.0; },
+                          2.0),
+            "the high drop must fall to the hang ledge");
+    require(torn.snapshot().player_linear_velocity.y < -9.0, "the high drop must arrive fast");
+    require(torn.set_move_input(1.0, 0.0), "high-drop reach must be accepted");
+    require(advance_until(torn,
+                          [](const Snapshot &state) {
+                              return state.traversal_state == TraversalState::Hanging;
+                          },
+                          2.0),
+            "a ledge passed in a 6 m fall must still be caught");
+    require(advance_until(torn,
+                          [](const Snapshot &state) {
+                              return state.traversal_state == TraversalState::None;
+                          },
+                          0.5),
+            "a ledge caught at the end of a 6 m fall must tear out of the hands");
+    const auto tore = torn.snapshot();
+    require(tore.hang_slip_count == 1, "the torn catch must be the grip's slip, not a release");
+    require(tore.player_linear_velocity.y < -2.0, "a torn grip must leave the body still falling");
+
+    Simulation swing(InitialSpawn::HangApproach);
+    require(swing.set_facing(1.0, 0.0), "swing facing must be accepted");
+    require(advance_until(swing,
+                          [](const Snapshot &state) { return state.player_position.y < 3.1; },
+                          2.0),
+            "the swing fall must pass the hang ledge's band");
+    require(swing.set_move_input(1.0, 0.0), "reaching for the swing ledge must be accepted");
+    require(advance_until(swing,
+                          [](const Snapshot &state) {
+                              return state.traversal_state == TraversalState::Hanging;
+                          },
+                          0.5),
+            "the swing ledge must be caught at arm's length");
+    require(swing.advance_frame(0.1).accepted, "swing interval must be accepted");
+    const auto swinging = swing.snapshot();
+    require(swinging.traversal_state == TraversalState::Hanging, "the swing must still be hanging");
+    require(swing.request_release(), "a swinging hang must be allowed to let go");
+    require(swing.advance_frame(Simulation::kFixedStepSeconds).accepted, "swing release tick must advance");
+    const auto let_go = swing.snapshot();
+    require(let_go.traversal_state == TraversalState::None, "letting go must end the swing hang");
+    require(std::abs(swinging.player_linear_velocity.x) > 0.5, "the caught body must be swinging in");
+    require(std::abs(let_go.player_linear_velocity.x - swinging.player_linear_velocity.x) < 0.3,
+            "a hang let go mid-swing must keep its swing");
 
     Simulation blocked(InitialSpawn::BlockedLedgeApproach);
     require(blocked.set_facing(-1.0, 0.0), "blocked-ledge facing must be accepted");
@@ -8607,9 +8673,13 @@ int main() {
     require(hanging.player_position.y > 175.1 && hanging.player_position.y < 175.3 &&
                 hanging.player_position.z < -128.91 && hanging.traversal_left_hand.y > 176.2,
             "the hang must hold the body under the 176 ring's lip, hands on it");
-    const double shimmy_x0 = hanging.player_position.x;
+    // The hands go along the lip at the shimmy's pace; the body, hanging
+    // from them, follows a little behind.
+    const double shimmy_x0 = hanging.traversal_left_hand.x;
+    const double body_x0 = hanging.player_position.x;
     (void)hold_stick(ledge, 1.0, 0.0, 0.0, 1.0, 2.0, [](const Snapshot &) { return false; });
-    const double shimmy_east = ledge.snapshot().player_position.x - shimmy_x0;
+    const double shimmy_east = ledge.snapshot().traversal_left_hand.x - shimmy_x0;
+    const double body_east = ledge.snapshot().player_position.x - body_x0;
     (void)hold_stick(ledge, -1.0, 0.0, 0.0, 1.0, 10.0, [](const Snapshot &) { return false; });
     const auto stopped = ledge.snapshot();
     (void)ledge.request_jump();
@@ -8617,6 +8687,8 @@ int main() {
             "Jump from the hang must climb back onto the ring");
     require(shimmy_east >= 1.15 && shimmy_east <= 1.25,
             "the shimmy must move along the lip at 0.6 m/s");
+    require(body_east > shimmy_east - 0.25 && body_east <= shimmy_east + 0.05,
+            "the body must follow its hands along the lip");
     require(stopped.traversal_state == TraversalState::Hanging && stopped.player_position.x > 7.2 &&
                 stopped.player_position.x < 7.9,
             "the shimmy must stop where a board across the lip ends the hold");

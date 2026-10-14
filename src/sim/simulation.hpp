@@ -95,6 +95,9 @@ enum class InitialSpawn : std::uint8_t {
     Ring264West = 36,
     // On the 750 deck, where stage O's rider steps off.
     Deck750 = 37,
+    // Six metres above the hang ledge, off its face: a catch from here
+    // tears the grip (a falsifier for the physical hang).
+    HangHighDrop = 38,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };
@@ -103,7 +106,8 @@ enum class InitialSpawn : std::uint8_t {
 // the movement fixtures. Every other world is the game's.
 [[nodiscard]] constexpr bool is_proving_spawn(const InitialSpawn spawn) noexcept {
     return static_cast<std::uint8_t>(spawn) <= static_cast<std::uint8_t>(InitialSpawn::BlockedLedgeApproach) ||
-           spawn == InitialSpawn::HighDrop || spawn == InitialSpawn::SurvivableDrop;
+           spawn == InitialSpawn::HighDrop || spawn == InitialSpawn::SurvivableDrop ||
+           spawn == InitialSpawn::HangHighDrop;
 }
 
 // One box of a mechanism-kit body, in the body's frame: what the presentation
@@ -465,6 +469,8 @@ struct Snapshot final {
     bool edge_drop_available = false;
     Vector3 edge_drop_point{};
     std::uint64_t climb_count = 0;
+    // Hangs torn off by a load past the hands' grip (kLedgeGripMaxForceN).
+    std::uint64_t hang_slip_count = 0;
     // Static dressing loaded from world_solids.inc: bodies built, drawn
     // mirrors of owned bodies skipped, and hulls Jolt refused (must be 0).
     // Edges under kStepMaximumHeight walked up (see try_step_up).

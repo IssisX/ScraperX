@@ -267,6 +267,31 @@ constexpr double kHangIntentDotThreshold = 0.3;
 // a one-tick pull moved the body that whole gap in 11 ms (seen: 0.31 m in
 // one frame catching the C2 duct from a keyboard leap).
 constexpr float kHangPullInSpeed = 3.0F;
+// Phase 3: the hang is held by arms, not placed. The hands close on the lip
+// and the shoulders hang from them on a tension-only line (a distance
+// constraint from the hands to a point kHangShoulderAboveCentre over the
+// body's centre, at the wall's face): taut at the reach the catch was made
+// at, drawn in at kHangPullInSpeed to kHangArmLength, a spring at that stop
+// (the trapeze's arms: Trapeze::kArmSpringHz, kArmDamping) that takes a
+// falling catch over a tenth of a second or so. Gravity stays on: the body
+// hangs, and swings under the hands with the momentum it caught them with.
+// The hands slip when the load passes kLedgeGripMaxForceN (CHOSEN, about 5.7
+// body weights; a ledge is held harder than a bar, the fingers hooked over its
+// edge and the feet on the wall) for Trapeze::kSlipTicks, or when the impulse
+// over it in one run passes kLedgeGripTearImpulseNs (CHOSEN): a catch is a
+// spike, not a hold. MEASURED on the proving ledge: a catch from a fall of a
+// metre peaks at ~10.5 kN with ~170 N*s over the grip and holds; one from
+// six metres (10.9 m/s) peaks at ~18 kN with ~700 N*s over and tears.
+constexpr float kHangShoulderAboveCentre = 0.45F;
+constexpr float kLedgeGripMaxForceN = 4500.0F;
+constexpr float kLedgeGripTearImpulseNs = 350.0F;
+// The body hanging is not a dead weight: the shoulders and core still its
+// swing under the hands with up to kHangSteadyForceN (CHOSEN, about 0.36 body
+// weights), against its motion relative to the hands across the arms, at
+// kHangSteadyRate per second of that motion.
+constexpr float kHangSteadyForceN = 300.0F;
+constexpr float kHangSteadyRate = 8.0F;
+constexpr float kHangArmLength = kHangDropBelowLedge - kHangShoulderAboveCentre;
 
 // A standing mantle steps in before it climbs. The probe offers a ledge from
 // 1.30 m out, and a body that rises from there hangs an arm's length off the
@@ -735,6 +760,8 @@ private:
         return {7.9, 1.2, -6.0};
     case scraperx::sim::InitialSpawn::HangApproach:
         return {7.6, 4.2, 4.0};
+    case scraperx::sim::InitialSpawn::HangHighDrop:
+        return {7.6, 10.2, 4.0};
     case scraperx::sim::InitialSpawn::MovingLedgeApproach:
         return {6.1, 4.2, 12.0};
     case scraperx::sim::InitialSpawn::BlockedLedgeApproach:
@@ -1281,6 +1308,7 @@ public:
             physics_system_.RemoveConstraint(carry_constraint_);
             carry_constraint_ = nullptr;
         }
+        drop_hang_arms();
         vertical_.reset();
         trapeze_.reset();
         swing_.reset();
@@ -1493,6 +1521,7 @@ public:
             parachute_deployed_ = false;
         }
 
+        check_hang_grip(bodies, delta_seconds);
         if (traversal_state_ != TraversalState::None) {
             resolve_traversal_outcome(bodies);
         }
@@ -3186,7 +3215,7 @@ private:
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
         traversal_desired_ = origin;
-        bodies.SetGravityFactor(player_id_, 0.0F);
+        attach_hang_arms(bodies);
     }
 
     [[nodiscard]] bool try_begin_ground_traversal(JPH::BodyInterface &bodies) noexcept {
@@ -3322,6 +3351,7 @@ private:
     }
 
     void begin_mantle_from_hang(JPH::BodyInterface &bodies) noexcept {
+        drop_hang_arms();
         const JPH::RVec3 origin = bodies.GetPosition(player_id_);
         traversal_state_ = TraversalState::Mantling;
         traversal_local_start_ = to_support_local(bodies, traversal_body_, origin);
@@ -3520,8 +3550,14 @@ private:
     void drive_traversal(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
         const JPH::RVec3 current = bodies.GetPosition(player_id_);
 
-        if (traversal_state_ == TraversalState::Hanging ||
-            traversal_state_ == TraversalState::Climbing) {
+        if (traversal_state_ == TraversalState::Hanging) {
+            // Held by the arms: nothing placed. The body steadies its swing.
+            draw_in_hang_arms(delta_seconds);
+            traversal_desired_ = current;
+            steady_hang(bodies);
+            return;
+        }
+        if (traversal_state_ == TraversalState::Climbing) {
             const float pull = kHangPullInSpeed * delta_seconds;
             const float gap = traversal_entry_offset_.Length();
             traversal_entry_offset_ =
@@ -3540,6 +3576,9 @@ private:
     }
 
     void resolve_traversal_outcome(JPH::BodyInterface &bodies) noexcept {
+        if (traversal_state_ == TraversalState::Hanging) {
+            return;   // held by the arms, nothing placed to fall behind
+        }
         const JPH::RVec3 actual = bodies.GetPosition(player_id_);
         const float error = JPH::Vec3(actual - traversal_desired_).Length();
         if (error > kTraversalStallTolerance) {
@@ -3604,12 +3643,113 @@ private:
         clear_traversal();
     }
 
+    // Where the shoulders hang from, in the body's frame: at the wall's face
+    // (kPlayerRadius + kHangWallGap toward it) and kHangShoulderAboveCentre up.
+    [[nodiscard]] JPH::Vec3 hang_shoulder_offset() const noexcept {
+        return traversal_normal_ * (kPlayerRadius + kHangWallGap) +
+               JPH::Vec3(0.0F, kHangShoulderAboveCentre, 0.0F);
+    }
+
+    // Closes the hands on the lip at traversal_local_ledge_: the arms taut
+    // at their reach now, never shorter than kHangArmLength.
+    void attach_hang_arms(JPH::BodyInterface &bodies) noexcept {
+        drop_hang_arms();
+        if (traversal_body_.IsInvalid()) {
+            return;
+        }
+        const JPH::RVec3 hands = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+        const JPH::RVec3 shoulders = bodies.GetPosition(player_id_) + hang_shoulder_offset();
+        const float reach = std::max(kHangArmLength, JPH::Vec3(shoulders - hands).Length());
+        JPH::DistanceConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mPoint1 = hands;
+        settings.mPoint2 = shoulders;
+        settings.mMinDistance = 0.0F;
+        settings.mMaxDistance = reach;
+        settings.mLimitsSpringSettings.mMode = JPH::ESpringMode::FrequencyAndDamping;
+        settings.mLimitsSpringSettings.mFrequency = Trapeze::kArmSpringHz;
+        settings.mLimitsSpringSettings.mDamping = Trapeze::kArmDamping;
+        hang_arms_ = static_cast<JPH::DistanceConstraint *>(
+            create_constraint(settings, traversal_body_, player_id_, false));
+        hang_over_grip_ticks_ = 0;
+        hang_over_grip_impulse_ = 0.0F;
+        bodies.SetGravityFactor(player_id_, 1.0F);
+    }
+
+    void drop_hang_arms() noexcept {
+        if (hang_arms_ != nullptr) {
+            physics_system_.RemoveConstraint(hang_arms_);
+            hang_arms_ = nullptr;
+        }
+        hang_over_grip_ticks_ = 0;
+        hang_over_grip_impulse_ = 0.0F;
+    }
+
+    // The shoulders and core stilling the swing (see kHangSteadyForceN):
+    // a finite force against the body's motion across the arms relative to
+    // the hands; the hold takes the reaction.
+    void steady_hang(JPH::BodyInterface &bodies) noexcept {
+        if (hang_arms_ == nullptr || traversal_body_.IsInvalid()) {
+            return;
+        }
+        const JPH::RVec3 hands = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
+        const JPH::RVec3 shoulders = bodies.GetPosition(player_id_) + hang_shoulder_offset();
+        JPH::Vec3 arm(hands - shoulders);
+        const float arm_length = arm.Length();
+        if (arm_length < 1.0e-3F) {
+            return;
+        }
+        arm /= arm_length;
+        JPH::Vec3 relative = bodies.GetLinearVelocity(player_id_) - bodies.GetPointVelocity(traversal_body_, hands);
+        relative -= arm * relative.Dot(arm);
+        JPH::Vec3 force = relative * (-kPlayerMassKg * kHangSteadyRate);
+        const float magnitude = force.Length();
+        if (magnitude > kHangSteadyForceN) {
+            force *= kHangSteadyForceN / magnitude;
+        }
+        bodies.AddForce(player_id_, force);
+        if (bodies.GetMotionType(traversal_body_) == JPH::EMotionType::Dynamic) {
+            bodies.AddForce(traversal_body_, -force, hands);
+        }
+    }
+
+    // The arms drawn in toward kHangArmLength (write phase).
+    void draw_in_hang_arms(const float delta_seconds) noexcept {
+        if (hang_arms_ == nullptr) {
+            return;
+        }
+        const float reach = hang_arms_->GetMaxDistance();
+        if (reach > kHangArmLength) {
+            hang_arms_->SetDistance(0.0F, std::max(kHangArmLength, reach - kHangPullInSpeed * delta_seconds));
+        }
+    }
+
+    // After the step: the hands' load, and the slip past the grip.
+    void check_hang_grip(JPH::BodyInterface &bodies, const float delta_seconds) noexcept {
+        if (hang_arms_ == nullptr || traversal_state_ != TraversalState::Hanging) {
+            return;
+        }
+        const float load = std::abs(hang_arms_->GetTotalLambdaPosition()) / delta_seconds;
+        if (load > kLedgeGripMaxForceN) {
+            ++hang_over_grip_ticks_;
+            hang_over_grip_impulse_ += (load - kLedgeGripMaxForceN) * delta_seconds;
+        } else {
+            hang_over_grip_ticks_ = 0;
+            hang_over_grip_impulse_ = 0.0F;
+        }
+        if (hang_over_grip_ticks_ >= Trapeze::kSlipTicks || hang_over_grip_impulse_ > kLedgeGripTearImpulseNs) {
+            ++hang_slip_count_;
+            release_hang(bodies);
+        }
+    }
+
+    // Letting go: the hands open and nothing else; the body keeps the
+    // velocity it had on the arms.
     void release_hang(JPH::BodyInterface &bodies) noexcept {
         const JPH::RVec3 ledge = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
         const JPH::Vec3 support_velocity =
             traversal_body_.IsInvalid() ? JPH::Vec3::sZero()
                                         : bodies.GetPointVelocity(traversal_body_, ledge);
-        bodies.SetLinearVelocity(player_id_, support_velocity);
         airborne_inherited_velocity_ = support_velocity;
         bodies.SetGravityFactor(player_id_, 1.0F);
         regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
@@ -3623,8 +3763,8 @@ private:
     // the hold: the structure feels who is on it. Static and kinematic
     // bodies take no force.
     void load_hold(JPH::BodyInterface &bodies) noexcept {
-        if ((traversal_state_ != TraversalState::Hanging &&
-             traversal_state_ != TraversalState::Climbing) ||
+        // A hang's arms are a constraint: the hold takes its load through them.
+        if (traversal_state_ != TraversalState::Climbing ||
             traversal_body_.IsInvalid() ||
             bodies.GetMotionType(traversal_body_) != JPH::EMotionType::Dynamic) {
             return;
@@ -4026,6 +4166,13 @@ private:
         traversal_local_ledge_ = to_support_local(bodies, at.body, at.ledge);
         traversal_target_body_ = at.body;
         traversal_local_target_ = to_support_local(bodies, at.body, at.landing);
+        // The hands move along the lip: they close again where they now are,
+        // the arms keeping the reach they had.
+        const float reach = hang_arms_ != nullptr ? hang_arms_->GetMaxDistance() : kHangArmLength;
+        attach_hang_arms(bodies);
+        if (hang_arms_ != nullptr && hang_arms_->GetMaxDistance() > reach) {
+            hang_arms_->SetDistance(0.0F, std::max(reach, kHangArmLength));
+        }
     }
 
     // An edge behind a standing body with a drop beyond it: the floor ends
@@ -4088,6 +4235,9 @@ private:
         traversal_progress_ = 0.0;
         traversal_stall_ticks_ = 0;
         ++accepted_traversal_count_;
+        JPH::BodyInterface &bodies = physics_system_.GetBodyInterfaceNoLock();
+        bodies.SetLinearVelocity(player_id_, JPH::Vec3::sZero());
+        attach_hang_arms(bodies);
     }
 
     // The support under a walking body, if it is a beam: a box narrower
@@ -4179,6 +4329,7 @@ private:
     }
 
     void clear_traversal() noexcept {
+        drop_hang_arms();
         traversal_state_ = TraversalState::None;
         traversal_normal_ = JPH::Vec3::sZero();
         hands_[0].valid = false;
@@ -4532,6 +4683,7 @@ public:
         state_.edge_drop_point =
             edge_affordance_.valid ? to_vector3(edge_affordance_.ledge) : Vector3{};
         state_.climb_count = climb_count_;
+        state_.hang_slip_count = hang_slip_count_;
 
         state_.ledge_available = affordance_.valid;
         state_.ledge_entity_id = affordance_.valid ? affordance_.ledge_entity_id : 0;
@@ -4606,6 +4758,13 @@ public:
     std::vector<JPH::Ref<JPH::TwoBodyConstraint>> machine_constraints_;
     // AS-003: the carry, created/removed at runtime (track_for_teardown=false).
     JPH::Ref<JPH::PointConstraint> carry_constraint_;
+    // The hands on a hang's lip (see kHangShoulderAboveCentre), null when not
+    // hanging; the ticks they have been over their grip, and how many hangs
+    // have slipped.
+    JPH::Ref<JPH::DistanceConstraint> hang_arms_;
+    int hang_over_grip_ticks_ = 0;
+    float hang_over_grip_impulse_ = 0.0F;
+    std::uint64_t hang_slip_count_ = 0;
     JPH::BodyID carried_id_;
     std::uint64_t carried_entity_ = 0;
     std::uint64_t carry_target_entity_ = 0;

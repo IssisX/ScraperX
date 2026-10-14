@@ -32,3 +32,11 @@ comes later, as a toy like the slingshot (it may skip things; it is never the in
 extra about 25-30% up the structure (around 200-240 m) where finding it feels like a reward. Order: the
 draw-call repair and a build first; then the parkour overhaul (physical ledge catches and mantles,
 brachiation along bars and pipes, slides and speed vaults, wall-runs), then the hook.
+
+**Parkour step 1, physical ledge catch (native).** A hang is now held by the arms: a tension-only
+spring line from the hands on the lip to the shoulders, with gravity on. The body swings under the
+hands with the momentum it caught them with. A swing let go keeps its velocity. The grip is finite:
+a catch after a 1 m fall holds (peak ~10.5 kN, ~170 N*s over the grip); a catch after a 6 m fall tears
+(~18 kN, ~700 N*s over; the tear threshold is 350 N*s). The mantle from a hang is unchanged. Native
+falsifiers are in the hang test (`HangHighDrop` spawn, `hang_slip_count`). There is no Godot
+read-out of a torn grip yet. Next: brachiation along bars and pipes.
