@@ -105,6 +105,9 @@ var _drone_db := -60.0
 var _rush_db := -60.0
 var _duck_db := 0.0
 var _machine_loops: Array[AudioStreamPlayer3D] = []
+# Stone pouring: the streams nearest the listener, each heard from its fall.
+var _pour_loops: Array[AudioStreamPlayer3D] = []
+var pours_heard := 0
 var _voice: AudioStreamPlayer
 var _voice_clips := {}   # tier -> Array[AudioStreamOggVorbis]
 var _voice_bags := {}    # tier -> clip indices not yet played this round
@@ -161,6 +164,8 @@ func _ready() -> void:
 	_drone = _looping_player(BUS_AMBIENCE)
 	for i in MACHINE_LOOPS:
 		_machine_loops.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, 110.0))
+	for i in 2:
+		_pour_loops.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0))
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -210,6 +215,10 @@ func _on_bank_ready() -> void:
 		player.play()
 	for player in _machine_loops:
 		player.stream = _bank.pick(&"groan_loop")
+		player.volume_db = -80.0
+		player.play()
+	for player in _pour_loops:
+		player.stream = _bank.pick(&"pour_loop")
 		player.volume_db = -80.0
 		player.play()
 
@@ -330,6 +339,25 @@ func update_machines(delta: float, machines: Array) -> void:
 			player.position = moving[i]["at"]
 			player.volume_db = linear_to_db(level) - 6.0
 			player.pitch_scale = 0.8 + 0.3 * level
+		else:
+			player.volume_db = -80.0
+
+
+# Stone pouring this frame: [midpoint of the fall, its length], nearest the
+# listener first. Each is heard from the middle of its fall, louder the
+# longer the drop.
+func update_pours(pours: Array, listener: Vector3) -> void:
+	pours.sort_custom(func(a: Array, b: Array) -> bool:
+		return (a[0] as Vector3).distance_to(listener) < (b[0] as Vector3).distance_to(listener))
+	if not pours.is_empty():
+		pours_heard += 1
+	if not _bank_ready or _silent:
+		return
+	for i in _pour_loops.size():
+		var player := _pour_loops[i]
+		if i < pours.size():
+			player.position = pours[i][0]
+			player.volume_db = linear_to_db(clampf(0.4 + float(pours[i][1]) / 12.0, 0.4, 1.0)) - 3.0
 		else:
 			player.volume_db = -80.0
 

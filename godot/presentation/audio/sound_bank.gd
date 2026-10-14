@@ -54,6 +54,7 @@ func build() -> void:
 	clips[&"hiss_loop"] = [_loop(_hiss(1.6), 0.3)]
 	clips[&"groan_loop"] = [_loop(_groan(3.2), 0.5)]
 	clips[&"motor_loop"] = [_loop(_motor(1.8), 0.3)]
+	clips[&"pour_loop"] = [_loop(_pour(1.8), 0.3)]
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -343,6 +344,21 @@ func _hiss(length: float) -> PackedFloat32Array:
 	var band := _band_noise_buffer(out.size(), 1800.0, 8500.0)
 	for i in out.size():
 		out[i] = band[i] * 2.2 * (0.9 + 0.1 * sin(TAU * 7.0 * float(i) / float(MIX_RATE)))
+	return out
+
+
+# Stone pouring from a spout into a bucket: a dense rattle of small stones
+# striking stone and steel, each a short bright click, over the low rush of
+# the mass going down.
+func _pour(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var rush := _band_noise_buffer(out.size(), 180.0, 900.0)
+	for i in out.size():
+		out[i] = rush[i] * 0.55
+	var clicks := int(length * 140.0)
+	for c in clicks:
+		_add_band_noise(out, _rng.randf_range(0.0, length - 0.02), 0.012,
+			_rng.randf_range(0.15, 0.6), 0.003, 1200.0, 5200.0)
 	return out
 
 

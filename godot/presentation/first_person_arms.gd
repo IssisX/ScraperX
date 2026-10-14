@@ -532,7 +532,7 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			# Held out ahead and right of the chest, turned a little toward
 			# the hook, the fist pointing along the line it is closed on.
 			var hook: Vector3 = state["hook_line"]
-			var wrist := camera.origin + right * 0.2 - up * 0.2 - back * 0.36
+			var wrist := camera.origin + right * 0.24 - up * 0.25 - back * 0.5
 			var along := (hook - wrist).normalized()
 			wrist += along * 0.04
 			var basis := _hand_basis(along, up - along * along.dot(up))
@@ -735,6 +735,13 @@ func hand_poses() -> Array:
 # hand moves between poses instead of jumping.
 func wrist_positions() -> Array:
 	return _hands.map(func(hand: Hand) -> Vector3: return hand.world_wrist)
+
+
+# The right hand's frame this frame (its wrist, fingers along +y), for what
+# it carries (the grappling hook's gun).
+func right_hand_transform() -> Transform3D:
+	var hand: Hand = _hands[0]
+	return Transform3D(Basis(hand.world_rotation), hand.world_wrist)
 
 
 # Worst distance between a rendered wrist and the point the native ledge

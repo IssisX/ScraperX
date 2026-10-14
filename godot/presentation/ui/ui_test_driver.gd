@@ -846,6 +846,9 @@ func _touch_hook() -> bool:
 	await _frames(2)
 	if not _main._touch.is_button_shown(&"hook"):
 		return _fail("HOOK was not offered once the hook was taken")
+	if not _main._hook_gun.visible:
+		return _fail("the hook's gun is not in the right hand once taken")
+	await _pose("hook_gun")
 	var target := Vector3(3.0, 3.1, -20.0)
 	var to: Vector3 = target - _main._camera.global_position
 	_main._yaw = atan2(-to.x, -to.z)
@@ -2687,6 +2690,9 @@ func _wheel(device: int) -> bool:
 	_main._pitch = 1.1
 	await _pose("wheel_pour")
 	_main._pitch = level_pitch
+	# The pour is heard: a rattle of stone from the middle of its fall.
+	if int(_main._audio.pours_heard) == 0:
+		return _fail("wheel: stone poured but nothing was heard")
 	await _seconds(4.0)
 	# Back in off the plank, which lets the wheel go, and into the bucket.
 	if not (await _go(device, Vector2(14.19, -113.3), 0.1, 8.0) and \

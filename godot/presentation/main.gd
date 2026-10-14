@@ -161,7 +161,7 @@ const RUBBLE_STONE_PITCH := 0.24
 const RUBBLE_TOP_STONES := 160
 const RUBBLE_PILE_STONES := 400
 const RUBBLE_PILE_STONES_PER_M2 := 11.0
-const RUBBLE_FALL_STONES := 18
+const RUBBLE_FALL_STONES := 56
 const RUBBLE_FALL_SPEED := 6.0
 const RIG_HOOK := 1
 const RIG_UNHOOK := 2
@@ -292,9 +292,16 @@ var _kit_dynamic: Array[bool] = []
 const MACHINE_MIN_KG := 40.0
 var _machines: Array[Dictionary] = []
 var _kit_cables: Array = []
+# Per bin: the dust thrown up where its stream of stone lands (null for water).
+var _kit_bin_dust: Array = []
 # The grappling hook's line, from the right hand to the hook, and its head.
 var _hook_line: MeshInstance3D
 var _hook_head: MeshInstance3D
+# The hook's gun, in the right fist once the hook is taken: a compact
+# launcher, drawn at HOOK_GUN_SCALE of its modelled size (a pistol-sized
+# tool so near the lens reads as a large one).
+var _hook_gun: Node3D
+const HOOK_GUN_SCALE := 0.62
 # Pigeons on the structure near the player; gulls at height.
 var _birds: Node3D
 # The hands on the pitman lift's hand line this frame.
@@ -3273,6 +3280,12 @@ func _build_kit() -> void:
 		stream.visible = false
 		_kit_root.add_child(stream)
 		_kit_bin_streams.append(stream)
+		var dust: CPUParticles3D = null
+		if not is_water:
+			dust = _stone_dust()
+			dust.name = "KitStreamDust%d" % index
+			_kit_root.add_child(dust)
+		_kit_bin_dust.append(dust)
 	var pile_mesh := CylinderMesh.new()
 	pile_mesh.top_radius = 0.6
 	pile_mesh.bottom_radius = 1.0
@@ -3375,6 +3388,50 @@ func _sample_machines(delta: float) -> void:
 		_works.update(delta, _camera.global_position, _machines)
 
 
+func _build_hook_gun() -> Node3D:
+	var gun := Node3D.new()
+	gun.name = "HookGun"
+	gun.visible = false
+	var steel := _material(Color("2c2f33"), 0.7, 0.45)
+	var grip := _material(Color("1a1612"), 0.1, 0.85)
+	var yellow := _material(Color("d9a514"), 0.3, 0.5)
+	# Along the hand's fingers (+y local) the barrel runs forward; the body
+	# sits over the fist, the reel drum under it, the hook's claw at the muzzle.
+	var parts := [
+		[_box_mesh(Vector3(0.07, 0.26, 0.09)), steel, Vector3(0.0, 0.07, 0.07)],
+		[_box_mesh(Vector3(0.05, 0.1, 0.06)), grip, Vector3(0.0, 0.0, 0.0)],
+		[_cylinder_mesh(0.024, 0.2), steel, Vector3(0.0, 0.27, 0.085)],
+		[_cylinder_mesh(0.045, 0.05), yellow, Vector3(0.0, 0.06, -0.01)],
+		[_box_mesh(Vector3(0.06, 0.035, 0.025)), yellow, Vector3(0.0, 0.385, 0.085)],
+	]
+	for part in parts:
+		var instance := MeshInstance3D.new()
+		instance.mesh = part[0]
+		instance.material_override = part[1]
+		instance.position = part[2]
+		if part[0] is CylinderMesh and part[2].y > 0.1:
+			pass   # the barrel's axis is +y already
+		elif part[0] is CylinderMesh:
+			instance.rotation = Vector3(0.0, 0.0, PI * 0.5)   # the drum's axis across the hand
+		gun.add_child(instance)
+	return gun
+
+
+func _box_mesh(size: Vector3) -> BoxMesh:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	return mesh
+
+
+func _cylinder_mesh(radius: float, height: float) -> CylinderMesh:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	mesh.radial_segments = 12
+	return mesh
+
+
 func _build_hook_view() -> void:
 	var line := BoxMesh.new()
 	line.size = Vector3(0.008, 0.008, 1.0)
@@ -3392,6 +3449,8 @@ func _build_hook_view() -> void:
 	_hook_head.mesh = head
 	_hook_head.visible = false
 	add_child(_hook_head)
+	_hook_gun = _build_hook_gun()
+	add_child(_hook_gun)
 
 
 # Where a line the right hand holds runs to: the grappling hook when it is
@@ -3413,15 +3472,23 @@ func _render_hook() -> void:
 	var hook: Dictionary = _native.get_hook_state()
 	var out := int(hook["state"]) != 0
 	_hook_head.visible = out
+	# The gun rides in the right fist once taken; hauling the pitman's line
+	# the fist holds the line instead.
+	_hook_gun.visible = bool(hook["has_hook"]) and not _hauling
+	if _hook_gun.visible:
+		_hook_gun.global_transform = _arms.right_hand_transform().scaled_local(Vector3.ONE * HOOK_GUN_SCALE)
 	var end: Variant = _hand_line_end()
 	if end == null:
 		_hook_line.visible = false
 		return
 	var at: Vector3 = end
-	# Out of the right fist, which is closed on the line (FirstPersonArms
-	# POSE_LINE): its wrist, a palm's length along the line.
+	# Out of the gun's muzzle when the gun is in the fist; else out of the
+	# right fist, closed on the line (FirstPersonArms POSE_LINE): its wrist, a
+	# palm's length along the line.
 	var wrist: Vector3 = _arms.wrist_positions()[0]
 	var hand := wrist + (at - wrist).normalized() * FirstPersonArms.LINE_GRIP_REACH
+	if _hook_gun.visible:
+		hand = _hook_gun.global_transform * Vector3(0.0, 0.4, 0.085)
 	_hook_head.global_position = at
 	_lay_segment(_hook_line, hand, at)
 
@@ -3456,6 +3523,7 @@ func _render_kit() -> void:
 # skirt of spilled rubble where each pile landed.
 func _render_rubble() -> void:
 	var bins: PackedFloat32Array = _native.get_kit_bins()
+	var pours: Array = []
 	for index in _kit_bin_streams.size():
 		var b := index * KIT_BIN_FLOATS
 		if b + KIT_BIN_FLOATS > bins.size():
@@ -3486,6 +3554,7 @@ func _render_rubble() -> void:
 						+ floor_rotation * Vector3(0.0, floor_box[1] + depth, 0.0))
 		var stream: MeshInstance3D = _kit_bin_streams[index]
 		var fall: MultiMeshInstance3D = _kit_bin_falls[index]
+		var dust: CPUParticles3D = _kit_bin_dust[index]
 		if bins[b + 3] > 0.5:
 			var from := Vector3(bins[b + 4], bins[b + 5], bins[b + 6])
 			var to := Vector3(bins[b + 7], bins[b + 8], bins[b + 9])
@@ -3493,9 +3562,15 @@ func _render_rubble() -> void:
 			fall.visible = bins[b + 10] < 0.5
 			if fall.visible:
 				_tumble_stones(fall, from, to, index)
+				pours.append([(from + to) * 0.5, from.distance_to(to)])
+			if dust != null:
+				dust.global_position = to
+				dust.emitting = fall.visible
 		else:
 			stream.visible = false
 			fall.visible = false
+			if dust != null:
+				dust.emitting = false
 	var piles: PackedFloat32Array = _native.get_kit_piles()
 	for index in _kit_piles.size():
 		var pile: MeshInstance3D = _kit_piles[index]
@@ -3516,6 +3591,7 @@ func _render_rubble() -> void:
 			spread.multimesh.visible_instance_count = mini(RUBBLE_PILE_STONES,
 				int(RUBBLE_PILE_STONES_PER_M2 * PI * reach * reach))
 			spread.transform = Transform3D(Basis.IDENTITY, Vector3(piles[p], piles[p + 1], piles[p + 2]))
+	_audio.update_pours(pours, _camera.global_position)
 	_render_water()
 
 
@@ -3640,6 +3716,57 @@ func _stone_spread(rock: ArrayMesh, key: int) -> MultiMeshInstance3D:
 
 
 # Stones tumbling down a pouring stream, spread along it and turning as they fall.
+# Dust where poured stone lands: soft brown-grey puffs kicked up and out,
+# settling as they fade.
+func _stone_dust() -> CPUParticles3D:
+	var dust := CPUParticles3D.new()
+	dust.amount = 18
+	dust.lifetime = 1.6
+	dust.emitting = false
+	dust.local_coords = false
+	dust.direction = Vector3.UP
+	dust.spread = 75.0
+	dust.initial_velocity_min = 0.6
+	dust.initial_velocity_max = 1.6
+	dust.gravity = Vector3(0.0, -0.4, 0.0)
+	dust.damping_min = 0.8
+	dust.damping_max = 1.4
+	var grow := Curve.new()
+	grow.add_point(Vector2(0.0, 0.4))
+	grow.add_point(Vector2(1.0, 1.6))
+	dust.scale_amount_curve = grow
+	var fade := Gradient.new()
+	fade.set_color(0, Color(0.55, 0.5, 0.44, 0.45))
+	fade.set_color(1, Color(0.55, 0.5, 0.44, 0.0))
+	dust.color_ramp = fade
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.9, 0.9)
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	material.vertex_color_use_as_albedo = true
+	material.albedo_texture = _soft_puff()
+	quad.material = material
+	dust.mesh = quad
+	return dust
+
+
+# A soft round puff, made once and shared.
+var _puff: ImageTexture
+func _soft_puff() -> ImageTexture:
+	if _puff == null:
+		var size := 32
+		var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+		for y in size:
+			for x in size:
+				var d := Vector2(x - size * 0.5 + 0.5, y - size * 0.5 + 0.5).length() / (size * 0.5)
+				var a := clampf(1.0 - d, 0.0, 1.0)
+				image.set_pixel(x, y, Color(1.0, 1.0, 1.0, a * a))
+		_puff = ImageTexture.create_from_image(image)
+	return _puff
+
+
 func _tumble_stones(fall: MultiMeshInstance3D, from: Vector3, to: Vector3, key: int) -> void:
 	var length := from.distance_to(to)
 	if length < 0.05:
@@ -3650,9 +3777,15 @@ func _tumble_stones(fall: MultiMeshInstance3D, from: Vector3, to: Vector3, key: 
 	var side := (Vector3.RIGHT if absf(along.x) < 0.9 else Vector3.FORWARD).cross(along).normalized()
 	var other := along.cross(side)
 	fall.transform = Transform3D.IDENTITY
+	# Each stone falls the stream's length under gravity, leaving the spout at
+	# RUBBLE_FALL_SPEED: it speeds up as it goes, so the stones string out
+	# toward the bottom, and the stream spreads as stones jostle apart.
+	var leave := RUBBLE_FALL_SPEED * 0.25
+	var drop_s := (-leave + sqrt(leave * leave + 2.0 * 9.81 * length)) / 9.81
 	for k in RUBBLE_FALL_STONES:
-		var phase := fposmod(float(k) / float(RUBBLE_FALL_STONES) + now * RUBBLE_FALL_SPEED / length, 1.0)
-		var spread := 0.08 + 0.1 * phase
+		var t := fposmod(float(k) / float(RUBBLE_FALL_STONES) + now / maxf(drop_s, 0.1), 1.0) * drop_s
+		var phase := clampf((leave * t + 0.5 * 9.81 * t * t) / length, 0.0, 1.0)
+		var spread := 0.1 + 0.32 * phase
 		var offset := side * (spread * (_hash01(key * 53 + k, 11) - 0.5) * 2.0) + \
 			other * (spread * (_hash01(key * 53 + k, 12) - 0.5) * 2.0)
 		var spin := Basis(Vector3(_hash01(key, k), 1.0, _hash01(k, key)).normalized(), now * (3.0 + 4.0 * _hash01(key + k, 13)))

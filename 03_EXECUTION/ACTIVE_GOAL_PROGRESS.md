@@ -92,7 +92,6 @@ Proven on a proving wall (native `wall run`, touch `touch_wall_run`). Not placed
   Touch `touch_hook` takes, aims, bites, reels and drops through the touch layer.
 - **Drawing.** While the hook is out, the right fist closes on the line, held out toward it. The line
   leaves the top of the fist (`touch_hook` checks the pose; a rendered capture was inspected).
-- **Gap.** There is no gun model in the hand.
 
 Old saves load: the kit's body list in a save may be shorter than the current world's (the pipe
 gallery and the hook rack added bodies, built last), and the missing tail keeps its current state.
@@ -200,3 +199,21 @@ now no motor turns it:
 - **Feel.** The 53 s haul may be long for a phone.
 
 Next: the cascade mast, barrel helix and crown gondola, each by a different decision.
+
+**Phase 7, the stone wheel's stone (Godot).**
+- **The fall.** Poured stone now falls under gravity from the spout: 56 tumbling stones a stream
+  (it was 18 at a constant 6 m/s). They speed up, string out and spread as they go.
+- **Dust.** A soft dust plume rises where each stream lands.
+- **Sound.** A positional pour sound (a dense rattle of small stones over the low rush of the mass)
+  plays from the middle of each fall while it pours.
+- **Proof.** `touch_wheel` fails if stone pours and nothing is heard. It passed.
+- **Not observed:** the new stream up close. From the plank the drop is about 2.7 m at about 20 m,
+  too small in a capture to judge.
+- **Still open:** reloading the finite hopper, and a closer look at the pile.
+
+**The hook's gun (Godot).** Once taken, the right fist carries a compact launcher: a steel body
+over a grip, a yellow reel drum, a barrel and the hook's claw at the muzzle. The line leaves from
+the muzzle. Hauling the pitman's line, the fist holds the line instead. `touch_hook` fails if the
+gun is not in hand after the take. Rendered captures were inspected after a fix: the first was
+drawn too large near the lens, so it is drawn at 0.62 of its model and the arm holds the line
+further out.
