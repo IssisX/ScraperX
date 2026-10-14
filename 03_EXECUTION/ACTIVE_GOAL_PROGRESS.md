@@ -39,4 +39,14 @@ hands with the momentum it caught them with. A swing let go keeps its velocity. 
 a catch after a 1 m fall holds (peak ~10.5 kN, ~170 N*s over the grip); a catch after a 6 m fall tears
 (~18 kN, ~700 N*s over; the tear threshold is 350 N*s). The mantle from a hang is unchanged. Native
 falsifiers are in the hang test (`HangHighDrop` spawn, `hang_slip_count`). There is no Godot
-read-out of a torn grip yet. Next: brachiation along bars and pipes.
+read-out of a torn grip yet.
+
+**Parkour step 2, brachiation (native + Godot, proving ground only).** A bar or pipe caught overhead
+in flight hangs the body from the same physical arms (new traversal state Swinging). Pressed along the
+swing it kips (≤160 N, in phase only). The stick let go stills the swing. Held forward, the free
+hand takes the next hold ahead within 1.0 m of the shoulders: bars a metre apart need a swing.
+DROP or JUMP flies on with the swing's velocity. Proven on a six-bar fixture: native `brachiation`
+(five bars crossed in 1.92 s, no skip, no snap, a fling onto the landing block, a still hang reaches
+nothing until pumped) and touch `touch_monkey_bars`. Not yet placed anywhere on the game's route,
+and the bars are not drawn (proving fixtures aren't). Next: put brachiation runs in the tower where
+they make a route or a shortcut, then slides and speed vaults.
