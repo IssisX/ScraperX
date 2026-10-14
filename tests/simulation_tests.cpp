@@ -8733,6 +8733,9 @@ int main() {
     require(sprint_jump >= walk_jump + 2.0,
             "a sprinting jump must carry at least 2 m past a walking one");
     require(!walk_flag && walk_peak <= 5.55, "without sprint held the body walks at 5.5 m/s");
+    // Stopped first: crouching at a run is a slide (run_slide), not this.
+    (void)sprint.set_move_input(0.0, 0.0);
+    (void)sprint.advance_frame(0.6);
     (void)sprint.set_sprint_input(true);
     (void)sprint.set_crouch_input(true);
     (void)sprint.advance_frame(0.3);
