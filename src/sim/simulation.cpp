@@ -292,6 +292,12 @@ constexpr float kLedgeGripTearImpulseNs = 350.0F;
 constexpr float kHangSteadyForceN = 300.0F;
 constexpr float kHangSteadyRate = 8.0F;
 constexpr float kHangArmLength = kHangDropBelowLedge - kHangShoulderAboveCentre;
+// The arms' stop sits short of kHangArmLength by the spring's sag under the
+// body's own weight, g / (2 pi kArmSpringHz)^2 (DERIVED, ~0.062 m, the same for
+// any mass): hanging still, the body rests at its hold, not below it.
+constexpr float kHangArmStop =
+    kHangArmLength - 9.81F / ((2.0F * static_cast<float>(kPi) * scraperx::sim::Trapeze::kArmSpringHz) *
+                              (2.0F * static_cast<float>(kPi) * scraperx::sim::Trapeze::kArmSpringHz));
 
 // A standing mantle steps in before it climbs. The probe offers a ledge from
 // 1.30 m out, and a body that rises from there hangs an arm's length off the
@@ -3651,7 +3657,7 @@ private:
     }
 
     // Closes the hands on the lip at traversal_local_ledge_: the arms taut
-    // at their reach now, never shorter than kHangArmLength.
+    // at their reach now, never shorter than kHangArmStop.
     void attach_hang_arms(JPH::BodyInterface &bodies) noexcept {
         drop_hang_arms();
         if (traversal_body_.IsInvalid()) {
@@ -3659,7 +3665,7 @@ private:
         }
         const JPH::RVec3 hands = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
         const JPH::RVec3 shoulders = bodies.GetPosition(player_id_) + hang_shoulder_offset();
-        const float reach = std::max(kHangArmLength, JPH::Vec3(shoulders - hands).Length());
+        const float reach = std::max(kHangArmStop, JPH::Vec3(shoulders - hands).Length());
         JPH::DistanceConstraintSettings settings;
         settings.mSpace = JPH::EConstraintSpace::WorldSpace;
         settings.mPoint1 = hands;
@@ -3713,14 +3719,14 @@ private:
         }
     }
 
-    // The arms drawn in toward kHangArmLength (write phase).
+    // The arms drawn in toward kHangArmStop (write phase).
     void draw_in_hang_arms(const float delta_seconds) noexcept {
         if (hang_arms_ == nullptr) {
             return;
         }
         const float reach = hang_arms_->GetMaxDistance();
-        if (reach > kHangArmLength) {
-            hang_arms_->SetDistance(0.0F, std::max(kHangArmLength, reach - kHangPullInSpeed * delta_seconds));
+        if (reach > kHangArmStop) {
+            hang_arms_->SetDistance(0.0F, std::max(kHangArmStop, reach - kHangPullInSpeed * delta_seconds));
         }
     }
 
@@ -4168,10 +4174,10 @@ private:
         traversal_local_target_ = to_support_local(bodies, at.body, at.landing);
         // The hands move along the lip: they close again where they now are,
         // the arms keeping the reach they had.
-        const float reach = hang_arms_ != nullptr ? hang_arms_->GetMaxDistance() : kHangArmLength;
+        const float reach = hang_arms_ != nullptr ? hang_arms_->GetMaxDistance() : kHangArmStop;
         attach_hang_arms(bodies);
         if (hang_arms_ != nullptr && hang_arms_->GetMaxDistance() > reach) {
-            hang_arms_->SetDistance(0.0F, std::max(reach, kHangArmLength));
+            hang_arms_->SetDistance(0.0F, std::max(reach, kHangArmStop));
         }
     }
 
