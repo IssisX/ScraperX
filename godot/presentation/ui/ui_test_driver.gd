@@ -26,7 +26,7 @@ const SCENARIOS := {
 	"touch_crouch": 0,
 	"touch_hang_drop": 5,
 	"touch_hang_climb": 5,
-	"touch_swing": 39,
+	"touch_monkey_bars": 39,
 	"touch_chute": 9,
 	"touch_lethal_feedback": 9,
 	"touch_pause": 8,
@@ -175,7 +175,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
-			"touch_hang_climb", "touch_swing"]:
+			"touch_hang_climb", "touch_monkey_bars"]:
 		main._yaw = -PI * 0.5
 		main._pitch = 0.0
 	# HangApproach starts mid-air: the push toward the wall has to be held
@@ -220,8 +220,8 @@ func _run() -> void:
 			ok = await _touch_hang(false)
 		"touch_hang_climb":
 			ok = await _touch_hang(true)
-		"touch_swing":
-			ok = await _touch_swing()
+		"touch_monkey_bars":
+			ok = await _touch_monkey_bars()
 		"touch_chute":
 			ok = await _touch_chute()
 		"touch_lethal_feedback":
@@ -630,7 +630,7 @@ func _touch_hang(climb: bool) -> bool:
 # 3.1 m up, x = 0..5; a landing block past the last): run and JUMP catches the
 # first, the stick held forward swings hand over hand to the last, DROP at the
 # bottom of a forward swing flies on to the block.
-func _touch_swing() -> bool:
+func _touch_monkey_bars() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	_stick_push(Vector2(0.0, -1.0))
 	await _frames(2)
