@@ -32,6 +32,11 @@ const SwingView := preload("res://presentation/swing_view.gd")
 # hands taking the push. The offset eases back to exactly zero, so a player
 # who is not traversing sees the unaltered pitch -- the CI hold included.
 const VIEW_PITCH_HANGING := 0.32
+# Swinging from a bar: radians the grip sits above the frame's middle.
+const SWING_GRIP_ABOVE_CENTRE := 0.2
+# The head follows a swing more slowly than a hang settles: each reach moves
+# the grip a metre on, and the view eases after it rather than nodding.
+const VIEW_PITCH_SWING_RATE := 4.0
 const VIEW_PITCH_MANTLING := -0.3
 const VIEW_PITCH_VAULTING := -0.12
 # On a ladder or pipe the eye leans up toward the next holds, less than a hang
@@ -1355,15 +1360,26 @@ func _update_feedback(delta: float) -> void:
 func _update_view_pitch_offset(delta: float) -> void:
 	var target := 0.0
 	match int(_ctx.get("traversal", TRAVERSAL_NONE)):
-		TRAVERSAL_HANGING, TRAVERSAL_LOWERING, TRAVERSAL_SWINGING:
+		TRAVERSAL_HANGING, TRAVERSAL_LOWERING:
 			target = VIEW_PITCH_HANGING
+		TRAVERSAL_SWINGING:
+			# Hung from a bar overhead, the head swings under the hands: the
+			# view looks up toward them, the grip held SWING_GRIP_ABOVE_CENTRE
+			# above the middle of the frame through the whole swing, so the
+			# hands and the next bar ahead stay in view.
+			var grip: Vector3 = (_native.get_traversal_left_hand() + _native.get_traversal_right_hand()) * 0.5
+			var eye: Vector3 = _camera.global_position
+			var ahead := (grip - eye).dot(Vector3(-sin(_yaw), 0.0, -cos(_yaw)))
+			target = clampf(atan2(grip.y - eye.y, ahead) - SWING_GRIP_ABOVE_CENTRE - _pitch, -0.2, 1.1)
 		TRAVERSAL_CLIMBING:
 			target = VIEW_PITCH_CLIMBING
 		TRAVERSAL_MANTLING:
 			target = VIEW_PITCH_MANTLING
 		TRAVERSAL_VAULTING:
 			target = VIEW_PITCH_VAULTING
-	_view_pitch_offset = lerpf(_view_pitch_offset, target, 1.0 - exp(-VIEW_PITCH_RATE * delta))
+	var rate := VIEW_PITCH_SWING_RATE if int(_ctx.get("traversal", TRAVERSAL_NONE)) == TRAVERSAL_SWINGING \
+		else VIEW_PITCH_RATE
+	_view_pitch_offset = lerpf(_view_pitch_offset, target, 1.0 - exp(-rate * delta))
 	if absf(_view_pitch_offset - target) < 0.0005:
 		_view_pitch_offset = target
 

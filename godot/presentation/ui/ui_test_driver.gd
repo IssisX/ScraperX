@@ -647,9 +647,10 @@ func _touch_monkey_bars() -> bool:
 		return _fail("JUMP read '%s' while swinging, expected JUMP OFF" % _main._touch.button_label(&"jump"))
 	await _seconds(0.2)
 	var grip_error: float = _main._arms.anchored_error()
-	if _main._arms.hand_poses() != [4, 4] or grip_error < 0.0 or grip_error > 0.02:
+	if _main._arms.hand_poses() != [11, 11] or grip_error < 0.0 or grip_error > 0.02:
 		return _fail("hands not gripping the native bar (poses %s, error %.3f m)" % [
 			str(_main._arms.hand_poses()), grip_error])
+	await _seconds(0.3)
 	await _pose("swinging")
 	var crossed: bool = await _wait_until(
 		func() -> bool: return _native().get_traversal_left_hand().x > 4.95, 4.0)
@@ -688,9 +689,10 @@ func _touch_pipe_gallery() -> bool:
 		return _fail("the JUMP from the stand's edge never caught a pipe")
 	await _seconds(0.2)
 	var grip_error: float = _main._arms.anchored_error()
-	if _main._arms.hand_poses() != [4, 4] or grip_error < 0.0 or grip_error > 0.02:
+	if _main._arms.hand_poses() != [11, 11] or grip_error < 0.0 or grip_error > 0.02:
 		return _fail("hands not gripping the pipe (poses %s, error %.3f m)" % [
 			str(_main._arms.hand_poses()), grip_error])
+	await _seconds(0.3)
 	await _pose("gallery_swing")
 	var lip: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 1, 8.0)
 	if not lip:

@@ -25,6 +25,13 @@ const SHOULDER_LOCAL := Vector3(0.17, -0.30, 0.18)
 # Arms raised to a grip rise from lower and nearer the centre, so the
 # forearms climb out of the bottom corners instead of crossing the frame.
 const SHOULDER_LOCAL_RAISED := Vector3(0.14, -0.46, 0.12)
+# Hanging from a lip or a bar overhead, the hands are above the eye: a
+# shoulder behind the eye would run the forearm back through the lens (sliced
+# open by the near plane, or out of frame altogether). The shoulders sit
+# wide, low and 0.22 m ahead of the eye -- nothing of the arm comes within
+# 0.15 m of the lens -- and the elbows splay out to the sides, so each arm
+# leaves the frame through its bottom edge and rises up its side to the hand.
+const SHOULDER_LOCAL_OVERHEAD := Vector3(0.30, -0.45, -0.22)
 # The native capsule holds the eye 0.41 m off a hang wall; a real body pulls
 # in. The shoulder may lean this far toward an out-of-reach anchor.
 const MAX_LEAN := 0.3
@@ -55,6 +62,8 @@ const POSE_CARRY := 8
 # Step 2: a fist round each of a climb's two holds, and arms out on a beam.
 const POSE_CLIMB := 9
 const POSE_BALANCE := 10
+# Step 2: an overhand fist round a bar or pipe overhead.
+const POSE_BAR := 11
 
 const TRAVERSAL_HANGING := 1
 const TRAVERSAL_MANTLING := 2
@@ -371,11 +380,15 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 	for hand in _hands:
 		var raised := traversal in [TRAVERSAL_HANGING, TRAVERSAL_CLIMBING, TRAVERSAL_LOWERING,
 			TRAVERSAL_SWINGING]
-		var shoulder_local := SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL
+		var overhead := traversal in [TRAVERSAL_HANGING, TRAVERSAL_LOWERING, TRAVERSAL_SWINGING]
+		var shoulder_local := SHOULDER_LOCAL_OVERHEAD if overhead else \
+			(SHOULDER_LOCAL_RAISED if raised else SHOULDER_LOCAL)
 		var shoulder := camera * Vector3(shoulder_local.x * hand.side, shoulder_local.y, shoulder_local.z)
 		var pose := POSE_REST
 		var reachable := true
-		if traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING or traversal == TRAVERSAL_SWINGING:
+		if traversal == TRAVERSAL_SWINGING:
+			pose = POSE_BAR
+		elif traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:
 			pose = POSE_GRIP
 		elif traversal == TRAVERSAL_CLIMBING:
 			pose = POSE_CLIMB
@@ -462,9 +475,16 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 			hand.released = false
 			hand.planted = false
 		var reach := wrist - shoulder
-		var deficit := reach.length() - (UPPER_ARM + FOREARM - 0.015)
-		if deficit > 0.0:
-			shoulder += reach.normalized() * minf(deficit, MAX_LEAN)
+		if overhead:
+			# Overhead the shoulder is placed for the picture: on the line from
+			# the hand toward its lower corner, just inside the arm's reach,
+			# so the hand is always on its grip and the arm always leaves the
+			# frame through that corner.
+			shoulder = wrist - reach.normalized() * (UPPER_ARM + FOREARM - 0.04)
+		else:
+			var deficit := reach.length() - (UPPER_ARM + FOREARM - 0.015)
+			if deficit > 0.0:
+				shoulder += reach.normalized() * minf(deficit, MAX_LEAN)
 		_solve_arm(hand, shoulder, wrist, hand_basis, _pole(pose, hand.side, forward, torso_right))
 		_pose_fingers(hand)
 
@@ -502,6 +522,14 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			# of the hand takes the push as the body rises past it.
 			var basis := _hand_basis(_grip_forward, Vector3.UP)
 			return [wrist, basis, true, 30.0, 0.1, 0.15]
+		POSE_BAR:
+			# Overhand round the bar the native says this hand holds: the wrist
+			# just under it on the near side, knuckles up and over the top,
+			# fingers closed round its far side.
+			var hold: Vector3 = state["hand_left"] if side < 0.0 else state["hand_right"]
+			var wrist := hold - _grip_forward * 0.03 + Vector3.DOWN * 0.06
+			var basis := _hand_basis(Vector3.UP * 0.9 + _grip_forward * 0.4, -_grip_forward)
+			return [wrist, basis, true, 30.0, 0.9, 0.6]
 		POSE_CLIMB:
 			# A fist round the bar the native says this hand holds: palm to the
 			# structure, fingers over the far side, the wrist just under it.
@@ -590,7 +618,10 @@ func _update_remote_buttons(pendant: Vector2) -> void:
 
 func _pole(pose: int, side: float, forward: Vector3, right: Vector3) -> Vector3:
 	match pose:
-		POSE_GRIP, POSE_PLANT, POSE_REACH, POSE_CLIMB:
+		POSE_GRIP, POSE_BAR:
+			# Hanging: elbows out to the sides and a little forward.
+			return right * side * 1.0 + forward * 0.25 + Vector3.DOWN * 0.4
+		POSE_PLANT, POSE_REACH, POSE_CLIMB:
 			# Elbows below and behind the grip, a little out: the forearm
 			# climbs into frame from the lower corner.
 			return right * side * 0.35 - forward * 0.6 + Vector3.DOWN * 1.0
