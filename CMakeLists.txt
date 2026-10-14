@@ -23,6 +23,7 @@ add_library(scraperx_sim STATIC
     src/sim/swing.cpp
     src/sim/trapeze.cpp
     src/sim/climb_c6.cpp
+    src/sim/pipe_gallery.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_wet_isolation.cpp
     src/sim/band_plate_shop.cpp

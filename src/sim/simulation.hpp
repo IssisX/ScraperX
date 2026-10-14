@@ -100,6 +100,8 @@ enum class InitialSpawn : std::uint8_t {
     HangHighDrop = 38,
     // On the deck a metre short of the first monkey bar, facing along them.
     SwingApproach = 39,
+    // On the pipe gallery's start stand in the yard, facing along its pipes.
+    PipeGallery = 40,
     // Not a spawn: one past the last, so a spawn added above it is never refused.
     Count,
 };

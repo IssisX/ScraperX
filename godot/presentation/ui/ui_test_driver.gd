@@ -27,6 +27,7 @@ const SCENARIOS := {
 	"touch_hang_drop": 5,
 	"touch_hang_climb": 5,
 	"touch_monkey_bars": 39,
+	"touch_pipe_gallery": 40,
 	"touch_chute": 9,
 	"touch_lethal_feedback": 9,
 	"touch_pause": 8,
@@ -175,7 +176,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 		return false
 	# The traversal kernels are authored facing +x (native tests do the same).
 	if scenario in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_hang_drop",
-			"touch_hang_climb", "touch_monkey_bars"]:
+			"touch_hang_climb", "touch_monkey_bars", "touch_pipe_gallery"]:
 		main._yaw = -PI * 0.5
 		main._pitch = 0.0
 	# HangApproach starts mid-air: the push toward the wall has to be held
@@ -222,6 +223,8 @@ func _run() -> void:
 			ok = await _touch_hang(true)
 		"touch_monkey_bars":
 			ok = await _touch_monkey_bars()
+		"touch_pipe_gallery":
+			ok = await _touch_pipe_gallery()
 		"touch_chute":
 			ok = await _touch_chute()
 		"touch_lethal_feedback":
@@ -668,6 +671,43 @@ func _touch_monkey_bars() -> bool:
 	_detail = "fling_vx=%.2f landed_x=%.2f landed_y=%.2f grip_error_m=%.4f" % [
 		fling_vx, _position().x, _position().y, grip_error]
 	return _position().x > 5.9 and _position().y > 1.3
+
+
+# The pipe gallery in the yard, in the game's world: run along the start
+# stand, JUMP from its painted edge, the stick held forward hand over hand
+# along the pipes to the platform's lip, CLIMB UP onto it.
+func _touch_pipe_gallery() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	_stick_push(Vector2(0.0, -1.0))
+	var at_edge: bool = await _wait_until(func() -> bool: return _position().x > 25.5, 2.0)
+	if not at_edge:
+		return _fail("the run never reached the start stand's edge (x %.2f)" % _position().x)
+	_tap(1, _center(&"jump"))
+	var caught: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 6, 1.5)
+	if not caught:
+		return _fail("the JUMP from the stand's edge never caught a pipe")
+	await _seconds(0.2)
+	var grip_error: float = _main._arms.anchored_error()
+	if _main._arms.hand_poses() != [4, 4] or grip_error < 0.0 or grip_error > 0.02:
+		return _fail("hands not gripping the pipe (poses %s, error %.3f m)" % [
+			str(_main._arms.hand_poses()), grip_error])
+	await _pose("gallery_swing")
+	var lip: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 1, 8.0)
+	if not lip:
+		return _fail("held forward, the swing never carried the hands to the platform's lip (hands at x %.2f)" % [
+			_native().get_traversal_left_hand().x])
+	_touch(0, _main._touch.stick_home(), false)
+	await _seconds(0.3)
+	if _main._touch.button_label(&"jump") != "CLIMB UP":
+		return _fail("JUMP read '%s' on the lip, expected CLIMB UP" % _main._touch.button_label(&"jump"))
+	_tap(1, _center(&"jump"))
+	var up: bool = await _wait_until(
+		func() -> bool: return bool(_native().is_player_grounded()) and _position().y > 5.4, 3.0)
+	if not up:
+		return _fail("CLIMB UP never stood the body on the platform (y %.2f)" % _position().y)
+	await _pose("gallery_top")
+	_detail = "top_x=%.2f top_y=%.2f grip_error_m=%.4f" % [_position().x, _position().y, grip_error]
+	return true
 
 
 func _touch_chute() -> bool:

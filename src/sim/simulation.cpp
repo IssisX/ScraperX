@@ -7,6 +7,7 @@
 #include "sim/mechanism_kit.hpp"
 #include "sim/slingshot.hpp"
 #include "sim/swing.hpp"
+#include "sim/pipe_gallery.hpp"
 #include "sim/trapeze.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"
@@ -789,6 +790,9 @@ private:
         return {7.9, 1.2, -6.0};
     case scraperx::sim::InitialSpawn::HangApproach:
         return {7.6, 4.2, 4.0};
+    case scraperx::sim::InitialSpawn::PipeGallery:
+        // On the gallery's start stand, 2.5 m short of its take-off.
+        return {23.5, 2.5, -34.0};
     case scraperx::sim::InitialSpawn::SwingApproach:
         return {-1.0, 1.0, -20.0};
     case scraperx::sim::InitialSpawn::HangHighDrop:
@@ -1342,6 +1346,9 @@ public:
         // Phase 3: the trapeze in the yard east of the start. Built last, so
         // every body before it keeps its place in the kit.
         trapeze_ = std::make_unique<Trapeze>(physics_system_, *kit_, player_id_);
+        // Parkour step 2: the pipe gallery beside it, built after it for the
+        // same reason.
+        PipeGallery::build(*kit_);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -3272,6 +3279,11 @@ private:
             return;
         }
 
+        begin_hang(bodies, probe, origin);
+    }
+
+    // The hands closed on `probe`'s lip, the body hung from them by the arms.
+    void begin_hang(JPH::BodyInterface &bodies, const LedgeProbe &probe, const JPH::RVec3 origin) noexcept {
         const JPH::RVec3 hold(probe.wall_point.GetX() - facing_.GetX() * (kPlayerRadius + kHangWallGap),
                               probe.ledge_point.GetY() - kHangDropBelowLedge,
                               probe.wall_point.GetZ() - facing_.GetZ() * (kPlayerRadius + kHangWallGap));
@@ -4035,6 +4047,17 @@ private:
         if (!next.valid || JPH::Vec3(next.point - shoulders).Length() > kSwingReachM ||
             JPH::Vec3(next.point - hands).Dot(facing_) < kSwingMinAdvanceM ||
             next.point.GetY() < shoulders.GetY()) {
+            // No bar ahead: a ledge's lip in the same reach is taken instead,
+            // and the body hangs from it as from any ledge caught.
+            const JPH::RVec3 origin = bodies.GetPosition(player_id_);
+            const LedgeProbe lip = probe_ledge(origin, facing_, kPlayerHalfHeight + kHangMinimumRiseAboveCentre,
+                                               kPlayerHalfHeight + kHangMaximumRiseAboveCentre, true);
+            if (lip.valid && JPH::Vec3(lip.ledge_point - shoulders).Length() <= kSwingReachM &&
+                JPH::Vec3(lip.ledge_point - hands).Dot(facing_) >= kSwingMinAdvanceM) {
+                clear_traversal();
+                begin_hang(bodies, lip, origin);
+                ++swing_reach_count_;
+            }
             return;
         }
         traversal_body_ = next.body;

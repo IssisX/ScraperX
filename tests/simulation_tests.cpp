@@ -1,6 +1,7 @@
 #include "sim/simulation.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/trapeze.hpp"
+#include "sim/pipe_gallery.hpp"
 
 #include <Jolt/Jolt.h>
 
@@ -6718,9 +6719,76 @@ void run_brachiation() {
               << "\n";
 }
 
+// The pipe gallery in the yard (sim/pipe_gallery.hpp), played: a run along
+// the start stand, a jump from its painted edge for the first pipe, the stick
+// held forward hand over hand along all ten, the platform's lip taken from
+// the front of a swing, and a climb up onto it.
+void run_pipe_gallery() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::PipeGallery;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    Simulation s(InitialSpawn::PipeGallery);
+    require(s.set_facing(1.0, 0.0), "gallery facing must be accepted");
+    require(s.advance_frame(0.4).accepted, "gallery settle must advance");
+    require(s.snapshot().player_grounded, "the gallery spawn must stand on the start stand");
+    require(s.set_move_input(1.0, 0.0), "gallery run-up must be accepted");
+    require(advance_until(s, [](const Snapshot &n) { return n.player_position.x > PipeGallery::kStandEastX - 0.5; },
+                          2.0),
+            "the run must reach the take-off");
+    require(s.request_jump(), "gallery jump must be accepted");
+    double caught_s = -1.0;
+    double ledge_s = -1.0;
+    double hand_x = 0.0;
+    std::uint64_t reaches = 0;
+    bool in_order = true;
+    for (int tick = 0; tick < 90 * 12 && ledge_s < 0.0; ++tick) {
+        require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "gallery tick");
+        const Snapshot n = s.snapshot();
+        if (std::getenv("SWING_TRACE") != nullptr && tick % 9 == 0) {
+            std::cout << "G t=" << tick << " st=" << static_cast<int>(n.traversal_state) << " x=" << n.player_position.x
+                      << " y=" << n.player_position.y << " vx=" << n.player_linear_velocity.x
+                      << " r=" << n.swing_reach_count << " hand=" << n.traversal_left_hand.x << "\n";
+        }
+        if (caught_s < 0.0 && n.traversal_state == TraversalState::Swinging) {
+            caught_s = (tick + 1) * Simulation::kFixedStepSeconds;
+            hand_x = n.traversal_left_hand.x;
+        }
+        if (n.traversal_state == TraversalState::Swinging && n.swing_reach_count != reaches) {
+            in_order = in_order && std::abs(n.traversal_left_hand.x - hand_x - PipeGallery::kPipeSpacing) < 0.05;
+            hand_x = n.traversal_left_hand.x;
+            reaches = n.swing_reach_count;
+        }
+        if (n.traversal_state == TraversalState::Hanging) {
+            ledge_s = (tick + 1) * Simulation::kFixedStepSeconds;
+        }
+    }
+    require(caught_s > 0.0 && caught_s < 1.0, "a jump from the take-off must catch the first pipe");
+    require(ledge_s > 0.0, "held forward, the gallery must carry the hands along every pipe to the platform's lip");
+    const double last_pipe_x =
+        PipeGallery::kFirstPipeX + PipeGallery::kPipeSpacing * (PipeGallery::kPipeCount - 1);
+    require(in_order && std::abs(hand_x - last_pipe_x) < 0.05,
+            "each reach must take the next pipe, none skipped, the lip taken from the last");
+    require(s.request_jump(), "the climb up must be accepted");
+    require(advance_until(s,
+                          [](const Snapshot &n) {
+                              return n.player_grounded && n.traversal_state == TraversalState::None;
+                          },
+                          3.0),
+            "from the lip the body must climb up onto the platform");
+    const Snapshot top = s.snapshot();
+    require(top.player_position.y > PipeGallery::kPlatformTop + 0.8 && top.player_position.x > PipeGallery::kPlatformWestX,
+            "the climb must stand the body on the platform");
+    require(top.death_count == 0, "the gallery is not lethal");
+    std::cout << "PASS scraperx_sim pipe gallery: caught_s=" << caught_s << " lip_s=" << ledge_s
+              << " top_y=" << top.player_position.y << "\n";
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
         run_brachiation();
+        run_pipe_gallery();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -8964,6 +9032,7 @@ int main() {
     run_tram();
     run_derrick();
     run_brachiation();
+    run_pipe_gallery();
     run_ascent();
 
     return EXIT_SUCCESS;
