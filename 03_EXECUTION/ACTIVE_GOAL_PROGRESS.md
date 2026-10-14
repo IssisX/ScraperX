@@ -71,4 +71,11 @@ the flat.
 - it then completes into free flight at the run's speed.
 
 The fixed 0.38 s crossing used to take a sprint from 8 m/s to about 1 m/s over the rail. Native
-`speed vault` and touch `touch_speed_vault` prove it. Next: wall-runs, then the hook.
+`speed vault` and touch `touch_speed_vault` prove it.
+
+**Parkour step 4, the wall-run (native + touch).** In flight from a jump, running along a wall, a foot
+plants on it as the body comes down, at most 3 times. Each step pushes off by 1.2 m/s, and the wall's
+friction (0.8 of that) resists only the sole's slide down. Steps slow the fall but never lift the
+body: about 0.14 s more airtime than the same jump away from a wall. Jumping on the wall kicks off it.
+Proven on a proving wall (native `wall run`, touch `touch_wall_run`). Not placed in the tower yet.
+Next: the grappling hook (task #102), found at about 200–240 m.
