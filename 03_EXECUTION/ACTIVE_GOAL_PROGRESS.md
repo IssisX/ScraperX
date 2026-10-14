@@ -63,4 +63,12 @@ hands themselves are still crude primitives.
 **Parkour step 3, the slide (native + Godot).** Crouching at a run (5 m/s or more) slides on, braked
 only by 0.35 g of friction, and passes under the 1.45 m crawl beam. The native `slide` test checks the
 deceleration against the friction; `touch_slide` plays it by touch. Limitation: a slope brakes like
-the flat. Next: speed vaults, wall-runs, then the hook.
+the flat.
+
+**Parkour step 3, the speed vault (native + touch).** At 6 m/s or more:
+- the vault is offered a quarter second's travel ahead (up to 2 m);
+- it crosses at the run's pace and holds its apex past the far edge;
+- it then completes into free flight at the run's speed.
+
+The fixed 0.38 s crossing used to take a sprint from 8 m/s to about 1 m/s over the rail. Native
+`speed vault` and touch `touch_speed_vault` prove it. Next: wall-runs, then the hook.
