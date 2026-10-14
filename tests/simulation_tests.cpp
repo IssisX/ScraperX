@@ -7010,6 +7010,19 @@ void run_hook() {
     require(s.request_hook_fire(), "wall fire");
     require(s.advance_frame(1.0).accepted, "wall flight");
     require(s.snapshot().hook_bite_count == 1, "a plain wall is not a hold: the hook must not bite on it");
+    // In the game: found on the 220 ring's north-west corner. Walked to from
+    // where C's platform sets a rider down, taken (the gun leaves its rack),
+    // kept through a save and a load.
+    Simulation g(InitialSpawn::Ring220North);
+    require(g.advance_frame(0.4).accepted && !g.snapshot().has_hook, "the game starts without the hook");
+    require(walk_to(g, -21.6, -127.6, 14.0, 0.3), "the rider must walk the 220 ring's north band to the hook rack");
+    require(g.request_hook_take() && g.advance_frame(Simulation::kFixedStepSeconds).accepted && g.snapshot().has_hook,
+            "the hook must be taken from its rack on the 220 ring");
+    const auto saved = g.save_game();
+    Simulation l(InitialSpawn::Ring220North);
+    require(l.advance_frame(0.1).accepted && l.load_game(saved.data(), saved.size()), "the save must load");
+    require(l.advance_frame(Simulation::kFixedStepSeconds).accepted && l.snapshot().has_hook,
+            "the hook must be kept through a save and a load");
     std::cout << "PASS scraperx_sim hook: lifted_m=" << reeled.player_position.y - y0 << " worst_climb_mps=" << worst_climb
               << " worst_tension_n=" << worst_tension << "\n";
 }

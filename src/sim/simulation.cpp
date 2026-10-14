@@ -1428,6 +1428,9 @@ public:
         // Parkour step 2: the pipe gallery beside it, built after it for the
         // same reason.
         PipeGallery::build(*kit_);
+        // Parkour step 5: the grappling hook, found on the 220 ring's
+        // north-west corner, off the line from C's platform to the swing.
+        build_hook_rack();
 
         physics_system_.OptimizeBroadPhase();
 
@@ -2682,6 +2685,53 @@ private:
 
     // ---- the grappling hook (see kHookLaunchMps) ---------------------------
 
+    // The rack on the 220 ring (deck top 220.25) and the hook gun on its shelf.
+    void build_hook_rack() {
+        const JPH::RVec3 base(-22.4, 220.25, -127.6);
+        std::vector<kit::Part> rack;
+        const auto box = [](const JPH::Vec3 half, const JPH::Vec3 offset, const kit::Material material) {
+            kit::Part part;
+            part.half = half;
+            part.offset = offset;
+            part.material = material;
+            return part;
+        };
+        rack.push_back(box(JPH::Vec3(0.08F, 0.75F, 0.08F), JPH::Vec3(0.0F, 0.75F, -0.3F), kit::Material::Rust));
+        rack.push_back(box(JPH::Vec3(0.08F, 0.75F, 0.08F), JPH::Vec3(0.0F, 0.75F, 0.3F), kit::Material::Rust));
+        rack.push_back(box(JPH::Vec3(0.22F, 0.03F, 0.42F), JPH::Vec3(0.0F, 1.02F, 0.0F), kit::Material::Steel));
+        rack.push_back(box(JPH::Vec3(0.02F, 0.35F, 0.42F), JPH::Vec3(-0.2F, 1.35F, 0.0F), kit::Material::Hazard));
+        (void)kit_->add_body(Simulation::kHookRackFrameEntityId, rack, base, JPH::Quat::sIdentity(), 0.0F, 0.8F);
+        std::vector<kit::Part> gun;
+        gun.push_back(box(JPH::Vec3(0.045F, 0.06F, 0.22F), JPH::Vec3::sZero(), kit::Material::Yellow));      // body
+        gun.push_back(box(JPH::Vec3(0.03F, 0.03F, 0.16F), JPH::Vec3(0.0F, 0.02F, 0.36F), kit::Material::Steel));  // barrel
+        gun.push_back(box(JPH::Vec3(0.09F, 0.02F, 0.03F), JPH::Vec3(0.0F, 0.02F, 0.53F), kit::Material::Steel));  // tines
+        gun.push_back(box(JPH::Vec3(0.03F, 0.08F, 0.035F), JPH::Vec3(0.0F, -0.1F, -0.08F), kit::Material::Rubble)); // grip
+        hook_gun_ = kit_->add_body(Simulation::kHookGunEntityId, gun, base + JPH::Vec3(0.0F, 1.13F, 0.0F),
+                                   JPH::Quat::sIdentity(), 3.0F, 0.9F);
+    }
+
+    [[nodiscard]] bool hook_take_in_reach(const JPH::BodyInterface &bodies) const noexcept {
+        if (has_hook_) {
+            return false;
+        }
+        const JPH::RVec3 player = bodies.GetPosition(player_id_);
+        if (!hook_rack_id_.IsInvalid() &&
+            JPH::Vec3(bodies.GetPosition(hook_rack_id_) - player).Length() <= kHookRackReach) {
+            return true;
+        }
+        return hook_gun_.valid() && kit_->body_enabled(hook_gun_) &&
+               JPH::Vec3(kit_->body_position(hook_gun_) - player).Length() <= kHookRackReach;
+    }
+
+    // The hook is had once its gun is off the rack (parked).
+    void sync_hook_from_rack() noexcept {
+        if (hook_gun_.valid() && !kit_->body_enabled(hook_gun_)) {
+            has_hook_ = true;
+        } else if (has_hook_ && hook_gun_.valid()) {
+            kit_->park(hook_gun_);   // taken since the checkpoint: still taken
+        }
+    }
+
     enum class HookState : std::uint8_t { Stowed = 0, Flying = 1, Bitten = 2 };
 
     [[nodiscard]] JPH::RVec3 hook_chest(const JPH::BodyInterface &bodies) const noexcept {
@@ -2689,9 +2739,16 @@ private:
     }
 
     void hook_pre_step(JPH::BodyInterface &bodies, const StepCommands &commands, const float dt) noexcept {
-        if (commands.hook_take && !has_hook_ && !hook_rack_id_.IsInvalid() &&
-            JPH::Vec3(bodies.GetPosition(hook_rack_id_) - bodies.GetPosition(player_id_)).Length() <= kHookRackReach) {
-            has_hook_ = true;
+        if (commands.hook_take && !has_hook_) {
+            const JPH::RVec3 player = bodies.GetPosition(player_id_);
+            if (!hook_rack_id_.IsInvalid() &&
+                JPH::Vec3(bodies.GetPosition(hook_rack_id_) - player).Length() <= kHookRackReach) {
+                has_hook_ = true;
+            } else if (hook_gun_.valid() && kit_->body_enabled(hook_gun_) &&
+                       JPH::Vec3(kit_->body_position(hook_gun_) - player).Length() <= kHookRackReach) {
+                kit_->park(hook_gun_);
+                has_hook_ = true;
+            }
         }
         if (!has_hook_) {
             return;
@@ -5077,6 +5134,7 @@ private:
         grounded_ = false;
         sliding_ = false;
         stow_hook(bodies);   // the hook comes back with the body; it is kept
+        sync_hook_from_rack();
         clear_recovery();
         clear_support_jolt();
         teetering_ = false;
@@ -5145,7 +5203,7 @@ public:
         auto &k = loaded.kit;
         const auto &c = current.kit;
         bool ok = r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
-                  r.pod(loaded.carrying_entity) && r.list(k.bodies, c.bodies.size()) &&
+                  r.pod(loaded.carrying_entity) && r.list_up_to(k.bodies, c.bodies.size()) &&
                   r.list(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
                   r.list(k.bin_contents, c.bin_contents.size()) && r.bits(k.rope_parted, c.rope_parted.size()) &&
                   r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
@@ -5163,6 +5221,11 @@ public:
             }
         }
         ok = ok && r.list(loaded.vertical.targets, current.vertical.targets.size()) && r.done();
+        // Bodies added to the world since the save was written (always built
+        // last, after every body before them) start as built.
+        for (std::size_t index = k.bodies.size(); ok && index < c.bodies.size(); ++index) {
+            k.bodies.push_back(c.bodies[index]);
+        }
         if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
             !std::isfinite(position.GetZ())) {
             return false;
@@ -5170,6 +5233,7 @@ public:
         checkpoint_position_ = position;
         checkpoint_crouched_ = crouched == 1;
         checkpoint_ = std::move(loaded);
+        has_hook_ = false;   // had in the save only if its gun is off the rack there
         restore_from_checkpoint(bodies);
         checkpoint_commit_count_ = commits;
         death_count_ = deaths;
@@ -5236,6 +5300,7 @@ public:
         state_.wall_step_count = wall_step_count_;
         state_.player_wall_running = wall_running();
         state_.has_hook = has_hook_;
+        state_.hook_take_available = hook_take_in_reach(bodies);
         state_.hook_state = static_cast<std::uint8_t>(hook_state_);
         state_.hook_position = hook_state_ == HookState::Stowed ? Vector3{} : to_vector3(hook_end(bodies));
         state_.hook_line_length = hook_line_ != nullptr ? hook_line_->GetMaxDistance() : 0.0;
@@ -5558,6 +5623,7 @@ public:
     HookState hook_state_ = HookState::Stowed;
     JPH::BodyID hook_body_;
     JPH::BodyID hook_rack_id_;
+    kit::BodyIndex hook_gun_{};
     JPH::BodyID hook_bite_target_;
     JPH::Vec3 hook_bite_local_ = JPH::Vec3::sZero();
     JPH::Ref<JPH::DistanceConstraint> hook_line_;

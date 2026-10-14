@@ -179,6 +179,12 @@ public:
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;
+    [[nodiscard]] godot::Dictionary get_hook_state() const;
+    bool set_hook_aim(godot::Vector3 direction);
+    bool request_hook_fire();
+    bool set_hook_reel(bool held);
+    bool request_hook_release();
+    bool request_hook_take();
     // The owner's vertical machines: one-shot Action (send the deck, or call it).
     [[nodiscard]] bool request_lift_action();
     // A saved climb (Simulation::save_game / load_game), as bytes.

@@ -23,6 +23,8 @@ const B_CROUCH := &"crouch"
 const B_DROP := &"drop"
 const B_CHUTE := &"chute"
 const B_PAUSE := &"pause"
+# The grappling hook, once found: tap fires it, held reels the line in.
+const B_HOOK := &"hook"
 
 const TONE_NORMAL := 0
 const TONE_PRIMARY := 1
@@ -68,7 +70,7 @@ var touch_scale := 1.0
 
 var _u := 1.0
 var _buttons := {}
-var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE]
+var _order: Array[StringName] = [B_PAUSE, B_JUMP, B_ACTION, B_CROUCH, B_DROP, B_CHUTE, B_HOOK]
 var _stick_index := -1
 var _stick_origin := Vector2.ZERO
 var _stick_knob := Vector2.ZERO
@@ -110,6 +112,11 @@ func stick_home() -> Vector2:
 	return _stick_home
 
 
+# A button with a finger on it now (the hook's reel is held, not tapped).
+func is_held(id: StringName) -> bool:
+	return _buttons[id].index != -1
+
+
 func is_button_shown(id: StringName) -> bool:
 	return _buttons[id].shown
 
@@ -132,6 +139,8 @@ func _layout() -> void:
 	# and "drop, then open the canopy" becomes the same thumb in one place.
 	_place(B_DROP, jump + Vector2(-306.0, 96.0) * _u, 86.0)
 	_place(B_CHUTE, jump + Vector2(-306.0, 96.0) * _u, 86.0)
+	# Over Action, away from the stick: the hook is aimed with the view.
+	_place(B_HOOK, jump + Vector2(-236.0, -370.0) * _u, 86.0)
 	_place(B_PAUSE, _safe.position + Vector2(m, m) + Vector2(52.0, 52.0) * _u, 52.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
@@ -159,6 +168,8 @@ func _verb_for(id: StringName) -> StringName:
 			return &"chute"
 		B_PAUSE:
 			return &"pause"
+		B_HOOK:
+			return &"hook"
 	return &""
 
 
@@ -330,6 +341,12 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	else:
 		chute.tone = TONE_NORMAL
 	_buttons[B_PAUSE].shown = true
+	var hook: TouchButton = _buttons[B_HOOK]
+	var hook_state: int = ctx.get("hook_state", 0)
+	hook.shown = ctx.get("has_hook", false)
+	hook.icon = &"up"
+	hook.label = "HOOK" if hook_state == 0 else ("REEL" if hook_state == 2 else "...")
+	hook.tone = TONE_PRIMARY if hook_state == 2 else TONE_NORMAL
 
 	var crouch: TouchButton = _buttons[B_CROUCH]
 	crouch.shown = not hanging and not climbing

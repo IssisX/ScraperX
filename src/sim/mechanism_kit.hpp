@@ -397,6 +397,10 @@ public:
     void capture(Checkpoint &out) const;
     void restore(const Checkpoint &in);
 
+    // Taken out of the world (a thing picked up and kept): parked where it
+    // is, drawn no more; a checkpoint keeps it so.
+    void park(BodyIndex body) { set_enabled(body, false); }
+
     // ---- read back ------------------------------------------------------
     [[nodiscard]] std::uint32_t body_count() const noexcept {
         return static_cast<std::uint32_t>(bodies_.size());

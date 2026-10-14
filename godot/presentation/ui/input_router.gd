@@ -175,6 +175,8 @@ func _handle_key(key: InputEventKey) -> void:
 			_verbs.append(&"drop")
 		KEY_F:
 			_verbs.append(&"chute")
+		KEY_G:
+			_verbs.append(&"hook")
 		KEY_C:
 			_verbs.append(&"crouch")
 		KEY_ESCAPE:
@@ -206,6 +208,8 @@ func _handle_pad_button(button: InputEventJoypadButton) -> void:
 			_verbs.append(&"crouch")
 		JOY_BUTTON_LEFT_STICK:
 			_pad_sprint = true
+		JOY_BUTTON_RIGHT_SHOULDER:
+			_verbs.append(&"hook")
 		JOY_BUTTON_START:
 			_verbs.append(&"pause")
 		JOY_BUTTON_BACK:
@@ -337,5 +341,7 @@ func frame(delta: float) -> Dictionary:
 	_mouse_look = Vector2.ZERO
 	var verbs: Array[StringName] = _verbs.duplicate()
 	_verbs.clear()
+	var hook_held: bool = enabled and gameplay_active and (_keys.has(KEY_G) or _buttons.has(JOY_BUTTON_RIGHT_SHOULDER) or
+		(touch != null and touch.is_held(&"hook")))
 	return {"move": move, "look": look, "verbs": verbs,
-		"crouch_held": crouch_held, "sprint_held": sprint_held}
+		"crouch_held": crouch_held, "sprint_held": sprint_held, "hook_held": hook_held}

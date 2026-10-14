@@ -31,6 +31,7 @@ const SCENARIOS := {
 	"touch_hang_climb": 5,
 	"touch_monkey_bars": 39,
 	"touch_pipe_gallery": 40,
+	"touch_hook": 39,
 	"touch_chute": 9,
 	"touch_lethal_feedback": 9,
 	"touch_pause": 8,
@@ -235,6 +236,8 @@ func _run() -> void:
 			ok = await _touch_monkey_bars()
 		"touch_pipe_gallery":
 			ok = await _touch_pipe_gallery()
+		"touch_hook":
+			ok = await _touch_hook()
 		"touch_chute":
 			ok = await _touch_chute()
 		"touch_lethal_feedback":
@@ -715,6 +718,62 @@ func _touch_hang(climb: bool) -> bool:
 # 3.1 m up, x = 0..5; a landing block past the last): run and JUMP catches the
 # first, the stick held forward swings hand over hand to the last, DROP at the
 # bottom of a forward swing flies on to the block.
+# Parkour step 5: the hook taken off its proving rack with ACTION, aimed with
+# the view at the third monkey bar, fired with HOOK, reeled in by holding HOOK
+# until the feet leave the deck, and let go with DROP.
+func _touch_hook() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if _main._touch.is_button_shown(&"hook"):
+		return _fail("HOOK was offered before the hook was taken")
+	if _ctx()["action"]["id"] != &"hook_take":
+		return _fail("ACTION offered '%s' beside the rack, expected TAKE HOOK" % str(_ctx()["action"]["id"]))
+	_tap(0, _center(&"action"))
+	var taken: bool = await _wait_until(func() -> bool: return bool(_native().get_hook_state()["has_hook"]), 0.5)
+	if not taken:
+		return _fail("TAKE HOOK did not take the hook")
+	await _frames(2)
+	if not _main._touch.is_button_shown(&"hook"):
+		return _fail("HOOK was not offered once the hook was taken")
+	var target := Vector3(3.0, 3.1, -20.0)
+	var to: Vector3 = target - _main._camera.global_position
+	_main._yaw = atan2(-to.x, -to.z)
+	_main._pitch = atan2(to.y, Vector2(to.x, to.z).length())
+	await _frames(2)
+	to = target - _main._camera.global_position
+	var off := rad_to_deg((-_main._camera.global_transform.basis.z).angle_to(to))
+	if off > 3.0:
+		return _fail("the view did not settle on the bar (%.1f deg off)" % off)
+	_tap(1, _center(&"hook"))
+	var bit: bool = await _wait_until(func() -> bool: return int(_native().get_hook_state()["state"]) == 2, 1.0)
+	if not bit:
+		return _fail("HOOK fired at the bar never bit (state %d)" % int(_native().get_hook_state()["state"]))
+	var bite: Vector3 = _native().get_hook_state()["position"]
+	if bite.distance_to(target) > 0.6:
+		return _fail("the hook bit at %s, not on the bar" % str(bite))
+	if _main._touch.button_label(&"hook") != "REEL":
+		return _fail("HOOK read '%s' once bitten, expected REEL" % _main._touch.button_label(&"hook"))
+	var y0 := _position().y
+	_touch(1, _center(&"hook"), true)
+	var lifted: bool = await _wait_until(
+		func() -> bool: return _position().y > y0 + 0.8 and not bool(_native().is_player_grounded()), 3.0)
+	await _pose("hook_reel")
+	_touch(1, _center(&"hook"), false)
+	if not lifted:
+		return _fail("holding HOOK never reeled the body off the deck (rise %.2f)" % (_position().y - y0))
+	var risen := _position().y - y0
+	if not _main._touch.is_button_shown(&"drop"):
+		return _fail("DROP was not offered on the line")
+	_tap(2, _center(&"drop"))
+	var free: bool = await _wait_until(func() -> bool: return int(_native().get_hook_state()["state"]) == 0, 0.5)
+	if not free:
+		return _fail("DROP did not let go of the line")
+	var down: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 2.0)
+	if not down:
+		return _fail("let go, the body never came down")
+	_detail = "bite=%s risen_m=%.2f" % [str(bite), risen]
+	return true
+
+
 func _touch_monkey_bars() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	_stick_push(Vector2(0.0, -1.0))

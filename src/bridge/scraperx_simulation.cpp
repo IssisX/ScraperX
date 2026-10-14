@@ -274,6 +274,12 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_drop"), &ScraperXSimulation::request_trapeze_drop);
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_hook_state"), &ScraperXSimulation::get_hook_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_hook_aim", "direction"), &ScraperXSimulation::set_hook_aim);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_hook_fire"), &ScraperXSimulation::request_hook_fire);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_hook_reel", "held"), &ScraperXSimulation::set_hook_reel);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_hook_release"), &ScraperXSimulation::request_hook_release);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_hook_take"), &ScraperXSimulation::request_hook_take);
     godot::ClassDB::bind_method(godot::D_METHOD("request_lift_action"), &ScraperXSimulation::request_lift_action);
     godot::ClassDB::bind_method(godot::D_METHOD("get_save_game"), &ScraperXSimulation::get_save_game);
     godot::ClassDB::bind_method(godot::D_METHOD("load_save_game", "bytes"), &ScraperXSimulation::load_save_game);
@@ -994,6 +1000,38 @@ bool ScraperXSimulation::request_trapeze_action() {
 
 bool ScraperXSimulation::request_trapeze_drop() {
     return simulation_->request_trapeze_drop();
+}
+
+godot::Dictionary ScraperXSimulation::get_hook_state() const {
+    const sim::Snapshot state = simulation_->snapshot();
+    godot::Dictionary out;
+    out["has_hook"] = state.has_hook;
+    out["take_available"] = state.hook_take_available;
+    out["state"] = static_cast<std::int64_t>(state.hook_state);
+    out["position"] = to_godot(state.hook_position);
+    out["line_length"] = state.hook_line_length;
+    out["tension_n"] = state.hook_tension_n;
+    return out;
+}
+
+bool ScraperXSimulation::set_hook_aim(const godot::Vector3 direction) {
+    return simulation_->set_hook_aim(direction.x, direction.y, direction.z);
+}
+
+bool ScraperXSimulation::request_hook_fire() {
+    return simulation_->request_hook_fire();
+}
+
+bool ScraperXSimulation::set_hook_reel(const bool held) {
+    return simulation_->set_hook_reel(held);
+}
+
+bool ScraperXSimulation::request_hook_release() {
+    return simulation_->request_hook_release();
+}
+
+bool ScraperXSimulation::request_hook_take() {
+    return simulation_->request_hook_take();
 }
 
 godot::Dictionary ScraperXSimulation::get_trapeze_state() const {

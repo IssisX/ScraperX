@@ -78,4 +78,22 @@ plants on it as the body comes down, at most 3 times. Each step pushes off by 1.
 friction (0.8 of that) resists only the sole's slide down. Steps slow the fall but never lift the
 body: about 0.14 s more airtime than the same jump away from a wall. Jumping on the wall kicks off it.
 Proven on a proving wall (native `wall run`, touch `touch_wall_run`). Not placed in the tower yet.
-Next: the grappling hook (task #102), found at about 200–240 m.
+**Parkour step 5, the grappling hook (native + touch).** A toy, not the route:
+- **Where it is.** A gun on a rack at the 220 ring's north-west corner. ACTION takes it (TAKE HOOK).
+  Taking it parks the gun's body, and a save keeps it.
+- **Firing.** HOOK (touch), G (keyboard) or the right shoulder (pad) fires along the view. The hook
+  is a 1.5 kg body at 40 m/s on a line of up to 30 m.
+- **Biting.** It bites only on holds (bars, pipes, rungs). Plain walls and the sky do not catch it,
+  and it comes back.
+- **Reeling.** Holding HOOK reels the line in at 3 m/s while its tension is under 1.2 kN. A body
+  hung too heavily stalls the reel instead of being pulled up faster. DROP lets go.
+- **Proof.** Native `hook`: it lifts the body off the deck and climbs no faster than the reel turns.
+  It also checks no bite on sky or wall, the game-world pickup, and keeping the hook through a save.
+  Touch `touch_hook` takes, aims, bites, reels and drops through the touch layer.
+- **Drawing.** The line runs from the right hand to the hook.
+- **Gaps.** The hand does not close on the line, and there is no gun model in the hand.
+
+Old saves load: the kit's body list in a save may be shorter than the current world's (the pipe
+gallery and the hook rack added bodies, built last), and the missing tail keeps its current state.
+No test yet loads a save written before them.
+Next: place the wall-run and brachiation in the tower; hands that grip what they hold.

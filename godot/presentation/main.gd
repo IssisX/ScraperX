@@ -289,6 +289,9 @@ var _kit_dynamic: Array[bool] = []
 const MACHINE_MIN_KG := 40.0
 var _machines: Array[Dictionary] = []
 var _kit_cables: Array = []
+# The grappling hook's line, from the right hand to the hook, and its head.
+var _hook_line: MeshInstance3D
+var _hook_head: MeshInstance3D
 # Per bin: the rubble layer on its floor (null for a static bin, whose
 # contents cannot be seen), that floor's box, and its stream.
 var _kit_bin_layers: Array = []
@@ -359,6 +362,7 @@ func _ready() -> void:
 	_audio.sky = _sky_cycle
 	add_child(_audio)
 	_build_arms()
+	_build_hook_view()
 	_build_interface()
 	_layout_hud()
 	get_viewport().size_changed.connect(_layout_hud)
@@ -487,6 +491,10 @@ func _process(delta: float) -> void:
 	_native.set_facing(facing.x, facing.y)
 	_dispatch(intent["verbs"], delta)
 	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]))
+	# The hook: aimed with the view; its reel turns while the button is held.
+	if bool(_ctx.get("has_hook", false)):
+		_native.set_hook_aim(-_camera.global_transform.basis.z)
+		_native.set_hook_reel(bool(intent.get("hook_held", false)) and int(_ctx.get("hook_state", 0)) == 2)
 	_native.set_sprint_input(bool(intent["sprint_held"]))
 
 
@@ -849,7 +857,9 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				# holds, or a load. On the ground with an edge behind, the
 				# native lowers the body over it into a hang. In the
 				# slingshot's pouch, out of it.
-				if bool(_ctx["sling_seated"]) or bool(_ctx["sling_recovering"]):
+				if int(_ctx.get("hook_state", 0)) != 0:
+					_native.request_hook_release()
+				elif bool(_ctx["sling_seated"]) or bool(_ctx["sling_recovering"]):
 					_native.request_slingshot_drop()
 				elif bool(_ctx["swing_seated"]):
 					_native.request_swing_drop()
@@ -861,6 +871,10 @@ func _dispatch(verbs: Array, delta: float) -> void:
 					_native.request_release()
 			&"chute":
 				_native.request_parachute()
+			&"hook":
+				if bool(_ctx.get("has_hook", false)) and int(_ctx.get("hook_state", 0)) == 0:
+					_native.set_hook_aim(-_camera.global_transform.basis.z)
+					_native.request_hook_fire()
 			&"back":
 				if bool(_ctx["sling_seated"]) or bool(_ctx["sling_recovering"]):
 					_native.request_slingshot_drop()
@@ -902,6 +916,8 @@ func _perform_action() -> void:
 			_native.request_traversal()
 		&"let_go":
 			_native.request_release()
+		&"hook_take":
+			_native.request_hook_take()
 		&"pick_up":
 			_native.request_pick_up()
 		&"set_down":
@@ -962,6 +978,7 @@ func _read_context() -> Dictionary:
 	var swing: Dictionary = _native.get_swing_state()
 	var swing_seated := bool(swing["seated"])
 	var trapeze: Dictionary = _native.get_trapeze_state()
+	var hook: Dictionary = _native.get_hook_state()
 	var trapeze_hanging := bool(trapeze["harnessed"])
 	# Off the trapeze, the arms' pull (the crouch toggle while hanging) ends.
 	if _trapeze_was_hanging and not trapeze_hanging:
@@ -984,6 +1001,8 @@ func _read_context() -> Dictionary:
 		else:
 			action = {"id": &"slingshot", "icon": &"up", "label": "PULL BACK",
 				"detail": "STICK BACK TO DRAW  " + drawn}
+	elif bool(hook["take_available"]):
+		action = {"id": &"hook_take", "icon": &"pick_up", "label": "TAKE HOOK", "detail": "A GRAPPLING HOOK"}
 	elif trapeze_hanging:
 		# On the trapeze: Crouch pulls up on the bar, Action lets go.
 		action = {"id": &"trapeze", "icon": &"down", "label": "LET GO",
@@ -1099,7 +1118,9 @@ func _read_context() -> Dictionary:
 		"swinging": swinging,
 		# Drop at an edge behind lowers into a hang; on holds it lets go; in
 		# the slingshot's pouch it climbs out.
-		"drop_ok": hanging or climbing or swinging or (grounded and free and edge_drop and carrying == 0) or \
+		"has_hook": bool(hook["has_hook"]),
+		"hook_state": int(hook["state"]),
+		"drop_ok": int(hook["state"]) != 0 or hanging or climbing or swinging or (grounded and free and edge_drop and carrying == 0) or \
 			sling_seated or bool(sling["recovering"]) or (swing_seated and bool(swing["may_leave"])) or \
 			trapeze_hanging,
 		"sling_seated": sling_seated,
@@ -1686,6 +1707,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _telemetry_on:
 		_write_telemetry(position, velocity, grounded)
 	_render_kit()
+	_render_hook()
 	_render_slingshot(delta)
 	if _swing_view != null:
 		_swing_view.update_view(_native.get_swing_state())
@@ -3280,6 +3302,44 @@ func _sample_machines(delta: float) -> void:
 		machine["last_tip"] = tip
 		machine["last_at"] = at
 	_audio.update_machines(delta, _machines)
+
+
+func _build_hook_view() -> void:
+	var line := BoxMesh.new()
+	line.size = Vector3(0.008, 0.008, 1.0)
+	line.material = _material(Color("1b1916"), 0.6, 0.5)
+	_hook_line = MeshInstance3D.new()
+	_hook_line.name = "HookLine"
+	_hook_line.mesh = line
+	_hook_line.visible = false
+	add_child(_hook_line)
+	var head := BoxMesh.new()
+	head.size = Vector3(0.12, 0.12, 0.12)
+	head.material = _material(Color("303033"), 0.5, 0.8)
+	_hook_head = MeshInstance3D.new()
+	_hook_head.name = "HookHead"
+	_hook_head.mesh = head
+	_hook_head.visible = false
+	add_child(_hook_head)
+
+
+# The hook in flight or bitten: its line runs from the right hand to it.
+# The arms are posed earlier in the frame, so the wrist is this frame's.
+func _render_hook() -> void:
+	if _hook_line == null:
+		return
+	var hook: Dictionary = _native.get_hook_state()
+	var out := int(hook["state"]) != 0
+	_hook_head.visible = out
+	if not out:
+		_hook_line.visible = false
+		return
+	var at: Vector3 = hook["position"]
+	# From the right palm, a hand's breadth ahead of its wrist.
+	var view := _camera.global_transform.basis
+	var hand: Vector3 = _arms.wrist_positions()[0] - view.z * 0.08
+	_hook_head.global_position = at
+	_lay_segment(_hook_line, hand, at)
 
 
 # Poses every moving kit body and lays every cable through its points, from

@@ -453,6 +453,7 @@ struct Snapshot final {
     // 2 bitten. The line runs from the body's chest to hook_position;
     // hook_line_length is its present limit, hook_tension_n its pull.
     bool has_hook = false;
+    bool hook_take_available = false;   // its rack in reach, not yet taken
     std::uint8_t hook_state = 0;
     Vector3 hook_position{};
     double hook_line_length = 0.0;
@@ -649,6 +650,9 @@ public:
     // the hook itself while it is out.
     static constexpr std::uint64_t kHookRackEntityId = 55;
     static constexpr std::uint64_t kHookEntityId = 56;
+    // The game's hook rack on the 220 ring, and the hook gun lying on it.
+    static constexpr std::uint64_t kHookRackFrameEntityId = 1959;
+    static constexpr std::uint64_t kHookGunEntityId = 2970;
 
     // AS-006, the Counterweight Well. Mechanism-kit ids: band structure from
     // 1000, moving bodies from 2000 (sim/mechanism_kit.hpp).
