@@ -48,25 +48,38 @@ std::unique_ptr<Machine> pitman_lift(BuildContext c) {
     auto exit = m->body("exit", {box(Vec3(1.5f, .3f, 2.0f), Material::Concrete)},
                         Vec3(5.3f, deck_end_y, 0), 0);
 
+    // The crank, massed part by part: a 3,080 kg rim, 2,000 kg of spokes, the
+    // 120 kg crank pin at +R, and opposite it a pin counterweight worth 545 kg at R. That
+    // weight cancels the pin and the half of the rod's 850 kg the pin carries:
+    // both act at R on opposite sides, so the crank is balanced at every angle
+    // and only the deck's side is left to the hand line and the deck's
+    // counterweight (vertical_route.cpp, the pitman's haul).
     std::vector<Part> crank_parts;
     for (int i = 0; i < 56; ++i) {
         const float angle = 2.0f * JPH_PI * i / 56.0f;
         auto rim = box(Vec3(.72f, .22f, .35f), Material::Steel,
                        Vec3(kRadius * std::cos(angle), kRadius * std::sin(angle), 0));
         rim.rotation = Quat::sRotation(Vec3::sAxisZ(), angle + JPH_PI * .5f);
+        rim.mass_kg = 55.0f;
         crank_parts.push_back(rim);
     }
     for (int i = 0; i < 4; ++i) {
         auto spoke = box(Vec3(kRadius, .18f, .28f), i % 2 ? Material::Rust : Material::Yellow);
         spoke.rotation = Quat::sRotation(Vec3::sAxisZ(), i * JPH_PI * .25f);
+        spoke.mass_kg = 500.0f;
         crank_parts.push_back(spoke);
     }
-    crank_parts.push_back(wheel(.65f, .55f, Vec3(kRadius, 0, 0)));
-    auto crank = m->body("crank", crank_parts, crank_center, 5200, kStart);
+    auto crank_pin_part = wheel(.65f, .55f, Vec3(kRadius, 0, 0));
+    crank_pin_part.mass_kg = 120.0f;
+    crank_parts.push_back(crank_pin_part);
+    auto pin_counterweight = box(Vec3(.7f, .55f, .4f), Material::Concrete, Vec3(-kRadius + .2f, 0, 0));
+    pin_counterweight.mass_kg = 554.0f;   // 545 kg at R, sat 0.2 m inside it
+    crank_parts.push_back(pin_counterweight);
+    auto crank = m->body("crank", crank_parts, crank_center, 5754, kStart);
     auto crank_hinge = m->hinge({}, crank, crank_center, -.02f, target + .02f);
-    // The nominal trace peaks near 310 kNm. A 600 kNm finite drive closes
-    // the full stroke and still stalls well short under the 3,000 kg case.
-    crank_hinge->GetMotorSettings().SetTorqueLimit(600000);
+    // No motor turns it: the route keeps the drive's record (its deck
+    // feedback) but never powers it. The rider's hand line does the work.
+    crank_hinge->GetMotorSettings().SetTorqueLimit(0);
 
     // 3.8 m across its guide, not 4: placed on the route, the deck's outer
     // face would otherwise run flush with the barrel helix's lower receiver,

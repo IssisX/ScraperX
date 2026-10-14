@@ -1432,6 +1432,9 @@ public:
         // Parkour step 5: the grappling hook, found on the 220 ring's
         // north-west corner, off the line from C's platform to the swing.
         build_hook_rack();
+        // The vertical route's late bodies (the pitman's deck counterweight),
+        // after every other kit body so older saves' lists still line up.
+        vertical_->build_late();
         // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
         crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
 
@@ -1510,6 +1513,7 @@ public:
         bool trapeze_drop = false;
         // A vertical machine's control: Action, one-shot.
         bool lift_action = false;
+        bool lift_haul = false;
         // The grappling hook: aim (a unit world vector), Fire and Release
         // one-shot, Reel held, Take one-shot.
         double hook_aim_x = 0.0;
@@ -1623,7 +1627,8 @@ public:
         }
         hook_pre_step(bodies, commands, delta_seconds);
 
-        vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0);
+        vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0,
+                            commands.lift_haul);
         kit_->pre_step(delta_seconds);
         crew_->pre_step(delta_seconds, bodies.GetPosition(player_id_), bodies.GetLinearVelocity(player_id_),
                         grounded_);
@@ -6118,6 +6123,7 @@ void Simulation::step_fixed() noexcept {
     commands.trapeze_action = trapeze_action_;
     commands.trapeze_drop = trapeze_drop_;
     commands.lift_action = lift_action_;
+    commands.lift_haul = lift_haul_;
     commands.hook_aim_x = hook_aim_x_;
     commands.hook_aim_y = hook_aim_y_;
     commands.hook_aim_z = hook_aim_z_;
@@ -6462,6 +6468,11 @@ bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
     return true;
 }
 
+bool Simulation::set_lift_haul(const bool held) noexcept {
+    lift_haul_ = held;
+    return true;
+}
+
 bool Simulation::request_lift_action() noexcept {
     if (lift_state().machine < 0) {
         return false;
@@ -6493,6 +6504,8 @@ LiftSnapshot Simulation::lift_state() const noexcept {
     result.tram_departs_s = route.tram_departs_s();
     result.derrick_iron_aboard = route.derrick_iron_aboard();
     result.derrick_holding = route.derrick_holding();
+    result.pitman = route.pitman();
+    result.pitman_haul_n = route.pitman_haul_n();
     return result;
 }
 

@@ -173,3 +173,30 @@ The native `workers` test checks all nine: each on its own floor and each walker
 route, with no shove.
 
 Next for life: a shout when a worker is startled, and workers on the higher bands.
+
+**Phase 6, the pitman lift is hauled by hand (native + touch).** It was "board, press RAISE, wait";
+now no motor turns it:
+- **Counterweights.** A 1,667.5 kg counterweight on a rope over two head sheaves balances the deck,
+  the rod's deck-side half and half a rider. A rope over a sheave balances at every height; the
+  crank's own pin-and-rod weight would not have, because the pitman's lift is lopsided (1.66× near
+  the bottom, 0.34× near the top). A 554 kg block on the crank opposite its pin cancels the pin
+  and the rod's other half.
+- **The haul.** On the deck, ACTION held (HAUL) pulls a hand line rigged as a gun tackle: each
+  newton at the hands lifts two. The hands pull at most 700 N, falling to nothing at 2.2 m/s of
+  line (a human force-speed limit, CHOSEN). The 2:1 is applied as an upward force on the deck; the
+  rider's own unweighting is folded into it.
+- **Brake and calls.** Let go, a brake on the deck's guide (30 kN) holds it. From the lower
+  receiver the same hold hauls the deck down on the call line (1:1). From the upper receiver it
+  frees the brake, and the empty deck (light by half a rider) rises at a governed 0.6 m/s.
+- **Placement and saves.** RAISE does nothing to it. The counterweight and its rope are built last
+  in the kit, so older saves' lists still line up.
+- **Proof.**
+  - Native `pitman`: RAISE does nothing; hauled halfway and let go, the deck holds within 4 mm for
+    4 s; the deck never outruns the hands (fastest 0.56 m/s); the haul from the lower to the upper
+    receiver takes 53 s.
+  - Touch `touch_machines`: hauled by holding ACTION, mast to pitman to helix to TP-340, with the
+    right fist checked closed on the line while hauling.
+- **Not tested:** the call line from the lower receiver and freeing the brake from the upper.
+- **Feel.** The 53 s haul may be long for a phone.
+
+Next: the cascade mast, barrel helix and crown gondola, each by a different decision.

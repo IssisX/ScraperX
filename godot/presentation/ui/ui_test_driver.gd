@@ -2317,13 +2317,29 @@ func _ride_machine(device: int, index: int, name: String, entry: Vector2, deck: 
 		exit = entry
 	if not (await _go(device, entry, 0.15, 8.0) and await _go(device, deck, 0.15, 6.0)):
 		return _fail("%s: the walk onto the deck stalled at %s" % [name, str(_position())])
-	if not await _offered(&"lift", "RAISE", name):
-		return _fail("%s: RAISE not offered on the deck (offered %s)" % [name, _action_label()])
-	_act(device)
-	if not await _wait_until(func() -> bool:
+	# The pitman lift is hauled by hand: ACTION held, not RAISE.
+	var hauled: bool = int(_native().get_lift_state()["pitman"]) == index
+	if hauled:
+		if not await _offered(&"haul", "HAUL"):
+			return _fail("%s: HAUL not offered on the deck (offered %s)" % [name, _action_label()])
+		_hold_act(device, true)
+		await _seconds(5.0)
+		if int(_main._arms.hand_poses()[0]) != _main.FirstPersonArms.POSE_LINE:
+			return _fail("%s: hauling, the right hand is not on the line (pose %d)" % [name,
+				int(_main._arms.hand_poses()[0])])
+		await _pose("machine_%d_haul" % index)
+	else:
+		if not await _offered(&"lift", "RAISE", name):
+			return _fail("%s: RAISE not offered on the deck (offered %s)" % [name, _action_label()])
+		_act(device)
+	var arrived: bool = await _wait_until(func() -> bool:
 			var lift: Dictionary = _native().get_lift_state()
-			return absf(float(lift["travels"][index]) - 1.0) < 0.01 and not bool(lift["moving"]) and \
-				bool(_ctx()["grounded"]), 90.0):
+			return absf(float(lift["travels"][index]) - 1.0) < 0.01 and (hauled or not bool(lift["moving"])) and \
+				bool(_ctx()["grounded"]), 90.0)
+	if hauled:
+		_hold_act(device, false)
+		await _seconds(0.3)
+	if not arrived:
 		return _fail("%s: the deck never reached its upper receiver (at %s, lift %s, grounded %s)" % [name,
 			str(_position()), str(_native().get_lift_state()), str(_ctx()["grounded"])])
 	await _pose("machine_%d_top" % index)
@@ -4118,6 +4134,18 @@ func _act(device: int) -> void:
 		_:
 			_key(KEY_E, true)
 			_key(KEY_E, false)
+
+
+# Holds ACTION down (or lets it go) on the device under test: a held verb,
+# like the pitman lift's HAUL.
+func _hold_act(device: int, pressed: bool) -> void:
+	match device:
+		InputRouter.Device.TOUCH:
+			_touch(1, _center(&"action"), pressed)
+		InputRouter.Device.GAMEPAD:
+			_button(JOY_BUTTON_X, pressed)
+		_:
+			_key(KEY_E, pressed)
 
 
 # Holds forward (+) or back (-) at `amount` of full throw on the device under

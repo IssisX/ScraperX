@@ -34,6 +34,7 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     // receivers sit at z -150.5 to -147.5, the deck north of them; the frame's
     // columns at z -168.3 and -140.3 stand clear of the north-west corner
     // column. Lower receiver 3.3 m over the origin: 291.25 m.
+    pitman_ = static_cast<int>(placed_.size());
     place("sx.pitman_lift.v1", {RVec3(-23.5, 287.95, -154.3), -0.5F * JPH_PI},
           {kPitmanStaticFirst, 3}, {kPitmanDynamicFirst, 3});
     // A steel walkway west from the mast's upper receiver (x -17.45) out
@@ -220,7 +221,50 @@ Route::InclineState Route::incline_state() const noexcept {
     return static_cast<InclineState>(static_cast<int>(targets_[static_cast<std::size_t>(incline_)] + .5F));
 }
 
-void Route::pre_step(float dt, bool action, std::uint64_t support) {
+void Route::build_late() {
+    if (pitman_ < 0 || pitman_counterweight_.valid()) {
+        return;
+    }
+    // The pitman's deck counterweight: a concrete block in a guide beside the
+    // deck's shaft, on the far side from its receivers, hung from the deck by
+    // a rope over two sheaves at the head. At the bottom of the deck's stroke
+    // it stands at the top of its own.
+    Placed &p = placed_[static_cast<std::size_t>(pitman_)];
+    Machine &m = *p.machine;
+    const float travel = p.exit_y - p.entry_y;
+    const RVec3 deck_at = kit_.body_position(p.deck);
+    const Vec3 deck_attach(-2.8F, .3F, 0.0F);       // in the deck's frame
+    const RVec3 deck_rope_at = deck_at + kit_.body_rotation(p.deck) * deck_attach;
+    const float head_y = p.exit_y + 6.0F;
+    // In the machine's frame: the deck's centre is x 0; the block at x -5.6.
+    const RVec3 block_at = m.point(Vec3(-5.6F, 0.0F, .6F)) +
+                           Vec3(0.0F, static_cast<float>(deck_at.GetY()) + travel - static_cast<float>(m.point(Vec3::sZero()).GetY()), 0.0F);
+    Part block = box(Vec3(.55F, .75F, .45F), Material::Concrete);
+    pitman_counterweight_ = kit_.add_body(kPitmanCounterweightEntity, {block}, block_at,
+                                          Quat::sRotation(Vec3::sAxisY(), m.context.placement.yaw),
+                                          kPitmanCounterweightKg, .5F);
+    kit_.set_damping(pitman_counterweight_, 0.0F, 0.0F);
+    // Its guide: travel down from where it starts.
+    (void)m.slider({}, pitman_counterweight_, Vec3::sAxisY(), -travel - .05F, .05F);
+    const RVec3 sheave_deck(deck_rope_at.GetX(), head_y + deck_at.GetY() - p.entry_y, deck_rope_at.GetZ());
+    const RVec3 block_top = block_at + Vec3(0.0F, .75F, 0.0F);
+    const RVec3 sheave_block(block_top.GetX(), sheave_deck.GetY(), block_top.GetZ());
+    const float length = static_cast<float>((sheave_deck.GetY() - deck_rope_at.GetY()) +
+                                            (sheave_block.GetY() - block_top.GetY()));
+    (void)kit_.add_rope(p.deck, deck_attach, sheave_deck, pitman_counterweight_, Vec3(0.0F, .75F, 0.0F),
+                        sheave_block, 1.0F, length, 80000.0F);
+    m.no_collision(p.deck, pitman_counterweight_);
+}
+
+void Route::pre_step(float dt, bool action, std::uint64_t support, bool haul) {
+    if (pitman_ >= 0) {
+        // The pitman is worked by the hands, never Action.
+        const Here here = at(support);
+        if (here.machine == pitman_) {
+            action = false;
+        }
+        placed_[static_cast<std::size_t>(pitman_)].machine->command({0.0F, false});
+    }
     if (action && incline_ >= 0) {
         // The slab incline: from its deck the plates work it, not Action;
         // from a receiver Action calls it there. Called down, its motor winds
@@ -330,6 +374,46 @@ void Route::pre_step(float dt, bool action, std::uint64_t support) {
     }
     for (auto &p : placed_) {
         p.machine->pre_step(dt);
+    }
+    pitman_step(haul, support);
+}
+
+void Route::pitman_step(const bool haul, const std::uint64_t support) {
+    pitman_haul_n_ = 0.0F;
+    if (pitman_ < 0) {
+        return;
+    }
+    Placed &p = placed_[static_cast<std::size_t>(pitman_)];
+    const Ref<SliderConstraint> &guide = p.machine->drives.front().translation_feedback;
+    const Here here = at(support);
+    const bool hands = haul && here.machine == pitman_;
+    const float rise = kit_.body_velocity(p.deck).GetY();   // m/s, up
+    auto &motor = guide->GetMotorSettings();
+    guide->SetMaxFrictionForce(kPitmanGuideFrictionN);
+    if (hands && here.role == Role::Deck) {
+        // The rider's haul: a gun tackle, one end on the deck, so the line
+        // runs through the hands at twice the deck's rise and each newton the
+        // hands pull lifts the rider-and-deck by two.
+        const float line = 2.0F * rise;
+        pitman_haul_n_ = kHaulMaxN * std::clamp(1.0F - line / kHaulLineMps, 0.0F, 1.0F);
+        guide->SetMotorState(EMotorState::Off);
+        world_.GetBodyInterface().AddForce(kit_.body_id(p.deck), Vec3(0.0F, 2.0F * pitman_haul_n_, 0.0F));
+    } else if (hands && here.role == Role::Entry) {
+        // The call line from the lower receiver: 1:1, down.
+        const float line = -rise;
+        pitman_haul_n_ = kHaulMaxN * std::clamp(1.0F - line / kHaulLineMps, 0.0F, 1.0F);
+        guide->SetMotorState(EMotorState::Off);
+        world_.GetBodyInterface().AddForce(kit_.body_id(p.deck), Vec3(0.0F, -pitman_haul_n_, 0.0F));
+    } else if (hands && here.role == Role::Exit) {
+        // From the upper receiver the hands free the brake; it governs.
+        guide->SetMotorState(EMotorState::Velocity);
+        motor.SetForceLimits(-kPitmanBrakeN, kPitmanBrakeN);
+        guide->SetTargetVelocity(kPitmanGovernedMps);
+    } else {
+        // Hands off: the brake holds the deck where it is.
+        guide->SetMotorState(EMotorState::Velocity);
+        motor.SetForceLimits(-kPitmanBrakeN, kPitmanBrakeN);
+        guide->SetTargetVelocity(0.0F);
     }
 }
 

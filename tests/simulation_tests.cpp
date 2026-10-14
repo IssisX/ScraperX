@@ -3871,9 +3871,10 @@ void run_mast() {
 }
 
 // The second of the owner's vertical machines: the pitman lift outside the
-// west face. A 600 kNm motor turns its 24 m crank through 160 degrees; the
-// crank pin drives an 18 m rod whose foot pulls the deck up its guide, 23.6 m,
-// slowing near both ends as the crank's geometry gears it down.
+// west face. Its 24 m crank turns through 160 degrees as the deck rises 23.6 m
+// on the crank's 18 m rod. No motor: a counterweight on a rope over the head
+// balances the deck and half a rider, and the rider hauls the rest by hand,
+// a gun tackle from the deck (Route::pitman_step). Let go, the brake holds.
 constexpr double kPitmanX = -23.5;
 constexpr double kPitmanDeckZ = -154.3;
 constexpr double kPitmanReceiverZ = -149.0;
@@ -3885,12 +3886,18 @@ bool pitman_ride(scraperx::sim::Simulation &s, double *ride_s) {
           s.lift_state().role == 1)) {
         return false;
     }
+    // RAISE does nothing to it.
     (void)s.request_lift_action();
+    if (!s.advance_frame(1.0).accepted || s.lift_state().travels[1] > 0.005) {
+        return false;
+    }
+    (void)s.set_lift_haul(true);
     const double start = s.snapshot().simulation_time_seconds;
     const bool up = wait_for(s, 90.0, [&s](const scraperx::sim::Snapshot &state) {
         const auto lift = s.lift_state();
-        return std::abs(lift.travels[1] - 1.0) < 0.005 && !lift.moving && state.player_grounded;
+        return std::abs(lift.travels[1] - 1.0) < 0.005 && state.player_grounded;
     });
+    (void)s.set_lift_haul(false);
     *ride_s = s.snapshot().simulation_time_seconds - start;
     return up && walk_to(s, kPitmanX, kPitmanReceiverZ, 6.0) && s.advance_frame(0.5).accepted &&
            s.lift_state().role == 3;
@@ -3904,12 +3911,40 @@ void run_pitman() {
     require(mast_ride(s).on_exit, "pitman: the cascade mast to its upper receiver");
     require(std::abs(s.lift_state().travels[1]) < 0.005,
             "pitman: left alone through the mast's ride, its deck must stay at its lower receiver");
+    {
+        // Hauled halfway and let go, the brake holds the rider where they are;
+        // the hands never pull the deck faster than half their line speed.
+        Simulation h(InitialSpawn::Ring264West);
+        (void)h.advance_frame(1.0);
+        require(mast_ride(h).on_exit && walk_to(h, -19.5, -149.25, 6.0) && walk_to(h, kPitmanX, kPitmanReceiverZ, 6.0) &&
+                    walk_to(h, kPitmanX, kPitmanDeckZ, 6.0) && h.advance_frame(0.5).accepted &&
+                    h.lift_state().role == 1,
+                "pitman: onto its deck");
+        (void)h.set_lift_haul(true);
+        double fastest = 0.0;
+        double pull = 0.0;
+        for (int tick = 0; tick < 90 * 60 && h.lift_state().travels[1] < 0.5; ++tick) {
+            require(h.advance_frame(scraperx::sim::Simulation::kFixedStepSeconds).accepted, "haul tick");
+            fastest = std::max(fastest, h.snapshot().support_point_linear_velocity.y);
+            pull = std::max(pull, h.lift_state().pitman_haul_n);
+        }
+        require(h.lift_state().travels[1] >= 0.5, "pitman: hauling must lift the deck");
+        require(fastest < 0.5 * scraperx::sim::vertical::Route::kHaulLineMps * 1.05,
+                "pitman: the deck never outruns the hands");
+        (void)h.set_lift_haul(false);
+        require(h.advance_frame(0.5).accepted, "let go");
+        const double held_at = h.lift_state().travels[1];
+        require(h.advance_frame(4.0).accepted && std::abs(h.lift_state().travels[1] - held_at) < 0.004 &&
+                    h.snapshot().player_grounded,
+                "pitman: let go, the brake must hold the deck and its rider");
+        std::cout << "  pitman haul: fastest_mps=" << fastest << " most_pull_n=" << pull << "\n";
+    }
     double ride_s = 0.0;
-    require(pitman_ride(s, &ride_s), "pitman: across the walkway, onto its deck, RAISE, and off at the top");
+    require(pitman_ride(s, &ride_s), "pitman: across the walkway, onto its deck, HAUL, and off at the top");
     const auto end = s.snapshot();
     require(end.death_count == 0 && end.player_grounded &&
                 end.support_entity_id == scraperx::sim::vertical::Route::kPitmanStaticFirst + 2 &&
-                end.player_position.y > 315.6 && end.player_position.y < 316.0 && ride_s > 15.0 && ride_s < 60.0,
+                end.player_position.y > 315.6 && end.player_position.y < 316.0 && ride_s > 15.0 && ride_s < 75.0,
             "pitman: standing on its upper receiver at 314.89 m, alive");
     std::cout << "PASS scraperx_sim pitman: ride_s=" << ride_s << " exit_y=" << end.player_position.y << '\n';
 }

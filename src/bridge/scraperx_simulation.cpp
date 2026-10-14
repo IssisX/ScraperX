@@ -278,6 +278,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_hook_state"), &ScraperXSimulation::get_hook_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_hook_aim", "direction"), &ScraperXSimulation::set_hook_aim);
     godot::ClassDB::bind_method(godot::D_METHOD("get_workers"), &ScraperXSimulation::get_workers);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_lift_haul", "held"), &ScraperXSimulation::set_lift_haul);
     godot::ClassDB::bind_method(godot::D_METHOD("get_worker_counts"), &ScraperXSimulation::get_worker_counts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_surface_below", "from", "reach"),
                                 &ScraperXSimulation::get_surface_below);
@@ -1019,6 +1020,10 @@ godot::Dictionary ScraperXSimulation::get_hook_state() const {
     return out;
 }
 
+bool ScraperXSimulation::set_lift_haul(const bool held) {
+    return simulation_->set_lift_haul(held);
+}
+
 godot::PackedFloat32Array ScraperXSimulation::get_workers() const {
     const sim::Snapshot state = simulation_->snapshot();
     godot::PackedFloat32Array out;
@@ -1165,6 +1170,8 @@ godot::Dictionary ScraperXSimulation::get_lift_state() const {
     out["tram_departs_s"] = state.tram_departs_s;
     out["derrick_iron_aboard"] = static_cast<std::int64_t>(state.derrick_iron_aboard);
     out["derrick_holding"] = state.derrick_holding;
+    out["pitman"] = static_cast<std::int64_t>(state.pitman);
+    out["pitman_haul_n"] = state.pitman_haul_n;
     godot::PackedFloat64Array travels;
     for (int i = 0; i < state.machine_count && i < static_cast<int>(state.travels.size()); ++i) {
         travels.push_back(state.travels[static_cast<std::size_t>(i)]);

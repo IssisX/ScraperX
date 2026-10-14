@@ -3,6 +3,7 @@
 // works them. Each machine runs on its own finite motor; the player's control
 // is the machine's own: from its deck, Action sends the deck to the other end;
 // from its lower or upper receiver, Action calls the deck to that receiver.
+// Several are worked by the body instead (see each below).
 #include "sim/vertical/vertical_machine.hpp"
 
 #include <cstdint>
@@ -34,8 +35,13 @@ public:
     Route &operator=(const Route &) = delete;
 
     // Write phase, before the one PhysicsSystem::Update. `support` is the
-    // entity the player stands on (0 when none).
-    void pre_step(float dt, bool action, std::uint64_t support);
+    // entity the player stands on (0 when none); `haul`, the player's hands
+    // held on a hand line (the pitman lift's).
+    void pre_step(float dt, bool action, std::uint64_t support, bool haul = false);
+
+    // Build-order tail: bodies added after every other kit body so an older
+    // save's kit lists still line up (the pitman's deck counterweight).
+    void build_late();
 
     [[nodiscard]] Here at(std::uint64_t support) const;
     [[nodiscard]] std::size_t size() const noexcept { return placed_.size(); }
@@ -75,6 +81,32 @@ public:
     // The slab's fall in its tower: the trolley's travel along the incline
     // (30 m at 60 degrees).
     static constexpr float kInclineSlabTravel = 34.641F;
+
+    // The pitman lift (-1 when not placed): worked by the rider's own hands.
+    // A counterweight on a rope over its head balances the deck, the rod's
+    // deck half and half a rider, so a rider hauling the hand line from its
+    // deck lifts only the other half of their own weight: the line is a gun
+    // tackle (one end on the deck), so each newton at the hands lifts two.
+    // Let go, the brake on the deck's guide holds it where it is. From the
+    // lower receiver the same hands haul it down (1:1, the call line); from
+    // the upper receiver they free the brake and the empty deck, lighter than
+    // its counterweight, rises governed.
+    [[nodiscard]] int pitman() const noexcept { return pitman_; }
+    [[nodiscard]] bool pitman_hauling() const noexcept { return pitman_haul_n_ > 0.0F; }
+    [[nodiscard]] float pitman_haul_n() const noexcept { return pitman_haul_n_; }
+    // The hands: at most kHaulMaxN, falling to nothing at kHaulLineMps of
+    // line through them (a human pull's force-speed limit, CHOSEN: a strong
+    // two-handed haul, about 2.2 m/s of line hand over hand at its fastest).
+    static constexpr float kHaulMaxN = 700.0F;
+    static constexpr float kHaulLineMps = 2.2F;
+    // The counterweight: deck 1,200 + rod's half 425 + half a rider 42.5 kg.
+    static constexpr float kPitmanCounterweightKg = 1667.5F;
+    static constexpr std::uint64_t kPitmanCounterweightEntity = 2975;
+    // The brake on the deck's guide, and the governed speed the empty deck
+    // rises at when freed from the upper receiver.
+    static constexpr float kPitmanBrakeN = 30000.0F;
+    static constexpr float kPitmanGovernedMps = .6F;
+    static constexpr float kPitmanGuideFrictionN = 150.0F;
 
     // Restore the Kit first, then this.
     [[nodiscard]] State state() const;
@@ -144,6 +176,7 @@ private:
     };
 
     void place(const char *id, Placement placement, EntityRange statics, EntityRange dynamics);
+    void pitman_step(bool haul, std::uint64_t support);
 
     kit::Kit &kit_;
     PhysicsSystem &world_;
@@ -160,6 +193,9 @@ private:
     // in targets_ (checkpointed).
     int derrick_ = -1;
     float incline_brake_n_ = 0.0F;
+    int pitman_ = -1;
+    BodyIndex pitman_counterweight_;
+    float pitman_haul_n_ = 0.0F;
 };
 
 } // namespace scraperx::sim::vertical

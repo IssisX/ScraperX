@@ -343,5 +343,8 @@ func frame(delta: float) -> Dictionary:
 	_verbs.clear()
 	var hook_held: bool = enabled and gameplay_active and (_keys.has(KEY_G) or _buttons.has(JOY_BUTTON_RIGHT_SHOULDER) or
 		(touch != null and touch.is_held(&"hook")))
+	var action_held: bool = enabled and gameplay_active and (_keys.has(KEY_E) or _buttons.has(JOY_BUTTON_X) or
+		(touch != null and touch.is_held(&"action")))
 	return {"move": move, "look": look, "verbs": verbs,
-		"crouch_held": crouch_held, "sprint_held": sprint_held, "hook_held": hook_held}
+		"crouch_held": crouch_held, "sprint_held": sprint_held, "hook_held": hook_held,
+		"action_held": action_held}

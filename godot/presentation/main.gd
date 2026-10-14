@@ -297,6 +297,8 @@ var _hook_line: MeshInstance3D
 var _hook_head: MeshInstance3D
 # Pigeons on the structure near the player; gulls at height.
 var _birds: Node3D
+# The hands on the pitman lift's hand line this frame.
+var _hauling := false
 # The yard crew, drawn from the native's workers.
 var _crew: Node3D
 # The structure at work: beacons on moving machines, steam from the vents.
@@ -513,6 +515,9 @@ func _process(delta: float) -> void:
 	_native.set_facing(facing.x, facing.y)
 	_dispatch(intent["verbs"], delta)
 	_native.set_crouch_input(_crouch_toggled or bool(intent["crouch_held"]))
+	# A hand line (the pitman lift's) is hauled while ACTION is held.
+	_hauling = bool(intent.get("action_held", false)) and _ctx.get("action", {}).get("id", &"") == &"haul"
+	_native.set_lift_haul(_hauling)
 	# The hook: aimed with the view; its reel turns while the button is held.
 	if bool(_ctx.get("has_hook", false)):
 		_native.set_hook_aim(-_camera.global_transform.basis.z)
@@ -940,6 +945,8 @@ func _perform_action() -> void:
 			_native.request_release()
 		&"hook_take":
 			_native.request_hook_take()
+		&"haul":
+			pass   # held, not tapped: see _process
 		&"pick_up":
 			_native.request_pick_up()
 		&"set_down":
@@ -1081,6 +1088,19 @@ func _read_context() -> Dictionary:
 				action = {"id": &"incline", "icon": &"down",
 					"label": "BRAKING" if float(lift["incline_brake_n"]) > 1000.0 else "BRAKE: THE TREADLE",
 					"detail": "%.1f M/S" % float(lift["incline_speed_mps"])}
+		elif lift_machine == int(lift["pitman"]):
+			# Worked by the hands: ACTION held hauls its line. On the deck a
+			# gun tackle lifts the rider; from the lower receiver the call
+			# line hauls the deck down; from the upper one the hands free its
+			# brake and the empty deck rises on its counterweight.
+			var pull := roundi(float(lift["pitman_haul_n"]))
+			if role == LIFT_ROLE_DECK and lift_travel < 0.995:
+				action = {"id": &"haul", "icon": &"up", "label": "HAUL",
+					"detail": ("%d N" % pull) if pull > 0 else "HOLD TO HAUL THE LINE"}
+			elif role == LIFT_ROLE_ENTRY and lift_travel > 0.01:
+				action = {"id": &"haul", "icon": &"down", "label": "HAUL DOWN", "detail": "THE CALL LINE"}
+			elif role == LIFT_ROLE_EXIT and lift_travel < 0.99:
+				action = {"id": &"haul", "icon": &"up", "label": "FREE BRAKE", "detail": "IT RISES EMPTY"}
 		elif role == LIFT_ROLE_DECK:
 			if float(lift["target"]) < 0.5:
 				action = {"id": &"lift", "icon": &"up", "label": "RAISE", "detail": lift_name}
@@ -1519,7 +1539,7 @@ func _arms_state(intent: Dictionary) -> Dictionary:
 		"carry_center": _carry_center(int(_ctx["carrying"])),
 		"carry_half": _carry_half(int(_ctx["carrying"])),
 		# The hook out: the right fist closes on its line.
-		"hook_line": _native.get_hook_state()["position"] if int(_ctx.get("hook_state", 0)) != 0 else null,
+		"hook_line": _hand_line_end(),
 		"move": intent["move"],
 		"bob_phase": _cam_bob_phase,
 	}
@@ -3374,6 +3394,17 @@ func _build_hook_view() -> void:
 	add_child(_hook_head)
 
 
+# Where a line the right hand holds runs to: the grappling hook when it is
+# out, or, hauling the pitman's hand line, straight up the line to the head
+# sheave; null when the hand holds no line.
+func _hand_line_end() -> Variant:
+	if int(_ctx.get("hook_state", 0)) != 0:
+		return _native.get_hook_state()["position"]
+	if _hauling:
+		return _camera.global_position + Vector3(0.0, 9.0, 0.0) - _camera.global_transform.basis.z * 0.5
+	return null
+
+
 # The hook in flight or bitten: its line runs from the right hand to it.
 # The arms are posed earlier in the frame, so the wrist is this frame's.
 func _render_hook() -> void:
@@ -3382,10 +3413,11 @@ func _render_hook() -> void:
 	var hook: Dictionary = _native.get_hook_state()
 	var out := int(hook["state"]) != 0
 	_hook_head.visible = out
-	if not out:
+	var end: Variant = _hand_line_end()
+	if end == null:
 		_hook_line.visible = false
 		return
-	var at: Vector3 = hook["position"]
+	var at: Vector3 = end
 	# Out of the right fist, which is closed on the line (FirstPersonArms
 	# POSE_LINE): its wrist, a palm's length along the line.
 	var wrist: Vector3 = _arms.wrist_positions()[0]

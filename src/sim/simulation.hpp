@@ -240,6 +240,10 @@ struct LiftSnapshot final {
     // motor holds the cradle down (called down, until a rider boards).
     int derrick_iron_aboard = 0;
     bool derrick_holding = false;
+    // The pitman lift (-1 when not placed), and the pull in the hands now
+    // when hauling its line (N; 0 when not).
+    int pitman = -1;
+    double pitman_haul_n = 0.0;
 };
 
 // A kit bin (the declared granular model, mechanism_kit.hpp): the kit body it
@@ -940,6 +944,9 @@ public:
     // A vertical machine: from its deck Action sends it to the other end;
     // from a receiver, Action calls it there. Refused off every machine.
     [[nodiscard]] bool request_lift_action() noexcept;
+    // The hands on a hand line, held (the pitman lift's haul): a held input,
+    // like set_move_input.
+    [[nodiscard]] bool set_lift_haul(bool held) noexcept;
     // The grappling hook: aimed along a world direction (the camera's), fired,
     // reeled in while held, let go; taken from its rack in reach.
     [[nodiscard]] bool set_hook_aim(double x, double y, double z) noexcept;
@@ -993,6 +1000,7 @@ private:
     bool trapeze_action_ = false;
     bool trapeze_drop_ = false;
     bool lift_action_ = false;
+    bool lift_haul_ = false;
     double hook_aim_x_ = 0.0;
     double hook_aim_y_ = 0.0;
     double hook_aim_z_ = -1.0;

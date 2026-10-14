@@ -184,6 +184,7 @@ public:
     // stride, grounded), and what the player has made them do.
     static constexpr std::int64_t kWorkerFloats = 8;
     [[nodiscard]] godot::PackedFloat32Array get_workers() const;
+    bool set_lift_haul(bool held);
     [[nodiscard]] godot::Dictionary get_worker_counts() const;
     // The height of the first surface below `from` within `reach`, or NAN.
     [[nodiscard]] double get_surface_below(godot::Vector3 from, double reach) const;
