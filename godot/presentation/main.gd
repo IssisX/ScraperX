@@ -34,9 +34,6 @@ const SwingView := preload("res://presentation/swing_view.gd")
 const VIEW_PITCH_HANGING := 0.32
 # Swinging from a bar: radians the grip sits above the frame's middle.
 const SWING_GRIP_ABOVE_CENTRE := 0.2
-# The head follows a swing more slowly than a hang settles: each reach moves
-# the grip a metre on, and the view eases after it rather than nodding.
-const VIEW_PITCH_SWING_RATE := 4.0
 const VIEW_PITCH_MANTLING := -0.3
 const VIEW_PITCH_VAULTING := -0.12
 # On a ladder or pipe the eye leans up toward the next holds, less than a hang
@@ -1377,9 +1374,7 @@ func _update_view_pitch_offset(delta: float) -> void:
 			target = VIEW_PITCH_MANTLING
 		TRAVERSAL_VAULTING:
 			target = VIEW_PITCH_VAULTING
-	var rate := VIEW_PITCH_SWING_RATE if int(_ctx.get("traversal", TRAVERSAL_NONE)) == TRAVERSAL_SWINGING \
-		else VIEW_PITCH_RATE
-	_view_pitch_offset = lerpf(_view_pitch_offset, target, 1.0 - exp(-rate * delta))
+	_view_pitch_offset = lerpf(_view_pitch_offset, target, 1.0 - exp(-VIEW_PITCH_RATE * delta))
 	if absf(_view_pitch_offset - target) < 0.0005:
 		_view_pitch_offset = target
 

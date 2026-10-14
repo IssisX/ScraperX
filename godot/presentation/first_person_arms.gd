@@ -526,7 +526,14 @@ func _pose_target(hand: Hand, pose: int, state: Dictionary, camera: Transform3D,
 			# Overhand round the bar the native says this hand holds: the wrist
 			# just under it on the near side, knuckles up and over the top,
 			# fingers closed round its far side.
-			var hold: Vector3 = state["hand_left"] if side < 0.0 else state["hand_right"]
+			# Drawn at the ledge grip's spacing about the native's two holds:
+			# the bar is often right at the face, and fists the native's
+			# 0.44 m apart sit outside the frame there.
+			var left: Vector3 = state["hand_left"]
+			var right_hold: Vector3 = state["hand_right"]
+			var along_bar := (right_hold - left).normalized() if left.distance_squared_to(right_hold) > 1.0e-6 \
+				else _grip_forward.cross(Vector3.UP).normalized()
+			var hold := (left + right_hold) * 0.5 + along_bar * (GRIP_HALF_SPAN * side)
 			var wrist := hold - _grip_forward * 0.03 + Vector3.DOWN * 0.06
 			var basis := _hand_basis(Vector3.UP * 0.9 + _grip_forward * 0.4, -_grip_forward)
 			return [wrist, basis, true, 30.0, 0.9, 0.6]
@@ -728,8 +735,9 @@ func view_fault(camera: Camera3D) -> String:
 	var inverse := camera.global_transform.affine_inverse()
 	for hand in _hands:
 		var name := "left" if hand.side < 0.0 else "right"
-		if not camera.is_position_in_frustum(hand.root.global_position):
-			return "the %s hand is off screen" % name
+		if not _on_screen(camera, hand.root.global_position):
+			return "the %s hand is off screen (at %s in the camera's frame)" % [name,
+				inverse * hand.root.global_position]
 		for segment: MeshInstance3D in [hand.upper, hand.fore]:
 			if not segment.visible:
 				continue
@@ -738,9 +746,17 @@ func view_fault(camera: Camera3D) -> String:
 			for i in 11:
 				var p := segment.global_position + axis * lerpf(-half, half, float(i) / 10.0)
 				var depth := -(inverse * p).z
-				if depth < VIEW_MIN_DEPTH and camera.is_position_in_frustum(p):
+				if depth < VIEW_MIN_DEPTH and _on_screen(camera, p):
 					return "the %s arm passes %.3f m from the lens" % [name, depth]
 	return ""
+
+
+# In front of the lens and projected inside the visible rect.
+# (is_position_in_frustum reads the renderer's last frustum, stale headless.)
+static func _on_screen(camera: Camera3D, point: Vector3) -> bool:
+	if camera.is_position_behind(point):
+		return false
+	return camera.get_viewport().get_visible_rect().has_point(camera.unproject_position(point))
 
 
 func anchored_error() -> float:

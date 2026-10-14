@@ -653,10 +653,10 @@ func _touch_monkey_bars() -> bool:
 	if _main._arms.hand_poses() != [11, 11] or grip_error < 0.0 or grip_error > 0.02:
 		return _fail("hands not gripping the native bar (poses %s, error %.3f m)" % [
 			str(_main._arms.hand_poses()), grip_error])
-	var view_fault: String = _main._arms.view_fault(_main._camera)
-	if view_fault != "":
-		return _fail("the arms do not read on screen: " + view_fault)
 	await _seconds(0.3)
+	var view_fault_settled: String = _main._arms.view_fault(_main._camera)
+	if view_fault_settled != "":
+		return _fail("the arms do not read on screen: " + view_fault_settled)
 	await _pose("swinging")
 	var crossed: bool = await _wait_until(
 		func() -> bool: return _native().get_traversal_left_hand().x > 4.95, 4.0)
@@ -698,10 +698,10 @@ func _touch_pipe_gallery() -> bool:
 	if _main._arms.hand_poses() != [11, 11] or grip_error < 0.0 or grip_error > 0.02:
 		return _fail("hands not gripping the pipe (poses %s, error %.3f m)" % [
 			str(_main._arms.hand_poses()), grip_error])
-	var view_fault: String = _main._arms.view_fault(_main._camera)
-	if view_fault != "":
-		return _fail("the arms do not read on screen: " + view_fault)
 	await _seconds(0.3)
+	var view_fault_settled: String = _main._arms.view_fault(_main._camera)
+	if view_fault_settled != "":
+		return _fail("the arms do not read on screen: " + view_fault_settled)
 	await _pose("gallery_swing")
 	var lip: bool = await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 1, 8.0)
 	if not lip:

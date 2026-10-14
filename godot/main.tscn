@@ -68,7 +68,7 @@ shadow_enabled = false
 [node name="Camera" type="Camera3D" parent="."]
 current = true
 fov = 82.0
-near = 0.25
+near = 0.05
 far = 2600.0
 
 [node name="HUD" type="CanvasLayer" parent="."]
