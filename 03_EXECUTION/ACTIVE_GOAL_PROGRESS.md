@@ -140,8 +140,7 @@ tower's base (GDD §19, Inhabitants):
 - **Touch.** `touch_workers` sees six workers and walks at the foreman; he steps aside and nobody
   is shoved. Rendered captures were inspected.
 - **Gaps:**
-  - Faces are blank.
-  - The crew has no voices or footsteps.
+  - The crew has no voice (footsteps, tool strikes and faces were added after this note).
   - The player's ledge, vault and wall probes do not yet ignore workers, so a worker could in
     principle be climbed.
   - There are no workers in the tower's bands yet.
@@ -159,5 +158,9 @@ show that they are running (`life/works.gd`):
 - **Gaps.** The existing vent stacks are all on the stack's back face, so no steam is visible from
   the start; a climber sees it. There are no lit windows or moving cloth yet.
 
-Next for life: crews on the decks, sound for the crew (footsteps, a shout when startled), and
-faces.
+**The crew heard and faced.** Each walker's footfalls sound where they land, and each working
+arm's strike sounds as it comes down, within 30 m. Heads have eyes and a brow. `touch_workers`
+fails if the crew is silent: 8 steps and 4 strikes were heard in its run. These are measured
+counts, not listened to.
+
+Next for life: crews on the decks, and a shout when a worker is startled.

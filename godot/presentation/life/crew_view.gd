@@ -7,7 +7,7 @@ extends Node3D
 ## aside it watches the player; startled, its arms come up and it leans back;
 ## shoved, its arms fly out.
 ##
-## Every part type is one MultiMesh across the whole crew: eleven draw calls
+## Every part type is one MultiMesh across the whole crew: thirteen draw calls
 ## (four of them cast shadows) however many workers there are.
 
 const WORKER_FLOATS := 8
@@ -31,13 +31,22 @@ const STEP_M := 0.75   # a stride: a full leg cycle is two of them
 const DRAW_RANGE_M := 160.0
 
 var _native: Object
+var _audio: Object
+# Per worker: the step and hammer beat last sounded, so each sounds once.
+var _last_step := PackedInt32Array()
+var _last_beat := PackedInt32Array()
+# Heard within this range only.
+const HEARD_M := 30.0
 var _parts := {}         # name -> MultiMesh
 var _clock := 0.0
 # The native's capsule centre is its stand height above the soles.
 const CENTRE_Y := 0.9
 
-func setup(native: Object) -> void:
+func setup(native: Object, audio: Object = null) -> void:
 	_native = native
+	_audio = audio
+	_last_step.resize(MAX_WORKERS)
+	_last_beat.resize(MAX_WORKERS)
 	var skin := _material(Color("b07a5a"), 0.75)
 	var trousers := _material(Color("2a3140"), 0.9)
 	var vest := _material(Color("e8611a"), 0.7, Color("e8611a"), 0.08)
@@ -56,6 +65,8 @@ func setup(native: Object) -> void:
 	_add_part(&"hand", _box(Vector3(0.08, 0.1, 0.05)), skin, 2, false)
 	_add_part(&"head", _sphere(0.105), skin, 1, false)
 	_add_part(&"hat", _hat_mesh(), hat, 1, false)
+	_add_part(&"eye", _sphere(0.016), _material(Color("17120e"), 0.4), 2, false)
+	_add_part(&"brow", _box(Vector3(0.16, 0.022, 0.03)), _material(Color("3a2a1e"), 0.9), 1, false)
 
 
 func update(delta: float, camera_position: Vector3, player_position: Vector3) -> void:
@@ -75,6 +86,7 @@ func update(delta: float, camera_position: Vector3, player_position: Vector3) ->
 			continue
 		_pose(w, centre - Vector3(0.0, CENTRE_Y, 0.0), data[b + 3], int(data[b + 4]), data[b + 5],
 			data[b + 6], player_position)
+		_sound(w, centre - Vector3(0.0, CENTRE_Y, 0.0), int(data[b + 4]), data[b + 6], camera_position)
 
 
 # Every figure in the crew, for a test: [feet, yaw, state] each.
@@ -162,6 +174,11 @@ func _pose(w: int, feet: Vector3, yaw: float, state: int, speed: float, stride: 
 	var head := neck + head_basis * Vector3(0.0, 0.14, 0.0)
 	_place(&"head", w, 0, body * Transform3D(head_basis, head))
 	_place(&"hat", w, 0, body * Transform3D(head_basis, head + head_basis * Vector3(0.0, 0.06, 0.0)))
+	# A face: two eyes and a brow, on the front of the head (+z is forward).
+	for side in 2:
+		var s := 0.038 if side == 0 else -0.038
+		_place(&"eye", w, side, body * Transform3D(head_basis, head + head_basis * Vector3(s, 0.012, 0.094)))
+	_place(&"brow", w, 0, body * Transform3D(head_basis, head + head_basis * Vector3(0.0, 0.045, 0.088)))
 	# Arms: from each shoulder, pitch forward (-) / back (+), roll out, elbow.
 	for side in 2:
 		var s := 1.0 if side == 0 else -1.0
@@ -174,6 +191,23 @@ func _pose(w: int, feet: Vector3, yaw: float, state: int, speed: float, stride: 
 		_place(&"upper_arm", w, side, body * _segment(shoulder, upper_basis, UPPER_ARM))
 		_place(&"forearm", w, side, body * _segment(elbow, fore_basis, FOREARM))
 		_place(&"hand", w, side, body * Transform3D(fore_basis, wrist + fore_basis * Vector3(0.0, -0.05, 0.0)))
+
+
+# A footfall each time a stride passes a step; a strike each time the
+# working arm comes down (the same beat _pose draws).
+func _sound(w: int, feet: Vector3, state: int, stride: float, listener: Vector3) -> void:
+	if _audio == null:
+		return
+	var step := int(floor(stride / STEP_M))
+	var near := feet.distance_to(listener) < HEARD_M
+	if step != _last_step[w]:
+		if near and _last_step[w] != 0:
+			_audio.worker_step(feet)
+		_last_step[w] = step
+	var beat := int(floor((_clock * 5.5 + float(w) * 1.7) / TAU))
+	if state == WORKING and beat != _last_beat[w] and near:
+		_audio.worker_strike(feet + Vector3(0.0, 0.9, 0.0))
+	_last_beat[w] = beat
 
 
 # A part hanging from `joint` along the basis's -y, `length` long.

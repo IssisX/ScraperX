@@ -787,7 +787,13 @@ func _touch_workers() -> bool:
 	var counts: Dictionary = _native().get_worker_counts()
 	if int(counts["stumbles"]) != 0:
 		return _fail("the foreman was shoved instead of stepping aside")
-	_detail = "yields=%d startles=%d" % [int(counts["yields"]), int(counts["startles"])]
+	# The crew is heard: footsteps from the walkers, strikes from the workers.
+	var audio: Object = _main._audio
+	if int(audio.worker_steps) == 0 or int(audio.worker_strikes) == 0:
+		return _fail("the crew was silent (steps %d, strikes %d)" % [int(audio.worker_steps),
+			int(audio.worker_strikes)])
+	_detail = "yields=%d startles=%d steps=%d strikes=%d" % [int(counts["yields"]), int(counts["startles"]),
+		int(audio.worker_steps), int(audio.worker_strikes)]
 	return true
 
 

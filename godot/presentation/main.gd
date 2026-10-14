@@ -390,7 +390,7 @@ func _ready() -> void:
 	_birds.setup(_native, _audio)
 	_crew = CrewView.new()
 	add_child(_crew)
-	_crew.setup(_native)
+	_crew.setup(_native, _audio)
 
 	# A saved climb continues; otherwise the playtest start point (pause
 	# menu), before the native clock moves.

@@ -478,6 +478,22 @@ func _update_birds(position: Vector3, delta: float) -> void:
 		sin(angle) * reach), -6.0, randf_range(0.9, 1.15), BUS_AMBIENCE)
 
 
+# One of the yard crew's footsteps, heard from where it fell.
+var worker_steps := 0
+var worker_strikes := 0
+
+
+func worker_step(at: Vector3) -> void:
+	worker_steps += 1
+	_play_at(&"step_concrete", at, -11.0, randf_range(0.85, 1.0), BUS_AMBIENCE)
+
+
+# A worker's tool striking its work.
+func worker_strike(at: Vector3) -> void:
+	worker_strikes += 1
+	_play_at(&"clang", at, -13.0, randf_range(1.1, 1.35), BUS_AMBIENCE)
+
+
 # A flock flushed at `at`: its wings, heard from where it rose.
 func flutter(at: Vector3) -> void:
 	_play_at(&"flutter", at, -4.0, randf_range(0.9, 1.1), BUS_AMBIENCE)
