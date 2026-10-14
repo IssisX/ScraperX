@@ -717,6 +717,32 @@ func wrist_positions() -> Array:
 
 # Worst distance between a rendered wrist and the point the native ledge
 # implies for it, over hands currently anchored; -1 when none is anchored.
+# What a test can ask of the picture, without looking at it: "" when every
+# hand is on screen and no drawn part of either arm comes within
+# VIEW_MIN_DEPTH of the lens (nearer, the near plane slices it open); else
+# what is wrong.
+const VIEW_MIN_DEPTH := 0.15
+
+
+func view_fault(camera: Camera3D) -> String:
+	var inverse := camera.global_transform.affine_inverse()
+	for hand in _hands:
+		var name := "left" if hand.side < 0.0 else "right"
+		if not camera.is_position_in_frustum(hand.root.global_position):
+			return "the %s hand is off screen" % name
+		for segment: MeshInstance3D in [hand.upper, hand.fore]:
+			if not segment.visible:
+				continue
+			var half: float = (segment.mesh as CylinderMesh).height * 0.5
+			var axis := segment.global_transform.basis.y.normalized()
+			for i in 11:
+				var p := segment.global_position + axis * lerpf(-half, half, float(i) / 10.0)
+				var depth := -(inverse * p).z
+				if depth < VIEW_MIN_DEPTH and camera.is_position_in_frustum(p):
+					return "the %s arm passes %.3f m from the lens" % [name, depth]
+	return ""
+
+
 func anchored_error() -> float:
 	var worst := -1.0
 	for hand in _hands:
