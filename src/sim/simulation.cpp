@@ -144,6 +144,19 @@ constexpr float kStumbleMinimumSpeed = 3.0F;
 // kSlideSteerAcceleration. It ends when the speed falls to the crouch walk's
 // (kPlayerMaximumRelativeSpeed * kCrouchSpeedScale), the body stands or
 // leaves the ground. Limitation: on a slope it is braked as on the flat.
+// Parkour step 3: the speed vault. At kSpeedVaultMinimumSpeed or more along
+// the vault, its crossing takes the run's own time (travel / speed, never
+// under kSpeedVaultMinimumSeconds) instead of kVaultDurationSeconds, so the
+// body goes over at the run's pace and leaves at it -- the fixed duration
+// carried a sprint's 8 m/s down to about 1 m/s mid-crossing. The vault keeps
+// speeds up to a sprint's (it capped them at a walk's). At a run it is offered
+// and taken from kSpeedVaultLookaheadSeconds of travel ahead (up to
+// kSpeedVaultMaximumReach): from arm's length a 0.95 m rail at 8 m/s would need
+// the body lifted a metre in a tenth of a second.
+constexpr double kSpeedVaultMinimumSpeed = 6.0;
+constexpr double kSpeedVaultMinimumSeconds = 0.22;
+constexpr float kSpeedVaultLookaheadSeconds = 0.25F;
+constexpr float kSpeedVaultMaximumReach = 2.0F;
 constexpr float kSlideMinimumSpeed = 5.0F;
 constexpr float kSlideFriction = 0.35F;
 constexpr float kSlideSteerAcceleration = 2.0F;
@@ -2108,7 +2121,8 @@ private:
                                          const float minimum_rise,
                                          const float maximum_rise,
                                          const bool require_supported_landing,
-                                         const bool see_past_holds = false) const noexcept {
+                                         const bool see_past_holds = false,
+                                         const float reach = kTraversalReach) const noexcept {
         LedgeProbe probe;
         if (facing.IsNearZero()) {
             return probe;
@@ -2122,10 +2136,10 @@ private:
         // just above the lowest rise this probe takes.
         const double low_y = static_cast<double>(feet_y) + minimum_rise + kLowWallProbeAbove;
         const JPH::RVec3 low_origin(origin.GetX(), low_y, origin.GetZ());
-        if (!cast_wall(origin, facing * (kTraversalReach + kPlayerRadius), see_past_holds, wall_hit,
+        if (!cast_wall(origin, facing * (reach + kPlayerRadius), see_past_holds, wall_hit,
                        wall_point) &&
             (low_y >= origin.GetY() ||
-             !cast_wall(low_origin, facing * (kTraversalReach + kPlayerRadius), see_past_holds, wall_hit,
+             !cast_wall(low_origin, facing * (reach + kPlayerRadius), see_past_holds, wall_hit,
                         wall_point))) {
             return probe;
         }
@@ -3367,6 +3381,18 @@ private:
         attach_hang_arms(bodies);
     }
 
+    // How far ahead a vault is offered and taken: arm's length at a walk; at
+    // a run (kSpeedVaultMinimumSpeed) a quarter second's travel, up to 2 m --
+    // a speed vault takes off well short of the rail, not at it.
+    [[nodiscard]] float vault_reach(const JPH::BodyInterface &bodies) const noexcept {
+        const JPH::Vec3 relative = bodies.GetLinearVelocity(player_id_) - airborne_inherited_velocity_;
+        const float along = relative.GetX() * facing_.GetX() + relative.GetZ() * facing_.GetZ();
+        if (along < static_cast<float>(kSpeedVaultMinimumSpeed)) {
+            return kTraversalReach;
+        }
+        return std::clamp(along * kSpeedVaultLookaheadSeconds, kTraversalReach, kSpeedVaultMaximumReach);
+    }
+
     [[nodiscard]] bool try_begin_ground_traversal(JPH::BodyInterface &bodies) noexcept {
         if (!grounded_ || facing_.IsNearZero()) {
             return false;
@@ -3376,7 +3402,7 @@ private:
         const float feet_y = origin.GetY() - kPlayerHalfHeight;
 
         const LedgeProbe vault_probe =
-            probe_ledge(origin, facing_, kVaultMinimumRise, kVaultMaximumRise, false);
+            probe_ledge(origin, facing_, kVaultMinimumRise, kVaultMaximumRise, false, false, vault_reach(bodies));
         if (vault_probe.valid) {
             JPH::RVec3 landing_centre;
             JPH::BodyID landing_body;
@@ -3533,17 +3559,49 @@ private:
                            0.0F,
                            player_velocity.GetZ() - support_velocity.GetZ());
         const float relative_speed = relative.Length();
-        if (relative_speed > kPlayerMaximumRelativeSpeed) {
-            relative = relative * (kPlayerMaximumRelativeSpeed / relative_speed);
+        const float speed_cap = kPlayerMaximumRelativeSpeed * static_cast<float>(kSprintSpeedScale);
+        if (relative_speed > speed_cap) {
+            relative = relative * (speed_cap / relative_speed);
         }
 
         const double travel_x = landing_centre.GetX() - origin.GetX();
         const double travel_z = landing_centre.GetZ() - origin.GetZ();
         const double travel_squared = travel_x * travel_x + travel_z * travel_z;
+        // A speed vault crosses at the run's own pace (see
+        // kSpeedVaultMinimumSpeed); a slower one takes a vault's time.
+        const double along_speed =
+            travel_squared > 1.0e-6
+                ? (relative.GetX() * travel_x + relative.GetZ() * travel_z) / std::sqrt(travel_squared)
+                : 0.0;
+        double vault_seconds = kVaultDurationSeconds;
+        traversal_vault_descend_at_ = 0.5F;
+        traversal_speed_vault_ = along_speed >= kSpeedVaultMinimumSpeed;
+        if (traversal_speed_vault_) {
+            vault_seconds = std::max(kSpeedVaultMinimumSeconds, std::sqrt(travel_squared) / along_speed);
+            // Crossing at a run's pace the body is still over the top at the
+            // half: it holds its apex until it is past the far edge (the top's
+            // depth felt by down-rays every 0.1 m past the face).
+            const JPH::Vec3 across_dir(static_cast<float>(travel_x), 0.0F, static_cast<float>(travel_z));
+            const JPH::Vec3 dir = across_dir.Normalized();
+            float depth = 0.0F;
+            for (int step = 1; step <= 14; ++step) {
+                const float along = 0.1F * static_cast<float>(step);
+                JPH::RayCastResult hit;
+                if (!cast_ray(probe.wall_point + dir * along + JPH::Vec3(0.0F, 0.3F, 0.0F),
+                              JPH::Vec3(0.0F, -0.4F, 0.0F), hit)) {
+                    break;
+                }
+                depth = along;
+            }
+            const float far_edge = static_cast<float>(JPH::Vec3(probe.wall_point - origin).Dot(dir)) + depth +
+                                   0.1F + kPlayerRadius;
+            traversal_vault_descend_at_ =
+                std::clamp(far_edge / static_cast<float>(std::sqrt(travel_squared)), 0.5F, 1.0F);
+        }
         traversal_vault_horizontal_slope_ = travel_squared > 1.0e-6
             ? std::clamp(static_cast<float>(
-                  kVaultDurationSeconds * (relative.GetX() * travel_x +
-                                           relative.GetZ() * travel_z) / travel_squared),
+                  vault_seconds * (relative.GetX() * travel_x +
+                                   relative.GetZ() * travel_z) / travel_squared),
                   0.0F, 3.0F)
             : 0.0F;
 
@@ -3597,7 +3655,7 @@ private:
         traversal_local_target_ = to_support_local(bodies, traversal_target_body_, landing_centre);
         traversal_progress_ = 0.0;
         // Rising clear first adds its time: the crossing keeps a vault's.
-        traversal_duration_ = kVaultDurationSeconds / (1.0 - traversal_vault_clear_progress_);
+        traversal_duration_ = vault_seconds / (1.0 - traversal_vault_clear_progress_);
         traversal_stall_ticks_ = 0;
         traversal_desired_ = origin;
         traversal_exit_relative_velocity_ = relative;
@@ -3663,9 +3721,12 @@ private:
             } else if (progress < 0.5F) {
                 height = start.GetY() +
                          (apex.GetY() - start.GetY()) * smoothstep(0.0F, 1.0F, progress * 2.0F);
+            } else if (progress < traversal_vault_descend_at_) {
+                height = apex.GetY();
             } else {
+                const float down = traversal_vault_descend_at_;
                 height = apex.GetY() + (target.GetY() - apex.GetY()) *
-                                           smoothstep(0.0F, 1.0F, (progress - 0.5F) * 2.0F);
+                                           smoothstep(0.0F, 1.0F, (progress - down) / (1.0F - down));
             }
             return JPH::RVec3(start.GetX() + (target.GetX() - start.GetX()) * horizontal,
                               height,
@@ -3732,6 +3793,14 @@ private:
     void resolve_traversal_outcome(JPH::BodyInterface &bodies) noexcept {
         if (traversal_state_ == TraversalState::Hanging || traversal_state_ == TraversalState::Swinging) {
             return;   // held by the arms, nothing placed to fall behind
+        }
+        if (traversal_state_ == TraversalState::Vaulting && traversal_speed_vault_ &&
+            traversal_progress_ >= traversal_vault_descend_at_) {
+            // Past the far edge at the apex: the run's speed carries on and
+            // gravity brings the body down where it will.
+            flight_from_jump_ = true;
+            complete_traversal(bodies);
+            return;
         }
         const JPH::RVec3 actual = bodies.GetPosition(player_id_);
         const float error = JPH::Vec3(actual - traversal_desired_).Length();
@@ -4570,6 +4639,8 @@ private:
 
     void clear_traversal() noexcept {
         drop_hang_arms();
+        traversal_speed_vault_ = false;
+        traversal_vault_descend_at_ = 0.5F;
         traversal_state_ = TraversalState::None;
         traversal_normal_ = JPH::Vec3::sZero();
         hands_[0].valid = false;
@@ -4609,7 +4680,7 @@ private:
         const JPH::RVec3 origin = bodies.GetPosition(player_id_);
         if (grounded_) {
             const LedgeProbe vault_probe =
-                probe_ledge(origin, facing_, kVaultMinimumRise, kVaultMaximumRise, false);
+                probe_ledge(origin, facing_, kVaultMinimumRise, kVaultMaximumRise, false, false, vault_reach(bodies));
             if (vault_probe.valid) {
                 JPH::RVec3 landing_centre;
                 JPH::BodyID landing_body;
@@ -5157,6 +5228,10 @@ public:
     bool sliding_ = false;
     JPH::Vec3 slide_direction_ = JPH::Vec3::sZero();
     std::uint64_t slide_count_ = 0;
+    // The vault's progress at which it starts down (0.5, or past the far edge).
+    float traversal_vault_descend_at_ = 0.5F;
+    // A speed vault ends past the far edge in free flight, not on a placed descent.
+    bool traversal_speed_vault_ = false;
     JPH::Vec3 roll_direction_{JPH::Vec3::sZero()};
     float roll_entry_speed_ = 0.0F;
     double roll_blocked_loss_ = 0.0;

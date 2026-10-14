@@ -6840,11 +6840,54 @@ void run_slide() {
               << "\n";
 }
 
+// Parkour step 3: the speed vault, over the proving ground's 0.95 m rail at
+// x = 5. At a sprint the vault crosses at the run's pace and leaves at it;
+// the scripted 0.38 s crossing used to carry 8 m/s down to about 1 m/s.
+void run_speed_vault() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    Simulation s(InitialSpawn::VaultApproach);
+    require(s.advance_frame(0.3).accepted, "speed-vault settle");
+    require(s.set_facing(1.0, 0.0) && s.set_move_input(1.0, 0.0) && s.set_sprint_input(true), "speed-vault sprint");
+    bool requested = false;
+    bool vaulted = false;
+    double slowest = 1.0e9;
+    double entry = 0.0;
+    double exit_speed = 0.0;
+    for (int tick = 0; tick < 90 * 3; ++tick) {
+        const Snapshot n = s.snapshot();
+        if (!requested && n.ledge_available && n.player_position.x > 3.0) {
+            entry = std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z);
+            require(s.request_traversal(), "speed-vault request");
+            requested = true;
+        }
+        require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "speed-vault tick");
+        const Snapshot m = s.snapshot();
+        if (m.traversal_state == TraversalState::Vaulting) {
+            vaulted = true;
+            slowest = std::min(slowest, m.player_linear_velocity.x);
+        } else if (vaulted) {
+            exit_speed = std::hypot(m.player_linear_velocity.x, m.player_linear_velocity.z);
+            break;
+        }
+    }
+    require(requested && vaulted, "a sprint at the rail must vault it");
+    require(entry > 7.5, "the run-up must be a sprint");
+    require(slowest > 6.0, "a speed vault must cross at the run's pace, not slow to a walk over the rail");
+    require(exit_speed > 7.5, "a speed vault must leave at the run's speed");
+    require(s.snapshot().player_position.x > 5.6 && s.snapshot().death_count == 0, "the speed vault must land past the rail");
+    std::cout << "PASS scraperx_sim speed vault: entry_mps=" << entry << " slowest_over_mps=" << slowest
+              << " exit_mps=" << exit_speed << "\n";
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
         run_brachiation();
         run_pipe_gallery();
         run_slide();
+        run_speed_vault();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -9093,6 +9136,7 @@ int main() {
     run_brachiation();
     run_pipe_gallery();
     run_slide();
+    run_speed_vault();
     run_ascent();
 
     return EXIT_SUCCESS;
