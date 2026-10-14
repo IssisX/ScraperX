@@ -146,4 +146,18 @@ tower's base (GDD §19, Inhabitants):
     principle be climbed.
   - There are no workers in the tower's bands yet.
 
-Next for life: the structure in motion (steam, beacons, lit windows), then crews on the decks.
+**Life L3, the structure at work (Godot, presentation only).** The world's machines and stacks
+show that they are running (`life/works.gd`):
+- **Beacons.** Every kit machine of 250 kg or more (65 of them) carries an amber beacon on its top.
+  It turns and flashes while that machine actually moves (its speed sampled each frame, as the audio
+  hears it) and for 2.5 s after; a still machine's beacon is dark. All beacons are two MultiMesh
+  draws.
+- **Steam.** The tower stack's vent stacks breathe, each on its own 7 s rhythm. A pool of four
+  emitters follows the vents nearest the camera.
+- **Proof.** `touch_works`, beside the traction tram: 65 beacons, 4 lit while the machines moved,
+  and a vent steaming in sight. Rendered captures were inspected.
+- **Gaps.** The existing vent stacks are all on the stack's back face, so no steam is visible from
+  the start; a climber sees it. There are no lit windows or moving cloth yet.
+
+Next for life: crews on the decks, sound for the crew (footsteps, a shout when startled), and
+faces.

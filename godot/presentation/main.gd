@@ -24,6 +24,7 @@ const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
 const Birds := preload("res://presentation/life/birds.gd")
 const CrewView := preload("res://presentation/life/crew_view.gd")
+const Works := preload("res://presentation/life/works.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
@@ -298,6 +299,9 @@ var _hook_head: MeshInstance3D
 var _birds: Node3D
 # The yard crew, drawn from the native's workers.
 var _crew: Node3D
+# The structure at work: beacons on moving machines, steam from the vents.
+var _works: Node3D
+var _vent_tops := PackedVector3Array()
 # Per bin: the rubble layer on its floor (null for a static bin, whose
 # contents cannot be seen), that floor's box, and its stream.
 var _kit_bin_layers: Array = []
@@ -413,6 +417,12 @@ func _ready() -> void:
 		_pitch = 0.06
 
 	_build_kit()
+	_works = Works.new()
+	add_child(_works)
+	_works.setup(_vent_tops)
+	for m in _machines.size():
+		if float(_machines[m]["mass"]) >= Works.BEACON_MIN_KG:
+			_works.add_beacon(_kit_bodies[int(_machines[m]["body"])], _machines[m]["top"], m)
 	_slingshot_view = SlingshotView.new()
 	add_child(_slingshot_view)
 	_slingshot_view.setup(self)
@@ -2228,6 +2238,8 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 			_add_box("VentStack", Vector3(0.8, 2.4, 0.8),
 				Vector3(cx + sx * (STACK_HALF_EXTENT - 2.2), y + 1.2,
 					cz - STACK_HALF_EXTENT + 2.2), mill_scale)
+			_vent_tops.append(Vector3(cx + sx * (STACK_HALF_EXTENT - 2.2), y + 2.45,
+				cz - STACK_HALF_EXTENT + 2.2))
 			_add_box("LampFitting", Vector3(0.5, 0.3, 0.7),
 				Vector3(cx + sx * (inner_half - 0.6), y + 2.6, cz), lamp_material)
 			var lamp := OmniLight3D.new()
@@ -3161,7 +3173,8 @@ func _build_kit() -> void:
 				float(_native.get_kit_body_mass(body)) >= MACHINE_MIN_KG:
 			_machines.append({"body": body, "tip": _farthest_corner(parts), "last_tip": Vector3.INF,
 				"last_at": Vector3.INF, "speed": 0.0, "turning": false, "at": Vector3.ZERO,
-				"tip_at": Vector3.ZERO})
+				"tip_at": Vector3.ZERO, "mass": float(_native.get_kit_body_mass(body)),
+				"top": _top_centre(parts)})
 	var statics := Node3D.new()
 	statics.name = "KitStatics"
 	_kit_root.add_child(statics)
@@ -3282,6 +3295,24 @@ func _build_kit() -> void:
 
 
 # The corner of a body's parts farthest from its origin, in its own frame.
+# The middle of a body's top, in its own frame: where a beacon sits.
+func _top_centre(parts: PackedFloat32Array) -> Vector3:
+	var low := Vector3.INF
+	var high := -Vector3.INF
+	for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
+		var basis := Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9]))
+		var centre := Vector3(parts[p + 3], parts[p + 4], parts[p + 5])
+		for corner in 8:
+			var flip := Vector3(1.0 if corner & 1 else -1.0, 1.0 if corner & 2 else -1.0,
+				1.0 if corner & 4 else -1.0)
+			var at := centre + basis * (flip * Vector3(parts[p], parts[p + 1], parts[p + 2]))
+			low = low.min(at)
+			high = high.max(at)
+	if low == Vector3.INF:
+		return Vector3.ZERO
+	return Vector3((low.x + high.x) * 0.5, high.y, (low.z + high.z) * 0.5)
+
+
 func _farthest_corner(parts: PackedFloat32Array) -> Vector3:
 	var best := Vector3.ZERO
 	for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
@@ -3320,6 +3351,8 @@ func _sample_machines(delta: float) -> void:
 		machine["last_tip"] = tip
 		machine["last_at"] = at
 	_audio.update_machines(delta, _machines)
+	if _works != null:
+		_works.update(delta, _camera.global_position, _machines)
 
 
 func _build_hook_view() -> void:

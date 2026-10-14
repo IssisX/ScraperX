@@ -34,6 +34,7 @@ const SCENARIOS := {
 	"touch_hook": 39,
 	"touch_birds": 8,
 	"touch_workers": 8,
+	"touch_works": 27,
 	"touch_chute": 9,
 	"touch_lethal_feedback": 9,
 	"touch_pause": 8,
@@ -244,6 +245,8 @@ func _run() -> void:
 			ok = await _touch_birds()
 		"touch_workers":
 			ok = await _touch_workers()
+		"touch_works":
+			ok = await _touch_works()
 		"touch_chute":
 			ok = await _touch_chute()
 		"touch_lethal_feedback":
@@ -730,6 +733,32 @@ func _touch_hang(climb: bool) -> bool:
 # Life L2: the yard crew. From the start, six workers are at their work on
 # the grade. The player walks straight at the foreman as he sets off: he
 # steps aside and watches them by, and nobody is shoved.
+# Life L3: the structure at work. Beside the traction tram, which shuttles
+# on its own: its beacon turns while it moves and goes dark when it stops,
+# and the stack's vents breathe steam in sight of the player.
+func _touch_works() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var works: Node3D = _main._works
+	if works.beacon_count() == 0:
+		return _fail("no machine carries a beacon")
+	var lit: bool = await _wait_until(func() -> bool: return works.lit_count() >= 1, 20.0)
+	if not lit:
+		return _fail("no beacon lit in 20 s beside a shuttling tram")
+	await _pose("works")
+	var steaming: bool = await _wait_until(func() -> bool: return works.steaming_count() >= 1, 8.0)
+	if not steaming:
+		return _fail("no vent breathed steam in sight")
+	var vent: Vector3 = works.steaming_at()[0]
+	var to: Vector3 = vent - _main._camera.global_position
+	_main._yaw = atan2(-to.x, -to.z)
+	_main._pitch = atan2(to.y, Vector2(to.x, to.z).length())
+	await _seconds(1.5)
+	await _pose("steam")
+	_detail = "beacons=%d lit=%d steaming=%d" % [works.beacon_count(), works.lit_count(),
+		works.steaming_count()]
+	return true
+
+
 func _touch_workers() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var figures: Array = _main._crew.figures()
