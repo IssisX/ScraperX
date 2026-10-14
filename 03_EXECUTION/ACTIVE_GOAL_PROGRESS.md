@@ -26,3 +26,9 @@ has not been checked against its scope here.
 continue, the title, the top and the licences are done (see the rows). The landing, roll and edge code was
 reviewed and repaired, and beams now balance by the pendulum. Next: stumbles from support acceleration and
 off-axis impacts, then phase 6's machine-control repetition.
+
+**Owner decisions (2026-10-14).** Movement should feel acrobatic and primate-like. A grappling hook
+comes later, as a toy like the slingshot (it may skip things; it is never the intended route), found as an
+extra about 25-30% up the structure (around 200-240 m) where finding it feels like a reward. Order: the
+draw-call repair and a build first; then the parkour overhaul (physical ledge catches and mantles,
+brachiation along bars and pipes, slides and speed vaults, wall-runs), then the hook.
