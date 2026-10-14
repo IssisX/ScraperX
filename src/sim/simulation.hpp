@@ -931,6 +931,9 @@ public:
     [[nodiscard]] bool set_hook_reel(bool held) noexcept;
     [[nodiscard]] bool request_hook_release() noexcept;
     [[nodiscard]] bool request_hook_take() noexcept;
+    // The height of the first surface straight below (x, y, z) within reach
+    // (at most 2 km), the player ignored; false when there is none. Read only.
+    [[nodiscard]] bool surface_below(double x, double y, double z, double reach, double &hit_y) const noexcept;
     // A saved climb: the committed checkpoint (where the player last stood
     // firm, every machine with it) and the tick, as bytes for this build.
     // load_game restores the world from one as a death would, without

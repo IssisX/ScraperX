@@ -180,6 +180,8 @@ public:
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;
     [[nodiscard]] godot::Dictionary get_hook_state() const;
+    // The height of the first surface below `from` within `reach`, or NAN.
+    [[nodiscard]] double get_surface_below(godot::Vector3 from, double reach) const;
     bool set_hook_aim(godot::Vector3 direction);
     bool request_hook_fire();
     bool set_hook_reel(bool held);

@@ -98,3 +98,20 @@ Old saves load: the kit's body list in a save may be shorter than the current wo
 gallery and the hook rack added bodies, built last), and the missing tail keeps its current state.
 No test yet loads a save written before them.
 Next: place the wall-run and brachiation in the tower.
+
+**Life L1, birds (Godot, presentation only).** The world had no living thing in it. Now:
+- **Pigeons.** Flocks of 4–8 stand on real surfaces near the player. Each bird's footing is the native's
+  first surface below it (`get_surface_below`, a read-only ray that ignores the player). They peck,
+  turn and hop.
+- **Flushing.** A flock flushes when the player comes within 4.5 m, runs at it from 9 m, or lands hard
+  within 14 m. It rises with a clatter of wings, wheels round and comes down on another real surface.
+  If no surface is found, it flies off.
+- **Gulls.** Above 60 m, gulls circle at the player's height.
+- **Cost.** All birds are one MultiMesh (one draw call), wings beat in the vertex shader, and the
+  native probes are capped at 10 a frame.
+- **Proof.** `touch_birds` runs at a flock: it flushed 8.9 m short of the player, rose 3.5 m and
+  landed twice. Rendered captures were inspected.
+- **Not covered.** No proof of the gulls, and no device measurement.
+
+Next for life: workers on real access (GDD §19), then the structure in motion (steam, beacons,
+lit windows).

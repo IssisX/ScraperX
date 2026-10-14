@@ -32,6 +32,7 @@ const SCENARIOS := {
 	"touch_monkey_bars": 39,
 	"touch_pipe_gallery": 40,
 	"touch_hook": 39,
+	"touch_birds": 8,
 	"touch_chute": 9,
 	"touch_lethal_feedback": 9,
 	"touch_pause": 8,
@@ -238,6 +239,8 @@ func _run() -> void:
 			ok = await _touch_pipe_gallery()
 		"touch_hook":
 			ok = await _touch_hook()
+		"touch_birds":
+			ok = await _touch_birds()
 		"touch_chute":
 			ok = await _touch_chute()
 		"touch_lethal_feedback":
@@ -718,6 +721,42 @@ func _touch_hang(climb: bool) -> bool:
 # 3.1 m up, x = 0..5; a landing block past the last): run and JUMP catches the
 # first, the stick held forward swings hand over hand to the last, DROP at the
 # bottom of a forward swing flies on to the block.
+# Life: a flock of pigeons stands on a real surface near the start. Faced and
+# run at with the stick, it flushes before the player reaches it, rises well
+# clear of where it stood, and comes down again somewhere real.
+func _touch_birds() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var birds: Node3D = _main._birds
+	var found: bool = await _wait_until(func() -> bool: return birds.perched_count() >= 4, 2.0)
+	if not found:
+		return _fail("no flock stood near the start (%d perched, probe %s, flushes %d)" % [birds.perched_count(),
+			str(_native().get_surface_below(_position() + Vector3(3.0, 5.0, 0.0), 20.0)), birds.flushes])
+	var flock: Vector3 = birds.nearest_perched_flock(_position())
+	var to := flock - _position()
+	_main._yaw = atan2(-to.x, -to.z)
+	_main._pitch = -0.25
+	await _pose("birds")
+	if not _stick_sprint():
+		return _fail("the stick pushed past its ring did not latch sprint")
+	var flushed: bool = await _wait_until(func() -> bool: return birds.flushes >= 1, 6.0)
+	var gap := Vector2(flock.x - _position().x, flock.z - _position().z).length()
+	if not flushed:
+		return _fail("running at the flock never flushed it (%.1f m off)" % gap)
+	if gap < 2.0:
+		return _fail("the flock waited until the player was on it (%.1f m)" % gap)
+	await _seconds(0.9)
+	await _pose("birds_flush")
+	_touch(0, _main._touch.stick_home(), false)
+	var risen: float = birds.highest_above(flock)
+	if risen < 2.0:
+		return _fail("the flushed flock rose only %.2f m" % risen)
+	var landed: bool = await _wait_until(func() -> bool: return birds.landings >= 2, 12.0)
+	if not landed:
+		return _fail("the flock never came down again (%d flying)" % birds.flying_count())
+	_detail = "flushed_at_m=%.1f risen_m=%.1f landings=%d" % [gap, risen, birds.landings]
+	return true
+
+
 # Parkour step 5: the hook taken off its proving rack with ACTION, aimed with
 # the view at the third monkey bar, fired with HOOK, reeled in by holding HOOK
 # until the feet leave the deck, and let go with DROP.

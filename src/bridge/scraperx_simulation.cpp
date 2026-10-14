@@ -1,6 +1,7 @@
 #include "bridge/scraperx_simulation.hpp"
 
 #include <cstring>
+#include <limits>
 
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -276,6 +277,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hook_state"), &ScraperXSimulation::get_hook_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_hook_aim", "direction"), &ScraperXSimulation::set_hook_aim);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_surface_below", "from", "reach"),
+                                &ScraperXSimulation::get_surface_below);
     godot::ClassDB::bind_method(godot::D_METHOD("request_hook_fire"), &ScraperXSimulation::request_hook_fire);
     godot::ClassDB::bind_method(godot::D_METHOD("set_hook_reel", "held"), &ScraperXSimulation::set_hook_reel);
     godot::ClassDB::bind_method(godot::D_METHOD("request_hook_release"), &ScraperXSimulation::request_hook_release);
@@ -1012,6 +1015,14 @@ godot::Dictionary ScraperXSimulation::get_hook_state() const {
     out["line_length"] = state.hook_line_length;
     out["tension_n"] = state.hook_tension_n;
     return out;
+}
+
+double ScraperXSimulation::get_surface_below(const godot::Vector3 from, const double reach) const {
+    double hit_y = 0.0;
+    if (!simulation_->surface_below(from.x, from.y, from.z, reach, hit_y)) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+    return hit_y;
 }
 
 bool ScraperXSimulation::set_hook_aim(const godot::Vector3 direction) {

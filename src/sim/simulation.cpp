@@ -1691,6 +1691,20 @@ public:
     }
 
     [[nodiscard]] const Slingshot &slingshot() const noexcept { return *slingshot_; }
+    // The first surface straight below a point within reach, the player's
+    // own body ignored: where a bird may stand. Read only.
+    [[nodiscard]] bool surface_below(const JPH::RVec3 from, const float reach, JPH::RVec3 &point) const noexcept {
+        if (!(reach > 0.0F)) {
+            return false;
+        }
+        JPH::RayCastResult hit;
+        const JPH::Vec3 down(0.0F, -reach, 0.0F);
+        if (!cast_ray(from, down, hit)) {
+            return false;
+        }
+        point = JPH::RRayCast(from, down).GetPointOnRay(hit.mFraction);
+        return true;
+    }
     [[nodiscard]] const Swing &swing() const noexcept { return *swing_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
     [[nodiscard]] const scraperx::sim::vertical::Route &vertical() const noexcept { return *vertical_; }
@@ -6220,6 +6234,20 @@ bool Simulation::request_hook_release() noexcept {
         return false;
     }
     hook_release_ = true;
+    return true;
+}
+
+bool Simulation::surface_below(const double x, const double y, const double z, const double reach,
+                               double &hit_y) const noexcept {
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) || !std::isfinite(reach) ||
+        reach > 2000.0) {
+        return false;
+    }
+    JPH::RVec3 point;
+    if (!physics_world_->surface_below(JPH::RVec3(x, y, z), static_cast<float>(reach), point)) {
+        return false;
+    }
+    hit_y = static_cast<double>(point.GetY());
     return true;
 }
 

@@ -478,6 +478,11 @@ func _update_birds(position: Vector3, delta: float) -> void:
 		sin(angle) * reach), -6.0, randf_range(0.9, 1.15), BUS_AMBIENCE)
 
 
+# A flock flushed at `at`: its wings, heard from where it rose.
+func flutter(at: Vector3) -> void:
+	_play_at(&"flutter", at, -4.0, randf_range(0.9, 1.1), BUS_AMBIENCE)
+
+
 func _surface(entity: int, height: float) -> StringName:
 	if entity == 51 and height < 0.5:
 		return &"step_earth"      # the valley floor, off the grade

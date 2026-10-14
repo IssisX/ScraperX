@@ -22,6 +22,7 @@ const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
+const Birds := preload("res://presentation/life/birds.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
@@ -292,6 +293,8 @@ var _kit_cables: Array = []
 # The grappling hook's line, from the right hand to the hook, and its head.
 var _hook_line: MeshInstance3D
 var _hook_head: MeshInstance3D
+# Pigeons on the structure near the player; gulls at height.
+var _birds: Node3D
 # Per bin: the rubble layer on its floor (null for a static bin, whose
 # contents cannot be seen), that floor's box, and its stream.
 var _kit_bin_layers: Array = []
@@ -375,6 +378,9 @@ func _ready() -> void:
 	if _native == null:
 		_fail_native("SCRAPERX_EXTENSION_INSTANTIATION_FAILED", 20)
 		return
+	_birds = Birds.new()
+	add_child(_birds)
+	_birds.setup(_native, _audio)
 
 	# A saved climb continues; otherwise the playtest start point (pause
 	# menu), before the native clock moves.
@@ -1710,6 +1716,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_write_telemetry(position, velocity, grounded)
 	_render_kit()
 	_render_hook()
+	if delta > 0.0 and _birds != null:
+		_birds.update(delta, position, velocity, grounded)
 	_render_slingshot(delta)
 	if _swing_view != null:
 		_swing_view.update_view(_native.get_swing_state())

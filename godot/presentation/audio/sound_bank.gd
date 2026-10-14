@@ -46,6 +46,7 @@ func build() -> void:
 	clips[&"clang"] = _variants(3, _clang)
 	clips[&"creak"] = _variants(2, _creak)
 	clips[&"bird"] = _variants(3, _bird)
+	clips[&"flutter"] = _variants(3, _flutter)
 	clips[&"wind_loop"] = [_loop(_wind(4.5), 0.5)]
 	clips[&"rush_loop"] = [_loop(_rush(2.4), 0.4)]
 	clips[&"hum_loop"] = [_loop(_hum(2.0), 0.3)]
@@ -164,6 +165,18 @@ func _rustle() -> PackedFloat32Array:
 		if i % 60 == 0:
 			grain = _rng.randf_range(0.2, 1.0)
 		out[i] += band[i] * grain * pow(sin(PI * t), 1.5) * 1.2
+	return out
+
+
+# A flock taking off: a dense clatter of wing claps, each a short soft
+# crack, falling away over two thirds of a second.
+func _flutter() -> PackedFloat32Array:
+	var out := _silence(0.7)
+	var claps := _rng.randi_range(14, 22)
+	for c in claps:
+		var at := _rng.randf_range(0.0, 0.45) * _rng.randf_range(0.4, 1.0)
+		_add_band_noise(out, at, 0.035, _rng.randf_range(0.35, 0.8) * (1.0 - at),
+			0.012, 500.0, 3200.0)
 	return out
 
 
