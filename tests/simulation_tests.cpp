@@ -7038,7 +7038,7 @@ void run_workers() {
     const double dt = Simulation::kFixedStepSeconds;
     {
         Simulation s(InitialSpawn::ExteriorGrade);
-        require(s.advance_frame(0.2).accepted && s.snapshot().worker_count == 6, "six of the yard crew");
+        require(s.advance_frame(0.2).accepted && s.snapshot().worker_count == 9, "six of the yard crew, three on the decks");
         double fastest = 0.0;
         for (int tick = 0; tick < 90 * 30; ++tick) {
             require(s.advance_frame(dt).accepted, "crew tick");
@@ -7052,10 +7052,13 @@ void run_workers() {
                 "left alone, nothing may shove, startle or turn aside the crew");
         require(fastest < 1.5 * 1.1, "the crew walks, at most its walking pace");
         for (std::size_t w = 0; w < n.worker_count; ++w) {
-            require(n.workers[w].position.y > 0.8 && n.workers[w].position.y < 1.4,
-                    "every worker is on the grade (or stepping over a kerb)");
+            const double floor = w < 6 ? 0.0 : (w < 8 ? 22.0 : 44.0);
+            require(n.workers[w].position.y > floor + 0.8 && n.workers[w].position.y < floor + 1.4,
+                    "every worker is on its floor (or stepping over a kerb)");
         }
-        require(n.workers[0].stride > 20.0 && n.workers[4].stride > 20.0, "the walkers walk their routes");
+        require(n.workers[0].stride > 20.0 && n.workers[4].stride > 20.0 && n.workers[6].stride > 20.0 &&
+                    n.workers[8].stride > 20.0,
+                "the walkers walk their routes, on the yard and the decks");
         std::cout << "  crew 30 s: foreman_m=" << n.workers[0].stride << " runner_m=" << n.workers[4].stride
                   << " fastest_mps=" << fastest << "\n";
     }

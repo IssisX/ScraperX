@@ -56,6 +56,14 @@ Crew::Crew(PhysicsSystem &physics, const std::uint32_t moving_layer)
     add({{-30.0F, -20.0F, 3.0F, kPi}, {-30.0F, -100.0F, 4.0F, 0.0F}}, 1.45F);
     // Someone watching the trapeze from beside its plane, now and then pacing.
     add({{36.0F, -20.0F, 16.0F, kPi}, {37.5F, -36.0F, 8.0F, 0.0F}}, 1.15F);
+    // On the stack's decks, each a ring band about 9 m wide round the central
+    // void (x -26..26, z -122..-176), its bands mapped clear with the probe.
+    // Deck 2 (22 m): a walker on the west band, looking out between stops,
+    // and someone at work on the north band; deck 4 (44 m): a walker on the
+    // east band. All clear of the route's machines on the south band.
+    add({{-21.5F, -136.0F, 5.0F, -kPi * 0.5F}, {-21.5F, -160.0F, 4.0F, -kPi * 0.5F}}, 1.2F, 22.0F);
+    add({{-5.0F, -170.0F, 12.0F, 0.0F}, {8.0F, -170.0F, 8.0F, 0.0F}}, 1.15F, 22.0F);
+    add({{21.5F, -140.0F, 6.0F, kPi * 0.5F}, {21.5F, -162.0F, 6.0F, kPi * 0.5F}}, 1.25F, 44.0F);
 }
 
 Crew::~Crew() {
@@ -66,7 +74,7 @@ Crew::~Crew() {
     }
 }
 
-void Crew::add(std::vector<Station> route, const float walk_mps) {
+void Crew::add(std::vector<Station> route, const float walk_mps, const float floor_y) {
     if (workers_.size() >= kMaxWorkers || route.empty()) {
         return;
     }
@@ -74,7 +82,7 @@ void Crew::add(std::vector<Station> route, const float walk_mps) {
     worker.route = std::move(route);
     worker.walk_mps = walk_mps;
     const Station &home = worker.route.front();
-    BodyCreationSettings settings(shape_, RVec3(home.x, kStandCentre, home.z), Quat::sIdentity(),
+    BodyCreationSettings settings(shape_, RVec3(home.x, floor_y + kStandCentre, home.z), Quat::sIdentity(),
                                   EMotionType::Dynamic, static_cast<ObjectLayer>(moving_layer_));
     settings.mAllowedDOFs = EAllowedDOFs::TranslationX | EAllowedDOFs::TranslationY | EAllowedDOFs::TranslationZ;
     settings.mAllowSleeping = false;
@@ -86,7 +94,7 @@ void Crew::add(std::vector<Station> route, const float walk_mps) {
     worker.body = physics_.GetBodyInterface().CreateAndAddBody(settings, EActivation::Activate);
     worker.next = worker.route.size() > 1 ? 1 : 0;
     worker.view.x = home.x;
-    worker.view.y = kStandCentre;
+    worker.view.y = floor_y + kStandCentre;
     worker.view.z = home.z;
     worker.view.yaw = home.face_yaw;
     // Start at the first station's work, so the yard is busy from the start.

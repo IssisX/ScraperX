@@ -11,7 +11,7 @@ extends Node3D
 ## (four of them cast shadows) however many workers there are.
 
 const WORKER_FLOATS := 8
-const MAX_WORKERS := 8
+const MAX_WORKERS := 12
 const WALKING := 0
 const WORKING := 1
 const YIELDING := 2

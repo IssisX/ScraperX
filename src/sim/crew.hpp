@@ -1,6 +1,6 @@
 #pragma once
 
-// Life L2: the yard crew (GDD 19, Inhabitants). Workers are real bodies: an
+// Life L2: the crew (GDD 19, Inhabitants), on the yard and the stack's decks. Workers are real bodies: an
 // 80 kg upright capsule each, in the same Jolt world as the player and every
 // machine, held upright (rotation locked) and moved only by a bounded
 // horizontal acceleration from their own feet. They can be bumped, pushed
@@ -37,7 +37,7 @@ public:
     enum class State : std::uint8_t { Walking = 0, Working = 1, Yielding = 2, Startled = 3, Stumbling = 4 };
 
     static constexpr std::uint64_t kWorkerEntityBase = 3100;
-    static constexpr std::size_t kMaxWorkers = 8;
+    static constexpr std::size_t kMaxWorkers = 12;
     static constexpr float kMassKg = 80.0F;
     static constexpr float kRadius = 0.28F;
     static constexpr float kHalfHeight = 0.62F;      // cylinder half; standing 1.8 m tall
@@ -113,7 +113,7 @@ private:
         View view;
     };
 
-    void add(std::vector<Station> route, float walk_mps);
+    void add(std::vector<Station> route, float walk_mps, float floor_y = 0.0F);
     [[nodiscard]] bool grounded(const Worker &worker, const JPH::BodyInterface &bodies) const;
 
     JPH::PhysicsSystem &physics_;

@@ -470,9 +470,9 @@ struct Snapshot final {
     double hook_tension_n = 0.0;
     std::uint64_t hook_fire_count = 0;
     std::uint64_t hook_bite_count = 0;
-    // The yard crew: how many, each one, and what the player has made them do.
+    // The crew: how many, each one, and what the player has made them do.
     std::uint8_t worker_count = 0;
-    std::array<WorkerView, 8> workers{};
+    std::array<WorkerView, 12> workers{};
     std::uint32_t worker_yields = 0;
     std::uint32_t worker_startles = 0;
     std::uint32_t worker_stumbles = 0;

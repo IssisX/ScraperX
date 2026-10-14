@@ -143,7 +143,7 @@ tower's base (GDD §19, Inhabitants):
   - The crew has no voice (footsteps, tool strikes and faces were added after this note).
   - The player's ledge, vault and wall probes do not yet ignore workers, so a worker could in
     principle be climbed.
-  - There are no workers in the tower's bands yet.
+  - There were no workers in the tower's bands yet (see Crews on the decks below).
 
 **Life L3, the structure at work (Godot, presentation only).** The world's machines and stacks
 show that they are running (`life/works.gd`):
@@ -163,4 +163,13 @@ arm's strike sounds as it comes down, within 30 m. Heads have eyes and a brow. `
 fails if the crew is silent: 8 steps and 4 strikes were heard in its run. These are measured
 counts, not listened to.
 
-Next for life: crews on the decks, and a shout when a worker is startled.
+**Crews on the decks.** Three more workers in the stack itself, on its ring decks, with lanes mapped
+clear with the probe and kept off the route's south band:
+- deck 2 (22 m): a walker on the west band, stopping to look out, and someone at work on the north
+  band;
+- deck 4 (44 m): a walker on the east band.
+
+The native `workers` test checks all nine: each on its own floor and each walker covering its
+route, with no shove.
+
+Next for life: a shout when a worker is startled, and workers on the higher bands.
