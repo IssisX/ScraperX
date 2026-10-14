@@ -35,6 +35,7 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
@@ -178,6 +179,29 @@ constexpr float kWallStepPushMps = 1.2F;
 constexpr float kWallFriction = 0.8F;
 constexpr float kWallKickMps = 3.0F;
 constexpr double kWallRunHoldSeconds = 0.3;
+// Parkour step 5: the grappling hook, a toy found up the tower. A hook of
+// kHookMassKg is fired along the aim at kHookLaunchMps on a line of at most
+// kHookLineMaxM (tension only), and flies under gravity as a body like any
+// other -- what it hits, it hits. Its tines bite only round a hold (a bar,
+// pipe, rung or rail: see find_grip) they strike within kHookBiteReach; on
+// anything else it glances off, and with no bite in kHookMissSeconds it is
+// reeled back in. Bitten, the line holds the body at its length: it hangs and
+// swings on it. The reel takes the line in at kHookReelSpeedMps while the
+// line's tension is under kHookReelForceN (CHOSEN, 1.5 body weights): past
+// that it stalls, so it lifts the body but cannot tear it off a hold or out of
+// a machine. On the taut line the stick pumps the swing as on a bar
+// (kSwingKipForceN), not as air control. Let go, the body keeps its velocity.
+constexpr float kHookMassKg = 1.5F;
+constexpr float kHookRadius = 0.08F;
+constexpr float kHookLaunchMps = 40.0F;
+constexpr float kHookLineMaxM = 30.0F;
+constexpr float kHookBiteReach = 0.16F;
+constexpr double kHookMissSeconds = 2.5;
+constexpr float kHookReelSpeedMps = 3.0F;
+constexpr float kHookReelForceN = 1200.0F;
+constexpr float kHookLineShortestM = 1.0F;
+constexpr float kHookTautTensionN = 30.0F;
+constexpr float kHookRackReach = 1.6F;
 constexpr float kSlideMinimumSpeed = 5.0F;
 constexpr float kSlideFriction = 0.35F;
 constexpr float kSlideSteerAcceleration = 2.0F;
@@ -1343,6 +1367,10 @@ public:
                 }
             }
             bar_part(JPH::Vec3(1.0F, 0.25F, 0.5F), JPH::RVec3(6.9, 0.25, -20.0));
+            hook_rack_id_ = add_box(bodies, JPH::Vec3(0.15F, 0.6F, 0.15F), JPH::RVec3(-2.0, 0.6, -20.9),
+                                    JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
+                                    Simulation::kHookRackEntityId);
+            machine_bodies_.push_back(hook_rack_id_);
             machine_bodies_.push_back(add_box(bodies, JPH::Vec3(6.0F, 2.0F, 0.25F), JPH::RVec3(-6.0, 2.0, -27.0),
                                               JPH::EMotionType::Static, object_layers::kStatic, 0.8F,
                                               Simulation::kRunWallEntityId));
@@ -1416,6 +1444,7 @@ public:
             carry_constraint_ = nullptr;
         }
         drop_hang_arms();
+        stow_hook(physics_system_.GetBodyInterface());
         vertical_.reset();
         trapeze_.reset();
         swing_.reset();
@@ -1475,6 +1504,15 @@ public:
         bool trapeze_drop = false;
         // A vertical machine's control: Action, one-shot.
         bool lift_action = false;
+        // The grappling hook: aim (a unit world vector), Fire and Release
+        // one-shot, Reel held, Take one-shot.
+        double hook_aim_x = 0.0;
+        double hook_aim_y = 0.0;
+        double hook_aim_z = -1.0;
+        bool hook_fire = false;
+        bool hook_reel = false;
+        bool hook_release = false;
+        bool hook_take = false;
     };
 
     void step(const StepCommands &commands,
@@ -1577,6 +1615,7 @@ public:
             drive_traversal(bodies, delta_seconds);
             load_hold(bodies);
         }
+        hook_pre_step(bodies, commands, delta_seconds);
 
         vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0);
         kit_->pre_step(delta_seconds);
@@ -1586,6 +1625,7 @@ public:
         slingshot_->post_step(delta_seconds);
         swing_->post_step(delta_seconds);
         trapeze_->post_step(delta_seconds);
+        hook_post_step(bodies, delta_seconds);
 
         SupportSample support = contact_listener_.sample();
         if (jump_started || traversal_state_ != TraversalState::None) {
@@ -2640,6 +2680,160 @@ private:
         }
     }
 
+    // ---- the grappling hook (see kHookLaunchMps) ---------------------------
+
+    enum class HookState : std::uint8_t { Stowed = 0, Flying = 1, Bitten = 2 };
+
+    [[nodiscard]] JPH::RVec3 hook_chest(const JPH::BodyInterface &bodies) const noexcept {
+        return bodies.GetPosition(player_id_) + JPH::Vec3(0.0F, 0.3F, 0.0F);
+    }
+
+    void hook_pre_step(JPH::BodyInterface &bodies, const StepCommands &commands, const float dt) noexcept {
+        if (commands.hook_take && !has_hook_ && !hook_rack_id_.IsInvalid() &&
+            JPH::Vec3(bodies.GetPosition(hook_rack_id_) - bodies.GetPosition(player_id_)).Length() <= kHookRackReach) {
+            has_hook_ = true;
+        }
+        if (!has_hook_) {
+            return;
+        }
+        if (commands.hook_release && hook_state_ != HookState::Stowed) {
+            stow_hook(bodies);
+            return;
+        }
+        if (commands.hook_fire && hook_state_ == HookState::Stowed && traversal_state_ == TraversalState::None) {
+            fire_hook(bodies, JPH::Vec3(static_cast<float>(commands.hook_aim_x), static_cast<float>(commands.hook_aim_y),
+                                        static_cast<float>(commands.hook_aim_z)));
+            return;
+        }
+        if (hook_state_ == HookState::Bitten && commands.hook_reel && hook_line_ != nullptr) {
+            const float length = std::min(hook_line_->GetMaxDistance(),
+                                          JPH::Vec3(hook_end(bodies) - hook_chest(bodies)).Length());
+            // The reel's motor stalls at kHookReelForceN.
+            if (hook_tension_n_ < kHookReelForceN) {
+                hook_line_->SetDistance(0.0F, std::max(kHookLineShortestM, length - kHookReelSpeedMps * dt));
+            } else {
+                ++hook_stall_ticks_;
+            }
+        }
+    }
+
+    void fire_hook(JPH::BodyInterface &bodies, JPH::Vec3 aim) noexcept {
+        if (aim.IsNearZero()) {
+            return;
+        }
+        aim = aim.Normalized();
+        const JPH::RVec3 start = hook_chest(bodies) + JPH::Vec3(0.0F, 0.3F, 0.0F) + aim * (kPlayerRadius + 0.3F);
+        hook_body_ = add_shape_body(bodies, new JPH::SphereShape(kHookRadius), start, JPH::Quat::sIdentity(),
+                                    JPH::EMotionType::Dynamic, object_layers::kMoving, 0.6F,
+                                    Simulation::kHookEntityId, kHookMassKg)
+                         ->GetID();
+        bodies.SetMotionQuality(hook_body_, JPH::EMotionQuality::LinearCast);
+        bodies.SetLinearVelocity(hook_body_, bodies.GetLinearVelocity(player_id_) + aim * kHookLaunchMps);
+        JPH::DistanceConstraintSettings settings;
+        settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+        settings.mPoint1 = hook_chest(bodies);
+        settings.mPoint2 = start;
+        settings.mMinDistance = 0.0F;
+        settings.mMaxDistance = kHookLineMaxM;
+        hook_line_ = static_cast<JPH::DistanceConstraint *>(
+            create_constraint(settings, player_id_, hook_body_, false));
+        hook_state_ = HookState::Flying;
+        hook_flight_seconds_ = 0.0;
+        hook_tension_n_ = 0.0F;
+        ++hook_fire_count_;
+    }
+
+    void stow_hook(JPH::BodyInterface &bodies) noexcept {
+        if (hook_line_ != nullptr) {
+            physics_system_.RemoveConstraint(hook_line_);
+            hook_line_ = nullptr;
+        }
+        if (!hook_body_.IsInvalid()) {
+            bodies.RemoveBody(hook_body_);
+            bodies.DestroyBody(hook_body_);
+            hook_body_ = {};
+        }
+        hook_state_ = HookState::Stowed;
+        hook_tension_n_ = 0.0F;
+    }
+
+    [[nodiscard]] static JPH::RVec3 closest_on_hold(const LeafBox &box, const std::uint32_t long_axis,
+                                                    const JPH::RVec3 point) noexcept {
+        const JPH::Vec3 along = box.axes[long_axis];
+        const float t = std::clamp(JPH::Vec3(point - box.centre).Dot(along), -box.half[long_axis], box.half[long_axis]);
+        return box.centre + along * t;
+    }
+
+    // Where the line ends: the hook in flight, the bite once bitten.
+    [[nodiscard]] JPH::RVec3 hook_end(const JPH::BodyInterface &bodies) const noexcept {
+        if (hook_state_ == HookState::Bitten) {
+            return from_support_local(bodies, hook_bite_target_, hook_bite_local_);
+        }
+        return hook_body_.IsInvalid() ? JPH::RVec3::sZero() : bodies.GetPosition(hook_body_);
+    }
+
+    void hook_post_step(JPH::BodyInterface &bodies, const float dt) noexcept {
+        if (hook_state_ == HookState::Stowed) {
+            return;
+        }
+        hook_tension_n_ = hook_line_ != nullptr ? std::abs(hook_line_->GetTotalLambdaPosition()) / dt : 0.0F;
+        if (hook_state_ != HookState::Flying) {
+            return;
+        }
+        hook_flight_seconds_ += dt;
+        // The tines bite round a hold they strike.
+        const JPH::RVec3 at = bodies.GetPosition(hook_body_);
+        JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> hits;
+        const JPH::IgnoreSingleBodyFilter not_player(player_id_);
+        const JPH::IgnoreSingleBodyFilterChained filter(hook_body_, not_player);
+        const JPH::SphereShape reach(kHookBiteReach);
+        physics_system_.GetNarrowPhaseQuery().CollideShape(&reach, JPH::Vec3::sReplicate(1.0F),
+                                                           JPH::RMat44::sTranslation(at), JPH::CollideShapeSettings(),
+                                                           at, hits, {}, {}, filter);
+        for (const JPH::CollideShapeResult &hit : hits.mHits) {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), hit.mBodyID2);
+            if (!lock.Succeeded()) {
+                continue;
+            }
+            const JPH::Body &body = lock.GetBody();
+            if (body.IsSensor() ||
+                (body.IsDynamic() && body.GetMotionProperties()->GetInverseMass() * kGripMinBodyMassKg > 1.0F)) {
+                continue;
+            }
+            LeafBox box;
+            std::uint32_t long_axis = 0;
+            if (!leaf_box(body, hit.mSubShapeID2, box) || !box_is_hold(box, long_axis)) {
+                continue;
+            }
+            const JPH::BodyID held = hit.mBodyID2;
+            // Bitten, the hook is part of the member: the line runs from the
+            // chest to the bite on it (a 1.5 kg hook between an 80 kg body and
+            // the structure would only be the solver's weak link).
+            const JPH::RVec3 bite = closest_on_hold(box, long_axis, at);
+            hook_bite_target_ = held;
+            hook_bite_local_ = to_support_local(bodies, held, bite);
+            const float length = std::min(kHookLineMaxM, JPH::Vec3(bite - hook_chest(bodies)).Length());
+            physics_system_.RemoveConstraint(hook_line_);
+            hook_line_ = nullptr;
+            bodies.RemoveBody(hook_body_);
+            bodies.DestroyBody(hook_body_);
+            hook_body_ = {};
+            JPH::DistanceConstraintSettings line;
+            line.mSpace = JPH::EConstraintSpace::WorldSpace;
+            line.mPoint1 = hook_chest(bodies);
+            line.mPoint2 = bite;
+            line.mMinDistance = 0.0F;
+            line.mMaxDistance = length;
+            hook_line_ = static_cast<JPH::DistanceConstraint *>(create_constraint(line, player_id_, held, false));
+            hook_state_ = HookState::Bitten;
+            ++hook_bite_count_;
+            return;
+        }
+        if (hook_flight_seconds_ > kHookMissSeconds) {
+            stow_hook(bodies);   // no bite: reeled back in
+        }
+    }
+
     [[nodiscard]] bool wall_running() const noexcept { return wall_run_seconds_left_ > 0.0; }
 
     // In flight, a wall beside the body: a step on it when one is due (see
@@ -3280,7 +3474,16 @@ private:
             const JPH::RVec3 centre = bodies.GetPosition(player_id_);
             const bool in_flight = flight_from_jump_ ||
                                    !feet_supported_at(centre, static_cast<float>(centre.GetY()) - active_half_height());
-            if (std::hypot(move_x, move_z) > 1.0e-3 || !in_flight) {
+            if (hook_state_ == HookState::Bitten && hook_tension_n_ > kHookTautTensionN) {
+                // On the taut line the stick pumps the swing, as on a bar.
+                const JPH::Vec3 input(static_cast<float>(commands.move_input_x), 0.0F,
+                                      static_cast<float>(commands.move_input_z));
+                const JPH::Vec3 relative = player_velocity - reference_velocity;
+                if (input.LengthSq() > 1.0e-2F && relative.Dot(input) > -kSwingKipFromRestMps) {
+                    bodies.AddForce(player_id_,
+                                    input * (std::min(1.0F, input.Length()) * kSwingKipForceN / input.Length()));
+                }
+            } else if (std::hypot(move_x, move_z) > 1.0e-3 || !in_flight) {
                 approach_relative_horizontal_velocity(player_velocity,
                                                       reference_velocity,
                                                       move_x,
@@ -4873,6 +5076,7 @@ private:
 
         grounded_ = false;
         sliding_ = false;
+        stow_hook(bodies);   // the hook comes back with the body; it is kept
         clear_recovery();
         clear_support_jolt();
         teetering_ = false;
@@ -5031,6 +5235,13 @@ public:
         state_.slide_count = slide_count_;
         state_.wall_step_count = wall_step_count_;
         state_.player_wall_running = wall_running();
+        state_.has_hook = has_hook_;
+        state_.hook_state = static_cast<std::uint8_t>(hook_state_);
+        state_.hook_position = hook_state_ == HookState::Stowed ? Vector3{} : to_vector3(hook_end(bodies));
+        state_.hook_line_length = hook_line_ != nullptr ? hook_line_->GetMaxDistance() : 0.0;
+        state_.hook_tension_n = hook_tension_n_;
+        state_.hook_fire_count = hook_fire_count_;
+        state_.hook_bite_count = hook_bite_count_;
         state_.support_entity_id = support_entity_id_;
         state_.support_contact_point = support_sample_.contact_point;
         state_.support_point_linear_velocity = support_sample_.point_velocity;
@@ -5342,6 +5553,19 @@ public:
     JPH::Vec3 wall_normal_ = JPH::Vec3::sZero();
     std::uint64_t wall_step_count_ = 0;
     std::uint64_t wall_kick_count_ = 0;
+    // The grappling hook.
+    bool has_hook_ = false;
+    HookState hook_state_ = HookState::Stowed;
+    JPH::BodyID hook_body_;
+    JPH::BodyID hook_rack_id_;
+    JPH::BodyID hook_bite_target_;
+    JPH::Vec3 hook_bite_local_ = JPH::Vec3::sZero();
+    JPH::Ref<JPH::DistanceConstraint> hook_line_;
+    double hook_flight_seconds_ = 0.0;
+    float hook_tension_n_ = 0.0F;
+    std::uint64_t hook_fire_count_ = 0;
+    std::uint64_t hook_bite_count_ = 0;
+    std::uint64_t hook_stall_ticks_ = 0;
     // A speed vault ends past the far edge in free flight, not on a placed descent.
     bool traversal_speed_vault_ = false;
     JPH::Vec3 roll_direction_{JPH::Vec3::sZero()};
@@ -5793,6 +6017,13 @@ void Simulation::step_fixed() noexcept {
     commands.trapeze_action = trapeze_action_;
     commands.trapeze_drop = trapeze_drop_;
     commands.lift_action = lift_action_;
+    commands.hook_aim_x = hook_aim_x_;
+    commands.hook_aim_y = hook_aim_y_;
+    commands.hook_aim_z = hook_aim_z_;
+    commands.hook_fire = hook_fire_;
+    commands.hook_reel = hook_reel_;
+    commands.hook_release = hook_release_;
+    commands.hook_take = hook_take_;
 
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
     sling_action_ = false;
@@ -5802,6 +6033,9 @@ void Simulation::step_fixed() noexcept {
     trapeze_action_ = false;
     trapeze_drop_ = false;
     lift_action_ = false;
+    hook_fire_ = false;
+    hook_release_ = false;
+    hook_take_ = false;
     jump_requested_ = false;
     traversal_requested_ = false;
     release_requested_ = false;
@@ -5888,6 +6122,46 @@ bool Simulation::set_slingshot_input(const double draw, const double yaw, const 
     sling_draw_ = std::clamp(draw, 0.0, 1.0);
     sling_yaw_ = std::clamp(yaw, -0.8, 0.8);
     sling_elevation_ = std::clamp(elevation, 0.35, 1.48);
+    return true;
+}
+
+bool Simulation::set_hook_aim(const double x, const double y, const double z) noexcept {
+    const double length = std::sqrt(x * x + y * y + z * z);
+    if (!std::isfinite(length) || length < 1.0e-6) {
+        return false;
+    }
+    hook_aim_x_ = x / length;
+    hook_aim_y_ = y / length;
+    hook_aim_z_ = z / length;
+    return true;
+}
+
+bool Simulation::request_hook_fire() noexcept {
+    if (!snapshot_.has_hook || snapshot_.hook_state != 0) {
+        return false;
+    }
+    hook_fire_ = true;
+    return true;
+}
+
+bool Simulation::set_hook_reel(const bool held) noexcept {
+    hook_reel_ = held;
+    return true;
+}
+
+bool Simulation::request_hook_release() noexcept {
+    if (snapshot_.hook_state == 0) {
+        return false;
+    }
+    hook_release_ = true;
+    return true;
+}
+
+bool Simulation::request_hook_take() noexcept {
+    if (snapshot_.has_hook) {
+        return false;
+    }
+    hook_take_ = true;
     return true;
 }
 

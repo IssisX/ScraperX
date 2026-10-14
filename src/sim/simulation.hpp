@@ -449,6 +449,16 @@ struct Snapshot final {
     // and whether one was taken in the last kWallRunHoldSeconds.
     std::uint64_t wall_step_count = 0;
     bool player_wall_running = false;
+    // Parkour step 5, the grappling hook. hook_state: 0 stowed, 1 flying,
+    // 2 bitten. The line runs from the body's chest to hook_position;
+    // hook_line_length is its present limit, hook_tension_n its pull.
+    bool has_hook = false;
+    std::uint8_t hook_state = 0;
+    Vector3 hook_position{};
+    double hook_line_length = 0.0;
+    double hook_tension_n = 0.0;
+    std::uint64_t hook_fire_count = 0;
+    std::uint64_t hook_bite_count = 0;
     std::uint64_t support_entity_id = 0;
     Vector3 support_contact_point{};
     Vector3 support_point_linear_velocity{};
@@ -635,6 +645,10 @@ public:
     static constexpr std::uint64_t kMonkeyBarsEntityId = 53;
     // Wall-run fixture: a wall 12 m long and 4 m tall, its face at z = -26.75.
     static constexpr std::uint64_t kRunWallEntityId = 54;
+    // Where the grappling hook is found (a rack; see request_hook_take), and
+    // the hook itself while it is out.
+    static constexpr std::uint64_t kHookRackEntityId = 55;
+    static constexpr std::uint64_t kHookEntityId = 56;
 
     // AS-006, the Counterweight Well. Mechanism-kit ids: band structure from
     // 1000, moving bodies from 2000 (sim/mechanism_kit.hpp).
@@ -906,6 +920,13 @@ public:
     // A vertical machine: from its deck Action sends it to the other end;
     // from a receiver, Action calls it there. Refused off every machine.
     [[nodiscard]] bool request_lift_action() noexcept;
+    // The grappling hook: aimed along a world direction (the camera's), fired,
+    // reeled in while held, let go; taken from its rack in reach.
+    [[nodiscard]] bool set_hook_aim(double x, double y, double z) noexcept;
+    [[nodiscard]] bool request_hook_fire() noexcept;
+    [[nodiscard]] bool set_hook_reel(bool held) noexcept;
+    [[nodiscard]] bool request_hook_release() noexcept;
+    [[nodiscard]] bool request_hook_take() noexcept;
     // A saved climb: the committed checkpoint (where the player last stood
     // firm, every machine with it) and the tick, as bytes for this build.
     // load_game restores the world from one as a death would, without
@@ -949,6 +970,13 @@ private:
     bool trapeze_action_ = false;
     bool trapeze_drop_ = false;
     bool lift_action_ = false;
+    double hook_aim_x_ = 0.0;
+    double hook_aim_y_ = 0.0;
+    double hook_aim_z_ = -1.0;
+    bool hook_fire_ = false;
+    bool hook_reel_ = false;
+    bool hook_release_ = false;
+    bool hook_take_ = false;
     Snapshot snapshot_{};
     Vector3 previous_player_position_{};
 };

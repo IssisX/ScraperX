@@ -6951,6 +6951,69 @@ void run_wall_run() {
               << " far_x=" << wall_x << "\n";
 }
 
+// Parkour step 5: the grappling hook on the proving ground. Taken from its
+// rack beside the monkey bars; fired at a bar it bites round it; reeled, it
+// lifts the body off the deck no faster than the reel turns and at no more
+// line tension than the reel's motor gives; let go, the body falls. Fired at
+// the sky it bites nothing and comes back; fired at the plain face of the run
+// wall it glances off -- not a hold.
+void run_hook() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const double dt = Simulation::kFixedStepSeconds;
+    Simulation s(InitialSpawn::SwingApproach);
+    require(s.advance_frame(0.4).accepted, "hook settle");
+    require(!s.request_hook_fire(), "without the hook nothing fires");
+    require(s.request_hook_take() && s.advance_frame(dt).accepted && s.snapshot().has_hook,
+            "the hook must be taken from its rack in reach");
+    // Aim from the eye at bar 3 (x 3, y 3.1, z -20).
+    const auto aim_at = [&](const double x, const double y, const double z) {
+        const auto p = s.snapshot().player_position;
+        require(s.set_hook_aim(x - p.x, y - (p.y + 0.6), z - p.z), "hook aim");
+    };
+    aim_at(3.0, 3.1, -20.0);
+    require(s.request_hook_fire(), "the hook must fire");
+    require(advance_until(s, [](const Snapshot &n) { return n.hook_state == 2; }, 1.0), "fired at a bar, the hook must bite");
+    const auto bit = s.snapshot().hook_position;
+    require(std::abs(bit.x - 3.0) < 0.25 && std::abs(bit.y - 3.1) < 0.25, "the hook must bite at the bar it hit");
+    const double y0 = s.snapshot().player_position.y;
+    require(s.set_hook_reel(true), "reel");
+    double worst_climb = 0.0;
+    double worst_tension = 0.0;
+    double last_y = y0;
+    for (int tick = 0; tick < 90 * 3; ++tick) {
+        require(s.advance_frame(dt).accepted, "reel tick");
+        const Snapshot n = s.snapshot();
+        worst_climb = std::max(worst_climb, (n.player_position.y - last_y) / dt);
+        worst_tension = std::max(worst_tension, n.hook_tension_n);
+        last_y = n.player_position.y;
+    }
+    const Snapshot reeled = s.snapshot();
+    require(reeled.player_position.y > y0 + 0.8 && !reeled.player_grounded,
+            "reeled in, the hook must lift the body off the deck");
+    require(worst_climb < 3.0 * 1.15, "the reel must take the line in no faster than it turns");
+    require(s.set_hook_reel(false) && s.request_hook_release(), "let go");
+    require(s.advance_frame(0.3).accepted, "let-go fall");
+    require(s.snapshot().hook_state == 0 && s.snapshot().player_linear_velocity.y < -0.5,
+            "let go, the hook comes back and the body falls");
+    require(advance_until(s, [](const Snapshot &n) { return n.player_grounded; }, 2.0), "down again");
+
+    // At the sky: no bite, and it comes back.
+    aim_at(-1.0, 50.0, -20.0);
+    require(s.request_hook_fire(), "sky fire");
+    require(s.advance_frame(3.0).accepted, "sky flight");
+    require(s.snapshot().hook_state == 0 && s.snapshot().hook_bite_count == 1, "fired at the sky, nothing may bite");
+
+    // At the run wall's plain face (z -26.75): no bite.
+    aim_at(-6.0, 2.0, -26.75);
+    require(s.request_hook_fire(), "wall fire");
+    require(s.advance_frame(1.0).accepted, "wall flight");
+    require(s.snapshot().hook_bite_count == 1, "a plain wall is not a hold: the hook must not bite on it");
+    std::cout << "PASS scraperx_sim hook: lifted_m=" << reeled.player_position.y - y0 << " worst_climb_mps=" << worst_climb
+              << " worst_tension_n=" << worst_tension << "\n";
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
         run_brachiation();
@@ -6958,6 +7021,7 @@ int main() {
         run_slide();
         run_speed_vault();
         run_wall_run();
+        run_hook();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -9208,6 +9272,7 @@ int main() {
     run_slide();
     run_speed_vault();
     run_wall_run();
+    run_hook();
     run_ascent();
 
     return EXIT_SUCCESS;
