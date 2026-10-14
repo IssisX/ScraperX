@@ -277,6 +277,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hook_state"), &ScraperXSimulation::get_hook_state);
     godot::ClassDB::bind_method(godot::D_METHOD("set_hook_aim", "direction"), &ScraperXSimulation::set_hook_aim);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_workers"), &ScraperXSimulation::get_workers);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_worker_counts"), &ScraperXSimulation::get_worker_counts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_surface_below", "from", "reach"),
                                 &ScraperXSimulation::get_surface_below);
     godot::ClassDB::bind_method(godot::D_METHOD("request_hook_fire"), &ScraperXSimulation::request_hook_fire);
@@ -1014,6 +1016,34 @@ godot::Dictionary ScraperXSimulation::get_hook_state() const {
     out["position"] = to_godot(state.hook_position);
     out["line_length"] = state.hook_line_length;
     out["tension_n"] = state.hook_tension_n;
+    return out;
+}
+
+godot::PackedFloat32Array ScraperXSimulation::get_workers() const {
+    const sim::Snapshot state = simulation_->snapshot();
+    godot::PackedFloat32Array out;
+    out.resize(static_cast<std::int64_t>(state.worker_count) * kWorkerFloats);
+    for (std::size_t index = 0; index < state.worker_count; ++index) {
+        const sim::WorkerView &worker = state.workers[index];
+        const std::int64_t base = static_cast<std::int64_t>(index) * kWorkerFloats;
+        out.set(base + 0, static_cast<float>(worker.position.x));
+        out.set(base + 1, static_cast<float>(worker.position.y));
+        out.set(base + 2, static_cast<float>(worker.position.z));
+        out.set(base + 3, static_cast<float>(worker.yaw));
+        out.set(base + 4, static_cast<float>(worker.state));
+        out.set(base + 5, static_cast<float>(worker.speed));
+        out.set(base + 6, static_cast<float>(worker.stride));
+        out.set(base + 7, worker.grounded ? 1.0F : 0.0F);
+    }
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_worker_counts() const {
+    const sim::Snapshot state = simulation_->snapshot();
+    godot::Dictionary out;
+    out["yields"] = static_cast<std::int64_t>(state.worker_yields);
+    out["startles"] = static_cast<std::int64_t>(state.worker_startles);
+    out["stumbles"] = static_cast<std::int64_t>(state.worker_stumbles);
     return out;
 }
 

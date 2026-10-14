@@ -180,6 +180,11 @@ public:
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;
     [[nodiscard]] godot::Dictionary get_hook_state() const;
+    // The yard crew: kWorkerFloats per worker (x, y, z, yaw, state, speed,
+    // stride, grounded), and what the player has made them do.
+    static constexpr std::int64_t kWorkerFloats = 8;
+    [[nodiscard]] godot::PackedFloat32Array get_workers() const;
+    [[nodiscard]] godot::Dictionary get_worker_counts() const;
     // The height of the first surface below `from` within `reach`, or NAN.
     [[nodiscard]] double get_surface_below(godot::Vector3 from, double reach) const;
     bool set_hook_aim(godot::Vector3 direction);

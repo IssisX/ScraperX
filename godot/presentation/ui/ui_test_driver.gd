@@ -33,6 +33,7 @@ const SCENARIOS := {
 	"touch_pipe_gallery": 40,
 	"touch_hook": 39,
 	"touch_birds": 8,
+	"touch_workers": 8,
 	"touch_chute": 9,
 	"touch_lethal_feedback": 9,
 	"touch_pause": 8,
@@ -241,6 +242,8 @@ func _run() -> void:
 			ok = await _touch_hook()
 		"touch_birds":
 			ok = await _touch_birds()
+		"touch_workers":
+			ok = await _touch_workers()
 		"touch_chute":
 			ok = await _touch_chute()
 		"touch_lethal_feedback":
@@ -724,6 +727,41 @@ func _touch_hang(climb: bool) -> bool:
 # Life: a flock of pigeons stands on a real surface near the start. Faced and
 # run at with the stick, it flushes before the player reaches it, rises well
 # clear of where it stood, and comes down again somewhere real.
+# Life L2: the yard crew. From the start, six workers are at their work on
+# the grade. The player walks straight at the foreman as he sets off: he
+# steps aside and watches them by, and nobody is shoved.
+func _touch_workers() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var figures: Array = _main._crew.figures()
+	if figures.size() != 6:
+		return _fail("expected six of the crew, saw %d" % figures.size())
+	var foreman: Vector3 = figures[0][0]
+	var to := foreman - _position()
+	_main._yaw = atan2(-to.x, -to.z)
+	_main._pitch = -0.08
+	await _seconds(0.3)
+	await _pose("workers")
+	await _seconds(2.0)
+	# Walk at him, steering the view onto him as he moves.
+	_stick_push(Vector2(0.0, -0.8))
+	var yielded: bool = await _wait_until(func() -> bool:
+		var at: Vector3 = _main._crew.figures()[0][0]
+		var d := at - _position()
+		_main._yaw = atan2(-d.x, -d.z)
+		return int(_native().get_worker_counts()["yields"]) >= 1, 10.0)
+	_touch(0, _main._touch.stick_home(), false)
+	if not yielded:
+		return _fail("walking at the foreman never made him step aside")
+	await _seconds(0.6)
+	await _pose("workers_aside")
+	await _seconds(1.5)
+	var counts: Dictionary = _native().get_worker_counts()
+	if int(counts["stumbles"]) != 0:
+		return _fail("the foreman was shoved instead of stepping aside")
+	_detail = "yields=%d startles=%d" % [int(counts["yields"]), int(counts["startles"])]
+	return true
+
+
 func _touch_birds() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var birds: Node3D = _main._birds

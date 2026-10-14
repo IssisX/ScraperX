@@ -23,6 +23,7 @@ const SettingsStore := preload("res://presentation/ui/settings_store.gd")
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
 const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
 const Birds := preload("res://presentation/life/birds.gd")
+const CrewView := preload("res://presentation/life/crew_view.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
@@ -295,6 +296,8 @@ var _hook_line: MeshInstance3D
 var _hook_head: MeshInstance3D
 # Pigeons on the structure near the player; gulls at height.
 var _birds: Node3D
+# The yard crew, drawn from the native's workers.
+var _crew: Node3D
 # Per bin: the rubble layer on its floor (null for a static bin, whose
 # contents cannot be seen), that floor's box, and its stream.
 var _kit_bin_layers: Array = []
@@ -381,6 +384,9 @@ func _ready() -> void:
 	_birds = Birds.new()
 	add_child(_birds)
 	_birds.setup(_native, _audio)
+	_crew = CrewView.new()
+	add_child(_crew)
+	_crew.setup(_native)
 
 	# A saved climb continues; otherwise the playtest start point (pause
 	# menu), before the native clock moves.
@@ -1718,6 +1724,8 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	_render_hook()
 	if delta > 0.0 and _birds != null:
 		_birds.update(delta, position, velocity, grounded)
+	if _crew != null:
+		_crew.update(delta, _camera.global_position, position)
 	_render_slingshot(delta)
 	if _swing_view != null:
 		_swing_view.update_view(_native.get_swing_state())

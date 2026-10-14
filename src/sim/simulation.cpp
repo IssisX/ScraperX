@@ -9,6 +9,7 @@
 #include "sim/swing.hpp"
 #include "sim/pipe_gallery.hpp"
 #include "sim/trapeze.hpp"
+#include "sim/crew.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"
 
@@ -1431,6 +1432,8 @@ public:
         // Parkour step 5: the grappling hook, found on the 220 ring's
         // north-west corner, off the line from C's platform to the swing.
         build_hook_rack();
+        // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
+        crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
 
         physics_system_.OptimizeBroadPhase();
 
@@ -1622,6 +1625,8 @@ public:
 
         vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0);
         kit_->pre_step(delta_seconds);
+        crew_->pre_step(delta_seconds, bodies.GetPosition(player_id_), bodies.GetLinearVelocity(player_id_),
+                        grounded_);
         contact_listener_.begin_tick();
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
         kit_->post_step(delta_seconds);
@@ -1629,6 +1634,7 @@ public:
         swing_->post_step(delta_seconds);
         trapeze_->post_step(delta_seconds);
         hook_post_step(bodies, delta_seconds);
+        crew_->post_step(delta_seconds);
 
         SupportSample support = contact_listener_.sample();
         if (jump_started || traversal_state_ != TraversalState::None) {
@@ -5321,6 +5327,20 @@ public:
         state_.hook_tension_n = hook_tension_n_;
         state_.hook_fire_count = hook_fire_count_;
         state_.hook_bite_count = hook_bite_count_;
+        state_.worker_count = static_cast<std::uint8_t>(std::min<std::size_t>(crew_->count(), state_.workers.size()));
+        for (std::size_t index = 0; index < state_.worker_count; ++index) {
+            const Crew::View &view = crew_->view(index);
+            WorkerView &out = state_.workers[index];
+            out.position = Vector3{view.x, view.y, view.z};
+            out.yaw = view.yaw;
+            out.state = static_cast<std::uint8_t>(view.state);
+            out.speed = view.speed;
+            out.stride = view.stride;
+            out.grounded = view.grounded;
+        }
+        state_.worker_yields = crew_->yields();
+        state_.worker_startles = crew_->startles();
+        state_.worker_stumbles = crew_->stumbles();
         state_.support_entity_id = support_entity_id_;
         state_.support_contact_point = support_sample_.contact_point;
         state_.support_point_linear_velocity = support_sample_.point_velocity;
@@ -5486,6 +5506,7 @@ public:
     std::unique_ptr<Slingshot> slingshot_;
     std::unique_ptr<Swing> swing_;
     std::unique_ptr<Trapeze> trapeze_;
+    std::unique_ptr<Crew> crew_;
     std::unique_ptr<scraperx::sim::vertical::Route> vertical_;
     // Thrown off the slingshot's bands and not yet down: the stick steers by
     // a bounded force instead of air control.

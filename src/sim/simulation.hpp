@@ -432,6 +432,16 @@ enum class FallState : std::uint8_t {
     Parachuting = 2,
 };
 
+// One of the yard crew (Life L2, sim/crew.hpp), as the presentation needs it.
+struct WorkerView final {
+    Vector3 position{};       // the capsule's centre
+    double yaw = 0.0;         // radians; 0 faces +z
+    std::uint8_t state = 0;   // 0 walking, 1 working, 2 yielding, 3 startled, 4 stumbling
+    double speed = 0.0;       // horizontal, m/s
+    double stride = 0.0;      // metres walked
+    bool grounded = true;
+};
+
 struct Snapshot final {
     std::uint64_t tick_index = 0;
     double simulation_time_seconds = 0.0;
@@ -460,6 +470,12 @@ struct Snapshot final {
     double hook_tension_n = 0.0;
     std::uint64_t hook_fire_count = 0;
     std::uint64_t hook_bite_count = 0;
+    // The yard crew: how many, each one, and what the player has made them do.
+    std::uint8_t worker_count = 0;
+    std::array<WorkerView, 8> workers{};
+    std::uint32_t worker_yields = 0;
+    std::uint32_t worker_startles = 0;
+    std::uint32_t worker_stumbles = 0;
     std::uint64_t support_entity_id = 0;
     Vector3 support_contact_point{};
     Vector3 support_point_linear_velocity{};

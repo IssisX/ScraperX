@@ -7027,6 +7027,90 @@ void run_hook() {
               << " worst_tension_n=" << worst_tension << "\n";
 }
 
+// Life L2: the yard crew. Real bodies on grade: they walk their routes with no
+// shove from anything when the player leaves them alone, step out of a walking
+// player's way, flinch at a hard landing near them, and stumble when run
+// into -- then go back to work.
+void run_workers() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const double dt = Simulation::kFixedStepSeconds;
+    {
+        Simulation s(InitialSpawn::ExteriorGrade);
+        require(s.advance_frame(0.2).accepted && s.snapshot().worker_count == 6, "six of the yard crew");
+        double fastest = 0.0;
+        for (int tick = 0; tick < 90 * 30; ++tick) {
+            require(s.advance_frame(dt).accepted, "crew tick");
+            const Snapshot n = s.snapshot();
+            for (std::size_t w = 0; w < n.worker_count; ++w) {
+                fastest = std::max(fastest, n.workers[w].speed);
+            }
+        }
+        const Snapshot n = s.snapshot();
+        require(n.worker_stumbles == 0 && n.worker_startles == 0 && n.worker_yields == 0,
+                "left alone, nothing may shove, startle or turn aside the crew");
+        require(fastest < 1.5 * 1.1, "the crew walks, at most its walking pace");
+        for (std::size_t w = 0; w < n.worker_count; ++w) {
+            require(n.workers[w].position.y > 0.8 && n.workers[w].position.y < 1.4,
+                    "every worker is on the grade (or stepping over a kerb)");
+        }
+        require(n.workers[0].stride > 20.0 && n.workers[4].stride > 20.0, "the walkers walk their routes");
+        std::cout << "  crew 30 s: foreman_m=" << n.workers[0].stride << " runner_m=" << n.workers[4].stride
+                  << " fastest_mps=" << fastest << "\n";
+    }
+    {
+        // Walking at the foreman as he sets off from his first station: he
+        // steps aside, and nobody is shoved.
+        Simulation s(InitialSpawn::ExteriorGrade);
+        require(s.advance_frame(2.5).accepted, "yield settle");
+        for (int tick = 0; tick < 90 * 10 && s.snapshot().worker_yields == 0; ++tick) {
+            const auto p = s.snapshot().player_position;
+            const auto w = s.snapshot().workers[0].position;
+            (void)s.set_move_input(w.x - p.x, w.z - p.z);
+            require(s.advance_frame(dt).accepted, "approach tick");
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        require(s.snapshot().worker_yields >= 1, "a walking player coming at a worker: it must step aside");
+        require(s.advance_frame(2.0).accepted, "yield after");
+        const Snapshot n = s.snapshot();
+        require(n.worker_stumbles == 0, "stepping aside in time, nobody is shoved");
+        require(advance_until(s, [](const Snapshot &m) { return m.workers[0].state <= 1; }, 8.0),
+                "the player gone by, he goes back to his walk");
+    }
+    {
+        // A hard landing beside the foreman's first station.
+        Simulation s(InitialSpawn::SurvivableDrop);
+        require(advance_until(s, [](const Snapshot &n) { return n.player_grounded; }, 4.0), "drop lands");
+        require(s.advance_frame(0.1).accepted && s.snapshot().worker_startles >= 1,
+                "a hard landing near the crew: someone flinches");
+    }
+    {
+        // Sprinting straight into the rigger at the slingshot's anchor.
+        Simulation s(InitialSpawn::ExteriorGrade);
+        require(s.advance_frame(0.2).accepted, "shove settle");
+        const auto rigger = s.snapshot().workers[1].position;
+        require(walk_to(s, rigger.x, rigger.z + 14.0, 12.0, 0.4), "line up on the rigger");
+        require(s.set_sprint_input(true), "sprint");
+        const bool hit = advance_until(s, [](const Snapshot &n) { return n.worker_stumbles >= 1; }, 0.1);
+        (void)hit;
+        for (int tick = 0; tick < 90 * 4 && s.snapshot().worker_stumbles == 0; ++tick) {
+            const auto p = s.snapshot().player_position;
+            const auto w = s.snapshot().workers[1].position;
+            (void)s.set_move_input(w.x - p.x, w.z - p.z);
+            require(s.advance_frame(dt).accepted, "sprint tick");
+        }
+        (void)s.set_sprint_input(false);
+        (void)s.set_move_input(0.0, 0.0);
+        const Snapshot hit_at = s.snapshot();
+        require(hit_at.worker_stumbles >= 1, "run into, a worker must stumble");
+        require(advance_until(s, [](const Snapshot &n) { return n.workers[1].state <= 1; }, 6.0),
+                "a stumbled worker recovers and goes back to work");
+        std::cout << "PASS scraperx_sim workers: startles=" << hit_at.worker_startles
+                  << " stumbles=" << hit_at.worker_stumbles << "\n";
+    }
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
         run_brachiation();
@@ -7035,6 +7119,7 @@ int main() {
         run_speed_vault();
         run_wall_run();
         run_hook();
+        run_workers();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -9286,6 +9371,7 @@ int main() {
     run_speed_vault();
     run_wall_run();
     run_hook();
+    run_workers();
     run_ascent();
 
     return EXIT_SUCCESS;

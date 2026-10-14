@@ -113,5 +113,37 @@ Next: place the wall-run and brachiation in the tower.
   landed twice. Rendered captures were inspected.
 - **Not covered.** No proof of the gulls, and no device measurement.
 
-Next for life: workers on real access (GDD §19), then the structure in motion (steam, beacons,
-lit windows).
+**Life L2, the yard crew (native + Godot).** Six workers on the grade between the start and the
+tower's base (GDD §19, Inhabitants):
+- **The crew.** A foreman walking the yard, two at the slingshot, a rigger at the base, a runner
+  between start and base, and someone watching the trapeze.
+- **Real bodies** (`sim/crew.cpp`). Each worker is an 80 kg upright capsule in the Jolt world, moved
+  only by its feet. Its acceleration is bounded (2.5 m/s², 4.5 m/s² when sidestepping) and it does
+  not drive while airborne. Workers step over the yard's 0.28 m kerbs with a lift from the feet.
+  Their routes keep to lanes mapped clear of machines with the native's own probe. Nothing
+  teleports them, and they are not saved.
+- **Around the player:**
+  - A walking player coming at a worker makes it step aside, earlier the faster they come. It
+    watches them pass, then goes back to work.
+  - A sprint at it, or a hard landing within 12 m, makes it flinch back and stare.
+  - A shove its feet did not drive makes it stumble, then recover.
+- **Drawn** (`life/crew_view.gd`). Boots, trousers, a hi-vis vest with a reflective stripe,
+  sleeves, hands, a head and a hard hat, posed from the native state: walking, working (a
+  hammering arm), watching, flinching and stumbling. The whole crew is 11 MultiMesh draw calls,
+  4 of them casting shadows.
+- **Proof.** Native `workers`:
+  - 30 s with the player idle has no shove, startle or yield; nobody walks faster than 1.5 m/s,
+    and both walkers cover more than 20 m;
+  - walking at the foreman makes him yield with no shove, and he resumes;
+  - a hard landing makes someone flinch;
+  - sprinting into a rigger makes him stumble, and he recovers.
+- **Touch.** `touch_workers` sees six workers and walks at the foreman; he steps aside and nobody
+  is shoved. Rendered captures were inspected.
+- **Gaps:**
+  - Faces are blank.
+  - The crew has no voices or footsteps.
+  - The player's ledge, vault and wall probes do not yet ignore workers, so a worker could in
+    principle be climbed.
+  - There are no workers in the tower's bands yet.
+
+Next for life: the structure in motion (steam, beacons, lit windows), then crews on the decks.
