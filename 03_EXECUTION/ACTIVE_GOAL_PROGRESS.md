@@ -51,5 +51,16 @@ nothing until pumped) and touch `touch_monkey_bars`. **In the game:** the pipe g
 south of the trapeze (`sim/pipe_gallery.cpp`). Ten pipes at 4.6 m from a 1.5 m start stand to a 4.7 m
 platform whose lip the swinging hand takes; swinging onto a ledge is now part of the move. Played
 natively (`pipe_gallery`) and by touch in the game's world (`touch_pipe_gallery`), with rendered
-captures. Not yet in the tower itself. Next: a bar or pipe run in the tower that makes a shortcut,
-then slides and speed vaults.
+captures. Not yet in the tower itself.
+
+**Arms overhead (Godot).** The camera's near plane was 0.25 m, so hands at the face were clipped away.
+It is now 0.05 m; the far views keep their draw counts and change only along near shadow edges.
+Overhead grips place the shoulders so whole sleeved arms rise from the lower corners. A bar has its
+own fist pose, and the view pitches to keep the grip in frame while swinging. The hang and swing
+touch scenarios fail if a hand leaves the screen or an arm comes within 0.15 m of the lens. The
+hands themselves are still crude primitives.
+
+**Parkour step 3, the slide (native + Godot).** Crouching at a run (5 m/s or more) slides on, braked
+only by 0.35 g of friction, and passes under the 1.45 m crawl beam. The native `slide` test checks the
+deceleration against the friction; `touch_slide` plays it by touch. Limitation: a slope brakes like
+the flat. Next: speed vaults, wall-runs, then the hook.
