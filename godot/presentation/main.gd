@@ -225,6 +225,7 @@ var _cam_bob_phase := 0.0
 var _cam_bob_weight := 0.0
 var _cam_fov_offset := 0.0
 var _cam_bank := 0.0
+var _fb_sliding := false
 var _crouch_eye := 0.0
 var _step_eye_lag := 0.0
 var _step_meters_seen := 0.0
@@ -1088,6 +1089,7 @@ func _read_context() -> Dictionary:
 		"velocity": velocity,
 		"grounded": grounded,
 		"crouched": bool(_native.is_player_crouched()),
+		"sliding": bool(_native.is_player_sliding()),
 		"traversal": traversal,
 		"hanging": hanging,
 		"climbing": climbing,
@@ -1307,6 +1309,10 @@ func _update_feedback(delta: float) -> void:
 		elif traversal != TRAVERSAL_NONE:
 			_haptic(&"tick")
 		_fb_traversal = traversal
+	var sliding: bool = _ctx.get("sliding", false)
+	if sliding and not _fb_sliding:
+		_haptic(&"vault")
+	_fb_sliding = sliding
 	var grounded: bool = _ctx["grounded"]
 	var velocity: Vector3 = _ctx["velocity"]
 	var lethal: float = _ctx["lethal"]
@@ -1582,6 +1588,11 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 			var mantle_heave := sin(PI * (traversal_prog - 0.45) / 0.55)
 			dip += 0.04 * mantle_heave
 		parkour_fov = 3.5 * sin(PI * clampf(traversal_prog, 0.0, 1.0))
+	elif bool(_ctx.get("sliding", false)):
+		# On the hip: the view leans back and a little to the trailing side,
+		# and widens with the speed the slide carries.
+		_cam_bank += 0.05
+		parkour_fov = 4.0 * clampf(Vector2(velocity.x, velocity.z).length() / 8.0, 0.0, 1.0)
 	elif bool(_ctx.get("balancing", false)) and grounded:
 		# Narrow beam balance micro-sway: subtle tightrope dynamic centering
 		var sway := sin(_cam_bob_phase * 0.75)
@@ -1726,6 +1737,8 @@ func _write_telemetry(position: Vector3, velocity: Vector3, grounded: bool) -> v
 		_status.text = "CLIMBING"
 	elif traversal == TRAVERSAL_SWINGING:
 		_status.text = "SWINGING"
+	elif bool(_native.is_player_sliding()):
+		_status.text = "SLIDING"
 	elif grounded and _is_kit(support) and support >= KIT_DYNAMIC_ENTITY_MIN:
 		_status.text = "RIDING A MACHINE"
 	elif grounded:

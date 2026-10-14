@@ -39,6 +39,7 @@ public:
     [[nodiscard]] godot::Vector3 get_player_linear_velocity() const;
     [[nodiscard]] bool is_player_grounded() const;
     [[nodiscard]] bool is_player_crouched() const;
+    [[nodiscard]] bool is_player_sliding() const;
     [[nodiscard]] std::int64_t get_support_entity_id() const;
     [[nodiscard]] godot::Vector3 get_support_contact_point() const;
     [[nodiscard]] godot::Vector3 get_support_point_linear_velocity() const;

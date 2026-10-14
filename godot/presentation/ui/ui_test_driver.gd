@@ -24,6 +24,7 @@ const SCENARIOS := {
 	"touch_vault": 3,
 	"touch_double_tap_vault": 3,
 	"touch_crouch": 0,
+	"touch_slide": 0,
 	"touch_hang_drop": 5,
 	"touch_hang_climb": 5,
 	"touch_monkey_bars": 39,
@@ -185,7 +186,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 		_stick_push(Vector2(0.0, -1.0))
 	# From the static-deck spawn (0, -8) straight down the crawl beam's lane,
 	# toward (-2, -15).
-	if scenario == "touch_crouch":
+	if scenario == "touch_crouch" or scenario == "touch_slide":
 		main._yaw = atan2(2.0, 7.0)
 		main._pitch = 0.0
 	_run.call_deferred()
@@ -217,6 +218,8 @@ func _run() -> void:
 			ok = await _touch_double_tap_vault()
 		"touch_crouch":
 			ok = await _touch_crouch()
+		"touch_slide":
+			ok = await _touch_slide()
 		"touch_hang_drop":
 			ok = await _touch_hang(false)
 		"touch_hang_climb":
@@ -540,6 +543,29 @@ func _touch_double_tap_vault() -> bool:
 # The crawl beam beside the dock has its underside 1.45 m up. Standing, the
 # walk stops at its face; CROUCH crouches the native body and the same walk
 # passes under; STAND raises it again in the open. The eye follows the body.
+# Parkour step 3: down the crawl beam's lane at a sprint (the stick pushed
+# past its ring), CROUCH 3 m short of the 1.45 m beam: the body slides under
+# it on its own momentum.
+func _touch_slide() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not _stick_sprint():
+		return _fail("the stick pushed past its ring did not latch sprint")
+	var near: bool = await _wait_until(func() -> bool: return _position().z < -10.0, 3.0)
+	if not near:
+		return _fail("the sprint never reached the beam's approach (z %.2f)" % _position().z)
+	var entry := Vector2(_velocity().x, _velocity().z).length()
+	_tap(1, _center(&"crouch"))
+	var slid: bool = await _wait_until(func() -> bool: return bool(_native().is_player_sliding()), 0.2)
+	if not slid:
+		return _fail("CROUCH at %.1f m/s did not slide" % entry)
+	await _pose("slide")
+	var under: bool = await _wait_until(func() -> bool: return _position().z < -13.4, 1.5)
+	if not under:
+		return _fail("the slide stopped short of the beam (z %.2f)" % _position().z)
+	_detail = "entry_mps=%.2f under_mps=%.2f" % [entry, Vector2(_velocity().x, _velocity().z).length()]
+	return Vector2(_velocity().x, _velocity().z).length() > 2.5
+
+
 func _touch_crouch() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not _main._touch.is_button_shown(&"crouch") or _main._touch.button_label(&"crouch") != "CROUCH":

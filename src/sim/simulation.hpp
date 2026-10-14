@@ -439,6 +439,9 @@ struct Snapshot final {
     bool player_grounded = false;
     // Crouched: the short capsule (see Simulation::set_crouch_input).
     bool player_crouched = false;
+    // Parkour step 3: crouched at a run, the body slides on (see kSlideFriction).
+    bool player_sliding = false;
+    std::uint64_t slide_count = 0;
     std::uint64_t support_entity_id = 0;
     Vector3 support_contact_point{};
     Vector3 support_point_linear_velocity{};

@@ -6785,10 +6785,66 @@ void run_pipe_gallery() {
               << " top_y=" << top.player_position.y << "\n";
 }
 
+// Parkour step 3: the slide, on the proving ground's crawl beam (a 4 m lane
+// at x = -2 under a beam 1.45 m up at z = -13). Sprinted at and crouched
+// 3 m short, the body slides under it on its own momentum, braked only by
+// sliding friction (0.35 g); crouched at a walk, it does not slide.
+void run_slide() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const double dt = Simulation::kFixedStepSeconds;
+    Simulation s(InitialSpawn::StaticDeck);
+    require(s.advance_frame(0.4).accepted, "slide settle");
+    // Onto the lane's centre line, stopped, then down it at a sprint.
+    require(s.set_facing(-1.0, 0.0) && s.set_move_input(-0.5, 0.0), "slide line-up");
+    require(advance_until(s, [](const Snapshot &n) { return n.player_position.x < -1.95; }, 4.0), "slide line-up walk");
+    require(s.set_move_input(0.0, 0.0) && s.advance_frame(0.5).accepted, "slide line-up stop");
+    require(std::abs(s.snapshot().player_position.x + 2.0) < 0.15, "the slide must start on the lane's centre line");
+    require(s.set_facing(0.0, -1.0) && s.set_move_input(0.0, -1.0) && s.set_sprint_input(true), "slide sprint");
+    require(advance_until(s, [](const Snapshot &n) { return n.player_position.z < -10.0; }, 3.0), "slide run-up");
+    const Snapshot run = s.snapshot();
+    require(std::hypot(run.player_linear_velocity.x, run.player_linear_velocity.z) > 6.0, "the run-up must reach a sprint");
+    require(s.set_crouch_input(true), "slide crouch");
+    require(s.advance_frame(dt * 2).accepted, "slide onset");
+    require(s.snapshot().player_sliding && s.snapshot().slide_count == 1, "crouching at a sprint must slide");
+    const Snapshot a = s.snapshot();
+    require(s.advance_frame(0.5).accepted, "slide half second");
+    const Snapshot b = s.snapshot();
+    const double va = std::hypot(a.player_linear_velocity.x, a.player_linear_velocity.z);
+    const double vb = std::hypot(b.player_linear_velocity.x, b.player_linear_velocity.z);
+    if (std::getenv("SLIDE_TRACE") != nullptr) {
+        std::cout << "slide va=" << va << " vb=" << vb << " za=" << a.player_position.z << " zb=" << b.player_position.z << "\n";
+    }
+    require(std::abs((va - vb) - 0.35 * 9.81 * 0.5) < 0.3,
+            "a slide must be braked by sliding friction only (0.35 g), not stopped by the crouch walk's traction");
+    double ended_z = 0.0;
+    require(advance_until(s,
+                          [&](const Snapshot &n) {
+                              ended_z = n.player_position.z;
+                              return !n.player_sliding;
+                          },
+                          3.0),
+            "the slide must run out");
+    require(ended_z < -14.0, "the slide must carry the body under the crawl beam and out past it");
+    require(s.snapshot().player_crouched, "a slide run out leaves the body crouched");
+    require(s.snapshot().death_count == 0, "the slide is not lethal");
+
+    // Crouched at a walk: no slide.
+    Simulation w(InitialSpawn::StaticDeck);
+    require(w.advance_frame(0.4).accepted && w.set_facing(0.0, -1.0) && w.set_move_input(0.0, -0.5), "walk");
+    require(w.advance_frame(1.0).accepted && w.set_crouch_input(true) && w.advance_frame(0.3).accepted, "walk crouch");
+    require(w.snapshot().slide_count == 0 && !w.snapshot().player_sliding, "crouching at a walk must not slide");
+
+    std::cout << "PASS scraperx_sim slide: entry_mps=" << va << " after_half_s=" << vb << " ran_out_z=" << ended_z
+              << "\n";
+}
+
 int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
         run_brachiation();
         run_pipe_gallery();
+        run_slide();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -9033,6 +9089,7 @@ int main() {
     run_derrick();
     run_brachiation();
     run_pipe_gallery();
+    run_slide();
     run_ascent();
 
     return EXIT_SUCCESS;

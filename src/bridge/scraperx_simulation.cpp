@@ -89,6 +89,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_player_linear_velocity);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_grounded"),
                                 &ScraperXSimulation::is_player_grounded);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_player_sliding"),
+                                &ScraperXSimulation::is_player_sliding);
     godot::ClassDB::bind_method(godot::D_METHOD("is_player_crouched"),
                                 &ScraperXSimulation::is_player_crouched);
     godot::ClassDB::bind_method(godot::D_METHOD("get_support_entity_id"),
@@ -368,6 +370,10 @@ godot::Vector3 ScraperXSimulation::get_player_linear_velocity() const {
 
 bool ScraperXSimulation::is_player_grounded() const {
     return simulation_->snapshot().player_grounded;
+}
+
+bool ScraperXSimulation::is_player_sliding() const {
+    return simulation_->snapshot().player_sliding;
 }
 
 bool ScraperXSimulation::is_player_crouched() const {

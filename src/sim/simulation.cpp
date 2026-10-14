@@ -135,6 +135,18 @@ constexpr float kRollDeceleration = 3.0F;
 constexpr float kRollSteerAcceleration = 4.0F;
 constexpr double kRollSeconds = 0.6;
 constexpr float kStumbleMinimumSpeed = 3.0F;
+// Parkour step 3: the slide. Crouching at a run -- kSlideMinimumSpeed or more
+// over the ground, within 45 degrees of the facing -- drops the body onto its
+// hip in the 1.2 m capsule and lets it run on: the ground takes the speed off
+// only as sliding friction, kSlideFriction (CHOSEN: boots and canvas on steel
+// plate, about 0.35) times g, 3.4 m/s/s, never the planted stop the crouch
+// walk's traction would make. The stick steers it with at most
+// kSlideSteerAcceleration. It ends when the speed falls to the crouch walk's
+// (kPlayerMaximumRelativeSpeed * kCrouchSpeedScale), the body stands or
+// leaves the ground. Limitation: on a slope it is braked as on the flat.
+constexpr float kSlideMinimumSpeed = 5.0F;
+constexpr float kSlideFriction = 0.35F;
+constexpr float kSlideSteerAcceleration = 2.0F;
 // Phase 4: a support jerked under the feet. The body keeps its velocity and
 // the soles re-match the support only at the ground's traction, so a jolt
 // dv leaves the COM moving at dv over the footing: an XCoM shift dv / omega
@@ -2578,12 +2590,54 @@ private:
             return;
         }
         if (!wants_up && grounded_) {
+            begin_slide_if_running(bodies);
             const JPH::RVec3 at = bodies.GetPosition(player_id_);
             bodies.SetShape(player_id_, player_crouch_shape_.GetPtr(), false,
                             JPH::EActivation::Activate);
             bodies.SetPosition(player_id_, at - JPH::Vec3(0.0F, kCrouchDrop, 0.0F),
                                JPH::EActivation::Activate);
             crouched_ = true;
+        }
+    }
+
+    // At the moment of crouching: fast enough, and running the way the body
+    // faces, it slides (see kSlideMinimumSpeed).
+    void begin_slide_if_running(JPH::BodyInterface &bodies) noexcept {
+        if (rolling() || carry_constraint_ != nullptr) {
+            return;
+        }
+        const JPH::Vec3 relative = bodies.GetLinearVelocity(player_id_) - airborne_inherited_velocity_;
+        const JPH::Vec3 horizontal(relative.GetX(), 0.0F, relative.GetZ());
+        const float speed = horizontal.Length();
+        if (speed < kSlideMinimumSpeed || facing_.IsNearZero() ||
+            horizontal.Dot(facing_) < std::cos(0.25F * static_cast<float>(kPi)) * speed) {
+            return;
+        }
+        sliding_ = true;
+        slide_direction_ = horizontal / speed;
+        ++slide_count_;
+    }
+
+    // Sliding: along the slide only friction acts; across it the stick steers.
+    void slide_locomotion(JPH::Vec3 &velocity, const JPH::Vec3 reference, const StepCommands &commands,
+                          const float dt) noexcept {
+        const float gravity = -physics_system_.GetGravity().GetY();
+        const JPH::Vec3 relative = velocity - reference;
+        const JPH::Vec3 across(-slide_direction_.GetZ(), 0.0F, slide_direction_.GetX());
+        const float along_speed = std::max(0.0F, relative.Dot(slide_direction_) - kSlideFriction * gravity * dt);
+        const float wanted_across =
+            float(commands.move_input_x * across.GetX() + commands.move_input_z * across.GetZ()) * kSlideMinimumSpeed * 0.5F;
+        const float across_speed = relative.Dot(across);
+        const float across_change = std::clamp(wanted_across - across_speed, -kSlideSteerAcceleration * dt,
+                                               kSlideSteerAcceleration * dt);
+        const JPH::Vec3 horizontal = slide_direction_ * along_speed + across * (across_speed + across_change);
+        velocity.SetX(reference.GetX() + horizontal.GetX());
+        velocity.SetZ(reference.GetZ() + horizontal.GetZ());
+        if (horizontal.Length() > 1.0e-3F) {
+            slide_direction_ = horizontal.Normalized();
+        }
+        if (along_speed <= kPlayerMaximumRelativeSpeed * static_cast<float>(kCrouchSpeedScale)) {
+            sliding_ = false;
         }
     }
 
@@ -2978,6 +3032,9 @@ private:
         double move_x = commands.move_input_x * speed_scale;
         double move_z = commands.move_input_z * speed_scale;
         const bool had_line = line_held_;
+        if (!grounded_) {
+            sliding_ = false;   // off the ground the slide is a fall
+        }
         sprinting_ = false;
         balancing_ = false;
         beam_xcom_ = 0.0F;
@@ -3020,7 +3077,7 @@ private:
             JPH::Vec3 teeter_direction = JPH::Vec3::sZero();
             const bool was_teetering = teetering_;
             teetering_ = false;
-            if (!beam.valid && !rolling()) {
+            if (!beam.valid && !rolling() && !sliding_) {
                 const JPH::Vec3 relative = player_velocity - reference_velocity;
                 const JPH::Vec3 horizontal(relative.GetX(), 0.0F, relative.GetZ());
                 const float speed = horizontal.Length();
@@ -3055,8 +3112,14 @@ private:
                                           ? static_cast<float>(kPlayerMaximumRelativeSpeed * kSprintSpeedScale)
                                           : kPlayerMaximumRelativeSpeed * carry_speed_scale()) *
                                      static_cast<float>(0.45 + 0.55 * balance);
+            if (sliding_ && !crouched_) {
+                sliding_ = false;
+            }
             if (rolling()) {
                 roll_locomotion(player_velocity, reference_velocity, commands, delta_seconds);
+            } else if (sliding_) {
+                sprinting_ = false;
+                slide_locomotion(player_velocity, reference_velocity, commands, delta_seconds);
             } else {
                 const JPH::Vec3 before = player_velocity - reference_velocity;
                 approach_relative_horizontal_velocity(player_velocity,
@@ -4635,6 +4698,7 @@ private:
         }
 
         grounded_ = false;
+        sliding_ = false;
         clear_recovery();
         clear_support_jolt();
         teetering_ = false;
@@ -4789,6 +4853,8 @@ public:
             {player_velocity.GetX(), player_velocity.GetY(), player_velocity.GetZ()};
         state_.player_grounded = grounded_;
         state_.player_crouched = crouched_;
+        state_.player_sliding = sliding_;
+        state_.slide_count = slide_count_;
         state_.support_entity_id = support_entity_id_;
         state_.support_contact_point = support_sample_.contact_point;
         state_.support_point_linear_velocity = support_sample_.point_velocity;
@@ -5088,6 +5154,9 @@ public:
     double recovery_duration_ = 0.0;
     double recovery_seconds_left_ = 0.0;
     double roll_seconds_left_ = 0.0;
+    bool sliding_ = false;
+    JPH::Vec3 slide_direction_ = JPH::Vec3::sZero();
+    std::uint64_t slide_count_ = 0;
     JPH::Vec3 roll_direction_{JPH::Vec3::sZero()};
     float roll_entry_speed_ = 0.0F;
     double roll_blocked_loss_ = 0.0;
