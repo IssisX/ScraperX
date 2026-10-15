@@ -97,7 +97,22 @@ endif()
 option(SCRAPERX_BUILD_TESTS "Build simulation tests regardless of platform" OFF)
 
 if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
-    add_executable(scraperx_sim_tests tests/simulation_tests.cpp)
+    add_executable(scraperx_sim_tests
+        tests/simulation_tests.cpp
+        tests/sim_tests_core.cpp
+        tests/sim_tests_well.cpp
+        tests/sim_tests_step2.cpp
+        tests/sim_tests_wet.cpp
+        tests/sim_tests_plate.cpp
+        tests/sim_tests_crane.cpp
+        tests/sim_tests_service.cpp
+        tests/sim_tests_machines.cpp
+        tests/sim_tests_rides.cpp
+        tests/sim_tests_ground.cpp
+        tests/sim_tests_stack_route.cpp
+        tests/sim_tests_stack.cpp
+        tests/sim_tests_movement.cpp
+    )
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_sim_tests PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
