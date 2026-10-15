@@ -785,8 +785,9 @@ func _touch_works() -> bool:
 func _touch_workers() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var figures: Array = _main._crew.figures()
-	if figures.size() != 9:
-		return _fail("expected nine of the crew (six in the yard, three on the decks), saw %d" % figures.size())
+	if figures.size() != 12:
+		return _fail("expected twelve of the crew (six in the yard, three on the decks, three on the rings), saw %d" %
+			figures.size())
 	var foreman: Vector3 = figures[0][0]
 	var to := foreman - _position()
 	_main._yaw = atan2(-to.x, -to.z)

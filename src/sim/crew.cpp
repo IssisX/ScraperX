@@ -64,6 +64,14 @@ Crew::Crew(PhysicsSystem &physics, const std::uint32_t moving_layer)
     add({{-21.5F, -136.0F, 5.0F, -kPi * 0.5F}, {-21.5F, -160.0F, 4.0F, -kPi * 0.5F}}, 1.2F, 22.0F);
     add({{-5.0F, -170.0F, 12.0F, 0.0F}, {8.0F, -170.0F, 8.0F, 0.0F}}, 1.15F, 22.0F);
     add({{21.5F, -140.0F, 6.0F, kPi * 0.5F}, {21.5F, -162.0F, 6.0F, kPi * 0.5F}}, 1.25F, 44.0F);
+    // High up, the same 4 m bands (probed): on the 220 ring's north band
+    // someone walks its length and stops to look out north over the drop; on
+    // the 264 ring a walker on its north band and someone at work on its east
+    // band. Clear of the swing's gangway, C6's arrival and C7's lane on the
+    // west band, and the cascade mast in the well.
+    add({{-16.0F, -171.0F, 7.0F, kPi}, {16.0F, -171.0F, 9.0F, kPi}}, 1.2F, 220.25F);
+    add({{-12.0F, -169.0F, 4.0F, kPi}, {12.0F, -169.0F, 6.0F, kPi}}, 1.15F, 264.25F);
+    add({{19.0F, -138.0F, 14.0F, -kPi * 0.5F}, {19.0F, -160.0F, 10.0F, -kPi * 0.5F}}, 1.1F, 264.25F);
 }
 
 Crew::~Crew() {

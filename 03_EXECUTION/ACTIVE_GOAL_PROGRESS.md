@@ -171,7 +171,21 @@ clear with the probe and kept off the route's south band:
 The native `workers` test checks all nine: each on its own floor and each walker covering its
 route, with no shove.
 
-Next for life: a shout when a worker is startled, and workers on the higher bands.
+**The crew higher up (2026-10-15).** Three more workers stand on the high rings, so the climb is
+not empty above 44 m:
+- One walks the 220 ring's north band and stops to look out north.
+- One walks the 264 ring's north band.
+- One works on the 264 ring's east band.
+
+The bands were mapped with the native surface probe (each is a 4 m band round the well). The
+routes keep clear of the swing's gangway, C6's arrival, C7's lane and the cascade mast.
+
+- **Native `workers`:** all twelve stand on their own floors, and the new walkers cover their
+  routes.
+- **Touch:** `touch_workers` sees twelve figures. `touch_slingshot`, `touch_swing`, `touch_c6`,
+  `touch_c7` and `touch_machines` still pass with the new crew in place.
+
+Next for life: a shout when a worker is startled (needs a licensed recording).
 
 **Phase 6, the pitman lift is hauled by hand (native + touch).** It was "board, press RAISE, wait";
 now no motor turns it:
