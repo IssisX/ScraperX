@@ -252,5 +252,12 @@ one kit body (`src/sim/climb_c7.cpp`, built last so older saves line up):
 - **Repair on the way.** The last mantle stalled at 291.07 m. A 5 cm gap between the walkway's edge
   and its fascia took the ledge point onto the fascia's lip strip, not the walkway. The fascia now
   sits flush with the walkway's edge.
-- **Not observed:** how it reads from the band (whether a player sees the galleries as the way),
-  and the phone.
+- **Rendered (local, 540×464, software renderer).** Six frames from a rendered `touch_c7`
+  (passed, 41.7 s):
+  - From the kentledge, gallery one's pipes and platform one's yellow lip read as the way ahead.
+  - On gallery two both fists are closed on a pipe, with the platform's lip beyond.
+  - On the walkway the checkpoint is secured at 292.2 m.
+  - Seen in passing: the distant mountains are flat grey cones with white caps. They look cheap
+    against the bar and belong in the look pass (task 93).
+- **Not observed:** whether a first-time player sees the galleries as the way from the band, and
+  the phone.
