@@ -492,6 +492,24 @@ built since (always last) still start as built. The format key moves to SXCLIMB2
 - **Proof.** Native `save`: a save whose first two bodies' entities are swapped is refused and
   changes nothing. With the check taken out, the same test fails.
 
+**The first sight: the yard's ground and the skyline (Godot, task 93).**
+- **The ground.** The yard was one flat, dark plane under a kerb and a few dashes. It is now
+  asphalt that has aged (`yard_ground.gd`): broad worn patches gone grey, darker repair
+  patches in blocks, the aggregate's grain, tar-sealed cracks where it has broken up, and oil
+  stains.
+  - Drawn from four noise textures read at each pixel's world position: no cost per frame.
+  - Its average colour is the old flat one's, so the light is unchanged. The collision is the
+    same box.
+- **The skyline.** From the yard, the basin's rim read as a row of teeth: 44 similar cones at
+  even spacing. A higher range now stands beyond it, out of reach: 22 peaks, 680–1100 m tall,
+  1.9–2.4 km out. Each keeps its foot outside the rim's own, and is drawn only (nothing can get
+  there). The rim's collision is unchanged.
+  - The haze eases (0.0009 to 0.0007 per metre, at most 0.6 of the way to the horizon), so the
+    near rock keeps its contrast and the far range reads paler and bluer.
+- **Rendered (local, 540×464).** `touch_workers` looking south from the start: worn,
+  stained ground, and a layered skyline behind the rim. `touch_title` unchanged in framing.
+- **Not observed:** the phone; the yard at night.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 

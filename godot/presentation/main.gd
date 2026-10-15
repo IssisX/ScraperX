@@ -25,6 +25,7 @@ const FirstPersonArms := preload("res://presentation/first_person_arms.gd")
 const Birds := preload("res://presentation/life/birds.gd")
 const CrewView := preload("res://presentation/life/crew_view.gd")
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
+const YardGround := preload("res://presentation/yard_ground.gd")
 const Works := preload("res://presentation/life/works.gd")
 const CloudLayer := preload("res://presentation/cloud_layer.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
@@ -2012,7 +2013,8 @@ func _build_world() -> void:
 	# lamplight are the warm accents -- and now verdigris copper, painted
 	# machinery blue, and lichen staining break the rust/iron monochrome, the
 	# way a real decades-old industrial site actually weathers.
-	var asphalt := _material(Color("17150f"), 0.06, 0.4)
+	# The yard's asphalt: worn, patched, cracked and stained (yard_ground.gd).
+	var asphalt := YardGround.material()
 	var concrete := _material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete)
 	# A real value ladder: near-black iron in shadow, mid rust for the frame,
 	# brighter oxide only where light catches an edge. Bump-mapped: these
@@ -2591,6 +2593,8 @@ const BASIN_CENTER := Vector3(0.0, 0.0, -100.0)
 const BASIN_RIM_RADIUS := 1100.0
 const BASIN_RIM_RIDGES := 44
 const VALLEY_FLOOR_TOP := -0.3
+const BACK_RANGE_PEAKS := 22
+const BACK_RANGE_CLEAR_M := 1450.0
 
 
 func _build_basin() -> void:
@@ -2621,6 +2625,21 @@ func _build_basin() -> void:
 		if height > 400.0:
 			_add_cone("RimRidgeSnow", radius * 0.3, height * 0.28,
 				base + Vector3(0.0, height * 0.93, 0.0), snow).visible = false
+
+	# Beyond the rim a higher range, out of reach: from the yard it stands over
+	# the rim's saddles, so the skyline is layered rather than a row of teeth.
+	# Drawn only (no solid: nothing can get there), each keeping its foot
+	# outside the rim's own (BACK_RANGE_CLEAR_M from the centre).
+	var back := RandomNumberGenerator.new()
+	back.seed = 2207
+	for index in BACK_RANGE_PEAKS:
+		var angle := TAU * (float(index) + back.randf_range(-0.3, 0.3)) / float(BACK_RANGE_PEAKS)
+		var reach := back.randf_range(1900.0, 2400.0)
+		var height := back.randf_range(680.0, 1100.0)
+		var radius := minf(height * back.randf_range(0.55, 0.8), reach - BACK_RANGE_CLEAR_M)
+		_peaks.append({"foot": BASIN_CENTER + Vector3(sin(angle) * reach, VALLEY_FLOOR_TOP - 2.0,
+			cos(angle) * reach), "radius": radius, "height": height, "variant": index + 11,
+			"rock": Color("56606e") if index % 2 == 0 else Color("5c5f68"), "snowy": height > 1020.0})
 
 	# Conifers scattered over the meadow, clear of the yard and the tower.
 	var placed := 0

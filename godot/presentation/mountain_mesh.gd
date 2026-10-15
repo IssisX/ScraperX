@@ -76,7 +76,7 @@ uniform vec3 snow : source_color = vec3(0.83, 0.855, 0.886);
 // the horizon with distance. In the albedo, so it is lit (and dark at night)
 // like the slope it covers.
 uniform vec3 haze : source_color = vec3(0.6, 0.66, 0.74);
-uniform float haze_per_m = 0.0009;
+uniform float haze_per_m = 0.0007;
 varying vec4 tint;
 void vertex() { tint = INSTANCE_CUSTOM; }
 void fragment() {
@@ -85,7 +85,7 @@ void fragment() {
 	vec3 rock = tint.rgb * shade;
 	vec3 surface = mix(mix(rock, rock * 1.6, COLOR.g), snow, white);
 	float air = 1.0 - exp(-length(VERTEX) * haze_per_m);
-	ALBEDO = mix(surface, haze, air * 0.7);
+	ALBEDO = mix(surface, haze, air * 0.6);
 	ROUGHNESS = mix(0.95, 0.72, white);
 	SPECULAR = mix(0.2, 0.45, white);
 }
