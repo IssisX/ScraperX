@@ -17,6 +17,10 @@ set(SCRAPERX_JOLT_COMMIT "e77f175595e64cb44218cc9d9d56fc365ad0e36a" CACHE STRING
 
 add_library(scraperx_sim STATIC
     src/sim/simulation.cpp
+    src/sim/physics_world.cpp
+    src/sim/physics_move.cpp
+    src/sim/physics_traversal.cpp
+    src/sim/physics_climb.cpp
     src/sim/mechanism_kit.cpp
     src/sim/slingshot.cpp
     src/sim/slingshot_model.cpp
@@ -66,7 +70,17 @@ endif()
 option(SCRAPERX_BUILD_TESTS "Build simulation tests regardless of platform" OFF)
 
 if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
-    add_executable(scraperx_sim_tests tests/simulation_tests.cpp)
+    add_executable(scraperx_sim_tests
+        tests/simulation_tests.cpp
+        tests/test_proving.cpp
+        tests/test_campaign.cpp
+        tests/test_wet.cpp
+        tests/test_plate.cpp
+        tests/test_crane.cpp
+        tests/test_stack.cpp
+        tests/test_floors.cpp
+        tests/test_upper.cpp
+    )
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_sim_tests PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
