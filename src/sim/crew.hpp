@@ -37,7 +37,7 @@ public:
     enum class State : std::uint8_t { Walking = 0, Working = 1, Yielding = 2, Startled = 3, Stumbling = 4 };
 
     static constexpr std::uint64_t kWorkerEntityBase = 3100;
-    static constexpr std::size_t kMaxWorkers = 12;
+    static constexpr std::size_t kMaxWorkers = 14;
     static constexpr float kMassKg = 80.0F;
     static constexpr float kRadius = 0.28F;
     static constexpr float kHalfHeight = 0.62F;      // cylinder half; standing 1.8 m tall
@@ -68,6 +68,11 @@ public:
     // of kStepLiftMps (rising ~0.43 m), CHOSEN for the yard's 0.28 m kerbs.
     static constexpr float kStepMaxM = 0.4F;
     static constexpr float kStepLiftMps = 2.9F;
+    // Edges: the feet never carry a worker toward a spot kEdgeLookM past its
+    // capsule where the floor falls away more than kEdgeDropM -- a person on
+    // a site does not step off an open edge. (A shove still can.)
+    static constexpr float kEdgeLookM = 0.35F;
+    static constexpr float kEdgeDropM = 0.5F;
 
     struct View {
         float x = 0.0F, y = 0.0F, z = 0.0F;
@@ -115,6 +120,8 @@ private:
 
     void add(std::vector<Station> route, float walk_mps, float floor_y = 0.0F);
     [[nodiscard]] bool grounded(const Worker &worker, const JPH::BodyInterface &bodies) const;
+    // Floor within kEdgeDropM below a standing worker's soles at `centre`.
+    [[nodiscard]] bool floor_under(const Worker &worker, JPH::RVec3 centre) const;
 
     JPH::PhysicsSystem &physics_;
     JPH::RefConst<JPH::Shape> shape_;

@@ -794,9 +794,15 @@ func _touch_works() -> bool:
 func _touch_workers() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var figures: Array = _main._crew.figures()
-	if figures.size() != 12:
-		return _fail("expected twelve of the crew (six in the yard, three on the decks, three on the rings), saw %d" %
+	if figures.size() != 14:
+		return _fail("expected fourteen of the crew (six in the yard, three on the decks, three on the rings, two welders), saw %d" %
 			figures.size())
+	# Every worker stands inside the crew's draw bounds, high rings included
+	# (they once covered only the yard, and the rest went undrawn).
+	var bounds: AABB = _main._crew.draw_bounds()
+	for figure in figures:
+		if not bounds.has_point(figure[0]):
+			return _fail("a worker at %s is outside the crew's draw bounds %s" % [str(figure[0]), str(bounds)])
 	var foreman: Vector3 = figures[0][0]
 	var to := foreman - _position()
 	_main._yaw = atan2(-to.x, -to.z)
@@ -1744,6 +1750,10 @@ func _shop(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died %d times on the way" % int(_native().get_death_count()))
+	# The Plate Shop at work: across the well a welder's arc burns, and is heard.
+	if int(_main._crew.welding_frames) == 0 or int(_main._audio.welds_heard) == 0:
+		return _fail("no welder was seen at work across the well (arc frames %d, heard %d)" % [
+			int(_main._crew.welding_frames), int(_main._audio.welds_heard)])
 	if not _heard_region(&"shop"):
 		return false
 	_detail = "shop_g_y=%.2f shop_h_y=%.2f ring484_y=%.2f seconds=%.1f worst_wrist_step_m=%.3f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
@@ -1792,6 +1802,18 @@ func _shop_g(device: int) -> bool:
 			float(_shop_state()["g_platform_travel"]))
 	await _seconds(1.0)
 	await _pose("shop_g_top")
+	if not _capture_prefix.is_empty():
+		# Across the well on the 374 ring, the Plate Shop's welder at work;
+		# then the view as it was. (Capture only: a headless run is unchanged.)
+		var yaw_before := float(_main._yaw)
+		var pitch_before := float(_main._pitch)
+		await _face(Vector2(1.0, -0.02))
+		await _tilt(-0.1)
+		await _wait_until(func() -> bool: return int(_main._crew.burning_count()) > 0, 40.0)
+		await _seconds(0.5)
+		await _pose("shop_welder")
+		_main._yaw = yaw_before
+		_main._pitch = pitch_before
 	if int(_native().get_support_entity_id()) != 2070:
 		return _fail("the rider is not on G's platform at the top (y %.2f, on %d)" % [_position().y,
 			int(_native().get_support_entity_id())])

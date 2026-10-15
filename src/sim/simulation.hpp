@@ -479,7 +479,7 @@ struct Snapshot final {
     std::uint64_t hook_bite_count = 0;
     // The crew: how many, each one, and what the player has made them do.
     std::uint8_t worker_count = 0;
-    std::array<WorkerView, 12> workers{};
+    std::array<WorkerView, 14> workers{};
     std::uint32_t worker_yields = 0;
     std::uint32_t worker_startles = 0;
     std::uint32_t worker_stumbles = 0;

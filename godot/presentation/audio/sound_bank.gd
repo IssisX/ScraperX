@@ -57,6 +57,7 @@ func build() -> void:
 	clips[&"pour_loop"] = [_loop(_pour(1.8), 0.3)]
 	# Last, so every clip above draws the same seeded noise it always has.
 	clips[&"drip"] = _variants(3, _drip)
+	clips[&"arc_loop"] = [_loop(_arc(1.6), 0.3)]
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -253,6 +254,23 @@ func _drip() -> PackedFloat32Array:
 	for i in range(out.size() - 1, echo - 1, -1):
 		dull += (out[i - echo] - dull) * 0.35
 		out[i] += dull * 0.3
+	return out
+
+
+# An electric arc on steel: a frying crackle -- sparse sharp clicks of
+# grit-band noise over a thin hiss -- with the welding set's buzz in its
+# upper harmonics (300-500 Hz, where a phone speaker carries it).
+func _arc(length: float) -> PackedFloat32Array:
+	var out := _silence(length)
+	var hiss := _band_noise_buffer(out.size(), 2500.0, 7000.0)
+	for i in out.size():
+		out[i] = hiss[i] * 0.18
+	for c in int(length * 220.0):
+		var bite := _rng.randf_range(0.3, 0.95)
+		_add_band_noise(out, _rng.randf_range(0.0, length - 0.01), 0.004, bite * bite, 0.0012,
+			1500.0, 6500.0)
+	for harmonic in [3.0, 4.0, 5.0]:
+		_add_tone(out, 100.0 * harmonic, 0.0, length, 0.15 / harmonic, 0.0)
 	return out
 
 

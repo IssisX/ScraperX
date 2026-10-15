@@ -72,6 +72,13 @@ Crew::Crew(PhysicsSystem &physics, const std::uint32_t moving_layer)
     add({{-16.0F, -171.0F, 7.0F, kPi}, {16.0F, -171.0F, 9.0F, kPi}}, 1.2F, 220.25F);
     add({{-12.0F, -169.0F, 4.0F, kPi}, {12.0F, -169.0F, 6.0F, kPi}}, 1.15F, 264.25F);
     add({{19.0F, -138.0F, 14.0F, -kPi * 0.5F}, {19.0F, -160.0F, 10.0F, -kPi * 0.5F}}, 1.1F, 264.25F);
+    // The Plate Shop (AS-008, 340 -> 484 m) at work: a welder on the east
+    // band of the 374 ring and one on the 418 ring, each kneeling at the
+    // band's inner edge over the well (0.7 m off it, facing it) at two seams
+    // in turn. Across the well from G, H and I on the west half; the lanes
+    // and the open edge probed.
+    add({{13.6F, -145.0F, 18.0F, -kPi * 0.5F}, {13.6F, -156.0F, 16.0F, -kPi * 0.5F}}, 1.05F, 374.25F);
+    add({{11.8F, -157.0F, 15.0F, -kPi * 0.5F}, {11.8F, -144.0F, 19.0F, -kPi * 0.5F}}, 1.1F, 418.25F);
 }
 
 Crew::~Crew() {
@@ -124,6 +131,13 @@ bool Crew::is_worker(const BodyID body) const noexcept {
     return false;
 }
 
+bool Crew::floor_under(const Worker &worker, const RVec3 centre) const {
+    RayCastResult hit;
+    const IgnoreSingleBodyFilter self(worker.body);
+    return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(centre, Vec3(0.0F, -(kStandCentre + kEdgeDropM), 0.0F)),
+                                                  hit, {}, {}, self);
+}
+
 bool Crew::grounded(const Worker &worker, const BodyInterface &bodies) const {
     const RVec3 centre = bodies.GetPosition(worker.body);
     const RRayCast ray(centre, Vec3(0.0F, -(kStandCentre + 0.12F), 0.0F));
@@ -173,6 +187,10 @@ void Crew::pre_step(const float dt, const RVec3 player, const Vec3 player_veloci
                 const Vec3 across(-player_velocity.GetZ(), 0.0F, player_velocity.GetX());
                 const Vec3 side = across.Normalized() * (across.Dot(-to_player) >= 0.0F ? 1.0F : -1.0F);
                 worker.aside = flat(Vec3(at)) + side * kYieldStepM;
+                // No floor there (an open edge): hold its ground instead.
+                if (!floor_under(worker, at + side * kYieldStepM)) {
+                    worker.aside = flat(Vec3(at));
+                }
                 worker.resume = view.state;
                 view.state = State::Yielding;
                 worker.timer = 0.6F;
@@ -245,6 +263,12 @@ void Crew::pre_step(const float dt, const RVec3 player, const Vec3 player_veloci
             }
             break;
         }
+        }
+        // Never toward an open edge: where the floor falls away ahead, the
+        // feet do not go.
+        if (on_ground && want.LengthSq() > 1.0e-4F &&
+            !floor_under(worker, at + want.Normalized() * (kRadius + kEdgeLookM))) {
+            want = Vec3::sZero();
         }
         view.yaw = turn_toward(view.yaw, face, view.state == State::Startled ? 9.0F : 4.0F, dt);
 

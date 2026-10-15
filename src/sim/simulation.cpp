@@ -5445,6 +5445,8 @@ public:
         state_.hook_tension_n = hook_tension_n_;
         state_.hook_fire_count = hook_fire_count_;
         state_.hook_bite_count = hook_bite_count_;
+        static_assert(std::tuple_size<decltype(Snapshot::workers)>::value == Crew::kMaxWorkers,
+                      "the snapshot carries every worker the crew can hold");
         state_.worker_count = static_cast<std::uint8_t>(std::min<std::size_t>(crew_->count(), state_.workers.size()));
         for (std::size_t index = 0; index < state_.worker_count; ++index) {
             const Crew::View &view = crew_->view(index);

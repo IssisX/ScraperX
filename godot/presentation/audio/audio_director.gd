@@ -119,6 +119,12 @@ var _duck_db := 0.0
 var _machine_loops: Array[AudioStreamPlayer3D] = []
 # Stone pouring: the streams nearest the listener, each heard from its fall.
 var _pour_loops: Array[AudioStreamPlayer3D] = []
+# Welders' arcs: WELD_LOOPS crackle loops, each following one burning arc
+# (the worker's index on it, -1 free); more arcs than loops go unheard.
+const WELD_LOOPS := 2
+var _weld_loops: Array[AudioStreamPlayer3D] = []
+var _weld_owner: Array[int] = []
+var welds_heard := 0
 var pours_heard := 0
 var _voice: AudioStreamPlayer
 var _voice_clips := {}   # tier -> Array[AudioStreamOggVorbis]
@@ -181,6 +187,9 @@ func _ready() -> void:
 		_machine_loops.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 6.0, 110.0))
 	for i in 2:
 		_pour_loops.append(_positional_player(BUS_EFFECTS, Vector3.ZERO, 5.0, 90.0))
+	for i in WELD_LOOPS:
+		_weld_loops.append(_positional_player(BUS_AMBIENCE, Vector3.ZERO, 4.0, 70.0))
+		_weld_owner.append(-1)
 	# ~0.35 s of GDScript synthesis on a desktop: off the main thread, so the
 	# first frames are not held up; cues before it finishes are counted but
 	# silent.
@@ -234,6 +243,10 @@ func _on_bank_ready() -> void:
 		player.play()
 	for player in _pour_loops:
 		player.stream = _bank.pick(&"pour_loop")
+		player.volume_db = -80.0
+		player.play()
+	for player in _weld_loops:
+		player.stream = _bank.pick(&"arc_loop")
 		player.volume_db = -80.0
 		player.play()
 
@@ -598,6 +611,28 @@ func worker_step(at: Vector3) -> void:
 func worker_strike(at: Vector3) -> void:
 	worker_strikes += 1
 	_play_at(&"clang", at, -13.0, randf_range(1.1, 1.35), BUS_AMBIENCE)
+
+
+# A welder's arc (worker `w`) burning at `at` within earshot (`on`), or
+# not: a crackle loop follows it while it burns.
+func worker_weld(w: int, at: Vector3, on: bool) -> void:
+	var slot := _weld_owner.find(w)
+	if not on:
+		if slot >= 0:
+			_weld_owner[slot] = -1
+			if _bank_ready and not _silent:
+				_weld_loops[slot].volume_db = -80.0
+		return
+	if slot < 0:
+		slot = _weld_owner.find(-1)
+		if slot < 0:
+			return
+		_weld_owner[slot] = w
+		welds_heard += 1
+	if not _bank_ready or _silent:
+		return
+	_weld_loops[slot].position = at
+	_weld_loops[slot].volume_db = -7.0
 
 
 # A flock flushed at `at`: its wings, heard from where it rose.

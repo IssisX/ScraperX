@@ -7,11 +7,23 @@ extends Node3D
 ## aside it watches the player; startled, its arms come up and it leans back;
 ## shoved, its arms fly out.
 ##
-## Every part type is one MultiMesh across the whole crew: thirteen draw calls
+## Every part type is one MultiMesh across the whole crew: fifteen draw calls
 ## (four of them cast shadows) however many workers there are.
+##
+## The Plate Shop's workers (feet in PLATE_SHOP_LOW..PLATE_SHOP_HIGH) are
+## welders: at a station they crouch at the band's edge, visor down, an
+## electrode in the right fist; in bursts the arc burns blue-white, lights
+## what is round it, crackles, and throws sparks that spill over the edge
+## and fall down the well.
 
 const WORKER_FLOATS := 8
-const MAX_WORKERS := 12
+const MAX_WORKERS := 14
+const PLATE_SHOP_LOW := 340.0
+const PLATE_SHOP_HIGH := 484.0
+const ROD := 0.35          # the electrode and its holder, from the fist
+const WELD_CYCLE_S := 5.0  # a burst of arc, then slag chipped and a look
+const WELD_BURST_S := 3.4
+const WELD_HEARD_M := 70.0
 const WALKING := 0
 const WORKING := 1
 const YIELDING := 2
@@ -39,6 +51,12 @@ var _last_beat := PackedInt32Array()
 const HEARD_M := 30.0
 var _parts := {}         # name -> MultiMesh
 var _clock := 0.0
+# Per welder (by worker index), made when first needed: its sparks, the
+# arc's light and the arc itself.
+var _welds := {}
+var _torch := {}         # worker index -> the electrode's tip, world
+# For a test: frames a welder's arc burned within drawing range.
+var welding_frames := 0
 # The native's capsule centre is its stand height above the soles.
 const CENTRE_Y := 0.9
 
@@ -67,6 +85,8 @@ func setup(native: Object, audio: Object = null) -> void:
 	_add_part(&"hat", _hat_mesh(), hat, 1, false)
 	_add_part(&"eye", _sphere(0.016), _material(Color("17120e"), 0.4), 2, false)
 	_add_part(&"brow", _box(Vector3(0.16, 0.022, 0.03)), _material(Color("3a2a1e"), 0.9), 1, false)
+	_add_part(&"visor", _box(Vector3(0.21, 0.17, 0.035)), _material(Color("1c1e1f"), 0.5), 1, false)
+	_add_part(&"rod", _cylinder(0.011, 0.014, ROD), _material(Color("2a2623"), 0.6), 1, false)
 
 
 func update(delta: float, camera_position: Vector3, player_position: Vector3) -> void:
@@ -87,6 +107,14 @@ func update(delta: float, camera_position: Vector3, player_position: Vector3) ->
 		_pose(w, centre - Vector3(0.0, CENTRE_Y, 0.0), data[b + 3], int(data[b + 4]), data[b + 5],
 			data[b + 6], player_position)
 		_sound(w, centre - Vector3(0.0, CENTRE_Y, 0.0), int(data[b + 4]), data[b + 6], camera_position)
+		if _is_welder(centre.y - CENTRE_Y):
+			_weld(w, data[b + 3], int(data[b + 4]) == WORKING, camera_position)
+	# A welder out of range, or no longer at work, is dark.
+	for w in _welds:
+		if w >= count or (data[w * WORKER_FLOATS + 1] - CENTRE_Y) < PLATE_SHOP_LOW or \
+				Vector3(data[w * WORKER_FLOATS], data[w * WORKER_FLOATS + 1],
+					data[w * WORKER_FLOATS + 2]).distance_to(camera_position) > DRAW_RANGE_M:
+			_weld_off(w)
 
 
 # Every figure in the crew, for a test: [feet, yaw, state] each.
@@ -111,7 +139,15 @@ func _pose(w: int, feet: Vector3, yaw: float, state: int, speed: float, stride: 
 	var head_pitch := 0.0
 	var arm := [Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.0, 0.0)]   # per side: pitch, roll, elbow
 	var personal := float(w) * 1.7
+	var welder := state == WORKING and _is_welder(feet.y)
 	match state:
+		WORKING when welder:
+			# Crouched at the edge, leaning over the seam: the right arm
+			# holds the electrode down to it, the left steadies on the knee.
+			lean = 0.75
+			head_pitch = 0.6
+			arm[0] = Vector3(-0.775, 0.1, 0.3)
+			arm[1] = Vector3(-0.4, -0.2, 0.9)
 		WORKING:
 			lean = 0.18
 			head_pitch = 0.35
@@ -139,7 +175,8 @@ func _pose(w: int, feet: Vector3, yaw: float, state: int, speed: float, stride: 
 			lean = 0.06 * gait
 	# A slight bob with each step.
 	var bob := absf(sin(phase)) * 0.025 * gait
-	var hip_pos := Vector3(0.0, HIP_Y + bob, 0.0)
+	# A crouch: the hips 0.38 m lower, thighs forward, shins back to the soles.
+	var hip_pos := Vector3(0.0, HIP_Y + bob - (0.38 if welder else 0.0), 0.0)
 	var pelvis := Basis(Vector3.RIGHT, -lean * 0.3) * Basis(Vector3.BACK, side_lean * 0.3)
 	_place(&"hips", w, 0, body * Transform3D(pelvis, hip_pos + Vector3(0.0, 0.03, 0.0)))
 	# Legs: thigh from the hip, shin from the knee, boot at the ankle.
@@ -149,6 +186,11 @@ func _pose(w: int, feet: Vector3, yaw: float, state: int, speed: float, stride: 
 		var knee_bend := 0.7 * gait * maxf(0.0, sin(phase + (0.0 if side == 0 else PI) + 1.2))
 		if state == STARTLED:
 			swing = -0.15 if side == 0 else 0.1
+		elif welder:
+			# Thigh 1.2 rad forward of upright (the pelvis already tips it
+			# back by lean * 0.3), shin 0.82 rad back: the ankle under the hip.
+			swing = 1.2 - lean * 0.3 + (0.08 if side == 0 else -0.08)
+			knee_bend = 2.02 + (0.08 if side == 0 else -0.08)
 		var hip_joint := hip_pos + Vector3(-HIP_HALF * s, -0.04, 0.0)
 		var thigh_basis := pelvis * Basis(Vector3.RIGHT, -swing)
 		var knee := hip_joint + thigh_basis * Vector3(0.0, -THIGH, 0.0)
@@ -179,6 +221,10 @@ func _pose(w: int, feet: Vector3, yaw: float, state: int, speed: float, stride: 
 		var s := 0.038 if side == 0 else -0.038
 		_place(&"eye", w, side, body * Transform3D(head_basis, head + head_basis * Vector3(s, 0.012, 0.094)))
 	_place(&"brow", w, 0, body * Transform3D(head_basis, head + head_basis * Vector3(0.0, 0.045, 0.088)))
+	if welder:
+		_place(&"visor", w, 0, body * Transform3D(head_basis, head + head_basis * Vector3(0.0, -0.01, 0.115)))
+	else:
+		_place(&"visor", w, 0, Transform3D(Basis().scaled(Vector3.ZERO), Vector3.ZERO))
 	# Arms: from each shoulder, pitch forward (-) / back (+), roll out, elbow.
 	for side in 2:
 		var s := 1.0 if side == 0 else -1.0
@@ -191,6 +237,14 @@ func _pose(w: int, feet: Vector3, yaw: float, state: int, speed: float, stride: 
 		_place(&"upper_arm", w, side, body * _segment(shoulder, upper_basis, UPPER_ARM))
 		_place(&"forearm", w, side, body * _segment(elbow, fore_basis, FOREARM))
 		_place(&"hand", w, side, body * Transform3D(fore_basis, wrist + fore_basis * Vector3(0.0, -0.05, 0.0)))
+		if side == 0:
+			if welder:
+				# The electrode runs on from the fist along the forearm.
+				_place(&"rod", w, 0, body * _segment(wrist, fore_basis, ROD))
+				_torch[w] = body * (wrist + fore_basis * Vector3(0.0, -ROD, 0.0))
+			else:
+				_place(&"rod", w, 0, Transform3D(Basis().scaled(Vector3.ZERO), Vector3.ZERO))
+				_torch.erase(w)
 
 
 # A footfall each time a stride passes a step; a strike each time the
@@ -205,9 +259,150 @@ func _sound(w: int, feet: Vector3, state: int, stride: float, listener: Vector3)
 			_audio.worker_step(feet)
 		_last_step[w] = step
 	var beat := int(floor((_clock * 5.5 + float(w) * 1.7) / TAU))
-	if state == WORKING and beat != _last_beat[w] and near:
+	if state == WORKING and beat != _last_beat[w] and near and not _is_welder(feet.y):
 		_audio.worker_strike(feet + Vector3(0.0, 0.9, 0.0))
 	_last_beat[w] = beat
+
+
+func _is_welder(feet_y: float) -> bool:
+	return feet_y > PLATE_SHOP_LOW and feet_y < PLATE_SHOP_HIGH
+
+
+# A welder's arc, in bursts while it works: sparks thrown out over the edge
+# and falling down the well, a flickering blue-white light, the arc itself,
+# and its crackle.
+func _weld(w: int, yaw: float, working: bool, camera_position: Vector3) -> void:
+	var burning := working and _torch.has(w) and \
+		fmod(_clock + float(w) * 3.1, WELD_CYCLE_S) < WELD_BURST_S
+	if not burning:
+		_weld_off(w)
+		return
+	if not _welds.has(w):
+		_welds[w] = _make_weld()
+	var parts: Dictionary = _welds[w]
+	var tip: Vector3 = _torch[w]
+	var sparks: CPUParticles3D = parts["sparks"]
+	# Thrown forward (the welder's facing) and down.
+	sparks.global_transform = Transform3D(Basis(Vector3.UP, yaw), tip)
+	sparks.emitting = true
+	var light: OmniLight3D = parts["light"]
+	light.global_position = tip + Vector3(0.0, 0.25, 0.0)
+	light.visible = true
+	# The arc stutters: a fresh brightness every frame.
+	var flicker := 0.55 + 0.45 * absf(sin(_clock * 97.0 + float(w))) * absf(sin(_clock * 41.0))
+	light.light_energy = 3.2 * flicker
+	var arc: MeshInstance3D = parts["arc"]
+	arc.global_position = tip
+	arc.scale = Vector3.ONE * (0.6 + 0.8 * flicker)
+	arc.visible = true
+	welding_frames += 1
+	if _audio != null:
+		_audio.worker_weld(w, tip, tip.distance_to(camera_position) < WELD_HEARD_M)
+
+
+func _weld_off(w: int) -> void:
+	if _welds.has(w):
+		var parts: Dictionary = _welds[w]
+		(parts["sparks"] as CPUParticles3D).emitting = false
+		(parts["light"] as OmniLight3D).visible = false
+		(parts["arc"] as MeshInstance3D).visible = false
+	if _audio != null:
+		_audio.worker_weld(w, Vector3.ZERO, false)
+
+
+func _make_weld() -> Dictionary:
+	var sparks := CPUParticles3D.new()
+	sparks.name = "WeldSparks"
+	sparks.amount = 120
+	sparks.lifetime = 1.7
+	sparks.local_coords = false
+	sparks.emitting = false
+	# Forward (+z, the welder's facing) and down a little, in a wide fan.
+	sparks.direction = Vector3(0.0, -0.25, 1.0)
+	sparks.spread = 48.0
+	sparks.initial_velocity_min = 1.0
+	sparks.initial_velocity_max = 3.8
+	sparks.gravity = Vector3(0.0, -9.8, 0.0)
+	sparks.damping_min = 0.2
+	sparks.damping_max = 0.7
+	sparks.particle_flag_align_y = true
+	sparks.scale_amount_min = 0.5
+	sparks.scale_amount_max = 1.1
+	var cool := Gradient.new()
+	cool.set_color(0, Color(1.0, 0.92, 0.65, 1.0))
+	cool.add_point(0.35, Color(1.0, 0.55, 0.15, 1.0))
+	cool.set_color(cool.get_point_count() - 1, Color(0.55, 0.1, 0.02, 0.0))
+	sparks.color_ramp = cool
+	var streak := BoxMesh.new()
+	streak.size = Vector3(0.016, 0.13, 0.016)
+	streak.material = _glow_material(4.0)
+	sparks.mesh = streak
+	add_child(sparks)
+	var light := OmniLight3D.new()
+	light.name = "WeldLight"
+	light.light_color = Color(0.72, 0.82, 1.0)
+	light.omni_range = 9.0
+	light.omni_attenuation = 1.6
+	light.shadow_enabled = false
+	light.visible = false
+	add_child(light)
+	var arc := MeshInstance3D.new()
+	arc.name = "WeldArc"
+	var bead := SphereMesh.new()
+	bead.radius = 0.03
+	bead.height = 0.06
+	bead.radial_segments = 8
+	bead.rings = 4
+	bead.material = _arc_material()
+	arc.mesh = bead
+	arc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	arc.visible = false
+	add_child(arc)
+	return {"sparks": sparks, "light": light, "arc": arc}
+
+
+# Hot metal: drawn additively from the particle's colour, bright enough to
+# bloom.
+func _glow_material(gain: float) -> ShaderMaterial:
+	var shader := Shader.new()
+	shader.code = """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
+uniform float gain = 4.0;
+void fragment() {
+	ALBEDO = COLOR.rgb * gain * COLOR.a;
+}
+"""
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	material.set_shader_parameter(&"gain", gain)
+	return material
+
+
+func _arc_material() -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = Color(0.85, 0.92, 1.0)
+	material.emission_enabled = true
+	material.emission = Color(0.7, 0.85, 1.0)
+	material.emission_energy_multiplier = 6.0
+	return material
+
+
+# How many welders' arcs are burning now: for a test.
+func burning_count() -> int:
+	var count := 0
+	for w in _welds:
+		if (_welds[w]["arc"] as MeshInstance3D).visible:
+			count += 1
+	return count
+
+
+# The bounds every part is culled by (one for all of them), in world space:
+# for a test.
+func draw_bounds() -> AABB:
+	var instance := get_node("Crew_boot") as MultiMeshInstance3D
+	return instance.global_transform * instance.custom_aabb
 
 
 # A part hanging from `joint` along the basis's -y, `length` long.
@@ -242,8 +437,10 @@ func _add_part(part: StringName, mesh: Mesh, material: Material, per_worker: int
 	instance.material_override = material
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else \
 		GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# The crew works over the yard; its parts' bounds are the yard.
-	instance.custom_aabb = AABB(Vector3(-80, -2, -200), Vector3(160, 10, 260))
+	# The crew works from the yard to the high rings: its parts' bounds are
+	# the whole structure. (They were the yard's alone, so the workers on
+	# the decks and rings were culled whenever the yard was out of view.)
+	instance.custom_aabb = AABB(Vector3(-80, -2, -260), Vector3(160, 1700, 320))
 	add_child(instance)
 	_parts[part] = mm
 

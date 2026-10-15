@@ -7185,8 +7185,8 @@ void run_workers() {
     const double dt = Simulation::kFixedStepSeconds;
     {
         Simulation s(InitialSpawn::ExteriorGrade);
-        require(s.advance_frame(0.2).accepted && s.snapshot().worker_count == 12,
-                "six of the yard crew, three on the decks, three on the high rings");
+        require(s.advance_frame(0.2).accepted && s.snapshot().worker_count == 14,
+                "six of the yard crew, three on the decks, three on the high rings, two welders in the Plate Shop");
         double fastest = 0.0;
         for (int tick = 0; tick < 90 * 30; ++tick) {
             require(s.advance_frame(dt).accepted, "crew tick");
@@ -7200,7 +7200,13 @@ void run_workers() {
                 "left alone, nothing may shove, startle or turn aside the crew");
         require(fastest < 1.5 * 1.1, "the crew walks, at most its walking pace");
         for (std::size_t w = 0; w < n.worker_count; ++w) {
-            const double floor = w < 6 ? 0.0 : (w < 8 ? 22.0 : (w < 9 ? 44.0 : (w < 10 ? 220.25 : 264.25)));
+            const double floor = w < 6    ? 0.0
+                                 : w < 8  ? 22.0
+                                 : w < 9  ? 44.0
+                                 : w < 10 ? 220.25
+                                 : w < 12 ? 264.25
+                                 : w < 13 ? 374.25
+                                          : 418.25;
             require(n.workers[w].position.y > floor + 0.8 && n.workers[w].position.y < floor + 1.4,
                     "every worker is on its floor (or stepping over a kerb)");
         }
@@ -7209,6 +7215,28 @@ void run_workers() {
                 "the walkers walk their routes, on the yard, the decks and the rings");
         std::cout << "  crew 30 s: foreman_m=" << n.workers[0].stride << " runner_m=" << n.workers[4].stride
                   << " fastest_mps=" << fastest << "\n";
+    }
+    {
+        // A worker never steps off an open edge. The 374 ring's welder kneels
+        // 0.7 m from the well. A player walking past on the band's outer side
+        // would have it step 1.1 m aside, away from them: into the well. Its
+        // feet find no floor there, so it holds its ground on the ring.
+        Simulation s(InitialSpawn::Ring374West);
+        require(s.advance_frame(0.2).accepted, "settle on the 374 ring");
+        const std::size_t welder = 12;
+        require(walk_to(s, -14.9, -164.9, 20.0, 0.4) && walk_to(s, 14.9, -164.9, 20.0, 0.4) &&
+                    walk_to(s, 15.8, -161.0, 10.0, 0.3),
+                "round the 374 ring to its east band");
+        const Snapshot before = s.snapshot();
+        require(walk_to(s, 15.8, -138.0, 15.0, 0.3), "along the band's outer side, past the welder");
+        (void)s.advance_frame(3.0);
+        const Snapshot n = s.snapshot();
+        std::cout << "  welder at the edge: yields=" << n.worker_yields - before.worker_yields
+                  << " welder=(" << n.workers[welder].position.x << "," << n.workers[welder].position.y << ","
+                  << n.workers[welder].position.z << ")\n";
+        require(n.worker_yields > before.worker_yields, "the welder turns aside for the passing player");
+        require(n.workers[welder].position.y > 374.25 + 0.8 && n.workers[welder].position.x > 12.9,
+                "and stays on its ring: it never steps into the well");
     }
     {
         // Phase 4: struck by something moving. Standing still in the runner's
@@ -7444,6 +7472,10 @@ void run_c7() {
 }
 
 int main() {
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "workers") {
+        run_workers();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
         run_brachiation();
         run_pipe_gallery();

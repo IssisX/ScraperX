@@ -453,6 +453,35 @@ listener (`audio_director.gd` `REGIONS`). A band is heard soon after it is enter
   - `touch_c7`: the rust reads as wet steel, and the walkway is no longer black glitter.
 - **Not observed:** the phone; the band at night.
 
+**Phase 6, the Plate Shop at work: two welders across the well (native + Godot).**
+- **Who.** A welder on the east band of the 374 ring and one on the 418 ring, across the well
+  from G, H and I. Each is a real 80 kg crew body (now 14 in all). It works two seams in turn,
+  crouched 0.7 m from the band's open inner edge, visor down, an electrode in the right fist.
+- **The arc.** It burns in bursts (3.4 s in every 5). Sparks spill over the edge and fall down
+  the well. A blue-white light flickers on what is round it. A crackle with the welding set's
+  buzz is heard within 70 m. Presentation only.
+- **Defect found and fixed: workers walked off edges.** A worker stepping aside for a passing
+  player went 1.1 m sideways with no look at the floor there. Next to the well, the 374 m welder
+  stepped in and fell 33 m onto TP-340 (native `workers`, reproduced before the fix). The crew's
+  feet now never drive toward a spot without floor within 0.5 m below. A sidestep with no floor
+  holds its ground. A shove can still carry a worker over: that is physics.
+- **Defect found and fixed: the high crew was not drawn.** The crew's parts were culled by a box
+  around the yard (y −2 to 8 m). So the workers on the 22/44 m decks and the 220/264 m rings
+  were dropped whenever the yard was out of view. The box now covers the structure, and
+  `touch_workers` fails if any worker stands outside it.
+- **Proof.**
+  - Native `workers`: 14 workers, each on its floor. Walked past on the outer side, the welder
+    yields and stays on its ring.
+  - `touch_shop`: a welder's arc burns within drawing range during the climb, and its crackle is
+    assigned within earshot.
+- **Rendered (local, 540×464).**
+  - From G's platform (`touch_shop`'s capture-only `shop_welder` pose), the welder is a small
+    hi-vis figure across the well with a spark trail.
+  - Up close (a throwaway local scenario, not committed): crouched at the edge, the electrode
+    to the seam, a blue-white pool of light on the deck, and sparks thrown over the edge. The
+    first spark spray (56) was too thin; it is now 120.
+- **Not observed:** the phone; the crackle through a speaker.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 
