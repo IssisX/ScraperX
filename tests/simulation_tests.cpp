@@ -3700,6 +3700,8 @@ void run_c6() {
             "C6: the climb must end standing on the 264 ring, alive");
     require(seen.leap_caught && seen.balanced_out && seen.balanced_up,
             "C6: the leap must end in the hands, and the girders out and up must be walked on the balance");
+    require(simulation.snapshot().wind_peak_force_n == 0.0,
+            "C6 is below the windy face: no wind may push its climber");
     // Designed, not free: from the ring, a jump under the platform's fascia
     // catches nothing; the kentledge is the way up.
     {
@@ -7380,6 +7382,9 @@ void run_c7() {
     require(one == scraperx::sim::ClimbC7::kGalleryOnePipes - 1 && two == scraperx::sim::ClimbC7::kGalleryTwoPipes - 1,
             "C7: every pipe of both galleries must be swung, none skipped");
     require(std::abs(s.lift_state().travels[0]) < 0.005, "C7: the mast never moved");
+    // Pressure from the world: out over the drop the wind off the west face
+    // pushed the body while it was off its feet (in the air, on the pipes).
+    require(top.wind_peak_force_n > 50.0, "C7: out over the drop the wind must push the climber");
     // The galleries are the way: from the band under platform one, a jump at
     // its fascia catches nothing.
     {
@@ -7398,7 +7403,7 @@ void run_c7() {
                 "C7 falsifier: from the band, platform one is out of reach");
     }
     std::cout << "PASS scraperx_sim c7: seconds=" << top.simulation_time_seconds - start << " pipes=" << one << "+" << two
-              << " top_y=" << top.player_position.y << "\n";
+              << " top_y=" << top.player_position.y << " wind_peak_n=" << top.wind_peak_force_n << "\n";
 }
 
 int main() {

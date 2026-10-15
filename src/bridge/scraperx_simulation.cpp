@@ -257,6 +257,7 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::is_stack_s3_brake_latched);
     godot::ClassDB::bind_method(godot::D_METHOD("get_landing_state"), &ScraperXSimulation::get_landing_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hand_state"), &ScraperXSimulation::get_hand_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_wind_mps"), &ScraperXSimulation::get_wind_mps);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wet_state"), &ScraperXSimulation::get_wet_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_shop_state"), &ScraperXSimulation::get_shop_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_crane_state"), &ScraperXSimulation::get_crane_state);
@@ -847,6 +848,11 @@ godot::Dictionary ScraperXSimulation::get_hand_state() const {
     out["swing_catches"] = static_cast<std::int64_t>(s.swing_catch_count);
     out["swing_reaches"] = static_cast<std::int64_t>(s.swing_reach_count);
     return out;
+}
+
+// The wind off the west face at the body (m/s), 0 outside its zone.
+double ScraperXSimulation::get_wind_mps() const {
+    return simulation_->snapshot().wind_mps;
 }
 
 godot::Dictionary ScraperXSimulation::get_wet_state() const {

@@ -1463,6 +1463,7 @@ func _update_body_feedback(delta: float) -> void:
 	_fb_swing_reaches = reaches
 	var haul := float(_native.get_lift_state()["pitman_haul_n"])
 	_fb_haul_n = haul
+	_audio.wind_mps = float(_native.get_wind_mps())
 	_fb_strain_s -= delta
 	if haul > 1.0 and _fb_strain_s <= 0.0:
 		_haptic(&"strain", clampf(haul / 700.0, 0.3, 1.0))

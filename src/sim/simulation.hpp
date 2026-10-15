@@ -575,6 +575,11 @@ struct Snapshot final {
     std::uint64_t support_stumble_count = 0;
     // Jumps that pushed off a dynamic support (its equal and opposite impulse).
     std::uint64_t jump_reaction_count = 0;
+    // The wind off the west face where C7 goes out (kWindZoneX): its speed at
+    // the body (0 outside), and the push it gave this tick (0 standing).
+    double wind_mps = 0.0;
+    double wind_force_n = 0.0;
+    double wind_peak_force_n = 0.0;   // the most it has pushed, N
     // Blows from something moving that reached the body's balance
     // (kShoveClosingMps); whether one became a stumble is in stumble_count.
     std::uint64_t shove_count = 0;

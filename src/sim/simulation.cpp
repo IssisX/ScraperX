@@ -222,6 +222,23 @@ constexpr float kSupportJoltSpan = 0.5F;
 // at kShoveClosingMps or more across a side contact (CHOSEN: faster than a
 // careful brush), and only what it gave the body past kShoveMinimumMps
 // (CHOSEN: the contact solver's own settling).
+// Task 91, pressure from the world: the wind off the tower's west face, where
+// C7 goes out over the drop (kWindZone*), outward (-x). Its speed swells in
+// gusts with the simulation's own clock (deterministic: the same inputs give
+// the same gusts), from kWindBaseMps to kWindGustMps, a full gust every few
+// seconds; it pushes a body that
+// is not standing as drag does, 0.5 rho CdA v^2 (rho 1.2 kg/m^3, CdA 0.7 m^2
+// for a person, CHOSEN): about 107 N at the gust's peak, an eighth of the
+// body's weight. Standing, the soles' traction takes it.
+constexpr float kWindZoneX = -26.6F;       // the west face; the wind is west of it
+constexpr float kWindZoneRampM = 2.0F;     // it rises over the first 2 m out
+constexpr float kWindZoneLowY = 262.0F;
+constexpr float kWindZoneHighY = 300.0F;
+constexpr float kWindZoneNorthZ = -166.0F;
+constexpr float kWindZoneSouthZ = -128.0F;
+constexpr float kWindBaseMps = 4.0F;
+constexpr float kWindGustMps = 16.0F;
+constexpr float kWindDragHalfRhoCdA = 0.5F * 1.2F * 0.7F;
 constexpr float kShoveClosingMps = 0.5F;
 constexpr float kShoveMinimumMps = 0.1F;
 
@@ -1521,6 +1538,7 @@ public:
     }
 
     struct StepCommands final {
+        double time_seconds = 0.0;   // the simulation's clock at the end of this tick
         double move_input_x = 0.0;
         double move_input_z = 0.0;
         double facing_x = 0.0;
@@ -1629,6 +1647,7 @@ public:
             flight_from_jump_ = false;
             clear_support_jolt();
         }
+        apply_wind(bodies, commands.time_seconds);
         if (!sling_controlling && traversal_state_ == TraversalState::None) {
             if (slingshot_flight_ && !grounded_) {
                 // Thrown: the stick steers with a bounded force (2 m/s/s at
@@ -3417,6 +3436,34 @@ private:
             landing_loss_ = loss;
             recovery_duration_ = recovery_seconds_left_ = std::clamp(0.3 + loss, 0.3, 1.5);
         }
+    }
+
+    // See kWindZoneX. The wind's speed at the body (m/s, 0 outside the zone)
+    // and its push on a body that is not standing.
+    void apply_wind(JPH::BodyInterface &bodies, const double t) noexcept {
+        const JPH::RVec3 at = bodies.GetPosition(player_id_);
+        const float x = static_cast<float>(at.GetX());
+        const float y = static_cast<float>(at.GetY());
+        const float z = static_cast<float>(at.GetZ());
+        wind_mps_ = 0.0F;
+        wind_force_n_ = 0.0F;
+        if (x > kWindZoneX || y < kWindZoneLowY || y > kWindZoneHighY || z < kWindZoneNorthZ ||
+            z > kWindZoneSouthZ) {
+            return;
+        }
+        // Two swells of incommensurate periods: never long calm, now and
+        // then both at once, the full gust.
+        constexpr double kTau = 2.0 * 3.141592653589793;
+        const float gust = static_cast<float>(std::clamp(
+            0.35 + 0.35 * std::sin(kTau * t / 7.3) + 0.3 * std::sin(kTau * t / 2.9 + 1.0), 0.0, 1.0));
+        const float exposure = std::clamp((kWindZoneX - x) / kWindZoneRampM, 0.0F, 1.0F);
+        wind_mps_ = exposure * (kWindBaseMps + (kWindGustMps - kWindBaseMps) * gust);
+        if (grounded_) {
+            return;   // standing, the soles' traction takes it
+        }
+        wind_force_n_ = kWindDragHalfRhoCdA * wind_mps_ * wind_mps_;
+        wind_peak_force_n_ = std::max(wind_peak_force_n_, wind_force_n_);
+        bodies.AddForce(player_id_, JPH::Vec3(-wind_force_n_, 0.0F, 0.0F));
     }
 
     // Phase 4: struck by something moving (kShoveClosingMps closing at a side
@@ -5471,6 +5518,9 @@ public:
         state_.support_jolt_peak_m = support_jolt_peak_m_;
         state_.support_stumble_count = support_stumble_count_;
         state_.jump_reaction_count = jump_reactions_;
+        state_.wind_mps = wind_mps_;
+        state_.wind_force_n = wind_force_n_;
+        state_.wind_peak_force_n = wind_peak_force_n_;
         state_.shove_count = shove_count_;
         state_.beam_lean = {beam_lean_.GetX(), 0.0, beam_lean_.GetZ()};
         state_.grip_available = grip_affordance_.valid;
@@ -5677,6 +5727,9 @@ public:
     bool flight_from_jump_ = false;
     // Jumps whose push-off went into a dynamic support.
     std::uint64_t jump_reactions_ = 0;
+    float wind_mps_ = 0.0F;
+    float wind_force_n_ = 0.0F;
+    float wind_peak_force_n_ = 0.0F;
     // Phase 4 shoves (take_shove): the last velocity the feet set, whether
     // it was set on the ground, the fastest closing at a side contact this
     // tick, and the blows counted.
@@ -6169,6 +6222,7 @@ void Simulation::step_fixed() noexcept {
         static_cast<double>(tick_index_ + 1) * kFixedStepSeconds;
 
     PhysicsWorld::StepCommands commands;
+    commands.time_seconds = next_time_seconds;
     commands.move_input_x = move_input_x_;
     commands.move_input_z = move_input_z_;
     commands.facing_x = facing_x_;

@@ -365,6 +365,9 @@ func update_pours(pours: Array, listener: Vector3) -> void:
 # Wind rises with altitude; a falling body hears the air tear past. The
 # yard's distant industrial bed thins out as the climb leaves it below.
 var _gust_clock := 0.0
+# The native wind off the west face where C7 goes out (m/s, 0 elsewhere):
+# there the wind heard is the wind that pushes.
+var wind_mps := 0.0
 
 
 func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: float) -> void:
@@ -377,6 +380,8 @@ func _update_air(position: Vector3, velocity: Vector3, grounded: bool, delta: fl
 	_gust_clock += delta
 	var gust := 0.5 + 0.5 * sin(_gust_clock * 0.37) * sin(_gust_clock * 0.11 + 1.3)
 	var wind_target := lerpf(-12.0, -4.0, altitude) + 3.0 * exposure + lerpf(1.0, 5.0, exposure) * (gust - 0.5)
+	if wind_mps > 0.0:
+		wind_target = maxf(wind_target, -10.0 + 12.0 * clampf(wind_mps / 16.0, 0.0, 1.0))
 	_wind_db = lerpf(_wind_db, wind_target, 1.0 - exp(-2.0 * delta))
 	_wind.pitch_scale = lerpf(1.0, 0.86, exposure) + 0.06 * (gust - 0.5)
 	_drone_db = lerpf(_drone_db, lerpf(-13.0, -24.0, altitude), 1.0 - exp(-1.5 * delta))

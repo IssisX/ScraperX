@@ -353,3 +353,21 @@ an XCoM shift past half a foot (0.15 m) is a stumble, with debt.
   white petals and was redone.
 - **Not observed:** the view from inside or just above the layer, overdraw on a phone, and the
   wind by ear.
+
+**Pressure from the world: wind on C7's face (native + Godot, task 91).** C7 was the exposed way
+past the cascade mast with no exposure but the drop. Now the wind off the tower's west face pushes
+a climber out over it.
+- **Where.** West of the face (x < -26.6, rising over 2 m), between 262 and 300 m.
+- **How hard.** Outward (-x) by drag, 0.5 rho CdA v^2 (rho 1.2, CdA 0.7 m², CHOSEN). The speed
+  swells between 4 and 16 m/s on two incommensurate periods of the simulation's own clock, so it is
+  deterministic: the same inputs give the same gusts, never long calm, and now and then both swells
+  at once give the full gust, about 107 N, an eighth of the body's weight.
+- **Who it pushes.** A body off its feet: on the pipes, in a leap, hanging. Standing, the soles take
+  it.
+- **Heard.** In the zone the wind heard follows the native wind (the bridge's `get_wind_mps()`).
+- **Proof.** Native `c7` climbs it in 34.63 s (34.61 calm) and fails unless the wind pushed the
+  climber (peak 84 N). Native `C6` fails if any wind reached its climb, which is below the zone.
+  `touch_c7` and `touch_machines` pass.
+- **A dead end on the way.** A first cut swelled once every 11 s; C7's whole gallery-two swing fell
+  in its calm. Real wind is not still for six seconds.
+- **Not observed:** how it feels on a phone, and whether players read the gusts before they leap.
