@@ -1,6 +1,6 @@
 extends RefCounted
 # Written by src/voice/generate_fall_voice.py -- do not edit by hand.
-# Tier -> clip files in presentation/audio/voice/.
+# Tier -> clip files in presentation/audio/voice/; clip -> the line it speaks.
 
 const DIR := "res://presentation/audio/voice/"
 const TIERS := {
@@ -61,4 +61,53 @@ const TIERS := {
 		"pain_04.ogg",
 		"pain_05.ogg",
 	],
+}
+const CAPTIONS := {
+	"yelp_00.ogg": "Whoa, whoa, whoa!",
+	"yelp_01.ogg": "Oh shit, no!",
+	"yelp_02.ogg": "Oh fuck, no!",
+	"yelp_03.ogg": "Oh crap, oh crap!",
+	"yelp_04.ogg": "Nope, nope, nope!",
+	"yelp_05.ogg": "Oh no, oh no!",
+	"yelp_06.ogg": "Shit, shit, shit!",
+	"yelp_07.ogg": "Whoa, hey, hey!",
+	"yelp_08.ogg": "Ah, shit, no!",
+	"yelp_09.ogg": "Fuck, fuck!",
+	"panic_00.ogg": "Oh shit, oh shit, oh shit!",
+	"panic_01.ogg": "No no no no no no!",
+	"panic_02.ogg": "Fuck, fuck, fuck, fuck!",
+	"panic_03.ogg": "Oh fuck, oh fuck, oh fuck!",
+	"panic_04.ogg": "Shit shit shit shit shit!",
+	"panic_05.ogg": "Nope nope nope nope nope!",
+	"panic_06.ogg": "Oh god, oh god, oh god!",
+	"panic_07.ogg": "This was a terrible idea!",
+	"panic_08.ogg": "Oh, come on! Come on!",
+	"panic_09.ogg": "I should have taken the stairs!",
+	"panic_10.ogg": "Grab something, grab something!",
+	"panic_11.ogg": "Why? Why? Why?",
+	"panic_12.ogg": "Oh, motherfucker!",
+	"terror_00.ogg": "Aaaah! Aaaaaaaah!",
+	"terror_01.ogg": "Aaaah! Fuck! Fuck!",
+	"terror_02.ogg": "I'm gonna die, I'm gonna die, I'm gonna die!",
+	"terror_03.ogg": "Mother fucker!",
+	"terror_04.ogg": "Not like this! Not like this!",
+	"terror_05.ogg": "Somebody catch me!",
+	"terror_06.ogg": "Holy shit, holy shit, holy shit!",
+	"terror_07.ogg": "Why did I climb this fucking thing?",
+	"terror_08.ogg": "Oh god, I'm sorry, Mom!",
+	"terror_09.ogg": "Aaaah! Shit! Shit!",
+	"terror_10.ogg": "Help! Help me! Help!",
+	"terror_11.ogg": "No! No! Aaaaah!",
+	"relief_00.ogg": "Oh, thank god. Thank god.",
+	"relief_01.ogg": "Ha. Ha ha. Okay. I'm alive.",
+	"relief_02.ogg": "Holy shit. Holy shit.",
+	"relief_03.ogg": "Never doing that again.",
+	"relief_04.ogg": "Okay. Okay. Breathe.",
+	"relief_05.ogg": "Oh, thank fuck for that.",
+	"pain_00.ogg": "Ow! Fuck!",
+	"pain_01.ogg": "Oof. Ow, shit.",
+	"pain_02.ogg": "Ah, my ankles!",
+	"pain_03.ogg": "Ugh. That was stupid.",
+	"pain_04.ogg": "Ow, ow, ow, ow.",
+	"pain_05.ogg": "Argh, son of a bitch!",
 }

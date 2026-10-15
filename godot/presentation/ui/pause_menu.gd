@@ -578,7 +578,10 @@ func _build_audio_page() -> void:
 	_slider_row("EFFECTS", &"effects_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("AMBIENCE", &"ambience_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
 	_slider_row("INTERFACE", &"interface_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
-	_end_page(PAGE_AUDIO, first, "Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience.")
+	_slider_row("VOICE", &"voice_volume", SettingsStore.VOLUME_RANGE, 0.05, "%.0f%%", 100.0)
+	_toggle_row("CAPTIONS", &"captions")
+	_end_page(PAGE_AUDIO, first,
+		"Footsteps, landings, grabs and machines are Effects; wind and hum are Ambience; Voice is the climber's. Captions print the climber's lines as said.")
 
 
 func _row(title: String) -> HBoxContainer:

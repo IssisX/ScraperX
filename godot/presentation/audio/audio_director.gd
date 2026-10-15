@@ -131,6 +131,9 @@ var _voice_clips := {}   # tier -> Array[AudioStreamOggVorbis]
 var _voice_bags := {}    # tier -> clip indices not yet played this round
 var _voice_last := {}    # tier -> index played last
 var _voice_left := 0.0   # seconds of the current line still to run
+# The line being said, as written (VoiceLines.CAPTIONS), while it is said.
+var caption := ""
+var _voice_names := {}   # tier -> clip file names, as _voice_clips
 var _voice_tier := &""   # tier of the line running, "" when quiet
 var _fall_top := -INF    # highest point since the climber last had support
 var _fall_lines := 0     # fear lines said in this fall
@@ -251,9 +254,9 @@ func _on_bank_ready() -> void:
 		player.play()
 
 
-func set_volumes(master: float, effects: float, ambience: float, interface: float) -> void:
+func set_volumes(master: float, effects: float, ambience: float, interface: float, voice: float = 1.0) -> void:
 	for pair in [[&"Master", master], [BUS_EFFECTS, effects], [BUS_AMBIENCE, ambience],
-			[BUS_INTERFACE, interface]]:
+			[BUS_INTERFACE, interface], [BUS_VOICE, voice]]:
 		var index := AudioServer.get_bus_index(pair[0])
 		if index < 0:
 			continue
@@ -499,6 +502,7 @@ func _voice_say(tier: StringName) -> void:
 	_voice_last[tier] = index
 	var clip: AudioStream = clips[index]
 	voice_lines[tier] = int(voice_lines.get(tier, 0)) + 1
+	caption = String(VoiceLines.CAPTIONS.get((_voice_names[tier] as Array)[index], ""))
 	_voice_tier = tier
 	_voice_left = clip.get_length()
 	if _silent:
@@ -509,6 +513,7 @@ func _voice_say(tier: StringName) -> void:
 
 func _voice_stop() -> void:
 	_voice_tier = &""
+	caption = ""
 	_voice_left = 0.0
 	if not _silent:
 		_voice.stop()
@@ -521,13 +526,16 @@ func _load_voice() -> void:
 	var count := 0
 	for tier in VoiceLines.TIERS:
 		var clips: Array = []
+		var names: Array = []
 		for file in VoiceLines.TIERS[tier]:
 			var clip := AudioStreamOggVorbis.load_from_file(VoiceLines.DIR + String(file))
 			if clip == null:
 				push_error("fear voice: cannot read %s%s" % [VoiceLines.DIR, file])
 				continue
 			clips.append(clip)
+			names.append(String(file))
 		_voice_clips[tier] = clips
+		_voice_names[tier] = names
 		count += clips.size()
 	print("SCRAPERX_AUDIO_VOICE lines=%d" % count)
 

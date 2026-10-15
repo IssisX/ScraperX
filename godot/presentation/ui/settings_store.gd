@@ -73,6 +73,9 @@ var master_volume := 0.8
 var effects_volume := 1.0
 var ambience_volume := 0.8
 var interface_volume := 0.7
+var voice_volume := 1.0
+# The climber's lines printed as spoken, uncensored, while they are said.
+var captions := false
 var start_at := 0
 var persistent := true
 
@@ -123,6 +126,8 @@ func load_from_disk() -> void:
 	effects_volume = _read_range(file, "effects_volume", effects_volume, VOLUME_RANGE)
 	ambience_volume = _read_range(file, "ambience_volume", ambience_volume, VOLUME_RANGE)
 	interface_volume = _read_range(file, "interface_volume", interface_volume, VOLUME_RANGE)
+	voice_volume = _read_range(file, "voice_volume", voice_volume, VOLUME_RANGE)
+	captions = _read_bool(file, "captions", captions)
 	start_at = _read_index(file, "start_at", start_at, START_NAMES.size())
 
 
@@ -140,7 +145,8 @@ func save_to_disk() -> void:
 	file.set_value(SECTION, "telemetry", telemetry)
 	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "show_fps",
 			"fov", "brightness", "head_bob", "speed_fov", "reduced_motion", "time_of_day", "day_minutes",
-			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "start_at"]:
+			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "voice_volume",
+			"captions", "start_at"]:
 		file.set_value(SECTION, key, get(key))
 	var error := file.save(PATH)
 	if error != OK:

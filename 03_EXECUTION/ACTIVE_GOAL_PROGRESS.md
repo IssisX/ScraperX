@@ -620,6 +620,19 @@ say why. Both archive designs are in the source (`src/sim/vertical/`) and unplac
   others: the pinion turned by a hand crank, as the pitman's is, would give the rider a different
   job.
 
+**Phase 10, captions and a voice slider (Godot; release plan item 13).**
+- **Captions** (AUDIO page, off by default). While the climber says a line, it is printed low and
+  centred, word for word as said and uncensored, and it goes when the line ends or is cut. The
+  words come from the voice's own generator (`src/voice/generate_fall_voice.py`). It now writes
+  each clip's line into `voice_lines.gd` beside the clip lists, and its `--table-only` run rebuilds
+  that table from the clips on disk without making any audio.
+- **VOICE** volume (AUDIO page) sets the climber's voice on its own bus.
+- **Proof.** `touch_lethal_feedback` turns captions on for its fall. Every line printed must be one
+  of the voice's own lines, and nothing may be left printed once the impact cuts the voice. It
+  printed "Fuck, fuck!" (rendered locally, 540×464).
+- **Still open (item 13):** in-world cues for the first moves, and danger shown by more than
+  colour.
+
 **Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
 blocks work that is otherwise ready.
 

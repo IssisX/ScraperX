@@ -24,6 +24,8 @@ Setup (a throwaway venv, CPU only):
   curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/john/medium/en_US-john-medium.onnx.json
 Run:
   tts/bin/python src/voice/generate_fall_voice.py --piper-model en_US-john-medium.onnx
+Rewrite only voice_lines.gd (clip lists and captions) from the clips on disk:
+  python3 src/voice/generate_fall_voice.py --table-only
 
 Seeds are fixed per line and take, so a rerun on the same packages and CPU
 reproduces the same selection.
@@ -35,7 +37,10 @@ import re
 import subprocess
 import sys
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:  # --table-only needs none of the audio stack
+    np = None
 
 # Tier -> (exaggeration, [lines]). A line may carry its own exaggeration as
 # (text, exaggeration). The director picks a tier from what the fall is
@@ -180,9 +185,46 @@ def finish(samples, rate, tier):
     return samples.astype(np.float32)
 
 
+def line_text(line):
+    return line[0] if isinstance(line, tuple) else line
+
+
+def gd_string(text):
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+# The table lists every clip on disk, so a partial run (--only) keeps the
+# lines it did not touch; each clip's caption is its line as written, the
+# words it was checked to say.
+def write_table(out):
+    present = set(os.listdir(out))
+    table = {tier: [(f"{tier}_{index:02d}.ogg", line_text(line)) for index, line in enumerate(lines)
+                    if f"{tier}_{index:02d}.ogg" in present]
+             for tier, (_, lines) in LINES.items()}
+    with open(os.path.join(out, "..", "voice_lines.gd"), "w") as gd:
+        gd.write("extends RefCounted\n")
+        gd.write("# Written by src/voice/generate_fall_voice.py -- do not edit by hand.\n")
+        gd.write("# Tier -> clip files in presentation/audio/voice/; clip -> the line it speaks.\n\n")
+        gd.write("const DIR := \"res://presentation/audio/voice/\"\n")
+        gd.write("const TIERS := {\n")
+        for tier, clips in table.items():
+            gd.write(f"\t&\"{tier}\": [\n")
+            for name, _ in clips:
+                gd.write(f"\t\t\"{name}\",\n")
+            gd.write("\t],\n")
+        gd.write("}\n")
+        gd.write("const CAPTIONS := {\n")
+        for clips in table.values():
+            for name, text in clips:
+                gd.write(f"\t\"{name}\": {gd_string(text)},\n")
+        gd.write("}\n")
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--piper-model", required=True)
+    parser.add_argument("--piper-model")
+    parser.add_argument("--table-only", action="store_true",
+                        help="rewrite voice_lines.gd from the clips on disk; generate nothing")
     parser.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "..",
                                                       "godot", "presentation", "audio", "voice"))
     parser.add_argument("--work", default="voice_work")
@@ -190,6 +232,11 @@ def main():
                         help="regenerate only these lines, e.g. terror:3,yelp:5 (tier:index)")
     parser.add_argument("--takes", type=int, default=TAKES)
     args = parser.parse_args()
+    if args.table_only:
+        write_table(args.out)
+        return
+    if not args.piper_model:
+        parser.error("--piper-model is required to generate")
     only = {tuple(item.split(":")) for item in args.only.split(",") if item}
 
     import librosa
@@ -258,24 +305,7 @@ def main():
                 marker.write('[remap]\n\nimporter="keep"\n')
             report.append(f"{name} {best[1]:.2f}s match {best[0]:.2f} line {line!r} heard {best[3]!r}")
 
-    # The table lists every clip on disk, so a partial run (--only) keeps
-    # the lines it did not touch.
-    present = set(os.listdir(args.out))
-    table = {tier: [f"{tier}_{index:02d}.ogg" for index in range(len(lines))
-                    if f"{tier}_{index:02d}.ogg" in present]
-             for tier, (_, lines) in LINES.items()}
-    with open(os.path.join(args.out, "..", "voice_lines.gd"), "w") as gd:
-        gd.write("extends RefCounted\n")
-        gd.write("# Written by src/voice/generate_fall_voice.py -- do not edit by hand.\n")
-        gd.write("# Tier -> clip files in presentation/audio/voice/.\n\n")
-        gd.write("const DIR := \"res://presentation/audio/voice/\"\n")
-        gd.write("const TIERS := {\n")
-        for tier, names in table.items():
-            gd.write(f"\t&\"{tier}\": [\n")
-            for name in names:
-                gd.write(f"\t\t\"{name}\",\n")
-            gd.write("\t],\n")
-        gd.write("}\n")
+    write_table(args.out)
     print("\n".join(report))
     # Every scripted line ships. One that no take could pass stops the run
     # loudly, for more takes or a rewording -- it is never left out quietly.

@@ -34,6 +34,8 @@ var _alt_anchor := NAN
 var _toasts: Array[Dictionary] = []
 var _flash := 0.0
 var _flash_color := UiStyle.HAZARD
+# The climber's line, printed while it is said (empty: none, or captions off).
+var caption := ""
 
 
 func _ready() -> void:
@@ -165,6 +167,8 @@ func _draw() -> void:
 		_draw_altimeter()
 	if not _toasts.is_empty():
 		_draw_toasts()
+	if not caption.is_empty():
+		_draw_caption()
 
 
 func _draw_reticle(c: Vector2) -> void:
@@ -344,3 +348,16 @@ func _draw_toasts() -> void:
 		UiStyle.text(self, UiStyle.font_label(), entry["sub"], Vector2(cx, rect.position.y + 86.0 * u),
 			sub_size, UiStyle.with_alpha(UiStyle.PAPER, alpha), HORIZONTAL_ALIGNMENT_CENTER)
 		y += 128.0 * u
+
+
+# Low and centred, above the touch controls, on a plate for any background.
+func _draw_caption() -> void:
+	var u := _u
+	var font_size := int(roundf(32.0 * u))
+	var cx := _safe.position.x + _safe.size.x * 0.5
+	var width := UiStyle.text_width(UiStyle.font_label(), caption, font_size) + 48.0 * u
+	var rect := Rect2(Vector2(cx - width * 0.5, _safe.end.y - 320.0 * u), Vector2(width, 60.0 * u))
+	UiStyle.plate(self, rect, UiStyle.with_alpha(UiStyle.INK, 0.78), UiStyle.with_alpha(UiStyle.PAPER, 0.0),
+		0.0, 10.0 * u)
+	UiStyle.text(self, UiStyle.font_label(), caption, Vector2(cx, rect.position.y + 41.0 * u), font_size,
+		UiStyle.PAPER, HORIZONTAL_ALIGNMENT_CENTER)

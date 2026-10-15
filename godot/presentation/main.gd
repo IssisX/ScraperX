@@ -555,6 +555,7 @@ func _process(delta: float) -> void:
 	_update_feedback(delta)
 	_touch.update_context(_ctx, delta)
 	_hud.family = _router.glyph_family()
+	_hud.caption = _audio.caption if _settings.captions else ""
 	_hud.update_hud(_ctx, delta)
 
 	var proof_ready := (
@@ -679,7 +680,7 @@ func _apply_settings() -> void:
 	_fps_label.visible = _settings.show_fps
 	# AUDIO
 	_audio.set_volumes(_settings.master_volume, _settings.effects_volume,
-		_settings.ambience_volume, _settings.interface_volume)
+		_settings.ambience_volume, _settings.interface_volume, _settings.voice_volume)
 	# DISPLAY
 	_fov_base = _settings.fov
 	_reduced_motion = _settings.reduced_motion

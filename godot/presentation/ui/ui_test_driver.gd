@@ -12,6 +12,7 @@ extends Node
 # --capture=<prefix> under a real renderer, each scenario also saves the
 # screen at its most telling moment as <prefix>_<pose>.png.
 
+const VoiceLinesTable := preload("res://presentation/audio/voice_lines.gd")
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
 const InputRouter := preload("res://presentation/ui/input_router.gd")
 const TouchControls := preload("res://presentation/ui/touch_controls.gd")
@@ -1050,7 +1051,14 @@ func _touch_chute() -> bool:
 
 
 func _touch_lethal_feedback() -> bool:
-	var reached: bool = await _wait_until(func() -> bool: return float(_ctx()["danger"]) >= 0.8, 5.0)
+	# Captions on for this fall: each line the climber says is printed as said.
+	_main._settings.captions = true
+	var captioned := []
+	var reached: bool = await _wait_until(func() -> bool:
+		var line := String(_main._hud.caption)
+		if not line.is_empty() and (captioned.is_empty() or captioned[-1] != line):
+			captioned.append(line)
+		return float(_ctx()["danger"]) >= 0.8, 5.0)
 	if not reached:
 		return _fail("fall danger never reached 0.8 of the native lethal speed")
 	await _pose("fall_danger")
@@ -1073,8 +1081,19 @@ func _touch_lethal_feedback() -> bool:
 		return _fail("the fear voice did not ride the fall: %s" % str(said))
 	if StringName(_main._audio._voice_tier) != &"":
 		return _fail("the fear voice runs on after the lethal impact (%s)" % _main._audio._voice_tier)
-	_detail = "toast='%s' lethal_mps=%.1f voice=%s cut=%d" % [sub, lethal, str(said),
-		int(_main._audio.voice_cut)]
+	# What was printed is what was said: lines of the voice's own table, word
+	# for word, gone when the impact cut the voice.
+	var spoken: Array = VoiceLinesTable.CAPTIONS.values()
+	if captioned.is_empty():
+		return _fail("captions on, the fall's lines were never printed")
+	for line in captioned:
+		if not spoken.has(line):
+			return _fail("caption '%s' is not a line the voice says" % line)
+	if not String(_main._hud.caption).is_empty():
+		return _fail("the caption '%s' stays after the voice was cut" % _main._hud.caption)
+	_main._settings.captions = false
+	_detail = "toast='%s' lethal_mps=%.1f voice=%s cut=%d captions=%s" % [sub, lethal, str(said),
+		int(_main._audio.voice_cut), str(captioned)]
 	# The announced speed must be the lethal fall it reports, not a settle.
 	return fell_at > lethal
 
