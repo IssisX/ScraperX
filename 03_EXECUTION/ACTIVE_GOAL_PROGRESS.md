@@ -411,3 +411,23 @@ hopper's rim, its mouth under a gate like the hopper's own: hinged, shut by its 
   the line runs up to the gantry. The first grip was a 0.44 m block that filled the lower view; it
   is now 0.32 × 0.24 m.
 - **Not observed:** the skip pouring, seen from the receiver; the phone.
+
+**Decisions waiting on the owner (2026-10-15).** Recorded here so they survive the session; each
+blocks work that is otherwise ready.
+
+1. **The cascade mast, barrel helix and crown gondola.** Rework them like the pitman (no motor; each
+   worked by a different decision of the player's), or keep their motors as designed (plan §2.6
+   rule 12 says "as designed, motors included"). Recommended: rework. C7 already makes the mast the
+   sheltered way and C7 the exposed one.
+2. **Physical mantles** (the last item of the parkour overhaul the owner ordered). Today a mantle
+   rises about 1.4 m in 0.42 s, a peak of about 4.8 g (DERIVED, 6h/T^2). Arms and legs limited to an
+   honest force (about 2.5 body weights) take about 0.8 s. That is truer, but slower, on every climb
+   in the game. Which does the owner want: the faster, acrobatic feel, or the slower, honest one?
+3. **Walking pushes back on a moving support** (Phase 2; built and taken out, see above). It needs
+   the luffing derrick's cradle held at its upper receiver by a hinged latch it passes and drops
+   behind. A fixed stop cannot work there: the cradle arrives from that side, and it is light and
+   presses up against the boom's stop. Worth building only if the owner wants this physics.
+4. **A release-signed APK in CI.** CI exports debug and re-signs with the owner's key. A release
+   export needs the release keystore at export time, and it cannot be tested here.
+5. **Still open from before:** what stands at the summit; the store name; the price; whether the
+   repository stays public; credits; and clearance for the fall voice.
